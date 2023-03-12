@@ -1,6 +1,7 @@
 {
     "m68k.includePaths": [
-        "c:\\Users\\bwodok\\Documents\\Visual_Studio_Code\\vscode-amiga-debug\\bin\\win32\\opt\\m68k-amiga-elf\\sys-include"
+        "c:\\Users\\bwodok\\Documents\\Visual_Studio_Code\\vscode-amiga-debug\\bin\\win32\\opt\\m68k-amiga-elf\\sys-include",
+        "/Users/cameron/.vscode/extensions/bartmanabyss.amiga-debug-1.7.1/bin/darwin/opt/m68k-amiga-elf/sys-include"
     ],
     "files.associations": {
         "intuition.h": "c",
@@ -10,5 +11,6 @@
         "graphics.h": "c",
         "view.h": "c",
         "dos.h": "c"
-    }
+    },
+    "m68k.vasm.provideDiagnostics": false
 }

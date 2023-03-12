@@ -12,6 +12,9 @@
 #define WIN_MIN_WIDTH 640
 #define WIN_HEIGHT 500
 #define WIN_MIN_HEIGHT 500
+#define BUTTON_GADGET_NUM 0
+#define BUTTON_WIDTH 100
+#define BUTTON_HEIGHT 30
 
 struct ExecBase *SysBase;
 struct DosLibrary *DOSBase;
@@ -21,12 +24,32 @@ struct Library *TranslatorBase;
 struct Window *window;
 struct Screen *screen;
 LONG exitCode;
+struct Gadget *gadget;
+
+UWORD buttonBorderData[] = {
+	0, 0, BUTTON_WIDTH + 1, 0, BUTTON_WIDTH + 1, BUTTON_HEIGHT + 1,
+	0, BUTTON_HEIGHT + 1, 0, 0,
+};
+struct Border buttonBorder = {
+	-1, -1, 1, 0, JAM1, 5, buttonBorderData, NULL,
+};
+
+struct IntuiText buttonText = {
+	3, 3, JAM1, 8, 10, NULL, "Press me!\0", NULL
+};
+
+struct Gadget buttonGadget = {
+	NULL, 20, 50, BUTTON_WIDTH, BUTTON_HEIGHT,
+	GFLG_GADGHCOMP, GACT_RELVERIFY | GACT_IMMEDIATE,
+	GTYP_BOOLGADGET, &buttonBorder, NULL, &buttonText, 0, NULL, BUTTON_GADGET_NUM, NULL,
+};
 
 void openLibraries();
 void closeLibraries();
 void configureApp();
 void initVideo();
 void cleanExit(LONG);
+void buttonPressed();
 BOOL handleIDCMP(struct Window*);
 
 enum ScreenMode {
@@ -113,6 +136,8 @@ void initVideo() {
 	}
 
 	SetRGB4(&(screen->ViewPort), 0, 0x0, 0x1, 0x2);
+	SetRGB4(&(screen->ViewPort), 1, 0x0, 0x0, 0x0);
+	SetRGB4(&(screen->ViewPort), 3, 0x0, 0xFF, 0x2);
 
 	window = OpenWindowTags(NULL,
 	WA_Left, WIN_LEFT_EDGE,
@@ -123,16 +148,17 @@ void initVideo() {
 	WA_MinHeight, WIN_MIN_HEIGHT,
 	WA_MaxWidth, ~0,
 	WA_MaxHeight, ~0,
+	WA_Gadgets, &buttonGadget,
 	WA_CloseGadget, TRUE,
 	WA_SizeGadget, FALSE,
 	WA_DepthGadget, FALSE,
 	WA_DragBar, FALSE,
 	WA_Activate, TRUE,
 	WA_NoCareRefresh, TRUE,
-	WA_IDCMP, IDCMP_CLOSEWINDOW,
+	WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP,
 	WA_CustomScreen, screen,
-	WA_Title, "Main Window",
-	WA_ScreenTitle, "Our screen - main window active",
+	WA_Borderless, TRUE,
+	WA_Backdrop, TRUE,
 	TAG_DONE);
 
 	if (window == NULL)
@@ -185,6 +211,9 @@ BOOL handleIDCMP(struct Window *window) {
 			case IDCMP_CLOSEWINDOW:
 				done = TRUE;
 				break;
+			case IDCMP_GADGETUP:
+				buttonPressed();
+				break;
 			default:
 				break;
 		}
@@ -202,3 +231,6 @@ void cleanExit(LONG returnValue) {
 	// Exit(returnValue);
 }
 
+void buttonPressed() {
+	DisplayAlert(RECOVERY_ALERT, "\x00\xF0\x14" "Button pressed mofo!" "\0\0", 50);
+}
