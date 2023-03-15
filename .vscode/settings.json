@@ -10,7 +10,8 @@
         "exec.h": "c",
         "graphics.h": "c",
         "view.h": "c",
-        "dos.h": "c"
+        "dos.h": "c",
+        "narrator.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false
 }

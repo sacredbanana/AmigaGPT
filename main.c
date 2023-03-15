@@ -5,7 +5,12 @@
 #include <proto/intuition.h>
 #include <intuition/intuition.h>
 #include <proto/translator.h>
+#include <devices/narrator.h>
 
+
+#define OLD_SPEECH
+#define EMULATOR
+#define TRANSLATION_BUFFER_LENGTH 1000
 #define WIN_LEFT_EDGE 0
 #define WIN_TOP_EDGE 0
 #define WIN_WIDTH 640
@@ -23,8 +28,12 @@ struct GfxBase *GfxBase;
 struct Library *TranslatorBase;
 struct Window *window;
 struct Screen *screen;
-LONG exitCode;
+struct MsgPort *NarratorPort;
+struct narrator_rb *NarratorIO;
 struct Gadget *gadget;
+BYTE audioChannels[4] = {3, 5, 10, 12};
+LONG exitCode;
+UBYTE translationBuffer[1000];
 
 UWORD buttonBorderData[] = {
 	0, 0, BUTTON_WIDTH + 1, 0, BUTTON_WIDTH + 1, BUTTON_HEIGHT + 1,
@@ -44,13 +53,20 @@ struct Gadget buttonGadget = {
 	GTYP_BOOLGADGET, &buttonBorder, NULL, &buttonText, 0, NULL, BUTTON_GADGET_NUM, NULL,
 };
 
+typedef enum {
+	EXIT_APPLICATION, ALERT_BUTTON_PRESSED, SPEAK_BUTTON_PRESSED
+} Action;
+
 void openLibraries();
+void openDevices();
 void closeLibraries();
+void closeDevices();
 void configureApp();
 void initVideo();
 void cleanExit(LONG);
-void buttonPressed();
-BOOL handleIDCMP(struct Window*);
+void speakText(STRPTR text);
+Action handleIDCMP(struct Window*);
+
 
 enum ScreenMode {
 	PAL_NON_INTERLACED = 256,
@@ -68,8 +84,13 @@ int main() {
 	SysBase = *((struct ExecBase**)4UL);
 	ULONG signalMask, winSignal, signals;
 	BOOL done = FALSE;
+	STRPTR englishString = "Never gonna give you up, never gonna let you down, never going to run around and desert you";
 
 	openLibraries();
+	if (exitCode)
+		goto exit;
+	
+	openDevices();
 	if (exitCode)
 		goto exit;
 
@@ -92,7 +113,16 @@ int main() {
 		signals = Wait(signalMask);
 
 		if (signals & winSignal)
-			done = handleIDCMP(window);
+			switch (handleIDCMP(window)) {
+				case EXIT_APPLICATION:
+					done = TRUE;
+					break;
+				case ALERT_BUTTON_PRESSED:
+					speakText(englishString);
+					break;
+				default:
+					break;
+			}
 	} while (!done);
 
 	cleanExit(RETURN_OK);
@@ -115,9 +145,45 @@ void openLibraries() {
 		return;
 	}
 
+	#ifdef OLD_SPEECH
+		#ifdef EMULATOR
+		TranslatorBase = (struct Library *)OpenLibrary("libs:old/translator.library", 0);
+		#else
+		TranslatorBase = (struct Library *)OpenLibrary("PROGDIR:libs/translator.library", 0);
+		#endif
+	#else
 	TranslatorBase = (struct Library *)OpenLibrary("translator.library", 0);
+	#endif
 	if (TranslatorBase == NULL)
 		cleanExit(RETURN_ERROR);
+}
+
+void openDevices() {
+	NarratorPort = CreateMsgPort();
+    if (!NarratorPort) {
+		cleanExit(RETURN_ERROR);
+		return;
+	}
+
+    NarratorIO = CreateIORequest(NarratorPort, sizeof(struct narrator_rb));
+    if (!NarratorIO) {
+		cleanExit(RETURN_ERROR);
+		return;
+	}
+
+	#ifdef OLD_SPEECH
+		#ifdef EMULATOR
+		if (OpenDevice("devs:old/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
+		#else
+		if (OpenDevice("PROGDIR:devs/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
+		#endif
+	#else
+	if (OpenDevice("narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
+		NarratorIO->flags = NDF_NEWIORB;
+	#endif
+			cleanExit(RETURN_ERROR);
+			return;
+	}
 }
 
 void initVideo() {
@@ -148,7 +214,8 @@ void initVideo() {
 	WA_MinHeight, WIN_MIN_HEIGHT,
 	WA_MaxWidth, ~0,
 	WA_MaxHeight, ~0,
-	WA_Gadgets, &buttonGadget,
+	WA_Gadgets, (ULONG)&buttonGadget,
+	WA_Title, (ULONG)"OpenAI Amiga",
 	WA_CloseGadget, TRUE,
 	WA_SizeGadget, FALSE,
 	WA_DepthGadget, FALSE,
@@ -157,35 +224,10 @@ void initVideo() {
 	WA_NoCareRefresh, TRUE,
 	WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP,
 	WA_CustomScreen, screen,
-	WA_Borderless, TRUE,
-	WA_Backdrop, TRUE,
 	TAG_DONE);
 
 	if (window == NULL)
 		cleanExit(RETURN_ERROR);
-
-	// struct NewWindow NewWindow;
-	// NewWindow.LeftEdge = 0;
-	// NewWindow.TopEdge = 0;
-	// NewWindow.Width = 640;
-	// NewWindow.Height = config.screenMode - 100;
-	// NewWindow.DetailPen = 0;
-	// NewWindow.BlockPen = 1;
-	// NewWindow.Title = NULL;
-	// NewWindow.Flags = SMART_REFRESH | ACTIVATE | BORDERLESS | NOCAREREFRESH | BACKDROP;
-	// NewWindow.IDCMPFlags = NULL;
-	// NewWindow.Type = CUSTOMSCREEN;
-	// NewWindow.FirstGadget = NULL;
-	// NewWindow.CheckMark = NULL;
-	// NewWindow.Screen = screen;
-	// NewWindow.BitMap = NULL;
-	// NewWindow.MinWidth = 30;
-	// NewWindow.MinHeight = 20;
-	// NewWindow.MaxWidth = 600;
-	// NewWindow.MaxHeight = 600;
-
-	// if ((window = (struct Window *)OpenWindow(&NewWindow)) == NULL)
-	// 	Exit(RETURN_ERROR);
 }
 
 void closeLibraries() {
@@ -194,12 +236,21 @@ void closeLibraries() {
 	CloseLibrary(TranslatorBase);
 }
 
+void closeDevices() {
+	 if (NarratorIO) {
+		DeleteIORequest((struct IORequest *)NarratorIO);
+		CloseDevice((struct IORequest *)NarratorIO);
+	 }
+
+	 if (NarratorPort)
+	  DeleteMsgPort(NarratorPort);
+}
+
 void configureApp() {
 	config.screenMode = PAL_NON_INTERLACED;
 }
 
-BOOL handleIDCMP(struct Window *window) {
-	BOOL done = FALSE;
+Action handleIDCMP(struct Window *window) {
 	struct IntuiMessage *message = NULL;
 	ULONG class;
 
@@ -209,17 +260,15 @@ BOOL handleIDCMP(struct Window *window) {
 
 		switch (class) {
 			case IDCMP_CLOSEWINDOW:
-				done = TRUE;
-				break;
+				return EXIT_APPLICATION;
 			case IDCMP_GADGETUP:
-				buttonPressed();
-				break;
+				return ALERT_BUTTON_PRESSED;
 			default:
 				break;
 		}
 	}
 
-	return done;
+	return NULL;
 }
 
 void cleanExit(LONG returnValue) {
@@ -227,10 +276,20 @@ void cleanExit(LONG returnValue) {
 	CloseWindow(window);
 	CloseScreen(screen);
 	closeLibraries();
+	closeDevices();
 	exitCode = returnValue;
 	// Exit(returnValue);
 }
 
-void buttonPressed() {
-	DisplayAlert(RECOVERY_ALERT, "\x00\xF0\x14" "Button pressed mofo!" "\0\0", 50);
+void speakText(STRPTR text) {
+	LONG textLength = strlen(text);
+	Translate(text, textLength, (STRPTR)&translationBuffer, TRANSLATION_BUFFER_LENGTH);
+	LONG translatedStringLength = strlen(translationBuffer);
+
+	NarratorIO->ch_masks = audioChannels;
+	NarratorIO->nm_masks = sizeof(audioChannels);
+	NarratorIO->message.io_Command= CMD_WRITE;
+    NarratorIO->message.io_Data = translationBuffer;
+    NarratorIO->message.io_Length = translatedStringLength;
+    DoIO((struct IORequest *)NarratorIO);
 }
