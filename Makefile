@@ -7,7 +7,7 @@ ifdef OS
 	SHELL = cmd.exe
 endif
 
-subdirs := $(wildcard */)
+subdirs := $(wildcard */) $(wildcard src/*/)
 VPATH = $(subdirs)
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
 cpp_objects := $(addprefix obj/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
