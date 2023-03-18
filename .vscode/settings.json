@@ -11,7 +11,16 @@
         "graphics.h": "c",
         "view.h": "c",
         "dos.h": "c",
-        "narrator.h": "c"
+        "narrator.h": "c",
+        "bsdsocket.h": "c",
+        "socket.h": "c",
+        "netdb.h": "c",
+        "amissl.h": "c",
+        "asn1.h": "c",
+        "e_os2.h": "c",
+        "types.h": "c",
+        "unistd.h": "c",
+        "errno.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false
 }

@@ -4,6 +4,7 @@
 #include "config.h"
 #include "speech.h"
 #include "gui.h"
+#include "openai.h"
 
 struct ExecBase *SysBase;
 struct DosLibrary *DOSBase;
@@ -32,6 +33,10 @@ int main() {
 	configureApp();
 
 	initVideo();
+	if (exitCode)
+		goto exit;
+
+	initOpenAIConnector();
 	if (exitCode)
 		goto exit;
 

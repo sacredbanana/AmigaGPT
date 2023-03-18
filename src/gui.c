@@ -116,6 +116,7 @@ LONG initVideo() {
 	Text(window->RPort, article, sizeof(article) - 1);
 }
 
+// The main loop of the GUI
 LONG startGUIRunLoop() {
     ULONG signalMask, winSignal, signals;
 	BOOL done = FALSE;
@@ -145,6 +146,7 @@ LONG startGUIRunLoop() {
 	return RETURN_OK;
 }
 
+// Handle the messages from the GUI
 Action handleIDCMP(struct Window *window) {
 	struct IntuiMessage *message = NULL;
 	ULONG class;
