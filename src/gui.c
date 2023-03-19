@@ -114,6 +114,7 @@ LONG initVideo() {
     Move(window->RPort, 30, 20);
 	UBYTE article[] = "This is a test string!";
 	Text(window->RPort, article, sizeof(article) - 1);
+	return RETURN_OK;
 }
 
 // The main loop of the GUI

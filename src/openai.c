@@ -47,7 +47,7 @@ LONG initOpenAIConnector() {
     long errno = 0;
     AmiSSLInitialized = FALSE;
 
-	if (!(UtilityBase = OpenLibrary("utility.library", 0)))
+	if (!(UtilityBase = (struct UtilityBase *)OpenLibrary("utility.library", 0)))
 		return RETURN_ERROR;
 
 	if (!(SocketBase = OpenLibrary("bsdsocket.library", 4)))

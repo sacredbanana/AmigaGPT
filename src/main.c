@@ -1,4 +1,6 @@
 #include "support/gcc8_c_support.h"
+#include <workbench/startup.h>
+#include <dos/dos.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include "config.h"
@@ -18,9 +20,20 @@ void closeDevices();
 void configureApp();
 void cleanExit(LONG);
 
-int main() {
+int _main() {
 	exitCode = 0;
 	SysBase = *((struct ExecBase**)4UL);
+	struct WBStartup *wbStartupMessage = NULL;
+	struct Process *currentTask = (struct Process*)FindTask(NULL);
+	struct CommandLineInterface *cli = (struct CommandLineInterface *)BADDR(currentTask->pr_CLI);
+
+	/* If we started from Workbench then we must retrieve the startup message
+     before doing anything else. The startup message also contains a lock on
+     the program directory. */
+	if (cli == NULL) {
+		WaitPort(&currentTask->pr_MsgPort);
+    	wbStartupMessage = (struct WBStartup*)GetMsg(&currentTask->pr_MsgPort);
+	}
 
 	openLibraries();
 	if (exitCode)
@@ -32,11 +45,11 @@ int main() {
 
 	configureApp();
 
-	initVideo();
+	exitCode = initVideo();
 	if (exitCode)
 		goto exit;
 
-	initOpenAIConnector();
+	// exitCode = initOpenAIConnector();
 	if (exitCode)
 		goto exit;
 
