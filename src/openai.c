@@ -88,20 +88,14 @@ LONG initOpenAIConnector() {
 
     printText = AllocMem(PRINT_BUFFER_LENGTH, MEMF_PUBLIC);
     if (printText == NULL) {
-        UBYTE text[] = "printText is NULL\n";
-        Write(Output(), (APTR)text, strlen(text));
         return RETURN_ERROR;
     }
     readBuffer = AllocMem(READ_BUFFER_LENGTH, MEMF_PUBLIC);
     if (readBuffer == NULL) {
-        UBYTE text[] = "readBuffer is NULL\n";
-        Write(Output(), (APTR)text, strlen(text));
         return RETURN_ERROR;
     }
     writeBuffer = AllocMem(WRITE_BUFFER_LENGTH, MEMF_PUBLIC);
     if (writeBuffer == NULL) {
-        UBYTE text[] = "writeBuffer is NULL\n";
-        Write(Output(), (APTR)text, strlen(text));
         return RETURN_ERROR;
     }
 

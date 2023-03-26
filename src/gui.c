@@ -6,6 +6,7 @@
 #include <proto/intuition.h>
 #include <intuition/intuition.h>
 #include "speech.h"
+#include "openai.h"
 
 struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
