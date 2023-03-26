@@ -12,11 +12,10 @@
 #include "openai.h"
 #include <stdbool.h>
 #include "speech.h"
+#include "api_key.h"
 
 #define GETINTERFACE(iface, base) TRUE
 #define DROPINTERFACE(iface)
-
-static UBYTE openAiApiKey[] = "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";
 
 static void cleanup(void);
 static void generateRandomSeed(UBYTE *buffer, LONG size);
@@ -48,7 +47,8 @@ ULONG rangeRand(ULONG maxValue)
   return (UWORD)a;
 }
 
-char buffer[4096]; /* This should be dynamically allocated */
+char buffer[8192]; /* This should be dynamically allocated */
+UBYTE printText[512];
 X509 *server_cert;
 SSL_CTX *ctx;
 BIO *bio, *bio_err;
@@ -82,45 +82,45 @@ LONG initOpenAIConnector() {
 	if ((UtilityBase = OpenLibrary("utility.library", 0)) == NULL)
 		return RETURN_ERROR;
 
-    UBYTE text[] = "opened utility.library\n";
-	Write(Output(), (APTR)text, strlen(text));
+    sprintf(printText,"opened utility.library\n");
+	Write(Output(), (APTR)printText, strlen(printText));
 	Delay(50);
 
 	if ((SocketBase = OpenLibrary("bsdsocket.library", 0)) == NULL)
 		return RETURN_ERROR;
 
-    UBYTE text2[] = "opened bsdsocket.library\n";
-	Write(Output(), (APTR)text2, strlen(text2));
+    sprintf(printText, "opened bsdsocket.library\n");
+	Write(Output(), (APTR)printText, strlen(printText));
 	Delay(50);
 
 	if ((AmiSSLMasterBase = OpenLibrary("AMISSL:libs/amisslmaster.library", AMISSLMASTER_MIN_VERSION)) == NULL)
 		return RETURN_ERROR;
 
-    UBYTE text3[] = "opened amisslmaster.library\n";
-	Write(Output(), (APTR)text3, strlen(text3));
+    sprintf(printText, "opened amisslmaster.library\n");
+	Write(Output(), (APTR)printText, strlen(printText));
 	Delay(50);
 
     if (!GETINTERFACE(IAmiSSLMaster, AmiSSLMasterBase)) {
         return RETURN_ERROR;
     }
 
-    UBYTE text366[] = "got amisslmaster.library interface\n";
-	Write(Output(), (APTR)text366, strlen(text366));
+    sprintf(printText, "got amisslmaster.library interface\n");
+	Write(Output(), (APTR)printText, strlen(printText));
 	Delay(50);
     
     if (InitAmiSSLMaster(AMISSL_CURRENT_VERSION, TRUE) == FALSE) {
         return RETURN_ERROR;
     }
 		
-    UBYTE text4[] = "initialized amisslmaster.library\n";
-	Write(Output(), (APTR)text4, strlen(text4));
+    sprintf(printText, "initialized amisslmaster.library\n");
+	Write(Output(), (APTR)printText, strlen(printText));
 	Delay(50);
 
 	if ((AmiSSLBase = OpenAmiSSL()) == NULL)
 		return RETURN_ERROR;
 
-    UBYTE text555[] = "opened amissl.library\n";
-	Write(Output(), (APTR)text555, strlen(text555));
+    sprintf(printText, "opened amissl.library\n");
+	Write(Output(), (APTR)printText, strlen(printText));
 	Delay(50);
 
     if(InitAmiSSL(AmiSSL_ErrNoPtr, &errno, AmiSSL_SocketBase, SocketBase, TAG_DONE) != 0) {
@@ -128,8 +128,8 @@ LONG initOpenAIConnector() {
         return RETURN_ERROR;
     }
 
-    UBYTE text6[] = "initialized amissl.library\n";
-	Write(Output(), (APTR)text6, strlen(text6));
+    sprintf(printText, "initialized amissl.library\n");
+	Write(Output(), (APTR)printText, strlen(printText));
 	Delay(50);
 
 	amiSSLInitialized = TRUE;
