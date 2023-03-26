@@ -13,12 +13,12 @@ struct DosLibrary *DOSBase;
 
 LONG exitCode;
 
-void openLibraries();
-void openDevices();
+LONG openLibraries();
+LONG openDevices();
 void closeLibraries();
 void closeDevices();
 void configureApp();
-void cleanExit(LONG);
+void cleanExit();
 
 int main() {
 	exitCode = 0;
@@ -35,11 +35,11 @@ int main() {
     	wbStartupMessage = (struct WBStartup*)GetMsg(&currentTask->pr_MsgPort);
 	}
 
-	openLibraries();
+	exitCode = openLibraries();
 	if (exitCode)
 		goto exit;
 	
-	openDevices();
+	exitCode = openDevices();
 	if (exitCode)
 		goto exit;
 
@@ -49,9 +49,6 @@ int main() {
 	if (exitCode)
 		goto exit;
 
-	UBYTE text[] = "About to do the thing!\n";
-	Write(Output(), (APTR)text, strlen(text));
-
 	exitCode = initOpenAIConnector();
 	if (exitCode)
 		goto exit;
@@ -60,28 +57,38 @@ int main() {
 	if (exitCode)
 		goto exit;
 
+	UBYTE text[] = "All went well!\n";
+	Write(Output(), (APTR)text, strlen(text));
+
 	// if (startGUIRunLoop() != 0)
-		cleanExit(RETURN_ERROR);
+		// cleanExit(RETURN_ERROR);
 
 exit:
+	UBYTE text2[] = "Exit!\n";
+	Write(Output(), (APTR)text2, strlen(text2));
+	cleanExit();
 	return exitCode;
 }
 
-void openLibraries() {
+LONG openLibraries() {
 	DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 37);
 	if (DOSBase == NULL) 
         return RETURN_ERROR;
 
 	if (openGUILibraries() != 0)
-		cleanExit(RETURN_ERROR);
+		return RETURN_ERROR;
 
 	if (openSpeechLibraries() != 0)
-		cleanExit(RETURN_ERROR);
+		return RETURN_ERROR;
+
+	return RETURN_OK;
 }
 
-void openDevices() {
+LONG openDevices() {
 	if (openSpeechDevices() != 0)
-		cleanExit(RETURN_ERROR);
+		return RETURN_ERROR;
+
+	return RETURN_OK;
 }
 
 void closeLibraries() {
@@ -94,11 +101,10 @@ void closeDevices() {
 	 closeSpeechDevices();
 }
 
-void cleanExit(LONG returnValue) {
+void cleanExit() {
 	// There seems to be a bug with the Exit() call causing the program to guru. Use dirty goto's for now
 	// shutdownGUI();
 	closeLibraries();
 	closeDevices();
-	exitCode = returnValue;
 	// Exit(returnValue);
 }

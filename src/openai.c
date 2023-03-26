@@ -47,12 +47,15 @@ ULONG rangeRand(ULONG maxValue)
   return (UWORD)a;
 }
 
-char buffer[8192]; /* This should be dynamically allocated */
+char buffer[4096];
+UBYTE readBuffer[4096];
+
 UBYTE printText[512];
 X509 *server_cert;
 SSL_CTX *ctx;
 BIO *bio, *bio_err;
 SSL *ssl;
+int sock = -1;
 
 static BPTR ErrorOutput(void)
 {
@@ -129,186 +132,244 @@ LONG initOpenAIConnector() {
     return RETURN_OK;
 }
 
+static UBYTE *getResponseFromJson(UBYTE *json) {
+    UBYTE content[] = "\"content\":\"";
+    UBYTE matchedIndex = 0;
+    ULONG jsonLength = strlen(json);
+    ULONG contentLength = strlen(content);
+    int braceDepth = 0;
+
+    for (ULONG i = 0; i < jsonLength; i++) {
+        if (json[i] == '{') {
+            braceDepth++;
+        } else if (json[i] == '}') {
+            braceDepth--;
+        }
+
+        if (json[i] == content[matchedIndex] && braceDepth > 0) {
+            matchedIndex++;
+        } else {
+            matchedIndex = 0;
+        }
+
+        if (matchedIndex == contentLength) {
+            ULONG responseMaxLength = jsonLength - i - 1;
+            UBYTE *response = AllocMem(responseMaxLength, MEMF_PUBLIC);
+            UBYTE *responseIndex = (UBYTE *)response;
+            for (ULONG j = i + 1; j < jsonLength; j++) {
+                if (json[j] == '\"') {
+                    *responseIndex = 0;
+                    return response;
+                }
+                *responseIndex++ = json[j];
+            }
+            // Close the string in case there's no closing quote found
+            *responseIndex = 0;
+            return response;
+        }
+    }
+    return NULL; // Return NULL if the "content" field is not found in the JSON string
+}
+
 LONG connectToOpenAI() {
     BOOL ok = TRUE;
     /* Basic intialization. Next few steps (up to SSL_new()) need
-		 * to be done only once per AmiSSL opener.
-		 */
-		OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT | OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
+        * to be done only once per AmiSSL opener.
+        */
+    OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT | OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
 
-		/* Seed the entropy engine */
-		generateRandomSeed(buffer, 128);
-		RAND_seed(buffer, 128);
+    sprintf(printText, "initialized openssl\n");
+    Write(Output(), (APTR)printText, strlen(printText));
 
-		/* Note: BIO writing routines are prepared for NULL BIO handle */
-		if((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp_amiga(bio_err, GetStdErr(), BIO_NOCLOSE | BIO_FP_TEXT);
+    /* Seed the entropy engine */
+    generateRandomSeed(buffer, 128);
+    RAND_seed(buffer, 128);
 
-		/* Get a new SSL context */
-		if((ctx = SSL_CTX_new(TLS_client_method())) != NULL)
-		{
-			/* Basic certificate handling. OpenSSL documentation has more
-			 * information on this.
-			 */
-			SSL_CTX_set_default_verify_paths(ctx);
-			SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-			                   verify_cb);
+    sprintf(printText, "seeded random\n");
+    Write(Output(), (APTR)printText, strlen(printText));
 
-			/* The following needs to be done once per socket */
-			if((ssl = SSL_new(ctx)) != NULL)
-			{
-				LONG sock;
-				LONG port, pport;
-				UBYTE *host, *proxy;
+    /* Note: BIO writing routines are prepared for NULL BIO handle */
+    if((bio_err = BIO_new(BIO_s_file())) != NULL)
+        BIO_set_fp_amiga(bio_err, GetStdErr(), BIO_NOCLOSE | BIO_FP_TEXT);
 
-				/* Connect to the HTTPS server, directly or through a proxy */
-				host = "api.openai.com";
-				port = 443;
-				proxy = NULL;
-				pport = 0;
+    sprintf(printText, "created bio\n");
+    Write(Output(), (APTR)printText, strlen(printText));
 
-				sock = connectToServer(host, port, proxy, pport);
+    /* Get a new SSL context */
+    if((ctx = SSL_CTX_new(TLS_client_method())) != NULL)
+    {
+        sprintf(printText, "created ssl context\n");
+        Write(Output(), (APTR)printText, strlen(printText));
 
-				/* Check if connection was established */
-				if (sock >= 0)
-				{
-					int ssl_err = 0;
+        /* Basic certificate handling. OpenSSL documentation has more
+            * information on this.
+            */
+        SSL_CTX_set_default_verify_paths(ctx);
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                            verify_cb);
 
-					/* Associate the socket with the ssl structure */
-					SSL_set_fd(ssl, sock);
+        sprintf(printText, "set ssl context\n");
+        Write(Output(), (APTR)printText, strlen(printText));
 
-					/* Set up SNI (Server Name Indication) */
-					SSL_set_tlsext_host_name(ssl, host);
+        /* The following needs to be done once per socket */
+        if((ssl = SSL_new(ctx)) != NULL)
+        {
+            sprintf(printText, "created ssl\n");
+            Write(Output(), (APTR)printText, strlen(printText));
 
-					/* Perform SSL handshake */
-					if((ssl_err = SSL_connect(ssl)) >= 0)
-					{
-                        sprintf(printText, "SSL connection to %s using %s\n", host, SSL_get_cipher(ssl));
+            LONG sock;
+            LONG port, pport;
+            UBYTE *host, *proxy;
+
+            /* Connect to the HTTPS server, directly or through a proxy */
+            host = "api.openai.com";
+            port = 443;
+            proxy = NULL;
+            pport = 0;
+
+            sock = connectToServer(host, port, proxy, pport);
+
+            /* Check if connection was established */
+            if (sock >= 0)
+            {
+                sprintf(printText, "connected to server\n");
+                Write(Output(), (APTR)printText, strlen(printText));
+                int ssl_err = 0;
+
+                /* Associate the socket with the ssl structure */
+                SSL_set_fd(ssl, sock);
+
+                /* Set up SNI (Server Name Indication) */
+                SSL_set_tlsext_host_name(ssl, host);
+
+                /* Perform SSL handshake */
+                if((ssl_err = SSL_connect(ssl)) >= 0)
+                {
+                    sprintf(printText, "SSL connection to %s using %s\n", host, SSL_get_cipher(ssl));
+                    Write(Output(), (APTR)printText, strlen(printText));
+
+                    /* Certificate checking. This example is *very* basic */
+                    if((server_cert = SSL_get_peer_certificate(ssl)))
+                    {
+                        UBYTE *str;
+
+                        sprintf(printText, "Server certificate:\n");
                         Write(Output(), (APTR)printText, strlen(printText));
 
-						/* Certificate checking. This example is *very* basic */
-						if((server_cert = SSL_get_peer_certificate(ssl)))
-						{
-							UBYTE *str;
-
-                            sprintf(printText, "Server certificate:\n");
+                        if((str = X509_NAME_oneline(X509_get_subject_name(server_cert), 0, 0)))
+                        {
+                            sprintf(printText, "\tSubject: %s\n", str);
                             Write(Output(), (APTR)printText, strlen(printText));
-
-							if((str = X509_NAME_oneline(X509_get_subject_name(server_cert), 0, 0)))
-							{
-                                sprintf(printText, "\tSubject: %s\n", str);
-                                Write(Output(), (APTR)printText, strlen(printText));
-								OPENSSL_free(str);
-							}
-							else {
-                                sprintf(printText, "Warning: couldn't read subject name in certificate!\n");
-                                Write(Output(), (APTR)printText, strlen(printText));
-                            }
-
-							if((str = X509_NAME_oneline(X509_get_issuer_name(server_cert),
-							                            0, 0)) != NULL)
-							{
-                                sprintf(printText, "\tIssuer: %s\n", str);
-                                Write(Output(), (APTR)printText, strlen(printText));
-								OPENSSL_free(str);
-							}
-							else {
-                                sprintf(printText, "Warning: couldn't read issuer name in certificate!\n");
-                                Write(Output(), (APTR)printText, strlen(printText));
-                            }
-
-							X509_free(server_cert);
-
-                            // Compose the POST request
-                            UBYTE content[] = "Congratulate me on successfully connecting to OpenAI using the AmiSSL library on my Amiga!";
-                            UBYTE model[] = "gpt-3.5-turbo";
-                            UBYTE role[] = "user";
-							UBYTE auth[512];
-							sprintf(auth, "Authorization: Bearer %s", openAiApiKey);
-							UBYTE body[1024];
-							sprintf(body,
-                                    "{\"model\": \"%s\",\r\n"
-                                    "\"messages\": [{\"role\": \"%s\", \"content\": \"%s\"}]\r\n"
-                                    "}\0",
-                                    model, role, content);
-							ULONG bodyLength = strlen(body);
-
-							UBYTE headers[] = "POST /v1/chat/completions HTTP/1.1\r\n"
-                                    "Host: api.openai.com\r\n"
-                                    "Content-Type: application/json\r\n";
-							sprintf(headers, "%s%s\r\n", headers, auth);
-							sprintf(headers, "%sContent-Length:", headers);
-							sprintf(buffer, "%s ", headers);
-							sprintf(buffer, "%s%lu\r\n\r\n", buffer, bodyLength);
-							sprintf(buffer, "%s%s", buffer, body);
-
-							if ((ssl_err = SSL_write(ssl, buffer, strlen(buffer))) > 0) {
-								/* Dump everything to output */
-								while ((ssl_err = SSL_read(ssl, buffer, sizeof(buffer) - 1)) > 0) {
-                                    Write(Output(), (APTR)buffer, strlen(buffer));
-                                }
-
-                                sprintf(printText, "\nDone!\n");
-                                Write(Output(), (APTR)printText, strlen(printText));
-
-								/* This is not entirely true, check
-								 * the SSL_read documentation
-								 */
-								ok = ssl_err == 0;
-							}
-							else {
-                                sprintf(printText, "Couldn't write request!\n");
-                                Write(Output(), (APTR)printText, strlen(printText));
-                            }
-						}
-						else {
-                            sprintf(printText, "Couldn't get server certificate!\n");
+                            OPENSSL_free(str);
+                        }
+                        else {
+                            sprintf(printText, "Warning: couldn't read subject name in certificate!\n");
                             Write(Output(), (APTR)printText, strlen(printText));
                         }
-							
-						/* Send SSL close notification */
-						SSL_shutdown(ssl);
-					}
-					else {
-                        sprintf(printText, "Couldn't establish SSL connection!\n");
-                        Write(Output(), (APTR)printText, strlen(printText));
-                    }
-					
-					/* If there were errors, print them */
-					if (ssl_err < 0)
-						ERR_print_errors(bio_err);
 
-					/* Close the socket */
-					CloseSocket(sock);
-				}
-				else {
-                    sprintf(printText, "Couldn't connect to host!\n");
+                        if((str = X509_NAME_oneline(X509_get_issuer_name(server_cert),
+                                                    0, 0)) != NULL)
+                        {
+                            sprintf(printText, "\tIssuer: %s\n", str);
+                            Write(Output(), (APTR)printText, strlen(printText));
+                            OPENSSL_free(str);
+                        }
+                        else {
+                            sprintf(printText, "Warning: couldn't read issuer name in certificate!\n");
+                            Write(Output(), (APTR)printText, strlen(printText));
+                        }
+
+                        X509_free(server_cert);
+
+                        // Compose the POST request
+                        UBYTE content[] = "Congratulate me on successfully connecting to OpenAI using the AmiSSL library on my Amiga!";
+                        UBYTE model[] = "gpt-3.5-turbo";
+                        UBYTE role[] = "user";
+                        UBYTE auth[512];
+                        sprintf(auth, "Authorization: Bearer %s", openAiApiKey);
+                        UBYTE body[1024];
+                        sprintf(body,
+                                "{\"model\": \"%s\",\r\n"
+                                "\"messages\": [{\"role\": \"%s\", \"content\": \"%s\"}]\r\n"
+                                "}\0",
+                                model, role, content);
+                        ULONG bodyLength = strlen(body);
+
+                        UBYTE headers[] = "POST /v1/chat/completions HTTP/1.1\r\n"
+                                "Host: api.openai.com\r\n"
+                                "Content-Type: application/json\r\n";
+                        sprintf(headers, "%s%s\r\n", headers, auth);
+                        sprintf(headers, "%sContent-Length:", headers);
+                        sprintf(buffer, "%s ", headers);
+                        sprintf(buffer, "%s%lu\r\n\r\n", buffer, bodyLength);
+                        sprintf(buffer, "%s%s", buffer, body);
+
+                        if ((ssl_err = SSL_write(ssl, buffer, strlen(buffer))) > 0) {
+                            /* Dump everything to output */
+                            // while ((ssl_err = SSL_read(ssl, readBuffer, sizeof(readBuffer) - 1)) > 0) {
+                            //     // Write(Output(), (APTR)readBuffer, strlen(readBuffer));
+                            // }
+
+                            SSL_read(ssl, readBuffer, sizeof(readBuffer) - 1);
+
+                            UBYTE *response = getResponseFromJson(readBuffer);
+                            if (response != NULL) {
+                                Write(Output(), (APTR)response, strlen(response));
+                                FreeMem(response, strlen(response));
+                            }
+                            
+                            /* This is not entirely true, check
+                                * the SSL_read documentation
+                                */
+                            ok = ssl_err == 0;
+                            ok = TRUE;
+                        }
+                        else {
+                            sprintf(printText, "Couldn't write request!\n");
+                            Write(Output(), (APTR)printText, strlen(printText));
+                        }
+                    }
+                    else {
+                        sprintf(printText, "Couldn't get server certificate!\n");
+                        Write(Output(), (APTR)printText, strlen(printText));
+                    }                    
+                }
+                else {
+                    sprintf(printText, "Couldn't establish SSL connection!\n");
                     Write(Output(), (APTR)printText, strlen(printText));
                 }
-
-                sprintf(printText, "before SSL_free()\n");
-                Write(Output(), (APTR)printText, strlen(printText));
-				SSL_free(ssl);
-			}
-			else {
-                sprintf(printText, "Couldn't create new SSL handle!\n");
+                
+                /* If there were errors, print them */
+                if (ssl_err < 0) {
+                    sprintf(printText, "SSL error: %d\n", ssl_err);
+                    ERR_print_errors(bio_err);
+                }
+            }
+            else {
+                sprintf(printText, "Couldn't connect to host!\n");
                 Write(Output(), (APTR)printText, strlen(printText));
             }
-				
-            sprintf(printText, "before SSL_CTX_free()\n");
+
+            sprintf(printText, "before SSL_free()\n");
             Write(Output(), (APTR)printText, strlen(printText));
-			SSL_CTX_free(ctx);
-		}
-		else {
-            sprintf(printText, "Couldn't create new context!\n");
+            
+        }
+        else {
+            sprintf(printText, "Couldn't create new SSL handle!\n");
             Write(Output(), (APTR)printText, strlen(printText));
         }
-
-		BIO_free(bio_err);
-
-        sprintf(printText,  "before cleanup()\n");
+            
+        sprintf(printText, "before SSL_CTX_free()\n");
         Write(Output(), (APTR)printText, strlen(printText));
-		cleanup();
+    }
+    else {
+        sprintf(printText, "Couldn't create new context!\n");
+        Write(Output(), (APTR)printText, strlen(printText));
+    }
+
+    sprintf(printText,  "before cleanup()\n");
+    Write(Output(), (APTR)printText, strlen(printText));
+    cleanup();
 
     sprintf(printText, "before end of connectToOpenAI()\n");
     Write(Output(), (APTR)printText, strlen(printText));
@@ -354,7 +415,6 @@ static LONG connectToServer(UBYTE *host, UWORD port, UBYTE *proxy, UWORD pport)
 	struct hostent *hostent;
 	BOOL ok = FALSE;
 	char *s1, *s2;
-	int sock = -1;
 
 	/* Lookup hostname */
 	if ((hostent = gethostbyname((proxy && pport) ? proxy : host)) != NULL)
@@ -457,6 +517,11 @@ static void cleanup(void)
 {
 	if (amiSSLInitialized)
 	{	/* Must always call after successful InitAmiSSL() */
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
+        CloseSocket(sock);
+        SSL_CTX_free(ctx);
+        BIO_free(bio_err);
 		CleanupAmiSSLA(NULL);
 	}
 
