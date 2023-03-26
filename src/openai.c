@@ -16,11 +16,15 @@
 
 #define GETINTERFACE(iface, base) TRUE
 #define DROPINTERFACE(iface)
+#define READ_BUFFER_LENGTH 8192
+#define WRITE_BUFFER_LENGTH 4096
+#define PRINT_BUFFER_LENGTH 2056
 
 static void cleanup(void);
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG connectToServer(UBYTE *, UWORD, UBYTE *, UWORD);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
+static UBYTE* getResponseFromJson(UBYTE *json);
 
 struct Library *AmiSSLMasterBase, *AmiSSLBase, *SocketBase;
 struct UtilityBase *UtilityBase;
@@ -29,6 +33,15 @@ extern struct DosLibrary *DOSBase;
 static SSL_CTX *_ssl_context;
 LONG UsesOpenSSLStructs = FALSE;
 BOOL amiSSLInitialized = FALSE;
+UBYTE *writeBuffer = NULL;
+UBYTE *readBuffer = NULL;
+UBYTE *printText = NULL;
+X509 *server_cert;
+SSL_CTX *ctx;
+BIO *bio, *bio_err;
+SSL *ssl;
+int sock = -1;
+int ssl_err = 0;
 
 ULONG RangeSeed;
 
@@ -46,16 +59,6 @@ ULONG rangeRand(ULONG maxValue)
     return (UWORD)((UWORD)a*(UWORD)maxValue>>16);
   return (UWORD)a;
 }
-
-char buffer[4096];
-UBYTE readBuffer[4096];
-
-UBYTE printText[512];
-X509 *server_cert;
-SSL_CTX *ctx;
-BIO *bio, *bio_err;
-SSL *ssl;
-int sock = -1;
 
 static BPTR ErrorOutput(void)
 {
@@ -81,6 +84,25 @@ static BPTR GetStdErr(void)
  */
 LONG initOpenAIConnector() {
     long errno = 0;
+
+    printText = AllocMem(PRINT_BUFFER_LENGTH, MEMF_PUBLIC);
+    if (printText == NULL) {
+        UBYTE text[] = "printText is NULL\n";
+        Write(Output(), (APTR)text, strlen(text));
+        return RETURN_ERROR;
+    }
+    readBuffer = AllocMem(READ_BUFFER_LENGTH, MEMF_PUBLIC);
+    if (readBuffer == NULL) {
+        UBYTE text[] = "readBuffer is NULL\n";
+        Write(Output(), (APTR)text, strlen(text));
+        return RETURN_ERROR;
+    }
+    writeBuffer = AllocMem(WRITE_BUFFER_LENGTH, MEMF_PUBLIC);
+    if (writeBuffer == NULL) {
+        UBYTE text[] = "writeBuffer is NULL\n";
+        Write(Output(), (APTR)text, strlen(text));
+        return RETURN_ERROR;
+    }
 
 	if ((UtilityBase = OpenLibrary("utility.library", 0)) == NULL)
 		return RETURN_ERROR;
@@ -121,7 +143,6 @@ LONG initOpenAIConnector() {
 	Write(Output(), (APTR)printText, strlen(printText));
 
     if(InitAmiSSL(AmiSSL_ErrNoPtr, &errno, AmiSSL_SocketBase, SocketBase, TAG_DONE) != 0) {
-        cleanup();
         return RETURN_ERROR;
     }
 
@@ -132,7 +153,110 @@ LONG initOpenAIConnector() {
     return RETURN_OK;
 }
 
-static UBYTE *getResponseFromJson(UBYTE *json) {
+UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
+    // Compose the POST request
+    // UBYTE content[] = "Congratulate me on successfully connecting to OpenAI using the AmiSSL library on my Amiga!";
+    // UBYTE model[] = "gpt-3.5-turbo";
+    // UBYTE role[] = "user";
+    UBYTE auth[512];
+    sprintf(auth, "Authorization: Bearer %s", openAiApiKey);
+    UBYTE body[1024];
+    sprintf(body,
+            "{\"model\": \"%s\",\r\n"
+            "\"messages\": [{\"role\": \"%s\", \"content\": \"%s\"}]\r\n"
+            "}\0",
+            model, role, content);
+    ULONG bodyLength = strlen(body);
+
+    UBYTE headers[] = "POST /v1/chat/completions HTTP/1.1\r\n"
+            "Host: api.openai.com\r\n"
+            "Content-Type: application/json\r\n";
+    sprintf(headers, "%s%s\r\n", headers, auth);
+    sprintf(headers, "%sContent-Length:", headers);
+    sprintf(writeBuffer, "%s ", headers);
+    sprintf(writeBuffer, "%s%lu\r\n\r\n", writeBuffer, bodyLength);
+    sprintf(writeBuffer, "%s%s", writeBuffer, body);
+
+    UWORD readLength = 64;
+    UBYTE responseData[readLength];
+    memclr(readBuffer, READ_BUFFER_LENGTH);
+
+    if ((ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer))) > 0) {
+        /* Dump everything to output */
+        while ((ssl_err = SSL_read(ssl, responseData, readLength)) > 0) {
+            Write(Output(), (APTR)responseData, readLength);
+            sprintf(readBuffer, "%s%s", readBuffer, responseData);
+        }
+
+        UBYTE *response = getResponseFromJson(readBuffer);
+        return response;
+    }
+    else {
+        sprintf(printText, "Couldn't write request!\n");
+        Write(Output(), (APTR)printText, strlen(printText));
+    }
+    return NULL;
+    // // Compose the POST request
+    // #define MAX_HEADERS_LENGTH 256
+    // #define MAX_AUTH_LENGTH 256
+    // UBYTE *headers = AllocMem(MAX_HEADERS_LENGTH, MEMF_PUBLIC);
+    // sprintf(headers, "POST /v1/chat/completions HTTP/1.1\r\n"
+    //         "Host: api.openai.com\r\n"
+    //         "Content-Type: application/json\r\n");
+    // UBYTE *auth = AllocMem(128, MEMF_PUBLIC);
+    // sprintf(auth, "Authorization: Bearer %s", openAiApiKey);
+    // sprintf(headers, "%s%s\r\n", headers, auth);
+    // sprintf(headers, "%sContent-Length:", headers);
+
+    // UBYTE *body = AllocMem(WRITE_BUFFER_LENGTH + 128, MEMF_PUBLIC);
+    // sprintf(body,
+    //         "{\"model\": \"%s\",\r\n"
+    //         "\"messages\": [{\"role\": \"%s\", \"content\": \"%s\"}]\r\n"
+    //         "}\0",
+    //         model, role, content);
+    // ULONG bodyLength = strlen(body);
+
+    // sprintf(writeBuffer, "%s ", headers);
+    // sprintf(writeBuffer, "%s%lu\r\n\r\n", writeBuffer, bodyLength);
+    // sprintf(writeBuffer, "%s%s", writeBuffer, body);
+    // FreeMem(headers, MAX_HEADERS_LENGTH);
+    // FreeMem(auth, MAX_AUTH_LENGTH);
+    // FreeMem(body, WRITE_BUFFER_LENGTH + 128);
+
+    // Write(Output(), (APTR)writeBuffer, strlen(writeBuffer));
+
+    // UWORD readLength = 256;
+    // UBYTE responseData[readLength];
+
+    // memclr(readBuffer, READ_BUFFER_LENGTH);
+
+    // if ((ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer))) > 0) {
+    //     /* Dump everything to output */
+    //     while ((ssl_err = SSL_read(ssl, readBuffer, readLength)) > 0) {
+    //         Write(Output(), (APTR)readBuffer, readLength);
+    //         sprintf(readBuffer, "%s%s", readBuffer, responseData);
+    //     }
+
+    //     Write(Output(), (APTR)readBuffer, strlen(readBuffer));
+
+    //     sprintf(printText, "Parsing response\n");
+    //     Write(Output(), (APTR)printText, strlen(printText));
+
+    //     UBYTE *response = getResponseFromJson(readBuffer);
+    //     if (response != NULL) {
+    //         Write(Output(), (APTR)response, strlen(response));
+    //     }
+        
+    //     return response;
+    // }
+    // else {
+    //     sprintf(printText, "Couldn't write request!\n");
+    //     Write(Output(), (APTR)printText, strlen(printText));
+    //     return NULL;
+    // }
+}
+
+static UBYTE* getResponseFromJson(UBYTE *json) {
     UBYTE content[] = "\"content\":\"";
     UBYTE matchedIndex = 0;
     ULONG jsonLength = strlen(json);
@@ -182,8 +306,8 @@ LONG connectToOpenAI() {
     Write(Output(), (APTR)printText, strlen(printText));
 
     /* Seed the entropy engine */
-    generateRandomSeed(buffer, 128);
-    RAND_seed(buffer, 128);
+    generateRandomSeed(writeBuffer, 128);
+    RAND_seed(writeBuffer, 128);
 
     sprintf(printText, "seeded random\n");
     Write(Output(), (APTR)printText, strlen(printText));
@@ -234,7 +358,6 @@ LONG connectToOpenAI() {
             {
                 sprintf(printText, "connected to server\n");
                 Write(Output(), (APTR)printText, strlen(printText));
-                int ssl_err = 0;
 
                 /* Associate the socket with the ssl structure */
                 SSL_set_fd(ssl, sock);
@@ -255,16 +378,19 @@ LONG connectToOpenAI() {
 
                         sprintf(printText, "Server certificate:\n");
                         Write(Output(), (APTR)printText, strlen(printText));
+                        Delay(50);
 
                         if((str = X509_NAME_oneline(X509_get_subject_name(server_cert), 0, 0)))
                         {
                             sprintf(printText, "\tSubject: %s\n", str);
                             Write(Output(), (APTR)printText, strlen(printText));
+                            Delay(50);
                             OPENSSL_free(str);
                         }
                         else {
                             sprintf(printText, "Warning: couldn't read subject name in certificate!\n");
                             Write(Output(), (APTR)printText, strlen(printText));
+                            Delay(50);
                         }
 
                         if((str = X509_NAME_oneline(X509_get_issuer_name(server_cert),
@@ -272,62 +398,65 @@ LONG connectToOpenAI() {
                         {
                             sprintf(printText, "\tIssuer: %s\n", str);
                             Write(Output(), (APTR)printText, strlen(printText));
+                            Delay(50);
                             OPENSSL_free(str);
                         }
                         else {
                             sprintf(printText, "Warning: couldn't read issuer name in certificate!\n");
                             Write(Output(), (APTR)printText, strlen(printText));
+                            Delay(50);
                         }
 
                         X509_free(server_cert);
 
                         // Compose the POST request
-                        UBYTE content[] = "Congratulate me on successfully connecting to OpenAI using the AmiSSL library on my Amiga!";
-                        UBYTE model[] = "gpt-3.5-turbo";
-                        UBYTE role[] = "user";
-                        UBYTE auth[512];
-                        sprintf(auth, "Authorization: Bearer %s", openAiApiKey);
-                        UBYTE body[1024];
-                        sprintf(body,
-                                "{\"model\": \"%s\",\r\n"
-                                "\"messages\": [{\"role\": \"%s\", \"content\": \"%s\"}]\r\n"
-                                "}\0",
-                                model, role, content);
-                        ULONG bodyLength = strlen(body);
+                        // UBYTE content[] = "Congratulate me on successfully connecting to OpenAI using the AmiSSL library on my Amiga!";
+                        // UBYTE model[] = "gpt-3.5-turbo";
+                        // UBYTE role[] = "user";
+                        // UBYTE auth[512];
+                        // sprintf(auth, "Authorization: Bearer %s", openAiApiKey);
+                        // UBYTE body[1024];
+                        // sprintf(body,
+                        //         "{\"model\": \"%s\",\r\n"
+                        //         "\"messages\": [{\"role\": \"%s\", \"content\": \"%s\"}]\r\n"
+                        //         "}\0",
+                        //         model, role, content);
+                        // ULONG bodyLength = strlen(body);
 
-                        UBYTE headers[] = "POST /v1/chat/completions HTTP/1.1\r\n"
-                                "Host: api.openai.com\r\n"
-                                "Content-Type: application/json\r\n";
-                        sprintf(headers, "%s%s\r\n", headers, auth);
-                        sprintf(headers, "%sContent-Length:", headers);
-                        sprintf(buffer, "%s ", headers);
-                        sprintf(buffer, "%s%lu\r\n\r\n", buffer, bodyLength);
-                        sprintf(buffer, "%s%s", buffer, body);
+                        // UBYTE headers[] = "POST /v1/chat/completions HTTP/1.1\r\n"
+                        //         "Host: api.openai.com\r\n"
+                        //         "Content-Type: application/json\r\n";
+                        // sprintf(headers, "%s%s\r\n", headers, auth);
+                        // sprintf(headers, "%sContent-Length:", headers);
+                        // sprintf(writeBuffer, "%s ", headers);
+                        // sprintf(writeBuffer, "%s%lu\r\n\r\n", writeBuffer, bodyLength);
+                        // sprintf(writeBuffer, "%s%s", writeBuffer, body);
 
-                        if ((ssl_err = SSL_write(ssl, buffer, strlen(buffer))) > 0) {
-                            /* Dump everything to output */
-                            // while ((ssl_err = SSL_read(ssl, readBuffer, sizeof(readBuffer) - 1)) > 0) {
-                            //     // Write(Output(), (APTR)readBuffer, strlen(readBuffer));
-                            // }
+                        // if ((ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer))) > 0) {
+                        //     /* Dump everything to output */
+                        //     UWORD readSize = 100;
+                        //     while ((ssl_err = SSL_read(ssl, readBuffer, readSize)) > 0) {
+                        //         Write(Output(), (APTR)readBuffer, readSize);
+                        //         Delay(50);
+                        //     }
 
-                            SSL_read(ssl, readBuffer, sizeof(readBuffer) - 1);
-
-                            UBYTE *response = getResponseFromJson(readBuffer);
-                            if (response != NULL) {
-                                Write(Output(), (APTR)response, strlen(response));
-                                FreeMem(response, strlen(response));
-                            }
+                        //     UBYTE *response = getResponseFromJson(readBuffer);
+                        //     if (response != NULL) {
+                        //         Write(Output(), (APTR)response, strlen(response));
+                        //         Delay(50);
+                        //         FreeMem(response, strlen(response));
+                        //     }
                             
-                            /* This is not entirely true, check
-                                * the SSL_read documentation
-                                */
-                            ok = ssl_err == 0;
-                            ok = TRUE;
-                        }
-                        else {
-                            sprintf(printText, "Couldn't write request!\n");
-                            Write(Output(), (APTR)printText, strlen(printText));
-                        }
+                        //     /* This is not entirely true, check
+                        //         * the SSL_read documentation
+                        //         */
+                        //     ok = ssl_err == 0;
+                        //     ok = TRUE;
+                        // }
+                        // else {
+                        //     sprintf(printText, "Couldn't write request!\n");
+                        //     Write(Output(), (APTR)printText, strlen(printText));
+                        // }
                     }
                     else {
                         sprintf(printText, "Couldn't get server certificate!\n");
@@ -349,27 +478,17 @@ LONG connectToOpenAI() {
                 sprintf(printText, "Couldn't connect to host!\n");
                 Write(Output(), (APTR)printText, strlen(printText));
             }
-
-            sprintf(printText, "before SSL_free()\n");
-            Write(Output(), (APTR)printText, strlen(printText));
             
         }
         else {
             sprintf(printText, "Couldn't create new SSL handle!\n");
             Write(Output(), (APTR)printText, strlen(printText));
         }
-            
-        sprintf(printText, "before SSL_CTX_free()\n");
-        Write(Output(), (APTR)printText, strlen(printText));
     }
     else {
         sprintf(printText, "Couldn't create new context!\n");
         Write(Output(), (APTR)printText, strlen(printText));
     }
-
-    sprintf(printText,  "before cleanup()\n");
-    Write(Output(), (APTR)printText, strlen(printText));
-    cleanup();
 
     sprintf(printText, "before end of connectToOpenAI()\n");
     Write(Output(), (APTR)printText, strlen(printText));
@@ -444,21 +563,21 @@ static LONG connectToServer(UBYTE *host, UWORD port, UBYTE *proxy, UWORD pport)
 				 * overflows, but some compilers don't have it and
 				 * handling that would be an overkill for this example
 				 */
-				sprintf(buffer, "CONNECT %s:%ld HTTP/1.0\r\n\r\n",
+				sprintf(writeBuffer, "CONNECT %s:%ld HTTP/1.0\r\n\r\n",
 				        host, (long)port);
 
 				/* In a real application, it would be necessary to loop
 				 * until everything is sent or an error occurrs, but here we
 				 * hope that everything gets sent at once.
 				 */
-				if (send(sock, buffer, strlen(buffer), 0) >= 0)
+				if (send(sock, writeBuffer, strlen(writeBuffer), 0) >= 0)
 				{
 					int len;
 
 					/* Again, some optimistic behaviour: HTTP response might not be
 					 * received with only one recv
 					 */
-					if ((len = recv(sock, buffer, sizeof(buffer) - 1, 0)) >= 0)
+					if ((len = recv(sock, writeBuffer, sizeof(writeBuffer) - 1, 0)) >= 0)
 					{
 						/* Assuming it was received, find the end of
 						 * the line and cut it off
@@ -472,7 +591,7 @@ static LONG connectToServer(UBYTE *host, UWORD port, UBYTE *proxy, UWORD pport)
 						// Printf("Proxy returned: %s\n", buffer);
 
 						/* Check if HTTP response makes sense */
-						if (strncmp(buffer, "HTTP/", 4) == 0)
+						if (strncmp(writeBuffer, "HTTP/", 4) == 0)
 						    // && (s1 = strchr(buffer, ' '))
 						    // && (s2 = strchr(++s1, ' '))
 						    // && (s2 - s1 == 3))
@@ -513,7 +632,7 @@ static LONG connectToServer(UBYTE *host, UWORD port, UBYTE *proxy, UWORD pport)
 	return(sock);
 }
 
-static void cleanup(void)
+void closeOpenAIConnector()
 {
 	if (amiSSLInitialized)
 	{	/* Must always call after successful InitAmiSSL() */
@@ -543,4 +662,8 @@ static void cleanup(void)
 	DROPINTERFACE(IUtility);
 	CloseLibrary((struct Library *)UtilityBase);
 	UtilityBase = NULL;
+
+    FreeMem(printText, PRINT_BUFFER_LENGTH);
+    FreeMem(writeBuffer, WRITE_BUFFER_LENGTH);
+    FreeMem(readBuffer, READ_BUFFER_LENGTH);
 }
