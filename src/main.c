@@ -51,7 +51,6 @@ int main() {
 
 	UBYTE text[] = "About to do the thing!\n";
 	Write(Output(), (APTR)text, strlen(text));
-	Delay(50);
 
 	exitCode = initOpenAIConnector();
 	if (exitCode)

@@ -8,7 +8,6 @@
 #include <libraries/amisslmaster.h>
 #include <libraries/amissl.h>
 #include <utility/utility.h>
-// #include <stdio.h>
 #include <string.h>
 #include "openai.h"
 #include <stdbool.h>
@@ -17,7 +16,7 @@
 #define GETINTERFACE(iface, base) TRUE
 #define DROPINTERFACE(iface)
 
-#define OPENAI_API_KEY "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"
+static UBYTE openAiApiKey[] = "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";
 
 static void cleanup(void);
 static void generateRandomSeed(UBYTE *buffer, LONG size);
@@ -52,7 +51,7 @@ ULONG rangeRand(ULONG maxValue)
 char buffer[4096]; /* This should be dynamically allocated */
 X509 *server_cert;
 SSL_CTX *ctx;
-BIO *bio_err;
+BIO *bio, *bio_err;
 SSL *ssl;
 
 static BPTR ErrorOutput(void)
@@ -236,16 +235,39 @@ LONG connectToOpenAI() {
 
 							X509_free(server_cert);
 
-							/* Send a HTTP request. Again, this is just
-							 * a very basic example.
-							 */
-							sprintf(buffer,"GET / HTTP/1.0\r\nHost: %s\r\n\r\n",host);
+                            // Compose the POST request
+                            UBYTE content[] = "Congratulate me on successfully connecting to OpenAI using the AmiSSL library on my Amiga!";
+                            UBYTE model[] = "gpt-3.5-turbo";
+                            UBYTE role[] = "user";
+							UBYTE auth[512];
+							sprintf(auth, "Authorization: Bearer %s", openAiApiKey);
+							UBYTE body[1024];
+							sprintf(body,
+                                    "{\"model\": \"%s\",\r\n"
+                                    "\"messages\": [{\"role\": \"%s\", \"content\": \"%s\"}]\r\n"
+                                    "}\0",
+                                    model, role, content);
+							ULONG bodyLength = strlen(body);
+
+							UBYTE headers[] = "POST /v1/chat/completions HTTP/1.1\r\n"
+                                    "Host: api.openai.com\r\n"
+                                    "Content-Type: application/json\r\n";
+							sprintf(headers, "%s%s\r\n", headers, auth);
+							sprintf(headers, "%sContent-Length:", headers);
+							sprintf(buffer, "%s ", headers);
+							sprintf(buffer, "%s%lu\r\n\r\n", buffer, bodyLength);
+							sprintf(buffer, "%s%s", buffer, body);
+
 							if ((ssl_err = SSL_write(ssl, buffer, strlen(buffer))) > 0) {
 								/* Dump everything to output */
 								while ((ssl_err = SSL_read(ssl, buffer, sizeof(buffer) - 1)) > 0) {
                                     Write(Output(), (APTR)buffer, strlen(buffer));
                                     Delay(50);
                                 }
+
+                                UBYTE text777[] = "Done!";
+                                Write(Output(), (APTR)text777, strlen(text777));
+                                Delay(50);
 
 								/* This is not entirely true, check
 								 * the SSL_read documentation
@@ -310,7 +332,7 @@ LONG connectToOpenAI() {
 
 		BIO_free(bio_err);
 
-        UBYTE text15[] = "before Cleanup()\n";
+        UBYTE text15[] = "before cleanup()\n";
                                 Write(Output(), (APTR)text15, strlen(text15));
                                 Delay(50);
 		cleanup();
@@ -362,6 +384,16 @@ static LONG connectToServer(UBYTE *host, UWORD port, UBYTE *proxy, UWORD pport)
 	char *s1, *s2;
 	int sock = -1;
 
+    STACK_OF(CONF_VALUE) *headers = NULL;
+
+    /* Add our own HTTP headers */
+	X509V3_add_value("User-Agent", "AmiSSL/5.1", &headers);
+	X509V3_add_value("Referer", "OpenAI Amiga", &headers);
+    X509V3_add_value("Content-Type", "application/json", &headers);
+    UBYTE auth[100];
+    sprintf(auth, "Basic %s", openAiApiKey);
+    X509V3_add_value("Authorization", auth, &headers);
+
 	/* Lookup hostname */
 	if ((hostent = gethostbyname((proxy && pport) ? proxy : host)) != NULL)
 	{
@@ -389,8 +421,23 @@ static LONG connectToServer(UBYTE *host, UWORD port, UBYTE *proxy, UWORD pport)
 				 * overflows, but some compilers don't have it and
 				 * handling that would be an overkill for this example
 				 */
-				sprintf(buffer, "CONNECT %s:%ld HTTP/1.0\r\n\r\n",
-				        host, (long)port);
+				// sprintf(buffer, "CONNECT %s:%ld HTTP/1.0\r\n\r\n",
+				//         host, (long)port);
+
+                memclr(buffer, sizeof(buffer));
+
+                // Compose the POST request
+                UBYTE prompt[] = "Hello, how can I help you today?";
+
+                sprintf(buffer,
+                        "POST /v1/engines/davinci-codex/completions HTTP/1.1\r\n"
+                        "Host: api.openai.com\r\n"
+                        "Content-Type: application/json\r\n"
+                        "Authorization: Bearer %s\r\n"
+                        "Content-Length: %zu\r\n"
+                        "\r\n"
+                        "{\"prompt\": \"%s\"}",
+                        openAiApiKey, strlen("{\"prompt\": \"") + strlen(prompt) + strlen("\"}"), prompt);
 
                 memclr(buffer, sizeof(buffer));
 
@@ -500,14 +547,14 @@ static void cleanup(void)
 // 	Write(Output(), (APTR)text7, strlen(text7));
 // 	Delay(50);
 
-//     // // Set up the connection
-//     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-//     if (sockfd < 0) {
-//         // printf("Failed to create a socket\n");
-//         // SSL_CTX_free(ctx);
-//         // CleanupAmiSSLA();
-//         return 1;
-//     }
+    // // // Set up the connection
+    // int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    // if (sockfd < 0) {
+    //     // printf("Failed to create a socket\n");
+    //     // SSL_CTX_free(ctx);
+    //     // CleanupAmiSSLA();
+    //     return 1;
+    // }
 
 //     UBYTE text8[] = "created socket\n";
 // 	Write(Output(), (APTR)text8, strlen(text8));
@@ -561,17 +608,17 @@ static void cleanup(void)
 // 	Write(Output(), (APTR)text11, strlen(text11));
 // 	Delay(50);
 
-//     // Compose the POST request
-//     char request[1024];
-//     sprintf(request,
-//              "POST /v1/engines/davinci-codex/completions HTTP/1.1\r\n"
-//              "Host: api.openai.com\r\n"
-//              "Content-Type: application/json\r\n"
-//              "Authorization: Bearer %s\r\n"
-//              "Content-Length: %zu\r\n"
-//              "\r\n"
-//              "{\"prompt\": \"Hello, how can I help you today?\"}",
-//              OPENAI_API_KEY, strlen("{\"prompt\": \"Hello, how can I help you today?\"}"));
+    // // Compose the POST request
+    // char request[1024];
+    // sprintf(request,
+    //          "POST /v1/engines/davinci-codex/completions HTTP/1.1\r\n"
+    //          "Host: api.openai.com\r\n"
+    //          "Content-Type: application/json\r\n"
+    //          "Authorization: Bearer %s\r\n"
+    //          "Content-Length: %zu\r\n"
+    //          "\r\n"
+    //          "{\"prompt\": \"Hello, how can I help you today?\"}",
+    //          OPENAI_API_KEY, strlen("{\"prompt\": \"Hello, how can I help you today?\"}"));
 
 //     // Send the POST request
 //     if (SSL_write(ssl, request, strlen(request)) < 0) {
