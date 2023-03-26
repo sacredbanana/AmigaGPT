@@ -57,9 +57,6 @@ int main() {
 	if (exitCode)
 		goto exit;
 
-	UBYTE text[] = "All went well!\n";
-	Write(Output(), (APTR)text, strlen(text));
-
 	// if (startGUIRunLoop() != 0)
 		// cleanExit(RETURN_ERROR);
 
@@ -74,8 +71,6 @@ int main() {
 	}
 
 exit:
-	UBYTE text2[] = "Exit!\n";
-	Write(Output(), (APTR)text2, strlen(text2));
 	cleanExit();
 	return exitCode;
 }
