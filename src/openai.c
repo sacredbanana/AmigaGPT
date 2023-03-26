@@ -190,9 +190,8 @@ LONG connectToOpenAI() {
 					/* Perform SSL handshake */
 					if((ssl_err = SSL_connect(ssl)) >= 0)
 					{
-                        UBYTE text[50];
-                        sprintf(text, "SSL connection to %s using %s\n", host, SSL_get_cipher(ssl));
-                        Write(Output(), (APTR)text, strlen(text));
+                        sprintf(printText, "SSL connection to %s using %s\n", host, SSL_get_cipher(ssl));
+                        Write(Output(), (APTR)printText, strlen(printText));
                         Delay(50);
 
 						/* Certificate checking. This example is *very* basic */
@@ -200,36 +199,34 @@ LONG connectToOpenAI() {
 						{
 							UBYTE *str;
 
-                            UBYTE text2[] = "Server certificate:\n";
-                            Write(Output(), (APTR)text2, strlen(text2));
+                            sprintf(printText, "Server certificate:\n");
+                            Write(Output(), (APTR)printText, strlen(printText));
                             Delay(50);
 
 							if((str = X509_NAME_oneline(X509_get_subject_name(server_cert), 0, 0)))
 							{
-                                UBYTE text3[50];
-                                sprintf(text3, "\tSubject: %s\n", str);
-                                Write(Output(), (APTR)text3, strlen(text3));
+                                sprintf(printText, "\tSubject: %s\n", str);
+                                Write(Output(), (APTR)printText, strlen(printText));
                                 Delay(50);
 								OPENSSL_free(str);
 							}
 							else {
-                                UBYTE text4[] = "Warning: couldn't read subject name in certificate!\n";
-                                Write(Output(), (APTR)text4, strlen(text4));
+                                sprintf(printText, "Warning: couldn't read subject name in certificate!\n");
+                                Write(Output(), (APTR)printText, strlen(printText));
                                 Delay(50);
                             }
 
 							if((str = X509_NAME_oneline(X509_get_issuer_name(server_cert),
 							                            0, 0)) != NULL)
 							{
-                                UBYTE text5[50];
-                                sprintf(text5, "\tIssuer: %s\n", str);
-                                Write(Output(), (APTR)text5, strlen(text5));
+                                sprintf(printText, "\tIssuer: %s\n", str);
+                                Write(Output(), (APTR)printText, strlen(printText));
                                 Delay(50);
 								OPENSSL_free(str);
 							}
 							else {
-                                UBYTE text6[] = "Warning: couldn't read issuer name in certificate!\n";
-                                Write(Output(), (APTR)text6, strlen(text6));
+                                sprintf(printText, "Warning: couldn't read issuer name in certificate!\n");
+                                Write(Output(), (APTR)printText, strlen(printText));
                                 Delay(50);
                             }
 
@@ -265,8 +262,8 @@ LONG connectToOpenAI() {
                                     Delay(50);
                                 }
 
-                                UBYTE text777[] = "Done!";
-                                Write(Output(), (APTR)text777, strlen(text777));
+                                sprintf(printText, "\nDone!\n");
+                                Write(Output(), (APTR)printText, strlen(printText));
                                 Delay(50);
 
 								/* This is not entirely true, check
@@ -275,24 +272,24 @@ LONG connectToOpenAI() {
 								ok = ssl_err == 0;
 							}
 							else {
-                                UBYTE text7[] = "Couldn't write request!\n";
-                                Write(Output(), (APTR)text7, strlen(text7));
+                                sprintf(printText, "Couldn't write request!\n");
+                                Write(Output(), (APTR)printText, strlen(printText));
                                 Delay(50);
                             }
 						}
 						else {
-                            UBYTE text8[] = "Couldn't get server certificate!\n";
-                                Write(Output(), (APTR)text8, strlen(text8));
-                                Delay(50);
+                            sprintf(printText, "Couldn't get server certificate!\n");
+                            Write(Output(), (APTR)printText, strlen(printText));
+                            Delay(50);
                         }
 							
 						/* Send SSL close notification */
 						SSL_shutdown(ssl);
 					}
 					else {
-                        UBYTE text9[] = "Couldn't establish SSL connection!\n";
-                                Write(Output(), (APTR)text9, strlen(text9));
-                                Delay(50);
+                        sprintf(printText, "Couldn't establish SSL connection!\n");
+                        Write(Output(), (APTR)printText, strlen(printText));
+                        Delay(50);
                     }
 					
 					/* If there were errors, print them */
@@ -303,43 +300,43 @@ LONG connectToOpenAI() {
 					CloseSocket(sock);
 				}
 				else {
-                    UBYTE text10[] = "Couldn't connect to host!\n";
-                                Write(Output(), (APTR)text10, strlen(text10));
-                                Delay(50);
+                    sprintf(printText, "Couldn't connect to host!\n");
+                    Write(Output(), (APTR)printText, strlen(printText));
+                    Delay(50);
                 }
 
-                UBYTE text11[] = "before SSL_free()\n";
-                                Write(Output(), (APTR)text11, strlen(text11));
-                                Delay(50);
+                sprintf(printText, "before SSL_free()\n");
+                Write(Output(), (APTR)printText, strlen(printText));
+                Delay(50);
 				SSL_free(ssl);
 			}
 			else {
-                UBYTE text12[] = "Couldn't create new SSL handle!\n";
-                                Write(Output(), (APTR)text12, strlen(text12));
-                                Delay(50);
+                sprintf(printText, "Couldn't create new SSL handle!\n");
+                Write(Output(), (APTR)printText, strlen(printText));
+                Delay(50);
             }
 				
-            UBYTE text13[] = "before SSL_CTX_free()\n";
-                                Write(Output(), (APTR)text13, strlen(text13));
-                                Delay(50);
+            sprintf(printText, "before SSL_CTX_free()\n");
+            Write(Output(), (APTR)printText, strlen(printText));
+            Delay(50);
 			SSL_CTX_free(ctx);
 		}
 		else {
-            UBYTE text14[] = "Couldn't create new context!\n";
-                                Write(Output(), (APTR)text14, strlen(text14));
-                                Delay(50);
+            sprintf(printText, "Couldn't create new context!\n");
+            Write(Output(), (APTR)printText, strlen(printText));
+            Delay(50);
         }
 
 		BIO_free(bio_err);
 
-        UBYTE text15[] = "before cleanup()\n";
-                                Write(Output(), (APTR)text15, strlen(text15));
-                                Delay(50);
+        sprintf(printText,  "before cleanup()\n");
+        Write(Output(), (APTR)printText, strlen(printText));
+        Delay(50);
 		cleanup();
 
-    UBYTE text16[] = "before end of connectToOpenAI()\n";
-                                Write(Output(), (APTR)text16, strlen(text16));
-                                Delay(50);
+    sprintf(printText, "before end of connectToOpenAI()\n");
+    Write(Output(), (APTR)printText, strlen(printText));
+    Delay(50);
 	return(ok ? RETURN_OK : RETURN_ERROR);
 }
 
@@ -384,16 +381,6 @@ static LONG connectToServer(UBYTE *host, UWORD port, UBYTE *proxy, UWORD pport)
 	char *s1, *s2;
 	int sock = -1;
 
-    STACK_OF(CONF_VALUE) *headers = NULL;
-
-    /* Add our own HTTP headers */
-	X509V3_add_value("User-Agent", "AmiSSL/5.1", &headers);
-	X509V3_add_value("Referer", "OpenAI Amiga", &headers);
-    X509V3_add_value("Content-Type", "application/json", &headers);
-    UBYTE auth[100];
-    sprintf(auth, "Basic %s", openAiApiKey);
-    X509V3_add_value("Authorization", auth, &headers);
-
 	/* Lookup hostname */
 	if ((hostent = gethostbyname((proxy && pport) ? proxy : host)) != NULL)
 	{
@@ -404,7 +391,8 @@ static LONG connectToServer(UBYTE *host, UWORD port, UBYTE *proxy, UWORD pport)
 		memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
 	}
 	else {
-        // FPrintf(GetStdErr(), "Host lookup failed\n");
+        sprintf(printText, "Host lookup failed\n");
+        Write(Output(), (APTR)printText, strlen(printText));
     }
 
 	/* Create a socket and connect to the server */
@@ -421,25 +409,8 @@ static LONG connectToServer(UBYTE *host, UWORD port, UBYTE *proxy, UWORD pport)
 				 * overflows, but some compilers don't have it and
 				 * handling that would be an overkill for this example
 				 */
-				// sprintf(buffer, "CONNECT %s:%ld HTTP/1.0\r\n\r\n",
-				//         host, (long)port);
-
-                memclr(buffer, sizeof(buffer));
-
-                // Compose the POST request
-                UBYTE prompt[] = "Hello, how can I help you today?";
-
-                sprintf(buffer,
-                        "POST /v1/engines/davinci-codex/completions HTTP/1.1\r\n"
-                        "Host: api.openai.com\r\n"
-                        "Content-Type: application/json\r\n"
-                        "Authorization: Bearer %s\r\n"
-                        "Content-Length: %zu\r\n"
-                        "\r\n"
-                        "{\"prompt\": \"%s\"}",
-                        openAiApiKey, strlen("{\"prompt\": \"") + strlen(prompt) + strlen("\"}"), prompt);
-
-                memclr(buffer, sizeof(buffer));
+				sprintf(buffer, "CONNECT %s:%ld HTTP/1.0\r\n\r\n",
+				        host, (long)port);
 
 				/* In a real application, it would be necessary to loop
 				 * until everything is sent or an error occurrs, but here we
