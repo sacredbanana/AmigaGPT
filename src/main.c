@@ -20,7 +20,7 @@ void closeDevices();
 void configureApp();
 void cleanExit(LONG);
 
-int _main() {
+int main() {
 	exitCode = 0;
 	SysBase = *((struct ExecBase**)4UL);
 	struct WBStartup *wbStartupMessage = NULL;
@@ -45,15 +45,23 @@ int _main() {
 
 	configureApp();
 
-	exitCode = initVideo();
+	// exitCode = initVideo();
 	if (exitCode)
 		goto exit;
 
-	// exitCode = initOpenAIConnector();
+	UBYTE text[] = "About to do the thing!\n";
+	Write(Output(), (APTR)text, strlen(text));
+	Delay(50);
+
+	exitCode = initOpenAIConnector();
 	if (exitCode)
 		goto exit;
 
-	if (startGUIRunLoop() != 0)
+	exitCode = connectToOpenAI();
+	if (exitCode)
+		goto exit;
+
+	// if (startGUIRunLoop() != 0)
 		cleanExit(RETURN_ERROR);
 
 exit:
@@ -61,6 +69,10 @@ exit:
 }
 
 void openLibraries() {
+	DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 37);
+	if (DOSBase == NULL) 
+        return RETURN_ERROR;
+
 	if (openGUILibraries() != 0)
 		cleanExit(RETURN_ERROR);
 
@@ -76,6 +88,7 @@ void openDevices() {
 void closeLibraries() {
 	closeGUILibraries();
 	closeSpeechLibraries();
+	CloseLibrary(DOSBase);
 }
 
 void closeDevices() {
@@ -84,7 +97,7 @@ void closeDevices() {
 
 void cleanExit(LONG returnValue) {
 	// There seems to be a bug with the Exit() call causing the program to guru. Use dirty goto's for now
-	shutdownGUI();
+	// shutdownGUI();
 	closeLibraries();
 	closeDevices();
 	exitCode = returnValue;

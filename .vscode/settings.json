@@ -20,7 +20,8 @@
         "e_os2.h": "c",
         "types.h": "c",
         "unistd.h": "c",
-        "errno.h": "c"
+        "errno.h": "c",
+        "amisslmaster.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false
 }
