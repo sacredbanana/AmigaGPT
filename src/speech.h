@@ -1,6 +1,6 @@
 #include <proto/dos.h>
 
-void speakText(STRPTR text);
+void speakText(UBYTE *text);
 LONG openSpeechLibraries();
 LONG openSpeechDevices();
 void closeSpeechLibraries();

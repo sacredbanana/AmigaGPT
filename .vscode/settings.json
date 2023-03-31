@@ -21,7 +21,10 @@
         "types.h": "c",
         "unistd.h": "c",
         "errno.h": "c",
-        "amisslmaster.h": "c"
+        "amisslmaster.h": "c",
+        "stdbool.h": "c",
+        "openai.h": "c",
+        "string.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false
 }

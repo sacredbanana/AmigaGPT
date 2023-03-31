@@ -13,11 +13,13 @@
     #define ASM(...)
 #endif
 
+#include <proto/dos.h>
+
 void *memcpy (void *, const void *, unsigned long);
 void *memset (void *, int, unsigned long);
 void *memmove (void *, const void *, unsigned long);
 void memclr(void* dest, unsigned long len);
-unsigned long strlen (const char *);
+ULONG strlen (const UBYTE *);
 void warpmode(int on); // bool on/off
 void KPrintF(const char* fmt, ...); // output to debugger
 

@@ -45,10 +45,6 @@ int main() {
 
 	configureApp();
 
-	// exitCode = initVideo();
-	if (exitCode)
-		goto exit;
-
 	exitCode = initOpenAIConnector();
 	if (exitCode)
 		goto exit;
@@ -56,19 +52,27 @@ int main() {
 	exitCode = connectToOpenAI();
 	if (exitCode)
 		goto exit;
-
-	// if (startGUIRunLoop() != 0)
-		// cleanExit(RETURN_ERROR);
-
-	UBYTE *response = postMessageToOpenAI("Write a short song about the Commodore Amiga", "gpt-3.5-turbo", "user");
+	
+	// exitCode = initVideo();
+	// if (exitCode)
+	// 	goto exit;
+	UBYTE text666[] = "Posting Message!\n";
+		Write(Output(), (APTR)text666, strlen(text666));
+	
+	UBYTE *response = postMessageToOpenAI("Write a haiku about the Commodore Amiga", "gpt-3.5-turbo", "user");
 	if (response != NULL) {
 		Write(Output(), (APTR)response, strlen(response));
+		speakText(response);
 		Delay(50);
-		FreeMem(response, strlen(response));
+		FreeMem(response, READ_BUFFER_LENGTH);
 	} else {
 		UBYTE text66[] = "No response from OpenAI!\n";
 		Write(Output(), (APTR)text66, strlen(text66));
 	}
+
+	// exitCode = startGUIRunLoop();
+	// if (exitCode)
+	// 	goto exit;
 
 exit:
 	cleanExit();
@@ -108,7 +112,7 @@ void closeDevices() {
 
 void cleanExit() {
 	// There seems to be a bug with the Exit() call causing the program to guru. Use dirty goto's for now
-	// shutdownGUI();
+	shutdownGUI();
 	closeOpenAIConnector();
 	closeLibraries();
 	closeDevices();

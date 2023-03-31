@@ -122,7 +122,7 @@ LONG initVideo() {
 LONG startGUIRunLoop() {
     ULONG signalMask, winSignal, signals;
 	BOOL done = FALSE;
-	STRPTR englishString = "Never gonna give you up, never gonna let you down, never going to run around and desert you";
+	UBYTE englishString[] = "Never gonna give you up, never gonna let you down, never going to run around and desert you";
     Action action;
 
     winSignal = 1L << window->UserPort->mp_SigBit;
@@ -137,7 +137,17 @@ LONG startGUIRunLoop() {
 					done = TRUE;
 					break;
 				case ALERT_BUTTON_PRESSED:
-					speakText(englishString);
+					UBYTE *response = postMessageToOpenAI("Write a haiku about the Commodore Amiga", "gpt-3.5-turbo", "user");
+					if (response != NULL) {
+						Write(Output(), (APTR)response, strlen(response));
+						speakText(response);
+						Delay(50);
+						FreeMem(response, strlen(response));
+					} else {
+						UBYTE text66[] = "No response from OpenAI!\n";
+						Write(Output(), (APTR)text66, strlen(text66));
+					}
+					// UBYTE *response = postMessageToOpenAI(englishString, "gpt-3.5-turbo", "Rick Astley");
 					break;
 				default:
 					break;

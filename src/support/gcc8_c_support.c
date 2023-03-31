@@ -2,9 +2,9 @@
 #include <proto/exec.h>
 extern struct ExecBase* SysBase;
 
-unsigned long strlen(const char* s) {
-	unsigned long t=0;
-	while(*s++)
+ULONG strlen(const UBYTE* s) {
+	ULONG t=0;
+	while(*(s++) != 0)
 		t++;
 	return t;
 }

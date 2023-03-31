@@ -5,7 +5,7 @@
 #include <proto/translator.h>
 #include <devices/narrator.h>
 
-#define TRANSLATION_BUFFER_SIZE 1000
+#define TRANSLATION_BUFFER_SIZE 8192
 
 struct Library *TranslatorBase;
 struct MsgPort *NarratorPort;
@@ -70,9 +70,9 @@ void closeSpeechDevices() {
 	  DeleteMsgPort(NarratorPort);
 }
 
-void speakText(STRPTR text) {
+void speakText(UBYTE *text) {
 	LONG textLength = strlen(text);
-	Translate(text, textLength, (STRPTR)&translationBuffer, TRANSLATION_BUFFER_SIZE);
+	Translate(text, textLength, translationBuffer, TRANSLATION_BUFFER_SIZE);
 	LONG translatedStringLength = strlen(translationBuffer);
 
 	NarratorIO->ch_masks = audioChannels;
