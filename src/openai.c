@@ -109,7 +109,7 @@ LONG initOpenAIConnector() {
     sprintf(printText, "opened bsdsocket.library\n");
 	Write(Output(), (APTR)printText, strlen(printText));
 
-	if ((AmiSSLMasterBase = OpenLibrary("AMISSL:libs/amisslmaster.library", AMISSLMASTER_MIN_VERSION)) == NULL)
+	if ((AmiSSLMasterBase = OpenLibrary("amisslmaster.library", AMISSLMASTER_MIN_VERSION)) == NULL)
 		return RETURN_ERROR;
 
     sprintf(printText, "opened amisslmaster.library\n");
