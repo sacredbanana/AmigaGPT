@@ -15,6 +15,8 @@
 
 #include <proto/dos.h>
 
+extern int errno;
+
 void *memcpy (void *, const void *, unsigned long);
 void *memset (void *, int, unsigned long);
 void *memmove (void *, const void *, unsigned long);

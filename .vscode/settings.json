@@ -24,7 +24,8 @@
         "amisslmaster.h": "c",
         "stdbool.h": "c",
         "openai.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "startup.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false
 }

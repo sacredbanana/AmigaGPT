@@ -25,7 +25,7 @@ static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLe
 static void replaceWithRealNewLines(UBYTE *content, LONG *stringLength);
 static LONG endOfResponse(UBYTE *response);
 
-struct Library *AmiSSLMasterBase, *AmiSSLBase, *SocketBase;
+struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase;
 struct UtilityBase *UtilityBase;
 extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
@@ -41,7 +41,6 @@ BIO *bio, *bio_err;
 SSL *ssl;
 int sock = -1;
 int ssl_err = 0;
-
 ULONG RangeSeed;
 
 ULONG rangeRand(ULONG maxValue)
@@ -82,8 +81,6 @@ static BPTR GetStdErr(void)
  * connect directly to the host.
  */
 LONG initOpenAIConnector() {
-    long errno = 0;
-
     printText = AllocVec(PRINT_BUFFER_LENGTH, MEMF_ANY);
     if (printText == NULL) {
         return RETURN_ERROR;
@@ -121,25 +118,22 @@ LONG initOpenAIConnector() {
 
     sprintf(printText, "got amisslmaster.library interface\n");
 	Write(Output(), (APTR)printText, strlen(printText));
-    
-    if (InitAmiSSLMaster(AMISSL_CURRENT_VERSION, TRUE) == FALSE) {
+
+    if (OpenAmiSSLTags(AMISSL_CURRENT_VERSION,
+	                  AmiSSL_UsesOpenSSLStructs, TRUE,
+                      AmiSSL_InitAmiSSL, TRUE,
+	                  AmiSSL_GetAmiSSLBase, &AmiSSLBase,
+	                  AmiSSL_GetAmiSSLExtBase, &AmiSSLExtBase,
+	                  AmiSSL_SocketBase, SocketBase,
+	                  AmiSSL_ErrNoPtr, &errno,
+	                  TAG_DONE) != 0) {
+        
+        sprintf(printText, "failed to initialize amisslmaster.library\n");
+	    Write(Output(), (APTR)printText, strlen(printText));
         return RETURN_ERROR;
     }
 		
     sprintf(printText, "initialized amisslmaster.library\n");
-	Write(Output(), (APTR)printText, strlen(printText));
-
-	if ((AmiSSLBase = OpenAmiSSL()) == NULL)
-		return RETURN_ERROR;
-
-    sprintf(printText, "opened amissl.library\n");
-	Write(Output(), (APTR)printText, strlen(printText));
-
-    if(InitAmiSSL(AmiSSL_ErrNoPtr, &errno, AmiSSL_SocketBase, SocketBase, TAG_DONE) != 0) {
-        return RETURN_ERROR;
-    }
-
-    sprintf(printText, "initialized amissl.library\n");
 	Write(Output(), (APTR)printText, strlen(printText));
 
 	amiSSLInitialized = TRUE;
