@@ -48,6 +48,7 @@ struct Config {
 	enum ScreenMode screenMode;
 } config;
 
+static void sendMessage();
 Action handleIDCMP(struct Window*);
 
 LONG openGUILibraries() {
@@ -118,6 +119,19 @@ LONG initVideo() {
 	return RETURN_OK;
 }
 
+static void sendMessage() {
+	UBYTE *response = postMessageToOpenAI("Write a haiku about the Commodore Amiga", "gpt-3.5-turbo", "user");
+	if (response != NULL) {
+		Write(Output(), (APTR)response, strlen(response));
+		speakText(response);
+		Delay(50);
+		FreeVec(response);
+	} else {
+		UBYTE text66[] = "No response from OpenAI!\n";
+		Write(Output(), (APTR)text66, strlen(text66));
+	}
+}
+
 // The main loop of the GUI
 LONG startGUIRunLoop() {
     ULONG signalMask, winSignal, signals;
@@ -128,6 +142,8 @@ LONG startGUIRunLoop() {
     winSignal = 1L << window->UserPort->mp_SigBit;
 	signalMask = winSignal;
 
+	sendMessage();
+
     while (!done) {
         signals = Wait(signalMask);
 
@@ -137,17 +153,7 @@ LONG startGUIRunLoop() {
 					done = TRUE;
 					break;
 				case ALERT_BUTTON_PRESSED:
-					UBYTE *response = postMessageToOpenAI("Write a haiku about the Commodore Amiga", "gpt-3.5-turbo", "user");
-					if (response != NULL) {
-						Write(Output(), (APTR)response, strlen(response));
-						speakText(response);
-						Delay(50);
-						FreeMem(response, strlen(response));
-					} else {
-						UBYTE text66[] = "No response from OpenAI!\n";
-						Write(Output(), (APTR)text66, strlen(text66));
-					}
-					// UBYTE *response = postMessageToOpenAI(englishString, "gpt-3.5-turbo", "Rick Astley");
+					sendMessage();
 					break;
 				default:
 					break;
