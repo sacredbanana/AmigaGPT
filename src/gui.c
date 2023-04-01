@@ -1,18 +1,43 @@
 #include "gui.h"
-// #include "support/gcc8_c_support.h"
+#include "support/gcc8_c_support.h"
 #include "config.h"
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>
+#include <devices/conunit.h>
 #include <intuition/intuition.h>
 #include "speech.h"
 #include "openai.h"
+#include "amiga.h"
+#include "console.h"
+
+#define CONTROL_SEQUENCE_BELL 0x07 // Flash the display -- do an Intuition DisplayBeep()
+#define CONTROL_SEQUENCE_BACKSPACE 0x08 // Move left one column
+#define CONTROL_SEQUENCE_HORIZONTAL_TAB 0x09 // Move right one tab stop
+#define CONTROL_SEQUENCE_LINEFEED 0x0A // Move down one text line as specified by he mode function
+#define CONTROL_SEQUENCE_VERTICAL_TAB 0x0B // Move up one text line
+#define CONTROL_SEQUENCE_FORMFEED 0x0C // Clear the console's window
+#define CONTROL_SEQUENCE_CARRIAGE_RETURN 0x0D // Move to the first column
+#define CONTROL_SEQUENCE_SHIFT_IN 0x0E // Undo SHIFT OUT
+#define CONTROL_SEQUENCE_SHIFT_OUT 0x0F // Set MSB of each character before displaying
+#define CONTROL_SEQUENCE_ESCAPE 0x1B // Escape, can be part of a control sequence indicator
+#define CONTROL_SEQUENCE_INDEX 0x84 // Move the active position down one line
+#define CONTROL_SEQUENCE_NEXT_LINE 0x85 // Go to the beginning of the next line
+#define CONTROL_SEQUENCE_HORIZONTAL_TABULATION_SET 0x88 // Set a tab at the cursor position
+#define CONTROL_SEQUENCE_REVERSE_INDEX 0x8D // Move the active position up one line
+#define CONTROL_SEQUENCE_CSI 0x9B // Control Sequence Introducer
+#define CONTROL_SEQUENCE_RESET_TO_INITIAL_STATE 0x1B0x63
 
 struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
 struct Window *window;
+struct Window *window2;
 struct Screen *screen;
 struct Gadget *gadget;
+struct IOStdReq *ConsoleReadIORequest;
+struct MsgPort *ConsoleReadPort;
+struct IOStdReq *ConsoleWriteIORequest;
+struct MsgPort *ConsoleWritePort;
 
 UWORD buttonBorderData[] = {
 	0, 0, BUTTON_WIDTH + 1, 0, BUTTON_WIDTH + 1, BUTTON_HEIGHT + 1,
@@ -78,16 +103,17 @@ LONG initVideo() {
 	screen = OpenScreenTags(NULL,
 	SA_Pens, (ULONG)pens,
 	SA_DisplayID, HIRES_KEY,
-	SA_Depth, 2,
+	SA_Depth, 3,
 	SA_Title, (ULONG)"OpenAI Amiga",
 	TAG_DONE);
 
 	if (screen == NULL)
         return RETURN_ERROR;
 
-	SetRGB4(&(screen->ViewPort), 0, 0x0, 0x1, 0x2);
+	SetRGB4(&(screen->ViewPort), 0, 0x0, 0x1, 0x5);
 	SetRGB4(&(screen->ViewPort), 1, 0x0, 0x0, 0x0);
 	SetRGB4(&(screen->ViewPort), 3, 0x0, 0xFF, 0x2);
+	SetRGB4(&(screen->ViewPort), 4, 0xFF, 0xFF, 0x0);
 
 	window = OpenWindowTags(NULL,
 	WA_Left, WIN_LEFT_EDGE,
@@ -113,16 +139,62 @@ LONG initVideo() {
 	if (window == NULL)
 		return RETURN_ERROR;
 
-    Move(window->RPort, 30, 20);
-	UBYTE article[] = "This is a test string!";
-	Text(window->RPort, article, sizeof(article) - 1);
+	window2 = OpenWindowTags(NULL,
+	WA_Left, 200,
+	WA_Top, 100,
+	WA_Width, 400,
+	WA_Height, 100,
+	WA_MinWidth, 100,
+	WA_MinHeight, 50,
+	WA_MaxWidth, ~0,
+	WA_MaxHeight, ~0,
+	WA_Title, (ULONG)"Conversation",
+	WA_CloseGadget, FALSE,
+	WA_SizeGadget, TRUE,
+	WA_DepthGadget, FALSE,
+	WA_DragBar, TRUE,
+	WA_Activate, TRUE,
+	WA_NoCareRefresh, TRUE,
+	WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE,
+	WA_CustomScreen, screen,
+	TAG_DONE);
+
+	if ((ConsoleReadPort= CreatePort("OA.ConsoleRead", 0)) == NULL) {
+		return RETURN_ERROR;
+	}
+
+	if ((ConsoleReadIORequest = (struct IOStdReq *)CreateExtIO(ConsoleReadPort, sizeof(struct IOStdReq))) == NULL) {
+		return RETURN_ERROR;
+	}
+
+	ConsoleReadIORequest->io_Data = (APTR)window;
+	ConsoleReadIORequest->io_Length = sizeof(struct Window);
+
+	if ((ConsoleWritePort= CreatePort("OA.ConsoleWrite", 0)) == NULL) {
+		return RETURN_ERROR;
+	}
+
+	if ((ConsoleWriteIORequest = (struct IOStdReq *)CreateExtIO(ConsoleWritePort, sizeof(struct IOStdReq))) == NULL) {
+		return RETURN_ERROR;
+	}
+
+	ConsoleWriteIORequest->io_Data = (APTR)window2;
+	ConsoleWriteIORequest->io_Length = sizeof(struct Window);
+
+	if (OpenDevice("console.device", CONU_SNIPMAP, (struct IORequest *)ConsoleWriteIORequest, CONFLAG_DEFAULT) != 0) {
+		return RETURN_ERROR;
+	}
+
+	selectGraphicRendition(SGR_PRIMARY, 4, 0);
+
 	return RETURN_OK;
 }
 
 static void sendMessage() {
-	UBYTE *response = postMessageToOpenAI("This is a test string!", "gpt-3.5-turbo", "user");
+	UBYTE *response = postMessageToOpenAI("Tell me an interesting random fact", "gpt-3.5-turbo", "user");
 	if (response != NULL) {
-		Write(Output(), (APTR)response, strlen(response));
+		consolePrintText(response);
+		moveCursorNextLine(2);
 		speakText(response);
 		Delay(50);
 		FreeVec(response);
@@ -185,6 +257,14 @@ Action handleIDCMP(struct Window *window) {
 }
 
 void shutdownGUI() {
+	if (!(CheckIO(ConsoleReadIORequest)))
+		AbortIO(ConsoleReadIORequest);
+	if (!(CheckIO(ConsoleWriteIORequest)))
+		AbortIO(ConsoleWriteIORequest);
+
+	WaitIO(ConsoleReadIORequest);
+	WaitIO(ConsoleWriteIORequest);
+	CloseDevice((struct IORequest *)ConsoleWriteIORequest);
     CloseWindow(window);
     CloseScreen(screen);
 }
