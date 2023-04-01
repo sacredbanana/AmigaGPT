@@ -120,11 +120,7 @@ LONG initVideo() {
 }
 
 static void sendMessage() {
-	UBYTE content[] = "This is a test string!";
-	UBYTE model[] = "gpt-3.5-turbo";
-	UBYTE role[] = "user";
-	Write(Output(), (APTR)content, 5);
-	UBYTE *response = postMessageToOpenAI(content, model, role);
+	UBYTE *response = postMessageToOpenAI("This is a test string!", "gpt-3.5-turbo", "user");
 	if (response != NULL) {
 		Write(Output(), (APTR)response, strlen(response));
 		speakText(response);
@@ -145,8 +141,6 @@ LONG startGUIRunLoop() {
 
     winSignal = 1L << window->UserPort->mp_SigBit;
 	signalMask = winSignal;
-
-	sendMessage();
 
     while (!done) {
         signals = Wait(signalMask);

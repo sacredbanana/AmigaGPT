@@ -144,52 +144,25 @@ static void replaceWithRealNewLines(UBYTE *string, LONG *stringLength) {
 }    
 
 UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
-    // Compose the POST request
-    UBYTE auth[512];
-    sprintf(auth, "Authorization: Bearer %s", openAiApiKey);
+    memclr(readBuffer, READ_BUFFER_LENGTH);
+    memclr(writeBuffer, WRITE_BUFFER_LENGTH);
 
-    sprintf(printText, "Auth: \n");
-    Write(Output(), (APTR)printText, strlen(printText));
-    Write(Output(), (APTR)readBuffer, strlen(readBuffer));
-    Delay(50);
-
-    UBYTE body[1024];
-    sprintf(body,
+    sprintf(readBuffer,
             "{\"model\": \"%s\",\r\n"
             "\"messages\": [{\"role\": \"%s\", \"content\": \"%s\"}]\r\n"
             "}\0",
             model, role, content);
-    ULONG bodyLength = strlen(body);
+    ULONG bodyLength = strlen(readBuffer);
 
-    sprintf(printText, "Body: \n");
-    Write(Output(), (APTR)printText, strlen(printText));
-    Write(Output(), (APTR)body, strlen(body));
-    Delay(50);
-
-    UBYTE headers[] = "POST /v1/chat/completions HTTP/1.1\r\n"
+    sprintf(writeBuffer, "POST /v1/chat/completions HTTP/1.1\r\n"
             "Host: api.openai.com\r\n"
-            "Content-Type: application/json\r\n";
-    sprintf(headers, "%s%s\r\n", headers, auth);
-    sprintf(headers, "%sContent-Length:", headers);
-
-    sprintf(printText, "Headers: \n");
-    Write(Output(), (APTR)printText, strlen(printText));
-    Write(Output(), (APTR)headers, strlen(auth));
-    Delay(50);
-
-    sprintf(writeBuffer, "%s ", headers);
-    sprintf(writeBuffer, "%s%lu\r\n\r\n", writeBuffer, bodyLength);
-    sprintf(writeBuffer, "%s%s", writeBuffer, body);
+            "Content-Type: application/json\r\n"
+            "Authorization: Bearer %s\r\n"
+            "Content-Length: %lu\r\n\r\n"
+            "%s", openAiApiKey, bodyLength, readBuffer);
 
     memclr(readBuffer, READ_BUFFER_LENGTH);
     LONG endOfResponseIndex = -1;
-
-    sprintf(printText, "Write buffer: \n");
-    Write(Output(), (APTR)printText, strlen(printText));
-    Write(Output(), (APTR)writeBuffer, strlen(writeBuffer));
-    Delay(50);
-
-    return NULL;
 
     if ((ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer))) > 0) {
         /* Dump everything to output */

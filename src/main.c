@@ -47,13 +47,13 @@ int main() {
 
 	configureApp();
 
-	// exitCode = initOpenAIConnector();
-	// if (exitCode)
-	// 	goto exit;
+	exitCode = initOpenAIConnector();
+	if (exitCode)
+		goto exit;
 
-	// exitCode = connectToOpenAI();
-	// if (exitCode)
-	// 	goto exit;
+	exitCode = connectToOpenAI();
+	if (exitCode)
+		goto exit;
 	
 	exitCode = initVideo();
 	if (exitCode)

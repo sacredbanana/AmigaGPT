@@ -33,7 +33,7 @@ else
 	SDKDIR = $(abspath $(dir $(shell which $(CC)))../m68k-amiga-elf/sys-include)
 endif
 
-CCFLAGS = -g -MP -MMD -m68000 -Ofast -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -D__NO_NET_API
+CCFLAGS = -g -MP -MMD -m68000 -Ofast -O0 -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -D__NO_NET_API
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-D
 LDFLAGS = -Wl,--emit-relocs,-Ttext=0,-Map=$(OUT).map
