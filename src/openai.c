@@ -16,10 +16,11 @@
 
 #define GETINTERFACE(iface, base) TRUE
 #define DROPINTERFACE(iface)
+#define HOST "api.openai.com"
+#define PORT 443
 
 static void cleanup(void);
 static void generateRandomSeed(UBYTE *buffer, LONG size);
-static LONG connectToServer(UBYTE *, UWORD, UBYTE *, UWORD);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLength);
 static void replaceWithRealNewLines(UBYTE *content, LONG *stringLength);
@@ -43,43 +44,30 @@ int sock = -1;
 int ssl_err = 0;
 ULONG RangeSeed;
 
-ULONG rangeRand(ULONG maxValue)
-{ ULONG a=RangeSeed;
-  UWORD i=maxValue-1;
-  do
-  { ULONG b=a;
-    a<<=1;
-    if((LONG)b<=0)
-      a^=0x1d872b41;
-  }while((i>>=1));
-  RangeSeed=a;
-  if((UWORD)maxValue)
-    return (UWORD)((UWORD)a*(UWORD)maxValue>>16);
+ULONG rangeRand(ULONG maxValue) {
+    ULONG a=RangeSeed;
+    UWORD i=maxValue-1;
+    do {
+        ULONG b=a;
+        a<<=1;
+        if((LONG)b<=0)
+        a^=0x1d872b41;
+    } while((i>>=1));
+    RangeSeed=a;
+    if((UWORD)maxValue)
+        return (UWORD)((UWORD)a*(UWORD)maxValue>>16);
   return (UWORD)a;
 }
 
-static BPTR ErrorOutput(void)
-{
+static BPTR ErrorOutput() {
 	return(((struct Process *)FindTask(NULL))->pr_CES);
 }
 
-static BPTR GetStdErr(void)
-{
+static BPTR GetStdErr() {
 	BPTR err = ErrorOutput();
-
 	return(err ? err : Output());
 }
 
-/* Usage: https <host> <port> [proxyhost] [proxyport]
- *
- * host:      name of host (default: "localhost")
- * port:      port to connect to (default: 443)
- * proxyhost: name of proxy (optional)
- * proxyport: name of proxy (optional)
- *
- * If any proxy parameter is omitted, the program will
- * connect directly to the host.
- */
 LONG initOpenAIConnector() {
     printText = AllocVec(PRINT_BUFFER_LENGTH, MEMF_ANY);
     if (printText == NULL) {
@@ -162,7 +150,7 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
 
     sprintf(printText, "Auth: \n");
     Write(Output(), (APTR)printText, strlen(printText));
-    Write(Output(), (APTR)auth, strlen(auth));
+    Write(Output(), (APTR)readBuffer, strlen(readBuffer));
     Delay(50);
 
     UBYTE body[1024];
@@ -201,14 +189,7 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
     Write(Output(), (APTR)writeBuffer, strlen(writeBuffer));
     Delay(50);
 
-    if (ssl == NULL) {
-        sprintf(printText, "SSL is NULL!\n");
-        Write(Output(), (APTR)printText, strlen(printText));
-    } else {
-        sprintf(printText, "SSL is not NULL!\n");
-        Write(Output(), (APTR)printText, strlen(printText));
-    }
-
+    return NULL;
 
     if ((ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer))) > 0) {
         /* Dump everything to output */
@@ -224,8 +205,7 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
         UBYTE *response = getResponseFromJson(readBuffer, endOfResponseIndex + 1, &responseLength);
         replaceWithRealNewLines(response, &responseLength);
         return response;
-    }
-    else {
+    } else {
         sprintf(printText, "Couldn't write request!\n");
         Write(Output(), (APTR)printText, strlen(printText));
         WORD err = SSL_get_error(ssl, ssl_err);
@@ -331,7 +311,10 @@ static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLe
 }
 
 LONG connectToOpenAI() {
-    BOOL ok = TRUE;
+    struct sockaddr_in addr;
+	struct hostent *hostent;
+    LONG sock;
+
     /* Basic intialization. Next few steps (up to SSL_new()) need
      * to be done only once per AmiSSL opener.
      */
@@ -348,21 +331,18 @@ LONG connectToOpenAI() {
     Write(Output(), (APTR)printText, strlen(printText));
 
     /* Note: BIO writing routines are prepared for NULL BIO handle */
-    if((bio_err = BIO_new(BIO_s_file())) != NULL)
+    if ((bio_err = BIO_new(BIO_s_file())) != NULL)
         BIO_set_fp_amiga(bio_err, GetStdErr(), BIO_NOCLOSE | BIO_FP_TEXT);
 
     sprintf(printText, "created bio\n");
     Write(Output(), (APTR)printText, strlen(printText));
 
     /* Get a new SSL context */
-    if((ctx = SSL_CTX_new(TLS_client_method())) != NULL)
-    {
+    if ((ctx = SSL_CTX_new(TLS_client_method())) != NULL) {
         sprintf(printText, "created ssl context\n");
         Write(Output(), (APTR)printText, strlen(printText));
 
-        /* Basic certificate handling. OpenSSL documentation has more
-            * information on this.
-            */
+        /* Basic certificate handling */
         SSL_CTX_set_default_verify_paths(ctx);
         SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
                             verify_cb);
@@ -371,26 +351,35 @@ LONG connectToOpenAI() {
         Write(Output(), (APTR)printText, strlen(printText));
 
         /* The following needs to be done once per socket */
-        if((ssl = SSL_new(ctx)) != NULL)
-        {
+        if((ssl = SSL_new(ctx)) != NULL) {
             sprintf(printText, "created ssl\n");
             Write(Output(), (APTR)printText, strlen(printText));
 
-            LONG sock;
-            LONG port, pport;
-            UBYTE *host, *proxy;
+            /* Lookup hostname */
+            if ((hostent = gethostbyname(HOST)) != NULL) {
+                memset(&addr, 0, sizeof(addr));
+                addr.sin_family = AF_INET;
+                addr.sin_port = htons(PORT);
+                addr.sin_len = hostent->h_length;;
+                memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
+            }
+            else {
+                sprintf(printText, "Host lookup failed\n");
+                Write(Output(), (APTR)printText, strlen(printText));
+                return RETURN_ERROR;
+            }
 
-            /* Connect to the HTTPS server, directly or through a proxy */
-            host = "api.openai.com";
-            port = 443;
-            proxy = NULL;
-            pport = 0;
-
-            sock = connectToServer(host, port, proxy, pport);
+            /* Create a socket and connect to the server */
+            if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
+                if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+                    sprintf(printText, "Couldn't connect to server\n");
+                    Write(Output(), (APTR)printText, strlen(printText));
+                    return RETURN_ERROR;
+                }
+            }
 
             /* Check if connection was established */
-            if (sock >= 0)
-            {
+            if (sock >= 0) {
                 sprintf(printText, "connected to server\n");
                 Write(Output(), (APTR)printText, strlen(printText));
 
@@ -398,59 +387,16 @@ LONG connectToOpenAI() {
                 SSL_set_fd(ssl, sock);
 
                 /* Set up SNI (Server Name Indication) */
-                SSL_set_tlsext_host_name(ssl, host);
+                SSL_set_tlsext_host_name(ssl, HOST);
 
                 /* Perform SSL handshake */
                 if((ssl_err = SSL_connect(ssl)) >= 0) {
-                    sprintf(printText, "SSL connection to %s using %s\n\0", host, SSL_get_cipher(ssl));
-                    Write(Output(), (APTR)printText, strlen(printText));
-
-                    // /* Certificate checking. This example is *very* basic */
-                    // if((server_cert = SSL_get_peer_certificate(ssl)))
-                    // {
-                    //     UBYTE *str;
-
-                    //     sprintf(printText, "Server certificate:\n");
-                    //     Write(Output(), (APTR)printText, strlen(printText));
-                    //     Delay(50);
-
-                    //     if((str = X509_NAME_oneline(X509_get_subject_name(server_cert), 0, 0)))
-                    //     {
-                    //         sprintf(printText, "\tSubject: %s\n", str);
-                    //         Write(Output(), (APTR)printText, strlen(printText));
-                    //         Delay(50);
-                    //         OPENSSL_free(str);
-                    //     }
-                    //     else {
-                    //         sprintf(printText, "Warning: couldn't read subject name in certificate!\n");
-                    //         Write(Output(), (APTR)printText, strlen(printText));
-                    //         Delay(50);
-                    //     }
-
-                    //     if((str = X509_NAME_oneline(X509_get_issuer_name(server_cert),
-                    //                                 0, 0)) != NULL)
-                    //     {
-                    //         sprintf(printText, "\tIssuer: %s\n", str);
-                    //         Write(Output(), (APTR)printText, strlen(printText));
-                    //         Delay(50);
-                    //         OPENSSL_free(str);
-                    //     }
-                    //     else {
-                    //         sprintf(printText, "Warning: couldn't read issuer name in certificate!\n");
-                    //         Write(Output(), (APTR)printText, strlen(printText));
-                    //         Delay(50);
-                    //     }
-
-                    //     X509_free(server_cert);
-                    // }
-                    // else {
-                    //     sprintf(printText, "Couldn't get server certificate!\n");
-                    //     Write(Output(), (APTR)printText, strlen(printText));
-                    // }                    
-                }
-                else {
+                    sprintf(printText, "SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
+                    Write(Output(), (APTR)printText, strlen(printText));                  
+                } else {
                     sprintf(printText, "Couldn't establish SSL connection!\n");
                     Write(Output(), (APTR)printText, strlen(printText));
+                    return RETURN_ERROR;
                 }
                 
                 /* If there were errors, print them */
@@ -458,30 +404,30 @@ LONG connectToOpenAI() {
                     sprintf(printText, "SSL error: %d\n", ssl_err);
                     Write(Output(), (APTR)printText, strlen(printText));
                     ERR_print_errors(bio_err);
+                    return RETURN_ERROR;
                 }
-            }
-            else {
+            } else {
                 sprintf(printText, "Couldn't connect to host!\n");
                 Write(Output(), (APTR)printText, strlen(printText));
+                return RETURN_ERROR;
             }
-        }
-        else {
+        } else {
             sprintf(printText, "Couldn't create new SSL handle!\n");
             Write(Output(), (APTR)printText, strlen(printText));
+            return RETURN_ERROR;
         }
-    }
-    else {
+    } else {
         sprintf(printText, "Couldn't create new context!\n");
         Write(Output(), (APTR)printText, strlen(printText));
+        return RETURN_ERROR;
     }
 
-	return(ok ? RETURN_OK : RETURN_ERROR);
+	return RETURN_OK;
 }
 
 /* Get some suitable random seed data
  */
-static void generateRandomSeed(UBYTE *buffer, LONG size)
-{
+static void generateRandomSeed(UBYTE *buffer, LONG size) {
 	for(int i = 0; i < size/2; i++) {
 		((UWORD *)buffer)[i] = rangeRand(65535);
 	}
@@ -490,135 +436,23 @@ static void generateRandomSeed(UBYTE *buffer, LONG size)
 /* This callback is called everytime OpenSSL verifies a certificate
  * in the chain during a connection, indicating success or failure.
  */
-static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx)
-{
-	if (!preverify_ok)
-	{
+static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx) {
+	if (!preverify_ok) {
 		/* Here, you could ask the user whether to ignore the failure,
 		 * displaying information from the certificate, for example.
 		 */
 		// FPrintf(GetStdErr(),"Certificate verification failed (%s)\n",
 		//         X509_verify_cert_error_string(X509_STORE_CTX_get_error(ctx)));
-	}
-	else
-	{
+	} else {
 		// FPrintf(GetStdErr(),"Certificate verification successful (hash %08lx)\n",
 		//         X509_issuer_and_serial_hash(X509_STORE_CTX_get_current_cert(ctx)));
 	}
 	return preverify_ok;
 }
 
-/* Connect to the specified server, either directly or through the specified
- * proxy using HTTP CONNECT method.
- */
-static LONG connectToServer(UBYTE *host, UWORD port, UBYTE *proxy, UWORD pport)
-{
-	struct sockaddr_in addr;
-	struct hostent *hostent;
-	BOOL ok = FALSE;
-	char *s1, *s2;
-
-	/* Lookup hostname */
-	if ((hostent = gethostbyname((proxy && pport) ? proxy : host)) != NULL)
-	{
-		memset(&addr, 0, sizeof(addr));
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons((proxy && pport) ? pport : port);
-		addr.sin_len = hostent->h_length;;
-		memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
-	}
-	else {
-        sprintf(printText, "Host lookup failed\n");
-        Write(Output(), (APTR)printText, strlen(printText));
-    }
-
-	/* Create a socket and connect to the server */
-	if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0))
-	{
-		if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) >= 0)
-		{
-			/* For proxy connection, use SSL tunneling. First issue a HTTP CONNECT
-			 * request and then proceed as with direct HTTPS connection.
-			 */
-			if (proxy && pport)
-			{
-				/* This should be done with snprintf to prevent buffer
-				 * overflows, but some compilers don't have it and
-				 * handling that would be an overkill for this example
-				 */
-				sprintf(writeBuffer, "CONNECT %s:%ld HTTP/1.0\r\n\r\n",
-				        host, (long)port);
-
-				/* In a real application, it would be necessary to loop
-				 * until everything is sent or an error occurrs, but here we
-				 * hope that everything gets sent at once.
-				 */
-				if (send(sock, writeBuffer, strlen(writeBuffer), 0) >= 0)
-				{
-					int len;
-
-					/* Again, some optimistic behaviour: HTTP response might not be
-					 * received with only one recv
-					 */
-					if ((len = recv(sock, writeBuffer, sizeof(writeBuffer) - 1, 0)) >= 0)
-					{
-						/* Assuming it was received, find the end of
-						 * the line and cut it off
-						 */
-						// if ((s1 = strchr(buffer, '\r'))
-						//     || (s1 = strchr(buffer, '\n')))
-						// 	*s1 = '\0';
-						// else
-						// 	buffer[len] = '\0';
-
-						// Printf("Proxy returned: %s\n", buffer);
-
-						/* Check if HTTP response makes sense */
-						if (strncmp(writeBuffer, "HTTP/", 4) == 0)
-						    // && (s1 = strchr(buffer, ' '))
-						    // && (s2 = strchr(++s1, ' '))
-						    // && (s2 - s1 == 3))
-						{
-							/* Only accept HTTP 200 OK response */
-							if (atol(s1) == 200)
-								ok = TRUE;
-							else {
-                                // FPrintf(GetStdErr(), "Proxy responce indicates error!\n");
-                            }
-						}
-						else {
-                                // FPrintf(GetStdErr(), "Amibigous proxy responce!\n");
-                         }
-					}
-					else {
-                        // FPrintf(GetStdErr(), "Couldn't get proxy response!\n");
-                    }
-				}
-				else {
-                    // FPrintf(GetStdErr(), "Couldn't send request to proxy!\n");
-                }
-			}
-			else {
-                ok = TRUE;
-            }
-		}
-		else {
-            // FPrintf(GetStdErr(), "Couldn't connect to server\n");
-        }
-
-		if (!ok) {
-			CloseSocket(sock);
-			sock = -1;
-		}
-	}
-
-	return(sock);
-}
-
-void closeOpenAIConnector()
-{
-	if (amiSSLInitialized)
-	{	/* Must always call after successful InitAmiSSL() */
+void closeOpenAIConnector() {
+	if (amiSSLInitialized) {
+        /* Must always call after successful InitAmiSSL() */
         SSL_shutdown(ssl);
         SSL_free(ssl);
         CloseSocket(sock);
@@ -627,8 +461,7 @@ void closeOpenAIConnector()
 		CleanupAmiSSLA(NULL);
 	}
 
-	if (AmiSSLBase)
-	{
+	if (AmiSSLBase) {
 		DROPINTERFACE(IAmiSSL);
 		CloseAmiSSL();
 		AmiSSLBase = NULL;

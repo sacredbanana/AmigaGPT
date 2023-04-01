@@ -47,32 +47,21 @@ int main() {
 
 	configureApp();
 
-	exitCode = initOpenAIConnector();
-	if (exitCode)
-		goto exit;
+	// exitCode = initOpenAIConnector();
+	// if (exitCode)
+	// 	goto exit;
 
-	exitCode = connectToOpenAI();
-	if (exitCode)
-		goto exit;
+	// exitCode = connectToOpenAI();
+	// if (exitCode)
+	// 	goto exit;
 	
 	exitCode = initVideo();
 	if (exitCode)
 		goto exit;
 
-	UBYTE *response = postMessageToOpenAI("Write a haiku about the Commodore Amiga", "gpt-3.5-turbo", "user");
-	if (response != NULL) {
-		Write(Output(), (APTR)response, strlen(response));
-		speakText(response);
-		Delay(50);
-		FreeVec(response);
-	} else {
-		UBYTE text66[] = "No response from OpenAI!\n";
-		Write(Output(), (APTR)text66, strlen(text66));
-	}
-
-	// exitCode = startGUIRunLoop();
-	// if (exitCode)
-	// 	goto exit;
+	exitCode = startGUIRunLoop();
+	if (exitCode)
+		goto exit;
 
 exit:
 	cleanExit();

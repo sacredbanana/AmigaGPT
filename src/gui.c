@@ -1,5 +1,5 @@
 #include "gui.h"
-#include "support/gcc8_c_support.h"
+// #include "support/gcc8_c_support.h"
 #include "config.h"
 #include <proto/exec.h>
 #include <proto/graphics.h>
@@ -120,7 +120,11 @@ LONG initVideo() {
 }
 
 static void sendMessage() {
-	UBYTE *response = postMessageToOpenAI("Write a haiku about the Commodore Amiga", "gpt-3.5-turbo", "user");
+	UBYTE content[] = "This is a test string!";
+	UBYTE model[] = "gpt-3.5-turbo";
+	UBYTE role[] = "user";
+	Write(Output(), (APTR)content, 5);
+	UBYTE *response = postMessageToOpenAI(content, model, role);
 	if (response != NULL) {
 		Write(Output(), (APTR)response, strlen(response));
 		speakText(response);
