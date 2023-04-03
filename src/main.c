@@ -47,6 +47,8 @@ int main() {
 
 	configureApp();
 
+	#ifndef EMULATOR
+
 	exitCode = initOpenAIConnector();
 	if (exitCode)
 		goto exit;
@@ -54,6 +56,8 @@ int main() {
 	exitCode = connectToOpenAI();
 	if (exitCode)
 		goto exit;
+
+	#endif
 	
 	exitCode = initVideo();
 	if (exitCode)
@@ -102,7 +106,9 @@ void closeDevices() {
 void cleanExit() {
 	// There seems to be a bug with the Exit() call causing the program to guru. Use dirty goto's for now
 	shutdownGUI();
+	#ifndef EMULATOR
 	closeOpenAIConnector();
+	#endif
 	closeLibraries();
 	closeDevices();
 	// Exit(returnValue);

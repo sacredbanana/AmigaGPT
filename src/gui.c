@@ -154,7 +154,7 @@ LONG initVideo() {
 	WA_DepthGadget, FALSE,
 	WA_DragBar, TRUE,
 	WA_Activate, TRUE,
-	WA_NoCareRefresh, TRUE,
+	WA_SimpleRefresh, TRUE,
 	WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE,
 	WA_CustomScreen, screen,
 	TAG_DONE);
