@@ -6,27 +6,19 @@
 #include <proto/intuition.h>
 #include <devices/conunit.h>
 #include <intuition/intuition.h>
+#include <intuition/gadgetclass.h>
+#include <proto/button.h>
 #include "speech.h"
 #include "openai.h"
 #include "amiga.h"
 #include "console.h"
 
-#define CONTROL_SEQUENCE_BELL 0x07 // Flash the display -- do an Intuition DisplayBeep()
-#define CONTROL_SEQUENCE_BACKSPACE 0x08 // Move left one column
-#define CONTROL_SEQUENCE_HORIZONTAL_TAB 0x09 // Move right one tab stop
-#define CONTROL_SEQUENCE_LINEFEED 0x0A // Move down one text line as specified by he mode function
-#define CONTROL_SEQUENCE_VERTICAL_TAB 0x0B // Move up one text line
-#define CONTROL_SEQUENCE_FORMFEED 0x0C // Clear the console's window
-#define CONTROL_SEQUENCE_CARRIAGE_RETURN 0x0D // Move to the first column
-#define CONTROL_SEQUENCE_SHIFT_IN 0x0E // Undo SHIFT OUT
-#define CONTROL_SEQUENCE_SHIFT_OUT 0x0F // Set MSB of each character before displaying
-#define CONTROL_SEQUENCE_ESCAPE 0x1B // Escape, can be part of a control sequence indicator
-#define CONTROL_SEQUENCE_INDEX 0x84 // Move the active position down one line
-#define CONTROL_SEQUENCE_NEXT_LINE 0x85 // Go to the beginning of the next line
-#define CONTROL_SEQUENCE_HORIZONTAL_TABULATION_SET 0x88 // Set a tab at the cursor position
-#define CONTROL_SEQUENCE_REVERSE_INDEX 0x8D // Move the active position up one line
-#define CONTROL_SEQUENCE_CSI 0x9B // Control Sequence Introducer
-#define CONTROL_SEQUENCE_RESET_TO_INITIAL_STATE 0x1B0x63
+#define BUTTON_ID 0
+#define BUTTON_WIDTH 100
+#define BUTTON_HEIGHT 30
+#define SEND_MESSAGE_BUTTON_ID 1
+#define SEND_MESSAGE_BUTTON_WIDTH 100
+#define SEND_MESSAGE_BUTTON_HEIGHT 20
 
 struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
@@ -55,8 +47,20 @@ struct IntuiText buttonText = {
 struct Gadget buttonGadget = {
 	NULL, 20, 50, BUTTON_WIDTH, BUTTON_HEIGHT,
 	GFLG_GADGHCOMP, GACT_RELVERIFY | GACT_IMMEDIATE,
-	GTYP_BOOLGADGET, &buttonBorder, NULL, &buttonText, 0, NULL, BUTTON_GADGET_NUM, NULL,
+	GTYP_BOOLGADGET, &buttonBorder, NULL, &buttonText, 0, NULL, BUTTON_ID, NULL,
 };
+
+struct Gadget *sendMessageButtonGadget;
+
+struct IntuiText sendMessageButtonText = {
+	1, 1, JAM1, 8, 10, NULL, "Send", NULL
+};
+
+struct Border sendButtonBorder = {
+	-1, -1, 1, 1, JAM1, 5, buttonBorderData, NULL,
+};
+
+struct DrawInfo drawInfo;
 
 typedef enum {
 	EXIT_APPLICATION, ALERT_BUTTON_PRESSED, SPEAK_BUTTON_PRESSED
@@ -104,16 +108,16 @@ LONG initVideo() {
 	SA_Pens, (ULONG)pens,
 	SA_DisplayID, HIRES_KEY,
 	SA_Depth, 3,
-	SA_Title, (ULONG)"OpenAI Amiga",
+	SA_Title, (ULONG)"AmigaGPT",
 	TAG_DONE);
 
 	if (screen == NULL)
         return RETURN_ERROR;
 
 	SetRGB4(&(screen->ViewPort), 0, 0x0, 0x1, 0x5);
-	SetRGB4(&(screen->ViewPort), 1, 0x0, 0x0, 0x0);
-	SetRGB4(&(screen->ViewPort), 3, 0x0, 0xFF, 0x2);
-	SetRGB4(&(screen->ViewPort), 4, 0xFF, 0xFF, 0x0);
+	SetRGB4(&(screen->ViewPort), 1, 0xA, 0x3, 0x0);
+	SetRGB4(&(screen->ViewPort), 3, 0xB, 0xF, 0x2);
+	SetRGB4(&(screen->ViewPort), 4, 0xF, 0xF, 0x0);
 
 	window = OpenWindowTags(NULL,
 	WA_Left, WIN_LEFT_EDGE,
@@ -125,7 +129,7 @@ LONG initVideo() {
 	WA_MaxWidth, ~0,
 	WA_MaxHeight, ~0,
 	WA_Gadgets, (ULONG)&buttonGadget,
-	WA_Title, (ULONG)"OpenAI Amiga",
+	WA_Title, (ULONG)"AmigaGPT",
 	WA_CloseGadget, TRUE,
 	WA_SizeGadget, FALSE,
 	WA_DepthGadget, FALSE,
@@ -186,6 +190,21 @@ LONG initVideo() {
 	}
 
 	selectGraphicRendition(SGR_PRIMARY, 4, 0);
+
+	if ((sendMessageButtonGadget = (struct Gadget*)NewObject(NULL, "frbuttonclass", 
+		GA_Left, 310L,
+		GA_Top, 50L,
+		GA_Width, SEND_MESSAGE_BUTTON_WIDTH,
+		GA_Height, SEND_MESSAGE_BUTTON_HEIGHT,
+		GA_IntuiText, (ULONG)&sendMessageButtonText,
+		GA_ID, SEND_MESSAGE_BUTTON_ID,
+		GA_RelVerify, TRUE,
+		TAG_DONE)) == NULL) {
+			return RETURN_ERROR;
+	}
+
+	AddGList(window, (struct Gadget*)sendMessageButtonGadget, -1, -1, NULL);
+	RefreshGList((struct Gadget*)sendMessageButtonGadget, window, NULL, -1);
 
 	return RETURN_OK;
 }
