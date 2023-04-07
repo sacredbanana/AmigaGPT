@@ -4,7 +4,6 @@
 #include <proto/exec.h>
 #include <exec/io.h>
 #include <exec/memory.h>
-#include "support/gcc8_c_support.h"
 
 #define NEWLIST(l) ((l)->lh_Head = (struct Node *)&(l)->lh_Tail, \
                     /*(l)->lh_Tail = NULL,*/ \

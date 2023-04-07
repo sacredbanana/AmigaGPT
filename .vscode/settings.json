@@ -1,6 +1,7 @@
 {
     "m68k.includePaths": [
-        "c:\\Users\\bwodok\\Documents\\Visual_Studio_Code\\vscode-amiga-debug\\bin\\win32\\opt\\m68k-amiga-elf\\sys-include",
+        "/opt/amiga/m68k-amigaos/ndk-include",
+        "/opt/amiga/m68k-amigaos/sys-include",
         "/Users/cameron/.vscode/extensions/bartmanabyss.amiga-debug-1.7.1/bin/darwin/opt/m68k-amiga-elf/sys-include"
     ],
     "files.associations": {
@@ -25,7 +26,14 @@
         "stdbool.h": "c",
         "openai.h": "c",
         "string.h": "c",
-        "startup.h": "c"
+        "startup.h": "c",
+        "button.h": "c",
+        "ports.h": "c",
+        "gadgetclass.h": "c",
+        "console.h": "c",
+        "speech.h": "c",
+        "conunit.h": "c",
+        "stdio.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false
 }

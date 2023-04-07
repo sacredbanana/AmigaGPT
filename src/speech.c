@@ -1,12 +1,13 @@
 #include "speech.h"
 #include "config.h"
-#include "support/gcc8_c_support.h"
 #include <proto/exec.h>
+#include <stdio.h>
 #include <proto/translator.h>
 #include <devices/narrator.h>
 
 #define TRANSLATION_BUFFER_SIZE 8192
 
+extern struct ExecBase* SysBase;
 struct Library *TranslatorBase;
 struct MsgPort *NarratorPort;
 struct narrator_rb *NarratorIO;
@@ -23,8 +24,10 @@ LONG openSpeechLibraries() {
 	#else
 	TranslatorBase = (struct Library *)OpenLibrary("translator.library", 0);
 	#endif
-	if (TranslatorBase == NULL)
+	if (TranslatorBase == NULL) {
+		printf("Could not open translator.library\n");
 		return RETURN_ERROR;
+	}
     else
         return RETURN_OK;
 }
@@ -32,11 +35,13 @@ LONG openSpeechLibraries() {
 LONG openSpeechDevices() {
 	NarratorPort = CreateMsgPort();
     if (!NarratorPort) {
+		printf("Could not create narrator port\n");
 		return RETURN_ERROR;
 	}
 
     NarratorIO = CreateIORequest(NarratorPort, sizeof(struct narrator_rb));
     if (!NarratorIO) {
+		printf("Could not create narrator IO request\n");
 		return RETURN_ERROR;
 	}
 
@@ -48,12 +53,13 @@ LONG openSpeechDevices() {
 		#endif
 	#else
 	if (OpenDevice("narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
-		NarratorIO->flags = NDF_NEWIORB;
 	#endif
+			printf("Could not open narrator device\n");
 			return RETURN_ERROR;
 	}
-    else
-        return RETURN_OK;
+	
+	// NarratorIO->flags = NDF_NEWIORB;
+    return RETURN_OK;
 }
 
 void closeSpeechLibraries() {

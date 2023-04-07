@@ -1,12 +1,13 @@
 #include "console.h"
 #include "math.h"
-#include "support/gcc8_c_support.h"
 #include "amiga.h"
-#include "stringutil.h"
+#include <string.h>
 #include <exec/ports.h>
 #include <proto/dos.h>
 #include <devices/conunit.h>
 #include <intuition/intuition.h>
+
+extern struct ExecBase *SysBase;
 
 BOOL isCursorEnabled;
 BOOL isScrollingEnabled;

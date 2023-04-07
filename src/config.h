@@ -1,5 +1,5 @@
 #define OLD_SPEECH
-#define EMULATOR
+// #define EMULATOR
 #define TRANSLATION_BUFFER_LENGTH 1000
 #define WIN_LEFT_EDGE 0
 #define WIN_TOP_EDGE 0

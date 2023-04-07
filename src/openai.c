@@ -1,4 +1,3 @@
-#include "support/gcc8_c_support.h"
 #include <amissl/amissl.h>
 #include <proto/exec.h>
 #include <proto/socket.h>
@@ -11,11 +10,10 @@
 #include <string.h>
 #include "openai.h"
 #include <stdbool.h>
+#include <stdio.h>
 #include "speech.h"
 #include "api_key.h"
 
-#define GETINTERFACE(iface, base) TRUE
-#define DROPINTERFACE(iface)
 #define HOST "api.openai.com"
 #define PORT 443
 
@@ -35,7 +33,6 @@ LONG UsesOpenSSLStructs = FALSE;
 BOOL amiSSLInitialized = FALSE;
 UBYTE *writeBuffer = NULL;
 UBYTE *readBuffer = NULL;
-UBYTE *printText = NULL;
 X509 *server_cert;
 SSL_CTX *ctx;
 BIO *bio, *bio_err;
@@ -59,20 +56,16 @@ ULONG rangeRand(ULONG maxValue) {
   return (UWORD)a;
 }
 
-static BPTR ErrorOutput() {
+static BPTR ErrOutput() {
 	return(((struct Process *)FindTask(NULL))->pr_CES);
 }
 
 static BPTR GetStdErr() {
-	BPTR err = ErrorOutput();
+	BPTR err = ErrOutput();
 	return(err ? err : Output());
 }
 
 LONG initOpenAIConnector() {
-    printText = AllocVec(PRINT_BUFFER_LENGTH, MEMF_ANY);
-    if (printText == NULL) {
-        return RETURN_ERROR;
-    }
     readBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY);
     if (readBuffer == NULL) {
         return RETURN_ERROR;
@@ -85,27 +78,17 @@ LONG initOpenAIConnector() {
 	if ((UtilityBase = (struct UtilityBase *)OpenLibrary("utility.library", 0)) == NULL)
 		return RETURN_ERROR;
 
-    sprintf(printText,"opened utility.library\n");
-	Write(Output(), (APTR)printText, strlen(printText));
+    printf("opened utility.library\n");
 
 	if ((SocketBase = OpenLibrary("bsdsocket.library", 0)) == NULL)
 		return RETURN_ERROR;
 
-    sprintf(printText, "opened bsdsocket.library\n");
-	Write(Output(), (APTR)printText, strlen(printText));
+    printf("opened bsdsocket.library\n");
 
 	if ((AmiSSLMasterBase = OpenLibrary("amisslmaster.library", AMISSLMASTER_MIN_VERSION)) == NULL)
 		return RETURN_ERROR;
 
-    sprintf(printText, "opened amisslmaster.library\n");
-	Write(Output(), (APTR)printText, strlen(printText));
-
-    if (!GETINTERFACE(IAmiSSLMaster, AmiSSLMasterBase)) {
-        return RETURN_ERROR;
-    }
-
-    sprintf(printText, "got amisslmaster.library interface\n");
-	Write(Output(), (APTR)printText, strlen(printText));
+    printf("opened amisslmaster.library\n");
 
     if (OpenAmiSSLTags(AMISSL_CURRENT_VERSION,
 	                  AmiSSL_UsesOpenSSLStructs, TRUE,
@@ -116,13 +99,11 @@ LONG initOpenAIConnector() {
 	                  AmiSSL_ErrNoPtr, &errno,
 	                  TAG_DONE) != 0) {
         
-        sprintf(printText, "failed to initialize amisslmaster.library\n");
-	    Write(Output(), (APTR)printText, strlen(printText));
+        printf("failed to initialize amisslmaster.library\n");
         return RETURN_ERROR;
     }
 		
-    sprintf(printText, "initialized amisslmaster.library\n");
-	Write(Output(), (APTR)printText, strlen(printText));
+    printf("initialized amisslmaster.library\n");
 
 	amiSSLInitialized = TRUE;
     return RETURN_OK;
@@ -144,8 +125,8 @@ static void replaceWithRealNewLines(UBYTE *string, LONG *stringLength) {
 }    
 
 UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
-    memclr(readBuffer, READ_BUFFER_LENGTH);
-    memclr(writeBuffer, WRITE_BUFFER_LENGTH);
+    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+    memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 
     sprintf(readBuffer,
             "{\"model\": \"%s\",\r\n"
@@ -161,7 +142,7 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
             "Content-Length: %lu\r\n\r\n"
             "%s", openAiApiKey, bodyLength, readBuffer);
 
-    memclr(readBuffer, READ_BUFFER_LENGTH);
+    memset(readBuffer, 0, READ_BUFFER_LENGTH);
     LONG endOfResponseIndex = -1;
 
     if ((ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer))) > 0) {
@@ -179,41 +160,32 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
         replaceWithRealNewLines(response, &responseLength);
         return response;
     } else {
-        sprintf(printText, "Couldn't write request!\n");
-        Write(Output(), (APTR)printText, strlen(printText));
+        printf("Couldn't write request!\n");
         WORD err = SSL_get_error(ssl, ssl_err);
         switch (err) {
             case SSL_ERROR_WANT_READ:
-                sprintf(printText, "SSL_ERROR_WANT_READ\n");
-                Write(Output(), (APTR)printText, strlen(printText));
+                printf("SSL_ERROR_WANT_READ\n");
                 break;
             case SSL_ERROR_WANT_WRITE:
-                sprintf(printText, "SSL_ERROR_WANT_WRITE\n");
-                Write(Output(), (APTR)printText, strlen(printText));
+                printf("SSL_ERROR_WANT_WRITE\n");
                 break;
             case SSL_ERROR_WANT_CONNECT:
-                sprintf(printText, "SSL_ERROR_WANT_CONNECT\n");
-                Write(Output(), (APTR)printText, strlen(printText));
+                printf("SSL_ERROR_WANT_CONNECT\n");
                 break;
             case SSL_ERROR_WANT_ACCEPT:
-                sprintf(printText, "SSL_ERROR_WANT_ACCEPT\n");
-                Write(Output(), (APTR)printText, strlen(printText));
+                printf("SSL_ERROR_WANT_ACCEPT\n");
                 break;
             case SSL_ERROR_WANT_X509_LOOKUP:
-                sprintf(printText, "SSL_ERROR_WANT_X509_LOOKUP\n");
-                Write(Output(), (APTR)printText, strlen(printText));
+                printf("SSL_ERROR_WANT_X509_LOOKUP\n");
                 break;
             case SSL_ERROR_SYSCALL:
-                sprintf(printText, "SSL_ERROR_SYSCALL\n");
-                Write(Output(), (APTR)printText, strlen(printText));
+                printf("SSL_ERROR_SYSCALL\n");
                 break;
             case SSL_ERROR_SSL:
-                sprintf(printText, "SSL_ERROR_SSL\n");
-                Write(Output(), (APTR)printText, strlen(printText));
+                printf("SSL_ERROR_SSL\n");
                 break;
             default:
-                sprintf(printText, "Unknown error!\n");
-                Write(Output(), (APTR)printText, strlen(printText));
+                printf("Unknown error!\n");
                 break;
         }
         ERR_print_errors(bio_err);
@@ -293,40 +265,34 @@ LONG connectToOpenAI() {
      */
     OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT | OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
 
-    sprintf(printText, "initialized openssl\n");
-    Write(Output(), (APTR)printText, strlen(printText));
+    printf("initialized openssl\n");
 
     /* Seed the entropy engine */
     generateRandomSeed(writeBuffer, 128);
     RAND_seed(writeBuffer, 128);
 
-    sprintf(printText, "seeded random\n");
-    Write(Output(), (APTR)printText, strlen(printText));
+    printf("seeded random\n");
 
     /* Note: BIO writing routines are prepared for NULL BIO handle */
     if ((bio_err = BIO_new(BIO_s_file())) != NULL)
         BIO_set_fp_amiga(bio_err, GetStdErr(), BIO_NOCLOSE | BIO_FP_TEXT);
 
-    sprintf(printText, "created bio\n");
-    Write(Output(), (APTR)printText, strlen(printText));
+    printf("created bio\n");
 
     /* Get a new SSL context */
     if ((ctx = SSL_CTX_new(TLS_client_method())) != NULL) {
-        sprintf(printText, "created ssl context\n");
-        Write(Output(), (APTR)printText, strlen(printText));
+        printf("created ssl context\n");
 
         /* Basic certificate handling */
         SSL_CTX_set_default_verify_paths(ctx);
         SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
                             verify_cb);
 
-        sprintf(printText, "set ssl context\n");
-        Write(Output(), (APTR)printText, strlen(printText));
+        printf("set ssl context\n");
 
         /* The following needs to be done once per socket */
         if((ssl = SSL_new(ctx)) != NULL) {
-            sprintf(printText, "created ssl\n");
-            Write(Output(), (APTR)printText, strlen(printText));
+            printf("created ssl\n");
 
             /* Lookup hostname */
             if ((hostent = gethostbyname(HOST)) != NULL) {
@@ -337,24 +303,21 @@ LONG connectToOpenAI() {
                 memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
             }
             else {
-                sprintf(printText, "Host lookup failed\n");
-                Write(Output(), (APTR)printText, strlen(printText));
+                printf("Host lookup failed\n");
                 return RETURN_ERROR;
             }
 
             /* Create a socket and connect to the server */
             if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
                 if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-                    sprintf(printText, "Couldn't connect to server\n");
-                    Write(Output(), (APTR)printText, strlen(printText));
+                    printf("Couldn't connect to server\n");
                     return RETURN_ERROR;
                 }
             }
 
             /* Check if connection was established */
             if (sock >= 0) {
-                sprintf(printText, "connected to server\n");
-                Write(Output(), (APTR)printText, strlen(printText));
+                printf("connected to server\n");
 
                 /* Associate the socket with the ssl structure */
                 SSL_set_fd(ssl, sock);
@@ -364,34 +327,28 @@ LONG connectToOpenAI() {
 
                 /* Perform SSL handshake */
                 if((ssl_err = SSL_connect(ssl)) >= 0) {
-                    sprintf(printText, "SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
-                    Write(Output(), (APTR)printText, strlen(printText));                  
+                    printf("SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
                 } else {
-                    sprintf(printText, "Couldn't establish SSL connection!\n");
-                    Write(Output(), (APTR)printText, strlen(printText));
+                    printf("Couldn't establish SSL connection!\n");
                     return RETURN_ERROR;
                 }
                 
                 /* If there were errors, print them */
                 if (ssl_err < 0) {
-                    sprintf(printText, "SSL error: %d\n", ssl_err);
-                    Write(Output(), (APTR)printText, strlen(printText));
+                    printf("SSL error: %d\n", ssl_err);
                     ERR_print_errors(bio_err);
                     return RETURN_ERROR;
                 }
             } else {
-                sprintf(printText, "Couldn't connect to host!\n");
-                Write(Output(), (APTR)printText, strlen(printText));
+                printf( "Couldn't connect to host!\n");
                 return RETURN_ERROR;
             }
         } else {
-            sprintf(printText, "Couldn't create new SSL handle!\n");
-            Write(Output(), (APTR)printText, strlen(printText));
+            printf("Couldn't create new SSL handle!\n");
             return RETURN_ERROR;
         }
     } else {
-        sprintf(printText, "Couldn't create new context!\n");
-        Write(Output(), (APTR)printText, strlen(printText));
+        printf("Couldn't create new context!\n");
         return RETURN_ERROR;
     }
 
@@ -414,11 +371,11 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx) {
 		/* Here, you could ask the user whether to ignore the failure,
 		 * displaying information from the certificate, for example.
 		 */
-		// FPrintf(GetStdErr(),"Certificate verification failed (%s)\n",
-		//         X509_verify_cert_error_string(X509_STORE_CTX_get_error(ctx)));
+		printf("Certificate verification failed (%s)\n",
+		        X509_verify_cert_error_string(X509_STORE_CTX_get_error(ctx)));
 	} else {
-		// FPrintf(GetStdErr(),"Certificate verification successful (hash %08lx)\n",
-		//         X509_issuer_and_serial_hash(X509_STORE_CTX_get_current_cert(ctx)));
+		printf("Certificate verification successful (hash %08lx)\n",
+		        X509_issuer_and_serial_hash(X509_STORE_CTX_get_current_cert(ctx)));
 	}
 	return preverify_ok;
 }
@@ -435,24 +392,10 @@ void closeOpenAIConnector() {
 	}
 
 	if (AmiSSLBase) {
-		DROPINTERFACE(IAmiSSL);
 		CloseAmiSSL();
 		AmiSSLBase = NULL;
 	}
 
-	DROPINTERFACE(IAmiSSLMaster);
-	CloseLibrary(AmiSSLMasterBase);
-	AmiSSLMasterBase = NULL;
-
-	DROPINTERFACE(ISocket);
-	CloseLibrary(SocketBase);
-	SocketBase = NULL;
-
-	DROPINTERFACE(IUtility);
-	CloseLibrary((struct Library *)UtilityBase);
-	UtilityBase = NULL;
-
-    FreeMem(printText, PRINT_BUFFER_LENGTH);
     FreeMem(writeBuffer, WRITE_BUFFER_LENGTH);
     FreeMem(readBuffer, READ_BUFFER_LENGTH);
 }

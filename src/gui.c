@@ -1,6 +1,6 @@
 #include "gui.h"
-#include "support/gcc8_c_support.h"
 #include "config.h"
+#include <stdio.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>
@@ -20,6 +20,8 @@
 #define SEND_MESSAGE_BUTTON_WIDTH 100
 #define SEND_MESSAGE_BUTTON_HEIGHT 20
 
+extern struct ExecBase * SysBase;
+extern struct DosLibrary *DOSBase;
 struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
 struct Window *window;
@@ -81,13 +83,17 @@ static void sendMessage();
 Action handleIDCMP(struct Window*);
 
 LONG openGUILibraries() {
-	IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 37);
-	if (IntuitionBase == NULL) 
+	IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 47);
+	if (IntuitionBase == NULL)  {
+		printf("Could not open intuition.library\n");
         return RETURN_ERROR;
+	}
 	
 	GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 0);
-	if (GfxBase == NULL)
+	if (GfxBase == NULL) {
+		printf( "Could not open graphics.library\n");
         return RETURN_ERROR;
+	}
 
 	return RETURN_OK;
 }
@@ -271,8 +277,6 @@ Action handleIDCMP(struct Window *window) {
 				break;
 		}
 	}
-
-	return NULL;
 }
 
 void shutdownGUI() {

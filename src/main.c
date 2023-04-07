@@ -1,5 +1,5 @@
-#include "support/gcc8_c_support.h"
 #include <workbench/startup.h>
+#include <stdio.h>
 #include <dos/dos.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -20,8 +20,6 @@ void closeDevices();
 void configureApp();
 void cleanExit();
 
-int errno = 0;
-
 int main() {
 	exitCode = 0;
 	SysBase = *((struct ExecBase**)4UL);
@@ -40,7 +38,7 @@ int main() {
 	exitCode = openLibraries();
 	if (exitCode)
 		goto exit;
-	
+
 	exitCode = openDevices();
 	if (exitCode)
 		goto exit;
@@ -56,9 +54,8 @@ int main() {
 	exitCode = connectToOpenAI();
 	if (exitCode)
 		goto exit;
-
 	#endif
-	
+
 	exitCode = initVideo();
 	if (exitCode)
 		goto exit;
@@ -73,22 +70,31 @@ exit:
 }
 
 LONG openLibraries() {
-	DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 37);
-	if (DOSBase == NULL) 
+	DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 47);
+
+	if (DOSBase == NULL)  {
+		printf("Failed to open dos.library v37. This app requires AmigaOS 3.2 or higher\n");
         return RETURN_ERROR;
+	}
 
-	if (openGUILibraries() != 0)
+	if (openGUILibraries() != 0) {
+		printf("Failed to open GUI libraries\n");
 		return RETURN_ERROR;
+	}
 
-	if (openSpeechLibraries() != 0)
+	if (openSpeechLibraries() != 0) {
+		printf("Failed to open speech libraries\n");
 		return RETURN_ERROR;
+	}
 
 	return RETURN_OK;
 }
 
 LONG openDevices() {
-	if (openSpeechDevices() != 0)
+	if (openSpeechDevices() != 0) {
+		printf("Failed to open speech devices\n");
 		return RETURN_ERROR;
+	}
 
 	return RETURN_OK;
 }
