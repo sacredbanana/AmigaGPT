@@ -239,15 +239,16 @@ LONG initVideo() {
 }
 
 static void sendMessage() {
+	ActivateGadget(sendMessageButton, window, NULL);
+	SetGadgetAttrs(sendMessageButton, window, NULL, GA_DISABLED, TRUE, TAG_DONE);
 	UBYTE *text = DoGadgetMethod(textInputTextEditor, window, NULL, GM_TEXTEDITOR_ExportText, NULL);
-	SetGadgetAttrs(chatOutputTextEditor, window, NULL, GA_TEXTEDITOR_Pen, 11, TAG_DONE);
 	DoGadgetMethod(chatOutputTextEditor, window, NULL, GM_TEXTEDITOR_InsertText, NULL, text, GV_TEXTEDITOR_InsertText_Bottom);
 	DoGadgetMethod(chatOutputTextEditor, window, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n", GV_TEXTEDITOR_InsertText_Bottom);
 	DoGadgetMethod(textInputTextEditor, window, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	printf("Sending message:\n%s\n", text);
 	UBYTE *response = postMessageToOpenAI(text, "gpt-3.5-turbo", "user");
+	SetGadgetAttrs(sendMessageButton, window, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	if (response != NULL) {
-		SetGadgetAttrs(chatOutputTextEditor, window, NULL, GA_TEXTEDITOR_Pen, 0, TAG_DONE);
 		DoGadgetMethod(chatOutputTextEditor, window, NULL, GM_TEXTEDITOR_InsertText, NULL, response, GV_TEXTEDITOR_InsertText_Bottom);
 		DoGadgetMethod(chatOutputTextEditor, window, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n", GV_TEXTEDITOR_InsertText_Bottom);
 		speakText(response);

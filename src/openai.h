@@ -2,7 +2,7 @@
 
 #define READ_BUFFER_LENGTH 8192
 #define WRITE_BUFFER_LENGTH 4096
-#define TEMP_BUFFER_LENGTH 64
+#define TEMP_BUFFER_LENGTH 1024
 
 struct OpenAIMessage {
     UBYTE *content;

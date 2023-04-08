@@ -139,6 +139,8 @@ static void formatText(UBYTE *string, LONG *stringLength) {
 }    
 
 UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
+    struct sockaddr_in addr;
+	struct hostent *hostent;
     UBYTE *response = NULL;
 
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
@@ -153,7 +155,6 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
 
     sprintf(writeBuffer, "POST /v1/chat/completions HTTP/1.1\r\n"
             "Host: api.openai.com\r\n"
-            "Connection: Keep-Alive\r\n"
             "Content-Type: application/json\r\n"
             "Authorization: Bearer %s\r\n"
             "Content-Length: %lu\r\n\r\n"
@@ -161,8 +162,88 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
 
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
 
-    printf("The write buffer is:\n%s\n", writeBuffer);
-    printf("The size of the write buffer is %lu\n", strlen(writeBuffer));
+    /* The following needs to be done once per socket */
+        if((ssl = SSL_new(ctx)) != NULL) {
+            printf("created ssl\n");
+
+            /* Lookup hostname */
+            if ((hostent = gethostbyname(HOST)) != NULL) {
+                memset(&addr, 0, sizeof(addr));
+                addr.sin_family = AF_INET;
+                addr.sin_port = htons(PORT);
+                addr.sin_len = hostent->h_length;;
+                memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
+            }
+            else {
+                printf("Host lookup failed\n");
+                return RETURN_ERROR;
+            }
+
+            /* Create a socket and connect to the server */
+            if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
+                if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+                    printf("Couldn't connect to server\n");
+                    return RETURN_ERROR;
+                }
+            }
+
+            /* Check if connection was established */
+            if (sock >= 0) {
+                printf("connected to server\n");
+
+                /* Associate the socket with the ssl structure */
+                SSL_set_fd(ssl, sock);
+
+                /* Set up SNI (Server Name Indication) */
+                SSL_set_tlsext_host_name(ssl, HOST);
+
+                /* Perform SSL handshake */
+                if((ssl_err = SSL_connect(ssl)) >= 0) {
+                    printf("SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
+                }
+                
+                /* If there were errors, print them */
+                if (ssl_err < 0) {
+                    LONG err = SSL_get_error(ssl, ssl_err);
+                    switch (err) {
+                        case SSL_ERROR_ZERO_RETURN:
+                            printf("SSL_ERROR_ZERO_RETURN\n");
+                            break;
+                        case SSL_ERROR_WANT_READ:
+                            printf("SSL_ERROR_WANT_READ\n");
+                            break;
+                        case SSL_ERROR_WANT_WRITE:
+                            printf("SSL_ERROR_WANT_WRITE\n");
+                            break;
+                        case SSL_ERROR_WANT_CONNECT:
+                            printf("SSL_ERROR_WANT_CONNECT\n");
+                            break;
+                        case SSL_ERROR_WANT_ACCEPT:
+                            printf("SSL_ERROR_WANT_ACCEPT\n");
+                            break;
+                        case SSL_ERROR_WANT_X509_LOOKUP:
+                            printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+                            break;
+                        case SSL_ERROR_SYSCALL:
+                            printf("SSL_ERROR_SYSCALL\n");
+                            break;
+                        case SSL_ERROR_SSL:
+                            printf("SSL_ERROR_SSL\n");
+                            break;
+                        default:
+                            printf("Unknown error: %ld\n", err);
+                            break;
+                    }
+                    return RETURN_ERROR;
+                }
+            } else {
+                printf( "Couldn't connect to host!\n");
+                return RETURN_ERROR;
+            }
+        } else {
+            printf("Couldn't create new SSL handle!\n");
+            return RETURN_ERROR;
+        }
 
     ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
@@ -248,6 +329,8 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
         }
         ERR_print_errors(bio_err);
     }
+    SSL_free(ssl);
+    CloseSocket(sock);
     return response;
 }
 
@@ -298,9 +381,6 @@ static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLe
 }
 
 LONG connectToOpenAI() {
-    struct sockaddr_in addr;
-	struct hostent *hostent;
-
     /* Basic intialization. Next few steps (up to SSL_new()) need
      * to be done only once per AmiSSL opener.
      */
@@ -324,72 +404,12 @@ LONG connectToOpenAI() {
     if ((ctx = SSL_CTX_new(TLS_client_method())) != NULL) {
         printf("created ssl context\n");
 
-        // SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
-
         /* Basic certificate handling */
         SSL_CTX_set_default_verify_paths(ctx);
         SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
                             verify_cb);
 
         printf("set ssl context\n");
-
-        /* The following needs to be done once per socket */
-        if((ssl = SSL_new(ctx)) != NULL) {
-            printf("created ssl\n");
-
-            /* Lookup hostname */
-            if ((hostent = gethostbyname(HOST)) != NULL) {
-                memset(&addr, 0, sizeof(addr));
-                addr.sin_family = AF_INET;
-                addr.sin_port = htons(PORT);
-                addr.sin_len = hostent->h_length;;
-                memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
-            }
-            else {
-                printf("Host lookup failed\n");
-                return RETURN_ERROR;
-            }
-
-            /* Create a socket and connect to the server */
-            if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
-                if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-                    printf("Couldn't connect to server\n");
-                    return RETURN_ERROR;
-                }
-            }
-
-            /* Check if connection was established */
-            if (sock >= 0) {
-                printf("connected to server\n");
-
-                /* Associate the socket with the ssl structure */
-                SSL_set_fd(ssl, sock);
-
-                /* Set up SNI (Server Name Indication) */
-                SSL_set_tlsext_host_name(ssl, HOST);
-
-                /* Perform SSL handshake */
-                if((ssl_err = SSL_connect(ssl)) >= 0) {
-                    printf("SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
-                } else {
-                    printf("Couldn't establish SSL connection!\n");
-                    return RETURN_ERROR;
-                }
-                
-                /* If there were errors, print them */
-                if (ssl_err < 0) {
-                    printf("SSL error: %d\n", ssl_err);
-                    ERR_print_errors(bio_err);
-                    return RETURN_ERROR;
-                }
-            } else {
-                printf( "Couldn't connect to host!\n");
-                return RETURN_ERROR;
-            }
-        } else {
-            printf("Couldn't create new SSL handle!\n");
-            return RETURN_ERROR;
-        }
     } else {
         printf("Couldn't create new context!\n");
         return RETURN_ERROR;
@@ -427,8 +447,6 @@ void closeOpenAIConnector() {
 	if (amiSSLInitialized) {
         /* Must always call after successful InitAmiSSL() */
         SSL_shutdown(ssl);
-        SSL_free(ssl);
-        CloseSocket(sock);
         SSL_CTX_free(ctx);
         BIO_free(bio_err);
 		CleanupAmiSSLA(NULL);
