@@ -32,12 +32,13 @@ LONG UsesOpenSSLStructs = FALSE;
 BOOL amiSSLInitialized = FALSE;
 UBYTE *writeBuffer = NULL;
 UBYTE *readBuffer = NULL;
+UBYTE *tempBuffer = NULL;
 X509 *server_cert;
 SSL_CTX *ctx;
 BIO *bio, *bio_err;
 SSL *ssl;
-int sock = -1;
-int ssl_err = 0;
+LONG sock = -1;
+LONG ssl_err = 0;
 ULONG RangeSeed;
 
 ULONG rangeRand(ULONG maxValue) {
@@ -71,6 +72,10 @@ LONG initOpenAIConnector() {
     }
     writeBuffer = AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY);
     if (writeBuffer == NULL) {
+        return RETURN_ERROR;
+    }
+    tempBuffer = AllocVec(TEMP_BUFFER_LENGTH, MEMF_ANY);
+    if (tempBuffer == NULL) {
         return RETURN_ERROR;
     }
 
@@ -148,37 +153,43 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
 
     sprintf(writeBuffer, "POST /v1/chat/completions HTTP/1.1\r\n"
             "Host: api.openai.com\r\n"
+            "Connection: Keep-Alive\r\n"
             "Content-Type: application/json\r\n"
             "Authorization: Bearer %s\r\n"
             "Content-Length: %lu\r\n\r\n"
             "%s", openAiApiKey, bodyLength, readBuffer);
 
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
-    LONG endOfResponseIndex = -1;
+
+    printf("The write buffer is:\n%s\n", writeBuffer);
+    printf("The size of the write buffer is %lu\n", strlen(writeBuffer));
 
     ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
     if (ssl_err > 0) {
         /* Dump everything to output */
+        ULONG totalBytesRead = 0;
         WORD bytesRead = 0;
         BOOL doneReading = FALSE;
         LONG err = 0;
         while (!doneReading) {
-            bytesRead = SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH);
+            bytesRead = SSL_read(ssl, tempBuffer, TEMP_BUFFER_LENGTH);
             err = SSL_get_error(ssl, bytesRead);
             switch (err) {
                 case SSL_ERROR_NONE:
                     printf("Read %d bytes from SSL\n", bytesRead);
+                    memcpy(readBuffer + totalBytesRead, tempBuffer, bytesRead);
+                    totalBytesRead += bytesRead;
                     LONG responseLength = 0;
-                    response = getResponseFromJson(readBuffer, bytesRead, &responseLength);
+                    response = getResponseFromJson(readBuffer, totalBytesRead, &responseLength);
                     if (response != NULL) {
-                        printf("Response: %s\n", response);
                         formatText(response, &responseLength);
                         doneReading = TRUE;
-                    }   
+                    }
                     break;
                 case SSL_ERROR_ZERO_RETURN:
                     printf("SSL_ERROR_ZERO_RETURN\n");
+                    doneReading = TRUE;
                     break;
                 case SSL_ERROR_WANT_READ:
                     printf("SSL_ERROR_WANT_READ\n");
@@ -242,12 +253,15 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
 
 static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLength) {
     const UBYTE content[] = "\"content\":\"";
+    const UBYTE responseTail[] = "\"finish_reason\":\"stop\",\"index\":0}]}";
+    if ((strstr(json, responseTail) == NULL) || (strstr(json, content) == NULL))
+        return NULL;
     UBYTE matchedIndex = 0;
     const ULONG contentLength = strlen(content);
     UBYTE braceDepth = 0;
     *responseLength = 0;
 
-    for (ULONG i = 0; i < jsonLength; i++) {
+    for (LONG i = 0; i < jsonLength; i++) {
         if (json[i] == '{') {
             braceDepth++;
         } else if (json[i] == '}') {
@@ -266,7 +280,7 @@ static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLe
         if (matchedIndex == contentLength) {
             UBYTE *response = AllocVec(jsonLength - matchedIndex, MEMF_ANY);
             UBYTE *responseIndex = (UBYTE *)response;
-            for (ULONG j = i; j < jsonLength; j++) {
+            for (LONG j = i; j < jsonLength; j++) {
                 if (json[j + 1] == '\"' && json[j] != '\\') {
                     *responseIndex = 0;
                     return response;
@@ -286,7 +300,6 @@ static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLe
 LONG connectToOpenAI() {
     struct sockaddr_in addr;
 	struct hostent *hostent;
-    LONG sock;
 
     /* Basic intialization. Next few steps (up to SSL_new()) need
      * to be done only once per AmiSSL opener.
@@ -428,4 +441,5 @@ void closeOpenAIConnector() {
 
     FreeVec(writeBuffer);
     FreeVec(readBuffer);
+    FreeVec(tempBuffer);
 }
