@@ -18,7 +18,7 @@ LONG openDevices();
 void closeLibraries();
 void closeDevices();
 void configureApp();
-void cleanExit();
+void cleanExit(ULONG returnCode);
 
 int main() {
 	exitCode = 0;
@@ -37,11 +37,11 @@ int main() {
 
 	exitCode = openLibraries();
 	if (exitCode)
-		goto exit;
+		cleanExit(exitCode);
 
 	exitCode = openDevices();
 	if (exitCode)
-		goto exit;
+		cleanExit(exitCode);
 
 	configureApp();
 
@@ -49,23 +49,20 @@ int main() {
 
 	exitCode = initOpenAIConnector();
 	if (exitCode)
-		goto exit;
+		cleanExit(exitCode);
 
 	exitCode = connectToOpenAI();
 	if (exitCode)
-		goto exit;
+		cleanExit(exitCode);
 	#endif
 
 	exitCode = initVideo();
 	if (exitCode)
-		goto exit;
+		cleanExit(exitCode);
 
 	exitCode = startGUIRunLoop();
-	if (exitCode)
-		goto exit;
 
-exit:
-	cleanExit();
+	cleanExit(exitCode);
 	return exitCode;
 }
 
@@ -109,13 +106,12 @@ void closeDevices() {
 	 closeSpeechDevices();
 }
 
-void cleanExit() {
-	// There seems to be a bug with the Exit() call causing the program to guru. Use dirty goto's for now
+void cleanExit(ULONG returnCode) {
 	shutdownGUI();
 	#ifndef EMULATOR
 	closeOpenAIConnector();
 	#endif
 	closeLibraries();
 	closeDevices();
-	Exit(RETURN_OK);
+	Exit(returnCode);
 }

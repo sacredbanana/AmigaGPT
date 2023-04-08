@@ -34,7 +34,7 @@
 #define CHAT_OUTPUT_TEXT_EDITOR_WIDTH 300
 #define CHAT_OUTPUT_TEXT_EDITOR_HEIGHT 100
 
-extern struct ExecBase * SysBase;
+extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
 struct IntuitionBase *IntuitionBase;
 struct Library *WindowBase;
@@ -69,7 +69,6 @@ struct Config {
 } config;
 
 static void sendMessage();
-Action handleIDCMP(struct Window*);
 
 LONG openGUILibraries() {
 	IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 47);
@@ -264,7 +263,6 @@ static void sendMessage() {
 LONG startGUIRunLoop() {
     ULONG signalMask, winSignal, signals, result;
 	BOOL done = FALSE;
-	UBYTE englishString[] = "Never gonna give you up, never gonna let you down, never going to run around and desert you";
     Action action;
 
     GetAttr(WINDOW_SigMask, windowObject, &winSignal);
@@ -281,7 +279,6 @@ LONG startGUIRunLoop() {
 					done = TRUE;
 					break;
 				case WMHI_GADGETUP:
-					printf("Button pressed!\n");
 					sendMessage();
 					break;
 				default:
@@ -293,30 +290,9 @@ LONG startGUIRunLoop() {
 	return RETURN_OK;
 }
 
-// Handle the messages from the GUI
-Action handleIDCMP(struct Window *window) {
-	struct IntuiMessage *message = NULL;
-	ULONG class;
-
-	while (message = (struct IntuiMessage *)GetMsg(window->UserPort)) {
-		class = message->Class;
-		ReplyMsg((struct Message *)message);
-
-		switch (class) {
-			case IDCMP_CLOSEWINDOW:
-				return EXIT_APPLICATION;
-			case IDCMP_GADGETUP:
-				return ALERT_BUTTON_PRESSED;
-			default:
-				break;
-		}
-	}
-}
-
 void shutdownGUI() {
 	if (windowObject) {
 		DisposeObject(windowObject);
 	}
-    DoMethod(window, WM_CLOSE);
     CloseScreen(screen);
 }

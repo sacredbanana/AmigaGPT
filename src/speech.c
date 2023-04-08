@@ -68,12 +68,12 @@ void closeSpeechLibraries() {
 
 void closeSpeechDevices() {
 	 if (NarratorIO) {
-		DeleteIORequest((struct IORequest *)NarratorIO);
 		CloseDevice((struct IORequest *)NarratorIO);
+		DeleteIORequest((struct IORequest *)NarratorIO);
 	 }
 
 	 if (NarratorPort)
-	  DeleteMsgPort(NarratorPort);
+		DeleteMsgPort(NarratorPort);
 }
 
 void speakText(UBYTE *text) {
