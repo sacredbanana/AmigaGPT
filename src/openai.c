@@ -21,8 +21,7 @@ static void cleanup(void);
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLength);
-static void replaceWithRealNewLines(UBYTE *content, LONG *stringLength);
-static LONG endOfResponse(UBYTE *response);
+static void formatText(UBYTE *content, LONG *stringLength);
 
 struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase;
 struct UtilityBase *UtilityBase;
@@ -33,7 +32,6 @@ LONG UsesOpenSSLStructs = FALSE;
 BOOL amiSSLInitialized = FALSE;
 UBYTE *writeBuffer = NULL;
 UBYTE *readBuffer = NULL;
-UBYTE *tempBuffer = NULL;
 X509 *server_cert;
 SSL_CTX *ctx;
 BIO *bio, *bio_err;
@@ -76,11 +74,6 @@ LONG initOpenAIConnector() {
         return RETURN_ERROR;
     }
 
-    tempBuffer = AllocVec(TEMP_BUFFER_LENGTH, MEMF_ANY);
-    if (tempBuffer == NULL) {
-        return RETURN_ERROR;
-    }
-
 	if ((UtilityBase = (struct UtilityBase *)OpenLibrary("utility.library", 0)) == NULL)
 		return RETURN_ERROR;
 
@@ -115,12 +108,22 @@ LONG initOpenAIConnector() {
     return RETURN_OK;
 }
 
-static void replaceWithRealNewLines(UBYTE *string, LONG *stringLength) {
+static void formatText(UBYTE *string, LONG *stringLength) {
     LONG newStringIndex = 0;
     const LONG oldStringLength = *stringLength;
     for (LONG oldStringIndex = 0; oldStringIndex < oldStringLength; oldStringIndex++) {
-        if (string[oldStringIndex] == '\\' && string[oldStringIndex + 1] == 'n') {
-            string[newStringIndex++] = '\n';
+        if (string[oldStringIndex] == '\\') {
+            if (string[oldStringIndex + 1] == 'n') {
+                string[newStringIndex++] = '\n';
+            } else if (string[oldStringIndex + 1] == 'r') {
+                string[newStringIndex++] = '\r';
+            } else if (string[oldStringIndex + 1] == 't') {
+                string[newStringIndex++] = '\t';
+            } else if (string[oldStringIndex + 1] == '\\') {
+                string[newStringIndex++] = '\\';
+            } else if (string[oldStringIndex + 1] == '"') {
+                string[newStringIndex++] = '"';
+            }
             oldStringIndex++;
         } else {
             string[newStringIndex++] = string[oldStringIndex];
@@ -131,6 +134,8 @@ static void replaceWithRealNewLines(UBYTE *string, LONG *stringLength) {
 }    
 
 UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
+    UBYTE *response = NULL;
+
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
     memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 
@@ -155,22 +160,25 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
 
     if (ssl_err > 0) {
         /* Dump everything to output */
-        UWORD readBufferIndex = 0;
         WORD bytesRead = 0;
         BOOL doneReading = FALSE;
         LONG err = 0;
         while (!doneReading) {
-            bytesRead = SSL_read(ssl, tempBuffer, TEMP_BUFFER_LENGTH);
+            bytesRead = SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH);
             err = SSL_get_error(ssl, bytesRead);
             switch (err) {
                 case SSL_ERROR_NONE:
                     printf("Read %d bytes from SSL\n", bytesRead);
-                    memcpy(readBuffer + readBufferIndex, tempBuffer, bytesRead);
-                    readBufferIndex += bytesRead;
-                    endOfResponseIndex = endOfResponse(readBuffer);
-                    if (endOfResponseIndex != -1) {
+                    LONG responseLength = 0;
+                    response = getResponseFromJson(readBuffer, bytesRead, &responseLength);
+                    if (response != NULL) {
+                        printf("Response: %s\n", response);
+                        formatText(response, &responseLength);
                         doneReading = TRUE;
-                    }
+                    }   
+                    break;
+                case SSL_ERROR_ZERO_RETURN:
+                    printf("SSL_ERROR_ZERO_RETURN\n");
                     break;
                 case SSL_ERROR_WANT_READ:
                     printf("SSL_ERROR_WANT_READ\n");
@@ -198,11 +206,6 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
                     break;
             }            
         }
-
-        LONG responseLength = 0;
-        UBYTE *response = getResponseFromJson(readBuffer, endOfResponseIndex + 1, &responseLength);
-        replaceWithRealNewLines(response, &responseLength);
-        return response;
     } else {
         printf("Couldn't write request!\n");
         LONG err = SSL_get_error(ssl, ssl_err);
@@ -234,26 +237,7 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
         }
         ERR_print_errors(bio_err);
     }
-    return NULL;
-}
-
-static LONG endOfResponse(UBYTE *response) {
-    const UBYTE substring[] = "finish_reason\":\"stop\",\"index\":0}]}";
-    int i = 0, j = 0;
-
-    while (response[i] != '\0') {
-        if (response[i] == substring[j]) {
-            j++;
-            if (substring[j] == '\0') {
-                return i;
-            }
-        } else {
-            j = 0;
-        }
-        i++;
-    }
-
-    return -1;
+    return response;
 }
 
 static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLength) {
@@ -283,7 +267,7 @@ static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLe
             UBYTE *response = AllocVec(jsonLength - matchedIndex, MEMF_ANY);
             UBYTE *responseIndex = (UBYTE *)response;
             for (ULONG j = i; j < jsonLength; j++) {
-                if (json[j + 1] == '\"') {
+                if (json[j + 1] == '\"' && json[j] != '\\') {
                     *responseIndex = 0;
                     return response;
                 }
@@ -444,5 +428,4 @@ void closeOpenAIConnector() {
 
     FreeVec(writeBuffer);
     FreeVec(readBuffer);
-    FreeVec(tempBuffer);
 }
