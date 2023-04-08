@@ -117,5 +117,5 @@ void cleanExit() {
 	#endif
 	closeLibraries();
 	closeDevices();
-	// Exit(returnValue);
+	Exit(RETURN_OK);
 }

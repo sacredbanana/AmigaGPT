@@ -33,6 +33,7 @@ LONG UsesOpenSSLStructs = FALSE;
 BOOL amiSSLInitialized = FALSE;
 UBYTE *writeBuffer = NULL;
 UBYTE *readBuffer = NULL;
+UBYTE *tempBuffer = NULL;
 X509 *server_cert;
 SSL_CTX *ctx;
 BIO *bio, *bio_err;
@@ -72,6 +73,11 @@ LONG initOpenAIConnector() {
     }
     writeBuffer = AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY);
     if (writeBuffer == NULL) {
+        return RETURN_ERROR;
+    }
+
+    tempBuffer = AllocVec(TEMP_BUFFER_LENGTH, MEMF_ANY);
+    if (tempBuffer == NULL) {
         return RETURN_ERROR;
     }
 
@@ -145,14 +151,52 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
     LONG endOfResponseIndex = -1;
 
-    if ((ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer))) > 0) {
+    ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+
+    if (ssl_err > 0) {
         /* Dump everything to output */
         UWORD readBufferIndex = 0;
-        while ((ssl_err = SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH)) > 0) {
-            endOfResponseIndex = endOfResponse(readBuffer);
-            if (endOfResponseIndex != -1) {
-                break;
-            }
+        WORD bytesRead = 0;
+        BOOL doneReading = FALSE;
+        LONG err = 0;
+        while (!doneReading) {
+            bytesRead = SSL_read(ssl, tempBuffer, TEMP_BUFFER_LENGTH);
+            err = SSL_get_error(ssl, bytesRead);
+            switch (err) {
+                case SSL_ERROR_NONE:
+                    printf("Read %d bytes from SSL\n", bytesRead);
+                    memcpy(readBuffer + readBufferIndex, tempBuffer, bytesRead);
+                    readBufferIndex += bytesRead;
+                    endOfResponseIndex = endOfResponse(readBuffer);
+                    if (endOfResponseIndex != -1) {
+                        doneReading = TRUE;
+                    }
+                    break;
+                case SSL_ERROR_WANT_READ:
+                    printf("SSL_ERROR_WANT_READ\n");
+                    break;
+                case SSL_ERROR_WANT_WRITE:
+                    printf("SSL_ERROR_WANT_WRITE\n");
+                    break;
+                case SSL_ERROR_WANT_CONNECT:
+                    printf("SSL_ERROR_WANT_CONNECT\n");
+                    break;
+                case SSL_ERROR_WANT_ACCEPT:
+                    printf("SSL_ERROR_WANT_ACCEPT\n");
+                    break;
+                case SSL_ERROR_WANT_X509_LOOKUP:
+                    printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+                    break;
+                case SSL_ERROR_SYSCALL:
+                    printf("SSL_ERROR_SYSCALL\n");
+                    break;
+                case SSL_ERROR_SSL:
+                    printf("SSL_ERROR_SSL\n");
+                    break;
+                default:
+                    printf("Unknown error: %ld\n", err);
+                    break;
+            }            
         }
 
         LONG responseLength = 0;
@@ -161,7 +205,7 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
         return response;
     } else {
         printf("Couldn't write request!\n");
-        WORD err = SSL_get_error(ssl, ssl_err);
+        LONG err = SSL_get_error(ssl, ssl_err);
         switch (err) {
             case SSL_ERROR_WANT_READ:
                 printf("SSL_ERROR_WANT_READ\n");
@@ -185,7 +229,7 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
                 printf("SSL_ERROR_SSL\n");
                 break;
             default:
-                printf("Unknown error!\n");
+                printf("Unknown error: %ld\n", err);
                 break;
         }
         ERR_print_errors(bio_err);
@@ -283,6 +327,8 @@ LONG connectToOpenAI() {
     if ((ctx = SSL_CTX_new(TLS_client_method())) != NULL) {
         printf("created ssl context\n");
 
+        // SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
+
         /* Basic certificate handling */
         SSL_CTX_set_default_verify_paths(ctx);
         SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
@@ -371,11 +417,11 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx) {
 		/* Here, you could ask the user whether to ignore the failure,
 		 * displaying information from the certificate, for example.
 		 */
-		printf("Certificate verification failed (%s)\n",
-		        X509_verify_cert_error_string(X509_STORE_CTX_get_error(ctx)));
+		// printf("Certificate verification failed (%s)\n",
+		//         X509_verify_cert_error_string(X509_STORE_CTX_get_error(ctx)));
 	} else {
-		printf("Certificate verification successful (hash %08lx)\n",
-		        X509_issuer_and_serial_hash(X509_STORE_CTX_get_current_cert(ctx)));
+		// printf("Certificate verification successful (hash %08lx)\n",
+		//         X509_issuer_and_serial_hash(X509_STORE_CTX_get_current_cert(ctx)));
 	}
 	return preverify_ok;
 }
@@ -396,6 +442,7 @@ void closeOpenAIConnector() {
 		AmiSSLBase = NULL;
 	}
 
-    FreeMem(writeBuffer, WRITE_BUFFER_LENGTH);
-    FreeMem(readBuffer, READ_BUFFER_LENGTH);
+    FreeVec(writeBuffer);
+    FreeVec(readBuffer);
+    FreeVec(tempBuffer);
 }

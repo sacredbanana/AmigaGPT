@@ -33,7 +33,13 @@
         "console.h": "c",
         "speech.h": "c",
         "conunit.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "layout.h": "c",
+        "classusr.h": "c"
     },
-    "m68k.vasm.provideDiagnostics": false
+    "m68k.vasm.provideDiagnostics": false,
+    "amiga.program": "out/amigagpt",
+    "amiga.rom-paths.A1200": "/Volumes/repos/kickstarts/KICK31.rom",
+    "amiga.rom-paths.A4000": "/Volumes/repos/kickstarts/KICK31.rom",
+    "amiga.rom-paths.A500": "/Volumes/repos/kickstarts/KICK13.rom"
 }
