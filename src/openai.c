@@ -176,14 +176,14 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
             }
             else {
                 printf("Host lookup failed\n");
-                return RETURN_ERROR;
+                return NULL;
             }
 
             /* Create a socket and connect to the server */
             if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
                 if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
                     printf("Couldn't connect to server\n");
-                    return RETURN_ERROR;
+                    return NULL;
                 }
             }
 
@@ -234,15 +234,15 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
                             printf("Unknown error: %ld\n", err);
                             break;
                     }
-                    return RETURN_ERROR;
+                    return NULL;
                 }
             } else {
                 printf( "Couldn't connect to host!\n");
-                return RETURN_ERROR;
+                return NULL;
             }
         } else {
             printf("Couldn't create new SSL handle!\n");
-            return RETURN_ERROR;
+            return NULL;
         }
 
     ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
@@ -327,7 +327,6 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
                 printf("Unknown error: %ld\n", err);
                 break;
         }
-        ERR_print_errors(bio_err);
     }
     SSL_free(ssl);
     CloseSocket(sock);

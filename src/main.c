@@ -11,17 +11,14 @@
 struct ExecBase *SysBase;
 struct DosLibrary *DOSBase;
 
-LONG exitCode;
-
 LONG openLibraries();
 LONG openDevices();
 void closeLibraries();
 void closeDevices();
-void configureApp();
 void cleanExit(ULONG returnCode);
 
 int main() {
-	exitCode = 0;
+	ULONG exitCode = 0;
 	SysBase = *((struct ExecBase**)4UL);
 	struct WBStartup *wbStartupMessage = NULL;
 	struct Process *currentTask = (struct Process*)FindTask(NULL);
@@ -42,8 +39,6 @@ int main() {
 	exitCode = openDevices();
 	if (exitCode)
 		cleanExit(exitCode);
-
-	configureApp();
 
 	#ifndef EMULATOR
 
@@ -113,5 +108,5 @@ void cleanExit(ULONG returnCode) {
 	#endif
 	closeLibraries();
 	closeDevices();
-	Exit(returnCode);
+	exit(returnCode);
 }
