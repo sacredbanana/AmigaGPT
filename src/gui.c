@@ -18,6 +18,8 @@
 #include <proto/radiobutton.h>
 #include <proto/window.h>
 #include <proto/texteditor.h>
+#include <proto/asl.h>
+#include <libraries/asl.h>
 #include <libraries/gadtools.h>
 #include <classes/window.h>
 #include "speech.h"
@@ -25,6 +27,8 @@
 #include "amiga.h"
 #include <stdbool.h>
 
+#define SCREEN_SELECT_WINDOW_WIDTH 200
+#define SCREEN_SELECT_WINDOW_HEIGHT 50
 #define SCREEN_SELECT_RADIO_BUTTON_ID 0
 #define SCREEN_SELECT_RADIO_BUTTON_WIDTH 100
 #define SCREEN_SELECT_RADIO_BUTTON_HEIGHT 30
@@ -55,6 +59,7 @@ struct Library *ButtonBase;
 struct Library *RadioButtonBase;
 struct Library *TextFieldBase;
 struct GfxBase *GfxBase;
+struct Library *AslBase;
 struct Window *mainWindow;
 Object *mainWindowObject;
 Object *mainLayout;
@@ -127,6 +132,12 @@ LONG openGUILibraries() {
         return RETURN_ERROR;
 	}
 
+	AslBase = OpenLibrary("asl.library", 47);
+	if (AslBase == NULL) {
+		printf( "Could not open asl.library\n");
+		return RETURN_ERROR;
+	}
+
 	return RETURN_OK;
 }
 
@@ -138,6 +149,7 @@ void closeGUILibraries() {
 	CloseLibrary(ButtonBase);
 	CloseLibrary(TextFieldBase);
 	CloseLibrary(RadioButtonBase);
+	CloseLibrary(AslBase);
 }
 
 LONG initVideo() {
@@ -248,6 +260,7 @@ LONG initVideo() {
 }
 
 static LONG selectScreen() {
+	struct ScreenModeRequester *screenModeRequester;
 	screen = LockPubScreen("Workbench");
 
 	STRPTR radioButtonOptions[] = {
@@ -312,8 +325,8 @@ static LONG selectScreen() {
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
 		WA_Title, "Screen Select",
-		WA_Width, 200,
-		WA_Height, 100,
+		WA_Width, SCREEN_SELECT_WINDOW_WIDTH,
+		WA_Height, SCREEN_SELECT_WINDOW_HEIGHT,
 		WA_CloseGadget, FALSE,
 		WINDOW_SharedPort, NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
@@ -366,35 +379,39 @@ static LONG selectScreen() {
         }
     }
 
-	DoMethod(screenSelectWindowObject, WM_CLOSE);
-
 	LONG selectedRadioButton;
 	GetAttr(RADIOBUTTON_Selected, screenSelectRadioButton, &selectedRadioButton);
 
 	if (selectedRadioButton == 0) {
 		// New screen
-		isPublicScreen = FALSE;
-		UnlockPubScreen(NULL, screen);
-		screen = OpenScreenTags(NULL,
-		SA_Pens, (ULONG)pens,
-		SA_DisplayID, HIRES_KEY,
-		SA_Depth, 3,
-		SA_Title, (ULONG)"AmigaGPT",
-		TAG_DONE);
+		if (screenModeRequester = (struct ScreenModeRequester *)AllocAslRequestTags(ASL_ScreenModeRequest, TAG_DONE)) {
+			if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
+				isPublicScreen = FALSE;
+				UnlockPubScreen(NULL, screen);
+				screen = OpenScreenTags(NULL,
+					SA_Pens, (ULONG)pens,
+					SA_DisplayID, screenModeRequester->sm_DisplayID,
+					SA_Depth, screenModeRequester->sm_DisplayDepth,
+					SA_Title, (ULONG)"AmigaGPT",
+					TAG_DONE);
 
-		if (screen == NULL) {
-			printf("Could not open screen\n");
-			return RETURN_ERROR;
+				if (screen == NULL) {
+					printf("Could not open screen\n");
+					return RETURN_ERROR;
+				}
+
+				SetRGB4(&(screen->ViewPort), 0, 0x0, 0x1, 0x5);
+				SetRGB4(&(screen->ViewPort), 1, 0xA, 0x3, 0x0);
+				SetRGB4(&(screen->ViewPort), 3, 0xB, 0xF, 0x2);
+				SetRGB4(&(screen->ViewPort), 4, 0xF, 0xF, 0x0);
+			}
 		}
-
-		SetRGB4(&(screen->ViewPort), 0, 0x0, 0x1, 0x5);
-		SetRGB4(&(screen->ViewPort), 1, 0xA, 0x3, 0x0);
-		SetRGB4(&(screen->ViewPort), 3, 0xB, 0xF, 0x2);
-		SetRGB4(&(screen->ViewPort), 4, 0xF, 0xF, 0x0);
 	} else {
 		// Open in Workbench
 		isPublicScreen = TRUE;
 	}
+
+	DoMethod(screenSelectWindowObject, WM_CLOSE);
 
 	return RETURN_OK;
 }
