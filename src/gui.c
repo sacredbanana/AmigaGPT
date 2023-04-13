@@ -9,6 +9,7 @@
 #include <gadgets/radiobutton.h>
 #include <gadgets/texteditor.h>
 #include <devices/conunit.h>
+#include <exec/execbase.h>
 #include <intuition/intuition.h>
 #include <intuition/gadgetclass.h>
 #include <intuition/classusr.h>
@@ -50,6 +51,8 @@
 #define MENU_ITEM_QUIT_ID 3
 #define MENU_ITEM_SPEECH_ENABLED_ID 4
 #define MENU_ITEM_FONT_ID 5
+#define MENU_ITEM_SPEECH_SYSTEM_OLD_ID 6
+#define MENU_ITEM_SPEECH_SYSTEM_NEW_ID 7
 
 extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
@@ -74,6 +77,7 @@ struct Gadget *gadget;
 BOOL isPublicScreen;
 UWORD pens[] = {~0};
 BOOL isSpeechEnabled;
+enum SpeechSystem speechSystem;
 
 
 struct NewMenu amigaGPTMenu[] = {
@@ -86,6 +90,9 @@ struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Font", 0, 0, 0, MENU_ITEM_FONT_ID},
 	{NM_TITLE, "Speech", 0, 0, 0, 0},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
+	{NM_ITEM, "Speech system", 0, 0, 0, 0},
+	{NM_SUB, "Old", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_SYSTEM_OLD_ID},
+	{NM_SUB, "New", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_NEW_ID},
 	{NM_END, NULL, 0, 0, 0, 0}
 };
 
@@ -454,6 +461,7 @@ LONG startGUIRunLoop() {
     WORD code;
 
 	isSpeechEnabled = TRUE;
+	speechSystem = SpeechSystemOld;
 
     GetAttr(WINDOW_SigMask, mainWindowObject, &winSignal);
 	signalMask = winSignal;
@@ -485,10 +493,6 @@ LONG startGUIRunLoop() {
 						case MENU_ITEM_QUIT_ID:
 							done = TRUE;
 							break;
-						case MENU_ITEM_SPEECH_ENABLED_ID:
-							menuItem->Flags ^= CHECKED;
-							isSpeechEnabled = !isSpeechEnabled;
-							break;
 						case MENU_ITEM_FONT_ID:
 							if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
 								if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
@@ -506,6 +510,26 @@ LONG startGUIRunLoop() {
 								}
 								FreeAslRequest(fontRequester);
 							}
+							break;
+						case MENU_ITEM_SPEECH_ENABLED_ID:
+							menuItem->Flags ^= CHECKED;
+							isSpeechEnabled = !isSpeechEnabled;
+							break;
+						case MENU_ITEM_SPEECH_SYSTEM_OLD_ID:
+							menuItem->Flags |= CHECKED;
+							menuItem = ItemAddress(menuStrip, MENU_ITEM_SPEECH_SYSTEM_NEW_ID);
+							menuItem->Flags &= ~CHECKED;
+							speechSystem = SpeechSystemOld;
+							closeSpeech();
+							initSpeech(speechSystem);
+							break;
+						case MENU_ITEM_SPEECH_SYSTEM_NEW_ID:
+							menuItem->Flags |= CHECKED;
+							menuItem = ItemAddress(menuStrip, MENU_ITEM_SPEECH_SYSTEM_OLD_ID);
+							menuItem->Flags &= ~CHECKED;
+							speechSystem = SpeechSystemNew;
+							closeSpeech();
+							initSpeech(speechSystem);
 							break;
 						default:
 							break;

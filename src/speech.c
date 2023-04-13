@@ -54,11 +54,18 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 
 void closeSpeech() {
 	CloseLibrary(TranslatorBase);
+	Forbid();
+	RemLibrary(TranslatorBase);
+	Permit();
+	
 	if (NarratorIO) {
 		if (CheckIO((struct IORequest *)NarratorIO) == 0) {
 			AbortIO((struct IORequest *)NarratorIO);
 		}
 		CloseDevice((struct IORequest *)NarratorIO);
+		Forbid();
+		RemDevice((struct Device *)((struct IORequest *)NarratorIO)->io_Device);
+		Permit();
 		DeleteIORequest((struct IORequest *)NarratorIO);
 	 }
 
