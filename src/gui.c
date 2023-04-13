@@ -24,7 +24,6 @@
 #include <classes/window.h>
 #include "speech.h"
 #include "openai.h"
-#include "amiga.h"
 #include <stdbool.h>
 
 #define SCREEN_SELECT_WINDOW_WIDTH 200
