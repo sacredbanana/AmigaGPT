@@ -8,6 +8,7 @@
 #include <gadgets/button.h>
 #include <gadgets/radiobutton.h>
 #include <gadgets/texteditor.h>
+#include <gadgets/scroller.h>
 #include <devices/conunit.h>
 #include <exec/execbase.h>
 #include <intuition/intuition.h>
@@ -19,6 +20,7 @@
 #include <proto/window.h>
 #include <proto/texteditor.h>
 #include <proto/asl.h>
+#include <proto/scroller.h>
 #include <libraries/asl.h>
 #include <libraries/gadtools.h>
 #include <classes/window.h>
@@ -45,6 +47,9 @@
 #define CHAT_OUTPUT_TEXT_EDITOR_ID 4
 #define CHAT_OUTPUT_TEXT_EDITOR_WIDTH 300
 #define CHAT_OUTPUT_TEXT_EDITOR_HEIGHT 100
+#define CHAT_OUTPUT_SCROLLER_ID 5
+#define CHAT_OUTPUT_SCROLLER_WIDTH 20
+#define CHAT_OUTPUT_SCROLLER_HEIGHT 100
 
 #define MENU_ITEM_ABOUT_ID 1
 #define MENU_ITEM_PREFERENCES_ID 2
@@ -57,30 +62,31 @@
 extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
 struct IntuitionBase *IntuitionBase;
-struct Library *WindowBase;
-struct Library *LayoutBase;
-struct Library *ButtonBase;
-struct Library *RadioButtonBase;
-struct Library *TextFieldBase;
 struct GfxBase *GfxBase;
 struct Library *AslBase;
-struct Window *mainWindow;
-Object *mainWindowObject;
-Object *mainLayout;
-Object *chatLayout;
-Object *chatInputLayout;
-Object *sendMessageButton;
-Object *textInputTextEditor;
-Object *chatOutputTextEditor;
-struct Screen *screen;
-struct Gadget *gadget;
-BOOL isPublicScreen;
-UWORD pens[] = {~0};
-BOOL isSpeechEnabled;
-enum SpeechSystem speechSystem;
+static struct Library *WindowBase;
+static struct Library *LayoutBase;
+static struct Library *ButtonBase;
+static struct Library *RadioButtonBase;
+static struct Library *TextFieldBase;
+static struct Library *ScrollerBase;
+static struct Window *mainWindow;
+static Object *mainWindowObject;
+static Object *mainLayout;
+static Object *chatLayout;
+static Object *chatInputLayout;
+static Object *chatOutputLayout;
+static Object *sendMessageButton;
+static Object *textInputTextEditor;
+static Object *chatOutputTextEditor;
+static Object *chatOutputScroller;
+static struct Screen *screen;
+static BOOL isPublicScreen;
+static UWORD pens[] = {~0};
+static BOOL isSpeechEnabled;
+static enum SpeechSystem speechSystem;
 
-
-struct NewMenu amigaGPTMenu[] = {
+static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
 	{NM_ITEM, "About", 0, 0, 0, MENU_ITEM_ABOUT_ID},
 	{NM_ITEM, "Preferences", "P", 0, 0, MENU_ITEM_PREFERENCES_ID},
@@ -128,6 +134,11 @@ LONG openGUILibraries() {
 
 	if ((TextFieldBase = OpenLibrary("gadgets/texteditor.gadget", 47)) == NULL) {
 		printf("Could not open texteditor.gadget\n");
+        return RETURN_ERROR;
+	}
+
+	if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 47)) == NULL) {
+		printf("Could not open scroller.gadget\n");
         return RETURN_ERROR;
 	}
 	
@@ -199,6 +210,19 @@ LONG initVideo() {
 			printf("Could not create text editor\n");
 			return RETURN_ERROR;
 	}
+
+	if ((chatOutputScroller = NewObject(SCROLLER_GetClass(), NULL,
+		GA_ID, CHAT_OUTPUT_SCROLLER_ID,
+		GA_RelVerify, TRUE,
+		GA_Width, CHAT_OUTPUT_SCROLLER_WIDTH,
+		GA_Height, CHAT_OUTPUT_SCROLLER_HEIGHT,
+		SCROLLER_Top, 0,
+		SCROLLER_Visible, 100,
+		SCROLLER_Total, 100,
+		TAG_DONE)) == NULL) {
+			printf("Could not create scroller\n");
+			return RETURN_ERROR;
+	}
 	
 	if ((chatInputLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
@@ -214,11 +238,25 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	if ((chatOutputLayout = NewObject(LAYOUT_GetClass(), NULL,
+		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
+		LAYOUT_HorizAlignment, LALIGN_CENTER,
+		LAYOUT_SpaceInner, TRUE,
+		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_AddChild, chatOutputTextEditor,
+		CHILD_WeightedWidth, 100,
+		LAYOUT_AddChild, chatOutputScroller,
+		CHILD_WeightedWidth, 10,
+		TAG_DONE)) == NULL) {
+			printf("Could not create chat output layout\n");
+			return RETURN_ERROR;
+	}
+
 	if ((chatLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, chatOutputTextEditor,
+		LAYOUT_AddChild, chatOutputLayout,
 		CHILD_WeightedHeight, 80,
 		LAYOUT_AddChild, chatInputLayout,
 		CHILD_WeightedHeight, 20,
@@ -497,18 +535,10 @@ LONG startGUIRunLoop() {
 							if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
 								if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
 									currentFont = &fontRequester->fo_Attr;
-									screen->Font = currentFont;
-									mainWindow->RPort->Font = currentFont;
-									MakeScreen(screen);
-									RethinkDisplay();
-									DoMethod(mainWindowObject, WM_CLOSE, NULL, TRUE);
-									DoMethod(mainWindowObject, WM_OPEN, NULL, TRUE);
-									SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_FixedFont, currentFont, TAG_DONE);
-									SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_FixedFont, currentFont, TAG_DONE);
-									SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, currentFont, TAG_DONE);
-									SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, currentFont, TAG_DONE);
 								}
 								FreeAslRequest(fontRequester);
+								SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, currentFont, TAG_DONE);
+								SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, currentFont, TAG_DONE);
 							}
 							break;
 						case MENU_ITEM_SPEECH_ENABLED_ID:
