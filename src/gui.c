@@ -41,6 +41,11 @@
 #define CHAT_OUTPUT_TEXT_EDITOR_WIDTH 300
 #define CHAT_OUTPUT_TEXT_EDITOR_HEIGHT 100
 
+#define MENU_ITEM_ABOUT_ID 1
+#define MENU_ITEM_PREFERENCES_ID 2
+#define MENU_ITEM_QUIT_ID 3
+#define MENU_ITEM_SPEECH_ENABLED_ID 4
+
 extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
 struct IntuitionBase *IntuitionBase;
@@ -49,7 +54,6 @@ struct Library *LayoutBase;
 struct Library *ButtonBase;
 struct Library *RadioButtonBase;
 struct Library *TextFieldBase;
-struct Library *GadToolsBase;
 struct GfxBase *GfxBase;
 struct Window *mainWindow;
 Object *mainWindowObject;
@@ -61,22 +65,19 @@ Object *textInputTextEditor;
 Object *chatOutputTextEditor;
 struct Screen *screen;
 struct Gadget *gadget;
-struct Menu *menuStrip;
-APTR *visualInfo;
 BOOL isPublicScreen;
 UWORD pens[] = {~0};
+BOOL isSpeechEnabled;
 
-
-typedef enum {
-	EXIT_APPLICATION, ALERT_BUTTON_PRESSED, SPEAK_BUTTON_PRESSED
-} Action;
 
 struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
-	{NM_ITEM, "About", 0, 0, 0, 0},
-	{NM_ITEM, "Preferences", "P", 0, 0, 0},
+	{NM_ITEM, "About", 0, 0, 0, MENU_ITEM_ABOUT_ID},
+	{NM_ITEM, "Preferences", "P", 0, 0, MENU_ITEM_PREFERENCES_ID},
 	{NM_ITEM, NM_BARLABEL, 0, 0, 0, 0},
-	{NM_ITEM, "Quit", "Q", 0, 0, 0},
+	{NM_ITEM, "Quit", "Q", 0, 0, MENU_ITEM_QUIT_ID},
+	{NM_TITLE, "Speech", 0, 0, 0, 0},
+	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
 	{NM_END, NULL, 0, 0, 0, 0}
 };
 
@@ -87,12 +88,6 @@ LONG openGUILibraries() {
 	IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 47);
 	if (IntuitionBase == NULL)  {
 		printf("Could not open intuition.library\n");
-        return RETURN_ERROR;
-	}
-
-	GadToolsBase = OpenLibrary("gadtools.library", 47);
-	if (GadToolsBase == NULL)  {
-		printf("Could not open gadtools.library\n");
         return RETURN_ERROR;
 	}
 
@@ -142,6 +137,7 @@ void closeGUILibraries() {
 	CloseLibrary(LayoutBase);
 	CloseLibrary(ButtonBase);
 	CloseLibrary(TextFieldBase);
+	CloseLibrary(RadioButtonBase);
 }
 
 LONG initVideo() {
@@ -346,7 +342,7 @@ static LONG selectScreen() {
 
 	BOOL done = FALSE;
 	ULONG signalMask, winSignal, signals, result;
-	ULONG code;
+	WORD code;
 
 	GetAttr(WINDOW_SigMask, screenSelectWindowObject, &winSignal);
 	signalMask = winSignal;
@@ -416,8 +412,8 @@ static void sendMessage() {
 	if (response != NULL) {
 		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, response, GV_TEXTEDITOR_InsertText_Bottom);
 		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n", GV_TEXTEDITOR_InsertText_Bottom);
-		speakText(response);
-		Delay(50);
+		if (isSpeechEnabled)
+			speakText(response);
 		FreeVec(response);
 	} else {
 		printf("No response from OpenAI\n");
@@ -429,7 +425,9 @@ static void sendMessage() {
 LONG startGUIRunLoop() {
     ULONG signalMask, winSignal, signals, result;
 	BOOL done = FALSE;
-    Action action;
+    WORD code;
+
+	isSpeechEnabled = TRUE;
 
     GetAttr(WINDOW_SigMask, mainWindowObject, &winSignal);
 	signalMask = winSignal;
@@ -439,13 +437,39 @@ LONG startGUIRunLoop() {
     while (!done) {
         signals = Wait(signalMask);
 
-		while ((result = DoMethod(mainWindowObject, WM_HANDLEINPUT, &action)) != WMHI_LASTMSG) {
+		while ((result = DoMethod(mainWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
 			switch (result & WMHI_CLASSMASK) {
 				case WMHI_CLOSEWINDOW:
 					done = TRUE;
 					break;
 				case WMHI_GADGETUP:
 					sendMessage();
+					break;
+				case WMHI_MENUPICK:
+				{
+					struct Menu *menuStrip;
+					GetAttr(WINDOW_MenuStrip, mainWindowObject, &menuStrip);
+					struct MenuItem *menuItem = ItemAddress(menuStrip, code);
+					ULONG itemIndex = GTMENUITEM_USERDATA(menuItem);
+					switch (itemIndex) {
+						case MENU_ITEM_ABOUT_ID:
+							printf("About menu item clicked!\n");
+							break;
+						case MENU_ITEM_PREFERENCES_ID:
+							printf("Preferences menu item clicked!\n");
+							break;
+						case MENU_ITEM_QUIT_ID:
+							done = TRUE;
+							break;
+						case MENU_ITEM_SPEECH_ENABLED_ID:
+							printf("Speech enabled menu item clicked!\n");
+							menuItem->Flags ^= CHECKED;
+							isSpeechEnabled = !isSpeechEnabled;
+							break;
+						default:
+							break;
+					}
+				}
 					break;
 				default:
 					break;
