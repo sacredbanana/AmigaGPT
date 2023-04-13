@@ -3,7 +3,6 @@
 #include <dos/dos.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
-#include "config.h"
 #include "speech.h"
 #include "gui.h"
 #include "openai.h"
@@ -11,14 +10,11 @@
 struct ExecBase *SysBase;
 struct DosLibrary *DOSBase;
 
-LONG openLibraries();
-LONG openDevices();
-void closeLibraries();
-void closeDevices();
-void cleanExit(ULONG returnCode);
+static LONG openLibraries();
+static void closeLibraries();
+static void cleanExit(ULONG returnCode);
 
 int main() {
-	ULONG exitCode = 0;
 	SysBase = *((struct ExecBase**)4UL);
 	struct WBStartup *wbStartupMessage = NULL;
 	struct Process *currentTask = (struct Process*)FindTask(NULL);
@@ -32,81 +28,51 @@ int main() {
     	wbStartupMessage = (struct WBStartup*)GetMsg(&currentTask->pr_MsgPort);
 	}
 
-	exitCode = openLibraries();
-	if (exitCode)
-		cleanExit(exitCode);
+	if (openLibraries() == RETURN_ERROR) {
+		printf("Failed to open libraries\n");
+		cleanExit(RETURN_ERROR);
+	}
 
-	exitCode = openDevices();
-	if (exitCode)
-		cleanExit(exitCode);
+	if (initSpeech(SpeechSystemOld) == RETURN_ERROR) {
+		printf("Failed to open speech system\n");
+		cleanExit(RETURN_ERROR);
+	}
 
-	#ifndef EMULATOR
+	if (initOpenAIConnector() == RETURN_ERROR) {
+		printf("Failed to open OpenAI connector\n");
+		cleanExit(RETURN_ERROR);
+	}
 
-	exitCode = initOpenAIConnector();
-	if (exitCode)
-		cleanExit(exitCode);
+	if (initVideo() == RETURN_ERROR) {
+		printf("Failed to initialize video\n");
+		cleanExit(RETURN_ERROR);
+	}
 
-	exitCode = connectToOpenAI();
-	if (exitCode)
-		cleanExit(exitCode);
-	#endif
+	if (startGUIRunLoop() == RETURN_ERROR) {
+		printf("GUI run loop returned an error\n");
+		cleanExit(RETURN_ERROR);
+	}
 
-	exitCode = initVideo();
-	if (exitCode)
-		cleanExit(exitCode);
-
-	exitCode = startGUIRunLoop();
-
-	cleanExit(exitCode);
-	return exitCode;
+	cleanExit(RETURN_OK);
+	return 0;
 }
 
-LONG openLibraries() {
-	DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 47);
-
-	if (DOSBase == NULL)  {
-		printf("Failed to open dos.library v37. This app requires AmigaOS 3.2 or higher\n");
+static LONG openLibraries() {
+	if ((DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 47)) == NULL) {
+		printf("Failed to open dos.library v47. This app requires AmigaOS 3.2 or higher\n");
         return RETURN_ERROR;
 	}
-
-	if (openGUILibraries() != 0) {
-		printf("Failed to open GUI libraries\n");
-		return RETURN_ERROR;
-	}
-
-	if (openSpeechLibraries() != 0) {
-		printf("Failed to open speech libraries\n");
-		return RETURN_ERROR;
-	}
-
 	return RETURN_OK;
 }
 
-LONG openDevices() {
-	if (openSpeechDevices() != 0) {
-		printf("Failed to open speech devices\n");
-		return RETURN_ERROR;
-	}
-
-	return RETURN_OK;
-}
-
-void closeLibraries() {
-	closeGUILibraries();
-	closeSpeechLibraries();
+static void closeLibraries() {
 	CloseLibrary(DOSBase);
 }
 
-void closeDevices() {
-	 closeSpeechDevices();
-}
-
-void cleanExit(ULONG returnCode) {
+static void cleanExit(ULONG returnCode) {
 	shutdownGUI();
-	#ifndef EMULATOR
+	closeSpeech();
 	closeOpenAIConnector();
-	#endif
 	closeLibraries();
-	closeDevices();
 	exit(returnCode);
 }

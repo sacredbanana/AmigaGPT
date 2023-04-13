@@ -1,5 +1,4 @@
 #include "gui.h"
-#include "config.h"
 #include <stdio.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
@@ -26,6 +25,8 @@
 #include "openai.h"
 #include <stdbool.h>
 
+#define MAIN_WIN_WIDTH 640
+#define MAIN_WIN_HEIGHT 500
 #define SCREEN_SELECT_WINDOW_WIDTH 200
 #define SCREEN_SELECT_WINDOW_HEIGHT 50
 #define SCREEN_SELECT_RADIO_BUTTON_ID 0
@@ -89,53 +90,46 @@ struct NewMenu amigaGPTMenu[] = {
 };
 
 static void sendMessage();
+static void closeGUILibraries();
 static LONG selectScreen();
 
 LONG openGUILibraries() {
-	IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 47);
-	if (IntuitionBase == NULL)  {
+	if ((IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 47)) == NULL) {
 		printf("Could not open intuition.library\n");
         return RETURN_ERROR;
 	}
 
-	WindowBase = OpenLibrary("window.class", 47);
-	if (IntuitionBase == NULL)  {
-		printf("Could not open mainWindow.class\n");
+	if ((WindowBase = OpenLibrary("window.class", 47)) == NULL) {
+		printf("Could not open window.class\n");
         return RETURN_ERROR;
 	}
 
-	LayoutBase = OpenLibrary("gadgets/layout.gadget", 47);
-	if (LayoutBase == NULL)  {
+	if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 47)) == NULL) {
 		printf("Could not open layout.gadget\n");
         return RETURN_ERROR;
 	}
 
-	ButtonBase = OpenLibrary("gadgets/button.gadget", 47);
-	if (ButtonBase == NULL)  {
+	if ((ButtonBase = OpenLibrary("gadgets/button.gadget", 47)) == NULL) {
 		printf("Could not open button.gadget\n");
         return RETURN_ERROR;
 	}
 
-	RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 47);
-	if (RadioButtonBase == NULL)  {
+	if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 47)) == NULL) {
 		printf("Could not open radiobutton.gadget\n");
         return RETURN_ERROR;
 	}
 
-	TextFieldBase = OpenLibrary("gadgets/texteditor.gadget", 47);
-	if (TextFieldBase == NULL)  {
+	if ((TextFieldBase = OpenLibrary("gadgets/texteditor.gadget", 47)) == NULL) {
 		printf("Could not open texteditor.gadget\n");
         return RETURN_ERROR;
 	}
 	
-	GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 47);
-	if (GfxBase == NULL) {
+	if ((GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 47)) == NULL) {
 		printf( "Could not open graphics.library\n");
         return RETURN_ERROR;
 	}
 
-	AslBase = OpenLibrary("asl.library", 47);
-	if (AslBase == NULL) {
+	if ((AslBase = OpenLibrary("asl.library", 47)) == NULL) {
 		printf( "Could not open asl.library\n");
 		return RETURN_ERROR;
 	}
@@ -143,7 +137,7 @@ LONG openGUILibraries() {
 	return RETURN_OK;
 }
 
-void closeGUILibraries() {
+static void closeGUILibraries() {
 	CloseLibrary(IntuitionBase);
 	CloseLibrary(GfxBase);
 	CloseLibrary(WindowBase);
@@ -155,11 +149,15 @@ void closeGUILibraries() {
 }
 
 LONG initVideo() {
+	if (openGUILibraries() == RETURN_ERROR) {
+		return RETURN_ERROR;
+	}
+
 	if (selectScreen() == RETURN_ERROR) {
 		return RETURN_ERROR;
 	}
 
-	sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
+	if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SEND_MESSAGE_BUTTON_ID,
 		GA_WIDTH, SEND_MESSAGE_BUTTON_WIDTH,
 		GA_HEIGHT, SEND_MESSAGE_BUTTON_HEIGHT,
@@ -168,33 +166,34 @@ LONG initVideo() {
 		GA_TEXT, (ULONG)"Send",
 		GA_RelVerify, TRUE,
 		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE);
+		TAG_DONE)) == NULL) {
+			printf("Could not create send message button\n");
+			return RETURN_ERROR;
+		}
 
-	chatOutputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
+	if ((chatOutputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
 		GA_ID, CHAT_OUTPUT_TEXT_EDITOR_ID,
 		GA_RelVerify, TRUE,
-		GA_Text, (ULONG)"",
 		GA_Width, CHAT_OUTPUT_TEXT_EDITOR_WIDTH,
 		GA_Height, CHAT_OUTPUT_TEXT_EDITOR_HEIGHT,
 		GA_ReadOnly, TRUE,
-		TAG_DONE
-	);
+		TAG_DONE)) == NULL) {
+			printf("Could not create text editor\n");
+			return RETURN_ERROR;
+	}
 
-	textInputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
+	if ((textInputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
 		GA_ID, TEXT_INPUT_TEXT_EDITOR_ID,
 		GA_RelVerify, TRUE,
 		GA_Text, (ULONG)"",
 		GA_Width, TEXT_INPUT_TEXT_EDITOR_WIDTH,
 		GA_Height, TEXT_INPUT_TEXT_EDITOR_HEIGHT,
-		TAG_DONE
-	);
-
-	if (textInputTextEditor == NULL) {
-		printf("Could not create text editor\n");
-		return RETURN_ERROR;
+		TAG_DONE)) == NULL) {
+			printf("Could not create text editor\n");
+			return RETURN_ERROR;
 	}
 	
-	chatInputLayout = NewObject(LAYOUT_GetClass(), NULL,
+	if ((chatInputLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
 		LAYOUT_HorizAlignment, LALIGN_CENTER,
 		LAYOUT_SpaceInner, TRUE,
@@ -203,9 +202,12 @@ LONG initVideo() {
 		CHILD_WeightedWidth, 100,
 		LAYOUT_AddChild, sendMessageButton,
 		CHILD_WeightedWidth, 10,
-		TAG_DONE);
+		TAG_DONE)) == NULL) {
+			printf("Could not create chat input layout\n");
+			return RETURN_ERROR;
+	}
 
-	chatLayout = NewObject(LAYOUT_GetClass(), NULL,
+	if ((chatLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
@@ -213,23 +215,29 @@ LONG initVideo() {
 		CHILD_WeightedHeight, 80,
 		LAYOUT_AddChild, chatInputLayout,
 		CHILD_WeightedHeight, 20,
-		TAG_DONE);
+		TAG_DONE)) == NULL) {
+			printf("Could not create chat layout\n");
+			return RETURN_ERROR;
+	}
 
-	mainLayout = NewObject(LAYOUT_GetClass(), NULL,
+	if ((mainLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
 		LAYOUT_DeferLayout, TRUE,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
 		LAYOUT_AddChild, chatLayout,
 		CHILD_WeightedWidth, 100,
-		TAG_DONE);
+		TAG_DONE)) == NULL) {
+			printf("Could not create main layout\n");
+			return RETURN_ERROR;
+	}
 	
-	mainWindowObject = NewObject(WINDOW_GetClass(), NULL,
+	if ((mainWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
 		WA_Title, "AmigaGPT",
-		WA_InnerWidth, WIN_WIDTH,
-		WA_InnerHeight, WIN_HEIGHT,
+		WA_InnerWidth, MAIN_WIN_WIDTH,
+		WA_InnerHeight, MAIN_WIN_HEIGHT,
 		WA_CloseGadget, TRUE,
 		WA_DragBar, isPublicScreen,
 		WA_SizeGadget, isPublicScreen,
@@ -242,16 +250,12 @@ LONG initVideo() {
 		WINDOW_NewMenu, amigaGPTMenu,
 		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_MENUPICK,
 		WA_CustomScreen, screen,
-		TAG_DONE);
-
-	if (mainWindowObject == NULL) {
-		printf("Could not create mainWindow object\n");
-		return RETURN_ERROR;
+		TAG_DONE)) == NULL) {
+			printf("Could not create mainWindow object\n");
+			return RETURN_ERROR;
 	}
 
-	mainWindow = (struct Window *)DoMethod(mainWindowObject, WM_OPEN, NULL);
-
-	if (mainWindow == NULL) {
+	if ((mainWindow = (struct Window *)DoMethod(mainWindowObject, WM_OPEN, NULL)) == NULL) {
 		printf("Could not open mainWindow\n");
 		return RETURN_ERROR;
 	}
@@ -262,6 +266,8 @@ LONG initVideo() {
 }
 
 static LONG selectScreen() {
+	Object *screenSelectRadioButton, *selectScreenOkButton, *screenSelectLayout, *screenSelectWindowObject;
+	struct Window *screenSelectWindow;
 	struct ScreenModeRequester *screenModeRequester;
 	screen = LockPubScreen("Workbench");
 
@@ -271,7 +277,7 @@ static LONG selectScreen() {
 		NULL
 	};
 
-	Object *screenSelectRadioButton = NewObject(RADIOBUTTON_GetClass(), NULL,
+	if ((screenSelectRadioButton = NewObject(RADIOBUTTON_GetClass(), NULL,
 		GA_ID, SCREEN_SELECT_RADIO_BUTTON_ID,
 		GA_WIDTH, SCREEN_SELECT_RADIO_BUTTON_WIDTH,
 		GA_HEIGHT, SCREEN_SELECT_RADIO_BUTTON_HEIGHT,
@@ -279,14 +285,12 @@ static LONG selectScreen() {
 		GA_TEXT, (ULONG)radioButtonOptions,
 		GA_RelVerify, TRUE,
 		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE);
-
-	if (screenSelectRadioButton == NULL) {
-		printf("Could not create screenSelectRadioButton\n");
-		return RETURN_ERROR;
+		TAG_DONE)) == NULL) {
+			printf("Could not create screenSelectRadioButton\n");
+			return RETURN_ERROR;
 	}
  
-	Object *selectScreenOkButton = NewObject(BUTTON_GetClass(), NULL,
+	if ((selectScreenOkButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SCREEN_SELECT_OK_BUTTON_ID,
 		GA_WIDTH, SCREEN_SELECT_OK_BUTTON_WIDTH,
 		GA_HEIGHT, SCREEN_SELECT_OK_BUTTON_HEIGHT,
@@ -294,14 +298,12 @@ static LONG selectScreen() {
 		GA_TEXT, (ULONG)"OK",
 		GA_RelVerify, TRUE,
 		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE);
-
-	if (selectScreenOkButton == NULL) {
-		printf("Could not create selectScreenOkButton\n");
-		return RETURN_ERROR;
+		TAG_DONE)) == NULL) {
+			printf("Could not create selectScreenOkButton\n");
+			return RETURN_ERROR;
 	}
 
-	Object *screenSelectLayout = NewObject(LAYOUT_GetClass(), NULL,
+	if ((screenSelectLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
 		LAYOUT_DeferLayout, TRUE,
 		LAYOUT_SpaceInner, TRUE,
@@ -316,14 +318,12 @@ static LONG selectScreen() {
 		CHILD_MaxHeight, 20,
 		CHILD_MaxWidth, 50,
 		CHILD_WeightedHeight, 20,
-		TAG_DONE);
-
-	if (screenSelectLayout == NULL) {
-		printf("Could not create screenSelectLayout\n");
-		return RETURN_ERROR;
+		TAG_DONE)) == NULL) {
+			printf("Could not create screenSelectLayout\n");
+			return RETURN_ERROR;
 	}
 
-	Object *screenSelectWindowObject = NewObject(WINDOW_GetClass(), NULL,
+	if ((screenSelectWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
 		WA_Title, "Screen Select",
@@ -336,22 +336,13 @@ static LONG selectScreen() {
 		WINDOW_Layout, screenSelectLayout,
 		WA_IDCMP, IDCMP_GADGETUP,
 		WA_CustomScreen, screen,
-		TAG_DONE);
-
-	if (screenSelectWindowObject == NULL) {
-		printf("Could not create screenSelectWindow object\n");
-		return RETURN_ERROR;
+		TAG_DONE)) == NULL) {
+			printf("Could not create screenSelectWindow object\n");
+			return RETURN_ERROR;
 	}
 
-	struct Window *screenSelectWindow = (struct Window *)DoMethod(screenSelectWindowObject, WM_OPEN, NULL);
-
-	if (screenSelectWindow == NULL) {
+	if ((screenSelectWindow = (struct Window *)DoMethod(screenSelectWindowObject, WM_OPEN, NULL)) == NULL) {
 		printf("Could not open screenSelectWindow\n");
-		return RETURN_ERROR;
-	}
-
-	if (screen == NULL) {
-		printf("Could not open screen\n");
 		return RETURN_ERROR;
 	}
 
@@ -401,7 +392,7 @@ static LONG selectScreen() {
 			if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
 				isPublicScreen = FALSE;
 				UnlockPubScreen(NULL, screen);
-				screen = OpenScreenTags(NULL,
+				if ((screen = OpenScreenTags(NULL,
 					SA_Pens, (ULONG)pens,
 					SA_DisplayID, screenModeRequester->sm_DisplayID,
 					SA_Depth, screenModeRequester->sm_DisplayDepth,
@@ -409,11 +400,9 @@ static LONG selectScreen() {
 					SA_AutoScroll, screenModeRequester->sm_AutoScroll,
 					SA_Width, screenModeRequester->sm_DisplayWidth,
 					SA_Height, screenModeRequester->sm_DisplayHeight,
-					TAG_DONE);
-
-				if (screen == NULL) {
-					printf("Could not open screen\n");
-					return RETURN_ERROR;
+					TAG_DONE)) == NULL) {
+						printf("Could not open screen\n");
+						return RETURN_ERROR;
 				}
 
 				SetRGB4(&(screen->ViewPort), 0, 0x0, 0x1, 0x5);
@@ -541,4 +530,5 @@ void shutdownGUI() {
 	} else {
 		CloseScreen(screen);
 	}
+	closeGUILibraries();
 }

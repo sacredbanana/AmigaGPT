@@ -17,7 +17,8 @@
 #define HOST "api.openai.com"
 #define PORT 443
 
-static void cleanup(void);
+static void cleanup();
+static LONG connectToOpenAI();
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLength);
@@ -67,32 +68,23 @@ static BPTR GetStdErr() {
 
 LONG initOpenAIConnector() {
     readBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY);
-    if (readBuffer == NULL) {
-        return RETURN_ERROR;
-    }
     writeBuffer = AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY);
-    if (writeBuffer == NULL) {
-        return RETURN_ERROR;
-    }
     tempBuffer = AllocVec(TEMP_BUFFER_LENGTH, MEMF_ANY);
-    if (tempBuffer == NULL) {
+
+	if ((UtilityBase = (struct UtilityBase *)OpenLibrary("utility.library", 0)) == NULL) {
+        printf("failed to open utility.library\n");
         return RETURN_ERROR;
     }
 
-	if ((UtilityBase = (struct UtilityBase *)OpenLibrary("utility.library", 0)) == NULL)
-		return RETURN_ERROR;
+	if ((SocketBase = OpenLibrary("bsdsocket.library", 0)) == NULL) {
+        printf("failed to open bsdsocket.library\n");
+        return RETURN_ERROR;
+    }
 
-    printf("opened utility.library\n");
-
-	if ((SocketBase = OpenLibrary("bsdsocket.library", 0)) == NULL)
-		return RETURN_ERROR;
-
-    printf("opened bsdsocket.library\n");
-
-	if ((AmiSSLMasterBase = OpenLibrary("amisslmaster.library", AMISSLMASTER_MIN_VERSION)) == NULL)
-		return RETURN_ERROR;
-
-    printf("opened amisslmaster.library\n");
+	if ((AmiSSLMasterBase = OpenLibrary("amisslmaster.library", AMISSLMASTER_MIN_VERSION)) == NULL) {
+        printf("failed to open amisslmaster.library\n");
+        return RETURN_ERROR;
+    }
 
     if (OpenAmiSSLTags(AMISSL_CURRENT_VERSION,
 	                  AmiSSL_UsesOpenSSLStructs, TRUE,
@@ -102,15 +94,13 @@ LONG initOpenAIConnector() {
 	                  AmiSSL_SocketBase, SocketBase,
 	                  AmiSSL_ErrNoPtr, &errno,
 	                  TAG_DONE) != 0) {
-        
         printf("failed to initialize amisslmaster.library\n");
         return RETURN_ERROR;
     }
 		
-    printf("initialized amisslmaster.library\n");
-
 	amiSSLInitialized = TRUE;
-    return RETURN_OK;
+
+    return connectToOpenAI();
 }
 
 static void formatText(UBYTE *string, LONG *stringLength) {
@@ -164,8 +154,6 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
 
     /* The following needs to be done once per socket */
         if((ssl = SSL_new(ctx)) != NULL) {
-            printf("created ssl\n");
-
             /* Lookup hostname */
             if ((hostent = gethostbyname(HOST)) != NULL) {
                 memset(&addr, 0, sizeof(addr));
@@ -189,8 +177,6 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
 
             /* Check if connection was established */
             if (sock >= 0) {
-                printf("connected to server\n");
-
                 /* Associate the socket with the ssl structure */
                 SSL_set_fd(ssl, sock);
 
@@ -258,7 +244,6 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
             err = SSL_get_error(ssl, bytesRead);
             switch (err) {
                 case SSL_ERROR_NONE:
-                    printf("Read %d bytes from SSL\n", bytesRead);
                     memcpy(readBuffer + totalBytesRead, tempBuffer, bytesRead);
                     totalBytesRead += bytesRead;
                     LONG responseLength = 0;
@@ -379,36 +364,25 @@ static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLe
     return NULL; // Return NULL if the "content" field is not found in the JSON string
 }
 
-LONG connectToOpenAI() {
+static LONG connectToOpenAI() {
     /* Basic intialization. Next few steps (up to SSL_new()) need
      * to be done only once per AmiSSL opener.
      */
     OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT | OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
 
-    printf("initialized openssl\n");
-
     /* Seed the entropy engine */
     generateRandomSeed(writeBuffer, 128);
     RAND_seed(writeBuffer, 128);
-
-    printf("seeded random\n");
 
     /* Note: BIO writing routines are prepared for NULL BIO handle */
     if ((bio_err = BIO_new(BIO_s_file())) != NULL)
         BIO_set_fp_amiga(bio_err, GetStdErr(), BIO_NOCLOSE | BIO_FP_TEXT);
 
-    printf("created bio\n");
-
     /* Get a new SSL context */
     if ((ctx = SSL_CTX_new(TLS_client_method())) != NULL) {
-        printf("created ssl context\n");
-
         /* Basic certificate handling */
         SSL_CTX_set_default_verify_paths(ctx);
-        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                            verify_cb);
-
-        printf("set ssl context\n");
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_cb);
     } else {
         printf("Couldn't create new context!\n");
         return RETURN_ERROR;
@@ -444,7 +418,6 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx) {
 
 void closeOpenAIConnector() {
 	if (amiSSLInitialized) {
-        /* Must always call after successful InitAmiSSL() */
         SSL_shutdown(ssl);
         SSL_CTX_free(ctx);
         BIO_free(bio_err);

@@ -1,9 +1,0 @@
-#define OLD_SPEECH
-// #define EMULATOR
-#define TRANSLATION_BUFFER_LENGTH 8192
-#define WIN_LEFT_EDGE 0
-#define WIN_TOP_EDGE 0
-#define WIN_WIDTH 640
-#define WIN_MIN_WIDTH 640
-#define WIN_HEIGHT 500
-#define WIN_MIN_HEIGHT 500
