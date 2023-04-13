@@ -49,6 +49,7 @@
 #define MENU_ITEM_PREFERENCES_ID 2
 #define MENU_ITEM_QUIT_ID 3
 #define MENU_ITEM_SPEECH_ENABLED_ID 4
+#define MENU_ITEM_FONT_ID 5
 
 extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
@@ -81,6 +82,8 @@ struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Preferences", "P", 0, 0, MENU_ITEM_PREFERENCES_ID},
 	{NM_ITEM, NM_BARLABEL, 0, 0, 0, 0},
 	{NM_ITEM, "Quit", "Q", 0, 0, MENU_ITEM_QUIT_ID},
+	{NM_TITLE, "View", 0, 0, 0, 0},
+	{NM_ITEM, "Font", 0, 0, 0, MENU_ITEM_FONT_ID},
 	{NM_TITLE, "Speech", 0, 0, 0, 0},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
 	{NM_END, NULL, 0, 0, 0, 0}
@@ -383,8 +386,19 @@ static LONG selectScreen() {
 	GetAttr(RADIOBUTTON_Selected, screenSelectRadioButton, &selectedRadioButton);
 
 	if (selectedRadioButton == 0) {
+		ULONG displayID = GetVPModeID(&screen->ViewPort);
 		// New screen
-		if (screenModeRequester = (struct ScreenModeRequester *)AllocAslRequestTags(ASL_ScreenModeRequest, TAG_DONE)) {
+		if (screenModeRequester = (struct ScreenModeRequester *)AllocAslRequestTags(ASL_ScreenModeRequest,
+		ASLSM_DoWidth, TRUE,
+		ASLSM_DoHeight, TRUE,
+		ASLSM_DoDepth, TRUE,
+		ASLSM_DoOverscanType, TRUE,
+		ASLSM_DoAutoScroll, TRUE,
+		ASLSM_InitialDisplayID, displayID,
+		ASLSM_InitialDisplayWidth, screen->Width,
+		ASLSM_InitialDisplayHeight, screen->Height,
+		ASLSM_InitialOverscanType, OSCAN_TEXT,
+		 TAG_DONE)) {
 			if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
 				isPublicScreen = FALSE;
 				UnlockPubScreen(NULL, screen);
@@ -392,7 +406,10 @@ static LONG selectScreen() {
 					SA_Pens, (ULONG)pens,
 					SA_DisplayID, screenModeRequester->sm_DisplayID,
 					SA_Depth, screenModeRequester->sm_DisplayDepth,
-					SA_Title, (ULONG)"AmigaGPT",
+					SA_Overscan, screenModeRequester->sm_OverscanType,
+					SA_AutoScroll, screenModeRequester->sm_AutoScroll,
+					SA_Width, screenModeRequester->sm_DisplayWidth,
+					SA_Height, screenModeRequester->sm_DisplayHeight,
 					TAG_DONE);
 
 				if (screen == NULL) {
@@ -420,6 +437,7 @@ static void sendMessage() {
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
 	UBYTE *text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
+	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TEXTEDITOR_Pen, 1, TAG_DONE);
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, text, GV_TEXTEDITOR_InsertText_Bottom);
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n", GV_TEXTEDITOR_InsertText_Bottom);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
@@ -427,6 +445,7 @@ static void sendMessage() {
 	UBYTE *response = postMessageToOpenAI(text, "gpt-3.5-turbo", "user");
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	if (response != NULL) {
+		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TEXTEDITOR_Pen, 0, TAG_DONE);
 		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, response, GV_TEXTEDITOR_InsertText_Bottom);
 		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n", GV_TEXTEDITOR_InsertText_Bottom);
 		if (isSpeechEnabled)
@@ -440,6 +459,8 @@ static void sendMessage() {
 
 // The main loop of the GUI
 LONG startGUIRunLoop() {
+	struct FontRequester *fontRequester;
+	struct TextAttr *currentFont;
     ULONG signalMask, winSignal, signals, result;
 	BOOL done = FALSE;
     WORD code;
@@ -470,18 +491,33 @@ LONG startGUIRunLoop() {
 					ULONG itemIndex = GTMENUITEM_USERDATA(menuItem);
 					switch (itemIndex) {
 						case MENU_ITEM_ABOUT_ID:
-							printf("About menu item clicked!\n");
 							break;
 						case MENU_ITEM_PREFERENCES_ID:
-							printf("Preferences menu item clicked!\n");
 							break;
 						case MENU_ITEM_QUIT_ID:
 							done = TRUE;
 							break;
 						case MENU_ITEM_SPEECH_ENABLED_ID:
-							printf("Speech enabled menu item clicked!\n");
 							menuItem->Flags ^= CHECKED;
 							isSpeechEnabled = !isSpeechEnabled;
+							break;
+						case MENU_ITEM_FONT_ID:
+							if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
+								if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
+									currentFont = &fontRequester->fo_Attr;
+									screen->Font = currentFont;
+									mainWindow->RPort->Font = currentFont;
+									MakeScreen(screen);
+									RethinkDisplay();
+									DoMethod(mainWindowObject, WM_CLOSE, NULL, TRUE);
+									DoMethod(mainWindowObject, WM_OPEN, NULL, TRUE);
+									SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_FixedFont, currentFont, TAG_DONE);
+									SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_FixedFont, currentFont, TAG_DONE);
+									SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, currentFont, TAG_DONE);
+									SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, currentFont, TAG_DONE);
+								}
+								FreeAslRequest(fontRequester);
+							}
 							break;
 						default:
 							break;
