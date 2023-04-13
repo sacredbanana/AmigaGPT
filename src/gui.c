@@ -71,7 +71,7 @@ typedef enum {
 	EXIT_APPLICATION, ALERT_BUTTON_PRESSED, SPEAK_BUTTON_PRESSED
 } Action;
 
-struct NewMenu *amigaGPTMenu = {
+struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
 	{NM_ITEM, "About", 0, 0, 0, 0},
 	{NM_ITEM, "Preferences", "P", 0, 0, 0},
@@ -90,8 +90,8 @@ LONG openGUILibraries() {
         return RETURN_ERROR;
 	}
 
-	GadToolsBase = OpenLibrary("gadtools.library", 37);
-	if (IntuitionBase == NULL)  {
+	GadToolsBase = OpenLibrary("gadtools.library", 47);
+	if (GadToolsBase == NULL)  {
 		printf("Could not open gadtools.library\n");
         return RETURN_ERROR;
 	}
@@ -224,6 +224,7 @@ LONG initVideo() {
 		WA_DragBar, isPublicScreen,
 		WA_SizeGadget, isPublicScreen,
 		WA_DepthGadget, isPublicScreen,
+		WA_NewLookMenus, TRUE,
 		WINDOW_IconifyGadget, isPublicScreen,
 		WINDOW_Layout, mainLayout,
 		WINDOW_SharedPort, NULL,
@@ -246,30 +247,6 @@ LONG initVideo() {
 	}
 
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
-
-	// visualInfo = GetVisualInfo(screen, TAG_END);
-
-	// if (visualInfo == NULL) {
-	// 	printf("Could not get visual info\n");
-	// 	return RETURN_ERROR;
-	// }
-
-	// menuStrip = CreateMenus(amigaGPTMenu, TAG_END);
-
-	// if (menuStrip == NULL) {
-	// 	printf("Could not create menu strip\n");
-	// 	return RETURN_ERROR;
-	// }
-
-	// if (!LayoutMenus(menuStrip, visualInfo, GTMN_NewLookMenus, TRUE, TAG_DONE)) {
-	// 	printf("Could not layout menus\n");
-	// 	return RETURN_ERROR;
-	// }
-
-	// if (!SetMenuStrip(mainWindow, menuStrip)) {
-	// 	printf("Could not set menu strip\n");
-	// 	return RETURN_ERROR;
-	// }
 
 	return RETURN_OK;
 }
@@ -480,13 +457,6 @@ LONG startGUIRunLoop() {
 }
 
 void shutdownGUI() {
-	// if (visualInfo) {
-	// 	FreeVisualInfo(visualInfo);
-	// }
-	// if (menuStrip) {
-	// 	ClearMenuStrip(mainWindow);
-	// 	FreeMenus(menuStrip);
-	// }
 	if (mainWindowObject) {
 		DisposeObject(mainWindowObject);
 	}

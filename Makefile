@@ -39,7 +39,7 @@ endif
 CCFLAGS = -g -MP -MMD -m68000 -Ofast -Wextra -Wno-unused-function -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -D__NOLIBBASE__ -noixemul -fbaserel -lamiga
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),-D
-LDFLAGS = -Wl,--emit-relocs,-Ttext=0,-Map=$(OUT).map
+LDFLAGS =  -Wl,-Map=$(OUT).map
 VASMFLAGS = -m68000 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -I$(INCDIR) -I$(SDKDIR) -I$(NDKDIR)
 
 all: $(OUT).exe
