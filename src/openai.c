@@ -185,7 +185,7 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
 
                 /* Perform SSL handshake */
                 if((ssl_err = SSL_connect(ssl)) >= 0) {
-                    printf("SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
+                    // printf("SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
                 }
                 
                 /* If there were errors, print them */

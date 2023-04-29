@@ -10,8 +10,8 @@ extern struct ExecBase* SysBase;
 struct Library *TranslatorBase;
 struct MsgPort *NarratorPort;
 struct narrator_rb *NarratorIO;
-BYTE audioChannels[4] = {3, 5, 10, 12};
-UBYTE translationBuffer[TRANSLATION_BUFFER_SIZE];
+static BYTE audioChannels[4] = {3, 5, 10, 12};
+static UBYTE translationBuffer[TRANSLATION_BUFFER_SIZE];
 
 LONG initSpeech(enum SpeechSystem speechSystem) {
 	if (!(NarratorPort = CreateMsgPort())) {

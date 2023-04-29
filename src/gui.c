@@ -9,6 +9,7 @@
 #include <gadgets/radiobutton.h>
 #include <gadgets/texteditor.h>
 #include <gadgets/scroller.h>
+#include <gadgets/string.h>
 #include <devices/conunit.h>
 #include <exec/execbase.h>
 #include <intuition/intuition.h>
@@ -19,6 +20,7 @@
 #include <proto/radiobutton.h>
 #include <proto/window.h>
 #include <proto/texteditor.h>
+#include <proto/string.h>
 #include <proto/asl.h>
 #include <proto/scroller.h>
 #include <libraries/asl.h>
@@ -50,6 +52,9 @@
 #define CHAT_OUTPUT_SCROLLER_ID 5
 #define CHAT_OUTPUT_SCROLLER_WIDTH 20
 #define CHAT_OUTPUT_SCROLLER_HEIGHT 100
+#define STATUS_BAR_ID 6
+#define STATUS_BAR_WIDTH 100
+#define STATUS_BAR_HEIGHT 20
 
 #define MENU_ITEM_ABOUT_ID 1
 #define MENU_ITEM_PREFERENCES_ID 2
@@ -70,6 +75,7 @@ static struct Library *ButtonBase;
 static struct Library *RadioButtonBase;
 static struct Library *TextFieldBase;
 static struct Library *ScrollerBase;
+static struct Library *StringBase;
 static struct Window *mainWindow;
 static Object *mainWindowObject;
 static Object *mainLayout;
@@ -80,6 +86,7 @@ static Object *sendMessageButton;
 static Object *textInputTextEditor;
 static Object *chatOutputTextEditor;
 static Object *chatOutputScroller;
+static Object *statusBar;
 static struct Screen *screen;
 static BOOL isPublicScreen;
 static UWORD pens[] = {~0};
@@ -141,6 +148,11 @@ LONG openGUILibraries() {
 		printf("Could not open scroller.gadget\n");
         return RETURN_ERROR;
 	}
+
+	if ((StringBase = OpenLibrary("gadgets/string.gadget", 47)) == NULL) {
+		printf("Could not open string.gadget\n");
+        return RETURN_ERROR;
+	}
 	
 	if ((GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 47)) == NULL) {
 		printf( "Could not open graphics.library\n");
@@ -194,6 +206,19 @@ LONG initVideo() {
 		GA_RelVerify, TRUE,
 		GA_Width, CHAT_OUTPUT_TEXT_EDITOR_WIDTH,
 		GA_Height, CHAT_OUTPUT_TEXT_EDITOR_HEIGHT,
+		GA_ReadOnly, TRUE,
+		GA_TEXTEDITOR_ImportHook, GV_TEXTEDITOR_ImportHook_Plain,
+		GA_TEXTEDITOR_ExportHook, GV_TEXTEDITOR_ExportHook_Plain,
+		TAG_DONE)) == NULL) {
+			printf("Could not create text editor\n");
+			return RETURN_ERROR;
+	}
+
+	if ((statusBar = NewObject(STRING_GetClass(), NULL,
+		GA_ID, STATUS_BAR_ID,
+		GA_RelVerify, TRUE,
+		GA_Width, STATUS_BAR_WIDTH,
+		GA_Height, STATUS_BAR_HEIGHT,
 		GA_ReadOnly, TRUE,
 		TAG_DONE)) == NULL) {
 			printf("Could not create text editor\n");
@@ -257,9 +282,11 @@ LONG initVideo() {
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
 		LAYOUT_AddChild, chatOutputLayout,
-		CHILD_WeightedHeight, 80,
+		CHILD_WeightedHeight, 70,
 		LAYOUT_AddChild, chatInputLayout,
 		CHILD_WeightedHeight, 20,
+		LAYOUT_AddChild, statusBar,
+		CHILD_WeightedHeight, 10,
 		TAG_DONE)) == NULL) {
 			printf("Could not create chat layout\n");
 			return RETURN_ERROR;
@@ -304,6 +331,9 @@ LONG initVideo() {
 		printf("Could not open mainWindow\n");
 		return RETURN_ERROR;
 	}
+
+	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_Pens, 0x00010002, TAG_DONE);
+	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 
@@ -412,8 +442,7 @@ static LONG selectScreen() {
 					break;
 				default:
 					break;
-			}
-               
+			}  
         }
     }
 
@@ -451,7 +480,8 @@ static LONG selectScreen() {
 				}
 
 				SetRGB4(&(screen->ViewPort), 0, 0x0, 0x1, 0x5);
-				SetRGB4(&(screen->ViewPort), 1, 0xA, 0x3, 0x0);
+				SetRGB4(&(screen->ViewPort), 1, 0xA, 0x0, 0x0);
+				SetRGB4(&(screen->ViewPort), 2, 0x0, 0x0, 0x3);
 				SetRGB4(&(screen->ViewPort), 3, 0xB, 0xF, 0x2);
 				SetRGB4(&(screen->ViewPort), 4, 0xF, 0xF, 0x0);
 			}
@@ -467,24 +497,37 @@ static LONG selectScreen() {
 }
 
 static void sendMessage() {
-	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
+	UBYTE newThing[2000];
+	// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
+	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Sending", TAG_DONE);
 	UBYTE *text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TEXTEDITOR_Pen, 1, TAG_DONE);
-	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, text, GV_TEXTEDITOR_InsertText_Bottom);
-	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n", GV_TEXTEDITOR_InsertText_Bottom);
+	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Pen, 1, TAG_DONE);
+	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, STRINGA_Pens, 0x00010002, TAG_DONE);
+	// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, text, GV_TEXTEDITOR_InsertText_Bottom);
+	// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n", GV_TEXTEDITOR_InsertText_Bottom);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
-	printf("Sending message:\n%s\n", text);
+	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
+	UBYTE *exportedText = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
+	sprintf(newThing, "%s*%s*\n\n", exportedText, text);
+	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, newThing, TAG_DONE);
+	FreeVec(exportedText);
+	exportedText = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
 	UBYTE *response = postMessageToOpenAI(text, "gpt-3.5-turbo", "user");
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	if (response != NULL) {
+		exportedText = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
+		sprintf(newThing, "%s%s", exportedText, response);
+		FreeVec(exportedText);
+		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TEXTEDITOR_Pen, 0, TAG_DONE);
-		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, response, GV_TEXTEDITOR_InsertText_Bottom);
-		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n", GV_TEXTEDITOR_InsertText_Bottom);
+		SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, newThing, TAG_DONE);
+		// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, response, GV_TEXTEDITOR_InsertText_Bottom);
+		// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n", GV_TEXTEDITOR_InsertText_Bottom);
 		if (isSpeechEnabled)
 			speakText(response);
 		FreeVec(response);
 	} else {
+		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "No response from OpenAI", TAG_DONE);
 		printf("No response from OpenAI\n");
 	}
 	FreeVec(text);
