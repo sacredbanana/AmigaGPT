@@ -148,7 +148,7 @@ static STRPTR getModelName(enum Model model) {
 	}
 }
 
-UBYTE* postMessageToOpenAI(UBYTE *content, enum Model model, UBYTE *role) {
+UBYTE* postMessageToOpenAI(struct MinList *conversation, enum Model model) {
     struct sockaddr_in addr;
 	struct hostent *hostent;
     UBYTE *response = NULL;
@@ -158,15 +158,29 @@ UBYTE* postMessageToOpenAI(UBYTE *content, enum Model model, UBYTE *role) {
 
     sprintf(readBuffer,
             "{\"model\": \"%s\",\r\n"
-            "\"messages\": [{\"role\": \"%s\", \"content\": \"%s\"}]\r\n"
-            "}\0",
-            getModelName(model), role, content);
+            "\"messages\": [", getModelName(model));
+    
+    struct MinNode *conversationNode = conversation->mlh_Head;
+    while (conversationNode->mln_Succ != NULL) {
+        struct ConversationNode *message = (struct ConversationNode *)conversationNode;
+        sprintf(readBuffer + strlen(readBuffer),
+                "{\"role\": \"%s\", \"content\": \"%s\"}",
+                message->role, message->content);
+        conversationNode = conversationNode->mln_Succ;
+        if (conversationNode->mln_Succ != NULL) {
+            strcat(readBuffer, ",");
+        }
+    }
+
+    strcat(readBuffer, "]\r\n}");
+
     ULONG bodyLength = strlen(readBuffer);
 
     sprintf(writeBuffer, "POST /v1/chat/completions HTTP/1.1\r\n"
             "Host: api.openai.com\r\n"
             "Content-Type: application/json\r\n"
             "Authorization: Bearer %s\r\n"
+            "User-Agent: AmigaGPT\r\n"
             "Content-Length: %lu\r\n\r\n"
             "%s", openAiApiKey, bodyLength, readBuffer);
 

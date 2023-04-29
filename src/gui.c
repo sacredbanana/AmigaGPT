@@ -1,5 +1,6 @@
 #include "gui.h"
 #include <stdio.h>
+#include <exec/lists.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>
@@ -109,6 +110,7 @@ static UWORD pens[] = {~0};
 static BOOL isSpeechEnabled;
 static enum SpeechSystem speechSystem;
 static enum Model model;
+struct MinList *conversation;
 
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
@@ -144,6 +146,7 @@ static void sendMessage();
 static void closeGUILibraries();
 static LONG selectScreen();
 static void clearModelMenuItems(struct Menu *menu);
+static void addTextToConversation(struct MinList *conversation, UBYTE *text, UBYTE *role);
 
 LONG openGUILibraries() {
 	if ((IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 47)) == NULL) {
@@ -545,32 +548,26 @@ static LONG selectScreen() {
 	return RETURN_OK;
 }
 
+// Sends a message to the OpenAI API and displays the response and speaks it if speech is anabled
 static void sendMessage() {
-	// UBYTE newThing[2000];
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Sending", TAG_DONE);
+
 	UBYTE *text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
-	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Pen, 1, TAG_DONE);
-	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, STRINGA_Pens, 0x00010002, TAG_DONE);
+	addTextToConversation(conversation, text, "user");
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, text, GV_TEXTEDITOR_InsertText_Bottom);
-	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n===\n", GV_TEXTEDITOR_InsertText_Bottom);
+	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n===============================\n\n", GV_TEXTEDITOR_InsertText_Bottom);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
-	// UBYTE *exportedText = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
-	// sprintf(newThing, "%s%s\n\n", exportedText, text);
-	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, newThing, TAG_DONE);
-	// FreeVec(exportedText);
-	UBYTE *response = postMessageToOpenAI(text, model, "user");
+
+	UBYTE *response = postMessageToOpenAI(conversation, model);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	if (response != NULL) {
-		// exportedText = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
-		// sprintf(newThing, "%s%s", exportedText, response);
-		// FreeVec(exportedText);
+		addTextToConversation(conversation, response, "assistant");
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TEXTEDITOR_Pen, 0, TAG_DONE);
-		// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, newThing, TAG_DONE);
 		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, response, GV_TEXTEDITOR_InsertText_Bottom);
-		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n===\n", GV_TEXTEDITOR_InsertText_Bottom);
+		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n===============================\n\n", GV_TEXTEDITOR_InsertText_Bottom);
 		if (isSpeechEnabled)
 			speakText(response);
 		FreeVec(response);
@@ -613,6 +610,27 @@ static void clearSpeechSystemMenuItems(struct Menu *menu) {
 	}
 }
 
+// Add a block of text to the conversation list
+static void addTextToConversation(struct MinList *conversation, UBYTE *text, UBYTE *role) {
+	struct ConversationNode *conversationNode = AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
+	if (conversationNode == NULL) {
+		printf("Failed to allocate memory for conversation node\n");
+		return;
+	}
+	strcpy(conversationNode->role, role);
+	strcpy(conversationNode->content, text);
+	AddTail(conversation, (struct Node *)conversationNode);
+}
+
+// Free the conversation list
+static void freeConversation(struct MinList *conversation) {
+	struct ConversationNode *conversationNode;
+	while ((conversationNode = (struct ConversationNode *)RemHead(conversation)) != NULL) {
+		FreeVec(conversationNode);
+	}
+	FreeVec(conversation);
+}
+
 // The main loop of the GUI
 LONG startGUIRunLoop() {
 	struct FontRequester *fontRequester;
@@ -627,6 +645,9 @@ LONG startGUIRunLoop() {
 
     GetAttr(WINDOW_SigMask, mainWindowObject, &winSignal);
 	signalMask = winSignal;
+
+	conversation = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
+	NewMinList(conversation);
 
 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GFLG_SELECTED, TRUE, TAG_DONE);
 

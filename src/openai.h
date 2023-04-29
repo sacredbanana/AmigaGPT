@@ -1,19 +1,13 @@
 #include <proto/dos.h>
 
 #define READ_BUFFER_LENGTH 8192
-#define WRITE_BUFFER_LENGTH 4096
+#define WRITE_BUFFER_LENGTH 8192
 #define TEMP_BUFFER_LENGTH 1024
 
-struct OpenAIMessage {
-    UBYTE *content;
-    UBYTE *role;
-    struct OpenAIMessage *next;
-};
-
-struct OpenAIConversation {
-    UBYTE *name;
-    UBYTE *model;
-    struct OpenAIMessage *firstMessage;
+struct ConversationNode {
+	struct Node node;
+	UBYTE role[64];
+	UBYTE content[READ_BUFFER_LENGTH];
 };
 
 enum Model {
@@ -26,5 +20,5 @@ enum Model {
 };
 
 LONG initOpenAIConnector();
-UBYTE* postMessageToOpenAI(UBYTE* content, enum Model model, UBYTE* role);
+UBYTE* postMessageToOpenAI(struct MinList *conversation, enum Model model);
 void closeOpenAIConnector();
