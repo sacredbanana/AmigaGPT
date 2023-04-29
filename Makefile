@@ -19,6 +19,10 @@ vasm_sources := $(wildcard *.asm) $(wildcard $(addsuffix *.asm, $(subdirs)))
 vasm_objects := $(addprefix obj/, $(patsubst %.asm,%.o,$(notdir $(vasm_sources))))
 objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
 
+AUTOGEN_FILE := src/version.h
+AUTOGEN_NEXT := $(shell expr $$(awk '/#define BUILD_NUMBER/' $(AUTOGEN_FILE) | tr -cd "[0-9]") + 1)
+
+
 # https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
 # http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
 
@@ -64,7 +68,9 @@ $(cpp_objects) : obj/%.o : %.cpp
 
 $(c_objects) : obj/%.o : %.c
 	$(info Compiling $<)
+	sed -i "" 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
+	$(info Cleaning... $(AUTOGEN_NEXT))
 
 $(s_objects): obj/%.o : %.s
 	$(info Assembling $<)

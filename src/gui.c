@@ -28,6 +28,7 @@
 #include <classes/window.h>
 #include "speech.h"
 #include "openai.h"
+#include "version.h"
 #include <stdbool.h>
 
 #define MAIN_WIN_WIDTH 640
@@ -566,8 +567,27 @@ LONG startGUIRunLoop() {
 					struct MenuItem *menuItem = ItemAddress(menuStrip, code);
 					ULONG itemIndex = GTMENUITEM_USERDATA(menuItem);
 					switch (itemIndex) {
-						case MENU_ITEM_ABOUT_ID:
+						case MENU_ITEM_ABOUT_ID: 
+						{
+							#define APP_VERSION_STRING(x) #x
+							#define APP_BUILD_DATE_STRING(x) #x
+							struct EasyStruct aboutRequester = {
+								sizeof(struct EasyStruct),
+								0,
+								"About",
+								"AmigaGPT\n\n"
+								"Version " APP_VERSION "\n"
+								"Build date: " __DATE__ "\n"
+								"Build number: " BUILD_NUMBER "\n\n"
+								"Developed by Cameron Armstrong (@sacredbanana on GitHub,\n"
+								"YouTube and Twitter, @Nightfox on EAB)\n\n"
+								"This app will always remain free but if you would like to\n"
+								"support me you can do so at https://paypal.me/sacredbanana",
+								"OK"
+							};
+							EasyRequest(mainWindow, &aboutRequester, NULL, NULL);
 							break;
+						}
 						case MENU_ITEM_PREFERENCES_ID:
 							break;
 						case MENU_ITEM_QUIT_ID:
