@@ -5,9 +5,14 @@
 #define TEMP_BUFFER_LENGTH 1024
 
 struct ConversationNode {
-	struct Node node;
+	struct MinNode node;
 	UBYTE role[64];
 	UBYTE content[READ_BUFFER_LENGTH];
+};
+
+struct ConversationListNode {
+    struct Node node;
+    struct MinList *conversation;
 };
 
 enum Model {

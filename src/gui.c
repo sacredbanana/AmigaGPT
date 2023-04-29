@@ -111,6 +111,7 @@ static BOOL isSpeechEnabled;
 static enum SpeechSystem speechSystem;
 static enum Model model;
 struct MinList *conversation;
+struct List *conversationList;
 
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
@@ -147,6 +148,9 @@ static void closeGUILibraries();
 static LONG selectScreen();
 static void clearModelMenuItems(struct Menu *menu);
 static void addTextToConversation(struct MinList *conversation, UBYTE *text, UBYTE *role);
+static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation);
+static void freeConversation(struct MinList *conversation);
+static void freeConversationList();
 
 LONG openGUILibraries() {
 	if ((IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 47)) == NULL) {
@@ -622,13 +626,34 @@ static void addTextToConversation(struct MinList *conversation, UBYTE *text, UBY
 	AddTail(conversation, (struct Node *)conversationNode);
 }
 
-// Free the conversation list
+// Add a conversation to the conversation list
+static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation) {
+	struct ConversationListNode *conversationListNode = AllocVec(sizeof(struct ConversationListNode), MEMF_CLEAR);
+	if (conversationListNode == NULL) {
+		printf("Failed to allocate memory for conversation list\n");
+		return;
+	}
+	conversationListNode->conversation = conversation;
+	AddTail(conversationList, (struct Node *)conversationListNode);
+}
+
+// Free the conversation
 static void freeConversation(struct MinList *conversation) {
 	struct ConversationNode *conversationNode;
 	while ((conversationNode = (struct ConversationNode *)RemHead(conversation)) != NULL) {
 		FreeVec(conversationNode);
 	}
 	FreeVec(conversation);
+}
+
+// Free the conversation list
+static void freeConversationList() {
+	struct ConversationListNode *conversationListNode;
+	while ((conversationListNode = (struct ConversationListNode *)RemHead(conversationList)) != NULL) {
+		freeConversation(conversationListNode->conversation);
+		FreeVec(conversationListNode);
+	}
+	FreeVec(conversationList);
 }
 
 // The main loop of the GUI
@@ -646,8 +671,11 @@ LONG startGUIRunLoop() {
     GetAttr(WINDOW_SigMask, mainWindowObject, &winSignal);
 	signalMask = winSignal;
 
+	conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
+	NewList(conversationList);
 	conversation = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
 	NewMinList(conversation);
+	addConversationToConversationList(conversationList, conversation);
 
 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GFLG_SELECTED, TRUE, TAG_DONE);
 
