@@ -31,6 +31,8 @@
 #include "version.h"
 #include <stdbool.h>
 
+// TODO: Fix edit menu
+
 #define MAIN_WIN_WIDTH 640
 #define MAIN_WIN_HEIGHT 500
 #define SCREEN_SELECT_WINDOW_WIDTH 200
@@ -64,6 +66,11 @@
 #define MENU_ITEM_FONT_ID 5
 #define MENU_ITEM_SPEECH_SYSTEM_OLD_ID 6
 #define MENU_ITEM_SPEECH_SYSTEM_NEW_ID 7
+#define MENU_ITEM_CUT_ID 8
+#define MENU_ITEM_COPY_ID 9
+#define MENU_ITEM_PASTE_ID 10
+#define MENU_ITEM_CLEAR_ID 11
+#define MENU_ITEM_SELECT_ALL_ID 12
 
 extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
@@ -100,6 +107,12 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Preferences", "P", 0, 0, MENU_ITEM_PREFERENCES_ID},
 	{NM_ITEM, NM_BARLABEL, 0, 0, 0, 0},
 	{NM_ITEM, "Quit", "Q", 0, 0, MENU_ITEM_QUIT_ID},
+	{NM_TITLE, "Edit", 0, 0, 0, 0},
+	{NM_ITEM, "Cut", "X", 0, 0, MENU_ITEM_CUT_ID},
+	{NM_ITEM, "Copy", "C", 0, 0, MENU_ITEM_COPY_ID},
+	{NM_ITEM, "Paste", "V", 0, 0, MENU_ITEM_PASTE_ID},
+	{NM_ITEM, "Clear", "L", 0, 0, MENU_ITEM_CLEAR_ID},
+	{NM_ITEM, "Select all", "A", 0, 0, MENU_ITEM_SELECT_ALL_ID},
 	{NM_TITLE, "View", 0, 0, 0, 0},
 	{NM_ITEM, "Font", 0, 0, 0, MENU_ITEM_FONT_ID},
 	{NM_TITLE, "Speech", 0, 0, 0, 0},
@@ -552,6 +565,9 @@ LONG startGUIRunLoop() {
     while (!done) {
         signals = Wait(signalMask);
 
+		BOOL isTextInputTextEditorActive = GetAttr(GFLG_SELECTED, textInputTextEditor, NULL);
+		BOOL isChatOutputTextEditorActive = GetAttr(GFLG_SELECTED, chatOutputTextEditor, NULL);
+
 		while ((result = DoMethod(mainWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
 			switch (result & WMHI_CLASSMASK) {
 				case WMHI_CLOSEWINDOW:
@@ -590,6 +606,86 @@ LONG startGUIRunLoop() {
 						}
 						case MENU_ITEM_PREFERENCES_ID:
 							break;
+						case MENU_ITEM_CUT_ID:
+						{
+							STRPTR result;
+							if (isTextInputTextEditorActive)
+								result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CUT");
+							else if (isChatOutputTextEditorActive)
+								result = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CUT");
+
+							if (result == FALSE)
+								printf("Error cutting text\n");
+							else if (result == TRUE)
+								printf("Text cut\n");
+							printf("%s\n", result);
+							FreeVec(result);
+							break;
+						}
+						case MENU_ITEM_COPY_ID:
+						{
+							STRPTR result;
+							if (isTextInputTextEditorActive)
+								result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "COPY");
+							else if (isChatOutputTextEditorActive)
+								result = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "COPY");
+
+							if (result == FALSE)
+								printf("Error copying text\n");
+							else if (result == TRUE)
+								printf("Text copied\n");
+							printf("%s\n", result);
+							FreeVec(result);
+							break;
+						}
+						case MENU_ITEM_PASTE_ID:
+						{
+							STRPTR result;
+							if (isTextInputTextEditorActive)
+								result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "PASTE");
+							else if (isChatOutputTextEditorActive)
+								result = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "PASTE");
+
+							if (result == FALSE)
+								printf("Error pasting text\n");
+							else if (result == TRUE)
+								printf("Text pasted\n");
+							printf("%s\n", result);
+							FreeVec(result);
+							break;
+						}
+						case MENU_ITEM_SELECT_ALL_ID:
+						{
+							STRPTR result;
+							if (isTextInputTextEditorActive)
+								result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_MarkText, NULL, 0, 0, 65535, 65535);
+							else if (isChatOutputTextEditorActive)
+								result = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_MarkText, NULL, 0, 0, 65535, 65535);
+
+							if (result == FALSE)
+								printf("Error selecting all text\n");
+							else if (result == TRUE)
+								printf("All text selected\n");
+							printf("%s\n", result);
+							FreeVec(result);
+							break;
+						}
+						case MENU_ITEM_CLEAR_ID:
+						{
+							STRPTR result;
+							if (isTextInputTextEditorActive)
+								result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CLEAR");
+							else if (isChatOutputTextEditorActive)
+								result = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CLEAR");
+
+							if (result == FALSE)
+								printf("Error clearing text\n");
+							else if (result == TRUE)
+								printf("Text cleared\n");
+							printf("%s\n", result);
+							FreeVec(result);
+							break;
+						}
 						case MENU_ITEM_QUIT_ID:
 							done = TRUE;
 							break;
