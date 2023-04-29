@@ -498,7 +498,7 @@ static LONG selectScreen() {
 
 static void sendMessage() {
 	UBYTE newThing[2000];
-	// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
+	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Sending", TAG_DONE);
 	UBYTE *text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
 	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Pen, 1, TAG_DONE);
@@ -511,7 +511,6 @@ static void sendMessage() {
 	sprintf(newThing, "%s*%s*\n\n", exportedText, text);
 	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, newThing, TAG_DONE);
 	FreeVec(exportedText);
-	exportedText = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
 	UBYTE *response = postMessageToOpenAI(text, "gpt-3.5-turbo", "user");
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	if (response != NULL) {
