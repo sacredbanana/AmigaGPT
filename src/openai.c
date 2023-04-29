@@ -23,6 +23,7 @@ static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLength);
 static void formatText(UBYTE *content, LONG *stringLength);
+static STRPTR getModelName(enum Model model);
 
 struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase;
 struct UtilityBase *UtilityBase;
@@ -126,9 +127,28 @@ static void formatText(UBYTE *string, LONG *stringLength) {
     }
     string[newStringIndex++] = '\0';
     *stringLength = newStringIndex;
-}    
+}
 
-UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
+static STRPTR getModelName(enum Model model) {
+	switch (model) {
+		case GPT_4:
+			return "gpt-4";
+		case GPT_4_0314:
+			return "gpt-4-0314";
+		case GPT_4_32K:
+			return "gpt-4-32k";
+		case GPT_4_32K_0314:
+			return "gpt-4-32k-0314";
+		case GPT_3_5_TURBO:
+			return "gpt-3.5-turbo";
+		case GPT_3_5_TURBO_0301:
+			return "gpt-3.5-turbo-0301";
+		default:
+			return NULL;
+	}
+}
+
+UBYTE* postMessageToOpenAI(UBYTE *content, enum Model model, UBYTE *role) {
     struct sockaddr_in addr;
 	struct hostent *hostent;
     UBYTE *response = NULL;
@@ -140,7 +160,7 @@ UBYTE* postMessageToOpenAI(UBYTE *content, UBYTE *model, UBYTE *role) {
             "{\"model\": \"%s\",\r\n"
             "\"messages\": [{\"role\": \"%s\", \"content\": \"%s\"}]\r\n"
             "}\0",
-            model, role, content);
+            getModelName(model), role, content);
     ULONG bodyLength = strlen(readBuffer);
 
     sprintf(writeBuffer, "POST /v1/chat/completions HTTP/1.1\r\n"

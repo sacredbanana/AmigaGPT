@@ -71,6 +71,14 @@
 #define MENU_ITEM_PASTE_ID 10
 #define MENU_ITEM_CLEAR_ID 11
 #define MENU_ITEM_SELECT_ALL_ID 12
+#define MENU_ITEM_MODEL_GPT_4_ID 13
+#define MENU_ITEM_MODEL_GPT_4_0314_ID 14
+#define MENU_ITEM_MODEL_GPT_4_32K_ID 15
+#define MENU_ITEM_MODEL_GPT_4_32K_0314_ID 16
+#define MENU_ITEM_MODEL_GPT_3_5_TURBO_ID 17
+#define MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID 18
+#define MENU_ITEM_MODEL_ID 22
+#define MENU_ITEM_SPEECH_SYSTEM_ID 23
 
 extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
@@ -100,6 +108,7 @@ static BOOL isPublicScreen;
 static UWORD pens[] = {~0};
 static BOOL isSpeechEnabled;
 static enum SpeechSystem speechSystem;
+static enum Model model;
 
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
@@ -117,15 +126,24 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Font", 0, 0, 0, MENU_ITEM_FONT_ID},
 	{NM_TITLE, "Speech", 0, 0, 0, 0},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
-	{NM_ITEM, "Speech system", 0, 0, 0, 0},
+	{NM_ITEM, "Speech system", 0, 0, 0, MENU_ITEM_SPEECH_SYSTEM_ID},
 	{NM_SUB, "Old", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_SYSTEM_OLD_ID},
 	{NM_SUB, "New", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_NEW_ID},
+	{NM_TITLE, "OpenAI", 0, 0, 0, 0},
+	{NM_ITEM, "Model", 0, 0, 0, MENU_ITEM_MODEL_ID},
+	{NM_SUB, "gpt-4", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_ID},
+	{NM_SUB, "gpt-4-0314", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_0314_ID},
+	{NM_SUB, "gpt-4-32k", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_32K_ID},
+	{NM_SUB, "gpt-4-32k-0314", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_32K_0314_ID},
+	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_ID},
+	{NM_SUB, "gpt-3.5-turbo-0301", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID},
 	{NM_END, NULL, 0, 0, 0, 0}
 };
 
 static void sendMessage();
 static void closeGUILibraries();
 static LONG selectScreen();
+static void clearModelMenuItems(struct Menu *menu);
 
 LONG openGUILibraries() {
 	if ((IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 47)) == NULL) {
@@ -215,6 +233,13 @@ LONG initVideo() {
 			return RETURN_ERROR;
 		}
 
+	struct TagItem chatOutputTextEditorMap[] = {
+		{GA_TEXTEDITOR_Prop_First, SCROLLER_Top},
+		{GA_TEXTEDITOR_Prop_Entries, SCROLLER_Total},
+		{GA_TEXTEDITOR_Prop_Visible, SCROLLER_Visible},
+		{TAG_DONE}
+	};
+
 	if ((chatOutputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
 		GA_ID, CHAT_OUTPUT_TEXT_EDITOR_ID,
 		GA_RelVerify, TRUE,
@@ -223,6 +248,7 @@ LONG initVideo() {
 		GA_ReadOnly, TRUE,
 		GA_TEXTEDITOR_ImportHook, GV_TEXTEDITOR_ImportHook_Plain,
 		GA_TEXTEDITOR_ExportHook, GV_TEXTEDITOR_ExportHook_Plain,
+		ICA_MAP, &chatOutputTextEditorMap,
 		TAG_DONE)) == NULL) {
 			printf("Could not create text editor\n");
 			return RETURN_ERROR;
@@ -250,6 +276,11 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	struct TagItem chatOutputTextScrollerMap[] = {
+		{GA_TEXTEDITOR_Prop_First, SCROLLER_Top},
+		{TAG_DONE}
+	};
+
 	if ((chatOutputScroller = NewObject(SCROLLER_GetClass(), NULL,
 		GA_ID, CHAT_OUTPUT_SCROLLER_ID,
 		GA_RelVerify, TRUE,
@@ -258,10 +289,14 @@ LONG initVideo() {
 		SCROLLER_Top, 0,
 		SCROLLER_Visible, 100,
 		SCROLLER_Total, 100,
+		ICA_MAP, &chatOutputTextScrollerMap,
+		ICA_TARGET, chatOutputTextEditor,
 		TAG_DONE)) == NULL) {
 			printf("Could not create scroller\n");
 			return RETURN_ERROR;
 	}
+
+	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, ICA_TARGET, chatOutputScroller, TAG_DONE);
 	
 	if ((chatInputLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
@@ -511,31 +546,31 @@ static LONG selectScreen() {
 }
 
 static void sendMessage() {
-	UBYTE newThing[2000];
+	// UBYTE newThing[2000];
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Sending", TAG_DONE);
 	UBYTE *text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
 	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Pen, 1, TAG_DONE);
 	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, STRINGA_Pens, 0x00010002, TAG_DONE);
-	// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, text, GV_TEXTEDITOR_InsertText_Bottom);
-	// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n", GV_TEXTEDITOR_InsertText_Bottom);
+	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, text, GV_TEXTEDITOR_InsertText_Bottom);
+	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n===\n", GV_TEXTEDITOR_InsertText_Bottom);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
-	UBYTE *exportedText = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
-	sprintf(newThing, "%s*%s*\n\n", exportedText, text);
-	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, newThing, TAG_DONE);
-	FreeVec(exportedText);
-	UBYTE *response = postMessageToOpenAI(text, "gpt-3.5-turbo", "user");
+	// UBYTE *exportedText = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
+	// sprintf(newThing, "%s%s\n\n", exportedText, text);
+	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, newThing, TAG_DONE);
+	// FreeVec(exportedText);
+	UBYTE *response = postMessageToOpenAI(text, model, "user");
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	if (response != NULL) {
-		exportedText = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
-		sprintf(newThing, "%s%s", exportedText, response);
-		FreeVec(exportedText);
+		// exportedText = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
+		// sprintf(newThing, "%s%s", exportedText, response);
+		// FreeVec(exportedText);
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TEXTEDITOR_Pen, 0, TAG_DONE);
-		SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, newThing, TAG_DONE);
-		// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, response, GV_TEXTEDITOR_InsertText_Bottom);
-		// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n", GV_TEXTEDITOR_InsertText_Bottom);
+		// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, newThing, TAG_DONE);
+		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, response, GV_TEXTEDITOR_InsertText_Bottom);
+		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n===\n", GV_TEXTEDITOR_InsertText_Bottom);
 		if (isSpeechEnabled)
 			speakText(response);
 		FreeVec(response);
@@ -544,6 +579,38 @@ static void sendMessage() {
 		printf("No response from OpenAI\n");
 	}
 	FreeVec(text);
+}
+
+// Clear all the checkboxes for all the models in rhe menu
+static void clearModelMenuItems(struct Menu *menu) {
+	while (strcmp(menu->MenuName, "OpenAI") != 0) {
+		menu = menu->NextMenu;
+	}
+	struct MenuItem *menuItem = menu->FirstItem;
+	while (GTMENUITEM_USERDATA(menuItem) != MENU_ITEM_MODEL_ID) {
+		menuItem = menuItem->NextItem;
+	}
+	menuItem = menuItem->SubItem;
+	while (menuItem != NULL) {
+		menuItem->Flags &= ~CHECKED;
+		menuItem = menuItem->NextItem;
+	}
+}
+
+// Clear all the checkboxes for all the speech systems in rhe menu
+static void clearSpeechSystemMenuItems(struct Menu *menu) {
+	while (strcmp(menu->MenuName, "Speech") != 0) {
+		menu = menu->NextMenu;
+	}
+	struct MenuItem *menuItem = menu->FirstItem;
+	while (GTMENUITEM_USERDATA(menuItem) != MENU_ITEM_SPEECH_SYSTEM_ID) {
+		menuItem = menuItem->NextItem;
+	}
+	menuItem = menuItem->SubItem;
+	while (menuItem != NULL) {
+		menuItem->Flags &= ~CHECKED;
+		menuItem = menuItem->NextItem;
+	}
 }
 
 // The main loop of the GUI
@@ -556,6 +623,7 @@ LONG startGUIRunLoop() {
 
 	isSpeechEnabled = TRUE;
 	speechSystem = SpeechSystemOld;
+	model = GPT_3_5_TURBO;
 
     GetAttr(WINDOW_SigMask, mainWindowObject, &winSignal);
 	signalMask = winSignal;
@@ -704,20 +772,56 @@ LONG startGUIRunLoop() {
 							isSpeechEnabled = !isSpeechEnabled;
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_OLD_ID:
+							clearSpeechSystemMenuItems(menuStrip);
+							menuItem = ItemAddress(menuStrip, code);
 							menuItem->Flags |= CHECKED;
-							menuItem = ItemAddress(menuStrip, MENU_ITEM_SPEECH_SYSTEM_NEW_ID);
-							menuItem->Flags &= ~CHECKED;
 							speechSystem = SpeechSystemOld;
 							closeSpeech();
 							initSpeech(speechSystem);
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_NEW_ID:
+							clearSpeechSystemMenuItems(menuStrip);
+							menuItem = ItemAddress(menuStrip, code);
 							menuItem->Flags |= CHECKED;
-							menuItem = ItemAddress(menuStrip, MENU_ITEM_SPEECH_SYSTEM_OLD_ID);
-							menuItem->Flags &= ~CHECKED;
 							speechSystem = SpeechSystemNew;
 							closeSpeech();
 							initSpeech(speechSystem);
+							break;
+						case MENU_ITEM_MODEL_GPT_4_ID:
+							clearModelMenuItems(menuStrip);
+							menuItem = ItemAddress(menuStrip, code);
+							menuItem->Flags |= CHECKED;
+							model = GPT_4;
+							break;
+						case MENU_ITEM_MODEL_GPT_4_0314_ID:
+							clearModelMenuItems(menuStrip);
+							menuItem = ItemAddress(menuStrip, code);
+							menuItem->Flags |= CHECKED;
+							model = GPT_4_0314;
+							break;
+						case MENU_ITEM_MODEL_GPT_4_32K_ID:
+							clearModelMenuItems(menuStrip);
+							menuItem = ItemAddress(menuStrip, code);
+							menuItem->Flags |= CHECKED;
+							model = GPT_4_32K;
+							break;
+						case MENU_ITEM_MODEL_GPT_4_32K_0314_ID:
+							clearModelMenuItems(menuStrip);
+							menuItem = ItemAddress(menuStrip, code);
+							menuItem->Flags |= CHECKED;
+							model = GPT_4_32K_0314;
+							break;
+						case MENU_ITEM_MODEL_GPT_3_5_TURBO_ID:
+							clearModelMenuItems(menuStrip);
+							menuItem = ItemAddress(menuStrip, code);
+							menuItem->Flags |= CHECKED;
+							model = GPT_3_5_TURBO;
+							break;
+						case MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID:
+							clearModelMenuItems(menuStrip);
+							menuItem = ItemAddress(menuStrip, code);
+							menuItem->Flags |= CHECKED;
+							model = GPT_3_5_TURBO_0301;
 							break;
 						default:
 							break;
