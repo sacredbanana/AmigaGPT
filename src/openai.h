@@ -10,11 +10,6 @@ struct ConversationNode {
 	UBYTE content[READ_BUFFER_LENGTH];
 };
 
-struct ConversationListNode {
-    struct Node node;
-    struct MinList *conversation;
-};
-
 enum Model {
     GPT_4,
     GPT_4_0314,

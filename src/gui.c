@@ -11,6 +11,7 @@
 #include <gadgets/texteditor.h>
 #include <gadgets/scroller.h>
 #include <gadgets/string.h>
+#include <gadgets/listbrowser.h>
 #include <devices/conunit.h>
 #include <exec/execbase.h>
 #include <intuition/intuition.h>
@@ -21,6 +22,7 @@
 #include <proto/radiobutton.h>
 #include <proto/window.h>
 #include <proto/texteditor.h>
+#include <proto/listbrowser.h>
 #include <proto/string.h>
 #include <proto/asl.h>
 #include <proto/scroller.h>
@@ -59,6 +61,9 @@
 #define STATUS_BAR_ID 6
 #define STATUS_BAR_WIDTH 100
 #define STATUS_BAR_HEIGHT 20
+#define CONVERSATION_LIST_BROWSER_ID 7
+#define CONVERSATION_LIST_BROWSER_WIDTH 100
+#define CONVERSATION_LIST_BROWSER_HEIGHT 200
 
 #define MENU_ITEM_ABOUT_ID 1
 #define MENU_ITEM_PREFERENCES_ID 2
@@ -93,6 +98,7 @@ static struct Library *RadioButtonBase;
 static struct Library *TextFieldBase;
 static struct Library *ScrollerBase;
 static struct Library *StringBase;
+static struct Library *ListBrowserBase;
 static struct Window *mainWindow;
 static Object *mainWindowObject;
 static Object *mainLayout;
@@ -104,13 +110,14 @@ static Object *textInputTextEditor;
 static Object *chatOutputTextEditor;
 static Object *chatOutputScroller;
 static Object *statusBar;
+static Object *conversationListBrowser;
 static struct Screen *screen;
 static BOOL isPublicScreen;
 static UWORD pens[] = {~0};
 static BOOL isSpeechEnabled;
 static enum SpeechSystem speechSystem;
 static enum Model model;
-struct MinList *conversation;
+struct MinList *currentConversation;
 struct List *conversationList;
 
 static struct NewMenu amigaGPTMenu[] = {
@@ -192,6 +199,11 @@ LONG openGUILibraries() {
 		printf("Could not open string.gadget\n");
         return RETURN_ERROR;
 	}
+
+	if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 47)) == NULL) {
+		printf("Could not open listbrowser.gadget\n");
+        return RETURN_ERROR;
+	}
 	
 	if ((GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 47)) == NULL) {
 		printf( "Could not open graphics.library\n");
@@ -225,6 +237,12 @@ LONG initVideo() {
 	if (selectScreen() == RETURN_ERROR) {
 		return RETURN_ERROR;
 	}
+
+	conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
+	NewList(conversationList);
+	currentConversation = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
+	NewMinList(currentConversation);
+	addConversationToConversationList(conversationList, currentConversation);
 
 	if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SEND_MESSAGE_BUTTON_ID,
@@ -348,13 +366,26 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	if ((conversationListBrowser = NewObject(LISTBROWSER_GetClass(), NULL,
+		GA_ID, CONVERSATION_LIST_BROWSER_ID,
+		GA_RelVerify, TRUE,
+		GA_Width, CONVERSATION_LIST_BROWSER_WIDTH,
+		GA_Height, CONVERSATION_LIST_BROWSER_HEIGHT,
+		LISTBROWSER_Labels, conversationList,
+		TAG_DONE)) == NULL) {
+			printf("Could not create conversation list browser\n");
+			return RETURN_ERROR;
+	}
+
 	if ((mainLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
 		LAYOUT_DeferLayout, TRUE,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_AddChild, conversationListBrowser,
+		CHILD_WeightedWidth, 20,
 		LAYOUT_AddChild, chatLayout,
-		CHILD_WeightedWidth, 100,
+		CHILD_WeightedWidth, 80,
 		TAG_DONE)) == NULL) {
 			printf("Could not create main layout\n");
 			return RETURN_ERROR;
@@ -558,16 +589,16 @@ static void sendMessage() {
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Sending", TAG_DONE);
 
 	UBYTE *text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
-	addTextToConversation(conversation, text, "user");
+	addTextToConversation(currentConversation, text, "user");
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, text, GV_TEXTEDITOR_InsertText_Bottom);
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n===============================\n\n", GV_TEXTEDITOR_InsertText_Bottom);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 
-	UBYTE *response = postMessageToOpenAI(conversation, model);
+	UBYTE *response = postMessageToOpenAI(currentConversation, model);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	if (response != NULL) {
-		addTextToConversation(conversation, response, "assistant");
+		addTextToConversation(currentConversation, response, "assistant");
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TEXTEDITOR_Pen, 0, TAG_DONE);
 		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, response, GV_TEXTEDITOR_InsertText_Bottom);
@@ -575,6 +606,24 @@ static void sendMessage() {
 		if (isSpeechEnabled)
 			speakText(response);
 		FreeVec(response);
+		struct Node *conversationListNode = conversationList->lh_TailPred;
+		STRPTR conversationName = AllocVec(100, MEMF_CLEAR);
+		GetListBrowserNodeAttrs(conversationListNode, LBNCA_Text, &conversationName, TAG_DONE);
+		if (strcmp(conversationName, "New conversation") == 0) {
+			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
+			addTextToConversation(currentConversation, "generate a short title for this conversation", "user");
+			response = postMessageToOpenAI(currentConversation, model);
+			if (response != NULL) {
+				SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
+				response[strlen(response)-1] = '\0';  // Remove the quotation marks from the title returned by OpenAI
+				SetListBrowserNodeAttrs(conversationListNode, LBNCA_Text, response+1, TAG_DONE);
+				SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
+				SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+				RemTail(currentConversation);
+				FreeVec(response);
+			}
+		}
+		FreeVec(conversationName);
 	} else {
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "No response from OpenAI", TAG_DONE);
 		printf("No response from OpenAI\n");
@@ -628,13 +677,17 @@ static void addTextToConversation(struct MinList *conversation, UBYTE *text, UBY
 
 // Add a conversation to the conversation list
 static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation) {
-	struct ConversationListNode *conversationListNode = AllocVec(sizeof(struct ConversationListNode), MEMF_CLEAR);
-	if (conversationListNode == NULL) {
-		printf("Failed to allocate memory for conversation list\n");
-		return;
+	struct Node *node;
+	if ((node = AllocListBrowserNode(1,
+		LBNCA_CopyText, TRUE,
+		LBNCA_Text, (ULONG)"New conversation",
+		LBNA_UserData, (ULONG)conversation,
+		TAG_DONE)) == NULL) {
+			printf("Could not create conversation list browser node\n");
+			return RETURN_ERROR;
 	}
-	conversationListNode->conversation = conversation;
-	AddTail(conversationList, (struct Node *)conversationListNode);
+
+	AddTail(conversationList, node);
 }
 
 // Free the conversation
@@ -648,9 +701,11 @@ static void freeConversation(struct MinList *conversation) {
 
 // Free the conversation list
 static void freeConversationList() {
-	struct ConversationListNode *conversationListNode;
-	while ((conversationListNode = (struct ConversationListNode *)RemHead(conversationList)) != NULL) {
-		freeConversation(conversationListNode->conversation);
+	struct Node *conversationListNode;
+	while ((conversationListNode = RemHead(conversationList)) != NULL) {
+		ULONG *conversation;
+		GetAttr(LBCIA_UserData, conversationListNode, (ULONG *)&conversation);
+		freeConversation(conversation);
 		FreeVec(conversationListNode);
 	}
 	FreeVec(conversationList);
@@ -670,12 +725,6 @@ LONG startGUIRunLoop() {
 
     GetAttr(WINDOW_SigMask, mainWindowObject, &winSignal);
 	signalMask = winSignal;
-
-	conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
-	NewList(conversationList);
-	conversation = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
-	NewMinList(conversation);
-	addConversationToConversationList(conversationList, conversation);
 
 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GFLG_SELECTED, TRUE, TAG_DONE);
 
@@ -887,6 +936,7 @@ LONG startGUIRunLoop() {
 }
 
 void shutdownGUI() {
+	freeConversationList();
 	if (mainWindowObject) {
 		DisposeObject(mainWindowObject);
 	}

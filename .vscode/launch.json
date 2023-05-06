@@ -2,6 +2,24 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/out/amigagpt.exe", // for loading symbols from running program
+            "cwd": "${workspaceFolder}",
+        
+            // if you want to connect at entry point (requires remote program to start paused)
+            "stopAtEntry": true,
+            "stopAtConnect": true,
+        
+            "MIMode": "gdb",
+            "miDebuggerPath": "/opt/amiga/bin/m68k-amigaos-gdb",
+            "miDebuggerServerAddress": "localhost:2345",
+            "setupCommands": [{
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true,
+          },
+        {
             "type": "amiga",
             "request": "launch",
             "preLaunchTask": "compile",
