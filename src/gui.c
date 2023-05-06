@@ -64,6 +64,9 @@
 #define CONVERSATION_LIST_BROWSER_ID 7
 #define CONVERSATION_LIST_BROWSER_WIDTH 100
 #define CONVERSATION_LIST_BROWSER_HEIGHT 200
+#define NEW_CHAT_BUTTON_ID 8
+#define NEW_CHAT_BUTTON_WIDTH 100
+#define NEW_CHAT_BUTTON_HEIGHT 20
 
 #define MENU_ITEM_ABOUT_ID 1
 #define MENU_ITEM_PREFERENCES_ID 2
@@ -105,12 +108,14 @@ static Object *mainLayout;
 static Object *chatLayout;
 static Object *chatInputLayout;
 static Object *chatOutputLayout;
+static Object *conversationsLayout;
 static Object *sendMessageButton;
 static Object *textInputTextEditor;
 static Object *chatOutputTextEditor;
 static Object *chatOutputScroller;
 static Object *statusBar;
 static Object *conversationListBrowser;
+static Object *newChatButton;
 static struct Screen *screen;
 static BOOL isPublicScreen;
 static UWORD pens[] = {~0};
@@ -154,8 +159,9 @@ static void sendMessage();
 static void closeGUILibraries();
 static LONG selectScreen();
 static void clearModelMenuItems(struct Menu *menu);
+static struct MinList* newConversation();
 static void addTextToConversation(struct MinList *conversation, UBYTE *text, UBYTE *role);
-static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation);
+static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation, UBYTE *title);
 static void freeConversation(struct MinList *conversation);
 static void freeConversationList();
 
@@ -240,9 +246,7 @@ LONG initVideo() {
 
 	conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
 	NewList(conversationList);
-	currentConversation = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
-	NewMinList(currentConversation);
-	addConversationToConversationList(conversationList, currentConversation);
+	currentConversation = NULL;
 
 	if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SEND_MESSAGE_BUTTON_ID,
@@ -256,7 +260,47 @@ LONG initVideo() {
 		TAG_DONE)) == NULL) {
 			printf("Could not create send message button\n");
 			return RETURN_ERROR;
-		}
+	}
+
+	if ((newChatButton = NewObject(BUTTON_GetClass(), NULL,
+		GA_ID, NEW_CHAT_BUTTON_ID,
+		GA_WIDTH, NEW_CHAT_BUTTON_WIDTH,
+		GA_HEIGHT, NEW_CHAT_BUTTON_HEIGHT,
+		BUTTON_TextPen, 3,
+		BUTTON_Justification, BCJ_CENTER,
+		GA_TEXT, (ULONG)"+ New Chat",
+		GA_RelVerify, TRUE,
+		ICA_TARGET, ICTARGET_IDCMP,
+		TAG_DONE)) == NULL) {
+			printf("Could not create new chat button\n");
+			return RETURN_ERROR;
+	}
+
+	if ((conversationListBrowser = NewObject(LISTBROWSER_GetClass(), NULL,
+		GA_ID, CONVERSATION_LIST_BROWSER_ID,
+		GA_RelVerify, TRUE,
+		GA_Width, CONVERSATION_LIST_BROWSER_WIDTH,
+		GA_Height, CONVERSATION_LIST_BROWSER_HEIGHT,
+		LISTBROWSER_WrapText, TRUE,
+		LISTBROWSER_AutoFit, TRUE,
+		LISTBROWSER_Labels, conversationList,
+		TAG_DONE)) == NULL) {
+			printf("Could not create conversation list browser\n");
+			return RETURN_ERROR;
+	}
+
+	if ((conversationsLayout = NewObject(LAYOUT_GetClass(), NULL,
+		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+		LAYOUT_SpaceInner, TRUE,
+		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_AddChild, newChatButton,
+		CHILD_WeightedHeight, 10,
+		LAYOUT_AddChild, conversationListBrowser,
+		CHILD_WeightedWidth, 90,
+		TAG_DONE)) == NULL) {
+			printf("Could not create conversations layout\n");
+			return RETURN_ERROR;
+	}
 
 	struct TagItem chatOutputTextEditorMap[] = {
 		{GA_TEXTEDITOR_Prop_First, SCROLLER_Top},
@@ -366,25 +410,12 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
-	if ((conversationListBrowser = NewObject(LISTBROWSER_GetClass(), NULL,
-		GA_ID, CONVERSATION_LIST_BROWSER_ID,
-		GA_RelVerify, TRUE,
-		GA_Width, CONVERSATION_LIST_BROWSER_WIDTH,
-		GA_Height, CONVERSATION_LIST_BROWSER_HEIGHT,
-		LISTBROWSER_WrapText, TRUE,
-		LISTBROWSER_AutoFit, TRUE,
-		LISTBROWSER_Labels, conversationList,
-		TAG_DONE)) == NULL) {
-			printf("Could not create conversation list browser\n");
-			return RETURN_ERROR;
-	}
-
 	if ((mainLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
 		LAYOUT_DeferLayout, TRUE,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, conversationListBrowser,
+		LAYOUT_AddChild, conversationsLayout,
 		CHILD_WeightedWidth, 30,
 		LAYOUT_AddChild, chatLayout,
 		CHILD_WeightedWidth, 70,
@@ -587,6 +618,11 @@ static LONG selectScreen() {
 
 // Sends a message to the OpenAI API and displays the response and speaks it if speech is anabled
 static void sendMessage() {
+	BOOL isNewConversation = FALSE;
+	if (currentConversation == NULL) {
+		isNewConversation = TRUE;
+		currentConversation = newConversation();
+	}
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Sending", TAG_DONE);
 
@@ -608,17 +644,13 @@ static void sendMessage() {
 		if (isSpeechEnabled)
 			speakText(response);
 		FreeVec(response);
-		struct Node *conversationListNode = conversationList->lh_TailPred;
-		STRPTR conversationName;
-		GetListBrowserNodeAttrs(conversationListNode, LBNCA_Text, &conversationName, TAG_DONE);
-		if (strcmp(conversationName, "New conversation") == 0) {
+		if (isNewConversation) {
+			struct Node *conversationListNode = conversationList->lh_Head->ln_Succ;
 			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes", "user");
 			response = postMessageToOpenAI(currentConversation, model);
 			if (response != NULL) {
-				SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
-				SetListBrowserNodeAttrs(conversationListNode, LBNCA_CopyText, TRUE, LBNCA_Text, response, TAG_DONE);
-				SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
+				addConversationToConversationList(conversationList, currentConversation, response);
 				SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 				RemTail(currentConversation);
 				FreeVec(response);
@@ -663,6 +695,13 @@ static void clearSpeechSystemMenuItems(struct Menu *menu) {
 	}
 }
 
+// Create a new conversation
+static struct MinList* newConversation() {
+	struct MinList *conversation = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
+	NewMinList(conversation);
+	return conversation;
+}
+
 // Add a block of text to the conversation list
 static void addTextToConversation(struct MinList *conversation, UBYTE *text, UBYTE *role) {
 	struct ConversationNode *conversationNode = AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
@@ -676,18 +715,20 @@ static void addTextToConversation(struct MinList *conversation, UBYTE *text, UBY
 }
 
 // Add a conversation to the conversation list
-static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation) {
+static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation, UBYTE *title) {
 	struct Node *node;
 	if ((node = AllocListBrowserNode(1,
 		LBNCA_CopyText, TRUE,
-		LBNCA_Text, (ULONG)"New conversation",
+		LBNCA_Text, title,
 		LBNA_UserData, (ULONG)conversation,
 		TAG_DONE)) == NULL) {
 			printf("Could not create conversation list browser node\n");
 			return RETURN_ERROR;
 	}
 
-	AddTail(conversationList, node);
+	SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);		
+	AddHead(conversationList, node);
+	SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
 }
 
 // Free the conversation
