@@ -782,7 +782,17 @@ LONG startGUIRunLoop() {
 					done = TRUE;
 					break;
 				case WMHI_GADGETUP:
-					sendMessage();
+					switch (result & WMHI_GADGETMASK) {
+						case SEND_MESSAGE_BUTTON_ID:
+						case TEXT_INPUT_TEXT_EDITOR_ID:
+							sendMessage();
+							break;
+						case NEW_CHAT_BUTTON_ID:
+							currentConversation = NULL;
+							DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+							ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
+							break;
+					}
 					break;
 				case WMHI_MENUPICK:
 				{
