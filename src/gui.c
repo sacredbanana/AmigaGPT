@@ -371,6 +371,8 @@ LONG initVideo() {
 		GA_RelVerify, TRUE,
 		GA_Width, CONVERSATION_LIST_BROWSER_WIDTH,
 		GA_Height, CONVERSATION_LIST_BROWSER_HEIGHT,
+		LISTBROWSER_WrapText, TRUE,
+		LISTBROWSER_AutoFit, TRUE,
 		LISTBROWSER_Labels, conversationList,
 		TAG_DONE)) == NULL) {
 			printf("Could not create conversation list browser\n");
@@ -383,9 +385,9 @@ LONG initVideo() {
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
 		LAYOUT_AddChild, conversationListBrowser,
-		CHILD_WeightedWidth, 20,
+		CHILD_WeightedWidth, 30,
 		LAYOUT_AddChild, chatLayout,
-		CHILD_WeightedWidth, 80,
+		CHILD_WeightedWidth, 70,
 		TAG_DONE)) == NULL) {
 			printf("Could not create main layout\n");
 			return RETURN_ERROR;
@@ -607,23 +609,21 @@ static void sendMessage() {
 			speakText(response);
 		FreeVec(response);
 		struct Node *conversationListNode = conversationList->lh_TailPred;
-		STRPTR conversationName = AllocVec(100, MEMF_CLEAR);
+		STRPTR conversationName;
 		GetListBrowserNodeAttrs(conversationListNode, LBNCA_Text, &conversationName, TAG_DONE);
 		if (strcmp(conversationName, "New conversation") == 0) {
 			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
-			addTextToConversation(currentConversation, "generate a short title for this conversation", "user");
+			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes", "user");
 			response = postMessageToOpenAI(currentConversation, model);
 			if (response != NULL) {
 				SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
-				response[strlen(response)-1] = '\0';  // Remove the quotation marks from the title returned by OpenAI
-				SetListBrowserNodeAttrs(conversationListNode, LBNCA_Text, response+1, TAG_DONE);
+				SetListBrowserNodeAttrs(conversationListNode, LBNCA_CopyText, TRUE, LBNCA_Text, response, TAG_DONE);
 				SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
 				SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 				RemTail(currentConversation);
 				FreeVec(response);
 			}
 		}
-		FreeVec(conversationName);
 	} else {
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "No response from OpenAI", TAG_DONE);
 		printf("No response from OpenAI\n");

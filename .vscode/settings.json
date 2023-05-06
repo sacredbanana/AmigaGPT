@@ -35,7 +35,9 @@
         "conunit.h": "c",
         "stdio.h": "c",
         "layout.h": "c",
-        "classusr.h": "c"
+        "classusr.h": "c",
+        "lists.h": "c",
+        "listbrowser.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",
