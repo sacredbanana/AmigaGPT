@@ -647,12 +647,13 @@ static void sendMessage() {
 		if (isNewConversation) {
 			struct Node *conversationListNode = conversationList->lh_Head->ln_Succ;
 			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
-			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes", "user");
+			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
 			response = postMessageToOpenAI(currentConversation, model);
 			if (response != NULL) {
 				addConversationToConversationList(conversationList, currentConversation, response);
 				SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
-				RemTail(currentConversation);
+				struct MinNode *titleRequestNode = RemTail(currentConversation);
+				FreeVec(titleRequestNode);
 				FreeVec(response);
 			}
 		}
@@ -745,7 +746,7 @@ static void freeConversationList() {
 	struct Node *conversationListNode;
 	while ((conversationListNode = RemHead(conversationList)) != NULL) {
 		ULONG *conversation;
-		GetAttr(LBCIA_UserData, conversationListNode, (ULONG *)&conversation);
+		GetListBrowserNodeAttrs(conversationListNode, LBNA_UserData, (ULONG *)&conversation, TAG_END);
 		freeConversation(conversation);
 		FreeVec(conversationListNode);
 	}
