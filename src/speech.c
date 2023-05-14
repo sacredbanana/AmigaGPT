@@ -13,6 +13,11 @@ struct narrator_rb *NarratorIO;
 static BYTE audioChannels[4] = {3, 5, 10, 12};
 static UBYTE translationBuffer[TRANSLATION_BUFFER_SIZE];
 
+/**
+ * Initialise the speech system
+ * @param speechSystem the speech system to use
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
 LONG initSpeech(enum SpeechSystem speechSystem) {
 	if (!(NarratorPort = CreateMsgPort())) {
 		printf("Could not create narrator port\n");
@@ -52,6 +57,9 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 	return RETURN_OK;
 }
 
+/**
+ * Close the speech system
+**/
 void closeSpeech() {
 	CloseLibrary(TranslatorBase);
 	Forbid();
@@ -73,7 +81,11 @@ void closeSpeech() {
 		DeleteMsgPort(NarratorPort);
 }
 
-void speakText(UBYTE *text) {
+/**
+ * Speak the given text aloud
+ * @param text the text to speak
+**/
+void speakText(STRPTR text) {
 	if (CheckIO((struct IORequest *)NarratorIO) == 0) {
 		AbortIO((struct IORequest *)NarratorIO);
 	}

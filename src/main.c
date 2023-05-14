@@ -14,7 +14,11 @@ static LONG openLibraries();
 static void closeLibraries();
 static void cleanExit(ULONG returnCode);
 
-int main() {
+/**
+ * App entry point
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
+LONG main() {
 	SysBase = *((struct ExecBase**)4UL);
 	struct WBStartup *wbStartupMessage = NULL;
 	struct Process *currentTask = (struct Process*)FindTask(NULL);
@@ -57,6 +61,10 @@ int main() {
 	return 0;
 }
 
+/**
+ * Open libraries needed by the whole app
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
 static LONG openLibraries() {
 	if ((DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 47)) == NULL) {
 		printf("Failed to open dos.library v47. This app requires AmigaOS 3.2 or higher\n");
@@ -65,10 +73,17 @@ static LONG openLibraries() {
 	return RETURN_OK;
 }
 
+/**
+ * Close libraries needed by the whole app
+**/
 static void closeLibraries() {
 	CloseLibrary(DOSBase);
 }
 
+/**
+ * Cleanup and exit the app
+ * @param returnCode the return code to exit with
+**/
 static void cleanExit(ULONG returnCode) {
 	shutdownGUI();
 	closeSpeech();

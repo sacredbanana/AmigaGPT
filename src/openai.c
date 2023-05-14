@@ -20,11 +20,14 @@
 #define HOST "api.openai.com"
 #define PORT 443
 
+static ULONG rangeRand(ULONG maxValue);
+static BPTR ErrOutput();
+static BPTR GetStdErr();
 static void cleanup();
-static LONG connectToOpenAI();
+static LONG createSSLContext();
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
-static STRPTR getResponseFromJson(STRPTR json);
+static STRPTR getMessageContentFromJson(STRPTR json);
 static void formatText(STRPTR unformattedText);
 static STRPTR getModelName(enum Model model);
 
@@ -46,7 +49,12 @@ LONG sock = -1;
 LONG ssl_err = 0;
 ULONG RangeSeed;
 
-ULONG rangeRand(ULONG maxValue) {
+/**
+ * Generate a random number
+ * @param maxValue the maximum value of the random number
+ * @return a random number
+**/
+static ULONG rangeRand(ULONG maxValue) {
     ULONG a=RangeSeed;
     UWORD i=maxValue-1;
     do {
@@ -61,15 +69,27 @@ ULONG rangeRand(ULONG maxValue) {
   return (UWORD)a;
 }
 
+/**
+ * Get the error output
+ * @return the error output
+**/
 static BPTR ErrOutput() {
 	return(((struct Process *)FindTask(NULL))->pr_CES);
 }
 
+/**
+ * Get the standard error
+ * @return the standard error
+**/
 static BPTR GetStdErr() {
 	BPTR err = ErrOutput();
 	return(err ? err : Output());
 }
 
+/**
+ * Initialize the OpenAI connector
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
 LONG initOpenAIConnector() {
     readBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY);
     writeBuffer = AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY);
@@ -104,9 +124,13 @@ LONG initOpenAIConnector() {
 		
 	amiSSLInitialized = TRUE;
 
-    return connectToOpenAI();
+    return createSSLContext();
 }
 
+/**
+ * Format a string with escape sequences into a string with the actual characters
+ * @param unformattedText the text to format
+**/
 static void formatText(STRPTR unformattedText) {
     LONG newStringIndex = 0;
     const LONG oldStringLength = strlen(unformattedText);
@@ -118,10 +142,6 @@ static void formatText(STRPTR unformattedText) {
                 unformattedText[newStringIndex++] = '\r';
             } else if (unformattedText[oldStringIndex + 1] == 't') {
                 unformattedText[newStringIndex++] = '\t';
-            } else if (unformattedText[oldStringIndex + 1] == '\\') {
-                unformattedText[newStringIndex++] = '\\';
-            } else if (unformattedText[oldStringIndex + 1] == '"') {
-                unformattedText[newStringIndex++] = '\"';
             }
             oldStringIndex++;
         } else {
@@ -131,6 +151,11 @@ static void formatText(STRPTR unformattedText) {
     unformattedText[newStringIndex++] = '\0';
 }
 
+/**
+ * Get the model name as a string
+ * @param model the model
+ * @return the model name as a string
+**/
 static STRPTR getModelName(enum Model model) {
 	switch (model) {
 		case GPT_4:
@@ -150,59 +175,48 @@ static STRPTR getModelName(enum Model model) {
 	}
 }
 
-UBYTE* postMessageToOpenAI(struct MinList *conversation, enum Model model) {
+/**
+ * Post a message to OpenAI
+ * @param conversation the conversation to post
+ * @param model the model to use
+ * @return a pointer to a new string containing the response -- Free it with FreeVec() when you are done using it
+ * @todo Handle errors
+**/
+STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model) {
     struct sockaddr_in addr;
 	struct hostent *hostent;
-    UBYTE *response = NULL;
+    STRPTR response = NULL;
 
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
     memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 
-    // struct json_object *obj = json_object_new_object();
-    // json_object_object_add(obj, "model", json_object_new_string(getModelName(model)));
+    struct json_object *obj = json_object_new_object();
+    json_object_object_add(obj, "model", json_object_new_string(getModelName(model)));
+    struct json_object *conversationArray = json_object_new_array();
 
-    // struct json_object *conversationArray = json_object_new_array();
-
-    sprintf(readBuffer,
-            "{\"model\": \"%s\",\r\n"
-            "\"messages\": [", getModelName(model));
-    
     struct MinNode *conversationNode = conversation->mlh_Head;
     while (conversationNode->mln_Succ != NULL) {
         struct ConversationNode *message = (struct ConversationNode *)conversationNode;
-        // struct json_object *messageObj = json_object_new_object();
-        // json_object_object_add(messageObj, "role", json_object_new_string(message->role));
-        // json_object_object_add(messageObj, "content", json_object_new_string(message->content));
-        // json_object_array_add(conversationArray, messageObj);
-        sprintf(readBuffer + strlen(readBuffer),
-                "{\"role\": \"%s\", \"content\": \"%s\"}",
-                message->role, message->content);
+        struct json_object *messageObj = json_object_new_object();
+        json_object_object_add(messageObj, "role", json_object_new_string(message->role));
+        json_object_object_add(messageObj, "content", json_object_new_string(message->content));
+        json_object_array_add(conversationArray, messageObj);
         conversationNode = conversationNode->mln_Succ;
-        if (conversationNode->mln_Succ != NULL) {
-            strcat(readBuffer, ",");
-        }
     }
 
-    strcat(readBuffer, "]\r\n}");
-
-    // json_object_object_add(obj, "messages", conversationArray);
+    json_object_object_add(obj, "messages", conversationArray);
     
-    // STRPTR jsonString = json_object_to_json_string(obj);
-    STRPTR jsonString = readBuffer;
+    STRPTR jsonString = json_object_to_json_string(obj);
 
     sprintf(writeBuffer, "POST /v1/chat/completions HTTP/1.1\r\n"
             "Host: api.openai.com\r\n"
             "Content-Type: application/json\r\n"
             "Authorization: Bearer %s\r\n"
             "User-Agent: AmigaGPT\r\n"
-            "Content-Length: %lu\r\n"
+            "Content-Length: %lu\r\n\r\n"
             "%s", openAiApiKey, strlen(jsonString), jsonString);
 
-    // json_object_put(obj);
-
-    printf("writeBuffer: \n%s\n", writeBuffer);
-
-    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+    json_object_put(obj);
 
     /* The following needs to be done once per socket */
         if((ssl = SSL_new(ctx)) != NULL) {
@@ -275,7 +289,7 @@ UBYTE* postMessageToOpenAI(struct MinList *conversation, enum Model model) {
                     return NULL;
                 }
             } else {
-                printf( "Couldn't connect to host!\n");
+                printf("Couldn't connect to host!\n");
                 return NULL;
             }
         } else {
@@ -296,11 +310,10 @@ UBYTE* postMessageToOpenAI(struct MinList *conversation, enum Model model) {
             err = SSL_get_error(ssl, bytesRead);
             switch (err) {
                 case SSL_ERROR_NONE:
-                    printf("temp buffer: \n%s\n", tempBuffer);
                     memcpy(readBuffer + totalBytesRead, tempBuffer, bytesRead);
                     totalBytesRead += bytesRead;
                     STRPTR json = strstr(readBuffer, "{");
-                    response = getResponseFromJson(json);
+                    response = getMessageContentFromJson(json);
                     if (response != NULL) {
                         formatText(response);
                         doneReading = TRUE;
@@ -374,8 +387,13 @@ UBYTE* postMessageToOpenAI(struct MinList *conversation, enum Model model) {
     return response;
 }
 
-static STRPTR getResponseFromJson(STRPTR json) {
-    printf("response:\n%s\n", json);
+/**
+ * Get the message content from the JSON response from OpenAI
+ * @param json the JSON response from OpenAI
+ * @return a pointer to a new string containing the message content -- Free it with FreeVec() when you are done using it
+ * @todo Handle errors
+**/
+static STRPTR getMessageContentFromJson(STRPTR json) {
     struct json_object *obj = json_tokener_parse(json);
     if (obj == NULL) return NULL;
     STRPTR obj_str = json_object_to_json_string(obj);
@@ -383,15 +401,18 @@ static STRPTR getResponseFromJson(STRPTR json) {
     struct json_object *choice = json_object_array_get_idx(choices, 0);
     struct json_object *message = json_object_object_get(choice, "message");
     struct json_object *content = json_object_object_get(message, "content");
-    STRPTR contentString = json_object_to_json_string(content);
-    printf("content: \n%s\n", contentString);
+    STRPTR contentString = json_object_get_string(content);
     STRPTR response = AllocVec(strlen(contentString) + 1, MEMF_ANY | MEMF_CLEAR);
     memcpy(response, contentString, strlen(contentString));
     json_object_put(obj);
     return response;
 }
 
-static LONG connectToOpenAI() {
+/**
+ * Create a new SSL context
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
+static LONG createSSLContext() {
     /* Basic intialization. Next few steps (up to SSL_new()) need
      * to be done only once per AmiSSL opener.
      */
@@ -418,17 +439,24 @@ static LONG connectToOpenAI() {
 	return RETURN_OK;
 }
 
-/* Get some suitable random seed data
- */
+/**
+ * Get some suitable random seed data
+ * @param buffer the buffer to fill with random data
+ * @param size the size of the buffer
+**/
 static void generateRandomSeed(UBYTE *buffer, LONG size) {
 	for(int i = 0; i < size/2; i++) {
 		((UWORD *)buffer)[i] = rangeRand(65535);
 	}
 }
 
-/* This callback is called everytime OpenSSL verifies a certificate
+/**
+ * This callback is called everytime OpenSSL verifies a certificate
  * in the chain during a connection, indicating success or failure.
- */
+ * @param preverify_ok 1 if the certificate passed verification, 0 otherwise
+ * @param ctx the X509 certificate store context
+ * @return 1 if the certificate passed verification, 0 otherwise
+**/
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx) {
 	if (!preverify_ok) {
 		/* Here, you could ask the user whether to ignore the failure,
@@ -443,6 +471,9 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx) {
 	return preverify_ok;
 }
 
+/**
+ * Cleanup the OpenAI connector and free all resources
+**/
 void closeOpenAIConnector() {
 	if (amiSSLInitialized) {
         SSL_shutdown(ssl);

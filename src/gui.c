@@ -165,6 +165,10 @@ static void addConversationToConversationList(struct List *conversationList, str
 static void freeConversation(struct MinList *conversation);
 static void freeConversationList();
 
+/**
+ * Open the libraries needed for the GUI
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
 LONG openGUILibraries() {
 	if ((IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 47)) == NULL) {
 		printf("Could not open intuition.library\n");
@@ -224,6 +228,9 @@ LONG openGUILibraries() {
 	return RETURN_OK;
 }
 
+/**
+ * Close the libraries used by the GUI
+**/
 static void closeGUILibraries() {
 	CloseLibrary(IntuitionBase);
 	CloseLibrary(GfxBase);
@@ -235,6 +242,10 @@ static void closeGUILibraries() {
 	CloseLibrary(AslBase);
 }
 
+/**
+ * Create the GUI
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
 LONG initVideo() {
 	if (openGUILibraries() == RETURN_ERROR) {
 		return RETURN_ERROR;
@@ -460,6 +471,10 @@ LONG initVideo() {
 	return RETURN_OK;
 }
 
+/**
+ * Display a requester for the screen the application should open on
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
 static LONG selectScreen() {
 	Object *screenSelectRadioButton, *selectScreenOkButton, *screenSelectLayout, *screenSelectWindowObject;
 	struct Window *screenSelectWindow;
@@ -616,7 +631,9 @@ static LONG selectScreen() {
 	return RETURN_OK;
 }
 
-// Sends a message to the OpenAI API and displays the response and speaks it if speech is anabled
+/**
+ * Sends a message to the OpenAI API and displays the response and speaks it if speech is anabled
+**/ 
 static void sendMessage() {
 	BOOL isNewConversation = FALSE;
 	if (currentConversation == NULL) {
@@ -633,7 +650,7 @@ static void sendMessage() {
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 
-	UBYTE *response = postMessageToOpenAI(currentConversation, model);
+	STRPTR response = postMessageToOpenAI(currentConversation, model);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	if (response != NULL) {
 		addTextToConversation(currentConversation, response, "assistant");
@@ -664,7 +681,10 @@ static void sendMessage() {
 	FreeVec(text);
 }
 
-// Clear all the checkboxes for all the models in rhe menu
+/**
+ * Clears all the checkboxes for all the models in the menu
+ * @param menu The menu to clear the checkboxes for
+**/ 
 static void clearModelMenuItems(struct Menu *menu) {
 	while (strcmp(menu->MenuName, "OpenAI") != 0) {
 		menu = menu->NextMenu;
@@ -680,7 +700,10 @@ static void clearModelMenuItems(struct Menu *menu) {
 	}
 }
 
-// Clear all the checkboxes for all the speech systems in rhe menu
+/**
+ * Clears all the checkboxes for all the speech systems in the menu
+ * @param menu The menu to clear the checkboxes for
+**/ 
 static void clearSpeechSystemMenuItems(struct Menu *menu) {
 	while (strcmp(menu->MenuName, "Speech") != 0) {
 		menu = menu->NextMenu;
@@ -696,15 +719,23 @@ static void clearSpeechSystemMenuItems(struct Menu *menu) {
 	}
 }
 
-// Create a new conversation
+/**
+ * Creates a new conversation
+ * @return A pointer to the new conversation
+**/
 static struct MinList* newConversation() {
 	struct MinList *conversation = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
 	NewMinList(conversation);
 	return conversation;
 }
 
-// Add a block of text to the conversation list
-static void addTextToConversation(struct MinList *conversation, UBYTE *text, UBYTE *role) {
+/**
+ * Add a block of text to the conversation list
+ * @param conversation The conversation to add the text to
+ * @param text The text to add to the conversation
+ * @param role The role of the text (user or assistant)
+**/ 
+static void addTextToConversation(struct MinList *conversation, STRPTR text, STRPTR role) {
 	struct ConversationNode *conversationNode = AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
 	if (conversationNode == NULL) {
 		printf("Failed to allocate memory for conversation node\n");
@@ -715,8 +746,13 @@ static void addTextToConversation(struct MinList *conversation, UBYTE *text, UBY
 	AddTail(conversation, (struct Node *)conversationNode);
 }
 
-// Add a conversation to the conversation list
-static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation, UBYTE *title) {
+/**
+ * Add a conversation to the conversation list
+ * @param conversationList The conversation list to add the conversation to
+ * @param conversation The conversation to add to the conversation list
+ * @param title The title of the conversation
+**/ 
+static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation, STRPTR title) {
 	struct Node *node;
 	if ((node = AllocListBrowserNode(1,
 		LBNCA_CopyText, TRUE,
@@ -732,7 +768,10 @@ static void addConversationToConversationList(struct List *conversationList, str
 	SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
 }
 
-// Free the conversation
+/**
+ * Free the conversation
+ * @param conversation The conversation to free
+**/ 
 static void freeConversation(struct MinList *conversation) {
 	struct ConversationNode *conversationNode;
 	while ((conversationNode = (struct ConversationNode *)RemHead(conversation)) != NULL) {
@@ -741,7 +780,9 @@ static void freeConversation(struct MinList *conversation) {
 	FreeVec(conversation);
 }
 
-// Free the conversation list
+/**
+ * Free the conversation list
+**/
 static void freeConversationList() {
 	struct Node *conversationListNode;
 	while ((conversationListNode = RemHead(conversationList)) != NULL) {
@@ -753,7 +794,12 @@ static void freeConversationList() {
 	FreeVec(conversationList);
 }
 
-// The main loop of the GUI
+/**
+ * The main run loop of the GUI
+ * @return The return code of the application
+ * @see RETURN_OK
+ * @see RETURN_ERROR
+**/ 
 LONG startGUIRunLoop() {
 	struct FontRequester *fontRequester;
 	struct TextAttr *currentFont;
@@ -987,6 +1033,9 @@ LONG startGUIRunLoop() {
 	return RETURN_OK;
 }
 
+/**
+ * Shutdown the GUI
+**/
 void shutdownGUI() {
 	freeConversationList();
 	if (mainWindowObject) {
