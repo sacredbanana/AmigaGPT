@@ -7,7 +7,7 @@ ifdef OS
 	SHELL = cmd.exe
 endif
 
-subdirs := $(wildcard */) $(wildcard src/*/)
+subdirs := $(wildcard */) $(wildcard src/*/) $(wildcard src/*/*/)
 VPATH = $(subdirs)
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
 cpp_objects := $(addprefix obj/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
@@ -40,7 +40,7 @@ else
 	INCDIR = /opt/amiga/m68k-amigaos/include
 endif
 
-CCFLAGS = -g -MP -MMD -m68000 -Ofast -Wextra -Wno-unused-function -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -D__NOLIBBASE__ -noixemul -fbaserel -lamiga
+CCFLAGS = -g -MP -MMD -m68000 -Ofast -Wextra -Wno-unused-function -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -D__NOLIBBASE__ -noixemul -fbaserel -lamiga -lm
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),-D
 LDFLAGS =  -Wl,-Map=$(OUT).map

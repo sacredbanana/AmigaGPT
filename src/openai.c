@@ -10,9 +10,12 @@
 #include <string.h>
 #include "openai.h"
 #include <stdbool.h>
+
 #include <stdio.h>
 #include "speech.h"
 #include "api_key.h"
+// #include "external/parson/parson.h"
+#include "external/json-c/json.h"
 
 #define HOST "api.openai.com"
 #define PORT 443
@@ -21,8 +24,8 @@ static void cleanup();
 static LONG connectToOpenAI();
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
-static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLength);
-static void formatText(UBYTE *content, LONG *stringLength);
+static STRPTR getResponseFromJson(STRPTR json);
+static void formatText(STRPTR unformattedText);
 static STRPTR getModelName(enum Model model);
 
 struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase;
@@ -104,29 +107,28 @@ LONG initOpenAIConnector() {
     return connectToOpenAI();
 }
 
-static void formatText(UBYTE *string, LONG *stringLength) {
+static void formatText(STRPTR unformattedText) {
     LONG newStringIndex = 0;
-    const LONG oldStringLength = *stringLength;
+    const LONG oldStringLength = strlen(unformattedText);
     for (LONG oldStringIndex = 0; oldStringIndex < oldStringLength; oldStringIndex++) {
-        if (string[oldStringIndex] == '\\') {
-            if (string[oldStringIndex + 1] == 'n') {
-                string[newStringIndex++] = '\n';
-            } else if (string[oldStringIndex + 1] == 'r') {
-                string[newStringIndex++] = '\r';
-            } else if (string[oldStringIndex + 1] == 't') {
-                string[newStringIndex++] = '\t';
-            } else if (string[oldStringIndex + 1] == '\\') {
-                string[newStringIndex++] = '\\';
-            } else if (string[oldStringIndex + 1] == '"') {
-                string[newStringIndex++] = '"';
+        if (unformattedText[oldStringIndex] == '\\') {
+            if (unformattedText[oldStringIndex + 1] == 'n') {
+                unformattedText[newStringIndex++] = '\n';
+            } else if (unformattedText[oldStringIndex + 1] == 'r') {
+                unformattedText[newStringIndex++] = '\r';
+            } else if (unformattedText[oldStringIndex + 1] == 't') {
+                unformattedText[newStringIndex++] = '\t';
+            } else if (unformattedText[oldStringIndex + 1] == '\\') {
+                unformattedText[newStringIndex++] = '\\';
+            } else if (unformattedText[oldStringIndex + 1] == '"') {
+                unformattedText[newStringIndex++] = '\"';
             }
             oldStringIndex++;
         } else {
-            string[newStringIndex++] = string[oldStringIndex];
+            unformattedText[newStringIndex++] = unformattedText[oldStringIndex];
         }
     }
-    string[newStringIndex++] = '\0';
-    *stringLength = newStringIndex;
+    unformattedText[newStringIndex++] = '\0';
 }
 
 static STRPTR getModelName(enum Model model) {
@@ -156,6 +158,11 @@ UBYTE* postMessageToOpenAI(struct MinList *conversation, enum Model model) {
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
     memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 
+    // struct json_object *obj = json_object_new_object();
+    // json_object_object_add(obj, "model", json_object_new_string(getModelName(model)));
+
+    // struct json_object *conversationArray = json_object_new_array();
+
     sprintf(readBuffer,
             "{\"model\": \"%s\",\r\n"
             "\"messages\": [", getModelName(model));
@@ -163,6 +170,10 @@ UBYTE* postMessageToOpenAI(struct MinList *conversation, enum Model model) {
     struct MinNode *conversationNode = conversation->mlh_Head;
     while (conversationNode->mln_Succ != NULL) {
         struct ConversationNode *message = (struct ConversationNode *)conversationNode;
+        // struct json_object *messageObj = json_object_new_object();
+        // json_object_object_add(messageObj, "role", json_object_new_string(message->role));
+        // json_object_object_add(messageObj, "content", json_object_new_string(message->content));
+        // json_object_array_add(conversationArray, messageObj);
         sprintf(readBuffer + strlen(readBuffer),
                 "{\"role\": \"%s\", \"content\": \"%s\"}",
                 message->role, message->content);
@@ -174,15 +185,22 @@ UBYTE* postMessageToOpenAI(struct MinList *conversation, enum Model model) {
 
     strcat(readBuffer, "]\r\n}");
 
-    ULONG bodyLength = strlen(readBuffer);
+    // json_object_object_add(obj, "messages", conversationArray);
+    
+    // STRPTR jsonString = json_object_to_json_string(obj);
+    STRPTR jsonString = readBuffer;
 
     sprintf(writeBuffer, "POST /v1/chat/completions HTTP/1.1\r\n"
             "Host: api.openai.com\r\n"
             "Content-Type: application/json\r\n"
             "Authorization: Bearer %s\r\n"
             "User-Agent: AmigaGPT\r\n"
-            "Content-Length: %lu\r\n\r\n"
-            "%s", openAiApiKey, bodyLength, readBuffer);
+            "Content-Length: %lu\r\n"
+            "%s", openAiApiKey, strlen(jsonString), jsonString);
+
+    // json_object_put(obj);
+
+    printf("writeBuffer: \n%s\n", writeBuffer);
 
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
 
@@ -278,12 +296,13 @@ UBYTE* postMessageToOpenAI(struct MinList *conversation, enum Model model) {
             err = SSL_get_error(ssl, bytesRead);
             switch (err) {
                 case SSL_ERROR_NONE:
+                    printf("temp buffer: \n%s\n", tempBuffer);
                     memcpy(readBuffer + totalBytesRead, tempBuffer, bytesRead);
                     totalBytesRead += bytesRead;
-                    LONG responseLength = 0;
-                    response = getResponseFromJson(readBuffer, totalBytesRead, &responseLength);
+                    STRPTR json = strstr(readBuffer, "{");
+                    response = getResponseFromJson(json);
                     if (response != NULL) {
-                        formatText(response, &responseLength);
+                        formatText(response);
                         doneReading = TRUE;
                     }
                     break;
@@ -308,9 +327,12 @@ UBYTE* postMessageToOpenAI(struct MinList *conversation, enum Model model) {
                     break;
                 case SSL_ERROR_SYSCALL:
                     printf("SSL_ERROR_SYSCALL\n");
+                    ULONG err = ERR_get_error();
+                    printf("error: %lu\n", err);
                     break;
                 case SSL_ERROR_SSL:
                     printf("SSL_ERROR_SSL\n");
+                    Delay(100);
                     break;
                 default:
                     printf("Unknown error: %ld\n", err);
@@ -352,50 +374,21 @@ UBYTE* postMessageToOpenAI(struct MinList *conversation, enum Model model) {
     return response;
 }
 
-static UBYTE* getResponseFromJson(UBYTE *json, LONG jsonLength, LONG *responseLength) {
-    const UBYTE content[] = "\"content\":\"";
-    const UBYTE responseTail[] = "\"finish_reason\":\"stop\",\"index\":0}]}";
-    if ((strstr(json, responseTail) == NULL) || (strstr(json, content) == NULL))
-        return NULL;
-    UBYTE matchedIndex = 0;
-    const ULONG contentLength = strlen(content);
-    UBYTE braceDepth = 0;
-    *responseLength = 0;
-
-    for (LONG i = 0; i < jsonLength; i++) {
-        if (json[i] == '{') {
-            braceDepth++;
-        } else if (json[i] == '}') {
-            braceDepth--;
-        }
-
-        if (braceDepth == 0)
-            continue;
-
-        if (json[i] == content[matchedIndex]) {
-            matchedIndex++;
-        } else {
-            matchedIndex = 0;
-        }
-
-        if (matchedIndex == contentLength) {
-            UBYTE *response = AllocVec(jsonLength - matchedIndex, MEMF_ANY);
-            UBYTE *responseIndex = (UBYTE *)response;
-            for (LONG j = i; j < jsonLength; j++) {
-                if (json[j + 1] == '\"' && json[j] != '\\') {
-                    *responseIndex = 0;
-                    return response;
-                }
-                (*responseLength)++;
-                *responseIndex++ = json[j + 1];
-            }
-            // Close the string in case there's no closing quote found
-            *responseIndex = 0;
-            return response;
-        }
-    }
-    *responseLength = -1;
-    return NULL; // Return NULL if the "content" field is not found in the JSON string
+static STRPTR getResponseFromJson(STRPTR json) {
+    printf("response:\n%s\n", json);
+    struct json_object *obj = json_tokener_parse(json);
+    if (obj == NULL) return NULL;
+    STRPTR obj_str = json_object_to_json_string(obj);
+    struct json_object *choices = json_object_object_get(obj, "choices");
+    struct json_object *choice = json_object_array_get_idx(choices, 0);
+    struct json_object *message = json_object_object_get(choice, "message");
+    struct json_object *content = json_object_object_get(message, "content");
+    STRPTR contentString = json_object_to_json_string(content);
+    printf("content: \n%s\n", contentString);
+    STRPTR response = AllocVec(strlen(contentString) + 1, MEMF_ANY | MEMF_CLEAR);
+    memcpy(response, contentString, strlen(contentString));
+    json_object_put(obj);
+    return response;
 }
 
 static LONG connectToOpenAI() {
