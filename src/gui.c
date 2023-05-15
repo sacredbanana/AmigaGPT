@@ -328,7 +328,7 @@ LONG initVideo() {
 		GA_Width, CHAT_OUTPUT_TEXT_EDITOR_WIDTH,
 		GA_Height, CHAT_OUTPUT_TEXT_EDITOR_HEIGHT,
 		GA_ReadOnly, TRUE,
-		GA_TEXTEDITOR_ImportHook, GV_TEXTEDITOR_ImportHook_Plain,
+		GA_TEXTEDITOR_ImportHook, GV_TEXTEDITOR_ImportHook_MIME,
 		GA_TEXTEDITOR_ExportHook, GV_TEXTEDITOR_ExportHook_Plain,
 		ICA_MAP, &chatOutputTextEditorMap,
 		TAG_DONE)) == NULL) {
@@ -788,18 +788,32 @@ static struct MinList* getConversationFromConversationList(struct List *conversa
 
 /**
  * Prints the conversation to the conversation window
- * @param conversaiion the conversation to display
+ * @param conversation the conversation to display
 **/
 static void displayConversation(struct MinList *conversation) {
     struct ConversationNode *conversationNode;
     DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+	STRPTR conversationString = AllocVec(WRITE_BUFFER_LENGTH, MEMF_CLEAR);
 
     for (conversationNode = (struct ConversationNode *)conversation->mlh_Head; 
          conversationNode->node.mln_Succ != NULL; 
          conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
-        DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, conversationNode->content, GV_TEXTEDITOR_InsertText_Bottom);
-        DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n===============================\n\n", GV_TEXTEDITOR_InsertText_Bottom);
+			if ((strlen(conversationString) + strlen(conversationNode->content) + 5) > WRITE_BUFFER_LENGTH) {
+				// TODO: Handle this better
+				return;
+			}
+			if (strcmp(conversationNode->role, "user") == 0) {
+				if (strlen(conversationString) == 0)
+					sprintf(conversationString, "*%s*", conversationNode->content);
+				else
+					sprintf(conversationString, "%s\n\n*%s*\0", conversationString, conversationNode->content);
+			} else {
+				sprintf(conversationString, "%s\n\n%s\0", conversationString, conversationNode->content);
+			}
     }
+
+	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationString, TAG_DONE);
+	FreeVec(conversationString);
 }
 
 /**
