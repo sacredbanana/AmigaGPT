@@ -160,8 +160,10 @@ static void closeGUILibraries();
 static LONG selectScreen();
 static void clearModelMenuItems(struct Menu *menu);
 static struct MinList* newConversation();
-static void addTextToConversation(struct MinList *conversation, UBYTE *text, UBYTE *role);
-static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation, UBYTE *title);
+static void addTextToConversation(struct MinList *conversation, STRPTR text, STRPTR role);
+static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation, STRPTR title);
+static struct MinList* getConversationFromConversationList(struct List *conversationList, ULONG index);
+static void displayConversation(struct MinList *conversation);
 static void freeConversation(struct MinList *conversation);
 static void freeConversationList();
 
@@ -643,10 +645,9 @@ static void sendMessage() {
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Sending", TAG_DONE);
 
-	UBYTE *text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
+	STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
 	addTextToConversation(currentConversation, text, "user");
-	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, text, GV_TEXTEDITOR_InsertText_Bottom);
-	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n===============================\n\n", GV_TEXTEDITOR_InsertText_Bottom);
+	displayConversation(currentConversation);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 
@@ -654,15 +655,13 @@ static void sendMessage() {
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	if (response != NULL) {
 		addTextToConversation(currentConversation, response, "assistant");
+		displayConversation(currentConversation);
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TEXTEDITOR_Pen, 0, TAG_DONE);
-		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, response, GV_TEXTEDITOR_InsertText_Bottom);
-		DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n===============================\n\n", GV_TEXTEDITOR_InsertText_Bottom);
 		if (isSpeechEnabled)
 			speakText(response);
 		FreeVec(response);
 		if (isNewConversation) {
-			struct Node *conversationListNode = conversationList->lh_Head->ln_Succ;
 			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
 			response = postMessageToOpenAI(currentConversation, model);
@@ -741,8 +740,10 @@ static void addTextToConversation(struct MinList *conversation, STRPTR text, STR
 		printf("Failed to allocate memory for conversation node\n");
 		return;
 	}
-	strcpy(conversationNode->role, role);
-	strcpy(conversationNode->content, text);
+	strncpy(conversationNode->role, role, sizeof(conversationNode->role) - 1);
+    conversationNode->role[sizeof(conversationNode->role) - 1] = '\0';
+    strncpy(conversationNode->content, text, sizeof(conversationNode->content) - 1);
+    conversationNode->content[sizeof(conversationNode->content) - 1] = '\0';
 	AddTail(conversation, (struct Node *)conversationNode);
 }
 
@@ -766,6 +767,39 @@ static void addConversationToConversationList(struct List *conversationList, str
 	SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);		
 	AddHead(conversationList, node);
 	SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
+}
+
+/**
+ * Get a conversation from the conversation list
+ * @param conversationList The conversation list to get the conversation from
+ * @param index The index of the conversation to get
+ * @return A pointer to the conversation
+**/
+static struct MinList* getConversationFromConversationList(struct List *conversationList, ULONG index) {
+	struct Node *node = conversationList->lh_Head->ln_Succ;
+	while (index > 0) {
+		node = node->ln_Succ;
+		index--;
+	}
+	STRPTR conversation;
+	GetListBrowserNodeAttrs(node, LBNA_UserData,&conversation, TAG_END);
+	return conversation;
+}
+
+/**
+ * Prints the conversation to the conversation window
+ * @param conversaiion the conversation to display
+**/
+static void displayConversation(struct MinList *conversation) {
+    struct ConversationNode *conversationNode;
+    DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+
+    for (conversationNode = (struct ConversationNode *)conversation->mlh_Head; 
+         conversationNode->node.mln_Succ != NULL; 
+         conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
+        DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, conversationNode->content, GV_TEXTEDITOR_InsertText_Bottom);
+        DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n\n===============================\n\n", GV_TEXTEDITOR_InsertText_Bottom);
+    }
 }
 
 /**
@@ -838,6 +872,17 @@ LONG startGUIRunLoop() {
 							DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 							ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 							break;
+						case CONVERSATION_LIST_BROWSER_ID:
+							{
+								// Switch to the conversation the user clicked on in the list
+								struct ListBrowserNode *node;
+								GetAttr(LISTBROWSER_SelectedNode, conversationListBrowser, &node);
+								struct MinList *conversation;
+								GetListBrowserNodeAttrs(node, LBNA_UserData,&conversation, TAG_END);
+								currentConversation = conversation;
+								displayConversation(currentConversation);
+								break;
+							}
 					}
 					break;
 				case WMHI_MENUPICK:
