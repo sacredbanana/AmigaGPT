@@ -44,10 +44,11 @@ LONG initOpenAIConnector();
  * Post a message to OpenAI
  * @param conversation the conversation to post
  * @param model the model to use
+ * @param openAiApiKey the OpenAI API key
  * @return a pointer to a new string containing the response -- Free it with FreeVec() when you are done using it
  * @todo Handle errors
 **/
-STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model);
+STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPTR openAiApiKey);
 
 /**
  * Cleanup the OpenAI connector and free all resources

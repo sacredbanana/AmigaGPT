@@ -18,6 +18,7 @@
 #include <intuition/gadgetclass.h>
 #include <intuition/classusr.h>
 #include <intuition/icclass.h>
+#include <graphics/text.h>
 #include <proto/button.h>
 #include <proto/radiobutton.h>
 #include <proto/window.h>
@@ -33,6 +34,7 @@
 #include "openai.h"
 #include "version.h"
 #include <stdbool.h>
+#include "external/json-c/json.h"
 
 // TODO: Fix edit menu
 
@@ -72,22 +74,23 @@
 #define MENU_ITEM_PREFERENCES_ID 2
 #define MENU_ITEM_QUIT_ID 3
 #define MENU_ITEM_SPEECH_ENABLED_ID 4
-#define MENU_ITEM_FONT_ID 5
-#define MENU_ITEM_SPEECH_SYSTEM_OLD_ID 6
-#define MENU_ITEM_SPEECH_SYSTEM_NEW_ID 7
-#define MENU_ITEM_CUT_ID 8
-#define MENU_ITEM_COPY_ID 9
-#define MENU_ITEM_PASTE_ID 10
-#define MENU_ITEM_CLEAR_ID 11
-#define MENU_ITEM_SELECT_ALL_ID 12
-#define MENU_ITEM_MODEL_GPT_4_ID 13
-#define MENU_ITEM_MODEL_GPT_4_0314_ID 14
-#define MENU_ITEM_MODEL_GPT_4_32K_ID 15
-#define MENU_ITEM_MODEL_GPT_4_32K_0314_ID 16
-#define MENU_ITEM_MODEL_GPT_3_5_TURBO_ID 17
-#define MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID 18
-#define MENU_ITEM_MODEL_ID 22
-#define MENU_ITEM_SPEECH_SYSTEM_ID 23
+#define MENU_ITEM_CHAT_FONT_ID 5
+#define MENU_ITEM_UI_FONT_ID 6
+#define MENU_ITEM_SPEECH_SYSTEM_OLD_ID 7
+#define MENU_ITEM_SPEECH_SYSTEM_NEW_ID 8
+#define MENU_ITEM_CUT_ID 9
+#define MENU_ITEM_COPY_ID 10
+#define MENU_ITEM_PASTE_ID 11
+#define MENU_ITEM_CLEAR_ID 12
+#define MENU_ITEM_SELECT_ALL_ID 13
+#define MENU_ITEM_MODEL_GPT_4_ID 14
+#define MENU_ITEM_MODEL_GPT_4_0314_ID 15
+#define MENU_ITEM_MODEL_GPT_4_32K_ID 16
+#define MENU_ITEM_MODEL_GPT_4_32K_0314_ID 17
+#define MENU_ITEM_MODEL_GPT_3_5_TURBO_ID 18
+#define MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID 19
+#define MENU_ITEM_MODEL_ID 20
+#define MENU_ITEM_SPEECH_SYSTEM_ID 21
 
 extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
@@ -119,11 +122,56 @@ static Object *newChatButton;
 static struct Screen *screen;
 static BOOL isPublicScreen;
 static UWORD pens[] = {~0};
-static BOOL isSpeechEnabled;
-static enum SpeechSystem speechSystem;
-static enum Model model;
 struct MinList *currentConversation;
 struct List *conversationList;
+
+static struct Config {
+	BOOL speechEnabled;
+	enum SpeechSystem speechSystem;
+	enum Model model;
+	UBYTE chatFontName[32];
+	UWORD chatFontSize;
+	UBYTE chatFontStyle;
+	UBYTE chatFontFlags;
+	UBYTE uiFontName[32];
+	UWORD uiFontSize;
+	UBYTE uiFontStyle;
+	UBYTE uiFontFlags;
+	UBYTE openAiApiKey[64];
+	ULONG colors[32];
+};
+struct Config config = {
+	.speechEnabled = TRUE,
+	.speechSystem = SpeechSystemOld,
+	.model = GPT_3_5_TURBO,
+	.chatFontName = {0},
+	.chatFontSize = 8,
+	.chatFontStyle = FS_NORMAL,
+	.chatFontFlags = FPF_DISKFONT | FPF_DESIGNED,
+	.uiFontName = {0},
+	.uiFontSize = 8,
+	.uiFontStyle = FS_NORMAL,
+	.uiFontFlags = FPF_DISKFONT | FPF_DESIGNED,
+	.openAiApiKey = NULL,
+	.colors = {
+		5l<<16+0,
+		0x00000000, 0x11111111, 0x55555555,
+		0xAAAAAAAA, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x33333333,
+		0xBBBBBBBB, 0xFFFFFFFF, 0x22222222,
+		0x00000000, 0x00000000, 0x00000000,
+		0
+	}
+};
+
+static struct TextAttr screenFont = {
+	.ta_Name = "",
+	.ta_YSize = 8,
+	.ta_Style = FS_NORMAL,
+	.ta_Flags = FPF_DISKFONT | FPF_DESIGNED
+};
+
+struct TextFont *loadedFont = NULL;
 
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
@@ -138,7 +186,8 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Clear", "L", 0, 0, MENU_ITEM_CLEAR_ID},
 	{NM_ITEM, "Select all", "A", 0, 0, MENU_ITEM_SELECT_ALL_ID},
 	{NM_TITLE, "View", 0, 0, 0, 0},
-	{NM_ITEM, "Font", 0, 0, 0, MENU_ITEM_FONT_ID},
+	{NM_ITEM, "Chat Font", 0, 0, 0, MENU_ITEM_CHAT_FONT_ID},
+	{NM_ITEM, "UI Font", 0, 0, 0, MENU_ITEM_UI_FONT_ID},
 	{NM_TITLE, "Speech", 0, 0, 0, 0},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
 	{NM_ITEM, "Speech system", 0, 0, 0, MENU_ITEM_SPEECH_SYSTEM_ID},
@@ -166,6 +215,8 @@ static struct MinList* getConversationFromConversationList(struct List *conversa
 static void displayConversation(struct MinList *conversation);
 static void freeConversation(struct MinList *conversation);
 static void freeConversationList();
+static LONG writeConfig();
+static LONG readConfig();
 
 /**
  * Open the libraries needed for the GUI
@@ -253,9 +304,10 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
-	if (selectScreen() == RETURN_ERROR) {
+	readConfig();
+
+	if (screen == NULL && selectScreen() == RETURN_ERROR)
 		return RETURN_ERROR;
-	}
 
 	conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
 	NewList(conversationList);
@@ -347,12 +399,20 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	struct TextAttr chatOutputTextEditorTextAttr = {
+		.ta_Name = config.chatFontName,
+		.ta_YSize = config.chatFontSize,
+		.ta_Style = config.chatFontStyle,
+		.ta_Flags = config.chatFontFlags
+	};
+
 	if ((textInputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
 		GA_ID, TEXT_INPUT_TEXT_EDITOR_ID,
 		GA_RelVerify, TRUE,
 		GA_Text, (ULONG)"",
 		GA_Width, TEXT_INPUT_TEXT_EDITOR_WIDTH,
 		GA_Height, TEXT_INPUT_TEXT_EDITOR_HEIGHT,
+		GA_TextAttr, (ULONG)&chatOutputTextEditorTextAttr,
 		TAG_DONE)) == NULL) {
 			printf("Could not create text editor\n");
 			return RETURN_ERROR;
@@ -483,6 +543,13 @@ static LONG selectScreen() {
 	struct ScreenModeRequester *screenModeRequester;
 	screen = LockPubScreen("Workbench");
 
+	if (strlen(config.uiFontName) > 0) {
+		screenFont.ta_Name = config.uiFontName;
+		screenFont.ta_YSize = config.uiFontSize;
+		screenFont.ta_Style = config.uiFontStyle;
+		screenFont.ta_Flags = config.uiFontFlags;
+	}
+
 	STRPTR radioButtonOptions[] = {
 		"New screen",
 		"Open in Workbench",
@@ -611,16 +678,12 @@ static LONG selectScreen() {
 					SA_AutoScroll, screenModeRequester->sm_AutoScroll,
 					SA_Width, screenModeRequester->sm_DisplayWidth,
 					SA_Height, screenModeRequester->sm_DisplayHeight,
+					SA_Font, &screenFont,
+					SA_Colors32, config.colors,
 					TAG_DONE)) == NULL) {
 						printf("Could not open screen\n");
 						return RETURN_ERROR;
 				}
-
-				SetRGB4(&(screen->ViewPort), 0, 0x0, 0x1, 0x5);
-				SetRGB4(&(screen->ViewPort), 1, 0xA, 0x0, 0x0);
-				SetRGB4(&(screen->ViewPort), 2, 0x0, 0x0, 0x3);
-				SetRGB4(&(screen->ViewPort), 3, 0xB, 0xF, 0x2);
-				SetRGB4(&(screen->ViewPort), 4, 0xF, 0xF, 0x0);
 			}
 		}
 	} else {
@@ -651,20 +714,20 @@ static void sendMessage() {
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 
-	STRPTR response = postMessageToOpenAI(currentConversation, model);
+	STRPTR response = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	if (response != NULL) {
 		addTextToConversation(currentConversation, response, "assistant");
 		displayConversation(currentConversation);
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TEXTEDITOR_Pen, 0, TAG_DONE);
-		if (isSpeechEnabled)
+		if (config.speechEnabled)
 			speakText(response);
 		FreeVec(response);
 		if (isNewConversation) {
 			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
-			response = postMessageToOpenAI(currentConversation, model);
+			response = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey);
 			if (response != NULL) {
 				addConversationToConversationList(conversationList, currentConversation, response);
 				SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
@@ -849,15 +912,9 @@ static void freeConversationList() {
  * @see RETURN_ERROR
 **/ 
 LONG startGUIRunLoop() {
-	struct FontRequester *fontRequester;
-	struct TextAttr *currentFont;
     ULONG signalMask, winSignal, signals, result;
 	BOOL done = FALSE;
     WORD code;
-
-	isSpeechEnabled = TRUE;
-	speechSystem = SpeechSystemOld;
-	model = GPT_3_5_TURBO;
 
     GetAttr(WINDOW_SigMask, mainWindowObject, &winSignal);
 	signalMask = winSignal;
@@ -1012,71 +1069,129 @@ LONG startGUIRunLoop() {
 						case MENU_ITEM_QUIT_ID:
 							done = TRUE;
 							break;
-						case MENU_ITEM_FONT_ID:
-							if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
-								if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
-									currentFont = &fontRequester->fo_Attr;
+						case MENU_ITEM_CHAT_FONT_ID:
+							{
+								struct FontRequester *fontRequester;
+								if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
+									struct TextAttr *chatFont;
+									if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
+										chatFont = &fontRequester->fo_Attr;
+										strncpy(config.chatFontName, chatFont->ta_Name, sizeof(config.chatFontName) - 1);
+										config.chatFontName[sizeof(config.chatFontName) - 1] = '\0';
+										config.chatFontSize = chatFont->ta_YSize;
+										config.chatFontStyle = chatFont->ta_Style;
+										config.chatFontFlags = chatFont->ta_Flags;
+										writeConfig();
+									}
+									SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
+									SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
+									FreeAslRequest(fontRequester);
 								}
-								FreeAslRequest(fontRequester);
-								SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, currentFont, TAG_DONE);
-								SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, currentFont, TAG_DONE);
+								break;
 							}
-							break;
+						case MENU_ITEM_UI_FONT_ID:
+							{
+								struct FontRequester *fontRequester;
+								if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
+									struct TextAttr *uiFont;
+									if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
+										uiFont = &fontRequester->fo_Attr;
+										strncpy(config.uiFontName, uiFont->ta_Name, sizeof(config.uiFontName) - 1);
+										config.uiFontName[sizeof(config.uiFontName) - 1] = '\0';
+										config.uiFontSize = uiFont->ta_YSize;
+										config.uiFontStyle = uiFont->ta_Style;
+										config.uiFontFlags = uiFont->ta_Flags;
+										writeConfig();
+										FreeAslRequest(fontRequester);
+										DoMethod(mainWindowObject, WM_CLOSE, NULL);
+										WORD width = screen->Width;
+										WORD height = screen->Height;
+										LONG displayId = GetVPModeID(&screen->ViewPort);
+										CloseScreen(screen);
+										screen = OpenScreenTags(NULL,
+											SA_Pens, (ULONG)pens,
+											SA_DisplayID, displayId,
+											SA_Depth, 3,
+											SA_Overscan, OSCAN_TEXT,
+											SA_AutoScroll, TRUE,
+											SA_Width, width,
+											SA_Height, height,
+											SA_Font, uiFont,
+											SA_Colors32, config.colors,
+											TAG_DONE);
+
+										SetAttrs(mainWindowObject, WA_CustomScreen, screen, TAG_DONE);
+										mainWindow = DoMethod(mainWindowObject, WM_OPEN, NULL);
+										GetAttr(WINDOW_SigMask, mainWindowObject, &winSignal);
+										signalMask = winSignal;
+									}
+								}
+								break;
+							}
 						case MENU_ITEM_SPEECH_ENABLED_ID:
 							menuItem->Flags ^= CHECKED;
-							isSpeechEnabled = !isSpeechEnabled;
+							config.speechEnabled = !config.speechEnabled;
+							writeConfig();
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_OLD_ID:
 							clearSpeechSystemMenuItems(menuStrip);
 							menuItem = ItemAddress(menuStrip, code);
 							menuItem->Flags |= CHECKED;
-							speechSystem = SpeechSystemOld;
+							config.speechSystem = SpeechSystemOld;
+							writeConfig();
 							closeSpeech();
-							initSpeech(speechSystem);
+							initSpeech(config.speechSystem);
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_NEW_ID:
 							clearSpeechSystemMenuItems(menuStrip);
 							menuItem = ItemAddress(menuStrip, code);
 							menuItem->Flags |= CHECKED;
-							speechSystem = SpeechSystemNew;
+							config.speechSystem = SpeechSystemNew;
+							writeConfig();
 							closeSpeech();
-							initSpeech(speechSystem);
+							initSpeech(config.speechSystem);
 							break;
 						case MENU_ITEM_MODEL_GPT_4_ID:
 							clearModelMenuItems(menuStrip);
 							menuItem = ItemAddress(menuStrip, code);
 							menuItem->Flags |= CHECKED;
-							model = GPT_4;
+							config.model = GPT_4;
+							writeConfig();
 							break;
 						case MENU_ITEM_MODEL_GPT_4_0314_ID:
 							clearModelMenuItems(menuStrip);
 							menuItem = ItemAddress(menuStrip, code);
 							menuItem->Flags |= CHECKED;
-							model = GPT_4_0314;
+							config.model = GPT_4_0314;
+							writeConfig();
 							break;
 						case MENU_ITEM_MODEL_GPT_4_32K_ID:
 							clearModelMenuItems(menuStrip);
 							menuItem = ItemAddress(menuStrip, code);
 							menuItem->Flags |= CHECKED;
-							model = GPT_4_32K;
+							config.model = GPT_4_32K;
+							writeConfig();
 							break;
 						case MENU_ITEM_MODEL_GPT_4_32K_0314_ID:
 							clearModelMenuItems(menuStrip);
 							menuItem = ItemAddress(menuStrip, code);
 							menuItem->Flags |= CHECKED;
-							model = GPT_4_32K_0314;
+							config.model = GPT_4_32K_0314;
+							writeConfig();
 							break;
 						case MENU_ITEM_MODEL_GPT_3_5_TURBO_ID:
 							clearModelMenuItems(menuStrip);
 							menuItem = ItemAddress(menuStrip, code);
 							menuItem->Flags |= CHECKED;
-							model = GPT_3_5_TURBO;
+							config.model = GPT_3_5_TURBO;
+							writeConfig();
 							break;
 						case MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID:
 							clearModelMenuItems(menuStrip);
 							menuItem = ItemAddress(menuStrip, code);
 							menuItem->Flags |= CHECKED;
-							model = GPT_3_5_TURBO_0301;
+							config.model = GPT_3_5_TURBO_0301;
+							writeConfig();
 							break;
 						default:
 							break;
@@ -1089,6 +1204,97 @@ LONG startGUIRunLoop() {
 		}
 	}
 
+	return RETURN_OK;
+}
+
+/**
+ * Write the config to disk
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
+static LONG writeConfig() {
+    BPTR file = Open("PROGDIR:config.json", MODE_NEWFILE);
+    if (file == 0) {
+        printf("Failed to open the config file\n");
+        return RETURN_ERROR;
+    }
+
+	struct json_object *configJsonObject = json_object_new_object();
+	json_object_object_add(configJsonObject, "speechEnabled", json_object_new_boolean(config.speechEnabled));
+	json_object_object_add(configJsonObject, "speechSystem", json_object_new_int(config.speechSystem));
+	json_object_object_add(configJsonObject, "model", json_object_new_int(config.model));
+	json_object_object_add(configJsonObject, "chatFontName", json_object_new_string(config.chatFontName));
+	json_object_object_add(configJsonObject, "chatFontSize", json_object_new_int(config.chatFontSize));
+	json_object_object_add(configJsonObject, "chatFontStyle", json_object_new_int(config.chatFontStyle));
+	json_object_object_add(configJsonObject, "chatFontFlags", json_object_new_int(config.chatFontFlags));
+	json_object_object_add(configJsonObject, "uiFontName", json_object_new_string(config.uiFontName));
+	json_object_object_add(configJsonObject, "uiFontSize", json_object_new_int(config.uiFontSize));
+	json_object_object_add(configJsonObject, "uiFontStyle", json_object_new_int(config.uiFontStyle));
+	json_object_object_add(configJsonObject, "uiFontFlags", json_object_new_int(config.uiFontFlags));
+	json_object_object_add(configJsonObject, "openAiApiKey", json_object_new_string(config.openAiApiKey));
+	STRPTR configJsonString = (STRPTR)json_object_to_json_string(configJsonObject);
+
+    if (Write(file, configJsonString, strlen(configJsonString)) != strlen(configJsonString)) {
+        printf("Failed to write the data to the config file\n");
+        Close(file);
+		json_object_put(configJsonObject);
+        return RETURN_ERROR;
+    }
+
+    Close(file);
+	json_object_put(configJsonObject);
+    return RETURN_OK;
+}
+
+/**
+ * Read the config from disk
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
+static LONG readConfig() {
+	BPTR file = Open("PROGDIR:config.json", MODE_OLDFILE);
+	if (file == 0) {
+		// No config exists. Create a new one from defaults
+		writeConfig();
+		return RETURN_OK;
+	}
+
+	Seek(file, 0, OFFSET_END);
+	LONG fileSize = Seek(file, 0, OFFSET_BEGINNING);
+	STRPTR configJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
+	if (Read(file, configJsonString, fileSize) != fileSize) {
+		printf("Failed to read the config file\n");
+		Close(file);
+		FreeVec(configJsonString);
+		return RETURN_ERROR;
+	}
+
+	Close(file);
+
+	struct json_object *configJsonObject = json_tokener_parse(configJsonString);
+	if (configJsonObject == NULL) {
+		printf("Failed to parse the config file\n");
+		Close(file);
+		FreeVec(configJsonString);
+		return RETURN_ERROR;
+	}
+
+	config.speechEnabled = json_object_get_boolean(json_object_object_get(configJsonObject, "speechEnabled"));
+	config.speechSystem = json_object_get_int(json_object_object_get(configJsonObject, "speechSystem"));
+	config.model = json_object_get_int(json_object_object_get(configJsonObject, "model"));
+	memset(config.chatFontName, 0, sizeof(config.chatFontName));
+	strncpy(config.chatFontName, json_object_get_string(json_object_object_get(configJsonObject, "chatFontName")), sizeof(config.chatFontName) - 1);
+	config.chatFontSize = json_object_get_int(json_object_object_get(configJsonObject, "chatFontSize"));
+	config.chatFontStyle = json_object_get_int(json_object_object_get(configJsonObject, "chatFontStyle"));
+	config.chatFontFlags = json_object_get_int(json_object_object_get(configJsonObject, "chatFontFlags"));
+	memset(config.uiFontName, 0, sizeof(config.uiFontName));
+	strncpy(config.uiFontName, json_object_get_string(json_object_object_get(configJsonObject, "uiFontName")), sizeof(config.uiFontName) - 1);
+	config.uiFontSize = json_object_get_int(json_object_object_get(configJsonObject, "uiFontSize"));
+	config.uiFontStyle = json_object_get_int(json_object_object_get(configJsonObject, "uiFontStyle"));
+	config.uiFontFlags = json_object_get_int(json_object_object_get(configJsonObject, "uiFontFlags"));
+	memset(config.openAiApiKey, 0, sizeof(config.openAiApiKey));
+	strncpy(config.openAiApiKey, json_object_get_string(json_object_object_get(configJsonObject, "openAiApiKey")), sizeof(config.openAiApiKey) - 1);
+
+	FreeVec(configJsonString);
+	json_object_put(configJsonObject);
 	return RETURN_OK;
 }
 

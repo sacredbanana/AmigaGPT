@@ -13,8 +13,6 @@
 
 #include <stdio.h>
 #include "speech.h"
-#include "api_key.h"
-// #include "external/parson/parson.h"
 #include "external/json-c/json.h"
 
 #define HOST "api.openai.com"
@@ -182,7 +180,7 @@ static STRPTR getModelName(enum Model model) {
  * @return a pointer to a new string containing the response -- Free it with FreeVec() when you are done using it
  * @todo Handle errors
 **/
-STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model) {
+STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPTR openAiApiKey) {
     struct sockaddr_in addr;
 	struct hostent *hostent;
     STRPTR response = NULL;
