@@ -40,7 +40,7 @@ LONG main() {
 
 	if (initSpeech(config.speechSystem) == RETURN_ERROR) {
 		printf("Failed to open speech system\n");
-		cleanExit(RETURN_ERROR);
+		config.speechSystem = SpeechSystemNone;
 	}
 
 	if (initOpenAIConnector() == RETURN_ERROR) {

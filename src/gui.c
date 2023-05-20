@@ -1104,7 +1104,7 @@ LONG startGUIRunLoop() {
 								writeConfig();
 								closeSpeech();
 							} else {
-								displayError("Could not initialise speech system v34.\n\nPlease make sure the translator.library and narrator.device\nv34 are installed into the program directory.");
+								displayError("Could not initialise speech system v34. Please make sure the translator.library and narrator.device v34 are installed into the program directory.");
 							}
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_37_ID:
@@ -1116,7 +1116,7 @@ LONG startGUIRunLoop() {
 								writeConfig();
 								closeSpeech();
 							} else {
-								displayError("Could not initialise speech system v37.\n\nPlease make sure the translator.library and narrator.device\nv37 are installed into the program directory.");
+								displayError("Could not initialise speech system v37. Please make sure the translator.library and narrator.device v37 are installed into the program directory.");
 							}
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_43_ID:
@@ -1128,7 +1128,7 @@ LONG startGUIRunLoop() {
 								writeConfig();
 								closeSpeech();
 							} else {
-								displayError("Could not initialize speech system v43.\n\nPlease make sure a version of narrator.device are\ninstalled into the program directory.");
+								displayError("Could not initialize speech system v43. Please make sure a version of narrator.device are installed into the program directory.");
 							}
 							break;
 						case MENU_ITEM_MODEL_GPT_4_ID:
