@@ -132,8 +132,6 @@ static struct TextAttr screenFont = {
 	.ta_Flags = FPF_DISKFONT | FPF_DESIGNED
 };
 
-struct TextFont *loadedFont = NULL;
-
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
 	{NM_ITEM, "About", 0, 0, 0, MENU_ITEM_ABOUT_ID},
@@ -822,7 +820,8 @@ static void displayConversation(struct MinList *conversation) {
          conversationNode->node.mln_Succ != NULL; 
          conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
 			if ((strlen(conversationString) + strlen(conversationNode->content) + 5) > WRITE_BUFFER_LENGTH) {
-				// TODO: Handle this better
+				displayError("The conversation has exceeded the maximum length.\n\nPlease start a new conversation.");
+				SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
 				return;
 			}
 			if (strcmp(conversationNode->role, "user") == 0) {
@@ -836,6 +835,7 @@ static void displayConversation(struct MinList *conversation) {
     }
 
 	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationString, TAG_DONE);
+	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	FreeVec(conversationString);
 }
 
@@ -1079,8 +1079,6 @@ LONG startGUIRunLoop() {
 										SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 										SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 										SetGadgetAttrs(statusBar, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-									} else {
-										printf("AslRequestTags failed\n");
 									}
 									FreeAslRequest(fontRequester);
 								}
@@ -1098,25 +1096,40 @@ LONG startGUIRunLoop() {
 							config.speechSystem = SpeechSystem34;
 							writeConfig();
 							closeSpeech();
-							initSpeech(config.speechSystem);
+							if (initSpeech(config.speechSystem) == RETURN_OK) {
+								clearSpeechSystemMenuItems(menuStrip);
+								menuItem = ItemAddress(menuStrip, code);
+								menuItem->Flags |= CHECKED;
+								config.speechSystem = SpeechSystem37;
+								writeConfig();
+								closeSpeech();
+							} else {
+								displayError("Could not initialise speech system v34.\n\nPlease make sure the translator.library and narrator.device\nv34 are installed into the program directory.");
+							}
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_37_ID:
-							clearSpeechSystemMenuItems(menuStrip);
-							menuItem = ItemAddress(menuStrip, code);
-							menuItem->Flags |= CHECKED;
-							config.speechSystem = SpeechSystem37;
-							writeConfig();
-							closeSpeech();
-							initSpeech(config.speechSystem);
+							if (initSpeech(config.speechSystem) == RETURN_OK) {
+								clearSpeechSystemMenuItems(menuStrip);
+								menuItem = ItemAddress(menuStrip, code);
+								menuItem->Flags |= CHECKED;
+								config.speechSystem = SpeechSystem37;
+								writeConfig();
+								closeSpeech();
+							} else {
+								displayError("Could not initialise speech system v37.\n\nPlease make sure the translator.library and narrator.device\nv37 are installed into the program directory.");
+							}
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_43_ID:
-							clearSpeechSystemMenuItems(menuStrip);
-							menuItem = ItemAddress(menuStrip, code);
-							menuItem->Flags |= CHECKED;
-							config.speechSystem = SpeechSystem43;
-							writeConfig();
-							closeSpeech();
-							initSpeech(config.speechSystem);
+							if (initSpeech(config.speechSystem) == RETURN_OK) {
+								clearSpeechSystemMenuItems(menuStrip);
+								menuItem = ItemAddress(menuStrip, code);
+								menuItem->Flags |= CHECKED;
+								config.speechSystem = SpeechSystem37;
+								writeConfig();
+								closeSpeech();
+							} else {
+								displayError("Could not initialize speech system v43.\n\nPlease make sure a version of narrator.device are\ninstalled into the program directory.");
+							}
 							break;
 						case MENU_ITEM_MODEL_GPT_4_ID:
 							clearModelMenuItems(menuStrip);
