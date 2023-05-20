@@ -124,6 +124,7 @@ static BOOL isPublicScreen;
 static UWORD pens[] = {~0};
 struct MinList *currentConversation;
 struct List *conversationList;
+static struct TextFont *uiTextFont = NULL;
 
 static struct Config {
 	BOOL speechEnabled;
@@ -187,7 +188,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Select all", "A", 0, 0, MENU_ITEM_SELECT_ALL_ID},
 	{NM_TITLE, "View", 0, 0, 0, 0},
 	{NM_ITEM, "Chat Font", 0, 0, 0, MENU_ITEM_CHAT_FONT_ID},
-	{NM_ITEM, "UI Font", 0, 0, 0, MENU_ITEM_UI_FONT_ID},
+	{NM_ITEM, "UI Font", 0, 0*NM_ITEMDISABLED, 0, MENU_ITEM_UI_FONT_ID},
 	{NM_TITLE, "Speech", 0, 0, 0, 0},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
 	{NM_ITEM, "Speech system", 0, 0, 0, MENU_ITEM_SPEECH_SYSTEM_ID},
@@ -306,7 +307,7 @@ LONG initVideo() {
 
 	readConfig();
 
-	if (screen == NULL && selectScreen() == RETURN_ERROR)
+	if (selectScreen() == RETURN_ERROR)
 		return RETURN_ERROR;
 
 	conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
@@ -988,7 +989,7 @@ LONG startGUIRunLoop() {
 							break;
 						case MENU_ITEM_CUT_ID:
 						{
-							STRPTR result;
+							STRPTR result = NULL;
 							if (isTextInputTextEditorActive)
 								result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CUT");
 							else if (isChatOutputTextEditorActive)
@@ -1004,7 +1005,7 @@ LONG startGUIRunLoop() {
 						}
 						case MENU_ITEM_COPY_ID:
 						{
-							STRPTR result;
+							STRPTR result = NULL;
 							if (isTextInputTextEditorActive)
 								result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "COPY");
 							else if (isChatOutputTextEditorActive)
@@ -1020,7 +1021,7 @@ LONG startGUIRunLoop() {
 						}
 						case MENU_ITEM_PASTE_ID:
 						{
-							STRPTR result;
+							STRPTR result = NULL;
 							if (isTextInputTextEditorActive)
 								result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "PASTE");
 							else if (isChatOutputTextEditorActive)
@@ -1036,7 +1037,7 @@ LONG startGUIRunLoop() {
 						}
 						case MENU_ITEM_SELECT_ALL_ID:
 						{
-							STRPTR result;
+							STRPTR result = NULL;
 							if (isTextInputTextEditorActive)
 								result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_MarkText, NULL, 0, 0, 65535, 65535);
 							else if (isChatOutputTextEditorActive)
@@ -1052,7 +1053,7 @@ LONG startGUIRunLoop() {
 						}
 						case MENU_ITEM_CLEAR_ID:
 						{
-							STRPTR result;
+							STRPTR result = NULL;
 							if (isTextInputTextEditorActive)
 								result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CLEAR");
 							else if (isChatOutputTextEditorActive)
@@ -1082,9 +1083,9 @@ LONG startGUIRunLoop() {
 										config.chatFontStyle = chatFont->ta_Style;
 										config.chatFontFlags = chatFont->ta_Flags;
 										writeConfig();
+										SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
+										SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
 									}
-									SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
-									SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
 									FreeAslRequest(fontRequester);
 								}
 								break;
@@ -1092,39 +1093,37 @@ LONG startGUIRunLoop() {
 						case MENU_ITEM_UI_FONT_ID:
 							{
 								struct FontRequester *fontRequester;
+								GetAttr(WINDOW_Window, mainWindowObject, &mainWindow);
 								if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
 									struct TextAttr *uiFont;
 									if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
 										uiFont = &fontRequester->fo_Attr;
+										memset(config.uiFontName, 0, sizeof(config.uiFontName));
 										strncpy(config.uiFontName, uiFont->ta_Name, sizeof(config.uiFontName) - 1);
 										config.uiFontName[sizeof(config.uiFontName) - 1] = '\0';
 										config.uiFontSize = uiFont->ta_YSize;
 										config.uiFontStyle = uiFont->ta_Style;
-										config.uiFontFlags = uiFont->ta_Flags;
+										config.uiFontFlags = uiFont->ta_Flags;										
 										writeConfig();
-										FreeAslRequest(fontRequester);
-										DoMethod(mainWindowObject, WM_CLOSE, NULL);
-										WORD width = screen->Width;
-										WORD height = screen->Height;
-										LONG displayId = GetVPModeID(&screen->ViewPort);
-										CloseScreen(screen);
-										screen = OpenScreenTags(NULL,
-											SA_Pens, (ULONG)pens,
-											SA_DisplayID, displayId,
-											SA_Depth, 3,
-											SA_Overscan, OSCAN_TEXT,
-											SA_AutoScroll, TRUE,
-											SA_Width, width,
-											SA_Height, height,
-											SA_Font, uiFont,
-											SA_Colors32, config.colors,
-											TAG_DONE);
+										if (!isPublicScreen) {
+											if (uiTextFont)
+												CloseFont(uiTextFont);
 
-										SetAttrs(mainWindowObject, WA_CustomScreen, screen, TAG_DONE);
-										mainWindow = DoMethod(mainWindowObject, WM_OPEN, NULL);
-										GetAttr(WINDOW_SigMask, mainWindowObject, &winSignal);
-										signalMask = winSignal;
+											DoMethod(mainWindowObject, WM_CLOSE, NULL);
+											uiTextFont = OpenFont(uiFont);
+											SetFont(&(screen->RastPort), uiTextFont);
+											SetFont(mainWindow->RPort, uiTextFont);
+											RemakeDisplay();
+											RethinkDisplay();
+											mainWindow = DoMethod(mainWindowObject, WM_OPEN, NULL);
+										}
+										SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+										SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+										SetGadgetAttrs(statusBar, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+									} else {
+										printf("AslRequestTags failed\n");
 									}
+									FreeAslRequest(fontRequester);
 								}
 								break;
 							}
@@ -1231,7 +1230,7 @@ static LONG writeConfig() {
 	json_object_object_add(configJsonObject, "uiFontStyle", json_object_new_int(config.uiFontStyle));
 	json_object_object_add(configJsonObject, "uiFontFlags", json_object_new_int(config.uiFontFlags));
 	json_object_object_add(configJsonObject, "openAiApiKey", json_object_new_string(config.openAiApiKey));
-	STRPTR configJsonString = (STRPTR)json_object_to_json_string(configJsonObject);
+	STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(configJsonObject, JSON_C_TO_STRING_PRETTY);
 
     if (Write(file, configJsonString, strlen(configJsonString)) != strlen(configJsonString)) {
         printf("Failed to write the data to the config file\n");
@@ -1311,5 +1310,8 @@ void shutdownGUI() {
 	} else {
 		CloseScreen(screen);
 	}
+	if (uiTextFont)
+		CloseFont(uiTextFont);
+
 	closeGUILibraries();
 }

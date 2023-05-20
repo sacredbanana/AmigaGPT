@@ -346,7 +346,7 @@ STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPT
                     Delay(100);
                     break;
                 default:
-                    printf("Unknown error: %ld\n", err);
+                    printf("Unknown error\n");
                     break;
             }            
         }
