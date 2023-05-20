@@ -18,3 +18,9 @@ LONG startGUIRunLoop();
  * Shutdown the GUI
 **/
 void shutdownGUI();
+
+/**
+ * Display an error message
+ * @param message the message to display
+**/ 
+void displayError(STRPTR message);

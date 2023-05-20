@@ -17,19 +17,22 @@ You can customise the look and feel of the application, including the ability to
 
 **AmigaGPT** can use the Amiga's speech synthesis capability to read the generated text aloud with support for switching between the old AmigaOS 1.0 and the AmigaOS 2.0 speech systems.
 
-## Installation
+## System Requirements
 
 Ensure you have the necessary system requirements:
 - An **Amiga** with **AmigaOS 3.2** or higher
 - Internet access using a TCP/IP stack such as **Roadshow** (http://roadshow.apc-tcp.de/index-en.php)
 - **AmiSSL 5.8** or higher (http://aminet.net/util/libs/AmiSSL-5.8-OS3.lha)
 - An **OpenAI account** with an active **API key**
-- *Optional*: A copy of the **Workbench 1.x** disk to install the old speech library and a copy of the **Workbench 2.x** disk to install the new speech library
+- *Optional*: A copy of the **Workbench 1.x** disk to install  `translator.library` and `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `translator.library` and `narrator.device` **v37**. `translator.library` **v43** is free and has been bundled into **AmigaGPT** but it still requires a version of `narrator.device` to work.  
 
-
-Download the latest release of **AmigaGPT**.
-Extract the .lha archive to your desired location.
-Launch the application by double-clicking the AmigaGPT icon.
+## Installation
+* Download the latest release of **AmigaGPT**
+* Extract the `.lha` archive to your desired location
+* *Optional* - Insert your Workbench 1.x disk and copy `translator.library` to `{AmigaGPTProgramDirectory}/libs/speech/34` and `narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/34`
+* *Optional* - Insert your Workbench 2.0 (you cannot use 2.1 because the speech libraries were removed after version 2.0) disk and copy `translator.library` to `{AmigaGPTProgramDirectory}/libs/speech/37` and `narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/37`
+* Launch the application by double-clicking the AmigaGPT icon
+* You may also launch the app in the command line but before you do, run the command `STACK 20000` to give the program 20kb of stack since the default stack size for apps launched from the shell is 4kb and this is not enough for **AmigaGPT** and will cause random crashes due to stack overflow. This is not required when you lauch the app by double clicking the icon since the stack size is saved in the icon
 
 ## Usage
 

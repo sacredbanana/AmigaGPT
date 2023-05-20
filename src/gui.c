@@ -30,11 +30,10 @@
 #include <libraries/asl.h>
 #include <libraries/gadtools.h>
 #include <classes/window.h>
-#include "speech.h"
-#include "openai.h"
 #include "version.h"
 #include <stdbool.h>
 #include "external/json-c/json.h"
+#include "config.h"
 
 // TODO: Fix edit menu
 
@@ -76,21 +75,22 @@
 #define MENU_ITEM_SPEECH_ENABLED_ID 4
 #define MENU_ITEM_CHAT_FONT_ID 5
 #define MENU_ITEM_UI_FONT_ID 6
-#define MENU_ITEM_SPEECH_SYSTEM_OLD_ID 7
-#define MENU_ITEM_SPEECH_SYSTEM_NEW_ID 8
-#define MENU_ITEM_CUT_ID 9
-#define MENU_ITEM_COPY_ID 10
-#define MENU_ITEM_PASTE_ID 11
-#define MENU_ITEM_CLEAR_ID 12
-#define MENU_ITEM_SELECT_ALL_ID 13
-#define MENU_ITEM_MODEL_GPT_4_ID 14
-#define MENU_ITEM_MODEL_GPT_4_0314_ID 15
-#define MENU_ITEM_MODEL_GPT_4_32K_ID 16
-#define MENU_ITEM_MODEL_GPT_4_32K_0314_ID 17
-#define MENU_ITEM_MODEL_GPT_3_5_TURBO_ID 18
-#define MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID 19
-#define MENU_ITEM_MODEL_ID 20
-#define MENU_ITEM_SPEECH_SYSTEM_ID 21
+#define MENU_ITEM_SPEECH_SYSTEM_34_ID 7
+#define MENU_ITEM_SPEECH_SYSTEM_37_ID 8
+#define MENU_ITEM_SPEECH_SYSTEM_43_ID 9
+#define MENU_ITEM_CUT_ID 10
+#define MENU_ITEM_COPY_ID 11
+#define MENU_ITEM_PASTE_ID 12
+#define MENU_ITEM_CLEAR_ID 13
+#define MENU_ITEM_SELECT_ALL_ID 14
+#define MENU_ITEM_MODEL_GPT_4_ID 15
+#define MENU_ITEM_MODEL_GPT_4_0314_ID 16
+#define MENU_ITEM_MODEL_GPT_4_32K_ID 17
+#define MENU_ITEM_MODEL_GPT_4_32K_0314_ID 18
+#define MENU_ITEM_MODEL_GPT_3_5_TURBO_ID 19
+#define MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID 20
+#define MENU_ITEM_MODEL_ID 21
+#define MENU_ITEM_SPEECH_SYSTEM_ID 22
 
 extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
@@ -125,46 +125,6 @@ static UWORD pens[] = {~0};
 struct MinList *currentConversation;
 struct List *conversationList;
 static struct TextFont *uiTextFont = NULL;
-
-static struct Config {
-	BOOL speechEnabled;
-	enum SpeechSystem speechSystem;
-	enum Model model;
-	UBYTE chatFontName[32];
-	UWORD chatFontSize;
-	UBYTE chatFontStyle;
-	UBYTE chatFontFlags;
-	UBYTE uiFontName[32];
-	UWORD uiFontSize;
-	UBYTE uiFontStyle;
-	UBYTE uiFontFlags;
-	UBYTE openAiApiKey[64];
-	ULONG colors[32];
-};
-struct Config config = {
-	.speechEnabled = TRUE,
-	.speechSystem = SpeechSystemOld,
-	.model = GPT_3_5_TURBO,
-	.chatFontName = {0},
-	.chatFontSize = 8,
-	.chatFontStyle = FS_NORMAL,
-	.chatFontFlags = FPF_DISKFONT | FPF_DESIGNED,
-	.uiFontName = {0},
-	.uiFontSize = 8,
-	.uiFontStyle = FS_NORMAL,
-	.uiFontFlags = FPF_DISKFONT | FPF_DESIGNED,
-	.openAiApiKey = NULL,
-	.colors = {
-		5l<<16+0,
-		0x00000000, 0x11111111, 0x55555555,
-		0xAAAAAAAA, 0x00000000, 0x00000000,
-		0x00000000, 0x00000000, 0x33333333,
-		0xBBBBBBBB, 0xFFFFFFFF, 0x22222222,
-		0x00000000, 0x00000000, 0x00000000,
-		0
-	}
-};
-
 static struct TextAttr screenFont = {
 	.ta_Name = "",
 	.ta_YSize = 8,
@@ -192,8 +152,9 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Speech", 0, 0, 0, 0},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
 	{NM_ITEM, "Speech system", 0, 0, 0, MENU_ITEM_SPEECH_SYSTEM_ID},
-	{NM_SUB, "Old", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_SYSTEM_OLD_ID},
-	{NM_SUB, "New", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_NEW_ID},
+	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_SYSTEM_34_ID},
+	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_37_ID},
+	{NM_SUB, "Francesco Devitt's v43", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_43_ID},
 	{NM_TITLE, "OpenAI", 0, 0, 0, 0},
 	{NM_ITEM, "Model", 0, 0, 0, MENU_ITEM_MODEL_ID},
 	{NM_SUB, "gpt-4", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_ID},
@@ -216,8 +177,6 @@ static struct MinList* getConversationFromConversationList(struct List *conversa
 static void displayConversation(struct MinList *conversation);
 static void freeConversation(struct MinList *conversation);
 static void freeConversationList();
-static LONG writeConfig();
-static LONG readConfig();
 
 /**
  * Open the libraries needed for the GUI
@@ -639,8 +598,52 @@ static LONG selectScreen() {
 				case WMHI_GADGETUP:
 					switch (result & WMHI_GADGETMASK) {
 						case SCREEN_SELECT_OK_BUTTON_ID:
-							done = TRUE;
+						{
+							LONG selectedRadioButton;
+							GetAttr(RADIOBUTTON_Selected, screenSelectRadioButton, &selectedRadioButton);
+
+							if (selectedRadioButton == 0) {
+								ULONG displayID = GetVPModeID(&screen->ViewPort);
+								// New screen
+								if (screenModeRequester = (struct ScreenModeRequester *)AllocAslRequestTags(ASL_ScreenModeRequest,
+								ASLSM_DoWidth, TRUE,
+								ASLSM_DoHeight, TRUE,
+								ASLSM_DoDepth, TRUE,
+								ASLSM_DoOverscanType, TRUE,
+								ASLSM_DoAutoScroll, TRUE,
+								ASLSM_InitialDisplayID, displayID,
+								ASLSM_InitialDisplayWidth, screen->Width,
+								ASLSM_InitialDisplayHeight, screen->Height,
+								ASLSM_InitialOverscanType, OSCAN_TEXT,
+								ASLSM_NegativeText, NULL,
+								TAG_DONE)) {
+									if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
+										isPublicScreen = FALSE;
+										UnlockPubScreen(NULL, screen);
+										if ((screen = OpenScreenTags(NULL,
+											SA_Pens, (ULONG)pens,
+											SA_DisplayID, screenModeRequester->sm_DisplayID,
+											SA_Depth, screenModeRequester->sm_DisplayDepth,
+											SA_Overscan, screenModeRequester->sm_OverscanType,
+											SA_AutoScroll, screenModeRequester->sm_AutoScroll,
+											SA_Width, screenModeRequester->sm_DisplayWidth,
+											SA_Height, screenModeRequester->sm_DisplayHeight,
+											SA_Font, &screenFont,
+											SA_Colors32, config.colors,
+											TAG_DONE)) == NULL) {
+												printf("Could not open screen\n");
+												return RETURN_ERROR;
+										}
+										done = TRUE;
+									}
+								}
+							} else {
+								// Open in Workbench
+								isPublicScreen = TRUE;
+								done = TRUE;
+							}
 							break;
+						}
 						default:
 							break;
 					}
@@ -648,48 +651,7 @@ static LONG selectScreen() {
 				default:
 					break;
 			}  
-        }
-    }
-
-	LONG selectedRadioButton;
-	GetAttr(RADIOBUTTON_Selected, screenSelectRadioButton, &selectedRadioButton);
-
-	if (selectedRadioButton == 0) {
-		ULONG displayID = GetVPModeID(&screen->ViewPort);
-		// New screen
-		if (screenModeRequester = (struct ScreenModeRequester *)AllocAslRequestTags(ASL_ScreenModeRequest,
-		ASLSM_DoWidth, TRUE,
-		ASLSM_DoHeight, TRUE,
-		ASLSM_DoDepth, TRUE,
-		ASLSM_DoOverscanType, TRUE,
-		ASLSM_DoAutoScroll, TRUE,
-		ASLSM_InitialDisplayID, displayID,
-		ASLSM_InitialDisplayWidth, screen->Width,
-		ASLSM_InitialDisplayHeight, screen->Height,
-		ASLSM_InitialOverscanType, OSCAN_TEXT,
-		 TAG_DONE)) {
-			if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
-				isPublicScreen = FALSE;
-				UnlockPubScreen(NULL, screen);
-				if ((screen = OpenScreenTags(NULL,
-					SA_Pens, (ULONG)pens,
-					SA_DisplayID, screenModeRequester->sm_DisplayID,
-					SA_Depth, screenModeRequester->sm_DisplayDepth,
-					SA_Overscan, screenModeRequester->sm_OverscanType,
-					SA_AutoScroll, screenModeRequester->sm_AutoScroll,
-					SA_Width, screenModeRequester->sm_DisplayWidth,
-					SA_Height, screenModeRequester->sm_DisplayHeight,
-					SA_Font, &screenFont,
-					SA_Colors32, config.colors,
-					TAG_DONE)) == NULL) {
-						printf("Could not open screen\n");
-						return RETURN_ERROR;
-				}
-			}
 		}
-	} else {
-		// Open in Workbench
-		isPublicScreen = TRUE;
 	}
 
 	DoMethod(screenSelectWindowObject, WM_CLOSE);
@@ -737,10 +699,7 @@ static void sendMessage() {
 				FreeVec(response);
 			}
 		}
-	} else {
-		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "No response from OpenAI", TAG_DONE);
-		printf("No response from OpenAI\n");
-	}
+	} 
 	FreeVec(text);
 }
 
@@ -1132,20 +1091,29 @@ LONG startGUIRunLoop() {
 							config.speechEnabled = !config.speechEnabled;
 							writeConfig();
 							break;
-						case MENU_ITEM_SPEECH_SYSTEM_OLD_ID:
+						case MENU_ITEM_SPEECH_SYSTEM_34_ID:
 							clearSpeechSystemMenuItems(menuStrip);
 							menuItem = ItemAddress(menuStrip, code);
 							menuItem->Flags |= CHECKED;
-							config.speechSystem = SpeechSystemOld;
+							config.speechSystem = SpeechSystem34;
 							writeConfig();
 							closeSpeech();
 							initSpeech(config.speechSystem);
 							break;
-						case MENU_ITEM_SPEECH_SYSTEM_NEW_ID:
+						case MENU_ITEM_SPEECH_SYSTEM_37_ID:
 							clearSpeechSystemMenuItems(menuStrip);
 							menuItem = ItemAddress(menuStrip, code);
 							menuItem->Flags |= CHECKED;
-							config.speechSystem = SpeechSystemNew;
+							config.speechSystem = SpeechSystem37;
+							writeConfig();
+							closeSpeech();
+							initSpeech(config.speechSystem);
+							break;
+						case MENU_ITEM_SPEECH_SYSTEM_43_ID:
+							clearSpeechSystemMenuItems(menuStrip);
+							menuItem = ItemAddress(menuStrip, code);
+							menuItem->Flags |= CHECKED;
+							config.speechSystem = SpeechSystem43;
 							writeConfig();
 							closeSpeech();
 							initSpeech(config.speechSystem);
@@ -1207,95 +1175,64 @@ LONG startGUIRunLoop() {
 }
 
 /**
- * Write the config to disk
- * @return RETURN_OK on success, RETURN_ERROR on failure
-**/
-static LONG writeConfig() {
-    BPTR file = Open("PROGDIR:config.json", MODE_NEWFILE);
-    if (file == 0) {
-        printf("Failed to open the config file\n");
-        return RETURN_ERROR;
+ * Display an error message
+ * @param message the message to display
+**/ 
+void displayError(STRPTR message) {
+    DisplayBeep(screen);
+    SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Error", TAG_DONE);
+    
+    STRPTR adjustedMsg = AllocVec(strlen(message) + 200, MEMF_ANY | MEMF_CLEAR);
+    STRPTR dest = adjustedMsg;
+
+    ULONG width = 300;
+    struct RastPort rp = screen->RastPort;
+    struct TextExtent te;
+    
+    while (*message != '\0') {
+        // Find how much of the message fits within half the screen width
+		ULONG fits = TextFit(&rp, message, strlen(message), &te, NULL, 1, width, rp.Font->tf_YSize);
+
+        // Find last space in the range that fits
+        STRPTR lastSpace = message + fits;
+        while (lastSpace > message && *lastSpace != ' ') {
+            lastSpace--;
+        }
+
+        // If we found a space, replace it with a newline and copy the line to the output
+        if (*lastSpace == ' ' && lastSpace != message) {
+            memcpy(dest, message, lastSpace - message);
+            dest[lastSpace - message] = '\n';
+            dest += lastSpace - message + 1;
+            message = lastSpace + 1;
+        } else {
+            // If we didn't find a space, just copy the part that fits
+            memcpy(dest, message, fits);
+            dest += fits;
+            message += fits;
+            // If we have not reached the end of the message, add a newline
+            if (*message != '\0') {
+                *dest++ = '\n';
+            }
+        }
     }
 
-	struct json_object *configJsonObject = json_object_new_object();
-	json_object_object_add(configJsonObject, "speechEnabled", json_object_new_boolean(config.speechEnabled));
-	json_object_object_add(configJsonObject, "speechSystem", json_object_new_int(config.speechSystem));
-	json_object_object_add(configJsonObject, "model", json_object_new_int(config.model));
-	json_object_object_add(configJsonObject, "chatFontName", json_object_new_string(config.chatFontName));
-	json_object_object_add(configJsonObject, "chatFontSize", json_object_new_int(config.chatFontSize));
-	json_object_object_add(configJsonObject, "chatFontStyle", json_object_new_int(config.chatFontStyle));
-	json_object_object_add(configJsonObject, "chatFontFlags", json_object_new_int(config.chatFontFlags));
-	json_object_object_add(configJsonObject, "uiFontName", json_object_new_string(config.uiFontName));
-	json_object_object_add(configJsonObject, "uiFontSize", json_object_new_int(config.uiFontSize));
-	json_object_object_add(configJsonObject, "uiFontStyle", json_object_new_int(config.uiFontStyle));
-	json_object_object_add(configJsonObject, "uiFontFlags", json_object_new_int(config.uiFontFlags));
-	json_object_object_add(configJsonObject, "openAiApiKey", json_object_new_string(config.openAiApiKey));
-	STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(configJsonObject, JSON_C_TO_STRING_PRETTY);
+	*dest = '\0';
+    
+    struct EasyStruct errorRequester = {
+        sizeof(struct EasyStruct),
+        0,
+        "Error",
+        adjustedMsg,
+        "OK"
+    };
+    EasyRequest(mainWindow, &errorRequester, NULL, NULL);
 
-    if (Write(file, configJsonString, strlen(configJsonString)) != strlen(configJsonString)) {
-        printf("Failed to write the data to the config file\n");
-        Close(file);
-		json_object_put(configJsonObject);
-        return RETURN_ERROR;
-    }
+	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 
-    Close(file);
-	json_object_put(configJsonObject);
-    return RETURN_OK;
+    FreeVec(adjustedMsg);
 }
 
-/**
- * Read the config from disk
- * @return RETURN_OK on success, RETURN_ERROR on failure
-**/
-static LONG readConfig() {
-	BPTR file = Open("PROGDIR:config.json", MODE_OLDFILE);
-	if (file == 0) {
-		// No config exists. Create a new one from defaults
-		writeConfig();
-		return RETURN_OK;
-	}
-
-	Seek(file, 0, OFFSET_END);
-	LONG fileSize = Seek(file, 0, OFFSET_BEGINNING);
-	STRPTR configJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
-	if (Read(file, configJsonString, fileSize) != fileSize) {
-		printf("Failed to read the config file\n");
-		Close(file);
-		FreeVec(configJsonString);
-		return RETURN_ERROR;
-	}
-
-	Close(file);
-
-	struct json_object *configJsonObject = json_tokener_parse(configJsonString);
-	if (configJsonObject == NULL) {
-		printf("Failed to parse the config file\n");
-		Close(file);
-		FreeVec(configJsonString);
-		return RETURN_ERROR;
-	}
-
-	config.speechEnabled = json_object_get_boolean(json_object_object_get(configJsonObject, "speechEnabled"));
-	config.speechSystem = json_object_get_int(json_object_object_get(configJsonObject, "speechSystem"));
-	config.model = json_object_get_int(json_object_object_get(configJsonObject, "model"));
-	memset(config.chatFontName, 0, sizeof(config.chatFontName));
-	strncpy(config.chatFontName, json_object_get_string(json_object_object_get(configJsonObject, "chatFontName")), sizeof(config.chatFontName) - 1);
-	config.chatFontSize = json_object_get_int(json_object_object_get(configJsonObject, "chatFontSize"));
-	config.chatFontStyle = json_object_get_int(json_object_object_get(configJsonObject, "chatFontStyle"));
-	config.chatFontFlags = json_object_get_int(json_object_object_get(configJsonObject, "chatFontFlags"));
-	memset(config.uiFontName, 0, sizeof(config.uiFontName));
-	strncpy(config.uiFontName, json_object_get_string(json_object_object_get(configJsonObject, "uiFontName")), sizeof(config.uiFontName) - 1);
-	config.uiFontSize = json_object_get_int(json_object_object_get(configJsonObject, "uiFontSize"));
-	config.uiFontStyle = json_object_get_int(json_object_object_get(configJsonObject, "uiFontStyle"));
-	config.uiFontFlags = json_object_get_int(json_object_object_get(configJsonObject, "uiFontFlags"));
-	memset(config.openAiApiKey, 0, sizeof(config.openAiApiKey));
-	strncpy(config.openAiApiKey, json_object_get_string(json_object_object_get(configJsonObject, "openAiApiKey")), sizeof(config.openAiApiKey) - 1);
-
-	FreeVec(configJsonString);
-	json_object_put(configJsonObject);
-	return RETURN_OK;
-}
 
 /**
  * Shutdown the GUI

@@ -3,9 +3,8 @@
 #include <dos/dos.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
-#include "speech.h"
 #include "gui.h"
-#include "openai.h"
+#include "config.h"
 
 struct ExecBase *SysBase;
 struct DosLibrary *DOSBase;
@@ -37,7 +36,9 @@ LONG main() {
 		cleanExit(RETURN_ERROR);
 	}
 
-	if (initSpeech(SpeechSystemOld) == RETURN_ERROR) {
+	readConfig();
+
+	if (initSpeech(config.speechSystem) == RETURN_ERROR) {
 		printf("Failed to open speech system\n");
 		cleanExit(RETURN_ERROR);
 	}

@@ -5,8 +5,9 @@
 **/
 enum SpeechSystem {
     SpeechSystemNone,
-    SpeechSystemOld,
-    SpeechSystemNew
+    SpeechSystem34,
+    SpeechSystem37,
+    SpeechSystem43
 };
 
 /**

@@ -8,8 +8,9 @@
 #include <libraries/amissl.h>
 #include <utility/utility.h>
 #include <string.h>
-#include "openai.h"
 #include <stdbool.h>
+#include "gui.h"
+#include "openai.h"
 
 #include <stdio.h>
 #include "speech.h"
@@ -25,7 +26,7 @@ static void cleanup();
 static LONG createSSLContext();
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
-static STRPTR getMessageContentFromJson(STRPTR json);
+static STRPTR getMessageContentFromJson(struct json_object *json);
 static void formatText(STRPTR unformattedText);
 static STRPTR getModelName(enum Model model);
 
@@ -298,7 +299,6 @@ STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPT
     ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
     if (ssl_err > 0) {
-        /* Dump everything to output */
         ULONG totalBytesRead = 0;
         WORD bytesRead = 0;
         BOOL doneReading = FALSE;
@@ -310,11 +310,15 @@ STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPT
                 case SSL_ERROR_NONE:
                     memcpy(readBuffer + totalBytesRead, tempBuffer, bytesRead);
                     totalBytesRead += bytesRead;
-                    STRPTR json = strstr(readBuffer, "{");
-                    response = getMessageContentFromJson(json);
-                    if (response != NULL) {
-                        formatText(response);
+                    STRPTR jsonString = strstr(readBuffer, "{");
+                    struct json_object *jsonObject = json_tokener_parse(jsonString);
+                    if (jsonObject != NULL) {
                         doneReading = TRUE;
+                        response = getMessageContentFromJson(jsonObject);
+                        json_object_put(jsonObject);
+                        if (response != NULL) {
+                            formatText(response);
+                        }
                     }
                     break;
                 case SSL_ERROR_ZERO_RETURN:
@@ -391,18 +395,25 @@ STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPT
  * @return a pointer to a new string containing the message content -- Free it with FreeVec() when you are done using it
  * @todo Handle errors
 **/
-static STRPTR getMessageContentFromJson(STRPTR json) {
-    struct json_object *obj = json_tokener_parse(json);
-    if (obj == NULL) return NULL;
-    STRPTR obj_str = json_object_to_json_string(obj);
-    struct json_object *choices = json_object_object_get(obj, "choices");
+static STRPTR getMessageContentFromJson(struct json_object *json) {
+    if (json == NULL) return NULL;
+    struct json_object *error;
+    if (json_object_object_get_ex(json, "error", &error)) {
+        struct json_object *message = json_object_object_get(error, "message");
+        STRPTR messageString = json_object_get_string(message);
+        displayError(messageString);
+        json_object_put(json);
+        return NULL;
+    }
+    
+    STRPTR json_str = json_object_to_json_string(json);
+    struct json_object *choices = json_object_object_get(json, "choices");
     struct json_object *choice = json_object_array_get_idx(choices, 0);
     struct json_object *message = json_object_object_get(choice, "message");
     struct json_object *content = json_object_object_get(message, "content");
     STRPTR contentString = json_object_get_string(content);
     STRPTR response = AllocVec(strlen(contentString) + 1, MEMF_ANY | MEMF_CLEAR);
     memcpy(response, contentString, strlen(contentString));
-    json_object_put(obj);
     return response;
 }
 

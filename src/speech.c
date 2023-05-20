@@ -32,23 +32,34 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 	switch (speechSystem) {
 		case SpeechSystemNone:
 			return RETURN_OK;
-		case SpeechSystemOld:
-			if ((TranslatorBase = (struct Library *)OpenLibrary("PROGDIR:libs/translator.library", 0)) == NULL) {
-				printf("Could not open old translator.library\n");
+		case SpeechSystem34:
+			if ((TranslatorBase = (struct Library *)OpenLibrary("PROGDIR:libs/speech/34/translator.library", 34)) == NULL) {
+				printf("Could not open translator.library v34\n");
 				return RETURN_ERROR;
 			}
-			if (OpenDevice("PROGDIR:devs/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
-				printf("Could not open old narrator.device\n");
+			if (OpenDevice("PROGDIR:devs/speech/34/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
+				printf("Could not open narrator.device v34\n");
 				return RETURN_ERROR;
 			}
 			break;
-		case SpeechSystemNew:
-			if ((TranslatorBase = (struct Library *)OpenLibrary("translator.library", 0)) == NULL) {
-				printf("Could not open new translator.library\n");
+		case SpeechSystem37:
+			if ((TranslatorBase = (struct Library *)OpenLibrary("PROGDIR:libs/speech/37/translator.library", 37)) == NULL) {
+				printf("Could not open translator.library v37\n");
 				return RETURN_ERROR;
 			}
-			if (OpenDevice("narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
-				printf("Could not open new narrator.device\n");
+			if (OpenDevice("PROGDIR:devs/speech/37/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
+				printf("Could not open narrator.device v37\n");
+				return RETURN_ERROR;
+			}
+			NarratorIO->flags = NDF_NEWIORB;
+			break;
+		case SpeechSystem43:
+			if ((TranslatorBase = (struct Library *)OpenLibrary("PROGDIR:libs/speech/43/translator.library", 43)) == NULL) {
+				printf("Could not open translator.library v43\n");
+				return RETURN_ERROR;
+			}
+			if (OpenDevice("PROGDIR:devs/speech/37/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
+				printf("Could not open narrator.device v37\n");
 				return RETURN_ERROR;
 			}
 			NarratorIO->flags = NDF_NEWIORB;
