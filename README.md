@@ -7,7 +7,10 @@ AmigaGPT is a text generation program that runs on the classic AmigaOS. Utilisin
 - ### State-of-the-art language model
 
 **AmigaGPT** uses the GPT-4 architecture developed by OpenAI to generate coherent, context-aware responses to your input.
-Seamless integration with AmigaOS: AmigaGPT takes full advantage of the AmigaOS API to provide a smooth, native user experience.
+
+- ### Seamless integration with AmigaOS
+
+AmigaGPT takes full advantage of the latest AmigaOS 3.2 API to provide a smooth, native user experience without the need to have third party frameworks installed.
 
 - ### UI customisation
 
@@ -15,7 +18,7 @@ You can customise the look and feel of the application, including the ability to
 
 - ### Speech capability
 
-**AmigaGPT** can use the Amiga's speech synthesis capability to read the generated text aloud with support for switching between the old AmigaOS 1.0 and the AmigaOS 2.0 speech systems.
+**AmigaGPT** can use the Amiga's speech synthesis capability to read the generated text aloud with support for switching between the old Workbench 1.x **v34**, the Workbench 2.0 **v37**, and the third party **v43** speech systems.
 
 ## System Requirements
 
