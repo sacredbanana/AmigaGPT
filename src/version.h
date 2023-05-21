@@ -1,2 +1,2 @@
 #define APP_VERSION "1.0.0"
-#define BUILD_NUMBER "615"
+#define BUILD_NUMBER "616"
