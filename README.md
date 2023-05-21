@@ -31,15 +31,38 @@ Ensure you have the necessary system requirements:
 
 ## Installation
 * Download the latest release of **AmigaGPT**
-* Extract the `.lha` archive to your desired location
-* *Optional* - Insert your Workbench 1.x disk and copy `translator.library` to `{AmigaGPTProgramDirectory}/libs/speech/34` and `narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/34`
-* *Optional* - Insert your Workbench 2.0 (you cannot use 2.1 because the speech libraries were removed after version 2.0) disk and copy `translator.library` to `{AmigaGPTProgramDirectory}/libs/speech/37` and `narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/37`
+* Extract the `amigagpt.lha` archive to your desired location
+
+## *Optional steps to enable speech functionality*
+**AmigaGPT** supports reading the output aloud. This requires a file called `narrator.device` which connot be included with **AmigaGPT** because it is still under copyright. Therefore, you must copy this file legally from your Workbench disks so that **AmigaGPT** will be able to synthesise speech. There are 2 versions of `narrator.device` supported, **v34** and **v37**. 
+
+**v34** is the original version that came with Workbench 1.x. **v37** was an updated version included with Workbench 2.0.x. It has more features and sounds more natural, however it does sound quite different which is why **AmigaGPT** supports you installing both versions and your choice of version to be used can be selected in the **Speech** menu in the app.
+
+Regardless of which version of `narrator.device` you choose to install (or both), **AmigaGPT** requires that you install the free third party `translator.library` **v43**. This works with both versions of `narrator.device`.
+
+### Installing `translator.library` **v43**
+Since `translator.library` **v43** is not available as a standalone install, you will need to install **v42** and then patch it to **v43**.
+* Download http://aminet.net/util/libs/translator42.lha and extract the archive to any convenient location on your Amiga such as `RAM:`
+* Navigate to that directory and double click the `Install` program
+* Run the installer using all the default settings
+* Download http://aminet.net/util/libs/Tran43pch.lha and once again extract it to a location of your choice
+* Navigate to that directory and double click the `Install` program
+* Run the installer using all the default settings
+
+
+### Installing `narrator.device` **v34**
+* Insert your Workbench 1.x disk and copy `df0:devs/narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/34`
+
+### Installing `narrator.device` **v37**
+* Insert your Workbench 2.0.x (you cannot use 2.1 because the speech libraries were removed after version 2.0.4) disk and copy `df0:devs/narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/37`
+
+## Launching **AmigaGPT**
 * Launch the application by double-clicking the AmigaGPT icon
 * You may also launch the app in the command line but before you do, run the command `STACK 20000` to give the program 20kb of stack since the default stack size for apps launched from the shell is 4kb and this is not enough for **AmigaGPT** and will cause random crashes due to stack overflow. This is not required when you lauch the app by double clicking the icon since the stack size is saved in the icon
 
 ## Usage
 
-When launched, **AmigaGPT** presents you with a choice of opening the app in a new screen or opening in Workbench. If you open in a new screen you have the ability to create a screen for the app to open in. Anything from 320x200 all the way up to 4k (RTG) resolution is supported. 
+When launched, **AmigaGPT** presents you with a choice of opening the app in a new screen or opening in Workbench. If you open in a new screen you have the ability to create a screen for the app to open in. **AmigaGPT** supports anything from **320x200** all the way up to **4k** resolution if using a video card for RTG. Bear in mind text will appear very tiny in resolutions above **1080p** so you may want to increase the font size settings from the **View** menu when the app opens.
 
 When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "**Send**" to see the GPT-4 model's response. The generated text appears in the box above the input. You can choose to have this text read aloud using the "**Speech**" menu option. You can also select which model for OpenAI to use in the "**OpenAI**" menu option.
 

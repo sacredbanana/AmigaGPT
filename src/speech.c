@@ -21,7 +21,6 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {
 	[SPEECH_SYSTEM_NONE] = "None",
     [SPEECH_SYSTEM_34] = "Workbench 1.x v34",
     [SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
-    [SPEECH_SYSTEM_43] = "Francesco Devitt's v43"
 };
 
 /**
@@ -44,37 +43,23 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 		case SPEECH_SYSTEM_NONE:
 			return RETURN_OK;
 		case SPEECH_SYSTEM_34:
-			if ((TranslatorBase = (struct Library *)OpenLibrary("PROGDIR:libs/speech/34/translator.library", 34)) == NULL) {
-				printf("Could not open translator.library v34\n");
-				return RETURN_ERROR;
-			}
 			if (OpenDevice("PROGDIR:devs/speech/34/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
 				printf("Could not open narrator.device v34\n");
 				return RETURN_ERROR;
 			}
 			break;
 		case SPEECH_SYSTEM_37:
-			if ((TranslatorBase = (struct Library *)OpenLibrary("PROGDIR:libs/speech/37/translator.library", 37)) == NULL) {
-				printf("Could not open translator.library v37\n");
-				return RETURN_ERROR;
-			}
 			if (OpenDevice("PROGDIR:devs/speech/37/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
 				printf("Could not open narrator.device v37\n");
 				return RETURN_ERROR;
 			}
 			NarratorIO->flags = NDF_NEWIORB;
 			break;
-		case SPEECH_SYSTEM_43:
-			if ((TranslatorBase = (struct Library *)OpenLibrary("PROGDIR:libs/speech/43/translator.library", 43)) == NULL) {
-				printf("Could not open translator.library v43\n");
-				return RETURN_ERROR;
-			}
-			if (OpenDevice("PROGDIR:devs/speech/37/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
-				printf("Could not open narrator.device v37\n");
-				return RETURN_ERROR;
-			}
-			NarratorIO->flags = NDF_NEWIORB;
-			break;
+	}
+
+	if ((TranslatorBase = (struct Library *)OpenLibrary("translator.library", 43)) == NULL) {
+		printf("Could not open translator.library\n");
+		return RETURN_ERROR;
 	}
 	return RETURN_OK;
 }

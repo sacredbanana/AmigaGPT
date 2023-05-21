@@ -75,7 +75,6 @@
 #define MENU_ITEM_UI_FONT_ID 6
 #define MENU_ITEM_SPEECH_SYSTEM_34_ID 7
 #define MENU_ITEM_SPEECH_SYSTEM_37_ID 8
-#define MENU_ITEM_SPEECH_SYSTEM_43_ID 9
 #define MENU_ITEM_CUT_ID 10
 #define MENU_ITEM_COPY_ID 11
 #define MENU_ITEM_PASTE_ID 12
@@ -150,7 +149,6 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Speech system", 0, 0, 0, MENU_ITEM_SPEECH_SYSTEM_ID},
 	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_SYSTEM_34_ID},
 	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_37_ID},
-	{NM_SUB, "Francesco Devitt's v43", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_43_ID},
 	{NM_TITLE, "OpenAI", 0, 0, 0, 0},
 	{NM_ITEM, "Model", 0, 0, 0, MENU_ITEM_MODEL_ID},
 	{NM_SUB, "gpt-4", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_ID},
@@ -1115,17 +1113,6 @@ LONG startGUIRunLoop() {
 							} else {
 								config.speechSystem = SPEECH_SYSTEM_NONE;
 								displayError("Could not initialise speech system v37. Please make sure the translator.library and narrator.device v37 are installed into the program directory.");
-							}
-							writeConfig();
-							refreshSpeechMenuItems();
-							break;
-						case MENU_ITEM_SPEECH_SYSTEM_43_ID:
-							closeSpeech();
-							if (initSpeech(SPEECH_SYSTEM_43) == RETURN_OK) {
-								config.speechSystem = SPEECH_SYSTEM_43;
-							} else {
-								config.speechSystem = SPEECH_SYSTEM_NONE;
-								displayError("Could not initialize speech system v43. Please make sure a version of narrator.device are installed into the program directory.");
 							}
 							writeConfig();
 							refreshSpeechMenuItems();

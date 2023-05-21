@@ -6,8 +6,7 @@
 enum SpeechSystem {
     SPEECH_SYSTEM_NONE = 0,
     SPEECH_SYSTEM_34,
-    SPEECH_SYSTEM_37,
-    SPEECH_SYSTEM_43
+    SPEECH_SYSTEM_37
 };
 
 /**
