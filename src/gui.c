@@ -146,7 +146,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Select all", "A", 0, 0, MENU_ITEM_SELECT_ALL_ID},
 	{NM_TITLE, "View", 0, 0, 0, 0},
 	{NM_ITEM, "Chat Font", 0, 0, 0, MENU_ITEM_CHAT_FONT_ID},
-	{NM_ITEM, "UI Font", 0, 0*NM_ITEMDISABLED, 0, MENU_ITEM_UI_FONT_ID},
+	{NM_ITEM, "UI Font", 0, 0, 0, MENU_ITEM_UI_FONT_ID},
 	{NM_TITLE, "Speech", 0, 0, 0, 0},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
 	{NM_ITEM, "Speech system", 0, 0, 0, MENU_ITEM_SPEECH_SYSTEM_ID},
@@ -167,7 +167,8 @@ static struct NewMenu amigaGPTMenu[] = {
 static void sendMessage();
 static void closeGUILibraries();
 static LONG selectScreen();
-static void clearModelMenuItems(struct Menu *menu);
+static void refreshModelMenuItems();
+static void refreshSpeechMenuItems();
 static struct MinList* newConversation();
 static void addTextToConversation(struct MinList *conversation, STRPTR text, STRPTR role);
 static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation, STRPTR title);
@@ -262,14 +263,15 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
-	readConfig();
-
 	if (selectScreen() == RETURN_ERROR)
 		return RETURN_ERROR;
 
 	conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
 	NewList(conversationList);
 	currentConversation = NULL;
+
+	refreshModelMenuItems();
+	refreshSpeechMenuItems();
 
 	if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SEND_MESSAGE_BUTTON_ID,
@@ -702,41 +704,49 @@ static void sendMessage() {
 }
 
 /**
- * Clears all the checkboxes for all the models in the menu
- * @param menu The menu to clear the checkboxes for
+ * Sets the checkbox for the model that is currently selected
 **/ 
-static void clearModelMenuItems(struct Menu *menu) {
-	while (strcmp(menu->MenuName, "OpenAI") != 0) {
-		menu = menu->NextMenu;
+static void refreshModelMenuItems() {
+	struct NewMenu *menu = amigaGPTMenu;
+	while (menu->nm_UserData != MENU_ITEM_MODEL_ID) {
+		menu++;
 	}
-	struct MenuItem *menuItem = menu->FirstItem;
-	while (GTMENUITEM_USERDATA(menuItem) != MENU_ITEM_MODEL_ID) {
-		menuItem = menuItem->NextItem;
+
+	while ((++menu)->nm_Type == NM_SUB) {
+		if (strcmp(menu->nm_Label, MODEL_NAMES[config.model]) == 0) {
+			menu->nm_Flags |= CHECKED;
+		} else {
+			menu->nm_Flags &= ~CHECKED;
+		}
 	}
-	menuItem = menuItem->SubItem;
-	while (menuItem != NULL) {
-		menuItem->Flags &= ~CHECKED;
-		menuItem = menuItem->NextItem;
-	}
+
+	SetAttrs(mainWindowObject, WINDOW_NewMenu, amigaGPTMenu, TAG_DONE);
 }
 
 /**
- * Clears all the checkboxes for all the speech systems in the menu
- * @param menu The menu to clear the checkboxes for
+ * Sets the checkboxes for the speech options that are currently selected
 **/ 
-static void clearSpeechSystemMenuItems(struct Menu *menu) {
-	while (strcmp(menu->MenuName, "Speech") != 0) {
-		menu = menu->NextMenu;
+static void refreshSpeechMenuItems() {
+	struct NewMenu *menu = amigaGPTMenu;
+	while (menu->nm_UserData != MENU_ITEM_SPEECH_ENABLED_ID) {
+		menu++;
 	}
-	struct MenuItem *menuItem = menu->FirstItem;
-	while (GTMENUITEM_USERDATA(menuItem) != MENU_ITEM_SPEECH_SYSTEM_ID) {
-		menuItem = menuItem->NextItem;
+
+	if (config.speechEnabled) {
+		menu++->nm_Flags |= CHECKED;
+	} else {
+		menu++->nm_Flags &= ~CHECKED;
 	}
-	menuItem = menuItem->SubItem;
-	while (menuItem != NULL) {
-		menuItem->Flags &= ~CHECKED;
-		menuItem = menuItem->NextItem;
+
+	while ((++menu)->nm_Type == NM_SUB) {
+		if (strcmp(menu->nm_Label, SPEECH_SYSTEM_NAMES[config.speechSystem]) == 0) {
+			menu->nm_Flags |= CHECKED;
+		} else {
+			menu->nm_Flags &= ~CHECKED;
+		}
 	}
+
+	SetAttrs(mainWindowObject, WINDOW_NewMenu, amigaGPTMenu, TAG_DONE);
 }
 
 /**
@@ -1085,93 +1095,69 @@ LONG startGUIRunLoop() {
 								break;
 							}
 						case MENU_ITEM_SPEECH_ENABLED_ID:
-							menuItem->Flags ^= CHECKED;
 							config.speechEnabled = !config.speechEnabled;
 							writeConfig();
+							refreshSpeechMenuItems();
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_34_ID:
-							clearSpeechSystemMenuItems(menuStrip);
-							menuItem = ItemAddress(menuStrip, code);
-							menuItem->Flags |= CHECKED;
-							config.speechSystem = SpeechSystem34;
-							writeConfig();
 							closeSpeech();
 							if (initSpeech(config.speechSystem) == RETURN_OK) {
-								clearSpeechSystemMenuItems(menuStrip);
-								menuItem = ItemAddress(menuStrip, code);
-								menuItem->Flags |= CHECKED;
-								config.speechSystem = SpeechSystem37;
+								config.speechSystem = SPEECH_SYSTEM_34;
 								writeConfig();
-								closeSpeech();
+								refreshSpeechMenuItems();
 							} else {
 								displayError("Could not initialise speech system v34. Please make sure the translator.library and narrator.device v34 are installed into the program directory.");
 							}
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_37_ID:
+							closeSpeech();
 							if (initSpeech(config.speechSystem) == RETURN_OK) {
-								clearSpeechSystemMenuItems(menuStrip);
-								menuItem = ItemAddress(menuStrip, code);
-								menuItem->Flags |= CHECKED;
-								config.speechSystem = SpeechSystem37;
+								config.speechSystem = SPEECH_SYSTEM_37;
 								writeConfig();
-								closeSpeech();
+								refreshSpeechMenuItems();
 							} else {
 								displayError("Could not initialise speech system v37. Please make sure the translator.library and narrator.device v37 are installed into the program directory.");
 							}
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_43_ID:
+							closeSpeech();
 							if (initSpeech(config.speechSystem) == RETURN_OK) {
-								clearSpeechSystemMenuItems(menuStrip);
-								menuItem = ItemAddress(menuStrip, code);
-								menuItem->Flags |= CHECKED;
-								config.speechSystem = SpeechSystem37;
+								config.speechSystem = SPEECH_SYSTEM_43;
 								writeConfig();
-								closeSpeech();
+								refreshSpeechMenuItems();
 							} else {
 								displayError("Could not initialize speech system v43. Please make sure a version of narrator.device are installed into the program directory.");
 							}
 							break;
 						case MENU_ITEM_MODEL_GPT_4_ID:
-							clearModelMenuItems(menuStrip);
-							menuItem = ItemAddress(menuStrip, code);
-							menuItem->Flags |= CHECKED;
 							config.model = GPT_4;
 							writeConfig();
+							refreshModelMenuItems();
 							break;
 						case MENU_ITEM_MODEL_GPT_4_0314_ID:
-							clearModelMenuItems(menuStrip);
-							menuItem = ItemAddress(menuStrip, code);
-							menuItem->Flags |= CHECKED;
 							config.model = GPT_4_0314;
 							writeConfig();
+							refreshModelMenuItems();
 							break;
 						case MENU_ITEM_MODEL_GPT_4_32K_ID:
-							clearModelMenuItems(menuStrip);
-							menuItem = ItemAddress(menuStrip, code);
-							menuItem->Flags |= CHECKED;
 							config.model = GPT_4_32K;
 							writeConfig();
+							refreshModelMenuItems();
 							break;
 						case MENU_ITEM_MODEL_GPT_4_32K_0314_ID:
-							clearModelMenuItems(menuStrip);
-							menuItem = ItemAddress(menuStrip, code);
-							menuItem->Flags |= CHECKED;
 							config.model = GPT_4_32K_0314;
 							writeConfig();
+							refreshModelMenuItems();
 							break;
 						case MENU_ITEM_MODEL_GPT_3_5_TURBO_ID:
-							clearModelMenuItems(menuStrip);
-							menuItem = ItemAddress(menuStrip, code);
-							menuItem->Flags |= CHECKED;
 							config.model = GPT_3_5_TURBO;
 							writeConfig();
+							refreshModelMenuItems();
 							break;
 						case MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID:
-							clearModelMenuItems(menuStrip);
-							menuItem = ItemAddress(menuStrip, code);
-							menuItem->Flags |= CHECKED;
 							config.model = GPT_3_5_TURBO_0301;
 							writeConfig();
+							refreshModelMenuItems();
 							break;
 						default:
 							break;

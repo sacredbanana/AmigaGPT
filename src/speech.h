@@ -4,11 +4,17 @@
  * A speech system. Old is the old translator.library, new is the new translator.library (V43), none is no speech system
 **/
 enum SpeechSystem {
-    SpeechSystemNone,
-    SpeechSystem34,
-    SpeechSystem37,
-    SpeechSystem43
+    SPEECH_SYSTEM_NONE = 0,
+    SPEECH_SYSTEM_34,
+    SPEECH_SYSTEM_37,
+    SPEECH_SYSTEM_43
 };
+
+/**
+ * The names of the speech systems
+ * @see enum SpeechSystem
+**/ 
+extern const STRPTR SPEECH_SYSTEM_NAMES[];
 
 /**
  * Initialise the speech system

@@ -7,11 +7,22 @@
 #define TRANSLATION_BUFFER_SIZE 8192
 
 extern struct ExecBase* SysBase;
-struct Library *TranslatorBase;
-struct MsgPort *NarratorPort;
-struct narrator_rb *NarratorIO;
+struct Library *TranslatorBase = NULL;
+static struct MsgPort *NarratorPort = NULL;
+static struct narrator_rb *NarratorIO = NULL;
 static BYTE audioChannels[4] = {3, 5, 10, 12};
 static UBYTE translationBuffer[TRANSLATION_BUFFER_SIZE];
+
+/**
+ * The names of the speech systems
+ * @see enum SpeechSystem
+**/ 
+const STRPTR SPEECH_SYSTEM_NAMES[] = {
+	[SPEECH_SYSTEM_NONE] = "None",
+    [SPEECH_SYSTEM_34] = "Workbench 1.x v34",
+    [SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
+    [SPEECH_SYSTEM_43] = "Francesco Devitt's v43"
+};
 
 /**
  * Initialise the speech system
@@ -30,9 +41,9 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 	}
 
 	switch (speechSystem) {
-		case SpeechSystemNone:
+		case SPEECH_SYSTEM_NONE:
 			return RETURN_OK;
-		case SpeechSystem34:
+		case SPEECH_SYSTEM_34:
 			if ((TranslatorBase = (struct Library *)OpenLibrary("PROGDIR:libs/speech/34/translator.library", 34)) == NULL) {
 				printf("Could not open translator.library v34\n");
 				return RETURN_ERROR;
@@ -42,7 +53,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 				return RETURN_ERROR;
 			}
 			break;
-		case SpeechSystem37:
+		case SPEECH_SYSTEM_37:
 			if ((TranslatorBase = (struct Library *)OpenLibrary("PROGDIR:libs/speech/37/translator.library", 37)) == NULL) {
 				printf("Could not open translator.library v37\n");
 				return RETURN_ERROR;
@@ -53,7 +64,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 			}
 			NarratorIO->flags = NDF_NEWIORB;
 			break;
-		case SpeechSystem43:
+		case SPEECH_SYSTEM_43:
 			if ((TranslatorBase = (struct Library *)OpenLibrary("PROGDIR:libs/speech/43/translator.library", 43)) == NULL) {
 				printf("Could not open translator.library v43\n");
 				return RETURN_ERROR;
@@ -72,19 +83,23 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
  * Close the speech system
 **/
 void closeSpeech() {
-	CloseLibrary(TranslatorBase);
-	Forbid();
-	RemLibrary(TranslatorBase);
-	Permit();
-	
+	if (TranslatorBase != NULL) {
+		CloseLibrary(TranslatorBase);
+		Forbid();
+		RemLibrary(TranslatorBase);
+		Permit();
+	}
 	if (NarratorIO) {
 		if (CheckIO((struct IORequest *)NarratorIO) == 0) {
 			AbortIO((struct IORequest *)NarratorIO);
 		}
-		CloseDevice((struct IORequest *)NarratorIO);
-		Forbid();
-		RemDevice((struct Device *)((struct IORequest *)NarratorIO)->io_Device);
-		Permit();
+		if (((struct IORequest *)NarratorIO)->io_Device != NULL) {
+			CloseDevice((struct IORequest *)NarratorIO);
+			Forbid();
+			RemDevice((struct Device *)((struct IORequest *)NarratorIO)->io_Device);
+			Permit();
+		}
+		
 		DeleteIORequest((struct IORequest *)NarratorIO);
 	 }
 

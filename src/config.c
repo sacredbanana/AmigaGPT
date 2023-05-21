@@ -10,7 +10,7 @@ extern struct DosLibrary *DOSBase;
 
 struct Config config = {
 	.speechEnabled = TRUE,
-	.speechSystem = SpeechSystem34,
+	.speechSystem = SPEECH_SYSTEM_34,
 	.model = GPT_3_5_TURBO,
 	.chatFontName = {0},
 	.chatFontSize = 8,

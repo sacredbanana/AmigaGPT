@@ -50,7 +50,8 @@
         "__config": "c",
         "json_types.h": "c",
         "string": "c",
-        "iosfwd": "c"
+        "iosfwd": "c",
+        "translator_protos.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",
