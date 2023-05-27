@@ -108,17 +108,17 @@ LONG initOpenAIConnector() {
     tempBuffer = AllocVec(TEMP_BUFFER_LENGTH, MEMF_ANY);
 
 	if ((UtilityBase = (struct UtilityBase *)OpenLibrary("utility.library", 0)) == NULL) {
-        printf("failed to open utility.library\n");
+        displayError("failed to open utility.library\n");
         return RETURN_ERROR;
     }
 
 	if ((SocketBase = OpenLibrary("bsdsocket.library", 0)) == NULL) {
-        printf("failed to open bsdsocket.library\n");
+        displayError("failed to open bsdsocket.library\n");
         return RETURN_ERROR;
     }
 
 	if ((AmiSSLMasterBase = OpenLibrary("amisslmaster.library", AMISSLMASTER_MIN_VERSION)) == NULL) {
-        printf("failed to open amisslmaster.library\n");
+        displayError("failed to open amisslmaster.library\n");
         return RETURN_ERROR;
     }
 
@@ -130,7 +130,7 @@ LONG initOpenAIConnector() {
 	                  AmiSSL_SocketBase, SocketBase,
 	                  AmiSSL_ErrNoPtr, &errno,
 	                  TAG_DONE) != 0) {
-        printf("failed to initialize amisslmaster.library\n");
+        displayError("failed to initialize amisslmaster.library\n");
         return RETURN_ERROR;
     }
 		
@@ -241,14 +241,14 @@ STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPT
                 memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
             }
             else {
-                printf("Host lookup failed\n");
+                displayError("Host lookup failed\n");
                 return NULL;
             }
 
             /* Create a socket and connect to the server */
             if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
                 if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-                    printf("Couldn't connect to server\n");
+                    displayError("Couldn't connect to server\n");
                     return NULL;
                 }
             }
@@ -301,11 +301,11 @@ STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPT
                     return NULL;
                 }
             } else {
-                printf("Couldn't connect to host!\n");
+                displayError("Couldn't connect to host!\n");
                 return NULL;
             }
         } else {
-            printf("Couldn't create new SSL handle!\n");
+            displayError("Couldn't create new SSL handle!\n");
             return NULL;
         }
 
@@ -368,7 +368,7 @@ STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPT
             }            
         }
     } else {
-        printf("Couldn't write request!\n");
+        displayError("Couldn't write request!\n");
         LONG err = SSL_get_error(ssl, ssl_err);
         switch (err) {
             case SSL_ERROR_WANT_READ:

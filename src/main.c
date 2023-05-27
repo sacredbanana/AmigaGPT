@@ -41,11 +41,8 @@ LONG main() {
 	if (initSpeech(config.speechSystem) == RETURN_ERROR) {
 		printf("Failed to open speech system\n");
 		config.speechSystem = SPEECH_SYSTEM_NONE;
-		printf("beep\n");
 		closeSpeech();
-		printf("boop\n");
 		initSpeech(config.speechSystem);
-		printf("barp\n");
 	}
 
 	if (initOpenAIConnector() == RETURN_ERROR) {
