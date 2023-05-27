@@ -1,8 +1,27 @@
 {
     "configurations": [
         {
-            "name": "Amiga",
-            "configurationProvider": "BartmanAbyss.amiga-debug"
+            "name": "Mac",
+            "compilerPathInCppPropertiesJson": "/opt/homebrew/bin/gcc",
+            "includePath": [
+                "/Volumes/repos/amigagpt/**",
+                "/Volumes/repos/vcpkg/installed/arm64-osx/include"
+            ],
+            "defines": [],
+            "macFrameworkPath": [
+                "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "macos-gcc-arm64",
+            "mergeConfigurations": false,
+            "compilerPath": "/opt/homebrew/bin/gcc",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
         }
     ],
     "version": 4

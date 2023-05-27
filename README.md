@@ -18,7 +18,7 @@ You can customise the look and feel of the application, including the ability to
 
 - ### Speech capability
 
-**AmigaGPT** can use the Amiga's speech synthesis capability to read the generated text aloud with support for switching between the old Workbench 1.x **v34**, the Workbench 2.0 **v37**, and the third party **v43** speech systems.
+**AmigaGPT** can use the Amiga's speech synthesis capability to read the generated text aloud with support for switching between the old Workbench 1.x **v34** and the Workbench 2.0 **v37** speech synthesisers.
 
 ## System Requirements
 
@@ -27,14 +27,13 @@ Ensure you have the necessary system requirements:
 - Internet access using a TCP/IP stack such as **Roadshow** (http://roadshow.apc-tcp.de/index-en.php)
 - **AmiSSL 5.8** or higher (http://aminet.net/util/libs/AmiSSL-5.8-OS3.lha)
 - An **OpenAI account** with an active **API key**
-- *Optional*: A copy of the **Workbench 1.x** disk to install  `translator.library` and `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `translator.library` and `narrator.device` **v37**. `translator.library` **v43** is free and has been bundled into **AmigaGPT** but it still requires a version of `narrator.device` to work.  
-
+- *Optional*: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
 ## Installation
 * Download the latest release of **AmigaGPT**
 * Extract the `amigagpt.lha` archive to your desired location
 
 ## *Optional steps to enable speech functionality*
-**AmigaGPT** supports reading the output aloud. This requires a file called `narrator.device` which connot be included with **AmigaGPT** because it is still under copyright. Therefore, you must copy this file legally from your Workbench disks so that **AmigaGPT** will be able to synthesise speech. There are 2 versions of `narrator.device` supported, **v34** and **v37**. 
+**AmigaGPT** supports reading the output aloud. This requires a file called `narrator.device` which cannot be included with **AmigaGPT** because it is still under copyright. Therefore, you must copy this file legally from your Workbench disks so that **AmigaGPT** will be able to synthesise speech. There are 2 versions of `narrator.device` supported, **v34** and **v37**. 
 
 **v34** is the original version that came with Workbench 1.x. **v37** was an updated version included with Workbench 2.0.x. It has more features and sounds more natural, however it does sound quite different which is why **AmigaGPT** supports you installing both versions and your choice of version to be used can be selected in the **Speech** menu in the app.
 
@@ -74,7 +73,7 @@ The "**Project**" menu includes an "**About**" option, which displays informatio
 
 ## Developing
 If you would like to build this project from source you will need Bebbo's **amiga-gcc** toolchain here https://github.com/bebbo/amiga-gcc
-Be sure to add `NDK=3.2` to the `make` options. Once your `amiga-gcc` dev environment is installed, you will need to download the AmiSSL SDK from http://aminet.net/util/libs/AmiSSL-5.8-SDK.lha and extract the header files into your `amiga-gcc` environment. By default this will be located at `/opt/amiga/m68k-amigaos/include`. Once this is set up all you will need to do to build the project is navigate to the project root directory and run the `make` command. The built app will appear in the `out` directory.
+Be sure to add `NDK=3.2` to the `make` options. Once your `amiga-gcc` dev environment is installed, you will need to download the AmiSSL and Translator SDK's from http://aminet.net/util/libs/AmiSSL-5.8-SDK.lha & http://aminet.net/util/libs/translator42.lha and extract the include header files into your `amiga-gcc` environment. By default this will be located at `/opt/amiga/m68k-amigaos/include`. Once this is set up all you will need to do to build the project is navigate to the project root directory and run the `make` command. The built app will appear in the `out` directory.
 
 ## License
 

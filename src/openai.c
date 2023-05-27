@@ -415,7 +415,6 @@ static STRPTR getMessageContentFromJson(struct json_object *json) {
         struct json_object *message = json_object_object_get(error, "message");
         STRPTR messageString = json_object_get_string(message);
         displayError(messageString);
-        json_object_put(json);
         return NULL;
     }
     

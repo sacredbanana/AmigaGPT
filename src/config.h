@@ -4,6 +4,7 @@
 struct Config {
 	BOOL speechEnabled;
 	enum SpeechSystem speechSystem;
+	UBYTE speechAccent[32];
 	enum Model model;
 	UBYTE chatFontName[32];
 	UWORD chatFontSize;

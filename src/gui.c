@@ -679,7 +679,6 @@ static void sendMessage() {
 		addTextToConversation(currentConversation, response, "assistant");
 		displayConversation(currentConversation);
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
-		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TEXTEDITOR_Pen, 0, TAG_DONE);
 		if (config.speechEnabled)
 			speakText(response);
 		FreeVec(response);
@@ -695,7 +694,18 @@ static void sendMessage() {
 				FreeVec(response);
 			}
 		}
-	} 
+	} else {
+		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
+		struct MinNode *lastMessage = RemTail(currentConversation);
+		FreeVec(lastMessage);
+		if (currentConversation == currentConversation->mlh_TailPred) {
+			freeConversation(currentConversation);
+			currentConversation = NULL;
+			DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+		} else {
+			displayConversation(currentConversation);
+		}
+	}
 	FreeVec(text);
 }
 

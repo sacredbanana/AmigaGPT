@@ -10,6 +10,7 @@ extern struct DosLibrary *DOSBase;
 
 struct Config config = {
 	.speechEnabled = TRUE,
+	.speechAccent = "!USA.accent",
 	.speechSystem = SPEECH_SYSTEM_34,
 	.model = GPT_3_5_TURBO,
 	.chatFontName = {0},
@@ -22,7 +23,7 @@ struct Config config = {
 	.uiFontFlags = FPF_DISKFONT | FPF_DESIGNED,
 	.openAiApiKey = NULL,
 	.colors = {
-		5l<<16+0,
+		5l<<16 | 0,
 		0x00000000, 0x11111111, 0x55555555,
 		0xAAAAAAAA, 0x00000000, 0x00000000,
 		0x00000000, 0x00000000, 0x33333333,
@@ -45,6 +46,7 @@ LONG writeConfig() {
 
 	struct json_object *configJsonObject = json_object_new_object();
 	json_object_object_add(configJsonObject, "speechEnabled", json_object_new_boolean(config.speechEnabled));
+	json_object_object_add(configJsonObject, "speechAccent", json_object_new_string(config.speechAccent));
 	json_object_object_add(configJsonObject, "speechSystem", json_object_new_int(config.speechSystem));
 	json_object_object_add(configJsonObject, "model", json_object_new_int(config.model));
 	json_object_object_add(configJsonObject, "chatFontName", json_object_new_string(config.chatFontName));
@@ -102,21 +104,86 @@ LONG readConfig() {
 		return RETURN_ERROR;
 	}
 
-	config.speechEnabled = json_object_get_boolean(json_object_object_get(configJsonObject, "speechEnabled"));
-	config.speechSystem = json_object_get_int(json_object_object_get(configJsonObject, "speechSystem"));
-	config.model = json_object_get_int(json_object_object_get(configJsonObject, "model"));
-	memset(config.chatFontName, 0, sizeof(config.chatFontName));
-	strncpy(config.chatFontName, json_object_get_string(json_object_object_get(configJsonObject, "chatFontName")), sizeof(config.chatFontName) - 1);
-	config.chatFontSize = json_object_get_int(json_object_object_get(configJsonObject, "chatFontSize"));
-	config.chatFontStyle = json_object_get_int(json_object_object_get(configJsonObject, "chatFontStyle"));
-	config.chatFontFlags = json_object_get_int(json_object_object_get(configJsonObject, "chatFontFlags"));
-	memset(config.uiFontName, 0, sizeof(config.uiFontName));
-	strncpy(config.uiFontName, json_object_get_string(json_object_object_get(configJsonObject, "uiFontName")), sizeof(config.uiFontName) - 1);
-	config.uiFontSize = json_object_get_int(json_object_object_get(configJsonObject, "uiFontSize"));
-	config.uiFontStyle = json_object_get_int(json_object_object_get(configJsonObject, "uiFontStyle"));
-	config.uiFontFlags = json_object_get_int(json_object_object_get(configJsonObject, "uiFontFlags"));
-	memset(config.openAiApiKey, 0, sizeof(config.openAiApiKey));
-	strncpy(config.openAiApiKey, json_object_get_string(json_object_object_get(configJsonObject, "openAiApiKey")), sizeof(config.openAiApiKey) - 1);
+	struct json_object *speechEnabledObj;
+	if (json_object_object_get_ex(configJsonObject, "speechEnabled", &speechEnabledObj)) {
+		config.speechEnabled = json_object_get_boolean(speechEnabledObj);
+	}
+
+	struct json_object *speechAccentObj;
+	if (json_object_object_get_ex(configJsonObject, "speechAccent", &speechAccentObj)) {
+		STRPTR speechAccent = json_object_get_string(speechAccentObj);
+		if (speechAccent != NULL && speechAccent[0] != '\0') {
+			memset(config.speechAccent, 0, sizeof(config.speechAccent));
+			strncpy(config.speechAccent, speechAccent, sizeof(config.speechAccent) - 1);
+		}
+	}
+
+	struct json_object *speechSystemObj;
+	if (json_object_object_get_ex(configJsonObject, "speechSystem", &speechSystemObj)) {
+		config.speechSystem = json_object_get_int(speechSystemObj);
+	}
+
+	struct json_object *modelObj;
+	if (json_object_object_get_ex(configJsonObject, "model", &modelObj)) {
+		config.model = json_object_get_int(modelObj);
+	}
+
+	struct json_object *chatFontNameObj;
+	if (json_object_object_get_ex(configJsonObject, "chatFontName", &chatFontNameObj)) {
+		STRPTR chatFontName = json_object_get_string(chatFontNameObj);
+		if (chatFontName != NULL && chatFontName[0] != '\0') {
+			memset(config.chatFontName, 0, sizeof(config.chatFontName));
+			strncpy(config.chatFontName, chatFontName, sizeof(config.chatFontName) - 1);
+		}
+	}
+
+	struct json_object *chatFontSizeObj;
+	if (json_object_object_get_ex(configJsonObject, "chatFontSize", &chatFontSizeObj)) {
+		config.chatFontSize = json_object_get_int(chatFontSizeObj);
+	}
+
+	struct json_object *chatFontStyleObj;
+	if (json_object_object_get_ex(configJsonObject, "chatFontStyle", &chatFontStyleObj)) {
+		config.chatFontStyle = json_object_get_int(chatFontStyleObj);
+	}
+
+	struct json_object *chatFontFlagsObj;
+	if (json_object_object_get_ex(configJsonObject, "chatFontFlags", &chatFontFlagsObj)) {
+		config.chatFontFlags = json_object_get_int(chatFontFlagsObj);
+	}
+
+	struct json_object *uiFontNameObj;
+	if (json_object_object_get_ex(configJsonObject, "uiFontName", &uiFontNameObj)) {
+		STRPTR uiFontName = json_object_get_string(uiFontNameObj);
+		if (uiFontName != NULL && uiFontName[0] != '\0') {
+			memset(config.uiFontName, 0, sizeof(config.uiFontName));
+			strncpy(config.uiFontName, uiFontName, sizeof(config.uiFontName) - 1);
+		}
+	}
+
+	struct json_object *uiFontSizeObj;
+	if (json_object_object_get_ex(configJsonObject, "uiFontSize", &uiFontSizeObj)) {
+		config.uiFontSize = json_object_get_int(uiFontSizeObj);
+	}
+
+	struct json_object *uiFontStyleObj;
+	if (json_object_object_get_ex(configJsonObject, "uiFontStyle", &uiFontStyleObj)) {
+		config.uiFontStyle = json_object_get_int(uiFontStyleObj);
+	}
+
+	struct json_object *uiFontFlagsObj;
+	if (json_object_object_get_ex(configJsonObject, "uiFontFlags", &uiFontFlagsObj)) {
+		config.uiFontFlags = json_object_get_int(uiFontFlagsObj);
+	}
+
+	struct json_object *openAiApiKeyObj;
+	if (json_object_object_get_ex(configJsonObject, "openAiApiKey", &openAiApiKeyObj)) {
+		STRPTR openAiApiKey = json_object_get_string(openAiApiKeyObj);
+		if (openAiApiKey != NULL && openAiApiKey[0] != '\0') {
+			memset(config.openAiApiKey, 0, sizeof(config.openAiApiKey));
+			strncpy(config.openAiApiKey, openAiApiKey, strlen(openAiApiKey));
+		}
+	}
 
 	FreeVec(configJsonString);
 	json_object_put(configJsonObject);

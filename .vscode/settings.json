@@ -2,7 +2,6 @@
     "m68k.includePaths": [
         "/opt/amiga/m68k-amigaos/ndk-include",
         "/opt/amiga/m68k-amigaos/sys-include",
-        // "/Users/cameron/.vscode/extensions/bartmanabyss.amiga-debug-1.7.1/bin/darwin/opt/m68k-amiga-elf/sys-include"
     ],
     "files.associations": {
         "intuition.h": "c",
@@ -51,11 +50,22 @@
         "json_types.h": "c",
         "string": "c",
         "iosfwd": "c",
-        "translator_protos.h": "c"
+        "translator_protos.h": "c",
+        "text.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",
     "amiga.rom-paths.A1200": "/Volumes/repos/kickstarts/KICK31.rom",
     "amiga.rom-paths.A4000": "/Volumes/repos/kickstarts/KICK31.rom",
-    "amiga.rom-paths.A500": "/Volumes/repos/kickstarts/KICK13.rom"
+    "amiga.rom-paths.A500": "/Volumes/repos/kickstarts/KICK13.rom",
+    "C_Cpp.default.systemIncludePath": [
+        "/opt/amiga/m68k-amigaos/include",
+        "/opt/amiga/m68k-amigaos/ndk-include",
+        "/opt/amiga/m68k-amigaos/libnix/include",
+        "/opt/amiga/m68k-amigaos/sys-include"
+    ],
+    "C_Cpp.default.compilerPath": "/opt/amiga/bin/m68k-amigaos-gcc",
+    "C_Cpp.default.cppStandard": "c++20",
+    "C_Cpp.default.cStandard": "c17",
+    "C_Cpp.default.intelliSenseMode": "macos-gcc-arm64",
 }

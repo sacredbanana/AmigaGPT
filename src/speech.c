@@ -1,8 +1,8 @@
-#include "speech.h"
 #include <proto/exec.h>
 #include <stdio.h>
 #include <proto/translator.h>
 #include <devices/narrator.h>
+#include "config.h"
 
 #define TRANSLATION_BUFFER_SIZE 8192
 
@@ -100,7 +100,7 @@ void speakText(STRPTR text) {
 	if (CheckIO((struct IORequest *)NarratorIO) == 0) {
 		AbortIO((struct IORequest *)NarratorIO);
 	}
-	Translate(text, strlen(text), translationBuffer, TRANSLATION_BUFFER_SIZE);
+	TranslateAs(text, strlen(text), translationBuffer, TRANSLATION_BUFFER_SIZE, config.speechAccent);
 	NarratorIO->ch_masks = audioChannels;
 	NarratorIO->nm_masks = sizeof(audioChannels);
 	NarratorIO->message.io_Command= CMD_WRITE;
