@@ -68,7 +68,7 @@
 #define NEW_CHAT_BUTTON_HEIGHT 20
 
 #define MENU_ITEM_ABOUT_ID 1
-#define MENU_ITEM_PREFERENCES_ID 2
+#define MENU_ITEM_SPEECH_ACCENT_ID 2
 #define MENU_ITEM_QUIT_ID 3
 #define MENU_ITEM_SPEECH_ENABLED_ID 4
 #define MENU_ITEM_CHAT_FONT_ID 5
@@ -132,7 +132,6 @@ static struct TextAttr screenFont = {
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
 	{NM_ITEM, "About", 0, 0, 0, MENU_ITEM_ABOUT_ID},
-	{NM_ITEM, "Preferences", "P", 0, 0, MENU_ITEM_PREFERENCES_ID},
 	{NM_ITEM, NM_BARLABEL, 0, 0, 0, 0},
 	{NM_ITEM, "Quit", "Q", 0, 0, MENU_ITEM_QUIT_ID},
 	{NM_TITLE, "Edit", 0, 0, 0, 0},
@@ -146,6 +145,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "UI Font", 0, 0, 0, MENU_ITEM_UI_FONT_ID},
 	{NM_TITLE, "Speech", 0, 0, 0, 0},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
+	{NM_ITEM, "Accent", 0, 0, 0, MENU_ITEM_SPEECH_ACCENT_ID},
 	{NM_ITEM, "Speech system", 0, 0, 0, MENU_ITEM_SPEECH_SYSTEM_ID},
 	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_SYSTEM_34_ID},
 	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_37_ID},
@@ -734,7 +734,7 @@ static void refreshModelMenuItems() {
 **/ 
 static void refreshSpeechMenuItems() {
 	struct NewMenu *menu = amigaGPTMenu;
-	while (menu->nm_UserData != MENU_ITEM_SPEECH_ENABLED_ID) {
+	while (menu->nm_UserData != MENU_ITEM_SPEECH_ACCENT_ID) {
 		menu++;
 	}
 
@@ -960,8 +960,6 @@ LONG startGUIRunLoop() {
 							EasyRequest(mainWindow, &aboutRequester, NULL, NULL);
 							break;
 						}
-						case MENU_ITEM_PREFERENCES_ID:
-							break;
 						case MENU_ITEM_CUT_ID:
 						{
 							STRPTR result = NULL;
@@ -1105,6 +1103,29 @@ LONG startGUIRunLoop() {
 							writeConfig();
 							refreshSpeechMenuItems();
 							break;
+						case MENU_ITEM_SPEECH_ACCENT_ID:
+						{
+							struct FileRequester *fileRequester = (struct FileRequester *)AllocAslRequestTags(
+								ASL_FileRequest,
+								ASLFR_Window, mainWindow,
+								ASLFR_PopToFront, TRUE,
+								ASLFR_Activate, TRUE,
+								ASLFR_DrawersOnly, FALSE,
+								ASLFR_InitialDrawer, "LOCALE:accents",
+								ASLFR_DoPatterns, TRUE,
+								ASLFR_InitialPattern, "#?.accent",
+								 TAG_DONE);
+							
+							if (fileRequester) {
+								if (AslRequestTags(fileRequester, TAG_DONE)) {
+									strncpy(config.speechAccent, fileRequester->fr_File, sizeof(config.speechAccent) - 1);
+									config.speechAccent[sizeof(config.speechAccent) - 1] = '\0';
+									writeConfig();
+								}
+								FreeAslRequest(fileRequester);
+							}
+							break;
+						}
 						case MENU_ITEM_SPEECH_SYSTEM_34_ID:
 							closeSpeech();
 							if (initSpeech(SPEECH_SYSTEM_34) == RETURN_OK) {

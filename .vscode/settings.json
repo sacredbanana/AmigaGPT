@@ -51,7 +51,8 @@
         "string": "c",
         "iosfwd": "c",
         "translator_protos.h": "c",
-        "text.h": "c"
+        "text.h": "c",
+        "asl.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",
@@ -64,7 +65,7 @@
         "/opt/amiga/m68k-amigaos/libnix/include",
         "/opt/amiga/m68k-amigaos/sys-include"
     ],
-    "C_Cpp.default.compilerPath": "/opt/amiga/bin/m68k-amigaos-gcc",
+    "C_Cpp.default.compilerPath": "/Users/cameron/.vscode-insiders/extensions/bartmanabyss.amiga-debug-1.7.2/bin/darwin/opt/bin/m68k-amiga-elf-gcc",
     "C_Cpp.default.cppStandard": "c++20",
     "C_Cpp.default.cStandard": "c17",
     "C_Cpp.default.intelliSenseMode": "macos-gcc-arm64",
