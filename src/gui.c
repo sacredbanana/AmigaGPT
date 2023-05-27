@@ -1,39 +1,40 @@
-#include "gui.h"
-#include <stdio.h>
+#include <classes/requester.h>
+#include <classes/window.h>
 #include <exec/lists.h>
+#include <exec/execbase.h>
+#include <gadgets/button.h>
+#include <gadgets/layout.h>
+#include <gadgets/listbrowser.h>
+#include <gadgets/radiobutton.h>
+#include <gadgets/scroller.h>
+#include <gadgets/string.h>
+#include <gadgets/texteditor.h>
+#include <graphics/text.h>
+#include <intuition/classusr.h>
+#include <intuition/gadgetclass.h>
+#include <intuition/icclass.h>
+#include <intuition/intuition.h>
+#include <libraries/asl.h>
+#include <libraries/gadtools.h>
+#include <proto/asl.h>
+#include <proto/button.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>
 #include <proto/layout.h>
-#include <gadgets/layout.h>
-#include <gadgets/button.h>
-#include <gadgets/radiobutton.h>
-#include <gadgets/texteditor.h>
-#include <gadgets/scroller.h>
-#include <gadgets/string.h>
-#include <gadgets/listbrowser.h>
-#include <devices/conunit.h>
-#include <exec/execbase.h>
-#include <intuition/intuition.h>
-#include <intuition/gadgetclass.h>
-#include <intuition/classusr.h>
-#include <intuition/icclass.h>
-#include <graphics/text.h>
-#include <proto/button.h>
-#include <proto/radiobutton.h>
-#include <proto/window.h>
-#include <proto/texteditor.h>
 #include <proto/listbrowser.h>
-#include <proto/string.h>
-#include <proto/asl.h>
+#include <proto/radiobutton.h>
+#include <proto/requester.h>
 #include <proto/scroller.h>
-#include <libraries/asl.h>
-#include <libraries/gadtools.h>
-#include <classes/window.h>
-#include "version.h"
+#include <proto/string.h>
+#include <proto/texteditor.h>
+#include <proto/window.h>
 #include <stdbool.h>
-#include "external/json-c/json.h"
+#include <stdio.h>
 #include "config.h"
+#include "external/json-c/json.h"
+#include "gui.h"
+#include "version.h"
 
 #define MAIN_WIN_WIDTH 640
 #define MAIN_WIN_HEIGHT 500
@@ -88,6 +89,7 @@
 #define MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID 20
 #define MENU_ITEM_MODEL_ID 21
 #define MENU_ITEM_SPEECH_SYSTEM_ID 22
+#define MENU_ITEM_OPENAI_API_KEY_ID 23
 
 extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
@@ -102,6 +104,7 @@ static struct Library *TextFieldBase;
 static struct Library *ScrollerBase;
 static struct Library *StringBase;
 static struct Library *ListBrowserBase;
+static struct Library *RequesterBase;
 static struct Window *mainWindow;
 static Object *mainWindowObject;
 static Object *mainLayout;
@@ -150,6 +153,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_SYSTEM_34_ID},
 	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_37_ID},
 	{NM_TITLE, "OpenAI", 0, 0, 0, 0},
+	{NM_ITEM, "API key", 0, 0, 0, MENU_ITEM_OPENAI_API_KEY_ID},
 	{NM_ITEM, "Model", 0, 0, 0, MENU_ITEM_MODEL_ID},
 	{NM_SUB, "gpt-4", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_ID},
 	{NM_SUB, "gpt-4-0314", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_0314_ID},
@@ -172,6 +176,11 @@ static struct MinList* getConversationFromConversationList(struct List *conversa
 static void displayConversation(struct MinList *conversation);
 static void freeConversation(struct MinList *conversation);
 static void freeConversationList();
+static void openChatFontRequester();
+static void openUIFontRequester();
+static void openAboutWindow();
+static void openSpeechAccentRequester();
+static void openApiKeyRequester();
 
 /**
  * Open the libraries needed for the GUI
@@ -220,6 +229,11 @@ LONG openGUILibraries() {
 
 	if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 47)) == NULL) {
 		printf("Could not open listbrowser.gadget\n");
+        return RETURN_ERROR;
+	}
+
+	if ((RequesterBase = OpenLibrary("requester.class", 47)) == NULL) {
+		printf("Could not open requester.class\n");
         return RETURN_ERROR;
 	}
 	
@@ -912,7 +926,10 @@ LONG startGUIRunLoop() {
 					switch (result & WMHI_GADGETMASK) {
 						case SEND_MESSAGE_BUTTON_ID:
 						case TEXT_INPUT_TEXT_EDITOR_ID:
-							sendMessage();
+							if (strlen(config.openAiApiKey) > 0)
+								sendMessage();
+							else
+								displayError("Please enter your OpenAI API key in the Open AI settings in the menu.");
 							break;
 						case NEW_CHAT_BUTTON_ID:
 							currentConversation = NULL;
@@ -940,26 +957,8 @@ LONG startGUIRunLoop() {
 					ULONG itemIndex = GTMENUITEM_USERDATA(menuItem);
 					switch (itemIndex) {
 						case MENU_ITEM_ABOUT_ID: 
-						{
-							#define APP_VERSION_STRING(x) #x
-							#define APP_BUILD_DATE_STRING(x) #x
-							struct EasyStruct aboutRequester = {
-								sizeof(struct EasyStruct),
-								0,
-								"About",
-								"AmigaGPT\n\n"
-								"Version " APP_VERSION "\n"
-								"Build date: " __DATE__ "\n"
-								"Build number: " BUILD_NUMBER "\n\n"
-								"Developed by Cameron Armstrong (@sacredbanana on GitHub,\n"
-								"YouTube and Twitter, @Nightfox on EAB)\n\n"
-								"This app will always remain free but if you would like to\n"
-								"support me you can do so at https://paypal.me/sacredbanana",
-								"OK"
-							};
-							EasyRequest(mainWindow, &aboutRequester, NULL, NULL);
+							openAboutWindow();
 							break;
-						}
 						case MENU_ITEM_CUT_ID:
 						{
 							STRPTR result = NULL;
@@ -1044,88 +1043,19 @@ LONG startGUIRunLoop() {
 							done = TRUE;
 							break;
 						case MENU_ITEM_CHAT_FONT_ID:
-							{
-								struct FontRequester *fontRequester;
-								if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
-									struct TextAttr *chatFont;
-									if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
-										chatFont = &fontRequester->fo_Attr;
-										strncpy(config.chatFontName, chatFont->ta_Name, sizeof(config.chatFontName) - 1);
-										config.chatFontName[sizeof(config.chatFontName) - 1] = '\0';
-										config.chatFontSize = chatFont->ta_YSize;
-										config.chatFontStyle = chatFont->ta_Style;
-										config.chatFontFlags = chatFont->ta_Flags;
-										writeConfig();
-										SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
-										SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
-									}
-									FreeAslRequest(fontRequester);
-								}
-								break;
-							}
+							openChatFontRequester();
+							break;
 						case MENU_ITEM_UI_FONT_ID:
-							{
-								struct FontRequester *fontRequester;
-								GetAttr(WINDOW_Window, mainWindowObject, &mainWindow);
-								if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
-									struct TextAttr *uiFont;
-									if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
-										uiFont = &fontRequester->fo_Attr;
-										memset(config.uiFontName, 0, sizeof(config.uiFontName));
-										strncpy(config.uiFontName, uiFont->ta_Name, sizeof(config.uiFontName) - 1);
-										config.uiFontName[sizeof(config.uiFontName) - 1] = '\0';
-										config.uiFontSize = uiFont->ta_YSize;
-										config.uiFontStyle = uiFont->ta_Style;
-										config.uiFontFlags = uiFont->ta_Flags;										
-										writeConfig();
-										if (!isPublicScreen) {
-											if (uiTextFont)
-												CloseFont(uiTextFont);
-
-											DoMethod(mainWindowObject, WM_CLOSE, NULL);
-											uiTextFont = OpenFont(uiFont);
-											SetFont(&(screen->RastPort), uiTextFont);
-											SetFont(mainWindow->RPort, uiTextFont);
-											RemakeDisplay();
-											RethinkDisplay();
-											mainWindow = DoMethod(mainWindowObject, WM_OPEN, NULL);
-										}
-										SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-										SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-										SetGadgetAttrs(statusBar, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-									}
-									FreeAslRequest(fontRequester);
-								}
-								break;
-							}
+							openUIFontRequester();
+							break;
 						case MENU_ITEM_SPEECH_ENABLED_ID:
 							config.speechEnabled = !config.speechEnabled;
 							writeConfig();
 							refreshSpeechMenuItems();
 							break;
 						case MENU_ITEM_SPEECH_ACCENT_ID:
-						{
-							struct FileRequester *fileRequester = (struct FileRequester *)AllocAslRequestTags(
-								ASL_FileRequest,
-								ASLFR_Window, mainWindow,
-								ASLFR_PopToFront, TRUE,
-								ASLFR_Activate, TRUE,
-								ASLFR_DrawersOnly, FALSE,
-								ASLFR_InitialDrawer, "LOCALE:accents",
-								ASLFR_DoPatterns, TRUE,
-								ASLFR_InitialPattern, "#?.accent",
-								 TAG_DONE);
-							
-							if (fileRequester) {
-								if (AslRequestTags(fileRequester, TAG_DONE)) {
-									strncpy(config.speechAccent, fileRequester->fr_File, sizeof(config.speechAccent) - 1);
-									config.speechAccent[sizeof(config.speechAccent) - 1] = '\0';
-									writeConfig();
-								}
-								FreeAslRequest(fileRequester);
-							}
+							openSpeechAccentRequester();
 							break;
-						}
 						case MENU_ITEM_SPEECH_SYSTEM_34_ID:
 							closeSpeech();
 							if (initSpeech(SPEECH_SYSTEM_34) == RETURN_OK) {
@@ -1147,6 +1077,9 @@ LONG startGUIRunLoop() {
 							}
 							writeConfig();
 							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_OPENAI_API_KEY_ID:
+							openApiKeyRequester();
 							break;
 						case MENU_ITEM_MODEL_GPT_4_ID:
 							config.model = GPT_4;
@@ -1249,6 +1182,142 @@ void displayError(STRPTR message) {
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 
     FreeVec(adjustedMsg);
+}
+
+/**
+ * Opens the About window
+**/
+static void openAboutWindow() {
+	#define APP_VERSION_STRING(x) #x
+	#define APP_BUILD_DATE_STRING(x) #x
+	struct EasyStruct aboutRequester = {
+		sizeof(struct EasyStruct),
+		0,
+		"About",
+		"AmigaGPT\n\n"
+		"Version " APP_VERSION "\n"
+		"Build date: " __DATE__ "\n"
+		"Build number: " BUILD_NUMBER "\n\n"
+		"Developed by Cameron Armstrong (@sacredbanana on GitHub,\n"
+		"YouTube and Twitter, @Nightfox on EAB)\n\n"
+		"This app will always remain free but if you would like to\n"
+		"support me you can do so at https://paypal.me/sacredbanana",
+		"OK"
+	};
+	EasyRequest(mainWindow, &aboutRequester, NULL, NULL);
+}
+
+/**
+ * Opens a requester for the user to select the font for the chat window 
+**/
+static void openChatFontRequester() {
+	struct FontRequester *fontRequester;
+	if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
+		struct TextAttr *chatFont;
+		if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
+			chatFont = &fontRequester->fo_Attr;
+			strncpy(config.chatFontName, chatFont->ta_Name, sizeof(config.chatFontName) - 1);
+			config.chatFontName[sizeof(config.chatFontName) - 1] = '\0';
+			config.chatFontSize = chatFont->ta_YSize;
+			config.chatFontStyle = chatFont->ta_Style;
+			config.chatFontFlags = chatFont->ta_Flags;
+			writeConfig();
+			SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
+			SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
+		}
+		FreeAslRequest(fontRequester);
+	}
+}
+
+/**
+ * Opens a requester for the user to select the font for the UI
+**/
+static void openUIFontRequester() {
+	struct FontRequester *fontRequester;
+	GetAttr(WINDOW_Window, mainWindowObject, &mainWindow);
+	if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
+		struct TextAttr *uiFont;
+		if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
+			uiFont = &fontRequester->fo_Attr;
+			memset(config.uiFontName, 0, sizeof(config.uiFontName));
+			strncpy(config.uiFontName, uiFont->ta_Name, sizeof(config.uiFontName) - 1);
+			config.uiFontName[sizeof(config.uiFontName) - 1] = '\0';
+			config.uiFontSize = uiFont->ta_YSize;
+			config.uiFontStyle = uiFont->ta_Style;
+			config.uiFontFlags = uiFont->ta_Flags;										
+			writeConfig();
+			if (!isPublicScreen) {
+				if (uiTextFont)
+					CloseFont(uiTextFont);
+
+				DoMethod(mainWindowObject, WM_CLOSE, NULL);
+				uiTextFont = OpenFont(uiFont);
+				SetFont(&(screen->RastPort), uiTextFont);
+				SetFont(mainWindow->RPort, uiTextFont);
+				RemakeDisplay();
+				RethinkDisplay();
+				mainWindow = DoMethod(mainWindowObject, WM_OPEN, NULL);
+			}
+			SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+			SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+			SetGadgetAttrs(statusBar, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+		}
+		FreeAslRequest(fontRequester);
+	}
+}
+
+
+/**
+ * Opens a requester for the user to select accent for the speech
+**/
+static void openSpeechAccentRequester() {
+	struct FileRequester *fileRequester = (struct FileRequester *)AllocAslRequestTags(
+									ASL_FileRequest,
+									ASLFR_Window, mainWindow,
+									ASLFR_PopToFront, TRUE,
+									ASLFR_Activate, TRUE,
+									ASLFR_DrawersOnly, FALSE,
+									ASLFR_InitialDrawer, "LOCALE:accents",
+									ASLFR_DoPatterns, TRUE,
+									ASLFR_InitialPattern, "#?.accent",
+									TAG_DONE);
+								
+	if (fileRequester) {
+		if (AslRequestTags(fileRequester, TAG_DONE)) {
+			strncpy(config.speechAccent, fileRequester->fr_File, sizeof(config.speechAccent) - 1);
+			config.speechAccent[sizeof(config.speechAccent) - 1] = '\0';
+			writeConfig();
+		}
+		FreeAslRequest(fileRequester);
+	}
+}
+
+/**
+ * Opens a requester for the user to enter their OpenAI API key
+**/
+static void openApiKeyRequester() {
+	UBYTE buffer[64];
+	strncpy(buffer, config.openAiApiKey, sizeof(buffer) - 1);
+	Object *openApiKeyRequester = NewObject(REQUESTER_GetClass(), NULL,
+		REQ_Type, REQTYPE_STRING,
+		REQ_TitleText, "Enter your OpenAI API key",
+		REQ_BodyText, "Please type or paste your OpenAI API key here",
+		REQ_GadgetText, "OK|CANCEL",
+		REQS_AllowEmpty, FALSE,
+		REQS_Buffer, buffer,
+		REQS_MaxChars, sizeof(buffer) - 1,
+		REQS_Invisible, FALSE,
+		REQ_ForceFocus, TRUE,
+		TAG_DONE);
+
+	if (openApiKeyRequester) {
+		ULONG result = OpenRequester(openApiKeyRequester, mainWindow);
+		if (result == 1) {
+			strncpy(config.openAiApiKey, buffer, sizeof(config.openAiApiKey) - 1);
+			writeConfig();
+		}
+		DisposeObject(openApiKeyRequester);
+	}
 }
 
 /**
