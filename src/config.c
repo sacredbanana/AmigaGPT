@@ -99,7 +99,6 @@ LONG readConfig() {
 	struct json_object *configJsonObject = json_tokener_parse(configJsonString);
 	if (configJsonObject == NULL) {
 		printf("Failed to parse the config file\n");
-		Close(file);
 		FreeVec(configJsonString);
 		return RETURN_ERROR;
 	}

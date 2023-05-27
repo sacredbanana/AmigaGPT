@@ -1,5 +1,6 @@
 #include <classes/requester.h>
 #include <classes/window.h>
+#include <dos/dos.h>
 #include <exec/lists.h>
 #include <exec/execbase.h>
 #include <gadgets/button.h>
@@ -35,6 +36,7 @@
 #include "external/json-c/json.h"
 #include "gui.h"
 #include "version.h"
+#include "customtexteditor.h"
 
 #define MAIN_WIN_WIDTH 640
 #define MAIN_WIN_HEIGHT 500
@@ -100,7 +102,7 @@ static struct Library *WindowBase;
 static struct Library *LayoutBase;
 static struct Library *ButtonBase;
 static struct Library *RadioButtonBase;
-static struct Library *TextFieldBase;
+struct Library *TextFieldBase;
 static struct Library *ScrollerBase;
 static struct Library *StringBase;
 static struct Library *ListBrowserBase;
@@ -181,6 +183,9 @@ static void openUIFontRequester();
 static void openAboutWindow();
 static void openSpeechAccentRequester();
 static void openApiKeyRequester();
+static LONG loadConversations();
+static LONG saveConversations();
+static BOOL copyFile(STRPTR source, STRPTR destination);
 
 /**
  * Open the libraries needed for the GUI
@@ -279,6 +284,7 @@ LONG initVideo() {
 	conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
 	NewList(conversationList);
 	currentConversation = NULL;
+	loadConversations();
 
 	refreshModelMenuItems();
 	refreshSpeechMenuItems();
@@ -376,7 +382,7 @@ LONG initVideo() {
 		.ta_Flags = config.chatFontFlags
 	};
 
-	if ((textInputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
+	if ((textInputTextEditor = NewObject(initCustomTextEditorClass(), NULL,
 		GA_ID, TEXT_INPUT_TEXT_EDITOR_ID,
 		GA_RelVerify, TRUE,
 		GA_Text, (ULONG)"",
@@ -483,7 +489,7 @@ LONG initVideo() {
 		WINDOW_SharedPort, NULL,
 		WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
 		WINDOW_NewMenu, amigaGPTMenu,
-		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_MENUPICK,
+		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MENUPICK,
 		WA_CustomScreen, screen,
 		TAG_DONE)) == NULL) {
 			printf("Could not create mainWindow object\n");
@@ -832,8 +838,8 @@ static struct MinList* getConversationFromConversationList(struct List *conversa
 		node = node->ln_Succ;
 		index--;
 	}
-	STRPTR conversation;
-	GetListBrowserNodeAttrs(node, LBNA_UserData,&conversation, TAG_END);
+	struct MinList *conversation;
+	GetListBrowserNodeAttrs(node, LBNA_UserData, &conversation, TAG_END);
 	return conversation;
 }
 
@@ -922,12 +928,25 @@ LONG startGUIRunLoop() {
 				case WMHI_CLOSEWINDOW:
 					done = TRUE;
 					break;
+				case WMHI_GADGETDOWN:
+					switch (result & WMHI_GADGETMASK) {
+						case TEXT_INPUT_TEXT_EDITOR_ID:
+							if (isChatOutputTextEditorActive)
+								ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
+							break;
+						case CHAT_OUTPUT_TEXT_EDITOR_ID:
+							printf("Chat output text editor clicked\n");
+							break;
+					}
+					break;
 				case WMHI_GADGETUP:
 					switch (result & WMHI_GADGETMASK) {
 						case SEND_MESSAGE_BUTTON_ID:
 						case TEXT_INPUT_TEXT_EDITOR_ID:
-							if (strlen(config.openAiApiKey) > 0)
+							if (strlen(config.openAiApiKey) > 0) {
 								sendMessage();
+								saveConversations();
+							}
 							else
 								displayError("Please enter your OpenAI API key in the Open AI settings in the menu.");
 							break;
@@ -962,10 +981,12 @@ LONG startGUIRunLoop() {
 						case MENU_ITEM_CUT_ID:
 						{
 							STRPTR result = NULL;
-							if (isTextInputTextEditorActive)
-								result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CUT");
-							else if (isChatOutputTextEditorActive)
-								result = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CUT");
+							// if (isTextInputTextEditorActive)
+							// 	result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CUT");
+							// else if (isChatOutputTextEditorActive)
+							// 	result = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CUT");
+
+							result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CUT");
 
 							if (result == FALSE)
 								printf("Error cutting text\n");
@@ -1122,6 +1143,8 @@ LONG startGUIRunLoop() {
 		}
 	}
 
+	saveConversations();
+
 	return RETURN_OK;
 }
 
@@ -1182,6 +1205,23 @@ void displayError(STRPTR message) {
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 
     FreeVec(adjustedMsg);
+}
+
+/**
+ * Display an error message about a disk error
+ * @param message the message to display
+ * @param error the error code returned by IOErr()
+**/ 
+void displayDiskError(STRPTR message, LONG error) {
+	const UBYTE ERROR_BUFFER_LENGTH = 255;
+	const UBYTE FINAL_MESSAGE_LENGTH = strlen(message) + ERROR_BUFFER_LENGTH;
+	STRPTR errorMessage = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+	STRPTR finalMessage = AllocVec(FINAL_MESSAGE_LENGTH, MEMF_ANY | MEMF_CLEAR);
+	Fault(error, NULL, errorMessage, ERROR_BUFFER_LENGTH);
+	snprintf(finalMessage, FINAL_MESSAGE_LENGTH - 3, "%s\n\n%s", message, error);
+	displayError(finalMessage);
+	FreeVec(errorMessage);
+	FreeVec(finalMessage);
 }
 
 /**
@@ -1318,6 +1358,225 @@ static void openApiKeyRequester() {
 		}
 		DisposeObject(openApiKeyRequester);
 	}
+}
+
+/**
+ * Saves the conversations to disk
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
+LONG saveConversations() {
+    BPTR file = Open("PROGDIR:chat-history.json", MODE_NEWFILE);
+    if (file == 0) {
+        displayDiskError("Failed to create message history file. Conversation history will not be saved.", IoErr());
+        return RETURN_ERROR;
+    }
+
+	struct json_object *conversationsJsonArray = json_object_new_array();
+	struct json_object *conversationJsonObject;
+	struct Node *conversationListNode = conversationList->lh_Head;
+	while (conversationListNode->ln_Succ) {
+		conversationJsonObject = json_object_new_object();
+		struct MinList *conversation;
+		GetListBrowserNodeAttrs(conversationListNode, LBNA_UserData, &conversation, TAG_END);
+		STRPTR conversationTitle;
+		GetListBrowserNodeAttrs(conversationListNode, LBNCA_Text, &conversationTitle, TAG_END);
+		json_object_object_add(conversationJsonObject, "name", json_object_new_string(conversationTitle));
+		struct json_object *messagesJsonArray = json_object_new_array();
+		struct ConversationNode *conversationNode;
+		for (conversationNode = (struct ConversationNode *)conversation->mlh_Head; 
+         conversationNode->node.mln_Succ != NULL; 
+         conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
+			struct json_object *messageJsonObject = json_object_new_object();
+			json_object_object_add(messageJsonObject, "role", json_object_new_string(conversationNode->role));
+			json_object_object_add(messageJsonObject, "content", json_object_new_string(conversationNode->content));
+			json_object_array_add(messagesJsonArray, messageJsonObject);
+    	}
+		json_object_object_add(conversationJsonObject, "messages", messagesJsonArray);
+		json_object_array_add(conversationsJsonArray, conversationJsonObject);
+		conversationListNode = conversationListNode->ln_Succ;
+	}
+
+	STRPTR conversationsJsonString = (STRPTR)json_object_to_json_string_ext(conversationsJsonArray, JSON_C_TO_STRING_PRETTY);
+
+    if (Write(file, conversationsJsonString, strlen(conversationsJsonString)) != strlen(conversationsJsonString)) {
+        displayError("Failed to write to message history file. Conversation history will not be saved.");
+        Close(file);
+		json_object_put(conversationsJsonArray);
+        return RETURN_ERROR;
+    }
+
+    Close(file);
+	json_object_put(conversationsJsonArray);
+    return RETURN_OK;
+}
+
+/**
+ * Load the conversations from disk
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
+LONG loadConversations() {
+	APTR errorBuffer = AllocVec(256, MEMF_ANY);
+	APTR errorOutputBuffer = AllocVec(256, MEMF_ANY);
+
+	BPTR file = Open("PROGDIR:chat-history.json", MODE_OLDFILE);
+	if (file == 0) {
+		return RETURN_OK;
+	}
+
+	Seek(file, 0, OFFSET_END);
+	LONG fileSize = Seek(file, 0, OFFSET_BEGINNING);
+	STRPTR conversationsJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
+	if (Read(file, conversationsJsonString, fileSize) != fileSize) {
+		displayDiskError("Failed to read from message history file. Conversation history will not be loaded", IoErr());
+		Close(file);
+		FreeVec(conversationsJsonString);
+		return RETURN_ERROR;
+	}
+
+	Close(file);
+
+	struct json_object *conversationsJsonArray = json_tokener_parse(conversationsJsonString);
+	if (conversationsJsonArray == NULL) {
+		if (Rename("PROGDIR:chat-history.json", "PROGDIR:chat-history.json.bak")) {
+			displayDiskError("Failed to parse chat history. Malformed JSON. The chat-history.json file is probably corrupted. Conversation history will not be loaded. A backup of the chat-history.json file has been created as chat-history.json.bak", IoErr());
+		} else if (copyFile("PROGDIR:chat-history.json", "RAM:chat-history.json")) {
+			displayError("Failed to parse chat history. Malformed JSON. The chat-history.json file is probably corrupted. Conversation history will not be loaded. There was an error writing a backup of the chat history to disk but a copy has been saved to RAM:chat-history.json.bak");
+			if (!DeleteFile("PROGDIR:chat-history.json")) {
+				displayDiskError("Failed to delete chat-history.json. Please delete this file manually.", IoErr());
+			}
+		}
+
+		FreeVec(conversationsJsonString);
+		return RETURN_ERROR;
+	}
+
+	for (UWORD i = 0; i < json_object_array_length(conversationsJsonArray); i++) {
+		struct json_object *conversationJsonObject = json_object_array_get_idx(conversationsJsonArray, i);
+		struct json_object *conversationNameJsonObject;
+		if (!json_object_object_get_ex(conversationJsonObject, "name", &conversationNameJsonObject)) {
+			displayError("Failed to parse chat history. \"name\" is missing from the conversation. The chat-history.json file is probably corrupted. Conversation history will not be loaded.");
+			FreeVec(conversationsJsonString);
+			json_object_put(conversationsJsonArray);
+			return RETURN_ERROR;
+		}
+
+		STRPTR conversationName = json_object_get_string(conversationNameJsonObject);
+
+		struct json_object *messagesJsonArray;
+		if (!json_object_object_get_ex(conversationJsonObject, "messages", &messagesJsonArray)) {
+			displayError("Failed to parse chat history. \"messages\" is missing from the conversation. The chat-history.json file is probably corrupted. Conversation history will not be loaded.");
+			FreeVec(conversationsJsonString);
+			json_object_put(conversationsJsonArray);
+			return RETURN_ERROR;
+		}
+
+		struct MinList *conversation = newConversation();
+		for (UWORD j = 0; j < json_object_array_length(messagesJsonArray); j++) {
+			struct json_object *messageJsonObject = json_object_array_get_idx(messagesJsonArray, j);
+			struct json_object *roleJsonObject;
+			if (!json_object_object_get_ex(messageJsonObject, "role", &roleJsonObject)) {
+				displayError("Failed to parse chat history. \"role\" is missing from the conversation message. The chat-history.json file is probably corrupted. Conversation history will not be loaded.");
+				FreeVec(conversationsJsonString);
+				json_object_put(conversationsJsonArray);
+				return RETURN_ERROR;
+			}
+			STRPTR role = json_object_get_string(roleJsonObject);
+
+			struct json_object *contentJsonObject = json_object_array_get_idx(messagesJsonArray, j);
+			if (!json_object_object_get_ex(messageJsonObject, "content", &contentJsonObject)) {
+				displayError("Failed to parse chat history. \"content\" is missing from the conversation. The chat-history.json file is probably corrupted. Conversation history will not be loaded.");
+				FreeVec(conversationsJsonString);
+				json_object_put(conversationsJsonArray);
+				return RETURN_ERROR;
+			}
+			STRPTR content = json_object_get_string(contentJsonObject);
+
+			addTextToConversation(conversation, content, role);
+		}
+		addConversationToConversationList(conversationList, conversation, conversationName);
+
+	}
+
+	json_object_put(conversationsJsonArray);
+	return RETURN_OK;
+}
+
+/**
+ * Copies a file from one location to another
+ * @param source The source file to copy
+ * @param destination The destination to copy the file to
+ * @return TRUE if the file was copied successfully, FALSE otherwise
+**/
+static BOOL copyFile(STRPTR source, STRPTR destination) {
+    BPTR srcFile, dstFile;
+    LONG bytesRead, bytesWritten, error;
+    APTR buffer = AllocVec(4096, MEMF_ANY);
+	APTR errorBuffer = AllocVec(256, MEMF_ANY);
+	APTR errorOutputBuffer = AllocVec(256, MEMF_ANY);
+
+    if (!(srcFile = Open(source, MODE_OLDFILE))) {
+		error = IoErr();
+		Fault(error, NULL, errorBuffer, sizeof(errorBuffer));
+		sprintf(errorOutputBuffer, "Error opening %s for copy:\n%s\0", source, errorBuffer);
+		displayError(errorOutputBuffer);
+		FreeVec(buffer);
+		FreeVec(errorBuffer);
+		FreeVec(errorOutputBuffer);
+        return FALSE;
+    }
+
+    if (!(dstFile = Open(destination, MODE_NEWFILE))) {
+		error = IoErr();
+		Fault(error, NULL, errorBuffer, sizeof(errorBuffer));
+		sprintf(errorOutputBuffer, "Error creating %s for copy:\n%s\0", destination, errorBuffer);
+		displayError(errorOutputBuffer);
+		FreeVec(buffer);
+		FreeVec(errorBuffer);
+		FreeVec(errorOutputBuffer);
+        Close(srcFile);
+        return FALSE;
+    }
+
+    do {
+        bytesRead = Read(srcFile, buffer, sizeof(buffer));
+
+        if (bytesRead > 0) {
+            bytesWritten = Write(dstFile, buffer, bytesRead);
+
+            if (bytesWritten != bytesRead) {
+				error = IoErr();
+				Fault(error, NULL, errorBuffer, sizeof(errorBuffer));
+				sprintf(errorOutputBuffer, "Error copying %s to %s:\n%s\0", source, destination, errorBuffer);
+				displayError(errorOutputBuffer);
+				FreeVec(buffer);
+				FreeVec(errorBuffer);
+				FreeVec(errorOutputBuffer);
+                Close(srcFile);
+                Close(dstFile);
+                return FALSE;
+            }
+        }
+        else if (bytesRead < 0) {
+			error = IoErr();
+			Fault(error, NULL, errorBuffer, sizeof(errorBuffer));
+			sprintf(errorOutputBuffer, "Error copying %s to %s:\n%s\0", source, destination, errorBuffer);
+			displayError(errorOutputBuffer);
+			FreeVec(buffer);
+			FreeVec(errorBuffer);
+			FreeVec(errorOutputBuffer);
+			Close(srcFile);
+			Close(dstFile);
+            return FALSE;
+        }
+    } while (bytesRead > 0);
+
+	FreeVec(buffer);
+	FreeVec(errorBuffer);
+	FreeVec(errorOutputBuffer);
+    Close(srcFile);
+    Close(dstFile);
+
+    return TRUE;
 }
 
 /**
