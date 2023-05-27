@@ -862,11 +862,11 @@ static void displayConversation(struct MinList *conversation) {
 			}
 			if (strcmp(conversationNode->role, "user") == 0) {
 				if (strlen(conversationString) == 0)
-					sprintf(conversationString, "*%s*", conversationNode->content);
+					snprintf(conversationString, WRITE_BUFFER_LENGTH - 3, "*%s*", conversationNode->content);
 				else
-					sprintf(conversationString, "%s\n\n*%s*\0", conversationString, conversationNode->content);
+					snprintf(conversationString, WRITE_BUFFER_LENGTH - 5, "%s\n\n*%s*", conversationString, conversationNode->content);
 			} else {
-				sprintf(conversationString, "%s\n\n%s\0", conversationString, conversationNode->content);
+				snprintf(conversationString, WRITE_BUFFER_LENGTH - 3, "%s\n\n%s\0", conversationString, conversationNode->content);
 			}
     }
 
@@ -1415,9 +1415,6 @@ LONG saveConversations() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG loadConversations() {
-	APTR errorBuffer = AllocVec(256, MEMF_ANY);
-	APTR errorOutputBuffer = AllocVec(256, MEMF_ANY);
-
 	BPTR file = Open("PROGDIR:chat-history.json", MODE_OLDFILE);
 	if (file == 0) {
 		return RETURN_OK;
@@ -1508,31 +1505,26 @@ LONG loadConversations() {
  * @return TRUE if the file was copied successfully, FALSE otherwise
 **/
 static BOOL copyFile(STRPTR source, STRPTR destination) {
+	const UBYTE ERROR_MESSAGE_BUFFER_SIZE = 255;
+	const UWORD FILE_BUFFER_SIZE = 4096;
     BPTR srcFile, dstFile;
-    LONG bytesRead, bytesWritten, error;
-    APTR buffer = AllocVec(4096, MEMF_ANY);
-	APTR errorBuffer = AllocVec(256, MEMF_ANY);
-	APTR errorOutputBuffer = AllocVec(256, MEMF_ANY);
+    LONG bytesRead, bytesWritten;
+    APTR buffer = AllocVec(FILE_BUFFER_SIZE, MEMF_ANY);
+	STRPTR errorMessage = AllocVec(ERROR_MESSAGE_BUFFER_SIZE, MEMF_ANY);
 
     if (!(srcFile = Open(source, MODE_OLDFILE))) {
-		error = IoErr();
-		Fault(error, NULL, errorBuffer, sizeof(errorBuffer));
-		sprintf(errorOutputBuffer, "Error opening %s for copy:\n%s\0", source, errorBuffer);
-		displayError(errorOutputBuffer);
+		snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error opening %s for copy", source);
+		displayDiskError(errorMessage, IoErr());
 		FreeVec(buffer);
-		FreeVec(errorBuffer);
-		FreeVec(errorOutputBuffer);
+		FreeVec(errorMessage);
         return FALSE;
     }
 
     if (!(dstFile = Open(destination, MODE_NEWFILE))) {
-		error = IoErr();
-		Fault(error, NULL, errorBuffer, sizeof(errorBuffer));
-		sprintf(errorOutputBuffer, "Error creating %s for copy:\n%s\0", destination, errorBuffer);
-		displayError(errorOutputBuffer);
+		snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error creating %s for copy", destination);
+		displayDiskError(errorMessage, IoErr());
 		FreeVec(buffer);
-		FreeVec(errorBuffer);
-		FreeVec(errorOutputBuffer);
+		FreeVec(errorMessage);
         Close(srcFile);
         return FALSE;
     }
@@ -1544,26 +1536,20 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
             bytesWritten = Write(dstFile, buffer, bytesRead);
 
             if (bytesWritten != bytesRead) {
-				error = IoErr();
-				Fault(error, NULL, errorBuffer, sizeof(errorBuffer));
-				sprintf(errorOutputBuffer, "Error copying %s to %s:\n%s\0", source, destination, errorBuffer);
-				displayError(errorOutputBuffer);
+				snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error copying %s to %s", source, destination);
+				displayDiskError(errorMessage, IoErr());
 				FreeVec(buffer);
-				FreeVec(errorBuffer);
-				FreeVec(errorOutputBuffer);
+				FreeVec(errorMessage);
                 Close(srcFile);
                 Close(dstFile);
                 return FALSE;
             }
         }
         else if (bytesRead < 0) {
-			error = IoErr();
-			Fault(error, NULL, errorBuffer, sizeof(errorBuffer));
-			sprintf(errorOutputBuffer, "Error copying %s to %s:\n%s\0", source, destination, errorBuffer);
-			displayError(errorOutputBuffer);
+			snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error copying %s to %s", source, destination);
+			displayDiskError(errorMessage, IoErr());
 			FreeVec(buffer);
-			FreeVec(errorBuffer);
-			FreeVec(errorOutputBuffer);
+			FreeVec(errorMessage);
 			Close(srcFile);
 			Close(dstFile);
             return FALSE;
@@ -1571,8 +1557,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
     } while (bytesRead > 0);
 
 	FreeVec(buffer);
-	FreeVec(errorBuffer);
-	FreeVec(errorOutputBuffer);
+	FreeVec(errorMessage);
     Close(srcFile);
     Close(dstFile);
 

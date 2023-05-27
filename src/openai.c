@@ -220,7 +220,7 @@ STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPT
     
     STRPTR jsonString = json_object_to_json_string(obj);
 
-    sprintf(writeBuffer, "POST /v1/chat/completions HTTP/1.1\r\n"
+    snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "POST /v1/chat/completions HTTP/1.1\r\n"
             "Host: api.openai.com\r\n"
             "Content-Type: application/json\r\n"
             "Authorization: Bearer %s\r\n"
