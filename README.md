@@ -63,13 +63,15 @@ Since `translator.library` **v43** is not available as a standalone install, you
 
 When launched, **AmigaGPT** presents you with a choice of opening the app in a new screen or opening in Workbench. If you open in a new screen you have the ability to create a screen for the app to open in. **AmigaGPT** supports anything from **320x200** all the way up to **4k** resolution if using a video card for RTG. Bear in mind text will appear very tiny in resolutions above **1080p** so you may want to increase the font size settings from the **View** menu when the app opens.
 
+When launching for the first time you will need to enter your OpenAI API key before you can start chatting. If you haven't already done so, create an OpenAI account and navigate to https://platform.openai.com/account/api-keys to generate an API key for use with **AmigaGPT**.
+
 When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "**Send**" to see the GPT-4 model's response. The generated text appears in the box above the input. You can choose to have this text read aloud using the "**Speech**" menu option. You can also select which model for OpenAI to use in the "**OpenAI**" menu option.
 
-To the left of the chat box is a conversation list which you can use to go to another saved conversation. New conversations can be created with the "**New chat**" button.
+To the left of the chat box is a conversation list which you can use to go to another saved conversation. New conversations can be created with the "**New chat**" button and conversations can be removed with the "**Delete chat**" button.
 
-In the "**Edit**" menu, you'll find basic text editing commands like Cut, Copy, Paste, Clear, and Select All. The "**View**" menu allows you to change the font used in the chat and the UI.
+In the "**Edit**" menu, you'll find basic text editing commands like **Cut**, **Copy**, **Paste** and **Clear**. The "**View**" menu allows you to change the font used in the chat and the UI.
 
-The "**Project**" menu includes an "**About**" option, which displays information about the program, and a "**Preferences**" option where you can configure application-wide settings.
+The "**Project**" menu includes an "**About**" option, which displays information about the program.
 
 ## Developing
 If you would like to build this project from source you will need Bebbo's **amiga-gcc** toolchain here https://github.com/bebbo/amiga-gcc

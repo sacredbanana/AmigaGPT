@@ -26,7 +26,7 @@ AUTOGEN_NEXT := $(shell expr $$(awk '/#define BUILD_NUMBER/' $(AUTOGEN_FILE) | t
 # https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
 # http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
 
-program = out/amigagpt
+program = out/AmigaGPT
 OUT = $(program)
 CC = /opt/amiga/bin/m68k-amigaos-gcc
 VASM = /opt/amiga/bin/vasmm68k_mot
