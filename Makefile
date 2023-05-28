@@ -46,18 +46,18 @@ ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),
 LDFLAGS =  -Wl,-Map=$(OUT).map
 VASMFLAGS = -m68000 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -I$(INCDIR) -I$(SDKDIR) -I$(NDKDIR)
 
-all: $(OUT).exe
+all: $(OUT)
 
-$(OUT).exe: $(objects)
-	$(info Linking $(program).exe)
+$(OUT): $(objects)
+	$(info Linking $(program))
 	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@
 
 clean:
 	$(info Cleaning...)
 ifdef WINDOWS
-	@del /q obj\* out\*
+	@del /q obj\*
 else
-	@$(RM) obj/* out/*
+	@$(RM) obj/*
 endif
 
 -include $(objects:.o=.d)
