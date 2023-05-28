@@ -38,8 +38,6 @@
 #include "version.h"
 #include "customtexteditor.h"
 
-#define MAIN_WIN_WIDTH 640
-#define MAIN_WIN_HEIGHT 500
 #define SCREEN_SELECT_WINDOW_WIDTH 200
 #define SCREEN_SELECT_WINDOW_HEIGHT 50
 #define SCREEN_SELECT_RADIO_BUTTON_ID 0
@@ -355,6 +353,7 @@ LONG initVideo() {
 		GA_Height, CONVERSATION_LIST_BROWSER_HEIGHT,
 		LISTBROWSER_WrapText, TRUE,
 		LISTBROWSER_AutoFit, TRUE,
+		LISTBROWSER_ShowSelected, TRUE,
 		LISTBROWSER_Labels, conversationList,
 		TAG_DONE)) == NULL) {
 			printf("Could not create conversation list browser\n");
@@ -511,8 +510,8 @@ LONG initVideo() {
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
 		WA_Title, "AmigaGPT",
-		WA_InnerWidth, MAIN_WIN_WIDTH,
-		WA_InnerHeight, MAIN_WIN_HEIGHT,
+		WA_Width, screen->Width * 0.8,
+		WA_Height, screen->Height * 0.8,
 		WA_CloseGadget, TRUE,
 		WA_DragBar, isPublicScreen,
 		WA_SizeGadget, isPublicScreen,
