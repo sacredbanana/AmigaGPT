@@ -67,8 +67,11 @@
 #define CONVERSATION_LIST_BROWSER_WIDTH 100
 #define CONVERSATION_LIST_BROWSER_HEIGHT 200
 #define NEW_CHAT_BUTTON_ID 8
-#define NEW_CHAT_BUTTON_WIDTH 100
+#define NEW_CHAT_BUTTON_WIDTH 50
 #define NEW_CHAT_BUTTON_HEIGHT 20
+#define DELETE_CHAT_BUTTON_ID 9
+#define DELETE_CHAT_BUTTON_WIDTH 50
+#define DELETE_CHAT_BUTTON_HEIGHT 20
 
 #define MENU_ITEM_ABOUT_ID 1
 #define MENU_ITEM_SPEECH_ACCENT_ID 2
@@ -114,6 +117,7 @@ static Object *chatLayout;
 static Object *chatInputLayout;
 static Object *chatOutputLayout;
 static Object *conversationsLayout;
+static Object *chatButtonsLayout;
 static Object *sendMessageButton;
 static Object *textInputTextEditor;
 static Object *chatOutputTextEditor;
@@ -121,6 +125,7 @@ static Object *chatOutputScroller;
 static Object *statusBar;
 static Object *conversationListBrowser;
 static Object *newChatButton;
+static Object *deleteChatButton;
 static struct Screen *screen;
 static BOOL isPublicScreen;
 static UWORD pens[] = {~0};
@@ -178,6 +183,7 @@ static struct MinList* getConversationFromConversationList(struct List *conversa
 static void displayConversation(struct MinList *conversation);
 static void freeConversation(struct MinList *conversation);
 static void freeConversationList();
+static void removeConversationFromConversationList(struct List *conversationList, struct MinList *conversation);
 static void openChatFontRequester();
 static void openUIFontRequester();
 static void openAboutWindow();
@@ -317,6 +323,31 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	if ((deleteChatButton = NewObject(BUTTON_GetClass(), NULL,
+		GA_ID, DELETE_CHAT_BUTTON_ID,
+		GA_WIDTH, DELETE_CHAT_BUTTON_WIDTH,
+		GA_HEIGHT, DELETE_CHAT_BUTTON_HEIGHT,
+		BUTTON_TextPen, 3,
+		BUTTON_Justification, BCJ_CENTER,
+		GA_TEXT, (ULONG)"- Delete Chat",
+		GA_RelVerify, TRUE,
+		ICA_TARGET, ICTARGET_IDCMP,
+		TAG_DONE)) == NULL) {
+			printf("Could not create delete chat button\n");
+			return RETURN_ERROR;
+	}
+
+	if ((chatButtonsLayout = NewObject(LAYOUT_GetClass(), NULL,
+		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+		LAYOUT_SpaceInner, TRUE,
+		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_AddChild, newChatButton,
+		LAYOUT_AddChild, deleteChatButton,
+		TAG_DONE)) == NULL) {
+			printf("Could not create conversations layout\n");
+			return RETURN_ERROR;
+	}
+
 	if ((conversationListBrowser = NewObject(LISTBROWSER_GetClass(), NULL,
 		GA_ID, CONVERSATION_LIST_BROWSER_ID,
 		GA_RelVerify, TRUE,
@@ -334,33 +365,12 @@ LONG initVideo() {
 		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, newChatButton,
+		LAYOUT_AddChild, chatButtonsLayout,
 		CHILD_WeightedHeight, 10,
 		LAYOUT_AddChild, conversationListBrowser,
 		CHILD_WeightedWidth, 90,
 		TAG_DONE)) == NULL) {
 			printf("Could not create conversations layout\n");
-			return RETURN_ERROR;
-	}
-
-	struct TagItem chatOutputTextEditorMap[] = {
-		{GA_TEXTEDITOR_Prop_First, SCROLLER_Top},
-		{GA_TEXTEDITOR_Prop_Entries, SCROLLER_Total},
-		{GA_TEXTEDITOR_Prop_Visible, SCROLLER_Visible},
-		{TAG_DONE}
-	};
-
-	if ((chatOutputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
-		GA_ID, CHAT_OUTPUT_TEXT_EDITOR_ID,
-		GA_RelVerify, TRUE,
-		GA_Width, CHAT_OUTPUT_TEXT_EDITOR_WIDTH,
-		GA_Height, CHAT_OUTPUT_TEXT_EDITOR_HEIGHT,
-		GA_ReadOnly, TRUE,
-		GA_TEXTEDITOR_ImportHook, GV_TEXTEDITOR_ImportHook_MIME,
-		GA_TEXTEDITOR_ExportHook, GV_TEXTEDITOR_ExportHook_Plain,
-		ICA_MAP, &chatOutputTextEditorMap,
-		TAG_DONE)) == NULL) {
-			printf("Could not create text editor\n");
 			return RETURN_ERROR;
 	}
 
@@ -375,7 +385,7 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
-	struct TextAttr chatOutputTextEditorTextAttr = {
+	struct TextAttr chatTextAttr = {
 		.ta_Name = config.chatFontName,
 		.ta_YSize = config.chatFontSize,
 		.ta_Style = config.chatFontStyle,
@@ -385,17 +395,41 @@ LONG initVideo() {
 	if ((textInputTextEditor = NewObject(initCustomTextEditorClass(), NULL,
 		GA_ID, TEXT_INPUT_TEXT_EDITOR_ID,
 		GA_RelVerify, TRUE,
-		GA_Text, (ULONG)"",
+		GA_Text, "",
 		GA_Width, TEXT_INPUT_TEXT_EDITOR_WIDTH,
 		GA_Height, TEXT_INPUT_TEXT_EDITOR_HEIGHT,
-		GA_TextAttr, (ULONG)&chatOutputTextEditorTextAttr,
+		GA_TextAttr, &chatTextAttr,
 		TAG_DONE)) == NULL) {
 			printf("Could not create text editor\n");
 			return RETURN_ERROR;
 	}
 
-	struct TagItem chatOutputTextScrollerMap[] = {
+	struct TagItem chatOutputMap[] = {
+		{SCROLLER_Top, GA_TEXTEDITOR_Prop_First},
+		{SCROLLER_Total, GA_TEXTEDITOR_Prop_Entries},
+		{SCROLLER_Visible, GA_TEXTEDITOR_Prop_Visible},
+		{TAG_DONE}
+	};
+
+	if ((chatOutputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
+		GA_ID, CHAT_OUTPUT_TEXT_EDITOR_ID,
+		GA_RelVerify, TRUE,
+		GA_Width, CHAT_OUTPUT_TEXT_EDITOR_WIDTH,
+		GA_Height, CHAT_OUTPUT_TEXT_EDITOR_HEIGHT,
+		GA_ReadOnly, TRUE,
+		GA_TextAttr, &chatTextAttr,
+		GA_TEXTEDITOR_ImportHook, GV_TEXTEDITOR_ImportHook_MIME,
+		GA_TEXTEDITOR_ExportHook, GV_TEXTEDITOR_ExportHook_Plain,
+		ICA_MAP, chatOutputMap,
+		TAG_DONE)) == NULL) {
+			printf("Could not create text editor\n");
+			return RETURN_ERROR;
+	}
+
+	struct TagItem chatOutputScrollerMap[] = {
 		{GA_TEXTEDITOR_Prop_First, SCROLLER_Top},
+		{GA_TEXTEDITOR_Prop_Entries, SCROLLER_Total},
+		{GA_TEXTEDITOR_Prop_Visible, SCROLLER_Visible},
 		{TAG_DONE}
 	};
 
@@ -407,7 +441,7 @@ LONG initVideo() {
 		SCROLLER_Top, 0,
 		SCROLLER_Visible, 100,
 		SCROLLER_Total, 100,
-		ICA_MAP, &chatOutputTextScrollerMap,
+		ICA_MAP, chatOutputScrollerMap,
 		ICA_TARGET, chatOutputTextEditor,
 		TAG_DONE)) == NULL) {
 			printf("Could not create scroller\n");
@@ -503,6 +537,9 @@ LONG initVideo() {
 
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_Pens, 0x00010002, TAG_DONE);
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+
+	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, "/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n", TAG_DONE);
+
 
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 
@@ -901,6 +938,29 @@ static void freeConversationList() {
 	FreeVec(conversationList);
 }
 
+
+/**
+ * Remove a conversation from the conversation list
+ * @param conversationList The conversation list to remove the conversation from
+ * @param conversation The conversation to remove from the conversation list
+**/ 
+static void removeConversationFromConversationList(struct List *conversationList, struct MinList *conversation) {
+	struct Node *node = conversationList->lh_Head->ln_Succ;
+	while (node->ln_Succ != NULL) {
+		struct ConversationNode *conversationNode;
+		GetListBrowserNodeAttrs(node, LBNA_UserData, (struct ConversationNode *)&conversationNode, TAG_END);
+		if (conversationNode == conversation) {
+			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);		
+			Remove(node);
+			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
+			freeConversation(conversation);
+			FreeVec(node);
+			return;
+		}
+		node = node->ln_Succ;
+	}
+}
+
 /**
  * The main run loop of the GUI
  * @return The return code of the application
@@ -955,6 +1015,13 @@ LONG startGUIRunLoop() {
 							DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 							ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 							break;
+						case DELETE_CHAT_BUTTON_ID:
+							removeConversationFromConversationList(conversationList, currentConversation);
+							currentConversation = NULL;
+							DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+							ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
+							saveConversations();
+							break;
 						case CONVERSATION_LIST_BROWSER_ID:
 							{
 								// Switch to the conversation the user clicked on in the list
@@ -988,9 +1055,9 @@ LONG startGUIRunLoop() {
 
 							result = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CUT");
 
-							if (result == FALSE)
+							if ((BOOL)result == FALSE)
 								printf("Error cutting text\n");
-							else if (result == TRUE)
+							else if ((BOOL)result == TRUE)
 								printf("Text cut\n");
 							printf("%s\n", result);
 							FreeVec(result);
@@ -1004,9 +1071,9 @@ LONG startGUIRunLoop() {
 							else if (isChatOutputTextEditorActive)
 								result = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "COPY");
 
-							if (result == FALSE)
+							if ((BOOL)result == FALSE)
 								printf("Error copying text\n");
-							else if (result == TRUE)
+							else if ((BOOL)result == TRUE)
 								printf("Text copied\n");
 							printf("%s\n", result);
 							FreeVec(result);
@@ -1020,9 +1087,9 @@ LONG startGUIRunLoop() {
 							else if (isChatOutputTextEditorActive)
 								result = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "PASTE");
 
-							if (result == FALSE)
+							if ((BOOL)result == FALSE)
 								printf("Error pasting text\n");
-							else if (result == TRUE)
+							else if ((BOOL)result == TRUE)
 								printf("Text pasted\n");
 							printf("%s\n", result);
 							FreeVec(result);
@@ -1036,9 +1103,9 @@ LONG startGUIRunLoop() {
 							else if (isChatOutputTextEditorActive)
 								result = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_MarkText, NULL, 0, 0, 65535, 65535);
 
-							if (result == FALSE)
+							if ((BOOL)result == FALSE)
 								printf("Error selecting all text\n");
-							else if (result == TRUE)
+							else if ((BOOL)result == TRUE)
 								printf("All text selected\n");
 							printf("%s\n", result);
 							FreeVec(result);
@@ -1052,9 +1119,9 @@ LONG startGUIRunLoop() {
 							else if (isChatOutputTextEditorActive)
 								result = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CLEAR");
 
-							if (result == FALSE)
+							if ((BOOL)result == FALSE)
 								printf("Error clearing text\n");
-							else if (result == TRUE)
+							else if ((BOOL)result == TRUE)
 								printf("Text cleared\n");
 							printf("%s\n", result);
 							FreeVec(result);
@@ -1398,7 +1465,7 @@ LONG saveConversations() {
 
 	STRPTR conversationsJsonString = (STRPTR)json_object_to_json_string_ext(conversationsJsonArray, JSON_C_TO_STRING_PRETTY);
 
-    if (Write(file, conversationsJsonString, strlen(conversationsJsonString)) != strlen(conversationsJsonString)) {
+    if (Write(file, conversationsJsonString, strlen(conversationsJsonString)) != (LONG)strlen(conversationsJsonString)) {
         displayError("Failed to write to message history file. Conversation history will not be saved.");
         Close(file);
 		json_object_put(conversationsJsonArray);

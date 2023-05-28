@@ -125,10 +125,10 @@ LONG initOpenAIConnector() {
     if (OpenAmiSSLTags(AMISSL_CURRENT_VERSION,
 	                  AmiSSL_UsesOpenSSLStructs, TRUE,
                       AmiSSL_InitAmiSSL, TRUE,
-	                  AmiSSL_GetAmiSSLBase, &AmiSSLBase,
-	                  AmiSSL_GetAmiSSLExtBase, &AmiSSLExtBase,
-	                  AmiSSL_SocketBase, SocketBase,
-	                  AmiSSL_ErrNoPtr, &errno,
+	                  AmiSSL_GetAmiSSLBase, (ULONG)&AmiSSLBase,
+	                  AmiSSL_GetAmiSSLExtBase, (ULONG)&AmiSSLExtBase,
+	                  AmiSSL_SocketBase, (ULONG)SocketBase,
+	                  AmiSSL_ErrNoPtr, (ULONG)&errno,
 	                  TAG_DONE) != 0) {
         displayError("failed to initialize amisslmaster.library\n");
         return RETURN_ERROR;
