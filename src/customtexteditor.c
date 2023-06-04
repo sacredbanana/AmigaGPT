@@ -42,7 +42,6 @@ ULONG dispatchCustomTextEditorClass(Class *customTextEditorClass, Object *custom
 	APTR returnValue;
 	switch (message->MethodID) {
 		case OM_NEW:
-			printf("OM_NEW\n");
 			if (returnValue = DoSuperMethodA(customTextEditorClass, customTextEditorObject, message)) {
 				return returnValue;
 			}

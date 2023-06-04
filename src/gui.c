@@ -169,7 +169,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_END, NULL, 0, 0, 0, 0}
 };
 
-static STRPTR getMessageContentFromJson(struct json_object *json);
+static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream);
 static void formatText(STRPTR unformattedText);
 static void sendMessage();
 static void closeGUILibraries();
@@ -734,10 +734,12 @@ static void formatText(STRPTR unformattedText) {
 /**
  * Get the message content from the JSON response from OpenAI
  * @param json the JSON response from OpenAI
+ * @param stream whether the response is a stream or not
  * @return a pointer to a new string containing the message content -- Free it with FreeVec() when you are done using it
+ * If found role in the json instead of content then return an empty string
  * @todo Handle errors
 **/
-static STRPTR getMessageContentFromJson(struct json_object *json) {
+static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream) {
 	if (json == NULL) return NULL;
 	struct json_object *error;
 	if (json_object_object_get_ex(json, "error", &error)) {
@@ -750,16 +752,23 @@ static STRPTR getMessageContentFromJson(struct json_object *json) {
 	STRPTR json_str = json_object_to_json_string(json);
 	struct json_object *choices = json_object_object_get(json, "choices");
 	struct json_object *choice = json_object_array_get_idx(choices, 0);
-	struct json_object *message = json_object_object_get(choice, "message");
+	struct json_object *message = json_object_object_get(choice, stream ? "delta" : "message");
+	if (stream) {
+		struct json_object *role = json_object_object_get(message, "role");
+		if (role != NULL)
+			return "\0";
+	}
 	struct json_object *content = json_object_object_get(message, "content");
 	return json_object_get_string(content);
 }
 
 /**
- * Sends a message to the OpenAI API and displays the response and speaks it if speech is anabled
+ * Sends a message to the OpenAI API and displays the response and speaks it if speech is enabled
 **/
 static void sendMessage() {
 	BOOL isNewConversation = FALSE;
+	STRPTR finishReason = NULL;
+	struct json_object **responses;
 	if (currentConversation == NULL) {
 		isNewConversation = TRUE;
 		currentConversation = newConversation();
@@ -773,46 +782,69 @@ static void sendMessage() {
 	displayConversation(currentConversation);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
-
-	json_object *response = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey, FALSE);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
-	if (response != NULL) {
-		STRPTR responseString = getMessageContentFromJson(response);
-		if (responseString != NULL) {
-			formatText(responseString);
-			addTextToConversation(currentConversation, responseString, "assistant");
-			displayConversation(currentConversation);
-			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
-			if (config.speechEnabled)
-				speakText(response);
-			json_object_put(response);
-			if (isNewConversation) {
-				SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
-				addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
-				response = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey, FALSE);
-				if (response != NULL) {
-					responseString = getMessageContentFromJson(response);
-					formatText(responseString);
-					addConversationToConversationList(conversationList, currentConversation, responseString);
-					SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
-					struct MinNode *titleRequestNode = RemTail(currentConversation);
-					FreeVec(titleRequestNode);
-					json_object_put(response);
-				}
-			}
-		} else {
-			SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
-			struct MinNode *lastMessage = RemTail(currentConversation);
-			FreeVec(lastMessage);
-			if (currentConversation == currentConversation->mlh_TailPred) {
-				freeConversation(currentConversation);
-				currentConversation = NULL;
-				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
-			} else {
+
+	addTextToConversation(currentConversation, "", "assistant");
+
+	BOOL dataStreamFinished = FALSE;
+	do {
+		responses = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey, TRUE);
+		UWORD responseIndex = 0;
+		struct json_object *response;
+		while (response = responses[responseIndex++]) {
+			STRPTR responseJsonString = (STRPTR)json_object_to_json_string_ext(response, JSON_C_TO_STRING_PRETTY);
+			STRPTR responseString = getMessageContentFromJson(response, TRUE);
+			
+			if (responseString != NULL) {
+				formatText(responseString);
+				snprintf(receivedMessage, READ_BUFFER_LENGTH - strlen(receivedMessage) - 1, "%s%s", receivedMessage, responseString);
+				struct MinNode *assistantMessageNode = RemTail(currentConversation);
+				FreeVec(assistantMessageNode);
+				addTextToConversation(currentConversation, receivedMessage, "assistant");
 				displayConversation(currentConversation);
+				finishReason = json_object_get_string(json_object_object_get(response, "finish_reason"));
+				if (finishReason != NULL) {
+					dataStreamFinished = TRUE;
+				}
+				json_object_put(response);
+			} else {
+				dataStreamFinished = TRUE;
 			}
 		}
-	} 
+	} while (!dataStreamFinished);
+
+	if (responses != NULL) {
+		FreeVec(responses);
+		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+		// if (config.speechEnabled)
+		// 	speakText(response);
+		if (isNewConversation) {
+			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
+			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
+			responses = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey, FALSE);
+			if (responses[0] != NULL) {
+				STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
+				formatText(responseString);
+				addConversationToConversationList(conversationList, currentConversation, responseString);
+				SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+				struct MinNode *titleRequestNode = RemTail(currentConversation);
+				FreeVec(titleRequestNode);
+				json_object_put(responses[0]);
+				FreeVec(responses);
+			}
+		}
+	} else {
+		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
+		struct MinNode *lastMessage = RemTail(currentConversation);
+		FreeVec(lastMessage);
+		if (currentConversation == currentConversation->mlh_TailPred) {
+			freeConversation(currentConversation);
+			currentConversation = NULL;
+			DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+		} else {
+			displayConversation(currentConversation);
+		}
+	}
 	FreeVec(text);
 }
 
@@ -958,6 +990,7 @@ static void displayConversation(struct MinList *conversation) {
 	}
 
 	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationString, TAG_DONE);
+	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_CursorY, ~0, TAG_DONE);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	FreeVec(conversationString);
 }

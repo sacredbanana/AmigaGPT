@@ -1,18 +1,16 @@
 #include <amissl/amissl.h>
-#include <proto/exec.h>
-#include <proto/socket.h>
-#include <proto/amissl.h>
-#include <proto/amisslmaster.h>
-#include <proto/utility.h>
 #include <libraries/amisslmaster.h>
 #include <libraries/amissl.h>
-#include <utility/utility.h>
+#include <proto/amissl.h>
+#include <proto/amisslmaster.h>
+#include <proto/exec.h>
+#include <proto/socket.h>
+#include <proto/utility.h>
 #include <string.h>
 #include <stdbool.h>
-#include "gui.h"
-#include "openai.h"
-
 #include <stdio.h>
+#include <utility/utility.h>
+#include "openai.h"
 #include "speech.h"
 #include "external/json-c/json.h"
 
@@ -37,7 +35,6 @@ LONG UsesOpenSSLStructs = FALSE;
 BOOL amiSSLInitialized = FALSE;
 UBYTE *writeBuffer = NULL;
 UBYTE *readBuffer = NULL;
-UBYTE *tempBuffer = NULL;
 X509 *server_cert;
 SSL_CTX *ctx;
 BIO *bio, *bio_err;
@@ -103,20 +100,19 @@ static BPTR GetStdErr() {
 LONG initOpenAIConnector() {
 	readBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY);
 	writeBuffer = AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY);
-	tempBuffer = AllocVec(TEMP_BUFFER_LENGTH, MEMF_ANY);
 
 	if ((UtilityBase = (struct UtilityBase *)OpenLibrary("utility.library", 0)) == NULL) {
-		displayError("failed to open utility.library\n");
+		displayError("failed to open utility.library");
 		return RETURN_ERROR;
 	}
 
 	if ((SocketBase = OpenLibrary("bsdsocket.library", 0)) == NULL) {
-		displayError("failed to open bsdsocket.library\n");
+		displayError("failed to open bsdsocket.library");
 		return RETURN_ERROR;
 	}
 
 	if ((AmiSSLMasterBase = OpenLibrary("amisslmaster.library", AMISSLMASTER_MIN_VERSION)) == NULL) {
-		displayError("failed to open amisslmaster.library\n");
+		displayError("failed to open amisslmaster.library");
 		return RETURN_ERROR;
 	}
 
@@ -128,7 +124,7 @@ LONG initOpenAIConnector() {
 					  AmiSSL_SocketBase, (ULONG)SocketBase,
 					  AmiSSL_ErrNoPtr, (ULONG)&errno,
 					  TAG_DONE) != 0) {
-		displayError("failed to initialize amisslmaster.library\n");
+		displayError("failed to initialize amisslmaster.library");
 		return RETURN_ERROR;
 	}
 		
@@ -167,19 +163,29 @@ static STRPTR getModelName(enum Model model) {
  * @param model the model to use
  * @param openAiApiKey the OpenAI API key
  * @param stream whether to stream the response or not
- * @return a pointer to a new json_object containing the response -- Free it with json_object_put() when you are done using it
- * @todo Handle errors
+ * @return a pointer to a new array of json_object containing the response(s) -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
-struct json_object* postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPTR openAiApiKey, BOOL stream) {
+struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPTR openAiApiKey, BOOL stream) {
 	struct sockaddr_in addr;
 	struct hostent *hostent;
-	struct json_object *response = NULL;
-	static BOOL streamingStarted = FALSE;
+	struct json_object **responses = AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+	static BOOL streamingInProgress = FALSE;
+	UWORD responseIndex = 0;
 
 	memset(readBuffer, 0, READ_BUFFER_LENGTH);
 	memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 
-	if (!stream || !streamingStarted) {
+	if (!stream || !streamingInProgress) {
+		printf("Connecting to OpenAI...\n");
+		streamingInProgress = stream;
+		if (ssl != NULL) {
+			SSL_free(ssl);
+		}
+
+		if (sock >- 0) {
+			CloseSocket(sock);
+		}
+
 		struct json_object *obj = json_object_new_object();
 		json_object_object_add(obj, "model", json_object_new_string(getModelName(model)));
 		struct json_object *conversationArray = json_object_new_array();
@@ -195,6 +201,8 @@ struct json_object* postMessageToOpenAI(struct MinList *conversation, enum Model
 		}
 
 		json_object_object_add(obj, "messages", conversationArray);
+
+		json_object_object_add(obj, "stream", json_object_new_boolean((json_bool)stream));
 		
 		STRPTR jsonString = json_object_to_json_string(obj);
 
@@ -209,103 +217,116 @@ struct json_object* postMessageToOpenAI(struct MinList *conversation, enum Model
 		json_object_put(obj);
 
 		/* The following needs to be done once per socket */
-			if((ssl = SSL_new(ctx)) != NULL) {
-				/* Lookup hostname */
-				if ((hostent = gethostbyname(HOST)) != NULL) {
-					memset(&addr, 0, sizeof(addr));
-					addr.sin_family = AF_INET;
-					addr.sin_port = htons(PORT);
-					addr.sin_len = hostent->h_length;;
-					memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
-				}
-				else {
-					displayError("Host lookup failed\n");
+		if((ssl = SSL_new(ctx)) != NULL) {
+			/* Lookup hostname */
+			if ((hostent = gethostbyname(HOST)) != NULL) {
+				memset(&addr, 0, sizeof(addr));
+				addr.sin_family = AF_INET;
+				addr.sin_port = htons(PORT);
+				addr.sin_len = hostent->h_length;;
+				memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
+			}
+			else {
+				displayError("Host lookup failed");
+				return NULL;
+			}
+
+			/* Create a socket and connect to the server */
+			if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
+				if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+					displayError("Couldn't connect to server");
 					return NULL;
 				}
+			}
 
-				/* Create a socket and connect to the server */
-				if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
-					if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-						displayError("Couldn't connect to server\n");
-						return NULL;
-					}
+			/* Check if connection was established */
+			if (sock >= 0) {
+				/* Associate the socket with the ssl structure */
+				SSL_set_fd(ssl, sock);
+
+				/* Set up SNI (Server Name Indication) */
+				SSL_set_tlsext_host_name(ssl, HOST);
+
+				/* Perform SSL handshake */
+				if((ssl_err = SSL_connect(ssl)) >= 0) {
+					// printf("SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
 				}
-
-				/* Check if connection was established */
-				if (sock >= 0) {
-					/* Associate the socket with the ssl structure */
-					SSL_set_fd(ssl, sock);
-
-					/* Set up SNI (Server Name Indication) */
-					SSL_set_tlsext_host_name(ssl, HOST);
-
-					/* Perform SSL handshake */
-					if((ssl_err = SSL_connect(ssl)) >= 0) {
-						// printf("SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
+				
+				/* If there were errors, print them */
+				if (ssl_err < 0) {
+					LONG err = SSL_get_error(ssl, ssl_err);
+					switch (err) {
+						case SSL_ERROR_ZERO_RETURN:
+							printf("SSL_ERROR_ZERO_RETURN\n");
+							break;
+						case SSL_ERROR_WANT_READ:
+							printf("SSL_ERROR_WANT_READ\n");
+							break;
+						case SSL_ERROR_WANT_WRITE:
+							printf("SSL_ERROR_WANT_WRITE\n");
+							break;
+						case SSL_ERROR_WANT_CONNECT:
+							printf("SSL_ERROR_WANT_CONNECT\n");
+							break;
+						case SSL_ERROR_WANT_ACCEPT:
+							printf("SSL_ERROR_WANT_ACCEPT\n");
+							break;
+						case SSL_ERROR_WANT_X509_LOOKUP:
+							printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+							break;
+						case SSL_ERROR_SYSCALL:
+							printf("SSL_ERROR_SYSCALL\n");
+							break;
+						case SSL_ERROR_SSL:
+							printf("SSL_ERROR_SSL\n");
+							break;
+						default:
+							printf("Unknown error: %ld\n", err);
+							break;
 					}
-					
-					/* If there were errors, print them */
-					if (ssl_err < 0) {
-						LONG err = SSL_get_error(ssl, ssl_err);
-						switch (err) {
-							case SSL_ERROR_ZERO_RETURN:
-								printf("SSL_ERROR_ZERO_RETURN\n");
-								break;
-							case SSL_ERROR_WANT_READ:
-								printf("SSL_ERROR_WANT_READ\n");
-								break;
-							case SSL_ERROR_WANT_WRITE:
-								printf("SSL_ERROR_WANT_WRITE\n");
-								break;
-							case SSL_ERROR_WANT_CONNECT:
-								printf("SSL_ERROR_WANT_CONNECT\n");
-								break;
-							case SSL_ERROR_WANT_ACCEPT:
-								printf("SSL_ERROR_WANT_ACCEPT\n");
-								break;
-							case SSL_ERROR_WANT_X509_LOOKUP:
-								printf("SSL_ERROR_WANT_X509_LOOKUP\n");
-								break;
-							case SSL_ERROR_SYSCALL:
-								printf("SSL_ERROR_SYSCALL\n");
-								break;
-							case SSL_ERROR_SSL:
-								printf("SSL_ERROR_SSL\n");
-								break;
-							default:
-								printf("Unknown error: %ld\n", err);
-								break;
-						}
-						return NULL;
-					}
-				} else {
-					displayError("Couldn't connect to host!\n");
 					return NULL;
 				}
 			} else {
-				displayError("Couldn't create new SSL handle!\n");
+				displayError("Couldn't connect to host!");
 				return NULL;
 			}
+		} else {
+			displayError("Couldn't create new SSL handle!");
+			return NULL;
+		}
 
 		ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 	}
 
-	if (ssl_err > 0 || streamingStarted) {
+	if (ssl_err > 0 || stream) {
 		ULONG totalBytesRead = 0;
 		WORD bytesRead = 0;
 		BOOL doneReading = FALSE;
 		LONG err = 0;
 		while (!doneReading) {
-			bytesRead = SSL_read(ssl, tempBuffer, TEMP_BUFFER_LENGTH);
+			bytesRead = SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
 				case SSL_ERROR_NONE:
-					memcpy(readBuffer + totalBytesRead, tempBuffer, bytesRead);
 					totalBytesRead += bytesRead;
-					STRPTR jsonString = strstr(readBuffer, "{");
-					response = json_tokener_parse(jsonString);
-					if (response != NULL) {
+					const STRPTR jsonStart = stream ? "data: {" : "{";
+					STRPTR jsonString = readBuffer;
+					while (jsonString = strstr(jsonString, jsonStart)) {
+						if (stream)
+							jsonString += 6; // Get to the start of the JSON
+						responses[responseIndex] = json_tokener_parse(jsonString);
 						doneReading = TRUE;
+						if (responses[responseIndex++] != NULL) {
+							if (stream) {
+								jsonString++;
+							} else {
+								break;
+							}
+						}
+					}
+					if (stream) {
+						if (strstr(readBuffer, "data: [DONE]"))
+							streamingInProgress = FALSE;
 					}
 					break;
 				case SSL_ERROR_ZERO_RETURN:
@@ -371,9 +392,7 @@ struct json_object* postMessageToOpenAI(struct MinList *conversation, enum Model
 				break;
 		}
 	}
-	SSL_free(ssl);
-	CloseSocket(sock);
-	return response;
+	return responses;
 }
 
 /**
@@ -457,5 +476,4 @@ void closeOpenAIConnector() {
 
 	FreeVec(writeBuffer);
 	FreeVec(readBuffer);
-	FreeVec(tempBuffer);
 }

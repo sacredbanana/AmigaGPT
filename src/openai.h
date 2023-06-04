@@ -2,7 +2,7 @@
 
 #define READ_BUFFER_LENGTH 8192
 #define WRITE_BUFFER_LENGTH 8192
-#define TEMP_BUFFER_LENGTH 1024
+#define RESPONSE_ARRAY_BUFFER_LENGTH 1024
 
 /**
  * A node in the conversation
@@ -52,10 +52,9 @@ LONG initOpenAIConnector();
  * @param model the model to use
  * @param openAiApiKey the OpenAI API key
  * @param stream whether to stream the response or not
- * @return a pointer to a new json_object containing the response -- Free it with json_object_put() when you are done using it
- * @todo Handle errors
+ * @return a pointer to a new array of json_object containing the response(s) -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
-struct json_object* postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPTR openAiApiKey, BOOL stream);
+struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPTR openAiApiKey, BOOL stream);
 
 /**
  * Cleanup the OpenAI connector and free all resources
