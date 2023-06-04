@@ -19,8 +19,8 @@ static UBYTE translationBuffer[TRANSLATION_BUFFER_SIZE];
 **/ 
 const STRPTR SPEECH_SYSTEM_NAMES[] = {
 	[SPEECH_SYSTEM_NONE] = "None",
-    [SPEECH_SYSTEM_34] = "Workbench 1.x v34",
-    [SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
+	[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
+	[SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
 };
 
 /**
@@ -104,7 +104,7 @@ void speakText(STRPTR text) {
 	NarratorIO->ch_masks = audioChannels;
 	NarratorIO->nm_masks = sizeof(audioChannels);
 	NarratorIO->message.io_Command= CMD_WRITE;
-    NarratorIO->message.io_Data = translationBuffer;
-    NarratorIO->message.io_Length = strlen(translationBuffer);
-    SendIO((struct IORequest *)NarratorIO);
+	NarratorIO->message.io_Data = translationBuffer;
+	NarratorIO->message.io_Length = strlen(translationBuffer);
+	SendIO((struct IORequest *)NarratorIO);
 }

@@ -169,6 +169,8 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_END, NULL, 0, 0, 0, 0}
 };
 
+static STRPTR getMessageContentFromJson(struct json_object *json);
+static void formatText(STRPTR unformattedText);
 static void sendMessage();
 static void closeGUILibraries();
 static LONG selectScreen();
@@ -198,57 +200,57 @@ static BOOL copyFile(STRPTR source, STRPTR destination);
 LONG openGUILibraries() {
 	if ((IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 47)) == NULL) {
 		printf("Could not open intuition.library\n");
-        return RETURN_ERROR;
+		return RETURN_ERROR;
 	}
 
 	if ((WindowBase = OpenLibrary("window.class", 47)) == NULL) {
 		printf("Could not open window.class\n");
-        return RETURN_ERROR;
+		return RETURN_ERROR;
 	}
 
 	if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 47)) == NULL) {
 		printf("Could not open layout.gadget\n");
-        return RETURN_ERROR;
+		return RETURN_ERROR;
 	}
 
 	if ((ButtonBase = OpenLibrary("gadgets/button.gadget", 47)) == NULL) {
 		printf("Could not open button.gadget\n");
-        return RETURN_ERROR;
+		return RETURN_ERROR;
 	}
 
 	if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 47)) == NULL) {
 		printf("Could not open radiobutton.gadget\n");
-        return RETURN_ERROR;
+		return RETURN_ERROR;
 	}
 
 	if ((TextFieldBase = OpenLibrary("gadgets/texteditor.gadget", 47)) == NULL) {
 		printf("Could not open texteditor.gadget\n");
-        return RETURN_ERROR;
+		return RETURN_ERROR;
 	}
 
 	if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 47)) == NULL) {
 		printf("Could not open scroller.gadget\n");
-        return RETURN_ERROR;
+		return RETURN_ERROR;
 	}
 
 	if ((StringBase = OpenLibrary("gadgets/string.gadget", 47)) == NULL) {
 		printf("Could not open string.gadget\n");
-        return RETURN_ERROR;
+		return RETURN_ERROR;
 	}
 
 	if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 47)) == NULL) {
 		printf("Could not open listbrowser.gadget\n");
-        return RETURN_ERROR;
+		return RETURN_ERROR;
 	}
 
 	if ((RequesterBase = OpenLibrary("requester.class", 47)) == NULL) {
 		printf("Could not open requester.class\n");
-        return RETURN_ERROR;
+		return RETURN_ERROR;
 	}
-	
+
 	if ((GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 47)) == NULL) {
 		printf( "Could not open graphics.library\n");
-        return RETURN_ERROR;
+		return RETURN_ERROR;
 	}
 
 	if ((AslBase = OpenLibrary("asl.library", 47)) == NULL) {
@@ -404,10 +406,11 @@ LONG initVideo() {
 	}
 
 	struct TagItem chatOutputMap[] = {
-		{SCROLLER_Top, GA_TEXTEDITOR_Prop_First},
-		{SCROLLER_Total, GA_TEXTEDITOR_Prop_Entries},
-		{SCROLLER_Visible, GA_TEXTEDITOR_Prop_Visible},
-		{TAG_DONE}
+		SCROLLER_ArrowDelta, GA_TEXTEDITOR_Prop_DeltaFactor,
+		SCROLLER_Total, GA_TEXTEDITOR_Prop_Entries,
+		SCROLLER_Top, GA_TEXTEDITOR_Prop_First,
+		SCROLLER_Visible, GA_TEXTEDITOR_Prop_Visible,
+		TAG_DONE
 	};
 
 	if ((chatOutputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
@@ -419,17 +422,17 @@ LONG initVideo() {
 		GA_TextAttr, &chatTextAttr,
 		GA_TEXTEDITOR_ImportHook, GV_TEXTEDITOR_ImportHook_MIME,
 		GA_TEXTEDITOR_ExportHook, GV_TEXTEDITOR_ExportHook_Plain,
-		ICA_MAP, chatOutputMap,
 		TAG_DONE)) == NULL) {
 			printf("Could not create text editor\n");
 			return RETURN_ERROR;
 	}
 
 	struct TagItem chatOutputScrollerMap[] = {
-		{GA_TEXTEDITOR_Prop_First, SCROLLER_Top},
-		{GA_TEXTEDITOR_Prop_Entries, SCROLLER_Total},
-		{GA_TEXTEDITOR_Prop_Visible, SCROLLER_Visible},
-		{TAG_DONE}
+		GA_TEXTEDITOR_Prop_DeltaFactor, SCROLLER_ArrowDelta,
+		GA_TEXTEDITOR_Prop_Entries, SCROLLER_Total,
+		GA_TEXTEDITOR_Prop_First, SCROLLER_Top,
+		GA_TEXTEDITOR_Prop_Visible, SCROLLER_Visible,
+		TAG_DONE
 	};
 
 	if ((chatOutputScroller = NewObject(SCROLLER_GetClass(), NULL,
@@ -437,18 +440,14 @@ LONG initVideo() {
 		GA_RelVerify, TRUE,
 		GA_Width, CHAT_OUTPUT_SCROLLER_WIDTH,
 		GA_Height, CHAT_OUTPUT_SCROLLER_HEIGHT,
-		SCROLLER_Top, 0,
-		SCROLLER_Visible, 100,
-		SCROLLER_Total, 100,
-		ICA_MAP, chatOutputScrollerMap,
-		ICA_TARGET, chatOutputTextEditor,
 		TAG_DONE)) == NULL) {
 			printf("Could not create scroller\n");
 			return RETURN_ERROR;
 	}
 
-	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, ICA_TARGET, chatOutputScroller, TAG_DONE);
-	
+	SetAttrs(chatOutputTextEditor, ICA_TARGET, chatOutputScroller, ICA_MAP, chatOutputMap, TAG_DONE);
+	SetAttrs(chatOutputScroller, ICA_TARGET, chatOutputTextEditor, ICA_MAP, chatOutputScrollerMap, TAG_DONE);
+
 	if ((chatInputLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
 		LAYOUT_HorizAlignment, LALIGN_CENTER,
@@ -505,7 +504,7 @@ LONG initVideo() {
 			printf("Could not create main layout\n");
 			return RETURN_ERROR;
 	}
-	
+
 	if ((mainWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
@@ -536,9 +535,6 @@ LONG initVideo() {
 
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_Pens, 0x00010002, TAG_DONE);
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
-
-	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, "/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n/AMIGA \n", TAG_DONE);
-
 
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 
@@ -580,7 +576,7 @@ static LONG selectScreen() {
 			printf("Could not create screenSelectRadioButton\n");
 			return RETURN_ERROR;
 	}
- 
+
 	if ((selectScreenOkButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SCREEN_SELECT_OK_BUTTON_ID,
 		GA_WIDTH, SCREEN_SELECT_OK_BUTTON_WIDTH,
@@ -643,10 +639,10 @@ static LONG selectScreen() {
 
 	GetAttr(WINDOW_SigMask, screenSelectWindowObject, &winSignal);
 	signalMask = winSignal;
-    while (!done) {
+	while (!done) {
 		signals = Wait(signalMask);
-        while ((result = DoMethod(screenSelectWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
-            switch (result & WMHI_CLASSMASK) {
+		while ((result = DoMethod(screenSelectWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
+			switch (result & WMHI_CLASSMASK) {
 				case WMHI_GADGETUP:
 					switch (result & WMHI_GADGETMASK) {
 						case SCREEN_SELECT_OK_BUTTON_ID:
@@ -702,7 +698,7 @@ static LONG selectScreen() {
 					break;
 				default:
 					break;
-			}  
+			}
 		}
 	}
 
@@ -712,8 +708,56 @@ static LONG selectScreen() {
 }
 
 /**
+ * Format a string with escape sequences into a string with the actual characters
+ * @param unformattedText the text to format
+**/
+static void formatText(STRPTR unformattedText) {
+	LONG newStringIndex = 0;
+	const LONG oldStringLength = strlen(unformattedText);
+	for (LONG oldStringIndex = 0; oldStringIndex < oldStringLength; oldStringIndex++) {
+		if (unformattedText[oldStringIndex] == '\\') {
+			if (unformattedText[oldStringIndex + 1] == 'n') {
+				unformattedText[newStringIndex++] = '\n';
+			} else if (unformattedText[oldStringIndex + 1] == 'r') {
+				unformattedText[newStringIndex++] = '\r';
+			} else if (unformattedText[oldStringIndex + 1] == 't') {
+				unformattedText[newStringIndex++] = '\t';
+			}
+			oldStringIndex++;
+		} else {
+			unformattedText[newStringIndex++] = unformattedText[oldStringIndex];
+		}
+	}
+	unformattedText[newStringIndex++] = '\0';
+}
+
+/**
+ * Get the message content from the JSON response from OpenAI
+ * @param json the JSON response from OpenAI
+ * @return a pointer to a new string containing the message content -- Free it with FreeVec() when you are done using it
+ * @todo Handle errors
+**/
+static STRPTR getMessageContentFromJson(struct json_object *json) {
+	if (json == NULL) return NULL;
+	struct json_object *error;
+	if (json_object_object_get_ex(json, "error", &error)) {
+		struct json_object *message = json_object_object_get(error, "message");
+		STRPTR messageString = json_object_get_string(message);
+		displayError(messageString);
+		return NULL;
+	}
+	
+	STRPTR json_str = json_object_to_json_string(json);
+	struct json_object *choices = json_object_object_get(json, "choices");
+	struct json_object *choice = json_object_array_get_idx(choices, 0);
+	struct json_object *message = json_object_object_get(choice, "message");
+	struct json_object *content = json_object_object_get(message, "content");
+	return json_object_get_string(content);
+}
+
+/**
  * Sends a message to the OpenAI API and displays the response and speaks it if speech is anabled
-**/ 
+**/
 static void sendMessage() {
 	BOOL isNewConversation = FALSE;
 	if (currentConversation == NULL) {
@@ -722,6 +766,7 @@ static void sendMessage() {
 	}
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Sending", TAG_DONE);
+	STRPTR receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 
 	STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
 	addTextToConversation(currentConversation, text, "user");
@@ -729,45 +774,51 @@ static void sendMessage() {
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 
-	STRPTR response = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey);
+	json_object *response = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey, FALSE);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	if (response != NULL) {
-		addTextToConversation(currentConversation, response, "assistant");
-		displayConversation(currentConversation);
-		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
-		if (config.speechEnabled)
-			speakText(response);
-		FreeVec(response);
-		if (isNewConversation) {
-			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
-			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
-			response = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey);
-			if (response != NULL) {
-				addConversationToConversationList(conversationList, currentConversation, response);
-				SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
-				struct MinNode *titleRequestNode = RemTail(currentConversation);
-				FreeVec(titleRequestNode);
-				FreeVec(response);
+		STRPTR responseString = getMessageContentFromJson(response);
+		if (responseString != NULL) {
+			formatText(responseString);
+			addTextToConversation(currentConversation, responseString, "assistant");
+			displayConversation(currentConversation);
+			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+			if (config.speechEnabled)
+				speakText(response);
+			json_object_put(response);
+			if (isNewConversation) {
+				SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
+				addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
+				response = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey, FALSE);
+				if (response != NULL) {
+					responseString = getMessageContentFromJson(response);
+					formatText(responseString);
+					addConversationToConversationList(conversationList, currentConversation, responseString);
+					SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+					struct MinNode *titleRequestNode = RemTail(currentConversation);
+					FreeVec(titleRequestNode);
+					json_object_put(response);
+				}
+			}
+		} else {
+			SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
+			struct MinNode *lastMessage = RemTail(currentConversation);
+			FreeVec(lastMessage);
+			if (currentConversation == currentConversation->mlh_TailPred) {
+				freeConversation(currentConversation);
+				currentConversation = NULL;
+				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+			} else {
+				displayConversation(currentConversation);
 			}
 		}
-	} else {
-		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
-		struct MinNode *lastMessage = RemTail(currentConversation);
-		FreeVec(lastMessage);
-		if (currentConversation == currentConversation->mlh_TailPred) {
-			freeConversation(currentConversation);
-			currentConversation = NULL;
-			DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
-		} else {
-			displayConversation(currentConversation);
-		}
-	}
+	} 
 	FreeVec(text);
 }
 
 /**
  * Sets the checkbox for the model that is currently selected
-**/ 
+**/
 static void refreshModelMenuItems() {
 	struct NewMenu *menu = amigaGPTMenu;
 	while (menu->nm_UserData != MENU_ITEM_MODEL_ID) {
@@ -787,7 +838,7 @@ static void refreshModelMenuItems() {
 
 /**
  * Sets the checkboxes for the speech options that are currently selected
-**/ 
+**/
 static void refreshSpeechMenuItems() {
 	struct NewMenu *menu = amigaGPTMenu;
 	while (menu->nm_UserData != MENU_ITEM_SPEECH_ACCENT_ID) {
@@ -826,7 +877,7 @@ static struct MinList* newConversation() {
  * @param conversation The conversation to add the text to
  * @param text The text to add to the conversation
  * @param role The role of the text (user or assistant)
-**/ 
+**/
 static void addTextToConversation(struct MinList *conversation, STRPTR text, STRPTR role) {
 	struct ConversationNode *conversationNode = AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
 	if (conversationNode == NULL) {
@@ -834,9 +885,9 @@ static void addTextToConversation(struct MinList *conversation, STRPTR text, STR
 		return;
 	}
 	strncpy(conversationNode->role, role, sizeof(conversationNode->role) - 1);
-    conversationNode->role[sizeof(conversationNode->role) - 1] = '\0';
-    strncpy(conversationNode->content, text, sizeof(conversationNode->content) - 1);
-    conversationNode->content[sizeof(conversationNode->content) - 1] = '\0';
+	conversationNode->role[sizeof(conversationNode->role) - 1] = '\0';
+	strncpy(conversationNode->content, text, sizeof(conversationNode->content) - 1);
+	conversationNode->content[sizeof(conversationNode->content) - 1] = '\0';
 	AddTail(conversation, (struct Node *)conversationNode);
 }
 
@@ -845,7 +896,7 @@ static void addTextToConversation(struct MinList *conversation, STRPTR text, STR
  * @param conversationList The conversation list to add the conversation to
  * @param conversation The conversation to add to the conversation list
  * @param title The title of the conversation
-**/ 
+**/
 static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation, STRPTR title) {
 	struct Node *node;
 	if ((node = AllocListBrowserNode(1,
@@ -857,7 +908,7 @@ static void addConversationToConversationList(struct List *conversationList, str
 			return RETURN_ERROR;
 	}
 
-	SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);		
+	SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
 	AddHead(conversationList, node);
 	SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
 }
@@ -884,13 +935,13 @@ static struct MinList* getConversationFromConversationList(struct List *conversa
  * @param conversation the conversation to display
 **/
 static void displayConversation(struct MinList *conversation) {
-    struct ConversationNode *conversationNode;
-    DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+	struct ConversationNode *conversationNode;
+	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	STRPTR conversationString = AllocVec(WRITE_BUFFER_LENGTH, MEMF_CLEAR);
 
-    for (conversationNode = (struct ConversationNode *)conversation->mlh_Head; 
-         conversationNode->node.mln_Succ != NULL; 
-         conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
+	for (conversationNode = (struct ConversationNode *)conversation->mlh_Head;
+		 conversationNode->node.mln_Succ != NULL;
+		 conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
 			if ((strlen(conversationString) + strlen(conversationNode->content) + 5) > WRITE_BUFFER_LENGTH) {
 				displayError("The conversation has exceeded the maximum length.\n\nPlease start a new conversation.");
 				SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
@@ -904,7 +955,7 @@ static void displayConversation(struct MinList *conversation) {
 			} else {
 				snprintf(conversationString, WRITE_BUFFER_LENGTH - 3, "%s\n\n%s\0", conversationString, conversationNode->content);
 			}
-    }
+	}
 
 	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationString, TAG_DONE);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
@@ -914,7 +965,7 @@ static void displayConversation(struct MinList *conversation) {
 /**
  * Free the conversation
  * @param conversation The conversation to free
-**/ 
+**/
 static void freeConversation(struct MinList *conversation) {
 	struct ConversationNode *conversationNode;
 	while ((conversationNode = (struct ConversationNode *)RemHead(conversation)) != NULL) {
@@ -942,14 +993,14 @@ static void freeConversationList() {
  * Remove a conversation from the conversation list
  * @param conversationList The conversation list to remove the conversation from
  * @param conversation The conversation to remove from the conversation list
-**/ 
+**/
 static void removeConversationFromConversationList(struct List *conversationList, struct MinList *conversation) {
 	struct Node *node = conversationList->lh_Head->ln_Succ;
 	while (node->ln_Succ != NULL) {
 		struct ConversationNode *conversationNode;
 		GetListBrowserNodeAttrs(node, LBNA_UserData, (struct ConversationNode *)&conversationNode, TAG_END);
 		if (conversationNode == conversation) {
-			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);		
+			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
 			Remove(node);
 			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
 			freeConversation(conversation);
@@ -965,19 +1016,19 @@ static void removeConversationFromConversationList(struct List *conversationList
  * @return The return code of the application
  * @see RETURN_OK
  * @see RETURN_ERROR
-**/ 
+**/
 LONG startGUIRunLoop() {
-    ULONG signalMask, winSignal, signals, result;
+	ULONG signalMask, winSignal, signals, result;
 	BOOL done = FALSE;
-    WORD code;
+	WORD code;
 
-    GetAttr(WINDOW_SigMask, mainWindowObject, &winSignal);
+	GetAttr(WINDOW_SigMask, mainWindowObject, &winSignal);
 	signalMask = winSignal;
 
 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GFLG_SELECTED, TRUE, TAG_DONE);
 
-    while (!done) {
-        signals = Wait(signalMask);
+	while (!done) {
+		signals = Wait(signalMask);
 
 		BOOL isTextInputTextEditorActive = GetAttr(GFLG_SELECTED, textInputTextEditor, NULL);
 		BOOL isChatOutputTextEditorActive = GetAttr(GFLG_SELECTED, chatOutputTextEditor, NULL);
@@ -1041,7 +1092,7 @@ LONG startGUIRunLoop() {
 					struct MenuItem *menuItem = ItemAddress(menuStrip, code);
 					ULONG itemIndex = GTMENUITEM_USERDATA(menuItem);
 					switch (itemIndex) {
-						case MENU_ITEM_ABOUT_ID: 
+						case MENU_ITEM_ABOUT_ID:
 							openAboutWindow();
 							break;
 						case MENU_ITEM_CUT_ID:
@@ -1217,67 +1268,67 @@ LONG startGUIRunLoop() {
 /**
  * Display an error message
  * @param message the message to display
-**/ 
+**/
 void displayError(STRPTR message) {
-    DisplayBeep(screen);
-    SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Error", TAG_DONE);
-    
-    STRPTR adjustedMsg = AllocVec(strlen(message) + 200, MEMF_ANY | MEMF_CLEAR);
-    STRPTR dest = adjustedMsg;
+	DisplayBeep(screen);
+	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Error", TAG_DONE);
 
-    ULONG width = 300;
-    struct RastPort rp = screen->RastPort;
-    struct TextExtent te;
-    
-    while (*message != '\0') {
-        // Find how much of the message fits within half the screen width
+	STRPTR adjustedMsg = AllocVec(strlen(message) + 200, MEMF_ANY | MEMF_CLEAR);
+	STRPTR dest = adjustedMsg;
+
+	ULONG width = 300;
+	struct RastPort rp = screen->RastPort;
+	struct TextExtent te;
+
+	while (*message != '\0') {
+		// Find how much of the message fits within half the screen width
 		ULONG fits = TextFit(&rp, message, strlen(message), &te, NULL, 1, width, rp.Font->tf_YSize);
 
-        // Find last space in the range that fits
-        STRPTR lastSpace = message + fits;
-        while (lastSpace > message && *lastSpace != ' ') {
-            lastSpace--;
-        }
+		// Find last space in the range that fits
+		STRPTR lastSpace = message + fits;
+		while (lastSpace > message && *lastSpace != ' ') {
+			lastSpace--;
+		}
 
-        // If we found a space, replace it with a newline and copy the line to the output
-        if (*lastSpace == ' ' && lastSpace != message) {
-            memcpy(dest, message, lastSpace - message);
-            dest[lastSpace - message] = '\n';
-            dest += lastSpace - message + 1;
-            message = lastSpace + 1;
-        } else {
-            // If we didn't find a space, just copy the part that fits
-            memcpy(dest, message, fits);
-            dest += fits;
-            message += fits;
-            // If we have not reached the end of the message, add a newline
-            if (*message != '\0') {
-                *dest++ = '\n';
-            }
-        }
-    }
+		// If we found a space, replace it with a newline and copy the line to the output
+		if (*lastSpace == ' ' && lastSpace != message) {
+			memcpy(dest, message, lastSpace - message);
+			dest[lastSpace - message] = '\n';
+			dest += lastSpace - message + 1;
+			message = lastSpace + 1;
+		} else {
+			// If we didn't find a space, just copy the part that fits
+			memcpy(dest, message, fits);
+			dest += fits;
+			message += fits;
+			// If we have not reached the end of the message, add a newline
+			if (*message != '\0') {
+				*dest++ = '\n';
+			}
+		}
+	}
 
 	*dest = '\0';
-    
-    struct EasyStruct errorRequester = {
-        sizeof(struct EasyStruct),
-        0,
-        "Error",
-        adjustedMsg,
-        "OK"
-    };
-    EasyRequest(mainWindow, &errorRequester, NULL, NULL);
+
+	struct EasyStruct errorRequester = {
+		sizeof(struct EasyStruct),
+		0,
+		"Error",
+		adjustedMsg,
+		 "OK"
+	};
+	EasyRequest(mainWindow, &errorRequester, NULL, NULL);
 
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 
-    FreeVec(adjustedMsg);
+	FreeVec(adjustedMsg);
 }
 
 /**
  * Display an error message about a disk error
  * @param message the message to display
  * @param error the error code returned by IOErr()
-**/ 
+**/
 void displayDiskError(STRPTR message, LONG error) {
 	const UBYTE ERROR_BUFFER_LENGTH = 255;
 	const UBYTE FINAL_MESSAGE_LENGTH = strlen(message) + ERROR_BUFFER_LENGTH;
@@ -1314,7 +1365,7 @@ static void openAboutWindow() {
 }
 
 /**
- * Opens a requester for the user to select the font for the chat window 
+ * Opens a requester for the user to select the font for the chat window
 **/
 static void openChatFontRequester() {
 	struct FontRequester *fontRequester;
@@ -1350,7 +1401,7 @@ static void openUIFontRequester() {
 			config.uiFontName[sizeof(config.uiFontName) - 1] = '\0';
 			config.uiFontSize = uiFont->ta_YSize;
 			config.uiFontStyle = uiFont->ta_Style;
-			config.uiFontFlags = uiFont->ta_Flags;										
+			config.uiFontFlags = uiFont->ta_Flags;
 			writeConfig();
 			if (!isPublicScreen) {
 				if (uiTextFont)
@@ -1387,7 +1438,7 @@ static void openSpeechAccentRequester() {
 									ASLFR_DoPatterns, TRUE,
 									ASLFR_InitialPattern, "#?.accent",
 									TAG_DONE);
-								
+
 	if (fileRequester) {
 		if (AslRequestTags(fileRequester, TAG_DONE)) {
 			strncpy(config.speechAccent, fileRequester->fr_File, sizeof(config.speechAccent) - 1);
@@ -1431,11 +1482,11 @@ static void openApiKeyRequester() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG saveConversations() {
-    BPTR file = Open("PROGDIR:chat-history.json", MODE_NEWFILE);
-    if (file == 0) {
-        displayDiskError("Failed to create message history file. Conversation history will not be saved.", IoErr());
-        return RETURN_ERROR;
-    }
+	BPTR file = Open("PROGDIR:chat-history.json", MODE_NEWFILE);
+	if (file == 0) {
+		displayDiskError("Failed to create message history file. Conversation history will not be saved.", IoErr());
+		return RETURN_ERROR;
+	}
 
 	struct json_object *conversationsJsonArray = json_object_new_array();
 	struct json_object *conversationJsonObject;
@@ -1449,14 +1500,14 @@ LONG saveConversations() {
 		json_object_object_add(conversationJsonObject, "name", json_object_new_string(conversationTitle));
 		struct json_object *messagesJsonArray = json_object_new_array();
 		struct ConversationNode *conversationNode;
-		for (conversationNode = (struct ConversationNode *)conversation->mlh_Head; 
-         conversationNode->node.mln_Succ != NULL; 
-         conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
+		for (conversationNode = (struct ConversationNode *)conversation->mlh_Head;
+			conversationNode->node.mln_Succ != NULL;
+			conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
 			struct json_object *messageJsonObject = json_object_new_object();
 			json_object_object_add(messageJsonObject, "role", json_object_new_string(conversationNode->role));
 			json_object_object_add(messageJsonObject, "content", json_object_new_string(conversationNode->content));
 			json_object_array_add(messagesJsonArray, messageJsonObject);
-    	}
+		}
 		json_object_object_add(conversationJsonObject, "messages", messagesJsonArray);
 		json_object_array_add(conversationsJsonArray, conversationJsonObject);
 		conversationListNode = conversationListNode->ln_Succ;
@@ -1464,16 +1515,16 @@ LONG saveConversations() {
 
 	STRPTR conversationsJsonString = (STRPTR)json_object_to_json_string_ext(conversationsJsonArray, JSON_C_TO_STRING_PRETTY);
 
-    if (Write(file, conversationsJsonString, strlen(conversationsJsonString)) != (LONG)strlen(conversationsJsonString)) {
-        displayError("Failed to write to message history file. Conversation history will not be saved.");
-        Close(file);
+	if (Write(file, conversationsJsonString, strlen(conversationsJsonString)) != (LONG)strlen(conversationsJsonString)) {
+		displayError("Failed to write to message history file. Conversation history will not be saved.");
+		Close(file);
 		json_object_put(conversationsJsonArray);
-        return RETURN_ERROR;
-    }
+		return RETURN_ERROR;
+	}
 
-    Close(file);
+	Close(file);
 	json_object_put(conversationsJsonArray);
-    return RETURN_OK;
+	return RETURN_OK;
 }
 
 /**
@@ -1573,61 +1624,60 @@ LONG loadConversations() {
 static BOOL copyFile(STRPTR source, STRPTR destination) {
 	const UBYTE ERROR_MESSAGE_BUFFER_SIZE = 255;
 	const UWORD FILE_BUFFER_SIZE = 4096;
-    BPTR srcFile, dstFile;
-    LONG bytesRead, bytesWritten;
-    APTR buffer = AllocVec(FILE_BUFFER_SIZE, MEMF_ANY);
+	BPTR srcFile, dstFile;
+	LONG bytesRead, bytesWritten;
+	APTR buffer = AllocVec(FILE_BUFFER_SIZE, MEMF_ANY);
 	STRPTR errorMessage = AllocVec(ERROR_MESSAGE_BUFFER_SIZE, MEMF_ANY);
 
-    if (!(srcFile = Open(source, MODE_OLDFILE))) {
+	if (!(srcFile = Open(source, MODE_OLDFILE))) {
 		snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error opening %s for copy", source);
 		displayDiskError(errorMessage, IoErr());
 		FreeVec(buffer);
 		FreeVec(errorMessage);
-        return FALSE;
-    }
+		return FALSE;
+	}
 
-    if (!(dstFile = Open(destination, MODE_NEWFILE))) {
+	if (!(dstFile = Open(destination, MODE_NEWFILE))) {
 		snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error creating %s for copy", destination);
 		displayDiskError(errorMessage, IoErr());
 		FreeVec(buffer);
 		FreeVec(errorMessage);
-        Close(srcFile);
-        return FALSE;
-    }
+		Close(srcFile);
+		return FALSE;
+	}
 
-    do {
-        bytesRead = Read(srcFile, buffer, sizeof(buffer));
+	do {
+		bytesRead = Read(srcFile, buffer, sizeof(buffer));
 
-        if (bytesRead > 0) {
-            bytesWritten = Write(dstFile, buffer, bytesRead);
+		if (bytesRead > 0) {
+			bytesWritten = Write(dstFile, buffer, bytesRead);
 
-            if (bytesWritten != bytesRead) {
+			if (bytesWritten != bytesRead) {
 				snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error copying %s to %s", source, destination);
 				displayDiskError(errorMessage, IoErr());
 				FreeVec(buffer);
 				FreeVec(errorMessage);
-                Close(srcFile);
-                Close(dstFile);
-                return FALSE;
-            }
-        }
-        else if (bytesRead < 0) {
+				Close(srcFile);
+				Close(dstFile);
+				return FALSE;
+			}
+		}
+		else if (bytesRead < 0) {
 			snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error copying %s to %s", source, destination);
 			displayDiskError(errorMessage, IoErr());
 			FreeVec(buffer);
 			FreeVec(errorMessage);
 			Close(srcFile);
 			Close(dstFile);
-            return FALSE;
-        }
-    } while (bytesRead > 0);
+			return FALSE;
+		}
+	} while (bytesRead > 0);
 
 	FreeVec(buffer);
 	FreeVec(errorMessage);
-    Close(srcFile);
-    Close(dstFile);
-
-    return TRUE;
+	Close(srcFile);
+	Close(dstFile);
+	return TRUE;
 }
 
 /**

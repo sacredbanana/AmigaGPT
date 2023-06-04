@@ -8,17 +8,17 @@
  * A node in the conversation
 **/
 struct ConversationNode {
-    /**
-     * The linking node
-    **/
+	/**
+	 * The linking node
+	**/
 	struct MinNode node;
-    /**
-     * The role of the speaker. Currently the only roles supported by OpenAI are "user" and "assistant"
-    **/
+	/**
+	 * The role of the speaker. Currently the only roles supported by OpenAI are "user" and "assistant"
+	**/
 	UBYTE role[64];
-    /**
-     * The text of the message
-    **/
+	/**
+	 * The text of the message
+	**/
 	UBYTE content[READ_BUFFER_LENGTH];
 };
 
@@ -26,12 +26,12 @@ struct ConversationNode {
  * The model OpenAI should use
 **/
 enum Model {
-    GPT_4 = 0,
-    GPT_4_0314,
-    GPT_4_32K,
-    GPT_4_32K_0314,
-    GPT_3_5_TURBO,
-    GPT_3_5_TURBO_0301
+	GPT_4 = 0,
+	GPT_4_0314,
+	GPT_4_32K,
+	GPT_4_32K_0314,
+	GPT_3_5_TURBO,
+	GPT_3_5_TURBO_0301
 };
 
 /**
@@ -51,10 +51,11 @@ LONG initOpenAIConnector();
  * @param conversation the conversation to post
  * @param model the model to use
  * @param openAiApiKey the OpenAI API key
- * @return a pointer to a new string containing the response -- Free it with FreeVec() when you are done using it
+ * @param stream whether to stream the response or not
+ * @return a pointer to a new json_object containing the response -- Free it with json_object_put() when you are done using it
  * @todo Handle errors
 **/
-STRPTR postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPTR openAiApiKey);
+struct json_object* postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPTR openAiApiKey, BOOL stream);
 
 /**
  * Cleanup the OpenAI connector and free all resources

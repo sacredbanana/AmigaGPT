@@ -24,11 +24,11 @@ LONG main() {
 	struct CommandLineInterface *cli = (struct CommandLineInterface *)BADDR(currentTask->pr_CLI);
 
 	/* If we started from Workbench then we must retrieve the startup message
-     before doing anything else. The startup message also contains a lock on
-     the program directory. */
+	 before doing anything else. The startup message also contains a lock on
+	 the program directory. */
 	if (cli == NULL) {
 		WaitPort(&currentTask->pr_MsgPort);
-    	wbStartupMessage = (struct WBStartup*)GetMsg(&currentTask->pr_MsgPort);
+		wbStartupMessage = (struct WBStartup*)GetMsg(&currentTask->pr_MsgPort);
 	}
 
 	if (openLibraries() == RETURN_ERROR) {
@@ -71,7 +71,7 @@ LONG main() {
 static LONG openLibraries() {
 	if ((DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 47)) == NULL) {
 		printf("Failed to open dos.library v47. This app requires AmigaOS 3.2 or higher\n");
-        return RETURN_ERROR;
+		return RETURN_ERROR;
 	}
 	return RETURN_OK;
 }

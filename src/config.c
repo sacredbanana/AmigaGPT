@@ -38,11 +38,11 @@ struct Config config = {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG writeConfig() {
-    BPTR file = Open("PROGDIR:config.json", MODE_NEWFILE);
-    if (file == 0) {
-        printf("Failed to open the config file\n");
-        return RETURN_ERROR;
-    }
+	BPTR file = Open("PROGDIR:config.json", MODE_NEWFILE);
+	if (file == 0) {
+		printf("Failed to open the config file\n");
+		return RETURN_ERROR;
+	}
 
 	struct json_object *configJsonObject = json_object_new_object();
 	json_object_object_add(configJsonObject, "speechEnabled", json_object_new_boolean(config.speechEnabled));
@@ -60,16 +60,16 @@ LONG writeConfig() {
 	json_object_object_add(configJsonObject, "openAiApiKey", json_object_new_string(config.openAiApiKey));
 	STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(configJsonObject, JSON_C_TO_STRING_PRETTY);
 
-    if (Write(file, configJsonString, strlen(configJsonString)) != strlen(configJsonString)) {
-        printf("Failed to write the data to the config file\n");
-        Close(file);
+	if (Write(file, configJsonString, strlen(configJsonString)) != strlen(configJsonString)) {
+		printf("Failed to write the data to the config file\n");
+		Close(file);
 		json_object_put(configJsonObject);
-        return RETURN_ERROR;
-    }
+		return RETURN_ERROR;
+	}
 
-    Close(file);
+	Close(file);
 	json_object_put(configJsonObject);
-    return RETURN_OK;
+	return RETURN_OK;
 }
 
 /**
