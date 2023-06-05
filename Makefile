@@ -34,13 +34,13 @@ VASM = /opt/amiga/bin/vasmm68k_mot
 ifdef WINDOWS
 	SDKDIR = $(abspath $(dir $(shell where $(CC)))..\m68k-amiga-elf\sys-include)
 else
-	# SDKDIR = $(abspath $(dir $(shell which $(CC)))../m68k-amiga-elf/sys-include)
+	OS3LIBDIR = /opt/amiga/m68k-amigaos/lib/AmigaOS3
 	SDKDIR = /opt/amiga/m68k-amigaos/sys-include
 	NDKDIR = /opt/amiga/m68k-amigaos/ndk-include
 	INCDIR = /opt/amiga/m68k-amigaos/include
 endif
 
-CCFLAGS = -g -MP -MMD -m68000 -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -noixemul -fbaserel -lamiga -lm
+CCFLAGS = -g -MP -MMD -m68000 -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -noixemul -fbaserel -L$(OS3LIBDIR) -lamiga -lm -lamisslstubs
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),-D
 LDFLAGS =  -Wl,-Map=$(OUT).map

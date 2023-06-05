@@ -20,13 +20,12 @@
 static ULONG rangeRand(ULONG maxValue);
 static BPTR ErrOutput();
 static BPTR GetStdErr();
-static void cleanup();
 static LONG createSSLContext();
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static STRPTR getModelName(enum Model model);
 
-struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase;
+struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase = NULL;
 struct Library *UtilityBase;
 static SSL_CTX *_ssl_context;
 LONG UsesOpenSSLStructs = FALSE;
@@ -176,6 +175,7 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 	if (!stream || !streamingInProgress) {
 		streamingInProgress = stream;
 		if (ssl != NULL) {
+			SSL_shutdown(ssl);
 			SSL_free(ssl);
 		}
 
@@ -389,6 +389,11 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 				break;
 		}
 	}
+	if (!stream) {
+		SSL_shutdown(ssl);
+		SSL_free(ssl);
+		ssl = NULL;
+	}
 	return responses;
 }
 
@@ -460,7 +465,6 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx) {
 **/
 void closeOpenAIConnector() {
 	if (amiSSLInitialized) {
-		SSL_shutdown(ssl);
 		SSL_CTX_free(ctx);
 		BIO_free(bio_err);
 		CleanupAmiSSLA(NULL);
@@ -470,6 +474,23 @@ void closeOpenAIConnector() {
 		CloseAmiSSL();
 		AmiSSLBase = NULL;
 	}
+
+	if (AmiSSLMasterBase) {
+		CloseLibrary(AmiSSLMasterBase);
+		AmiSSLMasterBase = NULL;
+	}
+
+	if (UtilityBase) {
+		CloseLibrary(UtilityBase);
+		UtilityBase = NULL;
+	}
+
+	if (SocketBase) {
+		CloseLibrary(SocketBase);
+		SocketBase = NULL;
+	}
+
+	sock = NULL;
 
 	FreeVec(writeBuffer);
 	FreeVec(readBuffer);
