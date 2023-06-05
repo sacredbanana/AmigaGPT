@@ -53,7 +53,8 @@
         "translator_protos.h": "c",
         "text.h": "c",
         "asl.h": "c",
-        "alib_protos.h": "c"
+        "alib_protos.h": "c",
+        "window.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

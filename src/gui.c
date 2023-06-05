@@ -99,16 +99,16 @@ extern struct DosLibrary *DOSBase;
 struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
 struct Library *AslBase;
-static struct Library *WindowBase;
-static struct Library *LayoutBase;
-static struct Library *ButtonBase;
-static struct Library *RadioButtonBase;
+struct Library *WindowBase;
+struct Library *LayoutBase;
+struct Library *ButtonBase;
+struct Library *RadioButtonBase;
 struct Library *TextFieldBase;
-static struct Library *ScrollerBase;
-static struct Library *StringBase;
-static struct Library *ListBrowserBase;
-static struct Library *RequesterBase;
-static struct Window *mainWindow;
+struct Library *ScrollerBase;
+struct Library *StringBase;
+struct Library *ListBrowserBase;
+struct Library *RequesterBase;
+struct Window *mainWindow;
 static Object *mainWindowObject;
 static Object *mainLayout;
 static Object *chatLayout;
@@ -180,7 +180,7 @@ static struct MinList* newConversation();
 static void addTextToConversation(struct MinList *conversation, STRPTR text, STRPTR role);
 static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation, STRPTR title);
 static struct MinList* getConversationFromConversationList(struct List *conversationList, ULONG index);
-static void displayConversation(struct MinList *conversation);
+static void displayConversation(struct MinList *conversation, BOOL scrollToBottom);
 static void freeConversation(struct MinList *conversation);
 static void freeConversationList();
 static void removeConversationFromConversationList(struct List *conversationList, struct MinList *conversation);
@@ -779,7 +779,7 @@ static void sendMessage() {
 
 	STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
 	addTextToConversation(currentConversation, text, "user");
-	displayConversation(currentConversation);
+	displayConversation(currentConversation, TRUE);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
@@ -787,6 +787,8 @@ static void sendMessage() {
 	addTextToConversation(currentConversation, "", "assistant");
 
 	BOOL dataStreamFinished = FALSE;
+	ULONG speechIndex = 0;
+	UWORD wordNumber = 0;
 	do {
 		responses = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey, TRUE);
 		UWORD responseIndex = 0;
@@ -801,7 +803,15 @@ static void sendMessage() {
 				struct MinNode *assistantMessageNode = RemTail(currentConversation);
 				FreeVec(assistantMessageNode);
 				addTextToConversation(currentConversation, receivedMessage, "assistant");
-				displayConversation(currentConversation);
+				if (++wordNumber % 50 == 0) {
+					displayConversation(currentConversation, TRUE);
+					if (config.speechEnabled) {
+						speakText(receivedMessage + speechIndex);
+						speechIndex = strlen(receivedMessage);
+					}
+				} else {
+					displayConversation(currentConversation, FALSE);
+				}
 				finishReason = json_object_get_string(json_object_object_get(response, "finish_reason"));
 				if (finishReason != NULL) {
 					dataStreamFinished = TRUE;
@@ -814,10 +824,11 @@ static void sendMessage() {
 	} while (!dataStreamFinished);
 
 	if (responses != NULL) {
+		if (config.speechEnabled) {
+			speakText(receivedMessage + speechIndex);
+		}
 		FreeVec(responses);
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
-		// if (config.speechEnabled)
-		// 	speakText(response);
 		if (isNewConversation) {
 			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
@@ -842,7 +853,7 @@ static void sendMessage() {
 			currentConversation = NULL;
 			DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 		} else {
-			displayConversation(currentConversation);
+			displayConversation(currentConversation, TRUE);
 		}
 	}
 	FreeVec(text);
@@ -965,8 +976,9 @@ static struct MinList* getConversationFromConversationList(struct List *conversa
 /**
  * Prints the conversation to the conversation window
  * @param conversation the conversation to display
+ * @param scrollToBottom whether to scroll to the bottom of the conversation
 **/
-static void displayConversation(struct MinList *conversation) {
+static void displayConversation(struct MinList *conversation, BOOL scrollToBottom) {
 	struct ConversationNode *conversationNode;
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	STRPTR conversationString = AllocVec(WRITE_BUFFER_LENGTH, MEMF_CLEAR);
@@ -988,9 +1000,15 @@ static void displayConversation(struct MinList *conversation) {
 				snprintf(conversationString, WRITE_BUFFER_LENGTH - 3, "%s\n\n%s\0", conversationString, conversationNode->content);
 			}
 	}
-
+	
+	snprintf(conversationString, WRITE_BUFFER_LENGTH - 3, "%s\n ", conversationString);
 	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationString, TAG_DONE);
-	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_CursorY, ~0, TAG_DONE);
+	
+	if (scrollToBottom) {
+		Delay(1);
+		SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_CursorY, ~0, TAG_DONE);
+	}
+	
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
 	FreeVec(conversationString);
 }
@@ -1113,7 +1131,7 @@ LONG startGUIRunLoop() {
 								struct MinList *conversation;
 								GetListBrowserNodeAttrs(node, LBNA_UserData,&conversation, TAG_END);
 								currentConversation = conversation;
-								displayConversation(currentConversation);
+								displayConversation(currentConversation, TRUE);
 								break;
 							}
 					}

@@ -5,9 +5,6 @@
 #include "config.h"
 #include "external/json-c/json.h"
 
-extern struct ExecBase *SysBase;
-extern struct DosLibrary *DOSBase;
-
 struct Config config = {
 	.speechEnabled = TRUE,
 	.speechAccent = "!USA.accent",

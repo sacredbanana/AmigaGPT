@@ -40,7 +40,7 @@ else
 	INCDIR = /opt/amiga/m68k-amigaos/include
 endif
 
-CCFLAGS = -g -MP -MMD -m68000 -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -D__NOLIBBASE__ -noixemul -fbaserel -lamiga -lm
+CCFLAGS = -g -MP -MMD -m68000 -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -noixemul -fbaserel -lamiga -lm
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),-D
 LDFLAGS =  -Wl,-Map=$(OUT).map

@@ -6,12 +6,11 @@
 
 #define TRANSLATION_BUFFER_SIZE 8192
 
-extern struct ExecBase* SysBase;
 struct Library *TranslatorBase = NULL;
 static struct MsgPort *NarratorPort = NULL;
 static struct narrator_rb *NarratorIO = NULL;
 static BYTE audioChannels[4] = {3, 5, 10, 12};
-static UBYTE translationBuffer[TRANSLATION_BUFFER_SIZE];
+static STRPTR translationBuffer;
 
 /**
  * The names of the speech systems
@@ -29,6 +28,8 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG initSpeech(enum SpeechSystem speechSystem) {
+	translationBuffer = AllocVec(TRANSLATION_BUFFER_SIZE, MEMF_ANY);
+
 	if (!(NarratorPort = CreateMsgPort())) {
 		printf("Could not create narrator port\n");
 		return RETURN_ERROR;
@@ -68,6 +69,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
  * Close the speech system
 **/
 void closeSpeech() {
+	FreeVec(translationBuffer);
 	if (TranslatorBase != NULL) {
 		CloseLibrary(TranslatorBase);
 		Forbid();
@@ -98,8 +100,9 @@ void closeSpeech() {
 **/
 void speakText(STRPTR text) {
 	if (CheckIO((struct IORequest *)NarratorIO) == 0) {
-		AbortIO((struct IORequest *)NarratorIO);
+		WaitIO((struct IORequest *)NarratorIO);
 	}
+	memset(translationBuffer, 0, TRANSLATION_BUFFER_SIZE);
 	TranslateAs(text, strlen(text), translationBuffer, TRANSLATION_BUFFER_SIZE, config.speechAccent);
 	NarratorIO->ch_masks = audioChannels;
 	NarratorIO->nm_masks = sizeof(audioChannels);

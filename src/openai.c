@@ -27,9 +27,7 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static STRPTR getModelName(enum Model model);
 
 struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase;
-struct UtilityBase *UtilityBase;
-extern struct ExecBase *SysBase;
-extern struct DosLibrary *DOSBase;
+struct Library *UtilityBase;
 static SSL_CTX *_ssl_context;
 LONG UsesOpenSSLStructs = FALSE;
 BOOL amiSSLInitialized = FALSE;
@@ -176,7 +174,6 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 	memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 
 	if (!stream || !streamingInProgress) {
-		printf("Connecting to OpenAI...\n");
 		streamingInProgress = stream;
 		if (ssl != NULL) {
 			SSL_free(ssl);
