@@ -920,7 +920,7 @@ static void refreshModelMenuItems() {
 **/
 static void refreshSpeechMenuItems() {
 	struct NewMenu *menu = amigaGPTMenu;
-	while (menu->nm_UserData != MENU_ITEM_SPEECH_ACCENT_ID) {
+	while (menu->nm_UserData != MENU_ITEM_SPEECH_ENABLED_ID) {
 		menu++;
 	}
 
