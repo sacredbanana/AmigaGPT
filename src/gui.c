@@ -1139,43 +1139,13 @@ LONG startGUIRunLoop() {
 				case WMHI_GADGETUP:
 					switch (result & WMHI_GADGETMASK) {
 						case SEND_MESSAGE_BUTTON_ID:
-						printf("what\n");
 						case TEXT_INPUT_TEXT_EDITOR_ID:
-						printf("the\n");
-						ULONG deltaFactor;
-						GetAttr(GA_TEXTEDITOR_Prop_DeltaFactor, chatOutputTextEditor, &deltaFactor);
-						printf("Delta factor: %ld\n", deltaFactor);
-						ULONG arrowDelta;
-						GetAttr(SCROLLER_ArrowDelta, chatOutputScroller, &arrowDelta);
-						printf("Arrow delta: %ld\n", arrowDelta);
-						ULONG entries;
-						GetAttr(GA_TEXTEDITOR_Prop_Entries, chatOutputTextEditor, &entries);
-						printf("Entries: %ld\n", entries);
-						SetGadgetAttrs(chatOutputScroller, mainWindow, NULL, SCROLLER_Total, entries, TAG_DONE);
-						ULONG total;
-						GetAttr(SCROLLER_Total, chatOutputScroller, &total);
-						printf("Total: %ld\n", total);
-						ULONG first;
-						GetAttr(GA_TEXTEDITOR_Prop_First, chatOutputTextEditor, &first);
-						printf("First: %ld\n", first);
-						SetGadgetAttrs(chatOutputScroller, mainWindow, NULL, SCROLLER_Top, first, TAG_DONE);
-						ULONG top;
-						GetAttr(SCROLLER_Top, chatOutputScroller, &top);
-						printf("Top: %ld\n", top);
-						ULONG textVisible;
-						GetAttr(GA_TEXTEDITOR_Prop_Visible, chatOutputTextEditor, &textVisible);
-						printf("Text visible: %ld\n", textVisible);
-						SetGadgetAttrs(chatOutputScroller, mainWindow, NULL, SCROLLER_Visible, textVisible, TAG_DONE);
-						ULONG visible;
-						GetAttr(SCROLLER_Visible, chatOutputScroller, &visible);
-						printf("Visible: %ld\n", visible);
-
-							// if (strlen(config.openAiApiKey) > 0) {
-							// 	sendMessage();
-							// 	saveConversations();
-							// }
-							// else
-							// 	displayError("Please enter your OpenAI API key in the Open AI settings in the menu.");
+							if (strlen(config.openAiApiKey) > 0) {
+								sendMessage();
+								saveConversations();
+							}
+							else
+								displayError("Please enter your OpenAI API key in the Open AI settings in the menu.");
 							break;
 						case NEW_CHAT_BUTTON_ID:
 							currentConversation = NULL;
