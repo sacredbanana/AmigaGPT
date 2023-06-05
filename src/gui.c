@@ -36,7 +36,6 @@
 #include "external/json-c/json.h"
 #include "gui.h"
 #include "version.h"
-#include "customtexteditor.h"
 
 #define SCREEN_SELECT_WINDOW_WIDTH 200
 #define SCREEN_SELECT_WINDOW_HEIGHT 50
@@ -136,7 +135,6 @@ static struct TextAttr screenFont = {
 	.ta_Style = FS_NORMAL,
 	.ta_Flags = FPF_DISKFONT | FPF_DESIGNED
 };
-
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
 	{NM_ITEM, "About", 0, 0, 0, MENU_ITEM_ABOUT_ID},
@@ -168,6 +166,8 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "gpt-3.5-turbo-0301", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID},
 	{NM_END, NULL, 0, 0, 0, 0}
 };
+struct Hook idcmpHook;
+struct MsgPort *appPort;
 
 static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream);
 static void formatText(STRPTR unformattedText);
@@ -192,6 +192,49 @@ static void openApiKeyRequester();
 static LONG loadConversations();
 static LONG saveConversations();
 static BOOL copyFile(STRPTR source, STRPTR destination);
+
+
+void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
+	switch (message->Class) {
+		case IDCMP_IDCMPUPDATE:
+		{
+			struct TagItem *tagList = message->IAddress;
+			struct TagItem *gadgetID = FindTagItem(GA_ID, tagList);
+			switch (gadgetID->ti_Data) {
+				case CHAT_OUTPUT_SCROLLER_ID:
+					gadgetID->ti_Tag = TAG_IGNORE;
+					ULONG top;
+					GetAttr(SCROLLER_Top, chatOutputScroller, &top);
+					SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL,
+					GA_TEXTEDITOR_Prop_First, top,
+					TAG_DONE);
+					break;
+				case CHAT_OUTPUT_TEXT_EDITOR_ID:
+					gadgetID->ti_Tag = TAG_IGNORE;
+					ULONG entries;
+					GetAttr(GA_TEXTEDITOR_Prop_Entries, chatOutputTextEditor, &entries);
+					ULONG first;
+					GetAttr(GA_TEXTEDITOR_Prop_First, chatOutputTextEditor, &first);
+					ULONG deltaFactor;
+					GetAttr(GA_TEXTEDITOR_Prop_DeltaFactor, chatOutputTextEditor, &deltaFactor);
+					ULONG visible;
+					GetAttr(GA_TEXTEDITOR_Prop_Visible, chatOutputTextEditor, &visible);
+					SetGadgetAttrs(chatOutputScroller, mainWindow, NULL,
+					SCROLLER_Total, entries,
+					SCROLLER_Top, first,
+					SCROLLER_ArrowDelta, deltaFactor,
+					SCROLLER_Visible, visible,
+					TAG_DONE);
+					RefreshGadgets(chatOutputScroller, mainWindow, NULL);
+					break;
+				}
+			break;
+		}
+		default:
+			printf("Unknown message class: %lx\n", message->Class);
+			break;
+	}
+}
 
 /**
  * Open the libraries needed for the GUI
@@ -393,7 +436,7 @@ LONG initVideo() {
 		.ta_Flags = config.chatFontFlags
 	};
 
-	if ((textInputTextEditor = NewObject(initCustomTextEditorClass(), NULL,
+	if ((textInputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
 		GA_ID, TEXT_INPUT_TEXT_EDITOR_ID,
 		GA_RelVerify, TRUE,
 		GA_Text, "",
@@ -405,14 +448,6 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
-	struct TagItem chatOutputMap[] = {
-		SCROLLER_ArrowDelta, GA_TEXTEDITOR_Prop_DeltaFactor,
-		SCROLLER_Total, GA_TEXTEDITOR_Prop_Entries,
-		SCROLLER_Top, GA_TEXTEDITOR_Prop_First,
-		SCROLLER_Visible, GA_TEXTEDITOR_Prop_Visible,
-		TAG_DONE
-	};
-
 	if ((chatOutputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
 		GA_ID, CHAT_OUTPUT_TEXT_EDITOR_ID,
 		GA_RelVerify, TRUE,
@@ -420,6 +455,7 @@ LONG initVideo() {
 		GA_Height, CHAT_OUTPUT_TEXT_EDITOR_HEIGHT,
 		GA_ReadOnly, TRUE,
 		GA_TextAttr, &chatTextAttr,
+		ICA_TARGET, ICTARGET_IDCMP,
 		GA_TEXTEDITOR_ImportHook, GV_TEXTEDITOR_ImportHook_MIME,
 		GA_TEXTEDITOR_ExportHook, GV_TEXTEDITOR_ExportHook_Plain,
 		TAG_DONE)) == NULL) {
@@ -427,26 +463,16 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
-	struct TagItem chatOutputScrollerMap[] = {
-		GA_TEXTEDITOR_Prop_DeltaFactor, SCROLLER_ArrowDelta,
-		GA_TEXTEDITOR_Prop_Entries, SCROLLER_Total,
-		GA_TEXTEDITOR_Prop_First, SCROLLER_Top,
-		GA_TEXTEDITOR_Prop_Visible, SCROLLER_Visible,
-		TAG_DONE
-	};
-
 	if ((chatOutputScroller = NewObject(SCROLLER_GetClass(), NULL,
 		GA_ID, CHAT_OUTPUT_SCROLLER_ID,
 		GA_RelVerify, TRUE,
 		GA_Width, CHAT_OUTPUT_SCROLLER_WIDTH,
 		GA_Height, CHAT_OUTPUT_SCROLLER_HEIGHT,
+		ICA_TARGET, ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
 			printf("Could not create scroller\n");
 			return RETURN_ERROR;
 	}
-
-	SetAttrs(chatOutputTextEditor, ICA_TARGET, chatOutputScroller, ICA_MAP, chatOutputMap, TAG_DONE);
-	SetAttrs(chatOutputScroller, ICA_TARGET, chatOutputTextEditor, ICA_MAP, chatOutputScrollerMap, TAG_DONE);
 
 	if ((chatInputLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
@@ -505,6 +531,12 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	idcmpHook.h_Entry = (HOOKFUNC)processIDCMP;
+	idcmpHook.h_Data = NULL;
+	idcmpHook.h_SubEntry = NULL;
+
+	appPort = CreateMsgPort();
+
 	if ((mainWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
@@ -516,11 +548,14 @@ LONG initVideo() {
 		WA_SizeGadget, isPublicScreen,
 		WA_DepthGadget, isPublicScreen,
 		WA_NewLookMenus, TRUE,
+		WINDOW_AppPort, appPort,
 		WINDOW_IconifyGadget, isPublicScreen,
 		WINDOW_Layout, mainLayout,
 		WINDOW_SharedPort, NULL,
 		WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
 		WINDOW_NewMenu, amigaGPTMenu,
+		WINDOW_IDCMPHook, &idcmpHook,
+		WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE,
 		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MENUPICK,
 		WA_CustomScreen, screen,
 		TAG_DONE)) == NULL) {
@@ -642,6 +677,7 @@ static LONG selectScreen() {
 	while (!done) {
 		signals = Wait(signalMask);
 		while ((result = DoMethod(screenSelectWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
+			// printf("result: %ld\n", result);
 			switch (result & WMHI_CLASSMASK) {
 				case WMHI_GADGETUP:
 					switch (result & WMHI_GADGETMASK) {
@@ -1103,13 +1139,43 @@ LONG startGUIRunLoop() {
 				case WMHI_GADGETUP:
 					switch (result & WMHI_GADGETMASK) {
 						case SEND_MESSAGE_BUTTON_ID:
+						printf("what\n");
 						case TEXT_INPUT_TEXT_EDITOR_ID:
-							if (strlen(config.openAiApiKey) > 0) {
-								sendMessage();
-								saveConversations();
-							}
-							else
-								displayError("Please enter your OpenAI API key in the Open AI settings in the menu.");
+						printf("the\n");
+						ULONG deltaFactor;
+						GetAttr(GA_TEXTEDITOR_Prop_DeltaFactor, chatOutputTextEditor, &deltaFactor);
+						printf("Delta factor: %ld\n", deltaFactor);
+						ULONG arrowDelta;
+						GetAttr(SCROLLER_ArrowDelta, chatOutputScroller, &arrowDelta);
+						printf("Arrow delta: %ld\n", arrowDelta);
+						ULONG entries;
+						GetAttr(GA_TEXTEDITOR_Prop_Entries, chatOutputTextEditor, &entries);
+						printf("Entries: %ld\n", entries);
+						SetGadgetAttrs(chatOutputScroller, mainWindow, NULL, SCROLLER_Total, entries, TAG_DONE);
+						ULONG total;
+						GetAttr(SCROLLER_Total, chatOutputScroller, &total);
+						printf("Total: %ld\n", total);
+						ULONG first;
+						GetAttr(GA_TEXTEDITOR_Prop_First, chatOutputTextEditor, &first);
+						printf("First: %ld\n", first);
+						SetGadgetAttrs(chatOutputScroller, mainWindow, NULL, SCROLLER_Top, first, TAG_DONE);
+						ULONG top;
+						GetAttr(SCROLLER_Top, chatOutputScroller, &top);
+						printf("Top: %ld\n", top);
+						ULONG textVisible;
+						GetAttr(GA_TEXTEDITOR_Prop_Visible, chatOutputTextEditor, &textVisible);
+						printf("Text visible: %ld\n", textVisible);
+						SetGadgetAttrs(chatOutputScroller, mainWindow, NULL, SCROLLER_Visible, textVisible, TAG_DONE);
+						ULONG visible;
+						GetAttr(SCROLLER_Visible, chatOutputScroller, &visible);
+						printf("Visible: %ld\n", visible);
+
+							// if (strlen(config.openAiApiKey) > 0) {
+							// 	sendMessage();
+							// 	saveConversations();
+							// }
+							// else
+							// 	displayError("Please enter your OpenAI API key in the Open AI settings in the menu.");
 							break;
 						case NEW_CHAT_BUTTON_ID:
 							currentConversation = NULL;
@@ -1746,6 +1812,9 @@ void shutdownGUI() {
 	}
 	if (uiTextFont)
 		CloseFont(uiTextFont);
+
+	if (appPort)
+		DeleteMsgPort(appPort);
 
 	closeGUILibraries();
 }
