@@ -33,7 +33,7 @@ BOOL amiSSLInitialized = FALSE;
 UBYTE *writeBuffer = NULL;
 UBYTE *readBuffer = NULL;
 X509 *server_cert;
-SSL_CTX *ctx;
+SSL_CTX *ctx = NULL;
 BIO *bio, *bio_err;
 SSL *ssl;
 LONG sock = -1;
@@ -465,7 +465,10 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx) {
 **/
 void closeOpenAIConnector() {
 	if (amiSSLInitialized) {
-		SSL_CTX_free(ctx);
+		if (ctx) {
+			SSL_CTX_free(ctx);
+			ctx = NULL;
+		}
 		BIO_free(bio_err);
 		CleanupAmiSSLA(NULL);
 	}
