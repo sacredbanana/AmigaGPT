@@ -4,6 +4,7 @@ Uploader: Cameron Armstrong (Nightfox)
 Type: util/misc
 Version: 1.0.0
 Architecture: m68k-amigaos >= 3.2.0
+Requires: AmigaOS 3.0+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 Kurz: App zum Chatten mit ChatGPT
 
 AmigaGPT is a text generation program that runs on the classic AmigaOS. Utilising the power of the OpenAI's GPT-3 and GPT-4 architectures, this program brings state-of-the-art language modeling to your Amiga computer.
@@ -15,16 +16,19 @@ Features:
 - Text-to-speech
 
 Requirements:
-- AmigaOS 3.2 or higher
-- AmiSSL 5.8 or higher
-- Internet connection
+- OCS/ECS/AGA Amiga
+- Motorola 68020 or higher CPU
+- AmigaOS 3.2 or higher OS
+- AmiSSL 5.8 or higher. Here is the latest version at the time of writing (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
+- Internet access using a TCP/IP stack such as Roadshow (http://roadshow.apc-tcp.de/index-en.php)
 - An active OpenAI API key
 - For speech, any version of narrator.device
 
 Installation:
-1. Unpack the archive to a directory of your choice.
-2. Run the Installer script included in the package.
-3. Follow the prompts to complete the installation.
+1. Install AmiSSL and a TCP/IP stack if not already done so
+2. Unpack the archive to a directory of your choice.
+3. Run the Installer script included in the package.
+4. Follow the prompts to complete the installation.
 
 Optional steps to enable speech functionality:
 AmigaGPT supports reading the output aloud. This requires a file called `narrator.device` which cannot be included with AmigaGPT because it is still under copyright. Therefore, you must copy this file legally from your Workbench disks so that AmigaGPT will be able to synthesise speech. There are 2 versions of `narrator.device` supported, v34 and v37. 
