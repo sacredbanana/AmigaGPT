@@ -83,3 +83,16 @@ AmigaGPT is licensed under the MIT License.
 Contributing:
 
 We welcome contributions to **AmigaGPT**! If you have a bug to report, a feature to suggest, or a change you'd like to make to the code, please open a new issue or submit a pull request.
+
+CONTRIBUTORS
+Code:
+- Cameron Armstrong (sacredbanana/Nightfox) https://github.com/sacredbanana/
+
+Art:
+- Mauricio Sandoval** - Icon design
+
+Special Thanks:
+- Bebbo for creating the Amiga GCC toolchain https://github.com/bebbo
+- OpenAI for making this all possible https://openai.com
+- EAB and everyone in it for answering my questions https://eab.abime.net/
+- Hyperion Entertainment for bringinging us AmigaOS 3.2 https://www.hyperion-entertainment.com
