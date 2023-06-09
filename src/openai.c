@@ -7,7 +7,6 @@
 #include <proto/socket.h>
 #include <proto/utility.h>
 #include <string.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <utility/utility.h>
 #include "openai.h"

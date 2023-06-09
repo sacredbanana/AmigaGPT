@@ -1,5 +1,4 @@
 #include <proto/exec.h>
-#include <stdio.h>
 #include <proto/translator.h>
 #include <devices/narrator.h>
 #include "config.h"

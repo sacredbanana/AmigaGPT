@@ -26,7 +26,7 @@ LONG main() {
 	/* If we started from Workbench then we must retrieve the startup message
 	 before doing anything else. The startup message also contains a lock on
 	 the program directory. */
-	if (cli == NULL) {
+	if (cli != NULL) {
 		WaitPort(&currentTask->pr_MsgPort);
 		wbStartupMessage = (struct WBStartup*)GetMsg(&currentTask->pr_MsgPort);
 	}
@@ -54,6 +54,9 @@ LONG main() {
 		printf("Failed to initialize video\n");
 		cleanExit(RETURN_ERROR);
 	}
+
+	if (wbStartupMessage != NULL)
+		ReplyMsg((struct Message *)wbStartupMessage);
 
 	if (startGUIRunLoop() == RETURN_ERROR) {
 		printf("GUI run loop returned an error\n");

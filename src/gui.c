@@ -30,8 +30,6 @@
 #include <proto/string.h>
 #include <proto/texteditor.h>
 #include <proto/window.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include "config.h"
 #include "external/json-c/json.h"
 #include "gui.h"

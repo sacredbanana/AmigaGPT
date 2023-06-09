@@ -1,11 +1,15 @@
 {
     "configurations": [
         {
-            "name": "Mac",
-            "compilerPathInCppPropertiesJson": "/opt/homebrew/bin/gcc",
+            "name": "macOS GCC Amiga",
             "includePath": [
                 "/Volumes/repos/amigagpt/**",
-                "/Volumes/repos/vcpkg/installed/arm64-osx/include"
+                "/opt/amiga/m68k-amigaos/include",
+                "/opt/amiga/m68k-amigaos/ndk-include",
+                "/opt/amiga/m68k-amigaos/libnix/include",
+                "/opt/amiga/m68k-amigaos/sys-include",
+                "/opt/amiga/m68k-amigaos/clib2/include"
+                // "/Volumes/repos/vcpkg/installed/arm64-osx/include"
             ],
             "defines": [],
             "macFrameworkPath": [
@@ -15,7 +19,7 @@
             "cppStandard": "c++20",
             "intelliSenseMode": "macos-gcc-arm64",
             "mergeConfigurations": false,
-            "compilerPath": "/opt/homebrew/bin/gcc",
+            "compilerPath": "/opt/amiga/bin/m68k-amigaos-gcc",
             "browse": {
                 "path": [
                     "${workspaceFolder}"

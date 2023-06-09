@@ -1,7 +1,10 @@
 {
     "m68k.includePaths": [
+        "/opt/amiga/m68k-amigaos/include",
         "/opt/amiga/m68k-amigaos/ndk-include",
+        "/opt/amiga/m68k-amigaos/libnix/include",
         "/opt/amiga/m68k-amigaos/sys-include",
+        "/opt/amiga/m68k-amigaos/clib2/include",
     ],
     "files.associations": {
         "intuition.h": "c",
@@ -54,7 +57,10 @@
         "text.h": "c",
         "asl.h": "c",
         "alib_protos.h": "c",
-        "window.h": "c"
+        "window.h": "c",
+        "stdlib.h": "c",
+        "cdefs.h": "c",
+        "stdarg.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",
@@ -65,10 +71,22 @@
         "/opt/amiga/m68k-amigaos/include",
         "/opt/amiga/m68k-amigaos/ndk-include",
         "/opt/amiga/m68k-amigaos/libnix/include",
-        "/opt/amiga/m68k-amigaos/sys-include"
+        "/opt/amiga/m68k-amigaos/sys-include",
+        "/opt/amiga/m68k-amigaos/clib2/include",
     ],
-    "C_Cpp.default.compilerPath": "/Users/cameron/.vscode-insiders/extensions/bartmanabyss.amiga-debug-1.7.2/bin/darwin/opt/bin/m68k-amiga-elf-gcc",
+    "C_Cpp.default.compilerPath": "/opt/amiga/bin/m68k-amigaos-gcc",
     "C_Cpp.default.cppStandard": "c++20",
     "C_Cpp.default.cStandard": "c17",
     "C_Cpp.default.intelliSenseMode": "macos-gcc-arm64",
+    "c-cpp-flylint.language": "c",
+    "c-cpp-flylint.includePaths": [
+        "/opt/amiga/m68k-amigaos/include",
+        "/opt/amiga/m68k-amigaos/ndk-include",
+        "/opt/amiga/m68k-amigaos/libnix/include",
+        "/opt/amiga/m68k-amigaos/sys-include",
+        "/opt/amiga/m68k-amigaos/clib2/include",
+    ],
+    "c-cpp-flylint.cppcheck.standard": [
+        "c18"
+    ],
 }
