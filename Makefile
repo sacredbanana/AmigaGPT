@@ -70,7 +70,6 @@ $(c_objects) : obj/%.o : %.c
 	$(info Compiling $<)
 	sed -i "" 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
-	$(info Cleaning... $(AUTOGEN_NEXT))
 
 $(s_objects): obj/%.o : %.s
 	$(info Assembling $<)
@@ -79,3 +78,16 @@ $(s_objects): obj/%.o : %.s
 $(vasm_objects): obj/%.o : %.asm
 	$(info Assembling $<)
 	$(VASM) $(VASMFLAGS) -o $@ $(CURDIR)/$<
+
+.PHONY: all clean copy_bundle_files
+
+all: $(OUT) copy_bundle_files
+
+copy_bundle_files:
+ifdef WINDOWS
+	$(info Copying bundle files...)
+	xcopy /E /Y /I bundle out
+else
+	$(info Copying bundle files...)
+	cp -R bundle/* out/
+endif
