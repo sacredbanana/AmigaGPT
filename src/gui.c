@@ -1540,11 +1540,12 @@ static void openSpeechAccentRequester() {
 static void openApiKeyRequester() {
 	UBYTE buffer[64];
 	strncpy(buffer, config.openAiApiKey, sizeof(buffer) - 1);
-	Object *openApiKeyRequester = NewObject(REQUESTER_GetClass(), NULL,
+	Object *apiKeyRequester = NewObject(REQUESTER_GetClass(), NULL,
 		REQ_Type, REQTYPE_STRING,
 		REQ_TitleText, "Enter your OpenAI API key",
 		REQ_BodyText, "Please type or paste your OpenAI API key here",
 		REQ_GadgetText, "OK|CANCEL",
+		REQ_Image, REQIMAGE_INFO,
 		REQS_AllowEmpty, FALSE,
 		REQS_Buffer, buffer,
 		REQS_MaxChars, sizeof(buffer) - 1,
@@ -1552,13 +1553,13 @@ static void openApiKeyRequester() {
 		REQ_ForceFocus, TRUE,
 		TAG_DONE);
 
-	if (openApiKeyRequester) {
-		ULONG result = OpenRequester(openApiKeyRequester, mainWindow);
+	if (apiKeyRequester) {
+		ULONG result = OpenRequester(apiKeyRequester, mainWindow);
 		if (result == 1) {
 			strncpy(config.openAiApiKey, buffer, sizeof(config.openAiApiKey) - 1);
 			writeConfig();
 		}
-		DisposeObject(openApiKeyRequester);
+		DisposeObject(apiKeyRequester);
 	}
 }
 

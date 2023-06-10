@@ -103,12 +103,12 @@ LONG initOpenAIConnector() {
 	}
 
 	if ((SocketBase = OpenLibrary("bsdsocket.library", 0)) == NULL) {
-		displayError("failed to open bsdsocket.library");
+		displayError("failed to open bsdsocket.library. You have to install a TCP/IP stack such as AmiTCP, Miami or Roadshow. Please refer to the documentation for more information.");
 		return RETURN_ERROR;
 	}
 
 	if ((AmiSSLMasterBase = OpenLibrary("amisslmaster.library", AMISSLMASTER_MIN_VERSION)) == NULL) {
-		displayError("failed to open amisslmaster.library");
+		displayError("failed to open amisslmaster.library version 5. You have to install AmiSSL 5. Please refer to the documentation for more information.");
 		return RETURN_ERROR;
 	}
 

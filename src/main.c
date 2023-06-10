@@ -45,13 +45,13 @@ LONG main() {
 		initSpeech(config.speechSystem);
 	}
 
-	if (initOpenAIConnector() == RETURN_ERROR) {
-		printf("Failed to open OpenAI connector\n");
+	if (initVideo() == RETURN_ERROR) {
+		printf("Failed to initialize video\n");
 		cleanExit(RETURN_ERROR);
 	}
 
-	if (initVideo() == RETURN_ERROR) {
-		printf("Failed to initialize video\n");
+	if (initOpenAIConnector() == RETURN_ERROR) {
+		printf("Failed to open OpenAI connector\n");
 		cleanExit(RETURN_ERROR);
 	}
 
