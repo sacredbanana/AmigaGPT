@@ -307,6 +307,14 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 					totalBytesRead += bytesRead;
 					const STRPTR jsonStart = stream ? "data: {" : "{";
 					STRPTR jsonString = readBuffer;
+					// Check for error in stream
+					if (stream && strstr(jsonString, jsonStart) == NULL) {
+						jsonString = strstr(jsonString, "{");
+						responses[0] = json_tokener_parse(jsonString);
+						streamingInProgress = FALSE;
+						doneReading = TRUE;
+						break;
+					}
 					while (jsonString = strstr(jsonString, jsonStart)) {
 						if (stream)
 							jsonString += 6; // Get to the start of the JSON
