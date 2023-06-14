@@ -783,14 +783,6 @@ static void formatText(STRPTR unformattedText) {
 **/
 static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream) {
 	if (json == NULL) return NULL;
-	struct json_object *error;
-	if (json_object_object_get_ex(json, "error", &error)) {
-		struct json_object *message = json_object_object_get(error, "message");
-		STRPTR messageString = json_object_get_string(message);
-		displayError(messageString);
-		return NULL;
-	}
-	
 	STRPTR json_str = json_object_to_json_string(json);
 	struct json_object *choices = json_object_object_get(json, "choices");
 	struct json_object *choice = json_object_array_get_idx(choices, 0);
@@ -837,14 +829,31 @@ static void sendMessage() {
 		UWORD responseIndex = 0;
 		struct json_object *response;
 		while (response = responses[responseIndex++]) {
-			STRPTR responseJsonString = (STRPTR)json_object_to_json_string_ext(response, JSON_C_TO_STRING_PRETTY);
-			STRPTR responseString = getMessageContentFromJson(response, TRUE);
-			if (responseString != NULL) {
-				formatText(responseString);
-				snprintf(receivedMessage, READ_BUFFER_LENGTH - strlen(receivedMessage) - 1, "%s%s", receivedMessage, responseString);
+			struct json_object *error;
+			if (json_object_object_get_ex(response, "error", &error)) {
+				struct json_object *message = json_object_object_get(error, "message");
+				STRPTR messageString = json_object_get_string(message);
+				displayError(messageString);
+				SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
+				struct MinNode *lastMessage = RemTail(currentConversation);
+				FreeVec(lastMessage);
+				if (currentConversation == currentConversation->mlh_TailPred) {
+					freeConversation(currentConversation);
+					currentConversation = NULL;
+					DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+				} else {
+					displayConversation(currentConversation);
+				}
+				json_object_put(response);
+				return;
+			}
+			STRPTR contentString = getMessageContentFromJson(response, TRUE);
+			if (contentString != NULL) {
+				formatText(contentString);
+				snprintf(receivedMessage, READ_BUFFER_LENGTH - strlen(receivedMessage) - 1, "%s%s", receivedMessage, contentString);
 				struct MinNode *assistantMessageNode = RemTail(currentConversation);
 				FreeVec(assistantMessageNode);
-				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, responseString, GV_TEXTEDITOR_InsertText_Bottom);
+				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, contentString, GV_TEXTEDITOR_InsertText_Bottom);
 				addTextToConversation(currentConversation, receivedMessage, "assistant");
 				if (++wordNumber % 50 == 0) {
 					if (config.speechEnabled) {
@@ -883,17 +892,6 @@ static void sendMessage() {
 				json_object_put(responses[0]);
 				FreeVec(responses);
 			}
-		}
-	} else {
-		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
-		struct MinNode *lastMessage = RemTail(currentConversation);
-		FreeVec(lastMessage);
-		if (currentConversation == currentConversation->mlh_TailPred) {
-			freeConversation(currentConversation);
-			currentConversation = NULL;
-			DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
-		} else {
-			displayConversation(currentConversation);
 		}
 	}
 	FreeVec(text);
@@ -1212,20 +1210,14 @@ LONG startGUIRunLoop() {
 						}
 						case MENU_ITEM_PASTE_ID:
 						{
-							BOOL success;
 							switch (activeTextEditorGadgetID) {
 								case TEXT_INPUT_TEXT_EDITOR_ID:
-									success = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "PASTE");
+									DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "PASTE");
 									break;
 								case CHAT_OUTPUT_TEXT_EDITOR_ID:
-									success = DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "PASTE");
+									DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "PASTE");
 									break;
 							}
-
-							if (!success)
-								printf("Error pasting text\n");
-							else
-								printf("Text pasted\n");
 							break;
 						}
 						case MENU_ITEM_SELECT_ALL_ID:
