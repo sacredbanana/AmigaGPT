@@ -1067,23 +1067,24 @@ static void freeConversationList() {
 	FreeVec(conversationList);
 }
 
-
 /**
  * Remove a conversation from the conversation list
  * @param conversationList The conversation list to remove the conversation from
  * @param conversation The conversation to remove from the conversation list
 **/
 static void removeConversationFromConversationList(struct List *conversationList, struct MinList *conversation) {
-	struct Node *node = conversationList->lh_Head->ln_Succ;
-	while (node->ln_Succ != NULL) {
-		struct ConversationNode *conversationNode;
-		GetListBrowserNodeAttrs(node, LBNA_UserData, (struct ConversationNode *)&conversationNode, TAG_END);
-		if (conversationNode == conversation) {
+	if (conversation == NULL) return;
+	struct Node *node = conversationList->lh_Head;
+	while (node != NULL) {
+		struct MinList *listBrowserConversation;
+		GetListBrowserNodeAttrs(node, LBNA_UserData, (struct MinList *)&listBrowserConversation, TAG_END);
+		if (listBrowserConversation == conversation) {
 			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
 			Remove(node);
+			FreeListBrowserNode(node);
+			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
 			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
 			freeConversation(conversation);
-			FreeVec(node);
 			return;
 		}
 		node = node->ln_Succ;
