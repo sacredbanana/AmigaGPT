@@ -26,7 +26,7 @@ LONG main() {
 	/* If we started from Workbench then we must retrieve the startup message
 	 before doing anything else. The startup message also contains a lock on
 	 the program directory. */
-	if (cli != NULL) {
+	if (cli == NULL) {
 		WaitPort(&currentTask->pr_MsgPort);
 		wbStartupMessage = (struct WBStartup*)GetMsg(&currentTask->pr_MsgPort);
 	}

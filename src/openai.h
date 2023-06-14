@@ -1,7 +1,7 @@
 #include <proto/dos.h>
 
 #define READ_BUFFER_LENGTH 8192
-#define WRITE_BUFFER_LENGTH 8192
+#define WRITE_BUFFER_LENGTH 65536
 #define RESPONSE_ARRAY_BUFFER_LENGTH 1024
 
 /**
@@ -19,7 +19,7 @@ struct ConversationNode {
 	/**
 	 * The text of the message
 	**/
-	UBYTE content[READ_BUFFER_LENGTH];
+	STRPTR content;
 };
 
 /**

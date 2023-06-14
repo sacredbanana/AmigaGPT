@@ -830,21 +830,18 @@ static void sendMessage() {
 		while (response = responses[responseIndex++]) {
 			STRPTR responseJsonString = (STRPTR)json_object_to_json_string_ext(response, JSON_C_TO_STRING_PRETTY);
 			STRPTR responseString = getMessageContentFromJson(response, TRUE);
-			
 			if (responseString != NULL) {
 				formatText(responseString);
 				snprintf(receivedMessage, READ_BUFFER_LENGTH - strlen(receivedMessage) - 1, "%s%s", receivedMessage, responseString);
 				struct MinNode *assistantMessageNode = RemTail(currentConversation);
 				FreeVec(assistantMessageNode);
+				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, responseString, GV_TEXTEDITOR_InsertText_Bottom);
 				addTextToConversation(currentConversation, receivedMessage, "assistant");
 				if (++wordNumber % 50 == 0) {
-					displayConversation(currentConversation, TRUE);
 					if (config.speechEnabled) {
 						speakText(receivedMessage + speechIndex);
 						speechIndex = strlen(receivedMessage);
 					}
-				} else {
-					displayConversation(currentConversation, FALSE);
 				}
 				finishReason = json_object_get_string(json_object_object_get(response, "finish_reason"));
 				if (finishReason != NULL) {
@@ -856,7 +853,7 @@ static void sendMessage() {
 			}
 		}
 	} while (!dataStreamFinished);
-
+	
 	if (responses != NULL) {
 		if (config.speechEnabled) {
 			speakText(receivedMessage + speechIndex);
@@ -963,8 +960,8 @@ static void addTextToConversation(struct MinList *conversation, STRPTR text, STR
 	}
 	strncpy(conversationNode->role, role, sizeof(conversationNode->role) - 1);
 	conversationNode->role[sizeof(conversationNode->role) - 1] = '\0';
-	strncpy(conversationNode->content, text, sizeof(conversationNode->content) - 1);
-	conversationNode->content[sizeof(conversationNode->content) - 1] = '\0';
+	conversationNode->content = AllocVec(strlen(text) + 1, MEMF_CLEAR);
+	strncpy(conversationNode->content, text, strlen(text));
 	AddTail(conversation, (struct Node *)conversationNode);
 }
 
@@ -1039,7 +1036,7 @@ static void displayConversation(struct MinList *conversation, BOOL scrollToBotto
 	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationString, TAG_DONE);
 	
 	if (scrollToBottom) {
-		Delay(1);
+		Delay(2);
 		SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_CursorY, ~0, TAG_DONE);
 	}
 	
@@ -1054,6 +1051,7 @@ static void displayConversation(struct MinList *conversation, BOOL scrollToBotto
 static void freeConversation(struct MinList *conversation) {
 	struct ConversationNode *conversationNode;
 	while ((conversationNode = (struct ConversationNode *)RemHead(conversation)) != NULL) {
+		FreeVec(conversationNode->content);
 		FreeVec(conversationNode);
 	}
 	FreeVec(conversation);
