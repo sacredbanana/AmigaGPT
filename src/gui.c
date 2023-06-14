@@ -926,6 +926,8 @@ static void refreshSpeechMenuItems() {
 		menu++->nm_Flags &= ~CHECKED;
 	}
 
+	menu++;
+
 	while ((++menu)->nm_Type == NM_SUB) {
 		if (strcmp(menu->nm_Label, SPEECH_SYSTEM_NAMES[config.speechSystem]) == 0) {
 			menu->nm_Flags |= CHECKED;
