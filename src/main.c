@@ -27,7 +27,6 @@ LONG main() {
 	 before doing anything else. The startup message also contains a lock on
 	 the program directory. */
 	if (cli == NULL) {
-		WaitPort(&currentTask->pr_MsgPort);
 		wbStartupMessage = (struct WBStartup*)GetMsg(&currentTask->pr_MsgPort);
 	}
 
