@@ -31,7 +31,8 @@ enum Model {
 	GPT_4_32K,
 	GPT_4_32K_0314,
 	GPT_3_5_TURBO,
-	GPT_3_5_TURBO_0301
+	GPT_3_5_TURBO_0301,
+	GPT_3_5_TURBO_16K,
 };
 
 /**

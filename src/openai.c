@@ -49,7 +49,8 @@ const STRPTR MODEL_NAMES[] = {
 	[GPT_4_32K] = "gpt-4-32k",
 	[GPT_4_32K_0314] = "gpt-4-32k-0314",
 	[GPT_3_5_TURBO] = "gpt-3.5-turbo",
-	[GPT_3_5_TURBO_0301] = "gpt-3.5-turbo-0301"
+	[GPT_3_5_TURBO_0301] = "gpt-3.5-turbo-0301",
+	[GPT_3_5_TURBO_16K] = "gpt-3.5-turbo-16k"
 };
 
 /**
