@@ -82,15 +82,16 @@
 #define MENU_ITEM_CLEAR_ID 13
 #define MENU_ITEM_SELECT_ALL_ID 14
 #define MENU_ITEM_MODEL_GPT_4_ID 15
-#define MENU_ITEM_MODEL_GPT_4_0314_ID 16
+#define MENU_ITEM_MODEL_GPT_4_0613_ID 16
 #define MENU_ITEM_MODEL_GPT_4_32K_ID 17
-#define MENU_ITEM_MODEL_GPT_4_32K_0314_ID 18
+#define MENU_ITEM_MODEL_GPT_4_32K_0613_ID 18
 #define MENU_ITEM_MODEL_GPT_3_5_TURBO_ID 19
-#define MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID 20
+#define MENU_ITEM_MODEL_GPT_3_5_TURBO_0613_ID 20
 #define MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_ID 21
-#define MENU_ITEM_MODEL_ID 22
-#define MENU_ITEM_SPEECH_SYSTEM_ID 23
-#define MENU_ITEM_OPENAI_API_KEY_ID 24
+#define MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_0613_ID 22
+#define MENU_ITEM_MODEL_ID 23
+#define MENU_ITEM_SPEECH_SYSTEM_ID 24
+#define MENU_ITEM_OPENAI_API_KEY_ID 25
 
 extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
@@ -158,12 +159,13 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "API key", 0, 0, 0, MENU_ITEM_OPENAI_API_KEY_ID},
 	{NM_ITEM, "Model", 0, 0, 0, MENU_ITEM_MODEL_ID},
 	{NM_SUB, "gpt-4", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_ID},
-	{NM_SUB, "gpt-4-0314", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_0314_ID},
+	{NM_SUB, "gpt-4-0613", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_0613_ID},
 	{NM_SUB, "gpt-4-32k", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_32K_ID},
-	{NM_SUB, "gpt-4-32k-0314", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_32K_0314_ID},
+	{NM_SUB, "gpt-4-32k-0613", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_32K_0613_ID},
 	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_ID},
-	{NM_SUB, "gpt-3.5-turbo-0301", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID},
+	{NM_SUB, "gpt-3.5-turbo-0613", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_0613_ID},
 	{NM_SUB, "gpt-3.5-turbo-16k", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_ID},
+	{NM_SUB, "gpt-3.5-turbo-16k-0613", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_0613_ID},
 	{NM_END, NULL, 0, 0, 0, 0}
 };
 struct Hook idcmpHook;
@@ -1286,8 +1288,8 @@ LONG startGUIRunLoop() {
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_4_0314_ID:
-							config.model = GPT_4_0314;
+						case MENU_ITEM_MODEL_GPT_4_0613_ID:
+							config.model = GPT_4_0613;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
@@ -1296,8 +1298,8 @@ LONG startGUIRunLoop() {
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_4_32K_0314_ID:
-							config.model = GPT_4_32K_0314;
+						case MENU_ITEM_MODEL_GPT_4_32K_0613_ID:
+							config.model = GPT_4_32K_0613;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
@@ -1306,8 +1308,18 @@ LONG startGUIRunLoop() {
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID:
-							config.model = GPT_3_5_TURBO_0301;
+						case MENU_ITEM_MODEL_GPT_3_5_TURBO_0613_ID:
+							config.model = GPT_3_5_TURBO_0613;
+							writeConfig();
+							refreshModelMenuItems();
+							break;
+						case MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_ID:
+							config.model = GPT_3_5_TURBO_16K;
+							writeConfig();
+							refreshModelMenuItems();
+							break;
+						case MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_0613_ID:
+							config.model = GPT_3_5_TURBO_16K_0613;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
