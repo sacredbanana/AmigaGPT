@@ -328,7 +328,7 @@ LONG initVideo() {
 
 	if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SEND_MESSAGE_BUTTON_ID,
-		BUTTON_TextPen, 3,
+		BUTTON_TextPen, 8,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_TEXT, (ULONG)"Send",
 		GA_RelVerify, TRUE,
@@ -340,7 +340,7 @@ LONG initVideo() {
 
 	if ((newChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, NEW_CHAT_BUTTON_ID,
-		BUTTON_TextPen, 3,
+		BUTTON_TextPen, 9,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_TEXT, (ULONG)"+ New Chat",
 		GA_RelVerify, TRUE,
@@ -352,7 +352,7 @@ LONG initVideo() {
 
 	if ((deleteChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, DELETE_CHAT_BUTTON_ID,
-		BUTTON_TextPen, 3,
+		BUTTON_TextPen, 4,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_TEXT, (ULONG)"- Delete Chat",
 		GA_RelVerify, TRUE,

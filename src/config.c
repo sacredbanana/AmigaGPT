@@ -7,7 +7,7 @@
 
 struct Config config = {
 	.speechEnabled = TRUE,
-	.speechAccent = "!USA.accent",
+	.speechAccent = "american.accent",
 	.speechSystem = SPEECH_SYSTEM_34,
 	.model = GPT_3_5_TURBO,
 	.chatFontName = {0},
@@ -20,12 +20,17 @@ struct Config config = {
 	.uiFontFlags = FPF_DISKFONT | FPF_DESIGNED,
 	.openAiApiKey = NULL,
 	.colors = {
-		5l<<16 | 0,
-		0x00000000, 0x11111111, 0x55555555,
-		0xAAAAAAAA, 0x00000000, 0x00000000,
-		0x00000000, 0x00000000, 0x33333333,
-		0xBBBBBBBB, 0xFFFFFFFF, 0x22222222,
-		0x00000000, 0x00000000, 0x00000000,
+		10l<<16 | 0,
+		0x00000000, 0x11111111, 0x15555555, // listbrowser background
+		0x00000000, 0xBBBBBBBB, 0xFFFFFFFF, // text colour
+		0x00000000, 0x00000000, 0x33333333, // gadget borders
+		0xA0000000, 0x00000000, 0x0FFFFFFF, // listbrowser select and window border and text editor backgrounds
+		0xFFFFFFFF, 0x00000000, 0x88888888, // delete chat button text
+		0x00000000, 0x00000000, 0x11111111, // screen border and menu background
+		0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, // selected menu item icon secondary colour
+		0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, // selected menu item background
+		0xE0000000, 0xE0000000, 0xFFFFFFFF, // send button text colour
+		0x00050000, 0xFFFF0FFF, 0x88888888, // new chat button text
 		0
 	}
 };
