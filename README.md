@@ -5,6 +5,9 @@ This is PRERELEASE software. What you see here does not represent the final prod
 
 AmigaGPT is a text generation program that runs on the classic AmigaOS. Utilising the power of the OpenAI's GPT-3 and GPT-4 architectures, this program brings state-of-the-art language modeling to your Amiga computer.
 
+<img width="953" alt="Screenshot 2023-06-15 at 10 26 38 pm" src="https://github.com/sacredbanana/AmigaGPT/assets/6903516/ca5e0db3-4e37-4ea9-a6ac-9fff2d5c195a">
+
+
 ## Features
 
 - ### State-of-the-art language model
