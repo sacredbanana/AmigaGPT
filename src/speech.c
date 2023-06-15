@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <proto/exec.h>
 #include <proto/translator.h>
 #include <devices/narrator.h>

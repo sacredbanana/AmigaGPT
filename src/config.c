@@ -22,7 +22,7 @@ struct Config config = {
 	.colors = {
 		10l<<16 | 0,
 		0x00000000, 0x11111111, 0x15555555, // listbrowser background
-		0x00000000, 0xBBBBBBBB, 0xFFFFFFFF, // text colour
+		0x00000000, 0x88888888, 0xFFFFFFFF, // text colour
 		0x00000000, 0x00000000, 0x33333333, // gadget borders
 		0xA0000000, 0x00000000, 0x0FFFFFFF, // listbrowser select and window border and text editor backgrounds
 		0xFFFFFFFF, 0x00000000, 0x88888888, // delete chat button text

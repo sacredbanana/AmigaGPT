@@ -674,6 +674,8 @@ static LONG selectScreen() {
 								ASLSM_InitialDisplayWidth, screen->Width,
 								ASLSM_InitialDisplayHeight, screen->Height,
 								ASLSM_InitialOverscanType, OSCAN_TEXT,
+								ASLSM_InitialDisplayDepth, 4,
+								ASLSM_MinDepth, 4,
 								ASLSM_NegativeText, NULL,
 								TAG_DONE)) {
 									if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
@@ -826,7 +828,9 @@ static void sendMessage() {
 				addTextToConversation(currentConversation, receivedMessage, "assistant");
 				if (++wordNumber % 50 == 0) {
 					if (config.speechEnabled) {
+						printf("speaking with accent %s\n", config.speechAccent);
 						speakText(receivedMessage + speechIndex);
+						printf("SPEAKING: %s\n", receivedMessage + speechIndex - 1);
 						speechIndex = strlen(receivedMessage);
 					}
 				}
@@ -844,6 +848,7 @@ static void sendMessage() {
 	if (responses != NULL) {
 		if (config.speechEnabled) {
 			speakText(receivedMessage + speechIndex);
+			printf("SPEAKING: %s\n", receivedMessage + speechIndex - 1);
 		}
 		FreeVec(responses);
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);

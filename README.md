@@ -107,7 +107,7 @@ GPT-3.5 models can understand and generate natural language or code. Our most ca
 
 ## Developing
 If you would like to build this project from source you will need Bebbo's **amiga-gcc** toolchain here https://github.com/bebbo/amiga-gcc
-Be sure to add `NDK=3.2` to the `make` options. Once your `amiga-gcc` dev environment is installed, you will need to download the AmiSSL and Translator SDK's from http://aminet.net/util/libs/AmiSSL-5.8-SDK.lha & http://aminet.net/util/libs/translator42.lha and extract the include header files into your `amiga-gcc` environment. By default this will be located at `/opt/amiga/m68k-amigaos/include`. Once this is set up all you will need to do to build the project is navigate to the project root directory and run the `make` command. The built app will appear in the `out` directory.
+Be sure to add `NDK=3.2` to the `make` options. Once your `amiga-gcc` dev environment is installed, you will need to download the contents of 
 
 ## License
 
