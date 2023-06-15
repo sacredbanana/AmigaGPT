@@ -4,7 +4,7 @@ Uploader: Cameron Armstrong (Nightfox)
 Type: util/misc
 Version: 1.0.0
 Architecture: m68k-amigaos >= 3.2.0
-Requires: AmigaOS 3.0+/68020+ util/libs/AmiSSL-5.9-OS3.lha
+Requires: AmigaOS 3.2+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 Kurz: App zum Chatten mit ChatGPT
 
 AmigaGPT is a text generation program that runs on the classic AmigaOS. Utilising the power of the OpenAI's GPT-3 and GPT-4 architectures, this program brings state-of-the-art language modeling to your Amiga computer.
@@ -19,7 +19,7 @@ Requirements:
 - OCS/ECS/AGA Amiga
 - Motorola 68020 or higher CPU
 - AmigaOS 3.2 or higher OS
-- AmiSSL 5.8 or higher. Here is the latest version at the time of writing (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
+- AmiSSL 5.9 or higher (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
 - Internet access using a TCP/IP stack such as Roadshow (http://roadshow.apc-tcp.de/index-en.php)
 - An active OpenAI API key
 - For speech, any version of narrator.device

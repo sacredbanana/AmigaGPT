@@ -30,7 +30,7 @@ Ensure you have the necessary system requirements:
 - **AmigaOS 3.2** or higher OS
 - Motorola 68020 or higher CPU
 - Internet access using a TCP/IP stack such as **Roadshow** (http://roadshow.apc-tcp.de/index-en.php)
-- **AmiSSL 5.8** or higher. Here is the latest version at the time of writing (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
+- **AmiSSL 5.9** or higher (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
 - An **OpenAI account** with an active **API key**
 - *Optional*: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
 

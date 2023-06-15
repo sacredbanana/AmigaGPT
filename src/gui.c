@@ -106,6 +106,9 @@ static Object *deleteChatButton;
 static struct Screen *screen;
 static BOOL isPublicScreen;
 static UWORD pens[] = {~0};
+static LONG sendMessageButtonPen;
+static LONG newChatButtonPen;
+static LONG deleteChatButtonPen;
 struct MinList *currentConversation;
 struct List *conversationList;
 static struct TextFont *uiTextFont = NULL;
@@ -326,9 +329,11 @@ LONG initVideo() {
 	refreshModelMenuItems();
 	refreshSpeechMenuItems();
 
+	sendMessageButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE) : 8;
+
 	if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SEND_MESSAGE_BUTTON_ID,
-		BUTTON_TextPen, 8,
+		BUTTON_TextPen, sendMessageButtonPen,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_TEXT, (ULONG)"Send",
 		GA_RelVerify, TRUE,
@@ -338,9 +343,11 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	newChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0xFFFFFFFF, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 9;
+
 	if ((newChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, NEW_CHAT_BUTTON_ID,
-		BUTTON_TextPen, 9,
+		BUTTON_TextPen, newChatButtonPen,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_TEXT, (ULONG)"+ New Chat",
 		GA_RelVerify, TRUE,
@@ -350,9 +357,11 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	deleteChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0xFFFFFFFF, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 4;
+
 	if ((deleteChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, DELETE_CHAT_BUTTON_ID,
-		BUTTON_TextPen, 4,
+		BUTTON_TextPen, deleteChatButtonPen,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_TEXT, (ULONG)"- Delete Chat",
 		GA_RelVerify, TRUE,
@@ -828,9 +837,7 @@ static void sendMessage() {
 				addTextToConversation(currentConversation, receivedMessage, "assistant");
 				if (++wordNumber % 50 == 0) {
 					if (config.speechEnabled) {
-						printf("speaking with accent %s\n", config.speechAccent);
 						speakText(receivedMessage + speechIndex);
-						printf("SPEAKING: %s\n", receivedMessage + speechIndex - 1);
 						speechIndex = strlen(receivedMessage);
 					}
 				}
@@ -848,7 +855,6 @@ static void sendMessage() {
 	if (responses != NULL) {
 		if (config.speechEnabled) {
 			speakText(receivedMessage + speechIndex);
-			printf("SPEAKING: %s\n", receivedMessage + speechIndex - 1);
 		}
 		FreeVec(responses);
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
@@ -1740,6 +1746,9 @@ void shutdownGUI() {
 		DisposeObject(mainWindowObject);
 	}
 	if (isPublicScreen) {
+		ReleasePen(screen->ViewPort.ColorMap, sendMessageButtonPen);
+		ReleasePen(screen->ViewPort.ColorMap, newChatButtonPen);
+		ReleasePen(screen->ViewPort.ColorMap, deleteChatButtonPen);
 		UnlockPubScreen(NULL, screen);
 	} else {
 		CloseScreen(screen);
