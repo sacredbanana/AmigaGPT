@@ -35,6 +35,7 @@
 #include "gui.h"
 #include "version.h"
 
+#define HELP_KEY 0x5F
 #define SCREEN_SELECT_WINDOW_WIDTH 200
 #define SCREEN_SELECT_WINDOW_HEIGHT 50
 #define SCREEN_SELECT_RADIO_BUTTON_ID 0
@@ -92,6 +93,7 @@
 #define MENU_ITEM_MODEL_ID 23
 #define MENU_ITEM_SPEECH_SYSTEM_ID 24
 #define MENU_ITEM_OPENAI_API_KEY_ID 25
+#define MENU_ITEM_VIEW_DOCUMENTATION_ID 26
 
 extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
@@ -166,6 +168,8 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "gpt-3.5-turbo-0613", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_0613_ID},
 	{NM_SUB, "gpt-3.5-turbo-16k", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_ID},
 	{NM_SUB, "gpt-3.5-turbo-16k-0613", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_0613_ID},
+	{NM_TITLE, "Help", 0, 0, 0, 0},
+	{NM_ITEM, "View Documentation", 0, 0, 0, MENU_ITEM_VIEW_DOCUMENTATION_ID},
 	{NM_END, NULL, 0, 0, 0, 0}
 };
 struct Hook idcmpHook;
@@ -195,7 +199,6 @@ static void openApiKeyRequester();
 static LONG loadConversations();
 static LONG saveConversations();
 static BOOL copyFile(STRPTR source, STRPTR destination);
-
 
 void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
 	switch (message->Class) {
@@ -563,7 +566,7 @@ LONG initVideo() {
 		WINDOW_NewMenu, amigaGPTMenu,
 		WINDOW_IDCMPHook, &idcmpHook,
 		WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE,
-		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MENUPICK,
+		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MENUPICK | IDCMP_RAWKEY,
 		WA_CustomScreen, screen,
 		TAG_DONE)) == NULL) {
 			printf("Could not create mainWindow object\n");
@@ -1327,6 +1330,12 @@ LONG startGUIRunLoop() {
 							break;
 					}
 				}
+				case WMHI_RAWKEY:
+					switch (code) {
+						case HELP_KEY:
+							displayError("Help not implemented yet");
+							break;
+					}
 					break;
 				default:
 					break;
