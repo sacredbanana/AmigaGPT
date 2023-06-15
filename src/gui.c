@@ -1532,7 +1532,7 @@ static void openApiKeyRequester() {
 	Object *apiKeyRequester = NewObject(REQUESTER_GetClass(), NULL,
 		REQ_Type, REQTYPE_STRING,
 		REQ_TitleText, "Enter your OpenAI API key",
-		REQ_BodyText, "Please type or paste your OpenAI API key here",
+		REQ_BodyText, "Please type or paste (Right Amiga + V) your OpenAI API key here",
 		REQ_GadgetText, "OK|CANCEL",
 		REQ_Image, REQIMAGE_INFO,
 		REQS_AllowEmpty, FALSE,
