@@ -140,16 +140,20 @@ static STRPTR getModelName(enum Model model) {
 	switch (model) {
 		case GPT_4:
 			return "gpt-4";
-		case GPT_4_0314:
-			return "gpt-4-0314";
+		case GPT_4_0613:
+			return "gpt-4-0613";
 		case GPT_4_32K:
 			return "gpt-4-32k";
-		case GPT_4_32K_0314:
-			return "gpt-4-32k-0314";
+		case GPT_4_32K_0613:
+			return "gpt-4-32k-0613";
 		case GPT_3_5_TURBO:
 			return "gpt-3.5-turbo";
-		case GPT_3_5_TURBO_0301:
-			return "gpt-3.5-turbo-0301";
+		case GPT_3_5_TURBO_0613:
+			return "gpt-3.5-turbo-0613";
+		case GPT_3_5_TURBO_16K:
+			return "gpt-3.5-turbo-16k";
+		case GPT_3_5_TURBO_16K_0613:
+			return "gpt-3.5-turbo-16k-0613";
 		default:
 			return NULL;
 	}
