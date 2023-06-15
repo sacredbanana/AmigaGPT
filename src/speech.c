@@ -98,6 +98,7 @@ void closeSpeech() {
  * @param text the text to speak
 **/
 void speakText(STRPTR text) {
+	if (config.speechSystem == SPEECH_SYSTEM_NONE) return;
 	if (CheckIO((struct IORequest *)NarratorIO) == 0) {
 		WaitIO((struct IORequest *)NarratorIO);
 	}
