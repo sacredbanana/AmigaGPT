@@ -15,8 +15,10 @@
 #include <intuition/gadgetclass.h>
 #include <intuition/icclass.h>
 #include <intuition/intuition.h>
+#include <libraries/amigaguide.h>
 #include <libraries/asl.h>
 #include <libraries/gadtools.h>
+#include <proto/amigaguide.h>
 #include <proto/asl.h>
 #include <proto/button.h>
 #include <proto/exec.h>
@@ -77,6 +79,7 @@ extern struct ExecBase *SysBase;
 extern struct DosLibrary *DOSBase;
 struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
+struct Library *AmigaGuideBase;
 struct Library *AslBase;
 struct Library *WindowBase;
 struct Library *LayoutBase;
@@ -180,6 +183,7 @@ static void openApiKeyRequester();
 static LONG loadConversations();
 static LONG saveConversations();
 static BOOL copyFile(STRPTR source, STRPTR destination);
+static void openDocumentation();
 
 void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
 	switch (message->Class) {
@@ -292,6 +296,11 @@ LONG openGUILibraries() {
 		return RETURN_ERROR;
 	}
 
+	if ((AmigaGuideBase = OpenLibrary("amigaguide.library", 0)) == NULL) {
+		printf( "Could not open amigaguide.library\n");
+		return RETURN_ERROR;
+	}
+
 	return RETURN_OK;
 }
 
@@ -307,6 +316,11 @@ static void closeGUILibraries() {
 	CloseLibrary(TextFieldBase);
 	CloseLibrary(RadioButtonBase);
 	CloseLibrary(AslBase);
+	CloseLibrary(StringBase);
+	CloseLibrary(ListBrowserBase);
+	CloseLibrary(ScrollerBase);
+	CloseLibrary(RequesterBase);
+	CloseLibrary(AmigaGuideBase);
 }
 
 /**
@@ -1299,6 +1313,9 @@ LONG startGUIRunLoop() {
 							writeConfig();
 							refreshModelMenuItems();
 							break;
+						case MENU_ITEM_VIEW_DOCUMENTATION_ID:
+							openDocumentation();
+							break;
 						default:
 							break;
 					}
@@ -1306,7 +1323,7 @@ LONG startGUIRunLoop() {
 				case WMHI_RAWKEY:
 					switch (code) {
 						case HELP_KEY:
-							displayError("Help not implemented yet");
+							openDocumentation();
 							break;
 					}
 					break;
@@ -1319,6 +1336,25 @@ LONG startGUIRunLoop() {
 	saveConversations();
 
 	return RETURN_OK;
+}
+
+/**
+ * Opens the application's documentation guide
+*/
+void openDocumentation() {
+	struct NewAmigaGuide guide = {
+		.nag_Name = "PROGDIR:AmigaGPT.guide",
+		.nag_Screen = screen,
+		.nag_PubScreen = NULL,
+		.nag_BaseName = "AmigaGPT",
+		.nag_Extens = NULL,
+	};
+	AMIGAGUIDECONTEXT handle;
+	if (handle = OpenAmigaGuide(&guide, NULL)) {
+		CloseAmigaGuide(handle);
+	} else {
+		displayDiskError("Could not open documentation", IoErr());
+	}
 }
 
 /**
