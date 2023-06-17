@@ -1,6 +1,3 @@
-## Note
-This is PRERELEASE software. What you see here does not represent the final product.
-
 # AmigaGPT
 
 AmigaGPT is a text generation program that runs on the classic AmigaOS. Utilising the power of the OpenAI's GPT-3 and GPT-4 architectures, this program brings state-of-the-art language modeling to your Amiga computer.
@@ -110,7 +107,8 @@ GPT-3.5 models can understand and generate natural language or code. Our most ca
 
 ## Developing
 If you would like to build this project from source you will need Bebbo's **amiga-gcc** toolchain here https://github.com/bebbo/amiga-gcc
-Be sure to add `NDK=3.2` to the `make` options. Once your `amiga-gcc` dev environment is installed, you will need to download the contents of 
+
+Once installed, get the required other SDK's from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
 
 ## License
 

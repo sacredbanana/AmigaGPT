@@ -1,172 +1,391 @@
-@database AmigaGuide
+@database @"AmigaGPT.guide"
+@{b}AUTHOR Cameron Armstrong (Nightfox/sacredbanana)@{ub}
+@wordwrap
 
-@node main
-
-AmigaGPT
+@node Main "AmigaGPT"
+@{b}AmigaGPT@{ub}
 
 Welcome to the future of language modeling on the classic AmigaOS, AmigaGPT. Built on the powerful OpenAI's GPT-3 and GPT-4 architectures, this program will take your Amiga experience to new horizons.
 
 @{b}Click on any topic to learn more.@{ub}
 
-@{" "}
+@{"Introduction " link intro}
+@{"System Requirements " link requirements}
+@{"Installation " link installation}
+@{"Launching " link launching}
+@{"Usage " link usage}
+@{"Models " link models}
+@{"Developing " link developing}
+@{"License " link license}
+@{"Contributing " link contributing}
+@{"Contributors and Special Thanks " link credits}
+@{"Changelog " link changelog}
 
-@link "Features" features
-@link "System Requirements" requirements
-@link "Installation" installation
-@link "Usage" usage
-@link "Models" models
-@link "Developing" developing
-@link "License" license
-@link "Contributing" contributing
-@link "Contributors and Special Thanks" credits
+@endnode
 
-@node features
-
-Features
+@node intro "Introduction"
+@{b}Features@{ub}
 
 AmigaGPT boasts a variety of exciting features:
 
-@{" "}
 
-@link "State-of-the-art language model" language_model
-@link "Seamless integration with AmigaOS" integration_amigaos
-@link "UI customisation" ui_customisation
-@link "Speech capability" speech_capability
-
-@button "Back" main
-
-@node language_model
-State-of-the-art language model
+- @{b}State-of-the-art language model@{ub}
 AmigaGPT uses the GPT-4 architecture developed by OpenAI to generate coherent, context-aware responses to your input.
 
-@button "Back" features
-
-@node integration_amigaos
-Seamless integration with AmigaOS
+- @{b}Seamless integration with AmigaOS@{ub}
 AmigaGPT takes full advantage of the latest AmigaOS 3.2 API to provide a smooth, native user experience without the need to have third party frameworks installed.
 
-@button "Back" features
-
-@node ui_customisation
-UI customisation
 You can customise the look and feel of the application, including the ability to choose the fonts and a choice of opening in the Workbench screen or a custom screen.
 
-@button "Back" features
-
-@node speech_capability
-Speech capability
+- @{b}Speech capability@{ub}
 AmigaGPT can use the Amiga's speech synthesis capability to read the generated text aloud with support for switching between the old Workbench 1.x v34 and the Workbench 2.0 v37 speech synthesisers.
 
-@button "Back" features
+@endnode
 
-@node requirements
+@node requirements "System Requirements"
 
-System Requirements
+@{b}System Requirements@{ub}
 
-For a smooth operation of AmigaGPT, your system needs to meet the following requirements:
+For smooth operation of AmigaGPT, your system needs to meet the following requirements:
 
 @{" "}
 
-An OCS/ECS/AGA Amiga
-AmigaOS 3.2 or higher OS
-Motorola 68020 or higher CPU
-Internet access using a TCP/IP stack such as Roadshow
-AmiSSL 5.8 or higher
-An OpenAI account with an active API key
-Optional: A copy of the Workbench 1.x disk to install narrator.device v34 and a copy of the Workbench 2.0 disk to install narrator.device v37
-@button "Back" main
+- An OCS/ECS/AGA Amiga
+- AmigaOS 3.2 or higher OS
+- Motorola 68020 or higher CPU
+- Internet access using a TCP/IP stack such as Roadshow
+- AmiSSL 5.9 or higher
+- An OpenAI account with an active API key
+- Optional: A copy of the Workbench 1.x disk to install narrator.device v34 and a copy of the Workbench 2.0 disk to install narrator.device v37
 
-@node installation
 
-Installation
+@endnode
+
+@node installation "Installation"
+
+@{b}Installation@{ub}
 
 Follow the steps for successful installation:
 
 @{" "}
 
-Install AmiSSL and a TCP/IP stack if not already done so
-Download the latest release of AmigaGPT
-Extract the amigagpt.lha archive to your desired location
-@button "Speech Functionality" speech_functionality
-@button "Back" main
+- Install AmiSSL and a TCP/IP stack if not already done so
+- Download the latest release of AmigaGPT
+- Extract the amigagpt.lha archive to your desired location
 
-@node speech_functionality
+@{b}Optional steps to enable speech functionality@{ub}
 
-Optional steps to enable speech functionality
+AmigaGPT supports reading the output aloud. This requires a file called `narrator.device` which cannot be included with AmigaGPT because it is still under copyright. Therefore, you must copy this file legally from your Workbench disks so that AmigaGPT will be able to synthesise speech. There are 2 versions of `narrator.device` supported, v34 and v37. 
 
-AmigaGPT supports reading the output aloud. This requires a file called narrator.device which cannot be included with AmigaGPT because it is still under copyright. Therefore, you must copy this file legally from your Workbench disks so that AmigaGPT will be able to synthesise speech.
+v34 is the original version that came with Workbench 1.x.
 
-If you have a Workbench 1.x disk:
+v37 was an updated version included with Workbench 2.0.x. It has more features and sounds more natural, however it does sound quite different which is why AmigaGPT supports you installing both versions and your choice of version to be used can be selected in the Speech menu in the app.
 
-Open a shell and type copy df0:narrator.device libs:narrator.device
-If you have a Workbench 2.0 disk:
+Regardless of which version of 'narrator.device' you choose to install (or both), AmigaGPT requires that you install the free third party `translator.library; v43. This works with both versions of 'narrator.device'.
 
-Open a shell and type copy df0:libs/narrator.device libs:narrator.device_v37
-Now your AmigaGPT can use the narrator.device to read aloud the generated text.
+@{"Installing `translator.library` v43 " link tran43}
+@{"Installing `narrator.device` v34 " link narrator34}
+@{"Installing `narrator.device` v37 " link narrator37}
 
-Remember that due to a bug in narrator.device v37, if you have both versions of narrator.device installed and you want to switch from v37 back to v34, you need to reboot your Amiga.
+@endnode
 
-@button "Back" installation
+@node tran43 "Installing translator.library v43"
 
-@node usage
+@{b}Installing `translator.library` v43@{ub}
 
-Usage
+Since `translator.library` v43 is not available as a standalone install, you will need to install v42 and then patch it to v43.
 
-Double-click on the AmigaGPT icon to launch the program.
-Upon launching for the first time, you'll be prompted to enter your OpenAI API key.
-Enter the text you want to generate a response to in the text box.
-Press Enter or click on the Generate button.
-The program will now contact the OpenAI API and generate a response.
-The generated response will appear in the lower text box.
-If you want to hear the response read aloud, click on the Speak button. You can select which version of narrator.device to use from the Settings menu.
-@button "Back" main
+- Download http://aminet.net/util/libs/translator42.lha and extract the archive to any convenient location on your Amiga such as `RAM:`
+- Navigate to that directory and double click the `Install` program
+- Run the installer using all the default settings
+- Download http://aminet.net/util/libs/Tran43pch.lha and once again extract it to a location of your choice
+- Navigate to that directory and double click the `Install` program
+- Run the installer using all the default settings
 
-@node models
+@endnode
 
-Models
+@node narrator34 "Installing `narrator.device` v34"
 
-The main language model used by AmigaGPT is a variant of OpenAI's GPT-4. This is a state-of-the-art language model that is capable of generating human-like text.
+@{b}Installing `narrator.device` v34@{ub}
 
-@button "Back" main
+Insert your Workbench 1.x disk and copy `df0:devs/narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/34`
 
-@node developing
+@endnode
 
-Developing
+@node narrator37 "Installing `narrator.device` v37"
 
-AmigaGPT is open source and we encourage contributions from the community. If you're a developer interested in contributing, please refer to the Contributing section.
+@{b}Installing `narrator.device` v37@{ub}
 
-@button "Back" main
+Insert your Workbench 2.0.x (you cannot use 2.1 because the speech libraries were removed after version 2.0.4) disk and copy `df0:devs/narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/37`
 
-@node license
+@endnode
 
-License
+@node launching "Launching AmigaGPT"
+@{b}Launching AmigaGPT@{ub}
 
-AmigaGPT is licensed under the GNU General Public License v3.0.
+- Launch the application by double-clicking the AmigaGPT icon
+- You may also launch the app in the command line but before you do, run the command `STACK 20000` to give the program 20kb of stack since the default stack size for apps launched from the shell is 4kb and this is not enough for AmigaGPT and will cause random crashes due to stack overflow. This is not required when you lauch the app by double clicking the icon since the stack size is saved in the icon.
 
-@button "Back" main
+@endnode
 
-@node contributing
+@node usage "Usage"
+@{b}Using AmigaGPT@{ub}
 
-Contributing
+Click on a topic to learn about it:
 
-We welcome all contributions to the project. If you're interested in contributing, please follow these steps:
+@{"Screen select " link screen}
+@{"Entering your OpenAI API key " link apikey}
+@{"Chatting with ChatGPT " link chatting}
+@{"Conversation list " link conlist}
+@{"Edit menu " link editmenu}
+@{"Changing the font of the UI and chat " link font}
 
-Fork the project on GitHub
-Make your changes in a new branch
-Submit a pull request with your changes
-Before submitting a pull request, please make sure to follow the project's coding conventions and ensure that your code is free of bugs.
+@endnode
 
-@button "Back" main
+@node screen "Screen select"
+@{b}Selecting a screen to open AmigaGPT in@{ub}
 
-@node credits
+When launched, AmigaGPT presents you with a choice of opening the app in a new screen or opening in Workbench. If you open in a new screen you have the ability to create a screen for the app to open in. AmigaGPT supports anything from 320x200 all the way up to 4k resolution if using a video card for RTG. Bear in mind text will appear very tiny in resolutions above 1080p so you may want to increase the font size settings from the View menu when the app opens.
 
-Contributors and Special Thanks
+@endnode
 
-AmigaGPT was developed by a dedicated group of Amiga enthusiasts. Special thanks to the following people:
+@node apikey "Entering your OpenAI API key"
+@{b}Entering your OpenAI API key@{ub}
 
-John Doe
-Jane Doe
-Richard Roe
-And many others who contributed their time and expertise to the project.
+When launching for the first time you will need to enter your OpenAI API key before you can start chatting. If you haven't already done so, create an OpenAI account and navigate to https://platform.openai.com/account/api-keys to generate an API key for use with AmigaGPT.
 
-@button "Back" main
+@endnode
+
+@node chatting "Chatting with ChatGPT"
+@{b}Chatting with ChatGPT@{ub}
+
+When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "Send" or Shift + Enter to see ChatGPT's response. The generated text appears in the box above the input. Depending on if you have speech configured and enabled, you will also hear it spoken to you.
+
+You can choose to have this text read aloud using the "Speech" menu option. You can also select which model for OpenAI to use in the "OpenAI" menu option.
+
+@endnode
+
+@node conlist "Conversation list"
+@{b}Conversation list@{ub}
+
+To the left of the chat box is a conversation list which you can use to go to another saved conversation. New conversations can be created with the "New chat" button and conversations can be removed with the "Delete chat" button. Your conversations will get saved and they will appear again the next time you open AmigaGPT.
+
+@endnode
+
+@node editmenu "Edit menu"
+@{b}Edit menu@{ub}
+
+In the "Edit" menu, you'll find basic text editing commands like Cut, Copy, Paste and Clear.
+
+@endnode
+
+@node font "Changing the fonts"
+@{b}Changing the fonts@{ub}
+
+You may change the fonts of both the UI and the chat.
+
+
+To change the font of either, go to the "View" menu.
+
+@endnode
+
+@node developing "Developing"
+@{b}Developing@{ub}
+
+Source code hosted at https://github.com/sacredbanana/AmigaGPT
+
+If you would like to build this project from source you will need Bebbo's **amiga-gcc** toolchain here https://github.com/bebbo/amiga-gcc
+
+Once this is installed, download the additional SDK's from https://github.com/sacredbanana/AmigaSDK-gcc and put them in your Amiga development environment installed in the above step.
+
+@endnode
+
+@node contributing "Contributing"
+@{b}Contributing to AmigaGPT@{ub}
+
+We welcome contributions to AmigaGPT! If you have a bug to report, a feature to suggest, or a change you'd like to make to the code, please open a new issue or submit a pull request.
+
+@endnode
+
+@node credits "Contributors"
+@{b}Contributors@{ub}
+
+@{b}Code@{ub}
+- Cameron Armstrong (sacredbanana/Nightfox) https://github.com/sacredbanana/
+
+@{b}Art@{ub}
+- Mauricio Sandoval - Icon design
+
+@{b}Special Thanks@{ub}
+- Bebbo for creating the Amiga GCC toolchain https://github.com/bebbo
+- OpenAI for making this all possible https://openai.com
+- EAB and everyone in it for answering my questions https://eab.abime.net/
+- Hyperion Entertainment for bringinging us AmigaOS 3.2 https://www.hyperion-entertainment.com
+
+
+@endnode
+
+@node license "License"
+@{b}License@{ub}
+
+
+@{b}AmigaGPT@{ub}
+
+
+MIT License
+
+Copyright (c) 2023 Cameron Armstrong
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+@{b}THIRD PARTY LICENSES@{ub}
+
+
+
+@{b}json-c@{ub}
+
+
+Copyright (c) 2009-2012 Eric Haszlakiewicz
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+----------------------------------------------------------------
+
+Copyright (c) 2004, 2005 Metaparadigm Pte Ltd
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+@{b}translator.library v43@{ub}
+
+
+Copyright 1996 Francesco Devitt and mbarlow@pacific.telebyte.net.
+Freely distributable.
+
+@endnode
+
+@node models "Models"
+@{b}Models@{ub}
+
+@{b}GPT-4@{ub}
+
+
+GPT-4 is currently in a limited beta and only accessible to those who have been granted access. Please join the waitlist (https://openai.com/waitlist/gpt-4) to get access.
+
+GPT-4 is a large multimodal model (accepting text inputs and emitting text outputs today, with image inputs coming in the future) that can solve difficult problems with greater accuracy than any of our previous models, thanks to its broader general knowledge and advanced reasoning capabilities. For many basic tasks, the difference between GPT-4 and GPT-3.5 models is not significant. However, in more complex reasoning situations, GPT-4 is much more capable than any of our previous models.
+
+@{B}Model variants@{ub}
+
+@{b}gpt-4@{ub}
+More capable than any GPT-3.5 model, able to do more complex tasks, and optimized for chat. Will be updated with our latest model iteration 2 weeks after it is released.
+
+Max tokens: 8,192
+Training data: Up to Sep 2021
+
+@{b}gpt-4-0613@{ub}
+Snapshot of gpt-4 from June 13th 2023 with function calling data. Unlike gpt-4, this model will not receive updates, and will be deprecated 3 months after a new version is released.
+
+Max tokens: 8,192
+Training data: Up to Sep 2021
+
+@{b}gpt-4-32k@{ub}
+Same capabilities as the base gpt-4 mode but with 4x the context length. Will be updated with our latest model iteration.
+
+Max tokens: 32,768
+Training data: Up to Sep 2021
+
+@{b}gpt-4-32k-0613@{ub}
+Snapshot of gpt-4-32 from June 13th 2023. Unlike gpt-4-32k, this model will not receive updates, and will be deprecated 3 months after a new version is released.
+
+Max tokens: 32,768
+Training data: Up to Sep 2021
+
+@{b}GPT-3.5@{ub}
+
+GPT-3.5 models can understand and generate natural language or code. Our most capable and cost effective model in the GPT-3.5 family is gpt-3.5-turbo which has been optimized for chat but works well for traditional completions tasks as well.
+
+
+@{b}gpt-3.5-turbo@{ub}
+Most capable GPT-3.5 model and optimized for chat at 1/10th the cost of text-davinci-003. Will be updated with our latest model iteration 2 weeks after it is released.
+
+Max tokens: 4,096
+Training data: Up to Sep 2021
+
+@{b}gpt-3.5-turbo-0613@{ub}
+Snapshot of gpt-3.5-turbo from June 13th 2023 with function calling data. Unlike gpt-3.5-turbo, this model will not receive updates, and will be deprecated 3 months after a new version is released.
+
+Max tokens: 4,096
+Training data: Up to Sep 2021
+
+@{b}gpt-3.5-turbo-16k@{ub}
+Same capabilities as the standard gpt-3.5-turbo model but with 4 times the context.
+
+Max tokens: 16,384
+Training data: Up to Sep 2021
+
+@{b}gpt-3.5-turbo-16k-0613@{ub}
+Snapshot of gpt-3.5-turbo-16k from June 13th 2023. Unlike gpt-3.5-turbo-16k, this model will not receive updates, and will be deprecated 3 months after a new version is released.
+
+Max tokens: 16,384
+Training data: Up to Sep 2021
+
+@endnode
+
+@node changelog "Changelog"
+@{b}Changelog@{ub}
+
+
+@{b}1.0@{ub}
+
+- Initial release
+
+@endnode
