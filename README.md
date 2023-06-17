@@ -64,7 +64,7 @@ Since `translator.library` **v43** is not available as a standalone install, you
 
 ## Launching **AmigaGPT**
 * Launch the application by double-clicking the AmigaGPT icon
-* You may also launch the app in the command line but before you do, run the command `STACK 20000` to give the program 20kb of stack since the default stack size for apps launched from the shell is 4kb and this is not enough for **AmigaGPT** and will cause random crashes due to stack overflow. This is not required when you lauch the app by double clicking the icon since the stack size is saved in the icon
+* You may also launch the app in the command line but before you do, run the command `STACK 20000` to give the program 20kb of stack since the default stack size for apps launched from the shell is 4kb and this is not enough for **AmigaGPT** and will cause random crashes due to stack overflow. This is not required when you launch the app by double clicking the icon since the stack size is saved in the icon
 
 ## Usage
 

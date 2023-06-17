@@ -124,7 +124,7 @@ Insert your Workbench 2.0.x (you cannot use 2.1 because the speech libraries wer
 @{b}Launching AmigaGPT@{ub}
 
 - Launch the application by double-clicking the AmigaGPT icon
-- You may also launch the app in the command line but before you do, run the command `STACK 20000` to give the program 20kb of stack since the default stack size for apps launched from the shell is 4kb and this is not enough for AmigaGPT and will cause random crashes due to stack overflow. This is not required when you lauch the app by double clicking the icon since the stack size is saved in the icon.
+- You may also launch the app in the command line but before you do, run the command `STACK 20000` to give the program 20kb of stack since the default stack size for apps launched from the shell is 4kb and this is not enough for AmigaGPT and will cause random crashes due to stack overflow. This is not required when you launch the app by double clicking the icon since the stack size is saved in the icon.
 
 @endnode
 
@@ -323,7 +323,7 @@ GPT-4 is currently in a limited beta and only accessible to those who have been 
 
 GPT-4 is a large multimodal model (accepting text inputs and emitting text outputs today, with image inputs coming in the future) that can solve difficult problems with greater accuracy than any of our previous models, thanks to its broader general knowledge and advanced reasoning capabilities. For many basic tasks, the difference between GPT-4 and GPT-3.5 models is not significant. However, in more complex reasoning situations, GPT-4 is much more capable than any of our previous models.
 
-@{B}Model variants@{ub}
+@{b}Model variants@{ub}
 
 @{b}gpt-4@{ub}
 More capable than any GPT-3.5 model, able to do more complex tasks, and optimized for chat. Will be updated with our latest model iteration 2 weeks after it is released.
