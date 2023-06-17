@@ -26,8 +26,10 @@ AUTOGEN_NEXT := $(shell expr $$(awk '/#define BUILD_NUMBER/' $(AUTOGEN_FILE) | t
 # https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
 # http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
 
-program = out/AmigaGPT
-OUT = $(program)
+
+program_name = AmigaGPT
+EXECUTABLE_OUT = out/$(program_name)
+PACKAGE_OUT = out/$(program_name).lha
 CC = /opt/amiga/bin/m68k-amigaos-gcc
 VASM = /opt/amiga/bin/vasmm68k_mot
 
@@ -43,13 +45,15 @@ endif
 CCFLAGS = -g -MP -MMD -m68020 -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -noixemul -fbaserel -L$(OS3LIBDIR) -lamiga -lm -lamisslstubs
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),-D
-LDFLAGS =  -Wl,-Map=$(OUT).map
+LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map
 VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -I$(INCDIR) -I$(SDKDIR) -I$(NDKDIR)
 
-all: $(OUT)
+.PHONY: all clean copy_bundle_files package
 
-$(OUT): $(objects)
-	$(info Linking $(program))
+all: $(EXECUTABLE_OUT) copy_bundle_files $(PACKAGE_OUT)
+
+$(EXECUTABLE_OUT): $(objects)
+	$(info Linking $(program_name))
 	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@
 
 clean:
@@ -79,15 +83,18 @@ $(vasm_objects): obj/%.o : %.asm
 	$(info Assembling $<)
 	$(VASM) $(VASMFLAGS) -o $@ $(CURDIR)/$<
 
-.PHONY: all clean copy_bundle_files
-
-all: $(OUT) copy_bundle_files
-
 copy_bundle_files:
 ifdef WINDOWS
 	$(info Copying bundle files...)
 	xcopy /E /Y /I bundle out
 else
 	$(info Copying bundle files...)
-	cp -R bundle/* out/
+	cp -R bundle/AmigaGPT/* out/
 endif
+
+$(PACKAGE_OUT): $(EXECUTABLE_OUT)
+	$(info Creating LHA package...)
+	@rm -f $(PACKAGE_OUT)
+	cp $(EXECUTABLE_OUT) bundle/$(program_name)/
+	cd bundle && lha a -v ../out/$(program_name).lha $(program_name) $(program_name).info
+	rm bundle/$(program_name)/$(program_name)

@@ -1,0 +1,172 @@
+@database AmigaGuide
+
+@node main
+
+AmigaGPT
+
+Welcome to the future of language modeling on the classic AmigaOS, AmigaGPT. Built on the powerful OpenAI's GPT-3 and GPT-4 architectures, this program will take your Amiga experience to new horizons.
+
+@{b}Click on any topic to learn more.@{ub}
+
+@{" "}
+
+@link "Features" features
+@link "System Requirements" requirements
+@link "Installation" installation
+@link "Usage" usage
+@link "Models" models
+@link "Developing" developing
+@link "License" license
+@link "Contributing" contributing
+@link "Contributors and Special Thanks" credits
+
+@node features
+
+Features
+
+AmigaGPT boasts a variety of exciting features:
+
+@{" "}
+
+@link "State-of-the-art language model" language_model
+@link "Seamless integration with AmigaOS" integration_amigaos
+@link "UI customisation" ui_customisation
+@link "Speech capability" speech_capability
+
+@button "Back" main
+
+@node language_model
+State-of-the-art language model
+AmigaGPT uses the GPT-4 architecture developed by OpenAI to generate coherent, context-aware responses to your input.
+
+@button "Back" features
+
+@node integration_amigaos
+Seamless integration with AmigaOS
+AmigaGPT takes full advantage of the latest AmigaOS 3.2 API to provide a smooth, native user experience without the need to have third party frameworks installed.
+
+@button "Back" features
+
+@node ui_customisation
+UI customisation
+You can customise the look and feel of the application, including the ability to choose the fonts and a choice of opening in the Workbench screen or a custom screen.
+
+@button "Back" features
+
+@node speech_capability
+Speech capability
+AmigaGPT can use the Amiga's speech synthesis capability to read the generated text aloud with support for switching between the old Workbench 1.x v34 and the Workbench 2.0 v37 speech synthesisers.
+
+@button "Back" features
+
+@node requirements
+
+System Requirements
+
+For a smooth operation of AmigaGPT, your system needs to meet the following requirements:
+
+@{" "}
+
+An OCS/ECS/AGA Amiga
+AmigaOS 3.2 or higher OS
+Motorola 68020 or higher CPU
+Internet access using a TCP/IP stack such as Roadshow
+AmiSSL 5.8 or higher
+An OpenAI account with an active API key
+Optional: A copy of the Workbench 1.x disk to install narrator.device v34 and a copy of the Workbench 2.0 disk to install narrator.device v37
+@button "Back" main
+
+@node installation
+
+Installation
+
+Follow the steps for successful installation:
+
+@{" "}
+
+Install AmiSSL and a TCP/IP stack if not already done so
+Download the latest release of AmigaGPT
+Extract the amigagpt.lha archive to your desired location
+@button "Speech Functionality" speech_functionality
+@button "Back" main
+
+@node speech_functionality
+
+Optional steps to enable speech functionality
+
+AmigaGPT supports reading the output aloud. This requires a file called narrator.device which cannot be included with AmigaGPT because it is still under copyright. Therefore, you must copy this file legally from your Workbench disks so that AmigaGPT will be able to synthesise speech.
+
+If you have a Workbench 1.x disk:
+
+Open a shell and type copy df0:narrator.device libs:narrator.device
+If you have a Workbench 2.0 disk:
+
+Open a shell and type copy df0:libs/narrator.device libs:narrator.device_v37
+Now your AmigaGPT can use the narrator.device to read aloud the generated text.
+
+Remember that due to a bug in narrator.device v37, if you have both versions of narrator.device installed and you want to switch from v37 back to v34, you need to reboot your Amiga.
+
+@button "Back" installation
+
+@node usage
+
+Usage
+
+Double-click on the AmigaGPT icon to launch the program.
+Upon launching for the first time, you'll be prompted to enter your OpenAI API key.
+Enter the text you want to generate a response to in the text box.
+Press Enter or click on the Generate button.
+The program will now contact the OpenAI API and generate a response.
+The generated response will appear in the lower text box.
+If you want to hear the response read aloud, click on the Speak button. You can select which version of narrator.device to use from the Settings menu.
+@button "Back" main
+
+@node models
+
+Models
+
+The main language model used by AmigaGPT is a variant of OpenAI's GPT-4. This is a state-of-the-art language model that is capable of generating human-like text.
+
+@button "Back" main
+
+@node developing
+
+Developing
+
+AmigaGPT is open source and we encourage contributions from the community. If you're a developer interested in contributing, please refer to the Contributing section.
+
+@button "Back" main
+
+@node license
+
+License
+
+AmigaGPT is licensed under the GNU General Public License v3.0.
+
+@button "Back" main
+
+@node contributing
+
+Contributing
+
+We welcome all contributions to the project. If you're interested in contributing, please follow these steps:
+
+Fork the project on GitHub
+Make your changes in a new branch
+Submit a pull request with your changes
+Before submitting a pull request, please make sure to follow the project's coding conventions and ensure that your code is free of bugs.
+
+@button "Back" main
+
+@node credits
+
+Contributors and Special Thanks
+
+AmigaGPT was developed by a dedicated group of Amiga enthusiasts. Special thanks to the following people:
+
+John Doe
+Jane Doe
+Richard Roe
+And many others who contributed their time and expertise to the project.
+
+@button "Back" main
