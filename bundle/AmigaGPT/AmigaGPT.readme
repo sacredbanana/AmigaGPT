@@ -1,11 +1,11 @@
 Short: App for chatting to ChatGPT
+Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox)
 Uploader: Cameron Armstrong (Nightfox)
 Type: util/misc
 Version: 1.0.0
 Architecture: m68k-amigaos >= 3.2.0
 Requires: AmigaOS 3.2+/68020+ util/libs/AmiSSL-5.9-OS3.lha
-Kurz: App zum Chatten mit ChatGPT
 
 AmigaGPT is a text generation program that runs on the classic AmigaOS.
 Utilising the power of the OpenAI's GPT-3 and GPT-4 architectures, this
