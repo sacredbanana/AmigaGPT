@@ -376,8 +376,11 @@ Training data: Up to Sep 2021
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}1.0.1 (2023-06-24)@{ub}
 
-@{b}1.0@{ub}
+- After setting UI font, the font is now applied fully without needing to restart the app
+
+@{b}1.0  (2023-06-17)@{ub}
 
 - Initial release
 

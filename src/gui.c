@@ -121,6 +121,8 @@ static struct TextAttr screenFont = {
 	.ta_Style = FS_NORMAL,
 	.ta_Flags = FPF_DISKFONT | FPF_DESIGNED
 };
+static struct TextAttr chatTextAttr = {0};
+static struct TextAttr uiTextAttr = {0};
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
 	{NM_ITEM, "About", 0, 0, 0, MENU_ITEM_ABOUT_ID},
@@ -343,11 +345,21 @@ LONG initVideo() {
 	refreshModelMenuItems();
 	refreshSpeechMenuItems();
 
+	uiTextAttr.ta_Name = config.uiFontName;
+	uiTextAttr.ta_YSize = config.uiFontSize;
+	uiTextAttr.ta_Style = config.uiFontStyle;
+	uiTextAttr.ta_Flags = config.uiFontFlags;
+	chatTextAttr.ta_Name = config.chatFontName;
+	chatTextAttr.ta_YSize = config.chatFontSize;
+	chatTextAttr.ta_Style = config.chatFontStyle;
+	chatTextAttr.ta_Flags = config.chatFontFlags;
+
 	sendMessageButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE) : 8;
 
 	if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SEND_MESSAGE_BUTTON_ID,
 		BUTTON_TextPen, sendMessageButtonPen,
+		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_TEXT, (ULONG)"Send",
 		GA_RelVerify, TRUE,
@@ -362,6 +374,7 @@ LONG initVideo() {
 	if ((newChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, NEW_CHAT_BUTTON_ID,
 		BUTTON_TextPen, newChatButtonPen,
+		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_TEXT, (ULONG)"+ New Chat",
 		GA_RelVerify, TRUE,
@@ -376,6 +389,7 @@ LONG initVideo() {
 	if ((deleteChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, DELETE_CHAT_BUTTON_ID,
 		BUTTON_TextPen, deleteChatButtonPen,
+		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_TEXT, (ULONG)"- Delete Chat",
 		GA_RelVerify, TRUE,
@@ -399,6 +413,7 @@ LONG initVideo() {
 	if ((conversationListBrowser = NewObject(LISTBROWSER_GetClass(), NULL,
 		GA_ID, CONVERSATION_LIST_BROWSER_ID,
 		GA_RelVerify, TRUE,
+		GA_TextAttr, &uiTextAttr,
 		LISTBROWSER_WrapText, TRUE,
 		LISTBROWSER_AutoFit, TRUE,
 		LISTBROWSER_ShowSelected, TRUE,
@@ -425,17 +440,11 @@ LONG initVideo() {
 		GA_ID, STATUS_BAR_ID,
 		GA_RelVerify, TRUE,
 		GA_ReadOnly, TRUE,
+		GA_TextAttr, &uiTextAttr,
 		TAG_DONE)) == NULL) {
 			printf("Could not create text editor\n");
 			return RETURN_ERROR;
 	}
-
-	struct TextAttr chatTextAttr = {
-		.ta_Name = config.chatFontName,
-		.ta_YSize = config.chatFontSize,
-		.ta_Style = config.chatFontStyle,
-		.ta_Flags = config.chatFontFlags
-	};
 
 	if ((textInputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
 		GA_ID, TEXT_INPUT_TEXT_EDITOR_ID,
@@ -1508,8 +1517,12 @@ static void openUIFontRequester() {
 				mainWindow = DoMethod(mainWindowObject, WM_OPEN, NULL);
 			}
 			SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+			SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 			SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 			SetGadgetAttrs(statusBar, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+
 		}
 		FreeAslRequest(fontRequester);
 	}
