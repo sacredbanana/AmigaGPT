@@ -9,14 +9,15 @@ endif
 
 subdirs := $(wildcard */) $(wildcard src/*/) $(wildcard src/*/*/)
 VPATH = $(subdirs)
+BUILD_DIR := build/os3/obj/
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
-cpp_objects := $(addprefix obj/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
+cpp_objects := $(addprefix $(BUILD_DIR),$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
 c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
-c_objects := $(addprefix obj/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
+c_objects := $(addprefix $(BUILD_DIR),$(patsubst %.c,%.o,$(notdir $(c_sources))))
 s_sources := $(wildcard *.s) $(wildcard $(addsuffix *.s,$(subdirs)))
-s_objects := $(addprefix obj/,$(patsubst %.s,%.o,$(notdir $(s_sources))))
+s_objects := $(addprefix $(BUILD_DIR),$(patsubst %.s,%.o,$(notdir $(s_sources))))
 vasm_sources := $(wildcard *.asm) $(wildcard $(addsuffix *.asm, $(subdirs)))
-vasm_objects := $(addprefix obj/, $(patsubst %.asm,%.o,$(notdir $(vasm_sources))))
+vasm_objects := $(addprefix $(BUILD_DIR), $(patsubst %.asm,%.o,$(notdir $(vasm_sources))))
 objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
 
 AUTOGEN_FILE := src/version.h
@@ -52,6 +53,10 @@ VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -I$(INC
 
 all: $(EXECUTABLE_OUT) copy_bundle_files $(PACKAGE_OUT)
 
+$(BUILD_DIR):
+	@$(info Creating directory $@)
+	@mkdir -p $@
+
 $(EXECUTABLE_OUT): $(objects)
 	$(info Linking $(program_name))
 	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@
@@ -59,27 +64,27 @@ $(EXECUTABLE_OUT): $(objects)
 clean:
 	$(info Cleaning...)
 ifdef WINDOWS
-	@del /q obj\*
+	@del /q build\os3\obj\*
 else
-	@$(RM) obj/*
+	@$(RM) $(BUILD_DIR)*
 endif
 
 -include $(objects:.o=.d)
 
-$(cpp_objects) : obj/%.o : %.cpp
+$(cpp_objects) : build/os3/obj/%.o : %.cpp | build/os3/obj/%.dir
 	$(info Compiling $<)
 	$(CC) $(CPPFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(c_objects) : obj/%.o : %.c
+$(c_objects) : build/os3/obj/%.o : %.c | $(BUILD_DIR)
 	$(info Compiling $<)
 	sed -i "" 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(s_objects): obj/%.o : %.s
+$(s_objects): build/os3/obj/%.o : %.s |$(BUILD_DIR)
 	$(info Assembling $<)
 	$(CC) $(CCFLAGS) $(ASFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(vasm_objects): obj/%.o : %.asm
+$(vasm_objects): build/os3/obj/%.o : %.asm | $(BUILD_DIR)
 	$(info Assembling $<)
 	$(VASM) $(VASMFLAGS) -o $@ $(CURDIR)/$<
 
