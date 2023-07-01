@@ -1,17 +1,42 @@
 {
     "configurations": [
         {
-            "name": "macOS GCC Amiga",
+            "name": "GCC AmigaOS 3",
             "includePath": [
-                "/Volumes/repos/amigagpt/**",
+                "./**",
                 "/opt/amiga/m68k-amigaos/include",
                 "/opt/amiga/m68k-amigaos/ndk-include",
                 "/opt/amiga/m68k-amigaos/libnix/include",
                 "/opt/amiga/m68k-amigaos/sys-include",
                 "/opt/amiga/m68k-amigaos/clib2/include"
-                // "/Volumes/repos/vcpkg/installed/arm64-osx/include"
             ],
-            "defines": [],
+            "defines": ["__AMIGAOS3__", "PROGRAM_NAME=\"AmigaGPT\""],
+            "macFrameworkPath": [
+                "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "macos-gcc-arm64",
+            "mergeConfigurations": false,
+            "compilerPath": "/opt/amiga/bin/m68k-amigaos-gcc",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
+            "name": "GCC AmigaOS 4",
+            "includePath": [
+                "./**",
+                "/opt/amiga/ppc-amigaos/SDK/newlib/include",
+                "/opt/amiga/ppc-amigaos/SDK/include/include_h",
+                "/opt/amiga/ppc-amigaos/SDK/include/netinclude",
+                "/opt/amiga/ppc-amigaos/SDK/local/common/include",
+                "/opt/amiga/ppc-amigaos/SDK/local/newlib/include"
+            ],
+            "defines": ["__AMIGAOS4__", "__USE_INLINE__", "PROGRAM_NAME=\"AmigaGPT\""],
             "macFrameworkPath": [
                 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
             ],

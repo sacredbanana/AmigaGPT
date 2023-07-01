@@ -1,9 +1,9 @@
 Short: App for chatting to ChatGPT
 Kurz: App zum Chatten mit ChatGPT
-Author: Cameron Armstrong (Nightfox)
-Uploader: Cameron Armstrong (Nightfox)
+Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
+Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 1.0.1
+Version: 1.1.0
 Architecture: m68k-amigaos >= 3.2.0
 Requires: AmigaOS 3.2+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 
@@ -112,8 +112,14 @@ The "Project" menu includes an "About" option, which displays information
 about the program.
 
 Developing:
-
 Source code hosted at https://github.com/sacredbanana/AmigaGPT
+You can either compile the code natively or with the Docker container.
+
+------
+Native
+------
+
+*Building the AmigaOS 3 app*
 
 If you would like to build this project from source you will need Bebbo's
 amiga-gcc toolchain here https://github.com/bebbo/amiga-gcc
@@ -121,6 +127,28 @@ amiga-gcc toolchain here https://github.com/bebbo/amiga-gcc
 Once installed, get the required other SDK's from
 https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga
 dev environment created in the above step.
+
+*Building the AmigaOS 4 app*
+Get this toolchain set up https://github.com/sba1/adtools
+
+Once installed, get the required other SDK's from
+https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga
+dev environment created in the above step.
+
+
+------
+Docker
+------
+
+You may use an all-in-one Docker image that is able to compile both the
+AmigaOS 3 and AmigaOS 4 versions of the app.
+
+Just install Docker on your machine and run the `build_os3.sh` or
+`build_os4.sh` scripts depending on which version of the app you want to
+ build. If you want to perform a clean build, you can set the environment
+variable `CLEAN=1` for example you can run `CLEAN=1 ./build_os3.sh`.
+
+The build app will be saved to the `/out` directory.
 
 Contributing:
 
@@ -144,6 +172,12 @@ Special Thanks:
  https://www.hyperion-entertainment.com
 
 Changelog:
+
+------------------
+1.1.0
+------------------
+- Support for PowerPC AmigaOS 4
+- Blank responses from OpenAI no longer cause a crash
 
 ------------------
 1.0.1 (2023-06-24)

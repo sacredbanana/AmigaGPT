@@ -1,14 +1,20 @@
+#include <dos/dos.h>
+#include <exec/exec.h>
 #include <exec/types.h>
 #include <graphics/text.h>
 #include <exec/memory.h>
+#include <proto/dos.h>
+#include <proto/exec.h>
 #include <stdlib.h>
 #include "config.h"
 #include "external/json-c/json.h"
 
 struct Config config = {
+	#ifdef __AMIGAOS3__
 	.speechEnabled = TRUE,
 	.speechAccent = "american.accent",
 	.speechSystem = SPEECH_SYSTEM_34,
+	#endif
 	.model = GPT_3_5_TURBO,
 	.chatFontName = {0},
 	.chatFontSize = 8,
@@ -47,9 +53,11 @@ LONG writeConfig() {
 	}
 
 	struct json_object *configJsonObject = json_object_new_object();
+	#ifdef __AMIGAOS3__
 	json_object_object_add(configJsonObject, "speechEnabled", json_object_new_boolean(config.speechEnabled));
 	json_object_object_add(configJsonObject, "speechAccent", json_object_new_string(config.speechAccent));
 	json_object_object_add(configJsonObject, "speechSystem", json_object_new_int(config.speechSystem));
+	#endif
 	json_object_object_add(configJsonObject, "model", json_object_new_int(config.model));
 	json_object_object_add(configJsonObject, "chatFontName", json_object_new_string(config.chatFontName));
 	json_object_object_add(configJsonObject, "chatFontSize", json_object_new_int(config.chatFontSize));
@@ -86,8 +94,12 @@ LONG readConfig() {
 		return RETURN_OK;
 	}
 
+	#ifdef __AMIGAOS3__
 	Seek(file, 0, OFFSET_END);
 	LONG fileSize = Seek(file, 0, OFFSET_BEGINNING);
+	#else
+	int64 fileSize = GetFileSize(file);
+	#endif
 	STRPTR configJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
 	if (Read(file, configJsonString, fileSize) != fileSize) {
 		printf("Failed to read the config file\n");
@@ -105,6 +117,7 @@ LONG readConfig() {
 		return RETURN_ERROR;
 	}
 
+	#ifdef __AMIGAOS3__
 	struct json_object *speechEnabledObj;
 	if (json_object_object_get_ex(configJsonObject, "speechEnabled", &speechEnabledObj)) {
 		config.speechEnabled = json_object_get_boolean(speechEnabledObj);
@@ -123,7 +136,8 @@ LONG readConfig() {
 	if (json_object_object_get_ex(configJsonObject, "speechSystem", &speechSystemObj)) {
 		config.speechSystem = json_object_get_int(speechSystemObj);
 	}
-
+	#endif
+	
 	struct json_object *modelObj;
 	if (json_object_object_get_ex(configJsonObject, "model", &modelObj)) {
 		config.model = json_object_get_int(modelObj);

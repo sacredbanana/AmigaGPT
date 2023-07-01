@@ -194,9 +194,30 @@ To change the font of either, go to the "View" menu.
 
 Source code hosted at https://github.com/sacredbanana/AmigaGPT
 
-If you would like to build this project from source you will need Bebbo's **amiga-gcc** toolchain here https://github.com/bebbo/amiga-gcc
+You can either compile the code natively or with the Docker container.
+
+@{b}Native@{ub}
+
+@{i}Building the AmigaOS 3 app@{ui}
+
+If you would like to build this project from source you will need Bebbo's @{b}amiga-gcc@{ub} toolchain here https://github.com/bebbo/amiga-gcc
 
 Once this is installed, download the additional SDK's from https://github.com/sacredbanana/AmigaSDK-gcc and put them in your Amiga development environment installed in the above step.
+
+@{i}Building the AmigaOS 4 app@{ui}
+
+Get this toolchain set up https://github.com/sba1/adtools
+
+Once installed, get the required other SDK's from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
+
+@{b}Docker@{ub}
+
+You may use an all-in-one Docker image that is able to compile both the AmigaOS 3 and AmigaOS 4 versions of the app.
+
+Just install Docker on your machine and run the `build_os3.sh` or `build_os4.sh` scripts depending on which version of the app you want to build.
+If you want to perform a clean build, you can set the environment variable `CLEAN=1` for example you can run `CLEAN=1 ./build_os3.sh`.
+
+The build app will be saved to the `/out` directory.
 
 @endnode
 
@@ -375,6 +396,11 @@ Training data: Up to Sep 2021
 
 @node changelog "Changelog"
 @{b}Changelog@{ub}
+
+@{b}1.1.0@{ub}
+
+- Support for PowerPC AmigaOS 4
+- Blank responses from OpenAI no longer cause a crash
 
 @{b}1.0.1 (2023-06-24)@{ub}
 

@@ -60,7 +60,8 @@
         "window.h": "c",
         "stdlib.h": "c",
         "cdefs.h": "c",
-        "stdarg.h": "c"
+        "stdarg.h": "c",
+        "application.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

@@ -6,7 +6,7 @@ OS := $(shell uname)
 
 subdirs := $(wildcard */) $(wildcard src/*/) $(wildcard src/*/*/)
 VPATH = $(subdirs)
-BUILD_DIR := build/os3/obj/
+BUILD_DIR := build/os4/obj/
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
 cpp_objects := $(addprefix $(BUILD_DIR),$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
 c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
@@ -20,19 +20,19 @@ objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
 AUTOGEN_FILE := src/version.h
 AUTOGEN_NEXT := $(shell expr $$(awk '/#define BUILD_NUMBER/' $(AUTOGEN_FILE) | tr -cd "[0-9]") + 1)
 
+
 # https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
 # http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
 
+
 PROGRAM_NAME = AmigaGPT
 EXECUTABLE_OUT = out/$(PROGRAM_NAME)
-PACKAGE_OUT = out/$(PROGRAM_NAME).lha
-CC = /opt/m68k-amigaos/bin/m68k-amigaos-gcc
-VASM = /opt/amiga/bin/vasmm68k_mot
+PACKAGE_OUT = out/$(PROGRAM_NAME)OS4.lha
+CC = ppc-amigaos-gcc
 
-LIBDIR = /opt/amiga/m68k-amigaos/lib
-SDKDIR = /opt/amiga/m68k-amigaos/sys-include
-NDKDIR = /opt/amiga/m68k-amigaos/ndk-include
-INCDIR = /opt/amiga/m68k-amigaos/include
+LIBDIR = /tools/ppc-amigaos/SDK/lib
+SDKDIR = /tools/ppc-amigaos/SDK/include/include_h
+NETINCDIR = /tools/ppc-amigaos/SDK/include/netinclude
 
 ifeq ($(OS),Darwin)
 	SED = sed -i "" 
@@ -40,11 +40,11 @@ else
 	SED = sed -i
 endif
 
-CCFLAGS = -g -MP -MMD -m68020 -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -noixemul -fbaserel -L$(LIBDIR) -lamiga -lm -lamisslstubs -D__AMIGAOS3__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\"
+CCFLAGS = -g -MP -MMD -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -L$(LIBDIR) -lm -lamisslstubs -D__AMIGAOS4__ -D__USE_INLINE__ -DHAVE_VASPRINTF -DPROGRAM_NAME=\"$(PROGRAM_NAME)\"
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
-ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),-D
+ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NETINCDIR),-D
 LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map
-VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS3__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -I$(INCDIR) -I$(SDKDIR) -I$(NDKDIR)
+VASMFLAGS = -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS4__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -I$(NETINCDIR) -I$(SDKDIR)
 
 .PHONY: all clean copy_bundle_files package
 
@@ -64,28 +64,28 @@ clean:
 
 -include $(objects:.o=.d)
 
-$(cpp_objects) : build/os3/obj/%.o : %.cpp | build/os3/obj/%.dir
+$(cpp_objects) : build/os4/obj/%.o : %.cpp | build/os4/obj/%.dir
 	$(info Compiling $<)
 	$(CC) $(CPPFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(c_objects) : build/os3/obj/%.o : %.c | $(BUILD_DIR)
+$(c_objects) : build/os4/obj/%.o : %.c | $(BUILD_DIR)
 	$(info Compiling $<)
 	$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(s_objects): build/os3/obj/%.o : %.s |$(BUILD_DIR)
+$(s_objects): build/os4/obj/%.o : %.s |$(BUILD_DIR)
 	$(info Assembling $<)
 	$(CC) $(CCFLAGS) $(ASFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(vasm_objects): build/os3/obj/%.o : %.asm | $(BUILD_DIR)
+$(vasm_objects): build/os4/obj/%.o : %.asm | $(BUILD_DIR)
 	$(info Assembling $<)
 	$(VASM) $(VASMFLAGS) -o $@ $(CURDIR)/$<
 
 copy_bundle_files:
 	$(info Copying bundle files...)
-	cp assets/AmigaGPTOS3.info bundle/$(PROGRAM_NAME)/$(PROGRAM_NAME).info
+	cp assets/AmigaGPTOS4.info bundle/$(PROGRAM_NAME)/$(PROGRAM_NAME).info
 	cp -R bundle/$(PROGRAM_NAME)/* out/
-
+	
 $(PACKAGE_OUT): $(EXECUTABLE_OUT)
 	$(info Creating LHA package...)
 	@rm -f $(PACKAGE_OUT)

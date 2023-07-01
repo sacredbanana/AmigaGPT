@@ -106,9 +106,26 @@ GPT-3.5 models can understand and generate natural language or code. Our most ca
 | gpt-3.5-turbo-16k-0613 | Snapshot of gpt-3.5-turbo-16k from June 13th 2023. Unlike gpt-3.5-turbo-16k, this model will not receive updates, and will be deprecated 3 months after a new version is released. | 16,384 | Up to Sep 2021 |
 
 ## Developing
+You can either compile the code natively or with the Docker container.
+
+### Native
+
+#### Building the AmigaOS 3 app
 If you would like to build this project from source you will need Bebbo's **amiga-gcc** toolchain here https://github.com/bebbo/amiga-gcc
 
 Once installed, get the required other SDK's from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
+
+#### Building the AmigaOS 4 app
+Get this toolchain set up https://github.com/sba1/adtools
+
+Once installed, get the required other SDK's from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
+
+### Docker
+You may use an all-in-one Docker image that is able to compile both the AmigaOS 3 and AmigaOS 4 versions of the app.
+
+Just install Docker on your machine and run the `build_os3.sh` or `build_os4.sh` scripts depending on which version of the app you want to build. If you want to perform a clean build, you can set the environment variable `CLEAN=1` for example you can run `CLEAN=1 ./build_os3.sh`.
+
+The build app will be saved to the `/out` directory.
 
 ## License
 
@@ -122,7 +139,7 @@ We welcome contributions to **AmigaGPT**! If you have a bug to report, a feature
 ### Code
 - **Cameron Armstrong (sacredbanana/Nightfox)** https://github.com/sacredbanana/
 
-## Art
+### Art
 - **Mauricio Sandoval** - Icon design
 
 ## Special Thanks

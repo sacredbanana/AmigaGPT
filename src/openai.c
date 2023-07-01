@@ -25,7 +25,13 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static STRPTR getModelName(enum Model model);
 
 struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase = NULL;
-struct Library *UtilityBase;
+#ifdef __AMIGAOS4__
+struct AmiSSLMasterIFace *IAmiSSLMaster;
+struct AmiSSLIFace *IAmiSSL;
+struct SocketIFace *ISocket;
+extern struct UtilityIFace *IUtility;
+#endif
+
 static SSL_CTX *_ssl_context;
 LONG UsesOpenSSLStructs = FALSE;
 BOOL amiSSLInitialized = FALSE;
@@ -99,20 +105,37 @@ LONG initOpenAIConnector() {
 	readBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY);
 	writeBuffer = AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY);
 
-	if ((UtilityBase = (struct UtilityBase *)OpenLibrary("utility.library", 0)) == NULL) {
-		displayError("failed to open utility.library");
-		return RETURN_ERROR;
-	}
-
+	#ifdef __AMIGAOS3__
 	if ((SocketBase = OpenLibrary("bsdsocket.library", 0)) == NULL) {
 		displayError("failed to open bsdsocket.library. You have to install a TCP/IP stack such as AmiTCP, Miami or Roadshow. Please refer to the documentation for more information.");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((SocketBase = OpenLibrary("bsdsocket.library", 4)) == NULL) {
+		displayError("failed to open bsdsocket.library version 4");
+		return RETURN_ERROR;
+	}
+	if ((ISocket = (struct SocketIFace *)GetInterface(SocketBase, "main", 1, NULL)) == NULL) {
+		displayError("failed to get the interface of bsdsocket.library");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((AmiSSLMasterBase = OpenLibrary("amisslmaster.library", AMISSLMASTER_MIN_VERSION)) == NULL) {
 		displayError("failed to open amisslmaster.library version 5. You have to install AmiSSL 5. Please refer to the documentation for more information.");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((AmiSSLMasterBase = OpenLibrary("amisslmaster.library", AMISSLMASTER_MIN_VERSION)) == NULL) {
+		displayError("failed to open amisslmaster.library version 5. You have to install AmiSSL 5. Please refer to the documentation for more information.");
+		return RETURN_ERROR;
+	}
+	if ((IAmiSSLMaster = (struct AmiSSLMasterIFace *)GetInterface(AmiSSLMasterBase, "main", 1, NULL)) == NULL) {
+		displayError("failed to get the interface of amisslmaster.library");
+		return RETURN_ERROR;
+	}
+	#endif
 
 	if (OpenAmiSSLTags(AMISSL_CURRENT_VERSION,
 					  AmiSSL_UsesOpenSSLStructs, TRUE,
@@ -125,6 +148,13 @@ LONG initOpenAIConnector() {
 		displayError("failed to initialize amisslmaster.library");
 		return RETURN_ERROR;
 	}
+
+	#ifdef __AMIGAOS4__
+	if ((IAmiSSL = (struct AmiSSLIFace *)GetInterface(AmiSSLBase, "main", 1, NULL)) == NULL) {
+		displayError("failed to get the interface of amissl.library");
+		return RETURN_ERROR;
+	}
+	#endif
 		
 	amiSSLInitialized = TRUE;
 
@@ -487,21 +517,25 @@ void closeOpenAIConnector() {
 	}
 
 	if (AmiSSLBase) {
+		#ifdef __AMIGAOS4__
+		DropInterface((struct Interface *)IAmiSSL);
+		#endif
 		CloseAmiSSL();
 		AmiSSLBase = NULL;
 	}
 
 	if (AmiSSLMasterBase) {
+		#ifdef __AMIGAOS4__
+		DropInterface((struct Interface *)IAmiSSLMaster);
+		#endif
 		CloseLibrary(AmiSSLMasterBase);
 		AmiSSLMasterBase = NULL;
 	}
 
-	if (UtilityBase) {
-		CloseLibrary(UtilityBase);
-		UtilityBase = NULL;
-	}
-
 	if (SocketBase) {
+		#ifdef __AMIGAOS4__
+		DropInterface((struct Interface *)ISocket);
+		#endif
 		CloseLibrary(SocketBase);
 		SocketBase = NULL;
 	}

@@ -1,3 +1,4 @@
+#ifdef __AMIGAOS3__
 #include <proto/dos.h>
 
 /**
@@ -32,3 +33,4 @@ void speakText(STRPTR text);
  * Close the speech system
 **/
 void closeSpeech();
+#endif

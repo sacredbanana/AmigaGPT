@@ -1,3 +1,4 @@
+#ifdef __AMIGAOS3__
 #include <stdio.h>
 #include <proto/exec.h>
 #include <proto/translator.h>
@@ -112,3 +113,4 @@ void speakText(STRPTR text) {
 	NarratorIO->message.io_Length = strlen(translationBuffer);
 	SendIO((struct IORequest *)NarratorIO);
 }
+#endif

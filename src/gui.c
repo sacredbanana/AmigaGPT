@@ -1,8 +1,9 @@
 #include <classes/requester.h>
 #include <classes/window.h>
 #include <dos/dos.h>
-#include <exec/lists.h>
+#include <exec/exec.h>
 #include <exec/execbase.h>
+#include <exec/lists.h>
 #include <gadgets/button.h>
 #include <gadgets/layout.h>
 #include <gadgets/listbrowser.h>
@@ -21,6 +22,7 @@
 #include <proto/amigaguide.h>
 #include <proto/asl.h>
 #include <proto/button.h>
+#include <proto/dos.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>
@@ -31,7 +33,10 @@
 #include <proto/scroller.h>
 #include <proto/string.h>
 #include <proto/texteditor.h>
+#include <proto/utility.h>
 #include <proto/window.h>
+#include <stdio.h>
+#include <utility/utility.h>
 #include "config.h"
 #include "external/json-c/json.h"
 #include "gui.h"
@@ -75,8 +80,28 @@
 #define MENU_ITEM_OPENAI_API_KEY_ID 25
 #define MENU_ITEM_VIEW_DOCUMENTATION_ID 26
 
-extern struct ExecBase *SysBase;
-extern struct DosLibrary *DOSBase;
+#ifdef __AMIGAOS4__
+#define IntuitionBase Library
+#define GfxBase Library
+struct IntuitionIFace *IIntuition;
+struct AslIFace *IAsl;
+struct GraphicsIFace *IGraphics;
+struct AmigaGuideIFace *IAmigaGuide;
+struct LayoutIFace *ILayout;
+struct ButtonIFace *IButton;
+struct RadioButtonIFace *IRadioButton;
+struct TextEditorIFace *ITextEditor;
+struct ScrollerIFace *IScroller;
+struct StringIFace *IString;
+struct ListBrowserIFace *IListBrowser;
+struct RequesterIFace *IRequester;
+struct WindowIFace *IWindow;
+extern struct UtilityIFace *IUtility;
+struct Library * TextEditorBase;
+#else
+struct Library *TextFieldBase;
+#endif
+
 struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
 struct Library *AmigaGuideBase;
@@ -85,7 +110,6 @@ struct Library *WindowBase;
 struct Library *LayoutBase;
 struct Library *ButtonBase;
 struct Library *RadioButtonBase;
-struct Library *TextFieldBase;
 struct Library *ScrollerBase;
 struct Library *StringBase;
 struct Library *ListBrowserBase;
@@ -137,12 +161,14 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "View", 0, 0, 0, 0},
 	{NM_ITEM, "Chat Font", 0, 0, 0, MENU_ITEM_CHAT_FONT_ID},
 	{NM_ITEM, "UI Font", 0, 0, 0, MENU_ITEM_UI_FONT_ID},
+	#ifdef __AMIGAOS3__
 	{NM_TITLE, "Speech", 0, 0, 0, 0},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
 	{NM_ITEM, "Accent", 0, 0, 0, MENU_ITEM_SPEECH_ACCENT_ID},
 	{NM_ITEM, "Speech system", 0, 0, 0, MENU_ITEM_SPEECH_SYSTEM_ID},
 	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_SYSTEM_34_ID},
 	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_37_ID},
+	#endif
 	{NM_TITLE, "OpenAI", 0, 0, 0, 0},
 	{NM_ITEM, "API key", 0, 0, 0, MENU_ITEM_OPENAI_API_KEY_ID},
 	{NM_ITEM, "Model", 0, 0, 0, MENU_ITEM_MODEL_ID},
@@ -186,8 +212,17 @@ static LONG loadConversations();
 static LONG saveConversations();
 static BOOL copyFile(STRPTR source, STRPTR destination);
 static void openDocumentation();
+#ifdef __AMIGAOS4__
+static uint32 processIDCMP(struct Hook *hook, struct Window *window, struct IntuiMessage *message);
+#else
+static void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message));
+#endif
 
-void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
+#ifdef __AMIGAOS4__
+static uint32 processIDCMP(struct Hook *hook, struct Window *window, struct IntuiMessage *message) {
+#else
+static void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
+#endif
 	switch (message->Class) {
 		case IDCMP_IDCMPUPDATE:
 		{
@@ -231,6 +266,11 @@ void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (
 			printf("Unknown message class: %lx\n", message->Class);
 			break;
 	}
+	#ifdef __AMIGAOS3__
+	return;
+	#else
+	return WHOOKRSLT_IGNORE;
+	#endif
 }
 
 /**
@@ -238,70 +278,213 @@ void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG openGUILibraries() {
+	#ifdef __AMIGAOS3__
 	if ((IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 47)) == NULL) {
 		printf("Could not open intuition.library\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((IntuitionBase = OpenLibrary("intuition.library", 50)) == NULL) {
+		printf("Could not open intuition.library\n");
+		return RETURN_ERROR;
+	}
+	if ((IIntuition = (struct IntuitionIFace *)GetInterface(IntuitionBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for intuition.library\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((WindowBase = OpenLibrary("window.class", 47)) == NULL) {
 		printf("Could not open window.class\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((WindowBase = OpenLibrary("window.class", 50)) == NULL) {
+		printf("Could not open window.class\n");
+		return RETURN_ERROR;
+	}
+	if ((IWindow = (struct WindowIFace *)GetInterface(WindowBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for window.class\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 47)) == NULL) {
 		printf("Could not open layout.gadget\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 50)) == NULL) {
+		printf("Could not open layout.gadget\n");
+		return RETURN_ERROR;
+	}
+	if ((ILayout = (struct LayoutIFace *)GetInterface(LayoutBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for layout.gadget\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((ButtonBase = OpenLibrary("gadgets/button.gadget", 47)) == NULL) {
 		printf("Could not open button.gadget\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((ButtonBase = OpenLibrary("gadgets/button.gadget", 50)) == NULL) {
+		printf("Could not open button.gadget\n");
+		return RETURN_ERROR;
+	}
+	if ((IButton = (struct ButtonIFace *)GetInterface(ButtonBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for button.gadget\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 47)) == NULL) {
 		printf("Could not open radiobutton.gadget\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 50)) == NULL) {
+		printf("Could not open radiobutton.gadget\n");
+		return RETURN_ERROR;
+	}
+	if ((IRadioButton = (struct RadioButtonIFace *)GetInterface(RadioButtonBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for radiobutton.gadget\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((TextFieldBase = OpenLibrary("gadgets/texteditor.gadget", 47)) == NULL) {
 		printf("Could not open texteditor.gadget\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((TextEditorBase = OpenLibrary("gadgets/texteditor.gadget", 50)) == NULL) {
+		printf("Could not open texteditor.gadget\n");
+		return RETURN_ERROR;
+	}
+	if ((ITextEditor = (struct TextEditorIFace *)GetInterface(TextEditorBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for texteditor.gadget\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 47)) == NULL) {
 		printf("Could not open scroller.gadget\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 50)) == NULL) {
+		printf("Could not open scroller.gadget\n");
+		return RETURN_ERROR;
+	}
+	if ((IScroller = (struct ScrollerIFace *)GetInterface(ScrollerBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for scroller.gadget\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((StringBase = OpenLibrary("gadgets/string.gadget", 47)) == NULL) {
 		printf("Could not open string.gadget\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((StringBase = OpenLibrary("gadgets/string.gadget", 50)) == NULL) {
+		printf("Could not open string.gadget\n");
+		return RETURN_ERROR;
+	}
+	if ((IString = (struct StringIFace *)GetInterface(StringBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for string.gadget\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 47)) == NULL) {
 		printf("Could not open listbrowser.gadget\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 50)) == NULL) {
+		printf("Could not open listbrowser.gadget\n");
+		return RETURN_ERROR;
+	}
+	if ((IListBrowser = (struct ListBrowserIFace *)GetInterface(ListBrowserBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for listbrowser.gadget\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((RequesterBase = OpenLibrary("requester.class", 47)) == NULL) {
 		printf("Could not open requester.class\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((RequesterBase = OpenLibrary("requester.class", 50)) == NULL) {
+		printf("Could not open requester.class\n");
+		return RETURN_ERROR;
+	}
+	if ((IRequester = (struct RequesterIFace *)GetInterface(RequesterBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for requester.class\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 47)) == NULL) {
 		printf( "Could not open graphics.library\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((GfxBase = OpenLibrary("graphics.library", 50)) == NULL) {
+		printf( "Could not open graphics.library\n");
+		return RETURN_ERROR;
+	}
+	if ((IGraphics = (struct GraphicsIFace *)GetInterface(GfxBase, "main", 1, NULL)) == NULL) {
+		printf( "Could not get interface for graphics.library\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((AslBase = OpenLibrary("asl.library", 47)) == NULL) {
 		printf( "Could not open asl.library\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((AslBase = OpenLibrary("asl.library", 50)) == NULL) {
+		printf( "Could not open asl.library\n");
+		return RETURN_ERROR;
+	}
+	if ((IAsl = (struct AslIFace *)GetInterface(AslBase, "main", 1, NULL)) == NULL) {
+		printf( "Could not get interface for asl.library\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
+	#ifdef __AMIGAOS3__
 	if ((AmigaGuideBase = OpenLibrary("amigaguide.library", 0)) == NULL) {
 		printf( "Could not open amigaguide.library\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((AmigaGuideBase = OpenLibrary("amigaguide.library", 50)) == NULL) {
+		printf( "Could not open amigaguide.library\n");
+		return RETURN_ERROR;
+	}
+	if ((IAmigaGuide = (struct AmigaGuideIFace *)GetInterface(AmigaGuideBase, "main", 1, NULL)) == NULL) {
+		printf( "Could not get interface for amigaguide.library\n");
+		return RETURN_ERROR;
+	}
+	#endif
 
 	return RETURN_OK;
 }
@@ -310,19 +493,37 @@ LONG openGUILibraries() {
  * Close the libraries used by the GUI
 **/
 static void closeGUILibraries() {
+	#ifdef __AMIGAOS4__
+	DropInterface((struct Interface *)IIntuition);
+	DropInterface((struct Interface *)IGraphics);
+	DropInterface((struct Interface *)IAsl);
+	DropInterface((struct Interface *)IAmigaGuide);
+	DropInterface((struct Interface *)IWindow);
+	DropInterface((struct Interface *)ILayout);
+	DropInterface((struct Interface *)IButton);
+	DropInterface((struct Interface *)ITextEditor);
+	DropInterface((struct Interface *)IRadioButton);
+	DropInterface((struct Interface *)IString);
+	DropInterface((struct Interface *)IListBrowser);
+	DropInterface((struct Interface *)IScroller);
+	DropInterface((struct Interface *)IRequester);
+	CloseLibrary(TextEditorBase);
+	#else
+	CloseLibrary(TextFieldBase);
+	#endif
+
 	CloseLibrary(IntuitionBase);
 	CloseLibrary(GfxBase);
+	CloseLibrary(AslBase);
+	CloseLibrary(AmigaGuideBase);
 	CloseLibrary(WindowBase);
 	CloseLibrary(LayoutBase);
 	CloseLibrary(ButtonBase);
-	CloseLibrary(TextFieldBase);
 	CloseLibrary(RadioButtonBase);
-	CloseLibrary(AslBase);
 	CloseLibrary(StringBase);
 	CloseLibrary(ListBrowserBase);
 	CloseLibrary(ScrollerBase);
 	CloseLibrary(RequesterBase);
-	CloseLibrary(AmigaGuideBase);
 }
 
 /**
@@ -361,7 +562,7 @@ LONG initVideo() {
 		BUTTON_TextPen, sendMessageButtonPen,
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
-		GA_TEXT, (ULONG)"Send",
+		GA_Text, (ULONG)"Send",
 		GA_RelVerify, TRUE,
 		ICA_TARGET, ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
@@ -376,7 +577,7 @@ LONG initVideo() {
 		BUTTON_TextPen, newChatButtonPen,
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
-		GA_TEXT, (ULONG)"+ New Chat",
+		GA_Text, (ULONG)"+ New Chat",
 		GA_RelVerify, TRUE,
 		ICA_TARGET, ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
@@ -391,7 +592,7 @@ LONG initVideo() {
 		BUTTON_TextPen, deleteChatButtonPen,
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
-		GA_TEXT, (ULONG)"- Delete Chat",
+		GA_Text, (ULONG)"- Delete Chat",
 		GA_RelVerify, TRUE,
 		ICA_TARGET, ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
@@ -545,8 +746,8 @@ LONG initVideo() {
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
 		WA_Title, "AmigaGPT",
-		WA_Width, screen->Width * 0.8,
-		WA_Height, screen->Height * 0.8,
+		WA_Width, (WORD)(screen->Width * 0.8),
+		WA_Height, (WORD)(screen->Height * 0.8),
 		WA_CloseGadget, TRUE,
 		WA_DragBar, isPublicScreen,
 		WA_SizeGadget, isPublicScreen,
@@ -558,7 +759,8 @@ LONG initVideo() {
 		WINDOW_SharedPort, NULL,
 		WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
 		WINDOW_NewMenu, amigaGPTMenu,
-		WINDOW_IDCMPHook, &idcmpHook,
+		// WINDOW_IDCMPHook, &idcmpHook,
+		// WINDOW_InterpretIDCMPHook, TRUE,
 		WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE,
 		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MENUPICK | IDCMP_RAWKEY,
 		WA_CustomScreen, screen,
@@ -608,10 +810,10 @@ static LONG selectScreen() {
 
 	if ((screenSelectRadioButton = NewObject(RADIOBUTTON_GetClass(), NULL,
 		GA_ID, SCREEN_SELECT_RADIO_BUTTON_ID,
-		GA_WIDTH, 100,
-		GA_HEIGHT, 30,
+		GA_Width, 100,
+		GA_Height, 30,
 		BUTTON_Justification, BCJ_CENTER,
-		GA_TEXT, (ULONG)radioButtonOptions,
+		GA_Text, (ULONG)radioButtonOptions,
 		GA_RelVerify, TRUE,
 		ICA_TARGET, ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
@@ -621,10 +823,10 @@ static LONG selectScreen() {
 
 	if ((selectScreenOkButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SCREEN_SELECT_OK_BUTTON_ID,
-		GA_WIDTH, 100,
-		GA_HEIGHT, 30,
+		GA_Width, 100,
+		GA_Height, 30,
 		BUTTON_Justification, BCJ_CENTER,
-		GA_TEXT, (ULONG)"OK",
+		GA_Text, (ULONG)"OK",
 		GA_RelVerify, TRUE,
 		ICA_TARGET, ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
@@ -759,6 +961,7 @@ static LONG selectScreen() {
 static void formatText(STRPTR unformattedText) {
 	LONG newStringIndex = 0;
 	const LONG oldStringLength = strlen(unformattedText);
+	if (oldStringLength == 0) return;
 	for (LONG oldStringIndex = 0; oldStringIndex < oldStringLength; oldStringIndex++) {
 		if (unformattedText[oldStringIndex] == '\\') {
 			if (unformattedText[oldStringIndex + 1] == 'n') {
@@ -810,7 +1013,7 @@ static void sendMessage() {
 		isNewConversation = TRUE;
 		currentConversation = newConversation();
 	}
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
+	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Sending", TAG_DONE);
 	STRPTR receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 
@@ -819,7 +1022,7 @@ static void sendMessage() {
 	displayConversation(currentConversation);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
+	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 
 	addTextToConversation(currentConversation, "", "assistant");
 
@@ -858,12 +1061,14 @@ static void sendMessage() {
 				FreeVec(assistantMessageNode);
 				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, contentString, GV_TEXTEDITOR_InsertText_Bottom);
 				addTextToConversation(currentConversation, receivedMessage, "assistant");
+				#ifdef __AMIGAOS3__
 				if (++wordNumber % 50 == 0) {
 					if (config.speechEnabled) {
 						speakText(receivedMessage + speechIndex);
 						speechIndex = strlen(receivedMessage);
 					}
 				}
+				#endif
 				finishReason = json_object_get_string(json_object_object_get(response, "finish_reason"));
 				if (finishReason != NULL) {
 					dataStreamFinished = TRUE;
@@ -876,9 +1081,11 @@ static void sendMessage() {
 	} while (!dataStreamFinished);
 	
 	if (responses != NULL) {
+		#ifdef __AMIGAOS3__
 		if (config.speechEnabled) {
 			speakText(receivedMessage + speechIndex);
 		}
+		#endif
 		FreeVec(responses);
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 		if (isNewConversation) {
@@ -924,6 +1131,7 @@ static void refreshModelMenuItems() {
  * Sets the checkboxes for the speech options that are currently selected
 **/
 static void refreshSpeechMenuItems() {
+	#ifdef __AMIGAOS3__
 	struct NewMenu *menu = amigaGPTMenu;
 	while (menu->nm_UserData != MENU_ITEM_SPEECH_ENABLED_ID) {
 		menu++;
@@ -946,6 +1154,7 @@ static void refreshSpeechMenuItems() {
 	}
 
 	SetAttrs(mainWindowObject, WINDOW_NewMenu, amigaGPTMenu, TAG_DONE);
+	#endif
 }
 
 /**
@@ -1030,7 +1239,7 @@ static void displayConversation(struct MinList *conversation) {
 		 conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
 			if ((strlen(conversationString) + strlen(conversationNode->content) + 5) > WRITE_BUFFER_LENGTH) {
 				displayError("The conversation has exceeded the maximum length.\n\nPlease start a new conversation.");
-				SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, TRUE, TAG_DONE);
+				SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 				return;
 			}
 			if (strcmp(conversationNode->role, "user") == 0) {
@@ -1047,7 +1256,7 @@ static void displayConversation(struct MinList *conversation) {
 	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationString, TAG_DONE);
 	Delay(2);
 	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_CursorY, ~0, TAG_DONE);
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
+	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	FreeVec(conversationString);
 }
 
@@ -1249,6 +1458,7 @@ LONG startGUIRunLoop() {
 						case MENU_ITEM_UI_FONT_ID:
 							openUIFontRequester();
 							break;
+						#ifdef __AMIGAOS3__
 						case MENU_ITEM_SPEECH_ENABLED_ID:
 							config.speechEnabled = !config.speechEnabled;
 							writeConfig();
@@ -1279,6 +1489,7 @@ LONG startGUIRunLoop() {
 							writeConfig();
 							refreshSpeechMenuItems();
 							break;
+						#endif
 						case MENU_ITEM_OPENAI_API_KEY_ID:
 							openApiKeyRequester();
 							break;
@@ -1420,7 +1631,7 @@ void displayError(STRPTR message) {
 	};
 	EasyRequest(mainWindow, &errorRequester, NULL, NULL);
 
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_DISABLED, FALSE, TAG_DONE);
+	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 
 	FreeVec(adjustedMsg);
 }
@@ -1533,6 +1744,7 @@ static void openUIFontRequester() {
  * Opens a requester for the user to select accent for the speech
 **/
 static void openSpeechAccentRequester() {
+	#ifdef __AMIGAOS3__
 	struct FileRequester *fileRequester = (struct FileRequester *)AllocAslRequestTags(
 									ASL_FileRequest,
 									ASLFR_Window, mainWindow,
@@ -1552,6 +1764,7 @@ static void openSpeechAccentRequester() {
 		}
 		FreeAslRequest(fileRequester);
 	}
+	#endif
 }
 
 /**
@@ -1643,8 +1856,12 @@ LONG loadConversations() {
 		return RETURN_OK;
 	}
 
+	#ifdef __AMIGAOS3__
 	Seek(file, 0, OFFSET_END);
 	LONG fileSize = Seek(file, 0, OFFSET_BEGINNING);
+	#else
+	int64 fileSize = GetFileSize(file);
+	#endif
 	STRPTR conversationsJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
 	if (Read(file, conversationsJsonString, fileSize) != fileSize) {
 		displayDiskError("Failed to read from message history file. Conversation history will not be loaded", IoErr());
@@ -1661,7 +1878,11 @@ LONG loadConversations() {
 			displayDiskError("Failed to parse chat history. Malformed JSON. The chat-history.json file is probably corrupted. Conversation history will not be loaded. A backup of the chat-history.json file has been created as chat-history.json.bak", IoErr());
 		} else if (copyFile("PROGDIR:chat-history.json", "RAM:chat-history.json")) {
 			displayError("Failed to parse chat history. Malformed JSON. The chat-history.json file is probably corrupted. Conversation history will not be loaded. There was an error writing a backup of the chat history to disk but a copy has been saved to RAM:chat-history.json.bak");
+			#ifdef __AMIGAOS3__
 			if (!DeleteFile("PROGDIR:chat-history.json")) {
+			#else
+			if (!Delete("PROGDIR:chat-history.json")) {
+			#endif
 				displayDiskError("Failed to delete chat-history.json. Please delete this file manually.", IoErr());
 			}
 		}
@@ -1804,7 +2025,6 @@ void shutdownGUI() {
 	}
 	if (uiTextFont)
 		CloseFont(uiTextFont);
-
 	if (appPort)
 		DeleteMsgPort(appPort);
 
