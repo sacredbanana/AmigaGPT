@@ -12,4 +12,4 @@ fi
 docker run --rm \
     -v ${PWD}:/work \
     -e USER=$( id -u ) -e GROUP=$( id -g ) \
-    -it sacredbanana/amiga-compiler make -f Makefile.OS4
+    -it sacredbanana/amiga-compiler:ppc-amigaos make -f Makefile.OS4

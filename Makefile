@@ -26,8 +26,8 @@ AUTOGEN_NEXT := $(shell expr $$(awk '/#define BUILD_NUMBER/' $(AUTOGEN_FILE) | t
 PROGRAM_NAME = AmigaGPT
 EXECUTABLE_OUT = out/$(PROGRAM_NAME)
 PACKAGE_OUT = out/$(PROGRAM_NAME).lha
-CC = /opt/m68k-amigaos/bin/m68k-amigaos-gcc
-VASM = /opt/amiga/bin/vasmm68k_mot
+CC = m68k-amigaos-gcc
+VASM = vasmm68k_mot
 
 LIBDIR = /opt/amiga/m68k-amigaos/lib
 SDKDIR = /opt/amiga/m68k-amigaos/sys-include
@@ -40,7 +40,7 @@ else
 	SED = sed -i
 endif
 
-CCFLAGS = -g -MP -MMD -m68020 -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -noixemul -fbaserel -L$(LIBDIR) -lamiga -lm -lamisslstubs -D__AMIGAOS3__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\"
+CCFLAGS = -g -MP -MMD -m68020 -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -noixemul -fbaserel -L$(LIBDIR) -lamiga -lm -lamisslstubs-l-D__AMIGAOS3__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\"
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),-D
 LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map

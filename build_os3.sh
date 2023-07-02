@@ -12,4 +12,4 @@ fi
 docker run --rm \
     -v ${PWD}:/work \
     -e USER=$( id -u ) -e GROUP=$( id -g ) \
-    -it sacredbanana/amiga-compiler make
+    -it sacredbanana/amiga-compiler:m68k-amigaos make
