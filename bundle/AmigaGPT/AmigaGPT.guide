@@ -398,7 +398,7 @@ Training data: Up to Sep 2021
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
-@{b}1.1.0@{ub}
+@{b}1.1.0 (2023-07-22)@{ub}
 
 - Now supports characters from Western languages other than English
 - Blank responses from OpenAI no longer cause a crash
