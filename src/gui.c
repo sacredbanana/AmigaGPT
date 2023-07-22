@@ -210,6 +210,8 @@ static void openSpeechAccentRequester();
 static void openApiKeyRequester();
 static LONG loadConversations();
 static LONG saveConversations();
+static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String);
+static STRPTR UTF8ToISO8859_1(CONST_STRPTR utf8String);
 static BOOL copyFile(STRPTR source, STRPTR destination);
 static void openDocumentation();
 #ifdef __AMIGAOS4__
@@ -1018,7 +1020,8 @@ static void sendMessage() {
 	STRPTR receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 
 	STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
-	addTextToConversation(currentConversation, text, "user");
+	STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
+	addTextToConversation(currentConversation, textUTF_8, "user");
 	displayConversation(currentConversation);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
@@ -1056,16 +1059,19 @@ static void sendMessage() {
 			STRPTR contentString = getMessageContentFromJson(response, TRUE);
 			if (contentString != NULL) {
 				formatText(contentString);
+				STRPTR contentStringISO8859_1 = UTF8ToISO8859_1(contentString);
 				snprintf(receivedMessage, READ_BUFFER_LENGTH - strlen(receivedMessage) - 1, "%s%s", receivedMessage, contentString);
+				STRPTR receivedMessageISO8859_1 = UTF8ToISO8859_1(receivedMessage);
 				struct MinNode *assistantMessageNode = RemTail(currentConversation);
 				FreeVec(assistantMessageNode);
-				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, contentString, GV_TEXTEDITOR_InsertText_Bottom);
+				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, contentStringISO8859_1, GV_TEXTEDITOR_InsertText_Bottom);
 				addTextToConversation(currentConversation, receivedMessage, "assistant");
 				#ifdef __AMIGAOS3__
 				if (++wordNumber % 50 == 0) {
 					if (config.speechEnabled) {
-						speakText(receivedMessage + speechIndex);
-						speechIndex = strlen(receivedMessage);
+						speakText(receivedMessageISO8859_1 + speechIndex);
+						speechIndex = strlen(receivedMessageISO8859_1);
+						FreeVec(receivedMessageISO8859_1);
 					}
 				}
 				#endif
@@ -1083,7 +1089,9 @@ static void sendMessage() {
 	if (responses != NULL) {
 		#ifdef __AMIGAOS3__
 		if (config.speechEnabled) {
-			speakText(receivedMessage + speechIndex);
+			STRPTR receivedMessageISO8859_1 = UTF8ToISO8859_1(receivedMessage);
+			speakText(receivedMessageISO8859_1 + speechIndex);
+			FreeVec(receivedMessageISO8859_1);
 		}
 		#endif
 		FreeVec(responses);
@@ -1105,6 +1113,7 @@ static void sendMessage() {
 		}
 	}
 	FreeVec(text);
+	FreeVec(textUTF_8);
 }
 
 /**
@@ -1253,11 +1262,13 @@ static void displayConversation(struct MinList *conversation) {
 	}
 	
 	snprintf(conversationString, WRITE_BUFFER_LENGTH - 3, "%s\n ", conversationString);
-	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationString, TAG_DONE);
+	STRPTR conversationStringISO8859_1 = UTF8ToISO8859_1(conversationString);
+	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationStringISO8859_1, TAG_DONE);
 	Delay(2);
 	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_CursorY, ~0, TAG_DONE);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	FreeVec(conversationString);
+	FreeVec(conversationStringISO8859_1);
 }
 
 /**
@@ -1847,6 +1858,76 @@ LONG saveConversations() {
 }
 
 /**
+ * Converts a UTF-8 string to ISO-8859-1 which is what the Amiga uses by default
+ * Taken from https://stackoverflow.com/questions/23689733/convert-string-from-utf-8-to-iso-8859-1
+ * @param utf8String the UTF-8 string to convert to ISO-8859-1
+ * @return pointer to the converted string. Free it with FreeVec() when you're done with it
+**/
+static STRPTR UTF8ToISO8859_1(CONST_STRPTR utf8String) {
+	if (utf8String == NULL)
+		return NULL;
+
+	STRPTR convertedString = AllocVec(strlen(utf8String) + 1, MEMF_ANY);
+	UBYTE* convertedStringPointer = convertedString;
+
+	UBYTE codepoint = NULL;
+	while (*utf8String != 0) {
+		UBYTE ch = (UBYTE)*utf8String;
+		if (ch <= 0x7f)
+			codepoint = ch;
+		else if (ch <= 0xbf)
+			codepoint = (codepoint << 6) | (ch & 0x3f);
+		else if (ch <= 0xdf)
+			codepoint = ch & 0x1f;
+		else if (ch <= 0xef)
+			codepoint = ch & 0x0f;
+		else
+			codepoint = ch & 0x07;
+		++utf8String;
+		if ((*utf8String & 0xc0) != 0x80) {
+			 *convertedStringPointer = codepoint;
+			convertedStringPointer++;
+		}
+	}
+	*convertedStringPointer = '\0';
+
+	return convertedString;
+}
+
+/**
+ * Converts a UTF-8 string to ISO-8859-1 which is what the Amiga uses by default
+ * Adapted from https://stackoverflow.com/questions/23689733/convert-string-from-utf-8-to-iso-8859-1
+ * @param iso8859_1String the ISO-8859-1 string to convert to UTF-8
+ * @return pointer to the converted string. Free it with FreeVec() when you're done with it
+**/
+static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String) {
+	if (iso8859_1String == NULL)
+		return NULL;
+
+	// Assume max UTF-8 size (4 bytes per character), plus null terminator
+	STRPTR convertedString = AllocVec((4 * strlen(iso8859_1String) + 1) * sizeof(char), MEMF_ANY);
+	UBYTE* convertedStringPointer = convertedString;
+
+	while (*iso8859_1String != 0) {
+		UBYTE ch = (UBYTE)*iso8859_1String;
+
+		if(ch < 128) { 
+			*convertedStringPointer++ = ch;
+		} 
+		else {
+			*convertedStringPointer++ = 0xc0 | (ch >> 6);    // first byte
+			*convertedStringPointer++ = 0x80 | (ch & 0x3f);  // second byte
+		}
+		
+		++iso8859_1String;
+	}
+	
+	*convertedStringPointer = '\0';
+
+	return convertedString;
+}
+
+/**
  * Load the conversations from disk
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
@@ -1931,7 +2012,6 @@ LONG loadConversations() {
 				return RETURN_ERROR;
 			}
 			STRPTR content = json_object_get_string(contentJsonObject);
-
 			addTextToConversation(conversation, content, role);
 		}
 		addConversationToConversationList(conversationList, conversation, conversationName);
