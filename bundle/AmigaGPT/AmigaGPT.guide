@@ -101,6 +101,7 @@ Since `translator.library` v43 is not available as a standalone install, you wil
 - Download http://aminet.net/util/libs/Tran43pch.lha and once again extract it to a location of your choice
 - Navigate to that directory and double click the `Install` program
 - Run the installer using all the default settings
+- Reboot your Amiga - It will not work until the system is restarted
 
 @endnode
 
@@ -399,7 +400,7 @@ Training data: Up to Sep 2021
 
 @{b}1.1.0@{ub}
 
-- Support for PowerPC AmigaOS 4
+- Now supports characters from Western languages other than English
 - Blank responses from OpenAI no longer cause a crash
 
 @{b}1.0.1 (2023-06-24)@{ub}

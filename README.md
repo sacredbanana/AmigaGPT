@@ -54,6 +54,7 @@ Since `translator.library` **v43** is not available as a standalone install, you
 * Download http://aminet.net/util/libs/Tran43pch.lha and once again extract it to a location of your choice
 * Navigate to that directory and double click the `Install` program
 * Run the installer using all the default settings
+* Reboot your Amiga - It will not work until the system is restarted
 
 
 ### Installing `narrator.device` **v34**

@@ -1,7 +1,7 @@
 # Changelog
 
 ## 1.1.0
-- Support for PowerPC AmigaOS 4
+- Now supports characters from Western languages other than English
 - Blank responses from OpenAI no longer cause a crash
 
 ## 1.0.1  (2023-06-24)
