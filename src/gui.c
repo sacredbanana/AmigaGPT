@@ -24,6 +24,9 @@
 #include <proto/button.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
+#ifdef __AMIGAOS3__
+#include <proto/gadtools.h>
+#endif
 #include <proto/graphics.h>
 #include <proto/intuition.h>
 #include <proto/layout.h>
@@ -148,7 +151,9 @@ static struct TextAttr screenFont = {
 };
 static struct TextAttr chatTextAttr = {0};
 static struct TextAttr uiTextAttr = {0};
+#ifdef __AMIGAOS3__
 static struct Menu *menu;
+#endif
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
 	{NM_ITEM, "About", 0, 0, 0, MENU_ITEM_ABOUT_ID},
@@ -555,9 +560,6 @@ LONG initVideo() {
 	currentConversation = NULL;
 	loadConversations();
 
-	refreshModelMenuItems();
-	refreshSpeechMenuItems();
-
 	uiTextAttr.ta_Name = config.uiFontName;
 	uiTextAttr.ta_YSize = config.uiFontSize;
 	uiTextAttr.ta_Style = config.uiFontStyle;
@@ -770,7 +772,7 @@ LONG initVideo() {
 		WINDOW_Layout, mainLayout,
 		WINDOW_SharedPort, NULL,
 		WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
-		WINDOW_NewMenu, amigaGPTMenu,
+		// WINDOW_NewMenu, amigaGPTMenu,
 		// WINDOW_IDCMPHook, &idcmpHook,
 		// WINDOW_InterpretIDCMPHook, TRUE,
 		WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE,
@@ -785,6 +787,9 @@ LONG initVideo() {
 		printf("Could not open mainWindow\n");
 		return RETURN_ERROR;
 	}
+
+	refreshModelMenuItems();
+	refreshSpeechMenuItems();
 
 	// For some reason it won't let you paste text into the empty text editor unless you do this
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);
@@ -1130,22 +1135,41 @@ static void sendMessage() {
  * Sets the checkbox for the model that is currently selected
 **/
 static void refreshModelMenuItems() {
-	struct NewMenu *menu = amigaGPTMenu;
-	while (menu->nm_UserData != MENU_ITEM_MODEL_ID) {
-		menu++;
+	APTR *visualInfo;
+	ULONG error = NULL;
+	struct NewMenu *newMenu = amigaGPTMenu;
+	while (newMenu->nm_UserData != MENU_ITEM_MODEL_ID) {
+		newMenu++;
 	}
 
-	while ((++menu)->nm_Type == NM_SUB) {
-		if (strcmp(menu->nm_Label, MODEL_NAMES[config.model]) == 0) {
-			menu->nm_Flags |= CHECKED;
+	while ((++newMenu)->nm_Type == NM_SUB) {
+		if (strcmp(newMenu->nm_Label, MODEL_NAMES[config.model]) == 0) {
+			newMenu->nm_Flags |= CHECKED;
 		} else {
-			menu->nm_Flags &= ~CHECKED;
+			newMenu->nm_Flags &= ~CHECKED;
 		}
 	}
 
-	#ifdef __AMIGAOS4__
-	menu = CreateMenus(amigaGPTMenu, TAG_DONE);
-	SetMenuStrip(mainWindow, menu);
+	#ifdef __AMIGAOS3__
+	FreeMenus(menu);
+	if (visualInfo = GetVisualInfo(screen, NULL)) {
+		if (menu = CreateMenus(amigaGPTMenu, GTMN_SecondaryError, &error, TAG_DONE)) {
+			if (LayoutMenus(menu, visualInfo, GTMN_NewLookMenus, TRUE, TAG_DONE)) {
+				if (SetMenuStrip(mainWindow, menu)) {
+					RefreshWindowFrame(mainWindow);
+				} else {
+					printf("Error setting menu strip\n");
+				}
+			} else {
+				printf("Error laying out menu\n");
+			}
+		} else {
+			printf("Error creating menu: %ld\n", error);
+		}
+		FreeVisualInfo(visualInfo);
+	} else {
+		printf("Error getting visual info\n");
+	}
 	#else
 	SetAttrs(mainWindowObject, WINDOW_NewMenu, amigaGPTMenu, TAG_DONE);
 	#endif
@@ -1156,28 +1180,46 @@ static void refreshModelMenuItems() {
 **/
 static void refreshSpeechMenuItems() {
 	#ifdef __AMIGAOS3__
-	struct NewMenu *menu = amigaGPTMenu;
-	while (menu->nm_UserData != MENU_ITEM_SPEECH_ENABLED_ID) {
-		menu++;
+	APTR *visualInfo;
+	ULONG error = NULL;
+	struct NewMenu *newMenu = amigaGPTMenu;
+	while (newMenu->nm_UserData != MENU_ITEM_SPEECH_ENABLED_ID) {
+		newMenu++;
 	}
 
 	if (config.speechEnabled) {
-		menu++->nm_Flags |= CHECKED;
+		newMenu++->nm_Flags |= CHECKED;
 	} else {
-		menu++->nm_Flags &= ~CHECKED;
+		newMenu++->nm_Flags &= ~CHECKED;
 	}
 
-	menu++;
+	newMenu++;
 
-	while ((++menu)->nm_Type == NM_SUB) {
-		if (strcmp(menu->nm_Label, SPEECH_SYSTEM_NAMES[config.speechSystem]) == 0) {
-			menu->nm_Flags |= CHECKED;
+	while ((++newMenu)->nm_Type == NM_SUB) {
+		if (strcmp(newMenu->nm_Label, SPEECH_SYSTEM_NAMES[config.speechSystem]) == 0) {
+			newMenu->nm_Flags |= CHECKED;
 		} else {
-			menu->nm_Flags &= ~CHECKED;
+			newMenu->nm_Flags &= ~CHECKED;
 		}
 	}
 
-	SetAttrs(mainWindowObject, WINDOW_NewMenu, amigaGPTMenu, TAG_DONE);
+	FreeMenus(menu);
+	if (visualInfo = GetVisualInfo(screen, NULL)) {
+		if (menu = CreateMenus(amigaGPTMenu, GTMN_SecondaryError, &error, TAG_DONE)) {
+			if (LayoutMenus(menu, visualInfo, GTMN_NewLookMenus, TRUE, TAG_DONE)) {
+				if (SetMenuStrip(mainWindow, menu)) {
+					RefreshWindowFrame(mainWindow);
+				} else {
+					printf("Error setting menu strip\n");
+				}
+			} else {
+				printf("Error laying out menu\n");
+			}
+		} else {
+			printf("Error creating menu: %ld\n", error);
+		}
+		FreeVisualInfo(visualInfo);
+	}
 	#endif
 }
 
@@ -2127,9 +2169,9 @@ void shutdownGUI() {
 		CloseFont(uiTextFont);
 	if (appPort)
 		DeleteMsgPort(appPort);
-	if (menu) {
-
-	}
+	#ifdef __AMIGAOS3__
+	FreeMenus(menu);
+	#endif
 
 	closeGUILibraries();
 }
