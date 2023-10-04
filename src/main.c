@@ -118,8 +118,8 @@ LONG main(int argc, char **argv) {
 **/
 static LONG openLibraries() {
 	#ifdef __AMIGAOS3__
-	if ((DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 47)) == NULL) {
-		printf("Failed to open dos.library v47. This app requires AmigaOS 3.2 or higher\n");
+	if ((DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 40)) == NULL) {
+		printf("Failed to open dos.library v40. This app requires AmigaOS 3.9 or 3.2+\n");
 		return RETURN_ERROR;
 	}
 	#else

@@ -51,7 +51,7 @@ For smooth operation of AmigaGPT, your system needs to meet the following requir
 @{" "}
 
 - An OCS/ECS/AGA Amiga
-- AmigaOS 3.2 or higher OS
+- AmigaOS 3.9 suuported but 3.2 or higher recommended
 - Motorola 68020 or higher CPU
 - Internet access using a TCP/IP stack such as Roadshow
 - AmiSSL 5.9 or higher
@@ -397,6 +397,10 @@ Training data: Up to Sep 2021
 
 @node changelog "Changelog"
 @{b}Changelog@{ub}
+
+@{b}1.2.0 (2023-10-04)
+
+- Now fully backwards compatible with AmigaOS 3.9
 
 @{b}1.1.0 (2023-07-22)@{ub}
 

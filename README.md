@@ -27,7 +27,7 @@ You can customise the look and feel of the application, including the ability to
 
 Ensure you have the necessary system requirements:
 - An OCS/ECS/AGA **Amiga**
-- **AmigaOS 3.2** or higher OS
+- **AmigaOS 3.9** supported but **AmigaOS 3.2** or higher recommended
 - Motorola 68020 or higher CPU
 - Internet access using a TCP/IP stack such as **Roadshow** (http://roadshow.apc-tcp.de/index-en.php)
 - **AmiSSL 5.9** or higher (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)

@@ -114,6 +114,7 @@ struct Library *ScrollerBase;
 struct Library *StringBase;
 struct Library *ListBrowserBase;
 struct Library *RequesterBase;
+struct Library *GadToolsBase;
 struct Window *mainWindow;
 static Object *mainWindowObject;
 static Object *mainLayout;
@@ -147,6 +148,7 @@ static struct TextAttr screenFont = {
 };
 static struct TextAttr chatTextAttr = {0};
 static struct TextAttr uiTextAttr = {0};
+static struct Menu *menu;
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
 	{NM_ITEM, "About", 0, 0, 0, MENU_ITEM_ABOUT_ID},
@@ -281,7 +283,7 @@ static void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __
 **/
 LONG openGUILibraries() {
 	#ifdef __AMIGAOS3__
-	if ((IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 47)) == NULL) {
+	if ((IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 40)) == NULL) {
 		printf("Could not open intuition.library\n");
 		return RETURN_ERROR;
 	}
@@ -297,7 +299,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((WindowBase = OpenLibrary("window.class", 47)) == NULL) {
+	if ((WindowBase = OpenLibrary("window.class", 45)) == NULL) {
 		printf("Could not open window.class\n");
 		return RETURN_ERROR;
 	}
@@ -313,7 +315,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 47)) == NULL) {
+	if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 45)) == NULL) {
 		printf("Could not open layout.gadget\n");
 		return RETURN_ERROR;
 	}
@@ -329,7 +331,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((ButtonBase = OpenLibrary("gadgets/button.gadget", 47)) == NULL) {
+	if ((ButtonBase = OpenLibrary("gadgets/button.gadget", 44)) == NULL) {
 		printf("Could not open button.gadget\n");
 		return RETURN_ERROR;
 	}
@@ -345,7 +347,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 47)) == NULL) {
+	if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 44)) == NULL) {
 		printf("Could not open radiobutton.gadget\n");
 		return RETURN_ERROR;
 	}
@@ -361,7 +363,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((TextFieldBase = OpenLibrary("gadgets/texteditor.gadget", 47)) == NULL) {
+	if ((TextFieldBase = OpenLibrary("gadgets/texteditor.gadget", 15)) == NULL) {
 		printf("Could not open texteditor.gadget\n");
 		return RETURN_ERROR;
 	}
@@ -377,7 +379,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 47)) == NULL) {
+	if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 45)) == NULL) {
 		printf("Could not open scroller.gadget\n");
 		return RETURN_ERROR;
 	}
@@ -393,7 +395,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((StringBase = OpenLibrary("gadgets/string.gadget", 47)) == NULL) {
+	if ((StringBase = OpenLibrary("gadgets/string.gadget", 45)) == NULL) {
 		printf("Could not open string.gadget\n");
 		return RETURN_ERROR;
 	}
@@ -409,7 +411,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 47)) == NULL) {
+	if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 44)) == NULL) {
 		printf("Could not open listbrowser.gadget\n");
 		return RETURN_ERROR;
 	}
@@ -425,7 +427,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((RequesterBase = OpenLibrary("requester.class", 47)) == NULL) {
+	if ((RequesterBase = OpenLibrary("requester.class", 42)) == NULL) {
 		printf("Could not open requester.class\n");
 		return RETURN_ERROR;
 	}
@@ -441,7 +443,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 47)) == NULL) {
+	if ((GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 40)) == NULL) {
 		printf( "Could not open graphics.library\n");
 		return RETURN_ERROR;
 	}
@@ -457,7 +459,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((AslBase = OpenLibrary("asl.library", 47)) == NULL) {
+	if ((AslBase = OpenLibrary("asl.library", 45)) == NULL) {
 		printf( "Could not open asl.library\n");
 		return RETURN_ERROR;
 	}
@@ -473,7 +475,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((AmigaGuideBase = OpenLibrary("amigaguide.library", 0)) == NULL) {
+	if ((AmigaGuideBase = OpenLibrary("amigaguide.library", 44)) == NULL) {
 		printf( "Could not open amigaguide.library\n");
 		return RETURN_ERROR;
 	}
@@ -484,6 +486,13 @@ LONG openGUILibraries() {
 	}
 	if ((IAmigaGuide = (struct AmigaGuideIFace *)GetInterface(AmigaGuideBase, "main", 1, NULL)) == NULL) {
 		printf( "Could not get interface for amigaguide.library\n");
+		return RETURN_ERROR;
+	}
+	#endif
+
+	#ifdef __AMIGAOS3__
+	if ((GadToolsBase = OpenLibrary("gadtools.library", 40)) == NULL) {
+		printf( "Could not open gadtools.library\n");
 		return RETURN_ERROR;
 	}
 	#endif
@@ -512,6 +521,7 @@ static void closeGUILibraries() {
 	CloseLibrary(TextEditorBase);
 	#else
 	CloseLibrary(TextFieldBase);
+	CloseLibrary(GadToolsBase);
 	#endif
 
 	CloseLibrary(IntuitionBase);
@@ -1133,7 +1143,12 @@ static void refreshModelMenuItems() {
 		}
 	}
 
+	#ifdef __AMIGAOS4__
+	menu = CreateMenus(amigaGPTMenu, TAG_DONE);
+	SetMenuStrip(mainWindow, menu);
+	#else
 	SetAttrs(mainWindowObject, WINDOW_NewMenu, amigaGPTMenu, TAG_DONE);
+	#endif
 }
 
 /**
@@ -1172,7 +1187,13 @@ static void refreshSpeechMenuItems() {
 **/
 static struct MinList* newConversation() {
 	struct MinList *conversation = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
-	NewMinList(conversation);
+	
+	// NewMinList(conversation); // This is what makes us require exec.library 45. Replace with the following:
+	if (conversation) {
+		conversation->mlh_Tail = 0;
+		conversation->mlh_Head = (struct MinNode *)&conversation->mlh_Tail;
+		conversation->mlh_TailPred = (struct MinNode *)&conversation->mlh_Head;
+	}
 	return conversation;
 }
 
@@ -2015,7 +2036,6 @@ LONG loadConversations() {
 			addTextToConversation(conversation, content, role);
 		}
 		addConversationToConversationList(conversationList, conversation, conversationName);
-
 	}
 
 	json_object_put(conversationsJsonArray);
@@ -2107,6 +2127,9 @@ void shutdownGUI() {
 		CloseFont(uiTextFont);
 	if (appPort)
 		DeleteMsgPort(appPort);
+	if (menu) {
+
+	}
 
 	closeGUILibraries();
 }

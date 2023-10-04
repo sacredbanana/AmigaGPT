@@ -1,4 +1,6 @@
 # Changelog
+## 1.2.0 (2023-10-04)
+- Now fully backwards compatible with AmigaOS 3.9
 
 ## 1.1.0 (2023-07-22)
 - Now supports characters from Western languages other than English
