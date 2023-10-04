@@ -6,6 +6,7 @@ Type: util/misc
 Version: 1.2.0
 Architecture: m68k-amigaos >= 3.9
 Requires: AmigaOS 3.9+/68020+ util/libs/AmiSSL-5.9-OS3.lha
+Replaces: util/misc/AmigaGPT.lha
 
 AmigaGPT is a text generation program that runs on the classic AmigaOS.
 Utilising the power of the OpenAI's GPT-3 and GPT-4 architectures, this
