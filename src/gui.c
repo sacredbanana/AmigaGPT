@@ -221,6 +221,7 @@ static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String);
 static STRPTR UTF8ToISO8859_1(CONST_STRPTR utf8String);
 static BOOL copyFile(STRPTR source, STRPTR destination);
 static void openDocumentation();
+static void updateMenu();
 #ifdef __AMIGAOS4__
 static uint32 processIDCMP(struct Hook *hook, struct Window *window, struct IntuiMessage *message);
 #else
@@ -756,6 +757,10 @@ LONG initVideo() {
 
 	appPort = CreateMsgPort();
 
+	#ifdef __AMIGAOS4__
+	refreshModelMenuItems();
+	#endif
+
 	if ((mainWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
@@ -772,7 +777,7 @@ LONG initVideo() {
 		WINDOW_Layout, mainLayout,
 		WINDOW_SharedPort, NULL,
 		WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
-		// WINDOW_NewMenu, amigaGPTMenu,
+		WINDOW_NewMenu, amigaGPTMenu,
 		// WINDOW_IDCMPHook, &idcmpHook,
 		// WINDOW_InterpretIDCMPHook, TRUE,
 		WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE,
@@ -788,8 +793,10 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
+	#ifdef __AMIGAOS3__
 	refreshModelMenuItems();
 	refreshSpeechMenuItems();
+	#endif
 
 	// For some reason it won't let you paste text into the empty text editor unless you do this
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);
@@ -1132,6 +1139,35 @@ static void sendMessage() {
 }
 
 /**
+ * Updates the menu
+ */
+static void updateMenu() {
+	#ifdef __AMIGAOS3__
+	APTR *visualInfo;
+	ULONG error = NULL;
+	FreeMenus(menu);
+	if (visualInfo = GetVisualInfo(screen, NULL)) {
+		if (menu = CreateMenus(amigaGPTMenu, GTMN_SecondaryError, &error, TAG_DONE)) {
+			if (LayoutMenus(menu, visualInfo, GTMN_NewLookMenus, TRUE, TAG_DONE)) {
+				if (SetMenuStrip(mainWindow, menu)) {
+					RefreshWindowFrame(mainWindow);
+				} else {
+					printf("Error setting menu strip\n");
+				}
+			} else {
+				printf("Error laying out menu\n");
+			}
+		} else {
+			printf("Error creating menu: %ld\n", error);
+		}
+		FreeVisualInfo(visualInfo);
+	}
+	#else
+	SetAttrs(mainWindowObject, WINDOW_NewMenu, amigaGPTMenu, TAG_DONE);
+	#endif
+}
+
+/**
  * Sets the checkbox for the model that is currently selected
 **/
 static void refreshModelMenuItems() {
@@ -1150,29 +1186,7 @@ static void refreshModelMenuItems() {
 		}
 	}
 
-	#ifdef __AMIGAOS3__
-	FreeMenus(menu);
-	if (visualInfo = GetVisualInfo(screen, NULL)) {
-		if (menu = CreateMenus(amigaGPTMenu, GTMN_SecondaryError, &error, TAG_DONE)) {
-			if (LayoutMenus(menu, visualInfo, GTMN_NewLookMenus, TRUE, TAG_DONE)) {
-				if (SetMenuStrip(mainWindow, menu)) {
-					RefreshWindowFrame(mainWindow);
-				} else {
-					printf("Error setting menu strip\n");
-				}
-			} else {
-				printf("Error laying out menu\n");
-			}
-		} else {
-			printf("Error creating menu: %ld\n", error);
-		}
-		FreeVisualInfo(visualInfo);
-	} else {
-		printf("Error getting visual info\n");
-	}
-	#else
-	SetAttrs(mainWindowObject, WINDOW_NewMenu, amigaGPTMenu, TAG_DONE);
-	#endif
+	updateMenu();
 }
 
 /**
@@ -1203,23 +1217,7 @@ static void refreshSpeechMenuItems() {
 		}
 	}
 
-	FreeMenus(menu);
-	if (visualInfo = GetVisualInfo(screen, NULL)) {
-		if (menu = CreateMenus(amigaGPTMenu, GTMN_SecondaryError, &error, TAG_DONE)) {
-			if (LayoutMenus(menu, visualInfo, GTMN_NewLookMenus, TRUE, TAG_DONE)) {
-				if (SetMenuStrip(mainWindow, menu)) {
-					RefreshWindowFrame(mainWindow);
-				} else {
-					printf("Error setting menu strip\n");
-				}
-			} else {
-				printf("Error laying out menu\n");
-			}
-		} else {
-			printf("Error creating menu: %ld\n", error);
-		}
-		FreeVisualInfo(visualInfo);
-	}
+	updateMenu();
 	#endif
 }
 
