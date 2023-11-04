@@ -61,8 +61,8 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 				return RETURN_ERROR;
 			}
 			NarratorIO->flags = NDF_NEWIORB;
-	// 		break;
-	// }
+			break;
+	}
 
 	if ((TranslatorBase = (struct Library *)OpenLibrary("translator.library", 43)) == NULL) {
 		printf("Could not open translator.library\n");
