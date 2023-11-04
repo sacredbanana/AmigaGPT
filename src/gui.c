@@ -151,9 +151,7 @@ static struct TextAttr screenFont = {
 };
 static struct TextAttr chatTextAttr = {0};
 static struct TextAttr uiTextAttr = {0};
-#ifdef __AMIGAOS3__
 static struct Menu *menu;
-#endif
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, 0},
 	{NM_ITEM, "About", 0, 0, 0, MENU_ITEM_ABOUT_ID},
@@ -168,14 +166,14 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "View", 0, 0, 0, 0},
 	{NM_ITEM, "Chat Font", 0, 0, 0, MENU_ITEM_CHAT_FONT_ID},
 	{NM_ITEM, "UI Font", 0, 0, 0, MENU_ITEM_UI_FONT_ID},
-	#ifdef __AMIGAOS3__
+	// #ifdef __AMIGAOS3__
 	{NM_TITLE, "Speech", 0, 0, 0, 0},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
 	{NM_ITEM, "Accent", 0, 0, 0, MENU_ITEM_SPEECH_ACCENT_ID},
 	{NM_ITEM, "Speech system", 0, 0, 0, MENU_ITEM_SPEECH_SYSTEM_ID},
 	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_SYSTEM_34_ID},
 	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_37_ID},
-	#endif
+	// #endif
 	{NM_TITLE, "OpenAI", 0, 0, 0, 0},
 	{NM_ITEM, "API key", 0, 0, 0, MENU_ITEM_OPENAI_API_KEY_ID},
 	{NM_ITEM, "Model", 0, 0, 0, MENU_ITEM_MODEL_ID},
@@ -793,10 +791,10 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
-	#ifdef __AMIGAOS3__
+	// #ifdef __AMIGAOS3__
 	refreshModelMenuItems();
 	refreshSpeechMenuItems();
-	#endif
+	// #endif
 
 	// For some reason it won't let you paste text into the empty text editor unless you do this
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);
@@ -910,7 +908,6 @@ static LONG selectScreen() {
 	while (!done) {
 		signals = Wait(signalMask);
 		while ((result = DoMethod(screenSelectWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
-			// printf("result: %ld\n", result);
 			switch (result & WMHI_CLASSMASK) {
 				case WMHI_GADGETUP:
 					switch (result & WMHI_GADGETMASK) {
@@ -1088,7 +1085,7 @@ static void sendMessage() {
 				FreeVec(assistantMessageNode);
 				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, contentStringISO8859_1, GV_TEXTEDITOR_InsertText_Bottom);
 				addTextToConversation(currentConversation, receivedMessage, "assistant");
-				#ifdef __AMIGAOS3__
+				// #ifdef __AMIGAOS3__
 				if (++wordNumber % 50 == 0) {
 					if (config.speechEnabled) {
 						speakText(receivedMessageISO8859_1 + speechIndex);
@@ -1096,7 +1093,7 @@ static void sendMessage() {
 						FreeVec(receivedMessageISO8859_1);
 					}
 				}
-				#endif
+				// #endif
 				finishReason = json_object_get_string(json_object_object_get(response, "finish_reason"));
 				if (finishReason != NULL) {
 					dataStreamFinished = TRUE;
@@ -1109,13 +1106,13 @@ static void sendMessage() {
 	} while (!dataStreamFinished);
 	
 	if (responses != NULL) {
-		#ifdef __AMIGAOS3__
+		// #ifdef __AMIGAOS3__
 		if (config.speechEnabled) {
 			STRPTR receivedMessageISO8859_1 = UTF8ToISO8859_1(receivedMessage);
 			speakText(receivedMessageISO8859_1 + speechIndex);
 			FreeVec(receivedMessageISO8859_1);
 		}
-		#endif
+		// #endif
 		FreeVec(responses);
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 		if (isNewConversation) {
@@ -1164,6 +1161,7 @@ static void updateMenu() {
 	}
 	#else
 	SetAttrs(mainWindowObject, WINDOW_NewMenu, amigaGPTMenu, TAG_DONE);
+	GetAttr(WINDOW_MenuStrip, mainWindowObject, &menu);
 	#endif
 }
 
@@ -1193,7 +1191,7 @@ static void refreshModelMenuItems() {
  * Sets the checkboxes for the speech options that are currently selected
 **/
 static void refreshSpeechMenuItems() {
-	#ifdef __AMIGAOS3__
+	// #ifdef __AMIGAOS3__
 	APTR *visualInfo;
 	ULONG error = NULL;
 	struct NewMenu *newMenu = amigaGPTMenu;
@@ -1218,7 +1216,7 @@ static void refreshSpeechMenuItems() {
 	}
 
 	updateMenu();
-	#endif
+	// #endif
 }
 
 /**
@@ -1463,6 +1461,7 @@ LONG startGUIRunLoop() {
 				{
 					struct MenuItem *menuItem = ItemAddress(menu, code);
 					ULONG itemIndex = GTMENUITEM_USERDATA(menuItem);
+					printf("index: %ld\n", itemIndex);
 					switch (itemIndex) {
 						case MENU_ITEM_ABOUT_ID:
 							openAboutWindow();
@@ -1528,7 +1527,7 @@ LONG startGUIRunLoop() {
 						case MENU_ITEM_UI_FONT_ID:
 							openUIFontRequester();
 							break;
-						#ifdef __AMIGAOS3__
+						// #ifdef __AMIGAOS3__
 						case MENU_ITEM_SPEECH_ENABLED_ID:
 							config.speechEnabled = !config.speechEnabled;
 							writeConfig();
@@ -1559,7 +1558,7 @@ LONG startGUIRunLoop() {
 							writeConfig();
 							refreshSpeechMenuItems();
 							break;
-						#endif
+						// #endif
 						case MENU_ITEM_OPENAI_API_KEY_ID:
 							openApiKeyRequester();
 							break;
@@ -1814,7 +1813,7 @@ static void openUIFontRequester() {
  * Opens a requester for the user to select accent for the speech
 **/
 static void openSpeechAccentRequester() {
-	#ifdef __AMIGAOS3__
+	// #ifdef __AMIGAOS3__
 	struct FileRequester *fileRequester = (struct FileRequester *)AllocAslRequestTags(
 									ASL_FileRequest,
 									ASLFR_Window, mainWindow,
@@ -1834,7 +1833,7 @@ static void openSpeechAccentRequester() {
 		}
 		FreeAslRequest(fileRequester);
 	}
-	#endif
+	// #endif
 }
 
 /**

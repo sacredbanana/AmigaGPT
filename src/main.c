@@ -81,14 +81,14 @@ LONG main(int argc, char **argv) {
 	#endif
 	readConfig();
 
-	#ifdef __AMIGAOS3__
+	// #ifdef __AMIGAOS3__
 	if (initSpeech(config.speechSystem) == RETURN_ERROR) {
 		printf("Failed to open speech system\n");
 		config.speechSystem = SPEECH_SYSTEM_NONE;
 		closeSpeech();
 		initSpeech(config.speechSystem);
 	}
-	#endif
+	// #endif
 
 	if (initVideo() == RETURN_ERROR) {
 		printf("Failed to initialize video\n");
@@ -178,9 +178,9 @@ static void closeLibraries() {
 **/
 static void cleanExit() {
 	shutdownGUI();
-	#ifdef __AMIGAOS3__
+	// #ifdef __AMIGAOS3__
 	closeSpeech();
-	#endif
+	// #endif
 	closeOpenAIConnector();
 	closeLibraries();
 	#ifdef __AMIGAOS4__

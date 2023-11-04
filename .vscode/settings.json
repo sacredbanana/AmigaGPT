@@ -61,7 +61,8 @@
         "stdlib.h": "c",
         "cdefs.h": "c",
         "stdarg.h": "c",
-        "application.h": "c"
+        "application.h": "c",
+        "translator_pragmas.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

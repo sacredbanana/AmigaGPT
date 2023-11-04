@@ -32,7 +32,8 @@ Ensure you have the necessary system requirements:
 - Internet access using a TCP/IP stack such as **Roadshow** (http://roadshow.apc-tcp.de/index-en.php)
 - **AmiSSL 5.9** or higher (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
 - An **OpenAI account** with an active **API key**
-- *Optional*: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
+- *Optional*: **AmigaOS 3 only**: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
+- *Optional*: **AmigaOS 4 only**: **Flite device** (http://aminet.net/package/mus/misc/flite_device)
 
 ## Installation
 * Install AmiSSL and a TCP/IP stack if not already done so
@@ -40,6 +41,7 @@ Ensure you have the necessary system requirements:
 * Extract the `amigagpt.lha` archive to your desired location
 
 ## *Optional steps to enable speech functionality*
+### AmigaOS 3 ###
 **AmigaGPT** supports reading the output aloud. This requires a file called `narrator.device` which cannot be included with **AmigaGPT** because it is still under copyright. Therefore, you must copy this file legally from your Workbench disks so that **AmigaGPT** will be able to synthesise speech. There are 2 versions of `narrator.device` supported, **v34** and **v37**. 
 
 **v34** is the original version that came with Workbench 1.x. **v37** was an updated version included with Workbench 2.0.x. It has more features and sounds more natural, however it does sound quite different which is why **AmigaGPT** supports you installing both versions and your choice of version to be used can be selected in the **Speech** menu in the app.
@@ -62,6 +64,10 @@ Since `translator.library` **v43** is not available as a standalone install, you
 
 ### Installing `narrator.device` **v37**
 * Insert your Workbench 2.0.x (you cannot use 2.1 because the speech libraries were removed after version 2.0.4) disk and copy `df0:devs/narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/37`
+
+### AmigaOS 4
+* AmigaGPT for AmigaOS 4 uses the Flite device to provide speech synthesis. Download it from http://aminet.net/package/mus/misc/flite_device.
+* Extract the archive and run the installer
 
 ## Launching **AmigaGPT**
 * Launch the application by double-clicking the AmigaGPT icon
@@ -122,7 +128,7 @@ Get this toolchain set up https://github.com/sba1/adtools
 Once installed, get the required other SDK's from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
 
 ### Docker
-You may use an all-in-one Docker image that is able to compile both the AmigaOS 3 and AmigaOS 4 versions of the app.
+You may use pre-prepared Docker images that are able to compile both the AmigaOS 3 and AmigaOS 4 versions of the app.
 
 Just install Docker on your machine and run the `build_os3.sh` or `build_os4.sh` scripts depending on which version of the app you want to build. If you want to perform a clean build, you can set the environment variable `CLEAN=1` for example you can run `CLEAN=1 ./build_os3.sh`.
 
@@ -147,4 +153,4 @@ We welcome contributions to **AmigaGPT**! If you have a bug to report, a feature
 - **Bebbo** for creating the Amiga GCC toolchain https://github.com/bebbo
 - **OpenAI** for making this all possible https://openai.com
 - **EAB** and everyone in it for answering my questions https://eab.abime.net/
-- **Hyperion Entertainment** for bringinging us AmigaOS 3.2 https://www.hyperion-entertainment.com
+- **Hyperion Entertainment** for bringing us AmigaOS 3.2 https://www.hyperion-entertainment.com

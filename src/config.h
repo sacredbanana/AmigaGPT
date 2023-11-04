@@ -2,11 +2,11 @@
 #include "speech.h"
 
 struct Config {
-	#ifdef __AMIGAOS3__
+	// #ifdef __AMIGAOS3__
 	BOOL speechEnabled;
 	enum SpeechSystem speechSystem;
 	UBYTE speechAccent[32];
-	#endif
+	// #endif
 	enum Model model;
 	UBYTE chatFontName[32];
 	UWORD chatFontSize;
