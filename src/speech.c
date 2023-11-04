@@ -1,10 +1,12 @@
 // #ifdef __AMIGAOS3__
 #include <stdio.h>
 #include <proto/exec.h>
+#ifdef __AMIGAOS3__
 #include <proto/translator.h>
 #include <devices/narrator.h>
-#ifdef __AMIGAOS4__
-#include <exec/emulation.h>
+#else
+#include <devices/flite.h>
+#include <proto/flite.h>
 #endif
 #include "config.h"
 
@@ -44,16 +46,16 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 		return RETURN_ERROR;
 	}
 
-	// switch (speechSystem) {
-	// 	case SPEECH_SYSTEM_NONE:
-	// 		return RETURN_OK;
-	// 	case SPEECH_SYSTEM_34:
-			// if (OpenDevice("PROGDIR:devs/speech/34/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
-			// 	printf("Could not open narrator.device v34\n");
-			// 	return RETURN_ERROR;
-			// }
-	// 		break;
-	// 	case SPEECH_SYSTEM_37:
+	switch (speechSystem) {
+		case SPEECH_SYSTEM_NONE:
+			return RETURN_OK;
+		case SPEECH_SYSTEM_34:
+			if (OpenDevice("PROGDIR:devs/speech/34/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
+				printf("Could not open narrator.device v34\n");
+				return RETURN_ERROR;
+			}
+			break;
+		case SPEECH_SYSTEM_37:
 			if (OpenDevice("PROGDIR:devs/speech/37/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
 				printf("Could not open narrator.device v37\n");
 				return RETURN_ERROR;
