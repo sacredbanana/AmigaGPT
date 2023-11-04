@@ -82,6 +82,12 @@
 #define MENU_ITEM_SPEECH_SYSTEM_ID 24
 #define MENU_ITEM_OPENAI_API_KEY_ID 25
 #define MENU_ITEM_VIEW_DOCUMENTATION_ID 26
+#define MENU_ITEM_VOICE_ID 27
+#define MENU_ITEM_SPEECH_VOICE_AWB_ID 28
+#define MENU_ITEM_SPEECH_VOICE_KAL_ID 29
+#define MENU_ITEM_SPEECH_VOICE_KAL16_ID 30
+#define MENU_ITEM_SPEECH_VOICE_RMS_ID 31
+#define MENU_ITEM_SPEECH_VOICE_SLT_ID 32
 
 #ifdef __AMIGAOS4__
 #define IntuitionBase Library
@@ -166,14 +172,21 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "View", 0, 0, 0, 0},
 	{NM_ITEM, "Chat Font", 0, 0, 0, MENU_ITEM_CHAT_FONT_ID},
 	{NM_ITEM, "UI Font", 0, 0, 0, MENU_ITEM_UI_FONT_ID},
-	// #ifdef __AMIGAOS3__
 	{NM_TITLE, "Speech", 0, 0, 0, 0},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
+	#ifdef __AMIGAOS3__
 	{NM_ITEM, "Accent", 0, 0, 0, MENU_ITEM_SPEECH_ACCENT_ID},
 	{NM_ITEM, "Speech system", 0, 0, 0, MENU_ITEM_SPEECH_SYSTEM_ID},
 	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_SYSTEM_34_ID},
 	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_37_ID},
-	// #endif
+	#else
+	{NM_ITEM, "Voice", 0, 0, 0, MENU_ITEM_VOICE_ID},
+	{NM_SUB, "awb", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_VOICE_AWB_ID},
+	{NM_SUB, "kal", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_KAL_ID},
+	{NM_SUB, "kal16", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_KAL16_ID},
+	{NM_SUB, "rms", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_RMS_ID},
+	{NM_SUB, "slt", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_SLT_ID},
+	#endif
 	{NM_TITLE, "OpenAI", 0, 0, 0, 0},
 	{NM_ITEM, "API key", 0, 0, 0, MENU_ITEM_OPENAI_API_KEY_ID},
 	{NM_ITEM, "Model", 0, 0, 0, MENU_ITEM_MODEL_ID},
@@ -1191,7 +1204,6 @@ static void refreshModelMenuItems() {
  * Sets the checkboxes for the speech options that are currently selected
 **/
 static void refreshSpeechMenuItems() {
-	// #ifdef __AMIGAOS3__
 	APTR *visualInfo;
 	ULONG error = NULL;
 	struct NewMenu *newMenu = amigaGPTMenu;
@@ -1205,8 +1217,8 @@ static void refreshSpeechMenuItems() {
 		newMenu++->nm_Flags &= ~CHECKED;
 	}
 
+	#ifdef __AMIGAOS3__
 	newMenu++;
-
 	while ((++newMenu)->nm_Type == NM_SUB) {
 		if (strcmp(newMenu->nm_Label, SPEECH_SYSTEM_NAMES[config.speechSystem]) == 0) {
 			newMenu->nm_Flags |= CHECKED;
@@ -1214,9 +1226,17 @@ static void refreshSpeechMenuItems() {
 			newMenu->nm_Flags &= ~CHECKED;
 		}
 	}
+	#else
+	while ((++newMenu)->nm_Type == NM_SUB) {
+		if (strcmp(newMenu->nm_Label, SPEECH_VOICE_NAMES[config.speechVoice]) == 0) {
+			newMenu->nm_Flags |= CHECKED;
+		} else {
+			newMenu->nm_Flags &= ~CHECKED;
+		}
+	}
+	#endif
 
 	updateMenu();
-	// #endif
 }
 
 /**
@@ -1461,7 +1481,6 @@ LONG startGUIRunLoop() {
 				{
 					struct MenuItem *menuItem = ItemAddress(menu, code);
 					ULONG itemIndex = GTMENUITEM_USERDATA(menuItem);
-					printf("index: %ld\n", itemIndex);
 					switch (itemIndex) {
 						case MENU_ITEM_ABOUT_ID:
 							openAboutWindow();
@@ -1527,12 +1546,12 @@ LONG startGUIRunLoop() {
 						case MENU_ITEM_UI_FONT_ID:
 							openUIFontRequester();
 							break;
-						// #ifdef __AMIGAOS3__
 						case MENU_ITEM_SPEECH_ENABLED_ID:
 							config.speechEnabled = !config.speechEnabled;
 							writeConfig();
 							refreshSpeechMenuItems();
 							break;
+						#ifdef __AMIGAOS3__
 						case MENU_ITEM_SPEECH_ACCENT_ID:
 							openSpeechAccentRequester();
 							break;
@@ -1558,7 +1577,33 @@ LONG startGUIRunLoop() {
 							writeConfig();
 							refreshSpeechMenuItems();
 							break;
-						// #endif
+						#else
+						case MENU_ITEM_SPEECH_VOICE_AWB_ID:
+							config.speechVoice = SPEECH_VOICE_AWB;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_VOICE_KAL_ID:
+							config.speechVoice = SPEECH_VOICE_KAL;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_VOICE_KAL16_ID:
+							config.speechVoice = SPEECH_VOICE_KAL16;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_VOICE_RMS_ID:
+							config.speechVoice = SPEECH_VOICE_RMS;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_VOICE_SLT_ID:
+							config.speechVoice = SPEECH_VOICE_SLT;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						#endif
 						case MENU_ITEM_OPENAI_API_KEY_ID:
 							openApiKeyRequester();
 							break;
@@ -1813,7 +1858,7 @@ static void openUIFontRequester() {
  * Opens a requester for the user to select accent for the speech
 **/
 static void openSpeechAccentRequester() {
-	// #ifdef __AMIGAOS3__
+	#ifdef __AMIGAOS3__
 	struct FileRequester *fileRequester = (struct FileRequester *)AllocAslRequestTags(
 									ASL_FileRequest,
 									ASLFR_Window, mainWindow,
@@ -1833,7 +1878,7 @@ static void openSpeechAccentRequester() {
 		}
 		FreeAslRequest(fileRequester);
 	}
-	// #endif
+	#endif
 }
 
 /**

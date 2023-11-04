@@ -1,22 +1,43 @@
-// #ifdef __AMIGAOS3__
 #include <stdio.h>
 #include <proto/exec.h>
 #ifdef __AMIGAOS3__
 #include <proto/translator.h>
 #include <devices/narrator.h>
 #else
+#include <exec/exec.h>
+#include <dos/dos.h>
 #include <devices/flite.h>
 #include <proto/flite.h>
 #endif
 #include "config.h"
+#include "version.h"
 
 #define TRANSLATION_BUFFER_SIZE 8192
 
+#ifdef __AMIGAOS3__
 struct Library *TranslatorBase = NULL;
 static struct MsgPort *NarratorPort = NULL;
 static struct narrator_rb *NarratorIO = NULL;
 static BYTE audioChannels[4] = {3, 5, 10, 12};
-static STRPTR translationBuffer;
+#else
+static struct MsgPort *fliteMessagePort = NULL;
+static struct FliteRequest *fliteRequest = NULL;
+struct Device *FliteBase = NULL;
+struct FliteIFace *IFlite = NULL;
+struct FliteVoice *voice = NULL;
+
+/**
+ * The names of the speech voices
+ * @see enum SpeechVoice
+**/ 
+const STRPTR SPEECH_VOICE_NAMES[] = {
+	[SPEECH_VOICE_AWB] = "awb",
+	[SPEECH_VOICE_KAL] = "kal",
+	[SPEECH_VOICE_KAL16] = "kal16",
+	[SPEECH_VOICE_RMS] = "rms",
+	[SPEECH_VOICE_SLT] = "slt"
+};
+#endif
 
 /**
  * The names of the speech systems
@@ -26,7 +47,10 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {
 	[SPEECH_SYSTEM_NONE] = "None",
 	[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
 	[SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
+	[SPEECH_SYSTEM_FLITE] = "Flite"
 };
+
+static STRPTR translationBuffer;
 
 /**
  * Initialise the speech system
@@ -36,6 +60,7 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {
 LONG initSpeech(enum SpeechSystem speechSystem) {
 	translationBuffer = AllocVec(TRANSLATION_BUFFER_SIZE, MEMF_ANY);
 
+	#ifdef __AMIGAOS3__
 	if (!(NarratorPort = CreateMsgPort())) {
 		printf("Could not create narrator port\n");
 		return RETURN_ERROR;
@@ -68,6 +93,43 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 		printf("Could not open translator.library\n");
 		return RETURN_ERROR;
 	}
+	#else
+
+	/* Note: we could use a struct IOStdReq here if we didn't need any of
+       the more "advanced" features of the device. */
+	/* Any additional fields will be ignored by flite.device 52.1 */
+	fliteMessagePort = AllocSysObject(ASOT_PORT, NULL);
+	fliteRequest = AllocSysObjectTags(ASOT_IOREQUEST,
+		ASOIOR_Size,		sizeof(struct FliteRequest),
+		ASOIOR_ReplyPort,	fliteMessagePort,
+		TAG_END);
+
+	if (fliteRequest) {
+		/* minimum version/revision */
+		/* This information will unfortunately be ignored by 52.1, */
+		/* so an additional check after OpenDevice() may be in order. */
+		fliteRequest->fr_Version = 53;
+		fliteRequest->fr_Revision = 1;
+
+		if (OpenDevice("flite.device", 0, (struct IORequest *)fliteRequest, 0) == IOERR_SUCCESS) {
+			FliteBase = fliteRequest->fr_Std.io_Device;
+			/* "main" interface is only available in 53.1 and higher versions */
+			IFlite = (struct FliteIFace *)GetInterface(
+				(struct Library *)FliteBase, "main", 1, NULL);
+			if (!IFlite) {
+				PutErrStr(APP_NAME": failed to obtain interface for flite.device\n");
+				return RETURN_ERROR;
+			}
+		} else {
+			PutErrStr(APP_NAME": failed to open flite.device\n");
+			return RETURN_ERROR;
+		}
+	} else {
+		PrintFault(ERROR_NO_FREE_STORE, APP_NAME);
+		return RETURN_ERROR;
+	}
+	#endif
+	
 	return RETURN_OK;
 }
 
@@ -76,6 +138,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 **/
 void closeSpeech() {
 	FreeVec(translationBuffer);
+	#ifdef __AMIGAOS3__
 	if (TranslatorBase != NULL) {
 		CloseLibrary(TranslatorBase);
 		Forbid();
@@ -98,6 +161,13 @@ void closeSpeech() {
 
 	 if (NarratorPort)
 		DeleteMsgPort(NarratorPort);
+	#else
+	if (IFlite && voice) CloseVoice(voice);
+	DropInterface((struct Interface *)IFlite);
+	CloseDevice((struct IORequest *)fliteRequest);
+	FreeSysObject(ASOT_IOREQUEST, fliteRequest);
+	FreeSysObject(ASOT_PORT, fliteMessagePort);
+	#endif
 }
 
 /**
@@ -105,32 +175,68 @@ void closeSpeech() {
  * @param text the text to speak
 **/
 void speakText(STRPTR text) {
-	printf("Translating text: %s\n", text);
 	if (config.speechSystem == SPEECH_SYSTEM_NONE) return;
+	#ifdef __AMIGAOS3__
+	memset(translationBuffer, 0, TRANSLATION_BUFFER_SIZE);
 	if (CheckIO((struct IORequest *)NarratorIO) == 0) {
 		WaitIO((struct IORequest *)NarratorIO);
 	}
-	memset(translationBuffer, 0, TRANSLATION_BUFFER_SIZE);
-	#ifdef __AMIGAOS3__
 	TranslateAs(text, strlen(text), translationBuffer, TRANSLATION_BUFFER_SIZE, config.speechAccent);
-	#else
-	printf("Emulating tags\n");
-	EmulateTags(TranslatorBase,
-	ET_Offset, -30,
-	ET_RegisterA0, text,
-	ET_RegisterD0, strlen(text),
-	ET_RegisterA1, translationBuffer,
-	ET_RegisterD1, TRANSLATION_BUFFER_SIZE,
-	// ET_RegisterD2, config.speechAccent,
-	ET_RegisterA6, TranslatorBase,
-	TAG_END);
-	#endif
 	NarratorIO->ch_masks = audioChannels;
 	NarratorIO->nm_masks = sizeof(audioChannels);
 	NarratorIO->message.io_Command= CMD_WRITE;
 	NarratorIO->message.io_Data = translationBuffer;
 	NarratorIO->message.io_Length = strlen(translationBuffer);
-	printf("Speaking: %s\n", translationBuffer);
 	SendIO((struct IORequest *)NarratorIO);
+	#else
+	if (IFlite && voice) CloseVoice(voice);
+	UBYTE voiceName[32];
+	snprintf(voiceName, 32, "%s.voice\0", SPEECH_VOICE_NAMES[config.speechVoice]);
+	printf("Opening voice %s\n", voiceName);
+	voice = OpenVoice(voiceName);
+	if (!voice) {
+		PutErrStr(APP_NAME": failed to open voice\n");
+		return;
+	}
+	snprintf(translationBuffer, TRANSLATION_BUFFER_SIZE, "%s\0", text);
+	fliteRequest->fr_Std.io_Command = CMD_WRITE;
+	fliteRequest->fr_Std.io_Data = (APTR)translationBuffer;
+	fliteRequest->fr_Std.io_Length = ~0; /* io_Data is NUL-terminated */
+	fliteRequest->fr_Voice = voice;
+
+	SendIO((struct IORequest *)fliteRequest);
+	Permit();
+	printf("Waiting for speech to finish\n");
+
+	Wait((1 << fliteMessagePort->mp_SigBit)|SIGBREAKF_CTRL_C);
+	printf("Speech finished\n");
+
+	/* Note: Never use CheckIO() or WaitIO() on an unused IORequest! */
+	if (!CheckIO((struct IORequest *)fliteRequest)) {
+		/* Aborting only works if the IORequest has not yet been
+			removed from the MsgPort by the flite.device process. */
+		AbortIO((struct IORequest *)fliteRequest);
+	}
+	/* Wait for request to finish, and perform cleanup afterwards */
+	WaitIO((struct IORequest *)fliteRequest);
+
+	printf("Speech IO finished\n");
+
+	switch (fliteRequest->fr_Std.io_Error) {
+		case IOERR_SUCCESS:
+			break;
+		case IOERR_ABORTED:
+			PutErrStr(APP_NAME": Speech IO aborted\n");
+			break;
+		case FLERR_FLITE:
+			PutErrStr(APP_NAME": libflite error\n");
+			break;
+		case FLERR_NOVOICE:
+			PutErrStr(APP_NAME": no voice\n");
+			break;
+		default:
+			PutErrStr(APP_NAME": unknown speech IO error\n");
+			break;
+	}
+	#endif
 }
-// #endif

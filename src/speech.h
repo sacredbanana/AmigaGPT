@@ -1,4 +1,3 @@
-// #ifdef __AMIGAOS3__
 #include <proto/dos.h>
 
 /**
@@ -7,7 +6,8 @@
 enum SpeechSystem {
 	SPEECH_SYSTEM_NONE = 0,
 	SPEECH_SYSTEM_34,
-	SPEECH_SYSTEM_37
+	SPEECH_SYSTEM_37,
+	SPEECH_SYSTEM_FLITE
 };
 
 /**
@@ -15,6 +15,27 @@ enum SpeechSystem {
  * @see enum SpeechSystem
 **/ 
 extern const STRPTR SPEECH_SYSTEM_NAMES[];
+
+#ifdef __AMIGAOS4__
+
+/**
+ * The voice of the spoken text
+**/
+enum SpeechVoice {
+	SPEECH_VOICE_AWB = 0,
+	SPEECH_VOICE_KAL,
+	SPEECH_VOICE_KAL16,
+	SPEECH_VOICE_RMS,
+	SPEECH_VOICE_SLT
+};
+
+/**
+ * The names of the speech voices
+ * @see enum SpeechVoice
+**/ 
+extern const STRPTR SPEECH_VOICE_NAMES[];
+
+#endif
 
 /**
  * Initialise the speech system
@@ -33,4 +54,3 @@ void speakText(STRPTR text);
  * Close the speech system
 **/
 void closeSpeech();
-// #endif
