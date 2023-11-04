@@ -1,4 +1,7 @@
 # Changelog
+## 1.2.1 (2023-11-04)
+- Now fully backwards compatible with Cloanto's AmigaOS 3.X (included in Amiga Forever)
+
 ## 1.2.0 (2023-10-04)
 - Now fully backwards compatible with AmigaOS 3.9
 

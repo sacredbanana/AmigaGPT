@@ -3,7 +3,7 @@ Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 1.2.0
+Version: 1.2.1
 Architecture: m68k-amigaos >= 3.9
 Requires: AmigaOS 3.9+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 Replaces: util/misc/AmigaGPT.lha
@@ -21,7 +21,7 @@ Features:
 Requirements:
 - OCS/ECS/AGA Amiga
 - Motorola 68020 or higher CPU
-- AmigaOS 3.9 supportrd but 3.2 or higher recommended
+- AmigaOS 3.9 and AmigaOS 3.X (included in Amiga Forever) supported but 3.2 or higher recommended
 - AmiSSL 5.9 or higher (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
 - Internet access using a TCP/IP stack such as Roadshow 
 (http://roadshow.apc-tcp.de/index-en.php)

@@ -305,7 +305,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((WindowBase = OpenLibrary("window.class", 45)) == NULL) {
+	if ((WindowBase = OpenLibrary("window.class", 44)) == NULL) {
 		printf("Could not open window.class\n");
 		return RETURN_ERROR;
 	}
@@ -321,7 +321,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 45)) == NULL) {
+	if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 44)) == NULL) {
 		printf("Could not open layout.gadget\n");
 		return RETURN_ERROR;
 	}
@@ -385,7 +385,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 45)) == NULL) {
+	if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 44)) == NULL) {
 		printf("Could not open scroller.gadget\n");
 		return RETURN_ERROR;
 	}
@@ -401,7 +401,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((StringBase = OpenLibrary("gadgets/string.gadget", 45)) == NULL) {
+	if ((StringBase = OpenLibrary("gadgets/string.gadget", 44)) == NULL) {
 		printf("Could not open string.gadget\n");
 		return RETURN_ERROR;
 	}
@@ -1461,9 +1461,7 @@ LONG startGUIRunLoop() {
 					break;
 				case WMHI_MENUPICK:
 				{
-					struct Menu *menuStrip;
-					GetAttr(WINDOW_MenuStrip, mainWindowObject, &menuStrip);
-					struct MenuItem *menuItem = ItemAddress(menuStrip, code);
+					struct MenuItem *menuItem = ItemAddress(menu, code);
 					ULONG itemIndex = GTMENUITEM_USERDATA(menuItem);
 					switch (itemIndex) {
 						case MENU_ITEM_ABOUT_ID:
