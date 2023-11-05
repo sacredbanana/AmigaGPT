@@ -192,7 +192,6 @@ void speakText(STRPTR text) {
 	if (IFlite && voice) CloseVoice(voice);
 	UBYTE voiceName[32];
 	snprintf(voiceName, 32, "%s.voice\0", SPEECH_VOICE_NAMES[config.speechVoice]);
-	printf("Opening voice %s\n", voiceName);
 	voice = OpenVoice(voiceName);
 	if (!voice) {
 		PutErrStr(APP_NAME": failed to open voice\n");
@@ -201,15 +200,11 @@ void speakText(STRPTR text) {
 	snprintf(translationBuffer, TRANSLATION_BUFFER_SIZE, "%s\0", text);
 	fliteRequest->fr_Std.io_Command = CMD_WRITE;
 	fliteRequest->fr_Std.io_Data = (APTR)translationBuffer;
-	fliteRequest->fr_Std.io_Length = ~0; /* io_Data is NUL-terminated */
+	fliteRequest->fr_Std.io_Length = ~0; /* io_Data is NULL-terminated */
 	fliteRequest->fr_Voice = voice;
 
 	SendIO((struct IORequest *)fliteRequest);
-	Permit();
-	printf("Waiting for speech to finish\n");
-
 	Wait((1 << fliteMessagePort->mp_SigBit)|SIGBREAKF_CTRL_C);
-	printf("Speech finished\n");
 
 	/* Note: Never use CheckIO() or WaitIO() on an unused IORequest! */
 	if (!CheckIO((struct IORequest *)fliteRequest)) {
@@ -219,8 +214,6 @@ void speakText(STRPTR text) {
 	}
 	/* Wait for request to finish, and perform cleanup afterwards */
 	WaitIO((struct IORequest *)fliteRequest);
-
-	printf("Speech IO finished\n");
 
 	switch (fliteRequest->fr_Std.io_Error) {
 		case IOERR_SUCCESS:
