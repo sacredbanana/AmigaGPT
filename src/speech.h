@@ -22,9 +22,9 @@ extern const STRPTR SPEECH_SYSTEM_NAMES[];
  * The voice of the spoken text
 **/
 enum SpeechVoice {
-	SPEECH_VOICE_AWB = 0,
-	SPEECH_VOICE_KAL,
+	SPEECH_VOICE_KAL = 0,
 	SPEECH_VOICE_KAL16,
+	SPEECH_VOICE_AWB,
 	SPEECH_VOICE_RMS,
 	SPEECH_VOICE_SLT
 };

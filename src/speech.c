@@ -31,9 +31,9 @@ struct FliteVoice *voice = NULL;
  * @see enum SpeechVoice
 **/ 
 const STRPTR SPEECH_VOICE_NAMES[] = {
-	[SPEECH_VOICE_AWB] = "awb",
 	[SPEECH_VOICE_KAL] = "kal",
 	[SPEECH_VOICE_KAL16] = "kal16",
+	[SPEECH_VOICE_AWB] = "awb",
 	[SPEECH_VOICE_RMS] = "rms",
 	[SPEECH_VOICE_SLT] = "slt"
 };

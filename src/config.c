@@ -15,7 +15,7 @@ struct Config config = {
 	.speechAccent = "american.accent",
 	.speechSystem = SPEECH_SYSTEM_34,
 	#else
-	.speechVoice = SPEECH_VOICE_AWB,
+	.speechVoice = SPEECH_VOICE_KAL,
 	.speechSystem = SPEECH_SYSTEM_FLITE,
 	#endif
 	.model = GPT_3_5_TURBO,

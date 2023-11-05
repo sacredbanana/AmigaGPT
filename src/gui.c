@@ -181,11 +181,11 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, MENU_ITEM_SPEECH_SYSTEM_37_ID},
 	#else
 	{NM_ITEM, "Voice", 0, 0, 0, MENU_ITEM_VOICE_ID},
-	{NM_SUB, "awb", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_VOICE_AWB_ID},
-	{NM_SUB, "kal", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_KAL_ID},
-	{NM_SUB, "kal16", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_KAL16_ID},
-	{NM_SUB, "rms", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_RMS_ID},
-	{NM_SUB, "slt", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_SLT_ID},
+	{NM_SUB, "kal (fast)", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_KAL_ID},
+	{NM_SUB, "kal16 (fast)", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_KAL16_ID},
+	{NM_SUB, "awb (slow)", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_VOICE_AWB_ID},
+	{NM_SUB, "rms (slow)", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_RMS_ID},
+	{NM_SUB, "slt (slow)", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_SLT_ID},
 	#endif
 	{NM_TITLE, "OpenAI", 0, 0, 0, 0},
 	{NM_ITEM, "API key", 0, 0, 0, MENU_ITEM_OPENAI_API_KEY_ID},
@@ -1098,7 +1098,6 @@ static void sendMessage() {
 				FreeVec(assistantMessageNode);
 				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, contentStringISO8859_1, GV_TEXTEDITOR_InsertText_Bottom);
 				addTextToConversation(currentConversation, receivedMessage, "assistant");
-				// #ifdef __AMIGAOS3__
 				if (++wordNumber % 50 == 0) {
 					if (config.speechEnabled) {
 						speakText(receivedMessageISO8859_1 + speechIndex);
@@ -1106,7 +1105,6 @@ static void sendMessage() {
 						FreeVec(receivedMessageISO8859_1);
 					}
 				}
-				// #endif
 				finishReason = json_object_get_string(json_object_object_get(response, "finish_reason"));
 				if (finishReason != NULL) {
 					dataStreamFinished = TRUE;
@@ -1228,7 +1226,18 @@ static void refreshSpeechMenuItems() {
 	}
 	#else
 	while ((++newMenu)->nm_Type == NM_SUB) {
-		if (strcmp(newMenu->nm_Label, SPEECH_VOICE_NAMES[config.speechVoice]) == 0) {
+		CONST_STRPTR currentVoiceName = SPEECH_VOICE_NAMES[config.speechVoice];
+
+		// Find the length of the first word in the label
+		UBYTE labelLen = 0;
+		while (newMenu->nm_Label[labelLen] != ' ') {
+			labelLen++;
+		}
+
+		// Compare the first word of the label with currentVoiceName
+		// We have to do this because the (slow) warnings were appended to the label
+		if (strncmp(newMenu->nm_Label, currentVoiceName, labelLen) == 0 &&
+			currentVoiceName[labelLen] == '\0') {
 			newMenu->nm_Flags |= CHECKED;
 		} else {
 			newMenu->nm_Flags &= ~CHECKED;
