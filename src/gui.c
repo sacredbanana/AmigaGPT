@@ -1122,7 +1122,7 @@ static void sendMessage() {
 			speakText(receivedMessageISO8859_1 + speechIndex);
 			FreeVec(receivedMessageISO8859_1);
 		}
-\		FreeVec(responses);
+		FreeVec(responses);
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 		if (isNewConversation) {
 			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
