@@ -12,13 +12,14 @@
 #include "config.h"
 #include "version.h"
 
+#ifdef __AMIGAOS3__
 #define TRANSLATION_BUFFER_SIZE 8192
 
-#ifdef __AMIGAOS3__
 struct Library *TranslatorBase = NULL;
 static struct MsgPort *NarratorPort = NULL;
 static struct narrator_rb *NarratorIO = NULL;
 static BYTE audioChannels[4] = {3, 5, 10, 12};
+static STRPTR translationBuffer;
 #else
 static struct MsgPort *fliteMessagePort = NULL;
 static struct FliteRequest *fliteRequest = NULL;
@@ -50,17 +51,14 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {
 	[SPEECH_SYSTEM_FLITE] = "Flite"
 };
 
-static STRPTR translationBuffer;
-
 /**
  * Initialise the speech system
  * @param speechSystem the speech system to use
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG initSpeech(enum SpeechSystem speechSystem) {
-	translationBuffer = AllocVec(TRANSLATION_BUFFER_SIZE, MEMF_ANY);
-
 	#ifdef __AMIGAOS3__
+	translationBuffer = AllocVec(TRANSLATION_BUFFER_SIZE, MEMF_ANY);
 	if (!(NarratorPort = CreateMsgPort())) {
 		printf("Could not create narrator port\n");
 		return RETURN_ERROR;
@@ -137,7 +135,6 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
  * Close the speech system
 **/
 void closeSpeech() {
-	FreeVec(translationBuffer);
 	#ifdef __AMIGAOS3__
 	if (TranslatorBase != NULL) {
 		CloseLibrary(TranslatorBase);
@@ -161,6 +158,8 @@ void closeSpeech() {
 
 	 if (NarratorPort)
 		DeleteMsgPort(NarratorPort);
+
+	FreeVec(translationBuffer);
 	#else
 	if (IFlite && voice) CloseVoice(voice);
 	DropInterface((struct Interface *)IFlite);
@@ -197,9 +196,8 @@ void speakText(STRPTR text) {
 		PutErrStr(APP_NAME": failed to open voice\n");
 		return;
 	}
-	snprintf(translationBuffer, TRANSLATION_BUFFER_SIZE, "%s\0", text);
 	fliteRequest->fr_Std.io_Command = CMD_WRITE;
-	fliteRequest->fr_Std.io_Data = (APTR)translationBuffer;
+	fliteRequest->fr_Std.io_Data = (APTR)text;
 	fliteRequest->fr_Std.io_Length = ~0; /* io_Data is NULL-terminated */
 	fliteRequest->fr_Voice = voice;
 

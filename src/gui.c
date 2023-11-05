@@ -1117,14 +1117,12 @@ static void sendMessage() {
 	} while (!dataStreamFinished);
 	
 	if (responses != NULL) {
-		// #ifdef __AMIGAOS3__
 		if (config.speechEnabled) {
 			STRPTR receivedMessageISO8859_1 = UTF8ToISO8859_1(receivedMessage);
 			speakText(receivedMessageISO8859_1 + speechIndex);
 			FreeVec(receivedMessageISO8859_1);
 		}
-		// #endif
-		FreeVec(responses);
+\		FreeVec(responses);
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 		if (isNewConversation) {
 			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
@@ -1662,6 +1660,7 @@ LONG startGUIRunLoop() {
 						default:
 							break;
 					}
+					break;
 				}
 				case WMHI_RAWKEY:
 					switch (code) {
