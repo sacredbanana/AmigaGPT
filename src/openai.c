@@ -51,11 +51,16 @@ ULONG RangeSeed;
 **/ 
 const STRPTR MODEL_NAMES[] = {
 	[GPT_4] = "gpt-4",
+	[GPT_4_0314] = "gpt-4-0314",
 	[GPT_4_0613] = "gpt-4-0613",
+	[GPT_4_1106_PREVIEW] = "gpt-4-1106-preview",
 	[GPT_4_32K] = "gpt-4-32k",
+	[GPT_4_32K_0314] = "gpt-4-32k-0314",
 	[GPT_4_32K_0613] = "gpt-4-32k-0613",
 	[GPT_3_5_TURBO] = "gpt-3.5-turbo",
+	[GPT_3_5_TURBO_0301] = "gpt-3.5-turbo-0301",
 	[GPT_3_5_TURBO_0613] = "gpt-3.5-turbo-0613",
+	[GPT_3_5_TURBO_1106] = "gpt-3.5-turbo-1106",
 	[GPT_3_5_TURBO_16K] = "gpt-3.5-turbo-16k",
 	[GPT_3_5_TURBO_16K_0613] = "gpt-3.5-turbo-16k-0613"
 };
@@ -204,10 +209,10 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 	static BOOL streamingInProgress = FALSE;
 	UWORD responseIndex = 0;
 
-	memset(readBuffer, 0, READ_BUFFER_LENGTH);
 	memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 
 	if (!stream || !streamingInProgress) {
+		memset(readBuffer, 0, READ_BUFFER_LENGTH);
 		streamingInProgress = stream;
 		if (ssl != NULL) {
 			SSL_shutdown(ssl);
@@ -336,38 +341,46 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 		BOOL doneReading = FALSE;
 		LONG err = 0;
 		while (!doneReading) {
-			bytesRead = SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH);
+			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
+			strcat(readBuffer, tempReadBuffer);
+			FreeVec(tempReadBuffer);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
 				case SSL_ERROR_NONE:
 					totalBytesRead += bytesRead;
 					const STRPTR jsonStart = stream ? "data: {" : "{";
 					STRPTR jsonString = readBuffer;
-					// Check for error in stream
-					if (stream && strstr(jsonString, jsonStart) == NULL) {
-						jsonString = strstr(jsonString, "{");
-						responses[0] = json_tokener_parse(jsonString);
-						streamingInProgress = FALSE;
-						doneReading = TRUE;
-						break;
-					}
+					STRPTR lastJsonString = jsonString;
 					while (jsonString = strstr(jsonString, jsonStart)) {
+						lastJsonString = jsonString;
 						if (stream)
 							jsonString += 6; // Get to the start of the JSON
-						responses[responseIndex] = json_tokener_parse(jsonString);
-						doneReading = TRUE;
-						if (responses[responseIndex++] != NULL) {
-							if (stream) {
-								jsonString++;
-							} else {
+						struct json_object *parsedResponse = json_tokener_parse(jsonString);
+						if (parsedResponse != NULL) {
+							responses[responseIndex++] = parsedResponse;
+							if (!stream)
 								break;
-							}
+						} else if (!stream) {
+							jsonString = NULL;
 						}
 					}
+					
 					if (stream) {
+						if (json_tokener_parse(lastJsonString + 6) == NULL) {
+							snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0", lastJsonString);
+						} else {
+							memset(readBuffer, 0, READ_BUFFER_LENGTH);
+						}
 						if (strstr(readBuffer, "data: [DONE]"))
 							streamingInProgress = FALSE;
+					} else if (json_tokener_parse(lastJsonString) == NULL) {
+							snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0", lastJsonString);
+							continue;
 					}
+					
+					doneReading = TRUE;
+
 					break;
 				case SSL_ERROR_ZERO_RETURN:
 					printf("SSL_ERROR_ZERO_RETURN\n");
