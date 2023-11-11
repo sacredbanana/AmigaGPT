@@ -25,7 +25,6 @@ AUTOGEN_NEXT := $(shell expr $$(awk '/#define BUILD_NUMBER/' $(AUTOGEN_FILE) | t
 
 PROGRAM_NAME = AmigaGPT
 EXECUTABLE_OUT = out/$(PROGRAM_NAME)
-PACKAGE_OUT = out/$(PROGRAM_NAME).lha
 CC = m68k-amigaos-gcc
 VASM = vasmm68k_mot
 
@@ -46,9 +45,9 @@ ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),
 LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map
 VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS3__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -I$(INCDIR) -I$(SDKDIR) -I$(NDKDIR)
 
-.PHONY: all clean copy_bundle_files package
+.PHONY: all clean copy_bundle_files
 
-all: $(EXECUTABLE_OUT) copy_bundle_files $(PACKAGE_OUT)
+all: copy_bundle_files $(EXECUTABLE_OUT)
 
 $(BUILD_DIR):
 	@$(info Creating directory $@)
@@ -60,6 +59,7 @@ $(EXECUTABLE_OUT): $(objects)
 
 clean:
 	$(info Cleaning...)
+	@$(RM) -f $(EXECUTABLE_OUT)
 	@$(RM) $(BUILD_DIR)*
 
 -include $(objects:.o=.d)
@@ -83,12 +83,5 @@ $(vasm_objects): build/os3/obj/%.o : %.asm | $(BUILD_DIR)
 
 copy_bundle_files:
 	$(info Copying bundle files...)
-	cp assets/AmigaGPTOS3.info bundle/$(PROGRAM_NAME)/$(PROGRAM_NAME).info
+	cp assets/AmigaGPT_OS3.info bundle/$(PROGRAM_NAME)/$(PROGRAM_NAME).info
 	cp -R bundle/$(PROGRAM_NAME)/* out/
-
-$(PACKAGE_OUT): $(EXECUTABLE_OUT)
-	$(info Creating LHA package...)
-	@rm -f $(PACKAGE_OUT)
-	cp $(EXECUTABLE_OUT) bundle/$(PROGRAM_NAME)/
-	cd bundle && lha a -v ../out/$(PROGRAM_NAME).lha $(PROGRAM_NAME) $(PROGRAM_NAME).info
-	rm bundle/$(PROGRAM_NAME)/$(PROGRAM_NAME)

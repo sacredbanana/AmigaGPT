@@ -4,7 +4,7 @@ Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
 Version: 1.3.0
-Architecture: m68k-amigaos >= 3.9
+Architecture: m68k-amigaos >= 3.9; ppc-amigaos
 Requires: AmigaOS 3.9+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 Replaces: util/misc/AmigaGPT.lha
 
@@ -20,9 +20,9 @@ Features:
 
 Requirements:
 - OCS/ECS/AGA Amiga
-- Motorola 68020 or higher CPU
+- Motorola 68020 or higher CPU or PPC for AmigaOS 4
 - AmigaOS 3.9 and AmigaOS 3.X (included in Amiga Forever) supported but
- 3.2 or higher recommended
+ 3.2 or higher recommended. AmigaOS 4.1 version also included.
 - AmiSSL 5.9 or higher (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
 - Internet access using a TCP/IP stack such as Roadshow 
 (http://roadshow.apc-tcp.de/index-en.php)
@@ -190,6 +190,19 @@ Special Thanks:
  https://www.hyperion-entertainment.com
 
 Changelog:
+------------------
+1.3.0 (2023-11-11)
+------------------
+- Native PPC version for AmigaOS 4.1
+- Scrollbar works again
+- Improve response handling from OpenAI preventing a crash
+- Latest OpenAI models added
+
+------------------
+1.2.1 (2023-11-04)
+- Now fully backwards compatible with Cloanto's AmigaOS 3.X (included
+ in Amiga Forever)
+------------------
 ------------------
 1.2.0 (2023-10-04)
 ------------------

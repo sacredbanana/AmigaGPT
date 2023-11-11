@@ -134,6 +134,16 @@ LONG readConfig() {
 	}
 
 	#ifdef __AMIGAOS3__
+	if (config.speechSystem == SPEECH_SYSTEM_FLITE || config.speechSystem == SPEECH_SYSTEM_NONE) {
+		config.speechSystem = SPEECH_SYSTEM_34;
+	}
+	#else
+	if (config.speechSystem == SPEECH_SYSTEM_34 || config.speechSystem == SPEECH_SYSTEM_37 || config.speechSystem == SPEECH_SYSTEM_NONE) {
+		config.speechSystem = SPEECH_SYSTEM_FLITE;
+	}
+	#endif
+
+	#ifdef __AMIGAOS3__
 	struct json_object *speechAccentObj;
 	if (json_object_object_get_ex(configJsonObject, "speechAccent", &speechAccentObj)) {
 		STRPTR speechAccent = json_object_get_string(speechAccentObj);

@@ -162,6 +162,7 @@ void closeSpeech() {
 	FreeVec(translationBuffer);
 	#else
 	if (IFlite && voice) CloseVoice(voice);
+	voice = NULL;
 	DropInterface((struct Interface *)IFlite);
 	CloseDevice((struct IORequest *)fliteRequest);
 	FreeSysObject(ASOT_IOREQUEST, fliteRequest);
@@ -189,6 +190,7 @@ void speakText(STRPTR text) {
 	SendIO((struct IORequest *)NarratorIO);
 	#else
 	if (IFlite && voice) CloseVoice(voice);
+	voice = NULL;
 	UBYTE voiceName[32];
 	snprintf(voiceName, 32, "%s.voice\0", SPEECH_VOICE_NAMES[config.speechVoice]);
 	voice = OpenVoice(voiceName);

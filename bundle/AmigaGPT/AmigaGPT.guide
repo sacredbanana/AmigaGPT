@@ -682,6 +682,13 @@ Training data: Up to Sep 2021
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}1.3.0 (2023-11-11)@{ub}
+
+- Native PPC version for AmigaOS 4.1
+- Scrollbar works again
+- Improve response handling from OpenAI preventing a crash
+- Latest OpenAI models added
+
 @{b}1.2.1 (2023-11-04)@{ub}
 
 - Now fully backwards compatible with Cloanto's AmigaOS 3.X (included in Amiga Forever)
