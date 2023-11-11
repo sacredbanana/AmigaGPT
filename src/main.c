@@ -81,20 +81,24 @@ LONG main(int argc, char **argv) {
 	#endif
 	readConfig();
 
-	if (initSpeech(config.speechSystem) == RETURN_ERROR) {
-		printf("Failed to open speech system\n");
-		config.speechSystem = SPEECH_SYSTEM_NONE;
-		closeSpeech();
-		initSpeech(config.speechSystem);
-	}
-
 	if (initVideo() == RETURN_ERROR) {
 		printf("Failed to initialize video\n");
 		cleanExit(RETURN_ERROR);
 	}
 
+	if (initSpeech(config.speechSystem) == RETURN_ERROR) {
+		#ifdef __AMIGAOS3__
+		displayError("Failed to open speech system. Make sure translator.library v43 and the relevant narrator.device are installed. See the guide for more information.");
+		#else
+		displayError("Failed to open speech system. Make sure Flite Device is installed. See the guide for more information.");
+		#endif
+		config.speechSystem = SPEECH_SYSTEM_NONE;
+		closeSpeech();
+		initSpeech(config.speechSystem);
+	}
+
 	if (initOpenAIConnector() == RETURN_ERROR) {
-		printf("Failed to open OpenAI connector\n");
+		displayError("Failed to open OpenAI connector.");
 		exit(RETURN_ERROR);
 	}
 
