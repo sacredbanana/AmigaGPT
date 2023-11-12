@@ -58,6 +58,7 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {
 **/
 LONG initSpeech(enum SpeechSystem speechSystem) {
 	#ifdef __AMIGAOS3__
+	return RETURN_OK;
 	translationBuffer = AllocVec(TRANSLATION_BUFFER_SIZE, MEMF_ANY);
 	if (!(NarratorPort = CreateMsgPort())) {
 		printf("Could not create narrator port\n");
@@ -92,7 +93,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 		return RETURN_ERROR;
 	}
 	#else
-
+	
 	/* Note: we could use a struct IOStdReq here if we didn't need any of
        the more "advanced" features of the device. */
 	/* Any additional fields will be ignored by flite.device 52.1 */

@@ -1,5 +1,5 @@
 # Changelog
-## 1.3.0 (2023-11-11)
+## 1.3.0 (2023-11-12)
 - Native PPC version for AmigaOS 4.1
 - Scrollbar works again
 - Improve response handling from OpenAI preventing a crash

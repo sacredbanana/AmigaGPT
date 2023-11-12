@@ -23,6 +23,8 @@ extern struct Library *UtilityBase;
 struct Library *UtilityBase;
 #endif
 
+struct WBStartup *wbStartupMessage = NULL;
+
 static LONG openLibraries();
 static void closeLibraries();
 static void cleanExit();
@@ -35,7 +37,12 @@ LONG main(int argc, char **argv) {
 	atexit(cleanExit);
 	SysBase = *((struct ExecBase**)4UL);
 
-	struct WBStartup *wbStartupMessage = NULL;
+	if (openLibraries() == RETURN_ERROR) {
+		printf("Failed to open libraries\n");
+		exit(RETURN_ERROR);
+	}
+
+	#ifdef __AMIGAOS3__
 	struct Process *currentTask = (struct Process*)FindTask(NULL);
 	struct CommandLineInterface *cli = (struct CommandLineInterface *)BADDR(currentTask->pr_CLI);
 
@@ -45,39 +52,21 @@ LONG main(int argc, char **argv) {
 	if (cli == NULL) {
 		wbStartupMessage = (struct WBStartup*)GetMsg(&currentTask->pr_MsgPort);
 	}
-
-	if (openLibraries() == RETURN_ERROR) {
-		printf("Failed to open libraries\n");
-		exit(RETURN_ERROR);
+	#else
+	if (argc == 0) {
+		wbStartupMessage = (struct WBStartup *)argv;
 	}
-
-	#ifdef __AMIGAOS4__
 
 	char fileName[256];
 	NameFromLock(GetProgramDir(), fileName, sizeof(fileName));
 	AddPart(fileName, argv[0], sizeof(fileName));
 
-	appID = RegisterApplication(PROGRAM_NAME,
-		REGAPP_UniqueApplication, FALSE,
+	appID = RegisterApplication(NULL,
+		REGAPP_UniqueApplication, TRUE,
 		REGAPP_URLIdentifier, "sacredbanana.net",
-		REGAPP_Hidden, FALSE,
-		REGAPP_LoadPrefs, TRUE,
-		REGAPP_SavePrefs, TRUE,
-		REGAPP_FileName, fileName,
 		REGAPP_WBStartup, (ULONG)wbStartupMessage,
-		REGAPP_NoIcon, cli != NULL,
-		REGAPP_AppIconInfo, cli != NULL ? APPICONT_None : APPICONT_ProgramIcon,
-		REGAPP_AppNotifications, FALSE,
-		REGAPP_BlankerNotifications, FALSE,
-		REGAPP_AllowsBlanker, TRUE,
-		REGAPP_NeedsGameMode, FALSE,
-		REGAPP_HasPrefsWindow, TRUE,
-		REGAPP_HasIconifyFeature, TRUE,
-		REGAPP_CanCreateNewDocs, TRUE,
-		REGAPP_CanPrintDocs, TRUE,
 		REGAPP_Description, "A ChatGPT client for AmigaOS",
 		TAG_DONE);
-
 	#endif
 	readConfig();
 
@@ -102,8 +91,10 @@ LONG main(int argc, char **argv) {
 		exit(RETURN_ERROR);
 	}
 
+	#ifdef __AMIGAOS3__
 	if (wbStartupMessage != NULL)
 		ReplyMsg((struct Message *)wbStartupMessage);
+	#endif
 
 	if (startGUIRunLoop() == RETURN_ERROR) {
 		printf("GUI run loop returned an error\n");
