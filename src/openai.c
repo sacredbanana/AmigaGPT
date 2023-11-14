@@ -344,6 +344,7 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
 			strcat(readBuffer, tempReadBuffer);
+			printf("readBuffer: %s\n", readBuffer);
 			FreeVec(tempReadBuffer);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
@@ -351,6 +352,16 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 					totalBytesRead += bytesRead;
 					const STRPTR jsonStart = stream ? "data: {" : "{";
 					STRPTR jsonString = readBuffer;
+					// Check for error in stream
+ 					if (stream && strstr(jsonString, jsonStart) == NULL) {
+ 						jsonString = strstr(jsonString, "{");
+ 						responses[0] = json_tokener_parse(jsonString);
+						if (json_object_object_get_ex(responses[0], "error", NULL)) {
+							streamingInProgress = FALSE;
+							doneReading = TRUE;
+							break;
+						}
+ 					}
 					STRPTR lastJsonString = jsonString;
 					while (jsonString = strstr(jsonString, jsonStart)) {
 						lastJsonString = jsonString;
