@@ -1818,7 +1818,11 @@ static void openAboutWindow() {
 		sizeof(struct EasyStruct),
 		0,
 		"About",
-		"AmigaGPT\n\n"
+		#ifdef __AMIGAOS3__
+		"AmigaGPT for m68k AmigaOS 3\n\n"
+		#else
+		"AmigaGPT for PPC AmigaOS 4\n\n"
+		#endif
 		"Version " APP_VERSION "\n"
 		"Build date: " __DATE__ "\n"
 		"Build number: " BUILD_NUMBER "\n\n"

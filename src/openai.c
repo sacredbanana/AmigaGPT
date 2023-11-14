@@ -345,6 +345,7 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 								break;
 						} else if (!stream) {
 							jsonString = NULL;
+							break;
 						}
 					}
 					
