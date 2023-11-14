@@ -1069,8 +1069,6 @@ static void sendMessage() {
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 
-	addTextToConversation(currentConversation, "", "assistant");
-
 	BOOL dataStreamFinished = FALSE;
 	ULONG speechIndex = 0;
 	UWORD wordNumber = 0;

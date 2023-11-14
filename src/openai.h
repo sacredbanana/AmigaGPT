@@ -45,7 +45,7 @@ enum Model {
  * The names of the models
  * @see enum Model
 **/ 
-extern const STRPTR MODEL_NAMES[];
+extern CONST_STRPTR MODEL_NAMES[];
 
 /**
  * Initialize the OpenAI connector

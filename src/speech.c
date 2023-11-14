@@ -58,7 +58,6 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {
 **/
 LONG initSpeech(enum SpeechSystem speechSystem) {
 	#ifdef __AMIGAOS3__
-	return RETURN_OK;
 	translationBuffer = AllocVec(TRANSLATION_BUFFER_SIZE, MEMF_ANY);
 	if (!(NarratorPort = CreateMsgPort())) {
 		printf("Could not create narrator port\n");

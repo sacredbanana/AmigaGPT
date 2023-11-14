@@ -49,7 +49,7 @@ ULONG RangeSeed;
  * The names of the models
  * @see enum Model
 **/ 
-const STRPTR MODEL_NAMES[] = {
+CONST_STRPTR MODEL_NAMES[] = {
 	[GPT_4] = "gpt-4",
 	[GPT_4_0314] = "gpt-4-0314",
 	[GPT_4_0613] = "gpt-4-0613",
@@ -167,34 +167,6 @@ LONG initOpenAIConnector() {
 }
 
 /**
- * Get the model name as a string
- * @param model the model
- * @return the model name as a string
-**/
-static STRPTR getModelName(enum Model model) {
-	switch (model) {
-		case GPT_4:
-			return "gpt-4";
-		case GPT_4_0613:
-			return "gpt-4-0613";
-		case GPT_4_32K:
-			return "gpt-4-32k";
-		case GPT_4_32K_0613:
-			return "gpt-4-32k-0613";
-		case GPT_3_5_TURBO:
-			return "gpt-3.5-turbo";
-		case GPT_3_5_TURBO_0613:
-			return "gpt-3.5-turbo-0613";
-		case GPT_3_5_TURBO_16K:
-			return "gpt-3.5-turbo-16k";
-		case GPT_3_5_TURBO_16K_0613:
-			return "gpt-3.5-turbo-16k-0613";
-		default:
-			return NULL;
-	}
-}
-
-/**
  * Post a message to OpenAI
  * @param conversation the conversation to post
  * @param model the model to use
@@ -224,7 +196,7 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 		}
 
 		struct json_object *obj = json_object_new_object();
-		json_object_object_add(obj, "model", json_object_new_string(getModelName(model)));
+		json_object_object_add(obj, "model", json_object_new_string(MODEL_NAMES[model]));
 		struct json_object *conversationArray = json_object_new_array();
 
 		struct MinNode *conversationNode = conversation->mlh_Head;
@@ -344,7 +316,6 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
 			strcat(readBuffer, tempReadBuffer);
-			printf("readBuffer: %s\n", readBuffer);
 			FreeVec(tempReadBuffer);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
