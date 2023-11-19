@@ -83,5 +83,6 @@ $(vasm_objects): build/os3/obj/%.o : %.asm | $(BUILD_DIR)
 
 copy_bundle_files:
 	$(info Copying bundle files...)
+	mkdir -p out
 	cp assets/AmigaGPT_OS3.info bundle/$(PROGRAM_NAME)/$(PROGRAM_NAME).info
 	cp -R bundle/$(PROGRAM_NAME)/* out/
