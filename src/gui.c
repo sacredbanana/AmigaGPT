@@ -1062,6 +1062,10 @@ static void sendMessage() {
 	STRPTR receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 
 	STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
+	// Remove trailing newline characters
+	while (text[strlen(text) - 1] == '\n') {
+		text[strlen(text) - 1] = '\0';
+	}
 	STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
 	addTextToConversation(currentConversation, textUTF_8, "user");
 	displayConversation(currentConversation);
@@ -1084,7 +1088,7 @@ static void sendMessage() {
 				STRPTR messageString = json_object_get_string(message);
 				displayError(messageString);
 				SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
-				struct MinNode *lastMessage = RemTail(currentConversation);
+				struct MinNode *lastMessage = RemTailMinList(currentConversation);
 				FreeVec(lastMessage);
 				if (currentConversation == currentConversation->mlh_TailPred) {
 					freeConversation(currentConversation);
@@ -1094,18 +1098,16 @@ static void sendMessage() {
 					displayConversation(currentConversation);
 				}
 				json_object_put(response);
+				FreeVec(receivedMessage);
 				return;
 			}
 			STRPTR contentString = getMessageContentFromJson(response, TRUE);
 			if (contentString != NULL) {
 				formatText(contentString);
 				STRPTR contentStringISO8859_1 = UTF8ToISO8859_1(contentString);
-				snprintf(receivedMessage, READ_BUFFER_LENGTH - strlen(receivedMessage) - 1, "%s%s", receivedMessage, contentString);
+				strncat(receivedMessage, contentString, READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
 				STRPTR receivedMessageISO8859_1 = UTF8ToISO8859_1(receivedMessage);
-				struct MinNode *assistantMessageNode = RemTail(currentConversation);
-				FreeVec(assistantMessageNode);
 				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, contentStringISO8859_1, GV_TEXTEDITOR_InsertText_Bottom);
-				addTextToConversation(currentConversation, receivedMessage, "assistant");
 				if (++wordNumber % 50 == 0) {
 					if (config.speechEnabled) {
 						speakText(receivedMessageISO8859_1 + speechIndex);
@@ -1123,14 +1125,16 @@ static void sendMessage() {
 			}
 		}
 	} while (!dataStreamFinished);
-	
+
 	if (responses != NULL) {
+		addTextToConversation(currentConversation, receivedMessage, "assistant");
 		if (config.speechEnabled) {
 			STRPTR receivedMessageISO8859_1 = UTF8ToISO8859_1(receivedMessage);
 			speakText(receivedMessageISO8859_1 + speechIndex);
 			FreeVec(receivedMessageISO8859_1);
 		}
 		FreeVec(responses);
+		FreeVec(receivedMessage);
 		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
 		if (isNewConversation) {
 			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
@@ -1141,7 +1145,7 @@ static void sendMessage() {
 				formatText(responseString);
 				addConversationToConversationList(conversationList, currentConversation, responseString);
 				SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
-				struct MinNode *titleRequestNode = RemTail(currentConversation);
+				struct MinNode *titleRequestNode = RemTailMinList(currentConversation);
 				FreeVec(titleRequestNode);
 				json_object_put(responses[0]);
 				FreeVec(responses);
@@ -1346,16 +1350,24 @@ static void displayConversation(struct MinList *conversation) {
 				return;
 			}
 			if (strcmp(conversationNode->role, "user") == 0) {
-				if (strlen(conversationString) == 0)
-					snprintf(conversationString, WRITE_BUFFER_LENGTH - 3, "*%s*", conversationNode->content);
-				else
-					snprintf(conversationString, WRITE_BUFFER_LENGTH - 5, "%s\n\n*%s*", conversationString, conversationNode->content);
+				STRPTR content = conversationNode->content;
+				strncat(conversationString, "*", WRITE_BUFFER_LENGTH - strlen(conversationString) - 2);
+				while (*content != '\0') {
+					if (*content == '\n') {
+						strncat(conversationString, "*", WRITE_BUFFER_LENGTH - strlen(conversationString) - 2);
+						strncat(conversationString, content++, 1);
+						strncat(conversationString, "*", WRITE_BUFFER_LENGTH - strlen(conversationString) - 2);
+					} else {
+						strncat(conversationString, content++, 1);
+					}
+				}
+				strncat(conversationString, "*\n\n", WRITE_BUFFER_LENGTH - strlen(conversationString) - 4);
 			} else {
-				snprintf(conversationString, WRITE_BUFFER_LENGTH - 3, "%s\n\n%s\0", conversationString, conversationNode->content);
-			}
+				strncat(conversationString, conversationNode->content, WRITE_BUFFER_LENGTH - strlen(conversationString));
+				strncat(conversationString, "\n\n", WRITE_BUFFER_LENGTH - strlen(conversationString) - 3);	
+			}	
 	}
-	
-	snprintf(conversationString, WRITE_BUFFER_LENGTH - 3, "%s\n ", conversationString);
+
 	STRPTR conversationStringISO8859_1 = UTF8ToISO8859_1(conversationString);
 	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationStringISO8859_1, TAG_DONE);
 	Delay(2);
