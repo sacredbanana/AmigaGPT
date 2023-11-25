@@ -1525,14 +1525,7 @@ LONG startGUIRunLoop() {
 						}
 						case MENU_ITEM_PASTE_ID:
 						{
-							switch (activeTextEditorGadgetID) {
-								case TEXT_INPUT_TEXT_EDITOR_ID:
-									DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "PASTE");
-									break;
-								case CHAT_OUTPUT_TEXT_EDITOR_ID:
-									DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "PASTE");
-									break;
-							}
+							DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "PASTE");
 							break;
 						}
 						case MENU_ITEM_SELECT_ALL_ID:
