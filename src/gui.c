@@ -1088,7 +1088,7 @@ static void sendMessage() {
 				STRPTR messageString = json_object_get_string(message);
 				displayError(messageString);
 				SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
-				struct MinNode *lastMessage = RemTailMinList(currentConversation);
+				struct MinNode *lastMessage = RemTail(currentConversation);
 				FreeVec(lastMessage);
 				if (currentConversation == currentConversation->mlh_TailPred) {
 					freeConversation(currentConversation);
@@ -1145,7 +1145,7 @@ static void sendMessage() {
 				formatText(responseString);
 				addConversationToConversationList(conversationList, currentConversation, responseString);
 				SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
-				struct MinNode *titleRequestNode = RemTailMinList(currentConversation);
+				struct MinNode *titleRequestNode = RemTail(currentConversation);
 				FreeVec(titleRequestNode);
 				json_object_put(responses[0]);
 				FreeVec(responses);
