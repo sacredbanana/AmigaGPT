@@ -684,7 +684,7 @@ Training data: Up to Sep 2021
 
 @{b}1.3.1 (2023-12-02)@{ub}
 
-- Fix pasting into chat input textbox (AmigaOS 3.2 and 4,1 only for now)
+- Fix pasting into chat input textbox (AmigaOS 3.2 and 4.1 only for now)
 - Remove trailing newline from user messages
 - Enclose all user lines in asterisks to make bold
 - Fix memory leak that was present in downloading responses from OpenAI
