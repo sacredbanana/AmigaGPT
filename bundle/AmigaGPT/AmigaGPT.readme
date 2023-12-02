@@ -3,7 +3,7 @@ Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 1.3.0
+Version: 1.3.1
 Architecture: m68k-amigaos >= 3.9; ppc-amigaos
 Requires: AmigaOS 3.9+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 Replaces: util/misc/AmigaGPT.lha
@@ -190,6 +190,15 @@ Special Thanks:
  https://www.hyperion-entertainment.com
 
 Changelog:
+
+------------------
+1.3.1 (2023-12-02)
+------------------
+- Fix pasting into chat input textbox (AmigaOS 3.2 and 4,1 only for now)
+- Remove trailing newline from user messages
+- Enclose all user lines in asterisks to make bold
+- Fix memory leak that was present in downloading responses from OpenAI
+
 ------------------
 1.3.0 (2023-11-12)
 ------------------
