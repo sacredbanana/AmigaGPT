@@ -1,13 +1,12 @@
 #include <dos/dos.h>
 #include <exec/exec.h>
+#include <exec/memory.h>
 #include <exec/types.h>
 #include <graphics/text.h>
-#include <exec/memory.h>
+#include <json-c/json.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
-#include <stdlib.h>
 #include "config.h"
-#include "external/json-c/json.h"
 
 struct Config config = {
 	.speechEnabled = TRUE,

@@ -29,9 +29,11 @@ PROGRAM_NAME = AmigaGPT_OS4
 EXECUTABLE_OUT = out/$(PROGRAM_NAME)
 CC = ppc-amigaos-gcc
 
-LIBDIR = /tools/ppc-amigaos/SDK/lib
+SDKLIBDIR = /tools/ppc-amigaos/SDK/lib
+LIBDIR = /tools/ppc-amigaos/lib
 SDKDIR = /tools/ppc-amigaos/SDK/include/include_h
 NETINCDIR = /tools/ppc-amigaos/SDK/include/netinclude
+INCDIR = /tools/ppc-amigaos/include
 
 ifeq ($(OS),Darwin)
 	SED = sed -i "" 
@@ -39,10 +41,10 @@ else
 	SED = sed -i
 endif
 
-CCFLAGS = -gdwarf-2 -gstrict-dwarf -MP -MMD -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -L$(LIBDIR) -lm -lamisslstubs -D__AMIGAOS4__ -D__USE_INLINE__ -DHAVE_VASPRINTF -DPROGRAM_NAME=\"$(PROGRAM_NAME)\"
+CCFLAGS = -gdwarf-2 -gstrict-dwarf -MP -MMD -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -D__AMIGAOS4__ -D__USE_INLINE__ -DHAVE_VASPRINTF -DPROGRAM_NAME=\"$(PROGRAM_NAME)\"
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NETINCDIR),-D
-LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map
+LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-lamisslstubs,-ljson-c
 VASMFLAGS = -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS4__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -I$(NETINCDIR) -I$(SDKDIR)
 
 .PHONY: all clean copy_bundle_files
@@ -55,7 +57,7 @@ $(BUILD_DIR):
 
 $(EXECUTABLE_OUT): $(objects)
 	$(info Linking $(PROGRAM_NAME))
-	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@
+	$(CC) $(CCFLAGS) $(objects) -o $@ $(LDFLAGS)
 
 clean:
 	$(info Cleaning...)

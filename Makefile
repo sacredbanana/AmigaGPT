@@ -39,10 +39,10 @@ else
 	SED = sed -i
 endif
 
-CCFLAGS = -g -MP -MMD -m68020 -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -noixemul -fbaserel -L$(LIBDIR) -lamiga -lm -lamisslstubs -D__AMIGAOS3__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\"
+CCFLAGS = -g -MP -MMD -m68020 -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -D__AMIGAOS3__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\"
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),-D
-LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map
+LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-lamiga,-lm,-lamisslstubs,-ljson-c
 VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS3__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -I$(INCDIR) -I$(SDKDIR) -I$(NDKDIR)
 
 .PHONY: all clean copy_bundle_files
@@ -55,7 +55,7 @@ $(BUILD_DIR):
 
 $(EXECUTABLE_OUT): $(objects)
 	$(info Linking $(PROGRAM_NAME))
-	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@
+	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@ $(LDFLAGS) 
 
 clean:
 	$(info Cleaning...)

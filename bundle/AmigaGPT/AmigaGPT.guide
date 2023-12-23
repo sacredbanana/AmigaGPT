@@ -214,13 +214,13 @@ You can either compile the code natively or with the Docker container.
 
 If you would like to build this project from source you will need Bebbo's @{b}amiga-gcc@{ub} toolchain here https://github.com/bebbo/amiga-gcc
 
-Once this is installed, download the additional SDK's from https://github.com/sacredbanana/AmigaSDK-gcc and put them in your Amiga development environment installed in the above step.
+Once this is installed, download the additional SDK's (AmiSSL, Translator, json-c) from https://github.com/sacredbanana/AmigaSDK-gcc and put them in your Amiga development environment installed in the above step.
 
 @{i}Building the AmigaOS 4 app@{ui}
 
 Get this toolchain set up https://github.com/sba1/adtools
 
-Once installed, get the required other SDK's from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
+Once installed, get the required other SDK's (AmiSSL, Translator, json-c) from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
 
 @{b}Docker@{ub}
 

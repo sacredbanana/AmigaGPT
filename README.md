@@ -125,12 +125,12 @@ You can either compile the code natively or with the Docker container.
 #### Building the AmigaOS 3 app
 If you would like to build this project from source you will need Bebbo's **amiga-gcc** toolchain here https://github.com/bebbo/amiga-gcc
 
-Once installed, get the required other SDK's from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
+Once installed, get the required other SDK's (AmiSSL, Translator, json-c) from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
 
 #### Building the AmigaOS 4 app
 Get this toolchain set up https://github.com/sba1/adtools
 
-Once installed, get the required other SDK's from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
+Once installed, get the required other SDK's (AmiSSL, Translator, json-c) from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
 
 ### Docker
 You may use pre-prepared Docker images that are able to compile both the AmigaOS 3 and AmigaOS 4 versions of the app.

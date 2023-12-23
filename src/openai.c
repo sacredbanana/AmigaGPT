@@ -1,4 +1,5 @@
 #include <amissl/amissl.h>
+#include <json-c/json.h>
 #include <libraries/amisslmaster.h>
 #include <libraries/amissl.h>
 #include <proto/amissl.h>
@@ -11,7 +12,6 @@
 #include <utility/utility.h>
 #include "openai.h"
 #include "speech.h"
-#include "external/json-c/json.h"
 
 #define HOST "api.openai.com"
 #define PORT 443

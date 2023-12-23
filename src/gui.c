@@ -16,6 +16,7 @@
 #include <intuition/gadgetclass.h>
 #include <intuition/icclass.h>
 #include <intuition/intuition.h>
+#include <json-c/json.h>
 #include <libraries/amigaguide.h>
 #include <libraries/asl.h>
 #include <libraries/gadtools.h>
@@ -41,7 +42,6 @@
 #include <stdio.h>
 #include <utility/utility.h>
 #include "config.h"
-#include "external/json-c/json.h"
 #include "gui.h"
 #include "version.h"
 
