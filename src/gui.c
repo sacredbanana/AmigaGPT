@@ -14,6 +14,7 @@
 #include <gadgets/scroller.h>
 #include <gadgets/string.h>
 #include <gadgets/texteditor.h>
+#include <graphics/modeid.h>
 #include <graphics/text.h>
 #include <intuition/classusr.h>
 #include <intuition/gadgetclass.h>
@@ -157,6 +158,7 @@ static Object *deleteChatButton;
 static Object *createImageButton;
 static Object *dataTypeObject;
 static struct Screen *screen;
+static struct Screen *imageScreen;
 static BOOL isPublicScreen;
 static UWORD pens[] = {~0};
 static LONG sendMessageButtonPen;
@@ -342,10 +344,12 @@ static void __SAVE_DS__ __ASM__ processIDCMPCreateImageWindow(__REG__ (a0, struc
 							SetWindowPointer(createImageWindow,
 								WA_BusyPointer,	TRUE,
 							TAG_DONE);
+							updateStatusBar("Processing image...");
 						}
 						else
 						{
 							SetWindowPointerA(createImageWindow,NULL);
+							updateStatusBar("Ready");
 						}
 
 						break;
@@ -359,12 +363,8 @@ static void __SAVE_DS__ __ASM__ processIDCMPCreateImageWindow(__REG__ (a0, struc
 			break;
 		}
 		case IDCMP_REFRESHWINDOW:
-			printf("Window dimensions: %d x %d\n", createImageWindow->Width, createImageWindow->Height);
-
 			BeginRefresh(createImageWindow);
 			EndRefresh(createImageWindow,TRUE);
-
-
 			break;
 		default:
 			printf("Unknown message class: %lx\n", message->Class);
@@ -892,32 +892,6 @@ LONG initVideo() {
 	refreshModelMenuItems();
 	#endif
 
-	if ((createImageWindowObject = NewObject(WINDOW_GetClass(), NULL,
-		WINDOW_Position, WPOS_CENTERSCREEN,
-		WA_Activate, TRUE,
-		WA_Title, "Create Image",
-		WA_Width, (WORD)(screen->Width * 0.5),
-		WA_Height, (WORD)(screen->Height * 0.5),
-		WA_CloseGadget, TRUE,
-		WA_DragBar, isPublicScreen,
-		WA_SizeGadget, isPublicScreen,
-		WA_DepthGadget, isPublicScreen,
-		WA_NewLookMenus, TRUE,
-		WA_SimpleRefresh, TRUE,
-		WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
-		WINDOW_IDCMPHook, &idcmpHookCreateImageWindow,
-		WINDOW_InterpretIDCMPHook, TRUE,
-		WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE | IDCMP_REFRESHWINDOW,
-		WA_IDCMP,			IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_REFRESHWINDOW | IDCMP_IDCMPUPDATE |
-							IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MOUSEBUTTONS |
-							IDCMP_MOUSEMOVE | IDCMP_VANILLAKEY |
-							IDCMP_RAWKEY,
-		WA_CustomScreen, screen,
-		TAG_DONE)) == NULL) {
-			printf("Could not create mainWindow object\n");
-			return RETURN_ERROR;
-	}
-
 	if ((mainWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
@@ -959,11 +933,19 @@ LONG initVideo() {
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);
 
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_Pens, 0x00010002, TAG_DONE);
-	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
-
+	updateStatusBar("Ready");
+	
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 
 	return RETURN_OK;
+}
+
+/**
+ * Update the status bar
+ * @param message the message to display
+**/ 
+void updateStatusBar(CONST_STRPTR message) {
+	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, message, TAG_DONE);
 }
 
 /**
@@ -1194,7 +1176,7 @@ static void sendMessage() {
 		currentConversation = newConversation();
 	}
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Sending", TAG_DONE);
+	updateStatusBar("Sending message...");
 	STRPTR receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 
 	STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
@@ -1271,16 +1253,16 @@ static void sendMessage() {
 		}
 		FreeVec(responses);
 		FreeVec(receivedMessage);
-		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+		updateStatusBar("Ready");
 		if (isNewConversation) {
-			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Generating conversation title", TAG_DONE);
+			updateStatusBar("Generating conversation title...");
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
 			responses = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey, FALSE);
 			if (responses[0] != NULL) {
 				STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
 				formatText(responseString);
 				addConversationToConversationList(conversationList, currentConversation, responseString);
-				SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+				updateStatusBar("Ready");
 				struct MinNode *titleRequestNode = RemTail(currentConversation);
 				FreeVec(titleRequestNode);
 				json_object_put(responses[0]);
@@ -1882,7 +1864,7 @@ void openDocumentation() {
 **/
 void displayError(STRPTR message) {
 	DisplayBeep(screen);
-	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Error", TAG_DONE);
+	updateStatusBar("Error");
 
 	STRPTR adjustedMsg = AllocVec(strlen(message) + 200, MEMF_ANY | MEMF_CLEAR);
 	STRPTR dest = adjustedMsg;
@@ -2034,7 +2016,7 @@ static void openUIFontRequester() {
 			SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 			SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 			SetGadgetAttrs(statusBar, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-			SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+			updateStatusBar("Ready");
 			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 
 		}
@@ -2154,7 +2136,6 @@ static void createImage() {
 
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Sending", TAG_DONE);
 
 	STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
 
@@ -2168,7 +2149,7 @@ static void createImage() {
 
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 
-	response = postImageCreationRequestToOpenAI(textUTF_8, DALL_E_2, 256, config.openAiApiKey);
+	response = postImageCreationRequestToOpenAI(textUTF_8, DALL_E_2, 512, config.openAiApiKey);
 	struct json_object *error;
 
 	if (json_object_object_get_ex(response, "error", &error)) {
@@ -2179,7 +2160,7 @@ static void createImage() {
 		json_object_put(response);
 		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 		SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+		updateStatusBar("Ready");
 		return;
 	}
 
@@ -2195,10 +2176,69 @@ static void createImage() {
 
 	json_object_put(response);
 
+	struct ColorSpec colors[257];
+	for (UWORD i = 0; i < 256; i++) {
+		colors[i].ColorIndex = i;
+		colors[i].Red = (i % 4) * 21;
+		colors[i].Green = (i / 4) % 16 * 4;
+		colors[i].Blue = i / 16;
+	}
+	colors[256].ColorIndex = -1;
+
+	const UBYTE NUM_COLOURS = 255;
+
+	WORD PenSpec[NUM_COLOURS + 1];
+
+	// Set up the pens
+	for (int i = 0; i < NUM_COLOURS; i++) {
+		PenSpec[i] = i;
+	}
+	PenSpec[NUM_COLOURS] = ~0;
+
+	// if ((imageScreen = OpenScreenTags(NULL,
+	// 										SA_Pens, PenSpec,
+	// 										SA_DisplayID,  PAL_MONITOR_ID | HIRESLACE_KEY,
+	// 										SA_Depth, 8,
+	// 										SA_Font, &screenFont,
+	// 										// SA_Colors, colors,
+	// 										SA_FullPalette, TRUE,
+	// 										TAG_DONE)) == NULL) {
+	// 											printf("Could not open screen\n");
+	// 											return RETURN_ERROR;
+	// 									}
+
+	if ((createImageWindowObject = NewObject(WINDOW_GetClass(), NULL,
+		WINDOW_Position, WPOS_CENTERSCREEN,
+		WA_Activate, TRUE,
+		WA_Title, "Generated Image",
+		WA_Width, 512,
+		WA_Height, 512,
+		WA_CloseGadget, TRUE,
+		WA_DragBar, isPublicScreen,
+		WA_SizeGadget, isPublicScreen,
+		WA_DepthGadget, isPublicScreen,
+		WA_NewLookMenus, TRUE,
+		WA_SimpleRefresh, TRUE,
+		WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
+		WINDOW_IDCMPHook, &idcmpHookCreateImageWindow,
+		WINDOW_InterpretIDCMPHook, TRUE,
+		WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE | IDCMP_REFRESHWINDOW,
+		WA_IDCMP,			IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_REFRESHWINDOW | IDCMP_IDCMPUPDATE |
+							IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MOUSEBUTTONS |
+							IDCMP_MOUSEMOVE | IDCMP_VANILLAKEY |
+							IDCMP_RAWKEY,
+		// WA_CustomScreen, imageScreen,
+		TAG_DONE)) == NULL) {
+			printf("Could not create createImageWindowObject\n");
+			return RETURN_ERROR;
+	}
+
 	if ((createImageWindow = (struct Window *)DoMethod(createImageWindowObject, WM_OPEN, NULL)) == NULL) {
 		printf("Could not open createImageWindow\n");
 		return RETURN_ERROR;
 	}
+
+	updateStatusBar("Loading image...");
 
 	if ((dataTypeObject = NewDTObject("PROGDIR:output.png",
 		DTA_SourceType, DTST_FILE,
@@ -2214,8 +2254,8 @@ static void createImage() {
 			return RETURN_ERROR;	
 	}
 
-	AddDTObject(createImageWindow,NULL,dataTypeObject,-1);
-	RefreshDTObjects(dataTypeObject,createImageWindow,NULL,NULL);
+	AddDTObject(createImageWindow, NULL, dataTypeObject, -1);
+	RefreshDTObjects(dataTypeObject, createImageWindow, NULL, NULL);
 
 	BOOL done = FALSE;
 	ULONG signalMask, winSignal, signals, result;
@@ -2243,11 +2283,13 @@ static void createImage() {
 	}
 
 	DoMethod(createImageWindowObject, WM_CLOSE);
+	DisposeObject(createImageWindowObject);
+	CloseScreen(imageScreen);
 	DisposeDTObject(dataTypeObject);
 
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+	updateStatusBar("Ready");
 }
 
 /**
@@ -2486,9 +2528,6 @@ void shutdownGUI() {
 	freeConversationList();
 	if (mainWindowObject) {
 		DisposeObject(mainWindowObject);
-	}
-	if (createImageWindowObject) {
-		DisposeObject(createImageWindowObject);
 	}
 	if (isPublicScreen) {
 		ReleasePen(screen->ViewPort.ColorMap, sendMessageButtonPen);

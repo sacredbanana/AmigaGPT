@@ -12,6 +12,7 @@
 #include <utility/utility.h>
 #include "openai.h"
 #include "speech.h"
+#include "gui.h"
 
 #define HOST "api.openai.com"
 #define PORT 443
@@ -234,6 +235,8 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 
 		json_object_put(obj);
 
+		updateStatusBar("Connecting...");
+
 		/* The following needs to be done once per socket */
 		if((ssl = SSL_new(ctx)) != NULL) {
 			/* Lookup hostname */
@@ -313,6 +316,8 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 			return NULL;
 		}
 
+		updateStatusBar("Sending request...");
+
 		ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 	}
 
@@ -321,9 +326,12 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 		WORD bytesRead = 0;
 		BOOL doneReading = FALSE;
 		LONG err = 0;
+		STRPTR statusMessage[64];
 		while (!doneReading) {
 			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
+			snprintf(statusMessage, 64, "Downloading response... (%lu bytes)", totalBytesRead);
+			updateStatusBar(statusMessage);
 			strcat(readBuffer, tempReadBuffer);
 			FreeVec(tempReadBuffer);
 			err = SSL_get_error(ssl, bytesRead);
@@ -472,6 +480,8 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 		CloseSocket(sock);
 	}
 
+	updateStatusBar("Connecting...");
+
 	struct json_object *obj = json_object_new_object();
 	json_object_object_add(obj, "model", json_object_new_string(IMAGE_MODEL_NAMES[imageModel]));
 	json_object_object_add(obj, "prompt", json_object_new_string(prompt));
@@ -570,6 +580,8 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 		return NULL;
 	}
 
+	updateStatusBar("Sending request...");
+
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
 	if (ssl_err > 0) {
@@ -577,9 +589,12 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 		WORD bytesRead = 0;
 		BOOL doneReading = FALSE;
 		LONG err = 0;
+		STRPTR statusMessage[64];
 		while (!doneReading) {
 			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
+			snprintf(statusMessage, 64, "Downloading image... (%lu bytes)", totalBytesRead);
+			updateStatusBar(statusMessage);
 			strcat(readBuffer, tempReadBuffer);
 			FreeVec(tempReadBuffer);
 			err = SSL_get_error(ssl, bytesRead);
@@ -751,6 +766,8 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		CloseSocket(sock);
 	}
 
+	updateStatusBar("Connecting...");
+
 	if((ssl = SSL_new(ctx)) != NULL) {
 		/* Lookup hostname */
 		if ((hostent = gethostbyname(hostString)) != NULL) {
@@ -844,6 +861,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		return NULL;
 	}
 
+	updateStatusBar("Sending request...");
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
 	if (ssl_err > 0) {
@@ -851,9 +869,12 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		WORD bytesRead = 0;
 		BOOL doneReading = FALSE;
 		LONG err = 0;
+		STRPTR statusMessage[64];
 		while (!doneReading) {
 			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
+			snprintf(statusMessage, 64, "Downloaded... %lu bytes", totalBytesRead);
+			updateStatusBar(statusMessage);
 			memcpy(downloadBuffer + totalBytesRead, tempReadBuffer, bytesRead);
 			FreeVec(tempReadBuffer);
 			err = SSL_get_error(ssl, bytesRead);

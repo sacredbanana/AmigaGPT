@@ -26,6 +26,12 @@ void shutdownGUI();
 void displayError(STRPTR message);
 
 /**
+ * Update the status bar
+ * @param message the message to display
+**/ 
+void updateStatusBar(CONST_STRPTR message);
+
+/**
  * Display an error message about a disk error
  * @param message the message to display
  * @param error the error code returned by IOErr()

@@ -64,7 +64,8 @@
         "application.h": "c",
         "translator_pragmas.h": "c",
         "flite.h": "c",
-        "gadtools.h": "c"
+        "gadtools.h": "c",
+        "modeid.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",
