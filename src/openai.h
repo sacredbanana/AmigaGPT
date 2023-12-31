@@ -2,6 +2,7 @@
 
 #define READ_BUFFER_LENGTH 8192
 #define WRITE_BUFFER_LENGTH 65536
+#define DOWNLOAD_BUFFER_LENGTH 4194304
 #define RESPONSE_ARRAY_BUFFER_LENGTH 1024
 
 /**
@@ -48,20 +49,52 @@ enum Model {
 extern CONST_STRPTR MODEL_NAMES[];
 
 /**
+ * The image model OpenAI should use
+**/
+enum ImageModel {
+	DALL_E_2 = 0,
+	DALL_E_3
+};
+
+/**
+ * The names of the image models
+ * @see enum ImageModel
+**/ 
+extern CONST_STRPTR IMAGE_MODEL_NAMES[];
+
+/**
  * Initialize the OpenAI connector
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG initOpenAIConnector();
 
 /**
- * Post a message to OpenAI
+ * Post a chat message to OpenAI
  * @param conversation the conversation to post
  * @param model the model to use
  * @param openAiApiKey the OpenAI API key
  * @param stream whether to stream the response or not
  * @return a pointer to a new array of json_object containing the response(s) -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
-struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPTR openAiApiKey, BOOL stream);
+struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Model model, CONST_STRPTR openAiApiKey, BOOL stream);
+
+/**
+ * Post a image creation request to OpenAI
+ * @param prompt the prompt to use
+ * @param imageModel the image model to use
+ * @param openAiApiKey the OpenAI API key
+ * @param stream whether to stream the response or not
+ * @return a pointer to a new json_object containing the response -- Free it with json_object_put when you are done using it
+**/
+struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, UWORD width, CONST_STRPTR openAiApiKey);
+
+/**
+ * Download a file from the internet
+ * @param url the URL to download from
+ * @param destination the destination to save the file to
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+ **/ 
+ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination);
 
 /**
  * Cleanup the OpenAI connector and free all resources

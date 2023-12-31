@@ -1,5 +1,8 @@
 #include <classes/requester.h>
 #include <classes/window.h>
+#include <datatypes/datatypes.h>
+#include <datatypes/datatypesclass.h>
+#include <datatypes/pictureclass.h>
 #include <dos/dos.h>
 #include <exec/exec.h>
 #include <exec/execbase.h>
@@ -23,6 +26,7 @@
 #include <proto/amigaguide.h>
 #include <proto/asl.h>
 #include <proto/button.h>
+#include <proto/datatypes.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
 #ifdef __AMIGAOS3__
@@ -56,6 +60,7 @@
 #define CONVERSATION_LIST_BROWSER_ID 7
 #define NEW_CHAT_BUTTON_ID 8
 #define DELETE_CHAT_BUTTON_ID 9
+#define CREATE_IMAGE_BUTTON_ID 10
 
 #define MENU_ITEM_ABOUT_ID 1
 #define MENU_ITEM_SPEECH_ACCENT_ID 2
@@ -111,7 +116,8 @@ struct ListBrowserIFace *IListBrowser;
 struct RequesterIFace *IRequester;
 struct WindowIFace *IWindow;
 extern struct UtilityIFace *IUtility;
-struct Library * TextEditorBase;
+struct Library *TextEditorBase;
+struct DataTypesIFace *IDataTypes;
 #else
 struct Library *TextFieldBase;
 #endif
@@ -129,8 +135,11 @@ struct Library *StringBase;
 struct Library *ListBrowserBase;
 struct Library *RequesterBase;
 struct Library *GadToolsBase;
+struct Library *DataTypesBase;
 struct Window *mainWindow;
+struct Window *createImageWindow;
 static Object *mainWindowObject;
+static Object *createImageWindowObject;
 static Object *mainLayout;
 static Object *chatLayout;
 static Object *chatInputLayout;
@@ -145,6 +154,8 @@ static Object *statusBar;
 static Object *conversationListBrowser;
 static Object *newChatButton;
 static Object *deleteChatButton;
+static Object *createImageButton;
+static Object *dataTypeObject;
 static struct Screen *screen;
 static BOOL isPublicScreen;
 static UWORD pens[] = {~0};
@@ -212,7 +223,8 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "View Documentation", 0, 0, 0, MENU_ITEM_VIEW_DOCUMENTATION_ID},
 	{NM_END, NULL, 0, 0, 0, 0}
 };
-struct Hook idcmpHook;
+struct Hook idcmpHookMainWindow;
+struct Hook idcmpHookCreateImageWindow;
 struct MsgPort *appPort;
 ULONG activeTextEditorGadgetID;
 
@@ -243,16 +255,19 @@ static STRPTR UTF8ToISO8859_1(CONST_STRPTR utf8String);
 static BOOL copyFile(STRPTR source, STRPTR destination);
 static void openDocumentation();
 static void updateMenu();
+static void createImage();
 #ifdef __AMIGAOS4__
-static uint32 processIDCMP(struct Hook *hook, struct Window *window, struct IntuiMessage *message);
+static uint32 processIDCMPMainWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message);
+static uint32 processIDCMPCreateImageWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message);
 #else
 static void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message));
+static void __SAVE_DS__ __ASM__ processIDCMPMainWindow(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message));
 #endif
 
 #ifdef __AMIGAOS4__
-static uint32 processIDCMP(struct Hook *hook, struct Window *window, struct IntuiMessage *message) {
+static uint32 processIDCMPMainWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message) {
 #else
-static void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
+static void __SAVE_DS__ __ASM__ processIDCMPMainWindow(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
 #endif
 	switch (message->Class) {
 		case IDCMP_IDCMPUPDATE:
@@ -293,6 +308,64 @@ static void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __
 				}
 			break;
 		}
+		default:
+			printf("Unknown message class: %lx\n", message->Class);
+			break;
+	}
+	#ifdef __AMIGAOS3__
+	return;
+	#else
+	return WHOOKRSLT_IGNORE;
+	#endif
+}
+
+#ifdef __AMIGAOS4__
+static uint32 processIDCMPCreateImageWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message) {
+#else
+static void __SAVE_DS__ __ASM__ processIDCMPCreateImageWindow(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
+#endif
+	switch (message->Class) {
+		case IDCMP_IDCMPUPDATE:
+		{
+			UWORD MsgCode = message->Code;
+			struct TagItem *MsgTags = message->IAddress;
+			struct TagItem *List = MsgTags;
+			struct TagItem *This;
+
+			while((This = NextTagItem(&List)) != NULL)
+			{
+				switch(This->ti_Tag)
+				{
+					case DTA_Busy:
+						if(This->ti_Data)
+						{
+							SetWindowPointer(createImageWindow,
+								WA_BusyPointer,	TRUE,
+							TAG_DONE);
+						}
+						else
+						{
+							SetWindowPointerA(createImageWindow,NULL);
+						}
+
+						break;
+
+					case DTA_Sync:
+						RefreshDTObjects(dataTypeObject,createImageWindow,NULL,NULL);
+						break;
+				}
+			}
+
+			break;
+		}
+		case IDCMP_REFRESHWINDOW:
+			printf("Window dimensions: %d x %d\n", createImageWindow->Width, createImageWindow->Height);
+
+			BeginRefresh(createImageWindow);
+			EndRefresh(createImageWindow,TRUE);
+
+
+			break;
 		default:
 			printf("Unknown message class: %lx\n", message->Class);
 			break;
@@ -524,6 +597,22 @@ LONG openGUILibraries() {
 	}
 	#endif
 
+	#ifdef __AMIGAOS3__
+	if ((DataTypesBase = OpenLibrary("datatypes.library", 44)) == NULL) {
+		printf( "Could not open datatypes.library\n");
+		return RETURN_ERROR;
+	}
+	#else
+	if ((DataTypesBase = OpenLibrary("datatypes.library", 50)) == NULL) {
+		printf( "Could not open datatypes.library\n");
+		return RETURN_ERROR;
+	}
+	if ((IDataTypes = (struct DataTypesIFace *)GetInterface(DataTypesBase, "main", 1, NULL)) == NULL) {
+		printf( "Could not get interface for datatypes.library\n");
+		return RETURN_ERROR;
+	}
+	#endif
+
 	return RETURN_OK;
 }
 
@@ -545,6 +634,7 @@ static void closeGUILibraries() {
 	DropInterface((struct Interface *)IListBrowser);
 	DropInterface((struct Interface *)IScroller);
 	DropInterface((struct Interface *)IRequester);
+	DropInterface((struct Interface *)IDataTypes);
 	CloseLibrary(TextEditorBase);
 	#else
 	CloseLibrary(TextFieldBase);
@@ -563,6 +653,7 @@ static void closeGUILibraries() {
 	CloseLibrary(ListBrowserBase);
 	CloseLibrary(ScrollerBase);
 	CloseLibrary(RequesterBase);
+	CloseLibrary(DataTypesBase);
 }
 
 /**
@@ -603,6 +694,19 @@ LONG initVideo() {
 		ICA_TARGET, ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
 			printf("Could not create send message button\n");
+			return RETURN_ERROR;
+	}
+
+	if ((createImageButton = NewObject(BUTTON_GetClass(), NULL,
+		GA_ID, CREATE_IMAGE_BUTTON_ID,
+		BUTTON_TextPen, sendMessageButtonPen,
+		GA_TextAttr, &uiTextAttr,
+		BUTTON_Justification, BCJ_CENTER,
+		GA_Text, (ULONG)"Create Image",
+		GA_RelVerify, TRUE,
+		ICA_TARGET, ICTARGET_IDCMP,
+		TAG_DONE)) == NULL) {
+			printf("Could not create create image button\n");
 			return RETURN_ERROR;
 	}
 
@@ -721,8 +825,10 @@ LONG initVideo() {
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
 		LAYOUT_AddChild, textInputTextEditor,
-		CHILD_WeightedWidth, 100,
+		CHILD_WeightedWidth, 80,
 		LAYOUT_AddChild, sendMessageButton,
+		CHILD_WeightedWidth, 10,
+		LAYOUT_AddChild, createImageButton,
 		CHILD_WeightedWidth, 10,
 		TAG_DONE)) == NULL) {
 			printf("Could not create chat input layout\n");
@@ -772,15 +878,45 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
-	idcmpHook.h_Entry = (HOOKFUNC)processIDCMP;
-	idcmpHook.h_Data = NULL;
-	idcmpHook.h_SubEntry = NULL;
+	idcmpHookMainWindow.h_Entry = (HOOKFUNC)processIDCMPMainWindow;
+	idcmpHookMainWindow.h_Data = NULL;
+	idcmpHookMainWindow.h_SubEntry = NULL;
+
+	idcmpHookCreateImageWindow.h_Entry = (HOOKFUNC)processIDCMPCreateImageWindow;
+	idcmpHookCreateImageWindow.h_Data = NULL;
+	idcmpHookCreateImageWindow.h_SubEntry = NULL;
 
 	appPort = CreateMsgPort();
 
 	#ifdef __AMIGAOS4__
 	refreshModelMenuItems();
 	#endif
+
+	if ((createImageWindowObject = NewObject(WINDOW_GetClass(), NULL,
+		WINDOW_Position, WPOS_CENTERSCREEN,
+		WA_Activate, TRUE,
+		WA_Title, "Create Image",
+		WA_Width, (WORD)(screen->Width * 0.5),
+		WA_Height, (WORD)(screen->Height * 0.5),
+		WA_CloseGadget, TRUE,
+		WA_DragBar, isPublicScreen,
+		WA_SizeGadget, isPublicScreen,
+		WA_DepthGadget, isPublicScreen,
+		WA_NewLookMenus, TRUE,
+		WA_SimpleRefresh, TRUE,
+		WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
+		WINDOW_IDCMPHook, &idcmpHookCreateImageWindow,
+		WINDOW_InterpretIDCMPHook, TRUE,
+		WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE | IDCMP_REFRESHWINDOW,
+		WA_IDCMP,			IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_REFRESHWINDOW | IDCMP_IDCMPUPDATE |
+							IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MOUSEBUTTONS |
+							IDCMP_MOUSEMOVE | IDCMP_VANILLAKEY |
+							IDCMP_RAWKEY,
+		WA_CustomScreen, screen,
+		TAG_DONE)) == NULL) {
+			printf("Could not create mainWindow object\n");
+			return RETURN_ERROR;
+	}
 
 	if ((mainWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
@@ -799,7 +935,7 @@ LONG initVideo() {
 		WINDOW_SharedPort, NULL,
 		WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
 		WINDOW_NewMenu, amigaGPTMenu,
-		WINDOW_IDCMPHook, &idcmpHook,
+		WINDOW_IDCMPHook, &idcmpHookMainWindow,
 		WINDOW_InterpretIDCMPHook, TRUE,
 		WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE,
 		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MENUPICK | IDCMP_RAWKEY,
@@ -1502,6 +1638,9 @@ LONG startGUIRunLoop() {
 								displayConversation(currentConversation);
 								break;
 							}
+						case CREATE_IMAGE_BUTTON_ID:
+							createImage();
+							break;
 					}
 					break;
 				case WMHI_MENUPICK:
@@ -2010,6 +2149,107 @@ LONG saveConversations() {
 	return RETURN_OK;
 }
 
+static void createImage() {
+	struct json_object *response;
+
+	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Sending", TAG_DONE);
+
+	STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
+
+	// Remove trailing newline characters
+	while (text[strlen(text) - 1] == '\n') {
+		text[strlen(text) - 1] = '\0';
+	}
+	STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
+	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
+
+	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
+
+	response = postImageCreationRequestToOpenAI(textUTF_8, DALL_E_2, 256, config.openAiApiKey);
+	struct json_object *error;
+
+	if (json_object_object_get_ex(response, "error", &error)) {
+		struct json_object *message = json_object_object_get(error, "message");
+		STRPTR messageString = json_object_get_string(message);
+		displayError(messageString);
+		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
+		json_object_put(response);
+		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+		SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+		SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+		return;
+	}
+
+	struct array_list *data = json_object_get_array(json_object_object_get(response, "data"));
+	struct json_object *dataObject = (struct json_object *)data->array[0];
+
+	STRPTR url = json_object_get_string(json_object_object_get(dataObject, "url"));
+
+	FreeVec(text);
+	FreeVec(textUTF_8);
+
+	downloadFile(url, "PROGDIR:output.png");
+
+	json_object_put(response);
+
+	if ((createImageWindow = (struct Window *)DoMethod(createImageWindowObject, WM_OPEN, NULL)) == NULL) {
+		printf("Could not open createImageWindow\n");
+		return RETURN_ERROR;
+	}
+
+	if ((dataTypeObject = NewDTObject("PROGDIR:output.png",
+		DTA_SourceType, DTST_FILE,
+		DTA_GroupID, GID_PICTURE,
+		PDTA_Remap, TRUE,
+		GA_Left, createImageWindow->BorderLeft,
+		GA_Top, createImageWindow->BorderTop,
+		GA_RelWidth, createImageWindow->Width - createImageWindow->BorderLeft - createImageWindow->BorderRight,
+		GA_RelHeight, createImageWindow->Height - createImageWindow->BorderTop - createImageWindow->BorderBottom,
+		ICA_TARGET,	ICTARGET_IDCMP,
+		TAG_DONE)) == NULL) {
+			printf("Could not create dataTypeObject\n");
+			return RETURN_ERROR;	
+	}
+
+	AddDTObject(createImageWindow,NULL,dataTypeObject,-1);
+	RefreshDTObjects(dataTypeObject,createImageWindow,NULL,NULL);
+
+	BOOL done = FALSE;
+	ULONG signalMask, winSignal, signals, result;
+	WORD code;
+
+	GetAttr(WINDOW_SigMask, createImageWindowObject, &winSignal);
+	signalMask = winSignal;
+	while (!done) {
+		signals = Wait(signalMask);
+		while ((result = DoMethod(createImageWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
+			switch (result & WMHI_CLASSMASK) {
+				case WMHI_GADGETUP:
+					switch (result & WMHI_GADGETMASK) {
+						default:
+							break;
+					}
+					break;
+				case WMHI_CLOSEWINDOW:
+					done = TRUE;
+					break;
+				default:
+					break;
+			}
+		}
+	}
+
+	DoMethod(createImageWindowObject, WM_CLOSE);
+	DisposeDTObject(dataTypeObject);
+
+	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, "Ready", TAG_DONE);
+}
+
 /**
  * Converts a UTF-8 string to ISO-8859-1 which is what the Amiga uses by default
  * Taken from https://stackoverflow.com/questions/23689733/convert-string-from-utf-8-to-iso-8859-1
@@ -2246,6 +2486,9 @@ void shutdownGUI() {
 	freeConversationList();
 	if (mainWindowObject) {
 		DisposeObject(mainWindowObject);
+	}
+	if (createImageWindowObject) {
+		DisposeObject(createImageWindowObject);
 	}
 	if (isPublicScreen) {
 		ReleasePen(screen->ViewPort.ColorMap, sendMessageButtonPen);

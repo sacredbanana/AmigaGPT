@@ -66,6 +66,15 @@ CONST_STRPTR MODEL_NAMES[] = {
 };
 
 /**
+ * The names of the image models
+ * @see enum ImageModel
+**/ 
+CONST_STRPTR IMAGE_MODEL_NAMES[] = {
+	[DALL_E_2] = "dall-e-2",
+	[DALL_E_3] = "dall-e-3"
+};
+
+/**
  * Generate a random number
  * @param maxValue the maximum value of the random number
  * @return a random number
@@ -167,14 +176,14 @@ LONG initOpenAIConnector() {
 }
 
 /**
- * Post a message to OpenAI
+ * Post a chat message to OpenAI
  * @param conversation the conversation to post
  * @param model the model to use
  * @param openAiApiKey the OpenAI API key
  * @param stream whether to stream the response or not
  * @return a pointer to a new array of json_object containing the response(s) -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
-struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Model model, STRPTR openAiApiKey, BOOL stream) {
+struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Model model, CONST_STRPTR openAiApiKey, BOOL stream) {
 	struct sockaddr_in addr;
 	struct hostent *hostent;
 	struct json_object **responses = AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
@@ -434,6 +443,509 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 		ssl = NULL;
 	}
 	return responses;
+}
+
+/**
+ * Post a image creation request to OpenAI
+ * @param prompt the prompt to use
+ * @param imageModel the image model to use
+ * @param openAiApiKey the OpenAI API key
+ * @param stream whether to stream the response or not
+ * @return a pointer to a new json_object containing the response -- Free it with json_object_put when you are done using it
+**/
+struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, UWORD width, CONST_STRPTR openAiApiKey) {
+	struct sockaddr_in addr;
+	struct hostent *hostent;
+	struct json_object *response;
+	static BOOL streamingInProgress = FALSE;
+	UWORD responseIndex = 0;
+
+	memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
+	memset(readBuffer, 0, READ_BUFFER_LENGTH);
+
+	if (ssl != NULL) {
+		SSL_shutdown(ssl);
+		SSL_free(ssl);
+	}
+
+	if (sock >- 0) {
+		CloseSocket(sock);
+	}
+
+	struct json_object *obj = json_object_new_object();
+	json_object_object_add(obj, "model", json_object_new_string(IMAGE_MODEL_NAMES[imageModel]));
+	json_object_object_add(obj, "prompt", json_object_new_string(prompt));
+
+	UBYTE sizeString[10];
+	snprintf(sizeString, 10, "%dx%d\0", width, width);
+	json_object_object_add(obj, "size", json_object_new_string(sizeString));	
+	STRPTR jsonString = json_object_to_json_string(obj);
+
+	snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "POST /v1/images/generations HTTP/1.1\r\n"
+			"Host: api.openai.com\r\n"
+			"Content-Type: application/json\r\n"
+			"Authorization: Bearer %s\r\n"
+			"User-Agent: AmigaGPT\r\n"
+			"Content-Length: %lu\r\n\r\n"
+			"%s", openAiApiKey, strlen(jsonString), jsonString);
+
+	json_object_put(obj);
+
+	/* The following needs to be done once per socket */
+	if((ssl = SSL_new(ctx)) != NULL) {
+		/* Lookup hostname */
+		if ((hostent = gethostbyname(HOST)) != NULL) {
+			memset(&addr, 0, sizeof(addr));
+			addr.sin_family = AF_INET;
+			addr.sin_port = htons(PORT);
+			addr.sin_len = hostent->h_length;;
+			memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
+		}
+		else {
+			displayError("Host lookup failed");
+			return NULL;
+		}
+
+		/* Create a socket and connect to the server */
+		if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
+			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+				displayError("Couldn't connect to server");
+				return NULL;
+			}
+		}
+
+		/* Check if connection was established */
+		if (sock >= 0) {
+			/* Associate the socket with the ssl structure */
+			SSL_set_fd(ssl, sock);
+
+			/* Set up SNI (Server Name Indication) */
+			SSL_set_tlsext_host_name(ssl, HOST);
+
+			/* Perform SSL handshake */
+			if((ssl_err = SSL_connect(ssl)) >= 0) {
+				// printf("SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
+			}
+			
+			/* If there were errors, print them */
+			if (ssl_err < 0) {
+				LONG err = SSL_get_error(ssl, ssl_err);
+				switch (err) {
+					case SSL_ERROR_ZERO_RETURN:
+						printf("SSL_ERROR_ZERO_RETURN\n");
+						break;
+					case SSL_ERROR_WANT_READ:
+						printf("SSL_ERROR_WANT_READ\n");
+						break;
+					case SSL_ERROR_WANT_WRITE:
+						printf("SSL_ERROR_WANT_WRITE\n");
+						break;
+					case SSL_ERROR_WANT_CONNECT:
+						printf("SSL_ERROR_WANT_CONNECT\n");
+						break;
+					case SSL_ERROR_WANT_ACCEPT:
+						printf("SSL_ERROR_WANT_ACCEPT\n");
+						break;
+					case SSL_ERROR_WANT_X509_LOOKUP:
+						printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+						break;
+					case SSL_ERROR_SYSCALL:
+						printf("SSL_ERROR_SYSCALL\n");
+						break;
+					case SSL_ERROR_SSL:
+						printf("SSL_ERROR_SSL\n");
+						break;
+					default:
+						printf("Unknown error: %ld\n", err);
+						break;
+				}
+				return NULL;
+			}
+		} else {
+			displayError("Couldn't connect to host!");
+			return NULL;
+		}
+	} else {
+		displayError("Couldn't create new SSL handle!");
+		return NULL;
+	}
+
+	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+
+	if (ssl_err > 0) {
+		ULONG totalBytesRead = 0;
+		WORD bytesRead = 0;
+		BOOL doneReading = FALSE;
+		LONG err = 0;
+		while (!doneReading) {
+			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
+			strcat(readBuffer, tempReadBuffer);
+			FreeVec(tempReadBuffer);
+			err = SSL_get_error(ssl, bytesRead);
+			switch (err) {
+				case SSL_ERROR_NONE:
+					totalBytesRead += bytesRead;
+					CONST_STRPTR jsonStart = "{";
+					STRPTR jsonString = readBuffer;
+					STRPTR lastJsonString = jsonString;
+					while (jsonString = strstr(jsonString, jsonStart)) {
+						lastJsonString = jsonString;
+
+						struct json_object *parsedResponse = json_tokener_parse(jsonString);
+						if (parsedResponse != NULL) {
+							response = parsedResponse;
+							break;
+						} else {
+							jsonString = NULL;
+							break;
+						}
+					}
+					
+					if (json_tokener_parse(lastJsonString) == NULL) {
+							snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0", lastJsonString);
+							continue;
+					}
+					
+					doneReading = TRUE;
+
+					break;
+				case SSL_ERROR_ZERO_RETURN:
+					printf("SSL_ERROR_ZERO_RETURN\n");
+					doneReading = TRUE;
+					break;
+				case SSL_ERROR_WANT_READ:
+					printf("SSL_ERROR_WANT_READ\n");
+					break;
+				case SSL_ERROR_WANT_WRITE:
+					printf("SSL_ERROR_WANT_WRITE\n");
+					break;
+				case SSL_ERROR_WANT_CONNECT:
+					printf("SSL_ERROR_WANT_CONNECT\n");
+					break;
+				case SSL_ERROR_WANT_ACCEPT:
+					printf("SSL_ERROR_WANT_ACCEPT\n");
+					break;
+				case SSL_ERROR_WANT_X509_LOOKUP:
+					printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+					break;
+				case SSL_ERROR_SYSCALL:
+					printf("SSL_ERROR_SYSCALL\n");
+					ULONG err = ERR_get_error();
+					printf("error: %lu\n", err);
+					break;
+				case SSL_ERROR_SSL:
+					printf("SSL_ERROR_SSL\n");
+					Delay(100);
+					break;
+				default:
+					printf("Unknown error\n");
+					break;
+			}            
+		}
+	} else {
+		displayError("Couldn't write request!\n");
+		LONG err = SSL_get_error(ssl, ssl_err);
+		switch (err) {
+			case SSL_ERROR_WANT_READ:
+				printf("SSL_ERROR_WANT_READ\n");
+				break;
+			case SSL_ERROR_WANT_WRITE:
+				printf("SSL_ERROR_WANT_WRITE\n");
+				break;
+			case SSL_ERROR_WANT_CONNECT:
+				printf("SSL_ERROR_WANT_CONNECT\n");
+				break;
+			case SSL_ERROR_WANT_ACCEPT:
+				printf("SSL_ERROR_WANT_ACCEPT\n");
+				break;
+			case SSL_ERROR_WANT_X509_LOOKUP:
+				printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+				break;
+			case SSL_ERROR_SYSCALL:
+				printf("SSL_ERROR_SYSCALL\n");
+				break;
+			case SSL_ERROR_SSL:
+				printf("SSL_ERROR_SSL\n");
+				break;
+			default:
+				printf("Unknown error: %ld\n", err);
+				break;
+		}
+	}
+
+	SSL_shutdown(ssl);
+	SSL_free(ssl);
+	ssl = NULL;
+
+	return response;
+}
+
+/**
+ * Download a file from the internet
+ * @param url the URL to download from
+ * @param destination the destination to save the file to
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+ **/ 
+ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
+	struct sockaddr_in addr;
+	struct hostent *hostent;
+	struct json_object *response;
+
+	BPTR fileHandle = Open(destination, MODE_NEWFILE);
+	if (fileHandle == NULL) {
+		displayError("Couldn't open file for writing");
+		return RETURN_ERROR;
+	}
+
+	APTR downloadBuffer = AllocVec(DOWNLOAD_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+	APTR writeBuffer = AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+
+	if (downloadBuffer == NULL) {
+        displayError("Couldn't allocate memory for download buffer");
+        Close(fileHandle);
+        return RETURN_ERROR;
+    }
+
+    UBYTE hostString[64];
+    UBYTE pathString[2056];
+
+    // Parse URL (very basic parsing, assuming URL starts with http:// or https://)
+    CONST_STRPTR urlStart = strstr(url, "://");
+    if (urlStart == NULL) {
+        displayError("Invalid URL format");
+        FreeVec(downloadBuffer);
+		FreeVec(writeBuffer);
+        Close(fileHandle);
+        return RETURN_ERROR;
+    }
+    urlStart += 3; // Skip past "://"
+
+    // Find the first slash after http:// or https:// to separate host and path
+    CONST_STRPTR pathStart = strchr(urlStart, '/');
+    if (pathStart == NULL) {
+        // URL doesn't have a path, use '/' as default
+        strcpy(hostString, urlStart);
+        strcpy(pathString, "/");
+    } else {
+        // Copy host and path into separate strings
+        ULONG hostLength = pathStart - urlStart;
+        strncpy(hostString, urlStart, hostLength);
+        hostString[hostLength] = '\0'; // Null-terminate the host string
+        strcpy(pathString, pathStart); // The rest is the path
+    }
+
+    // Construct the HTTP GET request
+    snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "GET %s HTTP/1.1\r\n"
+        "Host: %s\r\n\r\n"
+		"User-Agent: AmigaGPT\r\n"
+		, pathString, hostString);
+
+	/* The following needs to be done once per socket */
+	if (ssl != NULL) {
+		SSL_shutdown(ssl);
+		SSL_free(ssl);
+	}
+
+	if (sock >- 0) {
+		CloseSocket(sock);
+	}
+
+	if((ssl = SSL_new(ctx)) != NULL) {
+		/* Lookup hostname */
+		if ((hostent = gethostbyname(hostString)) != NULL) {
+			memset(&addr, 0, sizeof(addr));
+			addr.sin_family = AF_INET;
+			addr.sin_port = htons(PORT);
+			addr.sin_len = hostent->h_length;;
+			memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
+		}
+		else {
+			displayError("Host lookup failed");
+			FreeVec(downloadBuffer);
+			FreeVec(writeBuffer);
+			Close(fileHandle);
+			return NULL;
+		}
+
+		/* Create a socket and connect to the server */
+		if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
+			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+				displayError("Couldn't connect to server");
+				FreeVec(downloadBuffer);
+				FreeVec(writeBuffer);
+				Close(fileHandle);
+				return NULL;
+			}
+		}
+
+		/* Check if connection was established */
+		if (sock >= 0) {
+			/* Associate the socket with the ssl structure */
+			SSL_set_fd(ssl, sock);
+
+			/* Set up SNI (Server Name Indication) */
+			SSL_set_tlsext_host_name(ssl, hostString);
+
+			/* Perform SSL handshake */
+			if((ssl_err = SSL_connect(ssl)) >= 0) {
+				// printf("SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
+			}
+			
+			/* If there were errors, print them */
+			if (ssl_err < 0) {
+				LONG err = SSL_get_error(ssl, ssl_err);
+				switch (err) {
+					case SSL_ERROR_ZERO_RETURN:
+						printf("SSL_ERROR_ZERO_RETURN\n");
+						break;
+					case SSL_ERROR_WANT_READ:
+						printf("SSL_ERROR_WANT_READ\n");
+						break;
+					case SSL_ERROR_WANT_WRITE:
+						printf("SSL_ERROR_WANT_WRITE\n");
+						break;
+					case SSL_ERROR_WANT_CONNECT:
+						printf("SSL_ERROR_WANT_CONNECT\n");
+						break;
+					case SSL_ERROR_WANT_ACCEPT:
+						printf("SSL_ERROR_WANT_ACCEPT\n");
+						break;
+					case SSL_ERROR_WANT_X509_LOOKUP:
+						printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+						break;
+					case SSL_ERROR_SYSCALL:
+						printf("SSL_ERROR_SYSCALL\n");
+						break;
+					case SSL_ERROR_SSL:
+						printf("SSL_ERROR_SSL\n");
+						break;
+					default:
+						printf("Unknown error: %ld\n", err);
+						break;
+				}
+				FreeVec(downloadBuffer);
+				FreeVec(writeBuffer);
+				Close(fileHandle);
+				return NULL;
+			}
+		} else {
+			displayError("Couldn't connect to host!");
+			FreeVec(downloadBuffer);
+			FreeVec(writeBuffer);
+			Close(fileHandle);
+			return NULL;
+		}
+	} else {
+		displayError("Couldn't create new SSL handle!");
+		FreeVec(downloadBuffer);
+		FreeVec(writeBuffer);
+		Close(fileHandle);
+		return NULL;
+	}
+
+	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+
+	if (ssl_err > 0) {
+		ULONG totalBytesRead = 0;
+		WORD bytesRead = 0;
+		BOOL doneReading = FALSE;
+		LONG err = 0;
+		while (!doneReading) {
+			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
+			memcpy(downloadBuffer + totalBytesRead, tempReadBuffer, bytesRead);
+			FreeVec(tempReadBuffer);
+			err = SSL_get_error(ssl, bytesRead);
+			switch (err) {
+				case SSL_ERROR_NONE:
+					totalBytesRead += bytesRead;
+					break;
+				case SSL_ERROR_ZERO_RETURN:
+					printf("SSL_ERROR_ZERO_RETURN\n");
+					doneReading = TRUE;
+					break;
+				case SSL_ERROR_WANT_READ:
+					printf("SSL_ERROR_WANT_READ\n");
+					break;
+				case SSL_ERROR_WANT_WRITE:
+					printf("SSL_ERROR_WANT_WRITE\n");
+					break;
+				case SSL_ERROR_WANT_CONNECT:
+					printf("SSL_ERROR_WANT_CONNECT\n");
+					break;
+				case SSL_ERROR_WANT_ACCEPT:
+					printf("SSL_ERROR_WANT_ACCEPT\n");
+					break;
+				case SSL_ERROR_WANT_X509_LOOKUP:
+					printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+					break;
+				case SSL_ERROR_SYSCALL:
+					printf("SSL_ERROR_SYSCALL\n");
+					ULONG err = ERR_get_error();
+					printf("error: %lu\n", err);
+					break;
+				case SSL_ERROR_SSL:
+					doneReading = TRUE;
+					break;
+				default:
+					printf("Unknown error\n");
+					break;
+			}            
+		}
+
+		APTR pngData = strstr(downloadBuffer, "\x89\x50\x4E\x47");
+		if (pngData == NULL) {
+			displayError("Couldn't find PNG header in response");
+			FreeVec(downloadBuffer);
+			FreeVec(writeBuffer);
+			Close(fileHandle);
+			return RETURN_ERROR;
+		}
+		Write(fileHandle, pngData, totalBytesRead - (pngData - downloadBuffer));
+	} else {
+		displayError("Couldn't write request!\n");
+		LONG err = SSL_get_error(ssl, ssl_err);
+		switch (err) {
+			case SSL_ERROR_WANT_READ:
+				printf("SSL_ERROR_WANT_READ\n");
+				break;
+			case SSL_ERROR_WANT_WRITE:
+				printf("SSL_ERROR_WANT_WRITE\n");
+				break;
+			case SSL_ERROR_WANT_CONNECT:
+				printf("SSL_ERROR_WANT_CONNECT\n");
+				break;
+			case SSL_ERROR_WANT_ACCEPT:
+				printf("SSL_ERROR_WANT_ACCEPT\n");
+				break;
+			case SSL_ERROR_WANT_X509_LOOKUP:
+				printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+				break;
+			case SSL_ERROR_SYSCALL:
+				printf("SSL_ERROR_SYSCALL\n");
+				break;
+			case SSL_ERROR_SSL:
+				printf("SSL_ERROR_SSL\n");
+				break;
+			default:
+				printf("Unknown error: %ld\n", err);
+				break;
+		}
+		FreeVec(downloadBuffer);
+		FreeVec(writeBuffer);
+		Close(fileHandle);
+		return RETURN_ERROR;
+	}
+
+	SSL_shutdown(ssl);
+	SSL_free(ssl);
+	ssl = NULL;
+
+	FreeVec(downloadBuffer);
+	FreeVec(writeBuffer);
+	Close(fileHandle);
+	return RETURN_OK;
 }
 
 /**
