@@ -158,9 +158,8 @@ static Object *deleteChatButton;
 static Object *createImageButton;
 static Object *dataTypeObject;
 static struct Screen *screen;
-static struct Screen *imageScreen;
 static BOOL isPublicScreen;
-static UWORD pens[] = {~0};
+static WORD pens[32+ 1];
 static LONG sendMessageButtonPen;
 static LONG newChatButtonPen;
 static LONG deleteChatButtonPen;
@@ -682,7 +681,7 @@ LONG initVideo() {
 	chatTextAttr.ta_Style = config.chatFontStyle;
 	chatTextAttr.ta_Flags = config.chatFontFlags;
 
-	sendMessageButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE) : 8;
+	sendMessageButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE) : 4;
 
 	if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SEND_MESSAGE_BUTTON_ID,
@@ -710,7 +709,7 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
-	newChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0xFFFFFFFF, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 9;
+	newChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0xFFFFFFFF, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 5;
 
 	if ((newChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, NEW_CHAT_BUTTON_ID,
@@ -725,7 +724,7 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
-	deleteChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0xFFFFFFFF, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 4;
+	deleteChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0xFFFFFFFF, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 6;
 
 	if ((deleteChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, DELETE_CHAT_BUTTON_ID,
@@ -924,10 +923,8 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
-	// #ifdef __AMIGAOS3__
 	refreshModelMenuItems();
 	refreshSpeechMenuItems();
-	// #endif
 
 	// For some reason it won't let you paste text into the empty text editor unless you do this
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);
@@ -1076,9 +1073,27 @@ static LONG selectScreen() {
 								TAG_DONE)) {
 									if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
 										isPublicScreen = FALSE;
+										// for (WORD i = 0; i < 32; i++) {
+										// 	pens[i] = 3;
+										// }
 										UnlockPubScreen(NULL, screen);
+										pens[DETAILPEN] = 0; // nothing?
+										pens[BLOCKPEN] = 0; // nothing?
+										pens[TEXTPEN] = 1; // text colour
+										pens[SHINEPEN] = 1; // gadget top and left borders
+										pens[SHADOWPEN] = 3; // gadget bottom and right borders
+										pens[FILLPEN] = 2; // button text
+										pens[FILLTEXTPEN] = 4; // title bar text
+										pens[BACKGROUNDPEN] = 3; // background
+										pens[HIGHLIGHTTEXTPEN] = 0; // nothing?
+										pens[BARDETAILPEN] = 1; // menu text
+										pens[BARBLOCKPEN] = 0; // menu background
+										pens[BARTRIMPEN] = 3; // nothing?
+										pens[NUMDRIPENS] = ~0;
+
 										if ((screen = OpenScreenTags(NULL,
 											SA_Pens, (ULONG)pens,
+											SA_LikeWorkbench, TRUE,
 											SA_DisplayID, screenModeRequester->sm_DisplayID,
 											SA_Depth, screenModeRequester->sm_DisplayDepth,
 											SA_Overscan, screenModeRequester->sm_OverscanType,
@@ -2149,7 +2164,7 @@ static void createImage() {
 
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 
-	response = postImageCreationRequestToOpenAI(textUTF_8, DALL_E_2, 512, config.openAiApiKey);
+	response = postImageCreationRequestToOpenAI(textUTF_8, DALL_E_2, 256, config.openAiApiKey);
 	struct json_object *error;
 
 	if (json_object_object_get_ex(response, "error", &error)) {
@@ -2176,50 +2191,19 @@ static void createImage() {
 
 	json_object_put(response);
 
-	struct ColorSpec colors[257];
-	for (UWORD i = 0; i < 256; i++) {
-		colors[i].ColorIndex = i;
-		colors[i].Red = (i % 4) * 21;
-		colors[i].Green = (i / 4) % 16 * 4;
-		colors[i].Blue = i / 16;
-	}
-	colors[256].ColorIndex = -1;
-
-	const UBYTE NUM_COLOURS = 255;
-
-	WORD PenSpec[NUM_COLOURS + 1];
-
-	// Set up the pens
-	for (int i = 0; i < NUM_COLOURS; i++) {
-		PenSpec[i] = i;
-	}
-	PenSpec[NUM_COLOURS] = ~0;
-
-	// if ((imageScreen = OpenScreenTags(NULL,
-	// 										SA_Pens, PenSpec,
-	// 										SA_DisplayID,  PAL_MONITOR_ID | HIRESLACE_KEY,
-	// 										SA_Depth, 8,
-	// 										SA_Font, &screenFont,
-	// 										// SA_Colors, colors,
-	// 										SA_FullPalette, TRUE,
-	// 										TAG_DONE)) == NULL) {
-	// 											printf("Could not open screen\n");
-	// 											return RETURN_ERROR;
-	// 									}
-
 	if ((createImageWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
 		WA_Title, "Generated Image",
-		WA_Width, 512,
-		WA_Height, 512,
+		WA_Width, 256,
+		WA_Height, 256,
 		WA_CloseGadget, TRUE,
 		WA_DragBar, isPublicScreen,
 		WA_SizeGadget, isPublicScreen,
 		WA_DepthGadget, isPublicScreen,
 		WA_NewLookMenus, TRUE,
 		WA_SimpleRefresh, TRUE,
-		WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
+		WINDOW_Position, WPOS_CENTERSCREEN,
 		WINDOW_IDCMPHook, &idcmpHookCreateImageWindow,
 		WINDOW_InterpretIDCMPHook, TRUE,
 		WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE | IDCMP_REFRESHWINDOW,
@@ -2227,7 +2211,7 @@ static void createImage() {
 							IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MOUSEBUTTONS |
 							IDCMP_MOUSEMOVE | IDCMP_VANILLAKEY |
 							IDCMP_RAWKEY,
-		// WA_CustomScreen, imageScreen,
+		WA_CustomScreen, screen,
 		TAG_DONE)) == NULL) {
 			printf("Could not create createImageWindowObject\n");
 			return RETURN_ERROR;
@@ -2284,7 +2268,6 @@ static void createImage() {
 
 	DoMethod(createImageWindowObject, WM_CLOSE);
 	DisposeObject(createImageWindowObject);
-	CloseScreen(imageScreen);
 	DisposeDTObject(dataTypeObject);
 
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);

@@ -28,17 +28,15 @@ struct Config config = {
 	.uiFontFlags = FPF_DISKFONT | FPF_DESIGNED,
 	.openAiApiKey = NULL,
 	.colors = {
-		10l<<16 | 0,
-		0x00000000, 0x11111111, 0x15555555, // listbrowser background
-		0x00000000, 0x88888888, 0xFFFFFFFF, // text colour
-		0x00000000, 0x00000000, 0x33333333, // gadget borders
-		0xA0000000, 0x00000000, 0x0FFFFFFF, // listbrowser select and window border and text editor backgrounds
-		0xFFFFFFFF, 0x00000000, 0x88888888, // delete chat button text
-		0x00000000, 0x00000000, 0x11111111, // screen border and menu background
-		0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, // selected menu item icon secondary colour
-		0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, // selected menu item background
-		0xE0000000, 0xE0000000, 0xFFFFFFFF, // send button text colour
-		0x00050000, 0xFFFF0FFF, 0x88888888, // new chat button text
+		8 << 16,
+		0x00000000, 0x00000000, 0x11111111, // darkest blue
+		0x00000000, 0x88888888, 0xFFFFFFFF, // light blue
+		0xA0000000, 0x00000000, 0x0F0F0F0F, // dark red
+		0x00000000, 0x00000000, 0x00000000, // black
+		0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, // white
+		0x00000000, 0xFFFFFFFF, 0x66666666, // pastel green
+		0xFFFFFFFF, 0x00000000, 0x00000000, // red
+		0xf0000000, 0x00000000, 0x22222222, // dark blue
 		0
 	}
 };

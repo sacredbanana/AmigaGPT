@@ -19,7 +19,7 @@ struct Config {
 	UBYTE uiFontStyle;
 	UBYTE uiFontFlags;
 	UBYTE openAiApiKey[64];
-	ULONG colors[32];
+	ULONG colors[16 * 3 + 2];
 };
 
 /**
