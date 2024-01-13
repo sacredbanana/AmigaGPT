@@ -156,6 +156,7 @@ static Object *modeClickTab;
 static Object *chatTextBoxesLayout;
 static Object *imageGenerationTextBoxesLayout;
 static Object *chatInputLayout;
+static Object *imageGenerationInputLayout;
 static Object *chatOutputLayout;
 static Object *conversationsLayout;
 static Object *chatButtonsLayout;
@@ -369,6 +370,10 @@ static void __SAVE_DS__ __ASM__ processIDCMPCreateImageWindow(__REG__ (a0, struc
 						break;
 
 					case DTA_Sync:
+						SetAttrs(dataTypeObject,
+						 GA_RelWidth, createImageWindow->Width - createImageWindow->BorderLeft - createImageWindow->BorderRight,
+						GA_RelHeight, createImageWindow->Height - createImageWindow->BorderTop - createImageWindow->BorderBottom,
+						 TAG_DONE);
 						RefreshDTObjects(dataTypeObject,createImageWindow,NULL,NULL);
 						break;
 				}
@@ -937,15 +942,40 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	if ((imageGenerationInputLayout = NewObject(LAYOUT_GetClass(), NULL,
+		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+		LAYOUT_SpaceInner, TRUE,
+		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_AddChild, textInputTextEditor,
+		CHILD_WeightedHeight, 80,
+		CHILD_NoDispose, TRUE,
+		LAYOUT_AddChild, createImageButton,
+		CHILD_WeightedHeight, 20,
+		TAG_DONE)) == NULL) {
+			printf("Could not create image generation input layout\n");
+			return RETURN_ERROR;
+	}
+
+	if ((imageGenerationTextBoxesLayout = NewObject(LAYOUT_GetClass(), NULL,
+		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+		LAYOUT_SpaceInner, TRUE,
+		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_AddChild, imageGenerationInputLayout,
+		CHILD_WeightedHeight, 90,
+		LAYOUT_AddChild, statusBar,
+		CHILD_WeightedHeight, 10,
+		CHILD_NoDispose, TRUE,
+		TAG_DONE)) == NULL) {
+			printf("Could not create chat layout\n");
+			return RETURN_ERROR;
+	}
+
 	if ((imageGenerationModeLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, textInputTextEditor,
-		CHILD_WeightedWidth, 80,
-		CHILD_NoDispose, TRUE,
-		LAYOUT_AddChild, createImageButton,
-		CHILD_WeightedWidth, 20,
+		LAYOUT_AddChild, imageGenerationTextBoxesLayout,
+		CHILD_WeightedWidth, 100,
 		TAG_DONE)) == NULL) {
 			printf("Could not create image generation layout\n");
 			return RETURN_ERROR;
@@ -2282,7 +2312,7 @@ static void createImage() {
 
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 
-	response = postImageCreationRequestToOpenAI(textUTF_8, DALL_E_2, 256, config.openAiApiKey);
+	response = postImageCreationRequestToOpenAI(textUTF_8, DALL_E_3, 1024, config.openAiApiKey);
 	struct json_object *error;
 
 	if (json_object_object_get_ex(response, "error", &error)) {
@@ -2309,17 +2339,20 @@ static void createImage() {
 
 	json_object_put(response);
 
+	WORD lowestWidth = (screen->Width - 16) < 256 ? (screen->Width - 16) : 256;
+	WORD lowestHeight = screen->Height < 256 ? screen->Height : 256;
+	WORD lowestSize = lowestWidth < lowestHeight ? lowestWidth : lowestHeight;
+
 	if ((createImageWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
-		WA_Title, "Generated Image",
-		WA_Width, 256,
-		WA_Height, 256,
+		WA_Title, "Generated Image 256x256",
+		WA_Width, lowestSize,
+		WA_Height, lowestSize,
 		WA_CloseGadget, TRUE,
-		WA_DragBar, isPublicScreen,
-		WA_SizeGadget, isPublicScreen,
-		WA_DepthGadget, isPublicScreen,
-		WA_NewLookMenus, TRUE,
+		WA_DragBar, TRUE,
+		WA_SizeGadget, TRUE,
+		WA_DepthGadget, FALSE,
 		WA_SimpleRefresh, TRUE,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WINDOW_IDCMPHook, &idcmpHookCreateImageWindow,
@@ -2355,6 +2388,9 @@ static void createImage() {
 			printf("Could not create dataTypeObject\n");
 			return RETURN_ERROR;	
 	}
+
+	updateStatusBar("Scaling image...", 8);
+	DoMethod(dataTypeObject, PDTM_SCALE, 256, 256, 0);
 
 	AddDTObject(createImageWindow, NULL, dataTypeObject, -1);
 	RefreshDTObjects(dataTypeObject, createImageWindow, NULL, NULL);
