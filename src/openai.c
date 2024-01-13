@@ -76,6 +76,18 @@ CONST_STRPTR IMAGE_MODEL_NAMES[] = {
 };
 
 /**
+ * The names of the image sizes
+ * @see enum ImageSize
+**/
+extern CONST_STRPTR IMAGE_SIZE_NAMES[] = {
+	[IMAGE_SIZE_256x256] = "256x256",
+	[IMAGE_SIZE_512x512] = "512x512",
+	[IMAGE_SIZE_1024x1024] = "1024x1024",
+	[IMAGE_SIZE_1792x1024] = "1792x1024",
+	[IMAGE_SIZE_1024x1792] = "1024x1792"
+};
+
+/**
  * Generate a random number
  * @param maxValue the maximum value of the random number
  * @return a random number
@@ -457,11 +469,11 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
  * Post a image creation request to OpenAI
  * @param prompt the prompt to use
  * @param imageModel the image model to use
+ * @param imageSize the size of the image to create
  * @param openAiApiKey the OpenAI API key
- * @param stream whether to stream the response or not
  * @return a pointer to a new json_object containing the response -- Free it with json_object_put when you are done using it
 **/
-struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, UWORD width, CONST_STRPTR openAiApiKey) {
+struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize, CONST_STRPTR openAiApiKey) {
 	struct sockaddr_in addr;
 	struct hostent *hostent;
 	struct json_object *response;
@@ -485,10 +497,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 	struct json_object *obj = json_object_new_object();
 	json_object_object_add(obj, "model", json_object_new_string(IMAGE_MODEL_NAMES[imageModel]));
 	json_object_object_add(obj, "prompt", json_object_new_string(prompt));
-
-	UBYTE sizeString[10];
-	snprintf(sizeString, 10, "%dx%d\0", width, width);
-	json_object_object_add(obj, "size", json_object_new_string(sizeString));	
+	json_object_object_add(obj, "size", json_object_new_string(IMAGE_SIZE_NAMES[ImageSize]));	
 	STRPTR jsonString = json_object_to_json_string(obj);
 
 	snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "POST /v1/images/generations HTTP/1.1\r\n"

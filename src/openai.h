@@ -63,6 +63,23 @@ enum ImageModel {
 extern CONST_STRPTR IMAGE_MODEL_NAMES[];
 
 /**
+ * The size of the requested image
+**/
+extern enum ImageSize {
+	IMAGE_SIZE_256x256 = 0,
+	IMAGE_SIZE_512x512,
+	IMAGE_SIZE_1024x1024,
+	IMAGE_SIZE_1792x1024,
+	IMAGE_SIZE_1024x1792
+};
+
+/**
+ * The names of the image sizes
+ * @see enum ImageSize
+**/
+extern CONST_STRPTR IMAGE_SIZE_NAMES[]; 
+
+/**
  * Initialize the OpenAI connector
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
@@ -82,11 +99,11 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
  * Post a image creation request to OpenAI
  * @param prompt the prompt to use
  * @param imageModel the image model to use
+ * @param imageSize the size of the image to create
  * @param openAiApiKey the OpenAI API key
- * @param stream whether to stream the response or not
  * @return a pointer to a new json_object containing the response -- Free it with json_object_put when you are done using it
 **/
-struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, UWORD width, CONST_STRPTR openAiApiKey);
+struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize, CONST_STRPTR openAiApiKey);
 
 /**
  * Download a file from the internet

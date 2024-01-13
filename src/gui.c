@@ -108,6 +108,14 @@
 #define MENU_ITEM_IMAGE_MODEL_ID 38
 #define MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID 39
 #define MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID 40
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_ID 41
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_ID 42
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256_ID 43
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512_ID 44
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024_ID 45
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024_ID 46
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024_ID 47
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792_ID 48
 
 #ifdef __AMIGAOS4__
 #define IntuitionBase Library
@@ -241,6 +249,14 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Image Model", 0, 0, 0, MENU_ITEM_IMAGE_MODEL_ID},
 	{NM_SUB, "dall-e-2", 0, CHECKIT, 0, MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID},
 	{NM_SUB, "dall-e-3", 0, CHECKIT|CHECKED, 0, MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID},
+	{NM_ITEM, "DALL-E 2 Image Size", 0, 0, 0, MENU_ITEM_IMAGE_SIZE_DALL_E_2_ID},
+	{NM_SUB, "256x256", 0, CHECKIT|CHECKED, 0, MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256_ID},
+	{NM_SUB, "512x512", 0, CHECKIT, 0, MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512_ID},
+	{NM_SUB, "1024x1024", 0, CHECKIT, 0, MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024_ID},
+	{NM_ITEM, "DALL-E 3 Image Size", 0, 0, 0, MENU_ITEM_IMAGE_SIZE_DALL_E_3_ID},
+	{NM_SUB, "1024x1024", 0, CHECKIT|CHECKED, 0, MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024_ID},
+	{NM_SUB, "1792x1024", 0, CHECKIT, 0, MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024_ID},
+	{NM_SUB, "1024x1792", 0, CHECKIT, 0, MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792_ID},
 	{NM_TITLE, "Help", 0, 0, 0, 0},
 	{NM_ITEM, "View Documentation", 0, 0, 0, MENU_ITEM_VIEW_DOCUMENTATION_ID},
 	{NM_END, NULL, 0, 0, 0, 0}
@@ -255,7 +271,7 @@ static void formatText(STRPTR unformattedText);
 static void sendMessage();
 static void closeGUILibraries();
 static LONG selectScreen();
-static void refreshModelMenuItems();
+static void refreshOpenAIMenuItems();
 static void refreshSpeechMenuItems();
 static struct MinList* newConversation();
 static void addTextToConversation(struct MinList *conversation, STRPTR text, STRPTR role);
@@ -1026,7 +1042,7 @@ LONG initVideo() {
 	appPort = CreateMsgPort();
 
 	#ifdef __AMIGAOS4__
-	refreshModelMenuItems();
+	refreshOpenAIMenuItems();
 	#endif
 
 	if ((mainWindowObject = NewObject(WINDOW_GetClass(), NULL,
@@ -1066,7 +1082,7 @@ LONG initVideo() {
 		SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEdtorColorMap, TAG_DONE);
 	}
 
-	refreshModelMenuItems();
+	refreshOpenAIMenuItems();
 	refreshSpeechMenuItems();
 
 	// For some reason it won't let you paste text into the empty text editor unless you do this
@@ -1465,9 +1481,9 @@ static void updateMenu() {
 }
 
 /**
- * Sets the checkbox for the model that is currently selected
+ * Sets the checkboxesfor the OpenAI menu
 **/
-static void refreshModelMenuItems() {
+static void refreshOpenAIMenuItems() {
 	APTR *visualInfo;
 	ULONG error = NULL;
 	struct NewMenu *newMenu = amigaGPTMenu;
@@ -1489,6 +1505,30 @@ static void refreshModelMenuItems() {
 
 	while ((++newMenu)->nm_Type == NM_SUB) {
 		if (strcmp(newMenu->nm_Label, IMAGE_MODEL_NAMES[config.imageModel]) == 0) {
+			newMenu->nm_Flags |= CHECKED;
+		} else {
+			newMenu->nm_Flags &= ~CHECKED;
+		}
+	}
+
+	while (newMenu->nm_UserData != MENU_ITEM_IMAGE_SIZE_DALL_E_2_ID) {
+		newMenu++;
+	}
+
+	while ((++newMenu)->nm_Type == NM_SUB) {
+		if (strcmp(newMenu->nm_Label, IMAGE_SIZE_NAMES[config.imageSizeDallE2]) == 0) {
+			newMenu->nm_Flags |= CHECKED;
+		} else {
+			newMenu->nm_Flags &= ~CHECKED;
+		}
+	}
+
+	while (newMenu->nm_UserData != MENU_ITEM_IMAGE_SIZE_DALL_E_3_ID) {
+		newMenu++;
+	}
+
+	while ((++newMenu)->nm_Type == NM_SUB) {
+		if (strcmp(newMenu->nm_Label, IMAGE_SIZE_NAMES[config.imageSizeDallE3]) == 0) {
 			newMenu->nm_Flags |= CHECKED;
 		} else {
 			newMenu->nm_Flags &= ~CHECKED;
@@ -1933,77 +1973,107 @@ LONG startGUIRunLoop() {
 						case MENU_ITEM_CHAT_MODEL_GPT_4_ID:
 							config.chatModel = GPT_4;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_4_0314_ID:
 							config.chatModel = GPT_4_0314;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID:
 							config.chatModel = GPT_4_0613;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID:
 							config.chatModel = GPT_4_1106_PREVIEW;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_4_32K_ID:
 							config.chatModel = GPT_4_32K;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_4_32K_0314_ID:
 							config.chatModel = GPT_4_32K_0314;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_4_32K_0613_ID:
 							config.chatModel = GPT_4_32K_0613;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID:
 							config.chatModel = GPT_3_5_TURBO;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0301_ID:
 							config.chatModel = GPT_3_5_TURBO_0301;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0613_ID:
 							config.chatModel = GPT_3_5_TURBO_0613;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID:
 							config.chatModel = GPT_3_5_TURBO_1106;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_ID:
 							config.chatModel = GPT_3_5_TURBO_16K;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_0613_ID:
 							config.chatModel = GPT_3_5_TURBO_16K_0613;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID:
 							config.imageModel = DALL_E_2;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID:
 							config.imageModel = DALL_E_3;
 							writeConfig();
-							refreshModelMenuItems();
+							refreshOpenAIMenuItems();
+							break;
+						case MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256_ID:
+							config.imageSizeDallE2 = IMAGE_SIZE_256x256;
+							writeConfig();
+							refreshOpenAIMenuItems();
+							break;
+						case MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512_ID:
+							config.imageSizeDallE2 = IMAGE_SIZE_512x512;
+							writeConfig();
+							refreshOpenAIMenuItems();
+							break;
+						case MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024_ID:
+							config.imageSizeDallE2 = IMAGE_SIZE_1024x1024;
+							writeConfig();
+							refreshOpenAIMenuItems();
+							break;
+						case MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024_ID:
+							config.imageSizeDallE3 = IMAGE_SIZE_1024x1024;
+							writeConfig();
+							refreshOpenAIMenuItems();
+							break;
+						case MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024_ID:
+							config.imageSizeDallE3 = IMAGE_SIZE_1792x1024;
+							writeConfig();
+							refreshOpenAIMenuItems();
+							break;
+						case MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792_ID:
+							config.imageSizeDallE3 = IMAGE_SIZE_1024x1792;
+							writeConfig();
+							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_VIEW_DOCUMENTATION_ID:
 							openDocumentation();
@@ -2341,8 +2411,8 @@ static void createImage() {
 	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
 
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
-
-	response = postImageCreationRequestToOpenAI(textUTF_8, config.imageModel, 1024, config.openAiApiKey);
+	const enum ImageSize imageSize = config.imageModel == DALL_E_2 ? config.imageSizeDallE2 : config.imageSizeDallE3;
+	response = postImageCreationRequestToOpenAI(textUTF_8, config.imageModel, imageSize, config.openAiApiKey);
 	struct json_object *error;
 
 	if (json_object_object_get_ex(response, "error", &error)) {
@@ -2369,16 +2439,44 @@ static void createImage() {
 
 	json_object_put(response);
 
-	WORD lowestWidth = (screen->Width - 16) < 256 ? (screen->Width - 16) : 256;
-	WORD lowestHeight = screen->Height < 256 ? screen->Height : 256;
-	WORD lowestSize = lowestWidth < lowestHeight ? lowestWidth : lowestHeight;
+	WORD imageWidth, imageHeight;
+	switch (imageSize) {
+		case IMAGE_SIZE_256x256:
+			imageWidth = 256;
+			imageHeight = 256;
+			break;
+		case IMAGE_SIZE_512x512:
+			imageWidth = 512;
+			imageHeight = 512;
+			break;
+		case IMAGE_SIZE_1024x1024:
+			imageWidth = 1024;
+			imageHeight = 1024;
+			break;
+		case IMAGE_SIZE_1792x1024:
+			imageWidth = 1792;
+			imageHeight = 1024;
+			break;
+		case IMAGE_SIZE_1024x1792:
+			imageWidth = 1024;
+			imageHeight = 1792;
+			break;
+		default:
+			printf("Invalid image size\n");
+			imageWidth = 256;
+			imageHeight = 256;
+			break;
+	}
+
+	WORD lowestWidth = (screen->Width - 16) < imageWidth ? (screen->Width - 16) : imageWidth;
+	WORD lowestHeight = screen->Height < imageHeight ? screen->Height : imageHeight;
 
 	if ((createImageWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
-		WA_Title, "Generated Image 256x256",
-		WA_Width, lowestSize,
-		WA_Height, lowestSize,
+		WA_Title, "Generated Image",
+		WA_Width, lowestWidth,
+		WA_Height, lowestHeight,
 		WA_CloseGadget, TRUE,
 		WA_DragBar, TRUE,
 		WA_SizeGadget, TRUE,
@@ -2420,7 +2518,7 @@ static void createImage() {
 	}
 
 	updateStatusBar("Scaling image...", 8);
-	DoMethod(dataTypeObject, PDTM_SCALE, 256, 256, 0);
+	DoMethod(dataTypeObject, PDTM_SCALE, lowestWidth, lowestHeight, 0);
 
 	AddDTObject(createImageWindow, NULL, dataTypeObject, -1);
 	RefreshDTObjects(dataTypeObject, createImageWindow, NULL, NULL);

@@ -11,6 +11,8 @@ struct Config {
 	#endif
 	enum Model chatModel;
 	enum ImageModel imageModel;
+	enum ImageSize imageSizeDallE2;
+	enum ImageSize imageSizeDallE3;
 	UBYTE chatFontName[32];
 	UWORD chatFontSize;
 	UBYTE chatFontStyle;

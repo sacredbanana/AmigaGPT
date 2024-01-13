@@ -19,6 +19,8 @@ struct Config config = {
 	#endif
 	.chatModel = GPT_3_5_TURBO,
 	.imageModel = DALL_E_3,
+	.imageSizeDallE2 = IMAGE_SIZE_256x256,
+	.imageSizeDallE3 = IMAGE_SIZE_1024x1024,
 	.chatFontName = {0},
 	.chatFontSize = 8,
 	.chatFontStyle = FS_NORMAL,
@@ -64,6 +66,8 @@ LONG writeConfig() {
 	#endif
 	json_object_object_add(configJsonObject, "chatModel", json_object_new_int(config.chatModel));
 	json_object_object_add(configJsonObject, "imageModel", json_object_new_int(config.imageModel));
+	json_object_object_add(configJsonObject, "imageSizeDallE2", json_object_new_int(config.imageSizeDallE2));
+	json_object_object_add(configJsonObject, "imageSizeDallE3", json_object_new_int(config.imageSizeDallE3));
 	json_object_object_add(configJsonObject, "chatFontName", json_object_new_string(config.chatFontName));
 	json_object_object_add(configJsonObject, "chatFontSize", json_object_new_int(config.chatFontSize));
 	json_object_object_add(configJsonObject, "chatFontStyle", json_object_new_int(config.chatFontStyle));
@@ -166,6 +170,16 @@ LONG readConfig() {
 	struct json_object *imageModelObj;
 	if (json_object_object_get_ex(configJsonObject, "imageModel", &imageModelObj)) {
 		config.imageModel = json_object_get_int(imageModelObj);
+	}
+
+	struct json_object *imageSizeDallE2Obj;
+	if (json_object_object_get_ex(configJsonObject, "imageSizeDallE2", &imageSizeDallE2Obj)) {
+		config.imageSizeDallE2 = json_object_get_int(imageSizeDallE2Obj);
+	}
+
+	struct json_object *imageSizeDallE3Obj;
+	if (json_object_object_get_ex(configJsonObject, "imageSizeDallE3", &imageSizeDallE3Obj)) {
+		config.imageSizeDallE3 = json_object_get_int(imageSizeDallE3Obj);
 	}
 
 	struct json_object *chatFontNameObj;
