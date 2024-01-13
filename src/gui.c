@@ -8,6 +8,7 @@
 #include <exec/execbase.h>
 #include <exec/lists.h>
 #include <gadgets/button.h>
+#include <gadgets/clicktab.h>
 #include <gadgets/layout.h>
 #include <gadgets/listbrowser.h>
 #include <gadgets/radiobutton.h>
@@ -27,6 +28,7 @@
 #include <proto/amigaguide.h>
 #include <proto/asl.h>
 #include <proto/button.h>
+#include <proto/clicktab.h>
 #include <proto/datatypes.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
@@ -62,6 +64,10 @@
 #define NEW_CHAT_BUTTON_ID 8
 #define DELETE_CHAT_BUTTON_ID 9
 #define CREATE_IMAGE_BUTTON_ID 10
+#define CLICKTAB_MODE_SELECTION_ID 11
+
+#define MODE_SELECTION_TAB_CHAT_ID 0
+#define MODE_SELECTION_TAB_IMAGE_GENERATION_ID 1
 
 #define MENU_ITEM_ABOUT_ID 1
 #define MENU_ITEM_SPEECH_ACCENT_ID 2
@@ -108,6 +114,7 @@ struct AslIFace *IAsl;
 struct GraphicsIFace *IGraphics;
 struct AmigaGuideIFace *IAmigaGuide;
 struct LayoutIFace *ILayout;
+struct ClickTabIFace *IClickTab;;
 struct ButtonIFace *IButton;
 struct RadioButtonIFace *IRadioButton;
 struct TextEditorIFace *ITextEditor;
@@ -129,6 +136,7 @@ struct Library *AmigaGuideBase;
 struct Library *AslBase;
 struct Library *WindowBase;
 struct Library *LayoutBase;
+struct Library *ClickTabBase;
 struct Library *ButtonBase;
 struct Library *RadioButtonBase;
 struct Library *ScrollerBase;
@@ -142,7 +150,11 @@ struct Window *createImageWindow;
 static Object *mainWindowObject;
 static Object *createImageWindowObject;
 static Object *mainLayout;
-static Object *chatLayout;
+static Object *chatModeLayout;
+static Object *imageGenerationModeLayout;
+static Object *modeClickTab;
+static Object *chatTextBoxesLayout;
+static Object *imageGenerationTextBoxesLayout;
 static Object *chatInputLayout;
 static Object *chatOutputLayout;
 static Object *conversationsLayout;
@@ -166,6 +178,7 @@ static LONG newChatButtonPen;
 static LONG deleteChatButtonPen;
 struct MinList *currentConversation;
 struct List *conversationList;
+struct List *modeSelectionTabList;
 static struct TextFont *uiTextFont = NULL;
 static struct TextAttr screenFont = {
 	.ta_Name = "",
@@ -244,6 +257,7 @@ static struct MinList* getConversationFromConversationList(struct List *conversa
 static void displayConversation(struct MinList *conversation);
 static void freeConversation(struct MinList *conversation);
 static void freeConversationList();
+static void freeModeSelectionTabList();
 static void removeConversationFromConversationList(struct List *conversationList, struct MinList *conversation);
 static void openChatFontRequester();
 static void openUIFontRequester();
@@ -447,6 +461,22 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
+	if ((ClickTabBase = OpenLibrary("gadgets/clicktab.gadget", 44)) == NULL) {
+		printf("Could not open clicktab.gadget\n");
+		return RETURN_ERROR;
+	}
+	#else
+	if ((ClickTabBase= OpenLibrary("gadgets/clicktab.gadget", 50)) == NULL) {
+		printf("Could not open clicktab.gadget\n");
+		return RETURN_ERROR;
+	}
+	if ((IClickTab = (struct ClickTabIFace *)GetInterface(ClickTabBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for clicktab.gadget\n");
+		return RETURN_ERROR;
+	}
+	#endif
+
+	#ifdef __AMIGAOS3__
 	if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 44)) == NULL) {
 		printf("Could not open radiobutton.gadget\n");
 		return RETURN_ERROR;
@@ -627,6 +657,7 @@ static void closeGUILibraries() {
 	DropInterface((struct Interface *)IAmigaGuide);
 	DropInterface((struct Interface *)IWindow);
 	DropInterface((struct Interface *)ILayout);
+	DropInterface((struct Interface *)IClickTab);
 	DropInterface((struct Interface *)IButton);
 	DropInterface((struct Interface *)ITextEditor);
 	DropInterface((struct Interface *)IRadioButton);
@@ -647,6 +678,7 @@ static void closeGUILibraries() {
 	CloseLibrary(AmigaGuideBase);
 	CloseLibrary(WindowBase);
 	CloseLibrary(LayoutBase);
+	CloseLibrary(ClickTabBase);
 	CloseLibrary(ButtonBase);
 	CloseLibrary(RadioButtonBase);
 	CloseLibrary(StringBase);
@@ -667,6 +699,27 @@ LONG initVideo() {
 
 	if (selectScreen() == RETURN_ERROR)
 		return RETURN_ERROR;
+
+	modeSelectionTabList = AllocVec(sizeof(struct List), MEMF_CLEAR);
+	NewList(modeSelectionTabList);
+	struct Node *chatTabNode = AllocClickTabNode(TAG_DONE);
+	SetClickTabNodeAttrs(chatTabNode,
+	 TNA_Text, "Chat",
+	 #ifdef __AMIGAOS4__
+	 TNA_HintInfo, "Have a text conversation with ChatGPT",
+	 #endif
+	 TNA_Number, MODE_SELECTION_TAB_CHAT_ID,
+	  TAG_DONE);
+	struct Node *imageGenerationTabNode = AllocClickTabNode(TAG_DONE);
+	SetClickTabNodeAttrs(imageGenerationTabNode,
+	 TNA_Text, "Image generation",
+	 #ifdef __AMIGAOS4__
+	 TNA_HintInfo, "Generate an image from a text prompt",
+	 #endif
+	 TNA_Number, MODE_SELECTION_TAB_IMAGE_GENERATION_ID,
+	  TAG_DONE);
+	AddTail(modeSelectionTabList, chatTabNode);	
+	AddTail(modeSelectionTabList, imageGenerationTabNode);
 
 	conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
 	NewList(conversationList);
@@ -833,10 +886,9 @@ LONG initVideo() {
 		LAYOUT_SpaceOuter, TRUE,
 		LAYOUT_AddChild, textInputTextEditor,
 		CHILD_WeightedWidth, 80,
+		CHILD_NoDispose, TRUE,
 		LAYOUT_AddChild, sendMessageButton,
-		CHILD_WeightedWidth, 10,
-		LAYOUT_AddChild, createImageButton,
-		CHILD_WeightedWidth, 10,
+		CHILD_WeightedWidth, 20,
 		TAG_DONE)) == NULL) {
 			printf("Could not create chat input layout\n");
 			return RETURN_ERROR;
@@ -856,7 +908,7 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
-	if ((chatLayout = NewObject(LAYOUT_GetClass(), NULL,
+	if ((chatTextBoxesLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
@@ -866,20 +918,60 @@ LONG initVideo() {
 		CHILD_WeightedHeight, 20,
 		LAYOUT_AddChild, statusBar,
 		CHILD_WeightedHeight, 10,
+		CHILD_NoDispose, TRUE,
 		TAG_DONE)) == NULL) {
 			printf("Could not create chat layout\n");
 			return RETURN_ERROR;
 	}
 
-	if ((mainLayout = NewObject(LAYOUT_GetClass(), NULL,
+	if ((chatModeLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
-		LAYOUT_DeferLayout, TRUE,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
 		LAYOUT_AddChild, conversationsLayout,
 		CHILD_WeightedWidth, 30,
-		LAYOUT_AddChild, chatLayout,
+		LAYOUT_AddChild, chatTextBoxesLayout,
 		CHILD_WeightedWidth, 70,
+		TAG_DONE)) == NULL) {
+			printf("Could not create main layout\n");
+			return RETURN_ERROR;
+	}
+
+	if ((imageGenerationModeLayout = NewObject(LAYOUT_GetClass(), NULL,
+		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
+		LAYOUT_SpaceInner, TRUE,
+		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_AddChild, textInputTextEditor,
+		CHILD_WeightedWidth, 80,
+		CHILD_NoDispose, TRUE,
+		LAYOUT_AddChild, createImageButton,
+		CHILD_WeightedWidth, 20,
+		TAG_DONE)) == NULL) {
+			printf("Could not create image generation layout\n");
+			return RETURN_ERROR;
+	}
+
+	if ((modeClickTab = NewObject(CLICKTAB_GetClass(), NULL,
+		GA_ID, CLICKTAB_MODE_SELECTION_ID,
+		GA_RelVerify, TRUE,
+		CLICKTAB_Labels, modeSelectionTabList,
+		CLICKTAB_Current, 0,
+		CLICKTAB_AutoFit, TRUE,
+		CLICKTAB_PageGroup, NewObject(PAGE_GetClass(), NULL,
+            PAGE_Add,       chatModeLayout,
+            PAGE_Add,       imageGenerationModeLayout,
+        TAG_DONE),
+		TAG_DONE)) == NULL) {
+			printf("Could not create mode click tab\n");
+			return RETURN_ERROR;
+	}
+
+	if ((mainLayout = NewObject(LAYOUT_GetClass(), NULL,
+		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+		LAYOUT_DeferLayout, TRUE,
+		LAYOUT_SpaceInner, TRUE,
+		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_AddChild, modeClickTab,
 		TAG_DONE)) == NULL) {
 			printf("Could not create main layout\n");
 			return RETURN_ERROR;
@@ -944,7 +1036,7 @@ LONG initVideo() {
 
 	updateStatusBar("Ready", 5);
 	
-	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
+	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
 
 	return RETURN_OK;
 }
@@ -1218,7 +1310,7 @@ static void sendMessage() {
 	addTextToConversation(currentConversation, textUTF_8, "user");
 	displayConversation(currentConversation);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
-	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
+	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 
 	BOOL dataStreamFinished = FALSE;
@@ -1553,6 +1645,16 @@ static void freeConversationList() {
 }
 
 /**
+ * Free the mode selection tab list
+**/
+static void freeModeSelectionTabList() {
+	struct Node *modeSelectionTabListNode;
+	while ((modeSelectionTabListNode = RemHead(modeSelectionTabList)) != NULL) {
+		FreeClickTabNode(modeSelectionTabListNode);
+	}
+}
+
+/**
  * Remove a conversation from the conversation list
  * @param conversationList The conversation list to remove the conversation from
  * @param conversation The conversation to remove from the conversation list
@@ -1609,7 +1711,7 @@ LONG startGUIRunLoop() {
 					switch (result & WMHI_GADGETMASK) {
 						case TEXT_INPUT_TEXT_EDITOR_ID:
 							if (isChatOutputTextEditorActive)
-								ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
+								ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
 								activeTextEditorGadgetID = TEXT_INPUT_TEXT_EDITOR_ID;
 							break;
 					}
@@ -1628,14 +1730,14 @@ LONG startGUIRunLoop() {
 						case NEW_CHAT_BUTTON_ID:
 							currentConversation = NULL;
 							DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
-							ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
+							ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
 							activeTextEditorGadgetID = TEXT_INPUT_TEXT_EDITOR_ID;
 							break;
 						case DELETE_CHAT_BUTTON_ID:
 							removeConversationFromConversationList(conversationList, currentConversation);
 							currentConversation = NULL;
 							DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
-							ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
+							ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
 							activeTextEditorGadgetID = TEXT_INPUT_TEXT_EDITOR_ID;
 							saveConversations();
 							break;
@@ -2176,7 +2278,7 @@ static void createImage() {
 	}
 	STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
-	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
+	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
 
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 
@@ -2528,6 +2630,7 @@ void shutdownGUI() {
 	if (mainWindowObject) {
 		DisposeObject(mainWindowObject);
 	}
+	freeModeSelectionTabList();
 	if (isPublicScreen) {
 		ReleasePen(screen->ViewPort.ColorMap, sendMessageButtonPen);
 		ReleasePen(screen->ViewPort.ColorMap, newChatButtonPen);
