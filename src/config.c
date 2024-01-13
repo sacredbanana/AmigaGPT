@@ -17,6 +17,7 @@ struct Config config = {
 	.speechVoice = SPEECH_VOICE_KAL,
 	.speechSystem = SPEECH_SYSTEM_FLITE,
 	#endif
+	.chatSystem = NULL,
 	.chatModel = GPT_3_5_TURBO,
 	.imageModel = DALL_E_3,
 	.imageSizeDallE2 = IMAGE_SIZE_256x256,
@@ -64,6 +65,7 @@ LONG writeConfig() {
 	#else
 	json_object_object_add(configJsonObject, "speechVoice", json_object_new_int(config.speechVoice));
 	#endif
+	json_object_object_add(configJsonObject, "chatSystem", json_object_new_string(config.chatSystem));
 	json_object_object_add(configJsonObject, "chatModel", json_object_new_int(config.chatModel));
 	json_object_object_add(configJsonObject, "imageModel", json_object_new_int(config.imageModel));
 	json_object_object_add(configJsonObject, "imageSizeDallE2", json_object_new_int(config.imageSizeDallE2));
@@ -161,6 +163,17 @@ LONG readConfig() {
 		config.speechVoice = json_object_get_int(speechVoiceObj);
 	}
 	#endif
+
+	if (config.chatSystem == NULL) {
+		config.chatSystem = AllocVec(CHAT_SYSTEM_LENGTH, MEMF_CLEAR);
+	}
+	struct json_object *chatSystemObj;
+	if (json_object_object_get_ex(configJsonObject, "chatSystem", &chatSystemObj)) {
+		STRPTR chatSystem = json_object_get_string(chatSystemObj);
+		if (chatSystem != NULL) {
+			strncpy(config.chatSystem, chatSystem, CHAT_SYSTEM_LENGTH - 1);
+		}
+	}
 	
 	struct json_object *chatModelObj;
 	if (json_object_object_get_ex(configJsonObject, "chatModel", &chatModelObj) || json_object_object_get_ex(configJsonObject, "model", &chatModelObj)) {

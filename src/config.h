@@ -9,6 +9,7 @@ struct Config {
 	#else
 	enum SpeechVoice speechVoice;
 	#endif
+	STRPTR chatSystem;
 	enum Model chatModel;
 	enum ImageModel imageModel;
 	enum ImageSize imageSizeDallE2;

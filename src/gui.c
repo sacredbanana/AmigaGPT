@@ -116,6 +116,7 @@
 #define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024_ID 46
 #define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024_ID 47
 #define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792_ID 48
+#define MENU_ITEM_CHAT_SYSTEM_ID 49
 
 #ifdef __AMIGAOS4__
 #define IntuitionBase Library
@@ -232,6 +233,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	#endif
 	{NM_TITLE, "OpenAI", 0, 0, 0, 0},
 	{NM_ITEM, "API key", 0, 0, 0, MENU_ITEM_OPENAI_API_KEY_ID},
+	{NM_ITEM, "Chat System", 0, 0, 0, MENU_ITEM_CHAT_SYSTEM_ID},
 	{NM_ITEM, "Chat Model", 0, 0, 0, MENU_ITEM_CHAT_MODEL_ID},
 	{NM_SUB, "gpt-4", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_ID},
 	{NM_SUB, "gpt-4-0314", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_0314_ID},
@@ -268,7 +270,7 @@ ULONG activeTextEditorGadgetID;
 
 static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream);
 static void formatText(STRPTR unformattedText);
-static void sendMessage();
+static void sendChatMessage();
 static void closeGUILibraries();
 static LONG selectScreen();
 static void refreshOpenAIMenuItems();
@@ -287,6 +289,7 @@ static void openUIFontRequester();
 static void openAboutWindow();
 static void openSpeechAccentRequester();
 static void openApiKeyRequester();
+static void openChatSystemRequester();
 static LONG loadConversations();
 static LONG saveConversations();
 static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String);
@@ -1341,9 +1344,9 @@ static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream) {
 }
 
 /**
- * Sends a message to the OpenAI API and displays the response and speaks it if speech is enabled
+ * Sends a chat message to the OpenAI API and displays the response and speaks it if speech is enabled
 **/
-static void sendMessage() {
+static void sendChatMessage() {
 	BOOL isNewConversation = FALSE;
 	STRPTR finishReason = NULL;
 	struct json_object **responses;
@@ -1366,6 +1369,10 @@ static void sendMessage() {
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+
+	if (isNewConversation) {
+		addTextToConversation(currentConversation, config.chatSystem, "system");
+	}
 
 	BOOL dataStreamFinished = FALSE;
 	ULONG speechIndex = 0;
@@ -1811,7 +1818,7 @@ LONG startGUIRunLoop() {
 						case SEND_MESSAGE_BUTTON_ID:
 						case TEXT_INPUT_TEXT_EDITOR_ID:
 							if (strlen(config.openAiApiKey) > 0) {
-								sendMessage();
+								sendChatMessage();
 								saveConversations();
 							}
 							else
@@ -1969,6 +1976,9 @@ LONG startGUIRunLoop() {
 						#endif
 						case MENU_ITEM_OPENAI_API_KEY_ID:
 							openApiKeyRequester();
+							break;
+						case MENU_ITEM_CHAT_SYSTEM_ID:
+							openChatSystemRequester();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_4_ID:
 							config.chatModel = GPT_4;
@@ -2319,17 +2329,15 @@ static void openSpeechAccentRequester() {
  * Opens a requester for the user to enter their OpenAI API key
 **/
 static void openApiKeyRequester() {
-	UBYTE buffer[64];
-	strncpy(buffer, config.openAiApiKey, sizeof(buffer) - 1);
 	Object *apiKeyRequester = NewObject(REQUESTER_GetClass(), NULL,
 		REQ_Type, REQTYPE_STRING,
 		REQ_TitleText, "Enter your OpenAI API key",
 		REQ_BodyText, "Please type or paste (Right Amiga + V) your OpenAI API key here",
-		REQ_GadgetText, "OK|CANCEL",
+		REQ_GadgetText, "OK|Cancel",
 		REQ_Image, REQIMAGE_INFO,
 		REQS_AllowEmpty, FALSE,
-		REQS_Buffer, buffer,
-		REQS_MaxChars, sizeof(buffer) - 1,
+		REQS_Buffer, config.openAiApiKey,
+		REQS_MaxChars, 64,
 		REQS_Invisible, FALSE,
 		REQ_ForceFocus, TRUE,
 		TAG_DONE);
@@ -2337,10 +2345,41 @@ static void openApiKeyRequester() {
 	if (apiKeyRequester) {
 		ULONG result = OpenRequester(apiKeyRequester, mainWindow);
 		if (result == 1) {
-			strncpy(config.openAiApiKey, buffer, sizeof(config.openAiApiKey) - 1);
 			writeConfig();
 		}
 		DisposeObject(apiKeyRequester);
+	}
+}
+
+/**
+ * Opens a requester for the user to enter the chat system
+**/
+static void openChatSystemRequester() {
+	Object *chatSystemRequester = NewObject(REQUESTER_GetClass(), NULL,
+		REQ_Type, REQTYPE_STRING,
+		REQ_TitleText, "Enter how you would like AmigaGPT to respond",
+		REQ_BodyText, "If you would like AmigaGPT to respond in a\n"
+					  "certain way, or add some personality, type\n"
+					  "it in here. For example, you could type\n" 
+					  "\"Speak like a pirate\" or \"Speak like a\n"
+					  "robot\". If you would like AmigaGPT to respond\n"
+					  "normally, leave this blank. This setting will\n"
+					  "be applied to new conversations only.",
+		REQ_GadgetText, "OK|Cancel",
+		REQ_Image, REQIMAGE_INFO,
+		REQS_AllowEmpty, FALSE,
+		REQS_Buffer, config.chatSystem,
+		REQS_MaxChars, CHAT_SYSTEM_LENGTH - 1,
+		REQS_Invisible, FALSE,
+		REQ_ForceFocus, TRUE,
+		TAG_DONE);
+
+	if (chatSystemRequester) {
+		ULONG result = OpenRequester(chatSystemRequester, mainWindow);
+		if (result == 1) {
+			writeConfig();
+		}
+		DisposeObject(chatSystemRequester);
 	}
 }
 
