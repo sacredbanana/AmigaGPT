@@ -28,8 +28,10 @@ void displayError(STRPTR message);
 /**
  * Update the status bar
  * @param message the message to display
+ * @param pen the pen to use for the text
+ * 
 **/ 
-void updateStatusBar(CONST_STRPTR message);
+void updateStatusBar(CONST_STRPTR message, const ULONG pen);
 
 /**
  * Display an error message about a disk error

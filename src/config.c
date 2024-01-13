@@ -36,7 +36,7 @@ struct Config config = {
 		0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, // white
 		0x00000000, 0xFFFFFFFF, 0x66666666, // pastel green
 		0xFFFFFFFF, 0x00000000, 0x00000000, // red
-		0xf0000000, 0x00000000, 0x22222222, // dark blue
+		0xFFFFFFFF, 0xFFFFFFFF, 0x00000000, // yellow
 		0
 	}
 };

@@ -159,7 +159,8 @@ static Object *createImageButton;
 static Object *dataTypeObject;
 static struct Screen *screen;
 static BOOL isPublicScreen;
-static WORD pens[32+ 1];
+static WORD pens[32+1];
+static LONG textEdtorColorMap[] = {5,3,6,3,6,6,4,0,1,6,6,6,6,6,6,6};
 static LONG sendMessageButtonPen;
 static LONG newChatButtonPen;
 static LONG deleteChatButtonPen;
@@ -343,12 +344,12 @@ static void __SAVE_DS__ __ASM__ processIDCMPCreateImageWindow(__REG__ (a0, struc
 							SetWindowPointer(createImageWindow,
 								WA_BusyPointer,	TRUE,
 							TAG_DONE);
-							updateStatusBar("Processing image...");
+							updateStatusBar("Processing image...", 7);
 						}
 						else
 						{
 							SetWindowPointerA(createImageWindow,NULL);
-							updateStatusBar("Ready");
+							updateStatusBar("Ready", 5);
 						}
 
 						break;
@@ -681,11 +682,13 @@ LONG initVideo() {
 	chatTextAttr.ta_Style = config.chatFontStyle;
 	chatTextAttr.ta_Flags = config.chatFontFlags;
 
-	sendMessageButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE) : 4;
+	ULONG pen = 8;
+	sendMessageButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1;
 
 	if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SEND_MESSAGE_BUTTON_ID,
 		BUTTON_TextPen, sendMessageButtonPen,
+		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"Send",
@@ -699,6 +702,7 @@ LONG initVideo() {
 	if ((createImageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, CREATE_IMAGE_BUTTON_ID,
 		BUTTON_TextPen, sendMessageButtonPen,
+		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"Create Image",
@@ -709,11 +713,13 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
-	newChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0xFFFFFFFF, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 5;
+	pen = 5;
+	newChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
 
 	if ((newChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, NEW_CHAT_BUTTON_ID,
 		BUTTON_TextPen, newChatButtonPen,
+		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"+ New Chat",
@@ -724,11 +730,13 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
-	deleteChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0xFFFFFFFF, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 6;
+	pen = 6;
+	deleteChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
 
 	if ((deleteChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, DELETE_CHAT_BUTTON_ID,
 		BUTTON_TextPen, deleteChatButtonPen,
+		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"- Delete Chat",
@@ -923,14 +931,18 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
+	if (!isPublicScreen) {
+		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEdtorColorMap, TAG_DONE);
+		SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEdtorColorMap, TAG_DONE);
+	}
+
 	refreshModelMenuItems();
 	refreshSpeechMenuItems();
 
 	// For some reason it won't let you paste text into the empty text editor unless you do this
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);
 
-	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_Pens, 0x00010002, TAG_DONE);
-	updateStatusBar("Ready");
+	updateStatusBar("Ready", 5);
 	
 	ActivateLayoutGadget(mainLayout, mainWindow, NULL, textInputTextEditor);
 
@@ -940,8 +952,11 @@ LONG initVideo() {
 /**
  * Update the status bar
  * @param message the message to display
+ * @param pen the pen to use for the text
+ * 
 **/ 
-void updateStatusBar(CONST_STRPTR message) {
+void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
+	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_Pens, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[3*pen+1], config.colors[3*pen+2], config.colors[3*pen+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen, TAG_DONE);
 	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, message, TAG_DONE);
 }
 
@@ -1073,12 +1088,12 @@ static LONG selectScreen() {
 								TAG_DONE)) {
 									if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
 										isPublicScreen = FALSE;
-										// for (WORD i = 0; i < 32; i++) {
-										// 	pens[i] = 3;
-										// }
 										UnlockPubScreen(NULL, screen);
-										pens[DETAILPEN] = 0; // nothing?
-										pens[BLOCKPEN] = 0; // nothing?
+										for (WORD i = 0; i < 32; i++) {
+											pens[i]= 3;
+										}
+										pens[DETAILPEN] = 4; // nothing?
+										pens[BLOCKPEN] = 4; // nothing?
 										pens[TEXTPEN] = 1; // text colour
 										pens[SHINEPEN] = 1; // gadget top and left borders
 										pens[SHADOWPEN] = 3; // gadget bottom and right borders
@@ -1191,7 +1206,7 @@ static void sendMessage() {
 		currentConversation = newConversation();
 	}
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	updateStatusBar("Sending message...");
+	updateStatusBar("Sending message...", 7);
 	STRPTR receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 
 	STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
@@ -1268,16 +1283,16 @@ static void sendMessage() {
 		}
 		FreeVec(responses);
 		FreeVec(receivedMessage);
-		updateStatusBar("Ready");
+		updateStatusBar("Ready", 5);
 		if (isNewConversation) {
-			updateStatusBar("Generating conversation title...");
+			updateStatusBar("Generating conversation title...", 7);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
 			responses = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey, FALSE);
 			if (responses[0] != NULL) {
 				STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
 				formatText(responseString);
 				addConversationToConversationList(conversationList, currentConversation, responseString);
-				updateStatusBar("Ready");
+				updateStatusBar("Ready", 5);
 				struct MinNode *titleRequestNode = RemTail(currentConversation);
 				FreeVec(titleRequestNode);
 				json_object_put(responses[0]);
@@ -1879,7 +1894,7 @@ void openDocumentation() {
 **/
 void displayError(STRPTR message) {
 	DisplayBeep(screen);
-	updateStatusBar("Error");
+	updateStatusBar("Error", 6);
 
 	STRPTR adjustedMsg = AllocVec(strlen(message) + 200, MEMF_ANY | MEMF_CLEAR);
 	STRPTR dest = adjustedMsg;
@@ -2031,7 +2046,7 @@ static void openUIFontRequester() {
 			SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 			SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 			SetGadgetAttrs(statusBar, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-			updateStatusBar("Ready");
+			updateStatusBar("Ready", 5);
 			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 
 		}
@@ -2173,9 +2188,9 @@ static void createImage() {
 		displayError(messageString);
 		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
 		json_object_put(response);
-		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-		SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-		updateStatusBar("Ready");
+		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		updateStatusBar("Ready", 5);
 		return;
 	}
 
@@ -2222,7 +2237,7 @@ static void createImage() {
 		return RETURN_ERROR;
 	}
 
-	updateStatusBar("Loading image...");
+	updateStatusBar("Loading image...", 7);
 
 	if ((dataTypeObject = NewDTObject("PROGDIR:output.png",
 		DTA_SourceType, DTST_FILE,
@@ -2272,7 +2287,7 @@ static void createImage() {
 
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	updateStatusBar("Ready");
+	updateStatusBar("Ready", 5);
 }
 
 /**
