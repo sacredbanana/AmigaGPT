@@ -1,4 +1,10 @@
 # Changelog
+## 1,4,0
+- AI image generation
+- Colour tweaks
+- Status bar shows more information
+- About screen can now be dismissed with any key press or mouse click
+
 ## 1.3.1 (2023-12-02)
 - Fix pasting into chat input textbox (AmigaOS 3.2 and 4.1 only for now)
 - Remove trailing newline from user messages

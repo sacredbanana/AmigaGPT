@@ -1988,7 +1988,8 @@ static void openAboutWindow() {
 		"support me you can do so at https://paypal.me/sacredbanana",
 		"OK"
 	};
-	EasyRequest(mainWindow, &aboutRequester, NULL, NULL);
+	ULONG flags = IDCMP_RAWKEY | IDCMP_MOUSEBUTTONS;
+	EasyRequest(mainWindow, &aboutRequester, &flags, NULL);
 }
 
 /**
