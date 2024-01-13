@@ -46,7 +46,7 @@ enum Model {
  * The names of the models
  * @see enum Model
 **/ 
-extern CONST_STRPTR MODEL_NAMES[];
+extern CONST_STRPTR CHAT_MODEL_NAMES[];
 
 /**
  * The image model OpenAI should use

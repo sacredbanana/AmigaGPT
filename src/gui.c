@@ -82,20 +82,20 @@
 #define MENU_ITEM_PASTE_ID 12
 #define MENU_ITEM_CLEAR_ID 13
 #define MENU_ITEM_SELECT_ALL_ID 14
-#define MENU_ITEM_MODEL_GPT_4_ID 15
-#define MENU_ITEM_MODEL_GPT_4_0314_ID 16
-#define MENU_ITEM_MODEL_GPT_4_0613_ID 17
-#define MENU_ITEM_MODEL_GPT_4_1106_PREVIEW_ID 18
-#define MENU_ITEM_MODEL_GPT_4_32K_ID 19
-#define MENU_ITEM_MODEL_GPT_4_32K_0314_ID 20
-#define MENU_ITEM_MODEL_GPT_4_32K_0613_ID 21
-#define MENU_ITEM_MODEL_GPT_3_5_TURBO_ID 22
-#define MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID 23
-#define MENU_ITEM_MODEL_GPT_3_5_TURBO_0613_ID 24
-#define MENU_ITEM_MODEL_GPT_3_5_TURBO_1106_ID 25
-#define MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_ID 26
-#define MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_0613_ID 27
-#define MENU_ITEM_MODEL_ID 28
+#define MENU_ITEM_CHAT_MODEL_GPT_4_ID 15
+#define MENU_ITEM_CHAT_MODEL_GPT_4_0314_ID 16
+#define MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID 17
+#define MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID 18
+#define MENU_ITEM_CHAT_MODEL_GPT_4_32K_ID 19
+#define MENU_ITEM_CHAT_MODEL_GPT_4_32K_0314_ID 20
+#define MENU_ITEM_CHAT_MODEL_GPT_4_32K_0613_ID 21
+#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID 22
+#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0301_ID 23
+#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0613_ID 24
+#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID 25
+#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_ID 26
+#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_0613_ID 27
+#define MENU_ITEM_CHAT_MODEL_ID 28
 #define MENU_ITEM_SPEECH_SYSTEM_ID 29
 #define MENU_ITEM_OPENAI_API_KEY_ID 30
 #define MENU_ITEM_VIEW_DOCUMENTATION_ID 31
@@ -105,6 +105,9 @@
 #define MENU_ITEM_SPEECH_VOICE_KAL16_ID 35
 #define MENU_ITEM_SPEECH_VOICE_RMS_ID 36
 #define MENU_ITEM_SPEECH_VOICE_SLT_ID 37
+#define MENU_ITEM_IMAGE_MODEL_ID 38
+#define MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID 39
+#define MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID 40
 
 #ifdef __AMIGAOS4__
 #define IntuitionBase Library
@@ -221,20 +224,23 @@ static struct NewMenu amigaGPTMenu[] = {
 	#endif
 	{NM_TITLE, "OpenAI", 0, 0, 0, 0},
 	{NM_ITEM, "API key", 0, 0, 0, MENU_ITEM_OPENAI_API_KEY_ID},
-	{NM_ITEM, "Model", 0, 0, 0, MENU_ITEM_MODEL_ID},
-	{NM_SUB, "gpt-4", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_ID},
-	{NM_SUB, "gpt-4-0314", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_0314_ID},
-	{NM_SUB, "gpt-4-0613", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_0613_ID},
-	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_1106_PREVIEW_ID},
-	{NM_SUB, "gpt-4-32k", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_32K_ID},
-	{NM_SUB, "gpt-4-32k-0314", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_32K_0314_ID},
-	{NM_SUB, "gpt-4-32k-0613", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_4_32K_0613_ID},
-	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_ID},
-	{NM_SUB, "gpt-3.5-turbo-0301", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID},
-	{NM_SUB, "gpt-3.5-turbo-0613", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_0613_ID},
-	{NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_1106_ID},
-	{NM_SUB, "gpt-3.5-turbo-16k", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_ID},
-	{NM_SUB, "gpt-3.5-turbo-16k-0613", 0, CHECKIT, 0, MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_0613_ID},
+	{NM_ITEM, "Chat Model", 0, 0, 0, MENU_ITEM_CHAT_MODEL_ID},
+	{NM_SUB, "gpt-4", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_ID},
+	{NM_SUB, "gpt-4-0314", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_0314_ID},
+	{NM_SUB, "gpt-4-0613", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID},
+	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID},
+	{NM_SUB, "gpt-4-32k", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_32K_ID},
+	{NM_SUB, "gpt-4-32k-0314", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_32K_0314_ID},
+	{NM_SUB, "gpt-4-32k-0613", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_32K_0613_ID},
+	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID},
+	{NM_SUB, "gpt-3.5-turbo-0301", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0301_ID},
+	{NM_SUB, "gpt-3.5-turbo-0613", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0613_ID},
+	{NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID},
+	{NM_SUB, "gpt-3.5-turbo-16k", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_ID},
+	{NM_SUB, "gpt-3.5-turbo-16k-0613", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_0613_ID},
+	{NM_ITEM, "Image Model", 0, 0, 0, MENU_ITEM_IMAGE_MODEL_ID},
+	{NM_SUB, "dall-e-2", 0, CHECKIT, 0, MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID},
+	{NM_SUB, "dall-e-3", 0, CHECKIT|CHECKED, 0, MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID},
 	{NM_TITLE, "Help", 0, 0, 0, 0},
 	{NM_ITEM, "View Documentation", 0, 0, 0, MENU_ITEM_VIEW_DOCUMENTATION_ID},
 	{NM_END, NULL, 0, 0, 0, 0}
@@ -710,6 +716,7 @@ LONG initVideo() {
 	struct Node *chatTabNode = AllocClickTabNode(TAG_DONE);
 	SetClickTabNodeAttrs(chatTabNode,
 	 TNA_Text, "Chat",
+	 TNA_TextPen, 0,
 	 #ifdef __AMIGAOS4__
 	 TNA_HintInfo, "Have a text conversation with ChatGPT",
 	 #endif
@@ -718,6 +725,7 @@ LONG initVideo() {
 	struct Node *imageGenerationTabNode = AllocClickTabNode(TAG_DONE);
 	SetClickTabNodeAttrs(imageGenerationTabNode,
 	 TNA_Text, "Image generation",
+	 TNA_TextPen, 0,
 	 #ifdef __AMIGAOS4__
 	 TNA_HintInfo, "Generate an image from a text prompt",
 	 #endif
@@ -1348,7 +1356,7 @@ static void sendMessage() {
 	UWORD wordNumber = 0;
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 	do {
-		responses = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey, TRUE);
+		responses = postMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, TRUE);
 		UWORD responseIndex = 0;
 		struct json_object *response;
 		while (response = responses[responseIndex++]) {
@@ -1409,7 +1417,7 @@ static void sendMessage() {
 		if (isNewConversation) {
 			updateStatusBar("Generating conversation title...", 7);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
-			responses = postMessageToOpenAI(currentConversation, config.model, config.openAiApiKey, FALSE);
+			responses = postMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, FALSE);
 			if (responses[0] != NULL) {
 				STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
 				formatText(responseString);
@@ -1463,12 +1471,24 @@ static void refreshModelMenuItems() {
 	APTR *visualInfo;
 	ULONG error = NULL;
 	struct NewMenu *newMenu = amigaGPTMenu;
-	while (newMenu->nm_UserData != MENU_ITEM_MODEL_ID) {
+	while (newMenu->nm_UserData != MENU_ITEM_CHAT_MODEL_ID) {
 		newMenu++;
 	}
 
 	while ((++newMenu)->nm_Type == NM_SUB) {
-		if (strcmp(newMenu->nm_Label, MODEL_NAMES[config.model]) == 0) {
+		if (strcmp(newMenu->nm_Label, CHAT_MODEL_NAMES[config.chatModel]) == 0) {
+			newMenu->nm_Flags |= CHECKED;
+		} else {
+			newMenu->nm_Flags &= ~CHECKED;
+		}
+	}
+
+	while (newMenu->nm_UserData != MENU_ITEM_IMAGE_MODEL_ID) {
+		newMenu++;
+	}
+
+	while ((++newMenu)->nm_Type == NM_SUB) {
+		if (strcmp(newMenu->nm_Label, IMAGE_MODEL_NAMES[config.imageModel]) == 0) {
 			newMenu->nm_Flags |= CHECKED;
 		} else {
 			newMenu->nm_Flags &= ~CHECKED;
@@ -1910,68 +1930,78 @@ LONG startGUIRunLoop() {
 						case MENU_ITEM_OPENAI_API_KEY_ID:
 							openApiKeyRequester();
 							break;
-						case MENU_ITEM_MODEL_GPT_4_ID:
-							config.model = GPT_4;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_ID:
+							config.chatModel = GPT_4;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_4_0314_ID:
-							config.model = GPT_4_0314;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_0314_ID:
+							config.chatModel = GPT_4_0314;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_4_0613_ID:
-							config.model = GPT_4_0613;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID:
+							config.chatModel = GPT_4_0613;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_4_1106_PREVIEW_ID:
-							config.model = GPT_4_1106_PREVIEW;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID:
+							config.chatModel = GPT_4_1106_PREVIEW;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_4_32K_ID:
-							config.model = GPT_4_32K;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_32K_ID:
+							config.chatModel = GPT_4_32K;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_4_32K_0314_ID:
-							config.model = GPT_4_32K_0314;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_32K_0314_ID:
+							config.chatModel = GPT_4_32K_0314;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_4_32K_0613_ID:
-							config.model = GPT_4_32K_0613;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_32K_0613_ID:
+							config.chatModel = GPT_4_32K_0613;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_3_5_TURBO_ID:
-							config.model = GPT_3_5_TURBO;
+						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID:
+							config.chatModel = GPT_3_5_TURBO;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_3_5_TURBO_0301_ID:
-							config.model = GPT_3_5_TURBO_0301;
+						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0301_ID:
+							config.chatModel = GPT_3_5_TURBO_0301;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_3_5_TURBO_0613_ID:
-							config.model = GPT_3_5_TURBO_0613;
+						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0613_ID:
+							config.chatModel = GPT_3_5_TURBO_0613;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_3_5_TURBO_1106_ID:
-							config.model = GPT_3_5_TURBO_1106;
+						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID:
+							config.chatModel = GPT_3_5_TURBO_1106;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_ID:
-							config.model = GPT_3_5_TURBO_16K;
+						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_ID:
+							config.chatModel = GPT_3_5_TURBO_16K;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
-						case MENU_ITEM_MODEL_GPT_3_5_TURBO_16K_0613_ID:
-							config.model = GPT_3_5_TURBO_16K_0613;
+						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_0613_ID:
+							config.chatModel = GPT_3_5_TURBO_16K_0613;
+							writeConfig();
+							refreshModelMenuItems();
+							break;
+						case MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID:
+							config.imageModel = DALL_E_2;
+							writeConfig();
+							refreshModelMenuItems();
+							break;
+						case MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID:
+							config.imageModel = DALL_E_3;
 							writeConfig();
 							refreshModelMenuItems();
 							break;
@@ -2312,7 +2342,7 @@ static void createImage() {
 
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 
-	response = postImageCreationRequestToOpenAI(textUTF_8, DALL_E_3, 1024, config.openAiApiKey);
+	response = postImageCreationRequestToOpenAI(textUTF_8, config.imageModel, 1024, config.openAiApiKey);
 	struct json_object *error;
 
 	if (json_object_object_get_ex(response, "error", &error)) {

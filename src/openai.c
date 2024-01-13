@@ -50,7 +50,7 @@ ULONG RangeSeed;
  * The names of the models
  * @see enum Model
 **/ 
-CONST_STRPTR MODEL_NAMES[] = {
+CONST_STRPTR CHAT_MODEL_NAMES[] = {
 	[GPT_4] = "gpt-4",
 	[GPT_4_0314] = "gpt-4-0314",
 	[GPT_4_0613] = "gpt-4-0613",
@@ -206,7 +206,7 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 		}
 
 		struct json_object *obj = json_object_new_object();
-		json_object_object_add(obj, "model", json_object_new_string(MODEL_NAMES[model]));
+		json_object_object_add(obj, "model", json_object_new_string(CHAT_MODEL_NAMES[model]));
 		struct json_object *conversationArray = json_object_new_array();
 
 		struct MinNode *conversationNode = conversation->mlh_Head;

@@ -17,7 +17,8 @@ struct Config config = {
 	.speechVoice = SPEECH_VOICE_KAL,
 	.speechSystem = SPEECH_SYSTEM_FLITE,
 	#endif
-	.model = GPT_3_5_TURBO,
+	.chatModel = GPT_3_5_TURBO,
+	.imageModel = DALL_E_3,
 	.chatFontName = {0},
 	.chatFontSize = 8,
 	.chatFontStyle = FS_NORMAL,
@@ -61,7 +62,8 @@ LONG writeConfig() {
 	#else
 	json_object_object_add(configJsonObject, "speechVoice", json_object_new_int(config.speechVoice));
 	#endif
-	json_object_object_add(configJsonObject, "model", json_object_new_int(config.model));
+	json_object_object_add(configJsonObject, "chatModel", json_object_new_int(config.chatModel));
+	json_object_object_add(configJsonObject, "imageModel", json_object_new_int(config.imageModel));
 	json_object_object_add(configJsonObject, "chatFontName", json_object_new_string(config.chatFontName));
 	json_object_object_add(configJsonObject, "chatFontSize", json_object_new_int(config.chatFontSize));
 	json_object_object_add(configJsonObject, "chatFontStyle", json_object_new_int(config.chatFontStyle));
@@ -156,9 +158,14 @@ LONG readConfig() {
 	}
 	#endif
 	
-	struct json_object *modelObj;
-	if (json_object_object_get_ex(configJsonObject, "model", &modelObj)) {
-		config.model = json_object_get_int(modelObj);
+	struct json_object *chatModelObj;
+	if (json_object_object_get_ex(configJsonObject, "chatModel", &chatModelObj) || json_object_object_get_ex(configJsonObject, "model", &chatModelObj)) {
+		config.chatModel = json_object_get_int(chatModelObj);
+	}
+
+	struct json_object *imageModelObj;
+	if (json_object_object_get_ex(configJsonObject, "imageModel", &imageModelObj)) {
+		config.imageModel = json_object_get_int(imageModelObj);
 	}
 
 	struct json_object *chatFontNameObj;

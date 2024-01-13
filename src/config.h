@@ -9,7 +9,8 @@ struct Config {
 	#else
 	enum SpeechVoice speechVoice;
 	#endif
-	enum Model model;
+	enum Model chatModel;
+	enum ImageModel imageModel;
 	UBYTE chatFontName[32];
 	UWORD chatFontSize;
 	UBYTE chatFontStyle;
