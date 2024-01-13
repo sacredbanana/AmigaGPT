@@ -1,8 +1,8 @@
 # Changelog
 ## 1,4,0
-- AI image generation
+- AI image generation! Switch between chat and image generation mode by clicking the tabs at the top of the screen
 - Colour tweaks
-- Status bar shows more information
+- Status bar shows more information and colours
 - About screen can now be dismissed with any key press or mouse click
 - The OpenAI API key requester now populates with the existing key if it exists so you can more easily find and fix typos in the key
 - Added the ability to set the chat system (new "Chat System" menu item)
