@@ -14,9 +14,10 @@
 #include "speech.h"
 #include "gui.h"
 
-#define HOST "api.openai.com"
-#define PORT 443
+#define OPENAI_HOST "api.openai.com"
+#define OPENAI_PORT 443
 
+static ULONG createSSLConnection(CONST_STRPTR host, UWORD port);
 static ULONG rangeRand(ULONG maxValue);
 static BPTR ErrOutput();
 static BPTR GetStdErr();
@@ -188,6 +189,108 @@ LONG initOpenAIConnector() {
 	return createSSLContext();
 }
 
+
+/**
+ * Create a new SSL connection to a host with a new socket
+ * @param host the host to connect to
+ * @param port the port to connect to
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+ **/ 
+static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
+	struct sockaddr_in addr;
+	struct hostent *hostent;
+
+	if (ssl != NULL) {
+		SSL_shutdown(ssl);
+		SSL_free(ssl);
+	}
+
+	if (sock > -1) {
+		CloseSocket(sock);
+	}
+
+	/* The following needs to be done once per socket */
+	if((ssl = SSL_new(ctx)) != NULL) {
+		/* Lookup hostname */
+		if ((hostent = gethostbyname(host)) != NULL) {
+			memset(&addr, 0, sizeof(addr));
+			addr.sin_family = AF_INET;
+			addr.sin_port = port;
+			addr.sin_len = hostent->h_length;
+			memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
+		}
+		else {
+			displayError("Host lookup failed");
+			return RETURN_ERROR;
+		}
+
+		/* Create a socket and connect to the server */
+		if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
+			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+				displayError("Couldn't connect to server");
+				return RETURN_ERROR;
+			}
+		}
+
+		/* Check if connection was established */
+		if (sock >= 0) {
+			/* Associate the socket with the ssl structure */
+			SSL_set_fd(ssl, sock);
+
+			/* Set up SNI (Server Name Indication) */
+			SSL_set_tlsext_host_name(ssl, host);
+
+			/* Perform SSL handshake */
+			if((ssl_err = SSL_connect(ssl)) >= 0) {
+				// printf("SSL connection to %s using %s\n\0", host, SSL_get_cipher(ssl));
+			}
+			
+			/* If there were errors, print them */
+			if (ssl_err < 0) {
+				LONG err = SSL_get_error(ssl, ssl_err);
+				switch (err) {
+					case SSL_ERROR_ZERO_RETURN:
+						printf("SSL_ERROR_ZERO_RETURN\n");
+						break;
+					case SSL_ERROR_WANT_READ:
+						printf("SSL_ERROR_WANT_READ\n");
+						break;
+					case SSL_ERROR_WANT_WRITE:
+						printf("SSL_ERROR_WANT_WRITE\n");
+						break;
+					case SSL_ERROR_WANT_CONNECT:
+						printf("SSL_ERROR_WANT_CONNECT\n");
+						break;
+					case SSL_ERROR_WANT_ACCEPT:
+						printf("SSL_ERROR_WANT_ACCEPT\n");
+						break;
+					case SSL_ERROR_WANT_X509_LOOKUP:
+						printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+						break;
+					case SSL_ERROR_SYSCALL:
+						printf("SSL_ERROR_SYSCALL\n");
+						break;
+					case SSL_ERROR_SSL:
+						printf("SSL_ERROR_SSL\n");
+						break;
+					default:
+						printf("Unknown error: %ld\n", err);
+						break;
+				}
+				return RETURN_ERROR;
+			}
+		} else {
+			displayError("Couldn't connect to host!");
+			return RETURN_ERROR;
+		}
+	} else {
+		displayError("Couldn't create new SSL handle!");
+		return RETURN_ERROR;
+	}
+
+	return RETURN_OK;
+}
+
 /**
  * Post a chat message to OpenAI
  * @param conversation the conversation to post
@@ -197,8 +300,6 @@ LONG initOpenAIConnector() {
  * @return a pointer to a new array of json_object containing the response(s) -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
 struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Model model, CONST_STRPTR openAiApiKey, BOOL stream) {
-	struct sockaddr_in addr;
-	struct hostent *hostent;
 	struct json_object **responses = AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 	static BOOL streamingInProgress = FALSE;
 	UWORD responseIndex = 0;
@@ -208,14 +309,6 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 	if (!stream || !streamingInProgress) {
 		memset(readBuffer, 0, READ_BUFFER_LENGTH);
 		streamingInProgress = stream;
-		if (ssl != NULL) {
-			SSL_shutdown(ssl);
-			SSL_free(ssl);
-		}
-
-		if (sock >- 0) {
-			CloseSocket(sock);
-		}
 
 		struct json_object *obj = json_object_new_object();
 		json_object_object_add(obj, "model", json_object_new_string(CHAT_MODEL_NAMES[model]));
@@ -232,7 +325,6 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 		}
 
 		json_object_object_add(obj, "messages", conversationArray);
-
 		json_object_object_add(obj, "stream", json_object_new_boolean((json_bool)stream));
 		
 		STRPTR jsonString = json_object_to_json_string(obj);
@@ -248,88 +340,9 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 		json_object_put(obj);
 
 		updateStatusBar("Connecting...", 7);
-
-		/* The following needs to be done once per socket */
-		if((ssl = SSL_new(ctx)) != NULL) {
-			/* Lookup hostname */
-			if ((hostent = gethostbyname(HOST)) != NULL) {
-				memset(&addr, 0, sizeof(addr));
-				addr.sin_family = AF_INET;
-				addr.sin_port = htons(PORT);
-				addr.sin_len = hostent->h_length;;
-				memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
-			}
-			else {
-				displayError("Host lookup failed");
-				return NULL;
-			}
-
-			/* Create a socket and connect to the server */
-			if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
-				if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-					displayError("Couldn't connect to server");
-					return NULL;
-				}
-			}
-
-			/* Check if connection was established */
-			if (sock >= 0) {
-				/* Associate the socket with the ssl structure */
-				SSL_set_fd(ssl, sock);
-
-				/* Set up SNI (Server Name Indication) */
-				SSL_set_tlsext_host_name(ssl, HOST);
-
-				/* Perform SSL handshake */
-				if((ssl_err = SSL_connect(ssl)) >= 0) {
-					// printf("SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
-				}
-				
-				/* If there were errors, print them */
-				if (ssl_err < 0) {
-					LONG err = SSL_get_error(ssl, ssl_err);
-					switch (err) {
-						case SSL_ERROR_ZERO_RETURN:
-							printf("SSL_ERROR_ZERO_RETURN\n");
-							break;
-						case SSL_ERROR_WANT_READ:
-							printf("SSL_ERROR_WANT_READ\n");
-							break;
-						case SSL_ERROR_WANT_WRITE:
-							printf("SSL_ERROR_WANT_WRITE\n");
-							break;
-						case SSL_ERROR_WANT_CONNECT:
-							printf("SSL_ERROR_WANT_CONNECT\n");
-							break;
-						case SSL_ERROR_WANT_ACCEPT:
-							printf("SSL_ERROR_WANT_ACCEPT\n");
-							break;
-						case SSL_ERROR_WANT_X509_LOOKUP:
-							printf("SSL_ERROR_WANT_X509_LOOKUP\n");
-							break;
-						case SSL_ERROR_SYSCALL:
-							printf("SSL_ERROR_SYSCALL\n");
-							break;
-						case SSL_ERROR_SSL:
-							printf("SSL_ERROR_SSL\n");
-							break;
-						default:
-							printf("Unknown error: %ld\n", err);
-							break;
-					}
-					return NULL;
-				}
-			} else {
-				displayError("Couldn't connect to host!");
-				return NULL;
-			}
-		} else {
-			displayError("Couldn't create new SSL handle!");
-			return NULL;
-		}
+		createSSLConnection(OPENAI_HOST, OPENAI_PORT);
 
 		updateStatusBar("Sending request...", 7);
-
 		ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 	}
 
@@ -458,9 +471,11 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 		}
 	}
 	if (!stream) {
+		CloseSocket(sock);
 		SSL_shutdown(ssl);
 		SSL_free(ssl);
 		ssl = NULL;
+		sock = -1;
 	}
 	return responses;
 }
@@ -474,8 +489,6 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
  * @return a pointer to a new json_object containing the response -- Free it with json_object_put when you are done using it
 **/
 struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize, CONST_STRPTR openAiApiKey) {
-	struct sockaddr_in addr;
-	struct hostent *hostent;
 	struct json_object *response;
 	static BOOL streamingInProgress = FALSE;
 	UWORD responseIndex = 0;
@@ -483,16 +496,8 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 	memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 	memset(readBuffer, 0, READ_BUFFER_LENGTH);
 
-	if (ssl != NULL) {
-		SSL_shutdown(ssl);
-		SSL_free(ssl);
-	}
-
-	if (sock >- 0) {
-		CloseSocket(sock);
-	}
-
 	updateStatusBar("Connecting...", 7);
+	createSSLConnection(OPENAI_HOST, OPENAI_PORT);
 
 	struct json_object *obj = json_object_new_object();
 	json_object_object_add(obj, "model", json_object_new_string(IMAGE_MODEL_NAMES[imageModel]));
@@ -510,87 +515,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 
 	json_object_put(obj);
 
-	/* The following needs to be done once per socket */
-	if((ssl = SSL_new(ctx)) != NULL) {
-		/* Lookup hostname */
-		if ((hostent = gethostbyname(HOST)) != NULL) {
-			memset(&addr, 0, sizeof(addr));
-			addr.sin_family = AF_INET;
-			addr.sin_port = htons(PORT);
-			addr.sin_len = hostent->h_length;;
-			memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
-		}
-		else {
-			displayError("Host lookup failed");
-			return NULL;
-		}
-
-		/* Create a socket and connect to the server */
-		if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
-			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-				displayError("Couldn't connect to server");
-				return NULL;
-			}
-		}
-
-		/* Check if connection was established */
-		if (sock >= 0) {
-			/* Associate the socket with the ssl structure */
-			SSL_set_fd(ssl, sock);
-
-			/* Set up SNI (Server Name Indication) */
-			SSL_set_tlsext_host_name(ssl, HOST);
-
-			/* Perform SSL handshake */
-			if((ssl_err = SSL_connect(ssl)) >= 0) {
-				// printf("SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
-			}
-			
-			/* If there were errors, print them */
-			if (ssl_err < 0) {
-				LONG err = SSL_get_error(ssl, ssl_err);
-				switch (err) {
-					case SSL_ERROR_ZERO_RETURN:
-						printf("SSL_ERROR_ZERO_RETURN\n");
-						break;
-					case SSL_ERROR_WANT_READ:
-						printf("SSL_ERROR_WANT_READ\n");
-						break;
-					case SSL_ERROR_WANT_WRITE:
-						printf("SSL_ERROR_WANT_WRITE\n");
-						break;
-					case SSL_ERROR_WANT_CONNECT:
-						printf("SSL_ERROR_WANT_CONNECT\n");
-						break;
-					case SSL_ERROR_WANT_ACCEPT:
-						printf("SSL_ERROR_WANT_ACCEPT\n");
-						break;
-					case SSL_ERROR_WANT_X509_LOOKUP:
-						printf("SSL_ERROR_WANT_X509_LOOKUP\n");
-						break;
-					case SSL_ERROR_SYSCALL:
-						printf("SSL_ERROR_SYSCALL\n");
-						break;
-					case SSL_ERROR_SSL:
-						printf("SSL_ERROR_SSL\n");
-						break;
-					default:
-						printf("Unknown error: %ld\n", err);
-						break;
-				}
-				return NULL;
-			}
-		} else {
-			displayError("Couldn't connect to host!");
-			return NULL;
-		}
-	} else {
-		displayError("Couldn't create new SSL handle!");
-		return NULL;
-	}
-
 	updateStatusBar("Sending request...", 7);
-
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
 	if (ssl_err > 0) {
@@ -632,7 +557,6 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 					}
 					
 					doneReading = TRUE;
-
 					break;
 				case SSL_ERROR_ZERO_RETURN:
 					printf("SSL_ERROR_ZERO_RETURN\n");
@@ -698,10 +622,11 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 		}
 	}
 
+	CloseSocket(sock);
 	SSL_shutdown(ssl);
 	SSL_free(ssl);
 	ssl = NULL;
-
+	sock = -1;
 	return response;
 }
 
@@ -712,8 +637,6 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/ 
 ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
-	struct sockaddr_in addr;
-	struct hostent *hostent;
 	struct json_object *response;
 
 	BPTR fileHandle = Open(destination, MODE_NEWFILE);
@@ -757,105 +680,8 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		"User-Agent: AmigaGPT\r\n"
 		, pathString, hostString);
 
-	/* The following needs to be done once per socket */
-	if (ssl != NULL) {
-		SSL_shutdown(ssl);
-		SSL_free(ssl);
-	}
-
-	if (sock >- 0) {
-		CloseSocket(sock);
-	}
-
 	updateStatusBar("Connecting...", 7);
-
-	if((ssl = SSL_new(ctx)) != NULL) {
-		/* Lookup hostname */
-		if ((hostent = gethostbyname(hostString)) != NULL) {
-			memset(&addr, 0, sizeof(addr));
-			addr.sin_family = AF_INET;
-			addr.sin_port = htons(PORT);
-			addr.sin_len = hostent->h_length;;
-			memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
-		}
-		else {
-			displayError("Host lookup failed");
-			FreeVec(writeBuffer);
-			Close(fileHandle);
-			return NULL;
-		}
-
-		/* Create a socket and connect to the server */
-		if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
-			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-				displayError("Couldn't connect to server");
-				FreeVec(writeBuffer);
-				Close(fileHandle);
-				return NULL;
-			}
-		}
-
-		/* Check if connection was established */
-		if (sock >= 0) {
-			/* Associate the socket with the ssl structure */
-			SSL_set_fd(ssl, sock);
-
-			/* Set up SNI (Server Name Indication) */
-			SSL_set_tlsext_host_name(ssl, hostString);
-
-			/* Perform SSL handshake */
-			if((ssl_err = SSL_connect(ssl)) >= 0) {
-				// printf("SSL connection to %s using %s\n\0", HOST, SSL_get_cipher(ssl));
-			}
-			
-			/* If there were errors, print them */
-			if (ssl_err < 0) {
-				LONG err = SSL_get_error(ssl, ssl_err);
-				switch (err) {
-					case SSL_ERROR_ZERO_RETURN:
-						printf("SSL_ERROR_ZERO_RETURN\n");
-						break;
-					case SSL_ERROR_WANT_READ:
-						printf("SSL_ERROR_WANT_READ\n");
-						break;
-					case SSL_ERROR_WANT_WRITE:
-						printf("SSL_ERROR_WANT_WRITE\n");
-						break;
-					case SSL_ERROR_WANT_CONNECT:
-						printf("SSL_ERROR_WANT_CONNECT\n");
-						break;
-					case SSL_ERROR_WANT_ACCEPT:
-						printf("SSL_ERROR_WANT_ACCEPT\n");
-						break;
-					case SSL_ERROR_WANT_X509_LOOKUP:
-						printf("SSL_ERROR_WANT_X509_LOOKUP\n");
-						break;
-					case SSL_ERROR_SYSCALL:
-						printf("SSL_ERROR_SYSCALL\n");
-						break;
-					case SSL_ERROR_SSL:
-						printf("SSL_ERROR_SSL\n");
-						break;
-					default:
-						printf("Unknown error: %ld\n", err);
-						break;
-				}
-				FreeVec(writeBuffer);
-				Close(fileHandle);
-				return NULL;
-			}
-		} else {
-			displayError("Couldn't connect to host!");
-			FreeVec(writeBuffer);
-			Close(fileHandle);
-			return NULL;
-		}
-	} else {
-		displayError("Couldn't create new SSL handle!");
-		FreeVec(writeBuffer);
-		Close(fileHandle);
-		return NULL;
-	}
+	createSSLConnection(hostString, 443);
 
 	updateStatusBar("Sending request...", 7);
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
@@ -868,35 +694,42 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		UBYTE statusMessage[64];
 		LONG contentLength = 0;
 		STRPTR dataStart = NULL;
-		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_CLEAR);
+		BOOL headersRead = FALSE;
+		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH , MEMF_CLEAR);
 		while (!doneReading) {
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
-			if (contentLength == 0) {
-				STRPTR contentLengthStart = strstr(tempReadBuffer, "Content-Length: ");
-				if (contentLengthStart != NULL) {
-					contentLengthStart += 16;
-					STRPTR contentLengthEnd = strstr(contentLengthStart, "\r\n");
-					if (contentLengthEnd != NULL) {
-						contentLength = atoi(contentLengthStart);
+			if (!headersRead) {
+				if (contentLength == 0) {
+					STRPTR contentLengthStart = strstr(tempReadBuffer, "Content-Length: ");
+					if (contentLengthStart != NULL) {
+						contentLengthStart += 16;
+						STRPTR contentLengthEnd = strstr(contentLengthStart, "\r\n");
+						if (contentLengthEnd != NULL) {
+							contentLength = atoi(contentLengthStart);
+						}
 					}
 				}
-			}
-			if (dataStart == NULL) {
 				dataStart = strstr(tempReadBuffer, "\r\n\r\n");
 				if (dataStart != NULL) {
+					headersRead = TRUE;
 					dataStart += 4;
-					bytesRead -= (dataStart - tempReadBuffer);
-					Write(fileHandle, dataStart, bytesRead);
+					bytesRead -= (dataStart - tempReadBuffer);					
+				} else {
+					continue;
 				}
 			} else {
-				Write(fileHandle, tempReadBuffer, bytesRead);
+				dataStart = tempReadBuffer;
 			}
 			snprintf(statusMessage, sizeof(statusMessage), "Downloaded %lu/%ld bytes", totalBytesRead, contentLength);
 			updateStatusBar(statusMessage, 7);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
 				case SSL_ERROR_NONE:
+					Write(fileHandle, dataStart, bytesRead);
 					totalBytesRead += bytesRead;
+					if (totalBytesRead >= contentLength) {
+						doneReading = TRUE;
+					}
 					break;
 				case SSL_ERROR_ZERO_RETURN:
 					printf("SSL_ERROR_ZERO_RETURN\n");
@@ -921,9 +754,23 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 					printf("SSL_ERROR_SYSCALL\n");
 					ULONG err = ERR_get_error();
 					printf("error: %lu\n", err);
-					break;
 				case SSL_ERROR_SSL:
-					doneReading = TRUE;
+					updateStatusBar("Lost connection. Reconnecting...", 7);
+					CloseSocket(sock);
+					SSL_shutdown(ssl);
+					SSL_free(ssl);
+					ssl = NULL;
+					sock = -1;
+					createSSLConnection(hostString, 443);
+
+					headersRead = FALSE;
+					dataStart = NULL;
+					snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "GET %s HTTP/1.1\r\n"
+						"Host: %s\r\n"
+						"User-Agent: AmigaGPT\r\n"
+						"Range: bytes=%lu-\r\n\r\n\0"
+						, pathString, hostString, totalBytesRead);
+					SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 					break;
 				default:
 					printf("Unknown error\n");
@@ -965,9 +812,11 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		return RETURN_ERROR;
 	}
 
+	CloseSocket(sock);
 	SSL_shutdown(ssl);
 	SSL_free(ssl);
 	ssl = NULL;
+	sock = -1;
 
 	FreeVec(writeBuffer);
 	Close(fileHandle);
