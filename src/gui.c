@@ -319,6 +319,7 @@ static void freeConversationList();
 static void freeImageList();
 static void freeModeSelectionTabList();
 static void removeConversationFromConversationList(struct MinList *conversation);
+static void saveImageCopy(struct GeneratedImage *image);
 static void removeImageFromImageList(struct GeneratedImage *image);
 static void openChatFontRequester();
 static void openUIFontRequester();
@@ -1999,6 +2000,49 @@ static void removeConversationFromConversationList(struct MinList *conversation)
 }
 
 /**
+ * Save a copy of the image
+ * @param image The image to save a copy of
+**/ 
+static void saveImageCopy(struct GeneratedImage *image) {
+	STRPTR filePath = image->filePath;
+	struct FileRequester *fileReq = AllocAslRequestTags(ASL_FileRequest, TAG_END);
+	if (fileReq != NULL) {
+		if (AslRequestTags(fileReq,
+		ASLFR_Window, mainWindow,
+		ASLFR_TitleText, "Save Image Copy",
+		ASLFR_InitialFile, "image.png",
+		ASLFR_InitialDrawer, "SYS:",
+		ASLFR_DoSaveMode, TRUE,
+		TAG_DONE)) {
+			STRPTR savePath = fileReq->fr_Drawer;
+			STRPTR saveName = fileReq->fr_File;
+			STRPTR fullPath = AllocVec(strlen(savePath) + strlen(saveName) + 1, MEMF_CLEAR);
+			snprintf(fullPath, strlen(savePath) + strlen(saveName) + 1, "%s%s", savePath, saveName);
+			BPTR file = Open(fullPath, MODE_NEWFILE);
+			if (file == 0) {
+				displayDiskError("Failed to create image file. The image copy will not be saved.", IoErr());
+				FreeVec(fullPath);
+				FreeAslRequest(fileReq);
+				return RETURN_ERROR;
+			}
+
+			BPTR originalImage = Open(filePath, MODE_OLDFILE);
+			UBYTE *buffer = AllocVec(1024, MEMF_CLEAR);
+			LONG bytesRead;
+			while ((bytesRead = Read(originalImage, buffer, 1024)) > 0) {
+				Write(file, buffer, bytesRead);
+			}
+			FreeVec(buffer);
+			Close(originalImage);
+			Close(file);
+			FreeVec(fullPath);
+		}
+
+		FreeAslRequest(fileReq);
+	}
+}
+
+/**
  * Remove an image from the image list
  * @param image The image to remove from the image list
 **/
@@ -2009,6 +2053,7 @@ static void removeImageFromImageList(struct GeneratedImage *image) {
 		struct GeneratedImage *listBrowserImage;
 		GetListBrowserNodeAttrs(node, LBNA_UserData, (struct GeneratedImage *)&listBrowserImage, TAG_END);
 		if (listBrowserImage == image) {
+			DeleteFile(image->filePath);
 			SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
 			SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
 			Remove(node);
@@ -2158,6 +2203,9 @@ LONG startGUIRunLoop() {
 						}
 						case OPEN_ORIGINAL_IMAGE_BUTTON_ID:
 							openImage(currentImage, currentImage->width, currentImage->height);
+							break;
+						case SAVE_COPY_BUTTON_ID:
+							saveImageCopy(currentImage);
 							break;
 					}
 					break;
