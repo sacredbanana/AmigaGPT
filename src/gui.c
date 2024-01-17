@@ -70,8 +70,9 @@
 #define DELETE_IMAGE_BUTTON_ID 14
 #define OPEN_SMALL_IMAGE_BUTTON_ID 15
 #define OPEN_MEDIUM_IMAGE_BUTTON_ID 16
-#define OPEN_FULL_SIZE_IMAGE_BUTTON_ID 17
-#define SAVE_COPY_BUTTON_ID 18
+#define OPEN_LARGE_IMAGE_BUTTON_ID 17
+#define OPEN_ORIGINAL_IMAGE_BUTTON_ID 18
+#define SAVE_COPY_BUTTON_ID 19
 
 #define MODE_SELECTION_TAB_CHAT_ID 0
 #define MODE_SELECTION_TAB_IMAGE_GENERATION_ID 1
@@ -195,6 +196,7 @@ static Object *deleteImageButton;
 static Object *openSmallImageButton;
 static Object *openMediumImageButton;
 static Object *openLargeImageButton;
+static Object *openOriginalImageButton;
 static Object *saveCopyButton;
 static Object *createDeleteButtonsLayout;
 static Object *imageHistoryButtonsLayout;
@@ -206,8 +208,10 @@ static LONG sendMessageButtonPen;
 static LONG newChatButtonPen;
 static LONG deleteChatButtonPen;
 struct MinList *currentConversation;
+static struct GeneratedImage *currentImage;
 struct List *conversationList;
 struct List *modeSelectionTabList;
+struct List *imageList;
 static struct TextFont *uiTextFont = NULL;
 static struct TextAttr screenFont = {
 	.ta_Name = "",
@@ -279,6 +283,19 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "View Documentation", 0, 0, 0, MENU_ITEM_VIEW_DOCUMENTATION_ID},
 	{NM_END, NULL, 0, 0, 0, 0}
 };
+/**
+ * Struct representing a generated image
+ * @see enum ImageSize
+ * @see enum ImageModel
+ **/ 
+static struct GeneratedImage {
+	STRPTR name;
+	STRPTR filePath;
+	STRPTR prompt;
+	enum ImageModel imageModel;
+	WORD width;
+	WORD height;
+};
 struct Hook idcmpHookMainWindow;
 struct Hook idcmpHookCreateImageWindow;
 struct MsgPort *appPort;
@@ -293,20 +310,25 @@ static void refreshOpenAIMenuItems();
 static void refreshSpeechMenuItems();
 static struct MinList* newConversation();
 static void addTextToConversation(struct MinList *conversation, STRPTR text, STRPTR role);
-static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation, STRPTR title);
+static void addConversationToConversationList(struct MinList *conversation, STRPTR title);
+static void addImageToImageList(struct GeneratedImage *image);
 static struct MinList* getConversationFromConversationList(struct List *conversationList, ULONG index);
 static void displayConversation(struct MinList *conversation);
 static void freeConversation(struct MinList *conversation);
 static void freeConversationList();
+static void freeImageList();
 static void freeModeSelectionTabList();
-static void removeConversationFromConversationList(struct List *conversationList, struct MinList *conversation);
+static void removeConversationFromConversationList(struct MinList *conversation);
+static void removeImageFromImageList(struct GeneratedImage *image);
 static void openChatFontRequester();
 static void openUIFontRequester();
 static void openAboutWindow();
 static void openSpeechAccentRequester();
 static void openApiKeyRequester();
 static void openChatSystemRequester();
+static void openImage(struct GeneratedImage *generatedImage, WORD width, WORD height);
 static LONG loadConversations();
+static LONG loadImages();
 static LONG saveConversations();
 static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String);
 static STRPTR UTF8ToISO8859_1(CONST_STRPTR utf8String);
@@ -773,6 +795,11 @@ LONG initVideo() {
 	currentConversation = NULL;
 	loadConversations();
 
+	imageList = AllocVec(sizeof(struct List), MEMF_CLEAR);
+	NewList(imageList);
+	currentImage = NULL;
+	loadImages();
+
 	uiTextAttr.ta_Name = config.uiFontName;
 	uiTextAttr.ta_YSize = config.uiFontSize;
 	uiTextAttr.ta_Style = config.uiFontStyle;
@@ -820,7 +847,7 @@ LONG initVideo() {
 		LISTBROWSER_WrapText, TRUE,
 		LISTBROWSER_AutoFit, TRUE,
 		LISTBROWSER_ShowSelected, TRUE,
-		// LISTBROWSER_Labels, imageList,
+		LISTBROWSER_Labels, imageList,
 		TAG_DONE)) == NULL) {
 			printf("Could not create image list browser\n");
 			return RETURN_ERROR;
@@ -883,16 +910,30 @@ LONG initVideo() {
 	}
 
 	if ((openLargeImageButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, OPEN_FULL_SIZE_IMAGE_BUTTON_ID,
+		GA_ID, OPEN_LARGE_IMAGE_BUTTON_ID,
 		BUTTON_TextPen, sendMessageButtonPen,
 		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"Open Full Size Image",
+		GA_Text, (ULONG)"Open Large Image",
 		GA_RelVerify, TRUE,
 		ICA_TARGET, ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
-			printf("Could not create open full size image button\n");
+			printf("Could not create open large image button\n");
+			return RETURN_ERROR;
+	}
+
+	if ((openOriginalImageButton = NewObject(BUTTON_GetClass(), NULL,
+		GA_ID, OPEN_ORIGINAL_IMAGE_BUTTON_ID,
+		BUTTON_TextPen, sendMessageButtonPen,
+		BUTTON_BackgroundPen, 0,
+		GA_TextAttr, &uiTextAttr,
+		BUTTON_Justification, BCJ_CENTER,
+		GA_Text, (ULONG)"Open Original Image",
+		GA_RelVerify, TRUE,
+		ICA_TARGET, ICTARGET_IDCMP,
+		TAG_DONE)) == NULL) {
+			printf("Could not open original image button\n");
 			return RETURN_ERROR;
 	}
 
@@ -1115,10 +1156,12 @@ LONG initVideo() {
 		CHILD_WeightedHeight, 10,
 		LAYOUT_AddChild, openLargeImageButton,
 		CHILD_WeightedHeight, 10,
+		LAYOUT_AddChild, openOriginalImageButton,
+		CHILD_WeightedHeight, 10,
 		LAYOUT_AddChild, saveCopyButton,
 		CHILD_WeightedHeight, 10,
 		LAYOUT_AddChild, textInputTextEditor,
-		CHILD_WeightedHeight, 50,
+		CHILD_WeightedHeight, 40,
 		CHILD_NoDispose, TRUE,
 		LAYOUT_AddChild, createImageButton,
 		CHILD_WeightedHeight, 10,
@@ -1590,7 +1633,7 @@ static void sendChatMessage() {
 			if (responses[0] != NULL) {
 				STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
 				formatText(responseString);
-				addConversationToConversationList(conversationList, currentConversation, responseString);
+				addConversationToConversationList(currentConversation, responseString);
 				updateStatusBar("Ready", 5);
 				struct MinNode *titleRequestNode = RemTail(currentConversation);
 				FreeVec(titleRequestNode);
@@ -1778,11 +1821,10 @@ static void addTextToConversation(struct MinList *conversation, STRPTR text, STR
 
 /**
  * Add a conversation to the conversation list
- * @param conversationList The conversation list to add the conversation to
  * @param conversation The conversation to add to the conversation list
  * @param title The title of the conversation
 **/
-static void addConversationToConversationList(struct List *conversationList, struct MinList *conversation, STRPTR title) {
+static void addConversationToConversationList(struct MinList *conversation, STRPTR title) {
 	struct Node *node;
 	if ((node = AllocListBrowserNode(1,
 		LBNCA_CopyText, TRUE,
@@ -1796,6 +1838,26 @@ static void addConversationToConversationList(struct List *conversationList, str
 	SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
 	AddHead(conversationList, node);
 	SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
+}
+
+/**
+ * Add an image to the image list
+ * @param image The image to add to the imagelist
+**/
+static void addImageToImageList(struct GeneratedImage *image) {
+	struct Node *node;
+	if ((node = AllocListBrowserNode(1,
+		LBNCA_CopyText, TRUE,
+		LBNCA_Text, image->name,
+		LBNA_UserData, (ULONG)image,
+		TAG_DONE)) == NULL) {
+			printf("Could not create image list browser node\n");
+			return RETURN_ERROR;
+	}
+
+	SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
+	AddHead(imageList, node);
+	SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
 }
 
 /**
@@ -1888,6 +1950,22 @@ static void freeConversationList() {
 }
 
 /**
+ * Free the image list
+**/
+static void freeImageList() {
+	struct Node *imageListNode;
+	while ((imageListNode = RemHead(imageList)) != NULL) {
+		struct GeneratedImage *generatedImage;
+		GetListBrowserNodeAttrs(imageListNode, LBNA_UserData, (ULONG *)&generatedImage, TAG_END);
+		FreeVec(generatedImage->filePath);
+		FreeVec(generatedImage->name);
+		FreeVec(generatedImage->prompt);
+		FreeVec(generatedImage);
+	}
+	FreeVec(imageList);
+}
+
+/**
  * Free the mode selection tab list
 **/
 static void freeModeSelectionTabList() {
@@ -1899,10 +1977,9 @@ static void freeModeSelectionTabList() {
 
 /**
  * Remove a conversation from the conversation list
- * @param conversationList The conversation list to remove the conversation from
  * @param conversation The conversation to remove from the conversation list
 **/
-static void removeConversationFromConversationList(struct List *conversationList, struct MinList *conversation) {
+static void removeConversationFromConversationList(struct MinList *conversation) {
 	if (conversation == NULL) return;
 	struct Node *node = conversationList->lh_Head;
 	while (node != NULL) {
@@ -1915,6 +1992,32 @@ static void removeConversationFromConversationList(struct List *conversationList
 			FreeListBrowserNode(node);
 			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
 			freeConversation(conversation);
+			return;
+		}
+		node = node->ln_Succ;
+	}
+}
+
+/**
+ * Remove an image from the image list
+ * @param image The image to remove from the image list
+**/
+static void removeImageFromImageList(struct GeneratedImage *image) {
+	if (image == NULL) return;
+	struct Node *node = imageList->lh_Head;
+	while (node != NULL) {
+		struct GeneratedImage *listBrowserImage;
+		GetListBrowserNodeAttrs(node, LBNA_UserData, (struct GeneratedImage *)&listBrowserImage, TAG_END);
+		if (listBrowserImage == image) {
+			SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
+			SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
+			Remove(node);
+			FreeListBrowserNode(node);
+			SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
+			FreeVec(image->filePath);
+			FreeVec(image->name);
+			FreeVec(image->prompt);
+			FreeVec(image);
 			return;
 		}
 		node = node->ln_Succ;
@@ -1977,7 +2080,7 @@ LONG startGUIRunLoop() {
 							activeTextEditorGadgetID = TEXT_INPUT_TEXT_EDITOR_ID;
 							break;
 						case DELETE_CHAT_BUTTON_ID:
-							removeConversationFromConversationList(conversationList, currentConversation);
+							removeConversationFromConversationList(currentConversation);
 							currentConversation = NULL;
 							DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 							ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
@@ -1995,8 +2098,66 @@ LONG startGUIRunLoop() {
 								displayConversation(currentConversation);
 								break;
 							}
+						case IMAGE_LIST_BROWSER_ID:
+							{
+								// Switch to the image the user clicked on in the list
+								struct ListBrowserNode *node;
+								GetAttr(LISTBROWSER_SelectedNode, imageListBrowser, &node);
+								struct GeneratedImage *image;
+								GetListBrowserNodeAttrs(node, LBNA_UserData,&image, TAG_END);
+								currentImage = image;
+								break;
+							}
 						case CREATE_IMAGE_BUTTON_ID:
 							createImage();
+							saveImages();
+							break;
+						case DELETE_IMAGE_BUTTON_ID:
+							removeImageFromImageList(currentImage);
+							currentImage = NULL;
+							saveImages();
+							break;
+						case OPEN_SMALL_IMAGE_BUTTON_ID:
+						{
+							if (currentImage->width == currentImage->height)
+								openImage(currentImage, 256, 256);
+							else if (currentImage->width > currentImage->height) {
+								LONG height = (currentImage->height * 256) / currentImage->width;
+								openImage(currentImage, 256, height);
+							} else {
+								LONG width = (currentImage->width * 256) / currentImage->height;
+								openImage(currentImage, width, 256);
+							}
+							break;
+						}
+						case OPEN_MEDIUM_IMAGE_BUTTON_ID:
+						{
+							if (currentImage->width == currentImage->height)
+								openImage(currentImage, 512, 512);
+							else if (currentImage->width > currentImage->height) {
+								LONG height = (currentImage->height * 512) / currentImage->width;
+								openImage(currentImage, 512, height);
+							} else {
+								LONG width = (currentImage->width * 512) / currentImage->height;
+								openImage(currentImage, width, 512);
+							}
+							break;
+						}
+						case OPEN_LARGE_IMAGE_BUTTON_ID:
+						{
+							if (currentImage->width == currentImage->height)
+								openImage(currentImage, 1024, 1024);
+							else if (currentImage->width > currentImage->height) {
+								LONG height = (currentImage->height * 1024) / currentImage->width;
+								openImage(currentImage, 1024, height);
+							} else {
+								LONG width = (currentImage->width * 1024) / currentImage->height;
+								openImage(currentImage, width, 1024);
+							}
+							break;
+						}
+						case OPEN_ORIGINAL_IMAGE_BUTTON_ID:
+							openImage(currentImage, currentImage->width, currentImage->height);
 							break;
 					}
 					break;
@@ -2253,6 +2414,7 @@ LONG startGUIRunLoop() {
 	}
 
 	saveConversations();
+	saveImages();
 
 	return RETURN_OK;
 }
@@ -2579,6 +2741,48 @@ LONG saveConversations() {
 	return RETURN_OK;
 }
 
+/**
+ * Saves the images to disk
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
+LONG saveImages() {
+	BPTR file = Open("PROGDIR:image-history.json", MODE_NEWFILE);
+	if (file == 0) {
+		displayDiskError("Failed to create image history file. Image history will not be saved.", IoErr());
+		return RETURN_ERROR;
+	}
+
+	struct json_object *imagesJsonArray = json_object_new_array();
+	struct json_object *imageJsonObject;
+	struct Node *imageListNode = imageList->lh_Head;
+	while (imageListNode->ln_Succ) {
+		imageJsonObject = json_object_new_object();
+		struct GeneratedImage *generatedImage;
+		GetListBrowserNodeAttrs(imageListNode, LBNA_UserData, &generatedImage, TAG_END);
+		json_object_object_add(imageJsonObject, "name", json_object_new_string(generatedImage->name));
+		json_object_object_add(imageJsonObject, "filePath", json_object_new_string(generatedImage->filePath));
+		json_object_object_add(imageJsonObject, "prompt", json_object_new_string(generatedImage->prompt));
+		json_object_object_add(imageJsonObject, "imageModel", json_object_new_int(generatedImage->imageModel));
+		json_object_object_add(imageJsonObject, "width", json_object_new_int(generatedImage->width));
+		json_object_object_add(imageJsonObject, "height", json_object_new_int(generatedImage->height));
+		json_object_array_add(imagesJsonArray, imageJsonObject);
+		imageListNode = imageListNode->ln_Succ;
+	}
+
+	STRPTR imagesJsonString = (STRPTR)json_object_to_json_string_ext(imagesJsonArray, JSON_C_TO_STRING_PRETTY);
+
+	if (Write(file, imagesJsonString, strlen(imagesJsonString)) != (LONG)strlen(imagesJsonString)) {
+		displayError("Failed to write to image history file. Image history will not be saved.");
+		Close(file);
+		json_object_put(imagesJsonArray);
+		return RETURN_ERROR;
+	}
+
+	Close(file);
+	json_object_put(imagesJsonArray);
+	return RETURN_OK;
+}
+
 static void createImage() {
 	struct json_object *response;
 
@@ -2616,9 +2820,6 @@ static void createImage() {
 	struct json_object *dataObject = (struct json_object *)data->array[0];
 
 	STRPTR url = json_object_get_string(json_object_object_get(dataObject, "url"));
-
-	FreeVec(text);
-	FreeVec(textUTF_8);
 
 	CreateDir("PROGDIR:images");
 
@@ -2665,13 +2866,38 @@ static void createImage() {
 			break;
 	}
 
-	WORD lowestWidth = (screen->Width - 16) < imageWidth ? (screen->Width - 16) : imageWidth;
-	WORD lowestHeight = screen->Height < imageHeight ? screen->Height : imageHeight;
+	struct GeneratedImage *generatedImage = AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
+	generatedImage->name = AllocVec(11, MEMF_ANY | MEMF_CLEAR);
+	strcpy(generatedImage->name, id);
+	generatedImage->filePath = AllocVec(strlen(fullPath) + 1, MEMF_ANY | MEMF_CLEAR);
+	strcpy(generatedImage->filePath, fullPath);
+	generatedImage->prompt = AllocVec(strlen(text) + 1, MEMF_ANY | MEMF_CLEAR);
+	strcpy(generatedImage->prompt, text);
+	generatedImage->imageModel = config.imageModel;
+	generatedImage->width = imageWidth;
+	generatedImage->height = imageHeight;
+	addImageToImageList(generatedImage);
+	currentImage = generatedImage;
+
+	FreeVec(text);
+	FreeVec(textUTF_8);
+	return;
+}
+
+/**
+ * Opens and displays the image with sfaling
+ * @param image the image to open
+ * @param width the width of the image
+ * @param height the height of the image
+**/ 
+static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scaledHeight) {
+	WORD lowestWidth = (screen->Width - 16) < scaledWidth ? (screen->Width - 16) : scaledWidth;
+	WORD lowestHeight = screen->Height < scaledHeight ? screen->Height : scaledHeight;
 
 	if ((createImageWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
-		WA_Title, "Generated Image",
+		WA_Title, image->name,
 		WA_Width, lowestWidth,
 		WA_Height, lowestHeight,
 		WA_CloseGadget, TRUE,
@@ -2700,7 +2926,7 @@ static void createImage() {
 
 	updateStatusBar("Loading image...", 7);
 
-	if ((dataTypeObject = NewDTObject(fullPath,
+	if ((dataTypeObject = NewDTObject(image->filePath,
 		DTA_SourceType, DTST_FILE,
 		DTA_GroupID, GID_PICTURE,
 		PDTA_Remap, TRUE,
@@ -2828,7 +3054,7 @@ static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String) {
  * Load the conversations from disk
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
-LONG loadConversations() {
+static LONG loadConversations() {
 	BPTR file = Open("PROGDIR:chat-history.json", MODE_OLDFILE);
 	if (file == 0) {
 		return RETURN_OK;
@@ -2911,10 +3137,134 @@ LONG loadConversations() {
 			STRPTR content = json_object_get_string(contentJsonObject);
 			addTextToConversation(conversation, content, role);
 		}
-		addConversationToConversationList(conversationList, conversation, conversationName);
+		addConversationToConversationList(conversation, conversationName);
 	}
 
 	json_object_put(conversationsJsonArray);
+	return RETURN_OK;
+}
+
+/**
+ * Load the images from disk
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
+static LONG loadImages() {
+	BPTR file = Open("PROGDIR:image-history.json", MODE_OLDFILE);
+	if (file == 0) {
+		return RETURN_OK;
+	}
+
+	#ifdef __AMIGAOS3__
+	Seek(file, 0, OFFSET_END);
+	LONG fileSize = Seek(file, 0, OFFSET_BEGINNING);
+	#else
+	int64 fileSize = GetFileSize(file);
+	#endif
+	STRPTR imagesJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
+	if (Read(file, imagesJsonString, fileSize) != fileSize) {
+		displayDiskError("Failed to read from image history file. Image generation history will not be loaded", IoErr());
+		Close(file);
+		FreeVec(imagesJsonString);
+		return RETURN_ERROR;
+	}
+
+	Close(file);
+
+	struct json_object *imagesJsonArray = json_tokener_parse(imagesJsonString);
+	if (imagesJsonArray == NULL) {
+		if (Rename("PROGDIR:image-history.json", "PROGDIR:image-history.json.bak")) {
+			displayDiskError("Failed to parse image history. Malformed JSON. The image-history.json file is probably corrupted. Image history will not be loaded. A backup of the image-history.json file has been created as image-history.json.bak", IoErr());
+		} else if (copyFile("PROGDIR:image-history.json", "RAM:image-history.json")) {
+			displayError("Failed to parse image history. Malformed JSON. The image-history.json file is probably corrupted. Image history will not be loaded. There was an error writing a backup of the image history to disk but a copy has been saved to RAM:image-history.json.bak");
+			#ifdef __AMIGAOS3__
+			if (!DeleteFile("PROGDIR:image-history.json")) {
+			#else
+			if (!Delete("PROGDIR:image-history.json")) {
+			#endif
+				displayDiskError("Failed to delete image-history.json. Please delete this file manually.", IoErr());
+			}
+		}
+
+		FreeVec(imagesJsonString);
+		return RETURN_ERROR;
+	}
+
+	for (UWORD i = 0; i < json_object_array_length(imagesJsonArray); i++) {
+		struct json_object *imageJsonObject = json_object_array_get_idx(imagesJsonArray, i);
+		struct json_object *imageNameJsonObject;
+		if (!json_object_object_get_ex(imageJsonObject, "name", &imageNameJsonObject)) {
+			displayError("Failed to parse image history. \"name\" is missing from the image. The image-history.json file is probably corrupted. Image history will not be loaded.");
+			FreeVec(imagesJsonString);
+			json_object_put(imagesJsonArray);
+			return RETURN_ERROR;
+		}
+
+		STRPTR imageName = json_object_get_string(imageNameJsonObject);
+
+		struct json_object *imageFilePathJsonObject;
+		if (!json_object_object_get_ex(imageJsonObject, "filePath", &imageFilePathJsonObject)) {
+			displayError("Failed to parse image history. \"filePath\" is missing from the image. The image-history.json file is probably corrupted. Image history will not be loaded.");
+			FreeVec(imagesJsonString);
+			json_object_put(imagesJsonArray);
+			return RETURN_ERROR;
+		}
+
+		STRPTR imageFilePath = json_object_get_string(imageFilePathJsonObject);
+
+		struct json_object *imagePromptJsonObject;
+		if (!json_object_object_get_ex(imageJsonObject, "prompt", &imagePromptJsonObject)) {
+			displayError("Failed to parse image history. \"prompt\" is missing from the image. The image-history.json file is probably corrupted. Image history will not be loaded.");
+			FreeVec(imagesJsonString);
+			json_object_put(imagesJsonArray);
+			return RETURN_ERROR;
+		}
+
+		STRPTR imagePrompt = json_object_get_string(imagePromptJsonObject);
+
+		struct json_object *imageModelJsonObject;
+		if (!json_object_object_get_ex(imageJsonObject, "imageModel", &imageModelJsonObject)) {
+			displayError("Failed to parse image history. \"imageModel\" is missing from the image. The image-history.json file is probably corrupted. Image history will not be loaded.");
+			FreeVec(imagesJsonString);
+			json_object_put(imagesJsonArray);
+			return RETURN_ERROR;
+		}
+
+		enum ImageModel imageModel = json_object_get_int(imageModelJsonObject);
+
+		struct json_object *imageWidthJsonObject;
+		if (!json_object_object_get_ex(imageJsonObject, "width", &imageWidthJsonObject)) {
+			displayError("Failed to parse image history. \"width\" is missing from the image. The image-history.json file is probably corrupted. Image history will not be loaded.");
+			FreeVec(imagesJsonString);
+			json_object_put(imagesJsonArray);
+			return RETURN_ERROR;
+		}
+
+		UWORD imageWidth = (WORD)json_object_get_int(imageWidthJsonObject);
+
+		struct json_object *imageHeightJsonObject;
+		if (!json_object_object_get_ex(imageJsonObject, "height", &imageHeightJsonObject)) {
+			displayError("Failed to parse image history. \"height\" is missing from the image. The image-history.json file is probably corrupted. Image history will not be loaded.");
+			FreeVec(imagesJsonString);
+			json_object_put(imagesJsonArray);
+			return RETURN_ERROR;
+		}
+
+		UWORD imageHeight = (WORD)json_object_get_int(imageHeightJsonObject);
+
+		struct GeneratedImage *generatedImage = AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
+		generatedImage->name = AllocVec(strlen(imageName) + 1, MEMF_ANY);
+		strcpy(generatedImage->name, imageName);
+		generatedImage->filePath = AllocVec(strlen(imageFilePath) + 1, MEMF_ANY);
+		strcpy(generatedImage->filePath, imageFilePath);
+		generatedImage->prompt = AllocVec(strlen(imagePrompt) + 1, MEMF_ANY);
+		strcpy(generatedImage->prompt, imagePrompt);
+		generatedImage->imageModel = imageModel;
+		generatedImage->width = imageWidth;
+		generatedImage->height = imageHeight;
+		addImageToImageList(generatedImage);
+	}
+
+	json_object_put(imagesJsonArray);
 	return RETURN_OK;
 }
 
@@ -2988,6 +3338,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 **/
 void shutdownGUI() {
 	freeConversationList();
+	freeImageList();
 	if (mainWindowObject) {
 		DisposeObject(mainWindowObject);
 	}
