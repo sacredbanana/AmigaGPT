@@ -428,7 +428,6 @@ struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum 
 					}
 					
 					doneReading = TRUE;
-
 					break;
 				case SSL_ERROR_ZERO_RETURN:
 					printf("SSL_ERROR_ZERO_RETURN\n");
@@ -519,7 +518,9 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 	memset(readBuffer, 0, READ_BUFFER_LENGTH);
 
 	updateStatusBar("Connecting...", 7);
-	createSSLConnection(OPENAI_HOST, OPENAI_PORT);
+	if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+		return NULL;
+	}
 
 	struct json_object *obj = json_object_new_object();
 	json_object_object_add(obj, "model", json_object_new_string(IMAGE_MODEL_NAMES[imageModel]));
@@ -701,7 +702,10 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		, pathString, hostString);
 
 	updateStatusBar("Connecting...", 7);
-	createSSLConnection(hostString, 443);
+	if(createSSLConnection(hostString, 443) == RETURN_ERROR) {
+		Close(fileHandle);
+		return RETURN_ERROR;
+	}
 
 	updateStatusBar("Sending request...", 7);
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
@@ -781,7 +785,11 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 					SSL_free(ssl);
 					ssl = NULL;
 					sock = -1;
-					createSSLConnection(hostString, 443);
+					if (createSSLConnection(hostString, 443) == RETURN_ERROR) {
+						Close(fileHandle);
+						FreeVec(tempReadBuffer);
+						return RETURN_ERROR;
+					}
 
 					headersRead = FALSE;
 					dataStart = NULL;
