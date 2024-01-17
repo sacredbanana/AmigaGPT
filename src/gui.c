@@ -2620,7 +2620,19 @@ static void createImage() {
 	FreeVec(text);
 	FreeVec(textUTF_8);
 
-	downloadFile(url, "PROGDIR:output.png");
+	CreateDir("PROGDIR:images");
+
+	// Generate unique ID for the image
+	UBYTE fullPath[30] = "";
+	UBYTE id[11] = "";
+	CONST_STRPTR idChars = "abcdefghijklmnopqrstuvwxyz0123456789";
+	srand(time(NULL));
+	for (int i = 0; i < 9; i++) {
+		id[i] = idChars[rand() % strlen(idChars)];
+	}
+	snprintf(fullPath, sizeof(fullPath), "PROGDIR:images/%s.png", id);
+
+	downloadFile(url, fullPath);
 
 	json_object_put(response);
 
@@ -2688,7 +2700,7 @@ static void createImage() {
 
 	updateStatusBar("Loading image...", 7);
 
-	if ((dataTypeObject = NewDTObject("PROGDIR:output.png",
+	if ((dataTypeObject = NewDTObject(fullPath,
 		DTA_SourceType, DTST_FILE,
 		DTA_GroupID, GID_PICTURE,
 		PDTA_Remap, TRUE,
