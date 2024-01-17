@@ -218,9 +218,11 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
 			addr.sin_port = port;
 			addr.sin_len = hostent->h_length;
 			memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
-		}
-		else {
+		} else {
 			displayError("Host lookup failed");
+			SSL_shutdown(ssl);
+			SSL_free(ssl);
+			ssl = NULL;
 			return RETURN_ERROR;
 		}
 
@@ -228,8 +230,19 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
 		if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
 			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 				displayError("Couldn't connect to server");
+				CloseSocket(sock);
+				SSL_shutdown(ssl);
+				SSL_free(ssl);
+				ssl = NULL;
+				sock = -1;
 				return RETURN_ERROR;
 			}
+		} else {
+			displayError("Couldn't create socket");
+			SSL_shutdown(ssl);
+			SSL_free(ssl);
+			ssl = NULL;
+			return RETURN_ERROR;
 		}
 
 		/* Check if connection was established */
@@ -277,10 +290,20 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
 						printf("Unknown error: %ld\n", err);
 						break;
 				}
+				CloseSocket(sock);
+				SSL_shutdown(ssl);
+				SSL_free(ssl);
+				ssl = NULL;
+				sock = -1;
 				return RETURN_ERROR;
 			}
 		} else {
 			displayError("Couldn't connect to host!");
+			CloseSocket(sock);
+			SSL_shutdown(ssl);
+			SSL_free(ssl);
+			ssl = NULL;
+			sock = -1;
 			return RETURN_ERROR;
 		}
 	} else {
