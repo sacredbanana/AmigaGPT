@@ -338,11 +338,11 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 		WORD bytesRead = 0;
 		BOOL doneReading = FALSE;
 		LONG err = 0;
-		STRPTR statusMessage[64];
+		UBYTE statusMessage[64];
 		while (!doneReading) {
 			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
-			snprintf(statusMessage, 64, "Downloading response... (%lu bytes)", totalBytesRead);
+			snprintf(statusMessage, sizeof(statusMessage), "Downloading response... (%lu bytes)", totalBytesRead);
 			updateStatusBar(statusMessage, 7);
 			strcat(readBuffer, tempReadBuffer);
 			FreeVec(tempReadBuffer);
@@ -598,11 +598,11 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 		WORD bytesRead = 0;
 		BOOL doneReading = FALSE;
 		LONG err = 0;
-		STRPTR statusMessage[64];
+		UBYTE statusMessage[64];
 		while (!doneReading) {
 			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
-			snprintf(statusMessage, 64, "Downloading image... (%lu bytes)", totalBytesRead);
+			snprintf(statusMessage, sizeof(statusMessage), "Downloading image... (%lu bytes)", totalBytesRead);
 			updateStatusBar(statusMessage, 7);
 			strcat(readBuffer, tempReadBuffer);
 			FreeVec(tempReadBuffer);
@@ -722,14 +722,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		return RETURN_ERROR;
 	}
 
-	APTR downloadBuffer = AllocVec(DOWNLOAD_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
-	APTR writeBuffer = AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
-
-	if (downloadBuffer == NULL) {
-        displayError("Couldn't allocate memory for download buffer");
-        Close(fileHandle);
-        return RETURN_ERROR;
-    }
+	APTR writeBuffer = AllocVec(WRITE_BUFFER_LENGTH, MEMF_CLEAR);
 
     UBYTE hostString[64];
     UBYTE pathString[2056];
@@ -738,7 +731,6 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
     CONST_STRPTR urlStart = strstr(url, "://");
     if (urlStart == NULL) {
         displayError("Invalid URL format");
-        FreeVec(downloadBuffer);
 		FreeVec(writeBuffer);
         Close(fileHandle);
         return RETURN_ERROR;
@@ -788,7 +780,6 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		}
 		else {
 			displayError("Host lookup failed");
-			FreeVec(downloadBuffer);
 			FreeVec(writeBuffer);
 			Close(fileHandle);
 			return NULL;
@@ -798,7 +789,6 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
 			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 				displayError("Couldn't connect to server");
-				FreeVec(downloadBuffer);
 				FreeVec(writeBuffer);
 				Close(fileHandle);
 				return NULL;
@@ -850,21 +840,18 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 						printf("Unknown error: %ld\n", err);
 						break;
 				}
-				FreeVec(downloadBuffer);
 				FreeVec(writeBuffer);
 				Close(fileHandle);
 				return NULL;
 			}
 		} else {
 			displayError("Couldn't connect to host!");
-			FreeVec(downloadBuffer);
 			FreeVec(writeBuffer);
 			Close(fileHandle);
 			return NULL;
 		}
 	} else {
 		displayError("Couldn't create new SSL handle!");
-		FreeVec(downloadBuffer);
 		FreeVec(writeBuffer);
 		Close(fileHandle);
 		return NULL;
@@ -878,14 +865,34 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		WORD bytesRead = 0;
 		BOOL doneReading = FALSE;
 		LONG err = 0;
-		STRPTR statusMessage[64];
+		UBYTE statusMessage[64];
+		LONG contentLength = 0;
+		STRPTR dataStart = NULL;
+		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_CLEAR);
 		while (!doneReading) {
-			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
-			snprintf(statusMessage, 64, "Downloaded... %lu bytes", totalBytesRead);
+			if (contentLength == 0) {
+				STRPTR contentLengthStart = strstr(tempReadBuffer, "Content-Length: ");
+				if (contentLengthStart != NULL) {
+					contentLengthStart += 16;
+					STRPTR contentLengthEnd = strstr(contentLengthStart, "\r\n");
+					if (contentLengthEnd != NULL) {
+						contentLength = atoi(contentLengthStart);
+					}
+				}
+			}
+			if (dataStart == NULL) {
+				dataStart = strstr(tempReadBuffer, "\r\n\r\n");
+				if (dataStart != NULL) {
+					dataStart += 4;
+					bytesRead -= (dataStart - tempReadBuffer);
+					Write(fileHandle, dataStart, bytesRead);
+				}
+			} else {
+				Write(fileHandle, tempReadBuffer, bytesRead);
+			}
+			snprintf(statusMessage, sizeof(statusMessage), "Downloaded %lu/%ld bytes", totalBytesRead, contentLength);
 			updateStatusBar(statusMessage, 7);
-			memcpy(downloadBuffer + totalBytesRead, tempReadBuffer, bytesRead);
-			FreeVec(tempReadBuffer);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
 				case SSL_ERROR_NONE:
@@ -923,16 +930,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 					break;
 			}            
 		}
-
-		APTR pngData = strstr(downloadBuffer, "\x89\x50\x4E\x47");
-		if (pngData == NULL) {
-			displayError("Couldn't find PNG header in response");
-			FreeVec(downloadBuffer);
-			FreeVec(writeBuffer);
-			Close(fileHandle);
-			return RETURN_ERROR;
-		}
-		Write(fileHandle, pngData, totalBytesRead - (pngData - downloadBuffer));
+		FreeVec(tempReadBuffer);
 	} else {
 		displayError("Couldn't write request!\n");
 		LONG err = SSL_get_error(ssl, ssl_err);
@@ -962,7 +960,6 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 				printf("Unknown error: %ld\n", err);
 				break;
 		}
-		FreeVec(downloadBuffer);
 		FreeVec(writeBuffer);
 		Close(fileHandle);
 		return RETURN_ERROR;
@@ -972,7 +969,6 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 	SSL_free(ssl);
 	ssl = NULL;
 
-	FreeVec(downloadBuffer);
 	FreeVec(writeBuffer);
 	Close(fileHandle);
 	return RETURN_OK;

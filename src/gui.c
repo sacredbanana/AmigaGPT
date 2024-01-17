@@ -735,7 +735,7 @@ LONG initVideo() {
 	struct Node *chatTabNode = AllocClickTabNode(TAG_DONE);
 	SetClickTabNodeAttrs(chatTabNode,
 	 TNA_Text, "Chat",
-	 TNA_TextPen, 0,
+	 TNA_TextPen, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1,
 	 #ifdef __AMIGAOS4__
 	 TNA_HintInfo, "Have a text conversation with ChatGPT",
 	 #endif
