@@ -2866,13 +2866,36 @@ static void createImage() {
 			break;
 	}
 
+	updateStatusBar("Generating image name...", 7);
+	struct MinList *imageNameConversation = newConversation();
+	addTextToConversation(imageNameConversation, text, "user");
+	addTextToConversation(imageNameConversation, "generate a short title for this image and don't enclose the title in quotes or prefix the response with anything", "user");
+	struct json_object **responses = postChatMessageToOpenAI(imageNameConversation, config.chatModel, config.openAiApiKey, FALSE);
+	
 	struct GeneratedImage *generatedImage = AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
-	generatedImage->name = AllocVec(11, MEMF_ANY | MEMF_CLEAR);
-	strcpy(generatedImage->name, id);
+	if (responses[0] != NULL) {
+		STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
+		formatText(responseString);
+		generatedImage->name = AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
+		strncpy(generatedImage->name, responseString, strlen(responseString));
+		updateStatusBar("Ready", 5);
+		json_object_put(responses[0]);
+		FreeVec(responses);
+	} else {
+		generatedImage->name = AllocVec(11, MEMF_ANY | MEMF_CLEAR);
+		strncpy(generatedImage->name, id, 10);
+		updateStatusBar("Ready", 5);
+		if (responses != NULL) {
+			FreeVec(responses);
+		}
+		displayError("Failed to generate image name. Using ID instead.");
+	}
+	freeConversation(imageNameConversation);
+
 	generatedImage->filePath = AllocVec(strlen(fullPath) + 1, MEMF_ANY | MEMF_CLEAR);
-	strcpy(generatedImage->filePath, fullPath);
+	strncpy(generatedImage->filePath, fullPath, strlen(fullPath));
 	generatedImage->prompt = AllocVec(strlen(text) + 1, MEMF_ANY | MEMF_CLEAR);
-	strcpy(generatedImage->prompt, text);
+	strncpy(generatedImage->prompt, text, strlen(text));
 	generatedImage->imageModel = config.imageModel;
 	generatedImage->width = imageWidth;
 	generatedImage->height = imageHeight;
