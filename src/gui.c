@@ -3351,7 +3351,6 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 
 	do {
 		bytesRead = Read(srcFile, buffer, FILE_BUFFER_SIZE);
-		printf("bytesRead: %ld\n", bytesRead);
 
 		if (bytesRead > 0) {
 			bytesWritten = Write(dstFile, buffer, bytesRead);
