@@ -65,6 +65,13 @@
 #define DELETE_CHAT_BUTTON_ID 9
 #define CREATE_IMAGE_BUTTON_ID 10
 #define CLICKTAB_MODE_SELECTION_ID 11
+#define IMAGE_LIST_BROWSER_ID 12
+#define NEW_IMAGE_BUTTON_ID 13
+#define DELETE_IMAGE_BUTTON_ID 14
+#define OPEN_SMALL_IMAGE_BUTTON_ID 15
+#define OPEN_MEDIUM_IMAGE_BUTTON_ID 16
+#define OPEN_FULL_SIZE_IMAGE_BUTTON_ID 17
+#define SAVE_COPY_BUTTON_ID 18
 
 #define MODE_SELECTION_TAB_CHAT_ID 0
 #define MODE_SELECTION_TAB_IMAGE_GENERATION_ID 1
@@ -182,6 +189,15 @@ static Object *newChatButton;
 static Object *deleteChatButton;
 static Object *createImageButton;
 static Object *dataTypeObject;
+static Object *imageListBrowser;
+static Object *newImageButton;
+static Object *deleteImageButton;
+static Object *openSmallImageButton;
+static Object *openMediumImageButton;
+static Object *openLargeImageButton;
+static Object *saveCopyButton;
+static Object *createDeleteButtonsLayout;
+static Object *imageHistoryButtonsLayout;
 static struct Screen *screen;
 static BOOL isPublicScreen;
 static WORD pens[32+1];
@@ -403,7 +419,6 @@ static void __SAVE_DS__ __ASM__ processIDCMPCreateImageWindow(__REG__ (a0, struc
 						break;
 				}
 			}
-
 			break;
 		}
 		case IDCMP_REFRESHWINDOW:
@@ -798,6 +813,127 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	if ((imageListBrowser = NewObject(LISTBROWSER_GetClass(), NULL,
+		GA_ID, IMAGE_LIST_BROWSER_ID,
+		GA_RelVerify, TRUE,
+		GA_TextAttr, &uiTextAttr,
+		LISTBROWSER_WrapText, TRUE,
+		LISTBROWSER_AutoFit, TRUE,
+		LISTBROWSER_ShowSelected, TRUE,
+		// LISTBROWSER_Labels, imageList,
+		TAG_DONE)) == NULL) {
+			printf("Could not create image list browser\n");
+			return RETURN_ERROR;
+	}
+
+	if ((newImageButton = NewObject(BUTTON_GetClass(), NULL,
+		GA_ID, NEW_IMAGE_BUTTON_ID,
+		BUTTON_TextPen, sendMessageButtonPen,
+		BUTTON_BackgroundPen, 0,
+		GA_TextAttr, &uiTextAttr,
+		BUTTON_Justification, BCJ_CENTER,
+		GA_Text, (ULONG)"New Image",
+		GA_RelVerify, TRUE,
+		ICA_TARGET, ICTARGET_IDCMP,
+		TAG_DONE)) == NULL) {
+			printf("Could not create new image button\n");
+			return RETURN_ERROR;
+	}
+
+	if ((deleteImageButton = NewObject(BUTTON_GetClass(), NULL,
+		GA_ID, DELETE_IMAGE_BUTTON_ID,
+		BUTTON_TextPen, sendMessageButtonPen,
+		BUTTON_BackgroundPen, 0,
+		GA_TextAttr, &uiTextAttr,
+		BUTTON_Justification, BCJ_CENTER,
+		GA_Text, (ULONG)"Delete Image",
+		GA_RelVerify, TRUE,
+		ICA_TARGET, ICTARGET_IDCMP,
+		TAG_DONE)) == NULL) {
+			printf("Could not create delete image button\n");
+			return RETURN_ERROR;
+	}
+
+	if ((openSmallImageButton = NewObject(BUTTON_GetClass(), NULL,
+		GA_ID, OPEN_SMALL_IMAGE_BUTTON_ID,
+		BUTTON_TextPen, sendMessageButtonPen,
+		BUTTON_BackgroundPen, 0,
+		GA_TextAttr, &uiTextAttr,
+		BUTTON_Justification, BCJ_CENTER,
+		GA_Text, (ULONG)"Open Small Image",
+		GA_RelVerify, TRUE,
+		ICA_TARGET, ICTARGET_IDCMP,
+		TAG_DONE)) == NULL) {
+			printf("Could not create open small image button\n");
+			return RETURN_ERROR;
+	}
+
+	if ((openMediumImageButton = NewObject(BUTTON_GetClass(), NULL,
+		GA_ID, OPEN_MEDIUM_IMAGE_BUTTON_ID,
+		BUTTON_TextPen, sendMessageButtonPen,
+		BUTTON_BackgroundPen, 0,
+		GA_TextAttr, &uiTextAttr,
+		BUTTON_Justification, BCJ_CENTER,
+		GA_Text, (ULONG)"Open Medium Image",
+		GA_RelVerify, TRUE,
+		ICA_TARGET, ICTARGET_IDCMP,
+		TAG_DONE)) == NULL) {
+			printf("Could not create open medium image button\n");
+			return RETURN_ERROR;
+	}
+
+	if ((openLargeImageButton = NewObject(BUTTON_GetClass(), NULL,
+		GA_ID, OPEN_FULL_SIZE_IMAGE_BUTTON_ID,
+		BUTTON_TextPen, sendMessageButtonPen,
+		BUTTON_BackgroundPen, 0,
+		GA_TextAttr, &uiTextAttr,
+		BUTTON_Justification, BCJ_CENTER,
+		GA_Text, (ULONG)"Open Full Size Image",
+		GA_RelVerify, TRUE,
+		ICA_TARGET, ICTARGET_IDCMP,
+		TAG_DONE)) == NULL) {
+			printf("Could not create open full size image button\n");
+			return RETURN_ERROR;
+	}
+
+	if ((saveCopyButton = NewObject(BUTTON_GetClass(), NULL,
+		GA_ID, SAVE_COPY_BUTTON_ID,
+		BUTTON_TextPen, sendMessageButtonPen,
+		BUTTON_BackgroundPen, 0,
+		GA_TextAttr, &uiTextAttr,
+		BUTTON_Justification, BCJ_CENTER,
+		GA_Text, (ULONG)"Save Copy",
+		GA_RelVerify, TRUE,
+		ICA_TARGET, ICTARGET_IDCMP,
+		TAG_DONE)) == NULL) {
+			printf("Could not save copy button\n");
+			return RETURN_ERROR;
+	}
+
+	if ((createDeleteButtonsLayout = NewObject(LAYOUT_GetClass(), NULL,
+		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
+		LAYOUT_SpaceInner, TRUE,
+		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_AddChild, newImageButton,
+		LAYOUT_AddChild, deleteImageButton,
+		TAG_DONE)) == NULL) {
+			printf("Could not create create/delete buttons layout\n");
+			return RETURN_ERROR;
+	}
+
+	if ((imageHistoryButtonsLayout = NewObject(LAYOUT_GetClass(), NULL,
+		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+		LAYOUT_SpaceInner, TRUE,
+		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_AddChild, createDeleteButtonsLayout,
+		CHILD_WeightedHeight, 10,
+		LAYOUT_AddChild, imageListBrowser,
+		CHILD_WeightedWidth, 90,
+		TAG_DONE)) == NULL) {
+			printf("Could not create image history buttons layout\n");
+			return RETURN_ERROR;
+	}
+
 	pen = 5;
 	newChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
 
@@ -973,11 +1109,19 @@ LONG initVideo() {
 		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_AddChild, openSmallImageButton,
+		CHILD_WeightedHeight, 10,
+		LAYOUT_AddChild, openMediumImageButton,
+		CHILD_WeightedHeight, 10,
+		LAYOUT_AddChild, openLargeImageButton,
+		CHILD_WeightedHeight, 10,
+		LAYOUT_AddChild, saveCopyButton,
+		CHILD_WeightedHeight, 10,
 		LAYOUT_AddChild, textInputTextEditor,
-		CHILD_WeightedHeight, 80,
+		CHILD_WeightedHeight, 50,
 		CHILD_NoDispose, TRUE,
 		LAYOUT_AddChild, createImageButton,
-		CHILD_WeightedHeight, 20,
+		CHILD_WeightedHeight, 10,
 		TAG_DONE)) == NULL) {
 			printf("Could not create image generation input layout\n");
 			return RETURN_ERROR;
@@ -1001,8 +1145,10 @@ LONG initVideo() {
 		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_AddChild, imageHistoryButtonsLayout,
+		CHILD_WeightedWidth, 30,
 		LAYOUT_AddChild, imageGenerationTextBoxesLayout,
-		CHILD_WeightedWidth, 100,
+		CHILD_WeightedWidth, 70,
 		TAG_DONE)) == NULL) {
 			printf("Could not create image generation layout\n");
 			return RETURN_ERROR;
