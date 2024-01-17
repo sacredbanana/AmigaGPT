@@ -330,6 +330,7 @@ static void openChatSystemRequester();
 static void openImage(struct GeneratedImage *generatedImage, WORD width, WORD height);
 static LONG loadConversations();
 static LONG loadImages();
+static LONG saveImages();
 static LONG saveConversations();
 static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String);
 static STRPTR UTF8ToISO8859_1(CONST_STRPTR utf8String);
@@ -2037,7 +2038,11 @@ static void removeImageFromImageList(struct GeneratedImage *image) {
 		struct GeneratedImage *listBrowserImage;
 		GetListBrowserNodeAttrs(node, LBNA_UserData, (struct GeneratedImage *)&listBrowserImage, TAG_END);
 		if (listBrowserImage == image) {
+			#ifdef __AMIGAOS3__
 			DeleteFile(image->filePath);
+			#else
+			Delete(image->filePath);
+			#endif
 			SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
 			SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
 			Remove(node);
@@ -2777,7 +2782,7 @@ LONG saveConversations() {
  * Saves the images to disk
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
-LONG saveImages() {
+static LONG saveImages() {
 	BPTR file = Open("PROGDIR:image-history.json", MODE_NEWFILE);
 	if (file == 0) {
 		displayDiskError("Failed to create image history file. Image history will not be saved.", IoErr());

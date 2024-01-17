@@ -717,17 +717,17 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		LONG err = 0;
 		UBYTE statusMessage[64];
 		LONG contentLength = 0;
-		STRPTR dataStart = NULL;
+		UBYTE *dataStart = NULL;
 		BOOL headersRead = FALSE;
 		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH , MEMF_CLEAR);
 		while (!doneReading) {
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
 			if (!headersRead) {
 				if (contentLength == 0) {
-					STRPTR contentLengthStart = strstr(tempReadBuffer, "Content-Length: ");
+					UBYTE *contentLengthStart = strstr(tempReadBuffer, "Content-Length: ");
 					if (contentLengthStart != NULL) {
 						contentLengthStart += 16;
-						STRPTR contentLengthEnd = strstr(contentLengthStart, "\r\n");
+						UBYTE *contentLengthEnd = strstr(contentLengthStart, "\r\n");
 						if (contentLengthEnd != NULL) {
 							contentLength = atoi(contentLengthStart);
 						}
