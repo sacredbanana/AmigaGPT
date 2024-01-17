@@ -327,8 +327,6 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 	static BOOL streamingInProgress = FALSE;
 	UWORD responseIndex = 0;
 
-	memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
-
 	if (!stream || !streamingInProgress) {
 		memset(readBuffer, 0, READ_BUFFER_LENGTH);
 		streamingInProgress = stream;
@@ -358,12 +356,14 @@ struct json_object** postMessageToOpenAI(struct MinList *conversation, enum Mode
 				"Authorization: Bearer %s\r\n"
 				"User-Agent: AmigaGPT\r\n"
 				"Content-Length: %lu\r\n\r\n"
-				"%s", openAiApiKey, strlen(jsonString), jsonString);
+				"%s\0", openAiApiKey, strlen(jsonString), jsonString);
 
 		json_object_put(obj);
 
 		updateStatusBar("Connecting...", 7);
-		createSSLConnection(OPENAI_HOST, OPENAI_PORT);
+		if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+			return NULL;
+		}
 
 		updateStatusBar("Sending request...", 7);
 		ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
@@ -516,7 +516,6 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 	static BOOL streamingInProgress = FALSE;
 	UWORD responseIndex = 0;
 
-	memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 	memset(readBuffer, 0, READ_BUFFER_LENGTH);
 
 	updateStatusBar("Connecting...", 7);
@@ -534,7 +533,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 			"Authorization: Bearer %s\r\n"
 			"User-Agent: AmigaGPT\r\n"
 			"Content-Length: %lu\r\n\r\n"
-			"%s", openAiApiKey, strlen(jsonString), jsonString);
+			"%s\0", openAiApiKey, strlen(jsonString), jsonString);
 
 	json_object_put(obj);
 
@@ -547,13 +546,12 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 		BOOL doneReading = FALSE;
 		LONG err = 0;
 		UBYTE statusMessage[64];
+		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 		while (!doneReading) {
-			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
 			snprintf(statusMessage, sizeof(statusMessage), "Downloading image... (%lu bytes)", totalBytesRead);
 			updateStatusBar(statusMessage, 7);
 			strcat(readBuffer, tempReadBuffer);
-			FreeVec(tempReadBuffer);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
 				case SSL_ERROR_NONE:
@@ -575,8 +573,8 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 					}
 					
 					if (json_tokener_parse(lastJsonString) == NULL) {
-							snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0", lastJsonString);
-							continue;
+						snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0", lastJsonString);
+						continue;
 					}
 					
 					doneReading = TRUE;
@@ -614,6 +612,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 					break;
 			}            
 		}
+		FreeVec(tempReadBuffer);
 	} else {
 		displayError("Couldn't write request!\n");
 		LONG err = SSL_get_error(ssl, ssl_err);
@@ -668,8 +667,6 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		return RETURN_ERROR;
 	}
 
-	APTR writeBuffer = AllocVec(WRITE_BUFFER_LENGTH, MEMF_CLEAR);
-
     UBYTE hostString[64];
     UBYTE pathString[2056];
 
@@ -700,7 +697,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
     // Construct the HTTP GET request
     snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "GET %s HTTP/1.1\r\n"
         "Host: %s\r\n\r\n"
-		"User-Agent: AmigaGPT\r\n"
+		"User-Agent: AmigaGPT\r\n\r\n\0"
 		, pathString, hostString);
 
 	updateStatusBar("Connecting...", 7);
@@ -830,7 +827,6 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 				printf("Unknown error: %ld\n", err);
 				break;
 		}
-		FreeVec(writeBuffer);
 		Close(fileHandle);
 		return RETURN_ERROR;
 	}
@@ -841,7 +837,6 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 	ssl = NULL;
 	sock = -1;
 
-	FreeVec(writeBuffer);
 	Close(fileHandle);
 	return RETURN_OK;
 }
