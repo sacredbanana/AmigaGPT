@@ -2004,6 +2004,7 @@ static void removeConversationFromConversationList(struct MinList *conversation)
  * @param image The image to save a copy of
 **/ 
 static void saveImageCopy(struct GeneratedImage *image) {
+	if (image == NULL) return;
 	STRPTR filePath = image->filePath;
 	struct FileRequester *fileReq = AllocAslRequestTags(ASL_FileRequest, TAG_END);
 	if (fileReq != NULL) {
@@ -2018,26 +2019,9 @@ static void saveImageCopy(struct GeneratedImage *image) {
 			STRPTR saveName = fileReq->fr_File;
 			STRPTR fullPath = AllocVec(strlen(savePath) + strlen(saveName) + 1, MEMF_CLEAR);
 			snprintf(fullPath, strlen(savePath) + strlen(saveName) + 1, "%s%s", savePath, saveName);
-			BPTR file = Open(fullPath, MODE_NEWFILE);
-			if (file == 0) {
-				displayDiskError("Failed to create image file. The image copy will not be saved.", IoErr());
-				FreeVec(fullPath);
-				FreeAslRequest(fileReq);
-				return RETURN_ERROR;
-			}
-
-			BPTR originalImage = Open(filePath, MODE_OLDFILE);
-			UBYTE *buffer = AllocVec(1024, MEMF_CLEAR);
-			LONG bytesRead;
-			while ((bytesRead = Read(originalImage, buffer, 1024)) > 0) {
-				Write(file, buffer, bytesRead);
-			}
-			FreeVec(buffer);
-			Close(originalImage);
-			Close(file);
+			copyFile(filePath, fullPath);
 			FreeVec(fullPath);
 		}
-
 		FreeAslRequest(fileReq);
 	}
 }
@@ -2962,6 +2946,7 @@ static void createImage() {
  * @param height the height of the image
 **/ 
 static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scaledHeight) {
+	if (image == NULL) return;
 	WORD lowestWidth = (screen->Width - 16) < scaledWidth ? (screen->Width - 16) : scaledWidth;
 	WORD lowestHeight = screen->Height < scaledHeight ? screen->Height : scaledHeight;
 
@@ -3027,16 +3012,10 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scale
 		signals = Wait(signalMask);
 		while ((result = DoMethod(createImageWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
 			switch (result & WMHI_CLASSMASK) {
-				case WMHI_GADGETUP:
-					switch (result & WMHI_GADGETMASK) {
-						default:
-							break;
-					}
-					break;
+				case WMHI_RAWKEY:
 				case WMHI_CLOSEWINDOW:
+				case WMHI_MOUSEBUTTONS:
 					done = TRUE;
-					break;
-				default:
 					break;
 			}
 		}
@@ -3371,7 +3350,8 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 	}
 
 	do {
-		bytesRead = Read(srcFile, buffer, sizeof(buffer));
+		bytesRead = Read(srcFile, buffer, FILE_BUFFER_SIZE);
+		printf("bytesRead: %ld\n", bytesRead);
 
 		if (bytesRead > 0) {
 			bytesWritten = Write(dstFile, buffer, bytesRead);
