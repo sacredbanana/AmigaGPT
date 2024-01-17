@@ -1379,7 +1379,7 @@ static void sendChatMessage() {
 	UWORD wordNumber = 0;
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 	do {
-		responses = postMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, TRUE);
+		responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, TRUE);
 		UWORD responseIndex = 0;
 		struct json_object *response;
 		while (response = responses[responseIndex++]) {
@@ -1440,7 +1440,7 @@ static void sendChatMessage() {
 		if (isNewConversation) {
 			updateStatusBar("Generating conversation title...", 7);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
-			responses = postMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, FALSE);
+			responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, FALSE);
 			if (responses[0] != NULL) {
 				STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
 				formatText(responseString);
