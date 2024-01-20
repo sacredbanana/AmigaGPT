@@ -6,7 +6,7 @@
 - About screen can now be dismissed with any key press or mouse click
 - The OpenAI API key requester now populates with the existing key if it exists so you can more easily find and fix typos in the key
 - Added the ability to set the chat system (new "Chat System" menu item)
-- Fix crash when having a conversation consising of a few messages
+- Fix crash when having a conversation consisting of a few messages
 
 ## 1.3.1 (2023-12-02)
 - Fix pasting into chat input textbox (AmigaOS 3.2 and 4.1 only for now)
