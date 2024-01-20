@@ -14,6 +14,7 @@ program brings state-of-the-art language modeling to your Amiga computer.
 
 Features:
 - Generates text based on input prompts
+- Generates images based on input prompts
 - UI customisation
 - Full conversation history
 - Text-to-speech
@@ -112,6 +113,8 @@ before you can start chatting. If you haven't already done so, create an
 OpenAI account and navigate to https://platform.openai.com/account/api-keys to
 generate an API key for use with AmigaGPT.
 
+*Chat*
+
 When the app has opened, you are presented with a text input box. You can type
 any prompt into this box and press "Send" to see the GPT-4 model's response.
 The generated text appears in the box above the input. You can choose to have
@@ -121,6 +124,21 @@ model for OpenAI to use in the "OpenAI" menu option.
 To the left of the chat box is a conversation list which you can use to go to
 another saved conversation. New conversations can be created with the "New
 chat" button and conversations can be removed with the "Delete chat" button.
+
+There are 2 main modes of operation: Chat and Image Generation. You can switch
+between them via the tabs in the top left corner.
+
+*Image Generation*
+
+To generate images, simply select your desired image generation model from the
+"OpenAI" menu then type your prompt in the text box then hit the "Create Image"
+button. When it has been downloaded to your Amiga, you are then able to open
+the image to your desired scale, or save a copy of the file to a new location
+on your Amiga. Do note however that AmigaGPT will automatially save all your
+generated images until you delete them. This is just in case you would like to
+create a copy elsewhere.
+
+*General*
 
 In the "Edit" menu, you'll find basic text editing commands like Cut, Copy,
 Paste and Clear. The "View" menu allows you to change the font used in the
@@ -190,6 +208,17 @@ Special Thanks:
  https://www.hyperion-entertainment.com
 
 Changelog:
+
+------------------
+1.4.0 (2024-01-21) 
+------------------
+- AI image generation! Switch between chat and image generation mode by clicking the tabs at the top of the screen
+- Colour tweaks
+- Status bar shows more information and colours
+- About screen can now be dismissed with any key press or mouse click
+- The OpenAI API key requester now populates with the existing key if it exists so you can more easily find and fix typos in the key
+- Added the ability to set the chat system (new "Chat System" menu item)
+- Fix crash when having a conversation consising of a few messages
 
 ------------------
 1.3.1 (2023-12-02)

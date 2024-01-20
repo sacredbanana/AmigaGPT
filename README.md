@@ -11,9 +11,13 @@ AmigaGPT is a text generation program that runs on the classic AmigaOS. Utilisin
 
 **AmigaGPT** uses the GPT-4 architecture developed by OpenAI to generate coherent, context-aware responses to your input.
 
+- ### AI Image Generation with DALL-E 2 and DALL-E 3
+
+**AmigaGPT** can access the powerful DALL-E models to generate images from a prompt. You can view and save the images right inside the app.
+
 - ### Seamless integration with AmigaOS
 
-AmigaGPT takes full advantage of the latest AmigaOS 3.2 API to provide a smooth, native user experience without the need to have third party frameworks installed.
+**AmigaGPT** takes full advantage of the latest AmigaOS 3.2 API to provide a smooth, native user experience without the need to have third party frameworks installed.
 
 - ### UI customisation
 
@@ -79,15 +83,37 @@ When launched, **AmigaGPT** presents you with a choice of opening the app in a n
 
 When launching for the first time you will need to enter your OpenAI API key before you can start chatting. If you haven't already done so, create an OpenAI account and navigate to https://platform.openai.com/account/api-keys to generate an API key for use with **AmigaGPT**.
 
-When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "**Send**" to see the GPT-4 model's response. The generated text appears in the box above the input. You can choose to have this text read aloud using the "**Speech**" menu option. You can also select which model for OpenAI to use in the "**OpenAI**" menu option.
+There are 2 main modes of operation: Chat and Image Generation. You can switch between them via the tabs in the top left corner.
+
+### Chat
+
+When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "**Send**" to see the GPT model's response. The generated text appears in the box above the input. You can choose to have this text read aloud using the "**Speech**" menu option. You can also select which model for OpenAI to use in the "**OpenAI**" menu option.
 
 To the left of the chat box is a conversation list which you can use to go to another saved conversation. New conversations can be created with the "**New chat**" button and conversations can be removed with the "**Delete chat**" button.
+
+### Image Generation
+
+To generate images, simply select your desired image generation model from the "**OpenAI**" menu then type your prompt in the text box then hit the "**Create Image**" button. When it has been downloaded to your Amiga, you are then able to open the image to your desired scale, or save a copy of the file to a new location on your Amiga. Do note however that AmigaGPT will automatially save all your generated images until you delete them. This is just in case you would like to create a copy elsewhere.
+
+### General
 
 In the "**Edit**" menu, you'll find basic text editing commands like **Cut**, **Copy**, **Paste** and **Clear**. The "**View**" menu allows you to change the font used in the chat and the UI.
 
 The "**Project**" menu includes an "**About**" option, which displays information about the program.
 
 ## Models
+
+### **Image Generation**
+
+### DALL-E 3
+
+The latest DALL·E model released in Nov 2023.
+
+### DALL-E 2
+
+The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E with more realistic, accurate, and 4x greater resolution images than the original model.
+
+### **Chat**
 
 ### **GPT-4**
 *GPT-4 is currently in a limited beta and only accessible to those who have been granted access. Please join the [waitlist](https://openai.com/waitlist/gpt-4) to get access.*

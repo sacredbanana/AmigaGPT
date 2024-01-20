@@ -148,6 +148,7 @@ Click on a topic to learn about it:
 @{"Screen select " link screen}
 @{"Entering your OpenAI API key " link apikey}
 @{"Chatting with ChatGPT " link chatting}
+@{"Generating images " link images}
 @{"Conversation list " link conlist}
 @{"Edit menu " link editmenu}
 @{"Changing the font of the UI and chat " link font}
@@ -158,6 +159,8 @@ Click on a topic to learn about it:
 @{b}Selecting a screen to open AmigaGPT in@{ub}
 
 When launched, AmigaGPT presents you with a choice of opening the app in a new screen or opening in Workbench. If you open in a new screen you have the ability to create a screen for the app to open in. AmigaGPT supports anything from 320x200 all the way up to 4k resolution if using a video card for RTG. Bear in mind text will appear very tiny in resolutions above 1080p so you may want to increase the font size settings from the View menu when the app opens.
+
+There are 2 main modes of operation: Chat and Image Generation. You can switch between them via the tabs in the top left corner.
 
 @endnode
 
@@ -181,6 +184,13 @@ You can choose to have this text read aloud using the "Speech" menu option. You 
 @{b}Conversation list@{ub}
 
 To the left of the chat box is a conversation list which you can use to go to another saved conversation. New conversations can be created with the "New chat" button and conversations can be removed with the "Delete chat" button. Your conversations will get saved and they will appear again the next time you open AmigaGPT.
+
+@endnode
+
+@node images "Generating images"
+@{b}Generating Images@{ub}
+
+To generate images, simply select your desired image generation model from the "OpenAI" menu then type your prompt in the text box then hit the "Create Image" button. When it has been downloaded to your Amiga, you are then able to open the image to your desired scale, or save a copy of the file to a new location on your Amiga. Do note however that AmigaGPT will automatially save all your generated images until you delete them. This is just in case you would like to create a copy elsewhere.
 
 @endnode
 
@@ -585,6 +595,18 @@ palm/include/fdlibm.h
 @node models "Models"
 @{b}Models@{ub}
 
+@{b}Image Generation@{ub}
+
+@{b}DALL-E 3@{ub}
+
+The latest DALL·E model released in Nov 2023.
+
+@{b}DALL-E 2@{ub}
+
+The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E with more realistic, accurate, and 4x greater resolution images than the original model.
+
+@{b}Chat@{ub}
+
 @{b}GPT-4@{ub}
 
 
@@ -681,6 +703,16 @@ Training data: Up to Sep 2021
 
 @node changelog "Changelog"
 @{b}Changelog@{ub}
+
+@{b}1.4.0 (2024-01-21)@{ub}
+
+- AI image generation! Switch between chat and image generation mode by clicking the tabs at the top of the screen
+- Colour tweaks
+- Status bar shows more information and colours
+- About screen can now be dismissed with any key press or mouse click
+- The OpenAI API key requester now populates with the existing key if it exists so you can more easily find and fix typos in the key
+- Added the ability to set the chat system (new "Chat System" menu item)
+- Fix crash when having a conversation consising of a few messages
 
 @{b}1.3.1 (2023-12-02)@{ub}
 
