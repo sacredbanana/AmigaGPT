@@ -782,8 +782,8 @@ LONG initVideo() {
 	  TAG_DONE);
 	struct Node *imageGenerationTabNode = AllocClickTabNode(TAG_DONE);
 	SetClickTabNodeAttrs(imageGenerationTabNode,
-	 TNA_Text, "Image generation",
-	 TNA_TextPen, 0,
+	 TNA_Text, "Image Generation",
+	 TNA_TextPen, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1,
 	 #ifdef __AMIGAOS4__
 	 TNA_HintInfo, "Generate an image from a text prompt",
 	 #endif
