@@ -1632,12 +1632,12 @@ static void sendChatMessage() {
 				STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
 				formatText(responseString);
 				addConversationToConversationList(currentConversation, responseString);
-				updateStatusBar("Ready", 5);
-				struct MinNode *titleRequestNode = RemTail(currentConversation);
-				FreeVec(titleRequestNode);
-				json_object_put(responses[0]);
-				FreeVec(responses);
+				
 			}
+			struct MinNode *titleRequestNode = RemTail(currentConversation);
+			FreeVec(titleRequestNode);
+			json_object_put(responses[0]);
+			FreeVec(responses);
 		}
 	}
 

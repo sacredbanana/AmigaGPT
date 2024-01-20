@@ -409,8 +409,9 @@ struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum 
 						struct json_object *parsedResponse = json_tokener_parse(jsonString);
 						if (parsedResponse != NULL) {
 							responses[responseIndex++] = parsedResponse;
-							if (!stream)
+							if (!stream) {
 								break;
+							}
 						} else if (!stream) {
 							jsonString = NULL;
 							break;
@@ -426,9 +427,11 @@ struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum 
 						} else {
 							memset(readBuffer, 0, READ_BUFFER_LENGTH);
 						}
+						doneReading = TRUE;
+					} else if (jsonString != NULL) {
+						doneReading = TRUE;
 					}
 					
-					doneReading = TRUE;
 					break;
 				case SSL_ERROR_ZERO_RETURN:
 					printf("SSL_ERROR_ZERO_RETURN\n");
