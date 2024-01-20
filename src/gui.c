@@ -179,7 +179,6 @@ static Object *chatInputLayout;
 static Object *imageGenerationInputLayout;
 static Object *chatOutputLayout;
 static Object *conversationsLayout;
-static Object *chatButtonsLayout;
 static Object *sendMessageButton;
 static Object *textInputTextEditor;
 static Object *chatOutputTextEditor;
@@ -198,7 +197,6 @@ static Object *openMediumImageButton;
 static Object *openLargeImageButton;
 static Object *openOriginalImageButton;
 static Object *saveCopyButton;
-static Object *createDeleteButtonsLayout;
 static Object *imageHistoryButtonsLayout;
 static struct Screen *screen;
 static BOOL isPublicScreen;
@@ -206,7 +204,7 @@ static WORD pens[32+1];
 static LONG textEdtorColorMap[] = {5,3,6,3,6,6,4,0,1,6,6,6,6,6,6,6};
 static LONG sendMessageButtonPen;
 static LONG newChatButtonPen;
-static LONG deleteChatButtonPen;
+static LONG deleteButtonPen;
 struct MinList *currentConversation;
 static struct GeneratedImage *currentImage;
 struct List *conversationList;
@@ -857,13 +855,16 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	pen = 5;
+	newChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
+
 	if ((newImageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, NEW_IMAGE_BUTTON_ID,
-		BUTTON_TextPen, sendMessageButtonPen,
+		BUTTON_TextPen, newChatButtonPen,
 		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"New Image",
+		GA_Text, (ULONG)"+ New Image",
 		GA_RelVerify, TRUE,
 		ICA_TARGET, ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
@@ -871,13 +872,16 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	pen = 6;
+	deleteButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
+
 	if ((deleteImageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, DELETE_IMAGE_BUTTON_ID,
-		BUTTON_TextPen, sendMessageButtonPen,
+		BUTTON_TextPen, deleteButtonPen,
 		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"Delete Image",
+		GA_Text, (ULONG)"- Delete Image",
 		GA_RelVerify, TRUE,
 		ICA_TARGET, ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
@@ -960,32 +964,20 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
-	if ((createDeleteButtonsLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, newImageButton,
-		LAYOUT_AddChild, deleteImageButton,
-		TAG_DONE)) == NULL) {
-			printf("Could not create create/delete buttons layout\n");
-			return RETURN_ERROR;
-	}
-
 	if ((imageHistoryButtonsLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, createDeleteButtonsLayout,
-		CHILD_WeightedHeight, 10,
+		LAYOUT_AddChild, newImageButton,
+		CHILD_WeightedHeight, 5,
+		LAYOUT_AddChild, deleteImageButton,
+		CHILD_WeightedHeight, 5,
 		LAYOUT_AddChild, imageListBrowser,
 		CHILD_WeightedWidth, 90,
 		TAG_DONE)) == NULL) {
 			printf("Could not create image history buttons layout\n");
 			return RETURN_ERROR;
 	}
-
-	pen = 5;
-	newChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
 
 	if ((newChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, NEW_CHAT_BUTTON_ID,
@@ -1001,12 +993,9 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
-	pen = 6;
-	deleteChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
-
 	if ((deleteChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, DELETE_CHAT_BUTTON_ID,
-		BUTTON_TextPen, deleteChatButtonPen,
+		BUTTON_TextPen, deleteButtonPen,
 		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
@@ -1015,17 +1004,6 @@ LONG initVideo() {
 		ICA_TARGET, ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
 			printf("Could not create delete chat button\n");
-			return RETURN_ERROR;
-	}
-
-	if ((chatButtonsLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, newChatButton,
-		LAYOUT_AddChild, deleteChatButton,
-		TAG_DONE)) == NULL) {
-			printf("Could not create conversations layout\n");
 			return RETURN_ERROR;
 	}
 
@@ -1046,8 +1024,10 @@ LONG initVideo() {
 		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, chatButtonsLayout,
-		CHILD_WeightedHeight, 10,
+		LAYOUT_AddChild, newChatButton,
+		CHILD_WeightedHeight, 5,
+		LAYOUT_AddChild, deleteChatButton,
+		CHILD_WeightedHeight, 5,
 		LAYOUT_AddChild, conversationListBrowser,
 		CHILD_WeightedWidth, 90,
 		TAG_DONE)) == NULL) {
@@ -3498,7 +3478,7 @@ void shutdownGUI() {
 	if (isPublicScreen) {
 		ReleasePen(screen->ViewPort.ColorMap, sendMessageButtonPen);
 		ReleasePen(screen->ViewPort.ColorMap, newChatButtonPen);
-		ReleasePen(screen->ViewPort.ColorMap, deleteChatButtonPen);
+		ReleasePen(screen->ViewPort.ColorMap, deleteButtonPen);
 		UnlockPubScreen(NULL, screen);
 	} else {
 		CloseScreen(screen);
