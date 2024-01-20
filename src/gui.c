@@ -166,9 +166,9 @@ struct Library *RequesterBase;
 struct Library *GadToolsBase;
 struct Library *DataTypesBase;
 struct Window *mainWindow;
-struct Window *createImageWindow;
+struct Window *imageWindow;
 static Object *mainWindowObject;
-static Object *createImageWindowObject;
+static Object *imageWindowObject;
 static Object *mainLayout;
 static Object *chatModeLayout;
 static Object *imageGenerationModeLayout;
@@ -421,14 +421,14 @@ static void __SAVE_DS__ __ASM__ processIDCMPCreateImageWindow(__REG__ (a0, struc
 					case DTA_Busy:
 						if(This->ti_Data)
 						{
-							SetWindowPointer(createImageWindow,
+							SetWindowPointer(imageWindow,
 								WA_BusyPointer,	TRUE,
 							TAG_DONE);
 							updateStatusBar("Processing image...", 7);
 						}
 						else
 						{
-							SetWindowPointerA(createImageWindow,NULL);
+							SetWindowPointerA(imageWindow,NULL);
 							updateStatusBar("Ready", 5);
 						}
 
@@ -436,18 +436,18 @@ static void __SAVE_DS__ __ASM__ processIDCMPCreateImageWindow(__REG__ (a0, struc
 
 					case DTA_Sync:
 						SetAttrs(dataTypeObject,
-						 GA_RelWidth, createImageWindow->Width - createImageWindow->BorderLeft - createImageWindow->BorderRight,
-						GA_RelHeight, createImageWindow->Height - createImageWindow->BorderTop - createImageWindow->BorderBottom,
+						 GA_RelWidth, imageWindow->Width - imageWindow->BorderLeft - imageWindow->BorderRight,
+						GA_RelHeight, imageWindow->Height - imageWindow->BorderTop - imageWindow->BorderBottom,
 						 TAG_DONE);
-						RefreshDTObjects(dataTypeObject,createImageWindow,NULL,NULL);
+						RefreshDTObjects(dataTypeObject,imageWindow,NULL,NULL);
 						break;
 				}
 			}
 			break;
 		}
 		case IDCMP_REFRESHWINDOW:
-			BeginRefresh(createImageWindow);
-			EndRefresh(createImageWindow,TRUE);
+			BeginRefresh(imageWindow);
+			EndRefresh(imageWindow,TRUE);
 			break;
 		default:
 			printf("Unknown message class: %lx\n", message->Class);
@@ -2955,7 +2955,19 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scale
 	WORD lowestWidth = (screen->Width - 16) < scaledWidth ? (screen->Width - 16) : scaledWidth;
 	WORD lowestHeight = screen->Height < scaledHeight ? screen->Height : scaledHeight;
 
-	if ((createImageWindowObject = NewObject(WINDOW_GetClass(), NULL,
+	struct Object *textLabel = NewObject(STRING_GetClass(), NULL,
+		GA_ReadOnly, TRUE,
+		STRINGA_Justification, GACT_STRINGCENTER,
+		TAG_DONE);
+	
+	struct Object *imageWindowLayout = NewObject(LAYOUT_GetClass(), NULL,
+	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+		LAYOUT_AddChild, textLabel,
+		CHILD_MinWidth, lowestWidth,
+		CHILD_MinHeight, lowestHeight,
+		TAG_DONE);
+
+	if ((imageWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
 		WA_Title, image->name,
@@ -2965,7 +2977,7 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scale
 		WA_DragBar, TRUE,
 		WA_SizeGadget, TRUE,
 		WA_DepthGadget, FALSE,
-		WA_SimpleRefresh, TRUE,
+		WINDOW_Layout, imageWindowLayout,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WINDOW_IDCMPHook, &idcmpHookCreateImageWindow,
 		WINDOW_InterpretIDCMPHook, TRUE,
@@ -2976,25 +2988,31 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scale
 							IDCMP_RAWKEY,
 		WA_CustomScreen, screen,
 		TAG_DONE)) == NULL) {
-			printf("Could not create createImageWindowObject\n");
+			printf("Could not create imageWindowObject\n");
 			return RETURN_ERROR;
 	}
 
-	if ((createImageWindow = (struct Window *)DoMethod(createImageWindowObject, WM_OPEN, NULL)) == NULL) {
-		printf("Could not open createImageWindow\n");
+	if ((imageWindow = (struct Window *)DoMethod(imageWindowObject, WM_OPEN, NULL)) == NULL) {
+		printf("Could not open imageWindow\n");
 		return RETURN_ERROR;
 	}
 
+	SetGadgetAttrs(textLabel, imageWindow, NULL, STRINGA_TextVal, "Loading image...", TAG_DONE);
+
 	updateStatusBar("Loading image...", 7);
+	SetWindowPointer(imageWindow,
+								WA_BusyPointer,	TRUE,
+							TAG_DONE);
 
 	if ((dataTypeObject = NewDTObject(image->filePath,
 		DTA_SourceType, DTST_FILE,
 		DTA_GroupID, GID_PICTURE,
 		PDTA_Remap, TRUE,
-		GA_Left, createImageWindow->BorderLeft,
-		GA_Top, createImageWindow->BorderTop,
-		GA_RelWidth, createImageWindow->Width - createImageWindow->BorderLeft - createImageWindow->BorderRight,
-		GA_RelHeight, createImageWindow->Height - createImageWindow->BorderTop - createImageWindow->BorderBottom,
+		GA_Text, "Loading image...",
+		GA_Left, imageWindow->BorderLeft,
+		GA_Top, imageWindow->BorderTop,
+		GA_RelWidth, imageWindow->Width - imageWindow->BorderLeft - imageWindow->BorderRight,
+		GA_RelHeight, imageWindow->Height - imageWindow->BorderTop - imageWindow->BorderBottom,
 		ICA_TARGET,	ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
 			printf("Could not create dataTypeObject\n");
@@ -3004,18 +3022,18 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scale
 	updateStatusBar("Scaling image...", 8);
 	DoMethod(dataTypeObject, PDTM_SCALE, lowestWidth, lowestHeight, 0);
 
-	AddDTObject(createImageWindow, NULL, dataTypeObject, -1);
-	RefreshDTObjects(dataTypeObject, createImageWindow, NULL, NULL);
+	AddDTObject(imageWindow, NULL, dataTypeObject, -1);
+	RefreshDTObjects(dataTypeObject, imageWindow, NULL, NULL);
 
 	BOOL done = FALSE;
 	ULONG signalMask, winSignal, signals, result;
 	WORD code;
 
-	GetAttr(WINDOW_SigMask, createImageWindowObject, &winSignal);
+	GetAttr(WINDOW_SigMask, imageWindowObject, &winSignal);
 	signalMask = winSignal;
 	while (!done) {
 		signals = Wait(signalMask);
-		while ((result = DoMethod(createImageWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
+		while ((result = DoMethod(imageWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
 			switch (result & WMHI_CLASSMASK) {
 				case WMHI_RAWKEY:
 				case WMHI_CLOSEWINDOW:
@@ -3026,8 +3044,8 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scale
 		}
 	}
 
-	DoMethod(createImageWindowObject, WM_CLOSE);
-	DisposeObject(createImageWindowObject);
+	DoMethod(imageWindowObject, WM_CLOSE);
+	DisposeObject(imageWindowObject);
 	DisposeDTObject(dataTypeObject);
 
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
@@ -3354,6 +3372,8 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 		return FALSE;
 	}
 
+	updateStatusBar("Copying file...", 7);
+
 	do {
 		bytesRead = Read(srcFile, buffer, FILE_BUFFER_SIZE);
 
@@ -3361,6 +3381,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 			bytesWritten = Write(dstFile, buffer, bytesRead);
 
 			if (bytesWritten != bytesRead) {
+				updateStatusBar("Ready", 5);
 				snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error copying %s to %s", source, destination);
 				displayDiskError(errorMessage, IoErr());
 				FreeVec(buffer);
@@ -3371,6 +3392,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 			}
 		}
 		else if (bytesRead < 0) {
+			updateStatusBar("Ready", 5);
 			snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error copying %s to %s", source, destination);
 			displayDiskError(errorMessage, IoErr());
 			FreeVec(buffer);
