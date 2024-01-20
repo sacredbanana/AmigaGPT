@@ -2018,8 +2018,9 @@ static void saveImageCopy(struct GeneratedImage *image) {
 		TAG_DONE)) {
 			STRPTR savePath = fileReq->fr_Drawer;
 			STRPTR saveName = fileReq->fr_File;
-			STRPTR fullPath = AllocVec(strlen(savePath) + strlen(saveName) + 1, MEMF_CLEAR);
-			snprintf(fullPath, strlen(savePath) + strlen(saveName) + 1, "%s%s", savePath, saveName);
+			BOOL isRootDirectory = savePath[strlen(savePath) - 1] == ':';
+			STRPTR fullPath = AllocVec(strlen(savePath) + strlen(saveName) + 2, MEMF_CLEAR);
+			snprintf(fullPath, strlen(savePath) + strlen(saveName) + 2, "%s%s%s", savePath, isRootDirectory ? "" : "/", saveName);
 			copyFile(filePath, fullPath);
 			FreeVec(fullPath);
 		}
@@ -3403,6 +3404,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 		}
 	} while (bytesRead > 0);
 
+	updateStatusBar("Ready", 5);
 	FreeVec(buffer);
 	FreeVec(errorMessage);
 	Close(srcFile);
