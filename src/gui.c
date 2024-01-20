@@ -300,6 +300,8 @@ struct Hook idcmpHookMainWindow;
 struct Hook idcmpHookCreateImageWindow;
 struct MsgPort *appPort;
 ULONG activeTextEditorGadgetID;
+static struct Node *chatTabNode;
+static struct Node *imageGenerationTabNode;
 
 static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream);
 static void formatText(STRPTR unformattedText);
@@ -771,23 +773,23 @@ LONG initVideo() {
 
 	modeSelectionTabList = AllocVec(sizeof(struct List), MEMF_CLEAR);
 	NewList(modeSelectionTabList);
-	struct Node *chatTabNode = AllocClickTabNode(TAG_DONE);
+	chatTabNode = AllocClickTabNode(TAG_DONE);
 	SetClickTabNodeAttrs(chatTabNode,
+	 TNA_Number, MODE_SELECTION_TAB_CHAT_ID,
 	 TNA_Text, "Chat",
 	 TNA_TextPen, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1,
 	 #ifdef __AMIGAOS4__
 	 TNA_HintInfo, "Have a text conversation with ChatGPT",
 	 #endif
-	 TNA_Number, MODE_SELECTION_TAB_CHAT_ID,
 	  TAG_DONE);
-	struct Node *imageGenerationTabNode = AllocClickTabNode(TAG_DONE);
+	imageGenerationTabNode = AllocClickTabNode(TAG_DONE);
 	SetClickTabNodeAttrs(imageGenerationTabNode,
+	 TNA_Number, MODE_SELECTION_TAB_IMAGE_GENERATION_ID,
 	 TNA_Text, "Image Generation",
 	 TNA_TextPen, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1,
 	 #ifdef __AMIGAOS4__
 	 TNA_HintInfo, "Generate an image from a text prompt",
 	 #endif
-	 TNA_Number, MODE_SELECTION_TAB_IMAGE_GENERATION_ID,
 	  TAG_DONE);
 	AddTail(modeSelectionTabList, chatTabNode);	
 	AddTail(modeSelectionTabList, imageGenerationTabNode);
@@ -1203,7 +1205,6 @@ LONG initVideo() {
 		GA_ID, CLICKTAB_MODE_SELECTION_ID,
 		GA_RelVerify, TRUE,
 		CLICKTAB_Labels, modeSelectionTabList,
-		CLICKTAB_Current, 0,
 		CLICKTAB_AutoFit, TRUE,
 		CLICKTAB_PageGroup, NewObject(PAGE_GetClass(), NULL,
             PAGE_Add,       chatModeLayout,
@@ -1546,6 +1547,9 @@ static void sendChatMessage() {
 		currentConversation = newConversation();
 	}
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+
 	updateStatusBar("Sending message...", 7);
 	STRPTR receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 
@@ -1557,9 +1561,9 @@ static void sendChatMessage() {
 	STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
 	addTextToConversation(currentConversation, textUTF_8, "user");
 	displayConversation(currentConversation);
+	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 
 	if (isNewConversation) {
 		addTextToConversation(currentConversation, config.chatSystem, "system");
@@ -1590,6 +1594,11 @@ static void sendChatMessage() {
 					displayConversation(currentConversation);
 				}
 				json_object_put(response);
+
+				SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+
 				FreeVec(receivedMessage);
 				return;
 			}
@@ -1644,6 +1653,11 @@ static void sendChatMessage() {
 			}
 		}
 	}
+
+	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+
 	FreeVec(text);
 	FreeVec(textUTF_8);
 }
@@ -2143,6 +2157,17 @@ LONG startGUIRunLoop() {
 								currentImage = image;
 								break;
 							}
+						case CLICKTAB_MODE_SELECTION_ID:
+						{
+							struct Node *node;
+							GetAttr(CLICKTAB_CurrentNode, modeClickTab, &node);
+							if (node == chatTabNode) {
+								ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
+							} else if (node == imageGenerationTabNode) {
+								ActivateLayoutGadget(imageGenerationModeLayout, mainWindow, NULL, textInputTextEditor);
+							}
+							break;
+						}
 						case CREATE_IMAGE_BUTTON_ID:
 							createImage();
 							saveImages();
@@ -2824,8 +2849,15 @@ static LONG saveImages() {
 static void createImage() {
 	struct json_object *response;
 
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(openOriginalImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(saveCopyButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 
 	STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
 
@@ -2834,10 +2866,7 @@ static void createImage() {
 		text[strlen(text) - 1] = '\0';
 	}
 	STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
-	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
-	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
 
-	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 	const enum ImageSize imageSize = config.imageModel == DALL_E_2 ? config.imageSizeDallE2 : config.imageSizeDallE3;
 	response = postImageCreationRequestToOpenAI(textUTF_8, config.imageModel, imageSize, config.openAiApiKey);
 	struct json_object *error;
@@ -2848,8 +2877,15 @@ static void createImage() {
 		displayError(messageString);
 		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
 		json_object_put(response);
-		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 		SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		SetGadgetAttrs(openOriginalImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		SetGadgetAttrs(saveCopyButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 		updateStatusBar("Ready", 5);
 		return;
 	}
@@ -2939,6 +2975,17 @@ static void createImage() {
 	generatedImage->height = imageHeight;
 	addImageToImageList(generatedImage);
 	currentImage = generatedImage;
+
+	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(openOriginalImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(saveCopyButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, TRUE, TAG_DONE);
 
 	FreeVec(text);
 	FreeVec(textUTF_8);
