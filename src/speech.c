@@ -187,7 +187,7 @@ void speakText(STRPTR text) {
 	NarratorIO->message.io_Command= CMD_WRITE;
 	NarratorIO->message.io_Data = translationBuffer;
 	NarratorIO->message.io_Length = strlen(translationBuffer);
-	SendIO((struct IORequest *)NarratorIO);
+	DoIO((struct IORequest *)NarratorIO);
 	#else
 	if (IFlite && voice) CloseVoice(voice);
 	voice = NULL;

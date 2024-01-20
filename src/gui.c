@@ -1550,16 +1550,18 @@ static void sendChatMessage() {
 	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
 
-	if (isNewConversation) {
-		addTextToConversation(currentConversation, config.chatSystem, "system");
-	}
-
 	BOOL dataStreamFinished = FALSE;
 	ULONG speechIndex = 0;
 	UWORD wordNumber = 0;
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 	do {
+		if (strlen(config.chatSystem) > 0)
+			addTextToConversation(currentConversation, config.chatSystem, "system");
 		responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, TRUE);
+		if (strlen(config.chatSystem) > 0) {
+			struct MinNode *chatSystemNode = RemTail(currentConversation);
+			FreeVec(chatSystemNode);
+		}
 		UWORD responseIndex = 0;
 		struct json_object *response;
 		while (response = responses[responseIndex++]) {
@@ -1639,6 +1641,8 @@ static void sendChatMessage() {
 		}
 	}
 
+	updateStatusBar("Ready", 5);
+	
 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
@@ -1908,7 +1912,7 @@ static void displayConversation(struct MinList *conversation) {
 					}
 				}
 				strncat(conversationString, "*\n\n", WRITE_BUFFER_LENGTH - strlen(conversationString) - 4);
-			} else {
+			} else if (strcmp(conversationNode->role, "assistant") == 0) {
 				strncat(conversationString, conversationNode->content, WRITE_BUFFER_LENGTH - strlen(conversationString));
 				strncat(conversationString, "\n\n", WRITE_BUFFER_LENGTH - strlen(conversationString) - 3);	
 			}	
@@ -2785,6 +2789,7 @@ LONG saveConversations() {
 		for (conversationNode = (struct ConversationNode *)conversation->mlh_Head;
 			conversationNode->node.mln_Succ != NULL;
 			conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
+			if (!strcmp(conversationNode->role, "system")) continue;
 			struct json_object *messageJsonObject = json_object_new_object();
 			json_object_object_add(messageJsonObject, "role", json_object_new_string(conversationNode->role));
 			json_object_object_add(messageJsonObject, "content", json_object_new_string(conversationNode->content));

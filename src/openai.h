@@ -14,7 +14,7 @@ struct ConversationNode {
 	**/
 	struct MinNode node;
 	/**
-	 * The role of the speaker. Currently the only roles supported by OpenAI are "user" and "assistant"
+	 * The role of the speaker. Currently the only roles supported by OpenAI are "user", "assistant" and "systen"
 	**/
 	UBYTE role[64];
 	/**

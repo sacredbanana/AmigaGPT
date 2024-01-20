@@ -327,7 +327,11 @@ struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum 
 	static BOOL streamingInProgress = FALSE;
 	UWORD responseIndex = 0;
 
+	// printf("1\n");
+	// memset(readBuffer, 0, READ_BUFFER_LENGTH);
+
 	if (!stream || !streamingInProgress) {
+		// printf("2\n");
 		memset(readBuffer, 0, READ_BUFFER_LENGTH);
 		streamingInProgress = stream;
 
@@ -375,13 +379,12 @@ struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum 
 		BOOL doneReading = FALSE;
 		LONG err = 0;
 		UBYTE statusMessage[64];
+		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 		while (!doneReading) {
-			UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
-			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
-			snprintf(statusMessage, sizeof(statusMessage), "Downloading response... (%lu bytes)", totalBytesRead);
+			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
+			snprintf(statusMessage, sizeof(statusMessage), "Downloading response...");
 			updateStatusBar(statusMessage, 7);
-			strcat(readBuffer, tempReadBuffer);
-			FreeVec(tempReadBuffer);
+			strncat(readBuffer, tempReadBuffer, bytesRead);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
 				case SSL_ERROR_NONE:
@@ -415,16 +418,14 @@ struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum 
 					}
 					
 					if (stream) {
+						if (strstr(readBuffer, "data: [DONE]")) {
+							streamingInProgress = FALSE;
+						}
 						if (json_tokener_parse(lastJsonString + 6) == NULL) {
 							snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0", lastJsonString);
 						} else {
 							memset(readBuffer, 0, READ_BUFFER_LENGTH);
 						}
-						if (strstr(readBuffer, "data: [DONE]"))
-							streamingInProgress = FALSE;
-					} else if (json_tokener_parse(lastJsonString) == NULL) {
-							snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0", lastJsonString);
-							continue;
 					}
 					
 					doneReading = TRUE;
@@ -462,6 +463,7 @@ struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum 
 					break;
 			}            
 		}
+		FreeVec(tempReadBuffer);
 	} else {
 		displayError("Couldn't write request!\n");
 		LONG err = SSL_get_error(ssl, ssl_err);
@@ -719,7 +721,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		LONG contentLength = 0;
 		UBYTE *dataStart = NULL;
 		BOOL headersRead = FALSE;
-		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH , MEMF_CLEAR);
+		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_CLEAR);
 		while (!doneReading) {
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
 			if (!headersRead) {
