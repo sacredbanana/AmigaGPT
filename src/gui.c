@@ -887,6 +887,7 @@ LONG initVideo() {
 
 	if ((openSmallImageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, OPEN_SMALL_IMAGE_BUTTON_ID,
+		GA_Disabled, TRUE,
 		BUTTON_TextPen, sendMessageButtonPen,
 		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
@@ -901,6 +902,7 @@ LONG initVideo() {
 
 	if ((openMediumImageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, OPEN_MEDIUM_IMAGE_BUTTON_ID,
+		GA_Disabled, TRUE,
 		BUTTON_TextPen, sendMessageButtonPen,
 		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
@@ -915,6 +917,7 @@ LONG initVideo() {
 
 	if ((openLargeImageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, OPEN_LARGE_IMAGE_BUTTON_ID,
+		GA_Disabled, TRUE,
 		BUTTON_TextPen, sendMessageButtonPen,
 		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
@@ -929,6 +932,7 @@ LONG initVideo() {
 
 	if ((openOriginalImageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, OPEN_ORIGINAL_IMAGE_BUTTON_ID,
+		GA_Disabled, TRUE,
 		BUTTON_TextPen, sendMessageButtonPen,
 		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
@@ -943,6 +947,7 @@ LONG initVideo() {
 
 	if ((saveCopyButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SAVE_COPY_BUTTON_ID,
+		GA_Disabled, TRUE,
 		BUTTON_TextPen, sendMessageButtonPen,
 		BUTTON_BackgroundPen, 0,
 		GA_TextAttr, &uiTextAttr,
@@ -2147,6 +2152,18 @@ LONG startGUIRunLoop() {
 								displayConversation(currentConversation);
 								break;
 							}
+						case NEW_IMAGE_BUTTON_ID:
+							currentImage = NULL;
+							SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, FALSE, TAG_DONE);
+							DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+							SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+							SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+							SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+							SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+							SetGadgetAttrs(openOriginalImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+							SetGadgetAttrs(saveCopyButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+							ActivateLayoutGadget(imageGenerationModeLayout, mainWindow, NULL, textInputTextEditor);
+							break;
 						case IMAGE_LIST_BROWSER_ID:
 							{
 								// Switch to the image the user clicked on in the list
@@ -2155,6 +2172,14 @@ LONG startGUIRunLoop() {
 								struct GeneratedImage *image;
 								GetListBrowserNodeAttrs(node, LBNA_UserData,&image, TAG_END);
 								currentImage = image;
+								SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, TRUE, TAG_DONE);
+								SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, currentImage->prompt, TAG_DONE);
+								SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+								SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+								SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+								SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+								SetGadgetAttrs(openOriginalImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+								SetGadgetAttrs(saveCopyButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 								break;
 							}
 						case CLICKTAB_MODE_SELECTION_ID:
@@ -2976,7 +3001,8 @@ static void createImage() {
 	addImageToImageList(generatedImage);
 	currentImage = generatedImage;
 
-	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, TRUE, TAG_DONE);
 	SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
