@@ -1,4 +1,7 @@
 # Changelog
+## 1.4.1 (2024-01-22)
+- Fixed bug where the prompt textbox remains in a readonly state when switching from image mode to chat mode
+
 ## 1.4.0 (2024-01-21) 
 - AI image generation! Switch between chat and image generation mode by clicking the tabs at the top of the screen
 - Colour tweaks

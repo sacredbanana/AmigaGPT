@@ -2172,8 +2172,17 @@ LONG startGUIRunLoop() {
 							GetAttr(CLICKTAB_CurrentNode, modeClickTab, &node);
 							if (node == chatTabNode) {
 								ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
+								SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, FALSE, TAG_DONE);
+								DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 							} else if (node == imageGenerationTabNode) {
 								ActivateLayoutGadget(imageGenerationModeLayout, mainWindow, NULL, textInputTextEditor);
+								if (currentImage == NULL) {
+									SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, FALSE, TAG_DONE);
+									DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+								} else {
+									SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, TRUE, TAG_DONE);
+									SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, currentImage->prompt, TAG_DONE);
+								}
 							}
 							break;
 						}

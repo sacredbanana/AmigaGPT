@@ -3,7 +3,7 @@ Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 1.4.0
+Version: 1.4.1
 Architecture: m68k-amigaos >= 3.9; ppc-amigaos
 Requires: AmigaOS 3.9+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 Replaces: util/misc/AmigaGPT.lha
@@ -208,6 +208,10 @@ Special Thanks:
  https://www.hyperion-entertainment.com
 
 Changelog:
+------------------
+1.4.1 (2024-01-22)
+- Fixed bug where the prompt textbox remains in a readonly state when switching from image mode to chat mode
+------------------
 
 ------------------
 1.4.0 (2024-01-21) 
