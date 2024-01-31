@@ -1,4 +1,7 @@
 # Changelog
+## 1.4.2 (2024-01-31)
+- Replaced clicktabs for AmigaOS 3.X since the version is too old and will crash. 3.X users can select the mode at startup.
+
 ## 1.4.1 (2024-01-22)
 - Fixed bug where the prompt textbox remains in a readonly state when switching from image mode to chat mode
 

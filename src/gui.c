@@ -73,6 +73,7 @@
 #define OPEN_LARGE_IMAGE_BUTTON_ID 17
 #define OPEN_ORIGINAL_IMAGE_BUTTON_ID 18
 #define SAVE_COPY_BUTTON_ID 19
+#define MODE_SELECT_RADIO_BUTTON_ID 20
 
 #define MODE_SELECTION_TAB_CHAT_ID 0
 #define MODE_SELECTION_TAB_IMAGE_GENERATION_ID 1
@@ -200,6 +201,8 @@ static Object *saveCopyButton;
 static Object *imageHistoryButtonsLayout;
 static struct Screen *screen;
 static BOOL isPublicScreen;
+static BOOL isAmigaOS3X;
+static LONG selectedMode;
 static WORD pens[32+1];
 static LONG textEdtorColorMap[] = {5,3,6,3,6,6,4,0,1,6,6,6,6,6,6,6};
 static LONG sendMessageButtonPen;
@@ -305,7 +308,7 @@ static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream);
 static void formatText(STRPTR unformattedText);
 static void sendChatMessage();
 static void closeGUILibraries();
-static LONG selectScreen();
+static LONG openStartupOptions();
 static void refreshOpenAIMenuItems();
 static void refreshSpeechMenuItems();
 static struct MinList* newConversation();
@@ -545,6 +548,8 @@ LONG openGUILibraries() {
 	}
 	#endif
 
+	isAmigaOS3X = ClickTabBase->lib_Version < 45;
+
 	#ifdef __AMIGAOS3__
 	if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 44)) == NULL) {
 		printf("Could not open radiobutton.gadget\n");
@@ -766,7 +771,7 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
-	if (selectScreen() == RETURN_ERROR)
+	if (openStartupOptions() == RETURN_ERROR)
 		return RETURN_ERROR;
 
 	modeSelectionTabList = AllocVec(sizeof(struct List), MEMF_CLEAR);
@@ -1200,12 +1205,29 @@ LONG initVideo() {
 			return RETURN_ERROR;
 	}
 
+	Object *layoutToOpen;
+	if (isAmigaOS3X) {
+		switch (selectedMode) {
+			case MODE_SELECTION_TAB_CHAT_ID:
+				layoutToOpen = chatModeLayout;
+				break;
+			case MODE_SELECTION_TAB_IMAGE_GENERATION_ID:
+				layoutToOpen = imageGenerationModeLayout;
+				break;
+			default:
+				layoutToOpen = chatModeLayout;
+				break;
+		}
+	} else {
+		layoutToOpen = modeClickTab;
+	}
+
 	if ((mainLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
 		LAYOUT_DeferLayout, TRUE,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, modeClickTab,
+		LAYOUT_AddChild, layoutToOpen,
 		TAG_DONE)) == NULL) {
 			printf("Could not create main layout\n");
 			return RETURN_ERROR;
@@ -1259,7 +1281,8 @@ LONG initVideo() {
 
 	if (!isPublicScreen) {
 		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEdtorColorMap, TAG_DONE);
-		SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEdtorColorMap, TAG_DONE);
+		if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID)
+			SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEdtorColorMap, TAG_DONE);
 	}
 
 	refreshOpenAIMenuItems();
@@ -1270,7 +1293,11 @@ LONG initVideo() {
 
 	updateStatusBar("Ready", 5);
 	
-	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
+	if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID) {
+		ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
+	} else {
+		ActivateLayoutGadget(imageGenerationModeLayout, mainWindow, NULL, textInputTextEditor);
+	}
 
 	return RETURN_OK;
 }
@@ -1287,11 +1314,11 @@ void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
 }
 
 /**
- * Display a requester for the screen the application should open on
+ * Display a requester for the screen the application should open on and the mode to run in (if AmigaOS 3.X)
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
-static LONG selectScreen() {
-	Object *screenSelectRadioButton, *selectScreenOkButton, *screenSelectLayout, *screenSelectWindowObject;
+static LONG openStartupOptions() {
+	Object *screenSelectRadioButton, *modeSelectRadioButton, *startupOptionsOkButton, *screenSelectLayout, *startupOptionsWindowObject, *startupOptionsLayout, *modeSelectLayout = NULL;
 	struct Window *screenSelectWindow;
 	struct ScreenModeRequester *screenModeRequester;
 	screen = LockPubScreen("Workbench");
@@ -1303,7 +1330,7 @@ static LONG selectScreen() {
 		screenFont.ta_Flags = config.uiFontFlags;
 	}
 
-	STRPTR radioButtonOptions[] = {
+	CONST_STRPTR radioButtonOptions[] = {
 		"New screen",
 		"Open in Workbench",
 		NULL
@@ -1312,7 +1339,7 @@ static LONG selectScreen() {
 	if ((screenSelectRadioButton = NewObject(RADIOBUTTON_GetClass(), NULL,
 		GA_ID, SCREEN_SELECT_RADIO_BUTTON_ID,
 		GA_Width, 100,
-		GA_Height, 30,
+		GA_Height, ClickTabBase->lib_Version > 45 ? 100 : 50,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)radioButtonOptions,
 		GA_RelVerify, TRUE,
@@ -1322,7 +1349,7 @@ static LONG selectScreen() {
 			return RETURN_ERROR;
 	}
 
-	if ((selectScreenOkButton = NewObject(BUTTON_GetClass(), NULL,
+	if ((startupOptionsOkButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SCREEN_SELECT_OK_BUTTON_ID,
 		GA_Width, 100,
 		GA_Height, 30,
@@ -1331,41 +1358,86 @@ static LONG selectScreen() {
 		GA_RelVerify, TRUE,
 		ICA_TARGET, ICTARGET_IDCMP,
 		TAG_DONE)) == NULL) {
-			printf("Could not create selectScreenOkButton\n");
+			printf("Could not create startupOptionsOkButton\n");
 			return RETURN_ERROR;
 	}
 
 	if ((screenSelectLayout = NewObject(LAYOUT_GetClass(), NULL,
+		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+		LAYOUT_SpaceInner, TRUE,
+		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_BottomSpacing, 10,
+		LAYOUT_HorizAlignment, LALIGN_CENTER,
+		LAYOUT_Label, "Screen to open:",
+		LAYOUT_LabelPlace, BVJ_TOP_CENTER,
+		LAYOUT_BevelStyle, BVS_GROUP,
+		LAYOUT_AddChild, screenSelectRadioButton,
+		TAG_DONE)) == NULL) {
+			printf("Could not create screenSelectLayout\n");
+			return RETURN_ERROR;
+	}
+
+	if (isAmigaOS3X) {
+		CONST_STRPTR radioButtonOptions[] = {
+			"Chat",
+			"Image Generation",
+			NULL
+		};
+
+		if ((modeSelectRadioButton = NewObject(RADIOBUTTON_GetClass(), NULL,
+			GA_ID, MODE_SELECT_RADIO_BUTTON_ID,
+			GA_Width, 100,
+			BUTTON_Justification, BCJ_CENTER,
+			GA_Text, (ULONG)radioButtonOptions,
+			GA_RelVerify, TRUE,
+			ICA_TARGET, ICTARGET_IDCMP,
+			TAG_DONE)) == NULL) {
+				printf("Could not create modeSelectRadioButton\n");
+				return RETURN_ERROR;
+		}
+
+		if ((modeSelectLayout = NewObject(LAYOUT_GetClass(), NULL,
+		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+		LAYOUT_SpaceInner, TRUE,
+		LAYOUT_SpaceOuter, TRUE,
+		LAYOUT_BottomSpacing, 10,
+		LAYOUT_HorizAlignment, LALIGN_CENTER,
+		LAYOUT_Label, "Mode:",
+		LAYOUT_LabelPlace, BVJ_TOP_CENTER,
+		LAYOUT_BevelStyle, BVS_GROUP,
+		LAYOUT_AddChild, modeSelectRadioButton,
+		TAG_DONE)) == NULL) {
+			printf("Could not create modeSelectLayout\n");
+			return RETURN_ERROR;
+		}
+	}
+
+	if ((startupOptionsLayout = NewObject(LAYOUT_GetClass(), NULL,
 		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
 		LAYOUT_DeferLayout, TRUE,
 		LAYOUT_SpaceInner, TRUE,
 		LAYOUT_SpaceOuter, TRUE,
 		LAYOUT_BottomSpacing, 10,
 		LAYOUT_HorizAlignment, LALIGN_CENTER,
-		LAYOUT_Label, "Select a screen to open the window in:",
-		LAYOUT_LabelPlace, BVJ_TOP_CENTER,
-		LAYOUT_AddChild, screenSelectRadioButton,
-		CHILD_WeightedHeight, 80,
-		LAYOUT_AddChild, selectScreenOkButton,
-		CHILD_MaxHeight, 20,
-		CHILD_MaxWidth, 50,
-		CHILD_WeightedHeight, 20,
+		LAYOUT_AddChild, screenSelectLayout,
+		isAmigaOS3X ? LAYOUT_AddChild : TAG_SKIP, modeSelectLayout,
+		LAYOUT_AddChild, startupOptionsOkButton,
 		TAG_DONE)) == NULL) {
-			printf("Could not create screenSelectLayout\n");
+			printf("Could not create startupOptionsLayout\n");
 			return RETURN_ERROR;
 	}
 
-	if ((screenSelectWindowObject = NewObject(WINDOW_GetClass(), NULL,
+	if ((startupOptionsWindowObject = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
-		WA_Title, "Screen Select",
+		WA_Title, "Startup Options",
 		WA_Width, 200,
 		WA_Height, 50,
 		WA_CloseGadget, FALSE,
 		WINDOW_SharedPort, NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_DragBar, TRUE,
-		WINDOW_Layout, screenSelectLayout,
+		WINDOW_Layout, startupOptionsLayout,
 		WA_IDCMP, IDCMP_GADGETUP,
 		WA_CustomScreen, screen,
 		TAG_DONE)) == NULL) {
@@ -1373,7 +1445,7 @@ static LONG selectScreen() {
 			return RETURN_ERROR;
 	}
 
-	if ((screenSelectWindow = (struct Window *)DoMethod(screenSelectWindowObject, WM_OPEN, NULL)) == NULL) {
+	if ((screenSelectWindow = (struct Window *)DoMethod(startupOptionsWindowObject, WM_OPEN, NULL)) == NULL) {
 		printf("Could not open screenSelectWindow\n");
 		return RETURN_ERROR;
 	}
@@ -1382,16 +1454,20 @@ static LONG selectScreen() {
 	ULONG signalMask, winSignal, signals, result;
 	WORD code;
 
-	GetAttr(WINDOW_SigMask, screenSelectWindowObject, &winSignal);
+	GetAttr(WINDOW_SigMask, startupOptionsWindowObject, &winSignal);
 	signalMask = winSignal;
 	while (!done) {
 		signals = Wait(signalMask);
-		while ((result = DoMethod(screenSelectWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
+		while ((result = DoMethod(startupOptionsWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
 			switch (result & WMHI_CLASSMASK) {
 				case WMHI_GADGETUP:
 					switch (result & WMHI_GADGETMASK) {
 						case SCREEN_SELECT_OK_BUTTON_ID:
 						{
+							if (isAmigaOS3X) {
+								GetAttr(RADIOBUTTON_Selected, modeSelectRadioButton, &selectedMode);
+							}
+
 							LONG selectedRadioButton;
 							GetAttr(RADIOBUTTON_Selected, screenSelectRadioButton, &selectedRadioButton);
 
@@ -1467,7 +1543,7 @@ static LONG selectScreen() {
 		}
 	}
 
-	DoMethod(screenSelectWindowObject, WM_CLOSE);
+	DoMethod(startupOptionsWindowObject, WM_CLOSE);
 
 	return RETURN_OK;
 }

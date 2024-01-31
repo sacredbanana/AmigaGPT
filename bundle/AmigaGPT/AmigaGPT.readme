@@ -3,14 +3,14 @@ Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 1.4.1
+Version: 1.4.2
 Architecture: m68k-amigaos >= 3.9; ppc-amigaos
 Requires: AmigaOS 3.9+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 Replaces: util/misc/AmigaGPT.lha
 
-AmigaGPT is a text and image generation program that runs on the classic AmigaOS.
-Utilising the power of the OpenAI's GPT-3 and GPT-4 architectures, this
-program brings state-of-the-art language modeling to your Amiga computer.
+AmigaGPT is a text and image generation program that runs on the classic
+AmigaOS. Utilising the power of the OpenAI's GPT-3 and GPT-4 architectures,
+this program brings state-of-the-art language modeling to your Amiga computer.
 
 Features:
 - Generates text based on input prompts
@@ -23,7 +23,7 @@ Requirements:
 - OCS/ECS/AGA Amiga
 - Motorola 68020 or higher CPU or PPC for AmigaOS 4
 - AmigaOS 3.9 and AmigaOS 3.X (included in Amiga Forever) supported but
- 3.2 or higher recommended. AmigaOS 4.1 version also included.
+ 3.2 or higher required for best experience. AmigaOS 4.1 version also included.
 - AmiSSL 5.9 or higher (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
 - Internet access using a TCP/IP stack such as Roadshow 
 (http://roadshow.apc-tcp.de/index-en.php)
@@ -209,18 +209,27 @@ Special Thanks:
 
 Changelog:
 ------------------
+1.4.2 (2024-01-31)
+- Replaced clicktabs for AmigaOS 3.X since the version is too old and will
+  crash. 3.X users can select the mode at startup.
+------------------
+
+------------------
 1.4.1 (2024-01-22)
-- Fixed bug where the prompt textbox remains in a readonly state when switching from image mode to chat mode
+- Fixed bug where the prompt textbox remains in a readonly state when
+  switching from image mode to chat mode
 ------------------
 
 ------------------
 1.4.0 (2024-01-21) 
 ------------------
-- AI image generation! Switch between chat and image generation mode by clicking the tabs at the top of the screen
+- AI image generation! Switch between chat and image generation mode by
+  clicking the tabs at the top of the screen
 - Colour tweaks
 - Status bar shows more information and colours
 - About screen can now be dismissed with any key press or mouse click
-- The OpenAI API key requester now populates with the existing key if it exists so you can more easily find and fix typos in the key
+- The OpenAI API key requester now populates with the existing key if it
+  exists so you can more easily find and fix typos in the key
 - Added the ability to set the chat system (new "Chat System" menu item)
 - Fix crash when having a conversation consisting of a few messages
 
@@ -259,7 +268,8 @@ Changelog:
 ------------------
 1.0.1 (2023-06-24)
 ------------------
-- After setting UI font, the font is now applied fully without needing to restart the app
+- After setting UI font, the font is now applied fully without needing
+  to restart the app
 
 ----------------
 1.0 (2023-06-17)
