@@ -616,14 +616,26 @@ GPT-4 is a large multimodal model (accepting text inputs and emitting text outpu
 
 @{b}Model variants@{ub}
 
+@{b}gpt-4-0125-preview@{ub}
+The latest GPT-4 model intended to reduce cases of “laziness” where the model doesn’t complete a task. Returns a maximum of 4,096 output tokens.
+
+Max tokens: 128,000
+Training data: Up to Dec 2023
+
+@{b}gpt-4-turbo-preview@{ub}
+Currently points to gpt-4-0125-preview.
+
+Max tokens: 128,000
+Training data: Up to Dec 2023
+
+@{b}gpt-4-1106-preview@{ub}
+GPT-4 Turbo model featuring improved instruction following, JSON mode, reproducible outputs, parallel function calling, and more. Returns a maximum of 4,096 output tokens. This is a preview model.
+
+Max tokens: 128,000
+Training data: Up to Apr 2023
+
 @{b}gpt-4@{ub}
-More capable than any GPT-3.5 model, able to do more complex tasks, and optimized for chat. Currently points to gpt-4-0613.
-
-Max tokens: 8,192
-Training data: Up to Sep 2021
-
-@{b}gpt-4-0314@{ub}
-napshot of gpt-4 from March 14th 2023 with function calling support. This model version will be deprecated on June 13th 2024.
+Currently points to gpt-4-0613.
 
 Max tokens: 8,192
 Training data: Up to Sep 2021
@@ -634,49 +646,14 @@ Snapshot of gpt-4-32k from June 13th 2023 with improved function calling support
 Max tokens: 8,192
 Training data: Up to Sep 2021
 
-@{b}gpt-4-1106-preview@{ub}
-The latest GPT-4 model with improved instruction following, JSON mode, reproducible outputs, parallel function calling, and more. Returns a maximum of 4,096 output tokens. This preview model is not yet suited for production traffic. Learn more.
+@{b}gpt-3.5-turbo-0125@{ub}
+The latest GPT-3.5 Turbo model with higher accuracy at responding in requested formats and a fix for a bug which caused a text encoding issue for non-English language function calls. Returns a maximum of 4,096 output tokens.
 
-Max tokens: 128,000
-Training data: Up to Apr 2023
-
-@{b}gpt-4-32k@{ub}
-Currently points to gpt-4-32k-0613.
-
-Max tokens: 32,768
+Max tokens: 16,385
 Training data: Up to Sep 2021
-
-@{b}gpt-4-32k-0314@{ub}
-Snapshot of gpt-4-32k from March 14th 2023 with function calling support. This model version will be deprecated on June 13th 2024.
-
-Max tokens: 32,768
-Training data: Up to Sep 2021
-
-@{b}gpt-4-32k-0613@{ub}
-Snapshot of gpt-4-32 from June 13th 2023. Unlike gpt-4-32k, this model will not receive updates, and will be deprecated 3 months after a new version is released.
-
-Max tokens: 32,768
-Training data: Up to Sep 2021
-
-@{b}GPT-3.5@{ub}
-
-GPT-3.5 models can understand and generate natural language or code. Our most capable and cost effective model in the GPT-3.5 family is gpt-3.5-turbo which has been optimized for chat but works well for traditional completions tasks as well.
-
 
 @{b}gpt-3.5-turbo@{ub}
-Currently points to gpt-3.5-turbo-0613. Will point to gpt-3.5-turbo-1106 starting Dec 11, 2023.
-
-Max tokens: 4,096
-Training data: Up to Sep 2021
-
-@{b}gpt-3.5-turbo-0301@{ub}
-Snapshot of gpt-3.5-turbo from March 1st 2023. Will be deprecated on June 13th 2024.
-
-Max tokens: 4,096
-Training data: Up to Sep 2021
-
-@{b}gpt-3.5-turbo-0613@{ub}
-Snapshot of gpt-3.5-turbo from June 13th 2023. Will be deprecated on June 13, 2024.
+Currently points to gpt-3.5-turbo-0613. The gpt-3.5-turbo model alias will be automatically upgraded from gpt-3.5-turbo-0613 to gpt-3.5-turbo-0125 on February 16th.
 
 Max tokens: 4,096
 Training data: Up to Sep 2021
@@ -685,18 +662,6 @@ Training data: Up to Sep 2021
 The latest GPT-3.5 Turbo model with improved instruction following, JSON mode, reproducible outputs, parallel function calling, and more. Returns a maximum of 4,096 output tokens.
 
 Max tokens: 16,385
-Training data: Up to Sep 2021
-
-@{b}gpt-3.5-turbo-16k@{ub}
-Currently points to gpt-3.5-turbo-0613. Will point to gpt-3.5-turbo-1106 starting Dec 11, 2023.
-
-Max tokens: 16,384
-Training data: Up to Sep 2021
-
-@{b}gpt-3.5-turbo-16k-0613@{ub}
-Snapshot of gpt-3.5-16k-turbo from June 13th 2023. Will be deprecated on June 13, 2024.
-
-Max tokens: 16,384
 Training data: Up to Sep 2021
 
 @endnode

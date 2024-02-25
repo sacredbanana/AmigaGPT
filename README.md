@@ -122,12 +122,10 @@ GPT-4 is a large multimodal model (accepting text inputs and emitting text outpu
 
 | Model | Description | Max Tokens | Training Data |
 | ----- | ----------- | ---------- | ------------- |
-| gpt-4 | More capable than any GPT-3.5 model, able to do more complex tasks, and optimized for chat. Currently points to gpt-4-0613. | 8,192 | Up to Sep 2021 |
-| gpt-4-0314 | Snapshot of gpt-4 from March 14th 2023 with function calling support. This model version will be deprecated on June 13th 2024. | 8,192 | Up to Sep 2021 |
-| gpt-4-0613 | Snapshot of gpt-4 from June 13th 2023 with improved function calling support. | 8,192 | Up to Sep 2021 |
-| gpt-4-1106-preview | The latest GPT-4 model with improved instruction following, JSON mode, reproducible outputs, parallel function calling, and more. Returns a maximum of 4,096 output tokens. This preview model is not yet suited for production traffic. Learn more. | 128,000 | Up to Apr 2023 |
-| gpt-4-32k | Currently points to gpt-4-32k-0613.  | 32,768 | Up to Sep 2021 |
-| gpt-4-32k-0314 | Snapshot of gpt-4-32k from March 14th 2023 with function calling support. This model version will be deprecated on June 13th 2024. | 32,768 | Up to Sep 2021 |
+| gpt-4-0125-preview | The latest GPT-4 model intended to reduce cases of “laziness” where the model doesn’t complete a task. Returns a maximum of 4,096 output tokens. | 128,000 | Up to Dec 2023 |
+| gpt-4-turbo-preview | Currently points to gpt-4-0125-preview. | 128,000 | Up to Dec 2023 |
+| gpt-4-1106-preview | GPT-4 Turbo model featuring improved instruction following, JSON mode, reproducible outputs, parallel function calling, and more. Returns a maximum of 4,096 output tokens. This is a preview model. | 128,000 | Up to Apr 2023 |
+| gpt-4 | Currently points to gpt-4-0613. | 8,192 | Up to Sep 2021 |
 | gpt-4-32k-0613 | Snapshot of gpt-4-32k from June 13th 2023 with improved function calling support. | 32,768 | Up to Sep 2021 |
 
 ### **GPT-3.5**
@@ -136,12 +134,9 @@ GPT-3.5 models can understand and generate natural language or code. Our most ca
 
 | Model | Description | Max Tokens | Training Data |
 | ----- | ----------- | ---------- | ------------- |
+| gpt-3.5-turbo-0125 | The latest GPT-3.5 Turbo model with higher accuracy at responding in requested formats and a fix for a bug which caused a text encoding issue for non-English language function calls. Returns a maximum of 4,096 output tokens. | 16,385 | Up to Sep 2021 |
 | gpt-3.5-turbo | Currently points to gpt-3.5-turbo-0613. Will point to gpt-3.5-turbo-1106 starting Dec 11, 2023. | 4,096 | Up to Sep 2021 |
-| gpt-3.5-turbo-0301 | Snapshot of gpt-3.5-turbo from March 1st 2023. Will be deprecated on June 13th 2024. | 4,096 | Up to Sep 2021 |
-| gpt-3.5-turbo-0613 | Snapshot of gpt-3.5-turbo from June 13th 2023. Will be deprecated on June 13, 2024. | 4,096 | Up to Sep 2021 |
 | gpt-3.5-turbo-1106 | The latest GPT-3.5 Turbo model with improved instruction following, JSON mode, reproducible outputs, parallel function calling, and more. Returns a maximum of 4,096 output tokens. | 16,385 | Up to Sep 2021 |
-| gpt-3.5-turbo-16k | Currently points to gpt-3.5-turbo-0613. Will point to gpt-3.5-turbo-1106 starting Dec 11, 2023. | 16,384 | Up to Sep 2021 |
-| gpt-3.5-turbo-16k-0613 | Snapshot of gpt-3.5-16k-turbo from June 13th 2023. Will be deprecated on June 13, 2024. | 16,384 | Up to Sep 2021 |
 
 ## Developing
 You can either compile the code natively or with the Docker container.
