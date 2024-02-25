@@ -3,7 +3,7 @@ Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 1.4.2
+Version: 1.4.3
 Architecture: m68k-amigaos >= 3.9; ppc-amigaos
 Requires: AmigaOS 3.9+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 Replaces: util/misc/AmigaGPT.lha
@@ -209,16 +209,21 @@ Special Thanks:
 
 Changelog:
 ------------------
+1.4.3
+------------------
+- Updated to the latest OpenAI chat models
+
+------------------
 1.4.2 (2024-01-31)
+------------------
 - Replaced clicktabs for AmigaOS 3.X since the version is too old and will
   crash. 3.X users can select the mode at startup.
-------------------
 
 ------------------
 1.4.1 (2024-01-22)
+------------------
 - Fixed bug where the prompt textbox remains in a readonly state when
   switching from image mode to chat mode
-------------------
 
 ------------------
 1.4.0 (2024-01-21) 
@@ -251,9 +256,10 @@ Changelog:
 
 ------------------
 1.2.1 (2023-11-04)
+------------------
 - Now fully backwards compatible with Cloanto's AmigaOS 3.X (included
  in Amiga Forever)
-------------------
+
 ------------------
 1.2.0 (2023-10-04)
 ------------------

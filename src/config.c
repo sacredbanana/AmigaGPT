@@ -42,7 +42,9 @@ struct Config config = {
 		0xFFFFFFFF, 0x00000000, 0x00000000, // red
 		0xFFFFFFFF, 0xFFFFFFFF, 0x00000000, // yellow
 		0
-	}
+	},
+	.chatModelSetVersion = CHAT_MODEL_SET_VERSION,
+	.imageModelSetVersion = IMAGE_MODEL_SET_VERSION
 };
 
 /**
@@ -79,6 +81,8 @@ LONG writeConfig() {
 	json_object_object_add(configJsonObject, "uiFontStyle", json_object_new_int(config.uiFontStyle));
 	json_object_object_add(configJsonObject, "uiFontFlags", json_object_new_int(config.uiFontFlags));
 	json_object_object_add(configJsonObject, "openAiApiKey", json_object_new_string(config.openAiApiKey));
+	json_object_object_add(configJsonObject, "chatModelSetVersion", json_object_new_int(CHAT_MODEL_SET_VERSION));
+	json_object_object_add(configJsonObject, "imageModelSetVersion", json_object_new_int(IMAGE_MODEL_SET_VERSION));
 	STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(configJsonObject, JSON_C_TO_STRING_PRETTY);
 
 	if (Write(file, configJsonString, strlen(configJsonString)) != strlen(configJsonString)) {
@@ -250,6 +254,28 @@ LONG readConfig() {
 			memset(config.openAiApiKey, 0, sizeof(config.openAiApiKey));
 			strncpy(config.openAiApiKey, openAiApiKey, strlen(openAiApiKey));
 		}
+	}
+
+	struct json_object *chatModelSetVersionObj;
+	if (json_object_object_get_ex(configJsonObject, "chatModelSetVersion", &chatModelSetVersionObj)) {
+		config.chatModelSetVersion = json_object_get_int(chatModelSetVersionObj);
+	} else {
+		config.chatModelSetVersion = 0;
+	}
+
+	if (config.chatModelSetVersion != CHAT_MODEL_SET_VERSION) {
+		config.chatModel = GPT_4;
+	}
+
+	struct json_object *imageModelSetVersionObj;
+	if (json_object_object_get_ex(configJsonObject, "imageModelSetVersion", &imageModelSetVersionObj)) {
+		config.imageModelSetVersion = json_object_get_int(imageModelSetVersionObj);
+	} else {
+		config.imageModelSetVersion = 0;
+	}
+
+	if (config.imageModelSetVersion != IMAGE_MODEL_SET_VERSION) {
+		config.imageModel = DALL_E_3;
 	}
 
 	FreeVec(configJsonString);

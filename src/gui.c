@@ -91,41 +91,36 @@
 #define MENU_ITEM_PASTE_ID 12
 #define MENU_ITEM_CLEAR_ID 13
 #define MENU_ITEM_SELECT_ALL_ID 14
-#define MENU_ITEM_CHAT_MODEL_GPT_4_ID 15
-#define MENU_ITEM_CHAT_MODEL_GPT_4_0314_ID 16
-#define MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID 17
-#define MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID 18
-#define MENU_ITEM_CHAT_MODEL_GPT_4_32K_ID 19
-#define MENU_ITEM_CHAT_MODEL_GPT_4_32K_0314_ID 20
-#define MENU_ITEM_CHAT_MODEL_GPT_4_32K_0613_ID 21
-#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID 22
-#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0301_ID 23
-#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0613_ID 24
-#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID 25
-#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_ID 26
-#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_0613_ID 27
-#define MENU_ITEM_CHAT_MODEL_ID 28
-#define MENU_ITEM_SPEECH_SYSTEM_ID 29
-#define MENU_ITEM_OPENAI_API_KEY_ID 30
-#define MENU_ITEM_VIEW_DOCUMENTATION_ID 31
-#define MENU_ITEM_VOICE_ID 32
-#define MENU_ITEM_SPEECH_VOICE_AWB_ID 33
-#define MENU_ITEM_SPEECH_VOICE_KAL_ID 34
-#define MENU_ITEM_SPEECH_VOICE_KAL16_ID 35
-#define MENU_ITEM_SPEECH_VOICE_RMS_ID 36
-#define MENU_ITEM_SPEECH_VOICE_SLT_ID 37
-#define MENU_ITEM_IMAGE_MODEL_ID 38
-#define MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID 39
-#define MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID 40
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_ID 41
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_ID 42
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256_ID 43
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512_ID 44
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024_ID 45
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024_ID 46
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024_ID 47
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792_ID 48
-#define MENU_ITEM_CHAT_SYSTEM_ID 49
+#define MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID 15
+#define MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW_ID 16
+#define MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID 17
+#define MENU_ITEM_CHAT_MODEL_GPT_4_ID 18
+#define MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID 19
+#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID 20
+#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID 21
+#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID 22
+#define MENU_ITEM_CHAT_MODEL_ID 23
+#define MENU_ITEM_SPEECH_SYSTEM_ID 24
+#define MENU_ITEM_OPENAI_API_KEY_ID 25
+#define MENU_ITEM_VIEW_DOCUMENTATION_ID 26
+#define MENU_ITEM_VOICE_ID 27
+#define MENU_ITEM_SPEECH_VOICE_AWB_ID 28
+#define MENU_ITEM_SPEECH_VOICE_KAL_ID 29
+#define MENU_ITEM_SPEECH_VOICE_KAL16_ID 30
+#define MENU_ITEM_SPEECH_VOICE_RMS_ID 31
+#define MENU_ITEM_SPEECH_VOICE_SLT_ID 32
+#define MENU_ITEM_IMAGE_MODEL_ID 33
+#define MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID 34
+#define MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID 35
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_ID 36
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_ID 37
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256_ID 38
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512_ID 39
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024_ID 40
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024_ID 41
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024_ID 42
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792_ID 43
+#define MENU_ITEM_CHAT_SYSTEM_ID 44
 
 #ifdef __AMIGAOS4__
 #define IntuitionBase Library
@@ -256,19 +251,14 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "API key", 0, 0, 0, MENU_ITEM_OPENAI_API_KEY_ID},
 	{NM_ITEM, "Chat System", 0, 0, 0, MENU_ITEM_CHAT_SYSTEM_ID},
 	{NM_ITEM, "Chat Model", 0, 0, 0, MENU_ITEM_CHAT_MODEL_ID},
-	{NM_SUB, "gpt-4", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_ID},
-	{NM_SUB, "gpt-4-0314", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_0314_ID},
-	{NM_SUB, "gpt-4-0613", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID},
+
+	{NM_SUB, "gpt-4-0125-preview", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID},
+	{NM_SUB, "gpt-4-turbo-preview", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW_ID},
 	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID},
-	{NM_SUB, "gpt-4-32k", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_32K_ID},
-	{NM_SUB, "gpt-4-32k-0314", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_32K_0314_ID},
-	{NM_SUB, "gpt-4-32k-0613", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_32K_0613_ID},
+	{NM_SUB, "gpt-4-0613", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID},
+	{NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID},
 	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID},
-	{NM_SUB, "gpt-3.5-turbo-0301", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0301_ID},
-	{NM_SUB, "gpt-3.5-turbo-0613", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0613_ID},
 	{NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID},
-	{NM_SUB, "gpt-3.5-turbo-16k", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_ID},
-	{NM_SUB, "gpt-3.5-turbo-16k-0613", 0, CHECKIT, 0, MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_0613_ID},
 	{NM_ITEM, "Image Model", 0, 0, 0, MENU_ITEM_IMAGE_MODEL_ID},
 	{NM_SUB, "dall-e-2", 0, CHECKIT, 0, MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID},
 	{NM_SUB, "dall-e-3", 0, CHECKIT|CHECKED, 0, MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID},
@@ -2444,18 +2434,13 @@ LONG startGUIRunLoop() {
 						case MENU_ITEM_CHAT_SYSTEM_ID:
 							openChatSystemRequester();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_ID:
-							config.chatModel = GPT_4;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID:
+							config.chatModel = GPT_4_0125_PREVIEW;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_0314_ID:
-							config.chatModel = GPT_4_0314;
-							writeConfig();
-							refreshOpenAIMenuItems();
-							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID:
-							config.chatModel = GPT_4_0613;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW_ID:
+							config.chatModel = GPT_4_TURBO_PREVIEW;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
@@ -2464,18 +2449,18 @@ LONG startGUIRunLoop() {
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_32K_ID:
-							config.chatModel = GPT_4_32K;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_ID:
+							config.chatModel = GPT_4;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_32K_0314_ID:
-							config.chatModel = GPT_4_32K_0314;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID:
+							config.chatModel = GPT_4_0613;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_32K_0613_ID:
-							config.chatModel = GPT_4_32K_0613;
+						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID:
+							config.chatModel = GPT_3_5_TURBO_0125;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
@@ -2484,28 +2469,8 @@ LONG startGUIRunLoop() {
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0301_ID:
-							config.chatModel = GPT_3_5_TURBO_0301;
-							writeConfig();
-							refreshOpenAIMenuItems();
-							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0613_ID:
-							config.chatModel = GPT_3_5_TURBO_0613;
-							writeConfig();
-							refreshOpenAIMenuItems();
-							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID:
 							config.chatModel = GPT_3_5_TURBO_1106;
-							writeConfig();
-							refreshOpenAIMenuItems();
-							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_ID:
-							config.chatModel = GPT_3_5_TURBO_16K;
-							writeConfig();
-							refreshOpenAIMenuItems();
-							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_16K_0613_ID:
-							config.chatModel = GPT_3_5_TURBO_16K_0613;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;

@@ -27,19 +27,14 @@ struct ConversationNode {
  * The model OpenAI should use
 **/
 enum Model {
-	GPT_4 = 0,
-	GPT_4_0314,
-	GPT_4_0613,
+	GPT_4_0125_PREVIEW = 0,
+	GPT_4_TURBO_PREVIEW,
 	GPT_4_1106_PREVIEW,
-	GPT_4_32K,
-	GPT_4_32K_0314,
-	GPT_4_32K_0613,
+	GPT_4,
+	GPT_4_0613,
+	GPT_3_5_TURBO_0125,
 	GPT_3_5_TURBO,
-	GPT_3_5_TURBO_0301,
-	GPT_3_5_TURBO_0613,
 	GPT_3_5_TURBO_1106,
-	GPT_3_5_TURBO_16K,
-	GPT_3_5_TURBO_16K_0613
 };
 
 /**

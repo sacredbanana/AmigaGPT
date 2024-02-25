@@ -1,6 +1,9 @@
 #include "openai.h"
 #include "speech.h"
 
+#define CHAT_MODEL_SET_VERSION 1
+#define IMAGE_MODEL_SET_VERSION 0
+
 struct Config {
 	BOOL speechEnabled;
 	enum SpeechSystem speechSystem;
@@ -24,6 +27,8 @@ struct Config {
 	UBYTE uiFontFlags;
 	UBYTE openAiApiKey[64];
 	ULONG colors[16 * 3 + 2];
+	UWORD chatModelSetVersion;  // This is used to determine if the chat model set has changed and so the selected model should be reset to the default
+	UWORD imageModelSetVersion; // Ditto for the image model set
 };
 
 /**
