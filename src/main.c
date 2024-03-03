@@ -170,9 +170,7 @@ static void closeLibraries() {
  * Cleanup and exit the app
 **/
 static void cleanExit() {
-	if (config.chatSystem != NULL) {
-		FreeVec(config.chatSystem);
-	}
+	freeConfig();
 	shutdownGUI();
 	closeSpeech();
 	closeOpenAIConnector();

@@ -8,7 +8,7 @@ struct Config {
 	BOOL speechEnabled;
 	enum SpeechSystem speechSystem;
 	#ifdef __AMIGAOS3__
-	UBYTE speechAccent[32];
+	STRPTR speechAccent;
 	#else
 	enum SpeechVoice speechVoice;
 	#endif
@@ -17,15 +17,15 @@ struct Config {
 	enum ImageModel imageModel;
 	enum ImageSize imageSizeDallE2;
 	enum ImageSize imageSizeDallE3;
-	UBYTE chatFontName[32];
+	STRPTR chatFontName;
 	UWORD chatFontSize;
 	UBYTE chatFontStyle;
 	UBYTE chatFontFlags;
-	UBYTE uiFontName[32];
+	STRPTR uiFontName;
 	UWORD uiFontSize;
 	UBYTE uiFontStyle;
 	UBYTE uiFontFlags;
-	UBYTE openAiApiKey[64];
+	STRPTR openAiApiKey;
 	ULONG colors[16 * 3 + 2];
 	UWORD chatModelSetVersion;  // This is used to determine if the chat model set has changed and so the selected model should be reset to the default
 	UWORD imageModelSetVersion; // Ditto for the image model set
@@ -47,3 +47,8 @@ LONG writeConfig();
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG readConfig();
+
+/**
+ * Free the config
+**/ 
+void freeConfig();

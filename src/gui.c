@@ -797,11 +797,11 @@ LONG initVideo() {
 	currentImage = NULL;
 	loadImages();
 
-	uiTextAttr.ta_Name = config.uiFontName;
+	uiTextAttr.ta_Name = config.uiFontName ? config.uiFontName : "";
 	uiTextAttr.ta_YSize = config.uiFontSize;
 	uiTextAttr.ta_Style = config.uiFontStyle;
 	uiTextAttr.ta_Flags = config.uiFontFlags;
-	chatTextAttr.ta_Name = config.chatFontName;
+	chatTextAttr.ta_Name = config.chatFontName ? config.chatFontName : "";
 	chatTextAttr.ta_YSize = config.chatFontSize;
 	chatTextAttr.ta_Style = config.chatFontStyle;
 	chatTextAttr.ta_Flags = config.chatFontFlags;
@@ -1313,7 +1313,7 @@ static LONG openStartupOptions() {
 	struct ScreenModeRequester *screenModeRequester;
 	screen = LockPubScreen("Workbench");
 
-	if (strlen(config.uiFontName) > 0) {
+	if (config.uiFontName != NULL) {
 		screenFont.ta_Name = config.uiFontName;
 		screenFont.ta_YSize = config.uiFontSize;
 		screenFont.ta_Style = config.uiFontStyle;
@@ -1621,10 +1621,10 @@ static void sendChatMessage() {
 	UWORD wordNumber = 0;
 	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 	do {
-		if (strlen(config.chatSystem) > 0)
+		if (config.chatSystem != NULL && (config.chatSystem) > 0)
 			addTextToConversation(currentConversation, config.chatSystem, "system");
 		responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, TRUE);
-		if (strlen(config.chatSystem) > 0) {
+		if (config.chatSystem != NULL && strlen(config.chatSystem) > 0) {
 			struct MinNode *chatSystemNode = RemTail(currentConversation);
 			FreeVec(chatSystemNode);
 		}
@@ -2672,9 +2672,12 @@ static void openChatFontRequester() {
 	if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
 		struct TextAttr *chatFont;
 		if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
+			if (config.chatFontName != NULL) {
+				FreeVec(config.chatFontName);
+			}
 			chatFont = &fontRequester->fo_Attr;
+			config.chatFontName = AllocVec(strlen(chatFont->ta_Name) + 1, MEMF_ANY);
 			strncpy(config.chatFontName, chatFont->ta_Name, sizeof(config.chatFontName) - 1);
-			config.chatFontName[sizeof(config.chatFontName) - 1] = '\0';
 			config.chatFontSize = chatFont->ta_YSize;
 			config.chatFontStyle = chatFont->ta_Style;
 			config.chatFontFlags = chatFont->ta_Flags;
@@ -2695,10 +2698,12 @@ static void openUIFontRequester() {
 	if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
 		struct TextAttr *uiFont;
 		if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
+			if (config.uiFontName != NULL) {
+				FreeVec(config.uiFontName);
+			}
 			uiFont = &fontRequester->fo_Attr;
-			memset(config.uiFontName, 0, sizeof(config.uiFontName));
+			config.uiFontName = AllocVec(strlen(uiFont->ta_Name) + 1, MEMF_ANY);
 			strncpy(config.uiFontName, uiFont->ta_Name, sizeof(config.uiFontName) - 1);
-			config.uiFontName[sizeof(config.uiFontName) - 1] = '\0';
 			config.uiFontSize = uiFont->ta_YSize;
 			config.uiFontStyle = uiFont->ta_Style;
 			config.uiFontFlags = uiFont->ta_Flags;
@@ -2759,6 +2764,14 @@ static void openSpeechAccentRequester() {
  * Opens a requester for the user to enter their OpenAI API key
 **/
 static void openApiKeyRequester() {
+	UBYTE *buffer = config.openAiApiKey;
+	if (buffer == NULL) {
+		buffer = AllocVec(OPENAI_API_KEY_LENGTH, MEMF_ANY | MEMF_CLEAR);
+		if (buffer == NULL) {
+			displayError("Failed to allocate memory for API key buffer");
+			return;
+		}
+	}
 	Object *apiKeyRequester = NewObject(REQUESTER_GetClass(), NULL,
 		REQ_Type, REQTYPE_STRING,
 		REQ_TitleText, "Enter your OpenAI API key",
@@ -2766,7 +2779,7 @@ static void openApiKeyRequester() {
 		REQ_GadgetText, "OK|Cancel",
 		REQ_Image, REQIMAGE_INFO,
 		REQS_AllowEmpty, FALSE,
-		REQS_Buffer, config.openAiApiKey,
+		REQS_Buffer, buffer,
 		REQS_MaxChars, 64,
 		REQS_Invisible, FALSE,
 		REQ_ForceFocus, TRUE,
@@ -2785,6 +2798,14 @@ static void openApiKeyRequester() {
  * Opens a requester for the user to enter the chat system
 **/
 static void openChatSystemRequester() {
+	UBYTE *buffer = config.chatSystem;
+	if (buffer == NULL) {
+		buffer = AllocVec(CHAT_SYSTEM_LENGTH, MEMF_ANY | MEMF_CLEAR);
+		if (buffer == NULL) {
+			displayError("Failed to allocate memory for chat system buffer");
+			return;
+		}
+	}
 	Object *chatSystemRequester = NewObject(REQUESTER_GetClass(), NULL,
 		REQ_Type, REQTYPE_STRING,
 		REQ_TitleText, "Enter how you would like AmigaGPT to respond",
@@ -2798,7 +2819,7 @@ static void openChatSystemRequester() {
 		REQ_GadgetText, "OK|Cancel",
 		REQ_Image, REQIMAGE_INFO,
 		REQS_AllowEmpty, FALSE,
-		REQS_Buffer, config.chatSystem,
+		REQS_Buffer, buffer,
 		REQS_MaxChars, CHAT_SYSTEM_LENGTH - 1,
 		REQS_Invisible, FALSE,
 		REQ_ForceFocus, TRUE,

@@ -322,11 +322,7 @@ struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum 
 	static BOOL streamingInProgress = FALSE;
 	UWORD responseIndex = 0;
 
-	// printf("1\n");
-	// memset(readBuffer, 0, READ_BUFFER_LENGTH);
-
 	if (!stream || !streamingInProgress) {
-		// printf("2\n");
 		memset(readBuffer, 0, READ_BUFFER_LENGTH);
 		streamingInProgress = stream;
 

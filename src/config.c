@@ -8,10 +8,12 @@
 #include <proto/exec.h>
 #include "config.h"
 
+#define DEFAULT_ACCENT "american.accent"
+
 struct Config config = {
 	.speechEnabled = TRUE,
 	#ifdef __AMIGAOS3__
-	.speechAccent = "american.accent",
+	.speechAccent = NULL,
 	.speechSystem = SPEECH_SYSTEM_34,
 	#else
 	.speechVoice = SPEECH_VOICE_KAL,
@@ -22,11 +24,11 @@ struct Config config = {
 	.imageModel = DALL_E_3,
 	.imageSizeDallE2 = IMAGE_SIZE_256x256,
 	.imageSizeDallE3 = IMAGE_SIZE_1024x1024,
-	.chatFontName = {0},
+	.chatFontName = NULL,
 	.chatFontSize = 8,
 	.chatFontStyle = FS_NORMAL,
 	.chatFontFlags = FPF_DISKFONT | FPF_DESIGNED,
-	.uiFontName = {0},
+	.uiFontName = NULL,
 	.uiFontSize = 8,
 	.uiFontStyle = FS_NORMAL,
 	.uiFontFlags = FPF_DISKFONT | FPF_DESIGNED,
@@ -63,24 +65,24 @@ LONG writeConfig() {
 	json_object_object_add(configJsonObject, "speechEnabled", json_object_new_boolean(config.speechEnabled));
 	json_object_object_add(configJsonObject, "speechSystem", json_object_new_int(config.speechSystem));
 	#ifdef __AMIGAOS3__
-	json_object_object_add(configJsonObject, "speechAccent", json_object_new_string(config.speechAccent));
+	json_object_object_add(configJsonObject, "speechAccent", config.speechAccent != NULL ? json_object_new_string(config.speechAccent) : NULL);
 	#else
 	json_object_object_add(configJsonObject, "speechVoice", json_object_new_int(config.speechVoice));
 	#endif
-	json_object_object_add(configJsonObject, "chatSystem", json_object_new_string(config.chatSystem));
+	json_object_object_add(configJsonObject, "chatSystem", config.chatSystem != NULL ? json_object_new_string(config.chatSystem) : NULL);
 	json_object_object_add(configJsonObject, "chatModel", json_object_new_int(config.chatModel));
 	json_object_object_add(configJsonObject, "imageModel", json_object_new_int(config.imageModel));
 	json_object_object_add(configJsonObject, "imageSizeDallE2", json_object_new_int(config.imageSizeDallE2));
 	json_object_object_add(configJsonObject, "imageSizeDallE3", json_object_new_int(config.imageSizeDallE3));
-	json_object_object_add(configJsonObject, "chatFontName", json_object_new_string(config.chatFontName));
+	json_object_object_add(configJsonObject, "chatFontName", config.chatFontName != NULL ? json_object_new_string(config.chatFontName) : NULL);
 	json_object_object_add(configJsonObject, "chatFontSize", json_object_new_int(config.chatFontSize));
 	json_object_object_add(configJsonObject, "chatFontStyle", json_object_new_int(config.chatFontStyle));
 	json_object_object_add(configJsonObject, "chatFontFlags", json_object_new_int(config.chatFontFlags));
-	json_object_object_add(configJsonObject, "uiFontName", json_object_new_string(config.uiFontName));
+	json_object_object_add(configJsonObject, "uiFontName", config.uiFontName != NULL ? json_object_new_string(config.uiFontName) : NULL);
 	json_object_object_add(configJsonObject, "uiFontSize", json_object_new_int(config.uiFontSize));
 	json_object_object_add(configJsonObject, "uiFontStyle", json_object_new_int(config.uiFontStyle));
 	json_object_object_add(configJsonObject, "uiFontFlags", json_object_new_int(config.uiFontFlags));
-	json_object_object_add(configJsonObject, "openAiApiKey", json_object_new_string(config.openAiApiKey));
+	json_object_object_add(configJsonObject, "openAiApiKey", config.openAiApiKey != NULL ? json_object_new_string(config.openAiApiKey) : NULL);
 	json_object_object_add(configJsonObject, "chatModelSetVersion", json_object_new_int(CHAT_MODEL_SET_VERSION));
 	json_object_object_add(configJsonObject, "imageModelSetVersion", json_object_new_int(IMAGE_MODEL_SET_VERSION));
 	STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(configJsonObject, JSON_C_TO_STRING_PRETTY);
@@ -153,13 +155,21 @@ LONG readConfig() {
 	#endif
 
 	#ifdef __AMIGAOS3__
+	if (config.speechAccent != NULL) {
+		FreeVec(config.speechAccent);
+		config.speechAccent = NULL;
+	}
 	struct json_object *speechAccentObj;
 	if (json_object_object_get_ex(configJsonObject, "speechAccent", &speechAccentObj)) {
-		STRPTR speechAccent = json_object_get_string(speechAccentObj);
-		if (speechAccent != NULL && speechAccent[0] != '\0') {
-			memset(config.speechAccent, 0, sizeof(config.speechAccent));
-			strncpy(config.speechAccent, speechAccent, sizeof(config.speechAccent) - 1);
+		CONST_STRPTR speechAccent = json_object_get_string(speechAccentObj);
+		if (speechAccent != NULL) {
+			config.speechAccent = AllocVec(strlen(speechAccent) + 1, MEMF_CLEAR);
+			strncpy(config.speechAccent, speechAccent, strlen(speechAccent));
 		}
+	}
+	if (config.speechAccent == NULL) {
+		config.speechAccent = AllocVec(strlen(DEFAULT_ACCENT) + 1, MEMF_CLEAR);
+		strncpy(config.speechAccent, DEFAULT_ACCENT, strlen(DEFAULT_ACCENT));
 	}
 	#else
 	struct json_object *speechVoiceObj;
@@ -168,13 +178,15 @@ LONG readConfig() {
 	}
 	#endif
 
-	if (config.chatSystem == NULL) {
-		config.chatSystem = AllocVec(CHAT_SYSTEM_LENGTH, MEMF_CLEAR);
+	if (config.chatSystem != NULL) {
+		FreeVec(config.chatSystem);
+		config.chatSystem = NULL;
 	}
 	struct json_object *chatSystemObj;
 	if (json_object_object_get_ex(configJsonObject, "chatSystem", &chatSystemObj)) {
-		STRPTR chatSystem = json_object_get_string(chatSystemObj);
+		CONST_STRPTR chatSystem = json_object_get_string(chatSystemObj);
 		if (chatSystem != NULL) {
+			config.chatSystem = AllocVec(strlen(chatSystem) + 1, MEMF_CLEAR);
 			strncpy(config.chatSystem, chatSystem, CHAT_SYSTEM_LENGTH - 1);
 		}
 	}
@@ -199,11 +211,15 @@ LONG readConfig() {
 		config.imageSizeDallE3 = json_object_get_int(imageSizeDallE3Obj);
 	}
 
+	if (config.chatFontName != NULL) {
+		FreeVec(config.chatFontName);
+		config.chatFontName = NULL;
+	}
 	struct json_object *chatFontNameObj;
 	if (json_object_object_get_ex(configJsonObject, "chatFontName", &chatFontNameObj)) {
-		STRPTR chatFontName = json_object_get_string(chatFontNameObj);
-		if (chatFontName != NULL && chatFontName[0] != '\0') {
-			memset(config.chatFontName, 0, sizeof(config.chatFontName));
+		CONST_STRPTR chatFontName = json_object_get_string(chatFontNameObj);
+		if (chatFontName != NULL) {
+			config.chatFontName = AllocVec(strlen(chatFontName) + 1, MEMF_CLEAR);
 			strncpy(config.chatFontName, chatFontName, sizeof(config.chatFontName) - 1);
 		}
 	}
@@ -223,11 +239,15 @@ LONG readConfig() {
 		config.chatFontFlags = json_object_get_int(chatFontFlagsObj);
 	}
 
+	if (config.uiFontName != NULL) {
+		FreeVec(config.uiFontName);
+		config.uiFontName = NULL;
+	}
 	struct json_object *uiFontNameObj;
 	if (json_object_object_get_ex(configJsonObject, "uiFontName", &uiFontNameObj)) {
 		STRPTR uiFontName = json_object_get_string(uiFontNameObj);
-		if (uiFontName != NULL && uiFontName[0] != '\0') {
-			memset(config.uiFontName, 0, sizeof(config.uiFontName));
+		if (uiFontName != NULL) {
+			config.uiFontName = AllocVec(strlen(uiFontName) + 1, MEMF_CLEAR);
 			strncpy(config.uiFontName, uiFontName, sizeof(config.uiFontName) - 1);
 		}
 	}
@@ -247,11 +267,15 @@ LONG readConfig() {
 		config.uiFontFlags = json_object_get_int(uiFontFlagsObj);
 	}
 
+	if (config.openAiApiKey != NULL) {
+		FreeVec(config.openAiApiKey);
+		config.openAiApiKey = NULL;
+	}
 	struct json_object *openAiApiKeyObj;
 	if (json_object_object_get_ex(configJsonObject, "openAiApiKey", &openAiApiKeyObj)) {
 		STRPTR openAiApiKey = json_object_get_string(openAiApiKeyObj);
-		if (openAiApiKey != NULL && openAiApiKey[0] != '\0') {
-			memset(config.openAiApiKey, 0, sizeof(config.openAiApiKey));
+		if (openAiApiKey != NULL) {
+			config.openAiApiKey = AllocVec(strlen(openAiApiKey) + 1, MEMF_CLEAR);
 			strncpy(config.openAiApiKey, openAiApiKey, strlen(openAiApiKey));
 		}
 	}
@@ -281,4 +305,32 @@ LONG readConfig() {
 	FreeVec(configJsonString);
 	json_object_put(configJsonObject);
 	return RETURN_OK;
+}
+
+/**
+ * Free the config
+**/ 
+void freeConfig() {
+	#ifdef __AMIGAOS3__
+	if (config.speechAccent != NULL) {
+		FreeVec(config.speechAccent);
+		config.speechAccent = NULL;
+	}
+	#endif
+	if (config.chatSystem != NULL) {
+		FreeVec(config.chatSystem);
+		config.chatSystem = NULL;
+	}
+	if (config.chatFontName != NULL) {
+		FreeVec(config.chatFontName);
+		config.chatFontName = NULL;
+	}
+	if (config.uiFontName != NULL) {
+		FreeVec(config.uiFontName);
+		config.uiFontName = NULL;
+	}
+	if (config.openAiApiKey != NULL) {
+		FreeVec(config.openAiApiKey);
+		config.openAiApiKey = NULL;
+	}
 }

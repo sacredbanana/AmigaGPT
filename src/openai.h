@@ -4,6 +4,7 @@
 #define WRITE_BUFFER_LENGTH 65536
 #define RESPONSE_ARRAY_BUFFER_LENGTH 1024
 #define CHAT_SYSTEM_LENGTH 512
+#define OPENAI_API_KEY_LENGTH 64
 
 /**
  * A node in the conversation
