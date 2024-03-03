@@ -1488,7 +1488,7 @@ static LONG openStartupOptions() {
 										pens[BLOCKPEN] = 4; // nothing?
 										pens[TEXTPEN] = 1; // text colour
 										pens[SHINEPEN] = 1; // gadget top and left borders
-										pens[SHADOWPEN] = 3; // gadget bottom and right borders
+										pens[SHADOWPEN] = 1; // gadget bottom and right borders
 										pens[FILLPEN] = 2; // button text
 										pens[FILLTEXTPEN] = 4; // title bar text
 										pens[BACKGROUNDPEN] = 3; // background
