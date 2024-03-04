@@ -34,7 +34,7 @@ struct Config config = {
 	.uiFontFlags = FPF_DISKFONT | FPF_DESIGNED,
 	.openAiApiKey = NULL,
 	.colors = {
-		8 << 16,
+		10 << 16,
 		0x00000000, 0x00000000, 0x11111111, // darkest blue
 		0x00000000, 0x88888888, 0xFFFFFFFF, // light blue
 		0xA0000000, 0x00000000, 0x0F0F0F0F, // dark red
@@ -43,6 +43,8 @@ struct Config config = {
 		0x00000000, 0xFFFFFFFF, 0x66666666, // pastel green
 		0xFFFFFFFF, 0x00000000, 0x00000000, // red
 		0xFFFFFFFF, 0xFFFFFFFF, 0x00000000, // yellow
+		0x22222222, 0x22222222, 0x22222222, // dark grey
+		0x44444444, 0x44444444, 0x44444444, // grey
 		0
 	},
 	.chatModelSetVersion = CHAT_MODEL_SET_VERSION,

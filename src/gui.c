@@ -198,7 +198,7 @@ static struct Screen *screen;
 static BOOL isPublicScreen;
 static BOOL isAmigaOS3X;
 static LONG selectedMode;
-static WORD pens[32+1];
+static WORD pens[NUMDRIPENS + 1];
 static LONG textEdtorColorMap[] = {5,3,6,3,6,6,4,0,1,6,6,6,6,6,6,6};
 static LONG sendMessageButtonPen;
 static LONG newChatButtonPen;
@@ -812,7 +812,9 @@ LONG initVideo() {
 	if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, SEND_MESSAGE_BUTTON_ID,
 		BUTTON_TextPen, sendMessageButtonPen,
+		#ifdef __AMIGAOS3__
 		BUTTON_BackgroundPen, 0,
+		#endif
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"Send",
@@ -826,7 +828,9 @@ LONG initVideo() {
 	if ((createImageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, CREATE_IMAGE_BUTTON_ID,
 		BUTTON_TextPen, sendMessageButtonPen,
+		#ifdef __AMIGAOS3__
 		BUTTON_BackgroundPen, 0,
+		#endif
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"Create Image",
@@ -856,7 +860,9 @@ LONG initVideo() {
 	if ((newImageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, NEW_IMAGE_BUTTON_ID,
 		BUTTON_TextPen, newChatButtonPen,
+		#ifdef __AMIGAOS3__
 		BUTTON_BackgroundPen, 0,
+		#endif
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"+ New Image",
@@ -873,7 +879,9 @@ LONG initVideo() {
 	if ((deleteImageButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, DELETE_IMAGE_BUTTON_ID,
 		BUTTON_TextPen, deleteButtonPen,
+		#ifdef __AMIGAOS3__
 		BUTTON_BackgroundPen, 0,
+		#endif
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"- Delete Image",
@@ -888,7 +896,9 @@ LONG initVideo() {
 		GA_ID, OPEN_SMALL_IMAGE_BUTTON_ID,
 		GA_Disabled, TRUE,
 		BUTTON_TextPen, sendMessageButtonPen,
+		#ifdef __AMIGAOS3__
 		BUTTON_BackgroundPen, 0,
+		#endif
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"Open Small Image",
@@ -903,7 +913,9 @@ LONG initVideo() {
 		GA_ID, OPEN_MEDIUM_IMAGE_BUTTON_ID,
 		GA_Disabled, TRUE,
 		BUTTON_TextPen, sendMessageButtonPen,
+		#ifdef __AMIGAOS3__
 		BUTTON_BackgroundPen, 0,
+		#endif
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"Open Medium Image",
@@ -918,7 +930,9 @@ LONG initVideo() {
 		GA_ID, OPEN_LARGE_IMAGE_BUTTON_ID,
 		GA_Disabled, TRUE,
 		BUTTON_TextPen, sendMessageButtonPen,
+		#ifdef __AMIGAOS3__
 		BUTTON_BackgroundPen, 0,
+		#endif
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"Open Large Image",
@@ -933,7 +947,9 @@ LONG initVideo() {
 		GA_ID, OPEN_ORIGINAL_IMAGE_BUTTON_ID,
 		GA_Disabled, TRUE,
 		BUTTON_TextPen, sendMessageButtonPen,
+		#ifdef __AMIGAOS3__
 		BUTTON_BackgroundPen, 0,
+		#endif
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"Open Original Image",
@@ -948,7 +964,9 @@ LONG initVideo() {
 		GA_ID, SAVE_COPY_BUTTON_ID,
 		GA_Disabled, TRUE,
 		BUTTON_TextPen, sendMessageButtonPen,
+		#ifdef __AMIGAOS3__
 		BUTTON_BackgroundPen, 0,
+		#endif
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"Save Copy",
@@ -977,7 +995,9 @@ LONG initVideo() {
 	if ((newChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, NEW_CHAT_BUTTON_ID,
 		BUTTON_TextPen, newChatButtonPen,
+		#ifdef __AMIGAOS3__
 		BUTTON_BackgroundPen, 0,
+		#endif
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"+ New Chat",
@@ -991,7 +1011,9 @@ LONG initVideo() {
 	if ((deleteChatButton = NewObject(BUTTON_GetClass(), NULL,
 		GA_ID, DELETE_CHAT_BUTTON_ID,
 		BUTTON_TextPen, deleteButtonPen,
+		#ifdef __AMIGAOS3__
 		BUTTON_BackgroundPen, 0,
+		#endif
 		GA_TextAttr, &uiTextAttr,
 		BUTTON_Justification, BCJ_CENTER,
 		GA_Text, (ULONG)"- Delete Chat",
@@ -1481,8 +1503,8 @@ static LONG openStartupOptions() {
 									if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
 										isPublicScreen = FALSE;
 										UnlockPubScreen(NULL, screen);
-										for (WORD i = 0; i < 32; i++) {
-											pens[i]= 3;
+										for (WORD i = 0; i < NUMDRIPENS; i++) {
+											pens[i]= 1;
 										}
 										pens[DETAILPEN] = 4; // nothing?
 										pens[BLOCKPEN] = 4; // nothing?
@@ -1492,10 +1514,23 @@ static LONG openStartupOptions() {
 										pens[FILLPEN] = 2; // button text
 										pens[FILLTEXTPEN] = 4; // title bar text
 										pens[BACKGROUNDPEN] = 3; // background
-										pens[HIGHLIGHTTEXTPEN] = 0; // nothing?
+										pens[HIGHLIGHTTEXTPEN] = 4; // nothing?
 										pens[BARDETAILPEN] = 1; // menu text
 										pens[BARBLOCKPEN] = 0; // menu background
-										pens[BARTRIMPEN] = 3; // nothing?
+										pens[BARTRIMPEN] = 1; // nothing?
+										#ifdef __AMIGAOS4__
+										pens[FOREGROUNDPEN] = 0;
+										pens[DISABLEDPEN] = 8;
+										pens[DISABLEDSHADOWPEN] = 7;
+										pens[DISABLEDSHINEPEN] = 6;
+										pens[DISABLEDTEXTPEN] = 3;
+										pens[MENUBACKGROUNDPEN] = 9;
+										pens[MENUTEXTPEN] = 3;
+										pens[MENUSHINEPEN] = 8;
+										pens[MENUSHADOWPEN] = 0;
+										pens[SELECTPEN] = 2;
+										pens[SELECTTEXTPEN] = 4;
+										#endif
 										pens[NUMDRIPENS] = ~0;
 
 										if ((screen = OpenScreenTags(NULL,
