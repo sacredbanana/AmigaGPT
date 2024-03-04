@@ -75,6 +75,8 @@
 #define SAVE_COPY_BUTTON_ID 19
 #define MODE_SELECT_RADIO_BUTTON_ID 20
 
+#define NULL_ID 0
+
 #define MODE_SELECTION_TAB_CHAT_ID 0
 #define MODE_SELECTION_TAB_IMAGE_GENERATION_ID 1
 
@@ -219,20 +221,20 @@ static struct TextAttr chatTextAttr = {0};
 static struct TextAttr uiTextAttr = {0};
 static struct Menu *menu;
 static struct NewMenu amigaGPTMenu[] = {
-	{NM_TITLE, "Project", 0, 0, 0, 0},
+	{NM_TITLE, "Project", 0, 0, 0, NULL_ID},
 	{NM_ITEM, "About", 0, 0, 0, MENU_ITEM_ABOUT_ID},
-	{NM_ITEM, NM_BARLABEL, 0, 0, 0, 0},
+	{NM_ITEM, NM_BARLABEL, 0, 0, 0, NULL_ID},
 	{NM_ITEM, "Quit", "Q", 0, 0, MENU_ITEM_QUIT_ID},
-	{NM_TITLE, "Edit", 0, 0, 0, 0},
+	{NM_TITLE, "Edit", 0, 0, 0, NULL_ID},
 	{NM_ITEM, "Cut", "X", 0, 0, MENU_ITEM_CUT_ID},
 	{NM_ITEM, "Copy", "C", 0, 0, MENU_ITEM_COPY_ID},
 	{NM_ITEM, "Paste", "V", 0, 0, MENU_ITEM_PASTE_ID},
 	{NM_ITEM, "Clear", "L", 0, 0, MENU_ITEM_CLEAR_ID},
 	{NM_ITEM, "Select all", "A", 0, 0, MENU_ITEM_SELECT_ALL_ID},
-	{NM_TITLE, "View", 0, 0, 0, 0},
+	{NM_TITLE, "View", 0, 0, 0, NULL_ID},
 	{NM_ITEM, "Chat Font", 0, 0, 0, MENU_ITEM_CHAT_FONT_ID},
 	{NM_ITEM, "UI Font", 0, 0, 0, MENU_ITEM_UI_FONT_ID},
-	{NM_TITLE, "Speech", 0, 0, 0, 0},
+	{NM_TITLE, "Speech", 0, 0, 0, NULL_ID},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, MENU_ITEM_SPEECH_ENABLED_ID},
 	#ifdef __AMIGAOS3__
 	{NM_ITEM, "Accent", 0, 0, 0, MENU_ITEM_SPEECH_ACCENT_ID},
@@ -247,7 +249,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "rms (slow)", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_RMS_ID},
 	{NM_SUB, "slt (slow)", 0, CHECKIT, 0, MENU_ITEM_SPEECH_VOICE_SLT_ID},
 	#endif
-	{NM_TITLE, "OpenAI", 0, 0, 0, 0},
+	{NM_TITLE, "OpenAI", 0, 0, 0, NULL_ID},
 	{NM_ITEM, "API key", 0, 0, 0, MENU_ITEM_OPENAI_API_KEY_ID},
 	{NM_ITEM, "Chat System", 0, 0, 0, MENU_ITEM_CHAT_SYSTEM_ID},
 	{NM_ITEM, "Chat Model", 0, 0, 0, MENU_ITEM_CHAT_MODEL_ID},
@@ -270,7 +272,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "1024x1024", 0, CHECKIT|CHECKED, 0, MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024_ID},
 	{NM_SUB, "1792x1024", 0, CHECKIT, 0, MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024_ID},
 	{NM_SUB, "1024x1792", 0, CHECKIT, 0, MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792_ID},
-	{NM_TITLE, "Help", 0, 0, 0, 0},
+	{NM_TITLE, "Help", 0, 0, 0, NULL_ID},
 	{NM_ITEM, "View Documentation", 0, 0, 0, MENU_ITEM_VIEW_DOCUMENTATION_ID},
 	{NM_END, NULL, 0, 0, 0, 0}
 };
@@ -2350,7 +2352,7 @@ LONG startGUIRunLoop() {
 				case WMHI_MENUPICK:
 				{
 					struct MenuItem *menuItem = ItemAddress(menu, code);
-					ULONG itemIndex = GTMENUITEM_USERDATA(menuItem);
+					ULONG itemIndex = code != -1 ? (ULONG)GTMENUITEM_USERDATA(menuItem) : NULL_ID;
 					switch (itemIndex) {
 						case MENU_ITEM_ABOUT_ID:
 							openAboutWindow();

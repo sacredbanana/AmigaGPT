@@ -4,6 +4,7 @@
 
 - Updated to the latest OpenAI chat models
 - Fix crash when config.json doesn't exist
+- Fix crash when selecting the root menu items
 - Adjust screen colours to enhance visibility
 
 ## 1.4.2 (2024-01-31)
