@@ -1661,6 +1661,14 @@ static void sendChatMessage() {
 		if (config.chatSystem != NULL && (config.chatSystem) > 0)
 			addTextToConversation(currentConversation, config.chatSystem, "system");
 		responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, TRUE);
+		if (responses == NULL) {
+			displayError("Could not connect to OpenAI");
+			SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+			SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+			SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+			FreeVec(receivedMessage);
+			return;
+		}
 		if (config.chatSystem != NULL && strlen(config.chatSystem) > 0) {
 			struct MinNode *chatSystemNode = RemTail(currentConversation);
 			FreeVec(chatSystemNode);
@@ -1731,6 +1739,13 @@ static void sendChatMessage() {
 			updateStatusBar("Generating conversation title...", 7);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
 			responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, FALSE);
+			if (responses == NULL) {
+				displayError("Could not connect to OpenAI");
+				SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				return;
+			}
 			if (responses[0] != NULL) {
 				STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
 				formatText(responseString);
@@ -3002,6 +3017,15 @@ static void createImage() {
 
 	const enum ImageSize imageSize = config.imageModel == DALL_E_2 ? config.imageSizeDallE2 : config.imageSizeDallE3;
 	response = postImageCreationRequestToOpenAI(textUTF_8, config.imageModel, imageSize, config.openAiApiKey);
+	if (response == NULL) {
+		displayError("Error connecting. Please try again.");
+		SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+		updateStatusBar("Error", 6);
+		return;
+	}
 	struct json_object *error;
 
 	if (json_object_object_get_ex(response, "error", &error)) {
@@ -3011,15 +3035,11 @@ static void createImage() {
 		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
 		json_object_put(response);
 		SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		SetGadgetAttrs(openOriginalImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		SetGadgetAttrs(saveCopyButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 		SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 		SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		updateStatusBar("Ready", 5);
+		updateStatusBar("Error", 6);
+		json_object_put(response);
 		return;
 	}
 
@@ -3080,7 +3100,10 @@ static void createImage() {
 	struct json_object **responses = postChatMessageToOpenAI(imageNameConversation, config.chatModel, config.openAiApiKey, FALSE);
 	
 	struct GeneratedImage *generatedImage = AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
-	if (responses[0] != NULL) {
+	if (responses == NULL) {
+		displayError("Failed to generate image name. Using ID instead.");
+		updateStatusBar("Error", 6);
+	} else if (responses[0] != NULL) {
 		STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
 		formatText(responseString);
 		generatedImage->name = AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);

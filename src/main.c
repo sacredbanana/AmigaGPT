@@ -11,6 +11,8 @@
 #include "gui.h"
 #include "config.h"
 
+CONST_STRPTR stack = "$STACK: 32768";
+
 #ifdef __AMIGAOS4__
 struct Library *ApplicationBase;
 extern struct ExecIFace *IExec;
@@ -69,6 +71,24 @@ LONG main(int argc, char **argv) {
 		TAG_DONE);
 	#endif
 	readConfig();
+
+    ULONG *upper, *lower, total;
+    struct Task *task = FindTask(NULL);
+
+    // For CLI tasks, stack bounds are determined differently
+    if (((struct Process *)task)->pr_CLI) {
+        upper = (ULONG *)((struct Process *)task)->pr_ReturnAddr + sizeof(ULONG);
+        total = *(ULONG *)((struct Process *)task)->pr_ReturnAddr;
+        lower = upper - total;
+    } else {
+        upper = (ULONG *)((struct Process *)task)->pr_Task.tc_SPUpper;
+        lower = (ULONG *)((struct Process *)task)->pr_Task.tc_SPLower;
+        total = upper - lower;
+    }
+
+	if (total < 32768) {
+		printf("Warning: The stack size is too small. Please increase it to at least 32768 bytes to avoid crashes.\n");
+	}
 
 	if (initVideo() == RETURN_ERROR) {
 		printf("Failed to initialize video\n");

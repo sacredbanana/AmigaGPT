@@ -315,7 +315,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
  * @param model the model to use
  * @param openAiApiKey the OpenAI API key
  * @param stream whether to stream the response or not
- * @return a pointer to a new array of json_object containing the response(s) -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
+ * @return a pointer to a new array of json_object containing the response(s) or NULL -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
 struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum Model model, CONST_STRPTR openAiApiKey, BOOL stream) {
 	struct json_object **responses = AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
@@ -504,7 +504,7 @@ struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum 
  * @param imageModel the image model to use
  * @param imageSize the size of the image to create
  * @param openAiApiKey the OpenAI API key
- * @return a pointer to a new json_object containing the response -- Free it with json_object_put when you are done using it
+ * @return a pointer to a new json_object containing the response or NULL -- Free it with json_object_put when you are done using it
 **/
 struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize, CONST_STRPTR openAiApiKey) {
 	struct json_object *response;
@@ -522,7 +522,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 	json_object_object_add(obj, "model", json_object_new_string(IMAGE_MODEL_NAMES[imageModel]));
 	json_object_object_add(obj, "prompt", json_object_new_string(prompt));
 	json_object_object_add(obj, "size", json_object_new_string(IMAGE_SIZE_NAMES[ImageSize]));	
-	STRPTR jsonString = json_object_to_json_string(obj);
+	CONST_STRPTR jsonString = json_object_to_json_string(obj);
 
 	snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "POST /v1/images/generations HTTP/1.1\r\n"
 			"Host: api.openai.com\r\n"

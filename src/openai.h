@@ -87,7 +87,7 @@ LONG initOpenAIConnector();
  * @param model the model to use
  * @param openAiApiKey the OpenAI API key
  * @param stream whether to stream the response or not
- * @return a pointer to a new array of json_object containing the response(s) -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
+ * @return a pointer to a new array of json_object containing the response(s) or NULL -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
 struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum Model model, CONST_STRPTR openAiApiKey, BOOL stream);
 
@@ -97,7 +97,7 @@ struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum 
  * @param imageModel the image model to use
  * @param imageSize the size of the image to create
  * @param openAiApiKey the OpenAI API key
- * @return a pointer to a new json_object containing the response -- Free it with json_object_put when you are done using it
+ * @return a pointer to a new json_object containing the response or NULL -- Free it with json_object_put when you are done using it
 **/
 struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize, CONST_STRPTR openAiApiKey);
 

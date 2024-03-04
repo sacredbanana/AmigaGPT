@@ -6,6 +6,9 @@
 - Fix crash when config.json doesn't exist
 - Fix crash when selecting the root menu items
 - Adjust screen colours to enhance visibility
+- Improved error handling for connection errors
+- Use a stack cookie to set minimum stack size to 32768 bytes (AmigaOS 3.1.4 or higher required)
+- Shows a warning if the stack size is smaller than 32768 bytes
 
 ## 1.4.2 (2024-01-31)
 
