@@ -187,7 +187,7 @@ LONG readConfig() {
 		CONST_STRPTR chatSystem = json_object_get_string(chatSystemObj);
 		if (chatSystem != NULL) {
 			config.chatSystem = AllocVec(strlen(chatSystem) + 1, MEMF_CLEAR);
-			strncpy(config.chatSystem, chatSystem, CHAT_SYSTEM_LENGTH - 1);
+			strncpy(config.chatSystem, chatSystem, strlen(chatSystem));
 		}
 	}
 	
@@ -220,7 +220,7 @@ LONG readConfig() {
 		CONST_STRPTR chatFontName = json_object_get_string(chatFontNameObj);
 		if (chatFontName != NULL) {
 			config.chatFontName = AllocVec(strlen(chatFontName) + 1, MEMF_CLEAR);
-			strncpy(config.chatFontName, chatFontName, sizeof(config.chatFontName) - 1);
+			strncpy(config.chatFontName, chatFontName, strlen(chatFontName));
 		}
 	}
 
@@ -245,10 +245,10 @@ LONG readConfig() {
 	}
 	struct json_object *uiFontNameObj;
 	if (json_object_object_get_ex(configJsonObject, "uiFontName", &uiFontNameObj)) {
-		STRPTR uiFontName = json_object_get_string(uiFontNameObj);
+		CONST_STRPTR uiFontName = json_object_get_string(uiFontNameObj);
 		if (uiFontName != NULL) {
 			config.uiFontName = AllocVec(strlen(uiFontName) + 1, MEMF_CLEAR);
-			strncpy(config.uiFontName, uiFontName, sizeof(config.uiFontName) - 1);
+			strncpy(config.uiFontName, uiFontName, strlen(uiFontName));
 		}
 	}
 
@@ -273,7 +273,7 @@ LONG readConfig() {
 	}
 	struct json_object *openAiApiKeyObj;
 	if (json_object_object_get_ex(configJsonObject, "openAiApiKey", &openAiApiKeyObj)) {
-		STRPTR openAiApiKey = json_object_get_string(openAiApiKeyObj);
+		CONST_STRPTR openAiApiKey = json_object_get_string(openAiApiKeyObj);
 		if (openAiApiKey != NULL) {
 			config.openAiApiKey = AllocVec(strlen(openAiApiKey) + 1, MEMF_CLEAR);
 			strncpy(config.openAiApiKey, openAiApiKey, strlen(openAiApiKey));

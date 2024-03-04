@@ -2170,7 +2170,7 @@ LONG startGUIRunLoop() {
 					switch (result & WMHI_GADGETMASK) {
 						case SEND_MESSAGE_BUTTON_ID:
 						case TEXT_INPUT_TEXT_EDITOR_ID:
-							if (strlen(config.openAiApiKey) > 0) {
+							if (config.openAiApiKey != NULL && strlen(config.openAiApiKey) > 0) {
 								sendChatMessage();
 								saveConversations();
 							}
@@ -2253,8 +2253,12 @@ LONG startGUIRunLoop() {
 							break;
 						}
 						case CREATE_IMAGE_BUTTON_ID:
-							createImage();
-							saveImages();
+							if (config.openAiApiKey != NULL && strlen(config.openAiApiKey) > 0) {
+								createImage();
+								saveImages();
+							} else {
+								displayError("Please enter your OpenAI API key in the Open AI settings in the menu.");
+							}
 							break;
 						case DELETE_IMAGE_BUTTON_ID:
 							removeImageFromImageList(currentImage);
@@ -2676,12 +2680,13 @@ static void openChatFontRequester() {
 				FreeVec(config.chatFontName);
 			}
 			chatFont = &fontRequester->fo_Attr;
-			config.chatFontName = AllocVec(strlen(chatFont->ta_Name) + 1, MEMF_ANY);
-			strncpy(config.chatFontName, chatFont->ta_Name, sizeof(config.chatFontName) - 1);
+			config.chatFontName = AllocVec(strlen(chatFont->ta_Name) + 1, MEMF_ANY | MEMF_CLEAR);
+			strncpy(config.chatFontName, chatFont->ta_Name, strlen(chatFont->ta_Name));
 			config.chatFontSize = chatFont->ta_YSize;
 			config.chatFontStyle = chatFont->ta_Style;
 			config.chatFontFlags = chatFont->ta_Flags;
 			writeConfig();
+			printf("Chat font name: %s\n", config.chatFontName);
 			SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
 			SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
 		}
@@ -2702,8 +2707,8 @@ static void openUIFontRequester() {
 				FreeVec(config.uiFontName);
 			}
 			uiFont = &fontRequester->fo_Attr;
-			config.uiFontName = AllocVec(strlen(uiFont->ta_Name) + 1, MEMF_ANY);
-			strncpy(config.uiFontName, uiFont->ta_Name, sizeof(config.uiFontName) - 1);
+			config.uiFontName = AllocVec(strlen(uiFont->ta_Name) + 1, MEMF_ANY | MEMF_CLEAR);
+			strncpy(config.uiFontName, uiFont->ta_Name, strlen(uiFont->ta_Name));
 			config.uiFontSize = uiFont->ta_YSize;
 			config.uiFontStyle = uiFont->ta_Style;
 			config.uiFontFlags = uiFont->ta_Flags;
@@ -2764,13 +2769,13 @@ static void openSpeechAccentRequester() {
  * Opens a requester for the user to enter their OpenAI API key
 **/
 static void openApiKeyRequester() {
-	UBYTE *buffer = config.openAiApiKey;
+	STRPTR buffer = AllocVec(OPENAI_API_KEY_LENGTH + 1, MEMF_ANY | MEMF_CLEAR);
 	if (buffer == NULL) {
-		buffer = AllocVec(OPENAI_API_KEY_LENGTH, MEMF_ANY | MEMF_CLEAR);
-		if (buffer == NULL) {
-			displayError("Failed to allocate memory for API key buffer");
-			return;
-		}
+		displayError("Failed to allocate memory for API key buffer");
+		return;
+	}
+	if (config.openAiApiKey != NULL) {
+		strncpy(buffer, config.openAiApiKey, OPENAI_API_KEY_LENGTH);
 	}
 	Object *apiKeyRequester = NewObject(REQUESTER_GetClass(), NULL,
 		REQ_Type, REQTYPE_STRING,
@@ -2780,31 +2785,36 @@ static void openApiKeyRequester() {
 		REQ_Image, REQIMAGE_INFO,
 		REQS_AllowEmpty, FALSE,
 		REQS_Buffer, buffer,
-		REQS_MaxChars, 64,
-		REQS_Invisible, FALSE,
+		REQS_MaxChars, OPENAI_API_KEY_LENGTH,
 		REQ_ForceFocus, TRUE,
 		TAG_DONE);
 
 	if (apiKeyRequester) {
 		ULONG result = OpenRequester(apiKeyRequester, mainWindow);
 		if (result == 1) {
+			if (config.openAiApiKey != NULL) {
+				FreeVec(config.openAiApiKey);
+			}
+			config.openAiApiKey = AllocVec(strlen(buffer) + 1, MEMF_ANY | MEMF_CLEAR);
+			strncpy(config.openAiApiKey, buffer, strlen(buffer));
 			writeConfig();
 		}
 		DisposeObject(apiKeyRequester);
 	}
+	FreeVec(buffer);
 }
 
 /**
  * Opens a requester for the user to enter the chat system
 **/
 static void openChatSystemRequester() {
-	UBYTE *buffer = config.chatSystem;
+	STRPTR buffer = AllocVec(CHAT_SYSTEM_LENGTH + 1, MEMF_ANY | MEMF_CLEAR);
 	if (buffer == NULL) {
-		buffer = AllocVec(CHAT_SYSTEM_LENGTH, MEMF_ANY | MEMF_CLEAR);
-		if (buffer == NULL) {
-			displayError("Failed to allocate memory for chat system buffer");
-			return;
-		}
+		displayError("Failed to allocate memory for chat system buffer");
+		return;
+	}
+	if (config.chatSystem != NULL) {
+		strncpy(buffer, config.chatSystem, CHAT_SYSTEM_LENGTH);
 	}
 	Object *chatSystemRequester = NewObject(REQUESTER_GetClass(), NULL,
 		REQ_Type, REQTYPE_STRING,
@@ -2818,20 +2828,25 @@ static void openChatSystemRequester() {
 					  "be applied to new conversations only.",
 		REQ_GadgetText, "OK|Cancel",
 		REQ_Image, REQIMAGE_INFO,
-		REQS_AllowEmpty, FALSE,
+		REQS_AllowEmpty, TRUE,
 		REQS_Buffer, buffer,
-		REQS_MaxChars, CHAT_SYSTEM_LENGTH - 1,
-		REQS_Invisible, FALSE,
+		REQS_MaxChars, CHAT_SYSTEM_LENGTH,
 		REQ_ForceFocus, TRUE,
 		TAG_DONE);
 
 	if (chatSystemRequester) {
 		ULONG result = OpenRequester(chatSystemRequester, mainWindow);
 		if (result == 1) {
+			if (config.chatSystem != NULL) {
+				FreeVec(config.chatSystem);
+			}
+			config.chatSystem = AllocVec(strlen(buffer) + 1, MEMF_ANY | MEMF_CLEAR);
+			strncpy(config.chatSystem, buffer, strlen(buffer));
 			writeConfig();
 		}
 		DisposeObject(chatSystemRequester);
 	}
+	FreeVec(buffer);
 }
 
 /**
