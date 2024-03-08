@@ -68,7 +68,7 @@ LONG main(int argc, char **argv) {
         total = upper - lower;
     }
 
-	if (total < 327668) {
+	if (total < 32768) {
 		printf("Warning: The stack size of %ld bytes is too small. The minimum recommended stack size is 32768 bytes to avoid crashes.\n", total);
 	}
 	#else

@@ -201,7 +201,7 @@ static BOOL isPublicScreen;
 static BOOL isAmigaOS3X;
 static LONG selectedMode;
 static WORD pens[NUMDRIPENS + 1];
-static LONG textEdtorColorMap[] = {5,3,6,3,6,6,4,0,1,6,6,6,6,6,6,6};
+static LONG textEditorColorMap[] = {5,10,6,3,6,6,4,0,1,6,6,6,6,6,6,6};
 static LONG sendMessageButtonPen;
 static LONG newChatButtonPen;
 static LONG deleteButtonPen;
@@ -1294,9 +1294,9 @@ LONG initVideo() {
 	}
 
 	if (!isPublicScreen) {
-		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEdtorColorMap, TAG_DONE);
+		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEditorColorMap, TAG_DONE);
 		if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID)
-			SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEdtorColorMap, TAG_DONE);
+			SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEditorColorMap, TAG_DONE);
 	}
 
 	refreshOpenAIMenuItems();

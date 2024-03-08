@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.4.3
+## 1.4.3 (2024-02-08)
 
 - Updated to the latest OpenAI chat models
 - Fix crash when config.json doesn't exist
@@ -10,7 +10,6 @@
 - Use a stack cookie to set minimum stack size to 32768 bytes (AmigaOS 3.1.4 or higher required)
 - Shows a warning if the stack size is smaller than 32768 bytes (AmigaOS 3 only)
 - Send button no longer appears in corner of screen on image mode in 3.X after an error message is dismissed
-- TODO - Fix colour of text cursor in OS4
 
 ## 1.4.2 (2024-01-31)
 
