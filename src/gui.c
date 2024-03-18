@@ -2670,7 +2670,7 @@ void displayError(STRPTR message) {
 	};
 	EasyRequest(mainWindow, &errorRequester, NULL, NULL);
 
-	if (!isAmigaOS3X)
+	if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID)
 		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 
 	FreeVec(adjustedMsg);

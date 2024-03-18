@@ -1,5 +1,8 @@
 # Changelog
 
+- Fixes a bug in chat mode in AmigaOS 3.X where the send button stays disabled after an error occurs
+- Change the stack size in the program .info file to the recommended 32768 bytes
+
 ## 1.4.3 (2024-02-08)
 
 - Updated to the latest OpenAI chat models
@@ -19,7 +22,7 @@
 
 - Fixed bug where the prompt textbox remains in a readonly state when switching from image mode to chat mode
 
-## 1.4.0 (2024-01-21) 
+## 1.4.0 (2024-01-21)
 
 - AI image generation! Switch between chat and image generation mode by clicking the tabs at the top of the screen
 - Colour tweaks
