@@ -3,7 +3,7 @@ Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 1.4.3
+Version: 1.4.4
 Architecture: m68k-amigaos >= 3.9; ppc-amigaos
 Requires: AmigaOS 3.9+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 Replaces: util/misc/AmigaGPT.lha
@@ -208,6 +208,17 @@ Special Thanks:
  https://www.hyperion-entertainment.com
 
 Changelog:
+
+------------------
+1.4.4 (2024-03-23)
+------------------
+
+- Fixes a bug in chat mode in AmigaOS 3.X where the send button stays disabled
+  after an error occurs
+- Change the stack size in the program .info file to the recommended 32768
+  bytes
+- Fix bug where accents were not loaded properly resulting in the speech to
+  fail
 
 ------------------
 1.4.3 (2024-02-08)
