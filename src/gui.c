@@ -2809,8 +2809,11 @@ static void openSpeechAccentRequester() {
 
 	if (fileRequester) {
 		if (AslRequestTags(fileRequester, TAG_DONE)) {
-			strncpy(config.speechAccent, fileRequester->fr_File, sizeof(config.speechAccent) - 1);
-			config.speechAccent[sizeof(config.speechAccent) - 1] = '\0';
+			if (config.speechAccent != NULL) {
+				FreeVec(config.speechAccent);
+			}
+			config.speechAccent = AllocVec(strlen(fileRequester->fr_File) + 1, MEMF_ANY | MEMF_CLEAR);
+			strncpy(config.speechAccent, fileRequester->fr_File, strlen(fileRequester->fr_File));
 			writeConfig();
 		}
 		FreeAslRequest(fileRequester);

@@ -1,7 +1,10 @@
 # Changelog
 
+## 1.4.4
+
 - Fixes a bug in chat mode in AmigaOS 3.X where the send button stays disabled after an error occurs
 - Change the stack size in the program .info file to the recommended 32768 bytes
+- Fix bug where accents were not loaded properly resulting in the speech to fail
 
 ## 1.4.3 (2024-02-08)
 

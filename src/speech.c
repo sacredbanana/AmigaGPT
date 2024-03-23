@@ -181,7 +181,9 @@ void speakText(STRPTR text) {
 	if (CheckIO((struct IORequest *)NarratorIO) == 0) {
 		WaitIO((struct IORequest *)NarratorIO);
 	}
-	TranslateAs(text, strlen(text), translationBuffer, TRANSLATION_BUFFER_SIZE, config.speechAccent);
+	LoadAccent(config.speechAccent);
+	SetAccent(config.speechAccent);
+	Translate(text, strlen(text), translationBuffer, TRANSLATION_BUFFER_SIZE - 1);
 	NarratorIO->ch_masks = audioChannels;
 	NarratorIO->nm_masks = sizeof(audioChannels);
 	NarratorIO->message.io_Command= CMD_WRITE;
