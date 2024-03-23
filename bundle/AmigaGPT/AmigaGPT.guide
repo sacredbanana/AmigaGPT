@@ -669,7 +669,7 @@ Training data: Up to Sep 2021
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
-@{b}1.4.3 (2024-03-23)@{ub}
+@{b}1.4.4 (2024-03-23)@{ub}
 
 - Fixes a bug in chat mode in AmigaOS 3.X where the send button stays disabled
   after an error occurs
