@@ -477,7 +477,7 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((WindowBase = OpenLibrary("window.class", 44)) == NULL) {
+	if ((WindowBase = OpenLibrary("window.class", 42)) == NULL) {
 		printf("Could not open window.class\n");
 		return RETURN_ERROR;
 	}

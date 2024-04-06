@@ -24,7 +24,7 @@ static BPTR GetStdErr();
 static LONG createSSLContext();
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
-static STRPTR getModelName(enum Model model);
+static STRPTR getModelName(enum ChatModel model);
 
 struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase = NULL;
 #ifdef __AMIGAOS4__
@@ -48,8 +48,8 @@ LONG ssl_err = 0;
 ULONG RangeSeed;
 
 /**
- * The names of the models
- * @see enum Model
+ * The names of the chat models
+ * @see enum ChatModel
 **/ 
 CONST_STRPTR CHAT_MODEL_NAMES[] = {
 	[GPT_4_0125_PREVIEW] = "gpt-4-0125-preview",
@@ -317,7 +317,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
  * @param stream whether to stream the response or not
  * @return a pointer to a new array of json_object containing the response(s) or NULL -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
-struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum Model model, CONST_STRPTR openAiApiKey, BOOL stream) {
+struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum ChatModel model, CONST_STRPTR openAiApiKey, BOOL stream) {
 	struct json_object **responses = AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 	static BOOL streamingInProgress = FALSE;
 	UWORD responseIndex = 0;

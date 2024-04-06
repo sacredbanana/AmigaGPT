@@ -13,7 +13,7 @@ struct Config {
 	enum SpeechVoice speechVoice;
 	#endif
 	STRPTR chatSystem;
-	enum Model chatModel;
+	enum ChatModel chatModel;
 	enum ImageModel imageModel;
 	enum ImageSize imageSizeDallE2;
 	enum ImageSize imageSizeDallE3;
