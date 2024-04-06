@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.5 (2024-04-06)
+
+- Fixes the stack size calculation so it will no longer warn you that the stack size is too small if it really isn't
+
 ## 1.4.4 (2024-03-23)
 
 - Fixes a bug in chat mode in AmigaOS 3.X where the send button stays disabled after an error occurs

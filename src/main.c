@@ -55,18 +55,9 @@ LONG main(int argc, char **argv) {
 		wbStartupMessage = (struct WBStartup*)GetMsg(&currentTask->pr_MsgPort);
 	}
 
-	ULONG *upper, *lower, total;
-
-    // For CLI tasks, stack bounds are determined differently
-    if (currentTask->pr_CLI) {
-        upper = (ULONG *)currentTask->pr_ReturnAddr + sizeof(ULONG);
-        total = *(ULONG *)currentTask->pr_ReturnAddr;
-        lower = upper - total;
-    } else {
-        upper = (ULONG *)currentTask->pr_Task.tc_SPUpper;
-        lower = (ULONG *)currentTask->pr_Task.tc_SPLower;
-        total = upper - lower;
-    }
+	UBYTE *upper = (UBYTE *)currentTask->pr_Task.tc_SPUpper;
+	UBYTE *lower = (UBYTE *)currentTask->pr_Task.tc_SPLower;
+	ULONG total = upper - lower;
 
 	if (total < 32768) {
 		printf("Warning: The stack size of %ld bytes is too small. The minimum recommended stack size is 32768 bytes to avoid crashes.\n", total);

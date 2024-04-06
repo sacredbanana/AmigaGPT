@@ -5,6 +5,7 @@
         "/opt/amiga/m68k-amigaos/libnix/include",
         "/opt/amiga/m68k-amigaos/sys-include",
         "/opt/amiga/m68k-amigaos/clib2/include",
+        "/Users/cameron/.vscode/extensions/bartmanabyss.amiga-debug-1.7.7/bin/darwin/opt/m68k-amiga-elf/sys-include"
     ],
     "files.associations": {
         "intuition.h": "c",
@@ -95,4 +96,7 @@
     "c-cpp-flylint.cppcheck.standard": [
         "c18"
     ],
+    "[m68k]": {
+        "editor.rulers": []
+    },
 }
