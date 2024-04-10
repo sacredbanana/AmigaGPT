@@ -24,6 +24,8 @@ struct Config config = {
 	.imageModel = DALL_E_3,
 	.imageSizeDallE2 = IMAGE_SIZE_256x256,
 	.imageSizeDallE3 = IMAGE_SIZE_1024x1024,
+	.ttsModel = TTS_1,
+	.ttsVoice = ALLOY,
 	.chatFontName = NULL,
 	.chatFontSize = 8,
 	.chatFontStyle = FS_NORMAL,
@@ -49,7 +51,9 @@ struct Config config = {
 		0
 	},
 	.chatModelSetVersion = CHAT_MODEL_SET_VERSION,
-	.imageModelSetVersion = IMAGE_MODEL_SET_VERSION
+	.imageModelSetVersion = IMAGE_MODEL_SET_VERSION,
+	.ttsModelSetVersion = TTS_MODEL_SET_VERSION,
+	.ttsVoiceSetVersion = TTS_VOICE_SET_VERSION
 };
 
 /**
@@ -77,6 +81,8 @@ LONG writeConfig() {
 	json_object_object_add(configJsonObject, "imageModel", json_object_new_int(config.imageModel));
 	json_object_object_add(configJsonObject, "imageSizeDallE2", json_object_new_int(config.imageSizeDallE2));
 	json_object_object_add(configJsonObject, "imageSizeDallE3", json_object_new_int(config.imageSizeDallE3));
+	json_object_object_add(configJsonObject, "ttsModel", json_object_new_int(config.ttsModel));
+	json_object_object_add(configJsonObject, "ttsVoice", json_object_new_int(config.ttsVoice));
 	json_object_object_add(configJsonObject, "chatFontName", config.chatFontName != NULL ? json_object_new_string(config.chatFontName) : NULL);
 	json_object_object_add(configJsonObject, "chatFontSize", json_object_new_int(config.chatFontSize));
 	json_object_object_add(configJsonObject, "chatFontStyle", json_object_new_int(config.chatFontStyle));
@@ -88,6 +94,8 @@ LONG writeConfig() {
 	json_object_object_add(configJsonObject, "openAiApiKey", config.openAiApiKey != NULL ? json_object_new_string(config.openAiApiKey) : NULL);
 	json_object_object_add(configJsonObject, "chatModelSetVersion", json_object_new_int(CHAT_MODEL_SET_VERSION));
 	json_object_object_add(configJsonObject, "imageModelSetVersion", json_object_new_int(IMAGE_MODEL_SET_VERSION));
+	json_object_object_add(configJsonObject, "ttsModelSetVersion", json_object_new_int(TTS_MODEL_SET_VERSION));
+	json_object_object_add(configJsonObject, "ttsVoiceSetVersion", json_object_new_int(TTS_VOICE_SET_VERSION));
 	STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(configJsonObject, JSON_C_TO_STRING_PRETTY);
 
 	if (Write(file, configJsonString, strlen(configJsonString)) != strlen(configJsonString)) {
@@ -214,6 +222,16 @@ LONG readConfig() {
 		config.imageSizeDallE3 = json_object_get_int(imageSizeDallE3Obj);
 	}
 
+	struct json_object *ttsModelObj;
+	if (json_object_object_get_ex(configJsonObject, "ttsModel", &ttsModelObj)) {
+		config.ttsModel = json_object_get_int(ttsModelObj);
+	}
+
+	struct json_object *ttsVoiceObj;
+	if (json_object_object_get_ex(configJsonObject, "ttsVoice", &ttsVoiceObj)) {
+		config.ttsVoice = json_object_get_int(ttsVoiceObj);
+	}
+
 	if (config.chatFontName != NULL) {
 		FreeVec(config.chatFontName);
 		config.chatFontName = NULL;
@@ -303,6 +321,28 @@ LONG readConfig() {
 
 	if (config.imageModelSetVersion != IMAGE_MODEL_SET_VERSION) {
 		config.imageModel = DALL_E_3;
+	}
+
+	struct json_object *ttsModelSetVersionObj;
+	if (json_object_object_get_ex(configJsonObject, "ttsModelSetVersion", &ttsModelSetVersionObj)) {
+		config.ttsModelSetVersion = json_object_get_int(ttsModelSetVersionObj);
+	} else {
+		config.ttsModelSetVersion = 0;
+	}
+
+	if (config.ttsModelSetVersion != TTS_MODEL_SET_VERSION) {
+		config.ttsModel = TTS_1;
+	}
+
+	struct json_object *ttsVoiceSetVersionObj;
+	if (json_object_object_get_ex(configJsonObject, "ttsVoiceSetVersion", &ttsVoiceSetVersionObj)) {
+		config.ttsVoiceSetVersion = json_object_get_int(ttsVoiceSetVersionObj);
+	} else {
+		config.ttsVoiceSetVersion = 0;
+	}
+
+	if (config.ttsVoiceSetVersion != TTS_VOICE_SET_VERSION) {
+		config.ttsVoice = ALLOY;
 	}
 
 	FreeVec(configJsonString);

@@ -84,6 +84,28 @@ extern CONST_STRPTR IMAGE_SIZE_NAMES[] = {
 };
 
 /**
+ * The names of the TTS models
+ * @see enum TTSModel
+**/
+CONST_STRPTR TTS_MODEL_NAMES[] = {
+	[TTS_1] = "tts-1",
+	[TTS_1_HD] = "tts-1-hd"
+};
+
+/**
+ * The names of the TTS voices
+ * @see enum TTSVoice
+**/
+CONST_STRPTR TTS_VOICE_NAMES[] = {
+	[ALLOY] = "alloy",
+	[ECHO] = "echo",
+	[FABLE] = "fable",
+	[ONYX] = "onyx",
+	[NOVA] = "nova",
+	[SHIMMER] = "shimmer"
+};
+
+/**
  * Generate a random number
  * @param maxValue the maximum value of the random number
  * @return a random number
@@ -906,6 +928,151 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx) {
 		//         X509_issuer_and_serial_hash(X509_STORE_CTX_get_current_cert(ctx)));
 	}
 	return preverify_ok;
+}
+
+/**
+ * Post a text to speech request to OpenAI
+ * @param text the text to speak
+ * @param ttsModel the TTS model to use
+ * @param ttsVoice the voice to use
+ * @param openAiApiKey the OpenAI API key
+ * @return a pointer to a buffer containing the audio data or NULL -- Free it with FreeVec() when you are done using it
+ **/
+APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, enum TTSVoice ttsVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength) {
+	UBYTE *audioData = AllocVec(100000000, MEMF_ANY | MEMF_CLEAR);
+	struct json_object *response;
+
+	*audioLength = 0;
+
+	memset(readBuffer, 0, READ_BUFFER_LENGTH);
+
+	updateStatusBar("Connecting...", 7);
+	if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+		return NULL;
+	}
+
+	struct json_object *obj = json_object_new_object();
+	json_object_object_add(obj, "model", json_object_new_string(TTS_MODEL_NAMES[ttsModel]));
+	json_object_object_add(obj, "voice", json_object_new_string(TTS_VOICE_NAMES[ttsVoice]));
+	json_object_object_add(obj, "input", json_object_new_string(text));
+	json_object_object_add(obj, "response_format", json_object_new_string("pcm"));
+	CONST_STRPTR jsonString = json_object_to_json_string(obj);
+
+	snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "POST /v1/audio/speech HTTP/1.1\r\n"
+			"Host: api.openai.com\r\n"
+			"Content-Type: application/json\r\n"
+			"Authorization: Bearer %s\r\n"
+			"User-Agent: AmigaGPT\r\n"
+			"Content-Length: %lu\r\n\r\n"
+			"%s\0", openAiApiKey, strlen(jsonString), jsonString);
+
+	json_object_put(obj);
+
+	updateStatusBar("Sending request...", 7);
+	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+
+	if (ssl_err > 0) {
+		WORD bytesRead = 0;
+		BOOL doneReading = FALSE;
+		LONG err = 0;
+		UBYTE statusMessage[64];
+		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_CLEAR);
+		while (!doneReading) {
+			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
+			// printf("Read %ld bytes\n", bytesRead);
+			
+			snprintf(statusMessage, sizeof(statusMessage), "Downloaded %lu bytes", *audioLength);
+			updateStatusBar(statusMessage, 7);
+			err = SSL_get_error(ssl, bytesRead);
+			switch (err) {
+				case SSL_ERROR_NONE:
+					if (bytesRead == 5) {
+						// for (UBYTE i = 0; i < bytesRead; i++) {
+						// 	printf("%d: %02x ", i, tempReadBuffer[i]);
+						// }
+						doneReading = TRUE;
+					} else {
+						memcpy(audioData + *audioLength, tempReadBuffer, bytesRead);
+						*audioLength += bytesRead;
+					}
+					break;
+				case SSL_ERROR_ZERO_RETURN:
+					printf("SSL_ERROR_ZERO_RETURN\n");
+					doneReading = TRUE;
+					break;
+				case SSL_ERROR_WANT_READ:
+					printf("SSL_ERROR_WANT_READ\n");
+					break;
+				case SSL_ERROR_WANT_WRITE:
+					printf("SSL_ERROR_WANT_WRITE\n");
+					break;
+				case SSL_ERROR_WANT_CONNECT:
+					printf("SSL_ERROR_WANT_CONNECT\n");
+					break;
+				case SSL_ERROR_WANT_ACCEPT:
+					printf("SSL_ERROR_WANT_ACCEPT\n");
+					break;
+				case SSL_ERROR_WANT_X509_LOOKUP:
+					printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+					break;
+				case SSL_ERROR_SYSCALL:
+					printf("SSL_ERROR_SYSCALL\n");
+					ULONG err = ERR_get_error();
+					printf("error: %lu\n", err);
+				case SSL_ERROR_SSL:
+					updateStatusBar("Lost connection.", 7);
+					CloseSocket(sock);
+					SSL_shutdown(ssl);
+					SSL_free(ssl);
+					ssl = NULL;
+					sock = -1;;
+					doneReading = TRUE;
+					break;
+				default:
+					printf("Unknown error\n");
+					break;
+			}            
+		}
+		FreeVec(tempReadBuffer);
+	} else {
+		displayError("Couldn't write request!\n");
+		LONG err = SSL_get_error(ssl, ssl_err);
+		switch (err) {
+			case SSL_ERROR_WANT_READ:
+				printf("SSL_ERROR_WANT_READ\n");
+				break;
+			case SSL_ERROR_WANT_WRITE:
+				printf("SSL_ERROR_WANT_WRITE\n");
+				break;
+			case SSL_ERROR_WANT_CONNECT:
+				printf("SSL_ERROR_WANT_CONNECT\n");
+				break;
+			case SSL_ERROR_WANT_ACCEPT:
+				printf("SSL_ERROR_WANT_ACCEPT\n");
+				break;
+			case SSL_ERROR_WANT_X509_LOOKUP:
+				printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+				break;
+			case SSL_ERROR_SYSCALL:
+				printf("SSL_ERROR_SYSCALL\n");
+				break;
+			case SSL_ERROR_SSL:
+				printf("SSL_ERROR_SSL\n");
+				break;
+			default:
+				printf("Unknown error: %ld\n", err);
+				break;
+		}
+		return NULL;
+	}
+
+	CloseSocket(sock);
+	SSL_shutdown(ssl);
+	SSL_free(ssl);
+	ssl = NULL;
+	sock = -1;
+
+	return audioData;
 }
 
 /**

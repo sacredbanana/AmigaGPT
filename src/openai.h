@@ -59,6 +59,38 @@ enum ImageModel {
 extern CONST_STRPTR IMAGE_MODEL_NAMES[];
 
 /**
+ * The Text to Speech model OpenAI should use
+**/
+enum TTSModel {
+	TTS_1 = 0,
+	TTS_1_HD
+};
+
+/**
+ * The names of the Text to Speech models
+ * @see enum TTSModel
+**/ 
+extern CONST_STRPTR TTS_MODEL_NAMES[];
+
+/**
+ * The voice OpenAI should use
+**/
+enum TTSVoice {
+	ALLOY = 0,
+	ECHO,
+	FABLE,
+	ONYX,
+	NOVA,
+	SHIMMER
+};
+
+/**
+ * The names of the voices
+ * @see enum TTSModel
+**/ 
+extern CONST_STRPTR TTS_VOICE_NAMES[];
+
+/**
  * The size of the requested image
 **/
 extern enum ImageSize {
@@ -108,6 +140,16 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/ 
 ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination);
+
+/**
+ * Post a text to speech request to OpenAI
+ * @param text the text to speak
+ * @param ttsModel the TTS model to use
+ * @param ttsVoice the voice to use
+ * @param openAiApiKey the OpenAI API key
+ * @return a pointer to a buffer containing the audio data or NULL -- Free it with FreeVec() when you are done using it
+ **/
+APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, enum TTSVoice ttsVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength);
 
 /**
  * Cleanup the OpenAI connector and free all resources

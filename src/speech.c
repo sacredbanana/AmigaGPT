@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <devices/ahi.h>
+#include <proto/ahi.h>
 #include <proto/exec.h>
 #ifdef __AMIGAOS3__
 #include <proto/translator.h>
@@ -39,6 +41,8 @@ const STRPTR SPEECH_VOICE_NAMES[] = {
 	[SPEECH_VOICE_SLT] = "slt"
 };
 #endif
+
+static APTR loadAudioFile(CONST_STRPTR filename, ULONG* size);
 
 /**
  * The names of the speech systems
@@ -176,6 +180,77 @@ void closeSpeech() {
 **/
 void speakText(STRPTR text) {
 	if (config.speechSystem == SPEECH_SYSTEM_NONE) return;
+	config.speechSystem = SPEECH_SYSTEM_OPENAI;
+	if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
+		struct MsgPort* AHImp;
+		struct AHIRequest* ahiRequest;
+		BYTE ahiError;
+		ULONG audioLength;
+		APTR audioBuffer = postTextToSpeechRequestToOpenAI(text, config.ttsModel, config.ttsVoice, config.openAiApiKey, &audioLength);// loadAudioFile("PROGDIR:jeremy", &audioLength);
+
+		for (ULONG i = 0; i < audioLength; i += 2) {
+			WORD temp = ((WORD*)audioBuffer)[i];
+			((WORD*)audioBuffer)[i] = ((WORD*)audioBuffer)[i + 1];
+			((WORD*)audioBuffer)[i + 1] = temp;
+		}
+// 		// Convert to big endian
+// 		__asm__ __volatile__ (
+//     "lea %a1, %%a0\n"         // Correctly load buffer address into A0
+//     "move.l %0, %%d1\n"       // Load fileSize into D1
+//     "lsr.l #1, %%d1\n"        // fileSize / 2, since we're processing 2 bytes at a time
+
+// "1:\n"
+//     "move.w (%%a0), %%d0\n"   // Load the word from the buffer into D0
+//     "rol.w #8, %%d0\n"        // Rotate left by 8 bits to swap the bytes
+//     "move.w %%d0, (%%a0)+\n"  // Store the swapped word back and increment address
+//     "subq.l #1, %%d1\n"       // Decrement counter
+//     "bne.b 1b\n"              // Repeat if not done
+
+//     :                         // No output operands
+//     : "d" (audioLength), "a" (audioBuffer) // Input operands corrected
+//     : "d0", "d1", "a0", "memory"  // Clobber list
+// );
+		// Create a message port for AHI communication
+		AHImp = CreateMsgPort();
+
+		// Allocate an AHIRequest
+		ahiRequest = (struct AHIRequest*) CreateIORequest(AHImp, sizeof(struct AHIRequest));
+		ahiRequest->ahir_Version = 4; // Use AHI version 4
+
+		// Setup the AHIRequest for playback
+		ahiRequest->ahir_Std.io_Message.mn_ReplyPort = AHImp;
+		ahiRequest->ahir_Std.io_Command = CMD_WRITE;
+		ahiRequest->ahir_Std.io_Data = audioBuffer;
+		ahiRequest->ahir_Std.io_Length = audioLength;
+		ahiRequest->ahir_Frequency = 24000; // Set playback frequency
+		ahiRequest->ahir_Type = AHIST_M16S; // 16-bit stereo sound
+		ahiRequest->ahir_Volume = 0x10000; // Full volume
+		ahiRequest->ahir_Position = 0x8000; // Centered
+
+		// Open the AHI device
+		ahiError = OpenDevice(AHINAME, AHI_DEFAULT_UNIT, (struct IORequest*)ahiRequest, 0L);
+		if (ahiError != 0) {
+			printf("Failed to open AHI device: %d\n", ahiError);
+			FreeVec(audioBuffer);
+			return;
+		}
+
+		// Send the command to AHI
+		SendIO((struct IORequest*)ahiRequest);
+
+		// Wait for playback to finish
+		WaitPort(AHImp);
+		GetMsg(AHImp);
+
+		// Cleanup
+		CloseDevice((struct IORequest*)ahiRequest);
+		DeleteIORequest((struct IORequest*)ahiRequest);
+		DeleteMsgPort(AHImp);
+
+		FreeVec(audioBuffer);
+
+		return;
+	}
 	#ifdef __AMIGAOS3__
 	memset(translationBuffer, 0, TRANSLATION_BUFFER_SIZE);
 	if (CheckIO((struct IORequest *)NarratorIO) == 0) {
@@ -234,4 +309,68 @@ void speakText(STRPTR text) {
 			break;
 	}
 	#endif
+}
+
+/**
+ * Load an audio file into memory
+ * @param filename the name of the file to load
+ * @param size the size of the file
+ * @return a pointer to the loaded audio data, or NULL on failure. Free the buffer with FreeVec() when done.
+*/
+static APTR loadAudioFile(CONST_STRPTR filename, ULONG* size) {
+    BPTR fileHandle;
+    APTR buffer = NULL;
+    LONG fileSize;
+
+    // Attempt to open the audio file
+    fileHandle = Open(filename, MODE_OLDFILE);
+    if (!fileHandle) {
+        printf("Failed to open file: %s\n", filename);
+        return NULL;
+    }
+
+    // Obtain the size of the file
+    Seek(fileHandle, 0, OFFSET_END);
+    fileSize = Seek(fileHandle, 0, OFFSET_BEGINNING);
+
+    if (fileSize > 0) {
+        // Allocate buffer for audio data
+        buffer = AllocVec(fileSize, MEMF_PUBLIC | MEMF_CLEAR);
+        if (!buffer) {
+            printf("Failed to allocate memory for audio data\n");
+        } else {
+            // Read file content into buffer
+            if (Read(fileHandle, buffer, fileSize) != fileSize) {
+                printf("Failed to read file: %s\n", filename);
+                FreeVec(buffer);
+                buffer = NULL;
+            } else {
+                // Successfully read the file
+                *size = fileSize;
+
+				// Convert to big endian
+				__asm__ __volatile__ (
+					"lea    (%1), %%a0\n"     		// Load buffer address into A0
+					"move.l %0, %%d1\n"       		// Load fileSize into D1
+					"lsr.l  #1, %%d1\n"       		// fileSize / 2, since we're processing 2 bytes at a time
+
+				"1:\n"
+					"move.w (%%a0), %%d0\n"   		// Load the word from the buffer into D0
+					"rol.w  #8, %%d0\n"       		// Rotate left by 8 bits to swap the bytes
+					"move.w %%d0, (%%a0)+\n"  		// Store the swapped word back and increment address
+					"subq.l #1, %%d1\n"       		// Decrement counter
+					"bne.b  1b\n"             		// Repeat if not done
+
+					:                          		// No output operands
+					: "g" (fileSize), "g" (buffer) 	// Input operands
+					: "d0", "d1", "a0", "memory"  	// Clobber list
+				);
+            }
+        }
+    }
+
+    // Close the file
+    Close(fileHandle);
+
+    return buffer;
 }

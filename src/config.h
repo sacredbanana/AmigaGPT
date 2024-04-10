@@ -3,6 +3,8 @@
 
 #define CHAT_MODEL_SET_VERSION 1
 #define IMAGE_MODEL_SET_VERSION 0
+#define TTS_MODEL_SET_VERSION 0
+#define TTS_VOICE_SET_VERSION 0
 
 struct Config {
 	BOOL speechEnabled;
@@ -17,6 +19,8 @@ struct Config {
 	enum ImageModel imageModel;
 	enum ImageSize imageSizeDallE2;
 	enum ImageSize imageSizeDallE3;
+	enum TTSModel ttsModel;
+	enum TTSVoice ttsVoice;
 	STRPTR chatFontName;
 	UWORD chatFontSize;
 	UBYTE chatFontStyle;
@@ -29,6 +33,8 @@ struct Config {
 	ULONG colors[16 * 3 + 2];
 	UWORD chatModelSetVersion;  // This is used to determine if the chat model set has changed and so the selected model should be reset to the default
 	UWORD imageModelSetVersion; // Ditto for the image model set
+	UWORD ttsModelSetVersion;   // Ditto for the TTS model set
+	UWORD ttsVoiceSetVersion;   // Ditto for the TTS voice set
 };
 
 /**
