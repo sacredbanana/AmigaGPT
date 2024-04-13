@@ -669,6 +669,11 @@ Training data: Up to Sep 2021
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}1.4.6 (2024-04-13)@{ub}
+
+- Send button no longer appears in top left corner after closing a generated
+  image for Amiga 3.X
+
 @{b}1.4.5 (2024-04-06)@{ub}
 
 - Fixes the stack size calculation so it will no longer warn you that the

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.6 (2024-04-13)
+
+- Send button no longer appears in top left corner after closing a generated image for Amiga 3.X
+
 ## 1.4.5 (2024-04-06)
 
 - Fixes the stack size calculation so it will no longer warn you that the stack size is too small if it really isn't

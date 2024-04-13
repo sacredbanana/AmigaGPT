@@ -3,7 +3,7 @@ Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 1.4.5
+Version: 1.4.6
 Architecture: m68k-amigaos >= 3.9; ppc-amigaos
 Requires: AmigaOS 3.9+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 Replaces: util/misc/AmigaGPT.lha
@@ -208,6 +208,13 @@ Special Thanks:
  https://www.hyperion-entertainment.com
 
 Changelog:
+
+------------------
+1.4.6 (2024-04-13)
+------------------
+
+- Send button no longer appears in top left corner after closing a generated
+  image for Amiga 3.X
 
 ------------------
 1.4.5 (2024-04-06)

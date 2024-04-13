@@ -3257,7 +3257,9 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scale
 	DisposeObject(imageWindowObject);
 	DisposeDTObject(dataTypeObject);
 
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	if (!isAmigaOS3X)
+		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	
 	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	updateStatusBar("Ready", 5);
 }
