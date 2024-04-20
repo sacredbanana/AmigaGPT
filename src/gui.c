@@ -1709,7 +1709,11 @@ static void sendChatMessage() {
 				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, contentStringISO8859_1, GV_TEXTEDITOR_InsertText_Bottom);
 				if (++wordNumber % 50 == 0) {
 					if (config.speechEnabled) {
-						speakText(receivedMessageISO8859_1 + speechIndex);
+						if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
+							speakText(receivedMessage + speechIndex);
+						} else {
+							speakText(receivedMessageISO8859_1 + speechIndex);
+						}
 						speechIndex = strlen(receivedMessageISO8859_1);
 						FreeVec(receivedMessageISO8859_1);
 					}

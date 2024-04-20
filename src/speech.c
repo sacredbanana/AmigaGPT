@@ -193,23 +193,24 @@ void speakText(STRPTR text) {
 			((WORD*)audioBuffer)[i] = ((WORD*)audioBuffer)[i + 1];
 			((WORD*)audioBuffer)[i + 1] = temp;
 		}
-// 		// Convert to big endian
-// 		__asm__ __volatile__ (
-//     "lea %a1, %%a0\n"         // Correctly load buffer address into A0
-//     "move.l %0, %%d1\n"       // Load fileSize into D1
-//     "lsr.l #1, %%d1\n"        // fileSize / 2, since we're processing 2 bytes at a time
+		// Convert to big endian
+		__asm__ __volatile__ (
+			"lea %a1, %%a0\n"         // Correctly load buffer address into A0
+			"move.l %0, %%d1\n"       // Load fileSize into D1
+			"lsr.l #1, %%d1\n"        // fileSize / 2, since we're processing 2 bytes at a time
 
-// "1:\n"
-//     "move.w (%%a0), %%d0\n"   // Load the word from the buffer into D0
-//     "rol.w #8, %%d0\n"        // Rotate left by 8 bits to swap the bytes
-//     "move.w %%d0, (%%a0)+\n"  // Store the swapped word back and increment address
-//     "subq.l #1, %%d1\n"       // Decrement counter
-//     "bne.b 1b\n"              // Repeat if not done
+		"1:\n"
+			"move.w (%%a0), %%d0\n"   // Load the word from the buffer into D0
+			"rol.w #8, %%d0\n"        // Rotate left by 8 bits to swap the bytes
+			"move.w %%d0, (%%a0)+\n"  // Store the swapped word back and increment address
+			"subq.l #1, %%d1\n"       // Decrement counter
+			"bne.b 1b\n"              // Repeat if not done
 
-//     :                         // No output operands
-//     : "d" (audioLength), "a" (audioBuffer) // Input operands corrected
-//     : "d0", "d1", "a0", "memory"  // Clobber list
-// );
+			:                         // No output operands
+			: "d" (audioLength), "a" (audioBuffer) // Input operands corrected
+			: "d0", "d1", "a0", "memory"  // Clobber list
+		);
+
 		// Create a message port for AHI communication
 		AHImp = CreateMsgPort();
 

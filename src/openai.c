@@ -25,6 +25,7 @@ static LONG createSSLContext();
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static STRPTR getModelName(enum ChatModel model);
+static ULONG parseChunkLength(UBYTE *buffer);
 
 struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase = NULL;
 #ifdef __AMIGAOS4__
@@ -216,7 +217,7 @@ LONG initOpenAIConnector() {
 static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
 	struct sockaddr_in addr;
 	struct hostent *hostent;
-
+ 
 	if (ssl != NULL) {
 		SSL_shutdown(ssl);
 		SSL_free(ssl);
@@ -931,6 +932,26 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx) {
 }
 
 /**
+ * Helper function to parse the chunk length
+ * @param buffer the buffer to parse
+ * @return the chunk length
+ * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
+**/
+static ULONG parseChunkLength(UBYTE *buffer) {
+    UBYTE chunkLenStr[10] = {0}; // Enough for the chunk length in hex
+    UBYTE i = 0;
+    
+    // Loop until we find the CRLF which ends the chunk length line
+    while (i < 8 && buffer[i] != '\r' && buffer[i+1] != '\n') {
+        chunkLenStr[i] = buffer[i];
+        i++;
+    }
+	
+    // Convert hex string to unsigned long
+    return strtoul(chunkLenStr, NULL, 16);
+}
+
+/**
  * Post a text to speech request to OpenAI
  * @param text the text to speak
  * @param ttsModel the TTS model to use
@@ -939,7 +960,7 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx) {
  * @return a pointer to a buffer containing the audio data or NULL -- Free it with FreeVec() when you are done using it
  **/
 APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, enum TTSVoice ttsVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength) {
-	UBYTE *audioData = AllocVec(100000000, MEMF_ANY | MEMF_CLEAR);
+	UBYTE *audioData = AllocVec(3000000, MEMF_ANY | MEMF_CLEAR);
 	struct json_object *response;
 
 	*audioLength = 0;
@@ -970,30 +991,74 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 
 	updateStatusBar("Sending request...", 7);
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+	BPTR fileHandle2 = Open("PROGDIR:tts.out", MODE_NEWFILE);
 
 	if (ssl_err > 0) {
 		WORD bytesRead = 0;
+		WORD bytesRemainingInBuffer = 0;
 		BOOL doneReading = FALSE;
 		LONG err = 0;
 		UBYTE statusMessage[64];
 		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_CLEAR);
+		BOOL hasReadHeader = FALSE;
+		BOOL newChunkNeeded = TRUE;
+		ULONG chunkLength = 0;
+		ULONG chunkBytesNeedingRead = 0;
+		UBYTE *dataStart = NULL;
+		if (fileHandle2 == NULL) {
+			displayError("Couldn't open file for writing");
+			return NULL;
+		}
+
 		while (!doneReading) {
+			memset(tempReadBuffer, 0, READ_BUFFER_LENGTH);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
-			// printf("Read %ld bytes\n", bytesRead);
+            bytesRemainingInBuffer = bytesRead;
+			dataStart = tempReadBuffer;
 			
 			snprintf(statusMessage, sizeof(statusMessage), "Downloaded %lu bytes", *audioLength);
 			updateStatusBar(statusMessage, 7);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
 				case SSL_ERROR_NONE:
-					if (bytesRead == 5) {
-						// for (UBYTE i = 0; i < bytesRead; i++) {
-						// 	printf("%d: %02x ", i, tempReadBuffer[i]);
-						// }
-						doneReading = TRUE;
-					} else {
-						memcpy(audioData + *audioLength, tempReadBuffer, bytesRead);
-						*audioLength += bytesRead;
+					while (bytesRemainingInBuffer > 0) {
+						if (!hasReadHeader) {
+							dataStart = strstr(tempReadBuffer, "\r\n\r\n");
+							if (dataStart != NULL) {
+								hasReadHeader = TRUE;
+								dataStart += 4;
+								chunkLength = parseChunkLength(dataStart);
+								chunkBytesNeedingRead = chunkLength;
+								dataStart = strstr(dataStart, "\r\n") + 2;
+								bytesRemainingInBuffer -= (dataStart - tempReadBuffer);
+							} else {
+								continue;
+							}
+						} else if (newChunkNeeded) {
+							chunkLength = parseChunkLength(dataStart);
+							if (chunkLength == 0) {
+								doneReading = TRUE;
+								break;
+							}
+							chunkBytesNeedingRead = chunkLength;
+							uint8_t *oldDataStart = dataStart;
+							dataStart = strstr(dataStart, "\r\n") + 2;
+							bytesRemainingInBuffer -= (dataStart - oldDataStart);
+						}
+
+						if (chunkBytesNeedingRead > (uint32_t)bytesRemainingInBuffer) {
+							memcpy(audioData + *audioLength, dataStart, bytesRemainingInBuffer);
+							*audioLength += bytesRemainingInBuffer;
+							chunkBytesNeedingRead -= bytesRemainingInBuffer;
+							newChunkNeeded = FALSE;
+                            bytesRemainingInBuffer = 0;
+						} else {
+							memcpy(audioData + *audioLength, dataStart, chunkBytesNeedingRead);
+							*audioLength += chunkBytesNeedingRead;
+							dataStart += chunkBytesNeedingRead + 2;
+							bytesRemainingInBuffer -= chunkBytesNeedingRead + 2;
+							newChunkNeeded = TRUE;
+						}
 					}
 					break;
 				case SSL_ERROR_ZERO_RETURN:
@@ -1071,6 +1136,18 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 	SSL_free(ssl);
 	ssl = NULL;
 	sock = -1;
+
+	updateStatusBar("Download complete.", 7);
+
+	// Write the audio data to a file
+	BPTR fileHandle = Open("PROGDIR:tts.pcm", MODE_NEWFILE);
+	if (fileHandle == NULL) {
+		displayError("Couldn't open file for writing");
+		return NULL;
+	}
+	Write(fileHandle, audioData, *audioLength);
+	Close(fileHandle);
+		Close(fileHandle2);
 
 	return audioData;
 }
