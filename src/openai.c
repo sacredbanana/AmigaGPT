@@ -16,6 +16,7 @@
 
 #define OPENAI_HOST "api.openai.com"
 #define OPENAI_PORT 443
+#define AUDIO_BUFFER_SIZE 3000000
 
 static ULONG createSSLConnection(CONST_STRPTR host, UWORD port);
 static ULONG rangeRand(ULONG maxValue);
@@ -960,7 +961,7 @@ static ULONG parseChunkLength(UBYTE *buffer) {
  * @return a pointer to a buffer containing the audio data or NULL -- Free it with FreeVec() when you are done using it
  **/
 APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, enum TTSVoice ttsVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength) {
-	UBYTE *audioData = AllocVec(3000000, MEMF_ANY | MEMF_CLEAR);
+	UBYTE *audioData = AllocVec(AUDIO_BUFFER_SIZE, MEMF_ANY | MEMF_CLEAR);
 	struct json_object *response;
 
 	*audioLength = 0;
