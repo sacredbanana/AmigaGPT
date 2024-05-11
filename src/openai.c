@@ -992,7 +992,6 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 
 	updateStatusBar("Sending request...", 7);
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
-	BPTR fileHandle2 = Open("PROGDIR:tts.out", MODE_NEWFILE);
 
 	if (ssl_err > 0) {
 		WORD bytesRead = 0;
@@ -1000,20 +999,19 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 		BOOL doneReading = FALSE;
 		LONG err = 0;
 		UBYTE statusMessage[64];
+		UBYTE tempChunkHeaderBuffer[10] = {0};
+        UBYTE tempChunkDataBufferLength = 0;
 		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_CLEAR);
 		BOOL hasReadHeader = FALSE;
 		BOOL newChunkNeeded = TRUE;
 		ULONG chunkLength = 0;
 		ULONG chunkBytesNeedingRead = 0;
 		UBYTE *dataStart = NULL;
-		if (fileHandle2 == NULL) {
-			displayError("Couldn't open file for writing");
-			return NULL;
-		}
 
 		while (!doneReading) {
 			memset(tempReadBuffer, 0, READ_BUFFER_LENGTH);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
+			if (newChunkNeeded && bytesRead == 1) continue;
             bytesRemainingInBuffer = bytesRead;
 			dataStart = tempReadBuffer;
 			
@@ -1028,6 +1026,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 							if (dataStart != NULL) {
 								hasReadHeader = TRUE;
 								dataStart += 4;
+                                memcpy(tempChunkHeaderBuffer + tempChunkDataBufferLength, tempReadBuffer, 10 - tempChunkDataBufferLength);
 								chunkLength = parseChunkLength(dataStart);
 								chunkBytesNeedingRead = chunkLength;
 								dataStart = strstr(dataStart, "\r\n") + 2;
@@ -1035,19 +1034,21 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 							} else {
 								continue;
 							}
-						} else if (newChunkNeeded) {
-							chunkLength = parseChunkLength(dataStart);
-							if (chunkLength == 0) {
-								doneReading = TRUE;
-								break;
+						} else {
+							if (newChunkNeeded) {
+								chunkLength = parseChunkLength(dataStart);
+								if (chunkLength == 0) {
+									doneReading = TRUE;
+									break;
+								}
+								chunkBytesNeedingRead = chunkLength;
+								uint8_t *oldDataStart = dataStart;
+								dataStart = strstr(dataStart, "\r\n") + 2;
+								bytesRemainingInBuffer -= (dataStart - oldDataStart);
 							}
-							chunkBytesNeedingRead = chunkLength;
-							uint8_t *oldDataStart = dataStart;
-							dataStart = strstr(dataStart, "\r\n") + 2;
-							bytesRemainingInBuffer -= (dataStart - oldDataStart);
 						}
 
-						if (chunkBytesNeedingRead > (uint32_t)bytesRemainingInBuffer) {
+						if (chunkBytesNeedingRead > (ULONG)bytesRemainingInBuffer) {	
 							memcpy(audioData + *audioLength, dataStart, bytesRemainingInBuffer);
 							*audioLength += bytesRemainingInBuffer;
 							chunkBytesNeedingRead -= bytesRemainingInBuffer;
@@ -1056,8 +1057,14 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 						} else {
 							memcpy(audioData + *audioLength, dataStart, chunkBytesNeedingRead);
 							*audioLength += chunkBytesNeedingRead;
-							dataStart += chunkBytesNeedingRead + 2;
-							bytesRemainingInBuffer -= chunkBytesNeedingRead + 2;
+							if (chunkBytesNeedingRead == bytesRead) {
+								// We have the rest of the chunk but we don't have the closing CRLF
+								bytesRemainingInBuffer = 0;
+								bytesRead = SSL_read(ssl, tempReadBuffer, 2);
+							} else {
+								dataStart += chunkBytesNeedingRead + 2;
+								bytesRemainingInBuffer -= chunkBytesNeedingRead + 2;
+							}
 							newChunkNeeded = TRUE;
 						}
 					}

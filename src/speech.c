@@ -186,7 +186,7 @@ void speakText(STRPTR text) {
 		struct AHIRequest* ahiRequest;
 		BYTE ahiError;
 		ULONG audioLength;
-		APTR audioBuffer = postTextToSpeechRequestToOpenAI(text, config.ttsModel, config.ttsVoice, config.openAiApiKey, &audioLength);// loadAudioFile("PROGDIR:jeremy", &audioLength);
+		APTR audioBuffer = postTextToSpeechRequestToOpenAI(text, config.ttsModel, config.ttsVoice, config.openAiApiKey, &audioLength);
 
 		for (ULONG i = 0; i < audioLength; i += 2) {
 			WORD temp = ((WORD*)audioBuffer)[i];
