@@ -1147,16 +1147,6 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 
 	updateStatusBar("Download complete.", 7);
 
-	// Write the audio data to a file
-	BPTR fileHandle = Open("PROGDIR:tts.pcm", MODE_NEWFILE);
-	if (fileHandle == NULL) {
-		displayError("Couldn't open file for writing");
-		return NULL;
-	}
-	Write(fileHandle, audioData, *audioLength);
-	Close(fileHandle);
-		Close(fileHandle2);
-
 	return audioData;
 }
 
