@@ -180,7 +180,6 @@ void closeSpeech() {
 **/
 void speakText(STRPTR text) {
 	if (config.speechSystem == SPEECH_SYSTEM_NONE) return;
-	config.speechSystem = SPEECH_SYSTEM_OPENAI;
 	if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
 		struct MsgPort* AHImp;
 		struct AHIRequest* ahiRequest;
@@ -188,11 +187,11 @@ void speakText(STRPTR text) {
 		ULONG audioLength;
 		APTR audioBuffer = postTextToSpeechRequestToOpenAI(text, config.ttsModel, config.ttsVoice, config.openAiApiKey, &audioLength);
 
-		for (ULONG i = 0; i < audioLength; i += 2) {
-			WORD temp = ((WORD*)audioBuffer)[i];
-			((WORD*)audioBuffer)[i] = ((WORD*)audioBuffer)[i + 1];
-			((WORD*)audioBuffer)[i + 1] = temp;
-		}
+		// for (ULONG i = 0; i < audioLength; i += 2) {
+		// 	WORD temp = ((WORD*)audioBuffer)[i];
+		// 	((WORD*)audioBuffer)[i] = ((WORD*)audioBuffer)[i + 1];
+		// 	((WORD*)audioBuffer)[i + 1] = temp;
+		// }
 		// Convert to big endian
 		__asm__ __volatile__ (
 			"lea %a1, %%a0\n"         // Correctly load buffer address into A0

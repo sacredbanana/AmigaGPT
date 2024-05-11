@@ -1709,9 +1709,7 @@ static void sendChatMessage() {
 				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, contentStringISO8859_1, GV_TEXTEDITOR_InsertText_Bottom);
 				if (++wordNumber % 50 == 0) {
 					if (config.speechEnabled) {
-						if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
-							speakText(receivedMessage + speechIndex);
-						} else {
+						if (config.speechSystem != SPEECH_SYSTEM_OPENAI) {
 							speakText(receivedMessageISO8859_1 + speechIndex);
 						}
 						speechIndex = strlen(receivedMessageISO8859_1);
@@ -1733,7 +1731,11 @@ static void sendChatMessage() {
 		addTextToConversation(currentConversation, receivedMessage, "assistant");
 		if (config.speechEnabled) {
 			STRPTR receivedMessageISO8859_1 = UTF8ToISO8859_1(receivedMessage);
-			speakText(receivedMessageISO8859_1 + speechIndex);
+			if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
+				speakText(receivedMessage);
+			} else {
+				speakText(receivedMessageISO8859_1 + speechIndex);
+			}
 			FreeVec(receivedMessageISO8859_1);
 		}
 		FreeVec(responses);

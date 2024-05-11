@@ -1,7 +1,6 @@
 # to generate assembler listing with LTO, add to LDFLAGS: -Wa,-adhln=$@.listing,--listing-rhs-width=200
 # for better annotations add -dA -dP
 # to generate assembler source with LTO, add to LDFLAGS: -save-temps=cwd
-
 OS := $(shell uname)
 
 subdirs := $(wildcard */) $(wildcard src/*/) $(wildcard src/*/*/)
@@ -10,6 +9,7 @@ BUILD_DIR := build/os3/obj/
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
 cpp_objects := $(addprefix $(BUILD_DIR),$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
 c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
+c_sources := $(filter-out src/test/%, $(c_sources))
 c_objects := $(addprefix $(BUILD_DIR),$(patsubst %.c,%.o,$(notdir $(c_sources))))
 s_sources := $(wildcard *.s) $(wildcard $(addsuffix *.s,$(subdirs)))
 s_objects := $(addprefix $(BUILD_DIR),$(patsubst %.s,%.o,$(notdir $(s_sources))))
