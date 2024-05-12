@@ -3,7 +3,7 @@ Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 1.4.6
+Version: 1.5.0
 Architecture: m68k-amigaos >= 3.9; ppc-amigaos
 Requires: AmigaOS 3.9+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 Replaces: util/misc/AmigaGPT.lha
@@ -31,6 +31,8 @@ Requirements:
 - For speech on AmigaOS 3, any version of narrator.device
 - For speech on AmigaOS 4, Flite Device
  (http://aminet.net/package/mus/misc/flite_device)
+ - For OpenAI speech, AHI is required
+ (http://aminet.net/package/driver/audio/ahiusr_4.18)
 
 Installation:
 1. Install AmiSSL and a TCP/IP stack if not already done so
@@ -81,6 +83,10 @@ Installing `narrator.device` v37
 * Insert your Workbench 2.0.x (you cannot use 2.1 because the speech libraries
  were removed after version 2.0.4) disk and copy `df0:devs/narrator.device` to
 `{AmigaGPTProgramDirectory}/devs/speech/37`
+
+Installing AHI:
+* If your OS does not come with AHI installed, you can get it from
+ https://aminet.net/package/driver/audio/ahiusr_4.18
 
 AmigaOS 4:
 

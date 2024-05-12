@@ -38,6 +38,8 @@ Ensure you have the necessary system requirements:
 - An **OpenAI account** with an active **API key**
 - *Optional*: **AmigaOS 3 only**: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
 - *Optional*: **AmigaOS 4 only**: **Flite device** (http://aminet.net/package/mus/misc/flite_device)
+- *Optional*: For OpenAI voices, ***AHI*** needs to be installed
+ (http://aminet.net/package/driver/audio/ahiusr_4.18)
 
 ## Installation
 * Install AmiSSL and a TCP/IP stack if not already done so
@@ -68,6 +70,10 @@ Since `translator.library` **v43** is not available as a standalone install, you
 
 ### Installing `narrator.device` **v37**
 * Insert your Workbench 2.0.x (you cannot use 2.1 because the speech libraries were removed after version 2.0.4) disk and copy `df0:devs/narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/37`
+
+### Installing AHI
+* If your OS does not come with AHI installed, you can get it from
+ https://aminet.net/package/driver/audio/ahiusr_4.18
 
 ### AmigaOS 4
 * AmigaGPT for AmigaOS 4 uses the Flite device to provide speech synthesis. Download it from http://aminet.net/package/mus/misc/flite_device.
@@ -122,8 +128,10 @@ GPT-4 is a large multimodal model (accepting text inputs and emitting text outpu
 
 | Model | Description | Max Tokens | Training Data |
 | ----- | ----------- | ---------- | ------------- |
+| gpt-4-turbo | The latest GPT-4 Turbo model with vision capabilities. Vision requests can now use JSON mode and function calling. Currently points to gpt-4-turbo-2024-04-09. | 128,000 | Up to Dec 2023 |
+|gpt-4-turbo-2024-04-09 | GPT-4 Turbo with Vision model. Vision requests can now use JSON mode and function calling. gpt-4-turbo currently points to this version. | 128,000 | Up to Dec 2023 |
+| gpt-4-turbo-preview | GPT-4 Turbo preview model. Currently points to gpt-4-0125-preview. | 128,000 | Up to Dec 2023 |
 | gpt-4-0125-preview | The latest GPT-4 model intended to reduce cases of “laziness” where the model doesn’t complete a task. Returns a maximum of 4,096 output tokens. | 128,000 | Up to Dec 2023 |
-| gpt-4-turbo-preview | Currently points to gpt-4-0125-preview. | 128,000 | Up to Dec 2023 |
 | gpt-4-1106-preview | GPT-4 Turbo model featuring improved instruction following, JSON mode, reproducible outputs, parallel function calling, and more. Returns a maximum of 4,096 output tokens. This is a preview model. | 128,000 | Up to Apr 2023 |
 | gpt-4 | Currently points to gpt-4-0613. | 8,192 | Up to Sep 2021 |
 | gpt-4-32k-0613 | Snapshot of gpt-4-32k from June 13th 2023 with improved function calling support. | 32,768 | Up to Sep 2021 |

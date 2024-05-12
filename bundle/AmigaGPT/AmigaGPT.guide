@@ -58,6 +58,8 @@ For smooth operation of AmigaGPT, your system needs to meet the following requir
 - An OpenAI account with an active API key
 - Optional: For speech on AmigaOS 3, any version of narrator.device
 - Optional: For speech on AmigaOS 4, Flite Device
+- Optional: For OpenAI speech, AHI is required
+ (http://aminet.net/package/driver/audio/ahiusr_4.18)
 
 @endnode
 
@@ -90,6 +92,7 @@ Regardless of which version of 'narrator.device' you choose to install (or both)
 @{"Installing `translator.library` v43 " link tran43}
 @{"Installing `narrator.device` v34 " link narrator34}
 @{"Installing `narrator.device` v37 " link narrator37}
+@{"Installing AHI " link ahi}
 
 @{b}AmigaOS 4@{ub}
 
@@ -129,6 +132,14 @@ Insert your Workbench 1.x disk and copy `df0:devs/narrator.device` to `{AmigaGPT
 @{b}Installing `narrator.device` v37@{ub}
 
 Insert your Workbench 2.0.x (you cannot use 2.1 because the speech libraries were removed after version 2.0.4) disk and copy `df0:devs/narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/37`
+
+@endnode
+
+@node ahi "Installing `AHI`
+
+@{b}Installing AHI@{ub}
+
+If your OS doesn't come with AHI, you can download it from http://aminet.net/package/driver/audio/ahiusr_4.18
 
 @endnode
 
@@ -616,14 +627,26 @@ GPT-4 is a large multimodal model (accepting text inputs and emitting text outpu
 
 @{b}Model variants@{ub}
 
-@{b}gpt-4-0125-preview@{ub}
-The latest GPT-4 model intended to reduce cases of “laziness” where the model doesn’t complete a task. Returns a maximum of 4,096 output tokens.
+@{b}gpt-4-turbo@{ub}
+The latest GPT-4 Turbo model with vision capabilities. Vision requests can now use JSON mode and function calling. Currently points to gpt-4-turbo-2024-04-09.
+
+Max tokens: 128,000
+Training data: Up to Dec 2023
+
+@{b}gpt-4-turbo-2024-04-09@{ub}
+GPT-4 Turbo with Vision model. Vision requests can now use JSON mode and function calling. gpt-4-turbo currently points to this version.
 
 Max tokens: 128,000
 Training data: Up to Dec 2023
 
 @{b}gpt-4-turbo-preview@{ub}
 Currently points to gpt-4-0125-preview.
+
+Max tokens: 128,000
+Training data: Up to Dec 2023
+
+@{b}gpt-4-0125-preview@{ub}
+The latest GPT-4 model intended to reduce cases of “laziness” where the model doesn’t complete a task. Returns a maximum of 4,096 output tokens.
 
 Max tokens: 128,000
 Training data: Up to Dec 2023
@@ -668,6 +691,11 @@ Training data: Up to Sep 2021
 
 @node changelog "Changelog"
 @{b}Changelog@{ub}
+
+@{b}1.5.0 (2024-05-12)@{ub}
+
+- Support for OpenAI's 16-bit text to speech voices
+- Updated to latest OpenAI chat models
 
 @{b}1.4.6 (2024-04-13)@{ub}
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.5.0
+## 1.5.0 (2024-05-12)
 
 - Support for OpenAI text to speech voices
 - Updated to latest OpenAI chat models
