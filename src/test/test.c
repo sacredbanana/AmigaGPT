@@ -41,44 +41,44 @@ int sock = -1;
 int ssl_err = 0;
 uint32_t RangeSeed;
 
-enum TTSVoice {
-	ALLOY = 0,
-	ECHO,
-	FABLE,
-	ONYX,
-	NOVA,
-	SHIMMER
+enum OpenAITTSVoice {
+	OPENAI_TTS_VOICE_ALLOY = 0,
+	OPENAI_TTS_VOICE_ECHO,
+	OPENAI_TTS_VOICE_FABLE,
+	OPENAI_TTS_VOICE_ONYX,
+	OPENAI_TTS_VOICE_NOVA,
+	OPENAI_TTS_VOICE_SHIMMER
 };
 
 /**
  * The Text to Speech model OpenAI should use
 **/
-enum TTSModel {
-	TTS_1 = 0,
-	TTS_1_HD
+enum OpenAITTSModel {
+	OPENAI_TTS_MODEL_TTS_1 = 0,
+	OPENAI_TTS_MODEL_TTS_1_HD
 };
 
 
 /**
  * The names of the TTS models
- * @see enum TTSModel
+ * @see enum OpenAITTSModel
 **/
-const char* TTS_MODEL_NAMES[] = {
-	[TTS_1] = "tts-1",
-	[TTS_1_HD] = "tts-1-hd"
+const char* OPENAI_TTS_MODEL_NAMES[] = {
+	[OPENAI_TTS_MODEL_TTS_1] = "tts-1",
+	[OPENAI_TTS_MODEL_TTS_1_HD] = "tts-1-hd"
 };
 
 /**
  * The names of the TTS voices
- * @see enum TTSVoice
+ * @see enum OpenAITTSVoice
 **/
-const char* TTS_VOICE_NAMES[] = {
+const char* OPENAI_TTS_VOICE_NAMES[] = {
 	[ALLOY] = "alloy",
-	[ECHO] = "echo",
-	[FABLE] = "fable",
-	[ONYX] = "onyx",
-	[NOVA] = "nova",
-	[SHIMMER] = "shimmer"
+	[OPENAI_TTS_VOICE_ECHO] = "echo",
+	[OPENAI_TTS_VOICE_FABLE] = "fable",
+	[OPENAI_TTS_VOICE_ONYX] = "onyx",
+	[OPENAI_TTS_VOICE_NOVA] = "nova",
+	[OPENAI_TTS_VOICE_SHIMMER] = "shimmer"
 };
 
 static bool createSSLContext();
@@ -87,7 +87,7 @@ static void generateRandomSeed(uint8_t *buffer, uint32_t size);
 static uint32_t rangeRand(uint32_t maxValue);
 static bool createSSLConnection(const char *host, uint32_t port);
 static uint32_t parseChunkLength(uint8_t *buffer);
-u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum TTSModel ttsModel, enum TTSVoice ttsVoice, const char *openAiApiKey, uint32_t *audioLength);
+u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum OpenAITTSModel openAITTSModel, enum OpenAITTSVoice openAITTSVoice, const char *openAiApiKey, uint32_t *audioLength);
 
 int main(int argc, char *argv[])
 {
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 
 	CONST_STRPTR text = "The story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the name \"Coles\" really ties back to its founder, George James Coles. When he opened his first store in Collingwood, Melbourne, in 1914, it was called the \"G.J. Coles & Coy Limited,\" using his initials and a traditional business suffix to create a personal yet professional brand name. This approach was fairly common at the time, personalizing businesses to associate them dir ectly with their founders' reputations for integrity and quality.Chunked encoding is useful when larger amounts of data are sent to the client and the total size of the response may not be known until the request has been fully processed. For example, when generating a large HTML table resulting from a database query or when transmitting large images.A chunked response looks like this:";
 
-    postTextToSpeechRequestToOpenAI(text, TTS_1, ALLOY, OPENAI_API_KEY, &len);
+    postTextToSpeechRequestToOpenAI(text, OPENAI_TTS_MODEL_TTS_1, OPENAI_TTS_VOICE_ALLOY, OPENAI_API_KEY, &len);
 
     SSL_CTX_free(ctx);
 
@@ -353,7 +353,7 @@ static uint32_t parseChunkLength(uint8_t *buffer) {
     return strtoul(chunkLenStr, NULL, 16);
 }
 
-u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum TTSModel ttsModel, enum TTSVoice ttsVoice, const char *openAiApiKey, uint32_t *audioLength) {
+u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum OpenAITTSModel openAITTSModel, enum OpenAITTSVoice openAITTSVoice, const char *openAiApiKey, uint32_t *audioLength) {
 	// Allocate a buffer for the audio data. This buffer will be resized if needed
 	ULONG audioBufferSize = AUDIO_BUFFER_SIZE;
 	UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
@@ -378,8 +378,8 @@ u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum TTSModel ttsMod
 	}
 
 	struct json_object *obj = json_object_new_object();
-	json_object_object_add(obj, (const char*)"model", json_object_new_string(TTS_MODEL_NAMES[ttsModel]));
-	json_object_object_add(obj, (const char*)"voice", json_object_new_string(TTS_VOICE_NAMES[ttsVoice]));
+	json_object_object_add(obj, (const char*)"model", json_object_new_string(OPENAI_TTS_MODEL_NAMES[openAITTSModel]));
+	json_object_object_add(obj, (const char*)"voice", json_object_new_string(OPENAI_TTS_VOICE_NAMES[openAITTSVoice]));
 	json_object_object_add(obj, (const char*)"input", json_object_new_string(text));
 	json_object_object_add(obj, (const char*)"response_format", json_object_new_string("pcm"));
 	const char *jsonString = json_object_to_json_string(obj);

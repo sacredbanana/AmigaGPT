@@ -88,41 +88,55 @@
 #define MENU_ITEM_UI_FONT_ID 6
 #define MENU_ITEM_SPEECH_SYSTEM_34_ID 7
 #define MENU_ITEM_SPEECH_SYSTEM_37_ID 8
-#define MENU_ITEM_CUT_ID 10
-#define MENU_ITEM_COPY_ID 11
-#define MENU_ITEM_PASTE_ID 12
-#define MENU_ITEM_CLEAR_ID 13
-#define MENU_ITEM_SELECT_ALL_ID 14
-#define MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID 15
-#define MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW_ID 16
-#define MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID 17
-#define MENU_ITEM_CHAT_MODEL_GPT_4_ID 18
-#define MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID 19
-#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID 20
-#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID 21
-#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID 22
-#define MENU_ITEM_CHAT_MODEL_ID 23
-#define MENU_ITEM_SPEECH_SYSTEM_ID 24
-#define MENU_ITEM_OPENAI_API_KEY_ID 25
-#define MENU_ITEM_VIEW_DOCUMENTATION_ID 26
-#define MENU_ITEM_VOICE_ID 27
-#define MENU_ITEM_SPEECH_VOICE_AWB_ID 28
-#define MENU_ITEM_SPEECH_VOICE_KAL_ID 29
-#define MENU_ITEM_SPEECH_VOICE_KAL16_ID 30
-#define MENU_ITEM_SPEECH_VOICE_RMS_ID 31
-#define MENU_ITEM_SPEECH_VOICE_SLT_ID 32
-#define MENU_ITEM_IMAGE_MODEL_ID 33
-#define MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID 34
-#define MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID 35
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_ID 36
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_ID 37
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256_ID 38
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512_ID 39
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024_ID 40
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024_ID 41
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024_ID 42
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792_ID 43
-#define MENU_ITEM_CHAT_SYSTEM_ID 44
+#define MENU_ITEM_SPEECH_SYSTEM_FLITE_ID 9
+#define MENU_ITEM_SPEECH_SYSTEM_OPENAI_ID 10
+#define MENU_ITEM_CUT_ID 11
+#define MENU_ITEM_COPY_ID 12
+#define MENU_ITEM_PASTE_ID 13
+#define MENU_ITEM_CLEAR_ID 14
+#define MENU_ITEM_SELECT_ALL_ID 15
+#define MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_ID 16
+#define MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_2024_04_09_ID 17
+#define MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW_ID 18
+#define MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID 19
+#define MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID 20
+#define MENU_ITEM_CHAT_MODEL_GPT_4_ID 21
+#define MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID 22
+#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID 23
+#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID 24
+#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID 25
+#define MENU_ITEM_CHAT_MODEL_ID 26
+#define MENU_ITEM_SPEECH_SYSTEM_ID 27
+#define MENU_ITEM_OPENAI_API_KEY_ID 28
+#define MENU_ITEM_VIEW_DOCUMENTATION_ID 29
+#define MENU_ITEM_SPEECH_FLITE_VOICE_ID 30
+#define MENU_ITEM_SPEECH_FLITE_VOICE_AWB_ID 31
+#define MENU_ITEM_SPEECH_FLITE_VOICE_KAL_ID 32
+#define MENU_ITEM_SPEECH_FLITE_VOICE_KAL16_ID 33
+#define MENU_ITEM_SPEECH_FLITE_VOICE_RMS_ID 34
+#define MENU_ITEM_SPEECH_FLITE_VOICE_SLT_ID 35
+#define MENU_ITEM_SPEECH_OPENAI_VOICE_ID 36
+#define MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY_ID 37
+#define MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO_ID 38
+#define MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE_ID 39
+#define MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX_ID 40
+#define MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA_ID 41
+#define MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER_ID 42
+#define MENU_ITEM_SPEECH_OPENAI_MODEL_ID 43
+#define MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_ID 44
+#define MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD_ID 45
+#define MENU_ITEM_IMAGE_MODEL_ID 46
+#define MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID 47
+#define MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID 48
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_ID 49
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_ID 50
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256_ID 51
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512_ID 52
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024_ID 53
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024_ID 54
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024_ID 55
+#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792_ID 56
+#define MENU_ITEM_CHAT_SYSTEM_ID 57
 
 #ifdef __AMIGAOS4__
 #define IntuitionBase Library
@@ -236,30 +250,46 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "UI Font", 0, 0, 0, (APTR)MENU_ITEM_UI_FONT_ID},
 	{NM_TITLE, "Speech", 0, 0, 0, (APTR)NULL_ID},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_ENABLED_ID},
-	#ifdef __AMIGAOS3__
-	{NM_ITEM, "Accent", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_ACCENT_ID},
 	{NM_ITEM, "Speech system", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_ID},
+	#ifdef __AMIGAOS3__
 	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_34_ID},
 	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_37_ID},
 	#else
-	{NM_ITEM, "Voice", 0, 0, 0, (APTR)MENU_ITEM_VOICE_ID},
-	{NM_SUB, "kal (fast)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_VOICE_KAL_ID},
-	{NM_SUB, "kal16 (fast)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_VOICE_KAL16_ID},
-	{NM_SUB, "awb (slow)", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_VOICE_AWB_ID},
-	{NM_SUB, "rms (slow)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_VOICE_RMS_ID},
-	{NM_SUB, "slt (slow)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_VOICE_SLT_ID},
+	{NM_SUB, "Flite", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_FLITE_ID},
 	#endif
+	{NM_SUB, "OpenAI Text To Speech", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI_ID},
+	#ifdef __AMIGAOS4__
+	{NM_ITEM, "Flite Voice", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_ID},
+	{NM_SUB, "kal (fast)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL_ID},
+	{NM_SUB, "kal16 (fast)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL16_ID},
+	{NM_SUB, "awb (slow)", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_AWB_ID},
+	{NM_SUB, "rms (slow)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_RMS_ID},
+	{NM_SUB, "slt (slow)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_SLT_ID},
+	#endif
+	{NM_ITEM, "Accent", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_ACCENT_ID},
+	{NM_ITEM, "OpenAI Voice", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI_ID},
+	{NM_SUB, "alloy", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY_ID},
+	{NM_SUB, "echo", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO_ID},
+	{NM_SUB, "fable", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE_ID},
+	{NM_SUB, "onyx", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX_ID},
+	{NM_SUB, "nova", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA_ID},
+	{NM_SUB, "shimmer", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER_ID},
+	{NM_ITEM, "OpenAI Speech Model", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_ID},
+	{NM_SUB, "tts-1", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_ID},
+	{NM_SUB, "tts-1-hd", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD_ID},
 	{NM_TITLE, "OpenAI", 0, 0, 0, (APTR)NULL_ID},
 	{NM_ITEM, "API key", 0, 0, 0, (APTR)MENU_ITEM_OPENAI_API_KEY_ID},
 	{NM_ITEM, "Chat System", 0, 0, 0, (APTR)MENU_ITEM_CHAT_SYSTEM_ID},
 	{NM_ITEM, "Chat Model", 0, 0, 0, (APTR)MENU_ITEM_CHAT_MODEL_ID},
-
-	{NM_SUB, "gpt-4-0125-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID},
+	{NM_SUB, "gpt-4-turbo", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_ID},
+	{NM_SUB, "gpt-4-turbo-2024-04-09", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_2024_04_09_ID},
 	{NM_SUB, "gpt-4-turbo-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW_ID},
+	{NM_SUB, "gpt-4-0125-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID},
 	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID},
 	{NM_SUB, "gpt-4-0613", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID},
-	{NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID},
+	{NM_ITEM, NM_BARLABEL, 0, 0, 0, (APTR)NULL_ID},
 	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID},
+	{NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID},
 	{NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID},
 	{NM_ITEM, "Image Model", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_MODEL_ID},
 	{NM_SUB, "dall-e-2", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID},
@@ -1880,8 +1910,6 @@ static void refreshSpeechMenuItems() {
 		newMenu++->nm_Flags &= ~CHECKED;
 	}
 
-	#ifdef __AMIGAOS3__
-	newMenu++;
 	while ((++newMenu)->nm_Type == NM_SUB) {
 		if (strcmp(newMenu->nm_Label, SPEECH_SYSTEM_NAMES[config.speechSystem]) == 0) {
 			newMenu->nm_Flags |= CHECKED;
@@ -1889,9 +1917,10 @@ static void refreshSpeechMenuItems() {
 			newMenu->nm_Flags &= ~CHECKED;
 		}
 	}
-	#else
+	newMenu++;
+	#ifdef __AMIGAOS4__
 	while ((++newMenu)->nm_Type == NM_SUB) {
-		CONST_STRPTR currentVoiceName = SPEECH_VOICE_NAMES[config.speechVoice];
+		CONST_STRPTR currentFliteVoiceName = SPEECH_FLITE_VOICE_NAMES[config.speechFliteVoice];
 
 		// Find the length of the first word in the label
 		UBYTE labelLen = 0;
@@ -1901,14 +1930,36 @@ static void refreshSpeechMenuItems() {
 
 		// Compare the first word of the label with currentVoiceName
 		// We have to do this because the (slow) warnings were appended to the label
-		if (strncmp(newMenu->nm_Label, currentVoiceName, labelLen) == 0 &&
-			currentVoiceName[labelLen] == '\0') {
+		if (strncmp(newMenu->nm_Label, currentFliteVoiceName, labelLen) == 0 &&
+			currentFliteVoiceName[labelLen] == '\0') {
 			newMenu->nm_Flags |= CHECKED;
 		} else {
 			newMenu->nm_Flags &= ~CHECKED;
 		}
 	}
 	#endif
+
+	while ((++newMenu)->nm_Type == NM_SUB) {
+		CONST_STRPTR currentOpenAITTSVoiceName = OPENAI_TTS_VOICE_NAMES[config.openAITTSVoice];
+
+		if (strncmp(newMenu->nm_Label, currentOpenAITTSVoiceName, strlen(newMenu->nm_Label)) == 0 &&
+		 strlen(newMenu->nm_Label) == strlen(currentOpenAITTSVoiceName)) {
+			newMenu->nm_Flags |= CHECKED;
+		} else {
+			newMenu->nm_Flags &= ~CHECKED;
+		}
+	}
+
+	while ((++newMenu)->nm_Type == NM_SUB) {
+		CONST_STRPTR currentOpenAITTSModelName = OPENAI_TTS_MODEL_NAMES[config.openAITTSModel];
+
+		if (strncmp(newMenu->nm_Label, currentOpenAITTSModelName, strlen(newMenu->nm_Label)) == 0 &&
+		 strlen(newMenu->nm_Label) == strlen(currentOpenAITTSModelName)) {
+			newMenu->nm_Flags |= CHECKED;
+		} else {
+			newMenu->nm_Flags &= ~CHECKED;
+		}
+	}
 
 	updateMenu();
 }
@@ -2464,32 +2515,92 @@ LONG startGUIRunLoop() {
 							refreshSpeechMenuItems();
 							break;
 						#else
-						case MENU_ITEM_SPEECH_VOICE_AWB_ID:
-							config.speechVoice = SPEECH_VOICE_AWB;
-							writeConfig();
-							refreshSpeechMenuItems();
-							break;
-						case MENU_ITEM_SPEECH_VOICE_KAL_ID:
-							config.speechVoice = SPEECH_VOICE_KAL;
-							writeConfig();
-							refreshSpeechMenuItems();
-							break;
-						case MENU_ITEM_SPEECH_VOICE_KAL16_ID:
-							config.speechVoice = SPEECH_VOICE_KAL16;
-							writeConfig();
-							refreshSpeechMenuItems();
-							break;
-						case MENU_ITEM_SPEECH_VOICE_RMS_ID:
-							config.speechVoice = SPEECH_VOICE_RMS;
-							writeConfig();
-							refreshSpeechMenuItems();
-							break;
-						case MENU_ITEM_SPEECH_VOICE_SLT_ID:
-							config.speechVoice = SPEECH_VOICE_SLT;
+						case MENU_ITEM_SPEECH_SYSTEM_FLITE_ID:
+							closeSpeech();
+							if (initSpeech(SPEECH_SYSTEM_FLITE) == RETURN_OK) {
+								config.speechSystem = SPEECH_SYSTEM_FLITE;
+							} else {
+								config.speechSystem = SPEECH_SYSTEM_NONE;
+								displayError("Could not initialise speech system Flite. Please make sure the flite.device is installed into the program directory.");
+							}
 							writeConfig();
 							refreshSpeechMenuItems();
 							break;
 						#endif
+						case MENU_ITEM_SPEECH_SYSTEM_OPENAI_ID:
+							closeSpeech();
+							initSpeech(SPEECH_SYSTEM_OPENAI);
+							config.speechSystem = SPEECH_SYSTEM_OPENAI;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						#ifdef __AMIGAOS4__
+						case MENU_ITEM_SPEECH_FLITE_VOICE_AWB_ID:
+							config.speechFliteVoice = SPEECH_FLITE_VOICE_AWB;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_FLITE_VOICE_KAL_ID:
+							config.speechFliteVoice = SPEECH_FLITE_VOICE_KAL;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_FLITE_VOICE_KAL16_ID:
+							config.speechFliteVoice = SPEECH_FLITE_VOICE_KAL16;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_FLITE_VOICE_RMS_ID:
+							config.speechFliteVoice = SPEECH_FLITE_VOICE_RMS;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_FLITE_VOICE_SLT_ID:
+							config.speechFliteVoice = SPEECH_FLITE_VOICE_SLT;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						#endif
+						case MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_ID:
+							config.openAITTSModel = OPENAI_TTS_MODEL_TTS_1;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD_ID:
+							config.openAITTSModel = OPENAI_TTS_MODEL_TTS_1_HD;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY_ID:
+							config.openAITTSVoice = OPENAI_TTS_VOICE_ALLOY;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO_ID:
+							config.openAITTSVoice = OPENAI_TTS_VOICE_ECHO;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE_ID:
+							config.openAITTSVoice = OPENAI_TTS_VOICE_FABLE;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX_ID:
+							config.openAITTSVoice = OPENAI_TTS_VOICE_ONYX;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA_ID:
+							config.openAITTSVoice = OPENAI_TTS_VOICE_NOVA;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
+						case MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER_ID:
+							config.openAITTSVoice = OPENAI_TTS_VOICE_SHIMMER;
+							writeConfig();
+							refreshSpeechMenuItems();
+							break;
 						case MENU_ITEM_OPENAI_API_KEY_ID:
 							openApiKeyRequester();
 							break;

@@ -80,8 +80,6 @@ LONG main(int argc, char **argv) {
 	#endif
 	readConfig();
 
-	config.speechSystem = SPEECH_SYSTEM_OPENAI;
-
 	if (initVideo() == RETURN_ERROR) {
 		printf("Failed to initialize video\n");
 		cleanExit(RETURN_ERROR);

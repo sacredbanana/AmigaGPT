@@ -1,10 +1,11 @@
 #include "openai.h"
 #include "speech.h"
 
-#define CHAT_MODEL_SET_VERSION 1
+#define CHAT_MODEL_SET_VERSION 2
 #define IMAGE_MODEL_SET_VERSION 0
-#define TTS_MODEL_SET_VERSION 0
-#define TTS_VOICE_SET_VERSION 0
+#define SPEECH_SYSTEM_SET_VERSION 0
+#define OPENAI_TTS_MODEL_SET_VERSION 0
+#define OPENAI_TTS_VOICE_SET_VERSION 0
 
 struct Config {
 	BOOL speechEnabled;
@@ -12,15 +13,15 @@ struct Config {
 	#ifdef __AMIGAOS3__
 	STRPTR speechAccent;
 	#else
-	enum SpeechVoice speechVoice;
+	enum SpeechFliteVoice speechFliteVoice;
 	#endif
 	STRPTR chatSystem;
 	enum ChatModel chatModel;
 	enum ImageModel imageModel;
 	enum ImageSize imageSizeDallE2;
 	enum ImageSize imageSizeDallE3;
-	enum TTSModel ttsModel;
-	enum TTSVoice ttsVoice;
+	enum OpenAITTSModel openAITTSModel;
+	enum OpenAITTSVoice openAITTSVoice;
 	STRPTR chatFontName;
 	UWORD chatFontSize;
 	UBYTE chatFontStyle;
@@ -33,8 +34,9 @@ struct Config {
 	ULONG colors[16 * 3 + 2];
 	UWORD chatModelSetVersion;  // This is used to determine if the chat model set has changed and so the selected model should be reset to the default
 	UWORD imageModelSetVersion; // Ditto for the image model set
-	UWORD ttsModelSetVersion;   // Ditto for the TTS model set
-	UWORD ttsVoiceSetVersion;   // Ditto for the TTS voice set
+	UWORD speechSystemSetVersion; // Ditto for the speech system
+	UWORD openAITTSModelSetVersion;   // Ditto for the TTS model set
+	UWORD openAITTSVoiceSetVersion;   // Ditto for the TTS voice set
 };
 
 /**

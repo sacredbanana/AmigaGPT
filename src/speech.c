@@ -31,14 +31,14 @@ struct FliteVoice *voice = NULL;
 
 /**
  * The names of the speech voices
- * @see enum SpeechVoice
+ * @see enum SpeechFliteVoice
 **/ 
-const STRPTR SPEECH_VOICE_NAMES[] = {
-	[SPEECH_VOICE_KAL] = "kal",
-	[SPEECH_VOICE_KAL16] = "kal16",
-	[SPEECH_VOICE_AWB] = "awb",
-	[SPEECH_VOICE_RMS] = "rms",
-	[SPEECH_VOICE_SLT] = "slt"
+const STRPTR SPEECH_FLITE_VOICE_NAMES[] = {
+	[SPEECH_FLITE_VOICE_KAL] = "kal",
+	[SPEECH_FLITE_VOICE_KAL16] = "kal16",
+	[SPEECH_FLITE_VOICE_AWB] = "awb",
+	[SPEECH_FLITE_VOICE_RMS] = "rms",
+	[SPEECH_FLITE_VOICE_SLT] = "slt"
 };
 #endif
 
@@ -52,7 +52,8 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {
 	[SPEECH_SYSTEM_NONE] = "None",
 	[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
 	[SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
-	[SPEECH_SYSTEM_FLITE] = "Flite"
+	[SPEECH_SYSTEM_FLITE] = "Flite",
+	[SPEECH_SYSTEM_OPENAI] = "OpenAI Text To Speech"
 };
 
 /**
@@ -61,6 +62,7 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG initSpeech(enum SpeechSystem speechSystem) {
+	if (speechSystem == SPEECH_SYSTEM_NONE || speechSystem == SPEECH_SYSTEM_OPENAI) return RETURN_OK;
 	#ifdef __AMIGAOS3__
 	translationBuffer = AllocVec(TRANSLATION_BUFFER_SIZE, MEMF_ANY);
 	if (!(NarratorPort = CreateMsgPort())) {
@@ -185,7 +187,7 @@ void speakText(STRPTR text) {
 		struct AHIRequest* ahiRequest;
 		BYTE ahiError;
 		ULONG audioLength;
-		APTR audioBuffer = postTextToSpeechRequestToOpenAI(text, config.ttsModel, config.ttsVoice, config.openAiApiKey, &audioLength);
+		APTR audioBuffer = postTextToSpeechRequestToOpenAI(text, config.openAITTSModel, config.openAITTSVoice, config.openAiApiKey, &audioLength);
 
 		// for (ULONG i = 0; i < audioLength; i += 2) {
 		// 	WORD temp = ((WORD*)audioBuffer)[i];
@@ -269,7 +271,7 @@ void speakText(STRPTR text) {
 	if (IFlite && voice) CloseVoice(voice);
 	voice = NULL;
 	UBYTE voiceName[32];
-	snprintf(voiceName, 32, "%s.voice\0", SPEECH_VOICE_NAMES[config.speechVoice]);
+	snprintf(voiceName, 32, "%s.voice\0", SPEECH_FLITE_VOICE_NAMES[config.speechFliteVoice]);
 	voice = OpenVoice(voiceName);
 	if (!voice) {
 		PutErrStr(APP_NAME": failed to open voice\n");

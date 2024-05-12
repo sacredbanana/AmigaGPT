@@ -16,7 +16,7 @@ struct Config config = {
 	.speechAccent = NULL,
 	.speechSystem = SPEECH_SYSTEM_34,
 	#else
-	.speechVoice = SPEECH_VOICE_KAL,
+	.speechFliteVoice = SPEECH_FLITE_VOICE_KAL,
 	.speechSystem = SPEECH_SYSTEM_FLITE,
 	#endif
 	.chatSystem = NULL,
@@ -24,8 +24,8 @@ struct Config config = {
 	.imageModel = DALL_E_3,
 	.imageSizeDallE2 = IMAGE_SIZE_256x256,
 	.imageSizeDallE3 = IMAGE_SIZE_1024x1024,
-	.ttsModel = TTS_1,
-	.ttsVoice = ALLOY,
+	.openAITTSModel = OPENAI_TTS_MODEL_TTS_1,
+	.openAITTSVoice = OPENAI_TTS_VOICE_ALLOY,
 	.chatFontName = NULL,
 	.chatFontSize = 8,
 	.chatFontStyle = FS_NORMAL,
@@ -52,8 +52,9 @@ struct Config config = {
 	},
 	.chatModelSetVersion = CHAT_MODEL_SET_VERSION,
 	.imageModelSetVersion = IMAGE_MODEL_SET_VERSION,
-	.ttsModelSetVersion = TTS_MODEL_SET_VERSION,
-	.ttsVoiceSetVersion = TTS_VOICE_SET_VERSION
+	.speechSystemSetVersion = SPEECH_SYSTEM_SET_VERSION,
+	.openAITTSModelSetVersion = OPENAI_TTS_MODEL_SET_VERSION,
+	.openAITTSVoiceSetVersion = OPENAI_TTS_VOICE_SET_VERSION
 };
 
 /**
@@ -74,15 +75,15 @@ LONG writeConfig() {
 	#ifdef __AMIGAOS3__
 	json_object_object_add(configJsonObject, "speechAccent", config.speechAccent != NULL ? json_object_new_string(config.speechAccent) : NULL);
 	#else
-	json_object_object_add(configJsonObject, "speechVoice", json_object_new_int(config.speechVoice));
+	json_object_object_add(configJsonObject, "speechFliteVoice", json_object_new_int(config.speechFliteVoice));
 	#endif
 	json_object_object_add(configJsonObject, "chatSystem", config.chatSystem != NULL ? json_object_new_string(config.chatSystem) : NULL);
 	json_object_object_add(configJsonObject, "chatModel", json_object_new_int(config.chatModel));
 	json_object_object_add(configJsonObject, "imageModel", json_object_new_int(config.imageModel));
 	json_object_object_add(configJsonObject, "imageSizeDallE2", json_object_new_int(config.imageSizeDallE2));
 	json_object_object_add(configJsonObject, "imageSizeDallE3", json_object_new_int(config.imageSizeDallE3));
-	json_object_object_add(configJsonObject, "ttsModel", json_object_new_int(config.ttsModel));
-	json_object_object_add(configJsonObject, "ttsVoice", json_object_new_int(config.ttsVoice));
+	json_object_object_add(configJsonObject, "openAITTSModel", json_object_new_int(config.openAITTSModel));
+	json_object_object_add(configJsonObject, "openAITTSVoice", json_object_new_int(config.openAITTSVoice));
 	json_object_object_add(configJsonObject, "chatFontName", config.chatFontName != NULL ? json_object_new_string(config.chatFontName) : NULL);
 	json_object_object_add(configJsonObject, "chatFontSize", json_object_new_int(config.chatFontSize));
 	json_object_object_add(configJsonObject, "chatFontStyle", json_object_new_int(config.chatFontStyle));
@@ -94,8 +95,9 @@ LONG writeConfig() {
 	json_object_object_add(configJsonObject, "openAiApiKey", config.openAiApiKey != NULL ? json_object_new_string(config.openAiApiKey) : NULL);
 	json_object_object_add(configJsonObject, "chatModelSetVersion", json_object_new_int(CHAT_MODEL_SET_VERSION));
 	json_object_object_add(configJsonObject, "imageModelSetVersion", json_object_new_int(IMAGE_MODEL_SET_VERSION));
-	json_object_object_add(configJsonObject, "ttsModelSetVersion", json_object_new_int(TTS_MODEL_SET_VERSION));
-	json_object_object_add(configJsonObject, "ttsVoiceSetVersion", json_object_new_int(TTS_VOICE_SET_VERSION));
+	json_object_object_add(configJsonObject, "speechSystemSetVersion", json_object_new_int(SPEECH_SYSTEM_SET_VERSION));
+	json_object_object_add(configJsonObject, "openAITTSModelSetVersion", json_object_new_int(OPENAI_TTS_MODEL_SET_VERSION));
+	json_object_object_add(configJsonObject, "openAITTSVoiceSetVersion", json_object_new_int(OPENAI_TTS_VOICE_SET_VERSION));
 	STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(configJsonObject, JSON_C_TO_STRING_PRETTY);
 
 	if (Write(file, configJsonString, strlen(configJsonString)) != strlen(configJsonString)) {
@@ -184,8 +186,8 @@ LONG readConfig() {
 	}
 	#else
 	struct json_object *speechVoiceObj;
-	if (json_object_object_get_ex(configJsonObject, "speechVoice", &speechVoiceObj)) {
-		config.speechVoice = json_object_get_int(speechVoiceObj);
+	if (json_object_object_get_ex(configJsonObject, "speechFliteVoice", &speechVoiceObj)) {
+		config.speechFliteVoice = json_object_get_int(speechVoiceObj);
 	}
 	#endif
 
@@ -222,14 +224,14 @@ LONG readConfig() {
 		config.imageSizeDallE3 = json_object_get_int(imageSizeDallE3Obj);
 	}
 
-	struct json_object *ttsModelObj;
-	if (json_object_object_get_ex(configJsonObject, "ttsModel", &ttsModelObj)) {
-		config.ttsModel = json_object_get_int(ttsModelObj);
+	struct json_object *openAITTSModelObj;
+	if (json_object_object_get_ex(configJsonObject, "openAITTSModel", &openAITTSModelObj)) {
+		config.openAITTSModel = json_object_get_int(openAITTSModelObj);
 	}
 
-	struct json_object *ttsVoiceObj;
-	if (json_object_object_get_ex(configJsonObject, "ttsVoice", &ttsVoiceObj)) {
-		config.ttsVoice = json_object_get_int(ttsVoiceObj);
+	struct json_object *openAITTSVoiceObj;
+	if (json_object_object_get_ex(configJsonObject, "openAITTSVoice", &openAITTSVoiceObj)) {
+		config.openAITTSVoice = json_object_get_int(openAITTSVoiceObj);
 	}
 
 	if (config.chatFontName != NULL) {
@@ -323,26 +325,41 @@ LONG readConfig() {
 		config.imageModel = DALL_E_3;
 	}
 
-	struct json_object *ttsModelSetVersionObj;
-	if (json_object_object_get_ex(configJsonObject, "ttsModelSetVersion", &ttsModelSetVersionObj)) {
-		config.ttsModelSetVersion = json_object_get_int(ttsModelSetVersionObj);
+	struct json_object *speechSystemSetVersionObj;
+	if (json_object_object_get_ex(configJsonObject, "speechSystemSetVersion", &speechSystemSetVersionObj)) {
+		config.speechSystemSetVersion = json_object_get_int(speechSystemSetVersionObj);
 	} else {
-		config.ttsModelSetVersion = 0;
+		config.speechSystemSetVersion = 0;
 	}
 
-	if (config.ttsModelSetVersion != TTS_MODEL_SET_VERSION) {
-		config.ttsModel = TTS_1;
+	if (config.speechSystemSetVersion != SPEECH_SYSTEM_SET_VERSION) {
+		#ifdef __AMIGAOS3__
+		config.speechSystem = SPEECH_SYSTEM_34;
+		#else
+		config.speechSystem = SPEECH_SYSTEM_FLITE;
+		#endif
 	}
 
-	struct json_object *ttsVoiceSetVersionObj;
-	if (json_object_object_get_ex(configJsonObject, "ttsVoiceSetVersion", &ttsVoiceSetVersionObj)) {
-		config.ttsVoiceSetVersion = json_object_get_int(ttsVoiceSetVersionObj);
+	struct json_object *openAITTSModelSetVersionObj;
+	if (json_object_object_get_ex(configJsonObject, "openAITTSModelSetVersion", &openAITTSModelSetVersionObj)) {
+		config.openAITTSModelSetVersion = json_object_get_int(openAITTSModelSetVersionObj);
 	} else {
-		config.ttsVoiceSetVersion = 0;
+		config.openAITTSModelSetVersion = 0;
 	}
 
-	if (config.ttsVoiceSetVersion != TTS_VOICE_SET_VERSION) {
-		config.ttsVoice = ALLOY;
+	if (config.openAITTSModelSetVersion != OPENAI_TTS_MODEL_SET_VERSION) {
+		config.openAITTSModel = OPENAI_TTS_MODEL_TTS_1;
+	}
+
+	struct json_object *openAITTSVoiceSetVersionObj;
+	if (json_object_object_get_ex(configJsonObject, "openAITTSVoiceSetVersion", &openAITTSVoiceSetVersionObj)) {
+		config.openAITTSVoiceSetVersion = json_object_get_int(openAITTSVoiceSetVersionObj);
+	} else {
+		config.openAITTSVoiceSetVersion = 0;
+	}
+
+	if (config.openAITTSVoiceSetVersion != OPENAI_TTS_VOICE_SET_VERSION) {
+		config.openAITTSVoice = OPENAI_TTS_VOICE_ALLOY;
 	}
 
 	FreeVec(configJsonString);

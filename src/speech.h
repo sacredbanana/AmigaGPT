@@ -20,21 +20,21 @@ extern const STRPTR SPEECH_SYSTEM_NAMES[];
 #ifdef __AMIGAOS4__
 
 /**
- * The voice of the spoken text
+ * The Flite voice of the spoken text
 **/
-enum SpeechVoice {
-	SPEECH_VOICE_KAL = 0,
-	SPEECH_VOICE_KAL16,
-	SPEECH_VOICE_AWB,
-	SPEECH_VOICE_RMS,
-	SPEECH_VOICE_SLT
+enum SpeechFliteVoice {
+	SPEECH_FLITE_VOICE_KAL = 0,
+	SPEECH_FLITE_VOICE_KAL16,
+	SPEECH_FLITE_VOICE_AWB,
+	SPEECH_FLITE_VOICE_RMS,
+	SPEECH_FLITE_VOICE_SLT
 };
 
 /**
  * The names of the speech voices
- * @see enum SpeechVoice
+ * @see enum SpeechFliteVoice
 **/ 
-extern const STRPTR SPEECH_VOICE_NAMES[];
+extern const STRPTR SPEECH_FLITE_VOICE_NAMES[];
 
 #endif
 

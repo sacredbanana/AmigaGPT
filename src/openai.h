@@ -28,13 +28,15 @@ struct ConversationNode {
  * The chat model OpenAI should use
 **/
 enum ChatModel {
-	GPT_4_0125_PREVIEW = 0,
+	GPT_4_TURBO = 0,
+	GPT_4_TURBO_2024_04_09,
 	GPT_4_TURBO_PREVIEW,
+	GPT_4_0125_PREVIEW,
 	GPT_4_1106_PREVIEW,
 	GPT_4,
 	GPT_4_0613,
-	GPT_3_5_TURBO_0125,
 	GPT_3_5_TURBO,
+	GPT_3_5_TURBO_0125,
 	GPT_3_5_TURBO_1106,
 };
 
@@ -61,34 +63,34 @@ extern CONST_STRPTR IMAGE_MODEL_NAMES[];
 /**
  * The Text to Speech model OpenAI should use
 **/
-enum TTSModel {
-	TTS_1 = 0,
-	TTS_1_HD
+enum OpenAITTSModel {
+	OPENAI_TTS_MODEL_TTS_1 = 0,
+	OPENAI_TTS_MODEL_TTS_1_HD
 };
 
 /**
  * The names of the Text to Speech models
- * @see enum TTSModel
+ * @see enum OpenAITTSModel
 **/ 
-extern CONST_STRPTR TTS_MODEL_NAMES[];
+extern CONST_STRPTR OPENAI_TTS_MODEL_NAMES[];
 
 /**
  * The voice OpenAI should use
 **/
-enum TTSVoice {
-	ALLOY = 0,
-	ECHO,
-	FABLE,
-	ONYX,
-	NOVA,
-	SHIMMER
+enum OpenAITTSVoice {
+	OPENAI_TTS_VOICE_ALLOY = 0,
+	OPENAI_TTS_VOICE_ECHO,
+	OPENAI_TTS_VOICE_FABLE,
+	OPENAI_TTS_VOICE_ONYX,
+	OPENAI_TTS_VOICE_NOVA,
+	OPENAI_TTS_VOICE_SHIMMER
 };
 
 /**
  * The names of the voices
- * @see enum TTSModel
+ * @see enum OpenAITTSModel
 **/ 
-extern CONST_STRPTR TTS_VOICE_NAMES[];
+extern CONST_STRPTR OPENAI_TTS_VOICE_NAMES[];
 
 /**
  * The size of the requested image
@@ -144,12 +146,12 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination);
 /**
  * Post a text to speech request to OpenAI
  * @param text the text to speak
- * @param ttsModel the TTS model to use
- * @param ttsVoice the voice to use
+ * @param openAITTSModel the TTS model to use
+ * @param openAITTSVoice the voice to use
  * @param openAiApiKey the OpenAI API key
  * @return a pointer to a buffer containing the audio data or NULL -- Free it with FreeVec() when you are done using it
  **/
-APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, enum TTSVoice ttsVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength);
+APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel openAITTSModel, enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength);
 
 /**
  * Cleanup the OpenAI connector and free all resources

@@ -54,13 +54,15 @@ ULONG RangeSeed;
  * @see enum ChatModel
 **/ 
 CONST_STRPTR CHAT_MODEL_NAMES[] = {
-	[GPT_4_0125_PREVIEW] = "gpt-4-0125-preview",
+	[GPT_4_TURBO] = "gpt-4-turbo",
+	[GPT_4_TURBO_2024_04_09] = "gpt-4-turbo-2024-04-09",
 	[GPT_4_TURBO_PREVIEW] = "gpt-4-turbo-preview",
+	[GPT_4_0125_PREVIEW] = "gpt-4-0125-preview",
 	[GPT_4_1106_PREVIEW] = "gpt-4-1106-preview",
 	[GPT_4] = "gpt-4",
 	[GPT_4_0613] = "gpt-4-0613",
-	[GPT_3_5_TURBO_0125] = "gpt-3.5-turbo-0125",
 	[GPT_3_5_TURBO] = "gpt-3.5-turbo",
+	[GPT_3_5_TURBO_0125] = "gpt-3.5-turbo-0125",
 	[GPT_3_5_TURBO_1106] = "gpt-3.5-turbo-1106",
 };
 
@@ -87,24 +89,24 @@ extern CONST_STRPTR IMAGE_SIZE_NAMES[] = {
 
 /**
  * The names of the TTS models
- * @see enum TTSModel
+ * @see enum OpenAITTSModel
 **/
-CONST_STRPTR TTS_MODEL_NAMES[] = {
-	[TTS_1] = "tts-1",
-	[TTS_1_HD] = "tts-1-hd"
+CONST_STRPTR OPENAI_TTS_MODEL_NAMES[] = {
+	[OPENAI_TTS_MODEL_TTS_1] = "tts-1",
+	[OPENAI_TTS_MODEL_TTS_1_HD] = "tts-1-hd"
 };
 
 /**
  * The names of the TTS voices
- * @see enum TTSVoice
+ * @see enum OpenAITTSVoice
 **/
-CONST_STRPTR TTS_VOICE_NAMES[] = {
-	[ALLOY] = "alloy",
-	[ECHO] = "echo",
-	[FABLE] = "fable",
-	[ONYX] = "onyx",
-	[NOVA] = "nova",
-	[SHIMMER] = "shimmer"
+CONST_STRPTR OPENAI_TTS_VOICE_NAMES[] = {
+	[OPENAI_TTS_VOICE_ALLOY] = "alloy",
+	[OPENAI_TTS_VOICE_ECHO] = "echo",
+	[OPENAI_TTS_VOICE_FABLE] = "fable",
+	[OPENAI_TTS_VOICE_ONYX] = "onyx",
+	[OPENAI_TTS_VOICE_NOVA] = "nova",
+	[OPENAI_TTS_VOICE_SHIMMER] = "shimmer"
 };
 
 /**
@@ -961,12 +963,12 @@ static ULONG parseChunkLength(UBYTE *buffer) {
 /**
  * Post a text to speech request to OpenAI
  * @param text the text to speak
- * @param ttsModel the TTS model to use
- * @param ttsVoice the voice to use
+ * @param openAITTSModel the TTS model to use
+ * @param openAITTSVoice the voice to use
  * @param openAiApiKey the OpenAI API key
  * @return a pointer to a buffer containing the audio data or NULL -- Free it with FreeVec() when you are done using it
  **/
-APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, enum TTSVoice ttsVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength) {
+APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel openAITTSModel, enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength) {
 	// Allocate a buffer for the audio data. This buffer will be resized if needed
 	ULONG audioBufferSize = AUDIO_BUFFER_SIZE;
 	UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
@@ -983,8 +985,8 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 	}
 
 	struct json_object *obj = json_object_new_object();
-	json_object_object_add(obj, "model", json_object_new_string(TTS_MODEL_NAMES[ttsModel]));
-	json_object_object_add(obj, "voice", json_object_new_string(TTS_VOICE_NAMES[ttsVoice]));
+	json_object_object_add(obj, "model", json_object_new_string(OPENAI_TTS_MODEL_NAMES[openAITTSModel]));
+	json_object_object_add(obj, "voice", json_object_new_string(OPENAI_TTS_VOICE_NAMES[openAITTSVoice]));
 	json_object_object_add(obj, "input", json_object_new_string(text));
 	json_object_object_add(obj, "response_format", json_object_new_string("pcm"));
 	CONST_STRPTR jsonString = json_object_to_json_string(obj);
