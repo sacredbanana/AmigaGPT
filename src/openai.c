@@ -1020,7 +1020,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 		while (!doneReading) {
 			memset(tempReadBuffer, 0, READ_BUFFER_LENGTH);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
-			printf("Read %lu bytes\n", bytesRead);
+			// printf("Read %lu bytes\n", bytesRead);
 			if (newChunkNeeded && bytesRead == 1) continue;
             bytesRemainingInBuffer = bytesRead;
 			dataStart = tempReadBuffer;
@@ -1046,9 +1046,9 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 							}
 						} else {
 							if (newChunkNeeded) {
-								printf("New chunk needed\n");
+								// printf("New chunk needed\n");
 								chunkLength = parseChunkLength(dataStart);
-								printf("Chunk length: %lu\n", chunkLength);
+								// printf("Chunk length: %lu\n", chunkLength);
 								if (chunkLength == 0) {
 									doneReading = TRUE;
 									break;
@@ -1074,8 +1074,8 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 							FreeVec(oldAudioData);
 						}
 
-						printf("Chunk bytes needing read: %lu\n", chunkBytesNeedingRead);
-						printf("Bytes remaining in buffer: %lu\n", bytesRemainingInBuffer);
+						// printf("Chunk bytes needing read: %lu\n", chunkBytesNeedingRead);
+						// printf("Bytes remaining in buffer: %lu\n", bytesRemainingInBuffer);
 
 						if (chunkBytesNeedingRead > bytesRemainingInBuffer) {	
 							memcpy(audioData + *audioLength, dataStart, bytesRemainingInBuffer);
@@ -1083,29 +1083,22 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum TTSModel ttsModel, 
 							chunkBytesNeedingRead -= bytesRemainingInBuffer;
 							newChunkNeeded = FALSE;
                             bytesRemainingInBuffer = 0;
-							printf("Buffer empty. Chunk bytes still needing read: %lu\n", chunkBytesNeedingRead);
+							// printf("Buffer empty. Chunk bytes still needing read: %lu\n", chunkBytesNeedingRead);
 						} else {
 							memcpy(audioData + *audioLength, dataStart, chunkBytesNeedingRead);
 							*audioLength += chunkBytesNeedingRead;
-							// if (chunkBytesNeedingRead == bytesRead) {
-							// 	// We have the rest of the chunk but we don't have the closing CRLF
-							// 	bytesRemainingInBuffer = 0;
-							// 	bytesRead = SSL_read(ssl, tempReadBuffer, 2);
-							// 	printf("Want to read 2 bytes. Read %lu bytes\n", bytesRead);
-							// } else {
-								bytesRemainingInBuffer -= chunkBytesNeedingRead;
-								while (bytesRemainingInBuffer < 2) {
-									bytesRead = SSL_read(ssl, tempReadBuffer, 1);
-									printf("Want to read 1 byte. Read %lu bytes\n", bytesRead);
-									printf("Read a %x\n", tempReadBuffer[0]);
-									bytesRemainingInBuffer += bytesRead;
-								}
-								dataStart += chunkBytesNeedingRead + 2;
-								bytesRemainingInBuffer -= 2;
-								chunkBytesNeedingRead = 0;
-							// }
-							printf("New chunk bytes needing read: %lu\n", chunkBytesNeedingRead);
-							printf("New bytes remaining in buffer: %lu\n", bytesRemainingInBuffer);
+							bytesRemainingInBuffer -= chunkBytesNeedingRead;
+							while (bytesRemainingInBuffer < 2) {
+								bytesRead = SSL_read(ssl, tempReadBuffer, 1);
+								// printf("Want to read 1 byte. Read %lu bytes\n", bytesRead);
+								// printf("Read a %x\n", tempReadBuffer[0]);
+								bytesRemainingInBuffer += bytesRead;
+							}
+							dataStart += chunkBytesNeedingRead + 2;
+							bytesRemainingInBuffer -= 2;
+							chunkBytesNeedingRead = 0;
+							// printf("New chunk bytes needing read: %lu\n", chunkBytesNeedingRead);
+							// printf("New bytes remaining in buffer: %lu\n", bytesRemainingInBuffer);
 							newChunkNeeded = TRUE;
 						}
 					}
