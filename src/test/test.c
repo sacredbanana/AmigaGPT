@@ -358,8 +358,6 @@ u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum TTSModel ttsMod
 	ULONG audioBufferSize = AUDIO_BUFFER_SIZE;
 	UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
 
-	// openAiApiKey = OPENAI_API_KEY;
-
     u_int8_t readBuffer[READ_BUFFER_LENGTH];
 
 	FILE *file2 = fopen("/tmp/rawdata", "wb");  
