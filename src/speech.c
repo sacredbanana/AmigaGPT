@@ -228,7 +228,7 @@ void speakText(STRPTR text) {
 		ahiRequest->ahir_Std.io_Data = audioBuffer;
 		ahiRequest->ahir_Std.io_Length = audioLength;
 		ahiRequest->ahir_Frequency = 24000; // Set playback frequency
-		ahiRequest->ahir_Type = AHIST_M16S; // 16-bit stereo sound
+		ahiRequest->ahir_Type = AHIST_M16S; // 16-bit signed mono sound
 		ahiRequest->ahir_Volume = 0x10000; // Full volume
 		ahiRequest->ahir_Position = 0x8000; // Centered
 
