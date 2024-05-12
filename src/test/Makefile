@@ -1,36 +1,37 @@
-# Define the compiler
 CC=gcc
 
-# Compiler flags
-CFLAGS=-I/opt/homebrew/include -Wall -g -O0
+BUILD_DIR := ../../build/test/obj/
 
-# Linker flags
-LDFLAGS=-L/opt/homebrew/lib -ljson-c -lssl -lcrypto
+SUBDIRS := $(wildcard ./*/)
 
-# Define the source files
-SOURCES=test.c
+C_SOURCES := $(wildcard *.c) $(foreach dir, $(SUBDIRS), $(wildcard $(dir)/*.c))
+C_OBJECTS := $(addprefix $(BUILD_DIR), $(notdir $(C_SOURCES:.c=.o)))
 
-# Define the object files
-OBJECTS=$(SOURCES:.c=.o)
+LDFLAGS = -L/opt/homebrew/lib -ljson-c -lssl -lcrypto
+CFLAGS = -I/opt/homebrew/include -Wall -g -O0
 
-# Define the executable file
-EXECUTABLE=openai-test
+OBJECTS := $(C_OBJECTS)
 
-# BUILD_DIR := build/
+EXECUTABLE_OUT = ../../out/openai-test
 
-# $(BUILD_DIR):
-# 	@$(info Creating directory $@)
-# 	@mkdir -p $@
+.PHONY: all clean
 
-all: $(EXECUTABLE)
+all: $(EXECUTABLE_OUT)
 
-$(EXECUTABLE): $(OBJECTS) 
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+$(BUILD_DIR):
+	@$(info Creating directory $@)
+	@mkdir -p $@
 
-%.o: %.c
+$(EXECUTABLE_OUT): $(OBJECTS) | openai-key.h
+	@$(info Linking $@)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -o $@
+
+openai-key.h:
+	cp openai-key.h.template openai-key.h
+
+$(C_OBJECTS): $(BUILD_DIR)%.o: %.c | $(BUILD_DIR)
+	@$(info Compiling $<)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJECTS) $(EXECUTABLE)
-
-.PHONY: all clean
+	rm -f $(OBJECTS) $(EXECUTABLE_OUT)
