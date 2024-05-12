@@ -204,7 +204,7 @@ void speakText(STRPTR text) {
 			"bne.b 1b\n"              // Repeat if not done
 
 			:                         // No output operands
-			: "d" (audioLength), "a" (audioBuffer) // Input operands corrected
+			: "d" (audioLength), "a" (audioBuffer) // Input operands
 			: "d0", "d1", "a0", "memory"  // Clobber list
 		);
 		#else
