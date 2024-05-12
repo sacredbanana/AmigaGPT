@@ -26,7 +26,7 @@ static LONG createSSLContext();
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static STRPTR getModelName(enum ChatModel model);
-static ULONG parseChunkLength(UBYTE *buffer);
+static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
 
 struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase = NULL;
 #ifdef __AMIGAOS4__
@@ -937,17 +937,17 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx) {
 /**
  * Helper function to parse the chunk length
  * @param buffer the buffer to parse
+ * @param bufferLength the length of the buffer
  * @return the chunk length
  * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
 **/
-static ULONG parseChunkLength(UBYTE *buffer) {
+static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength) {
     UBYTE chunkLenStr[10] = {0}; // Enough for the chunk length in hex
-    UBYTE i = 0;
+    UBYTE i;
     
     // Loop until we find the CRLF which ends the chunk length line
-    while (i < 8 && buffer[i] != '\r' && buffer[i+1] != '\n') {
+    for (i = 0; i < 8 && i < bufferLength && buffer[i] != '\r' && buffer[i+1] != '\n'; i++) {
         chunkLenStr[i] = buffer[i];
-        i++;
     }
 
 	if (i == 8) {
@@ -1005,7 +1005,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
 	if (ssl_err > 0) {
-		WORD bytesRead = 0;
+		LONG bytesRead = 0;
 		ULONG bytesRemainingInBuffer = 0;
 		BOOL doneReading = FALSE;
 		LONG err = 0;
@@ -1039,7 +1039,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 								hasReadHeader = TRUE;
 								dataStart += 4;
                                 memcpy(tempChunkHeaderBuffer + tempChunkDataBufferLength, tempReadBuffer, 10 - tempChunkDataBufferLength);
-								chunkLength = parseChunkLength(dataStart);
+								chunkLength = parseChunkLength(dataStart, bytesRemainingInBuffer);
 								chunkBytesNeedingRead = chunkLength;
 								dataStart = strstr(dataStart, "\r\n") + 2;
 								bytesRemainingInBuffer -= (dataStart - tempReadBuffer);
@@ -1049,7 +1049,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 						} else {
 							if (newChunkNeeded) {
 								// printf("New chunk needed\n");
-								chunkLength = parseChunkLength(dataStart);
+								chunkLength = parseChunkLength(dataStart, bytesRemainingInBuffer);
 								// printf("Chunk length: %lu\n", chunkLength);
 								if (chunkLength == 0) {
 									doneReading = TRUE;

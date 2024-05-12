@@ -187,14 +187,10 @@ void speakText(STRPTR text) {
 		struct AHIRequest* ahiRequest;
 		BYTE ahiError;
 		ULONG audioLength;
-		APTR audioBuffer = postTextToSpeechRequestToOpenAI(text, config.openAITTSModel, config.openAITTSVoice, config.openAiApiKey, &audioLength);
+		UBYTE* audioBuffer = postTextToSpeechRequestToOpenAI(text, config.openAITTSModel, config.openAITTSVoice, config.openAiApiKey, &audioLength);
 
-		// for (ULONG i = 0; i < audioLength; i += 2) {
-		// 	WORD temp = ((WORD*)audioBuffer)[i];
-		// 	((WORD*)audioBuffer)[i] = ((WORD*)audioBuffer)[i + 1];
-		// 	((WORD*)audioBuffer)[i + 1] = temp;
-		// }
 		// Convert to big endian
+		#ifdef __AMIGAOS3__
 		__asm__ __volatile__ (
 			"lea %a1, %%a0\n"         // Correctly load buffer address into A0
 			"move.l %0, %%d1\n"       // Load fileSize into D1
@@ -211,7 +207,14 @@ void speakText(STRPTR text) {
 			: "d" (audioLength), "a" (audioBuffer) // Input operands corrected
 			: "d0", "d1", "a0", "memory"  // Clobber list
 		);
-
+		#else
+		for (ULONG i = 0; i < audioLength - 1; i += 2) {
+			UBYTE temp = audioBuffer[i];
+			audioBuffer[i] = audioBuffer[i + 1];
+			audioBuffer[i + 1] = temp;
+		}
+		#endif
+		
 		// Create a message port for AHI communication
 		AHImp = CreateMsgPort();
 
