@@ -2,7 +2,7 @@
 CC=gcc
 
 # Compiler flags
-CFLAGS=-I/opt/homebrew/include -Wall -g
+CFLAGS=-I/opt/homebrew/include -Wall -g -O0
 
 # Linker flags
 LDFLAGS=-L/opt/homebrew/lib -ljson-c -lssl -lcrypto
@@ -16,18 +16,18 @@ OBJECTS=$(SOURCES:.c=.o)
 # Define the executable file
 EXECUTABLE=openai-test
 
-BUILD_DIR := build/
+# BUILD_DIR := build/
 
-$(BUILD_DIR):
-	@$(info Creating directory $@)
-	@mkdir -p $@
+# $(BUILD_DIR):
+# 	@$(info Creating directory $@)
+# 	@mkdir -p $@
 
 all: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS) 
 	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
 
-%.o: %.c | $(BUILD_DIR)
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

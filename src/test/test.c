@@ -10,6 +10,7 @@
 #include <json-c/json.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include "openai-key.h"
 
 #define READ_BUFFER_LENGTH 8192
 #define WRITE_BUFFER_LENGTH 65536
@@ -96,8 +97,6 @@ int main(int argc, char *argv[])
     int len;
     char buf[1024];
 
-	CONST_STRPTR OPENAI_API_KEY = getenv("OPENAI_API_KEY");
-
     readBuffer = malloc(READ_BUFFER_LENGTH);
     writeBuffer = malloc(WRITE_BUFFER_LENGTH);
 
@@ -107,7 +106,9 @@ int main(int argc, char *argv[])
 
     createSSLContext();
 
-    postTextToSpeechRequestToOpenAI((char *)"SEQTA Software ist ein umfassendes Lernmanagement-System (LMS), das speziell für Schulen entwickelt wurde. Es bietet Lehrern, Schülern, Eltern und Schulverwaltungen eine Plattform, über die sie auf Bildungsressourcen, Kommunikationswerkzeuge und administrative Funktionen zugreifen können. Die Software ermöglicht es Lehrern, ihren Unterricht zu planen, Ressourcen zu teilen, Aufgaben zu erstellen und die Fortschritte der Schüler zu verfolgen. Schüler können auf Lernmaterialien zugreifen, ihre Hausaufgaben einreichen und Feedback erhalten. Eltern haben die Möglichkeit, die schulischen Leistungen und den Fortschritt ihrer Kinder zu überblicken und mit den Lehrkräften zu kommunizieren. Für die Schulverwaltung bietet SEQTA Werkzeuge zur Vereinfachung und Automatisierung von administrativen Aufgaben, vom Stundenplanmanagement bis zur Berichterstattung. SEQTA strebt danach, eine integrierte Lernumgebung zu schaffen, die die Bildungserfahrung für alle Beteiligten verbessern soll, indem sie effiziente, transparente und interaktive Kommunikation zwischen Lehrern, Schülern und Eltern fördert.", TTS_1, ALLOY, OPENAI_API_KEY, &len);
+	CONST_STRPTR text = "The story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the name \"Coles\" really ties back to its founder, George James Coles. When he opened his first store in Collingwood, Melbourne, in 1914, it was called the \"G.J. Coles & Coy Limited,\" using his initials and a traditional business suffix to create a personal yet professional brand name. This approach was fairly common at the time, personalizing businesses to associate them dir ectly with their founders' reputations for integrity and quality.Chunked encoding is useful when larger amounts of data are sent to the client and the total size of the response may not be known until the request has been fully processed. For example, when generating a large HTML table resulting from a database query or when transmitting large images.A chunked response looks like this:";
+
+    postTextToSpeechRequestToOpenAI(text, TTS_1, ALLOY, OPENAI_API_KEY, &len);
 
     SSL_CTX_free(ctx);
 
@@ -357,6 +358,8 @@ u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum TTSModel ttsMod
 	ULONG audioBufferSize = AUDIO_BUFFER_SIZE;
 	UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
 
+	// openAiApiKey = OPENAI_API_KEY;
+
     u_int8_t readBuffer[READ_BUFFER_LENGTH];
 
 	FILE *file2 = fopen("/tmp/rawdata", "wb");  
@@ -416,6 +419,9 @@ u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum TTSModel ttsMod
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
 			printf("Read %lu bytes\n", bytesRead);
 			if (newChunkNeeded && bytesRead == 1) continue;
+			if (bytesRead == 5) {
+				printf("%x %x %x %x %x\n", tempReadBuffer[0], tempReadBuffer[1], tempReadBuffer[2], tempReadBuffer[3], tempReadBuffer[4]);
+			}
 
 			fwrite(tempReadBuffer, sizeof(uint8_t), bytesRead, file2);
             bytesRemainingInBuffer = bytesRead;

@@ -46,6 +46,45 @@
             }
         },
         {
+            "label": "compile test",
+            "type": "shell",
+            "windows": {
+                "command": "${command:amiga.bin-path}\\gnumake.exe",
+                "options": {
+                    "cwd": "${workspaceRoot}\\src\\test",
+                    "env": {
+                        "PATH": "${env:PATH};${command:amiga.bin-path}\\opt\\bin;${command:amiga.bin-path}"
+                    }
+                },
+            },
+            "command": "make",
+            "options": {
+                "cwd": "${workspaceRoot}/src/test",
+                "env": {
+                    "PATH": "${env:PATH}:${command:amiga.bin-path}/opt/bin:${command:amiga.bin-path}",                }
+            },
+            "args": [
+            ],
+            "problemMatcher": [
+                {
+                    "base": "$gcc",
+                    "fileLocation": "absolute"
+                }
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
             "label": "clean",
             "type": "shell",
             "windows": {

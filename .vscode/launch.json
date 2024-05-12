@@ -1,6 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
+
         {
             "type": "cppdbg",
             "request": "launch",
@@ -18,7 +19,8 @@
               "description": "Enable pretty-printing for gdb",
               "text": "-enable-pretty-printing",
               "ignoreFailures": true,
-          },
+          }]
+        },
         {
             "type": "amiga",
             "request": "launch",
@@ -57,6 +59,19 @@
             "program": "${workspaceFolder}/${config:amiga.program}",
             "kickstart": "${config:amiga.rom-paths.A4000}",
             "internalConsoleOptions": "openOnSessionStart"
-        }        
+        },
+        {
+            "name": "(lldb) Launch Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "preLaunchTask": "compile test",
+            "program": "${workspaceFolder}/src/test/openai-test",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/src/test",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb"
+        }       
     ]
 }
