@@ -192,7 +192,7 @@ void speakText(STRPTR text) {
 		// Convert to big endian
 		#ifdef __AMIGAOS3__
 		__asm__ __volatile__ (
-			"lea %a1, %%a0\n"         // Correctly load buffer address into A0
+			"lea %a1, %%a0\n"         // Load buffer address into A0
 			"move.l %0, %%d1\n"       // Load fileSize into D1
 			"lsr.l #1, %%d1\n"        // fileSize / 2, since we're processing 2 bytes at a time
 
