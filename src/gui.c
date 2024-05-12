@@ -287,7 +287,6 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "gpt-4-0125-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID},
 	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID},
 	{NM_SUB, "gpt-4-0613", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID},
-	{NM_ITEM, NM_BARLABEL, 0, 0, 0, (APTR)NULL_ID},
 	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID},
 	{NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID},
 	{NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID},
@@ -1847,7 +1846,8 @@ static void refreshOpenAIMenuItems() {
 	}
 
 	while ((++newMenu)->nm_Type == NM_SUB) {
-		if (strcmp(newMenu->nm_Label, CHAT_MODEL_NAMES[config.chatModel]) == 0) {
+		if (strcmp(newMenu->nm_Label, CHAT_MODEL_NAMES[config.chatModel]) == 0 &&
+		strlen(newMenu->nm_Label) == strlen(CHAT_MODEL_NAMES[config.chatModel])) {
 			newMenu->nm_Flags |= CHECKED;
 		} else {
 			newMenu->nm_Flags &= ~CHECKED;
