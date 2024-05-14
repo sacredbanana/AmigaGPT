@@ -54,6 +54,8 @@ ULONG RangeSeed;
  * @see enum ChatModel
 **/ 
 CONST_STRPTR CHAT_MODEL_NAMES[] = {
+	[GPT_4o] = "gpt-4o",
+	[GPT_4o_2024_05_13] = "gpt-4o-2024-05-13",
 	[GPT_4_TURBO] = "gpt-4-turbo",
 	[GPT_4_TURBO_2024_04_09] = "gpt-4-turbo-2024-04-09",
 	[GPT_4_TURBO_PREVIEW] = "gpt-4-turbo-preview",

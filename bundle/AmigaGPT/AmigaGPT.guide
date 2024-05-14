@@ -620,12 +620,23 @@ The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E wi
 
 @{b}GPT-4@{ub}
 
-
 GPT-4 is currently in a limited beta and only accessible to those who have been granted access. Please join the waitlist (https://openai.com/waitlist/gpt-4) to get access.
 
 GPT-4 is a large multimodal model (accepting text inputs and emitting text outputs today, with image inputs coming in the future) that can solve difficult problems with greater accuracy than any of our previous models, thanks to its broader general knowledge and advanced reasoning capabilities. For many basic tasks, the difference between GPT-4 and GPT-3.5 models is not significant. However, in more complex reasoning situations, GPT-4 is much more capable than any of our previous models.
 
 @{b}Model variants@{ub}
+
+@{b}gpt-4o@{ub}
+Our most advanced, multimodal flagship model that’s cheaper and faster than GPT-4 Turbo. Currently points to gpt-4o-2024-05-13.
+
+Max tokens: 128,000
+Training data: Up to Oct 2023
+
+@{b}gpt-4o-2024-05-13@{ub}
+gpt-4o currently points to this version.
+
+Max tokens: 128,000
+Training data: Up to Oct 2023
 
 @{b}gpt-4-turbo@{ub}
 The latest GPT-4 Turbo model with vision capabilities. Vision requests can now use JSON mode and function calling. Currently points to gpt-4-turbo-2024-04-09.
@@ -692,10 +703,10 @@ Training data: Up to Sep 2021
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
-@{b}1.5.0 (2024-05-12)@{ub}
+@{b}1.5.0@{ub}
 
 - Support for OpenAI's 16-bit text to speech voices
-- Updated to latest OpenAI chat models
+- Updated to latest OpenAI chat models (including GPT-4o which will only work for ChatGPT Plus subscribers for now)
 
 @{b}1.4.6 (2024-04-13)@{ub}
 

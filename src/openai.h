@@ -28,7 +28,9 @@ struct ConversationNode {
  * The chat model OpenAI should use
 **/
 enum ChatModel {
-	GPT_4_TURBO = 0,
+	GPT_4o = 0,
+	GPT_4o_2024_05_13,
+	GPT_4_TURBO,
 	GPT_4_TURBO_2024_04_09,
 	GPT_4_TURBO_PREVIEW,
 	GPT_4_0125_PREVIEW,
