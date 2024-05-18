@@ -703,10 +703,11 @@ Training data: Up to Sep 2021
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
-@{b}1.5.0@{ub}
+@{b}1.5.0 (2024-05-18)@{ub}
 
-- Support for OpenAI's 16-bit text to speech voices
+- Support for OpenAI's 16-bit text to speech voices. Fast internet connection recommended
 - Updated to latest OpenAI chat models (including GPT-4o which will only work for ChatGPT Plus subscribers for now)
+- Removed debug symbols for faster and smaller executable
 
 @{b}1.4.6 (2024-04-13)@{ub}
 

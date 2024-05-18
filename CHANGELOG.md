@@ -1,9 +1,10 @@
 # Changelog
 
-## 1.5.0
+## 1.5.0 (2024-05-18)
 
-- Support for OpenAI text to speech voices
+- Support for OpenAI text to speech voices. Fast internet connection recommended
 - Updated to latest OpenAI chat models (including GPT-4o which will only work for ChatGPT Plus subscribers for now)
+- Removed debug symbols for faster and smaller executable
 
 ## 1.4.6 (2024-04-13)
 
