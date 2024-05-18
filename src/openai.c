@@ -979,8 +979,6 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 
 	*audioLength = 0;
 
-	memset(readBuffer, 0, READ_BUFFER_LENGTH);
-
 	updateStatusBar("Connecting...", 7);
 	if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
 		return NULL;
@@ -1014,7 +1012,6 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 		UBYTE statusMessage[64];
 		UBYTE tempChunkHeaderBuffer[10] = {0};
 		UBYTE tempChunkDataBufferLength = 0;
-		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 		BOOL hasReadHeader = FALSE;
 		BOOL newChunkNeeded = TRUE;
 		ULONG chunkLength = 0;
@@ -1022,11 +1019,11 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 		UBYTE *dataStart = NULL;
 
 		while (!doneReading) {
-            memset(tempReadBuffer, 0, READ_BUFFER_LENGTH);
-			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
+            memset(readBuffer, 0, READ_BUFFER_LENGTH);
+			bytesRead = SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH - 1);
 			if (newChunkNeeded && bytesRead == 1) continue;
             bytesRemainingInBuffer = bytesRead;
-			dataStart = tempReadBuffer;
+			dataStart = readBuffer;
 			
 			snprintf(statusMessage, sizeof(statusMessage), "Downloaded %lu bytes", *audioLength);
 			updateStatusBar(statusMessage, 7);
@@ -1035,12 +1032,12 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 				case SSL_ERROR_NONE:
 					while (bytesRemainingInBuffer > 0) {
 						if (!hasReadHeader) {
-							dataStart = strstr(tempReadBuffer, "\r\n\r\n");
+							dataStart = strstr(readBuffer, "\r\n\r\n");
 							if (dataStart != NULL) {
 								hasReadHeader = TRUE;
 								dataStart += 4;
 								newChunkNeeded = TRUE;
-								bytesRemainingInBuffer -= (dataStart - tempReadBuffer);
+								bytesRemainingInBuffer -= (dataStart - readBuffer);
 							}
 						}
 
@@ -1098,7 +1095,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 							*audioLength += chunkBytesNeedingRead;
 							bytesRemainingInBuffer -= chunkBytesNeedingRead;
 							while (bytesRemainingInBuffer < 2) {
-								bytesRead = SSL_read(ssl, tempReadBuffer, 1);
+								bytesRead = SSL_read(ssl, readBuffer, 1);
 								bytesRemainingInBuffer += bytesRead;
 							}
 							dataStart += chunkBytesNeedingRead + 2;
@@ -1145,7 +1142,6 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 					break;
 			}            
 		}
-		FreeVec(tempReadBuffer);
 	} else {
 		displayError("Couldn't write request!\n");
 		LONG err = SSL_get_error(ssl, ssl_err);
