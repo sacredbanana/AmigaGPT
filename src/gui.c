@@ -290,6 +290,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "gpt-4-turbo-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW_ID},
 	{NM_SUB, "gpt-4-0125-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID},
 	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID},
+	{NM_SUB, "gpt-4", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_ID},
 	{NM_SUB, "gpt-4-0613", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID},
 	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID},
 	{NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID},
@@ -1842,8 +1843,6 @@ static void updateMenu() {
  * Sets the checkboxesfor the OpenAI menu
 **/
 static void refreshOpenAIMenuItems() {
-	APTR *visualInfo;
-	ULONG error = NULL;
 	struct NewMenu *newMenu = amigaGPTMenu;
 	while (newMenu->nm_UserData != MENU_ITEM_CHAT_MODEL_ID) {
 		newMenu++;
@@ -1901,8 +1900,6 @@ static void refreshOpenAIMenuItems() {
  * Sets the checkboxes for the speech options that are currently selected
 **/
 static void refreshSpeechMenuItems() {
-	APTR *visualInfo;
-	ULONG error = NULL;
 	struct NewMenu *newMenu = amigaGPTMenu;
 	while (newMenu->nm_UserData != MENU_ITEM_SPEECH_ENABLED_ID) {
 		newMenu++;
@@ -2621,13 +2618,18 @@ LONG startGUIRunLoop() {
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID:
-							config.chatModel = GPT_4_0125_PREVIEW;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_ID:
+							config.chatModel = GPT_4_TURBO;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
 						case MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW_ID:
 							config.chatModel = GPT_4_TURBO_PREVIEW;
+							writeConfig();
+							refreshOpenAIMenuItems();
+							break;
+						case MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID:
+							config.chatModel = GPT_4_0125_PREVIEW;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
@@ -2646,13 +2648,13 @@ LONG startGUIRunLoop() {
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID:
-							config.chatModel = GPT_3_5_TURBO_0125;
+						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID:
+							config.chatModel = GPT_3_5_TURBO;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID:
-							config.chatModel = GPT_3_5_TURBO;
+						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID:
+							config.chatModel = GPT_3_5_TURBO_0125;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
