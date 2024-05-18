@@ -73,7 +73,7 @@ const char* OPENAI_TTS_MODEL_NAMES[] = {
  * @see enum OpenAITTSVoice
 **/
 const char* OPENAI_TTS_VOICE_NAMES[] = {
-	[ALLOY] = "alloy",
+	[OPENAI_TTS_VOICE_ALLOY] = "alloy",
 	[OPENAI_TTS_VOICE_ECHO] = "echo",
 	[OPENAI_TTS_VOICE_FABLE] = "fable",
 	[OPENAI_TTS_VOICE_ONYX] = "onyx",
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 
     createSSLContext();
 
-	CONST_STRPTR text = "The story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the namThe story behind the name \"Coles\" really ties back to its founder, George James Coles. When he opened his first store in Collingwood, Melbourne, in 1914, it was called the \"G.J. Coles & Coy Limited,\" using his initials and a traditional business suffix to create a personal yet professional brand name. This approach was fairly common at the time, personalizing businesses to associate them dir ectly with their founders' reputations for integrity and quality.Chunked encoding is useful when larger amounts of data are sent to the client and the total size of the response may not be known until the request has been fully processed. For example, when generating a large HTML table resulting from a database query or when transmitting large images.A chunked response looks like this:";
+	CONST_STRPTR text = "jeremy i love you. jarvis. The Amiga Advanced Architecture (AAA) chipset was intended as a next-generation evolution of the Amiga computer's original chipset, enhancing its graphical and performance capabilities. Announced in the early 1990s, it aimed to bring significant technological advancements that would keep the Amiga platform competitive. Some of the key features and enhancements that the AAA chipset was expected to include are as follows:\n\n### Graphics:\n1. **True 24-bit Color**: Support for 24-bit color depth, allowing for over 16 million colors on screen.\n2. **High Resolutions**: Support for resolutions up to 1280x1024 pixels, which was quite advanced for its time.\n3. **Improved Blitter**: Enhanced blitter performance for faster manipulation of bitmaps and handling of graphical operations.4. **Extended Sprites**: More and better sprites, enabling more complex and colorful graphics without excessive CPU load.\n5. **Alpha Channel Support**: Full-fledged alpha blending capabilities for more advanced transparency effects.\n\n### Sound:\n1. **16-bit Audio**: Upgrading from the 8-bit audio of previous Amiga models, the AAA chipset was aiming to offer 16-bit stereo sound.\n2. **Multiple Audio Channels**: More audio channels for richer sound and more complex audio compositions.\n\n### Memory and Performance:\n1. **Enhanced Memory Management**: Improved memory bandwidth and access times, facilitating faster overall system performance.\n2. **System Bus Enhancements**: Faster data throughput on the system bus to alleviate bottlenecks.\n\n### Compatibility:\n1. **Backwards Compatibility**: Efforts were being made to ensure that AAA would be compatible with existing Amiga software and hardware to some extent, to ease the transition for users.\n\n### Additional Features:\n1. **Advanced DMA Controllers**: Improved Direct Memory Access (DMA) controllers for more efficient data transfers.\n2. **Faster CPU Integration**: Better support for faster CPUs which were becoming more common in the early '90s.\n\nThe AAA project ultimately never came to fruition. Commodore, the company behind Amiga, faced significant financial difficulties and went bankrupt in 1994, which led to the discontinuation of the AAA chipset development before it could be commercially released. Nonetheless, the conceptual features of the AAA architecture demonstrated significant ambition and provided a glimpse into what could have been a revolutionary leap for the Amiga platform. Extra stuff";
 
     postTextToSpeechRequestToOpenAI(text, OPENAI_TTS_MODEL_TTS_1, OPENAI_TTS_VOICE_ALLOY, OPENAI_API_KEY, &len);
 
@@ -414,19 +414,19 @@ u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum OpenAITTSModel 
 
 		while (!doneReading) {
             memset(tempReadBuffer, 0, READ_BUFFER_LENGTH);
-			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
-			printf("Read %lu bytes\n", bytesRead);
+			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
+			// printf("Read %lu bytes\n", bytesRead);
 			if (newChunkNeeded && bytesRead == 1) continue;
-			if (bytesRead == 5) {
-				printf("%x %x %x %x %x\n", tempReadBuffer[0], tempReadBuffer[1], tempReadBuffer[2], tempReadBuffer[3], tempReadBuffer[4]);
-			}
+			// if (bytesRead == 5) {
+			// 	printf("%x %x %x %x %x\n", tempReadBuffer[0], tempReadBuffer[1], tempReadBuffer[2], tempReadBuffer[3], tempReadBuffer[4]);
+			// }
 
 			fwrite(tempReadBuffer, sizeof(uint8_t), bytesRead, file2);
             bytesRemainingInBuffer = bytesRead;
 			dataStart = tempReadBuffer;
 			
-			snprintf(statusMessage, sizeof(statusMessage), "Downloaded %lu bytes\n", *audioLength);
-			printf(statusMessage);
+			// snprintf(statusMessage, sizeof(statusMessage), "Downloaded %lu bytes\n", *audioLength);
+			// printf(statusMessage);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
 				case SSL_ERROR_NONE:
@@ -438,6 +438,7 @@ u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum OpenAITTSModel 
 								dataStart += 4;
                                 memcpy(tempChunkHeaderBuffer + tempChunkDataBufferLength, tempReadBuffer, 10 - tempChunkDataBufferLength);
 								chunkLength = parseChunkLength(dataStart);
+								// printf("Chunk length: %lu\n", chunkLength);
 								chunkBytesNeedingRead = chunkLength;
 								dataStart = strstr(dataStart, "\r\n") + 2;
 								bytesRemainingInBuffer -= (dataStart - tempReadBuffer);
@@ -446,22 +447,52 @@ u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum OpenAITTSModel 
 							}
 						} else {
 							if (newChunkNeeded) {
-								printf("New chunk needed\n");
-								chunkLength = parseChunkLength(dataStart);
-								printf("Chunk length: %lu\n", chunkLength);
+								// printf("New chunk needed\n");
+								// printf("data start:\n");
+								// for (int i = 0; i < 10; i++) {
+								// 		printf("%x ", dataStart[i]);
+								// 	}
+								// printf("\n");
+								tempChunkDataBufferLength = 0;
+								memset(tempChunkHeaderBuffer, 0, 10);
+								while (!strstr(tempChunkHeaderBuffer, "\r\n") && tempChunkDataBufferLength < 10) {
+									// printf("temp chunk header length: %d\n", tempChunkDataBufferLength);
+									// for (int i = 0; i < tempChunkDataBufferLength; i++) {
+									// 	printf("%x ", tempChunkHeaderBuffer[i]);
+									// }
+									// printf("\n");
+									if (bytesRemainingInBuffer > 0) {
+										memcpy(tempChunkHeaderBuffer + tempChunkDataBufferLength, dataStart, 1);
+										dataStart++;
+										bytesRemainingInBuffer--;
+										tempChunkDataBufferLength++;
+										// printf("adding byte to temp chunk header buffer\n");
+									} else {
+										UBYTE singleByte[1];
+										bytesRead = SSL_read(ssl, singleByte, 1);
+										memcpy(tempChunkHeaderBuffer + tempChunkDataBufferLength, singleByte, bytesRead);
+										tempChunkDataBufferLength += bytesRead;
+										// printf("Read 1 byte\n");
+									}
+								}
+								// printf("temp chunk header length: %d\n", tempChunkDataBufferLength);
+
+								chunkLength = parseChunkLength(tempChunkHeaderBuffer);
+								// printf("Chunk length: %lu\n", chunkLength);
 								if (chunkLength == 0) {
 									doneReading = TRUE;
 									break;
 								}
 								chunkBytesNeedingRead = chunkLength;
-								UBYTE *oldDataStart = dataStart;
-								dataStart = strstr(dataStart, "\r\n") + 2;
-								if (dataStart == NULL) {
-									printf("Couldn't find CRLF in chuuuuunk\n");
+								if (bytesRemainingInBuffer == 0) {
+									newChunkNeeded = FALSE;
+									// printf("No bytes remaining in buffer\n");
+									continue;
 								}
-								bytesRemainingInBuffer -= (dataStart - oldDataStart);
 							}
 						}
+
+						// printf("Chunky\n");
 
 						// Create a larger audio buffer if needed
 						if (*audioLength + chunkBytesNeedingRead > audioBufferSize) {
@@ -475,20 +506,11 @@ u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum OpenAITTSModel 
 							}
 							memcpy(audioData, oldAudioData, *audioLength);
 							FreeVec(oldAudioData);
-							printf("Resized audio buffer to %lu bytes\n", audioBufferSize);
+							// printf("Resized audio buffer to %lu bytes\n", audioBufferSize);
 						}
 
-						printf("Chunk bytes needing read: %lu\n", chunkBytesNeedingRead);
-						printf("Bytes remaining in buffer: %lu\n", bytesRemainingInBuffer);
-
-						if (bytesRemainingInBuffer - chunkBytesNeedingRead == 2) {
-							printf("2\n");
-							// memcpy(audioData + *audioLength, dataStart, chunkBytesNeedingRead);
-							// *audioLength += chunkBytesNeedingRead;
-							// bytesRemainingInBuffer = 0;
-							// doneReading = true;
-							// break;
-						}
+						// printf("Chunk bytes needing read: %lu\n", chunkBytesNeedingRead);
+						// printf("Bytes remaining in buffer: %lu\n", bytesRemainingInBuffer);
 
 						if (chunkBytesNeedingRead > bytesRemainingInBuffer) {	
 							memcpy(audioData + *audioLength, dataStart, bytesRemainingInBuffer);
@@ -496,29 +518,22 @@ u_int8_t* postTextToSpeechRequestToOpenAI(const char* text, enum OpenAITTSModel 
 							chunkBytesNeedingRead -= bytesRemainingInBuffer;
 							newChunkNeeded = FALSE;
                             bytesRemainingInBuffer = 0;
-							printf("Buffer empty. Chunk bytes still needing read: %lu\n", chunkBytesNeedingRead);
+							// printf("Buffer empty. Chunk bytes still needing read: %lu\n", chunkBytesNeedingRead);
 						} else {
 							memcpy(audioData + *audioLength, dataStart, chunkBytesNeedingRead);
 							*audioLength += chunkBytesNeedingRead;
-							// if (chunkBytesNeedingRead == bytesRead) {
-							// 	// We have the rest of the chunk but we don't have the closing CRLF
-							// 	bytesRemainingInBuffer = 0;
-							// 	bytesRead = SSL_read(ssl, tempReadBuffer, 2);
-							// 	printf("Want to read 2 bytes. Read %lu bytes\n", bytesRead);
-							// } else {
-								bytesRemainingInBuffer -= chunkBytesNeedingRead;
-								while (bytesRemainingInBuffer < 2) {
-									bytesRead = SSL_read(ssl, tempReadBuffer, 1);
-									printf("Want to read 1 byte. Read %lu bytes\n", bytesRead);
-									printf("Read a %x\n", tempReadBuffer[0]);
-									bytesRemainingInBuffer += bytesRead;
-								}
-								dataStart += chunkBytesNeedingRead + 2;
-								bytesRemainingInBuffer -= 2;
-								chunkBytesNeedingRead = 0;
-							// }
-							printf("New chunk bytes needing read: %lu\n", chunkBytesNeedingRead);
-							printf("New bytes remaining in buffer: %lu\n", bytesRemainingInBuffer);
+							bytesRemainingInBuffer -= chunkBytesNeedingRead;
+							while (bytesRemainingInBuffer < 2) {
+								bytesRead = SSL_read(ssl, tempReadBuffer, 1);
+								// printf("Want to read 1 byte. Read %lu bytes\n", bytesRead);
+								// printf("Read a %x\n", tempReadBuffer[0]);
+								bytesRemainingInBuffer += bytesRead;
+							}
+							dataStart += chunkBytesNeedingRead + 2;
+							bytesRemainingInBuffer -= 2;
+							chunkBytesNeedingRead = 0;
+							// printf("New chunk bytes needing read: %lu\n", chunkBytesNeedingRead);
+							// printf("New bytes remaining in buffer: %lu\n", bytesRemainingInBuffer);
 							newChunkNeeded = TRUE;
 						}
 					}

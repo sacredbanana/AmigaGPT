@@ -1013,8 +1013,8 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 		LONG err = 0;
 		UBYTE statusMessage[64];
 		UBYTE tempChunkHeaderBuffer[10] = {0};
-        UBYTE tempChunkDataBufferLength = 0;
-		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_CLEAR);
+		UBYTE tempChunkDataBufferLength = 0;
+		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 		BOOL hasReadHeader = FALSE;
 		BOOL newChunkNeeded = TRUE;
 		ULONG chunkLength = 0;
@@ -1022,9 +1022,8 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 		UBYTE *dataStart = NULL;
 
 		while (!doneReading) {
-			memset(tempReadBuffer, 0, READ_BUFFER_LENGTH);
+            memset(tempReadBuffer, 0, READ_BUFFER_LENGTH);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
-			// printf("Read %lu bytes\n", bytesRead);
 			if (newChunkNeeded && bytesRead == 1) continue;
             bytesRemainingInBuffer = bytesRead;
 			dataStart = tempReadBuffer;
@@ -1040,27 +1039,37 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 							if (dataStart != NULL) {
 								hasReadHeader = TRUE;
 								dataStart += 4;
-                                memcpy(tempChunkHeaderBuffer + tempChunkDataBufferLength, tempReadBuffer, 10 - tempChunkDataBufferLength);
-								chunkLength = parseChunkLength(dataStart, bytesRemainingInBuffer);
-								chunkBytesNeedingRead = chunkLength;
-								dataStart = strstr(dataStart, "\r\n") + 2;
+								newChunkNeeded = TRUE;
 								bytesRemainingInBuffer -= (dataStart - tempReadBuffer);
-							} else {
-								continue;
 							}
-						} else {
-							if (newChunkNeeded) {
-								// printf("New chunk needed\n");
-								chunkLength = parseChunkLength(dataStart, bytesRemainingInBuffer);
-								// printf("Chunk length: %lu\n", chunkLength);
-								if (chunkLength == 0) {
-									doneReading = TRUE;
-									break;
+						}
+
+						if (newChunkNeeded) {
+							tempChunkDataBufferLength = 0;
+							memset(tempChunkHeaderBuffer, 0, 10);
+							while (!strstr(tempChunkHeaderBuffer, "\r\n") && tempChunkDataBufferLength < 10) {
+								if (bytesRemainingInBuffer > 0) {
+									memcpy(tempChunkHeaderBuffer + tempChunkDataBufferLength, dataStart, 1);
+									dataStart++;
+									bytesRemainingInBuffer--;
+									tempChunkDataBufferLength++;
+								} else {
+									UBYTE singleByte[1];
+									bytesRead = SSL_read(ssl, singleByte, 1);
+									memcpy(tempChunkHeaderBuffer + tempChunkDataBufferLength, singleByte, bytesRead);
+									tempChunkDataBufferLength += bytesRead;
 								}
-								chunkBytesNeedingRead = chunkLength;
-								UBYTE *oldDataStart = dataStart;
-								dataStart = strstr(dataStart, "\r\n") + 2;
-								bytesRemainingInBuffer -= (dataStart - oldDataStart);
+							}
+
+							chunkLength = parseChunkLength(tempChunkHeaderBuffer, tempChunkDataBufferLength);
+							if (chunkLength == 0) {
+								doneReading = TRUE;
+								break;
+							}
+							chunkBytesNeedingRead = chunkLength;
+							if (bytesRemainingInBuffer == 0) {
+								newChunkNeeded = FALSE;
+								continue;
 							}
 						}
 
@@ -1078,31 +1087,23 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 							FreeVec(oldAudioData);
 						}
 
-						// printf("Chunk bytes needing read: %lu\n", chunkBytesNeedingRead);
-						// printf("Bytes remaining in buffer: %lu\n", bytesRemainingInBuffer);
-
 						if (chunkBytesNeedingRead > bytesRemainingInBuffer) {	
 							memcpy(audioData + *audioLength, dataStart, bytesRemainingInBuffer);
 							*audioLength += bytesRemainingInBuffer;
 							chunkBytesNeedingRead -= bytesRemainingInBuffer;
 							newChunkNeeded = FALSE;
-                            bytesRemainingInBuffer = 0;
-							// printf("Buffer empty. Chunk bytes still needing read: %lu\n", chunkBytesNeedingRead);
+							bytesRemainingInBuffer = 0;
 						} else {
 							memcpy(audioData + *audioLength, dataStart, chunkBytesNeedingRead);
 							*audioLength += chunkBytesNeedingRead;
 							bytesRemainingInBuffer -= chunkBytesNeedingRead;
 							while (bytesRemainingInBuffer < 2) {
 								bytesRead = SSL_read(ssl, tempReadBuffer, 1);
-								// printf("Want to read 1 byte. Read %lu bytes\n", bytesRead);
-								// printf("Read a %x\n", tempReadBuffer[0]);
 								bytesRemainingInBuffer += bytesRead;
 							}
 							dataStart += chunkBytesNeedingRead + 2;
 							bytesRemainingInBuffer -= 2;
 							chunkBytesNeedingRead = 0;
-							// printf("New chunk bytes needing read: %lu\n", chunkBytesNeedingRead);
-							// printf("New bytes remaining in buffer: %lu\n", bytesRemainingInBuffer);
 							newChunkNeeded = TRUE;
 						}
 					}
@@ -1225,7 +1226,7 @@ void closeOpenAIConnector() {
 		SocketBase = NULL;
 	}
 
-	sock = NULL;
+	sock = -1;
 
 	FreeVec(writeBuffer);
 	FreeVec(readBuffer);

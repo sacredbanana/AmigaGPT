@@ -65,7 +65,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "compile test",
-            "program": "${workspaceFolder}/src/test/openai-test",
+            "program": "${workspaceFolder}/out/openai-test",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/src/test",
