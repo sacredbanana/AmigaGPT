@@ -122,16 +122,15 @@ The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E wi
 ### **Chat**
 
 ### **GPT-4**
-*GPT-4 is currently in a limited beta and only accessible to those who have been granted access. Please join the [waitlist](https://openai.com/waitlist/gpt-4) to get access.*
 
 GPT-4 is a large multimodal model (accepting text inputs and emitting text outputs today, with image inputs coming in the future) that can solve difficult problems with greater accuracy than any of our previous models, thanks to its broader general knowledge and advanced reasoning capabilities. For many basic tasks, the difference between GPT-4 and GPT-3.5 models is not significant. However, in more complex reasoning situations, GPT-4 is much more capable than any of our previous models.
 
 | Model | Description | Max Tokens | Training Data |
 | ----- | ----------- | ---------- | ------------- |
 | gpt-4o | Our most advanced, multimodal flagship model that’s cheaper and faster than GPT-4 Turbo. Currently points to gpt-4o-2024-05-13. | 128,000 | Up to Oct 2023 |
-| gpt-4o | gpt-4o currently points to this version. | 128,000 | Up to Oct 2023 |
+| gpt-4o-2024-05-13 | gpt-4o currently points to this version. | 128,000 | Up to Oct 2023 |
 | gpt-4-turbo | The latest GPT-4 Turbo model with vision capabilities. Vision requests can now use JSON mode and function calling. Currently points to gpt-4-turbo-2024-04-09. | 128,000 | Up to Dec 2023 |
-|gpt-4-turbo-2024-04-09 | GPT-4 Turbo with Vision model. Vision requests can now use JSON mode and function calling. gpt-4-turbo currently points to this version. | 128,000 | Up to Dec 2023 |
+| gpt-4-turbo-2024-04-09 | GPT-4 Turbo with Vision model. Vision requests can now use JSON mode and function calling. gpt-4-turbo currently points to this version. | 128,000 | Up to Dec 2023 |
 | gpt-4-turbo-preview | GPT-4 Turbo preview model. Currently points to gpt-4-0125-preview. | 128,000 | Up to Dec 2023 |
 | gpt-4-0125-preview | The latest GPT-4 model intended to reduce cases of “laziness” where the model doesn’t complete a task. Returns a maximum of 4,096 output tokens. | 128,000 | Up to Dec 2023 |
 | gpt-4-1106-preview | GPT-4 Turbo model featuring improved instruction following, JSON mode, reproducible outputs, parallel function calling, and more. Returns a maximum of 4,096 output tokens. This is a preview model. | 128,000 | Up to Apr 2023 |
