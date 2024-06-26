@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.1 (2024-06-26)
+
+- Send button no longer appears after image creation
+- Create image button stays disabled after image creation. Select new image to create a new one
+- Updated to latest json-c
+
 ## 1.5.0 (2024-05-18)
 
 - Support for OpenAI text to speech voices. Fast internet connection recommended

@@ -703,6 +703,12 @@ Training data: Up to Sep 2021
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}1.5.1 (2024-06-26)@{ub}
+
+- Send button no longer appears after image creation
+- Create image button stays disabled after image creation. Select new image to create a new one
+- Updated to latest json-c
+
 @{b}1.5.0 (2024-05-18)@{ub}
 
 - Support for OpenAI's 16-bit text to speech voices. Fast internet connection recommended
