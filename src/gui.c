@@ -834,7 +834,13 @@ LONG initVideo() {
 		MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
 		MUIA_Application_Description, "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E",
 		MUIA_Application_Base, " ",
+<<<<<<< HEAD
 	End;
+=======
+		TAG_DONE);
+
+		
+>>>>>>> bb812f2 (Add MUI lib. Not compiling yet T_T)
 
 	if (openStartupOptions() == RETURN_ERROR)
 		return RETURN_ERROR;
@@ -1514,6 +1520,7 @@ static LONG openStartupOptions() {
 			return RETURN_ERROR;
 	}
 
+<<<<<<< HEAD
 	startupOptionsWindowObject = WindowObject,
 		MUIA_Window_Title, "Startup Options",
 		MUIA_Window_ID, 0,
@@ -1526,6 +1533,33 @@ static LONG openStartupOptions() {
 
 	set(startupOptionsWindowObject,MUIA_Window_Open,TRUE);// open window
 
+=======
+	// Object *label = MUI_MakeObject(MUIO_Label,"I am MUI Application on Amiga 3.X", NULL);
+
+	// Object *group = MUI_NewObject("Group.mui",
+	// 	Child, MUI_MakeObject(MUIO_Label,"I am MUI Application on Amiga 3.X",NULL),
+	// 	TAG_DONE);
+
+	// startupOptionsWindowObject = MUI_NewObject("Window.mui",
+	// 	MUIA_Window_Title, "Startup Options",
+	// 	MUIA_Window_ID, 0,
+	// 	WindowContents, group,
+	// 	TAG_DONE);
+
+	// if ((startupOptionsWindowObject = WindowObject,
+	// 	MUIA_Window_Title, "Startup Options",
+	// 	MUIA_Window_ID, 0,
+		// WindowContents, VGroup,
+	// 		Child, MUI_MakeObject(MUIO_Label,"I am MUI Application on Amiga 3.X",NULL),
+	// 		TAG_DONE),
+	// 	TAG_DONE) == NULL)) {
+	// 		printf("Could not create startupOptionsWindowObject object\n");
+	// 		return RETURN_ERROR;
+	// }
+
+	DoMethod(app, OM_ADDMEMBER, startupOptionsWindowObject);
+
+>>>>>>> bb812f2 (Add MUI lib. Not compiling yet T_T)
 	if ((startupOptionsWindowObjectOld = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
