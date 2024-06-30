@@ -68,7 +68,9 @@
         "modeid.h": "c",
         "clicktab.h": "c",
         "exec_protos.h": "c",
-        "ahi.h": "c"
+        "ahi.h": "c",
+        "muimaster.h": "c",
+        "mui.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

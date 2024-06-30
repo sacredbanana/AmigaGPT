@@ -1,3 +1,4 @@
+#include "amiga_compiler.h"
 #include <classes/requester.h>
 #include <classes/window.h>
 #include <datatypes/datatypes.h>
@@ -25,6 +26,7 @@
 #include <libraries/amigaguide.h>
 #include <libraries/asl.h>
 #include <libraries/gadtools.h>
+#include <libraries/mui.h>
 #include <proto/amigaguide.h>
 #include <proto/asl.h>
 #include <proto/button.h>
@@ -39,6 +41,7 @@
 #include <proto/intuition.h>
 #include <proto/layout.h>
 #include <proto/listbrowser.h>
+#include <proto/muimaster.h>
 #include <proto/radiobutton.h>
 #include <proto/requester.h>
 #include <proto/scroller.h>
@@ -160,6 +163,7 @@ struct WindowIFace *IWindow;
 extern struct UtilityIFace *IUtility;
 struct Library *TextEditorBase;
 struct DataTypesIFace *IDataTypes;
+struct MUIIFace *IMUI;
 #else
 struct Library *TextFieldBase;
 #endif
@@ -179,6 +183,7 @@ struct Library *ListBrowserBase;
 struct Library *RequesterBase;
 struct Library *GadToolsBase;
 struct Library *DataTypesBase;
+struct Library *MUIMasterBase;
 struct Window *mainWindow;
 struct Window *imageWindow;
 static Object *mainWindowObject;
@@ -212,6 +217,7 @@ static Object *openLargeImageButton;
 static Object *openOriginalImageButton;
 static Object *saveCopyButton;
 static Object *imageHistoryButtonsLayout;
+static Object *app;
 static struct Screen *screen;
 static BOOL isPublicScreen;
 static BOOL isAmigaOS3X;
@@ -511,6 +517,22 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
+	if ((MUIMasterBase = OpenLibrary("muimaster.library", 19)) == NULL) {
+		printf("Could not open muimaster.library\n");
+		return RETURN_ERROR;
+	}
+	#else
+	if ((MUIMasterBase = OpenLibrary("muimaster.library", 19)) == NULL) {
+		printf("Could not open muimaster.library\n");
+		return RETURN_ERROR;
+	}
+	if ((IMUI = (struct MUIIFace *)GetInterface(MUIMasterBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for muimaster.library\n");
+		return RETURN_ERROR;
+	}
+	#endif
+
+	#ifdef __AMIGAOS3__
 	if ((WindowBase = OpenLibrary("window.class", 42)) == NULL) {
 		printf("Could not open window.class\n");
 		return RETURN_ERROR;
@@ -766,6 +788,7 @@ static void closeGUILibraries() {
 	DropInterface((struct Interface *)IScroller);
 	DropInterface((struct Interface *)IRequester);
 	DropInterface((struct Interface *)IDataTypes);
+	DropInterface((struct Interface *)IMUI);
 	CloseLibrary(TextEditorBase);
 	#else
 	CloseLibrary(TextFieldBase);
@@ -786,6 +809,7 @@ static void closeGUILibraries() {
 	CloseLibrary(ScrollerBase);
 	CloseLibrary(RequesterBase);
 	CloseLibrary(DataTypesBase);
+	CloseLibrary(MUIMasterBase);
 }
 
 /**
@@ -796,6 +820,17 @@ LONG initVideo() {
 	if (openGUILibraries() == RETURN_ERROR) {
 		return RETURN_ERROR;
 	}
+
+	app = ApplicationObject,
+		MUIA_Application_Title, "AmigaGPT",
+		MUIA_Application_Version, APP_VERSION,
+		MUIA_Application_Copyright, "(C) 2024 Cameron Armstrong (Nightfox/sacredbanana)",
+		MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
+		MUIA_Application_Description, "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E",
+		MUIA_Application_Base, " ",
+		TAG_DONE);
+
+		
 
 	if (openStartupOptions() == RETURN_ERROR)
 		return RETURN_ERROR;
@@ -1366,7 +1401,7 @@ void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 static LONG openStartupOptions() {
-	Object *screenSelectRadioButton, *modeSelectRadioButton, *startupOptionsOkButton, *screenSelectLayout, *startupOptionsWindowObject, *startupOptionsLayout, *modeSelectLayout = NULL;
+	Object *screenSelectRadioButton, *modeSelectRadioButton, *startupOptionsOkButton, *screenSelectLayout, *startupOptionsWindowObject,  *startupOptionsWindowObjectOld, *startupOptionsLayout, *modeSelectLayout = NULL;
 	struct Window *screenSelectWindow;
 	struct ScreenModeRequester *screenModeRequester;
 	screen = LockPubScreen("Workbench");
@@ -1475,7 +1510,32 @@ static LONG openStartupOptions() {
 			return RETURN_ERROR;
 	}
 
-	if ((startupOptionsWindowObject = NewObject(WINDOW_GetClass(), NULL,
+	// Object *label = MUI_MakeObject(MUIO_Label,"I am MUI Application on Amiga 3.X", NULL);
+
+	// Object *group = MUI_NewObject("Group.mui",
+	// 	Child, MUI_MakeObject(MUIO_Label,"I am MUI Application on Amiga 3.X",NULL),
+	// 	TAG_DONE);
+
+	// startupOptionsWindowObject = MUI_NewObject("Window.mui",
+	// 	MUIA_Window_Title, "Startup Options",
+	// 	MUIA_Window_ID, 0,
+	// 	WindowContents, group,
+	// 	TAG_DONE);
+
+	// if ((startupOptionsWindowObject = WindowObject,
+	// 	MUIA_Window_Title, "Startup Options",
+	// 	MUIA_Window_ID, 0,
+		// WindowContents, VGroup,
+	// 		Child, MUI_MakeObject(MUIO_Label,"I am MUI Application on Amiga 3.X",NULL),
+	// 		TAG_DONE),
+	// 	TAG_DONE) == NULL)) {
+	// 		printf("Could not create startupOptionsWindowObject object\n");
+	// 		return RETURN_ERROR;
+	// }
+
+	DoMethod(app, OM_ADDMEMBER, startupOptionsWindowObject);
+
+	if ((startupOptionsWindowObjectOld = NewObject(WINDOW_GetClass(), NULL,
 		WINDOW_Position, WPOS_CENTERSCREEN,
 		WA_Activate, TRUE,
 		WA_Title, "Startup Options",
@@ -1489,11 +1549,11 @@ static LONG openStartupOptions() {
 		WA_IDCMP, IDCMP_GADGETUP,
 		WA_CustomScreen, screen,
 		TAG_DONE)) == NULL) {
-			printf("Could not create screenSelectWindow object\n");
+			printf("Could not create tartupOptionsWindowObjectOld object\n");
 			return RETURN_ERROR;
 	}
 
-	if ((screenSelectWindow = (struct Window *)DoMethod(startupOptionsWindowObject, WM_OPEN, NULL)) == NULL) {
+	if ((screenSelectWindow = (struct Window *)DoMethod(startupOptionsWindowObjectOld, WM_OPEN, NULL)) == NULL) {
 		printf("Could not open screenSelectWindow\n");
 		return RETURN_ERROR;
 	}
@@ -1502,11 +1562,11 @@ static LONG openStartupOptions() {
 	ULONG signalMask, winSignal, signals, result;
 	WORD code;
 
-	GetAttr(WINDOW_SigMask, startupOptionsWindowObject, &winSignal);
+	GetAttr(WINDOW_SigMask, startupOptionsWindowObjectOld, &winSignal);
 	signalMask = winSignal;
 	while (!done) {
 		signals = Wait(signalMask);
-		while ((result = DoMethod(startupOptionsWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
+		while ((result = DoMethod(startupOptionsWindowObjectOld, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
 			switch (result & WMHI_CLASSMASK) {
 				case WMHI_GADGETUP:
 					switch (result & WMHI_GADGETMASK) {
@@ -1604,7 +1664,7 @@ static LONG openStartupOptions() {
 		}
 	}
 
-	DoMethod(startupOptionsWindowObject, WM_CLOSE);
+	DoMethod(startupOptionsWindowObjectOld, WM_CLOSE);
 
 	return RETURN_OK;
 }
@@ -3755,6 +3815,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
  * Shutdown the GUI
 **/
 void shutdownGUI() {
+	MUI_DisposeObject(app);
 	freeConversationList();
 	freeImageList();
 	if (mainWindowObject) {
