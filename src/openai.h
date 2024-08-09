@@ -30,6 +30,8 @@ struct ConversationNode {
 enum ChatModel {
 	GPT_4o = 0,
 	GPT_4o_2024_05_13,
+	GPT_4o_MINI,
+	GPT_4o_MINI_2024_07_18,
 	GPT_4_TURBO,
 	GPT_4_TURBO_2024_04_09,
 	GPT_4_TURBO_PREVIEW,

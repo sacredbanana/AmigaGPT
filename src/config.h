@@ -1,7 +1,7 @@
 #include "openai.h"
 #include "speech.h"
 
-#define CHAT_MODEL_SET_VERSION 2
+#define CHAT_MODEL_SET_VERSION 3
 #define IMAGE_MODEL_SET_VERSION 0
 #define SPEECH_SYSTEM_SET_VERSION 0
 #define OPENAI_TTS_MODEL_SET_VERSION 0

@@ -129,6 +129,8 @@ GPT-4 is a large multimodal model (accepting text inputs and emitting text outpu
 | ----- | ----------- | ---------- | ------------- |
 | gpt-4o | Our most advanced, multimodal flagship model that’s cheaper and faster than GPT-4 Turbo. Currently points to gpt-4o-2024-05-13. | 128,000 | Up to Oct 2023 |
 | gpt-4o-2024-05-13 | gpt-4o currently points to this version. | 128,000 | Up to Oct 2023 |
+| gpt-4o-mini | Our affordable and intelligent small model for fast, lightweight tasks. GPT-4o mini is cheaper and more capable than GPT-3.5 Turbo. Currently points to gpt-4o-mini-2024-07-18. | 128,000 | Up to Oct 2023 |
+| gpt-4o-mini-2024-07-18 | gpt-4o-mini currently points to this version. | Up to Oct 2023 |
 | gpt-4-turbo | The latest GPT-4 Turbo model with vision capabilities. Vision requests can now use JSON mode and function calling. Currently points to gpt-4-turbo-2024-04-09. | 128,000 | Up to Dec 2023 |
 | gpt-4-turbo-2024-04-09 | GPT-4 Turbo with Vision model. Vision requests can now use JSON mode and function calling. gpt-4-turbo currently points to this version. | 128,000 | Up to Dec 2023 |
 | gpt-4-turbo-preview | GPT-4 Turbo preview model. Currently points to gpt-4-0125-preview. | 128,000 | Up to Dec 2023 |

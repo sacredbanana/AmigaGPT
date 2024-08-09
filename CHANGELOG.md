@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.0 (2024-08-08)
+
+- Add the GPT4o Mini model
+
 ## 1.5.1 (2024-06-26)
 
 - Send button no longer appears after image creation

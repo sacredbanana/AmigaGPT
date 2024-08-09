@@ -638,6 +638,18 @@ gpt-4o currently points to this version.
 Max tokens: 128,000
 Training data: Up to Oct 2023
 
+@{b}gpt-4o-mini@{ub}
+Our affordable and intelligent small model for fast, lightweight tasks. GPT-4o mini is cheaper and more capable than GPT-3.5 Turbo. Currently points to gpt-4o-mini-2024-07-18.
+
+Max tokens: 128,000
+Training data: Up to Oct 2023
+
+@{b}gpt-4o-mini-2024-07-18@{ub}
+gpt-4o-mini currently points to this version.
+
+Max tokens: 128,000
+Training data: Up to Oct 2023
+
 @{b}gpt-4-turbo@{ub}
 The latest GPT-4 Turbo model with vision capabilities. Vision requests can now use JSON mode and function calling. Currently points to gpt-4-turbo-2024-04-09.
 
@@ -702,6 +714,10 @@ Training data: Up to Sep 2021
 
 @node changelog "Changelog"
 @{b}Changelog@{ub}
+
+@{b}1.6.0 (2024-08-08)@{ub}
+
+- Add the GPT4o Mini model
 
 @{b}1.5.1 (2024-06-26)@{ub}
 
