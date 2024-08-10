@@ -221,8 +221,8 @@ Changelog:
 
 - Add the GPT4o Mini model
 - Remove the unused Accent menu item from OS4 version
-- Fix bug where some voice menu items in the OS4 version dont get a checkmark
-  after you select it
+- Fix bug where some voice menu items in the OS4 version fail to display a
+  checkmark after you select it
 
 ------------------
 1.5.1 (2024-06-26)
