@@ -715,9 +715,11 @@ Training data: Up to Sep 2021
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
-@{b}1.6.0 (2024-08-08)@{ub}
+@{b}1.6.0 (2024-08-10)@{ub}
 
 - Add the GPT4o Mini model
+- Remove the unused Accent menu item from OS4 version
+- Fix bug where some voice menu items in the OS4 version dont get a checkmark after you select it
 
 @{b}1.5.1 (2024-06-26)@{ub}
 

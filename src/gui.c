@@ -262,6 +262,9 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "Flite", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_FLITE_ID},
 	#endif
 	{NM_SUB, "OpenAI Text To Speech", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI_ID},
+	#ifdef __AMIGAOS3__
+	{NM_ITEM, "Accent", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_ACCENT_ID},
+	#endif
 	#ifdef __AMIGAOS4__
 	{NM_ITEM, "Flite Voice", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_ID},
 	{NM_SUB, "kal (fast)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL_ID},
@@ -270,7 +273,6 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "rms (slow)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_RMS_ID},
 	{NM_SUB, "slt (slow)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_SLT_ID},
 	#endif
-	{NM_ITEM, "Accent", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_ACCENT_ID},
 	{NM_ITEM, "OpenAI Voice", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI_ID},
 	{NM_SUB, "alloy", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY_ID},
 	{NM_SUB, "echo", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO_ID},
@@ -1819,7 +1821,7 @@ static void sendChatMessage() {
 static void updateMenu() {
 	#ifdef __AMIGAOS3__
 	APTR *visualInfo;
-	ULONG error = NULL;
+	ULONG error = 0;
 	FreeMenus(menu);
 	if (visualInfo = GetVisualInfo(screen, NULL)) {
 		if (menu = CreateMenus(amigaGPTMenu, GTMN_SecondaryError, &error, TAG_DONE)) {
@@ -1848,7 +1850,7 @@ static void updateMenu() {
 **/
 static void refreshOpenAIMenuItems() {
 	struct NewMenu *newMenu = amigaGPTMenu;
-	while (newMenu->nm_UserData != MENU_ITEM_CHAT_MODEL_ID) {
+	while ((int)newMenu->nm_UserData != MENU_ITEM_CHAT_MODEL_ID) {
 		newMenu++;
 	}
 
@@ -1861,7 +1863,7 @@ static void refreshOpenAIMenuItems() {
 		}
 	}
 
-	while (newMenu->nm_UserData != MENU_ITEM_IMAGE_MODEL_ID) {
+	while ((int)newMenu->nm_UserData != MENU_ITEM_IMAGE_MODEL_ID) {
 		newMenu++;
 	}
 
@@ -1873,7 +1875,7 @@ static void refreshOpenAIMenuItems() {
 		}
 	}
 
-	while (newMenu->nm_UserData != MENU_ITEM_IMAGE_SIZE_DALL_E_2_ID) {
+	while ((int)newMenu->nm_UserData != MENU_ITEM_IMAGE_SIZE_DALL_E_2_ID) {
 		newMenu++;
 	}
 
@@ -1885,7 +1887,7 @@ static void refreshOpenAIMenuItems() {
 		}
 	}
 
-	while (newMenu->nm_UserData != MENU_ITEM_IMAGE_SIZE_DALL_E_3_ID) {
+	while ((int)newMenu->nm_UserData != MENU_ITEM_IMAGE_SIZE_DALL_E_3_ID) {
 		newMenu++;
 	}
 
@@ -1905,7 +1907,7 @@ static void refreshOpenAIMenuItems() {
 **/
 static void refreshSpeechMenuItems() {
 	struct NewMenu *newMenu = amigaGPTMenu;
-	while (newMenu->nm_UserData != MENU_ITEM_SPEECH_ENABLED_ID) {
+	while ((int)newMenu->nm_UserData != MENU_ITEM_SPEECH_ENABLED_ID) {
 		newMenu++;
 	}
 
@@ -1922,11 +1924,10 @@ static void refreshSpeechMenuItems() {
 			newMenu->nm_Flags &= ~CHECKED;
 		}
 	}
-	newMenu++;
+
 	#ifdef __AMIGAOS4__
 	while ((++newMenu)->nm_Type == NM_SUB) {
 		CONST_STRPTR currentFliteVoiceName = SPEECH_FLITE_VOICE_NAMES[config.speechFliteVoice];
-
 		// Find the length of the first word in the label
 		UBYTE labelLen = 0;
 		while (newMenu->nm_Label[labelLen] != ' ') {
@@ -1935,13 +1936,17 @@ static void refreshSpeechMenuItems() {
 
 		// Compare the first word of the label with currentVoiceName
 		// We have to do this because the (slow) warnings were appended to the label
-		if (strncmp(newMenu->nm_Label, currentFliteVoiceName, labelLen) == 0 &&
-			currentFliteVoiceName[labelLen] == '\0') {
+		if (strncmp(newMenu->nm_Label, currentFliteVoiceName, labelLen) == 0 && currentFliteVoiceName[labelLen] == '\0') {
 			newMenu->nm_Flags |= CHECKED;
 		} else {
 			newMenu->nm_Flags &= ~CHECKED;
 		}
 	}
+	#endif
+
+	#ifdef __AMIGAOS3__
+	// Skip the Accent menu
+	newMenu++;
 	#endif
 
 	while ((++newMenu)->nm_Type == NM_SUB) {
