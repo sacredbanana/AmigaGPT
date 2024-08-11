@@ -4,14 +4,24 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "compile",
+            "label": "Compile OS3 version locally - Debug",
             "type": "shell",
-            "windows": {
-                "command": "${command:amiga.bin-path}\\gnumake.exe",
+            "osx": {
+                "command": "gmake",
                 "options": {
                     "cwd": "${workspaceRoot}",
                     "env": {
-                        "PATH": "${env:PATH};${command:amiga.bin-path}\\opt\\bin;${command:amiga.bin-path}"
+                        "DEBUG": "1",
+                        "PATH": "/opt/amiga/bin:${env:PATH}"
+                    }
+                },
+            },
+            "windows": {
+                "command": "gnumake.exe",
+                "options": {
+                    "cwd": "${workspaceRoot}",
+                    "env": {
+                        "DEBUG": "1",
                     }
                 },
             },
@@ -19,13 +29,10 @@
             "options": {
                 "cwd": "${workspaceRoot}",
                 "env": {
-                    "PATH": "${env:PATH}:${command:amiga.bin-path}/opt/bin:${command:amiga.bin-path}"
+                    "DEBUG": "1",
                 }
             },
-            "args": [
-                "-j4",
-                "program=${config:amiga.program}",
-            ],
+            "args": ["clean", "all"],
             "problemMatcher": [
                 {
                     "base": "$gcc",
@@ -46,7 +53,264 @@
             }
         },
         {
-            "label": "compile test",
+            "label": "Compile OS3 version locally - Release",
+            "type": "shell",
+            "osx": {
+                "command": "gmake",
+                "options": {
+                    "cwd": "${workspaceRoot}",
+                    "env": {
+                        "PATH": "/opt/amiga/bin:${env:PATH}"
+                    }
+                },
+            },
+            "windows": {
+                "command": "gnumake.exe",
+                "options": {
+                    "cwd": "${workspaceRoot}",
+                },
+            },
+            "command": "make",
+            "options": {
+                "cwd": "${workspaceRoot}",
+                "env": {
+                    "PATH": "/opt/amiga/bin:${env:PATH}"
+                }
+            },
+            "args": ["clean", "all"],
+            "problemMatcher": [
+                {
+                    "base": "$gcc",
+                    "fileLocation": "absolute"
+                }
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Compile OS3 version with Docker - Debug",
+            "type": "shell",
+            "command": "./build_os3.sh",
+            "options": {
+                "cwd": "${workspaceRoot}",
+                "env": {
+                    "CLEAN": "1",
+                    "DEBUG": "1",
+                }
+            },
+            "problemMatcher": [
+                {
+                    "base": "$gcc",
+                    "fileLocation": "absolute"
+                }
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Compile OS3 version with Docker - Release",
+            "type": "shell",
+            "command": "./build_os3.sh",
+            "options": {
+                "cwd": "${workspaceRoot}",
+                "env": {
+                    "CLEAN": "1",
+                }
+            },
+            "problemMatcher": [
+                {
+                    "base": "$gcc",
+                    "fileLocation": "absolute"
+                }
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Compile OS4 version locally - Debug",
+            "type": "shell",
+            "osx": {
+                "command": "gmake",
+                "options": {
+                    "cwd": "${workspaceRoot}",
+                    "env": {
+                        "DEBUG": "1",
+                        "PATH": "/opt/amiga/bin:${env:PATH}"
+                    }
+                },
+            },
+            "windows": {
+                "command": "gnumake.exe",
+                "options": {
+                    "cwd": "${workspaceRoot}",
+                    "env": {
+                        "DEBUG": "1",
+                    }
+                },
+            },
+            "command": "make",
+            "options": {
+                "cwd": "${workspaceRoot}",
+                "env": {
+                    "DEBUG": "1",
+                }
+            },
+            "args": ["clean", "all", "-f", "Makefile.OS4"],
+            "problemMatcher": [
+                {
+                    "base": "$gcc",
+                    "fileLocation": "absolute"
+                }
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Compile OS4 version locally - Release",
+            "type": "shell",
+            "osx": {
+                "command": "gmake",
+                "options": {
+                    "cwd": "${workspaceRoot}",
+                    "env": {
+                        "PATH": "/opt/amiga/bin:${env:PATH}"
+                    }
+                },
+            },
+            "windows": {
+                "command": "gnumake.exe",
+                "options": {
+                    "cwd": "${workspaceRoot}",
+                },
+            },
+            "command": "make",
+            "options": {
+                "cwd": "${workspaceRoot}",
+                "env": {
+                    "PATH": "/opt/amiga/bin:${env:PATH}"
+                }
+            },
+            "args": ["clean", "all", "-f", "Makefile.OS4"],
+            "problemMatcher": [
+                {
+                    "base": "$gcc",
+                    "fileLocation": "absolute"
+                }
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Compile OS4 version with Docker - Debug",
+            "type": "shell",
+            "command": "./build_os4.sh",
+            "options": {
+                "cwd": "${workspaceRoot}",
+                "env": {
+                    "CLEAN": "1",
+                    "DEBUG": "1",
+                }
+            },
+            "problemMatcher": [
+                {
+                    "base": "$gcc",
+                    "fileLocation": "absolute"
+                }
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Compile OS4 version with Docker - Release",
+            "type": "shell",
+            "command": "./build_os4.sh",
+            "options": {
+                "cwd": "${workspaceRoot}",
+                "env": {
+                    "CLEAN": "1",
+                }
+            },
+            "problemMatcher": [
+                {
+                    "base": "$gcc",
+                    "fileLocation": "absolute"
+                }
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Compile native tests",
             "type": "shell",
             "windows": {
                 "command": "${command:amiga.bin-path}\\gnumake.exe",
@@ -55,16 +319,16 @@
                     "env": {
                         "PATH": "${env:PATH};${command:amiga.bin-path}\\opt\\bin;${command:amiga.bin-path}"
                     }
-                },
+                }
             },
             "command": "make",
             "options": {
                 "cwd": "${workspaceRoot}/src/test",
                 "env": {
-                    "PATH": "${env:PATH}:${command:amiga.bin-path}/opt/bin:${command:amiga.bin-path}",                }
+                    "PATH": "${env:PATH}:${command:amiga.bin-path}/opt/bin:${command:amiga.bin-path}",
+                }
             },
-            "args": [
-            ],
+            "args": [],
             "problemMatcher": [
                 {
                     "base": "$gcc",
@@ -85,7 +349,7 @@
             }
         },
         {
-            "label": "clean",
+            "label": "Clean",
             "type": "shell",
             "windows": {
                 "command": "${command:amiga.bin-path}\\gnumake.exe"
@@ -97,6 +361,15 @@
             "args": [
                 "clean"
             ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Package",
+            "type": "shell",
+            "command": "./package.sh",
+            "options": {
+                "cwd": "${workspaceRoot}"
+            },
             "problemMatcher": []
         }
     ]

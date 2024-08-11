@@ -79,14 +79,14 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 
 	switch (speechSystem) {
 		case SPEECH_SYSTEM_34:
-			if (OpenDevice("PROGDIR:devs/speech/34/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
+			if (OpenDevice(PROGDIR"devs/speech/34/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
 				printf("Could not open narrator.device v34\n");
 				config.speechEnabled = FALSE;
 				return RETURN_ERROR;
 			}
 			break;
 		case SPEECH_SYSTEM_37:
-			if (OpenDevice("PROGDIR:devs/speech/37/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
+			if (OpenDevice(PROGDIR"devs/speech/37/narrator.device", 0, (struct IORequest *)NarratorIO, 0L) != 0) {
 				printf("Could not open narrator.device v37\n");
 				config.speechEnabled = FALSE;
 				return RETURN_ERROR;

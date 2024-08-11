@@ -30,11 +30,11 @@ PROGRAM_NAME = AmigaGPT_OS4
 EXECUTABLE_OUT = out/$(PROGRAM_NAME)
 CC = ppc-amigaos-gcc
 
-SDKLIBDIR = /tools/ppc-amigaos/SDK/lib
-LIBDIR = /tools/ppc-amigaos/lib
-SDKDIR = /tools/ppc-amigaos/SDK/include/include_h
-NETINCDIR = /tools/ppc-amigaos/SDK/include/netinclude
-INCDIR = /tools/ppc-amigaos/include
+SDKLIBDIR = /opt/amiga/ppc-amigaos/SDK/lib
+LIBDIR = /opt/amiga/ppc-amigaos/lib
+SDKDIR = /opt/amiga/ppc-amigaos/SDK/include/include_h
+NETINCDIR = /opt/amiga/ppc-amigaos/SDK/include/netinclude
+INCDIR = /opt/amiga/ppc-amigaos/include
 
 ifeq ($(OS),Darwin)
 	SED = sed -i "" 
@@ -42,7 +42,12 @@ else
 	SED = sed -i
 endif
 
-CCFLAGS = -MP -MMD -Ofast -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -D__AMIGAOS4__ -D__USE_INLINE__ -DHAVE_VASPRINTF -DPROGRAM_NAME=\"$(PROGRAM_NAME)\"
+CCFLAGS = -MP -MMD -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -lmui -D__AMIGAOS4__ -D__USE_INLINE__ -DHAVE_VASPRINTF -DPROGRAM_NAME=\"$(PROGRAM_NAME)\"
+ifeq ($(DEBUG),1)
+	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -O1
+else
+	CCFLAGS += -DPROGDIR=\"PROGDIR:\" -Ofast
+endif
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NETINCDIR),-D
 LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-lamisslstubs,-ljson-c

@@ -2835,7 +2835,7 @@ LONG startGUIRunLoop() {
 */
 void openDocumentation() {
 	struct NewAmigaGuide guide = {
-		.nag_Name = "PROGDIR:AmigaGPT.guide",
+		.nag_Name = PROGDIR"AmigaGPT.guide",
 		.nag_Screen = screen,
 		.nag_PubScreen = NULL,
 		.nag_BaseName = "AmigaGPT",
@@ -3143,7 +3143,7 @@ static void openChatSystemRequester() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG saveConversations() {
-	BPTR file = Open("PROGDIR:chat-history.json", MODE_NEWFILE);
+	BPTR file = Open(PROGDIR"chat-history.json", MODE_NEWFILE);
 	if (file == 0) {
 		displayDiskError("Failed to create message history file. Conversation history will not be saved.", IoErr());
 		return RETURN_ERROR;
@@ -3194,7 +3194,7 @@ LONG saveConversations() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 static LONG saveImages() {
-	BPTR file = Open("PROGDIR:image-history.json", MODE_NEWFILE);
+	BPTR file = Open(PROGDIR"image-history.json", MODE_NEWFILE);
 	if (file == 0) {
 		displayDiskError("Failed to create image history file. Image history will not be saved.", IoErr());
 		return RETURN_ERROR;
@@ -3285,7 +3285,7 @@ static void createImage() {
 
 	STRPTR url = json_object_get_string(json_object_object_get(dataObject, "url"));
 
-	CreateDir("PROGDIR:images");
+	CreateDir(PROGDIR"images");
 
 	// Generate unique ID for the image
 	UBYTE fullPath[30] = "";
@@ -3295,7 +3295,7 @@ static void createImage() {
 	for (int i = 0; i < 9; i++) {
 		id[i] = idChars[rand() % strlen(idChars)];
 	}
-	snprintf(fullPath, sizeof(fullPath), "PROGDIR:images/%s.png", id);
+	snprintf(fullPath, sizeof(fullPath), PROGDIR"images/%s.png", id);
 
 	downloadFile(url, fullPath);
 
@@ -3568,7 +3568,7 @@ static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String) {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 static LONG loadConversations() {
-	BPTR file = Open("PROGDIR:chat-history.json", MODE_OLDFILE);
+	BPTR file = Open(PROGDIR"chat-history.json", MODE_OLDFILE);
 	if (file == 0) {
 		return RETURN_OK;
 	}
@@ -3591,14 +3591,14 @@ static LONG loadConversations() {
 
 	struct json_object *conversationsJsonArray = json_tokener_parse(conversationsJsonString);
 	if (conversationsJsonArray == NULL) {
-		if (Rename("PROGDIR:chat-history.json", "PROGDIR:chat-history.json.bak")) {
+		if (Rename(PROGDIR"chat-history.json", PROGDIR"chat-history.json.bak")) {
 			displayDiskError("Failed to parse chat history. Malformed JSON. The chat-history.json file is probably corrupted. Conversation history will not be loaded. A backup of the chat-history.json file has been created as chat-history.json.bak", IoErr());
-		} else if (copyFile("PROGDIR:chat-history.json", "RAM:chat-history.json")) {
+		} else if (copyFile(PROGDIR"chat-history.json", "RAM:chat-history.json")) {
 			displayError("Failed to parse chat history. Malformed JSON. The chat-history.json file is probably corrupted. Conversation history will not be loaded. There was an error writing a backup of the chat history to disk but a copy has been saved to RAM:chat-history.json.bak");
 			#ifdef __AMIGAOS3__
-			if (!DeleteFile("PROGDIR:chat-history.json")) {
+			if (!DeleteFile(PROGDIR"chat-history.json")) {
 			#else
-			if (!Delete("PROGDIR:chat-history.json")) {
+			if (!Delete(PROGDIR"chat-history.json")) {
 			#endif
 				displayDiskError("Failed to delete chat-history.json. Please delete this file manually.", IoErr());
 			}
@@ -3662,7 +3662,7 @@ static LONG loadConversations() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 static LONG loadImages() {
-	BPTR file = Open("PROGDIR:image-history.json", MODE_OLDFILE);
+	BPTR file = Open(PROGDIR"image-history.json", MODE_OLDFILE);
 	if (file == 0) {
 		return RETURN_OK;
 	}
@@ -3685,14 +3685,14 @@ static LONG loadImages() {
 
 	struct json_object *imagesJsonArray = json_tokener_parse(imagesJsonString);
 	if (imagesJsonArray == NULL) {
-		if (Rename("PROGDIR:image-history.json", "PROGDIR:image-history.json.bak")) {
+		if (Rename(PROGDIR"image-history.json", PROGDIR"image-history.json.bak")) {
 			displayDiskError("Failed to parse image history. Malformed JSON. The image-history.json file is probably corrupted. Image history will not be loaded. A backup of the image-history.json file has been created as image-history.json.bak", IoErr());
-		} else if (copyFile("PROGDIR:image-history.json", "RAM:image-history.json")) {
+		} else if (copyFile(PROGDIR"image-history.json", "RAM:image-history.json")) {
 			displayError("Failed to parse image history. Malformed JSON. The image-history.json file is probably corrupted. Image history will not be loaded. There was an error writing a backup of the image history to disk but a copy has been saved to RAM:image-history.json.bak");
 			#ifdef __AMIGAOS3__
-			if (!DeleteFile("PROGDIR:image-history.json")) {
+			if (!DeleteFile(PROGDIR"image-history.json")) {
 			#else
-			if (!Delete("PROGDIR:image-history.json")) {
+			if (!Delete(PROGDIR"image-history.json")) {
 			#endif
 				displayDiskError("Failed to delete image-history.json. Please delete this file manually.", IoErr());
 			}

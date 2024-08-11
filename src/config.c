@@ -62,7 +62,7 @@ struct Config config = {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG writeConfig() {
-	BPTR file = Open("PROGDIR:config.json", MODE_NEWFILE);
+	BPTR file = Open(PROGDIR"config.json", MODE_NEWFILE);
 	if (file == 0) {
 		printf("Failed to open the config file\n");
 		return RETURN_ERROR;
@@ -117,7 +117,7 @@ LONG writeConfig() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG readConfig() {
-	BPTR file = Open("PROGDIR:config.json", MODE_OLDFILE);
+	BPTR file = Open(PROGDIR"config.json", MODE_OLDFILE);
 	if (file == 0) {
 		// No config exists. Create a new one from defaults
 		writeConfig();
