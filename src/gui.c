@@ -56,27 +56,30 @@
 #include "version.h"
 
 #define HELP_KEY 0x5F
-#define SCREEN_SELECT_RADIO_BUTTON_ID 0
-#define SCREEN_SELECT_OK_BUTTON_ID 1
-#define SEND_MESSAGE_BUTTON_ID 2
-#define TEXT_INPUT_TEXT_EDITOR_ID 3
-#define CHAT_OUTPUT_TEXT_EDITOR_ID 4
-#define CHAT_OUTPUT_SCROLLER_ID 5
-#define STATUS_BAR_ID 6
-#define CONVERSATION_LIST_BROWSER_ID 7
-#define NEW_CHAT_BUTTON_ID 8
-#define DELETE_CHAT_BUTTON_ID 9
-#define CREATE_IMAGE_BUTTON_ID 10
-#define CLICKTAB_MODE_SELECTION_ID 11
-#define IMAGE_LIST_BROWSER_ID 12
-#define NEW_IMAGE_BUTTON_ID 13
-#define DELETE_IMAGE_BUTTON_ID 14
-#define OPEN_SMALL_IMAGE_BUTTON_ID 15
-#define OPEN_MEDIUM_IMAGE_BUTTON_ID 16
-#define OPEN_LARGE_IMAGE_BUTTON_ID 17
-#define OPEN_ORIGINAL_IMAGE_BUTTON_ID 18
-#define SAVE_COPY_BUTTON_ID 19
-#define MODE_SELECT_RADIO_BUTTON_ID 20
+#define SCREEN_SELECT_WINDOW_ID 0
+#define SCREEN_SELECT_RADIO_BUTTON_ID 1
+#define SCREEN_SELECT_OK_BUTTON_ID 2
+#define SEND_MESSAGE_BUTTON_ID 3
+#define TEXT_INPUT_TEXT_EDITOR_ID 4
+#define CHAT_OUTPUT_TEXT_EDITOR_ID 5
+#define CHAT_OUTPUT_SCROLLER_ID 6
+#define STATUS_BAR_ID 7
+#define CONVERSATION_LIST_BROWSER_ID 8
+#define NEW_CHAT_BUTTON_ID 9
+#define DELETE_CHAT_BUTTON_ID 10
+#define CREATE_IMAGE_BUTTON_ID 11
+#define CLICKTAB_MODE_SELECTION_ID 12
+#define IMAGE_LIST_BROWSER_ID 13
+#define NEW_IMAGE_BUTTON_ID 14
+#define DELETE_IMAGE_BUTTON_ID 15
+#define OPEN_SMALL_IMAGE_BUTTON_ID 16
+#define OPEN_MEDIUM_IMAGE_BUTTON_ID 17
+#define OPEN_LARGE_IMAGE_BUTTON_ID 18
+#define OPEN_ORIGINAL_IMAGE_BUTTON_ID 19
+#define SAVE_COPY_BUTTON_ID 20
+#define MODE_SELECT_RADIO_BUTTON_ID 21
+
+#define STARTUP_OPTIONS_OK_BUTTON_PRESS 1
 
 #define NULL_ID 0
 
@@ -834,13 +837,7 @@ LONG initVideo() {
 		MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
 		MUIA_Application_Description, "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E",
 		MUIA_Application_Base, " ",
-<<<<<<< HEAD
 	End;
-=======
-		TAG_DONE);
-
-		
->>>>>>> bb812f2 (Add MUI lib. Not compiling yet T_T)
 
 	if (openStartupOptions() == RETURN_ERROR)
 		return RETURN_ERROR;
@@ -1411,7 +1408,7 @@ void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 static LONG openStartupOptions() {
-	Object *screenSelectRadioButton, *modeSelectRadioButton, *startupOptionsOkButton, *screenSelectLayout, *startupOptionsWindowObject,  *startupOptionsWindowObjectOld, *startupOptionsLayout, *modeSelectLayout = NULL;
+	Object *screenSelectRadioButton, *startupOptionsOkButton, *screenSelectGroup, *startupOptionsWindowObject, *modeSelectLayoutOld = NULL;
 	struct Window *screenSelectWindow;
 	struct ScreenModeRequester *screenModeRequester;
 	screen = LockPubScreen("Workbench");
@@ -1429,267 +1426,146 @@ static LONG openStartupOptions() {
 		NULL
 	};
 
-	if ((screenSelectRadioButton = NewObject(RADIOBUTTON_GetClass(), NULL,
-		GA_ID, SCREEN_SELECT_RADIO_BUTTON_ID,
-		GA_Width, 100,
-		GA_Height, ClickTabBase->lib_Version > 45 ? 100 : 50,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)radioButtonOptions,
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create screenSelectRadioButton\n");
-			return RETURN_ERROR;
-	}
-
-	if ((startupOptionsOkButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, SCREEN_SELECT_OK_BUTTON_ID,
-		GA_Width, 100,
-		GA_Height, 30,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"OK",
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create startupOptionsOkButton\n");
-			return RETURN_ERROR;
-	}
-
-	if ((screenSelectLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_BottomSpacing, 10,
-		LAYOUT_HorizAlignment, LALIGN_CENTER,
-		LAYOUT_Label, "Screen to open:",
-		LAYOUT_LabelPlace, BVJ_TOP_CENTER,
-		LAYOUT_BevelStyle, BVS_GROUP,
-		LAYOUT_AddChild, screenSelectRadioButton,
-		TAG_DONE)) == NULL) {
-			printf("Could not create screenSelectLayout\n");
-			return RETURN_ERROR;
-	}
-
-	if (isAmigaOS3X) {
-		CONST_STRPTR radioButtonOptions[] = {
-			"Chat",
-			"Image Generation",
-			NULL
-		};
-
-		if ((modeSelectRadioButton = NewObject(RADIOBUTTON_GetClass(), NULL,
-			GA_ID, MODE_SELECT_RADIO_BUTTON_ID,
-			GA_Width, 100,
-			BUTTON_Justification, BCJ_CENTER,
-			GA_Text, (ULONG)radioButtonOptions,
-			GA_RelVerify, TRUE,
-			ICA_TARGET, ICTARGET_IDCMP,
-			TAG_DONE)) == NULL) {
-				printf("Could not create modeSelectRadioButton\n");
-				return RETURN_ERROR;
-		}
-
-		if ((modeSelectLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_BottomSpacing, 10,
-		LAYOUT_HorizAlignment, LALIGN_CENTER,
-		LAYOUT_Label, "Mode:",
-		LAYOUT_LabelPlace, BVJ_TOP_CENTER,
-		LAYOUT_BevelStyle, BVS_GROUP,
-		LAYOUT_AddChild, modeSelectRadioButton,
-		TAG_DONE)) == NULL) {
-			printf("Could not create modeSelectLayout\n");
-			return RETURN_ERROR;
-		}
-	}
-
-	if ((startupOptionsLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-		LAYOUT_DeferLayout, TRUE,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_BottomSpacing, 10,
-		LAYOUT_HorizAlignment, LALIGN_CENTER,
-		LAYOUT_AddChild, screenSelectLayout,
-		isAmigaOS3X ? LAYOUT_AddChild : TAG_SKIP, modeSelectLayout,
-		LAYOUT_AddChild, startupOptionsOkButton,
-		TAG_DONE)) == NULL) {
-			printf("Could not create startupOptionsLayout\n");
-			return RETURN_ERROR;
-	}
-
-<<<<<<< HEAD
-	startupOptionsWindowObject = WindowObject,
-		MUIA_Window_Title, "Startup Options",
-		MUIA_Window_ID, 0,
-		WindowContents, VGroup,
-			Child, MUI_MakeObject(MUIO_Label,"I am MUI Application on Amiga 3.X",NULL),
-			End,
-		End;
-
-	DoMethod(app, OM_ADDMEMBER, startupOptionsWindowObject);
-
-	set(startupOptionsWindowObject,MUIA_Window_Open,TRUE);// open window
-
-=======
-	// Object *label = MUI_MakeObject(MUIO_Label,"I am MUI Application on Amiga 3.X", NULL);
-
-	// Object *group = MUI_NewObject("Group.mui",
-	// 	Child, MUI_MakeObject(MUIO_Label,"I am MUI Application on Amiga 3.X",NULL),
-	// 	TAG_DONE);
-
-	// startupOptionsWindowObject = MUI_NewObject("Window.mui",
-	// 	MUIA_Window_Title, "Startup Options",
-	// 	MUIA_Window_ID, 0,
-	// 	WindowContents, group,
-	// 	TAG_DONE);
-
-	// if ((startupOptionsWindowObject = WindowObject,
-	// 	MUIA_Window_Title, "Startup Options",
-	// 	MUIA_Window_ID, 0,
-		// WindowContents, VGroup,
-	// 		Child, MUI_MakeObject(MUIO_Label,"I am MUI Application on Amiga 3.X",NULL),
-	// 		TAG_DONE),
-	// 	TAG_DONE) == NULL)) {
-	// 		printf("Could not create startupOptionsWindowObject object\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	DoMethod(app, OM_ADDMEMBER, startupOptionsWindowObject);
-
->>>>>>> bb812f2 (Add MUI lib. Not compiling yet T_T)
-	if ((startupOptionsWindowObjectOld = NewObject(WINDOW_GetClass(), NULL,
-		WINDOW_Position, WPOS_CENTERSCREEN,
-		WA_Activate, TRUE,
-		WA_Title, "Startup Options",
-		WA_Width, 200,
-		WA_Height, 50,
-		WA_CloseGadget, FALSE,
-		WINDOW_SharedPort, NULL,
-		WINDOW_Position, WPOS_CENTERSCREEN,
-		WA_DragBar, TRUE,
-		WINDOW_Layout, startupOptionsLayout,
-		WA_IDCMP, IDCMP_GADGETUP,
-		WA_CustomScreen, screen,
-		TAG_DONE)) == NULL) {
-			printf("Could not create tartupOptionsWindowObjectOld object\n");
-			return RETURN_ERROR;
-	}
-
-	if ((screenSelectWindow = (struct Window *)DoMethod(startupOptionsWindowObjectOld, WM_OPEN, NULL)) == NULL) {
-		printf("Could not open screenSelectWindow\n");
+	if (!(screenSelectRadioButton = RadioObject,
+		MUIA_Frame, MUIV_Frame_Group,
+		MUIA_FrameTitle, "Screen to open:",
+		MUIA_HelpNode, "radioButton",
+		MUIA_Radio_Entries, radioButtonOptions,
+	End)) {
+		printf("Could not create screenSelectRadioButton\n");
 		return RETURN_ERROR;
 	}
 
-	BOOL done = FALSE;
-	ULONG signalMask, winSignal, signals, result;
-	WORD code;
-
-	GetAttr(WINDOW_SigMask, startupOptionsWindowObjectOld, &winSignal);
-	signalMask = winSignal;
-	while (!done) {
-		signals = Wait(signalMask);
-		while ((result = DoMethod(startupOptionsWindowObjectOld, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
-			switch (result & WMHI_CLASSMASK) {
-				case WMHI_GADGETUP:
-					switch (result & WMHI_GADGETMASK) {
-						case SCREEN_SELECT_OK_BUTTON_ID:
-						{
-							if (isAmigaOS3X) {
-								GetAttr(RADIOBUTTON_Selected, modeSelectRadioButton, &selectedMode);
-							}
-
-							LONG selectedRadioButton;
-							GetAttr(RADIOBUTTON_Selected, screenSelectRadioButton, &selectedRadioButton);
-
-							if (selectedRadioButton == 0) {
-								ULONG displayID = GetVPModeID(&screen->ViewPort);
-								// New screen
-								if (screenModeRequester = (struct ScreenModeRequester *)AllocAslRequestTags(ASL_ScreenModeRequest,
-								ASLSM_DoWidth, TRUE,
-								ASLSM_DoHeight, TRUE,
-								ASLSM_DoDepth, TRUE,
-								ASLSM_DoOverscanType, TRUE,
-								ASLSM_DoAutoScroll, TRUE,
-								ASLSM_InitialDisplayID, displayID,
-								ASLSM_InitialDisplayWidth, screen->Width,
-								ASLSM_InitialDisplayHeight, screen->Height,
-								ASLSM_InitialOverscanType, OSCAN_TEXT,
-								ASLSM_InitialDisplayDepth, 4,
-								ASLSM_MinDepth, 4,
-								ASLSM_NegativeText, NULL,
-								TAG_DONE)) {
-									if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
-										isPublicScreen = FALSE;
-										UnlockPubScreen(NULL, screen);
-										for (WORD i = 0; i < NUMDRIPENS; i++) {
-											pens[i]= 1;
-										}
-										pens[DETAILPEN] = 4; // nothing?
-										pens[BLOCKPEN] = 4; // nothing?
-										pens[TEXTPEN] = 1; // text colour
-										pens[SHINEPEN] = 1; // gadget top and left borders
-										pens[SHADOWPEN] = 1; // gadget bottom and right borders
-										pens[FILLPEN] = 2; // button text
-										pens[FILLTEXTPEN] = 4; // title bar text
-										pens[BACKGROUNDPEN] = 3; // background
-										pens[HIGHLIGHTTEXTPEN] = 4; // nothing?
-										pens[BARDETAILPEN] = 1; // menu text
-										pens[BARBLOCKPEN] = 0; // menu background
-										pens[BARTRIMPEN] = 1; // nothing?
-										#ifdef __AMIGAOS4__
-										pens[FOREGROUNDPEN] = 0;
-										pens[DISABLEDPEN] = 8;
-										pens[DISABLEDSHADOWPEN] = 7;
-										pens[DISABLEDSHINEPEN] = 6;
-										pens[DISABLEDTEXTPEN] = 3;
-										pens[MENUBACKGROUNDPEN] = 9;
-										pens[MENUTEXTPEN] = 3;
-										pens[MENUSHINEPEN] = 8;
-										pens[MENUSHADOWPEN] = 0;
-										pens[SELECTPEN] = 2;
-										pens[SELECTTEXTPEN] = 4;
-										#endif
-										pens[NUMDRIPENS] = ~0;
-
-										if ((screen = OpenScreenTags(NULL,
-											SA_Pens, (ULONG)pens,
-											SA_LikeWorkbench, TRUE,
-											SA_DisplayID, screenModeRequester->sm_DisplayID,
-											SA_Depth, screenModeRequester->sm_DisplayDepth,
-											SA_Overscan, screenModeRequester->sm_OverscanType,
-											SA_AutoScroll, screenModeRequester->sm_AutoScroll,
-											SA_Width, screenModeRequester->sm_DisplayWidth,
-											SA_Height, screenModeRequester->sm_DisplayHeight,
-											SA_Font, &screenFont,
-											SA_Colors32, config.colors,
-											TAG_DONE)) == NULL) {
-												printf("Could not open screen\n");
-												return RETURN_ERROR;
-										}
-										done = TRUE;
-									}
-								}
-							} else {
-								// Open in Workbench
-								isPublicScreen = TRUE;
-								done = TRUE;
-							}
-							break;
-						}
-						default:
-							break;
-					}
-					break;
-				default:
-					break;
-			}
-		}
+	if (startupOptionsOkButton = MUI_MakeObject(MUIO_Button, "OK")) {
+		set(startupOptionsOkButton, MUIA_CycleChain, 1);
+	} else {
+		printf("Could not create startupOptionsOkButton\n");
+		return RETURN_ERROR;
 	}
 
-	DoMethod(startupOptionsWindowObjectOld, WM_CLOSE);
+	if (!(screenSelectGroup = GroupObject,	
+		Child, screenSelectRadioButton,
+		Child, MUI_MakeObject(MUIO_HBar,10),
+		Child, startupOptionsOkButton = startupOptionsOkButton,
+	End)) {
+		printf("Could not create screenSelectGroup\n");
+		return RETURN_ERROR;
+	}
+
+	if (!(startupOptionsWindowObject = WindowObject,
+		MUIA_Window_Title, "Startup Options",
+		MUIA_Window_ID, SCREEN_SELECT_WINDOW_ID,
+		MUIA_Window_CloseGadget, FALSE,
+		MUIA_Window_DepthGadget, FALSE,
+		MUIA_Window_SizeGadget, FALSE,
+		WindowContents, screenSelectGroup,
+	End)) {
+		printf("Could not create startupOptionsWindowObject\n");
+		return RETURN_ERROR;
+	}
+
+	DoMethod(app, OM_ADDMEMBER, startupOptionsWindowObject);
+
+	set(startupOptionsWindowObject,MUIA_Window_Open,TRUE); // open window
+		  
+	DoMethod(startupOptionsOkButton, MUIM_Notify, MUIA_Pressed, FALSE,
+          app, 2, MUIM_Application_ReturnID, STARTUP_OPTIONS_OK_BUTTON_PRESS);
+
+	BOOL done = FALSE;
+	ULONG signals, result;
+	WORD code;
+
+	while (!done) {
+		ULONG id = DoMethod(app, MUIM_Application_Input, &signals);
+		if (signals) {
+			signals = Wait(signals);
+		}
+
+		switch(id) {
+			case STARTUP_OPTIONS_OK_BUTTON_PRESS:
+				{
+				ULONG selectedRadioButton;
+				get(screenSelectRadioButton, MUIA_Radio_Active, &selectedRadioButton);
+
+				if (selectedRadioButton == 0) {
+							ULONG displayID = GetVPModeID(&screen->ViewPort);
+							// New screen
+							if (screenModeRequester = (struct ScreenModeRequester *)AllocAslRequestTags(ASL_ScreenModeRequest,
+							ASLSM_DoWidth, TRUE,
+							ASLSM_DoHeight, TRUE,
+							ASLSM_DoDepth, TRUE,
+							ASLSM_DoOverscanType, TRUE,
+							ASLSM_DoAutoScroll, TRUE,
+							ASLSM_InitialDisplayID, displayID,
+							ASLSM_InitialDisplayWidth, screen->Width,
+							ASLSM_InitialDisplayHeight, screen->Height,
+							ASLSM_InitialOverscanType, OSCAN_TEXT,
+							ASLSM_InitialDisplayDepth, 4,
+							ASLSM_MinDepth, 4,
+							ASLSM_NegativeText, NULL,
+							TAG_DONE)) {
+								if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
+									isPublicScreen = FALSE;
+									UnlockPubScreen(NULL, screen);
+									for (WORD i = 0; i < NUMDRIPENS; i++) {
+										pens[i]= 1;
+									}
+									pens[DETAILPEN] = 4; // nothing?
+									pens[BLOCKPEN] = 4; // nothing?
+									pens[TEXTPEN] = 1; // text colour
+									pens[SHINEPEN] = 1; // gadget top and left borders
+									pens[SHADOWPEN] = 1; // gadget bottom and right borders
+									pens[FILLPEN] = 2; // button text
+									pens[FILLTEXTPEN] = 4; // title bar text
+									pens[BACKGROUNDPEN] = 3; // background
+									pens[HIGHLIGHTTEXTPEN] = 4; // nothing?
+									pens[BARDETAILPEN] = 1; // menu text
+									pens[BARBLOCKPEN] = 0; // menu background
+									pens[BARTRIMPEN] = 1; // nothing?
+									#ifdef __AMIGAOS4__
+									pens[FOREGROUNDPEN] = 0;
+									pens[DISABLEDPEN] = 8;
+									pens[DISABLEDSHADOWPEN] = 7;
+									pens[DISABLEDSHINEPEN] = 6;
+									pens[DISABLEDTEXTPEN] = 3;
+									pens[MENUBACKGROUNDPEN] = 9;
+									pens[MENUTEXTPEN] = 3;
+									pens[MENUSHINEPEN] = 8;
+									pens[MENUSHADOWPEN] = 0;
+									pens[SELECTPEN] = 2;
+									pens[SELECTTEXTPEN] = 4;
+									#endif
+									pens[NUMDRIPENS] = ~0;
+
+									if ((screen = OpenScreenTags(NULL,
+										SA_Pens, (ULONG)pens,
+										SA_LikeWorkbench, TRUE,
+										SA_DisplayID, screenModeRequester->sm_DisplayID,
+										SA_Depth, screenModeRequester->sm_DisplayDepth,
+										SA_Overscan, screenModeRequester->sm_OverscanType,
+										SA_AutoScroll, screenModeRequester->sm_AutoScroll,
+										SA_Width, screenModeRequester->sm_DisplayWidth,
+										SA_Height, screenModeRequester->sm_DisplayHeight,
+										SA_Font, &screenFont,
+										SA_Colors32, config.colors,
+										TAG_DONE)) == NULL) {
+											printf("Could not open screen\n");
+											return RETURN_ERROR;
+									}
+									done = TRUE;
+								}
+							}
+						} else {
+							// Open in Workbench
+							isPublicScreen = TRUE;
+							done = TRUE;
+						}
+				break;
+				}
+			}
+	}
+
+	set(startupOptionsWindowObject,MUIA_Window_Open,FALSE);// close window
 
 	return RETURN_OK;
 }
