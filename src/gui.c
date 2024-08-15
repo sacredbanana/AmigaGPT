@@ -1490,10 +1490,11 @@ static LONG openStartupOptions() {
 					if (selectedRadioButton == 0) {
 						// Open in Workbench
 						isPublicScreen = TRUE;
+						done = TRUE;
 					} else {
 						// New screen
 						ULONG displayID = GetVPModeID(&screen->ViewPort);
-						if (screenModeRequester = (struct ScreenModeRequester *)AllocAslRequestTags(ASL_ScreenModeRequest,
+						if (screenModeRequester = (struct ScreenModeRequester *)MUI_AllocAslRequestTags(ASL_ScreenModeRequest,
 						ASLSM_DoWidth, TRUE,
 						ASLSM_DoHeight, TRUE,
 						ASLSM_DoDepth, TRUE,
@@ -1507,7 +1508,7 @@ static LONG openStartupOptions() {
 						ASLSM_MinDepth, 4,
 						ASLSM_NegativeText, NULL,
 						TAG_DONE)) {
-							if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
+							if (MUI_AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
 								isPublicScreen = FALSE;
 								UnlockPubScreen(NULL, screen);
 								for (WORD i = 0; i < NUMDRIPENS; i++) {
@@ -1553,12 +1554,14 @@ static LONG openStartupOptions() {
 									SA_Colors32, config.colors,
 									TAG_DONE)) == NULL) {
 										printf("Could not open screen\n");
+										MUI_FreeAslRequest(screenModeRequester);
 										return RETURN_ERROR;
 								}
+								MUI_FreeAslRequest(screenModeRequester);
+								done = TRUE;
 							}
 						}
 					}
-					done = TRUE;
 					break;
 				}
 			}
