@@ -57,8 +57,6 @@
 
 #define HELP_KEY 0x5F
 #define SCREEN_SELECT_WINDOW_ID 0
-#define SCREEN_SELECT_RADIO_BUTTON_ID 1
-#define SCREEN_SELECT_OK_BUTTON_ID 2
 #define SEND_MESSAGE_BUTTON_ID 3
 #define TEXT_INPUT_TEXT_EDITOR_ID 4
 #define CHAT_OUTPUT_TEXT_EDITOR_ID 5
@@ -1408,7 +1406,7 @@ void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 static LONG openStartupOptions() {
-	Object *screenSelectRadioButton, *startupOptionsOkButton, *screenSelectGroup, *startupOptionsWindowObject, *modeSelectLayoutOld = NULL;
+	Object *screenSelectRadioButton, *startupOptionsOkButton, *screenSelectGroup, *startupOptionsWindowObject = NULL;
 	struct Window *screenSelectWindow;
 	struct ScreenModeRequester *screenModeRequester;
 	screen = LockPubScreen("Workbench");
@@ -1421,8 +1419,8 @@ static LONG openStartupOptions() {
 	}
 
 	CONST_STRPTR radioButtonOptions[] = {
-		"New screen",
 		"Open in Workbench",
+		"New screen",
 		NULL
 	};
 
@@ -1455,7 +1453,7 @@ static LONG openStartupOptions() {
 	if (!(startupOptionsWindowObject = WindowObject,
 		MUIA_Window_Title, "Startup Options",
 		MUIA_Window_ID, SCREEN_SELECT_WINDOW_ID,
-		MUIA_Window_CloseGadget, FALSE,
+		MUIA_Window_CloseGadget, TRUE,
 		MUIA_Window_DepthGadget, FALSE,
 		MUIA_Window_SizeGadget, FALSE,
 		WindowContents, screenSelectGroup,
@@ -1464,108 +1462,112 @@ static LONG openStartupOptions() {
 		return RETURN_ERROR;
 	}
 
+	DoMethod(startupOptionsWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
+	  app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+
 	DoMethod(app, OM_ADDMEMBER, startupOptionsWindowObject);
 
-	set(startupOptionsWindowObject,MUIA_Window_Open,TRUE); // open window
+	set(startupOptionsWindowObject,MUIA_Window_Open,TRUE);
 		  
 	DoMethod(startupOptionsOkButton, MUIM_Notify, MUIA_Pressed, FALSE,
           app, 2, MUIM_Application_ReturnID, STARTUP_OPTIONS_OK_BUTTON_PRESS);
 
 	BOOL done = FALSE;
-	ULONG signals, result;
-	WORD code;
+	ULONG signals;
 
 	while (!done) {
-		ULONG id = DoMethod(app, MUIM_Application_Input, &signals);
-		if (signals) {
-			signals = Wait(signals);
-		}
+		ULONG id = DoMethod(app, MUIM_Application_NewInput, &signals);
 
 		switch(id) {
+			case MUIV_Application_ReturnID_Quit:
+				done = TRUE;
+				break;
 			case STARTUP_OPTIONS_OK_BUTTON_PRESS:
 				{
-				ULONG selectedRadioButton;
-				get(screenSelectRadioButton, MUIA_Radio_Active, &selectedRadioButton);
+					ULONG selectedRadioButton;
+					get(screenSelectRadioButton, MUIA_Radio_Active, &selectedRadioButton);
 
-				if (selectedRadioButton == 0) {
-							ULONG displayID = GetVPModeID(&screen->ViewPort);
-							// New screen
-							if (screenModeRequester = (struct ScreenModeRequester *)AllocAslRequestTags(ASL_ScreenModeRequest,
-							ASLSM_DoWidth, TRUE,
-							ASLSM_DoHeight, TRUE,
-							ASLSM_DoDepth, TRUE,
-							ASLSM_DoOverscanType, TRUE,
-							ASLSM_DoAutoScroll, TRUE,
-							ASLSM_InitialDisplayID, displayID,
-							ASLSM_InitialDisplayWidth, screen->Width,
-							ASLSM_InitialDisplayHeight, screen->Height,
-							ASLSM_InitialOverscanType, OSCAN_TEXT,
-							ASLSM_InitialDisplayDepth, 4,
-							ASLSM_MinDepth, 4,
-							ASLSM_NegativeText, NULL,
-							TAG_DONE)) {
-								if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
-									isPublicScreen = FALSE;
-									UnlockPubScreen(NULL, screen);
-									for (WORD i = 0; i < NUMDRIPENS; i++) {
-										pens[i]= 1;
-									}
-									pens[DETAILPEN] = 4; // nothing?
-									pens[BLOCKPEN] = 4; // nothing?
-									pens[TEXTPEN] = 1; // text colour
-									pens[SHINEPEN] = 1; // gadget top and left borders
-									pens[SHADOWPEN] = 1; // gadget bottom and right borders
-									pens[FILLPEN] = 2; // button text
-									pens[FILLTEXTPEN] = 4; // title bar text
-									pens[BACKGROUNDPEN] = 3; // background
-									pens[HIGHLIGHTTEXTPEN] = 4; // nothing?
-									pens[BARDETAILPEN] = 1; // menu text
-									pens[BARBLOCKPEN] = 0; // menu background
-									pens[BARTRIMPEN] = 1; // nothing?
-									#ifdef __AMIGAOS4__
-									pens[FOREGROUNDPEN] = 0;
-									pens[DISABLEDPEN] = 8;
-									pens[DISABLEDSHADOWPEN] = 7;
-									pens[DISABLEDSHINEPEN] = 6;
-									pens[DISABLEDTEXTPEN] = 3;
-									pens[MENUBACKGROUNDPEN] = 9;
-									pens[MENUTEXTPEN] = 3;
-									pens[MENUSHINEPEN] = 8;
-									pens[MENUSHADOWPEN] = 0;
-									pens[SELECTPEN] = 2;
-									pens[SELECTTEXTPEN] = 4;
-									#endif
-									pens[NUMDRIPENS] = ~0;
+					if (selectedRadioButton == 0) {
+						// Open in Workbench
+						isPublicScreen = TRUE;
+					} else {
+						// New screen
+						ULONG displayID = GetVPModeID(&screen->ViewPort);
+						if (screenModeRequester = (struct ScreenModeRequester *)AllocAslRequestTags(ASL_ScreenModeRequest,
+						ASLSM_DoWidth, TRUE,
+						ASLSM_DoHeight, TRUE,
+						ASLSM_DoDepth, TRUE,
+						ASLSM_DoOverscanType, TRUE,
+						ASLSM_DoAutoScroll, TRUE,
+						ASLSM_InitialDisplayID, displayID,
+						ASLSM_InitialDisplayWidth, screen->Width,
+						ASLSM_InitialDisplayHeight, screen->Height,
+						ASLSM_InitialOverscanType, OSCAN_TEXT,
+						ASLSM_InitialDisplayDepth, 4,
+						ASLSM_MinDepth, 4,
+						ASLSM_NegativeText, NULL,
+						TAG_DONE)) {
+							if (AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
+								isPublicScreen = FALSE;
+								UnlockPubScreen(NULL, screen);
+								for (WORD i = 0; i < NUMDRIPENS; i++) {
+									pens[i]= 1;
+								}
+								pens[DETAILPEN] = 4; // nothing?
+								pens[BLOCKPEN] = 4; // nothing?
+								pens[TEXTPEN] = 1; // text colour
+								pens[SHINEPEN] = 1; // gadget top and left borders
+								pens[SHADOWPEN] = 1; // gadget bottom and right borders
+								pens[FILLPEN] = 2; // button text
+								pens[FILLTEXTPEN] = 4; // title bar text
+								pens[BACKGROUNDPEN] = 3; // background
+								pens[HIGHLIGHTTEXTPEN] = 4; // nothing?
+								pens[BARDETAILPEN] = 1; // menu text
+								pens[BARBLOCKPEN] = 0; // menu background
+								pens[BARTRIMPEN] = 1; // nothing?
+								#ifdef __AMIGAOS4__
+								pens[FOREGROUNDPEN] = 0;
+								pens[DISABLEDPEN] = 8;
+								pens[DISABLEDSHADOWPEN] = 7;
+								pens[DISABLEDSHINEPEN] = 6;
+								pens[DISABLEDTEXTPEN] = 3;
+								pens[MENUBACKGROUNDPEN] = 9;
+								pens[MENUTEXTPEN] = 3;
+								pens[MENUSHINEPEN] = 8;
+								pens[MENUSHADOWPEN] = 0;
+								pens[SELECTPEN] = 2;
+								pens[SELECTTEXTPEN] = 4;
+								#endif
+								pens[NUMDRIPENS] = ~0;
 
-									if ((screen = OpenScreenTags(NULL,
-										SA_Pens, (ULONG)pens,
-										SA_LikeWorkbench, TRUE,
-										SA_DisplayID, screenModeRequester->sm_DisplayID,
-										SA_Depth, screenModeRequester->sm_DisplayDepth,
-										SA_Overscan, screenModeRequester->sm_OverscanType,
-										SA_AutoScroll, screenModeRequester->sm_AutoScroll,
-										SA_Width, screenModeRequester->sm_DisplayWidth,
-										SA_Height, screenModeRequester->sm_DisplayHeight,
-										SA_Font, &screenFont,
-										SA_Colors32, config.colors,
-										TAG_DONE)) == NULL) {
-											printf("Could not open screen\n");
-											return RETURN_ERROR;
-									}
-									done = TRUE;
+								if ((screen = OpenScreenTags(NULL,
+									SA_Pens, (ULONG)pens,
+									SA_LikeWorkbench, TRUE,
+									SA_DisplayID, screenModeRequester->sm_DisplayID,
+									SA_Depth, screenModeRequester->sm_DisplayDepth,
+									SA_Overscan, screenModeRequester->sm_OverscanType,
+									SA_AutoScroll, screenModeRequester->sm_AutoScroll,
+									SA_Width, screenModeRequester->sm_DisplayWidth,
+									SA_Height, screenModeRequester->sm_DisplayHeight,
+									SA_Font, &screenFont,
+									SA_Colors32, config.colors,
+									TAG_DONE)) == NULL) {
+										printf("Could not open screen\n");
+										return RETURN_ERROR;
 								}
 							}
-						} else {
-							// Open in Workbench
-							isPublicScreen = TRUE;
-							done = TRUE;
 						}
-				break;
+					}
+					done = TRUE;
+					break;
 				}
 			}
+		if (!done && signals) {
+			signals = Wait(signals | SIGBREAKF_CTRL_C);
+		}
 	}
 
-	set(startupOptionsWindowObject,MUIA_Window_Open,FALSE);// close window
+	set(startupOptionsWindowObject,MUIA_Window_Open,FALSE);
 
 	return RETURN_OK;
 }
