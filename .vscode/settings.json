@@ -70,7 +70,8 @@
         "exec_protos.h": "c",
         "ahi.h": "c",
         "muimaster.h": "c",
-        "mui.h": "c"
+        "mui.h": "c",
+        "amigaguide.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

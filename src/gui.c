@@ -173,13 +173,11 @@ static Object *imageWindowObject;
 static Object *aboutAmigaGPTWindowObject;
 static Object *aboutMUIWindowObject = NULL;
 static Object *mainGroup;
-static Object *chatModeGroup;
 static Object *modeClickTab;
-static Object *chatTextBoxesGroup;
+static Object *sendMessageButton;
+static Object *chatInputTextEditor;
 static Object *chatOutputText;
-static Object *chatOutputTextVirtualGroup;
-static Object *chatOutputTextScrollGroup;
-static Object *chatOutputScroller;
+static Object *statusBar;
 static Object *dataTypeObject;
 static Object *app;
 static struct Screen *screen;
@@ -691,6 +689,7 @@ LONG initVideo() {
 									"\n"
 									"\033bLicense\033n\n"
 									"\tMIT\n"
+									"\n"
 									"\033b%W\033n\n"
 									"\thttps://github.com/sacredbanana/AmigaGPT/issues\n"
 									"\thttps://eab.abime.net/showthread.php?t=114798\n",
@@ -753,48 +752,6 @@ LONG initVideo() {
 	ULONG pen = 8;
 	sendMessageButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1;
 
-	if (!(chatOutputText = TextObject,
-		MUIA_Text_Contents, "This is a test.\nI hope this works.\n\33c\33bMUI\33n\nis magic\n\n",
-		MUIA_Text_Copy, TRUE,
-		MUIA_Text_Data, NULL,
-		MUIA_Text_Marking, TRUE,
-		MUIA_Text_PreParse, "",
-		MUIA_Text_SetMin, FALSE,
-		MUIA_Text_SetMax, FALSE,
-		MUIA_Text_SetVMax, FALSE,
-		MUIA_Text_Shorten, MUIV_Text_Shorten_Nothing,
-	End)) {
-		printf("Could not create chatOutputText\n");
-		return RETURN_ERROR;
-	}
-
-	if (!(chatOutputTextVirtualGroup = VirtgroupObject,
-		Child, chatOutputText,
-	End)) {
-		printf("Could not create chatOutputTextVirtualGroup\n");
-		return RETURN_ERROR;
-	}
-
-	if (!(chatOutputTextScrollGroup = ScrollgroupObject,
-		MUIA_Scrollgroup_Contents, chatOutputTextVirtualGroup,
-		MUIA_Scrollgroup_AutoBars, TRUE,
-		MUIA_Scrollgroup_NoHorizBar, TRUE,
-		MUIA_Scrollgroup_FreeHoriz, FALSE,
-		MUIA_Scrollgroup_FreeVert, TRUE,
-	End)) {
-		printf("Could not create chatOutputTextScrollGroup\n");
-		return RETURN_ERROR;
-	}
-
-	if (!(mainGroup = GroupObject,	
-		// Child, screenSelectRadioButton,
-		Child, chatOutputTextScrollGroup,
-		// Child, startupOptionsOkButton = startupOptionsOkButton,
-	End)) {
-		printf("Could not create mainGroup\n");
-		return RETURN_ERROR;
-	}
-
 	if (!(mainWindowObject = WindowObject,
 		MUIA_Window_Title, "AmigaGPT",
 		MUIA_Window_ID, MAIN_WINDOW_ID,
@@ -803,8 +760,8 @@ LONG initVideo() {
 		MUIA_Window_SizeGadget, isPublicScreen,
 		MUIA_Window_DragBar, isPublicScreen,
 		MUIA_Window_Screen, screen,
-		MUIA_Window_Width, MUIV_Window_Width_Visible(80),
-		MUIA_Window_Height, MUIV_Window_Height_Visible(80),
+		MUIA_Window_Width, MUIV_Window_Width_Visible(90),
+		MUIA_Window_Height, MUIV_Window_Height_Visible(90),
 		MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
 		MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
 		MUIA_Window_Menustrip, MUI_MakeObject(MUIO_MenustripNM, amigaGPTMenu),
@@ -812,7 +769,43 @@ LONG initVideo() {
 		MUIA_Window_UseBottomBorderScroller, FALSE,
 		MUIA_Window_UseRightBorderScroller, FALSE,
 		MUIA_Window_UseLeftBorderScroller, FALSE,
-		WindowContents, mainGroup,
+		WindowContents, VGroup,
+			Child, ScrollgroupObject,
+				MUIA_Scrollgroup_Contents, VGroup,
+					Child, chatOutputText = TextObject,
+						MUIA_Text_Contents, "This is a test.\nI hope this works.\n\33c\33bMUI\33n\nis magic\n\n",
+						MUIA_Text_Copy, TRUE,
+						MUIA_Text_Data, NULL,
+						MUIA_Text_Marking, TRUE,
+						MUIA_Text_PreParse, "",
+						MUIA_Text_SetMin, FALSE,
+						MUIA_Text_SetMax, FALSE,
+						MUIA_Text_SetVMax, FALSE,
+						MUIA_Text_Shorten, MUIV_Text_Shorten_Nothing,
+					End,
+				End,
+				MUIA_Scrollgroup_AutoBars, TRUE,
+				MUIA_Scrollgroup_NoHorizBar, TRUE,
+				MUIA_Scrollgroup_FreeHoriz, FALSE,
+				MUIA_Scrollgroup_FreeVert, TRUE,
+			End,
+			Child, StringObject,
+				MUIA_String_Contents, "Ready",
+				MUIA_String_MaxLen, 1024,
+				MUIA_CycleChain, TRUE,
+				MUIA_String_Accept, TRUE,
+				MUIA_String_AdvanceOnCR, TRUE,
+			End,
+			Child, HGroup,
+					Child, chatInputTextEditor = TextEditorObject,
+						MUIA_TextEditor_Contents, "",
+						MUIA_TextEditor_ReadOnly, FALSE,
+						MUIA_TextEditor_TabSize, 4,
+						MUIA_TextEditor_Pen, pen,
+					End,
+					Child, sendMessageButton = MUI_MakeObject(MUIO_Button, "Send"),
+				End,
+			End,
 	End)) {
 		printf("Could not create mainWindowObject\n");
 		return RETURN_ERROR;
