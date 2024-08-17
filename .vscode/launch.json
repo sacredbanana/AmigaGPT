@@ -24,6 +24,26 @@
         {
             "type": "cppdbg",
             "request": "launch",
+            "name": "Run OS3 version in remote gdbserver",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/opt/amiga/bin/m68k-amigaos-gdb",
+            "miDebuggerServerAddress": "pistorm:2345",
+            "program": "${workspaceFolder}/out/AmigaGPT",
+            "cwd": "${workspaceFolder}",
+            // "preLaunchTask": "Compile OS3 version locally - Debug",
+            "externalConsole": true,
+            "stopAtEntry": false,
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "type": "cppdbg",
+            "request": "launch",
             "name": "Run OS4 version in local gdbserver",
             "MIMode": "gdb",
             "miDebuggerPath": "/opt/amiga/bin/ppc-amigaos-gdb",

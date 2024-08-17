@@ -190,4 +190,10 @@ We welcome contributions to **AmigaGPT**! If you have a bug to report, a feature
 - **Bebbo** for creating the Amiga GCC toolchain https://github.com/bebbo
 - **OpenAI** for making this all possible https://openai.com
 - **EAB** and everyone in it for answering my questions https://eab.abime.net/
-- **Hyperion Entertainment** for bringing us AmigaOS 3.2 https://www.hyperion-entertainment.com
+- **Ján Zahurančík** for all the thorough testing, bundling AmigaGPT into AmiKit and for all the moral support https://www.amikit.amiga.sk
+- **CoffinOS** for bundling AmigaGPT into CoffinOS https://getcoffin.net
+- **Amiga Future Magazine** for reviewing AmigaGPT and publishing several of its updates in the News from Aminet section https://www.amigafuture.de/
+- **WhatIFF? Magaine** for reviewing AmigaGPT and interviewing me in issue 14 https://www.whatiff.info
+- **Dan Wood** for reviewing AmigaGPT on his YouTube channel https://www.youtube.com/watch?v=-OA28r8Up5U
+- **Proteque-CBN** for reviewing AmigaGPT on his YouTube channel https://www.youtube.com/watch?v=t3q8HQ6wrnw
+- **Les Docs** for making a video review and giving a tutorial on how to add support for the French accent https://www.youtube.com/watch?v=BV5Fq1PresE

@@ -20,6 +20,10 @@ objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
 AUTOGEN_FILE := src/version.h
 AUTOGEN_NEXT := $(shell expr $$(awk '/#define BUILD_NUMBER/' $(AUTOGEN_FILE) | tr -cd "[0-9]") + 1)
 
+GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+GIT_COMMIT := $(shell git rev-parse HEAD)
+GIT_TIMESTAMP := $(shell git log -1 --format=%cd --date=format:"%Y-%m-%d~%H:%M:%S")
+
 # https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
 # http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
 
@@ -39,7 +43,7 @@ else
 	SED = sed -i
 endif
 
-CCFLAGS = -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\"
+CCFLAGS = -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\"
 ifeq ($(DEBUG),1)
 	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -O1
 else

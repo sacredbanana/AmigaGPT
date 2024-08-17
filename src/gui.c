@@ -1,6 +1,6 @@
 #include "amiga_compiler.h"
 #include <classes/requester.h>
-#include <classes/window.h>
+// #include <classes/window.h>
 #include <datatypes/datatypes.h>
 #include <datatypes/datatypesclass.h>
 #include <datatypes/pictureclass.h>
@@ -8,29 +8,31 @@
 #include <exec/exec.h>
 #include <exec/execbase.h>
 #include <exec/lists.h>
-#include <gadgets/button.h>
-#include <gadgets/clicktab.h>
-#include <gadgets/layout.h>
-#include <gadgets/listbrowser.h>
-#include <gadgets/radiobutton.h>
-#include <gadgets/scroller.h>
-#include <gadgets/string.h>
-#include <gadgets/texteditor.h>
+// #include <gadgets/button.h>
+// #include <gadgets/clicktab.h>
+// #include <gadgets/layout.h>
+// #include <gadgets/listbrowser.h>
+// #include <gadgets/radiobutton.h>
+// #include <gadgets/scroller.h>
+// #include <gadgets/string.h>
+// #include <gadgets/texteditor.h>
 #include <graphics/modeid.h>
 #include <graphics/text.h>
-#include <intuition/classusr.h>
-#include <intuition/gadgetclass.h>
-#include <intuition/icclass.h>
+// #include <intuition/classusr.h>
+// #include <intuition/gadgetclass.h>
+// #include <intuition/icclass.h>
 #include <intuition/intuition.h>
 #include <json-c/json.h>
 #include <libraries/amigaguide.h>
 #include <libraries/asl.h>
 #include <libraries/gadtools.h>
 #include <libraries/mui.h>
+#include <mui/Aboutbox_mcc.h>
+#include <mui/TextEditor_mcc.h>
 #include <proto/amigaguide.h>
 #include <proto/asl.h>
-#include <proto/button.h>
-#include <proto/clicktab.h>
+// #include <proto/button.h>
+// #include <proto/clicktab.h>
 #include <proto/datatypes.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
@@ -39,14 +41,14 @@
 #endif
 #include <proto/graphics.h>
 #include <proto/intuition.h>
-#include <proto/layout.h>
+// #include <proto/layout.h>
 #include <proto/listbrowser.h>
 #include <proto/muimaster.h>
-#include <proto/radiobutton.h>
-#include <proto/requester.h>
-#include <proto/scroller.h>
-#include <proto/string.h>
-#include <proto/texteditor.h>
+// #include <proto/radiobutton.h>
+// #include <proto/requester.h>
+// #include <proto/scroller.h>
+// #include <proto/string.h>
+// #include <proto/texteditor.h>
 #include <proto/utility.h>
 #include <proto/window.h>
 #include <stdio.h>
@@ -57,6 +59,7 @@
 
 #define HELP_KEY 0x5F
 #define SCREEN_SELECT_WINDOW_ID 0
+#define MAIN_WINDOW_ID 1
 #define SEND_MESSAGE_BUTTON_ID 3
 #define TEXT_INPUT_TEXT_EDITOR_ID 4
 #define CHAT_OUTPUT_TEXT_EDITOR_ID 5
@@ -84,67 +87,71 @@
 #define MODE_SELECTION_TAB_CHAT_ID 0
 #define MODE_SELECTION_TAB_IMAGE_GENERATION_ID 1
 
-#define MENU_ITEM_ABOUT_ID 1
-#define MENU_ITEM_SPEECH_ACCENT_ID 2
-#define MENU_ITEM_QUIT_ID 3
-#define MENU_ITEM_SPEECH_ENABLED_ID 4
-#define MENU_ITEM_CHAT_FONT_ID 5
-#define MENU_ITEM_UI_FONT_ID 6
-#define MENU_ITEM_SPEECH_SYSTEM_34_ID 7
-#define MENU_ITEM_SPEECH_SYSTEM_37_ID 8
-#define MENU_ITEM_SPEECH_SYSTEM_FLITE_ID 9
-#define MENU_ITEM_SPEECH_SYSTEM_OPENAI_ID 10
-#define MENU_ITEM_CUT_ID 11
-#define MENU_ITEM_COPY_ID 12
-#define MENU_ITEM_PASTE_ID 13
-#define MENU_ITEM_CLEAR_ID 14
-#define MENU_ITEM_SELECT_ALL_ID 15
-#define MENU_ITEM_CHAT_MODEL_GPT_4o_ID 16
-#define MENU_ITEM_CHAT_MODEL_GPT_4o_2024_05_13_ID 17
-#define MENU_ITEM_CHAT_MODEL_GPT_4o_MINI_ID 18
-#define MENU_ITEM_CHAT_MODEL_GPT_4o_MINI_2024_07_18_ID 19
-#define MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_ID 20
-#define MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_2024_04_09_ID 21
-#define MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW_ID 22
-#define MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID 23
-#define MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID 24
-#define MENU_ITEM_CHAT_MODEL_GPT_4_ID 25
-#define MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID 26
-#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID 27
-#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID 28
-#define MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID 29
-#define MENU_ITEM_CHAT_MODEL_ID 30
-#define MENU_ITEM_SPEECH_SYSTEM_ID 31
-#define MENU_ITEM_OPENAI_API_KEY_ID 32
-#define MENU_ITEM_VIEW_DOCUMENTATION_ID 33
-#define MENU_ITEM_SPEECH_FLITE_VOICE_ID 34
-#define MENU_ITEM_SPEECH_FLITE_VOICE_AWB_ID 35
-#define MENU_ITEM_SPEECH_FLITE_VOICE_KAL_ID 36
-#define MENU_ITEM_SPEECH_FLITE_VOICE_KAL16_ID 37
-#define MENU_ITEM_SPEECH_FLITE_VOICE_RMS_ID 38
-#define MENU_ITEM_SPEECH_FLITE_VOICE_SLT_ID 39
-#define MENU_ITEM_SPEECH_OPENAI_VOICE_ID 40
-#define MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY_ID 41
-#define MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO_ID 42
-#define MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE_ID 43
-#define MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX_ID 44
-#define MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA_ID 45
-#define MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER_ID 46
-#define MENU_ITEM_SPEECH_OPENAI_MODEL_ID 47
-#define MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_ID 48
-#define MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD_ID 49
-#define MENU_ITEM_IMAGE_MODEL_ID 50
-#define MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID 51
-#define MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID 52
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_ID 53
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_ID 54
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256_ID 55
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512_ID 56
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024_ID 57
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024_ID 58
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024_ID 59
-#define MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792_ID 60
-#define MENU_ITEM_CHAT_SYSTEM_ID 61
+// Menu item IDs
+enum {
+	MENU_ITEM_ABOUT_AMIGAGPT = 1,
+	MENU_ITEM_ABOUT_MUI,
+	MENU_ITEM_QUIT,
+	MENU_ITEM_SPEECH_ACCENT,
+	MENU_ITEM_SPEECH_ENABLED,
+	MENU_ITEM_CHAT_FONT,
+	MENU_ITEM_UI_FONT,
+	MENU_ITEM_SPEECH_SYSTEM_34,
+	MENU_ITEM_SPEECH_SYSTEM_37,
+	MENU_ITEM_SPEECH_SYSTEM_FLITE,
+	MENU_ITEM_SPEECH_SYSTEM_OPENAI,
+	MENU_ITEM_CUT,
+	MENU_ITEM_COPY,
+	MENU_ITEM_PASTE,
+	MENU_ITEM_CLEAR,
+	MENU_ITEM_SELECT_ALL,
+	MENU_ITEM_CHAT_MODEL_GPT_4o,
+	MENU_ITEM_CHAT_MODEL_GPT_4o_2024_05_13,
+	MENU_ITEM_CHAT_MODEL_GPT_4o_MINI,
+	MENU_ITEM_CHAT_MODEL_GPT_4o_MINI_2024_07_18,
+	MENU_ITEM_CHAT_MODEL_GPT_4_TURBO,
+	MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_2024_04_09,
+	MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW,
+	MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW,
+	MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW,
+	MENU_ITEM_CHAT_MODEL_GPT_4,
+	MENU_ITEM_CHAT_MODEL_GPT_4_0613,
+	MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO,
+	MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125,
+	MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106,
+	MENU_ITEM_CHAT_MODEL,
+	MENU_ITEM_SPEECH_SYSTEM,
+	MENU_ITEM_OPENAI_API_KEY,
+	MENU_ITEM_VIEW_DOCUMENTATION,
+	MENU_ITEM_SPEECH_FLITE_VOICE,
+	MENU_ITEM_SPEECH_FLITE_VOICE_AWB,
+	MENU_ITEM_SPEECH_FLITE_VOICE_KAL,
+	MENU_ITEM_SPEECH_FLITE_VOICE_KAL16,
+	MENU_ITEM_SPEECH_FLITE_VOICE_RMS,
+	MENU_ITEM_SPEECH_FLITE_VOICE_SLT,
+	MENU_ITEM_SPEECH_OPENAI_VOICE,
+	MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY,
+	MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO,
+	MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE,
+	MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX,
+	MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA,
+	MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER,
+	MENU_ITEM_SPEECH_OPENAI_MODEL,
+	MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1,
+	MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD,
+	MENU_ITEM_IMAGE_MODEL,
+	MENU_ITEM_IMAGE_MODEL_DALL_E_2,
+	MENU_ITEM_IMAGE_MODEL_DALL_E_3,
+	MENU_ITEM_IMAGE_SIZE_DALL_E_2,
+	MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256,
+	MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512,
+	MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024,
+	MENU_ITEM_IMAGE_SIZE_DALL_E_3,
+	MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024,
+	MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024,
+	MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792,
+	MENU_ITEM_CHAT_SYSTEM
+};
 
 #ifdef __AMIGAOS4__
 #define IntuitionBase Library
@@ -175,51 +182,62 @@ struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
 struct Library *AmigaGuideBase;
 struct Library *AslBase;
-struct Library *WindowBase = NULL;
-struct Library *LayoutBase;
-struct Library *ClickTabBase;
-struct Library *ButtonBase;
-struct Library *RadioButtonBase;
-struct Library *ScrollerBase;
-struct Library *StringBase;
-struct Library *ListBrowserBase;
+// struct Library *WindowBase = NULL;
+// struct Library *LayoutBase;
+// struct Library *ClickTabBase;
+// struct Library *ButtonBase;
+// struct Library *RadioButtonBase;
+// struct Library *ScrollerBase;
+// struct Library *StringBase;
+// struct Library *ListBrowserBase;
 struct Library *RequesterBase = NULL;
 struct Library *GadToolsBase;
 struct Library *DataTypesBase;
 struct Library *MUIMasterBase;
 struct Window *mainWindow;
 struct Window *imageWindow;
+// static Object *mainWindowObjectOld;
 static Object *mainWindowObject;
 static Object *imageWindowObject;
-static Object *mainLayout;
-static Object *chatModeLayout;
-static Object *imageGenerationModeLayout;
+static Object *aboutAmigaGPTWindowObject;
+static Object *aboutMUIWindowObject = NULL;
+// static Object *mainLayout;
+static Object *mainGroup;
+// static Object *chatModeLayout;
+static Object *chatModeGroup;
+// static Object *imageGenerationModeLayout;
+// static Object *imageGenerationModeGroup;
+// static Object *modeClickTabOld;
 static Object *modeClickTab;
-static Object *chatTextBoxesLayout;
-static Object *imageGenerationTextBoxesLayout;
-static Object *chatInputLayout;
-static Object *imageGenerationInputLayout;
-static Object *chatOutputLayout;
-static Object *conversationsLayout;
-static Object *sendMessageButton;
-static Object *textInputTextEditor;
-static Object *chatOutputTextEditor;
+// static Object *chatTextBoxesLayout;
+static Object *chatTextBoxesGroup;
+// static Object *imageGenerationTextBoxesLayout;
+// static Object *chatInputLayout;
+// static Object *imageGenerationInputLayout;
+// static Object *chatOutputLayout;
+// static Object *conversationsLayout;
+// static Object *sendMessageButton;
+// static Object *textInputTextEditor;
+// static Object *chatOutputTextEditor;
+static Object *chatOutputText;
+static Object *chatOutputTextVirtualGroup;
+static Object *chatOutputTextScrollGroup;
 static Object *chatOutputScroller;
-static Object *statusBar;
-static Object *conversationListBrowser;
-static Object *newChatButton;
-static Object *deleteChatButton;
-static Object *createImageButton;
+// static Object *statusBar;
+// static Object *conversationListBrowser;
+// static Object *newChatButton;
+// static Object *deleteChatButton;
+// static Object *createImageButton;
 static Object *dataTypeObject;
-static Object *imageListBrowser;
-static Object *newImageButton;
-static Object *deleteImageButton;
-static Object *openSmallImageButton;
-static Object *openMediumImageButton;
-static Object *openLargeImageButton;
-static Object *openOriginalImageButton;
-static Object *saveCopyButton;
-static Object *imageHistoryButtonsLayout;
+// static Object *imageListBrowser;
+// static Object *newImageButton;
+// static Object *deleteImageButton;
+// static Object *openSmallImageButton;
+// static Object *openMediumImageButton;
+// static Object *openLargeImageButton;
+// static Object *openOriginalImageButton;
+// static Object *saveCopyButton;
+// static Object *imageHistoryButtonsLayout;
 static Object *app;
 static struct Screen *screen;
 static BOOL isPublicScreen;
@@ -247,80 +265,81 @@ static struct TextAttr uiTextAttr = {0};
 static struct Menu *menu;
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "About", 0, 0, 0, (APTR)MENU_ITEM_ABOUT_ID},
+	{NM_ITEM, "About AmigaGPT", 0, 0, 0, (APTR)MENU_ITEM_ABOUT_AMIGAGPT},
+	{NM_ITEM, "About MUI", 0, 0, 0, (APTR)MENU_ITEM_ABOUT_MUI},
 	{NM_ITEM, NM_BARLABEL, 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "Quit", "Q", 0, 0, (APTR)MENU_ITEM_QUIT_ID},
+	{NM_ITEM, "Quit", "Q", 0, 0, (APTR)MENU_ITEM_QUIT},
 	{NM_TITLE, "Edit", 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "Cut", "X", 0, 0, (APTR)MENU_ITEM_CUT_ID},
-	{NM_ITEM, "Copy", "C", 0, 0, (APTR)MENU_ITEM_COPY_ID},
-	{NM_ITEM, "Paste", "V", 0, 0, (APTR)MENU_ITEM_PASTE_ID},
-	{NM_ITEM, "Clear", "L", 0, 0, (APTR)MENU_ITEM_CLEAR_ID},
-	{NM_ITEM, "Select all", "A", 0, 0, (APTR)MENU_ITEM_SELECT_ALL_ID},
+	{NM_ITEM, "Cut", "X", 0, 0, (APTR)MENU_ITEM_CUT},
+	{NM_ITEM, "Copy", "C", 0, 0, (APTR)MENU_ITEM_COPY},
+	{NM_ITEM, "Paste", "V", 0, 0, (APTR)MENU_ITEM_PASTE},
+	{NM_ITEM, "Clear", "L", 0, 0, (APTR)MENU_ITEM_CLEAR},
+	{NM_ITEM, "Select all", "A", 0, 0, (APTR)MENU_ITEM_SELECT_ALL},
 	{NM_TITLE, "View", 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "Chat Font", 0, 0, 0, (APTR)MENU_ITEM_CHAT_FONT_ID},
-	{NM_ITEM, "UI Font", 0, 0, 0, (APTR)MENU_ITEM_UI_FONT_ID},
+	{NM_ITEM, "Chat Font", 0, 0, 0, (APTR)MENU_ITEM_CHAT_FONT},
+	{NM_ITEM, "UI Font", 0, 0, 0, (APTR)MENU_ITEM_UI_FONT},
 	{NM_TITLE, "Speech", 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_ENABLED_ID},
-	{NM_ITEM, "Speech system", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_ID},
+	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_ENABLED},
+	{NM_ITEM, "Speech system", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM},
 	#ifdef __AMIGAOS3__
-	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_34_ID},
-	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_37_ID},
+	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_34},
+	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_37},
 	#else
-	{NM_SUB, "Flite", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_FLITE_ID},
+	{NM_SUB, "Flite", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_FLITE},
 	#endif
-	{NM_SUB, "OpenAI Text To Speech", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI_ID},
+	{NM_SUB, "OpenAI Text To Speech", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
 	#ifdef __AMIGAOS3__
-	{NM_ITEM, "Accent", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_ACCENT_ID},
+	{NM_ITEM, "Accent", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_ACCENT},
 	#endif
 	#ifdef __AMIGAOS4__
-	{NM_ITEM, "Flite Voice", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_ID},
-	{NM_SUB, "kal (fast)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL_ID},
-	{NM_SUB, "kal16 (fast)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL16_ID},
-	{NM_SUB, "awb (slow)", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_AWB_ID},
-	{NM_SUB, "rms (slow)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_RMS_ID},
-	{NM_SUB, "slt (slow)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_SLT_ID},
+	{NM_ITEM, "Flite Voice", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE},
+	{NM_SUB, "kal (fast)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL},
+	{NM_SUB, "kal16 (fast)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL16},
+	{NM_SUB, "awb (slow)", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_AWB},
+	{NM_SUB, "rms (slow)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_RMS},
+	{NM_SUB, "slt (slow)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_SLT},
 	#endif
-	{NM_ITEM, "OpenAI Voice", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI_ID},
-	{NM_SUB, "alloy", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY_ID},
-	{NM_SUB, "echo", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO_ID},
-	{NM_SUB, "fable", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE_ID},
-	{NM_SUB, "onyx", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX_ID},
-	{NM_SUB, "nova", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA_ID},
-	{NM_SUB, "shimmer", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER_ID},
-	{NM_ITEM, "OpenAI Speech Model", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_ID},
-	{NM_SUB, "tts-1", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_ID},
-	{NM_SUB, "tts-1-hd", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD_ID},
+	{NM_ITEM, "OpenAI Voice", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
+	{NM_SUB, "alloy", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY},
+	{NM_SUB, "echo", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO},
+	{NM_SUB, "fable", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE},
+	{NM_SUB, "onyx", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX},
+	{NM_SUB, "nova", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA},
+	{NM_SUB, "shimmer", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER},
+	{NM_ITEM, "OpenAI Speech Model", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL},
+	{NM_SUB, "tts-1", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1},
+	{NM_SUB, "tts-1-hd", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD},
 	{NM_TITLE, "OpenAI", 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "API key", 0, 0, 0, (APTR)MENU_ITEM_OPENAI_API_KEY_ID},
-	{NM_ITEM, "Chat System", 0, 0, 0, (APTR)MENU_ITEM_CHAT_SYSTEM_ID},
-	{NM_ITEM, "Chat Model", 0, 0, 0, (APTR)MENU_ITEM_CHAT_MODEL_ID},
-	{NM_SUB, "gpt-4o", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_ID},
-	{NM_SUB, "gpt-4o-2024-05-13", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_2024_05_13_ID},
-	{NM_SUB, "gpt-4o-mini", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_MINI_ID},
-	{NM_SUB, "gpt-4o-mini-2024-07-18", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_MINI_2024_07_18_ID},
-	{NM_SUB, "gpt-4-turbo", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_ID},
-	{NM_SUB, "gpt-4-turbo-2024-04-09", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_2024_04_09_ID},
-	{NM_SUB, "gpt-4-turbo-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW_ID},
-	{NM_SUB, "gpt-4-0125-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID},
-	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID},
-	{NM_SUB, "gpt-4", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_ID},
-	{NM_SUB, "gpt-4-0613", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID},
-	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID},
-	{NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID},
-	{NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID},
-	{NM_ITEM, "Image Model", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_MODEL_ID},
-	{NM_SUB, "dall-e-2", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID},
-	{NM_SUB, "dall-e-3", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID},
-	{NM_ITEM, "DALL-E 2 Image Size", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_ID},
-	{NM_SUB, "256x256", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256_ID},
-	{NM_SUB, "512x512", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512_ID},
-	{NM_SUB, "1024x1024", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024_ID},
-	{NM_ITEM, "DALL-E 3 Image Size", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_ID},
-	{NM_SUB, "1024x1024", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024_ID},
-	{NM_SUB, "1792x1024", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024_ID},
-	{NM_SUB, "1024x1792", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792_ID},
+	{NM_ITEM, "API key", 0, 0, 0, (APTR)MENU_ITEM_OPENAI_API_KEY},
+	{NM_ITEM, "Chat System", 0, 0, 0, (APTR)MENU_ITEM_CHAT_SYSTEM},
+	{NM_ITEM, "Chat Model", 0, 0, 0, (APTR)MENU_ITEM_CHAT_MODEL},
+	{NM_SUB, "gpt-4o", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o},
+	{NM_SUB, "gpt-4o-2024-05-13", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_2024_05_13},
+	{NM_SUB, "gpt-4o-mini", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_MINI},
+	{NM_SUB, "gpt-4o-mini-2024-07-18", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_MINI_2024_07_18},
+	{NM_SUB, "gpt-4-turbo", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO},
+	{NM_SUB, "gpt-4-turbo-2024-04-09", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_2024_04_09},
+	{NM_SUB, "gpt-4-turbo-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW},
+	{NM_SUB, "gpt-4-0125-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW},
+	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW},
+	{NM_SUB, "gpt-4", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4},
+	{NM_SUB, "gpt-4-0613", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0613},
+	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO},
+	{NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125},
+	{NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106},
+	{NM_ITEM, "Image Model", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_MODEL},
+	{NM_SUB, "dall-e-2", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_MODEL_DALL_E_2},
+	{NM_SUB, "dall-e-3", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_IMAGE_MODEL_DALL_E_3},
+	{NM_ITEM, "DALL-E 2 Image Size", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2},
+	{NM_SUB, "256x256", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256},
+	{NM_SUB, "512x512", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512},
+	{NM_SUB, "1024x1024", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024},
+	{NM_ITEM, "DALL-E 3 Image Size", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3},
+	{NM_SUB, "1024x1024", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024},
+	{NM_SUB, "1792x1024", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024},
+	{NM_SUB, "1024x1792", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792},
 	{NM_TITLE, "Help", 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "View Documentation", 0, 0, 0, (APTR)MENU_ITEM_VIEW_DOCUMENTATION_ID},
+	{NM_ITEM, "View Documentation", 0, 0, 0, (APTR)MENU_ITEM_VIEW_DOCUMENTATION},
 	{NM_END, NULL, 0, 0, 0, 0}
 };
 /**
@@ -365,7 +384,7 @@ static void saveImageCopy(struct GeneratedImage *image);
 static void removeImageFromImageList(struct GeneratedImage *image);
 static void openChatFontRequester();
 static void openUIFontRequester();
-static void openAboutWindow();
+static void openAboutMUIWindow();
 static void openSpeechAccentRequester();
 static void openApiKeyRequester();
 static void openChatSystemRequester();
@@ -380,127 +399,127 @@ static BOOL copyFile(STRPTR source, STRPTR destination);
 static void openDocumentation();
 static void updateMenu();
 static void createImage();
-#ifdef __AMIGAOS4__
-static uint32 processIDCMPMainWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message);
-static uint32 processIDCMPCreateImageWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message);
-#else
-static void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message));
-static void __SAVE_DS__ __ASM__ processIDCMPMainWindow(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message));
-#endif
+// #ifdef __AMIGAOS4__
+// static uint32 processIDCMPMainWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message);
+// static uint32 processIDCMPCreateImageWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message);
+// #else
+// static void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message));
+// static void __SAVE_DS__ __ASM__ processIDCMPMainWindow(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message));
+// #endif
 
-#ifdef __AMIGAOS4__
-static uint32 processIDCMPMainWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message) {
-#else
-static void __SAVE_DS__ __ASM__ processIDCMPMainWindow(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
-#endif
-	switch (message->Class) {
-		case IDCMP_IDCMPUPDATE:
-		{
-			struct TagItem *tagList = message->IAddress;
-			struct TagItem *gadgetID = FindTagItem(GA_ID, tagList);
-			switch (gadgetID->ti_Data) {
-				case TEXT_INPUT_TEXT_EDITOR_ID:
-					activeTextEditorGadgetID = TEXT_INPUT_TEXT_EDITOR_ID;
-					break;					
-				case CHAT_OUTPUT_SCROLLER_ID:
-					gadgetID->ti_Tag = TAG_IGNORE;
-					ULONG top;
-					GetAttr(SCROLLER_Top, chatOutputScroller, &top);
-					SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL,
-					GA_TEXTEDITOR_Prop_First, top,
-					TAG_DONE);
-					break;
-				case CHAT_OUTPUT_TEXT_EDITOR_ID:
-					activeTextEditorGadgetID = CHAT_OUTPUT_TEXT_EDITOR_ID;
-					gadgetID->ti_Tag = TAG_IGNORE;
-					ULONG entries;
-					GetAttr(GA_TEXTEDITOR_Prop_Entries, chatOutputTextEditor, &entries);
-					ULONG first;
-					GetAttr(GA_TEXTEDITOR_Prop_First, chatOutputTextEditor, &first);
-					ULONG deltaFactor;
-					GetAttr(GA_TEXTEDITOR_Prop_DeltaFactor, chatOutputTextEditor, &deltaFactor);
-					ULONG visible;
-					GetAttr(GA_TEXTEDITOR_Prop_Visible, chatOutputTextEditor, &visible);
-					SetGadgetAttrs(chatOutputScroller, mainWindow, NULL,
-					SCROLLER_Total, entries,
-					SCROLLER_Top, first,
-					SCROLLER_ArrowDelta, deltaFactor,
-					SCROLLER_Visible, visible,
-					TAG_DONE);
-					RefreshGadgets(chatOutputScroller, mainWindow, NULL);
-					break;
-				}
-			break;
-		}
-		default:
-			printf("Unknown message class: %lx\n", message->Class);
-			break;
-	}
-	#ifdef __AMIGAOS3__
-	return;
-	#else
-	return WHOOKRSLT_IGNORE;
-	#endif
-}
+// #ifdef __AMIGAOS4__
+// static uint32 processIDCMPMainWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message) {
+// #else
+// static void __SAVE_DS__ __ASM__ processIDCMPMainWindow(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
+// #endif
+// 	switch (message->Class) {
+// 		case IDCMP_IDCMPUPDATE:
+// 		{
+// 			struct TagItem *tagList = message->IAddress;
+// 			struct TagItem *gadgetID = FindTagItem(GA_ID, tagList);
+// 			switch (gadgetID->ti_Data) {
+// 				case TEXT_INPUT_TEXT_EDITOR_ID:
+// 					activeTextEditorGadgetID = TEXT_INPUT_TEXT_EDITOR_ID;
+// 					break;					
+// 				case CHAT_OUTPUT_SCROLLER_ID:
+// 					gadgetID->ti_Tag = TAG_IGNORE;
+// 					ULONG top;
+// 					GetAttr(SCROLLER_Top, chatOutputScroller, &top);
+// 					SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL,
+// 					GA_TEXTEDITOR_Prop_First, top,
+// 					TAG_DONE);
+// 					break;
+// 				case CHAT_OUTPUT_TEXT_EDITOR_ID:
+// 					activeTextEditorGadgetID = CHAT_OUTPUT_TEXT_EDITOR_ID;
+// 					gadgetID->ti_Tag = TAG_IGNORE;
+// 					ULONG entries;
+// 					GetAttr(GA_TEXTEDITOR_Prop_Entries, chatOutputTextEditor, &entries);
+// 					ULONG first;
+// 					GetAttr(GA_TEXTEDITOR_Prop_First, chatOutputTextEditor, &first);
+// 					ULONG deltaFactor;
+// 					GetAttr(GA_TEXTEDITOR_Prop_DeltaFactor, chatOutputTextEditor, &deltaFactor);
+// 					ULONG visible;
+// 					GetAttr(GA_TEXTEDITOR_Prop_Visible, chatOutputTextEditor, &visible);
+// 					SetGadgetAttrs(chatOutputScroller, mainWindow, NULL,
+// 					SCROLLER_Total, entries,
+// 					SCROLLER_Top, first,
+// 					SCROLLER_ArrowDelta, deltaFactor,
+// 					SCROLLER_Visible, visible,
+// 					TAG_DONE);
+// 					RefreshGadgets(chatOutputScroller, mainWindow, NULL);
+// 					break;
+// 				}
+// 			break;
+// 		}
+// 		default:
+// 			printf("Unknown message class: %lx\n", message->Class);
+// 			break;
+// 	}
+// 	#ifdef __AMIGAOS3__
+// 	return;
+// 	#else
+// 	return WHOOKRSLT_IGNORE;
+// 	#endif
+// }
 
-#ifdef __AMIGAOS4__
-static uint32 processIDCMPCreateImageWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message) {
-#else
-static void __SAVE_DS__ __ASM__ processIDCMPCreateImageWindow(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
-#endif
-	switch (message->Class) {
-		case IDCMP_IDCMPUPDATE:
-		{
-			UWORD MsgCode = message->Code;
-			struct TagItem *MsgTags = message->IAddress;
-			struct TagItem *List = MsgTags;
-			struct TagItem *This;
+// #ifdef __AMIGAOS4__
+// static uint32 processIDCMPCreateImageWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message) {
+// #else
+// static void __SAVE_DS__ __ASM__ processIDCMPCreateImageWindow(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
+// #endif
+// 	switch (message->Class) {
+// 		case IDCMP_IDCMPUPDATE:
+// 		{
+// 			UWORD MsgCode = message->Code;
+// 			struct TagItem *MsgTags = message->IAddress;
+// 			struct TagItem *List = MsgTags;
+// 			struct TagItem *This;
 
-			while((This = NextTagItem(&List)) != NULL)
-			{
-				switch(This->ti_Tag)
-				{
-					case DTA_Busy:
-						if(This->ti_Data)
-						{
-							SetWindowPointer(imageWindow,
-								WA_BusyPointer,	TRUE,
-							TAG_DONE);
-							updateStatusBar("Processing image...", 7);
-						}
-						else
-						{
-							SetWindowPointerA(imageWindow,NULL);
-							updateStatusBar("Ready", 5);
-						}
+// 			while((This = NextTagItem(&List)) != NULL)
+// 			{
+// 				switch(This->ti_Tag)
+// 				{
+// 					case DTA_Busy:
+// 						if(This->ti_Data)
+// 						{
+// 							SetWindowPointer(imageWindow,
+// 								WA_BusyPointer,	TRUE,
+// 							TAG_DONE);
+// 							updateStatusBar("Processing image...", 7);
+// 						}
+// 						else
+// 						{
+// 							SetWindowPointerA(imageWindow,NULL);
+// 							updateStatusBar("Ready", 5);
+// 						}
 
-						break;
+// 						break;
 
-					case DTA_Sync:
-						SetAttrs(dataTypeObject,
-						 GA_RelWidth, imageWindow->Width - imageWindow->BorderLeft - imageWindow->BorderRight,
-						GA_RelHeight, imageWindow->Height - imageWindow->BorderTop - imageWindow->BorderBottom,
-						 TAG_DONE);
-						RefreshDTObjects(dataTypeObject,imageWindow,NULL,NULL);
-						break;
-				}
-			}
-			break;
-		}
-		case IDCMP_REFRESHWINDOW:
-			BeginRefresh(imageWindow);
-			EndRefresh(imageWindow,TRUE);
-			break;
-		default:
-			printf("Unknown message class: %lx\n", message->Class);
-			break;
-	}
-	#ifdef __AMIGAOS3__
-	return;
-	#else
-	return WHOOKRSLT_IGNORE;
-	#endif
-}
+// 					case DTA_Sync:
+// 						SetAttrs(dataTypeObject,
+// 						 GA_RelWidth, imageWindow->Width - imageWindow->BorderLeft - imageWindow->BorderRight,
+// 						GA_RelHeight, imageWindow->Height - imageWindow->BorderTop - imageWindow->BorderBottom,
+// 						 TAG_DONE);
+// 						RefreshDTObjects(dataTypeObject,imageWindow,NULL,NULL);
+// 						break;
+// 				}
+// 			}
+// 			break;
+// 		}
+// 		case IDCMP_REFRESHWINDOW:
+// 			BeginRefresh(imageWindow);
+// 			EndRefresh(imageWindow,TRUE);
+// 			break;
+// 		default:
+// 			printf("Unknown message class: %lx\n", message->Class);
+// 			break;
+// 	}
+// 	#ifdef __AMIGAOS3__
+// 	return;
+// 	#else
+// 	return WHOOKRSLT_IGNORE;
+// 	#endif
+// }
 
 /**
  * Open the libraries needed for the GUI
@@ -539,151 +558,151 @@ LONG openGUILibraries() {
 	}
 	#endif
 
-	#ifdef __AMIGAOS3__
-	if ((WindowBase = OpenLibrary("window.class", 42)) == NULL) {
-		printf("Could not open window.class\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((WindowBase = OpenLibrary("window.class", 50)) == NULL) {
-		printf("Could not open window.class\n");
-		return RETURN_ERROR;
-	}
-	if ((IWindow = (struct WindowIFace *)GetInterface(WindowBase, "main", 1, NULL)) == NULL) {
-		printf("Could not get interface for window.class\n");
-		return RETURN_ERROR;
-	}
-	#endif
+	// #ifdef __AMIGAOS3__
+	// if ((WindowBase = OpenLibrary("window.class", 42)) == NULL) {
+	// 	printf("Could not open window.class\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #else
+	// if ((WindowBase = OpenLibrary("window.class", 50)) == NULL) {
+	// 	printf("Could not open window.class\n");
+	// 	return RETURN_ERROR;
+	// }
+	// if ((IWindow = (struct WindowIFace *)GetInterface(WindowBase, "main", 1, NULL)) == NULL) {
+	// 	printf("Could not get interface for window.class\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #endif
 
-	#ifdef __AMIGAOS3__
-	if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 44)) == NULL) {
-		printf("Could not open layout.gadget\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 50)) == NULL) {
-		printf("Could not open layout.gadget\n");
-		return RETURN_ERROR;
-	}
-	if ((ILayout = (struct LayoutIFace *)GetInterface(LayoutBase, "main", 1, NULL)) == NULL) {
-		printf("Could not get interface for layout.gadget\n");
-		return RETURN_ERROR;
-	}
-	#endif
+	// #ifdef __AMIGAOS3__
+	// if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 44)) == NULL) {
+	// 	printf("Could not open layout.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #else
+	// if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 50)) == NULL) {
+	// 	printf("Could not open layout.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// if ((ILayout = (struct LayoutIFace *)GetInterface(LayoutBase, "main", 1, NULL)) == NULL) {
+	// 	printf("Could not get interface for layout.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #endif
 
-	#ifdef __AMIGAOS3__
-	if ((ButtonBase = OpenLibrary("gadgets/button.gadget", 44)) == NULL) {
-		printf("Could not open button.gadget\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((ButtonBase = OpenLibrary("gadgets/button.gadget", 50)) == NULL) {
-		printf("Could not open button.gadget\n");
-		return RETURN_ERROR;
-	}
-	if ((IButton = (struct ButtonIFace *)GetInterface(ButtonBase, "main", 1, NULL)) == NULL) {
-		printf("Could not get interface for button.gadget\n");
-		return RETURN_ERROR;
-	}
-	#endif
+	// #ifdef __AMIGAOS3__
+	// if ((ButtonBase = OpenLibrary("gadgets/button.gadget", 44)) == NULL) {
+	// 	printf("Could not open button.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #else
+	// if ((ButtonBase = OpenLibrary("gadgets/button.gadget", 50)) == NULL) {
+	// 	printf("Could not open button.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// if ((IButton = (struct ButtonIFace *)GetInterface(ButtonBase, "main", 1, NULL)) == NULL) {
+	// 	printf("Could not get interface for button.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #endif
 
-	#ifdef __AMIGAOS3__
-	if ((ClickTabBase = OpenLibrary("gadgets/clicktab.gadget", 44)) == NULL) {
-		printf("Could not open clicktab.gadget\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((ClickTabBase= OpenLibrary("gadgets/clicktab.gadget", 50)) == NULL) {
-		printf("Could not open clicktab.gadget\n");
-		return RETURN_ERROR;
-	}
-	if ((IClickTab = (struct ClickTabIFace *)GetInterface(ClickTabBase, "main", 1, NULL)) == NULL) {
-		printf("Could not get interface for clicktab.gadget\n");
-		return RETURN_ERROR;
-	}
-	#endif
+	// #ifdef __AMIGAOS3__
+	// if ((ClickTabBase = OpenLibrary("gadgets/clicktab.gadget", 44)) == NULL) {
+	// 	printf("Could not open clicktab.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #else
+	// if ((ClickTabBase= OpenLibrary("gadgets/clicktab.gadget", 50)) == NULL) {
+	// 	printf("Could not open clicktab.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// if ((IClickTab = (struct ClickTabIFace *)GetInterface(ClickTabBase, "main", 1, NULL)) == NULL) {
+	// 	printf("Could not get interface for clicktab.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #endif
 
-	isAmigaOS3X = ClickTabBase->lib_Version < 45;
+	// isAmigaOS3X = ClickTabBase->lib_Version < 45;
 
-	#ifdef __AMIGAOS3__
-	if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 44)) == NULL) {
-		printf("Could not open radiobutton.gadget\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 50)) == NULL) {
-		printf("Could not open radiobutton.gadget\n");
-		return RETURN_ERROR;
-	}
-	if ((IRadioButton = (struct RadioButtonIFace *)GetInterface(RadioButtonBase, "main", 1, NULL)) == NULL) {
-		printf("Could not get interface for radiobutton.gadget\n");
-		return RETURN_ERROR;
-	}
-	#endif
+	// #ifdef __AMIGAOS3__
+	// if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 44)) == NULL) {
+	// 	printf("Could not open radiobutton.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #else
+	// if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 50)) == NULL) {
+	// 	printf("Could not open radiobutton.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// if ((IRadioButton = (struct RadioButtonIFace *)GetInterface(RadioButtonBase, "main", 1, NULL)) == NULL) {
+	// 	printf("Could not get interface for radiobutton.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #endif
 
-	#ifdef __AMIGAOS3__
-	if ((TextFieldBase = OpenLibrary("gadgets/texteditor.gadget", 15)) == NULL) {
-		printf("Could not open texteditor.gadget\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((TextEditorBase = OpenLibrary("gadgets/texteditor.gadget", 50)) == NULL) {
-		printf("Could not open texteditor.gadget\n");
-		return RETURN_ERROR;
-	}
-	if ((ITextEditor = (struct TextEditorIFace *)GetInterface(TextEditorBase, "main", 1, NULL)) == NULL) {
-		printf("Could not get interface for texteditor.gadget\n");
-		return RETURN_ERROR;
-	}
-	#endif
+	// #ifdef __AMIGAOS3__
+	// if ((TextFieldBase = OpenLibrary("gadgets/texteditor.gadget", 15)) == NULL) {
+	// 	printf("Could not open texteditor.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #else
+	// if ((TextEditorBase = OpenLibrary("gadgets/texteditor.gadget", 50)) == NULL) {
+	// 	printf("Could not open texteditor.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// if ((ITextEditor = (struct TextEditorIFace *)GetInterface(TextEditorBase, "main", 1, NULL)) == NULL) {
+	// 	printf("Could not get interface for texteditor.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #endif
 
-	#ifdef __AMIGAOS3__
-	if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 44)) == NULL) {
-		printf("Could not open scroller.gadget\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 50)) == NULL) {
-		printf("Could not open scroller.gadget\n");
-		return RETURN_ERROR;
-	}
-	if ((IScroller = (struct ScrollerIFace *)GetInterface(ScrollerBase, "main", 1, NULL)) == NULL) {
-		printf("Could not get interface for scroller.gadget\n");
-		return RETURN_ERROR;
-	}
-	#endif
+	// #ifdef __AMIGAOS3__
+	// if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 44)) == NULL) {
+	// 	printf("Could not open scroller.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #else
+	// if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 50)) == NULL) {
+	// 	printf("Could not open scroller.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// if ((IScroller = (struct ScrollerIFace *)GetInterface(ScrollerBase, "main", 1, NULL)) == NULL) {
+	// 	printf("Could not get interface for scroller.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #endif
 
-	#ifdef __AMIGAOS3__
-	if ((StringBase = OpenLibrary("gadgets/string.gadget", 44)) == NULL) {
-		printf("Could not open string.gadget\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((StringBase = OpenLibrary("gadgets/string.gadget", 50)) == NULL) {
-		printf("Could not open string.gadget\n");
-		return RETURN_ERROR;
-	}
-	if ((IString = (struct StringIFace *)GetInterface(StringBase, "main", 1, NULL)) == NULL) {
-		printf("Could not get interface for string.gadget\n");
-		return RETURN_ERROR;
-	}
-	#endif
+	// #ifdef __AMIGAOS3__
+	// if ((StringBase = OpenLibrary("gadgets/string.gadget", 44)) == NULL) {
+	// 	printf("Could not open string.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #else
+	// if ((StringBase = OpenLibrary("gadgets/string.gadget", 50)) == NULL) {
+	// 	printf("Could not open string.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// if ((IString = (struct StringIFace *)GetInterface(StringBase, "main", 1, NULL)) == NULL) {
+	// 	printf("Could not get interface for string.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #endif
 
-	#ifdef __AMIGAOS3__
-	if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 44)) == NULL) {
-		printf("Could not open listbrowser.gadget\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 50)) == NULL) {
-		printf("Could not open listbrowser.gadget\n");
-		return RETURN_ERROR;
-	}
-	if ((IListBrowser = (struct ListBrowserIFace *)GetInterface(ListBrowserBase, "main", 1, NULL)) == NULL) {
-		printf("Could not get interface for listbrowser.gadget\n");
-		return RETURN_ERROR;
-	}
-	#endif
+	// #ifdef __AMIGAOS3__
+	// if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 44)) == NULL) {
+	// 	printf("Could not open listbrowser.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #else
+	// if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 50)) == NULL) {
+	// 	printf("Could not open listbrowser.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// if ((IListBrowser = (struct ListBrowserIFace *)GetInterface(ListBrowserBase, "main", 1, NULL)) == NULL) {
+	// 	printf("Could not get interface for listbrowser.gadget\n");
+	// 	return RETURN_ERROR;
+	// }
+	// #endif
 
 	#ifdef __AMIGAOS3__
 	if ((RequesterBase = OpenLibrary("requester.class", 42)) == NULL) {
@@ -784,21 +803,21 @@ static void closeGUILibraries() {
 	DropInterface((struct Interface *)IGraphics);
 	DropInterface((struct Interface *)IAsl);
 	DropInterface((struct Interface *)IAmigaGuide);
-	DropInterface((struct Interface *)IWindow);
-	DropInterface((struct Interface *)ILayout);
-	DropInterface((struct Interface *)IClickTab);
-	DropInterface((struct Interface *)IButton);
-	DropInterface((struct Interface *)ITextEditor);
-	DropInterface((struct Interface *)IRadioButton);
-	DropInterface((struct Interface *)IString);
-	DropInterface((struct Interface *)IListBrowser);
-	DropInterface((struct Interface *)IScroller);
+	// DropInterface((struct Interface *)IWindow);
+	// DropInterface((struct Interface *)ILayout);
+	// DropInterface((struct Interface *)IClickTab);
+	// DropInterface((struct Interface *)IButton);
+	// DropInterface((struct Interface *)ITextEditor);
+	// DropInterface((struct Interface *)IRadioButton);
+	// DropInterface((struct Interface *)IString);
+	// DropInterface((struct Interface *)IListBrowser);
+	// DropInterface((struct Interface *)IScroller);
 	DropInterface((struct Interface *)IRequester);
 	DropInterface((struct Interface *)IDataTypes);
 	DropInterface((struct Interface *)IMUI);
-	CloseLibrary(TextEditorBase);
+	// CloseLibrary(TextEditorBase);
 	#else
-	CloseLibrary(TextFieldBase);
+	// CloseLibrary(TextFieldBase);
 	CloseLibrary(GadToolsBase);
 	#endif
 
@@ -806,14 +825,14 @@ static void closeGUILibraries() {
 	CloseLibrary(GfxBase);
 	CloseLibrary(AslBase);
 	CloseLibrary(AmigaGuideBase);
-	CloseLibrary(WindowBase);
-	CloseLibrary(LayoutBase);
-	CloseLibrary(ClickTabBase);
-	CloseLibrary(ButtonBase);
-	CloseLibrary(RadioButtonBase);
-	CloseLibrary(StringBase);
-	CloseLibrary(ListBrowserBase);
-	CloseLibrary(ScrollerBase);
+	// CloseLibrary(WindowBase);
+	// CloseLibrary(LayoutBase);
+	// CloseLibrary(ClickTabBase);
+	// CloseLibrary(ButtonBase);
+	// CloseLibrary(RadioButtonBase);
+	// CloseLibrary(StringBase);
+	// CloseLibrary(ListBrowserBase);
+	// CloseLibrary(ScrollerBase);
 	CloseLibrary(RequesterBase);
 	CloseLibrary(DataTypesBase);
 	CloseLibrary(MUIMasterBase);
@@ -831,37 +850,100 @@ LONG initVideo() {
 	app = ApplicationObject,
 		MUIA_Application_Title, "AmigaGPT",
 		MUIA_Application_Version, APP_VERSION,
-		MUIA_Application_Copyright, "(C) 2024 Cameron Armstrong (Nightfox/sacredbanana)",
+		MUIA_Application_Copyright, "(C) 2023-2024 Cameron Armstrong (Nightfox/sacredbanana)",
 		MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
 		MUIA_Application_Description, "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E",
-		MUIA_Application_Base, " ",
-	End;
+			SubWindow, aboutAmigaGPTWindowObject = AboutboxObject,
+				MUIA_Aboutbox_Build, BUILD_NUMBER " ("__DATE__ ")\n""Git commit: " GIT_COMMIT "\nGit branch: " GIT_BRANCH "\n" "Commit timestamp: " GIT_TIMESTAMP,
+				MUIA_Aboutbox_Credits, "This app will always remain free but if you would like to support me you can do so at https://paypal.me/sacredbanana\n"
+									"\n"
+									"Click the version string above for build details.\n"
+									"\n"
+									"\033b%p\033n\n"
+									"\t\033iCameron Armstrong\033n\n"
+									"\t(@sacredbanana on GitHub, YouTube and Twitter, @Nightfox on EAB)\n"
+									"\n"
+									"\033b%I\033n\n"
+									"\t\033iMauricio Sandoval\033n\n"
+									"\n"
+									"\033b%T\033n\n"
+									"\t\033iBebbo\033n\n"
+									"\tfor creating the Amiga GCC toolchain\n"
+									"\thttps://github.com/bebbo\n"
+									"\n"
+									"\t\033iOpenAI\033n\n"
+									"\tfor creating the GPT and DALL-E models\n"
+									"\n"
+									"\t\033iEAB\033n\n"
+									"\tfor being a great community!\n"	
+									"\n"
+									"\t\033iJan Zahurancik\033n\n"
+									"\tfor all the thorough testing, bundling AmigaGPT into AmiKit and for all the moral support\n"
+									"\thttps://www.amikit.amiga.sk\n"
+									"\n"
+									"\t\033iCoffinOS\033n\n"
+									"\tfor bundling AmigaGPT into CoffinOS\n"
+									"\thttps://getcoffin.net\n"
+									"\n"
+									"\t\033iAmiga Future Magazine\033n\n"
+									"\tfor reviewing AmigaGPT and publishing several of its updates in the News from Aminet section\n"
+									"\thttps://www.amigafuture.de\n"
+									"\n"
+									"\t\033iWhatIFF? Magazine\033n\n"
+									"\tfor reviewing AmigaGPT and interviewing me in issue 14\n"
+									"\thttps://www.whatiff.info\n"
+									"\n"
+									"\t\033iDan Wood\033n\n"
+									"\tfor reviewing AmigaGPT on his YouTube channel\n"
+									"\thttps://www.youtube.com/watch?v=-OA28r8Up5U\n"
+									"\n"
+									"\t\033iProteque-CBN\033n\n"
+									"\tfor reviewing AmigaGPT on his YouTube channel\n"
+									"\thttps://www.youtube.com/watch?v=t3q8HQ6wrnw\n"
+									"\n"
+									"\t\033iLes Docs\033n\n"
+									"\tor making a video review and giving a tutorial on how to add support for the French accent\n"
+									"\thttps://www.youtube.com/watch?v=BV5Fq1PresE\n"
+									"\n"
+									"\033bLicense\033n\n"
+									"\tMIT\n"
+									"\033b%W\033n\n"
+									"\thttps://github.com/sacredbanana/AmigaGPT/issues\n"
+									"\thttps://eab.abime.net/showthread.php?t=114798\n",
+				MUIA_Aboutbox_URL, "https://github.com/sacredbanana/AmigaGPT",
+				MUIA_Aboutbox_URLText, "Visit the GitHub repository for the latest release",
+			End,
+		End;
+
+	DoMethod(aboutAmigaGPTWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
 
 	if (openStartupOptions() == RETURN_ERROR)
 		return RETURN_ERROR;
 
-	modeSelectionTabList = AllocVec(sizeof(struct List), MEMF_CLEAR);
-	NewList(modeSelectionTabList);
-	chatTabNode = AllocClickTabNode(TAG_DONE);
-	SetClickTabNodeAttrs(chatTabNode,
-	 TNA_Number, MODE_SELECTION_TAB_CHAT_ID,
-	 TNA_Text, "Chat",
-	 TNA_TextPen, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1,
-	 #ifdef __AMIGAOS4__
-	 TNA_HintInfo, "Have a text conversation with ChatGPT",
-	 #endif
-	  TAG_DONE);
-	imageGenerationTabNode = AllocClickTabNode(TAG_DONE);
-	SetClickTabNodeAttrs(imageGenerationTabNode,
-	 TNA_Number, MODE_SELECTION_TAB_IMAGE_GENERATION_ID,
-	 TNA_Text, "Image Generation",
-	 TNA_TextPen, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1,
-	 #ifdef __AMIGAOS4__
-	 TNA_HintInfo, "Generate an image from a text prompt",
-	 #endif
-	  TAG_DONE);
-	AddTail(modeSelectionTabList, chatTabNode);	
-	AddTail(modeSelectionTabList, imageGenerationTabNode);
+	set(aboutAmigaGPTWindowObject, MUIA_Window_Screen, screen);
+
+	// modeSelectionTabList = AllocVec(sizeof(struct List), MEMF_CLEAR);
+	// NewList(modeSelectionTabList);
+	// chatTabNode = AllocClickTabNode(TAG_DONE);
+	// SetClickTabNodeAttrs(chatTabNode,
+	//  TNA_Number, MODE_SELECTION_TAB_CHAT_ID,
+	//  TNA_Text, "Chat",
+	//  TNA_TextPen, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1,
+	//  #ifdef __AMIGAOS4__
+	//  TNA_HintInfo, "Have a text conversation with ChatGPT",
+	//  #endif
+	//   TAG_DONE);
+	// imageGenerationTabNode = AllocClickTabNode(TAG_DONE);
+	// SetClickTabNodeAttrs(imageGenerationTabNode,
+	//  TNA_Number, MODE_SELECTION_TAB_IMAGE_GENERATION_ID,
+	//  TNA_Text, "Image Generation",
+	//  TNA_TextPen, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1,
+	//  #ifdef __AMIGAOS4__
+	//  TNA_HintInfo, "Generate an image from a text prompt",
+	//  #endif
+	//   TAG_DONE);
+	// AddTail(modeSelectionTabList, chatTabNode);	
+	// AddTail(modeSelectionTabList, imageGenerationTabNode);
 
 	conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
 	NewList(conversationList);
@@ -885,449 +967,521 @@ LONG initVideo() {
 	ULONG pen = 8;
 	sendMessageButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1;
 
-	if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, SEND_MESSAGE_BUTTON_ID,
-		BUTTON_TextPen, sendMessageButtonPen,
-		#ifdef __AMIGAOS3__
-		BUTTON_BackgroundPen, 0,
-		#endif
-		GA_TextAttr, &uiTextAttr,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"Send",
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create send message button\n");
-			return RETURN_ERROR;
+	if (!(chatOutputText = TextObject,
+		MUIA_Text_Contents, "This is a test.\nI hope this works.\n\33c\33bMUI\33n\nis magic\n\nm68k-amigaos-gcc -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DPROGRAM_NAME=\"AmigaGPT\" -DPROGDIR=\"PROGDIR:\" -Ofast -Wl,-Map=out/AmigaGPT.map,-L/opt/amiga/m68k-amigaos/lib,-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui  build/os3/obj/config.o build/os3/obj/gui.o build/os3/obj/mai\n\nm68k-amigaos-gcc -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DPROGRAM_NAME=\"AmigaGPT\" -DPROGDIR=\"PROGDIR:\" -Ofast -Wl,-Map=out/AmigaGPT.map,-L/opt/amiga/m68k-amigaos/lib,-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui  build/os3/obj/config.o build/os3/obj/gui.o build/os3/obj/mai\n\nm68k-amigaos-gcc -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DPROGRAM_NAME=\"AmigaGPT\" -DPROGDIR=\"PROGDIR:\" -Ofast -Wl,-Map=out/AmigaGPT.map,-L/opt/amiga/m68k-amigaos/lib,-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui  build/os3/obj/config.o build/os3/obj/gui.o build/os3/obj/mai\n\n",
+		MUIA_Text_Copy, TRUE,
+		MUIA_Text_Data, NULL,
+		MUIA_Text_Marking, TRUE,
+		MUIA_Text_PreParse, "",
+		MUIA_Text_SetMin, FALSE,
+		MUIA_Text_SetMax, FALSE,
+		MUIA_Text_SetVMax, FALSE,
+		MUIA_Text_Shorten, MUIV_Text_Shorten_Nothing,
+	End)) {
+		printf("Could not create chatOutputText\n");
+		return RETURN_ERROR;
 	}
 
-	if ((createImageButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, CREATE_IMAGE_BUTTON_ID,
-		BUTTON_TextPen, sendMessageButtonPen,
-		#ifdef __AMIGAOS3__
-		BUTTON_BackgroundPen, 0,
-		#endif
-		GA_TextAttr, &uiTextAttr,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"Create Image",
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create create image button\n");
-			return RETURN_ERROR;
+	if (!(chatOutputTextVirtualGroup = VirtgroupObject,
+		Child, chatOutputText,
+	End)) {
+		printf("Could not create chatOutputTextVirtualGroup\n");
+		return RETURN_ERROR;
 	}
 
-	if ((imageListBrowser = NewObject(LISTBROWSER_GetClass(), NULL,
-		GA_ID, IMAGE_LIST_BROWSER_ID,
-		GA_RelVerify, TRUE,
-		GA_TextAttr, &uiTextAttr,
-		LISTBROWSER_WrapText, TRUE,
-		LISTBROWSER_AutoFit, TRUE,
-		LISTBROWSER_ShowSelected, TRUE,
-		LISTBROWSER_Labels, imageList,
-		TAG_DONE)) == NULL) {
-			printf("Could not create image list browser\n");
-			return RETURN_ERROR;
+	if (!(chatOutputTextScrollGroup = ScrollgroupObject,
+		MUIA_Scrollgroup_Contents, chatOutputTextVirtualGroup,
+		MUIA_Scrollgroup_AutoBars, TRUE,
+		MUIA_Scrollgroup_NoHorizBar, TRUE,
+		MUIA_Scrollgroup_FreeHoriz, FALSE,
+		MUIA_Scrollgroup_FreeVert, TRUE,
+	End)) {
+		printf("Could not create chatOutputTextScrollGroup\n");
+		return RETURN_ERROR;
 	}
 
-	pen = 5;
-	newChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
-
-	if ((newImageButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, NEW_IMAGE_BUTTON_ID,
-		BUTTON_TextPen, newChatButtonPen,
-		#ifdef __AMIGAOS3__
-		BUTTON_BackgroundPen, 0,
-		#endif
-		GA_TextAttr, &uiTextAttr,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"+ New Image",
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create new image button\n");
-			return RETURN_ERROR;
+	if (!(mainGroup = GroupObject,	
+		// Child, screenSelectRadioButton,
+		Child, chatOutputTextScrollGroup,
+		// Child, startupOptionsOkButton = startupOptionsOkButton,
+	End)) {
+		printf("Could not create mainGroup\n");
+		return RETURN_ERROR;
 	}
 
-	pen = 6;
-	deleteButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
-
-	if ((deleteImageButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, DELETE_IMAGE_BUTTON_ID,
-		BUTTON_TextPen, deleteButtonPen,
-		#ifdef __AMIGAOS3__
-		BUTTON_BackgroundPen, 0,
-		#endif
-		GA_TextAttr, &uiTextAttr,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"- Delete Image",
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create delete image button\n");
-			return RETURN_ERROR;
+	if (!(mainWindowObject = WindowObject,
+		MUIA_Window_Title, "AmigaGPT",
+		MUIA_Window_ID, MAIN_WINDOW_ID,
+		MUIA_Window_CloseGadget, TRUE,
+		MUIA_Window_DepthGadget, isPublicScreen,
+		MUIA_Window_SizeGadget, isPublicScreen,
+		MUIA_Window_DragBar, isPublicScreen,
+		MUIA_Window_Screen, screen,
+		MUIA_Window_Width, MUIV_Window_Width_Visible(80),
+		MUIA_Window_Height, MUIV_Window_Height_Visible(80),
+		MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
+		MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
+		MUIA_Window_Menustrip, MUI_MakeObject(MUIO_MenustripNM, amigaGPTMenu),
+		MUIA_Window_SizeRight, TRUE,
+		MUIA_Window_UseBottomBorderScroller, FALSE,
+		MUIA_Window_UseRightBorderScroller, FALSE,
+		MUIA_Window_UseLeftBorderScroller, FALSE,
+		WindowContents, mainGroup,
+	End)) {
+		printf("Could not create mainWindowObject\n");
+		return RETURN_ERROR;
 	}
 
-	if ((openSmallImageButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, OPEN_SMALL_IMAGE_BUTTON_ID,
-		GA_Disabled, TRUE,
-		BUTTON_TextPen, sendMessageButtonPen,
-		#ifdef __AMIGAOS3__
-		BUTTON_BackgroundPen, 0,
-		#endif
-		GA_TextAttr, &uiTextAttr,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"Open Small Image",
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create open small image button\n");
-			return RETURN_ERROR;
-	}
+	DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
+	  app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 
-	if ((openMediumImageButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, OPEN_MEDIUM_IMAGE_BUTTON_ID,
-		GA_Disabled, TRUE,
-		BUTTON_TextPen, sendMessageButtonPen,
-		#ifdef __AMIGAOS3__
-		BUTTON_BackgroundPen, 0,
-		#endif
-		GA_TextAttr, &uiTextAttr,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"Open Medium Image",
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create open medium image button\n");
-			return RETURN_ERROR;
-	}
+	DoMethod(app, OM_ADDMEMBER, mainWindowObject);
 
-	if ((openLargeImageButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, OPEN_LARGE_IMAGE_BUTTON_ID,
-		GA_Disabled, TRUE,
-		BUTTON_TextPen, sendMessageButtonPen,
-		#ifdef __AMIGAOS3__
-		BUTTON_BackgroundPen, 0,
-		#endif
-		GA_TextAttr, &uiTextAttr,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"Open Large Image",
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create open large image button\n");
-			return RETURN_ERROR;
-	}
+	set(mainWindowObject,MUIA_Window_Open,TRUE);
+	
+	// if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
+	// 	GA_ID, SEND_MESSAGE_BUTTON_ID,
+	// 	BUTTON_TextPen, sendMessageButtonPen,
+	// 	#ifdef __AMIGAOS3__
+	// 	BUTTON_BackgroundPen, 0,
+	// 	#endif
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	BUTTON_Justification, BCJ_CENTER,
+	// 	GA_Text, (ULONG)"Send",
+	// 	GA_RelVerify, TRUE,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create send message button\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((openOriginalImageButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, OPEN_ORIGINAL_IMAGE_BUTTON_ID,
-		GA_Disabled, TRUE,
-		BUTTON_TextPen, sendMessageButtonPen,
-		#ifdef __AMIGAOS3__
-		BUTTON_BackgroundPen, 0,
-		#endif
-		GA_TextAttr, &uiTextAttr,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"Open Original Image",
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not open original image button\n");
-			return RETURN_ERROR;
-	}
+	// if ((createImageButton = NewObject(BUTTON_GetClass(), NULL,
+	// 	GA_ID, CREATE_IMAGE_BUTTON_ID,
+	// 	BUTTON_TextPen, sendMessageButtonPen,
+	// 	#ifdef __AMIGAOS3__
+	// 	BUTTON_BackgroundPen, 0,
+	// 	#endif
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	BUTTON_Justification, BCJ_CENTER,
+	// 	GA_Text, (ULONG)"Create Image",
+	// 	GA_RelVerify, TRUE,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create create image button\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((saveCopyButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, SAVE_COPY_BUTTON_ID,
-		GA_Disabled, TRUE,
-		BUTTON_TextPen, sendMessageButtonPen,
-		#ifdef __AMIGAOS3__
-		BUTTON_BackgroundPen, 0,
-		#endif
-		GA_TextAttr, &uiTextAttr,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"Save Copy",
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not save copy button\n");
-			return RETURN_ERROR;
-	}
+	// if ((imageListBrowser = NewObject(LISTBROWSER_GetClass(), NULL,
+	// 	GA_ID, IMAGE_LIST_BROWSER_ID,
+	// 	GA_RelVerify, TRUE,
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	LISTBROWSER_WrapText, TRUE,
+	// 	LISTBROWSER_AutoFit, TRUE,
+	// 	LISTBROWSER_ShowSelected, TRUE,
+	// 	LISTBROWSER_Labels, imageList,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create image list browser\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((imageHistoryButtonsLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, newImageButton,
-		CHILD_WeightedHeight, 5,
-		LAYOUT_AddChild, deleteImageButton,
-		CHILD_WeightedHeight, 5,
-		LAYOUT_AddChild, imageListBrowser,
-		CHILD_WeightedWidth, 90,
-		TAG_DONE)) == NULL) {
-			printf("Could not create image history buttons layout\n");
-			return RETURN_ERROR;
-	}
+	// pen = 5;
+	// newChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
 
-	if ((newChatButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, NEW_CHAT_BUTTON_ID,
-		BUTTON_TextPen, newChatButtonPen,
-		#ifdef __AMIGAOS3__
-		BUTTON_BackgroundPen, 0,
-		#endif
-		GA_TextAttr, &uiTextAttr,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"+ New Chat",
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create new chat button\n");
-			return RETURN_ERROR;
-	}
+	// if ((newImageButton = NewObject(BUTTON_GetClass(), NULL,
+	// 	GA_ID, NEW_IMAGE_BUTTON_ID,
+	// 	BUTTON_TextPen, newChatButtonPen,
+	// 	#ifdef __AMIGAOS3__
+	// 	BUTTON_BackgroundPen, 0,
+	// 	#endif
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	BUTTON_Justification, BCJ_CENTER,
+	// 	GA_Text, (ULONG)"+ New Image",
+	// 	GA_RelVerify, TRUE,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create new image button\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((deleteChatButton = NewObject(BUTTON_GetClass(), NULL,
-		GA_ID, DELETE_CHAT_BUTTON_ID,
-		BUTTON_TextPen, deleteButtonPen,
-		#ifdef __AMIGAOS3__
-		BUTTON_BackgroundPen, 0,
-		#endif
-		GA_TextAttr, &uiTextAttr,
-		BUTTON_Justification, BCJ_CENTER,
-		GA_Text, (ULONG)"- Delete Chat",
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create delete chat button\n");
-			return RETURN_ERROR;
-	}
+	// pen = 6;
+	// deleteButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
 
-	if ((conversationListBrowser = NewObject(LISTBROWSER_GetClass(), NULL,
-		GA_ID, CONVERSATION_LIST_BROWSER_ID,
-		GA_RelVerify, TRUE,
-		GA_TextAttr, &uiTextAttr,
-		LISTBROWSER_WrapText, TRUE,
-		LISTBROWSER_AutoFit, TRUE,
-		LISTBROWSER_ShowSelected, TRUE,
-		LISTBROWSER_Labels, conversationList,
-		TAG_DONE)) == NULL) {
-			printf("Could not create conversation list browser\n");
-			return RETURN_ERROR;
-	}
+	// if ((deleteImageButton = NewObject(BUTTON_GetClass(), NULL,
+	// 	GA_ID, DELETE_IMAGE_BUTTON_ID,
+	// 	BUTTON_TextPen, deleteButtonPen,
+	// 	#ifdef __AMIGAOS3__
+	// 	BUTTON_BackgroundPen, 0,
+	// 	#endif
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	BUTTON_Justification, BCJ_CENTER,
+	// 	GA_Text, (ULONG)"- Delete Image",
+	// 	GA_RelVerify, TRUE,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create delete image button\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((conversationsLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, newChatButton,
-		CHILD_WeightedHeight, 5,
-		LAYOUT_AddChild, deleteChatButton,
-		CHILD_WeightedHeight, 5,
-		LAYOUT_AddChild, conversationListBrowser,
-		CHILD_WeightedWidth, 90,
-		TAG_DONE)) == NULL) {
-			printf("Could not create conversations layout\n");
-			return RETURN_ERROR;
-	}
+	// if ((openSmallImageButton = NewObject(BUTTON_GetClass(), NULL,
+	// 	GA_ID, OPEN_SMALL_IMAGE_BUTTON_ID,
+	// 	GA_Disabled, TRUE,
+	// 	BUTTON_TextPen, sendMessageButtonPen,
+	// 	#ifdef __AMIGAOS3__
+	// 	BUTTON_BackgroundPen, 0,
+	// 	#endif
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	BUTTON_Justification, BCJ_CENTER,
+	// 	GA_Text, (ULONG)"Open Small Image",
+	// 	GA_RelVerify, TRUE,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create open small image button\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((statusBar = NewObject(STRING_GetClass(), NULL,
-		GA_ID, STATUS_BAR_ID,
-		GA_RelVerify, TRUE,
-		GA_ReadOnly, TRUE,
-		GA_TextAttr, &uiTextAttr,
-		TAG_DONE)) == NULL) {
-			printf("Could not create text editor\n");
-			return RETURN_ERROR;
-	}
+	// if ((openMediumImageButton = NewObject(BUTTON_GetClass(), NULL,
+	// 	GA_ID, OPEN_MEDIUM_IMAGE_BUTTON_ID,
+	// 	GA_Disabled, TRUE,
+	// 	BUTTON_TextPen, sendMessageButtonPen,
+	// 	#ifdef __AMIGAOS3__
+	// 	BUTTON_BackgroundPen, 0,
+	// 	#endif
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	BUTTON_Justification, BCJ_CENTER,
+	// 	GA_Text, (ULONG)"Open Medium Image",
+	// 	GA_RelVerify, TRUE,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create open medium image button\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((textInputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
-		GA_ID, TEXT_INPUT_TEXT_EDITOR_ID,
-		GA_RelVerify, TRUE,
-		GA_TextAttr, &chatTextAttr,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create text editor\n");
-			return RETURN_ERROR;
-	}
+	// if ((openLargeImageButton = NewObject(BUTTON_GetClass(), NULL,
+	// 	GA_ID, OPEN_LARGE_IMAGE_BUTTON_ID,
+	// 	GA_Disabled, TRUE,
+	// 	BUTTON_TextPen, sendMessageButtonPen,
+	// 	#ifdef __AMIGAOS3__
+	// 	BUTTON_BackgroundPen, 0,
+	// 	#endif
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	BUTTON_Justification, BCJ_CENTER,
+	// 	GA_Text, (ULONG)"Open Large Image",
+	// 	GA_RelVerify, TRUE,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create open large image button\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((chatOutputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
-		GA_ID, CHAT_OUTPUT_TEXT_EDITOR_ID,
-		GA_RelVerify, TRUE,
-		GA_ReadOnly, TRUE,
-		GA_TextAttr, &chatTextAttr,
-		ICA_TARGET, ICTARGET_IDCMP,
-		GA_TEXTEDITOR_ImportHook, GV_TEXTEDITOR_ImportHook_MIME,
-		GA_TEXTEDITOR_ExportHook, GV_TEXTEDITOR_ExportHook_Plain,
-		TAG_DONE)) == NULL) {
-			printf("Could not create text editor\n");
-			return RETURN_ERROR;
-	}
+	// if ((openOriginalImageButton = NewObject(BUTTON_GetClass(), NULL,
+	// 	GA_ID, OPEN_ORIGINAL_IMAGE_BUTTON_ID,
+	// 	GA_Disabled, TRUE,
+	// 	BUTTON_TextPen, sendMessageButtonPen,
+	// 	#ifdef __AMIGAOS3__
+	// 	BUTTON_BackgroundPen, 0,
+	// 	#endif
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	BUTTON_Justification, BCJ_CENTER,
+	// 	GA_Text, (ULONG)"Open Original Image",
+	// 	GA_RelVerify, TRUE,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not open original image button\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((chatOutputScroller = NewObject(SCROLLER_GetClass(), NULL,
-		GA_ID, CHAT_OUTPUT_SCROLLER_ID,
-		GA_RelVerify, TRUE,
-		ICA_TARGET, ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create scroller\n");
-			return RETURN_ERROR;
-	}
+	// if ((saveCopyButton = NewObject(BUTTON_GetClass(), NULL,
+	// 	GA_ID, SAVE_COPY_BUTTON_ID,
+	// 	GA_Disabled, TRUE,
+	// 	BUTTON_TextPen, sendMessageButtonPen,
+	// 	#ifdef __AMIGAOS3__
+	// 	BUTTON_BackgroundPen, 0,
+	// 	#endif
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	BUTTON_Justification, BCJ_CENTER,
+	// 	GA_Text, (ULONG)"Save Copy",
+	// 	GA_RelVerify, TRUE,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not save copy button\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((chatInputLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
-		LAYOUT_HorizAlignment, LALIGN_CENTER,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, textInputTextEditor,
-		CHILD_WeightedWidth, 80,
-		CHILD_NoDispose, TRUE,
-		LAYOUT_AddChild, sendMessageButton,
-		CHILD_WeightedWidth, 20,
-		TAG_DONE)) == NULL) {
-			printf("Could not create chat input layout\n");
-			return RETURN_ERROR;
-	}
+	// if ((imageHistoryButtonsLayout = NewObject(LAYOUT_GetClass(), NULL,
+	// 	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+	// 	LAYOUT_SpaceInner, TRUE,
+	// 	LAYOUT_SpaceOuter, TRUE,
+	// 	LAYOUT_AddChild, newImageButton,
+	// 	CHILD_WeightedHeight, 5,
+	// 	LAYOUT_AddChild, deleteImageButton,
+	// 	CHILD_WeightedHeight, 5,
+	// 	LAYOUT_AddChild, imageListBrowser,
+	// 	CHILD_WeightedWidth, 90,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create image history buttons layout\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((chatOutputLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
-		LAYOUT_HorizAlignment, LALIGN_CENTER,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, chatOutputTextEditor,
-		CHILD_WeightedWidth, 100,
-		LAYOUT_AddChild, chatOutputScroller,
-		CHILD_WeightedWidth, 10,
-		TAG_DONE)) == NULL) {
-			printf("Could not create chat output layout\n");
-			return RETURN_ERROR;
-	}
+	// if ((newChatButton = NewObject(BUTTON_GetClass(), NULL,
+	// 	GA_ID, NEW_CHAT_BUTTON_ID,
+	// 	BUTTON_TextPen, newChatButtonPen,
+	// 	#ifdef __AMIGAOS3__
+	// 	BUTTON_BackgroundPen, 0,
+	// 	#endif
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	BUTTON_Justification, BCJ_CENTER,
+	// 	GA_Text, (ULONG)"+ New Chat",
+	// 	GA_RelVerify, TRUE,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create new chat button\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((chatTextBoxesLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, chatOutputLayout,
-		CHILD_WeightedHeight, 70,
-		LAYOUT_AddChild, chatInputLayout,
-		CHILD_WeightedHeight, 20,
-		LAYOUT_AddChild, statusBar,
-		CHILD_WeightedHeight, 10,
-		CHILD_NoDispose, TRUE,
-		TAG_DONE)) == NULL) {
-			printf("Could not create chat layout\n");
-			return RETURN_ERROR;
-	}
+	// if ((deleteChatButton = NewObject(BUTTON_GetClass(), NULL,
+	// 	GA_ID, DELETE_CHAT_BUTTON_ID,
+	// 	BUTTON_TextPen, deleteButtonPen,
+	// 	#ifdef __AMIGAOS3__
+	// 	BUTTON_BackgroundPen, 0,
+	// 	#endif
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	BUTTON_Justification, BCJ_CENTER,
+	// 	GA_Text, (ULONG)"- Delete Chat",
+	// 	GA_RelVerify, TRUE,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create delete chat button\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((chatModeLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, conversationsLayout,
-		CHILD_WeightedWidth, 30,
-		LAYOUT_AddChild, chatTextBoxesLayout,
-		CHILD_WeightedWidth, 70,
-		TAG_DONE)) == NULL) {
-			printf("Could not create main layout\n");
-			return RETURN_ERROR;
-	}
+	// if ((conversationListBrowser = NewObject(LISTBROWSER_GetClass(), NULL,
+	// 	GA_ID, CONVERSATION_LIST_BROWSER_ID,
+	// 	GA_RelVerify, TRUE,
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	LISTBROWSER_WrapText, TRUE,
+	// 	LISTBROWSER_AutoFit, TRUE,
+	// 	LISTBROWSER_ShowSelected, TRUE,
+	// 	LISTBROWSER_Labels, conversationList,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create conversation list browser\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((imageGenerationInputLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, openSmallImageButton,
-		CHILD_WeightedHeight, 10,
-		LAYOUT_AddChild, openMediumImageButton,
-		CHILD_WeightedHeight, 10,
-		LAYOUT_AddChild, openLargeImageButton,
-		CHILD_WeightedHeight, 10,
-		LAYOUT_AddChild, openOriginalImageButton,
-		CHILD_WeightedHeight, 10,
-		LAYOUT_AddChild, saveCopyButton,
-		CHILD_WeightedHeight, 10,
-		LAYOUT_AddChild, textInputTextEditor,
-		CHILD_WeightedHeight, 40,
-		CHILD_NoDispose, TRUE,
-		LAYOUT_AddChild, createImageButton,
-		CHILD_WeightedHeight, 10,
-		TAG_DONE)) == NULL) {
-			printf("Could not create image generation input layout\n");
-			return RETURN_ERROR;
-	}
+	// if ((conversationsLayout = NewObject(LAYOUT_GetClass(), NULL,
+	// 	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+	// 	LAYOUT_SpaceInner, TRUE,
+	// 	LAYOUT_SpaceOuter, TRUE,
+	// 	LAYOUT_AddChild, newChatButton,
+	// 	CHILD_WeightedHeight, 5,
+	// 	LAYOUT_AddChild, deleteChatButton,
+	// 	CHILD_WeightedHeight, 5,
+	// 	LAYOUT_AddChild, conversationListBrowser,
+	// 	CHILD_WeightedWidth, 90,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create conversations layout\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((imageGenerationTextBoxesLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, imageGenerationInputLayout,
-		CHILD_WeightedHeight, 90,
-		LAYOUT_AddChild, statusBar,
-		CHILD_WeightedHeight, 10,
-		CHILD_NoDispose, TRUE,
-		TAG_DONE)) == NULL) {
-			printf("Could not create chat layout\n");
-			return RETURN_ERROR;
-	}
+	// if ((statusBar = NewObject(STRING_GetClass(), NULL,
+	// 	GA_ID, STATUS_BAR_ID,
+	// 	GA_RelVerify, TRUE,
+	// 	GA_ReadOnly, TRUE,
+	// 	GA_TextAttr, &uiTextAttr,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create text editor\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((imageGenerationModeLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, imageHistoryButtonsLayout,
-		CHILD_WeightedWidth, 30,
-		LAYOUT_AddChild, imageGenerationTextBoxesLayout,
-		CHILD_WeightedWidth, 70,
-		TAG_DONE)) == NULL) {
-			printf("Could not create image generation layout\n");
-			return RETURN_ERROR;
-	}
+	// if ((textInputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
+	// 	GA_ID, TEXT_INPUT_TEXT_EDITOR_ID,
+	// 	GA_RelVerify, TRUE,
+	// 	GA_TextAttr, &chatTextAttr,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create text editor\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((modeClickTab = NewObject(CLICKTAB_GetClass(), NULL,
-		GA_ID, CLICKTAB_MODE_SELECTION_ID,
-		GA_RelVerify, TRUE,
-		CLICKTAB_Labels, modeSelectionTabList,
-		CLICKTAB_AutoFit, TRUE,
-		CLICKTAB_PageGroup, NewObject(PAGE_GetClass(), NULL,
-            PAGE_Add,       chatModeLayout,
-            PAGE_Add,       imageGenerationModeLayout,
-        TAG_DONE),
-		TAG_DONE)) == NULL) {
-			printf("Could not create mode click tab\n");
-			return RETURN_ERROR;
-	}
+	// if ((chatOutputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
+	// 	GA_ID, CHAT_OUTPUT_TEXT_EDITOR_ID,
+	// 	GA_RelVerify, TRUE,
+	// 	GA_ReadOnly, TRUE,
+	// 	GA_TextAttr, &chatTextAttr,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	GA_TEXTEDITOR_ImportHook, GV_TEXTEDITOR_ImportHook_MIME,
+	// 	GA_TEXTEDITOR_ExportHook, GV_TEXTEDITOR_ExportHook_Plain,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create text editor\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	Object *layoutToOpen;
-	if (isAmigaOS3X) {
-		switch (selectedMode) {
-			case MODE_SELECTION_TAB_CHAT_ID:
-				layoutToOpen = chatModeLayout;
-				break;
-			case MODE_SELECTION_TAB_IMAGE_GENERATION_ID:
-				layoutToOpen = imageGenerationModeLayout;
-				break;
-			default:
-				layoutToOpen = chatModeLayout;
-				break;
-		}
-	} else {
-		layoutToOpen = modeClickTab;
-	}
+	// if ((chatOutputScroller = NewObject(SCROLLER_GetClass(), NULL,
+	// 	GA_ID, CHAT_OUTPUT_SCROLLER_ID,
+	// 	GA_RelVerify, TRUE,
+	// 	ICA_TARGET, ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create scroller\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((mainLayout = NewObject(LAYOUT_GetClass(), NULL,
-		LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-		LAYOUT_DeferLayout, TRUE,
-		LAYOUT_SpaceInner, TRUE,
-		LAYOUT_SpaceOuter, TRUE,
-		LAYOUT_AddChild, layoutToOpen,
-		TAG_DONE)) == NULL) {
-			printf("Could not create main layout\n");
-			return RETURN_ERROR;
-	}
+	// if ((chatInputLayout = NewObject(LAYOUT_GetClass(), NULL,
+	// 	LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
+	// 	LAYOUT_HorizAlignment, LALIGN_CENTER,
+	// 	LAYOUT_SpaceInner, TRUE,
+	// 	LAYOUT_SpaceOuter, TRUE,
+	// 	LAYOUT_AddChild, textInputTextEditor,
+	// 	CHILD_WeightedWidth, 80,
+	// 	CHILD_NoDispose, TRUE,
+	// 	LAYOUT_AddChild, sendMessageButton,
+	// 	CHILD_WeightedWidth, 20,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create chat input layout\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	idcmpHookMainWindow.h_Entry = (HOOKFUNC)processIDCMPMainWindow;
-	idcmpHookMainWindow.h_Data = NULL;
-	idcmpHookMainWindow.h_SubEntry = NULL;
+	// if ((chatOutputLayout = NewObject(LAYOUT_GetClass(), NULL,
+	// 	LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
+	// 	LAYOUT_HorizAlignment, LALIGN_CENTER,
+	// 	LAYOUT_SpaceInner, TRUE,
+	// 	LAYOUT_SpaceOuter, TRUE,
+	// 	LAYOUT_AddChild, chatOutputTextEditor,
+	// 	CHILD_WeightedWidth, 100,
+	// 	LAYOUT_AddChild, chatOutputScroller,
+	// 	CHILD_WeightedWidth, 10,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create chat output layout\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	idcmpHookCreateImageWindow.h_Entry = (HOOKFUNC)processIDCMPCreateImageWindow;
-	idcmpHookCreateImageWindow.h_Data = NULL;
-	idcmpHookCreateImageWindow.h_SubEntry = NULL;
+	// if ((chatTextBoxesLayout = NewObject(LAYOUT_GetClass(), NULL,
+	// 	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+	// 	LAYOUT_SpaceInner, TRUE,
+	// 	LAYOUT_SpaceOuter, TRUE,
+	// 	LAYOUT_AddChild, chatOutputLayout,
+	// 	CHILD_WeightedHeight, 70,
+	// 	LAYOUT_AddChild, chatInputLayout,
+	// 	CHILD_WeightedHeight, 20,
+	// 	LAYOUT_AddChild, statusBar,
+	// 	CHILD_WeightedHeight, 10,
+	// 	CHILD_NoDispose, TRUE,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create chat layout\n");
+	// 		return RETURN_ERROR;
+	// }
+
+	// if ((chatModeLayout = NewObject(LAYOUT_GetClass(), NULL,
+	// 	LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
+	// 	LAYOUT_SpaceInner, TRUE,
+	// 	LAYOUT_SpaceOuter, TRUE,
+	// 	LAYOUT_AddChild, conversationsLayout,
+	// 	CHILD_WeightedWidth, 30,
+	// 	LAYOUT_AddChild, chatTextBoxesLayout,
+	// 	CHILD_WeightedWidth, 70,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create main layout\n");
+	// 		return RETURN_ERROR;
+	// }
+
+	// if ((imageGenerationInputLayout = NewObject(LAYOUT_GetClass(), NULL,
+	// 	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+	// 	LAYOUT_SpaceInner, TRUE,
+	// 	LAYOUT_SpaceOuter, TRUE,
+	// 	LAYOUT_AddChild, openSmallImageButton,
+	// 	CHILD_WeightedHeight, 10,
+	// 	LAYOUT_AddChild, openMediumImageButton,
+	// 	CHILD_WeightedHeight, 10,
+	// 	LAYOUT_AddChild, openLargeImageButton,
+	// 	CHILD_WeightedHeight, 10,
+	// 	LAYOUT_AddChild, openOriginalImageButton,
+	// 	CHILD_WeightedHeight, 10,
+	// 	LAYOUT_AddChild, saveCopyButton,
+	// 	CHILD_WeightedHeight, 10,
+	// 	LAYOUT_AddChild, textInputTextEditor,
+	// 	CHILD_WeightedHeight, 40,
+	// 	CHILD_NoDispose, TRUE,
+	// 	LAYOUT_AddChild, createImageButton,
+	// 	CHILD_WeightedHeight, 10,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create image generation input layout\n");
+	// 		return RETURN_ERROR;
+	// }
+
+	// if ((imageGenerationTextBoxesLayout = NewObject(LAYOUT_GetClass(), NULL,
+	// 	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+	// 	LAYOUT_SpaceInner, TRUE,
+	// 	LAYOUT_SpaceOuter, TRUE,
+	// 	LAYOUT_AddChild, imageGenerationInputLayout,
+	// 	CHILD_WeightedHeight, 90,
+	// 	LAYOUT_AddChild, statusBar,
+	// 	CHILD_WeightedHeight, 10,
+	// 	CHILD_NoDispose, TRUE,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create chat layout\n");
+	// 		return RETURN_ERROR;
+	// }
+
+	// if ((imageGenerationModeLayout = NewObject(LAYOUT_GetClass(), NULL,
+	// 	LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
+	// 	LAYOUT_SpaceInner, TRUE,
+	// 	LAYOUT_SpaceOuter, TRUE,
+	// 	LAYOUT_AddChild, imageHistoryButtonsLayout,
+	// 	CHILD_WeightedWidth, 30,
+	// 	LAYOUT_AddChild, imageGenerationTextBoxesLayout,
+	// 	CHILD_WeightedWidth, 70,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create image generation layout\n");
+	// 		return RETURN_ERROR;
+	// }
+
+	// if ((modeClickTabOld = NewObject(CLICKTAB_GetClass(), NULL,
+	// 	GA_ID, CLICKTAB_MODE_SELECTION_ID,
+	// 	GA_RelVerify, TRUE,
+	// 	CLICKTAB_Labels, modeSelectionTabList,
+	// 	CLICKTAB_AutoFit, TRUE,
+	// 	CLICKTAB_PageGroup, NewObject(PAGE_GetClass(), NULL,
+    //         PAGE_Add,       chatModeLayout,
+    //         PAGE_Add,       imageGenerationModeLayout,
+    //     TAG_DONE),
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create mode click tab\n");
+	// 		return RETURN_ERROR;
+	// }
+
+	// Object *layoutToOpen;
+	// if (isAmigaOS3X) {
+	// 	switch (selectedMode) {
+	// 		case MODE_SELECTION_TAB_CHAT_ID:
+	// 			layoutToOpen = chatModeLayout;
+	// 			break;
+	// 		case MODE_SELECTION_TAB_IMAGE_GENERATION_ID:
+	// 			layoutToOpen = imageGenerationModeLayout;
+	// 			break;
+	// 		default:
+	// 			layoutToOpen = chatModeLayout;
+	// 			break;
+	// 	}
+	// } else {
+	// 	layoutToOpen = modeClickTabOld;
+	// }
+
+	// if ((mainLayout = NewObject(LAYOUT_GetClass(), NULL,
+	// 	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+	// 	LAYOUT_DeferLayout, TRUE,
+	// 	LAYOUT_SpaceInner, TRUE,
+	// 	LAYOUT_SpaceOuter, TRUE,
+	// 	LAYOUT_AddChild, layoutToOpen,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create main layout\n");
+	// 		return RETURN_ERROR;
+	// }
+
+	// idcmpHookMainWindow.h_Entry = (HOOKFUNC)processIDCMPMainWindow;
+	// idcmpHookMainWindow.h_Data = NULL;
+	// idcmpHookMainWindow.h_SubEntry = NULL;
+
+	// idcmpHookCreateImageWindow.h_Entry = (HOOKFUNC)processIDCMPCreateImageWindow;
+	// idcmpHookCreateImageWindow.h_Data = NULL;
+	// idcmpHookCreateImageWindow.h_SubEntry = NULL;
 
 	appPort = CreateMsgPort();
 
@@ -1335,57 +1489,57 @@ LONG initVideo() {
 	refreshOpenAIMenuItems();
 	#endif
 
-	if ((mainWindowObject = NewObject(WINDOW_GetClass(), NULL,
-		WINDOW_Position, WPOS_CENTERSCREEN,
-		WA_Activate, TRUE,
-		WA_Title, "AmigaGPT",
-		WA_Width, (WORD)(screen->Width * 0.8),
-		WA_Height, (WORD)(screen->Height * 0.8),
-		WA_CloseGadget, TRUE,
-		WA_DragBar, isPublicScreen,
-		WA_SizeGadget, isPublicScreen,
-		WA_DepthGadget, isPublicScreen,
-		WA_NewLookMenus, TRUE,
-		WINDOW_AppPort, appPort,
-		WINDOW_IconifyGadget, isPublicScreen,
-		WINDOW_Layout, mainLayout,
-		WINDOW_SharedPort, NULL,
-		WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
-		WINDOW_NewMenu, amigaGPTMenu,
-		WINDOW_IDCMPHook, &idcmpHookMainWindow,
-		WINDOW_InterpretIDCMPHook, TRUE,
-		WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE,
-		WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MENUPICK | IDCMP_RAWKEY,
-		WA_CustomScreen, screen,
-		TAG_DONE)) == NULL) {
-			printf("Could not create mainWindow object\n");
-			return RETURN_ERROR;
-	}
+	// if ((mainWindowObjectOld = NewObject(WINDOW_GetClass(), NULL,
+	// 	WINDOW_Position, WPOS_CENTERSCREEN,
+	// 	WA_Activate, TRUE,
+	// 	WA_Title, "AmigaGPT",
+	// 	WA_Width, (WORD)(screen->Width * 0.8),
+	// 	WA_Height, (WORD)(screen->Height * 0.8),
+	// 	WA_CloseGadget, TRUE,
+	// 	WA_DragBar, isPublicScreen,
+	// 	WA_SizeGadget, isPublicScreen,
+	// 	WA_DepthGadget, isPublicScreen,
+	// 	WA_NewLookMenus, TRUE,
+	// 	WINDOW_AppPort, appPort,
+	// 	WINDOW_IconifyGadget, isPublicScreen,
+	// 	WINDOW_Layout, mainLayout,
+	// 	WINDOW_SharedPort, NULL,
+	// 	WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
+	// 	// WINDOW_NewMenu, amigaGPTMenu,
+	// 	WINDOW_IDCMPHook, &idcmpHookMainWindow,
+	// 	WINDOW_InterpretIDCMPHook, TRUE,
+	// 	WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE,
+	// 	WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MENUPICK | IDCMP_RAWKEY,
+	// 	WA_CustomScreen, screen,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create mainWindow object\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((mainWindow = (struct Window *)DoMethod(mainWindowObject, WM_OPEN, NULL)) == NULL) {
-		printf("Could not open mainWindow\n");
-		return RETURN_ERROR;
-	}
+	// if ((mainWindow = (struct Window *)DoMethod(mainWindowObjectOld, WM_OPEN, NULL)) == NULL) {
+	// 	printf("Could not open mainWindow\n");
+	// 	return RETURN_ERROR;
+	// }
 
-	if (!isPublicScreen) {
-		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEditorColorMap, TAG_DONE);
-		if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID)
-			SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEditorColorMap, TAG_DONE);
-	}
+	// if (!isPublicScreen) {
+	// 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEditorColorMap, TAG_DONE);
+	// 	if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID)
+	// 		SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEditorColorMap, TAG_DONE);
+	// }
 
 	refreshOpenAIMenuItems();
 	refreshSpeechMenuItems();
 
 	// For some reason it won't let you paste text into the empty text editor unless you do this
-	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);
+	// DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);
 
-	updateStatusBar("Ready", 5);
+	// updateStatusBar("Ready", 5);
 	
-	if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID) {
-		ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
-	} else {
-		ActivateLayoutGadget(imageGenerationModeLayout, mainWindow, NULL, textInputTextEditor);
-	}
+	// if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID) {
+	// 	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
+	// } else {
+	// 	ActivateLayoutGadget(imageGenerationModeLayout, mainWindow, NULL, textInputTextEditor);
+	// }
 
 	return RETURN_OK;
 }
@@ -1397,8 +1551,8 @@ LONG initVideo() {
  * 
 **/ 
 void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
-	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_Pens, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[3*pen+1], config.colors[3*pen+2], config.colors[3*pen+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen, TAG_DONE);
-	SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, message, TAG_DONE);
+	// SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_Pens, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[3*pen+1], config.colors[3*pen+2], config.colors[3*pen+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen, TAG_DONE);
+	// SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, message, TAG_DONE);
 }
 
 /**
@@ -1407,7 +1561,6 @@ void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
 **/
 static LONG openStartupOptions() {
 	Object *screenSelectRadioButton, *startupOptionsOkButton, *screenSelectGroup, *startupOptionsWindowObject = NULL;
-	struct Window *screenSelectWindow;
 	struct ScreenModeRequester *screenModeRequester;
 	screen = LockPubScreen("Workbench");
 
@@ -1508,7 +1661,7 @@ static LONG openStartupOptions() {
 						ASLSM_MinDepth, 4,
 						ASLSM_NegativeText, NULL,
 						TAG_DONE)) {
-							if (MUI_AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)screenSelectWindow, TAG_DONE)) {
+							if (MUI_AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)startupOptionsWindowObject, TAG_DONE)) {
 								isPublicScreen = FALSE;
 								UnlockPubScreen(NULL, screen);
 								for (WORD i = 0; i < NUMDRIPENS; i++) {
@@ -1634,38 +1787,38 @@ static void sendChatMessage() {
 		isNewConversation = TRUE;
 		currentConversation = newConversation();
 	}
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 
 	updateStatusBar("Sending message...", 7);
 	STRPTR receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 
-	STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
+	// STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
 	// Remove trailing newline characters
-	while (text[strlen(text) - 1] == '\n') {
-		text[strlen(text) - 1] = '\0';
-	}
-	STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
-	addTextToConversation(currentConversation, textUTF_8, "user");
-	displayConversation(currentConversation);
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
-	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
+	// while (text[strlen(text) - 1] == '\n') {
+	// 	text[strlen(text) - 1] = '\0';
+	// }
+	// STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
+	// addTextToConversation(currentConversation, textUTF_8, "user");
+	// displayConversation(currentConversation);
+	// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+	// ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
 
 	BOOL dataStreamFinished = FALSE;
 	ULONG speechIndex = 0;
 	UWORD wordNumber = 0;
-	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
+	// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 	do {
 		if (config.chatSystem != NULL && (config.chatSystem) > 0)
 			addTextToConversation(currentConversation, config.chatSystem, "system");
 		responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, TRUE);
 		if (responses == NULL) {
 			displayError("Could not connect to OpenAI");
-			SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-			SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-			SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+			// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+			// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+			// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 			FreeVec(receivedMessage);
 			return;
 		}
@@ -1681,21 +1834,21 @@ static void sendChatMessage() {
 				struct json_object *message = json_object_object_get(error, "message");
 				STRPTR messageString = json_object_get_string(message);
 				displayError(messageString);
-				SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
+				// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
 				struct MinNode *lastMessage = RemTail(currentConversation);
 				FreeVec(lastMessage);
 				if (currentConversation == currentConversation->mlh_TailPred) {
 					freeConversation(currentConversation);
 					currentConversation = NULL;
-					DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+					// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 				} else {
 					displayConversation(currentConversation);
 				}
 				json_object_put(response);
 
-				SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-				SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-				SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 
 				FreeVec(receivedMessage);
 				return;
@@ -1706,7 +1859,7 @@ static void sendChatMessage() {
 				STRPTR contentStringISO8859_1 = UTF8ToISO8859_1(contentString);
 				strncat(receivedMessage, contentString, READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
 				STRPTR receivedMessageISO8859_1 = UTF8ToISO8859_1(receivedMessage);
-				DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, contentStringISO8859_1, GV_TEXTEDITOR_InsertText_Bottom);
+				// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, contentStringISO8859_1, GV_TEXTEDITOR_InsertText_Bottom);
 				if (++wordNumber % 50 == 0) {
 					if (config.speechEnabled) {
 						if (config.speechSystem != SPEECH_SYSTEM_OPENAI) {
@@ -1747,9 +1900,9 @@ static void sendChatMessage() {
 			responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, FALSE);
 			if (responses == NULL) {
 				displayError("Could not connect to OpenAI");
-				SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-				SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-				SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 				return;
 			}
 			if (responses[0] != NULL) {
@@ -1767,12 +1920,12 @@ static void sendChatMessage() {
 
 	updateStatusBar("Ready", 5);
 	
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 
-	FreeVec(text);
-	FreeVec(textUTF_8);
+	// FreeVec(text);
+	// FreeVec(textUTF_8);
 }
 
 /**
@@ -1780,28 +1933,29 @@ static void sendChatMessage() {
  */
 static void updateMenu() {
 	#ifdef __AMIGAOS3__
-	APTR *visualInfo;
-	ULONG error = 0;
-	FreeMenus(menu);
-	if (visualInfo = GetVisualInfo(screen, NULL)) {
-		if (menu = CreateMenus(amigaGPTMenu, GTMN_SecondaryError, &error, TAG_DONE)) {
-			if (LayoutMenus(menu, visualInfo, GTMN_NewLookMenus, TRUE, TAG_DONE)) {
-				if (SetMenuStrip(mainWindow, menu)) {
-					RefreshWindowFrame(mainWindow);
-				} else {
-					printf("Error setting menu strip\n");
-				}
-			} else {
-				printf("Error laying out menu\n");
-			}
-		} else {
-			printf("Error creating menu: %ld\n", error);
-		}
-		FreeVisualInfo(visualInfo);
-	}
+	set(mainWindowObject, MUIA_Window_Menustrip, MUI_MakeObject(MUIO_MenustripNM, amigaGPTMenu));
+	// APTR *visualInfo;
+	// ULONG error = 0;
+	// FreeMenus(menu);
+	// if (visualInfo = GetVisualInfo(screen, NULL)) {
+	// 	if (menu = CreateMenus(amigaGPTMenu, GTMN_SecondaryError, &error, TAG_DONE)) {
+	// 		if (LayoutMenus(menu, visualInfo, GTMN_NewLookMenus, TRUE, TAG_DONE)) {
+	// 			if (SetMenuStrip(mainWindow, menu)) {
+	// 				RefreshWindowFrame(mainWindow);
+	// 			} else {
+	// 				printf("Error setting menu strip\n");
+	// 			}
+	// 		} else {
+	// 			printf("Error laying out menu\n");
+	// 		}
+	// 	} else {
+	// 		printf("Error creating menu: %ld\n", error);
+	// 	}
+	// 	FreeVisualInfo(visualInfo);
+	// }
 	#else
-	SetAttrs(mainWindowObject, WINDOW_NewMenu, amigaGPTMenu, TAG_DONE);
-	GetAttr(WINDOW_MenuStrip, mainWindowObject, &menu);
+	SetAttrs(mainWindowObjectOld, WINDOW_NewMenu, amigaGPTMenu, TAG_DONE);
+	GetAttr(WINDOW_MenuStrip, mainWindowObjectOld, &menu);
 	#endif
 }
 
@@ -1810,7 +1964,7 @@ static void updateMenu() {
 **/
 static void refreshOpenAIMenuItems() {
 	struct NewMenu *newMenu = amigaGPTMenu;
-	while ((int)newMenu->nm_UserData != MENU_ITEM_CHAT_MODEL_ID) {
+	while ((int)newMenu->nm_UserData != MENU_ITEM_CHAT_MODEL) {
 		newMenu++;
 	}
 
@@ -1823,7 +1977,7 @@ static void refreshOpenAIMenuItems() {
 		}
 	}
 
-	while ((int)newMenu->nm_UserData != MENU_ITEM_IMAGE_MODEL_ID) {
+	while ((int)newMenu->nm_UserData != MENU_ITEM_IMAGE_MODEL) {
 		newMenu++;
 	}
 
@@ -1835,7 +1989,7 @@ static void refreshOpenAIMenuItems() {
 		}
 	}
 
-	while ((int)newMenu->nm_UserData != MENU_ITEM_IMAGE_SIZE_DALL_E_2_ID) {
+	while ((int)newMenu->nm_UserData != MENU_ITEM_IMAGE_SIZE_DALL_E_2) {
 		newMenu++;
 	}
 
@@ -1847,7 +2001,7 @@ static void refreshOpenAIMenuItems() {
 		}
 	}
 
-	while ((int)newMenu->nm_UserData != MENU_ITEM_IMAGE_SIZE_DALL_E_3_ID) {
+	while ((int)newMenu->nm_UserData != MENU_ITEM_IMAGE_SIZE_DALL_E_3) {
 		newMenu++;
 	}
 
@@ -1867,7 +2021,7 @@ static void refreshOpenAIMenuItems() {
 **/
 static void refreshSpeechMenuItems() {
 	struct NewMenu *newMenu = amigaGPTMenu;
-	while ((int)newMenu->nm_UserData != MENU_ITEM_SPEECH_ENABLED_ID) {
+	while ((int)newMenu->nm_UserData != MENU_ITEM_SPEECH_ENABLED) {
 		newMenu++;
 	}
 
@@ -1985,9 +2139,9 @@ static void addConversationToConversationList(struct MinList *conversation, STRP
 			return RETURN_ERROR;
 	}
 
-	SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
+	// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
 	AddHead(conversationList, node);
-	SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
+	// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
 }
 
 /**
@@ -2005,9 +2159,9 @@ static void addImageToImageList(struct GeneratedImage *image) {
 			return RETURN_ERROR;
 	}
 
-	SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
+	// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
 	AddHead(imageList, node);
-	SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
+	// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
 }
 
 /**
@@ -2033,7 +2187,7 @@ static struct MinList* getConversationFromConversationList(struct List *conversa
 **/
 static void displayConversation(struct MinList *conversation) {
 	struct ConversationNode *conversationNode;
-	DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
+	// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	STRPTR conversationString = AllocVec(WRITE_BUFFER_LENGTH, MEMF_CLEAR);
 
 	for (conversationNode = (struct ConversationNode *)conversation->mlh_Head;
@@ -2041,7 +2195,7 @@ static void displayConversation(struct MinList *conversation) {
 		 conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
 			if ((strlen(conversationString) + strlen(conversationNode->content) + 5) > WRITE_BUFFER_LENGTH) {
 				displayError("The conversation has exceeded the maximum length.\n\nPlease start a new conversation.");
-				SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+				// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 				return;
 			}
 			if (strcmp(conversationNode->role, "user") == 0) {
@@ -2064,10 +2218,10 @@ static void displayConversation(struct MinList *conversation) {
 	}
 
 	STRPTR conversationStringISO8859_1 = UTF8ToISO8859_1(conversationString);
-	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationStringISO8859_1, TAG_DONE);
+	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationStringISO8859_1, TAG_DONE);
 	Delay(2);
-	SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_CursorY, ~0, TAG_DONE);
-	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_CursorY, ~0, TAG_DONE);
+	// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	FreeVec(conversationString);
 	FreeVec(conversationStringISO8859_1);
 }
@@ -2119,10 +2273,10 @@ static void freeImageList() {
  * Free the mode selection tab list
 **/
 static void freeModeSelectionTabList() {
-	struct Node *modeSelectionTabListNode;
-	while ((modeSelectionTabListNode = RemHead(modeSelectionTabList)) != NULL) {
-		FreeClickTabNode(modeSelectionTabListNode);
-	}
+	// struct Node *modeSelectionTabListNode;
+	// while ((modeSelectionTabListNode = RemHead(modeSelectionTabList)) != NULL) {
+	// 	FreeClickTabNode(modeSelectionTabListNode);
+	// }
 }
 
 /**
@@ -2136,11 +2290,11 @@ static void removeConversationFromConversationList(struct MinList *conversation)
 		struct MinList *listBrowserConversation;
 		GetListBrowserNodeAttrs(node, LBNA_UserData, (struct MinList *)&listBrowserConversation, TAG_END);
 		if (listBrowserConversation == conversation) {
-			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
-			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
+			// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
+			// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
 			Remove(node);
 			FreeListBrowserNode(node);
-			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
+			// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
 			freeConversation(conversation);
 			return;
 		}
@@ -2192,11 +2346,11 @@ static void removeImageFromImageList(struct GeneratedImage *image) {
 			#else
 			Delete(image->filePath);
 			#endif
-			SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
-			SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
+			// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
+			// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
 			Remove(node);
 			FreeListBrowserNode(node);
-			SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
+			// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
 			FreeVec(image->filePath);
 			FreeVec(image->name);
 			FreeVec(image->prompt);
@@ -2214,26 +2368,46 @@ static void removeImageFromImageList(struct GeneratedImage *image) {
  * @see RETURN_ERROR
 **/
 LONG startGUIRunLoop() {
-	ULONG signalMask, winSignal, signals, result;
-	BOOL done = FALSE;
+	ULONG signals;
+	BOOL running = TRUE;
 	WORD code;
 
-	GetAttr(WINDOW_SigMask, mainWindowObject, &winSignal);
-	signalMask = winSignal;
+	// GetAttr(WINDOW_SigMask, mainWindowObjectOld, &winSignal);
+	// signalMask = winSignal;
 
-	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GFLG_SELECTED, TRUE, TAG_DONE);
+	// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GFLG_SELECTED, TRUE, TAG_DONE);
 
-	activeTextEditorGadgetID = TEXT_INPUT_TEXT_EDITOR_ID;
+	// activeTextEditorGadgetID = TEXT_INPUT_TEXT_EDITOR_ID;
 
 	refreshSpeechMenuItems();
 
-	while (!done) {
-		signals = Wait(signalMask);
+	while (running) {
+		ULONG id = DoMethod(app, MUIM_Application_NewInput, &signals);
 
-		BOOL isTextInputTextEditorActive = GetAttr(GFLG_SELECTED, textInputTextEditor, NULL);
-		BOOL isChatOutputTextEditorActive = GetAttr(GFLG_SELECTED, chatOutputTextEditor, NULL);
+		switch(id) {
+			case MUIV_Application_ReturnID_Quit:
+			case MENU_ITEM_QUIT:
+				if((MUI_RequestA(app, mainWindowObject, 0, "Quit?", "_Yes|_No", "\33cAre you sure you want to quit AmigaGPT?", 0)) == 1)
+						running = FALSE;
+				break;
+			case MENU_ITEM_ABOUT_AMIGAGPT:
+				set(aboutAmigaGPTWindowObject, MUIA_Window_Open, TRUE);
+				break;
+			case MENU_ITEM_ABOUT_MUI:
+				openAboutMUIWindow();
+				break;
+			case MENU_ITEM_VIEW_DOCUMENTATION:
+				openDocumentation();
+				break;
+			default:
+				break;
+		}
+		if(running && signals) Wait(signals);
+	}
+		// BOOL isTextInputTextEditorActive = GetAttr(GFLG_SELECTED, textInputTextEditor, NULL);
+		// BOOL isChatOutputTextEditorActive = GetAttr(GFLG_SELECTED, chatOutputTextEditor, NULL);
 
-		while ((result = DoMethod(mainWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
+		/* while ((result = DoMethod(mainWindowObjectOld, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
 			switch (result & WMHI_CLASSMASK) {
 				case WMHI_CLOSEWINDOW:
 					done = TRUE;
@@ -2316,7 +2490,7 @@ LONG startGUIRunLoop() {
 						case CLICKTAB_MODE_SELECTION_ID:
 						{
 							struct Node *node;
-							GetAttr(CLICKTAB_CurrentNode, modeClickTab, &node);
+							GetAttr(CLICKTAB_CurrentNode, modeClickTabOld, &node);
 							if (node == chatTabNode) {
 								ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
 								SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, FALSE, TAG_DONE);
@@ -2704,6 +2878,7 @@ LONG startGUIRunLoop() {
 			}
 		}
 	}
+	*/
 
 	saveConversations();
 	saveImages();
@@ -2784,8 +2959,8 @@ void displayError(STRPTR message) {
 	};
 	EasyRequest(mainWindow, &errorRequester, NULL, NULL);
 
-	if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID)
-		SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID)
+	// 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 
 	FreeVec(adjustedMsg);
 }
@@ -2808,31 +2983,20 @@ void displayDiskError(STRPTR message, LONG error) {
 }
 
 /**
- * Opens the About window
+ * Opens the About NUI window
 **/
-static void openAboutWindow() {
-	#define APP_VERSION_STRING(x) #x
-	#define APP_BUILD_DATE_STRING(x) #x
-	struct EasyStruct aboutRequester = {
-		sizeof(struct EasyStruct),
-		0,
-		"About",
-		#ifdef __AMIGAOS3__
-		"AmigaGPT for m68k AmigaOS 3\n\n"
-		#else
-		"AmigaGPT for PPC AmigaOS 4\n\n"
-		#endif
-		"Version " APP_VERSION "\n"
-		"Build date: " __DATE__ "\n"
-		"Build number: " BUILD_NUMBER "\n\n"
-		"Developed by Cameron Armstrong (@sacredbanana on GitHub,\n"
-		"YouTube and Twitter, @Nightfox on EAB)\n\n"
-		"This app will always remain free but if you would like to\n"
-		"support me you can do so at https://paypal.me/sacredbanana",
-		"OK"
-	};
-	ULONG flags = IDCMP_RAWKEY | IDCMP_MOUSEBUTTONS;
-	EasyRequest(mainWindow, &aboutRequester, &flags, NULL);
+static void openAboutMUIWindow() {
+	if(aboutMUIWindowObject == NULL) {
+	  aboutMUIWindowObject = AboutmuiObject,
+	    MUIA_Window_RefWindow, mainWindowObject,
+	    MUIA_Aboutmui_Application, app,
+	    End;
+	}
+
+	if(aboutMUIWindowObject != NULL)
+	  set(aboutMUIWindowObject, MUIA_Window_Open, TRUE);
+	else
+	  DisplayBeep(0);
 }
 
 /**
@@ -2854,8 +3018,8 @@ static void openChatFontRequester() {
 			config.chatFontFlags = chatFont->ta_Flags;
 			writeConfig();
 			printf("Chat font name: %s\n", config.chatFontName);
-			SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
-			SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
+			// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
+			// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
 		}
 		FreeAslRequest(fontRequester);
 	}
@@ -2866,7 +3030,7 @@ static void openChatFontRequester() {
 **/
 static void openUIFontRequester() {
 	struct FontRequester *fontRequester;
-	GetAttr(WINDOW_Window, mainWindowObject, &mainWindow);
+	// GetAttr(WINDOW_Window, mainWindowObjectOld, &mainWindow);
 	if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
 		struct TextAttr *uiFont;
 		if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
@@ -2884,20 +3048,20 @@ static void openUIFontRequester() {
 				if (uiTextFont)
 					CloseFont(uiTextFont);
 
-				DoMethod(mainWindowObject, WM_CLOSE, NULL);
+				// DoMethod(mainWindowObjectOld, WM_CLOSE, NULL);
 				uiTextFont = OpenFont(uiFont);
 				SetFont(&(screen->RastPort), uiTextFont);
 				SetFont(mainWindow->RPort, uiTextFont);
 				RemakeDisplay();
 				RethinkDisplay();
-				mainWindow = DoMethod(mainWindowObject, WM_OPEN, NULL);
+				// mainWindow = DoMethod(mainWindowObjectOld, WM_OPEN, NULL);
 			}
-			SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-			SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-			SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-			SetGadgetAttrs(statusBar, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+			// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+			// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+			// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+			// SetGadgetAttrs(statusBar, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 			updateStatusBar("Ready", 5);
-			SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+			// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 
 		}
 		FreeAslRequest(fontRequester);
@@ -3115,155 +3279,155 @@ static LONG saveImages() {
 static void createImage() {
 	struct json_object *response;
 
-	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(openOriginalImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(saveCopyButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(openOriginalImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(saveCopyButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 
-	STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
+	// STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
 
-	// Remove trailing newline characters
-	while (text[strlen(text) - 1] == '\n') {
-		text[strlen(text) - 1] = '\0';
-	}
-	STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
+	// // Remove trailing newline characters
+	// while (text[strlen(text) - 1] == '\n') {
+	// 	text[strlen(text) - 1] = '\0';
+	// }
+	// STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
 
-	const enum ImageSize imageSize = config.imageModel == DALL_E_2 ? config.imageSizeDallE2 : config.imageSizeDallE3;
-	response = postImageCreationRequestToOpenAI(textUTF_8, config.imageModel, imageSize, config.openAiApiKey);
-	if (response == NULL) {
-		displayError("Error connecting. Please try again.");
-		SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		updateStatusBar("Error", 6);
-		return;
-	}
-	struct json_object *error;
+	// const enum ImageSize imageSize = config.imageModel == DALL_E_2 ? config.imageSizeDallE2 : config.imageSizeDallE3;
+	// response = postImageCreationRequestToOpenAI(textUTF_8, config.imageModel, imageSize, config.openAiApiKey);
+	// if (response == NULL) {
+	// 	displayError("Error connecting. Please try again.");
+	// 	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// 	SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// 	SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// 	updateStatusBar("Error", 6);
+	// 	return;
+	// }
+	// struct json_object *error;
 
-	if (json_object_object_get_ex(response, "error", &error)) {
-		struct json_object *message = json_object_object_get(error, "message");
-		STRPTR messageString = json_object_get_string(message);
-		displayError(messageString);
-		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
-		json_object_put(response);
-		SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-		updateStatusBar("Error", 6);
-		json_object_put(response);
-		return;
-	}
+	// if (json_object_object_get_ex(response, "error", &error)) {
+	// 	struct json_object *message = json_object_object_get(error, "message");
+	// 	STRPTR messageString = json_object_get_string(message);
+	// 	displayError(messageString);
+	// 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
+	// 	json_object_put(response);
+	// 	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// 	SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// 	SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// 	updateStatusBar("Error", 6);
+	// 	json_object_put(response);
+	// 	return;
+	// }
 
-	struct array_list *data = json_object_get_array(json_object_object_get(response, "data"));
-	struct json_object *dataObject = (struct json_object *)data->array[0];
+	// struct array_list *data = json_object_get_array(json_object_object_get(response, "data"));
+	// struct json_object *dataObject = (struct json_object *)data->array[0];
 
-	STRPTR url = json_object_get_string(json_object_object_get(dataObject, "url"));
+	// STRPTR url = json_object_get_string(json_object_object_get(dataObject, "url"));
 
-	CreateDir(PROGDIR"images");
+	// CreateDir(PROGDIR"images");
 
-	// Generate unique ID for the image
-	UBYTE fullPath[30] = "";
-	UBYTE id[11] = "";
-	CONST_STRPTR idChars = "abcdefghijklmnopqrstuvwxyz0123456789";
-	srand(time(NULL));
-	for (int i = 0; i < 9; i++) {
-		id[i] = idChars[rand() % strlen(idChars)];
-	}
-	snprintf(fullPath, sizeof(fullPath), PROGDIR"images/%s.png", id);
+	// // Generate unique ID for the image
+	// UBYTE fullPath[30] = "";
+	// UBYTE id[11] = "";
+	// CONST_STRPTR idChars = "abcdefghijklmnopqrstuvwxyz0123456789";
+	// srand(time(NULL));
+	// for (int i = 0; i < 9; i++) {
+	// 	id[i] = idChars[rand() % strlen(idChars)];
+	// }
+	// snprintf(fullPath, sizeof(fullPath), PROGDIR"images/%s.png", id);
 
-	downloadFile(url, fullPath);
+	// downloadFile(url, fullPath);
 
-	json_object_put(response);
+	// json_object_put(response);
 
-	WORD imageWidth, imageHeight;
-	switch (imageSize) {
-		case IMAGE_SIZE_256x256:
-			imageWidth = 256;
-			imageHeight = 256;
-			break;
-		case IMAGE_SIZE_512x512:
-			imageWidth = 512;
-			imageHeight = 512;
-			break;
-		case IMAGE_SIZE_1024x1024:
-			imageWidth = 1024;
-			imageHeight = 1024;
-			break;
-		case IMAGE_SIZE_1792x1024:
-			imageWidth = 1792;
-			imageHeight = 1024;
-			break;
-		case IMAGE_SIZE_1024x1792:
-			imageWidth = 1024;
-			imageHeight = 1792;
-			break;
-		default:
-			printf("Invalid image size\n");
-			imageWidth = 256;
-			imageHeight = 256;
-			break;
-	}
+	// WORD imageWidth, imageHeight;
+	// switch (imageSize) {
+	// 	case IMAGE_SIZE_256x256:
+	// 		imageWidth = 256;
+	// 		imageHeight = 256;
+	// 		break;
+	// 	case IMAGE_SIZE_512x512:
+	// 		imageWidth = 512;
+	// 		imageHeight = 512;
+	// 		break;
+	// 	case IMAGE_SIZE_1024x1024:
+	// 		imageWidth = 1024;
+	// 		imageHeight = 1024;
+	// 		break;
+	// 	case IMAGE_SIZE_1792x1024:
+	// 		imageWidth = 1792;
+	// 		imageHeight = 1024;
+	// 		break;
+	// 	case IMAGE_SIZE_1024x1792:
+	// 		imageWidth = 1024;
+	// 		imageHeight = 1792;
+	// 		break;
+	// 	default:
+	// 		printf("Invalid image size\n");
+	// 		imageWidth = 256;
+	// 		imageHeight = 256;
+	// 		break;
+	// }
 
-	updateStatusBar("Generating image name...", 7);
-	struct MinList *imageNameConversation = newConversation();
-	addTextToConversation(imageNameConversation, text, "user");
-	addTextToConversation(imageNameConversation, "generate a short title for this image and don't enclose the title in quotes or prefix the response with anything", "user");
-	struct json_object **responses = postChatMessageToOpenAI(imageNameConversation, config.chatModel, config.openAiApiKey, FALSE);
+	// updateStatusBar("Generating image name...", 7);
+	// struct MinList *imageNameConversation = newConversation();
+	// addTextToConversation(imageNameConversation, text, "user");
+	// addTextToConversation(imageNameConversation, "generate a short title for this image and don't enclose the title in quotes or prefix the response with anything", "user");
+	// struct json_object **responses = postChatMessageToOpenAI(imageNameConversation, config.chatModel, config.openAiApiKey, FALSE);
 	
-	struct GeneratedImage *generatedImage = AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
-	if (responses == NULL) {
-		displayError("Failed to generate image name. Using ID instead.");
-		updateStatusBar("Error", 6);
-	} else if (responses[0] != NULL) {
-		STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
-		formatText(responseString);
-		generatedImage->name = AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
-		strncpy(generatedImage->name, responseString, strlen(responseString));
-		updateStatusBar("Ready", 5);
-		json_object_put(responses[0]);
-		FreeVec(responses);
-	} else {
-		generatedImage->name = AllocVec(11, MEMF_ANY | MEMF_CLEAR);
-		strncpy(generatedImage->name, id, 10);
-		updateStatusBar("Ready", 5);
-		if (responses != NULL) {
-			FreeVec(responses);
-		}
-		displayError("Failed to generate image name. Using ID instead.");
-	}
-	freeConversation(imageNameConversation);
+	// struct GeneratedImage *generatedImage = AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
+	// if (responses == NULL) {
+	// 	displayError("Failed to generate image name. Using ID instead.");
+	// 	updateStatusBar("Error", 6);
+	// } else if (responses[0] != NULL) {
+	// 	STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
+	// 	formatText(responseString);
+	// 	generatedImage->name = AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
+	// 	strncpy(generatedImage->name, responseString, strlen(responseString));
+	// 	updateStatusBar("Ready", 5);
+	// 	json_object_put(responses[0]);
+	// 	FreeVec(responses);
+	// } else {
+	// 	generatedImage->name = AllocVec(11, MEMF_ANY | MEMF_CLEAR);
+	// 	strncpy(generatedImage->name, id, 10);
+	// 	updateStatusBar("Ready", 5);
+	// 	if (responses != NULL) {
+	// 		FreeVec(responses);
+	// 	}
+	// 	displayError("Failed to generate image name. Using ID instead.");
+	// }
+	// freeConversation(imageNameConversation);
 
-	generatedImage->filePath = AllocVec(strlen(fullPath) + 1, MEMF_ANY | MEMF_CLEAR);
-	strncpy(generatedImage->filePath, fullPath, strlen(fullPath));
-	generatedImage->prompt = AllocVec(strlen(text) + 1, MEMF_ANY | MEMF_CLEAR);
-	strncpy(generatedImage->prompt, text, strlen(text));
-	generatedImage->imageModel = config.imageModel;
-	generatedImage->width = imageWidth;
-	generatedImage->height = imageHeight;
-	addImageToImageList(generatedImage);
-	currentImage = generatedImage;
+	// generatedImage->filePath = AllocVec(strlen(fullPath) + 1, MEMF_ANY | MEMF_CLEAR);
+	// strncpy(generatedImage->filePath, fullPath, strlen(fullPath));
+	// generatedImage->prompt = AllocVec(strlen(text) + 1, MEMF_ANY | MEMF_CLEAR);
+	// strncpy(generatedImage->prompt, text, strlen(text));
+	// generatedImage->imageModel = config.imageModel;
+	// generatedImage->width = imageWidth;
+	// generatedImage->height = imageHeight;
+	// addImageToImageList(generatedImage);
+	// currentImage = generatedImage;
 
-	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, TRUE, TAG_DONE);
-	SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	SetGadgetAttrs(openOriginalImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	SetGadgetAttrs(saveCopyButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, TRUE, TAG_DONE);
+	// SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, TRUE, TAG_DONE);
+	// SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// SetGadgetAttrs(openOriginalImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// SetGadgetAttrs(saveCopyButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, TRUE, TAG_DONE);
 
-	FreeVec(text);
-	FreeVec(textUTF_8);
+	// FreeVec(text);
+	// FreeVec(textUTF_8);
 	return;
 }
 
@@ -3278,100 +3442,100 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scale
 	WORD lowestWidth = (screen->Width - 16) < scaledWidth ? (screen->Width - 16) : scaledWidth;
 	WORD lowestHeight = screen->Height < scaledHeight ? screen->Height : scaledHeight;
 
-	struct Object *textLabel = NewObject(STRING_GetClass(), NULL,
-		GA_ReadOnly, TRUE,
-		STRINGA_Justification, GACT_STRINGCENTER,
-		TAG_DONE);
+	// struct Object *textLabel = NewObject(STRING_GetClass(), NULL,
+	// 	GA_ReadOnly, TRUE,
+	// 	STRINGA_Justification, GACT_STRINGCENTER,
+	// 	TAG_DONE);
 	
-	struct Object *imageWindowLayout = NewObject(LAYOUT_GetClass(), NULL,
-	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-		LAYOUT_AddChild, textLabel,
-		CHILD_MinWidth, lowestWidth,
-		CHILD_MinHeight, lowestHeight,
-		TAG_DONE);
+	// struct Object *imageWindowLayout = NewObject(LAYOUT_GetClass(), NULL,
+	// LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
+	// 	LAYOUT_AddChild, textLabel,
+	// 	CHILD_MinWidth, lowestWidth,
+	// 	CHILD_MinHeight, lowestHeight,
+	// 	TAG_DONE);
 
-	if ((imageWindowObject = NewObject(WINDOW_GetClass(), NULL,
-		WINDOW_Position, WPOS_CENTERSCREEN,
-		WA_Activate, TRUE,
-		WA_Title, image->name,
-		WA_Width, lowestWidth,
-		WA_Height, lowestHeight,
-		WA_CloseGadget, TRUE,
-		WA_DragBar, TRUE,
-		WA_SizeGadget, TRUE,
-		WA_DepthGadget, FALSE,
-		WINDOW_Layout, imageWindowLayout,
-		WINDOW_Position, WPOS_CENTERSCREEN,
-		WINDOW_IDCMPHook, &idcmpHookCreateImageWindow,
-		WINDOW_InterpretIDCMPHook, TRUE,
-		WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE | IDCMP_REFRESHWINDOW,
-		WA_IDCMP,			IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_REFRESHWINDOW | IDCMP_IDCMPUPDATE |
-							IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MOUSEBUTTONS |
-							IDCMP_MOUSEMOVE | IDCMP_VANILLAKEY |
-							IDCMP_RAWKEY,
-		WA_CustomScreen, screen,
-		TAG_DONE)) == NULL) {
-			printf("Could not create imageWindowObject\n");
-			return RETURN_ERROR;
-	}
+	// if ((imageWindowObject = NewObject(WINDOW_GetClass(), NULL,
+	// 	WINDOW_Position, WPOS_CENTERSCREEN,
+	// 	WA_Activate, TRUE,
+	// 	WA_Title, image->name,
+	// 	WA_Width, lowestWidth,
+	// 	WA_Height, lowestHeight,
+	// 	WA_CloseGadget, TRUE,
+	// 	WA_DragBar, TRUE,
+	// 	WA_SizeGadget, TRUE,
+	// 	WA_DepthGadget, FALSE,
+	// 	WINDOW_Layout, imageWindowLayout,
+	// 	WINDOW_Position, WPOS_CENTERSCREEN,
+	// 	WINDOW_IDCMPHook, &idcmpHookCreateImageWindow,
+	// 	WINDOW_InterpretIDCMPHook, TRUE,
+	// 	WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE | IDCMP_REFRESHWINDOW,
+	// 	WA_IDCMP,			IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_REFRESHWINDOW | IDCMP_IDCMPUPDATE |
+	// 						IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MOUSEBUTTONS |
+	// 						IDCMP_MOUSEMOVE | IDCMP_VANILLAKEY |
+	// 						IDCMP_RAWKEY,
+	// 	WA_CustomScreen, screen,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create imageWindowObject\n");
+	// 		return RETURN_ERROR;
+	// }
 
-	if ((imageWindow = (struct Window *)DoMethod(imageWindowObject, WM_OPEN, NULL)) == NULL) {
-		printf("Could not open imageWindow\n");
-		return RETURN_ERROR;
-	}
+	// if ((imageWindow = (struct Window *)DoMethod(imageWindowObject, WM_OPEN, NULL)) == NULL) {
+	// 	printf("Could not open imageWindow\n");
+	// 	return RETURN_ERROR;
+	// }
 
-	SetGadgetAttrs(textLabel, imageWindow, NULL, STRINGA_TextVal, "Loading image...", TAG_DONE);
+	// SetGadgetAttrs(textLabel, imageWindow, NULL, STRINGA_TextVal, "Loading image...", TAG_DONE);
 
-	updateStatusBar("Loading image...", 7);
-	SetWindowPointer(imageWindow,
-								WA_BusyPointer,	TRUE,
-							TAG_DONE);
+	// updateStatusBar("Loading image...", 7);
+	// SetWindowPointer(imageWindow,
+	// 							WA_BusyPointer,	TRUE,
+	// 						TAG_DONE);
 
-	if ((dataTypeObject = NewDTObject(image->filePath,
-		DTA_SourceType, DTST_FILE,
-		DTA_GroupID, GID_PICTURE,
-		PDTA_Remap, TRUE,
-		GA_Text, "Loading image...",
-		GA_Left, imageWindow->BorderLeft,
-		GA_Top, imageWindow->BorderTop,
-		GA_RelWidth, imageWindow->Width - imageWindow->BorderLeft - imageWindow->BorderRight,
-		GA_RelHeight, imageWindow->Height - imageWindow->BorderTop - imageWindow->BorderBottom,
-		ICA_TARGET,	ICTARGET_IDCMP,
-		TAG_DONE)) == NULL) {
-			printf("Could not create dataTypeObject\n");
-			return RETURN_ERROR;	
-	}
+	// if ((dataTypeObject = NewDTObject(image->filePath,
+	// 	DTA_SourceType, DTST_FILE,
+	// 	DTA_GroupID, GID_PICTURE,
+	// 	PDTA_Remap, TRUE,
+	// 	GA_Text, "Loading image...",
+	// 	GA_Left, imageWindow->BorderLeft,
+	// 	GA_Top, imageWindow->BorderTop,
+	// 	GA_RelWidth, imageWindow->Width - imageWindow->BorderLeft - imageWindow->BorderRight,
+	// 	GA_RelHeight, imageWindow->Height - imageWindow->BorderTop - imageWindow->BorderBottom,
+	// 	ICA_TARGET,	ICTARGET_IDCMP,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create dataTypeObject\n");
+	// 		return RETURN_ERROR;	
+	// }
 
-	updateStatusBar("Scaling image...", 8);
-	DoMethod(dataTypeObject, PDTM_SCALE, lowestWidth, lowestHeight, 0);
+	// updateStatusBar("Scaling image...", 8);
+	// DoMethod(dataTypeObject, PDTM_SCALE, lowestWidth, lowestHeight, 0);
 
-	AddDTObject(imageWindow, NULL, dataTypeObject, -1);
-	RefreshDTObjects(dataTypeObject, imageWindow, NULL, NULL);
+	// AddDTObject(imageWindow, NULL, dataTypeObject, -1);
+	// RefreshDTObjects(dataTypeObject, imageWindow, NULL, NULL);
 
-	BOOL done = FALSE;
-	ULONG signalMask, winSignal, signals, result;
-	WORD code;
+	// BOOL done = FALSE;
+	// ULONG signalMask, winSignal, signals, result;
+	// WORD code;
 
-	GetAttr(WINDOW_SigMask, imageWindowObject, &winSignal);
-	signalMask = winSignal;
-	while (!done) {
-		signals = Wait(signalMask);
-		while ((result = DoMethod(imageWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
-			switch (result & WMHI_CLASSMASK) {
-				case WMHI_RAWKEY:
-				case WMHI_CLOSEWINDOW:
-				case WMHI_MOUSEBUTTONS:
-					done = TRUE;
-					break;
-			}
-		}
-	}
+	// GetAttr(WINDOW_SigMask, imageWindowObject, &winSignal);
+	// signalMask = winSignal;
+	// while (!done) {
+	// 	signals = Wait(signalMask);
+	// 	while ((result = DoMethod(imageWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
+	// 		switch (result & WMHI_CLASSMASK) {
+	// 			case WMHI_RAWKEY:
+	// 			case WMHI_CLOSEWINDOW:
+	// 			case WMHI_MOUSEBUTTONS:
+	// 				done = TRUE;
+	// 				break;
+	// 		}
+	// 	}
+	// }
 
-	DoMethod(imageWindowObject, WM_CLOSE);
-	DisposeObject(imageWindowObject);
-	DisposeDTObject(dataTypeObject);
+	// DoMethod(imageWindowObject, WM_CLOSE);
+	// DisposeObject(imageWindowObject);
+	// DisposeDTObject(dataTypeObject);
 
-	updateStatusBar("Ready", 5);
+	// updateStatusBar("Ready", 5);
 }
 
 /**
@@ -3739,9 +3903,9 @@ void shutdownGUI() {
 	MUI_DisposeObject(app);
 	freeConversationList();
 	freeImageList();
-	if (mainWindowObject) {
-		DisposeObject(mainWindowObject);
-	}
+	// if (mainWindowObjectOld) {
+	// 	DisposeObject(mainWindowObjectOld);
+	// }
 	freeModeSelectionTabList();
 	if (isPublicScreen) {
 		ReleasePen(screen->ViewPort.ColorMap, sendMessageButtonPen);
