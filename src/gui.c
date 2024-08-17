@@ -1,6 +1,5 @@
 #include "amiga_compiler.h"
 #include <classes/requester.h>
-// #include <classes/window.h>
 #include <datatypes/datatypes.h>
 #include <datatypes/datatypesclass.h>
 #include <datatypes/pictureclass.h>
@@ -8,19 +7,8 @@
 #include <exec/exec.h>
 #include <exec/execbase.h>
 #include <exec/lists.h>
-// #include <gadgets/button.h>
-// #include <gadgets/clicktab.h>
-// #include <gadgets/layout.h>
-// #include <gadgets/listbrowser.h>
-// #include <gadgets/radiobutton.h>
-// #include <gadgets/scroller.h>
-// #include <gadgets/string.h>
-// #include <gadgets/texteditor.h>
 #include <graphics/modeid.h>
 #include <graphics/text.h>
-// #include <intuition/classusr.h>
-// #include <intuition/gadgetclass.h>
-// #include <intuition/icclass.h>
 #include <intuition/intuition.h>
 #include <json-c/json.h>
 #include <libraries/amigaguide.h>
@@ -31,8 +19,6 @@
 #include <mui/TextEditor_mcc.h>
 #include <proto/amigaguide.h>
 #include <proto/asl.h>
-// #include <proto/button.h>
-// #include <proto/clicktab.h>
 #include <proto/datatypes.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
@@ -41,14 +27,8 @@
 #endif
 #include <proto/graphics.h>
 #include <proto/intuition.h>
-// #include <proto/layout.h>
 #include <proto/listbrowser.h>
 #include <proto/muimaster.h>
-// #include <proto/radiobutton.h>
-// #include <proto/requester.h>
-// #include <proto/scroller.h>
-// #include <proto/string.h>
-// #include <proto/texteditor.h>
 #include <proto/utility.h>
 #include <proto/window.h>
 #include <stdio.h>
@@ -182,62 +162,25 @@ struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
 struct Library *AmigaGuideBase;
 struct Library *AslBase;
-// struct Library *WindowBase = NULL;
-// struct Library *LayoutBase;
-// struct Library *ClickTabBase;
-// struct Library *ButtonBase;
-// struct Library *RadioButtonBase;
-// struct Library *ScrollerBase;
-// struct Library *StringBase;
-// struct Library *ListBrowserBase;
 struct Library *RequesterBase = NULL;
 struct Library *GadToolsBase;
 struct Library *DataTypesBase;
 struct Library *MUIMasterBase;
 struct Window *mainWindow;
 struct Window *imageWindow;
-// static Object *mainWindowObjectOld;
 static Object *mainWindowObject;
 static Object *imageWindowObject;
 static Object *aboutAmigaGPTWindowObject;
 static Object *aboutMUIWindowObject = NULL;
-// static Object *mainLayout;
 static Object *mainGroup;
-// static Object *chatModeLayout;
 static Object *chatModeGroup;
-// static Object *imageGenerationModeLayout;
-// static Object *imageGenerationModeGroup;
-// static Object *modeClickTabOld;
 static Object *modeClickTab;
-// static Object *chatTextBoxesLayout;
 static Object *chatTextBoxesGroup;
-// static Object *imageGenerationTextBoxesLayout;
-// static Object *chatInputLayout;
-// static Object *imageGenerationInputLayout;
-// static Object *chatOutputLayout;
-// static Object *conversationsLayout;
-// static Object *sendMessageButton;
-// static Object *textInputTextEditor;
-// static Object *chatOutputTextEditor;
 static Object *chatOutputText;
 static Object *chatOutputTextVirtualGroup;
 static Object *chatOutputTextScrollGroup;
 static Object *chatOutputScroller;
-// static Object *statusBar;
-// static Object *conversationListBrowser;
-// static Object *newChatButton;
-// static Object *deleteChatButton;
-// static Object *createImageButton;
 static Object *dataTypeObject;
-// static Object *imageListBrowser;
-// static Object *newImageButton;
-// static Object *deleteImageButton;
-// static Object *openSmallImageButton;
-// static Object *openMediumImageButton;
-// static Object *openLargeImageButton;
-// static Object *openOriginalImageButton;
-// static Object *saveCopyButton;
-// static Object *imageHistoryButtonsLayout;
 static Object *app;
 static struct Screen *screen;
 static BOOL isPublicScreen;
@@ -262,7 +205,7 @@ static struct TextAttr screenFont = {
 };
 static struct TextAttr chatTextAttr = {0};
 static struct TextAttr uiTextAttr = {0};
-static struct Menu *menu;
+// static struct Menu *menu;
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, (APTR)NULL_ID},
 	{NM_ITEM, "About AmigaGPT", 0, 0, 0, (APTR)MENU_ITEM_ABOUT_AMIGAGPT},
@@ -384,6 +327,7 @@ static void saveImageCopy(struct GeneratedImage *image);
 static void removeImageFromImageList(struct GeneratedImage *image);
 static void openChatFontRequester();
 static void openUIFontRequester();
+static void openAboutAmigaGPTWindow();
 static void openAboutMUIWindow();
 static void openSpeechAccentRequester();
 static void openApiKeyRequester();
@@ -558,152 +502,6 @@ LONG openGUILibraries() {
 	}
 	#endif
 
-	// #ifdef __AMIGAOS3__
-	// if ((WindowBase = OpenLibrary("window.class", 42)) == NULL) {
-	// 	printf("Could not open window.class\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #else
-	// if ((WindowBase = OpenLibrary("window.class", 50)) == NULL) {
-	// 	printf("Could not open window.class\n");
-	// 	return RETURN_ERROR;
-	// }
-	// if ((IWindow = (struct WindowIFace *)GetInterface(WindowBase, "main", 1, NULL)) == NULL) {
-	// 	printf("Could not get interface for window.class\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #endif
-
-	// #ifdef __AMIGAOS3__
-	// if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 44)) == NULL) {
-	// 	printf("Could not open layout.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #else
-	// if ((LayoutBase = OpenLibrary("gadgets/layout.gadget", 50)) == NULL) {
-	// 	printf("Could not open layout.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// if ((ILayout = (struct LayoutIFace *)GetInterface(LayoutBase, "main", 1, NULL)) == NULL) {
-	// 	printf("Could not get interface for layout.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #endif
-
-	// #ifdef __AMIGAOS3__
-	// if ((ButtonBase = OpenLibrary("gadgets/button.gadget", 44)) == NULL) {
-	// 	printf("Could not open button.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #else
-	// if ((ButtonBase = OpenLibrary("gadgets/button.gadget", 50)) == NULL) {
-	// 	printf("Could not open button.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// if ((IButton = (struct ButtonIFace *)GetInterface(ButtonBase, "main", 1, NULL)) == NULL) {
-	// 	printf("Could not get interface for button.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #endif
-
-	// #ifdef __AMIGAOS3__
-	// if ((ClickTabBase = OpenLibrary("gadgets/clicktab.gadget", 44)) == NULL) {
-	// 	printf("Could not open clicktab.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #else
-	// if ((ClickTabBase= OpenLibrary("gadgets/clicktab.gadget", 50)) == NULL) {
-	// 	printf("Could not open clicktab.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// if ((IClickTab = (struct ClickTabIFace *)GetInterface(ClickTabBase, "main", 1, NULL)) == NULL) {
-	// 	printf("Could not get interface for clicktab.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #endif
-
-	// isAmigaOS3X = ClickTabBase->lib_Version < 45;
-
-	// #ifdef __AMIGAOS3__
-	// if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 44)) == NULL) {
-	// 	printf("Could not open radiobutton.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #else
-	// if ((RadioButtonBase = OpenLibrary("gadgets/radiobutton.gadget", 50)) == NULL) {
-	// 	printf("Could not open radiobutton.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// if ((IRadioButton = (struct RadioButtonIFace *)GetInterface(RadioButtonBase, "main", 1, NULL)) == NULL) {
-	// 	printf("Could not get interface for radiobutton.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #endif
-
-	// #ifdef __AMIGAOS3__
-	// if ((TextFieldBase = OpenLibrary("gadgets/texteditor.gadget", 15)) == NULL) {
-	// 	printf("Could not open texteditor.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #else
-	// if ((TextEditorBase = OpenLibrary("gadgets/texteditor.gadget", 50)) == NULL) {
-	// 	printf("Could not open texteditor.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// if ((ITextEditor = (struct TextEditorIFace *)GetInterface(TextEditorBase, "main", 1, NULL)) == NULL) {
-	// 	printf("Could not get interface for texteditor.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #endif
-
-	// #ifdef __AMIGAOS3__
-	// if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 44)) == NULL) {
-	// 	printf("Could not open scroller.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #else
-	// if ((ScrollerBase = OpenLibrary("gadgets/scroller.gadget", 50)) == NULL) {
-	// 	printf("Could not open scroller.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// if ((IScroller = (struct ScrollerIFace *)GetInterface(ScrollerBase, "main", 1, NULL)) == NULL) {
-	// 	printf("Could not get interface for scroller.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #endif
-
-	// #ifdef __AMIGAOS3__
-	// if ((StringBase = OpenLibrary("gadgets/string.gadget", 44)) == NULL) {
-	// 	printf("Could not open string.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #else
-	// if ((StringBase = OpenLibrary("gadgets/string.gadget", 50)) == NULL) {
-	// 	printf("Could not open string.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// if ((IString = (struct StringIFace *)GetInterface(StringBase, "main", 1, NULL)) == NULL) {
-	// 	printf("Could not get interface for string.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #endif
-
-	// #ifdef __AMIGAOS3__
-	// if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 44)) == NULL) {
-	// 	printf("Could not open listbrowser.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #else
-	// if ((ListBrowserBase = OpenLibrary("gadgets/listbrowser.gadget", 50)) == NULL) {
-	// 	printf("Could not open listbrowser.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// if ((IListBrowser = (struct ListBrowserIFace *)GetInterface(ListBrowserBase, "main", 1, NULL)) == NULL) {
-	// 	printf("Could not get interface for listbrowser.gadget\n");
-	// 	return RETURN_ERROR;
-	// }
-	// #endif
-
 	#ifdef __AMIGAOS3__
 	if ((RequesterBase = OpenLibrary("requester.class", 42)) == NULL) {
 		printf("Could not open requester.class\n");
@@ -803,21 +601,10 @@ static void closeGUILibraries() {
 	DropInterface((struct Interface *)IGraphics);
 	DropInterface((struct Interface *)IAsl);
 	DropInterface((struct Interface *)IAmigaGuide);
-	// DropInterface((struct Interface *)IWindow);
-	// DropInterface((struct Interface *)ILayout);
-	// DropInterface((struct Interface *)IClickTab);
-	// DropInterface((struct Interface *)IButton);
-	// DropInterface((struct Interface *)ITextEditor);
-	// DropInterface((struct Interface *)IRadioButton);
-	// DropInterface((struct Interface *)IString);
-	// DropInterface((struct Interface *)IListBrowser);
-	// DropInterface((struct Interface *)IScroller);
 	DropInterface((struct Interface *)IRequester);
 	DropInterface((struct Interface *)IDataTypes);
 	DropInterface((struct Interface *)IMUI);
-	// CloseLibrary(TextEditorBase);
 	#else
-	// CloseLibrary(TextFieldBase);
 	CloseLibrary(GadToolsBase);
 	#endif
 
@@ -825,14 +612,6 @@ static void closeGUILibraries() {
 	CloseLibrary(GfxBase);
 	CloseLibrary(AslBase);
 	CloseLibrary(AmigaGuideBase);
-	// CloseLibrary(WindowBase);
-	// CloseLibrary(LayoutBase);
-	// CloseLibrary(ClickTabBase);
-	// CloseLibrary(ButtonBase);
-	// CloseLibrary(RadioButtonBase);
-	// CloseLibrary(StringBase);
-	// CloseLibrary(ListBrowserBase);
-	// CloseLibrary(ScrollerBase);
 	CloseLibrary(RequesterBase);
 	CloseLibrary(DataTypesBase);
 	CloseLibrary(MUIMasterBase);
@@ -847,13 +626,18 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
-	app = ApplicationObject,
+	if (!(app = ApplicationObject,
 		MUIA_Application_Title, "AmigaGPT",
 		MUIA_Application_Version, APP_VERSION,
 		MUIA_Application_Copyright, "(C) 2023-2024 Cameron Armstrong (Nightfox/sacredbanana)",
 		MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
 		MUIA_Application_Description, "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E",
-			SubWindow, aboutAmigaGPTWindowObject = AboutboxObject,
+		End)) {
+		printf("Could not create app!\n");
+		return RETURN_ERROR;
+	}
+
+	if ((aboutAmigaGPTWindowObject = AboutboxObject,
 				MUIA_Aboutbox_Build, BUILD_NUMBER " ("__DATE__ ")\n""Git commit: " GIT_COMMIT "\nGit branch: " GIT_BRANCH "\n" "Commit timestamp: " GIT_TIMESTAMP,
 				MUIA_Aboutbox_Credits, "This app will always remain free but if you would like to support me you can do so at https://paypal.me/sacredbanana\n"
 									"\n"
@@ -912,10 +696,12 @@ LONG initVideo() {
 									"\thttps://eab.abime.net/showthread.php?t=114798\n",
 				MUIA_Aboutbox_URL, "https://github.com/sacredbanana/AmigaGPT",
 				MUIA_Aboutbox_URLText, "Visit the GitHub repository for the latest release",
-			End,
-		End;
-
-	DoMethod(aboutAmigaGPTWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
+			End) ) {
+				DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
+				DoMethod(aboutAmigaGPTWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
+	} else {
+		printf("Warning: Could not create aboutAmigaGPTWindowObject\nThe installed MUI version is probably too old.\nFalling back to a simple requester.\n");
+	}
 
 	if (openStartupOptions() == RETURN_ERROR)
 		return RETURN_ERROR;
@@ -968,7 +754,7 @@ LONG initVideo() {
 	sendMessageButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1;
 
 	if (!(chatOutputText = TextObject,
-		MUIA_Text_Contents, "This is a test.\nI hope this works.\n\33c\33bMUI\33n\nis magic\n\nm68k-amigaos-gcc -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DPROGRAM_NAME=\"AmigaGPT\" -DPROGDIR=\"PROGDIR:\" -Ofast -Wl,-Map=out/AmigaGPT.map,-L/opt/amiga/m68k-amigaos/lib,-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui  build/os3/obj/config.o build/os3/obj/gui.o build/os3/obj/mai\n\nm68k-amigaos-gcc -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DPROGRAM_NAME=\"AmigaGPT\" -DPROGDIR=\"PROGDIR:\" -Ofast -Wl,-Map=out/AmigaGPT.map,-L/opt/amiga/m68k-amigaos/lib,-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui  build/os3/obj/config.o build/os3/obj/gui.o build/os3/obj/mai\n\nm68k-amigaos-gcc -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DPROGRAM_NAME=\"AmigaGPT\" -DPROGDIR=\"PROGDIR:\" -Ofast -Wl,-Map=out/AmigaGPT.map,-L/opt/amiga/m68k-amigaos/lib,-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui  build/os3/obj/config.o build/os3/obj/gui.o build/os3/obj/mai\n\n",
+		MUIA_Text_Contents, "This is a test.\nI hope this works.\n\33c\33bMUI\33n\nis magic\n\n",
 		MUIA_Text_Copy, TRUE,
 		MUIA_Text_Data, NULL,
 		MUIA_Text_Marking, TRUE,
@@ -1620,7 +1406,7 @@ static LONG openStartupOptions() {
 
 	DoMethod(app, OM_ADDMEMBER, startupOptionsWindowObject);
 
-	set(startupOptionsWindowObject,MUIA_Window_Open,TRUE);
+	set(startupOptionsWindowObject, MUIA_Window_Open, TRUE);
 		  
 	DoMethod(startupOptionsOkButton, MUIM_Notify, MUIA_Pressed, FALSE,
           app, 2, MUIM_Application_ReturnID, STARTUP_OPTIONS_OK_BUTTON_PRESS);
@@ -1661,7 +1447,7 @@ static LONG openStartupOptions() {
 						ASLSM_MinDepth, 4,
 						ASLSM_NegativeText, NULL,
 						TAG_DONE)) {
-							if (MUI_AslRequestTags(screenModeRequester, ASLSM_Window, (ULONG)startupOptionsWindowObject, TAG_DONE)) {
+							if (MUI_AslRequestTags(screenModeRequester, TAG_DONE)) {
 								isPublicScreen = FALSE;
 								UnlockPubScreen(NULL, screen);
 								for (WORD i = 0; i < NUMDRIPENS; i++) {
@@ -2391,7 +2177,7 @@ LONG startGUIRunLoop() {
 						running = FALSE;
 				break;
 			case MENU_ITEM_ABOUT_AMIGAGPT:
-				set(aboutAmigaGPTWindowObject, MUIA_Window_Open, TRUE);
+				openAboutAmigaGPTWindow();
 				break;
 			case MENU_ITEM_ABOUT_MUI:
 				openAboutMUIWindow();
@@ -2980,6 +2766,36 @@ void displayDiskError(STRPTR message, LONG error) {
 	displayError(finalMessage);
 	FreeVec(errorMessage);
 	FreeVec(finalMessage);
+}
+
+/**
+ * Opens the About AmigaGPT window
+**/
+static void openAboutAmigaGPTWindow() {
+	if(aboutAmigaGPTWindowObject) {
+	  set(aboutAmigaGPTWindowObject, MUIA_Window_Open, TRUE);
+	} else {
+	  struct EasyStruct aboutRequester = {
+		sizeof(struct EasyStruct),
+		0,
+		"About",
+		#ifdef __AMIGAOS3__
+		"AmigaGPT for m68k AmigaOS 3\n\n"
+		#else
+		"AmigaGPT for PPC AmigaOS 4\n\n"
+		#endif
+		"Version " APP_VERSION "\n"
+		"Build date: " __DATE__ "\n"
+		"Build number: " BUILD_NUMBER "\n\n"
+		"Developed by Cameron Armstrong (@sacredbanana on GitHub,\n"
+		"YouTube and Twitter, @Nightfox on EAB)\n\n"
+		"This app will always remain free but if you would like to\n"
+		"support me you can do so at https://paypal.me/sacredbanana",
+		"OK"
+	};
+	ULONG flags = IDCMP_RAWKEY | IDCMP_MOUSEBUTTONS;
+	EasyRequest(mainWindow, &aboutRequester, &flags, NULL);
+	}
 }
 
 /**
@@ -3919,9 +3735,9 @@ void shutdownGUI() {
 		CloseFont(uiTextFont);
 	if (appPort)
 		DeleteMsgPort(appPort);
-	#ifdef __AMIGAOS3__
-	FreeMenus(menu);
-	#endif
+	// #ifdef __AMIGAOS3__
+	// FreeMenus(menu);
+	// #endif
 
 	closeGUILibraries();
 }

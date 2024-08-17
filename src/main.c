@@ -82,7 +82,7 @@ LONG main(int argc, char **argv) {
 
 	if (initVideo() == RETURN_ERROR) {
 		printf("Failed to initialize video\n");
-		cleanExit(RETURN_ERROR);
+		exit(RETURN_ERROR);
 	}
 
 	if (initSpeech(config.speechSystem) == RETURN_ERROR) {
@@ -107,7 +107,7 @@ LONG main(int argc, char **argv) {
 
 	if (startGUIRunLoop() == RETURN_ERROR) {
 		printf("GUI run loop returned an error\n");
-		cleanExit(RETURN_ERROR);
+		exit(RETURN_ERROR);
 	}
 
 	exit(RETURN_OK);
