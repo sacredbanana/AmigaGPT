@@ -45,7 +45,7 @@ else
 	SED = sed -i
 endif
 
-CCFLAGS = -MP -MMD -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -lmui -D__AMIGAOS4__ -D__USE_INLINE__ -DHAVE_VASPRINTF -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\"
+CCFLAGS = -MP -MMD -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -D__AMIGAOS4__ -D__USE_INLINE__ -DHAVE_VASPRINTF -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\"
 ifeq ($(DEBUG),1)
 	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -O1
 else

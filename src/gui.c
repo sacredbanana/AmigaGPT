@@ -22,9 +22,7 @@
 #include <proto/datatypes.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
-#ifdef __AMIGAOS3__
 #include <proto/gadtools.h>
-#endif
 #include <proto/graphics.h>
 #include <proto/intuition.h>
 #include <proto/listbrowser.h>
@@ -153,7 +151,8 @@ struct WindowIFace *IWindow;
 extern struct UtilityIFace *IUtility;
 struct Library *TextEditorBase;
 struct DataTypesIFace *IDataTypes;
-struct MUIIFace *IMUI;
+struct MUIMasterIFace *IMUIMaster;
+struct GadToolsIFace *IGadTools;
 #else
 struct Library *TextFieldBase;
 #endif
@@ -494,7 +493,7 @@ LONG openGUILibraries() {
 		printf("Could not open muimaster.library\n");
 		return RETURN_ERROR;
 	}
-	if ((IMUI = (struct MUIIFace *)GetInterface(MUIMasterBase, "main", 1, NULL)) == NULL) {
+	if ((IMUIMaster = (struct MUIIFace *)GetInterface(MUIMasterBase, "main", 1, NULL)) == NULL) {
 		printf("Could not get interface for muimaster.library\n");
 		return RETURN_ERROR;
 	}
@@ -569,6 +568,15 @@ LONG openGUILibraries() {
 		printf( "Could not open gadtools.library\n");
 		return RETURN_ERROR;
 	}
+	#else
+	if ((GadToolsBase = OpenLibrary("gadtools.library", 50)) == NULL) {
+		printf( "Could not open gadtools.library\n");
+		return RETURN_ERROR;
+	}
+	if ((IGadTools = (struct GadToolsIFace *)GetInterface(GadToolsBase, "main", 1, NULL)) == NULL) {
+		printf( "Could not get interface for gadtools.library\n");
+		return RETURN_ERROR;
+	}
 	#endif
 
 	#ifdef __AMIGAOS3__
@@ -601,11 +609,11 @@ static void closeGUILibraries() {
 	DropInterface((struct Interface *)IAmigaGuide);
 	DropInterface((struct Interface *)IRequester);
 	DropInterface((struct Interface *)IDataTypes);
-	DropInterface((struct Interface *)IMUI);
-	#else
-	CloseLibrary(GadToolsBase);
+	DropInterface((struct Interface *)IMUIMaster);
+	DropInterface((struct Interface *)IGadTools);
 	#endif
 
+	CloseLibrary(GadToolsBase);
 	CloseLibrary(IntuitionBase);
 	CloseLibrary(GfxBase);
 	CloseLibrary(AslBase);
@@ -730,15 +738,15 @@ LONG initVideo() {
 	// AddTail(modeSelectionTabList, chatTabNode);	
 	// AddTail(modeSelectionTabList, imageGenerationTabNode);
 
-	conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
-	NewList(conversationList);
-	currentConversation = NULL;
-	loadConversations();
+	// conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
+	// NewList(conversationList);
+	// currentConversation = NULL;
+	// loadConversations();
 
-	imageList = AllocVec(sizeof(struct List), MEMF_CLEAR);
-	NewList(imageList);
-	currentImage = NULL;
-	loadImages();
+	// imageList = AllocVec(sizeof(struct List), MEMF_CLEAR);
+	// NewList(imageList);
+	// currentImage = NULL;
+	// loadImages();
 
 	uiTextAttr.ta_Name = config.uiFontName ? config.uiFontName : "";
 	uiTextAttr.ta_YSize = config.uiFontSize;
@@ -795,6 +803,7 @@ LONG initVideo() {
 				MUIA_CycleChain, TRUE,
 				MUIA_String_Accept, TRUE,
 				MUIA_String_AdvanceOnCR, TRUE,
+				MUIA_Background, MUII_FILL,
 			End,
 			Child, HGroup,
 					Child, chatInputTextEditor = TextEditorObject,
@@ -813,7 +822,6 @@ LONG initVideo() {
 
 	DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
 	  app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
-
 	DoMethod(app, OM_ADDMEMBER, mainWindowObject);
 
 	set(mainWindowObject,MUIA_Window_Open,TRUE);
@@ -1264,10 +1272,6 @@ LONG initVideo() {
 
 	appPort = CreateMsgPort();
 
-	#ifdef __AMIGAOS4__
-	refreshOpenAIMenuItems();
-	#endif
-
 	// if ((mainWindowObjectOld = NewObject(WINDOW_GetClass(), NULL,
 	// 	WINDOW_Position, WPOS_CENTERSCREEN,
 	// 	WA_Activate, TRUE,
@@ -1711,31 +1715,7 @@ static void sendChatMessage() {
  * Updates the menu
  */
 static void updateMenu() {
-	#ifdef __AMIGAOS3__
 	set(mainWindowObject, MUIA_Window_Menustrip, MUI_MakeObject(MUIO_MenustripNM, amigaGPTMenu));
-	// APTR *visualInfo;
-	// ULONG error = 0;
-	// FreeMenus(menu);
-	// if (visualInfo = GetVisualInfo(screen, NULL)) {
-	// 	if (menu = CreateMenus(amigaGPTMenu, GTMN_SecondaryError, &error, TAG_DONE)) {
-	// 		if (LayoutMenus(menu, visualInfo, GTMN_NewLookMenus, TRUE, TAG_DONE)) {
-	// 			if (SetMenuStrip(mainWindow, menu)) {
-	// 				RefreshWindowFrame(mainWindow);
-	// 			} else {
-	// 				printf("Error setting menu strip\n");
-	// 			}
-	// 		} else {
-	// 			printf("Error laying out menu\n");
-	// 		}
-	// 	} else {
-	// 		printf("Error creating menu: %ld\n", error);
-	// 	}
-	// 	FreeVisualInfo(visualInfo);
-	// }
-	#else
-	SetAttrs(mainWindowObjectOld, WINDOW_NewMenu, amigaGPTMenu, TAG_DONE);
-	GetAttr(WINDOW_MenuStrip, mainWindowObjectOld, &menu);
-	#endif
 }
 
 /**
@@ -2659,8 +2639,8 @@ LONG startGUIRunLoop() {
 	}
 	*/
 
-	saveConversations();
-	saveImages();
+	// saveConversations();
+	// saveImages();
 
 	return RETURN_OK;
 }
@@ -3710,12 +3690,12 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 **/
 void shutdownGUI() {
 	MUI_DisposeObject(app);
-	freeConversationList();
-	freeImageList();
+	// freeConversationList();
+	// freeImageList();
 	// if (mainWindowObjectOld) {
 	// 	DisposeObject(mainWindowObjectOld);
 	// }
-	freeModeSelectionTabList();
+	// freeModeSelectionTabList();
 	if (isPublicScreen) {
 		ReleasePen(screen->ViewPort.ColorMap, sendMessageButtonPen);
 		ReleasePen(screen->ViewPort.ColorMap, newChatButtonPen);
@@ -3728,9 +3708,6 @@ void shutdownGUI() {
 		CloseFont(uiTextFont);
 	if (appPort)
 		DeleteMsgPort(appPort);
-	// #ifdef __AMIGAOS3__
-	// FreeMenus(menu);
-	// #endif
 
 	closeGUILibraries();
 }

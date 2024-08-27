@@ -10,7 +10,15 @@
                 "/opt/amiga/m68k-amigaos/sys-include",
                 "/opt/amiga/m68k-amigaos/clib2/include"
             ],
-            "defines": ["__AMIGAOS3__", "PROGRAM_NAME=\"AmigaGPT\"","__stdargs= ", "PROGDIR=\"PROGDIR:\"", "GIT_BRANCH= ", "GIT_COMMIT= ", "GIT_TIMESTAMP= "],
+            "defines": [
+                "__AMIGAOS3__",
+                "PROGRAM_NAME=\"AmigaGPT\"",
+                "__stdargs= ",
+                "PROGDIR=\"PROGDIR:\"",
+                "GIT_BRANCH= ",
+                "GIT_COMMIT= ",
+                "GIT_TIMESTAMP= "
+            ],
             "macFrameworkPath": [
                 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
             ],
@@ -36,7 +44,15 @@
                 "/opt/amiga/ppc-amigaos/SDK/local/common/include",
                 "/opt/amiga/ppc-amigaos/SDK/local/newlib/include"
             ],
-            "defines": ["__AMIGAOS4__", "__USE_INLINE__", "PROGRAM_NAME=\"AmigaGPT\"", "PROGDIR=\"PROGDIR:\"", "GIT_BRANCH= ", "GIT_COMMIT= ", "GIT_TIMESTAMP= "],
+            "defines": [
+                "__AMIGAOS4__",
+                "__USE_INLINE__",
+                "PROGRAM_NAME=\"AmigaGPT\"",
+                "PROGDIR=\"PROGDIR:\"",
+                "GIT_BRANCH= ",
+                "GIT_COMMIT= ",
+                "GIT_TIMESTAMP= "
+            ],
             "macFrameworkPath": [
                 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
             ],
