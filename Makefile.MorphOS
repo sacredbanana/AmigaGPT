@@ -1,0 +1,100 @@
+# to generate assembler listing with LTO, add to LDFLAGS: -Wa,-adhln=$@.listing,--listing-rhs-width=200
+# for better annotations add -dA -dP
+# to generate assembler source with LTO, add to LDFLAGS: -save-temps=cwd
+
+OS := $(shell uname)
+
+subdirs := $(wildcard */) $(wildcard src/*/) $(wildcard src/*/*/)
+VPATH = $(subdirs)
+BUILD_DIR := build/morphos/obj/
+cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
+cpp_objects := $(addprefix $(BUILD_DIR),$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
+c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
+c_sources := $(filter-out src/test/%, $(c_sources))
+c_objects := $(addprefix $(BUILD_DIR),$(patsubst %.c,%.o,$(notdir $(c_sources))))
+s_sources := $(wildcard *.s) $(wildcard $(addsuffix *.s,$(subdirs)))
+s_objects := $(addprefix $(BUILD_DIR),$(patsubst %.s,%.o,$(notdir $(s_sources))))
+vasm_sources := $(wildcard *.asm) $(wildcard $(addsuffix *.asm, $(subdirs)))
+vasm_objects := $(addprefix $(BUILD_DIR), $(patsubst %.asm,%.o,$(notdir $(vasm_sources))))
+objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
+
+AUTOGEN_FILE := src/version.h
+AUTOGEN_NEXT := $(shell expr $$(awk '/#define BUILD_NUMBER/' $(AUTOGEN_FILE) | tr -cd "[0-9]") + 1)
+
+GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+GIT_COMMIT := $(shell git rev-parse HEAD)
+GIT_TIMESTAMP := $(shell git log -1 --format=%cd --date=format:"%Y-%m-%d~%H:%M:%S")
+
+# https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
+# http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
+
+
+PROGRAM_NAME = AmigaGPT_MorphOS
+EXECUTABLE_OUT = out/$(PROGRAM_NAME)
+CC = ppc-morphos-gcc
+
+SDKLIBDIR = /opt/amiga/ppc-amigaos/lib
+LIBDIR = /opt/amiga/lib
+SDKDIR = /opt/amiga/os-include
+NETINCDIR = /opt/amiga/includestd
+INCDIR = /opt/amiga/include
+
+ifeq ($(OS),Darwin)
+	SED = sed -i "" 
+else
+	SED = sed -i
+endif
+
+CCFLAGS = -MP -MMD -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -D__AMIGAOS4__ -D__USE_INLINE__ -DHAVE_VASPRINTF -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\"
+ifeq ($(DEBUG),1)
+	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -O1
+else
+	CCFLAGS += -DPROGDIR=\"PROGDIR:\" -Ofast
+endif
+CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
+ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NETINCDIR),-D
+LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-lamisslstubs,-ljson-c
+VASMFLAGS = -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__MORPHOS__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -I$(NETINCDIR) -I$(SDKDIR)
+
+.PHONY: all clean copy_bundle_files
+
+all: copy_bundle_files $(EXECUTABLE_OUT)
+
+$(BUILD_DIR):
+	@$(info Creating directory $@)
+	@mkdir -p $@
+
+$(EXECUTABLE_OUT): $(objects)
+	$(info Linking $(PROGRAM_NAME))
+	$(CC) $(CCFLAGS) $(objects) -o $@ $(LDFLAGS)
+
+clean:
+	$(info Cleaning...)
+	@$(RM) -f $(EXECUTABLE_OUT)
+	@$(RM) $(BUILD_DIR)*
+
+-include $(objects:.o=.d)
+
+$(cpp_objects) : build/morphos/obj/%.o : %.cpp | build/morphos/obj/%.dir
+	$(info Compiling $<)
+	$(CC) $(CPPFLAGS) -c -o $@ $(CURDIR)/$<
+
+$(c_objects) : build/morphos/obj/%.o : %.c | $(BUILD_DIR)
+	$(info Compiling $<)
+	$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
+	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
+
+$(s_objects): build/morphos/obj/%.o : %.s |$(BUILD_DIR)
+	$(info Assembling $<)
+	$(CC) $(CCFLAGS) $(ASFLAGS) -c -o $@ $(CURDIR)/$<
+
+$(vasm_objects): build/morphos/obj/%.o : %.asm | $(BUILD_DIR)
+	$(info Assembling $<)
+	$(VASM) $(VASMFLAGS) -o $@ $(CURDIR)/$<
+
+copy_bundle_files:
+	$(info Copying bundle files...)
+	mkdir -p out
+	cp assets/AmigaGPT_OS4.info bundle/AmigaGPT/$(PROGRAM_NAME).info
+	cp -R bundle/AmigaGPT/* out/
+	
