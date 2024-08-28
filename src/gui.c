@@ -1,5 +1,4 @@
 #include "amiga_compiler.h"
-#include <classes/requester.h>
 #include <datatypes/datatypes.h>
 #include <datatypes/datatypesclass.h>
 #include <datatypes/pictureclass.h>
@@ -25,7 +24,6 @@
 #include <proto/gadtools.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>
-#include <proto/listbrowser.h>
 #include <proto/muimaster.h>
 #include <proto/utility.h>
 #include <proto/window.h>
@@ -138,30 +136,16 @@ struct IntuitionIFace *IIntuition;
 struct AslIFace *IAsl;
 struct GraphicsIFace *IGraphics;
 struct AmigaGuideIFace *IAmigaGuide;
-struct LayoutIFace *ILayout;
-struct ClickTabIFace *IClickTab;;
-struct ButtonIFace *IButton;
-struct RadioButtonIFace *IRadioButton;
-struct TextEditorIFace *ITextEditor;
-struct ScrollerIFace *IScroller;
-struct StringIFace *IString;
-struct ListBrowserIFace *IListBrowser;
-struct RequesterIFace *IRequester;
-struct WindowIFace *IWindow;
 extern struct UtilityIFace *IUtility;
-struct Library *TextEditorBase;
 struct DataTypesIFace *IDataTypes;
 struct MUIMasterIFace *IMUIMaster;
 struct GadToolsIFace *IGadTools;
-#else
-struct Library *TextFieldBase;
 #endif
 
 struct IntuitionBase *IntuitionBase;
 struct GfxBase *GfxBase;
 struct Library *AmigaGuideBase;
 struct Library *AslBase;
-struct Library *RequesterBase = NULL;
 struct Library *GadToolsBase;
 struct Library *DataTypesBase;
 struct Library *MUIMasterBase;
@@ -202,7 +186,6 @@ static struct TextAttr screenFont = {
 };
 static struct TextAttr chatTextAttr = {0};
 static struct TextAttr uiTextAttr = {0};
-// static struct Menu *menu;
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, (APTR)NULL_ID},
 	{NM_ITEM, "About AmigaGPT", 0, 0, 0, (APTR)MENU_ITEM_ABOUT_AMIGAGPT},
@@ -500,22 +483,6 @@ LONG openGUILibraries() {
 	#endif
 
 	#ifdef __AMIGAOS3__
-	if ((RequesterBase = OpenLibrary("requester.class", 42)) == NULL) {
-		printf("Could not open requester.class\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((RequesterBase = OpenLibrary("requester.class", 50)) == NULL) {
-		printf("Could not open requester.class\n");
-		return RETURN_ERROR;
-	}
-	if ((IRequester = (struct RequesterIFace *)GetInterface(RequesterBase, "main", 1, NULL)) == NULL) {
-		printf("Could not get interface for requester.class\n");
-		return RETURN_ERROR;
-	}
-	#endif
-
-	#ifdef __AMIGAOS3__
 	if ((GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 40)) == NULL) {
 		printf( "Could not open graphics.library\n");
 		return RETURN_ERROR;
@@ -607,7 +574,6 @@ static void closeGUILibraries() {
 	DropInterface((struct Interface *)IGraphics);
 	DropInterface((struct Interface *)IAsl);
 	DropInterface((struct Interface *)IAmigaGuide);
-	DropInterface((struct Interface *)IRequester);
 	DropInterface((struct Interface *)IDataTypes);
 	DropInterface((struct Interface *)IMUIMaster);
 	DropInterface((struct Interface *)IGadTools);
@@ -618,7 +584,6 @@ static void closeGUILibraries() {
 	CloseLibrary(GfxBase);
 	CloseLibrary(AslBase);
 	CloseLibrary(AmigaGuideBase);
-	CloseLibrary(RequesterBase);
 	CloseLibrary(DataTypesBase);
 	CloseLibrary(MUIMasterBase);
 }
@@ -692,7 +657,7 @@ LONG initVideo() {
 									"\thttps://www.youtube.com/watch?v=t3q8HQ6wrnw\n"
 									"\n"
 									"\t\033iLes Docs\033n\n"
-									"\tor making a video review and giving a tutorial on how to add support for the French accent\n"
+									"\tfor making a video review and giving a tutorial on how to add support for the French accent\n"
 									"\thttps://www.youtube.com/watch?v=BV5Fq1PresE\n"
 									"\n"
 									"\033bLicense\033n\n"
@@ -1888,18 +1853,18 @@ static void addTextToConversation(struct MinList *conversation, STRPTR text, STR
  * @param title The title of the conversation
 **/
 static void addConversationToConversationList(struct MinList *conversation, STRPTR title) {
-	struct Node *node;
-	if ((node = AllocListBrowserNode(1,
-		LBNCA_CopyText, TRUE,
-		LBNCA_Text, title,
-		LBNA_UserData, (ULONG)conversation,
-		TAG_DONE)) == NULL) {
-			printf("Could not create conversation list browser node\n");
-			return RETURN_ERROR;
-	}
+	// struct Node *node;
+	// if ((node = AllocListBrowserNode(1,
+	// 	LBNCA_CopyText, TRUE,
+	// 	LBNCA_Text, title,
+	// 	LBNA_UserData, (ULONG)conversation,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create conversation list browser node\n");
+	// 		return RETURN_ERROR;
+	// }
 
 	// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
-	AddHead(conversationList, node);
+	// AddHead(conversationList, node);
 	// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
 }
 
@@ -1908,18 +1873,18 @@ static void addConversationToConversationList(struct MinList *conversation, STRP
  * @param image The image to add to the imagelist
 **/
 static void addImageToImageList(struct GeneratedImage *image) {
-	struct Node *node;
-	if ((node = AllocListBrowserNode(1,
-		LBNCA_CopyText, TRUE,
-		LBNCA_Text, image->name,
-		LBNA_UserData, (ULONG)image,
-		TAG_DONE)) == NULL) {
-			printf("Could not create image list browser node\n");
-			return RETURN_ERROR;
-	}
+	// struct Node *node;
+	// if ((node = AllocListBrowserNode(1,
+	// 	LBNCA_CopyText, TRUE,
+	// 	LBNCA_Text, image->name,
+	// 	LBNA_UserData, (ULONG)image,
+	// 	TAG_DONE)) == NULL) {
+	// 		printf("Could not create image list browser node\n");
+	// 		return RETURN_ERROR;
+	// }
 
 	// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
-	AddHead(imageList, node);
+	// AddHead(imageList, node);
 	// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
 }
 
@@ -1930,14 +1895,14 @@ static void addImageToImageList(struct GeneratedImage *image) {
  * @return A pointer to the conversation
 **/
 static struct MinList* getConversationFromConversationList(struct List *conversationList, ULONG index) {
-	struct Node *node = conversationList->lh_Head->ln_Succ;
-	while (index > 0) {
-		node = node->ln_Succ;
-		index--;
-	}
-	struct MinList *conversation;
-	GetListBrowserNodeAttrs(node, LBNA_UserData, &conversation, TAG_END);
-	return conversation;
+	// struct Node *node = conversationList->lh_Head->ln_Succ;
+	// while (index > 0) {
+	// 	node = node->ln_Succ;
+	// 	index--;
+	// }
+	// struct MinList *conversation;
+	// GetListBrowserNodeAttrs(node, LBNA_UserData, &conversation, TAG_END);
+	// return conversation;
 }
 
 /**
@@ -2002,30 +1967,30 @@ static void freeConversation(struct MinList *conversation) {
  * Free the conversation list
 **/
 static void freeConversationList() {
-	struct Node *conversationListNode;
-	while ((conversationListNode = RemHead(conversationList)) != NULL) {
-		ULONG *conversation;
-		GetListBrowserNodeAttrs(conversationListNode, LBNA_UserData, (ULONG *)&conversation, TAG_END);
-		freeConversation(conversation);
-		FreeVec(conversationListNode);
-	}
-	FreeVec(conversationList);
+	// struct Node *conversationListNode;
+	// while ((conversationListNode = RemHead(conversationList)) != NULL) {
+	// 	ULONG *conversation;
+	// 	GetListBrowserNodeAttrs(conversationListNode, LBNA_UserData, (ULONG *)&conversation, TAG_END);
+	// 	freeConversation(conversation);
+	// 	FreeVec(conversationListNode);
+	// }
+	// FreeVec(conversationList);
 }
 
 /**
  * Free the image list
 **/
 static void freeImageList() {
-	struct Node *imageListNode;
-	while ((imageListNode = RemHead(imageList)) != NULL) {
-		struct GeneratedImage *generatedImage;
-		GetListBrowserNodeAttrs(imageListNode, LBNA_UserData, (ULONG *)&generatedImage, TAG_END);
-		FreeVec(generatedImage->filePath);
-		FreeVec(generatedImage->name);
-		FreeVec(generatedImage->prompt);
-		FreeVec(generatedImage);
-	}
-	FreeVec(imageList);
+	// struct Node *imageListNode;
+	// while ((imageListNode = RemHead(imageList)) != NULL) {
+	// 	struct GeneratedImage *generatedImage;
+	// 	GetListBrowserNodeAttrs(imageListNode, LBNA_UserData, (ULONG *)&generatedImage, TAG_END);
+	// 	FreeVec(generatedImage->filePath);
+	// 	FreeVec(generatedImage->name);
+	// 	FreeVec(generatedImage->prompt);
+	// 	FreeVec(generatedImage);
+	// }
+	// FreeVec(imageList);
 }
 
 /**
@@ -2043,22 +2008,22 @@ static void freeModeSelectionTabList() {
  * @param conversation The conversation to remove from the conversation list
 **/
 static void removeConversationFromConversationList(struct MinList *conversation) {
-	if (conversation == NULL) return;
-	struct Node *node = conversationList->lh_Head;
-	while (node != NULL) {
-		struct MinList *listBrowserConversation;
-		GetListBrowserNodeAttrs(node, LBNA_UserData, (struct MinList *)&listBrowserConversation, TAG_END);
-		if (listBrowserConversation == conversation) {
-			// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
-			// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
-			Remove(node);
-			FreeListBrowserNode(node);
-			// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
-			freeConversation(conversation);
-			return;
-		}
-		node = node->ln_Succ;
-	}
+	// if (conversation == NULL) return;
+	// struct Node *node = conversationList->lh_Head;
+	// while (node != NULL) {
+	// 	struct MinList *listBrowserConversation;
+	// 	GetListBrowserNodeAttrs(node, LBNA_UserData, (struct MinList *)&listBrowserConversation, TAG_END);
+	// 	if (listBrowserConversation == conversation) {
+	// 		// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
+	// 		// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
+	// 		Remove(node);
+	// 		FreeListBrowserNode(node);
+	// 		// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
+	// 		freeConversation(conversation);
+	// 		return;
+	// 	}
+	// 	node = node->ln_Succ;
+	// }
 }
 
 /**
@@ -2094,30 +2059,30 @@ static void saveImageCopy(struct GeneratedImage *image) {
  * @param image The image to remove from the image list
 **/
 static void removeImageFromImageList(struct GeneratedImage *image) {
-	if (image == NULL) return;
-	struct Node *node = imageList->lh_Head;
-	while (node != NULL) {
-		struct GeneratedImage *listBrowserImage;
-		GetListBrowserNodeAttrs(node, LBNA_UserData, (struct GeneratedImage *)&listBrowserImage, TAG_END);
-		if (listBrowserImage == image) {
-			#ifdef __AMIGAOS3__
-			DeleteFile(image->filePath);
-			#else
-			Delete(image->filePath);
-			#endif
-			// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
-			// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
-			Remove(node);
-			FreeListBrowserNode(node);
-			// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
-			FreeVec(image->filePath);
-			FreeVec(image->name);
-			FreeVec(image->prompt);
-			FreeVec(image);
-			return;
-		}
-		node = node->ln_Succ;
-	}
+	// if (image == NULL) return;
+	// struct Node *node = imageList->lh_Head;
+	// while (node != NULL) {
+	// 	struct GeneratedImage *listBrowserImage;
+	// 	GetListBrowserNodeAttrs(node, LBNA_UserData, (struct GeneratedImage *)&listBrowserImage, TAG_END);
+	// 	if (listBrowserImage == image) {
+	// 		#ifdef __AMIGAOS3__
+	// 		DeleteFile(image->filePath);
+	// 		#else
+	// 		Delete(image->filePath);
+	// 		#endif
+	// 		// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
+	// 		// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
+	// 		Remove(node);
+	// 		FreeListBrowserNode(node);
+	// 		// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
+	// 		FreeVec(image->filePath);
+	// 		FreeVec(image->name);
+	// 		FreeVec(image->prompt);
+	// 		FreeVec(image);
+	// 		return;
+	// 	}
+	// 	node = node->ln_Succ;
+	// }
 }
 
 /**
@@ -2892,84 +2857,84 @@ static void openSpeechAccentRequester() {
  * Opens a requester for the user to enter their OpenAI API key
 **/
 static void openApiKeyRequester() {
-	STRPTR buffer = AllocVec(OPENAI_API_KEY_LENGTH + 1, MEMF_ANY | MEMF_CLEAR);
-	if (buffer == NULL) {
-		displayError("Failed to allocate memory for API key buffer");
-		return;
-	}
-	if (config.openAiApiKey != NULL) {
-		strncpy(buffer, config.openAiApiKey, OPENAI_API_KEY_LENGTH);
-	}
-	Object *apiKeyRequester = NewObject(REQUESTER_GetClass(), NULL,
-		REQ_Type, REQTYPE_STRING,
-		REQ_TitleText, "Enter your OpenAI API key",
-		REQ_BodyText, "Please type or paste (Right Amiga + V) your OpenAI API key here",
-		REQ_GadgetText, "OK|Cancel",
-		REQ_Image, REQIMAGE_INFO,
-		REQS_AllowEmpty, FALSE,
-		REQS_Buffer, buffer,
-		REQS_MaxChars, OPENAI_API_KEY_LENGTH,
-		REQ_ForceFocus, TRUE,
-		TAG_DONE);
+	// STRPTR buffer = AllocVec(OPENAI_API_KEY_LENGTH + 1, MEMF_ANY | MEMF_CLEAR);
+	// if (buffer == NULL) {
+	// 	displayError("Failed to allocate memory for API key buffer");
+	// 	return;
+	// }
+	// if (config.openAiApiKey != NULL) {
+	// 	strncpy(buffer, config.openAiApiKey, OPENAI_API_KEY_LENGTH);
+	// }
+	// Object *apiKeyRequester = NewObject(REQUESTER_GetClass(), NULL,
+	// 	REQ_Type, REQTYPE_STRING,
+	// 	REQ_TitleText, "Enter your OpenAI API key",
+	// 	REQ_BodyText, "Please type or paste (Right Amiga + V) your OpenAI API key here",
+	// 	REQ_GadgetText, "OK|Cancel",
+	// 	REQ_Image, REQIMAGE_INFO,
+	// 	REQS_AllowEmpty, FALSE,
+	// 	REQS_Buffer, buffer,
+	// 	REQS_MaxChars, OPENAI_API_KEY_LENGTH,
+	// 	REQ_ForceFocus, TRUE,
+	// 	TAG_DONE);
 
-	if (apiKeyRequester) {
-		ULONG result = OpenRequester(apiKeyRequester, mainWindow);
-		if (result == 1) {
-			if (config.openAiApiKey != NULL) {
-				FreeVec(config.openAiApiKey);
-			}
-			config.openAiApiKey = AllocVec(strlen(buffer) + 1, MEMF_ANY | MEMF_CLEAR);
-			strncpy(config.openAiApiKey, buffer, strlen(buffer));
-			writeConfig();
-		}
-		DisposeObject(apiKeyRequester);
-	}
-	FreeVec(buffer);
+	// if (apiKeyRequester) {
+	// 	ULONG result = OpenRequester(apiKeyRequester, mainWindow);
+	// 	if (result == 1) {
+	// 		if (config.openAiApiKey != NULL) {
+	// 			FreeVec(config.openAiApiKey);
+	// 		}
+	// 		config.openAiApiKey = AllocVec(strlen(buffer) + 1, MEMF_ANY | MEMF_CLEAR);
+	// 		strncpy(config.openAiApiKey, buffer, strlen(buffer));
+	// 		writeConfig();
+	// 	}
+	// 	DisposeObject(apiKeyRequester);
+	// }
+	// FreeVec(buffer);
 }
 
 /**
  * Opens a requester for the user to enter the chat system
 **/
 static void openChatSystemRequester() {
-	STRPTR buffer = AllocVec(CHAT_SYSTEM_LENGTH + 1, MEMF_ANY | MEMF_CLEAR);
-	if (buffer == NULL) {
-		displayError("Failed to allocate memory for chat system buffer");
-		return;
-	}
-	if (config.chatSystem != NULL) {
-		strncpy(buffer, config.chatSystem, CHAT_SYSTEM_LENGTH);
-	}
-	Object *chatSystemRequester = NewObject(REQUESTER_GetClass(), NULL,
-		REQ_Type, REQTYPE_STRING,
-		REQ_TitleText, "Enter how you would like AmigaGPT to respond",
-		REQ_BodyText, "If you would like AmigaGPT to respond in a\n"
-					  "certain way, or add some personality, type\n"
-					  "it in here. For example, you could type\n" 
-					  "\"Speak like a pirate\" or \"Speak like a\n"
-					  "robot\". If you would like AmigaGPT to respond\n"
-					  "normally, leave this blank. This setting will\n"
-					  "be applied to new conversations only.",
-		REQ_GadgetText, "OK|Cancel",
-		REQ_Image, REQIMAGE_INFO,
-		REQS_AllowEmpty, TRUE,
-		REQS_Buffer, buffer,
-		REQS_MaxChars, CHAT_SYSTEM_LENGTH,
-		REQ_ForceFocus, TRUE,
-		TAG_DONE);
+	// STRPTR buffer = AllocVec(CHAT_SYSTEM_LENGTH + 1, MEMF_ANY | MEMF_CLEAR);
+	// if (buffer == NULL) {
+	// 	displayError("Failed to allocate memory for chat system buffer");
+	// 	return;
+	// }
+	// if (config.chatSystem != NULL) {
+	// 	strncpy(buffer, config.chatSystem, CHAT_SYSTEM_LENGTH);
+	// }
+	// Object *chatSystemRequester = NewObject(REQUESTER_GetClass(), NULL,
+	// 	REQ_Type, REQTYPE_STRING,
+	// 	REQ_TitleText, "Enter how you would like AmigaGPT to respond",
+	// 	REQ_BodyText, "If you would like AmigaGPT to respond in a\n"
+	// 				  "certain way, or add some personality, type\n"
+	// 				  "it in here. For example, you could type\n" 
+	// 				  "\"Speak like a pirate\" or \"Speak like a\n"
+	// 				  "robot\". If you would like AmigaGPT to respond\n"
+	// 				  "normally, leave this blank. This setting will\n"
+	// 				  "be applied to new conversations only.",
+	// 	REQ_GadgetText, "OK|Cancel",
+	// 	REQ_Image, REQIMAGE_INFO,
+	// 	REQS_AllowEmpty, TRUE,
+	// 	REQS_Buffer, buffer,
+	// 	REQS_MaxChars, CHAT_SYSTEM_LENGTH,
+	// 	REQ_ForceFocus, TRUE,
+	// 	TAG_DONE);
 
-	if (chatSystemRequester) {
-		ULONG result = OpenRequester(chatSystemRequester, mainWindow);
-		if (result == 1) {
-			if (config.chatSystem != NULL) {
-				FreeVec(config.chatSystem);
-			}
-			config.chatSystem = AllocVec(strlen(buffer) + 1, MEMF_ANY | MEMF_CLEAR);
-			strncpy(config.chatSystem, buffer, strlen(buffer));
-			writeConfig();
-		}
-		DisposeObject(chatSystemRequester);
-	}
-	FreeVec(buffer);
+	// if (chatSystemRequester) {
+	// 	ULONG result = OpenRequester(chatSystemRequester, mainWindow);
+	// 	if (result == 1) {
+	// 		if (config.chatSystem != NULL) {
+	// 			FreeVec(config.chatSystem);
+	// 		}
+	// 		config.chatSystem = AllocVec(strlen(buffer) + 1, MEMF_ANY | MEMF_CLEAR);
+	// 		strncpy(config.chatSystem, buffer, strlen(buffer));
+	// 		writeConfig();
+	// 	}
+	// 	DisposeObject(chatSystemRequester);
+	// }
+	// FreeVec(buffer);
 }
 
 /**
@@ -2977,49 +2942,49 @@ static void openChatSystemRequester() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG saveConversations() {
-	BPTR file = Open(PROGDIR"chat-history.json", MODE_NEWFILE);
-	if (file == 0) {
-		displayDiskError("Failed to create message history file. Conversation history will not be saved.", IoErr());
-		return RETURN_ERROR;
-	}
+	// BPTR file = Open(PROGDIR"chat-history.json", MODE_NEWFILE);
+	// if (file == 0) {
+	// 	displayDiskError("Failed to create message history file. Conversation history will not be saved.", IoErr());
+	// 	return RETURN_ERROR;
+	// }
 
-	struct json_object *conversationsJsonArray = json_object_new_array();
-	struct json_object *conversationJsonObject;
-	struct Node *conversationListNode = conversationList->lh_Head;
-	while (conversationListNode->ln_Succ) {
-		conversationJsonObject = json_object_new_object();
-		struct MinList *conversation;
-		GetListBrowserNodeAttrs(conversationListNode, LBNA_UserData, &conversation, TAG_END);
-		STRPTR conversationTitle;
-		GetListBrowserNodeAttrs(conversationListNode, LBNCA_Text, &conversationTitle, TAG_END);
-		json_object_object_add(conversationJsonObject, "name", json_object_new_string(conversationTitle));
-		struct json_object *messagesJsonArray = json_object_new_array();
-		struct ConversationNode *conversationNode;
-		for (conversationNode = (struct ConversationNode *)conversation->mlh_Head;
-			conversationNode->node.mln_Succ != NULL;
-			conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
-			if (!strcmp(conversationNode->role, "system")) continue;
-			struct json_object *messageJsonObject = json_object_new_object();
-			json_object_object_add(messageJsonObject, "role", json_object_new_string(conversationNode->role));
-			json_object_object_add(messageJsonObject, "content", json_object_new_string(conversationNode->content));
-			json_object_array_add(messagesJsonArray, messageJsonObject);
-		}
-		json_object_object_add(conversationJsonObject, "messages", messagesJsonArray);
-		json_object_array_add(conversationsJsonArray, conversationJsonObject);
-		conversationListNode = conversationListNode->ln_Succ;
-	}
+	// struct json_object *conversationsJsonArray = json_object_new_array();
+	// struct json_object *conversationJsonObject;
+	// struct Node *conversationListNode = conversationList->lh_Head;
+	// while (conversationListNode->ln_Succ) {
+	// 	conversationJsonObject = json_object_new_object();
+	// 	struct MinList *conversation;
+	// 	GetListBrowserNodeAttrs(conversationListNode, LBNA_UserData, &conversation, TAG_END);
+	// 	STRPTR conversationTitle;
+	// 	GetListBrowserNodeAttrs(conversationListNode, LBNCA_Text, &conversationTitle, TAG_END);
+	// 	json_object_object_add(conversationJsonObject, "name", json_object_new_string(conversationTitle));
+	// 	struct json_object *messagesJsonArray = json_object_new_array();
+	// 	struct ConversationNode *conversationNode;
+	// 	for (conversationNode = (struct ConversationNode *)conversation->mlh_Head;
+	// 		conversationNode->node.mln_Succ != NULL;
+	// 		conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
+	// 		if (!strcmp(conversationNode->role, "system")) continue;
+	// 		struct json_object *messageJsonObject = json_object_new_object();
+	// 		json_object_object_add(messageJsonObject, "role", json_object_new_string(conversationNode->role));
+	// 		json_object_object_add(messageJsonObject, "content", json_object_new_string(conversationNode->content));
+	// 		json_object_array_add(messagesJsonArray, messageJsonObject);
+	// 	}
+	// 	json_object_object_add(conversationJsonObject, "messages", messagesJsonArray);
+	// 	json_object_array_add(conversationsJsonArray, conversationJsonObject);
+	// 	conversationListNode = conversationListNode->ln_Succ;
+	// }
 
-	STRPTR conversationsJsonString = (STRPTR)json_object_to_json_string_ext(conversationsJsonArray, JSON_C_TO_STRING_PRETTY);
+	// STRPTR conversationsJsonString = (STRPTR)json_object_to_json_string_ext(conversationsJsonArray, JSON_C_TO_STRING_PRETTY);
 
-	if (Write(file, conversationsJsonString, strlen(conversationsJsonString)) != (LONG)strlen(conversationsJsonString)) {
-		displayError("Failed to write to message history file. Conversation history will not be saved.");
-		Close(file);
-		json_object_put(conversationsJsonArray);
-		return RETURN_ERROR;
-	}
+	// if (Write(file, conversationsJsonString, strlen(conversationsJsonString)) != (LONG)strlen(conversationsJsonString)) {
+	// 	displayError("Failed to write to message history file. Conversation history will not be saved.");
+	// 	Close(file);
+	// 	json_object_put(conversationsJsonArray);
+	// 	return RETURN_ERROR;
+	// }
 
-	Close(file);
-	json_object_put(conversationsJsonArray);
+	// Close(file);
+	// json_object_put(conversationsJsonArray);
 	return RETURN_OK;
 }
 
@@ -3028,40 +2993,40 @@ LONG saveConversations() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 static LONG saveImages() {
-	BPTR file = Open(PROGDIR"image-history.json", MODE_NEWFILE);
-	if (file == 0) {
-		displayDiskError("Failed to create image history file. Image history will not be saved.", IoErr());
-		return RETURN_ERROR;
-	}
+	// BPTR file = Open(PROGDIR"image-history.json", MODE_NEWFILE);
+	// if (file == 0) {
+	// 	displayDiskError("Failed to create image history file. Image history will not be saved.", IoErr());
+	// 	return RETURN_ERROR;
+	// }
 
-	struct json_object *imagesJsonArray = json_object_new_array();
-	struct json_object *imageJsonObject;
-	struct Node *imageListNode = imageList->lh_Head;
-	while (imageListNode->ln_Succ) {
-		imageJsonObject = json_object_new_object();
-		struct GeneratedImage *generatedImage;
-		GetListBrowserNodeAttrs(imageListNode, LBNA_UserData, &generatedImage, TAG_END);
-		json_object_object_add(imageJsonObject, "name", json_object_new_string(generatedImage->name));
-		json_object_object_add(imageJsonObject, "filePath", json_object_new_string(generatedImage->filePath));
-		json_object_object_add(imageJsonObject, "prompt", json_object_new_string(generatedImage->prompt));
-		json_object_object_add(imageJsonObject, "imageModel", json_object_new_int(generatedImage->imageModel));
-		json_object_object_add(imageJsonObject, "width", json_object_new_int(generatedImage->width));
-		json_object_object_add(imageJsonObject, "height", json_object_new_int(generatedImage->height));
-		json_object_array_add(imagesJsonArray, imageJsonObject);
-		imageListNode = imageListNode->ln_Succ;
-	}
+	// struct json_object *imagesJsonArray = json_object_new_array();
+	// struct json_object *imageJsonObject;
+	// struct Node *imageListNode = imageList->lh_Head;
+	// while (imageListNode->ln_Succ) {
+	// 	imageJsonObject = json_object_new_object();
+	// 	struct GeneratedImage *generatedImage;
+	// 	GetListBrowserNodeAttrs(imageListNode, LBNA_UserData, &generatedImage, TAG_END);
+	// 	json_object_object_add(imageJsonObject, "name", json_object_new_string(generatedImage->name));
+	// 	json_object_object_add(imageJsonObject, "filePath", json_object_new_string(generatedImage->filePath));
+	// 	json_object_object_add(imageJsonObject, "prompt", json_object_new_string(generatedImage->prompt));
+	// 	json_object_object_add(imageJsonObject, "imageModel", json_object_new_int(generatedImage->imageModel));
+	// 	json_object_object_add(imageJsonObject, "width", json_object_new_int(generatedImage->width));
+	// 	json_object_object_add(imageJsonObject, "height", json_object_new_int(generatedImage->height));
+	// 	json_object_array_add(imagesJsonArray, imageJsonObject);
+	// 	imageListNode = imageListNode->ln_Succ;
+	// }
 
-	STRPTR imagesJsonString = (STRPTR)json_object_to_json_string_ext(imagesJsonArray, JSON_C_TO_STRING_PRETTY);
+	// STRPTR imagesJsonString = (STRPTR)json_object_to_json_string_ext(imagesJsonArray, JSON_C_TO_STRING_PRETTY);
 
-	if (Write(file, imagesJsonString, strlen(imagesJsonString)) != (LONG)strlen(imagesJsonString)) {
-		displayError("Failed to write to image history file. Image history will not be saved.");
-		Close(file);
-		json_object_put(imagesJsonArray);
-		return RETURN_ERROR;
-	}
+	// if (Write(file, imagesJsonString, strlen(imagesJsonString)) != (LONG)strlen(imagesJsonString)) {
+	// 	displayError("Failed to write to image history file. Image history will not be saved.");
+	// 	Close(file);
+	// 	json_object_put(imagesJsonArray);
+	// 	return RETURN_ERROR;
+	// }
 
-	Close(file);
-	json_object_put(imagesJsonArray);
+	// Close(file);
+	// json_object_put(imagesJsonArray);
 	return RETURN_OK;
 }
 
