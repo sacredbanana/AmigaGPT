@@ -16,8 +16,10 @@ struct Config config = {
 	.speechAccent = NULL,
 	.speechSystem = SPEECH_SYSTEM_34,
 	#else
+	#ifdef __AMIGAOS4__
 	.speechFliteVoice = SPEECH_FLITE_VOICE_KAL,
 	.speechSystem = SPEECH_SYSTEM_FLITE,
+	#endif
 	#endif
 	.chatSystem = NULL,
 	.chatModel = GPT_3_5_TURBO,
@@ -75,7 +77,9 @@ LONG writeConfig() {
 	#ifdef __AMIGAOS3__
 	json_object_object_add(configJsonObject, "speechAccent", config.speechAccent != NULL ? json_object_new_string(config.speechAccent) : NULL);
 	#else
+	#ifdef __AMIGAOS4__
 	json_object_object_add(configJsonObject, "speechFliteVoice", json_object_new_int(config.speechFliteVoice));
+	#endif
 	#endif
 	json_object_object_add(configJsonObject, "chatSystem", config.chatSystem != NULL ? json_object_new_string(config.chatSystem) : NULL);
 	json_object_object_add(configJsonObject, "chatModel", json_object_new_int(config.chatModel));
@@ -128,7 +132,13 @@ LONG readConfig() {
 	Seek(file, 0, OFFSET_END);
 	LONG fileSize = Seek(file, 0, OFFSET_BEGINNING);
 	#else
-	int64 fileSize = GetFileSize(file);
+	#ifdef __AMIGAOS4__
+	int64_t fileSize = GetFileSize(file);
+	#else
+	struct FileInfoBlock fib;
+	ExamineFH64(file, &fib, NULL);
+	int64_t fileSize = fib.fib_Size;
+	#endif
 	#endif
 	STRPTR configJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
 	if (Read(file, configJsonString, fileSize) != fileSize) {
@@ -162,9 +172,17 @@ LONG readConfig() {
 		config.speechSystem = SPEECH_SYSTEM_34;
 	}
 	#else
+	#ifdef __AMIGAOS4__
 	if (config.speechSystem == SPEECH_SYSTEM_34 || config.speechSystem == SPEECH_SYSTEM_37) {
 		config.speechSystem = SPEECH_SYSTEM_FLITE;
 	}
+	#else
+	#ifdef __MORPHOS__
+	if (config.speechSystem == SPEECH_SYSTEM_34 || config.speechSystem == SPEECH_SYSTEM_37 || config.speechSystem == SPEECH_SYSTEM_FLITE || config.speechSystem == SPEECH_SYSTEM_NONE) {
+		config.speechSystem = SPEECH_SYSTEM_OPENAI;
+	}
+	#endif
+	#endif
 	#endif
 
 	#ifdef __AMIGAOS3__
@@ -185,10 +203,12 @@ LONG readConfig() {
 		strncpy(config.speechAccent, DEFAULT_ACCENT, strlen(DEFAULT_ACCENT));
 	}
 	#else
+	#ifdef __AMIGAOS4__
 	struct json_object *speechVoiceObj;
 	if (json_object_object_get_ex(configJsonObject, "speechFliteVoice", &speechVoiceObj)) {
 		config.speechFliteVoice = json_object_get_int(speechVoiceObj);
 	}
+	#endif
 	#endif
 
 	if (config.chatSystem != NULL) {
@@ -336,7 +356,13 @@ LONG readConfig() {
 		#ifdef __AMIGAOS3__
 		config.speechSystem = SPEECH_SYSTEM_34;
 		#else
+		#ifdef __AMIGAOS4__
 		config.speechSystem = SPEECH_SYSTEM_FLITE;
+		#else
+		#ifdef __MORPHOS__
+		config.speechSystem = SPEECH_SYSTEM_OPENAI;
+		#endif
+		#endif
 		#endif
 	}
 

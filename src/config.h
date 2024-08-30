@@ -13,7 +13,9 @@ struct Config {
 	#ifdef __AMIGAOS3__
 	STRPTR speechAccent;
 	#else
+	#ifdef __AMIGAOS4__
 	enum SpeechFliteVoice speechFliteVoice;
+	#endif
 	#endif
 	STRPTR chatSystem;
 	enum ChatModel chatModel;

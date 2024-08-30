@@ -1,9 +1,14 @@
+#if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
 #include <amissl/amissl.h>
-#include <json-c/json.h>
 #include <libraries/amisslmaster.h>
 #include <libraries/amissl.h>
 #include <proto/amissl.h>
 #include <proto/amisslmaster.h>
+#else
+#include <openssl/ssl.h>
+#include <netdb.h>
+#endif
+#include <json-c/json.h>
 #include <proto/exec.h>
 #include <proto/socket.h>
 #include <proto/utility.h>
@@ -28,7 +33,9 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static STRPTR getModelName(enum ChatModel model);
 static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
 
+#if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
 struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase = NULL;
+#endif
 #ifdef __AMIGAOS4__
 struct AmiSSLMasterIFace *IAmiSSLMaster;
 struct AmiSSLIFace *IAmiSSL;
@@ -158,7 +165,7 @@ LONG initOpenAIConnector() {
 	readBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY);
 	writeBuffer = AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY);
 
-	#ifdef __AMIGAOS3__
+	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	if ((SocketBase = OpenLibrary("bsdsocket.library", 0)) == NULL) {
 		displayError("failed to open bsdsocket.library. You have to install a TCP/IP stack such as AmiTCP, Miami or Roadshow. Please refer to the documentation for more information.");
 		return RETURN_ERROR;
@@ -180,6 +187,7 @@ LONG initOpenAIConnector() {
 		return RETURN_ERROR;
 	}
 	#else
+	#ifdef __AMIGAOS4__
 	if ((AmiSSLMasterBase = OpenLibrary("amisslmaster.library", AMISSLMASTER_MIN_VERSION)) == NULL) {
 		displayError("failed to open amisslmaster.library version 5. You have to install AmiSSL 5. Please refer to the documentation for more information.");
 		return RETURN_ERROR;
@@ -189,7 +197,9 @@ LONG initOpenAIConnector() {
 		return RETURN_ERROR;
 	}
 	#endif
+	#endif
 
+	#if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
 	if (OpenAmiSSLTags(AMISSL_CURRENT_VERSION,
 					  AmiSSL_UsesOpenSSLStructs, TRUE,
 					  AmiSSL_InitAmiSSL, TRUE,
@@ -201,6 +211,7 @@ LONG initOpenAIConnector() {
 		displayError("failed to initialize amisslmaster.library");
 		return RETURN_ERROR;
 	}
+	#endif
 
 	#ifdef __AMIGAOS4__
 	if ((IAmiSSL = (struct AmiSSLIFace *)GetInterface(AmiSSLBase, "main", 1, NULL)) == NULL) {
@@ -891,7 +902,11 @@ static LONG createSSLContext() {
 
 	/* Note: BIO writing routines are prepared for NULL BIO handle */
 	if ((bio_err = BIO_new(BIO_s_file())) != NULL)
+	#if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
 		BIO_set_fp_amiga(bio_err, GetStdErr(), BIO_NOCLOSE | BIO_FP_TEXT);
+	#else
+		BIO_set_fp(bio_err, GetStdErr(), BIO_NOCLOSE);
+	#endif
 
 	/* Get a new SSL context */
 	if ((ctx = SSL_CTX_new(TLS_client_method())) != NULL) {
@@ -1197,9 +1212,12 @@ void closeOpenAIConnector() {
 			ctx = NULL;
 		}
 		BIO_free(bio_err);
+		#if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
 		CleanupAmiSSLA(NULL);
+		#endif
 	}
 
+#if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
 	if (AmiSSLBase) {
 		#ifdef __AMIGAOS4__
 		DropInterface((struct Interface *)IAmiSSL);
@@ -1215,6 +1233,7 @@ void closeOpenAIConnector() {
 		CloseLibrary(AmiSSLMasterBase);
 		AmiSSLMasterBase = NULL;
 	}
+#endif
 
 	if (SocketBase) {
 		#ifdef __AMIGAOS4__

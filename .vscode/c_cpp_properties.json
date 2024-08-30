@@ -69,6 +69,38 @@
             }
         },
         {
+            "name": "GCC MorphOS",
+            "includePath": [
+                "./**",
+                "/opt/amiga/includestd",
+                "/opt/amiga/os-include",
+                "/opt/amiga/ppc-morphos/os-include"
+            ],
+            "defines": [
+                "__MORPHOS__",
+                "__PPC__",
+                "PROGRAM_NAME=\"AmigaGPT\"",
+                "PROGDIR=\"PROGDIR:\"",
+                "GIT_BRANCH= ",
+                "GIT_COMMIT= ",
+                "GIT_TIMESTAMP= "
+            ],
+            "macFrameworkPath": [
+                "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "macos-gcc-arm64",
+            "mergeConfigurations": false,
+            "compilerPath": "/opt/amiga/bin/m68k-amigaos-gcc",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/**",

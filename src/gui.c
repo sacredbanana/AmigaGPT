@@ -1,4 +1,6 @@
+#ifdef __AMIGAOS3__ || __AMIGAOS4__
 #include "amiga_compiler.h"
+#endif
 #include <datatypes/datatypes.h>
 #include <datatypes/datatypesclass.h>
 #include <datatypes/pictureclass.h>
@@ -208,7 +210,9 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_34},
 	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_37},
 	#else
+	#ifdef __AMIGAOS4__
 	{NM_SUB, "Flite", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_FLITE},
+	#endif
 	#endif
 	{NM_SUB, "OpenAI Text To Speech", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
 	#ifdef __AMIGAOS3__
@@ -450,7 +454,7 @@ static void createImage();
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG openGUILibraries() {
-	#ifdef __AMIGAOS3__
+	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	if ((IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 40)) == NULL) {
 		printf("Could not open intuition.library\n");
 		return RETURN_ERROR;
@@ -466,7 +470,7 @@ LONG openGUILibraries() {
 	}
 	#endif
 
-	#ifdef __AMIGAOS3__
+	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	if ((MUIMasterBase = OpenLibrary("muimaster.library", 19)) == NULL) {
 		printf("Could not open muimaster.library\n");
 		return RETURN_ERROR;
@@ -482,7 +486,7 @@ LONG openGUILibraries() {
 	}
 	#endif
 
-	#ifdef __AMIGAOS3__
+	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	if ((GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 40)) == NULL) {
 		printf( "Could not open graphics.library\n");
 		return RETURN_ERROR;
@@ -498,7 +502,7 @@ LONG openGUILibraries() {
 	}
 	#endif
 
-	#ifdef __AMIGAOS3__
+	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	if ((AslBase = OpenLibrary("asl.library", 45)) == NULL) {
 		printf( "Could not open asl.library\n");
 		return RETURN_ERROR;
@@ -514,7 +518,7 @@ LONG openGUILibraries() {
 	}
 	#endif
 
-	#ifdef __AMIGAOS3__
+	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	if ((AmigaGuideBase = OpenLibrary("amigaguide.library", 44)) == NULL) {
 		printf( "Could not open amigaguide.library\n");
 		return RETURN_ERROR;
@@ -530,7 +534,7 @@ LONG openGUILibraries() {
 	}
 	#endif
 
-	#ifdef __AMIGAOS3__
+	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	if ((GadToolsBase = OpenLibrary("gadtools.library", 40)) == NULL) {
 		printf( "Could not open gadtools.library\n");
 		return RETURN_ERROR;
@@ -546,7 +550,7 @@ LONG openGUILibraries() {
 	}
 	#endif
 
-	#ifdef __AMIGAOS3__
+	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	if ((DataTypesBase = OpenLibrary("datatypes.library", 44)) == NULL) {
 		printf( "Could not open datatypes.library\n");
 		return RETURN_ERROR;
@@ -748,7 +752,6 @@ LONG initVideo() {
 					Child, chatOutputText = TextObject,
 						MUIA_Text_Contents, "This is a test.\nI hope this works.\n\33c\33bMUI\33n\nis magic\n\n",
 						MUIA_Text_Copy, TRUE,
-						MUIA_Text_Data, NULL,
 						MUIA_Text_Marking, TRUE,
 						MUIA_Text_PreParse, "",
 						MUIA_Text_SetMin, FALSE,
@@ -3376,7 +3379,13 @@ static LONG loadConversations() {
 	Seek(file, 0, OFFSET_END);
 	LONG fileSize = Seek(file, 0, OFFSET_BEGINNING);
 	#else
-	int64 fileSize = GetFileSize(file);
+	#ifdef __AMIGAOS4__
+	int64_t fileSize = GetFileSize(file);
+	#else
+	struct FileInfoBlock fib;
+	ExamineFH64(file, &fib, NULL);
+	int64_t fileSize = fib.fib_Size;
+	#endif
 	#endif
 	STRPTR conversationsJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
 	if (Read(file, conversationsJsonString, fileSize) != fileSize) {
@@ -3470,7 +3479,13 @@ static LONG loadImages() {
 	Seek(file, 0, OFFSET_END);
 	LONG fileSize = Seek(file, 0, OFFSET_BEGINNING);
 	#else
-	int64 fileSize = GetFileSize(file);
+	#ifdef __AMIGAOS4__
+	int64_t fileSize = GetFileSize(file);
+	#else
+	struct FileInfoBlock fib;
+	ExamineFH64(file, &fib, NULL);
+	int64_t fileSize = fib.fib_Size;
+	#endif
 	#endif
 	STRPTR imagesJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
 	if (Read(file, imagesJsonString, fileSize) != fileSize) {

@@ -33,11 +33,12 @@ PROGRAM_NAME = AmigaGPT_MorphOS
 EXECUTABLE_OUT = out/$(PROGRAM_NAME)
 CC = ppc-morphos-gcc
 
-SDKLIBDIR = /opt/amiga/ppc-amigaos/lib
+SDKLIBDIR = /opt/amiga/ppc-morphos/lib
 LIBDIR = /opt/amiga/lib
 SDKDIR = /opt/amiga/os-include
 NETINCDIR = /opt/amiga/includestd
-INCDIR = /opt/amiga/include
+INCDIR = /opt/amiga/ppc-morphos/include
+GCCLIBDIR = /opt/amiga/lib/gcc/ppc-morphos/11.2.0/
 
 ifeq ($(OS),Darwin)
 	SED = sed -i "" 
@@ -45,7 +46,7 @@ else
 	SED = sed -i
 endif
 
-CCFLAGS = -MP -MMD -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -D__AMIGAOS4__ -D__USE_INLINE__ -DHAVE_VASPRINTF -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\"
+CCFLAGS = -MP -MMD -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -D__MORPHOS__ -D__USE_INLINE__ -DHAVE_VASPRINTF -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\"
 ifeq ($(DEBUG),1)
 	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -O1
 else
@@ -53,7 +54,7 @@ else
 endif
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NETINCDIR),-D
-LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-lamisslstubs,-ljson-c
+LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-ljson-c,-lssl,-lcrypto,-L$(GCCLIBDIR),-latomic
 VASMFLAGS = -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__MORPHOS__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -I$(NETINCDIR) -I$(SDKDIR)
 
 .PHONY: all clean copy_bundle_files

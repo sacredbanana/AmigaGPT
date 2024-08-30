@@ -44,7 +44,7 @@ LONG main(int argc, char **argv) {
 		exit(RETURN_ERROR);
 	}
 
-	#ifdef __AMIGAOS3__
+	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	struct Process *currentTask = (struct Process*)FindTask(NULL);
 	struct CommandLineInterface *cli = (struct CommandLineInterface *)BADDR(currentTask->pr_CLI);
 
@@ -119,7 +119,7 @@ LONG main(int argc, char **argv) {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 static LONG openLibraries() {
-	#ifdef __AMIGAOS3__
+	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	if ((DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 40)) == NULL) {
 		printf("Failed to open dos.library v40. This app requires AmigaOS 3.9 or 3.2+\n");
 		return RETURN_ERROR;
@@ -131,7 +131,7 @@ static LONG openLibraries() {
 	}
 	#endif
 
-	#ifdef __AMIGAOS3__
+	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	if ((UtilityBase = OpenLibrary("utility.library", 0)) == NULL) {
 		printf( "Could not open utility.library\n");
 		return RETURN_ERROR;
