@@ -11,7 +11,7 @@
 #define DEFAULT_ACCENT "american.accent"
 
 struct Config config = {
-	.speechEnabled = TRUE,
+	.speechEnabled = FALSE,
 	#ifdef __AMIGAOS3__
 	.speechAccent = NULL,
 	.speechSystem = SPEECH_SYSTEM_34,
@@ -158,11 +158,11 @@ LONG readConfig() {
 	}
 
 	#ifdef __AMIGAOS3__
-	if (config.speechSystem == SPEECH_SYSTEM_FLITE || config.speechSystem == SPEECH_SYSTEM_NONE) {
+	if (config.speechSystem == SPEECH_SYSTEM_FLITE) {
 		config.speechSystem = SPEECH_SYSTEM_34;
 	}
 	#else
-	if (config.speechSystem == SPEECH_SYSTEM_34 || config.speechSystem == SPEECH_SYSTEM_37 || config.speechSystem == SPEECH_SYSTEM_NONE) {
+	if (config.speechSystem == SPEECH_SYSTEM_34 || config.speechSystem == SPEECH_SYSTEM_37) {
 		config.speechSystem = SPEECH_SYSTEM_FLITE;
 	}
 	#endif

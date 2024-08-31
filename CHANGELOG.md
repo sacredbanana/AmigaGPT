@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.1 (2024-08-31)
+
+- Default to speech disabled
+- Fix crash when trying to close speech system when it failed to initialise
+
 ## 1.6.0 (2024-08-10)
 
 - Add the GPT4o Mini model

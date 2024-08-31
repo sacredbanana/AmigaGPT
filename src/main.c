@@ -91,9 +91,8 @@ LONG main(int argc, char **argv) {
 		#else
 		displayError("Failed to open speech system. Make sure Flite Device is installed. See the guide for more information.");
 		#endif
-		config.speechSystem = SPEECH_SYSTEM_NONE;
+		config.speechEnabled = FALSE;
 		closeSpeech();
-		initSpeech(config.speechSystem);
 	}
 
 	if (initOpenAIConnector() == RETURN_ERROR) {

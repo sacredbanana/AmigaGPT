@@ -2265,6 +2265,8 @@ LONG startGUIRunLoop() {
 
 	activeTextEditorGadgetID = TEXT_INPUT_TEXT_EDITOR_ID;
 
+	refreshSpeechMenuItems();
+
 	while (!done) {
 		signals = Wait(signalMask);
 
@@ -2495,6 +2497,12 @@ LONG startGUIRunLoop() {
 							break;
 						case MENU_ITEM_SPEECH_ENABLED_ID:
 							config.speechEnabled = !config.speechEnabled;
+							if (config.speechEnabled) {
+								closeSpeech();
+								if (initSpeech(config.speechSystem) == RETURN_ERROR) {
+									displayError("Could not initialise selected speech system.");
+								}
+							}
 							writeConfig();
 							refreshSpeechMenuItems();
 							break;
@@ -2504,21 +2512,17 @@ LONG startGUIRunLoop() {
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_34_ID:
 							closeSpeech();
-							if (initSpeech(SPEECH_SYSTEM_34) == RETURN_OK) {
-								config.speechSystem = SPEECH_SYSTEM_34;
-							} else {
-								config.speechSystem = SPEECH_SYSTEM_NONE;
-								displayError("Could not initialise speech system v34. Please make sure the translator.library and narrator.device v34 are installed into the program directory.");
+							config.speechSystem = SPEECH_SYSTEM_34;
+							if (initSpeech(SPEECH_SYSTEM_34) == RETURN_ERROR) {
+								displayError("Could not initialise speech system v34. Please make sure the translator.library and narrator.device v34 are installed into the program directory.");								
 							}
 							writeConfig();
 							refreshSpeechMenuItems();
 							break;
 						case MENU_ITEM_SPEECH_SYSTEM_37_ID:
 							closeSpeech();
-							if (initSpeech(SPEECH_SYSTEM_37) == RETURN_OK) {
-								config.speechSystem = SPEECH_SYSTEM_37;
-							} else {
-								config.speechSystem = SPEECH_SYSTEM_NONE;
+							config.speechSystem = SPEECH_SYSTEM_37;
+							if (initSpeech(SPEECH_SYSTEM_37) == RETURN_ERROR) {
 								displayError("Could not initialise speech system v37. Please make sure the translator.library and narrator.device v37 are installed into the program directory.");
 							}
 							writeConfig();
@@ -2527,11 +2531,9 @@ LONG startGUIRunLoop() {
 						#else
 						case MENU_ITEM_SPEECH_SYSTEM_FLITE_ID:
 							closeSpeech();
-							if (initSpeech(SPEECH_SYSTEM_FLITE) == RETURN_OK) {
-								config.speechSystem = SPEECH_SYSTEM_FLITE;
-							} else {
-								config.speechSystem = SPEECH_SYSTEM_NONE;
-								displayError("Could not initialise speech system Flite. Please make sure the flite.device is installed into the program directory.");
+							config.speechSystem = SPEECH_SYSTEM_FLITE;
+							if (initSpeech(SPEECH_SYSTEM_FLITE) == RETURN_ERROR) {
+								displayError("Could not initialise speech system Flite. Please make sure the flite.device is installed into the program directory.");								
 							}
 							writeConfig();
 							refreshSpeechMenuItems();
