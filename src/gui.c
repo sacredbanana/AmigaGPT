@@ -17,6 +17,8 @@
 #include <libraries/gadtools.h>
 #include <libraries/mui.h>
 #include <mui/Aboutbox_mcc.h>
+#include <mui/NList_mcc.h>
+#include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
 #include <proto/amigaguide.h>
 #include <proto/asl.h>
@@ -30,6 +32,7 @@
 #include <proto/utility.h>
 #include <proto/window.h>
 #include <stdio.h>
+#include <SDI_hook.h>
 #include <utility/utility.h>
 #include "config.h"
 #include "gui.h"
@@ -163,6 +166,7 @@ static Object *sendMessageButton;
 static Object *chatInputTextEditor;
 static Object *chatOutputText;
 static Object *statusBar;
+static Object *conversationListObject;
 static Object *dataTypeObject;
 static Object *app;
 static struct Screen *screen;
@@ -174,7 +178,7 @@ static LONG textEditorColorMap[] = {5,10,6,3,6,6,4,0,1,6,6,6,6,6,6,6};
 static LONG sendMessageButtonPen;
 static LONG newChatButtonPen;
 static LONG deleteButtonPen;
-struct MinList *currentConversation;
+struct Conversation *currentConversation;
 static struct GeneratedImage *currentImage;
 struct List *conversationList;
 struct List *modeSelectionTabList;
@@ -282,8 +286,8 @@ static struct GeneratedImage {
 	WORD width;
 	WORD height;
 };
-struct Hook idcmpHookMainWindow;
-struct Hook idcmpHookCreateImageWindow;
+// struct Hook idcmpHookMainWindow;
+// struct Hook idcmpHookCreateImageWindow;
 struct MsgPort *appPort;
 ULONG activeTextEditorGadgetID;
 static struct Node *chatTabNode;
@@ -296,17 +300,18 @@ static void closeGUILibraries();
 static LONG openStartupOptions();
 static void refreshOpenAIMenuItems();
 static void refreshSpeechMenuItems();
-static struct MinList* newConversation();
-static void addTextToConversation(struct MinList *conversation, STRPTR text, STRPTR role);
-static void addConversationToConversationList(struct MinList *conversation, STRPTR title);
+static struct Conversation* newConversation();
+static struct Conversation* copyConversation(struct Conversation *conversation);
+static void addTextToConversation(struct Conversation *conversation, STRPTR text, STRPTR role);
+static void addConversationToConversationList(struct Conversation *conversation);
 static void addImageToImageList(struct GeneratedImage *image);
-static struct MinList* getConversationFromConversationList(struct List *conversationList, ULONG index);
-static void displayConversation(struct MinList *conversation);
-static void freeConversation(struct MinList *conversation);
+// static struct Conversation* getConversationFromConversationList(struct List *conversationList, ULONG index);
+static void displayConversation(struct Conversation *conversation);
+static void freeConversation(struct Conversation *conversation);
 static void freeConversationList();
 static void freeImageList();
 static void freeModeSelectionTabList();
-static void removeConversationFromConversationList(struct MinList *conversation);
+static void removeConversationFromConversationList(struct Conversation *conversation);
 static void saveImageCopy(struct GeneratedImage *image);
 static void removeImageFromImageList(struct GeneratedImage *image);
 static void openChatFontRequester();
@@ -569,6 +574,30 @@ LONG openGUILibraries() {
 	return RETURN_OK;
 }
 
+HOOKPROTONHNO(ConstructLI_TextFunc, APTR, struct NList_ConstructMessage *ncm) {
+	struct Conversation *oldEntry = (struct Conversation *)ncm->entry;
+	struct Conversation *newEntry = copyConversation(oldEntry);
+    return (newEntry);
+}
+MakeHook(ConstructLI_TextHook, ConstructLI_TextFunc);
+
+HOOKPROTONHNO(DestructLI_TextFunc, void, struct NList_DestructMessage *ndm) {
+	if (ndm->entry)
+		freeConversation((struct Conversation *)ndm->entry);
+}
+MakeHook(DestructLI_TextHook, DestructLI_TextFunc);
+
+HOOKPROTONHNO(DisplayLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
+  struct Conversation *entry = (struct Conversation *) ndm->entry;
+  ndm->strings[0] = (STRPTR)entry->name;
+}
+MakeHook(DisplayLI_TextHook, DisplayLI_TextFunc);
+
+HOOKPROTONHNO(ConversationRowClickedFunc, void, LONG *rowNumber) {
+		printf("Row number: %ld\n", rowNumber);
+}
+MakeHook(ConversationRowClickedHook, ConversationRowClickedFunc);
+
 /**
  * Close the libraries used by the GUI
 **/
@@ -746,53 +775,92 @@ LONG initVideo() {
 		MUIA_Window_UseBottomBorderScroller, FALSE,
 		MUIA_Window_UseRightBorderScroller, FALSE,
 		MUIA_Window_UseLeftBorderScroller, FALSE,
-		WindowContents, VGroup,
-			Child, ScrollgroupObject,
-				MUIA_Scrollgroup_Contents, VGroup,
-					Child, chatOutputText = TextObject,
-						MUIA_Text_Contents, "This is a test.\nI hope this works.\n\33c\33bMUI\33n\nis magic\n\n",
-						MUIA_Text_Copy, TRUE,
-						MUIA_Text_Marking, TRUE,
-						MUIA_Text_PreParse, "",
-						MUIA_Text_SetMin, FALSE,
-						MUIA_Text_SetMax, FALSE,
-						MUIA_Text_SetVMax, FALSE,
-						MUIA_Text_Shorten, MUIV_Text_Shorten_Nothing,
+		WindowContents, HGroup,
+			Child, VGroup,
+				Child, NListviewObject,
+					MUIA_CycleChain, 1,
+
+					MUIA_NListview_NList, conversationListObject = NListObject,
+						MUIA_NList_DefaultObjectOnClick, TRUE,
+						MUIA_NList_MultiSelect, MUIV_NList_MultiSelect_None,
+						MUIA_NList_ConstructHook2, &ConstructLI_TextHook,
+						MUIA_NList_DestructHook2, &DestructLI_TextHook,
+						MUIA_NList_DisplayHook2, &DisplayLI_TextHook,
+						MUIA_NList_Format, "BAR MINW=100 MAXW=200",
+						MUIA_NList_AutoVisible, TRUE,
+						MUIA_NList_TitleSeparator, FALSE,
+						MUIA_NList_Title, FALSE,
+						// MUIA_NList_EntryValueDependent, TRUE,
+						MUIA_NList_MinColSortable, 0,
+						MUIA_NList_Imports, MUIV_NList_Imports_All,
+						MUIA_NList_Exports, MUIV_NList_Exports_All,
 					End,
+					MUIA_ShortHelp, "List of all your past conversations.",
 				End,
-				MUIA_Scrollgroup_AutoBars, TRUE,
-				MUIA_Scrollgroup_NoHorizBar, TRUE,
-				MUIA_Scrollgroup_FreeHoriz, FALSE,
-				MUIA_Scrollgroup_FreeVert, TRUE,
 			End,
-			Child, StringObject,
-				MUIA_String_Contents, "Ready",
-				MUIA_String_MaxLen, 1024,
-				MUIA_CycleChain, TRUE,
-				MUIA_String_Accept, TRUE,
-				MUIA_String_AdvanceOnCR, TRUE,
-				MUIA_Background, MUII_FILL,
-			End,
-			Child, HGroup,
+			Child, VGroup,
+				// Chat output text display
+				Child, ScrollgroupObject,
+					MUIA_Scrollgroup_Contents, VGroup,
+						Child, chatOutputText = TextEditorObject,
+							MUIA_TextEditor_Contents, "This is a test.\nI hope this works.\n\33c\33bMUI\33n\nis magic\n\n",
+							MUIA_Text_Copy, TRUE,
+							MUIA_Text_Marking, TRUE,
+							MUIA_Text_PreParse, "",
+							MUIA_Text_SetMin, FALSE,
+							MUIA_Text_SetMax, FALSE,
+							MUIA_Text_SetVMax, FALSE,
+							MUIA_Text_Shorten, MUIV_Text_Shorten_Nothing,
+							// MUIA_TextEditor_ImportHook, &MyImportHook,
+						End,
+					End,
+					MUIA_Scrollgroup_AutoBars, TRUE,
+					MUIA_Scrollgroup_NoHorizBar, TRUE,
+					MUIA_Scrollgroup_FreeHoriz, FALSE,
+					MUIA_Scrollgroup_FreeVert, TRUE,
+				End,
+				// Status bar
+				Child, StringObject,
+					MUIA_String_Contents, "Ready",
+					MUIA_String_MaxLen, 1024,
+					MUIA_CycleChain, TRUE,
+					MUIA_String_Accept, TRUE,
+					MUIA_String_AdvanceOnCR, TRUE,
+					MUIA_Background, MUII_FILL,
+				End,
+				Child, HGroup,
+				// Chat input text editor
 					Child, chatInputTextEditor = TextEditorObject,
 						MUIA_TextEditor_Contents, "",
 						MUIA_TextEditor_ReadOnly, FALSE,
 						MUIA_TextEditor_TabSize, 4,
 						MUIA_TextEditor_Pen, pen,
 					End,
-					Child, sendMessageButton = MUI_MakeObject(MUIO_Button, "Send"),
+					// Send message button
+					Child, sendMessageButton = MUI_MakeObject(MUIO_Button, "Send",
+						MUIA_MinWidth, 100,
+						MUIA_Background, MUII_FILL,
+						MUIA_Text_Contents, "Send",
+						MUIA_CycleChain, TRUE,
+						MUIA_InputMode, MUIV_InputMode_RelVerify,
+						MUIA_ShortHelp, "Send the message",
+					End,
 				End,
 			End,
+		End,
 	End)) {
 		printf("Could not create mainWindowObject\n");
 		return RETURN_ERROR;
 	}
 
-	DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
+	DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, app, 3, MUIM_CallHook, &ConversationRowClickedFunc, MUIV_TriggerValue);
+	DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 
 	  app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 	DoMethod(app, OM_ADDMEMBER, mainWindowObject);
 
 	set(mainWindowObject,MUIA_Window_Open,TRUE);
+
+	loadConversations();
 	
 	// if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
 	// 	GA_ID, SEND_MESSAGE_BUTTON_ID,
@@ -1219,58 +1287,7 @@ LONG initVideo() {
 	// 	layoutToOpen = modeClickTabOld;
 	// }
 
-	// if ((mainLayout = NewObject(LAYOUT_GetClass(), NULL,
-	// 	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-	// 	LAYOUT_DeferLayout, TRUE,
-	// 	LAYOUT_SpaceInner, TRUE,
-	// 	LAYOUT_SpaceOuter, TRUE,
-	// 	LAYOUT_AddChild, layoutToOpen,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create main layout\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// idcmpHookMainWindow.h_Entry = (HOOKFUNC)processIDCMPMainWindow;
-	// idcmpHookMainWindow.h_Data = NULL;
-	// idcmpHookMainWindow.h_SubEntry = NULL;
-
-	// idcmpHookCreateImageWindow.h_Entry = (HOOKFUNC)processIDCMPCreateImageWindow;
-	// idcmpHookCreateImageWindow.h_Data = NULL;
-	// idcmpHookCreateImageWindow.h_SubEntry = NULL;
-
 	appPort = CreateMsgPort();
-
-	// if ((mainWindowObjectOld = NewObject(WINDOW_GetClass(), NULL,
-	// 	WINDOW_Position, WPOS_CENTERSCREEN,
-	// 	WA_Activate, TRUE,
-	// 	WA_Title, "AmigaGPT",
-	// 	WA_Width, (WORD)(screen->Width * 0.8),
-	// 	WA_Height, (WORD)(screen->Height * 0.8),
-	// 	WA_CloseGadget, TRUE,
-	// 	WA_DragBar, isPublicScreen,
-	// 	WA_SizeGadget, isPublicScreen,
-	// 	WA_DepthGadget, isPublicScreen,
-	// 	WA_NewLookMenus, TRUE,
-	// 	WINDOW_AppPort, appPort,
-	// 	WINDOW_IconifyGadget, isPublicScreen,
-	// 	WINDOW_Layout, mainLayout,
-	// 	WINDOW_SharedPort, NULL,
-	// 	WINDOW_Position, isPublicScreen ? WPOS_CENTERSCREEN : WPOS_FULLSCREEN,
-	// 	// WINDOW_NewMenu, amigaGPTMenu,
-	// 	WINDOW_IDCMPHook, &idcmpHookMainWindow,
-	// 	WINDOW_InterpretIDCMPHook, TRUE,
-	// 	WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE,
-	// 	WA_IDCMP, IDCMP_CLOSEWINDOW | IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MENUPICK | IDCMP_RAWKEY,
-	// 	WA_CustomScreen, screen,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create mainWindow object\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((mainWindow = (struct Window *)DoMethod(mainWindowObjectOld, WM_OPEN, NULL)) == NULL) {
-	// 	printf("Could not open mainWindow\n");
-	// 	return RETURN_ERROR;
-	// }
 
 	// if (!isPublicScreen) {
 	// 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEditorColorMap, TAG_DONE);
@@ -1284,7 +1301,7 @@ LONG initVideo() {
 	// For some reason it won't let you paste text into the empty text editor unless you do this
 	// DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);
 
-	// updateStatusBar("Ready", 5);
+	updateStatusBar("Ready", 5);
 	
 	// if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID) {
 	// 	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
@@ -1560,6 +1577,8 @@ static void sendChatMessage() {
 	BOOL dataStreamFinished = FALSE;
 	ULONG speechIndex = 0;
 	UWORD wordNumber = 0;
+
+	DoMethod(chatOutputText, MUIM_TextEditor_InsertText, "\n", MUIV_TextEditor_InsertText_Bottom);
 	// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 	do {
 		if (config.chatSystem != NULL && (config.chatSystem) > 0)
@@ -1585,12 +1604,14 @@ static void sendChatMessage() {
 				struct json_object *message = json_object_object_get(error, "message");
 				STRPTR messageString = json_object_get_string(message);
 				displayError(messageString);
+				set(chatInputTextEditor, MUIA_TextEditor_Contents, text);
 				// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
 				struct MinNode *lastMessage = RemTail(currentConversation);
 				FreeVec(lastMessage);
-				if (currentConversation == currentConversation->mlh_TailPred) {
+				if (currentConversation == currentConversation->messages->mlh_TailPred) {
 					freeConversation(currentConversation);
 					currentConversation = NULL;
+					DoMethod(chatOutputText, MUIM_TextEditor_ClearText);
 					// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 				} else {
 					displayConversation(currentConversation);
@@ -1659,8 +1680,11 @@ static void sendChatMessage() {
 			if (responses[0] != NULL) {
 				STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
 				formatText(responseString);
-				addConversationToConversationList(currentConversation, responseString);
-				
+				if (currentConversation->name == NULL) {
+					currentConversation->name = AllocVec(strlen(responseString) + 1, MEMF_CLEAR);
+					strncpy(currentConversation->name, responseString, strlen(responseString));
+				}
+				addConversationToConversationList(currentConversation);
 			}
 			struct MinNode *titleRequestNode = RemTail(currentConversation);
 			FreeVec(titleRequestNode);
@@ -1819,15 +1843,20 @@ static void refreshSpeechMenuItems() {
  * Creates a new conversation
  * @return A pointer to the new conversation
 **/
-static struct MinList* newConversation() {
-	struct MinList *conversation = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
+static struct Conversation* newConversation() {
+	struct Conversation *conversation = AllocVec(sizeof(struct Conversation), MEMF_CLEAR);
+	struct MinList *messages = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
 	
 	// NewMinList(conversation); // This is what makes us require exec.library 45. Replace with the following:
-	if (conversation) {
-		conversation->mlh_Tail = 0;
-		conversation->mlh_Head = (struct MinNode *)&conversation->mlh_Tail;
-		conversation->mlh_TailPred = (struct MinNode *)&conversation->mlh_Head;
+	if (messages) {
+		messages->mlh_Tail = 0;
+		messages->mlh_Head = (struct MinNode *)&messages->mlh_Tail;
+		messages->mlh_TailPred = (struct MinNode *)&messages->mlh_Head;
 	}
+
+	conversation->messages = messages;
+	conversation->name = NULL;
+	
 	return conversation;
 }
 
@@ -1837,7 +1866,7 @@ static struct MinList* newConversation() {
  * @param text The text to add to the conversation
  * @param role The role of the text (user or assistant)
 **/
-static void addTextToConversation(struct MinList *conversation, STRPTR text, STRPTR role) {
+static void addTextToConversation(struct Conversation *conversation, STRPTR text, STRPTR role) {
 	struct ConversationNode *conversationNode = AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
 	if (conversationNode == NULL) {
 		printf("Failed to allocate memory for conversation node\n");
@@ -1847,28 +1876,15 @@ static void addTextToConversation(struct MinList *conversation, STRPTR text, STR
 	conversationNode->role[sizeof(conversationNode->role) - 1] = '\0';
 	conversationNode->content = AllocVec(strlen(text) + 1, MEMF_CLEAR);
 	strncpy(conversationNode->content, text, strlen(text));
-	AddTail(conversation, (struct Node *)conversationNode);
+	AddTail(conversation->messages, (struct Node *)conversationNode);
 }
 
 /**
  * Add a conversation to the conversation list
  * @param conversation The conversation to add to the conversation list
- * @param title The title of the conversation
 **/
-static void addConversationToConversationList(struct MinList *conversation, STRPTR title) {
-	// struct Node *node;
-	// if ((node = AllocListBrowserNode(1,
-	// 	LBNCA_CopyText, TRUE,
-	// 	LBNCA_Text, title,
-	// 	LBNA_UserData, (ULONG)conversation,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create conversation list browser node\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
-	// AddHead(conversationList, node);
-	// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
+static void addConversationToConversationList(struct Conversation *conversation) {
+	DoMethod(conversationListObject, MUIM_NList_InsertSingle, conversation, MUIV_NList_Insert_Top);
 }
 
 /**
@@ -1891,33 +1907,33 @@ static void addImageToImageList(struct GeneratedImage *image) {
 	// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
 }
 
-/**
- * Get a conversation from the conversation list
- * @param conversationList The conversation list to get the conversation from
- * @param index The index of the conversation to get
- * @return A pointer to the conversation
-**/
-static struct MinList* getConversationFromConversationList(struct List *conversationList, ULONG index) {
-	// struct Node *node = conversationList->lh_Head->ln_Succ;
-	// while (index > 0) {
-	// 	node = node->ln_Succ;
-	// 	index--;
-	// }
-	// struct MinList *conversation;
-	// GetListBrowserNodeAttrs(node, LBNA_UserData, &conversation, TAG_END);
-	// return conversation;
-}
+// /**
+//  * Get a conversation from the conversation list
+//  * @param conversationList The conversation list to get the conversation from
+//  * @param index The index of the conversation to get
+//  * @return A pointer to the conversation
+// **/
+// static struct Conversation* getConversationFromConversationList(struct List *conversationList, ULONG index) {
+// 	struct Node *node = conversationList->lh_Head->ln_Succ;
+// 	while (index > 0) {
+// 		node = node->ln_Succ;
+// 		index--;
+// 	}
+// 	struct MinList *conversation;
+// 	GetListBrowserNodeAttrs(node, LBNA_UserData, &conversation, TAG_END);
+// 	return conversation;
+// }
 
 /**
  * Prints the conversation to the conversation window
  * @param conversation the conversation to display
 **/
-static void displayConversation(struct MinList *conversation) {
+static void displayConversation(struct Conversation *conversation) {
 	struct ConversationNode *conversationNode;
 	// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	STRPTR conversationString = AllocVec(WRITE_BUFFER_LENGTH, MEMF_CLEAR);
 
-	for (conversationNode = (struct ConversationNode *)conversation->mlh_Head;
+	for (conversationNode = (struct ConversationNode *)conversation->messages->mlh_Head;
 		 conversationNode->node.mln_Succ != NULL;
 		 conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
 			if ((strlen(conversationString) + strlen(conversationNode->content) + 5) > WRITE_BUFFER_LENGTH) {
@@ -1946,9 +1962,10 @@ static void displayConversation(struct MinList *conversation) {
 
 	STRPTR conversationStringISO8859_1 = UTF8ToISO8859_1(conversationString);
 	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationStringISO8859_1, TAG_DONE);
-	Delay(2);
+	// Delay(2);
 	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_CursorY, ~0, TAG_DONE);
 	// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	set(chatOutputText, MUIA_TextEditor_Contents, conversationStringISO8859_1);
 	FreeVec(conversationString);
 	FreeVec(conversationStringISO8859_1);
 }
@@ -1957,13 +1974,30 @@ static void displayConversation(struct MinList *conversation) {
  * Free the conversation
  * @param conversation The conversation to free
 **/
-static void freeConversation(struct MinList *conversation) {
+static void freeConversation(struct Conversation *conversation) {
 	struct ConversationNode *conversationNode;
-	while ((conversationNode = (struct ConversationNode *)RemHead(conversation)) != NULL) {
+	while ((conversationNode = (struct ConversationNode *)RemHead(conversation->messages)) != NULL) {
 		FreeVec(conversationNode->content);
 		FreeVec(conversationNode);
 	}
+	if (conversation->name != NULL)
+	 	FreeVec(conversation->name);
 	FreeVec(conversation);
+}
+
+static struct Conversation* copyConversation(struct Conversation *conversation) {
+	struct Conversation *copy = newConversation();
+	struct ConversationNode *conversationNode;
+	for (conversationNode = (struct ConversationNode *)conversation->messages->mlh_Head;
+		 conversationNode->node.mln_Succ != NULL;
+		 conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
+			addTextToConversation(copy, conversationNode->content, conversationNode->role);
+	}
+	if (conversation->name != NULL) {
+		copy->name = AllocVec(strlen(conversation->name) + 1, MEMF_CLEAR);
+		strncpy(copy->name, conversation->name, strlen(conversation->name));
+	}
+	return copy;
 }
 
 /**
@@ -2010,7 +2044,7 @@ static void freeModeSelectionTabList() {
  * Remove a conversation from the conversation list
  * @param conversation The conversation to remove from the conversation list
 **/
-static void removeConversationFromConversationList(struct MinList *conversation) {
+static void removeConversationFromConversationList(struct Conversation *conversation) {
 	// if (conversation == NULL) return;
 	// struct Node *node = conversationList->lh_Head;
 	// while (node != NULL) {
@@ -3436,7 +3470,10 @@ static LONG loadConversations() {
 			return RETURN_ERROR;
 		}
 
-		struct MinList *conversation = newConversation();
+		struct Conversation *conversation = newConversation();
+		conversation->name = AllocVec(strlen(conversationName) + 1, MEMF_ANY | MEMF_CLEAR);
+		strncpy(conversation->name, conversationName, strlen(conversationName));
+
 		for (UWORD j = 0; j < json_object_array_length(messagesJsonArray); j++) {
 			struct json_object *messageJsonObject = json_object_array_get_idx(messagesJsonArray, j);
 			struct json_object *roleJsonObject;
@@ -3458,7 +3495,8 @@ static LONG loadConversations() {
 			STRPTR content = json_object_get_string(contentJsonObject);
 			addTextToConversation(conversation, content, role);
 		}
-		addConversationToConversationList(conversation, conversationName);
+		addConversationToConversationList(conversation);
+		freeConversation(conversation);
 	}
 
 	json_object_put(conversationsJsonArray);
