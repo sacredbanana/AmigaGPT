@@ -7,6 +7,7 @@
 - New native version for MorphOS
 - Enhanced "About AmigaGPT" panel
 - New "About MUI" panel
+- Fix memory leak when receiving messages
 - support for proxy servers???
 - more responsive user interface with the ability to cancel pending operations???
 - ability to greatly customise the look of the app???

@@ -61,7 +61,10 @@
 #define SAVE_COPY_BUTTON_ID 20
 #define MODE_SELECT_RADIO_BUTTON_ID 21
 
-#define STARTUP_OPTIONS_OK_BUTTON_PRESS 1
+// Actions
+enum {
+	STARTUP_OPTIONS_OK_BUTTON_PRESS = 1
+};
 
 #define NULL_ID 0
 
@@ -286,8 +289,6 @@ static struct GeneratedImage {
 	WORD width;
 	WORD height;
 };
-// struct Hook idcmpHookMainWindow;
-// struct Hook idcmpHookCreateImageWindow;
 struct MsgPort *appPort;
 ULONG activeTextEditorGadgetID;
 static struct Node *chatTabNode;
@@ -304,7 +305,6 @@ static struct Conversation* newConversation();
 static struct Conversation* copyConversation(struct Conversation *conversation);
 static void addTextToConversation(struct Conversation *conversation, STRPTR text, STRPTR role);
 static void addImageToImageList(struct GeneratedImage *image);
-// static struct Conversation* getConversationFromConversationList(struct List *conversationList, ULONG index);
 static void displayConversation(struct Conversation *conversation);
 static void freeConversation(struct Conversation *conversation);
 static void freeConversationList();
@@ -1558,38 +1558,39 @@ static void sendChatMessage() {
 		isNewConversation = TRUE;
 		currentConversation = newConversation();
 	}
-	// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	set(sendMessageButton, MUIA_Disabled, TRUE);
 	// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 	// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 
 	updateStatusBar("Sending message...", 7);
 	STRPTR receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+	STRPTR text;
+	DoMethod(chatInputTextEditor, MUIM_TextEditor_ExportText, &text);
 
 	// STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
 	// Remove trailing newline characters
-	// while (text[strlen(text) - 1] == '\n') {
-	// 	text[strlen(text) - 1] = '\0';
-	// }
-	// STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
-	// addTextToConversation(currentConversation, textUTF_8, "user");
-	// displayConversation(currentConversation);
-	// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	// DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
-	// ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
+	while (text[strlen(text) - 1] == '\n') {
+		text[strlen(text) - 1] = '\0';
+	}
+	STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
+	addTextToConversation(currentConversation, textUTF_8, "user");
+	displayConversation(currentConversation);
+	set(sendMessageButton, MUIA_Disabled, TRUE);
+	DoMethod(chatInputTextEditor, MUIM_TextEditor_ClearText);
+	DoMethod(chatInputTextEditor, MUIM_GoActive);
 
 	BOOL dataStreamFinished = FALSE;
 	ULONG speechIndex = 0;
 	UWORD wordNumber = 0;
 
 	DoMethod(chatOutputTextEditor, MUIM_TextEditor_InsertText, "\n", MUIV_TextEditor_InsertText_Bottom);
-	// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 	do {
 		if (config.chatSystem != NULL && (config.chatSystem) > 0)
 			addTextToConversation(currentConversation, config.chatSystem, "system");
 		responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, TRUE);
 		if (responses == NULL) {
 			displayError("Could not connect to OpenAI");
-			// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+			set(sendMessageButton, MUIA_Disabled, FALSE);
 			// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 			// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 			FreeVec(receivedMessage);
@@ -1607,20 +1608,20 @@ static void sendChatMessage() {
 				struct json_object *message = json_object_object_get(error, "message");
 				STRPTR messageString = json_object_get_string(message);
 				displayError(messageString);
-				// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
+				set(chatInputTextEditor, MUIA_TextEditor_Contents, text);
 				struct MinNode *lastMessage = RemTail(currentConversation);
 				FreeVec(lastMessage);
 				if (currentConversation == currentConversation->messages->mlh_TailPred) {
 					freeConversation(currentConversation);
 					currentConversation = NULL;
 					DoMethod(chatOutputTextEditor, MUIM_TextEditor_ClearText);
-					// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 				} else {
 					displayConversation(currentConversation);
 				}
 				json_object_put(response);
 
-				// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				set(sendMessageButton, MUIA_Disabled, FALSE);
+
 				// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 				// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 
@@ -1629,18 +1630,22 @@ static void sendChatMessage() {
 			}
 			STRPTR contentString = getMessageContentFromJson(response, TRUE);
 			if (contentString != NULL) {
+				// Text for printing
 				formatText(contentString);
-				STRPTR contentStringISO8859_1 = UTF8ToISO8859_1(contentString);
+				STRPTR formattedMessageISO8859_1 = UTF8ToISO8859_1(contentString);
 				strncat(receivedMessage, contentString, READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
-				STRPTR receivedMessageISO8859_1 = UTF8ToISO8859_1(receivedMessage);
-				// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, contentStringISO8859_1, GV_TEXTEDITOR_InsertText_Bottom);
+				DoMethod(chatOutputTextEditor, MUIM_TextEditor_InsertText, formattedMessageISO8859_1, MUIV_TextEditor_InsertText_Bottom);
+				FreeVec(formattedMessageISO8859_1);
+				FreeVec(contentString);
+				// Text for speaking
+				STRPTR unformattedMessageISO8859_1 = UTF8ToISO8859_1(receivedMessage);
 				if (++wordNumber % 50 == 0) {
 					if (config.speechEnabled) {
 						if (config.speechSystem != SPEECH_SYSTEM_OPENAI) {
-							speakText(receivedMessageISO8859_1 + speechIndex);
+							speakText(unformattedMessageISO8859_1 + speechIndex);
 						}
-						speechIndex = strlen(receivedMessageISO8859_1);
-						FreeVec(receivedMessageISO8859_1);
+						speechIndex = strlen(unformattedMessageISO8859_1);
+						FreeVec(unformattedMessageISO8859_1);
 					}
 				}
 				finishReason = json_object_get_string(json_object_object_get(response, "finish_reason"));
@@ -2127,13 +2132,6 @@ LONG startGUIRunLoop() {
 	BOOL running = TRUE;
 	WORD code;
 
-	// GetAttr(WINDOW_SigMask, mainWindowObjectOld, &winSignal);
-	// signalMask = winSignal;
-
-	// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GFLG_SELECTED, TRUE, TAG_DONE);
-
-	// activeTextEditorGadgetID = TEXT_INPUT_TEXT_EDITOR_ID;
-
 	refreshSpeechMenuItems();
 
 	while (running) {
@@ -2142,9 +2140,13 @@ LONG startGUIRunLoop() {
 		switch(id) {
 			case MUIV_Application_ReturnID_Quit:
 			case MENU_ITEM_QUIT:
-				if((MUI_RequestA(app, mainWindowObject, 0, "Quit?", "_Yes|_No", "\33cAre you sure you want to quit AmigaGPT?", 0)) == 1)
+			{
+				BOOL forceQuit;
+				get(app, MUIA_Application_ForceQuit, &forceQuit);
+				if((forceQuit || (app, mainWindowObject, 0, "Quit?", "_Yes|_No", "\33cAre you sure you want to quit AmigaGPT?", 0)) == 1)
 						running = FALSE;
 				break;
+			}
 			case MENU_ITEM_ABOUT_AMIGAGPT:
 				openAboutAmigaGPTWindow();
 				break;
