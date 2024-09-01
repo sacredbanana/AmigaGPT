@@ -302,7 +302,6 @@ static void refreshSpeechMenuItems();
 static struct Conversation* newConversation();
 static struct Conversation* copyConversation(struct Conversation *conversation);
 static void addTextToConversation(struct Conversation *conversation, STRPTR text, STRPTR role);
-static void addConversationToConversationList(struct Conversation *conversation);
 static void addImageToImageList(struct GeneratedImage *image);
 // static struct Conversation* getConversationFromConversationList(struct List *conversationList, ULONG index);
 static void displayConversation(struct Conversation *conversation);
@@ -593,15 +592,13 @@ HOOKPROTONHNO(DisplayLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
 MakeHook(DisplayLI_TextHook, DisplayLI_TextFunc);
 
 HOOKPROTONHNO(ConversationRowClickedFunc, void, LONG *rowNumber) {
-	printf("Row number: %ld\n", *rowNumber);
-	if (currentConversation != NULL) {
+	if (currentConversation != NULL)
 		freeConversation(currentConversation);
-	}
+
 	struct Conversation *conversation;
-	DoMethod(conversationListObject, MUIM_NList_GetEntry, MUIV_NList_GetEntry_Active , conversation);
-	printf("Conversation name: %s\n", conversation->name);
+	DoMethod(conversationListObject, MUIM_NList_GetEntry, MUIV_NList_GetEntry_Active, &conversation);
 	currentConversation = copyConversation(conversation);
-	// displayConversation(currentConversation);
+	displayConversation(currentConversation);
 }
 MakeHook(ConversationRowClickedHook, ConversationRowClickedFunc);
 
@@ -773,8 +770,8 @@ LONG initVideo() {
 		MUIA_Window_SizeGadget, isPublicScreen,
 		MUIA_Window_DragBar, isPublicScreen,
 		MUIA_Window_Screen, screen,
-		MUIA_Window_Width, MUIV_Window_Width_Visible(90),
-		MUIA_Window_Height, MUIV_Window_Height_Visible(90),
+		MUIA_Window_Width, MUIV_Window_Width_Visible(isPublicScreen ? 90: 100),
+		MUIA_Window_Height, MUIV_Window_Height_Visible(isPublicScreen ? 90: 100),
 		MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
 		MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
 		MUIA_Window_Menustrip, MUI_MakeObject(MUIO_MenustripNM, amigaGPTMenu),
@@ -1690,7 +1687,7 @@ static void sendChatMessage() {
 					currentConversation->name = AllocVec(strlen(responseString) + 1, MEMF_CLEAR);
 					strncpy(currentConversation->name, responseString, strlen(responseString));
 				}
-				addConversationToConversationList(currentConversation);
+				DoMethod(conversationListObject, MUIM_NList_InsertSingle, currentConversation, MUIV_NList_Insert_Top);
 			}
 			struct MinNode *titleRequestNode = RemTail(currentConversation);
 			FreeVec(titleRequestNode);
@@ -1883,14 +1880,6 @@ static void addTextToConversation(struct Conversation *conversation, STRPTR text
 	conversationNode->content = AllocVec(strlen(text) + 1, MEMF_CLEAR);
 	strncpy(conversationNode->content, text, strlen(text));
 	AddTail(conversation->messages, (struct Node *)conversationNode);
-}
-
-/**
- * Add a conversation to the conversation list
- * @param conversation The conversation to add to the conversation list
-**/
-static void addConversationToConversationList(struct Conversation *conversation) {
-	DoMethod(conversationListObject, MUIM_NList_InsertSingle, conversation, MUIV_NList_Insert_Top);
 }
 
 /**
@@ -3480,6 +3469,8 @@ static LONG loadConversations() {
 		conversation->name = AllocVec(strlen(conversationName) + 1, MEMF_ANY | MEMF_CLEAR);
 		strncpy(conversation->name, conversationName, strlen(conversationName));
 
+		set(conversationListObject, MUIA_NList_Quiet, TRUE);
+
 		for (UWORD j = 0; j < json_object_array_length(messagesJsonArray); j++) {
 			struct json_object *messageJsonObject = json_object_array_get_idx(messagesJsonArray, j);
 			struct json_object *roleJsonObject;
@@ -3501,10 +3492,10 @@ static LONG loadConversations() {
 			STRPTR content = json_object_get_string(contentJsonObject);
 			addTextToConversation(conversation, content, role);
 		}
-		addConversationToConversationList(conversation);
+		DoMethod(conversationListObject, MUIM_NList_InsertSingle, conversation, MUIV_NList_Insert_Top);
 		freeConversation(conversation);
 	}
-
+	set(conversationListObject, MUIA_NList_Quiet, FALSE);
 	json_object_put(conversationsJsonArray);
 	return RETURN_OK;
 }
