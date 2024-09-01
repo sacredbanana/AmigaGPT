@@ -307,10 +307,8 @@ static void addTextToConversation(struct Conversation *conversation, STRPTR text
 static void addImageToImageList(struct GeneratedImage *image);
 static void displayConversation(struct Conversation *conversation);
 static void freeConversation(struct Conversation *conversation);
-static void freeConversationList();
 static void freeImageList();
 static void freeModeSelectionTabList();
-static void removeConversationFromConversationList(struct Conversation *conversation);
 static void saveImageCopy(struct GeneratedImage *image);
 static void removeImageFromImageList(struct GeneratedImage *image);
 static void openChatFontRequester();
@@ -786,9 +784,9 @@ LONG initVideo() {
 		MUIA_Window_UseLeftBorderScroller, FALSE,
 		WindowContents, HGroup,
 			Child, VGroup,
+				// Conversation list
 				Child, NListviewObject,
 					MUIA_CycleChain, 1,
-
 					MUIA_NListview_NList, conversationListObject = NListObject,
 						MUIA_NList_DefaultObjectOnClick, TRUE,
 						MUIA_NList_MultiSelect, MUIV_NList_MultiSelect_None,
@@ -818,6 +816,7 @@ LONG initVideo() {
 						MUIA_Text_SetVMax, FALSE,
 						MUIA_Text_Shorten, MUIV_Text_Shorten_Nothing,
 						MUIA_TextEditor_ReadOnly, TRUE,
+						MUIA_TextEditor_ImportHook,  MUIV_TextEditor_ImportHook_EMail,
 						MUIA_TextEditor_Slider, chatOutputScroller,
 					End,
 					Child, chatOutputScroller = ScrollbarObject,
@@ -1906,30 +1905,12 @@ static void addImageToImageList(struct GeneratedImage *image) {
 	// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
 }
 
-// /**
-//  * Get a conversation from the conversation list
-//  * @param conversationList The conversation list to get the conversation from
-//  * @param index The index of the conversation to get
-//  * @return A pointer to the conversation
-// **/
-// static struct Conversation* getConversationFromConversationList(struct List *conversationList, ULONG index) {
-// 	struct Node *node = conversationList->lh_Head->ln_Succ;
-// 	while (index > 0) {
-// 		node = node->ln_Succ;
-// 		index--;
-// 	}
-// 	struct MinList *conversation;
-// 	GetListBrowserNodeAttrs(node, LBNA_UserData, &conversation, TAG_END);
-// 	return conversation;
-// }
-
 /**
  * Prints the conversation to the conversation window
  * @param conversation the conversation to display
 **/
 static void displayConversation(struct Conversation *conversation) {
 	struct ConversationNode *conversationNode;
-	// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 	STRPTR conversationString = AllocVec(WRITE_BUFFER_LENGTH, MEMF_CLEAR);
 
 	for (conversationNode = (struct ConversationNode *)conversation->messages->mlh_Head;
@@ -1937,33 +1918,26 @@ static void displayConversation(struct Conversation *conversation) {
 		 conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
 			if ((strlen(conversationString) + strlen(conversationNode->content) + 5) > WRITE_BUFFER_LENGTH) {
 				displayError("The conversation has exceeded the maximum length.\n\nPlease start a new conversation.");
-				// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+				set(sendMessageButton, MUIA_Disabled, TRUE);
 				return;
 			}
 			if (strcmp(conversationNode->role, "user") == 0) {
 				STRPTR content = conversationNode->content;
-				strncat(conversationString, "*", WRITE_BUFFER_LENGTH - strlen(conversationString) - 2);
+				strncat(conversationString, "\33r\33b", WRITE_BUFFER_LENGTH - strlen(conversationString) - 5);
 				while (*content != '\0') {
-					if (*content == '\n') {
-						strncat(conversationString, "*", WRITE_BUFFER_LENGTH - strlen(conversationString) - 2);
-						strncat(conversationString, content++, 1);
-						strncat(conversationString, "*", WRITE_BUFFER_LENGTH - strlen(conversationString) - 2);
-					} else {
-						strncat(conversationString, content++, 1);
+					strncat(conversationString, content, 1);
+					if (*content++ == '\n') {
+						strncat(conversationString, "\33b", WRITE_BUFFER_LENGTH - strlen(conversationString) - 3);
 					}
 				}
-				strncat(conversationString, "*\n\n", WRITE_BUFFER_LENGTH - strlen(conversationString) - 4);
 			} else if (strcmp(conversationNode->role, "assistant") == 0) {
+				strncat(conversationString, "\33l", WRITE_BUFFER_LENGTH - strlen(conversationString) - 3);
 				strncat(conversationString, conversationNode->content, WRITE_BUFFER_LENGTH - strlen(conversationString));
-				strncat(conversationString, "\n\n", WRITE_BUFFER_LENGTH - strlen(conversationString) - 3);	
-			}	
+			}
+			strncat(conversationString, "\n\33c\33[s:18]\n", WRITE_BUFFER_LENGTH - strlen(conversationString) - 12);
 	}
 
 	STRPTR conversationStringISO8859_1 = UTF8ToISO8859_1(conversationString);
-	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, conversationStringISO8859_1, TAG_DONE);
-	// Delay(2);
-	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_CursorY, ~0, TAG_DONE);
-	// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	set(chatOutputTextEditor, MUIA_TextEditor_Contents, conversationStringISO8859_1);
 	FreeVec(conversationString);
 	FreeVec(conversationStringISO8859_1);
@@ -1984,6 +1958,11 @@ static void freeConversation(struct Conversation *conversation) {
 	FreeVec(conversation);
 }
 
+/**
+ * Copy a conversation
+ * @param conversation The conversation to copy
+ * @return A pointer to the copied conversation
+**/
 static struct Conversation* copyConversation(struct Conversation *conversation) {
 	struct Conversation *copy = newConversation();
 	struct ConversationNode *conversationNode;
@@ -2000,20 +1979,6 @@ static struct Conversation* copyConversation(struct Conversation *conversation) 
 }
 
 /**
- * Free the conversation list
-**/
-static void freeConversationList() {
-	// struct Node *conversationListNode;
-	// while ((conversationListNode = RemHead(conversationList)) != NULL) {
-	// 	ULONG *conversation;
-	// 	GetListBrowserNodeAttrs(conversationListNode, LBNA_UserData, (ULONG *)&conversation, TAG_END);
-	// 	freeConversation(conversation);
-	// 	FreeVec(conversationListNode);
-	// }
-	// FreeVec(conversationList);
-}
-
-/**
  * Free the image list
 **/
 static void freeImageList() {
@@ -2027,39 +1992,6 @@ static void freeImageList() {
 	// 	FreeVec(generatedImage);
 	// }
 	// FreeVec(imageList);
-}
-
-/**
- * Free the mode selection tab list
-**/
-static void freeModeSelectionTabList() {
-	// struct Node *modeSelectionTabListNode;
-	// while ((modeSelectionTabListNode = RemHead(modeSelectionTabList)) != NULL) {
-	// 	FreeClickTabNode(modeSelectionTabListNode);
-	// }
-}
-
-/**
- * Remove a conversation from the conversation list
- * @param conversation The conversation to remove from the conversation list
-**/
-static void removeConversationFromConversationList(struct Conversation *conversation) {
-	// if (conversation == NULL) return;
-	// struct Node *node = conversationList->lh_Head;
-	// while (node != NULL) {
-	// 	struct MinList *listBrowserConversation;
-	// 	GetListBrowserNodeAttrs(node, LBNA_UserData, (struct MinList *)&listBrowserConversation, TAG_END);
-	// 	if (listBrowserConversation == conversation) {
-	// 		// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
-	// 		// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
-	// 		Remove(node);
-	// 		FreeListBrowserNode(node);
-	// 		// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, LISTBROWSER_Labels, conversationList, TAG_DONE);
-	// 		freeConversation(conversation);
-	// 		return;
-	// 	}
-	// 	node = node->ln_Succ;
-	// }
 }
 
 /**
@@ -2143,7 +2075,7 @@ LONG startGUIRunLoop() {
 			{
 				BOOL forceQuit;
 				get(app, MUIA_Application_ForceQuit, &forceQuit);
-				if((forceQuit || (app, mainWindowObject, 0, "Quit?", "_Yes|_No", "\33cAre you sure you want to quit AmigaGPT?", 0)) == 1)
+				if(forceQuit || (MUI_RequestA(app, mainWindowObject, 0, "Quit?", "_Yes|_No", "\33cAre you sure you want to quit AmigaGPT?", 0)) == 1)
 						running = FALSE;
 				break;
 			}
