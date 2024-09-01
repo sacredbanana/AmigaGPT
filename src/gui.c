@@ -2637,8 +2637,8 @@ LONG startGUIRunLoop() {
 	}
 	*/
 
-	// saveConversations();
-	// saveImages();
+	saveConversations();
+	saveImages();
 
 	return RETURN_OK;
 }
@@ -2716,9 +2716,7 @@ void displayError(STRPTR message) {
 	};
 	EasyRequest(mainWindow, &errorRequester, NULL, NULL);
 
-	// if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID)
-	// 	SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-
+	set(sendMessageButton, MUIA_Disabled, FALSE);
 	FreeVec(adjustedMsg);
 }
 
@@ -3706,12 +3704,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 **/
 void shutdownGUI() {
 	MUI_DisposeObject(app);
-	// freeConversationList();
 	// freeImageList();
-	// if (mainWindowObjectOld) {
-	// 	DisposeObject(mainWindowObjectOld);
-	// }
-	// freeModeSelectionTabList();
 	if (isPublicScreen) {
 		ReleasePen(screen->ViewPort.ColorMap, sendMessageButtonPen);
 		ReleasePen(screen->ViewPort.ColorMap, newChatButtonPen);
