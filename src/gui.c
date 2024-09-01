@@ -180,7 +180,6 @@ static LONG newChatButtonPen;
 static LONG deleteButtonPen;
 struct Conversation *currentConversation;
 static struct GeneratedImage *currentImage;
-struct List *conversationList;
 struct List *modeSelectionTabList;
 struct List *imageList;
 static struct TextFont *uiTextFont = NULL;
@@ -594,7 +593,15 @@ HOOKPROTONHNO(DisplayLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
 MakeHook(DisplayLI_TextHook, DisplayLI_TextFunc);
 
 HOOKPROTONHNO(ConversationRowClickedFunc, void, LONG *rowNumber) {
-		printf("Row number: %ld\n", rowNumber);
+	printf("Row number: %ld\n", *rowNumber);
+	if (currentConversation != NULL) {
+		freeConversation(currentConversation);
+	}
+	struct Conversation *conversation;
+	DoMethod(conversationListObject, MUIM_NList_GetEntry, MUIV_NList_GetEntry_Active , conversation);
+	printf("Conversation name: %s\n", conversation->name);
+	currentConversation = copyConversation(conversation);
+	// displayConversation(currentConversation);
 }
 MakeHook(ConversationRowClickedHook, ConversationRowClickedFunc);
 
@@ -738,7 +745,7 @@ LONG initVideo() {
 
 	// conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
 	// NewList(conversationList);
-	// currentConversation = NULL;
+	currentConversation = NULL;
 	// loadConversations();
 
 	// imageList = AllocVec(sizeof(struct List), MEMF_CLEAR);
@@ -853,7 +860,7 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
-	DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, app, 3, MUIM_CallHook, &ConversationRowClickedFunc, MUIV_TriggerValue);
+	DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, app, 3, MUIM_CallHook, &ConversationRowClickedHook, MUIV_TriggerValue);
 	DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 
 	  app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 	DoMethod(app, OM_ADDMEMBER, mainWindowObject);
@@ -1604,7 +1611,6 @@ static void sendChatMessage() {
 				struct json_object *message = json_object_object_get(error, "message");
 				STRPTR messageString = json_object_get_string(message);
 				displayError(messageString);
-				set(chatInputTextEditor, MUIA_TextEditor_Contents, text);
 				// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
 				struct MinNode *lastMessage = RemTail(currentConversation);
 				FreeVec(lastMessage);
