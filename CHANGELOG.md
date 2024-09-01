@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.2 (2024-09-01)
+
+- Increase max OpenAI API key size to 256 characters
+
 ## 1.6.1 (2024-08-31)
 
 - Default to speech disabled

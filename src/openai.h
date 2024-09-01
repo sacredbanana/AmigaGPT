@@ -4,7 +4,7 @@
 #define WRITE_BUFFER_LENGTH 131072
 #define RESPONSE_ARRAY_BUFFER_LENGTH 1024
 #define CHAT_SYSTEM_LENGTH 512
-#define OPENAI_API_KEY_LENGTH 64
+#define OPENAI_API_KEY_LENGTH 256
 
 /**
  * A node in the conversation
@@ -15,13 +15,18 @@ struct ConversationNode {
 	**/
 	struct MinNode node;
 	/**
-	 * The role of the speaker. Currently the only roles supported by OpenAI are "user", "assistant" and "systen"
+	 * The role of the speaker. Currently the only roles supported by OpenAI are "user", "assistant" and "system"
 	**/
-	UBYTE role[64];
+	UBYTE role[10];
 	/**
 	 * The text of the message
 	**/
 	STRPTR content;
+};
+
+struct Conversation {
+	struct MinList *messages;
+	STRPTR name;
 };
 
 /**
@@ -127,7 +132,7 @@ LONG initOpenAIConnector();
  * @param stream whether to stream the response or not
  * @return a pointer to a new array of json_object containing the response(s) or NULL -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
-struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum ChatModel model, CONST_STRPTR openAiApiKey, BOOL stream);
+struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model, CONST_STRPTR openAiApiKey, BOOL stream);
 
 /**
  * Post a image creation request to OpenAI
