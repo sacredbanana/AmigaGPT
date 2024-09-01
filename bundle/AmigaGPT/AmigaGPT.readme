@@ -3,8 +3,8 @@ Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 1.6.3
-Architecture: m68k-amigaos >= 3.9; ppc-amigaos
+Version: 2.0.0
+Architecture: m68k-amigaos >= 3.1; ppc-amigaos; ppc-morphos
 Requires: AmigaOS 3.9+/68020+ util/libs/AmiSSL-5.9-OS3.lha
 Replaces: util/misc/AmigaGPT.lha
 

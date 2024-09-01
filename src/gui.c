@@ -164,7 +164,8 @@ static Object *mainGroup;
 static Object *modeClickTab;
 static Object *sendMessageButton;
 static Object *chatInputTextEditor;
-static Object *chatOutputText;
+static Object *chatOutputTextEditor;
+static Object *chatOutputScroller;
 static Object *statusBar;
 static Object *conversationListObject;
 static Object *dataTypeObject;
@@ -693,6 +694,10 @@ LONG initVideo() {
 									"\tfor reviewing AmigaGPT on his YouTube channel\n"
 									"\thttps://www.youtube.com/watch?v=t3q8HQ6wrnw\n"
 									"\n"
+									"\t\033iAmigaBill\033n\n"
+									"\tfor covering AmigaGPT in the Amiga News section on his Twitch streams and allowing me to join his stream to promote it\n"
+									"\thttps://www.twitch.tv/amigabill\n"
+									"\n"
 									"\t\033iLes Docs\033n\n"
 									"\tfor making a video review and giving a tutorial on how to add support for the French accent\n"
 									"\thttps://www.youtube.com/watch?v=BV5Fq1PresE\n"
@@ -799,29 +804,24 @@ LONG initVideo() {
 						MUIA_NList_Imports, MUIV_NList_Imports_All,
 						MUIA_NList_Exports, MUIV_NList_Exports_All,
 					End,
-					MUIA_ShortHelp, "List of all your past conversations.",
 				End,
 			End,
 			Child, VGroup,
 				// Chat output text display
-				Child, ScrollgroupObject,
-					MUIA_Scrollgroup_Contents, VGroup,
-						Child, chatOutputText = TextEditorObject,
-							MUIA_TextEditor_Contents, "This is a test.\nI hope this works.\n\33c\33bMUI\33n\nis magic\n\n",
-							MUIA_Text_Copy, TRUE,
-							MUIA_Text_Marking, TRUE,
-							MUIA_Text_PreParse, "",
-							MUIA_Text_SetMin, FALSE,
-							MUIA_Text_SetMax, FALSE,
-							MUIA_Text_SetVMax, FALSE,
-							MUIA_Text_Shorten, MUIV_Text_Shorten_Nothing,
-							// MUIA_TextEditor_ImportHook, &MyImportHook,
-						End,
+				Child, HGroup,
+					Child, chatOutputTextEditor = TextEditorObject,
+						MUIA_TextEditor_Contents, "",
+						MUIA_Text_Copy, TRUE,
+						MUIA_Text_Marking, TRUE,
+						MUIA_Text_SetMin, FALSE,
+						MUIA_Text_SetMax, FALSE,
+						MUIA_Text_SetVMax, FALSE,
+						MUIA_Text_Shorten, MUIV_Text_Shorten_Nothing,
+						MUIA_TextEditor_ReadOnly, TRUE,
+						MUIA_TextEditor_Slider, chatOutputScroller,
 					End,
-					MUIA_Scrollgroup_AutoBars, TRUE,
-					MUIA_Scrollgroup_NoHorizBar, TRUE,
-					MUIA_Scrollgroup_FreeHoriz, FALSE,
-					MUIA_Scrollgroup_FreeVert, TRUE,
+					Child, chatOutputScroller = ScrollbarObject,
+					End,
 				End,
 				// Status bar
 				Child, StringObject,
@@ -842,12 +842,11 @@ LONG initVideo() {
 					End,
 					// Send message button
 					Child, sendMessageButton = MUI_MakeObject(MUIO_Button, "Send",
-						MUIA_MinWidth, 100,
+						MUIA_Width, 500,
 						MUIA_Background, MUII_FILL,
 						MUIA_Text_Contents, "Send",
 						MUIA_CycleChain, TRUE,
 						MUIA_InputMode, MUIV_InputMode_RelVerify,
-						MUIA_ShortHelp, "Send the message",
 					End,
 				End,
 			End,
@@ -1582,7 +1581,7 @@ static void sendChatMessage() {
 	ULONG speechIndex = 0;
 	UWORD wordNumber = 0;
 
-	DoMethod(chatOutputText, MUIM_TextEditor_InsertText, "\n", MUIV_TextEditor_InsertText_Bottom);
+	DoMethod(chatOutputTextEditor, MUIM_TextEditor_InsertText, "\n", MUIV_TextEditor_InsertText_Bottom);
 	// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "\n", GV_TEXTEDITOR_InsertText_Bottom);
 	do {
 		if (config.chatSystem != NULL && (config.chatSystem) > 0)
@@ -1614,7 +1613,7 @@ static void sendChatMessage() {
 				if (currentConversation == currentConversation->messages->mlh_TailPred) {
 					freeConversation(currentConversation);
 					currentConversation = NULL;
-					DoMethod(chatOutputText, MUIM_TextEditor_ClearText);
+					DoMethod(chatOutputTextEditor, MUIM_TextEditor_ClearText);
 					// DoGadgetMethod(chatOutputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ClearText, NULL);
 				} else {
 					displayConversation(currentConversation);
@@ -1960,7 +1959,7 @@ static void displayConversation(struct Conversation *conversation) {
 	// Delay(2);
 	// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_CursorY, ~0, TAG_DONE);
 	// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	set(chatOutputText, MUIA_TextEditor_Contents, conversationStringISO8859_1);
+	set(chatOutputTextEditor, MUIA_TextEditor_Contents, conversationStringISO8859_1);
 	FreeVec(conversationString);
 	FreeVec(conversationStringISO8859_1);
 }

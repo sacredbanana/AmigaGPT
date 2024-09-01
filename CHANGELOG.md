@@ -1,8 +1,18 @@
 # Changelog
 
-## 1.6.3 (2024-09-18)
+## 2.0.0
 
-- Fixed error receiving chat messages
+- Completely replace ReAction with MUI 5 with backwards compatibility with MUI 3
+- Now fully compatible with AmigaOS 3.1
+- New native version for MorphOS
+- Enhanced "About AmigaGPT" panel
+- New "About MUI" panel
+- support for proxy servers???
+- more responsive user interface with the ability to cancel pending operations???
+- ability to greatly customise the look of the app???
+- new app installer???
+- ARexx port???
+- view instant preview of generated images???
 
 ## 1.6.2 (2024-09-01)
 
