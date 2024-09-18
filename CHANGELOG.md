@@ -15,6 +15,10 @@
 - ARexx port???
 - view instant preview of generated images???
 
+## 1.6.3 (2024-09-18)
+
+- Fixed error receiving chat messages
+
 ## 1.6.2 (2024-09-01)
 
 - Increase max OpenAI API key size to 256 characters
