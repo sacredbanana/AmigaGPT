@@ -6,6 +6,7 @@
             "request": "launch",
             "name": "Run OS3 version in local gdbserver",
             "MIMode": "gdb",
+            "serverLaunchTimeout": 100000000,
             "miDebuggerPath": "/opt/amiga/bin/m68k-amigaos-gdb",
             "miDebuggerServerAddress": "localhost:2345",
             "program": "${workspaceFolder}/out/AmigaGPT",
