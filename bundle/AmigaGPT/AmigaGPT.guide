@@ -715,6 +715,10 @@ Training data: Up to Sep 2021
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}1.6.3 (2024-09-18)@{ub}
+
+- Fixed error receiving chat messages
+
 @{b}1.6.2 (2024-09-01)@{ub}
 
 - Increase max OpenAI API key size to 256 characters

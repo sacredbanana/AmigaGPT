@@ -347,7 +347,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
  * @param stream whether to stream the response or not
  * @return a pointer to a new array of json_object containing the response(s) or NULL -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
-struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model, CONST_STRPTR openAiApiKey, BOOL stream) {
+struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum ChatModel model, CONST_STRPTR openAiApiKey, BOOL stream) {
 	struct json_object **responses = AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 	static BOOL streamingInProgress = FALSE;
 	UWORD responseIndex = 0;
@@ -360,7 +360,7 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 		json_object_object_add(obj, "model", json_object_new_string(CHAT_MODEL_NAMES[model]));
 		struct json_object *conversationArray = json_object_new_array();
 
-		struct MinNode *conversationNode = conversation->messages->mlh_Head;
+		struct MinNode *conversationNode = conversation->mlh_Head;
 		while (conversationNode->mln_Succ != NULL) {
 			struct ConversationNode *message = (struct ConversationNode *)conversationNode;
 			struct json_object *messageObj = json_object_new_object();

@@ -24,11 +24,6 @@ struct ConversationNode {
 	STRPTR content;
 };
 
-struct Conversation {
-	struct MinList *messages;
-	STRPTR name;
-};
-
 /**
  * The chat model OpenAI should use
 **/
@@ -132,7 +127,7 @@ LONG initOpenAIConnector();
  * @param stream whether to stream the response or not
  * @return a pointer to a new array of json_object containing the response(s) or NULL -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
-struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model, CONST_STRPTR openAiApiKey, BOOL stream);
+struct json_object** postChatMessageToOpenAI(struct MinList *conversation, enum ChatModel model, CONST_STRPTR openAiApiKey, BOOL stream);
 
 /**
  * Post a image creation request to OpenAI
