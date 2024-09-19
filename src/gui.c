@@ -45,7 +45,6 @@
 #define TEXT_INPUT_TEXT_EDITOR_ID 4
 #define CHAT_OUTPUT_TEXT_EDITOR_ID 5
 #define CHAT_OUTPUT_SCROLLER_ID 6
-#define STATUS_BAR_ID 7
 #define CONVERSATION_LIST_BROWSER_ID 8
 #define NEW_CHAT_BUTTON_ID 9
 #define DELETE_CHAT_BUTTON_ID 10
@@ -70,6 +69,27 @@ enum {
 
 #define MODE_SELECTION_TAB_CHAT_ID 0
 #define MODE_SELECTION_TAB_IMAGE_GENERATION_ID 1
+
+// Object IDs
+enum {
+	OBJECT_ID_MAIN_WINDOW = 1,
+	OBJECT_ID_MAIN_GROUP,
+	OBJECT_ID_MODE_CLICK_TAB,
+	OBJECT_ID_SEND_MESSAGE_BUTTON,
+	OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
+	OBJECT_ID_CHAT_OUTPUT_TEXT_EDITOR,
+	OBJECT_ID_CHAT_OUTPUT_SCROLLER,
+	OBJECT_ID_STATUS_BAR,
+	OBJECT_ID_CONVERSATION_LIST,
+	OBJECT_ID_DATA_TYPE,
+	OBJECT_ID_APP,
+	OBJECT_ID_IMAGE_WINDOW,
+	OBJECT_ID_IMAGE_LIST,
+	OBJECT_ID_IMAGE_DATA_TYPE,
+	OBJECT_ID_IMAGE_GROUP,
+	OBJECT_ID_IMAGE_WINDOW_OBJECT,
+	OBJECT_ID_ABOUT_AMIGAGPT
+};
 
 // Menu item IDs
 enum {
@@ -162,7 +182,6 @@ struct Window *imageWindow;
 static Object *mainWindowObject;
 static Object *imageWindowObject;
 static Object *aboutAmigaGPTWindowObject;
-static Object *aboutMUIWindowObject = NULL;
 static Object *mainGroup;
 static Object *modeClickTab;
 static Object *sendMessageButton;
@@ -322,7 +341,6 @@ static void removeImageFromImageList(struct GeneratedImage *image);
 static void openChatFontRequester();
 static void openUIFontRequester();
 static void openAboutAmigaGPTWindow();
-static void openAboutMUIWindow();
 static void openSpeechAccentRequester();
 static void openApiKeyRequester();
 static void openChatSystemRequester();
@@ -652,6 +670,8 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
+	CreateDir("ENVARC:AmigaGPT");
+
 	if (!(app = ApplicationObject,
 		MUIA_Application_Title, "AmigaGPT",
 		MUIA_Application_Version, APP_VERSION,
@@ -659,6 +679,7 @@ LONG initVideo() {
 		MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
 		MUIA_Application_Description, "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E",
 		MUIA_Application_UsedClasses, USED_CLASSES,
+		MUIA_Application_HelpFile, "PROGDIR:AmigaGPT.guide",
 		End)) {
 		printf("Could not create app!\n");
 		return RETURN_ERROR;
@@ -785,6 +806,8 @@ LONG initVideo() {
 	ULONG pen = 8;
 	sendMessageButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1;
 
+	Object menuStrip = MUI_MakeObject(MUIO_MenustripNM, amigaGPTMenu);
+
 	if (!(mainWindowObject = WindowObject,
 		MUIA_Window_Title, "AmigaGPT",
 		MUIA_Window_ID, MAIN_WINDOW_ID,
@@ -797,7 +820,7 @@ LONG initVideo() {
 		MUIA_Window_Height, MUIV_Window_Height_Visible(isPublicScreen ? 90: 100),
 		MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
 		MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
-		MUIA_Window_Menustrip, MUI_MakeObject(MUIO_MenustripNM, amigaGPTMenu),
+		MUIA_Window_Menustrip, menuStrip,
 		MUIA_Window_SizeRight, TRUE,
 		MUIA_Window_UseBottomBorderScroller, FALSE,
 		MUIA_Window_UseRightBorderScroller, FALSE,
@@ -844,17 +867,16 @@ LONG initVideo() {
 				End,
 				// Status bar
 				Child, StringObject,
-					MUIA_String_Contents, "Ready",
+					MUIA_ObjectID, OBJECT_ID_STATUS_BAR,
 					MUIA_String_MaxLen, 1024,
 					MUIA_CycleChain, TRUE,
-					MUIA_String_Accept, TRUE,
-					MUIA_String_AdvanceOnCR, TRUE,
+					MUIA_String_Accept, "",
 					MUIA_Background, MUII_FILL,
 				End,
 				Child, HGroup,
 				// Chat input text editor
 					Child, chatInputTextEditor = TextEditorObject,
-						MUIA_TextEditor_Contents, "",
+						MUIA_ObjectID, TEXT_INPUT_TEXT_EDITOR_ID,
 						MUIA_TextEditor_ReadOnly, FALSE,
 						MUIA_TextEditor_TabSize, 4,
 						MUIA_TextEditor_Pen, pen,
@@ -884,6 +906,15 @@ LONG initVideo() {
 	DoMethod(app, OM_ADDMEMBER, mainWindowObject);
 
 	set(mainWindowObject,MUIA_Window_Open,TRUE);
+
+	DoMethod(app, MUIM_Application_Load, "ENVARC:AmigaGPT/AmigaGPT.cfg");
+	
+	Object aboutMUIMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_ABOUT_MUI);
+	DoMethod(aboutMUIMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_Application_AboutMUI, mainWindowObject);
+	
+	Object speechEnabledMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ENABLED);
+	set(speechEnabledMenuItem, MUIA_Menuitem_Checked, config.speechEnabled);
+	DoMethod(speechEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, speechEnabledMenuItem, 3, MUIM_WriteLong, MUIV_TriggerValue, &config.speechEnabled);
 
 	loadConversations();
 	
@@ -1320,19 +1351,13 @@ LONG initVideo() {
 	// 		SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEditorColorMap, TAG_DONE);
 	// }
 
-	refreshOpenAIMenuItems();
-	refreshSpeechMenuItems();
+	// refreshOpenAIMenuItems();
+	// refreshSpeechMenuItems();
 
 	// For some reason it won't let you paste text into the empty text editor unless you do this
 	// DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);
 
 	updateStatusBar("Ready", 5);
-	
-	// if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID) {
-	// 	ActivateLayoutGadget(chatModeLayout, mainWindow, NULL, textInputTextEditor);
-	// } else {
-	// 	ActivateLayoutGadget(imageGenerationModeLayout, mainWindow, NULL, textInputTextEditor);
-	// }
 
 	return RETURN_OK;
 }
@@ -2084,7 +2109,7 @@ LONG startGUIRunLoop() {
 	BOOL running = TRUE;
 	WORD code;
 
-	refreshSpeechMenuItems();
+	// refreshSpeechMenuItems();
 
 	while (running) {
 		ULONG id = DoMethod(app, MUIM_Application_NewInput, &signals);
@@ -2101,9 +2126,6 @@ LONG startGUIRunLoop() {
 			}
 			case MENU_ITEM_ABOUT_AMIGAGPT:
 				openAboutAmigaGPTWindow();
-				break;
-			case MENU_ITEM_ABOUT_MUI:
-				openAboutMUIWindow();
 				break;
 			case MENU_ITEM_VIEW_DOCUMENTATION:
 				openDocumentation();
@@ -2592,6 +2614,8 @@ LONG startGUIRunLoop() {
 	saveConversations();
 	saveImages();
 
+	DoMethod(app, MUIM_Application_Save, "ENVARC:AmigaGPT/AmigaGPT.cfg");
+
 	return RETURN_OK;
 }
 
@@ -2720,23 +2744,6 @@ static void openAboutAmigaGPTWindow() {
 }
 
 /**
- * Opens the About NUI window
-**/
-static void openAboutMUIWindow() {
-	if(aboutMUIWindowObject == NULL) {
-	  aboutMUIWindowObject = AboutmuiObject,
-	    MUIA_Window_RefWindow, mainWindowObject,
-	    MUIA_Aboutmui_Application, app,
-	    End;
-	}
-
-	if(aboutMUIWindowObject != NULL)
-	  set(aboutMUIWindowObject, MUIA_Window_Open, TRUE);
-	else
-	  DisplayBeep(0);
-}
-
-/**
  * Opens a requester for the user to select the font for the chat window
 **/
 static void openChatFontRequester() {
@@ -2754,7 +2761,6 @@ static void openChatFontRequester() {
 			config.chatFontStyle = chatFont->ta_Style;
 			config.chatFontFlags = chatFont->ta_Flags;
 			writeConfig();
-			printf("Chat font name: %s\n", config.chatFontName);
 			// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
 			// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
 		}
@@ -2925,11 +2931,11 @@ static void openChatSystemRequester() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG saveConversations() {
-	// BPTR file = Open(PROGDIR"chat-history.json", MODE_NEWFILE);
-	// if (file == 0) {
-	// 	displayDiskError("Failed to create message history file. Conversation history will not be saved.", IoErr());
-	// 	return RETURN_ERROR;
-	// }
+	BPTR file = Open(PROGDIR"chat-history.json", MODE_OLDFILE);
+	if (file == 0) {
+		displayDiskError("Failed to create message history file. Conversation history will not be saved.", IoErr());
+		return RETURN_ERROR;
+	}
 
 	// struct json_object *conversationsJsonArray = json_object_new_array();
 	// struct json_object *conversationJsonObject;
@@ -2966,7 +2972,7 @@ LONG saveConversations() {
 	// 	return RETURN_ERROR;
 	// }
 
-	// Close(file);
+	Close(file);
 	// json_object_put(conversationsJsonArray);
 	return RETURN_OK;
 }

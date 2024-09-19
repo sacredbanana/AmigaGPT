@@ -72,7 +72,8 @@
         "muimaster.h": "c",
         "mui.h": "c",
         "amigaguide.h": "c",
-        "nlist_mcc.h": "c"
+        "nlist_mcc.h": "c",
+        "aboutbox_mcc.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

@@ -179,6 +179,7 @@ static void closeLibraries() {
  * Cleanup and exit the app
 **/
 static void cleanExit() {
+	writeConfig();
 	freeConfig();
 	shutdownGUI();
 	closeSpeech();

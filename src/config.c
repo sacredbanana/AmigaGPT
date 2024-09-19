@@ -72,7 +72,7 @@ LONG writeConfig() {
 
 	struct json_object *configJsonObject = json_object_new_object();
 
-	json_object_object_add(configJsonObject, "speechEnabled", json_object_new_boolean(config.speechEnabled));
+	json_object_object_add(configJsonObject, "speechEnabled", json_object_new_boolean((BOOL)config.speechEnabled));
 	json_object_object_add(configJsonObject, "speechSystem", json_object_new_int(config.speechSystem));
 	#ifdef __AMIGAOS3__
 	json_object_object_add(configJsonObject, "speechAccent", config.speechAccent != NULL ? json_object_new_string(config.speechAccent) : NULL);
@@ -159,7 +159,7 @@ LONG readConfig() {
 
 	struct json_object *speechEnabledObj;
 	if (json_object_object_get_ex(configJsonObject, "speechEnabled", &speechEnabledObj)) {
-		config.speechEnabled = json_object_get_boolean(speechEnabledObj);
+		config.speechEnabled = (ULONG)json_object_get_boolean(speechEnabledObj);
 	}
 
 	struct json_object *speechSystemObj;

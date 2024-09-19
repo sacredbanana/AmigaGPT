@@ -8,7 +8,7 @@
 #define OPENAI_TTS_VOICE_SET_VERSION 0
 
 struct Config {
-	BOOL speechEnabled;
+	ULONG speechEnabled; // Making it a ULONG so it can be directly triggered. BOOL is too small
 	enum SpeechSystem speechSystem;
 	#ifdef __AMIGAOS3__
 	STRPTR speechAccent;
