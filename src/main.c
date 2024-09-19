@@ -105,10 +105,7 @@ LONG main(int argc, char **argv) {
 		ReplyMsg((struct Message *)wbStartupMessage);
 	#endif
 
-	if (startGUIRunLoop() == RETURN_ERROR) {
-		printf("GUI run loop returned an error\n");
-		exit(RETURN_ERROR);
-	}
+	startGUIRunLoop();
 
 	exit(RETURN_OK);
 	return 0;

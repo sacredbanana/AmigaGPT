@@ -7,12 +7,9 @@
 LONG initVideo();
 
 /**
- * The main run loop of the GUI
- * @return The return code of the application
- * @see RETURN_OK
- * @see RETURN_ERROR
+ * Start the main run loop of the GUI
 **/ 
-LONG startGUIRunLoop();
+void startGUIRunLoop();
 
 /**
  * Shutdown the GUI
@@ -32,10 +29,3 @@ void displayError(STRPTR message);
  * 
 **/ 
 void updateStatusBar(CONST_STRPTR message, const ULONG pen);
-
-/**
- * Display an error message about a disk error
- * @param message the message to display
- * @param error the error code returned by IOErr()
-**/ 
-void displayDiskError(STRPTR message, LONG error);

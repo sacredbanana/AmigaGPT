@@ -126,7 +126,7 @@ enum {
 	MENU_ITEM_CHAT_MODEL,
 	MENU_ITEM_SPEECH_SYSTEM,
 	MENU_ITEM_OPENAI_API_KEY,
-	MENU_ITEM_VIEW_DOCUMENTATION,
+	MENU_ITEM_OPEN_DOCUMENTATION,
 	MENU_ITEM_SPEECH_FLITE_VOICE,
 	MENU_ITEM_SPEECH_FLITE_VOICE_AWB,
 	MENU_ITEM_SPEECH_FLITE_VOICE_KAL,
@@ -179,7 +179,7 @@ struct Library *DataTypesBase;
 struct Library *MUIMasterBase;
 struct Window *mainWindow;
 struct Window *imageWindow;
-static Object *mainWindowObject;
+static Object *mainWindowObject = NULL;
 static Object *imageWindowObject;
 static Object *aboutAmigaGPTWindowObject;
 static Object *mainGroup;
@@ -191,7 +191,7 @@ static Object *chatOutputScroller;
 static Object *statusBar;
 static Object *conversationListObject;
 static Object *dataTypeObject;
-static Object *app;
+static Object *app = NULL;
 static struct Screen *screen;
 static BOOL isPublicScreen;
 static BOOL isAmigaOS3X;
@@ -292,7 +292,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "1792x1024", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024},
 	{NM_SUB, "1024x1792", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792},
 	{NM_TITLE, "Help", 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "View Documentation", 0, 0, 0, (APTR)MENU_ITEM_VIEW_DOCUMENTATION},
+	{NM_ITEM, "Open Documentation", 0, 0, 0, (APTR)MENU_ITEM_OPEN_DOCUMENTATION},
 	{NM_END, NULL, 0, 0, 0, 0}
 };
 /**
@@ -326,8 +326,6 @@ static void formatText(STRPTR unformattedText);
 static void sendChatMessage();
 static void closeGUILibraries();
 static LONG openStartupOptions();
-static void refreshOpenAIMenuItems();
-static void refreshSpeechMenuItems();
 static struct Conversation* newConversation();
 static struct Conversation* copyConversation(struct Conversation *conversation);
 static void addTextToConversation(struct Conversation *conversation, STRPTR text, STRPTR role);
@@ -340,7 +338,6 @@ static void saveImageCopy(struct GeneratedImage *image);
 static void removeImageFromImageList(struct GeneratedImage *image);
 static void openChatFontRequester();
 static void openUIFontRequester();
-static void openAboutAmigaGPTWindow();
 static void openSpeechAccentRequester();
 static void openApiKeyRequester();
 static void openChatSystemRequester();
@@ -352,71 +349,7 @@ static LONG saveConversations();
 static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String);
 static STRPTR UTF8ToISO8859_1(CONST_STRPTR utf8String);
 static BOOL copyFile(STRPTR source, STRPTR destination);
-static void openDocumentation();
-static void updateMenu();
 static void createImage();
-// #ifdef __AMIGAOS4__
-// static uint32 processIDCMPMainWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message);
-// static uint32 processIDCMPCreateImageWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message);
-// #else
-// static void __SAVE_DS__ __ASM__ processIDCMP(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message));
-// static void __SAVE_DS__ __ASM__ processIDCMPMainWindow(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message));
-// #endif
-
-// #ifdef __AMIGAOS4__
-// static uint32 processIDCMPMainWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message) {
-// #else
-// static void __SAVE_DS__ __ASM__ processIDCMPMainWindow(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
-// #endif
-// 	switch (message->Class) {
-// 		case IDCMP_IDCMPUPDATE:
-// 		{
-// 			struct TagItem *tagList = message->IAddress;
-// 			struct TagItem *gadgetID = FindTagItem(GA_ID, tagList);
-// 			switch (gadgetID->ti_Data) {
-// 				case TEXT_INPUT_TEXT_EDITOR_ID:
-// 					activeTextEditorGadgetID = TEXT_INPUT_TEXT_EDITOR_ID;
-// 					break;					
-// 				case CHAT_OUTPUT_SCROLLER_ID:
-// 					gadgetID->ti_Tag = TAG_IGNORE;
-// 					ULONG top;
-// 					GetAttr(SCROLLER_Top, chatOutputScroller, &top);
-// 					SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL,
-// 					GA_TEXTEDITOR_Prop_First, top,
-// 					TAG_DONE);
-// 					break;
-// 				case CHAT_OUTPUT_TEXT_EDITOR_ID:
-// 					activeTextEditorGadgetID = CHAT_OUTPUT_TEXT_EDITOR_ID;
-// 					gadgetID->ti_Tag = TAG_IGNORE;
-// 					ULONG entries;
-// 					GetAttr(GA_TEXTEDITOR_Prop_Entries, chatOutputTextEditor, &entries);
-// 					ULONG first;
-// 					GetAttr(GA_TEXTEDITOR_Prop_First, chatOutputTextEditor, &first);
-// 					ULONG deltaFactor;
-// 					GetAttr(GA_TEXTEDITOR_Prop_DeltaFactor, chatOutputTextEditor, &deltaFactor);
-// 					ULONG visible;
-// 					GetAttr(GA_TEXTEDITOR_Prop_Visible, chatOutputTextEditor, &visible);
-// 					SetGadgetAttrs(chatOutputScroller, mainWindow, NULL,
-// 					SCROLLER_Total, entries,
-// 					SCROLLER_Top, first,
-// 					SCROLLER_ArrowDelta, deltaFactor,
-// 					SCROLLER_Visible, visible,
-// 					TAG_DONE);
-// 					RefreshGadgets(chatOutputScroller, mainWindow, NULL);
-// 					break;
-// 				}
-// 			break;
-// 		}
-// 		default:
-// 			printf("Unknown message class: %lx\n", message->Class);
-// 			break;
-// 	}
-// 	#ifdef __AMIGAOS3__
-// 	return;
-// 	#else
-// 	return WHOOKRSLT_IGNORE;
-// 	#endif
-// }
 
 // #ifdef __AMIGAOS4__
 // static uint32 processIDCMPCreateImageWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message) {
@@ -638,6 +571,51 @@ HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
 }
 MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
 
+HOOKPROTONHNONP(AboutAmigaGPTMenuItemClickedFunc, void) {
+	if(aboutAmigaGPTWindowObject) {
+	  set(aboutAmigaGPTWindowObject, MUIA_Window_Open, TRUE);
+	} else {
+	  struct EasyStruct aboutRequester = {
+		sizeof(struct EasyStruct),
+		0,
+		"About",
+		#ifdef __AMIGAOS3__
+		"AmigaGPT for m68k AmigaOS 3\n\n"
+		#else
+		"AmigaGPT for PPC AmigaOS 4\n\n"
+		#endif
+		"Version " APP_VERSION "\n"
+		"Build date: " __DATE__ "\n"
+		"Build number: " BUILD_NUMBER "\n\n"
+		"Developed by Cameron Armstrong (@sacredbanana on GitHub,\n"
+		"YouTube and Twitter, @Nightfox on EAB)\n\n"
+		"This app will always remain free but if you would like to\n"
+		"support me you can do so at https://paypal.me/sacredbanana",
+		"OK"
+	};
+	ULONG flags = IDCMP_RAWKEY | IDCMP_MOUSEBUTTONS;
+	EasyRequest(mainWindow, &aboutRequester, &flags, NULL);
+	}
+}
+MakeHook(AboutAmigaGPTMenuItemClickedHook, AboutAmigaGPTMenuItemClickedFunc);
+
+HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
+	struct NewAmigaGuide guide = {
+		.nag_Name = PROGDIR"AmigaGPT.guide",
+		.nag_Screen = screen,
+		.nag_PubScreen = NULL,
+		.nag_BaseName = "AmigaGPT",
+		.nag_Extens = NULL,
+	};
+	AMIGAGUIDECONTEXT handle;
+	if (handle = OpenAmigaGuide(&guide, NULL)) {
+		CloseAmigaGuide(handle);
+	} else {
+		displayError("Could not open documentation");
+	}
+}
+MakeHook(OpenDocumentationMenuItemClickedHook, OpenDocumentationMenuItemClickedFunc);
+
 /**
  * Close the libraries used by the GUI
 **/
@@ -673,6 +651,7 @@ LONG initVideo() {
 	CreateDir("ENVARC:AmigaGPT");
 
 	if (!(app = ApplicationObject,
+		MUIA_Application_Base, "AmigaGPT",
 		MUIA_Application_Title, "AmigaGPT",
 		MUIA_Application_Version, APP_VERSION,
 		MUIA_Application_Copyright, "(C) 2023-2024 Cameron Armstrong (Nightfox/sacredbanana)",
@@ -866,12 +845,12 @@ LONG initVideo() {
 					End,
 				End,
 				// Status bar
-				Child, StringObject,
+				Child, statusBar = StringObject,
 					MUIA_ObjectID, OBJECT_ID_STATUS_BAR,
 					MUIA_String_MaxLen, 1024,
 					MUIA_CycleChain, TRUE,
 					MUIA_String_Accept, "",
-					MUIA_Background, MUII_FILL,
+					// MUIA_Background, MUII_FILL,
 				End,
 				Child, HGroup,
 				// Chat input text editor
@@ -900,15 +879,18 @@ LONG initVideo() {
 
 	DoMethod(sendMessageButton, MUIM_Notify, MUIA_Pressed, FALSE,
               sendMessageButton, 2, MUIM_CallHook, &SendMessageButtonClickedHook);
-	DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, app, 3, MUIM_CallHook, &ConversationRowClickedHook, MUIV_TriggerValue);
+	DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_CallHook, &ConversationRowClickedHook, MUIV_TriggerValue);
 	DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 
-	  app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+	  MUIV_Notify_Application, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 	DoMethod(app, OM_ADDMEMBER, mainWindowObject);
 
 	set(mainWindowObject,MUIA_Window_Open,TRUE);
 
-	DoMethod(app, MUIM_Application_Load, "ENVARC:AmigaGPT/AmigaGPT.cfg");
+	DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
 	
+	Object aboutAmigaGPTMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_ABOUT_AMIGAGPT);
+	DoMethod(aboutAmigaGPTMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &AboutAmigaGPTMenuItemClickedHook, MUIV_TriggerValue);
+
 	Object aboutMUIMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_ABOUT_MUI);
 	DoMethod(aboutMUIMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_Application_AboutMUI, mainWindowObject);
 	
@@ -916,23 +898,10 @@ LONG initVideo() {
 	set(speechEnabledMenuItem, MUIA_Menuitem_Checked, config.speechEnabled);
 	DoMethod(speechEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, speechEnabledMenuItem, 3, MUIM_WriteLong, MUIV_TriggerValue, &config.speechEnabled);
 
+	Object openDocumentationMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPEN_DOCUMENTATION);
+	DoMethod(openDocumentationMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &OpenDocumentationMenuItemClickedHook, MUIV_TriggerValue);
+
 	loadConversations();
-	
-	// if ((sendMessageButton = NewObject(BUTTON_GetClass(), NULL,
-	// 	GA_ID, SEND_MESSAGE_BUTTON_ID,
-	// 	BUTTON_TextPen, sendMessageButtonPen,
-	// 	#ifdef __AMIGAOS3__
-	// 	BUTTON_BackgroundPen, 0,
-	// 	#endif
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	BUTTON_Justification, BCJ_CENTER,
-	// 	GA_Text, (ULONG)"Send",
-	// 	GA_RelVerify, TRUE,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create send message button\n");
-	// 		return RETURN_ERROR;
-	// }
 
 	// if ((createImageButton = NewObject(BUTTON_GetClass(), NULL,
 	// 	GA_ID, CREATE_IMAGE_BUTTON_ID,
@@ -1369,6 +1338,8 @@ LONG initVideo() {
  * 
 **/ 
 void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
+	set(statusBar, MUIA_String_Contents, message);
+	set(statusBar, MUIA_TextColor, "rff0000");
 	// SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_Pens, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[3*pen+1], config.colors[3*pen+2], config.colors[3*pen+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen, TAG_DONE);
 	// SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, message, TAG_DONE);
 }
@@ -1755,142 +1726,6 @@ static void sendChatMessage() {
 }
 
 /**
- * Updates the menu
- */
-static void updateMenu() {
-	set(mainWindowObject, MUIA_Window_Menustrip, MUI_MakeObject(MUIO_MenustripNM, amigaGPTMenu));
-}
-
-/**
- * Sets the checkboxesfor the OpenAI menu
-**/
-static void refreshOpenAIMenuItems() {
-	struct NewMenu *newMenu = amigaGPTMenu;
-	while ((int)newMenu->nm_UserData != MENU_ITEM_CHAT_MODEL) {
-		newMenu++;
-	}
-
-	while ((++newMenu)->nm_Type == NM_SUB) {
-		if (strcmp(newMenu->nm_Label, CHAT_MODEL_NAMES[config.chatModel]) == 0 &&
-		strlen(newMenu->nm_Label) == strlen(CHAT_MODEL_NAMES[config.chatModel])) {
-			newMenu->nm_Flags |= CHECKED;
-		} else {
-			newMenu->nm_Flags &= ~CHECKED;
-		}
-	}
-
-	while ((int)newMenu->nm_UserData != MENU_ITEM_IMAGE_MODEL) {
-		newMenu++;
-	}
-
-	while ((++newMenu)->nm_Type == NM_SUB) {
-		if (strcmp(newMenu->nm_Label, IMAGE_MODEL_NAMES[config.imageModel]) == 0) {
-			newMenu->nm_Flags |= CHECKED;
-		} else {
-			newMenu->nm_Flags &= ~CHECKED;
-		}
-	}
-
-	while ((int)newMenu->nm_UserData != MENU_ITEM_IMAGE_SIZE_DALL_E_2) {
-		newMenu++;
-	}
-
-	while ((++newMenu)->nm_Type == NM_SUB) {
-		if (strcmp(newMenu->nm_Label, IMAGE_SIZE_NAMES[config.imageSizeDallE2]) == 0) {
-			newMenu->nm_Flags |= CHECKED;
-		} else {
-			newMenu->nm_Flags &= ~CHECKED;
-		}
-	}
-
-	while ((int)newMenu->nm_UserData != MENU_ITEM_IMAGE_SIZE_DALL_E_3) {
-		newMenu++;
-	}
-
-	while ((++newMenu)->nm_Type == NM_SUB) {
-		if (strcmp(newMenu->nm_Label, IMAGE_SIZE_NAMES[config.imageSizeDallE3]) == 0) {
-			newMenu->nm_Flags |= CHECKED;
-		} else {
-			newMenu->nm_Flags &= ~CHECKED;
-		}
-	}
-
-	updateMenu();
-}
-
-/**
- * Sets the checkboxes for the speech options that are currently selected
-**/
-static void refreshSpeechMenuItems() {
-	struct NewMenu *newMenu = amigaGPTMenu;
-	while ((int)newMenu->nm_UserData != MENU_ITEM_SPEECH_ENABLED) {
-		newMenu++;
-	}
-
-	if (config.speechEnabled) {
-		newMenu++->nm_Flags |= CHECKED;
-	} else {
-		newMenu++->nm_Flags &= ~CHECKED;
-	}
-
-	while ((++newMenu)->nm_Type == NM_SUB) {
-		if (strcmp(newMenu->nm_Label, SPEECH_SYSTEM_NAMES[config.speechSystem]) == 0) {
-			newMenu->nm_Flags |= CHECKED;
-		} else {
-			newMenu->nm_Flags &= ~CHECKED;
-		}
-	}
-
-	#ifdef __AMIGAOS4__
-	while ((++newMenu)->nm_Type == NM_SUB) {
-		CONST_STRPTR currentFliteVoiceName = SPEECH_FLITE_VOICE_NAMES[config.speechFliteVoice];
-		// Find the length of the first word in the label
-		UBYTE labelLen = 0;
-		while (newMenu->nm_Label[labelLen] != ' ') {
-			labelLen++;
-		}
-
-		// Compare the first word of the label with currentVoiceName
-		// We have to do this because the (slow) warnings were appended to the label
-		if (strncmp(newMenu->nm_Label, currentFliteVoiceName, labelLen) == 0 && currentFliteVoiceName[labelLen] == '\0') {
-			newMenu->nm_Flags |= CHECKED;
-		} else {
-			newMenu->nm_Flags &= ~CHECKED;
-		}
-	}
-	#endif
-
-	#ifdef __AMIGAOS3__
-	// Skip the Accent menu
-	newMenu++;
-	#endif
-
-	while ((++newMenu)->nm_Type == NM_SUB) {
-		CONST_STRPTR currentOpenAITTSVoiceName = OPENAI_TTS_VOICE_NAMES[config.openAITTSVoice];
-
-		if (strncmp(newMenu->nm_Label, currentOpenAITTSVoiceName, strlen(newMenu->nm_Label)) == 0 &&
-		 strlen(newMenu->nm_Label) == strlen(currentOpenAITTSVoiceName)) {
-			newMenu->nm_Flags |= CHECKED;
-		} else {
-			newMenu->nm_Flags &= ~CHECKED;
-		}
-	}
-
-	while ((++newMenu)->nm_Type == NM_SUB) {
-		CONST_STRPTR currentOpenAITTSModelName = OPENAI_TTS_MODEL_NAMES[config.openAITTSModel];
-
-		if (strncmp(newMenu->nm_Label, currentOpenAITTSModelName, strlen(newMenu->nm_Label)) == 0 &&
-		 strlen(newMenu->nm_Label) == strlen(currentOpenAITTSModelName)) {
-			newMenu->nm_Flags |= CHECKED;
-		} else {
-			newMenu->nm_Flags &= ~CHECKED;
-		}
-	}
-
-	updateMenu();
-}
-
-/**
  * Creates a new conversation
  * @return A pointer to the new conversation
 **/
@@ -2099,24 +1934,18 @@ static void removeImageFromImageList(struct GeneratedImage *image) {
 }
 
 /**
- * The main run loop of the GUI
- * @return The return code of the application
- * @see RETURN_OK
- * @see RETURN_ERROR
+ * Start the main run loop of the GUI
 **/
-LONG startGUIRunLoop() {
-	ULONG signals;
+void startGUIRunLoop() {
+	DoMethod(app, MUIM_Application_Run);
+/* ULONG signals;
 	BOOL running = TRUE;
-	WORD code;
-
-	// refreshSpeechMenuItems();
 
 	while (running) {
 		ULONG id = DoMethod(app, MUIM_Application_NewInput, &signals);
 
 		switch(id) {
 			case MUIV_Application_ReturnID_Quit:
-			case MENU_ITEM_QUIT:
 			{
 				BOOL forceQuit;
 				get(app, MUIA_Application_ForceQuit, &forceQuit);
@@ -2124,12 +1953,6 @@ LONG startGUIRunLoop() {
 						running = FALSE;
 				break;
 			}
-			case MENU_ITEM_ABOUT_AMIGAGPT:
-				openAboutAmigaGPTWindow();
-				break;
-			case MENU_ITEM_VIEW_DOCUMENTATION:
-				openDocumentation();
-				break;
 			default:
 				break;
 		}
@@ -2138,7 +1961,7 @@ LONG startGUIRunLoop() {
 		// BOOL isTextInputTextEditorActive = GetAttr(GFLG_SELECTED, textInputTextEditor, NULL);
 		// BOOL isChatOutputTextEditorActive = GetAttr(GFLG_SELECTED, chatOutputTextEditor, NULL);
 
-		/* while ((result = DoMethod(mainWindowObjectOld, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
+		while ((result = DoMethod(mainWindowObjectOld, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
 			switch (result & WMHI_CLASSMASK) {
 				case WMHI_CLOSEWINDOW:
 					done = TRUE;
@@ -2609,33 +2432,13 @@ LONG startGUIRunLoop() {
 			}
 		}
 	}
-	*/
+	
 
 	saveConversations();
 	saveImages();
 
-	DoMethod(app, MUIM_Application_Save, "ENVARC:AmigaGPT/AmigaGPT.cfg");
-
 	return RETURN_OK;
-}
-
-/**
- * Opens the application's documentation guide
-*/
-void openDocumentation() {
-	struct NewAmigaGuide guide = {
-		.nag_Name = PROGDIR"AmigaGPT.guide",
-		.nag_Screen = screen,
-		.nag_PubScreen = NULL,
-		.nag_BaseName = "AmigaGPT",
-		.nag_Extens = NULL,
-	};
-	AMIGAGUIDECONTEXT handle;
-	if (handle = OpenAmigaGuide(&guide, NULL)) {
-		CloseAmigaGuide(handle);
-	} else {
-		displayDiskError("Could not open documentation", IoErr());
-	}
+	*/
 }
 
 /**
@@ -2643,103 +2446,27 @@ void openDocumentation() {
  * @param message the message to display
 **/
 void displayError(STRPTR message) {
-	DisplayBeep(screen);
-	updateStatusBar("Error", 6);
-
-	STRPTR adjustedMsg = AllocVec(strlen(message) + 200, MEMF_ANY | MEMF_CLEAR);
-	STRPTR dest = adjustedMsg;
-
-	ULONG width = 300;
-	struct RastPort rp = screen->RastPort;
-	struct TextExtent te;
-
-	while (*message != '\0') {
-		// Find how much of the message fits within half the screen width
-		ULONG fits = TextFit(&rp, message, strlen(message), &te, NULL, 1, width, rp.Font->tf_YSize);
-
-		// Find last space in the range that fits
-		STRPTR lastSpace = message + fits;
-		while (lastSpace > message && *lastSpace != ' ') {
-			lastSpace--;
+	const LONG ERROR_CODE = IoErr();
+	if (ERROR_CODE == 0) {
+		if (!app || !MUI_Request(app, mainWindowObject, MUIV_Requester_Image_Error, "Error", "*OK", "\33c%s", message)) {
+			fprintf(stderr, "%s\n", message);
 		}
-
-		// If we found a space, replace it with a newline and copy the line to the output
-		if (*lastSpace == ' ' && lastSpace != message) {
-			memcpy(dest, message, lastSpace - message);
-			dest[lastSpace - message] = '\n';
-			dest += lastSpace - message + 1;
-			message = lastSpace + 1;
-		} else {
-			// If we didn't find a space, just copy the part that fits
-			memcpy(dest, message, fits);
-			dest += fits;
-			message += fits;
-			// If we have not reached the end of the message, add a newline
-			if (*message != '\0') {
-				*dest++ = '\n';
-			}
-		}
-	}
-
-	*dest = '\0';
-
-	struct EasyStruct errorRequester = {
-		sizeof(struct EasyStruct),
-		0,
-		"Error",
-		adjustedMsg,
-		 "OK"
-	};
-	EasyRequest(mainWindow, &errorRequester, NULL, NULL);
-
-	set(sendMessageButton, MUIA_Disabled, FALSE);
-	FreeVec(adjustedMsg);
-}
-
-/**
- * Display an error message about a disk error
- * @param message the message to display
- * @param error the error code returned by IOErr()
-**/
-void displayDiskError(STRPTR message, LONG error) {
-	const UBYTE ERROR_BUFFER_LENGTH = 255;
-	const UBYTE FINAL_MESSAGE_LENGTH = strlen(message) + ERROR_BUFFER_LENGTH;
-	STRPTR errorMessage = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
-	STRPTR finalMessage = AllocVec(FINAL_MESSAGE_LENGTH, MEMF_ANY | MEMF_CLEAR);
-	Fault(error, NULL, errorMessage, ERROR_BUFFER_LENGTH);
-	snprintf(finalMessage, FINAL_MESSAGE_LENGTH - 3, "%s\n\n%s", message, error);
-	displayError(finalMessage);
-	FreeVec(errorMessage);
-	FreeVec(finalMessage);
-}
-
-/**
- * Opens the About AmigaGPT window
-**/
-static void openAboutAmigaGPTWindow() {
-	if(aboutAmigaGPTWindowObject) {
-	  set(aboutAmigaGPTWindowObject, MUIA_Window_Open, TRUE);
 	} else {
-	  struct EasyStruct aboutRequester = {
-		sizeof(struct EasyStruct),
-		0,
-		"About",
-		#ifdef __AMIGAOS3__
-		"AmigaGPT for m68k AmigaOS 3\n\n"
-		#else
-		"AmigaGPT for PPC AmigaOS 4\n\n"
-		#endif
-		"Version " APP_VERSION "\n"
-		"Build date: " __DATE__ "\n"
-		"Build number: " BUILD_NUMBER "\n\n"
-		"Developed by Cameron Armstrong (@sacredbanana on GitHub,\n"
-		"YouTube and Twitter, @Nightfox on EAB)\n\n"
-		"This app will always remain free but if you would like to\n"
-		"support me you can do so at https://paypal.me/sacredbanana",
-		"OK"
-	};
-	ULONG flags = IDCMP_RAWKEY | IDCMP_MOUSEBUTTONS;
-	EasyRequest(mainWindow, &aboutRequester, &flags, NULL);
+		if (app) {
+			const UBYTE ERROR_BUFFER_LENGTH = 255;
+			STRPTR errorMessage = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+			if (errorMessage) {
+				Fault(ERROR_CODE, message, errorMessage, ERROR_BUFFER_LENGTH);
+				if (MUI_Request(app, mainWindowObject, MUIV_Requester_Image_Error, "Error", "*OK", "\33c%s", errorMessage) != 0) {
+					updateStatusBar("Error", 6);
+				} else {
+					PrintFault(ERROR_CODE, message);
+				}
+				FreeVec(errorMessage);
+			}
+		} else {
+			PrintFault(ERROR_CODE, message);
+		}
 	}
 }
 
@@ -2933,7 +2660,7 @@ static void openChatSystemRequester() {
 LONG saveConversations() {
 	BPTR file = Open(PROGDIR"chat-history.json", MODE_OLDFILE);
 	if (file == 0) {
-		displayDiskError("Failed to create message history file. Conversation history will not be saved.", IoErr());
+		displayError("Failed to create message history file. Conversation history will not be saved.");
 		return RETURN_ERROR;
 	}
 
@@ -2984,7 +2711,7 @@ LONG saveConversations() {
 static LONG saveImages() {
 	// BPTR file = Open(PROGDIR"image-history.json", MODE_NEWFILE);
 	// if (file == 0) {
-	// 	displayDiskError("Failed to create image history file. Image history will not be saved.", IoErr());
+	// 	displayError("Failed to create image history file. Image history will not be saved.");
 	// 	return RETURN_ERROR;
 	// }
 
@@ -3375,7 +3102,7 @@ static LONG loadConversations() {
 	#endif
 	STRPTR conversationsJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
 	if (Read(file, conversationsJsonString, fileSize) != fileSize) {
-		displayDiskError("Failed to read from message history file. Conversation history will not be loaded", IoErr());
+		displayError("Failed to read from message history file. Conversation history will not be loaded");
 		Close(file);
 		FreeVec(conversationsJsonString);
 		return RETURN_ERROR;
@@ -3386,7 +3113,7 @@ static LONG loadConversations() {
 	struct json_object *conversationsJsonArray = json_tokener_parse(conversationsJsonString);
 	if (conversationsJsonArray == NULL) {
 		if (Rename(PROGDIR"chat-history.json", PROGDIR"chat-history.json.bak")) {
-			displayDiskError("Failed to parse chat history. Malformed JSON. The chat-history.json file is probably corrupted. Conversation history will not be loaded. A backup of the chat-history.json file has been created as chat-history.json.bak", IoErr());
+			displayError("Failed to parse chat history. Malformed JSON. The chat-history.json file is probably corrupted. Conversation history will not be loaded. A backup of the chat-history.json file has been created as chat-history.json.bak");
 		} else if (copyFile(PROGDIR"chat-history.json", "RAM:chat-history.json")) {
 			displayError("Failed to parse chat history. Malformed JSON. The chat-history.json file is probably corrupted. Conversation history will not be loaded. There was an error writing a backup of the chat history to disk but a copy has been saved to RAM:chat-history.json.bak");
 			#ifdef __AMIGAOS3__
@@ -3394,7 +3121,7 @@ static LONG loadConversations() {
 			#else
 			if (!Delete(PROGDIR"chat-history.json")) {
 			#endif
-				displayDiskError("Failed to delete chat-history.json. Please delete this file manually.", IoErr());
+				displayError("Failed to delete chat-history.json. Please delete this file manually.");
 			}
 		}
 
@@ -3481,7 +3208,7 @@ static LONG loadImages() {
 	#endif
 	STRPTR imagesJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
 	if (Read(file, imagesJsonString, fileSize) != fileSize) {
-		displayDiskError("Failed to read from image history file. Image generation history will not be loaded", IoErr());
+		displayError("Failed to read from image history file. Image generation history will not be loaded");
 		Close(file);
 		FreeVec(imagesJsonString);
 		return RETURN_ERROR;
@@ -3492,7 +3219,7 @@ static LONG loadImages() {
 	struct json_object *imagesJsonArray = json_tokener_parse(imagesJsonString);
 	if (imagesJsonArray == NULL) {
 		if (Rename(PROGDIR"image-history.json", PROGDIR"image-history.json.bak")) {
-			displayDiskError("Failed to parse image history. Malformed JSON. The image-history.json file is probably corrupted. Image history will not be loaded. A backup of the image-history.json file has been created as image-history.json.bak", IoErr());
+			displayError("Failed to parse image history. Malformed JSON. The image-history.json file is probably corrupted. Image history will not be loaded. A backup of the image-history.json file has been created as image-history.json.bak");
 		} else if (copyFile(PROGDIR"image-history.json", "RAM:image-history.json")) {
 			displayError("Failed to parse image history. Malformed JSON. The image-history.json file is probably corrupted. Image history will not be loaded. There was an error writing a backup of the image history to disk but a copy has been saved to RAM:image-history.json.bak");
 			#ifdef __AMIGAOS3__
@@ -3500,7 +3227,7 @@ static LONG loadImages() {
 			#else
 			if (!Delete(PROGDIR"image-history.json")) {
 			#endif
-				displayDiskError("Failed to delete image-history.json. Please delete this file manually.", IoErr());
+				displayError("Failed to delete image-history.json. Please delete this file manually.");
 			}
 		}
 
@@ -3603,7 +3330,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 
 	if (!(srcFile = Open(source, MODE_OLDFILE))) {
 		snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error opening %s for copy", source);
-		displayDiskError(errorMessage, IoErr());
+		displayError(errorMessage);
 		FreeVec(buffer);
 		FreeVec(errorMessage);
 		return FALSE;
@@ -3611,7 +3338,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 
 	if (!(dstFile = Open(destination, MODE_NEWFILE))) {
 		snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error creating %s for copy", destination);
-		displayDiskError(errorMessage, IoErr());
+		displayError(errorMessage);
 		FreeVec(buffer);
 		FreeVec(errorMessage);
 		Close(srcFile);
@@ -3629,7 +3356,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 			if (bytesWritten != bytesRead) {
 				updateStatusBar("Ready", 5);
 				snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error copying %s to %s", source, destination);
-				displayDiskError(errorMessage, IoErr());
+				displayError(errorMessage);
 				FreeVec(buffer);
 				FreeVec(errorMessage);
 				Close(srcFile);
@@ -3640,7 +3367,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 		else if (bytesRead < 0) {
 			updateStatusBar("Ready", 5);
 			snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error copying %s to %s", source, destination);
-			displayDiskError(errorMessage, IoErr());
+			displayError(errorMessage);
 			FreeVec(buffer);
 			FreeVec(errorMessage);
 			Close(srcFile);
@@ -3661,6 +3388,9 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
  * Shutdown the GUI
 **/
 void shutdownGUI() {
+	saveConversations();
+	saveImages();
+	DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 	MUI_DisposeObject(app);
 	// freeImageList();
 	if (isPublicScreen) {
