@@ -99,7 +99,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 			break;
 	}
 
-	if ((TranslatorBase = (struct Library *)OpenLibrary("translator.library", 43)) == NULL) {
+	if ((TranslatorBase = (struct Library *)OpenLibrary("translator.library", 42)) == NULL) {
 		printf("Could not open translator.library\n");
 		config.speechEnabled = FALSE;
 		return RETURN_ERROR;

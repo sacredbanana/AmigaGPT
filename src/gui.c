@@ -92,7 +92,7 @@ enum {
 };
 
 // Menu item IDs
-enum {
+enum MenuItemID {
 	MENU_ITEM_ABOUT_AMIGAGPT = 1,
 	MENU_ITEM_ABOUT_MUI,
 	MENU_ITEM_QUIT,
@@ -233,64 +233,64 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_ENABLED},
 	{NM_ITEM, "Speech system", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM},
 	#ifdef __AMIGAOS3__
-	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_34},
-	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_37},
+	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_SPEECH_SYSTEM_34},
+	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_SYSTEM_37},
 	#else
 	#ifdef __AMIGAOS4__
-	{NM_SUB, "Flite", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_FLITE},
+	{NM_SUB, "Flite", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_SPEECH_SYSTEM_FLITE},
 	#endif
 	#endif
-	{NM_SUB, "OpenAI Text To Speech", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
+	{NM_SUB, "OpenAI Text To Speech", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
 	#ifdef __AMIGAOS3__
 	{NM_ITEM, "Accent", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_ACCENT},
 	#endif
 	#ifdef __AMIGAOS4__
 	{NM_ITEM, "Flite Voice", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE},
-	{NM_SUB, "kal (fast)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL},
-	{NM_SUB, "kal16 (fast)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL16},
-	{NM_SUB, "awb (slow)", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_AWB},
-	{NM_SUB, "rms (slow)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_RMS},
-	{NM_SUB, "slt (slow)", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_SLT},
+	{NM_SUB, "kal (fast)", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL},
+	{NM_SUB, "kal16 (fast)", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL16},
+	{NM_SUB, "awb (slow)", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_AWB},
+	{NM_SUB, "rms (slow)", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_RMS},
+	{NM_SUB, "slt (slow)", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_SLT},
 	#endif
 	{NM_ITEM, "OpenAI Voice", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
-	{NM_SUB, "alloy", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY},
-	{NM_SUB, "echo", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO},
-	{NM_SUB, "fable", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE},
-	{NM_SUB, "onyx", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX},
-	{NM_SUB, "nova", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA},
-	{NM_SUB, "shimmer", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER},
+	{NM_SUB, "alloy", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY},
+	{NM_SUB, "echo", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO},
+	{NM_SUB, "fable", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE},
+	{NM_SUB, "onyx", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX},
+	{NM_SUB, "nova", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA},
+	{NM_SUB, "shimmer", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER},
 	{NM_ITEM, "OpenAI Speech Model", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL},
-	{NM_SUB, "tts-1", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1},
-	{NM_SUB, "tts-1-hd", 0, CHECKIT, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD},
+	{NM_SUB, "tts-1", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1},
+	{NM_SUB, "tts-1-hd", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD},
 	{NM_TITLE, "OpenAI", 0, 0, 0, (APTR)NULL_ID},
 	{NM_ITEM, "API key", 0, 0, 0, (APTR)MENU_ITEM_OPENAI_API_KEY},
 	{NM_ITEM, "Chat System", 0, 0, 0, (APTR)MENU_ITEM_CHAT_SYSTEM},
 	{NM_ITEM, "Chat Model", 0, 0, 0, (APTR)MENU_ITEM_CHAT_MODEL},
-	{NM_SUB, "gpt-4o", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o},
-	{NM_SUB, "gpt-4o-2024-05-13", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_2024_05_13},
-	{NM_SUB, "gpt-4o-mini", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_MINI},
-	{NM_SUB, "gpt-4o-mini-2024-07-18", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_MINI_2024_07_18},
-	{NM_SUB, "gpt-4-turbo", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO},
-	{NM_SUB, "gpt-4-turbo-2024-04-09", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_2024_04_09},
-	{NM_SUB, "gpt-4-turbo-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW},
-	{NM_SUB, "gpt-4-0125-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW},
-	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW},
-	{NM_SUB, "gpt-4", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4},
-	{NM_SUB, "gpt-4-0613", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0613},
-	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO},
-	{NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125},
-	{NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT, 0, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106},
+	{NM_SUB, "gpt-4o", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o},
+	{NM_SUB, "gpt-4o-2024-05-13", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_2024_05_13},
+	{NM_SUB, "gpt-4o-mini", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_MINI},
+	{NM_SUB, "gpt-4o-mini-2024-07-18", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_MINI_2024_07_18},
+	{NM_SUB, "gpt-4-turbo", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO},
+	{NM_SUB, "gpt-4-turbo-2024-04-09", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_2024_04_09},
+	{NM_SUB, "gpt-4-turbo-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW},
+	{NM_SUB, "gpt-4-0125-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW},
+	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW},
+	{NM_SUB, "gpt-4", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4},
+	{NM_SUB, "gpt-4-0613", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0613},
+	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO},
+	{NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125},
+	{NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106},
 	{NM_ITEM, "Image Model", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_MODEL},
-	{NM_SUB, "dall-e-2", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_MODEL_DALL_E_2},
-	{NM_SUB, "dall-e-3", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_IMAGE_MODEL_DALL_E_3},
+	{NM_SUB, "dall-e-2", 0, CHECKIT, ~16, (APTR)MENU_ITEM_IMAGE_MODEL_DALL_E_2},
+	{NM_SUB, "dall-e-3", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_IMAGE_MODEL_DALL_E_3},
 	{NM_ITEM, "DALL-E 2 Image Size", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2},
-	{NM_SUB, "256x256", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256},
-	{NM_SUB, "512x512", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512},
-	{NM_SUB, "1024x1024", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024},
+	{NM_SUB, "256x256", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256},
+	{NM_SUB, "512x512", 0, CHECKIT, ~16, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512},
+	{NM_SUB, "1024x1024", 0, CHECKIT, ~16, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024},
 	{NM_ITEM, "DALL-E 3 Image Size", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3},
-	{NM_SUB, "1024x1024", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024},
-	{NM_SUB, "1792x1024", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024},
-	{NM_SUB, "1024x1792", 0, CHECKIT, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792},
+	{NM_SUB, "1024x1024", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024},
+	{NM_SUB, "1792x1024", 0, CHECKIT, ~16, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024},
+	{NM_SUB, "1024x1792", 0, CHECKIT, ~16, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792},
 	{NM_TITLE, "Help", 0, 0, 0, (APTR)NULL_ID},
 	{NM_ITEM, "Open Documentation", 0, 0, 0, (APTR)MENU_ITEM_OPEN_DOCUMENTATION},
 	{NM_END, NULL, 0, 0, 0, 0}
@@ -599,6 +599,32 @@ HOOKPROTONHNONP(AboutAmigaGPTMenuItemClickedFunc, void) {
 }
 MakeHook(AboutAmigaGPTMenuItemClickedHook, AboutAmigaGPTMenuItemClickedFunc);
 
+HOOKPROTONHNO(SpeechSystemMenuItemClickedFunc, void, enum SpeechSystem *speechSystem) {
+	closeSpeech();
+	config.speechSystem = *speechSystem;
+	if (initSpeech(*speechSystem) == RETURN_ERROR) {
+		switch (*speechSystem) {
+			case SPEECH_SYSTEM_34:
+				displayError("Could not initialise speech system 34. Please make sure the speech.device is installed into the program directory.");
+				break;
+			case SPEECH_SYSTEM_37:
+				displayError("Could not initialise speech system 37. Please make sure the speech.device is installed into the program directory.");
+				break;
+			case SPEECH_SYSTEM_FLITE:
+				displayError("Could not initialise speech system Flite. Please make sure the flite.device is installed into the program directory.");
+				break;
+			case SPEECH_SYSTEM_OPENAI:
+				displayError("Could not initialise speech system OpenAI. Please make sure the openai.device is installed into the program directory.");
+				break;
+			default:
+				displayError("Unknown speech system!");
+				break;
+		}
+	}
+	// writeConfig();
+}
+MakeHook(SpeechSystemMenuItemClickedHook, SpeechSystemMenuItemClickedFunc);
+
 HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
 	struct NewAmigaGuide guide = {
 		.nag_Name = PROGDIR"AmigaGPT.guide",
@@ -900,6 +926,22 @@ LONG initVideo() {
 	Object speechEnabledMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ENABLED);
 	set(speechEnabledMenuItem, MUIA_Menuitem_Checked, config.speechEnabled);
 	DoMethod(speechEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, speechEnabledMenuItem, 3, MUIM_WriteLong, MUIV_TriggerValue, &config.speechEnabled);
+
+	Object speechSystem34MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_34);
+	set(speechSystem34MenuItem, MUIA_Menuitem_Checked, config.speechSystem == SPEECH_SYSTEM_34);
+	DoMethod(speechSystem34MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_34);
+
+	Object speechSystem37MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_37);
+	set(speechSystem37MenuItem, MUIA_Menuitem_Checked, config.speechSystem == SPEECH_SYSTEM_37);
+	DoMethod(speechSystem37MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_37);
+
+	Object speechSystemFliteMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_FLITE);
+	set(speechSystemFliteMenuItem, MUIA_Menuitem_Checked, config.speechSystem == SPEECH_SYSTEM_FLITE);
+	DoMethod(speechSystemFliteMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_FLITE);
+
+	Object speechSystemOpenAIMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_OPENAI);
+	set(speechSystemOpenAIMenuItem, MUIA_Menuitem_Checked, config.speechSystem == SPEECH_SYSTEM_OPENAI);
+	DoMethod(speechSystemOpenAIMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_OPENAI);
 
 	Object openDocumentationMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPEN_DOCUMENTATION);
 	DoMethod(openDocumentationMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &OpenDocumentationMenuItemClickedHook, MUIV_TriggerValue);
