@@ -176,6 +176,8 @@ static Object *imageWindowObject;
 static Object *aboutAmigaGPTWindowObject;
 static Object *mainGroup;
 static Object *modeClickTab;
+static Object *newChatButton;
+static Object *deleteChatButton;
 static Object *sendMessageButton;
 static Object *chatInputTextEditor;
 static Object *chatOutputTextEditor;
@@ -552,6 +554,20 @@ HOOKPROTONHNO(ConversationRowClickedFunc, void, LONG *rowNumber) {
 }
 MakeHook(ConversationRowClickedHook, ConversationRowClickedFunc);
 
+HOOKPROTONHNONP(NewChatButtonClickedFunc, void) {
+	currentConversation = NULL;
+	DoMethod(chatOutputTextEditor, MUIM_TextEditor_ClearText);
+}
+MakeHook(NewChatButtonClickedHook, NewChatButtonClickedFunc);
+
+HOOKPROTONHNONP(DeleteChatButtonClickedFunc, void) {
+	DoMethod(conversationListObject, MUIM_NList_Remove, MUIV_NList_Remove_Active);
+	currentConversation = NULL;
+	DoMethod(chatOutputTextEditor, MUIM_TextEditor_ClearText);
+	saveConversations();
+}
+MakeHook(DeleteChatButtonClickedHook, DeleteChatButtonClickedFunc);
+
 HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
 	if (config.openAiApiKey != NULL && strlen(config.openAiApiKey) > 0) {
 		sendChatMessage();
@@ -825,6 +841,22 @@ LONG initVideo() {
 		MUIA_Window_UseLeftBorderScroller, FALSE,
 		WindowContents, HGroup,
 			Child, VGroup,
+				Child, VGroup,
+					// New chat button
+					Child, newChatButton = MUI_MakeObject(MUIO_Button, "+ New Chat",
+						MUIA_Width, 500,
+						MUIA_Background, MUII_FILL,
+						MUIA_CycleChain, TRUE,
+						MUIA_InputMode, MUIV_InputMode_RelVerify,
+					End,
+					// Delete chat button
+					Child, deleteChatButton = MUI_MakeObject(MUIO_Button, "- Delete Chat",
+						MUIA_Width, 500,
+						MUIA_Background, MUII_FILL,
+						MUIA_CycleChain, TRUE,
+						MUIA_InputMode, MUIV_InputMode_RelVerify,
+					End,
+				End,
 				// Conversation list
 				Child, NListviewObject,
 					MUIA_CycleChain, 1,
@@ -884,7 +916,6 @@ LONG initVideo() {
 					Child, sendMessageButton = MUI_MakeObject(MUIO_Button, "Send",
 						MUIA_Width, 500,
 						MUIA_Background, MUII_FILL,
-						MUIA_Text_Contents, "Send",
 						MUIA_CycleChain, TRUE,
 						MUIA_InputMode, MUIV_InputMode_RelVerify,
 					End,
@@ -896,6 +927,10 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
+	DoMethod(newChatButton, MUIM_Notify, MUIA_Pressed, FALSE,
+			  newChatButton, 2, MUIM_CallHook, &NewChatButtonClickedHook);
+	DoMethod(deleteChatButton, MUIM_Notify, MUIA_Pressed, FALSE, 
+			  deleteChatButton, 2, MUIM_CallHook, &DeleteChatButtonClickedHook);
 	DoMethod(sendMessageButton, MUIM_Notify, MUIA_Pressed, FALSE,
               sendMessageButton, 2, MUIM_CallHook, &SendMessageButtonClickedHook);
 	DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_CallHook, &ConversationRowClickedHook, MUIV_TriggerValue);
