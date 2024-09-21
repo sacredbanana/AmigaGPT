@@ -33,7 +33,7 @@ struct Conversation {
  * The chat model OpenAI should use
 **/
 enum ChatModel {
-	GPT_4o = 0,
+	GPT_4o = 0L,
 	GPT_4o_2024_05_13,
 	GPT_4o_MINI,
 	GPT_4o_MINI_2024_07_18,
@@ -59,7 +59,7 @@ extern CONST_STRPTR CHAT_MODEL_NAMES[];
  * The image model OpenAI should use
 **/
 enum ImageModel {
-	DALL_E_2 = 0,
+	DALL_E_2 = 0L,
 	DALL_E_3
 };
 
@@ -73,7 +73,7 @@ extern CONST_STRPTR IMAGE_MODEL_NAMES[];
  * The Text to Speech model OpenAI should use
 **/
 enum OpenAITTSModel {
-	OPENAI_TTS_MODEL_TTS_1 = 0,
+	OPENAI_TTS_MODEL_TTS_1 = 0L,
 	OPENAI_TTS_MODEL_TTS_1_HD
 };
 
@@ -87,7 +87,7 @@ extern CONST_STRPTR OPENAI_TTS_MODEL_NAMES[];
  * The voice OpenAI should use
 **/
 enum OpenAITTSVoice {
-	OPENAI_TTS_VOICE_ALLOY = 0,
+	OPENAI_TTS_VOICE_ALLOY = 0L,
 	OPENAI_TTS_VOICE_ECHO,
 	OPENAI_TTS_VOICE_FABLE,
 	OPENAI_TTS_VOICE_ONYX,
@@ -105,7 +105,7 @@ extern CONST_STRPTR OPENAI_TTS_VOICE_NAMES[];
  * The size of the requested image
 **/
 extern enum ImageSize {
-	IMAGE_SIZE_256x256 = 0,
+	IMAGE_SIZE_256x256 = 0L,
 	IMAGE_SIZE_512x512,
 	IMAGE_SIZE_1024x1024,
 	IMAGE_SIZE_1792x1024,

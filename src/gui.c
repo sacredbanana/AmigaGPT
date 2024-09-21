@@ -93,68 +93,60 @@ enum {
 
 // Menu item IDs
 enum MenuItemID {
-	MENU_ITEM_ABOUT_AMIGAGPT = 1,
-	MENU_ITEM_ABOUT_MUI,
-	MENU_ITEM_QUIT,
-	MENU_ITEM_SPEECH_ACCENT,
+	MENU_ITEM_PROJECT_ABOUT_AMIGAGPT = 1,
+	MENU_ITEM_PROJECT_ABOUT_MUI,
+	MENU_ITEM_PROJECT_QUIT,
+	MENU_ITEM_EDIT_CUT,
+	MENU_ITEM_EDIT_COPY,
+	MENU_ITEM_EDIT_PASTE,
+	MENU_ITEM_EDIT_CLEAR,
+	MENU_ITEM_EDIT_SELECT_ALL,
+	MENU_ITEM_VIEW_CHAT_FONT,
+	MENU_ITEM_VIEW_UI_FONT,
 	MENU_ITEM_SPEECH_ENABLED,
-	MENU_ITEM_CHAT_FONT,
-	MENU_ITEM_UI_FONT,
 	MENU_ITEM_SPEECH_SYSTEM_34,
 	MENU_ITEM_SPEECH_SYSTEM_37,
 	MENU_ITEM_SPEECH_SYSTEM_FLITE,
 	MENU_ITEM_SPEECH_SYSTEM_OPENAI,
-	MENU_ITEM_CUT,
-	MENU_ITEM_COPY,
-	MENU_ITEM_PASTE,
-	MENU_ITEM_CLEAR,
-	MENU_ITEM_SELECT_ALL,
-	MENU_ITEM_CHAT_MODEL_GPT_4o,
-	MENU_ITEM_CHAT_MODEL_GPT_4o_2024_05_13,
-	MENU_ITEM_CHAT_MODEL_GPT_4o_MINI,
-	MENU_ITEM_CHAT_MODEL_GPT_4o_MINI_2024_07_18,
-	MENU_ITEM_CHAT_MODEL_GPT_4_TURBO,
-	MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_2024_04_09,
-	MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW,
-	MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW,
-	MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW,
-	MENU_ITEM_CHAT_MODEL_GPT_4,
-	MENU_ITEM_CHAT_MODEL_GPT_4_0613,
-	MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO,
-	MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125,
-	MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106,
-	MENU_ITEM_CHAT_MODEL,
-	MENU_ITEM_SPEECH_SYSTEM,
-	MENU_ITEM_OPENAI_API_KEY,
-	MENU_ITEM_OPEN_DOCUMENTATION,
-	MENU_ITEM_SPEECH_FLITE_VOICE,
+	MENU_ITEM_SPEECH_ACCENT,
 	MENU_ITEM_SPEECH_FLITE_VOICE_AWB,
 	MENU_ITEM_SPEECH_FLITE_VOICE_KAL,
 	MENU_ITEM_SPEECH_FLITE_VOICE_KAL16,
 	MENU_ITEM_SPEECH_FLITE_VOICE_RMS,
 	MENU_ITEM_SPEECH_FLITE_VOICE_SLT,
-	MENU_ITEM_SPEECH_OPENAI_VOICE,
 	MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY,
 	MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO,
 	MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE,
 	MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX,
 	MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA,
 	MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER,
-	MENU_ITEM_SPEECH_OPENAI_MODEL,
 	MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1,
 	MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD,
-	MENU_ITEM_IMAGE_MODEL,
-	MENU_ITEM_IMAGE_MODEL_DALL_E_2,
-	MENU_ITEM_IMAGE_MODEL_DALL_E_3,
-	MENU_ITEM_IMAGE_SIZE_DALL_E_2,
-	MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256,
-	MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512,
-	MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024,
-	MENU_ITEM_IMAGE_SIZE_DALL_E_3,
-	MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024,
-	MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024,
-	MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792,
-	MENU_ITEM_CHAT_SYSTEM
+	MENU_ITEM_OPENAI_API_KEY,
+	MENU_ITEM_OPENAI_CHAT_SYSTEM,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_05_13,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI_2024_07_18,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_2024_04_09,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_PREVIEW,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0125_PREVIEW,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_1106_PREVIEW,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0613,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_0125,
+	MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_1106,
+	MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_2,
+	MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_3,
+	MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_256X256,
+	MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_512X512,
+	MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_1024X1024,
+	MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1024,
+	MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1792X1024,
+	MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1792,
+	MENU_ITEM_HELP_OPEN_DOCUMENTATION
 };
 
 #ifdef __AMIGAOS4__
@@ -216,22 +208,22 @@ static struct TextAttr chatTextAttr = {0};
 static struct TextAttr uiTextAttr = {0};
 static struct NewMenu amigaGPTMenu[] = {
 	{NM_TITLE, "Project", 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "About AmigaGPT", 0, 0, 0, (APTR)MENU_ITEM_ABOUT_AMIGAGPT},
-	{NM_ITEM, "About MUI", 0, 0, 0, (APTR)MENU_ITEM_ABOUT_MUI},
+	{NM_ITEM, "About AmigaGPT", 0, 0, 0, (APTR)MENU_ITEM_PROJECT_ABOUT_AMIGAGPT},
+	{NM_ITEM, "About MUI", 0, 0, 0, (APTR)MENU_ITEM_PROJECT_ABOUT_MUI},
 	{NM_ITEM, NM_BARLABEL, 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "Quit", "Q", 0, 0, (APTR)MENU_ITEM_QUIT},
+	{NM_ITEM, "Quit", "Q", 0, 0, (APTR)MENU_ITEM_PROJECT_QUIT},
 	{NM_TITLE, "Edit", 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "Cut", "X", 0, 0, (APTR)MENU_ITEM_CUT},
-	{NM_ITEM, "Copy", "C", 0, 0, (APTR)MENU_ITEM_COPY},
-	{NM_ITEM, "Paste", "V", 0, 0, (APTR)MENU_ITEM_PASTE},
-	{NM_ITEM, "Clear", "L", 0, 0, (APTR)MENU_ITEM_CLEAR},
-	{NM_ITEM, "Select all", "A", 0, 0, (APTR)MENU_ITEM_SELECT_ALL},
+	{NM_ITEM, "Cut", "X", 0, 0, (APTR)MENU_ITEM_EDIT_CUT},
+	{NM_ITEM, "Copy", "C", 0, 0, (APTR)MENU_ITEM_EDIT_COPY},
+	{NM_ITEM, "Paste", "V", 0, 0, (APTR)MENU_ITEM_EDIT_PASTE},
+	{NM_ITEM, "Clear", "L", 0, 0, (APTR)MENU_ITEM_EDIT_CLEAR},
+	{NM_ITEM, "Select all", "A", 0, 0, (APTR)MENU_ITEM_EDIT_SELECT_ALL},
 	{NM_TITLE, "View", 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "Chat Font", 0, 0, 0, (APTR)MENU_ITEM_CHAT_FONT},
-	{NM_ITEM, "UI Font", 0, 0, 0, (APTR)MENU_ITEM_UI_FONT},
+	{NM_ITEM, "Chat Font", 0, 0, 0, (APTR)MENU_ITEM_VIEW_CHAT_FONT},
+	{NM_ITEM, "UI Font", 0, 0, 0, (APTR)MENU_ITEM_VIEW_UI_FONT},
 	{NM_TITLE, "Speech", 0, 0, 0, (APTR)NULL_ID},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_ENABLED},
-	{NM_ITEM, "Speech system", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM},
+	{NM_ITEM, "Speech system", 0, 0, 0, (APTR)NULL_ID},
 	#ifdef __AMIGAOS3__
 	{NM_SUB, "Workbench 1.x v34", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_SPEECH_SYSTEM_34},
 	{NM_SUB, "Workbench 2.0 v37", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_SYSTEM_37},
@@ -259,40 +251,40 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "onyx", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX},
 	{NM_SUB, "nova", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA},
 	{NM_SUB, "shimmer", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER},
-	{NM_ITEM, "OpenAI Speech Model", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL},
+	{NM_ITEM, "OpenAI Speech Model", 0, 0, 0, (APTR)NULL_ID},
 	{NM_SUB, "tts-1", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1},
 	{NM_SUB, "tts-1-hd", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD},
 	{NM_TITLE, "OpenAI", 0, 0, 0, (APTR)NULL_ID},
 	{NM_ITEM, "API key", 0, 0, 0, (APTR)MENU_ITEM_OPENAI_API_KEY},
-	{NM_ITEM, "Chat System", 0, 0, 0, (APTR)MENU_ITEM_CHAT_SYSTEM},
-	{NM_ITEM, "Chat Model", 0, 0, 0, (APTR)MENU_ITEM_CHAT_MODEL},
-	{NM_SUB, "gpt-4o", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o},
-	{NM_SUB, "gpt-4o-2024-05-13", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_2024_05_13},
-	{NM_SUB, "gpt-4o-mini", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_MINI},
-	{NM_SUB, "gpt-4o-mini-2024-07-18", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4o_MINI_2024_07_18},
-	{NM_SUB, "gpt-4-turbo", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO},
-	{NM_SUB, "gpt-4-turbo-2024-04-09", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_2024_04_09},
-	{NM_SUB, "gpt-4-turbo-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW},
-	{NM_SUB, "gpt-4-0125-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW},
-	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW},
-	{NM_SUB, "gpt-4", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4},
-	{NM_SUB, "gpt-4-0613", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_4_0613},
-	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO},
-	{NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125},
-	{NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT, ~16, (APTR)MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106},
-	{NM_ITEM, "Image Model", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_MODEL},
-	{NM_SUB, "dall-e-2", 0, CHECKIT, ~16, (APTR)MENU_ITEM_IMAGE_MODEL_DALL_E_2},
-	{NM_SUB, "dall-e-3", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_IMAGE_MODEL_DALL_E_3},
-	{NM_ITEM, "DALL-E 2 Image Size", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2},
-	{NM_SUB, "256x256", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256},
-	{NM_SUB, "512x512", 0, CHECKIT, ~16, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512},
-	{NM_SUB, "1024x1024", 0, CHECKIT, ~16, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024},
-	{NM_ITEM, "DALL-E 3 Image Size", 0, 0, 0, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3},
-	{NM_SUB, "1024x1024", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024},
-	{NM_SUB, "1792x1024", 0, CHECKIT, ~16, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024},
-	{NM_SUB, "1024x1792", 0, CHECKIT, ~16, (APTR)MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792},
+	{NM_ITEM, "Chat System", 0, 0, 0, (APTR)MENU_ITEM_OPENAI_CHAT_SYSTEM},
+	{NM_ITEM, "Chat Model", 0, 0, 0, (APTR)NULL_ID},
+	{NM_SUB, "gpt-4o", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o},
+	{NM_SUB, "gpt-4o-2024-05-13", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_05_13},
+	{NM_SUB, "gpt-4o-mini", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI},
+	{NM_SUB, "gpt-4o-mini-2024-07-18", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI_2024_07_18},
+	{NM_SUB, "gpt-4-turbo", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO},
+	{NM_SUB, "gpt-4-turbo-2024-04-09", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_2024_04_09},
+	{NM_SUB, "gpt-4-turbo-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_PREVIEW},
+	{NM_SUB, "gpt-4-0125-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0125_PREVIEW},
+	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_1106_PREVIEW},
+	{NM_SUB, "gpt-4", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4},
+	{NM_SUB, "gpt-4-0613", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0613},
+	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO},
+	{NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_0125},
+	{NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_1106},
+	{NM_ITEM, "Image Model", 0, 0, 0, (APTR)NULL_ID},
+	{NM_SUB, "dall-e-2", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_2},
+	{NM_SUB, "dall-e-3", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_3},
+	{NM_ITEM, "DALL-E 2 Image Size", 0, 0, 0, (APTR)NULL_ID},
+	{NM_SUB, "256x256", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_256X256},
+	{NM_SUB, "512x512", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_512X512},
+	{NM_SUB, "1024x1024", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_1024X1024},
+	{NM_ITEM, "DALL-E 3 Image Size", 0, 0, 0, (APTR)NULL_ID},
+	{NM_SUB, "1024x1024", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1024},
+	{NM_SUB, "1792x1024", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1792X1024},
+	{NM_SUB, "1024x1792", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1792},
 	{NM_TITLE, "Help", 0, 0, 0, (APTR)NULL_ID},
-	{NM_ITEM, "Open Documentation", 0, 0, 0, (APTR)MENU_ITEM_OPEN_DOCUMENTATION},
+	{NM_ITEM, "Open Documentation", 0, 0, 0, (APTR)MENU_ITEM_HELP_OPEN_DOCUMENTATION},
 	{NM_END, NULL, 0, 0, 0, 0}
 };
 /**
@@ -602,6 +594,9 @@ MakeHook(AboutAmigaGPTMenuItemClickedHook, AboutAmigaGPTMenuItemClickedFunc);
 HOOKPROTONHNO(SpeechSystemMenuItemClickedFunc, void, enum SpeechSystem *speechSystem) {
 	closeSpeech();
 	config.speechSystem = *speechSystem;
+	char speechSystemName[16];
+	snprintf(speechSystemName, sizeof(speechSystemName), "%lu", config.openAITTSModel);
+	displayError(speechSystemName);
 	if (initSpeech(*speechSystem) == RETURN_ERROR) {
 		switch (*speechSystem) {
 			case SPEECH_SYSTEM_34:
@@ -674,8 +669,6 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
-	CreateDir("ENVARC:AmigaGPT");
-
 	if (!(app = ApplicationObject,
 		MUIA_Application_Base, "AmigaGPT",
 		MUIA_Application_Title, "AmigaGPT",
@@ -686,7 +679,7 @@ LONG initVideo() {
 		MUIA_Application_UsedClasses, USED_CLASSES,
 		MUIA_Application_HelpFile, "PROGDIR:AmigaGPT.guide",
 		End)) {
-		printf("Could not create app!\n");
+		displayError("Could not create app!\n");
 		return RETURN_ERROR;
 	}
 
@@ -914,13 +907,13 @@ LONG initVideo() {
 
 	DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
 	
-	Object aboutAmigaGPTMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_ABOUT_AMIGAGPT);
+	Object aboutAmigaGPTMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_ABOUT_AMIGAGPT);
 	DoMethod(aboutAmigaGPTMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &AboutAmigaGPTMenuItemClickedHook, MUIV_TriggerValue);
 
-	Object aboutMUIMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_ABOUT_MUI);
+	Object aboutMUIMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_ABOUT_MUI);
 	DoMethod(aboutMUIMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_Application_AboutMUI, mainWindowObject);
 
-	Object quitMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_QUIT);
+	Object quitMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_QUIT);
 	DoMethod(quitMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 	
 	Object speechEnabledMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ENABLED);
@@ -929,21 +922,163 @@ LONG initVideo() {
 
 	Object speechSystem34MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_34);
 	set(speechSystem34MenuItem, MUIA_Menuitem_Checked, config.speechSystem == SPEECH_SYSTEM_34);
-	DoMethod(speechSystem34MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_34);
+	DoMethod(speechSystem34MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_CallHook, &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_34);
 
 	Object speechSystem37MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_37);
 	set(speechSystem37MenuItem, MUIA_Menuitem_Checked, config.speechSystem == SPEECH_SYSTEM_37);
-	DoMethod(speechSystem37MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_37);
+	DoMethod(speechSystem37MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_CallHook, &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_37);
 
 	Object speechSystemFliteMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_FLITE);
 	set(speechSystemFliteMenuItem, MUIA_Menuitem_Checked, config.speechSystem == SPEECH_SYSTEM_FLITE);
-	DoMethod(speechSystemFliteMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_FLITE);
+	DoMethod(speechSystemFliteMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_CallHook, &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_FLITE);
 
 	Object speechSystemOpenAIMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_OPENAI);
 	set(speechSystemOpenAIMenuItem, MUIA_Menuitem_Checked, config.speechSystem == SPEECH_SYSTEM_OPENAI);
-	DoMethod(speechSystemOpenAIMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_OPENAI);
+	DoMethod(speechSystemOpenAIMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_CallHook, &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_OPENAI);
 
-	Object openDocumentationMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPEN_DOCUMENTATION);
+	#ifdef __AMIGAOS4__
+	Object speechSystemFliteVoiceAWBMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_AWB);
+	set(speechSystemFliteVoiceAWBMenuItem, MUIA_Menuitem_Checked, config.speechFliteVoice == SPEECH_FLITE_VOICE_AWB);
+	DoMethod(speechSystemFliteVoiceAWBMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, SPEECH_FLITE_VOICE_AWB, &config.speechFliteVoice);
+
+	Object speechSystemFliteVoiceKALMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_KAL);
+	set(speechSystemFliteVoiceKALMenuItem, MUIA_Menuitem_Checked, config.speechFliteVoice == SPEECH_FLITE_VOICE_KAL);
+	DoMethod(speechSystemFliteVoiceKALMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, SPEECH_FLITE_VOICE_KAL, &config.speechFliteVoice);
+
+	Object speechSystemFliteVoiceKAL16MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_KAL16);
+	set(speechSystemFliteVoiceKAL16MenuItem, MUIA_Menuitem_Checked, config.speechFliteVoice == SPEECH_FLITE_VOICE_KAL16);
+	DoMethod(speechSystemFliteVoiceKAL16MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, SPEECH_FLITE_VOICE_KAL16, &config.speechFliteVoice);
+
+	Object speechSystemFliteVoiceRMSMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_RMS);
+	set(speechSystemFliteVoiceRMSMenuItem, MUIA_Menuitem_Checked, config.speechFliteVoice == SPEECH_FLITE_VOICE_RMS);
+	DoMethod(speechSystemFliteVoiceRMSMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, SPEECH_FLITE_VOICE_RMS, &config.speechFliteVoice);
+
+	Object speechSystemFliteVoiceSLTMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_SLT);
+	set(speechSystemFliteVoiceSLTMenuItem, MUIA_Menuitem_Checked, config.speechFliteVoice == SPEECH_FLITE_VOICE_SLT);
+	DoMethod(speechSystemFliteVoiceSLTMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, SPEECH_FLITE_VOICE_SLT, &config.speechFliteVoice);
+	#endif
+
+	Object speechOpenAIVoiceAlloyMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY);
+	set(speechOpenAIVoiceAlloyMenuItem, MUIA_Menuitem_Checked, config.openAITTSVoice == OPENAI_TTS_VOICE_ALLOY);
+	DoMethod(speechOpenAIVoiceAlloyMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, OPENAI_TTS_VOICE_ALLOY, &config.openAITTSVoice);
+
+	Object speechOpenAIVoiceEchoMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO);
+	set(speechOpenAIVoiceEchoMenuItem, MUIA_Menuitem_Checked, config.openAITTSVoice == OPENAI_TTS_VOICE_ECHO);
+	DoMethod(speechOpenAIVoiceEchoMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, OPENAI_TTS_VOICE_ECHO, &config.openAITTSVoice);
+
+	Object speechOpenAIVoiceFableMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE);
+	set(speechOpenAIVoiceFableMenuItem, MUIA_Menuitem_Checked, config.openAITTSVoice == OPENAI_TTS_VOICE_FABLE);
+	DoMethod(speechOpenAIVoiceFableMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, OPENAI_TTS_VOICE_FABLE, &config.openAITTSVoice);
+
+	Object speechOpenAIVoiceOnyxMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX);
+	set(speechOpenAIVoiceOnyxMenuItem, MUIA_Menuitem_Checked, config.openAITTSVoice == OPENAI_TTS_VOICE_ONYX);	
+	DoMethod(speechOpenAIVoiceOnyxMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, OPENAI_TTS_VOICE_ONYX, &config.openAITTSVoice);
+
+	Object speechOpenAIVoiceNovaMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA);
+	set(speechOpenAIVoiceNovaMenuItem, MUIA_Menuitem_Checked, config.openAITTSVoice == OPENAI_TTS_VOICE_NOVA);
+	DoMethod(speechOpenAIVoiceNovaMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, OPENAI_TTS_VOICE_NOVA, &config.openAITTSVoice);
+
+	Object speechOpenAIVoiceShimmerMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER);
+	set(speechOpenAIVoiceShimmerMenuItem, MUIA_Menuitem_Checked, config.openAITTSVoice == OPENAI_TTS_VOICE_SHIMMER);
+	DoMethod(speechOpenAIVoiceShimmerMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, OPENAI_TTS_VOICE_SHIMMER, &config.openAITTSVoice);
+
+	Object speechOpenAIModelTTS1MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1);
+	set(speechOpenAIModelTTS1MenuItem, MUIA_Menuitem_Checked, config.openAITTSModel == OPENAI_TTS_MODEL_TTS_1);
+	DoMethod(speechOpenAIModelTTS1MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, OPENAI_TTS_MODEL_TTS_1, &config.openAITTSModel);
+
+	Object speechOpenAIModelTTS1HDMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD);
+	set(speechOpenAIModelTTS1HDMenuItem, MUIA_Menuitem_Checked, config.openAITTSModel == OPENAI_TTS_MODEL_TTS_1_HD);
+	DoMethod(speechOpenAIModelTTS1HDMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, OPENAI_TTS_MODEL_TTS_1_HD, &config.openAITTSModel);
+
+	Object openAIChatModelGPT4oMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o);
+	set(openAIChatModelGPT4oMenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o);
+	DoMethod(openAIChatModelGPT4oMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4o, &config.chatModel);
+
+	Object openAIChatModelGPT4o2024_05_13MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_05_13);
+	set(openAIChatModelGPT4o2024_05_13MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o_2024_05_13);
+	DoMethod(openAIChatModelGPT4o2024_05_13MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4o_2024_05_13, &config.chatModel);
+
+	Object openAIChatModelGPT4oMiniMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI);
+	set(openAIChatModelGPT4oMiniMenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o_MINI);
+	DoMethod(openAIChatModelGPT4oMiniMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4o_MINI, &config.chatModel);
+
+	Object openAIChatModelGPT4oMini2024_07_18MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI_2024_07_18);
+	set(openAIChatModelGPT4oMini2024_07_18MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o_MINI_2024_07_18);
+	DoMethod(openAIChatModelGPT4oMini2024_07_18MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4o_MINI_2024_07_18, &config.chatModel);
+
+	Object openAIChatModelGPT4TurboMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO);
+	set(openAIChatModelGPT4TurboMenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4_TURBO);
+	DoMethod(openAIChatModelGPT4TurboMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4_TURBO, &config.chatModel);
+
+	Object openAIChatModelGPT4Turbo2024_04_09MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_2024_04_09);
+	set(openAIChatModelGPT4Turbo2024_04_09MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4_TURBO_2024_04_09);
+	DoMethod(openAIChatModelGPT4Turbo2024_04_09MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4_TURBO_2024_04_09, &config.chatModel);
+
+	Object openAIChatModelGPT4TurboPreviewMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_PREVIEW);
+	set(openAIChatModelGPT4TurboPreviewMenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4_TURBO_PREVIEW);
+	DoMethod(openAIChatModelGPT4TurboPreviewMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4_TURBO_PREVIEW, &config.chatModel);
+
+	Object openAIChatModelGPT4_0125PreviewMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0125_PREVIEW);
+	set(openAIChatModelGPT4_0125PreviewMenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4_0125_PREVIEW);
+	DoMethod(openAIChatModelGPT4_0125PreviewMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4_0125_PREVIEW, &config.chatModel);
+
+	Object openAIChatModelGPT4_1106MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_1106_PREVIEW);
+	set(openAIChatModelGPT4_1106MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4_1106_PREVIEW);
+	DoMethod(openAIChatModelGPT4_1106MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4_1106_PREVIEW, &config.chatModel);
+
+	Object openAIChatModelGPT4MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4);
+	set(openAIChatModelGPT4MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4);
+	DoMethod(openAIChatModelGPT4MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4, &config.chatModel);
+
+	Object openAIChatModelGPT4_0613MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0613);
+	set(openAIChatModelGPT4_0613MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4_0613);
+	DoMethod(openAIChatModelGPT4_0613MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4_0613, &config.chatModel);
+
+	Object openAIChatModelGPT3_5TurboMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO);
+	set(openAIChatModelGPT3_5TurboMenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_3_5_TURBO);
+	DoMethod(openAIChatModelGPT3_5TurboMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_3_5_TURBO, &config.chatModel);
+
+	Object openAIChatModelGPT3_5Turbo0125MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_0125);
+	set(openAIChatModelGPT3_5Turbo0125MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_3_5_TURBO_0125);
+	DoMethod(openAIChatModelGPT3_5Turbo0125MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_3_5_TURBO_0125, &config.chatModel);
+
+	Object openAIChatModelGPT3_5Turbo1106MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_1106);
+	set(openAIChatModelGPT3_5Turbo1106MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_3_5_TURBO_1106);
+	DoMethod(openAIChatModelGPT3_5Turbo1106MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_3_5_TURBO_1106, &config.chatModel);
+
+	Object openAIImageModelDALL_E_2MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_2);
+	set(openAIImageModelDALL_E_2MenuItem, MUIA_Menuitem_Checked, config.imageModel == DALL_E_2);
+	DoMethod(openAIImageModelDALL_E_2MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, DALL_E_2, &config.imageModel);
+
+	Object openAIImageModelDALL_E_3MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_3);
+	set(openAIImageModelDALL_E_3MenuItem, MUIA_Menuitem_Checked, config.imageModel == DALL_E_3);	
+	DoMethod(openAIImageModelDALL_E_3MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, DALL_E_3, &config.imageModel);
+
+	Object openAIImageSizeDALL_E_2_256X256MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_256X256);
+	set(openAIImageSizeDALL_E_2_256X256MenuItem, MUIA_Menuitem_Checked, config.imageSizeDallE2 == IMAGE_SIZE_256x256);
+	DoMethod(openAIImageSizeDALL_E_2_256X256MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, IMAGE_SIZE_256x256, &config.imageSizeDallE2);
+
+	Object openAIImageSizeDALL_E_2_512X512MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_512X512);
+	set(openAIImageSizeDALL_E_2_512X512MenuItem, MUIA_Menuitem_Checked, config.imageSizeDallE2 == IMAGE_SIZE_512x512);
+	DoMethod(openAIImageSizeDALL_E_2_512X512MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, IMAGE_SIZE_512x512, &config.imageSizeDallE2);
+
+	Object openAIImageSizeDALL_E_2_1024X1024MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_1024X1024);
+	set(openAIImageSizeDALL_E_2_1024X1024MenuItem, MUIA_Menuitem_Checked, config.imageSizeDallE2 == IMAGE_SIZE_1024x1024);
+	DoMethod(openAIImageSizeDALL_E_2_1024X1024MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, IMAGE_SIZE_1024x1024, &config.imageSizeDallE2);
+
+	Object openAIImageSizeDALL_E_3_1024X1024MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1024);
+	set(openAIImageSizeDALL_E_3_1024X1024MenuItem, MUIA_Menuitem_Checked, config.imageSizeDallE3 == IMAGE_SIZE_1024x1024);
+	DoMethod(openAIImageSizeDALL_E_3_1024X1024MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, IMAGE_SIZE_1024x1024, &config.imageSizeDallE3);
+
+	Object openAIImageSizeDALL_E_3_1792X1024MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1792X1024);
+	set(openAIImageSizeDALL_E_3_1792X1024MenuItem, MUIA_Menuitem_Checked, config.imageSizeDallE3 == IMAGE_SIZE_1792x1024);
+	DoMethod(openAIImageSizeDALL_E_3_1792X1024MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, IMAGE_SIZE_1792x1024, &config.imageSizeDallE3);
+
+	Object openAIImageSizeDALL_E_3_1024X1792MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1792);
+	set(openAIImageSizeDALL_E_3_1024X1792MenuItem, MUIA_Menuitem_Checked, config.imageSizeDallE3 == IMAGE_SIZE_1024x1792);
+	DoMethod(openAIImageSizeDALL_E_3_1024X1792MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, IMAGE_SIZE_1024x1792, &config.imageSizeDallE3);
+
+	Object openDocumentationMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_HELP_OPEN_DOCUMENTATION);
 	DoMethod(openDocumentationMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application,  3, MUIM_CallHook, &OpenDocumentationMenuItemClickedHook, MUIV_TriggerValue);
 
 	loadConversations();
@@ -1411,43 +1546,28 @@ static LONG openStartupOptions() {
 		NULL
 	};
 
-	if (!(screenSelectRadioButton = RadioObject,
-		MUIA_Frame, MUIV_Frame_Group,
-		MUIA_FrameTitle, "Screen to open:",
-		MUIA_HelpNode, "radioButton",
-		MUIA_Radio_Entries, radioButtonOptions,
-	End)) {
-		printf("Could not create screenSelectRadioButton\n");
-		return RETURN_ERROR;
-	}
-
-	if (startupOptionsOkButton = MUI_MakeObject(MUIO_Button, "OK")) {
-		set(startupOptionsOkButton, MUIA_CycleChain, 1);
-	} else {
-		printf("Could not create startupOptionsOkButton\n");
-		return RETURN_ERROR;
-	}
-
-	if (!(screenSelectGroup = GroupObject,	
-		Child, screenSelectRadioButton,
-		Child, MUI_MakeObject(MUIO_HBar,10),
-		Child, startupOptionsOkButton = startupOptionsOkButton,
-	End)) {
-		printf("Could not create screenSelectGroup\n");
-		return RETURN_ERROR;
-	}
-
 	if (!(startupOptionsWindowObject = WindowObject,
 		MUIA_Window_Title, "Startup Options",
 		MUIA_Window_ID, SCREEN_SELECT_WINDOW_ID,
 		MUIA_Window_CloseGadget, TRUE,
 		MUIA_Window_DepthGadget, FALSE,
 		MUIA_Window_SizeGadget, FALSE,
-		WindowContents, screenSelectGroup,
+		WindowContents, GroupObject,	
+			Child, screenSelectRadioButton = RadioObject,
+				MUIA_Frame, MUIV_Frame_Group,
+				MUIA_FrameTitle, "Screen to open:",
+				MUIA_HelpNode, "radioButton",
+				MUIA_Radio_Entries, radioButtonOptions,
+			End,
+			Child, MUI_MakeObject(MUIO_HBar,10),
+			Child, startupOptionsOkButton = MUI_MakeObject(MUIO_Button, "OK"),
+		End,
 	End)) {
 		printf("Could not create startupOptionsWindowObject\n");
 		return RETURN_ERROR;
 	}
+
+	set(startupOptionsOkButton, MUIA_CycleChain, 1);
 
 	DoMethod(startupOptionsWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
 	  app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
@@ -2171,10 +2291,10 @@ void startGUIRunLoop() {
 					struct MenuItem *menuItem = ItemAddress(menu, code);
 					ULONG itemIndex = code != -1 ? (ULONG)GTMENUITEM_USERDATA(menuItem) : NULL_ID;
 					switch (itemIndex) {
-						case MENU_ITEM_ABOUT_ID:
+						case MENU_ITEM_PROJECT_ABOUT_ID:
 							openAboutWindow();
 							break;
-						case MENU_ITEM_CUT_ID:
+						case MENU_ITEM_EDIT_CUT_ID:
 						{
 							switch (activeTextEditorGadgetID) {
 								case TEXT_INPUT_TEXT_EDITOR_ID:
@@ -2219,7 +2339,7 @@ void startGUIRunLoop() {
 							DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ARexxCmd, NULL, "CLEAR");
 							break;
 						}
-						case MENU_ITEM_QUIT_ID:
+						case MENU_ITEM_PROJECT_QUIT_ID:
 							done = TRUE;
 							break;
 						case MENU_ITEM_CHAT_FONT_ID:
@@ -2349,110 +2469,110 @@ void startGUIRunLoop() {
 						case MENU_ITEM_OPENAI_API_KEY_ID:
 							openApiKeyRequester();
 							break;
-						case MENU_ITEM_CHAT_SYSTEM_ID:
+						case MENU_ITEM_OPENAI_CHAT_SYSTEM_ID:
 							openChatSystemRequester();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4o_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_ID:
 							config.chatModel = GPT_4o;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4o_2024_05_13_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_05_13_ID:
 							config.chatModel = GPT_4o_2024_05_13;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4o_MINI_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI_ID:
 							config.chatModel = GPT_4o_MINI;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4o_MINI_2024_07_18_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI_2024_07_18_ID:
 							config.chatModel = GPT_4o_MINI_2024_07_18;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_ID:
 							config.chatModel = GPT_4_TURBO;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_TURBO_PREVIEW_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_PREVIEW_ID:
 							config.chatModel = GPT_4_TURBO_PREVIEW;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_0125_PREVIEW_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0125_PREVIEW_ID:
 							config.chatModel = GPT_4_0125_PREVIEW;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_1106_PREVIEW_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_1106_PREVIEW_ID:
 							config.chatModel = GPT_4_1106_PREVIEW;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_ID:
 							config.chatModel = GPT_4;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_4_0613_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0613_ID:
 							config.chatModel = GPT_4_0613;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_ID:
 							config.chatModel = GPT_3_5_TURBO;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_0125_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_0125_ID:
 							config.chatModel = GPT_3_5_TURBO_0125;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_CHAT_MODEL_GPT_3_5_TURBO_1106_ID:
+						case MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_1106_ID:
 							config.chatModel = GPT_3_5_TURBO_1106;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_IMAGE_MODEL_DALL_E_2_ID:
+						case MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_2_ID:
 							config.imageModel = DALL_E_2;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_IMAGE_MODEL_DALL_E_3_ID:
+						case MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_3_ID:
 							config.imageModel = DALL_E_3;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_IMAGE_SIZE_DALL_E_2_256X256_ID:
+						case MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_256X256_ID:
 							config.imageSizeDallE2 = IMAGE_SIZE_256x256;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_IMAGE_SIZE_DALL_E_2_512X512_ID:
+						case MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_512X512_ID:
 							config.imageSizeDallE2 = IMAGE_SIZE_512x512;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_IMAGE_SIZE_DALL_E_2_1024X1024_ID:
+						case MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_1024X1024_ID:
 							config.imageSizeDallE2 = IMAGE_SIZE_1024x1024;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1024_ID:
+						case MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1024_ID:
 							config.imageSizeDallE3 = IMAGE_SIZE_1024x1024;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_IMAGE_SIZE_DALL_E_3_1792X1024_ID:
+						case MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1792X1024_ID:
 							config.imageSizeDallE3 = IMAGE_SIZE_1792x1024;
 							writeConfig();
 							refreshOpenAIMenuItems();
 							break;
-						case MENU_ITEM_IMAGE_SIZE_DALL_E_3_1024X1792_ID:
+						case MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1792_ID:
 							config.imageSizeDallE3 = IMAGE_SIZE_1024x1792;
 							writeConfig();
 							refreshOpenAIMenuItems();
@@ -2493,20 +2613,17 @@ void startGUIRunLoop() {
 void displayError(STRPTR message) {
 	const LONG ERROR_CODE = IoErr();
 	if (ERROR_CODE == 0) {
-		if (!app || !MUI_Request(app, mainWindowObject, MUIV_Requester_Image_Error, "Error", "*OK", "\33c%s", message)) {
+		if (!app || MUI_Request(app, mainWindowObject, MUIV_Requester_Image_Error, "Error", "*OK", "\33c%s", message) != 0) {
 			fprintf(stderr, "%s\n", message);
-		}
+		} 
 	} else {
 		if (app) {
 			const UBYTE ERROR_BUFFER_LENGTH = 255;
 			STRPTR errorMessage = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 			if (errorMessage) {
 				Fault(ERROR_CODE, message, errorMessage, ERROR_BUFFER_LENGTH);
-				if (MUI_Request(app, mainWindowObject, MUIV_Requester_Image_Error, "Error", "*OK", "\33c%s", errorMessage) != 0) {
-					updateStatusBar("Error", 6);
-				} else {
-					PrintFault(ERROR_CODE, message);
-				}
+				MUI_Request(app, mainWindowObject, MUIV_Requester_Image_Error, "Error", "*OK", "\33c%s", errorMessage);
+				updateStatusBar("Error", 6);
 				FreeVec(errorMessage);
 			}
 		} else {
