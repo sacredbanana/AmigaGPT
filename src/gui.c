@@ -893,6 +893,9 @@ LONG initVideo() {
 
 	Object aboutMUIMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_ABOUT_MUI);
 	DoMethod(aboutMUIMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_Application_AboutMUI, mainWindowObject);
+
+	Object quitMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_QUIT);
+	DoMethod(quitMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 	
 	Object speechEnabledMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ENABLED);
 	set(speechEnabledMenuItem, MUIA_Menuitem_Checked, config.speechEnabled);
