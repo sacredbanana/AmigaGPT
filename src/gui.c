@@ -2855,49 +2855,48 @@ static void openChatSystemRequester() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG saveConversations() {
-	BPTR file = Open(PROGDIR"chat-history.json", MODE_OLDFILE);
+	BPTR file = Open(PROGDIR"chat-history.json", MODE_NEWFILE);
 	if (file == 0) {
 		displayError("Failed to create message history file. Conversation history will not be saved.");
 		return RETURN_ERROR;
 	}
 
-	// struct json_object *conversationsJsonArray = json_object_new_array();
-	// struct json_object *conversationJsonObject;
-	// struct Node *conversationListNode = conversationList->lh_Head;
-	// while (conversationListNode->ln_Succ) {
-	// 	conversationJsonObject = json_object_new_object();
-	// 	struct MinList *conversation;
-	// 	GetListBrowserNodeAttrs(conversationListNode, LBNA_UserData, &conversation, TAG_END);
-	// 	STRPTR conversationTitle;
-	// 	GetListBrowserNodeAttrs(conversationListNode, LBNCA_Text, &conversationTitle, TAG_END);
-	// 	json_object_object_add(conversationJsonObject, "name", json_object_new_string(conversationTitle));
-	// 	struct json_object *messagesJsonArray = json_object_new_array();
-	// 	struct ConversationNode *conversationNode;
-	// 	for (conversationNode = (struct ConversationNode *)conversation->mlh_Head;
-	// 		conversationNode->node.mln_Succ != NULL;
-	// 		conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
-	// 		if (!strcmp(conversationNode->role, "system")) continue;
-	// 		struct json_object *messageJsonObject = json_object_new_object();
-	// 		json_object_object_add(messageJsonObject, "role", json_object_new_string(conversationNode->role));
-	// 		json_object_object_add(messageJsonObject, "content", json_object_new_string(conversationNode->content));
-	// 		json_object_array_add(messagesJsonArray, messageJsonObject);
-	// 	}
-	// 	json_object_object_add(conversationJsonObject, "messages", messagesJsonArray);
-	// 	json_object_array_add(conversationsJsonArray, conversationJsonObject);
-	// 	conversationListNode = conversationListNode->ln_Succ;
-	// }
+	struct json_object *conversationsJsonArray = json_object_new_array();
 
-	// STRPTR conversationsJsonString = (STRPTR)json_object_to_json_string_ext(conversationsJsonArray, JSON_C_TO_STRING_PRETTY);
+	LONG totalConversationCount;
+	get(conversationListObject, MUIA_NList_Entries, &totalConversationCount);
 
-	// if (Write(file, conversationsJsonString, strlen(conversationsJsonString)) != (LONG)strlen(conversationsJsonString)) {
-	// 	displayError("Failed to write to message history file. Conversation history will not be saved.");
-	// 	Close(file);
-	// 	json_object_put(conversationsJsonArray);
-	// 	return RETURN_ERROR;
-	// }
+	for (LONG i = 0; i < totalConversationCount; i++) {
+		struct json_object *conversationJsonObject = json_object_new_object();
+		struct Conversation *conversation;
+		DoMethod(conversationListObject, MUIM_NList_GetEntry, i, &conversation);
+		json_object_object_add(conversationJsonObject, "name", json_object_new_string(conversation->name));
+		struct json_object *messagesJsonArray = json_object_new_array();
+		struct ConversationNode *conversationNode;
+		for (conversationNode = (struct ConversationNode *)conversation->messages->mlh_Head;
+			conversationNode->node.mln_Succ != NULL;
+			conversationNode = (struct ConversationNode *)conversationNode->node.mln_Succ) {
+			if (!strcmp(conversationNode->role, "system")) continue;
+			struct json_object *messageJsonObject = json_object_new_object();
+			json_object_object_add(messageJsonObject, "role", json_object_new_string(conversationNode->role));
+			json_object_object_add(messageJsonObject, "content", json_object_new_string(conversationNode->content));
+			json_object_array_add(messagesJsonArray, messageJsonObject);
+		}
+		json_object_object_add(conversationJsonObject, "messages", messagesJsonArray);
+		json_object_array_add(conversationsJsonArray, conversationJsonObject);
+	}
+
+	STRPTR conversationsJsonString = (STRPTR)json_object_to_json_string_ext(conversationsJsonArray, JSON_C_TO_STRING_PRETTY);
+
+	if (Write(file, conversationsJsonString, strlen(conversationsJsonString)) != (LONG)strlen(conversationsJsonString)) {
+		displayError("Failed to write to message history file. Conversation history will not be saved.");
+		Close(file);
+		json_object_put(conversationsJsonArray);
+		return RETURN_ERROR;
+	}
 
 	Close(file);
-	// json_object_put(conversationsJsonArray);
+	json_object_put(conversationsJsonArray);
 	return RETURN_OK;
 }
 
@@ -3585,7 +3584,6 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
  * Shutdown the GUI
 **/
 void shutdownGUI() {
-	saveConversations();
 	saveImages();
 	DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 	MUI_DisposeObject(app);
