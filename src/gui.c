@@ -811,10 +811,7 @@ LONG initVideo() {
 	// AddTail(modeSelectionTabList, chatTabNode);	
 	// AddTail(modeSelectionTabList, imageGenerationTabNode);
 
-	// conversationList = AllocVec(sizeof(struct List), MEMF_CLEAR);
-	// NewList(conversationList);
 	currentConversation = NULL;
-	// loadConversations();
 
 	// imageList = AllocVec(sizeof(struct List), MEMF_CLEAR);
 	// NewList(imageList);
@@ -955,7 +952,7 @@ LONG initVideo() {
 	Object apiKeyRequesterWindowObject = WindowObject,
 		MUIA_Window_Title, "Open AI API Key",
 		MUIA_Window_Screen, screen,
-		MUIA_Window_Width, 400,
+		MUIA_Window_Width, 800,
 		MUIA_Window_Height, 100,
 		WindowContents, VGroup,
 			Child, apiKeyRequesterString = StringObject,
@@ -1075,6 +1072,7 @@ LONG initVideo() {
 
 	Object openAIAPIKeyMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_API_KEY);
 	DoMethod(openAIAPIKeyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, apiKeyRequesterWindowObject,  3, MUIM_Set, MUIA_Window_Open, TRUE);
+	DoMethod(openAIAPIKeyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, apiKeyRequesterString,  3, MUIM_Set, MUIA_String_Contents, config.openAiApiKey);
 
 	Object openAIChatModelGPT4oMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o);
 	set(openAIChatModelGPT4oMenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o);
