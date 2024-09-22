@@ -174,6 +174,7 @@ struct Window *imageWindow;
 static Object *mainWindowObject = NULL;
 static Object *imageWindowObject;
 static Object *aboutAmigaGPTWindowObject;
+static Object *apiKeyRequesterString;
 static Object *mainGroup;
 static Object *modeClickTab;
 static Object *newChatButton;
@@ -333,7 +334,6 @@ static void removeImageFromImageList(struct GeneratedImage *image);
 static void openChatFontRequester();
 static void openUIFontRequester();
 static void openSpeechAccentRequester();
-static void openApiKeyRequester();
 static void openChatSystemRequester();
 static void openImage(struct GeneratedImage *generatedImage, WORD width, WORD height);
 static LONG loadConversations();
@@ -524,6 +524,19 @@ LONG openGUILibraries() {
 	return RETURN_OK;
 }
 
+HOOKPROTONHNONP(APIKeyRequesterOkButtonClickedFunc, void) {
+	STRPTR apiKey;
+	get(apiKeyRequesterString, MUIA_String_Contents, &apiKey);
+	if (config.openAiApiKey != NULL) {
+		FreeVec(config.openAiApiKey);
+		config.openAiApiKey = NULL;
+	}
+	config.openAiApiKey = AllocVec(strlen(apiKey) + 1, MEMF_CLEAR);
+	strncpy(config.openAiApiKey, apiKey, strlen(apiKey));
+	writeConfig();
+}
+MakeHook(APIKeyRequesterOkButtonClickedHook, APIKeyRequesterOkButtonClickedFunc);
+
 HOOKPROTONHNO(ConstructLI_TextFunc, APTR, struct NList_ConstructMessage *ncm) {
 	struct Conversation *oldEntry = (struct Conversation *)ncm->entry;
 	struct Conversation *newEntry = copyConversation(oldEntry);
@@ -632,7 +645,7 @@ HOOKPROTONHNO(SpeechSystemMenuItemClickedFunc, void, enum SpeechSystem *speechSy
 				break;
 		}
 	}
-	// writeConfig();
+	writeConfig();
 }
 MakeHook(SpeechSystemMenuItemClickedHook, SpeechSystemMenuItemClickedFunc);
 
@@ -938,6 +951,41 @@ LONG initVideo() {
 	  MUIV_Notify_Application, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 	DoMethod(app, OM_ADDMEMBER, mainWindowObject);
 
+	Object apiKeyRequesterOkButton, apiKeyRequesterCancelButton;
+	Object apiKeyRequesterWindowObject = WindowObject,
+		MUIA_Window_Title, "Open AI API Key",
+		MUIA_Window_Screen, screen,
+		MUIA_Window_Width, 400,
+		MUIA_Window_Height, 100,
+		WindowContents, VGroup,
+			Child, apiKeyRequesterString = StringObject,
+				MUIA_String_MaxLen, OPENAI_API_KEY_LENGTH,
+				MUIA_CycleChain, TRUE,
+				MUIA_String_Contents, config.openAiApiKey,
+			End,
+			Child, HGroup,
+				Child, apiKeyRequesterOkButton = MUI_MakeObject(MUIO_Button, "OK",
+					MUIA_Background, MUII_FILL,
+					MUIA_CycleChain, TRUE,
+					MUIA_InputMode, MUIV_InputMode_RelVerify,
+				End,
+				Child, apiKeyRequesterCancelButton = MUI_MakeObject(MUIO_Button, "Cancel",
+					MUIA_Background, MUII_FILL,
+					MUIA_CycleChain, TRUE,
+					MUIA_InputMode, MUIV_InputMode_RelVerify,
+				End,
+			End,
+		End,
+	End;
+	DoMethod(app, OM_ADDMEMBER, apiKeyRequesterWindowObject);
+
+	DoMethod(apiKeyRequesterOkButton, MUIM_Notify, MUIA_Pressed, FALSE,
+			  apiKeyRequesterString, 2, MUIM_CallHook, &APIKeyRequesterOkButtonClickedHook);
+	DoMethod(apiKeyRequesterOkButton, MUIM_Notify, MUIA_Pressed, FALSE, 
+			  apiKeyRequesterWindowObject, 3, MUIM_Set, MUIA_Window_Open, FALSE);
+	DoMethod(apiKeyRequesterCancelButton, MUIM_Notify, MUIA_Pressed, FALSE, 
+			  apiKeyRequesterWindowObject, 3, MUIM_Set, MUIA_Window_Open, FALSE);
+
 	set(mainWindowObject,MUIA_Window_Open,TRUE);
 
 	DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
@@ -1024,6 +1072,9 @@ LONG initVideo() {
 	Object speechOpenAIModelTTS1HDMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD);
 	set(speechOpenAIModelTTS1HDMenuItem, MUIA_Menuitem_Checked, config.openAITTSModel == OPENAI_TTS_MODEL_TTS_1_HD);
 	DoMethod(speechOpenAIModelTTS1HDMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, OPENAI_TTS_MODEL_TTS_1_HD, &config.openAITTSModel);
+
+	Object openAIAPIKeyMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_API_KEY);
+	DoMethod(openAIAPIKeyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, apiKeyRequesterWindowObject,  3, MUIM_Set, MUIA_Window_Open, TRUE);
 
 	Object openAIChatModelGPT4oMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o);
 	set(openAIChatModelGPT4oMenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o);
@@ -2079,27 +2130,27 @@ static void freeImageList() {
  * @param image The image to save a copy of
 **/ 
 static void saveImageCopy(struct GeneratedImage *image) {
-	if (image == NULL) return;
-	STRPTR filePath = image->filePath;
-	struct FileRequester *fileReq = AllocAslRequestTags(ASL_FileRequest, TAG_END);
-	if (fileReq != NULL) {
-		if (AslRequestTags(fileReq,
-		ASLFR_Window, mainWindow,
-		ASLFR_TitleText, "Save Image Copy",
-		ASLFR_InitialFile, "image.png",
-		ASLFR_InitialDrawer, "SYS:",
-		ASLFR_DoSaveMode, TRUE,
-		TAG_DONE)) {
-			STRPTR savePath = fileReq->fr_Drawer;
-			STRPTR saveName = fileReq->fr_File;
-			BOOL isRootDirectory = savePath[strlen(savePath) - 1] == ':';
-			STRPTR fullPath = AllocVec(strlen(savePath) + strlen(saveName) + 2, MEMF_CLEAR);
-			snprintf(fullPath, strlen(savePath) + strlen(saveName) + 2, "%s%s%s", savePath, isRootDirectory ? "" : "/", saveName);
-			copyFile(filePath, fullPath);
-			FreeVec(fullPath);
-		}
-		FreeAslRequest(fileReq);
-	}
+	// if (image == NULL) return;
+	// STRPTR filePath = image->filePath;
+	// struct FileRequester *fileReq = AllocAslRequestTags(ASL_FileRequest, TAG_END);
+	// if (fileReq != NULL) {
+	// 	if (AslRequestTags(fileReq,
+	// 	ASLFR_Window, mainWindow,
+	// 	ASLFR_TitleText, "Save Image Copy",
+	// 	ASLFR_InitialFile, "image.png",
+	// 	ASLFR_InitialDrawer, "SYS:",
+	// 	ASLFR_DoSaveMode, TRUE,
+	// 	TAG_DONE)) {
+	// 		STRPTR savePath = fileReq->fr_Drawer;
+	// 		STRPTR saveName = fileReq->fr_File;
+	// 		BOOL isRootDirectory = savePath[strlen(savePath) - 1] == ':';
+	// 		STRPTR fullPath = AllocVec(strlen(savePath) + strlen(saveName) + 2, MEMF_CLEAR);
+	// 		snprintf(fullPath, strlen(savePath) + strlen(saveName) + 2, "%s%s%s", savePath, isRootDirectory ? "" : "/", saveName);
+	// 		copyFile(filePath, fullPath);
+	// 		FreeVec(fullPath);
+	// 	}
+	// 	FreeAslRequest(fileReq);
+	// }
 }
 
 /**
@@ -2671,68 +2722,68 @@ void displayError(STRPTR message) {
  * Opens a requester for the user to select the font for the chat window
 **/
 static void openChatFontRequester() {
-	struct FontRequester *fontRequester;
-	if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
-		struct TextAttr *chatFont;
-		if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
-			if (config.chatFontName != NULL) {
-				FreeVec(config.chatFontName);
-			}
-			chatFont = &fontRequester->fo_Attr;
-			config.chatFontName = AllocVec(strlen(chatFont->ta_Name) + 1, MEMF_ANY | MEMF_CLEAR);
-			strncpy(config.chatFontName, chatFont->ta_Name, strlen(chatFont->ta_Name));
-			config.chatFontSize = chatFont->ta_YSize;
-			config.chatFontStyle = chatFont->ta_Style;
-			config.chatFontFlags = chatFont->ta_Flags;
-			writeConfig();
-			// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
-			// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
-		}
-		FreeAslRequest(fontRequester);
-	}
+	// struct FontRequester *fontRequester;
+	// if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
+	// 	struct TextAttr *chatFont;
+	// 	if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
+	// 		if (config.chatFontName != NULL) {
+	// 			FreeVec(config.chatFontName);
+	// 		}
+	// 		chatFont = &fontRequester->fo_Attr;
+	// 		config.chatFontName = AllocVec(strlen(chatFont->ta_Name) + 1, MEMF_ANY | MEMF_CLEAR);
+	// 		strncpy(config.chatFontName, chatFont->ta_Name, strlen(chatFont->ta_Name));
+	// 		config.chatFontSize = chatFont->ta_YSize;
+	// 		config.chatFontStyle = chatFont->ta_Style;
+	// 		config.chatFontFlags = chatFont->ta_Flags;
+	// 		writeConfig();
+	// 		// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
+	// 		// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
+	// 	}
+	// 	FreeAslRequest(fontRequester);
+	// }
 }
 
 /**
  * Opens a requester for the user to select the font for the UI
 **/
 static void openUIFontRequester() {
-	struct FontRequester *fontRequester;
-	// GetAttr(WINDOW_Window, mainWindowObjectOld, &mainWindow);
-	if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
-		struct TextAttr *uiFont;
-		if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
-			if (config.uiFontName != NULL) {
-				FreeVec(config.uiFontName);
-			}
-			uiFont = &fontRequester->fo_Attr;
-			config.uiFontName = AllocVec(strlen(uiFont->ta_Name) + 1, MEMF_ANY | MEMF_CLEAR);
-			strncpy(config.uiFontName, uiFont->ta_Name, strlen(uiFont->ta_Name));
-			config.uiFontSize = uiFont->ta_YSize;
-			config.uiFontStyle = uiFont->ta_Style;
-			config.uiFontFlags = uiFont->ta_Flags;
-			writeConfig();
-			if (!isPublicScreen) {
-				if (uiTextFont)
-					CloseFont(uiTextFont);
+	// struct FontRequester *fontRequester;
+	// // GetAttr(WINDOW_Window, mainWindowObjectOld, &mainWindow);
+	// if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
+	// 	struct TextAttr *uiFont;
+	// 	if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
+	// 		if (config.uiFontName != NULL) {
+	// 			FreeVec(config.uiFontName);
+	// 		}
+	// 		uiFont = &fontRequester->fo_Attr;
+	// 		config.uiFontName = AllocVec(strlen(uiFont->ta_Name) + 1, MEMF_ANY | MEMF_CLEAR);
+	// 		strncpy(config.uiFontName, uiFont->ta_Name, strlen(uiFont->ta_Name));
+	// 		config.uiFontSize = uiFont->ta_YSize;
+	// 		config.uiFontStyle = uiFont->ta_Style;
+	// 		config.uiFontFlags = uiFont->ta_Flags;
+	// 		writeConfig();
+	// 		if (!isPublicScreen) {
+	// 			if (uiTextFont)
+	// 				CloseFont(uiTextFont);
 
-				// DoMethod(mainWindowObjectOld, WM_CLOSE, NULL);
-				uiTextFont = OpenFont(uiFont);
-				SetFont(&(screen->RastPort), uiTextFont);
-				SetFont(mainWindow->RPort, uiTextFont);
-				RemakeDisplay();
-				RethinkDisplay();
-				// mainWindow = DoMethod(mainWindowObjectOld, WM_OPEN, NULL);
-			}
-			// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-			// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-			// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-			// SetGadgetAttrs(statusBar, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-			updateStatusBar("Ready", 5);
-			// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+	// 			// DoMethod(mainWindowObjectOld, WM_CLOSE, NULL);
+	// 			uiTextFont = OpenFont(uiFont);
+	// 			SetFont(&(screen->RastPort), uiTextFont);
+	// 			SetFont(mainWindow->RPort, uiTextFont);
+	// 			RemakeDisplay();
+	// 			RethinkDisplay();
+	// 			// mainWindow = DoMethod(mainWindowObjectOld, WM_OPEN, NULL);
+	// 		}
+	// 		// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+	// 		// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+	// 		// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+	// 		// SetGadgetAttrs(statusBar, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
+	// 		updateStatusBar("Ready", 5);
+	// 		// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
 
-		}
-		FreeAslRequest(fontRequester);
-	}
+	// 	}
+	// 	FreeAslRequest(fontRequester);
+	// }
 }
 
 
@@ -2740,69 +2791,30 @@ static void openUIFontRequester() {
  * Opens a requester for the user to select accent for the speech
 **/
 static void openSpeechAccentRequester() {
-	#ifdef __AMIGAOS3__
-	struct FileRequester *fileRequester = (struct FileRequester *)AllocAslRequestTags(
-									ASL_FileRequest,
-									ASLFR_Window, mainWindow,
-									ASLFR_PopToFront, TRUE,
-									ASLFR_Activate, TRUE,
-									ASLFR_DrawersOnly, FALSE,
-									ASLFR_InitialDrawer, "LOCALE:accents",
-									ASLFR_DoPatterns, TRUE,
-									ASLFR_InitialPattern, "#?.accent",
-									TAG_DONE);
+	// #ifdef __AMIGAOS3__
+	// struct FileRequester *fileRequester = (struct FileRequester *)AllocAslRequestTags(
+	// 								ASL_FileRequest,
+	// 								ASLFR_Window, mainWindow,
+	// 								ASLFR_PopToFront, TRUE,
+	// 								ASLFR_Activate, TRUE,
+	// 								ASLFR_DrawersOnly, FALSE,
+	// 								ASLFR_InitialDrawer, "LOCALE:accents",
+	// 								ASLFR_DoPatterns, TRUE,
+	// 								ASLFR_InitialPattern, "#?.accent",
+	// 								TAG_DONE);
 
-	if (fileRequester) {
-		if (AslRequestTags(fileRequester, TAG_DONE)) {
-			if (config.speechAccent != NULL) {
-				FreeVec(config.speechAccent);
-			}
-			config.speechAccent = AllocVec(strlen(fileRequester->fr_File) + 1, MEMF_ANY | MEMF_CLEAR);
-			strncpy(config.speechAccent, fileRequester->fr_File, strlen(fileRequester->fr_File));
-			writeConfig();
-		}
-		FreeAslRequest(fileRequester);
-	}
-	#endif
-}
-
-/**
- * Opens a requester for the user to enter their OpenAI API key
-**/
-static void openApiKeyRequester() {
-	// STRPTR buffer = AllocVec(OPENAI_API_KEY_LENGTH + 1, MEMF_ANY | MEMF_CLEAR);
-	// if (buffer == NULL) {
-	// 	displayError("Failed to allocate memory for API key buffer");
-	// 	return;
-	// }
-	// if (config.openAiApiKey != NULL) {
-	// 	strncpy(buffer, config.openAiApiKey, OPENAI_API_KEY_LENGTH);
-	// }
-	// Object *apiKeyRequester = NewObject(REQUESTER_GetClass(), NULL,
-	// 	REQ_Type, REQTYPE_STRING,
-	// 	REQ_TitleText, "Enter your OpenAI API key",
-	// 	REQ_BodyText, "Please type or paste (Right Amiga + V) your OpenAI API key here",
-	// 	REQ_GadgetText, "OK|Cancel",
-	// 	REQ_Image, REQIMAGE_INFO,
-	// 	REQS_AllowEmpty, FALSE,
-	// 	REQS_Buffer, buffer,
-	// 	REQS_MaxChars, OPENAI_API_KEY_LENGTH,
-	// 	REQ_ForceFocus, TRUE,
-	// 	TAG_DONE);
-
-	// if (apiKeyRequester) {
-	// 	ULONG result = OpenRequester(apiKeyRequester, mainWindow);
-	// 	if (result == 1) {
-	// 		if (config.openAiApiKey != NULL) {
-	// 			FreeVec(config.openAiApiKey);
+	// if (fileRequester) {
+	// 	if (AslRequestTags(fileRequester, TAG_DONE)) {
+	// 		if (config.speechAccent != NULL) {
+	// 			FreeVec(config.speechAccent);
 	// 		}
-	// 		config.openAiApiKey = AllocVec(strlen(buffer) + 1, MEMF_ANY | MEMF_CLEAR);
-	// 		strncpy(config.openAiApiKey, buffer, strlen(buffer));
+	// 		config.speechAccent = AllocVec(strlen(fileRequester->fr_File) + 1, MEMF_ANY | MEMF_CLEAR);
+	// 		strncpy(config.speechAccent, fileRequester->fr_File, strlen(fileRequester->fr_File));
 	// 		writeConfig();
 	// 	}
-	// 	DisposeObject(apiKeyRequester);
+	// 	FreeAslRequest(fileRequester);
 	// }
-	// FreeVec(buffer);
+	// #endif
 }
 
 /**
