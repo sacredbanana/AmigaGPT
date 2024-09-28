@@ -75,7 +75,9 @@
         "nlist_mcc.h": "c",
         "aboutbox_mcc.h": "c",
         "datetime.h": "c",
-        "exall.h": "c"
+        "exall.h": "c",
+        "pictureclass.h": "c",
+        "utility.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",
