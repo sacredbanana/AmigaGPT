@@ -171,10 +171,12 @@ struct Library *DataTypesBase;
 struct Library *MUIMasterBase;
 struct Window *mainWindow;
 struct Window *imageWindow;
+static Object *startupOptionsWindowObject;
 static Object *mainWindowObject = NULL;
 static Object *imageWindowObject;
 static Object *aboutAmigaGPTWindowObject;
 static Object *apiKeyRequesterString;
+static Object *apiKeyRequesterWindowObject;
 static Object *mainGroup;
 static Object *modeClickTab;
 static Object *newChatButton;
@@ -320,7 +322,7 @@ static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream);
 static void formatText(STRPTR unformattedText);
 static void sendChatMessage();
 static void closeGUILibraries();
-static LONG openStartupOptions();
+static LONG createStartupOptionsWindow();
 static struct Conversation* newConversation();
 static struct Conversation* copyConversation(struct Conversation *conversation);
 static void addTextToConversation(struct Conversation *conversation, STRPTR text, STRPTR role);
@@ -524,6 +526,98 @@ LONG openGUILibraries() {
 	return RETURN_OK;
 }
 
+HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void, Object *screenSelectRadioButton, Object *startupOptionsWindowObjecet) {
+	LONG selectedRadioButton;
+	get(screenSelectRadioButton, MUIA_Radio_Active, &selectedRadioButton);
+	
+	if (selectedRadioButton == 0) {
+		// Open in Workbench
+		isPublicScreen = TRUE;
+	} else {
+		// New screen
+		ULONG displayID = GetVPModeID(&screen->ViewPort);
+		struct ScreenModeRequester *screenModeRequester;
+		if (screenModeRequester = (struct ScreenModeRequester *)MUI_AllocAslRequestTags(ASL_ScreenModeRequest,
+		ASLSM_DoWidth, TRUE,
+		ASLSM_DoHeight, TRUE,
+		ASLSM_DoDepth, TRUE,
+		ASLSM_DoOverscanType, TRUE,
+		ASLSM_DoAutoScroll, TRUE,
+		ASLSM_InitialDisplayID, displayID,
+		ASLSM_InitialDisplayWidth, screen->Width,
+		ASLSM_InitialDisplayHeight, screen->Height,
+		ASLSM_InitialOverscanType, OSCAN_TEXT,
+		ASLSM_InitialDisplayDepth, 4,
+		ASLSM_MinDepth, 4,
+		ASLSM_NegativeText, NULL,
+		TAG_DONE)) {
+			if (MUI_AslRequestTags(screenModeRequester, TAG_DONE)) {
+				isPublicScreen = FALSE;
+				UnlockPubScreen(NULL, screen);
+				for (WORD i = 0; i < NUMDRIPENS; i++) {
+					pens[i]= 1;
+				}
+				pens[DETAILPEN] = 4; // nothing?
+				pens[BLOCKPEN] = 4; // nothing?
+				pens[TEXTPEN] = 1; // text colour
+				pens[SHINEPEN] = 1; // gadget top and left borders
+				pens[SHADOWPEN] = 1; // gadget bottom and right borders
+				pens[FILLPEN] = 2; // button text
+				pens[FILLTEXTPEN] = 4; // title bar text
+				pens[BACKGROUNDPEN] = 3; // background
+				pens[HIGHLIGHTTEXTPEN] = 4; // nothing?
+				pens[BARDETAILPEN] = 1; // menu text
+				pens[BARBLOCKPEN] = 0; // menu background
+				pens[BARTRIMPEN] = 1; // nothing?
+				#ifdef __AMIGAOS4__
+				pens[FOREGROUNDPEN] = 0;
+				pens[DISABLEDPEN] = 8;
+				pens[DISABLEDSHADOWPEN] = 7;
+				pens[DISABLEDSHINEPEN] = 6;
+				pens[DISABLEDTEXTPEN] = 3;
+				pens[MENUBACKGROUNDPEN] = 9;
+				pens[MENUTEXTPEN] = 3;
+				pens[MENUSHINEPEN] = 8;
+				pens[MENUSHADOWPEN] = 0;
+				pens[SELECTPEN] = 2;
+				pens[SELECTTEXTPEN] = 4;
+				#endif
+				pens[NUMDRIPENS] = ~0;
+
+				if ((screen = OpenScreenTags(NULL,
+					SA_Pens, (ULONG)pens,
+					SA_LikeWorkbench, TRUE,
+					SA_DisplayID, screenModeRequester->sm_DisplayID,
+					SA_Depth, screenModeRequester->sm_DisplayDepth,
+					SA_Overscan, screenModeRequester->sm_OverscanType,
+					SA_AutoScroll, screenModeRequester->sm_AutoScroll,
+					SA_Width, screenModeRequester->sm_DisplayWidth,
+					SA_Height, screenModeRequester->sm_DisplayHeight,
+					SA_Font, &screenFont,
+					SA_Colors32, config.colors,
+					TAG_DONE)) == NULL) {
+						displayError("Could not open screen");
+						MUI_FreeAslRequest(screenModeRequester);
+						return RETURN_ERROR;
+				}
+				MUI_FreeAslRequest(screenModeRequester);
+			}
+		}
+	}
+
+	set(startupOptionsWindowObject, MUIA_Window_Open, FALSE);
+	set(aboutAmigaGPTWindowObject, MUIA_Window_Screen, screen);	
+	set(apiKeyRequesterWindowObject, MUIA_Window_Screen, screen);
+	set(mainWindowObject, MUIA_Window_DepthGadget, isPublicScreen);
+	set(mainWindowObject, MUIA_Window_SizeGadget, isPublicScreen);
+	set(mainWindowObject, MUIA_Window_DragBar, isPublicScreen);
+	set(mainWindowObject, MUIA_Window_Screen, screen);
+	set(mainWindowObject, MUIA_Window_Width, MUIV_Window_Width_Visible(isPublicScreen ? 90 : 100));
+	set(mainWindowObject, MUIA_Window_Height, MUIV_Window_Height_Visible(isPublicScreen ? 90 : 100));
+	set(mainWindowObject, MUIA_Window_Open, TRUE);
+}
+MakeHook(StartupOptionsOkButtonClickedHook, StartupOptionsOkButtonClickedFunc);
+
 HOOKPROTONHNONP(APIKeyRequesterOkButtonClickedFunc, void) {
 	STRPTR apiKey;
 	get(apiKeyRequesterString, MUIA_String_Contents, &apiKey);
@@ -695,95 +789,10 @@ LONG initVideo() {
 		return RETURN_ERROR;
 	}
 
-	if (!(app = ApplicationObject,
-		MUIA_Application_Base, "AmigaGPT",
-		MUIA_Application_Title, "AmigaGPT",
-		MUIA_Application_Version, APP_VERSION,
-		MUIA_Application_Copyright, "(C) 2023-2024 Cameron Armstrong (Nightfox/sacredbanana)",
-		MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
-		MUIA_Application_Description, "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E",
-		MUIA_Application_UsedClasses, USED_CLASSES,
-		MUIA_Application_HelpFile, "PROGDIR:AmigaGPT.guide",
-		End)) {
-		displayError("Could not create app!\n");
-		return RETURN_ERROR;
-	}
-
-	if ((aboutAmigaGPTWindowObject = AboutboxObject,
-				MUIA_Aboutbox_Build, BUILD_NUMBER " ("__DATE__ ")\n""Git commit: " GIT_COMMIT "\nGit branch: " GIT_BRANCH "\n" "Commit timestamp: " GIT_TIMESTAMP,
-				MUIA_Aboutbox_Credits, "This app will always remain free but if you would like to support me you can do so at https://paypal.me/sacredbanana\n"
-									"\n"
-									"Click the version string above for build details.\n"
-									"\n"
-									"\033b%p\033n\n"
-									"\t\033iCameron Armstrong\033n\n"
-									"\t(@sacredbanana on GitHub, YouTube and Twitter, @Nightfox on EAB)\n"
-									"\n"
-									"\033b%I\033n\n"
-									"\t\033iMauricio Sandoval\033n\n"
-									"\n"
-									"\033b%T\033n\n"
-									"\t\033iBebbo\033n\n"
-									"\tfor creating the Amiga GCC toolchain\n"
-									"\thttps://github.com/bebbo\n"
-									"\n"
-									"\t\033iOpenAI\033n\n"
-									"\tfor creating the GPT and DALL-E models\n"
-									"\n"
-									"\t\033iEAB\033n\n"
-									"\tfor being a great community!\n"	
-									"\n"
-									"\t\033iJan Zahurancik\033n\n"
-									"\tfor all the thorough testing, bundling AmigaGPT into AmiKit and for all the moral support\n"
-									"\thttps://www.amikit.amiga.sk\n"
-									"\n"
-									"\t\033iCoffinOS\033n\n"
-									"\tfor bundling AmigaGPT into CoffinOS\n"
-									"\thttps://getcoffin.net\n"
-									"\n"
-									"\t\033iAmiga Future Magazine\033n\n"
-									"\tfor reviewing AmigaGPT and publishing several of its updates in the News from Aminet section\n"
-									"\thttps://www.amigafuture.de\n"
-									"\n"
-									"\t\033iWhatIFF? Magazine\033n\n"
-									"\tfor reviewing AmigaGPT and interviewing me in issue 14\n"
-									"\thttps://www.whatiff.info\n"
-									"\n"
-									"\t\033iDan Wood\033n\n"
-									"\tfor reviewing AmigaGPT on his YouTube channel\n"
-									"\thttps://www.youtube.com/watch?v=-OA28r8Up5U\n"
-									"\n"
-									"\t\033iProteque-CBN\033n\n"
-									"\tfor reviewing AmigaGPT on his YouTube channel\n"
-									"\thttps://www.youtube.com/watch?v=t3q8HQ6wrnw\n"
-									"\n"
-									"\t\033iAmigaBill\033n\n"
-									"\tfor covering AmigaGPT in the Amiga News section on his Twitch streams and allowing me to join his stream to promote it\n"
-									"\thttps://www.twitch.tv/amigabill\n"
-									"\n"
-									"\t\033iLes Docs\033n\n"
-									"\tfor making a video review and giving a tutorial on how to add support for the French accent\n"
-									"\thttps://www.youtube.com/watch?v=BV5Fq1PresE\n"
-									"\n"
-									"\033bLicense\033n\n"
-									"\tMIT\n"
-									"\n"
-									"\033b%W\033n\n"
-									"\thttps://github.com/sacredbanana/AmigaGPT/issues\n"
-									"\thttps://eab.abime.net/showthread.php?t=114798\n",
-				MUIA_Aboutbox_URL, "https://github.com/sacredbanana/AmigaGPT",
-				MUIA_Aboutbox_URLText, "Visit the GitHub repository for the latest release",
-			End) ) {
-				DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
-				DoMethod(aboutAmigaGPTWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
-	} else {
-		printf("Warning: Could not create aboutAmigaGPTWindowObject\nThe installed MUI version is probably too old.\nFalling back to a simple requester.\n");
-	}
-
-	if (openStartupOptions() == RETURN_ERROR)
+	if (createStartupOptionsWindow() == RETURN_ERROR)
 		return RETURN_ERROR;
 
-	set(aboutAmigaGPTWindowObject, MUIA_Window_Screen, screen);
+	// set(aboutAmigaGPTWindowObject, MUIA_Window_Screen, screen);
 
 	// modeSelectionTabList = AllocVec(sizeof(struct List), MEMF_CLEAR);
 	// NewList(modeSelectionTabList);
@@ -833,12 +842,6 @@ LONG initVideo() {
 		MUIA_Window_Title, "AmigaGPT",
 		MUIA_Window_ID, MAIN_WINDOW_ID,
 		MUIA_Window_CloseGadget, TRUE,
-		MUIA_Window_DepthGadget, isPublicScreen,
-		MUIA_Window_SizeGadget, isPublicScreen,
-		MUIA_Window_DragBar, isPublicScreen,
-		MUIA_Window_Screen, screen,
-		MUIA_Window_Width, MUIV_Window_Width_Visible(isPublicScreen ? 90: 100),
-		MUIA_Window_Height, MUIV_Window_Height_Visible(isPublicScreen ? 90: 100),
 		MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
 		MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
 		MUIA_Window_Menustrip, menuStrip,
@@ -930,7 +933,7 @@ LONG initVideo() {
 			End,
 		End,
 	End)) {
-		printf("Could not create mainWindowObject\n");
+		displayError("Could not create mainWindowObject");
 		return RETURN_ERROR;
 	}
 
@@ -943,35 +946,122 @@ LONG initVideo() {
 	DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_CallHook, &ConversationRowClickedHook, MUIV_TriggerValue);
 	DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 
 	  MUIV_Notify_Application, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
-	DoMethod(app, OM_ADDMEMBER, mainWindowObject);
 
 	Object apiKeyRequesterOkButton, apiKeyRequesterCancelButton;
-	Object apiKeyRequesterWindowObject = WindowObject,
-		MUIA_Window_Title, "Open AI API Key",
-		MUIA_Window_Screen, screen,
-		MUIA_Window_Width, 800,
-		MUIA_Window_Height, 100,
-		WindowContents, VGroup,
-			Child, apiKeyRequesterString = StringObject,
-				MUIA_String_MaxLen, OPENAI_API_KEY_LENGTH,
-				MUIA_CycleChain, TRUE,
-				MUIA_String_Contents, config.openAiApiKey,
-			End,
-			Child, HGroup,
-				Child, apiKeyRequesterOkButton = MUI_MakeObject(MUIO_Button, "OK",
-					MUIA_Background, MUII_FILL,
+
+	if (!(app = ApplicationObject,
+		MUIA_Application_Base, "AmigaGPT",
+		MUIA_Application_Title, "AmigaGPT",
+		MUIA_Application_Version, APP_VERSION,
+		MUIA_Application_Copyright, "(C) 2023-2024 Cameron Armstrong (Nightfox/sacredbanana)",
+		MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
+		MUIA_Application_Description, "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E",
+		MUIA_Application_UsedClasses, USED_CLASSES,
+		MUIA_Application_HelpFile, "PROGDIR:AmigaGPT.guide",
+		SubWindow, mainWindowObject,
+		SubWindow, startupOptionsWindowObject,
+		SubWindow, apiKeyRequesterWindowObject = WindowObject,
+			MUIA_Window_Title, "Open AI API Key",
+			MUIA_Window_Screen, screen,
+			MUIA_Window_Width, 800,
+			MUIA_Window_Height, 100,
+			WindowContents, VGroup,
+				Child, apiKeyRequesterString = StringObject,
+					MUIA_String_MaxLen, OPENAI_API_KEY_LENGTH,
 					MUIA_CycleChain, TRUE,
-					MUIA_InputMode, MUIV_InputMode_RelVerify,
+					MUIA_String_Contents, config.openAiApiKey,
 				End,
-				Child, apiKeyRequesterCancelButton = MUI_MakeObject(MUIO_Button, "Cancel",
-					MUIA_Background, MUII_FILL,
-					MUIA_CycleChain, TRUE,
-					MUIA_InputMode, MUIV_InputMode_RelVerify,
+				Child, HGroup,
+					Child, apiKeyRequesterOkButton = MUI_MakeObject(MUIO_Button, "OK",
+						MUIA_Background, MUII_FILL,
+						MUIA_CycleChain, TRUE,
+						MUIA_InputMode, MUIV_InputMode_RelVerify,
+					End,
+					Child, apiKeyRequesterCancelButton = MUI_MakeObject(MUIO_Button, "Cancel",
+						MUIA_Background, MUII_FILL,
+						MUIA_CycleChain, TRUE,
+						MUIA_InputMode, MUIV_InputMode_RelVerify,
+					End,
 				End,
 			End,
 		End,
-	End;
-	DoMethod(app, OM_ADDMEMBER, apiKeyRequesterWindowObject);
+		End)) {
+		displayError("Could not create app!\n");
+		return RETURN_ERROR;
+	}
+
+	if ((aboutAmigaGPTWindowObject = AboutboxObject,
+			MUIA_Aboutbox_Build, BUILD_NUMBER " ("__DATE__ ")\n""Git commit: " GIT_COMMIT "\nGit branch: " GIT_BRANCH "\n" "Commit timestamp: " GIT_TIMESTAMP,
+			MUIA_Aboutbox_Credits, "This app will always remain free but if you would like to support me you can do so at https://paypal.me/sacredbanana\n"
+								"\n"
+								"Click the version string above for build details.\n"
+								"\n"
+								"\033b%p\033n\n"
+								"\t\033iCameron Armstrong\033n\n"
+								"\t(@sacredbanana on GitHub, YouTube and Twitter, @Nightfox on EAB)\n"
+								"\n"
+								"\033b%I\033n\n"
+								"\t\033iMauricio Sandoval\033n\n"
+								"\n"
+								"\033b%T\033n\n"
+								"\t\033iBebbo\033n\n"
+								"\tfor creating the Amiga GCC toolchain\n"
+								"\thttps://github.com/bebbo\n"
+								"\n"
+								"\t\033iOpenAI\033n\n"
+								"\tfor creating the GPT and DALL-E models\n"
+								"\n"
+								"\t\033iEAB\033n\n"
+								"\tfor being a great community!\n"	
+								"\n"
+								"\t\033iJan Zahurancik\033n\n"
+								"\tfor all the thorough testing, bundling AmigaGPT into AmiKit and for all the moral support\n"
+								"\thttps://www.amikit.amiga.sk\n"
+								"\n"
+								"\t\033iCoffinOS\033n\n"
+								"\tfor bundling AmigaGPT into CoffinOS\n"
+								"\thttps://getcoffin.net\n"
+								"\n"
+								"\t\033iAmiga Future Magazine\033n\n"
+								"\tfor reviewing AmigaGPT and publishing several of its updates in the News from Aminet section\n"
+								"\thttps://www.amigafuture.de\n"
+								"\n"
+								"\t\033iWhatIFF? Magazine\033n\n"
+								"\tfor reviewing AmigaGPT and interviewing me in issue 14\n"
+								"\thttps://www.whatiff.info\n"
+								"\n"
+								"\t\033iDan Wood\033n\n"
+								"\tfor reviewing AmigaGPT on his YouTube channel\n"
+								"\thttps://www.youtube.com/watch?v=-OA28r8Up5U\n"
+								"\n"
+								"\t\033iProteque-CBN\033n\n"
+								"\tfor reviewing AmigaGPT on his YouTube channel\n"
+								"\thttps://www.youtube.com/watch?v=t3q8HQ6wrnw\n"
+								"\n"
+								"\t\033iAmigaBill\033n\n"
+								"\tfor covering AmigaGPT in the Amiga News section on his Twitch streams and allowing me to join his stream to promote it\n"
+								"\thttps://www.twitch.tv/amigabill\n"
+								"\n"
+								"\t\033iLes Docs\033n\n"
+								"\tfor making a video review and giving a tutorial on how to add support for the French accent\n"
+								"\thttps://www.youtube.com/watch?v=BV5Fq1PresE\n"
+								"\n"
+								"\033bLicense\033n\n"
+								"\tMIT\n"
+								"\n"
+								"\033b%W\033n\n"
+								"\thttps://github.com/sacredbanana/AmigaGPT/issues\n"
+								"\thttps://eab.abime.net/showthread.php?t=114798\n",
+			MUIA_Aboutbox_URL, "https://github.com/sacredbanana/AmigaGPT",
+			MUIA_Aboutbox_URLText, "Visit the GitHub repository for the latest release",
+		End) ) {
+			DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
+			DoMethod(aboutAmigaGPTWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
+	} else {
+		printf("Warning: Could not create aboutAmigaGPTWindowObject\nThe installed MUI version is probably too old.\nFalling back to a simple requester.\n");
+	}
+
+	set(startupOptionsWindowObject, MUIA_Window_Open, TRUE);	
 
 	DoMethod(apiKeyRequesterOkButton, MUIM_Notify, MUIA_Pressed, FALSE,
 			  apiKeyRequesterString, 2, MUIM_CallHook, &APIKeyRequesterOkButtonClickedHook);
@@ -979,8 +1069,6 @@ LONG initVideo() {
 			  apiKeyRequesterWindowObject, 3, MUIM_Set, MUIA_Window_Open, FALSE);
 	DoMethod(apiKeyRequesterCancelButton, MUIM_Notify, MUIA_Pressed, FALSE, 
 			  apiKeyRequesterWindowObject, 3, MUIM_Set, MUIA_Window_Open, FALSE);
-
-	set(mainWindowObject,MUIA_Window_Open,TRUE);
 
 	DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
 	
@@ -1581,8 +1669,6 @@ LONG initVideo() {
 	// 		SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEditorColorMap, TAG_DONE);
 	// }
 
-	// refreshOpenAIMenuItems();
-	// refreshSpeechMenuItems();
 
 	// For some reason it won't let you paste text into the empty text editor unless you do this
 	// DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);
@@ -1609,8 +1695,8 @@ void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
  * Display a requester for the screen the application should open on and the mode to run in (if AmigaOS 3.X)
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
-static LONG openStartupOptions() {
-	Object *screenSelectRadioButton, *startupOptionsOkButton, *screenSelectGroup, *startupOptionsWindowObject = NULL;
+static LONG createStartupOptionsWindow() {
+	Object *screenSelectRadioButton, *startupOptionsOkButton, *screenSelectGroup = NULL;
 	struct ScreenModeRequester *screenModeRequester;
 	screen = LockPubScreen("Workbench");
 
@@ -1644,7 +1730,7 @@ static LONG openStartupOptions() {
 			Child, startupOptionsOkButton = MUI_MakeObject(MUIO_Button, "OK"),
 		End,
 	End)) {
-		printf("Could not create startupOptionsWindowObject\n");
+		displayError("Could not create startupOptionsWindowObject\n");
 		return RETURN_ERROR;
 	}
 
@@ -1653,112 +1739,12 @@ static LONG openStartupOptions() {
 	DoMethod(startupOptionsWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
 	  app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 
-	DoMethod(app, OM_ADDMEMBER, startupOptionsWindowObject);
+	// DoMethod(app, OM_ADDMEMBER, startupOptionsWindowObject);
 
-	set(startupOptionsWindowObject, MUIA_Window_Open, TRUE);
+	// set(startupOptionsWindowObject, MUIA_Window_Open, TRUE);
 		  
 	DoMethod(startupOptionsOkButton, MUIM_Notify, MUIA_Pressed, FALSE,
-          app, 2, MUIM_Application_ReturnID, STARTUP_OPTIONS_OK_BUTTON_PRESS);
-
-	BOOL done = FALSE;
-	ULONG signals;
-
-	while (!done) {
-		ULONG id = DoMethod(app, MUIM_Application_NewInput, &signals);
-
-		switch(id) {
-			case MUIV_Application_ReturnID_Quit:
-				done = TRUE;
-				break;
-			case STARTUP_OPTIONS_OK_BUTTON_PRESS:
-				{
-					ULONG selectedRadioButton;
-					get(screenSelectRadioButton, MUIA_Radio_Active, &selectedRadioButton);
-
-					if (selectedRadioButton == 0) {
-						// Open in Workbench
-						isPublicScreen = TRUE;
-						done = TRUE;
-					} else {
-						// New screen
-						ULONG displayID = GetVPModeID(&screen->ViewPort);
-						if (screenModeRequester = (struct ScreenModeRequester *)MUI_AllocAslRequestTags(ASL_ScreenModeRequest,
-						ASLSM_DoWidth, TRUE,
-						ASLSM_DoHeight, TRUE,
-						ASLSM_DoDepth, TRUE,
-						ASLSM_DoOverscanType, TRUE,
-						ASLSM_DoAutoScroll, TRUE,
-						ASLSM_InitialDisplayID, displayID,
-						ASLSM_InitialDisplayWidth, screen->Width,
-						ASLSM_InitialDisplayHeight, screen->Height,
-						ASLSM_InitialOverscanType, OSCAN_TEXT,
-						ASLSM_InitialDisplayDepth, 4,
-						ASLSM_MinDepth, 4,
-						ASLSM_NegativeText, NULL,
-						TAG_DONE)) {
-							if (MUI_AslRequestTags(screenModeRequester, TAG_DONE)) {
-								isPublicScreen = FALSE;
-								UnlockPubScreen(NULL, screen);
-								for (WORD i = 0; i < NUMDRIPENS; i++) {
-									pens[i]= 1;
-								}
-								pens[DETAILPEN] = 4; // nothing?
-								pens[BLOCKPEN] = 4; // nothing?
-								pens[TEXTPEN] = 1; // text colour
-								pens[SHINEPEN] = 1; // gadget top and left borders
-								pens[SHADOWPEN] = 1; // gadget bottom and right borders
-								pens[FILLPEN] = 2; // button text
-								pens[FILLTEXTPEN] = 4; // title bar text
-								pens[BACKGROUNDPEN] = 3; // background
-								pens[HIGHLIGHTTEXTPEN] = 4; // nothing?
-								pens[BARDETAILPEN] = 1; // menu text
-								pens[BARBLOCKPEN] = 0; // menu background
-								pens[BARTRIMPEN] = 1; // nothing?
-								#ifdef __AMIGAOS4__
-								pens[FOREGROUNDPEN] = 0;
-								pens[DISABLEDPEN] = 8;
-								pens[DISABLEDSHADOWPEN] = 7;
-								pens[DISABLEDSHINEPEN] = 6;
-								pens[DISABLEDTEXTPEN] = 3;
-								pens[MENUBACKGROUNDPEN] = 9;
-								pens[MENUTEXTPEN] = 3;
-								pens[MENUSHINEPEN] = 8;
-								pens[MENUSHADOWPEN] = 0;
-								pens[SELECTPEN] = 2;
-								pens[SELECTTEXTPEN] = 4;
-								#endif
-								pens[NUMDRIPENS] = ~0;
-
-								if ((screen = OpenScreenTags(NULL,
-									SA_Pens, (ULONG)pens,
-									SA_LikeWorkbench, TRUE,
-									SA_DisplayID, screenModeRequester->sm_DisplayID,
-									SA_Depth, screenModeRequester->sm_DisplayDepth,
-									SA_Overscan, screenModeRequester->sm_OverscanType,
-									SA_AutoScroll, screenModeRequester->sm_AutoScroll,
-									SA_Width, screenModeRequester->sm_DisplayWidth,
-									SA_Height, screenModeRequester->sm_DisplayHeight,
-									SA_Font, &screenFont,
-									SA_Colors32, config.colors,
-									TAG_DONE)) == NULL) {
-										printf("Could not open screen\n");
-										MUI_FreeAslRequest(screenModeRequester);
-										return RETURN_ERROR;
-								}
-								MUI_FreeAslRequest(screenModeRequester);
-								done = TRUE;
-							}
-						}
-					}
-					break;
-				}
-			}
-		if (!done && signals) {
-			signals = Wait(signals | SIGBREAKF_CTRL_C);
-		}
-	}
-
-	set(startupOptionsWindowObject,MUIA_Window_Open,FALSE);
+          screenSelectRadioButton, 2, MUIM_CallHook, &StartupOptionsOkButtonClickedHook, startupOptionsWindowObject);
 
 	return RETURN_OK;
 }

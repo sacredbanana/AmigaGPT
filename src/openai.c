@@ -12,7 +12,7 @@
 #include <proto/exec.h>
 #include <proto/socket.h>
 #include <proto/utility.h>
-#include <string.h>
+#include <string.h>x
 #include <stdio.h>
 #include <utility/utility.h>
 #include "openai.h"
