@@ -623,22 +623,19 @@ MakeHook(AboutAmigaGPTMenuItemClickedHook, AboutAmigaGPTMenuItemClickedFunc);
 HOOKPROTONHNO(SpeechSystemMenuItemClickedFunc, void, enum SpeechSystem *speechSystem) {
 	closeSpeech();
 	config.speechSystem = *speechSystem;
-	char speechSystemName[16];
-	snprintf(speechSystemName, sizeof(speechSystemName), "%lu", config.openAITTSModel);
-	displayError(speechSystemName);
 	if (initSpeech(*speechSystem) == RETURN_ERROR) {
 		switch (*speechSystem) {
 			case SPEECH_SYSTEM_34:
-				displayError("Could not initialise speech system 34. Please make sure the speech.device is installed into the program directory.");
+				displayError("Could not initialise speech system 34. Please make sure the translator.library and narrator.device are installed into the program directory. See the documentation for more information.");
 				break;
 			case SPEECH_SYSTEM_37:
-				displayError("Could not initialise speech system 37. Please make sure the speech.device is installed into the program directory.");
+				displayError("Could not initialise speech system 37. Please make sure the translator.library and narrator.device are installed into the program directory. See the documentation for more information.");
 				break;
 			case SPEECH_SYSTEM_FLITE:
-				displayError("Could not initialise speech system Flite. Please make sure the flite.device is installed into the program directory.");
+				displayError("Could not initialise speech system Flite. Please make sure the flite device is installed. See the documentation for more information.");
 				break;
 			case SPEECH_SYSTEM_OPENAI:
-				displayError("Could not initialise speech system OpenAI. Please make sure the openai.device is installed into the program directory.");
+				displayError("Could not initialise speech system OpenAI");
 				break;
 			default:
 				displayError("Unknown speech system!");
@@ -1826,8 +1823,8 @@ static void sendChatMessage() {
 		currentConversation = newConversation();
 	}
 	set(sendMessageButton, MUIA_Disabled, TRUE);
-	// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
+	set(newChatButton, MUIA_Disabled, TRUE);
+	set(deleteChatButton, MUIA_Disabled, TRUE);
 
 	updateStatusBar("Sending message...", 7);
 	STRPTR receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
@@ -1840,7 +1837,6 @@ static void sendChatMessage() {
 	STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
 	addTextToConversation(currentConversation, textUTF_8, "user");
 	displayConversation(currentConversation);
-	set(sendMessageButton, MUIA_Disabled, TRUE);
 	DoMethod(chatInputTextEditor, MUIM_TextEditor_ClearText);
 	DoMethod(chatInputTextEditor, MUIM_GoActive);
 
@@ -1856,8 +1852,8 @@ static void sendChatMessage() {
 		if (responses == NULL) {
 			displayError("Could not connect to OpenAI");
 			set(sendMessageButton, MUIA_Disabled, FALSE);
-			// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-			// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+			set(newChatButton, MUIA_Disabled, FALSE);
+			set(deleteChatButton, MUIA_Disabled, FALSE);
 			FreeVec(receivedMessage);
 			return;
 		}
@@ -1886,9 +1882,8 @@ static void sendChatMessage() {
 				json_object_put(response);
 
 				set(sendMessageButton, MUIA_Disabled, FALSE);
-
-				// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-				// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				set(newChatButton, MUIA_Disabled, FALSE);
+				set(deleteChatButton, MUIA_Disabled, FALSE);
 
 				FreeVec(receivedMessage);
 				return;
@@ -1936,7 +1931,6 @@ static void sendChatMessage() {
 		}
 		FreeVec(responses);
 		FreeVec(receivedMessage);
-		updateStatusBar("Ready", 5);
 		if (isNewConversation) {
 			updateStatusBar("Generating conversation title...", 7);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
@@ -1944,8 +1938,8 @@ static void sendChatMessage() {
 			if (responses == NULL) {
 				displayError("Could not connect to OpenAI");
 				set(sendMessageButton, MUIA_Disabled, FALSE);
-				// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-				// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+				set(newChatButton, MUIA_Disabled, FALSE);
+				set(deleteChatButton, MUIA_Disabled, FALSE);
 				return;
 			}
 			if (responses[0] != NULL) {
@@ -1965,10 +1959,11 @@ static void sendChatMessage() {
 	}
 
 	updateStatusBar("Ready", 5);
+	saveConversations();
 	
 	set(sendMessageButton, MUIA_Disabled, FALSE);
-	// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
+	set(newChatButton, MUIA_Disabled, FALSE);
+	set(deleteChatButton, MUIA_Disabled, FALSE);
 
 	FreeVec(text);
 	FreeVec(textUTF_8);
