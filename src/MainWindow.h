@@ -18,4 +18,13 @@ extern LONG deleteButtonPen;
 extern BOOL isPublicScreen;
 extern struct Conversation *currentConversation;
 
+/**
+ * Create the main window
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
 LONG createMainWindow();
+
+/**
+ * Add actions to the main window
+**/ 
+void addMainWindowActions();

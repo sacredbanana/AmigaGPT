@@ -4,7 +4,7 @@
  * A speech system
 **/
 enum SpeechSystem {
-	SPEECH_SYSTEM_34 = 0,
+	SPEECH_SYSTEM_34 = 0L,
 	SPEECH_SYSTEM_37,
 	SPEECH_SYSTEM_FLITE,
 	SPEECH_SYSTEM_OPENAI
@@ -22,7 +22,7 @@ extern const STRPTR SPEECH_SYSTEM_NAMES[];
  * The Flite voice of the spoken text
 **/
 enum SpeechFliteVoice {
-	SPEECH_FLITE_VOICE_KAL = 0,
+	SPEECH_FLITE_VOICE_KAL = 0L,
 	SPEECH_FLITE_VOICE_KAL16,
 	SPEECH_FLITE_VOICE_AWB,
 	SPEECH_FLITE_VOICE_RMS,

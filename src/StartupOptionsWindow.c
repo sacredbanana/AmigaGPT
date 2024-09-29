@@ -26,6 +26,7 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void, Object *screenSelectRadioBu
 	
 	if (selectedRadioButton == 0) {
 		// Open in Workbench
+        screen = NULL;
 		isPublicScreen = TRUE;
 	} else {
 		// New screen
@@ -135,7 +136,7 @@ LONG createStartupOptionsWindow() {
 		WindowContents, VGroup,	
 			Child, screenSelectRadioButton = RadioObject,
 				MUIA_Frame, MUIV_Frame_Group,
-				MUIA_FrameTitle, "Screuen to open:",
+				MUIA_FrameTitle, "Screen to open:",
 				MUIA_HelpNode, "radioButton",
 				MUIA_Radio_Entries, radioButtonOptions,
 			End,
@@ -154,8 +155,8 @@ LONG createStartupOptionsWindow() {
 
 void addStartupOptionsWindowActions() {
     DoMethod(startupOptionsWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
-	  app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+	  MUIV_Notify_Application, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 
 	DoMethod(startupOptionsOkButton, MUIM_Notify, MUIA_Pressed, FALSE,
-          screenSelectRadioButton, 2, MUIM_CallHook, &StartupOptionsOkButtonClickedHook, startupOptionsWindowObject);
+          screenSelectRadioButton, 3, MUIM_CallHook, &StartupOptionsOkButtonClickedHook, startupOptionsWindowObject);
 }

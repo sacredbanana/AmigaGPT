@@ -10,6 +10,7 @@
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
+#include <mui/TheBar_mcc.h>
 #include <proto/datatypes.h>
 #include <proto/exec.h>
 #include <proto/muimaster.h>
@@ -337,31 +338,6 @@ LONG initVideo() {
 	if (createAPIKeyRequesterWindow() == RETURN_ERROR)
 		return RETURN_ERROR;
 
-	// set(aboutAmigaGPTWindowObject, MUIA_Window_Screen, screen);
-
-	// modeSelectionTabList = AllocVec(sizeof(struct List), MEMF_CLEAR);
-	// NewList(modeSelectionTabList);
-	// chatTabNode = AllocClickTabNode(TAG_DONE);
-	// SetClickTabNodeAttrs(chatTabNode,
-	//  TNA_Number, MODE_SELECTION_TAB_CHAT_ID,
-	//  TNA_Text, "Chat",
-	//  TNA_TextPen, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1,
-	//  #ifdef __AMIGAOS4__
-	//  TNA_HintInfo, "Have a text conversation with ChatGPT",
-	//  #endif
-	//   TAG_DONE);
-	// imageGenerationTabNode = AllocClickTabNode(TAG_DONE);
-	// SetClickTabNodeAttrs(imageGenerationTabNode,
-	//  TNA_Number, MODE_SELECTION_TAB_IMAGE_GENERATION_ID,
-	//  TNA_Text, "Image Generation",
-	//  TNA_TextPen, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0x00000000, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1,
-	//  #ifdef __AMIGAOS4__
-	//  TNA_HintInfo, "Generate an image from a text prompt",
-	//  #endif
-	//   TAG_DONE);
-	// AddTail(modeSelectionTabList, chatTabNode);	
-	// AddTail(modeSelectionTabList, imageGenerationTabNode);
-
 	currentConversation = NULL;
 
 	// imageList = AllocVec(sizeof(struct List), MEMF_CLEAR);
@@ -403,6 +379,7 @@ LONG initVideo() {
 	DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
 
 	addMenuActions();
+	addMainWindowActions();
 	addStartupOptionsWindowActions();
 
 	loadConversations();
@@ -2675,11 +2652,11 @@ void shutdownGUI() {
 	saveImages();
 	DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 	MUI_DisposeObject(app);
-	// freeImageList();
+	freeImageList();
 	if (isPublicScreen) {
-		ReleasePen(screen->ViewPort.ColorMap, sendMessageButtonPen);
-		ReleasePen(screen->ViewPort.ColorMap, newChatButtonPen);
-		ReleasePen(screen->ViewPort.ColorMap, deleteButtonPen);
+		// ReleasePen(screen->ViewPort.ColorMap, sendMessageButtonPen);
+		// ReleasePen(screen->ViewPort.ColorMap, newChatButtonPen);
+		// ReleasePen(screen->ViewPort.ColorMap, deleteButtonPen);
 		UnlockPubScreen(NULL, screen);
 	} else {
 		CloseScreen(screen);

@@ -45,9 +45,10 @@ endif
 
 CCFLAGS = -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\"
 ifeq ($(DEBUG),1)
-	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -O1
+	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -O0
 else
-	CCFLAGS += -DPROGDIR=\"PROGDIR:\" -Ofast
+# Writing to disk crashes inside hooks in anything higher than -O1
+	CCFLAGS += -DPROGDIR=\"PROGDIR:\" -O1
 endif
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),-D
