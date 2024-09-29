@@ -6,6 +6,10 @@
 
 Object *aboutAmigaGPTWindowObject;
 
+/**
+ * Create the about window
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+ **/
 LONG createAboutAmigaGPTWindow() {
     if ((aboutAmigaGPTWindowObject = AboutboxObject,
 			MUIA_Aboutbox_Build, BUILD_NUMBER " ("__DATE__ ")\n""Git commit: " GIT_COMMIT "\nGit branch: " GIT_BRANCH "\n" "Commit timestamp: " GIT_TIMESTAMP,

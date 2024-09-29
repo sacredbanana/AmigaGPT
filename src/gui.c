@@ -11,11 +11,10 @@
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
 #include <mui/TheBar_mcc.h>
-#include <proto/datatypes.h>
-#include <proto/exec.h>
-#include <proto/muimaster.h>
+#include <stdio.h>
 #include "AboutAmigaGPTWindow.h"
 #include "APIKeyRequesterWindow.h"
+#include "ChatSystemRequesterWindow.h"
 #include "config.h"
 #include "gui.h"
 #include "MainWindow.h"
@@ -24,24 +23,9 @@
 #include "version.h"
 
 #ifdef __AMIGAOS4__
-#define IntuitionBase Library
-#define GfxBase Library
-struct IntuitionIFace *IIntuition;
-struct AslIFace *IAsl;
-struct GraphicsIFace *IGraphics;
-struct AmigaGuideIFace *IAmigaGuide;
-extern struct UtilityIFace *IUtility;
-struct DataTypesIFace *IDataTypes;
 struct MUIMasterIFace *IMUIMaster;
-struct GadToolsIFace *IGadTools;
 #endif
 
-struct IntuitionBase *IntuitionBase;
-struct GfxBase *GfxBase;
-struct Library *AmigaGuideBase;
-struct Library *AslBase;
-struct Library *GadToolsBase;
-struct Library *DataTypesBase;
 struct Library *MUIMasterBase;
 Object *app;
 struct Window *imageWindow;
@@ -83,9 +67,6 @@ static void freeImageList();
 static void freeModeSelectionTabList();
 static void saveImageCopy(struct GeneratedImage *image);
 static void removeImageFromImageList(struct GeneratedImage *image);
-static void openChatFontRequester();
-static void openUIFontRequester();
-static void openSpeechAccentRequester();
 static void openChatSystemRequester();
 static void openImage(struct GeneratedImage *generatedImage, WORD width, WORD height);
 static LONG loadConversations();
@@ -161,22 +142,6 @@ static void createImage();
 **/
 LONG openGUILibraries() {
 	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-	if ((IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 40)) == NULL) {
-		printf("Could not open intuition.library\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((IntuitionBase = OpenLibrary("intuition.library", 50)) == NULL) {
-		printf("Could not open intuition.library\n");
-		return RETURN_ERROR;
-	}
-	if ((IIntuition = (struct IntuitionIFace *)GetInterface(IntuitionBase, "main", 1, NULL)) == NULL) {
-		printf("Could not get interface for intuition.library\n");
-		return RETURN_ERROR;
-	}
-	#endif
-
-	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	if ((MUIMasterBase = OpenLibrary("muimaster.library", 19)) == NULL) {
 		printf("Could not open muimaster.library\n");
 		return RETURN_ERROR;
@@ -192,86 +157,6 @@ LONG openGUILibraries() {
 	}
 	#endif
 
-	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-	if ((GfxBase = (struct GfxBase *)OpenLibrary("graphics.library", 40)) == NULL) {
-		printf( "Could not open graphics.library\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((GfxBase = OpenLibrary("graphics.library", 50)) == NULL) {
-		printf( "Could not open graphics.library\n");
-		return RETURN_ERROR;
-	}
-	if ((IGraphics = (struct GraphicsIFace *)GetInterface(GfxBase, "main", 1, NULL)) == NULL) {
-		printf( "Could not get interface for graphics.library\n");
-		return RETURN_ERROR;
-	}
-	#endif
-
-	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-	if ((AslBase = OpenLibrary("asl.library", 45)) == NULL) {
-		printf( "Could not open asl.library\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((AslBase = OpenLibrary("asl.library", 50)) == NULL) {
-		printf( "Could not open asl.library\n");
-		return RETURN_ERROR;
-	}
-	if ((IAsl = (struct AslIFace *)GetInterface(AslBase, "main", 1, NULL)) == NULL) {
-		printf( "Could not get interface for asl.library\n");
-		return RETURN_ERROR;
-	}
-	#endif
-
-	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-	if ((AmigaGuideBase = OpenLibrary("amigaguide.library", 44)) == NULL) {
-		printf( "Could not open amigaguide.library\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((AmigaGuideBase = OpenLibrary("amigaguide.library", 50)) == NULL) {
-		printf( "Could not open amigaguide.library\n");
-		return RETURN_ERROR;
-	}
-	if ((IAmigaGuide = (struct AmigaGuideIFace *)GetInterface(AmigaGuideBase, "main", 1, NULL)) == NULL) {
-		printf( "Could not get interface for amigaguide.library\n");
-		return RETURN_ERROR;
-	}
-	#endif
-
-	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-	if ((GadToolsBase = OpenLibrary("gadtools.library", 40)) == NULL) {
-		printf( "Could not open gadtools.library\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((GadToolsBase = OpenLibrary("gadtools.library", 50)) == NULL) {
-		printf( "Could not open gadtools.library\n");
-		return RETURN_ERROR;
-	}
-	if ((IGadTools = (struct GadToolsIFace *)GetInterface(GadToolsBase, "main", 1, NULL)) == NULL) {
-		printf( "Could not get interface for gadtools.library\n");
-		return RETURN_ERROR;
-	}
-	#endif
-
-	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-	if ((DataTypesBase = OpenLibrary("datatypes.library", 44)) == NULL) {
-		printf( "Could not open datatypes.library\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((DataTypesBase = OpenLibrary("datatypes.library", 50)) == NULL) {
-		printf( "Could not open datatypes.library\n");
-		return RETURN_ERROR;
-	}
-	if ((IDataTypes = (struct DataTypesIFace *)GetInterface(DataTypesBase, "main", 1, NULL)) == NULL) {
-		printf( "Could not get interface for datatypes.library\n");
-		return RETURN_ERROR;
-	}
-	#endif
-
 	return RETURN_OK;
 }
 
@@ -280,21 +165,8 @@ LONG openGUILibraries() {
 **/
 static void closeGUILibraries() {
 	#ifdef __AMIGAOS4__
-	DropInterface((struct Interface *)IIntuition);
-	DropInterface((struct Interface *)IGraphics);
-	DropInterface((struct Interface *)IAsl);
-	DropInterface((struct Interface *)IAmigaGuide);
-	DropInterface((struct Interface *)IDataTypes);
 	DropInterface((struct Interface *)IMUIMaster);
-	DropInterface((struct Interface *)IGadTools);
 	#endif
-
-	CloseLibrary(GadToolsBase);
-	CloseLibrary(IntuitionBase);
-	CloseLibrary(GfxBase);
-	CloseLibrary(AslBase);
-	CloseLibrary(AmigaGuideBase);
-	CloseLibrary(DataTypesBase);
 	CloseLibrary(MUIMasterBase);
 }
 
@@ -316,6 +188,9 @@ LONG initVideo() {
 	if (createAPIKeyRequesterWindow() == RETURN_ERROR)
 		return RETURN_ERROR;
 
+	if (createChatSystemRequesterWindow() == RETURN_ERROR)
+		return RETURN_ERROR;
+
 	currentConversation = NULL;
 
 	// imageList = AllocVec(sizeof(struct List), MEMF_CLEAR);
@@ -335,6 +210,7 @@ LONG initVideo() {
 		SubWindow, startupOptionsWindowObject,
 		SubWindow, mainWindowObject,
 		SubWindow, apiKeyRequesterWindowObject,
+		SubWindow, chatSystemRequesterWindowObject,
 		End)) {
 		displayError("Could not create app!\n");
 		return RETURN_ERROR;
@@ -1755,105 +1631,6 @@ void displayError(STRPTR message) {
 }
 
 /**
- * Opens a requester for the user to select the font for the chat window
-**/
-static void openChatFontRequester() {
-	// struct FontRequester *fontRequester;
-	// if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
-	// 	struct TextAttr *chatFont;
-	// 	if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
-	// 		if (config.chatFontName != NULL) {
-	// 			FreeVec(config.chatFontName);
-	// 		}
-	// 		chatFont = &fontRequester->fo_Attr;
-	// 		config.chatFontName = AllocVec(strlen(chatFont->ta_Name) + 1, MEMF_ANY | MEMF_CLEAR);
-	// 		strncpy(config.chatFontName, chatFont->ta_Name, strlen(chatFont->ta_Name));
-	// 		config.chatFontSize = chatFont->ta_YSize;
-	// 		config.chatFontStyle = chatFont->ta_Style;
-	// 		config.chatFontFlags = chatFont->ta_Flags;
-	// 		writeConfig();
-	// 		// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
-	// 		// SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TextAttr, chatFont, TAG_DONE);
-	// 	}
-	// 	FreeAslRequest(fontRequester);
-	// }
-}
-
-/**
- * Opens a requester for the user to select the font for the UI
-**/
-static void openUIFontRequester() {
-	// struct FontRequester *fontRequester;
-	// // GetAttr(WINDOW_Window, mainWindowObjectOld, &mainWindow);
-	// if (fontRequester = (struct FontRequester *)AllocAslRequestTags(ASL_FontRequest, TAG_DONE)) {
-	// 	struct TextAttr *uiFont;
-	// 	if (AslRequestTags(fontRequester, ASLFO_Window, (ULONG)mainWindow, TAG_DONE)) {
-	// 		if (config.uiFontName != NULL) {
-	// 			FreeVec(config.uiFontName);
-	// 		}
-	// 		uiFont = &fontRequester->fo_Attr;
-	// 		config.uiFontName = AllocVec(strlen(uiFont->ta_Name) + 1, MEMF_ANY | MEMF_CLEAR);
-	// 		strncpy(config.uiFontName, uiFont->ta_Name, strlen(uiFont->ta_Name));
-	// 		config.uiFontSize = uiFont->ta_YSize;
-	// 		config.uiFontStyle = uiFont->ta_Style;
-	// 		config.uiFontFlags = uiFont->ta_Flags;
-	// 		writeConfig();
-	// 		if (!isPublicScreen) {
-	// 			if (uiTextFont)
-	// 				CloseFont(uiTextFont);
-
-	// 			// DoMethod(mainWindowObjectOld, WM_CLOSE, NULL);
-	// 			uiTextFont = OpenFont(uiFont);
-	// 			SetFont(&(screen->RastPort), uiTextFont);
-	// 			SetFont(mainWindow->RPort, uiTextFont);
-	// 			RemakeDisplay();
-	// 			RethinkDisplay();
-	// 			// mainWindow = DoMethod(mainWindowObjectOld, WM_OPEN, NULL);
-	// 		}
-	// 		// SetGadgetAttrs(newChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-	// 		// SetGadgetAttrs(deleteChatButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-	// 		// SetGadgetAttrs(sendMessageButton, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-	// 		// SetGadgetAttrs(statusBar, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-	// 		updateStatusBar("Ready", 5);
-	// 		// SetGadgetAttrs(conversationListBrowser, mainWindow, NULL, GA_TextAttr, uiFont, TAG_DONE);
-
-	// 	}
-	// 	FreeAslRequest(fontRequester);
-	// }
-}
-
-
-/**
- * Opens a requester for the user to select accent for the speech
-**/
-static void openSpeechAccentRequester() {
-	// #ifdef __AMIGAOS3__
-	// struct FileRequester *fileRequester = (struct FileRequester *)AllocAslRequestTags(
-	// 								ASL_FileRequest,
-	// 								ASLFR_Window, mainWindow,
-	// 								ASLFR_PopToFront, TRUE,
-	// 								ASLFR_Activate, TRUE,
-	// 								ASLFR_DrawersOnly, FALSE,
-	// 								ASLFR_InitialDrawer, "LOCALE:accents",
-	// 								ASLFR_DoPatterns, TRUE,
-	// 								ASLFR_InitialPattern, "#?.accent",
-	// 								TAG_DONE);
-
-	// if (fileRequester) {
-	// 	if (AslRequestTags(fileRequester, TAG_DONE)) {
-	// 		if (config.speechAccent != NULL) {
-	// 			FreeVec(config.speechAccent);
-	// 		}
-	// 		config.speechAccent = AllocVec(strlen(fileRequester->fr_File) + 1, MEMF_ANY | MEMF_CLEAR);
-	// 		strncpy(config.speechAccent, fileRequester->fr_File, strlen(fileRequester->fr_File));
-	// 		writeConfig();
-	// 	}
-	// 	FreeAslRequest(fileRequester);
-	// }
-	// #endif
-}
-
-/**
  * Opens a requester for the user to enter the chat system
 **/
 static void openChatSystemRequester() {
@@ -1863,7 +1640,7 @@ static void openChatSystemRequester() {
 	// 	return;
 	// }
 	// if (config.chatSystem != NULL) {
-	// 	strncpy(buffer, config.chatSystem, CHAT_SYSTEM_LENGTH);
+		// strncpy(buffer, config.chatSystem, CHAT_SYSTEM_LENGTH);
 	// }
 	// Object *chatSystemRequester = NewObject(REQUESTER_GetClass(), NULL,
 	// 	REQ_Type, REQTYPE_STRING,

@@ -109,8 +109,8 @@ LONG createMainWindow() {
 						Child, newChatButton = MUI_MakeObject(MUIO_Button, "+ New Chat",
 							MUIA_Width, 500,
 							MUIA_CycleChain, TRUE,
-							MUIA_InputMode, MUIV_InputMode_RelVerify,
-						End,
+							MUIA_InputMode, MUIV_InputMode_RelVerify, TAG_DONE),
+						// End,
 						// Delete chat button
 						Child, deleteChatButton = MUI_MakeObject(MUIO_Button, "- Delete Chat",
 							MUIA_Width, 500,

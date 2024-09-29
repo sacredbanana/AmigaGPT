@@ -14,21 +14,11 @@
 CONST_STRPTR stack = "$STACK: 32768";
 
 #ifdef __AMIGAOS4__
-struct Library *ApplicationBase;
-extern struct ExecIFace *IExec;
-extern struct DOSIFace *IDOS;
-extern struct UtilityIFace *IUtility;
-struct ApplicationIFace *IApplication;
 static uint32 appID;
-extern struct Library *UtilityBase;
-#else
-struct Library *UtilityBase;
 #endif
 
 struct WBStartup *wbStartupMessage = NULL;
 
-static LONG openLibraries();
-static void closeLibraries();
 static void cleanExit();
 
 /**
@@ -38,11 +28,6 @@ static void cleanExit();
 LONG main(int argc, char **argv) {
 	atexit(cleanExit);
 	SysBase = *((struct ExecBase**)4UL);
-
-	if (openLibraries() == RETURN_ERROR) {
-		printf("Failed to open libraries\n");
-		exit(RETURN_ERROR);
-	}
 
 	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 	struct Process *currentTask = (struct Process*)FindTask(NULL);
@@ -112,67 +97,6 @@ LONG main(int argc, char **argv) {
 }
 
 /**
- * Open libraries needed by the whole app
- * @return RETURN_OK on success, RETURN_ERROR on failure
-**/
-static LONG openLibraries() {
-	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-	if ((DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 40)) == NULL) {
-		printf("Failed to open dos.library v40. This app requires AmigaOS 3.9 or 3.2+\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((DOSBase = OpenLibrary("dos.library", 50)) == NULL) {
-		printf("Failed to open dos.library v50. Is this even AmigaOS 4??\n");
-		return RETURN_ERROR;
-	}
-	#endif
-
-	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-	if ((UtilityBase = OpenLibrary("utility.library", 0)) == NULL) {
-		printf( "Could not open utility.library\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((UtilityBase = OpenLibrary("utility.library", 50)) == NULL) {
-		printf( "Could not open utility.library\n");
-		return RETURN_ERROR;
-	}
-	if ((IUtility = (struct UtilityIFace *)GetInterface(UtilityBase, "main", 1, NULL)) == NULL) {
-		printf( "Could not get interface for utility.library\n");
-		return RETURN_ERROR;
-	}
-	#endif
-
-	#ifdef __AMIGAOS4__
-	if ((ApplicationBase = OpenLibrary("application.library", 53)) == NULL) {
-		printf( "Could not open application.library\n");
-		return RETURN_ERROR;
-	}
-	if ((IApplication = (struct UtilityIFace *)GetInterface(ApplicationBase, "application", 2, NULL)) == NULL) {
-		printf( "Could not get interface for application.library\n");
-		return RETURN_ERROR;
-	}
-	#endif
-
-	return RETURN_OK;
-}
-
-/**
- * Close libraries needed by the whole app
-**/
-static void closeLibraries() {
-	#ifdef __AMIGAOS4__
-	DropInterface((struct Interface*)IDOS);
-	DropInterface((struct Interface*)IUtility);
-	DropInterface((struct Interface *)IApplication);
-	CloseLibrary(ApplicationBase);
-	#endif
-	CloseLibrary(DOSBase);
-	CloseLibrary(UtilityBase);
-}
-
-/**
  * Cleanup and exit the app
 **/
 static void cleanExit() {
@@ -181,7 +105,6 @@ static void cleanExit() {
 	shutdownGUI();
 	closeSpeech();
 	closeOpenAIConnector();
-	closeLibraries();
 	#ifdef __AMIGAOS4__
 	UnregisterApplication(appID, NULL);
 	#endif

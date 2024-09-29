@@ -11,10 +11,8 @@
 #include <json-c/json.h>
 #include <proto/exec.h>
 #include <proto/socket.h>
-#include <proto/utility.h>
 #include <string.h>x
 #include <stdio.h>
-#include <utility/utility.h>
 #include "openai.h"
 #include "speech.h"
 #include "gui.h"
@@ -40,7 +38,6 @@ struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase = NUL
 struct AmiSSLMasterIFace *IAmiSSLMaster;
 struct AmiSSLIFace *IAmiSSL;
 struct SocketIFace *ISocket;
-extern struct UtilityIFace *IUtility;
 #endif
 
 static SSL_CTX *_ssl_context;

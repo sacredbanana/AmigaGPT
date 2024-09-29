@@ -1,4 +1,13 @@
+#include <intuition/classusr.h>
+#include <proto/amigaguide.h>
+#include <proto/asl.h>
 #include <proto/dos.h>
+#include <proto/gadtools.h>
+#include <proto/datatypes.h>
+#include <proto/exec.h>
+#include <proto/graphics.h>
+#include <proto/intuition.h>
+#include <proto/muimaster.h>
 
 /**
  *  The object IDs for the GUI

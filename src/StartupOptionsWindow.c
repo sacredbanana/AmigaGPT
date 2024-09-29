@@ -5,6 +5,7 @@
 #include <SDI_hook.h>
 #include "AboutAmigaGPTWindow.h"
 #include "APIKeyRequesterWindow.h"
+#include "ChatSystemRequesterWindow.h"
 #include "config.h"
 #include "gui.h"
 #include "StartupOptionsWindow.h"
@@ -102,6 +103,7 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void, Object *screenSelectRadioBu
 	set(startupOptionsWindowObject, MUIA_Window_Open, FALSE);
 	set(aboutAmigaGPTWindowObject, MUIA_Window_Screen, screen);	
 	set(apiKeyRequesterWindowObject, MUIA_Window_Screen, screen);
+    set(chatSystemRequesterWindowObject, MUIA_Window_Screen, screen);
 	SetAttrs(mainWindowObject, MUIA_Window_DepthGadget, isPublicScreen,
         MUIA_Window_SizeGadget, isPublicScreen,
         MUIA_Window_DragBar, isPublicScreen,
@@ -109,6 +111,7 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void, Object *screenSelectRadioBu
         MUIA_Window_Width, MUIV_Window_Width_Visible(isPublicScreen ? 90 : 100),
         MUIA_Window_Height, MUIV_Window_Height_Visible(isPublicScreen ? 90 : 100),
         MUIA_Window_Open, TRUE,
+         MUIA_Window_ActiveObject, chatInputTextEditor,
         TAG_DONE);
 }
 MakeHook(StartupOptionsOkButtonClickedHook, StartupOptionsOkButtonClickedFunc);

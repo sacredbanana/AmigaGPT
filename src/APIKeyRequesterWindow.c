@@ -21,14 +21,21 @@ HOOKPROTONHNONP(APIKeyRequesterOkButtonClickedFunc, void) {
 }
 MakeHook(APIKeyRequesterOkButtonClickedHook, APIKeyRequesterOkButtonClickedFunc);
 
+/**
+ * Create the API key requester window
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+ **/
 LONG createAPIKeyRequesterWindow() {
     Object *apiKeyRequesterOkButton, *apiKeyRequesterCancelButton;
     if ((apiKeyRequesterWindowObject = WindowObject,
 			MUIA_Window_Title, "Open AI API Key",
-			MUIA_Window_Screen, screen,
 			MUIA_Window_Width, 800,
 			MUIA_Window_Height, 100,
 			WindowContents, VGroup,
+            Child, TextObject,
+                    MUIA_Text_PreParse, "\33c",
+                    MUIA_Text_Contents,  "Type or paste (Right-Amiga + V) your OpenAI API key here.\nThis key is required to use the OpenAI API.\nIf you do not have an API key, consult the AmigaGPT documentation for instructions on how to obtain one.",
+                End,
 				Child, apiKeyRequesterString = StringObject,
 					MUIA_String_MaxLen, OPENAI_API_KEY_LENGTH,
 					MUIA_CycleChain, TRUE,

@@ -8,6 +8,7 @@
 #include <SDI_hook.h>
 #include "APIKeyRequesterWindow.h"
 #include "AboutAmigaGPTWindow.h"
+#include "ChatSystemRequesterWindow.h"
 #include "config.h"
 #include "gui.h"
 #include "MainWindow.h"
@@ -70,6 +71,7 @@ HOOKPROTONHNO(SpeechSystemMenuItemClickedFunc, void, enum SpeechSystem *speechSy
 }
 MakeHook(SpeechSystemMenuItemClickedHook, SpeechSystemMenuItemClickedFunc);
 
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 HOOKPROTONHNONP(SpeechAccentMenuItemClickedFunc, void) {
 	struct FileRequester *fileRequester;
     if (fileRequester = (struct FileRequester *)MUI_AllocAslRequestTags(
@@ -94,6 +96,7 @@ HOOKPROTONHNONP(SpeechAccentMenuItemClickedFunc, void) {
     }
 }
 MakeHook(SpeechAccentMenuItemClickedHook, SpeechAccentMenuItemClickedFunc);
+#endif
 
 HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
 	struct NewAmigaGuide guide = {
@@ -142,7 +145,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Accent", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_ACCENT},
 	#endif
 	#ifdef __AMIGAOS4__
-	{NM_ITEM, "Flite Voice", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE},
+	{NM_ITEM, "Flite Voice", 0, 0, 0, (APTR)MENU_ITEM_NULL},
 	{NM_SUB, "kal (fast)", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL},
 	{NM_SUB, "kal16 (fast)", 0, CHECKIT, ~16, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL16},
 	{NM_SUB, "awb (slow)", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_AWB},
@@ -267,9 +270,11 @@ void addMenuActions() {
 	DoMethod(speechSystemFliteVoiceSLTMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, SPEECH_FLITE_VOICE_SLT, &config.speechFliteVoice);
 	#endif
 
+    #if defined(__AMIGAOS3__) || defined(__MORPHOS__)
     Object speechAccentMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ACCENT);
     DoMethod(speechAccentMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application,  2, MUIM_CallHook, &SpeechAccentMenuItemClickedHook);
-
+    #endif
+    
 	Object speechOpenAIVoiceAlloyMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY);
 	set(speechOpenAIVoiceAlloyMenuItem, MUIA_Menuitem_Checked, config.openAITTSVoice == OPENAI_TTS_VOICE_ALLOY);
 	DoMethod(speechOpenAIVoiceAlloyMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, OPENAI_TTS_VOICE_ALLOY, &config.openAITTSVoice);
@@ -305,6 +310,12 @@ void addMenuActions() {
 	Object openAIAPIKeyMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_API_KEY);
 	DoMethod(openAIAPIKeyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, apiKeyRequesterWindowObject,  3, MUIM_Set, MUIA_Window_Open, TRUE);
 	DoMethod(openAIAPIKeyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, apiKeyRequesterString,  3, MUIM_Set, MUIA_String_Contents, config.openAiApiKey);
+    DoMethod(openAIAPIKeyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, apiKeyRequesterWindowObject,  3, MUIM_Set, MUIA_Window_ActiveObject, apiKeyRequesterString);
+
+    Object openAIChatSystemMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_SYSTEM);
+    DoMethod(openAIChatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, chatSystemRequesterWindowObject,  3, MUIM_Set, MUIA_Window_Open, TRUE);
+    DoMethod(openAIChatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, chatSystemRequesterString,  3, MUIM_Set, MUIA_String_Contents, config.chatSystem);
+    DoMethod(openAIChatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, chatSystemRequesterWindowObject,  3, MUIM_Set, MUIA_Window_ActiveObject, chatSystemRequesterString);
 
 	Object openAIChatModelGPT4oMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o);
 	set(openAIChatModelGPT4oMenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o);

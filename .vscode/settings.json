@@ -79,7 +79,8 @@
         "pictureclass.h": "c",
         "utility.h": "c",
         "rexxsyslib.h": "c",
-        "texteditor_mcc.h": "c"
+        "texteditor_mcc.h": "c",
+        "intuition_protos.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",
