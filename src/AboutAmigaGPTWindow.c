@@ -75,7 +75,7 @@ LONG createAboutAmigaGPTWindow() {
 			DoMethod(aboutAmigaGPTWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
         return RETURN_OK;
 	} else {
-        printf("Warning: Could not create aboutAmigaGPTWindowObject\nThe installed MUI version is probably too old.\nFalling back to a simple requester.\n");
-		return RETURN_ERROR;
+        // printf("Warning: Could not create aboutAmigaGPTWindowObject\nThe installed MUI version is probably too old.\nFalling back to a simple requester.\n");
+		return RETURN_OK;
 	}
 }

@@ -25,7 +25,6 @@ enum {
 
 extern struct Screen *screen;
 extern Object *app;
-extern struct TextAttr screenFont;
 
 /**
  * Create the GUI

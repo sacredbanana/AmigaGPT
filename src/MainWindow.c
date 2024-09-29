@@ -2,6 +2,7 @@
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
+#include <proto/muimaster.h>
 #include <SDI_hook.h>
 #include <string.h>
 #include "config.h"
@@ -86,12 +87,9 @@ MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG createMainWindow() {
-    // ULONG pen = 8;
-	// sendMessageButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, 0x00000000, 0x00000000, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE) : 1;
-
 	createMenu();
 
-chatOutputScroller = ScrollbarObject, End;
+	chatOutputScroller = ScrollbarObject, End;
 
 	if ((mainWindowObject = WindowObject,
 		MUIA_Window_Title, "AmigaGPT",
@@ -104,13 +102,7 @@ chatOutputScroller = ScrollbarObject, End;
 		MUIA_Window_UseBottomBorderScroller, FALSE,
 		MUIA_Window_UseRightBorderScroller, FALSE,
 		MUIA_Window_UseLeftBorderScroller, FALSE,
-		WindowContents, VGroup,
-			Child, TitleObject,
-				MUIA_Title_Position, MUIV_Title_Position_Left,
-				Child, TextObject, MUIA_Text_Contents, "Chat", End,
-	    		Child, TextObject, MUIA_Text_Contents, "Image Generation", End,
-			End,
-			Child, HGroup,
+		WindowContents, HGroup,
 				Child, VGroup,
 					Child, VGroup,
 						// New chat button
@@ -189,8 +181,6 @@ chatOutputScroller = ScrollbarObject, End;
 					End,
 				End,
 			End,
-			Child, TextObject, MUIA_Text_Contents, "page 3", End,
-		End,
 	End) == NULL) {
         displayError("Could not create main window");
         return RETURN_ERROR;
@@ -209,7 +199,7 @@ void addMainWindowActions() {
 	DoMethod(deleteChatButton, MUIM_Notify, MUIA_Pressed, FALSE, 
 			  MUIV_Notify_Application, 3, MUIM_CallHook, &DeleteChatButtonClickedHook, MUIV_TriggerValue);
 	DoMethod(sendMessageButton, MUIM_Notify, MUIA_Pressed, FALSE,
-              sendMessageButton, 3, MUIM_CallHook, &SendMessageButtonClickedHook, MUIV_TriggerValue);
+              sendMessageButton, 2, MUIM_CallHook, &SendMessageButtonClickedHook);
 	DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, MUIV_Notify_Window, 3, MUIM_CallHook, &ConversationRowClickedHook, MUIV_TriggerValue);
 	DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 
 	  MUIV_Notify_Application, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);

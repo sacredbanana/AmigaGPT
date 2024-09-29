@@ -107,6 +107,8 @@ LONG main(int argc, char **argv) {
 
 	startGUIRunLoop();
 
+	printf("Exiting\n");
+
 	exit(RETURN_OK);
 	return 0;
 }

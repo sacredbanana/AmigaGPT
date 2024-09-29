@@ -88,7 +88,6 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void, Object *screenSelectRadioBu
 					SA_AutoScroll, screenModeRequester->sm_AutoScroll,
 					SA_Width, screenModeRequester->sm_DisplayWidth,
 					SA_Height, screenModeRequester->sm_DisplayHeight,
-					SA_Font, &screenFont,
 					SA_Colors32, config.colors,
 					TAG_DONE)) == NULL) {
 						displayError("Could not open screen");
@@ -103,13 +102,14 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void, Object *screenSelectRadioBu
 	set(startupOptionsWindowObject, MUIA_Window_Open, FALSE);
 	set(aboutAmigaGPTWindowObject, MUIA_Window_Screen, screen);	
 	set(apiKeyRequesterWindowObject, MUIA_Window_Screen, screen);
-	set(mainWindowObject, MUIA_Window_DepthGadget, isPublicScreen);
-	set(mainWindowObject, MUIA_Window_SizeGadget, isPublicScreen);
-	set(mainWindowObject, MUIA_Window_DragBar, isPublicScreen);
-	set(mainWindowObject, MUIA_Window_Screen, screen);
-	set(mainWindowObject, MUIA_Window_Width, MUIV_Window_Width_Visible(isPublicScreen ? 90 : 100));
-	set(mainWindowObject, MUIA_Window_Height, MUIV_Window_Height_Visible(isPublicScreen ? 90 : 100));
-	set(mainWindowObject, MUIA_Window_Open, TRUE);
+	SetAttrs(mainWindowObject, MUIA_Window_DepthGadget, isPublicScreen,
+        MUIA_Window_SizeGadget, isPublicScreen,
+        MUIA_Window_DragBar, isPublicScreen,
+        MUIA_Window_Screen, screen,
+        MUIA_Window_Width, MUIV_Window_Width_Visible(isPublicScreen ? 90 : 100),
+        MUIA_Window_Height, MUIV_Window_Height_Visible(isPublicScreen ? 90 : 100),
+        MUIA_Window_Open, TRUE,
+        TAG_DONE);
 }
 MakeHook(StartupOptionsOkButtonClickedHook, StartupOptionsOkButtonClickedFunc);
 
@@ -120,13 +120,6 @@ MakeHook(StartupOptionsOkButtonClickedHook, StartupOptionsOkButtonClickedFunc);
 LONG createStartupOptionsWindow() {
 	struct ScreenModeRequester *screenModeRequester;
 	screen = LockPubScreen("Workbench");
-
-	if (config.uiFontName != NULL) {
-		screenFont.ta_Name = config.uiFontName;
-		screenFont.ta_YSize = config.uiFontSize;
-		screenFont.ta_Style = config.uiFontStyle;
-		screenFont.ta_Flags = config.uiFontFlags;
-	}
 
 	if (!(startupOptionsWindowObject = WindowObject,
 		MUIA_Window_Title, "Startup Options",

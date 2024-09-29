@@ -1,6 +1,7 @@
 #include <libraries/amigaguide.h>
 #include <libraries/gadtools.h>
 #include <libraries/mui.h>
+#include <mui/TextEditor_mcc.h>
 #include <proto/amigaguide.h>
 #include <SDI_hook.h>
 #include "APIKeyRequesterWindow.h"
@@ -97,8 +98,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Clear", "L", 0, 0, (APTR)MENU_ITEM_EDIT_CLEAR},
 	{NM_ITEM, "Select all", "A", 0, 0, (APTR)MENU_ITEM_EDIT_SELECT_ALL},
 	{NM_TITLE, "View", 0, 0, 0, (APTR)MENU_ITEM_NULL},
-	{NM_ITEM, "Chat Font", 0, 0, 0, (APTR)MENU_ITEM_VIEW_CHAT_FONT},
-	{NM_ITEM, "UI Font", 0, 0, 0, (APTR)MENU_ITEM_VIEW_UI_FONT},
+	{NM_ITEM, "MUI Settings", 0, 0, 0, (APTR)MENU_ITEM_VIEW_MUI_SETTINGS},
 	{NM_TITLE, "Speech", 0, 0, 0, (APTR)MENU_ITEM_NULL},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_ENABLED},
 	{NM_ITEM, "Speech system", 0, 0, 0, (APTR)MENU_ITEM_NULL},
@@ -180,6 +180,24 @@ void addMenuActions() {
 	Object quitMenuItem = DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_QUIT);
 	DoMethod(quitMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 	
+    Object cutMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_CUT);
+    DoMethod(cutMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, chatInputTextEditor, 2, MUIM_TextEditor_ARexxCmd, "Cut");
+
+    Object copyMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_COPY);
+    DoMethod(copyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, chatInputTextEditor, 2, MUIM_TextEditor_ARexxCmd, "Copy");
+
+    Object pasteMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_PASTE);
+    DoMethod(pasteMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, chatInputTextEditor, 2, MUIM_TextEditor_ARexxCmd, "Paste");
+
+    Object clearMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_CLEAR);
+    DoMethod(clearMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, chatInputTextEditor, 1, MUIM_TextEditor_ClearText);
+
+    Object selectAllMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_SELECT_ALL);
+    DoMethod(selectAllMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, chatInputTextEditor, 2, MUIM_TextEditor_ARexxCmd, "SelectAll");
+
+    Object muiSettingsMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_MUI_SETTINGS);
+    DoMethod(muiSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application, 1, MUIM_Application_OpenConfigWindow);
+
 	Object speechEnabledMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ENABLED);
 	set(speechEnabledMenuItem, MUIA_Menuitem_Checked, config.speechEnabled);
 	DoMethod(speechEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, speechEnabledMenuItem, 3, MUIM_WriteLong, MUIV_TriggerValue, &config.speechEnabled);

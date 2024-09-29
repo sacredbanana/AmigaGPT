@@ -14,6 +14,9 @@
 #include <proto/datatypes.h>
 #include <proto/exec.h>
 #include <proto/muimaster.h>
+// #include <proto/rexxsyslib.h>
+// #include <rexx/storage.h>
+// #include <SDI_hook.h>
 #include "AboutAmigaGPTWindow.h"
 #include "APIKeyRequesterWindow.h"
 #include "config.h"
@@ -24,9 +27,6 @@
 #include "version.h"
 
 #define HELP_KEY 0x5F
-
-#define MODE_SELECTION_TAB_CHAT_ID 0
-#define MODE_SELECTION_TAB_IMAGE_GENERATION_ID 1
 
 #ifdef __AMIGAOS4__
 #define IntuitionBase Library
@@ -52,22 +52,9 @@ Object *app;
 struct Window *imageWindow;
 struct Screen *screen;
 static Object *imageWindowObject;
-static Object *mainGroup;
-static Object *modeClickTab;
 static Object *dataTypeObject;
-static LONG selectedMode;
 static struct GeneratedImage *currentImage;
-struct List *modeSelectionTabList;
 struct List *imageList;
-static struct TextFont *uiTextFont = NULL;
-struct TextAttr screenFont = {
-	.ta_Name = "",
-	.ta_YSize = 8,
-	.ta_Style = FS_NORMAL,
-	.ta_Flags = FPF_DISKFONT | FPF_DESIGNED
-};
-static struct TextAttr chatTextAttr = {0};
-static struct TextAttr uiTextAttr = {0};
 
 /**
  * Struct representing a generated image
@@ -82,10 +69,6 @@ static struct GeneratedImage {
 	WORD width;
 	WORD height;
 };
-struct MsgPort *appPort;
-ULONG activeTextEditorGadgetID;
-static struct Node *chatTabNode;
-static struct Node *imageGenerationTabNode;
 
 static CONST_STRPTR USED_CLASSES[] = {
 	MUIC_Aboutbox,
@@ -344,15 +327,6 @@ LONG initVideo() {
 	// NewList(imageList);
 	// currentImage = NULL;
 	// loadImages();
-
-	uiTextAttr.ta_Name = config.uiFontName ? config.uiFontName : "";
-	uiTextAttr.ta_YSize = config.uiFontSize;
-	uiTextAttr.ta_Style = config.uiFontStyle;
-	uiTextAttr.ta_Flags = config.uiFontFlags;
-	chatTextAttr.ta_Name = config.chatFontName ? config.chatFontName : "";
-	chatTextAttr.ta_YSize = config.chatFontSize;
-	chatTextAttr.ta_Style = config.chatFontStyle;
-	chatTextAttr.ta_Flags = config.chatFontFlags;
 
 	if (!(app = ApplicationObject,
 		MUIA_Application_Base, "AmigaGPT",
@@ -792,8 +766,6 @@ LONG initVideo() {
 	// } else {
 	// 	layoutToOpen = modeClickTabOld;
 	// }
-
-	appPort = CreateMsgPort();
 
 	// if (!isPublicScreen) {
 	// 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEditorColorMap, TAG_DONE);
@@ -1241,7 +1213,23 @@ static void removeImageFromImageList(struct GeneratedImage *image) {
  * Start the main run loop of the GUI
 **/
 void startGUIRunLoop() {
-	DoMethod(app, MUIM_Application_Run);
+	ULONG signals;
+	BOOL running = TRUE;
+
+	while (running) {
+		ULONG id = DoMethod(app, MUIM_Application_NewInput, &signals);
+
+		switch(id) {
+			case MUIV_Application_ReturnID_Quit:
+			{
+				running = FALSE;
+				break;
+			}
+			default:
+				break;
+		}
+		if(running && signals) Wait(signals);
+	}
 /* ULONG signals;
 	BOOL running = TRUE;
 
@@ -2654,17 +2642,10 @@ void shutdownGUI() {
 	MUI_DisposeObject(app);
 	freeImageList();
 	if (isPublicScreen) {
-		// ReleasePen(screen->ViewPort.ColorMap, sendMessageButtonPen);
-		// ReleasePen(screen->ViewPort.ColorMap, newChatButtonPen);
-		// ReleasePen(screen->ViewPort.ColorMap, deleteButtonPen);
 		UnlockPubScreen(NULL, screen);
 	} else {
 		CloseScreen(screen);
 	}
-	if (uiTextFont)
-		CloseFont(uiTextFont);
-	if (appPort)
-		DeleteMsgPort(appPort);
 
 	closeGUILibraries();
 }
