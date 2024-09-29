@@ -219,7 +219,7 @@ void speakText(STRPTR text) {
 		UBYTE* audioBuffer = postTextToSpeechRequestToOpenAI(text, config.openAITTSModel, config.openAITTSVoice, config.openAiApiKey, &audioLength);
 
 		// Convert to big endian
-		#ifdef __AMIGAOS4__
+		#ifdef __AMIGAOS3__
 		__asm__ __volatile__ (
 			"lea %a1, %%a0\n"         // Load buffer address into A0
 			"move.l %0, %%d1\n"       // Load fileSize into D1

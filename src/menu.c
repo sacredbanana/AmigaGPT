@@ -1,8 +1,10 @@
 #include <libraries/amigaguide.h>
+#include <libraries/asl.h>
 #include <libraries/gadtools.h>
 #include <libraries/mui.h>
 #include <mui/TextEditor_mcc.h>
 #include <proto/amigaguide.h>
+#include <proto/exec.h>
 #include <SDI_hook.h>
 #include "APIKeyRequesterWindow.h"
 #include "AboutAmigaGPTWindow.h"
@@ -67,6 +69,31 @@ HOOKPROTONHNO(SpeechSystemMenuItemClickedFunc, void, enum SpeechSystem *speechSy
 	writeConfig();
 }
 MakeHook(SpeechSystemMenuItemClickedHook, SpeechSystemMenuItemClickedFunc);
+
+HOOKPROTONHNONP(SpeechAccentMenuItemClickedFunc, void) {
+	struct FileRequester *fileRequester;
+    if (fileRequester = (struct FileRequester *)MUI_AllocAslRequestTags(
+        ASL_FileRequest,
+        ASLFR_Window, mainWindow,
+        ASLFR_PopToFront, TRUE,
+        ASLFR_Activate, TRUE,
+        ASLFR_DrawersOnly, FALSE,
+        ASLFR_InitialDrawer, "LOCALE:accents",
+        ASLFR_DoPatterns, TRUE,
+        ASLFR_InitialPattern, "#?.accent",
+        TAG_DONE)) {
+        if (MUI_AslRequestTags(fileRequester, TAG_DONE)) {
+            if (config.speechAccent != NULL) {
+                FreeVec(config.speechAccent);
+            }
+            config.speechAccent = AllocVec(strlen(fileRequester->fr_File) + 1, MEMF_ANY | MEMF_CLEAR);
+            strncpy(config.speechAccent, fileRequester->fr_File, strlen(fileRequester->fr_File));
+            writeConfig();
+        }
+        FreeAslRequest(fileRequester);
+    }
+}
+MakeHook(SpeechAccentMenuItemClickedHook, SpeechAccentMenuItemClickedFunc);
 
 HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
 	struct NewAmigaGuide guide = {
@@ -239,6 +266,9 @@ void addMenuActions() {
 	set(speechSystemFliteVoiceSLTMenuItem, MUIA_Menuitem_Checked, config.speechFliteVoice == SPEECH_FLITE_VOICE_SLT);
 	DoMethod(speechSystemFliteVoiceSLTMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, SPEECH_FLITE_VOICE_SLT, &config.speechFliteVoice);
 	#endif
+
+    Object speechAccentMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ACCENT);
+    DoMethod(speechAccentMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application,  2, MUIM_CallHook, &SpeechAccentMenuItemClickedHook);
 
 	Object speechOpenAIVoiceAlloyMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY);
 	set(speechOpenAIVoiceAlloyMenuItem, MUIA_Menuitem_Checked, config.openAITTSVoice == OPENAI_TTS_VOICE_ALLOY);

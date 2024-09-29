@@ -14,9 +14,6 @@
 #include <proto/datatypes.h>
 #include <proto/exec.h>
 #include <proto/muimaster.h>
-// #include <proto/rexxsyslib.h>
-// #include <rexx/storage.h>
-// #include <SDI_hook.h>
 #include "AboutAmigaGPTWindow.h"
 #include "APIKeyRequesterWindow.h"
 #include "config.h"
@@ -25,8 +22,6 @@
 #include "menu.h"
 #include "StartupOptionsWindow.h"
 #include "version.h"
-
-#define HELP_KEY 0x5F
 
 #ifdef __AMIGAOS4__
 #define IntuitionBase Library
