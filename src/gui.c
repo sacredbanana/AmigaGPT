@@ -225,7 +225,6 @@ LONG initVideo() {
 	DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
 
 	addMenuActions();
-	addMainWindowActions();
 	addStartupOptionsWindowActions();
 
 	loadConversations();
@@ -662,7 +661,6 @@ void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
 	STRPTR formattedMessage = AllocVec(strlen(message) + 20, MEMF_ANY);
 	snprintf(formattedMessage, strlen(message) + 20, "\33P[%lu\33p[2]%s\0", pen, message);
 	set(statusBar, MUIA_Text_Contents, formattedMessage);
-	printf("%s\n", formattedMessage);
 	FreeVec(formattedMessage);
 }
 
