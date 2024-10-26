@@ -12,15 +12,10 @@
 
 struct Config config = {
 	.speechEnabled = FALSE,
-	#ifdef __AMIGAOS3__
 	.speechAccent = NULL,
 	.speechSystem = SPEECH_SYSTEM_34,
-	#else
-	#ifdef __AMIGAOS4__
 	.speechFliteVoice = SPEECH_FLITE_VOICE_KAL,
 	.speechSystem = SPEECH_SYSTEM_FLITE,
-	#endif
-	#endif
 	.chatSystem = NULL,
 	.chatModel = GPT_3_5_TURBO,
 	.imageModel = DALL_E_3,
@@ -28,30 +23,7 @@ struct Config config = {
 	.imageSizeDallE3 = IMAGE_SIZE_1024x1024,
 	.openAITTSModel = OPENAI_TTS_MODEL_TTS_1,
 	.openAITTSVoice = OPENAI_TTS_VOICE_ALLOY,
-	.chatFontName = NULL,
-	.chatFontSize = 8,
-	.chatFontStyle = FS_NORMAL,
-	.chatFontFlags = FPF_DISKFONT | FPF_DESIGNED,
-	.uiFontName = NULL,
-	.uiFontSize = 8,
-	.uiFontStyle = FS_NORMAL,
-	.uiFontFlags = FPF_DISKFONT | FPF_DESIGNED,
 	.openAiApiKey = NULL,
-	.colors = {
-		11 << 16,
-		0x00000000, 0x00000000, 0x11111111, // darkest blue
-		0x00000000, 0x88888888, 0xFFFFFFFF, // light blue
-		0xA0000000, 0x00000000, 0x0F0F0F0F, // dark red
-		0x00000000, 0x00000000, 0x00000000, // black
-		0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, // white
-		0x00000000, 0xFFFFFFFF, 0x66666666, // pastel green
-		0xFFFFFFFF, 0x00000000, 0x00000000, // red
-		0xFFFFFFFF, 0xFFFFFFFF, 0x00000000, // yellow
-		0x22222222, 0x22222222, 0x22222222, // dark grey
-		0x44444444, 0x44444444, 0x44444444, // grey
-		0xFFFFFFFF, 0xAAAAAAAA, 0x00000000, // orange
-		0
-	},
 	.chatModelSetVersion = CHAT_MODEL_SET_VERSION,
 	.imageModelSetVersion = IMAGE_MODEL_SET_VERSION,
 	.speechSystemSetVersion = SPEECH_SYSTEM_SET_VERSION,
@@ -74,13 +46,8 @@ LONG writeConfig() {
 
 	json_object_object_add(configJsonObject, "speechEnabled", json_object_new_boolean((BOOL)config.speechEnabled));
 	json_object_object_add(configJsonObject, "speechSystem", json_object_new_int(config.speechSystem));
-	#ifdef __AMIGAOS3__
 	json_object_object_add(configJsonObject, "speechAccent", config.speechAccent != NULL ? json_object_new_string(config.speechAccent) : NULL);
-	#else
-	#ifdef __AMIGAOS4__
 	json_object_object_add(configJsonObject, "speechFliteVoice", json_object_new_int(config.speechFliteVoice));
-	#endif
-	#endif
 	json_object_object_add(configJsonObject, "chatSystem", config.chatSystem != NULL ? json_object_new_string(config.chatSystem) : NULL);
 	json_object_object_add(configJsonObject, "chatModel", json_object_new_int(config.chatModel));
 	json_object_object_add(configJsonObject, "imageModel", json_object_new_int(config.imageModel));
@@ -178,14 +145,13 @@ LONG readConfig() {
 	}
 	#else
 	#ifdef __MORPHOS__
-	if (config.speechSystem == SPEECH_SYSTEM_34 || config.speechSystem == SPEECH_SYSTEM_37 || config.speechSystem == SPEECH_SYSTEM_FLITE || config.speechSystem == SPEECH_SYSTEM_NONE) {
+	if (config.speechSystem == SPEECH_SYSTEM_34 || config.speechSystem == SPEECH_SYSTEM_37 || config.speechSystem == SPEECH_SYSTEM_FLITE) {
 		config.speechSystem = SPEECH_SYSTEM_OPENAI;
 	}
 	#endif
 	#endif
 	#endif
 
-	#ifdef __AMIGAOS3__
 	if (config.speechAccent != NULL) {
 		FreeVec(config.speechAccent);
 		config.speechAccent = NULL;
@@ -202,14 +168,11 @@ LONG readConfig() {
 		config.speechAccent = AllocVec(strlen(DEFAULT_ACCENT) + 1, MEMF_CLEAR);
 		strncpy(config.speechAccent, DEFAULT_ACCENT, strlen(DEFAULT_ACCENT));
 	}
-	#else
-	#ifdef __AMIGAOS4__
+
 	struct json_object *speechVoiceObj;
 	if (json_object_object_get_ex(configJsonObject, "speechFliteVoice", &speechVoiceObj)) {
 		config.speechFliteVoice = json_object_get_int(speechVoiceObj);
 	}
-	#endif
-	#endif
 
 	if (config.chatSystem != NULL) {
 		FreeVec(config.chatSystem);
@@ -359,9 +322,7 @@ LONG readConfig() {
 		#ifdef __AMIGAOS4__
 		config.speechSystem = SPEECH_SYSTEM_FLITE;
 		#else
-		#ifdef __MORPHOS__
 		config.speechSystem = SPEECH_SYSTEM_OPENAI;
-		#endif
 		#endif
 		#endif
 	}
@@ -397,12 +358,10 @@ LONG readConfig() {
  * Free the config
 **/ 
 void freeConfig() {
-	#ifdef __AMIGAOS3__
 	if (config.speechAccent != NULL) {
 		FreeVec(config.speechAccent);
 		config.speechAccent = NULL;
 	}
-	#endif
 	if (config.chatSystem != NULL) {
 		FreeVec(config.chatSystem);
 		config.chatSystem = NULL;

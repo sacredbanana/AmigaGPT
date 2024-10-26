@@ -393,12 +393,12 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 
 		json_object_put(obj);
 
-		updateStatusBar("Connecting...", 7);
+		updateStatusBar("Connecting...", yellowPen);
 		if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
 			return NULL;
 		}
 
-		updateStatusBar("Sending request...", 7);
+		updateStatusBar("Sending request...", yellowPen);
 		ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 	}
 
@@ -412,7 +412,7 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 		while (!doneReading) {
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
 			snprintf(statusMessage, sizeof(statusMessage), "Downloading response...");
-			updateStatusBar(statusMessage, 7);
+			updateStatusBar(statusMessage, yellowPen);
 			strncat(readBuffer, tempReadBuffer, bytesRead);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
@@ -551,7 +551,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 
 	memset(readBuffer, 0, READ_BUFFER_LENGTH);
 
-	updateStatusBar("Connecting...", 7);
+	updateStatusBar("Connecting...", yellowPen);
 	if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
 		return NULL;
 	}
@@ -572,7 +572,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 
 	json_object_put(obj);
 
-	updateStatusBar("Sending request...", 7);
+	updateStatusBar("Sending request...", yellowPen);
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
 	if (ssl_err > 0) {
@@ -585,7 +585,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 		while (!doneReading) {
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
 			snprintf(statusMessage, sizeof(statusMessage), "Downloading image... (%lu bytes)", totalBytesRead);
-			updateStatusBar(statusMessage, 7);
+			updateStatusBar(statusMessage, yellowPen);
 			strcat(readBuffer, tempReadBuffer);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
@@ -735,13 +735,13 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		"User-Agent: AmigaGPT\r\n\r\n\0"
 		, pathString, hostString);
 
-	updateStatusBar("Connecting...", 7);
+	updateStatusBar("Connecting...", yellowPen);
 	if(createSSLConnection(hostString, 443) == RETURN_ERROR) {
 		Close(fileHandle);
 		return RETURN_ERROR;
 	}
 
-	updateStatusBar("Sending request...", 7);
+	updateStatusBar("Sending request...", yellowPen);
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
 	if (ssl_err > 0) {
@@ -779,7 +779,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 				dataStart = tempReadBuffer;
 			}
 			snprintf(statusMessage, sizeof(statusMessage), "Downloaded %lu/%ld bytes", totalBytesRead, contentLength);
-			updateStatusBar(statusMessage, 7);
+			updateStatusBar(statusMessage, yellowPen);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
 				case SSL_ERROR_NONE:
@@ -813,7 +813,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 					ULONG err = ERR_get_error();
 					printf("error: %lu\n", err);
 				case SSL_ERROR_SSL:
-					updateStatusBar("Lost connection. Reconnecting...", 7);
+					updateStatusBar("Lost connection. Reconnecting...", redPen);
 					CloseSocket(sock);
 					SSL_shutdown(ssl);
 					SSL_free(ssl);
@@ -993,7 +993,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 
 	*audioLength = 0;
 
-	updateStatusBar("Connecting...", 7);
+	updateStatusBar("Connecting...", yellowPen);
 	if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
 		return NULL;
 	}
@@ -1015,7 +1015,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 
 	json_object_put(obj);
 
-	updateStatusBar("Sending request...", 7);
+	updateStatusBar("Sending request...", yellowPen);
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
 	if (ssl_err > 0) {
@@ -1040,7 +1040,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 			dataStart = readBuffer;
 			
 			snprintf(statusMessage, sizeof(statusMessage), "Downloaded %lu bytes", *audioLength);
-			updateStatusBar(statusMessage, 7);
+			updateStatusBar(statusMessage, yellowPen);
 			err = SSL_get_error(ssl, bytesRead);
 			switch (err) {
 				case SSL_ERROR_NONE:
@@ -1143,7 +1143,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 					ULONG err = ERR_get_error();
 					printf("error: %lu\n", err);
 				case SSL_ERROR_SSL:
-					updateStatusBar("Lost connection.", 7);
+					updateStatusBar("Lost connection.", redPen);
 					CloseSocket(sock);
 					SSL_shutdown(ssl);
 					SSL_free(ssl);
@@ -1194,7 +1194,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 	ssl = NULL;
 	sock = -1;
 
-	updateStatusBar("Download complete.", 7);
+	updateStatusBar("Download complete.", greenPen);
 
 	return audioData;
 }

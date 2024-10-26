@@ -34,6 +34,7 @@ enum {
 
 extern struct Screen *screen;
 extern Object *app;
+extern ULONG redPen, greenPen, bluePen, yellowPen;
 
 /**
  * Create the GUI

@@ -27,7 +27,7 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void, Object *screenSelectRadioBu
 	
 	if (selectedRadioButton == 0) {
 		// Open in Workbench
-        screen = NULL;
+        screen = LockPubScreen("Workbench");
 		isPublicScreen = TRUE;
 	} else {
 		// New screen
@@ -49,7 +49,6 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void, Object *screenSelectRadioBu
 		TAG_DONE)) {
 			if (MUI_AslRequestTags(screenModeRequester, TAG_DONE)) {
 				isPublicScreen = FALSE;
-				UnlockPubScreen(NULL, screen);
 				for (WORD i = 0; i < NUMDRIPENS; i++) {
 					pens[i]= 1;
 				}
@@ -100,19 +99,17 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void, Object *screenSelectRadioBu
 		}
 	}
 
+
+	redPen = ObtainBestPen(screen->ViewPort.ColorMap, 0xFFFFFFFF, 0, 0, OBP_Precision, PRECISION_GUI, TAG_DONE);
+	greenPen = ObtainBestPen(screen->ViewPort.ColorMap, 0, 0xFFFFFFFF, 0, OBP_Precision, PRECISION_GUI, TAG_DONE);
+	bluePen = ObtainBestPen(screen->ViewPort.ColorMap, 0, 0, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE);
+	yellowPen = ObtainBestPen(screen->ViewPort.ColorMap, 0xFFFFFFFF, 0xFFFFFFFF, 0, OBP_Precision, PRECISION_GUI, TAG_DONE);
+
 	set(startupOptionsWindowObject, MUIA_Window_Open, FALSE);
 	set(aboutAmigaGPTWindowObject, MUIA_Window_Screen, screen);	
 	set(apiKeyRequesterWindowObject, MUIA_Window_Screen, screen);
     set(chatSystemRequesterWindowObject, MUIA_Window_Screen, screen);
-	SetAttrs(mainWindowObject, MUIA_Window_DepthGadget, isPublicScreen,
-        MUIA_Window_SizeGadget, isPublicScreen,
-        MUIA_Window_DragBar, isPublicScreen,
-        MUIA_Window_Screen, screen,
-        MUIA_Window_Width, MUIV_Window_Width_Visible(isPublicScreen ? 90 : 100),
-        MUIA_Window_Height, MUIV_Window_Height_Visible(isPublicScreen ? 90 : 100),
-        MUIA_Window_Open, TRUE,
-         MUIA_Window_ActiveObject, chatInputTextEditor,
-        TAG_DONE);
+	set(mainWindowObject, MUIA_Window_Screen, screen);
 }
 MakeHook(StartupOptionsOkButtonClickedHook, StartupOptionsOkButtonClickedFunc);
 

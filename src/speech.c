@@ -31,6 +31,8 @@ static struct FliteRequest *fliteRequest = NULL;
 struct Device *FliteBase = NULL;
 struct FliteIFace *IFlite = NULL;
 struct FliteVoice *voice = NULL;
+#endif
+#endif
 
 /**
  * The names of the speech voices
@@ -43,8 +45,6 @@ const STRPTR SPEECH_FLITE_VOICE_NAMES[] = {
 	[SPEECH_FLITE_VOICE_RMS] = "rms",
 	[SPEECH_FLITE_VOICE_SLT] = "slt"
 };
-#endif
-#endif
 
 static APTR loadAudioFile(CONST_STRPTR filename, ULONG* size);
 

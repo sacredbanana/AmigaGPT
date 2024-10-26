@@ -10,13 +10,8 @@
 struct Config {
 	ULONG speechEnabled; // Making it a ULONG so it can be directly triggered. BOOL is too small
 	enum SpeechSystem speechSystem;
-	#ifdef __AMIGAOS3__
 	STRPTR speechAccent;
-	#else
-	#ifdef __AMIGAOS4__
 	enum SpeechFliteVoice speechFliteVoice;
-	#endif
-	#endif
 	STRPTR chatSystem;
 	enum ChatModel chatModel;
 	enum ImageModel imageModel;

@@ -28,6 +28,18 @@ LONG deleteButtonPen;
 BOOL isPublicScreen;
 struct Conversation *currentConversation;
 
+enum ButtonLabels {
+	NEW_CHAT_BUTTON_LABEL,
+	DELETE_CHAT_BUTTON_LABEL,
+	SEND_MESSAGE_BUTTON_LABEL
+};
+
+CONST_STRPTR BUTTON_LABEL_NAMES[] = {
+	"+ New Chat",
+	"- Delete Chat",
+	"Send"
+};
+
 HOOKPROTONHNO(ConstructLI_TextFunc, APTR, struct NList_ConstructMessage *ncm) {
 	struct Conversation *oldEntry = (struct Conversation *)ncm->entry;
 	struct Conversation *newEntry = copyConversation(oldEntry);
@@ -82,6 +94,31 @@ HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
 }
 MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
 
+HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
+	const UBYTE BUTTON_LABEL_BUFFER_SIZE = 64;
+	STRPTR buttonLabelText = AllocVec(BUTTON_LABEL_BUFFER_SIZE, MEMF_ANY);
+	snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0", greenPen, BUTTON_LABEL_NAMES[NEW_CHAT_BUTTON_LABEL]);
+	set(newChatButton, MUIA_Text_Contents, buttonLabelText);
+	snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0", redPen, BUTTON_LABEL_NAMES[DELETE_CHAT_BUTTON_LABEL]);
+	set(deleteChatButton, MUIA_Text_Contents, buttonLabelText);
+	snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0", bluePen, BUTTON_LABEL_NAMES[SEND_MESSAGE_BUTTON_LABEL]);
+	set(sendMessageButton, MUIA_Text_Contents, buttonLabelText);
+	FreeVec(buttonLabelText);
+	SetAttrs(mainWindowObject,
+		MUIA_Window_ID, isPublicScreen ? OBJECT_ID_MAIN_WINDOW : NULL,
+		MUIA_Window_DepthGadget, isPublicScreen,
+        MUIA_Window_SizeGadget, isPublicScreen,
+        MUIA_Window_DragBar, isPublicScreen,
+        MUIA_Window_Width, MUIV_Window_Width_Screen(isPublicScreen ? 90 : 100),
+        MUIA_Window_Height, MUIV_Window_Height_Screen(isPublicScreen ? 90 : 100),
+        MUIA_Window_ActiveObject, chatInputTextEditor,
+		MUIA_Window_Open, TRUE,
+        TAG_DONE);
+	
+	updateStatusBar("Ready", greenPen);
+}
+MakeHook(ConfigureForScreenHook, ConfigureForScreenFunc);
+
 /**
  * Create the main window
  * @return RETURN_OK on success, RETURN_ERROR on failure
@@ -89,11 +126,11 @@ MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
 LONG createMainWindow() {
 	createMenu();
 
-	chatOutputScroller = ScrollbarObject, End;
-
+	CONST_STRPTR deleteChatButtonLabel = "\33P[xxx]- Delete Chat";
+	snprintf(deleteChatButtonLabel, strlen(deleteChatButtonLabel), "\33P[%ld]- Delete Chat\0", redPen);
 	if ((mainWindowObject = WindowObject,
 		MUIA_Window_Title, "AmigaGPT",
-		MUIA_Window_ID, OBJECT_ID_MAIN_WINDOW,
+		// MUIA_Window_ID, OBJECT_ID_MAIN_WINDOW,
 		MUIA_Window_CloseGadget, TRUE,
 		MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
 		MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
@@ -106,13 +143,13 @@ LONG createMainWindow() {
 				Child, VGroup,
 					Child, VGroup,
 						// New chat button
-						Child, newChatButton = MUI_MakeObject(MUIO_Button, "+ New Chat",
+						Child, newChatButton = MUI_MakeObject(MUIO_Button, "",
 							MUIA_Width, 500,
 							MUIA_CycleChain, TRUE,
-							MUIA_InputMode, MUIV_InputMode_RelVerify, TAG_DONE),
-						// End,
+							MUIA_InputMode, MUIV_InputMode_RelVerify,
+						End,
 						// Delete chat button
-						Child, deleteChatButton = MUI_MakeObject(MUIO_Button, "- Delete Chat",
+						Child, deleteChatButton = MUI_MakeObject(MUIO_Button, BUTTON_LABEL_NAMES[DELETE_CHAT_BUTTON_LABEL],
 							MUIA_Width, 500,
 							MUIA_Background, MUII_FILL,
 							MUIA_CycleChain, TRUE,
@@ -157,12 +194,10 @@ LONG createMainWindow() {
 						End,
 					End,
 					// Status bar
-					Child, statusBar = StringObject,
-						MUIA_ObjectID, OBJECT_ID_STATUS_BAR,
-						MUIA_String_MaxLen, 1024,
-						MUIA_CycleChain, TRUE,
-						MUIA_String_Accept, "",
-						// MUIA_Background, MUII_FILL,
+					Child, statusBar = TextObject,
+						TextFrame,
+						MUIA_Text_Contents, "Ready",
+						MUIA_Background, MUII_SHADOWBACK,
 					End,
 					Child, HGroup,
 						// Chat input text editor
@@ -173,7 +208,7 @@ LONG createMainWindow() {
 							MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
 						End,
 						// Send message button
-						Child, sendMessageButton = MUI_MakeObject(MUIO_Button, "Send",
+						Child, sendMessageButton = MUI_MakeObject(MUIO_Button, BUTTON_LABEL_NAMES[SEND_MESSAGE_BUTTON_LABEL],
 						MUIA_ObjectID, OBJECT_ID_SEND_MESSAGE_BUTTON,
 							MUIA_CycleChain, TRUE,
 							MUIA_InputMode, MUIV_InputMode_RelVerify,
@@ -186,7 +221,12 @@ LONG createMainWindow() {
         return RETURN_ERROR;
     }
 
-    get(mainWindowObject, MUIA_Window, &mainWindow);          
+    get(mainWindowObject, MUIA_Window, &mainWindow);   
+
+	DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_Screen, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &ConfigureForScreenHook);
+
+	addMainWindowActions();
+	UnlockPubScreen(NULL, screen);       
     return RETURN_OK;
 }
 

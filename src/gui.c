@@ -28,6 +28,7 @@ struct MUIMasterIFace *IMUIMaster;
 
 struct Library *MUIMasterBase;
 Object *app;
+ULONG redPen, greenPen, bluePen, yellowPen;
 struct Window *imageWindow;
 struct Screen *screen;
 static Object *imageWindowObject;
@@ -646,9 +647,7 @@ LONG initVideo() {
 
 
 	// For some reason it won't let you paste text into the empty text editor unless you do this
-	// DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);
-
-	updateStatusBar("Ready", 5);
+	// DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);;
 
 	return RETURN_OK;
 }
@@ -660,10 +659,11 @@ LONG initVideo() {
  * 
 **/ 
 void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
-	set(statusBar, MUIA_String_Contents, message);
-	set(statusBar, MUIA_TextColor, "rff0000");
-	// SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_Pens, isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[3*pen+1], config.colors[3*pen+2], config.colors[3*pen+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen, TAG_DONE);
-	// SetGadgetAttrs(statusBar, mainWindow, NULL, STRINGA_TextVal, message, TAG_DONE);
+	STRPTR formattedMessage = AllocVec(strlen(message) + 20, MEMF_ANY);
+	snprintf(formattedMessage, strlen(message) + 20, "\33P[%lu\33p[2]%s\0", pen, message);
+	set(statusBar, MUIA_Text_Contents, formattedMessage);
+	printf("%s\n", formattedMessage);
+	FreeVec(formattedMessage);
 }
 
 /**
@@ -715,7 +715,10 @@ static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream) {
 }
 
 /**
- * Sends a chat message to the OpenAI API and displays the response and speaks it if speech is enabled
+ * @brief Sends a chat message to the OpenAI API and displays the response and speaks it if speech is enabled
+ * @details This function sends a chat message to the OpenAI API and displays the response in the chat window. It also speaks the response if speech is enabled.
+ * @param void
+ * @return void
 **/
 void sendChatMessage() {
 	BOOL isNewConversation = FALSE;
@@ -729,7 +732,7 @@ void sendChatMessage() {
 	set(newChatButton, MUIA_Disabled, TRUE);
 	set(deleteChatButton, MUIA_Disabled, TRUE);
 
-	updateStatusBar("Sending message...", 7);
+	updateStatusBar("Sending message...", yellowPen);
 	STRPTR receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 	STRPTR text = DoMethod(chatInputTextEditor, MUIM_TextEditor_ExportText);
 
@@ -861,7 +864,7 @@ void sendChatMessage() {
 		}
 	}
 
-	updateStatusBar("Ready", 5);
+	updateStatusBar("Ready", greenPen);
 	saveConversations();
 	
 	set(sendMessageButton, MUIA_Disabled, FALSE);
@@ -1611,7 +1614,13 @@ void startGUIRunLoop() {
 void displayError(STRPTR message) {
 	const LONG ERROR_CODE = IoErr();
 	if (ERROR_CODE == 0) {
-		if (!app || MUI_Request(app, mainWindowObject, MUIV_Requester_Image_Error, "Error", "*OK", "\33c%s", message) != 0) {
+		if (!app || MUI_Request(app, mainWindowObject,
+		#ifdef __MORPHOS__
+		NULL,
+		#else
+		 MUIV_Requester_Image_Error, "Error",
+		 #endif
+		  "*OK", "\33c%s", message) != 0) {
 			fprintf(stderr, "%s\n", message);
 		} 
 	} else {
@@ -1620,8 +1629,14 @@ void displayError(STRPTR message) {
 			STRPTR errorMessage = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 			if (errorMessage) {
 				Fault(ERROR_CODE, message, errorMessage, ERROR_BUFFER_LENGTH);
-				MUI_Request(app, mainWindowObject, MUIV_Requester_Image_Error, "Error", "*OK", "\33c%s", errorMessage);
-				updateStatusBar("Error", 6);
+				MUI_Request(app, mainWindowObject, 
+				#ifdef __MORPHOS__
+				NULL,
+				#else
+				 MUIV_Requester_Image_Error, "Error",
+				 #endif
+				"*OK", "\33c%s", errorMessage);
+				updateStatusBar("Error", redPen);
 				FreeVec(errorMessage);
 			}
 		} else {
@@ -2137,7 +2152,7 @@ static LONG loadConversations() {
 			displayError("Failed to parse chat history. Malformed JSON. The chat-history.json file is probably corrupted. Conversation history will not be loaded. A backup of the chat-history.json file has been created as chat-history.json.bak");
 		} else if (copyFile(PROGDIR"chat-history.json", "RAM:chat-history.json")) {
 			displayError("Failed to parse chat history. Malformed JSON. The chat-history.json file is probably corrupted. Conversation history will not be loaded. There was an error writing a backup of the chat history to disk but a copy has been saved to RAM:chat-history.json.bak");
-			#ifdef __AMIGAOS3__
+			#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 			if (!DeleteFile(PROGDIR"chat-history.json")) {
 			#else
 			if (!Delete(PROGDIR"chat-history.json")) {
@@ -2366,7 +2381,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 		return FALSE;
 	}
 
-	updateStatusBar("Copying file...", 7);
+	updateStatusBar("Copying file...", yellowPen);
 
 	do {
 		bytesRead = Read(srcFile, buffer, FILE_BUFFER_SIZE);
@@ -2375,7 +2390,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 			bytesWritten = Write(dstFile, buffer, bytesRead);
 
 			if (bytesWritten != bytesRead) {
-				updateStatusBar("Ready", 5);
+				updateStatusBar("Ready", greenPen);
 				snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error copying %s to %s", source, destination);
 				displayError(errorMessage);
 				FreeVec(buffer);
@@ -2386,7 +2401,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 			}
 		}
 		else if (bytesRead < 0) {
-			updateStatusBar("Ready", 5);
+			updateStatusBar("Ready", greenPen);
 			snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE, "Error copying %s to %s", source, destination);
 			displayError(errorMessage);
 			FreeVec(buffer);
@@ -2397,7 +2412,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 		}
 	} while (bytesRead > 0);
 
-	updateStatusBar("Ready", 5);
+	updateStatusBar("Ready", greenPen);
 	FreeVec(buffer);
 	FreeVec(errorMessage);
 	Close(srcFile);
@@ -2413,6 +2428,10 @@ void shutdownGUI() {
 	DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 	MUI_DisposeObject(app);
 	freeImageList();
+	ReleasePen(screen->ViewPort.ColorMap, redPen);
+	ReleasePen(screen->ViewPort.ColorMap, greenPen);
+	ReleasePen(screen->ViewPort.ColorMap, bluePen);
+	ReleasePen(screen->ViewPort.ColorMap, yellowPen);
 	if (isPublicScreen) {
 		UnlockPubScreen(NULL, screen);
 	} else {

@@ -16,8 +16,6 @@ enum SpeechSystem {
 **/ 
 extern const STRPTR SPEECH_SYSTEM_NAMES[];
 
-#ifdef __AMIGAOS4__
-
 /**
  * The Flite voice of the spoken text
 **/
@@ -34,8 +32,6 @@ enum SpeechFliteVoice {
  * @see enum SpeechFliteVoice
 **/ 
 extern const STRPTR SPEECH_FLITE_VOICE_NAMES[];
-
-#endif
 
 /**
  * Initialise the speech system
