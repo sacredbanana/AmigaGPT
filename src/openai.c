@@ -2,6 +2,7 @@
 #include <amissl/amissl.h>
 #include <libraries/amisslmaster.h>
 #include <libraries/amissl.h>
+#include <mui/Busy_mcc.h>
 #include <proto/amissl.h>
 #include <proto/amisslmaster.h>
 #else
@@ -16,6 +17,7 @@
 #include "openai.h"
 #include "speech.h"
 #include "gui.h"
+#include "MainWindow.h"
 
 #define OPENAI_HOST "api.openai.com"
 #define OPENAI_PORT 443
@@ -232,6 +234,8 @@ LONG initOpenAIConnector() {
 static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
 	struct sockaddr_in addr;
 	struct hostent *hostent;
+
+	set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
  
 	if (ssl != NULL) {
 		SSL_shutdown(ssl);
@@ -402,6 +406,8 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 		ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 	}
 
+	set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+
 	if (ssl_err > 0 || stream) {
 		ULONG totalBytesRead = 0;
 		WORD bytesRead = 0;
@@ -410,6 +416,7 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 		UBYTE statusMessage[64];
 		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 		while (!doneReading) {
+			DoMethod(loadingBar, MUIM_Busy_Move);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
 			snprintf(statusMessage, sizeof(statusMessage), "Downloading response...");
 			updateStatusBar(statusMessage, yellowPen);
@@ -575,6 +582,8 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 	updateStatusBar("Sending request...", yellowPen);
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
+	set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+
 	if (ssl_err > 0) {
 		ULONG totalBytesRead = 0;
 		WORD bytesRead = 0;
@@ -583,6 +592,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 		UBYTE statusMessage[64];
 		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 		while (!doneReading) {
+			DoMethod(loadingBar, MUIM_Busy_Move);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
 			snprintf(statusMessage, sizeof(statusMessage), "Downloading image... (%lu bytes)", totalBytesRead);
 			updateStatusBar(statusMessage, yellowPen);
@@ -744,6 +754,8 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 	updateStatusBar("Sending request...", yellowPen);
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
+	set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+
 	if (ssl_err > 0) {
 		ULONG totalBytesRead = 0;
 		WORD bytesRead = 0;
@@ -755,6 +767,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		BOOL headersRead = FALSE;
 		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_CLEAR);
 		while (!doneReading) {
+			DoMethod(loadingBar, MUIM_Busy_Move);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
 			if (!headersRead) {
 				if (contentLength == 0) {
@@ -1018,6 +1031,8 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 	updateStatusBar("Sending request...", yellowPen);
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 
+	set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+
 	if (ssl_err > 0) {
 		LONG bytesRead = 0;
 		ULONG bytesRemainingInBuffer = 0;
@@ -1033,6 +1048,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 		UBYTE *dataStart = NULL;
 
 		while (!doneReading) {
+			DoMethod(loadingBar, MUIM_Busy_Move);
             memset(readBuffer, 0, READ_BUFFER_LENGTH);
 			bytesRead = SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH - 1);
 			if (newChunkNeeded && bytesRead == 1) continue;

@@ -11,6 +11,7 @@ extern Object *chatOutputTextEditor;
 extern Object *chatOutputScroller;
 extern Object *statusBar;
 extern Object *conversationListObject;
+extern Object *loadingBar;
 extern WORD pens[NUMDRIPENS + 1];
 extern LONG sendMessageButtonPen;
 extern LONG newChatButtonPen;

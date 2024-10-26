@@ -7,10 +7,10 @@
 #include <json-c/json.h>
 #include <libraries/mui.h>
 #include <mui/Aboutbox_mcc.h>
+#include <mui/Busy_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
-#include <mui/TheBar_mcc.h>
 #include <stdio.h>
 #include "AboutAmigaGPTWindow.h"
 #include "APIKeyRequesterWindow.h"
@@ -52,6 +52,7 @@ static struct GeneratedImage {
 
 static CONST_STRPTR USED_CLASSES[] = {
 	MUIC_Aboutbox,
+	MUIC_Busy,
 	MUIC_NList,
 	MUIC_NListview,
 	MUIC_TextEditor,
@@ -731,6 +732,7 @@ void sendChatMessage() {
 	set(deleteChatButton, MUIA_Disabled, TRUE);
 
 	updateStatusBar("Sending message...", yellowPen);
+	set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
 	STRPTR receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 	STRPTR text = DoMethod(chatInputTextEditor, MUIM_TextEditor_ExportText);
 
@@ -755,6 +757,7 @@ void sendChatMessage() {
 		responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, TRUE);
 		if (responses == NULL) {
 			displayError("Could not connect to OpenAI");
+			set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 			set(sendMessageButton, MUIA_Disabled, FALSE);
 			set(newChatButton, MUIA_Disabled, FALSE);
 			set(deleteChatButton, MUIA_Disabled, FALSE);
@@ -773,6 +776,7 @@ void sendChatMessage() {
 				struct json_object *message = json_object_object_get(error, "message");
 				STRPTR messageString = json_object_get_string(message);
 				displayError(messageString);
+				set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 				set(chatInputTextEditor, MUIA_TextEditor_Contents, text);
 				struct MinNode *lastMessage = RemTail(currentConversation->messages);
 				FreeVec(lastMessage);
@@ -822,6 +826,8 @@ void sendChatMessage() {
 		}
 	} while (!dataStreamFinished);
 
+	set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+
 	if (responses != NULL) {
 		addTextToConversation(currentConversation, receivedMessage, "assistant");
 		if (config.speechEnabled) {
@@ -837,8 +843,10 @@ void sendChatMessage() {
 		FreeVec(receivedMessage);
 		if (isNewConversation) {
 			updateStatusBar("Generating conversation title...", 7);
+			set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
 			responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, FALSE);
+			set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 			if (responses == NULL) {
 				displayError("Could not connect to OpenAI");
 				set(sendMessageButton, MUIA_Disabled, FALSE);

@@ -1,4 +1,5 @@
 #include <libraries/mui.h>
+#include <mui/Busy_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
@@ -20,6 +21,7 @@ Object *chatOutputTextEditor;
 Object *chatOutputScroller;
 Object *statusBar;
 Object *conversationListObject;
+Object *loadingBar;
 WORD pens[NUMDRIPENS + 1];
 LONG textEditorColorMap[] = {5,10,6,3,6,6,4,0,1,6,6,6,6,6,6,6};
 LONG sendMessageButtonPen;
@@ -188,12 +190,6 @@ LONG createMainWindow() {
 						Child, chatOutputScroller = ScrollbarObject,
 						End,
 					End,
-					// Status bar
-					Child, statusBar = TextObject,
-						TextFrame,
-						MUIA_Text_Contents, "Ready",
-						MUIA_Background, MUII_SHADOWBACK,
-					End,
 					Child, HGroup,
 						// Chat input text editor
 						Child, chatInputTextEditor = TextEditorObject, MUIA_HorizWeight, 90,
@@ -213,6 +209,17 @@ LONG createMainWindow() {
 								MUIA_Text_Contents, BUTTON_LABEL_NAMES[SEND_MESSAGE_BUTTON_LABEL],
 							End,
 						End,
+					End,
+					// Status bar
+					Child, statusBar = TextObject,
+						TextFrame,
+						MUIA_Text_Contents, "Ready",
+						MUIA_Background, MUII_SHADOWBACK,
+					End,
+					// Loading bar
+					Child, loadingBar = BusyObject,
+						MUIA_MaxHeight, 10,
+						MUIA_Busy_Speed, MUIV_Busy_Speed_Off,
 					End,
 				End,
 			End,
