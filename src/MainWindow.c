@@ -37,7 +37,7 @@ enum ButtonLabels {
 CONST_STRPTR BUTTON_LABEL_NAMES[] = {
 	"+ New Chat",
 	"- Delete Chat",
-	"Send"
+	"\nSend\n"
 };
 
 HOOKPROTONHNO(ConstructLI_TextFunc, APTR, struct NList_ConstructMessage *ncm) {
@@ -126,11 +126,8 @@ MakeHook(ConfigureForScreenHook, ConfigureForScreenFunc);
 LONG createMainWindow() {
 	createMenu();
 
-	CONST_STRPTR deleteChatButtonLabel = "\33P[xxx]- Delete Chat";
-	snprintf(deleteChatButtonLabel, strlen(deleteChatButtonLabel), "\33P[%ld]- Delete Chat\0", redPen);
 	if ((mainWindowObject = WindowObject,
 		MUIA_Window_Title, "AmigaGPT",
-		// MUIA_Window_ID, OBJECT_ID_MAIN_WINDOW,
 		MUIA_Window_CloseGadget, TRUE,
 		MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
 		MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
@@ -140,21 +137,19 @@ LONG createMainWindow() {
 		MUIA_Window_UseRightBorderScroller, FALSE,
 		MUIA_Window_UseLeftBorderScroller, FALSE,
 		WindowContents, HGroup,
-				Child, VGroup,
-					Child, VGroup,
-						// New chat button
-						Child, newChatButton = MUI_MakeObject(MUIO_Button, "",
-							MUIA_Width, 500,
-							MUIA_CycleChain, TRUE,
-							MUIA_InputMode, MUIV_InputMode_RelVerify,
-						End,
-						// Delete chat button
-						Child, deleteChatButton = MUI_MakeObject(MUIO_Button, BUTTON_LABEL_NAMES[DELETE_CHAT_BUTTON_LABEL],
-							MUIA_Width, 500,
-							MUIA_Background, MUII_FILL,
-							MUIA_CycleChain, TRUE,
-							MUIA_InputMode, MUIV_InputMode_RelVerify,
-						End,
+				Child, VGroup, MUIA_Weight, 30,
+					// New chat button
+					Child, newChatButton = MUI_MakeObject(MUIO_Button, "",
+						MUIA_Width, 500,
+						MUIA_CycleChain, TRUE,
+						MUIA_InputMode, MUIV_InputMode_RelVerify,
+					End,
+					// Delete chat button
+					Child, deleteChatButton = MUI_MakeObject(MUIO_Button, BUTTON_LABEL_NAMES[DELETE_CHAT_BUTTON_LABEL],
+						MUIA_Width, 500,
+						MUIA_Background, MUII_FILL,
+						MUIA_CycleChain, TRUE,
+						MUIA_InputMode, MUIV_InputMode_RelVerify,
 					End,
 					// Conversation list
 					Child, NListviewObject,
@@ -201,17 +196,22 @@ LONG createMainWindow() {
 					End,
 					Child, HGroup,
 						// Chat input text editor
-						Child, chatInputTextEditor = TextEditorObject,
+						Child, chatInputTextEditor = TextEditorObject, MUIA_HorizWeight, 90,
 							MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
 							MUIA_TextEditor_ReadOnly, FALSE,
+							MUIA_HorizWeight, 90,
 							MUIA_TextEditor_TabSize, 4,
+							MUIA_TextEditor_Rows, 3,
 							MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
 						End,
 						// Send message button
-						Child, sendMessageButton = MUI_MakeObject(MUIO_Button, BUTTON_LABEL_NAMES[SEND_MESSAGE_BUTTON_LABEL],
-						MUIA_ObjectID, OBJECT_ID_SEND_MESSAGE_BUTTON,
-							MUIA_CycleChain, TRUE,
-							MUIA_InputMode, MUIV_InputMode_RelVerify,
+						Child, HGroup, MUIA_HorizWeight, 10,
+							Child, sendMessageButton = MUI_MakeObject(MUIO_Button, BUTTON_LABEL_NAMES[SEND_MESSAGE_BUTTON_LABEL],
+								MUIA_ObjectID, OBJECT_ID_SEND_MESSAGE_BUTTON,
+								MUIA_CycleChain, TRUE,
+								MUIA_InputMode, MUIV_InputMode_RelVerify,
+								MUIA_Text_Contents, BUTTON_LABEL_NAMES[SEND_MESSAGE_BUTTON_LABEL],
+							End,
 						End,
 					End,
 				End,
