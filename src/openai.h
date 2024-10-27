@@ -116,7 +116,20 @@ extern enum ImageSize {
  * The names of the image sizes
  * @see enum ImageSize
 **/
-extern CONST_STRPTR IMAGE_SIZE_NAMES[]; 
+extern CONST_STRPTR IMAGE_SIZE_NAMES[];
+
+/**
+ * Struct representing a generated image
+ * @see enum ImageModel
+ **/ 
+struct GeneratedImage {
+	STRPTR name;
+	STRPTR filePath;
+	STRPTR prompt;
+	enum ImageModel imageModel;
+	ULONG width;
+	ULONG height;
+};
 
 /**
  * Initialize the OpenAI connector

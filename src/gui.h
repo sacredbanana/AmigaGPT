@@ -85,6 +85,12 @@ void freeConversation(struct Conversation *conversation);
 LONG saveConversations();
 
 /**
+ * Saves the images to disk
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+**/
+LONG saveImages();
+
+/**
  * Copy a conversation
  * @param conversation The conversation to copy
  * @return A pointer to the copied conversation
@@ -92,6 +98,18 @@ LONG saveConversations();
 struct Conversation* copyConversation(struct Conversation *conversation);
 
 /**
+ * Copy a generated image
+ * @param generatedImage The generated image to copy
+ * @return A pointer to the copied generated image
+**/
+struct GeneratedImage* copyGeneratedImage(struct GeneratedImage *generatedImage);
+
+/**
  * Sends a chat message to the OpenAI API and displays the response and speaks it if speech is enabled
 **/
 void sendChatMessage();
+
+/**
+ * Create an image
+**/
+void createImage();

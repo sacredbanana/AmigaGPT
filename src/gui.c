@@ -34,21 +34,6 @@ struct Screen *screen;
 static Object *imageWindowObject;
 static Object *dataTypeObject;
 static struct GeneratedImage *currentImage;
-struct List *imageList;
-
-/**
- * Struct representing a generated image
- * @see enum ImageSize
- * @see enum ImageModel
- **/ 
-static struct GeneratedImage {
-	STRPTR name;
-	STRPTR filePath;
-	STRPTR prompt;
-	enum ImageModel imageModel;
-	WORD width;
-	WORD height;
-};
 
 static CONST_STRPTR USED_CLASSES[] = {
 	MUIC_Aboutbox,
@@ -64,20 +49,13 @@ static void formatText(STRPTR unformattedText);
 static void closeGUILibraries();
 static struct Conversation* newConversation();
 static void addTextToConversation(struct Conversation *conversation, STRPTR text, STRPTR role);
-static void addImageToImageList(struct GeneratedImage *image);
-static void freeImageList();
-static void freeModeSelectionTabList();
 static void saveImageCopy(struct GeneratedImage *image);
-static void removeImageFromImageList(struct GeneratedImage *image);
-static void openChatSystemRequester();
 static void openImage(struct GeneratedImage *generatedImage, WORD width, WORD height);
 static LONG loadConversations();
 static LONG loadImages();
-static LONG saveImages();
 static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String);
 static STRPTR UTF8ToISO8859_1(CONST_STRPTR utf8String);
 static BOOL copyFile(STRPTR source, STRPTR destination);
-static void createImage();
 
 // #ifdef __AMIGAOS4__
 // static uint32 processIDCMPCreateImageWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message) {
@@ -197,8 +175,7 @@ LONG initVideo() {
 
 	// imageList = AllocVec(sizeof(struct List), MEMF_CLEAR);
 	// NewList(imageList);
-	// currentImage = NULL;
-	// loadImages();
+	currentImage = NULL;
 
 	if (!(app = ApplicationObject,
 		MUIA_Application_Base, "AmigaGPT",
@@ -229,425 +206,7 @@ LONG initVideo() {
 	addStartupOptionsWindowActions();
 
 	loadConversations();
-
-	// if ((createImageButton = NewObject(BUTTON_GetClass(), NULL,
-	// 	GA_ID, CREATE_IMAGE_BUTTON_ID,
-	// 	BUTTON_TextPen, sendMessageButtonPen,
-	// 	#ifdef __AMIGAOS3__
-	// 	BUTTON_BackgroundPen, 0,
-	// 	#endif
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	BUTTON_Justification, BCJ_CENTER,
-	// 	GA_Text, (ULONG)"Create Image",
-	// 	GA_RelVerify, TRUE,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create create image button\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((imageListBrowser = NewObject(LISTBROWSER_GetClass(), NULL,
-	// 	GA_ID, IMAGE_LIST_BROWSER_ID,
-	// 	GA_RelVerify, TRUE,
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	LISTBROWSER_WrapText, TRUE,
-	// 	LISTBROWSER_AutoFit, TRUE,
-	// 	LISTBROWSER_ShowSelected, TRUE,
-	// 	LISTBROWSER_Labels, imageList,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create image list browser\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// pen = 5;
-	// newChatButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
-
-	// if ((newImageButton = NewObject(BUTTON_GetClass(), NULL,
-	// 	GA_ID, NEW_IMAGE_BUTTON_ID,
-	// 	BUTTON_TextPen, newChatButtonPen,
-	// 	#ifdef __AMIGAOS3__
-	// 	BUTTON_BackgroundPen, 0,
-	// 	#endif
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	BUTTON_Justification, BCJ_CENTER,
-	// 	GA_Text, (ULONG)"+ New Image",
-	// 	GA_RelVerify, TRUE,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create new image button\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// pen = 6;
-	// deleteButtonPen = isPublicScreen ? ObtainBestPen(screen->ViewPort.ColorMap, config.colors[pen*3+1], config.colors[pen*3+2], config.colors[pen*3+3], OBP_Precision, PRECISION_GUI, TAG_DONE) : pen;
-
-	// if ((deleteImageButton = NewObject(BUTTON_GetClass(), NULL,
-	// 	GA_ID, DELETE_IMAGE_BUTTON_ID,
-	// 	BUTTON_TextPen, deleteButtonPen,
-	// 	#ifdef __AMIGAOS3__
-	// 	BUTTON_BackgroundPen, 0,
-	// 	#endif
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	BUTTON_Justification, BCJ_CENTER,
-	// 	GA_Text, (ULONG)"- Delete Image",
-	// 	GA_RelVerify, TRUE,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create delete image button\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((openSmallImageButton = NewObject(BUTTON_GetClass(), NULL,
-	// 	GA_ID, OPEN_SMALL_IMAGE_BUTTON_ID,
-	// 	GA_Disabled, TRUE,
-	// 	BUTTON_TextPen, sendMessageButtonPen,
-	// 	#ifdef __AMIGAOS3__
-	// 	BUTTON_BackgroundPen, 0,
-	// 	#endif
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	BUTTON_Justification, BCJ_CENTER,
-	// 	GA_Text, (ULONG)"Open Small Image",
-	// 	GA_RelVerify, TRUE,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create open small image button\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((openMediumImageButton = NewObject(BUTTON_GetClass(), NULL,
-	// 	GA_ID, OPEN_MEDIUM_IMAGE_BUTTON_ID,
-	// 	GA_Disabled, TRUE,
-	// 	BUTTON_TextPen, sendMessageButtonPen,
-	// 	#ifdef __AMIGAOS3__
-	// 	BUTTON_BackgroundPen, 0,
-	// 	#endif
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	BUTTON_Justification, BCJ_CENTER,
-	// 	GA_Text, (ULONG)"Open Medium Image",
-	// 	GA_RelVerify, TRUE,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create open medium image button\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((openLargeImageButton = NewObject(BUTTON_GetClass(), NULL,
-	// 	GA_ID, OPEN_LARGE_IMAGE_BUTTON_ID,
-	// 	GA_Disabled, TRUE,
-	// 	BUTTON_TextPen, sendMessageButtonPen,
-	// 	#ifdef __AMIGAOS3__
-	// 	BUTTON_BackgroundPen, 0,
-	// 	#endif
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	BUTTON_Justification, BCJ_CENTER,
-	// 	GA_Text, (ULONG)"Open Large Image",
-	// 	GA_RelVerify, TRUE,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create open large image button\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((openOriginalImageButton = NewObject(BUTTON_GetClass(), NULL,
-	// 	GA_ID, OPEN_ORIGINAL_IMAGE_BUTTON_ID,
-	// 	GA_Disabled, TRUE,
-	// 	BUTTON_TextPen, sendMessageButtonPen,
-	// 	#ifdef __AMIGAOS3__
-	// 	BUTTON_BackgroundPen, 0,
-	// 	#endif
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	BUTTON_Justification, BCJ_CENTER,
-	// 	GA_Text, (ULONG)"Open Original Image",
-	// 	GA_RelVerify, TRUE,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not open original image button\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((saveCopyButton = NewObject(BUTTON_GetClass(), NULL,
-	// 	GA_ID, SAVE_COPY_BUTTON_ID,
-	// 	GA_Disabled, TRUE,
-	// 	BUTTON_TextPen, sendMessageButtonPen,
-	// 	#ifdef __AMIGAOS3__
-	// 	BUTTON_BackgroundPen, 0,
-	// 	#endif
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	BUTTON_Justification, BCJ_CENTER,
-	// 	GA_Text, (ULONG)"Save Copy",
-	// 	GA_RelVerify, TRUE,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not save copy button\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((imageHistoryButtonsLayout = NewObject(LAYOUT_GetClass(), NULL,
-	// 	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-	// 	LAYOUT_SpaceInner, TRUE,
-	// 	LAYOUT_SpaceOuter, TRUE,
-	// 	LAYOUT_AddChild, newImageButton,
-	// 	CHILD_WeightedHeight, 5,
-	// 	LAYOUT_AddChild, deleteImageButton,
-	// 	CHILD_WeightedHeight, 5,
-	// 	LAYOUT_AddChild, imageListBrowser,
-	// 	CHILD_WeightedWidth, 90,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create image history buttons layout\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((newChatButton = NewObject(BUTTON_GetClass(), NULL,
-	// 	GA_ID, NEW_CHAT_BUTTON_ID,
-	// 	BUTTON_TextPen, newChatButtonPen,
-	// 	#ifdef __AMIGAOS3__
-	// 	BUTTON_BackgroundPen, 0,
-	// 	#endif
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	BUTTON_Justification, BCJ_CENTER,
-	// 	GA_Text, (ULONG)"+ New Chat",
-	// 	GA_RelVerify, TRUE,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create new chat button\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((deleteChatButton = NewObject(BUTTON_GetClass(), NULL,
-	// 	GA_ID, DELETE_CHAT_BUTTON_ID,
-	// 	BUTTON_TextPen, deleteButtonPen,
-	// 	#ifdef __AMIGAOS3__
-	// 	BUTTON_BackgroundPen, 0,
-	// 	#endif
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	BUTTON_Justification, BCJ_CENTER,
-	// 	GA_Text, (ULONG)"- Delete Chat",
-	// 	GA_RelVerify, TRUE,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create delete chat button\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((conversationListBrowser = NewObject(LISTBROWSER_GetClass(), NULL,
-	// 	GA_ID, CONVERSATION_LIST_BROWSER_ID,
-	// 	GA_RelVerify, TRUE,
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	LISTBROWSER_WrapText, TRUE,
-	// 	LISTBROWSER_AutoFit, TRUE,
-	// 	LISTBROWSER_ShowSelected, TRUE,
-	// 	LISTBROWSER_Labels, conversationList,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create conversation list browser\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((conversationsLayout = NewObject(LAYOUT_GetClass(), NULL,
-	// 	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-	// 	LAYOUT_SpaceInner, TRUE,
-	// 	LAYOUT_SpaceOuter, TRUE,
-	// 	LAYOUT_AddChild, newChatButton,
-	// 	CHILD_WeightedHeight, 5,
-	// 	LAYOUT_AddChild, deleteChatButton,
-	// 	CHILD_WeightedHeight, 5,
-	// 	LAYOUT_AddChild, conversationListBrowser,
-	// 	CHILD_WeightedWidth, 90,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create conversations layout\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((statusBar = NewObject(STRING_GetClass(), NULL,
-	// 	GA_ID, STATUS_BAR_ID,
-	// 	GA_RelVerify, TRUE,
-	// 	GA_ReadOnly, TRUE,
-	// 	GA_TextAttr, &uiTextAttr,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create text editor\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((textInputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
-	// 	GA_ID, TEXT_INPUT_TEXT_EDITOR_ID,
-	// 	GA_RelVerify, TRUE,
-	// 	GA_TextAttr, &chatTextAttr,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create text editor\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((chatOutputTextEditor = NewObject(TEXTEDITOR_GetClass(), NULL,
-	// 	GA_ID, CHAT_OUTPUT_TEXT_EDITOR_ID,
-	// 	GA_RelVerify, TRUE,
-	// 	GA_ReadOnly, TRUE,
-	// 	GA_TextAttr, &chatTextAttr,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	GA_TEXTEDITOR_ImportHook, GV_TEXTEDITOR_ImportHook_MIME,
-	// 	GA_TEXTEDITOR_ExportHook, GV_TEXTEDITOR_ExportHook_Plain,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create text editor\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((chatOutputScroller = NewObject(SCROLLER_GetClass(), NULL,
-	// 	GA_ID, CHAT_OUTPUT_SCROLLER_ID,
-	// 	GA_RelVerify, TRUE,
-	// 	ICA_TARGET, ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create scroller\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((chatInputLayout = NewObject(LAYOUT_GetClass(), NULL,
-	// 	LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
-	// 	LAYOUT_HorizAlignment, LALIGN_CENTER,
-	// 	LAYOUT_SpaceInner, TRUE,
-	// 	LAYOUT_SpaceOuter, TRUE,
-	// 	LAYOUT_AddChild, textInputTextEditor,
-	// 	CHILD_WeightedWidth, 80,
-	// 	CHILD_NoDispose, TRUE,
-	// 	LAYOUT_AddChild, sendMessageButton,
-	// 	CHILD_WeightedWidth, 20,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create chat input layout\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((chatOutputLayout = NewObject(LAYOUT_GetClass(), NULL,
-	// 	LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
-	// 	LAYOUT_HorizAlignment, LALIGN_CENTER,
-	// 	LAYOUT_SpaceInner, TRUE,
-	// 	LAYOUT_SpaceOuter, TRUE,
-	// 	LAYOUT_AddChild, chatOutputTextEditor,
-	// 	CHILD_WeightedWidth, 100,
-	// 	LAYOUT_AddChild, chatOutputScroller,
-	// 	CHILD_WeightedWidth, 10,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create chat output layout\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((chatTextBoxesLayout = NewObject(LAYOUT_GetClass(), NULL,
-	// 	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-	// 	LAYOUT_SpaceInner, TRUE,
-	// 	LAYOUT_SpaceOuter, TRUE,
-	// 	LAYOUT_AddChild, chatOutputLayout,
-	// 	CHILD_WeightedHeight, 70,
-	// 	LAYOUT_AddChild, chatInputLayout,
-	// 	CHILD_WeightedHeight, 20,
-	// 	LAYOUT_AddChild, statusBar,
-	// 	CHILD_WeightedHeight, 10,
-	// 	CHILD_NoDispose, TRUE,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create chat layout\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((chatModeLayout = NewObject(LAYOUT_GetClass(), NULL,
-	// 	LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
-	// 	LAYOUT_SpaceInner, TRUE,
-	// 	LAYOUT_SpaceOuter, TRUE,
-	// 	LAYOUT_AddChild, conversationsLayout,
-	// 	CHILD_WeightedWidth, 30,
-	// 	LAYOUT_AddChild, chatTextBoxesLayout,
-	// 	CHILD_WeightedWidth, 70,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create main layout\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((imageGenerationInputLayout = NewObject(LAYOUT_GetClass(), NULL,
-	// 	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-	// 	LAYOUT_SpaceInner, TRUE,
-	// 	LAYOUT_SpaceOuter, TRUE,
-	// 	LAYOUT_AddChild, openSmallImageButton,
-	// 	CHILD_WeightedHeight, 10,
-	// 	LAYOUT_AddChild, openMediumImageButton,
-	// 	CHILD_WeightedHeight, 10,
-	// 	LAYOUT_AddChild, openLargeImageButton,
-	// 	CHILD_WeightedHeight, 10,
-	// 	LAYOUT_AddChild, openOriginalImageButton,
-	// 	CHILD_WeightedHeight, 10,
-	// 	LAYOUT_AddChild, saveCopyButton,
-	// 	CHILD_WeightedHeight, 10,
-	// 	LAYOUT_AddChild, textInputTextEditor,
-	// 	CHILD_WeightedHeight, 40,
-	// 	CHILD_NoDispose, TRUE,
-	// 	LAYOUT_AddChild, createImageButton,
-	// 	CHILD_WeightedHeight, 10,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create image generation input layout\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((imageGenerationTextBoxesLayout = NewObject(LAYOUT_GetClass(), NULL,
-	// 	LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-	// 	LAYOUT_SpaceInner, TRUE,
-	// 	LAYOUT_SpaceOuter, TRUE,
-	// 	LAYOUT_AddChild, imageGenerationInputLayout,
-	// 	CHILD_WeightedHeight, 90,
-	// 	LAYOUT_AddChild, statusBar,
-	// 	CHILD_WeightedHeight, 10,
-	// 	CHILD_NoDispose, TRUE,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create chat layout\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((imageGenerationModeLayout = NewObject(LAYOUT_GetClass(), NULL,
-	// 	LAYOUT_Orientation, LAYOUT_ORIENT_HORIZ,
-	// 	LAYOUT_SpaceInner, TRUE,
-	// 	LAYOUT_SpaceOuter, TRUE,
-	// 	LAYOUT_AddChild, imageHistoryButtonsLayout,
-	// 	CHILD_WeightedWidth, 30,
-	// 	LAYOUT_AddChild, imageGenerationTextBoxesLayout,
-	// 	CHILD_WeightedWidth, 70,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create image generation layout\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((modeClickTabOld = NewObject(CLICKTAB_GetClass(), NULL,
-	// 	GA_ID, CLICKTAB_MODE_SELECTION_ID,
-	// 	GA_RelVerify, TRUE,
-	// 	CLICKTAB_Labels, modeSelectionTabList,
-	// 	CLICKTAB_AutoFit, TRUE,
-	// 	CLICKTAB_PageGroup, NewObject(PAGE_GetClass(), NULL,
-    //         PAGE_Add,       chatModeLayout,
-    //         PAGE_Add,       imageGenerationModeLayout,
-    //     TAG_DONE),
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create mode click tab\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// Object *layoutToOpen;
-	// if (isAmigaOS3X) {
-	// 	switch (selectedMode) {
-	// 		case MODE_SELECTION_TAB_CHAT_ID:
-	// 			layoutToOpen = chatModeLayout;
-	// 			break;
-	// 		case MODE_SELECTION_TAB_IMAGE_GENERATION_ID:
-	// 			layoutToOpen = imageGenerationModeLayout;
-	// 			break;
-	// 		default:
-	// 			layoutToOpen = chatModeLayout;
-	// 			break;
-	// 	}
-	// } else {
-	// 	layoutToOpen = modeClickTabOld;
-	// }
-
-	// if (!isPublicScreen) {
-	// 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEditorColorMap, TAG_DONE);
-	// 	if (!isAmigaOS3X || selectedMode == MODE_SELECTION_TAB_CHAT_ID)
-	// 		SetGadgetAttrs(chatOutputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_ColorMap, &textEditorColorMap, TAG_DONE);
-	// }
-
-
-	// For some reason it won't let you paste text into the empty text editor unless you do this
-	// DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_InsertText, NULL, "", GV_TEXTEDITOR_InsertText_Bottom);;
+	loadImages();
 
 	return RETURN_OK;
 }
@@ -922,26 +481,6 @@ static void addTextToConversation(struct Conversation *conversation, STRPTR text
 }
 
 /**
- * Add an image to the image list
- * @param image The image to add to the imagelist
-**/
-static void addImageToImageList(struct GeneratedImage *image) {
-	// struct Node *node;
-	// if ((node = AllocListBrowserNode(1,
-	// 	LBNCA_CopyText, TRUE,
-	// 	LBNCA_Text, image->name,
-	// 	LBNA_UserData, (ULONG)image,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create image list browser node\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
-	// AddHead(imageList, node);
-	// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
-}
-
-/**
  * Prints the conversation to the conversation window
  * @param conversation the conversation to display
 **/
@@ -1015,6 +554,25 @@ struct Conversation* copyConversation(struct Conversation *conversation) {
 }
 
 /**
+ * Copy a generated image
+ * @param generatedImage The generated image to copy
+ * @return A pointer to the copied generated image
+**/
+struct GeneratedImage* copyGeneratedImage(struct GeneratedImage *generatedImage) {
+	struct GeneratedImage *newEntry = AllocVec(sizeof(struct GeneratedImage), MEMF_CLEAR);
+	newEntry->name = AllocVec(strlen(generatedImage->name) + 1, MEMF_CLEAR);
+	strncpy(newEntry->name, generatedImage->name, strlen(generatedImage->name));
+	newEntry->filePath = AllocVec(strlen(generatedImage->filePath) + 1, MEMF_CLEAR);
+	strncpy(newEntry->filePath, generatedImage->filePath, strlen(generatedImage->filePath));
+	newEntry->prompt = AllocVec(strlen(generatedImage->prompt) + 1, MEMF_CLEAR);
+	strncpy(newEntry->prompt, generatedImage->prompt, strlen(generatedImage->prompt));
+	newEntry->imageModel = generatedImage->imageModel;
+	newEntry->width = generatedImage->width;
+	newEntry->height = generatedImage->height;
+    return (newEntry);
+}
+
+/**
  * Free the image list
 **/
 static void freeImageList() {
@@ -1055,37 +613,6 @@ static void saveImageCopy(struct GeneratedImage *image) {
 	// 		FreeVec(fullPath);
 	// 	}
 	// 	FreeAslRequest(fileReq);
-	// }
-}
-
-/**
- * Remove an image from the image list
- * @param image The image to remove from the image list
-**/
-static void removeImageFromImageList(struct GeneratedImage *image) {
-	// if (image == NULL) return;
-	// struct Node *node = imageList->lh_Head;
-	// while (node != NULL) {
-	// 	struct GeneratedImage *listBrowserImage;
-	// 	GetListBrowserNodeAttrs(node, LBNA_UserData, (struct GeneratedImage *)&listBrowserImage, TAG_END);
-	// 	if (listBrowserImage == image) {
-	// 		#ifdef __AMIGAOS3__
-	// 		DeleteFile(image->filePath);
-	// 		#else
-	// 		Delete(image->filePath);
-	// 		#endif
-	// 		// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Selected, -1, TAG_DONE);
-	// 		// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, ~0, TAG_DONE);
-	// 		Remove(node);
-	// 		FreeListBrowserNode(node);
-	// 		// SetGadgetAttrs(imageListBrowser, mainWindow, NULL, LISTBROWSER_Labels, imageList, TAG_DONE);
-	// 		FreeVec(image->filePath);
-	// 		FreeVec(image->name);
-	// 		FreeVec(image->prompt);
-	// 		FreeVec(image);
-	// 		return;
-	// 	}
-	// 	node = node->ln_Succ;
 	// }
 }
 
@@ -1652,51 +1179,6 @@ void displayError(STRPTR message) {
 }
 
 /**
- * Opens a requester for the user to enter the chat system
-**/
-static void openChatSystemRequester() {
-	// STRPTR buffer = AllocVec(CHAT_SYSTEM_LENGTH + 1, MEMF_ANY | MEMF_CLEAR);
-	// if (buffer == NULL) {
-	// 	displayError("Failed to allocate memory for chat system buffer");
-	// 	return;
-	// }
-	// if (config.chatSystem != NULL) {
-		// strncpy(buffer, config.chatSystem, CHAT_SYSTEM_LENGTH);
-	// }
-	// Object *chatSystemRequester = NewObject(REQUESTER_GetClass(), NULL,
-	// 	REQ_Type, REQTYPE_STRING,
-	// 	REQ_TitleText, "Enter how you would like AmigaGPT to respond",
-	// 	REQ_BodyText, "If you would like AmigaGPT to respond in a\n"
-	// 				  "certain way, or add some personality, type\n"
-	// 				  "it in here. For example, you could type\n" 
-	// 				  "\"Speak like a pirate\" or \"Speak like a\n"
-	// 				  "robot\". If you would like AmigaGPT to respond\n"
-	// 				  "normally, leave this blank. This setting will\n"
-	// 				  "be applied to new conversations only.",
-	// 	REQ_GadgetText, "OK|Cancel",
-	// 	REQ_Image, REQIMAGE_INFO,
-	// 	REQS_AllowEmpty, TRUE,
-	// 	REQS_Buffer, buffer,
-	// 	REQS_MaxChars, CHAT_SYSTEM_LENGTH,
-	// 	REQ_ForceFocus, TRUE,
-	// 	TAG_DONE);
-
-	// if (chatSystemRequester) {
-	// 	ULONG result = OpenRequester(chatSystemRequester, mainWindow);
-	// 	if (result == 1) {
-	// 		if (config.chatSystem != NULL) {
-	// 			FreeVec(config.chatSystem);
-	// 		}
-	// 		config.chatSystem = AllocVec(strlen(buffer) + 1, MEMF_ANY | MEMF_CLEAR);
-	// 		strncpy(config.chatSystem, buffer, strlen(buffer));
-	// 		writeConfig();
-	// 	}
-	// 	DisposeObject(chatSystemRequester);
-	// }
-	// FreeVec(buffer);
-}
-
-/**
  * Saves the conversations to disk
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
@@ -1750,196 +1232,194 @@ LONG saveConversations() {
  * Saves the images to disk
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
-static LONG saveImages() {
-	// BPTR file = Open(PROGDIR"image-history.json", MODE_NEWFILE);
-	// if (file == 0) {
-	// 	displayError("Failed to create image history file. Image history will not be saved.");
-	// 	return RETURN_ERROR;
-	// }
+LONG saveImages() {
+	BPTR file = Open(PROGDIR"image-history.json", MODE_NEWFILE);
+	if (file == 0) {
+		displayError("Failed to create image history file. Image history will not be saved.");
+		return RETURN_ERROR;
+	}
 
-	// struct json_object *imagesJsonArray = json_object_new_array();
-	// struct json_object *imageJsonObject;
-	// struct Node *imageListNode = imageList->lh_Head;
-	// while (imageListNode->ln_Succ) {
-	// 	imageJsonObject = json_object_new_object();
-	// 	struct GeneratedImage *generatedImage;
-	// 	GetListBrowserNodeAttrs(imageListNode, LBNA_UserData, &generatedImage, TAG_END);
-	// 	json_object_object_add(imageJsonObject, "name", json_object_new_string(generatedImage->name));
-	// 	json_object_object_add(imageJsonObject, "filePath", json_object_new_string(generatedImage->filePath));
-	// 	json_object_object_add(imageJsonObject, "prompt", json_object_new_string(generatedImage->prompt));
-	// 	json_object_object_add(imageJsonObject, "imageModel", json_object_new_int(generatedImage->imageModel));
-	// 	json_object_object_add(imageJsonObject, "width", json_object_new_int(generatedImage->width));
-	// 	json_object_object_add(imageJsonObject, "height", json_object_new_int(generatedImage->height));
-	// 	json_object_array_add(imagesJsonArray, imageJsonObject);
-	// 	imageListNode = imageListNode->ln_Succ;
-	// }
+	LONG totalImageCount;
+	get(imageListObject, MUIA_NList_Entries, &totalImageCount);
 
-	// STRPTR imagesJsonString = (STRPTR)json_object_to_json_string_ext(imagesJsonArray, JSON_C_TO_STRING_PRETTY);
+	struct json_object *imagesJsonArray = json_object_new_array();
+	for (LONG i = 0; i < totalImageCount; i++) {
+		struct json_object *imageJsonObject = json_object_new_object();
+		struct GeneratedImage *generatedImage;
+		
+		DoMethod(imageListObject, MUIM_NList_GetEntry, i, &generatedImage);
+		json_object_object_add(imageJsonObject, "name", json_object_new_string(generatedImage->name));
+		json_object_object_add(imageJsonObject, "filePath", json_object_new_string(generatedImage->filePath));
+		json_object_object_add(imageJsonObject, "prompt", json_object_new_string(generatedImage->prompt));
+		json_object_object_add(imageJsonObject, "imageModel", json_object_new_int(generatedImage->imageModel));
+		json_object_object_add(imageJsonObject, "width", json_object_new_int(generatedImage->width));
+		json_object_object_add(imageJsonObject, "height", json_object_new_int(generatedImage->height));
+		json_object_array_add(imagesJsonArray, imageJsonObject);
+	}
 
-	// if (Write(file, imagesJsonString, strlen(imagesJsonString)) != (LONG)strlen(imagesJsonString)) {
-	// 	displayError("Failed to write to image history file. Image history will not be saved.");
-	// 	Close(file);
-	// 	json_object_put(imagesJsonArray);
-	// 	return RETURN_ERROR;
-	// }
+	STRPTR imagesJsonString = (STRPTR)json_object_to_json_string_ext(imagesJsonArray, JSON_C_TO_STRING_PRETTY);
 
-	// Close(file);
-	// json_object_put(imagesJsonArray);
+	if (Write(file, imagesJsonString, strlen(imagesJsonString)) != (LONG)strlen(imagesJsonString)) {
+		displayError("Failed to write to image history file. Image history will not be saved.");
+		Close(file);
+		json_object_put(imagesJsonArray);
+		return RETURN_ERROR;
+	}
+
+	Close(file);
+	json_object_put(imagesJsonArray);
 	return RETURN_OK;
 }
 
-static void createImage() {
+void createImage() {
 	struct json_object *response;
 
-	// SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 	// SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 	// SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 	// SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 	// SetGadgetAttrs(openOriginalImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 	// SetGadgetAttrs(saveCopyButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	// SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	// SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
 
-	// STRPTR text = DoGadgetMethod(textInputTextEditor, mainWindow, NULL, GM_TEXTEDITOR_ExportText, NULL);
+	set(createImageButton, MUIA_Disabled, TRUE);
+	set(newImageButton, MUIA_Disabled, TRUE);
+	set(deleteImageButton, MUIA_Disabled, TRUE);
+	set(imageInputTextEditor, MUIA_Disabled, TRUE);
+	STRPTR text = DoMethod(imageInputTextEditor, MUIM_TextEditor_ExportText);
+	// Remove trailing newline characters
+	while (text[strlen(text) - 1] == '\n') {
+		text[strlen(text) - 1] = '\0';
+	}
+	STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
 
-	// // Remove trailing newline characters
-	// while (text[strlen(text) - 1] == '\n') {
-	// 	text[strlen(text) - 1] = '\0';
-	// }
-	// STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
+	const enum ImageSize imageSize = config.imageModel == DALL_E_2 ? config.imageSizeDallE2 : config.imageSizeDallE3;
+	response = postImageCreationRequestToOpenAI(textUTF_8, config.imageModel, imageSize, config.openAiApiKey);
+	if (response == NULL) {
+		displayError("Error connecting. Please try again.");
+		set(createImageButton, MUIA_Disabled, FALSE);
+		set(newImageButton, MUIA_Disabled, FALSE);
+		set(deleteImageButton, MUIA_Disabled, FALSE);
+		set(imageInputTextEditor, MUIA_Disabled, FALSE);
+		updateStatusBar("Error", redPen);
+		return;
+	}
+	struct json_object *error;
 
-	// const enum ImageSize imageSize = config.imageModel == DALL_E_2 ? config.imageSizeDallE2 : config.imageSizeDallE3;
-	// response = postImageCreationRequestToOpenAI(textUTF_8, config.imageModel, imageSize, config.openAiApiKey);
-	// if (response == NULL) {
-	// 	displayError("Error connecting. Please try again.");
-	// 	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// 	SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// 	SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// 	updateStatusBar("Error", 6);
-	// 	return;
-	// }
-	// struct json_object *error;
+	if (json_object_object_get_ex(response, "error", &error)) {
+		struct json_object *message = json_object_object_get(error, "message");
+		STRPTR messageString = json_object_get_string(message);
+		displayError(messageString);
+		set(imageInputTextEditor, MUIA_TextEditor_Contents, text);
+		json_object_put(response);
+		set(createImageButton, MUIA_Disabled, FALSE);
+		set(newImageButton, MUIA_Disabled, FALSE);
+		set(deleteImageButton, MUIA_Disabled, FALSE);
+		set(imageInputTextEditor, MUIA_Disabled, FALSE);
+		updateStatusBar("Error", 6);
+		json_object_put(response);
+		return;
+	}
 
-	// if (json_object_object_get_ex(response, "error", &error)) {
-	// 	struct json_object *message = json_object_object_get(error, "message");
-	// 	STRPTR messageString = json_object_get_string(message);
-	// 	displayError(messageString);
-	// 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_TEXTEDITOR_Contents, text, TAG_DONE);
-	// 	json_object_put(response);
-	// 	SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// 	SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// 	SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// 	SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// 	updateStatusBar("Error", 6);
-	// 	json_object_put(response);
-	// 	return;
-	// }
+	struct array_list *data = json_object_get_array(json_object_object_get(response, "data"));
+	struct json_object *dataObject = (struct json_object *)data->array[0];
 
-	// struct array_list *data = json_object_get_array(json_object_object_get(response, "data"));
-	// struct json_object *dataObject = (struct json_object *)data->array[0];
+	STRPTR url = json_object_get_string(json_object_object_get(dataObject, "url"));
 
-	// STRPTR url = json_object_get_string(json_object_object_get(dataObject, "url"));
+	CreateDir(PROGDIR"images");
 
-	// CreateDir(PROGDIR"images");
+	// Generate unique ID for the image
+	UBYTE fullPath[30] = "";
+	UBYTE id[11] = "";
+	CONST_STRPTR idChars = "abcdefghijklmnopqrstuvwxyz0123456789";
+	srand(time(NULL));
+	for (int i = 0; i < 9; i++) {
+		id[i] = idChars[rand() % strlen(idChars)];
+	}
+	snprintf(fullPath, sizeof(fullPath), PROGDIR"images/%s.png", id);
 
-	// // Generate unique ID for the image
-	// UBYTE fullPath[30] = "";
-	// UBYTE id[11] = "";
-	// CONST_STRPTR idChars = "abcdefghijklmnopqrstuvwxyz0123456789";
-	// srand(time(NULL));
-	// for (int i = 0; i < 9; i++) {
-	// 	id[i] = idChars[rand() % strlen(idChars)];
-	// }
-	// snprintf(fullPath, sizeof(fullPath), PROGDIR"images/%s.png", id);
+	downloadFile(url, fullPath);
 
-	// downloadFile(url, fullPath);
+	json_object_put(response);
 
-	// json_object_put(response);
+	WORD imageWidth, imageHeight;
+	switch (imageSize) {
+		case IMAGE_SIZE_256x256:
+			imageWidth = 256;
+			imageHeight = 256;
+			break;
+		case IMAGE_SIZE_512x512:
+			imageWidth = 512;
+			imageHeight = 512;
+			break;
+		case IMAGE_SIZE_1024x1024:
+			imageWidth = 1024;
+			imageHeight = 1024;
+			break;
+		case IMAGE_SIZE_1792x1024:
+			imageWidth = 1792;
+			imageHeight = 1024;
+			break;
+		case IMAGE_SIZE_1024x1792:
+			imageWidth = 1024;
+			imageHeight = 1792;
+			break;
+		default:
+			printf("Invalid image size\n");
+			imageWidth = 256;
+			imageHeight = 256;
+			break;
+	}
 
-	// WORD imageWidth, imageHeight;
-	// switch (imageSize) {
-	// 	case IMAGE_SIZE_256x256:
-	// 		imageWidth = 256;
-	// 		imageHeight = 256;
-	// 		break;
-	// 	case IMAGE_SIZE_512x512:
-	// 		imageWidth = 512;
-	// 		imageHeight = 512;
-	// 		break;
-	// 	case IMAGE_SIZE_1024x1024:
-	// 		imageWidth = 1024;
-	// 		imageHeight = 1024;
-	// 		break;
-	// 	case IMAGE_SIZE_1792x1024:
-	// 		imageWidth = 1792;
-	// 		imageHeight = 1024;
-	// 		break;
-	// 	case IMAGE_SIZE_1024x1792:
-	// 		imageWidth = 1024;
-	// 		imageHeight = 1792;
-	// 		break;
-	// 	default:
-	// 		printf("Invalid image size\n");
-	// 		imageWidth = 256;
-	// 		imageHeight = 256;
-	// 		break;
-	// }
-
-	// updateStatusBar("Generating image name...", 7);
-	// struct MinList *imageNameConversation = newConversation();
-	// addTextToConversation(imageNameConversation, text, "user");
-	// addTextToConversation(imageNameConversation, "generate a short title for this image and don't enclose the title in quotes or prefix the response with anything", "user");
-	// struct json_object **responses = postChatMessageToOpenAI(imageNameConversation, config.chatModel, config.openAiApiKey, FALSE);
+	updateStatusBar("Generating image name...", 7);
+	struct Conversation *imageNameConversation = newConversation();
+	addTextToConversation(imageNameConversation, text, "user");
+	addTextToConversation(imageNameConversation, "generate a short title for this image and don't enclose the title in quotes or prefix the response with anything", "user");
+	struct json_object **responses = postChatMessageToOpenAI(imageNameConversation, config.chatModel, config.openAiApiKey, FALSE);
 	
-	// struct GeneratedImage *generatedImage = AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
-	// if (responses == NULL) {
-	// 	displayError("Failed to generate image name. Using ID instead.");
-	// 	updateStatusBar("Error", 6);
-	// } else if (responses[0] != NULL) {
-	// 	STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
-	// 	formatText(responseString);
-	// 	generatedImage->name = AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
-	// 	strncpy(generatedImage->name, responseString, strlen(responseString));
-	// 	updateStatusBar("Ready", 5);
-	// 	json_object_put(responses[0]);
-	// 	FreeVec(responses);
-	// } else {
-	// 	generatedImage->name = AllocVec(11, MEMF_ANY | MEMF_CLEAR);
-	// 	strncpy(generatedImage->name, id, 10);
-	// 	updateStatusBar("Ready", 5);
-	// 	if (responses != NULL) {
-	// 		FreeVec(responses);
-	// 	}
-	// 	displayError("Failed to generate image name. Using ID instead.");
-	// }
-	// freeConversation(imageNameConversation);
+	struct GeneratedImage *generatedImage = AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
+	if (responses == NULL) {
+		displayError("Failed to generate image name. Using ID instead.");
+		updateStatusBar("Error", 6);
+	} else if (responses[0] != NULL) {
+		STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
+		formatText(responseString);
+		generatedImage->name = AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
+		strncpy(generatedImage->name, responseString, strlen(responseString));
+		updateStatusBar("Ready", 5);
+		json_object_put(responses[0]);
+		FreeVec(responses);
+	} else {
+		generatedImage->name = AllocVec(11, MEMF_ANY | MEMF_CLEAR);
+		strncpy(generatedImage->name, id, 10);
+		updateStatusBar("Ready", 5);
+		if (responses != NULL) {
+			FreeVec(responses);
+		}
+		displayError("Failed to generate image name. Using ID instead.");
+	}
+	freeConversation(imageNameConversation);
 
-	// generatedImage->filePath = AllocVec(strlen(fullPath) + 1, MEMF_ANY | MEMF_CLEAR);
-	// strncpy(generatedImage->filePath, fullPath, strlen(fullPath));
-	// generatedImage->prompt = AllocVec(strlen(text) + 1, MEMF_ANY | MEMF_CLEAR);
-	// strncpy(generatedImage->prompt, text, strlen(text));
-	// generatedImage->imageModel = config.imageModel;
-	// generatedImage->width = imageWidth;
-	// generatedImage->height = imageHeight;
-	// addImageToImageList(generatedImage);
-	// currentImage = generatedImage;
+	generatedImage->filePath = AllocVec(strlen(fullPath) + 1, MEMF_ANY | MEMF_CLEAR);
+	strncpy(generatedImage->filePath, fullPath, strlen(fullPath));
+	generatedImage->prompt = AllocVec(strlen(text) + 1, MEMF_ANY | MEMF_CLEAR);
+	strncpy(generatedImage->prompt, text, strlen(text));
+	generatedImage->imageModel = config.imageModel;
+	generatedImage->width = imageWidth;
+	generatedImage->height = imageHeight;
+	DoMethod(imageListObject, MUIM_NList_InsertSingle, generatedImage, MUIV_NList_Insert_Top);
+	currentImage = generatedImage;
 
-	// SetGadgetAttrs(createImageButton, mainWindow, NULL, GA_Disabled, TRUE, TAG_DONE);
-	// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, TRUE, TAG_DONE);
 	// SetGadgetAttrs(openSmallImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	// SetGadgetAttrs(openMediumImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	// SetGadgetAttrs(openLargeImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	// SetGadgetAttrs(openOriginalImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
 	// SetGadgetAttrs(saveCopyButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// SetGadgetAttrs(newImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// SetGadgetAttrs(deleteImageButton, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_Disabled, FALSE, TAG_DONE);
-	// SetGadgetAttrs(textInputTextEditor, mainWindow, NULL, GA_ReadOnly, TRUE, TAG_DONE);
+	set(createImageButton, MUIA_Disabled, FALSE);
+	set(newImageButton, MUIA_Disabled, FALSE);
+	set(deleteImageButton, MUIA_Disabled, FALSE);
+	set(imageInputTextEditor, MUIA_Disabled, FALSE);
 
-	// FreeVec(text);
-	// FreeVec(textUTF_8);
+	FreeVec(text);
+	FreeVec(textUTF_8);
 	return;
 }
 
@@ -2278,6 +1758,7 @@ static LONG loadImages() {
 	}
 
 	for (UWORD i = 0; i < json_object_array_length(imagesJsonArray); i++) {
+		printf("Loading image %d\n", i);
 		struct json_object *imageJsonObject = json_object_array_get_idx(imagesJsonArray, i);
 		struct json_object *imageNameJsonObject;
 		if (!json_object_object_get_ex(imageJsonObject, "name", &imageNameJsonObject)) {
@@ -2349,7 +1830,7 @@ static LONG loadImages() {
 		generatedImage->imageModel = imageModel;
 		generatedImage->width = imageWidth;
 		generatedImage->height = imageHeight;
-		addImageToImageList(generatedImage);
+		DoMethod(imageListObject, MUIM_NList_InsertSingle, generatedImage, MUIV_NList_Insert_Top);
 	}
 
 	json_object_put(imagesJsonArray);

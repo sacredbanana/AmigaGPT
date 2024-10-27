@@ -22,6 +22,11 @@ Object *chatOutputScroller;
 Object *statusBar;
 Object *conversationListObject;
 Object *loadingBar;
+Object *imageInputTextEditor;
+Object *createImageButton;
+Object *newImageButton;
+Object *deleteImageButton;
+Object *imageListObject;
 WORD pens[NUMDRIPENS + 1];
 LONG textEditorColorMap[] = {5,10,6,3,6,6,4,0,1,6,6,6,6,6,6,6};
 LONG sendMessageButtonPen;
@@ -29,6 +34,7 @@ LONG newChatButtonPen;
 LONG deleteButtonPen;
 BOOL isPublicScreen;
 struct Conversation *currentConversation;
+struct GeneratedImage *currentImage;
 static char *Pages[]   = { "Chat Mode", "Image Generation Mode", NULL };
 
 enum ButtonLabels {
@@ -43,27 +49,51 @@ CONST_STRPTR BUTTON_LABEL_NAMES[] = {
 	"\nSend\n"
 };
 
-HOOKPROTONHNO(ConstructLI_TextFunc, APTR, struct NList_ConstructMessage *ncm) {
+HOOKPROTONHNO(ConstructConversationLI_TextFunc, APTR, struct NList_ConstructMessage *ncm) {
 	struct Conversation *oldEntry = (struct Conversation *)ncm->entry;
 	struct Conversation *newEntry = copyConversation(oldEntry);
     return (newEntry);
 }
-MakeHook(ConstructLI_TextHook, ConstructLI_TextFunc);
+MakeHook(ConstructConversationLI_TextHook, ConstructConversationLI_TextFunc);
 
-HOOKPROTONHNO(DestructLI_TextFunc, void, struct NList_DestructMessage *ndm) {
+HOOKPROTONHNO(DestructConversationLI_TextFunc, void, struct NList_DestructMessage *ndm) {
 	if (ndm->entry)
 		freeConversation((struct Conversation *)ndm->entry);
 }
-MakeHook(DestructLI_TextHook, DestructLI_TextFunc);
+MakeHook(DestructConversationLI_TextHook, DestructConversationLI_TextFunc);
 
-HOOKPROTONHNO(DisplayLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
+HOOKPROTONHNO(DisplayConversationLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
   struct Conversation *entry = (struct Conversation *) ndm->entry;
   ndm->strings[0] = (STRPTR)entry->name;
 }
-MakeHook(DisplayLI_TextHook, DisplayLI_TextFunc);
+MakeHook(DisplayConversationLI_TextHook, DisplayConversationLI_TextFunc);
+
+HOOKPROTONHNO(ConstructImageLI_TextFunc, APTR, struct NList_ConstructMessage *ncm) {
+	struct GeneratedImage *oldEntry = (struct GeneratedImage *)ncm->entry;
+	struct GeneratedImage *newEntry = copyGeneratedImage(oldEntry);
+    return (newEntry);
+}
+MakeHook(ConstructImageLI_TextHook, ConstructImageLI_TextFunc);
+
+HOOKPROTONHNO(DestructImageLI_TextFunc, void, struct NList_DestructMessage *ndm) {
+	if (ndm->entry) {
+		struct GeneratedImage *entry = (struct GeneratedImage *)ndm->entry;
+		FreeVec(entry->name);
+		FreeVec(entry->filePath);
+		FreeVec(entry->prompt);
+		FreeVec(entry);
+	}
+}
+MakeHook(DestructImageLI_TextHook, DestructImageLI_TextFunc);
+
+HOOKPROTONHNO(DisplayImageLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
+  struct GeneratedImage *entry = (struct GeneratedImage *) ndm->entry;
+  ndm->strings[0] = (STRPTR)entry->name;
+}
+MakeHook(DisplayImageLI_TextHook, DisplayImageLI_TextFunc);
 
 HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
-	if (currentConversation != NULL)
+	if (currentImage != NULL)
 		freeConversation(currentConversation);
 
 	struct Conversation *conversation;
@@ -72,6 +102,20 @@ HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
 	displayConversation(currentConversation);
 }
 MakeHook(ConversationRowClickedHook, ConversationRowClickedFunc);
+
+HOOKPROTONHNONP(ImageRowClickedFunc, void) {
+	if (currentImage != NULL) {
+		FreeVec(currentImage->name);
+		FreeVec(currentImage->filePath);
+		FreeVec(currentImage->prompt);
+		FreeVec(currentImage);
+	}
+
+	struct GeneratedImage *image;
+	DoMethod(imageListObject, MUIM_NList_GetEntry, MUIV_NList_GetEntry_Active, &image);
+	currentImage = copyGeneratedImage(image);
+}
+MakeHook(ImageRowClickedHook, ImageRowClickedFunc);
 
 HOOKPROTONHNONP(NewChatButtonClickedFunc, void) {
 	currentConversation = NULL;
@@ -96,6 +140,16 @@ HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
 	}
 }
 MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
+
+HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
+	if (config.openAiApiKey != NULL && strlen(config.openAiApiKey) > 0) {
+		createImage();
+		saveImages();
+	} else {
+		displayError("Please enter your OpenAI API key in the Open AI settings in the menu.");
+	}
+}
+MakeHook(CreateImageButtonClickedHook, CreateImageButtonClickedFunc);
 
 HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
 	const UBYTE BUTTON_LABEL_BUFFER_SIZE = 64;
@@ -145,13 +199,13 @@ LONG createMainWindow() {
 						Child, VGroup, MUIA_Weight, 30,
 							// New chat button
 							Child, newChatButton = MUI_MakeObject(MUIO_Button, "",
-								MUIA_Width, 500,
+								// MUIA_Width, 500,
 								MUIA_CycleChain, TRUE,
 								MUIA_InputMode, MUIV_InputMode_RelVerify,
 							End,
 							// Delete chat button
 							Child, deleteChatButton = MUI_MakeObject(MUIO_Button, BUTTON_LABEL_NAMES[DELETE_CHAT_BUTTON_LABEL],
-								MUIA_Width, 500,
+								// MUIA_Width, 500,
 								MUIA_Background, MUII_FILL,
 								MUIA_CycleChain, TRUE,
 								MUIA_InputMode, MUIV_InputMode_RelVerify,
@@ -162,9 +216,9 @@ LONG createMainWindow() {
 								MUIA_NListview_NList, conversationListObject = NListObject,
 									MUIA_NList_DefaultObjectOnClick, TRUE,
 									MUIA_NList_MultiSelect, MUIV_NList_MultiSelect_None,
-									MUIA_NList_ConstructHook2, &ConstructLI_TextHook,
-									MUIA_NList_DestructHook2, &DestructLI_TextHook,
-									MUIA_NList_DisplayHook2, &DisplayLI_TextHook,
+									MUIA_NList_ConstructHook2, &ConstructConversationLI_TextHook,
+									MUIA_NList_DestructHook2, &DestructConversationLI_TextHook,
+									MUIA_NList_DisplayHook2, &DisplayConversationLI_TextHook,
 									MUIA_NList_Format, "BAR MINW=100 MAXW=200",
 									MUIA_NList_AutoVisible, TRUE,
 									MUIA_NList_TitleSeparator, FALSE,
@@ -224,6 +278,54 @@ LONG createMainWindow() {
 							End,
 						End,
 					End,
+					Child, HGroup,
+						Child, VGroup, MUIA_Weight, 30,
+							// New image button
+							Child, newImageButton = MUI_MakeObject(MUIO_Button, "New Image",
+								// MUIA_ObjectID, OBJECT_ID_NEW_IMAGE_BUTTON,
+								MUIA_CycleChain, TRUE,
+								MUIA_InputMode, MUIV_InputMode_RelVerify,
+							End,
+							// Delete image button
+							Child, deleteImageButton = MUI_MakeObject(MUIO_Button, "Delete Image",
+								// MUIA_ObjectID, OBJECT_ID_DELETE_IMAGE_BUTTON,
+								MUIA_CycleChain, TRUE,
+								MUIA_InputMode, MUIV_InputMode_RelVerify,
+							End,
+							// Image list
+							Child, NListviewObject,
+								MUIA_CycleChain, 1,
+								MUIA_NListview_NList, imageListObject = NListObject,
+									MUIA_NList_DefaultObjectOnClick, TRUE,
+									MUIA_NList_MultiSelect, MUIV_NList_MultiSelect_None,
+									MUIA_NList_ConstructHook2, &ConstructImageLI_TextHook,
+									MUIA_NList_DestructHook2, &DestructImageLI_TextHook,
+									MUIA_NList_DisplayHook2, &DisplayImageLI_TextHook,
+									MUIA_NList_Format, "BAR MINW=100 MAXW=200",
+									MUIA_NList_AutoVisible, TRUE,
+									MUIA_NList_TitleSeparator, FALSE,
+									MUIA_NList_Title, FALSE,
+									MUIA_NList_MinColSortable, 0,
+									MUIA_NList_Imports, MUIV_NList_Imports_All,
+									MUIA_NList_Exports, MUIV_NList_Exports_All,
+								End,
+							End,
+						End,
+						// Image input text editor
+						Child, imageInputTextEditor = TextEditorObject,
+							// MUIA_ObjectID, OBJECT_ID_IMAGE_INPUT_TEXT_EDITOR,
+							MUIA_TextEditor_ReadOnly, FALSE,
+							MUIA_TextEditor_TabSize, 4,
+							MUIA_TextEditor_Rows, 3,
+							MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+						End,
+						// Create image button
+						Child, createImageButton = MUI_MakeObject(MUIO_Button, "Create Image",
+							// MUIA_ObjectID, OBJECT_ID_CREATE_IMAGE_BUTTON,
+							MUIA_CycleChain, TRUE,
+							MUIA_InputMode, MUIV_InputMode_RelVerify,
+						End,
+					End,
 				End,
 			End,
 		End) == NULL) {
@@ -250,7 +352,10 @@ void addMainWindowActions() {
 			  MUIV_Notify_Application, 3, MUIM_CallHook, &DeleteChatButtonClickedHook, MUIV_TriggerValue);
 	DoMethod(sendMessageButton, MUIM_Notify, MUIA_Pressed, FALSE,
               sendMessageButton, 2, MUIM_CallHook, &SendMessageButtonClickedHook);
+	DoMethod(createImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
+			  createImageButton, 2, MUIM_CallHook, &CreateImageButtonClickedHook);
 	DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, MUIV_Notify_Window, 3, MUIM_CallHook, &ConversationRowClickedHook, MUIV_TriggerValue);
+	DoMethod(imageListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, MUIV_Notify_Window, 3, MUIM_CallHook, &ImageRowClickedHook, MUIV_TriggerValue);
 	DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 
 	  MUIV_Notify_Application, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 }
