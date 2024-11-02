@@ -5,12 +5,14 @@
 #include <datatypes/datatypesclass.h>
 #include <datatypes/pictureclass.h>
 #include <json-c/json.h>
+#include <intuition/icclass.h>
 #include <libraries/mui.h>
 #include <mui/Aboutbox_mcc.h>
 #include <mui/Busy_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
+#include <SDI_hook.h>
 #include <stdio.h>
 #include "AboutAmigaGPTWindow.h"
 #include "APIKeyRequesterWindow.h"
@@ -21,17 +23,20 @@
 #include "menu.h"
 #include "StartupOptionsWindow.h"
 #include "version.h"
+#include "datatypesclass.h"
 
 #ifdef __AMIGAOS4__
 struct MUIMasterIFace *IMUIMaster;
+struct DataTypesIFace *IDataTypes;
 #endif
 
 struct Library *MUIMasterBase;
+struct Library *DataTypesBase;
 Object *app;
 ULONG redPen, greenPen, bluePen, yellowPen;
-struct Window *imageWindow;
 struct Screen *screen;
 static Object *imageWindowObject;
+struct Window *imageWindow;
 static Object *dataTypeObject;
 static struct GeneratedImage *currentImage;
 
@@ -50,7 +55,6 @@ static void closeGUILibraries();
 static struct Conversation* newConversation();
 static void addTextToConversation(struct Conversation *conversation, STRPTR text, STRPTR role);
 static void saveImageCopy(struct GeneratedImage *image);
-static void openImage(struct GeneratedImage *generatedImage, WORD width, WORD height);
 static LONG loadConversations();
 static LONG loadImages();
 static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String);
@@ -155,12 +159,16 @@ static void closeGUILibraries() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG initVideo() {
+	
+
 	if (openGUILibraries() == RETURN_ERROR) {
 		return RETURN_ERROR;
 	}
 
 	if (createStartupOptionsWindow() == RETURN_ERROR)
 		return RETURN_ERROR;
+
+	// int m = create_datatypes_class();
 
 	if (createMainWindow() == RETURN_ERROR)
 		return RETURN_ERROR;
@@ -172,10 +180,29 @@ LONG initVideo() {
 		return RETURN_ERROR;
 
 	currentConversation = NULL;
-
-	// imageList = AllocVec(sizeof(struct List), MEMF_CLEAR);
-	// NewList(imageList);
 	currentImage = NULL;
+
+	if ((imageWindowObject = WindowObject,
+			MUIA_Window_Title, "Image",
+			MUIA_Window_Width, 320,
+			MUIA_Window_Height, 240,
+			MUIA_Window_CloseGadget, TRUE,
+			MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
+			MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
+			MUIA_Window_SizeRight, TRUE,
+			MUIA_Window_UseBottomBorderScroller, FALSE,
+			MUIA_Window_UseRightBorderScroller, FALSE,
+			MUIA_Window_UseLeftBorderScroller, FALSE,
+			WindowContents, VGroup,
+				// Child, TextObject,
+				// 	MUIA_Text_PreParse, "\33c",
+				// 	MUIA_Text_Contents, "Image",
+				// End,
+			End,
+		End) == NULL) {
+        displayError("Could not create image window");
+        return RETURN_ERROR;
+    }
 
 	if (!(app = ApplicationObject,
 		MUIA_Application_Base, "AmigaGPT",
@@ -190,10 +217,14 @@ LONG initVideo() {
 		SubWindow, mainWindowObject,
 		SubWindow, apiKeyRequesterWindowObject,
 		SubWindow, chatSystemRequesterWindowObject,
+		SubWindow, imageWindowObject,
 		End)) {
 		displayError("Could not create app!\n");
 		return RETURN_ERROR;
 	}
+
+	DoMethod(imageWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
+    get(imageWindowObject, MUIA_Window, &imageWindow);   
 
 	if (createAboutAmigaGPTWindow() == RETURN_OK)
 		DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
@@ -573,22 +604,6 @@ struct GeneratedImage* copyGeneratedImage(struct GeneratedImage *generatedImage)
 }
 
 /**
- * Free the image list
-**/
-static void freeImageList() {
-	// struct Node *imageListNode;
-	// while ((imageListNode = RemHead(imageList)) != NULL) {
-	// 	struct GeneratedImage *generatedImage;
-	// 	GetListBrowserNodeAttrs(imageListNode, LBNA_UserData, (ULONG *)&generatedImage, TAG_END);
-	// 	FreeVec(generatedImage->filePath);
-	// 	FreeVec(generatedImage->name);
-	// 	FreeVec(generatedImage->prompt);
-	// 	FreeVec(generatedImage);
-	// }
-	// FreeVec(imageList);
-}
-
-/**
  * Save a copy of the image
  * @param image The image to save a copy of
 **/ 
@@ -772,48 +787,6 @@ void startGUIRunLoop() {
 							removeImageFromImageList(currentImage);
 							currentImage = NULL;
 							saveImages();
-							break;
-						case OPEN_SMALL_IMAGE_BUTTON_ID:
-						{
-							if (currentImage->width == currentImage->height)
-								openImage(currentImage, 256, 256);
-							else if (currentImage->width > currentImage->height) {
-								LONG height = (currentImage->height * 256) / currentImage->width;
-								openImage(currentImage, 256, height);
-							} else {
-								LONG width = (currentImage->width * 256) / currentImage->height;
-								openImage(currentImage, width, 256);
-							}
-							break;
-						}
-						case OPEN_MEDIUM_IMAGE_BUTTON_ID:
-						{
-							if (currentImage->width == currentImage->height)
-								openImage(currentImage, 512, 512);
-							else if (currentImage->width > currentImage->height) {
-								LONG height = (currentImage->height * 512) / currentImage->width;
-								openImage(currentImage, 512, height);
-							} else {
-								LONG width = (currentImage->width * 512) / currentImage->height;
-								openImage(currentImage, width, 512);
-							}
-							break;
-						}
-						case OPEN_LARGE_IMAGE_BUTTON_ID:
-						{
-							if (currentImage->width == currentImage->height)
-								openImage(currentImage, 1024, 1024);
-							else if (currentImage->width > currentImage->height) {
-								LONG height = (currentImage->height * 1024) / currentImage->width;
-								openImage(currentImage, 1024, height);
-							} else {
-								LONG width = (currentImage->width * 1024) / currentImage->height;
-								openImage(currentImage, width, 1024);
-							}
-							break;
-						}
-						case OPEN_ORIGINAL_IMAGE_BUTTON_ID:
-							openImage(currentImage, currentImage->width, currentImage->height);
 							break;
 						case SAVE_COPY_BUTTON_ID:
 							saveImageCopy(currentImage);
@@ -1418,18 +1391,20 @@ void createImage() {
 	set(deleteImageButton, MUIA_Disabled, FALSE);
 	set(imageInputTextEditor, MUIA_Disabled, FALSE);
 
+	set(imageView, MUIA_Dtpic_Name, fullPath);
+
 	FreeVec(text);
 	FreeVec(textUTF_8);
 	return;
 }
 
 /**
- * Opens and displays the image with sfaling
+ * Opens and displays the image with scaling
  * @param image the image to open
  * @param width the width of the image
  * @param height the height of the image
 **/ 
-static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scaledHeight) {
+void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scaledHeight) {
 	if (image == NULL) return;
 	WORD lowestWidth = (screen->Width - 16) < scaledWidth ? (screen->Width - 16) : scaledWidth;
 	WORD lowestHeight = screen->Height < scaledHeight ? screen->Height : scaledHeight;
@@ -1445,6 +1420,15 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scale
 	// 	CHILD_MinWidth, lowestWidth,
 	// 	CHILD_MinHeight, lowestHeight,
 	// 	TAG_DONE);
+
+	set(imageWindowObject, MUIA_Window_Title, image->name);
+	set(imageWindowObject, MUIA_Window_Width, lowestWidth);
+	set(imageWindowObject, MUIA_Window_Height, lowestHeight);
+	set(imageWindowObject, MUIA_Window_Activate, TRUE);
+	set(imageWindowObject, MUIA_Window_Screen, screen);
+	set(imageWindowObject, MUIA_Window_Open, TRUE);
+	set(imageView, MUIA_DataTypes_FileName, image->filePath);
+	get(imageWindowObject, MUIA_Window, &imageWindow);
 
 	// if ((imageWindowObject = NewObject(WINDOW_GetClass(), NULL,
 	// 	WINDOW_Position, WPOS_CENTERSCREEN,
@@ -1478,7 +1462,7 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scale
 
 	// SetGadgetAttrs(textLabel, imageWindow, NULL, STRINGA_TextVal, "Loading image...", TAG_DONE);
 
-	// updateStatusBar("Loading image...", 7);
+	updateStatusBar("Loading image...", yellowPen);
 	// SetWindowPointer(imageWindow,
 	// 							WA_BusyPointer,	TRUE,
 	// 						TAG_DONE);
@@ -1497,10 +1481,19 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scale
 	// 		printf("Could not create dataTypeObject\n");
 	// 		return RETURN_ERROR;	
 	// }
+	
+	// struct EasyStruct imageRequester = {
+	// 	sizeof(struct EasyStruct),
+	// 	0,
+	// 	currentImage->name,
+	// 	"OK"
+	// };
+	// ULONG flags = IDCMP_RAWKEY | IDCMP_MOUSEBUTTONS;
+	// BuildEasyRequest(mainWindow, &imageRequester, flags, NULL);
+	// EasyRequest(mainWindow, &imageRequester, &flags, NULL);
 
-	// updateStatusBar("Scaling image...", 8);
+	updateStatusBar("Scaling image...", 8);
 	// DoMethod(dataTypeObject, PDTM_SCALE, lowestWidth, lowestHeight, 0);
-
 	// AddDTObject(imageWindow, NULL, dataTypeObject, -1);
 	// RefreshDTObjects(dataTypeObject, imageWindow, NULL, NULL);
 
@@ -1527,7 +1520,7 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scale
 	// DisposeObject(imageWindowObject);
 	// DisposeDTObject(dataTypeObject);
 
-	// updateStatusBar("Ready", 5);
+	updateStatusBar("Ready", greenPen);
 }
 
 /**
@@ -1758,7 +1751,6 @@ static LONG loadImages() {
 	}
 
 	for (UWORD i = 0; i < json_object_array_length(imagesJsonArray); i++) {
-		printf("Loading image %d\n", i);
 		struct json_object *imageJsonObject = json_object_array_get_idx(imagesJsonArray, i);
 		struct json_object *imageNameJsonObject;
 		if (!json_object_object_get_ex(imageJsonObject, "name", &imageNameJsonObject)) {
@@ -1914,7 +1906,6 @@ void shutdownGUI() {
 	saveImages();
 	DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 	MUI_DisposeObject(app);
-	freeImageList();
 	ReleasePen(screen->ViewPort.ColorMap, redPen);
 	ReleasePen(screen->ViewPort.ColorMap, greenPen);
 	ReleasePen(screen->ViewPort.ColorMap, bluePen);
@@ -1924,6 +1915,8 @@ void shutdownGUI() {
 	} else {
 		CloseScreen(screen);
 	}
+
+	delete_datatypes_class();
 
 	closeGUILibraries();
 }

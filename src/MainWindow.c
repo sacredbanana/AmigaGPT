@@ -9,6 +9,7 @@
 #include "config.h"
 #include "gui.h"
 #include "menu.h"
+#include "datatypesclass.h"
 #include "MainWindow.h"
 
 struct Window *mainWindow;
@@ -27,6 +28,12 @@ Object *createImageButton;
 Object *newImageButton;
 Object *deleteImageButton;
 Object *imageListObject;
+Object *imageViewContainer;
+Object *imageView;
+Object *openSmallImageButton;
+Object *openMediumImageButton;
+Object *openLargeImageButton;
+Object *openOriginalImageButton;
 WORD pens[NUMDRIPENS + 1];
 LONG textEditorColorMap[] = {5,10,6,3,6,6,4,0,1,6,6,6,6,6,6,6};
 LONG sendMessageButtonPen;
@@ -114,6 +121,24 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
 	struct GeneratedImage *image;
 	DoMethod(imageListObject, MUIM_NList_GetEntry, MUIV_NList_GetEntry_Active, &image);
 	currentImage = copyGeneratedImage(image);
+	// STRPTR imagePath = AllocVec(strlen(currentImage->filePath) + 3, MEMF_ANY);
+	// snprintf(imagePath, strlen(currentImage->filePath) + 3, "5:%s", currentImage->filePath);
+	// DoMethod(imageViewContainer, MUIM_Group_InitChange);
+	// DoMethod(imageViewContainer, OM_REMMEMBER, imageView);
+	// MUI_DisposeObject(imageView);
+	// imageView = ImageObject,
+	// 				MUIA_Image_CopySpec, TRUE,
+	// 				MUIA_Image_Spec, imagePath,
+	// 				MUIA_Image_FreeHoriz, TRUE,
+	// 				MUIA_Image_FreeVert, TRUE,
+	// 				// MUIA_Dtpic_Name, "PROGDIR:images/cactus.png",
+	// 				MUIA_Width, 200,
+	// 				MUIA_Height, 200,
+	// 			End;
+	// DoMethod(imageViewContainer, OM_ADDMEMBER, imageView);
+	// DoMethod(imageViewContainer, MUIM_Group_ExitChange);
+	// FreeVec(imagePath);
+	// set(imageView, MUIA_Dtpic_Name, currentImage->filePath);
 }
 MakeHook(ImageRowClickedHook, ImageRowClickedFunc);
 
@@ -151,6 +176,50 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 }
 MakeHook(CreateImageButtonClickedHook, CreateImageButtonClickedFunc);
 
+HOOKPROTONHNONP(OpenSmallImageButtonClickedFunc, void) {
+	if (currentImage->width == currentImage->height)
+		openImage(currentImage, 256, 256);
+	else if (currentImage->width > currentImage->height) {
+		LONG height = (currentImage->height * 256) / currentImage->width;
+		openImage(currentImage, 256, height);
+	} else {
+		LONG width = (currentImage->width * 256) / currentImage->height;
+		openImage(currentImage, width, 256);
+	}
+}
+MakeHook(OpenSmallImageButtonClickedHook, OpenSmallImageButtonClickedFunc);
+
+HOOKPROTONHNONP(OpenMediumImageButtonClickedFunc, void) {
+	if (currentImage->width == currentImage->height)
+		openImage(currentImage, 512, 512);
+	else if (currentImage->width > currentImage->height) {
+		LONG height = (currentImage->height * 512) / currentImage->width;
+		openImage(currentImage, 512, height);
+	} else {
+		LONG width = (currentImage->width * 512) / currentImage->height;
+		openImage(currentImage, width, 512);
+	}
+}
+MakeHook(OpenMediumImageButtonClickedHook, OpenMediumImageButtonClickedFunc);
+
+HOOKPROTONHNONP(OpenLargeImageButtonClickedFunc, void) {
+	if (currentImage->width == currentImage->height)
+		openImage(currentImage, 1124, 1024);
+	else if (currentImage->width > currentImage->height) {
+		LONG height = (currentImage->height * 1024) / currentImage->width;
+		openImage(currentImage, 1024, height);
+	} else {
+		LONG width = (currentImage->width * 1024) / currentImage->height;
+		openImage(currentImage, width, 1024);
+	}
+}
+MakeHook(OpenLargeImageButtonClickedHook, OpenLargeImageButtonClickedFunc);
+
+HOOKPROTONHNONP(OpenOriginalImageButtonClickedFunc, void) {
+	openImage(currentImage, currentImage->width, currentImage->height);
+}
+MakeHook(OpenOriginalImageButtonClickedHook, OpenOriginalImageButtonClickedFunc);
+
 HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
 	const UBYTE BUTTON_LABEL_BUFFER_SIZE = 64;
 	STRPTR buttonLabelText = AllocVec(BUTTON_LABEL_BUFFER_SIZE, MEMF_ANY);
@@ -176,12 +245,15 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
 }
 MakeHook(ConfigureForScreenHook, ConfigureForScreenFunc);
 
+struct MUI_CustomClass *mcc;
 /**
  * Create the main window
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
 LONG createMainWindow() {
 	createMenu();
+
+	create_datatypes_class();
 
 	if ((mainWindowObject = WindowObject,
 			MUIA_Window_Title, "AmigaGPT",
@@ -246,17 +318,17 @@ LONG createMainWindow() {
 								End,
 								Child, chatOutputScroller = ScrollbarObject, End,
 							End,
-							// Status bar
-							Child, statusBar = TextObject, MUIA_VertWeight, 10,
-								TextFrame,
-								MUIA_Text_Contents, "Ready",
-								MUIA_Background, MUII_SHADOWBACK,
-							End,
-							// Loading bar
-							Child, loadingBar = BusyObject, MUIA_VertWeight, 10,
-								MUIA_MaxHeight, 20,
-								MUIA_Busy_Speed, MUIV_Busy_Speed_Off,
-							End,
+							// // Status bar
+							// Child, statusBar = TextObject, MUIA_VertWeight, 10,
+							// 	TextFrame,
+							// 	MUIA_Text_Contents, "Ready",
+							// 	MUIA_Background, MUII_SHADOWBACK,
+							// End,
+							// // Loading bar
+							// Child, loadingBar = BusyObject, MUIA_VertWeight, 10,
+							// 	MUIA_MaxHeight, 20,
+							// 	MUIA_Busy_Speed, MUIV_Busy_Speed_Off,
+							// End,
 							Child, HGroup, MUIA_VertWeight, 20,
 								// Chat input text editor
 								Child, chatInputTextEditor = TextEditorObject,
@@ -311,21 +383,85 @@ LONG createMainWindow() {
 								End,
 							End,
 						End,
-						// Image input text editor
-						Child, imageInputTextEditor = TextEditorObject,
-							// MUIA_ObjectID, OBJECT_ID_IMAGE_INPUT_TEXT_EDITOR,
-							MUIA_TextEditor_ReadOnly, FALSE,
-							MUIA_TextEditor_TabSize, 4,
-							MUIA_TextEditor_Rows, 3,
-							MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+						Child, VGroup, MUIA_Weight, 70,
+							// Image view container
+							Child, imageViewContainer = VGroup,
+								// Image view
+								Child, imageView = DataTypesObject,
+									TextFrame,
+									MUIA_Background, MUII_BACKGROUND,
+									TAG_END),
+									
+								// Child, imageView = ImageObject,
+								// 	MUIA_Image_CopySpec, TRUE,
+								// 	MUIA_Image_Spec, "5:PROGDIR:images/love.png",
+								// 	MUIA_Image_FreeHoriz, TRUE,
+								// 	MUIA_Image_FreeVert, TRUE,
+								// 	// MUIA_Dtpic_Name, "PROGDIR:images/cactus.png",
+								// 	MUIA_MinWidth, 200,
+								// 	MUIA_MinHeight, 200,
+							End,
+							// Open small image button
+							Child, openSmallImageButton = MUI_MakeObject(MUIO_Button, "Open Small",
+								// MUIA_ObjectID, OBJECT_ID_OPEN_SMALL_IMAGE_BUTTON,
+								MUIA_MaxWidth, 100,
+								MUIA_Weight, 10,
+								MUIA_CycleChain, TRUE,
+								MUIA_InputMode, MUIV_InputMode_RelVerify,
+							End,
+							// Open medium image button
+							Child, openMediumImageButton = MUI_MakeObject(MUIO_Button, "Open Medium",
+								// MUIA_ObjectID, OBJECT_ID_OPEN_MEDIUM_IMAGE_BUTTON,
+								MUIA_MaxWidth, 100,
+								MUIA_Weight, 10,
+								MUIA_CycleChain, TRUE,
+								MUIA_InputMode, MUIV_InputMode_RelVerify,
+							End,
+							// Open large image button
+							Child, openLargeImageButton = MUI_MakeObject(MUIO_Button, "Open Large",
+								// MUIA_ObjectID, OBJECT_ID_OPEN_LARGE_IMAGE_BUTTON,
+								MUIA_MaxWidth, 100,
+								MUIA_Weight, 10,
+								MUIA_CycleChain, TRUE,
+								MUIA_InputMode, MUIV_InputMode_RelVerify,
+							End,
+							// Open original image button
+							Child, openOriginalImageButton = MUI_MakeObject(MUIO_Button, "Open Original",
+								// MUIA_ObjectID, OBJECT_ID_OPEN_ORIGINAL_IMAGE_BUTTON,
+								MUIA_MaxWidth, 100,
+								MUIA_Weight, 10,
+								MUIA_CycleChain, TRUE,
+								MUIA_InputMode, MUIV_InputMode_RelVerify,
+							End,
+							// Image input text editor
+							Child, imageInputTextEditor = TextEditorObject,
+								// MUIA_ObjectID, OBJECT_ID_IMAGE_INPUT_TEXT_EDITOR,
+								MUIA_TextEditor_ReadOnly, FALSE,
+								MUIA_TextEditor_TabSize, 4,
+								MUIA_TextEditor_Rows, 3,
+								MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+							End,
 						End,
 						// Create image button
 						Child, createImageButton = MUI_MakeObject(MUIO_Button, "Create Image",
 							// MUIA_ObjectID, OBJECT_ID_CREATE_IMAGE_BUTTON,
+							MUIA_MaxWidth, 100,
+							MUIA_Weight, 10,
 							MUIA_CycleChain, TRUE,
 							MUIA_InputMode, MUIV_InputMode_RelVerify,
 						End,
 					End,
+				End,
+				// Status bar
+				Child, statusBar = TextObject, MUIA_VertWeight, 10,
+					TextFrame,
+					MUIA_Text_Contents, "Ready",
+					MUIA_Background, MUII_SHADOWBACK,
+				End,
+				// Loading bar
+				Child, loadingBar = BusyObject, MUIA_VertWeight, 10,
+					MUIA_MaxHeight, 20,
+					MUIA_Busy_Speed, MUIV_Busy_Speed_Off,
 				End,
 			End,
 		End) == NULL) {
@@ -354,6 +490,14 @@ void addMainWindowActions() {
               sendMessageButton, 2, MUIM_CallHook, &SendMessageButtonClickedHook);
 	DoMethod(createImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
 			  createImageButton, 2, MUIM_CallHook, &CreateImageButtonClickedHook);
+	DoMethod(openSmallImageButton, MUIM_Notify, MUIA_Pressed, FALSE, 
+			  openSmallImageButton, 2, MUIM_CallHook, &OpenSmallImageButtonClickedHook);
+	DoMethod(openMediumImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
+			  openMediumImageButton, 2, MUIM_CallHook, &OpenMediumImageButtonClickedHook);
+	DoMethod(openLargeImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
+			  openLargeImageButton, 2, MUIM_CallHook, &OpenLargeImageButtonClickedHook);
+	DoMethod(openOriginalImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
+			  openOriginalImageButton, 2, MUIM_CallHook, &OpenOriginalImageButtonClickedHook);
 	DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, MUIV_Notify_Window, 3, MUIM_CallHook, &ConversationRowClickedHook, MUIV_TriggerValue);
 	DoMethod(imageListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, MUIV_Notify_Window, 3, MUIM_CallHook, &ImageRowClickedHook, MUIV_TriggerValue);
 	DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 

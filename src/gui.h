@@ -91,6 +91,14 @@ LONG saveConversations();
 LONG saveImages();
 
 /**
+ * Opens and displays the image with scaling
+ * @param image the image to open
+ * @param width the width of the image
+ * @param height the height of the image
+**/ 
+void openImage(struct GeneratedImage *generatedImage, WORD width, WORD height);
+
+/**
  * Copy a conversation
  * @param conversation The conversation to copy
  * @return A pointer to the copied conversation

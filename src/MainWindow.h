@@ -17,6 +17,7 @@ extern Object *imageInputTextEditor;
 extern Object *createImageButton;
 extern Object *newImageButton;
 extern Object *deleteImageButton;
+extern Object *imageView;
 extern WORD pens[NUMDRIPENS + 1];
 extern LONG sendMessageButtonPen;
 extern LONG newChatButtonPen;
