@@ -30,6 +30,26 @@ struct MUIMasterIFace *IMUIMaster;
 struct DataTypesIFace *IDataTypes;
 #endif
 
+#ifdef __MORPHOS__
+static ULONG muiDispatcherGate(void)
+{
+	ULONG (*dispatcher)(struct IClass *, Object *, Msg);
+
+	struct IClass *cl  = (struct IClass *)REG_A0;
+	Object        *obj = (Object *)       REG_A2;
+	Msg           msg  = (Msg)            REG_A1;
+
+	dispatcher = (ULONG(*)(struct IClass *, Object *, Msg))cl->cl_UserData;
+
+	return dispatcher(cl, obj, msg);
+}
+
+struct EmulLibEntry muiDispatcherEntry =
+{
+	TRAP_LIB, 0, (void (*)(void)) muiDispatcherGate
+};
+#endif
+
 struct Library *MUIMasterBase;
 struct Library *DataTypesBase;
 Object *app;
@@ -248,7 +268,6 @@ void startGUIRunLoop() {
  * Shutdown the GUI
 **/
 void shutdownGUI() {
-	saveImages();
 	DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 	MUI_DisposeObject(app);
 	ReleasePen(screen->ViewPort.ColorMap, redPen);

@@ -81,7 +81,8 @@
         "rexxsyslib.h": "c",
         "texteditor_mcc.h": "c",
         "intuition_protos.h": "c",
-        "mainwindow.h": "c"
+        "mainwindow.h": "c",
+        "datatypesclass.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

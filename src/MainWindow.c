@@ -1503,7 +1503,7 @@ static LONG loadImages() {
 			displayError("Failed to parse image history. Malformed JSON. The image-history.json file is probably corrupted. Image history will not be loaded. A backup of the image-history.json file has been created as image-history.json.bak");
 		} else if (copyFile(PROGDIR"image-history.json", "RAM:image-history.json")) {
 			displayError("Failed to parse image history. Malformed JSON. The image-history.json file is probably corrupted. Image history will not be loaded. There was an error writing a backup of the image history to disk but a copy has been saved to RAM:image-history.json.bak");
-			#ifdef __AMIGAOS3__
+			#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
 			if (!DeleteFile(PROGDIR"image-history.json")) {
 			#else
 			if (!Delete(PROGDIR"image-history.json")) {
