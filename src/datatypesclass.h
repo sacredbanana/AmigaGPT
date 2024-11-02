@@ -23,24 +23,6 @@
 #ifndef SM__DATATYPESCLASS_H
 #define SM__DATATYPESCLASS_H
 
-__attribute__((__saveds__))  ULONG DataTypes_Dispatcher(struct IClass * cl __asm("a0"), Object * obj __asm("a2"), Msg msg __asm("a1"));
-
-struct DataTypes_Data
-{
-	Object *dt_obj;
-	char *filename; /* Cache the filename */
-	int del; /* 1 if filename should be deleted */
-	int show; /* 1 if between show / hide */
-
-	Object *horiz_scrollbar;
-	Object *vert_scrollbar;
-
-	union printerIO *pio;
-
-	struct MUI_EventHandlerNode ehnode; /* IDCMP_xxx */
-	struct MUI_InputHandlerNode ihnode; /* for reaction on the msg port */
-};
-
 /*
     AROS definition of BOOPSI_DISPATCHER collides with other systems
     because the opening bracket { is part of the definition.

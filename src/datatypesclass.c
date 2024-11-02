@@ -31,7 +31,6 @@
 #include <libraries/mui.h>
 #include <SDI_hook.h>
 
-
 #include <clib/alib_protos.h>
 #include <proto/utility.h>
 #include <proto/dos.h>
@@ -42,21 +41,23 @@
 
 #include "datatypesclass.h"
 
-// struct DataTypes_Data
-// {
-// 	Object *dt_obj;
-// 	char *filename; /* Cache the filename */
-// 	int del; /* 1 if filename should be deleted */
-// 	int show; /* 1 if between show / hide */
+struct DataTypes_Data
+{
+	Object *dt_obj;
+	char *filename; /* Cache the filename */
+	int del; /* 1 if filename should be deleted */
+	int show; /* 1 if between show / hide */
 
-// 	Object *horiz_scrollbar;
-// 	Object *vert_scrollbar;
+	Object *horiz_scrollbar;
+	Object *vert_scrollbar;
 
-// 	union printerIO *pio;
+	union printerIO *pio;
 
-// 	struct MUI_EventHandlerNode ehnode; /* IDCMP_xxx */
-// 	struct MUI_InputHandlerNode ihnode; /* for reaction on the msg port */
-// };
+	struct MUI_EventHandlerNode ehnode; /* IDCMP_xxx */
+	struct MUI_InputHandlerNode ihnode; /* for reaction on the msg port */
+};
+
+__attribute__((__saveds__))  ULONG DataTypes_Dispatcher(struct IClass * cl __asm("a0"), Object * obj __asm("a2"), Msg msg __asm("a1"));
 
 STATIC ULONG DataTypes_PrintCompleted(struct IClass *cl, Object *obj);
 
@@ -303,7 +304,7 @@ STATIC ULONG DataTypes_Set(struct IClass *cl,Object *obj,struct opSet *msg)
 					GA_Height,	_mheight(obj),
 					ICA_TARGET,	ICTARGET_IDCMP,
 					TAG_DONE);
-
+				DoMethod(data->dt_obj, PDTM_SCALE, _mwidth(obj), _mheight(obj), 0);
 				AddDTObject(_window(obj), NULL, data->dt_obj, -1);
 			}
 			MUI_Redraw(obj, MADF_DRAWOBJECT);
@@ -385,7 +386,7 @@ STATIC ULONG DataTypes_Show(struct IClass *cl, Object *obj, Msg msg)
 				ICA_TARGET,	ICTARGET_IDCMP,
 				PDTA_DestMode, PMODE_V43,
 				TAG_DONE);
-
+		DoMethod(data->dt_obj, PDTM_SCALE, _mwidth(obj), _mheight(obj), 0);
 		AddDTObject(_window(obj), NULL, data->dt_obj, -1);
 	}
 
@@ -604,11 +605,7 @@ void delete_datatypes_class(void)
 	{
 		if (MUI_DeleteCustomClass(CL_DataTypes))
 		{
-			// SM_DEBUGF(15,("Deleted CL_DataTypes: 0x%lx\n",CL_DataTypes));
 			CL_DataTypes = NULL;
-		} else
-		{
-			// SM_DEBUGF(5,("FAILED! Delete CL_DataTypes: 0x%lx\n",CL_DataTypes));
 		}
 	}
 }

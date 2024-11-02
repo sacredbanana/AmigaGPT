@@ -101,7 +101,7 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void, Object *screenSelectRadioBu
 
 
 	redPen = ObtainBestPen(screen->ViewPort.ColorMap, 0xFFFFFFFF, 0, 0, OBP_Precision, PRECISION_GUI, TAG_DONE);
-	greenPen = ObtainBestPen(screen->ViewPort.ColorMap, 0, 0xFFFFFFFF, 0, OBP_Precision, PRECISION_GUI, TAG_DONE);
+	greenPen = ObtainBestPen(screen->ViewPort.ColorMap, 0, 0xBBBBBBBB, 0, OBP_Precision, PRECISION_GUI, TAG_DONE);
 	bluePen = ObtainBestPen(screen->ViewPort.ColorMap, 0, 0, 0xFFFFFFFF, OBP_Precision, PRECISION_GUI, TAG_DONE);
 	yellowPen = ObtainBestPen(screen->ViewPort.ColorMap, 0xFFFFFFFF, 0xFFFFFFFF, 0, OBP_Precision, PRECISION_GUI, TAG_DONE);
 

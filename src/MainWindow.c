@@ -64,13 +64,19 @@ static BOOL copyFile(STRPTR source, STRPTR destination);
 enum ButtonLabels {
 	NEW_CHAT_BUTTON_LABEL,
 	DELETE_CHAT_BUTTON_LABEL,
-	SEND_MESSAGE_BUTTON_LABEL
+	SEND_MESSAGE_BUTTON_LABEL,
+	NEW_IMAGE_BUTTON_LABEL,
+	DELETE_IMAGE_BUTTON_LABEL,
+	CREATE_IMAGE_BUTTON_LABEL
 };
 
 CONST_STRPTR BUTTON_LABEL_NAMES[] = {
 	"+ New Chat",
 	"- Delete Chat",
-	"\nSend\n"
+	"\nSend\n",
+	"+ New Image",
+	"- Delete Image",
+	"\nCreate Image\n",
 };
 
 HOOKPROTONHNO(ConstructConversationLI_TextFunc, APTR, struct NList_ConstructMessage *ncm) {
@@ -138,24 +144,7 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
 	struct GeneratedImage *image;
 	DoMethod(imageListObject, MUIM_NList_GetEntry, MUIV_NList_GetEntry_Active, &image);
 	currentImage = copyGeneratedImage(image);
-	// STRPTR imagePath = AllocVec(strlen(currentImage->filePath) + 3, MEMF_ANY);
-	// snprintf(imagePath, strlen(currentImage->filePath) + 3, "5:%s", currentImage->filePath);
-	// DoMethod(imageViewContainer, MUIM_Group_InitChange);
-	// DoMethod(imageViewContainer, OM_REMMEMBER, imageView);
-	// MUI_DisposeObject(imageView);
-	// imageView = ImageObject,
-	// 				MUIA_Image_CopySpec, TRUE,
-	// 				MUIA_Image_Spec, imagePath,
-	// 				MUIA_Image_FreeHoriz, TRUE,
-	// 				MUIA_Image_FreeVert, TRUE,
-	// 				// MUIA_Dtpic_Name, "PROGDIR:images/cactus.png",
-	// 				MUIA_Width, 200,
-	// 				MUIA_Height, 200,
-	// 			End;
-	// DoMethod(imageViewContainer, OM_ADDMEMBER, imageView);
-	// DoMethod(imageViewContainer, MUIM_Group_ExitChange);
-	// FreeVec(imagePath);
-	// set(imageView, MUIA_Dtpic_Name, currentImage->filePath);
+	set(imageView, MUIA_DataTypes_FileName, currentImage->filePath);
 }
 MakeHook(ImageRowClickedHook, ImageRowClickedFunc);
 
@@ -416,6 +405,12 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
 	set(deleteChatButton, MUIA_Text_Contents, buttonLabelText);
 	snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0", bluePen, BUTTON_LABEL_NAMES[SEND_MESSAGE_BUTTON_LABEL]);
 	set(sendMessageButton, MUIA_Text_Contents, buttonLabelText);
+	snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0", greenPen, BUTTON_LABEL_NAMES[NEW_IMAGE_BUTTON_LABEL]);
+	set(newImageButton, MUIA_Text_Contents, buttonLabelText);
+	snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0", redPen, BUTTON_LABEL_NAMES[DELETE_IMAGE_BUTTON_LABEL]);
+	set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
+	snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0", bluePen, BUTTON_LABEL_NAMES[CREATE_IMAGE_BUTTON_LABEL]);
+	set(createImageButton, MUIA_Text_Contents, buttonLabelText);
 	FreeVec(buttonLabelText);
 	SetAttrs(mainWindowObject,
 		MUIA_Window_ID, isPublicScreen ? OBJECT_ID_MAIN_WINDOW : NULL,
@@ -563,10 +558,7 @@ LONG createMainWindow() {
 							Child, VSpace(0),
 							Child, HGroup,
 								// Image view
-								Child, imageView = DataTypesObject,
-									MUIA_MinWidth, 200,
-									MUIA_MinHeight, 200,
-								TAG_END),
+								Child, imageView = DataTypesObject, NULL,TAG_END),
 							End,
 							// Open small image button
 							Child, openSmallImageButton = MUI_MakeObject(MUIO_Button, "Open Small",
@@ -593,20 +585,24 @@ LONG createMainWindow() {
 								MUIA_CycleChain, TRUE,
 								MUIA_InputMode, MUIV_InputMode_RelVerify,
 							End,
-							// Image input text editor
-							Child, imageInputTextEditor = TextEditorObject,
-								MUIA_TextEditor_ReadOnly, FALSE,
-								MUIA_TextEditor_TabSize, 4,
-								MUIA_TextEditor_Rows, 3,
-								MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
-							End,
-						End,
-						Child, VGroup, MUIA_Weight, 20,
-							Child, VSpace(0),
-							// Create image button
-							Child, createImageButton = MUI_MakeObject(MUIO_Button, "\nCreate Image\n",
-								MUIA_CycleChain, TRUE,
-								MUIA_InputMode, MUIV_InputMode_RelVerify,
+							Child, HGroup,
+								// Image input text editor
+								Child, imageInputTextEditor = TextEditorObject,
+									MUIA_Weight, 80,
+									MUIA_TextEditor_ReadOnly, FALSE,
+									MUIA_TextEditor_TabSize, 4,
+									MUIA_TextEditor_Rows, 3,
+									MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+								End,
+								Child, VGroup,
+									MUIA_Weight, 20,
+									// Create image button
+									Child, createImageButton = MUI_MakeObject(MUIO_Button, "\nCreate Image\n",
+										MUIA_Weight, 20,
+										MUIA_CycleChain, TRUE,
+										MUIA_InputMode, MUIV_InputMode_RelVerify,
+									End,
+								End,
 							End,
 						End,
 					End,
@@ -1159,25 +1155,12 @@ void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scaledHeight
 	WORD lowestWidth = (screen->Width - 16) < scaledWidth ? (screen->Width - 16) : scaledWidth;
 	WORD lowestHeight = screen->Height < scaledHeight ? screen->Height : scaledHeight;
 
-	// struct Object *textLabel = NewObject(STRING_GetClass(), NULL,
-	// 	GA_ReadOnly, TRUE,
-	// 	STRINGA_Justification, GACT_STRINGCENTER,
-	// 	TAG_DONE);
-	
-	// struct Object *imageWindowLayout = NewObject(LAYOUT_GetClass(), NULL,
-	// LAYOUT_Orientation, LAYOUT_ORIENT_VERT,
-	// 	LAYOUT_AddChild, textLabel,
-	// 	CHILD_MinWidth, lowestWidth,
-	// 	CHILD_MinHeight, lowestHeight,
-	// 	TAG_DONE);
-
 	set(imageWindowObject, MUIA_Window_Title, image->name);
 	set(imageWindowObject, MUIA_Window_Width, lowestWidth);
 	set(imageWindowObject, MUIA_Window_Height, lowestHeight);
 	set(imageWindowObject, MUIA_Window_Activate, TRUE);
 	set(imageWindowObject, MUIA_Window_Screen, screen);
 	set(imageWindowObject, MUIA_Window_Open, TRUE);
-	set(imageView, MUIA_DataTypes_FileName, image->filePath);
 	get(imageWindowObject, MUIA_Window, &imageWindow);
 
 	// if ((imageWindowObject = NewObject(WINDOW_GetClass(), NULL,
