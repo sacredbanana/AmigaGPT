@@ -123,7 +123,7 @@ HOOKPROTONHNO(DisplayImageLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
 MakeHook(DisplayImageLI_TextHook, DisplayImageLI_TextFunc);
 
 HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
-	if (currentImage != NULL)
+	if (currentConversation != NULL)
 		freeConversation(currentConversation);
 
 	struct Conversation *conversation;
@@ -149,8 +149,11 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
 MakeHook(ImageRowClickedHook, ImageRowClickedFunc);
 
 HOOKPROTONHNONP(NewChatButtonClickedFunc, void) {
+	if (currentConversation != NULL)
+		freeConversation(currentConversation);
 	currentConversation = NULL;
 	DoMethod(chatOutputTextEditor, MUIM_TextEditor_ClearText);
+	DoMethod(chatOutputTextEditor, MUIM_GoActive);
 }
 MakeHook(NewChatButtonClickedHook, NewChatButtonClickedFunc);
 
@@ -171,6 +174,30 @@ HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
 	}
 }
 MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
+
+HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
+	if (currentImage != NULL) {
+		FreeVec(currentImage->name);
+		FreeVec(currentImage->filePath);
+		FreeVec(currentImage->prompt);
+		FreeVec(currentImage);
+	}
+	currentImage = NULL;
+	set(imageInputTextEditor, MUIA_Disabled, FALSE);
+	set(createImageButton, MUIA_Disabled, FALSE);
+	DoMethod(imageInputTextEditor, MUIM_TextEditor_ClearText);
+	DoMethod(imageInputTextEditor, MUIM_GoActive);
+	set(imageView, MUIA_DataTypes_FileName, "");
+}
+MakeHook(NewImageButtonClickedHook, NewImageButtonClickedFunc);
+
+HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
+	DoMethod(imageListObject, MUIM_NList_Remove, MUIV_NList_Remove_Active);
+	currentImage = NULL;
+	set(imageView, MUIA_DataTypes_FileName, "");
+	saveImages();
+}
+MakeHook(DeleteImageButtonClickedHook, DeleteImageButtonClickedFunc);
 
 HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 	if (config.openAiApiKey != NULL && strlen(config.openAiApiKey) > 0) {
@@ -305,17 +332,17 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 		generatedImage->width = imageWidth;
 		generatedImage->height = imageHeight;
 		DoMethod(imageListObject, MUIM_NList_InsertSingle, generatedImage, MUIV_NList_Insert_Top);
+		set(imageListObject, MUIA_NList_Active, 0);
 		currentImage = generatedImage;
+		set(imageView, MUIA_DataTypes_FileName, currentImage->filePath);
 
 		set(openSmallImageButton, MUIA_Disabled, FALSE);
 		set(openMediumImageButton, MUIA_Disabled, FALSE);
 		set(openLargeImageButton, MUIA_Disabled, FALSE);
 		set(openOriginalImageButton, MUIA_Disabled, FALSE);
 		set(saveImageCopyButton, MUIA_Disabled, FALSE);
-		set(createImageButton, MUIA_Disabled, FALSE);
 		set(newImageButton, MUIA_Disabled, FALSE);
 		set(deleteImageButton, MUIA_Disabled, FALSE);
-		set(imageInputTextEditor, MUIA_Disabled, FALSE);
 
 		FreeVec(text);
 		FreeVec(textUTF_8);
@@ -427,7 +454,6 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
 }
 MakeHook(ConfigureForScreenHook, ConfigureForScreenFunc);
 
-struct MUI_CustomClass *mcc;
 /**
  * Create the main window
  * @return RETURN_OK on success, RETURN_ERROR on failure
@@ -660,6 +686,10 @@ void addMainWindowActions() {
 	DoMethod(saveImageCopyButton, MUIM_Notify, MUIA_Pressed, FALSE, 
 			  saveImageCopyButton, 2, MUIM_CallHook, &SaveImageCopyButtonClickedHook);
 	DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, MUIV_Notify_Window, 3, MUIM_CallHook, &ConversationRowClickedHook, MUIV_TriggerValue);
+	DoMethod(newImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
+			  newImageButton, 2, MUIM_CallHook, &NewImageButtonClickedHook);
+	DoMethod(deleteImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
+			  MUIV_Notify_Application, 3, MUIM_CallHook, &DeleteImageButtonClickedHook, MUIV_TriggerValue);
 	DoMethod(imageListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, MUIV_Notify_Window, 3, MUIM_CallHook, &ImageRowClickedHook, MUIV_TriggerValue);
 	DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 
 	  MUIV_Notify_Application, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
