@@ -23,7 +23,6 @@ extern LONG sendMessageButtonPen;
 extern LONG newChatButtonPen;
 extern LONG deleteButtonPen;
 extern BOOL isPublicScreen;
-extern struct Conversation *currentConversation;
 
 /**
  * Create the main window
@@ -32,6 +31,15 @@ extern struct Conversation *currentConversation;
 LONG createMainWindow();
 
 /**
- * Add actions to the main window
+ * Display an error message
+ * @param message the message to display
 **/ 
-void addMainWindowActions();
+void displayError(STRPTR message);
+
+/**
+ * Update the status bar
+ * @param message the message to display
+ * @param pen the pen to use for the text
+ * 
+**/ 
+void updateStatusBar(CONST_STRPTR message, const ULONG pen);
