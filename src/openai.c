@@ -2,7 +2,6 @@
 #include <amissl/amissl.h>
 #include <libraries/amisslmaster.h>
 #include <libraries/amissl.h>
-#include <mui/Busy_mcc.h>
 #include <proto/amissl.h>
 #include <proto/amisslmaster.h>
 #else
@@ -10,9 +9,10 @@
 #include <netdb.h>
 #endif
 #include <json-c/json.h>
+#include <mui/Busy_mcc.h>
 #include <proto/exec.h>
 #include <proto/socket.h>
-#include <string.h>x
+#include <string.h>
 #include <stdio.h>
 #include "openai.h"
 #include "speech.h"

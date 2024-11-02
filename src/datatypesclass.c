@@ -57,7 +57,9 @@ struct DataTypes_Data
 	struct MUI_InputHandlerNode ihnode; /* for reaction on the msg port */
 };
 
+#ifdef __AMIGAOS3__
 __attribute__((__saveds__))  ULONG DataTypes_Dispatcher(struct IClass * cl __asm("a0"), Object * obj __asm("a2"), Msg msg __asm("a1"));
+#endif
 
 STATIC ULONG DataTypes_PrintCompleted(struct IClass *cl, Object *obj);
 

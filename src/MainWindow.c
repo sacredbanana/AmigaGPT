@@ -6,6 +6,7 @@
 #include <mui/TextEditor_mcc.h>
 #include <proto/muimaster.h>
 #include <SDI_hook.h>
+#include <stdio.h>
 #include <string.h>
 #include "config.h"
 #include "gui.h"
@@ -56,7 +57,9 @@ static struct Conversation* copyConversation(struct Conversation *conversation);
 static struct GeneratedImage* copyGeneratedImage(struct GeneratedImage *generatedImage);
 static void sendChatMessage();
 static LONG loadConversations();
+static LONG saveConversations();
 static LONG loadImages();
+static LONG saveImages();
 static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String);
 static STRPTR UTF8ToISO8859_1(CONST_STRPTR utf8String);
 static BOOL copyFile(STRPTR source, STRPTR destination);
@@ -1085,7 +1088,7 @@ void displayError(STRPTR message) {
  * Saves the conversations to disk
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
-LONG saveConversations() {
+static LONG saveConversations() {
 	BPTR file = Open(PROGDIR"chat-history.json", MODE_NEWFILE);
 	if (file == 0) {
 		displayError("Failed to create message history file. Conversation history will not be saved.");
@@ -1135,7 +1138,7 @@ LONG saveConversations() {
  * Saves the images to disk
  * @return RETURN_OK on success, RETURN_ERROR on failure
 **/
-LONG saveImages() {
+static LONG saveImages() {
 	BPTR file = Open(PROGDIR"image-history.json", MODE_NEWFILE);
 	if (file == 0) {
 		displayError("Failed to create image history file. Image history will not be saved.");
