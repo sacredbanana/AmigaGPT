@@ -38,6 +38,7 @@ extern ULONG redPen, greenPen, bluePen, yellowPen;
 extern Object *imageWindowObject;
 extern struct Window *imageWindow;
 extern Object *dataTypeObject;
+extern Object *openImageWindowImageView;
 
 /**
  * Create the GUI

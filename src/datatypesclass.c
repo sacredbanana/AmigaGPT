@@ -55,6 +55,8 @@ struct DataTypes_Data
 
 	struct MUI_EventHandlerNode ehnode; /* IDCMP_xxx */
 	struct MUI_InputHandlerNode ihnode; /* for reaction on the msg port */
+
+	STRPTR original_filename;
 };
 
 #ifdef __AMIGAOS3__
@@ -96,6 +98,7 @@ STATIC ULONG DataTypes_New(struct IClass *cl,Object *obj,struct opSet *msg)
 	data = (struct DataTypes_Data*)INST_DATA(cl,obj);
 	data->dt_obj = NULL;
 	data->filename = NULL;
+	data->original_filename = NULL;
 
 	data->ehnode.ehn_Priority = 1;
 	data->ehnode.ehn_Flags    = 0;
@@ -109,18 +112,20 @@ STATIC ULONG DataTypes_New(struct IClass *cl,Object *obj,struct opSet *msg)
 STATIC VOID DataTypes_Dispose(struct IClass *cl, Object *obj, Msg msg)
 {
 	struct DataTypes_Data *data = (struct DataTypes_Data*)INST_DATA(cl,obj);
-	if (data->dt_obj) DisposeDTObject(data->dt_obj);
-	if (data->filename)
-	{
+    if (data->dt_obj) DisposeDTObject(data->dt_obj);
+    if (data->filename) {
 		#ifdef __AMIGAOS4__
 		if (data->del) Delete(data->filename);
 		#else
-		if (data->del) DeleteFile(data->filename);
+        if (data->del) DeleteFile(data->filename);
 		#endif
-		FreeVec(data->filename);
-	}
+        FreeVec(data->filename);
+    }
+    if (data->original_filename) {
+        FreeVec(data->original_filename);
+    }
 
-	DoSuperMethodA(cl,obj,msg);
+    DoSuperMethodA(cl, obj, msg);
 }
 
 static int mystrcmp(const char *str1, const char *str2)
@@ -247,6 +252,10 @@ STATIC ULONG DataTypes_Set(struct IClass *cl,Object *obj,struct opSet *msg)
 
 	if (newfilename || newbuffer)
 	{
+		if (data->original_filename)
+			FreeVec(data->original_filename);
+        data->original_filename = StrCopy(newfilename); // Store original file
+
 		char tmpname[L_tmpnam];
 
 		if (data->dt_obj)
@@ -375,8 +384,14 @@ STATIC ULONG DataTypes_Show(struct IClass *cl, Object *obj, Msg msg)
 
 	data->show = 1;
 
-	if (data->dt_obj)
-	{
+	if (data->original_filename) {
+		if (data->dt_obj) {
+			DisposeDTObject(data->dt_obj); // Dispose the current scaled object
+		}
+
+		// Reload the original image
+        data->dt_obj = NewDTObject(data->original_filename, PDTA_DestMode, PMODE_V43, TAG_DONE);
+		
 		SetDTAttrs(data->dt_obj, NULL, NULL,
 				GA_Left,		_mleft(obj),
 				GA_Top,		_mtop(obj),
@@ -422,6 +437,30 @@ STATIC ULONG DataTypes_Draw(struct IClass *cl, Object *obj, struct MUIP_Draw *ms
 STATIC ULONG DataTypes_HandleEvent(struct IClass *cl, Object *obj, struct MUIP_HandleEvent *msg)
 {
 	struct DataTypes_Data *data = (struct DataTypes_Data*)INST_DATA(cl,obj);
+
+if (msg->imsg && msg->imsg->Class == IDCMP_NEWSIZE) {
+        if (data->dt_obj) {
+            DisposeDTObject(data->dt_obj);
+            data->dt_obj = NewDTObject(data->original_filename,
+                                       PDTA_DestMode, PMODE_V43,
+                                       TAG_DONE);
+
+            if (data->dt_obj) {
+                SetDTAttrs(data->dt_obj, NULL, NULL,
+                           GA_Left,   _mleft(obj),
+                           GA_Top,    _mtop(obj),
+                           GA_Width,  _mwidth(obj),
+                           GA_Height, _mheight(obj),
+                           ICA_TARGET, ICTARGET_IDCMP,
+                           TAG_DONE);
+
+                DoMethod(data->dt_obj, PDTM_SCALE, _mwidth(obj), _mheight(obj), 0);
+                AddDTObject(_window(obj), NULL, data->dt_obj, -1);
+            }
+        }
+    }
+
+	// return DoSuperMethodA(cl, obj, msg);
 
 	if (msg->imsg && msg->imsg->Class == IDCMP_IDCMPUPDATE)
 	{

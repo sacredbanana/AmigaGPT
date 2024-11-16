@@ -13,6 +13,8 @@
 #include "menu.h"
 #include "datatypesclass.h"
 #include "MainWindow.h"
+#include <dos/dos.h>
+// #include <inline/dos.h>
 
 struct Window *mainWindow;
 Object *mainWindowObject;
@@ -30,12 +32,8 @@ Object *createImageButton;
 Object *newImageButton;
 Object *deleteImageButton;
 Object *imageListObject;
-Object *imageViewContainer;
 Object *imageView;
-Object *openSmallImageButton;
-Object *openMediumImageButton;
-Object *openLargeImageButton;
-Object *openOriginalImageButton;
+Object *openImageButton;
 Object *saveImageCopyButton;
 WORD pens[NUMDRIPENS + 1];
 LONG textEditorColorMap[] = {5,10,6,3,6,6,4,0,1,6,6,6,6,6,6,6};
@@ -204,10 +202,7 @@ MakeHook(DeleteImageButtonClickedHook, DeleteImageButtonClickedFunc);
 
 HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 	if (config.openAiApiKey != NULL && strlen(config.openAiApiKey) > 0) {
-		set(openSmallImageButton, MUIA_Disabled, TRUE);
-		set(openMediumImageButton, MUIA_Disabled, TRUE);
-		set(openLargeImageButton, MUIA_Disabled, TRUE);
-		set(openOriginalImageButton, MUIA_Disabled, TRUE);
+		set(openImageButton, MUIA_Disabled, TRUE);
 		set(saveImageCopyButton, MUIA_Disabled, TRUE);
 		set(createImageButton, MUIA_Disabled, TRUE);
 		set(newImageButton, MUIA_Disabled, TRUE);
@@ -339,10 +334,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 		currentImage = generatedImage;
 		set(imageView, MUIA_DataTypes_FileName, currentImage->filePath);
 
-		set(openSmallImageButton, MUIA_Disabled, FALSE);
-		set(openMediumImageButton, MUIA_Disabled, FALSE);
-		set(openLargeImageButton, MUIA_Disabled, FALSE);
-		set(openOriginalImageButton, MUIA_Disabled, FALSE);
+		set(openImageButton, MUIA_Disabled, FALSE);
 		set(saveImageCopyButton, MUIA_Disabled, FALSE);
 		set(newImageButton, MUIA_Disabled, FALSE);
 		set(deleteImageButton, MUIA_Disabled, FALSE);
@@ -357,7 +349,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 }
 MakeHook(CreateImageButtonClickedHook, CreateImageButtonClickedFunc);
 
-HOOKPROTONHNONP(OpenSmallImageButtonClickedFunc, void) {
+HOOKPROTONHNONP(OpenImageButtonClickedFunc, void) {
 	if (currentImage->width == currentImage->height)
 		openImage(currentImage, 256, 256);
 	else if (currentImage->width > currentImage->height) {
@@ -368,38 +360,7 @@ HOOKPROTONHNONP(OpenSmallImageButtonClickedFunc, void) {
 		openImage(currentImage, width, 256);
 	}
 }
-MakeHook(OpenSmallImageButtonClickedHook, OpenSmallImageButtonClickedFunc);
-
-HOOKPROTONHNONP(OpenMediumImageButtonClickedFunc, void) {
-	if (currentImage->width == currentImage->height)
-		openImage(currentImage, 512, 512);
-	else if (currentImage->width > currentImage->height) {
-		LONG height = (currentImage->height * 512) / currentImage->width;
-		openImage(currentImage, 512, height);
-	} else {
-		LONG width = (currentImage->width * 512) / currentImage->height;
-		openImage(currentImage, width, 512);
-	}
-}
-MakeHook(OpenMediumImageButtonClickedHook, OpenMediumImageButtonClickedFunc);
-
-HOOKPROTONHNONP(OpenLargeImageButtonClickedFunc, void) {
-	if (currentImage->width == currentImage->height)
-		openImage(currentImage, 1124, 1024);
-	else if (currentImage->width > currentImage->height) {
-		LONG height = (currentImage->height * 1024) / currentImage->width;
-		openImage(currentImage, 1024, height);
-	} else {
-		LONG width = (currentImage->width * 1024) / currentImage->height;
-		openImage(currentImage, width, 1024);
-	}
-}
-MakeHook(OpenLargeImageButtonClickedHook, OpenLargeImageButtonClickedFunc);
-
-HOOKPROTONHNONP(OpenOriginalImageButtonClickedFunc, void) {
-	openImage(currentImage, currentImage->width, currentImage->height);
-}
-MakeHook(OpenOriginalImageButtonClickedHook, OpenOriginalImageButtonClickedFunc);
+MakeHook(OpenImageButtonClickedHook, OpenImageButtonClickedFunc);
 
 HOOKPROTONHNONP(SaveImageCopyButtonClickedFunc, void) {
 	if (currentImage == NULL) return;
@@ -589,23 +550,8 @@ LONG createMainWindow() {
 								// Image view
 								Child, imageView = DataTypesObject, NULL,TAG_END),
 							End,
-							// Open small image button
-							Child, openSmallImageButton = MUI_MakeObject(MUIO_Button, "Open Small",
-								MUIA_CycleChain, TRUE,
-								MUIA_InputMode, MUIV_InputMode_RelVerify,
-							TAG_DONE),
-							// Open medium image button
-							Child, openMediumImageButton = MUI_MakeObject(MUIO_Button, "Open Medium",
-								MUIA_CycleChain, TRUE,
-								MUIA_InputMode, MUIV_InputMode_RelVerify,
-							TAG_DONE),
-							// Open large image button
-							Child, openLargeImageButton = MUI_MakeObject(MUIO_Button, "Open Large",
-								MUIA_CycleChain, TRUE,
-								MUIA_InputMode, MUIV_InputMode_RelVerify,
-							TAG_DONE),
-							// Open original image button
-							Child, openOriginalImageButton = MUI_MakeObject(MUIO_Button, "Open Original",
+							// Open image button
+							Child, openImageButton = MUI_MakeObject(MUIO_Button, "Open Image",
 								MUIA_CycleChain, TRUE,
 								MUIA_InputMode, MUIV_InputMode_RelVerify,
 							TAG_DONE),
@@ -678,14 +624,8 @@ void addMainWindowActions() {
               sendMessageButton, 2, MUIM_CallHook, &SendMessageButtonClickedHook);
 	DoMethod(createImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
 			  createImageButton, 2, MUIM_CallHook, &CreateImageButtonClickedHook);
-	DoMethod(openSmallImageButton, MUIM_Notify, MUIA_Pressed, FALSE, 
-			  openSmallImageButton, 2, MUIM_CallHook, &OpenSmallImageButtonClickedHook);
-	DoMethod(openMediumImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
-			  openMediumImageButton, 2, MUIM_CallHook, &OpenMediumImageButtonClickedHook);
-	DoMethod(openLargeImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
-			  openLargeImageButton, 2, MUIM_CallHook, &OpenLargeImageButtonClickedHook);
-	DoMethod(openOriginalImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
-			  openOriginalImageButton, 2, MUIM_CallHook, &OpenOriginalImageButtonClickedHook);
+	DoMethod(openImageButton, MUIM_Notify, MUIA_Pressed, FALSE, 
+			  openImageButton, 2, MUIM_CallHook, &OpenImageButtonClickedHook);
 	DoMethod(saveImageCopyButton, MUIM_Notify, MUIA_Pressed, FALSE, 
 			  saveImageCopyButton, 2, MUIM_CallHook, &SaveImageCopyButtonClickedHook);
 	DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick, MUIV_EveryTime, MUIV_Notify_Window, 3, MUIM_CallHook, &ConversationRowClickedHook, MUIV_TriggerValue);
@@ -1184,9 +1124,15 @@ static LONG saveImages() {
  * @param height the height of the image
 **/ 
 void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scaledHeight) {
+	#ifdef __MORPHOS__
+	copyFile(image->filePath, "T:tempImage.png");
+	Execute("System:Utilities/MultiView T:tempImage.png", NULL, NULL);
+	#else
 	if (image == NULL) return;
 	WORD lowestWidth = (screen->Width - 16) < scaledWidth ? (screen->Width - 16) : scaledWidth;
 	WORD lowestHeight = screen->Height < scaledHeight ? screen->Height : scaledHeight;
+
+	updateStatusBar("Loading image...", yellowPen);
 
 	set(imageWindowObject, MUIA_Window_Title, image->name);
 	set(imageWindowObject, MUIA_Window_Width, lowestWidth);
@@ -1195,98 +1141,10 @@ void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scaledHeight
 	set(imageWindowObject, MUIA_Window_Screen, screen);
 	set(imageWindowObject, MUIA_Window_Open, TRUE);
 	get(imageWindowObject, MUIA_Window, &imageWindow);
-
-	// if ((imageWindowObject = NewObject(WINDOW_GetClass(), NULL,
-	// 	WINDOW_Position, WPOS_CENTERSCREEN,
-	// 	WA_Activate, TRUE,
-	// 	WA_Title, image->name,
-	// 	WA_Width, lowestWidth,
-	// 	WA_Height, lowestHeight,
-	// 	WA_CloseGadget, TRUE,
-	// 	WA_DragBar, TRUE,
-	// 	WA_SizeGadget, TRUE,
-	// 	WA_DepthGadget, FALSE,
-	// 	WINDOW_Layout, imageWindowLayout,
-	// 	WINDOW_Position, WPOS_CENTERSCREEN,
-	// 	WINDOW_IDCMPHook, &idcmpHookCreateImageWindow,
-	// 	WINDOW_InterpretIDCMPHook, TRUE,
-	// 	WINDOW_IDCMPHookBits, IDCMP_IDCMPUPDATE | IDCMP_REFRESHWINDOW,
-	// 	WA_IDCMP,			IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_REFRESHWINDOW | IDCMP_IDCMPUPDATE |
-	// 						IDCMP_GADGETUP | IDCMP_GADGETDOWN | IDCMP_MOUSEBUTTONS |
-	// 						IDCMP_MOUSEMOVE | IDCMP_VANILLAKEY |
-	// 						IDCMP_RAWKEY,
-	// 	WA_CustomScreen, screen,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create imageWindowObject\n");
-	// 		return RETURN_ERROR;
-	// }
-
-	// if ((imageWindow = (struct Window *)DoMethod(imageWindowObject, WM_OPEN, NULL)) == NULL) {
-	// 	printf("Could not open imageWindow\n");
-	// 	return RETURN_ERROR;
-	// }
-
-	// SetGadgetAttrs(textLabel, imageWindow, NULL, STRINGA_TextVal, "Loading image...", TAG_DONE);
-
-	updateStatusBar("Loading image...", yellowPen);
-	// SetWindowPointer(imageWindow,
-	// 							WA_BusyPointer,	TRUE,
-	// 						TAG_DONE);
-
-	// if ((dataTypeObject = NewDTObject(image->filePath,
-	// 	DTA_SourceType, DTST_FILE,
-	// 	DTA_GroupID, GID_PICTURE,
-	// 	PDTA_Remap, TRUE,
-	// 	GA_Text, "Loading image...",
-	// 	GA_Left, imageWindow->BorderLeft,
-	// 	GA_Top, imageWindow->BorderTop,
-	// 	GA_RelWidth, imageWindow->Width - imageWindow->BorderLeft - imageWindow->BorderRight,
-	// 	GA_RelHeight, imageWindow->Height - imageWindow->BorderTop - imageWindow->BorderBottom,
-	// 	ICA_TARGET,	ICTARGET_IDCMP,
-	// 	TAG_DONE)) == NULL) {
-	// 		printf("Could not create dataTypeObject\n");
-	// 		return RETURN_ERROR;	
-	// }
-	
-	// struct EasyStruct imageRequester = {
-	// 	sizeof(struct EasyStruct),
-	// 	0,
-	// 	currentImage->name,
-	// 	"OK"
-	// };
-	// ULONG flags = IDCMP_RAWKEY | IDCMP_MOUSEBUTTONS;
-	// BuildEasyRequest(mainWindow, &imageRequester, flags, NULL);
-	// EasyRequest(mainWindow, &imageRequester, &flags, NULL);
-
-	updateStatusBar("Scaling image...", 8);
-	// DoMethod(dataTypeObject, PDTM_SCALE, lowestWidth, lowestHeight, 0);
-	// AddDTObject(imageWindow, NULL, dataTypeObject, -1);
-	// RefreshDTObjects(dataTypeObject, imageWindow, NULL, NULL);
-
-	// BOOL done = FALSE;
-	// ULONG signalMask, winSignal, signals, result;
-	// WORD code;
-
-	// GetAttr(WINDOW_SigMask, imageWindowObject, &winSignal);
-	// signalMask = winSignal;
-	// while (!done) {
-	// 	signals = Wait(signalMask);
-	// 	while ((result = DoMethod(imageWindowObject, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG) {
-	// 		switch (result & WMHI_CLASSMASK) {
-	// 			case WMHI_RAWKEY:
-	// 			case WMHI_CLOSEWINDOW:
-	// 			case WMHI_MOUSEBUTTONS:
-	// 				done = TRUE;
-	// 				break;
-	// 		}
-	// 	}
-	// }
-
-	// DoMethod(imageWindowObject, WM_CLOSE);
-	// DisposeObject(imageWindowObject);
-	// DisposeDTObject(dataTypeObject);
+	set(openImageWindowImageView, MUIA_DataTypes_FileName, image->filePath);
 
 	updateStatusBar("Ready", greenPen);
+	#endif
 }
 
 /**

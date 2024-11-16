@@ -57,6 +57,7 @@ ULONG redPen, greenPen, bluePen, yellowPen;
 struct Screen *screen;
 Object *imageWindowObject;
 struct Window *imageWindow;
+Object *openImageWindowImageView;
 Object *dataTypeObject;
 
 static CONST_STRPTR USED_CLASSES[] = {
@@ -212,10 +213,7 @@ LONG initVideo() {
 			MUIA_Window_UseRightBorderScroller, FALSE,
 			MUIA_Window_UseLeftBorderScroller, FALSE,
 			WindowContents, VGroup,
-				// Child, TextObject,
-				// 	MUIA_Text_PreParse, "\33c",
-				// 	MUIA_Text_Contents, "Image",
-				// End,
+			Child, openImageWindowImageView = DataTypesObject, NULL,TAG_END),
 			End,
 		End) == NULL) {
         displayError("Could not create image window");
