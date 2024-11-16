@@ -150,6 +150,22 @@ LONG openGUILibraries() {
 	}
 	#endif
 
+	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+	if ((DataTypesBase = OpenLibrary("datatypes.library", 44)) == NULL) {
+		printf("Could not open datatypes.library\n");
+		return RETURN_ERROR;
+	}
+	#else
+	if ((DataTypesBase = OpenLibrary("datatypes.library", 44)) == NULL) {
+		printf("Could not open datatypes.library\n");
+		return RETURN_ERROR;
+	}
+	if ((IDataTypes = (struct DataTypesIFace *)GetInterface(DataTypesBase, "main", 1, NULL)) == NULL) {
+		printf("Could not get interface for datatypes.library\n");
+		return RETURN_ERROR;
+	}
+	#endif
+
 	return RETURN_OK;
 }
 

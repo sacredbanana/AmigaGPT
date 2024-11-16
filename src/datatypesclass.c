@@ -112,7 +112,11 @@ STATIC VOID DataTypes_Dispose(struct IClass *cl, Object *obj, Msg msg)
 	if (data->dt_obj) DisposeDTObject(data->dt_obj);
 	if (data->filename)
 	{
+		#ifdef __AMIGAOS4__
+		if (data->del) Delete(data->filename);
+		#else
 		if (data->del) DeleteFile(data->filename);
+		#endif
 		FreeVec(data->filename);
 	}
 
@@ -176,18 +180,7 @@ IPTR xget(Object * obj, ULONG attribute)
 
 struct MUI_CustomClass *CreateMCC(CONST_STRPTR supername, struct MUI_CustomClass *supermcc, int instDataSize, ULONG (*dispatcher)(struct IClass *, Object *, Msg))
 {
-	struct MUI_CustomClass *cl;
-
-	if ((SysBase->lib_Version > 51) || (SysBase->lib_Version == 51 && SysBase->lib_Revision >= 3))
-	{
-		cl = MUI_CreateCustomClass(NULL,supername,supermcc,instDataSize, (void *)dispatcher);
-	} else
-	{
-		if ((cl = MUI_CreateCustomClass(NULL,supername,supermcc,instDataSize, (void *) &muiDispatcherEntry)))
-		{
-			cl->mcc_Class->cl_UserData = (ULONG)dispatcher;
-		}
-	}
+	struct MUI_CustomClass *cl = MUI_CreateCustomClass(NULL,supername,supermcc,instDataSize, (void *)dispatcher);
 	return cl;
 }
 #elif defined(__MORPHOS__)
@@ -208,7 +201,7 @@ struct MUI_CustomClass *CreateMCC(CONST_STRPTR supername, struct MUI_CustomClass
 {
 	return MUI_CreateCustomClass(NULL,supername,supermcc,instDataSize, ENTRY(DataTypes_Dispatcher));
 }
-#endif /* __AMIGAOS4__ || __MORPHOS__ */
+#endif
 
 STATIC ULONG DataTypes_Set(struct IClass *cl,Object *obj,struct opSet *msg)
 {
@@ -271,7 +264,11 @@ STATIC ULONG DataTypes_Set(struct IClass *cl,Object *obj,struct opSet *msg)
 
 		if (data->filename)
 		{
+			#ifdef __AMIGAOS4__
+			if (data->del) Delete(data->filename);
+			#else
 			if (data->del) DeleteFile(data->filename);
+			#endif
 			FreeVec(data->filename);
 			data->del = 0;
 		}
