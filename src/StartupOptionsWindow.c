@@ -110,6 +110,8 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void, Object *screenSelectRadioBu
 	set(apiKeyRequesterWindowObject, MUIA_Window_Screen, screen);
     set(chatSystemRequesterWindowObject, MUIA_Window_Screen, screen);
 	set(mainWindowObject, MUIA_Window_Screen, screen);
+	set(mainWindowObject, MUIA_Window_Width, screen->Width);
+	set(mainWindowObject, MUIA_Window_Height, screen->Height);
 }
 MakeHook(StartupOptionsOkButtonClickedHook, StartupOptionsOkButtonClickedFunc);
 

@@ -14,7 +14,6 @@
 #include "datatypesclass.h"
 #include "MainWindow.h"
 #include <dos/dos.h>
-// #include <inline/dos.h>
 
 struct Window *mainWindow;
 Object *mainWindowObject;
@@ -141,9 +140,12 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
 		FreeVec(currentImage->prompt);
 		FreeVec(currentImage);
 	}
+	set(imageInputTextEditor, MUIA_Disabled, TRUE);
+	set(createImageButton, MUIA_Disabled, TRUE);
 
 	struct GeneratedImage *image;
 	DoMethod(imageListObject, MUIM_NList_GetEntry, MUIV_NList_GetEntry_Active, &image);
+	set(imageInputTextEditor, MUIA_TextEditor_Contents, image->prompt);
 	currentImage = copyGeneratedImage(image);
 	set(imageView, MUIA_DataTypes_FileName, currentImage->filePath);
 }
@@ -350,15 +352,46 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 MakeHook(CreateImageButtonClickedHook, CreateImageButtonClickedFunc);
 
 HOOKPROTONHNONP(OpenImageButtonClickedFunc, void) {
-	if (currentImage->width == currentImage->height)
-		openImage(currentImage, 256, 256);
-	else if (currentImage->width > currentImage->height) {
-		LONG height = (currentImage->height * 256) / currentImage->width;
-		openImage(currentImage, 256, height);
-	} else {
-		LONG width = (currentImage->width * 256) / currentImage->height;
-		openImage(currentImage, width, 256);
-	}
+	// Get screen dimensions
+    WORD screenWidth = screen->Width;
+    WORD screenHeight = screen->Height;
+
+    // Calculate the maximum size for the image
+    LONG maxImageWidth = (screenWidth * 90) / 100; // 90% of screen width
+    LONG maxImageHeight = (screenHeight * 90) / 100; // 90% of screen height
+
+    // Variables to hold the new dimensions
+    LONG newWidth = 0;
+    LONG newHeight = 0;
+
+    if (currentImage != NULL) {
+        if (currentImage->width > currentImage->height) {
+            // Landscape: fit width and calculate height maintaining aspect ratio
+            newWidth = maxImageWidth;
+            newHeight = (currentImage->height * maxImageWidth) / currentImage->width;
+
+            // Ensure height does not exceed maximum
+            if (newHeight > maxImageHeight) {
+                newHeight = maxImageHeight;
+                newWidth = (currentImage->width * maxImageHeight) / currentImage->height;
+            }
+        } else {
+            // Portrait or square: fit height and calculate width maintaining aspect ratio
+            newHeight = maxImageHeight;
+            newWidth = (currentImage->width * maxImageHeight) / currentImage->height;
+
+            // Ensure width does not exceed maximum
+            if (newWidth > maxImageWidth) {
+                newWidth = maxImageWidth;
+                newHeight = (currentImage->height * maxImageWidth) / currentImage->width;
+            }
+        }
+
+        // Open the image with calculated dimensions
+        openImage(currentImage, newWidth, newHeight);
+    } else {
+        displayError("No image is currently selected.");
+    }
 }
 MakeHook(OpenImageButtonClickedHook, OpenImageButtonClickedFunc);
 

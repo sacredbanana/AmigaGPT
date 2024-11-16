@@ -71,65 +71,6 @@ static CONST_STRPTR USED_CLASSES[] = {
 
 static void closeGUILibraries();
 
-// #ifdef __AMIGAOS4__
-// static uint32 processIDCMPCreateImageWindow(struct Hook *hook, struct Window *window, struct IntuiMessage *message) {
-// #else
-// static void __SAVE_DS__ __ASM__ processIDCMPCreateImageWindow(__REG__ (a0, struct Hook *hook), __REG__ (a2, struct Window *window), __REG__ (a1, struct IntuiMessage *message)) {
-// #endif
-// 	switch (message->Class) {
-// 		case IDCMP_IDCMPUPDATE:
-// 		{
-// 			UWORD MsgCode = message->Code;
-// 			struct TagItem *MsgTags = message->IAddress;
-// 			struct TagItem *List = MsgTags;
-// 			struct TagItem *This;
-
-// 			while((This = NextTagItem(&List)) != NULL)
-// 			{
-// 				switch(This->ti_Tag)
-// 				{
-// 					case DTA_Busy:
-// 						if(This->ti_Data)
-// 						{
-// 							SetWindowPointer(imageWindow,
-// 								WA_BusyPointer,	TRUE,
-// 							TAG_DONE);
-// 							updateStatusBar("Processing image...", 7);
-// 						}
-// 						else
-// 						{
-// 							SetWindowPointerA(imageWindow,NULL);
-// 							updateStatusBar("Ready", 5);
-// 						}
-
-// 						break;
-
-// 					case DTA_Sync:
-// 						SetAttrs(dataTypeObject,
-// 						 GA_RelWidth, imageWindow->Width - imageWindow->BorderLeft - imageWindow->BorderRight,
-// 						GA_RelHeight, imageWindow->Height - imageWindow->BorderTop - imageWindow->BorderBottom,
-// 						 TAG_DONE);
-// 						RefreshDTObjects(dataTypeObject,imageWindow,NULL,NULL);
-// 						break;
-// 				}
-// 			}
-// 			break;
-// 		}
-// 		case IDCMP_REFRESHWINDOW:
-// 			BeginRefresh(imageWindow);
-// 			EndRefresh(imageWindow,TRUE);
-// 			break;
-// 		default:
-// 			printf("Unknown message class: %lx\n", message->Class);
-// 			break;
-// 	}
-// 	#ifdef __AMIGAOS3__
-// 	return;
-// 	#else
-// 	return WHOOKRSLT_IGNORE;
-// 	#endif
-// }
-
 /**
  * Open the libraries needed for the GUI
  * @return RETURN_OK on success, RETURN_ERROR on failure
