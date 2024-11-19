@@ -80,6 +80,6 @@ LONG createAboutAmigaGPTWindow() {
         return RETURN_OK;
 	} else {
         // printf("Warning: Could not create aboutAmigaGPTWindowObject\nThe installed MUI version is probably too old.\nFalling back to a simple requester.\n");
-		return RETURN_OK;
+		return RETURN_ERROR;
 	}
 }

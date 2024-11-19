@@ -47,6 +47,7 @@ struct DataTypes_Data
 	char *filename; /* Cache the filename */
 	int del; /* 1 if filename should be deleted */
 	int show; /* 1 if between show / hide */
+	BOOL loading;
 
 	Object *horiz_scrollbar;
 	Object *vert_scrollbar;
@@ -98,6 +99,7 @@ STATIC ULONG DataTypes_New(struct IClass *cl,Object *obj,struct opSet *msg)
 	data = (struct DataTypes_Data*)INST_DATA(cl,obj);
 	data->dt_obj = NULL;
 	data->filename = NULL;
+	data->loading = FALSE;
 	data->original_filename = NULL;
 
 	data->ehnode.ehn_Priority = 1;
@@ -298,6 +300,10 @@ STATIC ULONG DataTypes_Set(struct IClass *cl,Object *obj,struct opSet *msg)
 		}
 		data->filename = StrCopy(newfilename);
 
+		data->loading = strlen(data->filename) > 0; // Set loading flag
+		
+    	MUI_Redraw(obj, MADF_DRAWOBJECT); // Trigger a redraw to show "Loading..."
+
 		data->dt_obj = NewDTObject(newfilename, PDTA_DestMode, PMODE_V43, TAG_DONE);
 
 		if (data->dt_obj)
@@ -315,6 +321,7 @@ STATIC ULONG DataTypes_Set(struct IClass *cl,Object *obj,struct opSet *msg)
 				DoMethod(data->dt_obj, PDTM_SCALE, _mwidth(obj), _mheight(obj), 0);
 				AddDTObject(_window(obj), NULL, data->dt_obj, -1);
 			}
+			data->loading = FALSE; // Clear loading flag
 			MUI_Redraw(obj, MADF_DRAWOBJECT);
 		}
 	}
@@ -426,41 +433,50 @@ STATIC ULONG DataTypes_Draw(struct IClass *cl, Object *obj, struct MUIP_Draw *ms
 	struct DataTypes_Data *data = (struct DataTypes_Data*)INST_DATA(cl,obj);
 	DoSuperMethodA(cl,obj,(Msg)msg);
 
-	if (msg->flags & MADF_DRAWOBJECT && data->dt_obj)
-	{
-		RefreshDTObjects(data->dt_obj, _window(obj), NULL, 0);
-	}
+	if (msg->flags & MADF_DRAWOBJECT) {
+        if (data->loading) {
+			DoMethod(obj, MUIM_Text, _mleft(obj), _mtop(obj) + (_mheight(obj) >> 1), _mwidth(obj), _mheight(obj),
+	         "Loading image...", -1, "\033c", 'b');
+        } else if (data->dt_obj) {
+            // Refresh the data type object
+            RefreshDTObjects(data->dt_obj, _window(obj), NULL, 0);
+        }
+    }
 
-	return 1;
+    return 1;
 }
 
 STATIC ULONG DataTypes_HandleEvent(struct IClass *cl, Object *obj, struct MUIP_HandleEvent *msg)
 {
 	struct DataTypes_Data *data = (struct DataTypes_Data*)INST_DATA(cl,obj);
 
-if (msg->imsg && msg->imsg->Class == IDCMP_NEWSIZE) {
-        if (data->dt_obj) {
-            DisposeDTObject(data->dt_obj);
-            data->dt_obj = NewDTObject(data->original_filename,
-                                       PDTA_DestMode, PMODE_V43,
-                                       TAG_DONE);
+	if (msg->imsg && msg->imsg->Class == IDCMP_NEWSIZE) {
+		if (data->dt_obj) {
+			DisposeDTObject(data->dt_obj);
+			data->dt_obj = NULL;
 
-            if (data->dt_obj) {
-                SetDTAttrs(data->dt_obj, NULL, NULL,
-                           GA_Left,   _mleft(obj),
-                           GA_Top,    _mtop(obj),
-                           GA_Width,  _mwidth(obj),
-                           GA_Height, _mheight(obj),
-                           ICA_TARGET, ICTARGET_IDCMP,
-                           TAG_DONE);
+			data->loading = 1;
+			MUI_Redraw(obj, MADF_DRAWOBJECT);
 
-                DoMethod(data->dt_obj, PDTM_SCALE, _mwidth(obj), _mheight(obj), 0);
-                AddDTObject(_window(obj), NULL, data->dt_obj, -1);
-            }
-        }
+			data->dt_obj = NewDTObject(data->original_filename, PDTA_DestMode, PMODE_V43, TAG_DONE);
+
+			if (data->dt_obj) {
+				SetDTAttrs(data->dt_obj, NULL, NULL,
+							GA_Left, _mleft(obj),
+							GA_Top, _mtop(obj),
+							GA_Width, _mwidth(obj),
+							GA_Height, _mheight(obj),
+							ICA_TARGET, ICTARGET_IDCMP,
+							TAG_DONE);
+
+				DoMethod(data->dt_obj, PDTM_SCALE, _mwidth(obj), _mheight(obj), 0);
+				AddDTObject(_window(obj), NULL, data->dt_obj, -1);
+			}
+
+			data->loading = 0;
+			MUI_Redraw(obj, MADF_DRAWOBJECT);
+		}
     }
-
-	// return DoSuperMethodA(cl, obj, msg);
 
 	if (msg->imsg && msg->imsg->Class == IDCMP_IDCMPUPDATE)
 	{

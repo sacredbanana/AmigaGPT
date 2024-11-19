@@ -44,7 +44,7 @@ LONG main(int argc, char **argv) {
 	UBYTE *lower = (UBYTE *)currentTask->pr_Task.tc_SPLower;
 	ULONG total = upper - lower;
 
-	if (total < 20000) {
+	if (total < 32768) {
 		printf("Warning: The stack size of %ld bytes is too small. The minimum recommended stack size is 20000 bytes to avoid crashes.\n", total);
 	}
 	#else

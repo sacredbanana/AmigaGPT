@@ -139,15 +139,23 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
 		FreeVec(currentImage->filePath);
 		FreeVec(currentImage->prompt);
 		FreeVec(currentImage);
+		currentImage = NULL;
 	}
-	set(imageInputTextEditor, MUIA_Disabled, TRUE);
-	set(createImageButton, MUIA_Disabled, TRUE);
 
-	struct GeneratedImage *image;
+	set(imageInputTextEditor, MUIA_TextEditor_ReadOnly, TRUE);
+	set(imageInputTextEditor, MUIA_Disabled, FALSE);
+
+	struct GeneratedImage *image = NULL;
 	DoMethod(imageListObject, MUIM_NList_GetEntry, MUIV_NList_GetEntry_Active, &image);
-	set(imageInputTextEditor, MUIA_TextEditor_Contents, image->prompt);
-	currentImage = copyGeneratedImage(image);
-	set(imageView, MUIA_DataTypes_FileName, currentImage->filePath);
+	if (image) {
+		set(createImageButton, MUIA_Disabled, TRUE);
+		set(openImageButton, MUIA_Disabled, FALSE);
+		set(saveImageCopyButton, MUIA_Disabled, FALSE);
+		set(imageInputTextEditor, MUIA_TextEditor_Contents, image->prompt);
+		set(imageInputTextEditor, MUIA_TextEditor_ReadOnly, TRUE);
+		currentImage = copyGeneratedImage(image);
+		set(imageView, MUIA_DataTypes_FileName, currentImage->filePath);
+	}
 }
 MakeHook(ImageRowClickedHook, ImageRowClickedFunc);
 
@@ -187,7 +195,10 @@ HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
 	}
 	currentImage = NULL;
 	set(imageInputTextEditor, MUIA_Disabled, FALSE);
+	set(imageInputTextEditor, MUIA_TextEditor_ReadOnly, FALSE);
 	set(createImageButton, MUIA_Disabled, FALSE);
+	set(openImageButton, MUIA_Disabled, TRUE);
+	set(saveImageCopyButton, MUIA_Disabled, TRUE);
 	DoMethod(imageInputTextEditor, MUIM_TextEditor_ClearText);
 	DoMethod(imageInputTextEditor, MUIM_GoActive);
 	set(imageView, MUIA_DataTypes_FileName, "");
@@ -196,7 +207,12 @@ MakeHook(NewImageButtonClickedHook, NewImageButtonClickedFunc);
 
 HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
 	DoMethod(imageListObject, MUIM_NList_Remove, MUIV_NList_Remove_Active);
-	currentImage = NULL;
+	DoMethod(imageListObject, MUIM_NList_Select, MUIV_NList_Select_All, MUIV_NList_Select_Off, NULL);
+	set(openImageButton, MUIA_Disabled, TRUE);
+	set(saveImageCopyButton, MUIA_Disabled, TRUE);
+	set(imageInputTextEditor, MUIA_TextEditor_ReadOnly, FALSE);
+	DoMethod(imageInputTextEditor, MUIM_TextEditor_ClearText);
+	DoMethod(imageInputTextEditor, MUIM_GoActive);
 	set(imageView, MUIA_DataTypes_FileName, "");
 	saveImages();
 }
@@ -225,6 +241,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 			set(newImageButton, MUIA_Disabled, FALSE);
 			set(deleteImageButton, MUIA_Disabled, FALSE);
 			set(imageInputTextEditor, MUIA_Disabled, FALSE);
+			set(imageInputTextEditor, MUIA_TextEditor_ReadOnly, FALSE);
 			updateStatusBar("Error", redPen);
 			return;
 		}
@@ -234,12 +251,12 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 			struct json_object *message = json_object_object_get(error, "message");
 			STRPTR messageString = json_object_get_string(message);
 			displayError(messageString);
-			set(imageInputTextEditor, MUIA_TextEditor_Contents, text);
 			json_object_put(response);
 			set(createImageButton, MUIA_Disabled, FALSE);
 			set(newImageButton, MUIA_Disabled, FALSE);
 			set(deleteImageButton, MUIA_Disabled, FALSE);
 			set(imageInputTextEditor, MUIA_Disabled, FALSE);
+			set(imageInputTextEditor, MUIA_TextEditor_ReadOnly, FALSE);
 			updateStatusBar("Error", 6);
 			json_object_put(response);
 			return;
@@ -332,14 +349,9 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 		generatedImage->width = imageWidth;
 		generatedImage->height = imageHeight;
 		DoMethod(imageListObject, MUIM_NList_InsertSingle, generatedImage, MUIV_NList_Insert_Top);
-		set(imageListObject, MUIA_NList_Active, 0);
+		DoMethod(imageListObject, MUIM_NList_SetActive, 0, NULL);
 		currentImage = generatedImage;
-		set(imageView, MUIA_DataTypes_FileName, currentImage->filePath);
-
-		set(openImageButton, MUIA_Disabled, FALSE);
-		set(saveImageCopyButton, MUIA_Disabled, FALSE);
-		set(newImageButton, MUIA_Disabled, FALSE);
-		set(deleteImageButton, MUIA_Disabled, FALSE);
+		ImageRowClickedFunc();
 
 		FreeVec(text);
 		FreeVec(textUTF_8);
@@ -446,6 +458,9 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
         MUIA_Window_ActiveObject, chatInputTextEditor,
 		MUIA_Window_Open, TRUE,
         TAG_DONE);
+
+	set(openImageButton, MUIA_Disabled, TRUE);
+	set(saveImageCopyButton, MUIA_Disabled, TRUE);
 	
 	updateStatusBar("Ready", greenPen);
 }
@@ -460,8 +475,6 @@ LONG createMainWindow() {
 	currentImage = NULL;
 
 	createMenu();
-
-	create_datatypes_class();
 
 	if ((mainWindowObject = WindowObject,
 			MUIA_Window_Title, "AmigaGPT",
@@ -547,7 +560,7 @@ LONG createMainWindow() {
 					End,
 					Child, HGroup,
 						GroupFrame,
-						Child, VGroup,// MUIA_Weight, 30,
+						Child, VGroup,
 							// New image button
 							Child, newImageButton = MUI_MakeObject(MUIO_Button, "New Image",
 								MUIA_CycleChain, TRUE,
@@ -577,22 +590,29 @@ LONG createMainWindow() {
 								End,
 							End,
 						End,
-						Child, VGroup, MUIA_Weight, 70,
-							Child, VSpace(0),
+						Child, VGroup, MUIA_Weight, 220,
 							Child, HGroup,
+								MUIA_Background, MUII_PropBack,
+								Child, MUI_MakeObject(MUIO_Button, "",
+								MUIA_CycleChain, TRUE,
+								MUIA_InputMode, MUIV_InputMode_RelVerify,
+							TAG_DONE),
 								// Image view
 								Child, imageView = DataTypesObject, NULL,TAG_END),
 							End,
-							// Open image button
-							Child, openImageButton = MUI_MakeObject(MUIO_Button, "Open Image",
-								MUIA_CycleChain, TRUE,
-								MUIA_InputMode, MUIV_InputMode_RelVerify,
-							TAG_DONE),
-							// Save image copy button
-							Child, saveImageCopyButton = MUI_MakeObject(MUIO_Button, "Save Image Copy",
-								MUIA_CycleChain, TRUE,
-								MUIA_InputMode, MUIV_InputMode_RelVerify,
-							TAG_DONE),
+							Child, HGroup,
+								GroupFrame,
+								// Open image button
+								Child, openImageButton = MUI_MakeObject(MUIO_Button, "Open Image",
+									MUIA_CycleChain, TRUE,
+									MUIA_InputMode, MUIV_InputMode_RelVerify,
+								TAG_DONE),
+								// Save image copy button
+								Child, saveImageCopyButton = MUI_MakeObject(MUIO_Button, "Save Image Copy",
+									MUIA_CycleChain, TRUE,
+									MUIA_InputMode, MUIV_InputMode_RelVerify,
+								TAG_DONE),
+							End,
 							Child, HGroup,
 								// Image input text editor
 								Child, imageInputTextEditor = TextEditorObject,
@@ -1173,7 +1193,6 @@ void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scaledHeight
 	set(imageWindowObject, MUIA_Window_Activate, TRUE);
 	set(imageWindowObject, MUIA_Window_Screen, screen);
 	set(imageWindowObject, MUIA_Window_Open, TRUE);
-	get(imageWindowObject, MUIA_Window, &imageWindow);
 	set(openImageWindowImageView, MUIA_DataTypes_FileName, image->filePath);
 
 	updateStatusBar("Ready", greenPen);

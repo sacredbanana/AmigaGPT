@@ -1,9 +1,6 @@
 #ifdef __AMIGAOS3__ || __AMIGAOS4__
 #include "amiga_compiler.h"
 #endif
-#include <datatypes/datatypes.h>
-#include <datatypes/datatypesclass.h>
-#include <datatypes/pictureclass.h>
 #include <json-c/json.h>
 #include <intuition/icclass.h>
 #include <libraries/mui.h>
@@ -27,7 +24,6 @@
 
 #ifdef __AMIGAOS4__
 struct MUIMasterIFace *IMUIMaster;
-struct DataTypesIFace *IDataTypes;
 #endif
 
 #ifdef __MORPHOS__
@@ -56,7 +52,6 @@ Object *app;
 ULONG redPen, greenPen, bluePen, yellowPen;
 struct Screen *screen;
 Object *imageWindowObject;
-struct Window *imageWindow;
 Object *openImageWindowImageView;
 Object *dataTypeObject;
 
@@ -91,23 +86,6 @@ LONG openGUILibraries() {
 		return RETURN_ERROR;
 	}
 	#endif
-
-	#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-	if ((DataTypesBase = OpenLibrary("datatypes.library", 44)) == NULL) {
-		printf("Could not open datatypes.library\n");
-		return RETURN_ERROR;
-	}
-	#else
-	if ((DataTypesBase = OpenLibrary("datatypes.library", 44)) == NULL) {
-		printf("Could not open datatypes.library\n");
-		return RETURN_ERROR;
-	}
-	if ((IDataTypes = (struct DataTypesIFace *)GetInterface(DataTypesBase, "main", 1, NULL)) == NULL) {
-		printf("Could not get interface for datatypes.library\n");
-		return RETURN_ERROR;
-	}
-	#endif
-
 	return RETURN_OK;
 }
 
@@ -129,6 +107,8 @@ LONG initVideo() {
 	if (openGUILibraries() == RETURN_ERROR) {
 		return RETURN_ERROR;
 	}
+
+	create_datatypes_class();
 
 	if (createStartupOptionsWindow() == RETURN_ERROR)
 		return RETURN_ERROR;
@@ -181,12 +161,11 @@ LONG initVideo() {
 	}
 
 	DoMethod(imageWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
-    get(imageWindowObject, MUIA_Window, &imageWindow);   
 
 	if (createAboutAmigaGPTWindow() == RETURN_OK)
 		DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
 
-	set(startupOptionsWindowObject, MUIA_Window_Open, TRUE);	
+	set(startupOptionsWindowObject, MUIA_Window_Open, TRUE);
 
 	DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
 
