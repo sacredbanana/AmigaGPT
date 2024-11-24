@@ -1197,7 +1197,11 @@ void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scaledHeight
 	if (image == NULL) return;
 	if (!isMUI5) {
 		copyFile(image->filePath, "T:tempImage.png");
+		#ifdef __AMIGAOS3__
 		Execute("MultiView T:tempImage.png", NULL, NULL);
+		#else
+		SystemTags("MultiView T:tempImage.png", SYS_Input, NULL, SYS_Output, NULL, TAG_DONE);
+		#endif
 		return;
 	}
 	WORD lowestWidth = (screen->Width - 16) < scaledWidth ? (screen->Width - 16) : scaledWidth;
