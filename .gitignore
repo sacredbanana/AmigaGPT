@@ -1,9 +1,8 @@
 .DS_Store
 out/
 build/
-bundle/AmigaGPT/AmigaGPT
 bundle/AmigaGPT/AmigaGPT.info
-bundle/AmigaGPT/AmigaGPT_OS4
 bundle/AmigaGPT/AmigaGPT_OS4.info
+bundle/AmigaGPT/AmigaGPT_MorphOS.info
 src/test/build
 src/test/openai-key.h

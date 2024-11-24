@@ -96,6 +96,6 @@ $(vasm_objects): build/morphos/obj/%.o : %.asm | $(BUILD_DIR)
 copy_bundle_files:
 	$(info Copying bundle files...)
 	mkdir -p out
-	cp assets/AmigaGPT_OS4.info bundle/AmigaGPT/$(PROGRAM_NAME).info
+	cp assets/$(PROGRAM_NAME).info bundle/AmigaGPT/$(PROGRAM_NAME).info
 	cp -R bundle/AmigaGPT/* out/
 	

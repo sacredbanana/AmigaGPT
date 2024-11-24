@@ -39,6 +39,7 @@ extern Object *imageWindowObject;
 extern struct Window *imageWindow;
 extern Object *dataTypeObject;
 extern Object *openImageWindowImageView;
+extern BOOL isMUI5;
 
 /**
  * Create the GUI

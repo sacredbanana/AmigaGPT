@@ -54,6 +54,7 @@ struct Screen *screen;
 Object *imageWindowObject;
 Object *openImageWindowImageView;
 Object *dataTypeObject;
+BOOL isMUI5;
 
 static CONST_STRPTR USED_CLASSES[] = {
 	MUIC_Aboutbox,
@@ -86,6 +87,8 @@ LONG openGUILibraries() {
 		return RETURN_ERROR;
 	}
 	#endif
+
+	isMUI5 = MUIMasterBase->lib_Version >= 20;
 	return RETURN_OK;
 }
 
@@ -122,7 +125,7 @@ LONG initVideo() {
 	if (createChatSystemRequesterWindow() == RETURN_ERROR)
 		return RETURN_ERROR;
 
-	if ((imageWindowObject = WindowObject,
+	if (isMUI5 && (imageWindowObject = WindowObject,
 			MUIA_Window_Title, "Image",
 			MUIA_Window_Width, 320,
 			MUIA_Window_Height, 240,
@@ -154,7 +157,6 @@ LONG initVideo() {
 		SubWindow, mainWindowObject,
 		SubWindow, apiKeyRequesterWindowObject,
 		SubWindow, chatSystemRequesterWindowObject,
-		SubWindow, imageWindowObject,
 		End)) {
 		displayError("Could not create app!\n");
 		return RETURN_ERROR;
@@ -164,6 +166,10 @@ LONG initVideo() {
 
 	if (createAboutAmigaGPTWindow() == RETURN_OK)
 		DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
+
+	if (isMUI5) {
+		DoMethod(app, OM_ADDMEMBER, imageWindowObject);
+	}
 
 	set(startupOptionsWindowObject, MUIA_Window_Open, TRUE);
 

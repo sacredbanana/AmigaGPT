@@ -591,15 +591,28 @@ LONG createMainWindow() {
 							End,
 						End,
 						Child, VGroup, MUIA_Weight, 220,
-							Child, HGroup,
-								MUIA_Background, MUII_PropBack,
-								Child, MUI_MakeObject(MUIO_Button, "",
-								MUIA_CycleChain, TRUE,
-								MUIA_InputMode, MUIV_InputMode_RelVerify,
-							TAG_DONE),
-								// Image view
-								Child, imageView = DataTypesObject, NULL,TAG_END),
+							// Image view
+							#ifdef __MORPHOS__
+							Child, imageView = VGroup,
+								Child, VSpace(0),
+								Child, TextObject,
+									TextFrame,
+									MUIA_Text_Contents, "\33cImage preview not supported in MorphOS. Click \"Open Image\" to view the image.",
+									MUIA_Background, MUII_TextBack,
+								End,
+								Child, VSpace(0),
 							End,
+							#else
+							Child, imageView = isMUI5 ? DataTypesObject, NULL,TAG_END) : VGroup,
+								Child, VSpace(0),
+								Child, TextObject,
+									TextFrame,
+									MUIA_Text_Contents, "\33cMUI version 5 is required for image preview. Click \"Open Image\" to view the image.",
+									MUIA_Background, MUII_TextBack,
+								End,
+								Child, VSpace(0),
+							End,
+							#endif
 							Child, HGroup,
 								GroupFrame,
 								// Open image button
@@ -1182,6 +1195,11 @@ void openImage(struct GeneratedImage *image, WORD scaledWidth, WORD scaledHeight
 	Execute("System:Utilities/MultiView T:tempImage.png", NULL, NULL);
 	#else
 	if (image == NULL) return;
+	if (!isMUI5) {
+		copyFile(image->filePath, "T:tempImage.png");
+		Execute("MultiView T:tempImage.png", NULL, NULL);
+		return;
+	}
 	WORD lowestWidth = (screen->Width - 16) < scaledWidth ? (screen->Width - 16) : scaledWidth;
 	WORD lowestHeight = screen->Height < scaledHeight ? screen->Height : scaledHeight;
 
