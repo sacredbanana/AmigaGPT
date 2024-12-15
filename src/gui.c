@@ -48,8 +48,8 @@ struct EmulLibEntry muiDispatcherEntry =
 
 struct Library *MUIMasterBase;
 struct Library *DataTypesBase;
-Object *app;
-ULONG redPen, greenPen, bluePen, yellowPen;
+Object *app = NULL;
+ULONG redPen = NULL, greenPen = NULL, bluePen = NULL, yellowPen = NULL;
 struct Screen *screen;
 Object *imageWindowObject;
 Object *openImageWindowImageView;
@@ -65,6 +65,7 @@ static CONST_STRPTR USED_CLASSES[] = {
 	NULL
 	};
 
+static BOOL checkMUICustomClassInstalled();
 static void closeGUILibraries();
 
 /**
@@ -108,6 +109,11 @@ static void closeGUILibraries() {
 **/
 LONG initVideo() {
 	if (openGUILibraries() == RETURN_ERROR) {
+		return RETURN_ERROR;
+	}
+
+	if (!checkMUICustomClassInstalled()) {
+		displayError("Could not find all the MUI custom classes. Please make sure they are installed. Refer to the documentation for more information.");
 		return RETURN_ERROR;
 	}
 
@@ -182,6 +188,24 @@ LONG initVideo() {
 }
 
 /**
+ * Check if the MUI custom classes are available
+ * @return TRUE if the classes are available, FALSE if not
+**/
+static BOOL checkMUICustomClassInstalled() {
+	BOOL hasAllClasses = TRUE;
+	for (int i = 0; USED_CLASSES[i] != NULL; i++) {
+		if (!isMUI5 && !strcmp(USED_CLASSES[i], MUIC_Aboutbox) != 0)
+			continue;	
+		if (!MUI_GetClass(USED_CLASSES[i])) {
+			displayError("Could not find the MUI custom class:");
+			displayError(USED_CLASSES[i]);
+			hasAllClasses = FALSE;
+		}
+	}
+    return hasAllClasses;
+}
+
+/**
  * Start the main run loop of the GUI
 **/
 void startGUIRunLoop() {
@@ -208,12 +232,22 @@ void startGUIRunLoop() {
  * Shutdown the GUI
 **/
 void shutdownGUI() {
-	DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
-	MUI_DisposeObject(app);
-	ReleasePen(screen->ViewPort.ColorMap, redPen);
-	ReleasePen(screen->ViewPort.ColorMap, greenPen);
-	ReleasePen(screen->ViewPort.ColorMap, bluePen);
-	ReleasePen(screen->ViewPort.ColorMap, yellowPen);
+	if (app) {
+		DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
+		MUI_DisposeObject(app);
+	}
+	if (redPen) {
+		ReleasePen(screen->ViewPort.ColorMap, redPen);
+	}
+	if (greenPen) {
+		ReleasePen(screen->ViewPort.ColorMap, greenPen);
+	}
+	if (bluePen) {
+		ReleasePen(screen->ViewPort.ColorMap, bluePen);
+	}
+	if (yellowPen) {
+		ReleasePen(screen->ViewPort.ColorMap, yellowPen);
+	}
 	if (isPublicScreen) {
 		UnlockPubScreen(NULL, screen);
 	} else {
