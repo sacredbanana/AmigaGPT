@@ -167,9 +167,16 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Chat System", 0, 0, 0, (APTR)MENU_ITEM_OPENAI_CHAT_SYSTEM},
 	{NM_ITEM, "Chat Model", 0, 0, 0, (APTR)MENU_ITEM_NULL},
 	{NM_SUB, "gpt-4o", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o},
+	{NM_SUB, "gpt-4o-2024-11-20", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_11_20},
+	{NM_SUB, "gpt-4o-2024-08-06", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_08_06},
 	{NM_SUB, "gpt-4o-2024-05-13", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_05_13},
+	{NM_SUB, "chatgpt-4o-latest", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_CHATGPT_4o_LATEST},
 	{NM_SUB, "gpt-4o-mini", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI},
 	{NM_SUB, "gpt-4o-mini-2024-07-18", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI_2024_07_18},
+	{NM_SUB, "o1-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_PREVIEW},
+	{NM_SUB, "o1-preview-2024-09-12", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_PREVIEW_2024_09_12},
+	{NM_SUB, "o1-mini", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_MINI},
+	{NM_SUB, "o1-mini-2024-09-12", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_MINI_2024_09_12},
 	{NM_SUB, "gpt-4-turbo", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO},
 	{NM_SUB, "gpt-4-turbo-2024-04-09", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_2024_04_09},
 	{NM_SUB, "gpt-4-turbo-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_PREVIEW},
@@ -177,6 +184,7 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "gpt-4-1106-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_1106_PREVIEW},
 	{NM_SUB, "gpt-4", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4},
 	{NM_SUB, "gpt-4-0613", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0613},
+	{NM_SUB, "gpt-4-0314", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0314},
 	{NM_SUB, "gpt-3.5-turbo", 0, CHECKIT|CHECKED, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO},
 	{NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_0125},
 	{NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_1106},
@@ -321,6 +329,14 @@ void addMenuActions() {
 	set(openAIChatModelGPT4oMenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o);
 	DoMethod(openAIChatModelGPT4oMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4o, &config.chatModel);
 
+	Object openAIChatModelGPT4o2024_11_20MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_11_20);
+	set(openAIChatModelGPT4o2024_11_20MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o_2024_11_20);
+	DoMethod(openAIChatModelGPT4o2024_11_20MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4o_2024_11_20, &config.chatModel);
+
+	Object openAIChatModelGPT4o2024_08_06MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_08_06);
+	set(openAIChatModelGPT4o2024_08_06MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o_2024_08_06);
+	DoMethod(openAIChatModelGPT4o2024_08_06MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4o_2024_08_06, &config.chatModel);
+
 	Object openAIChatModelGPT4o2024_05_13MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_05_13);
 	set(openAIChatModelGPT4o2024_05_13MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o_2024_05_13);
 	DoMethod(openAIChatModelGPT4o2024_05_13MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4o_2024_05_13, &config.chatModel);
@@ -332,6 +348,22 @@ void addMenuActions() {
 	Object openAIChatModelGPT4oMini2024_07_18MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI_2024_07_18);
 	set(openAIChatModelGPT4oMini2024_07_18MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o_MINI_2024_07_18);
 	DoMethod(openAIChatModelGPT4oMini2024_07_18MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4o_MINI_2024_07_18, &config.chatModel);
+
+	Object openAIChatModelo1PreviewMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_o1_PREVIEW);
+	set(openAIChatModelo1PreviewMenuItem, MUIA_Menuitem_Checked, config.chatModel == o1_PREVIEW);
+	DoMethod(openAIChatModelo1PreviewMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, o1_PREVIEW, &config.chatModel);
+
+	Object openAIChatModelo1Pewview2024_09_12MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_o1_PREVIEW_2024_09_12);
+	set(openAIChatModelo1Pewview2024_09_12MenuItem, MUIA_Menuitem_Checked, config.chatModel == o1_PREVIEW_2024_09_12);
+	DoMethod(openAIChatModelo1Pewview2024_09_12MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, o1_PREVIEW_2024_09_12, &config.chatModel);
+
+	Object openAIChatModelo1MiniMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_o1_MINI);
+	set(openAIChatModelo1MiniMenuItem, MUIA_Menuitem_Checked, config.chatModel == o1_MINI);
+	DoMethod(openAIChatModelo1MiniMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, o1_MINI, &config.chatModel);
+
+	Object openAIChatModelo1Mini2024_09_12MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_o1_MINI_2024_09_12);
+	set(openAIChatModelo1Mini2024_09_12MenuItem, MUIA_Menuitem_Checked, config.chatModel == o1_MINI_2024_09_12);
+	DoMethod(openAIChatModelo1Mini2024_09_12MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, o1_MINI_2024_09_12, &config.chatModel);
 
 	Object openAIChatModelGPT4TurboMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO);
 	set(openAIChatModelGPT4TurboMenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4_TURBO);
@@ -360,6 +392,10 @@ void addMenuActions() {
 	Object openAIChatModelGPT4_0613MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0613);
 	set(openAIChatModelGPT4_0613MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4_0613);
 	DoMethod(openAIChatModelGPT4_0613MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4_0613, &config.chatModel);
+
+	Object openAIChatModelGPT4_0314MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0314);
+	set(openAIChatModelGPT4_0314MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4_0314);
+	DoMethod(openAIChatModelGPT4_0314MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4_0314, &config.chatModel);
 
 	Object openAIChatModelGPT3_5TurboMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO);
 	set(openAIChatModelGPT3_5TurboMenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_3_5_TURBO);

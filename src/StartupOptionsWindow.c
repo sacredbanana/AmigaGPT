@@ -88,7 +88,6 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void, Object *screenSelectRadioBu
 					SA_AutoScroll, screenModeRequester->sm_AutoScroll,
 					SA_Width, screenModeRequester->sm_DisplayWidth,
 					SA_Height, screenModeRequester->sm_DisplayHeight,
-					SA_Colors32, config.colors,
 					TAG_DONE)) == NULL) {
 						displayError("Could not open screen");
 						MUI_FreeAslRequest(screenModeRequester);

@@ -8,12 +8,8 @@
 - Enhanced "About AmigaGPT" panel
 - New "About MUI" panel
 - Fix memory leak when receiving messages
-- support for proxy servers???
-- more responsive user interface with the ability to cancel pending operations???
-- ability to greatly customise the look of the app???
-- new app installer???
-- ARexx port???
-- view instant preview of generated images???
+- View instant preview of generated images (MUI 5 only and not supported in MorphOS)
+- Updated to the latest OpenAI models
 
 ## 1.6.3 (2024-09-18)
 

@@ -17,7 +17,7 @@ struct Config config = {
 	.speechFliteVoice = SPEECH_FLITE_VOICE_KAL,
 	.speechSystem = SPEECH_SYSTEM_FLITE,
 	.chatSystem = NULL,
-	.chatModel = GPT_3_5_TURBO,
+	.chatModel = GPT_4o,
 	.imageModel = DALL_E_3,
 	.imageSizeDallE2 = IMAGE_SIZE_256x256,
 	.imageSizeDallE3 = IMAGE_SIZE_1024x1024,
@@ -55,14 +55,6 @@ LONG writeConfig() {
 	json_object_object_add(configJsonObject, "imageSizeDallE3", json_object_new_int(config.imageSizeDallE3));
 	json_object_object_add(configJsonObject, "openAITTSModel", json_object_new_int(config.openAITTSModel));
 	json_object_object_add(configJsonObject, "openAITTSVoice", json_object_new_int(config.openAITTSVoice));
-	json_object_object_add(configJsonObject, "chatFontName", config.chatFontName != NULL ? json_object_new_string(config.chatFontName) : NULL);
-	json_object_object_add(configJsonObject, "chatFontSize", json_object_new_int(config.chatFontSize));
-	json_object_object_add(configJsonObject, "chatFontStyle", json_object_new_int(config.chatFontStyle));
-	json_object_object_add(configJsonObject, "chatFontFlags", json_object_new_int(config.chatFontFlags));
-	json_object_object_add(configJsonObject, "uiFontName", config.uiFontName != NULL ? json_object_new_string(config.uiFontName) : NULL);
-	json_object_object_add(configJsonObject, "uiFontSize", json_object_new_int(config.uiFontSize));
-	json_object_object_add(configJsonObject, "uiFontStyle", json_object_new_int(config.uiFontStyle));
-	json_object_object_add(configJsonObject, "uiFontFlags", json_object_new_int(config.uiFontFlags));
 	json_object_object_add(configJsonObject, "openAiApiKey", config.openAiApiKey != NULL ? json_object_new_string(config.openAiApiKey) : NULL);
 	json_object_object_add(configJsonObject, "chatModelSetVersion", json_object_new_int(CHAT_MODEL_SET_VERSION));
 	json_object_object_add(configJsonObject, "imageModelSetVersion", json_object_new_int(IMAGE_MODEL_SET_VERSION));
@@ -217,62 +209,6 @@ LONG readConfig() {
 		config.openAITTSVoice = json_object_get_int(openAITTSVoiceObj);
 	}
 
-	if (config.chatFontName != NULL) {
-		FreeVec(config.chatFontName);
-		config.chatFontName = NULL;
-	}
-	struct json_object *chatFontNameObj;
-	if (json_object_object_get_ex(configJsonObject, "chatFontName", &chatFontNameObj)) {
-		CONST_STRPTR chatFontName = json_object_get_string(chatFontNameObj);
-		if (chatFontName != NULL) {
-			config.chatFontName = AllocVec(strlen(chatFontName) + 1, MEMF_CLEAR);
-			strncpy(config.chatFontName, chatFontName, strlen(chatFontName));
-		}
-	}
-
-	struct json_object *chatFontSizeObj;
-	if (json_object_object_get_ex(configJsonObject, "chatFontSize", &chatFontSizeObj)) {
-		config.chatFontSize = json_object_get_int(chatFontSizeObj);
-	}
-
-	struct json_object *chatFontStyleObj;
-	if (json_object_object_get_ex(configJsonObject, "chatFontStyle", &chatFontStyleObj)) {
-		config.chatFontStyle = json_object_get_int(chatFontStyleObj);
-	}
-
-	struct json_object *chatFontFlagsObj;
-	if (json_object_object_get_ex(configJsonObject, "chatFontFlags", &chatFontFlagsObj)) {
-		config.chatFontFlags = json_object_get_int(chatFontFlagsObj);
-	}
-
-	if (config.uiFontName != NULL) {
-		FreeVec(config.uiFontName);
-		config.uiFontName = NULL;
-	}
-	struct json_object *uiFontNameObj;
-	if (json_object_object_get_ex(configJsonObject, "uiFontName", &uiFontNameObj)) {
-		CONST_STRPTR uiFontName = json_object_get_string(uiFontNameObj);
-		if (uiFontName != NULL) {
-			config.uiFontName = AllocVec(strlen(uiFontName) + 1, MEMF_CLEAR);
-			strncpy(config.uiFontName, uiFontName, strlen(uiFontName));
-		}
-	}
-
-	struct json_object *uiFontSizeObj;
-	if (json_object_object_get_ex(configJsonObject, "uiFontSize", &uiFontSizeObj)) {
-		config.uiFontSize = json_object_get_int(uiFontSizeObj);
-	}
-
-	struct json_object *uiFontStyleObj;
-	if (json_object_object_get_ex(configJsonObject, "uiFontStyle", &uiFontStyleObj)) {
-		config.uiFontStyle = json_object_get_int(uiFontStyleObj);
-	}
-
-	struct json_object *uiFontFlagsObj;
-	if (json_object_object_get_ex(configJsonObject, "uiFontFlags", &uiFontFlagsObj)) {
-		config.uiFontFlags = json_object_get_int(uiFontFlagsObj);
-	}
-
 	if (config.openAiApiKey != NULL) {
 		FreeVec(config.openAiApiKey);
 		config.openAiApiKey = NULL;
@@ -294,7 +230,7 @@ LONG readConfig() {
 	}
 
 	if (config.chatModelSetVersion != CHAT_MODEL_SET_VERSION) {
-		config.chatModel = GPT_4;
+		config.chatModel = GPT_4o;
 	}
 
 	struct json_object *imageModelSetVersionObj;
@@ -365,14 +301,6 @@ void freeConfig() {
 	if (config.chatSystem != NULL) {
 		FreeVec(config.chatSystem);
 		config.chatSystem = NULL;
-	}
-	if (config.chatFontName != NULL) {
-		FreeVec(config.chatFontName);
-		config.chatFontName = NULL;
-	}
-	if (config.uiFontName != NULL) {
-		FreeVec(config.uiFontName);
-		config.uiFontName = NULL;
 	}
 	if (config.openAiApiKey != NULL) {
 		FreeVec(config.openAiApiKey);

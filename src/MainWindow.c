@@ -35,10 +35,6 @@ Object *imageView;
 Object *openImageButton;
 Object *saveImageCopyButton;
 WORD pens[NUMDRIPENS + 1];
-LONG textEditorColorMap[] = {5,10,6,3,6,6,4,0,1,6,6,6,6,6,6,6};
-LONG sendMessageButtonPen;
-LONG newChatButtonPen;
-LONG deleteButtonPen;
 BOOL isPublicScreen;
 struct Conversation *currentConversation;
 struct GeneratedImage *currentImage;
@@ -812,8 +808,11 @@ static void sendChatMessage() {
 
 	DoMethod(chatOutputTextEditor, MUIM_TextEditor_InsertText, "\n", MUIV_TextEditor_InsertText_Bottom);
 	do {
-		if (config.chatSystem != NULL && (config.chatSystem) > 0)
+		if (config.chatSystem != NULL && strlen(config.chatSystem) > 0 &&
+			config.chatModel != o1_PREVIEW && config.chatModel != o1_PREVIEW_2024_09_12 &&
+			config.chatModel != o1_MINI && config.chatModel != o1_MINI_2024_09_12) {
 			addTextToConversation(currentConversation, config.chatSystem, "system");
+		}
 		responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, TRUE);
 		if (responses == NULL) {
 			displayError("Could not connect to OpenAI");
@@ -824,7 +823,9 @@ static void sendChatMessage() {
 			FreeVec(receivedMessage);
 			return;
 		}
-		if (config.chatSystem != NULL && strlen(config.chatSystem) > 0) {
+		if (config.chatSystem != NULL && strlen(config.chatSystem) > 0 &&
+			config.chatModel != o1_PREVIEW && config.chatModel != o1_PREVIEW_2024_09_12 &&
+			config.chatModel != o1_MINI && config.chatModel != o1_MINI_2024_09_12) {
 			struct MinNode *chatSystemNode = RemTail(currentConversation->messages);
 			FreeVec(chatSystemNode);
 		}
@@ -905,7 +906,7 @@ static void sendChatMessage() {
 			updateStatusBar("Generating conversation title...", 7);
 			set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
-			responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, FALSE);
+			responses = postChatMessageToOpenAI(currentConversation, GPT_4o_MINI, config.openAiApiKey, FALSE);
 			set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 			if (responses == NULL) {
 				displayError("Could not connect to OpenAI");

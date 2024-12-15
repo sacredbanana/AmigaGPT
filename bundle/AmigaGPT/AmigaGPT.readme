@@ -21,9 +21,8 @@ Features:
 
 Requirements:
 - OCS/ECS/AGA Amiga
-- Motorola 68020 or higher CPU or PPC for AmigaOS 4
-- AmigaOS 3.9 and AmigaOS 3.X (included in Amiga Forever) supported but
- 3.2 or higher required for best experience. AmigaOS 4.1 version also included.
+- MUI 3 minimum; MUI 5 recommended for all features
+- Motorola 68020 or higher CPU or PPC for AmigaOS 4/MorphOS
 - AmiSSL 5.9 or higher (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
 - Internet access using a TCP/IP stack such as Roadshow 
 (http://roadshow.apc-tcp.de/index-en.php)
@@ -98,9 +97,10 @@ Speech on AmigaOS 4 is done with the help of Flite Device.
 
 
 Launching AmigaGPT:
-* Launch the application by double-clicking the AmigaGPT icon
+* Launch the application by double-clicking the AmigaGPT icon correspondant to
+ the OS you are running
 * You may also launch the app in the command line but before you do, run the
- command `STACK 20000` to give the program 20kb of stack since the default
+ command `STACK 32768` to give the program 32kb of stack since the default
  stack size for apps launched from the shell is 4kb and this is not enough for
  AmigaGPT and will cause random crashes due to stack overflow. This is not
  required when you launch the app by double clicking the icon since the stack
@@ -112,7 +112,8 @@ screen or opening in Workbench. If you open in a new screen you have the
 ability to create a screen for the app to open in. AmigaGPT supports anything
 from 320x200 all the way up to 4k resolution if using a video card for RTG.
 Bear in mind text will appear very tiny in resolutions above 1080p so you may
-want to increase the font size settings from the View menu when the app opens.
+want to increase the font size settings from the MUI settings in the View menu
+when the app opens.
 
 When launching for the first time you will need to enter your OpenAI API key
 before you can start chatting. If you haven't already done so, create an
@@ -185,10 +186,11 @@ Docker
 You may use an all-in-one Docker image that is able to compile both the
 AmigaOS 3 and AmigaOS 4 versions of the app.
 
-Just install Docker on your machine and run the `build_os3.sh` or
-`build_os4.sh` scripts depending on which version of the app you want to
- build. If you want to perform a clean build, you can set the environment
-variable `CLEAN=1` for example you can run `CLEAN=1 ./build_os3.sh`.
+Just install Docker on your machine and run the `build_os3.sh`,
+`build_os4.sh` or `build_morphos.sh` scripts depending on which version of
+the app you want to build. If you want to perform a clean build, you can set
+the environment variable `CLEAN=1` for example you can run
+`CLEAN=1 ./build_os3.sh`.
 
 The build app will be saved to the `/out` directory.
 
@@ -221,10 +223,28 @@ Special Thanks:
   https://www.youtube.com/watch?v=-OA28r8Up5U
 - Proteque-CBN for reviewing AmigaGPT on his YouTube channel
   https://www.youtube.com/watch?v=t3q8HQ6wrnw
+- AmigaBill for covering AmigaGPT in the Amiga News section on his Twitch
+  streams and allowing me to join his stream to promote it
+	https://www.twitch.tv/amigabill
 - Les Docs for making a video review and giving a tutorial on how to add
   support for the French accent https://www.youtube.com/watch?v=BV5Fq1PresE
 
 Changelog:
+
+------------------
+2.0.0
+------------------
+
+- Completely replace ReAction with MUI 5 with backwards compatibility with
+  MUI 3
+- Now fully compatible with AmigaOS 3.1
+- New native version for MorphOS
+- Enhanced "About AmigaGPT" panel
+- New "About MUI" panel
+- Fix memory leak when receiving messages
+- View instant preview of generated images (MUI 5 only and not supported in
+  MorphOS)
+- Updated to the latest OpenAI models
 
 ------------------
 1.6.3 (2024-09-18)
