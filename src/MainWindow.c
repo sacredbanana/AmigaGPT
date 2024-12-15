@@ -907,6 +907,8 @@ static void sendChatMessage() {
 			set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
 			responses = postChatMessageToOpenAI(currentConversation, GPT_4o_MINI, config.openAiApiKey, FALSE);
+			struct MinNode *titleRequestNode = RemTail(currentConversation->messages);
+			FreeVec(titleRequestNode);
 			set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 			if (responses == NULL) {
 				displayError("Could not connect to OpenAI");
@@ -924,8 +926,6 @@ static void sendChatMessage() {
 				}
 				DoMethod(conversationListObject, MUIM_NList_InsertSingle, currentConversation, MUIV_NList_Insert_Top);
 			}
-			struct MinNode *titleRequestNode = RemTail(currentConversation->messages);
-			FreeVec(titleRequestNode);
 			json_object_put(responses[0]);
 			FreeVec(responses);
 		}
