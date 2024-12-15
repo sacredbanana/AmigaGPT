@@ -1,6 +1,6 @@
 # AmigaGPT
 
-AmigaGPT is a text and image generation program that runs on the classic AmigaOS. Utilising the power of the OpenAI's GPT-3 and GPT-4 architectures, this program brings state-of-the-art language modeling to your Amiga computer.
+AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS. This powerful tool brings the capabilities of OpenAI’s GPT to your Amiga system, enabling text generation, question answering, and creative exploration. AmigaGPT can also generate stunning images using DALL-E and includes support for speech output, making it easier than ever to interact with AI on your Amiga. Designed to integrate seamlessly with your system, AmigaGPT delivers modern AI technology while embracing the timeless Amiga experience.
 
 <img width="953" alt="Screenshot 2023-06-15 at 10 26 38 pm" src="https://github.com/sacredbanana/AmigaGPT/assets/6903516/ca5e0db3-4e37-4ea9-a6ac-9fff2d5c195a">
 
@@ -9,7 +9,7 @@ AmigaGPT is a text and image generation program that runs on the classic AmigaOS
 
 - ### State-of-the-art language model
 
-**AmigaGPT** uses the GPT-4 architecture developed by OpenAI to generate coherent, context-aware responses to your input.
+**AmigaGPT** uses the o1, GPT-4o, GPT-4 and GPT-3.5 models developed by OpenAI to generate coherent, context-aware responses to your input.
 
 - ### AI Image Generation with DALL-E 2 and DALL-E 3
 
@@ -17,24 +17,27 @@ AmigaGPT is a text and image generation program that runs on the classic AmigaOS
 
 - ### Seamless integration with AmigaOS
 
-**AmigaGPT** takes full advantage of the latest AmigaOS 3.2 API to provide a smooth, native user experience without the need to have third party frameworks installed.
+**AmigaGPT** takes full advantage of the MUI framework to provide a smooth, native user experience that is responsive and easy to use.
 
 - ### UI customisation
 
-You can customise the look and feel of the application, including the ability to choose the fonts and a choice of opening in the Workbench screen or a custom screen.
+You can customise the look and feel of the application, including the ability to choose the fonts, colours and a choice of opening in the Workbench screen or a custom screen.
 
 - ### Speech capability
 
-**AmigaGPT** can use the Amiga's speech synthesis capability to read the generated text aloud with support for switching between the old Workbench 1.x **v34** and the Workbench 2.0 **v37** speech synthesisers.
+**AmigaGPT** has support for OpenAI's high quality 16 bit voices. For AmigaOS 3, **AmigaGPT** can use the Amiga's speech synthesis capability to read the generated text aloud with support for switching between the old Workbench 1.x **v34** and the Workbench 2.0 **v37** speech synthesisers. For AmigaOS 4.1, it has support for `flite.device`.
 
 ## System Requirements
 
 Ensure you have the necessary system requirements:
-- An OCS/ECS/AGA **Amiga**
-- **AmigaOS 3.9** and **AmigaOS 3.X included in Amiga Forever** supported but **AmigaOS 3.2** or higher required for best experience.  **AmigaOS 4.1** version also included.
-- Motorola 68020 or higher CPU or PPC for AmigaOS 4
+- An OCS/ECS/AGA **Amiga** or a PowerPC machine capable of running MorphOS
+- **AmigaOS 3.1** or higher, **AmigaOS 4.1** or **MorphOS**
+- Motorola 68020 or higher CPU or PowerPC for AmigaOS 4/MorphOS
 - Internet access using a TCP/IP stack such as **Roadshow** (http://roadshow.apc-tcp.de/index-en.php)
-- **AmiSSL 5.9** or higher (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
+- For AmigaOS 3 & 4: **AmiSSL 5.9** or higher (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
+- **MUI 3** minimum but **MUI 5** recommended for all features (https://github.com/amiga-mui/muidev/releases)
+- **MCC_NList** MUI custom class for lists (http://aminet.net/package/dev/mui/MCC_NList-0.128)
+- **MCC_TextEditor** MUI custom class for text editors (http://aminet.net/package/dev/mui/MCC_TextEditor-15.56)
 - An **OpenAI account** with an active **API key**
 - *Optional*: **AmigaOS 3 only**: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
 - *Optional*: **AmigaOS 4 only**: **Flite device** (http://aminet.net/package/mus/misc/flite_device)
@@ -42,11 +45,19 @@ Ensure you have the necessary system requirements:
  (http://aminet.net/package/driver/audio/ahiusr_4.18)
 
 ## Installation
-* Install AmiSSL and a TCP/IP stack if not already done so
+* For AmigaOS 3 & 4, Install AmiSSL and a TCP/IP stack if not already done so
+* Download and install MUI. Version 5 recommended, version 3 minimum. Reboot.
+* Download and install MCC_NList and MCC_TextEditor
 * Download the latest release of **AmigaGPT**
 * Extract the `amigagpt.lha` archive to your desired location
 
 ## *Optional steps to enable speech functionality*
+AmigaGPT supports reading the output aloud. How AmigaGPT does this depends on whether you are using AmigaOS 3 or 4. Or for OpenAI voices, this works on every system.
+
+### Installing AHI for OpenAI voices
+If your OS does not come with AHI installed, you can get it from
+ https://aminet.net/package/driver/audio/ahiusr_4.18
+
 ### AmigaOS 3 ###
 **AmigaGPT** supports reading the output aloud. This requires a file called `narrator.device` which cannot be included with **AmigaGPT** because it is still under copyright. Therefore, you must copy this file legally from your Workbench disks so that **AmigaGPT** will be able to synthesise speech. There are 2 versions of `narrator.device` supported, **v34** and **v37**. 
 
@@ -70,10 +81,6 @@ Since `translator.library` **v43** is not available as a standalone install, you
 
 ### Installing `narrator.device` **v37**
 * Insert your Workbench 2.0.x (you cannot use 2.1 because the speech libraries were removed after version 2.0.4) disk and copy `df0:devs/narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/37`
-
-### Installing AHI
-* If your OS does not come with AHI installed, you can get it from
- https://aminet.net/package/driver/audio/ahiusr_4.18
 
 ### AmigaOS 4
 * AmigaGPT for AmigaOS 4 uses the Flite device to provide speech synthesis. Download it from http://aminet.net/package/mus/misc/flite_device.
@@ -103,9 +110,11 @@ To generate images, simply select your desired image generation model from the "
 
 ### General
 
-In the "**Edit**" menu, you'll find basic text editing commands like **Cut**, **Copy**, **Paste** and **Clear**. The "**View**" menu allows you to change the font used in the chat and the UI.
-
 The "**Project**" menu includes an "**About**" option, which displays information about the program.
+
+In the "**Edit**" menu, you'll find basic text editing commands like **Cut**, **Copy**, **Paste** and **Clear**.
+
+The "**View**" menu allows you to change the appearance of the app.
 
 ## Chat Models
 

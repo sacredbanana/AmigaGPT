@@ -5,12 +5,17 @@ Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
 Version: 2.0.0
 Architecture: m68k-amigaos >= 3.1; ppc-amigaos; ppc-morphos
-Requires: AmigaOS 3.9+/68020+ util/libs/AmiSSL-5.9-OS3.lha
+Requires: AmigaOS 3.1+/68020+ util/libs/AmiSSL-5.9-OS3.lha MUI
 Replaces: util/misc/AmigaGPT.lha
 
-AmigaGPT is a text and image generation program that runs on the classic
-AmigaOS. Utilising the power of the OpenAI's GPT-3 and GPT-4 architectures,
-this program brings state-of-the-art language modeling to your Amiga computer.
+AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS.
+This powerful tool brings the capabilities of OpenAI’s GPT to your Amiga
+system, enabling text generation, question answering, and creative
+ exploration. AmigaGPT can also generate stunning images using DALL-E and
+includes support for speech output, making it easier than ever to interact
+with AI on your Amiga. Designed to integrate seamlessly with your system,
+AmigaGPT delivers modern AI technology while embracing the timeless Amiga
+experience.
 
 Features:
 - Generates text based on input prompts
@@ -20,12 +25,19 @@ Features:
 - Text-to-speech
 
 Requirements:
-- OCS/ECS/AGA Amiga
+- OCS/ECS/AGA Amiga or a PowerPC machine capable of running MorphOS
 - MUI 3 minimum; MUI 5 recommended for all features
 - Motorola 68020 or higher CPU or PPC for AmigaOS 4/MorphOS
-- AmiSSL 5.9 or higher (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
+- For AmigaOS 3 & 4, AmiSSL 5.9 or higher
+  (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
 - Internet access using a TCP/IP stack such as Roadshow 
 (http://roadshow.apc-tcp.de/index-en.php)
+- MUI 3 minimum but MUI 5 recommended for all features
+  (https://github.com/amiga-mui/muidev/releases)
+- MCC_NList MUI custom class for lists
+  (http://aminet.net/package/dev/mui/MCC_NList-0.128)
+- MCC_TextEditor MUI custom class for text editors
+  (http://aminet.net/package/dev/mui/MCC_TextEditor-15.56)
 - An active OpenAI API key
 - For speech on AmigaOS 3, any version of narrator.device
 - For speech on AmigaOS 4, Flite Device
@@ -35,13 +47,20 @@ Requirements:
 
 Installation:
 1. Install AmiSSL and a TCP/IP stack if not already done so
-2. Unpack the archive to a directory of your choice.
-3. Run the Installer script included in the package.
-4. Follow the prompts to complete the installation.
+2. Download and install MUI. Version 5 recommended, version 3 minimum. Reboot.
+3. Download and install MCC_NList and MCC_TextEditor.
+4. Download the latest release of AmigaGPT.
+5. Extract the `amigagpt.lha` archive to your desired location.
 
 Optional steps to enable speech functionality:
 AmigaGPT supports reading the output aloud. How AmigaGPT does this depends
-on whether you are using AmigaOS 3 or 4.
+on whether you are using AmigaOS 3 or 4. Or for OpenAI voices, this works on
+every system.
+
+Installing AHI for OpenAI voices:
+
+If your OS does not come with AHI installed, you can get it from
+ https://aminet.net/package/driver/audio/ahiusr_4.18
 
 AmigaOS 3:
 
@@ -83,18 +102,12 @@ Installing `narrator.device` v37
  were removed after version 2.0.4) disk and copy `df0:devs/narrator.device` to
 `{AmigaGPTProgramDirectory}/devs/speech/37`
 
-Installing AHI:
-* If your OS does not come with AHI installed, you can get it from
- https://aminet.net/package/driver/audio/ahiusr_4.18
-
 AmigaOS 4:
 
 Speech on AmigaOS 4 is done with the help of Flite Device.
 
 - Download Flite Device from http://aminet.net/package/mus/misc/flite_device
 - Extract the archive and run the installer
-
-
 
 Launching AmigaGPT:
 * Launch the application by double-clicking the AmigaGPT icon correspondant to
@@ -177,7 +190,6 @@ Get this toolchain set up https://github.com/sba1/adtools
 Once installed, get the required other SDK's  (AmiSSL, Translator, json-c)
 from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga
 dev environment created in the above step.
-
 
 ------
 Docker
