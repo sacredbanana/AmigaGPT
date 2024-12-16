@@ -1,6 +1,7 @@
 #include <exec/exec.h>
 #include <libraries/mui.h>
 #include <SDI_hook.h>
+#include <mui/TextEditor_mcc.h>
 #include "APIKeyRequesterWindow.h"
 #include "config.h"
 #include "gui.h"
@@ -9,14 +10,21 @@ Object *apiKeyRequesterString;
 Object *apiKeyRequesterWindowObject;
 
 HOOKPROTONHNONP(APIKeyRequesterOkButtonClickedFunc, void) {
-	STRPTR apiKey;
-	get(apiKeyRequesterString, MUIA_String_Contents, &apiKey);
+	STRPTR apiKey = DoMethod(apiKeyRequesterString, MUIM_TextEditor_ExportText);
+	// Remove trailing newline characters
+	for (ULONG i = 0; i < strlen(apiKey); i++) {
+		if (apiKey[i] == '\n') {
+			apiKey[i] = '\0';
+		}
+	}
+	set(apiKeyRequesterString, MUIA_TextEditor_Contents, apiKey);
 	if (config.openAiApiKey != NULL) {
 		FreeVec(config.openAiApiKey);
 		config.openAiApiKey = NULL;
 	}
 	config.openAiApiKey = AllocVec(strlen(apiKey) + 1, MEMF_CLEAR);
 	strncpy(config.openAiApiKey, apiKey, strlen(apiKey));
+	FreeVec(apiKey);
 	writeConfig();
 }
 MakeHook(APIKeyRequesterOkButtonClickedHook, APIKeyRequesterOkButtonClickedFunc);
@@ -30,16 +38,15 @@ LONG createAPIKeyRequesterWindow() {
     if ((apiKeyRequesterWindowObject = WindowObject,
 			MUIA_Window_Title, "Open AI API Key",
 			MUIA_Window_Width, 800,
-			MUIA_Window_Height, 100,
+			MUIA_Window_Height, 200,
 			WindowContents, VGroup,
             Child, TextObject,
                     MUIA_Text_PreParse, "\33c",
                     MUIA_Text_Contents,  "Type or paste (Right-Amiga + V) your OpenAI API key here.\nThis key is required to use the OpenAI API.\nIf you do not have an API key, consult the AmigaGPT documentation for instructions on how to obtain one.",
                 End,
-				Child, apiKeyRequesterString = StringObject,
-					MUIA_String_MaxLen, OPENAI_API_KEY_LENGTH,
+				Child, apiKeyRequesterString = TextEditorObject,
 					MUIA_CycleChain, TRUE,
-					MUIA_String_Contents, config.openAiApiKey,
+					MUIA_TextEditor_Contents, config.openAiApiKey,
 				End,
 				Child, HGroup,
 					Child, apiKeyRequesterOkButton = MUI_MakeObject(MUIO_Button, "OK",
