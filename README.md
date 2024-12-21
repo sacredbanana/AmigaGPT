@@ -154,6 +154,8 @@ There are two model types available today:
 
 | Model | Description | Context Window | Max Output Tokens | Training Data |
 | ----- | ----------- | -------------- | ----------------- | ------------- |
+| o1 | Points to the most recent snapshot of the o1 model: o1-2024-12-17 | 200,000 | 100,000 | Oct 2023 |
+| o1-2024-12-17 | The latest o1 model | 200,000 | 100,000 | Oct 2023 |
 | o1-preview | Points to the most recent snapshot of the o1 model: o1-preview-2024-09-12 | 128,000 | 32,768 | Oct 2023 |
 | o1-preview-2024-09-12 | Latest o1 model snapshot | 128,000 | 32,768 | Oct 2023 |
 | o1-mini | Points to the most recent o1-mini snapshot: o1-mini-2024-09-12 | 128,000 | 65,536 | Oct 2023 |

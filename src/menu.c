@@ -173,6 +173,8 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_SUB, "chatgpt-4o-latest", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_CHATGPT_4o_LATEST},
 	{NM_SUB, "gpt-4o-mini", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI},
 	{NM_SUB, "gpt-4o-mini-2024-07-18", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI_2024_07_18},
+	{NM_SUB, "o1", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1},
+	{NM_SUB, "o1-2024-12-17", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_2024_12_17},
 	{NM_SUB, "o1-preview", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_PREVIEW},
 	{NM_SUB, "o1-preview-2024-09-12", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_PREVIEW_2024_09_12},
 	{NM_SUB, "o1-mini", 0, CHECKIT, ~16, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_MINI},
@@ -348,6 +350,14 @@ void addMenuActions() {
 	Object openAIChatModelGPT4oMini2024_07_18MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI_2024_07_18);
 	set(openAIChatModelGPT4oMini2024_07_18MenuItem, MUIA_Menuitem_Checked, config.chatModel == GPT_4o_MINI_2024_07_18);
 	DoMethod(openAIChatModelGPT4oMini2024_07_18MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, GPT_4o_MINI_2024_07_18, &config.chatModel);
+
+	Object openAIChatModelo1MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_o1);
+	set(openAIChatModelo1MenuItem, MUIA_Menuitem_Checked, config.chatModel == o1);
+	DoMethod(openAIChatModelo1MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, o1, &config.chatModel);
+
+	Object openAIChatModelo1_2024_12_17MenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_o1_2024_12_17);
+	set(openAIChatModelo1_2024_12_17MenuItem, MUIA_Menuitem_Checked, config.chatModel == o1_2024_12_17);
+	DoMethod(openAIChatModelo1_2024_12_17MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application,  3, MUIM_WriteLong, o1_2024_12_17, &config.chatModel);
 
 	Object openAIChatModelo1PreviewMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_o1_PREVIEW);
 	set(openAIChatModelo1PreviewMenuItem, MUIA_Menuitem_Checked, config.chatModel == o1_PREVIEW);

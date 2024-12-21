@@ -712,6 +712,22 @@ There are two model types available today:
 
 @{b}Model variants@{ub}
 
+@{b}o1@{ub}
+
+Points to the most recent snapshot of the o1 model: o1-2024-12-17
+ 
+Context Window: 200,000
+Max Output Tokens: 100,000
+Training data: Oct 2023
+
+@{b}o1-2024-12-17@{ub}
+
+The latest o1 model
+ 
+Context Window: 200,000
+Max Output Tokens: 100,000
+Training data: Oct 2023
+
 @{b}o1-preview@{ub}
 
 Points to the most recent snapshot of the o1 model: o1-preview-2024-09-12

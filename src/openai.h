@@ -40,6 +40,8 @@ enum ChatModel {
 	CHATGPT_4o_LATEST,
 	GPT_4o_MINI,
 	GPT_4o_MINI_2024_07_18,
+	o1,
+	o1_2024_12_17,
 	o1_PREVIEW,
 	o1_PREVIEW_2024_09_12,
 	o1_MINI,
