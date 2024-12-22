@@ -17,7 +17,7 @@ cp -R out/AmigaGPT_OS4 bundle/AmigaGPT/AmigaGPT_OS4
 CLEAN=1 ./build_morphos.sh
 
 # Copy AmigaGPT_MorphOS executable to bundle directory
-cp -R out/AmigaGPT_OS4 bundle/AmigaGPT/AmigaGPT_MorphOS
+cp -R out/AmigaGPT_MorphOS bundle/AmigaGPT/AmigaGPT_MorphOS
 
 # Change directory to bundle directory
 cd bundle
