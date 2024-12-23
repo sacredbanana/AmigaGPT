@@ -217,7 +217,9 @@ void speakText(STRPTR text) {
 		BYTE ahiError;
 		ULONG audioLength;
 		UBYTE* audioBuffer = postTextToSpeechRequestToOpenAI(text, config.openAITTSModel, config.openAITTSVoice, config.openAiApiKey, &audioLength);
-
+		if (!audioBuffer) {
+			return;
+		}
 		// Convert to big endian
 		#ifdef __AMIGAOS3__
 		__asm__ __volatile__ (

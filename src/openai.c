@@ -22,6 +22,7 @@
 #define OPENAI_HOST "api.openai.com"
 #define OPENAI_PORT 443
 #define AUDIO_BUFFER_SIZE 4096
+#define MAX_CONNECTION_RETRIES 10
 
 static ULONG createSSLConnection(CONST_STRPTR host, UWORD port);
 static ULONG rangeRand(ULONG maxValue);
@@ -373,6 +374,7 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 	struct json_object **responses = AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 	static BOOL streamingInProgress = FALSE;
 	UWORD responseIndex = 0;
+	UBYTE connectionRetryCount = 0;
 
 	if (!stream || !streamingInProgress) {
 		memset(readBuffer, 0, READ_BUFFER_LENGTH);
@@ -408,9 +410,15 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 		json_object_put(obj);
 
 		updateStatusBar("Connecting...", yellowPen);
-		if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
-			return NULL;
+		while (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+			if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+				displayError("Error connecting to host! Maximum retries reached.");
+				streamingInProgress = FALSE;
+				FreeVec(responses);
+				return NULL;
+			}
 		}
+		connectionRetryCount = 0;
 
 		updateStatusBar("Sending request...", yellowPen);
 		ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
@@ -504,8 +512,22 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 					printf("error: %lu\n", err);
 					break;
 				case SSL_ERROR_SSL:
-					printf("SSL_ERROR_SSL\n");
-					Delay(100);
+					updateStatusBar("Lost connection.", redPen);
+					if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+						if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+							displayError("Error connecting to host! Maximum retries reached.");
+							doneReading = TRUE;
+							streamingInProgress = FALSE;
+							FreeVec(tempReadBuffer);
+							struct json_object *response;
+							for (UWORD i = 0; i <= responseIndex; i++) {
+								response = responses[i];
+								json_object_put(response);
+							}
+							FreeVec(responses);
+							return NULL;
+						}
+					}
 					break;
 				default:
 					printf("Unknown error\n");
@@ -562,16 +584,20 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
  * @return a pointer to a new json_object containing the response or NULL -- Free it with json_object_put when you are done using it
 **/
 struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize, CONST_STRPTR openAiApiKey) {
-	struct json_object *response;
-	static BOOL streamingInProgress = FALSE;
+	struct json_object *response = NULL;
 	UWORD responseIndex = 0;
 
 	memset(readBuffer, 0, READ_BUFFER_LENGTH);
 
 	updateStatusBar("Connecting...", yellowPen);
-	if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
-		return NULL;
+	UBYTE connectionRetryCount = 0;
+	while (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+		if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+			displayError("Error connecting to host! Maximum retries reached.");
+			return NULL;
+		}
 	}
+	connectionRetryCount = 0;
 
 	struct json_object *obj = json_object_new_object();
 	json_object_object_add(obj, "model", json_object_new_string(IMAGE_MODEL_NAMES[imageModel]));
@@ -601,6 +627,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 		LONG err = 0;
 		UBYTE statusMessage[64];
 		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+
 		while (!doneReading) {
 			DoMethod(loadingBar, MUIM_Busy_Move);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
@@ -659,8 +686,13 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 					printf("error: %lu\n", err);
 					break;
 				case SSL_ERROR_SSL:
-					printf("SSL_ERROR_SSL\n");
-					Delay(100);
+					updateStatusBar("Lost connection.", redPen);
+					if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+						if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+							displayError("Error connecting to host! Maximum retries reached.");
+							doneReading = TRUE;
+						}
+					}
 					break;
 				default:
 					printf("Unknown error\n");
@@ -756,10 +788,15 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		, pathString, hostString);
 
 	updateStatusBar("Connecting...", yellowPen);
-	if(createSSLConnection(hostString, 443) == RETURN_ERROR) {
-		Close(fileHandle);
-		return RETURN_ERROR;
+	UBYTE connectionRetryCount = 0;
+	while (createSSLConnection(hostString, 443) == RETURN_ERROR) {
+		if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+			displayError("Error connecting to host! Maximum retries reached.");
+			Close(fileHandle);
+			return RETURN_ERROR;
+		}
 	}
+	connectionRetryCount = 0;
 
 	updateStatusBar("Sending request...", yellowPen);
 	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
@@ -776,6 +813,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		UBYTE *dataStart = NULL;
 		BOOL headersRead = FALSE;
 		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_CLEAR);
+		
 		while (!doneReading) {
 			DoMethod(loadingBar, MUIM_Busy_Move);
 			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
@@ -837,15 +875,17 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 					printf("error: %lu\n", err);
 				case SSL_ERROR_SSL:
 					updateStatusBar("Lost connection. Reconnecting...", redPen);
-					CloseSocket(sock);
-					SSL_shutdown(ssl);
-					SSL_free(ssl);
-					ssl = NULL;
-					sock = -1;
 					if (createSSLConnection(hostString, 443) == RETURN_ERROR) {
-						Close(fileHandle);
-						FreeVec(tempReadBuffer);
-						return RETURN_ERROR;
+						if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+							Close(fileHandle);
+							FreeVec(tempReadBuffer);
+							CloseSocket(sock);
+							SSL_shutdown(ssl);
+							SSL_free(ssl);
+							ssl = NULL;
+							sock = -1;
+							return RETURN_ERROR;
+						}
 					}
 
 					headersRead = FALSE;
@@ -1008,18 +1048,23 @@ static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength) {
  * @return a pointer to a buffer containing the audio data or NULL -- Free it with FreeVec() when you are done using it
  **/
 APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel openAITTSModel, enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength) {
-	// Allocate a buffer for the audio data. This buffer will be resized if needed
-	ULONG audioBufferSize = AUDIO_BUFFER_SIZE;
-	UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
-
 	struct json_object *response;
 
 	*audioLength = 0;
 
 	updateStatusBar("Connecting...", yellowPen);
-	if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
-		return NULL;
+	UBYTE connectionRetryCount = 0;
+	while (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+		if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+			displayError("Error connecting to host! Maximum retries reached.");
+			return NULL;
+		}
 	}
+	connectionRetryCount = 0;
+
+	// Allocate a buffer for the audio data. This buffer will be resized if needed
+	ULONG audioBufferSize = AUDIO_BUFFER_SIZE;
+	UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
 
 	struct json_object *obj = json_object_new_object();
 	json_object_object_add(obj, "model", json_object_new_string(OPENAI_TTS_MODEL_NAMES[openAITTSModel]));
@@ -1170,12 +1215,13 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 					printf("error: %lu\n", err);
 				case SSL_ERROR_SSL:
 					updateStatusBar("Lost connection.", redPen);
-					CloseSocket(sock);
-					SSL_shutdown(ssl);
-					SSL_free(ssl);
-					ssl = NULL;
-					sock = -1;;
-					doneReading = TRUE;
+					if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+						if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+							displayError("Error connecting to host! Maximum retries reached.");
+							FreeVec(audioData);
+							return NULL;
+						}
+					}
 					break;
 				default:
 					printf("Unknown error\n");
@@ -1184,6 +1230,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 		}
 	} else {
 		displayError("Couldn't write request!\n");
+		updateStatusBar("Connection error", redPen);
 		LONG err = SSL_get_error(ssl, ssl_err);
 		switch (err) {
 			case SSL_ERROR_WANT_READ:
@@ -1211,6 +1258,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 				printf("Unknown error: %ld\n", err);
 				break;
 		}
+		FreeVec(audioData);
 		return NULL;
 	}
 

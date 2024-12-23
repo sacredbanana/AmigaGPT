@@ -879,6 +879,11 @@ The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E wi
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.0.2 (2024-12-24)@{ub}
+
+- Fix memory leaks
+- Make more resiliant to connection errors or disconnections
+
 @{b}2.0.1 (2024-12-23)@{ub}
 
 - Fix a bug preventing you being able to create a new image after making one

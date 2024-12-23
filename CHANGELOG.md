@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.2 (2024-12-24)
+
+- Fix memory leaks
+- Make more resiliant to connection errors or disconnections
+
 ## 2.0.1 (2024-12-23)
 
 - Fix a bug preventing you being able to create a new image after making one
