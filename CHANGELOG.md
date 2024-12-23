@@ -1,6 +1,11 @@
 # Changelog
 
-## 2.0.0
+## 2.0.1 (2024-12-23)
+
+- Fix a bug preventing you being able to create a new image after making one
+- Fix crash when receiving an error generating an image
+
+## 2.0.0 (2024-12-22)
 
 - Completely replace ReAction with MUI 5 with backwards compatibility with MUI 3
 - Now fully compatible with AmigaOS 3.1

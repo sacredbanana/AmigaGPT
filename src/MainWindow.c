@@ -138,7 +138,6 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
 		currentImage = NULL;
 	}
 
-	set(imageInputTextEditor, MUIA_TextEditor_ReadOnly, TRUE);
 	set(imageInputTextEditor, MUIA_Disabled, FALSE);
 
 	struct GeneratedImage *image = NULL;
@@ -148,7 +147,6 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
 		set(openImageButton, MUIA_Disabled, FALSE);
 		set(saveImageCopyButton, MUIA_Disabled, FALSE);
 		set(imageInputTextEditor, MUIA_TextEditor_Contents, image->prompt);
-		set(imageInputTextEditor, MUIA_TextEditor_ReadOnly, TRUE);
 		currentImage = copyGeneratedImage(image);
 		set(imageView, MUIA_DataTypes_FileName, currentImage->filePath);
 	}
@@ -191,7 +189,6 @@ HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
 	}
 	currentImage = NULL;
 	set(imageInputTextEditor, MUIA_Disabled, FALSE);
-	set(imageInputTextEditor, MUIA_TextEditor_ReadOnly, FALSE);
 	set(createImageButton, MUIA_Disabled, FALSE);
 	set(openImageButton, MUIA_Disabled, TRUE);
 	set(saveImageCopyButton, MUIA_Disabled, TRUE);
@@ -206,7 +203,6 @@ HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
 	DoMethod(imageListObject, MUIM_NList_Select, MUIV_NList_Select_All, MUIV_NList_Select_Off, NULL);
 	set(openImageButton, MUIA_Disabled, TRUE);
 	set(saveImageCopyButton, MUIA_Disabled, TRUE);
-	set(imageInputTextEditor, MUIA_TextEditor_ReadOnly, FALSE);
 	DoMethod(imageInputTextEditor, MUIM_TextEditor_ClearText);
 	DoMethod(imageInputTextEditor, MUIM_GoActive);
 	set(imageView, MUIA_DataTypes_FileName, "");
@@ -237,7 +233,6 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 			set(newImageButton, MUIA_Disabled, FALSE);
 			set(deleteImageButton, MUIA_Disabled, FALSE);
 			set(imageInputTextEditor, MUIA_Disabled, FALSE);
-			set(imageInputTextEditor, MUIA_TextEditor_ReadOnly, FALSE);
 			updateStatusBar("Error", redPen);
 			return;
 		}
@@ -247,12 +242,10 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 			struct json_object *message = json_object_object_get(error, "message");
 			STRPTR messageString = json_object_get_string(message);
 			displayError(messageString);
-			json_object_put(response);
 			set(createImageButton, MUIA_Disabled, FALSE);
 			set(newImageButton, MUIA_Disabled, FALSE);
 			set(deleteImageButton, MUIA_Disabled, FALSE);
 			set(imageInputTextEditor, MUIA_Disabled, FALSE);
-			set(imageInputTextEditor, MUIA_TextEditor_ReadOnly, FALSE);
 			updateStatusBar("Error", 6);
 			json_object_put(response);
 			return;
@@ -348,6 +341,10 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 		DoMethod(imageListObject, MUIM_NList_SetActive, 0, NULL);
 		currentImage = generatedImage;
 		ImageRowClickedFunc();
+
+		set(createImageButton, MUIA_Disabled, FALSE);
+		set(newImageButton, MUIA_Disabled, FALSE);
+		set(deleteImageButton, MUIA_Disabled, FALSE);
 
 		FreeVec(text);
 		FreeVec(textUTF_8);

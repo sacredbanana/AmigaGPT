@@ -879,6 +879,22 @@ The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E wi
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.0.1 (2024-12-23)@{ub}
+
+- Fix a bug preventing you being able to create a new image after making one
+- Fix crash when receiving an error generating an image
+
+@{b}2.0.0 (2024-12-22)@{ub}
+
+- Completely replace ReAction with MUI 5 with backwards compatibility with MUI 3
+- Now fully compatible with AmigaOS 3.1
+- New native version for MorphOS
+- Enhanced "About AmigaGPT" panel
+- New "About MUI" panel
+- Fix memory leak when receiving messages
+- View instant preview of generated images (MUI 5 only and not supported in MorphOS)
+- Updated to the latest OpenAI models
+
 @{b}1.6.3 (2024-09-18)@{ub}
 
 - Fixed error receiving chat messages
