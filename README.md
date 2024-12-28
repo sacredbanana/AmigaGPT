@@ -116,6 +116,8 @@ In the "**Edit**" menu, you'll find basic text editing commands like **Cut**, **
 
 The "**View**" menu allows you to change the appearance of the app.
 
+The "**Connection**" menu allows you to connect via a proxy server. It supports both HTTP and HTTPS proxy servers but if you use an unecrypted HTTP proxy server you can improve the performance of AmigaGPT by removing the need for the encryption of the OpenAI traffic to be done on the system running AmigaGPT. For an easy proxy server you can run on your local network you can try out https://mitmproxy.org
+
 ## Chat Models
 
 ### GPT-4o

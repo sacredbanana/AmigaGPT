@@ -167,6 +167,13 @@ chat and the UI.
 The "Project" menu includes an "About" option, which displays information
 about the program.
 
+The "Connection" menu allows you to connect via a proxy server. It supports
+both HTTP and HTTPS proxy servers but if you use an unecrypted HTTP proxy
+server you can improve the performance of AmigaGPT by removing the need for
+the encryption of the OpenAI traffic to be done on the system running AmigaGPT.
+For an easy proxy server you can run on your local network you can try out
+https://mitmproxy.org
+
 Developing:
 Source code hosted at https://github.com/sacredbanana/AmigaGPT
 You can either compile the code natively or with the Docker container.
@@ -242,6 +249,12 @@ Special Thanks:
   support for the French accent https://www.youtube.com/watch?v=BV5Fq1PresE
 
 Changelog:
+
+------------------
+2.1.0 (2024-12-28)
+------------------
+
+- Add proxy server support
 
 ------------------
 2.0.2 (2024-12-24)
