@@ -1103,9 +1103,6 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy, CO
 						, url, hostString, totalBytesRead, authHeader);
 					SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 					break;
-				default:
-					printf("Unknown error\n");
-					break;
 			}            
 		}
 		FreeVec(tempReadBuffer);
