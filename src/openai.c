@@ -34,6 +34,7 @@ static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static STRPTR getModelName(enum ChatModel model);
 static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
+static STRPTR base64Encode(CONST_STRPTR input);
 
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
 struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase, *SocketBase = NULL;
@@ -253,6 +254,7 @@ LONG initOpenAIConnector() {
 static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
 	struct sockaddr_in addr;
 	struct hostent *hostent;
+	BOOL useSSL = !useProxy || proxyUsesSSL;
 
 	set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
  
@@ -267,7 +269,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy, C
 		sock = -1;
 	}
 
-	if (!useProxy || proxyUsesSSL) {
+	if (useSSL) {
 		/* The following needs to be done once per socket */
 		if((ssl = SSL_new(ctx)) == NULL) {
 			displayError("Couldn't create new SSL handle!");
@@ -315,7 +317,50 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy, C
 		return RETURN_ERROR;
 	}
 
-	if (!useProxy || proxyUsesSSL) {
+	if (useProxy && proxyUsesSSL) {
+		STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+
+		if (proxyRequiresAuth) {
+			// Construct the Proxy-Authorization header
+			STRPTR credentials = AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2, MEMF_ANY | MEMF_CLEAR);
+			snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2, "%s:%s", proxyUsername, proxyPassword);
+			UBYTE *encodedCredentials = base64Encode(credentials);
+			snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n", encodedCredentials);
+			FreeVec(encodedCredentials);
+    	}
+
+        // Send CONNECT request with optional Proxy-Authorization header
+        STRPTR connectRequest = AllocVec(1024, MEMF_CLEAR | MEMF_ANY);
+        snprintf(connectRequest, 1024,
+                 "CONNECT %s:%d HTTP/1.1\r\nHost: %s:%d\r\n%s\r\n",
+                 host, port, host, port, authHeader);
+
+        if (send(sock, connectRequest, strlen(connectRequest), 0) < 0) {
+            displayError("Failed to send CONNECT request");
+            CloseSocket(sock);
+			FreeVec(connectRequest);
+			FreeVec(authHeader);
+            return RETURN_ERROR;
+        }
+
+		FreeVec(connectRequest);
+		FreeVec(authHeader);
+
+        STRPTR response = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
+        if (recv(sock, response, 1023, 0) <= 0) {
+			if (!strstr(response, "200 Connection established")) {
+            	displayError("Proxy authentication failed");
+			} else {
+				displayError("Failed to receive response from proxy");
+			}
+            CloseSocket(sock);
+			FreeVec(response);
+            return RETURN_ERROR;
+        }
+		FreeVec(response);
+    }
+
+	if (useSSL) {
 		/* Associate the socket with the ssl structure */
 		SSL_set_fd(ssl, sock);
 
@@ -415,16 +460,29 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 		json_object_object_add(obj, "stream", json_object_new_boolean((json_bool)stream));
 		
 		CONST_STRPTR jsonString = json_object_to_json_string(obj);
+		
+		STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+		if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
+			// Construct the Proxy-Authorization header
+			STRPTR credentials = AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2, MEMF_ANY | MEMF_CLEAR);
+			snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2, "%s:%s", proxyUsername, proxyPassword);
+			UBYTE *encodedCredentials = base64Encode(credentials);
+			snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n", encodedCredentials);
+			FreeVec(encodedCredentials);
+    	}
 
 		snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "POST https://api.openai.com/v1/chat/completions HTTP/1.1\r\n"
 				"Host: api.openai.com\r\n"
 				"Content-Type: application/json\r\n"
 				"Authorization: Bearer %s\r\n"
 				"User-Agent: AmigaGPT\r\n"
-				"Content-Length: %lu\r\n\r\n"
-				"%s\0", openAiApiKey, strlen(jsonString), jsonString);
+				"Content-Length: %lu\r\n"
+				"%s\r\n"
+				"%s\0", openAiApiKey, strlen(jsonString), authHeader, jsonString);
 
 		json_object_put(obj);
+
+		FreeVec(authHeader);
 
 		updateStatusBar("Connecting...", yellowPen);
 		while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword) == RETURN_ERROR) {
@@ -474,15 +532,42 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 					const STRPTR jsonStart = stream ? "data: {" : "{";
 					STRPTR jsonString = readBuffer;
 					// Check for error in stream
- 					if (stream && strstr(jsonString, jsonStart) == NULL) {
- 						jsonString = strstr(jsonString, "{");
- 						responses[0] = json_tokener_parse(jsonString);
-						if (json_object_object_get_ex(responses[0], "error", NULL)) {
-							streamingInProgress = FALSE;
-							doneReading = TRUE;
-							break;
+					if (stream) {	
+						if (strstr(jsonString, jsonStart) == NULL) {
+							jsonString = strstr(jsonString, "{");
+							if (jsonString == NULL) {
+								STRPTR httpResponse = strstr(readBuffer, "HTTP/1.1");
+								if (httpResponse != NULL && strstr(httpResponse, "200 OK") == NULL) {
+									UBYTE error[256] = {0};
+									for (UWORD i = 0; i < 256; i++) {
+										if (httpResponse[i] == '\r' || httpResponse[i] == '\n') {
+											break;
+										}
+										error[i] = httpResponse[i];
+									}
+									displayError(error);
+									doneReading = TRUE;
+									streamingInProgress = FALSE;
+									FreeVec(tempReadBuffer);
+									struct json_object *response;
+									for (UWORD i = 0; i <= responseIndex; i++) {
+										response = responses[i];
+										json_object_put(response);
+									}
+									FreeVec(responses);
+									return NULL;
+								}
+							} else {
+								responses[0] = json_tokener_parse(jsonString);
+								if (json_object_object_get_ex(responses[0], "error", NULL)) {
+									doneReading = TRUE;
+									streamingInProgress = FALSE;
+									FreeVec(tempReadBuffer);
+									return responses;
+								}
+							}
 						}
- 					}
+					}
 					STRPTR lastJsonString = jsonString;
 					while (jsonString = strstr(jsonString, jsonStart)) {
 						lastJsonString = jsonString;
@@ -643,15 +728,27 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 	json_object_object_add(obj, "size", json_object_new_string(IMAGE_SIZE_NAMES[ImageSize]));	
 	CONST_STRPTR jsonString = json_object_to_json_string(obj);
 
+	STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+	if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
+		// Construct the Proxy-Authorization header
+		STRPTR credentials = AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2, MEMF_ANY | MEMF_CLEAR);
+		snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2, "%s:%s", proxyUsername, proxyPassword);
+		UBYTE *encodedCredentials = base64Encode(credentials);
+		snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n", encodedCredentials);
+		FreeVec(encodedCredentials);
+	}
 	snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "POST https://api.openai.com/v1/images/generations HTTP/1.1\r\n"
 			"Host: api.openai.com\r\n"
 			"Content-Type: application/json\r\n"
 			"Authorization: Bearer %s\r\n"
 			"User-Agent: AmigaGPT\r\n"
-			"Content-Length: %lu\r\n\r\n"
-			"%s\0", openAiApiKey, strlen(jsonString), jsonString);
+			"Content-Length: %lu\r\n"
+			"%s\r\n"
+			"%s\0", openAiApiKey, strlen(jsonString), authHeader, jsonString);
 
 	json_object_put(obj);
+
+	FreeVec(authHeader);
 
 	updateStatusBar("Sending request...", yellowPen);
 	if (useSSL) {
@@ -687,6 +784,20 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 			}
 			switch (err) {
 				case SSL_ERROR_NONE:
+				{
+					STRPTR httpResponse = strstr(readBuffer, "HTTP/1.1");
+					if (httpResponse != NULL && strstr(httpResponse, "200 OK") == NULL) {
+						UBYTE error[256] = {0};
+						for (UWORD i = 0; i < 256; i++) {
+							if (httpResponse[i] == '\r' || httpResponse[i] == '\n') {
+								break;
+							}
+							error[i] = httpResponse[i];
+						}
+						displayError(error);
+						doneReading = TRUE;
+						break;
+					}
 					totalBytesRead += bytesRead;
 					CONST_STRPTR jsonStart = "{";
 					STRPTR jsonString = readBuffer;
@@ -711,6 +822,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 					
 					doneReading = TRUE;
 					break;
+				}
 				case SSL_ERROR_ZERO_RETURN:
 					printf("SSL_ERROR_ZERO_RETURN\n");
 					doneReading = TRUE;
@@ -841,11 +953,22 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy, CO
         strcpy(pathString, pathStart); // The rest is the path
     }
 
+	STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+	if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
+		// Construct the Proxy-Authorization header
+		STRPTR credentials = AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2, MEMF_ANY | MEMF_CLEAR);
+		snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2, "%s:%s", proxyUsername, proxyPassword);
+		UBYTE *encodedCredentials = base64Encode(credentials);
+		snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n", encodedCredentials);
+		FreeVec(encodedCredentials);
+	}
+
     // Construct the HTTP GET request
     snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "GET %s HTTP/1.1\r\n"
         "Host: %s\r\n"
-		"User-Agent: AmigaGPT\r\n\r\n\0"
-		, url, hostString);
+		"User-Agent: AmigaGPT\r\n"
+		"%s\r\n\0"
+		, url, hostString, authHeader);
 
 	updateStatusBar("Connecting...", yellowPen);
 	UBYTE connectionRetryCount = 0;
@@ -886,6 +1009,19 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy, CO
 				bytesRead = recv(sock, tempReadBuffer, TEMP_READ_BUFFER_LENGTH, 0);
 			}
 			if (!headersRead) {
+				STRPTR httpResponse = strstr(readBuffer, "HTTP/1.1");
+				if (httpResponse != NULL && strstr(httpResponse, "200 OK") == NULL) {
+					UBYTE error[256] = {0};
+					for (UWORD i = 0; i < 256; i++) {
+						if (httpResponse[i] == '\r' || httpResponse[i] == '\n') {
+							break;
+						}
+						error[i] = httpResponse[i];
+					}
+					displayError(error);
+					doneReading = TRUE;
+					break;
+				}
 				if (contentLength == 0) {
 					UBYTE *contentLengthStart = strstr(tempReadBuffer, "Content-Length: ");
 					if (contentLengthStart != NULL) {
@@ -941,10 +1077,6 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy, CO
 				case SSL_ERROR_WANT_X509_LOOKUP:
 					printf("SSL_ERROR_WANT_X509_LOOKUP\n");
 					break;
-				case SSL_ERROR_SYSCALL:
-					printf("SSL_ERROR_SYSCALL\n");
-					ULONG err = ERR_get_error();
-					printf("error: %lu\n", err);
 				case SSL_ERROR_SSL:
 					updateStatusBar("Lost connection. Reconnecting...", redPen);
 					if (createSSLConnection(hostString, 443, useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword) == RETURN_ERROR) {
@@ -956,6 +1088,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy, CO
 							SSL_free(ssl);
 							ssl = NULL;
 							sock = -1;
+							FreeVec(authHeader);
 							return RETURN_ERROR;
 						}
 					}
@@ -965,8 +1098,9 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy, CO
 					snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "GET %s HTTP/1.1\r\n"
 						"Host: %s\r\n"
 						"User-Agent: AmigaGPT\r\n"
-						"Range: bytes=%lu-\r\n\r\n\0"
-						, url, hostString, totalBytesRead);
+						"Range: bytes=%lu-\r\n"
+						"%s\r\n\0"
+						, url, hostString, totalBytesRead, authHeader);
 					SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 					break;
 				default:
@@ -1005,8 +1139,11 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy, CO
 				break;
 		}
 		Close(fileHandle);
+		FreeVec(authHeader);
 		return RETURN_ERROR;
 	}
+
+	FreeVec(authHeader);
 
 	CloseSocket(sock);
 	if (ssl != NULL) {
@@ -1046,7 +1183,10 @@ static LONG createSSLContext() {
 	if ((ctx = SSL_CTX_new(TLS_client_method())) != NULL) {
 		/* Basic certificate handling */
 		SSL_CTX_set_default_verify_paths(ctx);
-		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_cb);
+
+		// Disable certificate verification. This is done because proxy servers often use self-signed certificates
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
+		// SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_cb);
 	} else {
 		printf("Couldn't create new context!\n");
 		return RETURN_ERROR;
@@ -1155,15 +1295,28 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 	json_object_object_add(obj, "response_format", json_object_new_string("pcm"));
 	CONST_STRPTR jsonString = json_object_to_json_string(obj);
 
+	STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+	if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
+		// Construct the Proxy-Authorization header
+		STRPTR credentials = AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2, MEMF_ANY | MEMF_CLEAR);
+		snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2, "%s:%s", proxyUsername, proxyPassword);
+		UBYTE *encodedCredentials = base64Encode(credentials);
+		snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n", encodedCredentials);
+		FreeVec(encodedCredentials);
+	}
+
 	snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "POST https://api.openai.com/v1/audio/speech HTTP/1.1\r\n"
 			"Host: api.openai.com\r\n"
 			"Content-Type: application/json\r\n"
 			"Authorization: Bearer %s\r\n"
 			"User-Agent: AmigaGPT\r\n"
-			"Content-Length: %lu\r\n\r\n"
-			"%s\0", openAiApiKey, strlen(jsonString), jsonString);
+			"Content-Length: %lu\r\n"
+			"%s\r\n"
+			"%s\0", openAiApiKey, strlen(jsonString), authHeader, jsonString);
 
 	json_object_put(obj);
+
+	FreeVec(authHeader);
 
 	updateStatusBar("Sending request...", yellowPen);
 	if (useSSL) {
@@ -1217,6 +1370,32 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 								dataStart += 4;
 								newChunkNeeded = TRUE;
 								bytesRemainingInBuffer -= (dataStart - readBuffer);
+								if (dataStart[0] == '{') {
+									CONST_STRPTR jsonString = strstr(dataStart, "{");
+									response = json_tokener_parse(jsonString);
+									struct json_object *error;
+									if (json_object_object_get_ex(response, "error", &error)) {
+										struct json_object *message = json_object_object_get(error, "message");
+										STRPTR messageString = json_object_get_string(message);
+										displayError(messageString);
+										FreeVec(audioData);
+										return NULL;
+									}
+								} else {
+									STRPTR httpResponse = strstr(readBuffer, "HTTP/1.1");
+									if (httpResponse != NULL && strstr(httpResponse, "200 OK") == NULL) {
+										UBYTE error[256] = {0};
+										for (UWORD i = 0; i < 256; i++) {
+											if (httpResponse[i] == '\r' || httpResponse[i] == '\n') {
+												break;
+											}
+											error[i] = httpResponse[i];
+										}
+										displayError(error);
+										FreeVec(audioData);
+										return NULL;
+									}
+								}
 							}
 						}
 
@@ -1422,4 +1601,35 @@ void closeOpenAIConnector() {
 
 	FreeVec(writeBuffer);
 	FreeVec(readBuffer);
+}
+
+/**
+ * Encode a string to base64
+ * @param input the string to encode
+ * @return a pointer to a buffer containing the base64 encoded string -- Free it with FreeVec() when you are done using it
+ */
+static STRPTR base64Encode(CONST_STRPTR input) {
+    const UBYTE base64Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    ULONG len = strlen(input);
+    UBYTE *encoded = AllocVec((len + 2) / 3 * 4 + 1, MEMF_CLEAR | MEMF_ANY);
+    UBYTE *p = encoded;
+    ULONG i;
+    for (i = 0; i < len - 2; i += 3) {
+        *p++ = base64Table[(input[i] >> 2) & 0x3F];
+        *p++ = base64Table[((input[i] & 0x03) << 4) | ((input[i + 1] >> 4) & 0x0F)];
+        *p++ = base64Table[((input[i + 1] & 0x0F) << 2) | ((input[i + 2] >> 6) & 0x03)];
+        *p++ = base64Table[input[i + 2] & 0x3F];
+    }
+    if (i < len) {
+        *p++ = base64Table[(input[i] >> 2) & 0x3F];
+        if (i == (len - 1)) {
+            *p++ = base64Table[(input[i] & 0x03) << 4];
+            *p++ = '=';
+        } else {
+            *p++ = base64Table[((input[i] & 0x03) << 4) | ((input[i + 1] >> 4) & 0x0F)];
+            *p++ = base64Table[(input[i + 1] & 0x0F) << 2];
+        }
+        *p++ = '=';
+    }
+    return encoded;
 }
