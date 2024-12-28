@@ -6,3 +6,10 @@ bundle/AmigaGPT/AmigaGPT_OS4.info
 bundle/AmigaGPT/AmigaGPT_MorphOS.info
 src/test/build
 src/test/openai-key.h
+
+# Super-linter outputs
+super-linter-output
+super-linter.log
+
+# GitHub Actions leftovers
+github_conf
