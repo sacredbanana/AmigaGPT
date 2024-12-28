@@ -216,7 +216,7 @@ void speakText(STRPTR text) {
 		struct AHIRequest* ahiRequest;
 		BYTE ahiError;
 		ULONG audioLength;
-		UBYTE* audioBuffer = postTextToSpeechRequestToOpenAI(text, config.openAITTSModel, config.openAITTSVoice, config.openAiApiKey, &audioLength);
+		UBYTE* audioBuffer = postTextToSpeechRequestToOpenAI(text, config.openAITTSModel, config.openAITTSVoice, config.openAiApiKey, &audioLength, config.proxyEnabled, config.proxyHost, config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername, config.proxyPassword);
 		if (!audioBuffer) {
 			return;
 		}

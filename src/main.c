@@ -92,6 +92,8 @@ LONG main(int argc, char **argv) {
 
 	startGUIRunLoop();
 
+	writeConfig();
+
 	exit(RETURN_OK);
 	return 0;
 }

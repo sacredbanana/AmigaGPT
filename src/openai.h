@@ -153,9 +153,16 @@ LONG initOpenAIConnector();
  * @param model the model to use
  * @param openAiApiKey the OpenAI API key
  * @param stream whether to stream the response or not
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
  * @return a pointer to a new array of json_object containing the response(s) or NULL -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
-struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model, CONST_STRPTR openAiApiKey, BOOL stream);
+struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model, CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 
 /**
  * Post a image creation request to OpenAI
@@ -163,17 +170,31 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
  * @param imageModel the image model to use
  * @param imageSize the size of the image to create
  * @param openAiApiKey the OpenAI API key
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
  * @return a pointer to a new json_object containing the response or NULL -- Free it with json_object_put when you are done using it
 **/
-struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize, CONST_STRPTR openAiApiKey);
+struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize, CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 
 /**
  * Download a file from the internet
  * @param url the URL to download from
  * @param destination the destination to save the file to
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/ 
-ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination);
+ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 
 /**
  * Post a text to speech request to OpenAI
@@ -181,9 +202,16 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination);
  * @param openAITTSModel the TTS model to use
  * @param openAITTSVoice the voice to use
  * @param openAiApiKey the OpenAI API key
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
  * @return a pointer to a buffer containing the audio data or NULL -- Free it with FreeVec() when you are done using it
  **/
-APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel openAITTSModel, enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength);
+APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel openAITTSModel, enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 
 /**
  * Cleanup the OpenAI connector and free all resources

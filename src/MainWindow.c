@@ -227,7 +227,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 		STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
 
 		const enum ImageSize imageSize = config.imageModel == DALL_E_2 ? config.imageSizeDallE2 : config.imageSizeDallE3;
-		struct json_object *response = postImageCreationRequestToOpenAI(textUTF_8, config.imageModel, imageSize, config.openAiApiKey);
+		struct json_object *response = postImageCreationRequestToOpenAI(textUTF_8, config.imageModel, imageSize, config.openAiApiKey, config.proxyEnabled, config.proxyHost, config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername, config.proxyPassword);
 		if (response == NULL) {
 			displayError("Error connecting. Please try again.");
 			set(createImageButton, MUIA_Disabled, FALSE);
@@ -269,7 +269,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 		}
 		snprintf(fullPath, sizeof(fullPath), PROGDIR"images/%s.png", id);
 
-		downloadFile(url, fullPath);
+		downloadFile(url, fullPath, config.proxyEnabled, config.proxyHost, config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername, config.proxyPassword);
 
 		json_object_put(response);
 
@@ -306,7 +306,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 		struct Conversation *imageNameConversation = newConversation();
 		addTextToConversation(imageNameConversation, text, "user");
 		addTextToConversation(imageNameConversation, "generate a short title for this image and don't enclose the title in quotes or prefix the response with anything", "user");
-		struct json_object **responses = postChatMessageToOpenAI(imageNameConversation, config.chatModel, config.openAiApiKey, FALSE);
+		struct json_object **responses = postChatMessageToOpenAI(imageNameConversation, config.chatModel, config.openAiApiKey, FALSE, config.proxyEnabled, config.proxyHost, config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername, config.proxyPassword);
 		
 		struct GeneratedImage *generatedImage = AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
 		if (responses == NULL) {
@@ -811,7 +811,7 @@ static void sendChatMessage() {
 			config.chatModel != o1_MINI && config.chatModel != o1_MINI_2024_09_12) {
 			addTextToConversation(currentConversation, config.chatSystem, "system");
 		}
-		responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, TRUE);
+		responses = postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, TRUE, config.proxyEnabled, config.proxyHost, config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername, config.proxyPassword);
 		if (responses == NULL) {
 			displayError("Could not connect to OpenAI");
 			set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -904,7 +904,7 @@ static void sendChatMessage() {
 			updateStatusBar("Generating conversation title...", 7);
 			set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
 			addTextToConversation(currentConversation, "generate a short title for this conversation and don't enclose the title in quotes or prefix the response with anything", "user");
-			responses = postChatMessageToOpenAI(currentConversation, GPT_4o_MINI, config.openAiApiKey, FALSE);
+			responses = postChatMessageToOpenAI(currentConversation, GPT_4o_MINI, config.openAiApiKey, FALSE, config.proxyEnabled, config.proxyHost, config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername, config.proxyPassword);
 			struct MinNode *titleRequestNode = RemTail(currentConversation->messages);
 			FreeVec(titleRequestNode);
 			set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);

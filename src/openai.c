@@ -23,8 +23,9 @@
 #define OPENAI_PORT 443
 #define AUDIO_BUFFER_SIZE 4096
 #define MAX_CONNECTION_RETRIES 10
+#define TEMP_READ_BUFFER_LENGTH 8192
 
-static ULONG createSSLConnection(CONST_STRPTR host, UWORD port);
+static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 static ULONG rangeRand(ULONG maxValue);
 static BPTR ErrOutput();
 static BPTR GetStdErr();
@@ -240,9 +241,16 @@ LONG initOpenAIConnector() {
  * Create a new SSL connection to a host with a new socket
  * @param host the host to connect to
  * @param port the port to connect to
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/ 
-static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
+static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
 	struct sockaddr_in addr;
 	struct hostent *hostent;
 
@@ -251,67 +259,63 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
 	if (ssl != NULL) {
 		SSL_shutdown(ssl);
 		SSL_free(ssl);
+		ssl = NULL;
 	}
 
 	if (sock > -1) {
 		CloseSocket(sock);
+		sock = -1;
 	}
 
-	#define PROXY_HOST "127.0.0.1"
-	#define PROXY_PORT 8080
+	if (!useProxy || proxyUsesSSL) {
+		/* The following needs to be done once per socket */
+		if((ssl = SSL_new(ctx)) == NULL) {
+			displayError("Couldn't create new SSL handle!");
+			return RETURN_ERROR;
+		}
+	}
 
-	/* The following needs to be done once per socket */
-	if((ssl = SSL_new(ctx)) != NULL) {
-		// Connect to the proxy server first
-        if ((hostent = gethostbyname(PROXY_HOST)) != NULL) {
-            memset(&addr, 0, sizeof(addr));
-            addr.sin_family = AF_INET;
-            addr.sin_port = htons(PROXY_PORT);
-            addr.sin_len = hostent->h_length;
-            memcpy(&addr.sin_addr, hostent->h_addr, hostent->h_length);
-        } else {
-            displayError("Proxy host lookup failed");
-            SSL_shutdown(ssl);
-            SSL_free(ssl);
-            ssl = NULL;
-            return RETURN_ERROR;
-        }
-		/* Lookup hostname */
-		// if ((hostent = gethostbyname(host)) != NULL) {
-		// 	memset(&addr, 0, sizeof(addr));
-		// 	addr.sin_family = AF_INET;
-		// 	addr.sin_port = port;
-		// 	addr.sin_len = hostent->h_length;
-		// 	memcpy(&addr.sin_addr,hostent->h_addr,hostent->h_length);
-		// } else {
-		// 	displayError("Host lookup failed");
-		// 	SSL_shutdown(ssl);
-		// 	SSL_free(ssl);
-		// 	ssl = NULL;
-		// 	return RETURN_ERROR;
-		// }
-
-		/* Create a socket and connect to the server */
-		if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
-			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-				displayError("Couldn't connect to server");
-				CloseSocket(sock);
-				SSL_shutdown(ssl);
-				SSL_free(ssl);
-				ssl = NULL;
-				sock = -1;
-				return RETURN_ERROR;
-			}
-		} else {
-			displayError("Couldn't create socket");
+	// Connect to the proxy server first
+	if ((hostent = gethostbyname(useProxy ? proxyHost : host)) != NULL) {
+		memset(&addr, 0, sizeof(addr));
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(useProxy ? proxyPort : port);
+		addr.sin_len = hostent->h_length;
+		memcpy(&addr.sin_addr, hostent->h_addr, hostent->h_length);
+	} else {
+		displayError("Proxy host lookup failed");
+		if (ssl != NULL) {
 			SSL_shutdown(ssl);
 			SSL_free(ssl);
 			ssl = NULL;
+		}
+		return RETURN_ERROR;
+	}
+
+	/* Create a socket and connect to the server */
+	if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
+		if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+			displayError("Couldn't connect to server");
+			CloseSocket(sock);
+			if (ssl != NULL) {
+				SSL_shutdown(ssl);
+				SSL_free(ssl);
+				ssl = NULL;
+			}
+			sock = -1;
 			return RETURN_ERROR;
 		}
+	} else {
+		displayError("Couldn't create socket");
+		if (ssl != NULL) {
+			SSL_shutdown(ssl);
+			SSL_free(ssl);
+			ssl = NULL;
+		}
+		return RETURN_ERROR;
+	}
 
-		return RETURN_OK;
-
+	if (!useProxy || proxyUsesSSL) {
 		/* Associate the socket with the ssl structure */
 		SSL_set_fd(ssl, sock);
 
@@ -320,9 +324,9 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
 
 		/* Perform SSL handshake */
 		if((ssl_err = SSL_connect(ssl)) >= 0) {
-			printf("SSL connection to %s using %s\n\0", host, SSL_get_cipher(ssl));
+			// printf("SSL connection to %s using %s\n\0", host, SSL_get_cipher(ssl));
 		}
-		
+
 		/* If there were errors, print them */
 		if (ssl_err < 0) {
 			LONG err = SSL_get_error(ssl, ssl_err);
@@ -362,9 +366,6 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
 			sock = -1;
 			return RETURN_ERROR;
 		}
-	} else {
-		displayError("Couldn't create new SSL handle!");
-		return RETURN_ERROR;
 	}
 
 	return RETURN_OK;
@@ -376,13 +377,21 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port) {
  * @param model the model to use
  * @param openAiApiKey the OpenAI API key
  * @param stream whether to stream the response or not
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
  * @return a pointer to a new array of json_object containing the response(s) or NULL -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
 **/
-struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model, CONST_STRPTR openAiApiKey, BOOL stream) {
+struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model, CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
 	struct json_object **responses = AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 	static BOOL streamingInProgress = FALSE;
 	UWORD responseIndex = 0;
 	UBYTE connectionRetryCount = 0;
+	BOOL useSSL = !useProxy || proxyUsesSSL;
 
 	if (!stream || !streamingInProgress) {
 		memset(readBuffer, 0, READ_BUFFER_LENGTH);
@@ -418,7 +427,7 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 		json_object_put(obj);
 
 		updateStatusBar("Connecting...", yellowPen);
-		while (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+		while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword) == RETURN_ERROR) {
 			if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
 				displayError("Error connecting to host! Maximum retries reached.");
 				streamingInProgress = FALSE;
@@ -428,8 +437,11 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 		}
 		connectionRetryCount = 0;
 		updateStatusBar("Sending request...", yellowPen);
-		// ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
-		ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+		if (useSSL) {
+			ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+		} else {
+			ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+		}
 	}
 
 	set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -443,16 +455,21 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 		UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 		while (!doneReading) {
 			DoMethod(loadingBar, MUIM_Busy_Move);
-			// bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
-			bytesRead = recv(sock, tempReadBuffer, READ_BUFFER_LENGTH - 1, 0);
-			// printf("Bytes read: %ld\n", bytesRead);
-			// printf("Read buffer: %s\n", tempReadBuffer);
+			if (useSSL) {
+				bytesRead = SSL_read(ssl, tempReadBuffer, TEMP_READ_BUFFER_LENGTH);
+			} else {
+				bytesRead = recv(sock, tempReadBuffer, TEMP_READ_BUFFER_LENGTH, 0);
+			}
 			snprintf(statusMessage, sizeof(statusMessage), "Downloading response...");
 			updateStatusBar(statusMessage, yellowPen);
 			strncat(readBuffer, tempReadBuffer, bytesRead);
-			// err = SSL_get_error(ssl, bytesRead);
-			// switch (err) {
-			// 	case SSL_ERROR_NONE:
+			if (useSSL) {
+				err = SSL_get_error(ssl, bytesRead);
+			} else {
+				err = SSL_ERROR_NONE;
+			}
+			switch (err) {
+				case SSL_ERROR_NONE:
 					totalBytesRead += bytesRead;
 					const STRPTR jsonStart = stream ? "data: {" : "{";
 					STRPTR jsonString = readBuffer;
@@ -497,53 +514,53 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 						doneReading = TRUE;
 					}
 					
-		// 			break;
-		// 		case SSL_ERROR_ZERO_RETURN:
-		// 			printf("SSL_ERROR_ZERO_RETURN\n");
-		// 			doneReading = TRUE;
-		// 			break;
-		// 		case SSL_ERROR_WANT_READ:
-		// 			printf("SSL_ERROR_WANT_READ\n");
-		// 			break;
-		// 		case SSL_ERROR_WANT_WRITE:
-		// 			printf("SSL_ERROR_WANT_WRITE\n");
-		// 			break;
-		// 		case SSL_ERROR_WANT_CONNECT:
-		// 			printf("SSL_ERROR_WANT_CONNECT\n");
-		// 			break;
-		// 		case SSL_ERROR_WANT_ACCEPT:
-		// 			printf("SSL_ERROR_WANT_ACCEPT\n");
-		// 			break;
-		// 		case SSL_ERROR_WANT_X509_LOOKUP:
-		// 			printf("SSL_ERROR_WANT_X509_LOOKUP\n");
-		// 			break;
-		// 		case SSL_ERROR_SYSCALL:
-		// 			printf("SSL_ERROR_SYSCALL\n");
-		// 			ULONG err = ERR_get_error();
-		// 			printf("error: %lu\n", err);
-		// 			break;
-		// 		case SSL_ERROR_SSL:
-		// 			updateStatusBar("Lost connection.", redPen);
-		// 			if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
-		// 				if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
-		// 					displayError("Error connecting to host! Maximum retries reached.");
-		// 					doneReading = TRUE;
-		// 					streamingInProgress = FALSE;
-		// 					FreeVec(tempReadBuffer);
-		// 					struct json_object *response;
-		// 					for (UWORD i = 0; i <= responseIndex; i++) {
-		// 						response = responses[i];
-		// 						json_object_put(response);
-		// 					}
-		// 					FreeVec(responses);
-		// 					return NULL;
-		// 				}
-		// 			}
-		// 			break;
-		// 		default:
-		// 			printf("Unknown error\n");
-		// 			break;
-		// 	}            
+					break;
+				case SSL_ERROR_ZERO_RETURN:
+					printf("SSL_ERROR_ZERO_RETURN\n");
+					doneReading = TRUE;
+					break;
+				case SSL_ERROR_WANT_READ:
+					printf("SSL_ERROR_WANT_READ\n");
+					break;
+				case SSL_ERROR_WANT_WRITE:
+					printf("SSL_ERROR_WANT_WRITE\n");
+					break;
+				case SSL_ERROR_WANT_CONNECT:
+					printf("SSL_ERROR_WANT_CONNECT\n");
+					break;
+				case SSL_ERROR_WANT_ACCEPT:
+					printf("SSL_ERROR_WANT_ACCEPT\n");
+					break;
+				case SSL_ERROR_WANT_X509_LOOKUP:
+					printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+					break;
+				case SSL_ERROR_SYSCALL:
+					printf("SSL_ERROR_SYSCALL\n");
+					ULONG err = ERR_get_error();
+					printf("error: %lu\n", err);
+					break;
+				case SSL_ERROR_SSL:
+					updateStatusBar("Lost connection.", redPen);
+					if (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword) == RETURN_ERROR) {
+						if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+							displayError("Error connecting to host! Maximum retries reached.");
+							doneReading = TRUE;
+							streamingInProgress = FALSE;
+							FreeVec(tempReadBuffer);
+							struct json_object *response;
+							for (UWORD i = 0; i <= responseIndex; i++) {
+								response = responses[i];
+								json_object_put(response);
+							}
+							FreeVec(responses);
+							return NULL;
+						}
+					}
+					break;
+				default:
+					printf("Unknown error\n");
+					break;
+			}            
 		}
 		FreeVec(tempReadBuffer);
 	} else {
@@ -578,9 +595,11 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
 	}
 	if (!stream) {
 		CloseSocket(sock);
-		SSL_shutdown(ssl);
-		SSL_free(ssl);
-		ssl = NULL;
+		if (ssl != NULL) {
+			SSL_shutdown(ssl);
+			SSL_free(ssl);
+			ssl = NULL;
+		}
 		sock = -1;
 	}
 	return responses;
@@ -592,17 +611,25 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
  * @param imageModel the image model to use
  * @param imageSize the size of the image to create
  * @param openAiApiKey the OpenAI API key
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
  * @return a pointer to a new json_object containing the response or NULL -- Free it with json_object_put when you are done using it
 **/
-struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize, CONST_STRPTR openAiApiKey) {
+struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize, CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
 	struct json_object *response = NULL;
 	UWORD responseIndex = 0;
+	BOOL useSSL = !useProxy || proxyUsesSSL;
 
 	memset(readBuffer, 0, READ_BUFFER_LENGTH);
 
 	updateStatusBar("Connecting...", yellowPen);
 	UBYTE connectionRetryCount = 0;
-	while (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+	while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword) == RETURN_ERROR) {
 		if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
 			displayError("Error connecting to host! Maximum retries reached.");
 			return NULL;
@@ -616,7 +643,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 	json_object_object_add(obj, "size", json_object_new_string(IMAGE_SIZE_NAMES[ImageSize]));	
 	CONST_STRPTR jsonString = json_object_to_json_string(obj);
 
-	snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "POST /v1/images/generations HTTP/1.1\r\n"
+	snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "POST https://api.openai.com/v1/images/generations HTTP/1.1\r\n"
 			"Host: api.openai.com\r\n"
 			"Content-Type: application/json\r\n"
 			"Authorization: Bearer %s\r\n"
@@ -627,7 +654,11 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 	json_object_put(obj);
 
 	updateStatusBar("Sending request...", yellowPen);
-	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+	if (useSSL) {
+		ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+	} else {
+		ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+	}
 
 	set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 
@@ -641,11 +672,19 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 
 		while (!doneReading) {
 			DoMethod(loadingBar, MUIM_Busy_Move);
-			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
+			if (useSSL) {
+				bytesRead = SSL_read(ssl, tempReadBuffer, TEMP_READ_BUFFER_LENGTH);
+			} else {
+				bytesRead = recv(sock, tempReadBuffer, TEMP_READ_BUFFER_LENGTH, 0);
+			}
 			snprintf(statusMessage, sizeof(statusMessage), "Downloading image... (%lu bytes)", totalBytesRead);
 			updateStatusBar(statusMessage, yellowPen);
 			strcat(readBuffer, tempReadBuffer);
-			err = SSL_get_error(ssl, bytesRead);
+			if (useSSL) {
+				err = SSL_get_error(ssl, bytesRead);
+			} else {
+				err = SSL_ERROR_NONE;
+			}
 			switch (err) {
 				case SSL_ERROR_NONE:
 					totalBytesRead += bytesRead;
@@ -698,7 +737,7 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 					break;
 				case SSL_ERROR_SSL:
 					updateStatusBar("Lost connection.", redPen);
-					if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+					if (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword) == RETURN_ERROR) {
 						if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
 							displayError("Error connecting to host! Maximum retries reached.");
 							doneReading = TRUE;
@@ -743,9 +782,11 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
 	}
 
 	CloseSocket(sock);
-	SSL_shutdown(ssl);
-	SSL_free(ssl);
-	ssl = NULL;
+	if (ssl != NULL) {
+		SSL_shutdown(ssl);
+		SSL_free(ssl);
+		ssl = NULL;
+	}
 	sock = -1;
 	return response;
 }
@@ -754,10 +795,18 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
  * Download a file from the internet
  * @param url the URL to download from
  * @param destination the destination to save the file to
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/ 
-ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
+ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
 	struct json_object *response;
+	BOOL useSSL = !useProxy || proxyUsesSSL;
 
 	BPTR fileHandle = Open(destination, MODE_NEWFILE);
 	if (fileHandle == NULL) {
@@ -794,13 +843,13 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 
     // Construct the HTTP GET request
     snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "GET %s HTTP/1.1\r\n"
-        "Host: %s\r\n\r\n"
+        "Host: %s\r\n"
 		"User-Agent: AmigaGPT\r\n\r\n\0"
-		, pathString, hostString);
+		, url, hostString);
 
 	updateStatusBar("Connecting...", yellowPen);
 	UBYTE connectionRetryCount = 0;
-	while (createSSLConnection(hostString, 443) == RETURN_ERROR) {
+	while (createSSLConnection(hostString, 443, useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword) == RETURN_ERROR) {
 		if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
 			displayError("Error connecting to host! Maximum retries reached.");
 			Close(fileHandle);
@@ -810,7 +859,11 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 	connectionRetryCount = 0;
 
 	updateStatusBar("Sending request...", yellowPen);
-	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+	if (useSSL) {
+		ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+	} else {
+		ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+	}
 
 	set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 
@@ -827,7 +880,11 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 		
 		while (!doneReading) {
 			DoMethod(loadingBar, MUIM_Busy_Move);
-			bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH - 1);
+			if (useSSL) {
+				bytesRead = SSL_read(ssl, tempReadBuffer, TEMP_READ_BUFFER_LENGTH);
+			} else {
+				bytesRead = recv(sock, tempReadBuffer, TEMP_READ_BUFFER_LENGTH, 0);
+			}
 			if (!headersRead) {
 				if (contentLength == 0) {
 					UBYTE *contentLengthStart = strstr(tempReadBuffer, "Content-Length: ");
@@ -852,7 +909,11 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 			}
 			snprintf(statusMessage, sizeof(statusMessage), "Downloaded %lu/%ld bytes", totalBytesRead, contentLength);
 			updateStatusBar(statusMessage, yellowPen);
-			err = SSL_get_error(ssl, bytesRead);
+			if (useSSL) {
+				err = SSL_get_error(ssl, bytesRead);
+			} else {
+				err = SSL_ERROR_NONE;
+			}
 			switch (err) {
 				case SSL_ERROR_NONE:
 					Write(fileHandle, dataStart, bytesRead);
@@ -886,7 +947,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 					printf("error: %lu\n", err);
 				case SSL_ERROR_SSL:
 					updateStatusBar("Lost connection. Reconnecting...", redPen);
-					if (createSSLConnection(hostString, 443) == RETURN_ERROR) {
+					if (createSSLConnection(hostString, 443, useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword) == RETURN_ERROR) {
 						if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
 							Close(fileHandle);
 							FreeVec(tempReadBuffer);
@@ -905,7 +966,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 						"Host: %s\r\n"
 						"User-Agent: AmigaGPT\r\n"
 						"Range: bytes=%lu-\r\n\r\n\0"
-						, pathString, hostString, totalBytesRead);
+						, url, hostString, totalBytesRead);
 					SSL_write(ssl, writeBuffer, strlen(writeBuffer));
 					break;
 				default:
@@ -948,9 +1009,11 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination) {
 	}
 
 	CloseSocket(sock);
-	SSL_shutdown(ssl);
-	SSL_free(ssl);
-	ssl = NULL;
+	if (ssl != NULL) {
+		SSL_shutdown(ssl);
+		SSL_free(ssl);
+		ssl = NULL;
+	}
 	sock = -1;
 
 	Close(fileHandle);
@@ -1056,16 +1119,24 @@ static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength) {
  * @param openAITTSModel the TTS model to use
  * @param openAITTSVoice the voice to use
  * @param openAiApiKey the OpenAI API key
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
  * @return a pointer to a buffer containing the audio data or NULL -- Free it with FreeVec() when you are done using it
  **/
-APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel openAITTSModel, enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength) {
+APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel openAITTSModel, enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
 	struct json_object *response;
+	BOOL useSSL = !useProxy || proxyUsesSSL;
 
 	*audioLength = 0;
 
 	updateStatusBar("Connecting...", yellowPen);
 	UBYTE connectionRetryCount = 0;
-	while (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+	while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword) == RETURN_ERROR) {
 		if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
 			displayError("Error connecting to host! Maximum retries reached.");
 			return NULL;
@@ -1084,7 +1155,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 	json_object_object_add(obj, "response_format", json_object_new_string("pcm"));
 	CONST_STRPTR jsonString = json_object_to_json_string(obj);
 
-	snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "POST /v1/audio/speech HTTP/1.1\r\n"
+	snprintf(writeBuffer, WRITE_BUFFER_LENGTH, "POST https://api.openai.com/v1/audio/speech HTTP/1.1\r\n"
 			"Host: api.openai.com\r\n"
 			"Content-Type: application/json\r\n"
 			"Authorization: Bearer %s\r\n"
@@ -1095,7 +1166,11 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 	json_object_put(obj);
 
 	updateStatusBar("Sending request...", yellowPen);
-	ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+	if (useSSL) {
+		ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+	} else {
+		ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+	}
 
 	set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 
@@ -1116,14 +1191,22 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 		while (!doneReading) {
 			DoMethod(loadingBar, MUIM_Busy_Move);
             memset(readBuffer, 0, READ_BUFFER_LENGTH);
-			bytesRead = SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH - 1);
+			if (useSSL) {
+				bytesRead = SSL_read(ssl, readBuffer, TEMP_READ_BUFFER_LENGTH);
+			} else {
+				bytesRead = recv(sock, readBuffer, TEMP_READ_BUFFER_LENGTH, 0);
+			}
 			if (newChunkNeeded && bytesRead == 1) continue;
             bytesRemainingInBuffer = bytesRead;
 			dataStart = readBuffer;
 			
 			snprintf(statusMessage, sizeof(statusMessage), "Downloaded %lu bytes", *audioLength);
 			updateStatusBar(statusMessage, yellowPen);
-			err = SSL_get_error(ssl, bytesRead);
+			if (useSSL) {
+				err = SSL_get_error(ssl, bytesRead);
+			} else {
+				err = SSL_ERROR_NONE;
+			}
 			switch (err) {
 				case SSL_ERROR_NONE:
 					while (bytesRemainingInBuffer > 0) {
@@ -1148,7 +1231,11 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 									tempChunkDataBufferLength++;
 								} else {
 									UBYTE singleByte[1];
-									bytesRead = SSL_read(ssl, singleByte, 1);
+									if (useSSL) {
+										bytesRead = SSL_read(ssl, singleByte, 1);
+									} else {
+										bytesRead = recv(sock, singleByte, 1, 0);
+									}
 									memcpy(tempChunkHeaderBuffer + tempChunkDataBufferLength, singleByte, bytesRead);
 									tempChunkDataBufferLength += bytesRead;
 								}
@@ -1191,7 +1278,11 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 							*audioLength += chunkBytesNeedingRead;
 							bytesRemainingInBuffer -= chunkBytesNeedingRead;
 							while (bytesRemainingInBuffer < 2) {
-								bytesRead = SSL_read(ssl, readBuffer, 1);
+								if (useSSL) {
+									bytesRead = SSL_read(ssl, readBuffer, 1);
+								} else {
+									bytesRead = recv(sock, readBuffer, 1, 0);
+								}
 								bytesRemainingInBuffer += bytesRead;
 							}
 							dataStart += chunkBytesNeedingRead + 2;
@@ -1226,7 +1317,7 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 					printf("error: %lu\n", err);
 				case SSL_ERROR_SSL:
 					updateStatusBar("Lost connection.", redPen);
-					if (createSSLConnection(OPENAI_HOST, OPENAI_PORT) == RETURN_ERROR) {
+					if (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword) == RETURN_ERROR) {
 						if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
 							displayError("Error connecting to host! Maximum retries reached.");
 							FreeVec(audioData);
@@ -1274,9 +1365,11 @@ APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel open
 	}
 
 	CloseSocket(sock);
-	SSL_shutdown(ssl);
-	SSL_free(ssl);
-	ssl = NULL;
+	if (ssl != NULL) {
+		SSL_shutdown(ssl);
+		SSL_free(ssl);
+		ssl = NULL;
+	}
 	sock = -1;
 
 	updateStatusBar("Download complete.", greenPen);
