@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # Run build_os3.sh with CLEAN=1
@@ -29,4 +28,3 @@ rm -f ../out/AmigaGPT.lha
 lha a -v ../out/AmigaGPT.lha AmigaGPT AmigaGPT.info
 
 rm -f AmigaGPT/AmigaGPT AmigaGPT/AmigaGPT.info AmigaGPT/AmigaGPT_OS4 AmigaGPT/AmigaGPT_OS4.info AmigaGPT/AmigaGPT_MorphOS AmigaGPT/AmigaGPT_MorphOS.info
-

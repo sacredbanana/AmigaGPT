@@ -1,3 +1,5 @@
+[![Super-Linter](https://github.com/sacredbanana/AmigaGPT/actions/workflows/super-linter.yml/badge.svg)](https://github.com/marketplace/actions/super-linter)
+
 # AmigaGPT
 
 AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS. This powerful tool brings the capabilities of OpenAI’s GPT to your Amiga system, enabling text generation, question answering, and creative exploration. AmigaGPT can also generate stunning images using DALL-E and includes support for speech output, making it easier than ever to interact with AI on your Amiga. Designed to integrate seamlessly with your system, AmigaGPT delivers modern AI technology while embracing the timeless Amiga experience.
@@ -33,16 +35,16 @@ Ensure you have the necessary system requirements:
 - An OCS/ECS/AGA **Amiga** or a PowerPC machine capable of running MorphOS
 - **AmigaOS 3.1** or higher, **AmigaOS 4.1** or **MorphOS**
 - Motorola 68020 or higher CPU or PowerPC for AmigaOS 4/MorphOS
-- Internet access using a TCP/IP stack such as **Roadshow** (http://roadshow.apc-tcp.de/index-en.php)
-- For AmigaOS 3 & 4: **AmiSSL 5.9** or higher (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
-- **MUI 3** minimum but **MUI 5** recommended for all features (https://github.com/amiga-mui/muidev/releases)
-- **MCC_NList** MUI custom class for lists (http://aminet.net/package/dev/mui/MCC_NList-0.128)
-- **MCC_TextEditor** MUI custom class for text editors (http://aminet.net/package/dev/mui/MCC_TextEditor-15.56)
+- Internet access using a TCP/IP stack such as **Roadshow** (<http://roadshow.apc-tcp.de/index-en.php>)
+- For AmigaOS 3 & 4: **AmiSSL 5.9** or higher (<http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha>)
+- **MUI 3** minimum but **MUI 5** recommended for all features (<https://github.com/amiga-mui/muidev/releases>)
+- **MCC_NList** MUI custom class for lists (<http://aminet.net/package/dev/mui/MCC_NList-0.128>)
+- **MCC_TextEditor** MUI custom class for text editors (<http://aminet.net/package/dev/mui/MCC_TextEditor-15.56>)
 - An **OpenAI account** with an active **API key**
 - *Optional*: **AmigaOS 3 only**: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
-- *Optional*: **AmigaOS 4 only**: **Flite device** (http://aminet.net/package/mus/misc/flite_device)
+- *Optional*: **AmigaOS 4 only**: **Flite device** (<http://aminet.net/package/mus/misc/flite_device>)
 - *Optional*: For OpenAI voices, ***AHI*** needs to be installed
- (http://aminet.net/package/driver/audio/ahiusr_4.18)
+ (<http://aminet.net/package/driver/audio/ahiusr_4.18>)
 
 ## Installation
 * For AmigaOS 3 & 4, Install AmiSSL and a TCP/IP stack if not already done so
@@ -56,10 +58,10 @@ AmigaGPT supports reading the output aloud. How AmigaGPT does this depends on wh
 
 ### Installing AHI for OpenAI voices
 If your OS does not come with AHI installed, you can get it from
- https://aminet.net/package/driver/audio/ahiusr_4.18
+ <https://aminet.net/package/driver/audio/ahiusr_4.18>
 
 ### AmigaOS 3 ###
-**AmigaGPT** supports reading the output aloud. This requires a file called `narrator.device` which cannot be included with **AmigaGPT** because it is still under copyright. Therefore, you must copy this file legally from your Workbench disks so that **AmigaGPT** will be able to synthesise speech. There are 2 versions of `narrator.device` supported, **v34** and **v37**. 
+**AmigaGPT** supports reading the output aloud. This requires a file called `narrator.device` which cannot be included with **AmigaGPT** because it is still under copyright. Therefore, you must copy this file legally from your Workbench disks so that **AmigaGPT** will be able to synthesise speech. There are 2 versions of `narrator.device` supported, **v34** and **v37**.
 
 **v34** is the original version that came with Workbench 1.x. **v37** was an updated version included with Workbench 2.0.x. It has more features and sounds more natural, however it does sound quite different which is why **AmigaGPT** supports you installing both versions and your choice of version to be used can be selected in the **Speech** menu in the app.
 
@@ -67,10 +69,10 @@ Regardless of which version of `narrator.device` you choose to install (or both)
 
 ### Installing `translator.library` **v43**
 Since `translator.library` **v43** is not available as a standalone install, you will need to install **v42** and then patch it to **v43**.
-* Download http://aminet.net/util/libs/translator42.lha and extract the archive to any convenient location on your Amiga such as `RAM:`
+* Download <http://aminet.net/util/libs/translator42.lha> and extract the archive to any convenient location on your Amiga such as `RAM:`
 * Navigate to that directory and double click the `Install` program
 * Run the installer using all the default settings
-* Download http://aminet.net/util/libs/Tran43pch.lha and once again extract it to a location of your choice
+* Download <http://aminet.net/util/libs/Tran43pch.lha> and once again extract it to a location of your choice
 * Navigate to that directory and double click the `Install` program
 * Run the installer using all the default settings
 * Reboot your Amiga - It will not work until the system is restarted
@@ -83,7 +85,7 @@ Since `translator.library` **v43** is not available as a standalone install, you
 * Insert your Workbench 2.0.x (you cannot use 2.1 because the speech libraries were removed after version 2.0.4) disk and copy `df0:devs/narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/37`
 
 ### AmigaOS 4
-* AmigaGPT for AmigaOS 4 uses the Flite device to provide speech synthesis. Download it from http://aminet.net/package/mus/misc/flite_device.
+* AmigaGPT for AmigaOS 4 uses the Flite device to provide speech synthesis. Download it from <http://aminet.net/package/mus/misc/flite_device>.
 * Extract the archive and run the installer
 
 ## Launching **AmigaGPT**
@@ -94,7 +96,7 @@ Since `translator.library` **v43** is not available as a standalone install, you
 
 When launched, **AmigaGPT** presents you with a choice of opening the app in a new screen or opening in Workbench. If you open in a new screen you have the ability to create a screen for the app to open in. **AmigaGPT** supports anything from **320x200** all the way up to **4k** resolution if using a video card for RTG. Bear in mind text will appear very tiny in resolutions above **1080p** so you may want to increase the font size settings from the **View** menu when the app opens.
 
-When launching for the first time you will need to enter your OpenAI API key before you can start chatting. If you haven't already done so, create an OpenAI account and navigate to https://platform.openai.com/account/api-keys to generate an API key for use with **AmigaGPT**.
+When launching for the first time you will need to enter your OpenAI API key before you can start chatting. If you haven't already done so, create an OpenAI account and navigate to <https://platform.openai.com/account/api-keys> to generate an API key for use with **AmigaGPT**.
 
 There are 2 main modes of operation: Chat and Image Generation. You can switch between them via the tabs in the top left corner.
 
@@ -116,7 +118,7 @@ In the "**Edit**" menu, you'll find basic text editing commands like **Cut**, **
 
 The "**View**" menu allows you to change the appearance of the app.
 
-The "**Connection**" menu allows you to connect via a proxy server. It supports both HTTP and HTTPS proxy servers but if you use an unecrypted HTTP proxy server you can improve the performance of AmigaGPT by removing the need for the encryption of the OpenAI traffic to be done on the system running AmigaGPT. For an easy proxy server you can run on your local network you can try out https://mitmproxy.org
+The "**Connection**" menu allows you to connect via a proxy server. It supports both HTTP and HTTPS proxy servers but if you use an unecrypted HTTP proxy server you can improve the performance of AmigaGPT by removing the need for the encryption of the OpenAI traffic to be done on the system running AmigaGPT. For an easy proxy server you can run on your local network you can try out <https://mitmproxy.org>
 
 ## Chat Models
 
@@ -211,14 +213,14 @@ You can either compile the code natively or with the Docker container.
 ### Native
 
 #### Building the AmigaOS 3 app
-If you would like to build this project from source you will need Bebbo's **amiga-gcc** toolchain here https://github.com/bebbo/amiga-gcc
+If you would like to build this project from source you will need Bebbo's **amiga-gcc** toolchain here <https://github.com/bebbo/amiga-gcc>
 
-Once installed, get the required other SDK's (AmiSSL, Translator, json-c) from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
+Once installed, get the required other SDK's (AmiSSL, Translator, json-c) from <https://github.com/sacredbanana/AmigaSDK-gcc> and put these in your Amiga dev environment created in the above step.
 
 #### Building the AmigaOS 4 app
-Get this toolchain set up https://github.com/sba1/adtools
+Get this toolchain set up <https://github.com/sba1/adtools>
 
-Once installed, get the required other SDK's (AmiSSL, Translator, json-c) from https://github.com/sacredbanana/AmigaSDK-gcc and put these in your Amiga dev environment created in the above step.
+Once installed, get the required other SDK's (AmiSSL, Translator, json-c) from <https://github.com/sacredbanana/AmigaSDK-gcc> and put these in your Amiga dev environment created in the above step.
 
 ### Docker
 You may use pre-prepared Docker images that are able to compile both the AmigaOS 3 and AmigaOS 4 versions of the app.
@@ -237,20 +239,20 @@ We welcome contributions to **AmigaGPT**! If you have a bug to report, a feature
 
 ## Contributors
 ### Code
-- **Cameron Armstrong (sacredbanana/Nightfox)** https://github.com/sacredbanana/
+- **Cameron Armstrong (sacredbanana/Nightfox)** <https://github.com/sacredbanana/>
 
 ### Art
 - **Mauricio Sandoval** - Icon design
 
 ## Special Thanks
-- **Bebbo** for creating the Amiga GCC toolchain https://github.com/bebbo
-- **OpenAI** for making this all possible https://openai.com
-- **EAB** and everyone in it for answering my questions https://eab.abime.net/
-- **Ján Zahurančík** for all the thorough testing, bundling AmigaGPT into AmiKit and for all the moral support https://www.amikit.amiga.sk
-- **CoffinOS** for bundling AmigaGPT into CoffinOS https://getcoffin.net
-- **Amiga Future Magazine** for reviewing AmigaGPT and publishing several of its updates in the News from Aminet section https://www.amigafuture.de/
-- **WhatIFF? Magaine** for reviewing AmigaGPT and interviewing me in issue 14 https://www.whatiff.info
-- **Dan Wood** for reviewing AmigaGPT on his YouTube channel https://www.youtube.com/watch?v=-OA28r8Up5U
-- **Proteque-CBN** for reviewing AmigaGPT on his YouTube channel https://www.youtube.com/watch?v=t3q8HQ6wrnw
-- **AmigaBill** for covering AmigaGPT in the Amiga News section on his Twitch streams and allowing me to join his stream to promote it https://www.twitch.tv/amigabill
-- **Les Docs** for making a video review and giving a tutorial on how to add support for the French accent https://www.youtube.com/watch?v=BV5Fq1PresE
+- **Bebbo** for creating the Amiga GCC toolchain <https://github.com/bebbo>
+- **OpenAI** for making this all possible <https://openai.com>
+- **EAB** and everyone in it for answering my questions <https://eab.abime.net/>
+- **Ján Zahurančík** for all the thorough testing, bundling AmigaGPT into AmiKit and for all the moral support <https://www.amikit.amiga.sk>
+- **CoffinOS** for bundling AmigaGPT into CoffinOS <https://getcoffin.net>
+- **Amiga Future Magazine** for reviewing AmigaGPT and publishing several of its updates in the News from Aminet section <https://www.amigafuture.de/>
+- **WhatIFF? Magaine** for reviewing AmigaGPT and interviewing me in issue 14 <https://www.whatiff.info>
+- **Dan Wood** for reviewing AmigaGPT on his YouTube channel <https://www.youtube.com/watch?v=-OA28r8Up5U>
+- **Proteque-CBN** for reviewing AmigaGPT on his YouTube channel <https://www.youtube.com/watch?v=t3q8HQ6wrnw>
+- **AmigaBill** for covering AmigaGPT in the Amiga News section on his Twitch streams and allowing me to join his stream to promote it <https://www.twitch.tv/amigabill>
+- **Les Docs** for making a video review and giving a tutorial on how to add support for the French accent <https://www.youtube.com/watch?v=BV5Fq1PresE>

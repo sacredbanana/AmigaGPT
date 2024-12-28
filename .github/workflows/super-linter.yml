@@ -8,9 +8,9 @@ name: Lint Code Base
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 jobs:
   run-lint:
     permissions:
@@ -30,6 +30,7 @@ jobs:
         uses: github/super-linter/slim@v4
         env:
           VALIDATE_ALL_CODEBASE: true
+          LINTER_RULES_PATH: "."
           ENABLE_GITHUB_ACTIONS_STEP_SUMMARY: true
           DEFAULT_BRANCH: "master"
           GITHUB_TOKEN: ${{ secrets.AMIGAGPT_GITHUB_TOKEN }}

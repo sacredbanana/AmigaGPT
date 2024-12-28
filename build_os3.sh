@@ -6,10 +6,10 @@
 set -e
 
 if [[ "${CLEAN}" == "1" ]]; then
-  rm -rf build
+	rm -rf build
 fi
 
 docker run --rm \
-    -v ${PWD}:/work \
-    -e USER=$( id -u ) -e GROUP=$( id -g ) -e DEBUG=${DEBUG} \
-    -it sacredbanana/amiga-compiler:m68k-amigaos make
+	-v ${PWD}:/work \
+	-e USER=$(id -u) -e GROUP=$(id -g) -e DEBUG=${DEBUG} \
+	-it sacredbanana/amiga-compiler:m68k-amigaos make

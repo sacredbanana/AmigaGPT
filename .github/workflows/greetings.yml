@@ -9,8 +9,8 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-    - uses: actions/first-interaction@v1
-      with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        issue-message: "Welcome! Thanks for submitting your first AmigaGPT issue! Your issue will be looked at ASAP. <3"
-        pr-message: "Welcome to the AmigaGPT dev team! All contributions are welcome. Thanks for submitting your first pull request! <3"
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: "Welcome! Thanks for submitting your first AmigaGPT issue! Your issue will be looked at ASAP. <3"
+          pr-message: "Welcome to the AmigaGPT dev team! All contributions are welcome. Thanks for submitting your first pull request! <3"

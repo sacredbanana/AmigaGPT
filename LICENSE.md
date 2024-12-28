@@ -200,16 +200,16 @@ src/regex/regsub.c
 
 src/speech/rateconv.c
 
- *	Copyright (c) 1992, 1995 by Markus Mummert
+ * Copyright (c) 1992, 1995 by Markus Mummert
  *
- *	Redistribution and use of this software, modifcation and inclusion
- *	into other forms of software are permitted provided that the following
- *	conditions are met:
+ * Redistribution and use of this software, modifcation and inclusion
+ * into other forms of software are permitted provided that the following
+ * conditions are met:
  *
- *	1. Redistributions of this software must retain the above copyright
- *	   notice, this list of conditions and the following disclaimer.
- *	2. If this software is redistributed in a modified condition
- *	   it must reveal clearly that it has been modified.
+ * 1. Redistributions of this software must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. If this software is redistributed in a modified condition
+ *    it must reveal clearly that it has been modified.
 
 lang/usenglish/us_durz_cart.c
 lang/usenglish/us_durz_cart.h

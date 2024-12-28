@@ -6,6 +6,7 @@
         "/opt/amiga/m68k-amigaos/sys-include",
         "/opt/amiga/m68k-amigaos/clib2/include",
     ],
+    "editor.formatOnSave": true,
     "files.associations": {
         "intuition.h": "c",
         "translator.h": "c",
