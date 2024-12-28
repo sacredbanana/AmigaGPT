@@ -24,7 +24,10 @@ struct Config {
 	UWORD imageModelSetVersion; // Ditto for the image model set
 	UWORD speechSystemSetVersion; // Ditto for the speech system
 	UWORD openAITTSModelSetVersion;   // Ditto for the TTS model set
-	UWORD openAITTSVoiceSetVersion;   // Ditto for the TTS voice set
+	UWORD openAITTSVoiceSetVersion;   // Ditto for the TTS voice set;
+	ULONG proxyEnabled;
+	STRPTR proxyHost;
+	UWORD proxyPort;
 };
 
 /**

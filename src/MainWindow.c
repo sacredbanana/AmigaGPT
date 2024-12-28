@@ -173,6 +173,7 @@ MakeHook(DeleteChatButtonClickedHook, DeleteChatButtonClickedFunc);
 HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
 	if (config.openAiApiKey != NULL && strlen(config.openAiApiKey) > 0) {
 		sendChatMessage();
+		// postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, FALSE);
 	}
 	else {
 		displayError("Please enter your OpenAI API key in the Open AI settings in the menu.");

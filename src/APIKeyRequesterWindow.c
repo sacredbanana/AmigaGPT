@@ -40,7 +40,7 @@ LONG createAPIKeyRequesterWindow() {
 			MUIA_Window_Width, 800,
 			MUIA_Window_Height, 200,
 			WindowContents, VGroup,
-            Child, TextObject,
+            	Child, TextObject,
                     MUIA_Text_PreParse, "\33c",
                     MUIA_Text_Contents,  "Type or paste (Right-Amiga + V) your OpenAI API key here.\nThis key is required to use the OpenAI API.\nIf you do not have an API key, consult the AmigaGPT documentation for instructions on how to obtain one.",
                 End,

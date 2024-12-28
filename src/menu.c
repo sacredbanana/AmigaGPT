@@ -13,6 +13,7 @@
 #include "gui.h"
 #include "MainWindow.h"
 #include "menu.h"
+#include "ProxySettingsRequesterWindow.h"
 #include "version.h"
 
 Object *menuStrip;
@@ -129,6 +130,10 @@ static struct NewMenu amigaGPTMenu[] = {
 	{NM_ITEM, "Select all", "A", 0, 0, (APTR)MENU_ITEM_EDIT_SELECT_ALL},
 	{NM_TITLE, "View", 0, 0, 0, (APTR)MENU_ITEM_NULL},
 	{NM_ITEM, "MUI Settings", 0, 0, 0, (APTR)MENU_ITEM_VIEW_MUI_SETTINGS},
+	{NM_TITLE, "Connection", 0, 0, 0, (APTR)MENU_ITEM_NULL},
+	{NM_ITEM, "Proxy", 0, 0, 0, (APTR)MENU_ITEM_NULL},
+	{NM_SUB, "Enabled", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_CONNECTION_PROXY_ENABLED},
+	{NM_SUB, "Settings", 0, 0, 0, (APTR)MENU_ITEM_CONNECTION_PROXY_SETTINGS},
 	{NM_TITLE, "Speech", 0, 0, 0, (APTR)MENU_ITEM_NULL},
 	{NM_ITEM, "Enabled", 0, CHECKIT|CHECKED, 0, (APTR)MENU_ITEM_SPEECH_ENABLED},
 	{NM_ITEM, "Speech system", 0, 0, 0, (APTR)MENU_ITEM_NULL},
@@ -237,6 +242,13 @@ void addMenuActions() {
 
     Object muiSettingsMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_MUI_SETTINGS);
     DoMethod(muiSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Application, 1, MUIM_Application_OpenConfigWindow);
+
+	Object proxyEnabledMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_ENABLED);
+	set(proxyEnabledMenuItem, MUIA_Menuitem_Checked, config.proxyEnabled);
+	DoMethod(proxyEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, MUIV_EveryTime, proxyEnabledMenuItem, 3, MUIM_WriteLong, MUIV_TriggerValue, &config.proxyEnabled);
+
+	Object proxySettingsMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_SETTINGS);
+	DoMethod(proxySettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime, proxySettingsRequesterWindowObject, 3, MUIM_Set, MUIA_Window_Open, TRUE);
 
 	Object speechEnabledMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ENABLED);
 	set(speechEnabledMenuItem, MUIA_Menuitem_Checked, config.speechEnabled);

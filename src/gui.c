@@ -18,6 +18,7 @@
 #include "gui.h"
 #include "MainWindow.h"
 #include "menu.h"
+#include "ProxySettingsRequesterWindow.h"
 #include "StartupOptionsWindow.h"
 #include "version.h"
 #include "datatypesclass.h"
@@ -131,6 +132,9 @@ LONG initVideo() {
 	if (createChatSystemRequesterWindow() == RETURN_ERROR)
 		return RETURN_ERROR;
 
+	if (createProxySettingsRequesterWindow() == RETURN_ERROR)
+		return RETURN_ERROR;
+
 	if (isMUI5 && (imageWindowObject = WindowObject,
 			MUIA_Window_Title, "Image",
 			MUIA_Window_Width, 320,
@@ -163,6 +167,7 @@ LONG initVideo() {
 		SubWindow, mainWindowObject,
 		SubWindow, apiKeyRequesterWindowObject,
 		SubWindow, chatSystemRequesterWindowObject,
+		SubWindow, proxySettingsRequesterWindowObject,
 		End)) {
 		displayError("Could not create app!\n");
 		return RETURN_ERROR;

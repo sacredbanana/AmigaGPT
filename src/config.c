@@ -28,7 +28,10 @@ struct Config config = {
 	.imageModelSetVersion = IMAGE_MODEL_SET_VERSION,
 	.speechSystemSetVersion = SPEECH_SYSTEM_SET_VERSION,
 	.openAITTSModelSetVersion = OPENAI_TTS_MODEL_SET_VERSION,
-	.openAITTSVoiceSetVersion = OPENAI_TTS_VOICE_SET_VERSION
+	.openAITTSVoiceSetVersion = OPENAI_TTS_VOICE_SET_VERSION,
+	.proxyEnabled = FALSE,
+	.proxyHost = NULL,
+	.proxyPort = 8080
 };
 
 /**
@@ -61,6 +64,9 @@ LONG writeConfig() {
 	json_object_object_add(configJsonObject, "speechSystemSetVersion", json_object_new_int(SPEECH_SYSTEM_SET_VERSION));
 	json_object_object_add(configJsonObject, "openAITTSModelSetVersion", json_object_new_int(OPENAI_TTS_MODEL_SET_VERSION));
 	json_object_object_add(configJsonObject, "openAITTSVoiceSetVersion", json_object_new_int(OPENAI_TTS_VOICE_SET_VERSION));
+	json_object_object_add(configJsonObject, "proxyEnabled", json_object_new_boolean((BOOL)config.proxyEnabled));
+	json_object_object_add(configJsonObject, "proxyHost", config.proxyHost != NULL ? json_object_new_string(config.proxyHost) : NULL);
+	json_object_object_add(configJsonObject, "proxyPort", json_object_new_int(config.proxyPort));
 	STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(configJsonObject, JSON_C_TO_STRING_PRETTY);
 
 	if (Write(file, configJsonString, strlen(configJsonString)) != strlen(configJsonString)) {
@@ -283,6 +289,34 @@ LONG readConfig() {
 
 	if (config.openAITTSVoiceSetVersion != OPENAI_TTS_VOICE_SET_VERSION) {
 		config.openAITTSVoice = OPENAI_TTS_VOICE_ALLOY;
+	}
+
+	struct json_object *proxyEnabledObj;
+	if (json_object_object_get_ex(configJsonObject, "proxyEnabled", &proxyEnabledObj)) {
+		config.proxyEnabled = (ULONG)json_object_get_boolean(proxyEnabledObj);
+	} else {
+		config.proxyEnabled = FALSE;
+	}
+
+	if (config.proxyHost != NULL) {
+		FreeVec(config.proxyHost);
+		config.proxyHost = NULL;
+	}
+
+	struct json_object *proxyHostObj;
+	if (json_object_object_get_ex(configJsonObject, "proxyHost", &proxyHostObj)) {
+		CONST_STRPTR proxyHost = json_object_get_string(proxyHostObj);
+		if (proxyHost != NULL) {
+			config.proxyHost = AllocVec(strlen(proxyHost) + 1, MEMF_CLEAR);
+			strncpy(config.proxyHost, proxyHost, strlen(proxyHost));
+		}
+	}
+
+	struct json_object *proxyPortObj;
+	if (json_object_object_get_ex(configJsonObject, "proxyPort", &proxyPortObj)) {
+		config.proxyPort = json_object_get_int(proxyPortObj);
+	} else {
+		config.proxyPort = 8080;
 	}
 
 	FreeVec(configJsonString);

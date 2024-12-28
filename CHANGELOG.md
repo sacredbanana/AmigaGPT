@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.0 (2024-12-28)
+
+- Add proxy server support
+
 ## 2.0.2 (2024-12-24)
 
 - Fix memory leaks
