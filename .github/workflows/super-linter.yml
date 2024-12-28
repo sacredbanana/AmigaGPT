@@ -13,6 +13,11 @@ on:
     branches: [ "master" ]
 jobs:
   run-lint:
+    permissions:
+      # To write linting fixes
+      contents: write
+      # To write Super-linter status checks
+      statuses: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -24,6 +29,6 @@ jobs:
       - name: Lint Code Base
         uses: github/super-linter@v4
         env:
-          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: "master"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
