@@ -28,6 +28,11 @@ struct Config {
 	ULONG proxyEnabled;
 	STRPTR proxyHost;
 	UWORD proxyPort;
+	ULONG proxyUsesSSL;
+	ULONG proxyRequiresAuth;
+	STRPTR proxyUsername;
+	STRPTR proxyPassword;
+
 };
 
 /**

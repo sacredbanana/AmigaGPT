@@ -2,6 +2,10 @@
 
 extern Object *proxyHostString;
 extern Object *proxyPortString;
+extern Object *proxyUsesSSLCycle;
+extern Object *proxyRequiresAuthCycle;
+extern Object *proxyUsernameString;
+extern Object *proxyPasswordString;
 extern Object *proxySettingsRequesterWindowObject;
 
 /**

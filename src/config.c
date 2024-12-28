@@ -31,7 +31,11 @@ struct Config config = {
 	.openAITTSVoiceSetVersion = OPENAI_TTS_VOICE_SET_VERSION,
 	.proxyEnabled = FALSE,
 	.proxyHost = NULL,
-	.proxyPort = 8080
+	.proxyPort = 8080,
+	.proxyUsesSSL = FALSE,
+	.proxyRequiresAuth = FALSE,
+	.proxyUsername = NULL,
+	.proxyPassword = NULL
 };
 
 /**
@@ -67,6 +71,10 @@ LONG writeConfig() {
 	json_object_object_add(configJsonObject, "proxyEnabled", json_object_new_boolean((BOOL)config.proxyEnabled));
 	json_object_object_add(configJsonObject, "proxyHost", config.proxyHost != NULL ? json_object_new_string(config.proxyHost) : NULL);
 	json_object_object_add(configJsonObject, "proxyPort", json_object_new_int(config.proxyPort));
+	json_object_object_add(configJsonObject, "proxyUsesSSL", json_object_new_boolean((BOOL)config.proxyUsesSSL));
+	json_object_object_add(configJsonObject, "proxyRequiresAuth", json_object_new_boolean((BOOL)config.proxyRequiresAuth));
+	json_object_object_add(configJsonObject, "proxyUsername", config.proxyUsername != NULL ? json_object_new_string(config.proxyUsername) : NULL);
+	json_object_object_add(configJsonObject, "proxyPassword", config.proxyPassword != NULL ? json_object_new_string(config.proxyPassword) : NULL);
 	STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(configJsonObject, JSON_C_TO_STRING_PRETTY);
 
 	if (Write(file, configJsonString, strlen(configJsonString)) != strlen(configJsonString)) {
@@ -319,6 +327,48 @@ LONG readConfig() {
 		config.proxyPort = 8080;
 	}
 
+	struct json_object *proxyUsesSSLObj;
+	if (json_object_object_get_ex(configJsonObject, "proxyUsesSSL", &proxyUsesSSLObj)) {
+		config.proxyUsesSSL = (ULONG)json_object_get_boolean(proxyUsesSSLObj);
+	} else {
+		config.proxyUsesSSL = FALSE;
+	}
+
+	struct json_object *proxyRequiresAuthObj;
+	if (json_object_object_get_ex(configJsonObject, "proxyRequiresAuth", &proxyRequiresAuthObj)) {
+		config.proxyRequiresAuth = (ULONG)json_object_get_boolean(proxyRequiresAuthObj);
+	} else {
+		config.proxyRequiresAuth = FALSE;
+	}
+
+	if (config.proxyUsername != NULL) {
+		FreeVec(config.proxyUsername);
+		config.proxyUsername = NULL;
+	}
+
+	struct json_object *proxyUsernameObj;
+	if (json_object_object_get_ex(configJsonObject, "proxyUsername", &proxyUsernameObj)) {
+		CONST_STRPTR proxyUsername = json_object_get_string(proxyUsernameObj);
+		if (proxyUsername != NULL) {
+			config.proxyUsername = AllocVec(strlen(proxyUsername) + 1, MEMF_CLEAR);
+			strncpy(config.proxyUsername, proxyUsername, strlen(proxyUsername));
+		}
+	}
+
+	if (config.proxyPassword != NULL) {
+		FreeVec(config.proxyPassword);
+		config.proxyPassword = NULL;
+	}
+
+	struct json_object *proxyPasswordObj;
+	if (json_object_object_get_ex(configJsonObject, "proxyPassword", &proxyPasswordObj)) {
+		CONST_STRPTR proxyPassword = json_object_get_string(proxyPasswordObj);
+		if (proxyPassword != NULL) {
+			config.proxyPassword = AllocVec(strlen(proxyPassword) + 1, MEMF_CLEAR);
+			strncpy(config.proxyPassword, proxyPassword, strlen(proxyPassword));
+		}
+	}
+
 	FreeVec(configJsonString);
 	json_object_put(configJsonObject);
 	return RETURN_OK;
@@ -339,5 +389,17 @@ void freeConfig() {
 	if (config.openAiApiKey != NULL) {
 		FreeVec(config.openAiApiKey);
 		config.openAiApiKey = NULL;
+	}
+	if (config.proxyHost != NULL) {
+		FreeVec(config.proxyHost);
+		config.proxyHost = NULL;
+	}
+	if (config.proxyUsername != NULL) {
+		FreeVec(config.proxyUsername);
+		config.proxyUsername = NULL;
+	}
+	if (config.proxyPassword != NULL) {
+		FreeVec(config.proxyPassword);
+		config.proxyPassword = NULL;
 	}
 }
