@@ -32,4 +32,4 @@ jobs:
           VALIDATE_ALL_CODEBASE: true
           ENABLE_GITHUB_ACTIONS_STEP_SUMMARY: true
           DEFAULT_BRANCH: "master"
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.AMIGAGPT_GITHUB_TOKEN }}
