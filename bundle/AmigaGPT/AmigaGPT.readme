@@ -3,9 +3,9 @@ Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 2.1.0
+Version: 2.1.1
 Architecture: m68k-amigaos >= 3.1; ppc-amigaos; ppc-morphos
-Requires: AmigaOS 3.1+/68020+ util/libs/AmiSSL-5.9-OS3.lha MUI
+Requires: AmigaOS 3.1+/68020+ util/libs/AmiSSL-v5-OS3.lha MUI
 Replaces: util/misc/AmigaGPT.lha
 
 AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS.
@@ -28,8 +28,9 @@ Requirements:
 - OCS/ECS/AGA Amiga or a PowerPC machine capable of running MorphOS
 - MUI 3 minimum; MUI 5 recommended for all features
 - Motorola 68020 or higher CPU or PPC for AmigaOS 4/MorphOS
-- For AmigaOS 3 & 4, AmiSSL 5.9 or higher
-  (http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha)
+- For AmigaOS 3 & 4, AmiSSL 5.18 or higher
+  (https://aminet.net/package/util/libs/AmiSSL-v5-OS3) for OS3 and
+  (https://aminet.net/package/util/libs/AmiSSL-v5-OS4) for OS4
 - Internet access using a TCP/IP stack such as Roadshow 
 (http://roadshow.apc-tcp.de/index-en.php)
 - MUI 3 minimum but MUI 5 recommended for all features
@@ -249,6 +250,13 @@ Special Thanks:
   support for the French accent https://www.youtube.com/watch?v=BV5Fq1PresE
 
 Changelog:
+
+------------------
+2.1.1 (2024-12-30)
+------------------
+
+- Add more clear error message when the user's installed AmiSSL version is too
+  old
 
 ------------------
 2.1.0 (2024-12-28)

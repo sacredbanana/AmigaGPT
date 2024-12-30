@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.1 (2024-12-30)
+
+- Add more clear error message when the user's installed AmiSSL version is too old
+
 ## 2.1.0 (2024-12-28)
 
 - Add proxy server support

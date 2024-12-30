@@ -58,7 +58,9 @@ For smooth operation of AmigaGPT, your system needs to meet the following requir
 - MUI 3 minimum but MUI 5 recommended for all features (https://github.com/amiga-mui/muidev/releases)
 - MCC_NList MUI custom class for lists (http://aminet.net/package/dev/mui/MCC_NList-0.128)
 - MCC_TextEditor MUI custom class for text editors (http://aminet.net/package/dev/mui/MCC_TextEditor-15.56)
-- AmiSSL 5.9 or higher
+- For AmigaOS 3 & 4, AmiSSL 5.18 or higher
+  (https://aminet.net/package/util/libs/AmiSSL-v5-OS3) for OS3 and
+  (https://aminet.net/package/util/libs/AmiSSL-v5-OS4) for OS4
 - An OpenAI account with an active API key
 - Optional: For speech on AmigaOS 3, any version of narrator.device
 - Optional: For speech on AmigaOS 4, Flite Device
@@ -886,6 +888,10 @@ The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E wi
 
 @node changelog "Changelog"
 @{b}Changelog@{ub}
+
+@{b}2.1.1 (2024-12-30)@{ub}
+
+- Add more clear error message when the user's installed AmiSSL version is too old
 
 @{b}2.1.0 (2024-12-28)@{ub}
 

@@ -220,7 +220,7 @@ LONG initOpenAIConnector() {
 					  AmiSSL_SocketBase, (ULONG)SocketBase,
 					  AmiSSL_ErrNoPtr, (ULONG)&errno,
 					  TAG_DONE) != 0) {
-		displayError("failed to initialize amisslmaster.library");
+		displayError("Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or newer. Please refer to the documentation for more information.");
 		return RETURN_ERROR;
 	}
 	#endif

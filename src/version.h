@@ -1,3 +1,3 @@
-#define APP_VERSION "2.1.0"
-#define BUILD_NUMBER "5154"
+#define APP_VERSION "2.1.1"
+#define BUILD_NUMBER "5160"
 #define APP_NAME "AmigaGPT"

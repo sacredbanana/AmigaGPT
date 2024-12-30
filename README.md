@@ -36,7 +36,7 @@ Ensure you have the necessary system requirements:
 - **AmigaOS 3.1** or higher, **AmigaOS 4.1** or **MorphOS**
 - Motorola 68020 or higher CPU or PowerPC for AmigaOS 4/MorphOS
 - Internet access using a TCP/IP stack such as **Roadshow** (<http://roadshow.apc-tcp.de/index-en.php>)
-- For AmigaOS 3 & 4: **AmiSSL 5.9** or higher (<http://aminet.net/util/libs/AmiSSL-5.9-OS3.lha>)
+- For AmigaOS 3 & 4: **AmiSSL 5.18** or higher (<https://aminet.net/package/util/libs/AmiSSL-v5-OS3>) for OS3 and (<https://aminet.net/package/util/libs/AmiSSL-v5-OS4>) for OS4
 - **MUI 3** minimum but **MUI 5** recommended for all features (<https://github.com/amiga-mui/muidev/releases>)
 - **MCC_NList** MUI custom class for lists (<http://aminet.net/package/dev/mui/MCC_NList-0.128>)
 - **MCC_TextEditor** MUI custom class for text editors (<http://aminet.net/package/dev/mui/MCC_TextEditor-15.56>)
