@@ -76,9 +76,8 @@ CONST_STRPTR BUTTON_LABEL_NAMES[] = {
 };
 
 HOOKPROTONHNO(ConstructConversationLI_TextFunc, APTR, struct NList_ConstructMessage *ncm) {
-	struct Conversation *oldEntry = (struct Conversation *)ncm->entry;
-	struct Conversation *newEntry = copyConversation(oldEntry);
-    return (newEntry);
+	struct Conversation *entry = (struct Conversation *)ncm->entry;
+    return (entry);
 }
 MakeHook(ConstructConversationLI_TextHook, ConstructConversationLI_TextFunc);
 
@@ -95,9 +94,8 @@ HOOKPROTONHNO(DisplayConversationLI_TextFunc, void, struct NList_DisplayMessage 
 MakeHook(DisplayConversationLI_TextHook, DisplayConversationLI_TextFunc);
 
 HOOKPROTONHNO(ConstructImageLI_TextFunc, APTR, struct NList_ConstructMessage *ncm) {
-	struct GeneratedImage *oldEntry = (struct GeneratedImage *)ncm->entry;
-	struct GeneratedImage *newEntry = copyGeneratedImage(oldEntry);
-    return (newEntry);
+	struct GeneratedImage *entry = (struct GeneratedImage *)ncm->entry;
+    return (entry);
 }
 MakeHook(ConstructImageLI_TextHook, ConstructImageLI_TextFunc);
 
@@ -119,25 +117,14 @@ HOOKPROTONHNO(DisplayImageLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
 MakeHook(DisplayImageLI_TextHook, DisplayImageLI_TextFunc);
 
 HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
-	if (currentConversation != NULL)
-		freeConversation(currentConversation);
-
 	struct Conversation *conversation;
 	DoMethod(conversationListObject, MUIM_NList_GetEntry, MUIV_NList_GetEntry_Active, &conversation);
-	currentConversation = copyConversation(conversation);
+	currentConversation = conversation;
 	displayConversation(currentConversation);
 }
 MakeHook(ConversationRowClickedHook, ConversationRowClickedFunc);
 
 HOOKPROTONHNONP(ImageRowClickedFunc, void) {
-	if (currentImage != NULL) {
-		FreeVec(currentImage->name);
-		FreeVec(currentImage->filePath);
-		FreeVec(currentImage->prompt);
-		FreeVec(currentImage);
-		currentImage = NULL;
-	}
-
 	set(imageInputTextEditor, MUIA_Disabled, FALSE);
 
 	struct GeneratedImage *image = NULL;
@@ -147,15 +134,13 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
 		set(openImageButton, MUIA_Disabled, FALSE);
 		set(saveImageCopyButton, MUIA_Disabled, FALSE);
 		set(imageInputTextEditor, MUIA_TextEditor_Contents, image->prompt);
-		currentImage = copyGeneratedImage(image);
+		currentImage = image;
 		set(imageView, MUIA_DataTypes_FileName, currentImage->filePath);
 	}
 }
 MakeHook(ImageRowClickedHook, ImageRowClickedFunc);
 
 HOOKPROTONHNONP(NewChatButtonClickedFunc, void) {
-	if (currentConversation != NULL)
-		freeConversation(currentConversation);
 	currentConversation = NULL;
 	DoMethod(chatOutputTextEditor, MUIM_TextEditor_ClearText);
 	DoMethod(chatOutputTextEditor, MUIM_GoActive);
@@ -173,21 +158,14 @@ MakeHook(DeleteChatButtonClickedHook, DeleteChatButtonClickedFunc);
 HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
 	if (config.openAiApiKey != NULL && strlen(config.openAiApiKey) > 0) {
 		sendChatMessage();
-		// postChatMessageToOpenAI(currentConversation, config.chatModel, config.openAiApiKey, FALSE);
-	}
-	else {
-		displayError("Please enter your OpenAI API key in the Open AI settings in the menu.");
+	} else {
+		displayError("Please enter your OpenAI API key in the Open AI settings "
+					 "in the menu.");
 	}
 }
 MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
 
 HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
-	if (currentImage != NULL) {
-		FreeVec(currentImage->name);
-		FreeVec(currentImage->filePath);
-		FreeVec(currentImage->prompt);
-		FreeVec(currentImage);
-	}
 	currentImage = NULL;
 	set(imageInputTextEditor, MUIA_Disabled, FALSE);
 	set(createImageButton, MUIA_Disabled, FALSE);
@@ -839,8 +817,8 @@ static void sendChatMessage() {
 				set(chatInputTextEditor, MUIA_TextEditor_Contents, text);
 				struct MinNode *lastMessage = RemTail(currentConversation->messages);
 				FreeVec(lastMessage);
-				if (currentConversation == currentConversation->messages->mlh_TailPred) {
-					freeConversation(currentConversation);
+				if (currentConversation ==
+					currentConversation->messages->mlh_TailPred) {
 					currentConversation = NULL;
 					DoMethod(chatOutputTextEditor, MUIM_TextEditor_ClearText);
 				} else {
@@ -1389,7 +1367,6 @@ static LONG loadConversations() {
 			addTextToConversation(conversation, content, role);
 		}
 		DoMethod(conversationListObject, MUIM_NList_InsertSingle, conversation, MUIV_NList_Insert_Top);
-		freeConversation(conversation);
 	}
 	set(conversationListObject, MUIA_NList_Quiet, FALSE);
 	json_object_put(conversationsJsonArray);
