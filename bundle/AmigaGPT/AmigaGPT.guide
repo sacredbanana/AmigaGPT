@@ -889,6 +889,11 @@ The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E wi
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.1.2 (2024-12-31)@{ub}
+
+- Fix bug where not all messages were being saved in a new conversation
+- Fix menu items not being selectable
+
 @{b}2.1.1 (2024-12-30)@{ub}
 
 - Add more clear error message when the user's installed AmiSSL version is too old

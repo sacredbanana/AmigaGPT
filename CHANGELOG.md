@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.2 (2024-12-31)
+
+- Fix bug where not all messages were being saved in a new conversation
+- Fix menu items not being selectable
+
 ## 2.1.1 (2024-12-30)
 
 - Add more clear error message when the user's installed AmiSSL version is too old
