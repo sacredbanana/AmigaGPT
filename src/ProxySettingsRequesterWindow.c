@@ -14,19 +14,20 @@ Object *proxyPasswordString;
 Object *proxySettingsRequesterWindowObject;
 
 HOOKPROTONHNONP(ProxySettingsRequesterOkButtonClickedFunc, void) {
-	STRPTR proxyHost;
+    STRPTR proxyHost;
     get(proxyHostString, MUIA_String_Contents, &proxyHost);
-	if (config.proxyHost != NULL) {
-		FreeVec(config.proxyHost);
-		config.proxyHost = NULL;
-	}
-	config.proxyHost = AllocVec(strlen(proxyHost) + 1, MEMF_CLEAR);
-	strncpy(config.proxyHost, proxyHost, strlen(proxyHost));
+    if (config.proxyHost != NULL) {
+        FreeVec(config.proxyHost);
+        config.proxyHost = NULL;
+    }
+    config.proxyHost = AllocVec(strlen(proxyHost) + 1, MEMF_CLEAR);
+    strncpy(config.proxyHost, proxyHost, strlen(proxyHost));
 
     LONG port;
     get(proxyPortString, MUIA_String_Integer, &port);
     if (port < 0 || port > 65535) {
-        displayError("Invalid port number. Please enter a number between 0 and 65535.");
+        displayError(
+            "Invalid port number. Please enter a number between 0 and 65535.");
         return;
     }
     config.proxyPort = port;
@@ -57,27 +58,22 @@ HOOKPROTONHNONP(ProxySettingsRequesterOkButtonClickedFunc, void) {
     config.proxyPassword = AllocVec(strlen(proxyPassword) + 1, MEMF_CLEAR);
     strncpy(config.proxyPassword, proxyPassword, strlen(proxyPassword));
 
-	writeConfig();
+    writeConfig();
     set(proxySettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
 }
-MakeHook(ProxySettingsRequesterOkButtonClickedHook, ProxySettingsRequesterOkButtonClickedFunc);
+MakeHook(ProxySettingsRequesterOkButtonClickedHook,
+         ProxySettingsRequesterOkButtonClickedFunc);
 
 /**
  * Create the proxy settings requester window
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createProxySettingsRequesterWindow() {
-    static CONST_STRPTR SSL_OPTIONS[] = {
-        "None (fastest)",
-        "SSL (secure)",
-        NULL
-    };
+    static CONST_STRPTR SSL_OPTIONS[] = {"None (fastest)", "SSL (secure)",
+                                         NULL};
 
-    static CONST_STRPTR AUTH_OPTIONS[] = {
-        "No authentication",
-        "Username and password",
-        NULL
-    };
+    static CONST_STRPTR AUTH_OPTIONS[] = {"No authentication",
+                                          "Username and password", NULL};
 
     Object *proxySettingsRequesterOkButton, *proxySettingsRequesterCancelButton;
     if ((proxySettingsRequesterWindowObject = WindowObject,

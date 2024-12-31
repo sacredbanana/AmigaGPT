@@ -8,143 +8,138 @@
 
 /**
  * A node in the conversation
-**/
+ **/
 struct ConversationNode {
-	/**
-	 * The linking node
-	**/
-	struct MinNode node;
-	/**
-	 * The role of the speaker. Currently the only roles supported by OpenAI are "user", "assistant" and "system"
-	**/
-	UBYTE role[10];
-	/**
-	 * The text of the message
-	**/
-	STRPTR content;
+    /**
+     * The linking node
+     **/
+    struct MinNode node;
+    /**
+     * The role of the speaker. Currently the only roles supported by OpenAI are
+     *"user", "assistant" and "system"
+     **/
+    UBYTE role[10];
+    /**
+     * The text of the message
+     **/
+    STRPTR content;
 };
 
 struct Conversation {
-	struct MinList *messages;
-	STRPTR name;
+    struct MinList *messages;
+    STRPTR name;
 };
 
 /**
  * The chat model OpenAI should use
-**/
+ **/
 enum ChatModel {
-	GPT_4o = 0L,
-	GPT_4o_2024_11_20,
-	GPT_4o_2024_08_06,
-	GPT_4o_2024_05_13,
-	CHATGPT_4o_LATEST,
-	GPT_4o_MINI,
-	GPT_4o_MINI_2024_07_18,
-	o1,
-	o1_2024_12_17,
-	o1_PREVIEW,
-	o1_PREVIEW_2024_09_12,
-	o1_MINI,
-	o1_MINI_2024_09_12,
-	GPT_4_TURBO,
-	GPT_4_TURBO_2024_04_09,
-	GPT_4_TURBO_PREVIEW,
-	GPT_4_0125_PREVIEW,
-	GPT_4_1106_PREVIEW,
-	GPT_4,
-	GPT_4_0613,
-	GPT_4_0314,
-	GPT_3_5_TURBO,
-	GPT_3_5_TURBO_0125,
-	GPT_3_5_TURBO_1106,
+    GPT_4o = 0L,
+    GPT_4o_2024_11_20,
+    GPT_4o_2024_08_06,
+    GPT_4o_2024_05_13,
+    CHATGPT_4o_LATEST,
+    GPT_4o_MINI,
+    GPT_4o_MINI_2024_07_18,
+    o1,
+    o1_2024_12_17,
+    o1_PREVIEW,
+    o1_PREVIEW_2024_09_12,
+    o1_MINI,
+    o1_MINI_2024_09_12,
+    GPT_4_TURBO,
+    GPT_4_TURBO_2024_04_09,
+    GPT_4_TURBO_PREVIEW,
+    GPT_4_0125_PREVIEW,
+    GPT_4_1106_PREVIEW,
+    GPT_4,
+    GPT_4_0613,
+    GPT_4_0314,
+    GPT_3_5_TURBO,
+    GPT_3_5_TURBO_0125,
+    GPT_3_5_TURBO_1106,
 };
 
 /**
  * The names of the models
  * @see enum ChatModel
-**/ 
+ **/
 extern CONST_STRPTR CHAT_MODEL_NAMES[];
 
 /**
  * The image model OpenAI should use
-**/
-enum ImageModel {
-	DALL_E_2 = 0L,
-	DALL_E_3
-};
+ **/
+enum ImageModel { DALL_E_2 = 0L, DALL_E_3 };
 
 /**
  * The names of the image models
  * @see enum ImageModel
-**/ 
+ **/
 extern CONST_STRPTR IMAGE_MODEL_NAMES[];
 
 /**
  * The Text to Speech model OpenAI should use
-**/
-enum OpenAITTSModel {
-	OPENAI_TTS_MODEL_TTS_1 = 0L,
-	OPENAI_TTS_MODEL_TTS_1_HD
-};
+ **/
+enum OpenAITTSModel { OPENAI_TTS_MODEL_TTS_1 = 0L, OPENAI_TTS_MODEL_TTS_1_HD };
 
 /**
  * The names of the Text to Speech models
  * @see enum OpenAITTSModel
-**/ 
+ **/
 extern CONST_STRPTR OPENAI_TTS_MODEL_NAMES[];
 
 /**
  * The voice OpenAI should use
-**/
+ **/
 enum OpenAITTSVoice {
-	OPENAI_TTS_VOICE_ALLOY = 0L,
-	OPENAI_TTS_VOICE_ECHO,
-	OPENAI_TTS_VOICE_FABLE,
-	OPENAI_TTS_VOICE_ONYX,
-	OPENAI_TTS_VOICE_NOVA,
-	OPENAI_TTS_VOICE_SHIMMER
+    OPENAI_TTS_VOICE_ALLOY = 0L,
+    OPENAI_TTS_VOICE_ECHO,
+    OPENAI_TTS_VOICE_FABLE,
+    OPENAI_TTS_VOICE_ONYX,
+    OPENAI_TTS_VOICE_NOVA,
+    OPENAI_TTS_VOICE_SHIMMER
 };
 
 /**
  * The names of the voices
  * @see enum OpenAITTSModel
-**/ 
+ **/
 extern CONST_STRPTR OPENAI_TTS_VOICE_NAMES[];
 
 /**
  * The size of the requested image
-**/
+ **/
 extern enum ImageSize {
-	IMAGE_SIZE_256x256 = 0L,
-	IMAGE_SIZE_512x512,
-	IMAGE_SIZE_1024x1024,
-	IMAGE_SIZE_1792x1024,
-	IMAGE_SIZE_1024x1792
+    IMAGE_SIZE_256x256 = 0L,
+    IMAGE_SIZE_512x512,
+    IMAGE_SIZE_1024x1024,
+    IMAGE_SIZE_1792x1024,
+    IMAGE_SIZE_1024x1792
 };
 
 /**
  * The names of the image sizes
  * @see enum ImageSize
-**/
+ **/
 extern CONST_STRPTR IMAGE_SIZE_NAMES[];
 
 /**
  * Struct representing a generated image
  * @see enum ImageModel
- **/ 
+ **/
 struct GeneratedImage {
-	STRPTR name;
-	STRPTR filePath;
-	STRPTR prompt;
-	enum ImageModel imageModel;
-	ULONG width;
-	ULONG height;
+    STRPTR name;
+    STRPTR filePath;
+    STRPTR prompt;
+    enum ImageModel imageModel;
+    ULONG width;
+    ULONG height;
 };
 
 /**
  * Initialize the OpenAI connector
  * @return RETURN_OK on success, RETURN_ERROR on failure
-**/
+ **/
 LONG initOpenAIConnector();
 
 /**
@@ -160,9 +155,16 @@ LONG initOpenAIConnector();
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
- * @return a pointer to a new array of json_object containing the response(s) or NULL -- Free it with json_object_put() for all responses then FreeVec() for the array when you are done using it
-**/
-struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model, CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
+ * @return a pointer to a new array of json_object containing the response(s) or
+ *NULL -- Free it with json_object_put() for all responses then FreeVec() for
+ *the array when you are done using it
+ **/
+struct json_object **
+postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
+                        CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
+                        CONST_STRPTR proxyHost, UWORD proxyPort,
+                        BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                        CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 
 /**
  * Post a image creation request to OpenAI
@@ -177,9 +179,14 @@ struct json_object** postChatMessageToOpenAI(struct Conversation *conversation, 
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
- * @return a pointer to a new json_object containing the response or NULL -- Free it with json_object_put when you are done using it
-**/
-struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize, CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
+ * @return a pointer to a new json_object containing the response or NULL --
+ *Free it with json_object_put when you are done using it
+ **/
+struct json_object *postImageCreationRequestToOpenAI(
+    CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize,
+    CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost,
+    UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 
 /**
  * Download a file from the internet
@@ -193,8 +200,11 @@ struct json_object* postImageCreationRequestToOpenAI(CONST_STRPTR prompt, enum I
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
  * @return RETURN_OK on success, RETURN_ERROR on failure
- **/ 
-ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
+ **/
+ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
+                   CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+                   BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+                   CONST_STRPTR proxyPassword);
 
 /**
  * Post a text to speech request to OpenAI
@@ -209,11 +219,17 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy, CO
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
- * @return a pointer to a buffer containing the audio data or NULL -- Free it with FreeVec() when you are done using it
+ * @return a pointer to a buffer containing the audio data or NULL -- Free it
+ *with FreeVec() when you are done using it
  **/
-APTR postTextToSpeechRequestToOpenAI(CONST_STRPTR text, enum OpenAITTSModel openAITTSModel, enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR openAiApiKey, ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
+APTR postTextToSpeechRequestToOpenAI(
+    CONST_STRPTR text, enum OpenAITTSModel openAITTSModel,
+    enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR openAiApiKey,
+    ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword);
 
 /**
  * Cleanup the OpenAI connector and free all resources
-**/
+ **/
 void closeOpenAIConnector();

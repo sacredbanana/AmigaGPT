@@ -1,5 +1,3 @@
-[![Super-Linter](https://github.com/sacredbanana/AmigaGPT/actions/workflows/super-linter.yml/badge.svg)](https://github.com/marketplace/actions/super-linter)
-
 # AmigaGPT
 
 AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS. This powerful tool brings the capabilities of OpenAI’s GPT to your Amiga system, enabling text generation, question answering, and creative exploration. AmigaGPT can also generate stunning images using DALL-E and includes support for speech output, making it easier than ever to interact with AI on your Amiga. Designed to integrate seamlessly with your system, AmigaGPT delivers modern AI technology while embracing the timeless Amiga experience.

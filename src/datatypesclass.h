@@ -26,9 +26,11 @@
 /*
     AROS definition of BOOPSI_DISPATCHER collides with other systems
     because the opening bracket { is part of the definition.
-    Therefore I've defined MY_BOOPSI_DISPATCHER as the platform independent macro.
+    Therefore I've defined MY_BOOPSI_DISPATCHER as the platform independent
+   macro.
 */
-#define MY_BOOPSI_DISPATCHER(rettype,name,cl,obj,msg) rettype name(struct IClass *cl, Object *obj, Msg msg)
+#define MY_BOOPSI_DISPATCHER(rettype, name, cl, obj, msg)                      \
+    rettype name(struct IClass *cl, Object *obj, Msg msg)
 
 #if !defined(__AROS__) && !defined(__MORPHOS__)
 /* IPTR is defined as integer type which is large enough to store a pointer */
@@ -39,17 +41,19 @@ typedef ULONG IPTR;
 extern struct MUI_CustomClass *CL_DataTypes;
 #define DataTypesObject (Object*)NewObject(CL_DataTypes->mcc_Class
 
-#define MUIA_DataTypes_Buffer         (TAG_USER | 0x30040001) /* (void *) .S. */
-#define MUIA_DataTypes_BufferLen      (TAG_USER | 0x30040002) /* (ULONG) .S. */
-#define MUIA_DataTypes_FileName       (TAG_USER | 0x30040003) /* (char*) .S. */
-#define MUIA_DataTypes_HorizScrollbar (TAG_USER | 0x30040004) /* (Object*) .S. */
-#define MUIA_DataTypes_SupportsPrint  (TAG_USER | 0x30040005) /* (BOOL) */
-#define MUIA_DataTypes_VertScrollbar  (TAG_USER | 0x30040006) /* (Object*) .S. */
+#define MUIA_DataTypes_Buffer (TAG_USER | 0x30040001)    /* (void *) .S. */
+#define MUIA_DataTypes_BufferLen (TAG_USER | 0x30040002) /* (ULONG) .S. */
+#define MUIA_DataTypes_FileName (TAG_USER | 0x30040003)  /* (char*) .S. */
+#define MUIA_DataTypes_HorizScrollbar                                          \
+    (TAG_USER | 0x30040004)                                  /* (Object*) .S. */
+#define MUIA_DataTypes_SupportsPrint (TAG_USER | 0x30040005) /* (BOOL) */
+#define MUIA_DataTypes_VertScrollbar (TAG_USER | 0x30040006) /* (Object*) .S.  \
+                                                              */
 
-#define MUIM_Datatypes_HorizUpdate    (TAG_USER | 0x30040101)
-#define MUIM_DataTypes_Print          (TAG_USER | 0x30040102)
+#define MUIM_Datatypes_HorizUpdate (TAG_USER | 0x30040101)
+#define MUIM_DataTypes_Print (TAG_USER | 0x30040102)
 #define MUIM_DataTypes_PrintCompleted (TAG_USER | 0x30040103)
-#define MUIM_Datatypes_VertUpdate     (TAG_USER | 0x30040104)
+#define MUIM_Datatypes_VertUpdate (TAG_USER | 0x30040104)
 
 int create_datatypes_class(void);
 void delete_datatypes_class(void);

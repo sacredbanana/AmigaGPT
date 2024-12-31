@@ -27,19 +27,19 @@ extern BOOL isPublicScreen;
 /**
  * Create the main window
  * @return RETURN_OK on success, RETURN_ERROR on failure
-**/
+ **/
 LONG createMainWindow();
 
 /**
  * Display an error message
  * @param message the message to display
-**/ 
+ **/
 void displayError(STRPTR message);
 
 /**
  * Update the status bar
  * @param message the message to display
  * @param pen the pen to use for the text
- * 
-**/ 
+ *
+ **/
 void updateStatusBar(CONST_STRPTR message, const ULONG pen);
