@@ -1,6 +1,7 @@
 #include <json-c/json.h>
 #include <libraries/mui.h>
 #include <mui/Busy_mcc.h>
+#include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
@@ -14,6 +15,31 @@
 #include "datatypesclass.h"
 #include "MainWindow.h"
 #include <dos/dos.h>
+
+/* Max nesting depth for B/I/U combined. Adjust as needed. */
+#define MAX_STYLE_STACK 32
+
+enum ButtonLabels {
+    NEW_CHAT_BUTTON_LABEL,
+    DELETE_CHAT_BUTTON_LABEL,
+    SEND_MESSAGE_BUTTON_LABEL,
+    NEW_IMAGE_BUTTON_LABEL,
+    DELETE_IMAGE_BUTTON_LABEL,
+    CREATE_IMAGE_BUTTON_LABEL
+};
+
+CONST_STRPTR BUTTON_LABEL_NAMES[] = {
+    "+ New Chat",  "- Delete Chat",  "\nSend\n",
+    "+ New Image", "- Delete Image", "\nCreate Image\n",
+};
+
+typedef enum { STYLE_BOLD, STYLE_ITALIC, STYLE_UNDERLINE } StyleType;
+
+/* A small stack to track active styles in the order they were opened. */
+typedef struct {
+    StyleType stack[MAX_STYLE_STACK];
+    int top;
+} StyleStack;
 
 struct Window *mainWindow;
 Object *mainWindowObject;
@@ -58,20 +84,14 @@ static LONG saveImages();
 static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String);
 static STRPTR UTF8ToISO8859_1(CONST_STRPTR utf8String);
 static BOOL copyFile(STRPTR source, STRPTR destination);
-
-enum ButtonLabels {
-    NEW_CHAT_BUTTON_LABEL,
-    DELETE_CHAT_BUTTON_LABEL,
-    SEND_MESSAGE_BUTTON_LABEL,
-    NEW_IMAGE_BUTTON_LABEL,
-    DELETE_IMAGE_BUTTON_LABEL,
-    CREATE_IMAGE_BUTTON_LABEL
-};
-
-CONST_STRPTR BUTTON_LABEL_NAMES[] = {
-    "+ New Chat",  "- Delete Chat",  "\nSend\n",
-    "+ New Image", "- Delete Image", "\nCreate Image\n",
-};
+static void initStyleStack(StyleStack *s);
+static BOOL pushStyle(StyleStack *s, StyleType style);
+static BOOL popStyle(StyleStack *s, StyleType style);
+static BOOL isTopStyle(const StyleStack *s, StyleType style);
+static void outputStyleOn(STRPTR out, size_t outSize, StyleType style);
+static void outputStyleOff(STRPTR out, size_t outSize);
+static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
+                         StyleType *foundStyle);
 
 HOOKPROTONHNO(ConstructConversationLI_TextFunc, APTR,
               struct NList_ConstructMessage *ncm) {
@@ -147,8 +167,8 @@ MakeHook(ImageRowClickedHook, ImageRowClickedFunc);
 
 HOOKPROTONHNONP(NewChatButtonClickedFunc, void) {
     currentConversation = NULL;
-    DoMethod(chatOutputTextEditor, MUIM_TextEditor_ClearText);
-    DoMethod(chatOutputTextEditor, MUIM_GoActive);
+    DoMethod(chatOutputTextEditor, MUIM_NList_Clear);
+    DoMethod(chatInputTextEditor, MUIM_GoActive);
 }
 MakeHook(NewChatButtonClickedHook, NewChatButtonClickedFunc);
 
@@ -156,7 +176,7 @@ HOOKPROTONHNONP(DeleteChatButtonClickedFunc, void) {
     DoMethod(conversationListObject, MUIM_NList_Remove,
              MUIV_NList_Remove_Active);
     currentConversation = NULL;
-    DoMethod(chatOutputTextEditor, MUIM_TextEditor_ClearText);
+    DoMethod(chatOutputTextEditor, MUIM_NList_Clear);
     saveConversations();
 }
 MakeHook(DeleteChatButtonClickedHook, DeleteChatButtonClickedFunc);
@@ -487,6 +507,246 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
 MakeHook(ConfigureForScreenHook, ConfigureForScreenFunc);
 
 /**
+ * Initialize the style stack.
+ * @param s : the style stack
+ */
+static void initStyleStack(StyleStack *s) { s->top = -1; }
+
+/**
+ * Push a style onto the stack.
+ * @param s : the style stack
+ * @param style : the style to push
+ * @return true if the style was pushed, false if the stack is full
+ */
+static BOOL pushStyle(StyleStack *s, StyleType style) {
+    if (s->top >= (MAX_STYLE_STACK - 1)) {
+        return FALSE;
+    }
+    s->stack[++s->top] = style;
+    return TRUE;
+}
+
+/**
+ * Pop the top style from the stack.
+ * @param s : the style stack
+ * @param style : the style to pop
+ * @return true if the top style was 'style' and was popped, false otherwise
+ */
+static BOOL popStyle(StyleStack *s, StyleType style) {
+    if (s->top < 0) {
+        return FALSE;
+    }
+    if (s->stack[s->top] == style) {
+        s->top--;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
+ * Check if the stack is currently 'style' on top.
+ * @return true if stack is currently 'style' on top
+ */
+static BOOL isTopStyle(const StyleStack *s, StyleType style) {
+    if (s->top < 0)
+        return FALSE;
+    return (s->stack[s->top] == style);
+}
+
+/**
+ * Output MUI escape codes for turning on/off styles:
+ *   \033b = bold on
+ *   \033i = italic on
+ *   \033u = underline on
+ *   \033n = normal (off)
+ *
+ * @param out : output buffer
+ * @param outSize : size of the output buffer
+ * @param style : style to turn on
+ */
+static void outputStyleOn(STRPTR out, size_t outSize, StyleType style) {
+    switch (style) {
+    case STYLE_BOLD:
+        strncat(out, "\033b", outSize - strlen(out) - 1);
+        break;
+    case STYLE_ITALIC:
+        strncat(out, "\033i", outSize - strlen(out) - 1);
+        break;
+    case STYLE_UNDERLINE:
+        strncat(out, "\033u", outSize - strlen(out) - 1);
+        break;
+    }
+}
+
+/*
+ * Output MUI escape code to turn off all styles.
+ * @param out : output buffer
+ * @param outSize : size of the output buffer
+ */
+static void outputStyleOff(STRPTR out, size_t outSize) {
+    /*
+       MCC_NList's docs say \033n sets the soft style back to normal,
+       thus turning off bold/italic/underline.
+    */
+    strncat(out, "\033n", outSize - strlen(out) - 1);
+}
+
+/*
+ * Attempt to parse the next formatting marker:
+ *  - "**" => toggles bold
+ *  - "*"  => toggles italic
+ *  - "__" => toggles underline
+ *  - "_"  => toggles italic (some Markdown variants do this),
+ *            but we'll skip that unless you truly want single underscore
+ *            for italic. We’ll assume only * for italic, __ for underline.
+ *
+ * @param input : the input string
+ * @param pos : current position in the input string
+ * @param len : length of the input string
+ * @param foundStyle : output parameter for the style found
+ * @return :
+ *   0 if no recognised marker
+ *   2 if recognized a 2-char marker (e.g., "**", "__")
+ *   1 if recognized a single-char marker (e.g., "*")
+ *
+ * Also outputs which style it corresponds to in 'foundStyle'.
+ */
+static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
+                         StyleType *foundStyle) {
+    if (pos >= len)
+        return 0;
+
+    // Check for "__" (underline)
+    if (pos + 1 < len && input[pos] == '_' && input[pos + 1] == '_') {
+        *foundStyle = STYLE_UNDERLINE;
+        return 2;
+    }
+    // Check for "**" (bold)
+    if (pos + 1 < len && input[pos] == '*' && input[pos + 1] == '*') {
+        *foundStyle = STYLE_BOLD;
+        return 2;
+    }
+    // Check for single "*"
+    if (input[pos] == '*') {
+        *foundStyle = STYLE_ITALIC;
+        return 1;
+    }
+    return 0;
+}
+
+/**
+ * Convert a (mini-)Markdown string with possible nesting of
+ *   **bold**, *italic*, __underline__
+ * to MUI/NList escape codes with a proper stack approach.
+ *
+ * - Supports nesting, e.g. **bold *italic** inside**
+ * - Supports escaping:
+ *      \*, \_, \\, so they’re inserted literally.
+ *
+ * @param input the input string
+ * @return a newly allocated string. Caller must FreeVec() it.
+ */
+static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
+    if (!input)
+        return NULL;
+
+    // Heuristic for output expansion: each marker can expand
+    // to ~4 chars (“\033b” or “\033n”), so let's be generous.
+    size_t inLen = strlen(input);
+    size_t outCap = inLen * 6 + 128;
+    STRPTR out = AllocVec(outCap, MEMF_ANY | MEMF_CLEAR);
+    if (!out)
+        return NULL;
+
+    StyleStack styleStack;
+    initStyleStack(&styleStack);
+
+    size_t i = 0;
+    while (i < inLen) {
+        // 1) Check for escapes: "\"
+        if (input[i] == '\\') {
+            // If we have a next char, output it literally and skip
+            if (i + 1 < inLen) {
+                // Next char is literal
+                size_t outLen = strlen(out);
+                if (outLen < outCap - 2) {
+                    out[outLen] = input[i + 1];
+                    out[outLen + 1] = '\0';
+                }
+                i += 2;
+            } else {
+                // Just a trailing backslash alone:
+                // output it or ignore, your choice. We'll just ignore it.
+                i++;
+            }
+            continue;
+        }
+
+        // 2) Try to parse a formatting marker
+        StyleType styleFound;
+        UBYTE markerLen = parseMarker(input, i, inLen, &styleFound);
+        if (markerLen > 0) {
+            // It's either a 1-char or 2-char marker
+            if (isTopStyle(&styleStack, styleFound)) {
+                // It's a closing marker for the top style
+                popStyle(&styleStack, styleFound);
+                // Output style off
+                outputStyleOff(out, outCap);
+
+                // Now re-enable any style(s) that remain on the stack
+                // because \033n turns off everything.
+                for (UWORD s = 0; s <= styleStack.top; s++) {
+                    outputStyleOn(out, outCap, styleStack.stack[s]);
+                }
+            } else {
+                // It's an opening marker for a new style
+                if (pushStyle(&styleStack, styleFound)) {
+                    outputStyleOn(out, outCap, styleFound);
+                } else {
+                    // We’ve run out of stack space; treat as literal
+                    // We'll just insert the raw marker:
+                    size_t availableSpace = outCap - strlen(out) - 1;
+                    size_t copyLen = (markerLen < availableSpace)
+                                         ? markerLen
+                                         : availableSpace;
+
+                    UBYTE tempBuf[256];
+                    if (copyLen > sizeof(tempBuf) - 1) {
+                        copyLen = sizeof(tempBuf) - 1;
+                    }
+
+                    memcpy(tempBuf, &input[i], copyLen);
+                    tempBuf[copyLen] = '\0';
+
+                    strncat(out, tempBuf, availableSpace);
+                }
+            }
+            i += markerLen;
+        } else {
+            // 3) Not a marker, just a normal character
+            size_t outLen = strlen(out);
+            if (outLen < outCap - 2) {
+                out[outLen] = input[i];
+                out[outLen + 1] = '\0';
+            }
+            i++;
+        }
+    }
+
+    // If any styles remain open, we can close them
+    while (styleStack.top >= 0) {
+        popStyle(&styleStack, styleStack.stack[styleStack.top]);
+        outputStyleOff(out, outCap);
+        // Re-enable anything that might remain on the stack
+        for (int s = 0; s <= styleStack.top; s++) {
+            outputStyleOn(out, outCap, styleStack.stack[s]);
+        }
+    }
+
+    return out;
+}
+
+/**
  * Create the main window
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
@@ -543,19 +803,13 @@ LONG createMainWindow() {
                         Child, VGroup,
                             // Chat output text display
                             Child, HGroup, MUIA_VertWeight, 60,
-                                Child, chatOutputTextEditor = TextEditorObject,
-                                    MUIA_TextEditor_Contents, "",
-                                    MUIA_Text_Copy, TRUE,
-                                    MUIA_Text_Marking, TRUE,
-                                    MUIA_Text_SetMin, FALSE,
-                                    MUIA_Text_SetMax, FALSE,
-                                    MUIA_Text_SetVMax, FALSE,
-                                    MUIA_Text_Shorten, MUIV_Text_Shorten_Nothing,
-                                    MUIA_TextEditor_ReadOnly, TRUE,
-                                    MUIA_TextEditor_ImportHook,  MUIV_TextEditor_ImportHook_EMail,
-                                    MUIA_TextEditor_Slider, chatOutputScroller,
+                                Child, NListviewObject,
+                                MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_None,
+                                MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
+                                MUIA_NListview_NList, chatOutputTextEditor = NFloattextObject,
+                                    MUIA_Frame, MUIV_Frame_Text,
+                                    End,
                                 End,
-                                Child, chatOutputScroller = ScrollbarObject, End,
                             End,
                             Child, HGroup, MUIA_VertWeight, 20,
                                 // Chat input text editor
@@ -685,7 +939,7 @@ LONG createMainWindow() {
         return RETURN_ERROR;
     }
 
-    get(mainWindowObject, MUIA_Window, &mainWindow);   
+    get(mainWindowObject, MUIA_Window, &mainWindow);
 
     DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_Screen, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &ConfigureForScreenHook);
 
@@ -843,8 +1097,11 @@ static void sendChatMessage() {
         text[strlen(text) - 1] = '\0';
     }
     STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
+
     addTextToConversation(currentConversation, textUTF_8, "user");
+
     displayConversation(currentConversation);
+
     DoMethod(chatInputTextEditor, MUIM_TextEditor_ClearText);
     DoMethod(chatInputTextEditor, MUIM_GoActive);
 
@@ -854,6 +1111,7 @@ static void sendChatMessage() {
 
     DoMethod(chatOutputTextEditor, MUIM_TextEditor_InsertText, "\n",
              MUIV_TextEditor_InsertText_Bottom);
+
     do {
         if (config.chatSystem != NULL && strlen(config.chatSystem) > 0 &&
             config.chatModel != o1_PREVIEW &&
@@ -1049,7 +1307,8 @@ static void addTextToConversation(struct Conversation *conversation,
  **/
 static void displayConversation(struct Conversation *conversation) {
     struct ConversationNode *conversationNode;
-    STRPTR conversationString = AllocVec(WRITE_BUFFER_LENGTH, MEMF_CLEAR);
+    STRPTR conversationString =
+        AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 
     for (conversationNode =
              (struct ConversationNode *)conversation->messages->mlh_Head;
@@ -1057,7 +1316,7 @@ static void displayConversation(struct Conversation *conversation) {
          conversationNode =
              (struct ConversationNode *)conversationNode->node.mln_Succ) {
         if ((strlen(conversationString) + strlen(conversationNode->content) +
-             5) > WRITE_BUFFER_LENGTH) {
+             256) > WRITE_BUFFER_LENGTH) {
             displayError("The conversation has exceeded the maximum "
                          "length.\n\nPlease start a new conversation.");
             set(sendMessageButton, MUIA_Disabled, TRUE);
@@ -1065,31 +1324,41 @@ static void displayConversation(struct Conversation *conversation) {
         }
         if (strcmp(conversationNode->role, "user") == 0) {
             STRPTR content = conversationNode->content;
-            strncat(conversationString, "\33r\33b",
-                    WRITE_BUFFER_LENGTH - strlen(conversationString) - 5);
-            while (*content != '\0') {
-                strncat(conversationString, content, 1);
-                if (*content++ == '\n') {
-                    strncat(conversationString, "\33b",
-                            WRITE_BUFFER_LENGTH - strlen(conversationString) -
-                                3);
+            CONST UBYTE userStyleString[] = "\033r\033b\0333";
+            strncat(conversationString, userStyleString,
+                    strlen(userStyleString));
+            for (ULONG i = 0; i < strlen(content); i++) {
+                strncat(conversationString, content + i, 1);
+                if (content[i] == '\n') {
+                    strncat(conversationString, "\033b", 2);
                 }
             }
         } else if (strcmp(conversationNode->role, "assistant") == 0) {
-            strncat(conversationString, "\33l",
-                    WRITE_BUFFER_LENGTH - strlen(conversationString) - 3);
-            strncat(conversationString, conversationNode->content,
-                    WRITE_BUFFER_LENGTH - strlen(conversationString));
+            CONST UBYTE assistantStyleString[] = "\n\n\033l\0332";
+            strncat(conversationString, assistantStyleString,
+                    strlen(assistantStyleString));
+            STRPTR formattedContent =
+                convertMarkdownFormattingToMUI(conversationNode->content);
+            strncat(conversationString, formattedContent,
+                    strlen(formattedContent));
+            FreeVec(formattedContent);
+            CONST UBYTE messageSeparatorStyleString[] = "\n\n";
+            strncat(conversationString, messageSeparatorStyleString,
+                    strlen(messageSeparatorStyleString));
         }
-        strncat(conversationString, "\n\33c\33[s:18]\n",
-                WRITE_BUFFER_LENGTH - strlen(conversationString) - 12);
     }
 
     STRPTR conversationStringISO8859_1 = UTF8ToISO8859_1(conversationString);
-    set(chatOutputTextEditor, MUIA_TextEditor_Contents,
+    STRPTR existingText;
+    get(chatOutputTextEditor, MUIA_NFloattext_Text, &existingText);
+    if (existingText != NULL) {
+        set(chatOutputTextEditor, MUIA_NFloattext_Text, NULL);
+        FreeVec(existingText);
+    }
+    set(chatOutputTextEditor, MUIA_NFloattext_Text,
         conversationStringISO8859_1);
+
     FreeVec(conversationString);
-    FreeVec(conversationStringISO8859_1);
 }
 
 /**

@@ -6,6 +6,7 @@
 #include <libraries/mui.h>
 #include <mui/Aboutbox_mcc.h>
 #include <mui/Busy_mcc.h>
+#include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
@@ -54,9 +55,9 @@ Object *openImageWindowImageView;
 Object *dataTypeObject;
 BOOL isMUI5;
 
-static CONST_STRPTR USED_CLASSES[] = {MUIC_Aboutbox,   MUIC_Busy,
-                                      MUIC_NList,      MUIC_NListview,
-                                      MUIC_TextEditor, NULL};
+static CONST_STRPTR USED_CLASSES[] = {
+    MUIC_Aboutbox,   MUIC_Busy,      MUIC_NList, MUIC_NListview,
+    MUIC_TextEditor, MUIC_Floattext, NULL};
 
 static BOOL checkMUICustomClassInstalled();
 static void closeGUILibraries();

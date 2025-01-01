@@ -284,7 +284,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
         }
     }
 
-    // Connect to the proxy server first
+    // Connect to the server first
     if ((hostent = gethostbyname(useProxy ? proxyHost : host)) != NULL) {
         memset(&addr, 0, sizeof(addr));
         addr.sin_family = AF_INET;
@@ -292,7 +292,8 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
         addr.sin_len = hostent->h_length;
         memcpy(&addr.sin_addr, hostent->h_addr, hostent->h_length);
     } else {
-        displayError("Proxy host lookup failed");
+        displayError(useProxy ? "Proxy host lookup failed"
+                              : "Host lookup failed");
         if (ssl != NULL) {
             SSL_shutdown(ssl);
             SSL_free(ssl);
@@ -304,7 +305,10 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
     /* Create a socket and connect to the server */
     if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
         if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-            displayError("Couldn't connect to server");
+            displayError(useProxy
+                             ? "Couldn't connect to server. Check if the "
+                               "proxy host and port are correct or disable it. "
+                             : "Couldn't connect to server");
             CloseSocket(sock);
             if (ssl != NULL) {
                 SSL_shutdown(ssl);
