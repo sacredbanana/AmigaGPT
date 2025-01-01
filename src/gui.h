@@ -1,6 +1,7 @@
 #include <intuition/classusr.h>
 #include <proto/amigaguide.h>
 #include <proto/asl.h>
+#include <proto/codesets.h>
 #include <proto/dos.h>
 #include <proto/gadtools.h>
 #include <proto/datatypes.h>
@@ -40,6 +41,8 @@ extern struct Window *imageWindow;
 extern Object *dataTypeObject;
 extern Object *openImageWindowImageView;
 extern BOOL isMUI5;
+extern struct codeset *systemCodeset;
+extern struct codeset *utf8Codeset;
 
 /**
  * Create the GUI

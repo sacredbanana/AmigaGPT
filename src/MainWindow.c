@@ -1,4 +1,5 @@
 #include <json-c/json.h>
+#include <libraries/codesets.h>
 #include <libraries/mui.h>
 #include <mui/Busy_mcc.h>
 #include <mui/NFloattext_mcc.h>
@@ -48,7 +49,6 @@ Object *deleteChatButton;
 Object *sendMessageButton;
 Object *chatInputTextEditor;
 Object *chatOutputTextEditor;
-Object *chatOutputScroller;
 Object *statusBar;
 Object *conversationListObject;
 Object *loadingBar;
@@ -64,7 +64,7 @@ WORD pens[NUMDRIPENS + 1];
 BOOL isPublicScreen;
 struct Conversation *currentConversation;
 struct GeneratedImage *currentImage;
-static char *Pages[] = {"Chat Mode", "Image Generation Mode", NULL};
+static UBYTE *Pages[] = {"Chat Mode", "Image Generation Mode", NULL};
 
 static struct Conversation *newConversation();
 static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream);
@@ -230,16 +230,23 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         while (text[strlen(text) - 1] == '\n') {
             text[strlen(text) - 1] = '\0';
         }
-        STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
+        STRPTR textUTF8 = CodesetsConvertStr(
+            CSA_SourceCodeset, (Tag)systemCodeset, CSA_DestCodeset,
+            (Tag)utf8Codeset, CSA_Source, (Tag)text, TAG_DONE);
+
+        addTextToConversation(currentConversation, textUTF8, "user");
+        FreeVec(text);
 
         const enum ImageSize imageSize = config.imageModel == DALL_E_2
                                              ? config.imageSizeDallE2
                                              : config.imageSizeDallE3;
         struct json_object *response = postImageCreationRequestToOpenAI(
-            textUTF_8, config.imageModel, imageSize, config.openAiApiKey,
+            textUTF8, config.imageModel, imageSize, config.openAiApiKey,
             config.proxyEnabled, config.proxyHost, config.proxyPort,
             config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
             config.proxyPassword);
+        CodesetsFreeA(textUTF8, NULL);
+
         if (response == NULL) {
             displayError("Error connecting. Please try again.");
             set(createImageButton, MUIA_Disabled, FALSE);
@@ -379,9 +386,6 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         set(createImageButton, MUIA_Disabled, FALSE);
         set(newImageButton, MUIA_Disabled, FALSE);
         set(deleteImageButton, MUIA_Disabled, FALSE);
-
-        FreeVec(text);
-        FreeVec(textUTF_8);
 
         saveImages();
     } else {
@@ -808,6 +812,7 @@ LONG createMainWindow() {
                                 MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
                                 MUIA_NListview_NList, chatOutputTextEditor = NFloattextObject,
                                     MUIA_Frame, MUIV_Frame_Text,
+                                    MUIA_NFloattext_Text, AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR),
                                     End,
                                 End,
                             End,
@@ -1085,6 +1090,9 @@ static void sendChatMessage() {
     set(sendMessageButton, MUIA_Disabled, TRUE);
     set(newChatButton, MUIA_Disabled, TRUE);
     set(deleteChatButton, MUIA_Disabled, TRUE);
+    STRPTR chatOutputTextEditorContents;
+    get(chatOutputTextEditor, MUIA_NFloattext_Text,
+        &chatOutputTextEditorContents);
 
     updateStatusBar("Sending message...", yellowPen);
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
@@ -1096,9 +1104,13 @@ static void sendChatMessage() {
     while (text[strlen(text) - 1] == '\n') {
         text[strlen(text) - 1] = '\0';
     }
-    STRPTR textUTF_8 = ISO8859_1ToUTF8(text);
+    STRPTR textUTF8 = CodesetsConvertStr(CSA_SourceCodeset, (Tag)systemCodeset,
+                                         CSA_DestCodeset, (Tag)utf8Codeset,
+                                         CSA_Source, (Tag)text, TAG_DONE);
 
-    addTextToConversation(currentConversation, textUTF_8, "user");
+    addTextToConversation(currentConversation, textUTF8, "user");
+    CodesetsFreeA(textUTF8, NULL);
+    FreeVec(text);
 
     displayConversation(currentConversation);
 
@@ -1109,8 +1121,7 @@ static void sendChatMessage() {
     ULONG speechIndex = 0;
     UWORD wordNumber = 0;
 
-    DoMethod(chatOutputTextEditor, MUIM_TextEditor_InsertText, "\n",
-             MUIV_TextEditor_InsertText_Bottom);
+    strncat(chatOutputTextEditorContents, "\n", 1);
 
     do {
         if (config.chatSystem != NULL && strlen(config.chatSystem) > 0 &&
@@ -1178,25 +1189,34 @@ static void sendChatMessage() {
             if (contentString != NULL) {
                 // Text for printing
                 formatText(contentString);
-                STRPTR formattedMessageISO8859_1 =
-                    UTF8ToISO8859_1(contentString);
+                STRPTR formattedMessageSystemEncoded = CodesetsConvertStr(
+                    CSA_SourceCodeset, (Tag)utf8Codeset, CSA_DestCodeset,
+                    (Tag)systemCodeset, CSA_Source, (Tag)contentString,
+                    CSA_MapForeignChars, TRUE, TAG_DONE);
                 strncat(receivedMessage, contentString,
                         READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
-                DoMethod(chatOutputTextEditor, MUIM_TextEditor_InsertText,
-                         formattedMessageISO8859_1,
-                         MUIV_TextEditor_InsertText_Bottom);
-                FreeVec(formattedMessageISO8859_1);
-                // Text for speaking
-                STRPTR unformattedMessageISO8859_1 =
-                    UTF8ToISO8859_1(receivedMessage);
+                strncat(chatOutputTextEditorContents,
+                        formattedMessageSystemEncoded,
+                        WRITE_BUFFER_LENGTH -
+                            strlen(chatOutputTextEditorContents) - 1);
+                CodesetsFreeA(formattedMessageSystemEncoded, NULL);
                 if (++wordNumber % 50 == 0) {
+                    set(chatOutputTextEditor, MUIA_NFloattext_Text,
+                        chatOutputTextEditorContents);
                     if (config.speechEnabled) {
+                        // Text for speaking
+                        STRPTR unformattedMessageSystemEncoded =
+                            CodesetsConvertStr(
+                                CSA_SourceCodeset, (Tag)utf8Codeset,
+                                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                                (Tag)receivedMessage, CSA_MapForeignChars, TRUE,
+                                TAG_DONE);
                         if (config.speechSystem != SPEECH_SYSTEM_OPENAI) {
-                            speakText(unformattedMessageISO8859_1 +
+                            speakText(unformattedMessageSystemEncoded +
                                       speechIndex);
                         }
-                        speechIndex = strlen(unformattedMessageISO8859_1);
-                        FreeVec(unformattedMessageISO8859_1);
+                        speechIndex = strlen(unformattedMessageSystemEncoded);
+                        CodesetsFreeA(unformattedMessageSystemEncoded, NULL);
                     }
                 }
                 finishReason = json_object_get_string(
@@ -1211,19 +1231,25 @@ static void sendChatMessage() {
         }
     } while (!dataStreamFinished);
 
+    set(chatOutputTextEditor, MUIA_NFloattext_Text,
+        chatOutputTextEditorContents);
+
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 
     if (responses != NULL) {
         addTextToConversation(currentConversation, receivedMessage,
                               "assistant");
         if (config.speechEnabled) {
-            STRPTR receivedMessageISO8859_1 = UTF8ToISO8859_1(receivedMessage);
             if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
                 speakText(receivedMessage);
             } else {
-                speakText(receivedMessageISO8859_1 + speechIndex);
+                STRPTR receivedMessageSystemEncoded = CodesetsConvertStr(
+                    CSA_SourceCodeset, (Tag)utf8Codeset, CSA_DestCodeset,
+                    (Tag)systemCodeset, CSA_Source, (Tag)receivedMessage,
+                    CSA_MapForeignChars, TRUE, TAG_DONE);
+                speakText(receivedMessageSystemEncoded + speechIndex);
+                CodesetsFreeA(receivedMessageSystemEncoded, NULL);
             }
-            FreeVec(receivedMessageISO8859_1);
         }
         FreeVec(responses);
         FreeVec(receivedMessage);
@@ -1275,9 +1301,6 @@ static void sendChatMessage() {
     set(sendMessageButton, MUIA_Disabled, FALSE);
     set(newChatButton, MUIA_Disabled, FALSE);
     set(deleteChatButton, MUIA_Disabled, FALSE);
-
-    FreeVec(text);
-    FreeVec(textUTF_8);
 }
 
 /**
@@ -1307,9 +1330,9 @@ static void addTextToConversation(struct Conversation *conversation,
  **/
 static void displayConversation(struct Conversation *conversation) {
     struct ConversationNode *conversationNode;
-    STRPTR conversationString =
-        AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
-
+    STRPTR conversationString;
+    get(chatOutputTextEditor, MUIA_NFloattext_Text, &conversationString);
+    conversationString[0] = '\0';
     for (conversationNode =
              (struct ConversationNode *)conversation->messages->mlh_Head;
          conversationNode->node.mln_Succ != NULL;
@@ -1348,17 +1371,17 @@ static void displayConversation(struct Conversation *conversation) {
         }
     }
 
-    STRPTR conversationStringISO8859_1 = UTF8ToISO8859_1(conversationString);
-    STRPTR existingText;
-    get(chatOutputTextEditor, MUIA_NFloattext_Text, &existingText);
-    if (existingText != NULL) {
-        set(chatOutputTextEditor, MUIA_NFloattext_Text, NULL);
-        FreeVec(existingText);
-    }
-    set(chatOutputTextEditor, MUIA_NFloattext_Text,
-        conversationStringISO8859_1);
+    STRPTR convertedConversationString = CodesetsConvertStr(
+        CSA_SourceCodeset, (Tag)utf8Codeset, CSA_DestCodeset,
+        (Tag)systemCodeset, CSA_Source, (Tag)conversationString,
+        CSA_MapForeignChars, TRUE, TAG_DONE);
 
-    FreeVec(conversationString);
+    snprintf(conversationString, WRITE_BUFFER_LENGTH, "%s\0",
+             convertedConversationString);
+
+    CodesetsFreeA(convertedConversationString, NULL);
+
+    set(chatOutputTextEditor, MUIA_NFloattext_Text, conversationString);
 }
 
 /**
@@ -1622,80 +1645,6 @@ void openImage(struct GeneratedImage *image, WORD scaledWidth,
 
     updateStatusBar("Ready", greenPen);
 #endif
-}
-
-/**
- * Converts a UTF-8 string to ISO-8859-1 which is what the Amiga uses by default
- * Taken from
- *https://stackoverflow.com/questions/23689733/convert-string-from-utf-8-to-iso-8859-1
- * @param utf8String the UTF-8 string to convert to ISO-8859-1
- * @return pointer to the converted string. Free it with FreeVec() when you're
- *done with it
- **/
-static STRPTR UTF8ToISO8859_1(CONST_STRPTR utf8String) {
-    if (utf8String == NULL)
-        return NULL;
-
-    STRPTR convertedString = AllocVec(strlen(utf8String) + 1, MEMF_ANY);
-    UBYTE *convertedStringPointer = convertedString;
-
-    UBYTE codepoint = NULL;
-    while (*utf8String != 0) {
-        UBYTE ch = (UBYTE)*utf8String;
-        if (ch <= 0x7f)
-            codepoint = ch;
-        else if (ch <= 0xbf)
-            codepoint = (codepoint << 6) | (ch & 0x3f);
-        else if (ch <= 0xdf)
-            codepoint = ch & 0x1f;
-        else if (ch <= 0xef)
-            codepoint = ch & 0x0f;
-        else
-            codepoint = ch & 0x07;
-        ++utf8String;
-        if ((*utf8String & 0xc0) != 0x80) {
-            *convertedStringPointer = codepoint;
-            convertedStringPointer++;
-        }
-    }
-    *convertedStringPointer = '\0';
-
-    return convertedString;
-}
-
-/**
- * Converts a UTF-8 string to ISO-8859-1 which is what the Amiga uses by default
- * Adapted from
- *https://stackoverflow.com/questions/23689733/convert-string-from-utf-8-to-iso-8859-1
- * @param iso8859_1String the ISO-8859-1 string to convert to UTF-8
- * @return pointer to the converted string. Free it with FreeVec() when you're
- *done with it
- **/
-static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String) {
-    if (iso8859_1String == NULL)
-        return NULL;
-
-    // Assume max UTF-8 size (4 bytes per character), plus null terminator
-    STRPTR convertedString =
-        AllocVec((4 * strlen(iso8859_1String) + 1) * sizeof(char), MEMF_ANY);
-    UBYTE *convertedStringPointer = convertedString;
-
-    while (*iso8859_1String != 0) {
-        UBYTE ch = (UBYTE)*iso8859_1String;
-
-        if (ch < 128) {
-            *convertedStringPointer++ = ch;
-        } else {
-            *convertedStringPointer++ = 0xc0 | (ch >> 6);   // first byte
-            *convertedStringPointer++ = 0x80 | (ch & 0x3f); // second byte
-        }
-
-        ++iso8859_1String;
-    }
-
-    *convertedStringPointer = '\0';
-
-    return convertedString;
 }
 
 /**

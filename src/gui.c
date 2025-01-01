@@ -3,6 +3,7 @@
 #endif
 #include <json-c/json.h>
 #include <intuition/icclass.h>
+#include <libraries/codesets.h>
 #include <libraries/mui.h>
 #include <mui/Aboutbox_mcc.h>
 #include <mui/Busy_mcc.h>
@@ -26,6 +27,7 @@
 
 #ifdef __AMIGAOS4__
 struct MUIMasterIFace *IMUIMaster;
+struct CodesetsIFace *ICodesets;
 #endif
 
 #ifdef __MORPHOS__
@@ -46,7 +48,7 @@ struct EmulLibEntry muiDispatcherEntry = {TRAP_LIB, 0,
 #endif
 
 struct Library *MUIMasterBase;
-struct Library *DataTypesBase;
+struct Library *CodesetsBase;
 Object *app = NULL;
 ULONG redPen = NULL, greenPen = NULL, bluePen = NULL, yellowPen = NULL;
 struct Screen *screen;
@@ -54,6 +56,8 @@ Object *imageWindowObject;
 Object *openImageWindowImageView;
 Object *dataTypeObject;
 BOOL isMUI5;
+struct codeset *systemCodeset;
+struct codeset *utf8Codeset;
 
 static CONST_STRPTR USED_CLASSES[] = {
     MUIC_Aboutbox,   MUIC_Busy,      MUIC_NList, MUIC_NListview,
@@ -67,22 +71,43 @@ static void closeGUILibraries();
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG openGUILibraries() {
-#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
     if ((MUIMasterBase = OpenLibrary("muimaster.library", 19)) == NULL) {
-        printf("Could not open muimaster.library\n");
+        printf("Could not open muimaster.library\nPlease make sure you have "
+               "MUI installed\n");
         return RETURN_ERROR;
     }
-#else
-    if ((MUIMasterBase = OpenLibrary("muimaster.library", 19)) == NULL) {
-        printf("Could not open muimaster.library\n");
-        return RETURN_ERROR;
-    }
+#ifdef __AMIGAOS4__
     if ((IMUIMaster = (struct MUIIFace *)GetInterface(MUIMasterBase, "main", 1,
                                                       NULL)) == NULL) {
         printf("Could not get interface for muimaster.library\n");
         return RETURN_ERROR;
     }
 #endif
+
+    if ((CodesetsBase = OpenLibrary("codesets.library", 6)) == NULL) {
+        printf(
+            "Could not open codesets.library\nPlease make sure you have "
+            "codesets installed\nRefer to the documentation for more info.\n");
+        return RETURN_ERROR;
+    }
+#ifdef __AMIGAOS4__
+    if ((ICodesets = (struct CodesetsIFace *)GetInterface(CodesetsBase, "main",
+                                                          1, NULL)) == NULL) {
+        printf("Could not get interface for codesets.library\n");
+        return RETURN_ERROR;
+    }
+#endif
+
+    if (!(systemCodeset = CodesetsFindA(NULL, NULL))) {
+        displayError("Could not find the system codeset");
+        return RETURN_ERROR;
+    }
+
+    if (!(utf8Codeset = CodesetsFind("UTF-8", NULL, CSA_FallbackToDefault,
+                                     FALSE, TAG_DONE))) {
+        displayError("Could not find the UTF-8 codeset");
+        return RETURN_ERROR;
+    }
 
     isMUI5 = MUIMasterBase->lib_Version >= 20;
     return RETURN_OK;
@@ -94,8 +119,10 @@ LONG openGUILibraries() {
 static void closeGUILibraries() {
 #ifdef __AMIGAOS4__
     DropInterface((struct Interface *)IMUIMaster);
+    DropInterface((struct Interface *)ICodesets);
 #endif
     CloseLibrary(MUIMasterBase);
+    CloseLibrary(CodesetsBase);
 }
 
 /**

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.0 (2025-01-01)
+
+- Support for ApolloOS
+- Replace MCC_TextEditor class with MCC_NFloattext for improved memory usage and compatibility with ApolloOS
+- Improved encoding to and from UTF-8 with enhanced character lookalike remapping (AmigaGPT now has codesets.library as a prerequisite)
+
 ## 2.1.2 (2024-12-31)
 
 - Fix bug where not all messages were being saved in a new conversation

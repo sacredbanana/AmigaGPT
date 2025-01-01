@@ -85,7 +85,8 @@
         "mainwindow.h": "c",
         "datatypesclass.h": "c",
         "gui.h": "c",
-        "nfloattext_mcc.h": "c"
+        "nfloattext_mcc.h": "c",
+        "codesets.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",
