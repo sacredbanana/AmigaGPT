@@ -41,6 +41,7 @@ extern struct Window *imageWindow;
 extern Object *dataTypeObject;
 extern Object *openImageWindowImageView;
 extern BOOL isMUI5;
+extern BOOL isAROS;
 extern struct codeset *systemCodeset;
 extern struct codeset *utf8Codeset;
 

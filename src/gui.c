@@ -6,6 +6,7 @@
 #include <libraries/codesets.h>
 #include <libraries/mui.h>
 #include <mui/Aboutbox_mcc.h>
+#include <mui/BetterString_mcc.h>
 #include <mui/Busy_mcc.h>
 #include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
@@ -56,12 +57,13 @@ Object *imageWindowObject;
 Object *openImageWindowImageView;
 Object *dataTypeObject;
 BOOL isMUI5;
+BOOL isAROS;
 struct codeset *systemCodeset;
 struct codeset *utf8Codeset;
 
 static CONST_STRPTR USED_CLASSES[] = {
-    MUIC_Aboutbox,   MUIC_Busy,      MUIC_NList, MUIC_NListview,
-    MUIC_TextEditor, MUIC_Floattext, NULL};
+    MUIC_Aboutbox,   MUIC_Busy,         MUIC_NList,      MUIC_NListview,
+    MUIC_TextEditor, MUIC_BetterString, MUIC_NFloattext, NULL};
 
 static BOOL checkMUICustomClassInstalled();
 static void closeGUILibraries();
@@ -107,6 +109,15 @@ LONG openGUILibraries() {
                                      FALSE, TAG_DONE))) {
         displayError("Could not find the UTF-8 codeset");
         return RETURN_ERROR;
+    }
+
+    struct Library *AROSBase;
+
+    if (AROSBase = OpenLibrary("aros.library", 0)) {
+        isAROS = TRUE;
+        CloseLibrary(AROSBase);
+    } else {
+        isAROS = FALSE;
     }
 
     isMUI5 = MUIMasterBase->lib_Version >= 20;
@@ -158,7 +169,7 @@ LONG initVideo() {
     if (createProxySettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
-    if (isMUI5 &&
+    if (isMUI5 && !isAROS &&
             (imageWindowObject = WindowObject, MUIA_Window_Title, "Image",
              MUIA_Window_Width, 320, MUIA_Window_Height, 240,
              MUIA_Window_CloseGadget, TRUE, MUIA_Window_LeftEdge,
@@ -176,10 +187,11 @@ LONG initVideo() {
     if (!(app = ApplicationObject, MUIA_Application_Base, "AmigaGPT",
           MUIA_Application_Title, "AmigaGPT", MUIA_Application_Version,
           APP_VERSION, MUIA_Application_Copyright,
-          "(C) 2023-2024 Cameron Armstrong (Nightfox/sacredbanana)",
+          "(C) 2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Description,
-          "AmigaGPT is an app for chatting to ChatGPT or creating AI images "
+          "AmigaGPT is an app for chatting to ChatGPT or creating AI "
+          "images "
           "with DALL-E",
           MUIA_Application_UsedClasses, USED_CLASSES, MUIA_Application_HelpFile,
           "PROGDIR:AmigaGPT.guide", SubWindow, startupOptionsWindowObject,
@@ -196,7 +208,7 @@ LONG initVideo() {
     if (createAboutAmigaGPTWindow() == RETURN_OK)
         DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
 
-    if (isMUI5) {
+    if (isMUI5 && !isAROS) {
         DoMethod(app, OM_ADDMEMBER, imageWindowObject);
     }
 
@@ -218,6 +230,8 @@ static BOOL checkMUICustomClassInstalled() {
     BOOL hasAllClasses = TRUE;
     for (int i = 0; USED_CLASSES[i] != NULL; i++) {
         if (!isMUI5 && !strcmp(USED_CLASSES[i], MUIC_Aboutbox) != 0)
+            continue;
+        if (!isAROS && !strcmp(USED_CLASSES[i], MUIC_BetterString) != 0)
             continue;
         if (!MUI_GetClass(USED_CLASSES[i])) {
             displayError("Could not find the MUI custom class:");

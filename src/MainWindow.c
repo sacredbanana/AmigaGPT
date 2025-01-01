@@ -1,6 +1,7 @@
 #include <json-c/json.h>
 #include <libraries/codesets.h>
 #include <libraries/mui.h>
+#include <mui/BetterString_mcc.h>
 #include <mui/Busy_mcc.h>
 #include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
@@ -158,7 +159,11 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
         set(createImageButton, MUIA_Disabled, TRUE);
         set(openImageButton, MUIA_Disabled, FALSE);
         set(saveImageCopyButton, MUIA_Disabled, FALSE);
-        set(imageInputTextEditor, MUIA_TextEditor_Contents, image->prompt);
+        if (isAROS) {
+            set(imageInputTextEditor, MUIA_String_Contents, image->prompt);
+        } else {
+            set(imageInputTextEditor, MUIA_TextEditor_Contents, image->prompt);
+        }
         currentImage = image;
         set(imageView, MUIA_DataTypes_FileName, currentImage->filePath);
     }
@@ -197,7 +202,11 @@ HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
     set(createImageButton, MUIA_Disabled, FALSE);
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);
-    DoMethod(imageInputTextEditor, MUIM_TextEditor_ClearText);
+    if (isAROS) {
+        set(imageInputTextEditor, MUIA_String_Contents, "");
+    } else {
+        DoMethod(imageInputTextEditor, MUIM_TextEditor_ClearText);
+    }
     DoMethod(imageInputTextEditor, MUIM_GoActive);
     set(imageView, MUIA_DataTypes_FileName, "");
 }
@@ -209,7 +218,11 @@ HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
              MUIV_NList_Select_Off, NULL);
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);
-    DoMethod(imageInputTextEditor, MUIM_TextEditor_ClearText);
+    if (isAROS) {
+        set(imageInputTextEditor, MUIA_String_Contents, "");
+    } else {
+        DoMethod(imageInputTextEditor, MUIM_TextEditor_ClearText);
+    }
     DoMethod(imageInputTextEditor, MUIM_GoActive);
     set(imageView, MUIA_DataTypes_FileName, "");
     saveImages();
@@ -224,8 +237,12 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         set(newImageButton, MUIA_Disabled, TRUE);
         set(deleteImageButton, MUIA_Disabled, TRUE);
         set(imageInputTextEditor, MUIA_Disabled, TRUE);
-        STRPTR text =
-            DoMethod(imageInputTextEditor, MUIM_TextEditor_ExportText);
+        STRPTR text;
+        if (isAROS) {
+            get(imageInputTextEditor, MUIA_String_Contents, &text);
+        } else {
+            text = DoMethod(imageInputTextEditor, MUIM_TextEditor_ExportText);
+        }
         // Remove trailing newline characters
         while (text[strlen(text) - 1] == '\n') {
             text[strlen(text) - 1] = '\0';
@@ -234,8 +251,9 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             CSA_SourceCodeset, (Tag)systemCodeset, CSA_DestCodeset,
             (Tag)utf8Codeset, CSA_Source, (Tag)text, TAG_DONE);
 
-        addTextToConversation(currentConversation, textUTF8, "user");
-        FreeVec(text);
+        if (!isAROS) {
+            FreeVec(text);
+        }
 
         const enum ImageSize imageSize = config.imageModel == DALL_E_2
                                              ? config.imageSizeDallE2
@@ -818,7 +836,9 @@ LONG createMainWindow() {
                             End,
                             Child, HGroup, MUIA_VertWeight, 20,
                                 // Chat input text editor
-                                Child, chatInputTextEditor = TextEditorObject,
+                                Child, chatInputTextEditor = isAROS ? BetterStringObject,
+                                    MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
+                                End : TextEditorObject,
                                     MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
                                     MUIA_TextEditor_ReadOnly, FALSE,
                                     MUIA_TextEditor_TabSize, 4,
@@ -882,7 +902,7 @@ LONG createMainWindow() {
                                 Child, VSpace(0),
                             End,
 #else
-                            Child, imageView = isMUI5 ? DataTypesObject, NULL,TAG_END) : VGroup,
+                            Child, imageView = (isMUI5 && !isAROS) ? DataTypesObject, NULL,TAG_END) : VGroup,
                                 Child, VSpace(0),
                                 Child, TextObject,
                                     TextFrame,
@@ -907,7 +927,8 @@ LONG createMainWindow() {
                             End,
                             Child, HGroup,
                                 // Image input text editor
-                                Child, imageInputTextEditor = TextEditorObject,
+                                Child, imageInputTextEditor = isAROS ? BetterStringObject,
+                                End : TextEditorObject,
                                     MUIA_Weight, 80,
                                     MUIA_TextEditor_ReadOnly, FALSE,
                                     MUIA_TextEditor_TabSize, 4,
@@ -1098,7 +1119,12 @@ static void sendChatMessage() {
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
     STRPTR receivedMessage =
         AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
-    STRPTR text = DoMethod(chatInputTextEditor, MUIM_TextEditor_ExportText);
+    STRPTR text;
+    if (isAROS) {
+        get(chatInputTextEditor, MUIA_String_Contents, &text);
+    } else {
+        text = DoMethod(chatInputTextEditor, MUIM_TextEditor_ExportText);
+    }
 
     // Remove trailing newline characters
     while (text[strlen(text) - 1] == '\n') {
@@ -1110,11 +1136,15 @@ static void sendChatMessage() {
 
     addTextToConversation(currentConversation, textUTF8, "user");
     CodesetsFreeA(textUTF8, NULL);
-    FreeVec(text);
 
     displayConversation(currentConversation);
 
-    DoMethod(chatInputTextEditor, MUIM_TextEditor_ClearText);
+    if (isAROS) {
+        DoMethod(chatInputTextEditor, MUIM_TextEditor_ClearText);
+    } else {
+        set(chatInputTextEditor, MUIA_String_Contents, "");
+        FreeVec(text);
+    }
     DoMethod(chatInputTextEditor, MUIM_GoActive);
 
     BOOL dataStreamFinished = FALSE;
@@ -1165,7 +1195,11 @@ static void sendChatMessage() {
                 STRPTR messageString = json_object_get_string(message);
                 displayError(messageString);
                 set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
-                set(chatInputTextEditor, MUIA_TextEditor_Contents, text);
+                if (isAROS) {
+                    set(chatInputTextEditor, MUIA_String_Contents, text);
+                } else {
+                    set(chatInputTextEditor, MUIA_TextEditor_Contents, text);
+                }
                 struct MinNode *lastMessage =
                     RemTail(currentConversation->messages);
                 FreeVec(lastMessage);
@@ -1618,10 +1652,10 @@ void openImage(struct GeneratedImage *image, WORD scaledWidth,
 #else
     if (image == NULL)
         return;
-    if (!isMUI5) {
+    if (!isMUI5 || isAROS) {
         copyFile(image->filePath, "T:tempImage.png");
 #ifdef __AMIGAOS3__
-        Execute("MultiView T:tempImage.png", NULL, NULL);
+        Execute("SYS:Utilities/MultiView T:tempImage.png", NULL, NULL);
 #else
         SystemTags("MultiView T:tempImage.png", SYS_Input, NULL, SYS_Output,
                    NULL, TAG_DONE);
