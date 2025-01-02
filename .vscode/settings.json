@@ -91,7 +91,11 @@
         "icclass.h": "c",
         "codesets_protos.h": "c",
         "muimaster_protos.h": "c",
-        "apikeyrequesterwindow.h": "c"
+        "apikeyrequesterwindow.h": "c",
+        "guigfx.h": "c",
+        "guigfx_lib.h": "c",
+        "datatypes.h": "c",
+        "guigfx_protos.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

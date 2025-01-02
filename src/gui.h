@@ -1,3 +1,4 @@
+#include <guigfx/guigfx.h>
 #include <intuition/classusr.h>
 #include <proto/amigaguide.h>
 #include <proto/asl.h>
@@ -6,7 +7,7 @@
 #undef USE_INLINE_STDARG
 #include <proto/dos.h>
 #include <proto/gadtools.h>
-#include <proto/datatypes.h>
+#include <proto/guigfx_lib.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>

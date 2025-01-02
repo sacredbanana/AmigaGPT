@@ -91,6 +91,7 @@ static void outputStyleOn(STRPTR out, size_t outSize, StyleType style);
 static void outputStyleOff(STRPTR out, size_t outSize);
 static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
                          StyleType *foundStyle);
+static PICTURE *generateThumbnail(struct GeneratedImage *image);
 
 HOOKPROTONHNO(ConstructConversationLI_TextFunc, APTR,
               struct NList_ConstructMessage *ncm) {
@@ -163,10 +164,11 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
             set(imageInputTextEditor, MUIA_TextEditor_Contents, image->prompt);
         }
         currentImage = image;
+        PICTURE *thumbnail = generateThumbnail(currentImage);
         DoMethod(imageViewGroup, MUIM_Group_InitChange);
         DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
         MUI_DisposeObject(imageView);
-        imageView = GuigfxObject, MUIA_Guigfx_FileName, currentImage->filePath,
+        imageView = GuigfxObject, MUIA_Guigfx_FileName, image->filePath,
         MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Low, MUIA_Guigfx_ScaleMode,
         NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE, MUIA_Guigfx_Transparency,
         NITRF_MASK, End;
@@ -319,13 +321,14 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             json_object_get_string(json_object_object_get(dataObject, "url"));
 
         CreateDir(PROGDIR "images");
+        CreateDir(PROGDIR "images/thumbnails");
 
         // Generate unique ID for the image
         UBYTE fullPath[30] = "";
         UBYTE id[11] = "";
         CONST_STRPTR idChars = "abcdefghijklmnopqrstuvwxyz0123456789";
         srand(time(NULL));
-        for (int i = 0; i < 9; i++) {
+        for (UBYTE i = 0; i < 9; i++) {
             id[i] = idChars[rand() % strlen(idChars)];
         }
         snprintf(fullPath, sizeof(fullPath), PROGDIR "images/%s.png", id);
@@ -1019,6 +1022,62 @@ void addMainWindowActions() {
     DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
              MUIV_Notify_Application, 2, MUIM_Application_ReturnID,
              MUIV_Application_ReturnID_Quit);
+}
+
+/**
+ * TODO: Implement this function
+ */
+static PICTURE *generateThumbnail(struct GeneratedImage *image) {
+    CONST_STRPTR imagePath = image->filePath;
+    if (imagePath == NULL) {
+        displayError("Image path is NULL");
+        return NULL;
+    }
+    // Get image directory
+    CONST_STRPTR imageDir = AllocVec(strlen(imagePath) + 1, MEMF_ANY);
+    strncpy(imageDir, imagePath, strlen(imagePath));
+    STRPTR lastSlash = strrchr(imageDir, '/');
+    if (lastSlash != NULL) {
+        lastSlash[1] = '\0';
+    } else {
+        displayError("Could not find image directory");
+        FreeVec(imageDir);
+        return NULL;
+    }
+    CONST_STRPTR fileName = strrchr(imagePath, '/');
+    if (fileName == NULL) {
+        displayError("Could not find image file name");
+        return NULL;
+    }
+
+    CONST_STRPTR thumbnailSubDir = "thumbnails";
+
+    CONST_STRPTR thumbnailPath = AllocVec(
+        strlen(imageDir) + strlen(thumbnailSubDir) + strlen(fileName) + 1,
+        MEMF_ANY);
+
+    snprintf(thumbnailPath,
+             strlen(imageDir) + strlen(thumbnailSubDir) + strlen(fileName) + 1,
+             "%s%s%s", imageDir, thumbnailSubDir, fileName);
+
+    CreateDir(PROGDIR "images/thumbnails");
+
+    PICTURE *thumbnail = LoadPicture(thumbnailPath, NULL);
+    if (thumbnail == NULL) {
+        PICTURE *image = LoadPicture(imagePath, NULL);
+        if (image == NULL) {
+            displayError("Could not load image for thumbnail generation");
+            FreeVec(imageDir);
+            FreeVec(thumbnailPath);
+            return NULL;
+        }
+
+        printf("Generating thumbnail for %s\n", thumbnailPath);
+
+        FreeVec(imageDir);
+        FreeVec(thumbnailPath);
+        return thumbnail;
+    }
 }
 
 /**
@@ -1730,18 +1789,21 @@ static LONG loadConversations() {
     if (conversationsJsonArray == NULL) {
         if (Rename(PROGDIR "chat-history.json",
                    PROGDIR "chat-history.json.bak")) {
-            displayError(
-                "Failed to parse chat history. Malformed JSON. The "
-                "chat-history.json file is probably corrupted. Conversation "
-                "history will not be loaded. A backup of the chat-history.json "
-                "file has been created as chat-history.json.bak");
+            displayError("Failed to parse chat history. Malformed JSON. The "
+                         "chat-history.json file is probably corrupted. "
+                         "Conversation "
+                         "history will not be loaded. A backup of the "
+                         "chat-history.json "
+                         "file has been created as chat-history.json.bak");
         } else if (copyFile(PROGDIR "chat-history.json",
                             "RAM:chat-history.json")) {
             displayError(
                 "Failed to parse chat history. Malformed JSON. The "
-                "chat-history.json file is probably corrupted. Conversation "
+                "chat-history.json file is probably corrupted. "
+                "Conversation "
                 "history will not be loaded. There was an error writing a "
-                "backup of the chat history to disk but a copy has been saved "
+                "backup of the chat history to disk but a copy has been "
+                "saved "
                 "to RAM:chat-history.json.bak");
 #if defined(__AMIGAOS3__) || defined(__MORPHOS__)
             if (!DeleteFile(PROGDIR "chat-history.json")) {
@@ -1765,7 +1827,8 @@ static LONG loadConversations() {
         if (!json_object_object_get_ex(conversationJsonObject, "name",
                                        &conversationNameJsonObject)) {
             displayError(
-                "Failed to parse chat history. \"name\" is missing from the "
+                "Failed to parse chat history. \"name\" is missing from "
+                "the "
                 "conversation. The chat-history.json file is probably "
                 "corrupted. Conversation history will not be loaded.");
             FreeVec(conversationsJsonString);
@@ -1780,7 +1843,8 @@ static LONG loadConversations() {
         if (!json_object_object_get_ex(conversationJsonObject, "messages",
                                        &messagesJsonArray)) {
             displayError(
-                "Failed to parse chat history. \"messages\" is missing from "
+                "Failed to parse chat history. \"messages\" is missing "
+                "from "
                 "the conversation. The chat-history.json file is probably "
                 "corrupted. Conversation history will not be loaded.");
             FreeVec(conversationsJsonString);
@@ -1817,8 +1881,10 @@ static LONG loadConversations() {
             if (!json_object_object_get_ex(messageJsonObject, "content",
                                            &contentJsonObject)) {
                 displayError(
-                    "Failed to parse chat history. \"content\" is missing from "
-                    "the conversation. The chat-history.json file is probably "
+                    "Failed to parse chat history. \"content\" is missing "
+                    "from "
+                    "the conversation. The chat-history.json file is "
+                    "probably "
                     "corrupted. Conversation history will not be loaded.");
                 FreeVec(conversationsJsonString);
                 json_object_put(conversationsJsonArray);
@@ -1874,8 +1940,10 @@ static LONG loadImages() {
                    PROGDIR "image-history.json.bak")) {
             displayError(
                 "Failed to parse image history. Malformed JSON. The "
-                "image-history.json file is probably corrupted. Image history "
-                "will not be loaded. A backup of the image-history.json file "
+                "image-history.json file is probably corrupted. Image "
+                "history "
+                "will not be loaded. A backup of the image-history.json "
+                "file "
                 "has been created as image-history.json.bak");
         } else if (copyFile(PROGDIR "image-history.json",
                             "RAM:image-history.json")) {
@@ -1905,7 +1973,8 @@ static LONG loadImages() {
         if (!json_object_object_get_ex(imageJsonObject, "name",
                                        &imageNameJsonObject)) {
             displayError(
-                "Failed to parse image history. \"name\" is missing from the "
+                "Failed to parse image history. \"name\" is missing from "
+                "the "
                 "image. The image-history.json file is probably corrupted. "
                 "Image history will not be loaded.");
             FreeVec(imagesJsonString);
@@ -1918,10 +1987,11 @@ static LONG loadImages() {
         struct json_object *imageFilePathJsonObject;
         if (!json_object_object_get_ex(imageJsonObject, "filePath",
                                        &imageFilePathJsonObject)) {
-            displayError(
-                "Failed to parse image history. \"filePath\" is missing from "
-                "the image. The image-history.json file is probably corrupted. "
-                "Image history will not be loaded.");
+            displayError("Failed to parse image history. \"filePath\" is "
+                         "missing from "
+                         "the image. The image-history.json file is "
+                         "probably corrupted. "
+                         "Image history will not be loaded.");
             FreeVec(imagesJsonString);
             json_object_put(imagesJsonArray);
             return RETURN_ERROR;
@@ -1933,7 +2003,8 @@ static LONG loadImages() {
         if (!json_object_object_get_ex(imageJsonObject, "prompt",
                                        &imagePromptJsonObject)) {
             displayError(
-                "Failed to parse image history. \"prompt\" is missing from the "
+                "Failed to parse image history. \"prompt\" is missing from "
+                "the "
                 "image. The image-history.json file is probably corrupted. "
                 "Image history will not be loaded.");
             FreeVec(imagesJsonString);
@@ -1946,10 +2017,11 @@ static LONG loadImages() {
         struct json_object *imageModelJsonObject;
         if (!json_object_object_get_ex(imageJsonObject, "imageModel",
                                        &imageModelJsonObject)) {
-            displayError(
-                "Failed to parse image history. \"imageModel\" is missing from "
-                "the image. The image-history.json file is probably corrupted. "
-                "Image history will not be loaded.");
+            displayError("Failed to parse image history. \"imageModel\" is "
+                         "missing from "
+                         "the image. The image-history.json file is "
+                         "probably corrupted. "
+                         "Image history will not be loaded.");
             FreeVec(imagesJsonString);
             json_object_put(imagesJsonArray);
             return RETURN_ERROR;
@@ -1961,7 +2033,8 @@ static LONG loadImages() {
         if (!json_object_object_get_ex(imageJsonObject, "width",
                                        &imageWidthJsonObject)) {
             displayError(
-                "Failed to parse image history. \"width\" is missing from the "
+                "Failed to parse image history. \"width\" is missing from "
+                "the "
                 "image. The image-history.json file is probably corrupted. "
                 "Image history will not be loaded.");
             FreeVec(imagesJsonString);
@@ -1975,7 +2048,8 @@ static LONG loadImages() {
         if (!json_object_object_get_ex(imageJsonObject, "height",
                                        &imageHeightJsonObject)) {
             displayError(
-                "Failed to parse image history. \"height\" is missing from the "
+                "Failed to parse image history. \"height\" is missing from "
+                "the "
                 "image. The image-history.json file is probably corrupted. "
                 "Image history will not be loaded.");
             FreeVec(imagesJsonString);

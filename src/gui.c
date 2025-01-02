@@ -50,6 +50,7 @@ struct EmulLibEntry muiDispatcherEntry = {TRAP_LIB, 0,
 
 struct Library *MUIMasterBase;
 struct Library *CodesetsBase;
+struct Library *GuiGFXBase;
 Object *app = NULL;
 ULONG redPen = NULL, greenPen = NULL, bluePen = NULL, yellowPen = NULL;
 struct Screen *screen;
@@ -101,6 +102,19 @@ LONG openGUILibraries() {
     }
 #endif
 
+    if ((GuiGFXBase = OpenLibrary("guigfx.library", 0)) == NULL) {
+        printf("Could not open guigfx.library\nPlease make sure you have "
+               "guigfx installed\n");
+        return RETURN_ERROR;
+    }
+#ifdef __AMIGAOS4__
+    if ((IGuiGFX = (struct GuiGFXIFace *)GetInterface(GuiGFXBase, "main", 1,
+                                                      NULL)) == NULL) {
+        printf("Could not get interface for guigfx.library\n");
+        return RETURN_ERROR;
+    }
+#endif
+
     if (!(systemCodeset = CodesetsFindA(NULL, NULL))) {
         displayError("Could not find the system codeset");
         return RETURN_ERROR;
@@ -132,9 +146,11 @@ static void closeGUILibraries() {
 #ifdef __AMIGAOS4__
     DropInterface((struct Interface *)IMUIMaster);
     DropInterface((struct Interface *)ICodesets);
+    DropInterface((struct Interface *)IGuiGFX);
 #endif
     CloseLibrary(MUIMasterBase);
     CloseLibrary(CodesetsBase);
+    CloseLibrary(GuiGFXBase);
 }
 
 /**
