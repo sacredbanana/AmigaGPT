@@ -87,7 +87,11 @@
         "gui.h": "c",
         "nfloattext_mcc.h": "c",
         "codesets.h": "c",
-        "betterstring_mcc.h": "c"
+        "betterstring_mcc.h": "c",
+        "icclass.h": "c",
+        "codesets_protos.h": "c",
+        "muimaster_protos.h": "c",
+        "apikeyrequesterwindow.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

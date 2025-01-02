@@ -1,20 +1,17 @@
 #include <json-c/json.h>
-#include <libraries/codesets.h>
-#include <libraries/mui.h>
 #include <mui/BetterString_mcc.h>
 #include <mui/Busy_mcc.h>
+#include <mui/Guigfx_mcc.h>
 #include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
-#include <proto/muimaster.h>
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
 #include "config.h"
 #include "gui.h"
 #include "menu.h"
-#include "datatypesclass.h"
 #include "MainWindow.h"
 #include <dos/dos.h>
 
@@ -59,6 +56,7 @@ Object *newImageButton;
 Object *deleteImageButton;
 Object *imageListObject;
 Object *imageView;
+Object *imageViewGroup;
 Object *openImageButton;
 Object *saveImageCopyButton;
 WORD pens[NUMDRIPENS + 1];
@@ -165,7 +163,18 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
             set(imageInputTextEditor, MUIA_TextEditor_Contents, image->prompt);
         }
         currentImage = image;
-        set(imageView, MUIA_DataTypes_FileName, currentImage->filePath);
+        DoMethod(imageViewGroup, MUIM_Group_InitChange);
+        if (imageView) {
+            DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
+            MUI_DisposeObject(imageView);
+        }
+        imageView = GuigfxObject, MUIA_Guigfx_FileName, currentImage->filePath,
+        MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Low, MUIA_Guigfx_ScaleMode,
+        NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE, MUIA_Guigfx_Transparency,
+        NITRF_MASK, End;
+        DoMethod(imageViewGroup, OM_ADDMEMBER, imageView);
+        DoMethod(imageViewGroup, MUIM_Group_MoveMember, imageView, 0);
+        DoMethod(imageViewGroup, MUIM_Group_ExitChange);
     }
 }
 MakeHook(ImageRowClickedHook, ImageRowClickedFunc);
@@ -208,7 +217,13 @@ HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
         DoMethod(imageInputTextEditor, MUIM_TextEditor_ClearText);
     }
     DoMethod(imageInputTextEditor, MUIM_GoActive);
-    set(imageView, MUIA_DataTypes_FileName, "");
+    DoMethod(imageViewGroup, MUIM_Group_InitChange);
+    DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
+    MUI_DisposeObject(imageView);
+    imageView = RectangleObject, MUIA_Frame, MUIV_Frame_ImageButton, End;
+    DoMethod(imageViewGroup, OM_ADDMEMBER, imageView);
+    DoMethod(imageViewGroup, MUIM_Group_MoveMember, imageView, 0);
+    DoMethod(imageViewGroup, MUIM_Group_ExitChange);
 }
 MakeHook(NewImageButtonClickedHook, NewImageButtonClickedFunc);
 
@@ -223,8 +238,13 @@ HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
     } else {
         DoMethod(imageInputTextEditor, MUIM_TextEditor_ClearText);
     }
-    DoMethod(imageInputTextEditor, MUIM_GoActive);
-    set(imageView, MUIA_DataTypes_FileName, "");
+    DoMethod(imageViewGroup, MUIM_Group_InitChange);
+    DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
+    MUI_DisposeObject(imageView);
+    imageView = RectangleObject, MUIA_Frame, MUIV_Frame_ImageButton, End;
+    DoMethod(imageViewGroup, OM_ADDMEMBER, imageView);
+    DoMethod(imageViewGroup, MUIM_Group_MoveMember, imageView, 0);
+    DoMethod(imageViewGroup, MUIM_Group_ExitChange);
     saveImages();
 }
 MakeHook(DeleteImageButtonClickedHook, DeleteImageButtonClickedFunc);
@@ -247,13 +267,10 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         while (text[strlen(text) - 1] == '\n') {
             text[strlen(text) - 1] = '\0';
         }
+
         STRPTR textUTF8 = CodesetsConvertStr(
             CSA_SourceCodeset, (Tag)systemCodeset, CSA_DestCodeset,
             (Tag)utf8Codeset, CSA_Source, (Tag)text, TAG_DONE);
-
-        if (!isAROS) {
-            FreeVec(text);
-        }
 
         const enum ImageSize imageSize = config.imageModel == DALL_E_2
                                              ? config.imageSizeDallE2
@@ -272,6 +289,9 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             set(deleteImageButton, MUIA_Disabled, FALSE);
             set(imageInputTextEditor, MUIA_Disabled, FALSE);
             updateStatusBar("Error", redPen);
+            if (!isAROS) {
+                FreeVec(text);
+            }
             return;
         }
         struct json_object *error;
@@ -287,6 +307,9 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             set(imageInputTextEditor, MUIA_Disabled, FALSE);
             updateStatusBar("Error", 6);
             json_object_put(response);
+            if (!isAROS) {
+                FreeVec(text);
+            }
             return;
         }
 
@@ -406,6 +429,10 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         set(deleteImageButton, MUIA_Disabled, FALSE);
 
         saveImages();
+
+        if (!isAROS) {
+            FreeVec(text);
+        }
     } else {
         displayError("Please enter your OpenAI API key in the Open AI settings "
                      "in the menu.");
@@ -889,29 +916,11 @@ LONG createMainWindow() {
                                 End,
                             End,
                         End,
-                        Child, VGroup, MUIA_Weight, 220,
-// Image view
-#ifdef __MORPHOS__
-                            Child, imageView = VGroup,
-                                Child, VSpace(0),
-                                Child, TextObject,
-                                    TextFrame,
-                                    MUIA_Text_Contents, "\33cImage preview not supported in MorphOS. Click \"Open Image\" to view the image.",
-                                    MUIA_Background, MUII_TextBack,
-                                End,
-                                Child, VSpace(0),
+                        Child, imageViewGroup = VGroup, MUIA_Weight, 220,
+                            // Image view
+                            Child, imageView = RectangleObject,
+                                MUIA_Frame, MUIV_Frame_ImageButton,
                             End,
-#else
-                            Child, imageView = (isMUI5 && !isAROS) ? DataTypesObject, NULL,TAG_END) : VGroup,
-                                Child, VSpace(0),
-                                Child, TextObject,
-                                    TextFrame,
-                                    MUIA_Text_Contents, "\33cMUI version 5 is required for image preview. Click \"Open Image\" to view the image.",
-                                    MUIA_Background, MUII_TextBack,
-                                End,
-                                Child, VSpace(0),
-                            End,
-#endif
                             Child, HGroup,
                                 GroupFrame,
                                 // Open image button
@@ -1675,7 +1684,7 @@ void openImage(struct GeneratedImage *image, WORD scaledWidth,
     set(imageWindowObject, MUIA_Window_Activate, TRUE);
     set(imageWindowObject, MUIA_Window_Screen, screen);
     set(imageWindowObject, MUIA_Window_Open, TRUE);
-    set(openImageWindowImageView, MUIA_DataTypes_FileName, image->filePath);
+    set(openImageWindowImageView, MUIA_Guigfx_FileName, image->filePath);
 
     updateStatusBar("Ready", greenPen);
 #endif

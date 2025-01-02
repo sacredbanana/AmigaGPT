@@ -1,7 +1,9 @@
 #include <intuition/classusr.h>
 #include <proto/amigaguide.h>
 #include <proto/asl.h>
+#define USE_INLINE_STDARG
 #include <proto/codesets.h>
+#undef USE_INLINE_STDARG
 #include <proto/dos.h>
 #include <proto/gadtools.h>
 #include <proto/datatypes.h>

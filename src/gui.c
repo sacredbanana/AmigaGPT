@@ -8,6 +8,7 @@
 #include <mui/Aboutbox_mcc.h>
 #include <mui/BetterString_mcc.h>
 #include <mui/Busy_mcc.h>
+#include <mui/Guigfx_mcc.h>
 #include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
@@ -24,7 +25,6 @@
 #include "ProxySettingsRequesterWindow.h"
 #include "StartupOptionsWindow.h"
 #include "version.h"
-#include "datatypesclass.h"
 
 #ifdef __AMIGAOS4__
 struct MUIMasterIFace *IMUIMaster;
@@ -62,8 +62,9 @@ struct codeset *systemCodeset;
 struct codeset *utf8Codeset;
 
 static CONST_STRPTR USED_CLASSES[] = {
-    MUIC_Aboutbox,   MUIC_Busy,         MUIC_NList,      MUIC_NListview,
-    MUIC_TextEditor, MUIC_BetterString, MUIC_NFloattext, NULL};
+    MUIC_Aboutbox,   MUIC_Busy,       MUIC_NList,
+    MUIC_NListview,  MUIC_TextEditor, MUIC_BetterString,
+    MUIC_NFloattext, MUIC_Guigfx,     NULL};
 
 static BOOL checkMUICustomClassInstalled();
 static void closeGUILibraries();
@@ -152,8 +153,6 @@ LONG initVideo() {
         return RETURN_ERROR;
     }
 
-    create_datatypes_class();
-
     if (createStartupOptionsWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
@@ -169,21 +168,6 @@ LONG initVideo() {
     if (createProxySettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
-    if (isMUI5 && !isAROS &&
-            (imageWindowObject = WindowObject, MUIA_Window_Title, "Image",
-             MUIA_Window_Width, 320, MUIA_Window_Height, 240,
-             MUIA_Window_CloseGadget, TRUE, MUIA_Window_LeftEdge,
-             MUIV_Window_LeftEdge_Centered, MUIA_Window_TopEdge,
-             MUIV_Window_TopEdge_Centered, MUIA_Window_SizeRight, TRUE,
-             MUIA_Window_UseBottomBorderScroller, FALSE,
-             MUIA_Window_UseRightBorderScroller, FALSE,
-             MUIA_Window_UseLeftBorderScroller, FALSE, WindowContents, VGroup,
-             Child, openImageWindowImageView = DataTypesObject, NULL, TAG_END),
-        End, End) == NULL) {
-            displayError("Could not create image window");
-            return RETURN_ERROR;
-        }
-
     if (!(app = ApplicationObject, MUIA_Application_Base, "AmigaGPT",
           MUIA_Application_Title, "AmigaGPT", MUIA_Application_Version,
           APP_VERSION, MUIA_Application_Copyright,
@@ -197,7 +181,20 @@ LONG initVideo() {
           "PROGDIR:AmigaGPT.guide", SubWindow, startupOptionsWindowObject,
           SubWindow, mainWindowObject, SubWindow, apiKeyRequesterWindowObject,
           SubWindow, chatSystemRequesterWindowObject, SubWindow,
-          proxySettingsRequesterWindowObject, End)) {
+          proxySettingsRequesterWindowObject, SubWindow,
+          imageWindowObject = WindowObject, MUIA_Window_Title, "Image",
+          MUIA_Window_Width, 320, MUIA_Window_Height, 240,
+          MUIA_Window_CloseGadget, TRUE, MUIA_Window_LeftEdge,
+          MUIV_Window_LeftEdge_Centered, MUIA_Window_TopEdge,
+          MUIV_Window_TopEdge_Centered, MUIA_Window_SizeRight, TRUE,
+          MUIA_Window_UseBottomBorderScroller, FALSE,
+          MUIA_Window_UseRightBorderScroller, FALSE,
+          MUIA_Window_UseLeftBorderScroller, FALSE, WindowContents, VGroup,
+          Child, openImageWindowImageView = GuigfxObject, MUIA_Guigfx_FileName,
+          "PROGDIR:images/pic.png", MUIA_Guigfx_Quality,
+          MUIV_Guigfx_Quality_Low, MUIA_Guigfx_ScaleMode,
+          NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE, MUIA_Guigfx_Transparency,
+          NITRF_MASK, End, End, End, End)) {
         displayError("Could not create app!\n");
         return RETURN_ERROR;
     }
@@ -207,10 +204,6 @@ LONG initVideo() {
 
     if (createAboutAmigaGPTWindow() == RETURN_OK)
         DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
-
-    if (isMUI5 && !isAROS) {
-        DoMethod(app, OM_ADDMEMBER, imageWindowObject);
-    }
 
     set(startupOptionsWindowObject, MUIA_Window_Open, TRUE);
 
@@ -290,8 +283,6 @@ void shutdownGUI() {
     } else {
         CloseScreen(screen);
     }
-
-    delete_datatypes_class();
 
     closeGUILibraries();
 }
