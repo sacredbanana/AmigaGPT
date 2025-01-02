@@ -80,8 +80,6 @@ static LONG loadConversations();
 static LONG saveConversations();
 static LONG loadImages();
 static LONG saveImages();
-static STRPTR ISO8859_1ToUTF8(CONST_STRPTR iso8859_1String);
-static STRPTR UTF8ToISO8859_1(CONST_STRPTR utf8String);
 static BOOL copyFile(STRPTR source, STRPTR destination);
 static void initStyleStack(StyleStack *s);
 static BOOL pushStyle(StyleStack *s, StyleType style);
@@ -164,7 +162,6 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
             set(imageInputTextEditor, MUIA_TextEditor_Contents, image->prompt);
         }
         currentImage = image;
-        PICTURE *thumbnail = generateThumbnail(currentImage);
         DoMethod(imageViewGroup, MUIM_Group_InitChange);
         DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
         MUI_DisposeObject(imageView);
@@ -1206,10 +1203,9 @@ static void sendChatMessage() {
     displayConversation(currentConversation);
 
     if (isAROS) {
-        DoMethod(chatInputTextEditor, MUIM_TextEditor_ClearText);
-    } else {
         set(chatInputTextEditor, MUIA_String_Contents, "");
-        FreeVec(text);
+    } else {
+        DoMethod(chatInputTextEditor, MUIM_TextEditor_ClearText);
     }
     DoMethod(chatInputTextEditor, MUIM_GoActive);
 
@@ -1240,6 +1236,9 @@ static void sendChatMessage() {
             set(newChatButton, MUIA_Disabled, FALSE);
             set(deleteChatButton, MUIA_Disabled, FALSE);
             FreeVec(receivedMessage);
+            if (!isAROS) {
+                FreeVec(text);
+            }
             return;
         }
         if (config.chatSystem != NULL && strlen(config.chatSystem) > 0 &&
@@ -1283,6 +1282,9 @@ static void sendChatMessage() {
                 set(deleteChatButton, MUIA_Disabled, FALSE);
 
                 FreeVec(receivedMessage);
+                if (!isAROS) {
+                    FreeVec(text);
+                }
                 return;
             }
             STRPTR contentString = getMessageContentFromJson(response, TRUE);
@@ -1353,6 +1355,9 @@ static void sendChatMessage() {
         }
         FreeVec(responses);
         FreeVec(receivedMessage);
+        if (!isAROS) {
+            FreeVec(text);
+        }
         if (isNewConversation) {
             updateStatusBar("Generating conversation title...", 7);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);

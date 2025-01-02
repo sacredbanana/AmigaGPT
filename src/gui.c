@@ -29,6 +29,7 @@
 #ifdef __AMIGAOS4__
 struct MUIMasterIFace *IMUIMaster;
 struct CodesetsIFace *ICodesets;
+struct GuiGFXIFace *IGuiGFX;
 #endif
 
 #ifdef __MORPHOS__
