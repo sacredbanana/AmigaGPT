@@ -54,8 +54,8 @@ Object *app = NULL;
 ULONG redPen = NULL, greenPen = NULL, bluePen = NULL, yellowPen = NULL;
 struct Screen *screen;
 Object *imageWindowObject;
-Object *openImageWindowImageView;
-Object *dataTypeObject;
+Object *imageWindowImageView;
+Object *imageWindowImageViewGroup;
 BOOL isMUI5;
 BOOL isAROS;
 struct codeset *systemCodeset;
@@ -189,12 +189,10 @@ LONG initVideo() {
           MUIV_Window_TopEdge_Centered, MUIA_Window_SizeRight, TRUE,
           MUIA_Window_UseBottomBorderScroller, FALSE,
           MUIA_Window_UseRightBorderScroller, FALSE,
-          MUIA_Window_UseLeftBorderScroller, FALSE, WindowContents, VGroup,
-          Child, openImageWindowImageView = GuigfxObject, MUIA_Guigfx_FileName,
-          "PROGDIR:images/pic.png", MUIA_Guigfx_Quality,
-          MUIV_Guigfx_Quality_Low, MUIA_Guigfx_ScaleMode,
-          NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE, MUIA_Guigfx_Transparency,
-          NITRF_MASK, End, End, End, End)) {
+          MUIA_Window_UseLeftBorderScroller, FALSE, WindowContents,
+          imageWindowImageViewGroup = VGroup, Child,
+          imageWindowImageView = RectangleObject, MUIA_Frame,
+          MUIV_Frame_ImageButton, End, End, End, End)) {
         displayError("Could not create app!\n");
         return RETURN_ERROR;
     }

@@ -164,10 +164,8 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
         }
         currentImage = image;
         DoMethod(imageViewGroup, MUIM_Group_InitChange);
-        if (imageView) {
-            DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
-            MUI_DisposeObject(imageView);
-        }
+        DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
+        MUI_DisposeObject(imageView);
         imageView = GuigfxObject, MUIA_Guigfx_FileName, currentImage->filePath,
         MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Low, MUIA_Guigfx_ScaleMode,
         NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE, MUIA_Guigfx_Transparency,
@@ -1655,22 +1653,9 @@ static LONG saveImages() {
  **/
 void openImage(struct GeneratedImage *image, WORD scaledWidth,
                WORD scaledHeight) {
-#ifdef __MORPHOS__
-    copyFile(image->filePath, "T:tempImage.png");
-    Execute("System:Utilities/MultiView T:tempImage.png", NULL, NULL);
-#else
     if (image == NULL)
         return;
-    if (!isMUI5 || isAROS) {
-        copyFile(image->filePath, "T:tempImage.png");
-#ifdef __AMIGAOS3__
-        Execute("SYS:Utilities/MultiView T:tempImage.png", NULL, NULL);
-#else
-        SystemTags("MultiView T:tempImage.png", SYS_Input, NULL, SYS_Output,
-                   NULL, TAG_DONE);
-#endif
-        return;
-    }
+
     WORD lowestWidth =
         (screen->Width - 16) < scaledWidth ? (screen->Width - 16) : scaledWidth;
     WORD lowestHeight =
@@ -1678,16 +1663,33 @@ void openImage(struct GeneratedImage *image, WORD scaledWidth,
 
     updateStatusBar("Loading image...", yellowPen);
 
+    Object *imageWindowLoadingTextObject = VGroup, Child, VSpace(0), Child,
+           TextObject, MUIA_Text_Contents, "\033cLoading image...", End, Child,
+           VSpace(0), End;
+    DoMethod(imageWindowImageViewGroup, OM_ADDMEMBER,
+             imageWindowLoadingTextObject);
+    DoMethod(imageWindowImageViewGroup, OM_REMMEMBER, imageWindowImageView);
+    MUI_DisposeObject(imageWindowImageView);
+
     set(imageWindowObject, MUIA_Window_Title, image->name);
     set(imageWindowObject, MUIA_Window_Width, lowestWidth);
     set(imageWindowObject, MUIA_Window_Height, lowestHeight);
     set(imageWindowObject, MUIA_Window_Activate, TRUE);
     set(imageWindowObject, MUIA_Window_Screen, screen);
     set(imageWindowObject, MUIA_Window_Open, TRUE);
-    set(openImageWindowImageView, MUIA_Guigfx_FileName, image->filePath);
+
+    DoMethod(imageWindowImageViewGroup, MUIM_Group_InitChange);
+    imageWindowImageView = GuigfxObject, MUIA_Guigfx_FileName, image->filePath,
+    MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Best, MUIA_Guigfx_ScaleMode,
+    NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE | NISMF_KEEPASPECT_SCREEN,
+    MUIA_Guigfx_Transparency, NITRF_MASK, End;
+    DoMethod(imageWindowImageViewGroup, OM_ADDMEMBER, imageWindowImageView);
+    DoMethod(imageWindowImageViewGroup, OM_REMMEMBER,
+             imageWindowLoadingTextObject);
+    DoMethod(imageWindowImageViewGroup, MUIM_Group_ExitChange);
+    MUI_DisposeObject(imageWindowLoadingTextObject);
 
     updateStatusBar("Ready", greenPen);
-#endif
 }
 
 /**
