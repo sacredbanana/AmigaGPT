@@ -35,9 +35,11 @@ Requirements:
 (http://roadshow.apc-tcp.de/index-en.php)
 - MUI 3 minimum but MUI 5 recommended for all features
   (https://github.com/amiga-mui/muidev/releases)
+- MCC_Guigfx MUI custom class for displaying images
+  (http://aminet.net/package/dev/mui/MCC_Guigfx)
 - MCC_NList MUI custom class for lists
   (http://aminet.net/package/dev/mui/MCC_NList-0.128)
-- Codesets.library 6.22 or higher
+- codesets.library 6.22 or higher
  (http://aminet.net/package/util/libs/codesets-6.22)
 - An active OpenAI API key
 - For speech on AmigaOS 3, any version of narrator.device
@@ -49,7 +51,7 @@ Requirements:
 Installation:
 1. Install AmiSSL and a TCP/IP stack if not already done so
 2. Download and install MUI. Version 5 recommended, version 3 minimum. Reboot.
-3. Download and install MCC_NList and codesets.library.
+3. Download and install MCC_Guigfx, MCC_NList and codesets.library.
 4. Download the latest release of AmigaGPT.
 5. Extract the `amigagpt.lha` archive to your desired location.
 

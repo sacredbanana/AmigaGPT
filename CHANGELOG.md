@@ -4,7 +4,7 @@
 
 - Support for ApolloOS
 - Image preview now works in MorphOS and in MUI 3 (AmigaGPT now has MCC_Guigfx as a prerequisite)
-- Replace MCC_TextEditor class with MCC_NFloattext for improved memory usage and compatibility with ApolloOS
+- Replace the chat output sections from MCC_TextEditor class to MCC_NFloattext for improved memory usage and compatibility with ApolloOS
 - Improved encoding to and from UTF-8 with enhanced character lookalike remapping (AmigaGPT now has codesets.library as a prerequisite)
 - Fix crash when the first data chunk received from OpenAI is smaller than the HTTP header
 - Fix crash when OpenAI sends a blank content string

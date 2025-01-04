@@ -7,7 +7,6 @@
 #undef USE_INLINE_STDARG
 #include <proto/dos.h>
 #include <proto/gadtools.h>
-#include <proto/guigfx.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>

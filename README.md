@@ -36,8 +36,9 @@ Ensure you have the necessary system requirements:
 - Internet access using a TCP/IP stack such as **Roadshow** (<http://roadshow.apc-tcp.de/index-en.php>)
 - For AmigaOS 3 & 4: **AmiSSL 5.18** or higher (<https://aminet.net/package/util/libs/AmiSSL-v5-OS3>) for OS3 and (<https://aminet.net/package/util/libs/AmiSSL-v5-OS4>) for OS4
 - **MUI 3** minimum but **MUI 5** recommended for all features (<https://github.com/amiga-mui/muidev/releases>)
+- **MCC_Guigfx** MUI custom class for displaying images (<http://aminet.net/package/dev/mui/MCC_Guigfx>)
 - **MCC_NList** MUI custom class for lists (<http://aminet.net/package/dev/mui/MCC_NList-0.128>)
-- **Codesets.library 6.22** or higher (<http://aminet.net/package/util/libs/codesets-6.22>)
+- **codesets.library 6.22** or higher (<http://aminet.net/package/util/libs/codesets-6.22>)
 - An **OpenAI account** with an active **API key**
 - *Optional*: **AmigaOS 3 only**: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
 - *Optional*: **AmigaOS 4 only**: **Flite device** (<http://aminet.net/package/mus/misc/flite_device>)
@@ -47,7 +48,7 @@ Ensure you have the necessary system requirements:
 ## Installation
 * For AmigaOS 3 & 4, Install AmiSSL and a TCP/IP stack if not already done so
 * Download and install MUI. Version 5 recommended, version 3 minimum. Reboot.
-* Download and install MCC_NList and codesets.library
+* Download and install MCC_Guigfx, MCC_NList and codesets.library
 * Download the latest release of **AmigaGPT**
 * Extract the `amigagpt.lha` archive to your desired location
 

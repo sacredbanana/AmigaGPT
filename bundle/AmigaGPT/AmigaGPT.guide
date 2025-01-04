@@ -56,8 +56,9 @@ For smooth operation of AmigaGPT, your system needs to meet the following requir
 - Motorola 68020 or higher CPU or PowerPC for AmigaOS 4/MorphOS
 - Internet access using a TCP/IP stack such as Roadshow
 - MUI 3 minimum but MUI 5 recommended for all features (https://github.com/amiga-mui/muidev/releases)
+- MCC_Guigfx MUI custom class for displaying images (http://aminet.net/package/dev/mui/MCC_Guigfx)
 - MCC_NList MUI custom class for lists (http://aminet.net/package/dev/mui/MCC_NList-0.128)
-- Codesets.library 6.22 or higher (http://aminet.net/package/util/libs/codesets-6.22)
+- codesets.library 6.22 or higher (http://aminet.net/package/util/libs/codesets-6.22)
 - For AmigaOS 3 & 4, AmiSSL 5.18 or higher
   (https://aminet.net/package/util/libs/AmiSSL-v5-OS3) for OS3 and
   (https://aminet.net/package/util/libs/AmiSSL-v5-OS4) for OS4
@@ -79,7 +80,7 @@ Follow the steps for successful installation:
 
 - For AmigaOS 3 & 4, Install AmiSSL and a TCP/IP stack if not already done so
 - Download and install MUI. Version 5 recommended, version 3 minimum. Reboot.
-- Download and install MCC_NList and codesets.library
+- Download and install MCC_Guigfx, MCC_NList and codesets.library
 - Download the latest release of AmigaGPT
 - Extract the amigagpt.lha archive to your desired location
 
