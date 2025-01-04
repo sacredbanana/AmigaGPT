@@ -1307,6 +1307,12 @@ static void sendChatMessage() {
                                 strlen(formattedMessageSystemEncoded) - 1);
                     CodesetsFreeA(formattedMessageSystemEncoded, NULL);
                     if (++wordNumber % 50 == 0) {
+                        STRPTR formattedContent =
+                            convertMarkdownFormattingToMUI(
+                                chatOutputTextEditorContents);
+                        strncpy(chatOutputTextEditorContents, formattedContent,
+                                WRITE_BUFFER_LENGTH - 1);
+                        FreeVec(formattedContent);
                         set(chatOutputTextEditor, MUIA_NFloattext_Text,
                             chatOutputTextEditorContents);
                         if (config.speechEnabled) {
@@ -1339,6 +1345,11 @@ static void sendChatMessage() {
         }
     } while (!dataStreamFinished);
 
+    STRPTR formattedContent =
+        convertMarkdownFormattingToMUI(chatOutputTextEditorContents);
+    strncpy(chatOutputTextEditorContents, formattedContent,
+            WRITE_BUFFER_LENGTH - 1);
+    FreeVec(formattedContent);
     set(chatOutputTextEditor, MUIA_NFloattext_Text,
         chatOutputTextEditorContents);
 
