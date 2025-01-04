@@ -45,7 +45,6 @@ extern Object *imageWindowImageViewGroup;
 extern BOOL isMUI5;
 extern BOOL isAROS;
 extern struct codeset *systemCodeset;
-extern struct codeset *utf8Codeset;
 
 /**
  * Create the GUI

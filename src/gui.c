@@ -61,7 +61,6 @@ Object *imageWindowImageViewGroup;
 BOOL isMUI5;
 BOOL isAROS;
 struct codeset *systemCodeset;
-struct codeset *utf8Codeset;
 
 static CONST_STRPTR USED_CLASSES[] = {
     MUIC_Aboutbox,   MUIC_Busy,       MUIC_NList,
@@ -118,12 +117,6 @@ LONG openGUILibraries() {
 
     if (!(systemCodeset = CodesetsFindA(NULL, NULL))) {
         displayError("Could not find the system codeset");
-        return RETURN_ERROR;
-    }
-
-    if (!(utf8Codeset = CodesetsFind("UTF-8", NULL, CSA_FallbackToDefault,
-                                     FALSE, TAG_DONE))) {
-        displayError("Could not find the UTF-8 codeset");
         return RETURN_ERROR;
     }
 

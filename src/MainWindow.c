@@ -66,10 +66,10 @@ struct GeneratedImage *currentImage;
 static UBYTE *Pages[] = {"Chat Mode", "Image Generation Mode", NULL};
 
 static struct Conversation *newConversation();
-static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream);
+static UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream);
 static void formatText(STRPTR unformattedText);
-static void addTextToConversation(struct Conversation *conversation,
-                                  STRPTR text, STRPTR role);
+static void addTextToConversation(struct Conversation *conversation, UTF8 *text,
+                                  STRPTR role);
 static void displayConversation(struct Conversation *conversation);
 static void freeConversation(struct Conversation *conversation);
 static struct Conversation *copyConversation(struct Conversation *conversation);
@@ -265,9 +265,9 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             text[strlen(text) - 1] = '\0';
         }
 
-        STRPTR textUTF8 = CodesetsConvertStr(
-            CSA_SourceCodeset, (Tag)systemCodeset, CSA_DestCodeset,
-            (Tag)utf8Codeset, CSA_Source, (Tag)text, TAG_DONE);
+        UTF8 *textUTF8 =
+            CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                               CSA_Source, (Tag)text, TAG_DONE);
 
         const enum ImageSize imageSize = config.imageModel == DALL_E_2
                                              ? config.imageSizeDallE2
@@ -1132,15 +1132,15 @@ static void formatText(STRPTR unformattedText) {
  * Get the message content from the JSON response from OpenAI
  * @param json the JSON response from OpenAI
  * @param stream whether the response is a stream or not
- * @return a pointer to a new string containing the message content -- Free it
- *with FreeVec() when you are done using it If found role in the json instead of
- *content then return an empty string
+ * @return a pointer to a new UTF8 string containing the message content -- Free
+ *it with FreeVec() when you are done using it If found role in the json instead
+ *of content then return an empty string
  * @todo Handle errors
  **/
-static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream) {
+static UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
     if (json == NULL)
         return NULL;
-    STRPTR json_str = json_object_to_json_string(json);
+    UTF8 *json_str = json_object_to_json_string(json);
     struct json_object *choices = json_object_object_get(json, "choices");
     struct json_object *choice = json_object_array_get_idx(choices, 0);
     struct json_object *message =
@@ -1160,8 +1160,6 @@ static STRPTR getMessageContentFromJson(struct json_object *json, BOOL stream) {
  * @details This function sends a chat message to the OpenAI API and displays
  *the response in the chat window. It also speaks the response if speech is
  *enabled.
- * @param void
- * @return void
  **/
 static void sendChatMessage() {
     BOOL isNewConversation = FALSE;
@@ -1180,8 +1178,7 @@ static void sendChatMessage() {
 
     updateStatusBar("Sending message...", yellowPen);
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
-    STRPTR receivedMessage =
-        AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+    UTF8 *receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
     STRPTR text;
     if (isAROS) {
         get(chatInputTextEditor, MUIA_String_Contents, &text);
@@ -1193,9 +1190,9 @@ static void sendChatMessage() {
     while (text[strlen(text) - 1] == '\n') {
         text[strlen(text) - 1] = '\0';
     }
-    STRPTR textUTF8 = CodesetsConvertStr(CSA_SourceCodeset, (Tag)systemCodeset,
-                                         CSA_DestCodeset, (Tag)utf8Codeset,
-                                         CSA_Source, (Tag)text, TAG_DONE);
+    UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+
+                                        CSA_Source, (Tag)text, TAG_DONE);
 
     addTextToConversation(currentConversation, textUTF8, "user");
     CodesetsFreeA(textUTF8, NULL);
@@ -1251,13 +1248,14 @@ static void sendChatMessage() {
             FreeVec(chatSystemNode);
         }
         UWORD responseIndex = 0;
+
         struct json_object *response;
         while (response = responses[responseIndex++]) {
             struct json_object *error;
             if (json_object_object_get_ex(response, "error", &error)) {
                 struct json_object *message =
                     json_object_object_get(error, "message");
-                STRPTR messageString = json_object_get_string(message);
+                UTF8 *messageString = json_object_get_string(message);
                 displayError(messageString);
                 set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
                 if (isAROS) {
@@ -1271,7 +1269,9 @@ static void sendChatMessage() {
                 if (currentConversation ==
                     currentConversation->messages->mlh_TailPred) {
                     currentConversation = NULL;
-                    DoMethod(chatOutputTextEditor, MUIM_TextEditor_ClearText);
+                    chatOutputTextEditorContents[0] = '\0';
+                    set(chatOutputTextEditor, MUIA_NFloattext_Text,
+                        chatOutputTextEditorContents);
                 } else {
                     displayConversation(currentConversation);
                 }
@@ -1287,38 +1287,44 @@ static void sendChatMessage() {
                 }
                 return;
             }
-            STRPTR contentString = getMessageContentFromJson(response, TRUE);
+
+            UTF8 *contentString = getMessageContentFromJson(response, TRUE);
             if (contentString != NULL) {
                 // Text for printing
-                formatText(contentString);
-                STRPTR formattedMessageSystemEncoded = CodesetsConvertStr(
-                    CSA_SourceCodeset, (Tag)utf8Codeset, CSA_DestCodeset,
-                    (Tag)systemCodeset, CSA_Source, (Tag)contentString,
-                    CSA_MapForeignChars, TRUE, TAG_DONE);
-                strncat(receivedMessage, contentString,
-                        READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
-                strncat(chatOutputTextEditorContents,
-                        formattedMessageSystemEncoded,
-                        WRITE_BUFFER_LENGTH -
-                            strlen(chatOutputTextEditorContents) - 1);
-                CodesetsFreeA(formattedMessageSystemEncoded, NULL);
-                if (++wordNumber % 50 == 0) {
-                    set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                        chatOutputTextEditorContents);
-                    if (config.speechEnabled) {
-                        // Text for speaking
-                        STRPTR unformattedMessageSystemEncoded =
-                            CodesetsConvertStr(
-                                CSA_SourceCodeset, (Tag)utf8Codeset,
-                                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                                (Tag)receivedMessage, CSA_MapForeignChars, TRUE,
-                                TAG_DONE);
-                        if (config.speechSystem != SPEECH_SYSTEM_OPENAI) {
-                            speakText(unformattedMessageSystemEncoded +
-                                      speechIndex);
+                if (strlen(contentString) > 0) {
+                    formatText(contentString);
+                    STRPTR formattedMessageSystemEncoded =
+                        CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
+                                          CSA_Source, (Tag)contentString,
+                                          CSA_MapForeignChars, TRUE, TAG_DONE);
+                    strncat(receivedMessage, contentString,
+                            READ_BUFFER_LENGTH - strlen(receivedMessage) -
+                                strlen(contentString) - 1);
+                    strncat(chatOutputTextEditorContents,
+                            formattedMessageSystemEncoded,
+                            WRITE_BUFFER_LENGTH -
+                                strlen(chatOutputTextEditorContents) -
+                                strlen(formattedMessageSystemEncoded) - 1);
+                    CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+                    if (++wordNumber % 50 == 0) {
+                        set(chatOutputTextEditor, MUIA_NFloattext_Text,
+                            chatOutputTextEditorContents);
+                        if (config.speechEnabled) {
+                            // Text for speaking
+                            STRPTR unformattedMessageSystemEncoded =
+                                CodesetsUTF8ToStr(
+                                    CSA_DestCodeset, (Tag)systemCodeset,
+                                    CSA_Source, (Tag)receivedMessage,
+                                    CSA_MapForeignChars, TRUE, TAG_DONE);
+                            if (config.speechSystem != SPEECH_SYSTEM_OPENAI) {
+                                speakText(unformattedMessageSystemEncoded +
+                                          speechIndex);
+                            }
+                            speechIndex =
+                                strlen(unformattedMessageSystemEncoded);
+                            CodesetsFreeA(unformattedMessageSystemEncoded,
+                                          NULL);
                         }
-                        speechIndex = strlen(unformattedMessageSystemEncoded);
-                        CodesetsFreeA(unformattedMessageSystemEncoded, NULL);
                     }
                 }
                 finishReason = json_object_get_string(
@@ -1345,10 +1351,9 @@ static void sendChatMessage() {
             if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
                 speakText(receivedMessage);
             } else {
-                STRPTR receivedMessageSystemEncoded = CodesetsConvertStr(
-                    CSA_SourceCodeset, (Tag)utf8Codeset, CSA_DestCodeset,
-                    (Tag)systemCodeset, CSA_Source, (Tag)receivedMessage,
-                    CSA_MapForeignChars, TRUE, TAG_DONE);
+                STRPTR receivedMessageSystemEncoded = CodesetsUTF8ToStr(
+                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                    (Tag)receivedMessage, CSA_MapForeignChars, TRUE, TAG_DONE);
                 speakText(receivedMessageSystemEncoded + speechIndex);
                 CodesetsFreeA(receivedMessageSystemEncoded, NULL);
             }
@@ -1383,7 +1388,7 @@ static void sendChatMessage() {
                 return;
             }
             if (responses[0] != NULL) {
-                STRPTR responseString =
+                UTF8 *responseString =
                     getMessageContentFromJson(responses[0], FALSE);
                 formatText(responseString);
                 if (currentConversation->name == NULL) {
@@ -1414,8 +1419,8 @@ static void sendChatMessage() {
  * @param text The text to add to the conversation
  * @param role The role of the text (user or assistant)
  **/
-static void addTextToConversation(struct Conversation *conversation,
-                                  STRPTR text, STRPTR role) {
+static void addTextToConversation(struct Conversation *conversation, UTF8 *text,
+                                  STRPTR role) {
     struct ConversationNode *conversationNode =
         AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
     if (conversationNode == NULL) {
@@ -1451,8 +1456,8 @@ static void displayConversation(struct Conversation *conversation) {
             return;
         }
         if (strcmp(conversationNode->role, "user") == 0) {
-            STRPTR content = conversationNode->content;
-            CONST UBYTE userStyleString[] = "\033r\033b\0333";
+            UTF8 *content = conversationNode->content;
+            const UBYTE userStyleString[] = "\033r\033b\0333";
             strncat(conversationString, userStyleString,
                     strlen(userStyleString));
             for (ULONG i = 0; i < strlen(content); i++) {
@@ -1462,7 +1467,7 @@ static void displayConversation(struct Conversation *conversation) {
                 }
             }
         } else if (strcmp(conversationNode->role, "assistant") == 0) {
-            CONST UBYTE assistantStyleString[] = "\n\n\033l\0332";
+            const UBYTE assistantStyleString[] = "\n\n\033l\0332";
             strncat(conversationString, assistantStyleString,
                     strlen(assistantStyleString));
             STRPTR formattedContent =
@@ -1470,16 +1475,15 @@ static void displayConversation(struct Conversation *conversation) {
             strncat(conversationString, formattedContent,
                     strlen(formattedContent));
             FreeVec(formattedContent);
-            CONST UBYTE messageSeparatorStyleString[] = "\n\n";
+            const UBYTE messageSeparatorStyleString[] = "\n\n";
             strncat(conversationString, messageSeparatorStyleString,
                     strlen(messageSeparatorStyleString));
         }
     }
 
-    STRPTR convertedConversationString = CodesetsConvertStr(
-        CSA_SourceCodeset, (Tag)utf8Codeset, CSA_DestCodeset,
-        (Tag)systemCodeset, CSA_Source, (Tag)conversationString,
-        CSA_MapForeignChars, TRUE, TAG_DONE);
+    STRPTR convertedConversationString = CodesetsUTF8ToStr(
+        CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+        (Tag)conversationString, CSA_MapForeignChars, TRUE, TAG_DONE);
 
     snprintf(conversationString, WRITE_BUFFER_LENGTH, "%s\0",
              convertedConversationString);
@@ -1841,7 +1845,7 @@ static LONG loadConversations() {
             return RETURN_ERROR;
         }
 
-        STRPTR conversationName =
+        UTF8 *conversationName =
             json_object_get_string(conversationNameJsonObject);
 
         struct json_object *messagesJsonArray;
@@ -1895,7 +1899,7 @@ static LONG loadConversations() {
                 json_object_put(conversationsJsonArray);
                 return RETURN_ERROR;
             }
-            STRPTR content = json_object_get_string(contentJsonObject);
+            UTF8 *content = json_object_get_string(contentJsonObject);
             addTextToConversation(conversation, content, role);
         }
         DoMethod(conversationListObject, MUIM_NList_InsertSingle, conversation,

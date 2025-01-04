@@ -1,11 +1,13 @@
 # Changelog
 
-## 2.2.0 (2025-01-02)
+## 2.2.0 (2025-01-04)
 
 - Support for ApolloOS
 - Image preview now works in MorphOS and in MUI 3 (AmigaGPT now has MCC_Guigfx as a prerequisite)
 - Replace MCC_TextEditor class with MCC_NFloattext for improved memory usage and compatibility with ApolloOS
 - Improved encoding to and from UTF-8 with enhanced character lookalike remapping (AmigaGPT now has codesets.library as a prerequisite)
+- Fix crash when the first data chunk received from OpenAI is smaller than the HTTP header
+- Fix crash when OpenAI sends a blank content string
 
 ## 2.1.2 (2024-12-31)
 

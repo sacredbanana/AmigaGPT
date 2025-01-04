@@ -1,3 +1,4 @@
+#include <libraries/codesets.h>
 #include "openai.h"
 #include "speech.h"
 

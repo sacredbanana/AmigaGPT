@@ -1,6 +1,8 @@
+#include <libraries/codesets.h>
 #include <proto/dos.h>
 
 #define READ_BUFFER_LENGTH 65536
+#define TEMP_READ_BUFFER_LENGTH READ_BUFFER_LENGTH / 2
 #define WRITE_BUFFER_LENGTH 131072
 #define RESPONSE_ARRAY_BUFFER_LENGTH 1024
 #define CHAT_SYSTEM_LENGTH 512
@@ -22,12 +24,12 @@ struct ConversationNode {
     /**
      * The text of the message
      **/
-    STRPTR content;
+    UTF8 *content;
 };
 
 struct Conversation {
     struct MinList *messages;
-    STRPTR name;
+    UTF8 *name;
 };
 
 /**

@@ -312,8 +312,15 @@ void addMenuActions() {
 
     Object clearMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_CLEAR);
-    DoMethod(clearMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
-             chatInputTextEditor, 1, MUIM_TextEditor_ClearText);
+    if (isAROS) {
+        DoMethod(clearMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+                 MUIV_EveryTime, chatInputTextEditor, 3, MUIM_Set,
+                 MUIA_String_Contents, "");
+    } else {
+        DoMethod(clearMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+                 MUIV_EveryTime, chatInputTextEditor, 1,
+                 MUIM_TextEditor_ClearText);
+    }
 
     Object selectAllMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_SELECT_ALL);

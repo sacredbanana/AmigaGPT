@@ -23,7 +23,6 @@
 #define OPENAI_PORT 443
 #define AUDIO_BUFFER_SIZE 4096
 #define MAX_CONNECTION_RETRIES 10
-#define TEMP_READ_BUFFER_LENGTH 8192
 
 static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
                                  CONST_STRPTR proxyHost, UWORD proxyPort,
@@ -607,6 +606,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
                                 FreeVec(responses);
                                 return NULL;
                             }
+                            continue;
                         } else {
                             responses[0] = json_tokener_parse(jsonString);
                             if (json_object_object_get_ex(responses[0], "error",
@@ -838,16 +838,16 @@ struct json_object *postImageCreationRequestToOpenAI(
         LONG err = 0;
         UBYTE statusMessage[64];
         UBYTE *tempReadBuffer =
-            AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+            AllocVec(TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 
         while (!doneReading) {
             DoMethod(loadingBar, MUIM_Busy_Move);
             if (useSSL) {
                 bytesRead =
-                    SSL_read(ssl, tempReadBuffer, TEMP_READ_BUFFER_LENGTH);
+                    SSL_read(ssl, tempReadBuffer, TEMP_READ_BUFFER_LENGTH - 1);
             } else {
                 bytesRead =
-                    recv(sock, tempReadBuffer, TEMP_READ_BUFFER_LENGTH, 0);
+                    recv(sock, tempReadBuffer, TEMP_READ_BUFFER_LENGTH - 1, 0);
             }
             snprintf(statusMessage, sizeof(statusMessage),
                      "Downloading image... (%lu bytes)", totalBytesRead);
