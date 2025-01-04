@@ -13,7 +13,7 @@
 struct Config config = {
     .speechEnabled = FALSE,
     .speechAccent = NULL,
-    .speechSystem = SPEECH_SYSTEM_34,
+    .speechSystem = SPEECH_SYSTEM_OPENAI,
     .speechFliteVoice = SPEECH_FLITE_VOICE_KAL,
     .speechSystem = SPEECH_SYSTEM_FLITE,
     .chatSystem = NULL,
@@ -182,7 +182,7 @@ LONG readConfig() {
 
 #ifdef __AMIGAOS3__
     if (config.speechSystem == SPEECH_SYSTEM_FLITE) {
-        config.speechSystem = SPEECH_SYSTEM_34;
+        config.speechSystem = SPEECH_SYSTEM_OPENAI;
     }
 #else
 #ifdef __AMIGAOS4__

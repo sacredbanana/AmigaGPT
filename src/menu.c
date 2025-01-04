@@ -373,25 +373,33 @@ void addMenuActions() {
 
     Object speechSystem34MenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_34);
-    set(speechSystem34MenuItem, MUIA_Menuitem_Checked,
-        config.speechSystem == SPEECH_SYSTEM_34);
-    DoMethod(speechSystem34MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE,
-             MUIV_Notify_Application, 3, MUIM_CallHook,
-             &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_34);
-    DoMethod(speechSystem34MenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
-             MUIA_Menuitem_Checked, TRUE);
+    if (isAROS) {
+        set(speechSystem34MenuItem, MUIA_Menuitem_Enabled, FALSE);
+    } else {
+        set(speechSystem34MenuItem, MUIA_Menuitem_Checked,
+            config.speechSystem == SPEECH_SYSTEM_34);
+        DoMethod(speechSystem34MenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+                 TRUE, MUIV_Notify_Application, 3, MUIM_CallHook,
+                 &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_34);
+        DoMethod(speechSystem34MenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+                 MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
+                 MUIA_Menuitem_Checked, TRUE);
+    }
 
     Object speechSystem37MenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_37);
-    set(speechSystem37MenuItem, MUIA_Menuitem_Checked,
-        config.speechSystem == SPEECH_SYSTEM_37);
-    DoMethod(speechSystem37MenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE,
-             MUIV_Notify_Application, 3, MUIM_CallHook,
-             &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_37);
-    DoMethod(speechSystem37MenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
-             MUIA_Menuitem_Checked, TRUE);
+    if (isAROS) {
+        set(speechSystem37MenuItem, MUIA_Menuitem_Enabled, FALSE);
+    } else {
+        set(speechSystem37MenuItem, MUIA_Menuitem_Checked,
+            config.speechSystem == SPEECH_SYSTEM_37);
+        DoMethod(speechSystem37MenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+                 TRUE, MUIV_Notify_Application, 3, MUIM_CallHook,
+                 &SpeechSystemMenuItemClickedHook, SPEECH_SYSTEM_37);
+        DoMethod(speechSystem37MenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+                 MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
+                 MUIA_Menuitem_Checked, TRUE);
+    }
 
     Object speechSystemFliteMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_FLITE);
