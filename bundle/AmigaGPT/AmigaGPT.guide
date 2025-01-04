@@ -890,6 +890,15 @@ The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E wi
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.2.0 (2025-01-04)@{ub}
+
+- Support for ApolloOS
+- Image preview now works in MorphOS and in MUI 3 (AmigaGPT now has MCC_Guigfx as a prerequisite)
+- Replace the chat output sections from MCC_TextEditor class to MCC_NFloattext for improved memory usage and compatibility with ApolloOS
+- Improved encoding to and from UTF-8 with enhanced character lookalike remapping (AmigaGPT now has codesets.library as a prerequisite)
+- Fix crash when the first data chunk received from OpenAI is smaller than the HTTP header
+- Fix crash when OpenAI sends a blank content string
+
 @{b}2.1.2 (2024-12-31)@{ub}
 
 - Fix bug where not all messages were being saved in a new conversation
