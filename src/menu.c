@@ -297,36 +297,53 @@ void addMenuActions() {
 
     Object cutMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_CUT);
-    DoMethod(cutMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
-             chatInputTextEditor, 2, MUIM_TextEditor_ARexxCmd, "Cut");
+    if (isAROS) {
+        set(cutMenuItem, MUIA_Menuitem_Enabled, FALSE);
+    } else {
+        DoMethod(cutMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+                 MUIV_EveryTime, chatInputTextEditor, 2,
+                 MUIM_TextEditor_ARexxCmd, "Cut");
+    }
 
     Object copyMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_COPY);
-    DoMethod(copyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
-             chatInputTextEditor, 2, MUIM_TextEditor_ARexxCmd, "Copy");
+    if (isAROS) {
+        set(copyMenuItem, MUIA_Menuitem_Enabled, FALSE);
+    } else {
+        DoMethod(copyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+                 MUIV_EveryTime, chatInputTextEditor, 2,
+                 MUIM_TextEditor_ARexxCmd, "Copy");
+    }
 
     Object pasteMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_PASTE);
-    DoMethod(pasteMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
-             chatInputTextEditor, 2, MUIM_TextEditor_ARexxCmd, "Paste");
+    if (isAROS) {
+        set(pasteMenuItem, MUIA_Menuitem_Enabled, FALSE);
+    } else {
+        DoMethod(pasteMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+                 MUIV_EveryTime, chatInputTextEditor, 2,
+                 MUIM_TextEditor_ARexxCmd, "Paste");
+    }
 
     Object clearMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_CLEAR);
     if (isAROS) {
+        set(clearMenuItem, MUIA_Menuitem_Enabled, FALSE);
+    } else {
         DoMethod(clearMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
                  MUIV_EveryTime, chatInputTextEditor, 3, MUIM_Set,
                  MUIA_String_Contents, "");
-    } else {
-        DoMethod(clearMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-                 MUIV_EveryTime, chatInputTextEditor, 1,
-                 MUIM_TextEditor_ClearText);
     }
 
     Object selectAllMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_SELECT_ALL);
-    DoMethod(selectAllMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, chatInputTextEditor, 2, MUIM_TextEditor_ARexxCmd,
-             "SelectAll");
+    if (isAROS) {
+        set(selectAllMenuItem, MUIA_Menuitem_Enabled, FALSE);
+    } else {
+        DoMethod(selectAllMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+                 MUIV_EveryTime, chatInputTextEditor, 2,
+                 MUIM_TextEditor_ARexxCmd, "SelectAll");
+    }
 
     Object muiSettingsMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
                                                   MENU_ITEM_VIEW_MUI_SETTINGS);
