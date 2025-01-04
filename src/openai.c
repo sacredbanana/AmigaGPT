@@ -552,16 +552,18 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
         BOOL doneReading = FALSE;
         LONG err = 0;
         UBYTE statusMessage[64];
-        UBYTE *tempReadBuffer =
-            AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+        UBYTE *tempReadBuffer = AllocVec(
+            useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
         while (!doneReading) {
             DoMethod(loadingBar, MUIM_Busy_Move);
             if (useSSL) {
                 bytesRead =
-                    SSL_read(ssl, tempReadBuffer, TEMP_READ_BUFFER_LENGTH);
+                    SSL_read(ssl, tempReadBuffer,
+                             useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1);
             } else {
                 bytesRead =
-                    recv(sock, tempReadBuffer, TEMP_READ_BUFFER_LENGTH, 0);
+                    recv(sock, tempReadBuffer,
+                         useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1, 0);
             }
             snprintf(statusMessage, sizeof(statusMessage),
                      "Downloading response...");
@@ -837,17 +839,19 @@ struct json_object *postImageCreationRequestToOpenAI(
         BOOL doneReading = FALSE;
         LONG err = 0;
         UBYTE statusMessage[64];
-        UBYTE *tempReadBuffer =
-            AllocVec(TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+        UBYTE *tempReadBuffer = AllocVec(
+            useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
 
         while (!doneReading) {
             DoMethod(loadingBar, MUIM_Busy_Move);
             if (useSSL) {
                 bytesRead =
-                    SSL_read(ssl, tempReadBuffer, TEMP_READ_BUFFER_LENGTH - 1);
+                    SSL_read(ssl, tempReadBuffer,
+                             useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1);
             } else {
                 bytesRead =
-                    recv(sock, tempReadBuffer, TEMP_READ_BUFFER_LENGTH - 1, 0);
+                    recv(sock, tempReadBuffer,
+                         useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1, 0);
             }
             snprintf(statusMessage, sizeof(statusMessage),
                      "Downloading image... (%lu bytes)", totalBytesRead);
@@ -1093,19 +1097,22 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
         LONG contentLength = 0;
         UBYTE *dataStart = NULL;
         BOOL headersRead = FALSE;
-        UBYTE *tempReadBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_CLEAR);
+        UBYTE *tempReadBuffer =
+            AllocVec(useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_CLEAR);
 
         while (!doneReading) {
             DoMethod(loadingBar, MUIM_Busy_Move);
             if (useSSL) {
                 bytesRead =
-                    SSL_read(ssl, tempReadBuffer, TEMP_READ_BUFFER_LENGTH);
+                    SSL_read(ssl, tempReadBuffer,
+                             useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1);
             } else {
                 bytesRead =
-                    recv(sock, tempReadBuffer, TEMP_READ_BUFFER_LENGTH, 0);
+                    recv(sock, tempReadBuffer,
+                         useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1, 0);
             }
             if (!headersRead) {
-                STRPTR httpResponse = strstr(readBuffer, "HTTP/1.1");
+                STRPTR httpResponse = strstr(tempReadBuffer, "HTTP/1.1");
                 if (httpResponse != NULL &&
                     strstr(httpResponse, "200 OK") == NULL) {
                     UBYTE error[256] = {0};
@@ -1475,9 +1482,13 @@ APTR postTextToSpeechRequestToOpenAI(
             DoMethod(loadingBar, MUIM_Busy_Move);
             memset(readBuffer, 0, READ_BUFFER_LENGTH);
             if (useSSL) {
-                bytesRead = SSL_read(ssl, readBuffer, TEMP_READ_BUFFER_LENGTH);
+                bytesRead =
+                    SSL_read(ssl, readBuffer,
+                             useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1);
             } else {
-                bytesRead = recv(sock, readBuffer, TEMP_READ_BUFFER_LENGTH, 0);
+                bytesRead =
+                    recv(sock, readBuffer,
+                         useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1, 0);
             }
             if (newChunkNeeded && bytesRead == 1)
                 continue;
