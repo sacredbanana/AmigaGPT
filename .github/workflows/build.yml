@@ -1,0 +1,32 @@
+name: Build
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  build_os3:
+    name: Build the AmigaOS 3 version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Build
+        run: CLEAN=1 ./build_os3.sh
+  build_os4:
+    name: Build the AmigaOS 4 version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Build
+        run: CLEAN=1 ./build_os4.sh
+  build_morphos:
+    name: Build the MorphOS version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Build
+        run: CLEAN=1 ./build_morphos.sh
