@@ -29,4 +29,4 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
       - name: Build
-        run: CLEAN=1 ./build_morphos.sh
+        run: docker run --rm -v ${PWD}:/work -e USER=$(id -u) -e GROUP=$(id -g) sacredbanana/amiga-compiler:ppc-morphos make -f Makefile.MorphOS
