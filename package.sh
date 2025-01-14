@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit on error
+set -e
+
 # Run build_os3.sh with CLEAN=1
 CLEAN=1 ./build_os3.sh
 
