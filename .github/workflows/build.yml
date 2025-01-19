@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y sudo apt install jlha-utils
+          sudo apt-get install -y jlha-utils
 
       - name: Build and package
         run: |
