@@ -20,7 +20,7 @@ jobs:
 
       - name: Build and package
         run: |
-          sudo ./package.sh
+          ./package.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
