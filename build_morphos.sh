@@ -12,4 +12,4 @@ fi
 docker run --rm \
 	-v ${PWD}:/work \
 	-e USER=$(id -u) -e GROUP=$(id -g) -e DEBUG=${DEBUG} \
-	-it sacredbanana/amiga-compiler:ppc-morphos make -f Makefile.MorphOS
+	sacredbanana/amiga-compiler:ppc-morphos make -f Makefile.MorphOS
