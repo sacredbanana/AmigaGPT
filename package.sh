@@ -28,6 +28,6 @@ cd bundle
 rm -f ../out/AmigaGPT.lha
 
 # Create LHA archive with verbose output
-lha a -v ../out/AmigaGPT.lha AmigaGPT AmigaGPT.info
+lha av ../out/AmigaGPT.lha AmigaGPT AmigaGPT.info
 
 rm -f AmigaGPT/AmigaGPT AmigaGPT/AmigaGPT.info AmigaGPT/AmigaGPT_OS4 AmigaGPT/AmigaGPT_OS4.info AmigaGPT/AmigaGPT_MorphOS AmigaGPT/AmigaGPT_MorphOS.info
