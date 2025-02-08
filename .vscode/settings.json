@@ -95,7 +95,8 @@
         "guigfx.h": "c",
         "guigfx_lib.h": "c",
         "datatypes.h": "c",
-        "guigfx_protos.h": "c"
+        "guigfx_protos.h": "c",
+        "sdi_hook.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

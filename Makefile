@@ -8,7 +8,21 @@ VPATH = $(subdirs)
 SOURCE_DIR = src
 BUILD_DIR = build/os3/obj
 BUNDLE_DIR = bundle
-CATALOG_DIR = $(BUNDLE_DIR)/$(PROGRAM_NAME)/catalogs
+CATALOG_DIR = $(BUNDLE_DIR)/AmigaGPT/catalogs
+CATALOG_DEFINITION = $(CATALOG_DIR)/amigagpt.cd
+catalog_translations := $(wildcard $(CATALOG_DIR)/*.ct)
+catalogs := $(patsubst %.ct,%.catalog,$(catalog_translations))
+cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
+cpp_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
+c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
+c_sources := $(filter-out $(SOURCE_DIR)/test/%, $(c_sources))
+c_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
+s_sources := $(wildcard *.s) $(wildcard $(addsuffix *.s,$(subdirs)))
+s_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.s,%.o,$(notdir $(s_sources))))
+vasm_sources := $(wildcard *.asm) $(wildcard $(addsuffix *.asm, $(subdirs)))
+vasm_objects := $(addprefix $(BUILD_DIR)/, $(patsubst %.asm,%.o,$(notdir $(vasm_sources))))
+objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
+
 AUTOGEN_FILE = $(SOURCE_DIR)/version.h
 AUTOGEN_NEXT = $(shell expr $$(awk '/#define BUILD_NUMBER/' $(AUTOGEN_FILE) | tr -cd "[0-9]") + 1)
 
@@ -30,31 +44,6 @@ SDKDIR = /opt/amiga/m68k-amigaos/sys-include
 NDKDIR = /opt/amiga/m68k-amigaos/ndk-include
 INCDIR = /opt/amiga/m68k-amigaos/include
 
-.PHONY: all clean copy_bundle_files
-
-all: $(EXECUTABLE_OUT) copy_bundle_files
-
-CATALOG_DEFINITION = $(CATALOG_DIR)/amigagpt.cd
-catalog_translations := $(wildcard $(CATALOG_DIR)/*.ct)
-catalogs := $(patsubst %.ct,%.catalog,$(catalog_translations))
-
-$(SOURCE_DIR)/amigagpt_cat.h:
-	@flexcat $(CATALOG_DEFINITION) $@=C_h.sd
-
-$(SOURCE_DIR)/amigagpt_cat.c:
-	@flexcat $(CATALOG_DEFINITION) $@=C_c.sd
-
-cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
-cpp_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
-c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
-c_sources := $(filter-out $(SOURCE_DIR)/test/%, $(c_sources))
-c_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
-s_sources := $(wildcard *.s) $(wildcard $(addsuffix *.s,$(subdirs)))
-s_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.s,%.o,$(notdir $(s_sources))))
-vasm_sources := $(wildcard *.asm) $(wildcard $(addsuffix *.asm, $(subdirs)))
-vasm_objects := $(addprefix $(BUILD_DIR)/, $(patsubst %.asm,%.o,$(notdir $(vasm_sources))))
-objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
-
 ifeq ($(OS),Darwin)
 	SED = sed -i "" 
 else
@@ -73,6 +62,24 @@ ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),
 LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui
 VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS3__  -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -I$(INCDIR) -I$(SDKDIR) -I$(NDKDIR)
 
+.PHONY: all clean copy_bundle_files
+
+all: $(EXECUTABLE_OUT) copy_bundle_files
+
+clean:
+	$(info Cleaning...)
+	@$(RM) $(SOURCE_DIR)/amigagpt_cat.h
+	@$(RM) $(SOURCE_DIR)/amigagpt_cat.c
+	@$(RM) $(CATALOG_DIR)/*.catalog
+	@$(RM) -f $(EXECUTABLE_OUT)
+	@$(RM) $(BUILD_DIR)/*
+
+$(SOURCE_DIR)/amigagpt_cat.h:
+	@flexcat $(CATALOG_DEFINITION) $@=C_h.sd
+
+$(SOURCE_DIR)/amigagpt_cat.c:
+	@flexcat $(CATALOG_DEFINITION) $@=C_c.sd
+
 $(BUILD_DIR):
 	@$(info Creating directory $@)
 	@mkdir -p $@
@@ -81,18 +88,13 @@ $(EXECUTABLE_DIR):
 	@$(info Creating directory $@)
 	@mkdir -p $@
 
-$(EXECUTABLE_OUT): $(EXECUTABLE_DIR) $(catalogs) $(objects)
+$(EXECUTABLE_OUT): $(EXECUTABLE_DIR) $(SOURCE_DIR)/amigagpt_cat.h $(SOURCE_DIR)/amigagpt_cat.c $(catalogs) $(objects)
 	$(info Linking $(PROGRAM_NAME))
 	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@ $(LDFLAGS) 
 
-clean:
-	$(info Cleaning...)
-	@$(RM) -f $(EXECUTABLE_OUT)
-	@$(RM) $(BUILD_DIR)/*
-
 -include $(objects:.o=.d)
 
-$(catalogs): $(CATALOG_DIR)/%.catalog : $(CATALOG_DIR)/%.ct | $(SOURCE_DIR)/amigagpt_cat.h $(SOURCE_DIR)/amigagpt_cat.c
+$(catalogs): $(CATALOG_DIR)/%.catalog : $(CATALOG_DIR)/%.ct
 	$(info Compiling catalog $<)
 	flexcat $(CATALOG_DEFINITION) $(CURDIR)/$< CATALOG $@
 
@@ -115,5 +117,5 @@ $(vasm_objects): $(BUILD_DIR)/%.o : %.asm | $(BUILD_DIR)
 
 copy_bundle_files:
 	$(info Copying bundle files...)
-	cp assets/AmigaGPT_OS3.info $(BUNDLE_DIR)/$(PROGRAM_NAME)/$(PROGRAM_NAME).info
-	cp -R $(BUNDLE_DIR)/$(PROGRAM_NAME)/* $(EXECUTABLE_DIR)/
+	cp assets/$(PROGRAM_NAME).info $(BUNDLE_DIR)/AmigaGPT/$(PROGRAM_NAME).info
+	cp -R $(BUNDLE_DIR)/AmigaGPT/* $(EXECUTABLE_DIR)/
