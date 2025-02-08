@@ -117,5 +117,5 @@ $(vasm_objects): $(BUILD_DIR)/%.o : %.asm | $(BUILD_DIR)
 
 copy_bundle_files:
 	$(info Copying bundle files...)
-	cp assets/$(PROGRAM_NAME).info $(BUNDLE_DIR)/AmigaGPT/$(PROGRAM_NAME).info
+	cp assets/AmigaGPT_OS3.info $(BUNDLE_DIR)/AmigaGPT/$(PROGRAM_NAME).info
 	cp -R $(BUNDLE_DIR)/AmigaGPT/* $(EXECUTABLE_DIR)/
