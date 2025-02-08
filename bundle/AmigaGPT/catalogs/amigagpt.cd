@@ -1,0 +1,9 @@
+#language english
+#version 0
+;   This defines a string and the ID which allows to use it.
+;   The number 4 says, that this string must not be shorter than
+;   4 characters.
+msgHello (/4/)
+Hello, world!
+msgBye (/0/)
+Bye, world!
