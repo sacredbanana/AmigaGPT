@@ -97,7 +97,10 @@
         "datatypes.h": "c",
         "guigfx_protos.h": "c",
         "sdi_hook.h": "c",
-        "locale.h": "c"
+        "locale.h": "c",
+        "locale_protos.h": "c",
+        "amigagpt_cat.h": "c",
+        "iffparse.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

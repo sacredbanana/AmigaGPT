@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <workbench/startup.h>
-#include "amigagpt_cat.h"
+#include "AmigaGPT_cat.h"
 #include "gui.h"
 #include "config.h"
 

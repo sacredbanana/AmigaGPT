@@ -6,7 +6,10 @@
 set -e
 
 if [[ "${CLEAN}" == "1" ]]; then
-	rm -rf build
+	docker run --rm \
+	-v ${PWD}:/work \
+	-e USER=$(id -u) -e GROUP=$(id -g) -e DEBUG=${DEBUG} \
+	sacredbanana/amiga-compiler:ppc-morphos make -f Makefile.MorphOS clean
 fi
 
 docker run --rm \

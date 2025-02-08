@@ -10,14 +10,14 @@ SOURCE_DIR = src
 BUILD_DIR = build/os4/obj
 BUNDLE_DIR = bundle
 CATALOG_DIR = $(BUNDLE_DIR)/AmigaGPT/catalogs
-CATALOG_DEFINITION = $(CATALOG_DIR)/amigagpt.cd
+CATALOG_DEFINITION = $(CATALOG_DIR)/AmigaGPT.cd
 catalog_subdirs := $(wildcard $(CATALOG_DIR)/*/)
 catalog_translations := $(wildcard $(addsuffix *.ct,$(catalog_subdirs)))
 temp_catalog_translations := $(addprefix $(BUILD_DIR)/,$(notdir $(catalog_translations)))
-catalogs := $(patsubst %.ct,%.catalog,$(catalog_translations))
+catalogs := $(catalog_subdirs)AmigaGPT.catalog
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
 cpp_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
-c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
+c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs))) $(SOURCE_DIR)/AmigaGPT_cat.c
 c_sources := $(filter-out $(SOURCE_DIR)/test/%, $(c_sources))
 c_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
 s_sources := $(wildcard *.s) $(wildcard $(addsuffix *.s,$(subdirs)))
@@ -71,16 +71,16 @@ all: $(EXECUTABLE_OUT) copy_bundle_files
 
 clean:
 	$(info Cleaning...)
-	$(RM) $(SOURCE_DIR)/amigagpt_cat.*
+	$(RM) $(SOURCE_DIR)/AmigaGPT_cat.*
 	$(RM) $(catalogs)
 	$(RM) -dr $(BUILD_DIR)
 
-$(SOURCE_DIR)/amigagpt_cat.h: $(CATALOG_DEFINITION)
+$(SOURCE_DIR)/AmigaGPT_cat.h: $(CATALOG_DEFINITION)
 	$(info Generating catalog header)
 	@$(RM) $@
 	flexcat $< $@=C_h.sd
 
-$(SOURCE_DIR)/amigagpt_cat.c: $(CATALOG_DEFINITION)
+$(SOURCE_DIR)/AmigaGPT_cat.c: $(CATALOG_DEFINITION)
 	$(info Generating catalog source)
 	@$(RM) $@
 	flexcat $< $@=C_c.sd
@@ -108,7 +108,7 @@ $(temp_catalog_translations): $(catalog_translations) $(CATALOG_DEFINITION)
 	flexcat $(CATALOG_DEFINITION) $< NEWCTFILE $<
 	@cp $< $@
 
-$(catalogs): %.catalog : %.ct | $(SOURCE_DIR)/amigagpt_cat.h $(SOURCE_DIR)/amigagpt_cat.c $(temp_catalog_translations)
+$(catalogs): $(temp_catalog_translations)
 	$(info Compiling catalogs $<)
 	$(RM) $@
 	flexcat $(CATALOG_DEFINITION) $< CATALOG $@
@@ -117,7 +117,7 @@ $(cpp_objects): $(BUILD_DIR)/%.o : %.cpp | $(BUILD_DIR)/%.dir
 	$(info Compiling $<)
 	$(CC) $(CPPFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(c_objects): $(BUILD_DIR)/%.o : %.c
+$(c_objects): $(BUILD_DIR)/%.o : %.c | $(SOURCE_DIR)/AmigaGPT_cat.h $(SOURCE_DIR)/AmigaGPT_cat.c
 	$(info Compiling $<)
 	@$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<

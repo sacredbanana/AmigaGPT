@@ -5,7 +5,7 @@ bundle/AmigaGPT/AmigaGPT.info
 bundle/AmigaGPT/AmigaGPT_OS4.info
 bundle/AmigaGPT/AmigaGPT_MorphOS.info
 bundle/AmigaGPT/catalogs/*/*.catalog
-src/amigagpt_cat.*
+src/AmigaGPT_cat.*
 src/test/build
 src/test/openai-key.h
 
