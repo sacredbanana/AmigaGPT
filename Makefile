@@ -10,7 +10,9 @@ BUILD_DIR = build/os3/obj
 BUNDLE_DIR = bundle
 CATALOG_DIR = $(BUNDLE_DIR)/AmigaGPT/catalogs
 CATALOG_DEFINITION = $(CATALOG_DIR)/amigagpt.cd
-catalog_translations := $(wildcard $(CATALOG_DIR)/*.ct)
+catalog_subdirs := $(wildcard $(CATALOG_DIR)/*/)
+catalog_translations := $(wildcard $(addsuffix *.ct,$(catalog_subdirs)))
+temp_catalog_translations := $(addprefix $(BUILD_DIR)/,$(notdir $(catalog_translations)))
 catalogs := $(patsubst %.ct,%.catalog,$(catalog_translations))
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
 cpp_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
@@ -68,50 +70,62 @@ all: $(EXECUTABLE_OUT) copy_bundle_files
 
 clean:
 	$(info Cleaning...)
-	@$(RM) $(SOURCE_DIR)/amigagpt_cat.h
-	@$(RM) $(SOURCE_DIR)/amigagpt_cat.c
-	@$(RM) $(CATALOG_DIR)/*.catalog
-	@$(RM) -f $(EXECUTABLE_OUT)
-	@$(RM) $(BUILD_DIR)/*
+	$(RM) $(SOURCE_DIR)/amigagpt_cat.*
+	$(RM) $(catalogs)
+	$(RM) -dr $(BUILD_DIR)
 
-$(SOURCE_DIR)/amigagpt_cat.h:
-	@flexcat $(CATALOG_DEFINITION) $@=C_h.sd
+$(SOURCE_DIR)/amigagpt_cat.h: $(CATALOG_DEFINITION)
+	$(info Generating catalog header)
+	@$(RM) $@
+	flexcat $< $@=C_h.sd
 
-$(SOURCE_DIR)/amigagpt_cat.c:
-	@flexcat $(CATALOG_DEFINITION) $@=C_c.sd
+$(SOURCE_DIR)/amigagpt_cat.c: $(CATALOG_DEFINITION)
+	$(info Generating catalog source)
+	@$(RM) $@
+	flexcat $< $@=C_c.sd
 
 $(BUILD_DIR):
 	@$(info Creating directory $@)
-	@mkdir -p $@
+	mkdir -p $@
 
 $(EXECUTABLE_DIR):
 	@$(info Creating directory $@)
-	@mkdir -p $@
+	mkdir -p $@
 
-$(EXECUTABLE_OUT): $(EXECUTABLE_DIR) $(SOURCE_DIR)/amigagpt_cat.h $(SOURCE_DIR)/amigagpt_cat.c $(catalogs) $(objects)
+$(EXECUTABLE_OUT): $(EXECUTABLE_DIR) $(BUILD_DIR) $(catalogs) $(objects)
 	$(info Linking $(PROGRAM_NAME))
+	@$(RM) $@
 	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@ $(LDFLAGS) 
 
 -include $(objects:.o=.d)
 
-$(catalogs): $(CATALOG_DIR)/%.catalog : $(CATALOG_DIR)/%.ct
-	$(info Compiling catalog $<)
-	flexcat $(CATALOG_DEFINITION) $(CURDIR)/$< CATALOG $@
+$(temp_catalog_translations): $(catalog_translations) $(CATALOG_DEFINITION)
+	$(info Copying catalog translations)
+	$(RM) $@
+# Allow it to fail the first time as the file may receive automatic adjustments
+	-@flexcat $(CATALOG_DEFINITION) $< NEWCTFILE $<
+	flexcat $(CATALOG_DEFINITION) $< NEWCTFILE $<
+	@cp $< $@
 
-$(cpp_objects) : $(BUILD_DIR)/%.o : %.cpp | $(BUILD_DIR)/%.dir
+$(catalogs): %.catalog : %.ct | $(SOURCE_DIR)/amigagpt_cat.h $(SOURCE_DIR)/amigagpt_cat.c $(temp_catalog_translations)
+	$(info Compiling catalogs $<)
+	$(RM) $@
+	flexcat $(CATALOG_DEFINITION) $< CATALOG $@
+
+$(cpp_objects): $(BUILD_DIR)/%.o : %.cpp | $(BUILD_DIR)/%.dir
 	$(info Compiling $<)
 	$(CC) $(CPPFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(c_objects) : $(BUILD_DIR)/%.o : %.c | $(BUILD_DIR)
+$(c_objects): $(BUILD_DIR)/%.o : %.c
 	$(info Compiling $<)
-	$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
+	@$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(s_objects): $(BUILD_DIR)/%.o : %.s | $(BUILD_DIR)
+$(s_objects): $(BUILD_DIR)/%.o : %.s
 	$(info Assembling $<)
 	$(CC) $(CCFLAGS) $(ASFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(vasm_objects): $(BUILD_DIR)/%.o : %.asm | $(BUILD_DIR)
+$(vasm_objects): $(BUILD_DIR)/%.o : %.asm
 	$(info Assembling $<)
 	$(VASM) $(VASMFLAGS) -o $@ $(CURDIR)/$<
 
