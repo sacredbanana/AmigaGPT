@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-17 12:46+0000\n"
+"POT-Creation-Date: 2025-02-17 12:53+0000\n"
 "PO-Revision-Date: 2025-02-17 06:16+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -590,132 +590,19 @@ msgctxt "STRING_ERROR_STARTUP_OPTIONS (86//)"
 msgid "Could not create startupOptionsWindowObject\n"
 msgstr ""
 
-#: src/config.c:11
-msgid "american.accent"
-msgstr ""
-
-#: src/config.c:45 src/config.c:135
-msgid "config.json"
-msgstr ""
-
 #: src/config.c:47
-#, c-format
-msgid "Failed to open the config file\n"
-msgstr ""
-
-#: src/config.c:53 src/config.c:172
-msgid "speechEnabled"
-msgstr ""
-
-#: src/config.c:55 src/config.c:178
-msgid "speechSystem"
-msgstr ""
-
-#: src/config.c:57 src/config.c:209
-msgid "speechAccent"
-msgstr ""
-
-#: src/config.c:61 src/config.c:224
-msgid "speechFliteVoice"
-msgstr ""
-
-#: src/config.c:63 src/config.c:234
-msgid "chatSystem"
-msgstr ""
-
-#: src/config.c:67 src/config.c:244
-msgid "chatModel"
-msgstr ""
-
-#: src/config.c:71 src/config.c:257
-msgid "imageSizeDallE2"
-msgstr ""
-
-#: src/config.c:73 src/config.c:263
-msgid "imageSizeDallE3"
-msgstr ""
-
-#: src/config.c:75 src/config.c:269
-msgid "openAITTSModel"
-msgstr ""
-
-#: src/config.c:77 src/config.c:275
-msgid "openAITTSVoice"
-msgstr ""
-
-#: src/config.c:79 src/config.c:285
-msgid "openAiApiKey"
-msgstr ""
-
-#: src/config.c:83 src/config.c:296
-msgid "chatModelSetVersion"
-msgstr ""
-
-#: src/config.c:85 src/config.c:309
-msgid "imageModelSetVersion"
-msgstr ""
-
-#: src/config.c:87 src/config.c:322
-msgid "speechSystemSetVersion"
-msgstr ""
-
-#: src/config.c:89 src/config.c:343
-msgid "openAITTSModelSetVersion"
-msgstr ""
-
-#: src/config.c:91 src/config.c:356
-msgid "openAITTSVoiceSetVersion"
-msgstr ""
-
-#: src/config.c:93 src/config.c:369
-msgid "proxyEnabled"
-msgstr ""
-
-#: src/config.c:95 src/config.c:382
-msgid "proxyHost"
-msgstr ""
-
-#: src/config.c:99 src/config.c:392
-msgid "proxyPort"
-msgstr ""
-
-#: src/config.c:101 src/config.c:400
-msgid "proxyUsesSSL"
-msgstr ""
-
-#: src/config.c:104 src/config.c:408
-msgid "proxyRequiresAuth"
-msgstr ""
-
-#: src/config.c:106 src/config.c:422
-msgid "proxyUsername"
-msgstr ""
-
-#: src/config.c:110 src/config.c:438
-msgid "proxyPassword"
-msgstr ""
-
-#: src/config.c:119
-#, c-format
-msgid "Failed to write the data to the config file\n"
-msgstr ""
-
-#: src/config.c:156
-#, c-format
+msgctxt "STRING_ERROR_CONFIG_FILE_READ (87//)"
 msgid "Failed to read the config file\n"
 msgstr ""
 
+#: src/config.c:119
+msgctxt "STRING_ERROR_CONFIG_FILE_WRITE (88//)"
+msgid "Failed to write the data to the config file\n"
+msgstr ""
+
 #: src/config.c:166
-#, c-format
+msgctxt "STRING_ERROR_CONFIG_FILE_PARSE (89//)"
 msgid "Failed to parse the config file\n"
-msgstr ""
-
-#: src/config.c:246 src/openai.c:472 src/openai.c:793 src/openai.c:1419
-msgid "model"
-msgstr ""
-
-#: src/gui.c:76
-msgid "muimaster.library"
 msgstr ""
 
 #: src/gui.c:77
@@ -2124,7 +2011,7 @@ msgid "prompt"
 msgstr ""
 
 #: src/MainWindow.c:1684 src/MainWindow.c:1966 src/config.c:69 src/config.c:251
-#: src/MainWindow.c:1683 src/MainWindow.c:1965
+#: src/MainWindow.c:1683 src/MainWindow.c:1965 src/config.c:70 src/config.c:252
 msgid "imageModel"
 msgstr ""
 
@@ -2179,4 +2066,112 @@ msgstr ""
 
 #: src/StartupOptionsWindow.c:126
 msgid "Screen to open:"
+msgstr ""
+
+#: src/config.c:12
+msgid "american.accent"
+msgstr ""
+
+#: src/config.c:46 src/config.c:136
+msgid "config.json"
+msgstr ""
+
+#: src/config.c:54 src/config.c:173
+msgid "speechEnabled"
+msgstr ""
+
+#: src/config.c:56 src/config.c:179
+msgid "speechSystem"
+msgstr ""
+
+#: src/config.c:58 src/config.c:210
+msgid "speechAccent"
+msgstr ""
+
+#: src/config.c:62 src/config.c:225
+msgid "speechFliteVoice"
+msgstr ""
+
+#: src/config.c:64 src/config.c:235
+msgid "chatSystem"
+msgstr ""
+
+#: src/config.c:68 src/config.c:245
+msgid "chatModel"
+msgstr ""
+
+#: src/config.c:72 src/config.c:258
+msgid "imageSizeDallE2"
+msgstr ""
+
+#: src/config.c:74 src/config.c:264
+msgid "imageSizeDallE3"
+msgstr ""
+
+#: src/config.c:76 src/config.c:270
+msgid "openAITTSModel"
+msgstr ""
+
+#: src/config.c:78 src/config.c:276
+msgid "openAITTSVoice"
+msgstr ""
+
+#: src/config.c:80 src/config.c:286
+msgid "openAiApiKey"
+msgstr ""
+
+#: src/config.c:84 src/config.c:297
+msgid "chatModelSetVersion"
+msgstr ""
+
+#: src/config.c:86 src/config.c:310
+msgid "imageModelSetVersion"
+msgstr ""
+
+#: src/config.c:88 src/config.c:323
+msgid "speechSystemSetVersion"
+msgstr ""
+
+#: src/config.c:90 src/config.c:344
+msgid "openAITTSModelSetVersion"
+msgstr ""
+
+#: src/config.c:92 src/config.c:357
+msgid "openAITTSVoiceSetVersion"
+msgstr ""
+
+#: src/config.c:94 src/config.c:370
+msgid "proxyEnabled"
+msgstr ""
+
+#: src/config.c:96 src/config.c:383
+msgid "proxyHost"
+msgstr ""
+
+#: src/config.c:100 src/config.c:393
+msgid "proxyPort"
+msgstr ""
+
+#: src/config.c:102 src/config.c:401
+msgid "proxyUsesSSL"
+msgstr ""
+
+#: src/config.c:105 src/config.c:409
+msgid "proxyRequiresAuth"
+msgstr ""
+
+#: src/config.c:107 src/config.c:423
+msgid "proxyUsername"
+msgstr ""
+
+#: src/config.c:111 src/config.c:439
+msgid "proxyPassword"
+msgstr ""
+
+#: src/config.c:247 src/openai.c:472 src/openai.c:793 src/openai.c:1419
+msgid "model"
+msgstr ""
+
+#: src/gui.c:76
+msgid "muimaster.library"
 msgstr ""

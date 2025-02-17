@@ -6,6 +6,7 @@
 #include <json-c/json.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
+#include "AmigaGPT_cat.h"
 #include "config.h"
 
 #define DEFAULT_ACCENT "american.accent"
@@ -44,7 +45,7 @@ struct Config config = {
 LONG writeConfig() {
     BPTR file = Open(PROGDIR "config.json", MODE_NEWFILE);
     if (file == 0) {
-        printf("Failed to open the config file\n");
+        printf(STRING_ERROR_CONFIG_FILE_READ);
         return RETURN_ERROR;
     }
 
@@ -116,7 +117,7 @@ LONG writeConfig() {
 
     if (Write(file, configJsonString, strlen(configJsonString)) !=
         strlen(configJsonString)) {
-        printf("Failed to write the data to the config file\n");
+        printf(STRING_ERROR_CONFIG_FILE_WRITE);
         Close(file);
         json_object_put(configJsonObject);
         return RETURN_ERROR;
@@ -153,7 +154,7 @@ LONG readConfig() {
 #endif
     STRPTR configJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
     if (Read(file, configJsonString, fileSize) != fileSize) {
-        printf("Failed to read the config file\n");
+        printf(STRING_ERROR_CONFIG_FILE_READ);
         Close(file);
         FreeVec(configJsonString);
         return RETURN_ERROR;
@@ -163,7 +164,7 @@ LONG readConfig() {
 
     struct json_object *configJsonObject = json_tokener_parse(configJsonString);
     if (configJsonObject == NULL) {
-        printf("Failed to parse the config file\n");
+        printf(STRING_ERROR_CONFIG_FILE_PARSE);
         FreeVec(configJsonString);
         return RETURN_ERROR;
     }
