@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-17 07:45+0000\n"
+"POT-Creation-Date: 2025-02-17 08:52+0000\n"
 "PO-Revision-Date: 2025-02-17 06:16+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -23,7 +23,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/main.c:64 src/main.c:65 src/main.c:66 src/main.c:63
+#: src/main.c:64 src/main.c:65 src/main.c:66 src/main.c:63 src/main.c:62
 msgid "minotaurcreative.net"
 msgstr ""
 
@@ -58,21 +58,18 @@ msgid "Failed to open OpenAI connector."
 msgstr ""
 
 #: src/main.c:51
-#, fuzzy
 msgctxt "STRING_WARNING_STACK (5//)"
 msgid ""
 "Warning: The stack size of %ld bytes is too small. The minimum recommended "
 "stack size is 32768 bytes to avoid crashes.\n"
 msgstr ""
-"Warning: The stack size of %ld bytes is too small. The minimum recommended "
-"stack size is 32768 bytes to avoid crashes.\n"
 
-#: src/main.c:15
-#, fuzzy
+#: src/main.c:15 src/main.c:14
 msgid "$STACK: 32768"
-msgstr "tet"
+msgstr ""
 
 #: src/APIKeyRequesterWindow.c:40
+msgctxt "STRING_API_KEY_REQUESTER_TITLE (6//)"
 msgid "Open AI API Key"
 msgstr ""
 
@@ -81,6 +78,7 @@ msgid "c"
 msgstr ""
 
 #: src/APIKeyRequesterWindow.c:46
+msgctxt "STRING_API_KEY_REQUESTER_BODY (7//)"
 msgid ""
 "Type or paste (Right-Amiga + V) your OpenAI API key here.\n"
 "This key is required to use the OpenAI API.\n"
@@ -91,41 +89,48 @@ msgstr ""
 #: src/APIKeyRequesterWindow.c:53 src/ChatSystemRequesterWindow.c:52
 #: src/ProxySettingsRequesterWindow.c:147 src/StartupOptionsWindow.c:129
 #: src/menu.c:39
+msgctxt "STRING_OK (8//)"
 msgid "OK"
 msgstr ""
 
 #: src/APIKeyRequesterWindow.c:58 src/ChatSystemRequesterWindow.c:57
 #: src/ProxySettingsRequesterWindow.c:152
+msgctxt "STRING_CANCEL (9//)"
 msgid "Cancel"
 msgstr ""
 
 #: src/APIKeyRequesterWindow.c:66
+msgctxt "STRING_ERROR_API_KEY_REQUESTER (10//)"
 msgid "Could not create API key requester window"
 msgstr ""
 
-#: src/AboutAmigaGPTWindow.c:15
+#: src/AboutAmigaGPTWindow.c:15 src/AboutAmigaGPTWindow.c:16
 msgid " ("
 msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:16
+msgctxt "STRING_GIT_COMMIT (11//)"
 msgid ""
 ")\n"
 "Git commit: "
 msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:17
+msgctxt "STRING_GIT_BRANCH (12//)"
 msgid ""
 "\n"
 "Git branch: "
 msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:17
+msgctxt "STRING_GIT_COMMIT_TIMESTAMP (13//)"
 msgid ""
 "\n"
 "Commit timestamp: "
 msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:20
+msgctxt "STRING_ABOUT_WINDOW_BODY (14//)"
 msgid ""
 "This app will always remain free but if you would like to support me you can "
 "do so at https://paypal.me/sacredbanana\n"
@@ -194,11 +199,12 @@ msgid ""
 "\thttps://eab.abime.net/showthread.php?t=114798\n"
 msgstr ""
 
-#: src/AboutAmigaGPTWindow.c:85
+#: src/AboutAmigaGPTWindow.c:85 src/AboutAmigaGPTWindow.c:19
 msgid "https://github.com/sacredbanana/AmigaGPT"
 msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:87
+msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (15//)"
 msgid "Visit the GitHub repository for the latest release"
 msgstr ""
 
@@ -2053,4 +2059,91 @@ msgstr ""
 #. No output operands
 #: src/speech.c:431 src/AmigaGPT_cat.c:54
 msgid "g"
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:16
+msgid ""
+")\n"
+"Git commit: "
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:17
+msgid ""
+"\n"
+"Git branch: "
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:17
+msgid ""
+"\n"
+"Commit timestamp: "
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:20
+msgid ""
+"This app will always remain free but if you would like to support me you can "
+"do so at https://paypal.me/sacredbanana\n"
+"\n"
+"Click the version string above for build details.\n"
+"\n"
+"b%pn\n"
+"\tiCameron Armstrongn\n"
+"\t(@sacredbanana on GitHub, YouTube and Twitter, @Nightfox on EAB)\n"
+"\n"
+"b%In\n"
+"\tiMauricio Sandovaln\n"
+"\n"
+"b%Tn\n"
+"\tiBebbon\n"
+"\tfor creating the Amiga GCC toolchain\n"
+"\thttps://github.com/bebbo\n"
+"\n"
+"\tiOpenAIn\n"
+"\tfor creating the GPT and DALL-E models\n"
+"\n"
+"\tiEABn\n"
+"\tfor being a great community!\n"
+"\n"
+"\tiJan Zahurancikn\n"
+"\tfor all the thorough testing, bundling AmigaGPT into AmiKit and for all "
+"the moral support\n"
+"\thttps://www.amikit.amiga.sk\n"
+"\n"
+"\tiCoffinOSn\n"
+"\tfor bundling AmigaGPT into CoffinOS\n"
+"\thttps://getcoffin.net\n"
+"\n"
+"\tiAmiga Future Magazinen\n"
+"\tfor reviewing AmigaGPT and publishing several of its updates in the News "
+"from Aminet section\n"
+"\thttps://www.amigafuture.de\n"
+"\n"
+"\tiWhatIFF? Magazinen\n"
+"\tfor reviewing AmigaGPT and interviewing me in issue 14\n"
+"\thttps://www.whatiff.info\n"
+"\n"
+"\tiDan Woodn\n"
+"\tfor reviewing AmigaGPT on his YouTube channel\n"
+"\thttps://www.youtube.com/watch?v=-OA28r8Up5U\n"
+"\n"
+"\tiProteque-CBNn\n"
+"\tfor reviewing AmigaGPT on his YouTube channel\n"
+"\thttps://www.youtube.com/watch?v=t3q8HQ6wrnw\n"
+"\n"
+"\tiAmigaBilln\n"
+"\tfor covering AmigaGPT in the Amiga News section on his Twitch streams and "
+"allowing me to join his stream to promote it\n"
+"\thttps://www.twitch.tv/amigabill\n"
+"\n"
+"\tiLes Docsn\n"
+"\tfor making a video review and giving a tutorial on how to add support for "
+"the French accent\n"
+"\thttps://www.youtube.com/watch?v=BV5Fq1PresE\n"
+"\n"
+"bLicensen\n"
+"\tMIT\n"
+"\n"
+"b%Wn\n"
+"\thttps://github.com/sacredbanana/AmigaGPT/issues\n"
+"\thttps://eab.abime.net/showthread.php?t=114798\n"
 msgstr ""

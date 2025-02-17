@@ -83,8 +83,7 @@ LONG createAboutAmigaGPTWindow() {
          "\thttps://github.com/sacredbanana/AmigaGPT/issues\n"
          "\thttps://eab.abime.net/showthread.php?t=114798\n",
          MUIA_Aboutbox_URL, "https://github.com/sacredbanana/AmigaGPT",
-         MUIA_Aboutbox_URLText,
-         "Visit the GitHub repository for the latest release", End)) {
+         MUIA_Aboutbox_URLText, STRING_ERROR_API_KEY_REQUESTER, End)) {
         DoMethod(aboutAmigaGPTWindowObject, MUIM_Notify,
                  MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 3, MUIM_Set,
                  MUIA_Window_Open, FALSE);

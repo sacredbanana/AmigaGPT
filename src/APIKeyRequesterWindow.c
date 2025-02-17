@@ -37,25 +37,26 @@ MakeHook(APIKeyRequesterOkButtonClickedHook,
 LONG createAPIKeyRequesterWindow() {
     Object *apiKeyRequesterOkButton, *apiKeyRequesterCancelButton;
     if ((apiKeyRequesterWindowObject = WindowObject,
-            MUIA_Window_Title, "Open AI API Key",
+            MUIA_Window_Title, STRING_API_KEY_REQUESTER_TITLE,
             MUIA_Window_Width, 800,
             MUIA_Window_Height, 200, 
             WindowContents, VGroup,
                 Child, TextObject,
                     MUIA_Text_PreParse, "\33c",
-                    MUIA_Text_Contents,  "Type or paste (Right-Amiga + V) your OpenAI API key here.\nThis key is required to use the OpenAI API.\nIf you do not have an API key, consult the AmigaGPT documentation for instructions on how to obtain one.",
+                    MUIA_Text_Contents,  STRING_API_KEY_REQUESTER_BODY
+                    ,
                 End,
                 Child, apiKeyRequesterString = TextEditorObject,
                     MUIA_CycleChain, TRUE,
                     MUIA_TextEditor_Contents, config.openAiApiKey,
                 End,
                 Child, HGroup,
-                    Child, apiKeyRequesterOkButton = MUI_MakeObject(MUIO_Button, "OK",
+                    Child, apiKeyRequesterOkButton = MUI_MakeObject(MUIO_Button, STRING_OK,
                         MUIA_Background, MUII_FILL,
                         MUIA_CycleChain, TRUE,
                         MUIA_InputMode, MUIV_InputMode_RelVerify,
                     End,
-                    Child, apiKeyRequesterCancelButton = MUI_MakeObject(MUIO_Button, "Cancel",
+                    Child, apiKeyRequesterCancelButton = MUI_MakeObject(MUIO_Button, STRING_CANCEL,
                         MUIA_Background, MUII_FILL,
                         MUIA_CycleChain, TRUE,
                         MUIA_InputMode, MUIV_InputMode_RelVerify,
@@ -63,7 +64,7 @@ LONG createAPIKeyRequesterWindow() {
                 End,
             End,
         End) == NULL) {
-        displayError("Could not create API key requester window");
+        displayError(STRING_ERROR_API_KEY_REQUESTER);
         return RETURN_ERROR;
     }
     DoMethod(apiKeyRequesterOkButton, MUIM_Notify, MUIA_Pressed, FALSE,

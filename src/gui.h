@@ -11,6 +11,7 @@
 #include <proto/graphics.h>
 #include <proto/intuition.h>
 #include <proto/muimaster.h>
+#include "AmigaGPT_cat.h"
 
 /**
  *  The object IDs for the GUI

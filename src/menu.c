@@ -36,7 +36,7 @@ HOOKPROTONHNONP(AboutAmigaGPTMenuItemClickedFunc, void) {
             "YouTube and Twitter, @Nightfox on EAB)\n\n"
             "This app will always remain free but if you would like to\n"
             "support me you can do so at https://paypal.me/sacredbanana",
-            "OK"};
+            STRING_OK};
         ULONG flags = IDCMP_RAWKEY | IDCMP_MOUSEBUTTONS;
         EasyRequest(mainWindow, &aboutRequester, &flags, NULL);
     }

@@ -126,7 +126,7 @@ LONG createStartupOptionsWindow() {
           MUIA_Frame, MUIV_Frame_Group, MUIA_FrameTitle,
           "Screen to open:", MUIA_HelpNode, "radioButton", MUIA_Radio_Entries,
           radioButtonOptions, End, Child, MUI_MakeObject(MUIO_HBar, 10), Child,
-          startupOptionsOkButton = MUI_MakeObject(MUIO_Button, "OK"), End,
+          startupOptionsOkButton = MUI_MakeObject(MUIO_Button, STRING_OK), End,
           End)) {
         displayError("Could not create startupOptionsWindowObject\n");
         return RETURN_ERROR;

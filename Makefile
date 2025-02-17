@@ -80,10 +80,10 @@ create_catalog:
 	@xgettext -a -c -L C -j -o $(CATALOG_DEFINITION) $(SOURCE_DIR)/*.c
 
 	$(info Generating catalog header)
-	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.h=C_h.sd || true
+	flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.h=C_h.sd || true
 
 	$(info Generating catalog source)
-	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.c=C_c.sd || true
+	flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.c=C_c.sd || true
 
 	$(info Updating catalog translations)
 	@for catalog_translation in $(catalog_translations); do \
@@ -91,7 +91,7 @@ create_catalog:
 	done
 
 	$(info Compiling catalogs $<)
-	@for catalog in $(catalog_translations); do \
+	@for catalog_translation in $(catalog_translations); do \
 		flexcat POFILE $$catalog_translation CATALOG $(dir $$catalog)/AmigaGPT.catalog || true; \
 	done
 
