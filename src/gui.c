@@ -161,8 +161,8 @@ LONG initVideo() {
     if (createProxySettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
-    if (!(app = ApplicationObject, MUIA_Application_Base, "AmigaGPT",
-          MUIA_Application_Title, "AmigaGPT", MUIA_Application_Version,
+    if (!(app = ApplicationObject, MUIA_Application_Base, STRING_APP_NAME,
+          MUIA_Application_Title, STRING_APP_NAME, MUIA_Application_Version,
           APP_VERSION, MUIA_Application_Copyright,
           "(C) 2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",

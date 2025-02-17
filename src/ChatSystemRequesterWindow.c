@@ -29,19 +29,13 @@ MakeHook(ChatSystemRequesterOkButtonClickedHook,
 LONG createChatSystemRequesterWindow() {
     Object *chatSystemRequesterOkButton, *chatSystemRequesterCancelButton;
     if ((chatSystemRequesterWindowObject = WindowObject,
-            MUIA_Window_Title, "Enter how you would like AmigaGPT to respond",
+            MUIA_Window_Title, STRING_CHAT_SYSTEM_WINDOW_TITLE,
             MUIA_Window_Width, 800,
             MUIA_Window_Height, 100,
             WindowContents, VGroup,
                 Child, TextObject,
                     MUIA_Text_PreParse, "\33c",
-                    MUIA_Text_Contents,  "If you would like AmigaGPT to respond in a\n"
-                      "certain way, or add some personality, type\n"
-                      "it in here. For example, you could type\n" 
-                      "\"Speak like a pirate\" or \"Speak like a\n"
-                      "robot\". If you would like AmigaGPT to respond\n"
-                      "normally, leave this blank. This setting will\n"
-                      "be applied to new conversations only.",
+                    MUIA_Text_Contents,  STRING_CHAT_SYSTEM_WINDOW_BODY,
                 End,
                 Child, chatSystemRequesterString = StringObject,
                     MUIA_String_MaxLen, CHAT_SYSTEM_LENGTH - 1,
@@ -62,7 +56,7 @@ LONG createChatSystemRequesterWindow() {
                 End,
             End,
         End) == NULL) {
-        displayError("Could not create Chat System requester window");
+        displayError(STRING_CHAT_SYSTEM_WINDOW_ERROR);
         return RETURN_ERROR;
     }
     DoMethod(chatSystemRequesterOkButton, MUIM_Notify, MUIA_Pressed, FALSE,

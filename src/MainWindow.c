@@ -18,20 +18,6 @@
 /* Max nesting depth for B/I/U combined. Adjust as needed. */
 #define MAX_STYLE_STACK 32
 
-enum ButtonLabels {
-    NEW_CHAT_BUTTON_LABEL,
-    DELETE_CHAT_BUTTON_LABEL,
-    SEND_MESSAGE_BUTTON_LABEL,
-    NEW_IMAGE_BUTTON_LABEL,
-    DELETE_IMAGE_BUTTON_LABEL,
-    CREATE_IMAGE_BUTTON_LABEL
-};
-
-CONST_STRPTR BUTTON_LABEL_NAMES[] = {
-    "+ New Chat",  "- Delete Chat",  "\nSend\n",
-    "+ New Image", "- Delete Image", "\nCreate Image\n",
-};
-
 typedef enum { STYLE_BOLD, STYLE_ITALIC, STYLE_UNDERLINE } StyleType;
 
 /* A small stack to track active styles in the order they were opened. */
@@ -63,7 +49,7 @@ WORD pens[NUMDRIPENS + 1];
 BOOL isPublicScreen;
 struct Conversation *currentConversation;
 struct GeneratedImage *currentImage;
-static UBYTE *Pages[] = {"Chat Mode", "Image Generation Mode", NULL};
+static UBYTE *pages[3] = {NULL};
 
 static struct Conversation *newConversation();
 static UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream);
@@ -196,8 +182,7 @@ HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
     if (config.openAiApiKey != NULL && strlen(config.openAiApiKey) > 0) {
         sendChatMessage();
     } else {
-        displayError("Please enter your OpenAI API key in the Open AI settings "
-                     "in the menu.");
+        displayError(STRING_ERROR_NO_API_KEY);
     }
 }
 MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
@@ -280,12 +265,12 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         CodesetsFreeA(textUTF8, NULL);
 
         if (response == NULL) {
-            displayError("Error connecting. Please try again.");
+            displayError(STRING_ERROR_CONNECTION);
             set(createImageButton, MUIA_Disabled, FALSE);
             set(newImageButton, MUIA_Disabled, FALSE);
             set(deleteImageButton, MUIA_Disabled, FALSE);
             set(imageInputTextEditor, MUIA_Disabled, FALSE);
-            updateStatusBar("Error", redPen);
+            updateStatusBar(STRING_ERROR, redPen);
             if (!isAROS) {
                 FreeVec(text);
             }
@@ -302,7 +287,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             set(newImageButton, MUIA_Disabled, FALSE);
             set(deleteImageButton, MUIA_Disabled, FALSE);
             set(imageInputTextEditor, MUIA_Disabled, FALSE);
-            updateStatusBar("Error", 6);
+            updateStatusBar(STRING_ERROR, 6);
             json_object_put(response);
             if (!isAROS) {
                 FreeVec(text);
@@ -360,13 +345,13 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             imageHeight = 1792;
             break;
         default:
-            printf("Invalid image size\n");
+            printf(STRING_ERROR_INVALID_IMAGE_SIZE);
             imageWidth = 256;
             imageHeight = 256;
             break;
         }
 
-        updateStatusBar("Generating image name...", 7);
+        updateStatusBar(STRING_GENERATING_IMAGE_NAME, 7);
         struct Conversation *imageNameConversation = newConversation();
         addTextToConversation(imageNameConversation, text, "user");
         addTextToConversation(
@@ -383,8 +368,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         struct GeneratedImage *generatedImage =
             AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
         if (responses == NULL) {
-            displayError("Failed to generate image name. Using ID instead.");
-            updateStatusBar("Error", 6);
+            displayError(STRING_ERROR_GENERATING_IMAGE_NAME);
+            updateStatusBar(STRING_ERROR, 6);
         } else if (responses[0] != NULL) {
             STRPTR responseString =
                 getMessageContentFromJson(responses[0], FALSE);
@@ -393,13 +378,13 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
                 AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
             strncpy(generatedImage->name, responseString,
                     strlen(responseString));
-            updateStatusBar("Ready", 5);
+            updateStatusBar(STRING_READY, 5);
             json_object_put(responses[0]);
             FreeVec(responses);
         } else {
             generatedImage->name = AllocVec(11, MEMF_ANY | MEMF_CLEAR);
             strncpy(generatedImage->name, id, 10);
-            updateStatusBar("Ready", 5);
+            updateStatusBar(STRING_READY, 5);
             if (responses != NULL) {
                 FreeVec(responses);
             }
@@ -483,7 +468,7 @@ HOOKPROTONHNONP(OpenImageButtonClickedFunc, void) {
         // Open the image with calculated dimensions
         openImage(currentImage, newWidth, newHeight);
     } else {
-        displayError("No image is currently selected.");
+        displayError(STRING_ERROR_NO_IMAGE_SELECTED);
     }
 }
 MakeHook(OpenImageButtonClickedHook, OpenImageButtonClickedFunc);
@@ -496,9 +481,9 @@ HOOKPROTONHNONP(SaveImageCopyButtonClickedFunc, void) {
         AllocAslRequestTags(ASL_FileRequest, TAG_END);
     if (fileReq != NULL) {
         if (AslRequestTags(fileReq, ASLFR_Window, mainWindow, ASLFR_TitleText,
-                           "Save Image Copy", ASLFR_InitialFile, "image.png",
-                           ASLFR_InitialDrawer, "SYS:", ASLFR_DoSaveMode, TRUE,
-                           TAG_DONE)) {
+                           STRING_SAVE_IMAGE_COPY, ASLFR_InitialFile,
+                           "image.png", ASLFR_InitialDrawer,
+                           "SYS:", ASLFR_DoSaveMode, TRUE, TAG_DONE)) {
             STRPTR savePath = fileReq->fr_Drawer;
             STRPTR saveName = fileReq->fr_File;
             BOOL isRootDirectory = savePath[strlen(savePath) - 1] == ':';
@@ -518,22 +503,22 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
     const UBYTE BUTTON_LABEL_BUFFER_SIZE = 64;
     STRPTR buttonLabelText = AllocVec(BUTTON_LABEL_BUFFER_SIZE, MEMF_ANY);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-             greenPen, BUTTON_LABEL_NAMES[NEW_CHAT_BUTTON_LABEL]);
+             greenPen, STRING_NEW_CHAT);
     set(newChatButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-             redPen, BUTTON_LABEL_NAMES[DELETE_CHAT_BUTTON_LABEL]);
+             redPen, STRING_DELETE_CHAT);
     set(deleteChatButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-             bluePen, BUTTON_LABEL_NAMES[SEND_MESSAGE_BUTTON_LABEL]);
+             bluePen, STRING_SEND);
     set(sendMessageButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-             greenPen, BUTTON_LABEL_NAMES[NEW_IMAGE_BUTTON_LABEL]);
+             greenPen, STRING_NEW_IMAGE);
     set(newImageButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-             redPen, BUTTON_LABEL_NAMES[DELETE_IMAGE_BUTTON_LABEL]);
+             redPen, STRING_DELETE_IMAGE);
     set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-             bluePen, BUTTON_LABEL_NAMES[CREATE_IMAGE_BUTTON_LABEL]);
+             bluePen, STRING_CREATE_IMAGE);
     set(createImageButton, MUIA_Text_Contents, buttonLabelText);
     FreeVec(buttonLabelText);
     SetAttrs(
@@ -549,7 +534,7 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);
 
-    updateStatusBar("Ready", greenPen);
+    updateStatusBar(STRING_READY, greenPen);
 }
 MakeHook(ConfigureForScreenHook, ConfigureForScreenFunc);
 
@@ -803,8 +788,11 @@ LONG createMainWindow() {
 
     createMenu();
 
+    pages[0] = STRING_CHAT_MODE;
+    pages[1] = STRING_IMAGE_GENERATION_MODE;
+
     if ((mainWindowObject = WindowObject,
-            MUIA_Window_Title, "AmigaGPT",
+            MUIA_Window_Title, STRING_APP_NAME,
             MUIA_Window_CloseGadget, TRUE,
             MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
             MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
@@ -814,16 +802,16 @@ LONG createMainWindow() {
             MUIA_Window_UseRightBorderScroller, FALSE,
             MUIA_Window_UseLeftBorderScroller, FALSE,
             WindowContents, VGroup,
-                Child, RegisterGroup(Pages),
+                Child, RegisterGroup(pages),
                     Child, HGroup,
                         Child, VGroup, MUIA_Weight, 30,
                             // New chat button
-                            Child, newChatButton = MUI_MakeObject(MUIO_Button, "",
+                            Child, newChatButton = MUI_MakeObject(MUIO_Button, STRING_NEW_CHAT,
                                 MUIA_CycleChain, TRUE,
                                 MUIA_InputMode, MUIV_InputMode_RelVerify,
                             TAG_DONE),
                             // Delete chat button
-                            Child, deleteChatButton = MUI_MakeObject(MUIO_Button, BUTTON_LABEL_NAMES[DELETE_CHAT_BUTTON_LABEL],
+                            Child, deleteChatButton = MUI_MakeObject(MUIO_Button, STRING_DELETE_CHAT,
                                 MUIA_Background, MUII_FILL,
                                 MUIA_CycleChain, TRUE,
                                 MUIA_InputMode, MUIV_InputMode_RelVerify,
@@ -874,11 +862,10 @@ LONG createMainWindow() {
                                 End,
                                 // Send message button
                                 Child, HGroup, MUIA_HorizWeight, 10,
-                                    Child, sendMessageButton = MUI_MakeObject(MUIO_Button, BUTTON_LABEL_NAMES[SEND_MESSAGE_BUTTON_LABEL],
+                                    Child, sendMessageButton = MUI_MakeObject(MUIO_Button, STRING_SEND,
                                         MUIA_ObjectID, OBJECT_ID_SEND_MESSAGE_BUTTON,
                                         MUIA_CycleChain, TRUE,
                                         MUIA_InputMode, MUIV_InputMode_RelVerify,
-                                        MUIA_Text_Contents, BUTTON_LABEL_NAMES[SEND_MESSAGE_BUTTON_LABEL],
                                     End,
                                 End,
                             End,
@@ -888,12 +875,12 @@ LONG createMainWindow() {
                         GroupFrame,
                         Child, VGroup,
                             // New image button
-                            Child, newImageButton = MUI_MakeObject(MUIO_Button, "New Image",
+                            Child, newImageButton = MUI_MakeObject(MUIO_Button, STRING_NEW_IMAGE,
                                 MUIA_CycleChain, TRUE,
                                 MUIA_InputMode, MUIV_InputMode_RelVerify,
                             TAG_DONE),
                             // Delete image button
-                            Child, deleteImageButton = MUI_MakeObject(MUIO_Button, "Delete Image",
+                            Child, deleteImageButton = MUI_MakeObject(MUIO_Button, STRING_DELETE_IMAGE,
                                 MUIA_CycleChain, TRUE,
                                 MUIA_InputMode, MUIV_InputMode_RelVerify,
                             TAG_DONE),
@@ -924,12 +911,12 @@ LONG createMainWindow() {
                             End,
                             Child, HGroup,
                                 // Open image button
-                                Child, openImageButton = MUI_MakeObject(MUIO_Button, "Open Image",
+                                Child, openImageButton = MUI_MakeObject(MUIO_Button, STRING_OPEN_IMAGE,
                                     MUIA_CycleChain, TRUE,
                                     MUIA_InputMode, MUIV_InputMode_RelVerify,
                                 TAG_DONE),
                                 // Save image copy button
-                                Child, saveImageCopyButton = MUI_MakeObject(MUIO_Button, "Save Image Copy",
+                                Child, saveImageCopyButton = MUI_MakeObject(MUIO_Button, STRING_SAVE_IMAGE_COPY,
                                     MUIA_CycleChain, TRUE,
                                     MUIA_InputMode, MUIV_InputMode_RelVerify,
                                 TAG_DONE),
@@ -947,7 +934,7 @@ LONG createMainWindow() {
                                 Child, VGroup,
                                     MUIA_Weight, 20,
                                     // Create image button
-                                    Child, createImageButton = MUI_MakeObject(MUIO_Button, "\nCreate Image\n",
+                                    Child, createImageButton = MUI_MakeObject(MUIO_Button, STRING_CREATE_IMAGE,
                                         MUIA_Weight, 20,
                                         MUIA_CycleChain, TRUE,
                                         MUIA_InputMode, MUIV_InputMode_RelVerify,
@@ -960,7 +947,7 @@ LONG createMainWindow() {
                 // Status bar
                 Child, statusBar = TextObject, MUIA_VertWeight, 10,
                     TextFrame,
-                    MUIA_Text_Contents, "Ready",
+                    MUIA_Text_Contents, STRING_READY,
                     MUIA_Background, MUII_SHADOWBACK,
                 End,
                 // Loading bar
@@ -970,7 +957,7 @@ LONG createMainWindow() {
                 End,
             End,
         End) == NULL) {
-        displayError("Could not create main window");
+        displayError(STRING_ERROR_MAIN_WINDOW);
         return RETURN_ERROR;
     }
 
@@ -1029,7 +1016,7 @@ void addMainWindowActions() {
 static PICTURE *generateThumbnail(struct GeneratedImage *image) {
     CONST_STRPTR imagePath = image->filePath;
     if (imagePath == NULL) {
-        displayError("Image path is NULL");
+        displayError(STRING_ERROR_IMAGE_PATH_NULL);
         return NULL;
     }
     // Get image directory
@@ -1039,13 +1026,13 @@ static PICTURE *generateThumbnail(struct GeneratedImage *image) {
     if (lastSlash != NULL) {
         lastSlash[1] = '\0';
     } else {
-        displayError("Could not find image directory");
+        displayError(STRING_ERROR_IMG_DIR_NOT_FOUND);
         FreeVec(imageDir);
         return NULL;
     }
     CONST_STRPTR fileName = strrchr(imagePath, '/');
     if (fileName == NULL) {
-        displayError("Could not find image file name");
+        displayError(STRING_ERROR_IMG_FILE_NOT_FOUND);
         return NULL;
     }
 
@@ -1065,13 +1052,11 @@ static PICTURE *generateThumbnail(struct GeneratedImage *image) {
     if (thumbnail == NULL) {
         PICTURE *image = LoadPicture(imagePath, NULL);
         if (image == NULL) {
-            displayError("Could not load image for thumbnail generation");
+            displayError(STRING_ERROR_IMG_LOAD_THUMBNAIL);
             FreeVec(imageDir);
             FreeVec(thumbnailPath);
             return NULL;
         }
-
-        printf("Generating thumbnail for %s\n", thumbnailPath);
 
         FreeVec(imageDir);
         FreeVec(thumbnailPath);
@@ -1178,7 +1163,7 @@ static void sendChatMessage() {
     get(chatOutputTextEditor, MUIA_NFloattext_Text,
         &chatOutputTextEditorContents);
 
-    updateStatusBar("Sending message...", yellowPen);
+    updateStatusBar(STRING_SENDING_MESSAGE, yellowPen);
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
     UTF8 *receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
     STRPTR text;
@@ -1229,7 +1214,7 @@ static void sendChatMessage() {
             config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
             config.proxyPassword);
         if (responses == NULL) {
-            displayError("Could not connect to OpenAI");
+            displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
             set(sendMessageButton, MUIA_Disabled, FALSE);
             set(newChatButton, MUIA_Disabled, FALSE);
@@ -1377,7 +1362,7 @@ static void sendChatMessage() {
             FreeVec(text);
         }
         if (isNewConversation) {
-            updateStatusBar("Generating conversation title...", 7);
+            updateStatusBar(STRING_GENERATING_CONVERSATION_TITLE, 7);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
             addTextToConversation(currentConversation,
                                   "generate a short title for this "
@@ -1394,7 +1379,7 @@ static void sendChatMessage() {
             FreeVec(titleRequestNode);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
             if (responses == NULL) {
-                displayError("Could not connect to OpenAI");
+                displayError(STRING_ERROR_CONNECTING_OPENAI);
                 set(sendMessageButton, MUIA_Disabled, FALSE);
                 set(newChatButton, MUIA_Disabled, FALSE);
                 set(deleteChatButton, MUIA_Disabled, FALSE);
@@ -1418,7 +1403,7 @@ static void sendChatMessage() {
         }
     }
 
-    updateStatusBar("Ready", greenPen);
+    updateStatusBar(STRING_READY, greenPen);
     saveConversations();
 
     set(sendMessageButton, MUIA_Disabled, FALSE);
@@ -1437,7 +1422,7 @@ static void addTextToConversation(struct Conversation *conversation, UTF8 *text,
     struct ConversationNode *conversationNode =
         AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
     if (conversationNode == NULL) {
-        printf("Failed to allocate memory for conversation node\n");
+        printf(STRING_ERROR_MEMORY_CONVERSATION_NODE);
         return;
     }
     strncpy(conversationNode->role, role, sizeof(conversationNode->role) - 1);
@@ -1463,8 +1448,7 @@ static void displayConversation(struct Conversation *conversation) {
              (struct ConversationNode *)conversationNode->node.mln_Succ) {
         if ((strlen(conversationString) + strlen(conversationNode->content) +
              256) > WRITE_BUFFER_LENGTH) {
-            displayError("The conversation has exceeded the maximum "
-                         "length.\n\nPlease start a new conversation.");
+            displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
             set(sendMessageButton, MUIA_Disabled, TRUE);
             return;
         }
@@ -1581,9 +1565,9 @@ void displayError(STRPTR message) {
 #ifdef __MORPHOS__
                                 NULL,
 #else
-                                MUIV_Requester_Image_Error, "Error",
+                                MUIV_Requester_Image_Error, STRING_ERROR,
 #endif
-                                "*OK", "\33c%s", message) != 0) {
+                                STRING_OK_REQUESTER, "\33c%s", message) != 0) {
             fprintf(stderr, "%s\n", message);
         }
     } else {
@@ -1597,10 +1581,10 @@ void displayError(STRPTR message) {
 #ifdef __MORPHOS__
                             NULL,
 #else
-                            MUIV_Requester_Image_Error, "Error",
+                            MUIV_Requester_Image_Error, STRING_ERROR,
 #endif
-                            "*OK", "\33c%s", errorMessage);
-                updateStatusBar("Error", redPen);
+                            STRING_OK_REQUESTER, "\33c%s", errorMessage);
+                updateStatusBar(STRING_ERROR, redPen);
                 FreeVec(errorMessage);
             }
         } else {
@@ -1616,8 +1600,7 @@ void displayError(STRPTR message) {
 static LONG saveConversations() {
     BPTR file = Open(PROGDIR "chat-history.json", MODE_NEWFILE);
     if (file == 0) {
-        displayError("Failed to create message history file. Conversation "
-                     "history will not be saved.");
+        displayError(STRING_ERROR_CHAT_HISTORY_CREATE);
         return RETURN_ERROR;
     }
 
@@ -1660,8 +1643,7 @@ static LONG saveConversations() {
 
     if (Write(file, conversationsJsonString, strlen(conversationsJsonString)) !=
         (LONG)strlen(conversationsJsonString)) {
-        displayError("Failed to write to message history file. Conversation "
-                     "history will not be saved.");
+        displayError(STRING_ERROR_CHAT_HISTORY_SAVE);
         Close(file);
         json_object_put(conversationsJsonArray);
         return RETURN_ERROR;
@@ -1679,8 +1661,7 @@ static LONG saveConversations() {
 static LONG saveImages() {
     BPTR file = Open(PROGDIR "image-history.json", MODE_NEWFILE);
     if (file == 0) {
-        displayError("Failed to create image history file. Image history will "
-                     "not be saved.");
+        displayError(STRING_ERROR_IMAGE_HISTORY_CREATE);
         return RETURN_ERROR;
     }
 
@@ -1714,8 +1695,7 @@ static LONG saveImages() {
 
     if (Write(file, imagesJsonString, strlen(imagesJsonString)) !=
         (LONG)strlen(imagesJsonString)) {
-        displayError("Failed to write to image history file. Image history "
-                     "will not be saved.");
+        displayError(STRING_ERROR_IMAGE_HISTORY_WRITE);
         Close(file);
         json_object_put(imagesJsonArray);
         return RETURN_ERROR;
@@ -1742,11 +1722,11 @@ void openImage(struct GeneratedImage *image, WORD scaledWidth,
     WORD lowestHeight =
         screen->Height < scaledHeight ? screen->Height : scaledHeight;
 
-    updateStatusBar("Loading image...", yellowPen);
+    updateStatusBar(STRING_LOADING_IMAGE, yellowPen);
 
     Object *imageWindowLoadingTextObject = VGroup, Child, VSpace(0), Child,
-           TextObject, MUIA_Text_Contents, "\033cLoading image...", End, Child,
-           VSpace(0), End;
+           TextObject, MUIA_Text_Contents, STRING_LOADING_IMAGE_CENTERED, End,
+           Child, VSpace(0), End;
     DoMethod(imageWindowImageViewGroup, OM_ADDMEMBER,
              imageWindowLoadingTextObject);
     DoMethod(imageWindowImageViewGroup, OM_REMMEMBER, imageWindowImageView);
@@ -1770,7 +1750,7 @@ void openImage(struct GeneratedImage *image, WORD scaledWidth,
     DoMethod(imageWindowImageViewGroup, MUIM_Group_ExitChange);
     MUI_DisposeObject(imageWindowLoadingTextObject);
 
-    updateStatusBar("Ready", greenPen);
+    updateStatusBar(STRING_READY, greenPen);
 }
 
 /**
@@ -1797,8 +1777,7 @@ static LONG loadConversations() {
 #endif
     STRPTR conversationsJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
     if (Read(file, conversationsJsonString, fileSize) != fileSize) {
-        displayError("Failed to read from message history file. Conversation "
-                     "history will not be loaded");
+        displayError(STRING_ERROR_CHAT_HISTORY_READ);
         Close(file);
         FreeVec(conversationsJsonString);
         return RETURN_ERROR;
@@ -1811,29 +1790,16 @@ static LONG loadConversations() {
     if (conversationsJsonArray == NULL) {
         if (Rename(PROGDIR "chat-history.json",
                    PROGDIR "chat-history.json.bak")) {
-            displayError("Failed to parse chat history. Malformed JSON. The "
-                         "chat-history.json file is probably corrupted. "
-                         "Conversation "
-                         "history will not be loaded. A backup of the "
-                         "chat-history.json "
-                         "file has been created as chat-history.json.bak");
+            displayError(STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP);
         } else if (copyFile(PROGDIR "chat-history.json",
                             "RAM:chat-history.json")) {
-            displayError(
-                "Failed to parse chat history. Malformed JSON. The "
-                "chat-history.json file is probably corrupted. "
-                "Conversation "
-                "history will not be loaded. There was an error writing a "
-                "backup of the chat history to disk but a copy has been "
-                "saved "
-                "to RAM:chat-history.json.bak");
+            displayError(STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM);
 #if defined(__AMIGAOS3__) || defined(__MORPHOS__)
             if (!DeleteFile(PROGDIR "chat-history.json")) {
 #else
             if (!Delete(PROGDIR "chat-history.json")) {
 #endif
-                displayError("Failed to delete chat-history.json. Please "
-                             "delete this file manually.");
+                displayError(STRING_ERROR_CHAT_HISTORY_DELETE);
             }
         }
 
@@ -1848,11 +1814,7 @@ static LONG loadConversations() {
         struct json_object *conversationNameJsonObject;
         if (!json_object_object_get_ex(conversationJsonObject, "name",
                                        &conversationNameJsonObject)) {
-            displayError(
-                "Failed to parse chat history. \"name\" is missing from "
-                "the "
-                "conversation. The chat-history.json file is probably "
-                "corrupted. Conversation history will not be loaded.");
+            displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
             FreeVec(conversationsJsonString);
             json_object_put(conversationsJsonArray);
             return RETURN_ERROR;
@@ -1864,11 +1826,7 @@ static LONG loadConversations() {
         struct json_object *messagesJsonArray;
         if (!json_object_object_get_ex(conversationJsonObject, "messages",
                                        &messagesJsonArray)) {
-            displayError(
-                "Failed to parse chat history. \"messages\" is missing "
-                "from "
-                "the conversation. The chat-history.json file is probably "
-                "corrupted. Conversation history will not be loaded.");
+            displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
             FreeVec(conversationsJsonString);
             json_object_put(conversationsJsonArray);
             return RETURN_ERROR;
@@ -1888,10 +1846,7 @@ static LONG loadConversations() {
             struct json_object *roleJsonObject;
             if (!json_object_object_get_ex(messageJsonObject, "role",
                                            &roleJsonObject)) {
-                displayError("Failed to parse chat history. \"role\" is "
-                             "missing from the conversation message. The "
-                             "chat-history.json file is probably corrupted. "
-                             "Conversation history will not be loaded.");
+                displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
                 FreeVec(conversationsJsonString);
                 json_object_put(conversationsJsonArray);
                 return RETURN_ERROR;
@@ -1902,12 +1857,7 @@ static LONG loadConversations() {
                 json_object_array_get_idx(messagesJsonArray, j);
             if (!json_object_object_get_ex(messageJsonObject, "content",
                                            &contentJsonObject)) {
-                displayError(
-                    "Failed to parse chat history. \"content\" is missing "
-                    "from "
-                    "the conversation. The chat-history.json file is "
-                    "probably "
-                    "corrupted. Conversation history will not be loaded.");
+                displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
                 FreeVec(conversationsJsonString);
                 json_object_put(conversationsJsonArray);
                 return RETURN_ERROR;
@@ -1947,8 +1897,7 @@ static LONG loadImages() {
 #endif
     STRPTR imagesJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
     if (Read(file, imagesJsonString, fileSize) != fileSize) {
-        displayError("Failed to read from image history file. Image generation "
-                     "history will not be loaded");
+        displayError(STRING_ERROR_IMAGE_HISTORY_READ);
         Close(file);
         FreeVec(imagesJsonString);
         return RETURN_ERROR;
@@ -1960,27 +1909,16 @@ static LONG loadImages() {
     if (imagesJsonArray == NULL) {
         if (Rename(PROGDIR "image-history.json",
                    PROGDIR "image-history.json.bak")) {
-            displayError(
-                "Failed to parse image history. Malformed JSON. The "
-                "image-history.json file is probably corrupted. Image "
-                "history "
-                "will not be loaded. A backup of the image-history.json "
-                "file "
-                "has been created as image-history.json.bak");
+            displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP);
         } else if (copyFile(PROGDIR "image-history.json",
                             "RAM:image-history.json")) {
-            displayError("Failed to parse image history. Malformed JSON. The "
-                         "image-history.json file is probably corrupted. Image "
-                         "history will not be loaded. There was an error "
-                         "writing a backup of the image history to disk but a "
-                         "copy has been saved to RAM:image-history.json.bak");
+            displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM);
 #if defined(__AMIGAOS3__) || defined(__MORPHOS__)
             if (!DeleteFile(PROGDIR "image-history.json")) {
 #else
             if (!Delete(PROGDIR "image-history.json")) {
 #endif
-                displayError("Failed to delete image-history.json. Please "
-                             "delete this file manually.");
+                displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP);
             }
         }
 
@@ -1994,11 +1932,7 @@ static LONG loadImages() {
         struct json_object *imageNameJsonObject;
         if (!json_object_object_get_ex(imageJsonObject, "name",
                                        &imageNameJsonObject)) {
-            displayError(
-                "Failed to parse image history. \"name\" is missing from "
-                "the "
-                "image. The image-history.json file is probably corrupted. "
-                "Image history will not be loaded.");
+            displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP);
             FreeVec(imagesJsonString);
             json_object_put(imagesJsonArray);
             return RETURN_ERROR;
@@ -2009,11 +1943,7 @@ static LONG loadImages() {
         struct json_object *imageFilePathJsonObject;
         if (!json_object_object_get_ex(imageJsonObject, "filePath",
                                        &imageFilePathJsonObject)) {
-            displayError("Failed to parse image history. \"filePath\" is "
-                         "missing from "
-                         "the image. The image-history.json file is "
-                         "probably corrupted. "
-                         "Image history will not be loaded.");
+            displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP);
             FreeVec(imagesJsonString);
             json_object_put(imagesJsonArray);
             return RETURN_ERROR;
@@ -2024,11 +1954,7 @@ static LONG loadImages() {
         struct json_object *imagePromptJsonObject;
         if (!json_object_object_get_ex(imageJsonObject, "prompt",
                                        &imagePromptJsonObject)) {
-            displayError(
-                "Failed to parse image history. \"prompt\" is missing from "
-                "the "
-                "image. The image-history.json file is probably corrupted. "
-                "Image history will not be loaded.");
+            displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP);
             FreeVec(imagesJsonString);
             json_object_put(imagesJsonArray);
             return RETURN_ERROR;
@@ -2039,11 +1965,7 @@ static LONG loadImages() {
         struct json_object *imageModelJsonObject;
         if (!json_object_object_get_ex(imageJsonObject, "imageModel",
                                        &imageModelJsonObject)) {
-            displayError("Failed to parse image history. \"imageModel\" is "
-                         "missing from "
-                         "the image. The image-history.json file is "
-                         "probably corrupted. "
-                         "Image history will not be loaded.");
+            displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP);
             FreeVec(imagesJsonString);
             json_object_put(imagesJsonArray);
             return RETURN_ERROR;
@@ -2054,11 +1976,7 @@ static LONG loadImages() {
         struct json_object *imageWidthJsonObject;
         if (!json_object_object_get_ex(imageJsonObject, "width",
                                        &imageWidthJsonObject)) {
-            displayError(
-                "Failed to parse image history. \"width\" is missing from "
-                "the "
-                "image. The image-history.json file is probably corrupted. "
-                "Image history will not be loaded.");
+            displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP);
             FreeVec(imagesJsonString);
             json_object_put(imagesJsonArray);
             return RETURN_ERROR;
@@ -2069,11 +1987,7 @@ static LONG loadImages() {
         struct json_object *imageHeightJsonObject;
         if (!json_object_object_get_ex(imageJsonObject, "height",
                                        &imageHeightJsonObject)) {
-            displayError(
-                "Failed to parse image history. \"height\" is missing from "
-                "the "
-                "image. The image-history.json file is probably corrupted. "
-                "Image history will not be loaded.");
+            displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP);
             FreeVec(imagesJsonString);
             json_object_put(imagesJsonArray);
             return RETURN_ERROR;
@@ -2117,7 +2031,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 
     if (!(srcFile = Open(source, MODE_OLDFILE))) {
         snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE,
-                 "Error opening %s for copy", source);
+                 STRING_ERROR_FILE_COPY_OPEN, source);
         displayError(errorMessage);
         FreeVec(buffer);
         FreeVec(errorMessage);
@@ -2126,7 +2040,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 
     if (!(dstFile = Open(destination, MODE_NEWFILE))) {
         snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE,
-                 "Error creating %s for copy", destination);
+                 STRING_ERROR_FILE_COPY_CREATE, destination);
         displayError(errorMessage);
         FreeVec(buffer);
         FreeVec(errorMessage);
@@ -2134,7 +2048,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
         return FALSE;
     }
 
-    updateStatusBar("Copying file...", yellowPen);
+    updateStatusBar(STRING_COPYING_FILE, yellowPen);
 
     do {
         bytesRead = Read(srcFile, buffer, FILE_BUFFER_SIZE);
@@ -2143,9 +2057,9 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
             bytesWritten = Write(dstFile, buffer, bytesRead);
 
             if (bytesWritten != bytesRead) {
-                updateStatusBar("Ready", greenPen);
+                updateStatusBar(STRING_READY, greenPen);
                 snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE,
-                         "Error copying %s to %s", source, destination);
+                         STRING_ERROR_FILE_COPY, source, destination);
                 displayError(errorMessage);
                 FreeVec(buffer);
                 FreeVec(errorMessage);
@@ -2154,7 +2068,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
                 return FALSE;
             }
         } else if (bytesRead < 0) {
-            updateStatusBar("Ready", greenPen);
+            updateStatusBar(STRING_READY, greenPen);
             snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE,
                      "Error copying %s to %s", source, destination);
             displayError(errorMessage);
@@ -2166,7 +2080,7 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
         }
     } while (bytesRead > 0);
 
-    updateStatusBar("Ready", greenPen);
+    updateStatusBar(STRING_READY, greenPen);
     FreeVec(buffer);
     FreeVec(errorMessage);
     Close(srcFile);
