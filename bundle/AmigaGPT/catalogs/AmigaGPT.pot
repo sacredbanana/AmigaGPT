@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-17 10:49+0000\n"
+"POT-Creation-Date: 2025-02-17 11:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -839,58 +839,72 @@ msgid "P[%lup[2]%s"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:30
+msgctxt "STRING_ERROR_INVALID_PORT (68//)"
 msgid "Invalid port number. Please enter a number between 0 and 65535."
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:72
+msgctxt "STRING_ENCRYPTION_NONE (69//)"
 msgid "None (fastest)"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:72
+msgctxt "STRING_ENCRYPTION_SSL (70//)"
 msgid "SSL (secure)"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:75
+msgctxt "STRING_AUTH_NONE (71//)"
 msgid "No authentication"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:76
+msgctxt "STRING_AUTH_USER_PASS (72//)"
 msgid "Username and password"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:80
+msgctxt "STRING_PROXY_SETTINGS (73//)"
 msgid "Proxy server settings"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:87
+msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:96
+msgctxt "STRING_PROXY_PORT (75//)"
 msgid "Port"
 msgstr ""
 
-#: src/ProxySettingsRequesterWindow.c:100
+#: src/ProxySettingsRequesterWindow.c:100 src/ProxySettingsRequesterWindow.c:99
+#: src/ProxySettingsRequesterWindow.c:98
 msgid "0123456789"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:107
+msgctxt "STRING_PROXY_ENCRYPTION (76//)"
 msgid "Encryption"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:116
+msgctxt "STRING_PROXY_AUTH (77//)"
 msgid "Authentication"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:125
+msgctxt "STRING_USERNAME (78//)"
 msgid "Username"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:135
+msgctxt "STRING_PASSWORD (79//)"
 msgid "Password"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:160
+msgctxt "STRING_ERROR_PROXY_SETTINGS (80//)"
 msgid "Could not create proxy settings requester window"
 msgstr ""
 

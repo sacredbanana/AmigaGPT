@@ -26,8 +26,7 @@ HOOKPROTONHNONP(ProxySettingsRequesterOkButtonClickedFunc, void) {
     LONG port;
     get(proxyPortString, MUIA_String_Integer, &port);
     if (port < 0 || port > 65535) {
-        displayError(
-            "Invalid port number. Please enter a number between 0 and 65535.");
+        displayError(STRING_ERROR_INVALID_PORT);
         return;
     }
     config.proxyPort = port;
@@ -69,22 +68,21 @@ MakeHook(ProxySettingsRequesterOkButtonClickedHook,
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createProxySettingsRequesterWindow() {
-    static CONST_STRPTR SSL_OPTIONS[] = {"None (fastest)", "SSL (secure)",
-                                         NULL};
+    STRPTR SSL_OPTIONS[] = {STRING_ENCRYPTION_NONE, STRING_ENCRYPTION_SSL,
+                            NULL};
 
-    static CONST_STRPTR AUTH_OPTIONS[] = {"No authentication",
-                                          "Username and password", NULL};
+    STRPTR AUTH_OPTIONS[] = {STRING_AUTH_NONE, STRING_AUTH_USER_PASS, NULL};
 
     Object *proxySettingsRequesterOkButton, *proxySettingsRequesterCancelButton;
     if ((proxySettingsRequesterWindowObject = WindowObject,
-			MUIA_Window_Title, "Proxy server settings",
+			MUIA_Window_Title, STRING_PROXY_SETTINGS,
 			MUIA_Window_Width, 400,
 			MUIA_Window_Height, 200,
             MUIA_Window_CloseGadget, FALSE,
 			WindowContents, VGroup,
                 Child, VGroup,
                     MUIA_Frame, MUIV_Frame_Group,
-                    MUIA_FrameTitle,  "Host",
+                    MUIA_FrameTitle, STRING_PROXY_HOST,
                     Child, proxyHostString = StringObject,
                         MUIA_Frame, MUIV_Frame_String,
                         MUIA_CycleChain, TRUE,
@@ -93,7 +91,7 @@ LONG createProxySettingsRequesterWindow() {
                 End,
                 Child, VGroup,
                     MUIA_Frame, MUIV_Frame_Group,
-                    MUIA_FrameTitle,  "Port",
+                    MUIA_FrameTitle, STRING_PROXY_PORT,
                     Child, proxyPortString = StringObject,
                         MUIA_Frame, MUIV_Frame_String,
                         MUIA_CycleChain, TRUE,
@@ -104,7 +102,7 @@ LONG createProxySettingsRequesterWindow() {
                 End,
                 Child, VGroup,
                     MUIA_Frame, MUIV_Frame_Group,
-                    MUIA_FrameTitle,  "Encryption",
+                    MUIA_FrameTitle, STRING_PROXY_ENCRYPTION,
                     Child, proxyUsesSSLCycle = CycleObject,
                         MUIA_CycleChain, TRUE,
                         MUIA_Cycle_Entries, SSL_OPTIONS,
@@ -113,7 +111,7 @@ LONG createProxySettingsRequesterWindow() {
                 End,
                 Child, VGroup,
                     MUIA_Frame, MUIV_Frame_Group,
-                    MUIA_FrameTitle,  "Authentication",
+                    MUIA_FrameTitle, STRING_PROXY_AUTH,
                     Child, proxyRequiresAuthCycle = CycleObject,
                         MUIA_CycleChain, TRUE,
                         MUIA_Cycle_Entries, AUTH_OPTIONS,
@@ -122,7 +120,7 @@ LONG createProxySettingsRequesterWindow() {
                     Child, HGroup,
                         Child, VGroup,
                             MUIA_Frame, MUIV_Frame_Group,
-                            MUIA_FrameTitle,  "Username",
+                            MUIA_FrameTitle, STRING_USERNAME,
                             Child, proxyUsernameString = StringObject,
                                 MUIA_Frame, MUIV_Frame_String,
                                 MUIA_CycleChain, TRUE,
@@ -132,7 +130,7 @@ LONG createProxySettingsRequesterWindow() {
                         End,
                         Child, VGroup,
                             MUIA_Frame, MUIV_Frame_Group,
-                            MUIA_FrameTitle,  "Password",
+                            MUIA_FrameTitle, STRING_PASSWORD,
                             Child, proxyPasswordString = StringObject,
                                 MUIA_Frame, MUIV_Frame_String,
                                 MUIA_CycleChain, TRUE,
@@ -157,7 +155,7 @@ LONG createProxySettingsRequesterWindow() {
 				End,
 			End,
 		End) == NULL) {
-        displayError("Could not create proxy settings requester window");
+        displayError(STRING_ERROR_PROXY_SETTINGS);
         return RETURN_ERROR;
     }
     DoMethod(proxySettingsRequesterOkButton, MUIM_Notify, MUIA_Pressed, FALSE,
