@@ -23,7 +23,7 @@ HOOKPROTONHNONP(AboutAmigaGPTMenuItemClickedFunc, void) {
         set(aboutAmigaGPTWindowObject, MUIA_Window_Open, TRUE);
     } else {
         struct EasyStruct aboutRequester = {
-            sizeof(struct EasyStruct), 0, "About",
+            sizeof(struct EasyStruct), 0, STRING_ABOUT,
 #ifdef __AMIGAOS3__
             "AmigaGPT for m68k AmigaOS 3\n\n"
 #else
@@ -50,27 +50,19 @@ HOOKPROTONHNO(SpeechSystemMenuItemClickedFunc, void,
     if (initSpeech(*speechSystem) == RETURN_ERROR) {
         switch (*speechSystem) {
         case SPEECH_SYSTEM_34:
-            displayError("Could not initialise speech system 34. Please make "
-                         "sure the translator.library and narrator.device are "
-                         "installed into the program directory. See the "
-                         "documentation for more information.");
+            displayError(STRING_ERROR_SPEECH_INIT_WORKBENCH_34);
             break;
         case SPEECH_SYSTEM_37:
-            displayError("Could not initialise speech system 37. Please make "
-                         "sure the translator.library and narrator.device are "
-                         "installed into the program directory. See the "
-                         "documentation for more information.");
+            displayError(STRING_ERROR_SPEECH_INIT_WORKBENCH_37);
             break;
         case SPEECH_SYSTEM_FLITE:
-            displayError("Could not initialise speech system Flite. Please "
-                         "make sure the flite device is installed. See the "
-                         "documentation for more information.");
+            displayError(STRING_ERROR_SPEECH_INIT_FLITE);
             break;
         case SPEECH_SYSTEM_OPENAI:
-            displayError("Could not initialise speech system OpenAI");
+            displayError(STRING_ERROR_SPEECH_INIT_OPENAI);
             break;
         default:
-            displayError("Unknown speech system!");
+            displayError(STRING_ERROR_SPEECH_UNKNOWN_SYSTEM);
             break;
         }
     }
@@ -114,71 +106,70 @@ HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
     if (handle = OpenAmigaGuide(&guide, NULL)) {
         CloseAmigaGuide(handle);
     } else {
-        displayError("Could not open documentation");
+        displayError(STRING_ERROR_DOCUMENTATION_OPEN);
     }
 }
 MakeHook(OpenDocumentationMenuItemClickedHook,
          OpenDocumentationMenuItemClickedFunc);
 
 static struct NewMenu amigaGPTMenu[] = {
-    {NM_TITLE, "Project", 0, 0, 0, (APTR)MENU_ITEM_NULL},
-    {NM_ITEM, "About AmigaGPT", 0, 0, 0,
-     (APTR)MENU_ITEM_PROJECT_ABOUT_AMIGAGPT},
-    {NM_ITEM, "About MUI", 0, 0, 0, (APTR)MENU_ITEM_PROJECT_ABOUT_MUI},
+    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_PROJECT},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_PROJECT_ABOUT_AMIGAGPT},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_PROJECT_ABOUT_MUI},
     {NM_ITEM, NM_BARLABEL, 0, 0, 0, (APTR)MENU_ITEM_NULL},
-    {NM_ITEM, "Quit", "Q", 0, 0, (APTR)MENU_ITEM_PROJECT_QUIT},
-    {NM_TITLE, "Edit", 0, 0, 0, (APTR)MENU_ITEM_NULL},
-    {NM_ITEM, "Cut", "X", 0, 0, (APTR)MENU_ITEM_EDIT_CUT},
-    {NM_ITEM, "Copy", "C", 0, 0, (APTR)MENU_ITEM_EDIT_COPY},
-    {NM_ITEM, "Paste", "V", 0, 0, (APTR)MENU_ITEM_EDIT_PASTE},
-    {NM_ITEM, "Clear", "L", 0, 0, (APTR)MENU_ITEM_EDIT_CLEAR},
-    {NM_ITEM, "Select all", "A", 0, 0, (APTR)MENU_ITEM_EDIT_SELECT_ALL},
-    {NM_TITLE, "View", 0, 0, 0, (APTR)MENU_ITEM_NULL},
-    {NM_ITEM, "MUI Settings", 0, 0, 0, (APTR)MENU_ITEM_VIEW_MUI_SETTINGS},
-    {NM_TITLE, "Connection", 0, 0, 0, (APTR)MENU_ITEM_NULL},
-    {NM_ITEM, "Proxy", 0, 0, 0, (APTR)MENU_ITEM_NULL},
-    {NM_SUB, "Enabled", 0, CHECKIT | CHECKED | MENUTOGGLE, 0,
+    {NM_ITEM, NULL, "Q", 0, 0, (APTR)MENU_ITEM_PROJECT_QUIT},
+    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_EDIT},
+    {NM_ITEM, NULL, "X", 0, 0, (APTR)MENU_ITEM_EDIT_CUT},
+    {NM_ITEM, NULL, "C", 0, 0, (APTR)MENU_ITEM_EDIT_COPY},
+    {NM_ITEM, NULL, "V", 0, 0, (APTR)MENU_ITEM_EDIT_PASTE},
+    {NM_ITEM, NULL, "L", 0, 0, (APTR)MENU_ITEM_EDIT_CLEAR},
+    {NM_ITEM, NULL, "A", 0, 0, (APTR)MENU_ITEM_EDIT_SELECT_ALL},
+    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_VIEW},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_VIEW_MUI_SETTINGS},
+    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_CONNECTION},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_CONNECTION_PROXY},
+    {NM_SUB, NULL, 0, CHECKIT | CHECKED | MENUTOGGLE, 0,
      (APTR)MENU_ITEM_CONNECTION_PROXY_ENABLED},
-    {NM_SUB, "Settings", 0, 0, 0, (APTR)MENU_ITEM_CONNECTION_PROXY_SETTINGS},
-    {NM_TITLE, "Speech", 0, 0, 0, (APTR)MENU_ITEM_NULL},
-    {NM_ITEM, "Enabled", 0, CHECKIT | CHECKED | MENUTOGGLE, 0,
+    {NM_SUB, NULL, 0, 0, 0, (APTR)MENU_ITEM_CONNECTION_PROXY_SETTINGS},
+    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH},
+    {NM_ITEM, NULL, 0, CHECKIT | CHECKED | MENUTOGGLE, 0,
      (APTR)MENU_ITEM_SPEECH_ENABLED},
-    {NM_ITEM, "Speech system", 0, 0, 0, (APTR)MENU_ITEM_NULL},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM},
 #ifdef __AMIGAOS3__
-    {NM_SUB, "Workbench 1.x v34", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
+    {NM_SUB, NULL, 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
      (APTR)MENU_ITEM_SPEECH_SYSTEM_34},
-    {NM_SUB, "Workbench 2.0 v37", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
+    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
      (APTR)MENU_ITEM_SPEECH_SYSTEM_37},
-    {NM_SUB, "OpenAI Text To Speech", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
+    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
      (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
 #else
 #ifdef __AMIGAOS4__
-    {NM_SUB, "Flite", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
+    {NM_SUB, NULL, 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
      (APTR)MENU_ITEM_SPEECH_SYSTEM_FLITE},
-    {NM_SUB, "OpenAI Text To Speech", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
+    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
      (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
 #else
-    {NM_SUB, "OpenAI Text To Speech", 0, CHECKIT | CHECKED, ~(1 << 2),
+    {NM_SUB, NULL, 0, CHECKIT | CHECKED, ~(1 << 2),
      (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
 #endif
 #endif
 #ifdef __AMIGAOS3__
-    {NM_ITEM, "Accent", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_ACCENT},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_ACCENT},
 #endif
 #ifdef __AMIGAOS4__
-    {NM_ITEM, "Flite Voice", 0, 0, 0, (APTR)MENU_ITEM_NULL},
-    {NM_SUB, "kal (fast)", 0, CHECKIT | MENUTOGGLE, ~(1 << 0),
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE},
+    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 0),
      (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL},
-    {NM_SUB, "kal16 (fast)", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
+    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
      (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL16},
-    {NM_SUB, "awb (slow)", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 2),
+    {NM_SUB, NULL, 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 2),
      (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_AWB},
-    {NM_SUB, "rms (slow)", 0, CHECKIT | MENUTOGGLE, ~(1 << 3),
+    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 3),
      (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_RMS},
-    {NM_SUB, "slt (slow)", 0, CHECKIT | MENUTOGGLE, ~(1 << 4),
+    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 4),
      (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_SLT},
 #endif
-    {NM_ITEM, "OpenAI Voice", 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE},
     {NM_SUB, "alloy", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
      (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY},
     {NM_SUB, "echo", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
@@ -191,15 +182,15 @@ static struct NewMenu amigaGPTMenu[] = {
      (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA},
     {NM_SUB, "shimmer", 0, CHECKIT | MENUTOGGLE, ~(1 << 5),
      (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER},
-    {NM_ITEM, "OpenAI Speech Model", 0, 0, 0, (APTR)MENU_ITEM_NULL},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL},
     {NM_SUB, "tts-1", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
      (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1},
     {NM_SUB, "tts-1-hd", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
      (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD},
-    {NM_TITLE, "OpenAI", 0, 0, 0, (APTR)MENU_ITEM_NULL},
-    {NM_ITEM, "API key", 0, 0, 0, (APTR)MENU_ITEM_OPENAI_API_KEY},
-    {NM_ITEM, "Chat System", 0, 0, 0, (APTR)MENU_ITEM_OPENAI_CHAT_SYSTEM},
-    {NM_ITEM, "Chat Model", 0, 0, 0, (APTR)MENU_ITEM_NULL},
+    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_API_KEY},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_CHAT_SYSTEM},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL},
     {NM_SUB, "gpt-4o", 0, CHECKIT | MENUTOGGLE, ~0,
      (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o},
     {NM_SUB, "gpt-4o-2024-11-20", 0, CHECKIT | MENUTOGGLE, ~0,
@@ -248,28 +239,27 @@ static struct NewMenu amigaGPTMenu[] = {
      (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_0125},
     {NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT | MENUTOGGLE, ~0,
      (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_1106},
-    {NM_ITEM, "Image Model", 0, 0, 0, (APTR)MENU_ITEM_NULL},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_IMAGE_MODEL},
     {NM_SUB, "dall-e-2", 0, CHECKIT | MENUTOGGLE, ~(1 << 0),
      (APTR)MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_2},
     {NM_SUB, "dall-e-3", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 1),
      (APTR)MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_3},
-    {NM_ITEM, "DALL-E 2 Image Size", 0, 0, 0, (APTR)MENU_ITEM_NULL},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2},
     {NM_SUB, "256x256", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
      (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_256X256},
     {NM_SUB, "512x512", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
      (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_512X512},
     {NM_SUB, "1024x1024", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
      (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_1024X1024},
-    {NM_ITEM, "DALL-E 3 Image Size", 0, 0, 0, (APTR)MENU_ITEM_NULL},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3},
     {NM_SUB, "1024x1024", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
      (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1024},
     {NM_SUB, "1792x1024", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
      (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1792X1024},
     {NM_SUB, "1024x1792", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
      (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1792},
-    {NM_TITLE, "Help", 0, 0, 0, (APTR)MENU_ITEM_NULL},
-    {NM_ITEM, "Open Documentation", 0, 0, 0,
-     (APTR)MENU_ITEM_HELP_OPEN_DOCUMENTATION},
+    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_HELP},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_HELP_OPEN_DOCUMENTATION},
     {NM_END, NULL, 0, 0, 0, 0}};
 
 void createMenu() {
@@ -965,4 +955,219 @@ void addMenuActions() {
     DoMethod(openDocumentationMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_CallHook,
              &OpenDocumentationMenuItemClickedHook, MUIV_TriggerValue);
+}
+
+void setMenuTitles() {
+    Object projectMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT);
+    set(projectMenuItem, MUIA_Menu_Title, STRING_MENU_PROJECT);
+
+    Object aboutAmigaGPTMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_ABOUT_AMIGAGPT);
+    set(aboutAmigaGPTMenuItem, MUIA_Menuitem_Title, STRING_MENU_ABOUT_AMIGAGPT);
+
+    Object aboutMuiMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
+                                               MENU_ITEM_PROJECT_ABOUT_MUI);
+    set(aboutMuiMenuItem, MUIA_Menuitem_Title, STRING_MENU_ABOUT_MUI);
+
+    Object quitMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_QUIT);
+    set(quitMenuItem, MUIA_Menuitem_Title, STRING_MENU_QUIT);
+
+    Object editMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT);
+    set(editMenuItem, MUIA_Menu_Title, STRING_MENU_EDIT);
+
+    Object cutMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_CUT);
+    set(cutMenuItem, MUIA_Menuitem_Title, STRING_MENU_CUT);
+
+    Object copyMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_COPY);
+    set(copyMenuItem, MUIA_Menuitem_Title, STRING_MENU_COPY);
+
+    Object pasteMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_PASTE);
+    set(pasteMenuItem, MUIA_Menuitem_Title, STRING_MENU_PASTE);
+
+    Object clearMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_CLEAR);
+    set(clearMenuItem, MUIA_Menuitem_Title, STRING_MENU_CLEAR);
+
+    Object selectAllMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_SELECT_ALL);
+    set(selectAllMenuItem, MUIA_Menuitem_Title, STRING_MENU_SELECT_ALL);
+
+    Object viewMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_VIEW);
+    set(viewMenuItem, MUIA_Menu_Title, STRING_MENU_VIEW);
+
+    Object muiSettingsMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
+                                                  MENU_ITEM_VIEW_MUI_SETTINGS);
+    set(muiSettingsMenuItem, MUIA_Menuitem_Title, STRING_MENU_MUI_SETTINGS);
+
+    Object connectionMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION);
+    set(connectionMenuItem, MUIA_Menuitem_Title, STRING_MENU_CONNECTION);
+
+    Object proxyMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY);
+    set(proxyMenuItem, MUIA_Menuitem_Title, STRING_MENU_PROXY);
+
+    Object proxyEnabledMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_ENABLED);
+    set(proxyEnabledMenuItem, MUIA_Menuitem_Title, STRING_MENU_ENABLED);
+
+    Object proxySettingsMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_SETTINGS);
+    set(proxySettingsMenuItem, MUIA_Menuitem_Title, STRING_MENU_SETTINGS);
+
+    Object speechMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH);
+    set(speechMenuItem, MUIA_Menu_Title, STRING_MENU_SPEECH);
+
+    Object speechEnabledMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ENABLED);
+    set(speechEnabledMenuItem, MUIA_Menuitem_Title, STRING_MENU_ENABLED);
+
+    Object speechSystemMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM);
+    set(speechSystemMenuItem, MUIA_Menuitem_Title, STRING_MENU_SPEECH_SYSTEM);
+
+#ifdef __AMIGAOS3__
+    Object speechSystem34MenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_34);
+    set(speechSystem34MenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_SPEECH_SYSTEM_34);
+
+    Object speechSystem37MenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_37);
+    set(speechSystem37MenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_SPEECH_SYSTEM_37);
+
+    Object speechAccentMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ACCENT);
+    set(speechAccentMenuItem, MUIA_Menuitem_Title, STRING_MENU_SPEECH_ACCENT);
+#endif
+
+#ifdef __AMIGAOS4__
+    Object speechSystemFliteMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_FLITE);
+    set(speechSystemFliteMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_SPEECH_SYSTEM_FLITE);
+
+    Object fliteVoiceMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
+                                                 MENU_ITEM_SPEECH_FLITE_VOICE);
+    set(fliteVoiceMenuItem, MUIA_Menuitem_Title, STRING_MENU_FLITE_VOICE);
+
+    Object fliteVoiceKalMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_KAL);
+    set(fliteVoiceKalMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_FLITE_VOICE_KAL);
+
+    Object fliteVoiceKal16MenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_KAL16);
+    set(fliteVoiceKal16MenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_FLITE_VOICE_KAL16);
+
+    Object fliteVoiceAwbMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_AWB);
+    set(fliteVoiceAwbMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_FLITE_VOICE_AWB);
+
+    Object fliteVoiceRmsMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_RMS);
+    set(fliteVoiceRmsMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_FLITE_VOICE_RMS);
+
+    Object fliteVoiceSltMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_SLT);
+    set(fliteVoiceSltMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_FLITE_VOICE_SLT);
+#endif
+
+    Object speechSystemOpenAIMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_OPENAI);
+    set(speechSystemOpenAIMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_SPEECH_SYSTEM_OPENAI);
+
+    Object speechSystemOpenAIVoiceMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE);
+    set(speechSystemOpenAIVoiceMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPENAI_VOICE);
+
+    Object speechSystemOpenAIVoiceAlloyMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY);
+    set(speechSystemOpenAIVoiceAlloyMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPENAI_VOICE_ALLOY);
+
+    Object speechSystemOpenAIVoiceEchoMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO);
+    set(speechSystemOpenAIVoiceEchoMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPENAI_VOICE_ECHO);
+
+    Object speechSystemOpenAIVoiceFableMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE);
+    set(speechSystemOpenAIVoiceFableMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPENAI_VOICE_FABLE);
+
+    Object speechSystemOpenAIVoiceOnyxMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX);
+    set(speechSystemOpenAIVoiceOnyxMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPENAI_VOICE_ONYX);
+
+    Object speechSystemOpenAIVoiceNovaMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA);
+    set(speechSystemOpenAIVoiceNovaMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPENAI_VOICE_NOVA);
+
+    Object speechSystemOpenAIVoiceShimmerMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER);
+    set(speechSystemOpenAIVoiceShimmerMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPENAI_VOICE_SHIMMER);
+
+    Object speechSystemOpenAIModelMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_MODEL);
+    set(speechSystemOpenAIModelMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_SPEECH_OPENAI_MODEL);
+
+    Object openAIMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI);
+    set(openAIMenuItem, MUIA_Menu_Title, STRING_MENU_OPENAI);
+
+    Object apiKeyMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_API_KEY);
+    set(apiKeyMenuItem, MUIA_Menuitem_Title, STRING_MENU_OPENAI_API_KEY);
+
+    Object chatSystemMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
+                                                 MENU_ITEM_OPENAI_CHAT_SYSTEM);
+    set(chatSystemMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPENAI_CHAT_SYSTEM);
+    Object chatModelMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
+                                                MENU_ITEM_OPENAI_CHAT_MODEL);
+    set(chatModelMenuItem, MUIA_Menuitem_Title, STRING_MENU_OPENAI_CHAT_MODEL);
+
+    Object openAIImageModelMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_MODEL);
+    set(openAIImageModelMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPENAI_IMAGE_MODEL);
+
+    Object openAIImageSizeDALL_E_2MenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2);
+    set(openAIImageSizeDALL_E_2MenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2);
+
+    Object openAIImageSizeDALL_E_3MenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3);
+    set(openAIImageSizeDALL_E_3MenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3);
+
+    Object helpMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_HELP);
+    set(helpMenuItem, MUIA_Menu_Title, STRING_MENU_HELP);
+
+    Object openDocumentationMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_HELP_OPEN_DOCUMENTATION);
+    set(openDocumentationMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPEN_DOCUMENTATION);
 }

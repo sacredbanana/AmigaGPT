@@ -71,9 +71,12 @@ LONG main(int argc, char **argv) {
 
     if (initSpeech(config.speechSystem) == RETURN_ERROR) {
 #ifdef __AMIGAOS3__
-        displayError(STRING_ERROR_SPEECH_OS3_INIT);
+        if (config.speechSystem == SPEECH_SYSTEM_34)
+            displayError(STRING_ERROR_SPEECH_INIT_WORKBENCH_34);
+        else if (config.speechSystem == SPEECH_SYSTEM_37)
+            displayError(STRING_ERROR_SPEECH_INIT_WORKBENCH_37);
 #else
-        displayError(STRING_ERROR_SPEECH_OS4_INIT);
+        displayError(STRING_ERROR_SPEECH_OS4_INIT_FLITE);
 #endif
         config.speechEnabled = FALSE;
         closeSpeech();

@@ -5,14 +5,14 @@
 #
 #. Generate unique ID for the image
 #: src/MainWindow.c:197 src/MainWindow.c:219 src/MainWindow.c:309
-#: src/MainWindow.c:310 src/MainWindow.c:493 src/MainWindow.c:1138
-#: src/MainWindow.c:1190 src/menu.c:335
+#: src/MainWindow.c:310 src/MainWindow.c:493 src/MainWindow.c:1139
+#: src/MainWindow.c:1191 src/menu.c:325
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-17 13:06+0000\n"
+"POT-Creation-Date: 2025-02-17 14:53+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -37,14 +37,14 @@ msgid "Failed to initialize video\n"
 msgstr ""
 
 #: src/main.c:76 src/main.c:77 src/main.c:78 src/main.c:75
-msgctxt "STRING_ERROR_SPEECH_OS3_INIT (2//)"
+msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
 msgid ""
-"Failed to open speech system. Make sure translator.library v43 and the "
-"relevant narrator.device are installed. See the guide for more information."
+"Failed to open speech system. Make sure translator.library v42 and the "
+"narrator.device v34 are installed. See the guide for more information."
 msgstr ""
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
-msgctxt "STRING_ERROR_SPEECH_OS4_INIT (3//)"
+msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
 msgid ""
 "Failed to open speech system. Make sure Flite Device is installed. See the "
 "guide for more information."
@@ -657,178 +657,119 @@ msgid "Could not find the MUI custom class:"
 msgstr ""
 
 #: src/menu.c:26
+msgctxt "STRING_ABOUT (99//)"
 msgid "About"
 msgstr ""
 
-#: src/menu.c:28
-msgid ""
-"AmigaGPT for m68k AmigaOS 3\n"
-"\n"
-"AmigaGPT for PPC AmigaOS 4\n"
-"\n"
-"Version "
-msgstr ""
-
-#: src/menu.c:32
-msgid ""
-"\n"
-"Build date: "
-msgstr ""
-
-#: src/menu.c:33
-msgid ""
-"\n"
-"Build number: "
-msgstr ""
-
-#: src/menu.c:34
-msgid ""
-"\n"
-"\n"
-"Developed by Cameron Armstrong (@sacredbanana on GitHub,\n"
-"YouTube and Twitter, @Nightfox on EAB)\n"
-"\n"
-"This app will always remain free but if you would like to\n"
-"support me you can do so at https://paypal.me/sacredbanana"
-msgstr ""
-
-#: src/menu.c:53
-msgid ""
-"Could not initialise speech system 34. Please make sure the translator."
-"library and narrator.device are installed into the program directory. See "
-"the documentation for more information."
-msgstr ""
-
 #: src/menu.c:59
+msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
 msgid ""
-"Could not initialise speech system 37. Please make sure the translator."
-"library and narrator.device are installed into the program directory. See "
-"the documentation for more information."
-msgstr ""
-
-#: src/menu.c:65
-msgid ""
-"Could not initialise speech system Flite. Please make sure the flite device "
-"is installed. See the documentation for more information."
+"Failed to open speech system. Make sure translator.library v42 and the "
+"narrator.device v37 are installed. See the guide for more information."
 msgstr ""
 
 #: src/menu.c:70
-msgid "Could not initialise speech system OpenAI"
+msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
+msgid "Could not initialize speech system OpenAI"
 msgstr ""
 
 #: src/menu.c:73
+msgctxt "STRING_ERROR_SPEECH_UNKNOWN_SYSTEM (102//)"
 msgid "Unknown speech system!"
 msgstr ""
 
-#: src/menu.c:87
-msgid "LOCALE:accents"
-msgstr ""
-
-#: src/menu.c:88
-msgid "#?.accent"
-msgstr ""
-
-#: src/menu.c:107
-msgid "AmigaGPT.guide"
-msgstr ""
-
 #: src/menu.c:117
+msgctxt "STRING_ERROR_DOCUMENTATION_OPEN (103//)"
 msgid "Could not open documentation"
 msgstr ""
 
-#: src/menu.c:124
+#: src/menu.c:124 src/menu.c:116
+msgctxt "STRING_MENU_PROJECT (104//)"
 msgid "Project"
 msgstr ""
 
-#: src/menu.c:125
+#: src/menu.c:125 src/menu.c:117
+msgctxt "STRING_MENU_ABOUT_AMIGAGPT (105//)"
 msgid "About AmigaGPT"
 msgstr ""
 
-#: src/menu.c:127
+#: src/menu.c:127 src/menu.c:119
+msgctxt "STRING_MENU_ABOUT_MUI (106//)"
 msgid "About MUI"
 msgstr ""
 
-#: src/menu.c:129
+#: src/menu.c:129 src/menu.c:121
+msgctxt "STRING_MENU_QUIT (107//)"
 msgid "Quit"
 msgstr ""
 
-#: src/menu.c:129
-msgid "Q"
-msgstr ""
-
-#: src/menu.c:130
+#: src/menu.c:130 src/menu.c:122
+msgctxt "STRING_MENU_EDIT (108//)"
 msgid "Edit"
 msgstr ""
 
-#: src/menu.c:131 src/menu.c:305
+#: src/menu.c:131 src/menu.c:305 src/menu.c:123 src/menu.c:300
+msgctxt "STRING_MENU_CUT (109//)"
 msgid "Cut"
 msgstr ""
 
-#: src/menu.c:131
-msgid "X"
-msgstr ""
-
-#: src/menu.c:132 src/menu.c:315
+#: src/menu.c:132 src/menu.c:315 src/menu.c:124 src/menu.c:310
+msgctxt "STRING_MENU_COPY (110//)"
 msgid "Copy"
 msgstr ""
 
-#: src/menu.c:132
-msgid "C"
-msgstr ""
-
-#: src/menu.c:133 src/menu.c:325
+#: src/menu.c:133 src/menu.c:325 src/menu.c:125 src/menu.c:320
+msgctxt "STRING_MENU_PASTE (111//)"
 msgid "Paste"
 msgstr ""
 
-#: src/menu.c:133
-msgid "V"
-msgstr ""
-
-#: src/menu.c:134
+#: src/menu.c:134 src/menu.c:126
+msgctxt "STRING_MENU_CLEAR(112//)"
 msgid "Clear"
 msgstr ""
 
-#: src/menu.c:134
-msgid "L"
-msgstr ""
-
-#: src/menu.c:135
+#: src/menu.c:135 src/menu.c:127
+msgctxt "STRING_MENU_SELECT_ALL (113//)"
 msgid "Select all"
 msgstr ""
 
-#: src/menu.c:135
-msgid "A"
-msgstr ""
-
-#: src/menu.c:136
+#: src/menu.c:136 src/menu.c:128
+msgctxt "STRING_MENU_VIEW (114//)"
 msgid "View"
 msgstr ""
 
-#: src/menu.c:137
+#: src/menu.c:137 src/menu.c:129
+msgctxt "STRING_MENU_MUI_SETTINGS (115//)"
 msgid "MUI Settings"
 msgstr ""
 
-#: src/menu.c:138
+#: src/menu.c:138 src/menu.c:130
+msgctxt "STRING_MENU_CONNECTION (116//)"
 msgid "Connection"
 msgstr ""
 
-#: src/menu.c:139
+#: src/menu.c:139 src/menu.c:131
+msgctxt "STRING_MENU_PROXY (117//)"
 msgid "Proxy"
 msgstr ""
 
-#: src/menu.c:140 src/menu.c:144
+#: src/menu.c:140 src/menu.c:144 src/menu.c:132 src/menu.c:136
+msgctxt "STRING_MENU_ENABLED (118//)"
 msgid "Enabled"
 msgstr ""
 
-#: src/menu.c:142
+#: src/menu.c:142 src/menu.c:134
+msgctxt "STRING_MENU_SETTINGS (119//)"
 msgid "Settings"
 msgstr ""
 
-#: src/menu.c:143
+#: src/menu.c:143 src/menu.c:135
+msgctxt "STRING_MENU_SPEECH (120//)"
 msgid "Speech"
 msgstr ""
 
-#: src/menu.c:146
+#: src/menu.c:146 src/menu.c:138
+msgctxt "STRING_MENU_SPEECH_SYSTEM (121//)"
 msgid "Speech system"
 msgstr ""
 
@@ -836,268 +777,145 @@ msgstr ""
 #. * The names of the speech systems
 #. * @see enum SpeechSystem
 #. *
-#: src/menu.c:148 src/speech.c:53
+#: src/menu.c:148 src/speech.c:53 src/menu.c:140
+msgctxt "STRING_MENU_SPEECH_SYSTEM_34 (122//)"
 msgid "Workbench 1.x v34"
 msgstr ""
 
-#: src/menu.c:150 src/speech.c:54
+#: src/menu.c:150 src/speech.c:54 src/menu.c:142
+msgctxt "STRING_MENU_SPEECH_SYSTEM_37 (123//)"
 msgid "Workbench 2.0 v37"
 msgstr ""
 
-#: src/menu.c:152 src/menu.c:158 src/menu.c:161 src/speech.c:57
-msgid "OpenAI Text To Speech"
-msgstr ""
-
-#: src/menu.c:156 src/speech.c:55
+#: src/menu.c:156 src/speech.c:55 src/menu.c:148
+msgctxt "STRING_MENU_SPEECH_SYSTEM_FLITE (124//)"
 msgid "Flite"
 msgstr ""
 
-#: src/menu.c:166
-msgid "Accent"
-msgstr ""
-
-#: src/menu.c:169
+#: src/menu.c:169 src/menu.c:161
+msgctxt "STRING_MENU_FLITE_VOICE (125//)"
 msgid "Flite Voice"
 msgstr ""
 
-#: src/menu.c:170
+#: src/menu.c:152 src/menu.c:158 src/menu.c:161 src/speech.c:57 src/menu.c:144
+#: src/menu.c:150 src/menu.c:153
+msgctxt "STRING_MENU_SPEECH_SYSTEM_OPENAI (126//)"
+msgid "OpenAI Text To Speech"
+msgstr ""
+
+#: src/menu.c:166 src/menu.c:158
+msgctxt "STRING_MENU_SPEECH_ACCENT (127//)"
+msgid "Accent"
+msgstr ""
+
+#: src/menu.c:170 src/menu.c:162
+msgctxt "STRING_MENU_FLITE_VOICE_KAL (128//)"
 msgid "kal (fast)"
 msgstr ""
 
-#: src/menu.c:172
+#: src/menu.c:172 src/menu.c:164
+msgctxt "STRING_MENU_FLITE_VOICE_KAL16 (129//)"
 msgid "kal16 (fast)"
 msgstr ""
 
-#: src/menu.c:174
+#: src/menu.c:174 src/menu.c:166
+msgctxt "STRING_MENU_FLITE_VOICE_AWB (130//)"
 msgid "awb (slow)"
 msgstr ""
 
-#: src/menu.c:176
+#: src/menu.c:176 src/menu.c:168
+msgctxt "STRING_MENU_FLITE_VOICE_RMS (131//)"
 msgid "rms (slow)"
 msgstr ""
 
-#: src/menu.c:178
+#: src/menu.c:178 src/menu.c:170
+msgctxt "STRING_MENU_FLITE_VOICE_SLT (132//)"
 msgid "slt (slow)"
 msgstr ""
 
-#: src/menu.c:181
+#: src/menu.c:181 src/menu.c:173
+msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 msgid "OpenAI Voice"
 msgstr ""
 
-#: src/menu.c:182 src/openai.c:126
+#: src/menu.c:182 src/openai.c:126 src/menu.c:174
+msgctxt "STRING_MENU_OPENAI_VOICE_ALLOY (134//)"
 msgid "alloy"
 msgstr ""
 
-#: src/menu.c:184 src/openai.c:126
+#: src/menu.c:184 src/openai.c:126 src/menu.c:176
+msgctxt "STRING_MENU_OPENAI_VOICE_ECHO (135//)"
 msgid "echo"
 msgstr ""
 
-#: src/menu.c:186 src/openai.c:127
+#: src/menu.c:186 src/openai.c:127 src/menu.c:178
+msgctxt "STRING_MENU_OPENAI_VOICE_FABLE (136//)"
 msgid "fable"
 msgstr ""
 
-#: src/menu.c:188 src/openai.c:127
+#: src/menu.c:188 src/openai.c:127 src/menu.c:180
+msgctxt "STRING_MENU_OPENAI_VOICE_ONYX (137//)"
 msgid "onyx"
 msgstr ""
 
-#: src/menu.c:190 src/openai.c:128
+#: src/menu.c:190 src/openai.c:128 src/menu.c:182
+msgctxt "STRING_MENU_OPENAI_VOICE_NOVA (138//)"
 msgid "nova"
 msgstr ""
 
-#: src/menu.c:192 src/openai.c:128
+#: src/menu.c:192 src/openai.c:128 src/menu.c:184
+msgctxt "STRING_MENU_OPENAI_VOICE_SHIMMER (139//)"
 msgid "shimmer"
 msgstr ""
 
-#: src/menu.c:194
+#: src/menu.c:194 src/menu.c:186
+msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 msgid "OpenAI Speech Model"
 msgstr ""
 
-#. *
-#. * The names of the TTS models
-#. * @see enum OpenAITTSModel
-#. *
-#: src/menu.c:195 src/openai.c:117
-msgid "tts-1"
-msgstr ""
-
-#: src/menu.c:197 src/openai.c:119
-msgid "tts-1-hd"
-msgstr ""
-
-#: src/menu.c:199
+#: src/menu.c:199 src/menu.c:192
+msgctxt "STRING_MENU_OPENAI (141//)"
 msgid "OpenAI"
 msgstr ""
 
-#: src/menu.c:200
+#: src/menu.c:200 src/menu.c:193
+msgctxt "STRING_MENU_OPENAI_API_KEY (142//)"
 msgid "API key"
 msgstr ""
 
-#: src/menu.c:201
+#: src/menu.c:201 src/menu.c:194
+msgctxt "STRING_MENU_OPENAI_CHAT_SYSTEM (143//)"
 msgid "Chat System"
 msgstr ""
 
-#: src/menu.c:202
+#: src/menu.c:202 src/menu.c:195
+msgctxt "STRING_MENU_OPENAI_CHAT_MODEL (144//)"
 msgid "Chat Model"
 msgstr ""
 
-#: src/menu.c:203 src/openai.c:70
-msgid "gpt-4o"
-msgstr ""
-
-#: src/menu.c:205 src/openai.c:71
-msgid "gpt-4o-2024-11-20"
-msgstr ""
-
-#: src/menu.c:207 src/openai.c:72
-msgid "gpt-4o-2024-08-06"
-msgstr ""
-
-#: src/menu.c:209 src/openai.c:73
-msgid "gpt-4o-2024-05-13"
-msgstr ""
-
-#: src/menu.c:211 src/openai.c:74
-msgid "chatgpt-4o-latest"
-msgstr ""
-
-#: src/menu.c:213 src/openai.c:75
-msgid "gpt-4o-mini"
-msgstr ""
-
-#: src/menu.c:215 src/openai.c:76
-msgid "gpt-4o-mini-2024-07-18"
-msgstr ""
-
-#: src/menu.c:217 src/openai.c:77
-msgid "o1"
-msgstr ""
-
-#: src/menu.c:219 src/openai.c:78
-msgid "o1-2024-12-17"
-msgstr ""
-
-#: src/menu.c:221 src/openai.c:79
-msgid "o1-preview"
-msgstr ""
-
-#: src/menu.c:223 src/openai.c:80
-msgid "o1-preview-2024-09-12"
-msgstr ""
-
-#: src/menu.c:225 src/openai.c:81
-msgid "o1-mini"
-msgstr ""
-
-#: src/menu.c:227 src/openai.c:82
-msgid "o1-mini-2024-09-12"
-msgstr ""
-
-#: src/menu.c:229 src/openai.c:83
-msgid "gpt-4-turbo"
-msgstr ""
-
-#: src/menu.c:231 src/openai.c:84
-msgid "gpt-4-turbo-2024-04-09"
-msgstr ""
-
-#: src/menu.c:233 src/openai.c:85
-msgid "gpt-4-turbo-preview"
-msgstr ""
-
-#: src/menu.c:235 src/openai.c:86
-msgid "gpt-4-0125-preview"
-msgstr ""
-
-#: src/menu.c:237 src/openai.c:87
-msgid "gpt-4-1106-preview"
-msgstr ""
-
-#: src/menu.c:239 src/openai.c:88
-msgid "gpt-4"
-msgstr ""
-
-#: src/menu.c:241 src/openai.c:89
-msgid "gpt-4-0613"
-msgstr ""
-
-#: src/menu.c:243 src/openai.c:90
-msgid "gpt-4-0314"
-msgstr ""
-
-#: src/menu.c:245 src/openai.c:91
-msgid "gpt-3.5-turbo"
-msgstr ""
-
-#: src/menu.c:247 src/openai.c:92
-msgid "gpt-3.5-turbo-0125"
-msgstr ""
-
-#: src/menu.c:249 src/openai.c:93
-msgid "gpt-3.5-turbo-1106"
-msgstr ""
-
-#: src/menu.c:251
+#: src/menu.c:251 src/menu.c:244
+msgctxt "STRING_MENU_OPENAI_IMAGE_MODEL (145//)"
 msgid "Image Model"
 msgstr ""
 
-#: src/menu.c:252 src/openai.c:101
-msgid "dall-e-2"
-msgstr ""
-
-#: src/menu.c:254 src/openai.c:101
-msgid "dall-e-3"
-msgstr ""
-
-#: src/menu.c:256
+#: src/menu.c:256 src/menu.c:249
+msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2 (146//)"
 msgid "DALL-E 2 Image Size"
 msgstr ""
 
-#. *
-#. * The names of the image sizes
-#. * @see enum ImageSize
-#. *
-#: src/menu.c:257 src/openai.c:107
-msgid "256x256"
-msgstr ""
-
-#: src/menu.c:259 src/openai.c:108
-msgid "512x512"
-msgstr ""
-
-#: src/menu.c:261 src/menu.c:264 src/openai.c:109
-msgid "1024x1024"
-msgstr ""
-
-#: src/menu.c:263
+#: src/menu.c:263 src/menu.c:257
+msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3 (147//)"
 msgid "DALL-E 3 Image Size"
 msgstr ""
 
-#: src/menu.c:266 src/openai.c:110
-msgid "1792x1024"
-msgstr ""
-
-#: src/menu.c:268 src/openai.c:111
-msgid "1024x1792"
-msgstr ""
-
-#: src/menu.c:270
+#: src/menu.c:270 src/menu.c:265
+msgctxt "STRING_MENU_HELP (148//)"
 msgid "Help"
 msgstr ""
 
-#: src/menu.c:271
+#: src/menu.c:271 src/menu.c:266
+msgctxt "STRING_MENU_OPEN_DOCUMENTATION (149//)"
 msgid "Open Documentation"
-msgstr ""
-
-#: src/menu.c:345
-msgid "SelectAll"
-msgstr ""
-
-#: src/openai.c:22
-msgid "api.openai.com"
-msgstr ""
-
-#: src/openai.c:174 src/openai.c:181
-msgid "bsdsocket.library"
 msgstr ""
 
 #: src/openai.c:175
@@ -1747,7 +1565,7 @@ msgid "Please enter your OpenAI API key in the Open AI settings in the menu."
 msgstr ""
 
 #: src/MainWindow.c:2085 src/MainWindow.c:2088 src/MainWindow.c:2070
-#: src/MainWindow.c:2073 src/MainWindow.c:2072
+#: src/MainWindow.c:2073 src/MainWindow.c:2072 src/MainWindow.c:2074
 #, c-format
 msgid "Error copying %s to %s"
 msgstr ""
@@ -1773,12 +1591,13 @@ msgid "https://github.com/sacredbanana/AmigaGPT"
 msgstr ""
 
 #: src/MainWindow.c:281 src/MainWindow.c:1242 src/openai.c:614
-#: src/openai.c:1521 src/MainWindow.c:1241
+#: src/openai.c:1521 src/MainWindow.c:1241 src/MainWindow.c:1243
 msgid "error"
 msgstr ""
 
 #: src/MainWindow.c:283 src/MainWindow.c:1134 src/MainWindow.c:1244
 #: src/openai.c:1525 src/MainWindow.c:1133 src/MainWindow.c:1243
+#: src/MainWindow.c:1135 src/MainWindow.c:1245
 msgid "message"
 msgstr ""
 
@@ -1795,6 +1614,7 @@ msgid "images"
 msgstr ""
 
 #: src/MainWindow.c:306 src/MainWindow.c:1049 src/MainWindow.c:1048
+#: src/MainWindow.c:1050
 msgid "images/thumbnails"
 msgstr ""
 
@@ -1809,7 +1629,8 @@ msgstr ""
 
 #: src/MainWindow.c:356 src/MainWindow.c:361 src/MainWindow.c:1184
 #: src/MainWindow.c:1371 src/MainWindow.c:1455 src/MainWindow.c:1183
-#: src/MainWindow.c:1370 src/MainWindow.c:1454
+#: src/MainWindow.c:1370 src/MainWindow.c:1454 src/MainWindow.c:1185
+#: src/MainWindow.c:1372 src/MainWindow.c:1456
 msgid "user"
 msgstr ""
 
@@ -1828,6 +1649,7 @@ msgid "SYS:"
 msgstr ""
 
 #: src/MainWindow.c:493 src/MainWindow.c:1047 src/MainWindow.c:1046
+#: src/MainWindow.c:1048
 #, c-format
 msgid "%s%s%s"
 msgstr ""
@@ -1843,6 +1665,7 @@ msgid "cP[%ld]%s"
 msgstr ""
 
 #: src/MainWindow.c:602 src/MainWindow.c:1463 src/MainWindow.c:1462
+#: src/MainWindow.c:1464
 msgid "b"
 msgstr ""
 
@@ -1863,88 +1686,90 @@ msgid "n"
 msgstr ""
 
 #: src/MainWindow.c:829 src/MainWindow.c:897 src/MainWindow.c:828
-#: src/MainWindow.c:896
+#: src/MainWindow.c:896 src/MainWindow.c:830 src/MainWindow.c:898
 msgid "BAR MINW=100 MAXW=200"
 msgstr ""
 
-#: src/MainWindow.c:1039 src/MainWindow.c:1038
+#: src/MainWindow.c:1039 src/MainWindow.c:1038 src/MainWindow.c:1040
 msgid "thumbnails"
 msgstr ""
 
-#: src/MainWindow.c:1131 src/MainWindow.c:1130
+#: src/MainWindow.c:1131 src/MainWindow.c:1130 src/MainWindow.c:1132
 msgid "choices"
 msgstr ""
 
-#: src/MainWindow.c:1134 src/MainWindow.c:1133
+#: src/MainWindow.c:1134 src/MainWindow.c:1133 src/MainWindow.c:1135
 msgid "delta"
 msgstr ""
 
 #: src/MainWindow.c:1136 src/MainWindow.c:1629 src/MainWindow.c:1847
 #: src/openai.c:481 src/MainWindow.c:1135 src/MainWindow.c:1628
-#: src/MainWindow.c:1846
+#: src/MainWindow.c:1846 src/MainWindow.c:1137 src/MainWindow.c:1630
+#: src/MainWindow.c:1848
 msgid "role"
 msgstr ""
 
 #: src/MainWindow.c:1140 src/MainWindow.c:1632 src/MainWindow.c:1858
 #: src/openai.c:483 src/MainWindow.c:1139 src/MainWindow.c:1631
-#: src/MainWindow.c:1857
+#: src/MainWindow.c:1857 src/MainWindow.c:1141 src/MainWindow.c:1633
+#: src/MainWindow.c:1859
 msgid "content"
 msgstr ""
 
-#: src/MainWindow.c:1200 src/MainWindow.c:1199
+#: src/MainWindow.c:1200 src/MainWindow.c:1199 src/MainWindow.c:1201
 msgid "\n"
 msgstr ""
 
 #: src/MainWindow.c:1209 src/MainWindow.c:1625 src/MainWindow.c:1208
-#: src/MainWindow.c:1624
+#: src/MainWindow.c:1624 src/MainWindow.c:1210 src/MainWindow.c:1626
 msgid "system"
 msgstr ""
 
-#: src/MainWindow.c:1324 src/MainWindow.c:1323
+#: src/MainWindow.c:1324 src/MainWindow.c:1323 src/MainWindow.c:1325
 msgid "finish_reason"
 msgstr ""
 
 #: src/MainWindow.c:1347 src/MainWindow.c:1466 src/MainWindow.c:1346
-#: src/MainWindow.c:1465
+#: src/MainWindow.c:1465 src/MainWindow.c:1348 src/MainWindow.c:1467
 msgid "assistant"
 msgstr ""
 
-#: src/MainWindow.c:1368 src/MainWindow.c:1367
+#: src/MainWindow.c:1368 src/MainWindow.c:1367 src/MainWindow.c:1369
 msgid ""
 "generate a short title for this conversation and don't enclose the title in "
 "quotes or prefix the response with anything"
 msgstr ""
 
-#: src/MainWindow.c:1457 src/MainWindow.c:1456
+#: src/MainWindow.c:1457 src/MainWindow.c:1456 src/MainWindow.c:1458
 msgid "rb3"
 msgstr ""
 
-#: src/MainWindow.c:1467 src/MainWindow.c:1466
+#: src/MainWindow.c:1467 src/MainWindow.c:1466 src/MainWindow.c:1468
 msgid ""
 "\n"
 "\n"
 "l2"
 msgstr ""
 
-#: src/MainWindow.c:1475 src/MainWindow.c:1474
+#: src/MainWindow.c:1475 src/MainWindow.c:1474 src/MainWindow.c:1476
 msgid ""
 "\n"
 "\n"
 msgstr ""
 
 #: src/MainWindow.c:1485 src/openai.c:647 src/openai.c:901
-#: src/MainWindow.c:1484
+#: src/MainWindow.c:1484 src/MainWindow.c:1486
 #, c-format
 msgid "%s"
 msgstr ""
 
 #: src/MainWindow.c:1570 src/MainWindow.c:1586 src/MainWindow.c:1569
-#: src/MainWindow.c:1585
+#: src/MainWindow.c:1585 src/MainWindow.c:1571 src/MainWindow.c:1587
 #, c-format
 msgid "c%s"
 msgstr ""
 
-#: src/MainWindow.c:1571 src/MainWindow.c:1570
+#: src/MainWindow.c:1571 src/MainWindow.c:1570 src/MainWindow.c:1572
 #, c-format
 msgid "%s\n"
 msgstr ""
@@ -1953,17 +1778,21 @@ msgstr ""
 #: src/MainWindow.c:1794 src/MainWindow.c:1798 src/MainWindow.c:1800
 #: src/MainWindow.c:1600 src/MainWindow.c:1760 src/MainWindow.c:1790
 #: src/MainWindow.c:1793 src/MainWindow.c:1797 src/MainWindow.c:1799
+#: src/MainWindow.c:1602 src/MainWindow.c:1762 src/MainWindow.c:1792
+#: src/MainWindow.c:1795 src/MainWindow.c:1801
 msgid "chat-history.json"
 msgstr ""
 
 #: src/MainWindow.c:1616 src/MainWindow.c:1677 src/MainWindow.c:1815
 #: src/MainWindow.c:1933 src/MainWindow.c:1615 src/MainWindow.c:1676
-#: src/MainWindow.c:1814 src/MainWindow.c:1932
+#: src/MainWindow.c:1814 src/MainWindow.c:1932 src/MainWindow.c:1617
+#: src/MainWindow.c:1678 src/MainWindow.c:1816 src/MainWindow.c:1934
 msgid "name"
 msgstr ""
 
 #: src/MainWindow.c:1636 src/MainWindow.c:1827 src/openai.c:489
-#: src/MainWindow.c:1635 src/MainWindow.c:1826
+#: src/MainWindow.c:1635 src/MainWindow.c:1826 src/MainWindow.c:1637
+#: src/MainWindow.c:1828
 msgid "messages"
 msgstr ""
 
@@ -1971,51 +1800,55 @@ msgstr ""
 #: src/MainWindow.c:1913 src/MainWindow.c:1917 src/MainWindow.c:1919
 #: src/MainWindow.c:1661 src/MainWindow.c:1880 src/MainWindow.c:1909
 #: src/MainWindow.c:1912 src/MainWindow.c:1916 src/MainWindow.c:1918
+#: src/MainWindow.c:1663 src/MainWindow.c:1882 src/MainWindow.c:1911
+#: src/MainWindow.c:1914 src/MainWindow.c:1920
 msgid "image-history.json"
 msgstr ""
 
 #: src/MainWindow.c:1680 src/MainWindow.c:1944 src/MainWindow.c:1679
-#: src/MainWindow.c:1943
+#: src/MainWindow.c:1943 src/MainWindow.c:1681 src/MainWindow.c:1945
 msgid "filePath"
 msgstr ""
 
 #: src/MainWindow.c:1682 src/MainWindow.c:1955 src/openai.c:794
-#: src/MainWindow.c:1681 src/MainWindow.c:1954
+#: src/MainWindow.c:1681 src/MainWindow.c:1954 src/MainWindow.c:1683
+#: src/MainWindow.c:1956
 msgid "prompt"
 msgstr ""
 
 #: src/MainWindow.c:1684 src/MainWindow.c:1966 src/config.c:69 src/config.c:251
 #: src/MainWindow.c:1683 src/MainWindow.c:1965 src/config.c:70 src/config.c:252
+#: src/MainWindow.c:1685 src/MainWindow.c:1967
 msgid "imageModel"
 msgstr ""
 
 #: src/MainWindow.c:1686 src/MainWindow.c:1977 src/MainWindow.c:1685
-#: src/MainWindow.c:1976
+#: src/MainWindow.c:1976 src/MainWindow.c:1687 src/MainWindow.c:1978
 msgid "width"
 msgstr ""
 
 #: src/MainWindow.c:1688 src/MainWindow.c:1988 src/MainWindow.c:1687
-#: src/MainWindow.c:1987
+#: src/MainWindow.c:1987 src/MainWindow.c:1689 src/MainWindow.c:1989
 msgid "height"
 msgstr ""
 
-#: src/MainWindow.c:1792 src/MainWindow.c:1791
+#: src/MainWindow.c:1792 src/MainWindow.c:1791 src/MainWindow.c:1793
 msgid "chat-history.json.bak"
 msgstr ""
 
-#: src/MainWindow.c:1795 src/MainWindow.c:1794
+#: src/MainWindow.c:1795 src/MainWindow.c:1794 src/MainWindow.c:1796
 msgid "RAM:chat-history.json"
 msgstr ""
 
-#: src/MainWindow.c:1911 src/MainWindow.c:1910
+#: src/MainWindow.c:1911 src/MainWindow.c:1910 src/MainWindow.c:1912
 msgid "image-history.json.bak"
 msgstr ""
 
-#: src/MainWindow.c:1914 src/MainWindow.c:1913
+#: src/MainWindow.c:1914 src/MainWindow.c:1913 src/MainWindow.c:1915
 msgid "RAM:image-history.json"
 msgstr ""
 
-#: src/MainWindow.c:2099 src/MainWindow.c:2098
+#: src/MainWindow.c:2099 src/MainWindow.c:2098 src/MainWindow.c:2100
 #, c-format
 msgid "P[%lup[2]%s"
 msgstr ""
@@ -2173,4 +2006,284 @@ msgstr ""
 
 #: src/gui.c:166
 msgid "PROGDIR:AmigaGPT.guide"
+msgstr ""
+
+#: src/menu.c:28
+msgid ""
+"AmigaGPT for m68k AmigaOS 3\n"
+"\n"
+"AmigaGPT for PPC AmigaOS 4\n"
+"\n"
+"Version "
+msgstr ""
+
+#: src/menu.c:32
+msgid ""
+"\n"
+"Build date: "
+msgstr ""
+
+#: src/menu.c:33
+msgid ""
+"\n"
+"Build number: "
+msgstr ""
+
+#: src/menu.c:34
+msgid ""
+"\n"
+"\n"
+"Developed by Cameron Armstrong (@sacredbanana on GitHub,\n"
+"YouTube and Twitter, @Nightfox on EAB)\n"
+"\n"
+"This app will always remain free but if you would like to\n"
+"support me you can do so at https://paypal.me/sacredbanana"
+msgstr ""
+
+#: src/menu.c:79
+msgid "LOCALE:accents"
+msgstr ""
+
+#: src/menu.c:80
+msgid "#?.accent"
+msgstr ""
+
+#: src/menu.c:99
+msgid "AmigaGPT.guide"
+msgstr ""
+
+#: src/menu.c:968
+msgid "Projectile"
+msgstr ""
+
+#: src/menu.c:120
+msgid "Q"
+msgstr ""
+
+#: src/menu.c:122
+msgid "X"
+msgstr ""
+
+#: src/menu.c:123
+msgid "C"
+msgstr ""
+
+#: src/menu.c:124
+msgid "V"
+msgstr ""
+
+#: src/menu.c:125
+msgid "L"
+msgstr ""
+
+#: src/menu.c:126
+msgid "A"
+msgstr ""
+
+#: src/menu.c:173 src/openai.c:126
+msgid "alloy"
+msgstr ""
+
+#: src/menu.c:175 src/openai.c:126
+msgid "echo"
+msgstr ""
+
+#: src/menu.c:177 src/openai.c:127
+msgid "fable"
+msgstr ""
+
+#: src/menu.c:179 src/openai.c:127
+msgid "onyx"
+msgstr ""
+
+#: src/menu.c:181 src/openai.c:128
+msgid "nova"
+msgstr ""
+
+#: src/menu.c:183 src/openai.c:128
+msgid "shimmer"
+msgstr ""
+
+#. *
+#. * The names of the TTS models
+#. * @see enum OpenAITTSModel
+#. *
+#: src/menu.c:186 src/openai.c:117
+msgid "tts-1"
+msgstr ""
+
+#: src/menu.c:188 src/openai.c:119
+msgid "tts-1-hd"
+msgstr ""
+
+#: src/menu.c:194 src/openai.c:70
+msgid "gpt-4o"
+msgstr ""
+
+#: src/menu.c:196 src/openai.c:71
+msgid "gpt-4o-2024-11-20"
+msgstr ""
+
+#: src/menu.c:198 src/openai.c:72
+msgid "gpt-4o-2024-08-06"
+msgstr ""
+
+#: src/menu.c:200 src/openai.c:73
+msgid "gpt-4o-2024-05-13"
+msgstr ""
+
+#: src/menu.c:202 src/openai.c:74
+msgid "chatgpt-4o-latest"
+msgstr ""
+
+#: src/menu.c:204 src/openai.c:75
+msgid "gpt-4o-mini"
+msgstr ""
+
+#: src/menu.c:206 src/openai.c:76
+msgid "gpt-4o-mini-2024-07-18"
+msgstr ""
+
+#: src/menu.c:208 src/openai.c:77
+msgid "o1"
+msgstr ""
+
+#: src/menu.c:210 src/openai.c:78
+msgid "o1-2024-12-17"
+msgstr ""
+
+#: src/menu.c:212 src/openai.c:79
+msgid "o1-preview"
+msgstr ""
+
+#: src/menu.c:214 src/openai.c:80
+msgid "o1-preview-2024-09-12"
+msgstr ""
+
+#: src/menu.c:216 src/openai.c:81
+msgid "o1-mini"
+msgstr ""
+
+#: src/menu.c:218 src/openai.c:82
+msgid "o1-mini-2024-09-12"
+msgstr ""
+
+#: src/menu.c:220 src/openai.c:83
+msgid "gpt-4-turbo"
+msgstr ""
+
+#: src/menu.c:222 src/openai.c:84
+msgid "gpt-4-turbo-2024-04-09"
+msgstr ""
+
+#: src/menu.c:224 src/openai.c:85
+msgid "gpt-4-turbo-preview"
+msgstr ""
+
+#: src/menu.c:226 src/openai.c:86
+msgid "gpt-4-0125-preview"
+msgstr ""
+
+#: src/menu.c:228 src/openai.c:87
+msgid "gpt-4-1106-preview"
+msgstr ""
+
+#: src/menu.c:230 src/openai.c:88
+msgid "gpt-4"
+msgstr ""
+
+#: src/menu.c:232 src/openai.c:89
+msgid "gpt-4-0613"
+msgstr ""
+
+#: src/menu.c:234 src/openai.c:90
+msgid "gpt-4-0314"
+msgstr ""
+
+#: src/menu.c:236 src/openai.c:91
+msgid "gpt-3.5-turbo"
+msgstr ""
+
+#: src/menu.c:238 src/openai.c:92
+msgid "gpt-3.5-turbo-0125"
+msgstr ""
+
+#: src/menu.c:240 src/openai.c:93
+msgid "gpt-3.5-turbo-1106"
+msgstr ""
+
+#: src/menu.c:243 src/openai.c:101
+msgid "dall-e-2"
+msgstr ""
+
+#: src/menu.c:245 src/openai.c:101
+msgid "dall-e-3"
+msgstr ""
+
+#. *
+#. * The names of the image sizes
+#. * @see enum ImageSize
+#. *
+#: src/menu.c:248 src/openai.c:107
+msgid "256x256"
+msgstr ""
+
+#: src/menu.c:250 src/openai.c:108
+msgid "512x512"
+msgstr ""
+
+#: src/menu.c:252 src/menu.c:255 src/openai.c:109
+msgid "1024x1024"
+msgstr ""
+
+#: src/menu.c:257 src/openai.c:110
+msgid "1792x1024"
+msgstr ""
+
+#: src/menu.c:259 src/openai.c:111
+msgid "1024x1792"
+msgstr ""
+
+#: src/menu.c:295
+msgid "Cut"
+msgstr ""
+
+#: src/menu.c:305
+msgid "Copy"
+msgstr ""
+
+#: src/menu.c:315
+msgid "Paste"
+msgstr ""
+
+#: src/menu.c:335
+msgid "SelectAll"
+msgstr ""
+
+#: src/openai.c:22
+msgid "api.openai.com"
+msgstr ""
+
+#: src/openai.c:174 src/openai.c:181
+msgid "bsdsocket.library"
+msgstr ""
+
+#. *
+#. * The names of the speech systems
+#. * @see enum SpeechSystem
+#. *
+#: src/speech.c:53
+msgid "Workbench 1.x v34"
+msgstr ""
+
+#: src/speech.c:54
+msgid "Workbench 2.0 v37"
+msgstr ""
+
+#: src/speech.c:55
+msgid "Flite"
+msgstr ""
+
+#: src/speech.c:57
+msgid "OpenAI Text To Speech"
 msgstr ""
