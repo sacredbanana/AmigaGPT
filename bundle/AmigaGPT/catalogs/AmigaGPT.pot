@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-17 15:58+0000\n"
+"POT-Creation-Date: 2025-02-17 16:27+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1100,135 +1100,77 @@ msgid "Download complete."
 msgstr ""
 
 #: src/speech.c:71
-#, c-format
+msgctxt "STRING_ERROR_NARRATOR_PORT (184//)"
 msgid "Could not create narrator port\n"
 msgstr ""
 
 #: src/speech.c:78
-#, c-format
+msgctxt "STRING_ERROR_NARRATOR_IO_REQUEST (185//)"
 msgid "Could not create narrator IO request\n"
 msgstr ""
 
-#: src/speech.c:85
-msgid "devs/speech/34/narrator.device"
-msgstr ""
-
 #: src/speech.c:87
-#, c-format
+msgctxt "STRING_ERROR_NARRATOR_34_DEVICE_OPEN (186//)"
 msgid "Could not open narrator.device v34\n"
 msgstr ""
 
-#: src/speech.c:93
-msgid "devs/speech/37/narrator.device"
-msgstr ""
-
 #: src/speech.c:95
-#, c-format
+msgctxt "STRING_ERROR_NARRATOR_37_DEVICE_OPEN (187//)"
 msgid "Could not open narrator.device v37\n"
 msgstr ""
 
-#: src/speech.c:104
-msgid "translator.library"
-msgstr ""
-
 #: src/speech.c:105
-#, c-format
+msgctxt "STRING_ERROR_TRANSLATOR_LIB_OPEN (188//)"
 msgid "Could not open translator.library\n"
 msgstr ""
 
-#: src/speech.c:126
-msgid "flite.device"
-msgstr ""
-
 #: src/speech.c:134
-msgid ": failed to obtain interface for flite.device\n"
+msgctxt "STRING_ERROR_FLITE_INTERFACE_OPEN (189//)"
+msgid "Failed to obtain interface for flite.device\n"
 msgstr ""
 
 #: src/speech.c:139
-msgid ": failed to open flite.device\n"
-msgstr ""
-
-#: src/speech.c:236
-msgid ""
-"lea %a1, %%a0\n"
-"move.l %0, %%d1\n"
-"lsr.l #1, %%d1\n"
-"1:\n"
-"move.w (%%a0), %%d0\n"
-"rol.w #8, %%d0\n"
-"move.w %%d0, (%%a0)+\n"
-"subq.l #1, %%d1\n"
-"bne.b 1b\n"
-msgstr ""
-
-#. No output operands
-#: src/speech.c:250
-msgid "d"
-msgstr ""
-
-#: src/speech.c:250
-msgid "a"
-msgstr ""
-
-#. Input operands
-#: src/speech.c:251 src/speech.c:432
-msgid "d0"
-msgstr ""
-
-#: src/speech.c:251 src/speech.c:432
-msgid "d1"
-msgstr ""
-
-#: src/speech.c:251 src/speech.c:432
-msgid "a0"
-msgstr ""
-
-#: src/speech.c:251 src/speech.c:432
-msgid "memory"
+msgctxt "STRING_ERROR_FLITE_DEVICE_OPEN (190//)"
+msgid "Failed to open flite.device\n"
 msgstr ""
 
 #: src/speech.c:283
-#, c-format
+msgctxt "STRING_ERROR_AHI_DEVICE_OPEN (191//)"
 msgid "Failed to open AHI device: %d\n"
 msgstr ""
 
-#: src/speech.c:330
-#, c-format
-msgid "%s.voice"
-msgstr ""
-
 #: src/speech.c:334
-msgid ": failed to open voice\n"
+msgctxt "STRING_ERROR_VOICE_OPEN (192//)"
+msgid "Failed to open voice"
 msgstr ""
 
 #: src/speech.c:358
-msgid ": Speech IO aborted\n"
+msgctxt "STRING_ERROR_SPEECH_IO_ABORTED (193//)"
+msgid "Speech IO aborted"
 msgstr ""
 
 #: src/speech.c:361
-msgid ": libflite error\n"
+msgctxt "STRING_ERROR_FLITE (194//)"
+msgid "Flite error"
 msgstr ""
 
 #: src/speech.c:364
-msgid ": no voice\n"
+msgctxt "STRING_ERROR_NO_VOICE (195//)"
+msgid "No voice"
 msgstr ""
 
 #: src/speech.c:367
-msgid ": unknown speech IO error\n"
+msgctxt "STRING_ERROR_SPEECH_UNKNOWN (196//)"
+msgid "Unknown speech IO error"
 msgstr ""
 
 #: src/speech.c:390
-#, c-format
+msgctxt "STRING_ERROR_FILE_OPEN (197//)"
 msgid "Failed to open file: %s\n"
 msgstr ""
 
-#: src/speech.c:402
-#, c-format
-msgid "Failed to allocate memory for audio data\n"
-msgstr ""
-
 #: src/speech.c:406
-#, c-format
+msgctxt "STRING_ERROR_FILE_READ (198//)"
 msgid "Failed to read file: %s\n"
 msgstr ""
 
@@ -1771,6 +1713,7 @@ msgstr ""
 
 #: src/gui.c:81 src/gui.c:93 src/openai.c:185 src/openai.c:210 src/openai.c:231
 #: src/speech.c:131 src/openai.c:183 src/openai.c:204 src/openai.c:223
+#: src/speech.c:132
 msgid "main"
 msgstr ""
 
@@ -2058,19 +2001,19 @@ msgstr ""
 #. * The names of the speech systems
 #. * @see enum SpeechSystem
 #. *
-#: src/speech.c:53
+#: src/speech.c:53 src/speech.c:54
 msgid "Workbench 1.x v34"
 msgstr ""
 
-#: src/speech.c:54
+#: src/speech.c:54 src/speech.c:55
 msgid "Workbench 2.0 v37"
 msgstr ""
 
-#: src/speech.c:55
+#: src/speech.c:55 src/speech.c:56
 msgid "Flite"
 msgstr ""
 
-#: src/speech.c:57
+#: src/speech.c:57 src/speech.c:58
 msgid "OpenAI Text To Speech"
 msgstr ""
 
@@ -2305,22 +2248,82 @@ msgstr ""
 #. * The names of the speech voices
 #. * @see enum SpeechFliteVoice
 #. *
-#: src/speech.c:41
+#: src/speech.c:41 src/speech.c:42
 msgid "kal"
 msgstr ""
 
-#: src/speech.c:42
+#: src/speech.c:42 src/speech.c:43
 msgid "kal16"
 msgstr ""
 
-#: src/speech.c:43
+#: src/speech.c:43 src/speech.c:44
 msgid "awb"
 msgstr ""
 
-#: src/speech.c:44
+#: src/speech.c:44 src/speech.c:45
 msgid "rms"
 msgstr ""
 
-#: src/speech.c:45
+#: src/speech.c:45 src/speech.c:46
 msgid "slt"
+msgstr ""
+
+#: src/speech.c:86
+msgid "devs/speech/34/narrator.device"
+msgstr ""
+
+#: src/speech.c:94
+msgid "devs/speech/37/narrator.device"
+msgstr ""
+
+#: src/speech.c:105
+msgid "translator.library"
+msgstr ""
+
+#: src/speech.c:127
+msgid "flite.device"
+msgstr ""
+
+#: src/speech.c:236
+msgid ""
+"lea %a1, %%a0\n"
+"move.l %0, %%d1\n"
+"lsr.l #1, %%d1\n"
+"1:\n"
+"move.w (%%a0), %%d0\n"
+"rol.w #8, %%d0\n"
+"move.w %%d0, (%%a0)+\n"
+"subq.l #1, %%d1\n"
+"bne.b 1b\n"
+msgstr ""
+
+#. No output operands
+#: src/speech.c:250
+msgid "d"
+msgstr ""
+
+#: src/speech.c:250
+msgid "a"
+msgstr ""
+
+#. Input operands
+#: src/speech.c:251 src/speech.c:432
+msgid "d0"
+msgstr ""
+
+#: src/speech.c:251 src/speech.c:432
+msgid "d1"
+msgstr ""
+
+#: src/speech.c:251 src/speech.c:432
+msgid "a0"
+msgstr ""
+
+#: src/speech.c:251 src/speech.c:432
+msgid "memory"
+msgstr ""
+
+#: src/speech.c:330
+#, c-format
+msgid "%s.voice"
 msgstr ""

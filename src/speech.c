@@ -14,6 +14,7 @@
 #endif
 #endif
 #include "config.h"
+#include "gui.h"
 #include "version.h"
 
 #ifdef __AMIGAOS3__
@@ -68,14 +69,14 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
     if (!translationBuffer)
         translationBuffer = AllocVec(TRANSLATION_BUFFER_SIZE, MEMF_ANY);
     if (!(NarratorPort = CreateMsgPort())) {
-        printf("Could not create narrator port\n");
+        printf(STRING_ERROR_NARRATOR_PORT);
         config.speechEnabled = FALSE;
         return RETURN_ERROR;
     }
 
     if (!(NarratorIO =
               CreateIORequest(NarratorPort, sizeof(struct narrator_rb)))) {
-        printf("Could not create narrator IO request\n");
+        printf(STRING_ERROR_NARRATOR_IO_REQUEST);
         config.speechEnabled = FALSE;
         return RETURN_ERROR;
     }
@@ -84,7 +85,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
     case SPEECH_SYSTEM_34:
         if (OpenDevice(PROGDIR "devs/speech/34/narrator.device", 0,
                        (struct IORequest *)NarratorIO, 0L) != 0) {
-            printf("Could not open narrator.device v34\n");
+            printf(STRING_ERROR_NARRATOR_34_DEVICE_OPEN);
             config.speechEnabled = FALSE;
             return RETURN_ERROR;
         }
@@ -92,7 +93,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
     case SPEECH_SYSTEM_37:
         if (OpenDevice(PROGDIR "devs/speech/37/narrator.device", 0,
                        (struct IORequest *)NarratorIO, 0L) != 0) {
-            printf("Could not open narrator.device v37\n");
+            printf(STRING_ERROR_NARRATOR_37_DEVICE_OPEN);
             config.speechEnabled = FALSE;
             return RETURN_ERROR;
         }
@@ -102,7 +103,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 
     if ((TranslatorBase =
              (struct Library *)OpenLibrary("translator.library", 42)) == NULL) {
-        printf("Could not open translator.library\n");
+        printf(STRING_ERROR_TRANSLATOR_LIB_OPEN);
         config.speechEnabled = FALSE;
         return RETURN_ERROR;
     }
@@ -130,13 +131,12 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
             IFlite = (struct FliteIFace *)GetInterface(
                 (struct Library *)FliteBase, "main", 1, NULL);
             if (!IFlite) {
-                PutErrStr(APP_NAME
-                          ": failed to obtain interface for flite.device\n");
+                printf(STRING_ERROR_FLITE_INTERFACE_OPEN);
                 config.speechEnabled = FALSE;
                 return RETURN_ERROR;
             }
         } else {
-            PutErrStr(APP_NAME ": failed to open flite.device\n");
+            printf(STRING_ERROR_FLITE_DEVICE_OPEN);
             config.speechEnabled = FALSE;
             return RETURN_ERROR;
         }
@@ -280,7 +280,7 @@ void speakText(STRPTR text) {
         ahiError = OpenDevice(AHINAME, AHI_DEFAULT_UNIT,
                               (struct IORequest *)ahiRequest, 0L);
         if (ahiError != 0) {
-            printf("Failed to open AHI device: %d\n", ahiError);
+            printf(STRING_ERROR_AHI_DEVICE_OPEN, ahiError);
             config.speechEnabled = FALSE;
             FreeVec(audioBuffer);
             return;
@@ -331,7 +331,7 @@ void speakText(STRPTR text) {
                  SPEECH_FLITE_VOICE_NAMES[config.speechFliteVoice]);
         voice = OpenVoice(voiceName);
         if (!voice) {
-            PutErrStr(APP_NAME ": failed to open voice\n");
+            displayError(STRING_ERROR_VOICE_OPEN);
             return;
         }
         fliteRequest->fr_Std.io_Command = CMD_WRITE;
@@ -355,16 +355,16 @@ void speakText(STRPTR text) {
         case IOERR_SUCCESS:
             break;
         case IOERR_ABORTED:
-            PutErrStr(APP_NAME ": Speech IO aborted\n");
+            displayError(STRING_ERROR_SPEECH_IO_ABORTED);
             break;
         case FLERR_FLITE:
-            PutErrStr(APP_NAME ": libflite error\n");
+            displayError(STRING_ERROR_FLITE);
             break;
         case FLERR_NOVOICE:
-            PutErrStr(APP_NAME ": no voice\n");
+            displayError(STRING_ERROR_NO_VOICE);
             break;
         default:
-            PutErrStr(APP_NAME ": unknown speech IO error\n");
+            displayError(STRING_ERROR_SPEECH_UNKNOWN);
             break;
         }
     }
@@ -387,7 +387,7 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size) {
     // Attempt to open the audio file
     fileHandle = Open(filename, MODE_OLDFILE);
     if (!fileHandle) {
-        printf("Failed to open file: %s\n", filename);
+        printf(STRING_ERROR_FILE_OPEN, filename);
         return NULL;
     }
 
@@ -399,11 +399,11 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size) {
         // Allocate buffer for audio data
         buffer = AllocVec(fileSize, MEMF_PUBLIC | MEMF_CLEAR);
         if (!buffer) {
-            printf("Failed to allocate memory for audio data\n");
+            displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
         } else {
             // Read file content into buffer
             if (Read(fileHandle, buffer, fileSize) != fileSize) {
-                printf("Failed to read file: %s\n", filename);
+                printf(STRING_ERROR_FILE_READ, filename);
                 FreeVec(buffer);
                 buffer = NULL;
             } else {
