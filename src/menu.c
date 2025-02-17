@@ -107,7 +107,7 @@ HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
         .nag_Name = PROGDIR "AmigaGPT.guide",
         .nag_Screen = screen,
         .nag_PubScreen = NULL,
-        .nag_BaseName = "AmigaGPT",
+        .nag_BaseName = STRING_APP_NAME,
         .nag_Extens = NULL,
     };
     AMIGAGUIDECONTEXT handle;

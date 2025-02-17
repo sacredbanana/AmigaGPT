@@ -49,7 +49,7 @@ WORD pens[NUMDRIPENS + 1];
 BOOL isPublicScreen;
 struct Conversation *currentConversation;
 struct GeneratedImage *currentImage;
-static UBYTE *pages[3] = {NULL};
+static STRPTR pages[3] = {NULL};
 
 static struct Conversation *newConversation();
 static UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream);

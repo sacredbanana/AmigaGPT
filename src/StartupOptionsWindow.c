@@ -15,9 +15,6 @@ Object *startupOptionsWindowObject;
 static Object *startupOptionsOkButton;
 static Object *screenSelectRadioButton;
 
-static CONST_STRPTR radioButtonOptions[] = {"Open in Workbench", "New screen",
-                                            NULL};
-
 HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void,
             Object *screenSelectRadioButton,
             Object *startupOptionsWindowObjecet) {
@@ -83,7 +80,7 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void,
                          SA_Width, screenModeRequester->sm_DisplayWidth,
                          SA_Height, screenModeRequester->sm_DisplayHeight,
                          TAG_DONE)) == NULL) {
-                    displayError("Could not open screen");
+                    displayError(STRING_ERROR_SCREEN);
                     MUI_FreeAslRequest(screenModeRequester);
                     return RETURN_ERROR;
                 }
@@ -118,17 +115,20 @@ MakeHook(StartupOptionsOkButtonClickedHook, StartupOptionsOkButtonClickedFunc);
 LONG createStartupOptionsWindow() {
     struct ScreenModeRequester *screenModeRequester;
     screen = LockPubScreen("Workbench");
+    static STRPTR radioButtonOptions[3] = {NULL};
+    radioButtonOptions[0] = STRING_OPEN_IN_WORKBENCH;
+    radioButtonOptions[1] = STRING_NEW_SCREEN;
 
     if (!(startupOptionsWindowObject = WindowObject, MUIA_Window_Title,
-          "Startup Options", MUIA_Window_CloseGadget, TRUE,
-          MUIA_Window_DepthGadget, FALSE, MUIA_Window_SizeGadget, FALSE,
-          WindowContents, VGroup, Child, screenSelectRadioButton = RadioObject,
-          MUIA_Frame, MUIV_Frame_Group, MUIA_FrameTitle,
-          "Screen to open:", MUIA_HelpNode, "radioButton", MUIA_Radio_Entries,
-          radioButtonOptions, End, Child, MUI_MakeObject(MUIO_HBar, 10), Child,
+          STRING_STARTUP_OPTIONS, MUIA_Window_DepthGadget, FALSE,
+          MUIA_Window_SizeGadget, FALSE, WindowContents, VGroup, Child,
+          screenSelectRadioButton = RadioObject, MUIA_Frame, MUIV_Frame_Group,
+          MUIA_FrameTitle, STRING_SCREEN_TO_OPEN, MUIA_HelpNode, "radioButton",
+          MUIA_Radio_Entries, radioButtonOptions, End, Child,
+          MUI_MakeObject(MUIO_HBar, 10), Child,
           startupOptionsOkButton = MUI_MakeObject(MUIO_Button, STRING_OK), End,
           End)) {
-        displayError("Could not create startupOptionsWindowObject\n");
+        displayError(STRING_ERROR_STARTUP_OPTIONS);
         return RETURN_ERROR;
     }
 

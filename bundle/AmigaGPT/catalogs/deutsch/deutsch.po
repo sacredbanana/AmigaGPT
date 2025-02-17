@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-17 11:03+0000\n"
+"POT-Creation-Date: 2025-02-17 12:46+0000\n"
 "PO-Revision-Date: 2025-02-17 06:16+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -63,17 +63,9 @@ msgid ""
 "stack size is 32768 bytes to avoid crashes.\n"
 msgstr ""
 
-#: src/main.c:15 src/main.c:14
-msgid "$STACK: 32768"
-msgstr ""
-
 #: src/APIKeyRequesterWindow.c:40
 msgctxt "STRING_API_KEY_REQUESTER_TITLE (6//)"
 msgid "Open AI API Key"
-msgstr ""
-
-#: src/APIKeyRequesterWindow.c:45 src/ChatSystemRequesterWindow.c:37
-msgid "c"
 msgstr ""
 
 #: src/APIKeyRequesterWindow.c:46
@@ -101,10 +93,6 @@ msgstr ""
 #: src/APIKeyRequesterWindow.c:66
 msgctxt "STRING_ERROR_API_KEY_REQUESTER (10//)"
 msgid "Could not create API key requester window"
-msgstr ""
-
-#: src/AboutAmigaGPTWindow.c:15 src/AboutAmigaGPTWindow.c:16
-msgid " ("
 msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:16
@@ -198,10 +186,6 @@ msgid ""
 "\thttps://eab.abime.net/showthread.php?t=114798\n"
 msgstr ""
 
-#: src/AboutAmigaGPTWindow.c:85 src/AboutAmigaGPTWindow.c:19
-msgid "https://github.com/sacredbanana/AmigaGPT"
-msgstr ""
-
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (15//)"
 msgid "Visit the GitHub repository for the latest release"
@@ -290,53 +274,6 @@ msgctxt "STRING_ERROR (29//)"
 msgid "Error"
 msgstr ""
 
-#: src/MainWindow.c:296 src/MainWindow.c:1257 src/openai.c:614
-#: src/openai.c:1521 src/MainWindow.c:295 src/MainWindow.c:1254
-#: src/MainWindow.c:298 src/MainWindow.c:281 src/MainWindow.c:1239
-#: src/MainWindow.c:1242
-msgid "error"
-msgstr ""
-
-#: src/MainWindow.c:298 src/MainWindow.c:1149 src/MainWindow.c:1259
-#: src/openai.c:1525 src/MainWindow.c:297 src/MainWindow.c:1146
-#: src/MainWindow.c:1256 src/MainWindow.c:300 src/MainWindow.c:283
-#: src/MainWindow.c:1131 src/MainWindow.c:1241 src/MainWindow.c:1134
-#: src/MainWindow.c:1244
-msgid "message"
-msgstr ""
-
-#: src/MainWindow.c:314 src/MainWindow.c:313 src/MainWindow.c:316
-#: src/MainWindow.c:299
-msgid "data"
-msgstr ""
-
-#: src/MainWindow.c:318 src/MainWindow.c:317 src/MainWindow.c:320
-#: src/MainWindow.c:303
-msgid "url"
-msgstr ""
-
-#: src/MainWindow.c:320 src/MainWindow.c:319 src/MainWindow.c:322
-#: src/MainWindow.c:305
-msgid "images"
-msgstr ""
-
-#: src/MainWindow.c:321 src/MainWindow.c:1062 src/MainWindow.c:320
-#: src/MainWindow.c:1061 src/MainWindow.c:323 src/MainWindow.c:1064
-#: src/MainWindow.c:306 src/MainWindow.c:1046 src/MainWindow.c:1049
-msgid "images/thumbnails"
-msgstr ""
-
-#: src/MainWindow.c:326 src/MainWindow.c:325 src/MainWindow.c:328
-#: src/MainWindow.c:311
-msgid "abcdefghijklmnopqrstuvwxyz0123456789"
-msgstr ""
-
-#: src/MainWindow.c:331 src/MainWindow.c:330 src/MainWindow.c:333
-#: src/MainWindow.c:316
-#, c-format
-msgid "images/%s.png"
-msgstr ""
-
 #: src/MainWindow.c:363
 msgctxt "STRING_ERROR_INVALID_IMAGE_SIZE (30//)"
 msgid "Invalid image size\n"
@@ -345,23 +282,6 @@ msgstr ""
 #: src/MainWindow.c:369
 msgctxt "STRING_GENERATING_IMAGE_NAME (31//)"
 msgid "Generating image name..."
-msgstr ""
-
-#: src/MainWindow.c:371 src/MainWindow.c:376 src/MainWindow.c:1199
-#: src/MainWindow.c:1386 src/MainWindow.c:1471 src/MainWindow.c:370
-#: src/MainWindow.c:375 src/MainWindow.c:1196 src/MainWindow.c:1383
-#: src/MainWindow.c:1467 src/MainWindow.c:373 src/MainWindow.c:378
-#: src/MainWindow.c:1470 src/MainWindow.c:356 src/MainWindow.c:361
-#: src/MainWindow.c:1181 src/MainWindow.c:1368 src/MainWindow.c:1452
-#: src/MainWindow.c:1184 src/MainWindow.c:1371 src/MainWindow.c:1455
-msgid "user"
-msgstr ""
-
-#: src/MainWindow.c:374 src/MainWindow.c:373 src/MainWindow.c:376
-#: src/MainWindow.c:359
-msgid ""
-"generate a short title for this image and don't enclose the title in quotes "
-"or prefix the response with anything"
 msgstr ""
 
 #: src/MainWindow.c:386 src/MainWindow.c:406
@@ -387,71 +307,9 @@ msgctxt "STRING_SAVE_IMAGE_COPY (35//)"
 msgid "Save Image Copy"
 msgstr ""
 
-#: src/MainWindow.c:499 src/MainWindow.c:502 src/MainWindow.c:485
-msgid "image.png"
-msgstr ""
-
-#: src/MainWindow.c:500 src/MainWindow.c:503 src/MainWindow.c:486
-msgid "SYS:"
-msgstr ""
-
-#: src/MainWindow.c:508 src/MainWindow.c:1060 src/MainWindow.c:507
-#: src/MainWindow.c:1059 src/MainWindow.c:510 src/MainWindow.c:1062
-#: src/MainWindow.c:493 src/MainWindow.c:1044 src/MainWindow.c:1047
-#, c-format
-msgid "%s%s%s"
-msgstr ""
-
-#: src/MainWindow.c:508 src/openai.c:1038 src/MainWindow.c:507
-#: src/MainWindow.c:510 src/MainWindow.c:493
-msgid "/"
-msgstr ""
-
-#: src/MainWindow.c:520 src/MainWindow.c:523 src/MainWindow.c:526
-#: src/MainWindow.c:529 src/MainWindow.c:532 src/MainWindow.c:535
-#: src/MainWindow.c:519 src/MainWindow.c:522 src/MainWindow.c:525
-#: src/MainWindow.c:528 src/MainWindow.c:531 src/MainWindow.c:534
-#: src/MainWindow.c:537 src/MainWindow.c:505 src/MainWindow.c:508
-#: src/MainWindow.c:511 src/MainWindow.c:514 src/MainWindow.c:517
-#, c-format
-msgid "cP[%ld]%s"
-msgstr ""
-
-#: src/MainWindow.c:617 src/MainWindow.c:1479 src/MainWindow.c:616
-#: src/MainWindow.c:1475 src/MainWindow.c:619 src/MainWindow.c:1478
-#: src/MainWindow.c:602 src/MainWindow.c:1460 src/MainWindow.c:1463
-msgid "b"
-msgstr ""
-
-#: src/MainWindow.c:620 src/MainWindow.c:619 src/MainWindow.c:622
-#: src/MainWindow.c:605
-msgid "i"
-msgstr ""
-
-#: src/MainWindow.c:623 src/MainWindow.c:622 src/MainWindow.c:625
-#: src/MainWindow.c:608
-msgid "u"
-msgstr ""
-
-#.
-#. MCC_NList's docs say \033n sets the soft style back to normal,
-#. thus turning off bold/italic/underline.
-#.
-#: src/MainWindow.c:638 src/MainWindow.c:637 src/MainWindow.c:640
-#: src/MainWindow.c:623
-msgid "n"
-msgstr ""
-
 #: src/MainWindow.c:807 src/gui.c:164 src/gui.c:165 src/menu.c:110
 msgctxt "STRING_APP_NAME (36//)"
 msgid "AmigaGPT"
-msgstr ""
-
-#: src/MainWindow.c:841 src/MainWindow.c:910 src/MainWindow.c:840
-#: src/MainWindow.c:909 src/MainWindow.c:843 src/MainWindow.c:912
-#: src/MainWindow.c:826 src/MainWindow.c:894 src/MainWindow.c:829
-#: src/MainWindow.c:897
-msgid "BAR MINW=100 MAXW=200"
 msgstr ""
 
 #. Open image button
@@ -480,40 +338,9 @@ msgctxt "STRING_ERROR_IMG_FILE_NOT_FOUND (41//)"
 msgid "Could not find image file name"
 msgstr ""
 
-#: src/MainWindow.c:1052 src/MainWindow.c:1051 src/MainWindow.c:1054
-#: src/MainWindow.c:1036 src/MainWindow.c:1039
-msgid "thumbnails"
-msgstr ""
-
 #: src/MainWindow.c:1068
 msgctxt "STRING_ERROR_IMG_LOAD_THUMBNAIL (42//)"
 msgid "Could not load image for thumbnail generation"
-msgstr ""
-
-#: src/MainWindow.c:1146 src/MainWindow.c:1143 src/MainWindow.c:1128
-#: src/MainWindow.c:1131
-msgid "choices"
-msgstr ""
-
-#: src/MainWindow.c:1149 src/MainWindow.c:1146 src/MainWindow.c:1131
-#: src/MainWindow.c:1134
-msgid "delta"
-msgstr ""
-
-#: src/MainWindow.c:1151 src/MainWindow.c:1646 src/MainWindow.c:1889
-#: src/openai.c:481 src/MainWindow.c:1148 src/MainWindow.c:1641
-#: src/MainWindow.c:1859 src/MainWindow.c:1644 src/MainWindow.c:1862
-#: src/MainWindow.c:1133 src/MainWindow.c:1626 src/MainWindow.c:1844
-#: src/MainWindow.c:1136 src/MainWindow.c:1629 src/MainWindow.c:1847
-msgid "role"
-msgstr ""
-
-#: src/MainWindow.c:1155 src/MainWindow.c:1649 src/MainWindow.c:1903
-#: src/openai.c:483 src/MainWindow.c:1152 src/MainWindow.c:1644
-#: src/MainWindow.c:1870 src/MainWindow.c:1647 src/MainWindow.c:1873
-#: src/MainWindow.c:1137 src/MainWindow.c:1629 src/MainWindow.c:1855
-#: src/MainWindow.c:1140 src/MainWindow.c:1632 src/MainWindow.c:1858
-msgid "content"
 msgstr ""
 
 #: src/MainWindow.c:1181
@@ -521,43 +348,14 @@ msgctxt "STRING_SENDING_MESSAGE (43//)"
 msgid "Sending message..."
 msgstr ""
 
-#: src/MainWindow.c:1215 src/MainWindow.c:1212 src/MainWindow.c:1197
-#: src/MainWindow.c:1200
-msgid "\n"
-msgstr ""
-
-#: src/MainWindow.c:1224 src/MainWindow.c:1642 src/MainWindow.c:1221
-#: src/MainWindow.c:1637 src/MainWindow.c:1640 src/MainWindow.c:1206
-#: src/MainWindow.c:1622 src/MainWindow.c:1209 src/MainWindow.c:1625
-msgid "system"
-msgstr ""
-
 #: src/MainWindow.c:1232 src/MainWindow.c:1397
 msgctxt "STRING_ERROR_CONNECTING_OPENAI (44//)"
 msgid "Could not connect to OpenAI"
 msgstr ""
 
-#: src/MainWindow.c:1339 src/MainWindow.c:1336 src/MainWindow.c:1321
-#: src/MainWindow.c:1324
-msgid "finish_reason"
-msgstr ""
-
-#: src/MainWindow.c:1362 src/MainWindow.c:1482 src/MainWindow.c:1359
-#: src/MainWindow.c:1478 src/MainWindow.c:1481 src/MainWindow.c:1344
-#: src/MainWindow.c:1463 src/MainWindow.c:1347 src/MainWindow.c:1466
-msgid "assistant"
-msgstr ""
-
 #: src/MainWindow.c:1380
 msgctxt "STRING_GENERATING_CONVERSATION_TITLE (45//)"
 msgid "Generating conversation title..."
-msgstr ""
-
-#: src/MainWindow.c:1383 src/MainWindow.c:1380 src/MainWindow.c:1365
-#: src/MainWindow.c:1368
-msgid ""
-"generate a short title for this conversation and don't enclose the title in "
-"quotes or prefix the response with anything"
 msgstr ""
 
 #: src/MainWindow.c:1440
@@ -573,61 +371,9 @@ msgid ""
 "Please start a new conversation."
 msgstr ""
 
-#: src/MainWindow.c:1473 src/MainWindow.c:1469 src/MainWindow.c:1472
-#: src/MainWindow.c:1454 src/MainWindow.c:1457
-msgid "rb3"
-msgstr ""
-
-#: src/MainWindow.c:1483 src/MainWindow.c:1479 src/MainWindow.c:1482
-#: src/MainWindow.c:1464 src/MainWindow.c:1467
-msgid ""
-"\n"
-"\n"
-"l2"
-msgstr ""
-
-#: src/MainWindow.c:1491 src/MainWindow.c:1487 src/MainWindow.c:1490
-#: src/MainWindow.c:1472 src/MainWindow.c:1475
-msgid ""
-"\n"
-"\n"
-msgstr ""
-
-#: src/MainWindow.c:1501 src/openai.c:647 src/openai.c:901
-#: src/MainWindow.c:1497 src/MainWindow.c:1500 src/MainWindow.c:1482
-#: src/MainWindow.c:1485
-#, c-format
-msgid "%s"
-msgstr ""
-
 #: src/MainWindow.c:1586 src/MainWindow.c:1602
 msgctxt "STRING_OK_REQUESTER (48//)"
 msgid "*OK"
-msgstr ""
-
-#: src/MainWindow.c:1586 src/MainWindow.c:1602 src/MainWindow.c:1582
-#: src/MainWindow.c:1598 src/MainWindow.c:1585 src/MainWindow.c:1601
-#: src/MainWindow.c:1567 src/MainWindow.c:1583 src/MainWindow.c:1570
-#, c-format
-msgid "c%s"
-msgstr ""
-
-#: src/MainWindow.c:1587 src/MainWindow.c:1583 src/MainWindow.c:1586
-#: src/MainWindow.c:1568 src/MainWindow.c:1571
-#, c-format
-msgid "%s\n"
-msgstr ""
-
-#: src/MainWindow.c:1617 src/MainWindow.c:1781 src/MainWindow.c:1812
-#: src/MainWindow.c:1820 src/MainWindow.c:1831 src/MainWindow.c:1833
-#: src/MainWindow.c:1613 src/MainWindow.c:1773 src/MainWindow.c:1803
-#: src/MainWindow.c:1806 src/MainWindow.c:1810 src/MainWindow.c:1616
-#: src/MainWindow.c:1776 src/MainWindow.c:1809 src/MainWindow.c:1813
-#: src/MainWindow.c:1815 src/MainWindow.c:1598 src/MainWindow.c:1758
-#: src/MainWindow.c:1788 src/MainWindow.c:1791 src/MainWindow.c:1795
-#: src/MainWindow.c:1797 src/MainWindow.c:1601 src/MainWindow.c:1761
-#: src/MainWindow.c:1794 src/MainWindow.c:1798 src/MainWindow.c:1800
-msgid "chat-history.json"
 msgstr ""
 
 #: src/MainWindow.c:1619
@@ -637,23 +383,6 @@ msgid ""
 "saved."
 msgstr ""
 
-#: src/MainWindow.c:1633 src/MainWindow.c:1696 src/MainWindow.c:1849
-#: src/MainWindow.c:1995 src/MainWindow.c:1628 src/MainWindow.c:1689
-#: src/MainWindow.c:1827 src/MainWindow.c:1945 src/MainWindow.c:1631
-#: src/MainWindow.c:1692 src/MainWindow.c:1830 src/MainWindow.c:1948
-#: src/MainWindow.c:1613 src/MainWindow.c:1674 src/MainWindow.c:1812
-#: src/MainWindow.c:1930 src/MainWindow.c:1616 src/MainWindow.c:1677
-#: src/MainWindow.c:1815 src/MainWindow.c:1933
-msgid "name"
-msgstr ""
-
-#: src/MainWindow.c:1653 src/MainWindow.c:1865 src/openai.c:489
-#: src/MainWindow.c:1648 src/MainWindow.c:1839 src/MainWindow.c:1651
-#: src/MainWindow.c:1842 src/MainWindow.c:1633 src/MainWindow.c:1824
-#: src/MainWindow.c:1636 src/MainWindow.c:1827
-msgid "messages"
-msgstr ""
-
 #: src/MainWindow.c:1663
 msgctxt "STRING_ERROR_CHAT_HISTORY_SAVE (50//)"
 msgid ""
@@ -661,56 +390,9 @@ msgid ""
 "saved."
 msgstr ""
 
-#: src/MainWindow.c:1680 src/MainWindow.c:1931 src/MainWindow.c:1961
-#: src/MainWindow.c:1970 src/MainWindow.c:1978 src/MainWindow.c:1980
-#: src/MainWindow.c:1674 src/MainWindow.c:1893 src/MainWindow.c:1922
-#: src/MainWindow.c:1925 src/MainWindow.c:1929 src/MainWindow.c:1677
-#: src/MainWindow.c:1896 src/MainWindow.c:1928 src/MainWindow.c:1932
-#: src/MainWindow.c:1934 src/MainWindow.c:1659 src/MainWindow.c:1878
-#: src/MainWindow.c:1907 src/MainWindow.c:1910 src/MainWindow.c:1914
-#: src/MainWindow.c:1916 src/MainWindow.c:1662 src/MainWindow.c:1881
-#: src/MainWindow.c:1913 src/MainWindow.c:1917 src/MainWindow.c:1919
-msgid "image-history.json"
-msgstr ""
-
 #: src/MainWindow.c:1682
 msgctxt "STRING_ERROR_IMAGE_HISTORY_CREATE (51//)"
 msgid "Failed to create image history file. Image history will not be saved."
-msgstr ""
-
-#: src/MainWindow.c:1699 src/MainWindow.c:2010 src/MainWindow.c:1692
-#: src/MainWindow.c:1956 src/MainWindow.c:1695 src/MainWindow.c:1959
-#: src/MainWindow.c:1677 src/MainWindow.c:1941 src/MainWindow.c:1680
-#: src/MainWindow.c:1944
-msgid "filePath"
-msgstr ""
-
-#: src/MainWindow.c:1701 src/MainWindow.c:2025 src/openai.c:794
-#: src/MainWindow.c:1694 src/MainWindow.c:1967 src/MainWindow.c:1697
-#: src/MainWindow.c:1970 src/MainWindow.c:1679 src/MainWindow.c:1952
-#: src/MainWindow.c:1682 src/MainWindow.c:1955
-msgid "prompt"
-msgstr ""
-
-#: src/MainWindow.c:1703 src/MainWindow.c:2040 src/config.c:69 src/config.c:251
-#: src/MainWindow.c:1696 src/MainWindow.c:1978 src/MainWindow.c:1699
-#: src/MainWindow.c:1981 src/MainWindow.c:1681 src/MainWindow.c:1963
-#: src/MainWindow.c:1684 src/MainWindow.c:1966
-msgid "imageModel"
-msgstr ""
-
-#: src/MainWindow.c:1705 src/MainWindow.c:2055 src/MainWindow.c:1698
-#: src/MainWindow.c:1989 src/MainWindow.c:1701 src/MainWindow.c:1992
-#: src/MainWindow.c:1683 src/MainWindow.c:1974 src/MainWindow.c:1686
-#: src/MainWindow.c:1977
-msgid "width"
-msgstr ""
-
-#: src/MainWindow.c:1707 src/MainWindow.c:2070 src/MainWindow.c:1700
-#: src/MainWindow.c:2000 src/MainWindow.c:1703 src/MainWindow.c:2003
-#: src/MainWindow.c:1685 src/MainWindow.c:1985 src/MainWindow.c:1688
-#: src/MainWindow.c:1988
-msgid "height"
 msgstr ""
 
 #: src/MainWindow.c:1717
@@ -735,22 +417,12 @@ msgid ""
 "loaded"
 msgstr ""
 
-#: src/MainWindow.c:1813 src/MainWindow.c:1804 src/MainWindow.c:1807
-#: src/MainWindow.c:1789 src/MainWindow.c:1792
-msgid "chat-history.json.bak"
-msgstr ""
-
 #: src/MainWindow.c:1814
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP (56//)"
 msgid ""
 "Failed to parse chat history. Malformed JSON. The chat-history.json file is "
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
-msgstr ""
-
-#: src/MainWindow.c:1821 src/MainWindow.c:1807 src/MainWindow.c:1810
-#: src/MainWindow.c:1792 src/MainWindow.c:1795
-msgid "RAM:chat-history.json"
 msgstr ""
 
 #: src/MainWindow.c:1823
@@ -781,22 +453,12 @@ msgid ""
 "loaded"
 msgstr ""
 
-#: src/MainWindow.c:1962 src/MainWindow.c:1923 src/MainWindow.c:1926
-#: src/MainWindow.c:1908 src/MainWindow.c:1911
-msgid "image-history.json.bak"
-msgstr ""
-
 #: src/MainWindow.c:1964
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP (61//)"
 msgid ""
 "Failed to parse image history. Malformed JSON. The image-history.json file "
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
-msgstr ""
-
-#: src/MainWindow.c:1971 src/MainWindow.c:1926 src/MainWindow.c:1929
-#: src/MainWindow.c:1911 src/MainWindow.c:1914
-msgid "RAM:image-history.json"
 msgstr ""
 
 #: src/MainWindow.c:1972
@@ -831,12 +493,6 @@ msgstr ""
 #: src/MainWindow.c:2148 src/MainWindow.c:2159
 msgctxt "STRING_ERROR_FILE_COPY (67//)"
 msgid "Error copying %s to %s"
-msgstr ""
-
-#: src/MainWindow.c:2185 src/MainWindow.c:2111 src/MainWindow.c:2114
-#: src/MainWindow.c:2096 src/MainWindow.c:2099
-#, c-format
-msgid "P[%lup[2]%s"
 msgstr ""
 
 #: src/ProxySettingsRequesterWindow.c:30
@@ -879,11 +535,6 @@ msgctxt "STRING_PROXY_PORT (75//)"
 msgid "Port"
 msgstr ""
 
-#: src/ProxySettingsRequesterWindow.c:100 src/ProxySettingsRequesterWindow.c:99
-#: src/ProxySettingsRequesterWindow.c:98
-msgid "0123456789"
-msgstr ""
-
 #: src/ProxySettingsRequesterWindow.c:107
 msgctxt "STRING_PROXY_ENCRYPTION (76//)"
 msgid "Encryption"
@@ -910,35 +561,32 @@ msgid "Could not create proxy settings requester window"
 msgstr ""
 
 #: src/StartupOptionsWindow.c:18
+msgctxt "STRING_OPEN_IN_WORKBENCH (81//)"
 msgid "Open in Workbench"
 msgstr ""
 
 #: src/StartupOptionsWindow.c:18
+msgctxt "STRING_NEW_SCREEN (82//)"
 msgid "New screen"
 msgstr ""
 
-#. Open in Workbench
-#: src/StartupOptionsWindow.c:29 src/StartupOptionsWindow.c:120
-msgid "Workbench"
-msgstr ""
-
 #: src/StartupOptionsWindow.c:86
+msgctxt "STRING_ERROR_SCREEN (83//)"
 msgid "Could not open screen"
 msgstr ""
 
 #: src/StartupOptionsWindow.c:123
+msgctxt "STRING_STARTUP_OPTIONS (84//)"
 msgid "Startup Options"
 msgstr ""
 
 #: src/StartupOptionsWindow.c:127
+msgctxt "STRING_SCREEN_TO_OPEN (85//)"
 msgid "Screen to open:"
 msgstr ""
 
-#: src/StartupOptionsWindow.c:127
-msgid "radioButton"
-msgstr ""
-
 #: src/StartupOptionsWindow.c:131
+msgctxt "STRING_ERROR_STARTUP_OPTIONS (86//)"
 msgid "Could not create startupOptionsWindowObject\n"
 msgstr ""
 
@@ -2238,11 +1886,297 @@ msgid "Please enter your OpenAI API key in the Open AI settings in the menu."
 msgstr ""
 
 #: src/MainWindow.c:2085 src/MainWindow.c:2088 src/MainWindow.c:2070
-#: src/MainWindow.c:2073
+#: src/MainWindow.c:2073 src/MainWindow.c:2072
 #, c-format
 msgid "Error copying %s to %s"
 msgstr ""
 
 #: src/menu.c:110
 msgid "AmigaGPT"
+msgstr ""
+
+#: src/main.c:14
+msgid "$STACK: 32768"
+msgstr ""
+
+#: src/APIKeyRequesterWindow.c:45 src/ChatSystemRequesterWindow.c:37
+msgid "c"
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:15
+msgid " ("
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:85
+msgid "https://github.com/sacredbanana/AmigaGPT"
+msgstr ""
+
+#: src/MainWindow.c:281 src/MainWindow.c:1242 src/openai.c:614
+#: src/openai.c:1521 src/MainWindow.c:1241
+msgid "error"
+msgstr ""
+
+#: src/MainWindow.c:283 src/MainWindow.c:1134 src/MainWindow.c:1244
+#: src/openai.c:1525 src/MainWindow.c:1133 src/MainWindow.c:1243
+msgid "message"
+msgstr ""
+
+#: src/MainWindow.c:299
+msgid "data"
+msgstr ""
+
+#: src/MainWindow.c:303
+msgid "url"
+msgstr ""
+
+#: src/MainWindow.c:305
+msgid "images"
+msgstr ""
+
+#: src/MainWindow.c:306 src/MainWindow.c:1049 src/MainWindow.c:1048
+msgid "images/thumbnails"
+msgstr ""
+
+#: src/MainWindow.c:311
+msgid "abcdefghijklmnopqrstuvwxyz0123456789"
+msgstr ""
+
+#: src/MainWindow.c:316
+#, c-format
+msgid "images/%s.png"
+msgstr ""
+
+#: src/MainWindow.c:356 src/MainWindow.c:361 src/MainWindow.c:1184
+#: src/MainWindow.c:1371 src/MainWindow.c:1455 src/MainWindow.c:1183
+#: src/MainWindow.c:1370 src/MainWindow.c:1454
+msgid "user"
+msgstr ""
+
+#: src/MainWindow.c:359
+msgid ""
+"generate a short title for this image and don't enclose the title in quotes "
+"or prefix the response with anything"
+msgstr ""
+
+#: src/MainWindow.c:485
+msgid "image.png"
+msgstr ""
+
+#: src/MainWindow.c:486
+msgid "SYS:"
+msgstr ""
+
+#: src/MainWindow.c:493 src/MainWindow.c:1047 src/MainWindow.c:1046
+#, c-format
+msgid "%s%s%s"
+msgstr ""
+
+#: src/MainWindow.c:493 src/openai.c:1038
+msgid "/"
+msgstr ""
+
+#: src/MainWindow.c:505 src/MainWindow.c:508 src/MainWindow.c:511
+#: src/MainWindow.c:514 src/MainWindow.c:517 src/MainWindow.c:520
+#, c-format
+msgid "cP[%ld]%s"
+msgstr ""
+
+#: src/MainWindow.c:602 src/MainWindow.c:1463 src/MainWindow.c:1462
+msgid "b"
+msgstr ""
+
+#: src/MainWindow.c:605
+msgid "i"
+msgstr ""
+
+#: src/MainWindow.c:608
+msgid "u"
+msgstr ""
+
+#.
+#. MCC_NList's docs say \033n sets the soft style back to normal,
+#. thus turning off bold/italic/underline.
+#.
+#: src/MainWindow.c:623
+msgid "n"
+msgstr ""
+
+#: src/MainWindow.c:829 src/MainWindow.c:897 src/MainWindow.c:828
+#: src/MainWindow.c:896
+msgid "BAR MINW=100 MAXW=200"
+msgstr ""
+
+#: src/MainWindow.c:1039 src/MainWindow.c:1038
+msgid "thumbnails"
+msgstr ""
+
+#: src/MainWindow.c:1131 src/MainWindow.c:1130
+msgid "choices"
+msgstr ""
+
+#: src/MainWindow.c:1134 src/MainWindow.c:1133
+msgid "delta"
+msgstr ""
+
+#: src/MainWindow.c:1136 src/MainWindow.c:1629 src/MainWindow.c:1847
+#: src/openai.c:481 src/MainWindow.c:1135 src/MainWindow.c:1628
+#: src/MainWindow.c:1846
+msgid "role"
+msgstr ""
+
+#: src/MainWindow.c:1140 src/MainWindow.c:1632 src/MainWindow.c:1858
+#: src/openai.c:483 src/MainWindow.c:1139 src/MainWindow.c:1631
+#: src/MainWindow.c:1857
+msgid "content"
+msgstr ""
+
+#: src/MainWindow.c:1200 src/MainWindow.c:1199
+msgid "\n"
+msgstr ""
+
+#: src/MainWindow.c:1209 src/MainWindow.c:1625 src/MainWindow.c:1208
+#: src/MainWindow.c:1624
+msgid "system"
+msgstr ""
+
+#: src/MainWindow.c:1324 src/MainWindow.c:1323
+msgid "finish_reason"
+msgstr ""
+
+#: src/MainWindow.c:1347 src/MainWindow.c:1466 src/MainWindow.c:1346
+#: src/MainWindow.c:1465
+msgid "assistant"
+msgstr ""
+
+#: src/MainWindow.c:1368 src/MainWindow.c:1367
+msgid ""
+"generate a short title for this conversation and don't enclose the title in "
+"quotes or prefix the response with anything"
+msgstr ""
+
+#: src/MainWindow.c:1457 src/MainWindow.c:1456
+msgid "rb3"
+msgstr ""
+
+#: src/MainWindow.c:1467 src/MainWindow.c:1466
+msgid ""
+"\n"
+"\n"
+"l2"
+msgstr ""
+
+#: src/MainWindow.c:1475 src/MainWindow.c:1474
+msgid ""
+"\n"
+"\n"
+msgstr ""
+
+#: src/MainWindow.c:1485 src/openai.c:647 src/openai.c:901
+#: src/MainWindow.c:1484
+#, c-format
+msgid "%s"
+msgstr ""
+
+#: src/MainWindow.c:1570 src/MainWindow.c:1586 src/MainWindow.c:1569
+#: src/MainWindow.c:1585
+#, c-format
+msgid "c%s"
+msgstr ""
+
+#: src/MainWindow.c:1571 src/MainWindow.c:1570
+#, c-format
+msgid "%s\n"
+msgstr ""
+
+#: src/MainWindow.c:1601 src/MainWindow.c:1761 src/MainWindow.c:1791
+#: src/MainWindow.c:1794 src/MainWindow.c:1798 src/MainWindow.c:1800
+#: src/MainWindow.c:1600 src/MainWindow.c:1760 src/MainWindow.c:1790
+#: src/MainWindow.c:1793 src/MainWindow.c:1797 src/MainWindow.c:1799
+msgid "chat-history.json"
+msgstr ""
+
+#: src/MainWindow.c:1616 src/MainWindow.c:1677 src/MainWindow.c:1815
+#: src/MainWindow.c:1933 src/MainWindow.c:1615 src/MainWindow.c:1676
+#: src/MainWindow.c:1814 src/MainWindow.c:1932
+msgid "name"
+msgstr ""
+
+#: src/MainWindow.c:1636 src/MainWindow.c:1827 src/openai.c:489
+#: src/MainWindow.c:1635 src/MainWindow.c:1826
+msgid "messages"
+msgstr ""
+
+#: src/MainWindow.c:1662 src/MainWindow.c:1881 src/MainWindow.c:1910
+#: src/MainWindow.c:1913 src/MainWindow.c:1917 src/MainWindow.c:1919
+#: src/MainWindow.c:1661 src/MainWindow.c:1880 src/MainWindow.c:1909
+#: src/MainWindow.c:1912 src/MainWindow.c:1916 src/MainWindow.c:1918
+msgid "image-history.json"
+msgstr ""
+
+#: src/MainWindow.c:1680 src/MainWindow.c:1944 src/MainWindow.c:1679
+#: src/MainWindow.c:1943
+msgid "filePath"
+msgstr ""
+
+#: src/MainWindow.c:1682 src/MainWindow.c:1955 src/openai.c:794
+#: src/MainWindow.c:1681 src/MainWindow.c:1954
+msgid "prompt"
+msgstr ""
+
+#: src/MainWindow.c:1684 src/MainWindow.c:1966 src/config.c:69 src/config.c:251
+#: src/MainWindow.c:1683 src/MainWindow.c:1965
+msgid "imageModel"
+msgstr ""
+
+#: src/MainWindow.c:1686 src/MainWindow.c:1977 src/MainWindow.c:1685
+#: src/MainWindow.c:1976
+msgid "width"
+msgstr ""
+
+#: src/MainWindow.c:1688 src/MainWindow.c:1988 src/MainWindow.c:1687
+#: src/MainWindow.c:1987
+msgid "height"
+msgstr ""
+
+#: src/MainWindow.c:1792 src/MainWindow.c:1791
+msgid "chat-history.json.bak"
+msgstr ""
+
+#: src/MainWindow.c:1795 src/MainWindow.c:1794
+msgid "RAM:chat-history.json"
+msgstr ""
+
+#: src/MainWindow.c:1911 src/MainWindow.c:1910
+msgid "image-history.json.bak"
+msgstr ""
+
+#: src/MainWindow.c:1914 src/MainWindow.c:1913
+msgid "RAM:image-history.json"
+msgstr ""
+
+#: src/MainWindow.c:2099 src/MainWindow.c:2098
+#, c-format
+msgid "P[%lup[2]%s"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:98
+msgid "0123456789"
+msgstr ""
+
+#. Open in Workbench
+#: src/StartupOptionsWindow.c:26 src/StartupOptionsWindow.c:117
+msgid "Workbench"
+msgstr ""
+
+#: src/StartupOptionsWindow.c:126 src/StartupOptionsWindow.c:127
+#: src/StartupOptionsWindow.c:128
+msgid "radioButton"
+msgstr ""
+
+#: src/StartupOptionsWindow.c:122
+msgid "Startup Options"
+msgstr ""
+
+#: src/StartupOptionsWindow.c:126
+msgid "Screen to open:"
 msgstr ""
