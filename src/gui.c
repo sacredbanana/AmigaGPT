@@ -74,34 +74,31 @@ static void closeGUILibraries();
  **/
 LONG openGUILibraries() {
     if ((MUIMasterBase = OpenLibrary("muimaster.library", 19)) == NULL) {
-        printf("Could not open muimaster.library\nPlease make sure you have "
-               "MUI installed\n");
+        printf(STRING_ERROR_MUI_LIB_OPEN);
         return RETURN_ERROR;
     }
 #ifdef __AMIGAOS4__
     if ((IMUIMaster = (struct MUIIFace *)GetInterface(MUIMasterBase, "main", 1,
                                                       NULL)) == NULL) {
-        printf("Could not get interface for muimaster.library\n");
+        printf(STRING_ERROR_MUI_INTERFACE_OPEN);
         return RETURN_ERROR;
     }
 #endif
 
     if ((CodesetsBase = OpenLibrary("codesets.library", 6)) == NULL) {
-        printf(
-            "Could not open codesets.library\nPlease make sure you have "
-            "codesets installed\nRefer to the documentation for more info.\n");
+        printf(STRING_ERROR_CODESETS_LIB_OPEN);
         return RETURN_ERROR;
     }
 #ifdef __AMIGAOS4__
     if ((ICodesets = (struct CodesetsIFace *)GetInterface(CodesetsBase, "main",
                                                           1, NULL)) == NULL) {
-        printf("Could not get interface for codesets.library\n");
+        printf(STRING_ERROR_CODESETS_INTERFACE_OPEN);
         return RETURN_ERROR;
     }
 #endif
 
     if (!(systemCodeset = CodesetsFindA(NULL, NULL))) {
-        displayError("Could not find the system codeset");
+        displayError(STRING_ERROR_CODESETS_SYSTEM);
         return RETURN_ERROR;
     }
 
@@ -140,9 +137,7 @@ LONG initVideo() {
     }
 
     if (!checkMUICustomClassInstalled()) {
-        displayError(
-            "Could not find all the MUI custom classes. Please make sure they "
-            "are installed. Refer to the documentation for more information.");
+        displayError(STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED);
         return RETURN_ERROR;
     }
 
@@ -166,16 +161,13 @@ LONG initVideo() {
           APP_VERSION, MUIA_Application_Copyright,
           "(C) 2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
-          MUIA_Application_Description,
-          "AmigaGPT is an app for chatting to ChatGPT or creating AI "
-          "images "
-          "with DALL-E",
+          MUIA_Application_Description, STRING_APP_DESCRIPTION,
           MUIA_Application_UsedClasses, USED_CLASSES, MUIA_Application_HelpFile,
           "PROGDIR:AmigaGPT.guide", SubWindow, startupOptionsWindowObject,
           SubWindow, mainWindowObject, SubWindow, apiKeyRequesterWindowObject,
           SubWindow, chatSystemRequesterWindowObject, SubWindow,
           proxySettingsRequesterWindowObject, SubWindow,
-          imageWindowObject = WindowObject, MUIA_Window_Title, "Image",
+          imageWindowObject = WindowObject, MUIA_Window_Title, STRING_IMAGE,
           MUIA_Window_Width, 320, MUIA_Window_Height, 240,
           MUIA_Window_CloseGadget, TRUE, MUIA_Window_LeftEdge,
           MUIV_Window_LeftEdge_Centered, MUIA_Window_TopEdge,
@@ -186,7 +178,7 @@ LONG initVideo() {
           imageWindowImageViewGroup = VGroup, Child,
           imageWindowImageView = RectangleObject, MUIA_Frame,
           MUIV_Frame_ImageButton, End, End, End, End)) {
-        displayError("Could not create app!\n");
+        displayError(STRING_ERROR_APP_CREATE);
         return RETURN_ERROR;
     }
 
@@ -218,7 +210,7 @@ static BOOL checkMUICustomClassInstalled() {
         if (!isAROS && !strcmp(USED_CLASSES[i], MUIC_BetterString) != 0)
             continue;
         if (!MUI_GetClass(USED_CLASSES[i])) {
-            displayError("Could not find the MUI custom class:");
+            displayError(STRING_ERROR_MUI_CUSTOM_CLASS_NOT_FOUND);
             displayError(USED_CLASSES[i]);
             hasAllClasses = FALSE;
         }

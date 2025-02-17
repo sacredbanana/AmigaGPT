@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-17 12:53+0000\n"
+"POT-Creation-Date: 2025-02-17 13:06+0000\n"
 "PO-Revision-Date: 2025-02-17 06:16+0800\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -28,11 +28,11 @@ msgstr ""
 
 #: src/main.c:65 src/main.c:66 src/main.c:67 src/main.c:64
 msgctxt "STRING_APP_DESCRIPTION (0//)"
-msgid "A ChatGPT client for AmigaOS"
+msgid ""
+"AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
 msgstr ""
 
 #: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
-#, c-format
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
 msgid "Failed to initialize video\n"
 msgstr ""
@@ -606,28 +606,19 @@ msgid "Failed to parse the config file\n"
 msgstr ""
 
 #: src/gui.c:77
-#, c-format
+msgctxt "STRING_ERROR_MUI_LIB_OPEN (90//)"
 msgid ""
 "Could not open muimaster.library\n"
 "Please make sure you have MUI installed\n"
 msgstr ""
 
-#: src/gui.c:82 src/gui.c:96 src/openai.c:185 src/openai.c:210 src/openai.c:231
-#: src/speech.c:131
-msgid "main"
-msgstr ""
-
 #: src/gui.c:84
-#, c-format
+msgctxt "STRING_ERROR_MUI_INTERFACE_OPEN (91//)"
 msgid "Could not get interface for muimaster.library\n"
 msgstr ""
 
-#: src/gui.c:89
-msgid "codesets.library"
-msgstr ""
-
 #: src/gui.c:91
-#, c-format
+msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
 msgid ""
 "Could not open codesets.library\n"
 "Please make sure you have codesets installed\n"
@@ -635,50 +626,34 @@ msgid ""
 msgstr ""
 
 #: src/gui.c:98
-#, c-format
+msgctxt "STRING_ERROR_CODESETS_INTERFACE_OPEN (93//)"
 msgid "Could not get interface for codesets.library\n"
 msgstr ""
 
 #: src/gui.c:104
+msgctxt "STRING_ERROR_CODESETS_SYSTEM (94//)"
 msgid "Could not find the system codeset"
 msgstr ""
 
-#: src/gui.c:110
-msgid "aros.library"
-msgstr ""
-
 #: src/gui.c:144
+msgctxt "STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED (95//)"
 msgid ""
 "Could not find all the MUI custom classes. Please make sure they are "
 "installed. Refer to the documentation for more information."
 msgstr ""
 
-#: src/gui.c:167
-msgid "(C) 2023-2025 Cameron Armstrong (Nightfox/sacredbanana)"
-msgstr ""
-
-#: src/gui.c:168
-msgid "Cameron Armstrong (Nightfox/sacredbanana)"
-msgstr ""
-
-#: src/gui.c:170
-msgid ""
-"AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
-msgstr ""
-
-#: src/gui.c:174
-msgid "PROGDIR:AmigaGPT.guide"
-msgstr ""
-
 #: src/gui.c:178
+msgctxt "STRING_IMAGE (96//)"
 msgid "Image"
 msgstr ""
 
 #: src/gui.c:189
+msgctxt "STRING_ERROR_APP_CREATE (97//)"
 msgid "Could not create app!\n"
 msgstr ""
 
 #: src/gui.c:221
+msgctxt "STRING_ERROR_MUI_CUSTOM_CLASS_NOT_FOUND (98//)"
 msgid "Could not find the MUI custom class:"
 msgstr ""
 
@@ -2174,4 +2149,29 @@ msgstr ""
 
 #: src/gui.c:76
 msgid "muimaster.library"
+msgstr ""
+
+#: src/gui.c:81 src/gui.c:93 src/openai.c:185 src/openai.c:210 src/openai.c:231
+#: src/speech.c:131
+msgid "main"
+msgstr ""
+
+#: src/gui.c:88
+msgid "codesets.library"
+msgstr ""
+
+#: src/gui.c:107
+msgid "aros.library"
+msgstr ""
+
+#: src/gui.c:162
+msgid "(C) 2023-2025 Cameron Armstrong (Nightfox/sacredbanana)"
+msgstr ""
+
+#: src/gui.c:163
+msgid "Cameron Armstrong (Nightfox/sacredbanana)"
+msgstr ""
+
+#: src/gui.c:166
+msgid "PROGDIR:AmigaGPT.guide"
 msgstr ""
