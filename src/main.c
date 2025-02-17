@@ -47,9 +47,7 @@ LONG main(int argc, char **argv) {
     ULONG total = upper - lower;
 
     if (total < 32768) {
-        printf("Warning: The stack size of %ld bytes is too small. The minimum "
-               "recommended stack size is 32768 bytes to avoid crashes.\n",
-               total);
+        printf(STRING_WARNING_STACK, total);
     }
 #else
     if (argc == 0) {
@@ -62,31 +60,28 @@ LONG main(int argc, char **argv) {
 
     appID = RegisterApplication(
         NULL, REGAPP_UniqueApplication, TRUE, REGAPP_URLIdentifier,
-        "sacredbanana.net", REGAPP_WBStartup, (ULONG)wbStartupMessage,
-        REGAPP_Description, "A ChatGPT client for AmigaOS", TAG_DONE);
+        "minotaurcreative.net", REGAPP_WBStartup, (ULONG)wbStartupMessage,
+        REGAPP_Description, STRING_APP_DESCRIPTION, TAG_DONE);
 #endif
     readConfig();
 
     if (initVideo() == RETURN_ERROR) {
-        printf("Failed to initialize video\n");
+        printf(STRING_ERROR_VIDEO_INIT);
         exit(RETURN_ERROR);
     }
 
     if (initSpeech(config.speechSystem) == RETURN_ERROR) {
 #ifdef __AMIGAOS3__
-        displayError("Failed to open speech system. Make sure "
-                     "translator.library v43 and the relevant narrator.device "
-                     "are installed. See the guide for more information.");
+        displayError(STRING_ERROR_SPEECH_OS3_INIT);
 #else
-        displayError("Failed to open speech system. Make sure Flite Device is "
-                     "installed. See the guide for more information.");
+        displayError(STRING_ERROR_SPEECH_OS4_INIT);
 #endif
         config.speechEnabled = FALSE;
         closeSpeech();
     }
 
     if (initOpenAIConnector() == RETURN_ERROR) {
-        displayError("Failed to open OpenAI connector.");
+        displayError(STRING_ERROR_OPENAI_INIT);
         exit(RETURN_ERROR);
     }
 

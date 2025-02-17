@@ -9,14 +9,13 @@ SOURCE_DIR = src
 BUILD_DIR = build/os3/obj
 BUNDLE_DIR = bundle
 CATALOG_DIR = $(BUNDLE_DIR)/AmigaGPT/catalogs
-CATALOG_DEFINITION = $(CATALOG_DIR)/AmigaGPT.cd
+CATALOG_DEFINITION = $(CATALOG_DIR)/AmigaGPT.pot
 catalog_subdirs := $(wildcard $(CATALOG_DIR)/*/)
-catalog_translations := $(wildcard $(addsuffix *.ct,$(catalog_subdirs)))
-temp_catalog_translations := $(addprefix $(BUILD_DIR)/,$(notdir $(catalog_translations)))
+catalog_translations := $(wildcard $(addsuffix *.po,$(catalog_subdirs)))
 catalogs := $(catalog_subdirs)AmigaGPT.catalog
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
 cpp_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
-c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs))) $(SOURCE_DIR)/AmigaGPT_cat.c
+c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
 c_sources := $(filter-out $(SOURCE_DIR)/test/%, $(c_sources))
 c_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
 s_sources := $(wildcard *.s) $(wildcard $(addsuffix *.s,$(subdirs)))
@@ -64,25 +63,37 @@ ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),
 LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui
 VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS3__  -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -I$(INCDIR) -I$(SDKDIR) -I$(NDKDIR)
 
-.PHONY: all clean copy_bundle_files
+.PHONY: all clean copy_bundle_files create_catalog
 
 all: $(EXECUTABLE_OUT) copy_bundle_files
 
 clean:
 	$(info Cleaning...)
-	$(RM) $(SOURCE_DIR)/AmigaGPT_cat.*
 	$(RM) $(catalogs)
 	$(RM) -dr $(BUILD_DIR)
 
-$(SOURCE_DIR)/AmigaGPT_cat.h: $(CATALOG_DEFINITION)
-	$(info Generating catalog header)
-	@$(RM) $@
-	flexcat $< $@=C_h.sd
+create_catalog:
+	$(info Removing old catalog sources)
+	@$(RM) $(SOURCE_DIR)/AmigaGPT_cat.c $(SOURCE_DIR)/AmigaGPT_cat.h
 
-$(SOURCE_DIR)/AmigaGPT_cat.c: $(CATALOG_DEFINITION)
+	$(info Generating catalog definition)
+	@xgettext -a -c -L C -j -o $(CATALOG_DEFINITION) $(SOURCE_DIR)/*.c
+
+	$(info Generating catalog header)
+	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.h=C_h.sd || true
+
 	$(info Generating catalog source)
-	@$(RM) $@
-	flexcat $< $@=C_c.sd
+	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.c=C_c.sd || true
+
+	$(info Updating catalog translations)
+	@for catalog_translation in $(catalog_translations); do \
+			msgmerge -U $$catalog_translation $(CATALOG_DEFINITION); \
+	done
+
+	$(info Compiling catalogs $<)
+	@for catalog in $(catalog_translations); do \
+		flexcat POFILE $$catalog_translation CATALOG $(dir $$catalog)/AmigaGPT.catalog || true; \
+	done
 
 $(BUILD_DIR):
 	@$(info Creating directory $@)
@@ -92,31 +103,18 @@ $(EXECUTABLE_DIR):
 	@$(info Creating directory $@)
 	mkdir -p $@
 
-$(EXECUTABLE_OUT): $(EXECUTABLE_DIR) $(BUILD_DIR) $(catalogs) $(objects)
+$(EXECUTABLE_OUT): create_catalog $(EXECUTABLE_DIR) $(BUILD_DIR) $(objects)
 	$(info Linking $(PROGRAM_NAME))
 	@$(RM) $@
 	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@ $(LDFLAGS) 
 
--include $(objects:.o=.d)
-
-$(temp_catalog_translations): $(catalog_translations) $(CATALOG_DEFINITION)
-	$(info Copying catalog translations)
-	$(RM) $@
-# Allow it to fail the first time as the file may receive automatic adjustments
-	-@flexcat $(CATALOG_DEFINITION) $< NEWCTFILE $<
-	flexcat $(CATALOG_DEFINITION) $< NEWCTFILE $<
-	@cp $< $@
-
-$(catalogs): $(temp_catalog_translations)
-	$(info Compiling catalogs $<)
-	$(RM) $@
-	flexcat $(CATALOG_DEFINITION) $< CATALOG $@
+-include $(objects:.o=.d)	
 
 $(cpp_objects): $(BUILD_DIR)/%.o : %.cpp | $(BUILD_DIR)/%.dir
 	$(info Compiling $<)
 	$(CC) $(CPPFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(c_objects): $(BUILD_DIR)/%.o : %.c | $(SOURCE_DIR)/AmigaGPT_cat.h $(SOURCE_DIR)/AmigaGPT_cat.c
+$(c_objects): $(BUILD_DIR)/%.o : %.c | create_catalog
 	$(info Compiling $<)
 	@$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<

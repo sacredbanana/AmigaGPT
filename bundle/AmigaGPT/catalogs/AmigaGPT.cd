@@ -1,6 +1,0 @@
-#language english
-#version 0
-msgHello (/4/)
-Hello, world!
-msgBye (/0/)
-Bye, world!

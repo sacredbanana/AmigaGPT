@@ -1,0 +1,2051 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#. Generate unique ID for the image
+#. New chat button
+#: src/MainWindow.c:212 src/MainWindow.c:234 src/MainWindow.c:324
+#: src/MainWindow.c:325 src/MainWindow.c:508 src/MainWindow.c:821
+#: src/MainWindow.c:1153 src/MainWindow.c:1205 src/menu.c:335
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-02-17 07:47+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/main.c:64 src/main.c:65 src/main.c:66 src/main.c:63
+msgid "minotaurcreative.net"
+msgstr ""
+
+#: src/main.c:65 src/main.c:66 src/main.c:67 src/main.c:64
+msgctxt "STRING_APP_DESCRIPTION (0//)"
+msgid "A ChatGPT client for AmigaOS"
+msgstr ""
+
+#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
+#, c-format
+msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
+msgid "Failed to initialize video\n"
+msgstr ""
+
+#: src/main.c:76 src/main.c:77 src/main.c:78 src/main.c:75
+msgctxt "STRING_ERROR_SPEECH_OS3_INIT (2//)"
+msgid ""
+"Failed to open speech system. Make sure translator.library v43 and the "
+"relevant narrator.device are installed. See the guide for more information."
+msgstr ""
+
+#: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
+msgctxt "STRING_ERROR_SPEECH_OS4_INIT (3//)"
+msgid ""
+"Failed to open speech system. Make sure Flite Device is installed. See the "
+"guide for more information."
+msgstr ""
+
+#: src/main.c:88 src/main.c:89 src/main.c:90 src/main.c:87
+msgctxt "STRING_ERROR_OPENAI_INIT (4//)"
+msgid "Failed to open OpenAI connector."
+msgstr ""
+
+#: src/main.c:51
+msgctxt "STRING_WARNING_STACK (5//)"
+msgid ""
+"Warning: The stack size of %ld bytes is too small. The minimum recommended "
+"stack size is 32768 bytes to avoid crashes.\n"
+msgstr ""
+
+#: src/main.c:15
+msgid "$STACK: 32768"
+msgstr ""
+
+#: src/APIKeyRequesterWindow.c:40
+msgid "Open AI API Key"
+msgstr ""
+
+#: src/APIKeyRequesterWindow.c:45 src/ChatSystemRequesterWindow.c:37
+msgid "c"
+msgstr ""
+
+#: src/APIKeyRequesterWindow.c:46
+msgid ""
+"Type or paste (Right-Amiga + V) your OpenAI API key here.\n"
+"This key is required to use the OpenAI API.\n"
+"If you do not have an API key, consult the AmigaGPT documentation for "
+"instructions on how to obtain one."
+msgstr ""
+
+#: src/APIKeyRequesterWindow.c:53 src/ChatSystemRequesterWindow.c:52
+#: src/ProxySettingsRequesterWindow.c:147 src/StartupOptionsWindow.c:129
+#: src/menu.c:39
+msgid "OK"
+msgstr ""
+
+#: src/APIKeyRequesterWindow.c:58 src/ChatSystemRequesterWindow.c:57
+#: src/ProxySettingsRequesterWindow.c:152
+msgid "Cancel"
+msgstr ""
+
+#: src/APIKeyRequesterWindow.c:66
+msgid "Could not create API key requester window"
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:15
+msgid " ("
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:16
+msgid ""
+")\n"
+"Git commit: "
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:17
+msgid ""
+"\n"
+"Git branch: "
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:17
+msgid ""
+"\n"
+"Commit timestamp: "
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:20
+msgid ""
+"This app will always remain free but if you would like to support me you can "
+"do so at https://paypal.me/sacredbanana\n"
+"\n"
+"Click the version string above for build details.\n"
+"\n"
+"b%pn\n"
+"\tiCameron Armstrongn\n"
+"\t(@sacredbanana on GitHub, YouTube and Twitter, @Nightfox on EAB)\n"
+"\n"
+"b%In\n"
+"\tiMauricio Sandovaln\n"
+"\n"
+"b%Tn\n"
+"\tiBebbon\n"
+"\tfor creating the Amiga GCC toolchain\n"
+"\thttps://github.com/bebbo\n"
+"\n"
+"\tiOpenAIn\n"
+"\tfor creating the GPT and DALL-E models\n"
+"\n"
+"\tiEABn\n"
+"\tfor being a great community!\n"
+"\n"
+"\tiJan Zahurancikn\n"
+"\tfor all the thorough testing, bundling AmigaGPT into AmiKit and for all "
+"the moral support\n"
+"\thttps://www.amikit.amiga.sk\n"
+"\n"
+"\tiCoffinOSn\n"
+"\tfor bundling AmigaGPT into CoffinOS\n"
+"\thttps://getcoffin.net\n"
+"\n"
+"\tiAmiga Future Magazinen\n"
+"\tfor reviewing AmigaGPT and publishing several of its updates in the News "
+"from Aminet section\n"
+"\thttps://www.amigafuture.de\n"
+"\n"
+"\tiWhatIFF? Magazinen\n"
+"\tfor reviewing AmigaGPT and interviewing me in issue 14\n"
+"\thttps://www.whatiff.info\n"
+"\n"
+"\tiDan Woodn\n"
+"\tfor reviewing AmigaGPT on his YouTube channel\n"
+"\thttps://www.youtube.com/watch?v=-OA28r8Up5U\n"
+"\n"
+"\tiProteque-CBNn\n"
+"\tfor reviewing AmigaGPT on his YouTube channel\n"
+"\thttps://www.youtube.com/watch?v=t3q8HQ6wrnw\n"
+"\n"
+"\tiAmigaBilln\n"
+"\tfor covering AmigaGPT in the Amiga News section on his Twitch streams and "
+"allowing me to join his stream to promote it\n"
+"\thttps://www.twitch.tv/amigabill\n"
+"\n"
+"\tiLes Docsn\n"
+"\tfor making a video review and giving a tutorial on how to add support for "
+"the French accent\n"
+"\thttps://www.youtube.com/watch?v=BV5Fq1PresE\n"
+"\n"
+"bLicensen\n"
+"\tMIT\n"
+"\n"
+"b%Wn\n"
+"\thttps://github.com/sacredbanana/AmigaGPT/issues\n"
+"\thttps://eab.abime.net/showthread.php?t=114798\n"
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:85
+msgid "https://github.com/sacredbanana/AmigaGPT"
+msgstr ""
+
+#: src/AboutAmigaGPTWindow.c:87
+msgid "Visit the GitHub repository for the latest release"
+msgstr ""
+
+#: src/ChatSystemRequesterWindow.c:32
+msgid "Enter how you would like AmigaGPT to respond"
+msgstr ""
+
+#: src/ChatSystemRequesterWindow.c:38
+msgid ""
+"If you would like AmigaGPT to respond in a\n"
+"certain way, or add some personality, type\n"
+"it in here. For example, you could type\n"
+"\"Speak like a pirate\" or \"Speak like a\n"
+"robot\". If you would like AmigaGPT to respond\n"
+"normally, leave this blank. This setting will\n"
+"be applied to new conversations only."
+msgstr ""
+
+#: src/ChatSystemRequesterWindow.c:65
+msgid "Could not create Chat System requester window"
+msgstr ""
+
+#: src/MainWindow.c:31
+msgid "+ New Chat"
+msgstr ""
+
+#: src/MainWindow.c:31
+msgid "- Delete Chat"
+msgstr ""
+
+#: src/MainWindow.c:31
+msgid ""
+"\n"
+"Send\n"
+msgstr ""
+
+#: src/MainWindow.c:32
+msgid "+ New Image"
+msgstr ""
+
+#: src/MainWindow.c:32
+msgid "- Delete Image"
+msgstr ""
+
+#. Create image button
+#: src/MainWindow.c:32 src/MainWindow.c:950
+msgid ""
+"\n"
+"Create Image\n"
+msgstr ""
+
+#: src/MainWindow.c:66
+msgid "Chat Mode"
+msgstr ""
+
+#: src/MainWindow.c:66
+msgid "Image Generation Mode"
+msgstr ""
+
+#: src/MainWindow.c:199 src/MainWindow.c:435
+msgid "Please enter your OpenAI API key in the Open AI settings in the menu."
+msgstr ""
+
+#: src/MainWindow.c:283
+msgid "Error connecting. Please try again."
+msgstr ""
+
+#: src/MainWindow.c:288 src/MainWindow.c:305 src/MainWindow.c:387
+#: src/MainWindow.c:1584 src/MainWindow.c:1600 src/MainWindow.c:1603
+msgid "Error"
+msgstr ""
+
+#: src/MainWindow.c:296 src/MainWindow.c:1257 src/openai.c:614
+#: src/openai.c:1521
+msgid "error"
+msgstr ""
+
+#: src/MainWindow.c:298 src/MainWindow.c:1149 src/MainWindow.c:1259
+#: src/openai.c:1525
+msgid "message"
+msgstr ""
+
+#: src/MainWindow.c:314
+msgid "data"
+msgstr ""
+
+#: src/MainWindow.c:318
+msgid "url"
+msgstr ""
+
+#: src/MainWindow.c:320
+msgid "images"
+msgstr ""
+
+#: src/MainWindow.c:321 src/MainWindow.c:1062
+msgid "images/thumbnails"
+msgstr ""
+
+#: src/MainWindow.c:326
+msgid "abcdefghijklmnopqrstuvwxyz0123456789"
+msgstr ""
+
+#: src/MainWindow.c:331
+#, c-format
+msgid "images/%s.png"
+msgstr ""
+
+#: src/MainWindow.c:363
+#, c-format
+msgid "Invalid image size\n"
+msgstr ""
+
+#: src/MainWindow.c:369
+msgid "Generating image name..."
+msgstr ""
+
+#: src/MainWindow.c:371 src/MainWindow.c:376 src/MainWindow.c:1199
+#: src/MainWindow.c:1386 src/MainWindow.c:1471
+msgid "user"
+msgstr ""
+
+#: src/MainWindow.c:374
+msgid ""
+"generate a short title for this image and don't enclose the title in quotes "
+"or prefix the response with anything"
+msgstr ""
+
+#: src/MainWindow.c:386 src/MainWindow.c:406
+msgid "Failed to generate image name. Using ID instead."
+msgstr ""
+
+#: src/MainWindow.c:396 src/MainWindow.c:402 src/MainWindow.c:552
+#: src/MainWindow.c:963 src/MainWindow.c:1421 src/MainWindow.c:1773
+#: src/MainWindow.c:2146 src/MainWindow.c:2157 src/MainWindow.c:2169
+msgid "Ready"
+msgstr ""
+
+#: src/MainWindow.c:486
+msgid "No image is currently selected."
+msgstr ""
+
+#. Save image copy button
+#: src/MainWindow.c:499 src/MainWindow.c:932
+msgid "Save Image Copy"
+msgstr ""
+
+#: src/MainWindow.c:499
+msgid "image.png"
+msgstr ""
+
+#: src/MainWindow.c:500
+msgid "SYS:"
+msgstr ""
+
+#: src/MainWindow.c:508 src/MainWindow.c:1060
+#, c-format
+msgid "%s%s%s"
+msgstr ""
+
+#: src/MainWindow.c:508 src/openai.c:1038
+msgid "/"
+msgstr ""
+
+#: src/MainWindow.c:520 src/MainWindow.c:523 src/MainWindow.c:526
+#: src/MainWindow.c:529 src/MainWindow.c:532 src/MainWindow.c:535
+#, c-format
+msgid "cP[%ld]%s"
+msgstr ""
+
+#: src/MainWindow.c:617 src/MainWindow.c:1479
+msgid "b"
+msgstr ""
+
+#: src/MainWindow.c:620
+msgid "i"
+msgstr ""
+
+#: src/MainWindow.c:623
+msgid "u"
+msgstr ""
+
+#.
+#. MCC_NList's docs say \033n sets the soft style back to normal,
+#. thus turning off bold/italic/underline.
+#.
+#: src/MainWindow.c:638
+msgid "n"
+msgstr ""
+
+#: src/MainWindow.c:807 src/gui.c:164 src/gui.c:165 src/menu.c:110
+msgid "AmigaGPT"
+msgstr ""
+
+#: src/MainWindow.c:841 src/MainWindow.c:910
+msgid "BAR MINW=100 MAXW=200"
+msgstr ""
+
+#. New image button
+#: src/MainWindow.c:891
+msgid "New Image"
+msgstr ""
+
+#. Delete image button
+#: src/MainWindow.c:896
+msgid "Delete Image"
+msgstr ""
+
+#. Open image button
+#: src/MainWindow.c:927
+msgid "Open Image"
+msgstr ""
+
+#: src/MainWindow.c:973
+msgid "Could not create main window"
+msgstr ""
+
+#: src/MainWindow.c:1032
+msgid "Image path is NULL"
+msgstr ""
+
+#: src/MainWindow.c:1042
+msgid "Could not find image directory"
+msgstr ""
+
+#: src/MainWindow.c:1048
+msgid "Could not find image file name"
+msgstr ""
+
+#: src/MainWindow.c:1052
+msgid "thumbnails"
+msgstr ""
+
+#: src/MainWindow.c:1068
+msgid "Could not load image for thumbnail generation"
+msgstr ""
+
+#: src/MainWindow.c:1074
+#, c-format
+msgid "Generating thumbnail for %s\n"
+msgstr ""
+
+#: src/MainWindow.c:1146
+msgid "choices"
+msgstr ""
+
+#: src/MainWindow.c:1149
+msgid "delta"
+msgstr ""
+
+#: src/MainWindow.c:1151 src/MainWindow.c:1646 src/MainWindow.c:1889
+#: src/openai.c:481
+msgid "role"
+msgstr ""
+
+#: src/MainWindow.c:1155 src/MainWindow.c:1649 src/MainWindow.c:1903
+#: src/openai.c:483
+msgid "content"
+msgstr ""
+
+#: src/MainWindow.c:1181
+msgid "Sending message..."
+msgstr ""
+
+#: src/MainWindow.c:1215
+msgid "\n"
+msgstr ""
+
+#: src/MainWindow.c:1224 src/MainWindow.c:1642
+msgid "system"
+msgstr ""
+
+#: src/MainWindow.c:1232 src/MainWindow.c:1397
+msgid "Could not connect to OpenAI"
+msgstr ""
+
+#: src/MainWindow.c:1339
+msgid "finish_reason"
+msgstr ""
+
+#: src/MainWindow.c:1362 src/MainWindow.c:1482
+msgid "assistant"
+msgstr ""
+
+#: src/MainWindow.c:1380
+msgid "Generating conversation title..."
+msgstr ""
+
+#: src/MainWindow.c:1383
+msgid ""
+"generate a short title for this conversation and don't enclose the title in "
+"quotes or prefix the response with anything"
+msgstr ""
+
+#: src/MainWindow.c:1440
+#, c-format
+msgid "Failed to allocate memory for conversation node\n"
+msgstr ""
+
+#: src/MainWindow.c:1466
+msgid ""
+"The conversation has exceeded the maximum length.\n"
+"\n"
+"Please start a new conversation."
+msgstr ""
+
+#: src/MainWindow.c:1473
+msgid "rb3"
+msgstr ""
+
+#: src/MainWindow.c:1483
+msgid ""
+"\n"
+"\n"
+"l2"
+msgstr ""
+
+#: src/MainWindow.c:1491
+msgid ""
+"\n"
+"\n"
+msgstr ""
+
+#: src/MainWindow.c:1501 src/openai.c:647 src/openai.c:901
+#, c-format
+msgid "%s"
+msgstr ""
+
+#: src/MainWindow.c:1586 src/MainWindow.c:1602
+msgid "*OK"
+msgstr ""
+
+#: src/MainWindow.c:1586 src/MainWindow.c:1602
+#, c-format
+msgid "c%s"
+msgstr ""
+
+#: src/MainWindow.c:1587
+#, c-format
+msgid "%s\n"
+msgstr ""
+
+#: src/MainWindow.c:1617 src/MainWindow.c:1781 src/MainWindow.c:1812
+#: src/MainWindow.c:1820 src/MainWindow.c:1831 src/MainWindow.c:1833
+msgid "chat-history.json"
+msgstr ""
+
+#: src/MainWindow.c:1619
+msgid ""
+"Failed to create message history file. Conversation history will not be "
+"saved."
+msgstr ""
+
+#: src/MainWindow.c:1633 src/MainWindow.c:1696 src/MainWindow.c:1849
+#: src/MainWindow.c:1995
+msgid "name"
+msgstr ""
+
+#: src/MainWindow.c:1653 src/MainWindow.c:1865 src/openai.c:489
+msgid "messages"
+msgstr ""
+
+#: src/MainWindow.c:1663
+msgid ""
+"Failed to write to message history file. Conversation history will not be "
+"saved."
+msgstr ""
+
+#: src/MainWindow.c:1680 src/MainWindow.c:1931 src/MainWindow.c:1961
+#: src/MainWindow.c:1970 src/MainWindow.c:1978 src/MainWindow.c:1980
+msgid "image-history.json"
+msgstr ""
+
+#: src/MainWindow.c:1682
+msgid "Failed to create image history file. Image history will not be saved."
+msgstr ""
+
+#: src/MainWindow.c:1699 src/MainWindow.c:2010
+msgid "filePath"
+msgstr ""
+
+#: src/MainWindow.c:1701 src/MainWindow.c:2025 src/openai.c:794
+msgid "prompt"
+msgstr ""
+
+#: src/MainWindow.c:1703 src/MainWindow.c:2040 src/config.c:69 src/config.c:251
+msgid "imageModel"
+msgstr ""
+
+#: src/MainWindow.c:1705 src/MainWindow.c:2055
+msgid "width"
+msgstr ""
+
+#: src/MainWindow.c:1707 src/MainWindow.c:2070
+msgid "height"
+msgstr ""
+
+#: src/MainWindow.c:1717
+msgid "Failed to write to image history file. Image history will not be saved."
+msgstr ""
+
+#: src/MainWindow.c:1745
+msgid "Loading image..."
+msgstr ""
+
+#: src/MainWindow.c:1748
+msgid "cLoading image..."
+msgstr ""
+
+#: src/MainWindow.c:1800
+msgid ""
+"Failed to read from message history file. Conversation history will not be "
+"loaded"
+msgstr ""
+
+#: src/MainWindow.c:1813
+msgid "chat-history.json.bak"
+msgstr ""
+
+#: src/MainWindow.c:1814
+msgid ""
+"Failed to parse chat history. Malformed JSON. The chat-history.json file is "
+"probably corrupted. Conversation history will not be loaded. A backup of the "
+"chat-history.json file has been created as chat-history.json.bak"
+msgstr ""
+
+#: src/MainWindow.c:1821
+msgid "RAM:chat-history.json"
+msgstr ""
+
+#: src/MainWindow.c:1823
+msgid ""
+"Failed to parse chat history. Malformed JSON. The chat-history.json file is "
+"probably corrupted. Conversation history will not be loaded. There was an "
+"error writing a backup of the chat history to disk but a copy has been saved "
+"to RAM:chat-history.json.bak"
+msgstr ""
+
+#: src/MainWindow.c:1835
+msgid "Failed to delete chat-history.json. Please delete this file manually."
+msgstr ""
+
+#: src/MainWindow.c:1852
+msgid ""
+"Failed to parse chat history. \"name\" is missing from the conversation. The "
+"chat-history.json file is probably corrupted. Conversation history will not "
+"be loaded."
+msgstr ""
+
+#: src/MainWindow.c:1868
+msgid ""
+"Failed to parse chat history. \"messages\" is missing from the conversation. "
+"The chat-history.json file is probably corrupted. Conversation history will "
+"not be loaded."
+msgstr ""
+
+#: src/MainWindow.c:1891
+msgid ""
+"Failed to parse chat history. \"role\" is missing from the conversation "
+"message. The chat-history.json file is probably corrupted. Conversation "
+"history will not be loaded."
+msgstr ""
+
+#: src/MainWindow.c:1906
+msgid ""
+"Failed to parse chat history. \"content\" is missing from the conversation. "
+"The chat-history.json file is probably corrupted. Conversation history will "
+"not be loaded."
+msgstr ""
+
+#: src/MainWindow.c:1950
+msgid ""
+"Failed to read from image history file. Image generation history will not be "
+"loaded"
+msgstr ""
+
+#: src/MainWindow.c:1962
+msgid "image-history.json.bak"
+msgstr ""
+
+#: src/MainWindow.c:1964
+msgid ""
+"Failed to parse image history. Malformed JSON. The image-history.json file "
+"is probably corrupted. Image history will not be loaded. A backup of the "
+"image-history.json file has been created as image-history.json.bak"
+msgstr ""
+
+#: src/MainWindow.c:1971
+msgid "RAM:image-history.json"
+msgstr ""
+
+#: src/MainWindow.c:1972
+msgid ""
+"Failed to parse image history. Malformed JSON. The image-history.json file "
+"is probably corrupted. Image history will not be loaded. There was an error "
+"writing a backup of the image history to disk but a copy has been saved to "
+"RAM:image-history.json.bak"
+msgstr ""
+
+#: src/MainWindow.c:1982
+msgid "Failed to delete image-history.json. Please delete this file manually."
+msgstr ""
+
+#: src/MainWindow.c:1998
+msgid ""
+"Failed to parse image history. \"name\" is missing from the image. The image-"
+"history.json file is probably corrupted. Image history will not be loaded."
+msgstr ""
+
+#: src/MainWindow.c:2012
+msgid ""
+"Failed to parse image history. \"filePath\" is missing from the image. The "
+"image-history.json file is probably corrupted. Image history will not be "
+"loaded."
+msgstr ""
+
+#: src/MainWindow.c:2028
+msgid ""
+"Failed to parse image history. \"prompt\" is missing from the image. The "
+"image-history.json file is probably corrupted. Image history will not be "
+"loaded."
+msgstr ""
+
+#: src/MainWindow.c:2042
+msgid ""
+"Failed to parse image history. \"imageModel\" is missing from the image. The "
+"image-history.json file is probably corrupted. Image history will not be "
+"loaded."
+msgstr ""
+
+#: src/MainWindow.c:2058
+msgid ""
+"Failed to parse image history. \"width\" is missing from the image. The "
+"image-history.json file is probably corrupted. Image history will not be "
+"loaded."
+msgstr ""
+
+#: src/MainWindow.c:2073
+msgid ""
+"Failed to parse image history. \"height\" is missing from the image. The "
+"image-history.json file is probably corrupted. Image history will not be "
+"loaded."
+msgstr ""
+
+#: src/MainWindow.c:2120
+#, c-format
+msgid "Error opening %s for copy"
+msgstr ""
+
+#: src/MainWindow.c:2129
+#, c-format
+msgid "Error creating %s for copy"
+msgstr ""
+
+#: src/MainWindow.c:2137
+msgid "Copying file..."
+msgstr ""
+
+#: src/MainWindow.c:2148 src/MainWindow.c:2159
+#, c-format
+msgid "Error copying %s to %s"
+msgstr ""
+
+#: src/MainWindow.c:2185
+#, c-format
+msgid "P[%lup[2]%s"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:30
+msgid "Invalid port number. Please enter a number between 0 and 65535."
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:72
+msgid "None (fastest)"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:72
+msgid "SSL (secure)"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:75
+msgid "No authentication"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:76
+msgid "Username and password"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:80
+msgid "Proxy server settings"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:87
+msgid "Host"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:96
+msgid "Port"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:100
+msgid "0123456789"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:107
+msgid "Encryption"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:116
+msgid "Authentication"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:125
+msgid "Username"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:135
+msgid "Password"
+msgstr ""
+
+#: src/ProxySettingsRequesterWindow.c:160
+msgid "Could not create proxy settings requester window"
+msgstr ""
+
+#: src/StartupOptionsWindow.c:18
+msgid "Open in Workbench"
+msgstr ""
+
+#: src/StartupOptionsWindow.c:18
+msgid "New screen"
+msgstr ""
+
+#. Open in Workbench
+#: src/StartupOptionsWindow.c:29 src/StartupOptionsWindow.c:120
+msgid "Workbench"
+msgstr ""
+
+#: src/StartupOptionsWindow.c:86
+msgid "Could not open screen"
+msgstr ""
+
+#: src/StartupOptionsWindow.c:123
+msgid "Startup Options"
+msgstr ""
+
+#: src/StartupOptionsWindow.c:127
+msgid "Screen to open:"
+msgstr ""
+
+#: src/StartupOptionsWindow.c:127
+msgid "radioButton"
+msgstr ""
+
+#: src/StartupOptionsWindow.c:131
+msgid "Could not create startupOptionsWindowObject\n"
+msgstr ""
+
+#: src/config.c:11
+msgid "american.accent"
+msgstr ""
+
+#: src/config.c:45 src/config.c:135
+msgid "config.json"
+msgstr ""
+
+#: src/config.c:47
+#, c-format
+msgid "Failed to open the config file\n"
+msgstr ""
+
+#: src/config.c:53 src/config.c:172
+msgid "speechEnabled"
+msgstr ""
+
+#: src/config.c:55 src/config.c:178
+msgid "speechSystem"
+msgstr ""
+
+#: src/config.c:57 src/config.c:209
+msgid "speechAccent"
+msgstr ""
+
+#: src/config.c:61 src/config.c:224
+msgid "speechFliteVoice"
+msgstr ""
+
+#: src/config.c:63 src/config.c:234
+msgid "chatSystem"
+msgstr ""
+
+#: src/config.c:67 src/config.c:244
+msgid "chatModel"
+msgstr ""
+
+#: src/config.c:71 src/config.c:257
+msgid "imageSizeDallE2"
+msgstr ""
+
+#: src/config.c:73 src/config.c:263
+msgid "imageSizeDallE3"
+msgstr ""
+
+#: src/config.c:75 src/config.c:269
+msgid "openAITTSModel"
+msgstr ""
+
+#: src/config.c:77 src/config.c:275
+msgid "openAITTSVoice"
+msgstr ""
+
+#: src/config.c:79 src/config.c:285
+msgid "openAiApiKey"
+msgstr ""
+
+#: src/config.c:83 src/config.c:296
+msgid "chatModelSetVersion"
+msgstr ""
+
+#: src/config.c:85 src/config.c:309
+msgid "imageModelSetVersion"
+msgstr ""
+
+#: src/config.c:87 src/config.c:322
+msgid "speechSystemSetVersion"
+msgstr ""
+
+#: src/config.c:89 src/config.c:343
+msgid "openAITTSModelSetVersion"
+msgstr ""
+
+#: src/config.c:91 src/config.c:356
+msgid "openAITTSVoiceSetVersion"
+msgstr ""
+
+#: src/config.c:93 src/config.c:369
+msgid "proxyEnabled"
+msgstr ""
+
+#: src/config.c:95 src/config.c:382
+msgid "proxyHost"
+msgstr ""
+
+#: src/config.c:99 src/config.c:392
+msgid "proxyPort"
+msgstr ""
+
+#: src/config.c:101 src/config.c:400
+msgid "proxyUsesSSL"
+msgstr ""
+
+#: src/config.c:104 src/config.c:408
+msgid "proxyRequiresAuth"
+msgstr ""
+
+#: src/config.c:106 src/config.c:422
+msgid "proxyUsername"
+msgstr ""
+
+#: src/config.c:110 src/config.c:438
+msgid "proxyPassword"
+msgstr ""
+
+#: src/config.c:119
+#, c-format
+msgid "Failed to write the data to the config file\n"
+msgstr ""
+
+#: src/config.c:156
+#, c-format
+msgid "Failed to read the config file\n"
+msgstr ""
+
+#: src/config.c:166
+#, c-format
+msgid "Failed to parse the config file\n"
+msgstr ""
+
+#: src/config.c:246 src/openai.c:472 src/openai.c:793 src/openai.c:1419
+msgid "model"
+msgstr ""
+
+#: src/gui.c:76
+msgid "muimaster.library"
+msgstr ""
+
+#: src/gui.c:77
+#, c-format
+msgid ""
+"Could not open muimaster.library\n"
+"Please make sure you have MUI installed\n"
+msgstr ""
+
+#: src/gui.c:82 src/gui.c:96 src/openai.c:185 src/openai.c:210 src/openai.c:231
+#: src/speech.c:131
+msgid "main"
+msgstr ""
+
+#: src/gui.c:84
+#, c-format
+msgid "Could not get interface for muimaster.library\n"
+msgstr ""
+
+#: src/gui.c:89
+msgid "codesets.library"
+msgstr ""
+
+#: src/gui.c:91
+#, c-format
+msgid ""
+"Could not open codesets.library\n"
+"Please make sure you have codesets installed\n"
+"Refer to the documentation for more info.\n"
+msgstr ""
+
+#: src/gui.c:98
+#, c-format
+msgid "Could not get interface for codesets.library\n"
+msgstr ""
+
+#: src/gui.c:104
+msgid "Could not find the system codeset"
+msgstr ""
+
+#: src/gui.c:110
+msgid "aros.library"
+msgstr ""
+
+#: src/gui.c:144
+msgid ""
+"Could not find all the MUI custom classes. Please make sure they are "
+"installed. Refer to the documentation for more information."
+msgstr ""
+
+#: src/gui.c:167
+msgid "(C) 2023-2025 Cameron Armstrong (Nightfox/sacredbanana)"
+msgstr ""
+
+#: src/gui.c:168
+msgid "Cameron Armstrong (Nightfox/sacredbanana)"
+msgstr ""
+
+#: src/gui.c:170
+msgid ""
+"AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
+msgstr ""
+
+#: src/gui.c:174
+msgid "PROGDIR:AmigaGPT.guide"
+msgstr ""
+
+#: src/gui.c:178
+msgid "Image"
+msgstr ""
+
+#: src/gui.c:189
+msgid "Could not create app!\n"
+msgstr ""
+
+#: src/gui.c:221
+msgid "Could not find the MUI custom class:"
+msgstr ""
+
+#: src/menu.c:26
+msgid "About"
+msgstr ""
+
+#: src/menu.c:28
+msgid ""
+"AmigaGPT for m68k AmigaOS 3\n"
+"\n"
+"AmigaGPT for PPC AmigaOS 4\n"
+"\n"
+"Version "
+msgstr ""
+
+#: src/menu.c:32
+msgid ""
+"\n"
+"Build date: "
+msgstr ""
+
+#: src/menu.c:33
+msgid ""
+"\n"
+"Build number: "
+msgstr ""
+
+#: src/menu.c:34
+msgid ""
+"\n"
+"\n"
+"Developed by Cameron Armstrong (@sacredbanana on GitHub,\n"
+"YouTube and Twitter, @Nightfox on EAB)\n"
+"\n"
+"This app will always remain free but if you would like to\n"
+"support me you can do so at https://paypal.me/sacredbanana"
+msgstr ""
+
+#: src/menu.c:53
+msgid ""
+"Could not initialise speech system 34. Please make sure the translator."
+"library and narrator.device are installed into the program directory. See "
+"the documentation for more information."
+msgstr ""
+
+#: src/menu.c:59
+msgid ""
+"Could not initialise speech system 37. Please make sure the translator."
+"library and narrator.device are installed into the program directory. See "
+"the documentation for more information."
+msgstr ""
+
+#: src/menu.c:65
+msgid ""
+"Could not initialise speech system Flite. Please make sure the flite device "
+"is installed. See the documentation for more information."
+msgstr ""
+
+#: src/menu.c:70
+msgid "Could not initialise speech system OpenAI"
+msgstr ""
+
+#: src/menu.c:73
+msgid "Unknown speech system!"
+msgstr ""
+
+#: src/menu.c:87
+msgid "LOCALE:accents"
+msgstr ""
+
+#: src/menu.c:88
+msgid "#?.accent"
+msgstr ""
+
+#: src/menu.c:107
+msgid "AmigaGPT.guide"
+msgstr ""
+
+#: src/menu.c:117
+msgid "Could not open documentation"
+msgstr ""
+
+#: src/menu.c:124
+msgid "Project"
+msgstr ""
+
+#: src/menu.c:125
+msgid "About AmigaGPT"
+msgstr ""
+
+#: src/menu.c:127
+msgid "About MUI"
+msgstr ""
+
+#: src/menu.c:129
+msgid "Quit"
+msgstr ""
+
+#: src/menu.c:129
+msgid "Q"
+msgstr ""
+
+#: src/menu.c:130
+msgid "Edit"
+msgstr ""
+
+#: src/menu.c:131 src/menu.c:305
+msgid "Cut"
+msgstr ""
+
+#: src/menu.c:131
+msgid "X"
+msgstr ""
+
+#: src/menu.c:132 src/menu.c:315
+msgid "Copy"
+msgstr ""
+
+#: src/menu.c:132
+msgid "C"
+msgstr ""
+
+#: src/menu.c:133 src/menu.c:325
+msgid "Paste"
+msgstr ""
+
+#: src/menu.c:133
+msgid "V"
+msgstr ""
+
+#: src/menu.c:134
+msgid "Clear"
+msgstr ""
+
+#: src/menu.c:134
+msgid "L"
+msgstr ""
+
+#: src/menu.c:135
+msgid "Select all"
+msgstr ""
+
+#: src/menu.c:135
+msgid "A"
+msgstr ""
+
+#: src/menu.c:136
+msgid "View"
+msgstr ""
+
+#: src/menu.c:137
+msgid "MUI Settings"
+msgstr ""
+
+#: src/menu.c:138
+msgid "Connection"
+msgstr ""
+
+#: src/menu.c:139
+msgid "Proxy"
+msgstr ""
+
+#: src/menu.c:140 src/menu.c:144
+msgid "Enabled"
+msgstr ""
+
+#: src/menu.c:142
+msgid "Settings"
+msgstr ""
+
+#: src/menu.c:143
+msgid "Speech"
+msgstr ""
+
+#: src/menu.c:146
+msgid "Speech system"
+msgstr ""
+
+#. *
+#. * The names of the speech systems
+#. * @see enum SpeechSystem
+#. *
+#: src/menu.c:148 src/speech.c:53
+msgid "Workbench 1.x v34"
+msgstr ""
+
+#: src/menu.c:150 src/speech.c:54
+msgid "Workbench 2.0 v37"
+msgstr ""
+
+#: src/menu.c:152 src/menu.c:158 src/menu.c:161 src/speech.c:57
+msgid "OpenAI Text To Speech"
+msgstr ""
+
+#: src/menu.c:156 src/speech.c:55
+msgid "Flite"
+msgstr ""
+
+#: src/menu.c:166
+msgid "Accent"
+msgstr ""
+
+#: src/menu.c:169
+msgid "Flite Voice"
+msgstr ""
+
+#: src/menu.c:170
+msgid "kal (fast)"
+msgstr ""
+
+#: src/menu.c:172
+msgid "kal16 (fast)"
+msgstr ""
+
+#: src/menu.c:174
+msgid "awb (slow)"
+msgstr ""
+
+#: src/menu.c:176
+msgid "rms (slow)"
+msgstr ""
+
+#: src/menu.c:178
+msgid "slt (slow)"
+msgstr ""
+
+#: src/menu.c:181
+msgid "OpenAI Voice"
+msgstr ""
+
+#: src/menu.c:182 src/openai.c:126
+msgid "alloy"
+msgstr ""
+
+#: src/menu.c:184 src/openai.c:126
+msgid "echo"
+msgstr ""
+
+#: src/menu.c:186 src/openai.c:127
+msgid "fable"
+msgstr ""
+
+#: src/menu.c:188 src/openai.c:127
+msgid "onyx"
+msgstr ""
+
+#: src/menu.c:190 src/openai.c:128
+msgid "nova"
+msgstr ""
+
+#: src/menu.c:192 src/openai.c:128
+msgid "shimmer"
+msgstr ""
+
+#: src/menu.c:194
+msgid "OpenAI Speech Model"
+msgstr ""
+
+#. *
+#. * The names of the TTS models
+#. * @see enum OpenAITTSModel
+#. *
+#: src/menu.c:195 src/openai.c:117
+msgid "tts-1"
+msgstr ""
+
+#: src/menu.c:197 src/openai.c:119
+msgid "tts-1-hd"
+msgstr ""
+
+#: src/menu.c:199
+msgid "OpenAI"
+msgstr ""
+
+#: src/menu.c:200
+msgid "API key"
+msgstr ""
+
+#: src/menu.c:201
+msgid "Chat System"
+msgstr ""
+
+#: src/menu.c:202
+msgid "Chat Model"
+msgstr ""
+
+#: src/menu.c:203 src/openai.c:70
+msgid "gpt-4o"
+msgstr ""
+
+#: src/menu.c:205 src/openai.c:71
+msgid "gpt-4o-2024-11-20"
+msgstr ""
+
+#: src/menu.c:207 src/openai.c:72
+msgid "gpt-4o-2024-08-06"
+msgstr ""
+
+#: src/menu.c:209 src/openai.c:73
+msgid "gpt-4o-2024-05-13"
+msgstr ""
+
+#: src/menu.c:211 src/openai.c:74
+msgid "chatgpt-4o-latest"
+msgstr ""
+
+#: src/menu.c:213 src/openai.c:75
+msgid "gpt-4o-mini"
+msgstr ""
+
+#: src/menu.c:215 src/openai.c:76
+msgid "gpt-4o-mini-2024-07-18"
+msgstr ""
+
+#: src/menu.c:217 src/openai.c:77
+msgid "o1"
+msgstr ""
+
+#: src/menu.c:219 src/openai.c:78
+msgid "o1-2024-12-17"
+msgstr ""
+
+#: src/menu.c:221 src/openai.c:79
+msgid "o1-preview"
+msgstr ""
+
+#: src/menu.c:223 src/openai.c:80
+msgid "o1-preview-2024-09-12"
+msgstr ""
+
+#: src/menu.c:225 src/openai.c:81
+msgid "o1-mini"
+msgstr ""
+
+#: src/menu.c:227 src/openai.c:82
+msgid "o1-mini-2024-09-12"
+msgstr ""
+
+#: src/menu.c:229 src/openai.c:83
+msgid "gpt-4-turbo"
+msgstr ""
+
+#: src/menu.c:231 src/openai.c:84
+msgid "gpt-4-turbo-2024-04-09"
+msgstr ""
+
+#: src/menu.c:233 src/openai.c:85
+msgid "gpt-4-turbo-preview"
+msgstr ""
+
+#: src/menu.c:235 src/openai.c:86
+msgid "gpt-4-0125-preview"
+msgstr ""
+
+#: src/menu.c:237 src/openai.c:87
+msgid "gpt-4-1106-preview"
+msgstr ""
+
+#: src/menu.c:239 src/openai.c:88
+msgid "gpt-4"
+msgstr ""
+
+#: src/menu.c:241 src/openai.c:89
+msgid "gpt-4-0613"
+msgstr ""
+
+#: src/menu.c:243 src/openai.c:90
+msgid "gpt-4-0314"
+msgstr ""
+
+#: src/menu.c:245 src/openai.c:91
+msgid "gpt-3.5-turbo"
+msgstr ""
+
+#: src/menu.c:247 src/openai.c:92
+msgid "gpt-3.5-turbo-0125"
+msgstr ""
+
+#: src/menu.c:249 src/openai.c:93
+msgid "gpt-3.5-turbo-1106"
+msgstr ""
+
+#: src/menu.c:251
+msgid "Image Model"
+msgstr ""
+
+#: src/menu.c:252 src/openai.c:101
+msgid "dall-e-2"
+msgstr ""
+
+#: src/menu.c:254 src/openai.c:101
+msgid "dall-e-3"
+msgstr ""
+
+#: src/menu.c:256
+msgid "DALL-E 2 Image Size"
+msgstr ""
+
+#. *
+#. * The names of the image sizes
+#. * @see enum ImageSize
+#. *
+#: src/menu.c:257 src/openai.c:107
+msgid "256x256"
+msgstr ""
+
+#: src/menu.c:259 src/openai.c:108
+msgid "512x512"
+msgstr ""
+
+#: src/menu.c:261 src/menu.c:264 src/openai.c:109
+msgid "1024x1024"
+msgstr ""
+
+#: src/menu.c:263
+msgid "DALL-E 3 Image Size"
+msgstr ""
+
+#: src/menu.c:266 src/openai.c:110
+msgid "1792x1024"
+msgstr ""
+
+#: src/menu.c:268 src/openai.c:111
+msgid "1024x1792"
+msgstr ""
+
+#: src/menu.c:270
+msgid "Help"
+msgstr ""
+
+#: src/menu.c:271
+msgid "Open Documentation"
+msgstr ""
+
+#: src/menu.c:345
+msgid "SelectAll"
+msgstr ""
+
+#: src/openai.c:22
+msgid "api.openai.com"
+msgstr ""
+
+#: src/openai.c:174 src/openai.c:181
+msgid "bsdsocket.library"
+msgstr ""
+
+#: src/openai.c:175
+msgid ""
+"failed to open bsdsocket.library. You have to install a TCP/IP stack such as "
+"AmiTCP, Miami or Roadshow. Please refer to the documentation for more "
+"information."
+msgstr ""
+
+#: src/openai.c:182
+msgid "failed to open bsdsocket.library version 4"
+msgstr ""
+
+#: src/openai.c:187
+msgid "failed to get the interface of bsdsocket.library"
+msgstr ""
+
+#: src/openai.c:193 src/openai.c:202
+msgid "amisslmaster.library"
+msgstr ""
+
+#: src/openai.c:195 src/openai.c:204
+msgid ""
+"failed to open amisslmaster.library version 5. You have to install AmiSSL 5. "
+"Please refer to the documentation for more information."
+msgstr ""
+
+#: src/openai.c:211
+msgid "failed to get the interface of amisslmaster.library"
+msgstr ""
+
+#: src/openai.c:223
+msgid ""
+"Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
+"newer. Please refer to the documentation for more information."
+msgstr ""
+
+#: src/openai.c:233
+msgid "failed to get the interface of amissl.library"
+msgstr ""
+
+#: src/openai.c:281
+msgid "Couldn't create new SSL handle!"
+msgstr ""
+
+#: src/openai.c:294
+msgid "Proxy host lookup failed"
+msgstr ""
+
+#: src/openai.c:295
+msgid "Host lookup failed"
+msgstr ""
+
+#: src/openai.c:308
+msgid ""
+"Couldn't connect to server. Check if the proxy host and port are correct or "
+"disable it. "
+msgstr ""
+
+#: src/openai.c:310
+msgid "Couldn't connect to server"
+msgstr ""
+
+#: src/openai.c:321
+msgid "Couldn't create socket"
+msgstr ""
+
+#: src/openai.c:339 src/openai.c:502 src/openai.c:806 src/openai.c:1054
+#: src/openai.c:1436
+#, c-format
+msgid "%s:%s"
+msgstr ""
+
+#: src/openai.c:342 src/openai.c:505 src/openai.c:808 src/openai.c:1056
+#: src/openai.c:1438
+#, c-format
+msgid "Proxy-Authorization: Basic %s\r\n"
+msgstr ""
+
+#: src/openai.c:350
+#, c-format
+msgid ""
+"CONNECT %s:%d HTTP/1.1\r\n"
+"Host: %s:%d\r\n"
+"%s\r\n"
+msgstr ""
+
+#: src/openai.c:354
+msgid "Failed to send CONNECT request"
+msgstr ""
+
+#: src/openai.c:366
+msgid "200 Connection established"
+msgstr ""
+
+#: src/openai.c:367
+msgid "Proxy authentication failed"
+msgstr ""
+
+#: src/openai.c:369
+msgid "Failed to receive response from proxy"
+msgstr ""
+
+#: src/openai.c:396 src/openai.c:659 src/openai.c:910 src/openai.c:1170
+#: src/openai.c:1635
+#, c-format
+msgid "SSL_ERROR_ZERO_RETURN\n"
+msgstr ""
+
+#: src/openai.c:399 src/openai.c:663 src/openai.c:715 src/openai.c:914
+#: src/openai.c:957 src/openai.c:1174 src/openai.c:1226 src/openai.c:1639
+#: src/openai.c:1682
+#, c-format
+msgid "SSL_ERROR_WANT_READ\n"
+msgstr ""
+
+#: src/openai.c:402 src/openai.c:666 src/openai.c:718 src/openai.c:917
+#: src/openai.c:960 src/openai.c:1177 src/openai.c:1229 src/openai.c:1642
+#: src/openai.c:1685
+#, c-format
+msgid "SSL_ERROR_WANT_WRITE\n"
+msgstr ""
+
+#: src/openai.c:405 src/openai.c:669 src/openai.c:721 src/openai.c:920
+#: src/openai.c:963 src/openai.c:1180 src/openai.c:1232 src/openai.c:1645
+#: src/openai.c:1688
+#, c-format
+msgid "SSL_ERROR_WANT_CONNECT\n"
+msgstr ""
+
+#: src/openai.c:408 src/openai.c:672 src/openai.c:724 src/openai.c:923
+#: src/openai.c:966 src/openai.c:1183 src/openai.c:1235 src/openai.c:1648
+#: src/openai.c:1691
+#, c-format
+msgid "SSL_ERROR_WANT_ACCEPT\n"
+msgstr ""
+
+#: src/openai.c:411 src/openai.c:675 src/openai.c:727 src/openai.c:926
+#: src/openai.c:969 src/openai.c:1186 src/openai.c:1238 src/openai.c:1651
+#: src/openai.c:1694
+#, c-format
+msgid "SSL_ERROR_WANT_X509_LOOKUP\n"
+msgstr ""
+
+#: src/openai.c:414 src/openai.c:678 src/openai.c:730 src/openai.c:929
+#: src/openai.c:972 src/openai.c:1241 src/openai.c:1654 src/openai.c:1697
+#, c-format
+msgid "SSL_ERROR_SYSCALL\n"
+msgstr ""
+
+#: src/openai.c:417 src/openai.c:733 src/openai.c:975 src/openai.c:1244
+#: src/openai.c:1700
+#, c-format
+msgid "SSL_ERROR_SSL\n"
+msgstr ""
+
+#: src/openai.c:420 src/openai.c:736 src/openai.c:978 src/openai.c:1247
+#: src/openai.c:1703
+#, c-format
+msgid "Unknown error: %ld\n"
+msgstr ""
+
+#: src/openai.c:490
+msgid "stream"
+msgstr ""
+
+#: src/openai.c:511
+#, c-format
+msgid ""
+"POST https://api.openai.com/v1/chat/completions HTTP/1.1\r\n"
+"Host: api.openai.com\r\n"
+"Content-Type: application/json\r\n"
+"Authorization: Bearer %s\r\n"
+"User-Agent: AmigaGPT\r\n"
+"Content-Length: %lu\r\n"
+"%s\r\n"
+"%s"
+msgstr ""
+
+#: src/openai.c:525 src/openai.c:779 src/openai.c:1069 src/openai.c:1400
+msgid "Connecting..."
+msgstr ""
+
+#: src/openai.c:532 src/openai.c:689 src/openai.c:785 src/openai.c:940
+#: src/openai.c:1075 src/openai.c:1406 src/openai.c:1664
+msgid "Error connecting to host! Maximum retries reached."
+msgstr ""
+
+#: src/openai.c:539 src/openai.c:827 src/openai.c:1082 src/openai.c:1458
+msgid "Sending request..."
+msgstr ""
+
+#: src/openai.c:569
+#, c-format
+msgid "Downloading response..."
+msgstr ""
+
+#: src/openai.c:580
+msgid "data: {"
+msgstr ""
+
+#: src/openai.c:580 src/openai.c:585 src/openai.c:883 src/openai.c:1518
+msgid "{"
+msgstr ""
+
+#: src/openai.c:588 src/openai.c:867 src/openai.c:1115 src/openai.c:1534
+msgid "HTTP/1.1"
+msgstr ""
+
+#: src/openai.c:590 src/openai.c:869 src/openai.c:1117 src/openai.c:1536
+msgid "200 OK"
+msgstr ""
+
+#: src/openai.c:643
+msgid "data: [DONE]"
+msgstr ""
+
+#: src/openai.c:680 src/openai.c:931 src/openai.c:1656
+#, c-format
+msgid "error: %lu\n"
+msgstr ""
+
+#: src/openai.c:683 src/openai.c:934 src/openai.c:1658
+msgid "Lost connection."
+msgstr ""
+
+#: src/openai.c:705 src/openai.c:947 src/openai.c:1672
+#, c-format
+msgid "Unknown error\n"
+msgstr ""
+
+#: src/openai.c:711 src/openai.c:953 src/openai.c:1222 src/openai.c:1677
+msgid "Couldn't write request!\n"
+msgstr ""
+
+#: src/openai.c:795
+msgid "size"
+msgstr ""
+
+#: src/openai.c:813
+#, c-format
+msgid ""
+"POST https://api.openai.com/v1/images/generations HTTP/1.1\r\n"
+"Host: api.openai.com\r\n"
+"Content-Type: application/json\r\n"
+"Authorization: Bearer %s\r\n"
+"User-Agent: AmigaGPT\r\n"
+"Content-Length: %lu\r\n"
+"%s\r\n"
+"%s"
+msgstr ""
+
+#: src/openai.c:857
+#, c-format
+msgid "Downloading image... (%lu bytes)"
+msgstr ""
+
+#: src/openai.c:1015
+msgid "Couldn't open file for writing"
+msgstr ""
+
+#. Parse URL (very basic parsing, assuming URL starts with http:// or
+#. https://)
+#: src/openai.c:1024
+msgid "://"
+msgstr ""
+
+#: src/openai.c:1026
+msgid "Invalid URL format"
+msgstr ""
+
+#: src/openai.c:1063
+#, c-format
+msgid ""
+"GET %s HTTP/1.1\r\n"
+"Host: %s\r\n"
+"User-Agent: AmigaGPT\r\n"
+"%s\r\n"
+msgstr ""
+
+#: src/openai.c:1132
+msgid "Content-Length: "
+msgstr ""
+
+#: src/openai.c:1136 src/openai.c:1556
+msgid "\r\n"
+msgstr ""
+
+#: src/openai.c:1142 src/openai.c:1510
+msgid ""
+"\r\n"
+"\r\n"
+msgstr ""
+
+#: src/openai.c:1154
+#, c-format
+msgid "Downloaded %lu/%ld bytes"
+msgstr ""
+
+#: src/openai.c:1189
+msgid "Lost connection. Reconnecting..."
+msgstr ""
+
+#: src/openai.c:1210
+#, c-format
+msgid ""
+"GET %s HTTP/1.1\r\n"
+"Host: %s\r\n"
+"User-Agent: AmigaGPT\r\n"
+"Range: bytes=%lu-\r\n"
+"%s\r\n"
+msgstr ""
+
+#: src/openai.c:1304
+#, c-format
+msgid "Couldn't create new context!\n"
+msgstr ""
+
+#: src/openai.c:1363
+#, c-format
+msgid "Couldn't find CRLF in chunk length\n"
+msgstr ""
+
+#: src/openai.c:1364
+#, c-format
+msgid "%x %x %x %x %x %x %x %x\n"
+msgstr ""
+
+#: src/openai.c:1422
+msgid "voice"
+msgstr ""
+
+#: src/openai.c:1424
+msgid "input"
+msgstr ""
+
+#: src/openai.c:1425
+msgid "response_format"
+msgstr ""
+
+#: src/openai.c:1426
+msgid "pcm"
+msgstr ""
+
+#: src/openai.c:1444
+#, c-format
+msgid ""
+"POST https://api.openai.com/v1/audio/speech HTTP/1.1\r\n"
+"Host: api.openai.com\r\n"
+"Content-Type: application/json\r\n"
+"Authorization: Bearer %s\r\n"
+"User-Agent: AmigaGPT\r\n"
+"Content-Length: %lu\r\n"
+"%s\r\n"
+"%s"
+msgstr ""
+
+#: src/openai.c:1499
+#, c-format
+msgid "Downloaded %lu bytes"
+msgstr ""
+
+#: src/openai.c:1600
+msgid "Not enough memory for audio buffer"
+msgstr ""
+
+#: src/openai.c:1678
+msgid "Connection error"
+msgstr ""
+
+#: src/openai.c:1718
+msgid "Download complete."
+msgstr ""
+
+#: src/openai.c:1778
+msgid "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+msgstr ""
+
+#. *
+#. * The names of the speech voices
+#. * @see enum SpeechFliteVoice
+#. *
+#: src/speech.c:41
+msgid "kal"
+msgstr ""
+
+#: src/speech.c:42
+msgid "kal16"
+msgstr ""
+
+#: src/speech.c:43
+msgid "awb"
+msgstr ""
+
+#: src/speech.c:44
+msgid "rms"
+msgstr ""
+
+#: src/speech.c:45
+msgid "slt"
+msgstr ""
+
+#: src/speech.c:71
+#, c-format
+msgid "Could not create narrator port\n"
+msgstr ""
+
+#: src/speech.c:78
+#, c-format
+msgid "Could not create narrator IO request\n"
+msgstr ""
+
+#: src/speech.c:85
+msgid "devs/speech/34/narrator.device"
+msgstr ""
+
+#: src/speech.c:87
+#, c-format
+msgid "Could not open narrator.device v34\n"
+msgstr ""
+
+#: src/speech.c:93
+msgid "devs/speech/37/narrator.device"
+msgstr ""
+
+#: src/speech.c:95
+#, c-format
+msgid "Could not open narrator.device v37\n"
+msgstr ""
+
+#: src/speech.c:104
+msgid "translator.library"
+msgstr ""
+
+#: src/speech.c:105
+#, c-format
+msgid "Could not open translator.library\n"
+msgstr ""
+
+#: src/speech.c:126
+msgid "flite.device"
+msgstr ""
+
+#: src/speech.c:134
+msgid ": failed to obtain interface for flite.device\n"
+msgstr ""
+
+#: src/speech.c:139
+msgid ": failed to open flite.device\n"
+msgstr ""
+
+#: src/speech.c:236
+msgid ""
+"lea %a1, %%a0\n"
+"move.l %0, %%d1\n"
+"lsr.l #1, %%d1\n"
+"1:\n"
+"move.w (%%a0), %%d0\n"
+"rol.w #8, %%d0\n"
+"move.w %%d0, (%%a0)+\n"
+"subq.l #1, %%d1\n"
+"bne.b 1b\n"
+msgstr ""
+
+#. No output operands
+#: src/speech.c:250
+msgid "d"
+msgstr ""
+
+#: src/speech.c:250
+msgid "a"
+msgstr ""
+
+#. Input operands
+#: src/speech.c:251 src/speech.c:432
+msgid "d0"
+msgstr ""
+
+#: src/speech.c:251 src/speech.c:432
+msgid "d1"
+msgstr ""
+
+#: src/speech.c:251 src/speech.c:432
+msgid "a0"
+msgstr ""
+
+#: src/speech.c:251 src/speech.c:432
+msgid "memory"
+msgstr ""
+
+#: src/speech.c:283
+#, c-format
+msgid "Failed to open AHI device: %d\n"
+msgstr ""
+
+#: src/speech.c:330
+#, c-format
+msgid "%s.voice"
+msgstr ""
+
+#: src/speech.c:334
+msgid ": failed to open voice\n"
+msgstr ""
+
+#: src/speech.c:358
+msgid ": Speech IO aborted\n"
+msgstr ""
+
+#: src/speech.c:361
+msgid ": libflite error\n"
+msgstr ""
+
+#: src/speech.c:364
+msgid ": no voice\n"
+msgstr ""
+
+#: src/speech.c:367
+msgid ": unknown speech IO error\n"
+msgstr ""
+
+#: src/speech.c:390
+#, c-format
+msgid "Failed to open file: %s\n"
+msgstr ""
+
+#: src/speech.c:402
+#, c-format
+msgid "Failed to allocate memory for audio data\n"
+msgstr ""
+
+#: src/speech.c:406
+#, c-format
+msgid "Failed to read file: %s\n"
+msgstr ""
+
+#: src/speech.c:415
+msgid ""
+"lea    (%1), %%a0\n"
+"move.l %0, %%d1\n"
+"lsr.l  #1, %%d1\n"
+"1:\n"
+"move.w (%%a0), %%d0\n"
+"rol.w  #8, %%d0\n"
+"move.w %%d0, (%%a0)+\n"
+"subq.l #1, %%d1\n"
+"bne.b  1b\n"
+msgstr ""
+
+#. No output operands
+#: src/speech.c:431 src/AmigaGPT_cat.c:54
+msgid "g"
+msgstr ""
