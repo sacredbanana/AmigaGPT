@@ -123,9 +123,8 @@ LONG createStartupOptionsWindow() {
           STRING_STARTUP_OPTIONS, MUIA_Window_DepthGadget, FALSE,
           MUIA_Window_SizeGadget, FALSE, WindowContents, VGroup, Child,
           screenSelectRadioButton = RadioObject, MUIA_Frame, MUIV_Frame_Group,
-          MUIA_FrameTitle, STRING_SCREEN_TO_OPEN, MUIA_HelpNode, "radioButton",
-          MUIA_Radio_Entries, radioButtonOptions, End, Child,
-          MUI_MakeObject(MUIO_HBar, 10), Child,
+          MUIA_FrameTitle, STRING_SCREEN_TO_OPEN, MUIA_Radio_Entries,
+          radioButtonOptions, End, Child, MUI_MakeObject(MUIO_HBar, 10), Child,
           startupOptionsOkButton = MUI_MakeObject(MUIO_Button, STRING_OK), End,
           End)) {
         displayError(STRING_ERROR_STARTUP_OPTIONS);

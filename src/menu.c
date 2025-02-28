@@ -66,7 +66,9 @@ HOOKPROTONHNO(SpeechSystemMenuItemClickedFunc, void,
             break;
         }
     }
-    writeConfig();
+    if (writeConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+    }
 }
 MakeHook(SpeechSystemMenuItemClickedHook, SpeechSystemMenuItemClickedFunc);
 
@@ -86,7 +88,9 @@ HOOKPROTONHNONP(SpeechAccentMenuItemClickedFunc, void) {
                                            MEMF_ANY | MEMF_CLEAR);
             strncpy(config.speechAccent, fileRequester->fr_File,
                     strlen(fileRequester->fr_File));
-            writeConfig();
+            if (writeConfig() == RETURN_ERROR) {
+                displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+            }
         }
         FreeAslRequest(fileRequester);
     }
@@ -1095,36 +1099,6 @@ void setMenuTitles() {
         menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE);
     set(speechSystemOpenAIVoiceMenuItem, MUIA_Menuitem_Title,
         STRING_MENU_OPENAI_VOICE);
-
-    Object speechSystemOpenAIVoiceAlloyMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY);
-    set(speechSystemOpenAIVoiceAlloyMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPENAI_VOICE_ALLOY);
-
-    Object speechSystemOpenAIVoiceEchoMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO);
-    set(speechSystemOpenAIVoiceEchoMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPENAI_VOICE_ECHO);
-
-    Object speechSystemOpenAIVoiceFableMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE);
-    set(speechSystemOpenAIVoiceFableMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPENAI_VOICE_FABLE);
-
-    Object speechSystemOpenAIVoiceOnyxMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX);
-    set(speechSystemOpenAIVoiceOnyxMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPENAI_VOICE_ONYX);
-
-    Object speechSystemOpenAIVoiceNovaMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA);
-    set(speechSystemOpenAIVoiceNovaMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPENAI_VOICE_NOVA);
-
-    Object speechSystemOpenAIVoiceShimmerMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER);
-    set(speechSystemOpenAIVoiceShimmerMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPENAI_VOICE_SHIMMER);
 
     Object speechSystemOpenAIModelMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_MODEL);

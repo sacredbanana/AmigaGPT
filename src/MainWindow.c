@@ -345,7 +345,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             imageHeight = 1792;
             break;
         default:
-            printf(STRING_ERROR_INVALID_IMAGE_SIZE);
+            displayError(STRING_ERROR_INVALID_IMAGE_SIZE);
             imageWidth = 256;
             imageHeight = 256;
             break;
@@ -502,22 +502,22 @@ MakeHook(SaveImageCopyButtonClickedHook, SaveImageCopyButtonClickedFunc);
 HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
     const UBYTE BUTTON_LABEL_BUFFER_SIZE = 64;
     STRPTR buttonLabelText = AllocVec(BUTTON_LABEL_BUFFER_SIZE, MEMF_ANY);
-    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]+ %s\0",
              greenPen, STRING_NEW_CHAT);
     set(newChatButton, MUIA_Text_Contents, buttonLabelText);
-    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s\0",
              redPen, STRING_DELETE_CHAT);
     set(deleteChatButton, MUIA_Text_Contents, buttonLabelText);
-    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]\n%s\n\0",
              bluePen, STRING_SEND);
     set(sendMessageButton, MUIA_Text_Contents, buttonLabelText);
-    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]+ %s\0",
              greenPen, STRING_NEW_IMAGE);
     set(newImageButton, MUIA_Text_Contents, buttonLabelText);
-    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s\0",
              redPen, STRING_DELETE_IMAGE);
     set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
-    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]\n%s\n\0",
              bluePen, STRING_CREATE_IMAGE);
     set(createImageButton, MUIA_Text_Contents, buttonLabelText);
     FreeVec(buttonLabelText);
@@ -1423,7 +1423,7 @@ static void addTextToConversation(struct Conversation *conversation, UTF8 *text,
     struct ConversationNode *conversationNode =
         AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
     if (conversationNode == NULL) {
-        printf(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
         return;
     }
     strncpy(conversationNode->role, role, sizeof(conversationNode->role) - 1);
@@ -1568,7 +1568,7 @@ void displayError(STRPTR message) {
 #else
                                 MUIV_Requester_Image_Error, STRING_ERROR,
 #endif
-                                STRING_OK_REQUESTER, "\33c%s", message) != 0) {
+                                STRING_OK, "\33c*%s", message) != 0) {
             fprintf(stderr, "%s\n", message);
         }
     } else {
@@ -1584,7 +1584,7 @@ void displayError(STRPTR message) {
 #else
                             MUIV_Requester_Image_Error, STRING_ERROR,
 #endif
-                            STRING_OK_REQUESTER, "\33c%s", errorMessage);
+                            STRING_OK, "\33c*%s", errorMessage);
                 updateStatusBar(STRING_ERROR, redPen);
                 FreeVec(errorMessage);
             }
@@ -1726,8 +1726,8 @@ void openImage(struct GeneratedImage *image, WORD scaledWidth,
     updateStatusBar(STRING_LOADING_IMAGE, yellowPen);
 
     Object *imageWindowLoadingTextObject = VGroup, Child, VSpace(0), Child,
-           TextObject, MUIA_Text_Contents, STRING_LOADING_IMAGE_CENTERED, End,
-           Child, VSpace(0), End;
+           TextObject, MUIA_Text_Contents, STRING_LOADING_IMAGE,
+           MUIA_Text_PreParse, "\033c", End, Child, VSpace(0), End;
     DoMethod(imageWindowImageViewGroup, OM_ADDMEMBER,
              imageWindowLoadingTextObject);
     DoMethod(imageWindowImageViewGroup, OM_REMMEMBER, imageWindowImageView);
@@ -2023,28 +2023,20 @@ static LONG loadImages() {
  * @return TRUE if the file was copied successfully, FALSE otherwise
  **/
 static BOOL copyFile(STRPTR source, STRPTR destination) {
-    const UBYTE ERROR_MESSAGE_BUFFER_SIZE = 255;
     const UWORD FILE_BUFFER_SIZE = 4096;
     BPTR srcFile, dstFile;
     LONG bytesRead, bytesWritten;
     APTR buffer = AllocVec(FILE_BUFFER_SIZE, MEMF_ANY);
-    STRPTR errorMessage = AllocVec(ERROR_MESSAGE_BUFFER_SIZE, MEMF_ANY);
 
     if (!(srcFile = Open(source, MODE_OLDFILE))) {
-        snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE,
-                 STRING_ERROR_FILE_COPY_OPEN, source);
-        displayError(errorMessage);
+        displayError(STRING_ERROR_FILE_COPY_OPEN);
         FreeVec(buffer);
-        FreeVec(errorMessage);
         return FALSE;
     }
 
     if (!(dstFile = Open(destination, MODE_NEWFILE))) {
-        snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE,
-                 STRING_ERROR_FILE_COPY_CREATE, destination);
-        displayError(errorMessage);
+        displayError(STRING_ERROR_FILE_COPY_CREATE);
         FreeVec(buffer);
-        FreeVec(errorMessage);
         Close(srcFile);
         return FALSE;
     }
@@ -2059,22 +2051,16 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 
             if (bytesWritten != bytesRead) {
                 updateStatusBar(STRING_READY, greenPen);
-                snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE,
-                         STRING_ERROR_FILE_COPY, source, destination);
-                displayError(errorMessage);
+                displayError(STRING_ERROR_FILE_COPY);
                 FreeVec(buffer);
-                FreeVec(errorMessage);
                 Close(srcFile);
                 Close(dstFile);
                 return FALSE;
             }
         } else if (bytesRead < 0) {
             updateStatusBar(STRING_READY, greenPen);
-            snprintf(errorMessage, ERROR_MESSAGE_BUFFER_SIZE,
-                     "Error copying %s to %s", source, destination);
-            displayError(errorMessage);
+            displayError(STRING_ERROR_FILE_COPY);
             FreeVec(buffer);
-            FreeVec(errorMessage);
             Close(srcFile);
             Close(dstFile);
             return FALSE;
@@ -2083,7 +2069,6 @@ static BOOL copyFile(STRPTR source, STRPTR destination) {
 
     updateStatusBar(STRING_READY, greenPen);
     FreeVec(buffer);
-    FreeVec(errorMessage);
     Close(srcFile);
     Close(dstFile);
     return TRUE;

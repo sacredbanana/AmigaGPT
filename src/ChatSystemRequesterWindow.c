@@ -17,7 +17,9 @@ HOOKPROTONHNONP(ChatSystemRequesterOkButtonClickedFunc, void) {
     }
     config.chatSystem = AllocVec(strlen(chatSystem) + 1, MEMF_CLEAR);
     strncpy(config.chatSystem, chatSystem, strlen(chatSystem));
-    writeConfig();
+    if (writeConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+    }
 }
 MakeHook(ChatSystemRequesterOkButtonClickedHook,
          ChatSystemRequesterOkButtonClickedFunc);

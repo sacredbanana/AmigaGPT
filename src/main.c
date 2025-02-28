@@ -46,7 +46,7 @@ LONG main(int argc, char **argv) {
     ULONG total = upper - lower;
 
     if (total < 32768) {
-        printf(STRING_WARNING_STACK, total);
+        printf("%s %ld %s.\n", STRING_WARNING_STACK, total, STRING_BYTES);
     }
 #else
     if (argc == 0) {
@@ -62,10 +62,13 @@ LONG main(int argc, char **argv) {
         "minotaurcreative.net", REGAPP_WBStartup, (ULONG)wbStartupMessage,
         REGAPP_Description, STRING_APP_DESCRIPTION, TAG_DONE);
 #endif
-    readConfig();
+    if (readConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_READ);
+        exit(RETURN_ERROR);
+    }
 
     if (initVideo() == RETURN_ERROR) {
-        printf(STRING_ERROR_VIDEO_INIT);
+        displayError(STRING_ERROR_VIDEO_INIT);
         exit(RETURN_ERROR);
     }
 
@@ -94,8 +97,6 @@ LONG main(int argc, char **argv) {
 
     startGUIRunLoop();
 
-    writeConfig();
-
     exit(RETURN_OK);
     return 0;
 }
@@ -104,7 +105,9 @@ LONG main(int argc, char **argv) {
  * Cleanup and exit the app
  **/
 static void cleanExit() {
-    writeConfig();
+    if (writeConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+    }
     freeConfig();
     shutdownGUI();
     closeSpeech();

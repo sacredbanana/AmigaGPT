@@ -57,7 +57,9 @@ HOOKPROTONHNONP(ProxySettingsRequesterOkButtonClickedFunc, void) {
     config.proxyPassword = AllocVec(strlen(proxyPassword) + 1, MEMF_CLEAR);
     strncpy(config.proxyPassword, proxyPassword, strlen(proxyPassword));
 
-    writeConfig();
+    if (writeConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+    }
     set(proxySettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
 }
 MakeHook(ProxySettingsRequesterOkButtonClickedHook,

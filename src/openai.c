@@ -406,7 +406,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
                 printf("SSL_ERROR_SSL\n");
                 break;
             default:
-                printf(STRING_ERROR_UNKNOWN_VALUE, err);
+                printf("%s: %ld\n", STRING_ERROR_UNKNOWN, err);
                 break;
             }
             CloseSocket(sock);
@@ -665,7 +665,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
             case SSL_ERROR_SYSCALL:
                 printf("SSL_ERROR_SYSCALL\n");
                 ULONG err = ERR_get_error();
-                printf(STRING_ERROR_VALUE, err);
+                printf("%s: %lu\n", STRING_ERROR, err);
                 break;
             case SSL_ERROR_SSL:
                 updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
@@ -690,6 +690,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
                 break;
             default:
                 printf(STRING_ERROR_UNKNOWN);
+                putchar('\n');
                 break;
             }
         }
@@ -720,7 +721,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
             printf("SSL_ERROR_SSL\n");
             break;
         default:
-            printf(STRING_ERROR_UNKNOWN_VALUE, err);
+            printf("%s: %ld\n", STRING_ERROR_UNKNOWN, err);
             break;
         }
     }
@@ -840,8 +841,8 @@ struct json_object *postImageCreationRequestToOpenAI(
                     recv(sock, tempReadBuffer,
                          useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1, 0);
             }
-            snprintf(statusMessage, sizeof(statusMessage),
-                     STRING_DOWNLOADING_IMAGE_BYTES, totalBytesRead);
+            snprintf(statusMessage, sizeof(statusMessage), "%s (%lu %s)",
+                     STRING_DOWNLOADING_IMAGE, totalBytesRead, STRING_BYTES);
             updateStatusBar(statusMessage, yellowPen);
             strcat(readBuffer, tempReadBuffer);
             if (useSSL) {
@@ -915,7 +916,7 @@ struct json_object *postImageCreationRequestToOpenAI(
             case SSL_ERROR_SYSCALL:
                 printf("SSL_ERROR_SYSCALL\n");
                 ULONG err = ERR_get_error();
-                printf(STRING_ERROR_VALUE, err);
+                printf("%s: %lu\n", STRING_ERROR, err);
                 break;
             case SSL_ERROR_SSL:
                 updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
@@ -931,6 +932,7 @@ struct json_object *postImageCreationRequestToOpenAI(
                 break;
             default:
                 printf(STRING_ERROR_UNKNOWN);
+                putchar('\n');
                 break;
             }
         }
@@ -961,7 +963,7 @@ struct json_object *postImageCreationRequestToOpenAI(
             printf("SSL_ERROR_SSL\n");
             break;
         default:
-            printf(STRING_ERROR_UNKNOWN_VALUE, err);
+            printf("%s: %ld\n", STRING_ERROR_UNKNOWN, err);
             break;
         }
     }
@@ -1136,9 +1138,9 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
             } else {
                 dataStart = tempReadBuffer;
             }
-            snprintf(statusMessage, sizeof(statusMessage),
-                     STRING_DOWNLOADED_BYTES_TOTAL, totalBytesRead,
-                     contentLength);
+            snprintf(statusMessage, sizeof(statusMessage), "%s %lu/%ld %s",
+                     STRING_DOWNLOADED, totalBytesRead, contentLength,
+                     STRING_BYTES);
             updateStatusBar(statusMessage, yellowPen);
             if (useSSL) {
                 err = SSL_get_error(ssl, bytesRead);
@@ -1231,7 +1233,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
             printf("SSL_ERROR_SSL\n");
             break;
         default:
-            printf(STRING_ERROR_UNKNOWN_VALUE, err);
+            printf("%s: %ld\n", STRING_ERROR_UNKNOWN, err);
             break;
         }
         Close(fileHandle);
@@ -1348,7 +1350,7 @@ static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength) {
 
     if (i == 8) {
         printf(STRING_ERROR_BAD_CHUNK);
-        printf("%x %x %x %x %x %x %x %x\n", buffer[0], buffer[1], buffer[2],
+        printf("\n%x %x %x %x %x %x %x %x\n", buffer[0], buffer[1], buffer[2],
                buffer[3], buffer[4], buffer[5], buffer[6], buffer[7]);
         return 0;
     }
@@ -1482,8 +1484,8 @@ APTR postTextToSpeechRequestToOpenAI(
             bytesRemainingInBuffer = bytesRead;
             dataStart = readBuffer;
 
-            snprintf(statusMessage, sizeof(statusMessage),
-                     STRING_DOWNLOADED_BYTES, *audioLength);
+            snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                     STRING_DOWNLOADED, *audioLength, STRING_BYTES);
             updateStatusBar(statusMessage, yellowPen);
             if (useSSL) {
                 err = SSL_get_error(ssl, bytesRead);
@@ -1640,7 +1642,7 @@ APTR postTextToSpeechRequestToOpenAI(
             case SSL_ERROR_SYSCALL:
                 printf("SSL_ERROR_SYSCALL\n");
                 ULONG err = ERR_get_error();
-                printf(STRING_ERROR_VALUE, err);
+                printf("%s: %lu\n", STRING_ERROR, err);
             case SSL_ERROR_SSL:
                 updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
                 if (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy,
@@ -1656,6 +1658,7 @@ APTR postTextToSpeechRequestToOpenAI(
                 break;
             default:
                 printf(STRING_ERROR_UNKNOWN);
+                putchar('\n');
                 break;
             }
         }
@@ -1686,7 +1689,7 @@ APTR postTextToSpeechRequestToOpenAI(
             printf("SSL_ERROR_SSL\n");
             break;
         default:
-            printf(STRING_ERROR_UNKNOWN_VALUE, err);
+            printf("%s: %ld\n", STRING_ERROR_UNKNOWN, err);
             break;
         }
         FreeVec(audioData);

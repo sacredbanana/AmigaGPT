@@ -25,7 +25,9 @@ HOOKPROTONHNONP(APIKeyRequesterOkButtonClickedFunc, void) {
     config.openAiApiKey = AllocVec(strlen(apiKey) + 1, MEMF_CLEAR);
     strncpy(config.openAiApiKey, apiKey, strlen(apiKey));
     FreeVec(apiKey);
-    writeConfig();
+    if (writeConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+    }
 }
 MakeHook(APIKeyRequesterOkButtonClickedHook,
          APIKeyRequesterOkButtonClickedFunc);
@@ -43,8 +45,15 @@ LONG createAPIKeyRequesterWindow() {
             WindowContents, VGroup,
                 Child, TextObject,
                     MUIA_Text_PreParse, "\33c",
-                    MUIA_Text_Contents,  STRING_API_KEY_REQUESTER_BODY
-                    ,
+                    MUIA_Text_Contents,  STRING_API_KEY_REQUESTER_BODY_INSTRUCTION,
+                End,
+                Child, TextObject,
+                    MUIA_Text_PreParse, "\n\33c",
+                    MUIA_Text_Contents,  STRING_API_KEY_REQUESTER_BODY_REASON,
+                End,
+                Child, TextObject,
+                    MUIA_Text_PreParse, "\n\33c",
+                    MUIA_Text_Contents,  STRING_API_KEY_REQUESTER_BODY_HELP,
                 End,
                 Child, apiKeyRequesterString = TextEditorObject,
                     MUIA_CycleChain, TRUE,

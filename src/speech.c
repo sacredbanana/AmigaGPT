@@ -69,14 +69,14 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
     if (!translationBuffer)
         translationBuffer = AllocVec(TRANSLATION_BUFFER_SIZE, MEMF_ANY);
     if (!(NarratorPort = CreateMsgPort())) {
-        printf(STRING_ERROR_NARRATOR_PORT);
+        displayError(STRING_ERROR_NARRATOR_PORT);
         config.speechEnabled = FALSE;
         return RETURN_ERROR;
     }
 
     if (!(NarratorIO =
               CreateIORequest(NarratorPort, sizeof(struct narrator_rb)))) {
-        printf(STRING_ERROR_NARRATOR_IO_REQUEST);
+        displayError(STRING_ERROR_NARRATOR_IO_REQUEST);
         config.speechEnabled = FALSE;
         return RETURN_ERROR;
     }
@@ -85,7 +85,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
     case SPEECH_SYSTEM_34:
         if (OpenDevice(PROGDIR "devs/speech/34/narrator.device", 0,
                        (struct IORequest *)NarratorIO, 0L) != 0) {
-            printf(STRING_ERROR_NARRATOR_34_DEVICE_OPEN);
+            displayError(STRING_ERROR_NARRATOR_34_DEVICE_OPEN);
             config.speechEnabled = FALSE;
             return RETURN_ERROR;
         }
@@ -93,7 +93,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
     case SPEECH_SYSTEM_37:
         if (OpenDevice(PROGDIR "devs/speech/37/narrator.device", 0,
                        (struct IORequest *)NarratorIO, 0L) != 0) {
-            printf(STRING_ERROR_NARRATOR_37_DEVICE_OPEN);
+            displayError(STRING_ERROR_NARRATOR_37_DEVICE_OPEN);
             config.speechEnabled = FALSE;
             return RETURN_ERROR;
         }
@@ -103,7 +103,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 
     if ((TranslatorBase =
              (struct Library *)OpenLibrary("translator.library", 42)) == NULL) {
-        printf(STRING_ERROR_TRANSLATOR_LIB_OPEN);
+        displayError(STRING_ERROR_TRANSLATOR_LIB_OPEN);
         config.speechEnabled = FALSE;
         return RETURN_ERROR;
     }
@@ -131,12 +131,12 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
             IFlite = (struct FliteIFace *)GetInterface(
                 (struct Library *)FliteBase, "main", 1, NULL);
             if (!IFlite) {
-                printf(STRING_ERROR_FLITE_INTERFACE_OPEN);
+                displayError(STRING_ERROR_FLITE_INTERFACE_OPEN);
                 config.speechEnabled = FALSE;
                 return RETURN_ERROR;
             }
         } else {
-            printf(STRING_ERROR_FLITE_DEVICE_OPEN);
+            displayError(STRING_ERROR_FLITE_DEVICE_OPEN);
             config.speechEnabled = FALSE;
             return RETURN_ERROR;
         }
@@ -280,7 +280,10 @@ void speakText(STRPTR text) {
         ahiError = OpenDevice(AHINAME, AHI_DEFAULT_UNIT,
                               (struct IORequest *)ahiRequest, 0L);
         if (ahiError != 0) {
-            printf(STRING_ERROR_AHI_DEVICE_OPEN, ahiError);
+            UBYTE errorBuffer[256];
+            snprintf(errorBuffer, 256, "%s: %s", STRING_ERROR_AHI_DEVICE_OPEN,
+                     ahiError);
+            displayError(errorBuffer);
             config.speechEnabled = FALSE;
             FreeVec(audioBuffer);
             return;
@@ -387,7 +390,7 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size) {
     // Attempt to open the audio file
     fileHandle = Open(filename, MODE_OLDFILE);
     if (!fileHandle) {
-        printf(STRING_ERROR_FILE_OPEN, filename);
+        displayError(STRING_ERROR_FILE_OPEN);
         return NULL;
     }
 
@@ -403,7 +406,7 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size) {
         } else {
             // Read file content into buffer
             if (Read(fileHandle, buffer, fileSize) != fileSize) {
-                printf(STRING_ERROR_FILE_READ, filename);
+                displayError(STRING_ERROR_FILE_READ);
                 FreeVec(buffer);
                 buffer = NULL;
             } else {

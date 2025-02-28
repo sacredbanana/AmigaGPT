@@ -74,25 +74,25 @@ static void closeGUILibraries();
  **/
 LONG openGUILibraries() {
     if ((MUIMasterBase = OpenLibrary("muimaster.library", 19)) == NULL) {
-        printf(STRING_ERROR_MUI_LIB_OPEN);
+        displayError(STRING_ERROR_MUI_LIB_OPEN);
         return RETURN_ERROR;
     }
 #ifdef __AMIGAOS4__
     if ((IMUIMaster = (struct MUIIFace *)GetInterface(MUIMasterBase, "main", 1,
                                                       NULL)) == NULL) {
-        printf(STRING_ERROR_MUI_INTERFACE_OPEN);
+        displayError(STRING_ERROR_MUI_INTERFACE_OPEN);
         return RETURN_ERROR;
     }
 #endif
 
     if ((CodesetsBase = OpenLibrary("codesets.library", 6)) == NULL) {
-        printf(STRING_ERROR_CODESETS_LIB_OPEN);
+        displayError(STRING_ERROR_CODESETS_LIB_OPEN);
         return RETURN_ERROR;
     }
 #ifdef __AMIGAOS4__
     if ((ICodesets = (struct CodesetsIFace *)GetInterface(CodesetsBase, "main",
                                                           1, NULL)) == NULL) {
-        printf(STRING_ERROR_CODESETS_INTERFACE_OPEN);
+        displayError(STRING_ERROR_CODESETS_INTERFACE_OPEN);
         return RETURN_ERROR;
     }
 #endif
@@ -211,6 +211,7 @@ static BOOL checkMUICustomClassInstalled() {
             continue;
         if (!MUI_GetClass(USED_CLASSES[i])) {
             displayError(STRING_ERROR_MUI_CUSTOM_CLASS_NOT_FOUND);
+            putchar(':');
             displayError(USED_CLASSES[i]);
             hasAllClasses = FALSE;
         }

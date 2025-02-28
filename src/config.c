@@ -46,6 +46,7 @@ LONG writeConfig() {
     BPTR file = Open(PROGDIR "config.json", MODE_NEWFILE);
     if (file == 0) {
         printf(STRING_ERROR_CONFIG_FILE_READ);
+        putchar('\n');
         return RETURN_ERROR;
     }
 
@@ -118,6 +119,7 @@ LONG writeConfig() {
     if (Write(file, configJsonString, strlen(configJsonString)) !=
         strlen(configJsonString)) {
         printf(STRING_ERROR_CONFIG_FILE_WRITE);
+        putchar('\n');
         Close(file);
         json_object_put(configJsonObject);
         return RETURN_ERROR;
@@ -155,6 +157,7 @@ LONG readConfig() {
     STRPTR configJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
     if (Read(file, configJsonString, fileSize) != fileSize) {
         printf(STRING_ERROR_CONFIG_FILE_READ);
+        putchar('\n');
         Close(file);
         FreeVec(configJsonString);
         return RETURN_ERROR;
@@ -165,6 +168,7 @@ LONG readConfig() {
     struct json_object *configJsonObject = json_tokener_parse(configJsonString);
     if (configJsonObject == NULL) {
         printf(STRING_ERROR_CONFIG_FILE_PARSE);
+        putchar('\n');
         FreeVec(configJsonString);
         return RETURN_ERROR;
     }

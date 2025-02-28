@@ -63,7 +63,7 @@ ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),
 LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui
 VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS3__  -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -I$(INCDIR) -I$(SDKDIR) -I$(NDKDIR)
 
-.PHONY: all clean copy_bundle_files create_catalog
+.PHONY: all clean copy_bundle_files catalog catalog_definition
 
 all: $(EXECUTABLE_OUT) copy_bundle_files
 
@@ -72,12 +72,14 @@ clean:
 	$(RM) $(catalogs)
 	$(RM) -dr $(BUILD_DIR)
 
-create_catalog:
+catalog_definition:
+	$(info Generating catalog definition)
+	@touch $(CATALOG_DEFINITION)
+	@xgettext -a -c -L C -j -o $(CATALOG_DEFINITION) $(SOURCE_DIR)/*.c
+
+catalog:
 	$(info Removing old catalog sources)
 	@$(RM) $(SOURCE_DIR)/AmigaGPT_cat.c $(SOURCE_DIR)/AmigaGPT_cat.h
-
-	$(info Generating catalog definition)
-	@xgettext -a -c -L C -j -o $(CATALOG_DEFINITION) $(SOURCE_DIR)/*.c
 
 	$(info Generating catalog header)
 	flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.h=C_h.sd || true
@@ -103,7 +105,7 @@ $(EXECUTABLE_DIR):
 	@$(info Creating directory $@)
 	mkdir -p $@
 
-$(EXECUTABLE_OUT): create_catalog $(EXECUTABLE_DIR) $(BUILD_DIR) $(objects)
+$(EXECUTABLE_OUT): catalog $(EXECUTABLE_DIR) $(BUILD_DIR) $(objects)
 	$(info Linking $(PROGRAM_NAME))
 	@$(RM) $@
 	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@ $(LDFLAGS) 
@@ -114,7 +116,7 @@ $(cpp_objects): $(BUILD_DIR)/%.o : %.cpp | $(BUILD_DIR)/%.dir
 	$(info Compiling $<)
 	$(CC) $(CPPFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(c_objects): $(BUILD_DIR)/%.o : %.c | create_catalog
+$(c_objects): $(BUILD_DIR)/%.o : %.c | catalog
 	$(info Compiling $<)
 	@$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
