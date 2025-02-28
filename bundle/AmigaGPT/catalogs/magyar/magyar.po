@@ -1,4 +1,3 @@
-# AmigaGPT
 msgid ""
 msgstr ""
 "Project-Id-Version: AmigaGPT\n"
@@ -19,11 +18,13 @@ msgctxt "STRING_APP_DESCRIPTION (0//)"
 msgid ""
 "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
 msgstr ""
+"Az AmigaGPT egy olyan alkalmazás, amellyel ChatGPT-vel cseveghet, vagy AI-"
+"képeket hozhat létre a DALL-E segítségével"
 
 #: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
 msgid "Failed to initialize video"
-msgstr ""
+msgstr "Nem sikerült inicializálni a videót"
 
 #: src/main.c:76 src/main.c:77 src/main.c:78 src/main.c:75
 msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
@@ -31,6 +32,9 @@ msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
 msgstr ""
+"Nem sikerült megnyitni a beszédrendszert. Győződjön meg arról, hogy a "
+"translator.library v42 és a narrator.device v34 telepítve van. További "
+"információért tekintse meg az útmutatót."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
@@ -38,11 +42,13 @@ msgid ""
 "Failed to open speech system. Make sure Flite Device is installed. See the "
 "guide for more information."
 msgstr ""
+"Nem sikerült megnyitni a beszédrendszert. Győződjön meg arról, hogy a Flite "
+"Device telepítve van. További információért tekintse meg az útmutatót."
 
 #: src/main.c:88 src/main.c:89 src/main.c:90 src/main.c:87
 msgctxt "STRING_ERROR_OPENAI_INIT (4//)"
 msgid "Failed to open OpenAI connector"
-msgstr ""
+msgstr "Nem sikerült megnyitni az OpenAI-csatlakozót"
 
 #: src/main.c:51
 msgctxt "STRING_WARNING_STACK (5//)"
@@ -50,21 +56,23 @@ msgid ""
 "Warning: The stack size is too small. The minimum recommended stack size is "
 "32768 bytes to avoid crashes. Your stack size is: "
 msgstr ""
+"Figyelmeztetés: A köteg mérete túl kicsi. Az összeomlások elkerülése "
+"érdekében a minimális ajánlott veremméret 32768 bájt. A köteg mérete: "
 
 #: src/APIKeyRequesterWindow.c:40
 msgctxt "STRING_API_KEY_REQUESTER_TITLE (6//)"
 msgid "OpenAI API Key"
-msgstr ""
+msgstr "OpenAI API kulcs"
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_INSTRUCTION (7//)"
 msgid "Type or paste (Right-Amiga + V) your OpenAI API key here."
-msgstr ""
+msgstr "Írja be vagy illessze be ide (jobb-Amiga + V) az OpenAI API-kulcsot."
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_REASON (199//)"
 msgid "This key is required to use the OpenAI API."
-msgstr ""
+msgstr "Ez a kulcs szükséges az OpenAI API használatához."
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_HELP (200//)"
@@ -72,39 +80,41 @@ msgid ""
 "If you do not have an API key, consult the AmigaGPT documentation for "
 "instructions on how to obtain one."
 msgstr ""
+"Ha nem rendelkezik API-kulccsal, olvassa el az AmigaGPT dokumentációját a "
+"beszerzési utasításokért."
 
 #: src/APIKeyRequesterWindow.c:53 src/ChatSystemRequesterWindow.c:52
 #: src/ProxySettingsRequesterWindow.c:147 src/StartupOptionsWindow.c:129
 #: src/menu.c:39
 msgctxt "STRING_OK (8//)"
 msgid "OK"
-msgstr ""
+msgstr "RENDBEN"
 
 #: src/APIKeyRequesterWindow.c:58 src/ChatSystemRequesterWindow.c:57
 #: src/ProxySettingsRequesterWindow.c:152
 msgctxt "STRING_CANCEL (9//)"
 msgid "Cancel"
-msgstr ""
+msgstr "Mégse"
 
 #: src/APIKeyRequesterWindow.c:66
 msgctxt "STRING_ERROR_API_KEY_REQUESTER (10//)"
 msgid "Could not create API key requester window"
-msgstr ""
+msgstr "Nem sikerült létrehozni az API kulcskérő ablakot"
 
 #: src/AboutAmigaGPTWindow.c:16
 msgctxt "STRING_GIT_COMMIT (11//)"
 msgid "Git commit"
-msgstr ""
+msgstr "Elkötelezett"
 
 #: src/AboutAmigaGPTWindow.c:17
 msgctxt "STRING_GIT_BRANCH (12//)"
 msgid "Git branch"
-msgstr ""
+msgstr "Git ág"
 
 #: src/AboutAmigaGPTWindow.c:17
 msgctxt "STRING_GIT_COMMIT_TIMESTAMP (13//)"
 msgid "Commit timestamp"
-msgstr ""
+msgstr "Végrehajtási időbélyeg"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_SUPPORT (14//)"
@@ -112,26 +122,27 @@ msgid ""
 "This app will always remain free but if you would like to support me you can "
 "do so at:"
 msgstr ""
+"Ez az alkalmazás mindig ingyenes marad, de ha támogatni szeretne, megteheti:"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BUILD_DETAILS (214//)"
 msgid "Click the version string above for build details."
-msgstr ""
+msgstr "Az összeállítás részleteiért kattintson a fenti verziókarakterláncra."
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BEBBO (201//)"
 msgid "for creating the Amiga GCC toolchain"
-msgstr ""
+msgstr "az Amiga GCC eszközlánc létrehozásához"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_OPENAI (202//)"
 msgid "for creating the GPT and DALL-E models"
-msgstr ""
+msgstr "a GPT és DALL-E modellek elkészítéséhez"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_EAB (203//)"
 msgid "for being a great community!"
-msgstr ""
+msgstr "hogy egy nagyszerű közösség!"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
@@ -139,11 +150,13 @@ msgid ""
 "for all the thorough testing, bundling AmigaGPT into AmiKit and for all the "
 "moral support"
 msgstr ""
+"az összes alapos tesztelésért, az AmigaGPT AmiKitbe való összeszereléséért "
+"és minden erkölcsi támogatásért"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_COFFINOS (205//)"
 msgid "for bundling AmigaGPT into CoffinOS"
-msgstr ""
+msgstr "AmigaGPT csomagolásához CoffinOS-be"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
@@ -151,16 +164,18 @@ msgid ""
 "for reviewing AmigaGPT and publishing several of its updates in the News "
 "from Aminet section"
 msgstr ""
+"az AmigaGPT áttekintéséért és számos frissítésének közzétételéért a News "
+"from Aminet szekcióban"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_WHATIFF (207//)"
 msgid "for reviewing AmigaGPT and interviewing me in issue 14"
-msgstr ""
+msgstr "az AmigaGPT áttekintéséért és velem készített interjúért a 14. számban"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_YOUTUBE_REVIEW (208//)"
 msgid "for reviewing AmigaGPT on his YouTube channel"
-msgstr ""
+msgstr "amiért véleményezte az AmigaGPT-t a YouTube-csatornáján"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
@@ -168,6 +183,9 @@ msgid ""
 "for covering AmigaGPT in the Amiga News section on his Twitch streams and "
 "allowing me to join his stream to promote it"
 msgstr ""
+"amiért tudósítottam az AmigaGPT-t az Amiga News szekcióban a Twitch "
+"streamjein, és lehetővé tettem, hogy csatlakozzam a streamjéhez, hogy "
+"népszerűsítsem azt"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
@@ -175,21 +193,23 @@ msgid ""
 "for making a video review and giving a tutorial on how to add support for "
 "the French accent"
 msgstr ""
+"videó áttekintés elkészítéséhez és oktatóanyag adáshoz a francia akcentus "
+"támogatásának hozzáadásához"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LICENSE (211//)"
 msgid "License"
-msgstr ""
+msgstr "Engedély"
 
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
 msgid "Visit the GitHub repository for the latest release"
-msgstr ""
+msgstr "Látogassa meg a GitHub adattárat a legújabb kiadásért"
 
 #: src/ChatSystemRequesterWindow.c:32
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_TITLE (213//)"
 msgid "Enter how you would like AmigaGPT to respond"
-msgstr ""
+msgstr "Adja meg, hogyan reagáljon az AmigaGPT"
 
 #: src/ChatSystemRequesterWindow.c:38
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
@@ -200,157 +220,162 @@ msgid ""
 "respondnormally, leave this blank. This setting willbe applied to new "
 "conversations only."
 msgstr ""
+"Ha azt szeretné, hogy az AmigaGPT határozottan válaszoljon, vagy egyéniséget "
+"adjon hozzá, írja be ide. Például beírhatja, hogy „Beszélj, mint egy kalóz” "
+"vagy „Beszélj, mint arobot”. Ha azt szeretné, hogy az AmigaGPT normálisan "
+"válaszoljon, hagyja üresen. Ez a beállítás csak az új beszélgetésekre "
+"vonatkozik."
 
 #: src/ChatSystemRequesterWindow.c:65
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_ERROR (18//)"
 msgid "Could not create Chat System requester window"
-msgstr ""
+msgstr "Nem sikerült létrehozni a Chat System kérelmező ablakát"
 
 #: src/MainWindow.c:31
 msgctxt "STRING_NEW_CHAT (19//)"
 msgid "New Chat"
-msgstr ""
+msgstr "Új csevegés"
 
 #: src/MainWindow.c:31
 msgctxt "STRING_DELETE_CHAT (20//)"
 msgid "Delete Chat"
-msgstr ""
+msgstr "Csevegés törlése"
 
 #: src/MainWindow.c:31
 msgctxt "STRING_SEND (21//)"
 msgid "Send"
-msgstr ""
+msgstr "Elküld"
 
 #: src/MainWindow.c:32
 msgctxt "STRING_NEW_IMAGE (22//)"
 msgid "New Image"
-msgstr ""
+msgstr "Új kép"
 
 #: src/MainWindow.c:32
 msgctxt "STRING_DELETE_IMAGE (23//)"
 msgid "Delete Image"
-msgstr ""
+msgstr "Kép törlése"
 
 #. Create image button
 #: src/MainWindow.c:32 src/MainWindow.c:950
 msgctxt "STRING_CREATE_IMAGE (24//)"
 msgid "Create Image"
-msgstr ""
+msgstr "Kép létrehozása"
 
 #: src/MainWindow.c:66
 msgctxt "STRING_CHAT_MODE (25//)"
 msgid "Chat Mode"
-msgstr ""
+msgstr "Chat mód"
 
 #: src/MainWindow.c:66
 msgctxt "STRING_IMAGE_GENERATION_MODE (26//)"
 msgid "Image Generation Mode"
-msgstr ""
+msgstr "Képgenerálási mód"
 
 #: src/MainWindow.c:199 src/MainWindow.c:435
 msgctxt "STRING_ERROR_NO_API_KEY (27//)"
 msgid "Please enter your OpenAI API key in the Open AI settings in the menu."
-msgstr ""
+msgstr "Kérjük, adja meg OpenAI API kulcsát a menü Open AI beállításaiban."
 
 #: src/MainWindow.c:283
 msgctxt "STRING_ERROR_CONNECTION (28//)"
 msgid "Error connecting. Please try again."
-msgstr ""
+msgstr "Hiba a csatlakozáskor. Kérjük, próbálja újra."
 
 #: src/MainWindow.c:288 src/MainWindow.c:305 src/MainWindow.c:387
 #: src/MainWindow.c:1584 src/MainWindow.c:1600 src/MainWindow.c:1603
 msgctxt "STRING_ERROR (29//)"
 msgid "Error"
-msgstr ""
+msgstr "Hiba"
 
 #: src/MainWindow.c:363
 msgctxt "STRING_ERROR_INVALID_IMAGE_SIZE (30//)"
 msgid "Invalid image size"
-msgstr ""
+msgstr "Érvénytelen képméret"
 
 #: src/MainWindow.c:369
 msgctxt "STRING_GENERATING_IMAGE_NAME (31//)"
 msgid "Generating image name..."
-msgstr ""
+msgstr "Képnév generálása..."
 
 #: src/MainWindow.c:386 src/MainWindow.c:406
 msgctxt "STRING_ERROR_GENERATING_IMAGE_NAME (32//)"
 msgid "Failed to generate image name. Using ID instead."
-msgstr ""
+msgstr "Nem sikerült létrehozni a kép nevét. Helyette ID használata."
 
 #: src/MainWindow.c:396 src/MainWindow.c:402 src/MainWindow.c:552
 #: src/MainWindow.c:963 src/MainWindow.c:1421 src/MainWindow.c:1773
 #: src/MainWindow.c:2146 src/MainWindow.c:2157 src/MainWindow.c:2169
 msgctxt "STRING_READY (33//)"
 msgid "Ready"
-msgstr ""
+msgstr "Kész"
 
 #: src/MainWindow.c:486
 msgctxt "STRING_ERROR_NO_IMAGE_SELECTED (34//)"
 msgid "No image is currently selected."
-msgstr ""
+msgstr "Jelenleg nincs kép kiválasztva."
 
 #. Save image copy button
 #: src/MainWindow.c:499 src/MainWindow.c:932
 msgctxt "STRING_SAVE_IMAGE_COPY (35//)"
 msgid "Save Image Copy"
-msgstr ""
+msgstr "Képmásolat mentése"
 
 #: src/MainWindow.c:807 src/gui.c:164 src/gui.c:165 src/menu.c:110
 msgctxt "STRING_APP_NAME (36//)"
 msgid "AmigaGPT"
-msgstr ""
+msgstr "AmigaGPT"
 
 #. Open image button
 #: src/MainWindow.c:927
 msgctxt "STRING_OPEN_IMAGE (37//)"
 msgid "Open Image"
-msgstr ""
+msgstr "Kép megnyitása"
 
 #: src/MainWindow.c:973
 msgctxt "STRING_ERROR_MAIN_WINDOW (38//)"
 msgid "Could not create main window"
-msgstr ""
+msgstr "Nem sikerült létrehozni a főablakot"
 
 #: src/MainWindow.c:1032
 msgctxt "STRING_ERROR_IMAGE_PATH_NULL (39//)"
 msgid "Image path is NULL"
-msgstr ""
+msgstr "A kép elérési útja NULL"
 
 #: src/MainWindow.c:1042
 msgctxt "STRING_ERROR_IMG_DIR_NOT_FOUND (40//)"
 msgid "Could not find image directory"
-msgstr ""
+msgstr "Nem található képkönyvtár"
 
 #: src/MainWindow.c:1048
 msgctxt "STRING_ERROR_IMG_FILE_NOT_FOUND (41//)"
 msgid "Could not find image file name"
-msgstr ""
+msgstr "Nem található a képfájl neve"
 
 #: src/MainWindow.c:1068
 msgctxt "STRING_ERROR_IMG_LOAD_THUMBNAIL (42//)"
 msgid "Could not load image for thumbnail generation"
-msgstr ""
+msgstr "Nem sikerült betölteni a képet az indexkép generálásához"
 
 #: src/MainWindow.c:1181
 msgctxt "STRING_SENDING_MESSAGE (43//)"
 msgid "Sending message..."
-msgstr ""
+msgstr "Üzenet küldése..."
 
 #: src/MainWindow.c:1232 src/MainWindow.c:1397
 msgctxt "STRING_ERROR_CONNECTING_OPENAI (44//)"
 msgid "Could not connect to OpenAI"
-msgstr ""
+msgstr "Nem sikerült csatlakozni az OpenAI-hoz"
 
 #: src/MainWindow.c:1380
 msgctxt "STRING_GENERATING_CONVERSATION_TITLE (45//)"
 msgid "Generating conversation title..."
-msgstr ""
+msgstr "Beszélgetés címének generálása..."
 
 #: src/MainWindow.c:1440
 msgctxt "STRING_ERROR_MEMORY_CONVERSATION_NODE (46//)"
 msgid "Failed to allocate memory for conversation node."
-msgstr ""
+msgstr "Nem sikerült memóriát lefoglalni a beszélgetési csomópont számára."
 
 #: src/MainWindow.c:1466
 msgctxt "STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED (47//)"
@@ -358,6 +383,7 @@ msgid ""
 "The conversation has exceeded the maximum length. Please start a new "
 "conversation."
 msgstr ""
+"A beszélgetés túllépte a maximális hosszt. Kérem, kezdjen új beszélgetést."
 
 #: src/MainWindow.c:1619
 msgctxt "STRING_ERROR_CHAT_HISTORY_CREATE (49//)"
@@ -365,6 +391,8 @@ msgid ""
 "Failed to create message history file. Conversation history will not be "
 "saved."
 msgstr ""
+"Nem sikerült létrehozni az üzenetelőzmény-fájlt. A beszélgetési előzmények "
+"nem kerülnek mentésre."
 
 #: src/MainWindow.c:1663
 msgctxt "STRING_ERROR_CHAT_HISTORY_SAVE (50//)"
@@ -372,21 +400,27 @@ msgid ""
 "Failed to write to message history file. Conversation history will not be "
 "saved."
 msgstr ""
+"Nem sikerült írni az üzenetelőzmény-fájlba. A beszélgetési előzmények nem "
+"kerülnek mentésre."
 
 #: src/MainWindow.c:1682
 msgctxt "STRING_ERROR_IMAGE_HISTORY_CREATE (51//)"
 msgid "Failed to create image history file. Image history will not be saved."
 msgstr ""
+"Nem sikerült létrehozni a képelőzményfájlt. A képelőzmények nem kerülnek "
+"mentésre."
 
 #: src/MainWindow.c:1717
 msgctxt "STRING_ERROR_IMAGE_HISTORY_WRITE (52//)"
 msgid "Failed to write to image history file. Image history will not be saved."
 msgstr ""
+"Nem sikerült írni a képelőzmények fájlba. A képelőzmények nem kerülnek "
+"mentésre."
 
 #: src/MainWindow.c:1745
 msgctxt "STRING_LOADING_IMAGE (53//)"
 msgid "Loading image..."
-msgstr ""
+msgstr "Kép betöltése..."
 
 #: src/MainWindow.c:1800
 msgctxt "STRING_ERROR_CHAT_HISTORY_READ (55//)"
@@ -394,6 +428,8 @@ msgid ""
 "Failed to read from message history file. Conversation history will not be "
 "loaded"
 msgstr ""
+"Nem sikerült beolvasni az üzenetelőzmény-fájlt. A beszélgetési előzmények "
+"nem töltődnek be"
 
 #: src/MainWindow.c:1814
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP (56//)"
@@ -402,6 +438,10 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
 msgstr ""
+"Nem sikerült elemezni a csevegési előzményeket. Rosszul formázott JSON. A "
+"chat-history.json fájl valószínűleg sérült. A beszélgetési előzmények nem "
+"töltődnek be. A chat-history.json fájl biztonsági másolata chat-history.json."
+"bak néven készült"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -411,11 +451,18 @@ msgid ""
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
 msgstr ""
+"Nem sikerült elemezni a csevegési előzményeket. Rosszul formázott JSON. A "
+"chat-history.json fájl valószínűleg sérült. A beszélgetési előzmények nem "
+"töltődnek be. Hiba történt a csevegési előzmények biztonsági másolatának "
+"lemezre írásakor, de a rendszer elmentette a másolatot a RAM-ba: chat-"
+"history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
 msgid "Failed to delete chat-history.json. Please delete this file manually."
 msgstr ""
+"Nem sikerült törölni a chat-history.json fájlt. Kérjük, törölje ezt a fájlt "
+"manuálisan."
 
 #: src/MainWindow.c:1852
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP (59//)"
@@ -423,6 +470,8 @@ msgid ""
 "Failed to parse chat history.The chat-history.json file is probably "
 "corrupted. Conversation history will not be loaded."
 msgstr ""
+"A csevegési előzmények elemzése nem sikerült. A chat-history.json fájl "
+"valószínűleg sérült. A beszélgetési előzmények nem töltődnek be."
 
 #: src/MainWindow.c:1950
 msgctxt "STRING_ERROR_IMAGE_HISTORY_READ (60//)"
@@ -430,6 +479,8 @@ msgid ""
 "Failed to read from image history file. Image generation history will not be "
 "loaded"
 msgstr ""
+"Nem sikerült beolvasni a képelőzmények fájlját. A képgenerálási előzmények "
+"nem töltődnek be"
 
 #: src/MainWindow.c:1964
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP (61//)"
@@ -438,6 +489,10 @@ msgid ""
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
 msgstr ""
+"Nem sikerült a képelőzmények elemzése. Rosszul formázott JSON. Az image-"
+"history.json fájl valószínűleg sérült. A képelőzmények nem töltődnek be. Az "
+"image-history.json fájlról készült biztonsági másolat image-history.json.bak "
+"néven"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -447,152 +502,160 @@ msgid ""
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
 msgstr ""
+"A képelőzmények elemzése nem sikerült. Rosszul formázott JSON. Az image-"
+"history.json fájl valószínűleg sérült. A képelőzmények nem töltődnek be. "
+"Hiba történt a képelőzmények biztonsági másolatának lemezre írásakor, de egy "
+"másolatot a rendszer a RAM-ba mentett:image-history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
 msgid "Failed to delete image-history.json. Please delete this file manually."
 msgstr ""
+"Nem sikerült törölni az image-history.json fájlt. Kérjük, törölje ezt a "
+"fájlt manuálisan."
 
 #: src/MainWindow.c:2120
 msgctxt "STRING_ERROR_FILE_COPY_OPEN (64//)"
 msgid "Error opening file for copy"
-msgstr ""
+msgstr "Hiba a fájl másoláshoz való megnyitásakor"
 
 #: src/MainWindow.c:2129
 msgctxt "STRING_ERROR_FILE_COPY_CREATE (65//)"
 msgid "Error creating file for copy"
-msgstr ""
+msgstr "Hiba a másolandó fájl létrehozásakor"
 
 #: src/MainWindow.c:2137
 msgctxt "STRING_COPYING_FILE (66//)"
 msgid "Copying file..."
-msgstr ""
+msgstr "Fájl másolása..."
 
 #: src/MainWindow.c:2148 src/MainWindow.c:2159
 msgctxt "STRING_ERROR_FILE_COPY (67//)"
 msgid "Error copying file"
-msgstr ""
+msgstr "Hiba a fájl másolásakor"
 
 #: src/ProxySettingsRequesterWindow.c:30
 msgctxt "STRING_ERROR_INVALID_PORT (68//)"
 msgid "Invalid port number. Please enter a number between 0 and 65535."
-msgstr ""
+msgstr "Érvénytelen portszám. Kérjük, adjon meg egy 0 és 65535 közötti számot."
 
 #: src/ProxySettingsRequesterWindow.c:72
 msgctxt "STRING_ENCRYPTION_NONE (69//)"
 msgid "None (fastest)"
-msgstr ""
+msgstr "Nincs (leggyorsabb)"
 
 #: src/ProxySettingsRequesterWindow.c:72
 msgctxt "STRING_ENCRYPTION_SSL (70//)"
 msgid "SSL (secure)"
-msgstr ""
+msgstr "SSL (biztonságos)"
 
 #: src/ProxySettingsRequesterWindow.c:75
 msgctxt "STRING_AUTH_NONE (71//)"
 msgid "No authentication"
-msgstr ""
+msgstr "Nincs hitelesítés"
 
 #: src/ProxySettingsRequesterWindow.c:76
 msgctxt "STRING_AUTH_USER_PASS (72//)"
 msgid "Username and password"
-msgstr ""
+msgstr "Felhasználónév és jelszó"
 
 #: src/ProxySettingsRequesterWindow.c:80
 msgctxt "STRING_PROXY_SETTINGS (73//)"
 msgid "Proxy server settings"
-msgstr ""
+msgstr "Proxyszerver beállításai"
 
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr ""
+msgstr "Házigazda"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"
 msgid "Port"
-msgstr ""
+msgstr "Kikötő"
 
 #: src/ProxySettingsRequesterWindow.c:107
 msgctxt "STRING_PROXY_ENCRYPTION (76//)"
 msgid "Encryption"
-msgstr ""
+msgstr "Titkosítás"
 
 #: src/ProxySettingsRequesterWindow.c:116
 msgctxt "STRING_PROXY_AUTH (77//)"
 msgid "Authentication"
-msgstr ""
+msgstr "Hitelesítés"
 
 #: src/ProxySettingsRequesterWindow.c:125
 msgctxt "STRING_USERNAME (78//)"
 msgid "Username"
-msgstr ""
+msgstr "Felhasználónév"
 
 #: src/ProxySettingsRequesterWindow.c:135
 msgctxt "STRING_PASSWORD (79//)"
 msgid "Password"
-msgstr ""
+msgstr "Jelszó"
 
 #: src/ProxySettingsRequesterWindow.c:160
 msgctxt "STRING_ERROR_PROXY_SETTINGS (80//)"
 msgid "Could not create proxy settings requester window"
-msgstr ""
+msgstr "Nem sikerült létrehozni a proxybeállításokat kérő ablakot"
 
 #: src/StartupOptionsWindow.c:18
 msgctxt "STRING_OPEN_IN_WORKBENCH (81//)"
 msgid "Open in Workbench"
-msgstr ""
+msgstr "Megnyitás a Workbenchben"
 
 #: src/StartupOptionsWindow.c:18
 msgctxt "STRING_NEW_SCREEN (82//)"
 msgid "New screen"
-msgstr ""
+msgstr "Új képernyő"
 
 #: src/StartupOptionsWindow.c:86
 msgctxt "STRING_ERROR_SCREEN (83//)"
 msgid "Could not open screen"
-msgstr ""
+msgstr "Nem sikerült megnyitni a képernyőt"
 
 #: src/StartupOptionsWindow.c:123
 msgctxt "STRING_STARTUP_OPTIONS (84//)"
 msgid "Startup Options"
-msgstr ""
+msgstr "Indítási lehetőségek"
 
 #: src/StartupOptionsWindow.c:127
 msgctxt "STRING_SCREEN_TO_OPEN (85//)"
 msgid "Screen to open"
-msgstr ""
+msgstr "Megnyitandó képernyő"
 
 #: src/StartupOptionsWindow.c:131
 msgctxt "STRING_ERROR_STARTUP_OPTIONS (86//)"
 msgid "Could not create startupOptionsWindowObject"
-msgstr ""
+msgstr "Nem sikerült létrehozni a startupOptionsWindowObject elemet"
 
 #: src/config.c:47
 msgctxt "STRING_ERROR_CONFIG_FILE_READ (87//)"
 msgid "Failed to read the config file"
-msgstr ""
+msgstr "Nem sikerült beolvasni a konfigurációs fájlt"
 
 #: src/config.c:119
 msgctxt "STRING_ERROR_CONFIG_FILE_WRITE (88//)"
 msgid "Failed to write the data to the config file"
-msgstr ""
+msgstr "Nem sikerült beírni az adatokat a konfigurációs fájlba"
 
 #: src/config.c:166
 msgctxt "STRING_ERROR_CONFIG_FILE_PARSE (89//)"
 msgid "Failed to parse the config file"
-msgstr ""
+msgstr "Nem sikerült elemezni a konfigurációs fájlt"
 
 #: src/gui.c:77
 msgctxt "STRING_ERROR_MUI_LIB_OPEN (90//)"
 msgid ""
 "Could not open muimaster.library. Please make sure you have MUI installed"
 msgstr ""
+"A muimaster.library nem nyitható meg. Kérjük, ellenőrizze, hogy telepítve "
+"van-e a MUI"
 
 #: src/gui.c:84
 msgctxt "STRING_ERROR_MUI_INTERFACE_OPEN (91//)"
 msgid "Could not get interface for muimaster.library"
-msgstr ""
+msgstr "Nem sikerült beszerezni a muimaster.library felületet"
 
 #: src/gui.c:91
 msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
@@ -600,16 +663,18 @@ msgid ""
 "Could not open codesets.library. Please make sure you have codesets "
 "installed. Refer to the documentation for more info."
 msgstr ""
+"A codesets.library nem nyitható meg. Kérjük, ellenőrizze, hogy telepítve "
+"vannak-e a kódkészletek. További információért tekintse meg a dokumentációt."
 
 #: src/gui.c:98
 msgctxt "STRING_ERROR_CODESETS_INTERFACE_OPEN (93//)"
 msgid "Could not get interface for codesets.library"
-msgstr ""
+msgstr "Nem sikerült beszerezni a codesets.library felületet"
 
 #: src/gui.c:104
 msgctxt "STRING_ERROR_CODESETS_SYSTEM (94//)"
 msgid "Could not find the system codeset"
-msgstr ""
+msgstr "Nem található a rendszerkódkészlet"
 
 #: src/gui.c:144
 msgctxt "STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED (95//)"
@@ -617,26 +682,29 @@ msgid ""
 "Could not find all the MUI custom classes. Please make sure they are "
 "installed. Refer to the documentation for more information."
 msgstr ""
+"Nem található az összes egyéni MUI osztály. Kérjük, ellenőrizze, hogy "
+"telepítve vannak-e. További információért tekintse meg a dokumentációt."
 
 #: src/gui.c:178
 msgctxt "STRING_IMAGE (96//)"
 msgid "Image"
-msgstr ""
+msgstr "Kép"
 
 #: src/gui.c:189
 msgctxt "STRING_ERROR_APP_CREATE (97//)"
 msgid "Could not create app!"
-msgstr ""
+msgstr "Nem sikerült létrehozni az alkalmazást!"
 
 #: src/gui.c:221
 msgctxt "STRING_ERROR_MUI_CUSTOM_CLASS_NOT_FOUND (98//)"
 msgid "Could not find the MUI custom class"
-msgstr ""
+msgstr "Nem található a MUI egyéni osztály"
 
 #: src/menu.c:26
+#, fuzzy
 msgctxt "STRING_ABOUT (99//)"
 msgid "About"
-msgstr ""
+msgstr "Körülbelül"
 
 #: src/menu.c:59
 msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
@@ -644,222 +712,226 @@ msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
 msgstr ""
+"Nem sikerült megnyitni a beszédrendszert. Győződjön meg arról, hogy a "
+"translator.library v42 és a narrator.device v37 telepítve van. További "
+"információért tekintse meg az útmutatót."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
 msgid "Could not initialize speech system OpenAI"
-msgstr ""
+msgstr "Nem sikerült inicializálni az OpenAI beszédrendszert"
 
 #: src/menu.c:73
 msgctxt "STRING_ERROR_SPEECH_UNKNOWN_SYSTEM (102//)"
 msgid "Unknown speech system!"
-msgstr ""
+msgstr "Ismeretlen beszédrendszer!"
 
 #: src/menu.c:117
 msgctxt "STRING_ERROR_DOCUMENTATION_OPEN (103//)"
 msgid "Could not open documentation"
-msgstr ""
+msgstr "Nem sikerült megnyitni a dokumentációt"
 
 #: src/menu.c:124 src/menu.c:116
 msgctxt "STRING_MENU_PROJECT (104//)"
 msgid "Project"
-msgstr ""
+msgstr "Projekt"
 
 #: src/menu.c:125 src/menu.c:117
 msgctxt "STRING_MENU_ABOUT_AMIGAGPT (105//)"
 msgid "About AmigaGPT"
-msgstr ""
+msgstr "Az AmigaGPT-ről"
 
 #: src/menu.c:127 src/menu.c:119
 msgctxt "STRING_MENU_ABOUT_MUI (106//)"
 msgid "About MUI"
-msgstr ""
+msgstr "A MUI-ról"
 
 #: src/menu.c:129 src/menu.c:121
 msgctxt "STRING_MENU_QUIT (107//)"
 msgid "Quit"
-msgstr ""
+msgstr "Kilép"
 
 #: src/menu.c:130 src/menu.c:122
 msgctxt "STRING_MENU_EDIT (108//)"
 msgid "Edit"
-msgstr ""
+msgstr "Szerkesztés"
 
 #: src/menu.c:131 src/menu.c:305 src/menu.c:123 src/menu.c:300
 msgctxt "STRING_MENU_CUT (109//)"
 msgid "Cut"
-msgstr ""
+msgstr "Vágott"
 
 #: src/menu.c:132 src/menu.c:315 src/menu.c:124 src/menu.c:310
 msgctxt "STRING_MENU_COPY (110//)"
 msgid "Copy"
-msgstr ""
+msgstr "Másolat"
 
 #: src/menu.c:133 src/menu.c:325 src/menu.c:125 src/menu.c:320
 msgctxt "STRING_MENU_PASTE (111//)"
 msgid "Paste"
-msgstr ""
+msgstr "Paszta"
 
 #: src/menu.c:134 src/menu.c:126
 msgctxt "STRING_MENU_CLEAR(112//)"
 msgid "Clear"
-msgstr ""
+msgstr "Világos"
 
 #: src/menu.c:135 src/menu.c:127
 msgctxt "STRING_MENU_SELECT_ALL (113//)"
 msgid "Select all"
-msgstr ""
+msgstr "Válassza ki az összeset"
 
 #: src/menu.c:136 src/menu.c:128
 msgctxt "STRING_MENU_VIEW (114//)"
 msgid "View"
-msgstr ""
+msgstr "Kilátás"
 
 #: src/menu.c:137 src/menu.c:129
 msgctxt "STRING_MENU_MUI_SETTINGS (115//)"
 msgid "MUI Settings"
-msgstr ""
+msgstr "MUI beállítások"
 
 #: src/menu.c:138 src/menu.c:130
 msgctxt "STRING_MENU_CONNECTION (116//)"
 msgid "Connection"
-msgstr ""
+msgstr "Kapcsolat"
 
 #: src/menu.c:139 src/menu.c:131
 msgctxt "STRING_MENU_PROXY (117//)"
 msgid "Proxy"
-msgstr ""
+msgstr "Meghatalmazott"
 
 #: src/menu.c:140 src/menu.c:144 src/menu.c:132 src/menu.c:136
 msgctxt "STRING_MENU_ENABLED (118//)"
 msgid "Enabled"
-msgstr ""
+msgstr "Engedélyezve"
 
 #: src/menu.c:142 src/menu.c:134
 msgctxt "STRING_MENU_SETTINGS (119//)"
 msgid "Settings"
-msgstr ""
+msgstr "Beállítások elemre"
 
 #: src/menu.c:143 src/menu.c:135
 msgctxt "STRING_MENU_SPEECH (120//)"
 msgid "Speech"
-msgstr ""
+msgstr "Beszéd"
 
 #: src/menu.c:146 src/menu.c:138
 msgctxt "STRING_MENU_SPEECH_SYSTEM (121//)"
 msgid "Speech system"
-msgstr ""
+msgstr "Beszédrendszer"
 
 #: src/menu.c:148 src/speech.c:53 src/menu.c:140
 msgctxt "STRING_MENU_SPEECH_SYSTEM_34 (122//)"
 msgid "Workbench 1.x v34"
-msgstr ""
+msgstr "Workbench 1.x v34"
 
 #: src/menu.c:150 src/speech.c:54 src/menu.c:142
 msgctxt "STRING_MENU_SPEECH_SYSTEM_37 (123//)"
 msgid "Workbench 2.0 v37"
-msgstr ""
+msgstr "Workbench 2.0 v37"
 
 #: src/menu.c:156 src/speech.c:55 src/menu.c:148
 msgctxt "STRING_MENU_SPEECH_SYSTEM_FLITE (124//)"
 msgid "Flite"
-msgstr ""
+msgstr "Flite"
 
 #: src/menu.c:169 src/menu.c:161
 msgctxt "STRING_MENU_FLITE_VOICE (125//)"
 msgid "Flite Voice"
-msgstr ""
+msgstr "Flite Voice"
 
 #: src/menu.c:152 src/menu.c:158 src/menu.c:161 src/speech.c:57 src/menu.c:144
 #: src/menu.c:150 src/menu.c:153
 msgctxt "STRING_MENU_SPEECH_SYSTEM_OPENAI (126//)"
 msgid "OpenAI Text To Speech"
-msgstr ""
+msgstr "OpenAI Text To Speech"
 
 #: src/menu.c:166 src/menu.c:158
 msgctxt "STRING_MENU_SPEECH_ACCENT (127//)"
 msgid "Accent"
-msgstr ""
+msgstr "Hangsúly"
 
 #: src/menu.c:170 src/menu.c:162
 msgctxt "STRING_MENU_FLITE_VOICE_KAL (128//)"
 msgid "kal (fast)"
-msgstr ""
+msgstr "kal (gyors)"
 
 #: src/menu.c:172 src/menu.c:164
 msgctxt "STRING_MENU_FLITE_VOICE_KAL16 (129//)"
 msgid "kal16 (fast)"
-msgstr ""
+msgstr "kal16 (gyors)"
 
 #: src/menu.c:174 src/menu.c:166
 msgctxt "STRING_MENU_FLITE_VOICE_AWB (130//)"
 msgid "awb (slow)"
-msgstr ""
+msgstr "awb (lassú)"
 
 #: src/menu.c:176 src/menu.c:168
 msgctxt "STRING_MENU_FLITE_VOICE_RMS (131//)"
 msgid "rms (slow)"
-msgstr ""
+msgstr "rms (lassú)"
 
 #: src/menu.c:178 src/menu.c:170
 msgctxt "STRING_MENU_FLITE_VOICE_SLT (132//)"
 msgid "slt (slow)"
-msgstr ""
+msgstr "slt (lassú)"
 
 #: src/menu.c:181 src/menu.c:173
 msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 msgid "OpenAI Voice"
-msgstr ""
+msgstr "OpenAI Voice"
 
 #: src/menu.c:194 src/menu.c:186
 msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 msgid "OpenAI Speech Model"
-msgstr ""
+msgstr "OpenAI beszédmodell"
 
 #: src/menu.c:199 src/menu.c:192
 msgctxt "STRING_MENU_OPENAI (141//)"
 msgid "OpenAI"
-msgstr ""
+msgstr "OpenAI"
 
 #: src/menu.c:200 src/menu.c:193
+#, fuzzy
 msgctxt "STRING_MENU_OPENAI_API_KEY (142//)"
 msgid "API key"
-msgstr ""
+msgstr "API kulcs"
 
 #: src/menu.c:201 src/menu.c:194
 msgctxt "STRING_MENU_OPENAI_CHAT_SYSTEM (143//)"
 msgid "Chat System"
-msgstr ""
+msgstr "Chat rendszer"
 
 #: src/menu.c:202 src/menu.c:195
 msgctxt "STRING_MENU_OPENAI_CHAT_MODEL (144//)"
 msgid "Chat Model"
-msgstr ""
+msgstr "Chat modell"
 
 #: src/menu.c:251 src/menu.c:244
 msgctxt "STRING_MENU_OPENAI_IMAGE_MODEL (145//)"
 msgid "Image Model"
-msgstr ""
+msgstr "Képmodell"
 
 #: src/menu.c:256 src/menu.c:249
 msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2 (146//)"
 msgid "DALL-E 2 Image Size"
-msgstr ""
+msgstr "DALL-E 2 képméret"
 
 #: src/menu.c:263 src/menu.c:257
 msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3 (147//)"
 msgid "DALL-E 3 Image Size"
-msgstr ""
+msgstr "DALL-E 3 képméret"
 
 #: src/menu.c:270 src/menu.c:265
 msgctxt "STRING_MENU_HELP (148//)"
 msgid "Help"
-msgstr ""
+msgstr "Segítség"
 
 #: src/menu.c:271 src/menu.c:266
 msgctxt "STRING_MENU_OPEN_DOCUMENTATION (149//)"
 msgid "Open Documentation"
-msgstr ""
+msgstr "Nyissa meg a Dokumentációt"
 
 #: src/openai.c:175
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN (150//)"
@@ -868,16 +940,19 @@ msgid ""
 "AmiTCP, Miami or Roadshow. Please refer to the documentation for more "
 "information."
 msgstr ""
+"A bsdsocket.library megnyitása nem sikerült. Telepítenie kell egy TCP/IP-"
+"vermet, például az AmiTCP-t, a Miami-t vagy a Roadshow-t. További "
+"információért tekintse meg a dokumentációt."
 
 #: src/openai.c:182
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN_OS4 (151//)"
 msgid "Failed to open bsdsocket.library"
-msgstr ""
+msgstr "A bsdsocket.library megnyitása nem sikerült"
 
 #: src/openai.c:187
 msgctxt "STRING_ERROR_BSDSOCKET_INTERFACE_OPEN (152//)"
 msgid "Failed to get the interface of bsdsocket.library"
-msgstr ""
+msgstr "Nem sikerült elérni a bsdsocket.library felületét"
 
 #: src/openai.c:195 src/openai.c:204
 msgctxt "STRING_ERROR_AMISSLMASTER_LIB_OPEN (153//)"
@@ -885,11 +960,13 @@ msgid ""
 "Failed to open amisslmaster.library version 5. You have to install AmiSSL 5. "
 "Please refer to the documentation for more information."
 msgstr ""
+"Nem sikerült megnyitni az amisslmaster.library 5-ös verzióját. Telepítenie "
+"kell az AmiSSL 5-öt. További információért tekintse meg a dokumentációt."
 
 #: src/openai.c:211
 msgctxt "STRING_ERROR_AMISSLMASTER_INTERFACE_OPEN (154//)"
 msgid "Failed to get the interface of amisslmaster.library"
-msgstr ""
+msgstr "Nem sikerült elérni az amisslmaster.library felületét"
 
 #: src/openai.c:223
 msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
@@ -897,26 +974,29 @@ msgid ""
 "Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
 "newer. Please refer to the documentation for more information."
 msgstr ""
+"Az amisslmaster.library inicializálása nem sikerült. Az AmigaGPT-hez AmiSSL "
+"5.18 vagy újabb szükséges. További információért tekintse meg a "
+"dokumentációt."
 
 #: src/openai.c:233
 msgctxt "STRING_ERROR_AMISSL_INTERFACE_INIT (156//)"
 msgid "Failed to get the interface of amissl.library"
-msgstr ""
+msgstr "Nem sikerült elérni az amissl.library felületét"
 
 #: src/openai.c:281
 msgctxt "STRING_ERROR_SSL_HANDLE (157//)"
 msgid "Couldn't create new SSL handle!"
-msgstr ""
+msgstr "Nem sikerült új SSL-leírót létrehozni!"
 
 #: src/openai.c:294
 msgctxt "STRING_ERROR_PROXY_HOST (158//)"
 msgid "Proxy host lookup failed"
-msgstr ""
+msgstr "A proxy gazdagép keresése sikertelen"
 
 #: src/openai.c:295
 msgctxt "STRING_ERROR_HOST (159//)"
 msgid "Host lookup failed"
-msgstr ""
+msgstr "A gazdagép keresése nem sikerült"
 
 #: src/openai.c:308
 msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
@@ -924,184 +1004,190 @@ msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
 msgstr ""
+"Nem sikerült csatlakozni a szerverhez. Ellenőrizze, hogy a proxy gazdagép és "
+"a port megfelelő-e, vagy tiltsa le."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
 msgid "Couldn't create socket"
-msgstr ""
+msgstr "Nem sikerült létrehozni a socketet"
 
 #: src/openai.c:354
 msgctxt "STRING_ERROR_CONNECT_REQUEST (162//)"
 msgid "Failed to send CONNECT request"
-msgstr ""
+msgstr "Nem sikerült elküldeni a CONNECT kérést"
 
 #: src/openai.c:367
 msgctxt "STRING_ERROR_PROXY_AUTH (163//)"
 msgid "Proxy authentication failed"
-msgstr ""
+msgstr "A proxy hitelesítés sikertelen"
 
 #: src/openai.c:369
 msgctxt "STRING_ERROR_PROXY_NO_RESPONSE (164//)"
 msgid "Failed to receive response from proxy"
-msgstr ""
+msgstr "Nem sikerült választ kapni a proxytól"
 
 #: src/openai.c:525 src/openai.c:779 src/openai.c:1069 src/openai.c:1400
 msgctxt "STRING_CONNECTING (166//)"
 msgid "Connecting..."
-msgstr ""
+msgstr "Csatlakozás..."
 
 #: src/openai.c:532 src/openai.c:689 src/openai.c:785 src/openai.c:940
 #: src/openai.c:1075 src/openai.c:1406 src/openai.c:1664
 msgctxt "STRING_ERROR_CONNECTING_MAX_RETRIES (167//)"
 msgid "Error connecting to host! Maximum retries reached."
 msgstr ""
+"Hiba a gazdagéphez való csatlakozáskor! Elérte az újrapróbálkozások "
+"maximális számát."
 
 #: src/openai.c:539 src/openai.c:827 src/openai.c:1082 src/openai.c:1458
 msgctxt "STRING_SENDING_REQUEST (168//)"
 msgid "Sending request..."
-msgstr ""
+msgstr "Kérés küldése..."
 
 #: src/openai.c:569
 msgctxt "STRING_DOWNLOADING_RESPONSE (169//)"
 msgid "Downloading response..."
-msgstr ""
+msgstr "Válasz letöltése..."
 
 #: src/openai.c:683 src/openai.c:934 src/openai.c:1658
 msgctxt "STRING_ERROR_CONNECTION_MAX_RETRIES (171//)"
 msgid "Error connecting to host! Maximum retries reached."
 msgstr ""
+"Hiba a gazdagéphez való csatlakozáskor! Elérte az újrapróbálkozások "
+"maximális számát."
 
 #: src/openai.c:705 src/openai.c:947 src/openai.c:1672
 msgctxt "STRING_ERROR_UNKNOWN (172//)"
 msgid "Unknown error"
-msgstr ""
+msgstr "Ismeretlen hiba"
 
 #: src/openai.c:711 src/openai.c:953 src/openai.c:1222 src/openai.c:1677
 msgctxt "STRING_ERROR_REQUEST_WRITE (173//)"
 msgid "Couldn't write request!"
-msgstr ""
+msgstr "Nem sikerült kérést írni!"
 
 #: src/openai.c:857
 msgctxt "STRING_DOWNLOADING_IMAGE (174//)"
 msgid "Downloading image..."
-msgstr ""
+msgstr "Kép letöltése..."
 
 #: src/openai.c:857
 msgctxt "STRING_BYTES (215//)"
 msgid "bytes"
-msgstr ""
+msgstr "bájtok"
 
 #: src/openai.c:1015
 msgctxt "STRING_ERROR_FILE_WRITE_OPEN (175//)"
 msgid "Couldn't open file for writing"
-msgstr ""
+msgstr "Nem sikerült megnyitni a fájlt íráshoz"
 
 #: src/openai.c:1026
 msgctxt "STRING_ERROR_INVALID_URL (176//)"
 msgid "Invalid URL format"
-msgstr ""
+msgstr "Érvénytelen URL-formátum"
 
 #: src/openai.c:1154
 msgctxt "STRING_DOWNLOADED (177//)"
 msgid "Downloaded"
-msgstr ""
+msgstr "Letöltve"
 
 #: src/openai.c:1189
 msgctxt "STRING_ERROR_LOST_CONNECTION (178//)"
 msgid "Lost connection. Reconnecting..."
-msgstr ""
+msgstr "Megszakadt kapcsolat. Újracsatlakozás..."
 
 #: src/openai.c:1304
 msgctxt "STRING_ERROR_SSL_CONTEXT (179//)"
 msgid "Couldn't create new SSL context!"
-msgstr ""
+msgstr "Nem sikerült új SSL-környezetet létrehozni!"
 
 #: src/openai.c:1363
 msgctxt "STRING_ERROR_BAD_CHUNK (180//)"
 msgid "Couldn't find CRLF in chunk length"
-msgstr ""
+msgstr "Nem található a CRLF a darab hosszában"
 
 #: src/openai.c:1600
 msgctxt "STRING_ERROR_AUDIO_BUFFER_MEMORY (182//)"
 msgid "Not enough memory for audio buffer"
-msgstr ""
+msgstr "Nincs elég memória az audiopufferhez"
 
 #: src/openai.c:1718
 msgctxt "STRING_DOWNLOAD_COMPLETE (183//)"
 msgid "Download complete"
-msgstr ""
+msgstr "Letöltés kész"
 
 #: src/speech.c:71
 msgctxt "STRING_ERROR_NARRATOR_PORT (184//)"
 msgid "Could not create narrator port"
-msgstr ""
+msgstr "Nem sikerült létrehozni a narrátor portot"
 
 #: src/speech.c:78
 msgctxt "STRING_ERROR_NARRATOR_IO_REQUEST (185//)"
 msgid "Could not create narrator IO request"
-msgstr ""
+msgstr "Nem sikerült létrehozni a narrátor IO-kérelmét"
 
 #: src/speech.c:87
 msgctxt "STRING_ERROR_NARRATOR_34_DEVICE_OPEN (186//)"
 msgid "Could not open narrator.device v34\n"
-msgstr ""
+msgstr "Nem sikerült megnyitni a narrator.device v34 "
 
 #: src/speech.c:95
 msgctxt "STRING_ERROR_NARRATOR_37_DEVICE_OPEN (187//)"
 msgid "Could not open narrator.device v37\n"
-msgstr ""
+msgstr "Nem sikerült megnyitni a narrator.device v37 "
 
 #: src/speech.c:105
 msgctxt "STRING_ERROR_TRANSLATOR_LIB_OPEN (188//)"
 msgid "Could not open translator.library"
-msgstr ""
+msgstr "A translator.library nem nyitható meg"
 
 #: src/speech.c:134
 msgctxt "STRING_ERROR_FLITE_INTERFACE_OPEN (189//)"
 msgid "Failed to obtain interface for flite.device"
-msgstr ""
+msgstr "Nem sikerült beszerezni a flite.device felületét"
 
 #: src/speech.c:139
 msgctxt "STRING_ERROR_FLITE_DEVICE_OPEN (190//)"
 msgid "Failed to open flite.device"
-msgstr ""
+msgstr "A flite.device megnyitása nem sikerült"
 
 #: src/speech.c:283
 msgctxt "STRING_ERROR_AHI_DEVICE_OPEN (191//)"
 msgid "Failed to open AHI device"
-msgstr ""
+msgstr "Nem sikerült megnyitni az AHI-eszközt"
 
 #: src/speech.c:334
 msgctxt "STRING_ERROR_VOICE_OPEN (192//)"
 msgid "Failed to open voice"
-msgstr ""
+msgstr "Nem sikerült megnyitni a hangot"
 
 #: src/speech.c:358
 msgctxt "STRING_ERROR_SPEECH_IO_ABORTED (193//)"
 msgid "Speech IO aborted"
-msgstr ""
+msgstr "A beszéd IO megszakítva"
 
 #: src/speech.c:361
 msgctxt "STRING_ERROR_FLITE (194//)"
 msgid "Flite error"
-msgstr ""
+msgstr "Flite hiba"
 
 #: src/speech.c:364
 msgctxt "STRING_ERROR_NO_VOICE (195//)"
 msgid "No voice"
-msgstr ""
+msgstr "Nincs hang"
 
 #: src/speech.c:367
 msgctxt "STRING_ERROR_SPEECH_UNKNOWN (196//)"
 msgid "Unknown speech IO error"
-msgstr ""
+msgstr "Ismeretlen beszéd IO hiba"
 
 #: src/speech.c:390
 msgctxt "STRING_ERROR_FILE_OPEN (197//)"
 msgid "Failed to open file"
-msgstr ""
+msgstr "Nem sikerült megnyitni a fájlt"
 
 #: src/speech.c:406
 msgctxt "STRING_ERROR_FILE_READ (198//)"
 msgid "Failed to read file"
-msgstr ""
+msgstr "Nem sikerült beolvasni a fájlt"

@@ -1,4 +1,3 @@
-# AmigaGPT
 msgid ""
 msgstr ""
 "Project-Id-Version: AmigaGPT\n"
@@ -20,11 +19,13 @@ msgctxt "STRING_APP_DESCRIPTION (0//)"
 msgid ""
 "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
 msgstr ""
+"AmigaGPT je aplikacija za razgovor s ChatGPT-om ili stvaranje AI slika s "
+"DALL-E"
 
 #: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
 msgid "Failed to initialize video"
-msgstr ""
+msgstr "Pokretanje videozapisa nije uspjelo"
 
 #: src/main.c:76 src/main.c:77 src/main.c:78 src/main.c:75
 msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
@@ -32,6 +33,9 @@ msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
 msgstr ""
+"Otvaranje govornog sustava nije uspjelo. Provjerite jesu li instalirani "
+"translator.library v42 i narrator.device v34. Više informacija potražite u "
+"vodiču."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
@@ -39,11 +43,13 @@ msgid ""
 "Failed to open speech system. Make sure Flite Device is installed. See the "
 "guide for more information."
 msgstr ""
+"Otvaranje govornog sustava nije uspjelo. Provjerite je li Flite uređaj "
+"instaliran. Pogledajte vodič za više informacija."
 
 #: src/main.c:88 src/main.c:89 src/main.c:90 src/main.c:87
 msgctxt "STRING_ERROR_OPENAI_INIT (4//)"
 msgid "Failed to open OpenAI connector"
-msgstr ""
+msgstr "Otvaranje OpenAI konektora nije uspjelo"
 
 #: src/main.c:51
 msgctxt "STRING_WARNING_STACK (5//)"
@@ -51,21 +57,23 @@ msgid ""
 "Warning: The stack size is too small. The minimum recommended stack size is "
 "32768 bytes to avoid crashes. Your stack size is: "
 msgstr ""
+"Upozorenje: Veličina hrpe je premala. Minimalna preporučena veličina stoga "
+"je 32768 bajtova kako bi se izbjegla rušenja. Vaša veličina hrpe je: "
 
 #: src/APIKeyRequesterWindow.c:40
 msgctxt "STRING_API_KEY_REQUESTER_TITLE (6//)"
 msgid "OpenAI API Key"
-msgstr ""
+msgstr "OpenAI API ključ"
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_INSTRUCTION (7//)"
 msgid "Type or paste (Right-Amiga + V) your OpenAI API key here."
-msgstr ""
+msgstr "Ovdje upišite ili zalijepite (Right-Amiga + V) svoj OpenAI API ključ."
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_REASON (199//)"
 msgid "This key is required to use the OpenAI API."
-msgstr ""
+msgstr "Ovaj ključ je potreban za korištenje OpenAI API-ja."
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_HELP (200//)"
@@ -73,39 +81,41 @@ msgid ""
 "If you do not have an API key, consult the AmigaGPT documentation for "
 "instructions on how to obtain one."
 msgstr ""
+"Ako nemate API ključ, pogledajte AmigaGPT dokumentaciju za upute kako ga "
+"nabaviti."
 
 #: src/APIKeyRequesterWindow.c:53 src/ChatSystemRequesterWindow.c:52
 #: src/ProxySettingsRequesterWindow.c:147 src/StartupOptionsWindow.c:129
 #: src/menu.c:39
 msgctxt "STRING_OK (8//)"
 msgid "OK"
-msgstr ""
+msgstr "U REDU"
 
 #: src/APIKeyRequesterWindow.c:58 src/ChatSystemRequesterWindow.c:57
 #: src/ProxySettingsRequesterWindow.c:152
 msgctxt "STRING_CANCEL (9//)"
 msgid "Cancel"
-msgstr ""
+msgstr "Otkazati"
 
 #: src/APIKeyRequesterWindow.c:66
 msgctxt "STRING_ERROR_API_KEY_REQUESTER (10//)"
 msgid "Could not create API key requester window"
-msgstr ""
+msgstr "Nije moguće stvoriti prozor zahtjevatelja API ključa"
 
 #: src/AboutAmigaGPTWindow.c:16
 msgctxt "STRING_GIT_COMMIT (11//)"
 msgid "Git commit"
-msgstr ""
+msgstr "Git počini"
 
 #: src/AboutAmigaGPTWindow.c:17
 msgctxt "STRING_GIT_BRANCH (12//)"
 msgid "Git branch"
-msgstr ""
+msgstr "Git grana"
 
 #: src/AboutAmigaGPTWindow.c:17
 msgctxt "STRING_GIT_COMMIT_TIMESTAMP (13//)"
 msgid "Commit timestamp"
-msgstr ""
+msgstr "Vremenska oznaka izvršenja"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_SUPPORT (14//)"
@@ -113,26 +123,28 @@ msgid ""
 "This app will always remain free but if you would like to support me you can "
 "do so at:"
 msgstr ""
+"Ova će aplikacija uvijek biti besplatna, ali ako me želite podržati, možete "
+"to učiniti na:"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BUILD_DETAILS (214//)"
 msgid "Click the version string above for build details."
-msgstr ""
+msgstr "Kliknite gornji niz verzije za pojedinosti o izradi."
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BEBBO (201//)"
 msgid "for creating the Amiga GCC toolchain"
-msgstr ""
+msgstr "za stvaranje Amiga GCC lanca alata"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_OPENAI (202//)"
 msgid "for creating the GPT and DALL-E models"
-msgstr ""
+msgstr "za izradu GPT i DALL-E modela"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_EAB (203//)"
 msgid "for being a great community!"
-msgstr ""
+msgstr "jer ste sjajna zajednica!"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
@@ -140,11 +152,13 @@ msgid ""
 "for all the thorough testing, bundling AmigaGPT into AmiKit and for all the "
 "moral support"
 msgstr ""
+"za svo temeljito testiranje, spajanje AmigaGPT-a u AmiKit i za svu moralnu "
+"podršku"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_COFFINOS (205//)"
 msgid "for bundling AmigaGPT into CoffinOS"
-msgstr ""
+msgstr "za spajanje AmigaGPT-a u CoffinOS"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
@@ -152,16 +166,18 @@ msgid ""
 "for reviewing AmigaGPT and publishing several of its updates in the News "
 "from Aminet section"
 msgstr ""
+"za pregled AmigaGPT-a i objavljivanje nekoliko njegovih ažuriranja u "
+"odjeljku Vijesti iz Amineta"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_WHATIFF (207//)"
 msgid "for reviewing AmigaGPT and interviewing me in issue 14"
-msgstr ""
+msgstr "za recenziju AmigaGPT i intervju sa mnom u broju 14"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_YOUTUBE_REVIEW (208//)"
 msgid "for reviewing AmigaGPT on his YouTube channel"
-msgstr ""
+msgstr "za recenziju AmigaGPT na njegovom YouTube kanalu"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
@@ -169,6 +185,9 @@ msgid ""
 "for covering AmigaGPT in the Amiga News section on his Twitch streams and "
 "allowing me to join his stream to promote it"
 msgstr ""
+"što pokrivate AmigaGPT u odjeljku Amiga News na njegovim streamovima na "
+"Twitchu i dopuštate mi da se pridružim njegovom streamu kako bih ga "
+"promovirao"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
@@ -176,21 +195,23 @@ msgid ""
 "for making a video review and giving a tutorial on how to add support for "
 "the French accent"
 msgstr ""
+"za izradu video recenzije i poduku o tome kako dodati podršku za francuski "
+"naglasak"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LICENSE (211//)"
 msgid "License"
-msgstr ""
+msgstr "Licenca"
 
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
 msgid "Visit the GitHub repository for the latest release"
-msgstr ""
+msgstr "Posjetite GitHub repozitorij za najnovije izdanje"
 
 #: src/ChatSystemRequesterWindow.c:32
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_TITLE (213//)"
 msgid "Enter how you would like AmigaGPT to respond"
-msgstr ""
+msgstr "Unesite kako želite da AmigaGPT odgovori"
 
 #: src/ChatSystemRequesterWindow.c:38
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
@@ -201,157 +222,161 @@ msgid ""
 "respondnormally, leave this blank. This setting willbe applied to new "
 "conversations only."
 msgstr ""
+"Ako želite da AmigaGPT odgovori na određeni način ili da doda malo "
+"osobnosti, upišite to ovdje. Na primjer, možete upisati \"Govori kao pirat\" "
+"ili \"Govori kao arobot\". Ako želite da AmigaGPT reagira normalno, ostavite "
+"ovo prazno. Ova će se postavka primijeniti samo na nove razgovore."
 
 #: src/ChatSystemRequesterWindow.c:65
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_ERROR (18//)"
 msgid "Could not create Chat System requester window"
-msgstr ""
+msgstr "Nije moguće stvoriti prozor zahtjevatelja sustava za ćaskanje"
 
 #: src/MainWindow.c:31
 msgctxt "STRING_NEW_CHAT (19//)"
 msgid "New Chat"
-msgstr ""
+msgstr "Novi razgovor"
 
 #: src/MainWindow.c:31
 msgctxt "STRING_DELETE_CHAT (20//)"
 msgid "Delete Chat"
-msgstr ""
+msgstr "Izbriši chat"
 
 #: src/MainWindow.c:31
 msgctxt "STRING_SEND (21//)"
 msgid "Send"
-msgstr ""
+msgstr "Poslati"
 
 #: src/MainWindow.c:32
 msgctxt "STRING_NEW_IMAGE (22//)"
 msgid "New Image"
-msgstr ""
+msgstr "Nova slika"
 
 #: src/MainWindow.c:32
 msgctxt "STRING_DELETE_IMAGE (23//)"
 msgid "Delete Image"
-msgstr ""
+msgstr "Izbriši sliku"
 
 #. Create image button
 #: src/MainWindow.c:32 src/MainWindow.c:950
 msgctxt "STRING_CREATE_IMAGE (24//)"
 msgid "Create Image"
-msgstr ""
+msgstr "Stvori sliku"
 
 #: src/MainWindow.c:66
 msgctxt "STRING_CHAT_MODE (25//)"
 msgid "Chat Mode"
-msgstr ""
+msgstr "Način razgovora"
 
 #: src/MainWindow.c:66
 msgctxt "STRING_IMAGE_GENERATION_MODE (26//)"
 msgid "Image Generation Mode"
-msgstr ""
+msgstr "Način generiranja slike"
 
 #: src/MainWindow.c:199 src/MainWindow.c:435
 msgctxt "STRING_ERROR_NO_API_KEY (27//)"
 msgid "Please enter your OpenAI API key in the Open AI settings in the menu."
-msgstr ""
+msgstr "Unesite svoj OpenAI API ključ u Open AI postavke u izborniku."
 
 #: src/MainWindow.c:283
 msgctxt "STRING_ERROR_CONNECTION (28//)"
 msgid "Error connecting. Please try again."
-msgstr ""
+msgstr "Greška pri povezivanju. Molimo pokušajte ponovo."
 
 #: src/MainWindow.c:288 src/MainWindow.c:305 src/MainWindow.c:387
 #: src/MainWindow.c:1584 src/MainWindow.c:1600 src/MainWindow.c:1603
 msgctxt "STRING_ERROR (29//)"
 msgid "Error"
-msgstr ""
+msgstr "Greška"
 
 #: src/MainWindow.c:363
 msgctxt "STRING_ERROR_INVALID_IMAGE_SIZE (30//)"
 msgid "Invalid image size"
-msgstr ""
+msgstr "Nevažeća veličina slike"
 
 #: src/MainWindow.c:369
 msgctxt "STRING_GENERATING_IMAGE_NAME (31//)"
 msgid "Generating image name..."
-msgstr ""
+msgstr "Generiranje naziva slike..."
 
 #: src/MainWindow.c:386 src/MainWindow.c:406
 msgctxt "STRING_ERROR_GENERATING_IMAGE_NAME (32//)"
 msgid "Failed to generate image name. Using ID instead."
-msgstr ""
+msgstr "Generiranje naziva slike nije uspjelo. Umjesto toga koristite ID."
 
 #: src/MainWindow.c:396 src/MainWindow.c:402 src/MainWindow.c:552
 #: src/MainWindow.c:963 src/MainWindow.c:1421 src/MainWindow.c:1773
 #: src/MainWindow.c:2146 src/MainWindow.c:2157 src/MainWindow.c:2169
 msgctxt "STRING_READY (33//)"
 msgid "Ready"
-msgstr ""
+msgstr "Spreman"
 
 #: src/MainWindow.c:486
 msgctxt "STRING_ERROR_NO_IMAGE_SELECTED (34//)"
 msgid "No image is currently selected."
-msgstr ""
+msgstr "Trenutno nije odabrana nijedna slika."
 
 #. Save image copy button
 #: src/MainWindow.c:499 src/MainWindow.c:932
 msgctxt "STRING_SAVE_IMAGE_COPY (35//)"
 msgid "Save Image Copy"
-msgstr ""
+msgstr "Spremi kopiju slike"
 
 #: src/MainWindow.c:807 src/gui.c:164 src/gui.c:165 src/menu.c:110
 msgctxt "STRING_APP_NAME (36//)"
 msgid "AmigaGPT"
-msgstr ""
+msgstr "AmigaGPT"
 
 #. Open image button
 #: src/MainWindow.c:927
 msgctxt "STRING_OPEN_IMAGE (37//)"
 msgid "Open Image"
-msgstr ""
+msgstr "Otvori sliku"
 
 #: src/MainWindow.c:973
 msgctxt "STRING_ERROR_MAIN_WINDOW (38//)"
 msgid "Could not create main window"
-msgstr ""
+msgstr "Nije moguće stvoriti glavni prozor"
 
 #: src/MainWindow.c:1032
 msgctxt "STRING_ERROR_IMAGE_PATH_NULL (39//)"
 msgid "Image path is NULL"
-msgstr ""
+msgstr "Putanja slike je NULL"
 
 #: src/MainWindow.c:1042
 msgctxt "STRING_ERROR_IMG_DIR_NOT_FOUND (40//)"
 msgid "Could not find image directory"
-msgstr ""
+msgstr "Nije moguće pronaći direktorij slika"
 
 #: src/MainWindow.c:1048
 msgctxt "STRING_ERROR_IMG_FILE_NOT_FOUND (41//)"
 msgid "Could not find image file name"
-msgstr ""
+msgstr "Nije moguće pronaći naziv slikovne datoteke"
 
 #: src/MainWindow.c:1068
 msgctxt "STRING_ERROR_IMG_LOAD_THUMBNAIL (42//)"
 msgid "Could not load image for thumbnail generation"
-msgstr ""
+msgstr "Nije moguće učitati sliku za generiranje minijature"
 
 #: src/MainWindow.c:1181
 msgctxt "STRING_SENDING_MESSAGE (43//)"
 msgid "Sending message..."
-msgstr ""
+msgstr "Slanje poruke..."
 
 #: src/MainWindow.c:1232 src/MainWindow.c:1397
 msgctxt "STRING_ERROR_CONNECTING_OPENAI (44//)"
 msgid "Could not connect to OpenAI"
-msgstr ""
+msgstr "Nije moguće povezati se s OpenAI-jem"
 
 #: src/MainWindow.c:1380
 msgctxt "STRING_GENERATING_CONVERSATION_TITLE (45//)"
 msgid "Generating conversation title..."
-msgstr ""
+msgstr "Generiranje naslova razgovora..."
 
 #: src/MainWindow.c:1440
 msgctxt "STRING_ERROR_MEMORY_CONVERSATION_NODE (46//)"
 msgid "Failed to allocate memory for conversation node."
-msgstr ""
+msgstr "Dodjela memorije za čvor razgovora nije uspjela."
 
 #: src/MainWindow.c:1466
 msgctxt "STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED (47//)"
@@ -359,6 +384,7 @@ msgid ""
 "The conversation has exceeded the maximum length. Please start a new "
 "conversation."
 msgstr ""
+"Razgovor je premašio maksimalnu duljinu. Molimo započnite novi razgovor."
 
 #: src/MainWindow.c:1619
 msgctxt "STRING_ERROR_CHAT_HISTORY_CREATE (49//)"
@@ -366,6 +392,8 @@ msgid ""
 "Failed to create message history file. Conversation history will not be "
 "saved."
 msgstr ""
+"Stvaranje datoteke povijesti poruka nije uspjelo. Povijest razgovora neće "
+"biti spremljena."
 
 #: src/MainWindow.c:1663
 msgctxt "STRING_ERROR_CHAT_HISTORY_SAVE (50//)"
@@ -373,21 +401,27 @@ msgid ""
 "Failed to write to message history file. Conversation history will not be "
 "saved."
 msgstr ""
+"Pisanje u datoteku povijesti poruka nije uspjelo. Povijest razgovora neće "
+"biti spremljena."
 
 #: src/MainWindow.c:1682
 msgctxt "STRING_ERROR_IMAGE_HISTORY_CREATE (51//)"
 msgid "Failed to create image history file. Image history will not be saved."
 msgstr ""
+"Stvaranje datoteke povijesti slike nije uspjelo. Povijest slika neće biti "
+"spremljena."
 
 #: src/MainWindow.c:1717
 msgctxt "STRING_ERROR_IMAGE_HISTORY_WRITE (52//)"
 msgid "Failed to write to image history file. Image history will not be saved."
 msgstr ""
+"Pisanje u datoteku povijesti slike nije uspjelo. Povijest slika neće biti "
+"spremljena."
 
 #: src/MainWindow.c:1745
 msgctxt "STRING_LOADING_IMAGE (53//)"
 msgid "Loading image..."
-msgstr ""
+msgstr "Učitavanje slike..."
 
 #: src/MainWindow.c:1800
 msgctxt "STRING_ERROR_CHAT_HISTORY_READ (55//)"
@@ -395,6 +429,8 @@ msgid ""
 "Failed to read from message history file. Conversation history will not be "
 "loaded"
 msgstr ""
+"Neuspješno čitanje iz datoteke povijesti poruka. Povijest razgovora neće se "
+"učitati"
 
 #: src/MainWindow.c:1814
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP (56//)"
@@ -403,6 +439,10 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
 msgstr ""
+"Raščlanjivanje povijesti razgovora nije uspjelo. Neispravan JSON. Datoteka "
+"chat-history.json vjerojatno je oštećena. Povijest razgovora neće se "
+"učitati. Sigurnosna kopija datoteke chat-history.json stvorena je kao chat-"
+"history.json.bak"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -412,11 +452,16 @@ msgid ""
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
 msgstr ""
+"Raščlanjivanje povijesti razgovora nije uspjelo. Neispravan JSON. Datoteka "
+"chat-history.json vjerojatno je oštećena. Povijest razgovora neće se "
+"učitati. Došlo je do pogreške pri pisanju sigurnosne kopije povijesti "
+"razgovora na disk, ali kopija je spremljena u RAM:chat-history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
 msgid "Failed to delete chat-history.json. Please delete this file manually."
 msgstr ""
+"Brisanje chat-history.json nije uspjelo. Molimo izbrišite ovu datoteku ručno."
 
 #: src/MainWindow.c:1852
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP (59//)"
@@ -424,6 +469,8 @@ msgid ""
 "Failed to parse chat history.The chat-history.json file is probably "
 "corrupted. Conversation history will not be loaded."
 msgstr ""
+"Raščlanjivanje povijesti razgovora nije uspjelo. Datoteka chat-history.json "
+"vjerojatno je oštećena. Povijest razgovora neće se učitati."
 
 #: src/MainWindow.c:1950
 msgctxt "STRING_ERROR_IMAGE_HISTORY_READ (60//)"
@@ -431,6 +478,8 @@ msgid ""
 "Failed to read from image history file. Image generation history will not be "
 "loaded"
 msgstr ""
+"Nije uspjelo čitanje iz datoteke povijesti slike. Povijest generiranja slika "
+"neće se učitati"
 
 #: src/MainWindow.c:1964
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP (61//)"
@@ -439,6 +488,10 @@ msgid ""
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
 msgstr ""
+"Raščlanjivanje povijesti slika nije uspjelo. Neispravan JSON. Datoteka image-"
+"history.json vjerojatno je oštećena. Povijest slika neće se učitati. "
+"Sigurnosna kopija datoteke image-history.json stvorena je kao image-history."
+"json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -448,152 +501,159 @@ msgid ""
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
 msgstr ""
+"Raščlanjivanje povijesti slika nije uspjelo. Neispravan JSON. Datoteka image-"
+"history.json vjerojatno je oštećena. Povijest slika neće se učitati. Došlo "
+"je do pogreške pri pisanju sigurnosne kopije povijesti slika na disk, ali "
+"kopija je spremljena u RAM:image-history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
 msgid "Failed to delete image-history.json. Please delete this file manually."
 msgstr ""
+"Brisanje image-history.json nije uspjelo. Molimo izbrišite ovu datoteku "
+"ručno."
 
 #: src/MainWindow.c:2120
 msgctxt "STRING_ERROR_FILE_COPY_OPEN (64//)"
 msgid "Error opening file for copy"
-msgstr ""
+msgstr "Pogreška pri otvaranju datoteke za kopiranje"
 
 #: src/MainWindow.c:2129
 msgctxt "STRING_ERROR_FILE_COPY_CREATE (65//)"
 msgid "Error creating file for copy"
-msgstr ""
+msgstr "Pogreška pri izradi datoteke za kopiranje"
 
 #: src/MainWindow.c:2137
 msgctxt "STRING_COPYING_FILE (66//)"
 msgid "Copying file..."
-msgstr ""
+msgstr "Kopiranje datoteke..."
 
 #: src/MainWindow.c:2148 src/MainWindow.c:2159
 msgctxt "STRING_ERROR_FILE_COPY (67//)"
 msgid "Error copying file"
-msgstr ""
+msgstr "Pogreška pri kopiranju datoteke"
 
 #: src/ProxySettingsRequesterWindow.c:30
 msgctxt "STRING_ERROR_INVALID_PORT (68//)"
 msgid "Invalid port number. Please enter a number between 0 and 65535."
-msgstr ""
+msgstr "Nevažeći broj priključka. Unesite broj između 0 i 65535."
 
 #: src/ProxySettingsRequesterWindow.c:72
 msgctxt "STRING_ENCRYPTION_NONE (69//)"
 msgid "None (fastest)"
-msgstr ""
+msgstr "Ništa (najbrži)"
 
 #: src/ProxySettingsRequesterWindow.c:72
 msgctxt "STRING_ENCRYPTION_SSL (70//)"
 msgid "SSL (secure)"
-msgstr ""
+msgstr "SSL (sigurno)"
 
 #: src/ProxySettingsRequesterWindow.c:75
 msgctxt "STRING_AUTH_NONE (71//)"
 msgid "No authentication"
-msgstr ""
+msgstr "Nema provjere autentičnosti"
 
 #: src/ProxySettingsRequesterWindow.c:76
 msgctxt "STRING_AUTH_USER_PASS (72//)"
 msgid "Username and password"
-msgstr ""
+msgstr "Korisničko ime i lozinka"
 
 #: src/ProxySettingsRequesterWindow.c:80
 msgctxt "STRING_PROXY_SETTINGS (73//)"
 msgid "Proxy server settings"
-msgstr ""
+msgstr "Postavke proxy poslužitelja"
 
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr ""
+msgstr "Domaćin"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"
 msgid "Port"
-msgstr ""
+msgstr "Luka"
 
 #: src/ProxySettingsRequesterWindow.c:107
 msgctxt "STRING_PROXY_ENCRYPTION (76//)"
 msgid "Encryption"
-msgstr ""
+msgstr "Enkripcija"
 
 #: src/ProxySettingsRequesterWindow.c:116
 msgctxt "STRING_PROXY_AUTH (77//)"
 msgid "Authentication"
-msgstr ""
+msgstr "Autentifikacija"
 
 #: src/ProxySettingsRequesterWindow.c:125
 msgctxt "STRING_USERNAME (78//)"
 msgid "Username"
-msgstr ""
+msgstr "Korisničko ime"
 
 #: src/ProxySettingsRequesterWindow.c:135
 msgctxt "STRING_PASSWORD (79//)"
 msgid "Password"
-msgstr ""
+msgstr "Lozinka"
 
 #: src/ProxySettingsRequesterWindow.c:160
 msgctxt "STRING_ERROR_PROXY_SETTINGS (80//)"
 msgid "Could not create proxy settings requester window"
-msgstr ""
+msgstr "Nije moguće stvoriti prozor zahtjevatelja postavki proxyja"
 
 #: src/StartupOptionsWindow.c:18
 msgctxt "STRING_OPEN_IN_WORKBENCH (81//)"
 msgid "Open in Workbench"
-msgstr ""
+msgstr "Otvori u Workbenchu"
 
 #: src/StartupOptionsWindow.c:18
 msgctxt "STRING_NEW_SCREEN (82//)"
 msgid "New screen"
-msgstr ""
+msgstr "Novi ekran"
 
 #: src/StartupOptionsWindow.c:86
 msgctxt "STRING_ERROR_SCREEN (83//)"
 msgid "Could not open screen"
-msgstr ""
+msgstr "Nije moguće otvoriti zaslon"
 
 #: src/StartupOptionsWindow.c:123
 msgctxt "STRING_STARTUP_OPTIONS (84//)"
 msgid "Startup Options"
-msgstr ""
+msgstr "Opcije pokretanja"
 
 #: src/StartupOptionsWindow.c:127
 msgctxt "STRING_SCREEN_TO_OPEN (85//)"
 msgid "Screen to open"
-msgstr ""
+msgstr "Zaslon za otvaranje"
 
 #: src/StartupOptionsWindow.c:131
 msgctxt "STRING_ERROR_STARTUP_OPTIONS (86//)"
 msgid "Could not create startupOptionsWindowObject"
-msgstr ""
+msgstr "Nije moguće stvoriti startupOptionsWindowObject"
 
 #: src/config.c:47
 msgctxt "STRING_ERROR_CONFIG_FILE_READ (87//)"
 msgid "Failed to read the config file"
-msgstr ""
+msgstr "Neuspješno čitanje konfiguracijske datoteke"
 
 #: src/config.c:119
 msgctxt "STRING_ERROR_CONFIG_FILE_WRITE (88//)"
 msgid "Failed to write the data to the config file"
-msgstr ""
+msgstr "Zapisivanje podataka u konfiguracijsku datoteku nije uspjelo"
 
 #: src/config.c:166
 msgctxt "STRING_ERROR_CONFIG_FILE_PARSE (89//)"
 msgid "Failed to parse the config file"
-msgstr ""
+msgstr "Raščlanjivanje konfiguracijske datoteke nije uspjelo"
 
 #: src/gui.c:77
 msgctxt "STRING_ERROR_MUI_LIB_OPEN (90//)"
 msgid ""
 "Could not open muimaster.library. Please make sure you have MUI installed"
 msgstr ""
+"Nije moguće otvoriti muimaster.library. Provjerite jeste li instalirali MUI"
 
 #: src/gui.c:84
 msgctxt "STRING_ERROR_MUI_INTERFACE_OPEN (91//)"
 msgid "Could not get interface for muimaster.library"
-msgstr ""
+msgstr "Nije moguće dobiti sučelje za muimaster.library"
 
 #: src/gui.c:91
 msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
@@ -601,16 +661,18 @@ msgid ""
 "Could not open codesets.library. Please make sure you have codesets "
 "installed. Refer to the documentation for more info."
 msgstr ""
+"Nije moguće otvoriti codedesets.library. Provjerite imate li instalirane "
+"kodne desetine. Više informacija potražite u dokumentaciji."
 
 #: src/gui.c:98
 msgctxt "STRING_ERROR_CODESETS_INTERFACE_OPEN (93//)"
 msgid "Could not get interface for codesets.library"
-msgstr ""
+msgstr "Nije moguće dobiti sučelje za codedesets.library"
 
 #: src/gui.c:104
 msgctxt "STRING_ERROR_CODESETS_SYSTEM (94//)"
 msgid "Could not find the system codeset"
-msgstr ""
+msgstr "Nije moguće pronaći kodni broj sustava"
 
 #: src/gui.c:144
 msgctxt "STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED (95//)"
@@ -618,26 +680,29 @@ msgid ""
 "Could not find all the MUI custom classes. Please make sure they are "
 "installed. Refer to the documentation for more information."
 msgstr ""
+"Nije moguće pronaći sve prilagođene klase MUI-ja. Provjerite jesu li "
+"instalirani. Više informacija potražite u dokumentaciji."
 
 #: src/gui.c:178
 msgctxt "STRING_IMAGE (96//)"
 msgid "Image"
-msgstr ""
+msgstr "Slika"
 
 #: src/gui.c:189
 msgctxt "STRING_ERROR_APP_CREATE (97//)"
 msgid "Could not create app!"
-msgstr ""
+msgstr "Nije moguće izraditi aplikaciju!"
 
 #: src/gui.c:221
 msgctxt "STRING_ERROR_MUI_CUSTOM_CLASS_NOT_FOUND (98//)"
 msgid "Could not find the MUI custom class"
-msgstr ""
+msgstr "Nije moguće pronaći MUI prilagođenu klasu"
 
 #: src/menu.c:26
+#, fuzzy
 msgctxt "STRING_ABOUT (99//)"
 msgid "About"
-msgstr ""
+msgstr "Oko"
 
 #: src/menu.c:59
 msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
@@ -645,222 +710,226 @@ msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
 msgstr ""
+"Otvaranje govornog sustava nije uspjelo. Provjerite jesu li instalirani "
+"translator.library v42 i narrator.device v37. Više informacija potražite u "
+"vodiču."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
 msgid "Could not initialize speech system OpenAI"
-msgstr ""
+msgstr "Nije moguće pokrenuti govorni sustav OpenAI"
 
 #: src/menu.c:73
 msgctxt "STRING_ERROR_SPEECH_UNKNOWN_SYSTEM (102//)"
 msgid "Unknown speech system!"
-msgstr ""
+msgstr "Nepoznati govorni sustav!"
 
 #: src/menu.c:117
 msgctxt "STRING_ERROR_DOCUMENTATION_OPEN (103//)"
 msgid "Could not open documentation"
-msgstr ""
+msgstr "Nije moguće otvoriti dokumentaciju"
 
 #: src/menu.c:124 src/menu.c:116
 msgctxt "STRING_MENU_PROJECT (104//)"
 msgid "Project"
-msgstr ""
+msgstr "Projekt"
 
 #: src/menu.c:125 src/menu.c:117
 msgctxt "STRING_MENU_ABOUT_AMIGAGPT (105//)"
 msgid "About AmigaGPT"
-msgstr ""
+msgstr "O AmigaGPT"
 
 #: src/menu.c:127 src/menu.c:119
 msgctxt "STRING_MENU_ABOUT_MUI (106//)"
 msgid "About MUI"
-msgstr ""
+msgstr "O MUI"
 
 #: src/menu.c:129 src/menu.c:121
 msgctxt "STRING_MENU_QUIT (107//)"
 msgid "Quit"
-msgstr ""
+msgstr "Prestati"
 
 #: src/menu.c:130 src/menu.c:122
 msgctxt "STRING_MENU_EDIT (108//)"
 msgid "Edit"
-msgstr ""
+msgstr "Uredi"
 
 #: src/menu.c:131 src/menu.c:305 src/menu.c:123 src/menu.c:300
 msgctxt "STRING_MENU_CUT (109//)"
 msgid "Cut"
-msgstr ""
+msgstr "Rez"
 
 #: src/menu.c:132 src/menu.c:315 src/menu.c:124 src/menu.c:310
 msgctxt "STRING_MENU_COPY (110//)"
 msgid "Copy"
-msgstr ""
+msgstr "Kopirati"
 
 #: src/menu.c:133 src/menu.c:325 src/menu.c:125 src/menu.c:320
 msgctxt "STRING_MENU_PASTE (111//)"
 msgid "Paste"
-msgstr ""
+msgstr "Zalijepiti"
 
 #: src/menu.c:134 src/menu.c:126
 msgctxt "STRING_MENU_CLEAR(112//)"
 msgid "Clear"
-msgstr ""
+msgstr "Jasan"
 
 #: src/menu.c:135 src/menu.c:127
 msgctxt "STRING_MENU_SELECT_ALL (113//)"
 msgid "Select all"
-msgstr ""
+msgstr "Odaberite sve"
 
 #: src/menu.c:136 src/menu.c:128
 msgctxt "STRING_MENU_VIEW (114//)"
 msgid "View"
-msgstr ""
+msgstr "Pogled"
 
 #: src/menu.c:137 src/menu.c:129
 msgctxt "STRING_MENU_MUI_SETTINGS (115//)"
 msgid "MUI Settings"
-msgstr ""
+msgstr "MUI postavke"
 
 #: src/menu.c:138 src/menu.c:130
 msgctxt "STRING_MENU_CONNECTION (116//)"
 msgid "Connection"
-msgstr ""
+msgstr "Veza"
 
 #: src/menu.c:139 src/menu.c:131
 msgctxt "STRING_MENU_PROXY (117//)"
 msgid "Proxy"
-msgstr ""
+msgstr "Proxy"
 
 #: src/menu.c:140 src/menu.c:144 src/menu.c:132 src/menu.c:136
 msgctxt "STRING_MENU_ENABLED (118//)"
 msgid "Enabled"
-msgstr ""
+msgstr "Omogućeno"
 
 #: src/menu.c:142 src/menu.c:134
 msgctxt "STRING_MENU_SETTINGS (119//)"
 msgid "Settings"
-msgstr ""
+msgstr "postavke"
 
 #: src/menu.c:143 src/menu.c:135
 msgctxt "STRING_MENU_SPEECH (120//)"
 msgid "Speech"
-msgstr ""
+msgstr "Govor"
 
 #: src/menu.c:146 src/menu.c:138
 msgctxt "STRING_MENU_SPEECH_SYSTEM (121//)"
 msgid "Speech system"
-msgstr ""
+msgstr "Govorni sustav"
 
 #: src/menu.c:148 src/speech.c:53 src/menu.c:140
 msgctxt "STRING_MENU_SPEECH_SYSTEM_34 (122//)"
 msgid "Workbench 1.x v34"
-msgstr ""
+msgstr "Workbench 1.x v34"
 
 #: src/menu.c:150 src/speech.c:54 src/menu.c:142
 msgctxt "STRING_MENU_SPEECH_SYSTEM_37 (123//)"
 msgid "Workbench 2.0 v37"
-msgstr ""
+msgstr "Workbench 2.0 v37"
 
 #: src/menu.c:156 src/speech.c:55 src/menu.c:148
 msgctxt "STRING_MENU_SPEECH_SYSTEM_FLITE (124//)"
 msgid "Flite"
-msgstr ""
+msgstr "Flite"
 
 #: src/menu.c:169 src/menu.c:161
 msgctxt "STRING_MENU_FLITE_VOICE (125//)"
 msgid "Flite Voice"
-msgstr ""
+msgstr "Flite Glas"
 
 #: src/menu.c:152 src/menu.c:158 src/menu.c:161 src/speech.c:57 src/menu.c:144
 #: src/menu.c:150 src/menu.c:153
 msgctxt "STRING_MENU_SPEECH_SYSTEM_OPENAI (126//)"
 msgid "OpenAI Text To Speech"
-msgstr ""
+msgstr "OpenAI pretvaranje teksta u govor"
 
 #: src/menu.c:166 src/menu.c:158
 msgctxt "STRING_MENU_SPEECH_ACCENT (127//)"
 msgid "Accent"
-msgstr ""
+msgstr "Akcent"
 
 #: src/menu.c:170 src/menu.c:162
 msgctxt "STRING_MENU_FLITE_VOICE_KAL (128//)"
 msgid "kal (fast)"
-msgstr ""
+msgstr "kal (brzo)"
 
 #: src/menu.c:172 src/menu.c:164
 msgctxt "STRING_MENU_FLITE_VOICE_KAL16 (129//)"
 msgid "kal16 (fast)"
-msgstr ""
+msgstr "kal16 (brzo)"
 
 #: src/menu.c:174 src/menu.c:166
 msgctxt "STRING_MENU_FLITE_VOICE_AWB (130//)"
 msgid "awb (slow)"
-msgstr ""
+msgstr "awb (sporo)"
 
 #: src/menu.c:176 src/menu.c:168
 msgctxt "STRING_MENU_FLITE_VOICE_RMS (131//)"
 msgid "rms (slow)"
-msgstr ""
+msgstr "rms (sporo)"
 
 #: src/menu.c:178 src/menu.c:170
 msgctxt "STRING_MENU_FLITE_VOICE_SLT (132//)"
 msgid "slt (slow)"
-msgstr ""
+msgstr "slt (sporo)"
 
 #: src/menu.c:181 src/menu.c:173
 msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 msgid "OpenAI Voice"
-msgstr ""
+msgstr "OpenAI glas"
 
 #: src/menu.c:194 src/menu.c:186
 msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 msgid "OpenAI Speech Model"
-msgstr ""
+msgstr "Govorni model OpenAI"
 
 #: src/menu.c:199 src/menu.c:192
 msgctxt "STRING_MENU_OPENAI (141//)"
 msgid "OpenAI"
-msgstr ""
+msgstr "OpenAI"
 
 #: src/menu.c:200 src/menu.c:193
+#, fuzzy
 msgctxt "STRING_MENU_OPENAI_API_KEY (142//)"
 msgid "API key"
-msgstr ""
+msgstr "API ključ"
 
 #: src/menu.c:201 src/menu.c:194
 msgctxt "STRING_MENU_OPENAI_CHAT_SYSTEM (143//)"
 msgid "Chat System"
-msgstr ""
+msgstr "Sustav za chat"
 
 #: src/menu.c:202 src/menu.c:195
 msgctxt "STRING_MENU_OPENAI_CHAT_MODEL (144//)"
 msgid "Chat Model"
-msgstr ""
+msgstr "Chat model"
 
 #: src/menu.c:251 src/menu.c:244
 msgctxt "STRING_MENU_OPENAI_IMAGE_MODEL (145//)"
 msgid "Image Model"
-msgstr ""
+msgstr "Model slike"
 
 #: src/menu.c:256 src/menu.c:249
 msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2 (146//)"
 msgid "DALL-E 2 Image Size"
-msgstr ""
+msgstr "DALL-E 2 Veličina slike"
 
 #: src/menu.c:263 src/menu.c:257
 msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3 (147//)"
 msgid "DALL-E 3 Image Size"
-msgstr ""
+msgstr "DALL-E 3 Veličina slike"
 
 #: src/menu.c:270 src/menu.c:265
 msgctxt "STRING_MENU_HELP (148//)"
 msgid "Help"
-msgstr ""
+msgstr "Pomoć"
 
 #: src/menu.c:271 src/menu.c:266
 msgctxt "STRING_MENU_OPEN_DOCUMENTATION (149//)"
 msgid "Open Documentation"
-msgstr ""
+msgstr "Otvorena dokumentacija"
 
 #: src/openai.c:175
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN (150//)"
@@ -869,16 +938,19 @@ msgid ""
 "AmiTCP, Miami or Roadshow. Please refer to the documentation for more "
 "information."
 msgstr ""
+"Otvaranje bsdsocket.library nije uspjelo. Morate instalirati TCP/IP skup kao "
+"što je AmiTCP, Miami ili Roadshow. Više informacija potražite u "
+"dokumentaciji."
 
 #: src/openai.c:182
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN_OS4 (151//)"
 msgid "Failed to open bsdsocket.library"
-msgstr ""
+msgstr "Otvaranje bsdsocket.library nije uspjelo"
 
 #: src/openai.c:187
 msgctxt "STRING_ERROR_BSDSOCKET_INTERFACE_OPEN (152//)"
 msgid "Failed to get the interface of bsdsocket.library"
-msgstr ""
+msgstr "Nije uspjelo dobivanje sučelja bsdsocket.library"
 
 #: src/openai.c:195 src/openai.c:204
 msgctxt "STRING_ERROR_AMISSLMASTER_LIB_OPEN (153//)"
@@ -886,11 +958,13 @@ msgid ""
 "Failed to open amisslmaster.library version 5. You have to install AmiSSL 5. "
 "Please refer to the documentation for more information."
 msgstr ""
+"Otvaranje amisslmaster.library verzije 5 nije uspjelo. Morate instalirati "
+"AmiSSL 5. Više informacija potražite u dokumentaciji."
 
 #: src/openai.c:211
 msgctxt "STRING_ERROR_AMISSLMASTER_INTERFACE_OPEN (154//)"
 msgid "Failed to get the interface of amisslmaster.library"
-msgstr ""
+msgstr "Nije uspjelo dobivanje sučelja amisslmaster.library"
 
 #: src/openai.c:223
 msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
@@ -898,26 +972,28 @@ msgid ""
 "Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
 "newer. Please refer to the documentation for more information."
 msgstr ""
+"Neuspješno pokretanje amisslmaster.library. AmigaGPT zahtijeva AmiSSL 5.18 "
+"ili noviji. Više informacija potražite u dokumentaciji."
 
 #: src/openai.c:233
 msgctxt "STRING_ERROR_AMISSL_INTERFACE_INIT (156//)"
 msgid "Failed to get the interface of amissl.library"
-msgstr ""
+msgstr "Nije uspjelo dobivanje sučelja amissl.library"
 
 #: src/openai.c:281
 msgctxt "STRING_ERROR_SSL_HANDLE (157//)"
 msgid "Couldn't create new SSL handle!"
-msgstr ""
+msgstr "Nije moguće stvoriti novu SSL oznaku!"
 
 #: src/openai.c:294
 msgctxt "STRING_ERROR_PROXY_HOST (158//)"
 msgid "Proxy host lookup failed"
-msgstr ""
+msgstr "Traženje proxy hosta nije uspjelo"
 
 #: src/openai.c:295
 msgctxt "STRING_ERROR_HOST (159//)"
 msgid "Host lookup failed"
-msgstr ""
+msgstr "Traženje hosta nije uspjelo"
 
 #: src/openai.c:308
 msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
@@ -925,184 +1001,190 @@ msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
 msgstr ""
+"Nije moguće spojiti se na poslužitelj. Provjerite jesu li proxy host i port "
+"ispravni ili ih onemogućite."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
 msgid "Couldn't create socket"
-msgstr ""
+msgstr "Nije moguće stvoriti utičnicu"
 
 #: src/openai.c:354
 msgctxt "STRING_ERROR_CONNECT_REQUEST (162//)"
 msgid "Failed to send CONNECT request"
-msgstr ""
+msgstr "Slanje zahtjeva za POVEZIVANJE nije uspjelo"
 
 #: src/openai.c:367
 msgctxt "STRING_ERROR_PROXY_AUTH (163//)"
 msgid "Proxy authentication failed"
-msgstr ""
+msgstr "Proxy provjera autentičnosti nije uspjela"
 
 #: src/openai.c:369
 msgctxt "STRING_ERROR_PROXY_NO_RESPONSE (164//)"
 msgid "Failed to receive response from proxy"
-msgstr ""
+msgstr "Nije uspjelo primanje odgovora od proxyja"
 
 #: src/openai.c:525 src/openai.c:779 src/openai.c:1069 src/openai.c:1400
 msgctxt "STRING_CONNECTING (166//)"
 msgid "Connecting..."
-msgstr ""
+msgstr "Povezivanje..."
 
 #: src/openai.c:532 src/openai.c:689 src/openai.c:785 src/openai.c:940
 #: src/openai.c:1075 src/openai.c:1406 src/openai.c:1664
 msgctxt "STRING_ERROR_CONNECTING_MAX_RETRIES (167//)"
 msgid "Error connecting to host! Maximum retries reached."
 msgstr ""
+"Pogreška pri povezivanju s hostom! Dosegnut je maksimalan broj ponovnih "
+"pokušaja."
 
 #: src/openai.c:539 src/openai.c:827 src/openai.c:1082 src/openai.c:1458
 msgctxt "STRING_SENDING_REQUEST (168//)"
 msgid "Sending request..."
-msgstr ""
+msgstr "Slanje zahtjeva..."
 
 #: src/openai.c:569
 msgctxt "STRING_DOWNLOADING_RESPONSE (169//)"
 msgid "Downloading response..."
-msgstr ""
+msgstr "Preuzimanje odgovora..."
 
 #: src/openai.c:683 src/openai.c:934 src/openai.c:1658
 msgctxt "STRING_ERROR_CONNECTION_MAX_RETRIES (171//)"
 msgid "Error connecting to host! Maximum retries reached."
 msgstr ""
+"Pogreška pri povezivanju s hostom! Dosegnut je maksimalan broj ponovnih "
+"pokušaja."
 
 #: src/openai.c:705 src/openai.c:947 src/openai.c:1672
 msgctxt "STRING_ERROR_UNKNOWN (172//)"
 msgid "Unknown error"
-msgstr ""
+msgstr "Nepoznata greška"
 
 #: src/openai.c:711 src/openai.c:953 src/openai.c:1222 src/openai.c:1677
 msgctxt "STRING_ERROR_REQUEST_WRITE (173//)"
 msgid "Couldn't write request!"
-msgstr ""
+msgstr "Ne mogu napisati zahtjev!"
 
 #: src/openai.c:857
 msgctxt "STRING_DOWNLOADING_IMAGE (174//)"
 msgid "Downloading image..."
-msgstr ""
+msgstr "Preuzimanje slike..."
 
 #: src/openai.c:857
 msgctxt "STRING_BYTES (215//)"
 msgid "bytes"
-msgstr ""
+msgstr "bajtova"
 
 #: src/openai.c:1015
 msgctxt "STRING_ERROR_FILE_WRITE_OPEN (175//)"
 msgid "Couldn't open file for writing"
-msgstr ""
+msgstr "Nije moguće otvoriti datoteku za pisanje"
 
 #: src/openai.c:1026
 msgctxt "STRING_ERROR_INVALID_URL (176//)"
 msgid "Invalid URL format"
-msgstr ""
+msgstr "Nevažeći format URL-a"
 
 #: src/openai.c:1154
 msgctxt "STRING_DOWNLOADED (177//)"
 msgid "Downloaded"
-msgstr ""
+msgstr "Preuzeto"
 
 #: src/openai.c:1189
 msgctxt "STRING_ERROR_LOST_CONNECTION (178//)"
 msgid "Lost connection. Reconnecting..."
-msgstr ""
+msgstr "Izgubljena veza. Ponovno povezivanje..."
 
 #: src/openai.c:1304
 msgctxt "STRING_ERROR_SSL_CONTEXT (179//)"
 msgid "Couldn't create new SSL context!"
-msgstr ""
+msgstr "Nije moguće stvoriti novi SSL kontekst!"
 
 #: src/openai.c:1363
 msgctxt "STRING_ERROR_BAD_CHUNK (180//)"
 msgid "Couldn't find CRLF in chunk length"
-msgstr ""
+msgstr "Nije moguće pronaći CRLF u duljini komada"
 
 #: src/openai.c:1600
 msgctxt "STRING_ERROR_AUDIO_BUFFER_MEMORY (182//)"
 msgid "Not enough memory for audio buffer"
-msgstr ""
+msgstr "Nema dovoljno memorije za međuspremnik zvuka"
 
 #: src/openai.c:1718
 msgctxt "STRING_DOWNLOAD_COMPLETE (183//)"
 msgid "Download complete"
-msgstr ""
+msgstr "Preuzimanje završeno"
 
 #: src/speech.c:71
 msgctxt "STRING_ERROR_NARRATOR_PORT (184//)"
 msgid "Could not create narrator port"
-msgstr ""
+msgstr "Nije moguće stvoriti priključak za pripovjedača"
 
 #: src/speech.c:78
 msgctxt "STRING_ERROR_NARRATOR_IO_REQUEST (185//)"
 msgid "Could not create narrator IO request"
-msgstr ""
+msgstr "Nije moguće izraditi IO zahtjev pripovjedača"
 
 #: src/speech.c:87
 msgctxt "STRING_ERROR_NARRATOR_34_DEVICE_OPEN (186//)"
 msgid "Could not open narrator.device v34\n"
-msgstr ""
+msgstr "Nije moguće otvoriti narrator.device v34 "
 
 #: src/speech.c:95
 msgctxt "STRING_ERROR_NARRATOR_37_DEVICE_OPEN (187//)"
 msgid "Could not open narrator.device v37\n"
-msgstr ""
+msgstr "Nije moguće otvoriti narrator.device v37 "
 
 #: src/speech.c:105
 msgctxt "STRING_ERROR_TRANSLATOR_LIB_OPEN (188//)"
 msgid "Could not open translator.library"
-msgstr ""
+msgstr "Nije moguće otvoriti translator.library"
 
 #: src/speech.c:134
 msgctxt "STRING_ERROR_FLITE_INTERFACE_OPEN (189//)"
 msgid "Failed to obtain interface for flite.device"
-msgstr ""
+msgstr "Nije uspjelo dobivanje sučelja za flite.device"
 
 #: src/speech.c:139
 msgctxt "STRING_ERROR_FLITE_DEVICE_OPEN (190//)"
 msgid "Failed to open flite.device"
-msgstr ""
+msgstr "Otvaranje flite.device nije uspjelo"
 
 #: src/speech.c:283
 msgctxt "STRING_ERROR_AHI_DEVICE_OPEN (191//)"
 msgid "Failed to open AHI device"
-msgstr ""
+msgstr "Otvaranje AHI uređaja nije uspjelo"
 
 #: src/speech.c:334
 msgctxt "STRING_ERROR_VOICE_OPEN (192//)"
 msgid "Failed to open voice"
-msgstr ""
+msgstr "Otvaranje glasa nije uspjelo"
 
 #: src/speech.c:358
 msgctxt "STRING_ERROR_SPEECH_IO_ABORTED (193//)"
 msgid "Speech IO aborted"
-msgstr ""
+msgstr "Govorni IO prekinut"
 
 #: src/speech.c:361
 msgctxt "STRING_ERROR_FLITE (194//)"
 msgid "Flite error"
-msgstr ""
+msgstr "Flite greška"
 
 #: src/speech.c:364
 msgctxt "STRING_ERROR_NO_VOICE (195//)"
 msgid "No voice"
-msgstr ""
+msgstr "Bez glasa"
 
 #: src/speech.c:367
 msgctxt "STRING_ERROR_SPEECH_UNKNOWN (196//)"
 msgid "Unknown speech IO error"
-msgstr ""
+msgstr "Nepoznata govorna IO pogreška"
 
 #: src/speech.c:390
 msgctxt "STRING_ERROR_FILE_OPEN (197//)"
 msgid "Failed to open file"
-msgstr ""
+msgstr "Otvaranje datoteke nije uspjelo"
 
 #: src/speech.c:406
 msgctxt "STRING_ERROR_FILE_READ (198//)"
 msgid "Failed to read file"
-msgstr ""
+msgstr "Čitanje datoteke nije uspjelo"
