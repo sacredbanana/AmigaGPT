@@ -85,7 +85,7 @@ LONG createAboutAmigaGPTWindow() {
              STRING_ABOUT_WINDOW_COFFINOS, STRING_ABOUT_WINDOW_AMIGA_FUTURE,
              STRING_ABOUT_WINDOW_WHATIFF, STRING_ABOUT_WINDOW_YOUTUBE_REVIEW,
              STRING_ABOUT_WINDOW_YOUTUBE_REVIEW, STRING_ABOUT_WINDOW_AMIGABILL,
-             , STRING_ABOUT_WINDOW_LES_DOCS, STRING_ABOUT_WINDOW_LICENSE);
+             STRING_ABOUT_WINDOW_LES_DOCS, STRING_ABOUT_WINDOW_LICENSE);
     if ((aboutAmigaGPTWindowObject = AboutboxObject, MUIA_Aboutbox_Build,
          buildString, MUIA_Aboutbox_Credits, bodyString, MUIA_Aboutbox_URL,
          "https://github.com/sacredbanana/AmigaGPT", MUIA_Aboutbox_URLText,
@@ -97,5 +97,5 @@ LONG createAboutAmigaGPTWindow() {
     }
     FreeVec(buildString);
     FreeVec(bodyString);
-    return success
+    return success;
 }

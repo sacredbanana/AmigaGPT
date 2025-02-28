@@ -12,7 +12,6 @@ CATALOG_DIR = $(BUNDLE_DIR)/AmigaGPT/catalogs
 CATALOG_DEFINITION = $(CATALOG_DIR)/AmigaGPT.pot
 catalog_subdirs := $(wildcard $(CATALOG_DIR)/*/)
 catalog_translations := $(wildcard $(addsuffix *.po,$(catalog_subdirs)))
-catalogs := $(catalog_subdirs)AmigaGPT.catalog
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
 cpp_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
 c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
@@ -82,19 +81,19 @@ catalog:
 	@$(RM) $(SOURCE_DIR)/AmigaGPT_cat.c $(SOURCE_DIR)/AmigaGPT_cat.h
 
 	$(info Generating catalog header)
-	flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.h=C_h.sd || true
+	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.h=C_h.sd || true
 
 	$(info Generating catalog source)
-	flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.c=C_c.sd || true
+	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.c=C_c.sd || true
 
 	$(info Updating catalog translations)
 	@for catalog_translation in $(catalog_translations); do \
-			msgmerge -U $$catalog_translation $(CATALOG_DEFINITION); \
+		msgmerge -U $$catalog_translation $(CATALOG_DEFINITION)|| true; \
 	done
 
-	$(info Compiling catalogs $<)
+	$(info Compiling catalogs $(catalog_translations))
 	@for catalog_translation in $(catalog_translations); do \
-		flexcat POFILE $$catalog_translation CATALOG $(dir $$catalog)/AmigaGPT.catalog || true; \
+		flexcat POFILE $$catalog_translation CATALOG $$(dirname $$catalog_translation)/AmigaGPT.catalog || true; \
 	done
 
 $(BUILD_DIR):

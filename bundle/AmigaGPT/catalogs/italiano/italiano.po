@@ -4,14 +4,15 @@ msgstr ""
 "Project-Id-Version: AmigaGPT\n"
 "Report-Msgid-Bugs-To: https://github.com/sacredbanana/AmigaGPT\n"
 "POT-Creation-Date: 2025-02-17 16:27+0000\n"
-"PO-Revision-Date: 2025-02-28 22:49+0800\n"
-"Last-Translator: Cameron Armstrong\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"PO-Revision-Date: 2025-02-17 16:27+0000\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: it\n"
 "MIME-Version: 1.0\n"
-"Catalog-Name: AmigaGPT\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Catalog-Name: AmigaGPT\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: src/main.c:65 src/main.c:66 src/main.c:67 src/main.c:64
 msgctxt "STRING_APP_DESCRIPTION (0//)"
@@ -46,8 +47,8 @@ msgstr ""
 #: src/main.c:51
 msgctxt "STRING_WARNING_STACK (5//)"
 msgid ""
-"Warning: The stack size is too small. The minimum recommended "
-"stack size is 32768 bytes to avoid crashes. Your stack size is: "
+"Warning: The stack size is too small. The minimum recommended stack size is "
+"32768 bytes to avoid crashes. Your stack size is: "
 msgstr ""
 
 #: src/APIKeyRequesterWindow.c:40
@@ -67,7 +68,8 @@ msgstr ""
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_HELP (200//)"
-msgid "If you do not have an API key, consult the AmigaGPT documentation for "
+msgid ""
+"If you do not have an API key, consult the AmigaGPT documentation for "
 "instructions on how to obtain one."
 msgstr ""
 
@@ -107,8 +109,8 @@ msgstr ""
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_SUPPORT (14//)"
 msgid ""
-"This app will always remain free but if you would like to support me "
-"you can do so at:"
+"This app will always remain free but if you would like to support me you can "
+"do so at:"
 msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:20
@@ -133,8 +135,9 @@ msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
-msgid "for all the thorough testing, bundling AmigaGPT into AmiKit and "
-"for all the moral support"
+msgid ""
+"for all the thorough testing, bundling AmigaGPT into AmiKit and for all the "
+"moral support"
 msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:20
@@ -144,8 +147,9 @@ msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
-msgid "for reviewing AmigaGPT and publishing several of its updates in "
-"the News from Aminet section"
+msgid ""
+"for reviewing AmigaGPT and publishing several of its updates in the News "
+"from Aminet section"
 msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:20
@@ -160,14 +164,16 @@ msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
-msgid "for covering AmigaGPT in the Amiga News section on his Twitch "
-"streams and allowing me to join his stream to promote it"
+msgid ""
+"for covering AmigaGPT in the Amiga News section on his Twitch streams and "
+"allowing me to join his stream to promote it"
 msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
-msgid "for making a video review and giving a tutorial on how to add "
-"support for the French accent"
+msgid ""
+"for making a video review and giving a tutorial on how to add support for "
+"the French accent"
 msgstr ""
 
 #: src/AboutAmigaGPTWindow.c:20
@@ -188,13 +194,11 @@ msgstr ""
 #: src/ChatSystemRequesterWindow.c:38
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
 msgid ""
-"If you would like AmigaGPT to respond in a"
-"certain way, or add some personality, type"
-"it in here. For example, you could type"
-"\"Speak like a pirate\" or \"Speak like a"
-"robot\". If you would like AmigaGPT to respond"
-"normally, leave this blank. This setting will"
-"be applied to new conversations only."
+"If you would like AmigaGPT to respond in acertain way, or add some "
+"personality, typeit in here. For example, you could type\"Speak like a "
+"pirate\" or \"Speak like arobot\". If you would like AmigaGPT to "
+"respondnormally, leave this blank. This setting willbe applied to new "
+"conversations only."
 msgstr ""
 
 #: src/ChatSystemRequesterWindow.c:65
@@ -351,8 +355,8 @@ msgstr ""
 #: src/MainWindow.c:1466
 msgctxt "STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED (47//)"
 msgid ""
-"The conversation has exceeded the maximum length. "
-"Please start a new conversation."
+"The conversation has exceeded the maximum length. Please start a new "
+"conversation."
 msgstr ""
 
 #: src/MainWindow.c:1619
@@ -581,8 +585,8 @@ msgstr ""
 
 #: src/gui.c:77
 msgctxt "STRING_ERROR_MUI_LIB_OPEN (90//)"
-msgid "Could not open muimaster.library. "
-"Please make sure you have MUI installed"
+msgid ""
+"Could not open muimaster.library. Please make sure you have MUI installed"
 msgstr ""
 
 #: src/gui.c:84
@@ -592,9 +596,9 @@ msgstr ""
 
 #: src/gui.c:91
 msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
-msgid "Could not open codesets.library. "
-"Please make sure you have codesets installed. "
-"Refer to the documentation for more info."
+msgid ""
+"Could not open codesets.library. Please make sure you have codesets "
+"installed. Refer to the documentation for more info."
 msgstr ""
 
 #: src/gui.c:98
