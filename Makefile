@@ -96,6 +96,13 @@ catalog:
 		flexcat POFILE $$catalog_translation CATALOG $$(dirname $$catalog_translation)/AmigaGPT.catalog || true; \
 	done
 
+$(SOURCE_DIR)/AmigaGPT_cat.c $(SOURCE_DIR)/AmigaGPT_cat.h: catalog
+	@true
+
+c_sources += $(SOURCE_DIR)/AmigaGPT_cat.c
+c_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
+objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
+
 $(BUILD_DIR):
 	@$(info Creating directory $@)
 	mkdir -p $@
@@ -115,7 +122,7 @@ $(cpp_objects): $(BUILD_DIR)/%.o : %.cpp | $(BUILD_DIR)/%.dir
 	$(info Compiling $<)
 	$(CC) $(CPPFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(c_objects): $(BUILD_DIR)/%.o : %.c | catalog
+$(c_objects): $(BUILD_DIR)/%.o : %.c $(SOURCE_DIR)/AmigaGPT_cat.h | catalog
 	$(info Compiling $<)
 	@$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<

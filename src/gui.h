@@ -10,6 +10,7 @@
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>
+#include <proto/locale.h>
 #include <proto/muimaster.h>
 #include "AmigaGPT_cat.h"
 
