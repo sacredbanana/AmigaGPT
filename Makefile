@@ -8,7 +8,7 @@ VPATH = $(subdirs)
 SOURCE_DIR = src
 BUILD_DIR = build/os3/obj
 BUNDLE_DIR = bundle
-CATALOG_DIR = $(BUNDLE_DIR)/AmigaGPT/catalogs
+CATALOG_DIR = catalogs
 CATALOG_DEFINITION = $(CATALOG_DIR)/AmigaGPT.pot
 catalog_subdirs := $(wildcard $(CATALOG_DIR)/*/)
 catalog_translations := $(wildcard $(addsuffix *.po,$(catalog_subdirs)))
@@ -99,9 +99,9 @@ catalog:
 $(SOURCE_DIR)/AmigaGPT_cat.c $(SOURCE_DIR)/AmigaGPT_cat.h: catalog
 	@true
 
-c_sources += $(SOURCE_DIR)/AmigaGPT_cat.c
-c_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
-objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
+# c_sources += $(SOURCE_DIR)/AmigaGPT_cat.c
+# c_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
+# objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
 
 $(BUILD_DIR):
 	@$(info Creating directory $@)
@@ -114,7 +114,7 @@ $(EXECUTABLE_DIR):
 $(EXECUTABLE_OUT): catalog $(EXECUTABLE_DIR) $(BUILD_DIR) $(objects)
 	$(info Linking $(PROGRAM_NAME))
 	@$(RM) $@
-	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@ $(LDFLAGS) 
+	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@ $(LDFLAGS)
 
 -include $(objects:.o=.d)	
 
@@ -137,5 +137,5 @@ $(vasm_objects): $(BUILD_DIR)/%.o : %.asm
 
 copy_bundle_files:
 	$(info Copying bundle files...)
-	cp assets/AmigaGPT_OS3.info $(BUNDLE_DIR)/AmigaGPT/$(PROGRAM_NAME).info
-	cp -R $(BUNDLE_DIR)/AmigaGPT/* $(EXECUTABLE_DIR)/
+	@cp assets/AmigaGPT_OS3.info $(BUNDLE_DIR)/AmigaGPT/$(PROGRAM_NAME).info
+	@cp -R $(BUNDLE_DIR)/AmigaGPT/* $(EXECUTABLE_DIR)/

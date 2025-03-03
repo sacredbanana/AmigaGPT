@@ -24,7 +24,7 @@ LONG createAboutAmigaGPTWindow() {
     snprintf(bodyString, 2048,
              "%s: https://paypal.me/sacredbanana\n\n"
              "%s\n\n"
-             "\033b%p\033n\n"
+             "\033b%%p\033n\n"
              "\t\033iCameron Armstrong\033n\n"
              "\t(@sacredbanana - GitHub/YouTube/Twitter, @Nightfox - "
              "EAB/Discord)\n\n"
