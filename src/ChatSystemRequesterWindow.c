@@ -1,5 +1,8 @@
 #include <exec/exec.h>
 #include <libraries/mui.h>
+#include <mui/BetterString_mcc.h>
+#include <mui/NFloattext_mcc.h>
+#include <mui/TextEditor_mcc.h>
 #include <SDI_hook.h>
 #include "ChatSystemRequesterWindow.h"
 #include "config.h"
@@ -10,7 +13,12 @@ Object *chatSystemRequesterWindowObject;
 
 HOOKPROTONHNONP(ChatSystemRequesterOkButtonClickedFunc, void) {
     STRPTR chatSystem;
-    get(chatSystemRequesterString, MUIA_String_Contents, &chatSystem);
+    if (isAROS) {
+        get(chatSystemRequesterString, MUIA_String_Contents, &chatSystem);
+    } else {
+        chatSystem =
+            DoMethod(chatSystemRequesterString, MUIM_TextEditor_ExportText);
+    }
     if (config.chatSystem != NULL) {
         FreeVec(config.chatSystem);
         config.chatSystem = NULL;
@@ -19,6 +27,9 @@ HOOKPROTONHNONP(ChatSystemRequesterOkButtonClickedFunc, void) {
     strncpy(config.chatSystem, chatSystem, strlen(chatSystem));
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+    }
+    if (!isAROS) {
+        FreeVec(chatSystem);
     }
 }
 MakeHook(ChatSystemRequesterOkButtonClickedHook,
@@ -32,19 +43,27 @@ LONG createChatSystemRequesterWindow() {
     Object *chatSystemRequesterOkButton, *chatSystemRequesterCancelButton;
     if ((chatSystemRequesterWindowObject = WindowObject,
             MUIA_Window_Title, STRING_CHAT_SYSTEM_WINDOW_TITLE,
-            MUIA_Window_Width, 800,
-            MUIA_Window_Height, 100,
+            MUIA_Window_Width, 400,
+            MUIA_Window_Height, 500,
+            MUIA_Window_CloseGadget, FALSE,
             WindowContents, VGroup,
-                Child, TextObject,
-                    MUIA_Text_PreParse, "\33c",
-                    MUIA_Text_Contents,  STRING_CHAT_SYSTEM_WINDOW_BODY,
+                Child, NFloattextObject,
+                    MUIA_ContextMenu, NULL,
+                    MUIA_NFloattext_Text, STRING_CHAT_SYSTEM_WINDOW_BODY,
+                    MUIA_NList_TypeSelect, MUIV_NList_TypeSelect_Line,
                 End,
-                Child, chatSystemRequesterString = StringObject,
-                    MUIA_String_MaxLen, CHAT_SYSTEM_LENGTH - 1,
-                    MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, config.chatSystem,
-                End,
+                Child,chatSystemRequesterString = isAROS ? BetterStringObject,
+                            MUIA_String_MaxLen, CHAT_SYSTEM_LENGTH - 1,
+                            MUIA_CycleChain, TRUE,
+                            MUIA_String_Contents, config.chatSystem,
+                        End : TextEditorObject,
+                            MUIA_TextEditor_Contents, config.chatSystem,
+                            MUIA_TextEditor_ReadOnly, FALSE,
+                            MUIA_TextEditor_TabSize, 4,
+                            MUIA_TextEditor_Rows, 3,
+                        End,
                 Child, HGroup,
+                    MUIA_Group_SameWidth, TRUE,
                     Child, chatSystemRequesterOkButton = MUI_MakeObject(MUIO_Button, STRING_OK,
                         MUIA_Background, MUII_FILL,
                         MUIA_CycleChain, TRUE,

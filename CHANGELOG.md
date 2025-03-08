@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.0
+
+- Localisation support
+- Removed close gadgets from API Key and Chat System requestor windows
+- Chat system requestor text entry field now multiline and supports clipboard
+
 ## 2.2.0 (2025-01-04)
 
 - Support for ApolloOS

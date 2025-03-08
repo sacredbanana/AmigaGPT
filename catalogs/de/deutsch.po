@@ -228,12 +228,13 @@ msgid "Enter how you would like AmigaGPT to respond"
 msgstr "Geben Sie ein, wie AmigaGPT antworten soll"
 
 #: src/ChatSystemRequesterWindow.c:38
+#, fuzzy
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
 msgid ""
-"If you would like AmigaGPT to respond in acertain way, or add some "
-"personality, typeit in here. For example, you could type\"Speak like a "
-"pirate\" or \"Speak like arobot\". If you would like AmigaGPT to "
-"respondnormally, leave this blank. This setting willbe applied to new "
+"If you would like AmigaGPT to respond in a certain way, or add some "
+"personality, type it in here. For example, you could type \"Speak like a "
+"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
+"normally, leave this blank. This setting will be applied to new "
 "conversations only."
 msgstr ""
 "Wenn Sie möchten, dass AmigaGPT auf eine bestimmte Weise antwortet oder "
