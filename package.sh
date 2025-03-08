@@ -25,6 +25,9 @@ cp -R out/AmigaGPT_MorphOS bundle/AmigaGPT/AmigaGPT_MorphOS
 mkdir -p bundle/AmigaGPT/catalogs
 rsync -av --include='*/' --include='*.catalog' --exclude='*' catalogs/ bundle/AmigaGPT/catalogs/
 
+# Copy installer script
+cp Install-AmigaGPT bundle/AmigaGPT/Install-AmigaGPT
+
 # Change directory to bundle directory
 cd bundle
 

@@ -10,8 +10,10 @@
 #include <workbench/startup.h>
 #include "gui.h"
 #include "config.h"
+#include "version.h"
 
 CONST_STRPTR stack = "$STACK: 32768";
+CONST_STRPTR version = "$VER: " APP_VERSION;
 
 #ifdef __AMIGAOS4__
 static uint32 appID;

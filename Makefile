@@ -135,3 +135,4 @@ copy_bundle_files:
 	$(info Copying bundle files...)
 	@cp assets/AmigaGPT_OS3.info $(BUNDLE_DIR)/AmigaGPT/$(PROGRAM_NAME).info
 	@cp -R $(BUNDLE_DIR)/AmigaGPT/* $(EXECUTABLE_DIR)/
+	@cp -R $(BUNDLE_DIR)/Install* $(EXECUTABLE_DIR)/

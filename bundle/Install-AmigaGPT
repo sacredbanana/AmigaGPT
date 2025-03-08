@@ -1,0 +1,122 @@
+;
+; AmigaGPT Installer Script
+; Written by Claude for AmigaGPT
+;
+
+(set #app-name "AmigaGPT")
+(set #app-version "2.3.0")
+(set #app-default-dest "Work:")
+
+; Welcome message
+(welcome "Welcome to the AmigaGPT installer!\n\n"
+        "This will install AmigaGPT %app-version% on your system.\n\n"
+        "AmigaGPT is a versatile ChatGPT client for AmigaOS that brings "
+        "the capabilities of OpenAI's GPT to your Amiga system.")
+
+; Check minimum system requirements
+(set #req-os "3.1")
+(set #req-cpu "68020")
+
+(if (< (getversion) #req-os)
+    (abort "This application requires AmigaOS " #req-os " or higher."))
+
+;(if (< (cpu) #req-cpu)
+;    (abort "This application requires a " #req-cpu " or higher CPU."))
+
+; Ask for installation location
+(set #install-dir
+    (askdir
+        (prompt "Choose a directory to install AmigaGPT")
+        (help "Select the drawer where you would like to install AmigaGPT.\n\n"
+              "A new drawer called 'AmigaGPT' will be created in the location "
+              "you select.")
+        (default #app-default-dest)))
+
+(working "Creating Directories...")
+
+; Create installation directories
+(makedir (tackon #install-dir "AmigaGPT"))
+(makedir (tackon #install-dir "AmigaGPT/Catalogs"))
+
+; Detect system architecture and copy appropriate executable
+(working "Copying Files...")
+
+(set #os-version (getversion))
+;(set #cpu-type (cpu))
+
+(if (>= #os-version "4.0")
+    ; AmigaOS 4.x
+    (copyfiles
+        (source "AmigaGPT_OS4")
+        (dest (tackon #install-dir "AmigaGPT"))
+        (help "Copying AmigaOS 4.x executable...")
+        (optional "warn"))
+    ; AmigaOS 3.x
+    (copyfiles
+        (source "AmigaGPT")
+        (dest (tackon #install-dir "AmigaGPT"))
+        (help "Copying AmigaOS 3.x executable...")
+        (optional "warn")))
+
+; Copy documentation
+(copyfiles
+    (source "AmigaGPT.guide")
+    (dest (tackon #install-dir "AmigaGPT"))
+    (help "Copying documentation...")
+    (optional "warn"))
+
+(copyfiles
+    (source "AmigaGPT.info")
+    (dest (tackon #install-dir "AmigaGPT"))
+    (help "Copying icons...")
+    (optional "warn"))
+
+; Copy catalogs
+(set #catalog-source "Catalogs")
+(foreach "#catalog-source" "#lang-dir"
+    (
+        (set #lang-name (getsize "#lang-dir"))
+        (makedir (tackon #install-dir (cat "AmigaGPT/Catalogs/" #lang-name)))
+        (copyfiles
+            (source (tackon "#lang-dir" "AmigaGPT.catalog"))
+            (dest (tackon #install-dir (cat "AmigaGPT/Catalogs/" #lang-name)))
+            (optional "warn"))
+    )
+)
+
+; Create assigns in user-startup
+;(set #user-startup "SYS:S/User-Startup")
+;(if (exists #user-startup)
+;    (
+;        (textfile
+;            (dest #user-startup)
+;            (append)
+;            (confirm)
+;            (help "Adding assigns to User-Startup...")
+;            ("\nIF EXISTS " (tackon #install-dir "AmigaGPT") "\n"
+;             "  Assign AmigaGPT: " (tackon #install-dir "AmigaGPT") "\n"
+;             "ENDIF\n"))
+;    )
+;)
+
+; Create AppDir for OS4
+(if (>= #os-version "4.0")
+    (
+        (makedir "APPDIR:Development/AmigaGPT")
+        (copyfiles
+            (source (tackon #install-dir "AmigaGPT/AmigaGPT_OS4"))
+            (dest "APPDIR:Development/AmigaGPT")
+            (optional "warn"))
+    )
+)
+
+; Final message
+(complete "AmigaGPT has been successfully installed!\n\n"
+         "You can find it in:\n"
+         #install-dir "AmigaGPT\n\n"
+         "Please make sure you have:\n"
+         "- MUI 3.8 or higher\n"
+         "- AmiSSL 5.0 or higher\n"
+         "- A working TCP/IP stack\n"
+         "- An OpenAI API key\n\n"
+         "Enjoy using AmigaGPT!") 
