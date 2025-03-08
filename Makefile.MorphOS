@@ -9,15 +9,13 @@ VPATH = $(subdirs)
 SOURCE_DIR = src
 BUILD_DIR = build/morphos/obj
 BUNDLE_DIR = bundle
-CATALOG_DIR = $(BUNDLE_DIR)/AmigaGPT/catalogs
-CATALOG_DEFINITION = $(CATALOG_DIR)/AmigaGPT.cd
+CATALOG_DIR = catalogs
+CATALOG_DEFINITION = $(CATALOG_DIR)/AmigaGPT.pot
 catalog_subdirs := $(wildcard $(CATALOG_DIR)/*/)
-catalog_translations := $(wildcard $(addsuffix *.ct,$(catalog_subdirs)))
-temp_catalog_translations := $(addprefix $(BUILD_DIR)/,$(notdir $(catalog_translations)))
-catalogs := $(catalog_subdirs)AmigaGPT.catalog
+catalog_translations := $(wildcard $(addsuffix *.po,$(catalog_subdirs)))
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
 cpp_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
-c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs))) $(SOURCE_DIR)/AmigaGPT_cat.c
+c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
 c_sources := $(filter-out $(SOURCE_DIR)/test/%, $(c_sources))
 c_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
 s_sources := $(wildcard *.s) $(wildcard $(addsuffix *.s,$(subdirs)))
@@ -72,19 +70,36 @@ all: $(EXECUTABLE_OUT) copy_bundle_files
 
 clean:
 	$(info Cleaning...)
-	$(RM) $(SOURCE_DIR)/AmigaGPT_cat.*
-	$(RM) $(catalogs)
+	$(RM) -dr $(BUNDLE_DIR)/AmigaGPT/catalogs
 	$(RM) -dr $(BUILD_DIR)
 
-$(SOURCE_DIR)/AmigaGPT_cat.h: $(CATALOG_DEFINITION)
-	$(info Generating catalog header)
-	@$(RM) $@
-	flexcat $< $@=C_h.sd
+catalog_definition:
+	$(info Generating catalog definition)
+	@touch $(CATALOG_DEFINITION)
+	@xgettext -a -c -L C -j -o $(CATALOG_DEFINITION) $(SOURCE_DIR)/*.c
 
-$(SOURCE_DIR)/AmigaGPT_cat.c: $(CATALOG_DEFINITION)
+catalog:
+	$(info Removing old catalog sources)
+	@$(RM) $(SOURCE_DIR)/AmigaGPT_cat.c $(SOURCE_DIR)/AmigaGPT_cat.h
+
+	$(info Generating catalog header)
+	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.h=C_h.sd || true
+
 	$(info Generating catalog source)
-	@$(RM) $@
-	flexcat $< $@=C_c.sd
+	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.c=C_c.sd || true
+
+	$(info Updating catalog translations)
+	@for catalog_translation in $(catalog_translations); do \
+		msgmerge -U $$catalog_translation $(CATALOG_DEFINITION)|| true; \
+	done
+
+	$(info Compiling catalogs $(catalog_translations))
+	@for catalog_translation in $(catalog_translations); do \
+		flexcat POFILE $$catalog_translation CATALOG $$(dirname $$catalog_translation)/AmigaGPT.catalog || true; \
+	done
+
+$(SOURCE_DIR)/AmigaGPT_cat.c $(SOURCE_DIR)/AmigaGPT_cat.h: catalog
+	@true
 
 $(BUILD_DIR):
 	@$(info Creating directory $@)
@@ -94,31 +109,18 @@ $(EXECUTABLE_DIR):
 	@$(info Creating directory $@)
 	mkdir -p $@
 
-$(EXECUTABLE_OUT): $(EXECUTABLE_DIR) $(BUILD_DIR) $(catalogs) $(objects)
+$(EXECUTABLE_OUT): catalog $(EXECUTABLE_DIR) $(BUILD_DIR) $(objects)
 	$(info Linking $(PROGRAM_NAME))
 	@$(RM) $@
-	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@ $(LDFLAGS) 
+	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@ $(LDFLAGS)
 
--include $(objects:.o=.d)
-
-$(temp_catalog_translations): $(catalog_translations) $(CATALOG_DEFINITION)
-	$(info Copying catalog translations)
-	$(RM) $@
-# Allow it to fail the first time as the file may receive automatic adjustments
-	-@flexcat $(CATALOG_DEFINITION) $< NEWCTFILE $<
-	flexcat $(CATALOG_DEFINITION) $< NEWCTFILE $<
-	@cp $< $@
-
-$(catalogs): $(temp_catalog_translations)
-	$(info Compiling catalogs $<)
-	$(RM) $@
-	flexcat $(CATALOG_DEFINITION) $< CATALOG $@
+-include $(objects:.o=.d)	
 
 $(cpp_objects): $(BUILD_DIR)/%.o : %.cpp | $(BUILD_DIR)/%.dir
 	$(info Compiling $<)
 	$(CC) $(CPPFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(c_objects): $(BUILD_DIR)/%.o : %.c | $(SOURCE_DIR)/AmigaGPT_cat.h $(SOURCE_DIR)/AmigaGPT_cat.c
+$(c_objects): $(BUILD_DIR)/%.o : %.c $(SOURCE_DIR)/AmigaGPT_cat.h | catalog
 	$(info Compiling $<)
 	@$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<

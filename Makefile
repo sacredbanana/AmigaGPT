@@ -68,7 +68,7 @@ all: $(EXECUTABLE_OUT) copy_bundle_files
 
 clean:
 	$(info Cleaning...)
-	$(RM) $(catalogs)
+	$(RM) -dr $(BUNDLE_DIR)/AmigaGPT/catalogs
 	$(RM) -dr $(BUILD_DIR)
 
 catalog_definition:
@@ -98,10 +98,6 @@ catalog:
 
 $(SOURCE_DIR)/AmigaGPT_cat.c $(SOURCE_DIR)/AmigaGPT_cat.h: catalog
 	@true
-
-# c_sources += $(SOURCE_DIR)/AmigaGPT_cat.c
-# c_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
-# objects := $(cpp_objects) $(c_objects) $(s_objects) $(vasm_objects)
 
 $(BUILD_DIR):
 	@$(info Creating directory $@)

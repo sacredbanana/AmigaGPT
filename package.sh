@@ -22,7 +22,8 @@ CLEAN=1 ./build_morphos.sh
 cp -R out/AmigaGPT_MorphOS bundle/AmigaGPT/AmigaGPT_MorphOS
 
 # Copy catalog files to bundle directory
-rsync -av --include='*/' --include='*.catalog' --exclude='*' catalogs bundle/AmigaGPT/catalogs
+mkdir -p bundle/AmigaGPT/catalogs
+rsync -av --include='*/' --include='*.catalog' --exclude='*' catalogs/ bundle/AmigaGPT/catalogs/
 
 # Change directory to bundle directory
 cd bundle

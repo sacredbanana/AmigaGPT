@@ -79,7 +79,7 @@ LONG main(int argc, char **argv) {
         else if (config.speechSystem == SPEECH_SYSTEM_37)
             displayError(STRING_ERROR_SPEECH_INIT_WORKBENCH_37);
 #else
-        displayError(STRING_ERROR_SPEECH_OS4_INIT_FLITE);
+        displayError(STRING_ERROR_SPEECH_INIT_FLITE);
 #endif
         config.speechEnabled = FALSE;
         closeSpeech();
