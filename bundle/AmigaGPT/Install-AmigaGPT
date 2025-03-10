@@ -14,6 +14,8 @@
 (set #arosver ( / (getversion "aros.library" (resident)) 65536))
 (set #os4 0)
 (set #mos 0)
+
+; Detect CPU type
 (if (and (<> #cpu "68000") (<> #cpu "68010") )
   (set #cpu-install 1) )
 (if (and (<> "NOFPU" #fpu) (= #cpu-install 1) )
@@ -22,100 +24,69 @@
   (set #cpu-install 3) )
 (if (exists "libs:68060.library")
   (set #cpu-install 4) )
-(if (exists "codecs020fpu")
-  ; OS3 archive
-  (if (<> (getversion "MorphOS" (resident)) 0)
-    ( (set #mos 1)
-      (set #cpu-install 4) )
-    (if (>= #osver 52)
-      ( (set #os4 1)
-        (set #cpu-install 2) ) ) )
-  ; OS4 archive
-  (if (exists "/AutoInstall")
+
+; Detect OS type
+(if (<> (getversion "MorphOS" (resident)) 0)
+  ( (set #mos 1)
+    (set #cpu-install 4) )
+  (if (>= #osver 52)
     ( (set #os4 1)
-      (set #cpu-install 5) )
-  ; MOS archive
-    ( (set #mos 1)
-      (set #cpu-install 6) ) ) )
+      (set #cpu-install 2) ) ) )
 
 (if (and #os4 (= #installer-ver 53) )
   (set #installer-ver 43) ) ; Workaround for broken Installer 53.1-53.7
 
 (set #muidir (if (= #mos 1) "SYS:Classes/MUI" "MUI:Libs/MUI") )
 
+; Get AmigaGPT version
 (set #app-version (getversion "AmigaGPT/AmigaGPT_OS3") )
 (set #app-vernum (/ #app-version 65536 ) )
 (set #app-revnum (- #app-version (* #app-vernum 65536 ) ) )
 
+; Get user language
 (if (= (exists "ENV:Language") 1)
   (set @language (getenv "Language") ) )
 
+; Text strings
 (set #welcome 
-    ("Welcome to the %s installer!\nThis will install %s %ld.%ld on your system." @app-name @app-name #app-vernum #app-revnum)
+    ("Welcome to the %s installer!\nThis will install %s %ld.%ld on your system.\n\nAmigaGPT is a versatile ChatGPT client for Amiga systems that brings the capabilities of OpenAI's GPT to your Amiga." @app-name @app-name #app-vernum #app-revnum)
 )
 
 (set #wrongversion
 (cat "You have an old version of the program 'Installer' "
      "on your Amiga!\n\nThe installation procedure needs at least Installer 42.9.\n\n"
-     "Please check your configuration!"
-))
+     "Please check your configuration!")
+)
 
 (set #destdir-prompt "Please select the drawer where %s should be installed.\n")
 (set #destdir-help "Typically, 'Work:' is selected as destination.")
 (set #amigagptdestdir-prompt ("Please select the drawer where %s should be installed. A new drawer \"%s\" will be created.\n" @app-name @app-name))
 (set #amigagptdestdir-help "Typically, 'Work:' is selected as destination.")
 
-(set #surfdir-info    "the Surfer applications")
-(set #muidir-info     "the MUI drawer")
-(set #devsdir-info    "additional device drivers")
-(set #envdir-info     "additional preferences")
-(set #classesdir-info "ClassAct files and some Datatypes")
-(set #libsdir-info    "additional libraries")
 (set #localedir-info  "locale catalogs")
-(set #fontsdir-info   "additional fonts")
-
 (set #installing "Installing %s...")
-
-(set #no-diskspace     "To install the Surfer package into '%s', you need at least %ld bytes of free harddrive space!")
-
-(set #startup-prompt    "Some lines need to be added to S:User-Startup for %s:\n\n%s")
-(set #startup-help      "The Surfer package won't work correctly without these lines!")
-
-(set #ask-config "The Surfer package has now been installed. Do you want to set up the configuration for it? Please reboot your Amiga once after the Surfer configuration!")
-(set #ask-config-help "Without setting up the configuration after an installation or an update, you might run into problems later!")
-
-(set #bonus-disk "On the last disk of the Surfer package, you'll find the FAX-Software MultiFax-Light as a little extra. If you want to try it, please install it separately.")
-
-(set #ask-disk1         "Please insert disk 'SurferDisk1'!")
-(set #ask-disk2         "Please insert disk 'SurferDisk2'!")
-(set #ask-disk3         "Please insert disk 'SurferDisk3'!")
-
-(set #muiinst-prompt    "Do you want to overwrite your current up to date MUI version with the possibly older MUI-AT V14.107?")
-(set #muiinst-help      "You seem to have a MUI version installed alread that is up to date. Don't overwrite it if you aren't completely sure about it.")
-
-(set #inetinst-prompt   "INet-225 seems to be already installed. Do you want to install the Surfer INet 7.100 anyway?")
-(set #inetinst-help     "It seems that you already have INet-225 installed on your system. If this installation works well, you don't need the INet V7.100 in this package.")
-
-(set #prefsave-prompt   "Do you want to keep the existing preferences for\n\n'%s'?")
-(set #prefsave-help     "If you don't keep existing preferences, they will be overwritten with default values!")
+(set #no-diskspace "To install AmigaGPT into '%s', you need at least %ld bytes of free harddrive space!")
+(set #startup-prompt "Some lines need to be added to S:User-Startup for %s:\n\n%s")
+(set #startup-help "AmigaGPT won't work correctly without these lines!")
+(set #os-selection-prompt "Please select which version of AmigaGPT you want to install:")
+(set #os-selection-help "Choose the version that matches your Amiga system.")
+(set #languages-prompt "Please select which languages you want to install:")
+(set #languages-help "Choose the languages you want to use with AmigaGPT.")
 
 ;------------------------------------------------------------------------
 ; Cleanup any temporary mess we created
 (procedure CLEANUP
-    ; Nothing to cleanup
     (delete (tackon @default-dest ".tempinstall") (all) (optional "force"))
 ) ; CLEANUP
 
 ;------------------------------------------------------------------------
 ; Obtain an installation path
 (procedure GETPATH #gp_envname #gp_default #gp_remdir #gp_msg #gp_help
-
     (set #gp_res "")
     (while (= "" #gp_res)
         (set #gp_res #gp_default)
         (if (not (exists #gp_res (noreq)))
           (
-            ; Surfer 1.1 Hack! We will have a work, but not right now.
             (if (= #gp_res "Work:")
               (
                 (set #gp_res "")
@@ -125,11 +96,9 @@
 
             (if (<> "" #gp_envname)
               (
-                (set #gp_res (getenv (cat "Surfer/Path_" #gp_envname)))
-
+                (set #gp_res (getenv (cat "AmigaGPT/Path_" #gp_envname)))
                 (if (AND (<> "" #gp_res) #gp_remdir)
                   (
-                    ; Remove the "Internet" suffix
                     (set #gp_res (pathonly #gp_res))
                   )
                 ) ; if
@@ -143,7 +112,6 @@
 
         (if (OR (= "" #gp_res) (= @user-level 2))
           (
-            ; We had a problem. So we need to ask the user!
             (set #gp_res
                 (expandpath
                     (askdir
@@ -168,142 +136,7 @@
 
     ; return the result!
     (set #gp_res #gp_res)
-
 ) ; GETPATH
-
-;------------------------------------------------------------------------
-(procedure RUNLHEX #rl_archive #rl_dest #rl_msg
-    (working (#installing #rl_msg))
-    (run (cat "C:lhex \"-qfw" #rl_dest "\" x \"" #rl_archive "\""))
-) ; RUNLHEX
-
-;------------------------------------------------------------------------
-; Unpack an archive like RUNLHEX, but to a temporary subdirectory
-(procedure RUNLHEX2TEMP #rl2t_archive #rl2t_dest #rl2t_msg
-
-    (set #rl2t_destpath #rl2t_dest)
-
-    (set #rl2t_temppath (tackon @default-dest ".tempinstall"))
-    (delete #rl2t_temppath (all) (optional "force"))
-    (makedir #rl2t_temppath)
-
-    (RUNLHEX #rl2t_archive #rl2t_temppath #rl2t_msg)
-
-) ; RUNLHEX2TEMP
-
-;------------------------------------------------------------------------
-(procedure UPD_TEMP2DEST #rl2t_usecopylib #rl2t_file
-
-    ; This may be called multiple times after RUNLHEX2TEMP
-    ; it will update a file from the temporary area to the
-    ; actual destination using copylib if requested to do so.
-
-    (set #rl2t_src (tackon #rl2t_temppath #rl2t_file))
-    (set #rl2t_dst (tackon #rl2t_destpath #rl2t_file))
-
-    (working (#installing #rl2t_file))
-
-    ; A directory as source needs special handling!
-    (if (= (exists #rl2t_src) 2)
-      (
-        ; A directory as source means copying the whole thing as is
-        ; Use copyfiles for copying
-        (copyfiles
-            (source #rl2t_src)
-            (dest #rl2t_dst)
-            (optional "force" "askuser")
-            (all))
-      )
-      (
-        ; Not a directory, copy the file to the correct destination
-        (set #rl2t_dstdir (pathonly #rl2t_dst))
-        (makedir #rl2t_dstdir)
-
-        (if #rl2t_usecopylib
-          (
-            ; Use copylib for copying
-            (copylib
-                (source #rl2t_src)
-                (dest #rl2t_dstdir)
-                (optional "force" "askuser")
-            )
-          )
-          (
-            ; Use copyfiles for copying
-            (copyfiles
-                (source #rl2t_src)
-                (dest #rl2t_dstdir)
-                (optional "force" "askuser")
-            )
-          )
-        ) ; if
-      )
-    ) ; if
-
-    ; Now delete the file/dir in the temporary storage area to conserve
-    ; disk space
-    (delete #rl2t_src (all) (optional "force"))
-
-) ; UPDATETEMP2DEST
-
-;------------------------------------------------------------------------
-; Cleanup the temporary directory created in RUNLHEX2TEMP
-(procedure KILLTEMP
-
-    (delete #rl2t_temppath (all) (optional "force"))
-
-) ; KILLTEMP
-
-;------------------------------------------------------------------------
-; Save a prefs file into a suitable subdirectory
-(procedure SAVEPREFS #sps_basedir #sps_file
-
-    (set #sps_name (tackon #sps_basedir #sps_file))
-    (if (exists #sps_name)
-      (
-        ; Yo. The file exists. Save it!
-        (set #sps_prefsdir (tackon (pathonly #sps_name) ".oldprefs"))
-
-        (makedir #sps_prefsdir)
-        (copyfiles
-            (source #sps_name)
-            (dest #sps_prefsdir)
-            (optional "force" "askuser"))
-      )
-    ) ; if
-
-); SAVEPREFS
-
-;------------------------------------------------------------------------
-; Ask the user if he wants to keep his/her prefs and cleanup
-; things accordingly
-(procedure SAVEPREFSEND #spe_basedir #spe_subdir #spe_appname
-
-    ; This matches SAVEPREFS
-    (set #spe_prefsdir (tackon #spe_basedir (tackon #spe_subdir ".oldprefs")))
-
-    (if (exists #spe_prefsdir)
-      (
-        ; We got prefs to check. default is "Yes, keep them"
-        (if (askbool (prompt (#prefsave-prompt #spe_appname))
-                     (help   #prefsave-help)
-                     (default 1))
-          (
-            ; Yo. Keep the old prefs!
-            (copyfiles
-                (source #spe_prefsdir)
-                (dest (tackon #spe_basedir #spe_subdir))
-                (pattern "#?")
-                (optional "force" "askuser"))
-          )
-        ) ; if
-
-        ; Ok, done keeping prefs. Now kill the backup!
-        (delete #spe_prefsdir (all) (optional "force"))
-      )
-    ) ; if
-
-); SAVEPREFSEND
 
 ;------------------------------------------------------------------------
 ; Helper functions for language names
@@ -399,6 +232,7 @@
 )
 
 (procedure p_install-catalogs
+  (message "aaa")
   (set #avail-lang 1) ; English (built-in)
   (foreach "catalogs" "#?"
     (set #i 0)
@@ -432,7 +266,7 @@
   (if (< #installer-ver 42)
     (set #nolang-fmt "(%s)")
     (set #nolang-fmt "") )
-  
+  (message "ddd")
   ; Now use the individual choice variables
   (set #languages
     (askoptions
@@ -488,378 +322,180 @@
 
 (welcome #welcome)
 
-(p_install-catalogs)
-
-(complete 0)
-
-(set #envdir     "ENVARC:")
-(set #devsdir    (GETPATH "" "DEVS:"       TRUE (#destdir-prompt #devsdir-info) #destdir-help))
-(set #classesdir (GETPATH "" "SYS:Classes" TRUE (#destdir-prompt #classesdir-info) #destdir-help))
-(set #libsdir    (GETPATH "" "LIBS:"       TRUE (#destdir-prompt #libsdir-info) #destdir-help))
-(set #localedir  (GETPATH "" "LOCALE:"     TRUE (#destdir-prompt #localedir-info) #destdir-help))
-(set #fontsdir   (GETPATH "" "FONTS:"      TRUE (#destdir-prompt #fontsdir-info) #destdir-help))
-
-(complete 15)
-
 ;------------------------------------------------------------------------
-; We have several destinations to check as our package is unfortunately
-; somewhat spread out.
+; Let user select which OS version to install
+(set #os-choice
+  (askchoice
+    (prompt #os-selection-prompt)
+    (help #os-selection-help)
+    (choices
+      "AmigaOS 3.x"
+      "AmigaOS 4.x"
+      "MorphOS"
+    )
+    (default (if #os4 1 (if #mos 2 0)))
+  )
+)
 
-    ; We assume a new installation on an A1200 without MUI or INet!
-    ;; (set AddWorkAssign FALSE)
-    ;; (set AddINetAssign TRUE)
-    ;; (set InstallMUI    FALSE)
-    ;; (set AddMUIAssign  FALSE)
-    ;; (set InstallINet   FALSE)
-    ;; (set AddINetAssign FALSE)
-    (set IsUpdate FALSE)
+; Set OS flags based on user choice
+(set #os4 (if (= #os-choice 1) 1 0))
+(set #mos (if (= #os-choice 2) 1 0))
 
-    ; First find the AmigaGPT base
+(complete 20)
 
-    (set #amigagptdirbase (GETPATH @app-name @default-dest TRUE #amigagptdestdir-prompt #amigagptdestdir-help))
+; First find the AmigaGPT base
 
-    ; We have to create a drawer "AmigaGPT" there!
-    (set #amigagptdir (tackon #amigagptdirbase @app-name))
+(set #amigagptdirbase (GETPATH @app-name @default-dest TRUE #amigagptdestdir-prompt #amigagptdestdir-help))
 
-    (if (not (exists #amigagptdir))
-      (
-        (makedir #amigagptdir (infos))
-      )
-      (
-        ; This must be an update!
-        (set IsUpdate TRUE)
-      )
+; We have to create a drawer "AmigaGPT" there!
+(set #amigagptdir (tackon #amigagptdirbase @app-name))
+
+(set #isupdate FALSE)
+(if (not (exists #amigagptdir))
+  (
+    ; For a new setup, we should leave some space!
+    (if (< (getdiskspace #amigagptdirbase) 4000000)
+        (abort (#no-diskspace #amigagptdirbase 4000000))
     )
 
-    ; Ok, we found the correct destination now
-    (set @default-dest #amigagptdir)
+    ; Just to be sure.
+    (makedir #amigagptdir (infos))
+  )
+  (
+    ; This must be an update!
+    (set #isupdate TRUE)
+  )
+)
 
-    ; MUI only needs to be installed if there isn't a suitable version
-    ; already. So we need to check for MUI 14.107 first!
-;; ;;     ;; (if (< (getversion "LIBS:muimaster.library") 917611)
-;; ;;     ;;   (
-;; ;;     ;;     ; Hmm. We don't have suitable MUI. Install it
-;; ;;     ;;     (set InstallMUI    TRUE)
-;; ;;     ;;     ;; (set AddMUIAssign  TRUE)
-;; ;;     ;;   )
-;; ;;     ;;   (
-;;         ; Ok. A suitable MUI is there. In expert mode ask the user if he
-;;         ; wants to overwrite it with the old one.
-;;         ;;     (if (= @user-level 2)
-;;         ;;       (
-;;         ;;         (if (askbool (prompt #muiinst-prompt)
-;;         ;;                      (help   #muiinst-help)
-;;         ;;                      (default 0))
-;;         ;;           (
-;;         ;;             ; Ok. Install it anyway!
-;;         ;;             (set InstallMUI    TRUE)
-;;         ;;             (set AddMUIAssign  TRUE)
-;;         ;;           )
-;;         ;;         ) ; if
-;;         ;;       )
-;;     ;;     ) ; if
+; Ok, we found the correct destination now
+(set @default-dest #amigagptdir)
 
-;;     ; If we already have INet, check before simply installing it
-;;     ; This works a lot like the MUI check!
-;;     ; We require INet 7.100.
-;;     ;; (if (<> "" (getassign "INet" "av"))
-;;     ;;   (
-;;     ;;     (if (< (getversion "INet:libs/inet.library") 458852)
-;;     ;;       (
-;;     ;;         ; Hmm. We don't have suitable INet. Install it
-;;     ;;         (set InstallINet   TRUE)
-;;     ;;         (set AddINetAssign TRUE)
-;;     ;;       )
-;;     ;;       (
-;;     ;;         ; Ok. A suitable INet is there. In expert mode ask the user if he
-;;     ;;         ; wants to overwrite it with the old one.
-;;     ;;         (if (= @user-level 2)
-;;     ;;           (
-;;     ;;             (if (askbool (prompt #inetinst-prompt)
-;;     ;;                          (help   #inetinst-help)
-;;     ;;                          (default 0))
-;;     ;;               (
-;;     ;;                 ; Ok. Install it anyway!
-;;     ;;                 (set InstallINet   TRUE)
-;;     ;;                 (set AddINetAssign TRUE)
-;;     ;;               )
-;;     ;;             ) ; if
-;;     ;;           )
-;;     ;;         ) ; if
-;;     ;;       )
-;;     ;;     ) ; if
-;;     ;;   )
-;;     ;;   (
-;;     ;;     ; Hmm. We don't have suitable INet. Install it
-;;     ;;     (set InstallINet   TRUE)
-;;     ;;     (set AddINetAssign TRUE)
-;;     ;;   )
-;;     ;; ) ; if
+; Check for catalogs and install them if available
+(if (exists "catalogs")
+  (
+    (set #localedir  (GETPATH "" "LOCALE:" TRUE (#destdir-prompt #localedir-info) #destdir-help))
+    (p_install-catalogs)
+  )
+)
 
-;;     ; This is tricky. We want the boot-volume as default, but the
-;;     ; user might have reassigned it. In that case we assume that
-;;     ; s/he knows what s/he is doing!
-;;     ;; (if InstallMUI
-;;     ;;   (
-;;     ;;     (set #muidir     (GETPATH "" "SYS:" TRUE (#destdir-prompt #muidir-info) #destdir-help))
-;;     ;;   )
-;;     ;; ) ; if
+(complete 30)
 
-;;     (complete 5)
+;------------------------------------------------------------------------
+; Copy the appropriate version of AmigaGPT based on user selection
+(working (#installing @app-name))
 
-;; ;------------------------------------------------------------------------
-;; ; First, we install lhex and Installer into C: This won't change and
-;; ; we need them.
-;; ;; (askdisk (dest "SurferDisk1") (prompt #ask-disk1) (help @askdisk-help))
+; Copy the appropriate executable based on OS choice
+(if (= #os-choice 0)
+  (
+    (copyfiles 
+      (source "AmigaGPT/AmigaGPT_OS3")
+      (dest @default-dest)
+      (optional "force" "askuser")
+    )
+    (copyfiles 
+      (source "AmigaGPT/AmigaGPT_OS3.info")
+      (dest @default-dest)
+      (optional "force" "askuser")
+    )
+    (copyfiles 
+      (source "icons/AmigaGPT_Drawer_OS3.info")
+      (dest #amigagptdirbase)
+      (newname (cat @app-name ".info"))
+      (optional "force" "askuser")
+    )
+  )
+)
 
-;; ;; (working (#installing "Installer"))
-;; ;; (copylib
-;; ;;     (source "Installer")
-;; ;;     (dest "C:")
-;; ;;     (optional "force" "askuser")
-;; ;; )
+(if (= #os-choice 1)
+  (
+    (copyfiles 
+      (source "AmigaGPT/AmigaGPT_OS4")
+      (dest @default-dest)
+      (optional "force" "askuser")
+    )
+    (copyfiles 
+      (source "AmigaGPT/AmigaGPT_OS4.info")
+      (dest @default-dest)
+      (optional "force" "askuser")
+    )
+    (copyfiles 
+      (source "icons/AmigaGPT_Drawer_OS4.info")
+      (dest #amigagptdirbase)
+      (newname (cat @app-name ".info"))
+      (optional "force" "askuser")
+    )
+  )
+)
 
-;; ;; (complete 8)
+(if (= #os-choice 2)
+  (
+    (copyfiles 
+      (source "AmigaGPT/AmigaGPT_MorphOS")
+      (dest @default-dest)
+      (optional "force" "askuser")
+    )
+    (copyfiles 
+      (source "AmigaGPT/AmigaGPT_MorphOS.info")
+      (dest @default-dest)
+      (optional "force" "askuser")
+    )
+    (copyfiles 
+      (source "icons/AmigaGPT_Drawer_OS4.info") ; Use OS4 drawer icon for MorphOS
+      (dest #amigagptdirbase)
+      (newname (cat @app-name ".info"))
+      (optional "force" "askuser")
+    )
+  )
+)
 
-;; ;; (working (#installing "lhex"))
-;; ;; (copylib
-;; ;;     (source "lhex")
-;; ;;     (dest "C:")
-;; ;;     (optional "force" "askuser")
-;; ;; )
+(complete 50)
 
-;; ;; (complete 5)
+;------------------------------------------------------------------------
+; Copy documentation
+(working (#installing "Documentation"))
+(copyfiles 
+  (source "AmigaGPT.guide")
+  (dest @default-dest)
+  (optional "force" "askuser")
+)
+(copyfiles 
+  (source "AmigaGPT.guide.info")
+  (dest @default-dest)
+  (optional "force" "askuser")
+)
+(copyfiles 
+  (source "AmigaGPT.readme")
+  (dest @default-dest)
+  (optional "force" "askuser")
+)
+(copyfiles 
+  (source "AmigaGPT.readme.info")
+  (dest @default-dest)
+  (optional "force" "askuser")
+)
 
-;; ;------------------------------------------------------------------------
-;; ; Now install Inet, fonts.lha and locale.lha, because they reside on disk #1
-;; ;; (if InstallINet
-;; ;;   (
-;; ;;     (SAVEPREFS #surferdir "Inet/db/group")
-;; ;;     (SAVEPREFS #surferdir "Inet/db/networks")
-;; ;;     (SAVEPREFS #surferdir "Inet/db/protocols")
-;; ;;     (SAVEPREFS #surferdir "Inet/db/services")
-;; ;;     (SAVEPREFS #surferdir "Inet/db/syslog.conf")
-;; ;;     (RUNLHEX "inet.lha" #surferdir "INet")
-;; ;;     (SAVEPREFSEND #surferdir "Inet/db" "INet")
-;; ;;   )
-;; ;; ) ; if
-;; ;; (complete 15)
+(complete 70)
 
-;; ;; (RUNLHEX "locale.lha"  #localedir #localedir-info)
-;; ;; (complete 18)
+;------------------------------------------------------------------------
+; Copy devs directory
+(working (#installing "Device files"))
+(copyfiles 
+  (source "AmigaGPT/devs")
+  (dest @default-dest)
+  (all)
+  (optional "force" "askuser")
+)
+(copyfiles 
+  (source "AmigaGPT/devs.info")
+  (dest @default-dest)
+  (optional "force" "askuser")
+)
 
-;; ;; (RUNLHEX "fonts.lha"   #fontsdir #fontsdir-info)
-;; ;; (complete 19)
+(complete 100)
 
-;; ;; ;------------------------------------------------------------------------
-;; ;; ; On disk #2, we got work_(www|email|irc|ftp).lha, libs.lha, devs.lha, envarc.lha
-;; ;; (askdisk (dest "SurferDisk2") (prompt #ask-disk2) (help @askdisk-help))
+(message (cat "AmigaGPT has been successfully installed.\n\n"
+              "You can find it in:\n" #amigagptdir "\n\n"
+              "Thank you for installing AmigaGPT!"))
 
-;; ;; (SAVEPREFS #surferdir "WWW/Bookmarks.html")
-;; ;; (SAVEPREFS #surferdir "WWW/MindWalker.prefs")
-;; ;; (RUNLHEX "SurferDisk2:work_www.lha"   #surferdir #surfdir-info)
-;; ;; (SAVEPREFSEND #surferdir "WWW" "MindWalker")
-;; ;; (complete 20)
-
-;; ;; (SAVEPREFS #surferdir "E-Mail/Voodoo.prefs")
-;; ;; (RUNLHEX "SurferDisk2:work_email.lha"   #surferdir #surfdir-info)
-;; ;; (SAVEPREFSEND #surferdir "E-Mail" "Voodoo")
-;; ;; (complete 24)
-
-;; ;; (RUNLHEX "SurferDisk2:work_irc.lha"   #surferdir #surfdir-info)
-;; ;; (complete 28)
-;; ;; (RUNLHEX "SurferDisk2:work_ftp.lha"   #surferdir #surfdir-info)
-;; ;; (complete 30)
-
-;; ;; (RUNLHEX2TEMP "SurferDisk2:libs.lha"   #libsdir #libsdir-info)
-;; ;; (UPD_TEMP2DEST TRUE "gtlayout.library")
-;; ;; (KILLTEMP)
-
-;; ;; (complete 35)
-;; ;; (RUNLHEX2TEMP "SurferDisk2:devs.lha"   #devsdir #devsdir-info)
-;; ;; (UPD_TEMP2DEST TRUE "networks/ppp.device")
-;; ;; (UPD_TEMP2DEST TRUE "networks/slip.device")
-;; ;; (UPD_TEMP2DEST FALSE "DataTypes")
-;; ;; (KILLTEMP)
-
-;; ;; (complete 40)
-
-;; ;; (SAVEPREFS #envdir "sana2/ppp0.config")
-;; ;; (SAVEPREFS #envdir "sana2/slip0.config")
-;; ;; (RUNLHEX "SurferDisk2:envarc.lha" #envdir #envdir-info)
-;; ;; (SAVEPREFSEND #envdir "sana2" #envdir-info)
-;; ;; (complete 42)
-
-;; ;------------------------------------------------------------------------
-;; ; On disk #3, we got classes.lha, locale.lha, fonts.lha, and MUI.lha
-;; ;; (askdisk (dest "SurferDisk3") (prompt #ask-disk3) (help @askdisk-help))
-
-;; ;; (RUNLHEX2TEMP "SurferDisk3:classes.lha" #classesdir #classesdir-info)
-;; ;; (UPD_TEMP2DEST TRUE "window.class")
-;; ;; (UPD_TEMP2DEST TRUE "arexx.class")
-;; ;; (UPD_TEMP2DEST TRUE "DataTypes/gif.datatype")
-;; ;; (UPD_TEMP2DEST TRUE "DataTypes/jpeg.datatype")
-;; ;; (UPD_TEMP2DEST TRUE "DataTypes/png.datatype")
-;; ;; (UPD_TEMP2DEST TRUE "DataTypes/xbm.datatype")
-;; ;; (UPD_TEMP2DEST TRUE "Gadgets/button.gadget")
-;; ;; (UPD_TEMP2DEST TRUE "Gadgets/checkbox.gadget")
-;; ;; (UPD_TEMP2DEST TRUE "Gadgets/clicktab.gadget")
-;; ;; (UPD_TEMP2DEST TRUE "Gadgets/integer.gadget")
-;; ;; (UPD_TEMP2DEST TRUE "Gadgets/layout.gadget")
-;; ;; (UPD_TEMP2DEST TRUE "Gadgets/listbrowser.gadget")
-;; ;; (UPD_TEMP2DEST TRUE "Gadgets/scroller.gadget")
-;; ;; (UPD_TEMP2DEST TRUE "Gadgets/space.gadget")
-;; ;; (UPD_TEMP2DEST TRUE "Gadgets/speedbar.gadget")
-;; ;; (UPD_TEMP2DEST TRUE "Gadgets/string.gadget")
-;; ;; (UPD_TEMP2DEST TRUE "Gadgets/textfield.gadget")
-;; ;; (UPD_TEMP2DEST TRUE "Images/bevel.image")
-;; ;; (UPD_TEMP2DEST TRUE "Images/drawlist.image")
-;; ;; (UPD_TEMP2DEST TRUE "Images/glyph.image")
-;; ;; (UPD_TEMP2DEST TRUE "Images/label.image")
-;; ;; (UPD_TEMP2DEST TRUE "Images/penmap.image")
-;; ;; (KILLTEMP)
-
-;; ;; (complete 62)
-;; ;; (RUNLHEX "SurferDisk3:work.lha"   #surferdir #surfdir-info)
-;; ;; (complete 65)
-;; ; Install MUI only if needed!
-;; ;; (if InstallMUI
-;; ;;   (
-;; ;;     (RUNLHEX "SurferDisk3:mui.lha"     #muidir #muidir-info)
-;; ;;   )
-;; ;; ) ; if
-;; (complete 80)
-
-;; ;------------------------------------------------------------------------
-;; ; There is the config backup-directory that might not exist yet.
-;; ; Some stuff depends on it!
-;; ;; (makedir (tackon #surferdir "Surfer-Backup"))
-
-;; ;------------------------------------------------------------------------
-;; ; We might need to create a Work: Assign. This is basically
-;; ; Surfer 1.1 magic!
-;; ; This is a necessary hack: Surfer MUST reside in Work:Internet currently!
-;; ;; ; (Surfer 1.1!)
-;; ;; (if (= "" (getassign "Work" "adv"))
-;; ;;     (Set AddWorkAssign TRUE)
-;; ;; ) ; if
-
-;; ;; (if AddWorkAssign
-;; ;;   (
-;; ;;     (set cmd (cat "Assign Work: \"" #surferdirbase "\"\n"))
-;; ;;     (startup "INTERNET-SURFER"
-;; ;;         (prompt (#startup-prompt "Surfer Package" cmd))
-;; ;;         (help #startup-help)
-;; ;;         (command cmd)
-;; ;;     )
-
-;; ;;     ; If we have to add a Work: Assign, we better create one right now
-;; ;;     ; The user might want to start the surfer right away!
-;; ;;     (makeassign "Work" #surferdirbase)
-;; ;;   )
-;; ;; )
-;; (complete 82)
-
-;; ; MUI might need one, too on a new installation
-;; ;; (if AddMUIAssign
-;; ;;   (
-;; ;;     (set cmd (cat "Assign MUI: " (tackon #muidir "MUI-AT") "\nAssign LIBS: MUI:Libs ADD\nAssign LOCALE: MUI:Locale ADD\n"))
-;; ;;     (startup "MUI-AT"
-;; ;;         (prompt (#startup-prompt "AT-MUI" cmd))
-;; ;;         (help #startup-help)
-;; ;;         (command cmd)
-;; ;;     )
-
-;; ;;     (if (not @pretend)
-;; ;;     (
-;; ;;       ; To help the poor fools
-;; ;;       (makeassign "MUI" (tackon #muidir "MUI-AT"))
-;; ;;       (run "Assign LIBS: MUI:Libs add")
-;; ;;       (run "Assign LOCALE: MUI:Locale add")
-;; ;;     ))
-;; ;;   )
-;; ;; )
-;; (complete 85)
-
-;; ; We should not forget INet!
-;; ;; (if AddINetAssign
-;; ;;   (
-;; ;;     (set #t (tackon #surferdir "INet"))
-;; ;;     (set cmd (cat "IF EXISTS \"" #t "\"\n  Assign INet: \"" #t "\"\n  Path INet:C ADD\nENDIF\n"))
-;; ;;     (startup "INet"
-;; ;;         (prompt (#startup-prompt "AT-INet" cmd))
-;; ;;         (help #startup-help)
-;; ;;         (command cmd)
-;; ;;     )
-
-;; ;;     ; Magic to avoid clashes!
-;; ;;     (if (<> "" (getassign "INet" "adv"))
-;; ;;         (run "Path INet:c remove")
-;; ;;     )
-
-;; ;;     ; To help the poor fools
-;; ;;     (if (not @pretend)
-;; ;;     (
-;; ;;       (makeassign "INet" #t)
-;; ;;     ))
-
-;; ;;     (run "Path INet:c add")
-;; ;;   )
-;; ;; )
-;; (complete 90)
-
-;; ;------------------------------------------------------------------------
-;; ; Something nifty. The user might still have an unmodified startup
-;; ; where T: points to RAM: We can't have that on an A1200 or Surfer
-;; ; won't run due to lack of memory. RAM: has the special feature
-;; ; that it is always full. We make use of this and expect at least 10K
-;; ; free temporary space!
-;; ;; (if (< (getdiskspace "T:") 10000)
-;; ;;   (
-;; ;;     (set #t (tackon #surferdir "Temp"))
-;; ;;     ; Hmm. It seems that this guy is using RAM:
-;; ;;     (set cmd (cat "If Not Exists \"" #t "\"\n  MakeDir \"" #t "\"\nEndIf\nDelete >NIL: \"" (tackon #t "#?") "\" quiet all\nAssign T: \"" #t "\"\n"))
-;; ;;     (startup "TEMPDIR"
-;; ;;         (prompt (#startup-prompt "Surfer" cmd))
-;; ;;         (help #startup-help)
-;; ;;         (command cmd)
-;; ;;     )
-
-;; ;;     (makedir #t)
-;; ;;     (if (not @pretend)
-;; ;;     (
-;; ;;       (makeassign "T" #t)
-;; ;;     ))
-;; ;;   )
-;; ;; )
-;; (complete 95)
-
-;; ;------------------------------------------------------------------------
-;; ; Finally create some information about where surfer resides now
-;; ;; (makedir "ENV:Surfer")
-;; ;; (makedir "ENVARC:Surfer")
-;; ;; (textfile (dest "ENV:Surfer/Path_SurferPackage") (append #surferdir))
-;; ;; (textfile (dest "ENVARC:Surfer/Path_SurferPackage") (append #surferdir))
-;; (complete 97)
-
-;; ;------------------------------------------------------------------------
-;; ; Inform the user about MF-Light
-;; ;; (message #bonus-disk (all))
-
-;; ;------------------------------------------------------------------------
-;; ; The user might want to update the configuration! This is valid for all
-;; ; user levels!
-;; ;; (user 2)
-;; ;; (if (askbool (prompt #ask-config) (help #ask-config-help) (default 1))
-;; ;;   (
-;; ;;     ; Just a try!
-;; ;;     (run (tackon #surferdir "Internet-Setup"))
-;; ;;   )
-;; ;; )
-
-;; ;------------------------------------------------------------------------
-;; ; That's it!
-;; (complete 100)
-
-;; (CLEANUP)
-;; (exit)
+(CLEANUP)
+(exit)
