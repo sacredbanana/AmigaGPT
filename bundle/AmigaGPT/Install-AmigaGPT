@@ -232,7 +232,6 @@
 )
 
 (procedure p_install-catalogs
-  (message "aaa")
   (set #avail-lang 1) ; English (built-in)
   (foreach "catalogs" "#?"
     (set #i 0)
@@ -266,7 +265,6 @@
   (if (< #installer-ver 42)
     (set #nolang-fmt "(%s)")
     (set #nolang-fmt "") )
-  (message "ddd")
   ; Now use the individual choice variables
   (set #languages
     (askoptions
@@ -344,7 +342,6 @@
 (complete 20)
 
 ; First find the AmigaGPT base
-
 (set #amigagptdirbase (GETPATH @app-name @default-dest TRUE #amigagptdestdir-prompt #amigagptdestdir-help))
 
 ; We have to create a drawer "AmigaGPT" there!
@@ -401,6 +398,21 @@
       (source "icons/AmigaGPT_Drawer_OS3.info")
       (dest #amigagptdirbase)
       (newname (cat @app-name ".info"))
+      (optional "force" "askuser")
+    )
+    (complete 70)
+    ;------------------------------------------------------------------------
+    ; Copy devs directory
+    (working (#installing "Device files"))
+    (copyfiles 
+      (source "AmigaGPT")
+      (dest @default-dest)
+      (pattern "devs")
+      (optional "force" "askuser")
+    )
+    (copyfiles 
+      (source "AmigaGPT/devs.info")
+      (dest @default-dest)
       (optional "force" "askuser")
     )
   )
@@ -474,28 +486,7 @@
   (optional "force" "askuser")
 )
 
-(complete 70)
-
-;------------------------------------------------------------------------
-; Copy devs directory
-(working (#installing "Device files"))
-(copyfiles 
-  (source "AmigaGPT/devs")
-  (dest @default-dest)
-  (all)
-  (optional "force" "askuser")
-)
-(copyfiles 
-  (source "AmigaGPT/devs.info")
-  (dest @default-dest)
-  (optional "force" "askuser")
-)
-
 (complete 100)
-
-(message (cat "AmigaGPT has been successfully installed.\n\n"
-              "You can find it in:\n" #amigagptdir "\n\n"
-              "Thank you for installing AmigaGPT!"))
 
 (CLEANUP)
 (exit)
