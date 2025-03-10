@@ -41,20 +41,17 @@
 (if (and #os4 (= #installer-ver 53) )
   (set #installer-ver 43) ) ; Workaround for broken Installer 53.1-53.7
 
-(set #dispdepth (if (< #installer-ver 44) (if (or #os4 #mos) 24 8) (querydisplay "screen" "depth") ) )
 (set #muidir (if (= #mos 1) "SYS:Classes/MUI" "MUI:Libs/MUI") )
 
 (set #app-version (getversion "AmigaGPT/AmigaGPT_OS3") )
 (set #app-vernum (/ #app-version 65536 ) )
 (set #app-revnum (- #app-version (* #app-vernum 65536 ) ) )
-(set #app-relstr (fileonly (expandpath "") ) )
-(set #app-relstr (substr #app-relstr 7 (- (strlen #app-relstr) 11 ) ) )
 
 (if (= (exists "ENV:Language") 1)
   (set @language (getenv "Language") ) )
 
 (set #welcome 
-    ("Welcome to the AmigaGPT installer!\nThis will install AmigaGPT %ld.%ld on your system.\nAmigaGPT is a versatile ChatGPT client for AmigaOS that brings the capabilities of OpenAI's GPT to your Amiga system." #app-vernum #app-revnum)
+    ("Welcome to the %s installer!\nThis will install %s %ld.%ld on your system." @app-name @app-name #app-vernum #app-revnum)
 )
 
 (set #wrongversion
@@ -308,83 +305,176 @@
 
 ); SAVEPREFSEND
 
-;; (procedure p_copy-catalog
-;;   (if (in #languages #catalog)
-;;     ( (set #lang-os3 (select #catalog "english" "bosanksi" "català" "czech" "dansk" "deutsch" "english_british" "español" "français" "greek" "hrvatski" "italiano" "magyar" "nederlands" "norsk" "polski" "português" "português-brazil" "russian" "slovak" "slovensko" "srpski" "suomi" "svenska" "türkçe") )
-;;       (set #lang-os4 (select #catalog "english" "bosnian" "catalan" "czech" "danish" "german" "english_british" "spanish" "french" "greek" "croatian" "italian" "hungarian" "dutch" "norwegian" "polish" "portuguese" "portuguese-brazil" "russian" "slovak" "slovenian" "serbian" "finnish" "swedish" "turkish") )
-;;       (set #dest-lang (tackon (tackon #localedir "Catalogs") (if #os4 #lang-os4 #lang-os3) ) )
-;;       (if (not (exists #dest-lang) ) (makedir #dest-lang) )
-;;       (set #source (tackon "catalogs" #lang-os4) )
-;;       (if (and (and (< #cpu-install 5) (or (>= #osver 46) (>= #arosver 40) ) ) (exists (tackon #source "iso") ) )
-;;         (set #source (tackon #source "iso") ) )
-;;       (copyfiles
-;;         (source #source)
-;;         (dest #dest-lang)
-;;         (pattern "#?.catalog")
-;;         (files) ) ) ) )
+;------------------------------------------------------------------------
+; Helper functions for language names
+;------------------------------------------------------------------------
 
-;; (procedure p_install-catalogs
-;;   (set #avail-lang 1) ; English (built-in)
-;;   (foreach "catalogs" "#?"
-;;     (set #i 0)
-;;     (while (<> @each-name (select #i "english" "bosnian" "catalan" "czech" "danish" "german" "english_british" "spanish" "french" "greek" "croatian" "italian" "hungarian" "dutch" "norwegian" "polish" "portuguese" "portuguese-brazil" "russian" "slovak" "slovenian" "serbian" "finnish" "swedish" "turkish") )
-;;       (set #i (+ #i 1))
-;;     )
-;;     (set #avail-lang (bitor #avail-lang (shiftleft 1 #i)))
-;;   )
+(procedure get-os3-lang #index
+  (if (= #index 0) (set @result "english") (
+  if (= #index 1) (set @result "bosanksi") (
+  if (= #index 2) (set @result "català") (
+  if (= #index 3) (set @result "czech") (
+  if (= #index 4) (set @result "dansk") (
+  if (= #index 5) (set @result "deutsch") (
+  if (= #index 6) (set @result "english_british") (
+  if (= #index 7) (set @result "español") (
+  if (= #index 8) (set @result "français") (
+  if (= #index 9) (set @result "greek") (
+  if (= #index 10) (set @result "hrvatski") (
+  if (= #index 11) (set @result "italiano") (
+  if (= #index 12) (set @result "magyar") (
+  if (= #index 13) (set @result "nederlands") (
+  if (= #index 14) (set @result "norsk") (
+  if (= #index 15) (set @result "polski") (
+  if (= #index 16) (set @result "português") (
+  if (= #index 17) (set @result "português-brazil") (
+  if (= #index 18) (set @result "russian") (
+  if (= #index 19) (set @result "sloven?ina") (
+  if (= #index 20) (set @result "slovensko") (
+  if (= #index 21) (set @result "srpski") (
+  if (= #index 22) (set @result "suomi") (
+  if (= #index 23) (set @result "svenska") (
+  if (= #index 24) (set @result "türkçe") (
+  (set @result "unknown")
+  ))))))))))))))))))))))))))
+  )
 
-;;   (set #default-lang 1) ; English
-;;   (set #i 0)
-;;   (while (<> @language (select #i "english" "bosanksi" "català" "czech" "dansk" "deutsch" "english_british" "español" "français" "greek" "hrvatski" "italiano" "magyar" "nederlands" "norsk" "polski" "português" "português-brazil" "russian" "slovak" "slovensko" "srpski" "suomi" "svenska" "türkçe") )
-;;     (set #i (+ #i 1))
-;;   )
-;;   (if (in #avail-lang #i)
-;;     (set #default-lang (bitor #default-lang (shiftleft 1 #i))))
+(procedure get-os4-lang #index
+  (if (= #index 0) (set @result "english") (
+  if (= #index 1) (set @result "bosnian") (
+  if (= #index 2) (set @result "catalan") (
+  if (= #index 3) (set @result "czech") (
+  if (= #index 4) (set @result "danish") (
+  if (= #index 5) (set @result "german") (
+  if (= #index 6) (set @result "english_british") (
+  if (= #index 7) (set @result "spanish") (
+  if (= #index 8) (set @result "french") (
+  if (= #index 9) (set @result "greek") (
+  if (= #index 10) (set @result "croatian") (
+  if (= #index 11) (set @result "italian") (
+  if (= #index 12) (set @result "hungarian") (
+  if (= #index 13) (set @result "dutch") (
+  if (= #index 14) (set @result "norwegian") (
+  if (= #index 15) (set @result "polish") (
+  if (= #index 16) (set @result "portuguese") (
+  if (= #index 17) (set @result "portuguese-brazil") (
+  if (= #index 18) (set @result "russian") (
+  if (= #index 19) (set @result "slovak") (
+  if (= #index 20) (set @result "slovenian") (
+  if (= #index 21) (set @result "serbian") (
+  if (= #index 22) (set @result "finnish") (
+  if (= #index 23) (set @result "swedish") (
+  if (= #index 24) (set @result "turkish") (
+  (set @result "unknown")
+  ))))))))))))))))))))))))))
+)
 
-;;   (if (< #installer-ver 42)
-;;     (set #nolang-fmt "(%s)")
-;;     (set #nolang-fmt "") )
+; Set the total number of languages
+(set #languages-count 25)
 
-;;   (set #languages
-;;     (askoptions
-;;       (choices
-;;         (cat #propchoices "English (built-in)")
-;; 	(if (in #avail-lang  1) "Bosanski" (#nolang-fmt "Bosanski"))
-;; 	(if (in #avail-lang  2) "Català" (#nolang-fmt "Català"))
-;; 	(if (in #avail-lang  3) "Czech" (#nolang-fmt "Czech"))
-;; 	(if (in #avail-lang  4) "Dansk" (#nolang-fmt "Dansk"))
-;; 	(if (in #avail-lang  5) "Deutsch" (#nolang-fmt "Deutsch"))
-;; 	(if (in #avail-lang  6) "English (built-in)" (#nolang-fmt "English (built-in)"))
-;; 	(if (in #avail-lang  7) "Español" (#nolang-fmt "Español"))
-;; 	(if (in #avail-lang  8) "Français" (#nolang-fmt "Français"))
-;; 	(if (in #avail-lang  9) "Greek" (#nolang-fmt "Greek"))
-;; 	(if (in #avail-lang 10) "Hrvatski" (#nolang-fmt "Hrvatski"))
-;; 	(if (in #avail-lang 11) "Italiano" (#nolang-fmt "Italiano"))
-;; 	(if (in #avail-lang 12) "Magyar" (#nolang-fmt "Magyar"))
-;; 	(if (in #avail-lang 13) "Nederlands" (#nolang-fmt "Nederlands"))
-;; 	(if (in #avail-lang 14) "Norsk" (#nolang-fmt "Norsk"))
-;; 	(if (in #avail-lang 15) "Polski" (#nolang-fmt "Polski"))
-;; 	(if (in #avail-lang 16) "Português" (#nolang-fmt "Português"))
-;; 	(if (in #avail-lang 17) "Português-brasil" (#nolang-fmt "Português-brasil"))
-;; 	(if (in #avail-lang 18) "Russian" (#nolang-fmt "Russian"))
-;; 	(if (in #avail-lang 19) "Slovak" (#nolang-fmt "Slovak"))
-;; 	(if (in #avail-lang 20) "Slovensko" (#nolang-fmt "Slovensko"))
-;; 	(if (in #avail-lang 21) "Srpski" (#nolang-fmt "Srpski"))
-;; 	(if (in #avail-lang 22) "Suomi" (#nolang-fmt "Suomi"))
-;; 	(if (in #avail-lang 23) "Svenska" (#nolang-fmt "Svenska"))
-;; 	(if (in #avail-lang 24) "Türkçe" (#nolang-fmt "Türkçe"))
-;;       )
-;;       (prompt #languages-prompt)
-;;       (help #languages-help)
-;;       (default #default-lang) ) )
-;;   (set #catdir (tackon #localedir "Catalogs"))
-;;   (if (not (exists #catdir) ) (makedir #catdir) )
+;------------------------------------------------------------------------
+; Catalog installation procedures
+;------------------------------------------------------------------------
 
-;;   (set #catalog 1)
-;;   (until (> #catalog 20)
-;;     (p_copy-catalog)
-;;     (set #catalog (+ #catalog 1) )
-;;   ) )
+(procedure p_copy-catalog
+  (if (in #languages #catalog)
+    ( 
+      (get-os3-lang #catalog)
+      (set #lang-os3 @result)
+      (get-os4-lang #catalog)
+      (set #lang-os4 @result)
+      
+      (set #dest-lang (tackon (tackon #localedir "Catalogs") (if #os4 #lang-os4 #lang-os3) ) )
+      (if (not (exists #dest-lang) ) (makedir #dest-lang) )
+      (set #source (tackon "catalogs" #lang-os4) )
+      (if (and (and (< #cpu-install 5) (or (>= #osver 46) (>= #arosver 40) ) ) (exists (tackon #source "iso") ) )
+        (set #source (tackon #source "iso") ) )
+      (copyfiles
+        (source #source)
+        (dest #dest-lang)
+        (pattern "#?.catalog")
+        (files) ) 
+    ) 
+  )
+)
+
+(procedure p_install-catalogs
+  (set #avail-lang 1) ; English (built-in)
+  (foreach "catalogs" "#?"
+    (set #i 0)
+    (while (< #i #languages-count)
+      (get-os4-lang #i)
+      (if (= @each-name @result)
+        (
+          (set #avail-lang (bitor #avail-lang (shiftleft 1 #i)))
+          (set #i #languages-count) ; Exit the loop
+        )
+        (set #i (+ #i 1))
+      )
+    )
+  )
+
+  (set #default-lang 1) ; English
+  (set #i 0)
+  (while (< #i #languages-count)
+    (get-os3-lang #i)
+    (if (= @language @result)
+      (
+        (if (in #avail-lang #i)
+          (set #default-lang (bitor #default-lang (shiftleft 1 #i)))
+        )
+        (set #i #languages-count) ; Exit the loop
+      )
+      (set #i (+ #i 1))
+    )
+  )
+
+  (if (< #installer-ver 42)
+    (set #nolang-fmt "(%s)")
+    (set #nolang-fmt "") )
+  
+  ; Now use the individual choice variables
+  (set #languages
+    (askoptions
+      (prompt #languages-prompt)
+      (help #languages-help)
+      (choices
+          (cat #propchoices "English (built-in)")
+	        ((set #i 1)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 2)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 3)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 4)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 5)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 6)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 7)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 8)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 9)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 10)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 11)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 12)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result))) 
+          ((set #i 13)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 14)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 15)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 16)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 17)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 18)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 19)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 20)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 21)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 22)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 23)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+          ((set #i 24)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
+      )
+      (default #default-lang) ) )
+
+  (set #catdir (tackon #localedir "Catalogs"))
+  (if (not (exists #catdir) ) (makedir #catdir) )
+
+  (set #catalog 1)
+  (until (> #catalog (- #languages-count 1))
+    (p_copy-catalog)
+    (set #catalog (+ #catalog 1) )
+  ) )
 
 ;------------------------------------------------------------------------
 ; We can't handle this script without Installer 42.9 or better!
@@ -431,15 +521,8 @@
     ; We have to create a drawer "AmigaGPT" there!
     (set #amigagptdir (tackon #amigagptdirbase @app-name))
 
-    ; If this is a new installation, we check the diskspace!
     (if (not (exists #amigagptdir))
       (
-        ; For a new setup, we should leave some space!
-        ;; (if (< (getdiskspace #amigagptdirbase) 4000000)
-        ;;     (abort (#no-diskspace #amigagptdirbase 4000000))
-        ;; )
-
-        ; Just to be sure.
         (makedir #amigagptdir (infos))
       )
       (
@@ -453,332 +536,330 @@
 
     ; MUI only needs to be installed if there isn't a suitable version
     ; already. So we need to check for MUI 14.107 first!
-    ;; (if (< (getversion "LIBS:muimaster.library") 917611)
-    ;;   (
-    ;;     ; Hmm. We don't have suitable MUI. Install it
-    ;;     (set InstallMUI    TRUE)
-    ;;     ;; (set AddMUIAssign  TRUE)
-    ;;   )
-    ;;   (
-        ; Ok. A suitable MUI is there. In expert mode ask the user if he
-        ; wants to overwrite it with the old one.
-    ;;     (if (= @user-level 2)
-    ;;       (
-    ;;         (if (askbool (prompt #muiinst-prompt)
-    ;;                      (help   #muiinst-help)
-    ;;                      (default 0))
-    ;;           (
-    ;;             ; Ok. Install it anyway!
-    ;;             (set InstallMUI    TRUE)
-    ;;             (set AddMUIAssign  TRUE)
-    ;;           )
-    ;;         ) ; if
-    ;;       )
-    ;;     ) ; if
-    ;;   )
-    ;; ) ; if
+;; ;;     ;; (if (< (getversion "LIBS:muimaster.library") 917611)
+;; ;;     ;;   (
+;; ;;     ;;     ; Hmm. We don't have suitable MUI. Install it
+;; ;;     ;;     (set InstallMUI    TRUE)
+;; ;;     ;;     ;; (set AddMUIAssign  TRUE)
+;; ;;     ;;   )
+;; ;;     ;;   (
+;;         ; Ok. A suitable MUI is there. In expert mode ask the user if he
+;;         ; wants to overwrite it with the old one.
+;;         ;;     (if (= @user-level 2)
+;;         ;;       (
+;;         ;;         (if (askbool (prompt #muiinst-prompt)
+;;         ;;                      (help   #muiinst-help)
+;;         ;;                      (default 0))
+;;         ;;           (
+;;         ;;             ; Ok. Install it anyway!
+;;         ;;             (set InstallMUI    TRUE)
+;;         ;;             (set AddMUIAssign  TRUE)
+;;         ;;           )
+;;         ;;         ) ; if
+;;         ;;       )
+;;     ;;     ) ; if
 
-    ; If we already have INet, check before simply installing it
-    ; This works a lot like the MUI check!
-    ; We require INet 7.100.
-    ;; (if (<> "" (getassign "INet" "av"))
-    ;;   (
-    ;;     (if (< (getversion "INet:libs/inet.library") 458852)
-    ;;       (
-    ;;         ; Hmm. We don't have suitable INet. Install it
-    ;;         (set InstallINet   TRUE)
-    ;;         (set AddINetAssign TRUE)
-    ;;       )
-    ;;       (
-    ;;         ; Ok. A suitable INet is there. In expert mode ask the user if he
-    ;;         ; wants to overwrite it with the old one.
-    ;;         (if (= @user-level 2)
-    ;;           (
-    ;;             (if (askbool (prompt #inetinst-prompt)
-    ;;                          (help   #inetinst-help)
-    ;;                          (default 0))
-    ;;               (
-    ;;                 ; Ok. Install it anyway!
-    ;;                 (set InstallINet   TRUE)
-    ;;                 (set AddINetAssign TRUE)
-    ;;               )
-    ;;             ) ; if
-    ;;           )
-    ;;         ) ; if
-    ;;       )
-    ;;     ) ; if
-    ;;   )
-    ;;   (
-    ;;     ; Hmm. We don't have suitable INet. Install it
-    ;;     (set InstallINet   TRUE)
-    ;;     (set AddINetAssign TRUE)
-    ;;   )
-    ;; ) ; if
+;;     ; If we already have INet, check before simply installing it
+;;     ; This works a lot like the MUI check!
+;;     ; We require INet 7.100.
+;;     ;; (if (<> "" (getassign "INet" "av"))
+;;     ;;   (
+;;     ;;     (if (< (getversion "INet:libs/inet.library") 458852)
+;;     ;;       (
+;;     ;;         ; Hmm. We don't have suitable INet. Install it
+;;     ;;         (set InstallINet   TRUE)
+;;     ;;         (set AddINetAssign TRUE)
+;;     ;;       )
+;;     ;;       (
+;;     ;;         ; Ok. A suitable INet is there. In expert mode ask the user if he
+;;     ;;         ; wants to overwrite it with the old one.
+;;     ;;         (if (= @user-level 2)
+;;     ;;           (
+;;     ;;             (if (askbool (prompt #inetinst-prompt)
+;;     ;;                          (help   #inetinst-help)
+;;     ;;                          (default 0))
+;;     ;;               (
+;;     ;;                 ; Ok. Install it anyway!
+;;     ;;                 (set InstallINet   TRUE)
+;;     ;;                 (set AddINetAssign TRUE)
+;;     ;;               )
+;;     ;;             ) ; if
+;;     ;;           )
+;;     ;;         ) ; if
+;;     ;;       )
+;;     ;;     ) ; if
+;;     ;;   )
+;;     ;;   (
+;;     ;;     ; Hmm. We don't have suitable INet. Install it
+;;     ;;     (set InstallINet   TRUE)
+;;     ;;     (set AddINetAssign TRUE)
+;;     ;;   )
+;;     ;; ) ; if
 
-    ; This is tricky. We want the boot-volume as default, but the
-    ; user might have reassigned it. In that case we assume that
-    ; s/he knows what s/he is doing!
-    ;; (if InstallMUI
-    ;;   (
-    ;;     (set #muidir     (GETPATH "" "SYS:" TRUE (#destdir-prompt #muidir-info) #destdir-help))
-    ;;   )
-    ;; ) ; if
+;;     ; This is tricky. We want the boot-volume as default, but the
+;;     ; user might have reassigned it. In that case we assume that
+;;     ; s/he knows what s/he is doing!
+;;     ;; (if InstallMUI
+;;     ;;   (
+;;     ;;     (set #muidir     (GETPATH "" "SYS:" TRUE (#destdir-prompt #muidir-info) #destdir-help))
+;;     ;;   )
+;;     ;; ) ; if
 
-    (complete 5)
-
-;------------------------------------------------------------------------
-; First, we install lhex and Installer into C: This won't change and
-; we need them.
-;; (askdisk (dest "SurferDisk1") (prompt #ask-disk1) (help @askdisk-help))
-
-;; (working (#installing "Installer"))
-;; (copylib
-;;     (source "Installer")
-;;     (dest "C:")
-;;     (optional "force" "askuser")
-;; )
-
-;; (complete 8)
-
-;; (working (#installing "lhex"))
-;; (copylib
-;;     (source "lhex")
-;;     (dest "C:")
-;;     (optional "force" "askuser")
-;; )
-
-;; (complete 5)
-
-;------------------------------------------------------------------------
-; Now install Inet, fonts.lha and locale.lha, because they reside on disk #1
-;; (if InstallINet
-;;   (
-;;     (SAVEPREFS #surferdir "Inet/db/group")
-;;     (SAVEPREFS #surferdir "Inet/db/networks")
-;;     (SAVEPREFS #surferdir "Inet/db/protocols")
-;;     (SAVEPREFS #surferdir "Inet/db/services")
-;;     (SAVEPREFS #surferdir "Inet/db/syslog.conf")
-;;     (RUNLHEX "inet.lha" #surferdir "INet")
-;;     (SAVEPREFSEND #surferdir "Inet/db" "INet")
-;;   )
-;; ) ; if
-;; (complete 15)
-
-;; (RUNLHEX "locale.lha"  #localedir #localedir-info)
-;; (complete 18)
-
-;; (RUNLHEX "fonts.lha"   #fontsdir #fontsdir-info)
-;; (complete 19)
+;;     (complete 5)
 
 ;; ;------------------------------------------------------------------------
-;; ; On disk #2, we got work_(www|email|irc|ftp).lha, libs.lha, devs.lha, envarc.lha
-;; (askdisk (dest "SurferDisk2") (prompt #ask-disk2) (help @askdisk-help))
+;; ; First, we install lhex and Installer into C: This won't change and
+;; ; we need them.
+;; ;; (askdisk (dest "SurferDisk1") (prompt #ask-disk1) (help @askdisk-help))
 
-;; (SAVEPREFS #surferdir "WWW/Bookmarks.html")
-;; (SAVEPREFS #surferdir "WWW/MindWalker.prefs")
-;; (RUNLHEX "SurferDisk2:work_www.lha"   #surferdir #surfdir-info)
-;; (SAVEPREFSEND #surferdir "WWW" "MindWalker")
-;; (complete 20)
+;; ;; (working (#installing "Installer"))
+;; ;; (copylib
+;; ;;     (source "Installer")
+;; ;;     (dest "C:")
+;; ;;     (optional "force" "askuser")
+;; ;; )
 
-;; (SAVEPREFS #surferdir "E-Mail/Voodoo.prefs")
-;; (RUNLHEX "SurferDisk2:work_email.lha"   #surferdir #surfdir-info)
-;; (SAVEPREFSEND #surferdir "E-Mail" "Voodoo")
-;; (complete 24)
+;; ;; (complete 8)
 
-;; (RUNLHEX "SurferDisk2:work_irc.lha"   #surferdir #surfdir-info)
-;; (complete 28)
-;; (RUNLHEX "SurferDisk2:work_ftp.lha"   #surferdir #surfdir-info)
-;; (complete 30)
+;; ;; (working (#installing "lhex"))
+;; ;; (copylib
+;; ;;     (source "lhex")
+;; ;;     (dest "C:")
+;; ;;     (optional "force" "askuser")
+;; ;; )
 
-;; (RUNLHEX2TEMP "SurferDisk2:libs.lha"   #libsdir #libsdir-info)
-;; (UPD_TEMP2DEST TRUE "gtlayout.library")
-;; (KILLTEMP)
+;; ;; (complete 5)
 
-;; (complete 35)
-;; (RUNLHEX2TEMP "SurferDisk2:devs.lha"   #devsdir #devsdir-info)
-;; (UPD_TEMP2DEST TRUE "networks/ppp.device")
-;; (UPD_TEMP2DEST TRUE "networks/slip.device")
-;; (UPD_TEMP2DEST FALSE "DataTypes")
-;; (KILLTEMP)
+;; ;------------------------------------------------------------------------
+;; ; Now install Inet, fonts.lha and locale.lha, because they reside on disk #1
+;; ;; (if InstallINet
+;; ;;   (
+;; ;;     (SAVEPREFS #surferdir "Inet/db/group")
+;; ;;     (SAVEPREFS #surferdir "Inet/db/networks")
+;; ;;     (SAVEPREFS #surferdir "Inet/db/protocols")
+;; ;;     (SAVEPREFS #surferdir "Inet/db/services")
+;; ;;     (SAVEPREFS #surferdir "Inet/db/syslog.conf")
+;; ;;     (RUNLHEX "inet.lha" #surferdir "INet")
+;; ;;     (SAVEPREFSEND #surferdir "Inet/db" "INet")
+;; ;;   )
+;; ;; ) ; if
+;; ;; (complete 15)
 
-;; (complete 40)
+;; ;; (RUNLHEX "locale.lha"  #localedir #localedir-info)
+;; ;; (complete 18)
 
-;; (SAVEPREFS #envdir "sana2/ppp0.config")
-;; (SAVEPREFS #envdir "sana2/slip0.config")
-;; (RUNLHEX "SurferDisk2:envarc.lha" #envdir #envdir-info)
-;; (SAVEPREFSEND #envdir "sana2" #envdir-info)
-;; (complete 42)
+;; ;; (RUNLHEX "fonts.lha"   #fontsdir #fontsdir-info)
+;; ;; (complete 19)
 
-;------------------------------------------------------------------------
-; On disk #3, we got classes.lha, locale.lha, fonts.lha, and MUI.lha
-;; (askdisk (dest "SurferDisk3") (prompt #ask-disk3) (help @askdisk-help))
+;; ;; ;------------------------------------------------------------------------
+;; ;; ; On disk #2, we got work_(www|email|irc|ftp).lha, libs.lha, devs.lha, envarc.lha
+;; ;; (askdisk (dest "SurferDisk2") (prompt #ask-disk2) (help @askdisk-help))
 
-;; (RUNLHEX2TEMP "SurferDisk3:classes.lha" #classesdir #classesdir-info)
-;; (UPD_TEMP2DEST TRUE "window.class")
-;; (UPD_TEMP2DEST TRUE "arexx.class")
-;; (UPD_TEMP2DEST TRUE "DataTypes/gif.datatype")
-;; (UPD_TEMP2DEST TRUE "DataTypes/jpeg.datatype")
-;; (UPD_TEMP2DEST TRUE "DataTypes/png.datatype")
-;; (UPD_TEMP2DEST TRUE "DataTypes/xbm.datatype")
-;; (UPD_TEMP2DEST TRUE "Gadgets/button.gadget")
-;; (UPD_TEMP2DEST TRUE "Gadgets/checkbox.gadget")
-;; (UPD_TEMP2DEST TRUE "Gadgets/clicktab.gadget")
-;; (UPD_TEMP2DEST TRUE "Gadgets/integer.gadget")
-;; (UPD_TEMP2DEST TRUE "Gadgets/layout.gadget")
-;; (UPD_TEMP2DEST TRUE "Gadgets/listbrowser.gadget")
-;; (UPD_TEMP2DEST TRUE "Gadgets/scroller.gadget")
-;; (UPD_TEMP2DEST TRUE "Gadgets/space.gadget")
-;; (UPD_TEMP2DEST TRUE "Gadgets/speedbar.gadget")
-;; (UPD_TEMP2DEST TRUE "Gadgets/string.gadget")
-;; (UPD_TEMP2DEST TRUE "Gadgets/textfield.gadget")
-;; (UPD_TEMP2DEST TRUE "Images/bevel.image")
-;; (UPD_TEMP2DEST TRUE "Images/drawlist.image")
-;; (UPD_TEMP2DEST TRUE "Images/glyph.image")
-;; (UPD_TEMP2DEST TRUE "Images/label.image")
-;; (UPD_TEMP2DEST TRUE "Images/penmap.image")
-;; (KILLTEMP)
+;; ;; (SAVEPREFS #surferdir "WWW/Bookmarks.html")
+;; ;; (SAVEPREFS #surferdir "WWW/MindWalker.prefs")
+;; ;; (RUNLHEX "SurferDisk2:work_www.lha"   #surferdir #surfdir-info)
+;; ;; (SAVEPREFSEND #surferdir "WWW" "MindWalker")
+;; ;; (complete 20)
 
-;; (complete 62)
-;; (RUNLHEX "SurferDisk3:work.lha"   #surferdir #surfdir-info)
-;; (complete 65)
-; Install MUI only if needed!
-;; (if InstallMUI
-;;   (
-;;     (RUNLHEX "SurferDisk3:mui.lha"     #muidir #muidir-info)
-;;   )
-;; ) ; if
-(complete 80)
+;; ;; (SAVEPREFS #surferdir "E-Mail/Voodoo.prefs")
+;; ;; (RUNLHEX "SurferDisk2:work_email.lha"   #surferdir #surfdir-info)
+;; ;; (SAVEPREFSEND #surferdir "E-Mail" "Voodoo")
+;; ;; (complete 24)
 
-;------------------------------------------------------------------------
-; There is the config backup-directory that might not exist yet.
-; Some stuff depends on it!
-;; (makedir (tackon #surferdir "Surfer-Backup"))
+;; ;; (RUNLHEX "SurferDisk2:work_irc.lha"   #surferdir #surfdir-info)
+;; ;; (complete 28)
+;; ;; (RUNLHEX "SurferDisk2:work_ftp.lha"   #surferdir #surfdir-info)
+;; ;; (complete 30)
 
-;------------------------------------------------------------------------
-; We might need to create a Work: Assign. This is basically
-; Surfer 1.1 magic!
-; This is a necessary hack: Surfer MUST reside in Work:Internet currently!
-;; ; (Surfer 1.1!)
-;; (if (= "" (getassign "Work" "adv"))
-;;     (Set AddWorkAssign TRUE)
-;; ) ; if
+;; ;; (RUNLHEX2TEMP "SurferDisk2:libs.lha"   #libsdir #libsdir-info)
+;; ;; (UPD_TEMP2DEST TRUE "gtlayout.library")
+;; ;; (KILLTEMP)
 
-;; (if AddWorkAssign
-;;   (
-;;     (set cmd (cat "Assign Work: \"" #surferdirbase "\"\n"))
-;;     (startup "INTERNET-SURFER"
-;;         (prompt (#startup-prompt "Surfer Package" cmd))
-;;         (help #startup-help)
-;;         (command cmd)
-;;     )
+;; ;; (complete 35)
+;; ;; (RUNLHEX2TEMP "SurferDisk2:devs.lha"   #devsdir #devsdir-info)
+;; ;; (UPD_TEMP2DEST TRUE "networks/ppp.device")
+;; ;; (UPD_TEMP2DEST TRUE "networks/slip.device")
+;; ;; (UPD_TEMP2DEST FALSE "DataTypes")
+;; ;; (KILLTEMP)
 
-;;     ; If we have to add a Work: Assign, we better create one right now
-;;     ; The user might want to start the surfer right away!
-;;     (makeassign "Work" #surferdirbase)
-;;   )
-;; )
-(complete 82)
+;; ;; (complete 40)
 
-; MUI might need one, too on a new installation
-;; (if AddMUIAssign
-;;   (
-;;     (set cmd (cat "Assign MUI: " (tackon #muidir "MUI-AT") "\nAssign LIBS: MUI:Libs ADD\nAssign LOCALE: MUI:Locale ADD\n"))
-;;     (startup "MUI-AT"
-;;         (prompt (#startup-prompt "AT-MUI" cmd))
-;;         (help #startup-help)
-;;         (command cmd)
-;;     )
+;; ;; (SAVEPREFS #envdir "sana2/ppp0.config")
+;; ;; (SAVEPREFS #envdir "sana2/slip0.config")
+;; ;; (RUNLHEX "SurferDisk2:envarc.lha" #envdir #envdir-info)
+;; ;; (SAVEPREFSEND #envdir "sana2" #envdir-info)
+;; ;; (complete 42)
 
-;;     (if (not @pretend)
-;;     (
-;;       ; To help the poor fools
-;;       (makeassign "MUI" (tackon #muidir "MUI-AT"))
-;;       (run "Assign LIBS: MUI:Libs add")
-;;       (run "Assign LOCALE: MUI:Locale add")
-;;     ))
-;;   )
-;; )
-(complete 85)
+;; ;------------------------------------------------------------------------
+;; ; On disk #3, we got classes.lha, locale.lha, fonts.lha, and MUI.lha
+;; ;; (askdisk (dest "SurferDisk3") (prompt #ask-disk3) (help @askdisk-help))
 
-; We should not forget INet!
-;; (if AddINetAssign
-;;   (
-;;     (set #t (tackon #surferdir "INet"))
-;;     (set cmd (cat "IF EXISTS \"" #t "\"\n  Assign INet: \"" #t "\"\n  Path INet:C ADD\nENDIF\n"))
-;;     (startup "INet"
-;;         (prompt (#startup-prompt "AT-INet" cmd))
-;;         (help #startup-help)
-;;         (command cmd)
-;;     )
+;; ;; (RUNLHEX2TEMP "SurferDisk3:classes.lha" #classesdir #classesdir-info)
+;; ;; (UPD_TEMP2DEST TRUE "window.class")
+;; ;; (UPD_TEMP2DEST TRUE "arexx.class")
+;; ;; (UPD_TEMP2DEST TRUE "DataTypes/gif.datatype")
+;; ;; (UPD_TEMP2DEST TRUE "DataTypes/jpeg.datatype")
+;; ;; (UPD_TEMP2DEST TRUE "DataTypes/png.datatype")
+;; ;; (UPD_TEMP2DEST TRUE "DataTypes/xbm.datatype")
+;; ;; (UPD_TEMP2DEST TRUE "Gadgets/button.gadget")
+;; ;; (UPD_TEMP2DEST TRUE "Gadgets/checkbox.gadget")
+;; ;; (UPD_TEMP2DEST TRUE "Gadgets/clicktab.gadget")
+;; ;; (UPD_TEMP2DEST TRUE "Gadgets/integer.gadget")
+;; ;; (UPD_TEMP2DEST TRUE "Gadgets/layout.gadget")
+;; ;; (UPD_TEMP2DEST TRUE "Gadgets/listbrowser.gadget")
+;; ;; (UPD_TEMP2DEST TRUE "Gadgets/scroller.gadget")
+;; ;; (UPD_TEMP2DEST TRUE "Gadgets/space.gadget")
+;; ;; (UPD_TEMP2DEST TRUE "Gadgets/speedbar.gadget")
+;; ;; (UPD_TEMP2DEST TRUE "Gadgets/string.gadget")
+;; ;; (UPD_TEMP2DEST TRUE "Gadgets/textfield.gadget")
+;; ;; (UPD_TEMP2DEST TRUE "Images/bevel.image")
+;; ;; (UPD_TEMP2DEST TRUE "Images/drawlist.image")
+;; ;; (UPD_TEMP2DEST TRUE "Images/glyph.image")
+;; ;; (UPD_TEMP2DEST TRUE "Images/label.image")
+;; ;; (UPD_TEMP2DEST TRUE "Images/penmap.image")
+;; ;; (KILLTEMP)
 
-;;     ; Magic to avoid clashes!
-;;     (if (<> "" (getassign "INet" "adv"))
-;;         (run "Path INet:c remove")
-;;     )
+;; ;; (complete 62)
+;; ;; (RUNLHEX "SurferDisk3:work.lha"   #surferdir #surfdir-info)
+;; ;; (complete 65)
+;; ; Install MUI only if needed!
+;; ;; (if InstallMUI
+;; ;;   (
+;; ;;     (RUNLHEX "SurferDisk3:mui.lha"     #muidir #muidir-info)
+;; ;;   )
+;; ;; ) ; if
+;; (complete 80)
 
-;;     ; To help the poor fools
-;;     (if (not @pretend)
-;;     (
-;;       (makeassign "INet" #t)
-;;     ))
+;; ;------------------------------------------------------------------------
+;; ; There is the config backup-directory that might not exist yet.
+;; ; Some stuff depends on it!
+;; ;; (makedir (tackon #surferdir "Surfer-Backup"))
 
-;;     (run "Path INet:c add")
-;;   )
-;; )
-(complete 90)
+;; ;------------------------------------------------------------------------
+;; ; We might need to create a Work: Assign. This is basically
+;; ; Surfer 1.1 magic!
+;; ; This is a necessary hack: Surfer MUST reside in Work:Internet currently!
+;; ;; ; (Surfer 1.1!)
+;; ;; (if (= "" (getassign "Work" "adv"))
+;; ;;     (Set AddWorkAssign TRUE)
+;; ;; ) ; if
 
-;------------------------------------------------------------------------
-; Something nifty. The user might still have an unmodified startup
-; where T: points to RAM: We can't have that on an A1200 or Surfer
-; won't run due to lack of memory. RAM: has the special feature
-; that it is always full. We make use of this and expect at least 10K
-; free temporary space!
-;; (if (< (getdiskspace "T:") 10000)
-;;   (
-;;     (set #t (tackon #surferdir "Temp"))
-;;     ; Hmm. It seems that this guy is using RAM:
-;;     (set cmd (cat "If Not Exists \"" #t "\"\n  MakeDir \"" #t "\"\nEndIf\nDelete >NIL: \"" (tackon #t "#?") "\" quiet all\nAssign T: \"" #t "\"\n"))
-;;     (startup "TEMPDIR"
-;;         (prompt (#startup-prompt "Surfer" cmd))
-;;         (help #startup-help)
-;;         (command cmd)
-;;     )
+;; ;; (if AddWorkAssign
+;; ;;   (
+;; ;;     (set cmd (cat "Assign Work: \"" #surferdirbase "\"\n"))
+;; ;;     (startup "INTERNET-SURFER"
+;; ;;         (prompt (#startup-prompt "Surfer Package" cmd))
+;; ;;         (help #startup-help)
+;; ;;         (command cmd)
+;; ;;     )
 
-;;     (makedir #t)
-;;     (if (not @pretend)
-;;     (
-;;       (makeassign "T" #t)
-;;     ))
-;;   )
-;; )
-(complete 95)
+;; ;;     ; If we have to add a Work: Assign, we better create one right now
+;; ;;     ; The user might want to start the surfer right away!
+;; ;;     (makeassign "Work" #surferdirbase)
+;; ;;   )
+;; ;; )
+;; (complete 82)
 
-;------------------------------------------------------------------------
-; Finally create some information about where surfer resides now
-;; (makedir "ENV:Surfer")
-;; (makedir "ENVARC:Surfer")
-;; (textfile (dest "ENV:Surfer/Path_SurferPackage") (append #surferdir))
-;; (textfile (dest "ENVARC:Surfer/Path_SurferPackage") (append #surferdir))
-(complete 97)
+;; ; MUI might need one, too on a new installation
+;; ;; (if AddMUIAssign
+;; ;;   (
+;; ;;     (set cmd (cat "Assign MUI: " (tackon #muidir "MUI-AT") "\nAssign LIBS: MUI:Libs ADD\nAssign LOCALE: MUI:Locale ADD\n"))
+;; ;;     (startup "MUI-AT"
+;; ;;         (prompt (#startup-prompt "AT-MUI" cmd))
+;; ;;         (help #startup-help)
+;; ;;         (command cmd)
+;; ;;     )
 
-;------------------------------------------------------------------------
-; Inform the user about MF-Light
-;; (message #bonus-disk (all))
+;; ;;     (if (not @pretend)
+;; ;;     (
+;; ;;       ; To help the poor fools
+;; ;;       (makeassign "MUI" (tackon #muidir "MUI-AT"))
+;; ;;       (run "Assign LIBS: MUI:Libs add")
+;; ;;       (run "Assign LOCALE: MUI:Locale add")
+;; ;;     ))
+;; ;;   )
+;; ;; )
+;; (complete 85)
 
-;------------------------------------------------------------------------
-; The user might want to update the configuration! This is valid for all
-; user levels!
-;; (user 2)
-;; (if (askbool (prompt #ask-config) (help #ask-config-help) (default 1))
-;;   (
-;;     ; Just a try!
-;;     (run (tackon #surferdir "Internet-Setup"))
-;;   )
-;; )
+;; ; We should not forget INet!
+;; ;; (if AddINetAssign
+;; ;;   (
+;; ;;     (set #t (tackon #surferdir "INet"))
+;; ;;     (set cmd (cat "IF EXISTS \"" #t "\"\n  Assign INet: \"" #t "\"\n  Path INet:C ADD\nENDIF\n"))
+;; ;;     (startup "INet"
+;; ;;         (prompt (#startup-prompt "AT-INet" cmd))
+;; ;;         (help #startup-help)
+;; ;;         (command cmd)
+;; ;;     )
 
-;------------------------------------------------------------------------
-; That's it!
-(complete 100)
+;; ;;     ; Magic to avoid clashes!
+;; ;;     (if (<> "" (getassign "INet" "adv"))
+;; ;;         (run "Path INet:c remove")
+;; ;;     )
 
-(CLEANUP)
-(exit)
+;; ;;     ; To help the poor fools
+;; ;;     (if (not @pretend)
+;; ;;     (
+;; ;;       (makeassign "INet" #t)
+;; ;;     ))
+
+;; ;;     (run "Path INet:c add")
+;; ;;   )
+;; ;; )
+;; (complete 90)
+
+;; ;------------------------------------------------------------------------
+;; ; Something nifty. The user might still have an unmodified startup
+;; ; where T: points to RAM: We can't have that on an A1200 or Surfer
+;; ; won't run due to lack of memory. RAM: has the special feature
+;; ; that it is always full. We make use of this and expect at least 10K
+;; ; free temporary space!
+;; ;; (if (< (getdiskspace "T:") 10000)
+;; ;;   (
+;; ;;     (set #t (tackon #surferdir "Temp"))
+;; ;;     ; Hmm. It seems that this guy is using RAM:
+;; ;;     (set cmd (cat "If Not Exists \"" #t "\"\n  MakeDir \"" #t "\"\nEndIf\nDelete >NIL: \"" (tackon #t "#?") "\" quiet all\nAssign T: \"" #t "\"\n"))
+;; ;;     (startup "TEMPDIR"
+;; ;;         (prompt (#startup-prompt "Surfer" cmd))
+;; ;;         (help #startup-help)
+;; ;;         (command cmd)
+;; ;;     )
+
+;; ;;     (makedir #t)
+;; ;;     (if (not @pretend)
+;; ;;     (
+;; ;;       (makeassign "T" #t)
+;; ;;     ))
+;; ;;   )
+;; ;; )
+;; (complete 95)
+
+;; ;------------------------------------------------------------------------
+;; ; Finally create some information about where surfer resides now
+;; ;; (makedir "ENV:Surfer")
+;; ;; (makedir "ENVARC:Surfer")
+;; ;; (textfile (dest "ENV:Surfer/Path_SurferPackage") (append #surferdir))
+;; ;; (textfile (dest "ENVARC:Surfer/Path_SurferPackage") (append #surferdir))
+;; (complete 97)
+
+;; ;------------------------------------------------------------------------
+;; ; Inform the user about MF-Light
+;; ;; (message #bonus-disk (all))
+
+;; ;------------------------------------------------------------------------
+;; ; The user might want to update the configuration! This is valid for all
+;; ; user levels!
+;; ;; (user 2)
+;; ;; (if (askbool (prompt #ask-config) (help #ask-config-help) (default 1))
+;; ;;   (
+;; ;;     ; Just a try!
+;; ;;     (run (tackon #surferdir "Internet-Setup"))
+;; ;;   )
+;; ;; )
+
+;; ;------------------------------------------------------------------------
+;; ; That's it!
+;; (complete 100)
+
+;; (CLEANUP)
+;; (exit)
