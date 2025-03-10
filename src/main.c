@@ -13,7 +13,7 @@
 #include "version.h"
 
 CONST_STRPTR stack = "$STACK: 32768";
-CONST_STRPTR version = "$VER: " APP_VERSION;
+CONST_STRPTR version = "$VER: AmigaGPT " APP_VERSION_AMIGA;
 
 #ifdef __AMIGAOS4__
 static uint32 appID;

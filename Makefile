@@ -3,13 +3,33 @@
 # to generate assembler source with LTO, add to LDFLAGS: -save-temps=cwd
 OS := $(shell uname)
 
+# https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
+# http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
+
+PROGRAM_NAME = AmigaGPT
+EXECUTABLE_DIR = out
+EXECUTABLE_OUT = $(EXECUTABLE_DIR)/$(PROGRAM_NAME)_OS3
+CC = m68k-amigaos-gcc
+VASM = vasmm68k_mot
+
+LIBDIR = /opt/amiga/m68k-amigaos/lib
+SDKDIR = /opt/amiga/m68k-amigaos/sys-include
+NDKDIR = /opt/amiga/m68k-amigaos/ndk-include
+INCDIR = /opt/amiga/m68k-amigaos/include
+
+ifeq ($(OS),Darwin)
+	SED = sed -i "" 
+else
+	SED = sed -i
+endif
+
 subdirs := $(wildcard */) $(wildcard src/*/) $(wildcard src/*/*/)
 VPATH = $(subdirs)
 SOURCE_DIR = src
 BUILD_DIR = build/os3/obj
 BUNDLE_DIR = bundle
 CATALOG_DIR = catalogs
-CATALOG_DEFINITION = $(CATALOG_DIR)/AmigaGPT.pot
+CATALOG_DEFINITION = $(CATALOG_DIR)/$(PROGRAM_NAME).pot
 catalog_subdirs := $(wildcard $(CATALOG_DIR)/*/)
 catalog_translations := $(wildcard $(addsuffix *.po,$(catalog_subdirs)))
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
@@ -30,27 +50,7 @@ GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT = $(shell git rev-parse HEAD)
 GIT_TIMESTAMP = $(shell git log -1 --format=%cd --date=format:"%Y-%m-%d~%H:%M:%S")
 
-# https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
-# http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
-
-PROGRAM_NAME = AmigaGPT
-EXECUTABLE_DIR = out
-EXECUTABLE_OUT = $(EXECUTABLE_DIR)/$(PROGRAM_NAME)
-CC = m68k-amigaos-gcc
-VASM = vasmm68k_mot
-
-LIBDIR = /opt/amiga/m68k-amigaos/lib
-SDKDIR = /opt/amiga/m68k-amigaos/sys-include
-NDKDIR = /opt/amiga/m68k-amigaos/ndk-include
-INCDIR = /opt/amiga/m68k-amigaos/include
-
-ifeq ($(OS),Darwin)
-	SED = sed -i "" 
-else
-	SED = sed -i
-endif
-
-CCFLAGS = -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\"
+CCFLAGS = -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\"
 ifeq ($(DEBUG),1)
 	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -O0
 else
@@ -60,7 +60,7 @@ endif
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),-D
 LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui
-VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS3__  -DPROGRAM_NAME=\"$(PROGRAM_NAME)\" -I$(INCDIR) -I$(SDKDIR) -I$(NDKDIR)
+VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS3__ -I$(INCDIR) -I$(SDKDIR) -I$(NDKDIR)
 
 .PHONY: all clean copy_bundle_files catalog catalog_definition
 
@@ -68,7 +68,7 @@ all: $(EXECUTABLE_OUT) copy_bundle_files
 
 clean:
 	$(info Cleaning...)
-	$(RM) -dr $(BUNDLE_DIR)/AmigaGPT/catalogs
+	$(RM) -dr $(BUNDLE_DIR)/$(PROGRAM_NAME)/catalogs
 	$(RM) -dr $(BUILD_DIR)
 
 catalog_definition:
@@ -78,13 +78,13 @@ catalog_definition:
 
 catalog:
 	$(info Removing old catalog sources)
-	@$(RM) $(SOURCE_DIR)/AmigaGPT_cat.c $(SOURCE_DIR)/AmigaGPT_cat.h
+	@$(RM) $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.c $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.h
 
 	$(info Generating catalog header)
-	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.h=C_h.sd || true
+	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.h=C_h.sd || true
 
 	$(info Generating catalog source)
-	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/AmigaGPT_cat.c=C_c.sd || true
+	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.c=C_c.sd || true
 
 	$(info Updating catalog translations)
 	@for catalog_translation in $(catalog_translations); do \
@@ -93,10 +93,10 @@ catalog:
 
 	$(info Compiling catalogs $(catalog_translations))
 	@for catalog_translation in $(catalog_translations); do \
-		flexcat POFILE $$catalog_translation CATALOG $$(dirname $$catalog_translation)/AmigaGPT.catalog || true; \
+		flexcat POFILE $$catalog_translation CATALOG $$(dirname $$catalog_translation)/$(PROGRAM_NAME).catalog || true; \
 	done
 
-$(SOURCE_DIR)/AmigaGPT_cat.c $(SOURCE_DIR)/AmigaGPT_cat.h: catalog
+$(SOURCE_DIR)/$(PROGRAM_NAME)_cat.c $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.h: catalog
 	@true
 
 $(BUILD_DIR):
@@ -118,7 +118,7 @@ $(cpp_objects): $(BUILD_DIR)/%.o : %.cpp | $(BUILD_DIR)/%.dir
 	$(info Compiling $<)
 	$(CC) $(CPPFLAGS) -c -o $@ $(CURDIR)/$<
 
-$(c_objects): $(BUILD_DIR)/%.o : %.c $(SOURCE_DIR)/AmigaGPT_cat.h | catalog
+$(c_objects): $(BUILD_DIR)/%.o : %.c $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.h | catalog
 	$(info Compiling $<)
 	@$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
@@ -133,6 +133,4 @@ $(vasm_objects): $(BUILD_DIR)/%.o : %.asm
 
 copy_bundle_files:
 	$(info Copying bundle files...)
-	@cp assets/AmigaGPT_OS3.info $(BUNDLE_DIR)/AmigaGPT/$(PROGRAM_NAME).info
-	@cp -R $(BUNDLE_DIR)/AmigaGPT/* $(EXECUTABLE_DIR)/
-	@cp -R $(BUNDLE_DIR)/Install* $(EXECUTABLE_DIR)/
+	@cp -R $(BUNDLE_DIR)/$(PROGRAM_NAME)/$(PROGRAM_NAME)/* $(EXECUTABLE_DIR)/

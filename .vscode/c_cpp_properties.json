@@ -12,7 +12,6 @@
             ],
             "defines": [
                 "__AMIGAOS3__",
-                "PROGRAM_NAME=\"AmigaGPT\"",
                 "__stdargs= ",
                 "PROGDIR=\"PROGDIR:\"",
                 "GIT_BRANCH= ",
@@ -47,7 +46,6 @@
             "defines": [
                 "__AMIGAOS4__",
                 "__USE_INLINE__",
-                "PROGRAM_NAME=\"AmigaGPT\"",
                 "PROGDIR=\"PROGDIR:\"",
                 "GIT_BRANCH= ",
                 "GIT_COMMIT= ",
@@ -79,7 +77,6 @@
             "defines": [
                 "__MORPHOS__",
                 "__PPC__",
-                "PROGRAM_NAME=\"AmigaGPT\"",
                 "PROGDIR=\"PROGDIR:\"",
                 "GIT_BRANCH= ",
                 "GIT_COMMIT= ",

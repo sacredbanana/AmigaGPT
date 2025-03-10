@@ -141,7 +141,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
             return RETURN_ERROR;
         }
     } else {
-        PrintFault(ERROR_NO_FREE_STORE, APP_NAME);
+        PrintFault(ERROR_NO_FREE_STORE, STRING_APP_NAME);
         config.speechEnabled = FALSE;
         return RETURN_ERROR;
     }
