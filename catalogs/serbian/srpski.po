@@ -259,12 +259,12 @@ msgstr "Избриши слику"
 #: src/MainWindow.c:32 src/MainWindow.c:950
 msgctxt "STRING_CREATE_IMAGE (24//)"
 msgid "Create Image"
-msgstr "Цреате Имаге"
+msgstr "Креирај слику"
 
 #: src/MainWindow.c:66
 msgctxt "STRING_CHAT_MODE (25//)"
 msgid "Chat Mode"
-msgstr "Цхат Моде"
+msgstr "Режим ћаскања"
 
 #: src/MainWindow.c:66
 msgctxt "STRING_IMAGE_GENERATION_MODE (26//)"
@@ -560,7 +560,7 @@ msgstr "Подешавања прокси сервера"
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr "Домаћин"
+msgstr "Хост"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"
@@ -696,7 +696,7 @@ msgstr "Није могуће пронаћи прилагођену класу �
 #, fuzzy
 msgctxt "STRING_ABOUT (99//)"
 msgid "About"
-msgstr "Абоут"
+msgstr "О АмигаГПТ"
 
 #: src/menu.c:59
 msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
@@ -775,7 +775,7 @@ msgstr "Изаберите све"
 #: src/menu.c:136 src/menu.c:128
 msgctxt "STRING_MENU_VIEW (114//)"
 msgid "View"
-msgstr "Виев"
+msgstr "Приказ"
 
 #: src/menu.c:137 src/menu.c:129
 msgctxt "STRING_MENU_MUI_SETTINGS (115//)"

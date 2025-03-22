@@ -68,7 +68,7 @@ msgstr "Clé API OpenAI"
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_INSTRUCTION (7//)"
 msgid "Type or paste (Right-Amiga + V) your OpenAI API key here."
-msgstr "Tapez ou collez (Right-Amiga + V) votre clé API OpenAI ici."
+msgstr "Tapez ou collez (Amiga-Droit + V) votre clé API OpenAI ici."
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_REASON (199//)"
@@ -89,7 +89,7 @@ msgstr ""
 #: src/menu.c:39
 msgctxt "STRING_OK (8//)"
 msgid "OK"
-msgstr "D'ACCORD"
+msgstr "OK"
 
 #: src/APIKeyRequesterWindow.c:58 src/ChatSystemRequesterWindow.c:57
 #: src/ProxySettingsRequesterWindow.c:152
@@ -105,7 +105,7 @@ msgstr "Impossible de créer la fenêtre de demande de clé API"
 #: src/AboutAmigaGPTWindow.c:16
 msgctxt "STRING_GIT_COMMIT (11//)"
 msgid "Git commit"
-msgstr "Validation Git"
+msgstr "Commit Git"
 
 #: src/AboutAmigaGPTWindow.c:17
 msgctxt "STRING_GIT_BRANCH (12//)"
@@ -577,7 +577,7 @@ msgstr "Paramètres du serveur proxy"
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr "Hôte"
+msgstr "Host"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"

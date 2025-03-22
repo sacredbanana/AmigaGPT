@@ -95,7 +95,7 @@ msgstr "OK"
 #: src/ProxySettingsRequesterWindow.c:152
 msgctxt "STRING_CANCEL (9//)"
 msgid "Cancel"
-msgstr "Cancellare"
+msgstr "Annulla"
 
 #: src/APIKeyRequesterWindow.c:66
 msgctxt "STRING_ERROR_API_KEY_REQUESTER (10//)"
@@ -110,7 +110,7 @@ msgstr "Commit Git"
 #: src/AboutAmigaGPTWindow.c:17
 msgctxt "STRING_GIT_BRANCH (12//)"
 msgid "Git branch"
-msgstr "Ramo Git"
+msgstr "Branch Git"
 
 #: src/AboutAmigaGPTWindow.c:17
 msgctxt "STRING_GIT_COMMIT_TIMESTAMP (13//)"
@@ -245,7 +245,7 @@ msgstr "Elimina chat"
 #: src/MainWindow.c:31
 msgctxt "STRING_SEND (21//)"
 msgid "Send"
-msgstr "Inviare"
+msgstr "Invia"
 
 #: src/MainWindow.c:32
 msgctxt "STRING_NEW_IMAGE (22//)"
@@ -571,7 +571,7 @@ msgstr "Impostazioni del server proxy"
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr "Ospite"
+msgstr "Host"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"

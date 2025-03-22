@@ -68,8 +68,7 @@ msgstr "Clave API de OpenAI"
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_INSTRUCTION (7//)"
 msgid "Type or paste (Right-Amiga + V) your OpenAI API key here."
-msgstr ""
-"Escribe o pega (botón derecho del mouse + V) tu clave API de OpenAI aquí."
+msgstr "Escribe o pega (Amiga-Derecha + V) tu clave API de OpenAI aquí."
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_REASON (199//)"

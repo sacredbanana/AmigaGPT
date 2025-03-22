@@ -407,7 +407,7 @@ msgstr ""
 msgctxt "STRING_ERROR_IMAGE_HISTORY_CREATE (51//)"
 msgid "Failed to create image history file. Image history will not be saved."
 msgstr ""
-"Det gick inte att skapa bildhistorikfil. Bildhistorik kommer inte att sparas."
+"Det gick inte att skapa bildhistorikfilen. Bildhistorik kommer inte att sparas."
 
 #: src/MainWindow.c:1717
 msgctxt "STRING_ERROR_IMAGE_HISTORY_WRITE (52//)"
@@ -564,12 +564,12 @@ msgstr "Proxyserverinställningar"
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr "Värd"
+msgstr "Host"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"
 msgid "Port"
-msgstr "Hamn"
+msgstr "Port"
 
 #: src/ProxySettingsRequesterWindow.c:107
 msgctxt "STRING_PROXY_ENCRYPTION (76//)"

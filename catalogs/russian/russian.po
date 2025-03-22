@@ -22,7 +22,7 @@ msgstr ""
 "AmigaGPT — приложение для общения в ChatGPT или создания изображений с "
 "помощью ИИ с помощью DALL-E."
 
-#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
+#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:75
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
 msgid "Failed to initialize video"
 msgstr "Не удалось инициализировать видео"
@@ -89,7 +89,7 @@ msgstr ""
 #: src/menu.c:39
 msgctxt "STRING_OK (8//)"
 msgid "OK"
-msgstr "ХОРОШО"
+msgstr "ОК"
 
 #: src/APIKeyRequesterWindow.c:58 src/ChatSystemRequesterWindow.c:57
 #: src/ProxySettingsRequesterWindow.c:152
@@ -224,7 +224,7 @@ msgid ""
 msgstr ""
 "Если вы хотите, чтобы AmigaGPT отвечал определенным образом или добавлял "
 "индивидуальности, введите это здесь. Например, вы можете ввести \"Speak like "
-"a pirate\" или \"Speak like arobot\". Если вы хотите, чтобы AmigaGPT отвечал "
+"a pirate\" или \"Speak like a robot\". Если вы хотите, чтобы AmigaGPT отвечал "
 "нормально, оставьте это поле пустым. Эта настройка будет применена только к "
 "новым разговорам."
 
@@ -246,7 +246,7 @@ msgstr "Удалить чат"
 #: src/MainWindow.c:31
 msgctxt "STRING_SEND (21//)"
 msgid "Send"
-msgstr "Отправлять"
+msgstr "Отправить"
 
 #: src/MainWindow.c:32
 msgctxt "STRING_NEW_IMAGE (22//)"
@@ -567,7 +567,7 @@ msgstr "Настройки прокси-сервера"
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr "Хозяин"
+msgstr "Хост"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"

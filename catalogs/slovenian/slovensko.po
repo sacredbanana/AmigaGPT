@@ -21,12 +21,12 @@ msgid ""
 msgstr ""
 "AmigaGPT je aplikacija za klepet s ChatGPT ali ustvarjanje slik AI z DALL-E"
 
-#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
+#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:75
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
 msgid "Failed to initialize video"
 msgstr "Inicializacija videa ni uspela"
 
-#: src/main.c:76 src/main.c:77 src/main.c:78 src/main.c:75
+#: src/main.c:76 src/main.c:77 src/main.c:78 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
@@ -561,12 +561,12 @@ msgstr "Nastavitve proxy strežnika"
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr "Gostitelj"
+msgstr "Host"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"
 msgid "Port"
-msgstr "Pristanišče"
+msgstr "Port"
 
 #: src/ProxySettingsRequesterWindow.c:107
 msgctxt "STRING_PROXY_ENCRYPTION (76//)"
@@ -752,7 +752,7 @@ msgstr "Uredi"
 #: src/menu.c:131 src/menu.c:305 src/menu.c:123 src/menu.c:300
 msgctxt "STRING_MENU_CUT (109//)"
 msgid "Cut"
-msgstr "Cut"
+msgstr "Izreži"
 
 #: src/menu.c:132 src/menu.c:315 src/menu.c:124 src/menu.c:310
 msgctxt "STRING_MENU_COPY (110//)"
@@ -982,12 +982,12 @@ msgstr "Ni bilo mogoče ustvariti novega SSL ročaja!"
 #: src/openai.c:294
 msgctxt "STRING_ERROR_PROXY_HOST (158//)"
 msgid "Proxy host lookup failed"
-msgstr "Iskanje posredniškega gostitelja ni uspelo"
+msgstr "Iskanje proxy hosta ni uspelo"
 
 #: src/openai.c:295
 msgctxt "STRING_ERROR_HOST (159//)"
 msgid "Host lookup failed"
-msgstr "Iskanje gostitelja ni uspelo"
+msgstr "Iskanje hosta ni uspelo"
 
 #: src/openai.c:308
 msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
@@ -996,7 +996,7 @@ msgid ""
 "disable it."
 msgstr ""
 "Povezave s strežnikom ni bilo mogoče vzpostaviti. Preverite, ali sta "
-"gostitelj proxy in vrata pravilna ali ju onemogočite."
+"proxy host in vrata pravilna ali ju onemogočite."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"

@@ -573,12 +573,12 @@ msgstr "Ρυθμίσεις διακομιστή μεσολάβησης"
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr "Πλήθος"
+msgstr "Διακομιστής"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"
 msgid "Port"
-msgstr "Λιμάνι"
+msgstr "Port"
 
 #: src/ProxySettingsRequesterWindow.c:107
 msgctxt "STRING_PROXY_ENCRYPTION (76//)"

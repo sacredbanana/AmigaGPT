@@ -567,12 +567,12 @@ msgstr "Proxyszerver beállításai"
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr "Házigazda"
+msgstr "Host"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"
 msgid "Port"
-msgstr "Kikötő"
+msgstr "Port"
 
 #: src/ProxySettingsRequesterWindow.c:107
 msgctxt "STRING_PROXY_ENCRYPTION (76//)"
@@ -991,12 +991,12 @@ msgstr "Nem sikerült új SSL-leírót létrehozni!"
 #: src/openai.c:294
 msgctxt "STRING_ERROR_PROXY_HOST (158//)"
 msgid "Proxy host lookup failed"
-msgstr "A proxy gazdagép keresése sikertelen"
+msgstr "A proxy host keresése sikertelen"
 
 #: src/openai.c:295
 msgctxt "STRING_ERROR_HOST (159//)"
 msgid "Host lookup failed"
-msgstr "A gazdagép keresése nem sikerült"
+msgstr "A host keresése nem sikerült"
 
 #: src/openai.c:308
 msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
@@ -1004,7 +1004,7 @@ msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
 msgstr ""
-"Nem sikerült csatlakozni a szerverhez. Ellenőrizze, hogy a proxy gazdagép és "
+"Nem sikerült csatlakozni a szerverhez. Ellenőrizze, hogy a proxy host és "
 "a port megfelelő-e, vagy tiltsa le."
 
 #: src/openai.c:321

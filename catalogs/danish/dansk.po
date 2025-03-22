@@ -560,12 +560,12 @@ msgstr "Proxyserverindstillinger"
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr "Vært"
+msgstr "Host"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"
 msgid "Port"
-msgstr "Havn"
+msgstr "Port"
 
 #: src/ProxySettingsRequesterWindow.c:107
 msgctxt "STRING_PROXY_ENCRYPTION (76//)"
@@ -981,12 +981,12 @@ msgstr "Kunne ikke oprette nyt SSL-håndtag!"
 #: src/openai.c:294
 msgctxt "STRING_ERROR_PROXY_HOST (158//)"
 msgid "Proxy host lookup failed"
-msgstr "Opslag på proxyvært mislykkedes"
+msgstr "Opslag på proxy host mislykkedes"
 
 #: src/openai.c:295
 msgctxt "STRING_ERROR_HOST (159//)"
 msgid "Host lookup failed"
-msgstr "Værtsopslag mislykkedes"
+msgstr "Host-opslag mislykkedes"
 
 #: src/openai.c:308
 msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
@@ -994,7 +994,7 @@ msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
 msgstr ""
-"Kunne ikke oprette forbindelse til serveren. Tjek, om proxyværten og porten "
+"Kunne ikke oprette forbindelse til serveren. Tjek, om proxy host og porten "
 "er korrekte, eller deaktiver den."
 
 #: src/openai.c:321

@@ -551,12 +551,12 @@ msgstr "Proxy sunucu ayarları"
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr "Ev sahibi"
+msgstr "Host"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"
 msgid "Port"
-msgstr "Liman"
+msgstr "Port"
 
 #: src/ProxySettingsRequesterWindow.c:107
 msgctxt "STRING_PROXY_ENCRYPTION (76//)"
@@ -968,12 +968,12 @@ msgstr "Yeni SSL tanıtıcısı oluşturulamadı!"
 #: src/openai.c:294
 msgctxt "STRING_ERROR_PROXY_HOST (158//)"
 msgid "Proxy host lookup failed"
-msgstr "Proxy ana bilgisayar araması başarısız oldu"
+msgstr "Proxy host araması başarısız oldu"
 
 #: src/openai.c:295
 msgctxt "STRING_ERROR_HOST (159//)"
 msgid "Host lookup failed"
-msgstr "Ana bilgisayar araması başarısız oldu"
+msgstr "Host araması başarısız oldu"
 
 #: src/openai.c:308
 msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
@@ -981,7 +981,7 @@ msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
 msgstr ""
-"Sunucuya bağlanılamadı. Proxy ana bilgisayarı ve portunun doğru olup "
+"Sunucuya bağlanılamadı. Proxy host ve portunun doğru olup "
 "olmadığını kontrol edin veya devre dışı bırakın."
 
 #: src/openai.c:321
@@ -1013,9 +1013,7 @@ msgstr "Bağlanıyor..."
 #: src/openai.c:1075 src/openai.c:1406 src/openai.c:1664
 msgctxt "STRING_ERROR_CONNECTING_MAX_RETRIES (167//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr ""
-"Ana bilgisayara bağlanırken hata oluştu! Maksimum yeniden deneme sayısına "
-"ulaşıldı."
+msgstr "Host'a bağlanırken hata oluştu! Maksimum yeniden deneme sayısına ulaşıldı."
 
 #: src/openai.c:539 src/openai.c:827 src/openai.c:1082 src/openai.c:1458
 msgctxt "STRING_SENDING_REQUEST (168//)"
@@ -1030,9 +1028,7 @@ msgstr "Yanıt indiriliyor..."
 #: src/openai.c:683 src/openai.c:934 src/openai.c:1658
 msgctxt "STRING_ERROR_CONNECTION_MAX_RETRIES (171//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr ""
-"Ana bilgisayara bağlanırken hata oluştu! Maksimum yeniden deneme sayısına "
-"ulaşıldı."
+msgstr "Host'a bağlanırken hata oluştu! Maksimum yeniden deneme sayısına ulaşıldı."
 
 #: src/openai.c:705 src/openai.c:947 src/openai.c:1672
 msgctxt "STRING_ERROR_UNKNOWN (172//)"

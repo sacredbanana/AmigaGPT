@@ -265,7 +265,7 @@ msgstr "Kreiraj sliku"
 #: src/MainWindow.c:66
 msgctxt "STRING_CHAT_MODE (25//)"
 msgid "Chat Mode"
-msgstr "Chat Mode"
+msgstr "Režim čavrljanja"
 
 #: src/MainWindow.c:66
 msgctxt "STRING_IMAGE_GENERATION_MODE (26//)"
@@ -562,12 +562,12 @@ msgstr "Postavke proxy servera"
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr "Domaćin"
+msgstr "Host"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"
 msgid "Port"
-msgstr "Luka"
+msgstr "Port"
 
 #: src/ProxySettingsRequesterWindow.c:107
 msgctxt "STRING_PROXY_ENCRYPTION (76//)"
@@ -753,7 +753,7 @@ msgstr "Uredi"
 #: src/menu.c:131 src/menu.c:305 src/menu.c:123 src/menu.c:300
 msgctxt "STRING_MENU_CUT (109//)"
 msgid "Cut"
-msgstr "Cut"
+msgstr "Izreži"
 
 #: src/menu.c:132 src/menu.c:315 src/menu.c:124 src/menu.c:310
 msgctxt "STRING_MENU_COPY (110//)"
