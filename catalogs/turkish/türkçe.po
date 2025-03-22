@@ -779,7 +779,7 @@ msgstr "Bağlantı"
 #: src/menu.c:139 src/menu.c:131
 msgctxt "STRING_MENU_PROXY (117//)"
 msgid "Proxy"
-msgstr "Vekil"
+msgstr "Proxy sunucusu"
 
 #: src/menu.c:140 src/menu.c:144 src/menu.c:132 src/menu.c:136
 msgctxt "STRING_MENU_ENABLED (118//)"

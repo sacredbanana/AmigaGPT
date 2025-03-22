@@ -70,10 +70,13 @@ MakeHook(ProxySettingsRequesterOkButtonClickedHook,
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createProxySettingsRequesterWindow() {
-    STRPTR SSL_OPTIONS[] = {STRING_ENCRYPTION_NONE, STRING_ENCRYPTION_SSL,
-                            NULL};
+    static STRPTR sslOptions[3] = {NULL};
+    sslOptions[0] = STRING_ENCRYPTION_NONE;
+    sslOptions[1] = STRING_ENCRYPTION_SSL;
 
-    STRPTR AUTH_OPTIONS[] = {STRING_AUTH_NONE, STRING_AUTH_USER_PASS, NULL};
+    static STRPTR authOptions[3] = {NULL};
+    authOptions[0] = STRING_AUTH_NONE;
+    authOptions[1] = STRING_AUTH_USER_PASS;
 
     Object *proxySettingsRequesterOkButton, *proxySettingsRequesterCancelButton;
     if ((proxySettingsRequesterWindowObject = WindowObject,
@@ -107,7 +110,7 @@ LONG createProxySettingsRequesterWindow() {
                     MUIA_FrameTitle, STRING_PROXY_ENCRYPTION,
                     Child, proxyUsesSSLCycle = CycleObject,
                         MUIA_CycleChain, TRUE,
-                        MUIA_Cycle_Entries, SSL_OPTIONS,
+                        MUIA_Cycle_Entries, sslOptions,
                         MUIA_Cycle_Active, config.proxyUsesSSL ? 1 : 0,
                     End,
                 End,
@@ -116,7 +119,7 @@ LONG createProxySettingsRequesterWindow() {
                     MUIA_FrameTitle, STRING_PROXY_AUTH,
                     Child, proxyRequiresAuthCycle = CycleObject,
                         MUIA_CycleChain, TRUE,
-                        MUIA_Cycle_Entries, AUTH_OPTIONS,
+                        MUIA_Cycle_Entries, authOptions,
                         MUIA_Cycle_Active, config.proxyRequiresAuth ? 1 : 0,
                     End,
                     Child, HGroup,

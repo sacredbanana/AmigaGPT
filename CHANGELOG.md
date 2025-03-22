@@ -1,11 +1,11 @@
 # Changelog
 
-## 2.3.0
+## 2.3.0 (2025-03-23)
 
 - Created an installer for easy and customisable installation
 - Localisation support
-- Removed close gadgets from API Key and Chat System requestor windows
-- Chat system requestor text entry field now multiline and supports clipboard
+- Removed close gadgets from API Key and Chat System requester windows
+- Chat system requester text entry field now multiline and supports clipboard
 
 ## 2.2.0 (2025-01-04)
 
