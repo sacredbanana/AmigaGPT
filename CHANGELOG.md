@@ -2,10 +2,10 @@
 
 ## 2.3.0 (2025-03-23)
 
-- Created an installer for easy and customisable installation
-- Localisation support
+- New installer for easy and customisable installation
+- Localisation support for 22 languages
 - Removed close gadgets from API Key and Chat System requester windows
-- Chat system requester text entry field now multiline and supports clipboard
+- Chat system requester text entry field is now multiline and supports clipboard
 
 ## 2.2.0 (2025-01-04)
 

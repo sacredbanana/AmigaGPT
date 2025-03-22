@@ -890,6 +890,13 @@ The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E wi
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.3.0 (2025-03-23)@{ub}
+
+- New installer for easy and customisable installation
+- Localisation support for 22 languages
+- Removed close gadgets from API Key and Chat System requester windows
+- Chat system requester text entry field is now multiline and supports clipboard
+
 @{b}2.2.0 (2025-01-04)@{ub}
 
 - Support for ApolloOS
