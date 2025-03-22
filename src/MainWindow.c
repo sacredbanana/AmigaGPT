@@ -1560,6 +1560,9 @@ copyGeneratedImage(struct GeneratedImage *generatedImage) {
  * @param message the message to display
  **/
 void displayError(STRPTR message) {
+    CONST_STRPTR okString =
+        AllocVec(strlen(STRING_OK) + 2, MEMF_ANY | MEMF_CLEAR);
+    snprintf(okString, strlen(STRING_OK) + 2, "*%s", STRING_OK);
     const LONG ERROR_CODE = IoErr();
     if (ERROR_CODE == 0) {
         if (!app || MUI_Request(app, mainWindowObject,
@@ -1568,7 +1571,7 @@ void displayError(STRPTR message) {
 #else
                                 MUIV_Requester_Image_Error, STRING_ERROR,
 #endif
-                                STRING_OK, "\33c*%s", message) != 0) {
+                                okString, "\33c%s", message) != 0) {
             fprintf(stderr, "%s\n", message);
         }
     } else {
@@ -1584,7 +1587,7 @@ void displayError(STRPTR message) {
 #else
                             MUIV_Requester_Image_Error, STRING_ERROR,
 #endif
-                            STRING_OK, "\33c*%s", errorMessage);
+                            okString, "\33c%s", errorMessage);
                 updateStatusBar(STRING_ERROR, redPen);
                 FreeVec(errorMessage);
             }
@@ -1592,6 +1595,7 @@ void displayError(STRPTR message) {
             PrintFault(ERROR_CODE, message);
         }
     }
+    FreeVec(okString);
 }
 
 /**

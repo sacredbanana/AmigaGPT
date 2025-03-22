@@ -99,8 +99,15 @@ MakeHook(SpeechAccentMenuItemClickedHook, SpeechAccentMenuItemClickedFunc);
 #endif
 
 HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
+    CONST_STRPTR guidePath = PROGDIR "AmigaGPT.guide";
+    BPTR file = Open(guidePath, MODE_OLDFILE);
+    if (file == NULL) {
+        displayError(STRING_ERROR_DOCUMENTATION_OPEN);
+        return;
+    }
+    Close(file);
     struct NewAmigaGuide guide = {
-        .nag_Name = PROGDIR "AmigaGPT.guide",
+        .nag_Name = guidePath,
         .nag_Screen = screen,
         .nag_PubScreen = NULL,
         .nag_BaseName = STRING_APP_NAME,
