@@ -1157,13 +1157,13 @@ msgstr "Es konnte keine Narrator-IO-Anforderung erstellt werden."
 
 #: src/speech.c:87
 msgctxt "STRING_ERROR_NARRATOR_34_DEVICE_OPEN (186//)"
-msgid "Could not open narrator.device v34\n"
-msgstr "narrator.device v34 konnte nicht geöffnet werden\n"
+msgid "Could not open narrator.device v34"
+msgstr "narrator.device v34 konnte nicht geöffnet werden"
 
 #: src/speech.c:95
 msgctxt "STRING_ERROR_NARRATOR_37_DEVICE_OPEN (187//)"
-msgid "Could not open narrator.device v37\n"
-msgstr "narrator.device v37 konnte nicht geöffnet werden\n"
+msgid "Could not open narrator.device v37"
+msgstr "narrator.device v37 konnte nicht geöffnet werden"
 
 #: src/speech.c:105
 msgctxt "STRING_ERROR_TRANSLATOR_LIB_OPEN (188//)"

@@ -144,7 +144,7 @@
 
 (procedure get-os3-lang #index
   (if (= #index 0) (set @result "english") (
-  if (= #index 1) (set @result "bosanksi") (
+  if (= #index 1) (set @result "bosanski") (
   if (= #index 2) (set @result "català") (
   if (= #index 3) (set @result "czech") (
   if (= #index 4) (set @result "dansk") (
@@ -162,7 +162,7 @@
   if (= #index 16) (set @result "português") (
   if (= #index 17) (set @result "português-brazil") (
   if (= #index 18) (set @result "russian") (
-  if (= #index 19) (set @result "sloven?ina") (
+  if (= #index 19) (set @result "slovak") (
   if (= #index 20) (set @result "slovensko") (
   if (= #index 21) (set @result "srpski") (
   if (= #index 22) (set @result "suomi") (

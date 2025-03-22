@@ -101,8 +101,8 @@ Regardless of which version of 'narrator.device' you choose to install (or both)
 OpenAI's 16 bit speech is done with AHI.
 
 @{"Installing `translator.library` v43 " link tran43}
-@{"Installing `narrator.device` v34 " link narrator34}
-@{"Installing `narrator.device` v37 " link narrator37}
+@{"Installing `narrator.device` v34" link narrator34}
+@{"Installing `narrator.device` v37" link narrator37}
 @{"Installing AHI " link ahi}
 
 @{b}AmigaOS 4@{ub}

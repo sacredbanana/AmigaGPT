@@ -1140,13 +1140,13 @@ msgstr "Δεν ήταν δυνατή η δημιουργία αιτήματος 
 
 #: src/speech.c:87
 msgctxt "STRING_ERROR_NARRATOR_34_DEVICE_OPEN (186//)"
-msgid "Could not open narrator.device v34\n"
-msgstr "Δεν ήταν δυνατό το άνοιγμα του narrator.device v34 "
+msgid "Could not open narrator.device v34"
+msgstr "Δεν ήταν δυνατό το άνοιγμα του narrator.device v34"
 
 #: src/speech.c:95
 msgctxt "STRING_ERROR_NARRATOR_37_DEVICE_OPEN (187//)"
-msgid "Could not open narrator.device v37\n"
-msgstr "Δεν ήταν δυνατό το άνοιγμα του narrator.device v37 "
+msgid "Could not open narrator.device v37"
+msgstr "Δεν ήταν δυνατό το άνοιγμα του narrator.device v37"
 
 #: src/speech.c:105
 msgctxt "STRING_ERROR_TRANSLATOR_LIB_OPEN (188//)"

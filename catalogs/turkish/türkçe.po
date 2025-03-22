@@ -1102,13 +1102,13 @@ msgstr "Anlatıcı IO isteği oluşturulamadı"
 
 #: src/speech.c:87
 msgctxt "STRING_ERROR_NARRATOR_34_DEVICE_OPEN (186//)"
-msgid "Could not open narrator.device v34\n"
-msgstr "Narrator.device v34 açılamadı "
+msgid "Could not open narrator.device v34"
+msgstr "Narrator.device v34 açılamadı"
 
 #: src/speech.c:95
 msgctxt "STRING_ERROR_NARRATOR_37_DEVICE_OPEN (187//)"
-msgid "Could not open narrator.device v37\n"
-msgstr "Narrator.device v37 açılamadı "
+msgid "Could not open narrator.device v37"
+msgstr "Narrator.device v37 açılamadı"
 
 #: src/speech.c:105
 msgctxt "STRING_ERROR_TRANSLATOR_LIB_OPEN (188//)"

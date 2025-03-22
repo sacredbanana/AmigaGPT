@@ -22,7 +22,7 @@ msgstr ""
 "AmigaGPT — приложение для общения в ChatGPT или создания изображений с "
 "помощью ИИ с помощью DALL-E."
 
-#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:75
+#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
 msgid "Failed to initialize video"
 msgstr "Не удалось инициализировать видео"
@@ -218,15 +218,15 @@ msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
 msgid ""
 "If you would like AmigaGPT to respond in a certain way, or add some "
 "personality, type it in here. For example, you could type \"Speak like a "
-"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to "
-"respond normally, leave this blank. This setting will be applied to new "
+"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
+"normally, leave this blank. This setting will be applied to new "
 "conversations only."
 msgstr ""
 "Если вы хотите, чтобы AmigaGPT отвечал определенным образом или добавлял "
 "индивидуальности, введите это здесь. Например, вы можете ввести \"Speak like "
-"a pirate\" или \"Speak like a robot\". Если вы хотите, чтобы AmigaGPT отвечал "
-"нормально, оставьте это поле пустым. Эта настройка будет применена только к "
-"новым разговорам."
+"a pirate\" или \"Speak like a robot\". Если вы хотите, чтобы AmigaGPT "
+"отвечал нормально, оставьте это поле пустым. Эта настройка будет применена "
+"только к новым разговорам."
 
 #: src/ChatSystemRequesterWindow.c:65
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_ERROR (18//)"
@@ -1127,13 +1127,13 @@ msgstr "Не удалось создать запрос ввода-вывода 
 
 #: src/speech.c:87
 msgctxt "STRING_ERROR_NARRATOR_34_DEVICE_OPEN (186//)"
-msgid "Could not open narrator.device v34\n"
-msgstr "Не удалось открыть narrator.device v34 "
+msgid "Could not open narrator.device v34"
+msgstr "Не удалось открыть narrator.device v34"
 
 #: src/speech.c:95
 msgctxt "STRING_ERROR_NARRATOR_37_DEVICE_OPEN (187//)"
-msgid "Could not open narrator.device v37\n"
-msgstr "Не удалось открыть narrator.device v37 "
+msgid "Could not open narrator.device v37"
+msgstr "Не удалось открыть narrator.device v37"
 
 #: src/speech.c:105
 msgctxt "STRING_ERROR_TRANSLATOR_LIB_OPEN (188//)"

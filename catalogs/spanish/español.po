@@ -1132,13 +1132,13 @@ msgstr "No se pudo crear la solicitud de E/S del narrador"
 
 #: src/speech.c:87
 msgctxt "STRING_ERROR_NARRATOR_34_DEVICE_OPEN (186//)"
-msgid "Could not open narrator.device v34\n"
-msgstr "No se pudo abrir narrator.device v34 "
+msgid "Could not open narrator.device v34"
+msgstr "No se pudo abrir narrator.device v34"
 
 #: src/speech.c:95
 msgctxt "STRING_ERROR_NARRATOR_37_DEVICE_OPEN (187//)"
-msgid "Could not open narrator.device v37\n"
-msgstr "No se pudo abrir narrator.device v37 "
+msgid "Could not open narrator.device v37"
+msgstr "No se pudo abrir narrator.device v37"
 
 #: src/speech.c:105
 msgctxt "STRING_ERROR_TRANSLATOR_LIB_OPEN (188//)"

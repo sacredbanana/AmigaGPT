@@ -21,12 +21,12 @@ msgid ""
 msgstr ""
 "AmigaGPT je aplikacija za klepet s ChatGPT ali ustvarjanje slik AI z DALL-E"
 
-#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:75
+#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
 msgid "Failed to initialize video"
 msgstr "Inicializacija videa ni uspela"
 
-#: src/main.c:76 src/main.c:77 src/main.c:78 src/main.c:79
+#: src/main.c:76 src/main.c:77 src/main.c:78 src/main.c:75
 msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
@@ -215,8 +215,8 @@ msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
 msgid ""
 "If you would like AmigaGPT to respond in a certain way, or add some "
 "personality, type it in here. For example, you could type \"Speak like a "
-"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to "
-"respond normally, leave this blank. This setting will be applied to new "
+"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
+"normally, leave this blank. This setting will be applied to new "
 "conversations only."
 msgstr ""
 "Če želite, da se AmigaGPT odzove na določen način ali doda nekaj osebnosti, "
@@ -995,8 +995,8 @@ msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
 msgstr ""
-"Povezave s strežnikom ni bilo mogoče vzpostaviti. Preverite, ali sta "
-"proxy host in vrata pravilna ali ju onemogočite."
+"Povezave s strežnikom ni bilo mogoče vzpostaviti. Preverite, ali sta proxy "
+"host in vrata pravilna ali ju onemogočite."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
@@ -1120,12 +1120,12 @@ msgstr "Ni bilo mogoče ustvariti zahteve IO pripovedovalca"
 
 #: src/speech.c:87
 msgctxt "STRING_ERROR_NARRATOR_34_DEVICE_OPEN (186//)"
-msgid "Could not open narrator.device v34\n"
+msgid "Could not open narrator.device v34"
 msgstr "Narrator.device v34 ni bilo mogoče odpreti "
 
 #: src/speech.c:95
 msgctxt "STRING_ERROR_NARRATOR_37_DEVICE_OPEN (187//)"
-msgid "Could not open narrator.device v37\n"
+msgid "Could not open narrator.device v37"
 msgstr "Narrator.device v37 ni bilo mogoče odpreti "
 
 #: src/speech.c:105

@@ -17,12 +17,12 @@ msgstr ""
 msgctxt "STRING_APP_DESCRIPTION (0//)"
 msgid ""
 "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
-msgstr ""
+msgstr "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
 
 #: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
 msgid "Failed to initialize video"
-msgstr ""
+msgstr "Failed to initialize video"
 
 #: src/main.c:76 src/main.c:77 src/main.c:78 src/main.c:75
 msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
@@ -30,6 +30,8 @@ msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
 msgstr ""
+"Failed to open speech system. Make sure translator.library v42 and the "
+"narrator.device v34 are installed. See the guide for more information."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
@@ -37,11 +39,13 @@ msgid ""
 "Failed to open speech system. Make sure Flite Device is installed. See the "
 "guide for more information."
 msgstr ""
+"Failed to open speech system. Make sure Flite Device is installed. See the "
+"guide for more information."
 
 #: src/main.c:88 src/main.c:89 src/main.c:90 src/main.c:87
 msgctxt "STRING_ERROR_OPENAI_INIT (4//)"
 msgid "Failed to open OpenAI connector"
-msgstr ""
+msgstr "Failed to open OpenAI connector"
 
 #: src/main.c:51
 msgctxt "STRING_WARNING_STACK (5//)"
@@ -49,60 +53,63 @@ msgid ""
 "Warning: The stack size is too small. The minimum recommended "
 "stack size is 32768 bytes to avoid crashes. Your stack size is: "
 msgstr ""
+"Warning: The stack size is too small. The minimum recommended "
+"stack size is 32768 bytes to avoid crashes. Your stack size is: "
 
 #: src/APIKeyRequesterWindow.c:40
 msgctxt "STRING_API_KEY_REQUESTER_TITLE (6//)"
 msgid "OpenAI API Key"
-msgstr ""
+msgstr "OpenAI API Key"
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_INSTRUCTION (7//)"
 msgid "Type or paste (Right-Amiga + V) your OpenAI API key here."
-msgstr ""
+msgstr "Type or paste (Right-Amiga + V) your OpenAI API key here."
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_REASON (199//)"
 msgid "This key is required to use the OpenAI API."
-msgstr ""
+msgstr "This key is required to use the OpenAI API."
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_HELP (200//)"
 msgid "If you do not have an API key, consult the AmigaGPT documentation for "
 "instructions on how to obtain one."
-msgstr ""
+msgstr "If you do not have an API key, consult the AmigaGPT documentation for "
+"instructions on how to obtain one."
 
 #: src/APIKeyRequesterWindow.c:53 src/ChatSystemRequesterWindow.c:52
 #: src/ProxySettingsRequesterWindow.c:147 src/StartupOptionsWindow.c:129
 #: src/menu.c:39
 msgctxt "STRING_OK (8//)"
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/APIKeyRequesterWindow.c:58 src/ChatSystemRequesterWindow.c:57
 #: src/ProxySettingsRequesterWindow.c:152
 msgctxt "STRING_CANCEL (9//)"
 msgid "Cancel"
-msgstr ""
+msgstr "Cancel"
 
 #: src/APIKeyRequesterWindow.c:66
 msgctxt "STRING_ERROR_API_KEY_REQUESTER (10//)"
 msgid "Could not create API key requester window"
-msgstr ""
+msgstr "Could not create API key requester window"
 
 #: src/AboutAmigaGPTWindow.c:16
 msgctxt "STRING_GIT_COMMIT (11//)"
 msgid "Git commit"
-msgstr ""
+msgstr "Git commit"
 
 #: src/AboutAmigaGPTWindow.c:17
 msgctxt "STRING_GIT_BRANCH (12//)"
 msgid "Git branch"
-msgstr ""
+msgstr "Git branch"
 
 #: src/AboutAmigaGPTWindow.c:17
 msgctxt "STRING_GIT_COMMIT_TIMESTAMP (13//)"
 msgid "Commit timestamp"
-msgstr ""
+msgstr "Commit timestamp"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_SUPPORT (14//)"
@@ -110,80 +117,86 @@ msgid ""
 "This app will always remain free but if you would like to support me "
 "you can do so at:"
 msgstr ""
+"This app will always remain free but if you would like to support me "
+"you can do so at:"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BUILD_DETAILS (214//)"
 msgid "Click the version string above for build details."
-msgstr ""
+msgstr "Click the version string above for build details."
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BEBBO (201//)"
 msgid "for creating the Amiga GCC toolchain"
-msgstr ""
+msgstr "for creating the Amiga GCC toolchain"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_OPENAI (202//)"
 msgid "for creating the GPT and DALL-E models"
-msgstr ""
+msgstr "for creating the GPT and DALL-E models"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_EAB (203//)"
 msgid "for being a great community!"
-msgstr ""
+msgstr "for being a great community!"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
 msgid "for all the thorough testing, bundling AmigaGPT into AmiKit and "
 "for all the moral support"
-msgstr ""
+msgstr "for all the thorough testing, bundling AmigaGPT into AmiKit and "
+"for all the moral support"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_COFFINOS (205//)"
 msgid "for bundling AmigaGPT into CoffinOS"
-msgstr ""
+msgstr "for bundling AmigaGPT into CoffinOS"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
 msgid "for reviewing AmigaGPT and publishing several of its updates in "
 "the News from Aminet section"
-msgstr ""
+msgstr "for reviewing AmigaGPT and publishing several of its updates in "
+"the News from Aminet section"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_WHATIFF (207//)"
 msgid "for reviewing AmigaGPT and interviewing me in issue 14"
-msgstr ""
+msgstr "for reviewing AmigaGPT and interviewing me in issue 14"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_YOUTUBE_REVIEW (208//)"
 msgid "for reviewing AmigaGPT on his YouTube channel"
-msgstr ""
+msgstr "for reviewing AmigaGPT on his YouTube channel"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
 msgid "for covering AmigaGPT in the Amiga News section on his Twitch "
 "streams and allowing me to join his stream to promote it"
-msgstr ""
+msgstr "for covering AmigaGPT in the Amiga News section on his Twitch "
+"streams and allowing me to join his stream to promote it"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
 msgid "for making a video review and giving a tutorial on how to add "
 "support for the French accent"
-msgstr ""
+msgstr "for making a video review and giving a tutorial on how to add "
+"support for the French accent"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LICENSE (211//)"
 msgid "License"
-msgstr ""
+msgstr "License"
 
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
 msgid "Visit the GitHub repository for the latest release"
-msgstr ""
+msgstr "Visit the GitHub repository for the latest release"
 
 #: src/ChatSystemRequesterWindow.c:32
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_TITLE (213//)"
 msgid "Enter how you would like AmigaGPT to respond"
-msgstr ""
+msgstr "Enter how you would like AmigaGPT to respond"
 
 #: src/ChatSystemRequesterWindow.c:38
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
@@ -196,157 +209,164 @@ msgid ""
 "normally, leave this blank. This setting will "
 "be applied to new conversations only."
 msgstr ""
+"If you would like AmigaGPT to respond in a "
+"certain way, or add some personality, type "
+"it in here. For example, you could type "
+"\"Speak like a pirate\" or \"Speak like a "
+"robot\". If you would like AmigaGPT to respond "
+"normally, leave this blank. This setting will "
+"be applied to new conversations only."
 
 #: src/ChatSystemRequesterWindow.c:65
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_ERROR (18//)"
 msgid "Could not create Chat System requester window"
-msgstr ""
+msgstr "Could not create Chat System requester window"
 
 #: src/MainWindow.c:31
 msgctxt "STRING_NEW_CHAT (19//)"
 msgid "New Chat"
-msgstr ""
+msgstr "New Chat"
 
 #: src/MainWindow.c:31
 msgctxt "STRING_DELETE_CHAT (20//)"
 msgid "Delete Chat"
-msgstr ""
+msgstr "Delete Chat"
 
 #: src/MainWindow.c:31
 msgctxt "STRING_SEND (21//)"
 msgid "Send"
-msgstr ""
+msgstr "Send"
 
 #: src/MainWindow.c:32
 msgctxt "STRING_NEW_IMAGE (22//)"
 msgid "New Image"
-msgstr ""
+msgstr "New Image"
 
 #: src/MainWindow.c:32
 msgctxt "STRING_DELETE_IMAGE (23//)"
 msgid "Delete Image"
-msgstr ""
+msgstr "Delete Image"
 
 #. Create image button
 #: src/MainWindow.c:32 src/MainWindow.c:950
 msgctxt "STRING_CREATE_IMAGE (24//)"
 msgid "Create Image"
-msgstr ""
+msgstr "Create Image"
 
 #: src/MainWindow.c:66
 msgctxt "STRING_CHAT_MODE (25//)"
 msgid "Chat Mode"
-msgstr ""
+msgstr "Chat Mode"
 
 #: src/MainWindow.c:66
 msgctxt "STRING_IMAGE_GENERATION_MODE (26//)"
 msgid "Image Generation Mode"
-msgstr ""
+msgstr "Image Generation Mode"
 
 #: src/MainWindow.c:199 src/MainWindow.c:435
 msgctxt "STRING_ERROR_NO_API_KEY (27//)"
 msgid "Please enter your OpenAI API key in the Open AI settings in the menu."
-msgstr ""
+msgstr "Please enter your OpenAI API key in the Open AI settings in the menu."
 
 #: src/MainWindow.c:283
 msgctxt "STRING_ERROR_CONNECTION (28//)"
 msgid "Error connecting. Please try again."
-msgstr ""
+msgstr "Error connecting. Please try again."
 
 #: src/MainWindow.c:288 src/MainWindow.c:305 src/MainWindow.c:387
 #: src/MainWindow.c:1584 src/MainWindow.c:1600 src/MainWindow.c:1603
 msgctxt "STRING_ERROR (29//)"
 msgid "Error"
-msgstr ""
+msgstr "Error"
 
 #: src/MainWindow.c:363
 msgctxt "STRING_ERROR_INVALID_IMAGE_SIZE (30//)"
 msgid "Invalid image size"
-msgstr ""
+msgstr "Invalid image size"
 
 #: src/MainWindow.c:369
 msgctxt "STRING_GENERATING_IMAGE_NAME (31//)"
 msgid "Generating image name..."
-msgstr ""
+msgstr "Generating image name..."
 
 #: src/MainWindow.c:386 src/MainWindow.c:406
 msgctxt "STRING_ERROR_GENERATING_IMAGE_NAME (32//)"
 msgid "Failed to generate image name. Using ID instead."
-msgstr ""
+msgstr "Failed to generate image name. Using ID instead."
 
 #: src/MainWindow.c:396 src/MainWindow.c:402 src/MainWindow.c:552
 #: src/MainWindow.c:963 src/MainWindow.c:1421 src/MainWindow.c:1773
 #: src/MainWindow.c:2146 src/MainWindow.c:2157 src/MainWindow.c:2169
 msgctxt "STRING_READY (33//)"
 msgid "Ready"
-msgstr ""
+msgstr "Ready"
 
 #: src/MainWindow.c:486
 msgctxt "STRING_ERROR_NO_IMAGE_SELECTED (34//)"
 msgid "No image is currently selected."
-msgstr ""
+msgstr "No image is currently selected."
 
 #. Save image copy button
 #: src/MainWindow.c:499 src/MainWindow.c:932
 msgctxt "STRING_SAVE_IMAGE_COPY (35//)"
 msgid "Save Image Copy"
-msgstr ""
+msgstr "Save Image Copy"
 
 #: src/MainWindow.c:807 src/gui.c:164 src/gui.c:165 src/menu.c:110
 msgctxt "STRING_APP_NAME (36//)"
 msgid "AmigaGPT"
-msgstr ""
+msgstr "AmigaGPT"
 
 #. Open image button
 #: src/MainWindow.c:927
 msgctxt "STRING_OPEN_IMAGE (37//)"
 msgid "Open Image"
-msgstr ""
+msgstr "Open Image"
 
 #: src/MainWindow.c:973
 msgctxt "STRING_ERROR_MAIN_WINDOW (38//)"
 msgid "Could not create main window"
-msgstr ""
+msgstr "Could not create main window"
 
 #: src/MainWindow.c:1032
 msgctxt "STRING_ERROR_IMAGE_PATH_NULL (39//)"
 msgid "Image path is NULL"
-msgstr ""
+msgstr "Image path is NULL"
 
 #: src/MainWindow.c:1042
 msgctxt "STRING_ERROR_IMG_DIR_NOT_FOUND (40//)"
 msgid "Could not find image directory"
-msgstr ""
+msgstr "Could not find image directory"
 
 #: src/MainWindow.c:1048
 msgctxt "STRING_ERROR_IMG_FILE_NOT_FOUND (41//)"
 msgid "Could not find image file name"
-msgstr ""
+msgstr "Could not find image file name"
 
 #: src/MainWindow.c:1068
 msgctxt "STRING_ERROR_IMG_LOAD_THUMBNAIL (42//)"
 msgid "Could not load image for thumbnail generation"
-msgstr ""
+msgstr "Could not load image for thumbnail generation"
 
 #: src/MainWindow.c:1181
 msgctxt "STRING_SENDING_MESSAGE (43//)"
 msgid "Sending message..."
-msgstr ""
+msgstr "Sending message..."
 
 #: src/MainWindow.c:1232 src/MainWindow.c:1397
 msgctxt "STRING_ERROR_CONNECTING_OPENAI (44//)"
 msgid "Could not connect to OpenAI"
-msgstr ""
+msgstr "Could not connect to OpenAI"
 
 #: src/MainWindow.c:1380
 msgctxt "STRING_GENERATING_CONVERSATION_TITLE (45//)"
 msgid "Generating conversation title..."
-msgstr ""
+msgstr "Generating conversation title..."
 
 #: src/MainWindow.c:1440
 msgctxt "STRING_ERROR_MEMORY_CONVERSATION_NODE (46//)"
 msgid "Failed to allocate memory for conversation node."
-msgstr ""
+msgstr "Failed to allocate memory for conversation node."
 
 #: src/MainWindow.c:1466
 msgctxt "STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED (47//)"
@@ -354,6 +374,8 @@ msgid ""
 "The conversation has exceeded the maximum length. "
 "Please start a new conversation."
 msgstr ""
+"The conversation has exceeded the maximum length. "
+"Please start a new conversation."
 
 #: src/MainWindow.c:1619
 msgctxt "STRING_ERROR_CHAT_HISTORY_CREATE (49//)"
@@ -361,6 +383,8 @@ msgid ""
 "Failed to create message history file. Conversation history will not be "
 "saved."
 msgstr ""
+"Failed to create message history file. Conversation history will not be "
+"saved."
 
 #: src/MainWindow.c:1663
 msgctxt "STRING_ERROR_CHAT_HISTORY_SAVE (50//)"
@@ -368,21 +392,23 @@ msgid ""
 "Failed to write to message history file. Conversation history will not be "
 "saved."
 msgstr ""
+"Failed to write to message history file. Conversation history will not be "
+"saved."
 
 #: src/MainWindow.c:1682
 msgctxt "STRING_ERROR_IMAGE_HISTORY_CREATE (51//)"
 msgid "Failed to create image history file. Image history will not be saved."
-msgstr ""
+msgstr "Failed to create image history file. Image history will not be saved."
 
 #: src/MainWindow.c:1717
 msgctxt "STRING_ERROR_IMAGE_HISTORY_WRITE (52//)"
 msgid "Failed to write to image history file. Image history will not be saved."
-msgstr ""
+msgstr "Failed to write to image history file. Image history will not be saved."
 
 #: src/MainWindow.c:1745
 msgctxt "STRING_LOADING_IMAGE (53//)"
 msgid "Loading image..."
-msgstr ""
+msgstr "Loading image..."
 
 #: src/MainWindow.c:1800
 msgctxt "STRING_ERROR_CHAT_HISTORY_READ (55//)"
@@ -390,6 +416,8 @@ msgid ""
 "Failed to read from message history file. Conversation history will not be "
 "loaded"
 msgstr ""
+"Failed to read from message history file. Conversation history will not be "
+"loaded"
 
 #: src/MainWindow.c:1814
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP (56//)"
@@ -398,6 +426,9 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
 msgstr ""
+"Failed to parse chat history. Malformed JSON. The chat-history.json file is "
+"probably corrupted. Conversation history will not be loaded. A backup of the "
+"chat-history.json file has been created as chat-history.json.bak"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -407,11 +438,15 @@ msgid ""
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
 msgstr ""
+"Failed to parse chat history. Malformed JSON. The chat-history.json file is "
+"probably corrupted. Conversation history will not be loaded. There was an "
+"error writing a backup of the chat history to disk but a copy has been saved "
+"to RAM:chat-history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
 msgid "Failed to delete chat-history.json. Please delete this file manually."
-msgstr ""
+msgstr "Failed to delete chat-history.json. Please delete this file manually."
 
 #: src/MainWindow.c:1852
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP (59//)"
@@ -419,6 +454,8 @@ msgid ""
 "Failed to parse chat history.The chat-history.json file is probably "
 "corrupted. Conversation history will not be loaded."
 msgstr ""
+"Failed to parse chat history.The chat-history.json file is probably "
+"corrupted. Conversation history will not be loaded."
 
 #: src/MainWindow.c:1950
 msgctxt "STRING_ERROR_IMAGE_HISTORY_READ (60//)"
@@ -426,6 +463,8 @@ msgid ""
 "Failed to read from image history file. Image generation history will not be "
 "loaded"
 msgstr ""
+"Failed to read from image history file. Image generation history will not be "
+"loaded"
 
 #: src/MainWindow.c:1964
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP (61//)"
@@ -434,6 +473,9 @@ msgid ""
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
 msgstr ""
+"Failed to parse image history. Malformed JSON. The image-history.json file "
+"is probably corrupted. Image history will not be loaded. A backup of the "
+"image-history.json file has been created as image-history.json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -443,169 +485,176 @@ msgid ""
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
 msgstr ""
+"Failed to parse image history. Malformed JSON. The image-history.json file "
+"is probably corrupted. Image history will not be loaded. There was an error "
+"writing a backup of the image history to disk but a copy has been saved to "
+"RAM:image-history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
 msgid "Failed to delete image-history.json. Please delete this file manually."
-msgstr ""
+msgstr "Failed to delete image-history.json. Please delete this file manually."
 
 #: src/MainWindow.c:2120
 msgctxt "STRING_ERROR_FILE_COPY_OPEN (64//)"
 msgid "Error opening file for copy"
-msgstr ""
+msgstr "Error opening file for copy"
 
 #: src/MainWindow.c:2129
 msgctxt "STRING_ERROR_FILE_COPY_CREATE (65//)"
 msgid "Error creating file for copy"
-msgstr ""
+msgstr "Error creating file for copy"
 
 #: src/MainWindow.c:2137
 msgctxt "STRING_COPYING_FILE (66//)"
 msgid "Copying file..."
-msgstr ""
+msgstr "Copying file..."
 
 #: src/MainWindow.c:2148 src/MainWindow.c:2159
 msgctxt "STRING_ERROR_FILE_COPY (67//)"
 msgid "Error copying file"
-msgstr ""
+msgstr "Error copying file"
 
 #: src/ProxySettingsRequesterWindow.c:30
 msgctxt "STRING_ERROR_INVALID_PORT (68//)"
 msgid "Invalid port number. Please enter a number between 0 and 65535."
-msgstr ""
+msgstr "Invalid port number. Please enter a number between 0 and 65535."
 
 #: src/ProxySettingsRequesterWindow.c:72
 msgctxt "STRING_ENCRYPTION_NONE (69//)"
 msgid "None (fastest)"
-msgstr ""
+msgstr "None (fastest)"
 
 #: src/ProxySettingsRequesterWindow.c:72
 msgctxt "STRING_ENCRYPTION_SSL (70//)"
 msgid "SSL (secure)"
-msgstr ""
+msgstr "SSL (secure)"
 
 #: src/ProxySettingsRequesterWindow.c:75
 msgctxt "STRING_AUTH_NONE (71//)"
 msgid "No authentication"
-msgstr ""
+msgstr "No authentication"
 
 #: src/ProxySettingsRequesterWindow.c:76
 msgctxt "STRING_AUTH_USER_PASS (72//)"
 msgid "Username and password"
-msgstr ""
+msgstr "Username and password"
 
 #: src/ProxySettingsRequesterWindow.c:80
 msgctxt "STRING_PROXY_SETTINGS (73//)"
 msgid "Proxy server settings"
-msgstr ""
+msgstr "Proxy server settings"
 
 #: src/ProxySettingsRequesterWindow.c:87
 msgctxt "STRING_PROXY_HOST (74//)"
 msgid "Host"
-msgstr ""
+msgstr "Host"
 
 #: src/ProxySettingsRequesterWindow.c:96
 msgctxt "STRING_PROXY_PORT (75//)"
 msgid "Port"
-msgstr ""
+msgstr "Port"
 
 #: src/ProxySettingsRequesterWindow.c:107
 msgctxt "STRING_PROXY_ENCRYPTION (76//)"
 msgid "Encryption"
-msgstr ""
+msgstr "Encryption"
 
 #: src/ProxySettingsRequesterWindow.c:116
 msgctxt "STRING_PROXY_AUTH (77//)"
 msgid "Authentication"
-msgstr ""
+msgstr "Authentication"
 
 #: src/ProxySettingsRequesterWindow.c:125
 msgctxt "STRING_USERNAME (78//)"
 msgid "Username"
-msgstr ""
+msgstr "Username"
 
 #: src/ProxySettingsRequesterWindow.c:135
 msgctxt "STRING_PASSWORD (79//)"
 msgid "Password"
-msgstr ""
+msgstr "Password"
 
 #: src/ProxySettingsRequesterWindow.c:160
 msgctxt "STRING_ERROR_PROXY_SETTINGS (80//)"
 msgid "Could not create proxy settings requester window"
-msgstr ""
+msgstr "Could not create proxy settings requester window"
 
 #: src/StartupOptionsWindow.c:18
 msgctxt "STRING_OPEN_IN_WORKBENCH (81//)"
 msgid "Open in Workbench"
-msgstr ""
+msgstr "Open in Workbench"
 
 #: src/StartupOptionsWindow.c:18
 msgctxt "STRING_NEW_SCREEN (82//)"
 msgid "New screen"
-msgstr ""
+msgstr "New screen"
 
 #: src/StartupOptionsWindow.c:86
 msgctxt "STRING_ERROR_SCREEN (83//)"
 msgid "Could not open screen"
-msgstr ""
+msgstr "Could not open screen"
 
 #: src/StartupOptionsWindow.c:123
 msgctxt "STRING_STARTUP_OPTIONS (84//)"
 msgid "Startup Options"
-msgstr ""
+msgstr "Startup Options"
 
 #: src/StartupOptionsWindow.c:127
 msgctxt "STRING_SCREEN_TO_OPEN (85//)"
 msgid "Screen to open"
-msgstr ""
+msgstr "Screen to open"
 
 #: src/StartupOptionsWindow.c:131
 msgctxt "STRING_ERROR_STARTUP_OPTIONS (86//)"
 msgid "Could not create startupOptionsWindowObject"
-msgstr ""
+msgstr "Could not create startupOptionsWindowObject"
 
 #: src/config.c:47
 msgctxt "STRING_ERROR_CONFIG_FILE_READ (87//)"
 msgid "Failed to read the config file"
-msgstr ""
+msgstr "Failed to read the config file"
 
 #: src/config.c:119
 msgctxt "STRING_ERROR_CONFIG_FILE_WRITE (88//)"
 msgid "Failed to write the data to the config file"
-msgstr ""
+msgstr "Failed to write the data to the config file"
 
 #: src/config.c:166
 msgctxt "STRING_ERROR_CONFIG_FILE_PARSE (89//)"
 msgid "Failed to parse the config file"
-msgstr ""
+msgstr "Failed to parse the config file"
 
 #: src/gui.c:77
 msgctxt "STRING_ERROR_MUI_LIB_OPEN (90//)"
 msgid "Could not open muimaster.library. "
 "Please make sure you have MUI installed"
-msgstr ""
+msgstr "Could not open muimaster.library. "
+"Please make sure you have MUI installed"
 
 #: src/gui.c:84
 msgctxt "STRING_ERROR_MUI_INTERFACE_OPEN (91//)"
 msgid "Could not get interface for muimaster.library"
-msgstr ""
+msgstr "Could not get interface for muimaster.library"
 
 #: src/gui.c:91
 msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
 msgid "Could not open codesets.library. "
 "Please make sure you have codesets installed. "
 "Refer to the documentation for more info."
-msgstr ""
+msgstr "Could not open codesets.library. "
+"Please make sure you have codesets installed. "
+"Refer to the documentation for more info."
 
 #: src/gui.c:98
 msgctxt "STRING_ERROR_CODESETS_INTERFACE_OPEN (93//)"
 msgid "Could not get interface for codesets.library"
-msgstr ""
+msgstr "Could not get interface for codesets.library"
 
 #: src/gui.c:104
 msgctxt "STRING_ERROR_CODESETS_SYSTEM (94//)"
 msgid "Could not find the system codeset"
-msgstr ""
+msgstr "Could not find the system codeset"
 
 #: src/gui.c:144
 msgctxt "STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED (95//)"
@@ -613,26 +662,28 @@ msgid ""
 "Could not find all the MUI custom classes. Please make sure they are "
 "installed. Refer to the documentation for more information."
 msgstr ""
+"Could not find all the MUI custom classes. Please make sure they are "
+"installed. Refer to the documentation for more information."
 
 #: src/gui.c:178
 msgctxt "STRING_IMAGE (96//)"
 msgid "Image"
-msgstr ""
+msgstr "Image"
 
 #: src/gui.c:189
 msgctxt "STRING_ERROR_APP_CREATE (97//)"
 msgid "Could not create app!"
-msgstr ""
+msgstr "Could not create app!"
 
 #: src/gui.c:221
 msgctxt "STRING_ERROR_MUI_CUSTOM_CLASS_NOT_FOUND (98//)"
 msgid "Could not find the MUI custom class"
-msgstr ""
+msgstr "Could not find the MUI custom class"
 
 #: src/menu.c:26
 msgctxt "STRING_ABOUT (99//)"
 msgid "About"
-msgstr ""
+msgstr "About"
 
 #: src/menu.c:59
 msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
@@ -640,222 +691,224 @@ msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
 msgstr ""
+"Failed to open speech system. Make sure translator.library v42 and the "
+"narrator.device v37 are installed. See the guide for more information."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
 msgid "Could not initialize speech system OpenAI"
-msgstr ""
+msgstr "Could not initialize speech system OpenAI"
 
 #: src/menu.c:73
 msgctxt "STRING_ERROR_SPEECH_UNKNOWN_SYSTEM (102//)"
 msgid "Unknown speech system!"
-msgstr ""
+msgstr "Unknown speech system!"
 
 #: src/menu.c:117
 msgctxt "STRING_ERROR_DOCUMENTATION_OPEN (103//)"
 msgid "Could not open documentation"
-msgstr ""
+msgstr "Could not open documentation"
 
 #: src/menu.c:124 src/menu.c:116
 msgctxt "STRING_MENU_PROJECT (104//)"
 msgid "Project"
-msgstr ""
+msgstr "Project"
 
 #: src/menu.c:125 src/menu.c:117
 msgctxt "STRING_MENU_ABOUT_AMIGAGPT (105//)"
 msgid "About AmigaGPT"
-msgstr ""
+msgstr "About AmigaGPT"
 
 #: src/menu.c:127 src/menu.c:119
 msgctxt "STRING_MENU_ABOUT_MUI (106//)"
 msgid "About MUI"
-msgstr ""
+msgstr "About MUI"
 
 #: src/menu.c:129 src/menu.c:121
 msgctxt "STRING_MENU_QUIT (107//)"
 msgid "Quit"
-msgstr ""
+msgstr "Quit"
 
 #: src/menu.c:130 src/menu.c:122
 msgctxt "STRING_MENU_EDIT (108//)"
 msgid "Edit"
-msgstr ""
+msgstr "Edit"
 
 #: src/menu.c:131 src/menu.c:305 src/menu.c:123 src/menu.c:300
 msgctxt "STRING_MENU_CUT (109//)"
 msgid "Cut"
-msgstr ""
+msgstr "Cut"
 
 #: src/menu.c:132 src/menu.c:315 src/menu.c:124 src/menu.c:310
 msgctxt "STRING_MENU_COPY (110//)"
 msgid "Copy"
-msgstr ""
+msgstr "Copy"
 
 #: src/menu.c:133 src/menu.c:325 src/menu.c:125 src/menu.c:320
 msgctxt "STRING_MENU_PASTE (111//)"
 msgid "Paste"
-msgstr ""
+msgstr "Paste"
 
 #: src/menu.c:134 src/menu.c:126
 msgctxt "STRING_MENU_CLEAR(112//)"
 msgid "Clear"
-msgstr ""
+msgstr "Clear"
 
 #: src/menu.c:135 src/menu.c:127
 msgctxt "STRING_MENU_SELECT_ALL (113//)"
 msgid "Select all"
-msgstr ""
+msgstr "Select all"
 
 #: src/menu.c:136 src/menu.c:128
 msgctxt "STRING_MENU_VIEW (114//)"
 msgid "View"
-msgstr ""
+msgstr "View"
 
 #: src/menu.c:137 src/menu.c:129
 msgctxt "STRING_MENU_MUI_SETTINGS (115//)"
 msgid "MUI Settings"
-msgstr ""
+msgstr "MUI Settings"
 
 #: src/menu.c:138 src/menu.c:130
 msgctxt "STRING_MENU_CONNECTION (116//)"
 msgid "Connection"
-msgstr ""
+msgstr "Connection"
 
 #: src/menu.c:139 src/menu.c:131
 msgctxt "STRING_MENU_PROXY (117//)"
 msgid "Proxy"
-msgstr ""
+msgstr "Proxy"
 
 #: src/menu.c:140 src/menu.c:144 src/menu.c:132 src/menu.c:136
 msgctxt "STRING_MENU_ENABLED (118//)"
 msgid "Enabled"
-msgstr ""
+msgstr "Enabled"
 
 #: src/menu.c:142 src/menu.c:134
 msgctxt "STRING_MENU_SETTINGS (119//)"
 msgid "Settings"
-msgstr ""
+msgstr "Settings"
 
 #: src/menu.c:143 src/menu.c:135
 msgctxt "STRING_MENU_SPEECH (120//)"
 msgid "Speech"
-msgstr ""
+msgstr "Speech"
 
 #: src/menu.c:146 src/menu.c:138
 msgctxt "STRING_MENU_SPEECH_SYSTEM (121//)"
 msgid "Speech system"
-msgstr ""
+msgstr "Speech system"
 
 #: src/menu.c:148 src/speech.c:53 src/menu.c:140
 msgctxt "STRING_MENU_SPEECH_SYSTEM_34 (122//)"
 msgid "Workbench 1.x v34"
-msgstr ""
+msgstr "Workbench 1.x v34"
 
 #: src/menu.c:150 src/speech.c:54 src/menu.c:142
 msgctxt "STRING_MENU_SPEECH_SYSTEM_37 (123//)"
 msgid "Workbench 2.0 v37"
-msgstr ""
+msgstr "Workbench 2.0 v37"
 
 #: src/menu.c:156 src/speech.c:55 src/menu.c:148
 msgctxt "STRING_MENU_SPEECH_SYSTEM_FLITE (124//)"
 msgid "Flite"
-msgstr ""
+msgstr "Flite"
 
 #: src/menu.c:169 src/menu.c:161
 msgctxt "STRING_MENU_FLITE_VOICE (125//)"
 msgid "Flite Voice"
-msgstr ""
+msgstr "Flite Voice"
 
 #: src/menu.c:152 src/menu.c:158 src/menu.c:161 src/speech.c:57 src/menu.c:144
 #: src/menu.c:150 src/menu.c:153
 msgctxt "STRING_MENU_SPEECH_SYSTEM_OPENAI (126//)"
 msgid "OpenAI Text To Speech"
-msgstr ""
+msgstr "OpenAI Text To Speech"
 
 #: src/menu.c:166 src/menu.c:158
 msgctxt "STRING_MENU_SPEECH_ACCENT (127//)"
 msgid "Accent"
-msgstr ""
+msgstr "Accent"
 
 #: src/menu.c:170 src/menu.c:162
 msgctxt "STRING_MENU_FLITE_VOICE_KAL (128//)"
 msgid "kal (fast)"
-msgstr ""
+msgstr "kal (fast)"
 
 #: src/menu.c:172 src/menu.c:164
 msgctxt "STRING_MENU_FLITE_VOICE_KAL16 (129//)"
 msgid "kal16 (fast)"
-msgstr ""
+msgstr "kal16 (fast)"
 
 #: src/menu.c:174 src/menu.c:166
 msgctxt "STRING_MENU_FLITE_VOICE_AWB (130//)"
 msgid "awb (slow)"
-msgstr ""
+msgstr "awb (slow)"
 
 #: src/menu.c:176 src/menu.c:168
 msgctxt "STRING_MENU_FLITE_VOICE_RMS (131//)"
 msgid "rms (slow)"
-msgstr ""
+msgstr "rms (slow)"
 
 #: src/menu.c:178 src/menu.c:170
 msgctxt "STRING_MENU_FLITE_VOICE_SLT (132//)"
 msgid "slt (slow)"
-msgstr ""
+msgstr "slt (slow)"
 
 #: src/menu.c:181 src/menu.c:173
 msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 msgid "OpenAI Voice"
-msgstr ""
+msgstr "OpenAI Voice"
 
 #: src/menu.c:194 src/menu.c:186
 msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 msgid "OpenAI Speech Model"
-msgstr ""
+msgstr "OpenAI Speech Model"
 
 #: src/menu.c:199 src/menu.c:192
 msgctxt "STRING_MENU_OPENAI (141//)"
 msgid "OpenAI"
-msgstr ""
+msgstr "OpenAI"
 
 #: src/menu.c:200 src/menu.c:193
 msgctxt "STRING_MENU_OPENAI_API_KEY (142//)"
 msgid "API key"
-msgstr ""
+msgstr "API key"
 
 #: src/menu.c:201 src/menu.c:194
 msgctxt "STRING_MENU_OPENAI_CHAT_SYSTEM (143//)"
 msgid "Chat System"
-msgstr ""
+msgstr "Chat System"
 
 #: src/menu.c:202 src/menu.c:195
 msgctxt "STRING_MENU_OPENAI_CHAT_MODEL (144//)"
 msgid "Chat Model"
-msgstr ""
+msgstr "Chat Model"
 
 #: src/menu.c:251 src/menu.c:244
 msgctxt "STRING_MENU_OPENAI_IMAGE_MODEL (145//)"
 msgid "Image Model"
-msgstr ""
+msgstr "Image Model"
 
 #: src/menu.c:256 src/menu.c:249
 msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2 (146//)"
 msgid "DALL-E 2 Image Size"
-msgstr ""
+msgstr "DALL-E 2 Image Size"
 
 #: src/menu.c:263 src/menu.c:257
 msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3 (147//)"
 msgid "DALL-E 3 Image Size"
-msgstr ""
+msgstr "DALL-E 3 Image Size"
 
 #: src/menu.c:270 src/menu.c:265
 msgctxt "STRING_MENU_HELP (148//)"
 msgid "Help"
-msgstr ""
+msgstr "Help"
 
 #: src/menu.c:271 src/menu.c:266
 msgctxt "STRING_MENU_OPEN_DOCUMENTATION (149//)"
 msgid "Open Documentation"
-msgstr ""
+msgstr "Open Documentation"
 
 #: src/openai.c:175
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN (150//)"
@@ -864,16 +917,19 @@ msgid ""
 "AmiTCP, Miami or Roadshow. Please refer to the documentation for more "
 "information."
 msgstr ""
+"Failed to open bsdsocket.library. You have to install a TCP/IP stack such as "
+"AmiTCP, Miami or Roadshow. Please refer to the documentation for more "
+"information."
 
 #: src/openai.c:182
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN_OS4 (151//)"
 msgid "Failed to open bsdsocket.library"
-msgstr ""
+msgstr "Failed to open bsdsocket.library"
 
 #: src/openai.c:187
 msgctxt "STRING_ERROR_BSDSOCKET_INTERFACE_OPEN (152//)"
 msgid "Failed to get the interface of bsdsocket.library"
-msgstr ""
+msgstr "Failed to get the interface of bsdsocket.library"
 
 #: src/openai.c:195 src/openai.c:204
 msgctxt "STRING_ERROR_AMISSLMASTER_LIB_OPEN (153//)"
@@ -881,11 +937,13 @@ msgid ""
 "Failed to open amisslmaster.library version 5. You have to install AmiSSL 5. "
 "Please refer to the documentation for more information."
 msgstr ""
+"Failed to open amisslmaster.library version 5. You have to install AmiSSL 5. "
+"Please refer to the documentation for more information."
 
 #: src/openai.c:211
 msgctxt "STRING_ERROR_AMISSLMASTER_INTERFACE_OPEN (154//)"
 msgid "Failed to get the interface of amisslmaster.library"
-msgstr ""
+msgstr "Failed to get the interface of amisslmaster.library"
 
 #: src/openai.c:223
 msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
@@ -893,26 +951,28 @@ msgid ""
 "Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
 "newer. Please refer to the documentation for more information."
 msgstr ""
+"Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
+"newer. Please refer to the documentation for more information."
 
 #: src/openai.c:233
 msgctxt "STRING_ERROR_AMISSL_INTERFACE_INIT (156//)"
 msgid "Failed to get the interface of amissl.library"
-msgstr ""
+msgstr "Failed to get the interface of amissl.library"
 
 #: src/openai.c:281
 msgctxt "STRING_ERROR_SSL_HANDLE (157//)"
 msgid "Couldn't create new SSL handle!"
-msgstr ""
+msgstr "Couldn't create new SSL handle!"
 
 #: src/openai.c:294
 msgctxt "STRING_ERROR_PROXY_HOST (158//)"
 msgid "Proxy host lookup failed"
-msgstr ""
+msgstr "Proxy host lookup failed"
 
 #: src/openai.c:295
 msgctxt "STRING_ERROR_HOST (159//)"
 msgid "Host lookup failed"
-msgstr ""
+msgstr "Host lookup failed"
 
 #: src/openai.c:308
 msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
@@ -920,184 +980,186 @@ msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
 msgstr ""
+"Couldn't connect to server. Check if the proxy host and port are correct or "
+"disable it."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
 msgid "Couldn't create socket"
-msgstr ""
+msgstr "Couldn't create socket"
 
 #: src/openai.c:354
 msgctxt "STRING_ERROR_CONNECT_REQUEST (162//)"
 msgid "Failed to send CONNECT request"
-msgstr ""
+msgstr "Failed to send CONNECT request"
 
 #: src/openai.c:367
 msgctxt "STRING_ERROR_PROXY_AUTH (163//)"
 msgid "Proxy authentication failed"
-msgstr ""
+msgstr "Proxy authentication failed"
 
 #: src/openai.c:369
 msgctxt "STRING_ERROR_PROXY_NO_RESPONSE (164//)"
 msgid "Failed to receive response from proxy"
-msgstr ""
+msgstr "Failed to receive response from proxy"
 
 #: src/openai.c:525 src/openai.c:779 src/openai.c:1069 src/openai.c:1400
 msgctxt "STRING_CONNECTING (166//)"
 msgid "Connecting..."
-msgstr ""
+msgstr "Connecting..."
 
 #: src/openai.c:532 src/openai.c:689 src/openai.c:785 src/openai.c:940
 #: src/openai.c:1075 src/openai.c:1406 src/openai.c:1664
 msgctxt "STRING_ERROR_CONNECTING_MAX_RETRIES (167//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr ""
+msgstr "Error connecting to host! Maximum retries reached."
 
 #: src/openai.c:539 src/openai.c:827 src/openai.c:1082 src/openai.c:1458
 msgctxt "STRING_SENDING_REQUEST (168//)"
 msgid "Sending request..."
-msgstr ""
+msgstr "Sending request..."
 
 #: src/openai.c:569
 msgctxt "STRING_DOWNLOADING_RESPONSE (169//)"
 msgid "Downloading response..."
-msgstr ""
+msgstr "Downloading response..."
 
 #: src/openai.c:683 src/openai.c:934 src/openai.c:1658
 msgctxt "STRING_ERROR_CONNECTION_MAX_RETRIES (171//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr ""
+msgstr "Error connecting to host! Maximum retries reached."
 
 #: src/openai.c:705 src/openai.c:947 src/openai.c:1672
 msgctxt "STRING_ERROR_UNKNOWN (172//)"
 msgid "Unknown error"
-msgstr ""
+msgstr "Unknown error"
 
 #: src/openai.c:711 src/openai.c:953 src/openai.c:1222 src/openai.c:1677
 msgctxt "STRING_ERROR_REQUEST_WRITE (173//)"
 msgid "Couldn't write request!"
-msgstr ""
+msgstr "Couldn't write request!"
 
 #: src/openai.c:857
 msgctxt "STRING_DOWNLOADING_IMAGE (174//)"
 msgid "Downloading image..."
-msgstr ""
+msgstr "Downloading image..."
 
 #: src/openai.c:857
 msgctxt "STRING_BYTES (215//)"
 msgid "bytes"
-msgstr ""
+msgstr "bytes"
 
 #: src/openai.c:1015
 msgctxt "STRING_ERROR_FILE_WRITE_OPEN (175//)"
 msgid "Couldn't open file for writing"
-msgstr ""
+msgstr "Couldn't open file for writing"
 
 #: src/openai.c:1026
 msgctxt "STRING_ERROR_INVALID_URL (176//)"
 msgid "Invalid URL format"
-msgstr ""
+msgstr "Invalid URL format"
 
 #: src/openai.c:1154
 msgctxt "STRING_DOWNLOADED (177//)"
 msgid "Downloaded"
-msgstr ""
+msgstr "Downloaded"
 
 #: src/openai.c:1189
 msgctxt "STRING_ERROR_LOST_CONNECTION (178//)"
 msgid "Lost connection. Reconnecting..."
-msgstr ""
+msgstr "Lost connection. Reconnecting..."
 
 #: src/openai.c:1304
 msgctxt "STRING_ERROR_SSL_CONTEXT (179//)"
 msgid "Couldn't create new SSL context!"
-msgstr ""
+msgstr "Couldn't create new SSL context!"
 
 #: src/openai.c:1363
 msgctxt "STRING_ERROR_BAD_CHUNK (180//)"
 msgid "Couldn't find CRLF in chunk length"
-msgstr ""
+msgstr "Couldn't find CRLF in chunk length"
 
 #: src/openai.c:1600
 msgctxt "STRING_ERROR_AUDIO_BUFFER_MEMORY (182//)"
 msgid "Not enough memory for audio buffer"
-msgstr ""
+msgstr "Not enough memory for audio buffer"
 
 #: src/openai.c:1718
 msgctxt "STRING_DOWNLOAD_COMPLETE (183//)"
 msgid "Download complete"
-msgstr ""
+msgstr "Download complete"
 
 #: src/speech.c:71
 msgctxt "STRING_ERROR_NARRATOR_PORT (184//)"
 msgid "Could not create narrator port"
-msgstr ""
+msgstr "Could not create narrator port"
 
 #: src/speech.c:78
 msgctxt "STRING_ERROR_NARRATOR_IO_REQUEST (185//)"
 msgid "Could not create narrator IO request"
-msgstr ""
+msgstr "Could not create narrator IO request"
 
 #: src/speech.c:87
 msgctxt "STRING_ERROR_NARRATOR_34_DEVICE_OPEN (186//)"
-msgid "Could not open narrator.device v34\n"
-msgstr ""
+msgid "Could not open narrator.device v34"
+msgstr "Could not open narrator.device v34"
 
 #: src/speech.c:95
 msgctxt "STRING_ERROR_NARRATOR_37_DEVICE_OPEN (187//)"
-msgid "Could not open narrator.device v37\n"
-msgstr ""
+msgid "Could not open narrator.device v37"
+msgstr "Could not open narrator.device v37"
 
 #: src/speech.c:105
 msgctxt "STRING_ERROR_TRANSLATOR_LIB_OPEN (188//)"
 msgid "Could not open translator.library"
-msgstr ""
+msgstr "Could not open translator.library"
 
 #: src/speech.c:134
 msgctxt "STRING_ERROR_FLITE_INTERFACE_OPEN (189//)"
 msgid "Failed to obtain interface for flite.device"
-msgstr ""
+msgstr "Failed to obtain interface for flite.device"
 
 #: src/speech.c:139
 msgctxt "STRING_ERROR_FLITE_DEVICE_OPEN (190//)"
 msgid "Failed to open flite.device"
-msgstr ""
+msgstr "Failed to open flite.device"
 
 #: src/speech.c:283
 msgctxt "STRING_ERROR_AHI_DEVICE_OPEN (191//)"
 msgid "Failed to open AHI device"
-msgstr ""
+msgstr "Failed to open AHI device"
 
 #: src/speech.c:334
 msgctxt "STRING_ERROR_VOICE_OPEN (192//)"
 msgid "Failed to open voice"
-msgstr ""
+msgstr "Failed to open voice"
 
 #: src/speech.c:358
 msgctxt "STRING_ERROR_SPEECH_IO_ABORTED (193//)"
 msgid "Speech IO aborted"
-msgstr ""
+msgstr "Speech IO aborted"
 
 #: src/speech.c:361
 msgctxt "STRING_ERROR_FLITE (194//)"
 msgid "Flite error"
-msgstr ""
+msgstr "Flite error"
 
 #: src/speech.c:364
 msgctxt "STRING_ERROR_NO_VOICE (195//)"
 msgid "No voice"
-msgstr ""
+msgstr "No voice"
 
 #: src/speech.c:367
 msgctxt "STRING_ERROR_SPEECH_UNKNOWN (196//)"
 msgid "Unknown speech IO error"
-msgstr ""
+msgstr "Unknown speech IO error"
 
 #: src/speech.c:390
 msgctxt "STRING_ERROR_FILE_OPEN (197//)"
 msgid "Failed to open file"
-msgstr ""
+msgstr "Failed to open file"
 
 #: src/speech.c:406
 msgctxt "STRING_ERROR_FILE_READ (198//)"
 msgid "Failed to read file"
-msgstr ""
+msgstr "Failed to read file"
