@@ -221,8 +221,8 @@ msgid ""
 "conversations only."
 msgstr ""
 "Ako želite da AmigaGPT odgovori na određeni način, ili da dodate neku "
-"ličnost, unesite to ovde. Na primer, možete da otkucate „Govori kao pirat" "
-"ili „Govori kao robot". Ako želite da AmigaGPT odgovara normalno, ostavite "
+"ličnost, unesite to ovde. Na primer, možete da otkucate „Govori kao pirat\" "
+"ili „Govori kao robot\". Ako želite da AmigaGPT odgovara normalno, ostavite "
 "ovo prazno. Ovo podešavanje će se primeniti samo na nove konverzacije."
 
 #: src/ChatSystemRequesterWindow.c:65
