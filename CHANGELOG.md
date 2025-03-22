@@ -2,6 +2,7 @@
 
 ## 2.3.0
 
+- Created an installer for easy and customisable installation
 - Localisation support
 - Removed close gadgets from API Key and Chat System requestor windows
 - Chat system requestor text entry field now multiline and supports clipboard

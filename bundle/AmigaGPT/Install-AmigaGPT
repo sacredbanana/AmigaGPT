@@ -81,65 +81,61 @@
 (procedure get-os3-lang #index
   (if (= #index 0) (set @result "english") (
   if (= #index 1) (set @result "bosanski") (
-  if (= #index 2) (set @result "català") (
-  if (= #index 3) (set @result "czech") (
-  if (= #index 4) (set @result "dansk") (
-  if (= #index 5) (set @result "deutsch") (
-  if (= #index 6) (set @result "english_british") (
-  if (= #index 7) (set @result "español") (
-  if (= #index 8) (set @result "français") (
-  if (= #index 9) (set @result "greek") (
-  if (= #index 10) (set @result "hrvatski") (
-  if (= #index 11) (set @result "italiano") (
-  if (= #index 12) (set @result "magyar") (
-  if (= #index 13) (set @result "nederlands") (
-  if (= #index 14) (set @result "norsk") (
-  if (= #index 15) (set @result "polski") (
-  if (= #index 16) (set @result "português") (
-  if (= #index 17) (set @result "português-brazil") (
-  if (= #index 18) (set @result "russian") (
-  if (= #index 19) (set @result "slovak") (
-  if (= #index 20) (set @result "slovensko") (
-  if (= #index 21) (set @result "srpski") (
-  if (= #index 22) (set @result "suomi") (
-  if (= #index 23) (set @result "svenska") (
-  if (= #index 24) (set @result "türkçe") (
+  if (= #index 2) (set @result "?e?tina") (
+  if (= #index 3) (set @result "dansk") (
+  if (= #index 4) (set @result "deutsch") (
+  if (= #index 5) (set @result "english_british") (
+  if (= #index 6) (set @result "español") (
+  if (= #index 7) (set @result "français") (
+  if (= #index 8) (set @result "greek") (
+  if (= #index 9) (set @result "hrvatski") (
+  if (= #index 10) (set @result "italiano") (
+  if (= #index 11) (set @result "magyar") (
+  if (= #index 12) (set @result "nederlands") (
+  if (= #index 13) (set @result "norsk") (
+  if (= #index 14) (set @result "polski") (
+  if (= #index 15) (set @result "português") (
+  if (= #index 16) (set @result "russian") (
+  if (= #index 17) (set @result "slovak") (
+  if (= #index 18) (set @result "slovensko") (
+  if (= #index 19) (set @result "srpski") (
+  if (= #index 20) (set @result "suomi") (
+  if (= #index 21) (set @result "svenska") (
+  if (= #index 22) (set @result "türkçe") (
   (set @result "unknown")
-  ))))))))))))))))))))))))))
+  ))))))))))))))))))))))))
   )
 
 (procedure get-os4-lang #index
   (if (= #index 0) (set @result "english") (
   if (= #index 1) (set @result "bosnian") (
-  if (= #index 2) (set @result "catalan") (
-  if (= #index 3) (set @result "czech") (
-  if (= #index 4) (set @result "danish") (
-  if (= #index 5) (set @result "german") (
-  if (= #index 6) (set @result "english_british") (
-  if (= #index 7) (set @result "spanish") (
-  if (= #index 8) (set @result "french") (
-  if (= #index 9) (set @result "greek") (
-  if (= #index 10) (set @result "croatian") (
-  if (= #index 11) (set @result "italian") (
-  if (= #index 12) (set @result "hungarian") (
-  if (= #index 13) (set @result "dutch") (
-  if (= #index 14) (set @result "norwegian") (
-  if (= #index 15) (set @result "polish") (
-  if (= #index 16) (set @result "portuguese") (
-  if (= #index 17) (set @result "portuguese-brazil") (
-  if (= #index 18) (set @result "russian") (
-  if (= #index 19) (set @result "slovak") (
-  if (= #index 20) (set @result "slovenian") (
-  if (= #index 21) (set @result "serbian") (
-  if (= #index 22) (set @result "finnish") (
-  if (= #index 23) (set @result "swedish") (
-  if (= #index 24) (set @result "turkish") (
+  if (= #index 2) (set @result "czech") (
+  if (= #index 3) (set @result "danish") (
+  if (= #index 4) (set @result "german") (
+  if (= #index 5) (set @result "english_british") (
+  if (= #index 6) (set @result "spanish") (
+  if (= #index 7) (set @result "french") (
+  if (= #index 8) (set @result "greek") (
+  if (= #index 9) (set @result "croatian") (
+  if (= #index 10) (set @result "italian") (
+  if (= #index 11) (set @result "hungarian") (
+  if (= #index 12) (set @result "dutch") (
+  if (= #index 13) (set @result "norwegian") (
+  if (= #index 14) (set @result "polish") (
+  if (= #index 15) (set @result "portuguese") (
+  if (= #index 16) (set @result "russian") (
+  if (= #index 17) (set @result "slovak") (
+  if (= #index 18) (set @result "slovenian") (
+  if (= #index 19) (set @result "serbian") (
+  if (= #index 20) (set @result "finnish") (
+  if (= #index 21) (set @result "swedish") (
+  if (= #index 22) (set @result "turkish") (
   (set @result "unknown")
-  ))))))))))))))))))))))))))
+  ))))))))))))))))))))))))
 )
 
 ; Set the total number of languages
-(set #languages-count 25)
+(set #languages-count 23)
 
 ;------------------------------------------------------------------------
 ; Catalog installation procedures
@@ -230,8 +226,6 @@
           ((set #i 20)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
           ((set #i 21)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
           ((set #i 22)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
-          ((set #i 23)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
-          ((set #i 24)(if (in #avail-lang #i) ("%s (%s)" (get-os4-lang #i) (get-os3-lang #i)) (#nolang-fmt @result)))
       )
       (default #default-lang) ) )
 
