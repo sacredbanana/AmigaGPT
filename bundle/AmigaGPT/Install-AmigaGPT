@@ -1,7 +1,4 @@
 ; $VER: Install-AmigaGPT 2.3.0 (10.03.2025)
-
-(onerror (CLEANUP))
-
 ;------------------------------------------------------------------------
 (set @app-name "AmigaGPT")
 (set @default-dest "SYS:")
@@ -49,7 +46,7 @@
 
 ; Text strings
 (set #welcome 
-    ("Welcome to the %s installer!\nThis will install %s %ld.%ld on your system.\n\nAmigaGPT is a versatile ChatGPT client for Amiga systems that brings the capabilities of OpenAI's GPT to your Amiga." @app-name @app-name #app-vernum #app-revnum)
+    ("Welcome to the %s installer!\nThis will install %s %ld.%ld.%ld on your system.\n\nAmigaGPT is a versatile ChatGPT client for Amiga systems that brings the capabilities of OpenAI's GPT to your Amiga." @app-name @app-name (/ #app-vernum 10) (- #app-vernum (* (/ #app-vernum 10) 10) ) #app-revnum)
 )
 
 (set #wrongversion
@@ -60,83 +57,22 @@
 
 (set #destdir-prompt "Please select the drawer where %s should be installed.\n")
 (set #destdir-help "Typically, 'Work:' is selected as destination.")
-(set #amigagptdestdir-prompt ("Please select the drawer where %s should be installed. A new drawer \"%s\" will be created.\n" @app-name @app-name))
+(set #amigagptdestdir-prompt ("Please select the drawer where %s should be installed. A new drawer \"%s\" will be created if it doesn't exist.\n" @app-name @app-name))
 (set #amigagptdestdir-help "Typically, 'Work:' is selected as destination.")
-
-(set #localedir-info  "locale catalogs")
+(set #upgrade-message "An existing installation of AmigaGPT%s was found in this directory.\n\nThis installation will be replaced.\n\nWarning: AmigaGPT now only allows a single platform for each directory it's installed into.\n\nIf you have installed AmigaGPT for other platforms in this directory, they will get deleted!\n\nDo you want to continue?")
+(set #localedir-prompt "Please select the drawer where locale catalogs should be installed.\n")
+(set #localedir-help "This should be set to the locale directory located at the root of your system.")
+(set #readme-prompt "Please select the drawer where readme should be installed.\n")
+(set #readme-help "This can be placed anywhere you like.")
+(set #guide-prompt "Please select the drawer where the guide should be installed.")
+(set #guide-help "This should be located in the same directory as AmigaGPT if you want to be able to read it from the help menu.")
 (set #installing "Installing %s...")
-(set #no-diskspace "To install AmigaGPT into '%s', you need at least %ld bytes of free harddrive space!")
 (set #startup-prompt "Some lines need to be added to S:User-Startup for %s:\n\n%s")
 (set #startup-help "AmigaGPT won't work correctly without these lines!")
 (set #os-selection-prompt "Please select which version of AmigaGPT you want to install:")
 (set #os-selection-help "Choose the version that matches your Amiga system.")
 (set #languages-prompt "Please select which languages you want to install:")
 (set #languages-help "Choose the languages you want to use with AmigaGPT.")
-
-;------------------------------------------------------------------------
-; Cleanup any temporary mess we created
-(procedure CLEANUP
-    (delete (tackon @default-dest ".tempinstall") (all) (optional "force"))
-) ; CLEANUP
-
-;------------------------------------------------------------------------
-; Obtain an installation path
-(procedure GETPATH #gp_envname #gp_default #gp_remdir #gp_msg #gp_help
-    (set #gp_res "")
-    (while (= "" #gp_res)
-        (set #gp_res #gp_default)
-        (if (not (exists #gp_res (noreq)))
-          (
-            (if (= #gp_res "Work:")
-              (
-                (set #gp_res "")
-                (set #gp_default @default-dest)
-              )
-            ) ; if
-
-            (if (<> "" #gp_envname)
-              (
-                (set #gp_res (getenv (cat "AmigaGPT/Path_" #gp_envname)))
-                (if (AND (<> "" #gp_res) #gp_remdir)
-                  (
-                    (set #gp_res (pathonly #gp_res))
-                  )
-                ) ; if
-              )
-              (
-                (set #gp_res "")
-              )
-            ) ; if
-          )
-        ) ; if
-
-        (if (OR (= "" #gp_res) (= @user-level 2))
-          (
-            (set #gp_res
-                (expandpath
-                    (askdir
-                        (prompt #gp_msg)
-                        (help #gp_help)
-                        (default #gp_default)
-                    )
-                )
-            )
-          )
-        ) ; if
-
-        ; If the directory does not exist, retry!
-        (if (<> "" #gp_res)
-          (
-            (if (not (exists #gp_res (noreq)))
-                (set #gp_res "")
-            ) ; if
-          )
-        ) ; if
-    ) ; while
-
-    ; return the result!
-    (set #gp_res #gp_res)
-) ; GETPATH
 
 ;------------------------------------------------------------------------
 ; Helper functions for language names
@@ -342,38 +278,57 @@
 (complete 20)
 
 ; First find the AmigaGPT base
-(set #amigagptdirbase (GETPATH @app-name @default-dest TRUE #amigagptdestdir-prompt #amigagptdestdir-help))
+(set #amigagptdirbase (expandpath
+                    (askdir
+                        (prompt #amigagptdestdir-prompt)
+                        (help #amigagptdestdir-help)
+                        (default @default-dest)
+                    ))
+
+)
 
 ; We have to create a drawer "AmigaGPT" there!
 (set #amigagptdir (tackon #amigagptdirbase @app-name))
 
-(set #isupdate FALSE)
 (if (not (exists #amigagptdir))
   (
-    ; For a new setup, we should leave some space!
-    (if (< (getdiskspace #amigagptdirbase) 4000000)
-        (abort (#no-diskspace #amigagptdirbase 4000000))
-    )
-
-    ; Just to be sure.
+    (set #old-app-vernum 0)
     (makedir #amigagptdir (infos))
   )
   (
-    ; This must be an update!
-    (set #isupdate TRUE)
+    (if (exists (tackon #amigagptdir "AmigaGPT"))
+      (
+        (set #old-app-version (getversion (tackon #amigagptdir "AmigaGPT")))
+        (set #old-app-vernum (/ #old-app-version 65536))
+        (set #old-app-revnum (- #old-app-version (* #old-app-vernum 65536)))
+        (message (#upgrade-message (if (= #old-app-vernum 0) "" (" (%ld.%ld.%ld)" (/ #old-app-vernum 10) (- #old-app-vernum (* (/ #old-app-vernum 10) 10)) #old-app-revnum))))
+      )
+    )
+
+    (if (or (exists (tackon #amigagptdir "AmigaGPT_OS4")) (exists (tackon #amigagptdir "AmigaGPT_MorphOS")))
+      (delete (tackon #amigagptdir "AmigaGPT_OS4") (all) (optional "force"))
+      (delete (tackon #amigagptdir "AmigaGPT_MorphOS") (all) (optional "force"))
+    )
   )
 )
 
 ; Ok, we found the correct destination now
 (set @default-dest #amigagptdir)
 
-; Check for catalogs and install them if available
-(if (exists "catalogs")
-  (
-    (set #localedir  (GETPATH "" "LOCALE:" TRUE (#destdir-prompt #localedir-info) #destdir-help))
-    (p_install-catalogs)
+(set #localedir 
+  (if (= @user-level 2)
+    (expandpath
+      (askdir
+        (prompt #localedir-prompt)
+        (help #localedir-help)
+        (default "LOCALE:")
+      )
+    )
+    "LOCALE:"
   )
 )
+
+(p_install-catalogs)
 
 (complete 30)
 
@@ -387,33 +342,30 @@
     (copyfiles 
       (source "AmigaGPT/AmigaGPT_OS3")
       (dest @default-dest)
-      (optional "force" "askuser")
-    )
-    (copyfiles 
-      (source "AmigaGPT/AmigaGPT_OS3.info")
-      (dest @default-dest)
+      (newname @app-name)
+      (infos)
       (optional "force" "askuser")
     )
     (copyfiles 
       (source "icons/AmigaGPT_Drawer_OS3.info")
       (dest #amigagptdirbase)
       (newname (cat @app-name ".info"))
+      (noposition)
       (optional "force" "askuser")
     )
     (complete 70)
     ;------------------------------------------------------------------------
-    ; Copy devs directory
-    (working (#installing "Device files"))
-    (copyfiles 
-      (source "AmigaGPT")
-      (dest @default-dest)
-      (pattern "devs")
-      (optional "force" "askuser")
-    )
-    (copyfiles 
-      (source "AmigaGPT/devs.info")
-      (dest @default-dest)
-      (optional "force" "askuser")
+    ; Copy devs directory if it doesn't exist
+    (if (not (exists (tackon @default-dest "devs") ) )
+      (
+        (working (#installing "Device files"))
+        (copyfiles 
+          (source "AmigaGPT")
+          (dest @default-dest)
+          (pattern "devs")
+          (infos)
+        )
+      )
     )
   )
 )
@@ -423,38 +375,33 @@
     (copyfiles 
       (source "AmigaGPT/AmigaGPT_OS4")
       (dest @default-dest)
-      (optional "force" "askuser")
-    )
-    (copyfiles 
-      (source "AmigaGPT/AmigaGPT_OS4.info")
-      (dest @default-dest)
+      (newname @app-name)
+      (infos)
       (optional "force" "askuser")
     )
     (copyfiles 
       (source "icons/AmigaGPT_Drawer_OS4.info")
       (dest #amigagptdirbase)
       (newname (cat @app-name ".info"))
+      (noposition)
       (optional "force" "askuser")
     )
   )
 )
-
 (if (= #os-choice 2)
   (
     (copyfiles 
       (source "AmigaGPT/AmigaGPT_MorphOS")
       (dest @default-dest)
-      (optional "force" "askuser")
-    )
-    (copyfiles 
-      (source "AmigaGPT/AmigaGPT_MorphOS.info")
-      (dest @default-dest)
+      (newname @app-name)
+      (infos)
       (optional "force" "askuser")
     )
     (copyfiles 
       (source "icons/AmigaGPT_Drawer_OS4.info") ; Use OS4 drawer icon for MorphOS
       (dest #amigagptdirbase)
       (newname (cat @app-name ".info"))
+      (noposition)
       (optional "force" "askuser")
     )
   )
@@ -466,27 +413,23 @@
 ; Copy documentation
 (working (#installing "Documentation"))
 (copyfiles 
+  (prompt #guide-prompt)
+  (help #guide-help)
   (source "AmigaGPT.guide")
   (dest @default-dest)
+  (infos)
+  (confirm "expert")
   (optional "force" "askuser")
 )
 (copyfiles 
-  (source "AmigaGPT.guide.info")
-  (dest @default-dest)
-  (optional "force" "askuser")
-)
-(copyfiles 
+  (prompt #readme-prompt)
+  (help #readme-help)
   (source "AmigaGPT.readme")
   (dest @default-dest)
-  (optional "force" "askuser")
-)
-(copyfiles 
-  (source "AmigaGPT.readme.info")
-  (dest @default-dest)
+  (infos)
+  (confirm "average")
   (optional "force" "askuser")
 )
 
 (complete 100)
-
-(CLEANUP)
 (exit)
