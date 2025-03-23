@@ -53,7 +53,8 @@ Installation:
 2. Download and install MUI. Version 5 recommended, version 3 minimum. Reboot.
 3. Download and install MCC_Guigfx, MCC_NList and codesets.library.
 4. Download the latest release of AmigaGPT.
-5. Extract the `amigagpt.lha` archive to your desired location.
+5. Extract the `amigagpt.lha` archive to a temporary location.
+6. Run the provided installer.
 
 Optional steps to enable speech functionality:
 AmigaGPT supports reading the output aloud. How AmigaGPT does this depends

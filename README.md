@@ -50,7 +50,8 @@ Ensure you have the necessary system requirements:
 * Download and install MUI. Version 5 recommended, version 3 minimum. Reboot.
 * Download and install MCC_Guigfx, MCC_NList and codesets.library
 * Download the latest release of **AmigaGPT**
-* Extract the `amigagpt.lha` archive to your desired location
+* Extract the `amigagpt.lha` archive to a temporary location
+* Run the provided installer
 
 ## *Optional steps to enable speech functionality*
 AmigaGPT supports reading the output aloud. How AmigaGPT does this depends on whether you are using AmigaOS 3 or 4. Or for OpenAI voices, this works on every system.
