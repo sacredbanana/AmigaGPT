@@ -31,8 +31,15 @@ cd bundle
 # Delete LHA archive if exists
 rm -f ../out/AmigaGPT.lha
 
+# Check if running on macOS and set appropriate LHA options
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    LHA_OPTS="av --ignore-mac-files"
+else
+    LHA_OPTS="av"
+fi
+
 # Create LHA archive with verbose output
-lha av --ignore-mac-files ../out/AmigaGPT.lha AmigaGPT AmigaGPT.info
+lha $LHA_OPTS ../out/AmigaGPT.lha AmigaGPT AmigaGPT.info
 
 rm -f AmigaGPT/AmigaGPT/AmigaGPT_OS3 AmigaGPT/AmigaGPT/AmigaGPT_OS4 AmigaGPT/AmigaGPT/AmigaGPT_MorphOS
 rm -dr AmigaGPT/catalogs
