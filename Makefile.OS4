@@ -36,8 +36,9 @@ catalog_translations := $(wildcard $(addsuffix *.po,$(catalog_subdirs)))
 cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
 cpp_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
 c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
-c_sources := $(filter-out $(SOURCE_DIR)/test/%, $(c_sources))
+c_sources := $(filter-out $(SOURCE_DIR)/test/% $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.c,$(c_sources))
 c_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
+catalog_object := $(BUILD_DIR)/$(PROGRAM_NAME)_cat.o
 s_sources := $(wildcard *.s) $(wildcard $(addsuffix *.s,$(subdirs)))
 s_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.s,%.o,$(notdir $(s_sources))))
 vasm_sources := $(wildcard *.asm) $(wildcard $(addsuffix *.asm, $(subdirs)))
@@ -107,10 +108,10 @@ $(EXECUTABLE_DIR):
 	@$(info Creating directory $@)
 	mkdir -p $@
 
-$(EXECUTABLE_OUT): catalog $(EXECUTABLE_DIR) $(BUILD_DIR) $(objects)
+$(EXECUTABLE_OUT): $(EXECUTABLE_DIR) $(BUILD_DIR) $(objects) catalog $(catalog_object)
 	$(info Linking $(PROGRAM_NAME))
 	@$(RM) $@
-	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) -o $@ $(LDFLAGS)
+	$(CC) $(CCFLAGS) $(LDFLAGS) $(objects) $(catalog_object) -o $@ $(LDFLAGS)
 
 -include $(objects:.o=.d)	
 
@@ -130,6 +131,10 @@ $(s_objects): $(BUILD_DIR)/%.o : %.s
 $(vasm_objects): $(BUILD_DIR)/%.o : %.asm
 	$(info Assembling $<)
 	$(VASM) $(VASMFLAGS) -o $@ $(CURDIR)/$<
+
+$(catalog_object): $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.c | catalog
+	$(info Compiling catalog $<)
+	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
 
 copy_bundle_files:
 	$(info Copying bundle files...)
