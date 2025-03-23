@@ -194,11 +194,6 @@ msgstr ""
 "for å lage en videoanmeldelse og gi en veiledning om hvordan du legger til "
 "støtte for den franske aksenten"
 
-#: src/AboutAmigaGPTWindow.c:20
-msgctxt "STRING_ABOUT_WINDOW_LICENSE (211//)"
-msgid "License"
-msgstr "Tillatelse"
-
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
 msgid "Visit the GitHub repository for the latest release"

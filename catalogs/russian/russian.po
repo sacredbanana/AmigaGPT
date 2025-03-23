@@ -198,11 +198,6 @@ msgstr ""
 "за создание видеообзора и предоставление руководства по добавлению поддержки "
 "французского акцента"
 
-#: src/AboutAmigaGPTWindow.c:20
-msgctxt "STRING_ABOUT_WINDOW_LICENSE (211//)"
-msgid "License"
-msgstr "Лицензия"
-
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
 msgid "Visit the GitHub repository for the latest release"

@@ -197,11 +197,6 @@ msgstr ""
 "za izradu video recenzije i podučavanje o tome kako dodati podršku za "
 "francuski naglasak"
 
-#: src/AboutAmigaGPTWindow.c:20
-msgctxt "STRING_ABOUT_WINDOW_LICENSE (211//)"
-msgid "License"
-msgstr "Licenca"
-
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
 msgid "Visit the GitHub repository for the latest release"

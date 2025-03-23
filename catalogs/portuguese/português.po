@@ -196,15 +196,10 @@ msgstr ""
 "para fazer uma revisão em vídeo e dar um tutorial sobre como adicionar "
 "suporte ao sotaque francês"
 
-#: src/AboutAmigaGPTWindow.c:20
-msgctxt "STRING_ABOUT_WINDOW_LICENSE (211//)"
-msgid "License"
-msgstr "Licença"
-
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
 msgid "Visit the GitHub repository for the latest release"
-msgstr "Visite o repositório GitHub para a versão mais recente"
+msgstr "Visit the GitHub repository for the latest release"
 
 #: src/ChatSystemRequesterWindow.c:32
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_TITLE (213//)"
@@ -216,8 +211,8 @@ msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
 msgid ""
 "If you would like AmigaGPT to respond in a certain way, or add some "
 "personality, type it in here. For example, you could type \"Speak like a "
-"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to "
-"respond normally, leave this blank. This setting will be applied to new "
+"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
+"normally, leave this blank. This setting will be applied to new "
 "conversations only."
 msgstr ""
 "Se você quiser que o AmigaGPT responda de uma certa maneira, ou adicione "

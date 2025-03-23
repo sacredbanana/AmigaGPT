@@ -243,6 +243,10 @@ We welcome contributions to **AmigaGPT**! If you have a bug to report, a feature
 ### Art
 - **Mauricio Sandoval** - Icon design
 
+### Translations
+- **Mauricio Sandoval** - Spanish
+- **Tobias Baeumer** - German
+
 ## Special Thanks
 - **Bebbo** for creating the Amiga GCC toolchain <https://github.com/bebbo>
 - **OpenAI** for making this all possible <https://openai.com>

@@ -22,7 +22,7 @@ LONG createAboutAmigaGPTWindow() {
                           "%s: " GIT_TIMESTAMP,
              STRING_GIT_COMMIT, STRING_GIT_BRANCH, STRING_GIT_COMMIT_TIMESTAMP);
     snprintf(bodyString, 2048,
-             "%s: https://paypal.me/sacredbanana\n\n"
+             "%s https://paypal.me/sacredbanana\n\n"
              "%s\n\n"
              "\033b%%p\033n\n"
              "\t\033iCameron Armstrong\033n\n"
@@ -30,6 +30,11 @@ LONG createAboutAmigaGPTWindow() {
              "EAB/Discord)\n\n"
              "\033b%%I\033n\n"
              "\t\033iMauricio Sandoval\033n\n\n"
+             "\033b%%l\033n\n"
+             "\t\033iMauricio Sandoval (español)\033n\n"
+             "\n"
+             "\t\033iTobias Baeumer (deutsch)\033n\n"
+             "\n"
              "\033b%%T\033n\n"
              "\t\033iBebbo\033n\n"
              "\t%s\n"
@@ -41,7 +46,7 @@ LONG createAboutAmigaGPTWindow() {
              "\t\033iEAB\033n\n"
              "\t%s\n"
              "\n"
-             "\t\033iJan Zahurancik\033n\n"
+             "\t\033iJán Zahurancik\033n\n"
              "\t%s\n"
              "\thttps://www.amikit.amiga.sk\n"
              "\n"
@@ -73,7 +78,7 @@ LONG createAboutAmigaGPTWindow() {
              "\t%s\n"
              "\thttps://www.youtube.com/watch?v=BV5Fq1PresE\n"
              "\n"
-             "\033b%s033n\n"
+             "\033b%%§\033n\n"
              "\tMIT\n"
              "\n"
              "\033b%%W\033n\n"
@@ -85,7 +90,7 @@ LONG createAboutAmigaGPTWindow() {
              STRING_ABOUT_WINDOW_COFFINOS, STRING_ABOUT_WINDOW_AMIGA_FUTURE,
              STRING_ABOUT_WINDOW_WHATIFF, STRING_ABOUT_WINDOW_YOUTUBE_REVIEW,
              STRING_ABOUT_WINDOW_YOUTUBE_REVIEW, STRING_ABOUT_WINDOW_AMIGABILL,
-             STRING_ABOUT_WINDOW_LES_DOCS, STRING_ABOUT_WINDOW_LICENSE);
+             STRING_ABOUT_WINDOW_LES_DOCS);
     if ((aboutAmigaGPTWindowObject = AboutboxObject, MUIA_Aboutbox_Build,
          buildString, MUIA_Aboutbox_Credits, bodyString, MUIA_Aboutbox_URL,
          "https://github.com/sacredbanana/AmigaGPT", MUIA_Aboutbox_URLText,

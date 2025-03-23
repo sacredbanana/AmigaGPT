@@ -195,11 +195,6 @@ msgstr ""
 "videokatsauksen tekemiseen ja opetusohjelman tuen lisäämiseen ranskalaiselle "
 "aksentille"
 
-#: src/AboutAmigaGPTWindow.c:20
-msgctxt "STRING_ABOUT_WINDOW_LICENSE (211//)"
-msgid "License"
-msgstr "Lisenssi"
-
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
 msgid "Visit the GitHub repository for the latest release"

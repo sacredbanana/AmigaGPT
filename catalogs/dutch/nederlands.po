@@ -198,11 +198,6 @@ msgstr ""
 "voor het maken van een videobeoordeling en het geven van een tutorial over "
 "hoe je ondersteuning kunt toevoegen voor het Franse accent"
 
-#: src/AboutAmigaGPTWindow.c:20
-msgctxt "STRING_ABOUT_WINDOW_LICENSE (211//)"
-msgid "License"
-msgstr "Licentie"
-
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
 msgid "Visit the GitHub repository for the latest release"

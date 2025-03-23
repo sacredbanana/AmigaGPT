@@ -24,7 +24,7 @@ Welcome to the future of language modeling on the classic AmigaOS, AmigaGPT. Bui
 @endnode
 
 @node intro "Introduction"
-AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS. This powerful tool brings the capabilities of OpenAI’s GPT to your Amiga system, enabling text generation, question answering, and creative exploration. AmigaGPT can also generate stunning images using DALL-E and includes support for speech output, making it easier than ever to interact with AI on your Amiga. Designed to integrate seamlessly with your system, AmigaGPT delivers modern AI technology while embracing the timeless Amiga experience.
+AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS. This powerful tool brings the capabilities of OpenAI?s GPT to your Amiga system, enabling text generation, question answering, and creative exploration. AmigaGPT can also generate stunning images using DALL-E and includes support for speech output, making it easier than ever to interact with AI on your Amiga. Designed to integrate seamlessly with your system, AmigaGPT delivers modern AI technology while embracing the timeless Amiga experience.
 
 @{b}Features@{ub}
 
@@ -185,7 +185,7 @@ Click on a topic to learn about it:
 @{"Changing the appearance of the UI and chat " link appearance}
 @{"Using a proxy server" link proxy}
 
-@endnodeƒ
+@endnode?
 
 @node screen "Screen select"
 @{b}Selecting a screen to open AmigaGPT in@{ub}
@@ -297,11 +297,15 @@ We welcome contributions to AmigaGPT! If you have a bug to report, a feature to 
 @{b}Art@{ub}
 - Mauricio Sandoval - Icon design
 
+@{b}Translations@{ub}
+- Mauricio Sandoval - Spanish
+- Tobias Baeumer - German
+
 @{b}Special Thanks@{ub}
 - Bebbo for creating the Amiga GCC toolchain https://github.com/bebbo
 - OpenAI for making this all possible https://openai.com
 - EAB and everyone in it for answering my questions https://eab.abime.net/
-- Ján Zahurančík for all the thorough testing, bundling AmigaGPT into 
+- J�n Zahuranc�k for all the thorough testing, bundling AmigaGPT into 
   AmiKit and for all the moral support https://www.amikit.amiga.sk
 - CoffinOS for bundling AmigaGPT into CoffinOS https://getcoffin.net
 - Amiga Future Magazine for reviewing AmigaGPT and publishing several of
@@ -652,7 +656,7 @@ palm/include/fdlibm.h
 
 @{b}@{u}GPT-4o@{uu}@{ub}
 
-GPT-4o ("o" for "omni") is our most advanced GPT model. It is multimodal (accepting text or image inputs and outputting text), and it has the same high intelligence as GPT-4 Turbo but is much more efficient—it generates text 2x faster and is 50% cheaper. Additionally, GPT-4o has the best vision and performance across non-English languages of any of our models. GPT-4o is available in the OpenAI API to paying customers.
+GPT-4o ("o" for "omni") is our most advanced GPT model. It is multimodal (accepting text or image inputs and outputting text), and it has the same high intelligence as GPT-4 Turbo but is much more efficient?it generates text 2x faster and is 50% cheaper. Additionally, GPT-4o has the best vision and performance across non-English languages of any of our models. GPT-4o is available in the OpenAI API to paying customers.
 
 @{b}Model variants@{ub}
 
@@ -690,7 +694,7 @@ Training data: Oct 2023
 
 @{b}@{u}GPT-4o mini@{uu}@{ub}
 
-GPT-4o mini (“o” for “omni”) is our most advanced model in the small models category, and our cheapest model yet. It is multimodal (accepting text or image inputs and outputting text), has higher intelligence than gpt-3.5-turbo but is just as fast. It is meant to be used for smaller tasks, including vision tasks.
+GPT-4o mini (?o? for ?omni?) is our most advanced model in the small models category, and our cheapest model yet. It is multimodal (accepting text or image inputs and outputting text), has higher intelligence than gpt-3.5-turbo but is just as fast. It is meant to be used for smaller tasks, including vision tasks.
 
 We recommend choosing gpt-4o-mini where you would have previously used gpt-3.5-turbo as this model is more capable and cheaper.
 
@@ -805,7 +809,7 @@ Training data: Dec 2023
 
 @{b}gpt-4-0125-preview@{ub}
 
-GPT-4 Turbo preview model intended to reduce cases of “laziness” where the model doesn’t complete a task.
+GPT-4 Turbo preview model intended to reduce cases of ?laziness? where the model doesn?t complete a task.
 
 Context Window: 128,000
 Max Output Tokens: 4,096
@@ -879,11 +883,11 @@ Training data: Sep 2021
 
 @{b}DALL-E 3@{ub}
 
-The latest DALL·E model released in Nov 2023.
+The latest DALL�E model released in Nov 2023.
 
 @{b}DALL-E 2@{ub}
 
-The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E with more realistic, accurate, and 4x greater resolution images than the original model.
+The previous DALL�E model released in Nov 2022. The 2nd iteration of DALL�E with more realistic, accurate, and 4x greater resolution images than the original model.
 
 @endnode
 
