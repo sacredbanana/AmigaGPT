@@ -112,7 +112,7 @@
   if (= #index 2) (set @result "czech") (
   if (= #index 3) (set @result "danish") (
   if (= #index 4) (set @result "german") (
-  if (= #index 5) (set @result "english_british") (
+  if (= #index 5) (set @result "english-british") (
   if (= #index 6) (set @result "spanish") (
   if (= #index 7) (set @result "french") (
   if (= #index 8) (set @result "greek") (
