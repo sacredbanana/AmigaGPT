@@ -1565,13 +1565,14 @@ void displayError(STRPTR message) {
     snprintf(okString, strlen(STRING_OK) + 2, "*%s", STRING_OK);
     const LONG ERROR_CODE = IoErr();
     if (ERROR_CODE == 0) {
-        if (!app || MUI_Request(app, mainWindowObject,
+        if (!app ||
+            MUI_Request(app, mainWindowObject,
 #ifdef __MORPHOS__
-                                NULL,
+                        NULL,
 #else
-                                MUIV_Requester_Image_Error, STRING_ERROR,
+                        MUIV_Requester_Image_Error,
 #endif
-                                okString, "\33c%s", message) != 0) {
+                        STRING_ERROR, okString, "\33c%s", message) != 0) {
             fprintf(stderr, "%s\n", message);
         }
     } else {
@@ -1585,9 +1586,9 @@ void displayError(STRPTR message) {
 #ifdef __MORPHOS__
                             NULL,
 #else
-                            MUIV_Requester_Image_Error, STRING_ERROR,
+                            MUIV_Requester_Image_Error,
 #endif
-                            okString, "\33c%s", errorMessage);
+                            STRING_ERROR, okString, "\33c%s", errorMessage);
                 updateStatusBar(STRING_ERROR, redPen);
                 FreeVec(errorMessage);
             }

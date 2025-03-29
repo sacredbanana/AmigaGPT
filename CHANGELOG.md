@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.1 (2025-03-29)
+
+- Fix broken error requester in MorphOS
+
 ## 2.3.0 (2025-03-23)
 
 - New installer for easy and customisable installation
