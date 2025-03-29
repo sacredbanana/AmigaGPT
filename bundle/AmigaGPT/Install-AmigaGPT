@@ -1,4 +1,4 @@
-; $VER: Install-AmigaGPT 2.3.0 (10.03.2025)
+; $VER: Install-AmigaGPT 2.3.1 (29.03.2025)
 ;------------------------------------------------------------------------
 (set @app-name "AmigaGPT")
 (set @default-dest "SYS:")
@@ -36,9 +36,9 @@
 (set #muidir (if (= #mos 1) "SYS:Classes/MUI" "MUI:Libs/MUI") )
 
 ; Get AmigaGPT version
-(set #app-version (getversion "AmigaGPT/AmigaGPT_OS3") )
-(set #app-vernum (/ #app-version 65536 ) )
-(set #app-revnum (- #app-version (* #app-vernum 65536 ) ) )
+(set #app-version ((run "version AmigaGPT/AmigaGPT_OS3 > ENV:NEW_AMIGAGPT_VERSION")(getenv "NEW_AMIGAGPT_VERSION")))
+(set #app-version-len (strlen #app-version))
+(set #app-version (substr #app-version (+ (strlen @app-name) 1) (- (- #app-version-len 2) (strlen @app-name))))
 
 ; Get user language
 (if (= (exists "ENV:Language") 1)
@@ -46,7 +46,7 @@
 
 ; Text strings
 (set #welcome 
-    ("Welcome to the %s installer!\nThis will install %s %ld.%ld.%ld on your system.\n\nAmigaGPT is a versatile ChatGPT client for Amiga systems that brings the capabilities of OpenAI's GPT to your Amiga." @app-name @app-name (/ #app-vernum 10) (- #app-vernum (* (/ #app-vernum 10) 10) ) #app-revnum)
+    ("Welcome to the %s installer!\nThis will install %s %s on your system.\n\nAmigaGPT is a versatile ChatGPT client for Amiga systems that brings the capabilities of OpenAI's GPT to your Amiga." @app-name @app-name #app-version)
 )
 
 (set #wrongversion
@@ -286,16 +286,16 @@
 
 (if (not (exists #amigagptdir))
   (
-    (set #old-app-vernum 0)
     (makedir #amigagptdir (infos))
   )
   (
     (if (exists (tackon #amigagptdir "AmigaGPT"))
       (
-        (set #old-app-version (getversion (tackon #amigagptdir "AmigaGPT")))
-        (set #old-app-vernum (/ #old-app-version 65536))
-        (set #old-app-revnum (- #old-app-version (* #old-app-vernum 65536)))
-        (message (#upgrade-message (if (= #old-app-vernum 0) "" (" (%ld.%ld.%ld)" (/ #old-app-vernum 10) (- #old-app-vernum (* (/ #old-app-vernum 10) 10)) #old-app-revnum))))
+        (set #old-version-check-status (run ("version %s" (tackon #amigagptdir "AmigaGPT"))))
+        (set #old-app-version ((run ("version %s > ENV:OLD_AMIGAGPT_VERSION" (tackon #amigagptdir "AmigaGPT")))(getenv "OLD_AMIGAGPT_VERSION")))
+        (set #old-app-version-len (strlen #old-app-version))
+        (set #old-app-version (substr #old-app-version (+ (strlen @app-name) 1) (- (- #old-app-version-len 2) (strlen @app-name))))
+        (message (#upgrade-message (if (= #old-version-check-status 20) "" (" (%s)" #old-app-version))))
       )
     )
 
@@ -412,17 +412,25 @@
   (source "AmigaGPT.guide")
   (dest @default-dest)
   (infos)
-  (confirm "expert")
-  (optional "force" "askuser")
 )
+
+(set #readmedir 
+  (if (> @user-level 0)
+    (expandpath
+      (askdir
+        (prompt #readme-prompt)
+        (help #readme-help)
+        (default @default-dest)
+      )
+    )
+    @default-dest
+  )
+)
+
 (copyfiles 
-  (prompt #readme-prompt)
-  (help #readme-help)
   (source "AmigaGPT.readme")
-  (dest @default-dest)
+  (dest #readmedir)
   (infos)
-  (confirm "average")
-  (optional "force" "askuser")
 )
 
 (complete 100)

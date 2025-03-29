@@ -16,7 +16,8 @@
                 "PROGDIR=\"PROGDIR:\"",
                 "GIT_BRANCH= ",
                 "GIT_COMMIT= ",
-                "GIT_TIMESTAMP= "
+                "GIT_TIMESTAMP= ",
+                "BUILD_DATE= "
             ],
             "macFrameworkPath": [
                 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
@@ -49,7 +50,8 @@
                 "PROGDIR=\"PROGDIR:\"",
                 "GIT_BRANCH= ",
                 "GIT_COMMIT= ",
-                "GIT_TIMESTAMP= "
+                "GIT_TIMESTAMP= ",
+                "BUILD_DATE= "
             ],
             "macFrameworkPath": [
                 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
@@ -80,7 +82,8 @@
                 "PROGDIR=\"PROGDIR:\"",
                 "GIT_BRANCH= ",
                 "GIT_COMMIT= ",
-                "GIT_TIMESTAMP= "
+                "GIT_TIMESTAMP= ",
+                "BUILD_DATE= "
             ],
             "macFrameworkPath": [
                 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
