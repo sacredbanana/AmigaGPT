@@ -895,6 +895,13 @@ The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E with
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.3.1 (2025-03-30)@{ub}
+
+- Fix broken error requester in MorphOS
+- Fix incorrect language name for english-british for OS4
+- Running the "Version" command on the AmigaGPT executable will now report the version and build date
+- The installer in MorphOS will now properly ask where you want to install the readme
+
 @{b}2.3.0 (2025-03-23)@{ub}
 
 - New installer for easy and customisable installation

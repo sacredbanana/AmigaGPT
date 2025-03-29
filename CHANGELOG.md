@@ -1,8 +1,11 @@
 # Changelog
 
-## 2.3.1 (2025-03-29)
+## 2.3.1 (2025-03-30)
 
 - Fix broken error requester in MorphOS
+- Fix incorrect language name for english-british for OS4
+- Running the "Version" command on the AmigaGPT executable will now report the version and build date
+- The installer in MorphOS will now properly ask where you want to install the readme
 
 ## 2.3.0 (2025-03-23)
 
