@@ -65,6 +65,38 @@ static CONST_STRPTR USED_CLASSES[] = {
     MUIC_NListview,  MUIC_TextEditor, MUIC_BetterString,
     MUIC_NFloattext, MUIC_Guigfx,     NULL};
 
+#define ID_RESCAN 1
+#define ID_ACTIVATE 2
+#define ID_DEACTIVATE 3
+#define ID_TOGGLE 4
+#define ID_RESTORE 5
+
+HOOKPROTONHNO(selectRxFunc, APTR, ULONG *arg) {
+    char *pattern;
+
+    printf("selectRxfunc\n");
+    displayError("selectRxfunc");
+
+    /*** pattern valid ? ***/
+    // if ((pattern = (char *)*arg)) {
+    /*** clear list & select matching pattern ***/
+    // select_tools_list(MUIV_List_Select_Off);
+    // select_pattern_tools_list(pattern);
+    // }
+
+    return (69);
+}
+MakeHook(selectRxHook, selectRxFunc);
+
+static struct MUI_Command arexxList[] = {
+    {"rescan", MC_TEMPLATE_ID, ID_RESCAN, NULL, {0, 0, 0, 0, 0}},
+    {"select", NULL, NULL, &selectRxHook, {0, 0, 0, 0, 0}},
+    {"activate", MC_TEMPLATE_ID, ID_ACTIVATE, NULL, {0, 0, 0, 0, 0}},
+    {"deactivate", MC_TEMPLATE_ID, ID_DEACTIVATE, NULL, {0, 0, 0, 0, 0}},
+    {"toggle", MC_TEMPLATE_ID, ID_TOGGLE, NULL, {0, 0, 0, 0, 0}},
+    {"restore", MC_TEMPLATE_ID, ID_RESTORE, NULL, {0, 0, 0, 0, 0}},
+    {NULL, NULL, 0, NULL, {0, 0, 0, 0, 0}}};
+
 static BOOL checkMUICustomClassInstalled();
 static void closeGUILibraries();
 
@@ -156,16 +188,18 @@ LONG initVideo() {
     if (createProxySettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
-    if (!(app = ApplicationObject, MUIA_Application_Base, STRING_APP_NAME,
+    if (!(app = ApplicationObject, MUIA_Application_Base, "AMIGAGPT",
           MUIA_Application_Title, STRING_APP_NAME, MUIA_Application_Version,
           APP_VERSION, MUIA_Application_Copyright,
-          "(C) 2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
+          "© 2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Description, STRING_APP_DESCRIPTION,
           MUIA_Application_UsedClasses, USED_CLASSES, MUIA_Application_HelpFile,
-          "PROGDIR:AmigaGPT.guide", SubWindow, startupOptionsWindowObject,
-          SubWindow, mainWindowObject, SubWindow, apiKeyRequesterWindowObject,
-          SubWindow, chatSystemRequesterWindowObject, SubWindow,
+          "PROGDIR:AmigaGPT.guide", MUIA_Application_SingleTask, TRUE,
+          MUIA_Application_Commands, arexxList, MUIA_Application_UseRexx, TRUE,
+          SubWindow, startupOptionsWindowObject, SubWindow, mainWindowObject,
+          SubWindow, apiKeyRequesterWindowObject, SubWindow,
+          chatSystemRequesterWindowObject, SubWindow,
           proxySettingsRequesterWindowObject, SubWindow,
           imageWindowObject = WindowObject, MUIA_Window_Title, STRING_IMAGE,
           MUIA_Window_Width, 320, MUIA_Window_Height, 240,
@@ -232,6 +266,10 @@ void startGUIRunLoop() {
         switch (id) {
         case MUIV_Application_ReturnID_Quit: {
             running = FALSE;
+            break;
+        }
+        case ID_RESCAN: {
+            printf("Rescan\n");
             break;
         }
         default:

@@ -12,6 +12,7 @@
 #include <proto/intuition.h>
 #include <proto/locale.h>
 #include <proto/muimaster.h>
+#include <proto/rexxsyslib.h>
 #include "AmigaGPT_cat.h"
 
 /**
@@ -46,7 +47,6 @@ extern Object *imageWindowImageViewGroup;
 extern BOOL isMUI5;
 extern BOOL isAROS;
 extern struct codeset *systemCodeset;
-
 /**
  * Create the GUI
  * @return RETURN_OK on success, RETURN_ERROR on failure

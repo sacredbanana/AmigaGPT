@@ -3,8 +3,10 @@
 #include <libraries/application.h>
 #include <proto/application.h>
 #endif
+
 #include <proto/dos.h>
 #include <proto/exec.h>
+#include <proto/rexxsyslib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <workbench/startup.h>
