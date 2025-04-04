@@ -1,18 +1,28 @@
 #include <libraries/mui.h>
 #include <mui/Aboutbox_mcc.h>
+#include <SDI_hook.h>
 #include "AboutAmigaGPTWindow.h"
 #include "gui.h"
 #include "version.h"
 
 Object *aboutAmigaGPTWindowObject;
+STRPTR buildString;
+STRPTR bodyString;
+
+HOOKPROTONHNONP(AboutWindowCloseFunc, void) {
+    set(aboutAmigaGPTWindowObject, MUIA_Window_Open, FALSE);
+    FreeVec(buildString);
+    FreeVec(bodyString);
+}
+MakeHook(AboutWindowCloseHook, AboutWindowCloseFunc);
 
 /**
  * Create the about window
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createAboutAmigaGPTWindow() {
-    STRPTR buildString = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
-    STRPTR bodyString = AllocVec(2048, MEMF_CLEAR | MEMF_ANY);
+    buildString = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
+    bodyString = AllocVec(2048, MEMF_CLEAR | MEMF_ANY);
     LONG success = RETURN_ERROR;
     snprintf(buildString, 512,
              BUILD_NUMBER " ("__DATE__
@@ -96,11 +106,9 @@ LONG createAboutAmigaGPTWindow() {
          "https://github.com/sacredbanana/AmigaGPT", MUIA_Aboutbox_URLText,
          STRING_ABOUT_WINDOW_URL_TEXT, End)) {
         DoMethod(aboutAmigaGPTWindowObject, MUIM_Notify,
-                 MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 3, MUIM_Set,
-                 MUIA_Window_Open, FALSE);
+                 MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 2,
+                 MUIM_CallHook, &AboutWindowCloseHook);
         success = RETURN_OK;
     }
-    FreeVec(buildString);
-    FreeVec(bodyString);
     return success;
 }
