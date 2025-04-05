@@ -487,7 +487,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
             conversationNode = conversationNode->mln_Succ;
         }
 
-        json_object_object_add(obj, "messages", conversationArray);
+        json_object_object_add(obj, "input", conversationArray);
         json_object_object_add(obj, "stream",
                                json_object_new_boolean((json_bool)stream));
 
@@ -509,7 +509,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
         }
 
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                 "POST https://api.openai.com/v1/chat/completions HTTP/1.1\r\n"
+                 "POST https://api.openai.com/v1/responses HTTP/1.1\r\n"
                  "Host: api.openai.com\r\n"
                  "Content-Type: application/json\r\n"
                  "Authorization: Bearer %s\r\n"
@@ -1432,8 +1432,6 @@ APTR postTextToSpeechRequestToOpenAI(
     json_object_object_add(obj, "response_format",
                            json_object_new_string("pcm"));
     CONST_STRPTR jsonString = json_object_to_json_string(obj);
-
-    printf("jsonString: %s\n", jsonString);
 
     STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {

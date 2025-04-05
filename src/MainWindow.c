@@ -1124,18 +1124,26 @@ static void formatText(STRPTR unformattedText) {
 UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
     if (json == NULL)
         return NULL;
-    UTF8 *json_str = json_object_to_json_string(json);
-    struct json_object *choices = json_object_object_get(json, "choices");
-    struct json_object *choice = json_object_array_get_idx(choices, 0);
-    struct json_object *message =
-        json_object_object_get(choice, stream ? "delta" : "message");
     if (stream) {
-        struct json_object *role = json_object_object_get(message, "role");
-        if (role != NULL)
-            return "\0";
+        struct json_object *type = json_object_object_get(json, "type");
+        UTF8 *typeStr = json_object_get_string(type);
+        if (strcmp(typeStr, "response.output_text.delta") == 0) {
+            struct json_object *text = json_object_object_get(json, "delta");
+            return json_object_get_string(text);
+        } else {
+            return "";
+        }
+    } else {
+        struct json_object *outputArray =
+            json_object_object_get(json, "output");
+        struct json_object *output = json_object_array_get_idx(outputArray, 0);
+        struct json_object *contentArray =
+            json_object_object_get(output, "content");
+        struct json_object *content =
+            json_object_array_get_idx(contentArray, 0);
+        struct json_object *text = json_object_object_get(content, "text");
+        return json_object_get_string(text);
     }
-    struct json_object *content = json_object_object_get(message, "content");
-    return json_object_get_string(content);
 }
 
 /**
@@ -1147,7 +1155,6 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
  **/
 static void sendChatMessage() {
     BOOL isNewConversation = FALSE;
-    STRPTR finishReason = NULL;
     struct json_object **responses;
     if (currentConversation == NULL) {
         isNewConversation = TRUE;
@@ -1317,9 +1324,9 @@ static void sendChatMessage() {
                         }
                     }
                 }
-                finishReason = json_object_get_string(
-                    json_object_object_get(response, "finish_reason"));
-                if (finishReason != NULL) {
+                STRPTR type = json_object_get_string(
+                    json_object_object_get(response, "type"));
+                if (strcmp(type, "response.completed") == 0) {
                     dataStreamFinished = TRUE;
                 }
                 json_object_put(response);

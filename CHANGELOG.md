@@ -8,6 +8,7 @@
 - Latest OpenAI text to speech models added
 - Latest OpenAI text to speech voices added
 - Can now give instructions to the OpenAI voice to change how it sounds (only works for the gpt-4o-mini-tts model)
+- Chat now uses the new Responses endpoint instead of the Chat Completions one to allow for future expansion
 
 ## 2.3.1 (2025-03-30)
 
