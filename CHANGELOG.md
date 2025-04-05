@@ -4,6 +4,9 @@
 
 - ARexx port added to allow issuing AmigaGPT commands from another app or from a sript
 - Fixed bug where the About AmigaGPT window wouldn't display all the text correctly
+- Latest OpenAI chat models added
+- Latest OpenAI text to speech models added
+- Latest OpenAI text to speech voices added
 
 ## 2.3.1 (2025-03-30)
 

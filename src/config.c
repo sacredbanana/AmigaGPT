@@ -22,7 +22,7 @@ struct Config config = {
     .imageModel = DALL_E_3,
     .imageSizeDallE2 = IMAGE_SIZE_256x256,
     .imageSizeDallE3 = IMAGE_SIZE_1024x1024,
-    .openAITTSModel = OPENAI_TTS_MODEL_TTS_1,
+    .openAITTSModel = OPENAI_TTS_MODEL_GPT_4o_MINI_TTS,
     .openAITTSVoice = OPENAI_TTS_VOICE_ALLOY,
     .openAiApiKey = NULL,
     .chatModelSetVersion = CHAT_MODEL_SET_VERSION,
@@ -354,7 +354,7 @@ LONG readConfig() {
     }
 
     if (config.openAITTSModelSetVersion != OPENAI_TTS_MODEL_SET_VERSION) {
-        config.openAITTSModel = OPENAI_TTS_MODEL_TTS_1;
+        config.openAITTSModel = OPENAI_TTS_MODEL_GPT_4o_MINI_TTS;
     }
 
     struct json_object *openAITTSVoiceSetVersionObj;

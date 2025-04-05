@@ -80,14 +80,18 @@ CONST_STRPTR CHAT_MODEL_NAMES[] = {
     [o1_PREVIEW_2024_09_12] = "o1-preview-2024-09-12",
     [o1_MINI] = "o1-mini",
     [o1_MINI_2024_09_12] = "o1-mini-2024-09-12",
+    [o1_PRO] = "o1-pro",
+    [o1_PRO_2025_03_19] = "o1-pro-2025-03-19",
+    [o3_MINI] = "o3-mini",
+    [o3_MINI_2025_01_31] = "o3-mini-2025-01-31",
     [GPT_4_TURBO] = "gpt-4-turbo",
     [GPT_4_TURBO_2024_04_09] = "gpt-4-turbo-2024-04-09",
     [GPT_4_TURBO_PREVIEW] = "gpt-4-turbo-preview",
-    [GPT_4_0125_PREVIEW] = "gpt-4-0125-preview",
-    [GPT_4_1106_PREVIEW] = "gpt-4-1106-preview",
     [GPT_4] = "gpt-4",
     [GPT_4_0613] = "gpt-4-0613",
     [GPT_4_0314] = "gpt-4-0314",
+    [GPT_4_5_PREVIEW] = "gpt-4.5-preview",
+    [GPT_4_5_PREVIEW_2025_02_27] = "gpt-4.5-preview-2025-02-27",
     [GPT_3_5_TURBO] = "gpt-3.5-turbo",
     [GPT_3_5_TURBO_0125] = "gpt-3.5-turbo-0125",
     [GPT_3_5_TURBO_1106] = "gpt-3.5-turbo-1106",
@@ -113,20 +117,25 @@ extern CONST_STRPTR IMAGE_SIZE_NAMES[] = {
  * The names of the TTS models
  * @see enum OpenAITTSModel
  **/
-CONST_STRPTR OPENAI_TTS_MODEL_NAMES[] = {[OPENAI_TTS_MODEL_TTS_1] = "tts-1",
-                                         [OPENAI_TTS_MODEL_TTS_1_HD] =
-                                             "tts-1-hd",
-                                         NULL};
+CONST_STRPTR OPENAI_TTS_MODEL_NAMES[] = {
+    [OPENAI_TTS_MODEL_TTS_1] = "tts-1",
+    [OPENAI_TTS_MODEL_TTS_1_HD] = "tts-1-hd",
+    [OPENAI_TTS_MODEL_GPT_4o_MINI_TTS] = "gpt-4o-mini-tts",
+    NULL};
 
 /**
  * The names of the TTS voices
  * @see enum OpenAITTSVoice
  **/
 CONST_STRPTR OPENAI_TTS_VOICE_NAMES[] = {[OPENAI_TTS_VOICE_ALLOY] = "alloy",
+                                         [OPENAI_TTS_VOICE_ASH] = "ash",
+                                         [OPENAI_TTS_VOICE_BALLAD] = "ballad",
+                                         [OPENAI_TTS_VOICE_CORAL] = "coral",
                                          [OPENAI_TTS_VOICE_ECHO] = "echo",
                                          [OPENAI_TTS_VOICE_FABLE] = "fable",
                                          [OPENAI_TTS_VOICE_ONYX] = "onyx",
                                          [OPENAI_TTS_VOICE_NOVA] = "nova",
+                                         [OPENAI_TTS_VOICE_SAGE] = "sage",
                                          [OPENAI_TTS_VOICE_SHIMMER] = "shimmer",
                                          NULL};
 

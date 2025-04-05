@@ -183,6 +183,12 @@ static struct NewMenu amigaGPTMenu[] = {
     {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE},
     {NM_SUB, "alloy", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
      (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY},
+    {NM_SUB, "ash", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
+     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ASH},
+    {NM_SUB, "ballad", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
+     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_BALLAD},
+    {NM_SUB, "coral", 0, CHECKIT | MENUTOGGLE, ~(1 << 3),
+     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_CORAL},
     {NM_SUB, "echo", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
      (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO},
     {NM_SUB, "fable", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
@@ -191,6 +197,8 @@ static struct NewMenu amigaGPTMenu[] = {
      (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX},
     {NM_SUB, "nova", 0, CHECKIT | MENUTOGGLE, ~(1 << 4),
      (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA},
+    {NM_SUB, "sage", 0, CHECKIT | MENUTOGGLE, ~(1 << 5),
+     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_SAGE},
     {NM_SUB, "shimmer", 0, CHECKIT | MENUTOGGLE, ~(1 << 5),
      (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER},
     {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL},
@@ -198,6 +206,8 @@ static struct NewMenu amigaGPTMenu[] = {
      (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1},
     {NM_SUB, "tts-1-hd", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
      (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD},
+    {NM_SUB, "gpt-4o-mini-tts", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
+     (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_GPT_4o_MINI_TTS},
     {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI},
     {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_API_KEY},
     {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_CHAT_SYSTEM},
@@ -228,22 +238,30 @@ static struct NewMenu amigaGPTMenu[] = {
      (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_MINI},
     {NM_SUB, "o1-mini-2024-09-12", 0, CHECKIT | MENUTOGGLE, ~0,
      (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_MINI_2024_09_12},
+    {NM_SUB, "o1-pro", 0, CHECKIT | MENUTOGGLE, ~0,
+     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_PRO},
+    {NM_SUB, "o1-pro-2025-03-19", 0, CHECKIT | MENUTOGGLE, ~0,
+     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_PRO_2025_03_19},
+    {NM_SUB, "o3-mini", 0, CHECKIT | MENUTOGGLE, ~0,
+     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o3_MINI},
+    {NM_SUB, "o3-mini-2025-01-31", 0, CHECKIT | MENUTOGGLE, ~0,
+     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o3_MINI_2025_01_31},
     {NM_SUB, "gpt-4-turbo", 0, CHECKIT | MENUTOGGLE, ~0,
      (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO},
     {NM_SUB, "gpt-4-turbo-2024-04-09", 0, CHECKIT | MENUTOGGLE, ~0,
      (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_2024_04_09},
     {NM_SUB, "gpt-4-turbo-preview", 0, CHECKIT | MENUTOGGLE, ~0,
      (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_PREVIEW},
-    {NM_SUB, "gpt-4-0125-preview", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0125_PREVIEW},
-    {NM_SUB, "gpt-4-1106-preview", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_1106_PREVIEW},
     {NM_SUB, "gpt-4", 0, CHECKIT | MENUTOGGLE, ~0,
      (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4},
     {NM_SUB, "gpt-4-0613", 0, CHECKIT | MENUTOGGLE, ~0,
      (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0613},
     {NM_SUB, "gpt-4-0314", 0, CHECKIT | MENUTOGGLE, ~0,
      (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0314},
+    {NM_SUB, "gpt-4.5-preview", 0, CHECKIT | MENUTOGGLE, ~0,
+     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_5_PREVIEW},
+    {NM_SUB, "gpt-4.5-preview-2025-02-27", 0, CHECKIT | MENUTOGGLE, ~0,
+     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_5_PREVIEW_2025_02_27},
     {NM_SUB, "gpt-3.5-turbo", 0, CHECKIT | CHECKED | MENUTOGGLE, ~0,
      (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO},
     {NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT | MENUTOGGLE, ~0,
@@ -501,6 +519,39 @@ void addMenuActions() {
              MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
              MUIA_Menuitem_Checked, TRUE);
 
+    Object speechOpenAIVoiceAshMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ASH);
+    set(speechOpenAIVoiceAshMenuItem, MUIA_Menuitem_Checked,
+        config.openAITTSVoice == OPENAI_TTS_VOICE_ASH);
+    DoMethod(speechOpenAIVoiceAshMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             TRUE, MUIV_Notify_Application, 3, MUIM_WriteLong,
+             OPENAI_TTS_VOICE_ASH, &config.openAITTSVoice);
+    DoMethod(speechOpenAIVoiceAshMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
+             MUIA_Menuitem_Checked, TRUE);
+
+    Object speechOpenAIVoiceBalladMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_BALLAD);
+    set(speechOpenAIVoiceBalladMenuItem, MUIA_Menuitem_Checked,
+        config.openAITTSVoice == OPENAI_TTS_VOICE_BALLAD);
+    DoMethod(speechOpenAIVoiceBalladMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application, 3,
+             MUIM_WriteLong, OPENAI_TTS_VOICE_BALLAD, &config.openAITTSVoice);
+    DoMethod(speechOpenAIVoiceBalladMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
+             MUIM_Set, MUIA_Menuitem_Checked, TRUE);
+
+    Object speechOpenAIVoiceCoralMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_CORAL);
+    set(speechOpenAIVoiceCoralMenuItem, MUIA_Menuitem_Checked,
+        config.openAITTSVoice == OPENAI_TTS_VOICE_CORAL);
+    DoMethod(speechOpenAIVoiceCoralMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             TRUE, MUIV_Notify_Application, 3, MUIM_WriteLong,
+             OPENAI_TTS_VOICE_CORAL, &config.openAITTSVoice);
+    DoMethod(speechOpenAIVoiceCoralMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
+             MUIA_Menuitem_Checked, TRUE);
+
     Object speechOpenAIVoiceEchoMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO);
     set(speechOpenAIVoiceEchoMenuItem, MUIA_Menuitem_Checked,
@@ -545,6 +596,17 @@ void addMenuActions() {
              MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
              MUIA_Menuitem_Checked, TRUE);
 
+    Object speechOpenAIVoiceSageMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_SAGE);
+    set(speechOpenAIVoiceSageMenuItem, MUIA_Menuitem_Checked,
+        config.openAITTSVoice == OPENAI_TTS_VOICE_SAGE);
+    DoMethod(speechOpenAIVoiceSageMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             TRUE, MUIV_Notify_Application, 3, MUIM_WriteLong,
+             OPENAI_TTS_VOICE_SAGE, &config.openAITTSVoice);
+    DoMethod(speechOpenAIVoiceSageMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
+             MUIA_Menuitem_Checked, TRUE);
+
     Object speechOpenAIVoiceShimmerMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER);
     set(speechOpenAIVoiceShimmerMenuItem, MUIA_Menuitem_Checked,
@@ -575,6 +637,19 @@ void addMenuActions() {
              MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application, 3,
              MUIM_WriteLong, OPENAI_TTS_MODEL_TTS_1_HD, &config.openAITTSModel);
     DoMethod(speechOpenAIModelTTS1HDMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
+             MUIM_Set, MUIA_Menuitem_Checked, TRUE);
+
+    Object speechOpenAIModelGPT4oMiniTTSMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData,
+                         MENU_ITEM_SPEECH_OPENAI_MODEL_GPT_4o_MINI_TTS);
+    set(speechOpenAIModelGPT4oMiniTTSMenuItem, MUIA_Menuitem_Checked,
+        config.openAITTSModel == OPENAI_TTS_MODEL_GPT_4o_MINI_TTS);
+    DoMethod(speechOpenAIModelGPT4oMiniTTSMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application, 3,
+             MUIM_WriteLong, OPENAI_TTS_MODEL_GPT_4o_MINI_TTS,
+             &config.openAITTSModel);
+    DoMethod(speechOpenAIModelGPT4oMiniTTSMenuItem, MUIM_Notify,
              MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
              MUIM_Set, MUIA_Menuitem_Checked, TRUE);
 
@@ -740,6 +815,52 @@ void addMenuActions() {
              MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
              MUIM_Set, MUIA_Menuitem_Checked, TRUE);
 
+    Object openAIChatModelo1ProMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_o1_PRO);
+    set(openAIChatModelo1ProMenuItem, MUIA_Menuitem_Checked,
+        config.chatModel == o1_PRO);
+    DoMethod(openAIChatModelo1ProMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             TRUE, MUIV_Notify_Application, 3, MUIM_WriteLong, o1_PRO,
+             &config.chatModel);
+    DoMethod(openAIChatModelo1ProMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
+             MUIA_Menuitem_Checked, TRUE);
+
+    Object openAIChatModelo1Pro2025_03_19MenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData,
+                         MENU_ITEM_OPENAI_CHAT_MODEL_o1_PRO_2025_03_19);
+    set(openAIChatModelo1Pro2025_03_19MenuItem, MUIA_Menuitem_Checked,
+        config.chatModel == o1_PRO_2025_03_19);
+    DoMethod(openAIChatModelo1Pro2025_03_19MenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application, 3,
+             MUIM_WriteLong, o1_PRO_2025_03_19, &config.chatModel);
+    DoMethod(openAIChatModelo1Pro2025_03_19MenuItem, MUIM_Notify,
+             MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
+             MUIM_Set, MUIA_Menuitem_Checked, TRUE);
+
+    Object openAIChatModelo3MiniMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_o3_MINI);
+    set(openAIChatModelo3MiniMenuItem, MUIA_Menuitem_Checked,
+        config.chatModel == o3_MINI);
+    DoMethod(openAIChatModelo3MiniMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             TRUE, MUIV_Notify_Application, 3, MUIM_WriteLong, o3_MINI,
+             &config.chatModel);
+    DoMethod(openAIChatModelo3MiniMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
+             MUIA_Menuitem_Checked, TRUE);
+
+    Object openAIChatModelo3Mini2025_01_31MenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData,
+                         MENU_ITEM_OPENAI_CHAT_MODEL_o3_MINI_2025_01_31);
+    set(openAIChatModelo3Mini2025_01_31MenuItem, MUIA_Menuitem_Checked,
+        config.chatModel == o3_MINI_2025_01_31);
+    DoMethod(openAIChatModelo3Mini2025_01_31MenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application, 3,
+             MUIM_WriteLong, o3_MINI_2025_01_31, &config.chatModel);
+    DoMethod(openAIChatModelo3Mini2025_01_31MenuItem, MUIM_Notify,
+             MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
+             MUIM_Set, MUIA_Menuitem_Checked, TRUE);
+
     Object openAIChatModelGPT4TurboMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO);
     set(openAIChatModelGPT4TurboMenuItem, MUIA_Menuitem_Checked,
@@ -775,30 +896,6 @@ void addMenuActions() {
              MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
              MUIM_Set, MUIA_Menuitem_Checked, TRUE);
 
-    Object openAIChatModelGPT4_0125PreviewMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData,
-                         MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0125_PREVIEW);
-    set(openAIChatModelGPT4_0125PreviewMenuItem, MUIA_Menuitem_Checked,
-        config.chatModel == GPT_4_0125_PREVIEW);
-    DoMethod(openAIChatModelGPT4_0125PreviewMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application, 3,
-             MUIM_WriteLong, GPT_4_0125_PREVIEW, &config.chatModel);
-    DoMethod(openAIChatModelGPT4_0125PreviewMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
-             MUIM_Set, MUIA_Menuitem_Checked, TRUE);
-
-    Object openAIChatModelGPT4_1106MenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData,
-                         MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_1106_PREVIEW);
-    set(openAIChatModelGPT4_1106MenuItem, MUIA_Menuitem_Checked,
-        config.chatModel == GPT_4_1106_PREVIEW);
-    DoMethod(openAIChatModelGPT4_1106MenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application, 3,
-             MUIM_WriteLong, GPT_4_1106_PREVIEW, &config.chatModel);
-    DoMethod(openAIChatModelGPT4_1106MenuItem, MUIM_Notify,
-             MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
-             MUIM_Set, MUIA_Menuitem_Checked, TRUE);
-
     Object openAIChatModelGPT4MenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4);
     set(openAIChatModelGPT4MenuItem, MUIA_Menuitem_Checked,
@@ -829,6 +926,29 @@ void addMenuActions() {
              MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application, 3,
              MUIM_WriteLong, GPT_4_0314, &config.chatModel);
     DoMethod(openAIChatModelGPT4_0314MenuItem, MUIM_Notify,
+             MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
+             MUIM_Set, MUIA_Menuitem_Checked, TRUE);
+
+    Object openAIChatModelGPT4_5PreviewMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_5_PREVIEW);
+    set(openAIChatModelGPT4_5PreviewMenuItem, MUIA_Menuitem_Checked,
+        config.chatModel == GPT_4_5_PREVIEW);
+    DoMethod(openAIChatModelGPT4_5PreviewMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application, 3,
+             MUIM_WriteLong, GPT_4_5_PREVIEW, &config.chatModel);
+    DoMethod(openAIChatModelGPT4_5PreviewMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
+             MUIM_Set, MUIA_Menuitem_Checked, TRUE);
+
+    Object openAIChatModelGPT4_5Preview2025_02_27MenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData,
+        MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_5_PREVIEW_2025_02_27);
+    set(openAIChatModelGPT4_5Preview2025_02_27MenuItem, MUIA_Menuitem_Checked,
+        config.chatModel == GPT_4_5_PREVIEW_2025_02_27);
+    DoMethod(openAIChatModelGPT4_5Preview2025_02_27MenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Application, 3,
+             MUIM_WriteLong, GPT_4_5_PREVIEW_2025_02_27, &config.chatModel);
+    DoMethod(openAIChatModelGPT4_5Preview2025_02_27MenuItem, MUIM_Notify,
              MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
              MUIM_Set, MUIA_Menuitem_Checked, TRUE);
 

@@ -2,11 +2,11 @@
 #include "openai.h"
 #include "speech.h"
 
-#define CHAT_MODEL_SET_VERSION 5
+#define CHAT_MODEL_SET_VERSION 6
 #define IMAGE_MODEL_SET_VERSION 0
 #define SPEECH_SYSTEM_SET_VERSION 1
-#define OPENAI_TTS_MODEL_SET_VERSION 0
-#define OPENAI_TTS_VOICE_SET_VERSION 0
+#define OPENAI_TTS_MODEL_SET_VERSION 1
+#define OPENAI_TTS_VOICE_SET_VERSION 1
 
 struct Config {
     ULONG speechEnabled; // Making it a ULONG so it can be directly triggered.
