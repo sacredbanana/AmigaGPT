@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.0
+
+- ARexx port added to allow issuing AmigaGPT commands from another app or from a sript
+- Fixed bug where the About AmigaGPT window wouldn't display all the text correctly
+
 ## 2.3.1 (2025-03-30)
 
 - Fix broken error requester in MorphOS

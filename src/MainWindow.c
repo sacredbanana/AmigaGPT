@@ -51,13 +51,9 @@ struct Conversation *currentConversation;
 struct GeneratedImage *currentImage;
 static STRPTR pages[3] = {NULL};
 
-static struct Conversation *newConversation();
-static UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream);
+struct Conversation *newConversation();
 static void formatText(STRPTR unformattedText);
-static void addTextToConversation(struct Conversation *conversation, UTF8 *text,
-                                  STRPTR role);
 static void displayConversation(struct Conversation *conversation);
-static void freeConversation(struct Conversation *conversation);
 static struct Conversation *copyConversation(struct Conversation *conversation);
 static struct GeneratedImage *
 copyGeneratedImage(struct GeneratedImage *generatedImage);
@@ -1069,7 +1065,7 @@ static PICTURE *generateThumbnail(struct GeneratedImage *image) {
  * Creates a new conversation
  * @return A pointer to the new conversation
  **/
-static struct Conversation *newConversation() {
+struct Conversation *newConversation() {
     struct Conversation *conversation =
         AllocVec(sizeof(struct Conversation), MEMF_CLEAR);
     struct MinList *messages = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
@@ -1125,7 +1121,7 @@ static void formatText(STRPTR unformattedText) {
  *of content then return an empty string
  * @todo Handle errors
  **/
-static UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
+UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
     if (json == NULL)
         return NULL;
     UTF8 *json_str = json_object_to_json_string(json);
@@ -1418,8 +1414,8 @@ static void sendChatMessage() {
  * @param text The text to add to the conversation
  * @param role The role of the text (user or assistant)
  **/
-static void addTextToConversation(struct Conversation *conversation, UTF8 *text,
-                                  STRPTR role) {
+void addTextToConversation(struct Conversation *conversation, UTF8 *text,
+                           STRPTR role) {
     struct ConversationNode *conversationNode =
         AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
     if (conversationNode == NULL) {
@@ -1495,7 +1491,7 @@ static void displayConversation(struct Conversation *conversation) {
  * Free the conversation
  * @param conversation The conversation to free
  **/
-static void freeConversation(struct Conversation *conversation) {
+void freeConversation(struct Conversation *conversation) {
     struct ConversationNode *conversationNode;
     while ((conversationNode = (struct ConversationNode *)RemHead(
                 conversation->messages)) != NULL) {

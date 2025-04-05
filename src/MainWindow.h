@@ -43,3 +43,35 @@ void displayError(STRPTR message);
  *
  **/
 void updateStatusBar(CONST_STRPTR message, const ULONG pen);
+
+/**
+ * Creates a new conversation
+ * @return A pointer to the new conversation
+ **/
+struct Conversation *newConversation();
+
+/**
+ * Get the message content from the JSON response from OpenAI
+ * @param json the JSON response from OpenAI
+ * @param stream whether the response is a stream or not
+ * @return a pointer to a new UTF8 string containing the message content -- Free
+ *it with FreeVec() when you are done using it If found role in the json instead
+ *of content then return an empty string
+ * @todo Handle errors
+ **/
+UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream);
+
+/**
+ * Add a block of text to the conversation list
+ * @param conversation The conversation to add the text to
+ * @param text The text to add to the conversation
+ * @param role The role of the text (user or assistant)
+ **/
+void addTextToConversation(struct Conversation *conversation, UTF8 *text,
+                           STRPTR role);
+
+/**
+ * Free the conversation
+ * @param conversation The conversation to free
+ **/
+void freeConversation(struct Conversation *conversation);

@@ -15,6 +15,7 @@
 #include <mui/TextEditor_mcc.h>
 #include <SDI_hook.h>
 #include <stdio.h>
+#include <string.h>
 #include "AboutAmigaGPTWindow.h"
 #include "APIKeyRequesterWindow.h"
 #include "ChatSystemRequesterWindow.h"
@@ -60,45 +61,93 @@ BOOL isMUI5;
 BOOL isAROS;
 struct codeset *systemCodeset;
 
+static BOOL checkMUICustomClassInstalled();
+static void closeGUILibraries();
+
 static CONST_STRPTR USED_CLASSES[] = {
     MUIC_Aboutbox,   MUIC_Busy,       MUIC_NList,
     MUIC_NListview,  MUIC_TextEditor, MUIC_BetterString,
     MUIC_NFloattext, MUIC_Guigfx,     NULL};
 
-#define ID_RESCAN 1
-#define ID_ACTIVATE 2
-#define ID_DEACTIVATE 3
-#define ID_TOGGLE 4
-#define ID_RESTORE 5
+HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
+    printf("SendMessage\nModel: %s\nSystem: %s\nAPI Key: %s\nPrompt: %s\n",
+           arg[0], arg[1], arg[2], arg[3]);
+    STRPTR modelString = (STRPTR)arg[0];
+    STRPTR system = (STRPTR)arg[1];
+    STRPTR apiKey = (STRPTR)arg[2];
+    STRPTR prompt = (STRPTR)arg[3];
 
-HOOKPROTONHNO(selectRxFunc, APTR, ULONG *arg) {
-    char *pattern;
+    if (apiKey == NULL) {
+        apiKey = config.openAiApiKey;
+    }
+    enum ChatModel model;
+    if (modelString == NULL) {
+        model = config.chatModel;
+    } else {
+        for (UBYTE i = 0; CHAT_MODEL_NAMES[i] != NULL; i++) {
+            if (CHAT_MODEL_NAMES[i + 1] == NULL) {
+                return (RETURN_ERROR);
+            }
+            if (strcmp(modelString, CHAT_MODEL_NAMES[i]) == 0) {
+                model = i;
+                break;
+            }
+        }
+    }
+    struct Conversation *conversation = newConversation();
+    UTF8 *promptUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                                          CSA_Source, (Tag)prompt, TAG_DONE);
+    addTextToConversation(conversation, promptUTF8, "user");
+    CodesetsFreeA(promptUTF8, NULL);
 
-    printf("selectRxfunc\n");
-    displayError("selectRxfunc");
+    if (system != NULL) {
+        UTF8 *systemUTF8 =
+            CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                               CSA_Source, (Tag)system, TAG_DONE);
+        addTextToConversation(conversation, systemUTF8, "system");
+        CodesetsFreeA(systemUTF8, NULL);
+    }
 
-    /*** pattern valid ? ***/
-    // if ((pattern = (char *)*arg)) {
-    /*** clear list & select matching pattern ***/
-    // select_tools_list(MUIV_List_Select_Off);
-    // select_pattern_tools_list(pattern);
-    // }
+    struct json_object **responses =
+        postChatMessageToOpenAI(conversation, model, apiKey, FALSE, FALSE, NULL,
+                                0, FALSE, FALSE, NULL, NULL);
 
-    return (69);
+    if (responses == NULL) {
+        printf(STRING_ERROR_CONNECTING_OPENAI);
+        set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
+        freeConversation(conversation);
+        return (RETURN_ERROR);
+    }
+    struct json_object *response = responses[0];
+    UTF8 *contentString = getMessageContentFromJson(response, FALSE);
+
+    if (contentString != NULL) {
+        if (strlen(contentString) > 0) {
+            STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
+                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                (Tag)contentString, CSA_MapForeignChars, TRUE, TAG_DONE);
+            set(app, MUIA_Application_RexxString,
+                formattedMessageSystemEncoded);
+            CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+        }
+        json_object_put(response);
+        FreeVec(responses);
+        freeConversation(conversation);
+        return (RETURN_OK);
+    }
+    FreeVec(responses);
+    freeConversation(conversation);
+    return (RETURN_ERROR);
 }
-MakeHook(selectRxHook, selectRxFunc);
+MakeHook(SendMessageHook, SendMessageFunc);
 
 static struct MUI_Command arexxList[] = {
-    {"rescan", MC_TEMPLATE_ID, ID_RESCAN, NULL, {0, 0, 0, 0, 0}},
-    {"select", NULL, NULL, &selectRxHook, {0, 0, 0, 0, 0}},
-    {"activate", MC_TEMPLATE_ID, ID_ACTIVATE, NULL, {0, 0, 0, 0, 0}},
-    {"deactivate", MC_TEMPLATE_ID, ID_DEACTIVATE, NULL, {0, 0, 0, 0, 0}},
-    {"toggle", MC_TEMPLATE_ID, ID_TOGGLE, NULL, {0, 0, 0, 0, 0}},
-    {"restore", MC_TEMPLATE_ID, ID_RESTORE, NULL, {0, 0, 0, 0, 0}},
+    {"SENDMESSAGE",
+     "M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F",
+     4,
+     &SendMessageHook,
+     {0, 0, 0, 0, 0}},
     {NULL, NULL, 0, NULL, {0, 0, 0, 0, 0}}};
-
-static BOOL checkMUICustomClassInstalled();
-static void closeGUILibraries();
 
 /**
  * Open the libraries needed for the GUI
