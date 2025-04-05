@@ -21,6 +21,7 @@ struct Config {
     enum ImageSize imageSizeDallE3;
     enum OpenAITTSModel openAITTSModel;
     enum OpenAITTSVoice openAITTSVoice;
+    STRPTR openAIVoiceInstructions;
     STRPTR openAiApiKey;
     UWORD chatModelSetVersion;    // This is used to determine if the chat model
                                   // set has changed and so the selected model

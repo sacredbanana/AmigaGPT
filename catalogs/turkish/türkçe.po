@@ -211,8 +211,8 @@ msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
 msgid ""
 "If you would like AmigaGPT to respond in a certain way, or add some "
 "personality, type it in here. For example, you could type \"Speak like a "
-"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to "
-"respond normally, leave this blank. This setting will be applied to new "
+"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
+"normally, leave this blank. This setting will be applied to new "
 "conversations only."
 msgstr ""
 "AmigaGPT'nin belirli bir şekilde yanıt vermesini veya biraz kişilik "
@@ -976,8 +976,8 @@ msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
 msgstr ""
-"Sunucuya bağlanılamadı. Proxy host ve portunun doğru olup "
-"olmadığını kontrol edin veya devre dışı bırakın."
+"Sunucuya bağlanılamadı. Proxy host ve portunun doğru olup olmadığını kontrol "
+"edin veya devre dışı bırakın."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
@@ -1008,7 +1008,8 @@ msgstr "Bağlanıyor..."
 #: src/openai.c:1075 src/openai.c:1406 src/openai.c:1664
 msgctxt "STRING_ERROR_CONNECTING_MAX_RETRIES (167//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr "Host'a bağlanırken hata oluştu! Maksimum yeniden deneme sayısına ulaşıldı."
+msgstr ""
+"Host'a bağlanırken hata oluştu! Maksimum yeniden deneme sayısına ulaşıldı."
 
 #: src/openai.c:539 src/openai.c:827 src/openai.c:1082 src/openai.c:1458
 msgctxt "STRING_SENDING_REQUEST (168//)"
@@ -1023,7 +1024,8 @@ msgstr "Yanıt indiriliyor..."
 #: src/openai.c:683 src/openai.c:934 src/openai.c:1658
 msgctxt "STRING_ERROR_CONNECTION_MAX_RETRIES (171//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr "Host'a bağlanırken hata oluştu! Maksimum yeniden deneme sayısına ulaşıldı."
+msgstr ""
+"Host'a bağlanırken hata oluştu! Maksimum yeniden deneme sayısına ulaşıldı."
 
 #: src/openai.c:705 src/openai.c:947 src/openai.c:1672
 msgctxt "STRING_ERROR_UNKNOWN (172//)"
@@ -1159,3 +1161,22 @@ msgstr "Dosya açılamadı"
 msgctxt "STRING_ERROR_FILE_READ (198//)"
 msgid "Failed to read file"
 msgstr "Dosya okunamadı"
+
+#: src/menu.c:272 src/menu.c:267
+msgctxt "STRING_MENU_OPENAI_VOICE_INSTRUCTIONS (216//)"
+msgid "OpenAI Voice Instructions"
+msgstr "Açık Belgeler"
+
+#: src/VoiceInstructionsRequesterWindow.c:11
+msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
+msgid ""
+"Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
+"voice'. This only works for the gpt-4o-mini-tts model."
+msgstr ""
+"AI'nın nasıl konuşmasını istediğinizi girin. Örnek: 'Derin ve gizemli bir "
+"sesle konuş'. Bu özellik sadece gpt-4o-mini-tts modeli için çalışır."
+
+#: src/VoiceInstructionsRequesterWindow.c:87
+msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
+msgid "Failed to create voice instructions window"
+msgstr "startupOptionsWindowObject oluşturulamadı"

@@ -14,6 +14,7 @@
 #include "MainWindow.h"
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
+#include "VoiceInstructionsRequesterWindow.h"
 #include "version.h"
 
 Object *menuStrip;
@@ -208,6 +209,7 @@ static struct NewMenu amigaGPTMenu[] = {
      (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD},
     {NM_SUB, "gpt-4o-mini-tts", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
      (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_GPT_4o_MINI_TTS},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_INSTRUCTIONS},
     {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI},
     {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_API_KEY},
     {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_CHAT_SYSTEM},
@@ -652,6 +654,21 @@ void addMenuActions() {
     DoMethod(speechOpenAIModelGPT4oMiniTTSMenuItem, MUIM_Notify,
              MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
              MUIM_Set, MUIA_Menuitem_Checked, TRUE);
+
+    Object openAIVoiceInstructionsMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_INSTRUCTIONS);
+    DoMethod(openAIVoiceInstructionsMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Trigger, MUIV_EveryTime,
+             voiceInstructionsRequesterWindowObject, 3, MUIM_Set,
+             MUIA_Window_Open, TRUE);
+    DoMethod(openAIVoiceInstructionsMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Trigger, MUIV_EveryTime,
+             voiceInstructionsRequesterString, 3, MUIM_Set,
+             MUIA_String_Contents, config.openAIVoiceInstructions);
+    DoMethod(openAIVoiceInstructionsMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Trigger, MUIV_EveryTime,
+             voiceInstructionsRequesterWindowObject, 3, MUIM_Set,
+             MUIA_Window_ActiveObject, voiceInstructionsRequesterString);
 
     Object openAIAPIKeyMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_API_KEY);
@@ -1231,6 +1248,11 @@ void setMenuTitles() {
         menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_MODEL);
     set(speechSystemOpenAIModelMenuItem, MUIA_Menuitem_Title,
         STRING_MENU_SPEECH_OPENAI_MODEL);
+
+    Object speechSystemOpenAIVoiceInstructionsMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_INSTRUCTIONS);
+    set(speechSystemOpenAIVoiceInstructionsMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_OPENAI_VOICE_INSTRUCTIONS);
 
     Object openAIMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI);

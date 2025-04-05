@@ -24,6 +24,7 @@ struct Config config = {
     .imageSizeDallE3 = IMAGE_SIZE_1024x1024,
     .openAITTSModel = OPENAI_TTS_MODEL_GPT_4o_MINI_TTS,
     .openAITTSVoice = OPENAI_TTS_VOICE_ALLOY,
+    .openAIVoiceInstructions = NULL,
     .openAiApiKey = NULL,
     .chatModelSetVersion = CHAT_MODEL_SET_VERSION,
     .imageModelSetVersion = IMAGE_MODEL_SET_VERSION,
@@ -92,6 +93,11 @@ LONG writeConfig() {
                            json_object_new_int(OPENAI_TTS_MODEL_SET_VERSION));
     json_object_object_add(configJsonObject, "openAITTSVoiceSetVersion",
                            json_object_new_int(OPENAI_TTS_VOICE_SET_VERSION));
+    json_object_object_add(
+        configJsonObject, "openAIVoiceInstructions",
+        config.openAIVoiceInstructions != NULL
+            ? json_object_new_string(config.openAIVoiceInstructions)
+            : NULL);
     json_object_object_add(configJsonObject, "proxyEnabled",
                            json_object_new_boolean((BOOL)config.proxyEnabled));
     json_object_object_add(configJsonObject, "proxyHost",
@@ -282,6 +288,23 @@ LONG readConfig() {
         config.openAITTSVoice = json_object_get_int(openAITTSVoiceObj);
     }
 
+    if (config.openAIVoiceInstructions != NULL) {
+        FreeVec(config.openAIVoiceInstructions);
+        config.openAIVoiceInstructions = NULL;
+    }
+    struct json_object *openAIVoiceInstructionsObj;
+    if (json_object_object_get_ex(configJsonObject, "openAIVoiceInstructions",
+                                  &openAIVoiceInstructionsObj)) {
+        CONST_STRPTR openAIVoiceInstructions =
+            json_object_get_string(openAIVoiceInstructionsObj);
+        if (openAIVoiceInstructions != NULL) {
+            config.openAIVoiceInstructions =
+                AllocVec(strlen(openAIVoiceInstructions) + 1, MEMF_CLEAR);
+            strncpy(config.openAIVoiceInstructions, openAIVoiceInstructions,
+                    strlen(openAIVoiceInstructions));
+        }
+    }
+
     if (config.openAiApiKey != NULL) {
         FreeVec(config.openAiApiKey);
         config.openAiApiKey = NULL;
@@ -466,6 +489,10 @@ void freeConfig() {
     if (config.chatSystem != NULL) {
         FreeVec(config.chatSystem);
         config.chatSystem = NULL;
+    }
+    if (config.openAIVoiceInstructions != NULL) {
+        FreeVec(config.openAIVoiceInstructions);
+        config.openAIVoiceInstructions = NULL;
     }
     if (config.openAiApiKey != NULL) {
         FreeVec(config.openAiApiKey);

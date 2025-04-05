@@ -214,8 +214,8 @@ msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
 msgid ""
 "If you would like AmigaGPT to respond in a certain way, or add some "
 "personality, type it in here. For example, you could type \"Speak like a "
-"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to "
-"respond normally, leave this blank. This setting will be applied to new "
+"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
+"normally, leave this blank. This setting will be applied to new "
 "conversations only."
 msgstr ""
 "Si deseas que AmigaGPT responda de una manera determinada, o agregar algo de "
@@ -384,8 +384,7 @@ msgid ""
 "The conversation has exceeded the maximum length. Please start a new "
 "conversation."
 msgstr ""
-"La conversación ha superado el tamaño máximo. Inicie una nueva "
-"conversación."
+"La conversación ha superado el tamaño máximo. Inicie una nueva conversación."
 
 #: src/MainWindow.c:1619
 msgctxt "STRING_ERROR_CHAT_HISTORY_CREATE (49//)"
@@ -1189,3 +1188,22 @@ msgstr "No se pudo abrir el archivo"
 msgctxt "STRING_ERROR_FILE_READ (198//)"
 msgid "Failed to read file"
 msgstr "No se pudo leer el archivo"
+
+#: src/menu.c:272 src/menu.c:267
+msgctxt "STRING_MENU_OPENAI_VOICE_INSTRUCTIONS (216//)"
+msgid "OpenAI Voice Instructions"
+msgstr "Abrir Documentación"
+
+#: src/VoiceInstructionsRequesterWindow.c:11
+msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
+msgid ""
+"Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
+"voice'. This only works for the gpt-4o-mini-tts model."
+msgstr ""
+"Ingrese cómo desea que la IA hable. Ejemplo: 'Habla en una voz profunda y "
+"misteriosa'. Esta función solo funciona con el modelo gpt-4o-mini-tts."
+
+#: src/VoiceInstructionsRequesterWindow.c:87
+msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
+msgid "Failed to create voice instructions window"
+msgstr "No se pudo crear startupOptionsWindowObject"

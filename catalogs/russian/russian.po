@@ -219,9 +219,9 @@ msgid ""
 msgstr ""
 "Если вы хотите, чтобы AmigaGPT отвечал определенным образом или добавлял "
 "индивидуальности, введите это здесь. Например, вы можете ввести \"Говори как "
-"пират\" или \"Говори как робот\". Если вы хотите, чтобы AmigaGPT "
-"отвечал нормально, оставьте это поле пустым. Эта настройка будет применена "
-"только к новым разговорам."
+"пират\" или \"Говори как робот\". Если вы хотите, чтобы AmigaGPT отвечал "
+"нормально, оставьте это поле пустым. Эта настройка будет применена только к "
+"новым разговорам."
 
 #: src/ChatSystemRequesterWindow.c:65
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_ERROR (18//)"
@@ -1184,3 +1184,22 @@ msgstr "Не удалось открыть файл"
 msgctxt "STRING_ERROR_FILE_READ (198//)"
 msgid "Failed to read file"
 msgstr "Не удалось прочитать файл"
+
+#: src/menu.c:272 src/menu.c:267
+msgctxt "STRING_MENU_OPENAI_VOICE_INSTRUCTIONS (216//)"
+msgid "OpenAI Voice Instructions"
+msgstr "Открытая документация"
+
+#: src/VoiceInstructionsRequesterWindow.c:11
+msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
+msgid ""
+"Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
+"voice'. This only works for the gpt-4o-mini-tts model."
+msgstr ""
+"Введите, как вы хотите, чтобы AI говорил. Пример: 'Говорить глубоко и "
+"загадочно'. Это работает только с моделью gpt-4o-mini-tts."
+
+#: src/VoiceInstructionsRequesterWindow.c:87
+msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
+msgid "Failed to create voice instructions window"
+msgstr "Не удалось создать startupOptionsWindowObject"

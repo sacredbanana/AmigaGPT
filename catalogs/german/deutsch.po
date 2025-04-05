@@ -1214,3 +1214,23 @@ msgstr "Datei konnte nicht geöffnet werden"
 msgctxt "STRING_ERROR_FILE_READ (198//)"
 msgid "Failed to read file"
 msgstr "Datei konnte nicht gelesen werden"
+
+#: src/menu.c:272 src/menu.c:267
+msgctxt "STRING_MENU_OPENAI_VOICE_INSTRUCTIONS (216//)"
+msgid "OpenAI Voice Instructions"
+msgstr "Dokumentation öffnen"
+
+#: src/VoiceInstructionsRequesterWindow.c:11
+msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
+msgid ""
+"Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
+"voice'. This only works for the gpt-4o-mini-tts model."
+msgstr ""
+"Geben Sie an, wie Sie möchten, dass die AI spricht. Beispiel: 'Sprich in "
+"einer tiefen und mysteriösen Stimme'. Dies funktioniert nur mit dem "
+"gpt-4o-mini-tts-Modell."
+
+#: src/VoiceInstructionsRequesterWindow.c:87
+msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
+msgid "Failed to create voice instructions window"
+msgstr "StartupOptionsWindowObject konnte nicht erstellt werden."

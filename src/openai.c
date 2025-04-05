@@ -1376,6 +1376,7 @@ static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength) {
  * @param text the text to speak
  * @param openAITTSModel the TTS model to use
  * @param openAITTSVoice the voice to use
+ * @param voiceInstructions the voice instructions to use
  * @param openAiApiKey the OpenAI API key
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
@@ -1389,9 +1390,10 @@ static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength) {
  **/
 APTR postTextToSpeechRequestToOpenAI(
     CONST_STRPTR text, enum OpenAITTSModel openAITTSModel,
-    enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR openAiApiKey,
-    ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
-    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
+    CONST_STRPTR openAiApiKey, ULONG *audioLength, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword) {
     struct json_object *response;
     BOOL useSSL = !useProxy || proxyUsesSSL;
@@ -1423,9 +1425,15 @@ APTR postTextToSpeechRequestToOpenAI(
         obj, "voice",
         json_object_new_string(OPENAI_TTS_VOICE_NAMES[openAITTSVoice]));
     json_object_object_add(obj, "input", json_object_new_string(text));
+    if (voiceInstructions != NULL) {
+        json_object_object_add(obj, "instructions",
+                               json_object_new_string(voiceInstructions));
+    }
     json_object_object_add(obj, "response_format",
                            json_object_new_string("pcm"));
     CONST_STRPTR jsonString = json_object_to_json_string(obj);
+
+    printf("jsonString: %s\n", jsonString);
 
     STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {

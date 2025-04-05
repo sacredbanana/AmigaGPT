@@ -25,6 +25,7 @@
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
 #include "StartupOptionsWindow.h"
+#include "VoiceInstructionsRequesterWindow.h"
 #include "version.h"
 
 #ifdef __AMIGAOS4__
@@ -293,11 +294,12 @@ MakeHook(ListVoicesHook, ListVoicesFunc);
 HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     STRPTR modelString = (STRPTR)arg[0];
     STRPTR voiceString = (STRPTR)arg[1];
-    STRPTR apiKey = (STRPTR)arg[2];
-    STRPTR prompt = (STRPTR)arg[3];
-
-    printf("SpeakText\nModel: %s\nVoice: %s\nAPI Key: %s\nPrompt: %s\n",
-           modelString, voiceString, apiKey, prompt);
+    STRPTR instructions = (STRPTR)arg[2];
+    STRPTR apiKey = (STRPTR)arg[3];
+    STRPTR prompt = (STRPTR)arg[4];
+    printf("SpeakText\nModel: %s\nVoice: %s\nInstructions: %s\nAPI Key: "
+           "%s\nPrompt: %s\n",
+           modelString, voiceString, instructions, apiKey, prompt);
 
     if (apiKey == NULL) {
         apiKey = config.openAiApiKey;
@@ -329,6 +331,7 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     config.speechSystem = SPEECH_SYSTEM_OPENAI;
     config.openAITTSModel = model;
     config.openAITTSVoice = voice;
+    config.openAIVoiceInstructions = instructions;
     speakText(prompt);
     readConfig();
     set(app, MUIA_Application_RexxString, prompt);
@@ -340,7 +343,7 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
     set(app, MUIA_Application_RexxString,
         "SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F\n"
         "CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F\n"
-        "SPEAKTEXT M=MODEL/K,V=VOICE/K,K=APIKEY/K,P=PROMPT/F\n"
+        "SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,P=PROMPT/F\n"
         "LISTCHATMODELS\n"
         "LISTIMAGEMODELS\n"
         "LISTIMAGESIZES\n"
@@ -362,8 +365,8 @@ static struct MUI_Command arexxList[] = {
      &CreateImageHook,
      {0, 0, 0, 0, 0}},
     {"SPEAKTEXT",
-     "M=MODEL/K,V=VOICE/K,K=APIKEY/K,P=PROMPT/F",
-     4,
+     "M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,P=PROMPT/F",
+     5,
      &SpeakTextHook,
      {0, 0, 0, 0, 0}},
     {"LISTCHATMODELS", NULL, NULL, &ListChatModelsHook, {0, 0, 0, 0, 0}},
@@ -462,6 +465,9 @@ LONG initVideo() {
     if (createProxySettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
+    if (createVoiceInstructionsRequesterWindow() == RETURN_ERROR)
+        return RETURN_ERROR;
+
     if (!(app = ApplicationObject, MUIA_Application_Base, "AMIGAGPT",
           MUIA_Application_Title, STRING_APP_NAME, MUIA_Application_Version,
           APP_VERSION, MUIA_Application_Copyright,
@@ -477,6 +483,7 @@ LONG initVideo() {
           SubWindow, apiKeyRequesterWindowObject, SubWindow,
           chatSystemRequesterWindowObject, SubWindow,
           proxySettingsRequesterWindowObject, SubWindow,
+          voiceInstructionsRequesterWindowObject, SubWindow,
           imageWindowObject = WindowObject, MUIA_Window_Title, STRING_IMAGE,
           MUIA_Window_Width, 320, MUIA_Window_Height, 240,
           MUIA_Window_CloseGadget, TRUE, MUIA_Window_LeftEdge,

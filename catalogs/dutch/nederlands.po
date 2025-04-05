@@ -213,8 +213,8 @@ msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
 msgid ""
 "If you would like AmigaGPT to respond in a certain way, or add some "
 "personality, type it in here. For example, you could type \"Speak like a "
-"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to "
-"respond normally, leave this blank. This setting will be applied to new "
+"pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
+"normally, leave this blank. This setting will be applied to new "
 "conversations only."
 msgstr ""
 "Als u wilt dat AmigaGPT op een bepaalde manier reageert, of wat "
@@ -1187,3 +1187,22 @@ msgstr "Het openen van het bestand is mislukt"
 msgctxt "STRING_ERROR_FILE_READ (198//)"
 msgid "Failed to read file"
 msgstr "Het is niet gelukt om het bestand te lezen"
+
+#: src/menu.c:272 src/menu.c:267
+msgctxt "STRING_MENU_OPENAI_VOICE_INSTRUCTIONS (216//)"
+msgid "OpenAI Voice Instructions"
+msgstr "Open documentatie"
+
+#: src/VoiceInstructionsRequesterWindow.c:11
+msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
+msgid ""
+"Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
+"voice'. This only works for the gpt-4o-mini-tts model."
+msgstr ""
+"Voer in hoe je wilt dat de AI spreekt. Voorbeeld: 'Spreek in een diepe en "
+"mystieke stem'. Dit werkt alleen met de gpt-4o-mini-tts-model."
+
+#: src/VoiceInstructionsRequesterWindow.c:87
+msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
+msgid "Failed to create voice instructions window"
+msgstr "Kan startupOptionsWindowObject niet aanmaken"

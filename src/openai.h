@@ -226,6 +226,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
  * @param text the text to speak
  * @param openAITTSModel the TTS model to use
  * @param openAITTSVoice the voice to use
+ * @param voiceInstructions the voice instructions to use
  * @param openAiApiKey the OpenAI API key
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
@@ -239,9 +240,10 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
  **/
 APTR postTextToSpeechRequestToOpenAI(
     CONST_STRPTR text, enum OpenAITTSModel openAITTSModel,
-    enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR openAiApiKey,
-    ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
-    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
+    CONST_STRPTR openAiApiKey, ULONG *audioLength, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword);
 
 /**
