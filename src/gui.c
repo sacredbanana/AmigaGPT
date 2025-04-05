@@ -254,6 +254,18 @@ HOOKPROTONHNO(ListImageModelsFunc, APTR, ULONG *arg) {
 }
 MakeHook(ListImageModelsHook, ListImageModelsFunc);
 
+HOOKPROTONHNO(ListImageSizesFunc, APTR, ULONG *arg) {
+    STRPTR sizes = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
+    for (UBYTE i = 0; IMAGE_SIZE_NAMES[i] != NULL; i++) {
+        strncat(sizes, IMAGE_SIZE_NAMES[i], 1024);
+        strncat(sizes, "\n", 1024);
+    }
+    set(app, MUIA_Application_RexxString, sizes);
+    FreeVec(sizes);
+    return (RETURN_OK);
+}
+MakeHook(ListImageSizesHook, ListImageSizesFunc);
+
 static struct MUI_Command arexxList[] = {
     {"SENDMESSAGE",
      "M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F",
@@ -267,6 +279,7 @@ static struct MUI_Command arexxList[] = {
      {0, 0, 0, 0, 0}},
     {"LISTCHATMODELS", NULL, NULL, &ListChatModelsHook, {0, 0, 0, 0, 0}},
     {"LISTIMAGEMODELS", NULL, NULL, &ListImageModelsHook, {0, 0, 0, 0, 0}},
+    {"LISTIMAGESIZES", NULL, NULL, &ListImageSizesHook, {0, 0, 0, 0, 0}},
     {NULL, NULL, 0, NULL, {0, 0, 0, 0, 0}}};
 
 /**
