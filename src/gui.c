@@ -278,6 +278,18 @@ HOOKPROTONHNO(ListVoiceModelsFunc, APTR, ULONG *arg) {
 }
 MakeHook(ListVoiceModelsHook, ListVoiceModelsFunc);
 
+HOOKPROTONHNO(ListVoicesFunc, APTR, ULONG *arg) {
+    STRPTR voices = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
+    for (UBYTE i = 0; OPENAI_TTS_VOICE_NAMES[i] != NULL; i++) {
+        strncat(voices, OPENAI_TTS_VOICE_NAMES[i], 1024);
+        strncat(voices, "\n", 1024);
+    }
+    set(app, MUIA_Application_RexxString, voices);
+    FreeVec(voices);
+    return (RETURN_OK);
+}
+MakeHook(ListVoicesHook, ListVoicesFunc);
+
 static struct MUI_Command arexxList[] = {
     {"SENDMESSAGE",
      "M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F",
@@ -293,6 +305,7 @@ static struct MUI_Command arexxList[] = {
     {"LISTIMAGEMODELS", NULL, NULL, &ListImageModelsHook, {0, 0, 0, 0, 0}},
     {"LISTIMAGESIZES", NULL, NULL, &ListImageSizesHook, {0, 0, 0, 0, 0}},
     {"LISTVOICEMODELS", NULL, NULL, &ListVoiceModelsHook, {0, 0, 0, 0, 0}},
+    {"LISTVOICES", NULL, NULL, &ListVoicesHook, {0, 0, 0, 0, 0}},
     {NULL, NULL, 0, NULL, {0, 0, 0, 0, 0}}};
 
 /**
