@@ -98,17 +98,16 @@ CONST_STRPTR CHAT_MODEL_NAMES[] = {
  * @see enum ImageModel
  **/
 CONST_STRPTR IMAGE_MODEL_NAMES[] = {
-    [DALL_E_2] = "dall-e-2", [DALL_E_3] = "dall-e-3"};
+    [DALL_E_2] = "dall-e-2", [DALL_E_3] = "dall-e-3", NULL};
 
 /**
  * The names of the image sizes
  * @see enum ImageSize
  **/
-extern CONST_STRPTR IMAGE_SIZE_NAMES[] = {[IMAGE_SIZE_256x256] = "256x256",
-                                          [IMAGE_SIZE_512x512] = "512x512",
-                                          [IMAGE_SIZE_1024x1024] = "1024x1024",
-                                          [IMAGE_SIZE_1792x1024] = "1792x1024",
-                                          [IMAGE_SIZE_1024x1792] = "1024x1792"};
+extern CONST_STRPTR IMAGE_SIZE_NAMES[] = {
+    [IMAGE_SIZE_256x256] = "256x256",     [IMAGE_SIZE_512x512] = "512x512",
+    [IMAGE_SIZE_1024x1024] = "1024x1024", [IMAGE_SIZE_1792x1024] = "1792x1024",
+    [IMAGE_SIZE_1024x1792] = "1024x1792", NULL};
 
 /**
  * The names of the TTS models
@@ -116,16 +115,20 @@ extern CONST_STRPTR IMAGE_SIZE_NAMES[] = {[IMAGE_SIZE_256x256] = "256x256",
  **/
 CONST_STRPTR OPENAI_TTS_MODEL_NAMES[] = {[OPENAI_TTS_MODEL_TTS_1] = "tts-1",
                                          [OPENAI_TTS_MODEL_TTS_1_HD] =
-                                             "tts-1-hd"};
+                                             "tts-1-hd",
+                                         NULL};
 
 /**
  * The names of the TTS voices
  * @see enum OpenAITTSVoice
  **/
-CONST_STRPTR OPENAI_TTS_VOICE_NAMES[] = {
-    [OPENAI_TTS_VOICE_ALLOY] = "alloy", [OPENAI_TTS_VOICE_ECHO] = "echo",
-    [OPENAI_TTS_VOICE_FABLE] = "fable", [OPENAI_TTS_VOICE_ONYX] = "onyx",
-    [OPENAI_TTS_VOICE_NOVA] = "nova",   [OPENAI_TTS_VOICE_SHIMMER] = "shimmer"};
+CONST_STRPTR OPENAI_TTS_VOICE_NAMES[] = {[OPENAI_TTS_VOICE_ALLOY] = "alloy",
+                                         [OPENAI_TTS_VOICE_ECHO] = "echo",
+                                         [OPENAI_TTS_VOICE_FABLE] = "fable",
+                                         [OPENAI_TTS_VOICE_ONYX] = "onyx",
+                                         [OPENAI_TTS_VOICE_NOVA] = "nova",
+                                         [OPENAI_TTS_VOICE_SHIMMER] = "shimmer",
+                                         NULL};
 
 /**
  * Generate a random number

@@ -70,12 +70,13 @@ static CONST_STRPTR USED_CLASSES[] = {
     MUIC_NFloattext, MUIC_Guigfx,     NULL};
 
 HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
-    printf("SendMessage\nModel: %s\nSystem: %s\nAPI Key: %s\nPrompt: %s\n",
-           arg[0], arg[1], arg[2], arg[3]);
     STRPTR modelString = (STRPTR)arg[0];
     STRPTR system = (STRPTR)arg[1];
     STRPTR apiKey = (STRPTR)arg[2];
     STRPTR prompt = (STRPTR)arg[3];
+
+    printf("SendMessage\nModel: %s\nSystem: %s\nAPI Key: %s\nPrompt: %s\n",
+           modelString, system, apiKey, prompt);
 
     if (apiKey == NULL) {
         apiKey = config.openAiApiKey;
@@ -141,11 +142,104 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 }
 MakeHook(SendMessageHook, SendMessageFunc);
 
+HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
+    STRPTR modelString = (STRPTR)arg[0];
+    STRPTR sizeString = (STRPTR)arg[1];
+    STRPTR apiKey = (STRPTR)arg[2];
+    STRPTR destination = (STRPTR)arg[3];
+    STRPTR prompt = (STRPTR)arg[4];
+    printf("CreateImage\nModel: %s\nSize: %s\nAPI Key: %s\nDestination: %s"
+           "\nPrompt: %s\n",
+           modelString, sizeString, apiKey, destination, prompt);
+
+    if (apiKey == NULL) {
+        apiKey = config.openAiApiKey;
+    }
+
+    enum ImageModel model;
+    if (modelString == NULL) {
+        model = config.imageModel;
+    } else {
+        for (UBYTE i = 0; IMAGE_MODEL_NAMES[i] != NULL; i++) {
+            if (IMAGE_MODEL_NAMES[i + 1] == NULL) {
+                return (RETURN_ERROR);
+            }
+            if (strcmp(modelString, IMAGE_MODEL_NAMES[i]) == 0) {
+                model = i;
+                break;
+            }
+        }
+    }
+    enum ImageSize size;
+    if (sizeString == NULL) {
+        size =
+            model == DALL_E_2 ? config.imageSizeDallE2 : config.imageSizeDallE3;
+    } else {
+        for (UBYTE i = 0; IMAGE_SIZE_NAMES[i] != NULL; i++) {
+            if (strcmp(sizeString, IMAGE_SIZE_NAMES[i]) == 0) {
+                size = i;
+                break;
+            }
+        }
+    }
+
+    UTF8 *promptUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                                          CSA_Source, (Tag)prompt, TAG_DONE);
+
+    struct json_object *response =
+        postImageCreationRequestToOpenAI(promptUTF8, model, size, apiKey, FALSE,
+                                         NULL, 0, FALSE, FALSE, NULL, NULL);
+    CodesetsFreeA(promptUTF8, NULL);
+
+    if (response == NULL) {
+        printf(STRING_ERROR_CONNECTION);
+        return (RETURN_ERROR);
+    }
+
+    struct json_object *error;
+    if (json_object_object_get_ex(response, "error", &error)) {
+        json_object_put(response);
+        return (RETURN_ERROR);
+    }
+
+    struct array_list *data =
+        json_object_get_array(json_object_object_get(response, "data"));
+    struct json_object *dataObject = (struct json_object *)data->array[0];
+
+    STRPTR url =
+        json_object_get_string(json_object_object_get(dataObject, "url"));
+
+    if (destination == NULL) {
+        // Generate unique ID for the image
+        UBYTE fullPath[30] = "";
+        UBYTE id[11] = "";
+        CONST_STRPTR idChars = "abcdefghijklmnopqrstuvwxyz0123456789";
+        srand(time(NULL));
+        for (UBYTE i = 0; i < 9; i++) {
+            id[i] = idChars[rand() % strlen(idChars)];
+        }
+        snprintf(fullPath, sizeof(fullPath), "SYS:%s.png", id);
+        destination = fullPath;
+    }
+    downloadFile(url, destination, FALSE, NULL, 0, FALSE, FALSE, NULL, NULL);
+
+    json_object_put(response);
+
+    set(app, MUIA_Application_RexxString, destination);
+    return (RETURN_OK);
+}
+MakeHook(CreateImageHook, CreateImageFunc);
+
 static struct MUI_Command arexxList[] = {
     {"SENDMESSAGE",
      "M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F",
      4,
      &SendMessageHook,
+     {0, 0, 0, 0, 0}},
+    {"CREATEIMAGE",
+     "M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F",
+     5,
+     &CreateImageHook,
      {0, 0, 0, 0, 0}},
     {NULL, NULL, 0, NULL, {0, 0, 0, 0, 0}}};
 
@@ -317,10 +411,6 @@ void startGUIRunLoop() {
         switch (id) {
         case MUIV_Application_ReturnID_Quit: {
             running = FALSE;
-            break;
-        }
-        case ID_RESCAN: {
-            printf("Rescan\n");
             break;
         }
         default:
