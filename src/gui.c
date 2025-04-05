@@ -336,6 +336,20 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
 }
 MakeHook(SpeakTextHook, SpeakTextFunc);
 
+HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
+    set(app, MUIA_Application_RexxString,
+        "SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F\n"
+        "CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F\n"
+        "SPEAKTEXT M=MODEL/K,V=VOICE/K,K=APIKEY/K,P=PROMPT/F\n"
+        "LISTCHATMODELS\n"
+        "LISTIMAGEMODELS\n"
+        "LISTIMAGESIZES\n"
+        "LISTVOICEMODELS\n"
+        "LISTVOICES\n");
+    return (RETURN_OK);
+}
+MakeHook(HelpHook, HelpFunc);
+
 static struct MUI_Command arexxList[] = {
     {"SENDMESSAGE",
      "M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F",
@@ -357,6 +371,7 @@ static struct MUI_Command arexxList[] = {
     {"LISTIMAGESIZES", NULL, NULL, &ListImageSizesHook, {0, 0, 0, 0, 0}},
     {"LISTVOICEMODELS", NULL, NULL, &ListVoiceModelsHook, {0, 0, 0, 0, 0}},
     {"LISTVOICES", NULL, NULL, &ListVoicesHook, {0, 0, 0, 0, 0}},
+    {"?", NULL, NULL, &HelpHook, {0, 0, 0, 0, 0}},
     {NULL, NULL, 0, NULL, {0, 0, 0, 0, 0}}};
 
 /**
