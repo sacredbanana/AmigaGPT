@@ -259,6 +259,18 @@ Special Thanks:
 Changelog:
 
 ------------------
+2.4.0 (2025-04-05)
+------------------
+
+- ARexx port added to allow issuing AmigaGPT commands from another app or from a sript
+- Fixed bug where the About AmigaGPT window wouldn't display all the text correctly
+- Latest OpenAI chat models added
+- Latest OpenAI text to speech models added
+- Latest OpenAI text to speech voices added
+- Can now give instructions to the OpenAI voice to change how it sounds (only works for the gpt-4o-mini-tts model)
+- Chat now uses the new Responses endpoint instead of the Chat Completions one to allow for future expansion
+
+------------------
 2.3.1 (2025-03-30)
 ------------------
 

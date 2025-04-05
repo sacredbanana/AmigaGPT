@@ -14,6 +14,7 @@ Welcome to the future of language modeling on the classic AmigaOS, AmigaGPT. Bui
 @{"Installation " link installation}
 @{"Launching " link launching}
 @{"Usage " link usage}
+@{"ARexx Integration " link arexx}
 @{"Models " link models}
 @{"Developing " link developing}
 @{"License " link license}
@@ -41,6 +42,9 @@ You can customise the look and feel of the application, including the ability to
 
 - @{b}Speech capability@{ub}
 AmigaGPT has support for OpenAI's high quality 16 bit voices. For AmigaOS 3, AmigaGPT can use the Amiga's speech synthesis capability to read the generated text aloud with support for switching between the old Workbench 1.x @{b}v34@{ub} and the Workbench 2.0 @{b}v37@{ub} speech synthesisers. For AmigaOS 4.1, it has support for `flite.device`.
+
+- @{b}ARexx integration@{ub}
+AmigaGPT includes ARexx support, allowing you to control the application programmatically from external scripts or other applications. You can send prompts, generate images, and utilize speech synthesis through simple ARexx commands.
 @endnode
 
 @node requirements "System Requirements"
@@ -184,9 +188,10 @@ Click on a topic to learn about it:
 @{"Conversation list " link conlist}
 @{"Edit menu " link editmenu}
 @{"Changing the appearance of the UI and chat " link appearance}
-@{"Using a proxy server" link proxy}
+@{"Using a proxy server " link proxy}
+@{"ARexx integration " link arexx}
 
-@endnode?
+@endnode
 
 @node screen "Screen select"
 @{b}Selecting a screen to open AmigaGPT in@{ub}
@@ -247,6 +252,73 @@ To change your settings, go to the "MUI Settings" in the "View" menu.
 @{b}Using a proxy server@{ub}
 
 The "Connection" menu allows you to connect via a proxy server. It supports both HTTP and HTTPS proxy servers but if you use an unecrypted HTTP proxy server you can improve the performance of AmigaGPT by removing the need for the encryption of the OpenAI traffic to be done on the system running AmigaGPT. For an easy proxy server you can run on your local network you can try out https://mitmproxy.org
+
+@endnode
+
+@node arexx "ARexx integration"
+@{b}ARexx integration@{ub}
+
+AmigaGPT includes ARexx support, allowing you to control the application programmatically from external scripts or other applications. You can send prompts, generate images, and utilize speech synthesis through simple ARexx commands.
+
+The following ARexx commands are available:
+
+@{b}SENDMESSAGE@{ub}
+Sends a message to the OpenAI API and returns the response.
+SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F
+- M=MODEL - Optional, the chat model to use (use LISTCHATMODELS to see available models)
+- S=SYSTEM - Optional, system message to include
+- K=APIKEY - Optional, your OpenAI API key (uses the saved key if not specified)
+- P=PROMPT - Required, the prompt or question to send
+
+@{b}CREATEIMAGE@{ub}
+Generates an image using the specified model.
+CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
+- M=MODEL - Optional, the image model to use (use LISTIMAGEMODELS to see available models)
+- S=SIZE - Optional, image size (use LISTIMAGESIZES to see available sizes)
+- K=APIKEY - Optional, your OpenAI API key
+- D=DESTINATION - Optional, the path where the image will be saved
+- P=PROMPT - Required, description of the image to generate
+
+@{b}SPEAKTEXT@{ub}
+Uses text-to-speech to speak the specified text.
+SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,P=PROMPT/F
+- M=MODEL - Optional, the voice model to use (use LISTVOICEMODELS to see available models)
+- V=VOICE - Optional, the voice to use (use LISTVOICES to see available voices)
+- I=INSTRUCTIONS - Optional, special instructions for the voice
+- K=APIKEY - Optional, your OpenAI API key
+- P=PROMPT - Required, the text to speak
+
+@{b}List Commands@{ub}
+- LISTCHATMODELS - Lists all available chat models
+- LISTIMAGEMODELS - Lists all available image models
+- LISTIMAGESIZES - Lists all available image sizes
+- LISTVOICEMODELS - Lists all available TTS models
+- LISTVOICES - Lists all available TTS voices
+
+@{b}Help@{ub}
+- ? - Displays a list of available commands
+
+@{b}Example ARexx Script@{ub}
+@{" "}
+/* Simple ARexx script for AmigaGPT */
+OPTIONS RESULTS
+ADDRESS 'AMIGAGPT'
+
+/* Send a message to GPT and get a response */
+'SENDMESSAGE P=What is the capital of France?'
+SAY RESULT
+
+/* Generate an image */
+'CREATEIMAGE P=A beautiful Amiga computer on a desk'
+SAY 'Image saved to:' RESULT
+
+/* Speak some text */
+'SPEAKTEXT P=Hello from ARexx!'
+
+EXIT
+@{" "}
+
+These commands allow you to easily integrate AmigaGPT into your Amiga workflow, automate tasks, or create custom applications that leverage the power of OpenAI's models.
 
 @endnode
 
@@ -612,7 +684,7 @@ to the system, so we just have the include file here
 palm/include/fdlibm.h
 
  * ====================================================
- * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+ * Copyright (c) 1993 by Sun Microsystems, Inc. All rights reserved.
  *
  * Developed at SunSoft, a Sun Microsystems, Inc. business.
  * Permission to use, copy, modify, and distribute this
@@ -659,6 +731,16 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 
 @node changelog "Changelog"
 @{b}Changelog@{ub}
+
+@{b}2.4.0 (2025-04-05)@{ub}
+
+- ARexx port added to allow issuing AmigaGPT commands from another app or from a sript
+- Fixed bug where the About AmigaGPT window wouldn't display all the text correctly
+- Latest OpenAI chat models added
+- Latest OpenAI text to speech models added
+- Latest OpenAI text to speech voices added
+- Can now give instructions to the OpenAI voice to change how it sounds (only works for the gpt-4o-mini-tts model)
+- Chat now uses the new Responses endpoint instead of the Chat Completions one to allow for future expansion
 
 @{b}2.3.1 (2025-03-30)@{ub}
 

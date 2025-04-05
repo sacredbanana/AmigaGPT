@@ -1,6 +1,6 @@
 # AmigaGPT
 
-AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS. This powerful tool brings the capabilities of OpenAI’s GPT to your Amiga system, enabling text generation, question answering, and creative exploration. AmigaGPT can also generate stunning images using DALL-E and includes support for speech output, making it easier than ever to interact with AI on your Amiga. Designed to integrate seamlessly with your system, AmigaGPT delivers modern AI technology while embracing the timeless Amiga experience.
+AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS. This powerful tool brings the capabilities of OpenAI's GPT to your Amiga system, enabling text generation, question answering, and creative exploration. AmigaGPT can also generate stunning images using DALL-E and includes support for speech output, making it easier than ever to interact with AI on your Amiga. Designed to integrate seamlessly with your system, AmigaGPT delivers modern AI technology while embracing the timeless Amiga experience.
 
 <img width="953" alt="Screenshot 2023-06-15 at 10 26 38 pm" src="https://github.com/sacredbanana/AmigaGPT/assets/6903516/ca5e0db3-4e37-4ea9-a6ac-9fff2d5c195a">
 
@@ -26,6 +26,10 @@ You can customise the look and feel of the application, including the ability to
 - ### Speech capability
 
 **AmigaGPT** has support for OpenAI's high quality 16 bit voices. For AmigaOS 3, **AmigaGPT** can use the Amiga's speech synthesis capability to read the generated text aloud with support for switching between the old Workbench 1.x **v34** and the Workbench 2.0 **v37** speech synthesisers. For AmigaOS 4.1, it has support for `flite.device`.
+
+- ### ARexx integration
+
+**AmigaGPT** includes ARexx support, allowing you to control the application programmatically from external scripts or other applications. You can send prompts, generate images, and utilize speech synthesis through simple ARexx commands.
 
 ## System Requirements
 
@@ -119,6 +123,74 @@ In the "**Edit**" menu, you'll find basic text editing commands like **Cut**, **
 The "**View**" menu allows you to change the appearance of the app.
 
 The "**Connection**" menu allows you to connect via a proxy server. It supports both HTTP and HTTPS proxy servers but if you use an unecrypted HTTP proxy server you can improve the performance of AmigaGPT by removing the need for the encryption of the OpenAI traffic to be done on the system running AmigaGPT. For an easy proxy server you can run on your local network you can try out <https://mitmproxy.org>
+
+### ARexx Support
+
+**AmigaGPT** now includes ARexx support, allowing you to control the application from external ARexx scripts or other applications. This powerful feature enables seamless integration with your Amiga workflow and automation of repetitive tasks.
+
+The following ARexx commands are available:
+
+#### SENDMESSAGE
+Sends a message to the OpenAI API and returns the response.
+```
+SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F
+```
+- `M=MODEL` - Optional, the chat model to use (use LISTCHATMODELS to see available models)
+- `S=SYSTEM` - Optional, system message to include
+- `K=APIKEY` - Optional, your OpenAI API key (uses the saved key if not specified)
+- `P=PROMPT` - Required, the prompt or question to send
+
+#### CREATEIMAGE
+Generates an image using the specified model.
+```
+CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
+```
+- `M=MODEL` - Optional, the image model to use (use LISTIMAGEMODELS to see available models)
+- `S=SIZE` - Optional, image size (use LISTIMAGESIZES to see available sizes)
+- `K=APIKEY` - Optional, your OpenAI API key
+- `D=DESTINATION` - Optional, the path where the image will be saved
+- `P=PROMPT` - Required, description of the image to generate
+
+#### SPEAKTEXT
+Uses text-to-speech to speak the specified text.
+```
+SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,P=PROMPT/F
+```
+- `M=MODEL` - Optional, the voice model to use (use LISTVOICEMODELS to see available models)
+- `V=VOICE` - Optional, the voice to use (use LISTVOICES to see available voices)
+- `I=INSTRUCTIONS` - Optional, special instructions for the voice
+- `K=APIKEY` - Optional, your OpenAI API key
+- `P=PROMPT` - Required, the text to speak
+
+#### List Commands
+- `LISTCHATMODELS` - Lists all available chat models
+- `LISTIMAGEMODELS` - Lists all available image models
+- `LISTIMAGESIZES` - Lists all available image sizes
+- `LISTVOICEMODELS` - Lists all available TTS models
+- `LISTVOICES` - Lists all available TTS voices
+
+#### Help
+- `?` - Displays a list of available commands
+
+#### Example ARexx Script
+```rexx
+/* Simple ARexx script for AmigaGPT */
+OPTIONS RESULTS
+ADDRESS 'AMIGAGPT'
+
+/* Send a message to GPT and get a response */
+'SENDMESSAGE P=What is the capital of France?'
+SAY RESULT
+
+/* Generate an image */
+'CREATEIMAGE P=A beautiful Amiga computer on a desk'
+SAY 'Image saved to:' RESULT
+
+/* Speak some text */
+'SPEAKTEXT P=Hello from ARexx!'
+
+EXIT
+```
 
 ## Models
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.4.0
+## 2.4.0 (2025-04-05)
 
 - ARexx port added to allow issuing AmigaGPT commands from another app or from a sript
 - Fixed bug where the About AmigaGPT window wouldn't display all the text correctly
