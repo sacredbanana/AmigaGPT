@@ -177,7 +177,7 @@ msgid ""
 "from Aminet section"
 msgstr ""
 "für die Besprechung von AmigaGPT und die Veröffentlichung mehrerer Updates "
-"im Bereich „Neuigkeiten aus dem Aminet“"
+"im Bereich "Neuigkeiten aus dem Aminet""
 
 #: src/AboutAmigaGPTWindow.c:20
 #, fuzzy
@@ -234,7 +234,7 @@ msgid ""
 msgstr ""
 "Wenn Sie möchten, dass AmigaGPT auf eine bestimmte Weise antwortet oder "
 "etwas Persönlichkeit hinzufügt, geben Sie es hier ein. Sie könnten "
-"beispielsweise „Sprich wie ein Pirat“ oder „Sprich wie ein Roboter“ "
+"beispielsweise "Sprich wie ein Pirat" oder "Sprich wie ein Roboter" "
 "eingeben. Wenn Sie möchten, dass AmigaGPT normal antwortet, lassen Sie "
 "dieses Feld leer. Diese Einstellung wird nur auf neue Konversationen "
 "angewendet."
@@ -1218,7 +1218,7 @@ msgstr "Datei konnte nicht gelesen werden"
 #: src/menu.c:272 src/menu.c:267
 msgctxt "STRING_MENU_OPENAI_VOICE_INSTRUCTIONS (216//)"
 msgid "OpenAI Voice Instructions"
-msgstr "Dokumentation öffnen"
+msgstr "OpenAI Stimmanweisungen"
 
 #: src/VoiceInstructionsRequesterWindow.c:11
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"

@@ -1183,7 +1183,7 @@ msgstr "Det gick inte att läsa filen"
 #: src/menu.c:272 src/menu.c:267
 msgctxt "STRING_MENU_OPENAI_VOICE_INSTRUCTIONS (216//)"
 msgid "OpenAI Voice Instructions"
-msgstr "Öppna dokumentation"
+msgstr "OpenAI röstinstruktioner"
 
 #: src/VoiceInstructionsRequesterWindow.c:11
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"

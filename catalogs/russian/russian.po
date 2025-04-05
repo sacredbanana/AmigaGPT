@@ -22,7 +22,7 @@ msgstr ""
 "AmigaGPT — приложение для общения в ChatGPT или создания изображений с "
 "помощью ИИ с помощью DALL-E."
 
-#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
+#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:75
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
 msgid "Failed to initialize video"
 msgstr "Не удалось инициализировать видео"
@@ -1188,7 +1188,7 @@ msgstr "Не удалось прочитать файл"
 #: src/menu.c:272 src/menu.c:267
 msgctxt "STRING_MENU_OPENAI_VOICE_INSTRUCTIONS (216//)"
 msgid "OpenAI Voice Instructions"
-msgstr "Открытая документация"
+msgstr "Инструкции для голоса OpenAI"
 
 #: src/VoiceInstructionsRequesterWindow.c:11
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"

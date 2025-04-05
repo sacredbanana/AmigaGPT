@@ -21,12 +21,12 @@ msgstr ""
 "AmigaGPT je aplikácia na chatovanie s ChatGPT alebo vytváranie AI obrázkov "
 "pomocou DALL-E"
 
-#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
+#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:75
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
 msgid "Failed to initialize video"
 msgstr "Nepodarilo sa inicializovať video"
 
-#: src/main.c:76 src/main.c:77 src/main.c:78 src/main.c:75
+#: src/main.c:76 src/main.c:77 src/main.c:78 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
@@ -1177,18 +1177,4 @@ msgstr "Súbor sa nepodarilo prečítať"
 #: src/menu.c:272 src/menu.c:267
 msgctxt "STRING_MENU_OPENAI_VOICE_INSTRUCTIONS (216//)"
 msgid "OpenAI Voice Instructions"
-msgstr "Otvorte dokumentáciu"
-
-#: src/VoiceInstructionsRequesterWindow.c:11
-msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
-msgid ""
-"Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
-"voice'. This only works for the gpt-4o-mini-tts model."
-msgstr ""
-"Vyplňte, ako chcete, aby AI hovoril. Príklad: 'Hovoriť hluboko a "
-"mystickým hlasom'. Toto funguje len s modeľom gpt-4o-mini-tts."
-
-#: src/VoiceInstructionsRequesterWindow.c:87
-msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
-msgid "Failed to create voice instructions window"
-msgstr "Nepodarilo sa vytvoriť startupOptionsWindowObject"
+msgstr "Hlasové inštrukcie OpenAI"

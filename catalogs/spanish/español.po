@@ -1192,7 +1192,7 @@ msgstr "No se pudo leer el archivo"
 #: src/menu.c:272 src/menu.c:267
 msgctxt "STRING_MENU_OPENAI_VOICE_INSTRUCTIONS (216//)"
 msgid "OpenAI Voice Instructions"
-msgstr "Abrir Documentación"
+msgstr "Instrucciones para la voz de OpenAI"
 
 #: src/VoiceInstructionsRequesterWindow.c:11
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
@@ -1200,10 +1200,10 @@ msgid ""
 "Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
 "voice'. This only works for the gpt-4o-mini-tts model."
 msgstr ""
-"Ingrese cómo desea que la IA hable. Ejemplo: 'Habla en una voz profunda y "
-"misteriosa'. Esta función solo funciona con el modelo gpt-4o-mini-tts."
+"Ingresa cómo deseas que la IA hable. Ejemplo: 'Habla en una voz profunda y "
+"misteriosa'. Esto solo funciona con el modelo gpt-4o-mini-tts."
 
 #: src/VoiceInstructionsRequesterWindow.c:87
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
 msgid "Failed to create voice instructions window"
-msgstr "No se pudo crear startupOptionsWindowObject"
+msgstr "No se pudo crear la ventana de instrucciones de voz"
