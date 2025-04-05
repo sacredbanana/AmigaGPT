@@ -2,7 +2,7 @@
 
 ## 2.4.0 (2025-04-05)
 
-- ARexx port added to allow issuing AmigaGPT commands from another app or from a sript
+- ARexx port added to allow issuing AmigaGPT commands from another app or from a script
 - Fixed bug where the About AmigaGPT window wouldn't display all the text correctly
 - Latest OpenAI chat models added
 - Latest OpenAI text to speech models added
