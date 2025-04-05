@@ -290,6 +290,52 @@ HOOKPROTONHNO(ListVoicesFunc, APTR, ULONG *arg) {
 }
 MakeHook(ListVoicesHook, ListVoicesFunc);
 
+HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
+    STRPTR modelString = (STRPTR)arg[0];
+    STRPTR voiceString = (STRPTR)arg[1];
+    STRPTR apiKey = (STRPTR)arg[2];
+    STRPTR prompt = (STRPTR)arg[3];
+
+    printf("SpeakText\nModel: %s\nVoice: %s\nAPI Key: %s\nPrompt: %s\n",
+           modelString, voiceString, apiKey, prompt);
+
+    if (apiKey == NULL) {
+        apiKey = config.openAiApiKey;
+    }
+    enum OpenAITTSModel model;
+    if (modelString == NULL) {
+        model = config.openAITTSModel;
+    } else {
+        for (UBYTE i = 0; OPENAI_TTS_MODEL_NAMES[i] != NULL; i++) {
+            if (strcmp(modelString, OPENAI_TTS_MODEL_NAMES[i]) == 0) {
+                model = i;
+                break;
+            }
+        }
+    }
+    enum OpenAITTSVoice voice;
+    if (voiceString == NULL) {
+        voice = config.openAITTSVoice;
+    } else {
+        for (UBYTE i = 0; OPENAI_TTS_VOICE_NAMES[i] != NULL; i++) {
+            if (strcmp(voiceString, OPENAI_TTS_VOICE_NAMES[i]) == 0) {
+                voice = i;
+                break;
+            }
+        }
+    }
+    config.speechEnabled = TRUE;
+    config.openAiApiKey = apiKey;
+    config.speechSystem = SPEECH_SYSTEM_OPENAI;
+    config.openAITTSModel = model;
+    config.openAITTSVoice = voice;
+    speakText(prompt);
+    readConfig();
+    set(app, MUIA_Application_RexxString, prompt);
+    return (RETURN_OK);
+}
+MakeHook(SpeakTextHook, SpeakTextFunc);
+
 static struct MUI_Command arexxList[] = {
     {"SENDMESSAGE",
      "M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F",
@@ -300,6 +346,11 @@ static struct MUI_Command arexxList[] = {
      "M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F",
      5,
      &CreateImageHook,
+     {0, 0, 0, 0, 0}},
+    {"SPEAKTEXT",
+     "M=MODEL/K,V=VOICE/K,K=APIKEY/K,P=PROMPT/F",
+     4,
+     &SpeakTextHook,
      {0, 0, 0, 0, 0}},
     {"LISTCHATMODELS", NULL, NULL, &ListChatModelsHook, {0, 0, 0, 0, 0}},
     {"LISTIMAGEMODELS", NULL, NULL, &ListImageModelsHook, {0, 0, 0, 0, 0}},
