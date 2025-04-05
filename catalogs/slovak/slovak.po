@@ -1178,3 +1178,17 @@ msgstr "Súbor sa nepodarilo prečítať"
 msgctxt "STRING_MENU_OPENAI_VOICE_INSTRUCTIONS (216//)"
 msgid "OpenAI Voice Instructions"
 msgstr "Hlasové inštrukcie OpenAI"
+
+#: src/VoiceInstructionsRequesterWindow.c:11
+msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
+msgid ""
+"Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
+"voice'. This only works for the gpt-4o-mini-tts model."
+msgstr ""
+"Vyplňte, ako chcete, aby AI hovoril. Príklad: 'Hovoriť hluboko a "
+"mystickým hlasom'. Toto funguje len s modeľom gpt-4o-mini-tts."
+
+#: src/VoiceInstructionsRequesterWindow.c:87
+msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
+msgid "Failed to create voice instructions window"
+msgstr "Nepodarilo sa vytvoriť startupOptionsWindowObject"
