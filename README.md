@@ -120,92 +120,9 @@ The "**View**" menu allows you to change the appearance of the app.
 
 The "**Connection**" menu allows you to connect via a proxy server. It supports both HTTP and HTTPS proxy servers but if you use an unecrypted HTTP proxy server you can improve the performance of AmigaGPT by removing the need for the encryption of the OpenAI traffic to be done on the system running AmigaGPT. For an easy proxy server you can run on your local network you can try out <https://mitmproxy.org>
 
-## Chat Models
+## Models
 
-### GPT-4o
-
-GPT-4o (“o” for “omni”) is our most advanced GPT model. It is multimodal (accepting text or image inputs and outputting text), and it has the same high intelligence as GPT-4 Turbo but is much more efficient—it generates text 2x faster and is 50% cheaper. Additionally, GPT-4o has the best vision and performance across non-English languages of any of our models. GPT-4o is available in the OpenAI API to paying customers.
-
-| Model | Description | Context Window | Max Output Tokens | Training Data |
-| ----- | ----------- | -------------- | ----------------- | ------------- |
-| gpt-4o | Our high-intelligence flagship model for complex, multi-step tasks. GPT-4o is cheaper and faster than GPT-4 Turbo. Currently points to gpt-4o-2024-08-06. | 128,000 | 16,384 | Oct 2023 |
-| gpt-4o-2024-11-20 | Latest gpt-4o snapshot from November 20th, 2024. | 128,000 | 16,384 | Oct 2023 |
-| gpt-4o-2024-08-06 | First snapshot that supports Structured Outputs. gpt-4o currently points to this version. | 128,000 | 16,384 | Oct 2023 |
-| gpt-4o-2024-05-13 | Original gpt-4o snapshot from May 13, 2024. | 128,000 | 4,096 | Oct 2023 |
-| chatgpt-4o-latest | The chatgpt-4o-latest model version continuously points to the version of GPT-4o used in ChatGPT, and is updated frequently, when there are significant changes. | 128,000 | 16,384 | Oct 2023 |
-
----
-### GPT-4o mini
-
-GPT-4o mini (“o” for “omni”) is our most advanced model in the small models category, and our cheapest model yet. It is multimodal (accepting text or image inputs and outputting text), has higher intelligence than **gpt-3.5-turbo** but is just as fast. It is meant to be used for smaller tasks, including vision tasks.
-
->We recommend choosing **gpt-4o-mini** where you would have previously used **gpt-3.5-turbo** as this model is more capable and cheaper.
-
-| Model | Description | Context Window | Max Output Tokens | Training Data |
-| ----- | ----------- | -------------- | ----------------- | ------------- |
-| gpt-4o-mini | Our affordable and intelligent small model for fast, lightweight tasks. GPT-4o mini is cheaper and more capable than GPT-3.5 Turbo. Currently points to gpt-4o-mini-2024-07-18. | 128,000 | 16,384 | Oct 2023 |
-| gpt-4o-mini-2024-07-18 | gpt-4o-mini currently points to this version. | 128,000 | 16,384 | Oct 2023 |
-
----
-### o1-preview and o1-mini
-
-The o1 series of large language models are trained with reinforcement learning to perform complex reasoning. o1 models think before they answer, producing a long internal chain of thought before responding to the user.
-
-There are two model types available today:
-
-- **o1-preview**: reasoning model designed to solve hard problems across domains.
-- **o1-mini**: faster and cheaper reasoning model particularly good at coding, math, and science.
-
-| Model | Description | Context Window | Max Output Tokens | Training Data |
-| ----- | ----------- | -------------- | ----------------- | ------------- |
-| o1 | Points to the most recent snapshot of the o1 model: o1-2024-12-17 | 200,000 | 100,000 | Oct 2023 |
-| o1-2024-12-17 | The latest o1 model | 200,000 | 100,000 | Oct 2023 |
-| o1-preview | Points to the most recent snapshot of the o1 model: o1-preview-2024-09-12 | 128,000 | 32,768 | Oct 2023 |
-| o1-preview-2024-09-12 | Latest o1 model snapshot | 128,000 | 32,768 | Oct 2023 |
-| o1-mini | Points to the most recent o1-mini snapshot: o1-mini-2024-09-12 | 128,000 | 65,536 | Oct 2023 |
-| o1-mini-2024-09-12 | Latest o1-mini model snapshot | 128,000 | 65,536 | Oct 2023 |
-
-#### GPT-4 Turbo and GPT-4
-
-GPT-4 is a large multimodal model (accepting text or image inputs and outputting text) that can solve difficult problems with greater accuracy than any of our previous models, thanks to its broader general knowledge and advanced reasoning capabilities.
-
-For many basic tasks, the difference between GPT-4 and GPT-3.5 models is not significant. However, in more complex reasoning situations, GPT-4 is much more capable than any of our previous models.
-
-| Model | Description | Context Window | Max Output Tokens | Training Data |
-| ----- | ----------- | -------------- | ----------------- | ------------- |
-| gpt-4-turbo | The latest GPT-4 Turbo model with vision capabilities. Vision requests can now use JSON mode and function calling. Currently points to gpt-4-turbo-2024-04-09. | 128,000 | 4,096 | Dec 2023 |
-| gpt-4-turbo-2024-04-09 | GPT-4 Turbo with Vision model. Vision requests can now use JSON mode and function calling. gpt-4-turbo currently points to this version. | 128,000 | 4,096 | Dec 2023 |
-| gpt-4-turbo-preview | GPT-4 Turbo preview model. Currently points to gpt-4-0125-preview. | 128,000 | 4,096 | Dec 2023 |
-| gpt-4-0125-preview | GPT-4 Turbo preview model intended to reduce cases of “laziness” where the model doesn’t complete a task. | 128,000 | 4,096 | Dec 2023 |
-| gpt-4-1106-preview | GPT-4 Turbo preview model featuring improved instruction following, JSON mode, reproducible outputs, parallel function calling, and more. This is a preview model. | 128,000 | 4,096 | Apr 2023 |
-| gpt-4 | Currently points to gpt-4-0613. | 8,192 | 8,192 | Sep 2021 |
-| gpt-4-0613 | Snapshot of gpt-4 from June 13th 2023 with improved function calling support. | 8,192 | 8,192 | Sep 2021 |
-| gpt-4-0314 | Snapshot of gpt-4 from March 14th 2023. | 8,192 | 8,192 | Sep 2021 |
-
----
-#### GPT-3.5 Turbo
-
-GPT-3.5 Turbo models can understand and generate natural language or code and have been optimized for chat using the Chat Completions API but work well for non-chat tasks as well.
-
->As of July 2024, gpt-4o-mini should be used in place of gpt-3.5-turbo, as it is cheaper, more capable, multimodal, and just as fast. gpt-3.5-turbo is still available for use in the API.
-
-| Model | Description | Max Tokens | Training Data |
-| ----- | ----------- | ---------- | ------------- |
-| gpt-3.5-turbo-0125 | The latest GPT-3.5 Turbo model with higher accuracy at responding in requested formats and a fix for a bug which caused a text encoding issue for non-English language function calls. | 16,385 | 4,096 | Sep 2021 |
-| gpt-3.5-turbo | Currently points to gpt-3.5-turbo-0125. | 16,385 | 4,096 | Sep 2021 |
-| gpt-3.5-turbo-1106 | GPT-3.5 Turbo model with improved instruction following, JSON mode, reproducible outputs, parallel function calling, and more. | 16,385 | 4,096 | Sep 2021 |
-
-## Image Generation Models
-
-DALL·E is a AI system that can create realistic images and art from a description in natural language. DALL·E 3 currently supports the ability, given a prompt, to create a new image with a specific size. DALL·E 2 also support the ability to edit an existing image, or create variations of a user provided image.
-
-### DALL-E 3
-
-The latest DALL·E model released in Nov 2023.
-
-### DALL-E 2
-
-The previous DALL·E model released in Nov 2022. The 2nd iteration of DALL·E with more realistic, accurate, and 4x greater resolution images than the original model.
+For the latest information on the models you can use in **AmigaGPT**, please refer to OpenAI's documentation at <https://platform.openai.com/docs/models>
 
 ## Developing
 You can either compile the code natively or with the Docker container.
