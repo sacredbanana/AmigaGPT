@@ -101,7 +101,8 @@
         "locale_protos.h": "c",
         "amigagpt_cat.h": "c",
         "iffparse.h": "c",
-        "rexxsyslib_protos.h": "c"
+        "rexxsyslib_protos.h": "c",
+        "arexx.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

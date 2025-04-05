@@ -22,7 +22,7 @@ msgstr ""
 "AmigaGPT — приложение для общения в ChatGPT или создания изображений с "
 "помощью ИИ с помощью DALL-E."
 
-#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:75
+#: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
 msgid "Failed to initialize video"
 msgstr "Не удалось инициализировать видео"
