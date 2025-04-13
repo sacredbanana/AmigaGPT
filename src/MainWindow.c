@@ -266,7 +266,6 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             set(newImageButton, MUIA_Disabled, FALSE);
             set(deleteImageButton, MUIA_Disabled, FALSE);
             set(imageInputTextEditor, MUIA_Disabled, FALSE);
-            updateStatusBar(STRING_ERROR, redPen);
             if (!isAROS) {
                 FreeVec(text);
             }
@@ -283,7 +282,6 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             set(newImageButton, MUIA_Disabled, FALSE);
             set(deleteImageButton, MUIA_Disabled, FALSE);
             set(imageInputTextEditor, MUIA_Disabled, FALSE);
-            updateStatusBar(STRING_ERROR, 6);
             json_object_put(response);
             if (!isAROS) {
                 FreeVec(text);
@@ -365,7 +363,6 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
         if (responses == NULL) {
             displayError(STRING_ERROR_GENERATING_IMAGE_NAME);
-            updateStatusBar(STRING_ERROR, 6);
         } else if (responses[0] != NULL) {
             STRPTR responseString =
                 getMessageContentFromJson(responses[0], FALSE);
