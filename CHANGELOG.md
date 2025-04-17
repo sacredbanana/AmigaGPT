@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.0 (2025-04-18)
+
+- Latest OpenAI chat models added (gpt-4.1, o3, o4-mini)
+
 ## 2.4.0 (2025-04-05)
 
 - ARexx port added to allow issuing AmigaGPT commands from another app or from a script
