@@ -940,7 +940,7 @@ LONG createMainWindow() {
                 Child, statusBar = TextObject, MUIA_VertWeight, 10,
                     TextFrame,
                     MUIA_Text_Contents, STRING_READY,
-                    MUIA_Background, MUII_SHADOWBACK,
+                    MUIA_Background, MUII_BACKGROUND,
                 End,
                 // Loading bar
                 Child, loadingBar = BusyObject, MUIA_VertWeight, 10,

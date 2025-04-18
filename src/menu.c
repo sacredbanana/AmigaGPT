@@ -154,7 +154,6 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
     AddPart(scriptPath, script, 1024);
     DoMethod(arexxObject, AM_EXECUTE, scriptPath, NULL, NULL, NULL, NULL, NULL);
     FreeVec(scriptPath);
-    updateStatusBar(STRING_READY, greenPen);
 }
 MakeHook(ARexxRunScriptMenuItemClickedHook, ARexxRunScriptMenuItemClickedFunc);
 

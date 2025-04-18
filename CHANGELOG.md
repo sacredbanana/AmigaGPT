@@ -3,6 +3,8 @@
 ## 2.5.0 (2025-04-18)
 
 - Added an ARexx menu to allow you to run your own scripts
+- Added sample scripts
+- Status bar background colour adjusted to improve readability
 - Latest OpenAI chat models added (gpt-4.1, o3, o4-mini)
 
 ## 2.4.0 (2025-04-05)

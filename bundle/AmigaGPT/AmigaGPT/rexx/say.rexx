@@ -1,4 +1,4 @@
-/* Say something */
+/* AmigaGPT Say something */
 OPTIONS RESULTS
 
 ADDRESS COMMAND

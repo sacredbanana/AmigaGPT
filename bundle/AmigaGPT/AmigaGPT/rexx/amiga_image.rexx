@@ -1,8 +1,9 @@
-/* AmigaGPT Amiga Image Script */
+/* AmigaGPT Display an image of a Commodore Amiga */
 OPTIONS RESULTS
 ADDRESS 'AMIGAGPT'
 
-'CREATEIMAGE P=A beautiful Amiga computer on a desk'
-SAY 'Image saved to:' RESULT
+'CREATEIMAGE A beautiful Amiga computer on a desk'
+ADDRESS COMMAND
+MultiView RESULT
 
 EXIT

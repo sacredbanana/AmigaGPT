@@ -1,4 +1,4 @@
-/* Say the OS version */
+/* AmigaGPT Say the OS version */
 OPTIONS RESULTS
 
 ADDRESS COMMAND

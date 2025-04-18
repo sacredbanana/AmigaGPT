@@ -7,6 +7,7 @@
 #include "ARexx.h"
 #include "gui.h"
 #include "config.h"
+#include "MainWindow.h"
 
 Object *arexxObject;
 
@@ -61,6 +62,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         printf(STRING_ERROR_CONNECTING_OPENAI);
         set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
         freeConversation(conversation);
+        updateStatusBar(STRING_ERROR, redPen);
         return (RETURN_ERROR);
     }
     struct json_object *response = responses[0];
@@ -78,10 +80,12 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         json_object_put(response);
         FreeVec(responses);
         freeConversation(conversation);
+        updateStatusBar(STRING_READY, greenPen);
         return (RETURN_OK);
     }
     FreeVec(responses);
     freeConversation(conversation);
+    updateStatusBar(STRING_ERROR, redPen);
     return (RETURN_ERROR);
 }
 MakeHook(SendMessageHook, SendMessageFunc);
@@ -134,12 +138,14 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
 
     if (response == NULL) {
         printf(STRING_ERROR_CONNECTION);
+        updateStatusBar(STRING_ERROR, redPen);
         return (RETURN_ERROR);
     }
 
     struct json_object *error;
     if (json_object_object_get_ex(response, "error", &error)) {
         json_object_put(response);
+        updateStatusBar(STRING_ERROR, redPen);
         return (RETURN_ERROR);
     }
 
@@ -159,13 +165,13 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
         for (UBYTE i = 0; i < 9; i++) {
             id[i] = idChars[rand() % strlen(idChars)];
         }
-        snprintf(fullPath, sizeof(fullPath), "SYS:%s.png", id);
+        snprintf(fullPath, sizeof(fullPath), "T:%s.png", id);
         destination = fullPath;
     }
     downloadFile(url, destination, FALSE, NULL, 0, FALSE, FALSE, NULL, NULL);
 
     json_object_put(response);
-
+    updateStatusBar(STRING_READY, greenPen);
     set(app, MUIA_Application_RexxString, destination);
     return (RETURN_OK);
 }
@@ -272,6 +278,7 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     speakText(prompt);
     readConfig();
     set(app, MUIA_Application_RexxString, prompt);
+    updateStatusBar(STRING_READY, greenPen);
     return (RETURN_OK);
 }
 MakeHook(SpeakTextHook, SpeakTextFunc);
