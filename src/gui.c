@@ -254,6 +254,64 @@ void startGUIRunLoop() {
 }
 
 /**
+ * Copies a file from one location to another
+ * @param source The source file to copy
+ * @param destination The destination to copy the file to
+ * @return TRUE if the file was copied successfully, FALSE otherwise
+ **/
+BOOL copyFile(STRPTR source, STRPTR destination) {
+    const UWORD FILE_BUFFER_SIZE = 4096;
+    BPTR srcFile, dstFile;
+    LONG bytesRead, bytesWritten;
+    APTR buffer = AllocVec(FILE_BUFFER_SIZE, MEMF_ANY);
+
+    if (!(srcFile = Open(source, MODE_OLDFILE))) {
+        displayError(STRING_ERROR_FILE_COPY_OPEN);
+        FreeVec(buffer);
+        return FALSE;
+    }
+
+    if (!(dstFile = Open(destination, MODE_NEWFILE))) {
+        displayError(STRING_ERROR_FILE_COPY_CREATE);
+        FreeVec(buffer);
+        Close(srcFile);
+        return FALSE;
+    }
+
+    updateStatusBar(STRING_COPYING_FILE, yellowPen);
+
+    do {
+        bytesRead = Read(srcFile, buffer, FILE_BUFFER_SIZE);
+
+        if (bytesRead > 0) {
+            bytesWritten = Write(dstFile, buffer, bytesRead);
+
+            if (bytesWritten != bytesRead) {
+                updateStatusBar(STRING_READY, greenPen);
+                displayError(STRING_ERROR_FILE_COPY);
+                FreeVec(buffer);
+                Close(srcFile);
+                Close(dstFile);
+                return FALSE;
+            }
+        } else if (bytesRead < 0) {
+            updateStatusBar(STRING_READY, greenPen);
+            displayError(STRING_ERROR_FILE_COPY);
+            FreeVec(buffer);
+            Close(srcFile);
+            Close(dstFile);
+            return FALSE;
+        }
+    } while (bytesRead > 0);
+
+    updateStatusBar(STRING_READY, greenPen);
+    FreeVec(buffer);
+    Close(srcFile);
+    Close(dstFile);
+    return TRUE;
+}
+
+/**
  * Shutdown the GUI
  **/
 void shutdownGUI() {

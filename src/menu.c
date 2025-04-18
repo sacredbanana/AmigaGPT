@@ -6,6 +6,8 @@
 #include <proto/amigaguide.h>
 #include <proto/exec.h>
 #include <SDI_hook.h>
+#include <stdio.h>
+#include <string.h>
 #include "APIKeyRequesterWindow.h"
 #include "AboutAmigaGPTWindow.h"
 #include "ChatSystemRequesterWindow.h"
@@ -18,6 +20,8 @@
 #include "version.h"
 
 Object *menuStrip;
+
+static void populateArexxMenu();
 
 HOOKPROTONHNONP(AboutAmigaGPTMenuItemClickedFunc, void) {
     if (aboutAmigaGPTWindowObject) {
@@ -98,6 +102,68 @@ HOOKPROTONHNONP(SpeechAccentMenuItemClickedFunc, void) {
 }
 MakeHook(SpeechAccentMenuItemClickedHook, SpeechAccentMenuItemClickedFunc);
 #endif
+
+HOOKPROTONHNONP(ARexxShellMenuItemClickedFunc, void) {
+    CONST_STRPTR arexxPath = PROGDIR "ARexxShell.arexx";
+    BPTR file = Open(arexxPath, MODE_OLDFILE);
+    if (file == NULL) {
+        displayError(STRING_ERROR_AREXX_SHELL_OPEN);
+    }
+}
+MakeHook(ARexxShellMenuItemClickedHook, ARexxShellMenuItemClickedFunc);
+
+HOOKPROTONHNONP(ARexxImportScriptMenuItemClickedFunc, void) {
+    struct FileRequester *fileReq =
+        AllocAslRequestTags(ASL_FileRequest, TAG_END);
+    if (fileReq != NULL) {
+        if (AslRequestTags(fileReq, ASLFR_Window, mainWindow, ASLFR_TitleText,
+                           STRING_MENU_AREXX_IMPORT_SCRIPT, ASLFR_InitialDrawer,
+                           "REXX:", ASLFR_InitialPattern, "#?.rexx",
+                           TAG_DONE)) {
+            STRPTR filePath = fileReq->fr_Drawer;
+            STRPTR fileName = fileReq->fr_File;
+            UWORD fullPathLength = strlen(filePath) + strlen(fileName) + 2;
+            STRPTR fullPath = AllocVec(fullPathLength, MEMF_CLEAR);
+            strncpy(fullPath, filePath, strlen(filePath));
+            AddPart(fullPath, fileName, fullPathLength);
+            UWORD destinationPathLength =
+                strlen(PROGDIR "rexx/") + strlen(fileName) + 1;
+            STRPTR destinationPath =
+                AllocVec(destinationPathLength, MEMF_CLEAR);
+            strncpy(destinationPath, PROGDIR "rexx/", strlen(PROGDIR "rexx/"));
+            AddPart(destinationPath, fileName, destinationPathLength);
+            copyFile(fullPath, destinationPath);
+            FreeVec(fullPath);
+            FreeVec(destinationPath);
+        }
+        FreeAslRequest(fileReq);
+    }
+    populateArexxMenu();
+}
+MakeHook(ARexxImportScriptMenuItemClickedHook,
+         ARexxImportScriptMenuItemClickedFunc);
+
+HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
+    STRPTR script = AllocVec(1024, MEMF_CLEAR);
+    get(obj, MUIA_Menuitem_Title, &script);
+    printf("Running script: %s\n", script);
+    FreeVec(script);
+    // STRPTR scriptPath =
+    //     AllocVec(strlen(PROGDIR "rexx/") + strlen(script) + 1, MEMF_CLEAR);
+    // snprintf(scriptPath, strlen(PROGDIR "rexx/") + strlen(script) + 1,
+    //          PROGDIR "rexx/%s", script);
+    // BPTR file = Open(scriptPath, MODE_OLDFILE);
+    // NameFromLock(GetProgramDir(), scriptname, sizeof(scriptname));
+    // IDOS->AddPart(scriptname, "Rexx/MyScript.rexx", sizeof(scriptname));
+    // IIntuition->IDoMethod(arexx_obj, AM_EXECUTE, scriptname, NULL, NULL,
+    // NULL,
+    //                       NULL, NULL);
+    // Close(file);
+    // if (file == NULL) {
+    //     displayError(STRING_ERROR_AREXX_SHELL_OPEN);
+    // }
+}
+MakeHook(ARexxRunScriptMenuItemClickedHook, ARexxRunScriptMenuItemClickedFunc);
 
 HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
     CONST_STRPTR guidePath = PROGDIR "AmigaGPT.guide";
@@ -301,12 +367,18 @@ static struct NewMenu amigaGPTMenu[] = {
      (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1792X1024},
     {NM_SUB, "1024x1792", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
      (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1792},
+    {NM_TITLE, "ARexx", 0, 0, 0, (APTR)MENU_ITEM_AREXX},
+    {NM_ITEM, "ARexx Shell", 0, 0, 0, (APTR)MENU_ITEM_AREXX_AREXX_SHELL},
+    {NM_ITEM, NM_BARLABEL, 0, 0, 0, (APTR)MENU_ITEM_NULL},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_AREXX_IMPORT_SCRIPT},
+    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_AREXX_RUN_SCRIPT},
     {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_HELP},
     {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_HELP_OPEN_DOCUMENTATION},
     {NM_END, NULL, 0, 0, 0, 0}};
 
 void createMenu() {
     menuStrip = MUI_MakeObject(MUIO_MenustripNM, amigaGPTMenu);
+    populateArexxMenu();
 }
 
 void addMenuActions() {
@@ -1178,6 +1250,18 @@ void addMenuActions() {
              MUIA_Menuitem_Trigger, MUIV_EveryTime, MUIV_Notify_Self, 3,
              MUIM_Set, MUIA_Menuitem_Checked, TRUE);
 
+    Object arexShellMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
+                                                MENU_ITEM_AREXX_AREXX_SHELL);
+    DoMethod(arexShellMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_CallHook,
+             &ARexxShellMenuItemClickedHook, MUIV_TriggerValue);
+
+    Object arexImportScriptMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_AREXX_IMPORT_SCRIPT);
+    DoMethod(arexImportScriptMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_CallHook,
+             &ARexxImportScriptMenuItemClickedHook, MUIV_TriggerValue);
+
     Object openDocumentationMenuItem =
         DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_HELP_OPEN_DOCUMENTATION);
     DoMethod(openDocumentationMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
@@ -1365,6 +1449,24 @@ void setMenuTitles() {
     set(openAIImageSizeDALL_E_3MenuItem, MUIA_Menuitem_Title,
         STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3);
 
+    Object arexxMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_AREXX);
+    set(arexxMenuItem, MUIA_Menu_Title, STRING_MENU_AREXX);
+
+    Object arexxShellMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
+                                                 MENU_ITEM_AREXX_AREXX_SHELL);
+    set(arexxShellMenuItem, MUIA_Menuitem_Title, STRING_MENU_AREXX_AREXX_SHELL);
+
+    Object arexxImportScriptMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_AREXX_IMPORT_SCRIPT);
+    set(arexxImportScriptMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_AREXX_IMPORT_SCRIPT);
+
+    Object arexxRunScriptMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_AREXX_RUN_SCRIPT);
+    set(arexxRunScriptMenuItem, MUIA_Menuitem_Title,
+        STRING_MENU_AREXX_RUN_SCRIPT);
+
     Object helpMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_HELP);
     set(helpMenuItem, MUIA_Menu_Title, STRING_MENU_HELP);
@@ -1373,4 +1475,58 @@ void setMenuTitles() {
         menuStrip, MUIM_FindUData, MENU_ITEM_HELP_OPEN_DOCUMENTATION);
     set(openDocumentationMenuItem, MUIA_Menuitem_Title,
         STRING_MENU_OPEN_DOCUMENTATION);
+}
+
+/**
+ * Populate the AREXX menu with the installed scripts
+ **/
+static void populateArexxMenu() {
+    DoMethod(menuStrip, MUIM_Menustrip_InitChange);
+
+    Object helpMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_HELP);
+    Object openDocumentationMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_HELP_OPEN_DOCUMENTATION);
+    Object arexxRunScriptMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_AREXX_RUN_SCRIPT);
+
+    // Remove any existing script items
+    Object *scriptMenuItem = NULL;
+    while (scriptMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
+                                             MENU_ITEM_AREXX_SCRIPT)) {
+        DoMethod(arexxRunScriptMenuItem, MUIM_Family_Remove, scriptMenuItem);
+        DisposeObject(scriptMenuItem);
+    }
+    // Scan the rexx directory for .rexx files
+    BPTR lock = Lock(PROGDIR "rexx", ACCESS_READ);
+    if (lock != 0) {
+        struct FileInfoBlock *fib = AllocDosObject(DOS_FIB, NULL);
+        if (fib != NULL) {
+            if (Examine(lock, fib)) {
+                // Iterate through all files in the directory
+                while (ExNext(lock, fib)) {
+                    // Check if this is a file (not a directory) and has
+                    // .rexx extension
+                    STRPTR filename = fib->fib_FileName;
+                    LONG len = strlen(filename);
+
+                    if (len > 5 && !stricmp(&filename[len - 5], ".rexx")) {
+                        Object *newScriptMenuItem = MenuitemObject,
+                               MUIA_Menuitem_Title, filename,
+                               MUIA_Menuitem_CopyStrings, TRUE, MUIA_UserData,
+                               (APTR)MENU_ITEM_AREXX_SCRIPT, End;
+                        DoMethod(arexxRunScriptMenuItem, MUIM_Family_AddTail,
+                                 newScriptMenuItem);
+                        DoMethod(newScriptMenuItem, MUIM_Notify,
+                                 MUIA_Menuitem_Trigger, MUIV_EveryTime,
+                                 MUIV_Notify_Self, 2, MUIM_CallHook,
+                                 &ARexxRunScriptMenuItemClickedHook);
+                    }
+                }
+            }
+            FreeDosObject(DOS_FIB, fib);
+            UnLock(lock);
+        }
+        DoMethod(menuStrip, MUIM_Menustrip_ExitChange);
+    }
 }

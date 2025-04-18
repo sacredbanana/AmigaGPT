@@ -1175,3 +1175,40 @@ msgstr "Enter how you want the AI to speak. Example: 'Speak in a deep and "
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
 msgid "Failed to create voice instructions window"
 msgstr "Failed to create voice instructions window"
+
+#: src/menu.c:305
+msgctxt "STRING_MENU_AREXX (219//)"
+msgid "ARexx"
+msgstr "ARexx"
+
+#: src/menu.c:306
+msgctxt "STRING_MENU_AREXX_AREXX_SHELL (220//)"
+msgid "ARexx Shell"
+msgstr "ARexx Shell"
+
+#: src/menu.c:307
+msgctxt "STRING_MENU_AREXX_IMPORT_SCRIPT (221//)"
+msgid "Import Script"
+msgstr "Import Script"
+
+#: src/menu.c:308
+msgctxt "STRING_MENU_AREXX_RUN_SCRIPT (222//)"
+msgid "Run Script"
+msgstr "Run Script"
+
+#: src/menu.c:309
+msgctxt "STRING_MENU_AREXX_TEST (223//)"
+msgid "Test"
+msgstr "Test"
+
+#: src/menu.c:310
+msgctxt "STRING_MENU_AREXX_RUN_SCRIPT_ERROR (224//)"
+msgid "Failed to run script"
+msgstr "Failed to run script"
+
+#: src/menu.c:311
+msgctxt "STRING_ERROR_AREXX_SHELL_OPEN (225//)"
+msgid "Failed to open AREXX shell"
+msgstr "Failed to open AREXX shell"
+
+

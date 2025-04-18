@@ -59,6 +59,14 @@ LONG initVideo();
 void startGUIRunLoop();
 
 /**
+ * Copies a file from one location to another
+ * @param source The source file to copy
+ * @param destination The destination to copy the file to
+ * @return TRUE if the file was copied successfully, FALSE otherwise
+ **/
+BOOL copyFile(STRPTR source, STRPTR destination);
+
+/**
  * Shutdown the GUI
  **/
 void shutdownGUI();

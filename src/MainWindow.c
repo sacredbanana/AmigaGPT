@@ -62,7 +62,6 @@ static LONG loadConversations();
 static LONG saveConversations();
 static LONG loadImages();
 static LONG saveImages();
-static BOOL copyFile(STRPTR source, STRPTR destination);
 static void initStyleStack(StyleStack *s);
 static BOOL pushStyle(StyleStack *s, StyleType style);
 static BOOL popStyle(StyleStack *s, StyleType style);
@@ -479,11 +478,10 @@ HOOKPROTONHNONP(SaveImageCopyButtonClickedFunc, void) {
                            "SYS:", ASLFR_DoSaveMode, TRUE, TAG_DONE)) {
             STRPTR savePath = fileReq->fr_Drawer;
             STRPTR saveName = fileReq->fr_File;
-            BOOL isRootDirectory = savePath[strlen(savePath) - 1] == ':';
-            STRPTR fullPath =
-                AllocVec(strlen(savePath) + strlen(saveName) + 2, MEMF_CLEAR);
-            snprintf(fullPath, strlen(savePath) + strlen(saveName) + 2,
-                     "%s%s%s", savePath, isRootDirectory ? "" : "/", saveName);
+            UWORD fullPathLength = strlen(savePath) + strlen(saveName) + 2;
+            STRPTR fullPath = AllocVec(fullPathLength, MEMF_CLEAR);
+            strncpy(fullPath, savePath, strlen(savePath));
+            AddPart(fullPath, saveName, fullPathLength);
             copyFile(filePath, fullPath);
             FreeVec(fullPath);
         }
@@ -2019,64 +2017,6 @@ static LONG loadImages() {
 
     json_object_put(imagesJsonArray);
     return RETURN_OK;
-}
-
-/**
- * Copies a file from one location to another
- * @param source The source file to copy
- * @param destination The destination to copy the file to
- * @return TRUE if the file was copied successfully, FALSE otherwise
- **/
-static BOOL copyFile(STRPTR source, STRPTR destination) {
-    const UWORD FILE_BUFFER_SIZE = 4096;
-    BPTR srcFile, dstFile;
-    LONG bytesRead, bytesWritten;
-    APTR buffer = AllocVec(FILE_BUFFER_SIZE, MEMF_ANY);
-
-    if (!(srcFile = Open(source, MODE_OLDFILE))) {
-        displayError(STRING_ERROR_FILE_COPY_OPEN);
-        FreeVec(buffer);
-        return FALSE;
-    }
-
-    if (!(dstFile = Open(destination, MODE_NEWFILE))) {
-        displayError(STRING_ERROR_FILE_COPY_CREATE);
-        FreeVec(buffer);
-        Close(srcFile);
-        return FALSE;
-    }
-
-    updateStatusBar(STRING_COPYING_FILE, yellowPen);
-
-    do {
-        bytesRead = Read(srcFile, buffer, FILE_BUFFER_SIZE);
-
-        if (bytesRead > 0) {
-            bytesWritten = Write(dstFile, buffer, bytesRead);
-
-            if (bytesWritten != bytesRead) {
-                updateStatusBar(STRING_READY, greenPen);
-                displayError(STRING_ERROR_FILE_COPY);
-                FreeVec(buffer);
-                Close(srcFile);
-                Close(dstFile);
-                return FALSE;
-            }
-        } else if (bytesRead < 0) {
-            updateStatusBar(STRING_READY, greenPen);
-            displayError(STRING_ERROR_FILE_COPY);
-            FreeVec(buffer);
-            Close(srcFile);
-            Close(dstFile);
-            return FALSE;
-        }
-    } while (bytesRead > 0);
-
-    updateStatusBar(STRING_READY, greenPen);
-    FreeVec(buffer);
-    Close(srcFile);
-    Close(dstFile);
-    return TRUE;
 }
 
 /**
