@@ -778,7 +778,6 @@ LONG createMainWindow() {
     currentImage = NULL;
 
     createMenu();
-    setMenuTitles();
 
     pages[0] = STRING_CHAT_MODE;
     pages[1] = STRING_IMAGE_GENERATION_MODE;

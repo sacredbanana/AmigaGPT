@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.5.0 (2025-04-18)
+## 2.5.0 (2025-04-19)
 
 - Added an ARexx menu to allow you to run your own scripts
 - Added sample scripts

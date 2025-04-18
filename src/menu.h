@@ -111,5 +111,3 @@ extern Object *menuStrip;
 void createMenu();
 
 void addMenuActions();
-
-void setMenuTitles();

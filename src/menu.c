@@ -182,194 +182,332 @@ HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
 MakeHook(OpenDocumentationMenuItemClickedHook,
          OpenDocumentationMenuItemClickedFunc);
 
-static struct NewMenu amigaGPTMenu[] = {
-    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_PROJECT},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_PROJECT_ABOUT_AMIGAGPT},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_PROJECT_ABOUT_MUI},
-    {NM_ITEM, NM_BARLABEL, 0, 0, 0, (APTR)MENU_ITEM_NULL},
-    {NM_ITEM, NULL, "Q", 0, 0, (APTR)MENU_ITEM_PROJECT_QUIT},
-    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_EDIT},
-    {NM_ITEM, NULL, "X", 0, 0, (APTR)MENU_ITEM_EDIT_CUT},
-    {NM_ITEM, NULL, "C", 0, 0, (APTR)MENU_ITEM_EDIT_COPY},
-    {NM_ITEM, NULL, "V", 0, 0, (APTR)MENU_ITEM_EDIT_PASTE},
-    {NM_ITEM, NULL, "L", 0, 0, (APTR)MENU_ITEM_EDIT_CLEAR},
-    {NM_ITEM, NULL, "A", 0, 0, (APTR)MENU_ITEM_EDIT_SELECT_ALL},
-    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_VIEW},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_VIEW_MUI_SETTINGS},
-    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_CONNECTION},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_CONNECTION_PROXY},
-    {NM_SUB, NULL, 0, CHECKIT | CHECKED | MENUTOGGLE, 0,
-     (APTR)MENU_ITEM_CONNECTION_PROXY_ENABLED},
-    {NM_SUB, NULL, 0, 0, 0, (APTR)MENU_ITEM_CONNECTION_PROXY_SETTINGS},
-    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH},
-    {NM_ITEM, NULL, 0, CHECKIT | CHECKED | MENUTOGGLE, 0,
-     (APTR)MENU_ITEM_SPEECH_ENABLED},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_SYSTEM},
-#ifdef __AMIGAOS3__
-    {NM_SUB, NULL, 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
-     (APTR)MENU_ITEM_SPEECH_SYSTEM_34},
-    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
-     (APTR)MENU_ITEM_SPEECH_SYSTEM_37},
-    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
-     (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
-#else
-#ifdef __AMIGAOS4__
-    {NM_SUB, NULL, 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
-     (APTR)MENU_ITEM_SPEECH_SYSTEM_FLITE},
-    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
-     (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
-#else
-    {NM_SUB, NULL, 0, CHECKIT | CHECKED, ~(1 << 2),
-     (APTR)MENU_ITEM_SPEECH_SYSTEM_OPENAI},
-#endif
-#endif
-#ifdef __AMIGAOS3__
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_ACCENT},
-#endif
-#ifdef __AMIGAOS4__
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_FLITE_VOICE},
-    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 0),
-     (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL},
-    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
-     (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_KAL16},
-    {NM_SUB, NULL, 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 2),
-     (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_AWB},
-    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 3),
-     (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_RMS},
-    {NM_SUB, NULL, 0, CHECKIT | MENUTOGGLE, ~(1 << 4),
-     (APTR)MENU_ITEM_SPEECH_FLITE_VOICE_SLT},
-#endif
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE},
-    {NM_SUB, "alloy", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY},
-    {NM_SUB, "ash", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ASH},
-    {NM_SUB, "ballad", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_BALLAD},
-    {NM_SUB, "coral", 0, CHECKIT | MENUTOGGLE, ~(1 << 3),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_CORAL},
-    {NM_SUB, "echo", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO},
-    {NM_SUB, "fable", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE},
-    {NM_SUB, "onyx", 0, CHECKIT | MENUTOGGLE, ~(1 << 3),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX},
-    {NM_SUB, "nova", 0, CHECKIT | MENUTOGGLE, ~(1 << 4),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA},
-    {NM_SUB, "sage", 0, CHECKIT | MENUTOGGLE, ~(1 << 5),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_SAGE},
-    {NM_SUB, "shimmer", 0, CHECKIT | MENUTOGGLE, ~(1 << 5),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL},
-    {NM_SUB, "tts-1", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1},
-    {NM_SUB, "tts-1-hd", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD},
-    {NM_SUB, "gpt-4o-mini-tts", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
-     (APTR)MENU_ITEM_SPEECH_OPENAI_MODEL_GPT_4o_MINI_TTS},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_SPEECH_OPENAI_VOICE_INSTRUCTIONS},
-    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_API_KEY},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_CHAT_SYSTEM},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_CHAT_MODEL},
-    {NM_SUB, "chatgpt-4o-latest", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_CHATGPT_4o_LATEST},
-    {NM_SUB, "gpt-3.5-turbo", 0, CHECKIT | CHECKED | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO},
-    {NM_SUB, "gpt-3.5-turbo-0125", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_0125},
-    {NM_SUB, "gpt-3.5-turbo-1106", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_1106},
-    {NM_SUB, "gpt-4-turbo", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO},
-    {NM_SUB, "gpt-4-turbo-2024-04-09", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_2024_04_09},
-    {NM_SUB, "gpt-4-turbo-preview", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_PREVIEW},
-    {NM_SUB, "gpt-4", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4},
-    {NM_SUB, "gpt-4-0613", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0613},
-    {NM_SUB, "gpt-4-0314", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0314},
-    {NM_SUB, "gpt-4.1", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_1},
-    {NM_SUB, "gpt-4.1-2024-04-14", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_1_2024_04_14},
-    {NM_SUB, "gpt-4.5-preview", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_5_PREVIEW},
-    {NM_SUB, "gpt-4.5-preview-2025-02-27", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_5_PREVIEW_2025_02_27},
-    {NM_SUB, "gpt-4o", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o},
-    {NM_SUB, "gpt-4o-2024-11-20", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_11_20},
-    {NM_SUB, "gpt-4o-2024-08-06", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_08_06},
-    {NM_SUB, "gpt-4o-2024-05-13", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_05_13},
-    {NM_SUB, "gpt-4o-mini", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI},
-    {NM_SUB, "gpt-4o-mini-2024-07-18", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI_2024_07_18},
-    {NM_SUB, "o1", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1},
-    {NM_SUB, "o1-2024-12-17", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_2024_12_17},
-    {NM_SUB, "o1-preview", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_PREVIEW},
-    {NM_SUB, "o1-preview-2024-09-12", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_PREVIEW_2024_09_12},
-    {NM_SUB, "o1-mini", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_MINI},
-    {NM_SUB, "o1-mini-2024-09-12", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_MINI_2024_09_12},
-    {NM_SUB, "o1-pro", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_PRO},
-    {NM_SUB, "o1-pro-2025-03-19", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o1_PRO_2025_03_19},
-    {NM_SUB, "o3", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o3},
-    {NM_SUB, "o3-2025-04-16", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o3_2025_04_16},
-    {NM_SUB, "o3-mini", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o3_MINI},
-    {NM_SUB, "o3-mini-2025-01-31", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o3_MINI_2025_01_31},
-    {NM_SUB, "o4-mini", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o4_MINI},
-    {NM_SUB, "o4-mini-2025-04-16", 0, CHECKIT | MENUTOGGLE, ~0,
-     (APTR)MENU_ITEM_OPENAI_CHAT_MODEL_o4_MINI_2025_04_16},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_IMAGE_MODEL},
-    {NM_SUB, "dall-e-2", 0, CHECKIT | MENUTOGGLE, ~(1 << 0),
-     (APTR)MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_2},
-    {NM_SUB, "dall-e-3", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 1),
-     (APTR)MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_3},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2},
-    {NM_SUB, "256x256", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
-     (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_256X256},
-    {NM_SUB, "512x512", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
-     (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_512X512},
-    {NM_SUB, "1024x1024", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
-     (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_1024X1024},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3},
-    {NM_SUB, "1024x1024", 0, CHECKIT | CHECKED | MENUTOGGLE, ~(1 << 0),
-     (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1024},
-    {NM_SUB, "1792x1024", 0, CHECKIT | MENUTOGGLE, ~(1 << 1),
-     (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1792X1024},
-    {NM_SUB, "1024x1792", 0, CHECKIT | MENUTOGGLE, ~(1 << 2),
-     (APTR)MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1792},
-    {NM_TITLE, "ARexx", 0, 0, 0, (APTR)MENU_ITEM_AREXX},
-    {NM_ITEM, "ARexx Shell", 0, 0, 0, (APTR)MENU_ITEM_AREXX_AREXX_SHELL},
-    {NM_ITEM, NM_BARLABEL, 0, 0, 0, (APTR)MENU_ITEM_NULL},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_AREXX_IMPORT_SCRIPT},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_AREXX_RUN_SCRIPT},
-    {NM_TITLE, NULL, 0, 0, 0, (APTR)MENU_ITEM_HELP},
-    {NM_ITEM, NULL, 0, 0, 0, (APTR)MENU_ITEM_HELP_OPEN_DOCUMENTATION},
-    {NM_END, NULL, 0, 0, 0, 0}};
-
 void createMenu() {
-    menuStrip = MUI_MakeObject(MUIO_MenustripNM, amigaGPTMenu);
+    menuStrip = MenustripObject, MUIA_Family_Child, MenuObject, MUIA_Menu_Title,
+    STRING_MENU_PROJECT, MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child,
+    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_ABOUT_AMIGAGPT,
+    MUIA_UserData, MENU_ITEM_PROJECT_ABOUT_AMIGAGPT, MUIA_Menuitem_CopyStrings,
+    FALSE, End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_ABOUT_MUI, MUIA_UserData, MENU_ITEM_PROJECT_ABOUT_MUI,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, NM_BARLABEL, MUIA_UserData, MENU_ITEM_NULL,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_QUIT, MUIA_UserData,
+    MENU_ITEM_PROJECT_QUIT, MUIA_Menuitem_Shortcut, "Q",
+    MUIA_Menuitem_CopyStrings, FALSE, End, End,
+
+    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_EDIT,
+    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_CUT, MUIA_UserData, MENU_ITEM_EDIT_CUT,
+    MUIA_Menuitem_Shortcut, "X", MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_COPY,
+    MUIA_UserData, MENU_ITEM_EDIT_COPY, MUIA_Menuitem_Shortcut, "C",
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_PASTE, MUIA_UserData, MENU_ITEM_EDIT_PASTE,
+    MUIA_Menuitem_Shortcut, "V", MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_CLEAR,
+    MUIA_UserData, MENU_ITEM_EDIT_CLEAR, MUIA_Menuitem_Shortcut, "L",
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_SELECT_ALL, MUIA_UserData,
+    MENU_ITEM_EDIT_SELECT_ALL, MUIA_Menuitem_Shortcut, "A",
+    MUIA_Menuitem_CopyStrings, FALSE, End, End,
+
+    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_VIEW,
+    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_MUI_SETTINGS, MUIA_UserData,
+    MENU_ITEM_VIEW_MUI_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End, End,
+
+    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_CONNECTION,
+    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_ENABLED, MUIA_UserData,
+    MENU_ITEM_CONNECTION_PROXY_ENABLED, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_SETTINGS, MUIA_UserData,
+    MENU_ITEM_CONNECTION_PROXY_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
+    End,
+
+    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_SPEECH,
+    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_ENABLED, MUIA_UserData,
+    MENU_ITEM_SPEECH_ENABLED, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_SPEECH_SYSTEM, MUIA_UserData,
+    MENU_ITEM_SPEECH_SYSTEM, MUIA_Menuitem_CopyStrings, FALSE,
+#ifdef __AMIGAOS3__
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_SPEECH_SYSTEM_34, MUIA_UserData, MENU_ITEM_SPEECH_SYSTEM_34,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~(1 << 0),
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_SPEECH_SYSTEM_37, MUIA_UserData,
+    MENU_ITEM_SPEECH_SYSTEM_37, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~(1 << 1), MUIA_Menuitem_CopyStrings, FALSE, End,
+#endif
+#ifdef __AMIGAOS4__
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_SPEECH_SYSTEM_FLITE, MUIA_UserData,
+    MENU_ITEM_SPEECH_SYSTEM_FLITE, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~(1 << 0), MUIA_Menuitem_CopyStrings, FALSE, End,
+#endif
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_SPEECH_SYSTEM_OPENAI, MUIA_UserData,
+    MENU_ITEM_SPEECH_SYSTEM_OPENAI, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~(1 << 3), MUIA_Menuitem_CopyStrings, FALSE, End,
+    End,
+#ifdef __AMIGAOS3__
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_SPEECH_ACCENT, MUIA_UserData, MENU_ITEM_SPEECH_ACCENT,
+    MUIA_Menuitem_CopyStrings, FALSE, End,
+#endif
+#ifdef __AMIGAOS4__
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_FLITE_VOICE, MUIA_UserData, MENU_ITEM_SPEECH_FLITE_VOICE,
+    MUIA_Menuitem_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_FLITE_VOICE_KAL, MUIA_UserData,
+    MENU_ITEM_SPEECH_FLITE_VOICE_KAL, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_FLITE_VOICE_KAL16, MUIA_UserData,
+    MENU_ITEM_SPEECH_FLITE_VOICE_KAL16, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_FLITE_VOICE_AWB, MUIA_UserData,
+    MENU_ITEM_SPEECH_FLITE_VOICE_AWB, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_FLITE_VOICE_RMS, MUIA_UserData,
+    MENU_ITEM_SPEECH_FLITE_VOICE_RMS, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_FLITE_VOICE_SLT, MUIA_UserData,
+    MENU_ITEM_SPEECH_FLITE_VOICE_SLT, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_CopyStrings, FALSE, End, End,
+#endif
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_OPENAI_VOICE, MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_VOICE,
+    MUIA_Menuitem_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "alloy", MUIA_UserData,
+    MENU_ITEM_SPEECH_OPENAI_VOICE_ALLOY, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~(1 << 0), MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "ash",
+    MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_VOICE_ASH, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~(1 << 1), MUIA_Menuitem_CopyStrings, FALSE,
+    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "ballad",
+    MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_VOICE_BALLAD, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~(1 << 2), MUIA_Menuitem_CopyStrings, FALSE,
+    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "coral",
+    MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_VOICE_CORAL, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~(1 << 3), MUIA_Menuitem_CopyStrings, FALSE,
+    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "echo",
+    MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_VOICE_ECHO, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~(1 << 4), MUIA_Menuitem_CopyStrings, FALSE,
+    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "fable",
+    MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_VOICE_FABLE, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~(1 << 5), MUIA_Menuitem_CopyStrings, FALSE,
+    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "onyx",
+    MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_VOICE_ONYX, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~(1 << 6), MUIA_Menuitem_CopyStrings, FALSE,
+    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "nova",
+    MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_VOICE_NOVA, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~(1 << 7), MUIA_Menuitem_CopyStrings, FALSE,
+    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "sage",
+    MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_VOICE_SAGE, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~(1 << 8), MUIA_Menuitem_CopyStrings, FALSE,
+    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "shimmer",
+    MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_VOICE_SHIMMER, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~(1 << 9), MUIA_Menuitem_CopyStrings, FALSE,
+    End, End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_SPEECH_OPENAI_MODEL, MUIA_UserData,
+    MENU_ITEM_SPEECH_OPENAI_MODEL, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "tts-1",
+    MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~(1 << 0), MUIA_Menuitem_CopyStrings, FALSE,
+    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "tts-1-hd",
+    MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_MODEL_TTS_1_HD,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~(1 << 1),
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "gpt-4o-mini-tts", MUIA_UserData,
+    MENU_ITEM_SPEECH_OPENAI_MODEL_GPT_4o_MINI_TTS, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~(1 << 2), MUIA_Menuitem_CopyStrings, FALSE, End,
+    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_OPENAI_VOICE_INSTRUCTIONS, MUIA_UserData,
+    MENU_ITEM_SPEECH_OPENAI_VOICE_INSTRUCTIONS, MUIA_Menuitem_CopyStrings,
+    FALSE, End, End,
+
+    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_OPENAI,
+    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_OPENAI_API_KEY, MUIA_UserData,
+    MENU_ITEM_OPENAI_API_KEY, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_OPENAI_CHAT_SYSTEM, MUIA_UserData, MENU_ITEM_OPENAI_CHAT_SYSTEM,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_OPENAI_CHAT_MODEL, MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "chatgpt-4o-latest",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_CHATGPT_4o_LATEST,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~0,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "gpt-3.5-turbo", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    "gpt-3.5-turbo-0125", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_0125, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    "gpt-3.5-turbo-1106", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_GPT_3_5_TURBO_1106, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "gpt-4-turbo",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~0,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "gpt-4-turbo-2024-04-09", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_2024_04_09, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    "gpt-4-turbo-preview", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_TURBO_PREVIEW, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "gpt-4",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "gpt-4-0613",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_0613,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~0,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "gpt-4.1", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_1, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    "gpt-4.1-2024-04-14", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_1_2024_04_14, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "gpt-4.5-preview",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_5_PREVIEW,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~0,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "gpt-4.5-preview-2025-02-27", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4_5_PREVIEW_2025_02_27,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~0,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "gpt-4o", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "gpt-4o-2024-11-20",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_11_20,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~0,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "gpt-4o-2024-08-06", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_08_06, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "gpt-4o-2024-05-13",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_2024_05_13,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~0,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "gpt-4o-mini", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    "gpt-4o-mini-2024-07-18", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_GPT_4o_MINI_2024_07_18, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "o1", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_o1, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "o1-preview",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_o1_PREVIEW,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~0,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "o1-preview-2024-09-12", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_o1_PREVIEW_2024_09_12, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "o1-mini",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_o1_MINI, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    "o1-mini-2024-09-12", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_o1_MINI_2024_09_12, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "o1-pro",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_o1_PRO, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "o1-pro-2025-03-19",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_o1_PRO_2025_03_19,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~0,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "o3", MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_o3,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~0,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "o3-2025-04-16", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_o3_2025_04_16, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "o3-mini",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_o3_MINI, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    "o3-mini-2025-01-31", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_o3_MINI_2025_01_31, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "o4-mini",
+    MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL_o4_MINI, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    "o4-mini-2025-04-16", MUIA_UserData,
+    MENU_ITEM_OPENAI_CHAT_MODEL_o4_MINI_2025_04_16, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_OPENAI_IMAGE_MODEL, MUIA_UserData, MENU_ITEM_OPENAI_IMAGE_MODEL,
+    MUIA_Menuitem_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "dall-e-2", MUIA_UserData,
+    MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_2, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~(1 << 0), MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "dall-e-3",
+    MUIA_UserData, MENU_ITEM_OPENAI_IMAGE_MODEL_DALL_E_3, MUIA_Menuitem_Checkit,
+    TRUE, MUIA_Menuitem_Exclude, ~(1 << 1), MUIA_Menuitem_CopyStrings, FALSE,
+    End, End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_UserData,
+    MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "256x256",
+    MUIA_UserData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_256X256,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~(1 << 0),
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "512x512", MUIA_UserData,
+    MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_512X512, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~(1 << 1), MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "1024x1024",
+    MUIA_UserData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2_1024X1024,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~(1 << 2),
+    MUIA_Menuitem_CopyStrings, FALSE, End, End, MUIA_Family_Child,
+    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3,
+    MUIA_UserData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3,
+    MUIA_Menuitem_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "1024x1024", MUIA_UserData,
+    MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1024, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~(1 << 0), MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, "1792x1024",
+    MUIA_UserData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1792X1024,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Exclude, ~(1 << 1),
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, "1024x1792", MUIA_UserData,
+    MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3_1024X1792, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Exclude, ~(1 << 2), MUIA_Menuitem_CopyStrings, FALSE, End,
+    End, End,
+
+    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_AREXX,
+    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_AREXX_AREXX_SHELL, MUIA_UserData,
+    MENU_ITEM_AREXX_AREXX_SHELL, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_AREXX_IMPORT_SCRIPT, MUIA_UserData,
+    MENU_ITEM_AREXX_IMPORT_SCRIPT, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_AREXX_RUN_SCRIPT, MUIA_UserData, MENU_ITEM_AREXX_RUN_SCRIPT,
+    MUIA_Menuitem_CopyStrings, FALSE, End, End,
+
+    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_HELP,
+    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_OPEN_DOCUMENTATION, MUIA_UserData,
+    MENU_ITEM_HELP_OPEN_DOCUMENTATION, MUIA_Menuitem_CopyStrings, FALSE, End,
+    End,
+
+    End;
     populateArexxMenu();
 }
 
@@ -1259,214 +1397,6 @@ void addMenuActions() {
     DoMethod(openDocumentationMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_CallHook,
              &OpenDocumentationMenuItemClickedHook, MUIV_TriggerValue);
-}
-
-void setMenuTitles() {
-    Object projectMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT);
-    set(projectMenuItem, MUIA_Menu_Title, STRING_MENU_PROJECT);
-
-    Object aboutAmigaGPTMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_ABOUT_AMIGAGPT);
-    set(aboutAmigaGPTMenuItem, MUIA_Menuitem_Title, STRING_MENU_ABOUT_AMIGAGPT);
-
-    Object aboutMuiMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
-                                               MENU_ITEM_PROJECT_ABOUT_MUI);
-    set(aboutMuiMenuItem, MUIA_Menuitem_Title, STRING_MENU_ABOUT_MUI);
-
-    Object quitMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_QUIT);
-    set(quitMenuItem, MUIA_Menuitem_Title, STRING_MENU_QUIT);
-
-    Object editMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT);
-    set(editMenuItem, MUIA_Menu_Title, STRING_MENU_EDIT);
-
-    Object cutMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_CUT);
-    set(cutMenuItem, MUIA_Menuitem_Title, STRING_MENU_CUT);
-
-    Object copyMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_COPY);
-    set(copyMenuItem, MUIA_Menuitem_Title, STRING_MENU_COPY);
-
-    Object pasteMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_PASTE);
-    set(pasteMenuItem, MUIA_Menuitem_Title, STRING_MENU_PASTE);
-
-    Object clearMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_CLEAR);
-    set(clearMenuItem, MUIA_Menuitem_Title, STRING_MENU_CLEAR);
-
-    Object selectAllMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_SELECT_ALL);
-    set(selectAllMenuItem, MUIA_Menuitem_Title, STRING_MENU_SELECT_ALL);
-
-    Object viewMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_VIEW);
-    set(viewMenuItem, MUIA_Menu_Title, STRING_MENU_VIEW);
-
-    Object muiSettingsMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
-                                                  MENU_ITEM_VIEW_MUI_SETTINGS);
-    set(muiSettingsMenuItem, MUIA_Menuitem_Title, STRING_MENU_MUI_SETTINGS);
-
-    Object connectionMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION);
-    set(connectionMenuItem, MUIA_Menuitem_Title, STRING_MENU_CONNECTION);
-
-    Object proxyMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY);
-    set(proxyMenuItem, MUIA_Menuitem_Title, STRING_MENU_PROXY);
-
-    Object proxyEnabledMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_ENABLED);
-    set(proxyEnabledMenuItem, MUIA_Menuitem_Title, STRING_MENU_ENABLED);
-
-    Object proxySettingsMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_SETTINGS);
-    set(proxySettingsMenuItem, MUIA_Menuitem_Title, STRING_MENU_SETTINGS);
-
-    Object speechMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH);
-    set(speechMenuItem, MUIA_Menu_Title, STRING_MENU_SPEECH);
-
-    Object speechEnabledMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ENABLED);
-    set(speechEnabledMenuItem, MUIA_Menuitem_Title, STRING_MENU_ENABLED);
-
-    Object speechSystemMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM);
-    set(speechSystemMenuItem, MUIA_Menuitem_Title, STRING_MENU_SPEECH_SYSTEM);
-
-#ifdef __AMIGAOS3__
-    Object speechSystem34MenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_34);
-    set(speechSystem34MenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_SPEECH_SYSTEM_34);
-
-    Object speechSystem37MenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_37);
-    set(speechSystem37MenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_SPEECH_SYSTEM_37);
-
-    Object speechAccentMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ACCENT);
-    set(speechAccentMenuItem, MUIA_Menuitem_Title, STRING_MENU_SPEECH_ACCENT);
-#endif
-
-#ifdef __AMIGAOS4__
-    Object speechSystemFliteMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_FLITE);
-    set(speechSystemFliteMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_SPEECH_SYSTEM_FLITE);
-
-    Object fliteVoiceMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
-                                                 MENU_ITEM_SPEECH_FLITE_VOICE);
-    set(fliteVoiceMenuItem, MUIA_Menuitem_Title, STRING_MENU_FLITE_VOICE);
-
-    Object fliteVoiceKalMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_KAL);
-    set(fliteVoiceKalMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_FLITE_VOICE_KAL);
-
-    Object fliteVoiceKal16MenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_KAL16);
-    set(fliteVoiceKal16MenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_FLITE_VOICE_KAL16);
-
-    Object fliteVoiceAwbMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_AWB);
-    set(fliteVoiceAwbMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_FLITE_VOICE_AWB);
-
-    Object fliteVoiceRmsMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_RMS);
-    set(fliteVoiceRmsMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_FLITE_VOICE_RMS);
-
-    Object fliteVoiceSltMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_FLITE_VOICE_SLT);
-    set(fliteVoiceSltMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_FLITE_VOICE_SLT);
-#endif
-
-    Object speechSystemOpenAIMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_SYSTEM_OPENAI);
-    set(speechSystemOpenAIMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_SPEECH_SYSTEM_OPENAI);
-
-    Object speechSystemOpenAIVoiceMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE);
-    set(speechSystemOpenAIVoiceMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPENAI_VOICE);
-
-    Object speechSystemOpenAIModelMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_MODEL);
-    set(speechSystemOpenAIModelMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_SPEECH_OPENAI_MODEL);
-
-    Object speechSystemOpenAIVoiceInstructionsMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_INSTRUCTIONS);
-    set(speechSystemOpenAIVoiceInstructionsMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPENAI_VOICE_INSTRUCTIONS);
-
-    Object openAIMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI);
-    set(openAIMenuItem, MUIA_Menu_Title, STRING_MENU_OPENAI);
-
-    Object apiKeyMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_API_KEY);
-    set(apiKeyMenuItem, MUIA_Menuitem_Title, STRING_MENU_OPENAI_API_KEY);
-
-    Object chatSystemMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
-                                                 MENU_ITEM_OPENAI_CHAT_SYSTEM);
-    set(chatSystemMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPENAI_CHAT_SYSTEM);
-    Object chatModelMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
-                                                MENU_ITEM_OPENAI_CHAT_MODEL);
-    set(chatModelMenuItem, MUIA_Menuitem_Title, STRING_MENU_OPENAI_CHAT_MODEL);
-
-    Object openAIImageModelMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_MODEL);
-    set(openAIImageModelMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPENAI_IMAGE_MODEL);
-
-    Object openAIImageSizeDALL_E_2MenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2);
-    set(openAIImageSizeDALL_E_2MenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2);
-
-    Object openAIImageSizeDALL_E_3MenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3);
-    set(openAIImageSizeDALL_E_3MenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3);
-
-    Object arexxMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_AREXX);
-    set(arexxMenuItem, MUIA_Menu_Title, STRING_MENU_AREXX);
-
-    Object arexxShellMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
-                                                 MENU_ITEM_AREXX_AREXX_SHELL);
-    set(arexxShellMenuItem, MUIA_Menuitem_Title, STRING_MENU_AREXX_AREXX_SHELL);
-
-    Object arexxImportScriptMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_AREXX_IMPORT_SCRIPT);
-    set(arexxImportScriptMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_AREXX_IMPORT_SCRIPT);
-
-    Object arexxRunScriptMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_AREXX_RUN_SCRIPT);
-    set(arexxRunScriptMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_AREXX_RUN_SCRIPT);
-
-    Object helpMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_HELP);
-    set(helpMenuItem, MUIA_Menu_Title, STRING_MENU_HELP);
-
-    Object openDocumentationMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_HELP_OPEN_DOCUMENTATION);
-    set(openDocumentationMenuItem, MUIA_Menuitem_Title,
-        STRING_MENU_OPEN_DOCUMENTATION);
 }
 
 /**
