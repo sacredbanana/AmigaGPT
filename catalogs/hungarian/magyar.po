@@ -1205,3 +1205,33 @@ msgstr ""
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
 msgid "Failed to create voice instructions window"
 msgstr "Nem sikerült létrehozni a startupOptionsWindowObject elemet"
+
+#: src/menu.c:305
+msgctxt "STRING_MENU_AREXX (219//)"
+msgid "ARexx"
+msgstr "ARexx"
+
+#: src/menu.c:306
+msgctxt "STRING_MENU_AREXX_AREXX_SHELL (220//)"
+msgid "ARexx Shell"
+msgstr "ARexx Shell"
+
+#: src/menu.c:307
+msgctxt "STRING_MENU_AREXX_IMPORT_SCRIPT (221//)"
+msgid "Import Script"
+msgstr "Importálás"
+
+#: src/menu.c:308
+msgctxt "STRING_MENU_AREXX_RUN_SCRIPT (222//)"
+msgid "Run Script"
+msgstr "Futtatás"
+
+#: src/menu.c:310
+msgctxt "STRING_MENU_AREXX_RUN_SCRIPT_ERROR (224//)"
+msgid "Failed to run script"
+msgstr "Nem sikerült a script futtatása"
+
+#: src/menu.c:311
+msgctxt "STRING_ERROR_AREXX_SHELL_OPEN (225//)"
+msgid "Failed to open ARexx shell"
+msgstr "Nem sikerült megnyitni a ARexx shellt"

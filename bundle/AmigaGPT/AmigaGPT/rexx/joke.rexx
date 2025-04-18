@@ -1,0 +1,8 @@
+/* AmigaGPT Random Joke Script */
+OPTIONS RESULTS
+ADDRESS 'AMIGAGPT'
+
+'SENDMESSAGE P=Tell me a funny joke'
+SAY RESULT
+
+EXIT

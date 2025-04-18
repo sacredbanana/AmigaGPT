@@ -1,6 +1,7 @@
 #include <guigfx/guigfx.h>
 #include <intuition/classusr.h>
 #include <proto/amigaguide.h>
+#include <proto/arexx.h>
 #include <proto/asl.h>
 #define USE_INLINE_STDARG
 #include <proto/codesets.h>

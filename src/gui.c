@@ -53,6 +53,7 @@ struct EmulLibEntry muiDispatcherEntry = {TRAP_LIB, 0,
 
 struct Library *MUIMasterBase;
 struct Library *CodesetsBase;
+struct Library *ARexxBase = NULL;
 Object *app = NULL;
 ULONG redPen = NULL, greenPen = NULL, bluePen = NULL, yellowPen = NULL;
 struct Screen *screen;
@@ -105,6 +106,11 @@ LONG openGUILibraries() {
         return RETURN_ERROR;
     }
 
+    if ((ARexxBase = OpenLibrary("arexx.class", 0)) == NULL) {
+        displayError("STRING_ERROR_AREXX_LIB_OPEN");
+        return RETURN_ERROR;
+    }
+
     struct Library *AROSBase;
 
     if (AROSBase = OpenLibrary("aros.library", 0)) {
@@ -128,6 +134,7 @@ static void closeGUILibraries() {
 #endif
     CloseLibrary(MUIMasterBase);
     CloseLibrary(CodesetsBase);
+    CloseLibrary(ARexxBase);
 }
 
 /**
@@ -148,6 +155,9 @@ LONG initVideo() {
         return RETURN_ERROR;
 
     if (createMainWindow() == RETURN_ERROR)
+        return RETURN_ERROR;
+
+    if (initARexx() == RETURN_ERROR)
         return RETURN_ERROR;
 
     if (createAPIKeyRequesterWindow() == RETURN_ERROR)
@@ -337,5 +347,6 @@ void shutdownGUI() {
         CloseScreen(screen);
     }
 
+    closeARexx();
     closeGUILibraries();
 }

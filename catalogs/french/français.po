@@ -1207,10 +1207,41 @@ msgid ""
 "Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
 "voice'. This only works for the gpt-4o-mini-tts model."
 msgstr ""
-"Entrez comment vous voulez que l'IA parle. Exemple: 'Parlez de manière profonde et mystérieuse'. "
-"Cette fonctionnalité ne fonctionne que pour le modèle gpt-4o-mini-tts."
+"Entrez comment vous voulez que l'IA parle. Exemple: 'Parlez de manière "
+"profonde et mystérieuse'. Cette fonctionnalité ne fonctionne que pour le "
+"modèle gpt-4o-mini-tts."
 
 #: src/VoiceInstructionsRequesterWindow.c:87
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
 msgid "Failed to create voice instructions window"
 msgstr "Impossible de créer startupOptionsWindowObject"
+
+#: src/menu.c:305
+msgctxt "STRING_MENU_AREXX (219//)"
+msgid "ARexx"
+msgstr "ARexx"
+
+#: src/menu.c:306
+msgctxt "STRING_MENU_AREXX_AREXX_SHELL (220//)"
+msgid "ARexx Shell"
+msgstr "ARexx Shell"
+
+#: src/menu.c:307
+msgctxt "STRING_MENU_AREXX_IMPORT_SCRIPT (221//)"
+msgid "Import Script"
+msgstr "Importer le script"
+
+#: src/menu.c:308
+msgctxt "STRING_MENU_AREXX_RUN_SCRIPT (222//)"
+msgid "Run Script"
+msgstr "Exécuter le script"
+
+#: src/menu.c:310
+msgctxt "STRING_MENU_AREXX_RUN_SCRIPT_ERROR (224//)"
+msgid "Failed to run script"
+msgstr "Échec de l'exécution du script"
+
+#: src/menu.c:311
+msgctxt "STRING_ERROR_AREXX_SHELL_OPEN (225//)"
+msgid "Failed to open ARexx shell"
+msgstr "Impossible d'ouvrir le fichier ARexx"

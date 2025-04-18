@@ -8,14 +8,19 @@
 #include "gui.h"
 #include "config.h"
 
+Object *arexxObject;
+
+HOOKPROTONH(ReplyCallbackFunc, APTR, Object *obj, struct RexxMsg *rxm) {
+    printf("Args[0]: %s\nResult1: %ld   Result2: %ld\n", rxm->rm_Args[0],
+           rxm->rm_Result1, rxm->rm_Result2);
+}
+MakeHook(ReplyCallbackHook, ReplyCallbackFunc);
+
 HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     STRPTR modelString = (STRPTR)arg[0];
     STRPTR system = (STRPTR)arg[1];
     STRPTR apiKey = (STRPTR)arg[2];
     STRPTR prompt = (STRPTR)arg[3];
-
-    printf("SendMessage\nModel: %s\nSystem: %s\nAPI Key: %s\nPrompt: %s\n",
-           modelString, system, apiKey, prompt);
 
     if (apiKey == NULL) {
         apiKey = config.openAiApiKey;
@@ -87,9 +92,6 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     STRPTR apiKey = (STRPTR)arg[2];
     STRPTR destination = (STRPTR)arg[3];
     STRPTR prompt = (STRPTR)arg[4];
-    printf("CreateImage\nModel: %s\nSize: %s\nAPI Key: %s\nDestination: %s"
-           "\nPrompt: %s\n",
-           modelString, sizeString, apiKey, destination, prompt);
 
     if (apiKey == NULL) {
         apiKey = config.openAiApiKey;
@@ -235,9 +237,6 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     STRPTR instructions = (STRPTR)arg[2];
     STRPTR apiKey = (STRPTR)arg[3];
     STRPTR prompt = (STRPTR)arg[4];
-    printf("SpeakText\nModel: %s\nVoice: %s\nInstructions: %s\nAPI Key: "
-           "%s\nPrompt: %s\n",
-           modelString, voiceString, instructions, apiKey, prompt);
 
     if (apiKey == NULL) {
         apiKey = config.openAiApiKey;
@@ -314,3 +313,16 @@ struct MUI_Command arexxList[] = {
     {"LISTVOICES", NULL, NULL, &ListVoicesHook, {0, 0, 0, 0, 0}},
     {"?", NULL, NULL, &HelpHook, {0, 0, 0, 0, 0}},
     {NULL, NULL, 0, NULL, {0, 0, 0, 0, 0}}};
+
+LONG initARexx() {
+    arexxObject = NewObject(AREXX_GetClass(), NULL, AREXX_HostName, "AMIGAGPT",
+                            AREXX_Commands, NULL, AREXX_NoSlot, FALSE,
+                            AREXX_ReplyHook, &ReplyCallbackHook, TAG_DONE);
+    if (arexxObject == NULL) {
+        displayError(STRING_ERROR_AREXX_SHELL_OPEN);
+        return RETURN_ERROR;
+    }
+    return RETURN_OK;
+}
+
+void closeARexx() { DisposeObject(arexxObject); }

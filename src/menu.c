@@ -1,3 +1,4 @@
+#include <classes/arexx.h>
 #include <libraries/amigaguide.h>
 #include <libraries/asl.h>
 #include <libraries/gadtools.h>
@@ -10,6 +11,7 @@
 #include <string.h>
 #include "APIKeyRequesterWindow.h"
 #include "AboutAmigaGPTWindow.h"
+#include "ARexx.h"
 #include "ChatSystemRequesterWindow.h"
 #include "config.h"
 #include "gui.h"
@@ -144,24 +146,15 @@ MakeHook(ARexxImportScriptMenuItemClickedHook,
          ARexxImportScriptMenuItemClickedFunc);
 
 HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
-    STRPTR script = AllocVec(1024, MEMF_CLEAR);
+    STRPTR script;
     get(obj, MUIA_Menuitem_Title, &script);
-    printf("Running script: %s\n", script);
-    FreeVec(script);
-    // STRPTR scriptPath =
-    //     AllocVec(strlen(PROGDIR "rexx/") + strlen(script) + 1, MEMF_CLEAR);
-    // snprintf(scriptPath, strlen(PROGDIR "rexx/") + strlen(script) + 1,
-    //          PROGDIR "rexx/%s", script);
-    // BPTR file = Open(scriptPath, MODE_OLDFILE);
-    // NameFromLock(GetProgramDir(), scriptname, sizeof(scriptname));
-    // IDOS->AddPart(scriptname, "Rexx/MyScript.rexx", sizeof(scriptname));
-    // IIntuition->IDoMethod(arexx_obj, AM_EXECUTE, scriptname, NULL, NULL,
-    // NULL,
-    //                       NULL, NULL);
-    // Close(file);
-    // if (file == NULL) {
-    //     displayError(STRING_ERROR_AREXX_SHELL_OPEN);
-    // }
+    STRPTR scriptPath = AllocVec(1024, MEMF_CLEAR);
+    NameFromLock(GetProgramDir(), scriptPath, 1024);
+    AddPart(scriptPath, "rexx/", 1024);
+    AddPart(scriptPath, script, 1024);
+    DoMethod(arexxObject, AM_EXECUTE, scriptPath, NULL, NULL, NULL, NULL, NULL);
+    FreeVec(scriptPath);
+    updateStatusBar(STRING_READY, greenPen);
 }
 MakeHook(ARexxRunScriptMenuItemClickedHook, ARexxRunScriptMenuItemClickedFunc);
 
