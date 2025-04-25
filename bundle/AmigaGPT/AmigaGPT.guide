@@ -260,6 +260,8 @@ The "Connection" menu allows you to connect via a proxy server. It supports both
 
 AmigaGPT includes ARexx support, allowing you to control the application programmatically from external scripts or other applications. You can send prompts, generate images, and utilize speech synthesis through simple ARexx commands.
 
+Note: MorphOS does not yet have an ARexx implementation. You can try installing the 68k version of ARexx but this is untested.
+
 The following ARexx commands are available:
 
 @{b}SENDMESSAGE@{ub}
@@ -733,6 +735,14 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 
 @node changelog "Changelog"
 @{b}Changelog@{ub}
+
+@{b}2.5.0 (2025-04-25)@{ub}
+
+- Added an ARexx menu to allow you to run your own scripts. ARexx is not yet implemented in MorphOS so you can try installing the 68k version of ARexx and see if that works.
+- Added sample scripts
+- Status bar background colour adjusted to improve readability
+- Latest OpenAI chat models added (gpt-4.1, o3, o4-mini)
+- The menu has been rewritten and now gets built dynamically. It will now automatically create menu options for all the available models. This will make adding new models much easier and quicker
 
 @{b}2.4.0 (2025-04-05)@{ub}
 

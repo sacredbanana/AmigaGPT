@@ -120,7 +120,7 @@ HOOKPROTONHNONP(CloseARexxShellFunc, void) {
 #ifdef __AMIGAOS3__
     Execute("TE\nTCC", NULL, NULL);
 #else
-    System("TE\nTCC", TAG_DONE);
+    SystemTagList("TE\nTCC", TAG_DONE);
 #endif
 }
 MakeHook(CloseARexxShellFuncHook, CloseARexxShellFunc);
@@ -163,7 +163,13 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
     NameFromLock(GetProgramDir(), scriptPath, 1024);
     AddPart(scriptPath, "rexx/", 1024);
     AddPart(scriptPath, script, 1024);
+#ifndef __MORPHOS__
     DoMethod(arexxObject, AM_EXECUTE, scriptPath, NULL, NULL, NULL, NULL, NULL);
+#else
+    UBYTE command[1024] = {0};
+    snprintf(command, sizeof(command), "RX %s", scriptPath);
+    SystemTagList(scriptPath, TAG_DONE);
+#endif
     FreeVec(scriptPath);
 }
 MakeHook(ARexxRunScriptMenuItemClickedHook, ARexxRunScriptMenuItemClickedFunc);

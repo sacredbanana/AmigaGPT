@@ -1247,3 +1247,8 @@ msgstr "Αποτυχία εκτέλεσης του script"
 msgctxt "STRING_ERROR_AREXX_SHELL_OPEN (225//)"
 msgid "Failed to open ARexx shell"
 msgstr "Απέτυχε το άνοιγμα του ARexx shell"
+
+#: src/menu.c:112
+msgctxt "STRING_ERROR_AREXX_LIB_OPEN (226//)"
+msgid "Could not open arexx.class."
+msgstr "Αδυνατή η ανοίξιση του arexx.class."

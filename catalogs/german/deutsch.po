@@ -1264,3 +1264,8 @@ msgstr "Skript konnte nicht ausgeführt werden"
 msgctxt "STRING_ERROR_AREXX_SHELL_OPEN (225//)"
 msgid "Failed to open ARexx shell"
 msgstr "ARexx-Shell konnte nicht geöffnet werden"
+
+#: src/menu.c:112
+msgctxt "STRING_ERROR_AREXX_LIB_OPEN (226//)"
+msgid "Could not open arexx.class."
+msgstr "arexx.class konnte nicht geöffnet werden"

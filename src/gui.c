@@ -108,11 +108,12 @@ LONG openGUILibraries() {
         return RETURN_ERROR;
     }
 
+#ifndef __MORPHOS__
     if ((ARexxBase = OpenLibrary("arexx.class", 0)) == NULL) {
-        displayError("STRING_ERROR_AREXX_LIB_OPEN");
+        displayError(STRING_ERROR_AREXX_LIB_OPEN);
         return RETURN_ERROR;
     }
-
+#endif
     struct Library *AROSBase;
 
     if (AROSBase = OpenLibrary("aros.library", 0)) {
@@ -136,7 +137,9 @@ static void closeGUILibraries() {
 #endif
     CloseLibrary(MUIMasterBase);
     CloseLibrary(CodesetsBase);
+#ifndef __MORPHOS__
     CloseLibrary(ARexxBase);
+#endif
 }
 
 /**
@@ -159,8 +162,10 @@ LONG initVideo() {
     if (createMainWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
+#ifndef __MORPHOS__
     if (initARexx() == RETURN_ERROR)
         return RETURN_ERROR;
+#endif
 
     if (createAPIKeyRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
@@ -349,6 +354,8 @@ void shutdownGUI() {
         CloseScreen(screen);
     }
 
+#ifndef __MORPHOS__
     closeARexx();
+#endif
     closeGUILibraries();
 }

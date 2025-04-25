@@ -1,11 +1,12 @@
 # Changelog
 
-## 2.5.0 (2025-04-19)
+## 2.5.0 (2025-04-25)
 
-- Added an ARexx menu to allow you to run your own scripts
+- Added an ARexx menu to allow you to run your own scripts. ARexx is not yet implemented in MorphOS so you can try installing the 68k version of ARexx and see if that works.
 - Added sample scripts
 - Status bar background colour adjusted to improve readability
 - Latest OpenAI chat models added (gpt-4.1, o3, o4-mini)
+- The menu has been rewritten and now gets built dynamically. It will now automatically create menu options for all the available models. This will make adding new models much easier and quicker
 
 ## 2.4.0 (2025-04-05)
 

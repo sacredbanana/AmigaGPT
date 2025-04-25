@@ -1232,3 +1232,8 @@ msgstr "Nije uspjelo izvršavanje skripte"
 msgctxt "STRING_ERROR_AREXX_SHELL_OPEN (225//)"
 msgid "Failed to open ARexx shell"
 msgstr "Otvaranje ARexx shella nije uspjelo"
+
+#: src/menu.c:112
+msgctxt "STRING_ERROR_AREXX_LIB_OPEN (226//)"
+msgid "Could not open arexx.class."
+msgstr "Nije moguće otvoriti arexx.class."
