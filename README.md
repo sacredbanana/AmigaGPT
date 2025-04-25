@@ -192,6 +192,8 @@ SAY 'Image saved to:' RESULT
 EXIT
 ```
 
+The **ARexx** menu allows you to import and run ARexx scripts. Also, selecting **Arexx Shell** will open a shell and put all ARexx scripts in trace mode so you can run the scripts line by line for debugging purposes. Select **Arexx Shell** once again to turn off trace mode and close the shell.
+
 ## Models
 
 For the latest information on the models you can use in **AmigaGPT**, please refer to OpenAI's documentation at <https://platform.openai.com/docs/models>

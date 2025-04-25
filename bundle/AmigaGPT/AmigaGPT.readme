@@ -178,6 +178,11 @@ the encryption of the OpenAI traffic to be done on the system running AmigaGPT.
 For an easy proxy server you can run on your local network you can try out
 https://mitmproxy.org
 
+The "ARexx" menu allows you to import and run ARexx scripts. Also, selecting
+"Arexx Shell" will open a shell and put all ARexx scripts in trace mode so you
+can run the scripts line by line for debugging purposes. Select "Arexx Shell"
+once again to turn off trace mode and close the shell.
+
 Developing:
 Source code hosted at https://github.com/sacredbanana/AmigaGPT
 You can either compile the code natively or with the Docker container.

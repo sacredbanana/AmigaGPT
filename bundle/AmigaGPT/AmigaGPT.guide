@@ -320,6 +320,8 @@ EXIT
 
 These commands allow you to easily integrate AmigaGPT into your Amiga workflow, automate tasks, or create custom applications that leverage the power of OpenAI's models.
 
+The @{b}ARexx** menu@{ub} allows you to import and run ARexx scripts. Also, selecting @{b}Arexx Shell@{ub} will open a shell and put all ARexx scripts in trace mode so you can run the scripts line by line for debugging purposes. Select @{b}Arexx Shell@{ub} once again to turn off trace mode and close the shell.
+
 @endnode
 
 @node developing "Developing"

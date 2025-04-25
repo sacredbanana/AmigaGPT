@@ -107,14 +107,11 @@ HOOKPROTONHNONP(SpeechAccentMenuItemClickedFunc, void) {
 MakeHook(SpeechAccentMenuItemClickedHook, SpeechAccentMenuItemClickedFunc);
 #endif
 
-HOOKPROTONHNONP(ARexxShellMenuItemClickedFunc, void) {
-    CONST_STRPTR arexxPath = PROGDIR "ARexxShell.arexx";
-    BPTR file = Open(arexxPath, MODE_OLDFILE);
-    if (file == NULL) {
-        displayError(STRING_ERROR_AREXX_SHELL_OPEN);
-    }
-}
-MakeHook(ARexxShellMenuItemClickedHook, ARexxShellMenuItemClickedFunc);
+HOOKPROTONHNONP(OpenARexxShellFunc, void) { Execute("TS\nTCO", NULL, NULL); }
+MakeHook(OpenARexxShellFuncHook, OpenARexxShellFunc);
+
+HOOKPROTONHNONP(CloseARexxShellFunc, void) { Execute("TE\nTCC", NULL, NULL); }
+MakeHook(CloseARexxShellFuncHook, CloseARexxShellFunc);
 
 HOOKPROTONHNONP(ARexxImportScriptMenuItemClickedFunc, void) {
     struct FileRequester *fileReq =
@@ -277,10 +274,11 @@ void createMenu() {
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_AREXX,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_AREXX_AREXX_SHELL, MUIA_UserData,
-    MENU_ITEM_AREXX_AREXX_SHELL, MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
-    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_AREXX_IMPORT_SCRIPT, MUIA_UserData,
+    MENU_ITEM_AREXX_AREXX_SHELL, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Menuitem_Checkit, TRUE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, NM_BARLABEL, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_AREXX_IMPORT_SCRIPT, MUIA_UserData,
     MENU_ITEM_AREXX_IMPORT_SCRIPT, MUIA_Menuitem_CopyStrings, FALSE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_AREXX_RUN_SCRIPT, MUIA_UserData, MENU_ITEM_AREXX_RUN_SCRIPT,
@@ -441,9 +439,12 @@ void addMenuActions() {
 
     Object arexShellMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
                                                 MENU_ITEM_AREXX_AREXX_SHELL);
-    DoMethod(arexShellMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_CallHook,
-             &ARexxShellMenuItemClickedHook, MUIV_TriggerValue);
+    DoMethod(arexShellMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE,
+             MUIV_Notify_Application, 2, MUIM_CallHook,
+             &OpenARexxShellFuncHook);
+    DoMethod(arexShellMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, FALSE,
+             MUIV_Notify_Application, 2, MUIM_CallHook,
+             &CloseARexxShellFuncHook);
 
     Object arexImportScriptMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_AREXX_IMPORT_SCRIPT);
@@ -698,10 +699,6 @@ static void populateOpenAIMenu() {
 static void populateArexxMenu() {
     DoMethod(menuStrip, MUIM_Menustrip_InitChange);
 
-    Object helpMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_HELP);
-    Object openDocumentationMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_HELP_OPEN_DOCUMENTATION);
     Object arexxRunScriptMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_AREXX_RUN_SCRIPT);
 
