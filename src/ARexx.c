@@ -1,4 +1,3 @@
-
 #include <json-c/json.h>
 #include <libraries/mui.h>
 #include <SDI_hook.h>
@@ -120,10 +119,29 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
         size =
             model == DALL_E_2 ? config.imageSizeDallE2 : config.imageSizeDallE3;
     } else {
-        for (UBYTE i = 0; IMAGE_SIZE_NAMES[i] != NULL; i++) {
-            if (strcmp(sizeString, IMAGE_SIZE_NAMES[i]) == 0) {
-                size = i;
-                break;
+        // Set a default size in case no match is found
+        size = model == DALL_E_2 ? IMAGE_SIZES_DALL_E_2[0]
+                                 : IMAGE_SIZES_DALL_E_3[0];
+
+        if (model == DALL_E_2) {
+            // Handle DALL-E 2 sizes
+            for (UBYTE i = 0; IMAGE_SIZES_DALL_E_2[i] != IMAGE_SIZE_NULL;
+                 i++) { // DALL-E 2 has 3 size options
+                enum ImageSize currentSize = IMAGE_SIZES_DALL_E_2[i];
+                if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
+                    size = currentSize;
+                    break;
+                }
+            }
+        } else {
+            // Handle DALL-E 3 sizes
+            for (UBYTE i = 0; IMAGE_SIZES_DALL_E_3[i] != IMAGE_SIZE_NULL;
+                 i++) { // DALL-E 3 has 3 size options
+                enum ImageSize currentSize = IMAGE_SIZES_DALL_E_3[i];
+                if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
+                    size = currentSize;
+                    break;
+                }
             }
         }
     }
@@ -203,8 +221,16 @@ MakeHook(ListImageModelsHook, ListImageModelsFunc);
 
 HOOKPROTONHNO(ListImageSizesFunc, APTR, ULONG *arg) {
     STRPTR sizes = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
-    for (UBYTE i = 0; IMAGE_SIZE_NAMES[i] != NULL; i++) {
-        strncat(sizes, IMAGE_SIZE_NAMES[i], 1024);
+    strncat(sizes, "DALL-E 2\n", 1024);
+    // The IMAGE_SIZES_DALL_E_2 array has 3 elements (not NULL-terminated)
+    for (UBYTE i = 0; i < 3; i++) {
+        strncat(sizes, IMAGE_SIZE_NAMES[IMAGE_SIZES_DALL_E_2[i]], 1024);
+        strncat(sizes, "\n", 1024);
+    }
+    strncat(sizes, "DALL-E 3\n", 1024);
+    // The IMAGE_SIZES_DALL_E_3 array has 3 elements (not NULL-terminated)
+    for (UBYTE i = 0; i < 3; i++) {
+        strncat(sizes, IMAGE_SIZE_NAMES[IMAGE_SIZES_DALL_E_3[i]], 1024);
         strncat(sizes, "\n", 1024);
     }
     set(app, MUIA_Application_RexxString, sizes);

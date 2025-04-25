@@ -71,9 +71,6 @@ CONST_STRPTR CHAT_MODEL_NAMES[] = {
     [GPT_3_5_TURBO] = "gpt-3.5-turbo",
     [GPT_3_5_TURBO_0125] = "gpt-3.5-turbo-0125",
     [GPT_3_5_TURBO_1106] = "gpt-3.5-turbo-1106",
-    [GPT_4_TURBO] = "gpt-4-turbo",
-    [GPT_4_TURBO_2024_04_09] = "gpt-4-turbo-2024-04-09",
-    [GPT_4_TURBO_PREVIEW] = "gpt-4-turbo-preview",
     [GPT_4] = "gpt-4",
     [GPT_4_0613] = "gpt-4-0613",
     [GPT_4_0314] = "gpt-4-0314",
@@ -81,6 +78,9 @@ CONST_STRPTR CHAT_MODEL_NAMES[] = {
     [GPT_4_1_2024_04_14] = "gpt-4.1-2025-04-14",
     [GPT_4_5_PREVIEW] = "gpt-4.5-preview",
     [GPT_4_5_PREVIEW_2025_02_27] = "gpt-4.5-preview-2025-02-27",
+    [GPT_4_TURBO] = "gpt-4-turbo",
+    [GPT_4_TURBO_2024_04_09] = "gpt-4-turbo-2024-04-09",
+    [GPT_4_TURBO_PREVIEW] = "gpt-4-turbo-preview",
     [GPT_4o] = "gpt-4o",
     [GPT_4o_2024_11_20] = "gpt-4o-2024-11-20",
     [GPT_4o_2024_08_06] = "gpt-4o-2024-08-06",
@@ -114,7 +114,7 @@ CONST_STRPTR IMAGE_MODEL_NAMES[] = {
  * The names of the image sizes
  * @see enum ImageSize
  **/
-extern CONST_STRPTR IMAGE_SIZE_NAMES[] = {
+CONST_STRPTR IMAGE_SIZE_NAMES[] = {
     [IMAGE_SIZE_256x256] = "256x256",     [IMAGE_SIZE_512x512] = "512x512",
     [IMAGE_SIZE_1024x1024] = "1024x1024", [IMAGE_SIZE_1792x1024] = "1792x1024",
     [IMAGE_SIZE_1024x1792] = "1024x1792", NULL};
@@ -128,6 +128,22 @@ CONST_STRPTR OPENAI_TTS_MODEL_NAMES[] = {
     [OPENAI_TTS_MODEL_TTS_1_HD] = "tts-1-hd",
     [OPENAI_TTS_MODEL_GPT_4o_MINI_TTS] = "gpt-4o-mini-tts",
     NULL};
+
+/**
+ * The image sizes for DALL-E 2
+ * @see enum ImageSize
+ **/
+const enum ImageSize IMAGE_SIZES_DALL_E_2[] = {
+    IMAGE_SIZE_256x256, IMAGE_SIZE_512x512, IMAGE_SIZE_1024x1024,
+    IMAGE_SIZE_NULL};
+
+/**
+ * The image sizes for DALL-E 3
+ * @see enum ImageSize
+ **/
+const enum ImageSize IMAGE_SIZES_DALL_E_3[] = {
+    IMAGE_SIZE_1024x1024, IMAGE_SIZE_1792x1024, IMAGE_SIZE_1024x1792,
+    IMAGE_SIZE_NULL};
 
 /**
  * The names of the TTS voices
@@ -772,7 +788,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
  *Free it with json_object_put when you are done using it
  **/
 struct json_object *postImageCreationRequestToOpenAI(
-    CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize,
+    CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize imageSize,
     CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost,
     UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
     CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
@@ -799,7 +815,7 @@ struct json_object *postImageCreationRequestToOpenAI(
         obj, "model", json_object_new_string(IMAGE_MODEL_NAMES[imageModel]));
     json_object_object_add(obj, "prompt", json_object_new_string(prompt));
     json_object_object_add(obj, "size",
-                           json_object_new_string(IMAGE_SIZE_NAMES[ImageSize]));
+                           json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
     CONST_STRPTR jsonString = json_object_to_json_string(obj);
 
     STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);

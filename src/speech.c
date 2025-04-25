@@ -39,11 +39,10 @@ struct FliteVoice *voice = NULL;
  * The names of the speech voices
  * @see enum SpeechFliteVoice
  **/
-const STRPTR SPEECH_FLITE_VOICE_NAMES[] = {[SPEECH_FLITE_VOICE_KAL] = "kal",
-                                           [SPEECH_FLITE_VOICE_KAL16] = "kal16",
-                                           [SPEECH_FLITE_VOICE_AWB] = "awb",
-                                           [SPEECH_FLITE_VOICE_RMS] = "rms",
-                                           [SPEECH_FLITE_VOICE_SLT] = "slt"};
+const STRPTR SPEECH_FLITE_VOICE_NAMES[] = {
+    [SPEECH_FLITE_VOICE_KAL] = "kal", [SPEECH_FLITE_VOICE_KAL16] = "kal16",
+    [SPEECH_FLITE_VOICE_AWB] = "awb", [SPEECH_FLITE_VOICE_RMS] = "rms",
+    [SPEECH_FLITE_VOICE_SLT] = "slt", NULL};
 
 static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size);
 
@@ -55,7 +54,8 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
                                       [SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
                                       [SPEECH_SYSTEM_FLITE] = "Flite",
                                       [SPEECH_SYSTEM_OPENAI] =
-                                          "OpenAI Text To Speech"};
+                                          "OpenAI Text To Speech",
+                                      NULL};
 
 /**
  * Initialise the speech system

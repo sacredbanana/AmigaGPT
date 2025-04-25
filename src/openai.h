@@ -40,9 +40,6 @@ enum ChatModel {
     GPT_3_5_TURBO,
     GPT_3_5_TURBO_0125,
     GPT_3_5_TURBO_1106,
-    GPT_4_TURBO,
-    GPT_4_TURBO_2024_04_09,
-    GPT_4_TURBO_PREVIEW,
     GPT_4,
     GPT_4_0613,
     GPT_4_0314,
@@ -50,6 +47,9 @@ enum ChatModel {
     GPT_4_1_2024_04_14,
     GPT_4_5_PREVIEW,
     GPT_4_5_PREVIEW_2025_02_27,
+    GPT_4_TURBO,
+    GPT_4_TURBO_2024_04_09,
+    GPT_4_TURBO_PREVIEW,
     GPT_4o,
     GPT_4o_2024_11_20,
     GPT_4o_2024_08_06,
@@ -130,7 +130,8 @@ extern CONST_STRPTR OPENAI_TTS_VOICE_NAMES[];
 /**
  * The size of the requested image
  **/
-extern enum ImageSize {
+enum ImageSize {
+    IMAGE_SIZE_NULL = -1L,
     IMAGE_SIZE_256x256 = 0L,
     IMAGE_SIZE_512x512,
     IMAGE_SIZE_1024x1024,
@@ -142,7 +143,19 @@ extern enum ImageSize {
  * The names of the image sizes
  * @see enum ImageSize
  **/
-extern CONST_STRPTR IMAGE_SIZE_NAMES[];
+CONST_STRPTR IMAGE_SIZE_NAMES[];
+
+/**
+ * The image sizes for DALL-E 2
+ * @see enum ImageSize
+ **/
+extern const enum ImageSize IMAGE_SIZES_DALL_E_2[];
+
+/**
+ * The image sizes for DALL-E 3
+ * @see enum ImageSize
+ **/
+extern const enum ImageSize IMAGE_SIZES_DALL_E_3[];
 
 /**
  * Struct representing a generated image
