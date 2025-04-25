@@ -107,10 +107,22 @@ HOOKPROTONHNONP(SpeechAccentMenuItemClickedFunc, void) {
 MakeHook(SpeechAccentMenuItemClickedHook, SpeechAccentMenuItemClickedFunc);
 #endif
 
-HOOKPROTONHNONP(OpenARexxShellFunc, void) { Execute("TS\nTCO", NULL, NULL); }
+HOOKPROTONHNONP(OpenARexxShellFunc, void) {
+#ifdef __AMIGAOS3__
+    Execute("TS\nTCO", NULL, NULL);
+#else
+    SystemTagList("TS\nTCO", TAG_DONE);
+#endif
+}
 MakeHook(OpenARexxShellFuncHook, OpenARexxShellFunc);
 
-HOOKPROTONHNONP(CloseARexxShellFunc, void) { Execute("TE\nTCC", NULL, NULL); }
+HOOKPROTONHNONP(CloseARexxShellFunc, void) {
+#ifdef __AMIGAOS3__
+    Execute("TE\nTCC", NULL, NULL);
+#else
+    System("TE\nTCC", TAG_DONE);
+#endif
+}
 MakeHook(CloseARexxShellFuncHook, CloseARexxShellFunc);
 
 HOOKPROTONHNONP(ARexxImportScriptMenuItemClickedFunc, void) {
@@ -219,19 +231,20 @@ void createMenu() {
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_CONNECTION,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_ENABLED, MUIA_UserData,
-    MENU_ITEM_CONNECTION_PROXY_ENABLED, MUIA_Menuitem_Checkit, TRUE,
-    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_SETTINGS, MUIA_UserData,
-    MENU_ITEM_CONNECTION_PROXY_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
-    End,
+    MENU_ITEM_CONNECTION_PROXY_ENABLED, MUIA_Menuitem_Toggle, TRUE,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_SETTINGS, MUIA_UserData, MENU_ITEM_CONNECTION_PROXY_SETTINGS,
+    MUIA_Menuitem_CopyStrings, FALSE, End, End,
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_SPEECH,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_ENABLED, MUIA_UserData,
-    MENU_ITEM_SPEECH_ENABLED, MUIA_Menuitem_Checkit, TRUE,
-    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_SPEECH_SYSTEM, MUIA_UserData,
-    MENU_ITEM_SPEECH_SYSTEM, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MENU_ITEM_SPEECH_ENABLED, MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle,
+    TRUE, MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child,
+    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_SPEECH_SYSTEM,
+    MUIA_UserData, MENU_ITEM_SPEECH_SYSTEM, MUIA_Menuitem_CopyStrings, FALSE,
+    End,
 #ifdef __AMIGAOS3__
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_SPEECH_ACCENT, MUIA_UserData, MENU_ITEM_SPEECH_ACCENT,
@@ -275,10 +288,10 @@ void createMenu() {
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_AREXX_AREXX_SHELL, MUIA_UserData,
     MENU_ITEM_AREXX_AREXX_SHELL, MUIA_Menuitem_CopyStrings, FALSE,
-    MUIA_Menuitem_Checkit, TRUE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, NM_BARLABEL, MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_AREXX_IMPORT_SCRIPT, MUIA_UserData,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_AREXX_IMPORT_SCRIPT, MUIA_UserData,
     MENU_ITEM_AREXX_IMPORT_SCRIPT, MUIA_Menuitem_CopyStrings, FALSE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_AREXX_RUN_SCRIPT, MUIA_UserData, MENU_ITEM_AREXX_RUN_SCRIPT,
@@ -514,14 +527,14 @@ static void populateSpeechMenu() {
     for (UBYTE i = 0; SPEECH_FLITE_VOICE_NAMES[i] != NULL; i++) {
         Object *newFliteVoiceMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                SPEECH_FLITE_VOICE_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
-               MUIA_Menuitem_Checked, config.fliteVoice == i,
+               MUIA_Menuitem_Checked, config.speechFliteVoice == i,
                MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_CopyStrings,
                FALSE, End;
         DoMethod(fliteVoiceMenuItem, MUIM_Family_AddTail,
                  newFliteVoiceMenuItem);
         DoMethod(newFliteVoiceMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
                  TRUE, MUIV_Notify_Self, 3, MUIM_WriteLong, i,
-                 &config.fliteVoice);
+                 &config.speechFliteVoice);
         DoMethod(newFliteVoiceMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
                  MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
                  MUIA_Menuitem_Checked, TRUE);
@@ -709,6 +722,8 @@ static void populateArexxMenu() {
         DoMethod(arexxRunScriptMenuItem, MUIM_Family_Remove, scriptMenuItem);
         DisposeObject(scriptMenuItem);
     }
+#ifdef __AMIGAOS3__
+
     // Scan the rexx directory for .rexx files
     BPTR lock = Lock(PROGDIR "rexx", ACCESS_READ);
     if (lock != 0) {
@@ -739,6 +754,37 @@ static void populateArexxMenu() {
             FreeDosObject(DOS_FIB, fib);
             UnLock(lock);
         }
-        DoMethod(menuStrip, MUIM_Menustrip_ExitChange);
     }
+#else
+    APTR context =
+        ObtainDirContextTags(EX_StringNameInput, PROGDIR "rexx", EX_DataFields,
+                             (EXF_NAME | EXF_LINK | EXF_TYPE), TAG_END);
+    if (context) {
+        struct ExamineData *dat;
+
+        while ((dat = ExamineDir(context))) /* until no more data.*/
+        {
+            if (EXD_IS_FILE(dat)) /* a file */
+            {
+                if (strlen(dat->Name) > 5 &&
+                    !stricmp(&dat->Name[strlen(dat->Name) - 5], ".rexx")) {
+                    Object *newScriptMenuItem = MenuitemObject,
+                           MUIA_Menuitem_Title, dat->Name,
+                           MUIA_Menuitem_CopyStrings, TRUE, MUIA_UserData,
+                           (APTR)MENU_ITEM_AREXX_SCRIPT, End;
+                    DoMethod(arexxRunScriptMenuItem, MUIM_Family_AddTail,
+                             newScriptMenuItem);
+                    DoMethod(newScriptMenuItem, MUIM_Notify,
+                             MUIA_Menuitem_Trigger, MUIV_EveryTime,
+                             MUIV_Notify_Self, 2, MUIM_CallHook,
+                             &ARexxRunScriptMenuItemClickedHook);
+                }
+            }
+        }
+    } else {
+        displayError(STRING_ERROR);
+    }
+    ReleaseDirContext(context);
+#endif
+    DoMethod(menuStrip, MUIM_Menustrip_ExitChange);
 }

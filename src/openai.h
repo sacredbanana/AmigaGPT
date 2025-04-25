@@ -143,7 +143,7 @@ enum ImageSize {
  * The names of the image sizes
  * @see enum ImageSize
  **/
-CONST_STRPTR IMAGE_SIZE_NAMES[];
+extern CONST_STRPTR IMAGE_SIZE_NAMES[];
 
 /**
  * The image sizes for DALL-E 2

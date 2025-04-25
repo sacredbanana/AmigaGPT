@@ -53,7 +53,9 @@ struct EmulLibEntry muiDispatcherEntry = {TRAP_LIB, 0,
 
 struct Library *MUIMasterBase;
 struct Library *CodesetsBase;
+#ifndef __AMIGAOS4__
 struct Library *ARexxBase = NULL;
+#endif
 Object *app = NULL;
 ULONG redPen = NULL, greenPen = NULL, bluePen = NULL, yellowPen = NULL;
 struct Screen *screen;
