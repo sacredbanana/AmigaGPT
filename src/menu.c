@@ -230,12 +230,13 @@ void createMenu() {
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_CONNECTION,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_ENABLED, MUIA_UserData,
-    MENU_ITEM_CONNECTION_PROXY_ENABLED, MUIA_Menuitem_Toggle, TRUE,
-    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Menuitem_Title, STRING_MENU_PROXY, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_ENABLED,
+    MUIA_UserData, MENU_ITEM_CONNECTION_PROXY_ENABLED, MUIA_Menuitem_Toggle,
+    TRUE, MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_CopyStrings, FALSE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_SETTINGS, MUIA_UserData, MENU_ITEM_CONNECTION_PROXY_SETTINGS,
-    MUIA_Menuitem_CopyStrings, FALSE, End, End,
+    MUIA_Menuitem_CopyStrings, FALSE, End, End, End,
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_SPEECH,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
@@ -503,8 +504,8 @@ static void populateSpeechMenu() {
         Object *newSpeechSystemMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                SPEECH_SYSTEM_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
                MUIA_Menuitem_Checked, config.speechSystem == i,
-               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_CopyStrings,
-               FALSE, End;
+               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
+               MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(speechSystemMenuItem, MUIM_Family_AddTail,
                  newSpeechSystemMenuItem);
         DoMethod(newSpeechSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
@@ -528,8 +529,8 @@ static void populateSpeechMenu() {
         Object *newFliteVoiceMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                SPEECH_FLITE_VOICE_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
                MUIA_Menuitem_Checked, config.speechFliteVoice == i,
-               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_CopyStrings,
-               FALSE, End;
+               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
+               MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(fliteVoiceMenuItem, MUIM_Family_AddTail,
                  newFliteVoiceMenuItem);
         DoMethod(newFliteVoiceMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
@@ -554,8 +555,8 @@ static void populateSpeechMenu() {
         Object *newOpenAIVoiceMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                OPENAI_TTS_VOICE_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
                MUIA_Menuitem_Checked, config.openAITTSVoice == i,
-               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_CopyStrings,
-               FALSE, End;
+               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
+               MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(openAIVoiceMenuItem, MUIM_Family_AddTail,
                  newOpenAIVoiceMenuItem);
         DoMethod(newOpenAIVoiceMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
@@ -579,8 +580,8 @@ static void populateSpeechMenu() {
         Object *newOpenAITTSModelMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                OPENAI_TTS_MODEL_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
                MUIA_Menuitem_Checked, config.openAITTSModel == i,
-               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_CopyStrings,
-               FALSE, End;
+               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
+               MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(openAITTSModelMenuItem, MUIM_Family_AddTail,
                  newOpenAITTSModelMenuItem);
         DoMethod(newOpenAITTSModelMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
@@ -616,11 +617,16 @@ static void populateOpenAIMenu() {
         Object *newChatModelMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                CHAT_MODEL_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
                MUIA_Menuitem_Checked, config.chatModel == i,
-               MUIA_Menuitem_Exclude, ~0, MUIA_Menuitem_CopyStrings, FALSE, End;
+               MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_Exclude, ~0,
+               MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(openAIChatModelMenuItem, MUIM_Family_AddTail,
                  newChatModelMenuItem);
-        DoMethod(newChatModelMenuItem, MUIM_Notify, MUIA_Menuitem_Checked, TRUE,
-                 MUIV_Notify_Self, 3, MUIM_WriteLong, i, &config.chatModel);
+        DoMethod(newChatModelMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+                 MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
+                 MUIA_Menuitem_Checked, TRUE);
+        DoMethod(newChatModelMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+                 MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_WriteLong, i,
+                 &config.chatModel);
     }
 
     Object *openAIImageModelMenuItem = (Object *)DoMethod(
@@ -640,8 +646,8 @@ static void populateOpenAIMenu() {
         Object *newImageModelMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                IMAGE_MODEL_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
                MUIA_Menuitem_Checked, config.imageModel == i,
-               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_CopyStrings,
-               FALSE, End;
+               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
+               MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(openAIImageModelMenuItem, MUIM_Family_AddTail,
                  newImageModelMenuItem);
         DoMethod(newImageModelMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
@@ -668,7 +674,8 @@ static void populateOpenAIMenu() {
                MUIA_Menuitem_Title, IMAGE_SIZE_NAMES[imageSize],
                MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
                config.imageSizeDallE2 == imageSize, MUIA_Menuitem_Exclude,
-               ~(1 << i), MUIA_Menuitem_CopyStrings, FALSE, End;
+               ~(1 << i), MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_CopyStrings,
+               FALSE, End;
         DoMethod(openAIImageSizeDALL_E_2MenuItem, MUIM_Family_AddTail,
                  newImageSizeDallE2MenuItem);
         DoMethod(newImageSizeDallE2MenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
@@ -695,7 +702,8 @@ static void populateOpenAIMenu() {
                MUIA_Menuitem_Title, IMAGE_SIZE_NAMES[imageSize],
                MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
                config.imageSizeDallE3 == imageSize, MUIA_Menuitem_Exclude,
-               ~(1 << i), MUIA_Menuitem_CopyStrings, FALSE, End;
+               ~(1 << i), MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_CopyStrings,
+               FALSE, End;
         DoMethod(openAIImageSizeDALL_E_3MenuItem, MUIM_Family_AddTail,
                  newImageSizeDallE3MenuItem);
         DoMethod(newImageSizeDallE3MenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
