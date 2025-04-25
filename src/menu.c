@@ -730,9 +730,9 @@ static void populateArexxMenu() {
         DoMethod(arexxRunScriptMenuItem, MUIM_Family_Remove, scriptMenuItem);
         DisposeObject(scriptMenuItem);
     }
-#ifdef __AMIGAOS3__
 
     // Scan the rexx directory for .rexx files
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
     BPTR lock = Lock(PROGDIR "rexx", ACCESS_READ);
     if (lock != 0) {
         struct FileInfoBlock *fib = AllocDosObject(DOS_FIB, NULL);

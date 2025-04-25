@@ -85,8 +85,8 @@
   if (= #index 3) (set @result "dansk") (
   if (= #index 4) (set @result "deutsch") (
   if (= #index 5) (set @result "english_british") (
-  if (= #index 6) (set @result "espaï¿½ol") (
-  if (= #index 7) (set @result "franï¿½ais") (
+  if (= #index 6) (set @result "español") (
+  if (= #index 7) (set @result "français") (
   if (= #index 8) (set @result "greek") (
   if (= #index 9) (set @result "hrvatski") (
   if (= #index 10) (set @result "italiano") (
@@ -94,14 +94,14 @@
   if (= #index 12) (set @result "nederlands") (
   if (= #index 13) (set @result "norsk") (
   if (= #index 14) (set @result "polski") (
-  if (= #index 15) (set @result "portuguï¿½s") (
+  if (= #index 15) (set @result "português") (
   if (= #index 16) (set @result "russian") (
   if (= #index 17) (set @result "slovak") (
   if (= #index 18) (set @result "slovensko") (
   if (= #index 19) (set @result "srpski") (
   if (= #index 20) (set @result "suomi") (
   if (= #index 21) (set @result "svenska") (
-  if (= #index 22) (set @result "tï¿½rkï¿½e") (
+  if (= #index 22) (set @result "türkçe") (
   (set @result "unknown")
   ))))))))))))))))))))))))
   )
