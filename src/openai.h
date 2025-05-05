@@ -96,7 +96,6 @@ enum OpenAITTSModel {
     OPENAI_TTS_MODEL_TTS_1 = 0L,
     OPENAI_TTS_MODEL_TTS_1_HD,
     OPENAI_TTS_MODEL_GPT_4o_MINI_TTS
-
 };
 
 /**

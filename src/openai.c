@@ -842,6 +842,8 @@ struct json_object *postImageCreationRequestToOpenAI(
     if (imageModel != GPT_IMAGE_1) {
         json_object_object_add(obj, "response_format",
                                json_object_new_string("b64_json"));
+        json_object_object_add(obj, "moderation",
+                               json_object_new_string("low"));
     }
     CONST_STRPTR jsonString = json_object_to_json_string(obj);
 
@@ -1740,7 +1742,6 @@ APTR postTextToSpeechRequestToOpenAI(
         }
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
-        updateStatusBar(STRING_ERROR_CONNECTION, redPen);
         LONG err = SSL_get_error(ssl, ssl_err);
         switch (err) {
         case SSL_ERROR_WANT_READ:

@@ -1609,6 +1609,8 @@ void displayError(STRPTR message) {
     } else {
         STRPTR errorDescription = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY);
         Fault(ERROR_CODE, NULL, errorDescription, ERROR_BUFFER_LENGTH);
+        snprintf(errorMessage, ERROR_BUFFER_LENGTH, "%s: %s\n\n%s\0",
+                 STRING_ERROR, errorDescription, message);
         if (app) {
             MUI_Request(app, mainWindowObject,
 #ifdef __MORPHOS__
@@ -1618,8 +1620,6 @@ void displayError(STRPTR message) {
 #endif
                         STRING_ERROR, okString, "\33c%s", errorMessage);
         } else {
-            snprintf(errorMessage, ERROR_BUFFER_LENGTH, "%s: %s\n\n%s\0",
-                     STRING_ERROR, errorDescription, message);
             struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,
                                          STRING_ERROR, errorMessage, STRING_OK};
             EasyRequest(NULL, &errorES, NULL, NULL);
