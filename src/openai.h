@@ -278,3 +278,11 @@ APTR postTextToSpeechRequestToOpenAI(
  * Cleanup the OpenAI connector and free all resources
  **/
 void closeOpenAIConnector();
+
+/**
+ * Decode a base64 encoded string
+ * @param dataB64 the base64 encoded string
+ * @param data_len the length of the decoded data
+ * @return a pointer to the decoded data
+ */
+UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len);

@@ -1,7 +1,8 @@
 # Changelog
 
-## 2.6.0 (2025-05-05)
+## 2.6.0 (2025-05-06)
 
+- Added gpt-image-1 image model
 - Fixed bug where AmigaGPT would get stuck after sending multiple chat messages
 - Fixed the bsdsocket.library error that appears on MorphOS if the app is closed before it has finished loading
 - Error messages can now be displayed in a requester if MUI is not finished initialising the app

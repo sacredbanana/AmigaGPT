@@ -54,7 +54,7 @@ BUILD_DATE := $(shell date +%d.%m.%Y)
 
 CCFLAGS = -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -fbaserel -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\" -DBUILD_DATE=\"$(BUILD_DATE)\"
 ifeq ($(DEBUG),1)
-	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -O0
+	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -O1
 else
 # Writing to disk crashes inside hooks in anything higher than -O1
 	CCFLAGS += -DPROGDIR=\"PROGDIR:\" -O1

@@ -9,7 +9,7 @@
             "serverLaunchTimeout": 100000000,
             "miDebuggerPath": "/opt/amiga/bin/m68k-amigaos-gdb",
             "miDebuggerServerAddress": "localhost:2345",
-            "program": "${workspaceFolder}/out/AmigaGPT",
+            "program": "${workspaceFolder}/out/AmigaGPT_OS3",
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "Compile OS3 version locally - Debug",
             "externalConsole": true,
@@ -29,7 +29,7 @@
             "MIMode": "gdb",
             "miDebuggerPath": "/opt/amiga/bin/m68k-amigaos-gdb",
             "miDebuggerServerAddress": "pistorm:2345",
-            "program": "${workspaceFolder}/out/AmigaGPT",
+            "program": "${workspaceFolder}/out/AmigaGPT_OS3",
             "cwd": "${workspaceFolder}",
             // "preLaunchTask": "Compile OS3 version locally - Debug",
             "externalConsole": true,
@@ -113,6 +113,6 @@
             "environment": [],
             "externalConsole": false,
             "MIMode": "lldb"
-        }       
+        }
     ]
 }

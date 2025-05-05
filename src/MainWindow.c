@@ -249,9 +249,21 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
                                CSA_Source, (Tag)text, TAG_DONE);
 
-        const enum ImageSize imageSize = config.imageModel == DALL_E_2
-                                             ? config.imageSizeDallE2
-                                             : config.imageSizeDallE3;
+        enum ImageSize imageSize;
+        switch (config.imageModel) {
+        case DALL_E_2:
+            imageSize = config.imageSizeDallE2;
+            break;
+        case DALL_E_3:
+            imageSize = config.imageSizeDallE3;
+            break;
+        case GPT_IMAGE_1:
+            imageSize = config.imageSizeGptImage1;
+            break;
+        default:
+            imageSize = config.imageSizeDallE2;
+            break;
+        }
         struct json_object *response = postImageCreationRequestToOpenAI(
             textUTF8, config.imageModel, imageSize, config.openAiApiKey,
             config.proxyEnabled, config.proxyHost, config.proxyPort,
@@ -292,8 +304,11 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             json_object_get_array(json_object_object_get(response, "data"));
         struct json_object *dataObject = (struct json_object *)data->array[0];
 
-        STRPTR url =
-            json_object_get_string(json_object_object_get(dataObject, "url"));
+        STRPTR b64 = json_object_get_string(
+            json_object_object_get(dataObject, "b64_json"));
+
+        LONG data_len;
+        UBYTE *imageData = decodeBase64(b64, &data_len);
 
         CreateDir(PROGDIR "images");
         CreateDir(PROGDIR "images/thumbnails");
@@ -308,10 +323,10 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         }
         snprintf(fullPath, sizeof(fullPath), PROGDIR "images/%s.png", id);
 
-        downloadFile(url, fullPath, config.proxyEnabled, config.proxyHost,
-                     config.proxyPort, config.proxyUsesSSL,
-                     config.proxyRequiresAuth, config.proxyUsername,
-                     config.proxyPassword);
+        FILE *file = fopen(fullPath, "wb");
+        fwrite(imageData, 1, data_len, file);
+        fclose(file);
+        FreeVec(imageData);
 
         json_object_put(response);
 
@@ -336,6 +351,18 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         case IMAGE_SIZE_1024x1792:
             imageWidth = 1024;
             imageHeight = 1792;
+            break;
+        case IMAGE_SIZE_1024x1536:
+            imageWidth = 1024;
+            imageHeight = 1536;
+            break;
+        case IMAGE_SIZE_1536x1024:
+            imageWidth = 1536;
+            imageHeight = 1024;
+            break;
+        case IMAGE_SIZE_AUTO:
+            imageWidth = 1024;
+            imageHeight = 1024;
             break;
         default:
             displayError(STRING_ERROR_INVALID_IMAGE_SIZE);

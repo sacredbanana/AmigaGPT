@@ -12,7 +12,8 @@
                     "cwd": "${workspaceRoot}",
                     "env": {
                         "DEBUG": "1",
-                        "PATH": "/opt/amiga/bin:${env:PATH}"
+                        "PATH": "/opt/amiga/bin:${env:PATH}",
+                        "FLEXCAT_SDDIR": "/opt/amiga/lib/flexcat"
                     }
                 },
             },
@@ -32,7 +33,10 @@
                     "DEBUG": "1",
                 }
             },
-            "args": ["clean", "all"],
+            "args": [
+                "clean",
+                "all"
+            ],
             "problemMatcher": [
                 {
                     "base": "$gcc",
@@ -77,7 +81,10 @@
                     "PATH": "/opt/amiga/bin:${env:PATH}"
                 }
             },
-            "args": ["clean", "all"],
+            "args": [
+                "clean",
+                "all"
+            ],
             "problemMatcher": [
                 {
                     "base": "$gcc",
@@ -185,7 +192,12 @@
                     "DEBUG": "1",
                 }
             },
-            "args": ["clean", "all", "-f", "Makefile.OS4"],
+            "args": [
+                "clean",
+                "all",
+                "-f",
+                "Makefile.OS4"
+            ],
             "problemMatcher": [
                 {
                     "base": "$gcc",
@@ -230,7 +242,12 @@
                     "PATH": "/opt/amiga/bin:${env:PATH}"
                 }
             },
-            "args": ["clean", "all", "-f", "Makefile.OS4"],
+            "args": [
+                "clean",
+                "all",
+                "-f",
+                "Makefile.OS4"
+            ],
             "problemMatcher": [
                 {
                     "base": "$gcc",

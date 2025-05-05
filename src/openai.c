@@ -776,6 +776,22 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
 }
 
 /**
+ * Decode a base64 encoded string
+ * @param dataB64 the base64 encoded string
+ * @param data_len the length of the decoded data
+ * @return a pointer to the decoded data
+ */
+UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len) {
+    LONG dataB64_len = strlen(dataB64);
+    *data_len = 3 * dataB64_len / 4;
+    UBYTE *data = AllocVec(*data_len, MEMF_ANY | MEMF_CLEAR);
+    EVP_DecodeBlock(data, dataB64, dataB64_len);
+    while (dataB64[--dataB64_len] == '=')
+        (*data_len)--;
+    return data;
+}
+
+/**
  * Post a image creation request to OpenAI
  * @param prompt the prompt to use
  * @param imageModel the image model to use
@@ -799,6 +815,8 @@ struct json_object *postImageCreationRequestToOpenAI(
     struct json_object *response = NULL;
     UWORD responseIndex = 0;
     BOOL useSSL = !useProxy || proxyUsesSSL;
+    struct json_tokener *tokener = json_tokener_new();
+    json_tokener_set_flags(tokener, JSON_TOKENER_STRICT);
 
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
 
@@ -809,6 +827,7 @@ struct json_object *postImageCreationRequestToOpenAI(
                                proxyUsername, proxyPassword) == RETURN_ERROR) {
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
+            json_tokener_free(tokener);
             return NULL;
         }
     }
@@ -820,6 +839,10 @@ struct json_object *postImageCreationRequestToOpenAI(
     json_object_object_add(obj, "prompt", json_object_new_string(prompt));
     json_object_object_add(obj, "size",
                            json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
+    if (imageModel != GPT_IMAGE_1) {
+        json_object_object_add(obj, "response_format",
+                               json_object_new_string("b64_json"));
+    }
     CONST_STRPTR jsonString = json_object_to_json_string(obj);
 
     STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
@@ -867,6 +890,7 @@ struct json_object *postImageCreationRequestToOpenAI(
         UBYTE statusMessage[64];
         UBYTE *tempReadBuffer = AllocVec(
             useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+        BOOL foundJson = FALSE;
 
         while (!doneReading) {
             DoMethod(loadingBar, MUIM_Busy_Move);
@@ -882,7 +906,9 @@ struct json_object *postImageCreationRequestToOpenAI(
             snprintf(statusMessage, sizeof(statusMessage), "%s (%lu %s)",
                      STRING_DOWNLOADING_IMAGE, totalBytesRead, STRING_BYTES);
             updateStatusBar(statusMessage, yellowPen);
-            strcat(readBuffer, tempReadBuffer);
+            if (!foundJson) {
+                strcat(readBuffer, tempReadBuffer);
+            }
             if (useSSL) {
                 err = SSL_get_error(ssl, bytesRead);
             } else {
@@ -905,26 +931,32 @@ struct json_object *postImageCreationRequestToOpenAI(
                     doneReading = TRUE;
                 }
                 totalBytesRead += bytesRead;
-                CONST_STRPTR jsonStart = "{";
-                STRPTR jsonString = readBuffer;
-                STRPTR lastJsonString = jsonString;
-                while (jsonString = strstr(jsonString, jsonStart)) {
-                    lastJsonString = jsonString;
-
-                    struct json_object *parsedResponse =
-                        json_tokener_parse(jsonString);
-                    if (parsedResponse != NULL) {
-                        response = parsedResponse;
-                        break;
-                    } else {
-                        jsonString = NULL;
-                        break;
+                if (!foundJson) {
+                    CONST_STRPTR jsonStart = "{";
+                    jsonString = readBuffer;
+                    jsonString = strstr(jsonString, jsonStart);
+                    if (jsonString == NULL) {
+                        continue;
                     }
+                    foundJson = TRUE;
+                }
+                enum json_tokener_error jerr;
+                jerr = json_tokener_get_error(tokener);
+                if (jerr != json_tokener_continue) {
+                    response = json_tokener_parse_ex(tokener, jsonString,
+                                                     strlen(jsonString));
+                } else {
+                    response = json_tokener_parse_ex(tokener, tempReadBuffer,
+                                                     bytesRead);
+                }
+                jerr = json_tokener_get_error(tokener);
+
+                if (jerr != json_tokener_success &&
+                    jerr != json_tokener_continue) {
+                    displayError(json_tokener_error_desc(jerr));
                 }
 
-                if (json_tokener_parse(lastJsonString) == NULL) {
-                    snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0",
-                             lastJsonString);
+                if (response == NULL) {
                     continue;
                 }
 
@@ -1012,6 +1044,7 @@ struct json_object *postImageCreationRequestToOpenAI(
         ssl = NULL;
     }
     sock = -1;
+    json_tokener_free(tokener);
     return response;
 }
 
