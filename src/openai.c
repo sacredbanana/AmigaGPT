@@ -39,9 +39,9 @@ static STRPTR getModelName(enum ChatModel model);
 static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
 static STRPTR base64Encode(CONST_STRPTR input);
 
+struct Library *SocketBase;
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
-struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase,
-    *SocketBase = NULL;
+struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase;
 #endif
 #ifdef __AMIGAOS4__
 struct AmiSSLMasterIFace *IAmiSSLMaster;
@@ -204,12 +204,12 @@ LONG initOpenAIConnector() {
     readBuffer = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY);
     writeBuffer = AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY);
 
-#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+#if defined(__AMIGAOS3__)
     if ((SocketBase = OpenLibrary("bsdsocket.library", 0)) == NULL) {
         displayError(STRING_ERROR_BSDSOCKET_LIB_OPEN);
         return RETURN_ERROR;
     }
-#else
+#elif defined(__AMIGAOS4__)
     if ((SocketBase = OpenLibrary("bsdsocket.library", 4)) == NULL) {
         displayError(STRING_ERROR_BSDSOCKET_LIB_OPEN_OS4);
         return RETURN_ERROR;
@@ -1787,7 +1787,6 @@ void closeOpenAIConnector() {
         CloseLibrary(AmiSSLMasterBase);
         AmiSSLMasterBase = NULL;
     }
-#endif
 
     if (SocketBase) {
 #ifdef __AMIGAOS4__
@@ -1796,6 +1795,7 @@ void closeOpenAIConnector() {
         CloseLibrary(SocketBase);
         SocketBase = NULL;
     }
+#endif
 
     sock = -1;
 

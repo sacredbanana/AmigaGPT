@@ -1,4 +1,5 @@
 #include <classes/arexx.h>
+#include <dos/dostags.h>
 #include <libraries/amigaguide.h>
 #include <libraries/asl.h>
 #include <libraries/gadtools.h>
@@ -108,19 +109,19 @@ MakeHook(SpeechAccentMenuItemClickedHook, SpeechAccentMenuItemClickedFunc);
 #endif
 
 HOOKPROTONHNONP(OpenARexxShellFunc, void) {
-#ifdef __AMIGAOS3__
-    Execute("TS\nTCO", NULL, NULL);
+#ifdef __MORPHOS__
+    SystemTags("TS && TCO", TAG_DONE);
 #else
-    SystemTagList("TS\nTCO", TAG_DONE);
+    SystemTags("PATH ADD SYS:Rexxc && TS && TCO", TAG_DONE);
 #endif
 }
 MakeHook(OpenARexxShellFuncHook, OpenARexxShellFunc);
 
 HOOKPROTONHNONP(CloseARexxShellFunc, void) {
-#ifdef __AMIGAOS3__
-    Execute("TE\nTCC", NULL, NULL);
+#ifdef __MORPHOS__
+    SystemTags("TE && TCC", TAG_DONE);
 #else
-    SystemTagList("TE\nTCC", TAG_DONE);
+    SystemTags("PATH ADD SYS:Rexxc >NIL: && TE && TCC", TAG_DONE);
 #endif
 }
 MakeHook(CloseARexxShellFuncHook, CloseARexxShellFunc);

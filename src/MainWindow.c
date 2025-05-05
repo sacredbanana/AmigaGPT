@@ -1557,6 +1557,8 @@ copyGeneratedImage(struct GeneratedImage *generatedImage) {
  * @param message the message to display
  **/
 void displayError(STRPTR message) {
+    const UBYTE ERROR_BUFFER_LENGTH = 255;
+    STRPTR errorMessage = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
     CONST_STRPTR okString =
         AllocVec(strlen(STRING_OK) + 2, MEMF_ANY | MEMF_CLEAR);
     snprintf(okString, strlen(STRING_OK) + 2, "*%s", STRING_OK);
@@ -1570,29 +1572,32 @@ void displayError(STRPTR message) {
                         MUIV_Requester_Image_Error,
 #endif
                         STRING_ERROR, okString, "\33c%s", message) != 0) {
-            fprintf(stderr, "%s\n", message);
+            struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,
+                                         STRING_ERROR, message, STRING_OK};
+            EasyRequest(NULL, &errorES, NULL, NULL);
         }
     } else {
+        STRPTR errorDescription = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY);
+        Fault(ERROR_CODE, NULL, errorDescription, ERROR_BUFFER_LENGTH);
         if (app) {
-            const UBYTE ERROR_BUFFER_LENGTH = 255;
-            STRPTR errorMessage =
-                AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
-            if (errorMessage) {
-                Fault(ERROR_CODE, message, errorMessage, ERROR_BUFFER_LENGTH);
-                MUI_Request(app, mainWindowObject,
+            MUI_Request(app, mainWindowObject,
 #ifdef __MORPHOS__
-                            NULL,
+                        NULL,
 #else
-                            MUIV_Requester_Image_Error,
+                        MUIV_Requester_Image_Error,
 #endif
-                            STRING_ERROR, okString, "\33c%s", errorMessage);
-                updateStatusBar(STRING_ERROR, redPen);
-                FreeVec(errorMessage);
-            }
+                        STRING_ERROR, okString, "\33c%s", errorMessage);
+            updateStatusBar(STRING_ERROR, redPen);
         } else {
-            PrintFault(ERROR_CODE, message);
+            snprintf(errorMessage, ERROR_BUFFER_LENGTH, "%s: %s\n\n%s\0",
+                     STRING_ERROR, errorDescription, message);
+            struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,
+                                         STRING_ERROR, errorMessage, STRING_OK};
+            EasyRequest(NULL, &errorES, NULL, NULL);
         }
+        FreeVec(errorDescription);
     }
+    FreeVec(errorMessage);
     FreeVec(okString);
 }
 

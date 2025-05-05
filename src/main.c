@@ -51,7 +51,11 @@ LONG main(int argc, char **argv) {
     ULONG total = upper - lower;
 
     if (total < 32768) {
-        printf("%s %ld %s.\n", STRING_WARNING_STACK, total, STRING_BYTES);
+        STRPTR warningMessage = AllocVec(512, MEMF_ANY);
+        snprintf(warningMessage, 512, "%s %ld %s.\n", STRING_WARNING_STACK,
+                 total, STRING_BYTES);
+        displayError(warningMessage);
+        FreeVec(warningMessage);
     }
 #else
     if (argc == 0) {
