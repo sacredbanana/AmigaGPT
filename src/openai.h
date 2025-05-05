@@ -81,7 +81,7 @@ extern CONST_STRPTR CHAT_MODEL_NAMES[];
 /**
  * The image model OpenAI should use
  **/
-enum ImageModel { DALL_E_2 = 0L, DALL_E_3 };
+enum ImageModel { DALL_E_2 = 0L, DALL_E_3, GPT_IMAGE_1 };
 
 /**
  * The names of the image models
@@ -136,7 +136,10 @@ enum ImageSize {
     IMAGE_SIZE_512x512,
     IMAGE_SIZE_1024x1024,
     IMAGE_SIZE_1792x1024,
-    IMAGE_SIZE_1024x1792
+    IMAGE_SIZE_1024x1792,
+    IMAGE_SIZE_1536x1024,
+    IMAGE_SIZE_1024x1536,
+    IMAGE_SIZE_AUTO
 };
 
 /**
@@ -156,6 +159,12 @@ extern const enum ImageSize IMAGE_SIZES_DALL_E_2[];
  * @see enum ImageSize
  **/
 extern const enum ImageSize IMAGE_SIZES_DALL_E_3[];
+
+/**
+ * The image sizes for GPT Image 1
+ * @see enum ImageSize
+ **/
+extern const enum ImageSize IMAGE_SIZES_GPT_IMAGE_1[];
 
 /**
  * Struct representing a generated image

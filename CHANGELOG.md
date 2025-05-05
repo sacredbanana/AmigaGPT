@@ -1,10 +1,12 @@
 # Changelog
 
-## 2.5.1 (2025-05-05)
+## 2.6.0 (2025-05-05)
 
 - Fixed bug where AmigaGPT would get stuck after sending multiple chat messages
 - Fixed the bsdsocket.library error that appears on MorphOS if the app is closed before it has finished loading
 - Error messages can now be displayed in a requester if MUI is not finished initialising the app
+- TODO: Fix toggling speech enabled in menu
+- TODO: Fix crash on AmigaOS 3.1 when generating an image
 
 ## 2.5.0 (2025-04-25)
 

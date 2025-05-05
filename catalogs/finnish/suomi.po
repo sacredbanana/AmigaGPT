@@ -1229,3 +1229,8 @@ msgstr "ARexx shellin avaaminen epäonnistui"
 msgctxt "STRING_ERROR_AREXX_LIB_OPEN (226//)"
 msgid "Could not open arexx.class."
 msgstr "ARexx-luokan avaaminen epäonnistui"
+
+#: src/menu.c:294
+msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1 (227//)"
+msgid "GPT Image 1 Image Size"
+msgstr "GPT Image 1 Slika Koko"

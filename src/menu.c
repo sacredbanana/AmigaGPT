@@ -290,7 +290,10 @@ void createMenu() {
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3, MUIA_UserData,
     MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3, MUIA_Menuitem_CopyStrings, FALSE, End,
-    End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_UserData,
+    MENU_ITEM_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_Menuitem_CopyStrings, FALSE,
+    End, End,
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_AREXX,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
@@ -716,6 +719,34 @@ static void populateOpenAIMenu() {
         DoMethod(newImageSizeDallE3MenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
                  TRUE, MUIV_Notify_Self, 3, MUIM_WriteLong, imageSize,
                  &config.imageSizeDallE3);
+    }
+
+    Object *openAIImageSizeGPT_IMAGE_1MenuItem = (Object *)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_GPT_IMAGE_1);
+
+    // Remove any existing image size items
+    Object *imageSizeGptImage1MenuItem;
+    while (imageSizeGptImage1MenuItem = (Object *)DoMethod(
+               openAIImageSizeGPT_IMAGE_1MenuItem, MUIM_Family_GetChild)) {
+        DoMethod(openAIImageSizeGPT_IMAGE_1MenuItem, MUIM_Family_Remove,
+                 imageSizeGptImage1MenuItem);
+        DisposeObject(imageSizeGptImage1MenuItem);
+    }
+
+    // Populate the image size menu with the sizes
+    for (UBYTE i = 0; IMAGE_SIZES_GPT_IMAGE_1[i] != IMAGE_SIZE_NULL; i++) {
+        enum ImageSize imageSize = IMAGE_SIZES_GPT_IMAGE_1[i];
+        Object *newImageSizeGptImage1MenuItem = MenuitemObject,
+               MUIA_Menuitem_Title, IMAGE_SIZE_NAMES[imageSize],
+               MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
+               config.imageSizeGptImage1 == imageSize, MUIA_Menuitem_Exclude,
+               ~(1 << i), MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_CopyStrings,
+               FALSE, End;
+        DoMethod(openAIImageSizeGPT_IMAGE_1MenuItem, MUIM_Family_AddTail,
+                 newImageSizeGptImage1MenuItem);
+        DoMethod(newImageSizeGptImage1MenuItem, MUIM_Notify,
+                 MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Self, 3,
+                 MUIM_WriteLong, imageSize, &config.imageSizeGptImage1);
     }
 
     DoMethod(menuStrip, MUIM_Menustrip_ExitChange);

@@ -1241,3 +1241,8 @@ msgstr "Het openen van het ARexx shell is mislukt"
 msgctxt "STRING_ERROR_AREXX_LIB_OPEN (226//)"
 msgid "Could not open arexx.class."
 msgstr "Kan arexx.class niet openen."
+
+#: src/menu.c:294
+msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1 (227//)"
+msgid "GPT Image 1 Image Size"
+msgstr "GPT Image 1 Slika Grootte"

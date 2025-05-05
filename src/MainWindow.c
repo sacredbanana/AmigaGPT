@@ -1557,6 +1557,9 @@ copyGeneratedImage(struct GeneratedImage *generatedImage) {
  * @param message the message to display
  **/
 void displayError(STRPTR message) {
+    if (app) {
+        updateStatusBar(STRING_ERROR, redPen);
+    }
     const UBYTE ERROR_BUFFER_LENGTH = 255;
     STRPTR errorMessage = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
     CONST_STRPTR okString =
@@ -1587,7 +1590,6 @@ void displayError(STRPTR message) {
                         MUIV_Requester_Image_Error,
 #endif
                         STRING_ERROR, okString, "\33c%s", errorMessage);
-            updateStatusBar(STRING_ERROR, redPen);
         } else {
             snprintf(errorMessage, ERROR_BUFFER_LENGTH, "%s: %s\n\n%s\0",
                      STRING_ERROR, errorDescription, message);

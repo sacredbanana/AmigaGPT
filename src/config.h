@@ -3,7 +3,7 @@
 #include "speech.h"
 
 #define CHAT_MODEL_SET_VERSION 7
-#define IMAGE_MODEL_SET_VERSION 0
+#define IMAGE_MODEL_SET_VERSION 1
 #define SPEECH_SYSTEM_SET_VERSION 1
 #define OPENAI_TTS_MODEL_SET_VERSION 1
 #define OPENAI_TTS_VOICE_SET_VERSION 1
@@ -19,6 +19,7 @@ struct Config {
     enum ImageModel imageModel;
     enum ImageSize imageSizeDallE2;
     enum ImageSize imageSizeDallE3;
+    enum ImageSize imageSizeGptImage1;
     enum OpenAITTSModel openAITTSModel;
     enum OpenAITTSVoice openAITTSVoice;
     STRPTR openAIVoiceInstructions;

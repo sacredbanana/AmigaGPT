@@ -22,6 +22,7 @@ struct Config config = {
     .imageModel = DALL_E_3,
     .imageSizeDallE2 = IMAGE_SIZE_256x256,
     .imageSizeDallE3 = IMAGE_SIZE_1024x1024,
+    .imageSizeGptImage1 = IMAGE_SIZE_AUTO,
     .openAITTSModel = OPENAI_TTS_MODEL_GPT_4o_MINI_TTS,
     .openAITTSVoice = OPENAI_TTS_VOICE_ALLOY,
     .openAIVoiceInstructions = NULL,
@@ -75,6 +76,8 @@ LONG writeConfig() {
                            json_object_new_int(config.imageSizeDallE2));
     json_object_object_add(configJsonObject, "imageSizeDallE3",
                            json_object_new_int(config.imageSizeDallE3));
+    json_object_object_add(configJsonObject, "imageSizeGptImage1",
+                           json_object_new_int(config.imageSizeGptImage1));
     json_object_object_add(configJsonObject, "openAITTSModel",
                            json_object_new_int(config.openAITTSModel));
     json_object_object_add(configJsonObject, "openAITTSVoice",
@@ -274,6 +277,12 @@ LONG readConfig() {
     if (json_object_object_get_ex(configJsonObject, "imageSizeDallE3",
                                   &imageSizeDallE3Obj)) {
         config.imageSizeDallE3 = json_object_get_int(imageSizeDallE3Obj);
+    }
+
+    struct json_object *imageSizeGptImage1Obj;
+    if (json_object_object_get_ex(configJsonObject, "imageSizeGptImage1",
+                                  &imageSizeGptImage1Obj)) {
+        config.imageSizeGptImage1 = json_object_get_int(imageSizeGptImage1Obj);
     }
 
     struct json_object *openAITTSModelObj;

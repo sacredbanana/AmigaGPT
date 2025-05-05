@@ -107,17 +107,24 @@ CONST_STRPTR CHAT_MODEL_NAMES[] = {
  * The names of the image models
  * @see enum ImageModel
  **/
-CONST_STRPTR IMAGE_MODEL_NAMES[] = {
-    [DALL_E_2] = "dall-e-2", [DALL_E_3] = "dall-e-3", NULL};
+CONST_STRPTR IMAGE_MODEL_NAMES[] = {[DALL_E_2] = "dall-e-2",
+                                    [DALL_E_3] = "dall-e-3",
+                                    [GPT_IMAGE_1] = "gpt-image-1",
+                                    NULL};
 
 /**
  * The names of the image sizes
  * @see enum ImageSize
  **/
-CONST_STRPTR IMAGE_SIZE_NAMES[] = {
-    [IMAGE_SIZE_256x256] = "256x256",     [IMAGE_SIZE_512x512] = "512x512",
-    [IMAGE_SIZE_1024x1024] = "1024x1024", [IMAGE_SIZE_1792x1024] = "1792x1024",
-    [IMAGE_SIZE_1024x1792] = "1024x1792", NULL};
+CONST_STRPTR IMAGE_SIZE_NAMES[] = {[IMAGE_SIZE_256x256] = "256x256",
+                                   [IMAGE_SIZE_512x512] = "512x512",
+                                   [IMAGE_SIZE_1024x1024] = "1024x1024",
+                                   [IMAGE_SIZE_1792x1024] = "1792x1024",
+                                   [IMAGE_SIZE_1024x1792] = "1024x1792",
+                                   [IMAGE_SIZE_1536x1024] = "1536x1024",
+                                   [IMAGE_SIZE_1024x1536] = "1024x1536",
+                                   [IMAGE_SIZE_AUTO] = "auto",
+                                   NULL};
 
 /**
  * The names of the TTS models
@@ -144,6 +151,14 @@ const enum ImageSize IMAGE_SIZES_DALL_E_2[] = {
 const enum ImageSize IMAGE_SIZES_DALL_E_3[] = {
     IMAGE_SIZE_1024x1024, IMAGE_SIZE_1792x1024, IMAGE_SIZE_1024x1792,
     IMAGE_SIZE_NULL};
+
+/**
+ * The image sizes for GPT Image 1
+ * @see enum ImageSize
+ **/
+const enum ImageSize IMAGE_SIZES_GPT_IMAGE_1[] = {
+    IMAGE_SIZE_1024x1024, IMAGE_SIZE_1536x1024, IMAGE_SIZE_1024x1536,
+    IMAGE_SIZE_AUTO, IMAGE_SIZE_NULL};
 
 /**
  * The names of the TTS voices
@@ -621,24 +636,6 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
                                 displayError(error);
                                 doneReading = TRUE;
                                 streamingInProgress = FALSE;
-                                FreeVec(tempReadBuffer);
-                                struct json_object *response;
-                                for (UWORD i = 0; i <= responseIndex; i++) {
-                                    response = responses[i];
-                                    json_object_put(response);
-                                }
-                                FreeVec(responses);
-                                return NULL;
-                            }
-                            continue;
-                        } else {
-                            responses[0] = json_tokener_parse(jsonString);
-                            if (json_object_object_get_ex(responses[0], "error",
-                                                          NULL)) {
-                                doneReading = TRUE;
-                                streamingInProgress = FALSE;
-                                FreeVec(tempReadBuffer);
-                                return responses;
                             }
                         }
                     }
@@ -906,7 +903,6 @@ struct json_object *postImageCreationRequestToOpenAI(
                     }
                     displayError(error);
                     doneReading = TRUE;
-                    break;
                 }
                 totalBytesRead += bytesRead;
                 CONST_STRPTR jsonStart = "{";
