@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.5.1 (2025-05-05)
+- Fixed bug where AmigaGPT would get stuck after sending multiple chat messages
+
 ## 2.5.0 (2025-04-25)
 
 - Added an ARexx menu to allow you to run your own scripts. ARexx is not yet implemented in MorphOS so you can try installing the 68k version of ARexx and see if that works.

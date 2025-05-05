@@ -662,9 +662,6 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
                 }
 
                 if (stream) {
-                    if (strstr(readBuffer, "data: [DONE]")) {
-                        streamingInProgress = FALSE;
-                    }
                     if (json_tokener_parse(lastJsonString + 6) == NULL) {
                         snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0",
                                  lastJsonString);
@@ -759,7 +756,17 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
             break;
         }
     }
-    if (!stream) {
+    if (stream) {
+        // Check if the last response is the end of the stream and set the
+        // streamingInProgress flag to FALSE so that the next request will
+        // establish a new connection because OpenAI will close the connection
+        // after the stream is finished
+        STRPTR type = json_object_get_string(
+            json_object_object_get(responses[responseIndex - 1], "type"));
+        if (strcmp(type, "response.completed") == 0) {
+            streamingInProgress = FALSE;
+        }
+    } else {
         CloseSocket(sock);
         if (ssl != NULL) {
             SSL_shutdown(ssl);
