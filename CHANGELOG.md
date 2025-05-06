@@ -6,11 +6,12 @@
 - Added GPT-4.1 mini and GPT-4.1 nano chat models
 - Retrieves image data directly from OpenAI instead of downloading from file server to speed up image retrieval
 - Error messages can now be displayed in a requester if MUI is not finished initialising the app
+- Now displays an informative error message if you are attempting to generate an image when you have insufficient credits in your OpenAI API account
 - M68k version compiled with extra optimisations for faster code
 - Fixed bug where AmigaGPT would get stuck after sending multiple chat messages
 - Fixed the bsdsocket.library error that appears on MorphOS if the app is closed before it has finished loading
 - Fix crash when toggling speech enabled in menu
-- TODO: Fix crash on AmigaOS 3.1 when generating an image
+- Fix crash when generating an image when OpenAI reports an error
 
 ## 2.5.0 (2025-04-25)
 
