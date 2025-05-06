@@ -116,33 +116,51 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     }
     enum ImageSize size;
     if (sizeString == NULL) {
-        size =
-            model == DALL_E_2 ? config.imageSizeDallE2 : config.imageSizeDallE3;
+        switch (model) {
+        case DALL_E_2:
+            size = config.imageSizeDallE2;
+            break;
+        case DALL_E_3:
+            size = config.imageSizeDallE3;
+            break;
+        default:
+            size = config.imageSizeGptImage1;
+            break;
+        }
     } else {
         // Set a default size in case no match is found
-        size = model == DALL_E_2 ? IMAGE_SIZES_DALL_E_2[0]
-                                 : IMAGE_SIZES_DALL_E_3[0];
-
-        if (model == DALL_E_2) {
-            // Handle DALL-E 2 sizes
-            for (UBYTE i = 0; IMAGE_SIZES_DALL_E_2[i] != IMAGE_SIZE_NULL;
-                 i++) { // DALL-E 2 has 3 size options
+        switch (model) {
+        case DALL_E_2:
+            size = IMAGE_SIZES_DALL_E_2[0];
+            for (UBYTE i = 0; IMAGE_SIZES_DALL_E_2[i] != IMAGE_SIZE_NULL; i++) {
                 enum ImageSize currentSize = IMAGE_SIZES_DALL_E_2[i];
                 if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
                     size = currentSize;
                     break;
                 }
             }
-        } else {
-            // Handle DALL-E 3 sizes
-            for (UBYTE i = 0; IMAGE_SIZES_DALL_E_3[i] != IMAGE_SIZE_NULL;
-                 i++) { // DALL-E 3 has 3 size options
+            break;
+        case DALL_E_3:
+            size = IMAGE_SIZES_DALL_E_3[0];
+            for (UBYTE i = 0; IMAGE_SIZES_DALL_E_3[i] != IMAGE_SIZE_NULL; i++) {
                 enum ImageSize currentSize = IMAGE_SIZES_DALL_E_3[i];
                 if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
                     size = currentSize;
                     break;
                 }
             }
+            break;
+        default:
+            size = IMAGE_SIZE_AUTO;
+            for (UBYTE i = 0; IMAGE_SIZES_GPT_IMAGE_1[i] != IMAGE_SIZE_NULL;
+                 i++) {
+                enum ImageSize currentSize = IMAGE_SIZES_GPT_IMAGE_1[i];
+                if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
+                    size = currentSize;
+                    break;
+                }
+            }
+            break;
         }
     }
 
@@ -171,8 +189,11 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
         json_object_get_array(json_object_object_get(response, "data"));
     struct json_object *dataObject = (struct json_object *)data->array[0];
 
-    STRPTR url =
-        json_object_get_string(json_object_object_get(dataObject, "url"));
+    STRPTR b64 =
+        json_object_get_string(json_object_object_get(dataObject, "b64_json"));
+
+    LONG data_len;
+    UBYTE *imageData = decodeBase64(b64, &data_len);
 
     if (destination == NULL) {
         // Generate unique ID for the image
@@ -186,7 +207,11 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
         snprintf(fullPath, sizeof(fullPath), "T:%s.png", id);
         destination = fullPath;
     }
-    downloadFile(url, destination, FALSE, NULL, 0, FALSE, FALSE, NULL, NULL);
+
+    FILE *file = fopen(destination, "wb");
+    fwrite(imageData, 1, data_len, file);
+    fclose(file);
+    FreeVec(imageData);
 
     json_object_put(response);
     updateStatusBar(STRING_READY, greenPen);
@@ -222,15 +247,18 @@ MakeHook(ListImageModelsHook, ListImageModelsFunc);
 HOOKPROTONHNO(ListImageSizesFunc, APTR, ULONG *arg) {
     STRPTR sizes = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
     strncat(sizes, "DALL-E 2\n", 1024);
-    // The IMAGE_SIZES_DALL_E_2 array has 3 elements (not NULL-terminated)
     for (UBYTE i = 0; i < 3; i++) {
         strncat(sizes, IMAGE_SIZE_NAMES[IMAGE_SIZES_DALL_E_2[i]], 1024);
         strncat(sizes, "\n", 1024);
     }
     strncat(sizes, "DALL-E 3\n", 1024);
-    // The IMAGE_SIZES_DALL_E_3 array has 3 elements (not NULL-terminated)
     for (UBYTE i = 0; i < 3; i++) {
         strncat(sizes, IMAGE_SIZE_NAMES[IMAGE_SIZES_DALL_E_3[i]], 1024);
+        strncat(sizes, "\n", 1024);
+    }
+    strncat(sizes, "GPT Image 1\n", 1024);
+    for (UBYTE i = 0; i < 3; i++) {
+        strncat(sizes, IMAGE_SIZE_NAMES[IMAGE_SIZES_GPT_IMAGE_1[i]], 1024);
         strncat(sizes, "\n", 1024);
     }
     set(app, MUIA_Application_RexxString, sizes);
