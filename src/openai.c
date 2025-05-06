@@ -766,7 +766,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
         // after the stream is finished
         STRPTR type = json_object_get_string(
             json_object_object_get(responses[responseIndex - 1], "type"));
-        if (strcmp(type, "response.completed") == 0) {
+        if (type != NULL && strcmp(type, "response.completed") == 0) {
             streamingInProgress = FALSE;
         }
     } else {
