@@ -1234,3 +1234,8 @@ msgstr "ARexx-luokan avaaminen epäonnistui"
 msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1 (227//)"
 msgid "GPT Image 1 Image Size"
 msgstr "GPT Image 1 Slika Koko"
+
+#: src/MainWindow.c:299
+msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
+msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
+msgstr "Virheellinen pyyntö. Sinun OpenAI API-tilisi on ehkä loppuun saavuttanut tämän mallin suorittamiseen. Tarkista tilisi saldo."

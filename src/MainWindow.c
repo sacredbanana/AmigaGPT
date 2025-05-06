@@ -288,7 +288,20 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             struct json_object *message =
                 json_object_object_get(error, "message");
             STRPTR messageString = json_object_get_string(message);
-            displayError(messageString);
+            if (messageString != NULL) {
+                displayError(messageString);
+            } else {
+                struct json_object *type =
+                    json_object_object_get(error, "type");
+                STRPTR typeString = json_object_get_string(type);
+                if (typeString != NULL) {
+                    if (strcmp(typeString, "invalid_request_error") == 0) {
+                        displayError(STRING_ERROR_INVALID_REQUEST);
+                    } else {
+                        displayError(typeString);
+                    }
+                }
+            }
             set(createImageButton, MUIA_Disabled, FALSE);
             set(newImageButton, MUIA_Disabled, FALSE);
             set(deleteImageButton, MUIA_Disabled, FALSE);
@@ -376,7 +389,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         addTextToConversation(imageNameConversation, text, "user");
         addTextToConversation(
             imageNameConversation,
-            "generate a short title for this image and don't enclose the title "
+            "generate a short title for this image and don't enclose the "
+            "title "
             "in quotes or prefix the response with anything",
             "user");
         struct json_object **responses = postChatMessageToOpenAI(
@@ -390,6 +404,22 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         if (responses == NULL) {
             displayError(STRING_ERROR_GENERATING_IMAGE_NAME);
         } else if (responses[0] != NULL) {
+            if (json_object_object_get_ex(responses[0], "error", &error)) {
+                struct json_object *message =
+                    json_object_object_get(error, "message");
+                STRPTR messageString = json_object_get_string(message);
+                displayError(messageString);
+                set(createImageButton, MUIA_Disabled, FALSE);
+                set(newImageButton, MUIA_Disabled, FALSE);
+                set(deleteImageButton, MUIA_Disabled, FALSE);
+                set(imageInputTextEditor, MUIA_Disabled, FALSE);
+                json_object_put(responses[0]);
+                FreeVec(responses);
+                if (!isAROS) {
+                    FreeVec(text);
+                }
+                return;
+            }
             STRPTR responseString =
                 getMessageContentFromJson(responses[0], FALSE);
             formatText(responseString);
@@ -470,8 +500,8 @@ HOOKPROTONHNONP(OpenImageButtonClickedFunc, void) {
                            currentImage->height;
             }
         } else {
-            // Portrait or square: fit height and calculate width maintaining
-            // aspect ratio
+            // Portrait or square: fit height and calculate width
+            // maintaining aspect ratio
             newHeight = maxImageHeight;
             newWidth =
                 (currentImage->width * maxImageHeight) / currentImage->height;
@@ -1137,9 +1167,9 @@ static void formatText(STRPTR unformattedText) {
  * Get the message content from the JSON response from OpenAI
  * @param json the JSON response from OpenAI
  * @param stream whether the response is a stream or not
- * @return a pointer to a new UTF8 string containing the message content -- Free
- *it with FreeVec() when you are done using it If found role in the json instead
- *of content then return an empty string
+ * @return a pointer to a new UTF8 string containing the message content --
+ *Free it with FreeVec() when you are done using it If found role in the
+ *json instead of content then return an empty string
  * @todo Handle errors
  **/
 UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
@@ -1168,11 +1198,11 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
 }
 
 /**
- * @brief Sends a chat message to the OpenAI API and displays the response and
- *speaks it if speech is enabled
- * @details This function sends a chat message to the OpenAI API and displays
- *the response in the chat window. It also speaks the response if speech is
- *enabled.
+ * @brief Sends a chat message to the OpenAI API and displays the response
+ *and speaks it if speech is enabled
+ * @details This function sends a chat message to the OpenAI API and
+ *displays the response in the chat window. It also speaks the response if
+ *speech is enabled.
  **/
 static void sendChatMessage() {
     BOOL isNewConversation = FALSE;
