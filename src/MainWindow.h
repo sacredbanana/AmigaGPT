@@ -51,6 +51,14 @@ void updateStatusBar(CONST_STRPTR message, const ULONG pen);
 struct Conversation *newConversation();
 
 /**
+ * Sets the system of the conversation
+ * @param conversation the conversation to set the system of
+ * @param system the system to set
+ **/
+void setConversationSystem(struct Conversation *conversation,
+                           CONST_STRPTR system);
+
+/**
  * Get the message content from the JSON response from OpenAI
  * @param json the JSON response from OpenAI
  * @param stream whether the response is a stream or not

@@ -28,21 +28,29 @@ struct ConversationNode {
 };
 
 struct Conversation {
+    /**
+     * The messages in the conversation
+     **/
     struct MinList *messages;
+    /**
+     * The name of the conversation
+     **/
     UTF8 *name;
+    /**
+     * The system of the conversation
+     **/
+    UTF8 *system;
 };
 
 /**
- * The chat model OpenAI should use
+ * The chat model OpenAI should use. Commented out models are not supported by
+ * the responses endpoint. Do not exceed 32 models or the menu will not display
+ * correctly.
  **/
 enum ChatModel {
     CHATGPT_4o_LATEST = 0L,
     GPT_3_5_TURBO,
-    GPT_3_5_TURBO_0125,
-    GPT_3_5_TURBO_1106,
     GPT_4,
-    GPT_4_0613,
-    GPT_4_0314,
     GPT_4_1,
     GPT_4_1_2025_04_14,
     GPT_4_1_MINI,
@@ -62,10 +70,10 @@ enum ChatModel {
     GPT_4o_MINI_2024_07_18,
     o1,
     o1_2024_12_17,
-    o1_PREVIEW,
-    o1_PREVIEW_2024_09_12,
-    o1_MINI,
-    o1_MINI_2024_09_12,
+    // o1_PREVIEW,
+    // o1_PREVIEW_2024_09_12,
+    // o1_MINI,
+    // o1_MINI_2024_09_12,
     o1_PRO,
     o1_PRO_2025_03_19,
     o3,

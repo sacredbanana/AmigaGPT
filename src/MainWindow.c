@@ -227,247 +227,239 @@ HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
 MakeHook(DeleteImageButtonClickedHook, DeleteImageButtonClickedFunc);
 
 HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
-    if (config.openAiApiKey != NULL && strlen(config.openAiApiKey) > 0) {
-        set(openImageButton, MUIA_Disabled, TRUE);
-        set(saveImageCopyButton, MUIA_Disabled, TRUE);
-        set(createImageButton, MUIA_Disabled, TRUE);
-        set(newImageButton, MUIA_Disabled, TRUE);
-        set(deleteImageButton, MUIA_Disabled, TRUE);
-        set(imageInputTextEditor, MUIA_Disabled, TRUE);
-        STRPTR text;
-        if (isAROS) {
-            get(imageInputTextEditor, MUIA_String_Contents, &text);
-        } else {
-            text = DoMethod(imageInputTextEditor, MUIM_TextEditor_ExportText);
-        }
-        // Remove trailing newline characters
-        while (text[strlen(text) - 1] == '\n') {
-            text[strlen(text) - 1] = '\0';
-        }
+    if (config.openAiApiKey == NULL || strlen(config.openAiApiKey) == 0) {
+        displayError(STRING_ERROR_NO_API_KEY);
+        return;
+    }
+    set(openImageButton, MUIA_Disabled, TRUE);
+    set(saveImageCopyButton, MUIA_Disabled, TRUE);
+    set(createImageButton, MUIA_Disabled, TRUE);
+    set(newImageButton, MUIA_Disabled, TRUE);
+    set(deleteImageButton, MUIA_Disabled, TRUE);
+    set(imageInputTextEditor, MUIA_Disabled, TRUE);
+    STRPTR text;
+    if (isAROS) {
+        get(imageInputTextEditor, MUIA_String_Contents, &text);
+    } else {
+        text = DoMethod(imageInputTextEditor, MUIM_TextEditor_ExportText);
+    }
+    // Remove trailing newline characters
+    while (text[strlen(text) - 1] == '\n') {
+        text[strlen(text) - 1] = '\0';
+    }
 
-        UTF8 *textUTF8 =
-            CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
-                               CSA_Source, (Tag)text, TAG_DONE);
+    UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                                        CSA_Source, (Tag)text, TAG_DONE);
 
-        enum ImageSize imageSize;
-        switch (config.imageModel) {
-        case DALL_E_2:
-            imageSize = config.imageSizeDallE2;
-            break;
-        case DALL_E_3:
-            imageSize = config.imageSizeDallE3;
-            break;
-        case GPT_IMAGE_1:
-            imageSize = config.imageSizeGptImage1;
-            break;
-        default:
-            imageSize = config.imageSizeDallE2;
-            break;
-        }
-        struct json_object *response = postImageCreationRequestToOpenAI(
-            textUTF8, config.imageModel, imageSize, config.openAiApiKey,
-            config.proxyEnabled, config.proxyHost, config.proxyPort,
-            config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
-            config.proxyPassword);
-        CodesetsFreeA(textUTF8, NULL);
+    enum ImageSize imageSize;
+    switch (config.imageModel) {
+    case DALL_E_2:
+        imageSize = config.imageSizeDallE2;
+        break;
+    case DALL_E_3:
+        imageSize = config.imageSizeDallE3;
+        break;
+    case GPT_IMAGE_1:
+        imageSize = config.imageSizeGptImage1;
+        break;
+    default:
+        imageSize = config.imageSizeDallE2;
+        break;
+    }
+    struct json_object *response = postImageCreationRequestToOpenAI(
+        textUTF8, config.imageModel, imageSize, config.openAiApiKey,
+        config.proxyEnabled, config.proxyHost, config.proxyPort,
+        config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
+        config.proxyPassword);
+    CodesetsFreeA(textUTF8, NULL);
 
-        if (response == NULL) {
-            displayError(STRING_ERROR_CONNECTION);
-            set(createImageButton, MUIA_Disabled, FALSE);
-            set(newImageButton, MUIA_Disabled, FALSE);
-            set(deleteImageButton, MUIA_Disabled, FALSE);
-            set(imageInputTextEditor, MUIA_Disabled, FALSE);
-            if (!isAROS) {
-                FreeVec(text);
-            }
-            return;
-        }
-        struct json_object *error;
-
-        if (json_object_object_get_ex(response, "error", &error)) {
-            struct json_object *message =
-                json_object_object_get(error, "message");
-            STRPTR messageString = json_object_get_string(message);
-            if (messageString != NULL) {
-                displayError(messageString);
-            } else {
-                struct json_object *type =
-                    json_object_object_get(error, "type");
-                STRPTR typeString = json_object_get_string(type);
-                if (typeString != NULL) {
-                    if (strcmp(typeString, "invalid_request_error") == 0) {
-                        displayError(STRING_ERROR_INVALID_REQUEST);
-                    } else {
-                        displayError(typeString);
-                    }
-                }
-            }
-            set(createImageButton, MUIA_Disabled, FALSE);
-            set(newImageButton, MUIA_Disabled, FALSE);
-            set(deleteImageButton, MUIA_Disabled, FALSE);
-            set(imageInputTextEditor, MUIA_Disabled, FALSE);
-            json_object_put(response);
-            if (!isAROS) {
-                FreeVec(text);
-            }
-            return;
-        }
-
-        struct array_list *data =
-            json_object_get_array(json_object_object_get(response, "data"));
-        struct json_object *dataObject = (struct json_object *)data->array[0];
-
-        STRPTR b64 = json_object_get_string(
-            json_object_object_get(dataObject, "b64_json"));
-
-        LONG data_len;
-        UBYTE *imageData = decodeBase64(b64, &data_len);
-
-        CreateDir(PROGDIR "images");
-        CreateDir(PROGDIR "images/thumbnails");
-
-        // Generate unique ID for the image
-        UBYTE fullPath[30] = "";
-        UBYTE id[11] = "";
-        CONST_STRPTR idChars = "abcdefghijklmnopqrstuvwxyz0123456789";
-        srand(time(NULL));
-        for (UBYTE i = 0; i < 9; i++) {
-            id[i] = idChars[rand() % strlen(idChars)];
-        }
-        snprintf(fullPath, sizeof(fullPath), PROGDIR "images/%s.png", id);
-
-        FILE *file = fopen(fullPath, "wb");
-        fwrite(imageData, 1, data_len, file);
-        fclose(file);
-        FreeVec(imageData);
-
-        json_object_put(response);
-
-        WORD imageWidth, imageHeight;
-        switch (imageSize) {
-        case IMAGE_SIZE_256x256:
-            imageWidth = 256;
-            imageHeight = 256;
-            break;
-        case IMAGE_SIZE_512x512:
-            imageWidth = 512;
-            imageHeight = 512;
-            break;
-        case IMAGE_SIZE_1024x1024:
-            imageWidth = 1024;
-            imageHeight = 1024;
-            break;
-        case IMAGE_SIZE_1792x1024:
-            imageWidth = 1792;
-            imageHeight = 1024;
-            break;
-        case IMAGE_SIZE_1024x1792:
-            imageWidth = 1024;
-            imageHeight = 1792;
-            break;
-        case IMAGE_SIZE_1024x1536:
-            imageWidth = 1024;
-            imageHeight = 1536;
-            break;
-        case IMAGE_SIZE_1536x1024:
-            imageWidth = 1536;
-            imageHeight = 1024;
-            break;
-        case IMAGE_SIZE_AUTO:
-            imageWidth = 1024;
-            imageHeight = 1024;
-            break;
-        default:
-            displayError(STRING_ERROR_INVALID_IMAGE_SIZE);
-            imageWidth = 256;
-            imageHeight = 256;
-            break;
-        }
-
-        updateStatusBar(STRING_GENERATING_IMAGE_NAME, 7);
-        struct Conversation *imageNameConversation = newConversation();
-        addTextToConversation(imageNameConversation, text, "user");
-        addTextToConversation(
-            imageNameConversation,
-            "generate a short title for this image and don't enclose the "
-            "title "
-            "in quotes or prefix the response with anything",
-            "user");
-        struct json_object **responses = postChatMessageToOpenAI(
-            imageNameConversation, config.chatModel, config.openAiApiKey, FALSE,
-            config.proxyEnabled, config.proxyHost, config.proxyPort,
-            config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
-            config.proxyPassword);
-
-        struct GeneratedImage *generatedImage =
-            AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
-        if (responses == NULL) {
-            displayError(STRING_ERROR_GENERATING_IMAGE_NAME);
-        } else if (responses[0] != NULL) {
-            if (json_object_object_get_ex(responses[0], "error", &error)) {
-                struct json_object *message =
-                    json_object_object_get(error, "message");
-                STRPTR messageString = json_object_get_string(message);
-                displayError(messageString);
-                set(createImageButton, MUIA_Disabled, FALSE);
-                set(newImageButton, MUIA_Disabled, FALSE);
-                set(deleteImageButton, MUIA_Disabled, FALSE);
-                set(imageInputTextEditor, MUIA_Disabled, FALSE);
-                json_object_put(responses[0]);
-                FreeVec(responses);
-                if (!isAROS) {
-                    FreeVec(text);
-                }
-                return;
-            }
-            STRPTR responseString =
-                getMessageContentFromJson(responses[0], FALSE);
-            formatText(responseString);
-            generatedImage->name =
-                AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
-            strncpy(generatedImage->name, responseString,
-                    strlen(responseString));
-            updateStatusBar(STRING_READY, 5);
-            json_object_put(responses[0]);
-            FreeVec(responses);
-        } else {
-            generatedImage->name = AllocVec(11, MEMF_ANY | MEMF_CLEAR);
-            strncpy(generatedImage->name, id, 10);
-            updateStatusBar(STRING_READY, 5);
-            if (responses != NULL) {
-                FreeVec(responses);
-            }
-            displayError("Failed to generate image name. Using ID instead.");
-        }
-        freeConversation(imageNameConversation);
-
-        generatedImage->filePath =
-            AllocVec(strlen(fullPath) + 1, MEMF_ANY | MEMF_CLEAR);
-        strncpy(generatedImage->filePath, fullPath, strlen(fullPath));
-        generatedImage->prompt =
-            AllocVec(strlen(text) + 1, MEMF_ANY | MEMF_CLEAR);
-        strncpy(generatedImage->prompt, text, strlen(text));
-        generatedImage->imageModel = config.imageModel;
-        generatedImage->width = imageWidth;
-        generatedImage->height = imageHeight;
-        DoMethod(imageListObject, MUIM_NList_InsertSingle, generatedImage,
-                 MUIV_NList_Insert_Top);
-        DoMethod(imageListObject, MUIM_NList_SetActive, 0, NULL);
-        currentImage = generatedImage;
-        ImageRowClickedFunc();
-
+    if (response == NULL) {
+        displayError(STRING_ERROR_CONNECTION);
         set(createImageButton, MUIA_Disabled, FALSE);
         set(newImageButton, MUIA_Disabled, FALSE);
         set(deleteImageButton, MUIA_Disabled, FALSE);
-
-        saveImages();
-
+        set(imageInputTextEditor, MUIA_Disabled, FALSE);
         if (!isAROS) {
             FreeVec(text);
         }
+        return;
+    }
+    struct json_object *error;
+
+    if (json_object_object_get_ex(response, "error", &error) &&
+        !json_object_is_type(error, json_type_null)) {
+        struct json_object *message = json_object_object_get(error, "message");
+        STRPTR messageString = json_object_get_string(message);
+        if (messageString != NULL) {
+            displayError(messageString);
+        } else {
+            struct json_object *type = json_object_object_get(error, "type");
+            STRPTR typeString = json_object_get_string(type);
+            if (typeString != NULL) {
+                if (strcmp(typeString, "invalid_request_error") == 0) {
+                    displayError(STRING_ERROR_INVALID_REQUEST);
+                } else {
+                    displayError(typeString);
+                }
+            }
+        }
+        set(createImageButton, MUIA_Disabled, FALSE);
+        set(newImageButton, MUIA_Disabled, FALSE);
+        set(deleteImageButton, MUIA_Disabled, FALSE);
+        set(imageInputTextEditor, MUIA_Disabled, FALSE);
+        json_object_put(response);
+        if (!isAROS) {
+            FreeVec(text);
+        }
+        return;
+    }
+
+    struct array_list *data =
+        json_object_get_array(json_object_object_get(response, "data"));
+    struct json_object *dataObject = (struct json_object *)data->array[0];
+
+    STRPTR b64 =
+        json_object_get_string(json_object_object_get(dataObject, "b64_json"));
+
+    LONG data_len;
+    UBYTE *imageData = decodeBase64(b64, &data_len);
+
+    CreateDir(PROGDIR "images");
+    CreateDir(PROGDIR "images/thumbnails");
+
+    // Generate unique ID for the image
+    UBYTE fullPath[30] = "";
+    UBYTE id[11] = "";
+    CONST_STRPTR idChars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    srand(time(NULL));
+    for (UBYTE i = 0; i < 9; i++) {
+        id[i] = idChars[rand() % strlen(idChars)];
+    }
+    snprintf(fullPath, sizeof(fullPath), PROGDIR "images/%s.png", id);
+
+    FILE *file = fopen(fullPath, "wb");
+    fwrite(imageData, 1, data_len, file);
+    fclose(file);
+    FreeVec(imageData);
+
+    json_object_put(response);
+
+    WORD imageWidth, imageHeight;
+    switch (imageSize) {
+    case IMAGE_SIZE_256x256:
+        imageWidth = 256;
+        imageHeight = 256;
+        break;
+    case IMAGE_SIZE_512x512:
+        imageWidth = 512;
+        imageHeight = 512;
+        break;
+    case IMAGE_SIZE_1024x1024:
+        imageWidth = 1024;
+        imageHeight = 1024;
+        break;
+    case IMAGE_SIZE_1792x1024:
+        imageWidth = 1792;
+        imageHeight = 1024;
+        break;
+    case IMAGE_SIZE_1024x1792:
+        imageWidth = 1024;
+        imageHeight = 1792;
+        break;
+    case IMAGE_SIZE_1024x1536:
+        imageWidth = 1024;
+        imageHeight = 1536;
+        break;
+    case IMAGE_SIZE_1536x1024:
+        imageWidth = 1536;
+        imageHeight = 1024;
+        break;
+    case IMAGE_SIZE_AUTO:
+        imageWidth = 1024;
+        imageHeight = 1024;
+        break;
+    default:
+        displayError(STRING_ERROR_INVALID_IMAGE_SIZE);
+        imageWidth = 256;
+        imageHeight = 256;
+        break;
+    }
+
+    updateStatusBar(STRING_GENERATING_IMAGE_NAME, 7);
+    struct Conversation *imageNameConversation = newConversation();
+    addTextToConversation(imageNameConversation, text, "user");
+    addTextToConversation(
+        imageNameConversation,
+        "generate a short title for this image and don't enclose the "
+        "title "
+        "in quotes or prefix the response with anything",
+        "user");
+    struct json_object **responses = postChatMessageToOpenAI(
+        imageNameConversation, GPT_4o_MINI, config.openAiApiKey, FALSE,
+        config.proxyEnabled, config.proxyHost, config.proxyPort,
+        config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
+        config.proxyPassword);
+
+    struct GeneratedImage *generatedImage =
+        AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
+    if (responses == NULL) {
+        displayError(STRING_ERROR_GENERATING_IMAGE_NAME);
+    } else if (responses[0] != NULL) {
+        if (json_object_object_get_ex(responses[0], "error", &error) &&
+            !json_object_is_type(error, json_type_null)) {
+            set(createImageButton, MUIA_Disabled, FALSE);
+            set(newImageButton, MUIA_Disabled, FALSE);
+            set(deleteImageButton, MUIA_Disabled, FALSE);
+            set(imageInputTextEditor, MUIA_Disabled, FALSE);
+            json_object_put(responses[0]);
+            FreeVec(responses);
+            if (!isAROS) {
+                FreeVec(text);
+            }
+            freeConversation(imageNameConversation);
+            return;
+        }
+        STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
+        formatText(responseString);
+        generatedImage->name =
+            AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
+        strncpy(generatedImage->name, responseString, strlen(responseString));
+        updateStatusBar(STRING_READY, 5);
+        json_object_put(responses[0]);
+        FreeVec(responses);
     } else {
-        displayError("Please enter your OpenAI API key in the Open AI settings "
-                     "in the menu.");
+        generatedImage->name = AllocVec(11, MEMF_ANY | MEMF_CLEAR);
+        strncpy(generatedImage->name, id, 10);
+        updateStatusBar(STRING_READY, 5);
+        if (responses != NULL) {
+            FreeVec(responses);
+        }
+        displayError("Failed to generate image name. Using ID instead.");
+    }
+    freeConversation(imageNameConversation);
+
+    generatedImage->filePath =
+        AllocVec(strlen(fullPath) + 1, MEMF_ANY | MEMF_CLEAR);
+    strncpy(generatedImage->filePath, fullPath, strlen(fullPath));
+    generatedImage->prompt = AllocVec(strlen(text) + 1, MEMF_ANY | MEMF_CLEAR);
+    strncpy(generatedImage->prompt, text, strlen(text));
+    generatedImage->imageModel = config.imageModel;
+    generatedImage->width = imageWidth;
+    generatedImage->height = imageHeight;
+    DoMethod(imageListObject, MUIM_NList_InsertSingle, generatedImage,
+             MUIV_NList_Insert_Top);
+    DoMethod(imageListObject, MUIM_NList_SetActive, 0, NULL);
+    currentImage = generatedImage;
+    ImageRowClickedFunc();
+
+    set(createImageButton, MUIA_Disabled, FALSE);
+    set(newImageButton, MUIA_Disabled, FALSE);
+    set(deleteImageButton, MUIA_Disabled, FALSE);
+
+    saveImages();
+
+    if (!isAROS) {
+        FreeVec(text);
     }
 }
 MakeHook(CreateImageButtonClickedHook, CreateImageButtonClickedFunc);
@@ -1113,6 +1105,26 @@ static PICTURE *generateThumbnail(struct GeneratedImage *image) {
 }
 
 /**
+ * Sets the system of the conversation
+ * @param conversation the conversation to set the system of
+ * @param system the system to set
+ **/
+void setConversationSystem(struct Conversation *conversation,
+                           CONST_STRPTR system) {
+    if (conversation->system != NULL) {
+        CodesetsFreeA(conversation->system, NULL);
+    }
+    if (system == NULL || strlen(system) == 0) {
+        conversation->system = NULL;
+        return;
+    }
+    UTF8 *systemUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+
+                                          CSA_Source, (Tag)system, TAG_DONE);
+    conversation->system = systemUTF8;
+}
+
+/**
  * Creates a new conversation
  * @return A pointer to the new conversation
  **/
@@ -1131,6 +1143,7 @@ struct Conversation *newConversation() {
 
     conversation->messages = messages;
     conversation->name = NULL;
+    conversation->system = NULL;
 
     return conversation;
 }
@@ -1239,6 +1252,8 @@ static void sendChatMessage() {
     addTextToConversation(currentConversation, textUTF8, "user");
     CodesetsFreeA(textUTF8, NULL);
 
+    setConversationSystem(currentConversation, config.chatSystem);
+
     displayConversation(currentConversation);
 
     if (isAROS) {
@@ -1255,14 +1270,6 @@ static void sendChatMessage() {
     strncat(chatOutputTextEditorContents, "\n", 1);
 
     do {
-        if (config.chatSystem != NULL && strlen(config.chatSystem) > 0 &&
-            config.chatModel != o1_PREVIEW &&
-            config.chatModel != o1_PREVIEW_2024_09_12 &&
-            config.chatModel != o1_MINI &&
-            config.chatModel != o1_MINI_2024_09_12) {
-            addTextToConversation(currentConversation, config.chatSystem,
-                                  "system");
-        }
         responses = postChatMessageToOpenAI(
             currentConversation, config.chatModel, config.openAiApiKey, TRUE,
             config.proxyEnabled, config.proxyHost, config.proxyPort,
@@ -1280,21 +1287,14 @@ static void sendChatMessage() {
             }
             return;
         }
-        if (config.chatSystem != NULL && strlen(config.chatSystem) > 0 &&
-            config.chatModel != o1_PREVIEW &&
-            config.chatModel != o1_PREVIEW_2024_09_12 &&
-            config.chatModel != o1_MINI &&
-            config.chatModel != o1_MINI_2024_09_12) {
-            struct MinNode *chatSystemNode =
-                RemTail(currentConversation->messages);
-            FreeVec(chatSystemNode);
-        }
+
         UWORD responseIndex = 0;
 
         struct json_object *response;
         while (response = responses[responseIndex++]) {
             struct json_object *error;
-            if (json_object_object_get_ex(response, "error", &error)) {
+            if (json_object_object_get_ex(response, "error", &error) &&
+                !json_object_is_type(error, json_type_null)) {
                 struct json_object *message =
                     json_object_object_get(error, "message");
                 UTF8 *messageString = json_object_get_string(message);
@@ -1424,6 +1424,7 @@ static void sendChatMessage() {
                                   "conversation and don't enclose the title in "
                                   "quotes or prefix the response with anything",
                                   "user");
+            setConversationSystem(currentConversation, NULL);
             responses = postChatMessageToOpenAI(
                 currentConversation, GPT_4o_MINI, config.openAiApiKey, FALSE,
                 config.proxyEnabled, config.proxyHost, config.proxyPort,
@@ -1558,6 +1559,8 @@ void freeConversation(struct Conversation *conversation) {
     }
     if (conversation->name != NULL)
         FreeVec(conversation->name);
+    if (conversation->system != NULL)
+        CodesetsFreeA(conversation->system, NULL);
     FreeVec(conversation);
 }
 

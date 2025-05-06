@@ -69,11 +69,7 @@ ULONG RangeSeed;
 CONST_STRPTR CHAT_MODEL_NAMES[] = {
     [CHATGPT_4o_LATEST] = "chatgpt-4o-latest",
     [GPT_3_5_TURBO] = "gpt-3.5-turbo",
-    [GPT_3_5_TURBO_0125] = "gpt-3.5-turbo-0125",
-    [GPT_3_5_TURBO_1106] = "gpt-3.5-turbo-1106",
     [GPT_4] = "gpt-4",
-    [GPT_4_0613] = "gpt-4-0613",
-    [GPT_4_0314] = "gpt-4-0314",
     [GPT_4_1] = "gpt-4.1",
     [GPT_4_1_2025_04_14] = "gpt-4.1-2025-04-14",
     [GPT_4_1_MINI] = "gpt-4.1-mini",
@@ -93,10 +89,10 @@ CONST_STRPTR CHAT_MODEL_NAMES[] = {
     [GPT_4o_MINI_2024_07_18] = "gpt-4o-mini-2024-07-18",
     [o1] = "o1",
     [o1_2024_12_17] = "o1-2024-12-17",
-    [o1_PREVIEW] = "o1-preview",
-    [o1_PREVIEW_2024_09_12] = "o1-preview-2024-09-12",
-    [o1_MINI] = "o1-mini",
-    [o1_MINI_2024_09_12] = "o1-mini-2024-09-12",
+    // [o1_PREVIEW] = "o1-preview",
+    // [o1_PREVIEW_2024_09_12] = "o1-preview-2024-09-12",
+    // [o1_MINI] = "o1-mini",
+    // [o1_MINI_2024_09_12] = "o1-mini-2024-09-12",
     [o1_PRO] = "o1-pro",
     [o1_PRO_2025_03_19] = "o1-pro-2025-03-19",
     [o3] = "o3",
@@ -531,6 +527,12 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
         json_object_object_add(obj, "input", conversationArray);
         json_object_object_add(obj, "stream",
                                json_object_new_boolean((json_bool)stream));
+
+        if (conversation->system != NULL && strlen(conversation->system) > 0) {
+            json_object_object_add(
+                obj, "instructions",
+                json_object_new_string(conversation->system));
+        }
 
         CONST_STRPTR jsonString = json_object_to_json_string(obj);
 

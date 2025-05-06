@@ -45,13 +45,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     addTextToConversation(conversation, promptUTF8, "user");
     CodesetsFreeA(promptUTF8, NULL);
 
-    if (system != NULL) {
-        UTF8 *systemUTF8 =
-            CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
-                               CSA_Source, (Tag)system, TAG_DONE);
-        addTextToConversation(conversation, systemUTF8, "system");
-        CodesetsFreeA(systemUTF8, NULL);
-    }
+    setConversationSystem(conversation, system);
 
     struct json_object **responses =
         postChatMessageToOpenAI(conversation, model, apiKey, FALSE, FALSE, NULL,
