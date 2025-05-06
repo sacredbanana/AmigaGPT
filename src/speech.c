@@ -5,13 +5,11 @@
 #ifdef __AMIGAOS3__
 #include <proto/translator.h>
 #include <devices/narrator.h>
-#else
-#ifdef __AMIGAOS4__
+#elif defined(__AMIGAOS4__)
 #include <exec/exec.h>
 #include <dos/dos.h>
 #include <devices/flite.h>
 #include <proto/flite.h>
-#endif
 #endif
 #include "config.h"
 #include "gui.h"
@@ -25,14 +23,12 @@ static struct MsgPort *NarratorPort = NULL;
 static struct narrator_rb *NarratorIO = NULL;
 static BYTE audioChannels[4] = {3, 5, 10, 12};
 static STRPTR translationBuffer = NULL;
-#else
-#ifdef __AMIGAOS4__
+#elif defined(__AMIGAOS4__)
 static struct MsgPort *fliteMessagePort = NULL;
 static struct FliteRequest *fliteRequest = NULL;
 struct Device *FliteBase = NULL;
 struct FliteIFace *IFlite = NULL;
 struct FliteVoice *voice = NULL;
-#endif
 #endif
 
 /**
@@ -63,7 +59,7 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG initSpeech(enum SpeechSystem speechSystem) {
-    if (!config.speechEnabled || speechSystem == SPEECH_SYSTEM_OPENAI)
+    if (speechSystem == SPEECH_SYSTEM_OPENAI)
         return RETURN_OK;
 #ifdef __AMIGAOS3__
     if (!translationBuffer)
@@ -107,8 +103,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
         config.speechEnabled = FALSE;
         return RETURN_ERROR;
     }
-#else
-#ifdef __AMIGAOS4__
+#elif defined(__AMIGAOS4__)
     /* Note: we could use a struct IOStdReq here if we didn't need any of
        the more "advanced" features of the device. */
     /* Any additional fields will be ignored by flite.device 52.1 */
@@ -145,7 +140,6 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
         config.speechEnabled = FALSE;
         return RETURN_ERROR;
     }
-#endif
 #endif
 
     return RETURN_OK;
@@ -188,8 +182,7 @@ void closeSpeech() {
         FreeVec(translationBuffer);
         translationBuffer = NULL;
     }
-#else
-#ifdef __AMIGAOS4__
+#elif defined(__AMIGAOS4__)
     if (IFlite && voice) {
         CloseVoice(voice);
         voice = NULL;
@@ -205,7 +198,6 @@ void closeSpeech() {
         FreeSysObject(ASOT_PORT, fliteMessagePort);
         fliteMessagePort = NULL;
     }
-#endif
 #endif
 }
 
@@ -323,8 +315,7 @@ void speakText(STRPTR text) {
         NarratorIO->message.io_Length = strlen(translationBuffer);
         DoIO((struct IORequest *)NarratorIO);
     }
-#else
-#ifdef __AMIGAOS4__
+#elif defined(__AMIGAOS4__)
     if (config.speechSystem == SPEECH_SYSTEM_FLITE) {
         if (IFlite && voice)
             CloseVoice(voice);
@@ -371,7 +362,6 @@ void speakText(STRPTR text) {
             break;
         }
     }
-#endif
 #endif
 }
 

@@ -56,7 +56,7 @@ BUILD_DATE := $(shell date +%d.%m.%Y)
 
 CCFLAGS = -MP -MMD -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -noixemul -D__MORPHOS__  -DHAVE_VASPRINTF -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\" -DBUILD_DATE=\"$(BUILD_DATE)\"
 ifeq ($(DEBUG),1)
-	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -O1
+	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -Og
 else
 	CCFLAGS += -DPROGDIR=\"PROGDIR:\" -Ofast
 endif

@@ -839,11 +839,12 @@ struct json_object *postImageCreationRequestToOpenAI(
     json_object_object_add(obj, "prompt", json_object_new_string(prompt));
     json_object_object_add(obj, "size",
                            json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
-    if (imageModel != GPT_IMAGE_1) {
-        json_object_object_add(obj, "response_format",
-                               json_object_new_string("b64_json"));
+    if (imageModel == GPT_IMAGE_1) {
         json_object_object_add(obj, "moderation",
                                json_object_new_string("low"));
+    } else {
+        json_object_object_add(obj, "response_format",
+                               json_object_new_string("b64_json"));
     }
     CONST_STRPTR jsonString = json_object_to_json_string(obj);
 

@@ -16,7 +16,6 @@ struct Config config = {
     .speechAccent = NULL,
     .speechSystem = SPEECH_SYSTEM_OPENAI,
     .speechFliteVoice = SPEECH_FLITE_VOICE_KAL,
-    .speechSystem = SPEECH_SYSTEM_FLITE,
     .chatSystem = NULL,
     .chatModel = GPT_4o,
     .imageModel = DALL_E_3,
@@ -198,21 +197,17 @@ LONG readConfig() {
     if (config.speechSystem == SPEECH_SYSTEM_FLITE) {
         config.speechSystem = SPEECH_SYSTEM_OPENAI;
     }
-#else
-#ifdef __AMIGAOS4__
+#elif defined(__AMIGAOS4__)
     if (config.speechSystem == SPEECH_SYSTEM_34 ||
         config.speechSystem == SPEECH_SYSTEM_37) {
-        config.speechSystem = SPEECH_SYSTEM_FLITE;
+        config.speechSystem = SPEECH_SYSTEM_OPENAI;
     }
-#else
-#ifdef __MORPHOS__
+#elif defined(__MORPHOS__)
     if (config.speechSystem == SPEECH_SYSTEM_34 ||
         config.speechSystem == SPEECH_SYSTEM_37 ||
         config.speechSystem == SPEECH_SYSTEM_FLITE) {
         config.speechSystem = SPEECH_SYSTEM_OPENAI;
     }
-#endif
-#endif
 #endif
 
     if (config.speechAccent != NULL) {
@@ -365,15 +360,7 @@ LONG readConfig() {
     }
 
     if (config.speechSystemSetVersion != SPEECH_SYSTEM_SET_VERSION) {
-#ifdef __AMIGAOS3__
-        config.speechSystem = SPEECH_SYSTEM_34;
-#else
-#ifdef __AMIGAOS4__
-        config.speechSystem = SPEECH_SYSTEM_FLITE;
-#else
         config.speechSystem = SPEECH_SYSTEM_OPENAI;
-#endif
-#endif
     }
 
     struct json_object *openAITTSModelSetVersionObj;

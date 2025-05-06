@@ -9,6 +9,10 @@
             "osx": {
                 "command": "gmake",
                 "options": {
+                    "args": [
+                        "clean",
+                        "all"
+                    ],
                     "cwd": "${workspaceRoot}",
                     "env": {
                         "DEBUG": "1",
@@ -61,6 +65,10 @@
             "type": "shell",
             "osx": {
                 "command": "gmake",
+                "args": [
+                    "clean",
+                    "all"
+                ],
                 "options": {
                     "cwd": "${workspaceRoot}",
                     "env": {
@@ -168,6 +176,12 @@
             "type": "shell",
             "osx": {
                 "command": "gmake",
+                "args": [
+                    "clean",
+                    "all",
+                    "-f",
+                    "Makefile.OS4"
+                ],
                 "options": {
                     "cwd": "${workspaceRoot}",
                     "env": {
@@ -222,6 +236,12 @@
             "type": "shell",
             "osx": {
                 "command": "gmake",
+                "args": [
+                    "clean",
+                    "all",
+                    "-f",
+                    "Makefile.OS4"
+                ],
                 "options": {
                     "cwd": "${workspaceRoot}",
                     "env": {
@@ -325,6 +345,63 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "label": "Compile MorphOS version locally - Debug",
+            "type": "shell",
+            "command": "gmake",
+            "args": [
+                "clean",
+                "all",
+                "-f",
+                "Makefile.MorphOS"
+            ],
+            "options": {
+                "cwd": "${workspaceRoot}",
+                "env": {
+                    "DEBUG": "1",
+                }
+            },
+        },
+        {
+            "label": "Compile MorphOS version locally - Release",
+            "type": "shell",
+            "command": "gmake",
+            "args": [
+                "clean",
+                "all",
+                "-f",
+                "Makefile.MorphOS"
+            ],
+            "options": {
+                "cwd": "${workspaceRoot}",
+                "env": {
+                    "PATH": "/opt/amiga/bin:${env:PATH}"
+                }
+            },
+        },
+        {
+            "label": "Compile MorphOS version with Docker - Debug",
+            "type": "shell",
+            "command": "./build_morphos.sh",
+            "options": {
+                "cwd": "${workspaceRoot}",
+                "env": {
+                    "CLEAN": "1",
+                    "DEBUG": "1",
+                }
+            },
+        },
+        {
+            "label": "Compile MorphOS version with Docker - Release",
+            "type": "shell",
+            "command": "./build_morphos.sh",
+            "options": {
+                "cwd": "${workspaceRoot}",
+                "env": {
+                    "CLEAN": "1",
+                }
+            },
         },
         {
             "label": "Compile native tests",

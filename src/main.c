@@ -16,7 +16,7 @@
 
 CONST_STRPTR stack = "$STACK: 32768";
 CONST_STRPTR version = "$VER: AmigaGPT " APP_VERSION " (" BUILD_DATE
-                       ") © 2023-2025 Cameron Armstrong";
+                       ") ï¿½ 2023-2025 Cameron Armstrong";
 
 #ifdef __AMIGAOS4__
 static uint32 appID;
@@ -82,14 +82,19 @@ LONG main(int argc, char **argv) {
     }
 
     if (initSpeech(config.speechSystem) == RETURN_ERROR) {
-#ifdef __AMIGAOS3__
-        if (config.speechSystem == SPEECH_SYSTEM_34)
+        switch (config.speechSystem) {
+        case SPEECH_SYSTEM_34:
             displayError(STRING_ERROR_SPEECH_INIT_WORKBENCH_34);
-        else if (config.speechSystem == SPEECH_SYSTEM_37)
+            break;
+        case SPEECH_SYSTEM_37:
             displayError(STRING_ERROR_SPEECH_INIT_WORKBENCH_37);
-#else
-        displayError(STRING_ERROR_SPEECH_INIT_FLITE);
-#endif
+        case SPEECH_SYSTEM_FLITE:
+            displayError(STRING_ERROR_SPEECH_INIT_FLITE);
+            break;
+        default:
+            displayError(STRING_ERROR_SPEECH_UNKNOWN_SYSTEM);
+            break;
+        }
         config.speechEnabled = FALSE;
         closeSpeech();
     }

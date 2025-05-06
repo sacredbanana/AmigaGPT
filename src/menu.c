@@ -29,6 +29,7 @@ static void populateOpenAIMenu();
 static void populateArexxMenu();
 
 HOOKPROTONHNONP(AboutAmigaGPTMenuItemClickedFunc, void) {
+    printf("speech: %lu\n", config.speechEnabled);
     if (aboutAmigaGPTWindowObject) {
         set(aboutAmigaGPTWindowObject, MUIA_Window_Open, TRUE);
     } else {

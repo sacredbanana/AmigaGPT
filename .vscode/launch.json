@@ -31,7 +31,7 @@
             "miDebuggerServerAddress": "pistorm:2345",
             "program": "${workspaceFolder}/out/AmigaGPT_OS3",
             "cwd": "${workspaceFolder}",
-            // "preLaunchTask": "Compile OS3 version locally - Debug",
+            "preLaunchTask": "Compile OS3 version locally - Debug",
             "externalConsole": true,
             "stopAtEntry": false,
             "setupCommands": [
@@ -63,43 +63,24 @@
             ]
         },
         {
-            "type": "amiga",
+            "type": "cppdbg",
             "request": "launch",
-            "preLaunchTask": "compile",
-            "name": "AROS",
-            "config": "A500",
-            "program": "${workspaceFolder}/${config:amiga.program}",
-            "internalConsoleOptions": "openOnSessionStart"
-        },
-        {
-            "type": "amiga",
-            "request": "launch",
-            "preLaunchTask": "compile",
-            "name": "Amiga 500",
-            "config": "A500",
-            "program": "${workspaceFolder}/${config:amiga.program}",
-            "kickstart": "${config:amiga.rom-paths.A500}",
-            "internalConsoleOptions": "openOnSessionStart"
-        },
-        {
-            "type": "amiga",
-            "request": "launch",
-            "preLaunchTask": "compile",
-            "name": "Amiga 1200",
-            "config": "A1200",
-            "program": "${workspaceFolder}/${config:amiga.program}",
-            "kickstart": "${config:amiga.rom-paths.A1200}",
-            "internalConsoleOptions": "openOnSessionStart"
-        },
-        {
-            "type": "amiga",
-            "request": "launch",
-            "preLaunchTask": "compile",
-            "name": "Amiga 4000",
-            "config": "A4000",
-            "program": "${workspaceFolder}/${config:amiga.program}",
-            "kickstart": "${config:amiga.rom-paths.A4000}",
-            "internalConsoleOptions": "openOnSessionStart"
+            "name": "Run MorphOS version in local gdbserver",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/opt/amiga/bin/ppc-amigaos-gdb",
+            "miDebuggerServerAddress": "localhost:2345",
+            "program": "${workspaceFolder}/out/AmigaGPT_MorphOS",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Compile MorphOS version locally - Debug",
+            "externalConsole": true,
+            "stopAtEntry": false,
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
         },
         {
             "name": "(lldb) Launch Test",
