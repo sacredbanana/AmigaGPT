@@ -3,6 +3,7 @@
 ## 2.6.1 (2025-05-11)
 
 - Stop the stack size warning appearing on MorphOS
+- Fix bug where the conversation window will say "(null)" if the user clicks in the conversation list below all the entries
 
 ## 2.6.0 (2025-05-06)
 

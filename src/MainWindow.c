@@ -122,8 +122,10 @@ HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
     struct Conversation *conversation;
     DoMethod(conversationListObject, MUIM_NList_GetEntry,
              MUIV_NList_GetEntry_Active, &conversation);
-    currentConversation = conversation;
-    displayConversation(currentConversation);
+    if (conversation) {
+        currentConversation = conversation;
+        displayConversation(currentConversation);
+    }
 }
 MakeHook(ConversationRowClickedHook, ConversationRowClickedFunc);
 
