@@ -14,10 +14,12 @@
 #include "config.h"
 #include "version.h"
 
+#if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
 CONST_STRPTR stack = "$STACK: 32768";
+#endif
+
 CONST_STRPTR version = "$VER: AmigaGPT " APP_VERSION " (" BUILD_DATE
                        ") � 2023-2025 Cameron Armstrong";
-
 #ifdef __AMIGAOS4__
 static uint32 appID;
 #endif
@@ -46,6 +48,7 @@ LONG main(int argc, char **argv) {
         wbStartupMessage = (struct WBStartup *)GetMsg(&currentTask->pr_MsgPort);
     }
 
+#ifdef __AMIGAOS3__
     UBYTE *upper = (UBYTE *)currentTask->pr_Task.tc_SPUpper;
     UBYTE *lower = (UBYTE *)currentTask->pr_Task.tc_SPLower;
     ULONG total = upper - lower;
@@ -57,6 +60,7 @@ LONG main(int argc, char **argv) {
         displayError(warningMessage);
         FreeVec(warningMessage);
     }
+#endif
 #else
     if (argc == 0) {
         wbStartupMessage = (struct WBStartup *)argv;

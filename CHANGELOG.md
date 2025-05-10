@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.1 (2025-05-11)
+
+- Stop the stack size warning appearing on MorphOS
+
 ## 2.6.0 (2025-05-06)
 
 - Added GPT Image 1 image model
