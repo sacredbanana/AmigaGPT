@@ -18,6 +18,8 @@
 /* Max nesting depth for B/I/U combined. Adjust as needed. */
 #define MAX_STYLE_STACK 32
 
+#define CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH 1024 * 100
+
 typedef enum { STYLE_BOLD, STYLE_ITALIC, STYLE_UNDERLINE } StyleType;
 
 /* A small stack to track active styles in the order they were opened. */
@@ -32,6 +34,7 @@ Object *newChatButton;
 Object *deleteChatButton;
 Object *sendMessageButton;
 Object *chatInputTextEditor;
+Object *chatOutputListView;
 Object *chatOutputTextEditor;
 Object *statusBar;
 Object *conversationListObject;
@@ -45,6 +48,7 @@ Object *imageView;
 Object *imageViewGroup;
 Object *openImageButton;
 Object *saveImageCopyButton;
+STRPTR chatOutputTextEditorContents = NULL;
 WORD pens[NUMDRIPENS + 1];
 BOOL isPublicScreen;
 struct Conversation *currentConversation;
@@ -830,6 +834,9 @@ LONG createMainWindow() {
 
     createMenu();
 
+    chatOutputTextEditorContents = AllocVec(
+        CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, MEMF_ANY | MEMF_CLEAR);
+
     pages[0] = STRING_CHAT_MODE;
     pages[1] = STRING_IMAGE_GENERATION_MODE;
 
@@ -881,7 +888,7 @@ LONG createMainWindow() {
                         Child, VGroup,
                             // Chat output text display
                             Child, HGroup, MUIA_VertWeight, 60,
-                                Child, NListviewObject,
+                                Child, chatOutputListView = NListviewObject,
                                 MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_None,
                                 MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
                                 MUIA_NListview_NList, chatOutputTextEditor = NFloattextObject,
@@ -1229,9 +1236,6 @@ static void sendChatMessage() {
     set(sendMessageButton, MUIA_Disabled, TRUE);
     set(newChatButton, MUIA_Disabled, TRUE);
     set(deleteChatButton, MUIA_Disabled, TRUE);
-    STRPTR chatOutputTextEditorContents;
-    get(chatOutputTextEditor, MUIA_NFloattext_Text,
-        &chatOutputTextEditorContents);
 
     updateStatusBar(STRING_SENDING_MESSAGE, yellowPen);
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
@@ -1242,6 +1246,12 @@ static void sendChatMessage() {
     } else {
         text = DoMethod(chatInputTextEditor, MUIM_TextEditor_ExportText);
     }
+
+    snprintf(chatOutputTextEditorContents,
+             CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\033r\033b\0333%s\0",
+             text);
+    set(chatOutputTextEditor, MUIA_NFloattext_Text,
+        chatOutputTextEditorContents);
 
     // Remove trailing newline characters
     while (text[strlen(text) - 1] == '\n') {
@@ -1255,8 +1265,6 @@ static void sendChatMessage() {
     CodesetsFreeA(textUTF8, NULL);
 
     setConversationSystem(currentConversation, config.chatSystem);
-
-    displayConversation(currentConversation);
 
     if (isAROS) {
         set(chatInputTextEditor, MUIA_String_Contents, "");
@@ -1346,7 +1354,7 @@ static void sendChatMessage() {
                                 strlen(contentString) - 1);
                     strncat(chatOutputTextEditorContents,
                             formattedMessageSystemEncoded,
-                            WRITE_BUFFER_LENGTH -
+                            CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
                                 strlen(chatOutputTextEditorContents) -
                                 strlen(formattedMessageSystemEncoded) - 1);
                     CodesetsFreeA(formattedMessageSystemEncoded, NULL);
@@ -1355,10 +1363,12 @@ static void sendChatMessage() {
                             convertMarkdownFormattingToMUI(
                                 chatOutputTextEditorContents);
                         strncpy(chatOutputTextEditorContents, formattedContent,
-                                WRITE_BUFFER_LENGTH - 1);
+                                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 1);
                         FreeVec(formattedContent);
                         set(chatOutputTextEditor, MUIA_NFloattext_Text,
                             chatOutputTextEditorContents);
+                        set(chatOutputListView, MUIA_NList_First,
+                            MUIV_NList_First_Bottom);
                         if (config.speechEnabled) {
                             // Text for speaking
                             STRPTR unformattedMessageSystemEncoded =
@@ -1389,19 +1399,13 @@ static void sendChatMessage() {
         }
     } while (!dataStreamFinished);
 
-    STRPTR formattedContent =
-        convertMarkdownFormattingToMUI(chatOutputTextEditorContents);
-    strncpy(chatOutputTextEditorContents, formattedContent,
-            WRITE_BUFFER_LENGTH - 1);
-    FreeVec(formattedContent);
-    set(chatOutputTextEditor, MUIA_NFloattext_Text,
-        chatOutputTextEditorContents);
-
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 
     if (responses != NULL) {
         addTextToConversation(currentConversation, receivedMessage,
                               "assistant");
+        displayConversation(currentConversation);
+
         if (config.speechEnabled) {
             if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
                 speakText(receivedMessage);
@@ -1496,16 +1500,14 @@ void addTextToConversation(struct Conversation *conversation, UTF8 *text,
  **/
 static void displayConversation(struct Conversation *conversation) {
     struct ConversationNode *conversationNode;
-    STRPTR conversationString;
-    get(chatOutputTextEditor, MUIA_NFloattext_Text, &conversationString);
-    conversationString[0] = '\0';
+    chatOutputTextEditorContents[0] = '\0';
     for (conversationNode =
              (struct ConversationNode *)conversation->messages->mlh_Head;
          conversationNode->node.mln_Succ != NULL;
          conversationNode =
              (struct ConversationNode *)conversationNode->node.mln_Succ) {
-        if ((strlen(conversationString) + strlen(conversationNode->content) +
-             256) > WRITE_BUFFER_LENGTH) {
+        if ((strlen(chatOutputTextEditorContents) +
+             strlen(conversationNode->content) + 256) > WRITE_BUFFER_LENGTH) {
             displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
             set(sendMessageButton, MUIA_Disabled, TRUE);
             return;
@@ -1513,39 +1515,41 @@ static void displayConversation(struct Conversation *conversation) {
         if (strcmp(conversationNode->role, "user") == 0) {
             UTF8 *content = conversationNode->content;
             const UBYTE userStyleString[] = "\033r\033b\0333";
-            strncat(conversationString, userStyleString,
+            strncat(chatOutputTextEditorContents, userStyleString,
                     strlen(userStyleString));
             for (ULONG i = 0; i < strlen(content); i++) {
-                strncat(conversationString, content + i, 1);
+                strncat(chatOutputTextEditorContents, content + i, 1);
                 if (content[i] == '\n') {
-                    strncat(conversationString, "\033b", 2);
+                    strncat(chatOutputTextEditorContents, "\033b", 2);
                 }
             }
         } else if (strcmp(conversationNode->role, "assistant") == 0) {
             const UBYTE assistantStyleString[] = "\n\n\033l\0332";
-            strncat(conversationString, assistantStyleString,
+            strncat(chatOutputTextEditorContents, assistantStyleString,
                     strlen(assistantStyleString));
             STRPTR formattedContent =
                 convertMarkdownFormattingToMUI(conversationNode->content);
-            strncat(conversationString, formattedContent,
+            strncat(chatOutputTextEditorContents, formattedContent,
                     strlen(formattedContent));
             FreeVec(formattedContent);
             const UBYTE messageSeparatorStyleString[] = "\n\n";
-            strncat(conversationString, messageSeparatorStyleString,
+            strncat(chatOutputTextEditorContents, messageSeparatorStyleString,
                     strlen(messageSeparatorStyleString));
         }
     }
 
     STRPTR convertedConversationString = CodesetsUTF8ToStr(
         CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-        (Tag)conversationString, CSA_MapForeignChars, TRUE, TAG_DONE);
+        (Tag)chatOutputTextEditorContents, CSA_MapForeignChars, TRUE, TAG_DONE);
 
-    snprintf(conversationString, WRITE_BUFFER_LENGTH, "%s\0",
+    snprintf(chatOutputTextEditorContents, WRITE_BUFFER_LENGTH, "%s\0",
              convertedConversationString);
 
     CodesetsFreeA(convertedConversationString, NULL);
 
-    set(chatOutputTextEditor, MUIA_NFloattext_Text, conversationString);
+    set(chatOutputTextEditor, MUIA_NFloattext_Text,
+        chatOutputTextEditorContents);
+    set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
 }
 
 /**
