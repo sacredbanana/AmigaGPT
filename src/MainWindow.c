@@ -9,6 +9,7 @@
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
+#include "AmigaGPTTextEditor.h"
 #include "config.h"
 #include "gui.h"
 #include "menu.h"
@@ -676,7 +677,7 @@ static void outputStyleOff(STRPTR out, size_t outSize) {
  *  - "__" => toggles underline
  *  - "_"  => toggles italic (some Markdown variants do this),
  *            but we'll skip that unless you truly want single underscore
- *            for italic. We’ll assume only * for italic, __ for underline.
+ *            for italic. We'll assume only * for italic, __ for underline.
  *
  * @param input : the input string
  * @param pos : current position in the input string
@@ -719,7 +720,7 @@ static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
  *
  * - Supports nesting, e.g. **bold *italic** inside**
  * - Supports escaping:
- *      \*, \_, \\, so they’re inserted literally.
+ *      \*, \_, \\, so they're inserted literally.
  *
  * @param input the input string
  * @return a newly allocated string. Caller must FreeVec() it.
@@ -729,7 +730,7 @@ static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
         return NULL;
 
     // Heuristic for output expansion: each marker can expand
-    // to ~4 chars (“\033b” or “\033n”), so let's be generous.
+    // to ~4 chars ("\033b" or "\033n"), so let's be generous.
     size_t inLen = strlen(input);
     size_t outCap = inLen * 6 + 128;
     STRPTR out = AllocVec(outCap, MEMF_ANY | MEMF_CLEAR);
@@ -781,7 +782,7 @@ static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
                 if (pushStyle(&styleStack, styleFound)) {
                     outputStyleOn(out, outCap, styleFound);
                 } else {
-                    // We’ve run out of stack space; treat as literal
+                    // We've run out of stack space; treat as literal
                     // We'll just insert the raw marker:
                     size_t availableSpace = outCap - strlen(out) - 1;
                     size_t copyLen = (markerLen < availableSpace)
@@ -831,6 +832,10 @@ static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
 LONG createMainWindow() {
     currentConversation = NULL;
     currentImage = NULL;
+
+    if (createAmigaGPTTextEditor() == RETURN_ERROR) {
+        displayError("Could not create custom class.");
+    }
 
     createMenu();
 
@@ -900,15 +905,16 @@ LONG createMainWindow() {
                             End,
                             Child, HGroup, MUIA_VertWeight, 20,
                                 // Chat input text editor
-                                Child, chatInputTextEditor = isAROS ? BetterStringObject,
+                                Child, chatInputTextEditor = NewObject(MUIC_AmigaGPTTextEditor,
+					TextFrame,
+					MUIA_Background, MUII_BACKGROUND,
                                     MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
-                                End : TextEditorObject,
-                                    MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
+                                    MUIA_AmigaGPTTextEditor_SubmitHook, &SendMessageButtonClickedHook,
+                                    isAROS ? TAG_DONE : TAG_SKIP, NULL,
                                     MUIA_TextEditor_ReadOnly, FALSE,
                                     MUIA_TextEditor_TabSize, 4,
                                     MUIA_TextEditor_Rows, 3,
-                                    MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
-                                End,
+                                    MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail, TAG_DONE),
                                 // Send message button
                                 Child, HGroup, MUIA_HorizWeight, 10,
                                     Child, sendMessageButton = MUI_MakeObject(MUIO_Button, STRING_SEND,
@@ -972,14 +978,14 @@ LONG createMainWindow() {
                             End,
                             Child, HGroup,
                                 // Image input text editor
-                                Child, imageInputTextEditor = isAROS ? BetterStringObject,
-                                End : TextEditorObject,
+                                Child, imageInputTextEditor = NewObject(MUIC_AmigaGPTTextEditor, NULL,
                                     MUIA_Weight, 80,
+                                    MUIA_AmigaGPTTextEditor_SubmitHook, &CreateImageButtonClickedHook,
+                                    isAROS ? TAG_DONE : TAG_SKIP, NULL,
                                     MUIA_TextEditor_ReadOnly, FALSE,
                                     MUIA_TextEditor_TabSize, 4,
                                     MUIA_TextEditor_Rows, 3,
-                                    MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
-                                End,
+                                    MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail, TAG_DONE),
                                 Child, VGroup,
                                     MUIA_Weight, 20,
                                     // Create image button
@@ -1057,6 +1063,14 @@ void addMainWindowActions() {
     DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
              MUIV_Notify_Application, 2, MUIM_Application_ReturnID,
              MUIV_Application_ReturnID_Quit);
+    // DoMethod(chatInputTextEditor, MUIM_Notify,
+    // MUIA_AmigaGPTTextEditor_Submit,
+    //          MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_CallHook,
+    //          &SendMessageButtonClickedHook, MUIV_TriggerValue);
+    // DoMethod(imageInputTextEditor, MUIM_Notify,
+    // MUIA_AmigaGPTTextEditor_Submit,
+    //          TRUE, MUIV_Notify_Window, 2, MUIM_CallHook,
+    //          &CreateImageButtonClickedHook);
 }
 
 /**
@@ -1248,8 +1262,24 @@ static void sendChatMessage() {
     }
 
     snprintf(chatOutputTextEditorContents,
-             CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\033r\033b\0333%s\0",
-             text);
+             CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\033r\033b\0333");
+    size_t currentLength = strlen(chatOutputTextEditorContents);
+    for (ULONG i = 0; i < strlen(text); i++) {
+        if (currentLength >= CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 10)
+            break;
+
+        chatOutputTextEditorContents[currentLength++] = text[i];
+        chatOutputTextEditorContents[currentLength] = '\0';
+
+        // If it's a newline, add the styling codes after it
+        if (text[i] == '\n') {
+            strncat(chatOutputTextEditorContents, "\033r\033b\0333",
+                    CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - currentLength -
+                        1);
+            currentLength = strlen(chatOutputTextEditorContents);
+        }
+    }
+
     set(chatOutputTextEditor, MUIA_NFloattext_Text,
         chatOutputTextEditorContents);
 
@@ -1257,6 +1287,7 @@ static void sendChatMessage() {
     while (text[strlen(text) - 1] == '\n') {
         text[strlen(text) - 1] = '\0';
     }
+
     UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
 
                                         CSA_Source, (Tag)text, TAG_DONE);
@@ -1520,7 +1551,8 @@ static void displayConversation(struct Conversation *conversation) {
             for (ULONG i = 0; i < strlen(content); i++) {
                 strncat(chatOutputTextEditorContents, content + i, 1);
                 if (content[i] == '\n') {
-                    strncat(chatOutputTextEditorContents, "\033b", 2);
+                    strncat(chatOutputTextEditorContents, userStyleString,
+                            strlen(userStyleString));
                 }
             }
         } else if (strcmp(conversationNode->role, "assistant") == 0) {

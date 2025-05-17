@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "AboutAmigaGPTWindow.h"
+#include "AmigaGPTTextEditor.h"
 #include "APIKeyRequesterWindow.h"
 #include "ARexx.h"
 #include "ChatSystemRequesterWindow.h"
@@ -356,6 +357,7 @@ void shutdownGUI() {
     if (chatOutputTextEditorContents) {
         FreeVec(chatOutputTextEditorContents);
     }
+    deleteAmigaGPTTextEditor();
 
 #ifndef __MORPHOS__
     closeARexx();
