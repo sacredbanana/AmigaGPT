@@ -1,6 +1,7 @@
 #include <exec/exec.h>
 #include <libraries/mui.h>
 #include <SDI_hook.h>
+#include <string.h>
 #include "ProxySettingsRequesterWindow.h"
 #include "config.h"
 #include "gui.h"

@@ -32,12 +32,6 @@ extern BOOL isPublicScreen;
 LONG createMainWindow();
 
 /**
- * Display an error message
- * @param message the message to display
- **/
-void displayError(STRPTR message);
-
-/**
  * Update the status bar
  * @param message the message to display
  * @param pen the pen to use for the text

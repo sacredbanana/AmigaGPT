@@ -5,6 +5,8 @@
 #include <proto/amissl.h>
 #include <proto/amisslmaster.h>
 #else
+#include <openssl/err.h>
+#include <openssl/rand.h>
 #include <openssl/ssl.h>
 #include <netdb.h>
 #endif

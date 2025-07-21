@@ -2,14 +2,16 @@
 #include <mui/BetterString_mcc.h>
 #include <mui/TextEditor_mcc.h>
 #include <SDI_hook.h>
+#include <string.h>
 #include "gui.h"
 #include "AmigaGPTTextEditor.h"
 
 struct MUI_CustomClass *amigaGPTTextEditorClass;
 
 struct AmigaGPTTextEditorData {
-    struct MUI_EventHandlerNode eh;
+    struct MUI_EventHandlerNode *eh;
     struct Hook *submitHook;
+    BOOL isActive;
 };
 
 SAVEDS ULONG mGet(struct IClass *cl, Object *obj, struct opGet *msg) {
@@ -43,27 +45,30 @@ SAVEDS ULONG mSet(struct IClass *cl, Object *obj, struct opSet *msg) {
 }
 
 SAVEDS ULONG mSetup(struct IClass *cl, Object *obj, Msg msg) {
+    printf("mSetup\n");
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
+    data->isActive = FALSE;
 
     if (!(DoSuperMethodA(cl, obj, msg)))
         return FALSE;
-
-    data->eh.ehn_Class = cl;
-    data->eh.ehn_Object = obj;
-    data->eh.ehn_Events = IDCMP_RAWKEY;
-    data->eh.ehn_Flags = MUI_EHF_GUIMODE;
-    data->eh.ehn_Priority = 100;
 
     return TRUE;
 }
 
 SAVEDS ULONG mCleanup(struct IClass *cl, Object *obj, Msg msg) {
+    printf("mCleanup\n");
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
 
-    if (_win(obj) != NULL)
-        DoMethod(_win(obj), MUIM_Window_RemEventHandler, &data->eh);
+    // FreeVec(data->eh);
 
-    return DoSuperMethodA(cl, obj, msg);
+    return TRUE;
+}
+
+SAVEDS ULONG mDispose(struct IClass *cl, Object *obj, Msg msg) {
+    printf("mDispose\n");
+    struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
+    FreeVec(data->eh);
+    return TRUE;
 }
 
 SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
@@ -78,14 +83,15 @@ SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
                 if (msg->imsg->Qualifier == 32768) {
                     STRPTR text;
                     if (isAROS) {
-                        get(obj, MUIA_Text_Contents, &text);
+                        get(obj, MUIA_String_Contents, &text);
                     } else {
                         text = DoMethod(obj, MUIM_TextEditor_ExportText);
                     }
                     if (strlen(text) > 0) {
                         rc = MUI_EventHandlerRC_Eat;
                         if (data->submitHook != NULL) {
-                            CallHook(data->submitHook, NULL, NULL);
+                            DoMethod(obj, MUIM_CallHook, data->submitHook, NULL,
+                                     NULL);
                         }
                         return rc;
                     }
@@ -103,10 +109,20 @@ SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
 }
 
 SAVEDS ULONG mNew(struct IClass *cl, Object *obj, Msg *msg) {
+    printf("mNew\n");
     if (!(obj = (Object *)DoSuperMethodA(cl, obj, msg)))
         return 0;
 
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
+    struct MUI_EventHandlerNode *eh = (struct MUI_EventHandlerNode *)AllocVec(
+        sizeof(struct MUI_EventHandlerNode), MEMF_PUBLIC);
+    eh->ehn_Class = cl;
+    eh->ehn_Object = obj;
+    eh->ehn_Events = IDCMP_RAWKEY;
+    eh->ehn_Flags = MUI_EHF_GUIMODE;
+    eh->ehn_Priority = 100;
+    data->eh = eh;
+
     struct TagItem *tags, *tag;
     for (tags = ((struct opSet *)msg)->ops_AttrList;
          (tag = NextTagItem(&tags));) {
@@ -123,21 +139,29 @@ SAVEDS ULONG mNew(struct IClass *cl, Object *obj, Msg *msg) {
 
 SAVEDS ULONG mGoActive(struct IClass *cl, Object *obj,
                        struct MUIP_GoActive *msg) {
+    printf("mGoActive\n");
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
 
-    if (_win(obj) != NULL) {
-        DoMethod(_win(obj), MUIM_Window_AddEventHandler, &data->eh);
+    if (!data->isActive) {
+        printf("Adding event handler\n");
+        DoMethod(_win(obj), MUIM_Window_AddEventHandler, data->eh);
+        data->isActive = TRUE;
+    } else {
+        printf("Not adding event handler\n");
     }
+
     return DoSuperMethodA(cl, obj, msg);
 }
 
 SAVEDS ULONG mGoInactive(struct IClass *cl, Object *obj,
                          struct MUIP_GoInactive *msg) {
+    printf("mGoInactive\n");
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
 
-    if (_win(obj) != NULL) {
-        DoMethod(_win(obj), MUIM_Window_RemEventHandler, &data->eh);
+    if (data->isActive && _win(obj) != NULL) {
+        DoMethod(_win(obj), MUIM_Window_RemEventHandler, data->eh);
     }
+    data->isActive = FALSE;
     return DoSuperMethodA(cl, obj, msg);
 }
 
@@ -149,6 +173,8 @@ DISPATCHER(MyDispatcher) {
         return (mGet(cl, obj, (APTR)msg));
     case OM_SET:
         return (mSet(cl, obj, (APTR)msg));
+    case OM_DISPOSE:
+        return (mDispose(cl, obj, (APTR)msg));
     case MUIM_HandleEvent:
         return (mHandleEvent(cl, obj, (APTR)msg));
     case MUIM_Setup:

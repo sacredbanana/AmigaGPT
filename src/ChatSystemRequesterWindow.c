@@ -4,6 +4,7 @@
 #include <mui/NFloattext_mcc.h>
 #include <mui/TextEditor_mcc.h>
 #include <SDI_hook.h>
+#include <string.h>
 #include "ChatSystemRequesterWindow.h"
 #include "config.h"
 #include "gui.h"

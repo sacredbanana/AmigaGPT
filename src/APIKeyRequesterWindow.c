@@ -2,9 +2,11 @@
 #include <libraries/mui.h>
 #include <SDI_hook.h>
 #include <mui/TextEditor_mcc.h>
+#include <string.h>
 #include "APIKeyRequesterWindow.h"
 #include "config.h"
 #include "gui.h"
+#include "MainWindow.h"
 
 Object *apiKeyRequesterString;
 Object *apiKeyRequesterWindowObject;

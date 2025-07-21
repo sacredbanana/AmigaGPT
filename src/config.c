@@ -6,6 +6,8 @@
 #include <json-c/json.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
+#include <string.h>
+#include <stdio.h>
 #include "AmigaGPT_cat.h"
 #include "config.h"
 

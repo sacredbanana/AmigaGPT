@@ -1,5 +1,6 @@
 #include <guigfx/guigfx.h>
 #include <intuition/classusr.h>
+#include <clib/alib_protos.h>
 #include <proto/amigaguide.h>
 #include <proto/arexx.h>
 #include <proto/asl.h>
@@ -8,12 +9,14 @@
 #undef USE_INLINE_STDARG
 #include <proto/dos.h>
 #include <proto/gadtools.h>
+#include <proto/guigfx.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>
 #include <proto/locale.h>
 #include <proto/muimaster.h>
 #include <proto/rexxsyslib.h>
+#include <proto/utility.h>
 #include "AmigaGPT_cat.h"
 
 /**
@@ -66,6 +69,12 @@ void startGUIRunLoop();
  * @return TRUE if the file was copied successfully, FALSE otherwise
  **/
 BOOL copyFile(STRPTR source, STRPTR destination);
+
+/**
+ * Display an error message
+ * @param message the message to display
+ **/
+void displayError(STRPTR message);
 
 /**
  * Shutdown the GUI

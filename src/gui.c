@@ -330,6 +330,57 @@ BOOL copyFile(STRPTR source, STRPTR destination) {
 }
 
 /**
+ * Display an error message
+ * @param message the message to display
+ **/
+void displayError(STRPTR message) {
+    if (app) {
+        updateStatusBar(STRING_ERROR, redPen);
+    }
+    const UBYTE ERROR_BUFFER_LENGTH = 255;
+    STRPTR errorMessage = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+    CONST_STRPTR okString =
+        AllocVec(strlen(STRING_OK) + 2, MEMF_ANY | MEMF_CLEAR);
+    snprintf(okString, strlen(STRING_OK) + 2, "*%s", STRING_OK);
+    const LONG ERROR_CODE = IoErr();
+    if (ERROR_CODE == 0) {
+        if (!app ||
+            MUI_Request(app, mainWindowObject,
+#ifdef __MORPHOS__
+                        NULL,
+#else
+                        MUIV_Requester_Image_Error,
+#endif
+                        STRING_ERROR, okString, "\33c%s", message) != 0) {
+            struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,
+                                         STRING_ERROR, message, STRING_OK};
+            EasyRequest(NULL, &errorES, NULL, NULL);
+        }
+    } else {
+        STRPTR errorDescription = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY);
+        Fault(ERROR_CODE, NULL, errorDescription, ERROR_BUFFER_LENGTH);
+        snprintf(errorMessage, ERROR_BUFFER_LENGTH, "%s: %s\n\n%s\0",
+                 STRING_ERROR, errorDescription, message);
+        if (app) {
+            MUI_Request(app, mainWindowObject,
+#ifdef __MORPHOS__
+                        NULL,
+#else
+                        MUIV_Requester_Image_Error,
+#endif
+                        STRING_ERROR, okString, "\33c%s", errorMessage);
+        } else {
+            struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,
+                                         STRING_ERROR, errorMessage, STRING_OK};
+            EasyRequest(NULL, &errorES, NULL, NULL);
+        }
+        FreeVec(errorDescription);
+    }
+    FreeVec(errorMessage);
+    FreeVec(okString);
+}
+
+/**
  * Shutdown the GUI
  **/
 void shutdownGUI() {

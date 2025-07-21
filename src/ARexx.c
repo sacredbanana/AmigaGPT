@@ -3,6 +3,7 @@
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include "ARexx.h"
 #include "gui.h"
 #include "config.h"

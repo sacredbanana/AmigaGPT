@@ -81,8 +81,6 @@ HOOKPROTONH(StartupOptionsOkButtonClickedFunc, void,
                          SA_Height, screenModeRequester->sm_DisplayHeight,
                          TAG_DONE)) == NULL) {
                     displayError(STRING_ERROR_SCREEN);
-                    MUI_FreeAslRequest(screenModeRequester);
-                    return RETURN_ERROR;
                 }
                 MUI_FreeAslRequest(screenModeRequester);
             }

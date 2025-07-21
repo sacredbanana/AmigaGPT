@@ -9,6 +9,7 @@
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include "AmigaGPTTextEditor.h"
 #include "config.h"
 #include "gui.h"
@@ -30,7 +31,7 @@ typedef struct {
 } StyleStack;
 
 struct Window *mainWindow;
-Object *mainWindowObject;
+Object *mainWindowObject = NULL;
 Object *newChatButton;
 Object *deleteChatButton;
 Object *sendMessageButton;
@@ -67,6 +68,8 @@ static LONG loadConversations();
 static LONG saveConversations();
 static LONG loadImages();
 static LONG saveImages();
+static void openImage(struct GeneratedImage *image, WORD scaledWidth,
+                      WORD scaledHeight);
 static void initStyleStack(StyleStack *s);
 static BOOL pushStyle(StyleStack *s, StyleType style);
 static BOOL popStyle(StyleStack *s, StyleType style);
@@ -76,6 +79,7 @@ static void outputStyleOff(STRPTR out, size_t outSize);
 static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
                          StyleType *foundStyle);
 static PICTURE *generateThumbnail(struct GeneratedImage *image);
+static void addMainWindowActions();
 
 HOOKPROTONHNO(ConstructConversationLI_TextFunc, APTR,
               struct NList_ConstructMessage *ncm) {
@@ -1032,7 +1036,7 @@ LONG createMainWindow() {
 /**
  * Add actions to the main window
  **/
-void addMainWindowActions() {
+static void addMainWindowActions() {
     DoMethod(newChatButton, MUIM_Notify, MUIA_Pressed, FALSE, newChatButton, 2,
              MUIM_CallHook, &NewChatButtonClickedHook);
     DoMethod(deleteChatButton, MUIM_Notify, MUIA_Pressed, FALSE,
@@ -1348,6 +1352,8 @@ static void sendChatMessage() {
                 }
                 struct MinNode *lastMessage =
                     RemTail(currentConversation->messages);
+                // struct Node *lastMessage =
+                // RemTail((struct List *)currentConversation->messages);
                 FreeVec(lastMessage);
                 if (currentConversation ==
                     currentConversation->messages->mlh_TailPred) {
@@ -1467,8 +1473,8 @@ static void sendChatMessage() {
                 config.proxyEnabled, config.proxyHost, config.proxyPort,
                 config.proxyUsesSSL, config.proxyRequiresAuth,
                 config.proxyUsername, config.proxyPassword);
-            struct MinNode *titleRequestNode =
-                RemTail(currentConversation->messages);
+            struct Node *titleRequestNode =
+                RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
             if (responses == NULL) {
@@ -1522,7 +1528,8 @@ void addTextToConversation(struct Conversation *conversation, UTF8 *text,
     conversationNode->role[sizeof(conversationNode->role) - 1] = '\0';
     conversationNode->content = AllocVec(strlen(text) + 1, MEMF_CLEAR);
     strncpy(conversationNode->content, text, strlen(text));
-    AddTail(conversation->messages, (struct Node *)conversationNode);
+    AddTail((struct List *)conversation->messages,
+            (struct Node *)conversationNode);
 }
 
 /**
@@ -1591,7 +1598,7 @@ static void displayConversation(struct Conversation *conversation) {
 void freeConversation(struct Conversation *conversation) {
     struct ConversationNode *conversationNode;
     while ((conversationNode = (struct ConversationNode *)RemHead(
-                conversation->messages)) != NULL) {
+                (struct List *)conversation->messages)) != NULL) {
         FreeVec(conversationNode->content);
         FreeVec(conversationNode);
     }
@@ -1648,57 +1655,6 @@ copyGeneratedImage(struct GeneratedImage *generatedImage) {
     newEntry->width = generatedImage->width;
     newEntry->height = generatedImage->height;
     return (newEntry);
-}
-
-/**
- * Display an error message
- * @param message the message to display
- **/
-void displayError(STRPTR message) {
-    if (app) {
-        updateStatusBar(STRING_ERROR, redPen);
-    }
-    const UBYTE ERROR_BUFFER_LENGTH = 255;
-    STRPTR errorMessage = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
-    CONST_STRPTR okString =
-        AllocVec(strlen(STRING_OK) + 2, MEMF_ANY | MEMF_CLEAR);
-    snprintf(okString, strlen(STRING_OK) + 2, "*%s", STRING_OK);
-    const LONG ERROR_CODE = IoErr();
-    if (ERROR_CODE == 0) {
-        if (!app ||
-            MUI_Request(app, mainWindowObject,
-#ifdef __MORPHOS__
-                        NULL,
-#else
-                        MUIV_Requester_Image_Error,
-#endif
-                        STRING_ERROR, okString, "\33c%s", message) != 0) {
-            struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,
-                                         STRING_ERROR, message, STRING_OK};
-            EasyRequest(NULL, &errorES, NULL, NULL);
-        }
-    } else {
-        STRPTR errorDescription = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY);
-        Fault(ERROR_CODE, NULL, errorDescription, ERROR_BUFFER_LENGTH);
-        snprintf(errorMessage, ERROR_BUFFER_LENGTH, "%s: %s\n\n%s\0",
-                 STRING_ERROR, errorDescription, message);
-        if (app) {
-            MUI_Request(app, mainWindowObject,
-#ifdef __MORPHOS__
-                        NULL,
-#else
-                        MUIV_Requester_Image_Error,
-#endif
-                        STRING_ERROR, okString, "\33c%s", errorMessage);
-        } else {
-            struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,
-                                         STRING_ERROR, errorMessage, STRING_OK};
-            EasyRequest(NULL, &errorES, NULL, NULL);
-        }
-        FreeVec(errorDescription);
-    }
-    FreeVec(errorMessage);
-    FreeVec(okString);
 }
 
 /**
@@ -1820,8 +1776,8 @@ static LONG saveImages() {
  * @param width the width of the image
  * @param height the height of the image
  **/
-void openImage(struct GeneratedImage *image, WORD scaledWidth,
-               WORD scaledHeight) {
+static void openImage(struct GeneratedImage *image, WORD scaledWidth,
+                      WORD scaledHeight) {
     if (image == NULL)
         return;
 

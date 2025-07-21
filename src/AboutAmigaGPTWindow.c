@@ -1,6 +1,7 @@
 #include <libraries/mui.h>
 #include <mui/Aboutbox_mcc.h>
 #include <SDI_hook.h>
+#include <stdio.h>
 #include "AboutAmigaGPTWindow.h"
 #include "gui.h"
 #include "version.h"
@@ -41,7 +42,7 @@ LONG createAboutAmigaGPTWindow() {
              "\033b%%I\033n\n"
              "\t\033iMauricio Sandoval\033n\n\n"
              "\033b%%l\033n\n"
-             "\t\033iMauricio Sandoval (español)\033n\n"
+             "\t\033iMauricio Sandoval (espaï¿½ol)\033n\n"
              "\n"
              "\t\033iTobias Baeumer (deutsch)\033n\n"
              "\n"
@@ -56,7 +57,7 @@ LONG createAboutAmigaGPTWindow() {
              "\t\033iEAB\033n\n"
              "\t%s\n"
              "\n"
-             "\t\033iJán Zahurancik\033n\n"
+             "\t\033iJï¿½n Zahurancik\033n\n"
              "\t%s\n"
              "\thttps://www.amikit.amiga.sk\n"
              "\n"
@@ -88,7 +89,7 @@ LONG createAboutAmigaGPTWindow() {
              "\t%s\n"
              "\thttps://www.youtube.com/watch?v=BV5Fq1PresE\n"
              "\n"
-             "\033b%%§\033n\n"
+             "\033b%%ï¿½\033n\n"
              "\tMIT\n"
              "\n"
              "\033b%%W\033n\n"
