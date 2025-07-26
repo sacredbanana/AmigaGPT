@@ -680,7 +680,6 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
 
                 break;
             case SSL_ERROR_ZERO_RETURN:
-                printf("SSL_ERROR_ZERO_RETURN\n");
                 doneReading = TRUE;
                 break;
             case SSL_ERROR_WANT_READ:

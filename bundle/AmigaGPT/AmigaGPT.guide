@@ -736,6 +736,17 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.7.0 (2025-07-27)@{ub}
+
+- Stop the stack size warning appearing on MorphOS
+- Running ARexx scripts now working in MorphOS (requires the 68k version of rexxsyslib.library installed)
+- Fix bug where the conversation window will say "(null)" if the user clicks in the conversation list below all the entries
+- Chat window scrolls to bottom when new text is received
+- Can now send the message by pressing return (right shift + return will create a new line without sending) (MUI 5 only)
+- The status bar now has a dark background to make the status more visible
+- Fixed bug where your sent message does not get formatted correctly if it has more than 1 line
+- While receiving a message, the chat window only shows the current message. This dramatically speeds up text rendering. Long conversations no longer become increasingly sluggish after every new message
+
 @{b}2.6.0 (2025-05-06)@{ub}
 
 - Added GPT Image 1 image model
