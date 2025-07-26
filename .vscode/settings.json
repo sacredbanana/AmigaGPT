@@ -104,7 +104,8 @@
         "rexxsyslib_protos.h": "c",
         "arexx.h": "c",
         "arexx_protos.h": "c",
-        "alib.h": "c"
+        "alib.h": "c",
+        "macros.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

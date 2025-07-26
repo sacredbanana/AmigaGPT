@@ -169,8 +169,9 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
     DoMethod(arexxObject, AM_EXECUTE, scriptPath, NULL, NULL, NULL, NULL, NULL);
 #else
     UBYTE command[1024] = {0};
-    snprintf(command, sizeof(command), "RX %s", scriptPath);
-    SystemTagList(scriptPath, TAG_DONE);
+    snprintf(command, sizeof(command), "RUN RX %s", scriptPath);
+    SystemTags(command, SYS_Input, NULL, SYS_Output, NULL, SYS_Asynch, TRUE,
+               TAG_DONE);
 #endif
     FreeVec(scriptPath);
 }

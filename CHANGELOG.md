@@ -3,6 +3,7 @@
 ## 2.7.0 (2025-07-26)
 
 - Stop the stack size warning appearing on MorphOS
+- Running ARexx scripts now working in MorphOS (requires the 68k version of rexxsyslib.library installed)
 - Fix bug where the conversation window will say "(null)" if the user clicks in the conversation list below all the entries
 - Chat window scrolls to bottom when new text is received
 - Can now send the message by pressing return (right shift + return will create a new line without sending) (MUI 5 only)
