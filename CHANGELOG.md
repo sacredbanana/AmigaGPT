@@ -1,11 +1,11 @@
 # Changelog
 
-## 2.6.1 (2025-05-17)
+## 2.7.0 (2025-07-26)
 
 - Stop the stack size warning appearing on MorphOS
 - Fix bug where the conversation window will say "(null)" if the user clicks in the conversation list below all the entries
 - Chat window scrolls to bottom when new text is received
-- Can now send the message by pressing return (right shift + return will create a new line without sending)
+- Can now send the message by pressing return (right shift + return will create a new line without sending) (MUI 5 only)
 - Fixed bug where your sent message does not get formatted correctly if it has more than 1 line
 - While receiving a message, the chat window only shows the current message. This dramatically speeds up text rendering. Long conversations no longer become increasingly sluggish after every new message
 

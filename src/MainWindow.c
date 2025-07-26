@@ -1359,10 +1359,8 @@ static void sendChatMessage() {
                 } else {
                     set(chatInputTextEditor, MUIA_TextEditor_Contents, text);
                 }
-                struct MinNode *lastMessage =
-                    RemTail(currentConversation->messages);
-                // struct Node *lastMessage =
-                // RemTail((struct List *)currentConversation->messages);
+                struct Node *lastMessage =
+                    RemTail((struct List *)currentConversation->messages);
                 FreeVec(lastMessage);
                 if (currentConversation ==
                     currentConversation->messages->mlh_TailPred) {
