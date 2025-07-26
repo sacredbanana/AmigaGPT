@@ -16,6 +16,8 @@
 
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
 CONST_STRPTR stack = "$STACK: 32768";
+#elif defined(__MORPHOS__)
+unsigned long __stack = 32768;
 #endif
 
 CONST_STRPTR version = "$VER: AmigaGPT " APP_VERSION " (" BUILD_DATE

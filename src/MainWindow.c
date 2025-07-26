@@ -1021,10 +1021,9 @@ LONG createMainWindow() {
                     End,
                 End,
                 // Status bar
-                Child, statusBar = TextObject, MUIA_VertWeight, 10,
-                    TextFrame,
+                Child, statusBar = TextObject,
+                    MUIA_Background, MUII_SHADOW,
                     MUIA_Text_Contents, STRING_READY,
-                    MUIA_Background, MUII_BACKGROUND,
                 End,
                 // Loading bar
                 Child, loadingBar = BusyObject, MUIA_VertWeight, 10,
@@ -2093,8 +2092,8 @@ static LONG loadImages() {
  *
  **/
 void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
-    STRPTR formattedMessage = AllocVec(strlen(message) + 20, MEMF_ANY);
-    snprintf(formattedMessage, strlen(message) + 20, "\33P[%lu\33p[2]%s\0", pen,
+    STRPTR formattedMessage = AllocVec(strlen(message) + 32, MEMF_ANY);
+    snprintf(formattedMessage, strlen(message) + 32, "\33P[%lu]  %s\t\0", pen,
              message);
     set(statusBar, MUIA_Text_Contents, formattedMessage);
     FreeVec(formattedMessage);
