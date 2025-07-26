@@ -45,8 +45,15 @@ SAVEDS ULONG mSet(struct IClass *cl, Object *obj, struct opSet *msg) {
 }
 
 SAVEDS ULONG mSetup(struct IClass *cl, Object *obj, Msg msg) {
-    printf("mSetup\n");
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
+    struct MUI_EventHandlerNode *eh = (struct MUI_EventHandlerNode *)AllocVec(
+        sizeof(struct MUI_EventHandlerNode), MEMF_PUBLIC);
+    eh->ehn_Class = cl;
+    eh->ehn_Object = obj;
+    eh->ehn_Events = IDCMP_RAWKEY;
+    eh->ehn_Flags = MUI_EHF_GUIMODE;
+    eh->ehn_Priority = 100;
+    data->eh = eh;
     data->isActive = FALSE;
 
     if (!(DoSuperMethodA(cl, obj, msg)))
@@ -56,19 +63,11 @@ SAVEDS ULONG mSetup(struct IClass *cl, Object *obj, Msg msg) {
 }
 
 SAVEDS ULONG mCleanup(struct IClass *cl, Object *obj, Msg msg) {
-    printf("mCleanup\n");
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
 
-    // FreeVec(data->eh);
-
-    return TRUE;
-}
-
-SAVEDS ULONG mDispose(struct IClass *cl, Object *obj, Msg msg) {
-    printf("mDispose\n");
-    struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
     FreeVec(data->eh);
-    return TRUE;
+
+    return DoSuperMethodA(cl, obj, msg);
 }
 
 SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
@@ -109,19 +108,13 @@ SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
 }
 
 SAVEDS ULONG mNew(struct IClass *cl, Object *obj, Msg *msg) {
-    printf("mNew\n");
     if (!(obj = (Object *)DoSuperMethodA(cl, obj, msg)))
         return 0;
 
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
-    struct MUI_EventHandlerNode *eh = (struct MUI_EventHandlerNode *)AllocVec(
-        sizeof(struct MUI_EventHandlerNode), MEMF_PUBLIC);
-    eh->ehn_Class = cl;
-    eh->ehn_Object = obj;
-    eh->ehn_Events = IDCMP_RAWKEY;
-    eh->ehn_Flags = MUI_EHF_GUIMODE;
-    eh->ehn_Priority = 100;
-    data->eh = eh;
+
+    data->submitHook = NULL;
+    data->eh = NULL;
 
     struct TagItem *tags, *tag;
     for (tags = ((struct opSet *)msg)->ops_AttrList;
@@ -139,15 +132,11 @@ SAVEDS ULONG mNew(struct IClass *cl, Object *obj, Msg *msg) {
 
 SAVEDS ULONG mGoActive(struct IClass *cl, Object *obj,
                        struct MUIP_GoActive *msg) {
-    printf("mGoActive\n");
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
 
     if (!data->isActive) {
-        printf("Adding event handler\n");
         DoMethod(_win(obj), MUIM_Window_AddEventHandler, data->eh);
         data->isActive = TRUE;
-    } else {
-        printf("Not adding event handler\n");
     }
 
     return DoSuperMethodA(cl, obj, msg);
@@ -155,7 +144,6 @@ SAVEDS ULONG mGoActive(struct IClass *cl, Object *obj,
 
 SAVEDS ULONG mGoInactive(struct IClass *cl, Object *obj,
                          struct MUIP_GoInactive *msg) {
-    printf("mGoInactive\n");
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
 
     if (data->isActive && _win(obj) != NULL) {
@@ -173,8 +161,6 @@ DISPATCHER(MyDispatcher) {
         return (mGet(cl, obj, (APTR)msg));
     case OM_SET:
         return (mSet(cl, obj, (APTR)msg));
-    case OM_DISPOSE:
-        return (mDispose(cl, obj, (APTR)msg));
     case MUIM_HandleEvent:
         return (mHandleEvent(cl, obj, (APTR)msg));
     case MUIM_Setup:

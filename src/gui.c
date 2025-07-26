@@ -408,7 +408,9 @@ void shutdownGUI() {
     if (chatOutputTextEditorContents) {
         FreeVec(chatOutputTextEditorContents);
     }
-    deleteAmigaGPTTextEditor();
+    if (isMUI5) {
+        deleteAmigaGPTTextEditor();
+    }
 
 #ifndef __MORPHOS__
     closeARexx();

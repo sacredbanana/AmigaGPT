@@ -837,8 +837,41 @@ LONG createMainWindow() {
     currentConversation = NULL;
     currentImage = NULL;
 
-    if (createAmigaGPTTextEditor() == RETURN_ERROR) {
+    if (isMUI5 && createAmigaGPTTextEditor() == RETURN_ERROR) {
         displayError("Could not create custom class.");
+    }
+
+    if (isMUI5) {
+        chatInputTextEditor = NewObject(
+            MUIC_AmigaGPTTextEditor, NULL, TextFrame, MUIA_Background,
+            MUII_BACKGROUND, MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
+            MUIA_AmigaGPTTextEditor_SubmitHook, &SendMessageButtonClickedHook,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL, MUIA_TextEditor_ReadOnly, FALSE,
+            MUIA_TextEditor_TabSize, 4, MUIA_TextEditor_Rows, 3,
+            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+            TAG_DONE);
+        imageInputTextEditor = NewObject(
+            MUIC_AmigaGPTTextEditor, NULL, MUIA_Weight, 80,
+            MUIA_AmigaGPTTextEditor_SubmitHook, &CreateImageButtonClickedHook,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL, MUIA_TextEditor_ReadOnly, FALSE,
+            MUIA_TextEditor_TabSize, 4, MUIA_TextEditor_Rows, 3,
+            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+            TAG_DONE);
+    } else {
+        chatInputTextEditor = MUI_NewObject(
+            isAROS ? MUIC_BetterString : MUIC_TextEditor, TextFrame,
+            MUIA_Background, MUII_BACKGROUND, MUIA_ObjectID,
+            OBJECT_ID_CHAT_INPUT_TEXT_EDITOR, isAROS ? TAG_DONE : TAG_SKIP,
+            NULL, MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3, MUIA_TextEditor_ExportHook,
+            MUIV_TextEditor_ExportHook_EMail, TAG_DONE);
+
+        imageInputTextEditor = MUI_NewObject(
+            isAROS ? MUIC_BetterString : MUIC_TextEditor, TextFrame,
+            MUIA_Background, MUIA_Weight, 80, isAROS ? TAG_DONE : TAG_SKIP,
+            NULL, MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3, MUIA_TextEditor_ExportHook,
+            MUIV_TextEditor_ExportHook_EMail, TAG_DONE);
     }
 
     createMenu();
@@ -909,16 +942,7 @@ LONG createMainWindow() {
                             End,
                             Child, HGroup, MUIA_VertWeight, 20,
                                 // Chat input text editor
-                                Child, chatInputTextEditor = NewObject(MUIC_AmigaGPTTextEditor,
-					TextFrame,
-					MUIA_Background, MUII_BACKGROUND,
-                                    MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
-                                    MUIA_AmigaGPTTextEditor_SubmitHook, &SendMessageButtonClickedHook,
-                                    isAROS ? TAG_DONE : TAG_SKIP, NULL,
-                                    MUIA_TextEditor_ReadOnly, FALSE,
-                                    MUIA_TextEditor_TabSize, 4,
-                                    MUIA_TextEditor_Rows, 3,
-                                    MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail, TAG_DONE),
+                                Child, chatInputTextEditor,
                                 // Send message button
                                 Child, HGroup, MUIA_HorizWeight, 10,
                                     Child, sendMessageButton = MUI_MakeObject(MUIO_Button, STRING_SEND,
@@ -982,14 +1006,7 @@ LONG createMainWindow() {
                             End,
                             Child, HGroup,
                                 // Image input text editor
-                                Child, imageInputTextEditor = NewObject(MUIC_AmigaGPTTextEditor, NULL,
-                                    MUIA_Weight, 80,
-                                    MUIA_AmigaGPTTextEditor_SubmitHook, &CreateImageButtonClickedHook,
-                                    isAROS ? TAG_DONE : TAG_SKIP, NULL,
-                                    MUIA_TextEditor_ReadOnly, FALSE,
-                                    MUIA_TextEditor_TabSize, 4,
-                                    MUIA_TextEditor_Rows, 3,
-                                    MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail, TAG_DONE),
+                                Child, imageInputTextEditor,
                                 Child, VGroup,
                                     MUIA_Weight, 20,
                                     // Create image button
@@ -1067,14 +1084,6 @@ static void addMainWindowActions() {
     DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
              MUIV_Notify_Application, 2, MUIM_Application_ReturnID,
              MUIV_Application_ReturnID_Quit);
-    // DoMethod(chatInputTextEditor, MUIM_Notify,
-    // MUIA_AmigaGPTTextEditor_Submit,
-    //          MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_CallHook,
-    //          &SendMessageButtonClickedHook, MUIV_TriggerValue);
-    // DoMethod(imageInputTextEditor, MUIM_Notify,
-    // MUIA_AmigaGPTTextEditor_Submit,
-    //          TRUE, MUIV_Notify_Window, 2, MUIM_CallHook,
-    //          &CreateImageButtonClickedHook);
 }
 
 /**
