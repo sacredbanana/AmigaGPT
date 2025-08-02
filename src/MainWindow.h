@@ -46,6 +46,12 @@ void updateStatusBar(CONST_STRPTR message, const ULONG pen);
 struct Conversation *newConversation();
 
 /**
+ * Prints the conversation to the conversation window
+ * @param conversation the conversation to display
+ **/
+void displayConversation(struct Conversation *conversation);
+
+/**
  * Sets the system of the conversation
  * @param conversation the conversation to set the system of
  * @param system the system to set

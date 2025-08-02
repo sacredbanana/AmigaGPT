@@ -39,6 +39,8 @@ struct Config {
     STRPTR proxyUsername;
     STRPTR proxyPassword;
     ULONG fixedWidthFonts;
+    LONG userTextAlignment;
+    LONG assistantTextAlignment;
 };
 
 /**

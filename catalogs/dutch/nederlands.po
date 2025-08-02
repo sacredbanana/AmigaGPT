@@ -1256,3 +1256,28 @@ msgstr "Ongeldige aanvraag. Uw OpenAI API-account heeft waarschijnlijk geen kred
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
 msgid "Fixed width fonts"
 msgstr "Vaste breedte lettertypen"
+
+#: src/menu.c:138
+msgctxt "STRING_MENU_USER_TEXT_ALIGNMENT (230//)"
+msgid "User text alignment"
+msgstr "Korisniks tekstuitlijning"
+
+#: src/menu.c:139
+msgctxt "STRING_MENU_ASSISTANT_TEXT_ALIGNMENT (231//)"
+msgid "Assistant text alignment"
+msgstr "Asistent tekstuitlijning"
+
+#: src/menu.c:140
+msgctxt "STRING_MENU_TEXT_ALIGNMENT_LEFT (232//)"
+msgid "Left"
+msgstr "Links"
+
+#: src/menu.c:141
+msgctxt "STRING_MENU_TEXT_ALIGNMENT_CENTER (233//)"
+msgid "Center"
+msgstr "Midden"
+
+#: src/menu.c:142
+msgctxt "STRING_MENU_TEXT_ALIGNMENT_RIGHT (234//)"
+msgid "Right"
+msgstr "Rechts"

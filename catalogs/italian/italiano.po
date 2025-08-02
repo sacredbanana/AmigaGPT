@@ -1256,3 +1256,28 @@ msgstr "Invalid request. Your OpenAI API account probably has no credit left to 
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
 msgid "Fixed width fonts"
 msgstr "Fonti a larghezza fissa"
+
+#: src/menu.c:138
+msgctxt "STRING_MENU_USER_TEXT_ALIGNMENT (230//)"
+msgid "User text alignment"
+msgstr "Allineamento del testo dell'utente"
+
+#: src/menu.c:139
+msgctxt "STRING_MENU_ASSISTANT_TEXT_ALIGNMENT (231//)"
+msgid "Assistant text alignment"
+msgstr "Allineamento del testo dell'assistente"
+
+#: src/menu.c:140
+msgctxt "STRING_MENU_TEXT_ALIGNMENT_LEFT (232//)"
+msgid "Left"
+msgstr "Sinistra"
+
+#: src/menu.c:141
+msgctxt "STRING_MENU_TEXT_ALIGNMENT_CENTER (233//)"
+msgid "Center"
+msgstr "Centro"
+
+#: src/menu.c:142
+msgctxt "STRING_MENU_TEXT_ALIGNMENT_RIGHT (234//)"
+msgid "Right"
+msgstr "Destra"

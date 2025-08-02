@@ -59,7 +59,6 @@ static STRPTR pages[3] = {NULL};
 
 struct Conversation *newConversation();
 static void formatText(STRPTR unformattedText);
-static void displayConversation(struct Conversation *conversation);
 static struct Conversation *copyConversation(struct Conversation *conversation);
 static struct GeneratedImage *
 copyGeneratedImage(struct GeneratedImage *generatedImage);
@@ -1284,9 +1283,22 @@ static void sendChatMessage() {
     } else {
         text = DoMethod(chatInputTextEditor, MUIM_TextEditor_ExportText);
     }
-
-    snprintf(chatOutputTextEditorContents,
-             CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\033r\033b\0333");
+    UBYTE userStyleString[] = "\033r\033b\0333";
+    UBYTE userAlignment;
+    switch (config.userTextAlignment) {
+    case ALIGN_LEFT:
+        userAlignment = 'l';
+        break;
+    case ALIGN_CENTER:
+        userAlignment = 'c';
+        break;
+    case ALIGN_RIGHT:
+        userAlignment = 'r';
+        break;
+    }
+    userStyleString[1] = userAlignment;
+    strncat(chatOutputTextEditorContents, userStyleString,
+            strlen(userStyleString));
     size_t currentLength = strlen(chatOutputTextEditorContents);
     for (ULONG i = 0; i < strlen(text); i++) {
         if (currentLength >= CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 10)
@@ -1297,9 +1309,8 @@ static void sendChatMessage() {
 
         // If it's a newline, add the styling codes after it
         if (text[i] == '\n') {
-            strncat(chatOutputTextEditorContents, "\033r\033b\0333",
-                    CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - currentLength -
-                        1);
+            strncat(chatOutputTextEditorContents, userStyleString,
+                    strlen(userStyleString));
             currentLength = strlen(chatOutputTextEditorContents);
         }
     }
@@ -1554,7 +1565,10 @@ void addTextToConversation(struct Conversation *conversation, UTF8 *text,
  * Prints the conversation to the conversation window
  * @param conversation the conversation to display
  **/
-static void displayConversation(struct Conversation *conversation) {
+void displayConversation(struct Conversation *conversation) {
+    if (conversation == NULL) {
+        conversation = currentConversation;
+    }
     struct ConversationNode *conversationNode;
     chatOutputTextEditorContents[0] = '\0';
     for (conversationNode =
@@ -1570,7 +1584,20 @@ static void displayConversation(struct Conversation *conversation) {
         }
         if (strcmp(conversationNode->role, "user") == 0) {
             UTF8 *content = conversationNode->content;
-            const UBYTE userStyleString[] = "\033r\033b\0333";
+            UBYTE userAlignment;
+            switch (config.userTextAlignment) {
+            case ALIGN_LEFT:
+                userAlignment = 'l';
+                break;
+            case ALIGN_CENTER:
+                userAlignment = 'c';
+                break;
+            case ALIGN_RIGHT:
+                userAlignment = 'r';
+                break;
+            }
+            UBYTE userStyleString[] = "\033r\033b\0333";
+            userStyleString[1] = userAlignment;
             strncat(chatOutputTextEditorContents, userStyleString,
                     strlen(userStyleString));
             for (ULONG i = 0; i < strlen(content); i++) {
@@ -1581,7 +1608,9 @@ static void displayConversation(struct Conversation *conversation) {
                 }
             }
         } else if (strcmp(conversationNode->role, "assistant") == 0) {
-            const UBYTE assistantStyleString[] = "\n\n\033l\0332";
+            set(chatOutputListView, MUIA_NFloattext_Align,
+                config.assistantTextAlignment);
+            UBYTE assistantStyleString[] = "\n\n\0332";
             strncat(chatOutputTextEditorContents, assistantStyleString,
                     strlen(assistantStyleString));
             STRPTR formattedContent =

@@ -1243,3 +1243,28 @@ msgstr "Nevažeći zahtev. Vaš OpenAI API račun verovatno nema više kredita z
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
 msgid "Fixed width fonts"
 msgstr "Fiksna širina fonta"
+
+#: src/menu.c:138
+msgctxt "STRING_MENU_USER_TEXT_ALIGNMENT (230//)"
+msgid "User text alignment"
+msgstr "Poravnanje korisničkog teksta"
+
+#: src/menu.c:139
+msgctxt "STRING_MENU_ASSISTANT_TEXT_ALIGNMENT (231//)"
+msgid "Assistant text alignment"
+msgstr "Poravnanje asistentovog teksta"
+
+#: src/menu.c:140
+msgctxt "STRING_MENU_TEXT_ALIGNMENT_LEFT (232//)"
+msgid "Left"
+msgstr "Levo"
+
+#: src/menu.c:141
+msgctxt "STRING_MENU_TEXT_ALIGNMENT_CENTER (233//)"
+msgid "Center"
+msgstr "Centar"
+
+#: src/menu.c:142
+msgctxt "STRING_MENU_TEXT_ALIGNMENT_RIGHT (234//)"
+msgid "Right"
+msgstr "Desno"

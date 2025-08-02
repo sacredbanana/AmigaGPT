@@ -267,6 +267,15 @@ Special Thanks:
 Changelog:
 
 ------------------
+2.8.0 (2025-08-02)
+------------------
+
+- Add "Fixed width fonts" item in the "View" menu to toggle fixed width fonts
+  for the chat input and chat output
+- Add "User text alignment" and "Assistant text alignment" items in the "View"
+  menu to set the alignment of user and assistant messages in the chat
+
+------------------
 2.7.0 (2025-07-27)
 ------------------
 

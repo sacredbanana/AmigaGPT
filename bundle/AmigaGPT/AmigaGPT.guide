@@ -736,6 +736,11 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.8.0 (2025-08-02)@{ub}
+
+- Add "Fixed width fonts" item in the "View" menu to toggle fixed width fonts for the chat input and chat output
+- Add "User text alignment" and "Assistant text alignment" items in the "View" menu to set the alignment of user and assistant messages in the chat
+
 @{b}2.7.0 (2025-07-27)@{ub}
 
 - Stop the stack size warning appearing on MorphOS

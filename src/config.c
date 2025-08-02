@@ -4,6 +4,7 @@
 #include <exec/types.h>
 #include <graphics/text.h>
 #include <json-c/json.h>
+#include <mui/NList_mcc.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
 #include <string.h>
@@ -40,7 +41,10 @@ struct Config config = {
     .proxyRequiresAuth = FALSE,
     .proxyUsername = NULL,
     .proxyPassword = NULL,
-    .fixedWidthFonts = FALSE};
+    .fixedWidthFonts = FALSE,
+    .userTextAlignment = ALIGN_RIGHT,
+    .assistantTextAlignment = ALIGN_LEFT,
+};
 
 /**
  * Write the config to disk
@@ -127,6 +131,11 @@ LONG writeConfig() {
     json_object_object_add(
         configJsonObject, "fixedWidthFonts",
         json_object_new_boolean((BOOL)config.fixedWidthFonts));
+
+    json_object_object_add(configJsonObject, "userTextAlignment",
+                           json_object_new_int(config.userTextAlignment));
+    json_object_object_add(configJsonObject, "assistantTextAlignment",
+                           json_object_new_int(config.assistantTextAlignment));
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
@@ -484,6 +493,35 @@ LONG readConfig() {
             (ULONG)json_object_get_boolean(fixedWidthFontsObj);
     } else {
         config.fixedWidthFonts = FALSE;
+    }
+
+    struct json_object *userTextAlignmentObj;
+    if (json_object_object_get_ex(configJsonObject, "userTextAlignment",
+                                  &userTextAlignmentObj)) {
+        config.userTextAlignment = json_object_get_int(userTextAlignmentObj);
+    } else {
+        config.userTextAlignment = ALIGN_RIGHT;
+    }
+
+    if (config.userTextAlignment != ALIGN_LEFT &&
+        config.userTextAlignment != ALIGN_RIGHT &&
+        config.userTextAlignment != ALIGN_CENTER) {
+        config.userTextAlignment = ALIGN_RIGHT;
+    }
+
+    struct json_object *assistantTextAlignmentObj;
+    if (json_object_object_get_ex(configJsonObject, "assistantTextAlignment",
+                                  &assistantTextAlignmentObj)) {
+        config.assistantTextAlignment =
+            json_object_get_int(assistantTextAlignmentObj);
+    } else {
+        config.assistantTextAlignment = ALIGN_LEFT;
+    }
+
+    if (config.assistantTextAlignment != ALIGN_LEFT &&
+        config.assistantTextAlignment != ALIGN_RIGHT &&
+        config.assistantTextAlignment != ALIGN_CENTER) {
+        config.assistantTextAlignment = ALIGN_LEFT;
     }
 
     FreeVec(configJsonString);

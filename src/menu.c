@@ -4,6 +4,7 @@
 #include <libraries/asl.h>
 #include <libraries/gadtools.h>
 #include <libraries/mui.h>
+#include <mui/NList_mcc.h>
 #include <mui/TextEditor_mcc.h>
 #include <proto/amigaguide.h>
 #include <proto/exec.h>
@@ -221,6 +222,9 @@ HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
 MakeHook(FixedWidthFontsMenuItemClickedHook,
          FixedWidthFontsMenuItemClickedFunc);
 
+HOOKPROTONHNONP(TextAlignmentChangedFunc, void) { displayConversation(NULL); }
+MakeHook(TextAlignmentChangedHook, TextAlignmentChangedFunc);
+
 void createMenu() {
     menuStrip = MenustripObject, MUIA_Family_Child, MenuObject, MUIA_Menu_Title,
     STRING_MENU_PROJECT, MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child,
@@ -256,8 +260,46 @@ void createMenu() {
     MUIA_Menuitem_Title, STRING_MENU_FIXED_WIDTH_FONTS, MUIA_UserData,
     MENU_ITEM_VIEW_FIXED_WIDTH_FONTS, MUIA_Menuitem_Checkit, TRUE,
     MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_MUI_SETTINGS, MUIA_UserData,
-    MENU_ITEM_VIEW_MUI_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End, End,
+    MUIA_Menuitem_Title, STRING_MENU_USER_TEXT_ALIGNMENT, MUIA_UserData,
+    MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_TEXT_ALIGNMENT_LEFT, MUIA_UserData,
+    MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_LEFT, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
+    config.userTextAlignment == ALIGN_LEFT, MUIA_Menuitem_Exclude, ~(1 << 0),
+    MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_CENTER, MUIA_UserData,
+    MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_CENTER, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
+    config.userTextAlignment == ALIGN_CENTER, MUIA_Menuitem_Exclude, ~(1 << 1),
+    MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_RIGHT, MUIA_UserData,
+    MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_RIGHT, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
+    config.userTextAlignment == ALIGN_RIGHT, MUIA_Menuitem_Exclude, ~(1 << 2),
+    MUIA_Menuitem_Toggle, TRUE, End, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_ASSISTANT_TEXT_ALIGNMENT, MUIA_UserData,
+    MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_TEXT_ALIGNMENT_LEFT, MUIA_UserData,
+    MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_LEFT, MUIA_Menuitem_CopyStrings,
+    FALSE, MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
+    config.assistantTextAlignment == ALIGN_LEFT, MUIA_Menuitem_Exclude,
+    ~(1 << 0), MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child,
+    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_CENTER,
+    MUIA_UserData, MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_CENTER,
+    MUIA_Menuitem_CopyStrings, FALSE, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Checked, config.assistantTextAlignment == ALIGN_CENTER,
+    MUIA_Menuitem_Exclude, ~(1 << 1), MUIA_Menuitem_Toggle, TRUE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_TEXT_ALIGNMENT_RIGHT, MUIA_UserData,
+    MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_RIGHT, MUIA_Menuitem_CopyStrings,
+    FALSE, MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
+    config.assistantTextAlignment == ALIGN_RIGHT, MUIA_Menuitem_Exclude,
+    ~(1 << 2), MUIA_Menuitem_Toggle, TRUE, End, End, MUIA_Family_Child,
+    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_MUI_SETTINGS,
+    MUIA_UserData, MENU_ITEM_VIEW_MUI_SETTINGS, MUIA_Menuitem_CopyStrings,
+    FALSE, End, End,
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_CONNECTION,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
@@ -424,6 +466,75 @@ void addMenuActions() {
     DoMethod(fixedWidthFontsMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &FixedWidthFontsMenuItemClickedHook, MUIV_TriggerValue);
+
+    Object userTextAlignmentLeftMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_LEFT);
+    set(userTextAlignmentLeftMenuItem, MUIA_Menuitem_Checked,
+        config.userTextAlignment == ALIGN_LEFT);
+    DoMethod(userTextAlignmentLeftMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_WriteLong,
+             ALIGN_LEFT, &config.userTextAlignment);
+    DoMethod(userTextAlignmentLeftMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &TextAlignmentChangedHook, MUIV_TriggerValue);
+
+    Object userTextAlignmentCenterMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_CENTER);
+    set(userTextAlignmentCenterMenuItem, MUIA_Menuitem_Checked,
+        config.userTextAlignment == ALIGN_CENTER);
+    DoMethod(userTextAlignmentCenterMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 3,
+             MUIM_WriteLong, ALIGN_CENTER, &config.userTextAlignment);
+    DoMethod(userTextAlignmentCenterMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
+             MUIM_CallHook, &TextAlignmentChangedHook, MUIV_TriggerValue);
+
+    Object userTextAlignmentRightMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_RIGHT);
+    set(userTextAlignmentRightMenuItem, MUIA_Menuitem_Checked,
+        config.userTextAlignment == ALIGN_RIGHT);
+    DoMethod(userTextAlignmentRightMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_WriteLong,
+             ALIGN_RIGHT, &config.userTextAlignment);
+    DoMethod(userTextAlignmentRightMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &TextAlignmentChangedHook, MUIV_TriggerValue);
+
+    Object assistantTextAlignmentLeftMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData,
+                         MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_LEFT);
+    set(assistantTextAlignmentLeftMenuItem, MUIA_Menuitem_Checked,
+        config.assistantTextAlignment == ALIGN_LEFT);
+    DoMethod(assistantTextAlignmentLeftMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 3,
+             MUIM_WriteLong, ALIGN_LEFT, &config.assistantTextAlignment);
+    DoMethod(assistantTextAlignmentLeftMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
+             MUIM_CallHook, &TextAlignmentChangedHook, MUIV_TriggerValue);
+
+    Object assistantTextAlignmentCenterMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData,
+                         MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_CENTER);
+    set(assistantTextAlignmentCenterMenuItem, MUIA_Menuitem_Checked,
+        config.assistantTextAlignment == ALIGN_CENTER);
+    DoMethod(assistantTextAlignmentCenterMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 3,
+             MUIM_WriteLong, ALIGN_CENTER, &config.assistantTextAlignment);
+    DoMethod(assistantTextAlignmentCenterMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
+             MUIM_CallHook, &TextAlignmentChangedHook, MUIV_TriggerValue);
+
+    Object assistantTextAlignmentRightMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData,
+                         MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_RIGHT);
+    set(assistantTextAlignmentRightMenuItem, MUIA_Menuitem_Checked,
+        config.assistantTextAlignment == ALIGN_RIGHT);
+    DoMethod(assistantTextAlignmentRightMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 3,
+             MUIM_WriteLong, ALIGN_RIGHT, &config.assistantTextAlignment);
+    DoMethod(assistantTextAlignmentRightMenuItem, MUIM_Notify,
+             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
+             MUIM_CallHook, &TextAlignmentChangedHook, MUIV_TriggerValue);
 
     Object proxyEnabledMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_ENABLED);
