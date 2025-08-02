@@ -38,6 +38,7 @@ struct Config {
     ULONG proxyRequiresAuth;
     STRPTR proxyUsername;
     STRPTR proxyPassword;
+    ULONG fixedWidthFonts;
 };
 
 /**

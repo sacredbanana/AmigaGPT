@@ -1243,3 +1243,8 @@ msgstr "GPT Image 1 Obrazek Velikost"
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
 msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
 msgstr "Ogiltigt anrop. Ditt OpenAI API-konto har sannolikt inga krediter kvar för att köra denna modell. Kontrollera ditt kontosaldo."
+
+#: src/menu.c:137
+msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
+msgid "Fixed width fonts"
+msgstr "Fast bredd fonter"

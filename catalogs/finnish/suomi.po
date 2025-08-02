@@ -1239,3 +1239,8 @@ msgstr "GPT Image 1 Slika Koko"
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
 msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
 msgstr "Virheellinen pyyntö. Sinun OpenAI API-tilisi on ehkä loppuun saavuttanut tämän mallin suorittamiseen. Tarkista tilisi saldo."
+
+#: src/menu.c:137
+msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
+msgid "Fixed width fonts"
+msgstr "Kiinteä leveys kirjasinkokoja"  

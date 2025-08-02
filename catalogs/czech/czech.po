@@ -1239,3 +1239,7 @@ msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
 msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
 msgstr "Neplatný požadavek. Vaš OpenAI API účet pravděpodobně nemá žádné kredity na spuštění tohoto modelu. Zkontrolujte svůj účet."
 
+#: src/menu.c:137
+msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
+msgid "Fixed width fonts"
+msgstr "Fiksní šířka písma"

@@ -39,7 +39,8 @@ struct Config config = {
     .proxyUsesSSL = FALSE,
     .proxyRequiresAuth = FALSE,
     .proxyUsername = NULL,
-    .proxyPassword = NULL};
+    .proxyPassword = NULL,
+    .fixedWidthFonts = FALSE};
 
 /**
  * Write the config to disk
@@ -123,6 +124,10 @@ LONG writeConfig() {
                            config.proxyPassword != NULL
                                ? json_object_new_string(config.proxyPassword)
                                : NULL);
+    json_object_object_add(
+        configJsonObject, "fixedWidthFonts",
+        json_object_new_boolean((BOOL)config.fixedWidthFonts));
+
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
 
@@ -469,6 +474,16 @@ LONG readConfig() {
                 AllocVec(strlen(proxyPassword) + 1, MEMF_CLEAR);
             strncpy(config.proxyPassword, proxyPassword, strlen(proxyPassword));
         }
+    }
+
+    struct json_object *fixedWidthFontsObj;
+
+    if (json_object_object_get_ex(configJsonObject, "fixedWidthFonts",
+                                  &fixedWidthFontsObj)) {
+        config.fixedWidthFonts =
+            (ULONG)json_object_get_boolean(fixedWidthFontsObj);
+    } else {
+        config.fixedWidthFonts = FALSE;
     }
 
     FreeVec(configJsonString);

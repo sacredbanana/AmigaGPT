@@ -127,7 +127,11 @@ HOOKPROTONHNO(DisplayImageLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
 }
 MakeHook(DisplayImageLI_TextHook, DisplayImageLI_TextFunc);
 
+BOOL thing = FALSE;
+
 HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
+    thing = !thing;
+    set(chatInputTextEditor, MUIA_TextEditor_FixedFont, TRUE);
     struct Conversation *conversation;
     DoMethod(conversationListObject, MUIM_NList_GetEntry,
              MUIV_NList_GetEntry_Active, &conversation);
@@ -846,14 +850,17 @@ LONG createMainWindow() {
             MUIC_AmigaGPTTextEditor, NULL, TextFrame, MUIA_Background,
             MUII_BACKGROUND, MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
             MUIA_AmigaGPTTextEditor_SubmitHook, &SendMessageButtonClickedHook,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL, MUIA_TextEditor_ReadOnly, FALSE,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL, MUIA_TextEditor_FixedFont,
+            config.fixedWidthFonts, MUIA_TextEditor_ReadOnly, FALSE,
             MUIA_TextEditor_TabSize, 4, MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
+
         imageInputTextEditor = NewObject(
             MUIC_AmigaGPTTextEditor, NULL, MUIA_Weight, 80,
             MUIA_AmigaGPTTextEditor_SubmitHook, &CreateImageButtonClickedHook,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL, MUIA_TextEditor_ReadOnly, FALSE,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL, MUIA_TextEditor_FixedFont,
+            config.fixedWidthFonts, MUIA_TextEditor_ReadOnly, FALSE,
             MUIA_TextEditor_TabSize, 4, MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
@@ -862,14 +869,16 @@ LONG createMainWindow() {
             isAROS ? MUIC_BetterString : MUIC_TextEditor, TextFrame,
             MUIA_Background, MUII_BACKGROUND, MUIA_ObjectID,
             OBJECT_ID_CHAT_INPUT_TEXT_EDITOR, isAROS ? TAG_DONE : TAG_SKIP,
-            NULL, MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
+            NULL, MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+            MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
             MUIA_TextEditor_Rows, 3, MUIA_TextEditor_ExportHook,
             MUIV_TextEditor_ExportHook_EMail, TAG_DONE);
 
         imageInputTextEditor = MUI_NewObject(
             isAROS ? MUIC_BetterString : MUIC_TextEditor, TextFrame,
             MUIA_Background, MUIA_Weight, 80, isAROS ? TAG_DONE : TAG_SKIP,
-            NULL, MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
+            NULL, MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+            MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
             MUIA_TextEditor_Rows, 3, MUIA_TextEditor_ExportHook,
             MUIV_TextEditor_ExportHook_EMail, TAG_DONE);
     }
@@ -934,6 +943,7 @@ LONG createMainWindow() {
                                 MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_None,
                                 MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
                                 MUIA_NListview_NList, chatOutputTextEditor = NFloattextObject,
+                                    MUIA_Font, config.fixedWidthFonts ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
                                     MUIA_Frame, MUIV_Frame_Text,
                                     MUIA_ContextMenu, NULL,
                                     MUIA_NFloattext_Text, AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR),
@@ -1041,6 +1051,8 @@ LONG createMainWindow() {
     DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_Screen, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &ConfigureForScreenHook);
 
     addMainWindowActions();
+    addMenuActions();
+
     UnlockPubScreen(NULL, screen);    
 
     loadConversations();

@@ -29,7 +29,6 @@ static void populateOpenAIMenu();
 static void populateArexxMenu();
 
 HOOKPROTONHNONP(AboutAmigaGPTMenuItemClickedFunc, void) {
-    printf("speech: %lu\n", config.speechEnabled);
     if (aboutAmigaGPTWindowObject) {
         set(aboutAmigaGPTWindowObject, MUIA_Window_Open, TRUE);
     } else {
@@ -202,6 +201,26 @@ HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
 MakeHook(OpenDocumentationMenuItemClickedHook,
          OpenDocumentationMenuItemClickedFunc);
 
+HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
+    config.fixedWidthFonts = !config.fixedWidthFonts;
+    if (writeConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+    }
+    set(mainWindowObject, MUIA_Window_Open, FALSE);
+    DoMethod(app, OM_REMMEMBER, mainWindowObject);
+    MUI_DisposeObject(mainWindowObject);
+    mainWindowObject = NULL;
+    if (createMainWindow() == RETURN_ERROR) {
+        displayError(STRING_ERROR_MAIN_WINDOW);
+        return;
+    }
+    DoMethod(app, OM_ADDMEMBER, mainWindowObject);
+    set(mainWindowObject, MUIA_Window_Screen, screen);
+    set(mainWindowObject, MUIA_Window_Open, TRUE);
+}
+MakeHook(FixedWidthFontsMenuItemClickedHook,
+         FixedWidthFontsMenuItemClickedFunc);
+
 void createMenu() {
     menuStrip = MenustripObject, MUIA_Family_Child, MenuObject, MUIA_Menu_Title,
     STRING_MENU_PROJECT, MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child,
@@ -234,6 +253,9 @@ void createMenu() {
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_VIEW,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_FIXED_WIDTH_FONTS, MUIA_UserData,
+    MENU_ITEM_VIEW_FIXED_WIDTH_FONTS, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_MUI_SETTINGS, MUIA_UserData,
     MENU_ITEM_VIEW_MUI_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End, End,
 
@@ -395,6 +417,13 @@ void addMenuActions() {
     DoMethod(muiSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, MUIV_Notify_Application, 1,
              MUIM_Application_OpenConfigWindow);
+
+    Object fixedWidthFontsMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_FIXED_WIDTH_FONTS);
+    set(fixedWidthFontsMenuItem, MUIA_Menuitem_Checked, config.fixedWidthFonts);
+    DoMethod(fixedWidthFontsMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &FixedWidthFontsMenuItemClickedHook, MUIV_TriggerValue);
 
     Object proxyEnabledMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_ENABLED);

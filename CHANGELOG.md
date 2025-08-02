@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.8.0 (2025-08-02)
+- Add "Fixed width fonts" item in the "View" menu to toggle fixed width fonts for the chat input and chat output
+
 ## 2.7.0 (2025-07-27)
 
 - Stop the stack size warning appearing on MorphOS
