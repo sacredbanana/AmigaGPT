@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.8.2 (2025-08-05)
+- Fixed bad characrers in About AmigaGPT window
+
 ## 2.8.1 (2025-08-04)
 
 - Fixed some menu items not working
