@@ -89,7 +89,11 @@ LONG createAboutAmigaGPTWindow() {
              "\t%s\n"
              "\thttps://www.youtube.com/watch?v=BV5Fq1PresE\n"
              "\n"
-             "\033b%%§\033n\n"
+             "\t\033iDaniel Reimann\033n\n"
+             "\t%s\n"
+             "\thttp://amiga-news.de\n"
+             "\n"
+             "\033b%%\247\033n\n"
              "\tMIT\n"
              "\n"
              "\033b%%W\033n\n"
@@ -101,7 +105,7 @@ LONG createAboutAmigaGPTWindow() {
              STRING_ABOUT_WINDOW_COFFINOS, STRING_ABOUT_WINDOW_AMIGA_FUTURE,
              STRING_ABOUT_WINDOW_WHATIFF, STRING_ABOUT_WINDOW_YOUTUBE_REVIEW,
              STRING_ABOUT_WINDOW_YOUTUBE_REVIEW, STRING_ABOUT_WINDOW_AMIGABILL,
-             STRING_ABOUT_WINDOW_LES_DOCS);
+             STRING_ABOUT_WINDOW_LES_DOCS, STRING_ABOUT_WINDOW_DANIEL_REIMANN);
     if ((aboutAmigaGPTWindowObject = AboutboxObject, MUIA_Aboutbox_Build,
          buildString, MUIA_Aboutbox_Credits, bodyString, MUIA_Aboutbox_URL,
          "https://github.com/sacredbanana/AmigaGPT", MUIA_Aboutbox_URLText,

@@ -1290,3 +1290,8 @@ msgstr "Centré"
 msgctxt "STRING_MENU_TEXT_ALIGNMENT_RIGHT (234//)"
 msgid "Right"
 msgstr "Droite"
+
+#: src/AboutAmigaGPTWindow.c:105
+msgctxt "STRING_ABOUT_WINDOW_DANIEL_REIMANN (235//)"
+msgid "for covering AmigaGPT news"
+msgstr "pour couvrir les actualités AmigaGPT"

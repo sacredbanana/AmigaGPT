@@ -1266,3 +1266,8 @@ msgstr "Centret"
 msgctxt "STRING_MENU_TEXT_ALIGNMENT_RIGHT (234//)"
 msgid "Right"
 msgstr "Højre"
+
+#: src/AboutAmigaGPTWindow.c:105
+msgctxt "STRING_ABOUT_WINDOW_DANIEL_REIMANN (235//)"
+msgid "for covering AmigaGPT news"
+msgstr "for at dække AmigaGPT-nyheder"

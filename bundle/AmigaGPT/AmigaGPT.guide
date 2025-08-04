@@ -398,7 +398,8 @@ We welcome contributions to AmigaGPT! If you have a bug to report, a feature to 
   https://www.twitch.tv/amigabill
 - Les Docs for making a video review and giving a tutorial on how to add
   support for the French accent https://www.youtube.com/watch?v=BV5Fq1PresE
-
+- Daniel Reimann or covering AmigaGPT news
+  http://amiga-news.de
 
 @endnode
 
@@ -735,6 +736,12 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 
 @node changelog "Changelog"
 @{b}Changelog@{ub}
+
+@{b}2.8.1 (2025-08-04)@{ub}
+
+- Fixed some menu items not working
+- The window position and size is now remembered between sessions
+- Fixed license label in the About AmigaGPT window
 
 @{b}2.8.0 (2025-08-02)@{ub}
 

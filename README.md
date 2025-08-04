@@ -253,3 +253,4 @@ We welcome contributions to **AmigaGPT**! If you have a bug to report, a feature
 - **Proteque-CBN** for reviewing AmigaGPT on his YouTube channel <https://www.youtube.com/watch?v=t3q8HQ6wrnw>
 - **AmigaBill** for covering AmigaGPT in the Amiga News section on his Twitch streams and allowing me to join his stream to promote it <https://www.twitch.tv/amigabill>
 - **Les Docs** for making a video review and giving a tutorial on how to add support for the French accent <https://www.youtube.com/watch?v=BV5Fq1PresE>
+- **Daniel Reimann** for covering AmigaGPT news <http://amiga-news.de>
