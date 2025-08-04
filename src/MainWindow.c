@@ -1050,8 +1050,7 @@ LONG createMainWindow() {
     DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_Screen, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &ConfigureForScreenHook);
 
     addMainWindowActions();
-    addMenuActions();
-
+    
     UnlockPubScreen(NULL, screen);    
 
     loadConversations();

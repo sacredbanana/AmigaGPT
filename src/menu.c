@@ -218,6 +218,7 @@ HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
     DoMethod(app, OM_ADDMEMBER, mainWindowObject);
     set(mainWindowObject, MUIA_Window_Screen, screen);
     set(mainWindowObject, MUIA_Window_Open, TRUE);
+    addMenuActions();
 }
 MakeHook(FixedWidthFontsMenuItemClickedHook,
          FixedWidthFontsMenuItemClickedFunc);

@@ -221,6 +221,7 @@ LONG initVideo() {
 
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
 
+    addMenuActions();
     addStartupOptionsWindowActions();
 
     return RETURN_OK;

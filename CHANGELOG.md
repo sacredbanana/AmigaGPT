@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.8.1 (2025-08-04)
+
+- Fixed some menu items not working
+
 ## 2.8.0 (2025-08-02)
 
 - Add "Fixed width fonts" item in the "View" menu to toggle fixed width fonts for the chat input and chat output
