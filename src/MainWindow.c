@@ -582,8 +582,11 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
         MUIA_Window_DragBar, isPublicScreen, MUIA_Window_Width,
         MUIV_Window_Width_Screen(isPublicScreen ? 90 : 100), MUIA_Window_Height,
         MUIV_Window_Height_Screen(isPublicScreen ? 90 : 100),
-        MUIA_Window_ActiveObject, chatInputTextEditor, MUIA_Window_Open, TRUE,
-        TAG_DONE);
+        MUIA_Window_ActiveObject, chatInputTextEditor, TAG_DONE);
+
+    DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
+    set(mainWindowObject, MUIA_Window_Open, TRUE);
+    addMenuActions();
 
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);

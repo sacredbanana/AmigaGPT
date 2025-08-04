@@ -3,6 +3,7 @@
 ## 2.8.1 (2025-08-04)
 
 - Fixed some menu items not working
+- The window position and size is now remembered between sessions
 
 ## 2.8.0 (2025-08-02)
 
