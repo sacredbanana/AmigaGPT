@@ -4,6 +4,7 @@
 
 - Fixed some menu items not working
 - The window position and size is now remembered between sessions
+- Fixed license label in the About AmigaGPT window
 
 ## 2.8.0 (2025-08-02)
 
