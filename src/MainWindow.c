@@ -53,8 +53,8 @@ Object *saveImageCopyButton;
 STRPTR chatOutputTextEditorContents = NULL;
 WORD pens[NUMDRIPENS + 1];
 BOOL isPublicScreen;
-struct Conversation *currentConversation;
-struct GeneratedImage *currentImage;
+struct Conversation *currentConversation = NULL;
+struct GeneratedImage *currentImage = NULL;
 static STRPTR pages[3] = {NULL};
 
 struct Conversation *newConversation();
@@ -840,9 +840,6 @@ static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createMainWindow() {
-    currentConversation = NULL;
-    currentImage = NULL;
-
     if (isMUI5 && createAmigaGPTTextEditor() == RETURN_ERROR) {
         displayError("Could not create custom class.");
     }
@@ -887,8 +884,10 @@ LONG createMainWindow() {
 
     createMenu();
 
-    chatOutputTextEditorContents = AllocVec(
-        CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, MEMF_ANY | MEMF_CLEAR);
+    if (chatOutputTextEditorContents == NULL) {
+        chatOutputTextEditorContents = AllocVec(
+            CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, MEMF_ANY | MEMF_CLEAR);
+    }
 
     pages[0] = STRING_CHAT_MODE;
     pages[1] = STRING_IMAGE_GENERATION_MODE;
@@ -948,7 +947,7 @@ LONG createMainWindow() {
                                     MUIA_Font, config.fixedWidthFonts ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
                                     MUIA_Frame, MUIV_Frame_Text,
                                     MUIA_ContextMenu, NULL,
-                                    MUIA_NFloattext_Text, AllocVec(WRITE_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR),
+                                    MUIA_NFloattext_Text, chatOutputTextEditorContents,
                                     End,
                                 End,
                             End,

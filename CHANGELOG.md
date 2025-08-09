@@ -1,7 +1,9 @@
 # Changelog
 
-## 2.8.2 (2025-08-05)
+## 2.9.0 (2025-08-09)
+
 - Fixed bad characrers in About AmigaGPT window
+- Fix crash switching to fixed width fonts
 
 ## 2.8.1 (2025-08-04)
 

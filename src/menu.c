@@ -209,16 +209,12 @@ HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
     }
     set(mainWindowObject, MUIA_Window_Open, FALSE);
     DoMethod(app, OM_REMMEMBER, mainWindowObject);
-    MUI_DisposeObject(mainWindowObject);
-    mainWindowObject = NULL;
     if (createMainWindow() == RETURN_ERROR) {
         displayError(STRING_ERROR_MAIN_WINDOW);
         return;
     }
     DoMethod(app, OM_ADDMEMBER, mainWindowObject);
     set(mainWindowObject, MUIA_Window_Screen, screen);
-    set(mainWindowObject, MUIA_Window_Open, TRUE);
-    addMenuActions();
 }
 MakeHook(FixedWidthFontsMenuItemClickedHook,
          FixedWidthFontsMenuItemClickedFunc);
