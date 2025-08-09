@@ -23,7 +23,7 @@
 #include "VoiceInstructionsRequesterWindow.h"
 #include "version.h"
 
-Object *menuStrip;
+Object *menuStrip = NULL;
 
 static void populateSpeechMenu();
 static void populateOpenAIMenu();
@@ -202,19 +202,26 @@ HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
 MakeHook(OpenDocumentationMenuItemClickedHook,
          OpenDocumentationMenuItemClickedFunc);
 
-HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
-    config.fixedWidthFonts = !config.fixedWidthFonts;
-    if (writeConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
-    }
+HOOKPROTONHNONP(RecreateMainWindowFunc, void) {
     set(mainWindowObject, MUIA_Window_Open, FALSE);
+    DoMethod(mainWindowObject, MUIM_KillNotify, MUIA_Window_Screen);
+    DoMethod(mainWindowObject, MUIM_KillNotify, MUIA_Window_CloseRequest);
     DoMethod(app, OM_REMMEMBER, mainWindowObject);
     if (createMainWindow() == RETURN_ERROR) {
         displayError(STRING_ERROR_MAIN_WINDOW);
         return;
     }
-    DoMethod(app, OM_ADDMEMBER, mainWindowObject);
     set(mainWindowObject, MUIA_Window_Screen, screen);
+}
+MakeHook(RecreateMainWindowHook, RecreateMainWindowFunc);
+
+HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
+    config.fixedWidthFonts = !config.fixedWidthFonts;
+    if (writeConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+    }
+    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+             &RecreateMainWindowHook);
 }
 MakeHook(FixedWidthFontsMenuItemClickedHook,
          FixedWidthFontsMenuItemClickedFunc);
@@ -386,8 +393,8 @@ void addMenuActions() {
     Object aboutAmigaGPTMenuItem =
         DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_ABOUT_AMIGAGPT);
     DoMethod(aboutAmigaGPTMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_CallHook,
-             &AboutAmigaGPTMenuItemClickedHook, MUIV_TriggerValue);
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &AboutAmigaGPTMenuItemClickedHook);
 
     Object aboutMUIMenuItem =
         DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_ABOUT_MUI);
@@ -462,7 +469,7 @@ void addMenuActions() {
     set(fixedWidthFontsMenuItem, MUIA_Menuitem_Checked, config.fixedWidthFonts);
     DoMethod(fixedWidthFontsMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
-             &FixedWidthFontsMenuItemClickedHook, MUIV_TriggerValue);
+             &FixedWidthFontsMenuItemClickedHook);
 
     Object userTextAlignmentLeftMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_LEFT);
@@ -495,7 +502,7 @@ void addMenuActions() {
              ALIGN_RIGHT, &config.userTextAlignment);
     DoMethod(userTextAlignmentRightMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
-             &TextAlignmentChangedHook, MUIV_TriggerValue);
+             &TextAlignmentChangedHook);
 
     Object assistantTextAlignmentLeftMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData,
@@ -507,7 +514,7 @@ void addMenuActions() {
              MUIM_WriteLong, ALIGN_LEFT, &config.assistantTextAlignment);
     DoMethod(assistantTextAlignmentLeftMenuItem, MUIM_Notify,
              MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
-             MUIM_CallHook, &TextAlignmentChangedHook, MUIV_TriggerValue);
+             MUIM_CallHook, &TextAlignmentChangedHook);
 
     Object assistantTextAlignmentCenterMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData,
@@ -519,7 +526,7 @@ void addMenuActions() {
              MUIM_WriteLong, ALIGN_CENTER, &config.assistantTextAlignment);
     DoMethod(assistantTextAlignmentCenterMenuItem, MUIM_Notify,
              MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
-             MUIM_CallHook, &TextAlignmentChangedHook, MUIV_TriggerValue);
+             MUIM_CallHook, &TextAlignmentChangedHook);
 
     Object assistantTextAlignmentRightMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData,
@@ -531,7 +538,7 @@ void addMenuActions() {
              MUIM_WriteLong, ALIGN_RIGHT, &config.assistantTextAlignment);
     DoMethod(assistantTextAlignmentRightMenuItem, MUIM_Notify,
              MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
-             MUIM_CallHook, &TextAlignmentChangedHook, MUIV_TriggerValue);
+             MUIM_CallHook, &TextAlignmentChangedHook);
 
     Object proxyEnabledMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_ENABLED);

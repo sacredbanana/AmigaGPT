@@ -844,6 +844,10 @@ LONG createMainWindow() {
         displayError("Could not create custom class.");
     }
 
+    if (mainWindowObject != NULL) {
+        MUI_DisposeObject(mainWindowObject);
+    }
+
     if (isMUI5) {
         chatInputTextEditor = NewObject(
             MUIC_AmigaGPTTextEditor, NULL, TextFrame, MUIA_Background,
@@ -1049,11 +1053,13 @@ LONG createMainWindow() {
 
     get(mainWindowObject, MUIA_Window, &mainWindow);
 
+    DoMethod(app, OM_ADDMEMBER, mainWindowObject);
+
     DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_Screen, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &ConfigureForScreenHook);
 
     addMainWindowActions();
     
-    UnlockPubScreen(NULL, screen);    
+    UnlockPubScreen(NULL, screen);
 
     loadConversations();
     loadImages();

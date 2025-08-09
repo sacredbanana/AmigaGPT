@@ -160,9 +160,6 @@ LONG initVideo() {
     if (createStartupOptionsWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
-    if (createMainWindow() == RETURN_ERROR)
-        return RETURN_ERROR;
-
 #ifndef __MORPHOS__
     if (initARexx() == RETURN_ERROR)
         return RETURN_ERROR;
@@ -191,8 +188,8 @@ LONG initVideo() {
           MUIA_Application_UsedClasses, USED_CLASSES, MUIA_Application_HelpFile,
           "PROGDIR:AmigaGPT.guide", MUIA_Application_SingleTask, TRUE,
           MUIA_Application_Commands, arexxList, MUIA_Application_UseRexx, TRUE,
-          SubWindow, startupOptionsWindowObject, SubWindow, mainWindowObject,
-          SubWindow, apiKeyRequesterWindowObject, SubWindow,
+          SubWindow, startupOptionsWindowObject, SubWindow,
+          apiKeyRequesterWindowObject, SubWindow,
           chatSystemRequesterWindowObject, SubWindow,
           proxySettingsRequesterWindowObject, SubWindow,
           voiceInstructionsRequesterWindowObject, SubWindow,
@@ -219,9 +216,11 @@ LONG initVideo() {
 
     set(startupOptionsWindowObject, MUIA_Window_Open, TRUE);
 
+    if (createMainWindow() == RETURN_ERROR)
+        return RETURN_ERROR;
+
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
 
-    addMenuActions();
     addStartupOptionsWindowActions();
 
     return RETURN_OK;
