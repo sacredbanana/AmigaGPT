@@ -89,7 +89,7 @@ LONG createAboutAmigaGPTWindow() {
              "\t%s\n"
              "\thttps://www.youtube.com/watch?v=BV5Fq1PresE\n"
              "\n"
-             "\t\033iDaniel Reimann\033n\n"
+             "\t\033iamiga-news.de\033n\n"
              "\t%s\n"
              "\thttp://amiga-news.de\n"
              "\n"
