@@ -2,6 +2,7 @@
 
 ## 2.9.0 (2025-08-09)
 
+- Added gpt-5 chat models and make this the default chat model
 - Fixed bad characrers in About AmigaGPT window
 - Fix crash switching to fixed width fonts
 

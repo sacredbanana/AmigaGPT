@@ -1253,7 +1253,27 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
     } else {
         struct json_object *outputArray =
             json_object_object_get(json, "output");
-        struct json_object *output = json_object_array_get_idx(outputArray, 0);
+        struct json_object *output = NULL;
+
+        int arrayLength = json_object_array_length(outputArray);
+        for (int i = 0; i < arrayLength; i++) {
+            struct json_object *currentOutput =
+                json_object_array_get_idx(outputArray, i);
+            struct json_object *typeObj =
+                json_object_object_get(currentOutput, "type");
+            if (typeObj != NULL) {
+                const char *typeStr = json_object_get_string(typeObj);
+                if (strcmp(typeStr, "message") == 0) {
+                    output = currentOutput;
+                    break;
+                }
+            }
+        }
+
+        if (output == NULL) {
+            return "";
+        }
+
         struct json_object *contentArray =
             json_object_object_get(output, "content");
         struct json_object *content =
@@ -1505,7 +1525,7 @@ static void sendChatMessage() {
                                   "user");
             setConversationSystem(currentConversation, NULL);
             responses = postChatMessageToOpenAI(
-                currentConversation, GPT_4o_MINI, config.openAiApiKey, FALSE,
+                currentConversation, GPT_5_NANO, config.openAiApiKey, FALSE,
                 config.proxyEnabled, config.proxyHost, config.proxyPort,
                 config.proxyUsesSSL, config.proxyRequiresAuth,
                 config.proxyUsername, config.proxyPassword);

@@ -20,8 +20,8 @@ struct Config config = {
     .speechSystem = SPEECH_SYSTEM_OPENAI,
     .speechFliteVoice = SPEECH_FLITE_VOICE_KAL,
     .chatSystem = NULL,
-    .chatModel = GPT_4o,
-    .imageModel = DALL_E_3,
+    .chatModel = CHATGPT_5_LATEST,
+    .imageModel = GPT_IMAGE_1,
     .imageSizeDallE2 = IMAGE_SIZE_256x256,
     .imageSizeDallE3 = IMAGE_SIZE_1024x1024,
     .imageSizeGptImage1 = IMAGE_SIZE_AUTO,
@@ -350,7 +350,7 @@ LONG readConfig() {
     }
 
     if (config.chatModelSetVersion != CHAT_MODEL_SET_VERSION) {
-        config.chatModel = GPT_4o;
+        config.chatModel = CHATGPT_5_LATEST;
     }
 
     struct json_object *imageModelSetVersionObj;
@@ -363,7 +363,7 @@ LONG readConfig() {
     }
 
     if (config.imageModelSetVersion != IMAGE_MODEL_SET_VERSION) {
-        config.imageModel = DALL_E_3;
+        config.imageModel = GPT_IMAGE_1;
     }
 
     struct json_object *speechSystemSetVersionObj;
