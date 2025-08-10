@@ -654,9 +654,15 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
                 }
 
                 if (stream) {
-                    if (json_tokener_parse(lastJsonString + 6) == NULL) {
+                    struct json_object *parsedResponse;
+                    if ((parsedResponse =
+                             json_tokener_parse(lastJsonString + 6)) == NULL) {
                         snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0",
                                  lastJsonString);
+                        if ((parsedResponse =
+                                 json_tokener_parse(lastJsonString)) != NULL) {
+                            responses[responseIndex++] = parsedResponse;
+                        }
                     } else {
                         memset(readBuffer, 0, READ_BUFFER_LENGTH);
                     }
