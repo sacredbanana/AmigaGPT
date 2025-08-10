@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.9.1 (2025-08-10)
+
+- Added more entries to PATH in the ARexx execution environment for so it ARexx can run more commands just from their name
+
 ## 2.9.0 (2025-08-09)
 
 - Added gpt-5 chat models and make this the default chat model

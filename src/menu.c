@@ -28,6 +28,19 @@ Object *menuStrip = NULL;
 static void populateSpeechMenu();
 static void populateOpenAIMenu();
 static void populateArexxMenu();
+static BPTR BuildNPPath(const char *const *extraDirs, size_t extraCount,
+                        BOOL addParent);
+static void FreeNPPath(BPTR listHead);
+
+/* The Shell's path nodes are trivial: next + lock (both BPTRs).   */
+/* RKRM names it PathComponent / Guru Book calls it PathList entry. */
+struct PathNodeCompat {
+    BPTR pc_Next; /* BPTR to next node (or ZERO) */
+    BPTR pc_Lock; /* BPTR lock on a directory    */
+};
+
+/* Iterate a BPTR path list */
+#define PN_NEXT(n) ((struct PathNodeCompat *)BADDR((n)->pc_Next))
 
 HOOKPROTONHNONP(AboutAmigaGPTMenuItemClickedFunc, void) {
     if (aboutAmigaGPTWindowObject) {
@@ -168,10 +181,18 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
 #ifndef __MORPHOS__
     DoMethod(arexxObject, AM_EXECUTE, scriptPath, NULL, NULL, NULL, NULL, NULL);
 #else
-    UBYTE command[1024] = {0};
+    const char *extra[] = {"SYS:Utilities", "MOSSYS:C", "SYS:S", "MOSSYS:S"};
+    BPTR npPath = BuildNPPath(extra, 4, TRUE);
+
+    UBYTE command[1024];
     snprintf(command, sizeof(command), "RUN RX %s", scriptPath);
-    SystemTags(command, SYS_Input, NULL, SYS_Output, NULL, SYS_Asynch, TRUE,
-               TAG_DONE);
+
+    LONG rc = SystemTags((CONST_STRPTR)command, NP_Path, (ULONG)npPath,
+                         SYS_Asynch, TRUE, TAG_DONE);
+
+    if (rc == -1) {
+        FreeNPPath(npPath);
+    }
 #endif
     FreeVec(scriptPath);
 }
@@ -979,4 +1000,103 @@ static void populateArexxMenu() {
     ReleaseDirContext(context);
 #endif
     DoMethod(menuStrip, MUIM_Menustrip_ExitChange);
+}
+
+/**
+ * @brief Build a NP_Path list.
+ * @param extraDirs[]: array of assigns/paths like "SYS:Utilities",
+ *MOSSYS:Utilities"
+ * @param addParent: if TRUE, duplicate the caller’s existing CLI path first
+ * @returns BPTR to first node, or ZERO on failure (nothing allocated).
+ **/
+static BPTR BuildNPPath(const char *const *extraDirs, size_t extraCount,
+                        BOOL addParent) {
+    struct PathNodeCompat *head = NULL, *tail = NULL;
+
+    // Optionally copy the caller’s current shell path (duplicates the locks).
+    if (addParent) {
+        struct CommandLineInterface *cli =
+            Cli(); // NULL if we’re not in a shell
+        if (cli && cli->cli_CommandDir) {
+            for (struct PathNodeCompat *src =
+                     (struct PathNodeCompat *)BADDR(cli->cli_CommandDir);
+                 src; src = PN_NEXT(src)) {
+                BPTR dup = DupLock(src->pc_Lock);
+                if (!dup)
+                    goto fail;
+
+                struct PathNodeCompat *node = (struct PathNodeCompat *)AllocVec(
+                    sizeof(*node), MEMF_PUBLIC | MEMF_CLEAR);
+                if (!node) {
+                    UnLock(dup);
+                    goto fail;
+                }
+
+                node->pc_Lock = dup;
+                if (tail)
+                    tail->pc_Next = MKBADDR(node);
+                else
+                    head = node;
+                tail = node;
+            }
+        }
+    }
+
+    // Append our extra directories
+    for (size_t i = 0; i < extraCount; ++i) {
+        if (!extraDirs[i] || !extraDirs[i][0])
+            continue;
+        BPTR lock = Lock((STRPTR)extraDirs[i], ACCESS_READ);
+        if (!lock)
+            continue;
+
+        struct PathNodeCompat *node = (struct PathNodeCompat *)AllocVec(
+            sizeof(*node), MEMF_PUBLIC | MEMF_CLEAR);
+        if (!node) {
+            UnLock(lock);
+            goto fail;
+        }
+
+        node->pc_Lock = lock;
+        if (tail)
+            tail->pc_Next = MKBADDR(node);
+        else
+            head = node;
+        tail = node;
+    }
+
+    /* Note: current directory and C: are implicit; don’t add them yourself. */
+    /* C: is always searched last, current dir always first.                 */ /*  */
+
+    return MKBADDR(head);
+
+fail:
+    if (head) {
+        struct PathNodeCompat *n = head;
+        while (n) {
+            struct PathNodeCompat *next = PN_NEXT(n);
+            if (n->pc_Lock)
+                UnLock(n->pc_Lock);
+            FreeVec(n);
+            n = next;
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief Free a NP_Path list we built if SystemTagList() fails (rc == -1).
+ * @param listHead The head of the NP_Path list to free.
+ **/
+static void FreeNPPath(BPTR listHead) {
+    if (!listHead)
+        return;
+    struct PathNodeCompat *n = (struct PathNodeCompat *)BADDR(listHead);
+    while (n) {
+        struct PathNodeCompat *next = PN_NEXT(n);
+        if (n->pc_Lock)
+            UnLock(n->pc_Lock);
+        FreeVec(n);
+        n = next;
+    }
 }
