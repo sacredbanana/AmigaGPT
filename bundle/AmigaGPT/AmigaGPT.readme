@@ -273,7 +273,7 @@ Changelog:
 ------------------
 
 - Added gpt-5 chat models and make this the default chat model
-- Fixed bad characrers in About AmigaGPT window
+- Fixed bad characters in About AmigaGPT window
 - Fix crash switching to fixed width fonts
 
 ------------------
