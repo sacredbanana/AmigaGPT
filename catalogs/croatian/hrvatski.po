@@ -1287,3 +1287,8 @@ msgstr "za pokrivanje AmigaGPT vijesti"
 msgctxt "STRING_MENU_PRINT (236//)"
 msgid "Print"
 msgstr "Ispiši"
+
+#: src/menu.c:144
+msgctxt "STRING_MENU_CLEAR_MUI_SETTINGS (237//)"
+msgid "Clear MUI Settings"
+msgstr "Očisti MUI postavke"

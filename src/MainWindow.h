@@ -23,7 +23,7 @@ extern WORD pens[NUMDRIPENS + 1];
 extern LONG sendMessageButtonPen;
 extern LONG newChatButtonPen;
 extern LONG deleteButtonPen;
-extern BOOL isPublicScreen;
+// Removed isPublicScreen - MUI handles screen management automatically
 
 /**
  * Create the main window

@@ -55,7 +55,6 @@ Object *openImageButton;
 Object *saveImageCopyButton;
 STRPTR chatOutputTextEditorContents = NULL;
 WORD pens[NUMDRIPENS + 1];
-BOOL isPublicScreen;
 struct Conversation *currentConversation = NULL;
 struct GeneratedImage *currentImage = NULL;
 static STRPTR pages[3] = {NULL};
@@ -482,9 +481,11 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 MakeHook(CreateImageButtonClickedHook, CreateImageButtonClickedFunc);
 
 HOOKPROTONHNONP(OpenImageButtonClickedFunc, void) {
-    // Get screen dimensions
-    WORD screenWidth = screen->Width;
-    WORD screenHeight = screen->Height;
+    // Get screen dimensions from main window
+    struct Screen *currentScreen;
+    get(mainWindowObject, MUIA_Window_Screen, &currentScreen);
+    WORD screenWidth = currentScreen ? currentScreen->Width : 640;
+    WORD screenHeight = currentScreen ? currentScreen->Height : 480;
 
     // Calculate the maximum size for the image
     LONG maxImageWidth = (screenWidth * 90) / 100;   // 90% of screen width
@@ -557,6 +558,35 @@ HOOKPROTONHNONP(SaveImageCopyButtonClickedFunc, void) {
 MakeHook(SaveImageCopyButtonClickedHook, SaveImageCopyButtonClickedFunc);
 
 HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
+    // Get the current screen to allocate pens
+    struct Screen *currentScreen;
+    get(mainWindowObject, MUIA_Window_Screen, &currentScreen);
+
+    if (currentScreen) {
+        // Release old pens if they exist
+        if (redPen)
+            ReleasePen(currentScreen->ViewPort.ColorMap, redPen);
+        if (greenPen)
+            ReleasePen(currentScreen->ViewPort.ColorMap, greenPen);
+        if (bluePen)
+            ReleasePen(currentScreen->ViewPort.ColorMap, bluePen);
+        if (yellowPen)
+            ReleasePen(currentScreen->ViewPort.ColorMap, yellowPen);
+
+        // Allocate new pens for current screen
+        redPen = ObtainBestPen(currentScreen->ViewPort.ColorMap, 0xFFFFFFFF, 0,
+                               0, OBP_Precision, PRECISION_GUI, TAG_DONE);
+        greenPen =
+            ObtainBestPen(currentScreen->ViewPort.ColorMap, 0, 0xBBBBBBBB, 0,
+                          OBP_Precision, PRECISION_GUI, TAG_DONE);
+        bluePen =
+            ObtainBestPen(currentScreen->ViewPort.ColorMap, 0, 0, 0xFFFFFFFF,
+                          OBP_Precision, PRECISION_GUI, TAG_DONE);
+        yellowPen = ObtainBestPen(currentScreen->ViewPort.ColorMap, 0xFFFFFFFF,
+                                  0xFFFFFFFF, 0, OBP_Precision, PRECISION_GUI,
+                                  TAG_DONE);
+    }
+
     const UBYTE BUTTON_LABEL_BUFFER_SIZE = 64;
     STRPTR buttonLabelText = AllocVec(BUTTON_LABEL_BUFFER_SIZE, MEMF_ANY);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]+ %s\0",
@@ -565,7 +595,7 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s\0",
              redPen, STRING_DELETE_CHAT);
     set(deleteChatButton, MUIA_Text_Contents, buttonLabelText);
-    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]\n%s\n\0",
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
              bluePen, STRING_SEND);
     set(sendMessageButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]+ %s\0",
@@ -574,18 +604,12 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s\0",
              redPen, STRING_DELETE_IMAGE);
     set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
-    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]\n%s\n\0",
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
              bluePen, STRING_CREATE_IMAGE);
     set(createImageButton, MUIA_Text_Contents, buttonLabelText);
     FreeVec(buttonLabelText);
-    SetAttrs(
-        mainWindowObject, MUIA_Window_ID,
-        isPublicScreen ? OBJECT_ID_MAIN_WINDOW : NULL, MUIA_Window_DepthGadget,
-        isPublicScreen, MUIA_Window_SizeGadget, isPublicScreen,
-        MUIA_Window_DragBar, isPublicScreen, MUIA_Window_Width,
-        MUIV_Window_Width_Screen(isPublicScreen ? 90 : 100), MUIA_Window_Height,
-        MUIV_Window_Height_Screen(isPublicScreen ? 90 : 100),
-        MUIA_Window_ActiveObject, chatInputTextEditor, TAG_DONE);
+    SetAttrs(mainWindowObject, MUIA_Window_ActiveObject, chatInputTextEditor,
+             TAG_DONE);
 
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
     set(mainWindowObject, MUIA_Window_Open, TRUE);
@@ -901,9 +925,15 @@ LONG createMainWindow() {
 
     if ((mainWindowObject = WindowObject,
             MUIA_Window_Title, STRING_APP_NAME,
+            MUIA_Window_ID, OBJECT_ID_MAIN_WINDOW,
             MUIA_Window_CloseGadget, TRUE,
+            MUIA_Window_SizeGadget, TRUE,
+            MUIA_Window_DepthGadget, TRUE,
+            MUIA_Window_DragBar, TRUE,
             MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
             MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
+            MUIA_Window_Width, MUIV_Window_Width_Screen(90),
+            MUIA_Window_Height, MUIV_Window_Height_Screen(90),
             MUIA_Window_Menustrip, menuStrip,
             MUIA_Window_SizeRight, TRUE,
             MUIA_Window_UseBottomBorderScroller, FALSE,
@@ -1062,7 +1092,59 @@ LONG createMainWindow() {
 
     addMainWindowActions();
     
-    UnlockPubScreen(NULL, screen);
+    // Open the main window immediately after creation
+    DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
+    set(mainWindowObject, MUIA_Window_Open, TRUE);
+    addMenuActions();
+    
+    // Allocate pens after window is opened
+    struct Screen *currentScreen;
+    get(mainWindowObject, MUIA_Window_Screen, &currentScreen);
+    if (currentScreen) {
+        redPen = ObtainBestPen(currentScreen->ViewPort.ColorMap, 0xFFFFFFFF, 0,
+                               0, OBP_Precision, PRECISION_GUI, TAG_DONE);
+        greenPen =
+            ObtainBestPen(currentScreen->ViewPort.ColorMap, 0, 0xBBBBBBBB, 0,
+                          OBP_Precision, PRECISION_GUI, TAG_DONE);
+        bluePen =
+            ObtainBestPen(currentScreen->ViewPort.ColorMap, 0, 0, 0xFFFFFFFF,
+                          OBP_Precision, PRECISION_GUI, TAG_DONE);
+        yellowPen = ObtainBestPen(currentScreen->ViewPort.ColorMap, 0xFFFFFFFF,
+                                  0xFFFFFFFF, 0, OBP_Precision, PRECISION_GUI,
+                                  TAG_DONE);
+
+        // Now set up the button labels with colors
+        const UBYTE BUTTON_LABEL_BUFFER_SIZE = 64;
+        STRPTR buttonLabelText = AllocVec(BUTTON_LABEL_BUFFER_SIZE, MEMF_ANY);
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
+                 "\33c\33P[%ld]+ %s\0", greenPen, STRING_NEW_CHAT);
+        set(newChatButton, MUIA_Text_Contents, buttonLabelText);
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
+                 "\33c\33P[%ld]- %s\0", redPen, STRING_DELETE_CHAT);
+        set(deleteChatButton, MUIA_Text_Contents, buttonLabelText);
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+                 bluePen, STRING_SEND);
+        set(sendMessageButton, MUIA_Text_Contents, buttonLabelText);
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
+                 "\33c\33P[%ld]+ %s\0", greenPen, STRING_NEW_IMAGE);
+        set(newImageButton, MUIA_Text_Contents, buttonLabelText);
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
+                 "\33c\33P[%ld]- %s\0", redPen, STRING_DELETE_IMAGE);
+        set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+                 bluePen, STRING_CREATE_IMAGE);
+        set(createImageButton, MUIA_Text_Contents, buttonLabelText);
+        FreeVec(buttonLabelText);
+
+        // Force a layout refresh to ensure buttons display correctly
+        DoMethod(mainWindowObject, MUIM_Group_InitChange);
+        DoMethod(mainWindowObject, MUIM_Group_ExitChange);
+    }
+    
+    set(openImageButton, MUIA_Disabled, TRUE);
+    set(saveImageCopyButton, MUIA_Disabled, TRUE);
+    
+    updateStatusBar(STRING_READY, greenPen);
 
     loadConversations();
     loadImages();
@@ -1858,10 +1940,16 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth,
     if (image == NULL)
         return;
 
+    // Get screen dimensions from main window
+    struct Screen *currentScreen;
+    get(mainWindowObject, MUIA_Window_Screen, &currentScreen);
+    WORD screenWidth = currentScreen ? currentScreen->Width : 640;
+    WORD screenHeight = currentScreen ? currentScreen->Height : 480;
+
     WORD lowestWidth =
-        (screen->Width - 16) < scaledWidth ? (screen->Width - 16) : scaledWidth;
+        (screenWidth - 16) < scaledWidth ? (screenWidth - 16) : scaledWidth;
     WORD lowestHeight =
-        screen->Height < scaledHeight ? screen->Height : scaledHeight;
+        screenHeight < scaledHeight ? screenHeight : scaledHeight;
 
     updateStatusBar(STRING_LOADING_IMAGE, yellowPen);
 
@@ -1877,7 +1965,6 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth,
     set(imageWindowObject, MUIA_Window_Width, lowestWidth);
     set(imageWindowObject, MUIA_Window_Height, lowestHeight);
     set(imageWindowObject, MUIA_Window_Activate, TRUE);
-    set(imageWindowObject, MUIA_Window_Screen, screen);
     set(imageWindowObject, MUIA_Window_Open, TRUE);
 
     DoMethod(imageWindowImageViewGroup, MUIM_Group_InitChange);

@@ -3,6 +3,8 @@
 ## 2.10.0 (2025-08-17)
 
 - Added menu option to print the conversation with the printer
+- Now uses native MUI screen management (set screen in System menu in MUI settings)
+- Added menu option to clear the MUI settings
 - Added more entries to PATH in the ARexx execution environment so ARexx can run more commands just from their name
 - Improve error handling in chat responses
 - Restore backwards compatibility with AmigaOS 3.1

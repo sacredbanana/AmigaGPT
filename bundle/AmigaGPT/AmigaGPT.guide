@@ -60,6 +60,7 @@ For smooth operation of AmigaGPT, your system needs to meet the following requir
 - An OCS/ECS/AGA Amiga or a PowerPC machine capable of running MorphOS
 - AmigaOS 3.1 or higher, AmigaOS 4.1 or MorphOS
 - Motorola 68020 or higher CPU or PowerPC for AmigaOS 4/MorphOS
+- For image viewing, sufficient memory that your installed PNG datatype requires
 - Internet access using a TCP/IP stack such as Roadshow
 - MUI 3 minimum but MUI 5 recommended for all features. MUI 5:(https://github.com/amiga-mui/muidev/releases) or MUI 3.9: (https://github.com/amiga-mui/muidev/releases/download/MUI-3.9-2015R1/MUI-3.9-2015R1-os3.lha)
 - render.library 40.08 or higher (https://aminet.net/package/dev/misc/renderlib)
@@ -202,9 +203,9 @@ Click on a topic to learn about it:
 @node screen "Screen select"
 @{b}Selecting a screen to open AmigaGPT in@{ub}
 
-When launched, AmigaGPT presents you with a choice of opening the app in a new screen or opening in Workbench. If you open in a new screen you have the ability to create a screen for the app to open in. AmigaGPT supports anything from 320x200 all the way up to 4k resolution if using a video card for RTG. Bear in mind text will appear very tiny in resolutions above 1080p so you may want to increase the font size settings from the View menu when the app opens.
+AmigaGPT can run on its own screen or in Workbench. To configure this, open the MUI Settings menu item from the View menu and configure it in the System menu in the MUI Setings panel.
 
-There are 2 main modes of operation: Chat and Image Generation. You can switch between them via the tabs in the top left corner.
+If you open in a new screen you have the ability to create a screen for the app to open in. AmigaGPT supports anything from 320x200 all the way up to 4k resolution if using a video card for RTG. Bear in mind text will appear very tiny in resolutions above 1080p so you may want to increase the font size settings from the MUI settings in the View menu when the app opens.
 
 @endnode
 
@@ -746,6 +747,8 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 @{b}2.10.0 (2025-08-17)@{ub}
 
 - Added menu option to print the conversation with the printer
+- Now uses native MUI screen management (set screen in System menu in MUI settings)
+- Added menu option to clear the MUI settings
 - Added more entries to PATH in the ARexx execution environment so ARexx can run more commands just from their name
 - Improve error handling in chat responses
 - Restore backwards compatibility with AmigaOS 3.1

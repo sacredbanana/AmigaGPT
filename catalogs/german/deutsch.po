@@ -1319,3 +1319,8 @@ msgstr "für die Abdeckung von AmigaGPT-Nachrichten"
 msgctxt "STRING_MENU_PRINT (236//)"
 msgid "Print"
 msgstr "Drucken"
+
+#: src/menu.c:144
+msgctxt "STRING_MENU_CLEAR_MUI_SETTINGS (237//)"
+msgid "Clear MUI Settings"
+msgstr "MUI-Einstellungen löschen"

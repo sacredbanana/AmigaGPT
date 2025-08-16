@@ -28,6 +28,8 @@ Requirements:
 - OCS/ECS/AGA Amiga or a PowerPC machine capable of running MorphOS
 - MUI 3 minimum; MUI 5 recommended for all features
 - Motorola 68020 or higher CPU or PPC for AmigaOS 4/MorphOS
+- For image viewing, sufficient memory that your installed PNG
+  datatype requires
 - For AmigaOS 3 & 4, AmiSSL 5.18 or higher
   (https://aminet.net/package/util/libs/AmiSSL-v5-OS3) for OS3 and
   (https://aminet.net/package/util/libs/AmiSSL-v5-OS4) for OS4
@@ -137,8 +139,12 @@ Launching AmigaGPT:
  size is saved in the icon.
 
 Usage:
-When launched, AmigaGPT presents you with a choice of opening the app in a new
-screen or opening in Workbench. If you open in a new screen you have the
+
+AmigaGPT can run on its own screen or in Workbench. To configure this, open
+the MUI Settings menu item from the View menu and configure it in the System
+menu in the MUI Setings panel.
+
+If you open in a new screen you have the
 ability to create a screen for the app to open in. AmigaGPT supports anything
 from 320x200 all the way up to 4k resolution if using a video card for RTG.
 Bear in mind text will appear very tiny in resolutions above 1080p so you may
@@ -286,6 +292,9 @@ Changelog:
 ------------------
 
 - Added menu option to print the conversation with the printer
+- Now uses native MUI screen management (set screen in System menu in MUI
+  settings)
+- Added menu option to clear the MUI settings
 - Added more entries to PATH in the ARexx execution environment so ARexx
   can run more commands just from their name
 - Improve error handling in chat responses

@@ -44,7 +44,6 @@ enum {
     OBJECT_ID_ABOUT_AMIGAGPT
 };
 
-extern struct Screen *screen;
 extern Object *app;
 extern ULONG redPen, greenPen, bluePen, yellowPen;
 extern Object *imageWindowObject;

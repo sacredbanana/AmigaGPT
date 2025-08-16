@@ -37,6 +37,7 @@ Ensure you have the necessary system requirements:
 - An OCS/ECS/AGA **Amiga** or a PowerPC machine capable of running MorphOS
 - **AmigaOS 3.1** or higher, **AmigaOS 4.1** or **MorphOS**
 - Motorola 68020 or higher CPU or PowerPC for AmigaOS 4/MorphOS
+- For image viewing, sufficient memory that your installed PNG datatype requires
 - Internet access using a TCP/IP stack such as **Roadshow** (<http://roadshow.apc-tcp.de/index-en.php>)
 - For AmigaOS 3 & 4: **AmiSSL 5.18** or higher (<https://aminet.net/package/util/libs/AmiSSL-v5-OS3>) for OS3 and (<https://aminet.net/package/util/libs/AmiSSL-v5-OS4>) for OS4
 - **MUI 3** minimum but **MUI 5** recommended for all features. MUI 5:(<https://github.com/amiga-mui/muidev/releases>) or MUI 3.9: (<https://github.com/amiga-mui/muidev/releases/download/MUI-3.9-2015R1/MUI-3.9-2015R1-os3.lha>)
@@ -102,8 +103,6 @@ Since `translator.library` **v43** is not available as a standalone install, you
 
 ## Usage
 
-When launched, **AmigaGPT** presents you with a choice of opening the app in a new screen or opening in Workbench. If you open in a new screen you have the ability to create a screen for the app to open in. **AmigaGPT** supports anything from **320x200** all the way up to **4k** resolution if using a video card for RTG. Bear in mind text will appear very tiny in resolutions above **1080p** so you may want to increase the font size settings from the **View** menu when the app opens.
-
 When launching for the first time you will need to enter your OpenAI API key before you can start chatting. If you haven't already done so, create an OpenAI account and navigate to <https://platform.openai.com/account/api-keys> to generate an API key for use with **AmigaGPT**.
 
 There are 2 main modes of operation: Chat and Image Generation. You can switch between them via the tabs in the top left corner.
@@ -125,6 +124,10 @@ The "**Project**" menu includes an "**About**" option, which displays informatio
 In the "**Edit**" menu, you'll find basic text editing commands like **Cut**, **Copy**, **Paste** and **Clear**.
 
 The "**View**" menu allows you to change the appearance of the app.
+
+AmigaGPT can run on its own screen or in Workbench. To configure this, open the **MUI Settings** menu item from the **View** menu and configure it in the **System** menu in the **MUI Setings** panel.
+
+If you open in a new screen you have the ability to create a screen for the app to open in. **AmigaGPT** supports anything from 320x200 all the way up to 4k resolution if using a video card for RTG. Bear in mind text will appear very tiny in resolutions above 1080p so you may want to increase the font size settings from the MUI settings in the View menu when the app opens.
 
 The "**Connection**" menu allows you to connect via a proxy server. It supports both HTTP and HTTPS proxy servers but if you use an unecrypted HTTP proxy server you can improve the performance of AmigaGPT by removing the need for the encryption of the OpenAI traffic to be done on the system running AmigaGPT. For an easy proxy server you can run on your local network you can try out <https://mitmproxy.org>
 

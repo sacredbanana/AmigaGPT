@@ -1,4 +1,4 @@
-#ifdef __AMIGAOS3__ || __AMIGAOS4__
+#if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
 #include "amiga_compiler.h"
 #endif
 #include <json-c/json.h>
@@ -25,8 +25,7 @@
 #include "gui.h"
 #include "MainWindow.h"
 #include "menu.h"
-#include "ProxySettingsRequesterWindow.h"
-#include "StartupOptionsWindow.h"
+#include "ProxySettingsRequesterWindow.h" - MUI handles screen management automatically
 #include "VoiceInstructionsRequesterWindow.h"
 #include "version.h"
 
@@ -55,8 +54,7 @@ struct EmulLibEntry muiDispatcherEntry = {TRAP_LIB, 0,
 struct Library *MUIMasterBase;
 struct Library *CodesetsBase;
 Object *app = NULL;
-ULONG redPen = NULL, greenPen = NULL, bluePen = NULL, yellowPen = NULL;
-struct Screen *screen;
+ULONG redPen = 0, greenPen = 0, bluePen = 0, yellowPen = 0;
 Object *imageWindowObject;
 Object *imageWindowImageView;
 Object *imageWindowImageViewGroup;
@@ -138,9 +136,6 @@ LONG initVideo() {
         return RETURN_ERROR;
     }
 
-    if (createStartupOptionsWindow() == RETURN_ERROR)
-        return RETURN_ERROR;
-
     if (createAPIKeyRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
@@ -164,14 +159,15 @@ LONG initVideo() {
           MUIA_Application_UsedClasses, USED_CLASSES, MUIA_Application_HelpFile,
           "PROGDIR:AmigaGPT.guide", MUIA_Application_SingleTask, TRUE,
           MUIA_Application_Commands, arexxList, MUIA_Application_UseRexx, TRUE,
-          SubWindow, startupOptionsWindowObject, SubWindow,
-          apiKeyRequesterWindowObject, SubWindow,
+          SubWindow, apiKeyRequesterWindowObject, SubWindow,
           chatSystemRequesterWindowObject, SubWindow,
           proxySettingsRequesterWindowObject, SubWindow,
           voiceInstructionsRequesterWindowObject, SubWindow,
           imageWindowObject = WindowObject, MUIA_Window_Title, STRING_IMAGE,
-          MUIA_Window_Width, 320, MUIA_Window_Height, 240,
-          MUIA_Window_CloseGadget, TRUE, MUIA_Window_LeftEdge,
+          MUIA_Window_ID, OBJECT_ID_IMAGE_WINDOW, MUIA_Window_Width, 320,
+          MUIA_Window_Height, 240, MUIA_Window_CloseGadget, TRUE,
+          MUIA_Window_SizeGadget, TRUE, MUIA_Window_DepthGadget, TRUE,
+          MUIA_Window_DragBar, TRUE, MUIA_Window_LeftEdge,
           MUIV_Window_LeftEdge_Centered, MUIA_Window_TopEdge,
           MUIV_Window_TopEdge_Centered, MUIA_Window_SizeRight, TRUE,
           MUIA_Window_UseBottomBorderScroller, FALSE,
@@ -190,14 +186,10 @@ LONG initVideo() {
     if (createAboutAmigaGPTWindow() == RETURN_OK)
         DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
 
-    set(startupOptionsWindowObject, MUIA_Window_Open, TRUE);
-
     if (createMainWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
-
-    addStartupOptionsWindowActions();
 
     return RETURN_OK;
 }
@@ -365,24 +357,24 @@ void displayError(STRPTR message) {
 void shutdownGUI() {
     if (app) {
         DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
+
+        // Release pens if they were allocated
+        if (mainWindowObject && (redPen || greenPen || bluePen || yellowPen)) {
+            struct Screen *currentScreen;
+            get(mainWindowObject, MUIA_Window_Screen, &currentScreen);
+            if (currentScreen) {
+                if (redPen)
+                    ReleasePen(currentScreen->ViewPort.ColorMap, redPen);
+                if (greenPen)
+                    ReleasePen(currentScreen->ViewPort.ColorMap, greenPen);
+                if (bluePen)
+                    ReleasePen(currentScreen->ViewPort.ColorMap, bluePen);
+                if (yellowPen)
+                    ReleasePen(currentScreen->ViewPort.ColorMap, yellowPen);
+            }
+        }
+
         MUI_DisposeObject(app);
-    }
-    if (redPen) {
-        ReleasePen(screen->ViewPort.ColorMap, redPen);
-    }
-    if (greenPen) {
-        ReleasePen(screen->ViewPort.ColorMap, greenPen);
-    }
-    if (bluePen) {
-        ReleasePen(screen->ViewPort.ColorMap, bluePen);
-    }
-    if (yellowPen) {
-        ReleasePen(screen->ViewPort.ColorMap, yellowPen);
-    }
-    if (isPublicScreen) {
-        UnlockPubScreen(NULL, screen);
-    } else {
-        CloseScreen(screen);
     }
     if (chatOutputTextEditorContents) {
         FreeVec(chatOutputTextEditorContents);

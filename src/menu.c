@@ -212,6 +212,10 @@ HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
         return;
     }
     Close(file);
+
+    struct Screen *screen;
+    get(mainWindowObject, MUIA_Window_Screen, &screen);
+
     struct NewAmigaGuide guide = {
         .nag_Name = guidePath,
         .nag_Screen = screen,
@@ -238,7 +242,6 @@ HOOKPROTONHNONP(RecreateMainWindowFunc, void) {
         displayError(STRING_ERROR_MAIN_WINDOW);
         return;
     }
-    set(mainWindowObject, MUIA_Window_Screen, screen);
 }
 MakeHook(RecreateMainWindowHook, RecreateMainWindowFunc);
 
@@ -255,6 +258,13 @@ MakeHook(FixedWidthFontsMenuItemClickedHook,
 
 HOOKPROTONHNONP(TextAlignmentChangedFunc, void) { displayConversation(NULL); }
 MakeHook(TextAlignmentChangedHook, TextAlignmentChangedFunc);
+
+HOOKPROTONHNONP(ClearMuiSettingsFunc, void) {
+    DeleteFile("ENV:mui/AmigaGPT.prefs");
+    DeleteFile("ENVARC:mui/AmigaGPT.prefs");
+    DoMethod(app, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+}
+MakeHook(ClearMuiSettingsHook, ClearMuiSettingsFunc);
 
 void createMenu() {
     menuStrip = MenustripObject, MUIA_Family_Child, MenuObject, MUIA_Menu_Title,
@@ -332,9 +342,13 @@ void createMenu() {
     FALSE, MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
     config.assistantTextAlignment == ALIGN_RIGHT, MUIA_Menuitem_Exclude,
     ~(1 << 2), MUIA_Menuitem_Toggle, TRUE, End, End, MUIA_Family_Child,
-    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_MUI_SETTINGS,
-    MUIA_UserData, MENU_ITEM_VIEW_MUI_SETTINGS, MUIA_Menuitem_CopyStrings,
-    FALSE, End, End,
+    MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL, MUIA_UserData,
+    MENU_ITEM_NULL, End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_MUI_SETTINGS, MUIA_UserData, MENU_ITEM_VIEW_MUI_SETTINGS,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_CLEAR_MUI_SETTINGS, MUIA_UserData,
+    MENU_ITEM_VIEW_CLEAR_MUI_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
+    End,
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_CONNECTION,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
@@ -500,6 +514,12 @@ void addMenuActions() {
     DoMethod(muiSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, MUIV_Notify_Application, 1,
              MUIM_Application_OpenConfigWindow);
+
+    Object clearMuiSettingsMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_CLEAR_MUI_SETTINGS);
+    DoMethod(clearMuiSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &ClearMuiSettingsHook);
 
     Object fixedWidthFontsMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_FIXED_WIDTH_FONTS);

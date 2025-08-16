@@ -1277,3 +1277,8 @@ msgstr "pre pokrytie AmigaGPT správ"
 msgctxt "STRING_MENU_PRINT (236//)"
 msgid "Print"
 msgstr "Tlačiť"
+
+#: src/menu.c:144
+msgctxt "STRING_MENU_CLEAR_MUI_SETTINGS (237//)"
+msgid "Clear MUI Settings"
+msgstr "Vyčistiť nastavenia MUI"
