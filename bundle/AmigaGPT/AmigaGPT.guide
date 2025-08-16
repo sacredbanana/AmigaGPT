@@ -743,6 +743,15 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.10.0 (2025-08-17)@{ub}
+
+- Added menu option to print the conversation with the printer
+- Added more entries to PATH in the ARexx execution environment so ARexx can run more commands just from their name
+- Improve error handling in chat responses
+- Restore backwards compatibility with AmigaOS 3.1
+- Enter key to submit text now works in MUI 3.9 (not earlier)
+- Fix crash opening the "About AmigaGPT" window on MUI 3.9
+
 @{b}2.9.0 (2025-08-09)@{ub}
 
 - Added gpt-5 chat models and make this the default chat model
