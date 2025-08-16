@@ -1,21 +1,21 @@
 # AmigaGPT
 
-AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS. This powerful tool brings the capabilities of OpenAI's GPT to your Amiga system, enabling text generation, question answering, and creative exploration. AmigaGPT can also generate stunning images using DALL-E and includes support for speech output, making it easier than ever to interact with AI on your Amiga. Designed to integrate seamlessly with your system, AmigaGPT delivers modern AI technology while embracing the timeless Amiga experience.
+AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS. This powerful tool brings the capabilities of OpenAI's GPT to your Amiga system, enabling text generation, question answering, and creative exploration. AmigaGPT can also generate stunning images and includes support for speech output, making it easier than ever to interact with AI on your Amiga. Designed to integrate seamlessly with your system, AmigaGPT delivers modern AI technology while embracing the timeless Amiga experience.
 
 <img width="953" alt="Screenshot 2023-06-15 at 10 26 38 pm" src="https://github.com/sacredbanana/AmigaGPT/assets/6903516/ca5e0db3-4e37-4ea9-a6ac-9fff2d5c195a">
 
 
 ## Features
 
-- ### State-of-the-art language model
+- ### State-of-the-art language and image models
 
-**AmigaGPT** uses the o1, GPT-4o, GPT-4 and GPT-3.5 models developed by OpenAI to generate coherent, context-aware responses to your input.
+**AmigaGPT** uses the o1, o3, o4, GPT-5, GPT-4o, GPT-4 and GPT-3.5 models developed by OpenAI to generate coherent, context-aware responses to your input.
 
-- ### AI Image Generation with DALL-E 2 and DALL-E 3
+- ### AI Image Generation with DALL-E 2, DALL-E 3 and GPT-Image-1
 
-**AmigaGPT** can access the powerful DALL-E models to generate images from a prompt. You can view and save the images right inside the app.
+**AmigaGPT** can access the powerful OpenAI models to generate images from a prompt. You can view and save the images right inside the app.
 
-- ### Seamless integration with AmigaOS
+- ### Seamless integration with AmigaOS and MorphOS
 
 **AmigaGPT** takes full advantage of the MUI framework to provide a smooth, native user experience that is responsive and easy to use.
 
@@ -40,9 +40,13 @@ Ensure you have the necessary system requirements:
 - Internet access using a TCP/IP stack such as **Roadshow** (<http://roadshow.apc-tcp.de/index-en.php>)
 - For AmigaOS 3 & 4: **AmiSSL 5.18** or higher (<https://aminet.net/package/util/libs/AmiSSL-v5-OS3>) for OS3 and (<https://aminet.net/package/util/libs/AmiSSL-v5-OS4>) for OS4
 - **MUI 3** minimum but **MUI 5** recommended for all features (<https://github.com/amiga-mui/muidev/releases>)
+- **render.library 40.08** or higher (<https://aminet.net/package/dev/misc/renderlib>)
+- **guigfx.library 20.0** or higher (<https://aminet.net/dev/misc/guigfxlib.lha>) (FPU) or (<https://aminet.net/dev/misc/guigfxlib_nofpu.lha>) 
+- **codesets.library 6.22** or higher (<http://aminet.net/package/util/libs/codesets-6.22>)
 - **MCC_Guigfx** MUI custom class for displaying images (<http://aminet.net/package/dev/mui/MCC_Guigfx>)
 - **MCC_NList** MUI custom class for lists (<http://aminet.net/package/dev/mui/MCC_NList-0.128>)
-- **codesets.library 6.22** or higher (<http://aminet.net/package/util/libs/codesets-6.22>)
+- **MCC_TextEditor 15.56** or higher (<https://aminet.net/dev/mui/MCC_TextEditor-15.56.lha>)
+- **A PNG datatype** Any will do, but here is one (<https://aminet.net/util/dtype/vPNGdt.lha>)
 - An **OpenAI account** with an active **API key**
 - *Optional*: **AmigaOS 3 only**: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
 - *Optional*: **AmigaOS 4 only**: **Flite device** (<http://aminet.net/package/mus/misc/flite_device>)
@@ -52,7 +56,7 @@ Ensure you have the necessary system requirements:
 ## Installation
 * For AmigaOS 3 & 4, Install AmiSSL and a TCP/IP stack if not already done so
 * Download and install MUI. Version 5 recommended, version 3 minimum. Reboot.
-* Download and install MCC_Guigfx, MCC_NList and codesets.library
+* Download and install codesets.library, render.library, MCC_Guigfx, MCC_NList and MCC_TextEditor
 * Download the latest release of **AmigaGPT**
 * Extract the `amigagpt.lha` archive to a temporary location
 * Run the provided installer

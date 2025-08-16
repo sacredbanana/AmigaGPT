@@ -11,7 +11,7 @@ Replaces: util/misc/AmigaGPT.lha
 AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS.
 This powerful tool brings the capabilities of OpenAI?s GPT to your Amiga
 system, enabling text generation, question answering, and creative
- exploration. AmigaGPT can also generate stunning images using DALL-E and
+ exploration. AmigaGPT can also generate stunning images and
 includes support for speech output, making it easier than ever to interact
 with AI on your Amiga. Designed to integrate seamlessly with your system,
 AmigaGPT delivers modern AI technology while embracing the timeless Amiga
@@ -35,12 +35,21 @@ Requirements:
 (http://roadshow.apc-tcp.de/index-en.php)
 - MUI 3 minimum but MUI 5 recommended for all features
   (https://github.com/amiga-mui/muidev/releases)
+- **render.library 40.08** or higher
+  (https://aminet.net/package/dev/misc/renderlib)
+- **guigfx.library 20.0** or higher
+  (https://aminet.net/dev/misc/guigfxlib.lha) (FPU) or
+  (https://aminet.net/dev/misc/guigfxlib_nofpu.lha) 
+- codesets.library 6.22 or higher
+ (http://aminet.net/package/util/libs/codesets-6.22)
 - MCC_Guigfx MUI custom class for displaying images
   (http://aminet.net/package/dev/mui/MCC_Guigfx)
 - MCC_NList MUI custom class for lists
   (http://aminet.net/package/dev/mui/MCC_NList-0.128)
-- codesets.library 6.22 or higher
- (http://aminet.net/package/util/libs/codesets-6.22)
+- MCC_TextEditor 15.56 or higher
+  (https://aminet.net/dev/mui/MCC_TextEditor-15.56.lha)
+- A PNG datatype - Any will do, but here is one
+  (https://aminet.net/util/dtype/vPNGdt.lha)
 - An active OpenAI API key
 - For speech on AmigaOS 3, any version of narrator.device
 - For speech on AmigaOS 4, Flite Device
@@ -51,7 +60,8 @@ Requirements:
 Installation:
 1. Install AmiSSL and a TCP/IP stack if not already done so
 2. Download and install MUI. Version 5 recommended, version 3 minimum. Reboot.
-3. Download and install MCC_Guigfx, MCC_NList and codesets.library.
+3. Download and install codesets.library, render.library, MCC_Guigfx,
+   MCC_NList and MCC_TextEditor
 4. Download the latest release of AmigaGPT.
 5. Extract the `amigagpt.lha` archive to a temporary location.
 6. Run the provided installer.
