@@ -1,11 +1,12 @@
 # Changelog
 
-## 2.9.1 (2025-08-10)
+## 2.10.0 (2025-08-10)
 
 - Added more entries to PATH in the ARexx execution environment for so it ARexx can run more commands just from their name
 - Improve error handling in chat responses
 - Restore backwards compatibility with AmigaOS 3.1
 - Enter key to submit text now works in MUI 3.9 (not earlier)
+- Fix crash opening the "About AmigaGPT" window on MUI 3.9
 
 ## 2.9.0 (2025-08-09)
 

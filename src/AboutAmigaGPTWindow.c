@@ -22,6 +22,9 @@ MakeHook(AboutWindowCloseHook, AboutWindowCloseFunc);
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createAboutAmigaGPTWindow() {
+    if (isMUI39) {
+        return RETURN_FAIL;
+    }
     buildString = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
     bodyString = AllocVec(2048, MEMF_CLEAR | MEMF_ANY);
     LONG success = RETURN_ERROR;
