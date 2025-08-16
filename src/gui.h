@@ -19,6 +19,8 @@
 #include <proto/utility.h>
 #include "AmigaGPT_cat.h"
 
+#define APP_ID_PRINT 1000L
+
 /**
  *  The object IDs for the GUI
  * */
@@ -52,6 +54,7 @@ extern BOOL isMUI5;
 extern BOOL isMUI39;
 extern BOOL isAROS;
 extern struct codeset *systemCodeset;
+
 /**
  * Create the GUI
  * @return RETURN_OK on success, RETURN_ERROR on failure

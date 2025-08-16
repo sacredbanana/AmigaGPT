@@ -2223,5 +2223,5 @@ LONG printConversation() {
         result = RETURN_OK;
     }
 
-    return result;
+    return RETURN_OK;
 }

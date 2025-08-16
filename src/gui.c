@@ -238,6 +238,10 @@ void startGUIRunLoop() {
             running = FALSE;
             break;
         }
+        // Must be called here because calling via a hook causes a crash
+        case APP_ID_PRINT:
+            printConversation();
+            break;
         default:
             break;
         }

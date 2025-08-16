@@ -256,9 +256,6 @@ MakeHook(FixedWidthFontsMenuItemClickedHook,
 HOOKPROTONHNONP(TextAlignmentChangedFunc, void) { displayConversation(NULL); }
 MakeHook(TextAlignmentChangedHook, TextAlignmentChangedFunc);
 
-HOOKPROTONHNONP(PrintMenuItemClickedFunc, void) { printConversation(); }
-MakeHook(PrintMenuItemClickedHook, PrintMenuItemClickedFunc);
-
 void createMenu() {
     menuStrip = MenustripObject, MUIA_Family_Child, MenuObject, MUIA_Menu_Title,
     STRING_MENU_PROJECT, MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child,
@@ -427,8 +424,8 @@ void addMenuActions() {
     Object printMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_PRINT);
     DoMethod(printMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
-             MUIV_Notify_Application, 2, MUIM_CallHook,
-             &PrintMenuItemClickedHook);
+             MUIV_Notify_Application, 2, MUIM_Application_ReturnID,
+             APP_ID_PRINT);
 
     Object aboutAmigaGPTMenuItem =
         DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_ABOUT_AMIGAGPT);
