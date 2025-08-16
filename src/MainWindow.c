@@ -1,3 +1,6 @@
+#include <devices/printer.h>
+#include <devices/prtbase.h>
+#include <devices/trackdisk.h>
 #include <json-c/json.h>
 #include <mui/BetterString_mcc.h>
 #include <mui/Busy_mcc.h>
@@ -2165,4 +2168,60 @@ void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
              message);
     set(statusBar, MUIA_Text_Contents, formattedMessage);
     FreeVec(formattedMessage);
+}
+
+/**
+ * Print the conversation text to the printer
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+ **/
+LONG printConversation() {
+    BPTR printerFile;
+    LONG result = RETURN_ERROR;
+
+    printerFile = Open("PRT:", MODE_NEWFILE);
+    if (printerFile) {
+        STRPTR printerText =
+            AllocVec(strlen(READ_BUFFER_LENGTH) + 1, MEMF_ANY | MEMF_CLEAR);
+        struct ConversationNode *conversationNode;
+
+        for (conversationNode = (struct ConversationNode *)
+                                    currentConversation->messages->mlh_Head;
+             conversationNode->node.mln_Succ != NULL;
+             conversationNode =
+                 (struct ConversationNode *)conversationNode->node.mln_Succ) {
+            UTF8 *content = conversationNode->content;
+            if (strcmp(conversationNode->role, "user") == 0) {
+                Write(printerFile, "*******************\n", -1);
+                Write(printerFile, "User:\n\n", -1);
+
+                STRPTR convertedConversationString = CodesetsUTF8ToStr(
+                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                    (Tag)content, CSA_MapForeignChars, TRUE, TAG_DONE);
+
+                Write(printerFile, convertedConversationString, -1);
+
+                CodesetsFreeA(convertedConversationString, NULL);
+            } else if (strcmp(conversationNode->role, "assistant") == 0) {
+                Write(printerFile, "\n\n", -1);
+                Write(printerFile, "*******************\n", -1);
+                Write(printerFile, "AmigaGPT:\n\n", -1);
+
+                STRPTR convertedConversationString = CodesetsUTF8ToStr(
+                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                    (Tag)content, CSA_MapForeignChars, TRUE, TAG_DONE);
+
+                Write(printerFile, convertedConversationString, -1);
+
+                CodesetsFreeA(convertedConversationString, NULL);
+
+                Write(printerFile, "\n\n", -1);
+            }
+        }
+
+        FreeVec(printerText);
+        Close(printerFile);
+        result = RETURN_OK;
+    }
+
+    return result;
 }

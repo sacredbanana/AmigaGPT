@@ -1287,3 +1287,8 @@ msgstr "Derecha"
 msgctxt "STRING_ABOUT_WINDOW_DANIEL_REIMANN (235//)"
 msgid "for covering AmigaGPT news"
 msgstr "para cubrir noticias de AmigaGPT"
+
+#: src/menu.c:143
+msgctxt "STRING_MENU_PRINT (236//)"
+msgid "Print"
+msgstr "Imprimir"

@@ -106,7 +106,9 @@
         "arexx_protos.h": "c",
         "alib.h": "c",
         "macros.h": "c",
-        "guigfx_mcc.h": "c"
+        "guigfx_mcc.h": "c",
+        "printer.h": "c",
+        "prtbase.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

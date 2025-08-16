@@ -84,3 +84,9 @@ void addTextToConversation(struct Conversation *conversation, UTF8 *text,
  * @param conversation The conversation to free
  **/
 void freeConversation(struct Conversation *conversation);
+
+/**
+ * Print the conversation text to the printer
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+ **/
+LONG printConversation();

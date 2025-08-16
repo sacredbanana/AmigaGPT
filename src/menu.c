@@ -256,16 +256,23 @@ MakeHook(FixedWidthFontsMenuItemClickedHook,
 HOOKPROTONHNONP(TextAlignmentChangedFunc, void) { displayConversation(NULL); }
 MakeHook(TextAlignmentChangedHook, TextAlignmentChangedFunc);
 
+HOOKPROTONHNONP(PrintMenuItemClickedFunc, void) { printConversation(); }
+MakeHook(PrintMenuItemClickedHook, PrintMenuItemClickedFunc);
+
 void createMenu() {
     menuStrip = MenustripObject, MUIA_Family_Child, MenuObject, MUIA_Menu_Title,
     STRING_MENU_PROJECT, MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child,
-    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_ABOUT_AMIGAGPT,
-    MUIA_UserData, MENU_ITEM_PROJECT_ABOUT_AMIGAGPT, MUIA_Menuitem_CopyStrings,
-    FALSE, End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_ABOUT_MUI, MUIA_UserData, MENU_ITEM_PROJECT_ABOUT_MUI,
+    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_PRINT, MUIA_UserData,
+    MENU_ITEM_PROJECT_PRINT, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Menuitem_Shortcut, "P", End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, NM_BARLABEL, MUIA_UserData, MENU_ITEM_NULL, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_ABOUT_AMIGAGPT, MUIA_UserData, MENU_ITEM_PROJECT_ABOUT_AMIGAGPT,
     MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, NM_BARLABEL, MUIA_UserData, MENU_ITEM_NULL,
-    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_ABOUT_MUI, MUIA_UserData,
+    MENU_ITEM_PROJECT_ABOUT_MUI, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
+    MUIA_UserData, MENU_ITEM_NULL, End, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_QUIT, MUIA_UserData,
     MENU_ITEM_PROJECT_QUIT, MUIA_Menuitem_Shortcut, "Q",
     MUIA_Menuitem_CopyStrings, FALSE, End, End,
@@ -417,6 +424,12 @@ void createMenu() {
 }
 
 void addMenuActions() {
+    Object printMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_PRINT);
+    DoMethod(printMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
+             MUIV_Notify_Application, 2, MUIM_CallHook,
+             &PrintMenuItemClickedHook);
+
     Object aboutAmigaGPTMenuItem =
         DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_ABOUT_AMIGAGPT);
     DoMethod(aboutAmigaGPTMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,

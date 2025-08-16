@@ -1278,3 +1278,8 @@ msgstr "Höger"
 msgctxt "STRING_ABOUT_WINDOW_DANIEL_REIMANN (235//)"
 msgid "for covering AmigaGPT news"
 msgstr "för att täcka AmigaGPT-nyheter"
+
+#: src/menu.c:143
+msgctxt "STRING_MENU_PRINT (236//)"
+msgid "Print"
+msgstr "Skriv ut"

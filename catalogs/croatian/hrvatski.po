@@ -1282,3 +1282,8 @@ msgstr "Desno"
 msgctxt "STRING_ABOUT_WINDOW_DANIEL_REIMANN (235//)"
 msgid "for covering AmigaGPT news"
 msgstr "za pokrivanje AmigaGPT vijesti"
+
+#: src/menu.c:143
+msgctxt "STRING_MENU_PRINT (236//)"
+msgid "Print"
+msgstr "Ispiši"
