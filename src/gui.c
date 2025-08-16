@@ -54,9 +54,6 @@ struct EmulLibEntry muiDispatcherEntry = {TRAP_LIB, 0,
 
 struct Library *MUIMasterBase;
 struct Library *CodesetsBase;
-#ifndef __AMIGAOS4__
-struct Library *ARexxBase = NULL;
-#endif
 Object *app = NULL;
 ULONG redPen = NULL, greenPen = NULL, bluePen = NULL, yellowPen = NULL;
 struct Screen *screen;
@@ -64,6 +61,7 @@ Object *imageWindowObject;
 Object *imageWindowImageView;
 Object *imageWindowImageViewGroup;
 BOOL isMUI5;
+BOOL isMUI39;
 BOOL isAROS;
 struct codeset *systemCodeset;
 
@@ -109,22 +107,8 @@ LONG openGUILibraries() {
         return RETURN_ERROR;
     }
 
-#ifndef __MORPHOS__
-    if ((ARexxBase = OpenLibrary("arexx.class", 0)) == NULL) {
-        displayError(STRING_ERROR_AREXX_LIB_OPEN);
-        return RETURN_ERROR;
-    }
-#endif
-    struct Library *AROSBase;
-
-    if (AROSBase = OpenLibrary("aros.library", 0)) {
-        isAROS = TRUE;
-        CloseLibrary(AROSBase);
-    } else {
-        isAROS = FALSE;
-    }
-
-    isMUI5 = MUIMasterBase->lib_Version >= 20;
+    isMUI5 = MUIMasterBase->lib_Version >= 21;
+    isMUI39 = MUIMasterBase->lib_Version == 20;
     return RETURN_OK;
 }
 
@@ -138,9 +122,6 @@ static void closeGUILibraries() {
 #endif
     CloseLibrary(MUIMasterBase);
     CloseLibrary(CodesetsBase);
-#ifndef __MORPHOS__
-    CloseLibrary(ARexxBase);
-#endif
 }
 
 /**
@@ -159,11 +140,6 @@ LONG initVideo() {
 
     if (createStartupOptionsWindow() == RETURN_ERROR)
         return RETURN_ERROR;
-
-#ifndef __MORPHOS__
-    if (initARexx() == RETURN_ERROR)
-        return RETURN_ERROR;
-#endif
 
     if (createAPIKeyRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
@@ -407,12 +383,9 @@ void shutdownGUI() {
     if (chatOutputTextEditorContents) {
         FreeVec(chatOutputTextEditorContents);
     }
-    if (isMUI5) {
+    if (isMUI5 || isMUI39) {
         deleteAmigaGPTTextEditor();
     }
 
-#ifndef __MORPHOS__
-    closeARexx();
-#endif
     closeGUILibraries();
 }

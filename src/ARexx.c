@@ -9,8 +9,6 @@
 #include "config.h"
 #include "MainWindow.h"
 
-Object *arexxObject;
-
 HOOKPROTONH(ReplyCallbackFunc, APTR, Object *obj, struct RexxMsg *rxm) {
     printf("Args[0]: %s\nResult1: %ld   Result2: %ld\n", rxm->rm_Args[0],
            rxm->rm_Result1, rxm->rm_Result2);
@@ -369,16 +367,3 @@ struct MUI_Command arexxList[] = {
     {"LISTVOICES", NULL, NULL, &ListVoicesHook, {0, 0, 0, 0, 0}},
     {"?", NULL, NULL, &HelpHook, {0, 0, 0, 0, 0}},
     {NULL, NULL, 0, NULL, {0, 0, 0, 0, 0}}};
-
-LONG initARexx() {
-    arexxObject = NewObject(AREXX_GetClass(), NULL, AREXX_HostName, "AMIGAGPT",
-                            AREXX_Commands, NULL, AREXX_NoSlot, FALSE,
-                            AREXX_ReplyHook, &ReplyCallbackHook, TAG_DONE);
-    if (arexxObject == NULL) {
-        displayError(STRING_ERROR_AREXX_SHELL_OPEN);
-        return RETURN_ERROR;
-    }
-    return RETURN_OK;
-}
-
-void closeARexx() { DisposeObject(arexxObject); }

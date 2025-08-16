@@ -1,4 +1,3 @@
-#include <classes/arexx.h>
 #include <dos/dostags.h>
 #include <libraries/amigaguide.h>
 #include <libraries/asl.h>
@@ -178,22 +177,29 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
     NameFromLock(GetProgramDir(), scriptPath, 1024);
     AddPart(scriptPath, "rexx/", 1024);
     AddPart(scriptPath, script, 1024);
-#ifndef __MORPHOS__
-    DoMethod(arexxObject, AM_EXECUTE, scriptPath, NULL, NULL, NULL, NULL, NULL);
-#else
+#ifdef __MORPHOS__
     const char *extra[] = {"SYS:Utilities", "MOSSYS:C", "SYS:S", "MOSSYS:S"};
+#else
+    const char *extra[] = {"SYS:Utilities",
+                           "SYS:S",
+                           "SYS:Rexxc",
+                           "SYS:System",
+                           "SYS:Prefs",
+                           "SYS:Tools",
+                           "SYS:Tools/Commodities",
+                           "SYS:WBStartup"};
+#endif
     BPTR npPath = BuildNPPath(extra, 4, TRUE);
 
     UBYTE command[1024];
-    snprintf(command, sizeof(command), "RUN RX %s", scriptPath);
+    snprintf(command, sizeof(command), "RUN RX %s\nENDSHELL", scriptPath);
 
     LONG rc = SystemTags((CONST_STRPTR)command, NP_Path, (ULONG)npPath,
-                         SYS_Asynch, TRUE, TAG_DONE);
+                         SYS_Asynch, FALSE, TAG_DONE);
 
     if (rc == -1) {
         FreeNPPath(npPath);
     }
-#endif
     FreeVec(scriptPath);
 }
 MakeHook(ARexxRunScriptMenuItemClickedHook, ARexxRunScriptMenuItemClickedFunc);
@@ -1013,7 +1019,8 @@ static BPTR BuildNPPath(const char *const *extraDirs, size_t extraCount,
                         BOOL addParent) {
     struct PathNodeCompat *head = NULL, *tail = NULL;
 
-    // Optionally copy the caller’s current shell path (duplicates the locks).
+// Optionally copy the caller’s current shell path (duplicates the locks).
+#ifndef __AMIGAOS4__
     if (addParent) {
         struct CommandLineInterface *cli =
             Cli(); // NULL if we’re not in a shell
@@ -1041,6 +1048,7 @@ static BPTR BuildNPPath(const char *const *extraDirs, size_t extraCount,
             }
         }
     }
+#endif
 
     // Append our extra directories
     for (size_t i = 0; i < extraCount; ++i) {

@@ -34,7 +34,10 @@ Requirements:
 - Internet access using a TCP/IP stack such as Roadshow 
 (http://roadshow.apc-tcp.de/index-en.php)
 - MUI 3 minimum but MUI 5 recommended for all features
-  (https://github.com/amiga-mui/muidev/releases)
+  MUI 5:(https://github.com/amiga-mui/muidev/releases)
+  or MUI 3.9:
+  (https://github.com/amiga-mui/muidev/releases/download/
+  MUI-3.9-2015R1/MUI-3.9-2015R1-os3.lha)
 - **render.library 40.08** or higher
   (https://aminet.net/package/dev/misc/renderlib)
 - **guigfx.library 20.0** or higher

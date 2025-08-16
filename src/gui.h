@@ -49,6 +49,7 @@ extern Object *imageWindowObject;
 extern Object *imageWindowImageView;
 extern Object *imageWindowImageViewGroup;
 extern BOOL isMUI5;
+extern BOOL isMUI39;
 extern BOOL isAROS;
 extern struct codeset *systemCodeset;
 /**

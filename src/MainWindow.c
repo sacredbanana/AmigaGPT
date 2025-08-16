@@ -840,7 +840,7 @@ static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createMainWindow() {
-    if (isMUI5 && createAmigaGPTTextEditor() == RETURN_ERROR) {
+    if ((isMUI5 || isMUI39) && createAmigaGPTTextEditor() == RETURN_ERROR) {
         displayError("Could not create custom class.");
     }
 
@@ -848,7 +848,7 @@ LONG createMainWindow() {
         MUI_DisposeObject(mainWindowObject);
     }
 
-    if (isMUI5) {
+    if (isMUI5 || isMUI39) {
         chatInputTextEditor = NewObject(
             MUIC_AmigaGPTTextEditor, NULL, TextFrame, MUIA_Background,
             MUII_BACKGROUND, MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
