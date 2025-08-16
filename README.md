@@ -125,7 +125,7 @@ In the "**Edit**" menu, you'll find basic text editing commands like **Cut**, **
 
 The "**View**" menu allows you to change the appearance of the app.
 
-AmigaGPT can run on its own screen or in Workbench. To configure this, open the **MUI Settings** menu item from the **View** menu and configure it in the **System** menu in the **MUI Setings** panel.
+AmigaGPT can run on its own screen or in Workbench. To configure this, open the **MUI Settings** menu item from the **View** menu and configure it in the **Screen** or **System** menu in the **MUI Setings** panel.
 
 If you open in a new screen you have the ability to create a screen for the app to open in. **AmigaGPT** supports anything from 320x200 all the way up to 4k resolution if using a video card for RTG. Bear in mind text will appear very tiny in resolutions above 1080p so you may want to increase the font size settings from the MUI settings in the View menu when the app opens.
 

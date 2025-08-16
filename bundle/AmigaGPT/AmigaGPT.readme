@@ -139,10 +139,9 @@ Launching AmigaGPT:
  size is saved in the icon.
 
 Usage:
-
 AmigaGPT can run on its own screen or in Workbench. To configure this, open
-the MUI Settings menu item from the View menu and configure it in the System
-menu in the MUI Setings panel.
+the MUI Settings menu item from the View menu and configure it in the "Screen"
+or "System" menu in the MUI Setings panel.
 
 If you open in a new screen you have the
 ability to create a screen for the app to open in. AmigaGPT supports anything
@@ -292,8 +291,8 @@ Changelog:
 ------------------
 
 - Added menu option to print the conversation with the printer
-- Now uses native MUI screen management (set screen in System menu in MUI
-  settings)
+- Now uses native MUI screen management (set screen in Screen or System menu
+  in MUI settings)
 - Added menu option to clear the MUI settings
 - Added more entries to PATH in the ARexx execution environment so ARexx
   can run more commands just from their name

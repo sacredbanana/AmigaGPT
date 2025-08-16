@@ -260,8 +260,13 @@ HOOKPROTONHNONP(TextAlignmentChangedFunc, void) { displayConversation(NULL); }
 MakeHook(TextAlignmentChangedHook, TextAlignmentChangedFunc);
 
 HOOKPROTONHNONP(ClearMuiSettingsFunc, void) {
-    DeleteFile("ENV:mui/AmigaGPT.prefs");
+#ifdef __AMIGAOS4__
+    Delete("ENVARC:mui/AmigaGPT.prefs");
+    Delete("ENV:mui/AmigaGPT.prefs");
+#else
     DeleteFile("ENVARC:mui/AmigaGPT.prefs");
+    DeleteFile("ENV:mui/AmigaGPT.prefs");
+#endif
     DoMethod(app, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 }
 MakeHook(ClearMuiSettingsHook, ClearMuiSettingsFunc);
