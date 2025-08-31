@@ -40,6 +40,8 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static STRPTR getModelName(enum ChatModel model);
 static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
 static STRPTR base64Encode(CONST_STRPTR input);
+static void drain_openssl_error_queue(CONST_STRPTR where);
+static void report_ssl_error(SSL *s, int ret, CONST_STRPTR where);
 
 struct Library *SocketBase;
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
@@ -332,6 +334,12 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
 
     /* Create a socket and connect to the server */
     if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
+        struct timeval timeout;
+        timeout.tv_sec = 180;
+        timeout.tv_usec = 0;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+
         if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
             displayError(useProxy ? STRING_ERROR_CONNECTION_PROXY
                                   : STRING_ERROR_CONNECTION);
@@ -410,43 +418,16 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
         SSL_set_tlsext_host_name(ssl, host);
 
         /* Perform SSL handshake */
-        if ((ssl_err = SSL_connect(ssl)) >= 0) {
-            // printf("SSL connection to %s using %s\n\0", host,
-            // SSL_get_cipher(ssl));
-        }
+        ERR_clear_error();
+        ssl_err = SSL_connect(ssl);
 
-        /* If there were errors, print them */
-        if (ssl_err < 0) {
-            LONG err = SSL_get_error(ssl, ssl_err);
-            switch (err) {
-            case SSL_ERROR_ZERO_RETURN:
-                printf("SSL_ERROR_ZERO_RETURN\n");
-                break;
-            case SSL_ERROR_WANT_READ:
-                printf("SSL_ERROR_WANT_READ\n");
-                break;
-            case SSL_ERROR_WANT_WRITE:
-                printf("SSL_ERROR_WANT_WRITE\n");
-                break;
-            case SSL_ERROR_WANT_CONNECT:
-                printf("SSL_ERROR_WANT_CONNECT\n");
-                break;
-            case SSL_ERROR_WANT_ACCEPT:
-                printf("SSL_ERROR_WANT_ACCEPT\n");
-                break;
-            case SSL_ERROR_WANT_X509_LOOKUP:
-                printf("SSL_ERROR_WANT_X509_LOOKUP\n");
-                break;
-            case SSL_ERROR_SYSCALL:
-                printf("SSL_ERROR_SYSCALL\n");
-                break;
-            case SSL_ERROR_SSL:
-                printf("SSL_ERROR_SSL\n");
-                break;
-            default:
-                printf("%s: %ld\n", STRING_ERROR_UNKNOWN, err);
-                break;
-            }
+        if (ssl_err == 1) {
+            /* Handshake successful. */
+            // printf("SSL connection to %s using %s\n", host,
+            // SSL_get_cipher(ssl));
+        } else {
+            /* Handshake failed: report with full diagnostics. */
+            report_ssl_error(ssl, ssl_err, "SSL_connect");
             CloseSocket(sock);
             SSL_shutdown(ssl);
             SSL_free(ssl);
@@ -570,7 +551,11 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
         connectionRetryCount = 0;
         updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
         if (useSSL) {
+            ERR_clear_error();
             ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+            if (ssl_err <= 0) {
+                report_ssl_error(ssl, ssl_err, "SSL_write (responses)");
+            }
         } else {
             ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
         }
@@ -589,6 +574,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
         while (!doneReading) {
             DoMethod(loadingBar, MUIM_Busy_Move);
             if (useSSL) {
+                ERR_clear_error();
                 bytesRead =
                     SSL_read(ssl, tempReadBuffer,
                              useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1);
@@ -691,30 +677,9 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
                 printf("SSL_ERROR_WANT_X509_LOOKUP\n");
                 break;
             case SSL_ERROR_SYSCALL:
-                printf("SSL_ERROR_SYSCALL\n");
-                ULONG err = ERR_get_error();
-                printf("%s: %lu\n", STRING_ERROR, err);
-                break;
             case SSL_ERROR_SSL:
-                updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
-                if (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy,
-                                        proxyHost, proxyPort, proxyUsesSSL,
-                                        proxyRequiresAuth, proxyUsername,
-                                        proxyPassword) == RETURN_ERROR) {
-                    if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
-                        displayError(STRING_ERROR_CONNECTION_MAX_RETRIES);
-                        doneReading = TRUE;
-                        streamingInProgress = FALSE;
-                        FreeVec(tempReadBuffer);
-                        struct json_object *response;
-                        for (UWORD i = 0; i <= responseIndex; i++) {
-                            response = responses[i];
-                            json_object_put(response);
-                        }
-                        FreeVec(responses);
-                        return NULL;
-                    }
-                }
+                report_ssl_error(ssl, bytesRead, "SSL_read (responses)");
+                doneReading = TRUE;
                 break;
             default:
                 printf(STRING_ERROR_UNKNOWN);
@@ -725,33 +690,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
         FreeVec(tempReadBuffer);
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
-        LONG err = SSL_get_error(ssl, ssl_err);
-        switch (err) {
-        case SSL_ERROR_WANT_READ:
-            printf("SSL_ERROR_WANT_READ\n");
-            break;
-        case SSL_ERROR_WANT_WRITE:
-            printf("SSL_ERROR_WANT_WRITE\n");
-            break;
-        case SSL_ERROR_WANT_CONNECT:
-            printf("SSL_ERROR_WANT_CONNECT\n");
-            break;
-        case SSL_ERROR_WANT_ACCEPT:
-            printf("SSL_ERROR_WANT_ACCEPT\n");
-            break;
-        case SSL_ERROR_WANT_X509_LOOKUP:
-            printf("SSL_ERROR_WANT_X509_LOOKUP\n");
-            break;
-        case SSL_ERROR_SYSCALL:
-            printf("SSL_ERROR_SYSCALL\n");
-            break;
-        case SSL_ERROR_SSL:
-            printf("SSL_ERROR_SSL\n");
-            break;
-        default:
-            printf("%s: %ld\n", STRING_ERROR_UNKNOWN, err);
-            break;
-        }
+        report_ssl_error(ssl, ssl_err, "SSL_write");
     }
     if (stream) {
         // Check if the last response is the end of the stream and set the
@@ -878,7 +817,11 @@ struct json_object *postImageCreationRequestToOpenAI(
 
     updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
     if (useSSL) {
+        ERR_clear_error();
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+        if (ssl_err <= 0) {
+            report_ssl_error(ssl, ssl_err, "SSL_write (images)");
+        }
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
     }
@@ -898,6 +841,7 @@ struct json_object *postImageCreationRequestToOpenAI(
         while (!doneReading) {
             DoMethod(loadingBar, MUIM_Busy_Move);
             if (useSSL) {
+                ERR_clear_error();
                 bytesRead =
                     SSL_read(ssl, tempReadBuffer,
                              useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1);
@@ -986,21 +930,9 @@ struct json_object *postImageCreationRequestToOpenAI(
                 printf("SSL_ERROR_WANT_X509_LOOKUP\n");
                 break;
             case SSL_ERROR_SYSCALL:
-                printf("SSL_ERROR_SYSCALL\n");
-                ULONG err = ERR_get_error();
-                printf("%s: %lu\n", STRING_ERROR, err);
-                break;
             case SSL_ERROR_SSL:
-                updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
-                if (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy,
-                                        proxyHost, proxyPort, proxyUsesSSL,
-                                        proxyRequiresAuth, proxyUsername,
-                                        proxyPassword) == RETURN_ERROR) {
-                    if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
-                        displayError(STRING_ERROR_CONNECTION_MAX_RETRIES);
-                        doneReading = TRUE;
-                    }
-                }
+                report_ssl_error(ssl, bytesRead, "SSL_read (images)");
+                doneReading = TRUE;
                 break;
             default:
                 printf(STRING_ERROR_UNKNOWN);
@@ -1011,33 +943,7 @@ struct json_object *postImageCreationRequestToOpenAI(
         FreeVec(tempReadBuffer);
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
-        LONG err = SSL_get_error(ssl, ssl_err);
-        switch (err) {
-        case SSL_ERROR_WANT_READ:
-            printf("SSL_ERROR_WANT_READ\n");
-            break;
-        case SSL_ERROR_WANT_WRITE:
-            printf("SSL_ERROR_WANT_WRITE\n");
-            break;
-        case SSL_ERROR_WANT_CONNECT:
-            printf("SSL_ERROR_WANT_CONNECT\n");
-            break;
-        case SSL_ERROR_WANT_ACCEPT:
-            printf("SSL_ERROR_WANT_ACCEPT\n");
-            break;
-        case SSL_ERROR_WANT_X509_LOOKUP:
-            printf("SSL_ERROR_WANT_X509_LOOKUP\n");
-            break;
-        case SSL_ERROR_SYSCALL:
-            printf("SSL_ERROR_SYSCALL\n");
-            break;
-        case SSL_ERROR_SSL:
-            printf("SSL_ERROR_SSL\n");
-            break;
-        default:
-            printf("%s: %ld\n", STRING_ERROR_UNKNOWN, err);
-            break;
-        }
+        report_ssl_error(ssl, ssl_err, "SSL_write");
     }
 
     CloseSocket(sock);
@@ -1125,7 +1031,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
              "Host: %s\r\n"
              "User-Agent: AmigaGPT\r\n"
              "%s\r\n\0",
-             url, hostString, authHeader);
+             pathString, hostString, authHeader);
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
     UBYTE connectionRetryCount = 0;
@@ -1142,7 +1048,11 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
 
     updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
     if (useSSL) {
+        ERR_clear_error();
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+        if (ssl_err <= 0) {
+            report_ssl_error(ssl, ssl_err, "SSL_write (download)");
+        }
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
     }
@@ -1164,6 +1074,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
         while (!doneReading) {
             DoMethod(loadingBar, MUIM_Busy_Move);
             if (useSSL) {
+                ERR_clear_error();
                 bytesRead =
                     SSL_read(ssl, tempReadBuffer,
                              useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1);
@@ -1248,6 +1159,8 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
                 printf("SSL_ERROR_WANT_X509_LOOKUP\n");
                 break;
             case SSL_ERROR_SSL:
+                report_ssl_error(ssl, bytesRead, "SSL_read (download)");
+                /* Attempt reconnect & range resume follows as before */
                 updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
                 if (createSSLConnection(hostString, 443, useProxy, proxyHost,
                                         proxyPort, proxyUsesSSL,
@@ -1265,7 +1178,6 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
                         return RETURN_ERROR;
                     }
                 }
-
                 headersRead = FALSE;
                 dataStart = NULL;
                 snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
@@ -1274,41 +1186,19 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
                          "User-Agent: AmigaGPT\r\n"
                          "Range: bytes=%lu-\r\n"
                          "%s\r\n\0",
-                         url, hostString, totalBytesRead, authHeader);
+                         pathString, hostString, totalBytesRead, authHeader);
                 SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+                break;
+            case SSL_ERROR_SYSCALL:
+                report_ssl_error(ssl, bytesRead, "SSL_read (download)");
+                doneReading = TRUE;
                 break;
             }
         }
         FreeVec(tempReadBuffer);
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
-        LONG err = SSL_get_error(ssl, ssl_err);
-        switch (err) {
-        case SSL_ERROR_WANT_READ:
-            printf("SSL_ERROR_WANT_READ\n");
-            break;
-        case SSL_ERROR_WANT_WRITE:
-            printf("SSL_ERROR_WANT_WRITE\n");
-            break;
-        case SSL_ERROR_WANT_CONNECT:
-            printf("SSL_ERROR_WANT_CONNECT\n");
-            break;
-        case SSL_ERROR_WANT_ACCEPT:
-            printf("SSL_ERROR_WANT_ACCEPT\n");
-            break;
-        case SSL_ERROR_WANT_X509_LOOKUP:
-            printf("SSL_ERROR_WANT_X509_LOOKUP\n");
-            break;
-        case SSL_ERROR_SYSCALL:
-            printf("SSL_ERROR_SYSCALL\n");
-            break;
-        case SSL_ERROR_SSL:
-            printf("SSL_ERROR_SSL\n");
-            break;
-        default:
-            printf("%s: %ld\n", STRING_ERROR_UNKNOWN, err);
-            break;
-        }
+        report_ssl_error(ssl, ssl_err, "SSL_write (download)");
         Close(fileHandle);
         FreeVec(authHeader);
         return RETURN_ERROR;
@@ -1356,6 +1246,8 @@ static LONG createSSLContext() {
     if ((ctx = SSL_CTX_new(TLS_client_method())) != NULL) {
         /* Basic certificate handling */
         SSL_CTX_set_default_verify_paths(ctx);
+
+        SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
 
         // Disable certificate verification. This is done because proxy servers
         // often use self-signed certificates
@@ -1430,6 +1322,73 @@ static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength) {
 
     // Convert hex string to unsigned long
     return strtoul(chunkLenStr, NULL, 16);
+}
+
+/**
+ * Drain and print the entire OpenSSL error queue with context.
+ * Uses ERR_error_string_n/ERR_lib_error_string/ERR_reason_error_string when
+ * available.
+ * @param where the source of the error
+ */
+static void drain_openssl_error_queue(CONST_STRPTR where) {
+    unsigned long err;
+    if (ERR_peek_error() == 0) {
+        return;
+    }
+    UBYTE line[512];
+    while ((err = ERR_get_error()) != 0) {
+        char text[256];
+        const char *lib = ERR_lib_error_string(err);
+        const char *reason = ERR_reason_error_string(err);
+        ERR_error_string_n(err, text, sizeof text);
+        snprintf(line, sizeof line, "%s: [0x%lx] lib=%s reason=%s :: %s",
+                 where ? where : "OpenSSL", err, lib ? lib : "?",
+                 reason ? reason : "?", text);
+        displayError(line);
+    }
+}
+
+/**
+ * Helper function to report SSL errors
+ * Retryable errors print to stdout, fatal errors call
+ *displayError/drain_openssl_error_queue.
+ * @param s the SSL connection
+ * @param ret the return value from the SSL function
+ * @param where the source of the error
+ **/
+static void report_ssl_error(SSL *s, int ret, CONST_STRPTR where) {
+    int why = SSL_get_error(s, ret);
+    switch (why) {
+    case SSL_ERROR_NONE:
+        return;
+    case SSL_ERROR_WANT_READ:
+    case SSL_ERROR_WANT_WRITE:
+    case SSL_ERROR_WANT_CONNECT:
+    case SSL_ERROR_WANT_ACCEPT:
+    case SSL_ERROR_WANT_X509_LOOKUP:
+        // Retryable conditions: log to console only
+        printf("%s: %s\n", where,
+               (why == SSL_ERROR_WANT_READ)      ? "SSL_ERROR_WANT_READ"
+               : (why == SSL_ERROR_WANT_WRITE)   ? "SSL_ERROR_WANT_WRITE"
+               : (why == SSL_ERROR_WANT_CONNECT) ? "SSL_ERROR_WANT_CONNECT"
+               : (why == SSL_ERROR_WANT_ACCEPT)  ? "SSL_ERROR_WANT_ACCEPT"
+                                                : "SSL_ERROR_WANT_X509_LOOKUP");
+        break;
+    case SSL_ERROR_ZERO_RETURN:
+        displayError("SSL: ZERO_RETURN (connection closed)");
+        break;
+    case SSL_ERROR_SYSCALL:
+        if (ERR_peek_error() == 0) {
+            displayError(strerror(errno));
+        } else {
+            drain_openssl_error_queue(where);
+        }
+        break;
+    case SSL_ERROR_SSL:
+    default:
+        drain_openssl_error_queue(where);
+        break;
+    }
 }
 
 /**
@@ -1525,7 +1484,11 @@ APTR postTextToSpeechRequestToOpenAI(
 
     updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
     if (useSSL) {
+        ERR_clear_error();
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+        if (ssl_err <= 0) {
+            report_ssl_error(ssl, ssl_err, "SSL_write (tts)");
+        }
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
     }
@@ -1550,6 +1513,7 @@ APTR postTextToSpeechRequestToOpenAI(
             DoMethod(loadingBar, MUIM_Busy_Move);
             memset(readBuffer, 0, READ_BUFFER_LENGTH);
             if (useSSL) {
+                ERR_clear_error();
                 bytesRead =
                     SSL_read(ssl, readBuffer,
                              useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1);
@@ -1719,10 +1683,8 @@ APTR postTextToSpeechRequestToOpenAI(
                 printf("SSL_ERROR_WANT_X509_LOOKUP\n");
                 break;
             case SSL_ERROR_SYSCALL:
-                printf("SSL_ERROR_SYSCALL\n");
-                ULONG err = ERR_get_error();
-                printf("%s: %lu\n", STRING_ERROR, err);
-            case SSL_ERROR_SSL:
+            case SSL_ERROR_SSL: {
+                report_ssl_error(ssl, bytesRead, "SSL_read (tts)");
                 updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
                 if (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy,
                                         proxyHost, proxyPort, proxyUsesSSL,
@@ -1735,6 +1697,7 @@ APTR postTextToSpeechRequestToOpenAI(
                     }
                 }
                 break;
+            }
             default:
                 printf(STRING_ERROR_UNKNOWN);
                 putchar('\n');
@@ -1743,33 +1706,7 @@ APTR postTextToSpeechRequestToOpenAI(
         }
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
-        LONG err = SSL_get_error(ssl, ssl_err);
-        switch (err) {
-        case SSL_ERROR_WANT_READ:
-            printf("SSL_ERROR_WANT_READ\n");
-            break;
-        case SSL_ERROR_WANT_WRITE:
-            printf("SSL_ERROR_WANT_WRITE\n");
-            break;
-        case SSL_ERROR_WANT_CONNECT:
-            printf("SSL_ERROR_WANT_CONNECT\n");
-            break;
-        case SSL_ERROR_WANT_ACCEPT:
-            printf("SSL_ERROR_WANT_ACCEPT\n");
-            break;
-        case SSL_ERROR_WANT_X509_LOOKUP:
-            printf("SSL_ERROR_WANT_X509_LOOKUP\n");
-            break;
-        case SSL_ERROR_SYSCALL:
-            printf("SSL_ERROR_SYSCALL\n");
-            break;
-        case SSL_ERROR_SSL:
-            printf("SSL_ERROR_SSL\n");
-            break;
-        default:
-            printf("%s: %ld\n", STRING_ERROR_UNKNOWN, err);
-            break;
-        }
+        report_ssl_error(ssl, ssl_err, "SSL_write");
         FreeVec(audioData);
         return NULL;
     }

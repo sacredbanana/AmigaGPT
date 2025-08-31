@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.10.1 (2025-08-31)
+
+- Automatically retry sending or receiving data if the request was made before the handshake had completed
+- Greatly improved error reporting for connection errors. It now can show the user a much more detailed and useful error message if something goes wrong
+- Added a 3 minute timeout for waiting for a response from the API so it will give up after 3 minutes with an error message instead of waiting forever and making AmigaGPT permanently stuck
+- Stop the ARexx scripts that delete a temporary file from announcing the deletion to the user in the console
+- Change the default program for the readme and the guide to both be MultiView
+
 ## 2.10.0 (2025-08-17)
 
 - Added menu option to print the conversation with the printer
