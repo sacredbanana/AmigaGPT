@@ -10,7 +10,7 @@ CMDLINE = 'c:version >t:AmigaGPTInput'
 IF OPEN(HANDLE,"t:AmigaGPTInput",'r') THEN DO
 	INPUT = READLN(HANDLE)
 	CALL CLOSE(HANDLE)
-	ADDRESS COMMAND 'c:delete T:AmigaGPTInput'
+	ADDRESS COMMAND 'c:delete T:AmigaGPTInput QUIET'
 END
 
 ADDRESS 'AMIGAGPT'
