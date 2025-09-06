@@ -341,6 +341,12 @@
       (optional "force" "askuser")
     )
     (copyfiles 
+      (source "AmigaGPT/AmigaGPTD_OS3")
+      (dest "C:")
+      (newname "AmigaGPTD")
+      (optional "force" "askuser")
+    )
+    (copyfiles 
       (source "icons/AmigaGPT_Drawer_OS3.info")
       (dest #amigagptdirbase)
       (newname (cat @app-name ".info"))
@@ -374,6 +380,12 @@
       (optional "force" "askuser")
     )
     (copyfiles 
+      (source "AmigaGPT/AmigaGPTD_OS4")
+      (dest "C:")
+      (newname "AmigaGPTD")
+      (optional "force" "askuser")
+    )
+    (copyfiles 
       (source "icons/AmigaGPT_Drawer_OS4.info")
       (dest #amigagptdirbase)
       (newname (cat @app-name ".info"))
@@ -389,6 +401,12 @@
       (dest @default-dest)
       (newname @app-name)
       (infos)
+      (optional "force" "askuser")
+    )
+    (copyfiles 
+      (source "AmigaGPT/AmigaGPTD_MorphOS")
+      (dest "C:")
+      (newname "AmigaGPTD")
       (optional "force" "askuser")
     )
     (copyfiles 
@@ -450,6 +468,26 @@
   (dest #readmedir)
   (infos)
 )
+
+;=============================================================================
+; Startup Sequence
+
+(complete 93)
+
+(startup "AMIGAGPT"
+	(prompt #userstartupask)
+	(help @startup-help)
+	(command "if exists \"" @default-dest "\"\n")
+	(command "   assign AMIGAGPT: \"" @default-dest "\"\n")
+	(command "endif")
+)
+
+;=============================================================================
+; Finish
+
+(complete 95)
+
+(run (cat "assign AMIGAGPT: " "\"" @default-dest "\""))
 
 (complete 100)
 (exit)
