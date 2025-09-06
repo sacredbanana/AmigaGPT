@@ -5,6 +5,7 @@ SIGNAL ON HALT
 SIGNAL ON BREAK_C
 
 /* -------- main -------- */
+fallback = 0
 CALL Init
 IF fallback THEN DO
   CALL Fallback_RequestChoice
