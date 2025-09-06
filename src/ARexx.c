@@ -58,6 +58,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         return (RETURN_ERROR);
     }
     struct json_object *response = responses[0];
+
     UTF8 *contentString = getMessageContentFromJson(response, FALSE);
 
     if (contentString != NULL) {

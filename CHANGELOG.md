@@ -1,7 +1,8 @@
 # Changelog
 
-## 2.10.1 (2025-08-31)
+## 2.11.0 (2025-09-06)
 
+- Chat message responses from ARexx now put escape sequences in the returned string instead of using control characters (e.g. \n instead of 0x0A) to make them easier to work with in ARexx scripts
 - Automatically retry sending or receiving data if the request was made before the handshake had completed
 - Greatly improved error reporting for connection errors. It now can show the user a much more detailed and useful error message if something goes wrong
 - Added a 3 minute timeout for waiting for a response from the API so it will give up after 3 minutes with an error message instead of waiting forever and making AmigaGPT permanently stuck

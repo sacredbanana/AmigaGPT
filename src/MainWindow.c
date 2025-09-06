@@ -60,7 +60,6 @@ struct GeneratedImage *currentImage = NULL;
 static STRPTR pages[3] = {NULL};
 
 struct Conversation *newConversation();
-static void formatText(STRPTR unformattedText);
 static struct Conversation *copyConversation(struct Conversation *conversation);
 static struct GeneratedImage *
 copyGeneratedImage(struct GeneratedImage *generatedImage);
@@ -436,7 +435,6 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             return;
         }
         STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
-        formatText(responseString);
         generatedImage->name =
             AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
         strncpy(generatedImage->name, responseString, strlen(responseString));
@@ -1287,34 +1285,6 @@ struct Conversation *newConversation() {
 }
 
 /**
- * Format a string with escape sequences into a string with the actual
- *characters
- * @param unformattedText the text to format
- **/
-static void formatText(STRPTR unformattedText) {
-    LONG newStringIndex = 0;
-    const LONG oldStringLength = strlen(unformattedText);
-    if (oldStringLength == 0)
-        return;
-    for (LONG oldStringIndex = 0; oldStringIndex < oldStringLength;
-         oldStringIndex++) {
-        if (unformattedText[oldStringIndex] == '\\') {
-            if (unformattedText[oldStringIndex + 1] == 'n') {
-                unformattedText[newStringIndex++] = '\n';
-            } else if (unformattedText[oldStringIndex + 1] == 'r') {
-                unformattedText[newStringIndex++] = '\r';
-            } else if (unformattedText[oldStringIndex + 1] == 't') {
-                unformattedText[newStringIndex++] = '\t';
-            }
-            oldStringIndex++;
-        } else {
-            unformattedText[newStringIndex++] = unformattedText[oldStringIndex];
-        }
-    }
-    unformattedText[newStringIndex++] = '\0';
-}
-
-/**
  * Get the message content from the JSON response from OpenAI
  * @param json the JSON response from OpenAI
  * @param stream whether the response is a stream or not
@@ -1364,7 +1334,8 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
         struct json_object *content =
             json_object_array_get_idx(contentArray, 0);
         struct json_object *text = json_object_object_get(content, "text");
-        return json_object_get_string(text);
+        return json_object_to_json_string_ext(text,
+                                              JSON_C_TO_STRING_NOSLASHESCAPE);
     }
 }
 
@@ -1522,7 +1493,6 @@ static void sendChatMessage() {
             if (contentString != NULL) {
                 // Text for printing
                 if (strlen(contentString) > 0) {
-                    formatText(contentString);
                     STRPTR formattedMessageSystemEncoded =
                         CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
                                           CSA_Source, (Tag)contentString,
@@ -1628,7 +1598,6 @@ static void sendChatMessage() {
             if (responses[0] != NULL) {
                 UTF8 *responseString =
                     getMessageContentFromJson(responses[0], FALSE);
-                formatText(responseString);
                 if (currentConversation->name == NULL) {
                     currentConversation->name =
                         AllocVec(strlen(responseString) + 1, MEMF_CLEAR);
