@@ -37,16 +37,12 @@ GetJoke: PROCEDURE EXPOSE joke
     joke = 'Cannot contact AmigaGPT. Please start AmigaGPT first.'
     RETURN
   END
-  CALL DoMethod("sg","InitChange")
-  CALL Set("joketext","contents","Generating a funny joke for ya")
-  CALL DoMethod("sg","ExitChange")
+  CALL Set("joketext","text","Generating a funny joke for ya")
   ADDRESS 'AMIGAGPT'
-  'SENDMESSAGE M=gpt-5-mini Tell me a pretty long funny joke'
+  'SENDMESSAGE M=gpt-5-mini Tell me a medium length funny joke'
   ADDRESS COMMAND
   joke = ParseText(RESULT)
-  CALL DoMethod("sg","InitChange")
-  CALL Set("joketext","contents",joke)
-  CALL DoMethod("sg","ExitChange")
+  CALL Set("joketext","text",joke)
   RETURN
 
 CreateApp: PROCEDURE EXPOSE joke
@@ -56,8 +52,6 @@ CreateApp: PROCEDURE EXPOSE joke
 
    win.Title     = "Random Joke"
    win.Contents  = "root"
-   win.UseRightBorderScroller=1
-   win.UseBottomBorderScroller=1
    win.SizeGadget = 1
    win.DragBar    = 1
    win.width      = -100-50
@@ -67,24 +61,15 @@ CreateApp: PROCEDURE EXPOSE joke
     root.class        = "group"
 
     /* multi-line text */
-    root.0            = "sg"
-       sg.class              = "scrollgroup"
-      sg.frame             = "virtual"
-      sg.UseWinBorder       = 1
-      sg.minheight        = 200
-      sg.minwidth         = 400
-      sg.VirtGroupContents  = "vg"
-        vg.class            = "virtgroup"
+    root.0            = "lv"
 
-        vg.0                = "joketext"
+    lv.Class="NListview"
+    lv.CycleChain=1
+    lv.List="joketext"
 
-          joketext.class     = "text"
-          joketext.weight = 90
-          joketext.background = "textback"
-          joketext.frame     = "group"
-          joketext.setvmax = 0
-          joketext.setmin = 0
-        vg.1 = vspace()
+      joketext.class     = "NFloatText"
+      joketext.background = "textback"
+      joketext.frame     = "group"
 
     /* buttons row */
     root.1            = "btns"
