@@ -15,4 +15,4 @@ fi
 docker run --rm \
 	-v ${PWD}:/work \
 	-e USER=$(id -u) -e GROUP=$(id -g) -e DEBUG=${DEBUG} \
-	sacredbanana/amiga-compiler:m68k-amigaos make
+	sacredbanana/amiga-compiler:m68k-amigaos sh -c "make && make daemon"

@@ -15,4 +15,4 @@ fi
 docker run --rm \
 	-v ${PWD}:/work \
 	-e USER=$(id -u) -e GROUP=$(id -g) -e DEBUG=${DEBUG} \
-	sacredbanana/amiga-compiler:ppc-amigaos make -f Makefile.OS4
+	sacredbanana/amiga-compiler:ppc-amigaos sh -c "make -f Makefile.OS4 && make -f Makefile.OS4 daemon"

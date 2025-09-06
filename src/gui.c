@@ -131,6 +131,21 @@ LONG initVideo() {
         return RETURN_ERROR;
     }
 
+#ifdef DAEMON
+    if (!(app = ApplicationObject, MUIA_Application_Base, "AMIGAGPTD",
+          MUIA_Application_Title, "AmigaGPT Daemon", MUIA_Application_Version,
+          APP_VERSION, MUIA_Application_Copyright,
+          "2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
+          MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
+          MUIA_Application_Description, "AmigaGPT Daemon",
+          MUIA_Application_Version,
+          "$VER: AmigaGPTD " APP_VERSION " (" BUILD_DATE ")",
+          MUIA_Application_SingleTask, TRUE, MUIA_Application_Commands,
+          arexxList, MUIA_Application_UseRexx, TRUE, End)) {
+        displayError("Failed to create MUI application");
+        return RETURN_ERROR;
+    }
+#else
     if (!checkMUICustomClassInstalled()) {
         displayError(STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED);
         return RETURN_ERROR;
@@ -189,6 +204,8 @@ LONG initVideo() {
     if (createMainWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
+#endif
+
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
 
     return RETURN_OK;
@@ -230,16 +247,36 @@ void startGUIRunLoop() {
             running = FALSE;
             break;
         }
+#ifndef DAEMON
         // Must be called here because calling via a hook causes a crash
         case APP_ID_PRINT:
             printConversation();
             break;
+#endif
         default:
             break;
         }
         if (running && signals)
             Wait(signals);
     }
+}
+
+/**
+ * Update the status bar
+ * @param message the message to display
+ * @param pen the pen to use for the text
+ *
+ **/
+void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
+#ifndef DAEMON
+    STRPTR formattedMessage = AllocVec(strlen(message) + 32, MEMF_ANY);
+    snprintf(formattedMessage, strlen(message) + 32, "\33P[%lu]  %s\t\0", pen,
+             message);
+    set(statusBar, MUIA_Text_Contents, formattedMessage);
+    FreeVec(formattedMessage);
+#else
+    printf("AmigaGPTD Status: %s\n", message);
+#endif
 }
 
 /**
@@ -305,6 +342,7 @@ BOOL copyFile(STRPTR source, STRPTR destination) {
  * @param message the message to display
  **/
 void displayError(STRPTR message) {
+#ifndef DAEMON
     if (app) {
         updateStatusBar(STRING_ERROR, redPen);
     }
@@ -349,6 +387,148 @@ void displayError(STRPTR message) {
     }
     FreeVec(errorMessage);
     FreeVec(okString);
+#else
+    fprintf(stderr, "AmigaGPTD Error: %s\n", message);
+#endif
+}
+
+/**
+ * Creates a new conversation
+ * @return A pointer to the new conversation
+ **/
+struct Conversation *newConversation() {
+    struct Conversation *conversation =
+        AllocVec(sizeof(struct Conversation), MEMF_CLEAR);
+    struct MinList *messages = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
+
+    // NewMinList(conversation); // This is what makes us require
+    // exec.library 45. Replace with the following:
+    if (messages) {
+        messages->mlh_Tail = 0;
+        messages->mlh_Head = (struct MinNode *)&messages->mlh_Tail;
+        messages->mlh_TailPred = (struct MinNode *)&messages->mlh_Head;
+    }
+
+    conversation->messages = messages;
+    conversation->name = NULL;
+    conversation->system = NULL;
+
+    return conversation;
+}
+
+/**
+ * Sets the system of the conversation
+ * @param conversation the conversation to set the system of
+ * @param system the system to set
+ **/
+void setConversationSystem(struct Conversation *conversation,
+                           CONST_STRPTR system) {
+    if (conversation->system != NULL) {
+        CodesetsFreeA(conversation->system, NULL);
+    }
+    if (system == NULL || strlen(system) == 0) {
+        conversation->system = NULL;
+        return;
+    }
+    UTF8 *systemUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+
+                                          CSA_Source, (Tag)system, TAG_DONE);
+    conversation->system = systemUTF8;
+}
+
+/**
+ * Get the message content from the JSON response from OpenAI
+ * @param json the JSON response from OpenAI
+ * @param stream whether the response is a stream or not
+ * @return a pointer to a new UTF8 string containing the message content --
+ *Free it with FreeVec() when you are done using it If found role in the
+ *json instead of content then return an empty string
+ * @todo Handle errors
+ **/
+UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
+    if (json == NULL)
+        return NULL;
+    if (stream) {
+        struct json_object *type = json_object_object_get(json, "type");
+        UTF8 *typeStr = json_object_get_string(type);
+        if (strcmp(typeStr, "response.output_text.delta") == 0) {
+            struct json_object *text = json_object_object_get(json, "delta");
+            return json_object_get_string(text);
+        } else {
+            return "";
+        }
+    } else {
+        struct json_object *outputArray =
+            json_object_object_get(json, "output");
+        struct json_object *output = NULL;
+
+        int arrayLength = json_object_array_length(outputArray);
+        for (int i = 0; i < arrayLength; i++) {
+            struct json_object *currentOutput =
+                json_object_array_get_idx(outputArray, i);
+            struct json_object *typeObj =
+                json_object_object_get(currentOutput, "type");
+            if (typeObj != NULL) {
+                const char *typeStr = json_object_get_string(typeObj);
+                if (strcmp(typeStr, "message") == 0) {
+                    output = currentOutput;
+                    break;
+                }
+            }
+        }
+
+        if (output == NULL) {
+            return "";
+        }
+
+        struct json_object *contentArray =
+            json_object_object_get(output, "content");
+        struct json_object *content =
+            json_object_array_get_idx(contentArray, 0);
+        struct json_object *text = json_object_object_get(content, "text");
+        return json_object_to_json_string_ext(text,
+                                              JSON_C_TO_STRING_NOSLASHESCAPE);
+    }
+}
+
+/**
+ * Add a block of text to the conversation list
+ * @param conversation The conversation to add the text to
+ * @param text The text to add to the conversation
+ * @param role The role of the text (user or assistant)
+ **/
+void addTextToConversation(struct Conversation *conversation, UTF8 *text,
+                           STRPTR role) {
+    struct ConversationNode *conversationNode =
+        AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
+    if (conversationNode == NULL) {
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        return;
+    }
+    strncpy(conversationNode->role, role, sizeof(conversationNode->role) - 1);
+    conversationNode->role[sizeof(conversationNode->role) - 1] = '\0';
+    conversationNode->content = AllocVec(strlen(text) + 1, MEMF_CLEAR);
+    strncpy(conversationNode->content, text, strlen(text));
+    AddTail((struct List *)conversation->messages,
+            (struct Node *)conversationNode);
+}
+
+/**
+ * Free the conversation
+ * @param conversation The conversation to free
+ **/
+void freeConversation(struct Conversation *conversation) {
+    struct ConversationNode *conversationNode;
+    while ((conversationNode = (struct ConversationNode *)RemHead(
+                (struct List *)conversation->messages)) != NULL) {
+        FreeVec(conversationNode->content);
+        FreeVec(conversationNode);
+    }
+    if (conversation->name != NULL)
+        FreeVec(conversation->name);
+    if (conversation->system != NULL)
+        CodesetsFreeA(conversation->system, NULL);
+    FreeVec(conversation);
 }
 
 /**
@@ -358,6 +538,7 @@ void shutdownGUI() {
     if (app) {
         DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 
+#ifndef DAEMON
         // Release pens if they were allocated
         if (mainWindowObject && (redPen || greenPen || bluePen || yellowPen)) {
             struct Screen *currentScreen;
@@ -373,15 +554,19 @@ void shutdownGUI() {
                     ReleasePen(currentScreen->ViewPort.ColorMap, yellowPen);
             }
         }
+#endif
 
         MUI_DisposeObject(app);
     }
+
+#ifndef DAEMON
     if (chatOutputTextEditorContents) {
         FreeVec(chatOutputTextEditorContents);
     }
     if (isMUI5 || isMUI39) {
         deleteAmigaGPTTextEditor();
     }
+#endif
 
     closeGUILibraries();
 }

@@ -294,7 +294,9 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
     struct hostent *hostent;
     BOOL useSSL = !useProxy || proxyUsesSSL;
 
+#ifndef DAEMON
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
+#endif
 
     if (ssl != NULL) {
         SSL_shutdown(ssl);
@@ -561,7 +563,9 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
         }
     }
 
+#ifndef DAEMON
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
 
     if (ssl_err > 0 || stream) {
         ULONG totalBytesRead = 0;
@@ -572,7 +576,9 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
         UBYTE *tempReadBuffer = AllocVec(
             useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
         while (!doneReading) {
+#ifndef DAEMON
             DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
             if (useSSL) {
                 ERR_clear_error();
                 bytesRead =
@@ -826,7 +832,9 @@ struct json_object *postImageCreationRequestToOpenAI(
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
     }
 
+#ifndef DAEMON
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
 
     if (ssl_err > 0) {
         ULONG totalBytesRead = 0;
@@ -839,7 +847,9 @@ struct json_object *postImageCreationRequestToOpenAI(
         BOOL foundJson = FALSE;
 
         while (!doneReading) {
+#ifndef DAEMON
             DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
             if (useSSL) {
                 ERR_clear_error();
                 bytesRead =
@@ -1057,7 +1067,9 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
     }
 
+#ifndef DAEMON
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
 
     if (ssl_err > 0) {
         ULONG totalBytesRead = 0;
@@ -1072,7 +1084,9 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
             AllocVec(useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_CLEAR);
 
         while (!doneReading) {
+#ifndef DAEMON
             DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
             if (useSSL) {
                 ERR_clear_error();
                 bytesRead =
@@ -1493,7 +1507,9 @@ APTR postTextToSpeechRequestToOpenAI(
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
     }
 
+#ifndef DAEMON
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
 
     if (ssl_err > 0) {
         LONG bytesRead = 0;
@@ -1510,7 +1526,9 @@ APTR postTextToSpeechRequestToOpenAI(
         UBYTE *dataStart = NULL;
 
         while (!doneReading) {
+#ifndef DAEMON
             DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
             memset(readBuffer, 0, READ_BUFFER_LENGTH);
             if (useSSL) {
                 ERR_clear_error();

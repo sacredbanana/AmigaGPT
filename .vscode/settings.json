@@ -108,7 +108,8 @@
         "macros.h": "c",
         "guigfx_mcc.h": "c",
         "printer.h": "c",
-        "prtbase.h": "c"
+        "prtbase.h": "c",
+        "busy_mcc.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

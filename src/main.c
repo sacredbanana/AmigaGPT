@@ -20,8 +20,14 @@ CONST_STRPTR stack = "$STACK: 32768";
 unsigned long __stack = 32768;
 #endif
 
+#ifdef DAEMON
+CONST_STRPTR version = "$VER: AmigaGPTD " APP_VERSION " (" BUILD_DATE
+                       ") � 2023-2025 Cameron Armstrong";
+#else
 CONST_STRPTR version = "$VER: AmigaGPT " APP_VERSION " (" BUILD_DATE
                        ") � 2023-2025 Cameron Armstrong";
+#endif
+
 #ifdef __AMIGAOS4__
 static uint32 appID;
 #endif
@@ -75,8 +81,17 @@ LONG main(int argc, char **argv) {
     appID = RegisterApplication(
         NULL, REGAPP_UniqueApplication, TRUE, REGAPP_URLIdentifier,
         "minotaurcreative.net", REGAPP_WBStartup, (ULONG)wbStartupMessage,
+#ifdef DAEMON
+        REGAPP_Description, "AmigaGPT Daemon", TAG_DONE);
+#else
         REGAPP_Description, STRING_APP_DESCRIPTION, TAG_DONE);
 #endif
+#endif
+
+#ifdef DAEMON
+    printf("AmigaGPTD " APP_VERSION " starting...\n");
+#endif
+
     if (readConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_READ);
         exit(RETURN_ERROR);
@@ -115,6 +130,10 @@ LONG main(int argc, char **argv) {
         ReplyMsg((struct Message *)wbStartupMessage);
 #endif
 
+#ifdef DAEMON
+    printf("AmigaGPTD ready - listening for ARexx commands...\n");
+#endif
+
     startGUIRunLoop();
 
     exit(RETURN_OK);
@@ -125,6 +144,10 @@ LONG main(int argc, char **argv) {
  * Cleanup and exit the app
  **/
 static void cleanExit() {
+#ifdef DAEMON
+    printf("AmigaGPTD shutting down...\n");
+#endif
+
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
     }

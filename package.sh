@@ -9,17 +9,26 @@ CLEAN=1 ./build_os3.sh
 # Copy AmigaGPT executable to bundle directory
 cp -R out/AmigaGPT_OS3 bundle/AmigaGPT/AmigaGPT/AmigaGPT_OS3
 
+# Copy AmigaGPTD executable to bundle directory
+cp -R out/AmigaGPTD_OS3 bundle/AmigaGPT/AmigaGPT/AmigaGPTD_OS3
+
 # Run build_os4.sh with CLEAN=1
 CLEAN=1 ./build_os4.sh
 
 # Copy AmigaGPT_OS4 executable to bundle directory
 cp -R out/AmigaGPT_OS4 bundle/AmigaGPT/AmigaGPT/AmigaGPT_OS4
 
+# Copy AmigaGPTD_OS4 executable to bundle directory
+cp -R out/AmigaGPTD_OS4 bundle/AmigaGPT/AmigaGPT/AmigaGPTD_OS4
+
 # Run build_morphos.sh with CLEAN=1
 CLEAN=1 ./build_morphos.sh
 
 # Copy AmigaGPT_MorphOS executable to bundle directory
 cp -R out/AmigaGPT_MorphOS bundle/AmigaGPT/AmigaGPT/AmigaGPT_MorphOS
+
+# Copy AmigaGPTD_MorphOS executable to bundle directory
+cp -R out/AmigaGPTD_MorphOS bundle/AmigaGPT/AmigaGPT/AmigaGPTD_MorphOS
 
 # Copy catalog files to bundle directory
 mkdir -p bundle/AmigaGPT/catalogs
@@ -41,5 +50,5 @@ fi
 # Create LHA archive with verbose output
 lha $LHA_OPTS ../out/AmigaGPT.lha AmigaGPT AmigaGPT.info
 
-rm -f AmigaGPT/AmigaGPT/AmigaGPT_OS3 AmigaGPT/AmigaGPT/AmigaGPT_OS4 AmigaGPT/AmigaGPT/AmigaGPT_MorphOS
+rm -f AmigaGPT/AmigaGPT/AmigaGPT_OS3 AmigaGPT/AmigaGPT/AmigaGPT_OS4 AmigaGPT/AmigaGPT/AmigaGPT_MorphOS AmigaGPT/AmigaGPT/AmigaGPTD_OS3 AmigaGPT/AmigaGPT/AmigaGPTD_OS4 AmigaGPT/AmigaGPT/AmigaGPTD_MorphOS
 rm -dr AmigaGPT/catalogs

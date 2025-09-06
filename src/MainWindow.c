@@ -1241,105 +1241,6 @@ static PICTURE *generateThumbnail(struct GeneratedImage *image) {
 }
 
 /**
- * Sets the system of the conversation
- * @param conversation the conversation to set the system of
- * @param system the system to set
- **/
-void setConversationSystem(struct Conversation *conversation,
-                           CONST_STRPTR system) {
-    if (conversation->system != NULL) {
-        CodesetsFreeA(conversation->system, NULL);
-    }
-    if (system == NULL || strlen(system) == 0) {
-        conversation->system = NULL;
-        return;
-    }
-    UTF8 *systemUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
-
-                                          CSA_Source, (Tag)system, TAG_DONE);
-    conversation->system = systemUTF8;
-}
-
-/**
- * Creates a new conversation
- * @return A pointer to the new conversation
- **/
-struct Conversation *newConversation() {
-    struct Conversation *conversation =
-        AllocVec(sizeof(struct Conversation), MEMF_CLEAR);
-    struct MinList *messages = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
-
-    // NewMinList(conversation); // This is what makes us require
-    // exec.library 45. Replace with the following:
-    if (messages) {
-        messages->mlh_Tail = 0;
-        messages->mlh_Head = (struct MinNode *)&messages->mlh_Tail;
-        messages->mlh_TailPred = (struct MinNode *)&messages->mlh_Head;
-    }
-
-    conversation->messages = messages;
-    conversation->name = NULL;
-    conversation->system = NULL;
-
-    return conversation;
-}
-
-/**
- * Get the message content from the JSON response from OpenAI
- * @param json the JSON response from OpenAI
- * @param stream whether the response is a stream or not
- * @return a pointer to a new UTF8 string containing the message content --
- *Free it with FreeVec() when you are done using it If found role in the
- *json instead of content then return an empty string
- * @todo Handle errors
- **/
-UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
-    if (json == NULL)
-        return NULL;
-    if (stream) {
-        struct json_object *type = json_object_object_get(json, "type");
-        UTF8 *typeStr = json_object_get_string(type);
-        if (strcmp(typeStr, "response.output_text.delta") == 0) {
-            struct json_object *text = json_object_object_get(json, "delta");
-            return json_object_get_string(text);
-        } else {
-            return "";
-        }
-    } else {
-        struct json_object *outputArray =
-            json_object_object_get(json, "output");
-        struct json_object *output = NULL;
-
-        int arrayLength = json_object_array_length(outputArray);
-        for (int i = 0; i < arrayLength; i++) {
-            struct json_object *currentOutput =
-                json_object_array_get_idx(outputArray, i);
-            struct json_object *typeObj =
-                json_object_object_get(currentOutput, "type");
-            if (typeObj != NULL) {
-                const char *typeStr = json_object_get_string(typeObj);
-                if (strcmp(typeStr, "message") == 0) {
-                    output = currentOutput;
-                    break;
-                }
-            }
-        }
-
-        if (output == NULL) {
-            return "";
-        }
-
-        struct json_object *contentArray =
-            json_object_object_get(output, "content");
-        struct json_object *content =
-            json_object_array_get_idx(contentArray, 0);
-        struct json_object *text = json_object_object_get(content, "text");
-        return json_object_to_json_string_ext(text,
-                                              JSON_C_TO_STRING_NOSLASHESCAPE);
-    }
-}
-
-/**
  * @brief Sends a chat message to the OpenAI API and displays the response
  *and speaks it if speech is enabled
  * @details This function sends a chat message to the OpenAI API and
@@ -1621,28 +1522,6 @@ static void sendChatMessage() {
 }
 
 /**
- * Add a block of text to the conversation list
- * @param conversation The conversation to add the text to
- * @param text The text to add to the conversation
- * @param role The role of the text (user or assistant)
- **/
-void addTextToConversation(struct Conversation *conversation, UTF8 *text,
-                           STRPTR role) {
-    struct ConversationNode *conversationNode =
-        AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
-    if (conversationNode == NULL) {
-        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
-        return;
-    }
-    strncpy(conversationNode->role, role, sizeof(conversationNode->role) - 1);
-    conversationNode->role[sizeof(conversationNode->role) - 1] = '\0';
-    conversationNode->content = AllocVec(strlen(text) + 1, MEMF_CLEAR);
-    strncpy(conversationNode->content, text, strlen(text));
-    AddTail((struct List *)conversation->messages,
-            (struct Node *)conversationNode);
-}
-
-/**
  * Prints the conversation to the conversation window
  * @param conversation the conversation to display
  **/
@@ -1717,24 +1596,6 @@ void displayConversation(struct Conversation *conversation) {
     set(chatOutputTextEditor, MUIA_NFloattext_Text,
         chatOutputTextEditorContents);
     set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
-}
-
-/**
- * Free the conversation
- * @param conversation The conversation to free
- **/
-void freeConversation(struct Conversation *conversation) {
-    struct ConversationNode *conversationNode;
-    while ((conversationNode = (struct ConversationNode *)RemHead(
-                (struct List *)conversation->messages)) != NULL) {
-        FreeVec(conversationNode->content);
-        FreeVec(conversationNode);
-    }
-    if (conversation->name != NULL)
-        FreeVec(conversation->name);
-    if (conversation->system != NULL)
-        CodesetsFreeA(conversation->system, NULL);
-    FreeVec(conversation);
 }
 
 /**
@@ -2210,20 +2071,6 @@ static LONG loadImages() {
 
     json_object_put(imagesJsonArray);
     return RETURN_OK;
-}
-
-/**
- * Update the status bar
- * @param message the message to display
- * @param pen the pen to use for the text
- *
- **/
-void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
-    STRPTR formattedMessage = AllocVec(strlen(message) + 32, MEMF_ANY);
-    snprintf(formattedMessage, strlen(message) + 32, "\33P[%lu]  %s\t\0", pen,
-             message);
-    set(statusBar, MUIA_Text_Contents, formattedMessage);
-    FreeVec(formattedMessage);
 }
 
 /**
