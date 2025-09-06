@@ -172,7 +172,7 @@ LONG initVideo() {
           MUIA_Application_Version,
           "$VER: AmigaGPT " APP_VERSION " (" BUILD_DATE ")",
           MUIA_Application_UsedClasses, USED_CLASSES, MUIA_Application_HelpFile,
-          "PROGDIR:AmigaGPT.guide", MUIA_Application_SingleTask, TRUE,
+          "AMIGAGPT:AmigaGPT.guide", MUIA_Application_SingleTask, TRUE,
           MUIA_Application_Commands, arexxList, MUIA_Application_UseRexx, TRUE,
           SubWindow, apiKeyRequesterWindowObject, SubWindow,
           chatSystemRequesterWindowObject, SubWindow,

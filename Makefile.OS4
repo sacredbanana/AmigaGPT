@@ -60,9 +60,9 @@ BUILD_DATE := $(shell date +%d.%m.%Y)
 
 CCFLAGS = -MP -MMD -Wextra -Wno-unused-function -Wno-discarded-qualifiers -I$(INCDIR) -Wno-int-conversion -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -fno-exceptions -D__AMIGAOS4__ -D__amigaos4__ -D__USE_INLINE__ -DHAVE_VASPRINTF -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\" -DBUILD_DATE=\"$(BUILD_DATE)\"
 ifeq ($(DEBUG),1)
-	CCFLAGS += -DPROGDIR=\"OUT:\" -DDEBUG -g -Og
+	CCFLAGS += -DDEBUG -g -Og
 else
-	CCFLAGS += -DPROGDIR=\"PROGDIR:\" -Ofast
+	CCFLAGS += -Ofast
 endif
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NETINCDIR),-I$(INCDIR),-D

@@ -73,6 +73,9 @@
 (set #os-selection-help "Choose the version that matches your Amiga system.")
 (set #languages-prompt "Please select which languages you want to install:")
 (set #languages-help "Choose the languages you want to use with AmigaGPT.")
+(set #userstartupassignask	"An AMIGAGPT: assign will be added to your \"S:User-Startup\" file.")
+(set #userstartuprunask	"Do you want the AmigaGPT daemon to automatically start when you boot? This will be added to your \"S:User-Startup\" file.")
+
 
 ;------------------------------------------------------------------------
 ; Helper functions for language names
@@ -85,8 +88,8 @@
   if (= #index 3) (set @result "dansk") (
   if (= #index 4) (set @result "deutsch") (
   if (= #index 5) (set @result "english_british") (
-  if (= #index 6) (set @result "español") (
-  if (= #index 7) (set @result "français") (
+  if (= #index 6) (set @result "espaï¿½ol") (
+  if (= #index 7) (set @result "franï¿½ais") (
   if (= #index 8) (set @result "greek") (
   if (= #index 9) (set @result "hrvatski") (
   if (= #index 10) (set @result "italiano") (
@@ -94,14 +97,14 @@
   if (= #index 12) (set @result "nederlands") (
   if (= #index 13) (set @result "norsk") (
   if (= #index 14) (set @result "polski") (
-  if (= #index 15) (set @result "português") (
+  if (= #index 15) (set @result "portuguï¿½s") (
   if (= #index 16) (set @result "russian") (
   if (= #index 17) (set @result "slovak") (
   if (= #index 18) (set @result "slovensko") (
   if (= #index 19) (set @result "srpski") (
   if (= #index 20) (set @result "suomi") (
   if (= #index 21) (set @result "svenska") (
-  if (= #index 22) (set @result "türkçe") (
+  if (= #index 22) (set @result "tï¿½rkï¿½e") (
   (set @result "unknown")
   ))))))))))))))))))))))))
   )
@@ -475,11 +478,21 @@
 (complete 93)
 
 (startup "AMIGAGPT"
-	(prompt #userstartupask)
-	(help @startup-help)
-	(command "if exists \"" @default-dest "\"\n")
-	(command "   assign AMIGAGPT: \"" @default-dest "\"\n")
-	(command "endif")
+	(prompt #userstartupassignask)
+  (help @startup-help)
+	(command "If Exists \"" @default-dest "\"\n")
+	(command "   Assign AMIGAGPT: \"" @default-dest "\"\n")
+	(command "Endif")
+)
+
+(startup "AMIGAGPT"
+	(prompt #userstartuprunask)
+  (help @startup-help)
+  (confirm)
+	(command "If Exists \"" @default-dest "\"\n")
+	(command "   Assign AMIGAGPT: \"" @default-dest "\"\n")
+	(command "   Run <>nil: AmigaGPTD\n")
+	(command "Endif")
 )
 
 ;=============================================================================

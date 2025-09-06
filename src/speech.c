@@ -79,7 +79,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
 
     switch (speechSystem) {
     case SPEECH_SYSTEM_34:
-        if (OpenDevice(PROGDIR "devs/speech/34/narrator.device", 0,
+        if (OpenDevice("AMIGAGPT:devs/speech/34/narrator.device", 0,
                        (struct IORequest *)NarratorIO, 0L) != 0) {
             displayError(STRING_ERROR_NARRATOR_34_DEVICE_OPEN);
             config.speechEnabled = FALSE;
@@ -87,7 +87,7 @@ LONG initSpeech(enum SpeechSystem speechSystem) {
         }
         break;
     case SPEECH_SYSTEM_37:
-        if (OpenDevice(PROGDIR "devs/speech/37/narrator.device", 0,
+        if (OpenDevice("AMIGAGPT:devs/speech/37/narrator.device", 0,
                        (struct IORequest *)NarratorIO, 0L) != 0) {
             displayError(STRING_ERROR_NARRATOR_37_DEVICE_OPEN);
             config.speechEnabled = FALSE;

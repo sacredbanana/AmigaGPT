@@ -154,10 +154,11 @@ HOOKPROTONHNONP(ARexxImportScriptMenuItemClickedFunc, void) {
             strncpy(fullPath, filePath, strlen(filePath));
             AddPart(fullPath, fileName, fullPathLength);
             UWORD destinationPathLength =
-                strlen(PROGDIR "rexx/") + strlen(fileName) + 1;
+                strlen("AMIGAGPT:rexx/") + strlen(fileName) + 1;
             STRPTR destinationPath =
                 AllocVec(destinationPathLength, MEMF_CLEAR);
-            strncpy(destinationPath, PROGDIR "rexx/", strlen(PROGDIR "rexx/"));
+            strncpy(destinationPath, "AMIGAGPT:rexx/",
+                    strlen("AMIGAGPT:rexx/"));
             AddPart(destinationPath, fileName, destinationPathLength);
             copyFile(fullPath, destinationPath);
             FreeVec(fullPath);
@@ -205,7 +206,7 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
 MakeHook(ARexxRunScriptMenuItemClickedHook, ARexxRunScriptMenuItemClickedFunc);
 
 HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
-    CONST_STRPTR guidePath = PROGDIR "AmigaGPT.guide";
+    CONST_STRPTR guidePath = "AMIGAGPT:AmigaGPT.guide";
     BPTR file = Open(guidePath, MODE_OLDFILE);
     if (file == NULL) {
         displayError(STRING_ERROR_DOCUMENTATION_OPEN);
@@ -979,7 +980,7 @@ static void populateArexxMenu() {
 
     // Scan the rexx directory for .rexx files
 #if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-    BPTR lock = Lock(PROGDIR "rexx", ACCESS_READ);
+    BPTR lock = Lock("AMIGAGPT:rexx", ACCESS_READ);
     if (lock != 0) {
         struct FileInfoBlock *fib = AllocDosObject(DOS_FIB, NULL);
         if (fib != NULL) {
@@ -1011,7 +1012,7 @@ static void populateArexxMenu() {
     }
 #else
     APTR context =
-        ObtainDirContextTags(EX_StringNameInput, PROGDIR "rexx", EX_DataFields,
+        ObtainDirContextTags(EX_StringNameInput, "AMIGAGPT:rexx", EX_DataFields,
                              (EXF_NAME | EXF_LINK | EXF_TYPE), TAG_END);
     if (context) {
         struct ExamineData *dat;

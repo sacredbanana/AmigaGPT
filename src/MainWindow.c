@@ -339,8 +339,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     LONG data_len;
     UBYTE *imageData = decodeBase64(b64, &data_len);
 
-    CreateDir(PROGDIR "images");
-    CreateDir(PROGDIR "images/thumbnails");
+    CreateDir("AMIGAGPT:images");
+    CreateDir("AMIGAGPT:images/thumbnails");
 
     // Generate unique ID for the image
     UBYTE fullPath[30] = "";
@@ -350,7 +350,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     for (UBYTE i = 0; i < 9; i++) {
         id[i] = idChars[rand() % strlen(idChars)];
     }
-    snprintf(fullPath, sizeof(fullPath), PROGDIR "images/%s.png", id);
+    snprintf(fullPath, sizeof(fullPath), "AMIGAGPT:images/%s.png", id);
 
     FILE *file = fopen(fullPath, "wb");
     fwrite(imageData, 1, data_len, file);
@@ -1187,60 +1187,6 @@ static void addMainWindowActions() {
 }
 
 /**
- * TODO: Implement this function
- */
-static PICTURE *generateThumbnail(struct GeneratedImage *image) {
-    CONST_STRPTR imagePath = image->filePath;
-    if (imagePath == NULL) {
-        displayError(STRING_ERROR_IMAGE_PATH_NULL);
-        return NULL;
-    }
-    // Get image directory
-    CONST_STRPTR imageDir = AllocVec(strlen(imagePath) + 1, MEMF_ANY);
-    strncpy(imageDir, imagePath, strlen(imagePath));
-    STRPTR lastSlash = strrchr(imageDir, '/');
-    if (lastSlash != NULL) {
-        lastSlash[1] = '\0';
-    } else {
-        displayError(STRING_ERROR_IMG_DIR_NOT_FOUND);
-        FreeVec(imageDir);
-        return NULL;
-    }
-    CONST_STRPTR fileName = strrchr(imagePath, '/');
-    if (fileName == NULL) {
-        displayError(STRING_ERROR_IMG_FILE_NOT_FOUND);
-        return NULL;
-    }
-
-    CONST_STRPTR thumbnailSubDir = "thumbnails";
-
-    CONST_STRPTR thumbnailPath = AllocVec(
-        strlen(imageDir) + strlen(thumbnailSubDir) + strlen(fileName) + 1,
-        MEMF_ANY);
-
-    snprintf(thumbnailPath,
-             strlen(imageDir) + strlen(thumbnailSubDir) + strlen(fileName) + 1,
-             "%s%s%s", imageDir, thumbnailSubDir, fileName);
-
-    CreateDir(PROGDIR "images/thumbnails");
-
-    PICTURE *thumbnail = LoadPicture(thumbnailPath, NULL);
-    if (thumbnail == NULL) {
-        PICTURE *image = LoadPicture(imagePath, NULL);
-        if (image == NULL) {
-            displayError(STRING_ERROR_IMG_LOAD_THUMBNAIL);
-            FreeVec(imageDir);
-            FreeVec(thumbnailPath);
-            return NULL;
-        }
-
-        FreeVec(imageDir);
-        FreeVec(thumbnailPath);
-        return thumbnail;
-    }
-}
-
-/**
  * @brief Sends a chat message to the OpenAI API and displays the response
  *and speaks it if speech is enabled
  * @details This function sends a chat message to the OpenAI API and
@@ -1651,7 +1597,7 @@ copyGeneratedImage(struct GeneratedImage *generatedImage) {
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 static LONG saveConversations() {
-    BPTR file = Open(PROGDIR "chat-history.json", MODE_NEWFILE);
+    BPTR file = Open("AMIGAGPT:chat-history.json", MODE_NEWFILE);
     if (file == 0) {
         displayError(STRING_ERROR_CHAT_HISTORY_CREATE);
         return RETURN_ERROR;
@@ -1712,7 +1658,7 @@ static LONG saveConversations() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 static LONG saveImages() {
-    BPTR file = Open(PROGDIR "image-history.json", MODE_NEWFILE);
+    BPTR file = Open("AMIGAGPT:image-history.json", MODE_NEWFILE);
     if (file == 0) {
         displayError(STRING_ERROR_IMAGE_HISTORY_CREATE);
         return RETURN_ERROR;
@@ -1816,7 +1762,7 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth,
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 static LONG loadConversations() {
-    BPTR file = Open(PROGDIR "chat-history.json", MODE_OLDFILE);
+    BPTR file = Open("AMIGAGPT:chat-history.json", MODE_OLDFILE);
     if (file == 0) {
         return RETURN_OK;
     }
@@ -1846,16 +1792,16 @@ static LONG loadConversations() {
     struct json_object *conversationsJsonArray =
         json_tokener_parse(conversationsJsonString);
     if (conversationsJsonArray == NULL) {
-        if (Rename(PROGDIR "chat-history.json",
-                   PROGDIR "chat-history.json.bak")) {
+        if (Rename("AMIGAGPT:chat-history.json",
+                   "AMIGAGPT:chat-history.json.bak")) {
             displayError(STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP);
-        } else if (copyFile(PROGDIR "chat-history.json",
+        } else if (copyFile("AMIGAGPT:chat-history.json",
                             "RAM:chat-history.json")) {
             displayError(STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM);
 #if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-            if (!DeleteFile(PROGDIR "chat-history.json")) {
+            if (!DeleteFile("AMIGAGPT:chat-history.json")) {
 #else
-            if (!Delete(PROGDIR "chat-history.json")) {
+            if (!Delete("AMIGAGPT:chat-history.json")) {
 #endif
                 displayError(STRING_ERROR_CHAT_HISTORY_DELETE);
             }
@@ -1936,7 +1882,7 @@ static LONG loadConversations() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 static LONG loadImages() {
-    BPTR file = Open(PROGDIR "image-history.json", MODE_OLDFILE);
+    BPTR file = Open("AMIGAGPT:image-history.json", MODE_OLDFILE);
     if (file == 0) {
         return RETURN_OK;
     }
@@ -1965,16 +1911,16 @@ static LONG loadImages() {
 
     struct json_object *imagesJsonArray = json_tokener_parse(imagesJsonString);
     if (imagesJsonArray == NULL) {
-        if (Rename(PROGDIR "image-history.json",
-                   PROGDIR "image-history.json.bak")) {
+        if (Rename("AMIGAGPT:image-history.json",
+                   "AMIGAGPT:image-history.json.bak")) {
             displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP);
-        } else if (copyFile(PROGDIR "image-history.json",
+        } else if (copyFile("AMIGAGPT:image-history.json",
                             "RAM:image-history.json")) {
             displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM);
 #if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-            if (!DeleteFile(PROGDIR "image-history.json")) {
+            if (!DeleteFile("AMIGAGPT:image-history.json")) {
 #else
-            if (!Delete(PROGDIR "image-history.json")) {
+            if (!Delete("AMIGAGPT:image-history.json")) {
 #endif
                 displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP);
             }

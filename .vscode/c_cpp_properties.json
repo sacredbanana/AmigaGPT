@@ -13,7 +13,6 @@
             "defines": [
                 "__AMIGAOS3__",
                 "__stdargs= ",
-                "PROGDIR=\"PROGDIR:\"",
                 "GIT_BRANCH= ",
                 "GIT_COMMIT= ",
                 "GIT_TIMESTAMP= ",
@@ -47,7 +46,6 @@
             "defines": [
                 "__AMIGAOS4__",
                 "__USE_INLINE__",
-                "PROGDIR=\"PROGDIR:\"",
                 "GIT_BRANCH= ",
                 "GIT_COMMIT= ",
                 "GIT_TIMESTAMP= ",
@@ -79,7 +77,6 @@
             "defines": [
                 "__MORPHOS__",
                 "__PPC__",
-                "PROGDIR=\"PROGDIR:\"",
                 "GIT_BRANCH= ",
                 "GIT_COMMIT= ",
                 "GIT_TIMESTAMP= ",
