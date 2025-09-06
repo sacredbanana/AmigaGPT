@@ -5,9 +5,10 @@ SIGNAL ON HALT
 SIGNAL ON BREAK_C
 
 /* -------- main -------- */
-fallback = 0
+FALLBACK = 0
+AMIGAGPTPORT = "AMIGAGPT"
 CALL Init
-IF fallback THEN DO
+IF FALLBACK THEN DO
   CALL Fallback_RequestChoice
   EXIT 0
 END
@@ -18,34 +19,38 @@ EXIT 0
 
 /* -------- procedures -------- */
 
-Init: PROCEDURE
-  l="rmh.library"; IF ~SHOW("L",l) THEN ; IF ~ADDLIB(l,0,-30) THEN DO; fallback=1; RETURN; END
-  IF AddLibrary("rexxsupport.library","rxmui.library") ~= 0 THEN DO; fallback=1; RETURN; END
+Init: PROCEDURE EXPOSE AMIGAGPT_PORT
+  IF ~SHOW('P',AMIGAGPT_PORT) THEN DO
+  /* The main AmigaGPT app is not open. Attempt to connect to AmigaGPTD instead */
+    AMIGAGPT_PORT = "AMIGAGPTD"
+    IF ~SHOW('P',AMIGAGPT_PORT) THEN DO
+      SAY 'Cannot contact AmigaGPT. Please start either AmigaGPT or AmigaGPTD first.'
+      EXIT 1
+    END
+  END
+  l="rmh.library"; IF ~SHOW("L",l) THEN ; IF ~ADDLIB(l,0,-30) THEN DO; FALLBACK=1; RETURN; END
+  IF AddLibrary("rexxsupport.library","rxmui.library") ~= 0 THEN DO; FALLBACK=1; RETURN; END
   CALL RxMUIOpt("DebugMode ShowErr")
   RETURN
 
-Fallback_RequestChoice: PROCEDURE
+Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
   SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
-  ADDRESS 'AMIGAGPT'
+  ADDRESS VALUE AMIGAGPT_PORT
   'SENDMESSAGE M=gpt-5-nano Tell me a short funny joke on a single line'
   ADDRESS COMMAND
   'REQUESTCHOICE >NIL: "Random Joke" 'RESULT' "Haha" "ROFL" "LMAO" "Yikes"'
   RETURN
 
-GetJoke: PROCEDURE EXPOSE joke
-  IF ~SHOW('P','AMIGAGPT') THEN DO
-    joke = 'Cannot contact AmigaGPT. Please start AmigaGPT first.'
-    RETURN
-  END
+GetJoke: PROCEDURE EXPOSE AMIGAGPT_PORT
   CALL Set("joketext","text","Generating a funny joke for ya")
-  ADDRESS 'AMIGAGPT'
+  ADDRESS VALUE AMIGAGPT_PORT
   'SENDMESSAGE M=gpt-5-mini Tell me a medium length funny joke'
   ADDRESS COMMAND
-  joke = ParseText(RESULT)
-  CALL Set("joketext","text",joke)
+  JOKE = ParseText(RESULT)
+  CALL Set("joketext","text", JOKE)
   RETURN
 
-CreateApp: PROCEDURE EXPOSE joke
+CreateApp: PROCEDURE
   app.Title      = "AmigaGPT Joke"
   app.Base       = "AMIGAGPT_JOKE"
   app.SubWindow  = "win"
@@ -101,7 +106,7 @@ CreateApp: PROCEDURE EXPOSE joke
   CALL Set("win","open",1)
   RETURN
 
-HandleApp: PROCEDURE EXPOSE joke
+HandleApp: PROCEDURE
   ctrl_c = 2**12
   DO FOREVER
     CALL NewHandle("APP","H",ctrl_c)
