@@ -135,7 +135,11 @@ The "**Connection**" menu allows you to connect via a proxy server. It supports 
 
 **AmigaGPT** now includes ARexx support, allowing you to control the application from external ARexx scripts or other applications. This powerful feature enables seamless integration with your Amiga workflow and automation of repetitive tasks.
 
-Note: MorphOS does not yet have an ARexx implementation. You can try installing the 68k version of ARexx but this is untested.
+Note: MorphOS does not yet have a complete ARexx implementation. You must install the 68k version of ARexx on MorphOS to be able to use ARexx with AmigaGPT.
+
+AmigaGPT also comes with a companion daemon app called AmigaGPTD. You may run this in the shell. The daemon will respond to the same ARexx commands as the main app so you do not need to launch the main AmigaGPT app.
+
+Please note: AmigaGPT and AmigaGPTD listen on 2 differnt ARexx ports so adjust your scrips accordingly. AmigaGPT listens on **AMIGAGPT** and AmigaGPTD listens on **AMIGAGPTD**.
 
 The following ARexx commands are available:
 
