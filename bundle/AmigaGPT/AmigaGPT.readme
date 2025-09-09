@@ -295,9 +295,9 @@ Special Thanks:
 
 Changelog:
 
-------------------
-2.11.0 (2025-09-07)
-------------------
+-------------------
+2.11.0 (2025-09-09)
+-------------------
 
 - New daemon app (AmigaGPTD). An app that has no GUI and can run in the
   background. If you have this running, there is no longer any need to have
@@ -321,9 +321,9 @@ Changelog:
 - Installer now installs the updated and new ARexx scripts if an older version
   of AmigaGPT is already installed
 
-------------------
+-------------------
 2.10.0 (2025-08-17)
-------------------
+-------------------
 
 - Added menu option to print the conversation with the printer
 - Now uses native MUI screen management (set screen in Screen or System menu
