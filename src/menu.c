@@ -196,7 +196,11 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
                                             // and DUPLICATE any parent nodes.
 
     UBYTE command[1024];
+#ifdef __AMIGAOS3__
+    snprintf(command, sizeof(command), "Run SYS:Rexxc/RX %s", scriptPath);
+#else
     snprintf(command, sizeof(command), "Run RX %s", scriptPath);
+#endif
 
     LONG rc = SystemTags((CONST_STRPTR)command, NP_Path, (ULONG)npPath,
                          NP_StackSize, 32768, TAG_DONE);

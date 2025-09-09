@@ -5,6 +5,7 @@
 - Can now quit the app and daemon with CTRL-C in the shell
 - AmigaGPTD now shows errors in requesters
 - AmigaGPTD now launches with sufficient stack size
+- Launching ARexx scripts from AmigaGPT now finds RX on earlier versions of AmigaOS 3
 
 ## 2.11.0 (2025-09-09)
 
