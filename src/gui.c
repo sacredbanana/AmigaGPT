@@ -345,10 +345,17 @@ BOOL copyFile(STRPTR source, STRPTR destination) {
  **/
 void displayError(STRPTR message) {
 #ifndef DAEMON
+    const UBYTE appName[] = "AmigaGPT";
     if (app) {
         updateStatusBar(STRING_ERROR, redPen);
     }
+#else
+    const UBYTE appName[] = "AmigaGPTD";
 #endif
+    UBYTE *errorTitle = AllocVec(strlen(appName) + strlen(STRING_ERROR) + 2,
+                                 MEMF_ANY | MEMF_CLEAR);
+    snprintf(errorTitle, strlen(appName) + strlen(STRING_ERROR) + 2, "%s %s",
+             appName, STRING_ERROR);
     const UBYTE ERROR_BUFFER_LENGTH = 255;
     STRPTR errorMessage = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
     CONST_STRPTR okString =
@@ -357,17 +364,16 @@ void displayError(STRPTR message) {
     const LONG ERROR_CODE = IoErr();
     if (ERROR_CODE == 0) {
 #ifndef DAEMON
-        if (!app ||
-            MUI_Request(app, mainWindowObject,
+        if (!app || MUI_Request(app, mainWindowObject,
 #ifdef __MORPHOS__
-                        NULL,
+                                NULL,
 #else
-                        MUIV_Requester_Image_Error,
+                                MUIV_Requester_Image_Error,
 #endif
-                        STRING_ERROR, okString, "\33c%s", message) != 0) {
+                                errorTitle, okString, "\33c%s", message) != 0) {
 #endif
             struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,
-                                         STRING_ERROR, message, STRING_OK};
+                                         errorTitle, message, STRING_OK};
             EasyRequest(NULL, &errorES, NULL, NULL);
 #ifndef DAEMON
         }
@@ -376,7 +382,7 @@ void displayError(STRPTR message) {
         STRPTR errorDescription = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY);
         Fault(ERROR_CODE, NULL, errorDescription, ERROR_BUFFER_LENGTH);
         snprintf(errorMessage, ERROR_BUFFER_LENGTH, "%s: %s\n\n%s\0",
-                 STRING_ERROR, errorDescription, message);
+                 errorTitle, errorDescription, message);
         if (app) {
 #ifndef DAEMON
             MUI_Request(app, mainWindowObject,
@@ -385,7 +391,7 @@ void displayError(STRPTR message) {
 #else
                         MUIV_Requester_Image_Error,
 #endif
-                        STRING_ERROR, okString, "\33c%s", errorMessage);
+                        errorTitle, okString, "\33c%s", errorMessage);
         } else {
 #endif
             struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,

@@ -493,8 +493,10 @@
   (help @startup-help)
   (confirm)
 	(command "If Exists \"" @default-dest "\"\n")
-	(command "   Assign AMIGAGPT: \"" @default-dest "\"\n")
-	(command "   Run <>nil: AmigaGPTD\n")
+  (command "  Assign AMIGAGPT: \"" @default-dest "\"\n")
+  (command "  Echo \"STACK 32768\" > T:AmigaGPTDStartup\n")
+  (command "  Echo \"AmigaGPTD <>NIL:\" >> T:AmigaGPTDStartup\n")
+  (command "  NewShell \"NIL:\" from T:AmigaGPTDStartup\n")
 	(command "Endif")
 )
 

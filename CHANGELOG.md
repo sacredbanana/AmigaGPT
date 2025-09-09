@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.11.1 (2025-09-10)
+
+- Can now quit the app and daemon with CTRL-C in the shell
+- AmigaGPTD now shows errors in requesters
+- AmigaGPTD now launches with sufficient stack size
+
 ## 2.11.0 (2025-09-09)
 
 - New daemon app (AmigaGPTD). An app that has no GUI and can run in the background. If you have this running, there is no longer any need to have the main AmigaGPT app open if you want to use AmigaGPT's commands in ARexx. The daemon listens on the ARexx port named "AMIGAGPTD" so make sure your scripts try to connect to this new port first, and if it fails, attempt connecting to "AMIGAGPT" which is still the port used by the main app
