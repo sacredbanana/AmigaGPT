@@ -9,6 +9,7 @@
 - Added a 3 minute timeout for waiting for a response from the API so it will give up after 3 minutes with an error message instead of waiting forever and making AmigaGPT permanently stuck
 - Stop the ARexx scripts that delete a temporary file from announcing the deletion to the user in the console
 - Change the default program for the readme and the guide to both be MultiView
+- Installer now installs the updated and new ARexx scripts if an older version of AmigaGPT is already installed
 
 ## 2.10.0 (2025-08-17)
 

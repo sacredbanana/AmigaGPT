@@ -240,17 +240,17 @@ MakeHook(ListImageModelsHook, ListImageModelsFunc);
 
 HOOKPROTONHNO(ListImageSizesFunc, APTR, ULONG *arg) {
     STRPTR sizes = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
-    strncat(sizes, "DALL-E 2\n", 1024);
+    strncat(sizes, "DALL-E 2:\n", 1024);
     for (UBYTE i = 0; i < 3; i++) {
         strncat(sizes, IMAGE_SIZE_NAMES[IMAGE_SIZES_DALL_E_2[i]], 1024);
         strncat(sizes, "\n", 1024);
     }
-    strncat(sizes, "DALL-E 3\n", 1024);
+    strncat(sizes, "DALL-E 3:\n", 1024);
     for (UBYTE i = 0; i < 3; i++) {
         strncat(sizes, IMAGE_SIZE_NAMES[IMAGE_SIZES_DALL_E_3[i]], 1024);
         strncat(sizes, "\n", 1024);
     }
-    strncat(sizes, "GPT Image 1\n", 1024);
+    strncat(sizes, "GPT Image 1:\n", 1024);
     for (UBYTE i = 0; i < 3; i++) {
         strncat(sizes, IMAGE_SIZE_NAMES[IMAGE_SIZES_GPT_IMAGE_1[i]], 1024);
         strncat(sizes, "\n", 1024);

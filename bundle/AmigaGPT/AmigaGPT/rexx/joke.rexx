@@ -6,7 +6,7 @@ SIGNAL ON BREAK_C
 
 /* -------- main -------- */
 FALLBACK = 0
-AMIGAGPTPORT = "AMIGAGPT"
+AMIGAGPT_PORT = "AMIGAGPT"
 CALL Init
 IF FALLBACK THEN DO
   CALL Fallback_RequestChoice
@@ -19,7 +19,7 @@ EXIT 0
 
 /* -------- procedures -------- */
 
-Init: PROCEDURE EXPOSE AMIGAGPT_PORT
+Init: PROCEDURE EXPOSE AMIGAGPT_PORT FALLBACK
   IF ~SHOW('P',AMIGAGPT_PORT) THEN DO
   /* The main AmigaGPT app is not open. Attempt to connect to AmigaGPTD instead */
     AMIGAGPT_PORT = "AMIGAGPTD"
@@ -29,12 +29,21 @@ Init: PROCEDURE EXPOSE AMIGAGPT_PORT
     END
   END
   l="rmh.library"; IF ~SHOW("L",l) THEN ; IF ~ADDLIB(l,0,-30) THEN DO; FALLBACK=1; RETURN; END
-  IF AddLibrary("rexxsupport.library","rxmui.library") ~= 0 THEN DO; FALLBACK=1; RETURN; END
+  ADDRESS COMMAND 'VERSION rxmui.library >NIL:'
+  IF RC ~= 0 THEN DO
+    FALLBACK = 1
+    RETURN
+  END
+  IF AddLibrary("rexxsupport.library","rxmui.library") ~= 0 THEN DO
+    FALLBACK = 1
+    RETURN
+  END
   CALL RxMUIOpt("DebugMode ShowErr")
   RETURN
 
 Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
   SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
+  SAY "Retrieving joke using AmigaGPT. Please wait..."
   ADDRESS VALUE AMIGAGPT_PORT
   'SENDMESSAGE M=gpt-5-nano Tell me a short funny joke on a single line'
   ADDRESS COMMAND

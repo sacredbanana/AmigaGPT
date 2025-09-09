@@ -1,0 +1,21 @@
+/* Shows AmigaGPT's supported ARexx commands */
+OPTIONS RESULTS
+ADDRESS 'AMIGAGPT'
+SAY "ARexx commands:"
+'?'
+SAY RESULT
+SAY "Chat models:"
+'LISTCHATMODELS'
+SAY RESULT
+SAY "Image models:"
+'LISTIMAGEMODELS'
+SAY RESULT
+SAY "Image sizes:"
+'LISTIMAGESIZES'
+SAY RESULT
+SAY "Voice models:"
+'LISTVOICEMODELS'
+SAY RESULT
+SAY "Voices:"
+'LISTVOICES'
+SAY RESULT

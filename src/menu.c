@@ -27,8 +27,7 @@ Object *menuStrip = NULL;
 static void populateSpeechMenu();
 static void populateOpenAIMenu();
 static void populateArexxMenu();
-static BPTR BuildNPPath(const char *const *extraDirs, size_t extraCount,
-                        BOOL addParent);
+static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent);
 static void FreeNPPath(BPTR listHead);
 
 /* The Shell's path nodes are trivial: next + lock (both BPTRs).   */
@@ -179,7 +178,8 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
     AddPart(scriptPath, "rexx/", 1024);
     AddPart(scriptPath, script, 1024);
 #ifdef __MORPHOS__
-    const char *extra[] = {"SYS:Utilities", "MOSSYS:C", "SYS:S", "MOSSYS:S"};
+    const char *extra[] = {"SYS:Utilities", "MOSSYS:C", "SYS:S", "MOSSYS:S",
+                           NULL};
 #else
     const char *extra[] = {"SYS:Utilities",
                            "SYS:S",
@@ -188,17 +188,21 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
                            "SYS:Prefs",
                            "SYS:Tools",
                            "SYS:Tools/Commodities",
-                           "SYS:WBStartup"};
+                           "SYS:WBStartup",
+                           NULL};
 #endif
-    BPTR npPath = BuildNPPath(extra, 4, TRUE);
+
+    BPTR npPath = BuildNPPath(extra, TRUE); // BuildNPPath should stop at NULL
+                                            // and DUPLICATE any parent nodes.
 
     UBYTE command[1024];
-    snprintf(command, sizeof(command), "RUN RX %s\nENDSHELL", scriptPath);
+    snprintf(command, sizeof(command), "Run RX %s", scriptPath);
 
     LONG rc = SystemTags((CONST_STRPTR)command, NP_Path, (ULONG)npPath,
-                         SYS_Asynch, FALSE, TAG_DONE);
+                         NP_StackSize, 32768, TAG_DONE);
 
-    if (rc == -1) {
+    // Only free on failure. On success DOS owns the list.
+    if (rc == -1 && npPath) {
         FreeNPPath(npPath);
     }
     FreeVec(scriptPath);
@@ -1051,8 +1055,7 @@ static void populateArexxMenu() {
  * @param addParent: if TRUE, duplicate the caller’s existing CLI path first
  * @returns BPTR to first node, or ZERO on failure (nothing allocated).
  **/
-static BPTR BuildNPPath(const char *const *extraDirs, size_t extraCount,
-                        BOOL addParent) {
+static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent) {
     struct PathNodeCompat *head = NULL, *tail = NULL;
 
 // Optionally copy the caller’s current shell path (duplicates the locks).
@@ -1087,6 +1090,7 @@ static BPTR BuildNPPath(const char *const *extraDirs, size_t extraCount,
 #endif
 
     // Append our extra directories
+    const size_t extraCount = sizeof(extraDirs) / sizeof(extraDirs[0]);
     for (size_t i = 0; i < extraCount; ++i) {
         if (!extraDirs[i] || !extraDirs[i][0])
             continue;
