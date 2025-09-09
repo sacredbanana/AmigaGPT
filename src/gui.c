@@ -257,7 +257,9 @@ void startGUIRunLoop() {
             break;
         }
         if (running && signals)
-            Wait(signals);
+            signals = Wait(signals | SIGBREAKF_CTRL_C);
+        if (signals & SIGBREAKF_CTRL_C)
+            running = FALSE;
     }
 }
 
@@ -346,6 +348,7 @@ void displayError(STRPTR message) {
     if (app) {
         updateStatusBar(STRING_ERROR, redPen);
     }
+#endif
     const UBYTE ERROR_BUFFER_LENGTH = 255;
     STRPTR errorMessage = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
     CONST_STRPTR okString =
@@ -353,6 +356,7 @@ void displayError(STRPTR message) {
     snprintf(okString, strlen(STRING_OK) + 2, "*%s", STRING_OK);
     const LONG ERROR_CODE = IoErr();
     if (ERROR_CODE == 0) {
+#ifndef DAEMON
         if (!app ||
             MUI_Request(app, mainWindowObject,
 #ifdef __MORPHOS__
@@ -361,16 +365,20 @@ void displayError(STRPTR message) {
                         MUIV_Requester_Image_Error,
 #endif
                         STRING_ERROR, okString, "\33c%s", message) != 0) {
+#endif
             struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,
                                          STRING_ERROR, message, STRING_OK};
             EasyRequest(NULL, &errorES, NULL, NULL);
+#ifndef DAEMON
         }
+#endif
     } else {
         STRPTR errorDescription = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY);
         Fault(ERROR_CODE, NULL, errorDescription, ERROR_BUFFER_LENGTH);
         snprintf(errorMessage, ERROR_BUFFER_LENGTH, "%s: %s\n\n%s\0",
                  STRING_ERROR, errorDescription, message);
         if (app) {
+#ifndef DAEMON
             MUI_Request(app, mainWindowObject,
 #ifdef __MORPHOS__
                         NULL,
@@ -379,6 +387,7 @@ void displayError(STRPTR message) {
 #endif
                         STRING_ERROR, okString, "\33c%s", errorMessage);
         } else {
+#endif
             struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,
                                          STRING_ERROR, errorMessage, STRING_OK};
             EasyRequest(NULL, &errorES, NULL, NULL);
@@ -387,9 +396,6 @@ void displayError(STRPTR message) {
     }
     FreeVec(errorMessage);
     FreeVec(okString);
-#else
-    fprintf(stderr, "AmigaGPTD Error: %s\n", message);
-#endif
 }
 
 /**

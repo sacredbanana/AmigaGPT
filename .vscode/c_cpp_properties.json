@@ -34,6 +34,40 @@
             }
         },
         {
+            "name": "GCC AmigaOS 3 Daemon",
+            "includePath": [
+                "./**",
+                "/opt/amiga/m68k-amigaos/include",
+                "/opt/amiga/m68k-amigaos/ndk-include",
+                "/opt/amiga/m68k-amigaos/libnix/include",
+                "/opt/amiga/m68k-amigaos/sys-include",
+                "/opt/amiga/m68k-amigaos/clib2/include"
+            ],
+            "defines": [
+                "__AMIGAOS3__",
+                "__stdargs= ",
+                "GIT_BRANCH= ",
+                "GIT_COMMIT= ",
+                "GIT_TIMESTAMP= ",
+                "BUILD_DATE= ",
+                "DAEMON"
+            ],
+            "macFrameworkPath": [
+                "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "macos-gcc-arm64",
+            "mergeConfigurations": false,
+            "compilerPath": "/opt/amiga/bin/m68k-amigaos-gcc",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
             "name": "GCC AmigaOS 4",
             "includePath": [
                 "./**",
