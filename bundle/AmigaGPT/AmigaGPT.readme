@@ -3,7 +3,7 @@ Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 2.11.1
+Version: 2.11.2
 Architecture: m68k-amigaos >= 3.1; ppc-amigaos; ppc-morphos
 Requires: AmigaOS 3.1+/68020+ util/libs/AmiSSL-v5-OS3.lha MUI
 Replaces: util/misc/AmigaGPT.lha
@@ -294,6 +294,13 @@ Special Thanks:
   http://amiga-news.de
 
 Changelog:
+
+-------------------
+2.11.2 (2025-09-11)
+-------------------
+
+- Improve handling of server disconnections
+- Fix bug where sometimes it wouldn't download the entire voice cclip
 
 -------------------
 2.11.1 (2025-09-10)

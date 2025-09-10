@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.11.2 (2025-09-11)
+
+- Improve handling of server disconnections
+- Fix bug where sometimes it wouldn't download the entire voice cclip
+
 ## 2.11.1 (2025-09-10)
 
 - Can now quit the app and daemon with CTRL-C in the shell

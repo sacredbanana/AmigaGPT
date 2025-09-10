@@ -40,8 +40,8 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static STRPTR getModelName(enum ChatModel model);
 static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
 static STRPTR base64Encode(CONST_STRPTR input);
-static void drain_openssl_error_queue(CONST_STRPTR where);
-static void report_ssl_error(SSL *s, int ret, CONST_STRPTR where);
+static void drainOpenSslErrorQueue(CONST_STRPTR where);
+static void reportSslError(SSL *s, int ret, CONST_STRPTR where);
 
 struct Library *SocketBase;
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
@@ -429,7 +429,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
             // SSL_get_cipher(ssl));
         } else {
             /* Handshake failed: report with full diagnostics. */
-            report_ssl_error(ssl, ssl_err, "SSL_connect");
+            reportSslError(ssl, ssl_err, "SSL_connect");
             CloseSocket(sock);
             SSL_shutdown(ssl);
             SSL_free(ssl);
@@ -556,7 +556,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
             ERR_clear_error();
             ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
             if (ssl_err <= 0) {
-                report_ssl_error(ssl, ssl_err, "SSL_write (responses)");
+                reportSslError(ssl, ssl_err, "SSL_write (responses)");
             }
         } else {
             ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
@@ -684,7 +684,23 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
                 break;
             case SSL_ERROR_SYSCALL:
             case SSL_ERROR_SSL:
-                report_ssl_error(ssl, bytesRead, "SSL_read (responses)");
+                // Check if we have a complete JSON response before treating as
+                // error
+                if (strlen(readBuffer) > 0) {
+                    // Try to parse what we have - if it's valid JSON, the
+                    // connection closure is normal
+                    const STRPTR jsonStart = stream ? "data: {" : "{";
+                    STRPTR jsonString = stream ? strstr(readBuffer, jsonStart)
+                                               : strstr(readBuffer, "{");
+                    if (jsonString != NULL) {
+                        // We have JSON data - this might be a normal connection
+                        // closure
+                        doneReading = TRUE;
+                        break;
+                    }
+                }
+                // No valid data received - this is a real error
+                reportSslError(ssl, bytesRead, "SSL_read (responses)");
                 doneReading = TRUE;
                 break;
             default:
@@ -696,7 +712,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
         FreeVec(tempReadBuffer);
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
-        report_ssl_error(ssl, ssl_err, "SSL_write");
+        reportSslError(ssl, ssl_err, "SSL_write");
     }
     if (stream) {
         // Check if the last response is the end of the stream and set the
@@ -826,7 +842,7 @@ struct json_object *postImageCreationRequestToOpenAI(
         ERR_clear_error();
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
         if (ssl_err <= 0) {
-            report_ssl_error(ssl, ssl_err, "SSL_write (images)");
+            reportSslError(ssl, ssl_err, "SSL_write (images)");
         }
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
@@ -941,7 +957,7 @@ struct json_object *postImageCreationRequestToOpenAI(
                 break;
             case SSL_ERROR_SYSCALL:
             case SSL_ERROR_SSL:
-                report_ssl_error(ssl, bytesRead, "SSL_read (images)");
+                reportSslError(ssl, bytesRead, "SSL_read (images)");
                 doneReading = TRUE;
                 break;
             default:
@@ -953,7 +969,7 @@ struct json_object *postImageCreationRequestToOpenAI(
         FreeVec(tempReadBuffer);
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
-        report_ssl_error(ssl, ssl_err, "SSL_write");
+        reportSslError(ssl, ssl_err, "SSL_write");
     }
 
     CloseSocket(sock);
@@ -1061,7 +1077,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
         ERR_clear_error();
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
         if (ssl_err <= 0) {
-            report_ssl_error(ssl, ssl_err, "SSL_write (download)");
+            reportSslError(ssl, ssl_err, "SSL_write (download)");
         }
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
@@ -1173,7 +1189,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
                 printf("SSL_ERROR_WANT_X509_LOOKUP\n");
                 break;
             case SSL_ERROR_SSL:
-                report_ssl_error(ssl, bytesRead, "SSL_read (download)");
+                reportSslError(ssl, bytesRead, "SSL_read (download)");
                 /* Attempt reconnect & range resume follows as before */
                 updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
                 if (createSSLConnection(hostString, 443, useProxy, proxyHost,
@@ -1204,7 +1220,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
                 SSL_write(ssl, writeBuffer, strlen(writeBuffer));
                 break;
             case SSL_ERROR_SYSCALL:
-                report_ssl_error(ssl, bytesRead, "SSL_read (download)");
+                reportSslError(ssl, bytesRead, "SSL_read (download)");
                 doneReading = TRUE;
                 break;
             }
@@ -1212,7 +1228,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
         FreeVec(tempReadBuffer);
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
-        report_ssl_error(ssl, ssl_err, "SSL_write (download)");
+        reportSslError(ssl, ssl_err, "SSL_write (download)");
         Close(fileHandle);
         FreeVec(authHeader);
         return RETURN_ERROR;
@@ -1344,7 +1360,7 @@ static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength) {
  * available.
  * @param where the source of the error
  */
-static void drain_openssl_error_queue(CONST_STRPTR where) {
+static void drainOpenSslErrorQueue(CONST_STRPTR where) {
     unsigned long err;
     if (ERR_peek_error() == 0) {
         return;
@@ -1370,7 +1386,7 @@ static void drain_openssl_error_queue(CONST_STRPTR where) {
  * @param ret the return value from the SSL function
  * @param where the source of the error
  **/
-static void report_ssl_error(SSL *s, int ret, CONST_STRPTR where) {
+static void reportSslError(SSL *s, int ret, CONST_STRPTR where) {
     int why = SSL_get_error(s, ret);
     switch (why) {
     case SSL_ERROR_NONE:
@@ -1395,12 +1411,12 @@ static void report_ssl_error(SSL *s, int ret, CONST_STRPTR where) {
         if (ERR_peek_error() == 0) {
             displayError(strerror(errno));
         } else {
-            drain_openssl_error_queue(where);
+            drainOpenSslErrorQueue(where);
         }
         break;
     case SSL_ERROR_SSL:
     default:
-        drain_openssl_error_queue(where);
+        drainOpenSslErrorQueue(where);
         break;
     }
 }
@@ -1501,7 +1517,7 @@ APTR postTextToSpeechRequestToOpenAI(
         ERR_clear_error();
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
         if (ssl_err <= 0) {
-            report_ssl_error(ssl, ssl_err, "SSL_write (tts)");
+            reportSslError(ssl, ssl_err, "SSL_write (tts)");
         }
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
@@ -1619,6 +1635,13 @@ APTR postTextToSpeechRequestToOpenAI(
                                 } else {
                                     bytesRead = recv(sock, singleByte, 1, 0);
                                 }
+                                if (bytesRead <= 0) {
+                                    // Set error flag to trigger reconnection
+                                    // logic
+                                    err = SSL_ERROR_SYSCALL;
+                                    doneReading = TRUE;
+                                    break;
+                                }
                                 memcpy(tempChunkHeaderBuffer +
                                            tempChunkDataBufferLength,
                                        singleByte, bytesRead);
@@ -1672,8 +1695,27 @@ APTR postTextToSpeechRequestToOpenAI(
                             } else {
                                 bytesRead = recv(sock, readBuffer, 1, 0);
                             }
+                            if (bytesRead <= 0) {
+                                // Connection closed or error during trailer
+                                // read
+
+                                // For TTS downloads, we must restart completely
+                                // as streams are not resumable But first, let's
+                                // check if we're at the end and can complete
+                                // with current data
+                                if (chunkBytesNeedingRead == 0) {
+                                    newChunkNeeded = TRUE;
+                                    break; // Continue to next chunk
+                                } else {
+                                    err = SSL_ERROR_SYSCALL;
+                                    doneReading = TRUE;
+                                    break;
+                                }
+                            }
                             bytesRemainingInBuffer += bytesRead;
                         }
+                        if (doneReading)
+                            break;
                         dataStart += chunkBytesNeedingRead + 2;
                         bytesRemainingInBuffer -= 2;
                         chunkBytesNeedingRead = 0;
@@ -1682,7 +1724,45 @@ APTR postTextToSpeechRequestToOpenAI(
                 }
                 break;
             case SSL_ERROR_ZERO_RETURN:
-                printf("SSL_ERROR_ZERO_RETURN\n");
+                // Process any remaining data in buffer before exiting
+                if (bytesRemainingInBuffer > 0 && chunkBytesNeedingRead > 0) {
+                    // Process remaining buffer data using the same logic as the
+                    // main loop
+                    while (bytesRemainingInBuffer > 0 &&
+                           chunkBytesNeedingRead > 0) {
+                        // Create a larger audio buffer if needed
+                        if (*audioLength + chunkBytesNeedingRead >
+                            audioBufferSize) {
+                            audioBufferSize <<= 1;
+                            APTR oldAudioData = audioData;
+                            audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                            if (audioData == NULL) {
+                                FreeVec(oldAudioData);
+                                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                                return NULL;
+                            }
+                            memcpy(audioData, oldAudioData, *audioLength);
+                            FreeVec(oldAudioData);
+                        }
+
+                        if (chunkBytesNeedingRead > bytesRemainingInBuffer) {
+                            memcpy(audioData + *audioLength, dataStart,
+                                   bytesRemainingInBuffer);
+                            *audioLength += bytesRemainingInBuffer;
+                            chunkBytesNeedingRead -= bytesRemainingInBuffer;
+                            bytesRemainingInBuffer = 0;
+                        } else {
+                            memcpy(audioData + *audioLength, dataStart,
+                                   chunkBytesNeedingRead);
+                            *audioLength += chunkBytesNeedingRead;
+                            bytesRemainingInBuffer -= chunkBytesNeedingRead;
+                            chunkBytesNeedingRead = 0;
+                            newChunkNeeded = TRUE;
+                        }
+                    }
+                }
+
+                // Now we can safely exit
                 doneReading = TRUE;
                 break;
             case SSL_ERROR_WANT_READ:
@@ -1702,7 +1782,7 @@ APTR postTextToSpeechRequestToOpenAI(
                 break;
             case SSL_ERROR_SYSCALL:
             case SSL_ERROR_SSL: {
-                report_ssl_error(ssl, bytesRead, "SSL_read (tts)");
+                reportSslError(ssl, bytesRead, "SSL_read (tts)");
                 updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
                 if (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy,
                                         proxyHost, proxyPort, proxyUsesSSL,
@@ -1713,6 +1793,31 @@ APTR postTextToSpeechRequestToOpenAI(
                         FreeVec(audioData);
                         return NULL;
                     }
+                } else {
+                    // Successful reconnection - restart the download
+                    printf("Reconnected - restarting TTS download...\n");
+                    *audioLength = 0; // Reset audio length
+                    hasReadHeader = FALSE;
+                    newChunkNeeded = TRUE;
+                    chunkBytesNeedingRead = 0;
+                    bytesRemainingInBuffer = 0;
+                    // Re-send the HTTP request
+                    if (useSSL) {
+                        ERR_clear_error();
+                        ssl_err =
+                            SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+                        if (ssl_err <= 0) {
+                            reportSslError(ssl, ssl_err,
+                                           "SSL_write (tts retry)");
+                            continue;
+                        }
+                    } else {
+                        ssl_err =
+                            send(sock, writeBuffer, strlen(writeBuffer), 0);
+                        if (ssl_err <= 0) {
+                            continue;
+                        }
+                    }
                 }
                 break;
             }
@@ -1722,9 +1827,33 @@ APTR postTextToSpeechRequestToOpenAI(
                 break;
             }
         }
+
+        // CRITICAL: Process any remaining buffer data before exiting main loop
+        if (bytesRemainingInBuffer > 0 && chunkBytesNeedingRead > 0) {
+            // Create a larger audio buffer if needed
+            if (*audioLength + chunkBytesNeedingRead > audioBufferSize) {
+                audioBufferSize <<= 1;
+                APTR oldAudioData = audioData;
+                audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                if (audioData == NULL) {
+                    FreeVec(oldAudioData);
+                    displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                    return NULL;
+                }
+                memcpy(audioData, oldAudioData, *audioLength);
+                FreeVec(oldAudioData);
+            }
+
+            // Process the remaining data
+            ULONG bytesToSave = (chunkBytesNeedingRead < bytesRemainingInBuffer)
+                                    ? chunkBytesNeedingRead
+                                    : bytesRemainingInBuffer;
+            memcpy(audioData + *audioLength, dataStart, bytesToSave);
+            *audioLength += bytesToSave;
+        }
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
-        report_ssl_error(ssl, ssl_err, "SSL_write");
+        reportSslError(ssl, ssl_err, "SSL_write");
         FreeVec(audioData);
         return NULL;
     }
