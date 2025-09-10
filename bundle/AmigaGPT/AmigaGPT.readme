@@ -25,11 +25,10 @@ Features:
 - Text-to-speech
 
 Requirements:
-- OCS/ECS/AGA Amiga or a PowerPC machine capable of running MorphOS
+- OCS/ECS/AGA Amiga or a PowerPC machine capable of running MorphO
 - MUI 3 minimum; MUI 5 recommended for all features
 - Motorola 68020 or higher CPU or PPC for AmigaOS 4/MorphOS
-- For image viewing, sufficient memory that your installed PNG
-  datatype requires
+- 8MB Fast RAM minimum, 16MB or higher recommended
 - For AmigaOS 3 & 4, AmiSSL 5.18 or higher
   (https://aminet.net/package/util/libs/AmiSSL-v5-OS3) for OS3 and
   (https://aminet.net/package/util/libs/AmiSSL-v5-OS4) for OS4

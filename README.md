@@ -37,7 +37,7 @@ Ensure you have the necessary system requirements:
 - An OCS/ECS/AGA **Amiga** or a PowerPC machine capable of running MorphOS
 - **AmigaOS 3.1** or higher, **AmigaOS 4.1** or **MorphOS**
 - Motorola 68020 or higher CPU or PowerPC for AmigaOS 4/MorphOS
-- For image viewing, sufficient memory that your installed PNG datatype requires
+- 8MB Fast RAM minimum, 16MB or higher recommended
 - Internet access using a TCP/IP stack such as **Roadshow** (<http://roadshow.apc-tcp.de/index-en.php>)
 - For AmigaOS 3 & 4: **AmiSSL 5.18** or higher (<https://aminet.net/package/util/libs/AmiSSL-v5-OS3>) for OS3 and (<https://aminet.net/package/util/libs/AmiSSL-v5-OS4>) for OS4
 - **MUI 3** minimum but **MUI 5** recommended for all features. MUI 5:(<https://github.com/amiga-mui/muidev/releases>) or MUI 3.9: (<https://github.com/amiga-mui/muidev/releases/download/MUI-3.9-2015R1/MUI-3.9-2015R1-os3.lha>)
