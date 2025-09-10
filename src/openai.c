@@ -524,7 +524,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
         }
 
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                 "POST https://api.openai.com/v1/responses HTTP/1.1\r\n"
+                 "POST %s/v1/responses HTTP/1.1\r\n"
                  "Host: api.openai.com\r\n"
                  "Content-Type: application/json\r\n"
                  "Authorization: Bearer %s\r\n"
@@ -532,7 +532,8 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
                  "Content-Length: %lu\r\n"
                  "%s\r\n"
                  "%s\0",
-                 openAiApiKey, strlen(jsonString), authHeader, jsonString);
+                 useSSL ? "" : "https://api.openai.com", openAiApiKey,
+                 strlen(jsonString), authHeader, jsonString);
 
         json_object_put(obj);
 
@@ -823,7 +824,7 @@ struct json_object *postImageCreationRequestToOpenAI(
         FreeVec(encodedCredentials);
     }
     snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-             "POST https://api.openai.com/v1/images/generations HTTP/1.1\r\n"
+             "POST %s/v1/images/generations HTTP/1.1\r\n"
              "Host: api.openai.com\r\n"
              "Content-Type: application/json\r\n"
              "Authorization: Bearer %s\r\n"
@@ -831,7 +832,8 @@ struct json_object *postImageCreationRequestToOpenAI(
              "Content-Length: %lu\r\n"
              "%s\r\n"
              "%s\0",
-             openAiApiKey, strlen(jsonString), authHeader, jsonString);
+             useSSL ? "" : "https://api.openai.com", openAiApiKey,
+             strlen(jsonString), authHeader, jsonString);
 
     json_object_put(obj);
 
@@ -1498,7 +1500,7 @@ APTR postTextToSpeechRequestToOpenAI(
     }
 
     snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-             "POST https://api.openai.com/v1/audio/speech HTTP/1.1\r\n"
+             "POST %s/v1/audio/speech HTTP/1.1\r\n"
              "Host: api.openai.com\r\n"
              "Content-Type: application/json\r\n"
              "Authorization: Bearer %s\r\n"
@@ -1506,7 +1508,8 @@ APTR postTextToSpeechRequestToOpenAI(
              "Content-Length: %lu\r\n"
              "%s\r\n"
              "%s\0",
-             openAiApiKey, strlen(jsonString), authHeader, jsonString);
+             useSSL ? "" : "https://api.openai.com", openAiApiKey,
+             strlen(jsonString), authHeader, jsonString);
 
     json_object_put(obj);
 
