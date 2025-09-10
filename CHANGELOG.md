@@ -6,6 +6,7 @@
 - AmigaGPTD now shows errors in requesters
 - AmigaGPTD now launches with sufficient stack size
 - Launching ARexx scripts from AmigaGPT now finds RX on earlier versions of AmigaOS 3
+- Say.rexx script now lets you select a voice
 
 ## 2.11.0 (2025-09-09)
 

@@ -754,6 +754,7 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 - AmigaGPTD now shows errors in requesters
 - AmigaGPTD now launches with sufficient stack size
 - Launching ARexx scripts from AmigaGPT now finds RX on earlier versions of AmigaOS 3
+- Say.rexx script now lets you select a voice
 
 @{b}2.11.0 (2025-09-09)@{ub}
 
