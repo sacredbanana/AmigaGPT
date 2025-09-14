@@ -1,9 +1,9 @@
 # Changelog
 
-## 2.11.2 (2025-09-11)
+## 2.11.2 (2025-09-14)
 
 - Improve handling of server disconnections
-- Fix bug where sometimes it wouldn't download the entire voice cclip
+- Fix occasional crash downloading chat responses
 
 ## 2.11.1 (2025-09-10)
 
