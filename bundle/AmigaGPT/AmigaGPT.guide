@@ -751,7 +751,9 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 @{b}2.11.2 (2025-09-11)@{ub}
 
 - Improve handling of server disconnections
-- Fix bug where sometimes it wouldn't download the entire voice cclip
+- Fix occasional crash downloading chat responses
+- Startup script for the daemon in AmigaOS 4 and MorphOS no longer cause errors
+- The say.rexx script now works with the daemon
 
 @{b}2.11.1 (2025-09-10)@{ub}
 

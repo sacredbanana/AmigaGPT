@@ -142,7 +142,8 @@ LONG initVideo() {
           "$VER: AmigaGPTD " APP_VERSION " (" BUILD_DATE ")",
           MUIA_Application_SingleTask, TRUE, MUIA_Application_Commands,
           arexxList, MUIA_Application_UseRexx, TRUE, End)) {
-        displayError("Failed to create MUI application");
+        fprintf(stderr, "Failed to create MUI application. There may be "
+                        "another instance of AmigaGPTD running.");
         return RETURN_ERROR;
     }
 #else
