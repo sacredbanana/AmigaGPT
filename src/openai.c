@@ -604,24 +604,46 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
                 totalBytesRead += bytesRead;
                 const STRPTR jsonStart = stream ? "data: {" : "{";
                 STRPTR jsonString = readBuffer;
+                if (readBuffer == NULL) {
+                    doneReading = TRUE;
+                    streamingInProgress = FALSE;
+                    break;
+                }
                 // Check for error in stream
                 if (stream) {
-                    if (strstr(jsonString, jsonStart) == NULL) {
+                    if (jsonString != NULL && strstr(jsonString, jsonStart) == NULL) {
                         jsonString = strstr(jsonString, "{");
                         if (jsonString == NULL) {
-                            STRPTR httpResponse =
-                                strstr(readBuffer, "HTTP/1.1");
-                            if (httpResponse != NULL &&
-                                strstr(httpResponse, "200 OK") == NULL) {
-                                UBYTE error[256] = {0};
-                                for (UWORD i = 0; i < 256; i++) {
-                                    if (httpResponse[i] == '\r' ||
-                                        httpResponse[i] == '\n') {
-                                        break;
+                            if (readBuffer != NULL) {
+                                // Check if we can safely read the first character
+                                if (readBuffer[0] != '\0') {
+                                    
+                                    // Use strnlen or manual length calculation to avoid strlen issues with UTF-8
+                                    ULONG bufLen = 0;
+                                    ULONG maxLen = READ_BUFFER_LENGTH - 1;
+                                    while (bufLen < maxLen && readBuffer[bufLen] != '\0') {
+                                        bufLen++;
                                     }
-                                    error[i] = httpResponse[i];
+                                    
+                                    STRPTR httpResponse = strstr(readBuffer, "HTTP/1.1");
+                                    if (httpResponse != NULL) {
+                                        STRPTR okCheck = strstr(httpResponse, "200 OK");
+                                        if (okCheck == NULL) {
+                                            UBYTE error[256] = {0};
+                                            for (UWORD i = 0; i < 256; i++) {
+                                                if (httpResponse[i] == '\r' ||
+                                                    httpResponse[i] == '\n') {
+                                                    break;
+                                                }
+                                                error[i] = httpResponse[i];
+                                            }
+                                            displayError(error);
+                                            doneReading = TRUE;
+                                            streamingInProgress = FALSE;
+                                        }
+                                    }
                                 }
-                                displayError(error);
+                            } else {
                                 doneReading = TRUE;
                                 streamingInProgress = FALSE;
                             }
@@ -629,35 +651,40 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
                     }
                 }
                 STRPTR lastJsonString = jsonString;
-                while (jsonString = strstr(jsonString, jsonStart)) {
-                    lastJsonString = jsonString;
-                    if (stream)
-                        jsonString += 6; // Get to the start of the JSON
-                    struct json_object *parsedResponse =
-                        json_tokener_parse(jsonString);
-                    if (parsedResponse != NULL) {
-                        responses[responseIndex++] = parsedResponse;
-                        if (!stream) {
+                if (jsonString != NULL) {
+                    while (jsonString = strstr(jsonString, jsonStart)) {
+                        lastJsonString = jsonString;
+                        if (stream) {
+                            jsonString += 6; // Get to the start of the JSON
+                        }
+                        struct json_object *parsedResponse =
+                            json_tokener_parse(jsonString);
+                        if (parsedResponse != NULL) {
+                            responses[responseIndex++] = parsedResponse;
+                            if (!stream) {
+                                break;
+                            }
+                        } else if (!stream) {
+                            jsonString = NULL;
                             break;
                         }
-                    } else if (!stream) {
-                        jsonString = NULL;
-                        break;
                     }
                 }
 
                 if (stream) {
-                    struct json_object *parsedResponse;
-                    if ((parsedResponse =
-                             json_tokener_parse(lastJsonString + 6)) == NULL) {
-                        snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0",
-                                 lastJsonString);
+                    if (lastJsonString != NULL) {
+                        struct json_object *parsedResponse;
                         if ((parsedResponse =
-                                 json_tokener_parse(lastJsonString)) != NULL) {
-                            responses[responseIndex++] = parsedResponse;
+                                 json_tokener_parse(lastJsonString + 6)) == NULL) {
+                            snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0",
+                                     lastJsonString);
+                            if ((parsedResponse =
+                                     json_tokener_parse(lastJsonString)) != NULL) {
+                                responses[responseIndex++] = parsedResponse;
+                            }
+                        } else {
+                            memset(readBuffer, 0, READ_BUFFER_LENGTH);
                         }
-                    } else {
-                        memset(readBuffer, 0, READ_BUFFER_LENGTH);
                     }
                     doneReading = TRUE;
                 } else if (jsonString != NULL) {
@@ -720,10 +747,12 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
         // streamingInProgress flag to FALSE so that the next request will
         // establish a new connection because OpenAI will close the connection
         // after the stream is finished
-        STRPTR type = json_object_get_string(
-            json_object_object_get(responses[responseIndex - 1], "type"));
-        if (type != NULL && strcmp(type, "response.completed") == 0) {
-            streamingInProgress = FALSE;
+        if (responseIndex > 0 && responses[responseIndex - 1] != NULL) {
+            STRPTR type = json_object_get_string(
+                json_object_object_get(responses[responseIndex - 1], "type"));
+            if (type != NULL && strcmp(type, "response.completed") == 0) {
+                streamingInProgress = FALSE;
+            }
         }
     } else {
         CloseSocket(sock);
@@ -1587,7 +1616,7 @@ APTR postTextToSpeechRequestToOpenAI(
                                     strstr(dataStart, "{");
                                 response = json_tokener_parse(jsonString);
                                 struct json_object *error;
-                                if (json_object_object_get_ex(response, "error",
+                                if (response != NULL && json_object_object_get_ex(response, "error",
                                                               &error)) {
                                     struct json_object *message =
                                         json_object_object_get(error,
