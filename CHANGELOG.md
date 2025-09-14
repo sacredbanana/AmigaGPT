@@ -5,6 +5,7 @@
 - Improve handling of server disconnections
 - Fix occasional crash downloading chat responses
 - Startup script for the daemon in AmigaOS 4 and MorphOS no longer cause errors
+- The say.rexx script now works with the daemon
 
 ## 2.11.1 (2025-09-10)
 
