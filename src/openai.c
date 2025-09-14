@@ -946,7 +946,7 @@ struct json_object *postImageCreationRequestToOpenAI(
                 }
                 enum json_tokener_error jerr;
                 jerr = json_tokener_get_error(tokener);
-                if (jerr != json_tokener_continue) {
+                if (jsonString != NULL && jerr != json_tokener_continue) {
                     response = json_tokener_parse_ex(tokener, jsonString,
                                                      strlen(jsonString));
                 } else {
