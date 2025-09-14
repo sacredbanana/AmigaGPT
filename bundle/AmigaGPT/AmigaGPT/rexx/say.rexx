@@ -42,7 +42,6 @@ END
 /* Show the chosen voice */
 IF INPUT > 0 THEN DO
 	VOICE = WORD(BUTTONS, INPUT)
-	SAY "You selected:" VOICE
 END
 
 ADDRESS VALUE AMIGAGPT_PORT
