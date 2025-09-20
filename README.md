@@ -167,12 +167,13 @@ CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
 #### SPEAKTEXT
 Uses text-to-speech to speak the specified text.
 ```
-SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,P=PROMPT/F
+SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,P=PROMPT/F
 ```
 - `M=MODEL` - Optional, the voice model to use (use LISTVOICEMODELS to see available models)
 - `V=VOICE` - Optional, the voice to use (use LISTVOICES to see available voices)
 - `I=INSTRUCTIONS` - Optional, special instructions for the voice
 - `K=APIKEY` - Optional, your OpenAI API key
+- `O=OUTPUT` - Optional, file to write audio data to instead of playing it
 - `P=PROMPT` - Required, the text to speak
 
 #### List Commands

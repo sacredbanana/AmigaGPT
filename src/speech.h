@@ -43,8 +43,10 @@ LONG initSpeech(enum SpeechSystem speechSystem);
 /**
  * Speak the given text aloud
  * @param text the text to speak
+ * @param output the output file to save the OpenAIaudio to. If NULL, the audio
+ * will be played through AHI.
  **/
-void speakText(STRPTR text);
+void speakText(STRPTR text, CONST_STRPTR output);
 
 /**
  * Close the speech system

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <devices/ahi.h>
 #include <proto/ahi.h>
+#include <proto/dos.h>
 #include <proto/exec.h>
 #ifdef __AMIGAOS3__
 #include <proto/translator.h>
@@ -204,8 +205,10 @@ void closeSpeech() {
 /**
  * Speak the given text aloud
  * @param text the text to speak
+ * @param output the output file to save the OpenAIaudio to. If NULL, the audio
+ * will be played through AHI.
  **/
-void speakText(STRPTR text) {
+void speakText(STRPTR text, CONST_STRPTR output) {
     if (!config.speechEnabled)
         return;
     if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
@@ -249,6 +252,22 @@ void speakText(STRPTR text) {
             audioBuffer[i + 1] = temp;
         }
 #endif
+        if (output) {
+#ifdef __AMIGAOS4__
+            Delete(output);
+#else
+            DeleteFile(output);
+#endif
+            BPTR outputFile = Open(output, MODE_NEWFILE);
+            if (!outputFile) {
+                displayError(STRING_ERROR_FILE_OPEN);
+            } else {
+                Write(outputFile, audioBuffer, audioLength);
+                Close(outputFile);
+            }
+            FreeVec(audioBuffer);
+            return;
+        }
 
         // Create a message port for AHI communication
         AHImp = CreateMsgPort();

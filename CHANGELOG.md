@@ -3,6 +3,8 @@
 ## 2.12.0 (2025-09-20)
 
 - Add "verse" OpenAI voice
+- Add ability for ARexx command "SPEAKTEXT" to save audio to file
+- The say.rexx script now asks if you want to play the audio or save to file
 - Improve display of Text To Speech errors
 
 ## 2.11.2 (2025-09-14)

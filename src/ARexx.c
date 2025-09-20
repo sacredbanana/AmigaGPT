@@ -290,7 +290,8 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     STRPTR voiceString = (STRPTR)arg[1];
     STRPTR instructions = (STRPTR)arg[2];
     STRPTR apiKey = (STRPTR)arg[3];
-    STRPTR prompt = (STRPTR)arg[4];
+    STRPTR output = (STRPTR)arg[4];
+    STRPTR prompt = (STRPTR)arg[5];
 
     if (apiKey == NULL) {
         apiKey = config.openAiApiKey;
@@ -323,7 +324,7 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     config.openAITTSModel = model;
     config.openAITTSVoice = voice;
     config.openAIVoiceInstructions = instructions;
-    speakText(prompt);
+    speakText(prompt, output);
     readConfig();
     set(app, MUIA_Application_RexxString, prompt);
     updateStatusBar(STRING_READY, greenPen);
@@ -335,7 +336,9 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
     set(app, MUIA_Application_RexxString,
         "SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F\n"
         "CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F\n"
-        "SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,P=PROMPT/F\n"
+        "SPEAKTEXT "
+        "M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,P=PROMPT/"
+        "F\n"
         "LISTCHATMODELS\n"
         "LISTIMAGEMODELS\n"
         "LISTIMAGESIZES\n"
@@ -357,7 +360,7 @@ struct MUI_Command arexxList[] = {
      &CreateImageHook,
      {0, 0, 0, 0, 0}},
     {"SPEAKTEXT",
-     "M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,P=PROMPT/F",
+     "M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,P=PROMPT/F",
      5,
      &SpeakTextHook,
      {0, 0, 0, 0, 0}},
