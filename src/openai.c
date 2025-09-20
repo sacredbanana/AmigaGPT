@@ -42,6 +42,7 @@ static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
 static STRPTR base64Encode(CONST_STRPTR input);
 static void drainOpenSslErrorQueue(CONST_STRPTR where);
 static void reportSslError(SSL *s, int ret, CONST_STRPTR where);
+static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage);
 
 struct Library *SocketBase;
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
@@ -165,6 +166,7 @@ CONST_STRPTR OPENAI_TTS_VOICE_NAMES[] = {[OPENAI_TTS_VOICE_ALLOY] = "alloy",
                                          [OPENAI_TTS_VOICE_NOVA] = "nova",
                                          [OPENAI_TTS_VOICE_SAGE] = "sage",
                                          [OPENAI_TTS_VOICE_SHIMMER] = "shimmer",
+                                         [OPENAI_TTS_VOICE_VERSE] = "verse",
                                          NULL};
 
 /**
@@ -611,23 +613,29 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
                 }
                 // Check for error in stream
                 if (stream) {
-                    if (jsonString != NULL && strstr(jsonString, jsonStart) == NULL) {
+                    if (jsonString != NULL &&
+                        strstr(jsonString, jsonStart) == NULL) {
                         jsonString = strstr(jsonString, "{");
                         if (jsonString == NULL) {
                             if (readBuffer != NULL) {
-                                // Check if we can safely read the first character
+                                // Check if we can safely read the first
+                                // character
                                 if (readBuffer[0] != '\0') {
-                                    
-                                    // Use strnlen or manual length calculation to avoid strlen issues with UTF-8
+
+                                    // Use strnlen or manual length calculation
+                                    // to avoid strlen issues with UTF-8
                                     ULONG bufLen = 0;
                                     ULONG maxLen = READ_BUFFER_LENGTH - 1;
-                                    while (bufLen < maxLen && readBuffer[bufLen] != '\0') {
+                                    while (bufLen < maxLen &&
+                                           readBuffer[bufLen] != '\0') {
                                         bufLen++;
                                     }
-                                    
-                                    STRPTR httpResponse = strstr(readBuffer, "HTTP/1.1");
+
+                                    STRPTR httpResponse =
+                                        strstr(readBuffer, "HTTP/1.1");
                                     if (httpResponse != NULL) {
-                                        STRPTR okCheck = strstr(httpResponse, "200 OK");
+                                        STRPTR okCheck =
+                                            strstr(httpResponse, "200 OK");
                                         if (okCheck == NULL) {
                                             UBYTE error[256] = {0};
                                             for (UWORD i = 0; i < 256; i++) {
@@ -674,12 +682,12 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
                 if (stream) {
                     if (lastJsonString != NULL) {
                         struct json_object *parsedResponse;
-                        if ((parsedResponse =
-                                 json_tokener_parse(lastJsonString + 6)) == NULL) {
+                        if ((parsedResponse = json_tokener_parse(
+                                 lastJsonString + 6)) == NULL) {
                             snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0",
                                      lastJsonString);
-                            if ((parsedResponse =
-                                     json_tokener_parse(lastJsonString)) != NULL) {
+                            if ((parsedResponse = json_tokener_parse(
+                                     lastJsonString)) != NULL) {
                                 responses[responseIndex++] = parsedResponse;
                             }
                         } else {
@@ -1559,6 +1567,8 @@ APTR postTextToSpeechRequestToOpenAI(
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 #endif
 
+    BOOL isErrorResponse = FALSE;
+
     if (ssl_err > 0) {
         LONG bytesRead = 0;
         ULONG bytesRemainingInBuffer = 0;
@@ -1616,14 +1626,21 @@ APTR postTextToSpeechRequestToOpenAI(
                                     strstr(dataStart, "{");
                                 response = json_tokener_parse(jsonString);
                                 struct json_object *error;
-                                if (response != NULL && json_object_object_get_ex(response, "error",
+                                if (response != NULL &&
+                                    json_object_object_get_ex(response, "error",
                                                               &error)) {
                                     struct json_object *message =
                                         json_object_object_get(error,
                                                                "message");
-                                    STRPTR messageString =
+                                    STRPTR rawMessageString =
                                         json_object_get_string(message);
-                                    displayError(messageString);
+                                    STRPTR cleanMessage =
+                                        extractUserFriendlyErrorMessage(
+                                            rawMessageString);
+                                    displayError(cleanMessage);
+                                    if (cleanMessage != rawMessageString) {
+                                        FreeVec(cleanMessage);
+                                    }
                                     FreeVec(audioData);
                                     return NULL;
                                 }
@@ -1632,17 +1649,10 @@ APTR postTextToSpeechRequestToOpenAI(
                                     strstr(readBuffer, "HTTP/1.1");
                                 if (httpResponse != NULL &&
                                     strstr(httpResponse, "200 OK") == NULL) {
-                                    UBYTE error[256] = {0};
-                                    for (UWORD i = 0; i < 256; i++) {
-                                        if (httpResponse[i] == '\r' ||
-                                            httpResponse[i] == '\n') {
-                                            break;
-                                        }
-                                        error[i] = httpResponse[i];
-                                    }
-                                    displayError(error);
-                                    FreeVec(audioData);
-                                    return NULL;
+                                    // Mark this as an error response but
+                                    // continue downloading to get the complete
+                                    // JSON error message
+                                    isErrorResponse = TRUE;
                                 }
                             }
                         }
@@ -1827,7 +1837,6 @@ APTR postTextToSpeechRequestToOpenAI(
                     }
                 } else {
                     // Successful reconnection - restart the download
-                    printf("Reconnected - restarting TTS download...\n");
                     *audioLength = 0; // Reset audio length
                     hasReadHeader = FALSE;
                     newChunkNeeded = TRUE;
@@ -1897,6 +1906,41 @@ APTR postTextToSpeechRequestToOpenAI(
         ssl = NULL;
     }
     sock = -1;
+
+    // Check if this was an error response and parse JSON error message
+    if (isErrorResponse && *audioLength > 0) {
+        // Try to parse the downloaded data as JSON error response
+        STRPTR jsonStart = strstr((STRPTR)audioData, "{");
+        if (jsonStart != NULL) {
+            struct json_object *errorResponse = json_tokener_parse(jsonStart);
+            if (errorResponse != NULL) {
+                struct json_object *error;
+                if (json_object_object_get_ex(errorResponse, "error", &error)) {
+                    struct json_object *message =
+                        json_object_object_get(error, "message");
+                    if (message != NULL) {
+                        STRPTR rawMessageString =
+                            json_object_get_string(message);
+                        STRPTR cleanMessage =
+                            extractUserFriendlyErrorMessage(rawMessageString);
+                        displayError(cleanMessage);
+                        if (cleanMessage != rawMessageString) {
+                            FreeVec(cleanMessage); // Free the allocated clean
+                                                   // message
+                        }
+                        json_object_put(errorResponse);
+                        FreeVec(audioData);
+                        return NULL;
+                    }
+                }
+                json_object_put(errorResponse);
+            }
+        }
+        // If we couldn't parse the JSON error, show a generic error
+        displayError("HTTP error occurred but could not parse error details");
+        FreeVec(audioData);
+        return NULL;
+    }
 
     updateStatusBar(STRING_DOWNLOAD_COMPLETE, greenPen);
 
@@ -1984,4 +2028,40 @@ static STRPTR base64Encode(CONST_STRPTR input) {
         *p++ = '=';
     }
     return encoded;
+}
+
+/**
+ * Extract user-friendly error message from OpenAI validation error
+ * @param rawMessage The raw error message from OpenAI API
+ * @return A user-friendly error message, or the original if parsing fails
+ */
+static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage) {
+    if (rawMessage == NULL) {
+        return "Unknown error occurred";
+    }
+
+    // Look for the 'msg': pattern in validation errors
+    STRPTR msgStart = strstr(rawMessage, "'msg': \"");
+    if (msgStart != NULL) {
+        msgStart += 8; // Skip past "'msg': \""
+        STRPTR msgEnd = strstr(msgStart, "\"");
+        if (msgEnd != NULL) {
+            // Calculate length and create a copy
+            ULONG msgLength = msgEnd - msgStart;
+            STRPTR cleanMessage = AllocVec(msgLength + 1, MEMF_ANY);
+            if (cleanMessage != NULL) {
+                strncpy(cleanMessage, msgStart, msgLength);
+                cleanMessage[msgLength] = '\0';
+                return cleanMessage;
+            }
+        }
+    }
+
+    // Fallback: return a copy of the original message
+    ULONG originalLength = strlen(rawMessage);
+    STRPTR messageCopy = AllocVec(originalLength + 1, MEMF_ANY);
+    if (messageCopy != NULL) {
+        strcpy(messageCopy, rawMessage);
+    }
+    return messageCopy;
 }

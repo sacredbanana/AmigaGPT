@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.12.0 (2025-09-20)
+
+- Add "verse" OpenAI voice
+- Improve display of Text To Speech errors
+
 ## 2.11.2 (2025-09-14)
 
 - Improve handling of server disconnections
