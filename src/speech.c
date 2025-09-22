@@ -3,6 +3,7 @@
 #include <proto/ahi.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
+#include <string.h>
 #ifdef __AMIGAOS3__
 #include <proto/translator.h>
 #include <devices/narrator.h>
@@ -53,6 +54,18 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
                                       [SPEECH_SYSTEM_OPENAI] =
                                           "OpenAI Text To Speech",
                                       NULL};
+
+/**
+ * The names of the audio formats
+ * @see AudioFormat
+ **/
+const STRPTR AUDIO_FORMAT_NAMES[] = {[AUDIO_FORMAT_PCM] = "pcm",
+                                     [AUDIO_FORMAT_MP3] = "mp3",
+                                     [AUDIO_FORMAT_OPUS] = "opus",
+                                     [AUDIO_FORMAT_WAV] = "wav",
+                                     [AUDIO_FORMAT_AAC] = "aac",
+                                     [AUDIO_FORMAT_FLAC] = "flac",
+                                     NULL};
 
 /**
  * Initialise the speech system
@@ -205,54 +218,64 @@ void closeSpeech() {
 /**
  * Speak the given text aloud
  * @param text the text to speak
- * @param output the output file to save the OpenAIaudio to. If NULL, the audio
+ * @param output the output file to save the OpenAI audio to. If NULL, the audio
  * will be played through AHI.
+ * @param audioFormat the audio format to save the audio to
  **/
-void speakText(STRPTR text, CONST_STRPTR output) {
-    if (!config.speechEnabled)
-        return;
+void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
     if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
         struct MsgPort *AHImp;
         struct AHIRequest *ahiRequest;
         BYTE ahiError;
         ULONG audioLength;
+
+        AudioFormat defaultAudioFormatForPlayback = AUDIO_FORMAT_PCM;
+
+        if (output == NULL || strlen(output) == 0) {
+            audioFormat = &defaultAudioFormatForPlayback;
+        }
+
         UBYTE *audioBuffer = postTextToSpeechRequestToOpenAI(
             text, config.openAITTSModel, config.openAITTSVoice,
             config.openAIVoiceInstructions, config.openAiApiKey, &audioLength,
             config.proxyEnabled, config.proxyHost, config.proxyPort,
             config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
-            config.proxyPassword);
+            config.proxyPassword, audioFormat);
         if (!audioBuffer) {
             return;
         }
+
+        if (audioFormat == NULL || *audioFormat == AUDIO_FORMAT_PCM) {
 // Convert to big endian
 #ifdef __AMIGAOS3__
-        __asm__ __volatile__(
-            "lea %a1, %%a0\n"   // Load buffer address into A0
-            "move.l %0, %%d1\n" // Load fileSize into D1
-            "lsr.l #1, %%d1\n"  // fileSize / 2, since we're processing 2 bytes
-                                // at a time
+            __asm__ __volatile__(
+                "lea %a1, %%a0\n"   // Load buffer address into A0
+                "move.l %0, %%d1\n" // Load fileSize into D1
+                "lsr.l #1, %%d1\n"  // fileSize / 2, since we're processing 2
+                                    // bytes at a time
 
-            "1:\n"
-            "move.w (%%a0), %%d0\n"  // Load the word from the buffer into D0
-            "rol.w #8, %%d0\n"       // Rotate left by 8 bits to swap the bytes
-            "move.w %%d0, (%%a0)+\n" // Store the swapped word back and
-                                     // increment address
-            "subq.l #1, %%d1\n"      // Decrement counter
-            "bne.b 1b\n"             // Repeat if not done
+                "1:\n"
+                "move.w (%%a0), %%d0\n" // Load the word from the buffer into D0
+                "rol.w #8, %%d0\n" // Rotate left by 8 bits to swap the bytes
+                "move.w %%d0, (%%a0)+\n" // Store the swapped word back and
+                                         // increment address
+                "subq.l #1, %%d1\n"      // Decrement counter
+                "bne.b 1b\n"             // Repeat if not done
 
-            :                                    // No output operands
-            : "d"(audioLength), "a"(audioBuffer) // Input operands
-            : "d0", "d1", "a0", "memory"         // Clobber list
-        );
+                :                                    // No output operands
+                : "d"(audioLength), "a"(audioBuffer) // Input operands
+                : "d0", "d1", "a0", "memory"         // Clobber list
+            );
 #else
-        for (ULONG i = 0; i < audioLength - 1; i += 2) {
-            UBYTE temp = audioBuffer[i];
-            audioBuffer[i] = audioBuffer[i + 1];
-            audioBuffer[i + 1] = temp;
-        }
+            for (ULONG i = 0; i < audioLength - 1; i += 2) {
+                UBYTE temp = audioBuffer[i];
+                audioBuffer[i] = audioBuffer[i + 1];
+                audioBuffer[i + 1] = temp;
+            }
 #endif
-        if (output) {
+        }
+
+        if (output != NULL && strlen(output) > 0) {
 #ifdef __AMIGAOS4__
             Delete(output);
 #else

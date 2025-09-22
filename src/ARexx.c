@@ -3,6 +3,7 @@
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
 #include "ARexx.h"
 #include "gui.h"
@@ -25,12 +26,12 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         apiKey = config.openAiApiKey;
     }
     ChatModel model;
-    if (modelString == NULL) {
-        model = config.chatModel;
+    if (modelString == NULL || strlen(modelString) == 0) {
+        model = GPT_5_MINI;
     } else {
         for (UBYTE i = 0; CHAT_MODEL_NAMES[i] != NULL; i++) {
             if (CHAT_MODEL_NAMES[i + 1] == NULL) {
-                return (RETURN_ERROR);
+                return RETURN_ERROR;
             }
             if (strcmp(modelString, CHAT_MODEL_NAMES[i]) == 0) {
                 model = i;
@@ -55,7 +56,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
         freeConversation(conversation);
         updateStatusBar(STRING_ERROR, redPen);
-        return (RETURN_ERROR);
+        return RETURN_ERROR;
     }
     struct json_object *response = responses[0];
 
@@ -74,12 +75,12 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         FreeVec(responses);
         freeConversation(conversation);
         updateStatusBar(STRING_READY, greenPen);
-        return (RETURN_OK);
+        return RETURN_OK;
     }
     FreeVec(responses);
     freeConversation(conversation);
     updateStatusBar(STRING_ERROR, redPen);
-    return (RETURN_ERROR);
+    return RETURN_ERROR;
 }
 MakeHook(SendMessageHook, SendMessageFunc);
 
@@ -90,13 +91,13 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     STRPTR destination = (STRPTR)arg[3];
     STRPTR prompt = (STRPTR)arg[4];
 
-    if (apiKey == NULL) {
+    if (apiKey == NULL || strlen(apiKey) == 0) {
         apiKey = config.openAiApiKey;
     }
 
     ImageModel model;
-    if (modelString == NULL) {
-        model = config.imageModel;
+    if (modelString == NULL || strlen(modelString) == 0) {
+        model = GPT_IMAGE_1;
     } else {
         for (UBYTE i = 0; IMAGE_MODEL_NAMES[i] != NULL; i++) {
             if (IMAGE_MODEL_NAMES[i + 1] == NULL) {
@@ -108,24 +109,11 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
             }
         }
     }
-    ImageSize size;
-    if (sizeString == NULL) {
-        switch (model) {
-        case DALL_E_2:
-            size = config.imageSizeDallE2;
-            break;
-        case DALL_E_3:
-            size = config.imageSizeDallE3;
-            break;
-        default:
-            size = config.imageSizeGptImage1;
-            break;
-        }
-    } else {
+    ImageSize size = IMAGE_SIZE_1024x1024;
+    if (sizeString != NULL && strlen(sizeString) > 0) {
         // Set a default size in case no match is found
         switch (model) {
         case DALL_E_2:
-            size = IMAGE_SIZES_DALL_E_2[0];
             for (UBYTE i = 0; IMAGE_SIZES_DALL_E_2[i] != IMAGE_SIZE_NULL; i++) {
                 ImageSize currentSize = IMAGE_SIZES_DALL_E_2[i];
                 if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
@@ -135,7 +123,6 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
             }
             break;
         case DALL_E_3:
-            size = IMAGE_SIZES_DALL_E_3[0];
             for (UBYTE i = 0; IMAGE_SIZES_DALL_E_3[i] != IMAGE_SIZE_NULL; i++) {
                 ImageSize currentSize = IMAGE_SIZES_DALL_E_3[i];
                 if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
@@ -145,7 +132,6 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
             }
             break;
         default:
-            size = IMAGE_SIZE_AUTO;
             for (UBYTE i = 0; IMAGE_SIZES_GPT_IMAGE_1[i] != IMAGE_SIZE_NULL;
                  i++) {
                 ImageSize currentSize = IMAGE_SIZES_GPT_IMAGE_1[i];
@@ -169,14 +155,14 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     if (response == NULL) {
         printf(STRING_ERROR_CONNECTION);
         updateStatusBar(STRING_ERROR, redPen);
-        return (RETURN_ERROR);
+        return RETURN_ERROR;
     }
 
     struct json_object *error;
     if (json_object_object_get_ex(response, "error", &error)) {
         json_object_put(response);
         updateStatusBar(STRING_ERROR, redPen);
-        return (RETURN_ERROR);
+        return RETURN_ERROR;
     }
 
     struct array_list *data =
@@ -210,7 +196,7 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     json_object_put(response);
     updateStatusBar(STRING_READY, greenPen);
     set(app, MUIA_Application_RexxString, destination);
-    return (RETURN_OK);
+    return RETURN_OK;
 }
 MakeHook(CreateImageHook, CreateImageFunc);
 
@@ -222,7 +208,7 @@ HOOKPROTONHNO(ListChatModelsFunc, APTR, ULONG *arg) {
     }
     set(app, MUIA_Application_RexxString, models);
     FreeVec(models);
-    return (RETURN_OK);
+    return RETURN_OK;
 }
 MakeHook(ListChatModelsHook, ListChatModelsFunc);
 
@@ -234,7 +220,7 @@ HOOKPROTONHNO(ListImageModelsFunc, APTR, ULONG *arg) {
     }
     set(app, MUIA_Application_RexxString, models);
     FreeVec(models);
-    return (RETURN_OK);
+    return RETURN_OK;
 }
 MakeHook(ListImageModelsHook, ListImageModelsFunc);
 
@@ -257,7 +243,7 @@ HOOKPROTONHNO(ListImageSizesFunc, APTR, ULONG *arg) {
     }
     set(app, MUIA_Application_RexxString, sizes);
     FreeVec(sizes);
-    return (RETURN_OK);
+    return RETURN_OK;
 }
 MakeHook(ListImageSizesHook, ListImageSizesFunc);
 
@@ -269,7 +255,7 @@ HOOKPROTONHNO(ListVoiceModelsFunc, APTR, ULONG *arg) {
     }
     set(app, MUIA_Application_RexxString, models);
     FreeVec(models);
-    return (RETURN_OK);
+    return RETURN_OK;
 }
 MakeHook(ListVoiceModelsHook, ListVoiceModelsFunc);
 
@@ -281,9 +267,21 @@ HOOKPROTONHNO(ListVoicesFunc, APTR, ULONG *arg) {
     }
     set(app, MUIA_Application_RexxString, voices);
     FreeVec(voices);
-    return (RETURN_OK);
+    return RETURN_OK;
 }
 MakeHook(ListVoicesHook, ListVoicesFunc);
+
+HOOKPROTONHNO(ListAudioFormatsFunc, APTR, ULONG *arg) {
+    STRPTR formats = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
+    for (UBYTE i = 0; AUDIO_FORMAT_NAMES[i] != NULL; i++) {
+        strncat(formats, AUDIO_FORMAT_NAMES[i], 1024);
+        strncat(formats, "\n", 1024);
+    }
+    set(app, MUIA_Application_RexxString, formats);
+    FreeVec(formats);
+    return RETURN_OK;
+}
+MakeHook(ListAudioFormatsHook, ListAudioFormatsFunc);
 
 HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     STRPTR modelString = (STRPTR)arg[0];
@@ -291,44 +289,58 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     STRPTR instructions = (STRPTR)arg[2];
     STRPTR apiKey = (STRPTR)arg[3];
     STRPTR output = (STRPTR)arg[4];
-    STRPTR prompt = (STRPTR)arg[5];
+    STRPTR audioFormatString = (STRPTR)arg[5];
+    STRPTR prompt = (STRPTR)arg[6];
 
-    if (apiKey == NULL) {
+    if (apiKey == NULL || strlen(apiKey) == 0) {
         apiKey = config.openAiApiKey;
     }
     OpenAITTSModel model;
-    if (modelString == NULL) {
-        model = config.openAITTSModel;
+    if (modelString == NULL || strlen(modelString) == 0) {
+        model = OPENAI_TTS_MODEL_GPT_4o_MINI_TTS;
     } else {
         for (UBYTE i = 0; OPENAI_TTS_MODEL_NAMES[i] != NULL; i++) {
-            if (strcmp(modelString, OPENAI_TTS_MODEL_NAMES[i]) == 0) {
+            if (strcasecmp(modelString, OPENAI_TTS_MODEL_NAMES[i]) == 0) {
                 model = i;
                 break;
             }
         }
     }
     OpenAITTSVoice voice;
-    if (voiceString == NULL) {
-        voice = config.openAITTSVoice;
+    if (voiceString == NULL || strlen(voiceString) == 0) {
+        voice = OPENAI_TTS_VOICE_ALLOY;
     } else {
         for (UBYTE i = 0; OPENAI_TTS_VOICE_NAMES[i] != NULL; i++) {
-            if (strcmp(voiceString, OPENAI_TTS_VOICE_NAMES[i]) == 0) {
+            if (strcasecmp(voiceString, OPENAI_TTS_VOICE_NAMES[i]) == 0) {
                 voice = i;
                 break;
             }
         }
     }
-    config.speechEnabled = TRUE;
+    AudioFormat audioFormat;
+    if (audioFormatString == NULL || strlen(audioFormatString) == 0) {
+        audioFormat = AUDIO_FORMAT_MP3;
+    } else {
+        for (UBYTE i = 0; AUDIO_FORMAT_NAMES[i] != NULL; i++) {
+            printf("AUDIO_FORMAT_NAMES[%d]: %s\n", i, AUDIO_FORMAT_NAMES[i]);
+            if (strcasecmp(audioFormatString, AUDIO_FORMAT_NAMES[i]) == 0) {
+                audioFormat = i;
+                break;
+            }
+        }
+    }
+
+    writeConfig();
     config.openAiApiKey = apiKey;
     config.speechSystem = SPEECH_SYSTEM_OPENAI;
     config.openAITTSModel = model;
     config.openAITTSVoice = voice;
     config.openAIVoiceInstructions = instructions;
-    speakText(prompt, output);
+    speakText(prompt, output, &audioFormat);
     readConfig();
     set(app, MUIA_Application_RexxString, prompt);
     updateStatusBar(STRING_READY, greenPen);
-    return (RETURN_OK);
+    return RETURN_OK;
 }
 MakeHook(SpeakTextHook, SpeakTextFunc);
 
@@ -339,12 +351,13 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
         "SPEAKTEXT "
         "M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,P=PROMPT/"
         "F\n"
+        "LISTAUDIOFORMATS\n"
         "LISTCHATMODELS\n"
         "LISTIMAGEMODELS\n"
         "LISTIMAGESIZES\n"
         "LISTVOICEMODELS\n"
         "LISTVOICES\n");
-    return (RETURN_OK);
+    return RETURN_OK;
 }
 MakeHook(HelpHook, HelpFunc);
 
@@ -360,10 +373,12 @@ struct MUI_Command arexxList[] = {
      &CreateImageHook,
      {0, 0, 0, 0, 0}},
     {"SPEAKTEXT",
-     "M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,P=PROMPT/F",
+     "M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,F=FORMAT/"
+     "K,P=PROMPT/F",
      5,
      &SpeakTextHook,
      {0, 0, 0, 0, 0}},
+    {"LISTAUDIOFORMATS", NULL, NULL, &ListAudioFormatsHook, {0, 0, 0, 0, 0}},
     {"LISTCHATMODELS", NULL, NULL, &ListChatModelsHook, {0, 0, 0, 0, 0}},
     {"LISTIMAGEMODELS", NULL, NULL, &ListImageModelsHook, {0, 0, 0, 0, 0}},
     {"LISTIMAGESIZES", NULL, NULL, &ListImageSizesHook, {0, 0, 0, 0, 0}},

@@ -148,9 +148,9 @@ Sends a message to the OpenAI API and returns the response.
 ```
 SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F
 ```
-- `M=MODEL` - Optional, the chat model to use (use LISTCHATMODELS to see available models)
+- `M=MODEL` - Optional, the chat model to use (use LISTCHATMODELS to see available models). Default is gpt-5-mini
 - `S=SYSTEM` - Optional, system message to include
-- `K=APIKEY` - Optional, your OpenAI API key (uses the saved key if not specified)
+- `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
 - `P=PROMPT` - Required, the prompt or question to send
 
 #### CREATEIMAGE
@@ -158,25 +158,27 @@ Generates an image using the specified model.
 ```
 CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
 ```
-- `M=MODEL` - Optional, the image model to use (use LISTIMAGEMODELS to see available models)
-- `S=SIZE` - Optional, image size (use LISTIMAGESIZES to see available sizes)
-- `K=APIKEY` - Optional, your OpenAI API key
-- `D=DESTINATION` - Optional, the path where the image will be saved
+- `M=MODEL` - Optional, the image model to use (use LISTIMAGEMODELS to see available models). Default is gpt-image-1
+- `S=SIZE` - Optional, image size (use LISTIMAGESIZES to see available sizes). Default is 1024x1024
+- `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
+- `D=DESTINATION` - Optional, the path where the image will be saved. Default is the creation of a temporary file. The destination will be the returned string from this function
 - `P=PROMPT` - Required, description of the image to generate
 
 #### SPEAKTEXT
 Uses text-to-speech to speak the specified text.
 ```
-SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,P=PROMPT/F
+SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,F=FORMAT/K,P=PROMPT/F
 ```
-- `M=MODEL` - Optional, the voice model to use (use LISTVOICEMODELS to see available models)
-- `V=VOICE` - Optional, the voice to use (use LISTVOICES to see available voices)
+- `M=MODEL` - Optional, the voice model to use (use LISTVOICEMODELS to see available models). Default is gpt-4o-mini-tts
+- `V=VOICE` - Optional, the voice to use (use LISTVOICES to see available voices). Default is alloy
 - `I=INSTRUCTIONS` - Optional, special instructions for the voice
-- `K=APIKEY` - Optional, your OpenAI API key
+- `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
 - `O=OUTPUT` - Optional, file to write audio data to instead of playing it
+- `F=FORMAT` - Optional, format of output file (use LISTAUDIOFORMATS to see available formats). Default is MP3 and ignored if OUTPUT is not provided
 - `P=PROMPT` - Required, the text to speak
 
 #### List Commands
+- `LISTAUDIOFORMATS` - Lists all available audio formats for saving audio files
 - `LISTCHATMODELS` - Lists all available chat models
 - `LISTIMAGEMODELS` - Lists all available image models
 - `LISTIMAGESIZES` - Lists all available image sizes

@@ -24,8 +24,6 @@ END
 
 PROMPT = INPUT
 
-SAY PROMPT
-
 /* Get the list of voices */
 ADDRESS VALUE AMIGAGPT_PORT
 'LISTVOICES'
@@ -41,12 +39,13 @@ IF OPEN(HANDLE,"T:AmigaGPTInput",'r') THEN DO
 	'Delete T:AmigaGPTInput QUIET'
 END
 
-/* Show the chosen voice */
-IF INPUT > 0 THEN DO
-	VOICE = WORD(BUTTONS, INPUT)
+IF INPUT == 0 THEN DO
+	EXIT 0
 END
 
-'REQUESTCHOICE  >T:AmigaGPTInput "Select Mode" "Play the audio out loud or save the audio to a file?" "Play audio" "Write to file"'
+VOICE = WORD(BUTTONS, INPUT)
+
+'REQUESTCHOICE  >T:AmigaGPTInput "Select Mode" "Play the audio out loud or save the audio to a file?" "Play audio" "Write to file" "Cancel"'
 
 IF OPEN(HANDLE,"T:AmigaGPTInput",'r') THEN DO
 	INPUT = READLN(HANDLE)
@@ -54,17 +53,41 @@ IF OPEN(HANDLE,"T:AmigaGPTInput",'r') THEN DO
 	'Delete T:AmigaGPTInput QUIET'
 END
 
-MODE = INPUT
+IF INPUT == 0 THEN DO
+	EXIT 0
+END
 
-SAY MODE
+MODE = INPUT
 
 IF MODE == 1 THEN DO
 	ADDRESS VALUE AMIGAGPT_PORT
 	'SPEAKTEXT V='VOICE 'P='PROMPT
 END
 
-IF MODE == 0 THEN DO
-	'REQUESTFILE >T:AmigaGPTInput DRAWER SYS: TITLE "Save voice clip" NOICONS'
+IF MODE == 2 THEN DO
+	/* Get the list of audio formats */
+	ADDRESS VALUE AMIGAGPT_PORT
+	'LISTAUDIOFORMATS'
+	AUDIO_FORMATS = RESULT
+	BUTTONS = TRANSLATE(AUDIO_FORMATS, ", ", '0A'X)
+
+
+	ADDRESS COMMAND
+	'REQUESTCHOICE  >T:AmigaGPTInput "Select Audio Format" "Choose an audio format from the list:" 'BUTTONS' "Cancel"'
+
+	IF OPEN(HANDLE,"T:AmigaGPTInput",'r') THEN DO
+		INPUT = READLN(HANDLE)
+		CALL CLOSE(HANDLE)
+		'Delete T:AmigaGPTInput QUIET'
+	END
+
+	IF INPUT == 0 THEN DO
+		EXIT 0
+	END
+
+	AUDIO_FORMAT = WORD(BUTTONS, INPUT)
+
+	'REQUESTFILE >T:AmigaGPTInput DRAWER SYS: FILE "audio.'AUDIO_FORMAT'" TITLE "Save voice clip" POSITIVE "Save" NEGATIVE "Cancel" SAVEMODE NOICONS'
 	IF OPEN(HANDLE,"T:AmigaGPTInput",'r') THEN DO
 		INPUT = READLN(HANDLE)
 		CALL CLOSE(HANDLE)
@@ -74,7 +97,7 @@ IF MODE == 0 THEN DO
 	OUTPUT = INPUT
 
 	ADDRESS VALUE AMIGAGPT_PORT
-	'SPEAKTEXT V='VOICE 'O='OUTPUT 'P='PROMPT
+	'SPEAKTEXT V='VOICE 'O='OUTPUT 'F='AUDIO_FORMAT 'P='PROMPT
 END
 
 EXIT 0

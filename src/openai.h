@@ -1,5 +1,6 @@
 #include <libraries/codesets.h>
 #include <proto/dos.h>
+#include "speech.h"
 
 #define READ_BUFFER_LENGTH 65536
 #define TEMP_READ_BUFFER_LENGTH READ_BUFFER_LENGTH / 2
@@ -262,6 +263,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
+ * @param audioFormat the audio format to use
  * @return a pointer to a buffer containing the audio data or NULL -- Free it
  *with FreeVec() when you are done using it
  **/
@@ -271,7 +273,7 @@ APTR postTextToSpeechRequestToOpenAI(
     CONST_STRPTR openAiApiKey, ULONG *audioLength, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword);
+    CONST_STRPTR proxyPassword, AudioFormat *audioFormat);
 
 /**
  * Cleanup the OpenAI connector and free all resources

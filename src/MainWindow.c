@@ -1374,7 +1374,7 @@ static void sendChatMessage() {
                             if (config.speechSystem != SPEECH_SYSTEM_OPENAI) {
                                 speakText(unformattedMessageSystemEncoded +
                                               speechIndex,
-                                          NULL);
+                                          NULL, NULL);
                             }
                             speechIndex =
                                 strlen(unformattedMessageSystemEncoded);
@@ -1404,12 +1404,13 @@ static void sendChatMessage() {
 
         if (config.speechEnabled) {
             if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
-                speakText(receivedMessage, NULL);
+                speakText(receivedMessage, NULL, AUDIO_FORMAT_PCM);
             } else {
                 STRPTR receivedMessageSystemEncoded = CodesetsUTF8ToStr(
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                     (Tag)receivedMessage, CSA_MapForeignChars, TRUE, TAG_DONE);
-                speakText(receivedMessageSystemEncoded + speechIndex, NULL);
+                speakText(receivedMessageSystemEncoded + speechIndex, NULL,
+                          NULL);
                 CodesetsFreeA(receivedMessageSystemEncoded, NULL);
             }
         }

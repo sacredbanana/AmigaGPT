@@ -1,3 +1,6 @@
+#ifndef SPEECH_H
+#define SPEECH_H
+
 #include <proto/dos.h>
 
 /**
@@ -34,6 +37,24 @@ typedef enum {
 extern const STRPTR SPEECH_FLITE_VOICE_NAMES[];
 
 /**
+ * The audio format
+ **/
+typedef enum {
+    AUDIO_FORMAT_PCM = 0L,
+    AUDIO_FORMAT_MP3,
+    AUDIO_FORMAT_OPUS,
+    AUDIO_FORMAT_WAV,
+    AUDIO_FORMAT_AAC,
+    AUDIO_FORMAT_FLAC
+} AudioFormat;
+
+/**
+ * The names of the audio formats
+ * @see AudioFormat
+ **/
+extern const STRPTR AUDIO_FORMAT_NAMES[];
+
+/**
  * Initialise the speech system
  * @param speechSystem the speech system to use
  * @return RETURN_OK on success, RETURN_ERROR on failure
@@ -43,12 +64,15 @@ LONG initSpeech(SpeechSystem speechSystem);
 /**
  * Speak the given text aloud
  * @param text the text to speak
- * @param output the output file to save the OpenAIaudio to. If NULL, the audio
+ * @param output the output file to save the OpenAI audio to. If NULL, the audio
  * will be played through AHI.
+ * @param audioFormat the audio format to save the audio to
  **/
-void speakText(STRPTR text, CONST_STRPTR output);
+void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat);
 
 /**
  * Close the speech system
  **/
 void closeSpeech();
+
+#endif // SPEECH_H

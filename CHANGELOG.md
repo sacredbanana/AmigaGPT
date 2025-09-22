@@ -1,11 +1,12 @@
 # Changelog
 
-## 2.12.0 (2025-09-20)
+## 2.12.0 (2025-09-22)
 
 - Add "verse" OpenAI voice
-- Add ability for ARexx command "SPEAKTEXT" to save audio to file
-- The say.rexx script now asks if you want to play the audio or save to file
+- Add ability for ARexx command "SPEAKTEXT" to save audio to file of various audio formats
+- The say.rexx script now asks if you want to play the audio or save to a file with audio format selection
 - Improve display of Text To Speech errors
+- Most ARexx parameters now use sensible defaults instead of reading from AmigaGPT config
 
 ## 2.11.2 (2025-09-14)
 

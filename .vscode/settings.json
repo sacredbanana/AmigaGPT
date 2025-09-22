@@ -109,7 +109,9 @@
         "guigfx_mcc.h": "c",
         "printer.h": "c",
         "prtbase.h": "c",
-        "busy_mcc.h": "c"
+        "busy_mcc.h": "c",
+        "time.h": "c",
+        "strings.h": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",
