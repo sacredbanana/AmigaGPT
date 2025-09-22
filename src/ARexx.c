@@ -24,7 +24,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     if (apiKey == NULL) {
         apiKey = config.openAiApiKey;
     }
-    enum ChatModel model;
+    ChatModel model;
     if (modelString == NULL) {
         model = config.chatModel;
     } else {
@@ -94,7 +94,7 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
         apiKey = config.openAiApiKey;
     }
 
-    enum ImageModel model;
+    ImageModel model;
     if (modelString == NULL) {
         model = config.imageModel;
     } else {
@@ -108,7 +108,7 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
             }
         }
     }
-    enum ImageSize size;
+    ImageSize size;
     if (sizeString == NULL) {
         switch (model) {
         case DALL_E_2:
@@ -127,7 +127,7 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
         case DALL_E_2:
             size = IMAGE_SIZES_DALL_E_2[0];
             for (UBYTE i = 0; IMAGE_SIZES_DALL_E_2[i] != IMAGE_SIZE_NULL; i++) {
-                enum ImageSize currentSize = IMAGE_SIZES_DALL_E_2[i];
+                ImageSize currentSize = IMAGE_SIZES_DALL_E_2[i];
                 if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
                     size = currentSize;
                     break;
@@ -137,7 +137,7 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
         case DALL_E_3:
             size = IMAGE_SIZES_DALL_E_3[0];
             for (UBYTE i = 0; IMAGE_SIZES_DALL_E_3[i] != IMAGE_SIZE_NULL; i++) {
-                enum ImageSize currentSize = IMAGE_SIZES_DALL_E_3[i];
+                ImageSize currentSize = IMAGE_SIZES_DALL_E_3[i];
                 if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
                     size = currentSize;
                     break;
@@ -148,7 +148,7 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
             size = IMAGE_SIZE_AUTO;
             for (UBYTE i = 0; IMAGE_SIZES_GPT_IMAGE_1[i] != IMAGE_SIZE_NULL;
                  i++) {
-                enum ImageSize currentSize = IMAGE_SIZES_GPT_IMAGE_1[i];
+                ImageSize currentSize = IMAGE_SIZES_GPT_IMAGE_1[i];
                 if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
                     size = currentSize;
                     break;
@@ -296,7 +296,7 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     if (apiKey == NULL) {
         apiKey = config.openAiApiKey;
     }
-    enum OpenAITTSModel model;
+    OpenAITTSModel model;
     if (modelString == NULL) {
         model = config.openAITTSModel;
     } else {
@@ -307,7 +307,7 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
             }
         }
     }
-    enum OpenAITTSVoice voice;
+    OpenAITTSVoice voice;
     if (voiceString == NULL) {
         voice = config.openAITTSVoice;
     } else {

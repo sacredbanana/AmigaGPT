@@ -66,7 +66,7 @@ HOOKPROTONHNONP(AboutAmigaGPTMenuItemClickedFunc, void) {
 MakeHook(AboutAmigaGPTMenuItemClickedHook, AboutAmigaGPTMenuItemClickedFunc);
 
 HOOKPROTONHNO(SpeechSystemMenuItemClickedFunc, void,
-              enum SpeechSystem *speechSystem) {
+              SpeechSystem *speechSystem) {
     closeSpeech();
     config.speechSystem = *speechSystem;
     if (initSpeech(*speechSystem) == RETURN_ERROR) {
@@ -896,7 +896,7 @@ static void populateOpenAIMenu() {
 
     // Populate the image size menu with the sizes
     for (UBYTE i = 0; IMAGE_SIZES_DALL_E_2[i] != IMAGE_SIZE_NULL; i++) {
-        enum ImageSize imageSize = IMAGE_SIZES_DALL_E_2[i];
+        ImageSize imageSize = IMAGE_SIZES_DALL_E_2[i];
         Object *newImageSizeDallE2MenuItem = MenuitemObject,
                MUIA_Menuitem_Title, IMAGE_SIZE_NAMES[imageSize],
                MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
@@ -924,7 +924,7 @@ static void populateOpenAIMenu() {
 
     // Populate the image size menu with the sizes
     for (UBYTE i = 0; IMAGE_SIZES_DALL_E_3[i] != IMAGE_SIZE_NULL; i++) {
-        enum ImageSize imageSize = IMAGE_SIZES_DALL_E_3[i];
+        ImageSize imageSize = IMAGE_SIZES_DALL_E_3[i];
         Object *newImageSizeDallE3MenuItem = MenuitemObject,
                MUIA_Menuitem_Title, IMAGE_SIZE_NAMES[imageSize],
                MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
@@ -952,7 +952,7 @@ static void populateOpenAIMenu() {
 
     // Populate the image size menu with the sizes
     for (UBYTE i = 0; IMAGE_SIZES_GPT_IMAGE_1[i] != IMAGE_SIZE_NULL; i++) {
-        enum ImageSize imageSize = IMAGE_SIZES_GPT_IMAGE_1[i];
+        ImageSize imageSize = IMAGE_SIZES_GPT_IMAGE_1[i];
         Object *newImageSizeGptImage1MenuItem = MenuitemObject,
                MUIA_Menuitem_Title, IMAGE_SIZE_NAMES[imageSize],
                MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,

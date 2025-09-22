@@ -34,7 +34,7 @@ struct FliteVoice *voice = NULL;
 
 /**
  * The names of the speech voices
- * @see enum SpeechFliteVoice
+ * @see SpeechFliteVoice
  **/
 const STRPTR SPEECH_FLITE_VOICE_NAMES[] = {
     [SPEECH_FLITE_VOICE_KAL] = "kal", [SPEECH_FLITE_VOICE_KAL16] = "kal16",
@@ -45,7 +45,7 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size);
 
 /**
  * The names of the speech systems
- * @see enum SpeechSystem
+ * @see SpeechSystem
  **/
 const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
                                       [SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
@@ -59,7 +59,7 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
  * @param speechSystem the speech system to use
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
-LONG initSpeech(enum SpeechSystem speechSystem) {
+LONG initSpeech(SpeechSystem speechSystem) {
     if (speechSystem == SPEECH_SYSTEM_OPENAI)
         return RETURN_OK;
 #ifdef __AMIGAOS3__

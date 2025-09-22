@@ -37,7 +37,7 @@ static BPTR GetStdErr();
 static LONG createSSLContext();
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
-static STRPTR getModelName(enum ChatModel model);
+static STRPTR getModelName(ChatModel model);
 static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
 static STRPTR base64Encode(CONST_STRPTR input);
 static void drainOpenSslErrorQueue(CONST_STRPTR where);
@@ -69,7 +69,7 @@ ULONG RangeSeed;
 
 /**
  * The names of the chat models
- * @see enum ChatModel
+ * @see ChatModel
  **/
 CONST_STRPTR CHAT_MODEL_NAMES[] = {[CHATGPT_5_LATEST] = "gpt-5-chat-latest",
                                    [GPT_3_5_TURBO] = "gpt-3.5-turbo",
@@ -97,7 +97,7 @@ CONST_STRPTR CHAT_MODEL_NAMES[] = {[CHATGPT_5_LATEST] = "gpt-5-chat-latest",
 
 /**
  * The names of the image models
- * @see enum ImageModel
+ * @see ImageModel
  **/
 CONST_STRPTR IMAGE_MODEL_NAMES[] = {[DALL_E_2] = "dall-e-2",
                                     [DALL_E_3] = "dall-e-3",
@@ -106,7 +106,7 @@ CONST_STRPTR IMAGE_MODEL_NAMES[] = {[DALL_E_2] = "dall-e-2",
 
 /**
  * The names of the image sizes
- * @see enum ImageSize
+ * @see ImageSize
  **/
 CONST_STRPTR IMAGE_SIZE_NAMES[] = {[IMAGE_SIZE_256x256] = "256x256",
                                    [IMAGE_SIZE_512x512] = "512x512",
@@ -120,7 +120,7 @@ CONST_STRPTR IMAGE_SIZE_NAMES[] = {[IMAGE_SIZE_256x256] = "256x256",
 
 /**
  * The names of the TTS models
- * @see enum OpenAITTSModel
+ * @see OpenAITTSModel
  **/
 CONST_STRPTR OPENAI_TTS_MODEL_NAMES[] = {
     [OPENAI_TTS_MODEL_TTS_1] = "tts-1",
@@ -130,31 +130,31 @@ CONST_STRPTR OPENAI_TTS_MODEL_NAMES[] = {
 
 /**
  * The image sizes for DALL-E 2
- * @see enum ImageSize
+ * @see ImageSize
  **/
-const enum ImageSize IMAGE_SIZES_DALL_E_2[] = {
+const ImageSize IMAGE_SIZES_DALL_E_2[] = {
     IMAGE_SIZE_256x256, IMAGE_SIZE_512x512, IMAGE_SIZE_1024x1024,
     IMAGE_SIZE_NULL};
 
 /**
  * The image sizes for DALL-E 3
- * @see enum ImageSize
+ * @see ImageSize
  **/
-const enum ImageSize IMAGE_SIZES_DALL_E_3[] = {
+const ImageSize IMAGE_SIZES_DALL_E_3[] = {
     IMAGE_SIZE_1024x1024, IMAGE_SIZE_1792x1024, IMAGE_SIZE_1024x1792,
     IMAGE_SIZE_NULL};
 
 /**
  * The image sizes for GPT Image 1
- * @see enum ImageSize
+ * @see ImageSize
  **/
-const enum ImageSize IMAGE_SIZES_GPT_IMAGE_1[] = {
+const ImageSize IMAGE_SIZES_GPT_IMAGE_1[] = {
     IMAGE_SIZE_1024x1024, IMAGE_SIZE_1536x1024, IMAGE_SIZE_1024x1536,
     IMAGE_SIZE_AUTO, IMAGE_SIZE_NULL};
 
 /**
  * The names of the TTS voices
- * @see enum OpenAITTSVoice
+ * @see OpenAITTSVoice
  **/
 CONST_STRPTR OPENAI_TTS_VOICE_NAMES[] = {[OPENAI_TTS_VOICE_ALLOY] = "alloy",
                                          [OPENAI_TTS_VOICE_ASH] = "ash",
@@ -462,7 +462,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
  *the array when you are done using it
  **/
 struct json_object **
-postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
+postChatMessageToOpenAI(struct Conversation *conversation, ChatModel model,
                         CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
                         CONST_STRPTR proxyHost, UWORD proxyPort,
                         BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
@@ -807,7 +807,7 @@ UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len) {
  *Free it with json_object_put when you are done using it
  **/
 struct json_object *postImageCreationRequestToOpenAI(
-    CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize imageSize,
+    CONST_STRPTR prompt, ImageModel imageModel, ImageSize imageSize,
     CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost,
     UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
     CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
@@ -1478,8 +1478,8 @@ static void reportSslError(SSL *s, int ret, CONST_STRPTR where) {
  *with FreeVec() when you are done using it
  **/
 APTR postTextToSpeechRequestToOpenAI(
-    CONST_STRPTR text, enum OpenAITTSModel openAITTSModel,
-    enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
+    CONST_STRPTR text, OpenAITTSModel openAITTSModel,
+    OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
     CONST_STRPTR openAiApiKey, ULONG *audioLength, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,

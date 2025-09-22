@@ -266,7 +266,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
                                         CSA_Source, (Tag)text, TAG_DONE);
 
-    enum ImageSize imageSize;
+    ImageSize imageSize;
     switch (config.imageModel) {
     case DALL_E_2:
         imageSize = config.imageSizeDallE2;
@@ -1976,7 +1976,7 @@ static LONG loadImages() {
             return RETURN_ERROR;
         }
 
-        enum ImageModel imageModel = json_object_get_int(imageModelJsonObject);
+        ImageModel imageModel = json_object_get_int(imageModelJsonObject);
 
         struct json_object *imageWidthJsonObject;
         if (!json_object_object_get_ex(imageJsonObject, "width",

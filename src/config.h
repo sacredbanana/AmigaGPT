@@ -11,17 +11,17 @@
 struct Config {
     ULONG speechEnabled; // Making it a ULONG so it can be directly triggered.
                          // BOOL is too small
-    enum SpeechSystem speechSystem;
+    SpeechSystem speechSystem;
     STRPTR speechAccent;
-    enum SpeechFliteVoice speechFliteVoice;
+    SpeechFliteVoice speechFliteVoice;
     STRPTR chatSystem;
-    enum ChatModel chatModel;
-    enum ImageModel imageModel;
-    enum ImageSize imageSizeDallE2;
-    enum ImageSize imageSizeDallE3;
-    enum ImageSize imageSizeGptImage1;
-    enum OpenAITTSModel openAITTSModel;
-    enum OpenAITTSVoice openAITTSVoice;
+    ChatModel chatModel;
+    ImageModel imageModel;
+    ImageSize imageSizeDallE2;
+    ImageSize imageSizeDallE3;
+    ImageSize imageSizeGptImage1;
+    OpenAITTSModel openAITTSModel;
+    OpenAITTSVoice openAITTSVoice;
     STRPTR openAIVoiceInstructions;
     STRPTR openAiApiKey;
     UWORD chatModelSetVersion;    // This is used to determine if the chat model

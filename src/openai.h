@@ -47,7 +47,7 @@ struct Conversation {
  * the responses endpoint. Do not exceed 32 models or the menu will not display
  * correctly.
  **/
-enum ChatModel {
+typedef enum {
     CHATGPT_5_LATEST = 0L,
     GPT_3_5_TURBO,
     GPT_4,
@@ -69,44 +69,44 @@ enum ChatModel {
     o3,
     o3_MINI,
     o4_MINI,
-};
+} ChatModel;
 
 /**
  * The names of the models
- * @see enum ChatModel
+ * @see ChatModel
  **/
 extern CONST_STRPTR CHAT_MODEL_NAMES[];
 
 /**
  * The image model OpenAI should use
  **/
-enum ImageModel { DALL_E_2 = 0L, DALL_E_3, GPT_IMAGE_1 };
+typedef enum { DALL_E_2 = 0L, DALL_E_3, GPT_IMAGE_1 } ImageModel;
 
 /**
  * The names of the image models
- * @see enum ImageModel
+ * @see ImageModel
  **/
 extern CONST_STRPTR IMAGE_MODEL_NAMES[];
 
 /**
  * The Text to Speech model OpenAI should use
  **/
-enum OpenAITTSModel {
+typedef enum {
     OPENAI_TTS_MODEL_TTS_1 = 0L,
     OPENAI_TTS_MODEL_TTS_1_HD,
     OPENAI_TTS_MODEL_GPT_4o_MINI_TTS
-};
+} OpenAITTSModel;
 
 /**
  * The names of the Text to Speech models
- * @see enum OpenAITTSModel
+ * @see OpenAITTSModel
  **/
 extern CONST_STRPTR OPENAI_TTS_MODEL_NAMES[];
 
 /**
  * The voice OpenAI should use
  **/
-enum OpenAITTSVoice {
+typedef enum {
     OPENAI_TTS_VOICE_ALLOY = 0L,
     OPENAI_TTS_VOICE_ASH,
     OPENAI_TTS_VOICE_BALLAD,
@@ -118,18 +118,18 @@ enum OpenAITTSVoice {
     OPENAI_TTS_VOICE_SAGE,
     OPENAI_TTS_VOICE_SHIMMER,
     OPENAI_TTS_VOICE_VERSE
-};
+} OpenAITTSVoice;
 
 /**
  * The names of the voices
- * @see enum OpenAITTSModel
+ * @see OpenAITTSModel
  **/
 extern CONST_STRPTR OPENAI_TTS_VOICE_NAMES[];
 
 /**
  * The size of the requested image
  **/
-enum ImageSize {
+typedef enum {
     IMAGE_SIZE_NULL = -1L,
     IMAGE_SIZE_256x256 = 0L,
     IMAGE_SIZE_512x512,
@@ -139,41 +139,41 @@ enum ImageSize {
     IMAGE_SIZE_1536x1024,
     IMAGE_SIZE_1024x1536,
     IMAGE_SIZE_AUTO
-};
+} ImageSize;
 
 /**
  * The names of the image sizes
- * @see enum ImageSize
+ * @see ImageSize
  **/
 extern CONST_STRPTR IMAGE_SIZE_NAMES[];
 
 /**
  * The image sizes for DALL-E 2
- * @see enum ImageSize
+ * @see ImageSize
  **/
-extern const enum ImageSize IMAGE_SIZES_DALL_E_2[];
+extern const ImageSize IMAGE_SIZES_DALL_E_2[];
 
 /**
  * The image sizes for DALL-E 3
- * @see enum ImageSize
+ * @see ImageSize
  **/
-extern const enum ImageSize IMAGE_SIZES_DALL_E_3[];
+extern const ImageSize IMAGE_SIZES_DALL_E_3[];
 
 /**
  * The image sizes for GPT Image 1
- * @see enum ImageSize
+ * @see ImageSize
  **/
-extern const enum ImageSize IMAGE_SIZES_GPT_IMAGE_1[];
+extern const ImageSize IMAGE_SIZES_GPT_IMAGE_1[];
 
 /**
  * Struct representing a generated image
- * @see enum ImageModel
+ * @see ImageModel
  **/
 struct GeneratedImage {
     STRPTR name;
     STRPTR filePath;
     STRPTR prompt;
-    enum ImageModel imageModel;
+    ImageModel imageModel;
     ULONG width;
     ULONG height;
 };
@@ -202,7 +202,7 @@ LONG initOpenAIConnector();
  *the array when you are done using it
  **/
 struct json_object **
-postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
+postChatMessageToOpenAI(struct Conversation *conversation, ChatModel model,
                         CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
                         CONST_STRPTR proxyHost, UWORD proxyPort,
                         BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
@@ -225,7 +225,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, enum ChatModel model,
  *Free it with json_object_put when you are done using it
  **/
 struct json_object *postImageCreationRequestToOpenAI(
-    CONST_STRPTR prompt, enum ImageModel imageModel, enum ImageSize ImageSize,
+    CONST_STRPTR prompt, ImageModel imageModel, ImageSize ImageSize,
     CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost,
     UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
     CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
@@ -266,8 +266,8 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
  *with FreeVec() when you are done using it
  **/
 APTR postTextToSpeechRequestToOpenAI(
-    CONST_STRPTR text, enum OpenAITTSModel openAITTSModel,
-    enum OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
+    CONST_STRPTR text, OpenAITTSModel openAITTSModel,
+    OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
     CONST_STRPTR openAiApiKey, ULONG *audioLength, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,

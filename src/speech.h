@@ -3,33 +3,33 @@
 /**
  * A speech system
  **/
-enum SpeechSystem {
+typedef enum {
     SPEECH_SYSTEM_34 = 0L,
     SPEECH_SYSTEM_37,
     SPEECH_SYSTEM_FLITE,
     SPEECH_SYSTEM_OPENAI
-};
+} SpeechSystem;
 
 /**
  * The names of the speech systems
- * @see enum SpeechSystem
+ * @see SpeechSystem
  **/
 extern const STRPTR SPEECH_SYSTEM_NAMES[];
 
 /**
  * The Flite voice of the spoken text
  **/
-enum SpeechFliteVoice {
+typedef enum {
     SPEECH_FLITE_VOICE_KAL = 0L,
     SPEECH_FLITE_VOICE_KAL16,
     SPEECH_FLITE_VOICE_AWB,
     SPEECH_FLITE_VOICE_RMS,
     SPEECH_FLITE_VOICE_SLT
-};
+} SpeechFliteVoice;
 
 /**
  * The names of the speech voices
- * @see enum SpeechFliteVoice
+ * @see SpeechFliteVoice
  **/
 extern const STRPTR SPEECH_FLITE_VOICE_NAMES[];
 
@@ -38,7 +38,7 @@ extern const STRPTR SPEECH_FLITE_VOICE_NAMES[];
  * @param speechSystem the speech system to use
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
-LONG initSpeech(enum SpeechSystem speechSystem);
+LONG initSpeech(SpeechSystem speechSystem);
 
 /**
  * Speak the given text aloud
