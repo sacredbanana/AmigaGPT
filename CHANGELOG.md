@@ -7,6 +7,7 @@
 - The say.rexx script now asks if you want to play the audio or save to a file with audio format selection
 - Improve display of Text To Speech errors
 - Most ARexx parameters now use sensible defaults instead of reading from AmigaGPT config
+- Fix bug where conversation titles and ARexx SENDMESSAGE responses were enclosed in quotes
 
 ## 2.11.2 (2025-09-14)
 

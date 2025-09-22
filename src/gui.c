@@ -42,7 +42,7 @@ static ULONG muiDispatcherGate(void) {
     Object *obj = (Object *)REG_A2;
     Msg msg = (Msg)REG_A1;
 
-    dispatcher = (ULONG(*)(struct IClass *, Object *, Msg))cl->cl_UserData;
+    dispatcher = (ULONG (*)(struct IClass *, Object *, Msg))cl->cl_UserData;
 
     return dispatcher(cl, obj, msg);
 }
@@ -499,8 +499,12 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
         struct json_object *content =
             json_object_array_get_idx(contentArray, 0);
         struct json_object *text = json_object_object_get(content, "text");
-        return json_object_to_json_string_ext(text,
-                                              JSON_C_TO_STRING_NOSLASHESCAPE);
+        char *textStr = json_object_to_json_string_ext(
+            text, JSON_C_TO_STRING_NOSLASHESCAPE);
+        // remove the enclosing quotes
+        textStr++;
+        textStr[strlen(textStr) - 1] = '\0';
+        return textStr;
     }
 }
 

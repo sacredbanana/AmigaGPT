@@ -410,7 +410,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         "in quotes or prefix the response with anything",
         "user");
     struct json_object **responses = postChatMessageToOpenAI(
-        imageNameConversation, GPT_4o_MINI, config.openAiApiKey, FALSE,
+        imageNameConversation, GPT_5_NANO, config.openAiApiKey, FALSE,
         config.proxyEnabled, config.proxyHost, config.proxyPort,
         config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
         config.proxyPassword);
