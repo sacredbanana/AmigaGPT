@@ -1,4 +1,4 @@
-/* Generates a random joke using AmigaGPT and then displays it in a popup window */
+/* Asks AmigaGPT a question and then displays it in a popup window */
 /* Uses RxMUI to create a GUI or fallback to a simple requester if RxMUI is not installed */
 OPTIONS RESULTS
 SIGNAL ON HALT
@@ -13,7 +13,6 @@ IF FALLBACK THEN DO
   EXIT 0
 END
 CALL CreateApp
-CALL GetJoke
 CALL HandleApp
 EXIT 0
 
@@ -43,28 +42,38 @@ Init: PROCEDURE EXPOSE AMIGAGPT_PORT FALLBACK
 
 Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
   SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
-  SAY "Retrieving joke using AmigaGPT. Please wait..."
+  SAY "Retrieving answer using AmigaGPT. Please wait..."
+  'Requeststring >T:AmigaGPTInput "Ask me a question" "Type what you want to ask"'
+
+  IF OPEN(HANDLE,"T:AmigaGPTInput",'r') THEN DO
+    INPUT = READLN(HANDLE)
+    CALL CLOSE(HANDLE)
+    'Delete T:AmigaGPTInput QUIET'
+  END
+
+  PROMPT = INPUT
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-nano Tell me a short funny joke on a single line'
+  'SENDMESSAGE M=gpt-5-nano 'PROMPT
   ADDRESS COMMAND
-  'REQUESTCHOICE >NIL: "Random Joke" 'RESULT' "Haha" "ROFL" "LMAO" "Yikes"'
+  'REQUESTCHOICE >NIL: "Ask AmigaGPT" 'RESULT' "Ok"'
   RETURN
 
-GetJoke: PROCEDURE EXPOSE AMIGAGPT_PORT
-  CALL Set("joketext","text","Generating a funny joke for ya")
+GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT
+  CALL GetAttr("asktext","contents", QUESTION)
+  QUESTION = TRANSLATE(QUESTION, ", ", '0A'X)
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-mini Tell me a medium length funny joke'
+  'SENDMESSAGE M=gpt-5-mini 'QUESTION
   ADDRESS COMMAND
-  JOKE = ParseText(RESULT)
-  CALL Set("joketext","text", JOKE)
-  RETURN
+  ANSWER = ParseText(RESULT)
+  SAY ANSWER
+  EXIT 0
 
 CreateApp: PROCEDURE
-  app.Title      = "AmigaGPT Joke"
-  app.Base       = "AMIGAGPT_JOKE"
+  app.Title      = "AmigaGPT Answer"
+  app.Base       = "AMIGAGPT_ANSWER"
   app.SubWindow  = "win"
 
-   win.Title     = "Random Joke"
+   win.Title     = "Answer"
    win.Contents  = "root"
    win.SizeGadget = 1
    win.DragBar    = 1
@@ -75,44 +84,35 @@ CreateApp: PROCEDURE
     root.class        = "group"
 
     /* multi-line text */
-    root.0            = "lv"
+    root.0            = "asktext"
 
-    lv.Class="NListview"
-    lv.CycleChain=1
-    lv.List="joketext"
-
-      joketext.class     = "NFloatText"
-      joketext.background = "textback"
-      joketext.frame     = "group"
+    asktext.class     = "TextEditor"
+    asktext.background = "textback"
+    /* asktext.frame     = "group" */
+    asktext.selected = 1
 
     /* buttons row */
     root.1            = "btns"
      btns.class       = "group"
      btns.horiz       = 1
 
-     /* _Haha */
-     btns.0           = "btnHaha"
-      btnHaha.class      = "text"
-      btnHaha.frame      = "button"
-      btnHaha.inputmode  = "relverify"
-      btnHaha.contents   = "Haha"
-
-     /* _More */
-     btns.1           = "btnMore"
-      btnMore.class      = "text"
-      btnMore.frame      = "button"
-      btnMore.inputmode  = "relverify"
-      btnMore.contents   = "Lame. Tell me another joke."
+     /* _Ok */
+     btns.0           = "btnOk"
+      btnOk.class      = "text"
+      btnOk.frame      = "button"
+      btnOk.inputmode  = "relverify"
+      btnOk.contents   = "Ok"
 
   res = NewObj("application","app")
   IF res > 0 THEN EXIT 30
 
   /* events → APPEVENTs (still "pressed") */
   CALL Notify("win","closerequest",1,"app","ReturnID","quit")
-  CALL Notify("btnHaha","pressed",1,"app","ReturnID","quit")
-  CALL Notify("btnMore","pressed",1,"app","ReturnID")
+  CALL Notify("btnOk","pressed",1,"app","ReturnID")
 
   CALL Set("win","open",1)
+
+  CALL Set("win", "ActiveObject", "asktext")
   RETURN
 
 HandleApp: PROCEDURE EXPOSE AMIGAGPT_PORT
@@ -122,7 +122,7 @@ HandleApp: PROCEDURE EXPOSE AMIGAGPT_PORT
     IF AND(h.signals,ctrl_c) > 0 THEN LEAVE
     SELECT
       WHEN h.event = "QUIT" THEN LEAVE
-      WHEN h.event = "BTNMORE" THEN CALL GetJoke
+      WHEN h.event = "BTNOK" THEN CALL GetAnswer
       OTHERWISE INTERPRET h.event
     END
   END

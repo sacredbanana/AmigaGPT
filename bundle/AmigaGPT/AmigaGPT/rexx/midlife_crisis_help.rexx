@@ -1,4 +1,4 @@
-/* Generates a random joke using AmigaGPT and then displays it in a popup window */
+/* Generates helpful advice for a midlife crisis using AmigaGPT and then displays it in a popup window */
 /* Uses RxMUI to create a GUI or fallback to a simple requester if RxMUI is not installed */
 OPTIONS RESULTS
 SIGNAL ON HALT
@@ -13,7 +13,7 @@ IF FALLBACK THEN DO
   EXIT 0
 END
 CALL CreateApp
-CALL GetJoke
+CALL GetHelp
 CALL HandleApp
 EXIT 0
 
@@ -43,28 +43,28 @@ Init: PROCEDURE EXPOSE AMIGAGPT_PORT FALLBACK
 
 Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
   SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
-  SAY "Retrieving joke using AmigaGPT. Please wait..."
+  SAY "Retrieving helpful advice for a midlife crisis using AmigaGPT. Please wait..."
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-nano Tell me a short funny joke on a single line'
+  'SENDMESSAGE M=gpt-5-nano Tell me helpful advice for a midlife crisis on a single line'
   ADDRESS COMMAND
-  'REQUESTCHOICE >NIL: "Random Joke" 'RESULT' "Haha" "ROFL" "LMAO" "Yikes"'
+  'REQUESTCHOICE >NIL: "Helpful Advice" 'RESULT' Ok"'
   RETURN
 
-GetJoke: PROCEDURE EXPOSE AMIGAGPT_PORT
-  CALL Set("joketext","text","Generating a funny joke for ya")
+GetHelp: PROCEDURE EXPOSE AMIGAGPT_PORT
+  CALL Set("helpttext","text","Generating helpful advice for a midlife crisis for ya")
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-mini Tell me a medium length funny joke'
+  'SENDMESSAGE M=gpt-5-mini Tell me helpful advice for a midlife crisis'
   ADDRESS COMMAND
-  JOKE = ParseText(RESULT)
-  CALL Set("joketext","text", JOKE)
+  POEM = ParseText(RESULT)
+  CALL Set("helpttext","text", HELP)
   RETURN
 
 CreateApp: PROCEDURE
-  app.Title      = "AmigaGPT Joke"
-  app.Base       = "AMIGAGPT_JOKE"
+  app.Title      = "AmigaGPT Helpful Advice for a Midlife Crisis"
+  app.Base       = "AMIGAGPT_HELPFUL_ADVICE_FOR_A_MIDLIFE_CRISIS"
   app.SubWindow  = "win"
 
-   win.Title     = "Random Joke"
+   win.Title     = "Helpful Advice for a Midlife Crisis"
    win.Contents  = "root"
    win.SizeGadget = 1
    win.DragBar    = 1
@@ -79,11 +79,11 @@ CreateApp: PROCEDURE
 
     lv.Class="NListview"
     lv.CycleChain=1
-    lv.List="joketext"
+    lv.List="helpttext"
 
-      joketext.class     = "NFloatText"
-      joketext.background = "textback"
-      joketext.frame     = "group"
+      helpttext.class     = "NFloatText"
+      helpttext.background = "textback"
+      helpttext.frame     = "group"
 
     /* buttons row */
     root.1            = "btns"
@@ -91,25 +91,25 @@ CreateApp: PROCEDURE
      btns.horiz       = 1
 
      /* _Haha */
-     btns.0           = "btnHaha"
-      btnHaha.class      = "text"
-      btnHaha.frame      = "button"
-      btnHaha.inputmode  = "relverify"
-      btnHaha.contents   = "Haha"
+     btns.0           = "btnOk"
+      btnOk.class      = "text"
+      btnOk.frame      = "button"
+      btnOk.inputmode  = "relverify"
+      btnOk.contents   = "Ok"
 
      /* _More */
      btns.1           = "btnMore"
       btnMore.class      = "text"
       btnMore.frame      = "button"
       btnMore.inputmode  = "relverify"
-      btnMore.contents   = "Lame. Tell me another joke."
+      btnMore.contents   = "I need more help"
 
   res = NewObj("application","app")
   IF res > 0 THEN EXIT 30
 
   /* events → APPEVENTs (still "pressed") */
   CALL Notify("win","closerequest",1,"app","ReturnID","quit")
-  CALL Notify("btnHaha","pressed",1,"app","ReturnID","quit")
+  CALL Notify("btnOk","pressed",1,"app","ReturnID","quit")
   CALL Notify("btnMore","pressed",1,"app","ReturnID")
 
   CALL Set("win","open",1)
@@ -122,7 +122,7 @@ HandleApp: PROCEDURE EXPOSE AMIGAGPT_PORT
     IF AND(h.signals,ctrl_c) > 0 THEN LEAVE
     SELECT
       WHEN h.event = "QUIT" THEN LEAVE
-      WHEN h.event = "BTNMORE" THEN CALL GetJoke
+      WHEN h.event = "BTNMORE" THEN CALL GetPoem
       OTHERWISE INTERPRET h.event
     END
   END

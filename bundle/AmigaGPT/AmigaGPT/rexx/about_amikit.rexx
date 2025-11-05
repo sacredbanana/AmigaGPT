@@ -1,4 +1,4 @@
-/* Generates a random joke using AmigaGPT and then displays it in a popup window */
+/* Gives a description of AmiKit using AmigaGPT and then displays it in a popup window */
 /* Uses RxMUI to create a GUI or fallback to a simple requester if RxMUI is not installed */
 OPTIONS RESULTS
 SIGNAL ON HALT
@@ -13,7 +13,7 @@ IF FALLBACK THEN DO
   EXIT 0
 END
 CALL CreateApp
-CALL GetJoke
+CALL GetAmiKit
 CALL HandleApp
 EXIT 0
 
@@ -43,28 +43,28 @@ Init: PROCEDURE EXPOSE AMIGAGPT_PORT FALLBACK
 
 Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
   SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
-  SAY "Retrieving joke using AmigaGPT. Please wait..."
+  SAY "Retrieving AmiKit description using AmigaGPT. Please wait..."
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-nano Tell me a short funny joke on a single line'
+  'SENDMESSAGE M=gpt-5-nano Give me a short description of AmiKit. Do it all on a single line.'
   ADDRESS COMMAND
-  'REQUESTCHOICE >NIL: "Random Joke" 'RESULT' "Haha" "ROFL" "LMAO" "Yikes"'
+  'REQUESTCHOICE >NIL: "AmiKit" 'RESULT' Ok"'
   RETURN
 
-GetJoke: PROCEDURE EXPOSE AMIGAGPT_PORT
-  CALL Set("joketext","text","Generating a funny joke for ya")
+GetAmiKit: PROCEDURE EXPOSE AMIGAGPT_PORT
+  CALL Set("amikittext","text","Generating a AmiKit description for ya")
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-mini Tell me a medium length funny joke'
+  'SENDMESSAGE M=gpt-5-mini Give me a description of AmiKit.'
   ADDRESS COMMAND
-  JOKE = ParseText(RESULT)
-  CALL Set("joketext","text", JOKE)
+  AMIKIT = ParseText(RESULT)
+  CALL Set("amikittext","text", AMIKIT)
   RETURN
 
 CreateApp: PROCEDURE
-  app.Title      = "AmigaGPT Joke"
-  app.Base       = "AMIGAGPT_JOKE"
+  app.Title      = "AmigaGPT AmiKit Description"
+  app.Base       = "AMIGAGPT_AMIKit_DESCRIPTION"
   app.SubWindow  = "win"
 
-   win.Title     = "Random Joke"
+   win.Title     = "AmiKit"
    win.Contents  = "root"
    win.SizeGadget = 1
    win.DragBar    = 1
@@ -79,11 +79,11 @@ CreateApp: PROCEDURE
 
     lv.Class="NListview"
     lv.CycleChain=1
-    lv.List="joketext"
+    lv.List="amikittext"
 
-      joketext.class     = "NFloatText"
-      joketext.background = "textback"
-      joketext.frame     = "group"
+      amikittext.class     = "NFloatText"
+      amikittext.background = "textback"
+      amikittext.frame     = "group"
 
     /* buttons row */
     root.1            = "btns"
@@ -91,38 +91,29 @@ CreateApp: PROCEDURE
      btns.horiz       = 1
 
      /* _Haha */
-     btns.0           = "btnHaha"
-      btnHaha.class      = "text"
-      btnHaha.frame      = "button"
-      btnHaha.inputmode  = "relverify"
-      btnHaha.contents   = "Haha"
-
-     /* _More */
-     btns.1           = "btnMore"
-      btnMore.class      = "text"
-      btnMore.frame      = "button"
-      btnMore.inputmode  = "relverify"
-      btnMore.contents   = "Lame. Tell me another joke."
+     btns.0           = "btnOk"
+      btnOk.class      = "text"
+      btnOk.frame      = "button"
+      btnOk.inputmode  = "relverify"
+      btnOk.contents   = "Ok"
 
   res = NewObj("application","app")
   IF res > 0 THEN EXIT 30
 
   /* events → APPEVENTs (still "pressed") */
   CALL Notify("win","closerequest",1,"app","ReturnID","quit")
-  CALL Notify("btnHaha","pressed",1,"app","ReturnID","quit")
-  CALL Notify("btnMore","pressed",1,"app","ReturnID")
+  CALL Notify("btnOk","pressed",1,"app","ReturnID","quit")
 
   CALL Set("win","open",1)
   RETURN
 
-HandleApp: PROCEDURE EXPOSE AMIGAGPT_PORT
+HandleApp: PROCEDURE
   ctrl_c = 2**12
   DO FOREVER
     CALL NewHandle("APP","H",ctrl_c)
     IF AND(h.signals,ctrl_c) > 0 THEN LEAVE
     SELECT
       WHEN h.event = "QUIT" THEN LEAVE
-      WHEN h.event = "BTNMORE" THEN CALL GetJoke
       OTHERWISE INTERPRET h.event
     END
   END
