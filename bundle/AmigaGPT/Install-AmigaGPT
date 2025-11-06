@@ -509,8 +509,6 @@
     (default 0))
 )
 
-(message #askgptinstall)
-
 (if (= #askgptinstall 0)
   (
     (copyfiles 
