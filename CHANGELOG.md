@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.13.0 (2025-11-06)
+
+- Add ability for ChatGPT to search the web (enabled by default)
+- Add "AskGPT" commandline utility. You can ask AmigaGPT anything from the shell with the "AskGPT" command.
+- Add "about_amikit", "recommend_game", "poem", "ask", "sing" and "midlife_crisis_help" ARexx scripts
+- Fix crash in joke.rexx when asking for another joke
+
 ## 2.12.0 (2025-09-22)
 
 - Add "verse" OpenAI voice

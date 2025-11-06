@@ -223,6 +223,8 @@ When the app has opened, you are presented with a text input box. You can type a
 
 You can choose to have this text read aloud using the "Speech" menu option. You can also select which model for OpenAI to use in the "OpenAI" menu option.
 
+You can also chat to AmigaGPT within the Shell as long as either AmigaGPT or the AmigaGPTD daemon are running. Just type `askgpt` into the shell and it will ask you what you want to ask. Or just ask right away with the command "askgpt What is the capital of Australia?".
+
 @endnode
 
 @node conlist "Conversation list"

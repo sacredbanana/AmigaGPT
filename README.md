@@ -113,6 +113,8 @@ When the app has opened, you are presented with a text input box. You can type a
 
 To the left of the chat box is a conversation list which you can use to go to another saved conversation. New conversations can be created with the "**New chat**" button and conversations can be removed with the "**Delete chat**" button.
 
+You can also chat to AmigaGPT within the Shell as long as either AmigaGPT or the AmigaGPTD daemon are running. Just type `askgpt` into the shell and it will ask you what you want to ask. Or just ask right away with the command `askgpt What is the capital of Australia?`.
+
 ### Image Generation
 
 To generate images, simply select your desired image generation model from the "**OpenAI**" menu then type your prompt in the text box then hit the "**Create Image**" button. When it has been downloaded to your Amiga, you are then able to open the image to your desired scale, or save a copy of the file to a new location on your Amiga. Do note however that AmigaGPT will automatially save all your generated images until you delete them. This is just in case you would like to create a copy elsewhere.

@@ -1,15 +1,23 @@
-/* Asks AmigaGPT a question and then displays it in a popup window */
+/* Asks AmigaGPT a question and then displays it */
 /* Uses RxMUI to create a GUI or fallback to a simple requester if RxMUI is not installed */
 OPTIONS RESULTS
 SIGNAL ON HALT
 SIGNAL ON BREAK_C
 
+ARG ARG1 PROMPT
+PARSE ARG PROMPT
+
+GUI = 0
+IF ARG1 = "GUI" THEN DO
+  GUI = 1
+  PARSE ARG ARG1 PROMPT
+END
+
 /* -------- main -------- */
-FALLBACK = 0
 AMIGAGPT_PORT = "AMIGAGPT"
 CALL Init
-IF FALLBACK THEN DO
-  CALL Fallback_RequestChoice
+IF ~GUI THEN DO
+  CALL NoGUI_RequestChoice
   EXIT 0
 END
 CALL CreateApp
@@ -18,7 +26,7 @@ EXIT 0
 
 /* -------- procedures -------- */
 
-Init: PROCEDURE EXPOSE AMIGAGPT_PORT FALLBACK
+Init: PROCEDURE EXPOSE AMIGAGPT_PORT GUI
   IF ~SHOW('P',AMIGAGPT_PORT) THEN DO
   /* The main AmigaGPT app is not open. Attempt to connect to AmigaGPTD instead */
     AMIGAGPT_PORT = "AMIGAGPTD"
@@ -27,46 +35,47 @@ Init: PROCEDURE EXPOSE AMIGAGPT_PORT FALLBACK
       EXIT 1
     END
   END
-  l="rmh.library"; IF ~SHOW("L",l) THEN ; IF ~ADDLIB(l,0,-30) THEN DO; FALLBACK=1; RETURN; END
-  ADDRESS COMMAND 'VERSION rxmui.library >NIL:'
-  IF RC ~= 0 THEN DO
-    FALLBACK = 1
-    RETURN
+  IF GUI = 1 THEN DO
+    l="rmh.library"; IF ~SHOW("L",l) THEN ; IF ~ADDLIB(l,0,-30) THEN DO; NOGUI=1; RETURN; END
+    ADDRESS COMMAND 'VERSION rxmui.library >NIL:'
+    IF RC ~= 0 THEN DO
+      SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
+      GUI = 0
+      RETURN
+    END
   END
   IF AddLibrary("rexxsupport.library","rxmui.library") ~= 0 THEN DO
-    FALLBACK = 1
+    GUI = 0
     RETURN
   END
   CALL RxMUIOpt("DebugMode ShowErr")
   RETURN
 
-Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
-  SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
-  SAY "Retrieving answer using AmigaGPT. Please wait..."
-  'Requeststring >T:AmigaGPTInput "Ask me a question" "Type what you want to ask"'
-
-  IF OPEN(HANDLE,"T:AmigaGPTInput",'r') THEN DO
-    INPUT = READLN(HANDLE)
-    CALL CLOSE(HANDLE)
-    'Delete T:AmigaGPTInput QUIET'
+NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT
+  IF PROMPT = "" THEN DO
+    SAY "What do you want to ask?"
+    PARSE PULL PROMPT
   END
 
-  PROMPT = INPUT
   ADDRESS VALUE AMIGAGPT_PORT
+  SAY "Retrieving answer using AmigaGPT. Please wait..."
   'SENDMESSAGE M=gpt-5-nano WEBSEARCH 'PROMPT
-  ADDRESS COMMAND
-  'REQUESTCHOICE >NIL: "Ask AmigaGPT" 'RESULT' "Ok"'
+  SAY ParseText(RESULT)
   RETURN
 
 GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT
-  CALL GetAttr("asktext","contents", QUESTION)
+  CALL GetAttr("asktext","Contents", QUESTION)
   QUESTION = TRANSLATE(QUESTION, ", ", '0A'X)
+  CALL SetAttr("asktext","Contents", "Retrieving answer using AmigaGPT. Please wait...")
+  CALL SetAttr("asktext", "ReadOnly", 1)
   ADDRESS VALUE AMIGAGPT_PORT
   'SENDMESSAGE M=gpt-5-mini WEBSEARCH 'QUESTION
   ADDRESS COMMAND
   ANSWER = ParseText(RESULT)
-  SAY ANSWER
-  EXIT 0
+  CALL SetAttr("asktext","Contents", ANSWER)
+  CALL KillNotify("btnOk","app")
+  CALL Notify("btnOk","pressed",1,"app","ReturnID", "quit")
+  RETURN
 
 CreateApp: PROCEDURE
   app.Title      = "AmigaGPT Answer"
@@ -83,14 +92,19 @@ CreateApp: PROCEDURE
     /* vertical stack */
     root.class        = "group"
 
+    root.0            = "header"
+    
+    header.class      = "Text"
+    header.contents   = '1B'X"c"'1B'X"bWhat would you like to ask?"
+
     /* multi-line text */
-    root.0            = "asktext"
+    root.1            = "asktext"
 
     asktext.class     = "TextEditor"
     asktext.background = "textback"
 
     /* buttons row */
-    root.1            = "btns"
+    root.2             = "btns"
      btns.class       = "group"
      btns.horiz       = 1
 

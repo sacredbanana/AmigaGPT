@@ -75,6 +75,8 @@
 (set #languages-help "Choose the languages you want to use with AmigaGPT.")
 (set #userstartupassignask	"An AMIGAGPT: assign will be added to your \"S:User-Startup\" file.")
 (set #userstartuprunask	"Do you want the AmigaGPT daemon to automatically start when you boot? This will be added to your \"S:User-Startup\" file.")
+(set #askgptinstallask	"Do you want the AskGPT ARexx script to be installed? This will allow you to ask AmigaGPT questions from the command line by running 'askgpt <question>' from the command line.")
+(set #askgptinstallhelp	"The AskGPT script will be installed to your C: directory and will be available as a command line tool.")
 
 
 ;------------------------------------------------------------------------
@@ -488,33 +490,36 @@
 	(command "Endif")
 )
 
-(if (= #os-choice 0)
-  (
-    (startup "AMIGAGPT"
-      (prompt #userstartuprunask)
-      (help @startup-help)
-      (confirm)
-      (command "If Exists \"" @default-dest "\"\n")
-      (command "  Assign AMIGAGPT: \"" @default-dest "\"\n")
-      (command "  Echo \"STACK 32768\" > T:AmigaGPTDStartup\n")
-      (command "  Echo \"AmigaGPTD <>NIL:\" >> T:AmigaGPTDStartup\n")
-      (command "  NewShell \"NIL:\" from T:AmigaGPTDStartup\n")
-      (command "Endif")
-    )
+(
+  (startup "AMIGAGPT"
+    (prompt #userstartuprunask)
+    (help @startup-help)
+    (confirm)
+    (command "If Exists \"" @default-dest "\"\n")
+    (command "  Assign AMIGAGPT: \"" @default-dest "\"\n")
+    (command "  Run <>NIL: C:AmigaGPTD <>NIL:\n")
+    (command "Endif")
   )
 )
 
-(if (not(= #os-choice 0))
+(set #askgptinstall (askchoice
+    (prompt #askgptinstallask)
+    (help @askgptinstallhelp)
+    (choices "Yes" "No")
+    (default 0))
+)
+
+(message #askgptinstall)
+
+(if (= #askgptinstall 0)
   (
-    (startup "AMIGAGPT"
-      (prompt #userstartuprunask)
-      (help @startup-help)
-      (confirm)
-      (command "If Exists \"" @default-dest "\"\n")
-      (command "  Assign AMIGAGPT: \"" @default-dest "\"\n")
-      (command "  Run <>NIL: AmigaGPTD\n")
-      (command "Endif")
+    (copyfiles 
+      (source "AmigaGPT/rexx/askgpt.rexx")
+      (dest "C:")
+      (newname "askgpt")
+      (optional "force" "askuser")
     )
+    (protect "C:askgpt" "+s")
   )
 )
 
