@@ -514,10 +514,10 @@
     (copyfiles 
       (source "AmigaGPT/rexx/askgpt.rexx")
       (dest "C:")
-      (newname "askgpt")
+      (newname "AskGPT")
       (optional "force" "askuser")
     )
-    (protect "C:askgpt" "+s")
+    (protect "C:AskGPT" "+s")
   )
 )
 

@@ -186,6 +186,29 @@ struct GeneratedImage {
 LONG initOpenAIConnector();
 
 /**
+ * Get the chat models from the OpenAI API
+ * @param host the host to use
+ * @param port the port to use
+ * @param useSSL whether to use SSL or not
+ * @param openAiApiKey the OpenAI API key (can be NULL for local LLM)
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
+ * @return a pointer to a new json_object array containing the model names or
+ * NULL -- Free it with json_object_put() when you are done using it
+ **/
+struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
+                                  CONST_STRPTR openAiApiKey, BOOL useProxy,
+                                  CONST_STRPTR proxyHost, ULONG proxyPort,
+                                  BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                                  CONST_STRPTR proxyUsername,
+                                  CONST_STRPTR proxyPassword);
+
+/**
  * Post a chat message to OpenAI
  * @param conversation the conversation to post
  * @param model the model to use
@@ -204,7 +227,7 @@ LONG initOpenAIConnector();
  *the array when you are done using it
  **/
 struct json_object **
-postChatMessageToOpenAI(struct Conversation *conversation, ChatModel model,
+postChatMessageToOpenAI(struct Conversation *conversation, CONST_STRPTR model,
                         CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
                         CONST_STRPTR proxyHost, UWORD proxyPort,
                         BOOL proxyUsesSSL, BOOL proxyRequiresAuth,

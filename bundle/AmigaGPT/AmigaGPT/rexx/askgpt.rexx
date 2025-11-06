@@ -1,4 +1,4 @@
-/* Asks AmigaGPT a question and then displays it */
+/* Asks AmigaGPT a question then displays it */
 /* Uses RxMUI to create a GUI or fallback to a simple requester if RxMUI is not installed */
 OPTIONS RESULTS
 SIGNAL ON HALT
@@ -59,7 +59,7 @@ NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT
 
   ADDRESS VALUE AMIGAGPT_PORT
   SAY "Retrieving answer using AmigaGPT. Please wait..."
-  'SENDMESSAGE M=gpt-5-nano WEBSEARCH 'PROMPT
+  'SENDMESSAGE M=mistralrp-noromaid-nsfw-mistral-7b 'PROMPT
   SAY ParseText(RESULT)
   RETURN
 
@@ -118,7 +118,6 @@ CreateApp: PROCEDURE
   res = NewObj("application","app")
   IF res > 0 THEN EXIT 30
 
-  /* events → APPEVENTs (still "pressed") */
   CALL Notify("win","closerequest",1,"app","ReturnID","quit")
   CALL Notify("btnOk","pressed",1,"app","ReturnID")
 

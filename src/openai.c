@@ -26,9 +26,15 @@
 #define AUDIO_BUFFER_SIZE 4096
 #define MAX_CONNECTION_RETRIES 10
 
-static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
-                                 CONST_STRPTR proxyHost, UWORD proxyPort,
-                                 BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+// Set to TRUE to use local LLM server instead of OpenAI
+#define USE_LOCAL_LLM TRUE
+#define LOCAL_LLM_HOST "localhost"
+#define LOCAL_LLM_PORT 1234
+
+static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                                 BOOL useProxy, CONST_STRPTR proxyHost,
+                                 UWORD proxyPort, BOOL proxyUsesSSL,
+                                 BOOL proxyRequiresAuth,
                                  CONST_STRPTR proxyUsername,
                                  CONST_STRPTR proxyPassword);
 static ULONG rangeRand(ULONG maxValue);
@@ -278,6 +284,7 @@ LONG initOpenAIConnector() {
  * Create a new SSL connection to a host with a new socket
  * @param host the host to connect to
  * @param port the port to connect to
+ * @param useSSL whether to use SSL or not
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -287,14 +294,14 @@ LONG initOpenAIConnector() {
  * @param proxyPassword the proxy password to use
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
-static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
-                                 CONST_STRPTR proxyHost, UWORD proxyPort,
-                                 BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                                 BOOL useProxy, CONST_STRPTR proxyHost,
+                                 UWORD proxyPort, BOOL proxyUsesSSL,
+                                 BOOL proxyRequiresAuth,
                                  CONST_STRPTR proxyUsername,
                                  CONST_STRPTR proxyPassword) {
     struct sockaddr_in addr;
     struct hostent *hostent;
-    BOOL useSSL = !useProxy || proxyUsesSSL;
 
 #ifndef DAEMON
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
@@ -311,7 +318,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
         sock = -1;
     }
 
-    if (useSSL) {
+    if (useSSL || (useProxy && proxyUsesSSL)) {
         /* The following needs to be done once per socket */
         if ((ssl = SSL_new(ctx)) == NULL) {
             displayError(STRING_ERROR_SSL_HANDLE);
@@ -445,6 +452,188 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
 }
 
 /**
+ * Get the chat models from the OpenAI API
+ * @param host the host to use
+ * @param port the port to use
+ * @param useSSL whether to use SSL or not
+ * @param openAiApiKey the OpenAI API key (can be NULL for local LLM)
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
+ * @return a pointer to a new json_object array containing the model names or
+ * NULL -- Free it with json_object_put() when you are done using it
+ **/
+struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
+                                  CONST_STRPTR openAiApiKey, BOOL useProxy,
+                                  CONST_STRPTR proxyHost, ULONG proxyPort,
+                                  BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                                  CONST_STRPTR proxyUsername,
+                                  CONST_STRPTR proxyPassword) {
+    UBYTE connectionRetryCount = 0;
+    if (host == NULL || strlen(host) == 0) {
+        host = OPENAI_HOST;
+        useSSL = TRUE;
+        port = OPENAI_PORT;
+    }
+    if (port == 0) {
+        port = useSSL ? 443 : 80;
+    }
+    if (useProxy && proxyUsesSSL) {
+        useSSL = TRUE;
+    }
+
+    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+    memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
+
+    // Build HTTP GET request
+    STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+    if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
+        STRPTR credentials =
+            AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                     MEMF_ANY | MEMF_CLEAR);
+        snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                 "%s:%s", proxyUsername, proxyPassword);
+        UBYTE *encodedCredentials = base64Encode(credentials);
+        snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
+                 encodedCredentials);
+        FreeVec(encodedCredentials);
+        FreeVec(credentials);
+    }
+
+    if (useSSL || useProxy) {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "GET %s://%s:%d/v1/models HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "Authorization: Bearer %s\r\n"
+                 "User-Agent: AmigaGPT\r\n"
+                 "%s\r\n",
+                 useSSL ? "https" : "http", host, port, host, port,
+                 openAiApiKey ? openAiApiKey : "", authHeader);
+    } else {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "GET /v1/models HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "Authorization: Bearer %s\r\n"
+                 "User-Agent: AmigaGPT\r\n"
+                 "%s\r\n",
+                 host, port, openAiApiKey ? openAiApiKey : "", authHeader);
+    }
+
+    FreeVec(authHeader);
+
+    updateStatusBar(STRING_CONNECTING, yellowPen);
+    while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
+        if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+            displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
+            return NULL;
+        }
+    }
+
+    updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
+    if (useSSL) {
+        ERR_clear_error();
+        ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+        if (ssl_err <= 0) {
+            reportSslError(ssl, ssl_err, "SSL_write (models)");
+            return NULL;
+        }
+    } else {
+        ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+        if (ssl_err <= 0) {
+            displayError(STRING_ERROR_REQUEST_WRITE);
+            return NULL;
+        }
+    }
+
+#ifndef DAEMON
+    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
+
+    // Read response
+    ULONG totalBytesRead = 0;
+    WORD bytesRead = 0;
+    BOOL doneReading = FALSE;
+    UBYTE *tempReadBuffer = AllocVec(useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH,
+                                     MEMF_ANY | MEMF_CLEAR);
+
+    while (!doneReading && totalBytesRead < READ_BUFFER_LENGTH - 1) {
+        if (useSSL) {
+            ERR_clear_error();
+            bytesRead =
+                SSL_read(ssl, tempReadBuffer,
+                         useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1);
+        } else {
+            bytesRead =
+                recv(sock, tempReadBuffer,
+                     useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1, 0);
+        }
+
+        if (bytesRead > 0) {
+            strncat(readBuffer, tempReadBuffer, bytesRead);
+            totalBytesRead += bytesRead;
+        } else {
+            doneReading = TRUE;
+        }
+    }
+    FreeVec(tempReadBuffer);
+
+    // Close connection
+    CloseSocket(sock);
+    if (ssl != NULL) {
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
+        ssl = NULL;
+    }
+    sock = -1;
+
+    // Parse response
+    STRPTR jsonStart = strstr(readBuffer, "\r\n\r\n");
+    if (jsonStart == NULL) {
+        displayError("Invalid response format");
+        return NULL;
+    }
+    jsonStart += 4;
+
+    struct json_object *response = json_tokener_parse(jsonStart);
+    if (response == NULL) {
+        displayError("Failed to parse models response");
+        return NULL;
+    }
+
+    // Extract model IDs from response
+    struct json_object *dataArray = json_object_object_get(response, "data");
+    if (dataArray == NULL) {
+        json_object_put(response);
+        displayError("No 'data' field in models response");
+        return NULL;
+    }
+
+    // Create array of model names
+    struct json_object *modelNames = json_object_new_array();
+    int arrayLength = json_object_array_length(dataArray);
+
+    for (int i = 0; i < arrayLength; i++) {
+        struct json_object *modelObj = json_object_array_get_idx(dataArray, i);
+        struct json_object *idObj = json_object_object_get(modelObj, "id");
+        if (idObj != NULL) {
+            CONST_STRPTR modelId = json_object_get_string(idObj);
+            json_object_array_add(modelNames, json_object_new_string(modelId));
+        }
+    }
+
+    json_object_put(response);
+    updateStatusBar(STRING_READY, greenPen);
+
+    return modelNames;
+}
+
+/**
  * Post a chat message to OpenAI
  * @param conversation the conversation to post
  * @param model the model to use
@@ -463,59 +652,107 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
  *the array when you are done using it
  **/
 struct json_object **
-postChatMessageToOpenAI(struct Conversation *conversation, ChatModel model,
+postChatMessageToOpenAI(struct Conversation *conversation, CONST_STRPTR model,
                         CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
                         CONST_STRPTR proxyHost, UWORD proxyPort,
                         BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
                         CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
                         BOOL webSearchEnabled) {
+    if (model == NULL || strlen(model) == 0) {
+        displayError("Model not specified");
+        return NULL;
+    }
     struct json_object **responses =
         AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH,
                  MEMF_ANY | MEMF_CLEAR);
     static BOOL streamingInProgress = FALSE;
     UWORD responseIndex = 0;
     UBYTE connectionRetryCount = 0;
-    BOOL useSSL = !useProxy || proxyUsesSSL;
+
+    // Determine connection settings based on local LLM flag
+    CONST_STRPTR targetHost = USE_LOCAL_LLM ? LOCAL_LLM_HOST : OPENAI_HOST;
+    UWORD targetPort = USE_LOCAL_LLM ? LOCAL_LLM_PORT : OPENAI_PORT;
+    BOOL useSSL = USE_LOCAL_LLM ? FALSE : (!useProxy || proxyUsesSSL);
+
+    // Disable streaming for local LLM (not supported)
+    if (USE_LOCAL_LLM) {
+        stream = FALSE;
+    }
 
     if (!stream || !streamingInProgress) {
         memset(readBuffer, 0, READ_BUFFER_LENGTH);
         streamingInProgress = stream;
 
         struct json_object *obj = json_object_new_object();
-        json_object_object_add(obj, "model",
-                               json_object_new_string(CHAT_MODEL_NAMES[model]));
+        json_object_object_add(obj, "model", json_object_new_string(model));
         struct json_object *conversationArray = json_object_new_array();
 
-        struct json_object *toolsArray = json_object_new_array();
-        if (webSearchEnabled) {
-            struct json_object *webSearchToolObj = json_object_new_object();
-            json_object_object_add(webSearchToolObj, "type",
-                                   json_object_new_string("web_search"));
-            json_object_array_add(toolsArray, webSearchToolObj);
-        }
-        json_object_object_add(obj, "tools", toolsArray);
+        if (USE_LOCAL_LLM) {
+            // Local LLM uses standard OpenAI format with "messages" array
+            // Add system message if present
+            if (conversation->system != NULL &&
+                strlen(conversation->system) > 0) {
+                struct json_object *systemMessageObj = json_object_new_object();
+                json_object_object_add(systemMessageObj, "role",
+                                       json_object_new_string("system"));
+                json_object_object_add(
+                    systemMessageObj, "content",
+                    json_object_new_string(conversation->system));
+                json_object_array_add(conversationArray, systemMessageObj);
+            }
 
-        struct MinNode *conversationNode = conversation->messages->mlh_Head;
-        while (conversationNode->mln_Succ != NULL) {
-            struct ConversationNode *message =
-                (struct ConversationNode *)conversationNode;
-            struct json_object *messageObj = json_object_new_object();
-            json_object_object_add(messageObj, "role",
-                                   json_object_new_string(message->role));
-            json_object_object_add(messageObj, "content",
-                                   json_object_new_string(message->content));
-            json_object_array_add(conversationArray, messageObj);
-            conversationNode = conversationNode->mln_Succ;
-        }
+            struct MinNode *conversationNode = conversation->messages->mlh_Head;
+            while (conversationNode->mln_Succ != NULL) {
+                struct ConversationNode *message =
+                    (struct ConversationNode *)conversationNode;
+                struct json_object *messageObj = json_object_new_object();
+                json_object_object_add(messageObj, "role",
+                                       json_object_new_string(message->role));
+                json_object_object_add(
+                    messageObj, "content",
+                    json_object_new_string(message->content));
+                json_object_array_add(conversationArray, messageObj);
+                conversationNode = conversationNode->mln_Succ;
+            }
 
-        json_object_object_add(obj, "input", conversationArray);
-        json_object_object_add(obj, "stream",
-                               json_object_new_boolean((json_bool)stream));
+            json_object_object_add(obj, "messages", conversationArray);
+            json_object_object_add(obj, "stream",
+                                   json_object_new_boolean((json_bool)FALSE));
+        } else {
+            // OpenAI's newer format with "input" and "instructions"
+            struct json_object *toolsArray = json_object_new_array();
+            if (webSearchEnabled) {
+                struct json_object *webSearchToolObj = json_object_new_object();
+                json_object_object_add(webSearchToolObj, "type",
+                                       json_object_new_string("web_search"));
+                json_object_array_add(toolsArray, webSearchToolObj);
+            }
+            json_object_object_add(obj, "tools", toolsArray);
 
-        if (conversation->system != NULL && strlen(conversation->system) > 0) {
-            json_object_object_add(
-                obj, "instructions",
-                json_object_new_string(conversation->system));
+            struct MinNode *conversationNode = conversation->messages->mlh_Head;
+            while (conversationNode->mln_Succ != NULL) {
+                struct ConversationNode *message =
+                    (struct ConversationNode *)conversationNode;
+                struct json_object *messageObj = json_object_new_object();
+                json_object_object_add(messageObj, "role",
+                                       json_object_new_string(message->role));
+                json_object_object_add(
+                    messageObj, "content",
+                    json_object_new_string(message->content));
+                json_object_array_add(conversationArray, messageObj);
+                conversationNode = conversationNode->mln_Succ;
+            }
+
+            json_object_object_add(obj, "input", conversationArray);
+            json_object_object_add(obj, "stream",
+                                   json_object_new_boolean((json_bool)stream));
+
+            if (conversation->system != NULL &&
+                strlen(conversation->system) > 0) {
+                json_object_object_add(
+                    obj, "instructions",
+                    json_object_new_string(conversation->system));
+            }
         }
 
         CONST_STRPTR jsonString = json_object_to_json_string(obj);
@@ -535,24 +772,39 @@ postChatMessageToOpenAI(struct Conversation *conversation, ChatModel model,
             FreeVec(encodedCredentials);
         }
 
-        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                 "POST %s/v1/responses HTTP/1.1\r\n"
-                 "Host: api.openai.com\r\n"
-                 "Content-Type: application/json\r\n"
-                 "Authorization: Bearer %s\r\n"
-                 "User-Agent: AmigaGPT\r\n"
-                 "Content-Length: %lu\r\n"
-                 "%s\r\n"
-                 "%s\0",
-                 useSSL ? "" : "https://api.openai.com", openAiApiKey,
-                 strlen(jsonString), authHeader, jsonString);
+        if (USE_LOCAL_LLM) {
+            // Local LLM servers typically use OpenAI-compatible
+            // /v1/chat/completions endpoint
+            snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                     "POST /v1/chat/completions HTTP/1.1\r\n"
+                     "Host: %s:%d\r\n"
+                     "Content-Type: application/json\r\n"
+                     "User-Agent: AmigaGPT\r\n"
+                     "Content-Length: %lu\r\n"
+                     "%s\r\n"
+                     "%s\0",
+                     targetHost, targetPort, strlen(jsonString), authHeader,
+                     jsonString);
+        } else {
+            snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                     "POST %s/v1/responses HTTP/1.1\r\n"
+                     "Host: api.openai.com\r\n"
+                     "Content-Type: application/json\r\n"
+                     "Authorization: Bearer %s\r\n"
+                     "User-Agent: AmigaGPT\r\n"
+                     "Content-Length: %lu\r\n"
+                     "%s\r\n"
+                     "%s\0",
+                     useSSL ? "" : "https://api.openai.com", openAiApiKey,
+                     strlen(jsonString), authHeader, jsonString);
+        }
 
         json_object_put(obj);
 
         FreeVec(authHeader);
 
         updateStatusBar(STRING_CONNECTING, yellowPen);
-        while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy,
+        while (createSSLConnection(targetHost, targetPort, useSSL, useProxy,
                                    proxyHost, proxyPort, proxyUsesSSL,
                                    proxyRequiresAuth, proxyUsername,
                                    proxyPassword) == RETURN_ERROR) {
@@ -831,9 +1083,10 @@ struct json_object *postImageCreationRequestToOpenAI(
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
     UBYTE connectionRetryCount = 0;
-    while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy, proxyHost,
-                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
-                               proxyUsername, proxyPassword) == RETURN_ERROR) {
+    while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useSSL, useProxy,
+                               proxyHost, proxyPort, proxyUsesSSL,
+                               proxyRequiresAuth, proxyUsername,
+                               proxyPassword) == RETURN_ERROR) {
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
             json_tokener_free(tokener);
@@ -1110,9 +1363,9 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
     UBYTE connectionRetryCount = 0;
-    while (createSSLConnection(hostString, 443, useProxy, proxyHost, proxyPort,
-                               proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-                               proxyPassword) == RETURN_ERROR) {
+    while (createSSLConnection(hostString, 443, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
             Close(fileHandle);
@@ -1241,8 +1494,8 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
                 reportSslError(ssl, bytesRead, "SSL_read (download)");
                 /* Attempt reconnect & range resume follows as before */
                 updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
-                if (createSSLConnection(hostString, 443, useProxy, proxyHost,
-                                        proxyPort, proxyUsesSSL,
+                if (createSSLConnection(hostString, 443, useSSL, useProxy,
+                                        proxyHost, proxyPort, proxyUsesSSL,
                                         proxyRequiresAuth, proxyUsername,
                                         proxyPassword) == RETURN_ERROR) {
                     if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
@@ -1502,9 +1755,10 @@ APTR postTextToSpeechRequestToOpenAI(
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
     UBYTE connectionRetryCount = 0;
-    while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy, proxyHost,
-                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
-                               proxyUsername, proxyPassword) == RETURN_ERROR) {
+    while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useSSL, useProxy,
+                               proxyHost, proxyPort, proxyUsesSSL,
+                               proxyRequiresAuth, proxyUsername,
+                               proxyPassword) == RETURN_ERROR) {
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
             return NULL;
@@ -1840,10 +2094,10 @@ APTR postTextToSpeechRequestToOpenAI(
             case SSL_ERROR_SSL: {
                 reportSslError(ssl, bytesRead, "SSL_read (tts)");
                 updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
-                if (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useProxy,
-                                        proxyHost, proxyPort, proxyUsesSSL,
-                                        proxyRequiresAuth, proxyUsername,
-                                        proxyPassword) == RETURN_ERROR) {
+                if (createSSLConnection(
+                        OPENAI_HOST, OPENAI_PORT, useSSL, useProxy, proxyHost,
+                        proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                        proxyUsername, proxyPassword) == RETURN_ERROR) {
                     if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
                         displayError(STRING_ERROR_CONNECTION_MAX_RETRIES);
                         FreeVec(audioData);

@@ -17,7 +17,7 @@ HOOKPROTONH(ReplyCallbackFunc, APTR, Object *obj, struct RexxMsg *rxm) {
 MakeHook(ReplyCallbackHook, ReplyCallbackFunc);
 
 HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
-    STRPTR modelString = (STRPTR)arg[0];
+    STRPTR model = (STRPTR)arg[0];
     STRPTR system = (STRPTR)arg[1];
     STRPTR apiKey = (STRPTR)arg[2];
     BOOL webSearchEnabled = (BOOL)arg[3];
@@ -26,20 +26,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     if (apiKey == NULL) {
         apiKey = config.openAiApiKey;
     }
-    ChatModel model;
-    if (modelString == NULL || strlen(modelString) == 0) {
-        model = GPT_5_MINI;
-    } else {
-        for (UBYTE i = 0; CHAT_MODEL_NAMES[i] != NULL; i++) {
-            if (CHAT_MODEL_NAMES[i + 1] == NULL) {
-                return RETURN_ERROR;
-            }
-            if (strcmp(modelString, CHAT_MODEL_NAMES[i]) == 0) {
-                model = i;
-                break;
-            }
-        }
-    }
+
     struct Conversation *conversation = newConversation();
     UTF8 *promptUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
                                           CSA_Source, (Tag)prompt, TAG_DONE);
@@ -284,6 +271,44 @@ HOOKPROTONHNO(ListAudioFormatsFunc, APTR, ULONG *arg) {
 }
 MakeHook(ListAudioFormatsHook, ListAudioFormatsFunc);
 
+HOOKPROTONHNO(ListServerModelsFunc, APTR, ULONG *arg) {
+    STRPTR host = (STRPTR)arg[0];
+    LONG *port = (LONG *)arg[1];
+    BOOL useSSL = (BOOL)arg[2];
+    STRPTR apiKey = (STRPTR)arg[3];
+    BOOL useProxy = (BOOL)arg[4];
+    STRPTR proxyHost = (STRPTR)arg[5];
+    LONG *proxyPort = (LONG *)arg[6];
+    BOOL proxyUsesSSL = (BOOL)arg[7];
+    BOOL proxyRequiresAuth = (BOOL)arg[8];
+    STRPTR proxyUsername = (STRPTR)arg[9];
+    STRPTR proxyPassword = (STRPTR)arg[10];
+
+    ULONG portValue = port == NULL ? (useSSL ? 443 : 80) : (ULONG)*port;
+    ULONG proxyPortValue = proxyPort == NULL ? 8080 : (ULONG)*proxyPort;
+
+    struct json_object *models = getChatModels(
+        host, portValue, useSSL, apiKey, useProxy, proxyHost, proxyPortValue,
+        proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword);
+
+    if (models == NULL) {
+        return RETURN_ERROR;
+    }
+
+    STRPTR modelsString = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
+    for (UBYTE i = 0; i < json_object_array_length(models); i++) {
+        struct json_object *model = json_object_array_get_idx(models, i);
+        strncat(modelsString, json_object_get_string(model), 1024);
+        strncat(modelsString, "\n", 1024);
+    }
+
+    set(app, MUIA_Application_RexxString, modelsString);
+    FreeVec(modelsString);
+    json_object_put(models);
+    return RETURN_OK;
+}
+MakeHook(ListServerModelsHook, ListServerModelsFunc);
+
 HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     STRPTR modelString = (STRPTR)arg[0];
     STRPTR voiceString = (STRPTR)arg[1];
@@ -352,6 +377,10 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
         "SPEAKTEXT "
         "M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,P=PROMPT/"
         "F\n"
+        "LISTSERVERMODELS "
+        "H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/"
+        "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
+        "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K\n"
         "LISTAUDIOFORMATS\n"
         "LISTCHATMODELS\n"
         "LISTIMAGEMODELS\n"
@@ -365,7 +394,7 @@ MakeHook(HelpHook, HelpFunc);
 struct MUI_Command arexxList[] = {
     {"SENDMESSAGE",
      "M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F",
-     4,
+     5,
      &SendMessageHook,
      {0, 0, 0, 0, 0}},
     {"CREATEIMAGE",
@@ -376,10 +405,17 @@ struct MUI_Command arexxList[] = {
     {"SPEAKTEXT",
      "M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,F=FORMAT/"
      "K,P=PROMPT/F",
-     5,
+     7,
      &SpeakTextHook,
      {0, 0, 0, 0, 0}},
     {"LISTAUDIOFORMATS", NULL, NULL, &ListAudioFormatsHook, {0, 0, 0, 0, 0}},
+    {"LISTSERVERMODELS",
+     "H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,"
+     "PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,"
+     "PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K",
+     11,
+     &ListServerModelsHook,
+     {0, 0, 0, 0, 0}},
     {"LISTCHATMODELS", NULL, NULL, &ListChatModelsHook, {0, 0, 0, 0, 0}},
     {"LISTIMAGEMODELS", NULL, NULL, &ListImageModelsHook, {0, 0, 0, 0, 0}},
     {"LISTIMAGESIZES", NULL, NULL, &ListImageSizesHook, {0, 0, 0, 0, 0}},

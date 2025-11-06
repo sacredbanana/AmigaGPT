@@ -18,6 +18,11 @@
 #define OPENAI_PORT 443
 #define AUDIO_BUFFER_SIZE 4096
 
+// Set to TRUE to use local LLM server instead of OpenAI
+#define USE_LOCAL_LLM TRUE
+#define LOCAL_LLM_HOST "localhost"
+#define LOCAL_LLM_PORT 1234
+
 #define UBYTE uint8_t
 #define ULONG uint32_t
 #define LONG int32_t
@@ -77,74 +82,46 @@ static SSL_verify_cb verify_cb(SSL_verify_cb preverify_ok, X509_STORE_CTX *ctx);
 static void generateRandomSeed(uint8_t *buffer, uint32_t size);
 static uint32_t rangeRand(uint32_t maxValue);
 static bool createSSLConnection(const char *host, uint32_t port);
+static bool createPlainConnection(const char *host, uint32_t port);
 static uint32_t parseChunkLength(uint8_t *buffer);
 u_int8_t *postTextToSpeechRequestToOpenAI(const char *text,
                                           enum OpenAITTSModel openAITTSModel,
                                           enum OpenAITTSVoice openAITTSVoice,
                                           const char *openAiApiKey,
                                           uint32_t *audioLength);
+char *postChatMessageToLocalLLM(const char *prompt, const char *system_message);
 
 int main(int argc, char *argv[]) {
-    SSL_CTX *ctx;
-    SSL *ssl;
-    BIO *sbio;
-    int len;
-    char buf[1024];
-
     readBuffer = malloc(READ_BUFFER_LENGTH);
     writeBuffer = malloc(WRITE_BUFFER_LENGTH);
 
-    SSL_library_init();
-    OpenSSL_add_all_algorithms();
-    SSL_load_error_strings();
+    if (USE_LOCAL_LLM) {
+        printf("Testing local LLM server at %s:%d\n", LOCAL_LLM_HOST,
+               LOCAL_LLM_PORT);
 
-    createSSLContext();
+        char *response = postChatMessageToLocalLLM(
+            "Tell me a short joke about the Amiga computer.",
+            "You are a helpful assistant who loves the Amiga computer.");
 
-    CONST_STRPTR text =
-        "jeremy i love you. jarvis. The Amiga Advanced Architecture (AAA) "
-        "chipset was intended as a next-generation evolution of the Amiga "
-        "computer's original chipset, enhancing its graphical and performance "
-        "capabilities. Announced in the early 1990s, it aimed to bring "
-        "significant technological advancements that would keep the Amiga "
-        "platform competitive. Some of the key features and enhancements that "
-        "the AAA chipset was expected to include are as follows:\n\n### "
-        "Graphics:\n1. **True 24-bit Color**: Support for 24-bit color depth, "
-        "allowing for over 16 million colors on screen.\n2. **High "
-        "Resolutions**: Support for resolutions up to 1280x1024 pixels, which "
-        "was quite advanced for its time.\n3. **Improved Blitter**: Enhanced "
-        "blitter performance for faster manipulation of bitmaps and handling "
-        "of graphical operations.4. **Extended Sprites**: More and better "
-        "sprites, enabling more complex and colorful graphics without "
-        "excessive CPU load.\n5. **Alpha Channel Support**: Full-fledged alpha "
-        "blending capabilities for more advanced transparency effects.\n\n### "
-        "Sound:\n1. **16-bit Audio**: Upgrading from the 8-bit audio of "
-        "previous Amiga models, the AAA chipset was aiming to offer 16-bit "
-        "stereo sound.\n2. **Multiple Audio Channels**: More audio channels "
-        "for richer sound and more complex audio compositions.\n\n### Memory "
-        "and Performance:\n1. **Enhanced Memory Management**: Improved memory "
-        "bandwidth and access times, facilitating faster overall system "
-        "performance.\n2. **System Bus Enhancements**: Faster data throughput "
-        "on the system bus to alleviate bottlenecks.\n\n### Compatibility:\n1. "
-        "**Backwards Compatibility**: Efforts were being made to ensure that "
-        "AAA would be compatible with existing Amiga software and hardware to "
-        "some extent, to ease the transition for users.\n\n### Additional "
-        "Features:\n1. **Advanced DMA Controllers**: Improved Direct Memory "
-        "Access (DMA) controllers for more efficient data transfers.\n2. "
-        "**Faster CPU Integration**: Better support for faster CPUs which were "
-        "becoming more common in the early '90s.\n\nThe AAA project ultimately "
-        "never came to fruition. Commodore, the company behind Amiga, faced "
-        "significant financial difficulties and went bankrupt in 1994, which "
-        "led to the discontinuation of the AAA chipset development before it "
-        "could be commercially released. Nonetheless, the conceptual features "
-        "of the AAA architecture demonstrated significant ambition and "
-        "provided a glimpse into what could have been a revolutionary leap for "
-        "the Amiga platform. Extra stuff";
+        if (response) {
+            printf("\n=== RESPONSE ===\n%s\n================\n", response);
+            free(response);
+        } else {
+            printf("Failed to get response from local LLM\n");
+        }
+    } else {
+        SSL_library_init();
+        OpenSSL_add_all_algorithms();
+        SSL_load_error_strings();
+        createSSLContext();
 
-    postTextToSpeechRequestToOpenAI(text, OPENAI_TTS_MODEL_TTS_1,
-                                    OPENAI_TTS_VOICE_ALLOY, OPENAI_API_KEY,
-                                    &len);
-
-    SSL_CTX_free(ctx);
+        CONST_STRPTR text = "Hello, this is a test of OpenAI TTS";
+        uint32_t len;
+        postTextToSpeechRequestToOpenAI(text, OPENAI_TTS_MODEL_TTS_1,
+                                        OPENAI_TTS_VOICE_ALLOY, OPENAI_API_KEY,
+                                        &len);
+        SSL_CTX_free(ctx);
+    }
 
     free(readBuffer);
     free(writeBuffer);
@@ -706,4 +683,209 @@ u_int8_t *postTextToSpeechRequestToOpenAI(const char *text,
     fclose(file2);
 
     return audioData;
+}
+
+/**
+ * Create a plain socket connection (no SSL) for local LLM
+ * @param host the host to connect to
+ * @param port the port to connect to
+ * @return true on success, false on failure
+ **/
+static bool createPlainConnection(const char *host, uint32_t port) {
+    struct sockaddr_in addr;
+    struct hostent *hostent;
+
+    if (sock > -1) {
+        close(sock);
+    }
+
+    /* Lookup hostname */
+    if ((hostent = gethostbyname(host)) != NULL) {
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        memcpy(&addr.sin_addr, hostent->h_addr, hostent->h_length);
+    } else {
+        printf("Host lookup failed: %s\n", hstrerror(h_errno));
+        return false;
+    }
+
+    /* Create a socket and connect to the server */
+    if (hostent && ((sock = socket(AF_INET, SOCK_STREAM, 0)) >= 0)) {
+        if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+            printf("Couldn't connect to server\n");
+            perror("Connect failed");
+            close(sock);
+            sock = -1;
+            return false;
+        }
+    } else {
+        printf("Couldn't create socket\n");
+        return false;
+    }
+
+    printf("Connected to %s:%d\n", host, port);
+    return true;
+}
+
+/**
+ * Post a chat message to local LLM server
+ * @param prompt the user's prompt
+ * @param system_message optional system message (can be NULL)
+ * @return the response content as a string (caller must free), or NULL on error
+ **/
+char *postChatMessageToLocalLLM(const char *prompt,
+                                const char *system_message) {
+    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+    memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
+
+    printf("Connecting to local LLM...\n");
+    if (!createPlainConnection(LOCAL_LLM_HOST, LOCAL_LLM_PORT)) {
+        return NULL;
+    }
+
+    // Build JSON request
+    struct json_object *obj = json_object_new_object();
+    json_object_object_add(
+        obj, "model",
+        json_object_new_string("mistralrp-noromaid-nsfw-mistral-7b"));
+
+    struct json_object *messages = json_object_new_array();
+
+    // Add system message if provided
+    if (system_message != NULL) {
+        struct json_object *system_msg = json_object_new_object();
+        json_object_object_add(system_msg, "role",
+                               json_object_new_string("system"));
+        json_object_object_add(system_msg, "content",
+                               json_object_new_string(system_message));
+        json_object_array_add(messages, system_msg);
+    }
+
+    // Add user message
+    struct json_object *user_msg = json_object_new_object();
+    json_object_object_add(user_msg, "role", json_object_new_string("user"));
+    json_object_object_add(user_msg, "content", json_object_new_string(prompt));
+    json_object_array_add(messages, user_msg);
+
+    json_object_object_add(obj, "messages", messages);
+    json_object_object_add(obj, "stream", json_object_new_boolean(false));
+
+    const char *jsonString = json_object_to_json_string(obj);
+
+    // Build HTTP request
+    snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+             "POST /v1/chat/completions HTTP/1.1\r\n"
+             "Host: %s:%d\r\n"
+             "Content-Type: application/json\r\n"
+             "User-Agent: AmigaGPT-Test\r\n"
+             "Content-Length: %lu\r\n\r\n"
+             "%s",
+             LOCAL_LLM_HOST, LOCAL_LLM_PORT, strlen(jsonString), jsonString);
+
+    json_object_put(obj);
+
+    printf("Sending request...\n");
+    ssize_t bytes_sent = send(sock, writeBuffer, strlen(writeBuffer), 0);
+    if (bytes_sent <= 0) {
+        printf("Failed to send request\n");
+        close(sock);
+        sock = -1;
+        return NULL;
+    }
+
+    printf("Waiting for response...\n");
+    // Read response
+    ssize_t bytes_read = recv(sock, readBuffer, READ_BUFFER_LENGTH - 1, 0);
+    if (bytes_read <= 0) {
+        printf("Failed to read response\n");
+        close(sock);
+        sock = -1;
+        return NULL;
+    }
+    readBuffer[bytes_read] = '\0';
+
+    // Find JSON start (after HTTP headers)
+    char *json_start = strstr(readBuffer, "\r\n\r\n");
+    if (json_start == NULL) {
+        printf("Invalid response format\n");
+        close(sock);
+        sock = -1;
+        return NULL;
+    }
+    json_start += 4; // Skip past "\r\n\r\n"
+
+    // Parse JSON response
+    struct json_object *response = json_tokener_parse(json_start);
+    if (response == NULL) {
+        printf("Failed to parse JSON response\n");
+        printf("Raw response:\n%s\n", json_start);
+        close(sock);
+        sock = -1;
+        return NULL;
+    }
+
+    // Check for error response
+    struct json_object *error_obj = json_object_object_get(response, "error");
+    if (error_obj != NULL) {
+        struct json_object *error_msg =
+            json_object_object_get(error_obj, "message");
+        if (error_msg != NULL) {
+            printf("Error from server: %s\n",
+                   json_object_get_string(error_msg));
+        } else {
+            printf("Error response (no message field)\n");
+        }
+        json_object_put(response);
+        close(sock);
+        sock = -1;
+        return NULL;
+    }
+
+    // Extract content from response
+    struct json_object *choices = json_object_object_get(response, "choices");
+    if (choices == NULL) {
+        printf("No 'choices' in response\n");
+        printf("Full response: %s\n", json_object_to_json_string(response));
+        json_object_put(response);
+        close(sock);
+        sock = -1;
+        return NULL;
+    }
+
+    struct json_object *choice = json_object_array_get_idx(choices, 0);
+    if (choice == NULL) {
+        printf("No choice at index 0\n");
+        json_object_put(response);
+        close(sock);
+        sock = -1;
+        return NULL;
+    }
+
+    struct json_object *message = json_object_object_get(choice, "message");
+    if (message == NULL) {
+        printf("No 'message' in choice\n");
+        json_object_put(response);
+        close(sock);
+        sock = -1;
+        return NULL;
+    }
+
+    struct json_object *content = json_object_object_get(message, "content");
+    if (content == NULL) {
+        printf("No 'content' in message\n");
+        json_object_put(response);
+        close(sock);
+        sock = -1;
+        return NULL;
+    }
+
+    const char *content_str = json_object_get_string(content);
+    char *result = strdup(content_str);
+
+    json_object_put(response);
+    close(sock);
+    sock = -1;
+
+    return result;
 }

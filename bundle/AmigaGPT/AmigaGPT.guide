@@ -279,6 +279,7 @@ The following ARexx commands are available:
 
 @{b}SENDMESSAGE@{ub}
 Sends a message to the OpenAI API and returns the response.
+
 SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
 - M=MODEL - Optional, the chat model to use (use LISTCHATMODELS to see available models). Default is gpt-5-mini
 - S=SYSTEM - Optional, system message to include
@@ -288,6 +289,7 @@ SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
 
 @{b}CREATEIMAGE@{ub}
 Generates an image using the specified model.
+
 CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
 - M=MODEL - Optional, the image model to use (use LISTIMAGEMODELS to see available models). Default is gpt-image-1
 - S=SIZE - Optional, image size (use LISTIMAGESIZES to see available sizes). Default is 1024x1024
@@ -297,6 +299,7 @@ CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
 
 @{b}SPEAKTEXT@{ub}
 Uses text-to-speech to speak the specified text.
+
 SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,F=FORMAT/K,P=PROMPT/F
 - M=MODEL - Optional, the voice model to use (use LISTVOICEMODELS to see available models). Default is gpt-4o-mini-tts
 - V=VOICE - Optional, the voice to use (use LISTVOICES to see available voices). Default is alloy
@@ -307,15 +310,51 @@ SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,F=FORMAT/K,
 - P=PROMPT - Required, the text to speak
 
 @{b}List Commands@{ub}
-- LISTAUDIOFORMATS - Lists all available audio formats for saving audio files
-- LISTCHATMODELS - Lists all available chat models
-- LISTIMAGEMODELS - Lists all available image models
-- LISTIMAGESIZES - Lists all available image sizes
-- LISTVOICEMODELS - Lists all available TTS models
-- LISTVOICES - Lists all available TTS voices
 
-@{b}Help@{ub}
-- ? - Displays a list of available commands
+@{b}LISTSERVERMODELS@{ub}
+Lists all models available on a server
+
+LISTSERVERMODELS H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K
+
+- `H=HOST` - Optional, the URL of the host of the server. Defaults to api.openai.com
+- `P=PORT` - Optional, the port to connect to. Defaults to 443 for SSL or 80 insecure
+- `S=SSL` - Optional, flag to indicate if this is an SSL connection
+- `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
+- `U=USEPROXY` - Optional, flag to indicate if you want to connect via a proxy server
+- `PH=PROXYHOST` - Optional, the URL of the proxy server if you are using one
+- `PP=PROXYPORT` - Optional, the port of the proxy server if you are using one
+- `PS=PROXYUSESSSL` - Optional, flag to indicate if the proxy uses an SSL connection
+- `PA=PROXYREQUIRESAUTH` - Optional, flag to indicate if the proxy server requires authentication
+- `PU=PROXYUSERNAME` - Optional, username of the proxy server if needed
+- `PP=PROXYPASSWORD` - Optional, password of the proxy server if needed
+
+@{b}LISTAUDIOFORMATS@{ub}
+ Lists all available audio formats for saving audio files
+ LISTAUDIOFORMATS
+
+@{b}LISTCHATMODELS@{ub}
+Lists all available chat models
+LISTCHATMODELS
+
+@{b}LISTIMAGEMODELS@{ub}
+Lists all available image models
+LISTIMAGEMODELS
+
+@{b}LISTIMAGESIZES@{ub}
+Lists all available image sizes
+LISTIMAGESIZES
+
+@{b}LISTVOICEMODELS@{ub}
+Lists all available TTS models
+LISTVOICEMODELS
+
+@{b}LISTVOICES@{ub}
+Lists all available TTS voices
+LISTVOICES
+
+@{b}Help (?)@{ub}
+Displays a list of available commands
+?
 
 @{b}Example ARexx Script@{ub}
 @{" "}

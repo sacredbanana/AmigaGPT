@@ -410,10 +410,10 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         "in quotes or prefix the response with anything",
         "user");
     struct json_object **responses = postChatMessageToOpenAI(
-        imageNameConversation, GPT_5_NANO, config.openAiApiKey, FALSE,
-        config.proxyEnabled, config.proxyHost, config.proxyPort,
-        config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
-        config.proxyPassword, config.webSearchEnabled);
+        imageNameConversation, CHAT_MODEL_NAMES[GPT_5_NANO],
+        config.openAiApiKey, FALSE, config.proxyEnabled, config.proxyHost,
+        config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth,
+        config.proxyUsername, config.proxyPassword, config.webSearchEnabled);
 
     struct GeneratedImage *generatedImage =
         AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
@@ -1277,10 +1277,11 @@ static void sendChatMessage() {
 
     do {
         responses = postChatMessageToOpenAI(
-            currentConversation, config.chatModel, config.openAiApiKey, TRUE,
-            config.proxyEnabled, config.proxyHost, config.proxyPort,
-            config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
-            config.proxyPassword, config.webSearchEnabled);
+            currentConversation, CHAT_MODEL_NAMES[config.chatModel],
+            config.openAiApiKey, TRUE, config.proxyEnabled, config.proxyHost,
+            config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth,
+            config.proxyUsername, config.proxyPassword,
+            config.webSearchEnabled);
         if (responses == NULL) {
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -1429,10 +1430,11 @@ static void sendChatMessage() {
                                   "user");
             setConversationSystem(currentConversation, NULL);
             responses = postChatMessageToOpenAI(
-                currentConversation, GPT_5_NANO, config.openAiApiKey, FALSE,
-                config.proxyEnabled, config.proxyHost, config.proxyPort,
-                config.proxyUsesSSL, config.proxyRequiresAuth,
-                config.proxyUsername, config.proxyPassword, config.webSearchEnabled);
+                currentConversation, CHAT_MODEL_NAMES[GPT_5_NANO],
+                config.openAiApiKey, FALSE, config.proxyEnabled,
+                config.proxyHost, config.proxyPort, config.proxyUsesSSL,
+                config.proxyRequiresAuth, config.proxyUsername,
+                config.proxyPassword, config.webSearchEnabled);
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);

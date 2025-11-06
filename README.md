@@ -181,15 +181,65 @@ SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,F=FORMAT/K,
 - `P=PROMPT` - Required, the text to speak
 
 #### List Commands
-- `LISTAUDIOFORMATS` - Lists all available audio formats for saving audio files
-- `LISTCHATMODELS` - Lists all available chat models
-- `LISTIMAGEMODELS` - Lists all available image models
-- `LISTIMAGESIZES` - Lists all available image sizes
-- `LISTVOICEMODELS` - Lists all available TTS models
-- `LISTVOICES` - Lists all available TTS voices
+#### LISTSERVERMODELS
+Lists all models available on a server
 
-#### Help
-- `?` - Displays a list of available commands
+```
+LISTSERVERMODELS H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K
+```
+- `H=HOST` - Optional, the URL of the host of the server. Defaults to api.openai.com
+- `P=PORT` - Optional, the port to connect to. Defaults to 443 for SSL or 80 insecure
+- `S=SSL` - Optional, flag to indicate if this is an SSL connection
+- `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
+- `U=USEPROXY` - Optional, flag to indicate if you want to connect via a proxy server
+- `PH=PROXYHOST` - Optional, the URL of the proxy server if you are using one
+- `PP=PROXYPORT` - Optional, the port of the proxy server if you are using one
+- `PS=PROXYUSESSSL` - Optional, flag to indicate if the proxy uses an SSL connection
+- `PA=PROXYREQUIRESAUTH` - Optional, flag to indicate if the proxy server requires authentication
+- `PU=PROXYUSERNAME` - Optional, username of the proxy server if needed
+- `PP=PROXYPASSWORD` - Optional, password of the proxy server if needed
+
+#### LISTAUDIOFORMATS
+Lists all available audio formats for saving audio files
+```
+LISTAUDIOFORMATS
+```
+
+#### LISTCHATMODELS
+Lists all available chat models
+```
+LISTCHATMODELS
+```
+
+#### LISTIMAGEMODELS
+Lists all available image models
+```
+LISTIMAGEMODELS
+```
+
+#### LISTIMAGESIZES
+Lists all available image sizes
+```
+LISTIMAGESIZES
+```
+
+#### LISTVOICEMODELS
+Lists all available TTS models
+```
+LISTVOICEMODELS
+```
+
+#### LISTVOICES
+Lists all available TTS voices
+```
+LISTVOICES
+```
+
+#### Help (?)
+Displays a list of available commands
+```
+?
+```
 
 #### Example ARexx Script
 ```rexx

@@ -471,6 +471,24 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
             return "";
         }
     } else {
+        // Check if this is a standard OpenAI format response (for local LLM)
+        struct json_object *choicesArray = json_object_object_get(json, "choices");
+        if (choicesArray != NULL) {
+            // Standard OpenAI format: { "choices": [{ "message": { "content": "..." } }] }
+            struct json_object *choice = json_object_array_get_idx(choicesArray, 0);
+            if (choice != NULL) {
+                struct json_object *message = json_object_object_get(choice, "message");
+                if (message != NULL) {
+                    struct json_object *content = json_object_object_get(message, "content");
+                    if (content != NULL) {
+                        return json_object_get_string(content);
+                    }
+                }
+            }
+            return "";
+        }
+        
+        // Otherwise, use OpenAI's newer format with "output"
         struct json_object *outputArray =
             json_object_object_get(json, "output");
         struct json_object *output = NULL;
