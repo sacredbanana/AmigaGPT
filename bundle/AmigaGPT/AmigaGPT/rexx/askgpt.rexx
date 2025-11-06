@@ -72,17 +72,17 @@ GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT
   'SENDMESSAGE M=gpt-5-mini WEBSEARCH 'QUESTION
   ADDRESS COMMAND
   ANSWER = ParseText(RESULT)
-  CALL SetAttr("asktext","Contents", ANSWER)
+  CALL SetAttr("asktext","Contents", '1B'X"b"QUESTION | '0A'X | ANSWER)
   CALL KillNotify("btnOk","app")
   CALL Notify("btnOk","pressed",1,"app","ReturnID", "quit")
   RETURN
 
 CreateApp: PROCEDURE
-  app.Title      = "AmigaGPT Answer"
-  app.Base       = "AMIGAGPT_ANSWER"
+  app.Title      = "AmigaGPT AskGPT"
+  app.Base       = "AMIGAGPT_ASKGPT"
   app.SubWindow  = "win"
 
-   win.Title     = "Answer"
+   win.Title     = "AskGPT"
    win.Contents  = "root"
    win.SizeGadget = 1
    win.DragBar    = 1
