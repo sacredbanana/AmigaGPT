@@ -53,7 +53,7 @@ Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
 
   PROMPT = INPUT
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-nano 'PROMPT
+  'SENDMESSAGE M=gpt-5-nano WEBSEARCH 'PROMPT
   ADDRESS COMMAND
   'REQUESTCHOICE >NIL: "Ask AmigaGPT" 'RESULT' "Ok"'
   RETURN
@@ -62,7 +62,7 @@ GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT
   CALL GetAttr("asktext","contents", QUESTION)
   QUESTION = TRANSLATE(QUESTION, ", ", '0A'X)
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-mini 'QUESTION
+  'SENDMESSAGE M=gpt-5-mini WEBSEARCH 'QUESTION
   ADDRESS COMMAND
   ANSWER = ParseText(RESULT)
   SAY ANSWER
@@ -88,8 +88,6 @@ CreateApp: PROCEDURE
 
     asktext.class     = "TextEditor"
     asktext.background = "textback"
-    /* asktext.frame     = "group" */
-    asktext.selected = 1
 
     /* buttons row */
     root.1            = "btns"

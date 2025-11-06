@@ -20,7 +20,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     STRPTR modelString = (STRPTR)arg[0];
     STRPTR system = (STRPTR)arg[1];
     STRPTR apiKey = (STRPTR)arg[2];
-    STRPTR prompt = (STRPTR)arg[3];
+    BOOL webSearchEnabled = (BOOL)arg[3];
+    STRPTR prompt = (STRPTR)arg[4];
 
     if (apiKey == NULL) {
         apiKey = config.openAiApiKey;
@@ -49,7 +50,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
     struct json_object **responses =
         postChatMessageToOpenAI(conversation, model, apiKey, FALSE, FALSE, NULL,
-                                0, FALSE, FALSE, NULL, NULL);
+                                0, FALSE, FALSE, NULL, NULL, webSearchEnabled);
 
     if (responses == NULL) {
         printf(STRING_ERROR_CONNECTING_OPENAI);
@@ -346,7 +347,7 @@ MakeHook(SpeakTextHook, SpeakTextFunc);
 
 HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
     set(app, MUIA_Application_RexxString,
-        "SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F\n"
+        "SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F\n"
         "CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F\n"
         "SPEAKTEXT "
         "M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,P=PROMPT/"
@@ -363,7 +364,7 @@ MakeHook(HelpHook, HelpFunc);
 
 struct MUI_Command arexxList[] = {
     {"SENDMESSAGE",
-     "M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F",
+     "M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F",
      4,
      &SendMessageHook,
      {0, 0, 0, 0, 0}},

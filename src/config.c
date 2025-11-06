@@ -44,6 +44,7 @@ struct Config config = {
     .fixedWidthFonts = FALSE,
     .userTextAlignment = ALIGN_RIGHT,
     .assistantTextAlignment = ALIGN_LEFT,
+    .webSearchEnabled = TRUE,
 };
 
 /**
@@ -136,6 +137,10 @@ LONG writeConfig() {
                            json_object_new_int(config.userTextAlignment));
     json_object_object_add(configJsonObject, "assistantTextAlignment",
                            json_object_new_int(config.assistantTextAlignment));
+
+    json_object_object_add(
+        configJsonObject, "webSearchEnabled",
+        json_object_new_boolean((BOOL)config.webSearchEnabled));
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
@@ -522,6 +527,15 @@ LONG readConfig() {
         config.assistantTextAlignment != ALIGN_RIGHT &&
         config.assistantTextAlignment != ALIGN_CENTER) {
         config.assistantTextAlignment = ALIGN_LEFT;
+    }
+
+    struct json_object *webSearchEnabledObj;
+    if (json_object_object_get_ex(configJsonObject, "webSearchEnabled",
+                                  &webSearchEnabledObj)) {
+        config.webSearchEnabled =
+            (ULONG)json_object_get_boolean(webSearchEnabledObj);
+    } else {
+        config.webSearchEnabled = TRUE;
     }
 
     FreeVec(configJsonString);

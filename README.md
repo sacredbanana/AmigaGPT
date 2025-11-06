@@ -146,11 +146,12 @@ The following ARexx commands are available:
 #### SENDMESSAGE
 Sends a message to the OpenAI API and returns the response.
 ```
-SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,P=PROMPT/F
+SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
 ```
 - `M=MODEL` - Optional, the chat model to use (use LISTCHATMODELS to see available models). Default is gpt-5-mini
 - `S=SYSTEM` - Optional, system message to include
 - `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
+- `W=WEBSEARCH` - Optional, enable ChatGPT to search the web
 - `P=PROMPT` - Required, the prompt or question to send
 
 #### CREATEIMAGE

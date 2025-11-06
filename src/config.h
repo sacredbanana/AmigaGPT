@@ -41,6 +41,7 @@ struct Config {
     ULONG fixedWidthFonts;
     LONG userTextAlignment;
     LONG assistantTextAlignment;
+    LONG webSearchEnabled;
 };
 
 /**

@@ -1307,3 +1307,8 @@ msgstr "Εκτύπωση"
 msgctxt "STRING_MENU_CLEAR_MUI_SETTINGS (237//)"
 msgid "Clear MUI Settings"
 msgstr "Καθαρισμός MUI Settings"
+
+#: src/menu.c:145
+msgctxt "STRING_MENU_OPENAI_WEB_SEARCH (238//)"
+msgid "Web Search"
+msgstr "Web αναζήτηση"

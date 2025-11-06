@@ -457,6 +457,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useProxy,
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
+ * @param webSearchEnabled whether to enable web search or not
  * @return a pointer to a new array of json_object containing the response(s) or
  *NULL -- Free it with json_object_put() for all responses then FreeVec() for
  *the array when you are done using it
@@ -466,8 +467,8 @@ postChatMessageToOpenAI(struct Conversation *conversation, ChatModel model,
                         CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
                         CONST_STRPTR proxyHost, UWORD proxyPort,
                         BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                        CONST_STRPTR proxyUsername,
-                        CONST_STRPTR proxyPassword) {
+                        CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+                        BOOL webSearchEnabled) {
     struct json_object **responses =
         AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH,
                  MEMF_ANY | MEMF_CLEAR);
@@ -484,6 +485,15 @@ postChatMessageToOpenAI(struct Conversation *conversation, ChatModel model,
         json_object_object_add(obj, "model",
                                json_object_new_string(CHAT_MODEL_NAMES[model]));
         struct json_object *conversationArray = json_object_new_array();
+
+        struct json_object *toolsArray = json_object_new_array();
+        if (webSearchEnabled) {
+            struct json_object *webSearchToolObj = json_object_new_object();
+            json_object_object_add(webSearchToolObj, "type",
+                                   json_object_new_string("web_search"));
+            json_object_array_add(toolsArray, webSearchToolObj);
+        }
+        json_object_object_add(obj, "tools", toolsArray);
 
         struct MinNode *conversationNode = conversation->messages->mlh_Head;
         while (conversationNode->mln_Succ != NULL) {

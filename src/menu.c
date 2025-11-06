@@ -409,12 +409,16 @@ void createMenu() {
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_OPENAI_CHAT_SYSTEM, MUIA_UserData, MENU_ITEM_OPENAI_CHAT_SYSTEM,
     MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_OPENAI_CHAT_MODEL, MUIA_UserData,
-    MENU_ITEM_OPENAI_CHAT_MODEL, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Menuitem_Title, STRING_MENU_OPENAI_WEB_SEARCH, MUIA_UserData,
+    MENU_ITEM_OPENAI_WEB_SEARCH_ENABLED, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_IMAGE_MODEL, MUIA_UserData, MENU_ITEM_OPENAI_IMAGE_MODEL,
+    STRING_MENU_OPENAI_CHAT_MODEL, MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL,
     MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_UserData,
+    MUIA_Menuitem_Title, STRING_MENU_OPENAI_IMAGE_MODEL, MUIA_UserData,
+    MENU_ITEM_OPENAI_IMAGE_MODEL, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_UserData,
     MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_Menuitem_CopyStrings, FALSE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3, MUIA_UserData,
@@ -677,6 +681,14 @@ void addMenuActions() {
     DoMethod(openAIChatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, chatSystemRequesterWindowObject, 3, MUIM_Set,
              MUIA_Window_ActiveObject, chatSystemRequesterString);
+
+    Object openAIWebSearchEnabledMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_WEB_SEARCH_ENABLED);
+    set(openAIWebSearchEnabledMenuItem, MUIA_Menuitem_Checked,
+        config.webSearchEnabled);
+    DoMethod(openAIWebSearchEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             MUIV_EveryTime, openAIWebSearchEnabledMenuItem, 3, MUIM_WriteLong,
+             MUIV_TriggerValue, &config.webSearchEnabled);
 
     Object arexShellMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
                                                 MENU_ITEM_AREXX_AREXX_SHELL);

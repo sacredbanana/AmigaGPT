@@ -413,7 +413,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         imageNameConversation, GPT_5_NANO, config.openAiApiKey, FALSE,
         config.proxyEnabled, config.proxyHost, config.proxyPort,
         config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
-        config.proxyPassword);
+        config.proxyPassword, config.webSearchEnabled);
 
     struct GeneratedImage *generatedImage =
         AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
@@ -1280,7 +1280,7 @@ static void sendChatMessage() {
             currentConversation, config.chatModel, config.openAiApiKey, TRUE,
             config.proxyEnabled, config.proxyHost, config.proxyPort,
             config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
-            config.proxyPassword);
+            config.proxyPassword, config.webSearchEnabled);
         if (responses == NULL) {
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -1432,7 +1432,7 @@ static void sendChatMessage() {
                 currentConversation, GPT_5_NANO, config.openAiApiKey, FALSE,
                 config.proxyEnabled, config.proxyHost, config.proxyPort,
                 config.proxyUsesSSL, config.proxyRequiresAuth,
-                config.proxyUsername, config.proxyPassword);
+                config.proxyUsername, config.proxyPassword, config.webSearchEnabled);
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);

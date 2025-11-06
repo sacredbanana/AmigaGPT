@@ -198,6 +198,7 @@ LONG initOpenAIConnector();
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
+ * @param webSearchEnabled whether to enable web search or not
  * @return a pointer to a new array of json_object containing the response(s) or
  *NULL -- Free it with json_object_put() for all responses then FreeVec() for
  *the array when you are done using it
@@ -207,7 +208,8 @@ postChatMessageToOpenAI(struct Conversation *conversation, ChatModel model,
                         CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
                         CONST_STRPTR proxyHost, UWORD proxyPort,
                         BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                        CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
+                        CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+                        BOOL webSearchEnabled);
 
 /**
  * Post a image creation request to OpenAI
