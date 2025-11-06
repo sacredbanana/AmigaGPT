@@ -36,7 +36,7 @@ Init: PROCEDURE EXPOSE AMIGAGPT_PORT GUI
     END
   END
   IF GUI = 1 THEN DO
-    l="rmh.library"; IF ~SHOW("L",l) THEN ; IF ~ADDLIB(l,0,-30) THEN DO; NOGUI=1; RETURN; END
+    l="rmh.library"; IF ~SHOW("L",l) THEN ; IF ~ADDLIB(l,0,-30) THEN DO; GUI=0; RETURN; END
     ADDRESS COMMAND 'VERSION rxmui.library >NIL:'
     IF RC ~= 0 THEN DO
       SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
