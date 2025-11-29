@@ -86,36 +86,65 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
         proxyUsername, proxyPassword, webSearchEnabled);
 
+    freeConversation(conversation);
+
     if (responses == NULL) {
-        printf(STRING_ERROR_CONNECTING_OPENAI);
         set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
-        freeConversation(conversation);
         updateStatusBar(STRING_ERROR, redPen);
-        return RETURN_ERROR;
+        return RETURN_OK;
     }
+
     struct json_object *response = responses[0];
+    if (response == NULL) {
+        set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
+        updateStatusBar(STRING_ERROR, redPen);
+        FreeVec(responses);
+        return RETURN_OK;
+    }
 
-    UTF8 *contentString = getMessageContentFromJson(response, FALSE, TRUE);
-
-    if (contentString != NULL) {
-        if (strlen(contentString) > 0) {
-            STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
-                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                (Tag)contentString, CSA_MapForeignChars, TRUE, TAG_DONE);
-            set(app, MUIA_Application_RexxString,
-                formattedMessageSystemEncoded);
-            CodesetsFreeA(formattedMessageSystemEncoded, NULL);
-        }
+    struct json_object *error;
+    if (json_object_object_get_ex(response, "error", &error) &&
+        !json_object_is_type(error, json_type_null)) {
+        struct json_object *message = json_object_object_get(error, "message");
+        UTF8 *messageString = json_object_get_string(message);
+        STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)messageString,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
+        set(app, MUIA_Application_RexxString, formattedMessageSystemEncoded);
+        CodesetsFreeA(formattedMessageSystemEncoded, NULL);
         json_object_put(response);
         FreeVec(responses);
-        freeConversation(conversation);
+        updateStatusBar(STRING_ERROR, redPen);
+        return RETURN_OK;
+    } else {
+        UTF8 *contentString = getMessageContentFromJson(response, FALSE, TRUE);
+        json_object_put(response);
+        FreeVec(responses);
+
+        if (!contentString) {
+            updateStatusBar(STRING_ERROR, redPen);
+            set(app, MUIA_Application_RexxString,
+                STRING_ERROR_CONNECTING_OPENAI);
+            return RETURN_OK;
+        }
+
+        if (strlen(contentString) == 0) {
+            set(app, MUIA_Application_RexxString,
+                STRING_ERROR_CONNECTING_OPENAI);
+            updateStatusBar(STRING_ERROR, redPen);
+            FreeVec(contentString);
+            return RETURN_OK;
+        }
+
+        STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)contentString,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
+        set(app, MUIA_Application_RexxString, formattedMessageSystemEncoded);
+        CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+        FreeVec(contentString);
         updateStatusBar(STRING_READY, greenPen);
         return RETURN_OK;
     }
-    FreeVec(responses);
-    freeConversation(conversation);
-    updateStatusBar(STRING_ERROR, redPen);
-    return RETURN_ERROR;
 }
 MakeHook(SendMessageHook, SendMessageFunc);
 

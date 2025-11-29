@@ -295,6 +295,14 @@ Special Thanks:
 Changelog:
 
 -------------------
+2.13.1 (2025-11-30)
+-------------------
+
+- Fix AskGPT crashing when running it without a GUI
+- Fix crash in ARexx SENDMESSAGE handler if there's an error response from
+  the server
+
+-------------------
 2.13.0 (2025-11-29)
 -------------------
 

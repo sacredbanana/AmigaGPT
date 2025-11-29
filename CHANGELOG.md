@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.13.1 (2025-11-30)
+
+- Fix AskGPT crashing when running it without a GUI
+- Fix crash in ARexx SENDMESSAGE handler if there's an error response from the server
+
 ## 2.13.0 (2025-11-29)
 
 - Add support for custom chat servers that conform to the OpenAI API so you can chat with alternative LLM servers hosted in your local network or on the internet

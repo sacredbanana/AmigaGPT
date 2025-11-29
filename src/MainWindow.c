@@ -1316,7 +1316,11 @@ static void sendChatMessage() {
                 struct json_object *message =
                     json_object_object_get(error, "message");
                 UTF8 *messageString = json_object_get_string(message);
-                displayError(messageString);
+                STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
+                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                    (Tag)messageString, CSA_MapForeignChars, TRUE, TAG_DONE);
+                displayError(formattedMessageSystemEncoded);
+                CodesetsFreeA(formattedMessageSystemEncoded, NULL);
                 set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
                 if (isAROS) {
                     set(chatInputTextEditor, MUIA_String_Contents, text);
