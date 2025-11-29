@@ -715,40 +715,7 @@ struct json_object **postChatMessageToOpenAI(
                     obj, "instructions",
                     json_object_new_string(conversation->system));
             }
-            // Local LLM uses standard OpenAI format with "messages" array
-            // Add system message if present
-            // if (conversation->system != NULL &&
-            //     strlen(conversation->system) > 0) {
-            //     struct json_object *systemMessageObj =
-            //     json_object_new_object();
-            //     json_object_object_add(systemMessageObj, "role",
-            //                            json_object_new_string("system"));
-            //     json_object_object_add(
-            //         systemMessageObj, "content",
-            //         json_object_new_string(conversation->system));
-            //     json_object_array_add(conversationArray, systemMessageObj);
-            // }
-
-            // struct MinNode *conversationNode =
-            // conversation->messages->mlh_Head; while
-            // (conversationNode->mln_Succ != NULL) {
-            //     struct ConversationNode *message =
-            //         (struct ConversationNode *)conversationNode;
-            //     struct json_object *messageObj = json_object_new_object();
-            //     json_object_object_add(messageObj, "role",
-            //                            json_object_new_string(message->role));
-            //     json_object_object_add(
-            //         messageObj, "content",
-            //         json_object_new_string(message->content));
-            //     json_object_array_add(conversationArray, messageObj);
-            //     conversationNode = conversationNode->mln_Succ;
-            // }
-
-            // json_object_object_add(obj, "messages", conversationArray);
-            // json_object_object_add(obj, "stream",
-            //                        json_object_new_boolean((json_bool)FALSE));
         } else {
-            // OpenAI's newer format with "input" and "instructions"
             struct json_object *toolsArray = json_object_new_array();
             if (webSearchEnabled) {
                 struct json_object *webSearchToolObj = json_object_new_object();
@@ -1051,6 +1018,19 @@ struct json_object **postChatMessageToOpenAI(
             if (type != NULL && strcmp(type, "response.completed") == 0) {
                 streamingInProgress = FALSE;
             }
+        }
+        struct json_object *error;
+        if (json_object_object_get_ex(responses[responseIndex - 1], "error",
+                                      &error) &&
+            !json_object_is_type(error, json_type_null)) {
+            CloseSocket(sock);
+            if (ssl != NULL) {
+                SSL_shutdown(ssl);
+                SSL_free(ssl);
+                ssl = NULL;
+            }
+            sock = -1;
+            streamingInProgress = FALSE;
         }
     } else {
         CloseSocket(sock);

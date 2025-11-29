@@ -9,6 +9,7 @@
 - Fix crash in joke.rexx when asking for another joke
 - Fix bug where the new conversation is not the selected conversation in the conversation list
 - Fix bug where starting a new conversation after deleting a conversation would briefly show the old conversation in the chat window before it gets a response from the server
+- Fix freeze when starting a new conversation after the previous conversation ended in an error
 
 ## 2.12.0 (2025-09-22)
 
