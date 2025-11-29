@@ -50,6 +50,22 @@ Init: PROCEDURE EXPOSE AMIGAGPT_PORT GUI
   CALL RxMUIOpt("DebugMode ShowErr")
   RETURN
 
+/* Replace all non-overlapping occurrences of old with new in s */
+ReplaceAll: PROCEDURE
+  PARSE ARG s, old, new
+  IF old = '' THEN RETURN s            /* avoid infinite loop */
+  p = 1; out = ''
+  DO FOREVER
+    i = POS(old, s, p)
+    IF i = 0 THEN DO
+      out = out || SUBSTR(s, p)        /* tack on the tail */
+      LEAVE
+    END
+    out = out || SUBSTR(s, p, i - p) || new
+    p = i + LENGTH(old)                 /* advance past the match */
+  END
+  RETURN out
+
 NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT
   IF PROMPT = "" THEN DO
     SAY "What do you want to ask?"
@@ -59,7 +75,7 @@ NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT
   ADDRESS VALUE AMIGAGPT_PORT
   SAY "Retrieving answer using AmigaGPT. Please wait..."
   'SENDMESSAGE WEBSEARCH M=gpt-5-mini P='PROMPT
-  ANSWER = TRANSLATE(RESULT, '0A'X, "\n")
+  ANSWER = ReplaceAll(RESULT, "\n", '0A'X)
   SAY ANSWER
   RETURN
 

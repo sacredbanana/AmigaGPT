@@ -107,9 +107,7 @@ void setConversationSystem(struct Conversation *conversation,
  * @param retainJSONFormat whether to retain the JSON format of the message
  * string
  * @return a pointer to a new UTF8 string containing the message content --
- *Free it with FreeVec() when you are done using it If found role in the
- *json instead of content then return an empty string
- * @todo Handle errors
+ * If it found role in the JSON instead of content then return an empty string
  **/
 UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                                 BOOL retainJSONFormat);

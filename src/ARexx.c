@@ -118,13 +118,13 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         return RETURN_OK;
     } else {
         UTF8 *contentString = getMessageContentFromJson(response, FALSE, TRUE);
-        json_object_put(response);
-        FreeVec(responses);
 
         if (!contentString) {
             updateStatusBar(STRING_ERROR, redPen);
             set(app, MUIA_Application_RexxString,
                 STRING_ERROR_CONNECTING_OPENAI);
+            json_object_put(response);
+            FreeVec(responses);
             return RETURN_OK;
         }
 
@@ -132,7 +132,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             set(app, MUIA_Application_RexxString,
                 STRING_ERROR_CONNECTING_OPENAI);
             updateStatusBar(STRING_ERROR, redPen);
-            FreeVec(contentString);
+            json_object_put(response);
+            FreeVec(responses);
             return RETURN_OK;
         }
 
@@ -141,7 +142,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             CSA_MapForeignChars, TRUE, TAG_DONE);
         set(app, MUIA_Application_RexxString, formattedMessageSystemEncoded);
         CodesetsFreeA(formattedMessageSystemEncoded, NULL);
-        FreeVec(contentString);
+        json_object_put(response);
+        FreeVec(responses);
         updateStatusBar(STRING_READY, greenPen);
         return RETURN_OK;
     }
