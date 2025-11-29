@@ -1282,3 +1282,18 @@ msgstr "Tøm MUI-innstillinger"
 msgctxt "STRING_MENU_OPENAI_WEB_SEARCH (238//)"
 msgid "Web Search"
 msgstr "Web søk"
+
+#: src/menu.c:146
+msgctxt "STRING_MENU_CUSTOM_SERVER (239//)"
+msgid "Custom Server"
+msgstr "Egendefinert Server"
+
+#: src/menu.c:148
+msgctxt "STRING_MENU_CUSTOM_SERVER_SETTINGS (241//)"
+msgid "Custom Server Settings"
+msgstr "Egendefinert Server Innstillinger"
+
+#: src/CustomServerSettingsRequesterWindow.c:11
+msgctxt "STRING_ERROR_CUSTOM_SERVER_SETTINGS (242//)"
+msgid "Failed to create custom server settings window"
+msgstr "Kunne ikke opprette customServerSettingsRequesterWindowObject"

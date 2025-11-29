@@ -45,7 +45,7 @@ Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
   SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
   SAY "Retrieving helpful advice for a midlife crisis using AmigaGPT. Please wait..."
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-nano Tell me helpful advice for a midlife crisis on a single line'
+  'SENDMESSAGE M=gpt-5-nano P=Tell me helpful advice for a midlife crisis on a single line'
   ADDRESS COMMAND
   'REQUESTCHOICE >NIL: "Helpful Advice" 'RESULT' Ok"'
   RETURN
@@ -53,7 +53,7 @@ Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
 GetHelp: PROCEDURE EXPOSE AMIGAGPT_PORT
   CALL Set("helpttext","text","Generating helpful advice for a midlife crisis for ya")
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-mini Tell me helpful advice for a midlife crisis'
+  'SENDMESSAGE M=gpt-5-mini P=Tell me helpful advice for a midlife crisis'
   ADDRESS COMMAND
   POEM = ParseText(RESULT)
   CALL Set("helpttext","text", HELP)

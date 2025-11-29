@@ -42,6 +42,12 @@ struct Config {
     LONG userTextAlignment;
     LONG assistantTextAlignment;
     LONG webSearchEnabled;
+    ULONG useCustomServer;
+    STRPTR customHost;
+    ULONG customPort;
+    ULONG customUseSSL;
+    STRPTR customApiKey;
+    STRPTR customChatModel;
 };
 
 /**

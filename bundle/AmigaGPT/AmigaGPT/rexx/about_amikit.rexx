@@ -45,7 +45,7 @@ Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
   SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
   SAY "Retrieving AmiKit description using AmigaGPT. Please wait..."
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-nano Give me a short description of AmiKit. Do it all on a single line.'
+  'SENDMESSAGE M=gpt-5-nano P=Give me a short description of AmiKit. Do it all on a single line.'
   ADDRESS COMMAND
   'REQUESTCHOICE >NIL: "AmiKit" 'RESULT' Ok"'
   RETURN
@@ -53,7 +53,7 @@ Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
 GetAmiKit: PROCEDURE EXPOSE AMIGAGPT_PORT
   CALL Set("amikittext","text","Generating a AmiKit description for ya")
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-mini Give me a description of AmiKit.'
+  'SENDMESSAGE M=gpt-5-mini P=Give me a description of AmiKit.'
   ADDRESS COMMAND
   AMIKIT = ParseText(RESULT)
   CALL Set("amikittext","text", AMIKIT)

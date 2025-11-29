@@ -45,7 +45,7 @@ Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
   SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
   SAY "Retrieving game recommendation using AmigaGPT. Please wait..."
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-nano Recommend a Commodore Amiga game and give me a short description of it. Do it all on a single line.'
+  'SENDMESSAGE M=gpt-5-mini P=Recommend a Commodore Amiga game and give me a short description of it. Do it all on a single line.'
   ADDRESS COMMAND
   'REQUESTCHOICE >NIL: "Random Game" 'RESULT' Ok"'
   RETURN
@@ -53,7 +53,7 @@ Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
 GetGame: PROCEDURE EXPOSE AMIGAGPT_PORT
   CALL Set("gametext","text","Generating a game recommendation for ya")
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-mini Recommend a Commodore Amiga game and give me a description of it.'
+  'SENDMESSAGE M=gpt-5-mini P=Recommend a Commodore Amiga game and give me a description of it.'
   ADDRESS COMMAND
   GAME = ParseText(RESULT)
   CALL Set("gametext","text", GAME)

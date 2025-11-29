@@ -14,6 +14,7 @@
 #include "AboutAmigaGPTWindow.h"
 #include "ARexx.h"
 #include "ChatSystemRequesterWindow.h"
+#include "CustomServerSettingsRequesterWindow.h"
 #include "config.h"
 #include "gui.h"
 #include "MainWindow.h"
@@ -405,27 +406,37 @@ void createMenu() {
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_OPENAI,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_OPENAI_API_KEY, MUIA_UserData,
-    MENU_ITEM_OPENAI_API_KEY, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MENU_ITEM_AI_OPENAI_API_KEY, MUIA_Menuitem_CopyStrings, FALSE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_CHAT_SYSTEM, MUIA_UserData, MENU_ITEM_OPENAI_CHAT_SYSTEM,
+    STRING_MENU_OPENAI_CHAT_SYSTEM, MUIA_UserData, MENU_ITEM_AI_CHAT_SYSTEM,
     MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_OPENAI_WEB_SEARCH, MUIA_UserData,
-    MENU_ITEM_OPENAI_WEB_SEARCH_ENABLED, MUIA_Menuitem_CopyStrings, FALSE,
+    MENU_ITEM_AI_OPENAI_WEB_SEARCH_ENABLED, MUIA_Menuitem_CopyStrings, FALSE,
     MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_CHAT_MODEL, MUIA_UserData, MENU_ITEM_OPENAI_CHAT_MODEL,
-    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_OPENAI_IMAGE_MODEL, MUIA_UserData,
-    MENU_ITEM_OPENAI_IMAGE_MODEL, MUIA_Menuitem_CopyStrings, FALSE, End,
+    STRING_MENU_OPENAI_CHAT_MODEL, MUIA_UserData,
+    MENU_ITEM_AI_OPENAI_CHAT_MODEL, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_OPENAI_IMAGE_MODEL, MUIA_UserData,
+    MENU_ITEM_AI_OPENAI_IMAGE_MODEL, MUIA_Menuitem_CopyStrings, FALSE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_UserData,
-    MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    MENU_ITEM_AI_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_Menuitem_CopyStrings, FALSE,
+    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3, MUIA_UserData,
-    MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3, MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    MENU_ITEM_AI_OPENAI_IMAGE_SIZE_DALL_E_3, MUIA_Menuitem_CopyStrings, FALSE,
+    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_UserData,
-    MENU_ITEM_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_Menuitem_CopyStrings, FALSE,
+    MENU_ITEM_AI_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_Menuitem_CopyStrings,
+    FALSE, End, MUIA_Family_Child, MenuObject, MUIA_UserData,
+    MENU_ITEM_AI_CUSTOM_SERVER, MUIA_Menu_Title, STRING_MENU_CUSTOM_SERVER,
+    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_ENABLED, MUIA_UserData,
+    MENU_ITEM_AI_CUSTOM_SERVER_ENABLED, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_CUSTOM_SERVER_SETTINGS, MUIA_UserData,
+    MENU_ITEM_AI_CUSTOM_SERVER_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
     End, End,
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_AREXX,
@@ -658,8 +669,8 @@ void addMenuActions() {
              voiceInstructionsRequesterWindowObject, 3, MUIM_Set,
              MUIA_Window_ActiveObject, voiceInstructionsRequesterString);
 
-    Object openAIAPIKeyMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_API_KEY);
+    Object openAIAPIKeyMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
+                                                   MENU_ITEM_AI_OPENAI_API_KEY);
     DoMethod(openAIAPIKeyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, apiKeyRequesterWindowObject, 3, MUIM_Set,
              MUIA_Window_Open, TRUE);
@@ -670,8 +681,8 @@ void addMenuActions() {
              MUIV_EveryTime, apiKeyRequesterWindowObject, 3, MUIM_Set,
              MUIA_Window_ActiveObject, apiKeyRequesterString);
 
-    Object openAIChatSystemMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_SYSTEM);
+    Object openAIChatSystemMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_AI_CHAT_SYSTEM);
     DoMethod(openAIChatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, chatSystemRequesterWindowObject, 3, MUIM_Set,
              MUIA_Window_Open, TRUE);
@@ -683,12 +694,26 @@ void addMenuActions() {
              MUIA_Window_ActiveObject, chatSystemRequesterString);
 
     Object openAIWebSearchEnabledMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_WEB_SEARCH_ENABLED);
+        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_WEB_SEARCH_ENABLED);
     set(openAIWebSearchEnabledMenuItem, MUIA_Menuitem_Checked,
         config.webSearchEnabled);
     DoMethod(openAIWebSearchEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, openAIWebSearchEnabledMenuItem, 3, MUIM_WriteLong,
              MUIV_TriggerValue, &config.webSearchEnabled);
+
+    Object customServerEnabledMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_AI_CUSTOM_SERVER_ENABLED);
+    set(customServerEnabledMenuItem, MUIA_Menuitem_Checked,
+        config.useCustomServer);
+    DoMethod(customServerEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             MUIV_EveryTime, customServerEnabledMenuItem, 3, MUIM_WriteLong,
+             MUIV_TriggerValue, &config.useCustomServer);
+
+    Object customServerSettingsMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_AI_CUSTOM_SERVER_SETTINGS);
+    DoMethod(customServerSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, customServerSettingsRequesterWindowObject, 3,
+             MUIM_Set, MUIA_Window_Open, TRUE);
 
     Object arexShellMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
                                                 MENU_ITEM_AREXX_AREXX_SHELL);
@@ -840,7 +865,7 @@ static void populateOpenAIMenu() {
     DoMethod(menuStrip, MUIM_Menustrip_InitChange);
 
     Object *openAIChatModelMenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_CHAT_MODEL);
+        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_CHAT_MODEL);
 
     // Remove any existing chat model items
     Object *chatModelMenuItem;
@@ -869,7 +894,7 @@ static void populateOpenAIMenu() {
     }
 
     Object *openAIImageModelMenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_MODEL);
+        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_IMAGE_MODEL);
 
     // Remove any existing image model items
     Object *imageModelMenuItem;
@@ -895,7 +920,7 @@ static void populateOpenAIMenu() {
     }
 
     Object *openAIImageSizeDALL_E_2MenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_2);
+        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_IMAGE_SIZE_DALL_E_2);
 
     // Remove any existing image size items
     Object *imageSizeDallE2MenuItem;
@@ -923,7 +948,7 @@ static void populateOpenAIMenu() {
     }
 
     Object *openAIImageSizeDALL_E_3MenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_DALL_E_3);
+        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_IMAGE_SIZE_DALL_E_3);
 
     // Remove any existing image size items
     Object *imageSizeDallE3MenuItem;
@@ -951,7 +976,7 @@ static void populateOpenAIMenu() {
     }
 
     Object *openAIImageSizeGPT_IMAGE_1MenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_OPENAI_IMAGE_SIZE_GPT_IMAGE_1);
+        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_IMAGE_SIZE_GPT_IMAGE_1);
 
     // Remove any existing image size items
     Object *imageSizeGptImage1MenuItem;

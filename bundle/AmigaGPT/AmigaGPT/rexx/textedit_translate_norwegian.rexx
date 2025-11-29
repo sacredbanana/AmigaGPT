@@ -16,7 +16,7 @@ ADDRESS 'TEXTEDIT.1'
 'GETSELECTEDTEXT'
 
 ADDRESS VALUE AMIGAGPT_PORT
-'SENDMESSAGE M=gpt-5-mini Translate the following into Norwegian: 'SELECTEDTEXT
+'SENDMESSAGE M=gpt-5-mini P=Translate the following into Norwegian: 'SELECTEDTEXT
 
 TRANSLATEDTEXT = RESULT
 

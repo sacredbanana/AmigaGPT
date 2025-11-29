@@ -45,7 +45,7 @@ Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
   SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
   SAY "Retrieving poem using AmigaGPT. Please wait..."
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-nano Tell me a short poem on a single line'
+  'SENDMESSAGE M=gpt-5-nano P=Tell me a short poem on a single line'
   ADDRESS COMMAND
   'REQUESTCHOICE >NIL: "Random Poem" 'RESULT' Ok"'
   RETURN
@@ -53,7 +53,7 @@ Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
 GetPoem: PROCEDURE EXPOSE AMIGAGPT_PORT
   CALL Set("poemtext","text","Generating a poem for ya")
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-mini Tell me a medium length poem'
+  'SENDMESSAGE M=gpt-5-mini P=Tell me a medium length poem'
   ADDRESS COMMAND
   POEM = ParseText(RESULT)
   CALL Set("poemtext","text", POEM)

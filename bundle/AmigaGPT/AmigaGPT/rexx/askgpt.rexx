@@ -59,7 +59,7 @@ NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT
 
   ADDRESS VALUE AMIGAGPT_PORT
   SAY "Retrieving answer using AmigaGPT. Please wait..."
-  'SENDMESSAGE M=mistralrp-noromaid-nsfw-mistral-7b 'PROMPT
+  'SENDMESSAGE P='PROMPT
   SAY ParseText(RESULT)
   RETURN
 
@@ -69,7 +69,7 @@ GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT
   CALL SetAttr("asktext","Contents", "Retrieving answer using AmigaGPT. Please wait...")
   CALL SetAttr("asktext", "ReadOnly", 1)
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-mini WEBSEARCH 'QUESTION
+  'SENDMESSAGE WEBSEARCH P='QUESTION
   ADDRESS COMMAND
   ANSWER = ParseText(RESULT)
   CALL SetAttr("asktext","Contents", '1B'X"b"QUESTION '0A'X'0A'X ANSWER)

@@ -13,7 +13,7 @@ IF ~SHOW('P',AMIGAGPT_PORT) THEN DO
 END
 
 ADDRESS VALUE AMIGAGPT_PORT
-'CREATEIMAGE A beautiful Amiga computer on a desk'
+'CREATEIMAGE P=A beautiful Amiga computer on a desk'
 
 ADDRESS COMMAND
 MultiView RESULT

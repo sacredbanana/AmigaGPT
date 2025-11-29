@@ -45,6 +45,12 @@ struct Config config = {
     .userTextAlignment = ALIGN_RIGHT,
     .assistantTextAlignment = ALIGN_LEFT,
     .webSearchEnabled = TRUE,
+    .useCustomServer = FALSE,
+    .customHost = NULL,
+    .customPort = 80,
+    .customUseSSL = FALSE,
+    .customApiKey = NULL,
+    .customChatModel = NULL,
 };
 
 /**
@@ -141,6 +147,31 @@ LONG writeConfig() {
     json_object_object_add(
         configJsonObject, "webSearchEnabled",
         json_object_new_boolean((BOOL)config.webSearchEnabled));
+
+    json_object_object_add(
+        configJsonObject, "useCustomServer",
+        json_object_new_boolean((BOOL)config.useCustomServer));
+
+    json_object_object_add(configJsonObject, "customHost",
+                           config.customHost != NULL
+                               ? json_object_new_string(config.customHost)
+                               : NULL);
+
+    json_object_object_add(configJsonObject, "customPort",
+                           json_object_new_int(config.customPort));
+
+    json_object_object_add(configJsonObject, "customUseSSL",
+                           json_object_new_boolean((BOOL)config.customUseSSL));
+
+    json_object_object_add(configJsonObject, "customApiKey",
+                           config.customApiKey != NULL
+                               ? json_object_new_string(config.customApiKey)
+                               : NULL);
+
+    json_object_object_add(configJsonObject, "customChatModel",
+                           config.customChatModel != NULL
+                               ? json_object_new_string(config.customChatModel)
+                               : NULL);
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
@@ -538,6 +569,76 @@ LONG readConfig() {
         config.webSearchEnabled = TRUE;
     }
 
+    struct json_object *useCustomServerObj;
+    if (json_object_object_get_ex(configJsonObject, "useCustomServer",
+                                  &useCustomServerObj)) {
+        config.useCustomServer =
+            (ULONG)json_object_get_boolean(useCustomServerObj);
+    } else {
+        config.useCustomServer = FALSE;
+    }
+
+    if (config.useCustomServer) {
+        config.customHost = NULL;
+        config.customPort = 80;
+        config.customUseSSL = FALSE;
+    }
+
+    if (config.customHost != NULL) {
+        FreeVec(config.customHost);
+        config.customHost = NULL;
+    }
+
+    struct json_object *customHostObj;
+    if (json_object_object_get_ex(configJsonObject, "customHost",
+                                  &customHostObj)) {
+        CONST_STRPTR customHost = json_object_get_string(customHostObj);
+        if (customHost != NULL) {
+            config.customHost = AllocVec(strlen(customHost) + 1, MEMF_CLEAR);
+            strncpy(config.customHost, customHost, strlen(customHost));
+        }
+    }
+
+    struct json_object *customPortObj;
+    if (json_object_object_get_ex(configJsonObject, "customPort",
+                                  &customPortObj)) {
+        config.customPort = json_object_get_int(customPortObj);
+    } else {
+        config.customPort = 80;
+    }
+
+    struct json_object *customUseSSLObj;
+    if (json_object_object_get_ex(configJsonObject, "customUseSSL",
+                                  &customUseSSLObj)) {
+        config.customUseSSL = (ULONG)json_object_get_boolean(customUseSSLObj);
+    } else {
+        config.customUseSSL = FALSE;
+    }
+
+    struct json_object *customApiKeyObj;
+    if (json_object_object_get_ex(configJsonObject, "customApiKey",
+                                  &customApiKeyObj)) {
+        CONST_STRPTR customApiKey = json_object_get_string(customApiKeyObj);
+        if (customApiKey != NULL) {
+            config.customApiKey =
+                AllocVec(strlen(customApiKey) + 1, MEMF_CLEAR);
+            strncpy(config.customApiKey, customApiKey, strlen(customApiKey));
+        }
+    }
+
+    struct json_object *customChatModelObj;
+    if (json_object_object_get_ex(configJsonObject, "customChatModel",
+                                  &customChatModelObj)) {
+        CONST_STRPTR customChatModel =
+            json_object_get_string(customChatModelObj);
+        if (customChatModel != NULL) {
+            config.customChatModel =
+                AllocVec(strlen(customChatModel) + 1, MEMF_CLEAR);
+            strncpy(config.customChatModel, customChatModel,
+                    strlen(customChatModel));
+        }
+    }
+
     FreeVec(configJsonString);
     json_object_put(configJsonObject);
     return RETURN_OK;
@@ -574,5 +675,17 @@ void freeConfig() {
     if (config.proxyPassword != NULL) {
         FreeVec(config.proxyPassword);
         config.proxyPassword = NULL;
+    }
+    if (config.customHost != NULL) {
+        FreeVec(config.customHost);
+        config.customHost = NULL;
+    }
+    if (config.customApiKey != NULL) {
+        FreeVec(config.customApiKey);
+        config.customApiKey = NULL;
+    }
+    if (config.customChatModel != NULL) {
+        FreeVec(config.customChatModel);
+        config.customChatModel = NULL;
     }
 }

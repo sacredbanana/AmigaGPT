@@ -424,9 +424,9 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
 msgstr ""
-"Sohbet geçmişi ayrıştırılamadı. Hatalı biçimlendirilmiş JSON. Chat-history."
-"json dosyası muhtemelen bozuk. Sohbet geçmişi yüklenmeyecek. Chat-history."
-"json dosyasının bir yedeği chat-history.json.bak olarak oluşturuldu"
+"Sohbet geçmişi ayrıştırılamadı. Hatalı biçimlendirilmiş JSON. Chat-"
+"history.json dosyası muhtemelen bozuk. Sohbet geçmişi yüklenmeyecek. Chat-"
+"history.json dosyasının bir yedeği chat-history.json.bak olarak oluşturuldu"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -436,8 +436,8 @@ msgid ""
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
 msgstr ""
-"Sohbet geçmişi ayrıştırılamadı. Hatalı biçimlendirilmiş JSON. Chat-history."
-"json dosyası muhtemelen bozuk. Sohbet geçmişi yüklenmeyecek. Sohbet "
+"Sohbet geçmişi ayrıştırılamadı. Hatalı biçimlendirilmiş JSON. Chat-"
+"history.json dosyası muhtemelen bozuk. Sohbet geçmişi yüklenmeyecek. Sohbet "
 "geçmişinin bir yedeğini diske yazarken bir hata oluştu ancak bir kopyası "
 "RAM'e kaydedildi:chat-history.json.bak"
 
@@ -471,9 +471,9 @@ msgid ""
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
 msgstr ""
-"Görüntü geçmişi ayrıştırılamadı. Hatalı biçimlendirilmiş JSON. image-history."
-"json dosyası muhtemelen bozuk. Görüntü geçmişi yüklenmeyecek. image-history."
-"json dosyasının bir yedeği image-history.json.bak olarak oluşturuldu"
+"Görüntü geçmişi ayrıştırılamadı. Hatalı biçimlendirilmiş JSON. image-"
+"history.json dosyası muhtemelen bozuk. Görüntü geçmişi yüklenmeyecek. image-"
+"history.json dosyasının bir yedeği image-history.json.bak olarak oluşturuldu"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -483,10 +483,10 @@ msgid ""
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
 msgstr ""
-"Görüntü geçmişi ayrıştırılamadı. Hatalı biçimlendirilmiş JSON. image-history."
-"json dosyası muhtemelen bozuk. Görüntü geçmişi yüklenmeyecek. Görüntü "
-"geçmişinin bir yedeğini diske yazarken bir hata oluştu ancak bir kopyası "
-"RAM'e kaydedildi:image-history.json.bak"
+"Görüntü geçmişi ayrıştırılamadı. Hatalı biçimlendirilmiş JSON. image-"
+"history.json dosyası muhtemelen bozuk. Görüntü geçmişi yüklenmeyecek. "
+"Görüntü geçmişinin bir yedeğini diske yazarken bir hata oluştu ancak bir "
+"kopyası RAM'e kaydedildi:image-history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
@@ -1223,8 +1223,12 @@ msgstr "GPT Image 1 Görsel Boyutu"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
-msgstr "Geçersiz istek. OpenAI API hesabınız muhtemelen bu modeli çalıştırmak için kredi bakiyeniz bitmiştir. Lütfen hesabınızı kontrol edin."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
+msgstr ""
+"Geçersiz istek. OpenAI API hesabınız muhtemelen bu modeli çalıştırmak için "
+"kredi bakiyeniz bitmiştir. Lütfen hesabınızı kontrol edin."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1275,3 +1279,18 @@ msgstr "MUI ayarlarını temizle"
 msgctxt "STRING_MENU_OPENAI_WEB_SEARCH (238//)"
 msgid "Web Search"
 msgstr "Web arama"
+
+#: src/menu.c:146
+msgctxt "STRING_MENU_CUSTOM_SERVER (239//)"
+msgid "Custom Server"
+msgstr "Özel Sunucu"
+
+#: src/menu.c:148
+msgctxt "STRING_MENU_CUSTOM_SERVER_SETTINGS (241//)"
+msgid "Custom Server Settings"
+msgstr "Özel Sunucu Ayarları"
+
+#: src/CustomServerSettingsRequesterWindow.c:11
+msgctxt "STRING_ERROR_CUSTOM_SERVER_SETTINGS (242//)"
+msgid "Failed to create custom server settings window"
+msgstr "Özel Sunucu Ayarları penceresi oluşturulamadı"

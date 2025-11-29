@@ -21,11 +21,12 @@
 #include "APIKeyRequesterWindow.h"
 #include "ARexx.h"
 #include "ChatSystemRequesterWindow.h"
+#include "CustomServerSettingsRequesterWindow.h"
 #include "config.h"
 #include "gui.h"
 #include "MainWindow.h"
 #include "menu.h"
-#include "ProxySettingsRequesterWindow.h" - MUI handles screen management automatically
+#include "ProxySettingsRequesterWindow.h"
 #include "VoiceInstructionsRequesterWindow.h"
 #include "version.h"
 
@@ -158,6 +159,9 @@ LONG initVideo() {
     if (createChatSystemRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
+    if (createCustomServerSettingsRequesterWindow() == RETURN_ERROR)
+        return RETURN_ERROR;
+
     if (createProxySettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
@@ -177,6 +181,7 @@ LONG initVideo() {
           MUIA_Application_Commands, arexxList, MUIA_Application_UseRexx, TRUE,
           SubWindow, apiKeyRequesterWindowObject, SubWindow,
           chatSystemRequesterWindowObject, SubWindow,
+          customServerSettingsRequesterWindowObject, SubWindow,
           proxySettingsRequesterWindowObject, SubWindow,
           voiceInstructionsRequesterWindowObject, SubWindow,
           imageWindowObject = WindowObject, MUIA_Window_Title, STRING_IMAGE,
@@ -472,14 +477,19 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
         }
     } else {
         // Check if this is a standard OpenAI format response (for local LLM)
-        struct json_object *choicesArray = json_object_object_get(json, "choices");
+        struct json_object *choicesArray =
+            json_object_object_get(json, "choices");
         if (choicesArray != NULL) {
-            // Standard OpenAI format: { "choices": [{ "message": { "content": "..." } }] }
-            struct json_object *choice = json_object_array_get_idx(choicesArray, 0);
+            // Standard OpenAI format: { "choices": [{ "message": { "content":
+            // "..." } }] }
+            struct json_object *choice =
+                json_object_array_get_idx(choicesArray, 0);
             if (choice != NULL) {
-                struct json_object *message = json_object_object_get(choice, "message");
+                struct json_object *message =
+                    json_object_object_get(choice, "message");
                 if (message != NULL) {
-                    struct json_object *content = json_object_object_get(message, "content");
+                    struct json_object *content =
+                        json_object_object_get(message, "content");
                     if (content != NULL) {
                         return json_object_get_string(content);
                     }
@@ -487,7 +497,7 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
             }
             return "";
         }
-        
+
         // Otherwise, use OpenAI's newer format with "output"
         struct json_object *outputArray =
             json_object_object_get(json, "output");

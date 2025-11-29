@@ -410,10 +410,10 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         "in quotes or prefix the response with anything",
         "user");
     struct json_object **responses = postChatMessageToOpenAI(
-        imageNameConversation, CHAT_MODEL_NAMES[GPT_5_NANO],
+        imageNameConversation, NULL, 0, FALSE, CHAT_MODEL_NAMES[GPT_5_NANO],
         config.openAiApiKey, FALSE, config.proxyEnabled, config.proxyHost,
         config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth,
-        config.proxyUsername, config.proxyPassword, config.webSearchEnabled);
+        config.proxyUsername, config.proxyPassword, FALSE);
 
     struct GeneratedImage *generatedImage =
         AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
@@ -1277,11 +1277,16 @@ static void sendChatMessage() {
 
     do {
         responses = postChatMessageToOpenAI(
-            currentConversation, CHAT_MODEL_NAMES[config.chatModel],
-            config.openAiApiKey, TRUE, config.proxyEnabled, config.proxyHost,
-            config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth,
-            config.proxyUsername, config.proxyPassword,
-            config.webSearchEnabled);
+            currentConversation,
+            config.useCustomServer ? config.customHost : NULL,
+            config.useCustomServer ? config.customPort : 0,
+            config.useCustomServer ? config.customUseSSL : FALSE,
+            config.useCustomServer ? config.customChatModel
+                                   : CHAT_MODEL_NAMES[config.chatModel],
+            config.openAiApiKey, !config.useCustomServer, config.proxyEnabled,
+            config.proxyHost, config.proxyPort, config.proxyUsesSSL,
+            config.proxyRequiresAuth, config.proxyUsername,
+            config.proxyPassword, config.webSearchEnabled);
         if (responses == NULL) {
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -1337,7 +1342,8 @@ static void sendChatMessage() {
                 return;
             }
 
-            UTF8 *contentString = getMessageContentFromJson(response, TRUE);
+            UTF8 *contentString =
+                getMessageContentFromJson(response, !config.useCustomServer);
             if (contentString != NULL) {
                 // Text for printing
                 if (strlen(contentString) > 0) {
@@ -1386,7 +1392,8 @@ static void sendChatMessage() {
                 }
                 STRPTR type = json_object_get_string(
                     json_object_object_get(response, "type"));
-                if (strcmp(type, "response.completed") == 0) {
+                if (config.useCustomServer ||
+                    strcmp(type, "response.completed") == 0) {
                     dataStreamFinished = TRUE;
                 }
                 json_object_put(response);
@@ -1430,7 +1437,12 @@ static void sendChatMessage() {
                                   "user");
             setConversationSystem(currentConversation, NULL);
             responses = postChatMessageToOpenAI(
-                currentConversation, CHAT_MODEL_NAMES[GPT_5_NANO],
+                currentConversation,
+                config.useCustomServer ? config.customHost : NULL,
+                config.useCustomServer ? config.customPort : 0,
+                config.useCustomServer ? config.customUseSSL : FALSE,
+                config.useCustomServer ? config.customChatModel
+                                       : CHAT_MODEL_NAMES[GPT_5_NANO],
                 config.openAiApiKey, FALSE, config.proxyEnabled,
                 config.proxyHost, config.proxyPort, config.proxyUsesSSL,
                 config.proxyRequiresAuth, config.proxyUsername,

@@ -1302,3 +1302,18 @@ msgstr "Limpiar configuraciones MUI"
 msgctxt "STRING_MENU_OPENAI_WEB_SEARCH (238//)"
 msgid "Web Search"
 msgstr "Búsqueda web"
+
+#: src/menu.c:146
+msgctxt "STRING_MENU_CUSTOM_SERVER (239//)"
+msgid "Custom Server"
+msgstr "Servidor personalizado"
+
+#: src/menu.c:148
+msgctxt "STRING_MENU_CUSTOM_SERVER_SETTINGS (241//)"
+msgid "Custom Server Settings"
+msgstr "Configurações do servidor personalizado"
+
+#: src/CustomServerSettingsRequesterWindow.c:11
+msgctxt "STRING_ERROR_CUSTOM_SERVER_SETTINGS (242//)"
+msgid "Failed to create custom server settings window"
+msgstr "No se pudo crear la ventana de configuración del servidor personalizado"

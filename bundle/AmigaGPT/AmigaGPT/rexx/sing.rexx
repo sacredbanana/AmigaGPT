@@ -36,7 +36,7 @@ VOICE = WORD(BUTTONS, INPUT)
 SAY "Generating song. Please wait..."
 
 ADDRESS VALUE AMIGAGPT_PORT
-'SENDMESSAGE M=gpt-5-mini Sing a medium length song. Just give me the lyrics, no other text.'
+'SENDMESSAGE M=gpt-5-mini P=Sing a medium length song. Just give me the lyrics, no other text.'
 SONG = TRANSLATE(RESULT, ", ", '0A'X)
 'SPEAKTEXT V='VOICE 'P='SONG
 

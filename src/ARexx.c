@@ -19,12 +19,58 @@ MakeHook(ReplyCallbackHook, ReplyCallbackFunc);
 HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     STRPTR model = (STRPTR)arg[0];
     STRPTR system = (STRPTR)arg[1];
-    STRPTR apiKey = (STRPTR)arg[2];
-    BOOL webSearchEnabled = (BOOL)arg[3];
-    STRPTR prompt = (STRPTR)arg[4];
+    STRPTR host = (STRPTR)arg[2];
+    ULONG *port = (ULONG *)arg[3];
+    BOOL useSSL = (BOOL)arg[4];
+    STRPTR apiKey = (STRPTR)arg[5];
+    BOOL useProxy = (BOOL)arg[6];
+    STRPTR proxyHost = (STRPTR)arg[7];
+    ULONG *proxyPort = (ULONG *)arg[8];
+    BOOL proxyUsesSSL = (BOOL)arg[9];
+    BOOL proxyRequiresAuth = (BOOL)arg[10];
+    STRPTR proxyUsername = (STRPTR)arg[11];
+    STRPTR proxyPassword = (STRPTR)arg[12];
+    BOOL webSearchEnabled = (BOOL)arg[13];
+    STRPTR prompt = (STRPTR)arg[14];
+
+    ULONG portValue = port == NULL
+                          ? (config.useCustomServer ? config.customPort : NULL)
+                          : (ULONG)*port;
+    ULONG proxyPortValue =
+        proxyPort == NULL ? config.proxyPort : (ULONG)*proxyPort;
 
     if (apiKey == NULL) {
-        apiKey = config.openAiApiKey;
+        apiKey =
+            config.useCustomServer ? config.customApiKey : config.openAiApiKey;
+    }
+
+    if (host == NULL || strlen(host) == 0) {
+        host = config.useCustomServer ? config.customHost : NULL;
+    }
+
+    if (!useSSL) {
+        useSSL = config.useCustomServer ? config.customUseSSL : TRUE;
+    }
+
+    if (!proxyUsesSSL) {
+        proxyUsesSSL = config.proxyUsesSSL;
+    }
+
+    if (!proxyRequiresAuth) {
+        proxyRequiresAuth = config.proxyRequiresAuth;
+    }
+
+    if (proxyUsername == NULL || strlen(proxyUsername) == 0) {
+        proxyUsername = config.proxyUsername;
+    }
+
+    if (proxyPassword == NULL || strlen(proxyPassword) == 0) {
+        proxyPassword = config.proxyPassword;
+    }
+
+    if (model == NULL || strlen(model) == 0) {
+        model = config.useCustomServer ? config.customChatModel
+                                       : CHAT_MODEL_NAMES[config.chatModel];
     }
 
     struct Conversation *conversation = newConversation();
@@ -35,9 +81,10 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
     setConversationSystem(conversation, system);
 
-    struct json_object **responses =
-        postChatMessageToOpenAI(conversation, model, apiKey, FALSE, FALSE, NULL,
-                                0, FALSE, FALSE, NULL, NULL, webSearchEnabled);
+    struct json_object **responses = postChatMessageToOpenAI(
+        conversation, host, portValue, useSSL, model, apiKey, FALSE, useProxy,
+        proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
+        proxyUsername, proxyPassword, webSearchEnabled);
 
     if (responses == NULL) {
         printf(STRING_ERROR_CONNECTING_OPENAI);
@@ -287,6 +334,10 @@ HOOKPROTONHNO(ListServerModelsFunc, APTR, ULONG *arg) {
     ULONG portValue = port == NULL ? (useSSL ? 443 : 80) : (ULONG)*port;
     ULONG proxyPortValue = proxyPort == NULL ? 8080 : (ULONG)*proxyPort;
 
+    if (apiKey == NULL) {
+        apiKey = config.openAiApiKey;
+    }
+
     struct json_object *models = getChatModels(
         host, portValue, useSSL, apiKey, useProxy, proxyHost, proxyPortValue,
         proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword);
@@ -372,7 +423,11 @@ MakeHook(SpeakTextHook, SpeakTextFunc);
 
 HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
     set(app, MUIA_Application_RexxString,
-        "SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F\n"
+        "SENDMESSAGE "
+        "M=MODEL/K,S=SYSTEM/K,H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/"
+        "S,PH=PROXYHOST/"
+        "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
+        "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,P=PROMPT/F\n"
         "CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F\n"
         "SPEAKTEXT "
         "M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,P=PROMPT/"
@@ -393,8 +448,11 @@ MakeHook(HelpHook, HelpFunc);
 
 struct MUI_Command arexxList[] = {
     {"SENDMESSAGE",
-     "M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F",
-     5,
+     "M=MODEL/K,S=SYSTEM/K,H=HOST/K,PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/"
+     "S,PH=PROXYHOST/"
+     "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
+     "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,P=PROMPT/F",
+     15,
      &SendMessageHook,
      {0, 0, 0, 0, 0}},
     {"CREATEIMAGE",
@@ -410,7 +468,7 @@ struct MUI_Command arexxList[] = {
      {0, 0, 0, 0, 0}},
     {"LISTAUDIOFORMATS", NULL, NULL, &ListAudioFormatsHook, {0, 0, 0, 0, 0}},
     {"LISTSERVERMODELS",
-     "H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,"
+     "H=HOST/K,PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,"
      "PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,"
      "PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K",
      11,

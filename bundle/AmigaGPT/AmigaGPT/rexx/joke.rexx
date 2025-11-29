@@ -45,7 +45,7 @@ Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
   SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
   SAY "Retrieving joke using AmigaGPT. Please wait..."
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-nano Tell me a short funny joke on a single line'
+  'SENDMESSAGE M=gpt-5-nano P=Tell me a short funny joke on a single line'
   ADDRESS COMMAND
   'REQUESTCHOICE >NIL: "Random Joke" 'RESULT' "Haha" "ROFL" "LMAO" "Yikes"'
   RETURN
@@ -53,7 +53,7 @@ Fallback_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT
 GetJoke: PROCEDURE EXPOSE AMIGAGPT_PORT
   CALL Set("joketext","text","Generating a funny joke for ya")
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE M=gpt-5-mini Tell me a medium length funny joke'
+  'SENDMESSAGE M=gpt-5-mini P=Tell me a medium length funny joke'
   ADDRESS COMMAND
   JOKE = ParseText(RESULT)
   CALL Set("joketext","text", JOKE)

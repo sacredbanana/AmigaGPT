@@ -211,6 +211,9 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
 /**
  * Post a chat message to OpenAI
  * @param conversation the conversation to post
+ * @param host the host to use set to NULL to use OpenAI default host
+ * @param port the port to use set to 0 to use OpenAI default port
+ * @param useSSL whether to use SSL or not
  * @param model the model to use
  * @param openAiApiKey the OpenAI API key
  * @param stream whether to stream the response or not
@@ -226,13 +229,12 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
  *NULL -- Free it with json_object_put() for all responses then FreeVec() for
  *the array when you are done using it
  **/
-struct json_object **
-postChatMessageToOpenAI(struct Conversation *conversation, CONST_STRPTR model,
-                        CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
-                        CONST_STRPTR proxyHost, UWORD proxyPort,
-                        BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                        CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
-                        BOOL webSearchEnabled);
+struct json_object **postChatMessageToOpenAI(
+    struct Conversation *conversation, STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR model, CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, BOOL webSearchEnabled);
 
 /**
  * Post a image creation request to OpenAI

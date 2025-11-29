@@ -1301,3 +1301,18 @@ msgstr "MUI-instellingen wissen"
 msgctxt "STRING_MENU_OPENAI_WEB_SEARCH (238//)"
 msgid "Web Search"
 msgstr "Web zoeken"
+
+#: src/menu.c:146
+msgctxt "STRING_MENU_CUSTOM_SERVER (239//)"
+msgid "Custom Server"
+msgstr "Aangepaste Server"
+
+#: src/menu.c:148
+msgctxt "STRING_MENU_CUSTOM_SERVER_SETTINGS (241//)"
+msgid "Custom Server Settings"
+msgstr "Aangepaste Server Instellingen"
+
+#: src/CustomServerSettingsRequesterWindow.c:11
+msgctxt "STRING_ERROR_CUSTOM_SERVER_SETTINGS (242//)"
+msgid "Failed to create custom server settings window"
+msgstr "Kan customServerSettingsRequesterWindowObject niet aanmaken"

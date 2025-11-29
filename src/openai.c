@@ -26,11 +26,6 @@
 #define AUDIO_BUFFER_SIZE 4096
 #define MAX_CONNECTION_RETRIES 10
 
-// Set to TRUE to use local LLM server instead of OpenAI
-#define USE_LOCAL_LLM TRUE
-#define LOCAL_LLM_HOST "localhost"
-#define LOCAL_LLM_PORT 1234
-
 static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
                                  BOOL useProxy, CONST_STRPTR proxyHost,
                                  UWORD proxyPort, BOOL proxyUsesSSL,
@@ -636,6 +631,9 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
 /**
  * Post a chat message to OpenAI
  * @param conversation the conversation to post
+ * @param host the host to use set to NULL to use OpenAI default host
+ * @param port the port to use set to 0 to use OpenAI default port
+ * @param useSSL whether to use SSL or not
  * @param model the model to use
  * @param openAiApiKey the OpenAI API key
  * @param stream whether to stream the response or not
@@ -651,13 +649,12 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
  *NULL -- Free it with json_object_put() for all responses then FreeVec() for
  *the array when you are done using it
  **/
-struct json_object **
-postChatMessageToOpenAI(struct Conversation *conversation, CONST_STRPTR model,
-                        CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
-                        CONST_STRPTR proxyHost, UWORD proxyPort,
-                        BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                        CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
-                        BOOL webSearchEnabled) {
+struct json_object **postChatMessageToOpenAI(
+    struct Conversation *conversation, STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR model, CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, BOOL webSearchEnabled) {
     if (model == NULL || strlen(model) == 0) {
         displayError("Model not specified");
         return NULL;
@@ -669,14 +666,19 @@ postChatMessageToOpenAI(struct Conversation *conversation, CONST_STRPTR model,
     UWORD responseIndex = 0;
     UBYTE connectionRetryCount = 0;
 
-    // Determine connection settings based on local LLM flag
-    CONST_STRPTR targetHost = USE_LOCAL_LLM ? LOCAL_LLM_HOST : OPENAI_HOST;
-    UWORD targetPort = USE_LOCAL_LLM ? LOCAL_LLM_PORT : OPENAI_PORT;
-    BOOL useSSL = USE_LOCAL_LLM ? FALSE : (!useProxy || proxyUsesSSL);
+    BOOL useCustomServer = host != NULL && strlen(host) > 0;
+    if (useCustomServer) {
+        if (port == 0) {
+            port = useSSL ? 443 : 80;
+        }
+    } else {
+        host = OPENAI_HOST;
+        port = OPENAI_PORT;
+        useSSL = TRUE;
+    }
 
-    // Disable streaming for local LLM (not supported)
-    if (USE_LOCAL_LLM) {
-        stream = FALSE;
+    if (useProxy && proxyUsesSSL) {
+        useSSL = TRUE;
     }
 
     if (!stream || !streamingInProgress) {
@@ -687,20 +689,7 @@ postChatMessageToOpenAI(struct Conversation *conversation, CONST_STRPTR model,
         json_object_object_add(obj, "model", json_object_new_string(model));
         struct json_object *conversationArray = json_object_new_array();
 
-        if (USE_LOCAL_LLM) {
-            // Local LLM uses standard OpenAI format with "messages" array
-            // Add system message if present
-            if (conversation->system != NULL &&
-                strlen(conversation->system) > 0) {
-                struct json_object *systemMessageObj = json_object_new_object();
-                json_object_object_add(systemMessageObj, "role",
-                                       json_object_new_string("system"));
-                json_object_object_add(
-                    systemMessageObj, "content",
-                    json_object_new_string(conversation->system));
-                json_object_array_add(conversationArray, systemMessageObj);
-            }
-
+        if (useCustomServer) {
             struct MinNode *conversationNode = conversation->messages->mlh_Head;
             while (conversationNode->mln_Succ != NULL) {
                 struct ConversationNode *message =
@@ -715,9 +704,48 @@ postChatMessageToOpenAI(struct Conversation *conversation, CONST_STRPTR model,
                 conversationNode = conversationNode->mln_Succ;
             }
 
-            json_object_object_add(obj, "messages", conversationArray);
+            json_object_object_add(obj, "input", conversationArray);
             json_object_object_add(obj, "stream",
-                                   json_object_new_boolean((json_bool)FALSE));
+                                   json_object_new_boolean((json_bool)stream));
+
+            if (conversation->system != NULL &&
+                strlen(conversation->system) > 0) {
+                json_object_object_add(
+                    obj, "instructions",
+                    json_object_new_string(conversation->system));
+            }
+            // Local LLM uses standard OpenAI format with "messages" array
+            // Add system message if present
+            // if (conversation->system != NULL &&
+            //     strlen(conversation->system) > 0) {
+            //     struct json_object *systemMessageObj =
+            //     json_object_new_object();
+            //     json_object_object_add(systemMessageObj, "role",
+            //                            json_object_new_string("system"));
+            //     json_object_object_add(
+            //         systemMessageObj, "content",
+            //         json_object_new_string(conversation->system));
+            //     json_object_array_add(conversationArray, systemMessageObj);
+            // }
+
+            // struct MinNode *conversationNode =
+            // conversation->messages->mlh_Head; while
+            // (conversationNode->mln_Succ != NULL) {
+            //     struct ConversationNode *message =
+            //         (struct ConversationNode *)conversationNode;
+            //     struct json_object *messageObj = json_object_new_object();
+            //     json_object_object_add(messageObj, "role",
+            //                            json_object_new_string(message->role));
+            //     json_object_object_add(
+            //         messageObj, "content",
+            //         json_object_new_string(message->content));
+            //     json_object_array_add(conversationArray, messageObj);
+            //     conversationNode = conversationNode->mln_Succ;
+            // }
+
+            // json_object_object_add(obj, "messages", conversationArray);
+            // json_object_object_add(obj, "stream",
+            //                        json_object_new_boolean((json_bool)FALSE));
         } else {
             // OpenAI's newer format with "input" and "instructions"
             struct json_object *toolsArray = json_object_new_array();
@@ -772,31 +800,30 @@ postChatMessageToOpenAI(struct Conversation *conversation, CONST_STRPTR model,
             FreeVec(encodedCredentials);
         }
 
-        if (USE_LOCAL_LLM) {
-            // Local LLM servers typically use OpenAI-compatible
-            // /v1/chat/completions endpoint
+        if (useSSL || useProxy) {
             snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                     "POST /v1/chat/completions HTTP/1.1\r\n"
+                     "POST %s://%s:%d/v1/responses HTTP/1.1\r\n"
                      "Host: %s:%d\r\n"
-                     "Content-Type: application/json\r\n"
-                     "User-Agent: AmigaGPT\r\n"
-                     "Content-Length: %lu\r\n"
-                     "%s\r\n"
-                     "%s\0",
-                     targetHost, targetPort, strlen(jsonString), authHeader,
-                     jsonString);
-        } else {
-            snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                     "POST %s/v1/responses HTTP/1.1\r\n"
-                     "Host: api.openai.com\r\n"
                      "Content-Type: application/json\r\n"
                      "Authorization: Bearer %s\r\n"
                      "User-Agent: AmigaGPT\r\n"
                      "Content-Length: %lu\r\n"
                      "%s\r\n"
                      "%s\0",
-                     useSSL ? "" : "https://api.openai.com", openAiApiKey,
-                     strlen(jsonString), authHeader, jsonString);
+                     useSSL ? "https" : "http", host, port, host, port,
+                     openAiApiKey, strlen(jsonString), authHeader, jsonString);
+        } else {
+            snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                     "POST /v1/responses HTTP/1.1\r\n"
+                     "Host: %s:%d\r\n"
+                     "Content-Type: application/json\r\n"
+                     "Authorization: Bearer %s\r\n"
+                     "User-Agent: AmigaGPT\r\n"
+                     "Content-Length: %lu\r\n"
+                     "%s\r\n"
+                     "%s\0",
+                     host, port, openAiApiKey, strlen(jsonString), authHeader,
+                     jsonString);
         }
 
         json_object_put(obj);
@@ -804,9 +831,9 @@ postChatMessageToOpenAI(struct Conversation *conversation, CONST_STRPTR model,
         FreeVec(authHeader);
 
         updateStatusBar(STRING_CONNECTING, yellowPen);
-        while (createSSLConnection(targetHost, targetPort, useSSL, useProxy,
-                                   proxyHost, proxyPort, proxyUsesSSL,
-                                   proxyRequiresAuth, proxyUsername,
+        while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                                   proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                                   proxyUsername,
                                    proxyPassword) == RETURN_ERROR) {
             if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
                 displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
