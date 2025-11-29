@@ -4,7 +4,8 @@
 
 - Add support for custom chat servers that conform to the OpenAI API so you can chat with alternative LLM servers hosted in your local network or on the internet
 - Add ability for ChatGPT to search the web (enabled by default)
-- Add "AskGPT" commandline utility. You can ask AmigaGPT anything from the shell with the "AskGPT" command.
+- Add "AskGPT" commandline utility. You can ask AmigaGPT anything from the shell with the "AskGPT" command
+- Add support for the GPT-5.1 chat model
 - Fix crash in joke.rexx when asking for another joke
 
 ## 2.12.0 (2025-09-22)
