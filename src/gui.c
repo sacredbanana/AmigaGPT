@@ -458,12 +458,15 @@ void setConversationSystem(struct Conversation *conversation,
  * Get the message content from the JSON response from OpenAI
  * @param json the JSON response from OpenAI
  * @param stream whether the response is a stream or not
+ * @param retainJSONFormat whether to retain the JSON format of the message
+ * string
  * @return a pointer to a new UTF8 string containing the message content --
  *Free it with FreeVec() when you are done using it If found role in the
  *json instead of content then return an empty string
  * @todo Handle errors
  **/
-UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
+UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
+                                BOOL retainJSONFormat) {
     if (json == NULL)
         return NULL;
     if (stream) {
@@ -476,29 +479,6 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
             return "";
         }
     } else {
-        // Check if this is a standard OpenAI format response (for local LLM)
-        struct json_object *choicesArray =
-            json_object_object_get(json, "choices");
-        if (choicesArray != NULL) {
-            // Standard OpenAI format: { "choices": [{ "message": { "content":
-            // "..." } }] }
-            struct json_object *choice =
-                json_object_array_get_idx(choicesArray, 0);
-            if (choice != NULL) {
-                struct json_object *message =
-                    json_object_object_get(choice, "message");
-                if (message != NULL) {
-                    struct json_object *content =
-                        json_object_object_get(message, "content");
-                    if (content != NULL) {
-                        return json_object_get_string(content);
-                    }
-                }
-            }
-            return "";
-        }
-
-        // Otherwise, use OpenAI's newer format with "output"
         struct json_object *outputArray =
             json_object_object_get(json, "output");
         struct json_object *output = NULL;
@@ -527,11 +507,16 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream) {
         struct json_object *content =
             json_object_array_get_idx(contentArray, 0);
         struct json_object *text = json_object_object_get(content, "text");
-        char *textStr = json_object_to_json_string_ext(
-            text, JSON_C_TO_STRING_NOSLASHESCAPE);
-        // remove the enclosing quotes
-        textStr++;
-        textStr[strlen(textStr) - 1] = '\0';
+        UTF8 *textStr;
+        if (retainJSONFormat) {
+            textStr = json_object_to_json_string_ext(
+                text, JSON_C_TO_STRING_NOSLASHESCAPE);
+            // remove the enclosing quotes
+            textStr++;
+            textStr[strlen(textStr) - 1] = '\0';
+        } else {
+            textStr = json_object_get_string(text);
+        }
         return textStr;
     }
 }

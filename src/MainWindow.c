@@ -434,7 +434,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             freeConversation(imageNameConversation);
             return;
         }
-        STRPTR responseString = getMessageContentFromJson(responses[0], FALSE);
+        STRPTR responseString =
+            getMessageContentFromJson(responses[0], FALSE, FALSE);
         generatedImage->name =
             AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
         strncpy(generatedImage->name, responseString, strlen(responseString));
@@ -1342,63 +1343,75 @@ static void sendChatMessage() {
                 return;
             }
 
-            UTF8 *contentString =
-                getMessageContentFromJson(response, !config.useCustomServer);
-            if (contentString != NULL) {
-                // Text for printing
-                if (strlen(contentString) > 0) {
-                    STRPTR formattedMessageSystemEncoded =
-                        CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
-                                          CSA_Source, (Tag)contentString,
-                                          CSA_MapForeignChars, TRUE, TAG_DONE);
-                    strncat(receivedMessage, contentString,
-                            READ_BUFFER_LENGTH - strlen(receivedMessage) -
-                                strlen(contentString) - 1);
-                    strncat(chatOutputTextEditorContents,
-                            formattedMessageSystemEncoded,
-                            CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
-                                strlen(chatOutputTextEditorContents) -
-                                strlen(formattedMessageSystemEncoded) - 1);
-                    CodesetsFreeA(formattedMessageSystemEncoded, NULL);
-                    if (++wordNumber % 50 == 0) {
-                        STRPTR formattedContent =
-                            convertMarkdownFormattingToMUI(
-                                chatOutputTextEditorContents);
-                        strncpy(chatOutputTextEditorContents, formattedContent,
+            UTF8 *contentString = getMessageContentFromJson(
+                response, !config.useCustomServer, FALSE);
+            if (config.useCustomServer) {
+                strncpy(receivedMessage, contentString,
+                        READ_BUFFER_LENGTH - strlen(receivedMessage) -
+                            strlen(contentString) - 1);
+                json_object_put(response);
+                dataStreamFinished = TRUE;
+                continue;
+            } else {
+                if (contentString != NULL) {
+                    // Text for printing
+                    if (strlen(contentString) > 0) {
+                        STRPTR formattedMessageSystemEncoded =
+                            CodesetsUTF8ToStr(
+                                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                                (Tag)contentString, CSA_MapForeignChars, TRUE,
+                                TAG_DONE);
+                        strncat(receivedMessage, contentString,
+                                READ_BUFFER_LENGTH - strlen(receivedMessage) -
+                                    strlen(contentString) - 1);
+                        strncat(chatOutputTextEditorContents,
+                                formattedMessageSystemEncoded,
+                                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
+                                    strlen(chatOutputTextEditorContents) -
+                                    strlen(formattedMessageSystemEncoded) - 1);
+                        CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+                        if (++wordNumber % 50 == 0) {
+                            STRPTR formattedContent =
+                                convertMarkdownFormattingToMUI(
+                                    chatOutputTextEditorContents);
+                            strncpy(
+                                chatOutputTextEditorContents, formattedContent,
                                 CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 1);
-                        FreeVec(formattedContent);
-                        set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                            chatOutputTextEditorContents);
-                        set(chatOutputListView, MUIA_NList_First,
-                            MUIV_NList_First_Bottom);
-                        if (config.speechEnabled) {
-                            // Text for speaking
-                            STRPTR unformattedMessageSystemEncoded =
-                                CodesetsUTF8ToStr(
-                                    CSA_DestCodeset, (Tag)systemCodeset,
-                                    CSA_Source, (Tag)receivedMessage,
-                                    CSA_MapForeignChars, TRUE, TAG_DONE);
-                            if (config.speechSystem != SPEECH_SYSTEM_OPENAI) {
-                                speakText(unformattedMessageSystemEncoded +
-                                              speechIndex,
-                                          NULL, NULL);
+                            FreeVec(formattedContent);
+                            set(chatOutputTextEditor, MUIA_NFloattext_Text,
+                                chatOutputTextEditorContents);
+                            set(chatOutputListView, MUIA_NList_First,
+                                MUIV_NList_First_Bottom);
+                            if (config.speechEnabled) {
+                                // Text for speaking
+                                STRPTR unformattedMessageSystemEncoded =
+                                    CodesetsUTF8ToStr(
+                                        CSA_DestCodeset, (Tag)systemCodeset,
+                                        CSA_Source, (Tag)receivedMessage,
+                                        CSA_MapForeignChars, TRUE, TAG_DONE);
+                                if (config.speechSystem !=
+                                    SPEECH_SYSTEM_OPENAI) {
+                                    speakText(unformattedMessageSystemEncoded +
+                                                  speechIndex,
+                                              NULL, NULL);
+                                }
+                                speechIndex =
+                                    strlen(unformattedMessageSystemEncoded);
+                                CodesetsFreeA(unformattedMessageSystemEncoded,
+                                              NULL);
                             }
-                            speechIndex =
-                                strlen(unformattedMessageSystemEncoded);
-                            CodesetsFreeA(unformattedMessageSystemEncoded,
-                                          NULL);
                         }
                     }
-                }
-                STRPTR type = json_object_get_string(
-                    json_object_object_get(response, "type"));
-                if (config.useCustomServer ||
-                    strcmp(type, "response.completed") == 0) {
+                    STRPTR type = json_object_get_string(
+                        json_object_object_get(response, "type"));
+                    if (config.useCustomServer ||
+                        strcmp(type, "response.completed") == 0) {
+                        dataStreamFinished = TRUE;
+                    }
+                    json_object_put(response);
+                } else {
                     dataStreamFinished = TRUE;
                 }
-                json_object_put(response);
-            } else {
-                dataStreamFinished = TRUE;
             }
         }
     } while (!dataStreamFinished);
@@ -1460,7 +1473,7 @@ static void sendChatMessage() {
             }
             if (responses[0] != NULL) {
                 UTF8 *responseString =
-                    getMessageContentFromJson(responses[0], FALSE);
+                    getMessageContentFromJson(responses[0], FALSE, FALSE);
                 if (currentConversation->name == NULL) {
                     currentConversation->name =
                         AllocVec(strlen(responseString) + 1, MEMF_CLEAR);

@@ -104,12 +104,15 @@ void setConversationSystem(struct Conversation *conversation,
  * Get the message content from the JSON response from OpenAI
  * @param json the JSON response from OpenAI
  * @param stream whether the response is a stream or not
- * @return a pointer to a new UTF8 string containing the message content -- Free
- *it with FreeVec() when you are done using it If found role in the json instead
- *of content then return an empty string
+ * @param retainJSONFormat whether to retain the JSON format of the message
+ * string
+ * @return a pointer to a new UTF8 string containing the message content --
+ *Free it with FreeVec() when you are done using it If found role in the
+ *json instead of content then return an empty string
  * @todo Handle errors
  **/
-UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream);
+UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
+                                BOOL retainJSONFormat);
 
 /**
  * Add a block of text to the conversation list
