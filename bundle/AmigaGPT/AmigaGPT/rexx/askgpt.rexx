@@ -1,5 +1,5 @@
 /* Asks AmigaGPT a question then displays it */
-/* Uses RxMUI to create a GUI or fallback to a simple requester if RxMUI is not installed */
+/* If the first argument is GUI, then it uses RxMUI to create a GUI or fallback to a simple requester if RxMUI is not installed */
 OPTIONS RESULTS
 SIGNAL ON HALT
 SIGNAL ON BREAK_C
@@ -35,16 +35,15 @@ Init: PROCEDURE EXPOSE AMIGAGPT_PORT GUI
       EXIT 1
     END
   END
-  IF GUI = 1 THEN DO
-    l="rmh.library"; IF ~SHOW("L",l) THEN ; IF ~ADDLIB(l,0,-30) THEN DO; GUI=0; RETURN; END
-    ADDRESS COMMAND 'VERSION rxmui.library >NIL:'
-    IF RC ~= 0 THEN DO
-      SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
-      GUI = 0
-      RETURN
-    END
+  IF GUI = 0 THEN RETURN
+  l="rmh.library"; IF ~SHOW("L",l) THEN ; IF ~ADDLIB(l,0,-30) THEN DO; GUI=0; RETURN; END
+  ADDRESS COMMAND 'VERSION rxmui.library >NIL:'
+  IF RC ~= 0 THEN DO
+    SAY "RxMUI not installed. Install RxMUI to be able to use all features of this script"
+    GUI = 0
+    RETURN
   END
-  IF AddLibrary("rexxsupport.library","rxmui.library") ~= 0 THEN DO
+  IF AddLibrary("rxmui.library", "rexxsupport.library") ~= 0 THEN DO
     GUI = 0
     RETURN
   END
@@ -59,8 +58,9 @@ NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT
 
   ADDRESS VALUE AMIGAGPT_PORT
   SAY "Retrieving answer using AmigaGPT. Please wait..."
-  'SENDMESSAGE P='PROMPT
-  SAY ParseText(RESULT)
+  'SENDMESSAGE WEBSEARCH M=gpt-5-mini P='PROMPT
+  ANSWER = TRANSLATE(RESULT, '0A'X, "\n")
+  SAY ANSWER
   RETURN
 
 GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT
@@ -69,7 +69,7 @@ GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT
   CALL SetAttr("asktext","Contents", "Retrieving answer using AmigaGPT. Please wait...")
   CALL SetAttr("asktext", "ReadOnly", 1)
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE WEBSEARCH P='QUESTION
+  'SENDMESSAGE WEBSEARCH M=gpt-5-mini P='QUESTION
   ADDRESS COMMAND
   ANSWER = ParseText(RESULT)
   CALL SetAttr("asktext","Contents", '1B'X"b"QUESTION '0A'X'0A'X ANSWER)
