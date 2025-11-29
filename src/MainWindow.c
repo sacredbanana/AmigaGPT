@@ -138,6 +138,7 @@ HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
     if (conversation) {
         currentConversation = conversation;
         displayConversation(currentConversation);
+        DoMethod(chatInputTextEditor, MUIM_GoActive);
     }
 }
 MakeHook(ConversationRowClickedHook, ConversationRowClickedFunc);
@@ -1200,6 +1201,10 @@ static void sendChatMessage() {
     if (currentConversation == NULL) {
         isNewConversation = TRUE;
         currentConversation = newConversation();
+        chatOutputTextEditorContents[0] = '\0';
+        set(chatOutputTextEditor, MUIA_NFloattext_Text,
+            chatOutputTextEditorContents);
+        set(conversationListObject, MUIA_NList_Active, MUIV_NList_Active_Off);
     }
     set(sendMessageButton, MUIA_Disabled, TRUE);
     set(newChatButton, MUIA_Disabled, TRUE);
@@ -1482,6 +1487,8 @@ static void sendChatMessage() {
                 }
                 DoMethod(conversationListObject, MUIM_NList_InsertSingle,
                          currentConversation, MUIV_NList_Insert_Top);
+                DoMethod(conversationListObject, MUIM_NList_SetActive,
+                         MUIV_NList_Active_Top, NULL);
             }
             json_object_put(responses[0]);
             FreeVec(responses);

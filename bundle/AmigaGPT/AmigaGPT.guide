@@ -800,6 +800,8 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 - Add "AskGPT" commandline utility. You can ask AmigaGPT anything from the shell with the "AskGPT" command
 - Add support for the GPT-5.1 chat model
 - Fix crash in joke.rexx when asking for another joke
+- Fix bug where the new conversation is not the selected conversation in the conversation list
+- Fix bug where starting a new conversation after deleting a conversation would briefly show the old conversation in the chat window before it gets a response from the server
 
 @{b}2.12.0 (2025-09-22)@{ub}
 
