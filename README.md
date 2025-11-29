@@ -113,7 +113,7 @@ When the app has opened, you are presented with a text input box. You can type a
 
 To the left of the chat box is a conversation list which you can use to go to another saved conversation. New conversations can be created with the "**New chat**" button and conversations can be removed with the "**Delete chat**" button.
 
-You can also chat to AmigaGPT within the Shell as long as either AmigaGPT or the AmigaGPTD daemon are running. Just type `askgpt` into the shell and it will ask you what you want to ask. Or just ask right away with the command `askgpt What is the capital of Australia?`.
+You can also chat to AmigaGPT within the Shell as long as either AmigaGPT or the AmigaGPTD daemon are running. Just type `askgpt` into the shell and it will ask you what you want to ask. Or just ask right away with the command `askgpt What is the capital of Australia?`. To activate a mini GUI for AskGPT, just add `GUI` as the first argument to AskGPT.
 
 ### Image Generation
 
