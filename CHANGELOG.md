@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.13.2 (2025-12-06)
+
+- Chat now scrolls to the bottom instead of the top when you send a chat message
+
 ## 2.13.1 (2025-11-30)
 
 - Fix AskGPT crashing when running it without a GUI

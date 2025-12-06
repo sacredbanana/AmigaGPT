@@ -1253,6 +1253,8 @@ static void sendChatMessage() {
 
     set(chatOutputTextEditor, MUIA_NFloattext_Text,
         chatOutputTextEditorContents);
+    set(chatOutputListView, MUIA_NList_First,
+            MUIV_NList_First_Bottom);
 
     // Remove trailing newline characters
     while (text[strlen(text) - 1] == '\n') {
