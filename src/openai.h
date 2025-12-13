@@ -64,6 +64,8 @@ typedef enum {
     GPT_5_MINI,
     GPT_5_NANO,
     GPT_5_1,
+    GPT_5_2,
+    GPT_5_2_PRO,
     o1,
     o1_PREVIEW,
     o1_MINI,

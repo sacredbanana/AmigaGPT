@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.14.0 (2025-12-13)
+
+- Add GPT 5.2 and GPT 5.2 Pro chat models
+
 ## 2.13.2 (2025-12-06)
 
 - Chat now scrolls to the bottom instead of the top when you send a chat message

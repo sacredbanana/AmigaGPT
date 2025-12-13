@@ -793,6 +793,10 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.14.0 (2025-12-13)@{ub}
+
+- Add GPT 5.2 and GPT 5.2 Pro chat models
+
 @{b}2.13.2 (2025-12-06)@{ub}
 
 - Chat now scrolls to the bottom instead of the top when you send a chat message
