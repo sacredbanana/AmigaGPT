@@ -51,6 +51,8 @@ struct Config config = {
     .customUseSSL = FALSE,
     .customApiKey = NULL,
     .customChatModel = NULL,
+    .customApiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS,
+    .customApiEndpoinUrl = "v1",
 };
 
 /**
@@ -172,6 +174,15 @@ LONG writeConfig() {
                            config.customChatModel != NULL
                                ? json_object_new_string(config.customChatModel)
                                : NULL);
+
+    json_object_object_add(configJsonObject, "customApiEndpoint",
+                           json_object_new_int(config.customApiEndpoint));
+
+    json_object_object_add(
+        configJsonObject, "customApiEndpoinUrl",
+        config.customApiEndpoinUrl != NULL
+            ? json_object_new_string(config.customApiEndpoinUrl)
+            : NULL);
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
@@ -639,6 +650,27 @@ LONG readConfig() {
         }
     }
 
+    struct json_object *customApiEndpointObj;
+    if (json_object_object_get_ex(configJsonObject, "customApiEndpoint",
+                                  &customApiEndpointObj)) {
+        config.customApiEndpoint = json_object_get_int(customApiEndpointObj);
+    } else {
+        config.customApiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS;
+    }
+
+    struct json_object *customApiEndpoinUrlObj;
+    if (json_object_object_get_ex(configJsonObject, "customApiEndpoinUrl",
+                                  &customApiEndpoinUrlObj)) {
+        CONST_STRPTR customApiEndpoinUrl =
+            json_object_get_string(customApiEndpoinUrlObj);
+        if (customApiEndpoinUrl != NULL) {
+            config.customApiEndpoinUrl =
+                AllocVec(strlen(customApiEndpoinUrl) + 1, MEMF_CLEAR);
+            strncpy(config.customApiEndpoinUrl, customApiEndpoinUrl,
+                    strlen(customApiEndpoinUrl));
+        }
+    }
+
     FreeVec(configJsonString);
     json_object_put(configJsonObject);
     return RETURN_OK;
@@ -687,5 +719,9 @@ void freeConfig() {
     if (config.customChatModel != NULL) {
         FreeVec(config.customChatModel);
         config.customChatModel = NULL;
+    }
+    if (config.customApiEndpoinUrl != NULL) {
+        FreeVec(config.customApiEndpoinUrl);
+        config.customApiEndpoinUrl = NULL;
     }
 }

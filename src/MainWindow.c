@@ -414,7 +414,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         imageNameConversation, NULL, 0, FALSE, CHAT_MODEL_NAMES[GPT_5_NANO],
         config.openAiApiKey, FALSE, config.proxyEnabled, config.proxyHost,
         config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth,
-        config.proxyUsername, config.proxyPassword, FALSE);
+        config.proxyUsername, config.proxyPassword, FALSE,
+        API_ENDPOINT_RESPONSES, NULL);
 
     struct GeneratedImage *generatedImage =
         AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
@@ -435,8 +436,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             freeConversation(imageNameConversation);
             return;
         }
-        STRPTR responseString =
-            getMessageContentFromJson(responses[0], FALSE, FALSE);
+        STRPTR responseString = getMessageContentFromJson(
+            responses[0], FALSE, FALSE, API_ENDPOINT_RESPONSES);
         generatedImage->name =
             AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
         strncpy(generatedImage->name, responseString, strlen(responseString));
@@ -1253,8 +1254,7 @@ static void sendChatMessage() {
 
     set(chatOutputTextEditor, MUIA_NFloattext_Text,
         chatOutputTextEditorContents);
-    set(chatOutputListView, MUIA_NList_First,
-            MUIV_NList_First_Bottom);
+    set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
 
     // Remove trailing newline characters
     while (text[strlen(text) - 1] == '\n') {
@@ -1291,10 +1291,13 @@ static void sendChatMessage() {
             config.useCustomServer ? config.customUseSSL : FALSE,
             config.useCustomServer ? config.customChatModel
                                    : CHAT_MODEL_NAMES[config.chatModel],
-            config.openAiApiKey, !config.useCustomServer, config.proxyEnabled,
-            config.proxyHost, config.proxyPort, config.proxyUsesSSL,
-            config.proxyRequiresAuth, config.proxyUsername,
-            config.proxyPassword, config.webSearchEnabled);
+            config.useCustomServer ? config.customApiKey : config.openAiApiKey,
+            !config.useCustomServer, config.proxyEnabled, config.proxyHost,
+            config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth,
+            config.proxyUsername, config.proxyPassword, config.webSearchEnabled,
+            config.useCustomServer ? config.customApiEndpoint
+                                   : API_ENDPOINT_RESPONSES,
+            config.useCustomServer ? config.customApiEndpoinUrl : NULL);
         if (responses == NULL) {
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -1355,7 +1358,9 @@ static void sendChatMessage() {
             }
 
             UTF8 *contentString = getMessageContentFromJson(
-                response, !config.useCustomServer, FALSE);
+                response, !config.useCustomServer, FALSE,
+                config.useCustomServer ? config.customApiEndpoint
+                                       : API_ENDPOINT_RESPONSES);
             if (config.useCustomServer) {
                 strncpy(receivedMessage, contentString,
                         READ_BUFFER_LENGTH - strlen(receivedMessage) -
@@ -1467,10 +1472,15 @@ static void sendChatMessage() {
                 config.useCustomServer ? config.customUseSSL : FALSE,
                 config.useCustomServer ? config.customChatModel
                                        : CHAT_MODEL_NAMES[GPT_5_NANO],
-                config.openAiApiKey, FALSE, config.proxyEnabled,
-                config.proxyHost, config.proxyPort, config.proxyUsesSSL,
-                config.proxyRequiresAuth, config.proxyUsername,
-                config.proxyPassword, config.webSearchEnabled);
+                config.useCustomServer ? config.customApiKey
+                                       : config.openAiApiKey,
+                FALSE, config.proxyEnabled, config.proxyHost, config.proxyPort,
+                config.proxyUsesSSL, config.proxyRequiresAuth,
+                config.proxyUsername, config.proxyPassword,
+                config.webSearchEnabled,
+                config.useCustomServer ? config.customApiEndpoint
+                                       : API_ENDPOINT_RESPONSES,
+                config.useCustomServer ? config.customApiEndpoinUrl : NULL);
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);
@@ -1483,8 +1493,10 @@ static void sendChatMessage() {
                 return;
             }
             if (responses[0] != NULL) {
-                UTF8 *responseString =
-                    getMessageContentFromJson(responses[0], FALSE, FALSE);
+                UTF8 *responseString = getMessageContentFromJson(
+                    responses[0], FALSE, FALSE,
+                    config.useCustomServer ? config.customApiEndpoint
+                                           : API_ENDPOINT_RESPONSES);
                 if (currentConversation->name == NULL) {
                     currentConversation->name =
                         AllocVec(strlen(responseString) + 1, MEMF_CLEAR);

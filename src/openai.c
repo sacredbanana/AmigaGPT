@@ -174,6 +174,15 @@ CONST_STRPTR OPENAI_TTS_VOICE_NAMES[] = {[OPENAI_TTS_VOICE_ALLOY] = "alloy",
                                          NULL};
 
 /**
+ * The names of the API endpoints
+ * @see APIEndpoint
+ **/
+CONST_STRPTR API_ENDPOINT_NAMES[] = {[API_ENDPOINT_RESPONSES] = "responses",
+                                     [API_ENDPOINT_CHAT_COMPLETIONS] =
+                                         "chat/completions",
+                                     NULL};
+
+/**
  * Generate a random number
  * @param maxValue the maximum value of the random number
  * @return a random number
@@ -648,6 +657,8 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
  * @param webSearchEnabled whether to enable web search or not
+ * @param apiEndpoint the API endpoint to use
+ * @param apiEndpoinUrl the API endpoint URL to use
  * @return a pointer to a new array of json_object containing the response(s) or
  *NULL -- Free it with json_object_put() for all responses then FreeVec() for
  *the array when you are done using it
@@ -657,7 +668,8 @@ struct json_object **postChatMessageToOpenAI(
     CONST_STRPTR model, CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, BOOL webSearchEnabled) {
+    CONST_STRPTR proxyPassword, BOOL webSearchEnabled, APIEndpoint apiEndpoint,
+    CONST_STRPTR apiEndpoinUrl) {
     if (model == NULL || strlen(model) == 0) {
         displayError("Model not specified");
         return NULL;
@@ -707,15 +719,20 @@ struct json_object **postChatMessageToOpenAI(
                 conversationNode = conversationNode->mln_Succ;
             }
 
-            json_object_object_add(obj, "input", conversationArray);
+            json_object_object_add(
+                obj,
+                apiEndpoint == API_ENDPOINT_RESPONSES ? "input" : "messages",
+                conversationArray);
             json_object_object_add(obj, "stream",
                                    json_object_new_boolean((json_bool)stream));
 
-            if (conversation->system != NULL &&
-                strlen(conversation->system) > 0) {
-                json_object_object_add(
-                    obj, "instructions",
-                    json_object_new_string(conversation->system));
+            if (apiEndpoint == API_ENDPOINT_RESPONSES) {
+                if (conversation->system != NULL &&
+                    strlen(conversation->system) > 0) {
+                    json_object_object_add(
+                        obj, "instructions",
+                        json_object_new_string(conversation->system));
+                }
             }
         } else {
             struct json_object *toolsArray = json_object_new_array();
@@ -770,9 +787,13 @@ struct json_object **postChatMessageToOpenAI(
             FreeVec(encodedCredentials);
         }
 
+        if (apiEndpoinUrl == NULL) {
+            apiEndpoinUrl = "v1";
+        }
+
         if (useSSL || useProxy) {
             snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                     "POST %s://%s:%d/v1/responses HTTP/1.1\r\n"
+                     "POST %s://%s:%d%s%s/%s HTTP/1.1\r\n"
                      "Host: %s:%d\r\n"
                      "Content-Type: application/json\r\n"
                      "Authorization: Bearer %s\r\n"
@@ -780,11 +801,13 @@ struct json_object **postChatMessageToOpenAI(
                      "Content-Length: %lu\r\n"
                      "%s\r\n"
                      "%s\0",
-                     useSSL ? "https" : "http", host, port, host, port,
-                     openAiApiKey, strlen(jsonString), authHeader, jsonString);
+                     useSSL ? "https" : "http", host, port,
+                     strlen(apiEndpoinUrl) > 0 ? "/" : "", apiEndpoinUrl,
+                     API_ENDPOINT_NAMES[apiEndpoint], host, port, openAiApiKey,
+                     strlen(jsonString), authHeader, jsonString);
         } else {
             snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                     "POST /v1/responses HTTP/1.1\r\n"
+                     "POST %s%s/%s HTTP/1.1\r\n"
                      "Host: %s:%d\r\n"
                      "Content-Type: application/json\r\n"
                      "Authorization: Bearer %s\r\n"
@@ -792,8 +815,9 @@ struct json_object **postChatMessageToOpenAI(
                      "Content-Length: %lu\r\n"
                      "%s\r\n"
                      "%s\0",
-                     host, port, openAiApiKey, strlen(jsonString), authHeader,
-                     jsonString);
+                     strlen(apiEndpoinUrl) > 0 ? "/" : "", apiEndpoinUrl,
+                     API_ENDPOINT_NAMES[apiEndpoint], host, port, openAiApiKey,
+                     strlen(jsonString), authHeader, jsonString);
         }
 
         json_object_put(obj);

@@ -5,6 +5,8 @@ extern Object *customServerPortString;
 extern Object *customServerUsesSSLCycle;
 extern Object *customServerApiKeyString;
 extern Object *customServerChatModelString;
+extern Object *customServerApiEndpointCycle;
+extern Object *customServerApiEndpoinUrlString;
 extern Object *customServerSettingsRequesterWindowObject;
 
 /**

@@ -11,6 +11,8 @@ Object *customServerPortString;
 Object *customServerUsesSSLCycle;
 Object *customServerApiKeyString;
 Object *customServerChatModelString;
+Object *customServerApiEndpointCycle;
+Object *customServerApiEndpoinUrlString;
 Object *customServerSettingsRequesterWindowObject;
 
 HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
@@ -57,6 +59,23 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     strncpy(config.customChatModel, customServerChatModel,
             strlen(customServerChatModel));
 
+    LONG apiEndpoint;
+    get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
+    config.customApiEndpoint = apiEndpoint;
+
+    STRPTR customServerApiEndpoinUrl;
+    get(customServerApiEndpoinUrlString, MUIA_String_Contents,
+        &customServerApiEndpoinUrl);
+
+    if (config.customApiEndpoinUrl != NULL) {
+        FreeVec(config.customApiEndpoinUrl);
+        config.customApiEndpoinUrl = NULL;
+    }
+    config.customApiEndpoinUrl =
+        AllocVec(strlen(customServerApiEndpoinUrl) + 1, MEMF_CLEAR);
+    strncpy(config.customApiEndpoinUrl, customServerApiEndpoinUrl,
+            strlen(customServerApiEndpoinUrl));
+
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
     }
@@ -73,6 +92,10 @@ LONG createCustomServerSettingsRequesterWindow() {
     static STRPTR sslOptions[3] = {NULL};
     sslOptions[0] = STRING_ENCRYPTION_NONE;
     sslOptions[1] = STRING_ENCRYPTION_SSL;
+
+    static STRPTR apiEndpointOptions[2] = {NULL};
+    apiEndpointOptions[0] = API_ENDPOINT_NAMES[API_ENDPOINT_RESPONSES];
+    apiEndpointOptions[1] = API_ENDPOINT_NAMES[API_ENDPOINT_CHAT_COMPLETIONS];
 
     Object *customServerSettingsRequesterOkButton,
         *customServerSettingsRequesterCancelButton;
@@ -118,6 +141,7 @@ LONG createCustomServerSettingsRequesterWindow() {
                     MUIA_Frame, MUIV_Frame_String,
                     MUIA_CycleChain, TRUE,
                     MUIA_String_Contents, config.customApiKey,
+                    MUIA_String_MaxLen, 256,
                 End,
             End,
             Child, VGroup,
@@ -127,6 +151,24 @@ LONG createCustomServerSettingsRequesterWindow() {
                     MUIA_Frame, MUIV_Frame_String,
                     MUIA_CycleChain, TRUE,
                     MUIA_String_Contents, config.customChatModel,
+                End,
+            End,
+            Child, VGroup,
+                MUIA_Frame, MUIV_Frame_Group,
+                MUIA_FrameTitle, "STRING_MENU_OPENAI_API_ENDPOINT",
+                Child, customServerApiEndpointCycle = CycleObject,
+                    MUIA_CycleChain, TRUE,
+                    MUIA_Cycle_Entries, apiEndpointOptions,
+                    MUIA_Cycle_Active, config.customApiEndpoint,
+                End,
+            End,
+            Child, VGroup,
+                MUIA_Frame, MUIV_Frame_Group,
+                MUIA_FrameTitle, "STRING_MENU_OPENAI_API_ENDPOINT_URL",
+                Child, customServerApiEndpoinUrlString = StringObject,
+                    MUIA_Frame, MUIV_Frame_String,
+                    MUIA_CycleChain, TRUE,
+                    MUIA_String_Contents, config.customApiEndpoinUrl,
                 End,
             End,
             Child, HGroup,

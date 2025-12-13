@@ -84,7 +84,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     struct json_object **responses = postChatMessageToOpenAI(
         conversation, host, portValue, useSSL, model, apiKey, FALSE, useProxy,
         proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
-        proxyUsername, proxyPassword, webSearchEnabled);
+        proxyUsername, proxyPassword, webSearchEnabled, API_ENDPOINT_RESPONSES,
+        NULL);
 
     freeConversation(conversation);
 
@@ -117,7 +118,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         updateStatusBar(STRING_ERROR, redPen);
         return RETURN_OK;
     } else {
-        UTF8 *contentString = getMessageContentFromJson(response, FALSE, TRUE);
+        UTF8 *contentString = getMessageContentFromJson(response, FALSE, TRUE,
+                                                        API_ENDPOINT_RESPONSES);
 
         if (!contentString) {
             updateStatusBar(STRING_ERROR, redPen);

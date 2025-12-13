@@ -1,3 +1,6 @@
+#ifndef OPENAI_H
+#define OPENAI_H
+
 #include <libraries/codesets.h>
 #include <proto/dos.h>
 #include "speech.h"
@@ -183,6 +186,21 @@ struct GeneratedImage {
 };
 
 /**
+ * The API endpoint to use
+ * @see APIEndpoint
+ **/
+typedef enum {
+    API_ENDPOINT_RESPONSES = 0L,
+    API_ENDPOINT_CHAT_COMPLETIONS
+} APIEndpoint;
+
+/**
+ * The names of the API endpoints
+ * @see APIEndpoint
+ **/
+extern CONST_STRPTR API_ENDPOINT_NAMES[];
+
+/**
  * Initialize the OpenAI connector
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
@@ -228,6 +246,8 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
  * @param webSearchEnabled whether to enable web search or not
+ * @param apiEndpoint the API endpoint to use
+ * @param apiEndpoinUrl the API endpoint URL to use
  * @return a pointer to a new array of json_object containing the response(s) or
  *NULL -- Free it with json_object_put() for all responses then FreeVec() for
  *the array when you are done using it
@@ -237,7 +257,8 @@ struct json_object **postChatMessageToOpenAI(
     CONST_STRPTR model, CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, BOOL webSearchEnabled);
+    CONST_STRPTR proxyPassword, BOOL webSearchEnabled, APIEndpoint apiEndpoint,
+    CONST_STRPTR apiEndpoinUrl);
 
 /**
  * Post a image creation request to OpenAI
@@ -317,3 +338,5 @@ void closeOpenAIConnector();
  * @return a pointer to the decoded data
  */
 UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len);
+
+#endif

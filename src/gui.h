@@ -18,6 +18,7 @@
 #include <proto/rexxsyslib.h>
 #include <proto/utility.h>
 #include "AmigaGPT_cat.h"
+#include "openai.h"
 
 #define APP_ID_PRINT 1000L
 
@@ -106,11 +107,12 @@ void setConversationSystem(struct Conversation *conversation,
  * @param stream whether the response is a stream or not
  * @param retainJSONFormat whether to retain the JSON format of the message
  * string
+ * @param apiEndpoint the API endpoint to use
  * @return a pointer to a new UTF8 string containing the message content --
  * If it found role in the JSON instead of content then return an empty string
  **/
 UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
-                                BOOL retainJSONFormat);
+                                BOOL retainJSONFormat, APIEndpoint apiEndpoint);
 
 /**
  * Add a block of text to the conversation list

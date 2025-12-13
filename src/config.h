@@ -48,6 +48,8 @@ struct Config {
     ULONG customUseSSL;
     STRPTR customApiKey;
     STRPTR customChatModel;
+    APIEndpoint customApiEndpoint;
+    STRPTR customApiEndpoinUrl;
 };
 
 /**

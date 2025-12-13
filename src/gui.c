@@ -460,11 +460,13 @@ void setConversationSystem(struct Conversation *conversation,
  * @param stream whether the response is a stream or not
  * @param retainJSONFormat whether to retain the JSON format of the message
  * string
+ * @param apiEndpoint the API endpoint to use
  * @return a pointer to a new UTF8 string containing the message content --
  * If it found role in the JSON instead of content then return an empty string
  **/
 UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
-                                BOOL retainJSONFormat) {
+                                BOOL retainJSONFormat,
+                                APIEndpoint apiEndpoint) {
     if (json == NULL)
         return NULL;
     if (stream) {
@@ -477,34 +479,46 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
             return "";
         }
     } else {
-        struct json_object *outputArray =
-            json_object_object_get(json, "output");
-        struct json_object *output = NULL;
+        struct json_object *text;
+        if (apiEndpoint == API_ENDPOINT_RESPONSES) {
+            struct json_object *outputArray =
+                json_object_object_get(json, "output");
+            struct json_object *output = NULL;
 
-        int arrayLength = json_object_array_length(outputArray);
-        for (int i = 0; i < arrayLength; i++) {
-            struct json_object *currentOutput =
-                json_object_array_get_idx(outputArray, i);
-            struct json_object *typeObj =
-                json_object_object_get(currentOutput, "type");
-            if (typeObj != NULL) {
-                const char *typeStr = json_object_get_string(typeObj);
-                if (strcmp(typeStr, "message") == 0) {
-                    output = currentOutput;
-                    break;
+            int arrayLength = json_object_array_length(outputArray);
+            for (int i = 0; i < arrayLength; i++) {
+                struct json_object *currentOutput =
+                    json_object_array_get_idx(outputArray, i);
+                struct json_object *typeObj =
+                    json_object_object_get(currentOutput, "type");
+                if (typeObj != NULL) {
+                    const char *typeStr = json_object_get_string(typeObj);
+                    if (strcmp(typeStr, "message") == 0) {
+                        output = currentOutput;
+                        break;
+                    }
                 }
             }
+
+            if (output == NULL) {
+                return "";
+            }
+
+            struct json_object *contentArray =
+                json_object_object_get(output, "content");
+            struct json_object *content =
+                json_object_array_get_idx(contentArray, 0);
+            text = json_object_object_get(content, "text");
+        } else {
+            struct json_object *contentArray =
+                json_object_object_get(json, "choices");
+            struct json_object *content =
+                json_object_array_get_idx(contentArray, 0);
+            struct json_object *message =
+                json_object_object_get(content, "message");
+            text = json_object_object_get(message, "content");
         }
 
-        if (output == NULL) {
-            return "";
-        }
-
-        struct json_object *contentArray =
-            json_object_object_get(output, "content");
-        struct json_object *content =
-            json_object_array_get_idx(contentArray, 0);
-        struct json_object *text = json_object_object_get(content, "text");
         UTF8 *textStr;
         if (retainJSONFormat) {
             textStr = json_object_to_json_string_ext(
