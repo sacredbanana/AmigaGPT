@@ -1,6 +1,7 @@
 #include <exec/exec.h>
 #include <libraries/mui.h>
 #include <SDI_hook.h>
+#include <stdio.h>
 #include <string.h>
 #include "CustomServerSettingsRequesterWindow.h"
 #include "config.h"
@@ -36,7 +37,7 @@ HOOKPROTONHNONP(SettingsChangedFunc, void) {
     get(customServerApiEndpointUrlString, MUIA_String_Contents,
         &customServerApiEndpointUrl);
 
-    STRPTR fullUrlPreviewString[512];
+    UBYTE fullUrlPreviewString[512];
     snprintf(fullUrlPreviewString, 512, "%s://%s:%d%s%s/%s\0",
              usesSSL == 1 ? "https" : "http", customServerHost, port,
              strlen(customServerApiEndpointUrl) > 0 ? "/" : "",
