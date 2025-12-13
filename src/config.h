@@ -49,7 +49,7 @@ struct Config {
     STRPTR customApiKey;
     STRPTR customChatModel;
     APIEndpoint customApiEndpoint;
-    STRPTR customApiEndpoinUrl;
+    STRPTR customApiEndpointUrl;
 };
 
 /**

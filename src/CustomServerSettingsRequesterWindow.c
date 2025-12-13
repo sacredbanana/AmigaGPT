@@ -12,8 +12,39 @@ Object *customServerUsesSSLCycle;
 Object *customServerApiKeyString;
 Object *customServerChatModelString;
 Object *customServerApiEndpointCycle;
-Object *customServerApiEndpoinUrlString;
+Object *customServerApiEndpointUrlString;
+Object *customServerFullUrlPreviewString;
 Object *customServerSettingsRequesterWindowObject;
+
+HOOKPROTONHNONP(SettingsChangedFunc, void) {
+    STRPTR customServerHost;
+    get(customServerHostString, MUIA_String_Contents, &customServerHost);
+
+    LONG port;
+    get(customServerPortString, MUIA_String_Integer, &port);
+
+    LONG usesSSL;
+    get(customServerUsesSSLCycle, MUIA_Cycle_Active, &usesSSL);
+
+    STRPTR customServerApiKey;
+    get(customServerApiKeyString, MUIA_String_Contents, &customServerApiKey);
+
+    LONG apiEndpoint;
+    get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
+
+    STRPTR customServerApiEndpointUrl;
+    get(customServerApiEndpointUrlString, MUIA_String_Contents,
+        &customServerApiEndpointUrl);
+
+    STRPTR fullUrlPreviewString[512];
+    snprintf(fullUrlPreviewString, 512, "%s://%s:%d%s%s/%s\0",
+             usesSSL == 1 ? "https" : "http", customServerHost, port,
+             strlen(customServerApiEndpointUrl) > 0 ? "/" : "",
+             customServerApiEndpointUrl, API_ENDPOINT_NAMES[apiEndpoint]);
+    set(customServerFullUrlPreviewString, MUIA_Text_Contents,
+        fullUrlPreviewString);
+}
+MakeHook(SettingsChangedHook, SettingsChangedFunc);
 
 HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     STRPTR customServerHost;
@@ -63,18 +94,18 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
     config.customApiEndpoint = apiEndpoint;
 
-    STRPTR customServerApiEndpoinUrl;
-    get(customServerApiEndpoinUrlString, MUIA_String_Contents,
-        &customServerApiEndpoinUrl);
+    STRPTR customServerApiEndpointUrl;
+    get(customServerApiEndpointUrlString, MUIA_String_Contents,
+        &customServerApiEndpointUrl);
 
-    if (config.customApiEndpoinUrl != NULL) {
-        FreeVec(config.customApiEndpoinUrl);
-        config.customApiEndpoinUrl = NULL;
+    if (config.customApiEndpointUrl != NULL) {
+        FreeVec(config.customApiEndpointUrl);
+        config.customApiEndpointUrl = NULL;
     }
-    config.customApiEndpoinUrl =
-        AllocVec(strlen(customServerApiEndpoinUrl) + 1, MEMF_CLEAR);
-    strncpy(config.customApiEndpoinUrl, customServerApiEndpoinUrl,
-            strlen(customServerApiEndpoinUrl));
+    config.customApiEndpointUrl =
+        AllocVec(strlen(customServerApiEndpointUrl) + 1, MEMF_CLEAR);
+    strncpy(config.customApiEndpointUrl, customServerApiEndpointUrl,
+            strlen(customServerApiEndpointUrl));
 
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
@@ -150,12 +181,12 @@ LONG createCustomServerSettingsRequesterWindow() {
                 Child, customServerChatModelString = StringObject,
                     MUIA_Frame, MUIV_Frame_String,
                     MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, config.customChatModel,
+                    MUIA_String_Contents, config.customChatModel != NULL ? config.customChatModel : "gemini-2.0-flash",
                 End,
             End,
             Child, VGroup,
                 MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, "STRING_MENU_OPENAI_API_ENDPOINT",
+                MUIA_FrameTitle, STRING_MENU_OPENAI_API_ENDPOINT,
                 Child, customServerApiEndpointCycle = CycleObject,
                     MUIA_CycleChain, TRUE,
                     MUIA_Cycle_Entries, apiEndpointOptions,
@@ -164,11 +195,18 @@ LONG createCustomServerSettingsRequesterWindow() {
             End,
             Child, VGroup,
                 MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, "STRING_MENU_OPENAI_API_ENDPOINT_URL",
-                Child, customServerApiEndpoinUrlString = StringObject,
+                MUIA_FrameTitle, STRING_MENU_OPENAI_API_ENDPOINT_URL,
+                Child, customServerApiEndpointUrlString = StringObject,
                     MUIA_Frame, MUIV_Frame_String,
                     MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, config.customApiEndpoinUrl,
+                    MUIA_String_Contents, config.customApiEndpointUrl != NULL ? config.customApiEndpointUrl : "v1",
+                End,
+            End,
+            Child, VGroup,
+                MUIA_Frame, MUIV_Frame_Group,
+                MUIA_FrameTitle, STRING_MENU_OPENAI_FULL_URL_PREVIEW,
+                Child, customServerFullUrlPreviewString = TextObject,
+                    MUIA_Frame, MUIV_Frame_String,
                 End,
             End,
             Child, HGroup,
@@ -194,5 +232,12 @@ LONG createCustomServerSettingsRequesterWindow() {
     DoMethod(customServerSettingsRequesterCancelButton, MUIM_Notify,
              MUIA_Pressed, FALSE, MUIV_Notify_Window, 3, MUIM_Set,
              MUIA_Window_Open, FALSE);
+    DoMethod(customServerSettingsRequesterWindowObject, MUIM_Notify, MUIA_Window_Open, MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook, &SettingsChangedHook);
+    DoMethod(customServerHostString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
+    DoMethod(customServerPortString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
+    DoMethod(customServerUsesSSLCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
+    DoMethod(customServerApiKeyString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
+    DoMethod(customServerApiEndpointCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
+    DoMethod(customServerApiEndpointUrlString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     return RETURN_OK;
 }

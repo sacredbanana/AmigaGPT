@@ -52,7 +52,7 @@ struct Config config = {
     .customApiKey = NULL,
     .customChatModel = NULL,
     .customApiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS,
-    .customApiEndpoinUrl = "v1",
+    .customApiEndpointUrl = NULL,
 };
 
 /**
@@ -179,9 +179,9 @@ LONG writeConfig() {
                            json_object_new_int(config.customApiEndpoint));
 
     json_object_object_add(
-        configJsonObject, "customApiEndpoinUrl",
-        config.customApiEndpoinUrl != NULL
-            ? json_object_new_string(config.customApiEndpoinUrl)
+        configJsonObject, "customApiEndpointUrl",
+        config.customApiEndpointUrl != NULL
+            ? json_object_new_string(config.customApiEndpointUrl)
             : NULL);
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
@@ -658,16 +658,16 @@ LONG readConfig() {
         config.customApiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS;
     }
 
-    struct json_object *customApiEndpoinUrlObj;
-    if (json_object_object_get_ex(configJsonObject, "customApiEndpoinUrl",
-                                  &customApiEndpoinUrlObj)) {
-        CONST_STRPTR customApiEndpoinUrl =
-            json_object_get_string(customApiEndpoinUrlObj);
-        if (customApiEndpoinUrl != NULL) {
-            config.customApiEndpoinUrl =
-                AllocVec(strlen(customApiEndpoinUrl) + 1, MEMF_CLEAR);
-            strncpy(config.customApiEndpoinUrl, customApiEndpoinUrl,
-                    strlen(customApiEndpoinUrl));
+    struct json_object *customApiEndpointUrlObj;
+    if (json_object_object_get_ex(configJsonObject, "customApiEndpointUrl",
+                                  &customApiEndpointUrlObj)) {
+        CONST_STRPTR customApiEndpointUrl =
+            json_object_get_string(customApiEndpointUrlObj);
+        if (customApiEndpointUrl != NULL) {
+            config.customApiEndpointUrl =
+                AllocVec(strlen(customApiEndpointUrl) + 1, MEMF_CLEAR);
+            strncpy(config.customApiEndpointUrl, customApiEndpointUrl,
+                    strlen(customApiEndpointUrl));
         }
     }
 
@@ -720,8 +720,8 @@ void freeConfig() {
         FreeVec(config.customChatModel);
         config.customChatModel = NULL;
     }
-    if (config.customApiEndpoinUrl != NULL) {
-        FreeVec(config.customApiEndpoinUrl);
-        config.customApiEndpoinUrl = NULL;
+    if (config.customApiEndpointUrl != NULL) {
+        FreeVec(config.customApiEndpointUrl);
+        config.customApiEndpointUrl = NULL;
     }
 }

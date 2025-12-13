@@ -1297,7 +1297,7 @@ static void sendChatMessage() {
             config.proxyUsername, config.proxyPassword, config.webSearchEnabled,
             config.useCustomServer ? config.customApiEndpoint
                                    : API_ENDPOINT_RESPONSES,
-            config.useCustomServer ? config.customApiEndpoinUrl : NULL);
+            config.useCustomServer ? config.customApiEndpointUrl : NULL);
         if (responses == NULL) {
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -1480,7 +1480,7 @@ static void sendChatMessage() {
                 config.webSearchEnabled,
                 config.useCustomServer ? config.customApiEndpoint
                                        : API_ENDPOINT_RESPONSES,
-                config.useCustomServer ? config.customApiEndpoinUrl : NULL);
+                config.useCustomServer ? config.customApiEndpointUrl : NULL);
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);

@@ -1285,3 +1285,18 @@ msgstr "Custom Server Settings"
 msgctxt "STRING_ERROR_CUSTOM_SERVER_SETTINGS (242//)"
 msgid "Failed to create custom server settings window"
 msgstr "Failed to create custom server settings window"
+
+#: src/CustomServerSettingsRequesterWindow.c:111
+msgctxt "STRING_MENU_OPENAI_API_ENDPOINT (243//)"
+msgid "API Endpoint"
+msgstr "API Endpoint"
+
+#: src/CustomServerSettingsRequesterWindow.c:112
+msgctxt "STRING_MENU_OPENAI_API_ENDPOINT_URL (244//)"
+msgid "API Endpoint URL"
+msgstr "API Endpoint URL"
+
+#: src/CustomServerSettingsRequesterWindow.c:113
+msgctxt "STRING_MENU_OPENAI_FULL_URL_PREVIEW (245//)"
+msgid "Full URL Preview"
+msgstr "Full URL Preview"
