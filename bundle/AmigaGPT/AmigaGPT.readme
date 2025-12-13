@@ -9,7 +9,7 @@ Requires: AmigaOS 3.1+/68020+ util/libs/AmiSSL-v5-OS3.lha MUI
 Replaces: util/misc/AmigaGPT.lha
 
 AmigaGPT is a versatile ChatGPT client for AmigaOS 3.x, 4.1 and MorphOS.
-This powerful tool brings the capabilities of OpenAI?s GPT to your Amiga
+This powerful tool brings the capabilities of OpenAI's GPT to your Amiga
 system, enabling text generation, question answering, and creative
  exploration. AmigaGPT can also generate stunning images and
 includes support for speech output, making it easier than ever to interact
@@ -293,6 +293,14 @@ Special Thanks:
   http://amiga-news.de
 
 Changelog:
+
+-------------------
+2.15.0 (2025-12-13)
+-------------------
+
+- Add support for setting custom server endpoint and endpoint URL
+- Add chat/completions endpoint support for custom server for compatibility
+  with servers such as Google Gemini
 
 -------------------
 2.14.0 (2025-12-13)

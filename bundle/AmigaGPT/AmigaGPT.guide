@@ -793,6 +793,11 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.15.0 (2025-12-13)@{ub}
+
+- Add support for setting custom server endpoint and endpoint URL
+- Add chat/completions endpoint support for custom server for compatibility with servers such as Google Gemini
+
 @{b}2.14.0 (2025-12-13)@{ub}
 
 - Add GPT 5.2 and GPT 5.2 Pro chat models
