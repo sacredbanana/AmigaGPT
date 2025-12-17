@@ -103,10 +103,10 @@ CONST_STRPTR CHAT_MODEL_NAMES[] = {[CHATGPT_5_LATEST] = "gpt-5-chat-latest",
  * The names of the image models
  * @see ImageModel
  **/
-CONST_STRPTR IMAGE_MODEL_NAMES[] = {[DALL_E_2] = "dall-e-2",
-                                    [DALL_E_3] = "dall-e-3",
-                                    [GPT_IMAGE_1] = "gpt-image-1",
-                                    NULL};
+CONST_STRPTR IMAGE_MODEL_NAMES[] = {
+    [DALL_E_2] = "dall-e-2",           [DALL_E_3] = "dall-e-3",
+    [GPT_IMAGE_1] = "gpt-image-1",     [GPT_IMAGE_1_MINI] = "gpt-image-1-mini",
+    [GPT_IMAGE_1_5] = "gpt-image-1.5", NULL};
 
 /**
  * The names of the image sizes
@@ -1135,9 +1135,14 @@ struct json_object *postImageCreationRequestToOpenAI(
     json_object_object_add(obj, "prompt", json_object_new_string(prompt));
     json_object_object_add(obj, "size",
                            json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
-    if (imageModel == GPT_IMAGE_1) {
+    if (imageModel == GPT_IMAGE_1 || imageModel == GPT_IMAGE_1_MINI ||
+        imageModel == GPT_IMAGE_1_5) {
         json_object_object_add(obj, "moderation",
                                json_object_new_string("low"));
+        json_object_object_add(obj, "output_format",
+                               json_object_new_string("jpeg"));
+        json_object_object_add(obj, "output_compression",
+                               json_object_new_int(100));
     } else {
         json_object_object_add(obj, "response_format",
                                json_object_new_string("b64_json"));

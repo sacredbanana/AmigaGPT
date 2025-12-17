@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.16.0 (2025-12-18)
+
+- Add GPT Image 2 and GPT Image 1.5 Mini image models
+
 ## 2.15.0 (2025-12-13)
 
 - Add support for setting custom server endpoint and endpoint URL

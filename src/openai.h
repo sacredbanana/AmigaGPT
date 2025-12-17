@@ -87,7 +87,13 @@ extern CONST_STRPTR CHAT_MODEL_NAMES[];
 /**
  * The image model OpenAI should use
  **/
-typedef enum { DALL_E_2 = 0L, DALL_E_3, GPT_IMAGE_1 } ImageModel;
+typedef enum {
+    DALL_E_2 = 0L,
+    DALL_E_3,
+    GPT_IMAGE_1,
+    GPT_IMAGE_1_MINI,
+    GPT_IMAGE_1_5
+} ImageModel;
 
 /**
  * The names of the image models

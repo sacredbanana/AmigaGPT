@@ -276,6 +276,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         imageSize = config.imageSizeDallE3;
         break;
     case GPT_IMAGE_1:
+    case GPT_IMAGE_1_MINI:
+    case GPT_IMAGE_1_5:
         imageSize = config.imageSizeGptImage1;
         break;
     default:
