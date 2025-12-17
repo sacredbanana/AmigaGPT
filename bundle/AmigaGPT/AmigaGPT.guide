@@ -793,6 +793,12 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.16.0 (2025-12-18)@{ub}
+
+- Add GPT Image 2 and GPT Image 1.5 Mini image models
+- Add ability to select image output format (JPG/PNG)
+- Deleting images actually now properly deletes them from disk
+
 @{b}2.15.0 (2025-12-13)@{ub}
 
 - Add support for setting custom server endpoint and endpoint URL
