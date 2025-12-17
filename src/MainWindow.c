@@ -114,7 +114,11 @@ HOOKPROTONHNO(DestructImageLI_TextFunc, void,
     if (ndm->entry) {
         struct GeneratedImage *entry = (struct GeneratedImage *)ndm->entry;
         if (entry->filePath != NULL) {
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
             DeleteFile(entry->filePath);
+#else
+            Delete(entry->filePath);
+#endif
         }
         FreeVec(entry->name);
         FreeVec(entry->filePath);
