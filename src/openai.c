@@ -183,6 +183,13 @@ CONST_STRPTR API_ENDPOINT_NAMES[] = {[API_ENDPOINT_RESPONSES] = "responses",
                                      NULL};
 
 /**
+ * The names of the image formats
+ * @see ImageFormat
+ **/
+CONST_STRPTR IMAGE_FORMAT_NAMES[] = {
+    [IMAGE_FORMAT_JPG] = "jpeg", [IMAGE_FORMAT_PNG] = "png", NULL};
+
+/**
  * Generate a random number
  * @param maxValue the maximum value of the random number
  * @return a random number
@@ -1099,6 +1106,7 @@ UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len) {
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
+ * @param imageFormat the image format to use
  * @return a pointer to a new json_object containing the response or NULL --
  *Free it with json_object_put when you are done using it
  **/
@@ -1106,7 +1114,8 @@ struct json_object *postImageCreationRequestToOpenAI(
     CONST_STRPTR prompt, ImageModel imageModel, ImageSize imageSize,
     CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost,
     UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
+    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+    ImageFormat imageFormat) {
     struct json_object *response = NULL;
     UWORD responseIndex = 0;
     BOOL useSSL = !useProxy || proxyUsesSSL;
@@ -1139,8 +1148,9 @@ struct json_object *postImageCreationRequestToOpenAI(
         imageModel == GPT_IMAGE_1_5) {
         json_object_object_add(obj, "moderation",
                                json_object_new_string("low"));
-        json_object_object_add(obj, "output_format",
-                               json_object_new_string("jpeg"));
+        json_object_object_add(
+            obj, "output_format",
+            json_object_new_string(IMAGE_FORMAT_NAMES[imageFormat]));
         json_object_object_add(obj, "output_compression",
                                json_object_new_int(100));
     } else {

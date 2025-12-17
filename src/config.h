@@ -50,6 +50,7 @@ struct Config {
     STRPTR customChatModel;
     APIEndpoint customApiEndpoint;
     STRPTR customApiEndpointUrl;
+    ImageFormat imageFormat;
 };
 
 /**

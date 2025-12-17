@@ -215,9 +215,9 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     UTF8 *promptUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
                                           CSA_Source, (Tag)prompt, TAG_DONE);
 
-    struct json_object *response =
-        postImageCreationRequestToOpenAI(promptUTF8, model, size, apiKey, FALSE,
-                                         NULL, 0, FALSE, FALSE, NULL, NULL);
+    struct json_object *response = postImageCreationRequestToOpenAI(
+        promptUTF8, model, size, apiKey, FALSE, NULL, 0, FALSE, FALSE, NULL,
+        NULL, IMAGE_FORMAT_JPG);
     CodesetsFreeA(promptUTF8, NULL);
 
     if (response == NULL) {

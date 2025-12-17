@@ -1359,3 +1359,8 @@ msgstr "API Endpoint URL Endpunkt"
 msgctxt "STRING_MENU_OPENAI_FULL_URL_PREVIEW (245//)"
 msgid "Full URL Preview"
 msgstr "Full URL Vorschau"
+
+#: src/menu.c:246
+msgctxt "STRING_IMAGE_FORMAT (246//)"
+msgid "Image Format"
+msgstr "Bildformat"

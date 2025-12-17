@@ -113,6 +113,9 @@ HOOKPROTONHNO(DestructImageLI_TextFunc, void,
               struct NList_DestructMessage *ndm) {
     if (ndm->entry) {
         struct GeneratedImage *entry = (struct GeneratedImage *)ndm->entry;
+        if (entry->filePath != NULL) {
+            DeleteFile(entry->filePath);
+        }
         FreeVec(entry->name);
         FreeVec(entry->filePath);
         FreeVec(entry->prompt);
@@ -288,7 +291,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         textUTF8, config.imageModel, imageSize, config.openAiApiKey,
         config.proxyEnabled, config.proxyHost, config.proxyPort,
         config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
-        config.proxyPassword);
+        config.proxyPassword, config.imageFormat);
     CodesetsFreeA(textUTF8, NULL);
 
     if (response == NULL) {
@@ -343,17 +346,26 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     UBYTE *imageData = decodeBase64(b64, &data_len);
 
     CreateDir("AMIGAGPT:images");
-    CreateDir("AMIGAGPT:images/thumbnails");
+    STRPTR imageFormat;
+    switch (config.imageModel) {
+    case DALL_E_2:
+    case DALL_E_3:
+        imageFormat = "png";
+        break;
+    default:
+        imageFormat = IMAGE_FORMAT_NAMES[config.imageFormat];
+    }
 
     // Generate unique ID for the image
-    UBYTE fullPath[30] = "";
+    UBYTE fullPath[35] = "";
     UBYTE id[11] = "";
     CONST_STRPTR idChars = "abcdefghijklmnopqrstuvwxyz0123456789";
     srand(time(NULL));
     for (UBYTE i = 0; i < 9; i++) {
         id[i] = idChars[rand() % strlen(idChars)];
     }
-    snprintf(fullPath, sizeof(fullPath), "AMIGAGPT:images/%s.png", id);
+    snprintf(fullPath, sizeof(fullPath), "AMIGAGPT:images/%s.%s", id,
+             imageFormat);
 
     FILE *file = fopen(fullPath, "wb");
     fwrite(imageData, 1, data_len, file);
@@ -539,13 +551,19 @@ HOOKPROTONHNONP(SaveImageCopyButtonClickedFunc, void) {
     if (currentImage == NULL)
         return;
     STRPTR filePath = currentImage->filePath;
+    STRPTR fileExtension = strrchr(filePath, '.');
+    if (fileExtension == NULL) {
+        fileExtension = ".png";
+    }
+    UBYTE fileName[11] = "";
+    snprintf(fileName, sizeof(fileName), "image%s\0", fileExtension);
     struct FileRequester *fileReq =
         AllocAslRequestTags(ASL_FileRequest, TAG_END);
     if (fileReq != NULL) {
         if (AslRequestTags(fileReq, ASLFR_Window, mainWindow, ASLFR_TitleText,
-                           STRING_SAVE_IMAGE_COPY, ASLFR_InitialFile,
-                           "image.png", ASLFR_InitialDrawer,
-                           "SYS:", ASLFR_DoSaveMode, TRUE, TAG_DONE)) {
+                           STRING_SAVE_IMAGE_COPY, ASLFR_InitialFile, fileName,
+                           ASLFR_InitialDrawer, "SYS:", ASLFR_DoSaveMode, TRUE,
+                           TAG_DONE)) {
             STRPTR savePath = fileReq->fr_Drawer;
             STRPTR saveName = fileReq->fr_File;
             UWORD fullPathLength = strlen(savePath) + strlen(saveName) + 2;

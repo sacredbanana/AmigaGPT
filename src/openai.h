@@ -207,6 +207,18 @@ typedef enum {
 extern CONST_STRPTR API_ENDPOINT_NAMES[];
 
 /**
+ * The format of the image
+ * @see ImageFormat
+ **/
+typedef enum { IMAGE_FORMAT_JPG = 0L, IMAGE_FORMAT_PNG } ImageFormat;
+
+/**
+ * The names of the image formats
+ * @see ImageFormat
+ **/
+extern CONST_STRPTR IMAGE_FORMAT_NAMES[];
+
+/**
  * Initialize the OpenAI connector
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
@@ -279,14 +291,16 @@ struct json_object **postChatMessageToOpenAI(
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
+ * @param imageFormat the image format to use
  * @return a pointer to a new json_object containing the response or NULL --
  *Free it with json_object_put when you are done using it
  **/
 struct json_object *postImageCreationRequestToOpenAI(
-    CONST_STRPTR prompt, ImageModel imageModel, ImageSize ImageSize,
+    CONST_STRPTR prompt, ImageModel imageModel, ImageSize imageSize,
     CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost,
     UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
+    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+    ImageFormat imageFormat);
 
 /**
  * Download a file from the internet

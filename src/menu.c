@@ -428,10 +428,12 @@ void createMenu() {
     End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_UserData,
     MENU_ITEM_AI_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_Menuitem_CopyStrings,
-    FALSE, End, MUIA_Family_Child, MenuObject, MUIA_UserData,
-    MENU_ITEM_AI_CUSTOM_SERVER, MUIA_Menu_Title, STRING_MENU_CUSTOM_SERVER,
-    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_ENABLED, MUIA_UserData,
+    FALSE, End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_IMAGE_FORMAT, MUIA_UserData, MENU_ITEM_AI_OPENAI_IMAGE_FORMAT,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuObject,
+    MUIA_UserData, MENU_ITEM_AI_CUSTOM_SERVER, MUIA_Menu_Title,
+    STRING_MENU_CUSTOM_SERVER, MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child,
+    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_ENABLED, MUIA_UserData,
     MENU_ITEM_AI_CUSTOM_SERVER_ENABLED, MUIA_Menuitem_CopyStrings, FALSE,
     MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
@@ -1001,6 +1003,32 @@ static void populateOpenAIMenu() {
         DoMethod(newImageSizeGptImage1MenuItem, MUIM_Notify,
                  MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Self, 3,
                  MUIM_WriteLong, imageSize, &config.imageSizeGptImage1);
+    }
+
+    Object *openAIImageFormatMenuItem = (Object *)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_IMAGE_FORMAT);
+
+    // Remove any existing image format items
+    Object *imageFormatMenuItem;
+    while (imageFormatMenuItem = (Object *)DoMethod(openAIImageFormatMenuItem,
+                                                    MUIM_Family_GetChild)) {
+        DoMethod(openAIImageFormatMenuItem, MUIM_Family_Remove,
+                 imageFormatMenuItem);
+        DisposeObject(imageFormatMenuItem);
+    }
+
+    // Populate the image format menu with the formats
+    for (UBYTE i = 0; IMAGE_FORMAT_NAMES[i] != NULL; i++) {
+        Object *newImageFormatMenuItem = MenuitemObject, MUIA_Menuitem_Title,
+               IMAGE_FORMAT_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
+               MUIA_Menuitem_Checked, config.imageFormat == i,
+               MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_Exclude, ~(1 << i),
+               MUIA_Menuitem_CopyStrings, FALSE, End;
+        DoMethod(openAIImageFormatMenuItem, MUIM_Family_AddTail,
+                 newImageFormatMenuItem);
+        DoMethod(newImageFormatMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+                 TRUE, MUIV_Notify_Self, 3, MUIM_WriteLong, i,
+                 &config.imageFormat);
     }
 
     DoMethod(menuStrip, MUIM_Menustrip_ExitChange);

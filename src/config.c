@@ -53,6 +53,7 @@ struct Config config = {
     .customChatModel = NULL,
     .customApiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS,
     .customApiEndpointUrl = NULL,
+    .imageFormat = IMAGE_FORMAT_PNG,
 };
 
 /**
@@ -183,6 +184,9 @@ LONG writeConfig() {
         config.customApiEndpointUrl != NULL
             ? json_object_new_string(config.customApiEndpointUrl)
             : NULL);
+
+    json_object_object_add(configJsonObject, "imageFormat",
+                           json_object_new_int(config.imageFormat));
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
@@ -669,6 +673,14 @@ LONG readConfig() {
             strncpy(config.customApiEndpointUrl, customApiEndpointUrl,
                     strlen(customApiEndpointUrl));
         }
+    }
+
+    struct json_object *imageFormatObj;
+    if (json_object_object_get_ex(configJsonObject, "imageFormat",
+                                  &imageFormatObj)) {
+        config.imageFormat = json_object_get_int(imageFormatObj);
+    } else {
+        config.imageFormat = IMAGE_FORMAT_PNG;
     }
 
     FreeVec(configJsonString);
