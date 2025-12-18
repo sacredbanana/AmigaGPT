@@ -48,12 +48,13 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size);
  * The names of the speech systems
  * @see SpeechSystem
  **/
-const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
-                                      [SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
-                                      [SPEECH_SYSTEM_FLITE] = "Flite",
-                                      [SPEECH_SYSTEM_OPENAI] =
-                                          "OpenAI Text To Speech",
-                                      NULL};
+const STRPTR SPEECH_SYSTEM_NAMES[] = {
+    [SPEECH_SYSTEM_34] = "Workbench 1.x v34",
+    [SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
+    [SPEECH_SYSTEM_FLITE] = "Flite",
+    [SPEECH_SYSTEM_OPENAI] = "OpenAI Text To Speech",
+    [SPEECH_SYSTEM_ELEVENLABS] = "Elevenlabs Text To Speech",
+    NULL};
 
 /**
  * The names of the audio formats

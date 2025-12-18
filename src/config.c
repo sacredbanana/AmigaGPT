@@ -54,6 +54,9 @@ struct Config config = {
     .customApiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS,
     .customApiEndpointUrl = NULL,
     .imageFormat = IMAGE_FORMAT_PNG,
+    .elevenLabsAPIKey = NULL,
+    .elevenLabsVoiceID = NULL,
+    .elevenLabsModel = NULL,
 };
 
 /**
@@ -187,6 +190,20 @@ LONG writeConfig() {
 
     json_object_object_add(configJsonObject, "imageFormat",
                            json_object_new_int(config.imageFormat));
+
+    json_object_object_add(configJsonObject, "elevenLabsAPIKey",
+                           config.elevenLabsAPIKey != NULL
+                               ? json_object_new_string(config.elevenLabsAPIKey)
+                               : NULL);
+    json_object_object_add(
+        configJsonObject, "elevenLabsVoiceID",
+        config.elevenLabsVoiceID != NULL
+            ? json_object_new_string(config.elevenLabsVoiceID)
+            : NULL);
+    json_object_object_add(configJsonObject, "elevenLabsModel",
+                           config.elevenLabsModel != NULL
+                               ? json_object_new_string(config.elevenLabsModel)
+                               : NULL);
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
@@ -683,6 +700,42 @@ LONG readConfig() {
         config.imageFormat = IMAGE_FORMAT_PNG;
     }
 
+    struct json_object *elevenLabsAPIKeyObj;
+    if (json_object_object_get_ex(configJsonObject, "elevenLabsAPIKey",
+                                  &elevenLabsAPIKeyObj)) {
+        config.elevenLabsAPIKey = json_object_get_string(elevenLabsAPIKeyObj);
+        if (config.elevenLabsAPIKey != NULL) {
+            config.elevenLabsAPIKey =
+                AllocVec(strlen(config.elevenLabsAPIKey) + 1, MEMF_CLEAR);
+            strncpy(config.elevenLabsAPIKey, config.elevenLabsAPIKey,
+                    strlen(config.elevenLabsAPIKey));
+        }
+    }
+
+    struct json_object *elevenLabsVoiceIDObj;
+    if (json_object_object_get_ex(configJsonObject, "elevenLabsVoiceID",
+                                  &elevenLabsVoiceIDObj)) {
+        config.elevenLabsVoiceID = json_object_get_string(elevenLabsVoiceIDObj);
+        if (config.elevenLabsVoiceID != NULL) {
+            config.elevenLabsVoiceID =
+                AllocVec(strlen(config.elevenLabsVoiceID) + 1, MEMF_CLEAR);
+            strncpy(config.elevenLabsVoiceID, config.elevenLabsVoiceID,
+                    strlen(config.elevenLabsVoiceID));
+        }
+    }
+
+    struct json_object *elevenLabsModelObj;
+    if (json_object_object_get_ex(configJsonObject, "elevenLabsModel",
+                                  &elevenLabsModelObj)) {
+        config.elevenLabsModel = json_object_get_string(elevenLabsModelObj);
+        if (config.elevenLabsModel != NULL) {
+            config.elevenLabsModel =
+                AllocVec(strlen(config.elevenLabsModel) + 1, MEMF_CLEAR);
+            strncpy(config.elevenLabsModel, config.elevenLabsModel,
+                    strlen(config.elevenLabsModel));
+        }
+    }
+
     FreeVec(configJsonString);
     json_object_put(configJsonObject);
     return RETURN_OK;
@@ -735,5 +788,17 @@ void freeConfig() {
     if (config.customApiEndpointUrl != NULL) {
         FreeVec(config.customApiEndpointUrl);
         config.customApiEndpointUrl = NULL;
+    }
+    if (config.elevenLabsAPIKey != NULL) {
+        FreeVec(config.elevenLabsAPIKey);
+        config.elevenLabsAPIKey = NULL;
+    }
+    if (config.elevenLabsVoiceID != NULL) {
+        FreeVec(config.elevenLabsVoiceID);
+        config.elevenLabsVoiceID = NULL;
+    }
+    if (config.elevenLabsModel != NULL) {
+        FreeVec(config.elevenLabsModel);
+        config.elevenLabsModel = NULL;
     }
 }

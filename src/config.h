@@ -51,6 +51,9 @@ struct Config {
     APIEndpoint customApiEndpoint;
     STRPTR customApiEndpointUrl;
     ImageFormat imageFormat;
+    STRPTR elevenLabsAPIKey;
+    STRPTR elevenLabsVoiceID;
+    STRPTR elevenLabsModel;
 };
 
 /**

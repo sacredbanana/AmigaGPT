@@ -401,7 +401,10 @@ void createMenu() {
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_OPENAI_VOICE_INSTRUCTIONS, MUIA_UserData,
     MENU_ITEM_SPEECH_OPENAI_VOICE_INSTRUCTIONS, MUIA_Menuitem_CopyStrings,
-    FALSE, End, End,
+    FALSE, End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    "STRING_MENU_ELEVENLABS_SETTINGS", MUIA_UserData,
+    MENU_ITEM_SPEECH_ELEVENLABS_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
+    End,
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_OPENAI,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,

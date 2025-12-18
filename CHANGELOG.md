@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.17.0 (2025-12-18)
+
+- Add support for Elevenlabs TTS
+
 ## 2.16.0 (2025-12-18)
 
 - Add GPT Image 1.5  and GPT Image 1 Mini image models
