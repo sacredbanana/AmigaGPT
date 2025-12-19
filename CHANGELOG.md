@@ -1,8 +1,9 @@
 # Changelog
 
-## 2.17.0 (2025-12-18)
+## 2.17.0 (2025-12-19)
 
 - Add support for Elevenlabs TTS
+- Cut, Copy, Paste, Select All and Clear commands now work for the text input box in image generation mode
 
 ## 2.16.0 (2025-12-18)
 

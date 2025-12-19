@@ -53,6 +53,7 @@ Object *imageView;
 Object *imageViewGroup;
 Object *openImageButton;
 Object *saveImageCopyButton;
+Object *modeRegisterGroup;
 STRPTR chatOutputTextEditorContents = NULL;
 WORD pens[NUMDRIPENS + 1];
 struct Conversation *currentConversation = NULL;
@@ -965,7 +966,7 @@ LONG createMainWindow() {
             MUIA_Window_UseRightBorderScroller, FALSE,
             MUIA_Window_UseLeftBorderScroller, FALSE,
             WindowContents, VGroup,
-                Child, RegisterGroup(pages),
+                Child, modeRegisterGroup = RegisterGroup(pages),
                     Child, HGroup,
                         Child, VGroup, MUIA_Weight, 30,
                             // New chat button

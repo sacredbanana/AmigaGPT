@@ -214,6 +214,51 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
 }
 MakeHook(ARexxRunScriptMenuItemClickedHook, ARexxRunScriptMenuItemClickedFunc);
 
+/**
+ * Get the active text editor based on which page is selected in the mode
+ * register group
+ * @return The active text editor object
+ */
+static Object *getActiveTextEditor() {
+    LONG activePage = 0;
+    get(modeRegisterGroup, MUIA_Group_ActivePage, &activePage);
+    return (activePage == 0) ? chatInputTextEditor : imageInputTextEditor;
+}
+
+HOOKPROTONHNONP(EditCutFunc, void) {
+    Object *activeEditor = getActiveTextEditor();
+    DoMethod(activeEditor, MUIM_TextEditor_ARexxCmd, "Cut");
+}
+MakeHook(EditCutHook, EditCutFunc);
+
+HOOKPROTONHNONP(EditCopyFunc, void) {
+    Object *activeEditor = getActiveTextEditor();
+    DoMethod(activeEditor, MUIM_TextEditor_ARexxCmd, "Copy");
+}
+MakeHook(EditCopyHook, EditCopyFunc);
+
+HOOKPROTONHNONP(EditPasteFunc, void) {
+    Object *activeEditor = getActiveTextEditor();
+    DoMethod(activeEditor, MUIM_TextEditor_ARexxCmd, "Paste");
+}
+MakeHook(EditPasteHook, EditPasteFunc);
+
+HOOKPROTONHNONP(EditClearFunc, void) {
+    Object *activeEditor = getActiveTextEditor();
+    if (isAROS) {
+        set(activeEditor, MUIA_String_Contents, "");
+    } else {
+        DoMethod(activeEditor, MUIM_TextEditor_ClearText);
+    }
+}
+MakeHook(EditClearHook, EditClearFunc);
+
+HOOKPROTONHNONP(EditSelectAllFunc, void) {
+    Object *activeEditor = getActiveTextEditor();
+    DoMethod(activeEditor, MUIM_TextEditor_ARexxCmd, "SelectAll");
+}
+MakeHook(EditSelectAllHook, EditSelectAllFunc);
+
 HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
     CONST_STRPTR guidePath = "AMIGAGPT:AmigaGPT.guide";
     BPTR file = Open(guidePath, MODE_OLDFILE);
@@ -499,8 +544,8 @@ void addMenuActions() {
         set(cutMenuItem, MUIA_Menuitem_Enabled, FALSE);
     } else {
         DoMethod(cutMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-                 MUIV_EveryTime, chatInputTextEditor, 2,
-                 MUIM_TextEditor_ARexxCmd, "Cut");
+                 MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+                 &EditCutHook);
     }
 
     Object copyMenuItem =
@@ -509,8 +554,8 @@ void addMenuActions() {
         set(copyMenuItem, MUIA_Menuitem_Enabled, FALSE);
     } else {
         DoMethod(copyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-                 MUIV_EveryTime, chatInputTextEditor, 2,
-                 MUIM_TextEditor_ARexxCmd, "Copy");
+                 MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+                 &EditCopyHook);
     }
 
     Object pasteMenuItem =
@@ -519,8 +564,8 @@ void addMenuActions() {
         set(pasteMenuItem, MUIA_Menuitem_Enabled, FALSE);
     } else {
         DoMethod(pasteMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-                 MUIV_EveryTime, chatInputTextEditor, 2,
-                 MUIM_TextEditor_ARexxCmd, "Paste");
+                 MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+                 &EditPasteHook);
     }
 
     Object clearMenuItem =
@@ -529,8 +574,8 @@ void addMenuActions() {
         set(clearMenuItem, MUIA_Menuitem_Enabled, FALSE);
     } else {
         DoMethod(clearMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-                 MUIV_EveryTime, chatInputTextEditor, 3, MUIM_Set,
-                 MUIA_String_Contents, "");
+                 MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+                 &EditClearHook);
     }
 
     Object selectAllMenuItem =
@@ -539,8 +584,8 @@ void addMenuActions() {
         set(selectAllMenuItem, MUIA_Menuitem_Enabled, FALSE);
     } else {
         DoMethod(selectAllMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-                 MUIV_EveryTime, chatInputTextEditor, 2,
-                 MUIM_TextEditor_ARexxCmd, "SelectAll");
+                 MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+                 &EditSelectAllHook);
     }
 
     Object muiSettingsMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
