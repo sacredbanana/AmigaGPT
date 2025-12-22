@@ -2700,12 +2700,19 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
 
     FreeVec(authHeader);
 
+#ifndef DAEMON
+    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
+#endif
+
     updateStatusBar(STRING_CONNECTING, yellowPen);
     while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
                                proxyPort, proxyUsesSSL, proxyRequiresAuth,
                                proxyUsername, proxyPassword) == RETURN_ERROR) {
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
+#ifndef DAEMON
+            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
             return NULL;
         }
     }
@@ -2716,12 +2723,18 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
         if (ssl_err <= 0) {
             reportSslError(ssl, ssl_err, "SSL_write (generic GET)");
+#ifndef DAEMON
+            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
             return NULL;
         }
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
         if (ssl_err <= 0) {
             displayError(STRING_ERROR_REQUEST_WRITE);
+#ifndef DAEMON
+            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
             return NULL;
         }
     }
@@ -2758,6 +2771,9 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
     }
 
     if (jsonStart == NULL) {
+#ifndef DAEMON
+        set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
         return NULL;
     }
 
@@ -2772,5 +2788,8 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
 
     /* Parse JSON */
     struct json_object *result = json_tokener_parse(jsonStart);
+#ifndef DAEMON
+    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
     return result;
 }
