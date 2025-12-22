@@ -713,6 +713,15 @@ struct json_object **postChatMessageToOpenAI(
 
         if (useCustomServer) {
             struct MinNode *conversationNode = conversation->messages->mlh_Head;
+            if (apiEndpoint == API_ENDPOINT_CHAT_COMPLETIONS) {
+                struct json_object *messageObj = json_object_new_object();
+                json_object_object_add(messageObj, "role",
+                                       json_object_new_string("system"));
+                json_object_object_add(
+                    messageObj, "content",
+                    json_object_new_string(conversation->system));
+                json_object_array_add(conversationArray, messageObj);
+            }
             while (conversationNode->mln_Succ != NULL) {
                 struct ConversationNode *message =
                     (struct ConversationNode *)conversationNode;
