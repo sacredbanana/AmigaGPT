@@ -56,7 +56,9 @@ struct Config config = {
     .imageFormat = IMAGE_FORMAT_PNG,
     .elevenLabsAPIKey = NULL,
     .elevenLabsVoiceID = NULL,
+    .elevenLabsVoiceName = NULL,
     .elevenLabsModel = NULL,
+    .elevenLabsModelName = NULL,
 };
 
 /**
@@ -200,10 +202,20 @@ LONG writeConfig() {
         config.elevenLabsVoiceID != NULL
             ? json_object_new_string(config.elevenLabsVoiceID)
             : NULL);
+    json_object_object_add(
+        configJsonObject, "elevenLabsVoiceName",
+        config.elevenLabsVoiceName != NULL
+            ? json_object_new_string(config.elevenLabsVoiceName)
+            : NULL);
     json_object_object_add(configJsonObject, "elevenLabsModel",
                            config.elevenLabsModel != NULL
                                ? json_object_new_string(config.elevenLabsModel)
                                : NULL);
+    json_object_object_add(
+        configJsonObject, "elevenLabsModelName",
+        config.elevenLabsModelName != NULL
+            ? json_object_new_string(config.elevenLabsModelName)
+            : NULL);
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
@@ -700,39 +712,88 @@ LONG readConfig() {
         config.imageFormat = IMAGE_FORMAT_PNG;
     }
 
+    if (config.elevenLabsAPIKey != NULL) {
+        FreeVec(config.elevenLabsAPIKey);
+        config.elevenLabsAPIKey = NULL;
+    }
     struct json_object *elevenLabsAPIKeyObj;
     if (json_object_object_get_ex(configJsonObject, "elevenLabsAPIKey",
                                   &elevenLabsAPIKeyObj)) {
-        config.elevenLabsAPIKey = json_object_get_string(elevenLabsAPIKeyObj);
-        if (config.elevenLabsAPIKey != NULL) {
+        CONST_STRPTR elevenLabsAPIKey =
+            json_object_get_string(elevenLabsAPIKeyObj);
+        if (elevenLabsAPIKey != NULL) {
             config.elevenLabsAPIKey =
-                AllocVec(strlen(config.elevenLabsAPIKey) + 1, MEMF_CLEAR);
-            strncpy(config.elevenLabsAPIKey, config.elevenLabsAPIKey,
-                    strlen(config.elevenLabsAPIKey));
+                AllocVec(strlen(elevenLabsAPIKey) + 1, MEMF_CLEAR);
+            strncpy(config.elevenLabsAPIKey, elevenLabsAPIKey,
+                    strlen(elevenLabsAPIKey));
         }
     }
 
+    if (config.elevenLabsVoiceID != NULL) {
+        FreeVec(config.elevenLabsVoiceID);
+        config.elevenLabsVoiceID = NULL;
+    }
     struct json_object *elevenLabsVoiceIDObj;
     if (json_object_object_get_ex(configJsonObject, "elevenLabsVoiceID",
                                   &elevenLabsVoiceIDObj)) {
-        config.elevenLabsVoiceID = json_object_get_string(elevenLabsVoiceIDObj);
-        if (config.elevenLabsVoiceID != NULL) {
+        CONST_STRPTR elevenLabsVoiceID =
+            json_object_get_string(elevenLabsVoiceIDObj);
+        if (elevenLabsVoiceID != NULL) {
             config.elevenLabsVoiceID =
-                AllocVec(strlen(config.elevenLabsVoiceID) + 1, MEMF_CLEAR);
-            strncpy(config.elevenLabsVoiceID, config.elevenLabsVoiceID,
-                    strlen(config.elevenLabsVoiceID));
+                AllocVec(strlen(elevenLabsVoiceID) + 1, MEMF_CLEAR);
+            strncpy(config.elevenLabsVoiceID, elevenLabsVoiceID,
+                    strlen(elevenLabsVoiceID));
         }
     }
 
+    if (config.elevenLabsVoiceName != NULL) {
+        FreeVec(config.elevenLabsVoiceName);
+        config.elevenLabsVoiceName = NULL;
+    }
+    struct json_object *elevenLabsVoiceNameObj;
+    if (json_object_object_get_ex(configJsonObject, "elevenLabsVoiceName",
+                                  &elevenLabsVoiceNameObj)) {
+        CONST_STRPTR elevenLabsVoiceName =
+            json_object_get_string(elevenLabsVoiceNameObj);
+        if (elevenLabsVoiceName != NULL) {
+            config.elevenLabsVoiceName =
+                AllocVec(strlen(elevenLabsVoiceName) + 1, MEMF_CLEAR);
+            strncpy(config.elevenLabsVoiceName, elevenLabsVoiceName,
+                    strlen(elevenLabsVoiceName));
+        }
+    }
+
+    if (config.elevenLabsModel != NULL) {
+        FreeVec(config.elevenLabsModel);
+        config.elevenLabsModel = NULL;
+    }
     struct json_object *elevenLabsModelObj;
     if (json_object_object_get_ex(configJsonObject, "elevenLabsModel",
                                   &elevenLabsModelObj)) {
-        config.elevenLabsModel = json_object_get_string(elevenLabsModelObj);
-        if (config.elevenLabsModel != NULL) {
+        CONST_STRPTR elevenLabsModel =
+            json_object_get_string(elevenLabsModelObj);
+        if (elevenLabsModel != NULL) {
             config.elevenLabsModel =
-                AllocVec(strlen(config.elevenLabsModel) + 1, MEMF_CLEAR);
-            strncpy(config.elevenLabsModel, config.elevenLabsModel,
-                    strlen(config.elevenLabsModel));
+                AllocVec(strlen(elevenLabsModel) + 1, MEMF_CLEAR);
+            strncpy(config.elevenLabsModel, elevenLabsModel,
+                    strlen(elevenLabsModel));
+        }
+    }
+
+    if (config.elevenLabsModelName != NULL) {
+        FreeVec(config.elevenLabsModelName);
+        config.elevenLabsModelName = NULL;
+    }
+    struct json_object *elevenLabsModelNameObj;
+    if (json_object_object_get_ex(configJsonObject, "elevenLabsModelName",
+                                  &elevenLabsModelNameObj)) {
+        CONST_STRPTR elevenLabsModelName =
+            json_object_get_string(elevenLabsModelNameObj);
+        if (elevenLabsModelName != NULL) {
+            config.elevenLabsModelName =
+                AllocVec(strlen(elevenLabsModelName) + 1, MEMF_CLEAR);
+            strncpy(config.elevenLabsModelName, elevenLabsModelName,
+                    strlen(elevenLabsModelName));
         }
     }
 
@@ -797,8 +858,16 @@ void freeConfig() {
         FreeVec(config.elevenLabsVoiceID);
         config.elevenLabsVoiceID = NULL;
     }
+    if (config.elevenLabsVoiceName != NULL) {
+        FreeVec(config.elevenLabsVoiceName);
+        config.elevenLabsVoiceName = NULL;
+    }
     if (config.elevenLabsModel != NULL) {
         FreeVec(config.elevenLabsModel);
         config.elevenLabsModel = NULL;
+    }
+    if (config.elevenLabsModelName != NULL) {
+        FreeVec(config.elevenLabsModelName);
+        config.elevenLabsModelName = NULL;
     }
 }

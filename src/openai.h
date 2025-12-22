@@ -359,4 +359,30 @@ void closeOpenAIConnector();
  */
 UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len);
 
+/**
+ * Make a generic HTTPS GET request and return the JSON response
+ * @param host the host to connect to
+ * @param port the port to use
+ * @param endpoint the API endpoint (e.g., "/v1/models")
+ * @param apiKey the API key to use
+ * @param apiKeyHeader the header name for the API key (e.g., "xi-api-key" or
+ * "Authorization")
+ * @param useBearer whether to use "Bearer " prefix for the API key
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
+ * @return a pointer to a new json_object or NULL -- Free it with
+ * json_object_put() when you are done using it
+ **/
+struct json_object *
+makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
+                    CONST_STRPTR apiKey, CONST_STRPTR apiKeyHeader,
+                    BOOL useBearer, BOOL useProxy, CONST_STRPTR proxyHost,
+                    UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
+
 #endif

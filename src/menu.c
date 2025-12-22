@@ -16,6 +16,7 @@
 #include "ChatSystemRequesterWindow.h"
 #include "CustomServerSettingsRequesterWindow.h"
 #include "config.h"
+#include "ElevenLabsSettingsRequesterWindow.h"
 #include "gui.h"
 #include "MainWindow.h"
 #include "menu.h"
@@ -718,6 +719,18 @@ void addMenuActions() {
              MUIA_Menuitem_Trigger, MUIV_EveryTime,
              voiceInstructionsRequesterWindowObject, 3, MUIM_Set,
              MUIA_Window_ActiveObject, voiceInstructionsRequesterString);
+
+    Object elevenLabsSettingsMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ELEVENLABS_SETTINGS);
+    DoMethod(elevenLabsSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &ElevenLabsSettingsWindowOpenHook);
+    DoMethod(elevenLabsSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, elevenLabsSettingsRequesterWindowObject, 3,
+             MUIM_Set, MUIA_Window_Open, TRUE);
+    DoMethod(elevenLabsSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, elevenLabsSettingsRequesterWindowObject, 3,
+             MUIM_Set, MUIA_Window_ActiveObject, elevenLabsAPIKeyString);
 
     Object openAIAPIKeyMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
                                                    MENU_ITEM_AI_OPENAI_API_KEY);

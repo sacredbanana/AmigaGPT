@@ -53,7 +53,9 @@ struct Config {
     ImageFormat imageFormat;
     STRPTR elevenLabsAPIKey;
     STRPTR elevenLabsVoiceID;
+    STRPTR elevenLabsVoiceName;
     STRPTR elevenLabsModel;
+    STRPTR elevenLabsModelName;
 };
 
 /**

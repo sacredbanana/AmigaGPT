@@ -2382,3 +2382,166 @@ static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage) {
     }
     return messageCopy;
 }
+
+/**
+ * Make a generic HTTPS GET request and return the JSON response
+ * @param host the host to connect to
+ * @param port the port to use
+ * @param endpoint the API endpoint (e.g., "/v1/models")
+ * @param apiKey the API key to use
+ * @param apiKeyHeader the header name for the API key (e.g., "xi-api-key" or
+ * "Authorization")
+ * @param useBearer whether to use "Bearer " prefix for the API key
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
+ * @return a pointer to a new json_object or NULL -- Free it with
+ * json_object_put() when you are done using it
+ **/
+struct json_object *
+makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
+                    CONST_STRPTR apiKey, CONST_STRPTR apiKeyHeader,
+                    BOOL useBearer, BOOL useProxy, CONST_STRPTR proxyHost,
+                    UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
+
+    UBYTE connectionRetryCount = 0;
+    BOOL useSSL = TRUE;
+
+    if (port == 0) {
+        port = 443;
+    }
+    if (useProxy && proxyUsesSSL) {
+        useSSL = TRUE;
+    }
+
+    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+    memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
+
+    /* Build HTTP GET request */
+    STRPTR authHeader = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
+    if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
+        STRPTR credentials =
+            AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                     MEMF_ANY | MEMF_CLEAR);
+        snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                 "%s:%s", proxyUsername, proxyPassword);
+        UBYTE *encodedCredentials = base64Encode(credentials);
+        snprintf(authHeader, 512, "Proxy-Authorization: Basic %s\r\n",
+                 encodedCredentials);
+        FreeVec(encodedCredentials);
+        FreeVec(credentials);
+    }
+
+    /* Build the API key header */
+    UBYTE apiKeyHeaderStr[512];
+    if (useBearer) {
+        snprintf(apiKeyHeaderStr, sizeof(apiKeyHeaderStr), "%s: Bearer %s\r\n",
+                 apiKeyHeader, apiKey ? apiKey : "");
+    } else {
+        snprintf(apiKeyHeaderStr, sizeof(apiKeyHeaderStr), "%s: %s\r\n",
+                 apiKeyHeader, apiKey ? apiKey : "");
+    }
+
+    if (useSSL || useProxy) {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "GET https://%s:%d%s HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "%s"
+                 "User-Agent: AmigaGPT\r\n"
+                 "Accept: application/json\r\n"
+                 "Connection: close\r\n"
+                 "%s\r\n",
+                 host, port, endpoint, host, port, apiKeyHeaderStr, authHeader);
+    } else {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "GET %s HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "%s"
+                 "User-Agent: AmigaGPT\r\n"
+                 "Accept: application/json\r\n"
+                 "Connection: close\r\n"
+                 "%s\r\n",
+                 endpoint, host, port, apiKeyHeaderStr, authHeader);
+    }
+
+    FreeVec(authHeader);
+
+    updateStatusBar(STRING_CONNECTING, yellowPen);
+    while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
+        if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+            displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
+            return NULL;
+        }
+    }
+
+    updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
+    if (useSSL) {
+        ERR_clear_error();
+        ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+        if (ssl_err <= 0) {
+            reportSslError(ssl, ssl_err, "SSL_write (generic GET)");
+            return NULL;
+        }
+    } else {
+        ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+        if (ssl_err <= 0) {
+            displayError(STRING_ERROR_REQUEST_WRITE);
+            return NULL;
+        }
+    }
+
+    LONG totalRead = 0;
+    LONG bytesRead;
+
+    do {
+        if (useSSL) {
+            ERR_clear_error();
+            bytesRead = SSL_read(ssl, readBuffer + totalRead,
+                                 READ_BUFFER_LENGTH - totalRead - 1);
+        } else {
+            bytesRead = recv(sock, readBuffer + totalRead,
+                             READ_BUFFER_LENGTH - totalRead - 1, 0);
+        }
+        if (bytesRead > 0) {
+            totalRead += bytesRead;
+        }
+    } while (bytesRead > 0 && totalRead < READ_BUFFER_LENGTH - 1);
+
+    readBuffer[totalRead] = '\0';
+
+    updateStatusBar(STRING_READY, greenPen);
+
+    /* Find JSON body (after headers) */
+    STRPTR jsonStart = strstr(readBuffer, "\r\n\r\n");
+    if (jsonStart == NULL) {
+        jsonStart = strstr(readBuffer, "\n\n");
+        if (jsonStart != NULL)
+            jsonStart += 2;
+    } else {
+        jsonStart += 4;
+    }
+
+    if (jsonStart == NULL) {
+        return NULL;
+    }
+
+    /* Check for chunked transfer encoding */
+    if (strstr(readBuffer, "Transfer-Encoding: chunked") != NULL) {
+        /* Skip chunk size line */
+        STRPTR chunkData = strchr(jsonStart, '\n');
+        if (chunkData != NULL) {
+            jsonStart = chunkData + 1;
+        }
+    }
+
+    /* Parse JSON */
+    struct json_object *result = json_tokener_parse(jsonStart);
+    return result;
+}

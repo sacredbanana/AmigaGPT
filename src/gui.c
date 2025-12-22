@@ -23,6 +23,7 @@
 #include "ChatSystemRequesterWindow.h"
 #include "CustomServerSettingsRequesterWindow.h"
 #include "config.h"
+#include "ElevenLabsSettingsRequesterWindow.h"
 #include "gui.h"
 #include "MainWindow.h"
 #include "menu.h"
@@ -168,6 +169,9 @@ LONG initVideo() {
     if (createVoiceInstructionsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
+    if (createElevenLabsSettingsRequesterWindow() == RETURN_ERROR)
+        return RETURN_ERROR;
+
     if (!(app = ApplicationObject, MUIA_Application_Base, "AMIGAGPT",
           MUIA_Application_Title, STRING_APP_NAME, MUIA_Application_Version,
           APP_VERSION, MUIA_Application_Copyright,
@@ -184,6 +188,7 @@ LONG initVideo() {
           customServerSettingsRequesterWindowObject, SubWindow,
           proxySettingsRequesterWindowObject, SubWindow,
           voiceInstructionsRequesterWindowObject, SubWindow,
+          elevenLabsSettingsRequesterWindowObject, SubWindow,
           imageWindowObject = WindowObject, MUIA_Window_Title, STRING_IMAGE,
           MUIA_Window_ID, OBJECT_ID_IMAGE_WINDOW, MUIA_Window_Width, 320,
           MUIA_Window_Height, 240, MUIA_Window_CloseGadget, TRUE,
