@@ -5,6 +5,7 @@
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
 #include <SDI_hook.h>
+#include <stdio.h>
 #include <string.h>
 #include "ElevenLabsSettingsRequesterWindow.h"
 #include "config.h"
