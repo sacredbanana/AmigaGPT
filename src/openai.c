@@ -2384,6 +2384,226 @@ static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage) {
 }
 
 /**
+ * Post a text to speech request to the ElevenLabs API
+ * @param text the text to be spoken
+ * @param voiceId the ElevenLabs voice ID
+ * @param modelId the ElevenLabs model ID
+ * @param apiKey the ElevenLabs API key
+ * @param audioLength a pointer to a variable that will be set to the length of
+ * the audio data
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
+ * @return a pointer to a buffer containing the PCM audio data or NULL -- Free
+ * it with FreeVec() when you are done using it
+ **/
+APTR postTextToSpeechRequestToElevenLabs(
+    CONST_STRPTR text, CONST_STRPTR voiceId, CONST_STRPTR modelId,
+    CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword) {
+
+#define ELEVENLABS_HOST "api.elevenlabs.io"
+#define ELEVENLABS_PORT 443
+
+    BOOL useSSL = !useProxy || proxyUsesSSL;
+    *audioLength = 0;
+
+    updateStatusBar(STRING_CONNECTING, yellowPen);
+    UBYTE connectionRetryCount = 0;
+    while (createSSLConnection(ELEVENLABS_HOST, ELEVENLABS_PORT, useSSL,
+                               useProxy, proxyHost, proxyPort, proxyUsesSSL,
+                               proxyRequiresAuth, proxyUsername,
+                               proxyPassword) == RETURN_ERROR) {
+        if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+            displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
+            return NULL;
+        }
+    }
+
+    /* Allocate buffer for audio data */
+    ULONG audioBufferSize = AUDIO_BUFFER_SIZE;
+    UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
+    if (audioData == NULL) {
+        displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+        return NULL;
+    }
+
+    /* Build JSON request body */
+    struct json_object *obj = json_object_new_object();
+    json_object_object_add(obj, "text", json_object_new_string(text));
+    if (modelId != NULL && strlen(modelId) > 0) {
+        json_object_object_add(obj, "model_id",
+                               json_object_new_string(modelId));
+    }
+    CONST_STRPTR jsonString = json_object_to_json_string(obj);
+
+    /* Build proxy auth header if needed */
+    STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+    if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
+        STRPTR credentials =
+            AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                     MEMF_ANY | MEMF_CLEAR);
+        snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                 "%s:%s", proxyUsername, proxyPassword);
+        UBYTE *encodedCredentials = base64Encode(credentials);
+        snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
+                 encodedCredentials);
+        FreeVec(encodedCredentials);
+        FreeVec(credentials);
+    }
+
+    /* Build the endpoint with voice ID and output format */
+    UBYTE endpoint[256];
+    snprintf(endpoint, sizeof(endpoint),
+             "/v1/text-to-speech/%s?output_format=pcm_24000",
+             voiceId != NULL ? voiceId : "");
+
+    snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+             "POST %s%s HTTP/1.1\r\n"
+             "Host: %s\r\n"
+             "Content-Type: application/json\r\n"
+             "xi-api-key: %s\r\n"
+             "User-Agent: AmigaGPT\r\n"
+             "Content-Length: %lu\r\n"
+             "Connection: close\r\n"
+             "%s\r\n"
+             "%s",
+             useSSL ? "" : "https://api.elevenlabs.io", endpoint,
+             ELEVENLABS_HOST, apiKey ? apiKey : "", strlen(jsonString),
+             authHeader, jsonString);
+
+    json_object_put(obj);
+    FreeVec(authHeader);
+
+    updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
+    if (useSSL) {
+        ERR_clear_error();
+        ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+        if (ssl_err <= 0) {
+            reportSslError(ssl, ssl_err, "SSL_write (elevenlabs tts)");
+            FreeVec(audioData);
+            return NULL;
+        }
+    } else {
+        ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+        if (ssl_err <= 0) {
+            displayError(STRING_ERROR_REQUEST_WRITE);
+            FreeVec(audioData);
+            return NULL;
+        }
+    }
+
+#ifndef DAEMON
+    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
+
+    /* Read response */
+    LONG bytesRead = 0;
+    BOOL hasReadHeader = FALSE;
+    UBYTE *dataStart = NULL;
+    UBYTE statusMessage[64];
+
+    while (1) {
+#ifndef DAEMON
+        DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+        memset(readBuffer, 0, READ_BUFFER_LENGTH);
+        if (useSSL) {
+            ERR_clear_error();
+            bytesRead = SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH - 1);
+        } else {
+            bytesRead = recv(sock, readBuffer, READ_BUFFER_LENGTH - 1, 0);
+        }
+
+        if (bytesRead <= 0) {
+            break;
+        }
+
+        dataStart = readBuffer;
+        ULONG bytesToCopy = bytesRead;
+
+        if (!hasReadHeader) {
+            /* Look for end of HTTP headers */
+            dataStart = strstr(readBuffer, "\r\n\r\n");
+            if (dataStart != NULL) {
+                hasReadHeader = TRUE;
+                dataStart += 4;
+                bytesToCopy = bytesRead - (dataStart - readBuffer);
+
+                /* Check for error response */
+                if (strstr(readBuffer, "HTTP/1.1 200") == NULL) {
+                    /* Try to parse error JSON */
+                    if (dataStart[0] == '{') {
+                        struct json_object *response =
+                            json_tokener_parse(dataStart);
+                        if (response != NULL) {
+                            struct json_object *detail;
+                            if (json_object_object_get_ex(response, "detail",
+                                                          &detail)) {
+                                struct json_object *message =
+                                    json_object_object_get(detail, "message");
+                                if (message != NULL) {
+                                    displayError(
+                                        json_object_get_string(message));
+                                } else {
+                                    displayError(
+                                        json_object_get_string(detail));
+                                }
+                            }
+                            json_object_put(response);
+                        }
+                    }
+                    FreeVec(audioData);
+                    return NULL;
+                }
+            } else {
+                continue;
+            }
+        }
+
+        /* Expand buffer if needed */
+        if (*audioLength + bytesToCopy > audioBufferSize) {
+            audioBufferSize <<= 1;
+            APTR oldAudioData = audioData;
+            audioData = AllocVec(audioBufferSize, MEMF_ANY);
+            if (audioData == NULL) {
+                FreeVec(oldAudioData);
+                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                return NULL;
+            }
+            memcpy(audioData, oldAudioData, *audioLength);
+            FreeVec(oldAudioData);
+        }
+
+        memcpy(audioData + *audioLength, dataStart, bytesToCopy);
+        *audioLength += bytesToCopy;
+
+        snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                 STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+        updateStatusBar(statusMessage, yellowPen);
+    }
+
+#ifndef DAEMON
+    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
+
+    updateStatusBar(STRING_READY, greenPen);
+
+    if (*audioLength == 0) {
+        FreeVec(audioData);
+        return NULL;
+    }
+
+    return audioData;
+}
+
+/**
  * Make a generic HTTPS GET request and return the JSON response
  * @param host the host to connect to
  * @param port the port to use

@@ -15,6 +15,7 @@
 #endif
 #include "config.h"
 #include "gui.h"
+#include "openai.h"
 #include "version.h"
 
 #ifdef __AMIGAOS3__
@@ -74,7 +75,8 @@ const STRPTR AUDIO_FORMAT_NAMES[] = {[AUDIO_FORMAT_PCM] = "pcm",
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG initSpeech(SpeechSystem speechSystem) {
-    if (speechSystem == SPEECH_SYSTEM_OPENAI)
+    if (speechSystem == SPEECH_SYSTEM_OPENAI ||
+        speechSystem == SPEECH_SYSTEM_ELEVENLABS)
         return RETURN_OK;
 #ifdef __AMIGAOS3__
     if (!translationBuffer)
@@ -224,7 +226,8 @@ void closeSpeech() {
  * @param audioFormat the audio format to save the audio to
  **/
 void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
-    if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
+    if (config.speechSystem == SPEECH_SYSTEM_OPENAI ||
+        config.speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
         struct MsgPort *AHImp;
         struct AHIRequest *ahiRequest;
         BYTE ahiError;
@@ -236,12 +239,24 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
             audioFormat = &defaultAudioFormatForPlayback;
         }
 
-        UBYTE *audioBuffer = postTextToSpeechRequestToOpenAI(
-            text, config.openAITTSModel, config.openAITTSVoice,
-            config.openAIVoiceInstructions, config.openAiApiKey, &audioLength,
-            config.proxyEnabled, config.proxyHost, config.proxyPort,
-            config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
-            config.proxyPassword, audioFormat);
+        UBYTE *audioBuffer = NULL;
+
+        if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
+            audioBuffer = postTextToSpeechRequestToOpenAI(
+                text, config.openAITTSModel, config.openAITTSVoice,
+                config.openAIVoiceInstructions, config.openAiApiKey,
+                &audioLength, config.proxyEnabled, config.proxyHost,
+                config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth,
+                config.proxyUsername, config.proxyPassword, audioFormat);
+        } else if (config.speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
+            audioBuffer = postTextToSpeechRequestToElevenLabs(
+                text, config.elevenLabsVoiceID, config.elevenLabsModel,
+                config.elevenLabsAPIKey, &audioLength, config.proxyEnabled,
+                config.proxyHost, config.proxyPort, config.proxyUsesSSL,
+                config.proxyRequiresAuth, config.proxyUsername,
+                config.proxyPassword);
+        }
+
         if (!audioBuffer) {
             return;
         }

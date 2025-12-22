@@ -385,4 +385,29 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
                     UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
                     CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 
+/**
+ * Post a text to speech request to the ElevenLabs API
+ * @param text the text to be spoken
+ * @param voiceId the ElevenLabs voice ID
+ * @param modelId the ElevenLabs model ID
+ * @param apiKey the ElevenLabs API key
+ * @param audioLength a pointer to a variable that will be set to the length of
+ * the audio data
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
+ * @return a pointer to a buffer containing the PCM audio data or NULL -- Free
+ * it with FreeVec() when you are done using it
+ **/
+APTR postTextToSpeechRequestToElevenLabs(
+    CONST_STRPTR text, CONST_STRPTR voiceId, CONST_STRPTR modelId,
+    CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword);
+
 #endif
