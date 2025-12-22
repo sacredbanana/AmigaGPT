@@ -793,6 +793,12 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}2.17.0 (2025-12-22)@{ub}
+
+- Add support for Elevenlabs TTS
+- Cut, Copy, Paste, Select All and Clear commands now work for the text input box in image generation mode
+- Chat system now works for custom LLM servers using the completions endpoint
+
 @{b}2.16.0 (2025-12-18)@{ub}
 
 - Add GPT Image 1.5 and GPT Image 1 Mini image models
