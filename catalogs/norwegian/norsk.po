@@ -31,8 +31,8 @@ msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
 msgstr ""
-"Kunne ikke åpne talesystemet. Sørg for at translator.library v42 og narrator."
-"device v34 er installert. Se veiledningen for mer informasjon."
+"Kunne ikke åpne talesystemet. Sørg for at translator.library v42 og "
+"narrator.device v34 er installert. Se veiledningen for mer informasjon."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
@@ -429,8 +429,8 @@ msgid ""
 msgstr ""
 "Kunne ikke analysere nettpratloggen. Misformet JSON. Chat-history.json-filen "
 "er sannsynligvis ødelagt. Samtalehistorikk vil ikke bli lastet inn. En "
-"sikkerhetskopi av chat-history.json-filen er opprettet som chat-history.json."
-"bak"
+"sikkerhetskopi av chat-history.json-filen er opprettet som chat-"
+"history.json.bak"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -478,8 +478,8 @@ msgid ""
 msgstr ""
 "Kunne ikke analysere bildeloggen. Misformet JSON. Image-history.json-filen "
 "er sannsynligvis ødelagt. Bildehistorikk vil ikke bli lastet inn. En "
-"sikkerhetskopi av image-history.json-filen er opprettet som image-history."
-"json.bak"
+"sikkerhetskopi av image-history.json-filen er opprettet som image-"
+"history.json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -696,8 +696,8 @@ msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
 msgstr ""
-"Kunne ikke åpne talesystemet. Sørg for at translator.library v42 og narrator."
-"device v37 er installert. Se veiledningen for mer informasjon."
+"Kunne ikke åpne talesystemet. Sørg for at translator.library v42 og "
+"narrator.device v37 er installert. Se veiledningen for mer informasjon."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
@@ -1230,8 +1230,12 @@ msgstr "GPT Image 1 Bilde Størrelse"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
-msgstr "Ugyldig anmodning. Din OpenAI API-konto har sandsynligvis ingen kreditter tilbage til at køre denne model. Tjek din kontobalance."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
+msgstr ""
+"Ugyldig anmodning. Din OpenAI API-konto har sandsynligvis ingen kreditter "
+"tilbage til at køre denne model. Tjek din kontobalance."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1317,3 +1321,69 @@ msgstr "Full URL forhåndsvisning"
 msgctxt "STRING_IMAGE_FORMAT (246//)"
 msgid "Image Format"
 msgstr "Bildeformat"
+
+#: src/menu.c:247
+msgctxt "STRING_MENU_ELEVENLABS_SETTINGS (247//)"
+msgid "ElevenLabs Settings"
+msgstr "ElevenLabs Innstillinger"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:110
+msgctxt "STRING_NONE_SELECTED (248//)"
+msgid "None Selected"
+msgstr "Ingen valgt"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:111
+msgctxt "STRING_ERROR_ELEVENLABS_API_KEY_REQUIRED (249//)"
+msgid "Please enter your ElevenLabs API key first"
+msgstr "Vennligst skriv inn ElevenLabs API-nøkkelen din først"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:112
+msgctxt "STRING_FETCHING_ELEVENLABS_MODELS (250//)"
+msgid "Fetching ElevenLabs models..."
+msgstr "Henter ElevenLabs modeller..."
+
+#: src/ElevenLabsSettingsRequesterWindow.c:113
+msgctxt "STRING_ERROR_FETCHING_ELEVENLABS_MODELS (251//)"
+msgid "Failed to fetch ElevenLabs models"
+msgstr "Kunne ikke hente ElevenLabs modeller"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:114
+msgctxt "STRING_SEARCHING_ELEVENLABS_VOICES (252//)"
+msgid "Searching ElevenLabs voices..."
+msgstr "Søker ElevenLabs stemmer..."
+
+#: src/ElevenLabsSettingsRequesterWindow.c:115
+#, fuzzy
+msgctxt "STRING_ERROR_SEARCHING_ELEVENLABS_VOICES (253//)"
+msgid "Failed to search ElevenLabs voices"
+msgstr "Kunne ikke hente ElevenLabs modeller"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:116
+msgctxt "STRING_MENU_ELEVENLABS_MODEL (254//)"
+msgid "Model"
+msgstr "Modell"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:117
+msgctxt "STRING_CURRENT (255//)"
+msgid "Current:"
+msgstr "Nå:"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:118
+msgctxt "STRING_FETCH_ELEVENLABS_MODELS (256//)"
+msgid "Fetch Models"
+msgstr "Hent modeller"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:119
+msgctxt "STRING_MENU_ELEVENLABS_VOICE (257//)"
+msgid "Voice"
+msgstr "Stemme"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:120
+msgctxt "STRING_SEARCH (258//)"
+msgid "Search"
+msgstr "Søk"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:121
+msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
+msgid "Failed to create ElevenLabs settings window"
+msgstr "Kunne ikke opprette ElevenLabs settings window"

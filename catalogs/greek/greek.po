@@ -1347,3 +1347,68 @@ msgstr "Full URL προεπισκόπηση"
 msgctxt "STRING_IMAGE_FORMAT (246//)"
 msgid "Image Format"
 msgstr "Μορφή εικόνας"
+
+#: src/menu.c:247
+msgctxt "STRING_MENU_ELEVENLABS_SETTINGS (247//)"
+msgid "ElevenLabs Settings"
+msgstr "Ρυθμίσεις ElevenLabs"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:110
+msgctxt "STRING_NONE_SELECTED (248//)"
+msgid "None Selected"
+msgstr "Καμία επιλογή"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:111
+msgctxt "STRING_ERROR_ELEVENLABS_API_KEY_REQUIRED (249//)"
+msgid "Please enter your ElevenLabs API key first"
+msgstr "Παρακαλώ εισάγετε πρώτα το ElevenLabs API key"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:112
+msgctxt "STRING_FETCHING_ELEVENLABS_MODELS (250//)"
+msgid "Fetching ElevenLabs models..."
+msgstr "Λήψη ElevenLabs model..."
+
+#: src/ElevenLabsSettingsRequesterWindow.c:113
+msgctxt "STRING_ERROR_FETCHING_ELEVENLABS_MODELS (251//)"
+msgid "Failed to fetch ElevenLabs models"
+msgstr "Απέτυχε η λήψη των ElevenLabs model"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:114
+msgctxt "STRING_SEARCHING_ELEVENLABS_VOICES (252//)"
+msgid "Searching ElevenLabs voices..."
+msgstr "Αναζήτηση ElevenLabs φωνών..."
+
+#: src/ElevenLabsSettingsRequesterWindow.c:115
+msgctxt "STRING_ERROR_SEARCHING_ELEVENLABS_VOICES (253//)"
+msgid "Failed to search ElevenLabs voices"
+msgstr "Απέτυχε η αναζήτηση των ElevenLabs φωνών"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:116
+msgctxt "STRING_MENU_ELEVENLABS_MODEL (254//)"
+msgid "Model"
+msgstr "Μοντέλο"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:117
+msgctxt "STRING_CURRENT (255//)"
+msgid "Current:"
+msgstr "Τρέχον:"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:118
+msgctxt "STRING_FETCH_ELEVENLABS_MODELS (256//)"
+msgid "Fetch Models"
+msgstr "Λήψη Μοντέλων"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:119
+msgctxt "STRING_MENU_ELEVENLABS_VOICE (257//)"
+msgid "Voice"
+msgstr "Φωνή"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:120
+msgctxt "STRING_SEARCH (258//)"
+msgid "Search"
+msgstr "Αναζήτηση"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:121
+msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
+msgid "Failed to create ElevenLabs settings window"
+msgstr "Απέτυχε η δημιουργία του παραθύρου ρυθμίσεων ElevenLabs"

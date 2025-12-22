@@ -1333,3 +1333,68 @@ msgstr "Full URL предварительный просмотр"
 msgctxt "STRING_IMAGE_FORMAT (246//)"
 msgid "Image Format"
 msgstr "Формат изображения"
+
+#: src/menu.c:247
+msgctxt "STRING_MENU_ELEVENLABS_SETTINGS (247//)"
+msgid "ElevenLabs Settings"
+msgstr "ElevenLabs Настройки"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:110
+msgctxt "STRING_NONE_SELECTED (248//)"
+msgid "None Selected"
+msgstr "Не выбрано"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:111
+msgctxt "STRING_ERROR_ELEVENLABS_API_KEY_REQUIRED (249//)"
+msgid "Please enter your ElevenLabs API key first"
+msgstr "Пожалуйста, введите ваш ElevenLabs API ключ сначала"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:112
+msgctxt "STRING_FETCHING_ELEVENLABS_MODELS (250//)"
+msgid "Fetching ElevenLabs models..."
+msgstr "Загрузка ElevenLabs моделей..."
+
+#: src/ElevenLabsSettingsRequesterWindow.c:113
+msgctxt "STRING_ERROR_FETCHING_ELEVENLABS_MODELS (251//)"
+msgid "Failed to fetch ElevenLabs models"
+msgstr "Не удалось загрузить ElevenLabs модели"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:114
+msgctxt "STRING_SEARCHING_ELEVENLABS_VOICES (252//)"
+msgid "Searching ElevenLabs voices..."
+msgstr "Поиск ElevenLabs голосов..."
+
+#: src/ElevenLabsSettingsRequesterWindow.c:115
+msgctxt "STRING_ERROR_SEARCHING_ELEVENLABS_VOICES (253//)"
+msgid "Failed to search ElevenLabs voices"
+msgstr "Не удалось найти ElevenLabs голоса"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:116
+msgctxt "STRING_MENU_ELEVENLABS_MODEL (254//)"
+msgid "Model"
+msgstr "Модель"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:117
+msgctxt "STRING_CURRENT (255//)"
+msgid "Current:"
+msgstr "Текущий:"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:118
+msgctxt "STRING_FETCH_ELEVENLABS_MODELS (256//)"
+msgid "Fetch Models"
+msgstr "Загрузить модели"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:119
+msgctxt "STRING_MENU_ELEVENLABS_VOICE (257//)"
+msgid "Voice"
+msgstr "Голос"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:120
+msgctxt "STRING_SEARCH (258//)"
+msgid "Search"
+msgstr "Поиск"
+
+#: src/ElevenLabsSettingsRequesterWindow.c:121
+msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
+msgid "Failed to create ElevenLabs settings window"
+msgstr "Не удалось создать ElevenLabs settings window"

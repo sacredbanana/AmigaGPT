@@ -85,7 +85,8 @@ HOOKPROTONHNONP(ElevenLabsSettingsWindowOpenFunc, void) {
         set(elevenLabsCurrentModelText, MUIA_Text_Contents,
             config.elevenLabsModelName);
     } else {
-        set(elevenLabsCurrentModelText, MUIA_Text_Contents, "(none selected)");
+        set(elevenLabsCurrentModelText, MUIA_Text_Contents,
+            STRING_NONE_SELECTED);
     }
 
     /* Update current voice text */
@@ -93,7 +94,8 @@ HOOKPROTONHNONP(ElevenLabsSettingsWindowOpenFunc, void) {
         set(elevenLabsCurrentVoiceText, MUIA_Text_Contents,
             config.elevenLabsVoiceName);
     } else {
-        set(elevenLabsCurrentVoiceText, MUIA_Text_Contents, "(none selected)");
+        set(elevenLabsCurrentVoiceText, MUIA_Text_Contents,
+            STRING_NONE_SELECTED);
     }
 }
 MakeHook(ElevenLabsSettingsWindowOpenHook, ElevenLabsSettingsWindowOpenFunc);
@@ -103,11 +105,11 @@ HOOKPROTONHNONP(ElevenLabsFetchModelsButtonClickedFunc, void) {
     get(elevenLabsAPIKeyString, MUIA_String_Contents, &apiKey);
 
     if (apiKey == NULL || strlen(apiKey) == 0) {
-        displayError("Please enter your ElevenLabs API key first");
+        displayError(STRING_ERROR_ELEVENLABS_API_KEY_REQUIRED);
         return;
     }
 
-    updateStatusBar("Fetching ElevenLabs models...", yellowPen);
+    updateStatusBar(STRING_FETCHING_ELEVENLABS_MODELS, yellowPen);
     set(elevenLabsFetchModelsButton, MUIA_Disabled, TRUE);
 
     if (elevenLabsModelsJson != NULL) {
@@ -121,7 +123,7 @@ HOOKPROTONHNONP(ElevenLabsFetchModelsButtonClickedFunc, void) {
         populateModelList();
         updateStatusBar(STRING_READY, greenPen);
     } else {
-        displayError("Failed to fetch ElevenLabs models");
+        displayError(STRING_ERROR_FETCHING_ELEVENLABS_MODELS);
         updateStatusBar(STRING_READY, greenPen);
     }
 
@@ -137,11 +139,11 @@ HOOKPROTONHNONP(ElevenLabsSearchVoicesButtonClickedFunc, void) {
     get(elevenLabsVoiceSearchString, MUIA_String_Contents, &searchQuery);
 
     if (apiKey == NULL || strlen(apiKey) == 0) {
-        displayError("Please enter your ElevenLabs API key first");
+        displayError(STRING_ERROR_ELEVENLABS_API_KEY_REQUIRED);
         return;
     }
 
-    updateStatusBar("Searching ElevenLabs voices...", yellowPen);
+    updateStatusBar(STRING_SEARCHING_ELEVENLABS_VOICES, yellowPen);
     set(elevenLabsSearchButton, MUIA_Disabled, TRUE);
 
     if (elevenLabsVoicesJson != NULL) {
@@ -155,7 +157,7 @@ HOOKPROTONHNONP(ElevenLabsSearchVoicesButtonClickedFunc, void) {
         populateVoiceList();
         updateStatusBar(STRING_READY, greenPen);
     } else {
-        displayError("Failed to search ElevenLabs voices");
+        displayError(STRING_ERROR_SEARCHING_ELEVENLABS_VOICES);
         updateStatusBar(STRING_READY, greenPen);
     }
 
@@ -452,7 +454,7 @@ LONG createElevenLabsSettingsRequesterWindow() {
     Object *elevenLabsSettingsOkButton, *elevenLabsSettingsCancelButton;
 
     if ((elevenLabsSettingsRequesterWindowObject = WindowObject,
-            MUIA_Window_Title, "ElevenLabs Settings",
+            MUIA_Window_Title, STRING_MENU_ELEVENLABS_SETTINGS,
             MUIA_Window_Width, 500,
             MUIA_Window_Height, 400,
             MUIA_Window_CloseGadget, FALSE,
@@ -460,7 +462,7 @@ LONG createElevenLabsSettingsRequesterWindow() {
                 /* API Key Section */
                 Child, VGroup,
                     MUIA_Frame, MUIV_Frame_Group,
-                    MUIA_FrameTitle, "API Key",
+                    MUIA_FrameTitle, STRING_MENU_OPENAI_API_KEY,
                     Child, elevenLabsAPIKeyString = StringObject,
                         MUIA_Frame, MUIV_Frame_String,
                         MUIA_CycleChain, TRUE,
@@ -470,15 +472,15 @@ LONG createElevenLabsSettingsRequesterWindow() {
                 /* Model Section */
                 Child, VGroup,
                     MUIA_Frame, MUIV_Frame_Group,
-                    MUIA_FrameTitle, "Model",
+                    MUIA_FrameTitle, STRING_MENU_ELEVENLABS_MODEL,
                     Child, HGroup,
-                        Child, Label("Current:"),
+                        Child, Label(STRING_CURRENT),
                         Child, elevenLabsCurrentModelText = TextObject,
-                            MUIA_Text_Contents, "(none selected)",
+                            MUIA_Text_Contents, STRING_NONE_SELECTED,
                         End,
                     End,
                     Child, HGroup,
-                        Child, elevenLabsFetchModelsButton = MUI_MakeObject(MUIO_Button, "Fetch Models",
+                        Child, elevenLabsFetchModelsButton = MUI_MakeObject(MUIO_Button, STRING_FETCH_ELEVENLABS_MODELS,
                             MUIA_CycleChain, TRUE,
                             MUIA_InputMode, MUIV_InputMode_RelVerify,
                         End,
@@ -499,11 +501,11 @@ LONG createElevenLabsSettingsRequesterWindow() {
                 /* Voice Section */
                 Child, VGroup,
                     MUIA_Frame, MUIV_Frame_Group,
-                    MUIA_FrameTitle, "Voice",
+                    MUIA_FrameTitle, STRING_MENU_ELEVENLABS_VOICE,
                     Child, HGroup,
-                        Child, Label("Current:"),
+                        Child, Label(STRING_CURRENT),
                         Child, elevenLabsCurrentVoiceText = TextObject,
-                            MUIA_Text_Contents, "(none selected)",
+                            MUIA_Text_Contents, STRING_NONE_SELECTED,
                         End,
                     End,
                     Child, HGroup,
@@ -512,7 +514,7 @@ LONG createElevenLabsSettingsRequesterWindow() {
                             MUIA_CycleChain, TRUE,
                             MUIA_String_AdvanceOnCR, TRUE,
                         End,
-                        Child, elevenLabsSearchButton = MUI_MakeObject(MUIO_Button, "Search",
+                        Child, elevenLabsSearchButton = MUI_MakeObject(MUIO_Button, STRING_SEARCH,
                             MUIA_CycleChain, TRUE,
                             MUIA_InputMode, MUIV_InputMode_RelVerify,
                             MUIA_Weight, 30,
@@ -546,7 +548,7 @@ LONG createElevenLabsSettingsRequesterWindow() {
                 End,
             End,
         End) == NULL) {
-        displayError("Failed to create ElevenLabs settings window");
+        displayError(STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE);
         return RETURN_ERROR;
     }
 
