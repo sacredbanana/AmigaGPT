@@ -519,7 +519,38 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
             struct json_object *content =
                 json_object_array_get_idx(contentArray, 0);
             text = json_object_object_get(content, "text");
+        } else if (apiEndpoint == API_ENDPOINT_MESSAGES) {
+            /* Anthropic/Claude Messages API response format:
+             * { "content": [{"type": "text", "text": "..."}], ... } */
+            struct json_object *contentArray =
+                json_object_object_get(json, "content");
+            if (contentArray == NULL ||
+                !json_object_is_type(contentArray, json_type_array)) {
+                return "";
+            }
+
+            /* Find the first text block in the content array */
+            int arrayLength = json_object_array_length(contentArray);
+            for (int i = 0; i < arrayLength; i++) {
+                struct json_object *block =
+                    json_object_array_get_idx(contentArray, i);
+                struct json_object *typeObj =
+                    json_object_object_get(block, "type");
+                if (typeObj != NULL) {
+                    const char *typeStr = json_object_get_string(typeObj);
+                    if (strcmp(typeStr, "text") == 0) {
+                        text = json_object_object_get(block, "text");
+                        break;
+                    }
+                }
+            }
+
+            if (text == NULL) {
+                return "";
+            }
         } else {
+            /* OpenAI chat/completions format:
+             * { "choices": [{"message": {"content": "..."}}] } */
             struct json_object *contentArray =
                 json_object_object_get(json, "choices");
             struct json_object *content =

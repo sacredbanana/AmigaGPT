@@ -438,7 +438,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         configGetOpenAiApiKey(), FALSE, configGetProxyEnabled(),
         configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
         configGetProxyRequiresAuth(), configGetProxyUsername(),
-        configGetProxyPassword(), FALSE, API_ENDPOINT_RESPONSES, NULL);
+        configGetProxyPassword(), FALSE, API_ENDPOINT_RESPONSES, NULL,
+        AUTHORIZATION_TYPE_BEARER, NULL);
 
     struct GeneratedImage *generatedImage =
         AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
@@ -1327,7 +1328,10 @@ static void sendChatMessage() {
             configGetProxyPassword(), configGetWebSearchEnabled(),
             useCustomServer ? configGetCustomApiEndpoint()
                             : API_ENDPOINT_RESPONSES,
-            useCustomServer ? configGetCustomApiEndpointUrl() : NULL);
+            useCustomServer ? configGetCustomApiEndpointUrl() : NULL,
+            useCustomServer ? configGetCustomAuthorizationType()
+                            : AUTHORIZATION_TYPE_BEARER,
+            useCustomServer ? configGetCustomHeaders() : NULL);
         if (responses == NULL) {
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -1510,7 +1514,10 @@ static void sendChatMessage() {
                 configGetProxyPassword(), configGetWebSearchEnabled(),
                 useCustomServer ? configGetCustomApiEndpoint()
                                 : API_ENDPOINT_RESPONSES,
-                useCustomServer ? configGetCustomApiEndpointUrl() : NULL);
+                useCustomServer ? configGetCustomApiEndpointUrl() : NULL,
+                useCustomServer ? configGetCustomAuthorizationType()
+                                : AUTHORIZATION_TYPE_BEARER,
+                useCustomServer ? configGetCustomHeaders() : NULL);
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);

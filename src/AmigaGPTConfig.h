@@ -58,6 +58,9 @@
 #define MUIA_AmigaGPTConfig_ElevenLabsVoiceName (AmigaGPTConfig_Dummy + 0x2D)
 #define MUIA_AmigaGPTConfig_ElevenLabsModel (AmigaGPTConfig_Dummy + 0x2E)
 #define MUIA_AmigaGPTConfig_ElevenLabsModelName (AmigaGPTConfig_Dummy + 0x2F)
+#define MUIA_AmigaGPTConfig_CustomAuthorizationType                            \
+    (AmigaGPTConfig_Dummy + 0x30)
+#define MUIA_AmigaGPTConfig_CustomHeaders (AmigaGPTConfig_Dummy + 0x31)
 
 /* Version tracking attributes (read-only, for internal use) */
 #define MUIA_AmigaGPTConfig_ChatModelSetVersion (AmigaGPTConfig_Dummy + 0x40)
@@ -222,6 +225,10 @@ APIEndpoint configGetCustomApiEndpoint(void);
 void configSetCustomApiEndpoint(APIEndpoint value);
 STRPTR configGetCustomApiEndpointUrl(void);
 void configSetCustomApiEndpointUrl(CONST_STRPTR value);
+AuthorizationType configGetCustomAuthorizationType(void);
+void configSetCustomAuthorizationType(AuthorizationType value);
+STRPTR configGetCustomHeaders(void);
+void configSetCustomHeaders(CONST_STRPTR value);
 
 /* ElevenLabs settings */
 STRPTR configGetElevenLabsAPIKey(void);

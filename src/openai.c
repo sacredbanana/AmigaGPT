@@ -180,7 +180,18 @@ CONST_STRPTR OPENAI_TTS_VOICE_NAMES[] = {[OPENAI_TTS_VOICE_ALLOY] = "alloy",
 CONST_STRPTR API_ENDPOINT_NAMES[] = {[API_ENDPOINT_RESPONSES] = "responses",
                                      [API_ENDPOINT_CHAT_COMPLETIONS] =
                                          "chat/completions",
+                                     [API_ENDPOINT_MESSAGES] = "messages",
                                      NULL};
+
+/**
+ * The names of the authorization types
+ * @see AuthorizationType
+ **/
+CONST_STRPTR AUTHORIZATION_TYPE_NAMES[] = {
+    [AUTHORIZATION_TYPE_NONE] = "",
+    [AUTHORIZATION_TYPE_BEARER] = "Authorization: Bearer",
+    [AUTHORIZATION_TYPE_X_API_KEY] = "x-api-key:",
+    NULL};
 
 /**
  * The names of the image formats
@@ -482,13 +493,13 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
  * @return a pointer to a new json_object array containing the model names or
  * NULL -- Free it with json_object_put() when you are done using it
  **/
-struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
-                                  CONST_STRPTR openAiApiKey, BOOL useProxy,
-                                  CONST_STRPTR proxyHost, ULONG proxyPort,
-                                  BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                                  CONST_STRPTR proxyUsername,
-                                  CONST_STRPTR proxyPassword,
-                                  CONST_STRPTR apiEndpointUrl) {
+struct json_object *
+getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR openAiApiKey,
+              BOOL useProxy, CONST_STRPTR proxyHost, ULONG proxyPort,
+              BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+              CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+              CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+              CONST_STRPTR customHeaders) {
     UBYTE connectionRetryCount = 0;
     if (host == NULL || strlen(host) == 0) {
         host = OPENAI_HOST;
@@ -510,11 +521,28 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
         snprintf(modelsPath, sizeof(modelsPath), "/v1/models");
     }
 
+    /* Build the authorization header based on type */
+    UBYTE apiAuthHeader[512];
+    memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && openAiApiKey != NULL &&
+        strlen(openAiApiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], openAiApiKey);
+    }
+
+    /* Build custom headers string with proper line ending */
+    UBYTE customHeadersFormatted[1024];
+    memset(customHeadersFormatted, 0, sizeof(customHeadersFormatted));
+    if (customHeaders != NULL && strlen(customHeaders) > 0) {
+        snprintf(customHeadersFormatted, sizeof(customHeadersFormatted),
+                 "%s\r\n", customHeaders);
+    }
+
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
     memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 
     // Build HTTP GET request
-    STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+    STRPTR proxyAuthHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
         STRPTR credentials =
             AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
@@ -522,7 +550,7 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
         UBYTE *encodedCredentials = base64Encode(credentials);
-        snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
+        snprintf(proxyAuthHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
         FreeVec(encodedCredentials);
         FreeVec(credentials);
@@ -532,23 +560,25 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
                  "GET %s://%s:%d%s HTTP/1.1\r\n"
                  "Host: %s:%d\r\n"
-                 "Authorization: Bearer %s\r\n"
+                 "%s"
+                 "%s"
                  "User-Agent: AmigaGPT\r\n"
                  "%s\r\n",
                  useSSL ? "https" : "http", host, port, modelsPath, host, port,
-                 openAiApiKey ? openAiApiKey : "", authHeader);
+                 apiAuthHeader, customHeadersFormatted, proxyAuthHeader);
     } else {
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
                  "GET %s HTTP/1.1\r\n"
                  "Host: %s:%d\r\n"
-                 "Authorization: Bearer %s\r\n"
+                 "%s"
+                 "%s"
                  "User-Agent: AmigaGPT\r\n"
                  "%s\r\n",
-                 modelsPath, host, port, openAiApiKey ? openAiApiKey : "",
-                 authHeader);
+                 modelsPath, host, port, apiAuthHeader, customHeadersFormatted,
+                 proxyAuthHeader);
     }
 
-    FreeVec(authHeader);
+    FreeVec(proxyAuthHeader);
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
     while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
@@ -625,8 +655,13 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
     }
     sock = -1;
 
-    // Print JSON response
-    printf("response: %s\n", json_object_to_json_string(response));
+    // Display error if any
+    struct json_object *error = json_object_object_get(response, "error");
+    if (error != NULL) {
+        displayError(json_object_get_string(error));
+        json_object_put(response);
+        return NULL;
+    }
 
     // Extract model IDs from response
     struct json_object *dataArray = json_object_object_get(response, "data");
@@ -684,7 +719,8 @@ struct json_object **postChatMessageToOpenAI(
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, BOOL webSearchEnabled, APIEndpoint apiEndpoint,
-    CONST_STRPTR apiEndpoinUrl) {
+    CONST_STRPTR apiEndpoinUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders) {
     if (model == NULL || strlen(model) == 0) {
         displayError("Model not specified");
         return NULL;
@@ -721,41 +757,81 @@ struct json_object **postChatMessageToOpenAI(
 
         if (useCustomServer) {
             struct MinNode *conversationNode = conversation->messages->mlh_Head;
-            if (apiEndpoint == API_ENDPOINT_CHAT_COMPLETIONS) {
-                struct json_object *messageObj = json_object_new_object();
-                json_object_object_add(messageObj, "role",
-                                       json_object_new_string("system"));
-                json_object_object_add(
-                    messageObj, "content",
-                    json_object_new_string(conversation->system));
-                json_object_array_add(conversationArray, messageObj);
-            }
-            while (conversationNode->mln_Succ != NULL) {
-                struct ConversationNode *message =
-                    (struct ConversationNode *)conversationNode;
-                struct json_object *messageObj = json_object_new_object();
-                json_object_object_add(messageObj, "role",
-                                       json_object_new_string(message->role));
-                json_object_object_add(
-                    messageObj, "content",
-                    json_object_new_string(message->content));
-                json_object_array_add(conversationArray, messageObj);
-                conversationNode = conversationNode->mln_Succ;
-            }
 
-            json_object_object_add(
-                obj,
-                apiEndpoint == API_ENDPOINT_RESPONSES ? "input" : "messages",
-                conversationArray);
-            json_object_object_add(obj, "stream",
-                                   json_object_new_boolean((json_bool)stream));
-
-            if (apiEndpoint == API_ENDPOINT_RESPONSES) {
+            if (apiEndpoint == API_ENDPOINT_MESSAGES) {
+                /* Anthropic/Claude Messages API format */
+                /* System prompt is a top-level parameter, not in messages */
                 if (conversation->system != NULL &&
                     strlen(conversation->system) > 0) {
                     json_object_object_add(
-                        obj, "instructions",
+                        obj, "system",
                         json_object_new_string(conversation->system));
+                }
+
+                /* max_tokens is required for Claude API */
+                json_object_object_add(obj, "max_tokens",
+                                       json_object_new_int(4096));
+
+                /* Build messages array (no system role in messages) */
+                while (conversationNode->mln_Succ != NULL) {
+                    struct ConversationNode *message =
+                        (struct ConversationNode *)conversationNode;
+                    struct json_object *messageObj = json_object_new_object();
+                    json_object_object_add(
+                        messageObj, "role",
+                        json_object_new_string(message->role));
+                    json_object_object_add(
+                        messageObj, "content",
+                        json_object_new_string(message->content));
+                    json_object_array_add(conversationArray, messageObj);
+                    conversationNode = conversationNode->mln_Succ;
+                }
+
+                json_object_object_add(obj, "messages", conversationArray);
+                /* Note: Claude streaming is handled differently, disable for
+                 * now */
+                json_object_object_add(obj, "stream",
+                                       json_object_new_boolean(FALSE));
+            } else {
+                /* OpenAI-compatible endpoints (responses, chat/completions) */
+                if (apiEndpoint == API_ENDPOINT_CHAT_COMPLETIONS) {
+                    struct json_object *messageObj = json_object_new_object();
+                    json_object_object_add(messageObj, "role",
+                                           json_object_new_string("system"));
+                    json_object_object_add(
+                        messageObj, "content",
+                        json_object_new_string(conversation->system));
+                    json_object_array_add(conversationArray, messageObj);
+                }
+                while (conversationNode->mln_Succ != NULL) {
+                    struct ConversationNode *message =
+                        (struct ConversationNode *)conversationNode;
+                    struct json_object *messageObj = json_object_new_object();
+                    json_object_object_add(
+                        messageObj, "role",
+                        json_object_new_string(message->role));
+                    json_object_object_add(
+                        messageObj, "content",
+                        json_object_new_string(message->content));
+                    json_object_array_add(conversationArray, messageObj);
+                    conversationNode = conversationNode->mln_Succ;
+                }
+
+                json_object_object_add(obj,
+                                       apiEndpoint == API_ENDPOINT_RESPONSES
+                                           ? "input"
+                                           : "messages",
+                                       conversationArray);
+                json_object_object_add(
+                    obj, "stream", json_object_new_boolean((json_bool)stream));
+
+                if (apiEndpoint == API_ENDPOINT_RESPONSES) {
+                    if (conversation->system != NULL &&
+                        strlen(conversation->system) > 0) {
+                        json_object_object_add(
+                            obj, "instructions",
+                            json_object_new_string(conversation->system));
+                    }
                 }
             }
         } else {
@@ -815,33 +891,54 @@ struct json_object **postChatMessageToOpenAI(
             apiEndpoinUrl = "v1";
         }
 
+        /* Build the API authorization header based on type */
+        UBYTE apiAuthHeader[512];
+        memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+        if (authorizationType != AUTHORIZATION_TYPE_NONE &&
+            openAiApiKey != NULL && strlen(openAiApiKey) > 0) {
+            snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                     AUTHORIZATION_TYPE_NAMES[authorizationType], openAiApiKey);
+        }
+
+        /* Build custom headers string with proper line ending */
+        UBYTE customHeadersFormatted[1024];
+        memset(customHeadersFormatted, 0, sizeof(customHeadersFormatted));
+        if (customHeaders != NULL && strlen(customHeaders) > 0) {
+            snprintf(customHeadersFormatted, sizeof(customHeadersFormatted),
+                     "%s\r\n", customHeaders);
+        }
+
         if (useSSL || useProxy) {
             snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
                      "POST %s://%s:%d%s%s/%s HTTP/1.1\r\n"
                      "Host: %s:%d\r\n"
                      "Content-Type: application/json\r\n"
-                     "Authorization: Bearer %s\r\n"
+                     "%s"
+                     "%s"
                      "User-Agent: AmigaGPT\r\n"
                      "Content-Length: %lu\r\n"
                      "%s\r\n"
                      "%s\0",
                      useSSL ? "https" : "http", host, port,
                      strlen(apiEndpoinUrl) > 0 ? "/" : "", apiEndpoinUrl,
-                     API_ENDPOINT_NAMES[apiEndpoint], host, port, openAiApiKey,
-                     strlen(jsonString), authHeader, jsonString);
+                     API_ENDPOINT_NAMES[apiEndpoint], host, port, apiAuthHeader,
+                     customHeadersFormatted, strlen(jsonString), authHeader,
+                     jsonString);
         } else {
             snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
                      "POST %s%s/%s HTTP/1.1\r\n"
                      "Host: %s:%d\r\n"
                      "Content-Type: application/json\r\n"
-                     "Authorization: Bearer %s\r\n"
+                     "%s"
+                     "%s"
                      "User-Agent: AmigaGPT\r\n"
                      "Content-Length: %lu\r\n"
                      "%s\r\n"
                      "%s\0",
                      strlen(apiEndpoinUrl) > 0 ? "/" : "", apiEndpoinUrl,
-                     API_ENDPOINT_NAMES[apiEndpoint], host, port, openAiApiKey,
-                     strlen(jsonString), authHeader, jsonString);
+                     API_ENDPOINT_NAMES[apiEndpoint], host, port, apiAuthHeader,
+                     customHeadersFormatted, strlen(jsonString), authHeader,
+                     jsonString);
         }
 
         json_object_put(obj);

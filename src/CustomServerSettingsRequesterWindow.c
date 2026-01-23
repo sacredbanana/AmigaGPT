@@ -15,12 +15,14 @@ Object *customServerTemplateCycle;
 Object *customServerHostString;
 Object *customServerPortString;
 Object *customServerUsesSSLCycle;
+Object *customServerAuthorizationTypeCycle;
 Object *customServerApiKeyString;
 Object *customServerChatModelString;
 Object *customServerModelList;
 Object *customServerFetchModelsButton;
 Object *customServerApiEndpointCycle;
 Object *customServerApiEndpointUrlString;
+Object *customServerCustomHeadersString;
 Object *customServerFullUrlPreviewString;
 Object *customServerSettingsRequesterWindowObject;
 
@@ -30,7 +32,9 @@ static struct json_object *customServerModelsJson = NULL;
 enum {
     TEMPLATE_NONE = 0,
     TEMPLATE_GOOGLE_GEMINI,
-    TEMPLATE_LM_STUDIO
+    TEMPLATE_LM_STUDIO,
+    TEMPLATE_ANTHROPIC_CLAUDE,
+    TEMPLATE_XAI_GROK
 };
 
 /* Forward declarations */
@@ -81,14 +85,19 @@ HOOKPROTONHNONP(FetchCustomModelsFunc, void) {
     STRPTR host;
     LONG port;
     LONG usesSSL;
+    LONG authorizationType;
     STRPTR apiKey;
     STRPTR endpointUrl;
+    STRPTR customHeaders;
 
     get(customServerHostString, MUIA_String_Contents, &host);
     get(customServerPortString, MUIA_String_Integer, &port);
     get(customServerUsesSSLCycle, MUIA_Cycle_Active, &usesSSL);
+    get(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
+        &authorizationType);
     get(customServerApiKeyString, MUIA_String_Contents, &apiKey);
     get(customServerApiEndpointUrlString, MUIA_String_Contents, &endpointUrl);
+    get(customServerCustomHeadersString, MUIA_String_Contents, &customHeaders);
 
     if (host == NULL || strlen(host) == 0) {
         displayError(STRING_ERROR_NO_HOST);
@@ -105,11 +114,12 @@ HOOKPROTONHNONP(FetchCustomModelsFunc, void) {
     }
 
     /* Fetch models from the custom server */
-    customServerModelsJson = getChatModels(
-        host, port, usesSSL == 1, apiKey, configGetProxyEnabled(),
-        configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
-        configGetProxyRequiresAuth(), configGetProxyUsername(),
-        configGetProxyPassword(), endpointUrl);
+    customServerModelsJson =
+        getChatModels(host, port, usesSSL == 1, apiKey, configGetProxyEnabled(),
+                      configGetProxyHost(), configGetProxyPort(),
+                      configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+                      configGetProxyUsername(), configGetProxyPassword(),
+                      endpointUrl, authorizationType, customHeaders);
 
     if (customServerModelsJson != NULL) {
         populateModelList();
@@ -172,6 +182,8 @@ HOOKPROTONHNONP(TemplateSelectedFunc, void) {
             "generativelanguage.googleapis.com");
         set(customServerPortString, MUIA_String_Integer, 443);
         set(customServerUsesSSLCycle, MUIA_Cycle_Active, 1); /* SSL enabled */
+        set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
+            AUTHORIZATION_TYPE_BEARER);
         set(customServerChatModelString, MUIA_String_Contents,
             "gemini-2.0-flash");
         set(customServerApiEndpointCycle, MUIA_Cycle_Active,
@@ -183,10 +195,38 @@ HOOKPROTONHNONP(TemplateSelectedFunc, void) {
         set(customServerHostString, MUIA_String_Contents, "localhost");
         set(customServerPortString, MUIA_String_Integer, 1234);
         set(customServerUsesSSLCycle, MUIA_Cycle_Active, 0); /* No SSL */
+        set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
+            AUTHORIZATION_TYPE_NONE);
         set(customServerChatModelString, MUIA_String_Contents, "");
         set(customServerApiEndpointCycle, MUIA_Cycle_Active,
             API_ENDPOINT_RESPONSES);
         set(customServerApiEndpointUrlString, MUIA_String_Contents, "v1");
+        break;
+    case TEMPLATE_ANTHROPIC_CLAUDE:
+        set(customServerHostString, MUIA_String_Contents, "api.anthropic.com");
+        set(customServerPortString, MUIA_String_Integer, 443);
+        set(customServerUsesSSLCycle, MUIA_Cycle_Active, 1); /* SSL enabled */
+        set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
+            AUTHORIZATION_TYPE_X_API_KEY);
+        set(customServerChatModelString, MUIA_String_Contents,
+            "claude-sonnet-4-5-20250929");
+        set(customServerApiEndpointCycle, MUIA_Cycle_Active,
+            API_ENDPOINT_MESSAGES);
+        set(customServerApiEndpointUrlString, MUIA_String_Contents, "v1");
+        set(customServerCustomHeadersString, MUIA_String_Contents,
+            "anthropic-version: 2023-06-01");
+        break;
+    case TEMPLATE_XAI_GROK:
+        set(customServerHostString, MUIA_String_Contents, "api.x.ai");
+        set(customServerPortString, MUIA_String_Integer, 443);
+        set(customServerUsesSSLCycle, MUIA_Cycle_Active, 1); /* SSL enabled */
+        set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
+            AUTHORIZATION_TYPE_BEARER);
+        set(customServerChatModelString, MUIA_String_Contents, "grok-4");
+        set(customServerApiEndpointCycle, MUIA_Cycle_Active,
+            API_ENDPOINT_CHAT_COMPLETIONS);
+        set(customServerApiEndpointUrlString, MUIA_String_Contents, "v1");
+        set(customServerCustomHeadersString, MUIA_String_Contents, "");
         break;
     default:
         /* TEMPLATE_NONE - do nothing */
@@ -247,6 +287,11 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     get(customServerUsesSSLCycle, MUIA_Cycle_Active, &usesSSL);
     configSetCustomUseSSL(usesSSL == 1);
 
+    LONG authorizationType;
+    get(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
+        &authorizationType);
+    configSetCustomAuthorizationType(authorizationType);
+
     STRPTR customServerApiKey;
     get(customServerApiKeyString, MUIA_String_Contents, &customServerApiKey);
     configSetCustomApiKey(customServerApiKey);
@@ -265,6 +310,11 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         &customServerApiEndpointUrl);
     configSetCustomApiEndpointUrl(customServerApiEndpointUrl);
 
+    STRPTR customServerCustomHeaders;
+    get(customServerCustomHeadersString, MUIA_String_Contents,
+        &customServerCustomHeaders);
+    configSetCustomHeaders(customServerCustomHeaders);
+
     set(customServerSettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
 }
 MakeHook(CustomServerSettingsRequesterOkButtonClickedHook,
@@ -275,18 +325,34 @@ MakeHook(CustomServerSettingsRequesterOkButtonClickedHook,
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createCustomServerSettingsRequesterWindow() {
-    static STRPTR templateOptions[4] = {NULL};
+    static STRPTR templateOptions[6] = {NULL};
     templateOptions[TEMPLATE_NONE] = STRING_MENU_TEMPLATE_NONE;
-    templateOptions[TEMPLATE_GOOGLE_GEMINI] = STRING_MENU_TEMPLATE_GOOGLE_GEMINI;
+    templateOptions[TEMPLATE_GOOGLE_GEMINI] =
+        STRING_MENU_TEMPLATE_GOOGLE_GEMINI;
     templateOptions[TEMPLATE_LM_STUDIO] = STRING_MENU_TEMPLATE_LM_STUDIO;
+    templateOptions[TEMPLATE_ANTHROPIC_CLAUDE] =
+        STRING_MENU_TEMPLATE_ANTHROPIC_CLAUDE;
+    templateOptions[TEMPLATE_XAI_GROK] = STRING_MENU_TEMPLATE_XAI_GROK;
 
     static STRPTR sslOptions[3] = {NULL};
     sslOptions[0] = STRING_ENCRYPTION_NONE;
     sslOptions[1] = STRING_ENCRYPTION_SSL;
 
-    static STRPTR apiEndpointOptions[3] = {NULL};
-    apiEndpointOptions[0] = API_ENDPOINT_NAMES[API_ENDPOINT_RESPONSES];
-    apiEndpointOptions[1] = API_ENDPOINT_NAMES[API_ENDPOINT_CHAT_COMPLETIONS];
+    static STRPTR apiEndpointOptions[4] = {NULL};
+    apiEndpointOptions[API_ENDPOINT_RESPONSES] =
+        API_ENDPOINT_NAMES[API_ENDPOINT_RESPONSES];
+    apiEndpointOptions[API_ENDPOINT_CHAT_COMPLETIONS] =
+        API_ENDPOINT_NAMES[API_ENDPOINT_CHAT_COMPLETIONS];
+    apiEndpointOptions[API_ENDPOINT_MESSAGES] =
+        API_ENDPOINT_NAMES[API_ENDPOINT_MESSAGES];
+
+    static STRPTR authorizationTypeOptions[4] = {NULL};
+    authorizationTypeOptions[AUTHORIZATION_TYPE_NONE] =
+        STRING_AUTHORIZATION_NONE;
+    authorizationTypeOptions[AUTHORIZATION_TYPE_BEARER] =
+        STRING_AUTHORIZATION_BEARER;
+    authorizationTypeOptions[AUTHORIZATION_TYPE_X_API_KEY] =
+        STRING_AUTHORIZATION_X_API_KEY;
 
     Object *customServerSettingsRequesterOkButton,
         *customServerSettingsRequesterCancelButton;
@@ -332,6 +398,15 @@ LONG createCustomServerSettingsRequesterWindow() {
                     MUIA_CycleChain, TRUE,
                     MUIA_Cycle_Entries, sslOptions,
                     MUIA_Cycle_Active, configGetCustomUseSSL() ? 1 : 0,
+                End,
+            End,
+            Child, VGroup,
+                MUIA_Frame, MUIV_Frame_Group,
+                MUIA_FrameTitle, STRING_AUTHORIZATION_TYPE,
+                Child, customServerAuthorizationTypeCycle = CycleObject,
+                    MUIA_CycleChain, TRUE,
+                    MUIA_Cycle_Entries, authorizationTypeOptions,
+                    MUIA_Cycle_Active, configGetCustomAuthorizationType(),
                 End,
             End,
             Child, VGroup,
@@ -391,6 +466,16 @@ LONG createCustomServerSettingsRequesterWindow() {
             End,
             Child, VGroup,
                 MUIA_Frame, MUIV_Frame_Group,
+                MUIA_FrameTitle, STRING_CUSTOM_HEADERS,
+                Child, customServerCustomHeadersString = StringObject,
+                    MUIA_Frame, MUIV_Frame_String,
+                    MUIA_CycleChain, TRUE,
+                    MUIA_String_Contents, configGetCustomHeaders() != NULL ? configGetCustomHeaders() : "",
+                    MUIA_String_MaxLen, 512,
+                End,
+            End,
+            Child, VGroup,
+                MUIA_Frame, MUIV_Frame_Group,
                 MUIA_FrameTitle, STRING_MENU_OPENAI_FULL_URL_PREVIEW,
                 Child, customServerFullUrlPreviewString = TextObject,
                     MUIA_Frame, MUIV_Frame_String,
@@ -424,6 +509,7 @@ LONG createCustomServerSettingsRequesterWindow() {
     DoMethod(customServerHostString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerPortString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerUsesSSLCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
+    DoMethod(customServerAuthorizationTypeCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerApiKeyString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerApiEndpointCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerApiEndpointUrlString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);

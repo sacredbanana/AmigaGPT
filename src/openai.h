@@ -197,7 +197,8 @@ struct GeneratedImage {
  **/
 typedef enum {
     API_ENDPOINT_RESPONSES = 0L,
-    API_ENDPOINT_CHAT_COMPLETIONS
+    API_ENDPOINT_CHAT_COMPLETIONS,
+    API_ENDPOINT_MESSAGES
 } APIEndpoint;
 
 /**
@@ -205,6 +206,22 @@ typedef enum {
  * @see APIEndpoint
  **/
 extern CONST_STRPTR API_ENDPOINT_NAMES[];
+
+/**
+ * The authorization type to use
+ * @see AuthorizationType
+ **/
+typedef enum {
+    AUTHORIZATION_TYPE_NONE = 0,
+    AUTHORIZATION_TYPE_BEARER,
+    AUTHORIZATION_TYPE_X_API_KEY
+} AuthorizationType;
+
+/**
+ * The names of the authorization types
+ * @see AuthorizationType
+ **/
+extern CONST_STRPTR AUTHORIZATION_TYPE_NAMES[];
 
 /**
  * The format of the image
@@ -238,16 +255,18 @@ LONG initOpenAIConnector();
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
  * @param apiEndpointUrl the API endpoint URL to use
+ * @param authorizationType the authorization type to use
+ * @param customHeaders custom HTTP headers to add to the request
  * @return a pointer to a new json_object array containing the model names or
  * NULL -- Free it with json_object_put() when you are done using it
  **/
-struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
-                                  CONST_STRPTR openAiApiKey, BOOL useProxy,
-                                  CONST_STRPTR proxyHost, ULONG proxyPort,
-                                  BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                                  CONST_STRPTR proxyUsername,
-                                  CONST_STRPTR proxyPassword,
-                                  CONST_STRPTR apiEndpointUrl);
+struct json_object *
+getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR openAiApiKey,
+              BOOL useProxy, CONST_STRPTR proxyHost, ULONG proxyPort,
+              BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+              CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+              CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+              CONST_STRPTR customHeaders);
 
 /**
  * Post a chat message to OpenAI
@@ -268,6 +287,8 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
  * @param webSearchEnabled whether to enable web search or not
  * @param apiEndpoint the API endpoint to use
  * @param apiEndpoinUrl the API endpoint URL to use
+ * @param authorizationType the authorization type to use
+ * @param customHeaders custom HTTP headers to add to the request
  * @return a pointer to a new array of json_object containing the response(s) or
  *NULL -- Free it with json_object_put() for all responses then FreeVec() for
  *the array when you are done using it
@@ -278,7 +299,8 @@ struct json_object **postChatMessageToOpenAI(
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, BOOL webSearchEnabled, APIEndpoint apiEndpoint,
-    CONST_STRPTR apiEndpoinUrl);
+    CONST_STRPTR apiEndpoinUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders);
 
 /**
  * Post a image creation request to OpenAI

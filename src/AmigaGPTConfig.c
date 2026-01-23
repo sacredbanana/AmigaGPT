@@ -49,6 +49,7 @@ struct AmigaGPTConfigData {
     ULONG customPort;
     ULONG customUseSSL;
     APIEndpoint customApiEndpoint;
+    AuthorizationType customAuthorizationType;
     ImageFormat imageFormat;
 
     /* Version tracking */
@@ -70,6 +71,7 @@ struct AmigaGPTConfigData {
     STRPTR customApiKey;
     STRPTR customChatModel;
     STRPTR customApiEndpointUrl;
+    STRPTR customHeaders;
     STRPTR elevenLabsAPIKey;
     STRPTR elevenLabsVoiceID;
     STRPTR elevenLabsVoiceName;
@@ -137,6 +139,7 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->customPort = 80;
     data->customUseSSL = FALSE;
     data->customApiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS;
+    data->customAuthorizationType = AUTHORIZATION_TYPE_BEARER;
     data->imageFormat = IMAGE_FORMAT_PNG;
 
     data->chatModelSetVersion = CHAT_MODEL_SET_VERSION;
@@ -182,6 +185,7 @@ static void freeAllStrings(struct AmigaGPTConfigData *data) {
     freeString(&data->customApiKey);
     freeString(&data->customChatModel);
     freeString(&data->customApiEndpointUrl);
+    freeString(&data->customHeaders);
     freeString(&data->elevenLabsAPIKey);
     freeString(&data->elevenLabsVoiceID);
     freeString(&data->elevenLabsVoiceName);
@@ -378,6 +382,12 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_CustomApiEndpointUrl:
         *store = (ULONG)data->customApiEndpointUrl;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_CustomHeaders:
+        *store = (ULONG)data->customHeaders;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_CustomAuthorizationType:
+        *store = (ULONG)data->customAuthorizationType;
         return TRUE;
     case MUIA_AmigaGPTConfig_ElevenLabsAPIKey:
         *store = (ULONG)data->elevenLabsAPIKey;
@@ -597,6 +607,16 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                               (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
+        case MUIA_AmigaGPTConfig_CustomHeaders:
+            if (setStringAttr(&data->customHeaders, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_CustomAuthorizationType:
+            if (data->customAuthorizationType != (AuthorizationType)ti_Data) {
+                data->customAuthorizationType = (AuthorizationType)ti_Data;
+                changed = TRUE;
+            }
+            break;
         case MUIA_AmigaGPTConfig_ElevenLabsAPIKey:
             if (setStringAttr(&data->elevenLabsAPIKey, (CONST_STRPTR)ti_Data))
                 changed = TRUE;
@@ -708,6 +728,8 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
                            json_object_new_boolean((BOOL)data->customUseSSL));
     json_object_object_add(configJsonObject, "customApiEndpoint",
                            json_object_new_int(data->customApiEndpoint));
+    json_object_object_add(configJsonObject, "customAuthorizationType",
+                           json_object_new_int(data->customAuthorizationType));
     json_object_object_add(configJsonObject, "imageFormat",
                            json_object_new_int(data->imageFormat));
 
@@ -770,6 +792,10 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
         data->customApiEndpointUrl != NULL
             ? json_object_new_string(data->customApiEndpointUrl)
             : NULL);
+    json_object_object_add(configJsonObject, "customHeaders",
+                           data->customHeaders != NULL
+                               ? json_object_new_string(data->customHeaders)
+                               : NULL);
     json_object_object_add(configJsonObject, "elevenLabsAPIKey",
                            data->elevenLabsAPIKey != NULL
                                ? json_object_new_string(data->elevenLabsAPIKey)
@@ -974,6 +1000,10 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
                                   &valueObj))
         data->customApiEndpoint = json_object_get_int(valueObj);
 
+    if (json_object_object_get_ex(configJsonObject, "customAuthorizationType",
+                                  &valueObj))
+        data->customAuthorizationType = json_object_get_int(valueObj);
+
     if (json_object_object_get_ex(configJsonObject, "imageFormat", &valueObj))
         data->imageFormat = json_object_get_int(valueObj);
 
@@ -1040,6 +1070,7 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     readJsonString(configJsonObject, "customChatModel", &data->customChatModel);
     readJsonString(configJsonObject, "customApiEndpointUrl",
                    &data->customApiEndpointUrl);
+    readJsonString(configJsonObject, "customHeaders", &data->customHeaders);
     readJsonString(configJsonObject, "elevenLabsAPIKey",
                    &data->elevenLabsAPIKey);
     readJsonString(configJsonObject, "elevenLabsVoiceID",
@@ -1387,6 +1418,20 @@ STRPTR configGetCustomApiEndpointUrl(void) {
     return val;
 }
 
+AuthorizationType configGetCustomAuthorizationType(void) {
+    AuthorizationType val = AUTHORIZATION_TYPE_BEARER;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomAuthorizationType, &val);
+    return val;
+}
+
+STRPTR configGetCustomHeaders(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomHeaders, &val);
+    return val;
+}
+
 ImageFormat configGetImageFormat(void) {
     ImageFormat val = IMAGE_FORMAT_PNG;
     if (configObj)
@@ -1602,6 +1647,17 @@ void configSetCustomApiEndpoint(APIEndpoint value) {
 void configSetCustomApiEndpointUrl(CONST_STRPTR value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_CustomApiEndpointUrl, (ULONG)value);
+}
+
+void configSetCustomAuthorizationType(AuthorizationType value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomAuthorizationType,
+            (ULONG)value);
+}
+
+void configSetCustomHeaders(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomHeaders, (ULONG)value);
 }
 
 void configSetElevenLabsAPIKey(CONST_STRPTR value) {

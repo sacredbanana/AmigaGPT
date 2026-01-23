@@ -85,7 +85,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         conversation, host, portValue, useSSL, model, apiKey, FALSE, useProxy,
         proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
         proxyUsername, proxyPassword, webSearchEnabled, API_ENDPOINT_RESPONSES,
-        NULL);
+        NULL, AUTHORIZATION_TYPE_BEARER, NULL);
 
     freeConversation(conversation);
 
@@ -373,7 +373,8 @@ HOOKPROTONHNO(ListServerModelsFunc, APTR, ULONG *arg) {
 
     struct json_object *models = getChatModels(
         host, portValue, useSSL, apiKey, useProxy, proxyHost, proxyPortValue,
-        proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword, NULL);
+        proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword, NULL,
+        AUTHORIZATION_TYPE_BEARER, NULL);
 
     if (models == NULL) {
         return RETURN_ERROR;

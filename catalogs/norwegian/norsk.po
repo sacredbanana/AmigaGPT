@@ -1408,7 +1408,6 @@ msgctxt "STRING_MENU_TEMPLATE_LM_STUDIO (263//)"
 msgid "LM Studio"
 msgstr "LM Studio"
 
-
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_FETCH_MODELS (264//)"
 msgid "Fetch Models"
@@ -1428,3 +1427,40 @@ msgstr "Kunne ikke hente modeller fra serveren"
 msgctxt "STRING_ERROR_NO_HOST (267//)"
 msgid "Please enter a host address first"
 msgstr "Vennligst skriv inn en vertsadresse først"
+
+#: src/CustomServerSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_AUTHORIZATION_TYPE (268//)"
+msgid "Authorization"
+msgstr "Autentisering"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_AUTHORIZATION_NONE (269//)"
+msgid "None"
+msgstr "None"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_AUTHORIZATION_BEARER (270//)"
+msgid "Bearer Token"
+msgstr "Bearer Token"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_AUTHORIZATION_X_API_KEY (271//)"
+msgid "x-api-key"
+msgstr "x-api-key"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_ANTHROPIC_CLAUDE (272//)"
+msgid "Anthropic Claude"
+msgstr "Anthropic Claude"
+
+#: src/CustomServerSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_CUSTOM_HEADERS (273//)"
+msgid "Custom Headers"
+msgstr "Egendefinert Server"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_XAI_GROK (274//)"
+msgid "xAI Grok"
+msgstr "xAI Grok"
