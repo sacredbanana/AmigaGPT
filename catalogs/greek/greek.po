@@ -32,9 +32,9 @@ msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
 msgstr ""
-"Απέτυχε το άνοιγμα του συστήματος ομιλίας. Βεβαιωθείτε ότι το translator."
-"library v42 και το narrator.device v34 είναι εγκατεστημένα. Δείτε τον οδηγό "
-"για περισσότερες πληροφορίες."
+"Απέτυχε το άνοιγμα του συστήματος ομιλίας. Βεβαιωθείτε ότι το "
+"translator.library v42 και το narrator.device v34 είναι εγκατεστημένα. Δείτε "
+"τον οδηγό για περισσότερες πληροφορίες."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
@@ -717,9 +717,9 @@ msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
 msgstr ""
-"Απέτυχε το άνοιγμα του συστήματος ομιλίας. Βεβαιωθείτε ότι το translator."
-"library v42 και το narrator.device v37 είναι εγκατεστημένα. Δείτε τον οδηγό "
-"για περισσότερες πληροφορίες."
+"Απέτυχε το άνοιγμα του συστήματος ομιλίας. Βεβαιωθείτε ότι το "
+"translator.library v42 και το narrator.device v37 είναι εγκατεστημένα. Δείτε "
+"τον οδηγό για περισσότερες πληροφορίες."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
@@ -1260,7 +1260,9 @@ msgstr "GPT Image 1 Εικόνα Μέγεθος"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
 msgstr "Αδυνατή η ανοίξιση του arexx.class."
 
 #: src/menu.c:137
@@ -1412,3 +1414,24 @@ msgstr "Αναζήτηση"
 msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "Απέτυχε η δημιουργία του παραθύρου ρυθμίσεων ElevenLabs"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE (260//)"
+msgid "Template"
+msgstr "Πρότυπο"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_NONE (261//)"
+msgid "Select a template..."
+msgstr "Επιλέξτε πρότυπο..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_GOOGLE_GEMINI (262//)"
+msgid "Google Gemini"
+msgstr "Google Gemini"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_LM_STUDIO (263//)"
+msgid "LM Studio"
+msgstr "LM Studio"
+

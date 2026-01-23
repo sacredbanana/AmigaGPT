@@ -2,6 +2,7 @@
 
 ## 2.18.0 (2026-01-24)
 
+- Google Gemini and LM Studio are now available as templates in the custom server options window
 - All config options are now immediately saved to disk
 
 ## 2.17.0 (2025-12-22)
@@ -12,7 +13,7 @@
 
 ## 2.16.0 (2025-12-18)
 
-- Add GPT Image 1.5  and GPT Image 1 Mini image models
+- Add GPT Image 1.5 and GPT Image 1 Mini image models
 - Add ability to select image output format (JPG/PNG)
 - Deleting images actually now properly deletes them from disk
 

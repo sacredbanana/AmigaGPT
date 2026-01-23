@@ -489,8 +489,8 @@ msgid ""
 msgstr ""
 "Impossibile analizzare la cronologia delle immagini. JSON non valido. Il "
 "file image-history.json è probabilmente danneggiato. La cronologia delle "
-"immagini non verrà caricata. È stato creato un backup del file image-history."
-"json come image-history.json.bak"
+"immagini non verrà caricata. È stato creato un backup del file image-"
+"history.json come image-history.json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -1249,8 +1249,12 @@ msgstr "GPT Image 1 Dimensione Immagine"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
-msgstr "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
+msgstr ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1401,3 +1405,24 @@ msgstr "Cerca"
 msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "Impossibile creare la finestra di impostazioni ElevenLabs"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE (260//)"
+msgid "Template"
+msgstr "Modello"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_NONE (261//)"
+msgid "Select a template..."
+msgstr "Seleziona un modello..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_GOOGLE_GEMINI (262//)"
+msgid "Google Gemini"
+msgstr "Google Gemini"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_LM_STUDIO (263//)"
+msgid "LM Studio"
+msgstr "LM Studio"
+

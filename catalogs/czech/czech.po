@@ -430,9 +430,9 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
 msgstr ""
-"Historii chatu se nepodařilo analyzovat. Poškozený JSON. Soubor chat-history."
-"json je pravděpodobně poškozen. Historie konverzace nebude načtena. Záloha "
-"souboru chat-history.json byla vytvořena jako chat-history.json.bak"
+"Historii chatu se nepodařilo analyzovat. Poškozený JSON. Soubor chat-"
+"history.json je pravděpodobně poškozen. Historie konverzace nebude načtena. "
+"Záloha souboru chat-history.json byla vytvořena jako chat-history.json.bak"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -442,10 +442,10 @@ msgid ""
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
 msgstr ""
-"Historii chatu se nepodařilo analyzovat. Poškozený JSON. Soubor chat-history."
-"json je pravděpodobně poškozen. Historie konverzace nebude načtena. Při "
-"zápisu zálohy historie chatu na disk došlo k chybě, ale kopie byla uložena "
-"do RAM:chat-history.json.bak"
+"Historii chatu se nepodařilo analyzovat. Poškozený JSON. Soubor chat-"
+"history.json je pravděpodobně poškozen. Historie konverzace nebude načtena. "
+"Při zápisu zálohy historie chatu na disk došlo k chybě, ale kopie byla "
+"uložena do RAM:chat-history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
@@ -478,9 +478,9 @@ msgid ""
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
 msgstr ""
-"Analýza historie obrázků se nezdařila. Poškozený JSON. Soubor image-history."
-"json je pravděpodobně poškozen. Historie obrázků nebude načtena. Záloha "
-"souboru image-history.json byla vytvořena jako image-history.json.bak"
+"Analýza historie obrázků se nezdařila. Poškozený JSON. Soubor image-"
+"history.json je pravděpodobně poškozen. Historie obrázků nebude načtena. "
+"Záloha souboru image-history.json byla vytvořena jako image-history.json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -490,10 +490,10 @@ msgid ""
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
 msgstr ""
-"Analýza historie obrázků se nezdařila. Poškozený JSON. Soubor image-history."
-"json je pravděpodobně poškozen. Historie obrázků nebude načtena. Při zápisu "
-"zálohy historie bitové kopie na disk došlo k chybě, ale kopie byla uložena "
-"do paměti RAM:image-history.json.bak"
+"Analýza historie obrázků se nezdařila. Poškozený JSON. Soubor image-"
+"history.json je pravděpodobně poškozen. Historie obrázků nebude načtena. Při "
+"zápisu zálohy historie bitové kopie na disk došlo k chybě, ale kopie byla "
+"uložena do paměti RAM:image-history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
@@ -1236,8 +1236,12 @@ msgstr "Velikost obrázku GPT Image 1"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
-msgstr "Neplatný požadavek. Vaš OpenAI API účet pravděpodobně nemá žádné kredity na spuštění tohoto modelu. Zkontrolujte svůj účet."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
+msgstr ""
+"Neplatný požadavek. Vaš OpenAI API účet pravděpodobně nemá žádné kredity na "
+"spuštění tohoto modelu. Zkontrolujte svůj účet."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1388,3 +1392,24 @@ msgstr "Hledat"
 msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "Nelze vytvořit ElevenLabs settings window"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE (260//)"
+msgid "Template"
+msgstr "Šablona"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_NONE (261//)"
+msgid "Select a template..."
+msgstr "Vyberte šablonu..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_GOOGLE_GEMINI (262//)"
+msgid "Google Gemini"
+msgstr "Google Gemini"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_LM_STUDIO (263//)"
+msgid "LM Studio"
+msgstr "LM Studio"
+

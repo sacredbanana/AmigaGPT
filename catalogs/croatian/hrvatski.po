@@ -485,8 +485,8 @@ msgid ""
 msgstr ""
 "Raščlanjivanje povijesti slika nije uspjelo. Neispravan JSON. Datoteka image-"
 "history.json vjerojatno je oštećena. Povijest slika neće se učitati. "
-"Sigurnosna kopija datoteke image-history.json stvorena je kao image-history."
-"json.bak"
+"Sigurnosna kopija datoteke image-history.json stvorena je kao image-"
+"history.json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -1245,8 +1245,12 @@ msgstr "GPT Image 1 Slika Velicina"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
-msgstr "Nevažeći zahtjev. Vaš OpenAI API račun verovatno nema više kredita za izvršavanje ovog modela. Provjerite svoj račun."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
+msgstr ""
+"Nevažeći zahtjev. Vaš OpenAI API račun verovatno nema više kredita za "
+"izvršavanje ovog modela. Provjerite svoj račun."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1397,3 +1401,24 @@ msgstr "Pretraga"
 msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "Nije uspjelo kreiranje ElevenLabs settings window"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE (260//)"
+msgid "Template"
+msgstr "Predložak"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_NONE (261//)"
+msgid "Select a template..."
+msgstr "Odaberite predložak..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_GOOGLE_GEMINI (262//)"
+msgid "Google Gemini"
+msgstr "Google Gemini"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_LM_STUDIO (263//)"
+msgid "LM Studio"
+msgstr "LM Studio"
+

@@ -437,9 +437,10 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
 msgstr ""
-"Не удалось проанализировать историю чата. Неверный JSON. Файл chat-history."
-"json, вероятно, поврежден. История разговоров не будет загружена. Резервная "
-"копия файла chat-history.json была создана как chat-history.json.bak"
+"Не удалось проанализировать историю чата. Неверный JSON. Файл chat-"
+"history.json, вероятно, поврежден. История разговоров не будет загружена. "
+"Резервная копия файла chat-history.json была создана как chat-"
+"history.json.bak"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -449,10 +450,10 @@ msgid ""
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
 msgstr ""
-"Не удалось проанализировать историю чата. Неверный JSON. Файл chat-history."
-"json, вероятно, поврежден. История разговоров не будет загружена. Произошла "
-"ошибка при записи резервной копии истории чата на диск, но копия была "
-"сохранена в RAM:chat-history.json.bak"
+"Не удалось проанализировать историю чата. Неверный JSON. Файл chat-"
+"history.json, вероятно, поврежден. История разговоров не будет загружена. "
+"Произошла ошибка при записи резервной копии истории чата на диск, но копия "
+"была сохранена в RAM:chat-history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
@@ -1246,8 +1247,12 @@ msgstr "GPT Image 1 Размер изображения"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
-msgstr "Неверный запрос. Ваш OpenAI API-аккаунт, вероятно, не имеет кредитов для выполнения этой модели. Проверьте свой баланс."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
+msgstr ""
+"Неверный запрос. Ваш OpenAI API-аккаунт, вероятно, не имеет кредитов для "
+"выполнения этой модели. Проверьте свой баланс."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1398,3 +1403,24 @@ msgstr "Поиск"
 msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "Не удалось создать ElevenLabs settings window"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE (260//)"
+msgid "Template"
+msgstr "Шаблон"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_NONE (261//)"
+msgid "Select a template..."
+msgstr "Выберите шаблон..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_GOOGLE_GEMINI (262//)"
+msgid "Google Gemini"
+msgstr "Google Gemini"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_LM_STUDIO (263//)"
+msgid "LM Studio"
+msgstr "LM Studio"
+

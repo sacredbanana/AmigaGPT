@@ -433,10 +433,10 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
 msgstr ""
-"Det gick inte att analysera chatthistoriken. Felaktig JSON. Chat-history."
-"json-filen är förmodligen skadad. Konversationshistorik kommer inte att "
-"laddas. En säkerhetskopia av filen chat-history.json har skapats som chat-"
-"history.json.bak"
+"Det gick inte att analysera chatthistoriken. Felaktig JSON. Chat-"
+"history.json-filen är förmodligen skadad. Konversationshistorik kommer inte "
+"att laddas. En säkerhetskopia av filen chat-history.json har skapats som "
+"chat-history.json.bak"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -446,10 +446,10 @@ msgid ""
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
 msgstr ""
-"Det gick inte att analysera chatthistoriken. Felaktig JSON. Chat-history."
-"json-filen är förmodligen skadad. Konversationshistorik kommer inte att "
-"laddas. Det gick inte att skriva en säkerhetskopia av chatthistoriken till "
-"disken men en kopia har sparats i RAM:chat-history.json.bak"
+"Det gick inte att analysera chatthistoriken. Felaktig JSON. Chat-"
+"history.json-filen är förmodligen skadad. Konversationshistorik kommer inte "
+"att laddas. Det gick inte att skriva en säkerhetskopia av chatthistoriken "
+"till disken men en kopia har sparats i RAM:chat-history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
@@ -485,8 +485,8 @@ msgid ""
 msgstr ""
 "Det gick inte att analysera bildhistoriken. Felaktig JSON. Filen image-"
 "history.json är förmodligen skadad. Bildhistorik kommer inte att laddas. En "
-"säkerhetskopia av filen image-history.json har skapats som image-history."
-"json.bak"
+"säkerhetskopia av filen image-history.json har skapats som image-"
+"history.json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -1241,8 +1241,12 @@ msgstr "GPT Image 1 Obrazek Velikost"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
-msgstr "Ogiltigt anrop. Ditt OpenAI API-konto har sannolikt inga krediter kvar för att köra denna modell. Kontrollera ditt kontosaldo."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
+msgstr ""
+"Ogiltigt anrop. Ditt OpenAI API-konto har sannolikt inga krediter kvar för "
+"att köra denna modell. Kontrollera ditt kontosaldo."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1393,3 +1397,24 @@ msgstr "Sök"
 msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "Kunde inte skapa ElevenLabs settings window"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE (260//)"
+msgid "Template"
+msgstr "Mall"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_NONE (261//)"
+msgid "Select a template..."
+msgstr "Välj en mall..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_GOOGLE_GEMINI (262//)"
+msgid "Google Gemini"
+msgstr "Google Gemini"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_LM_STUDIO (263//)"
+msgid "LM Studio"
+msgstr "LM Studio"
+

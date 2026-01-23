@@ -31,9 +31,9 @@ msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
 msgstr ""
-"Otvaranje govornog sistema nije uspjelo. Provjerite jesu li translator."
-"library v42 i narrator.device v34 instalirani. Pogledajte vodič za više "
-"informacija."
+"Otvaranje govornog sistema nije uspjelo. Provjerite jesu li "
+"translator.library v42 i narrator.device v34 instalirani. Pogledajte vodič "
+"za više informacija."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
@@ -701,9 +701,9 @@ msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
 msgstr ""
-"Otvaranje govornog sistema nije uspjelo. Provjerite jesu li translator."
-"library v42 i narrator.device v37 instalirani. Pogledajte vodič za više "
-"informacija."
+"Otvaranje govornog sistema nije uspjelo. Provjerite jesu li "
+"translator.library v42 i narrator.device v37 instalirani. Pogledajte vodič "
+"za više informacija."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
@@ -1239,8 +1239,12 @@ msgstr "GPT Image 1 Slika Velicina"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
-msgstr "Nevažeći zahtjev. Vaš OpenAI API račun verovatno nema više kredita za izvršavanje ovog modela. Provjerite svoj račun."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
+msgstr ""
+"Nevažeći zahtjev. Vaš OpenAI API račun verovatno nema više kredita za "
+"izvršavanje ovog modela. Provjerite svoj račun."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1391,3 +1395,24 @@ msgstr "Pretraga"
 msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "Nije uspjelo kreiranje ElevenLabs settings window"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE (260//)"
+msgid "Template"
+msgstr "Predložak"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_NONE (261//)"
+msgid "Select a template..."
+msgstr "Odaberite predložak..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_GOOGLE_GEMINI (262//)"
+msgid "Google Gemini"
+msgstr "Google Gemini"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_LM_STUDIO (263//)"
+msgid "LM Studio"
+msgstr "LM Studio"
+

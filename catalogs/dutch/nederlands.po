@@ -500,11 +500,11 @@ msgid ""
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
 msgstr ""
-"Image history kon niet worden geparseerd. Misvormde JSON. Het image-history."
-"json-bestand is waarschijnlijk beschadigd. Image history wordt niet geladen. "
-"Er is een fout opgetreden bij het schrijven van een back-up van de image "
-"history naar schijf, maar er is een kopie opgeslagen in RAM:image-history."
-"json.bak"
+"Image history kon niet worden geparseerd. Misvormde JSON. Het image-"
+"history.json-bestand is waarschijnlijk beschadigd. Image history wordt niet "
+"geladen. Er is een fout opgetreden bij het schrijven van een back-up van de "
+"image history naar schijf, maar er is een kopie opgeslagen in RAM:image-"
+"history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
@@ -1004,8 +1004,8 @@ msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
 msgstr ""
-"Kon geen verbinding maken met de server. Controleer of de proxyhost en -"
-"poort correct zijn of schakel deze uit."
+"Kon geen verbinding maken met de server. Controleer of de proxyhost en "
+"-poort correct zijn of schakel deze uit."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
@@ -1249,8 +1249,12 @@ msgstr "GPT Image 1 Slika Grootte"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
-msgstr "Ongeldige aanvraag. Uw OpenAI API-account heeft waarschijnlijk geen krediet meer om deze model uit te voeren. Controleer uw accountbalans."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
+msgstr ""
+"Ongeldige aanvraag. Uw OpenAI API-account heeft waarschijnlijk geen krediet "
+"meer om deze model uit te voeren. Controleer uw accountbalans."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1401,3 +1405,24 @@ msgstr "Zoeken"
 msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "Kan ElevenLabs settings window niet aanmaken"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE (260//)"
+msgid "Template"
+msgstr "Sjabloon"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_NONE (261//)"
+msgid "Select a template..."
+msgstr "Selecteer een sjabloon..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_GOOGLE_GEMINI (262//)"
+msgid "Google Gemini"
+msgstr "Google Gemini"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_LM_STUDIO (263//)"
+msgid "LM Studio"
+msgstr "LM Studio"
+
