@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.18.0 (2026-01-24)
+
+- All config options are now immediately saved to disk
+
 ## 2.17.0 (2025-12-22)
 
 - Add support for Elevenlabs TTS
