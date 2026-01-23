@@ -1412,3 +1412,23 @@ msgctxt "STRING_MENU_TEMPLATE_LM_STUDIO (263//)"
 msgid "LM Studio"
 msgstr "LM Studio"
 
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_FETCH_MODELS (264//)"
+msgid "Fetch Models"
+msgstr "Načítať modely"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_FETCHING_MODELS (265//)"
+msgid "Fetching models..."
+msgstr "Načítavanie modelov..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_FETCHING_MODELS (266//)"
+msgid "Failed to fetch models from server"
+msgstr "Nepodarilo sa načítať modely zo servera"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_NO_HOST (267//)"
+msgid "Please enter a host address first"
+msgstr "Najprv zadajte adresu hostiteľa"

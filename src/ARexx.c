@@ -373,7 +373,7 @@ HOOKPROTONHNO(ListServerModelsFunc, APTR, ULONG *arg) {
 
     struct json_object *models = getChatModels(
         host, portValue, useSSL, apiKey, useProxy, proxyHost, proxyPortValue,
-        proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword);
+        proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword, NULL);
 
     if (models == NULL) {
         return RETURN_ERROR;

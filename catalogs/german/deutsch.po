@@ -1448,3 +1448,23 @@ msgstr "Google Gemini"
 msgctxt "STRING_MENU_TEMPLATE_LM_STUDIO (263//)"
 msgid "LM Studio"
 msgstr "LM Studio"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_FETCH_MODELS (264//)"
+msgid "Fetch Models"
+msgstr "Modelle abrufen"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_FETCHING_MODELS (265//)"
+msgid "Fetching models..."
+msgstr "Modelle werden abgerufen..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_FETCHING_MODELS (266//)"
+msgid "Failed to fetch models from server"
+msgstr "Modelle konnten nicht vom Server abgerufen werden"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_NO_HOST (267//)"
+msgid "Please enter a host address first"
+msgstr "Bitte geben Sie zuerst eine Hostadresse ein"

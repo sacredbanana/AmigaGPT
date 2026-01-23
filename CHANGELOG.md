@@ -3,6 +3,7 @@
 ## 2.18.0 (2026-01-24)
 
 - Google Gemini and LM Studio are now available as templates in the custom server options window
+- List all available models on the custom server
 - All config options are now immediately saved to disk
 
 ## 2.17.0 (2025-12-22)

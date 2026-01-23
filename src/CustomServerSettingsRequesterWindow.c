@@ -1,11 +1,15 @@
 #include <exec/exec.h>
+#include <json-c/json.h>
 #include <libraries/mui.h>
+#include <mui/NList_mcc.h>
+#include <mui/NListview_mcc.h>
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
 #include "AmigaGPTConfig.h"
 #include "CustomServerSettingsRequesterWindow.h"
 #include "gui.h"
+#include "openai.h"
 
 Object *customServerTemplateCycle;
 Object *customServerHostString;
@@ -13,10 +17,14 @@ Object *customServerPortString;
 Object *customServerUsesSSLCycle;
 Object *customServerApiKeyString;
 Object *customServerChatModelString;
+Object *customServerModelList;
+Object *customServerFetchModelsButton;
 Object *customServerApiEndpointCycle;
 Object *customServerApiEndpointUrlString;
 Object *customServerFullUrlPreviewString;
 Object *customServerSettingsRequesterWindowObject;
+
+static struct json_object *customServerModelsJson = NULL;
 
 /* Template definitions */
 enum {
@@ -24,6 +32,135 @@ enum {
     TEMPLATE_GOOGLE_GEMINI,
     TEMPLATE_LM_STUDIO
 };
+
+/* Forward declarations */
+static void populateModelList(void);
+
+/* NList hooks for models */
+HOOKPROTONHNO(ConstructCustomModelLI_TextFunc, APTR,
+              struct NList_ConstructMessage *ncm) {
+    STRPTR entry = (STRPTR)ncm->entry;
+    return entry;
+}
+MakeHook(ConstructCustomModelLI_TextHook, ConstructCustomModelLI_TextFunc);
+
+HOOKPROTONHNO(DestructCustomModelLI_TextFunc, void,
+              struct NList_DestructMessage *ndm) {
+    /* Don't free - strings owned by JSON object */
+}
+MakeHook(DestructCustomModelLI_TextHook, DestructCustomModelLI_TextFunc);
+
+HOOKPROTONHNO(DisplayCustomModelLI_TextFunc, void,
+              struct NList_DisplayMessage *ndm) {
+    STRPTR entry = (STRPTR)ndm->entry;
+    ndm->strings[0] = entry;
+}
+MakeHook(DisplayCustomModelLI_TextHook, DisplayCustomModelLI_TextFunc);
+
+/* Hook for when a model is selected from the list */
+HOOKPROTONHNONP(CustomModelSelectedFunc, void) {
+    LONG active = MUIV_NList_Active_Off;
+    get(customServerModelList, MUIA_NList_Active, &active);
+
+    if (active != MUIV_NList_Active_Off && customServerModelsJson != NULL &&
+        json_object_is_type(customServerModelsJson, json_type_array)) {
+        struct json_object *modelIdObj =
+            json_object_array_get_idx(customServerModelsJson, active);
+        if (modelIdObj != NULL) {
+            CONST_STRPTR modelId = json_object_get_string(modelIdObj);
+            if (modelId != NULL) {
+                set(customServerChatModelString, MUIA_String_Contents, modelId);
+            }
+        }
+    }
+}
+MakeHook(CustomModelSelectedHook, CustomModelSelectedFunc);
+
+/* Hook for fetching models from the server */
+HOOKPROTONHNONP(FetchCustomModelsFunc, void) {
+    STRPTR host;
+    LONG port;
+    LONG usesSSL;
+    STRPTR apiKey;
+    STRPTR endpointUrl;
+
+    get(customServerHostString, MUIA_String_Contents, &host);
+    get(customServerPortString, MUIA_String_Integer, &port);
+    get(customServerUsesSSLCycle, MUIA_Cycle_Active, &usesSSL);
+    get(customServerApiKeyString, MUIA_String_Contents, &apiKey);
+    get(customServerApiEndpointUrlString, MUIA_String_Contents, &endpointUrl);
+
+    if (host == NULL || strlen(host) == 0) {
+        displayError(STRING_ERROR_NO_HOST);
+        return;
+    }
+
+    updateStatusBar(STRING_FETCHING_MODELS, yellowPen);
+    set(customServerFetchModelsButton, MUIA_Disabled, TRUE);
+
+    /* Free previous models JSON if any */
+    if (customServerModelsJson != NULL) {
+        json_object_put(customServerModelsJson);
+        customServerModelsJson = NULL;
+    }
+
+    /* Fetch models from the custom server */
+    customServerModelsJson = getChatModels(
+        host, port, usesSSL == 1, apiKey, configGetProxyEnabled(),
+        configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
+        configGetProxyRequiresAuth(), configGetProxyUsername(),
+        configGetProxyPassword(), endpointUrl);
+
+    if (customServerModelsJson != NULL) {
+        populateModelList();
+        updateStatusBar(STRING_READY, greenPen);
+    } else {
+        displayError(STRING_ERROR_FETCHING_MODELS);
+        updateStatusBar(STRING_READY, greenPen);
+    }
+
+    set(customServerFetchModelsButton, MUIA_Disabled, FALSE);
+}
+MakeHook(FetchCustomModelsHook, FetchCustomModelsFunc);
+
+/* Populate the model list from JSON */
+static void populateModelList(void) {
+    DoMethod(customServerModelList, MUIM_NList_Clear);
+
+    if (customServerModelsJson == NULL)
+        return;
+
+    /* getChatModels returns a simple array of model ID strings */
+    if (!json_object_is_type(customServerModelsJson, json_type_array)) {
+        return;
+    }
+
+    LONG modelCount = json_object_array_length(customServerModelsJson);
+    STRPTR currentModel = NULL;
+    get(customServerChatModelString, MUIA_String_Contents, &currentModel);
+    LONG selectedIndex = MUIV_NList_Active_Off;
+
+    for (LONG i = 0; i < modelCount; i++) {
+        struct json_object *modelIdObj =
+            json_object_array_get_idx(customServerModelsJson, i);
+        CONST_STRPTR modelId = json_object_get_string(modelIdObj);
+
+        if (modelId != NULL) {
+            DoMethod(customServerModelList, MUIM_NList_InsertSingle, modelId,
+                     MUIV_NList_Insert_Bottom);
+
+            /* Check if this is the currently selected model */
+            if (currentModel != NULL && strcmp(modelId, currentModel) == 0) {
+                selectedIndex = i;
+            }
+        }
+    }
+
+    /* Select the current model in the list if found */
+    if (selectedIndex != MUIV_NList_Active_Off) {
+        set(customServerModelList, MUIA_NList_Active, selectedIndex);
+    }
+}
 
 HOOKPROTONHNONP(TemplateSelectedFunc, void) {
     LONG template;
@@ -215,6 +352,24 @@ LONG createCustomServerSettingsRequesterWindow() {
                     MUIA_CycleChain, TRUE,
                     MUIA_String_Contents, configGetCustomChatModel() != NULL ? configGetCustomChatModel() : "gemini-2.0-flash",
                 End,
+                Child, HGroup,
+                    Child, customServerFetchModelsButton = MUI_MakeObject(
+                        MUIO_Button, STRING_FETCH_MODELS, MUIA_CycleChain, TRUE,
+                        MUIA_InputMode, MUIV_InputMode_RelVerify, TAG_DONE),
+                End,
+                Child, NListviewObject,
+                    MUIA_NListview_NList, customServerModelList = NListObject,
+                        MUIA_NList_ConstructHook2, &ConstructCustomModelLI_TextHook,
+                        MUIA_NList_DestructHook2, &DestructCustomModelLI_TextHook,
+                        MUIA_NList_DisplayHook2, &DisplayCustomModelLI_TextHook,
+                        MUIA_NList_Format, "",
+                        MUIA_NList_Title, FALSE,
+                        MUIA_NList_MinLineHeight, 16,
+                    End,
+                    MUIA_CycleChain, TRUE,
+                    MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
+                    MUIA_FixHeight, 80,
+                End,
             End,
             Child, VGroup,
                 MUIA_Frame, MUIV_Frame_Group,
@@ -272,5 +427,10 @@ LONG createCustomServerSettingsRequesterWindow() {
     DoMethod(customServerApiKeyString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerApiEndpointCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerApiEndpointUrlString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
+    DoMethod(customServerFetchModelsButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             MUIV_Notify_Application, 2, MUIM_CallHook, &FetchCustomModelsHook);
+    DoMethod(customServerModelList, MUIM_Notify, MUIA_NList_Active,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &CustomModelSelectedHook);
     return RETURN_OK;
 }

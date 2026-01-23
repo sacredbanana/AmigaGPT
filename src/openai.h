@@ -237,6 +237,7 @@ LONG initOpenAIConnector();
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
+ * @param apiEndpointUrl the API endpoint URL to use
  * @return a pointer to a new json_object array containing the model names or
  * NULL -- Free it with json_object_put() when you are done using it
  **/
@@ -245,7 +246,8 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
                                   CONST_STRPTR proxyHost, ULONG proxyPort,
                                   BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
                                   CONST_STRPTR proxyUsername,
-                                  CONST_STRPTR proxyPassword);
+                                  CONST_STRPTR proxyPassword,
+                                  CONST_STRPTR apiEndpointUrl);
 
 /**
  * Post a chat message to OpenAI

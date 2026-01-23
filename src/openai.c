@@ -478,6 +478,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
+ * @param apiEndpointUrl the API endpoint URL to use
  * @return a pointer to a new json_object array containing the model names or
  * NULL -- Free it with json_object_put() when you are done using it
  **/
@@ -486,7 +487,8 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
                                   CONST_STRPTR proxyHost, ULONG proxyPort,
                                   BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
                                   CONST_STRPTR proxyUsername,
-                                  CONST_STRPTR proxyPassword) {
+                                  CONST_STRPTR proxyPassword,
+                                  CONST_STRPTR apiEndpointUrl) {
     UBYTE connectionRetryCount = 0;
     if (host == NULL || strlen(host) == 0) {
         host = OPENAI_HOST;
@@ -498,6 +500,14 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
     }
     if (useProxy && proxyUsesSSL) {
         useSSL = TRUE;
+    }
+
+    /* Build the models endpoint path */
+    UBYTE modelsPath[256];
+    if (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0) {
+        snprintf(modelsPath, sizeof(modelsPath), "/%s/models", apiEndpointUrl);
+    } else {
+        snprintf(modelsPath, sizeof(modelsPath), "/v1/models");
     }
 
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
@@ -520,21 +530,22 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
 
     if (useSSL || useProxy) {
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                 "GET %s://%s:%d/v1/models HTTP/1.1\r\n"
+                 "GET %s://%s:%d%s HTTP/1.1\r\n"
                  "Host: %s:%d\r\n"
                  "Authorization: Bearer %s\r\n"
                  "User-Agent: AmigaGPT\r\n"
                  "%s\r\n",
-                 useSSL ? "https" : "http", host, port, host, port,
+                 useSSL ? "https" : "http", host, port, modelsPath, host, port,
                  openAiApiKey ? openAiApiKey : "", authHeader);
     } else {
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                 "GET /v1/models HTTP/1.1\r\n"
+                 "GET %s HTTP/1.1\r\n"
                  "Host: %s:%d\r\n"
                  "Authorization: Bearer %s\r\n"
                  "User-Agent: AmigaGPT\r\n"
                  "%s\r\n",
-                 host, port, openAiApiKey ? openAiApiKey : "", authHeader);
+                 modelsPath, host, port, openAiApiKey ? openAiApiKey : "",
+                 authHeader);
     }
 
     FreeVec(authHeader);
@@ -570,6 +581,7 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
 #endif
 
     // Read response
+    struct json_object *response;
     ULONG totalBytesRead = 0;
     WORD bytesRead = 0;
     BOOL doneReading = FALSE;
@@ -591,8 +603,15 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
         if (bytesRead > 0) {
             strncat(readBuffer, tempReadBuffer, bytesRead);
             totalBytesRead += bytesRead;
-        } else {
-            doneReading = TRUE;
+        }
+
+        // Parse response
+        STRPTR jsonStart = strstr(readBuffer, "{");
+        if (jsonStart) {
+            response = json_tokener_parse(jsonStart);
+            if (response) {
+                doneReading = TRUE;
+            }
         }
     }
     FreeVec(tempReadBuffer);
@@ -606,19 +625,8 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
     }
     sock = -1;
 
-    // Parse response
-    STRPTR jsonStart = strstr(readBuffer, "\r\n\r\n");
-    if (jsonStart == NULL) {
-        displayError("Invalid response format");
-        return NULL;
-    }
-    jsonStart += 4;
-
-    struct json_object *response = json_tokener_parse(jsonStart);
-    if (response == NULL) {
-        displayError("Failed to parse models response");
-        return NULL;
-    }
+    // Print JSON response
+    printf("response: %s\n", json_object_to_json_string(response));
 
     // Extract model IDs from response
     struct json_object *dataArray = json_object_object_get(response, "data");
