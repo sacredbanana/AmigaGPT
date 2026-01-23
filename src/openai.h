@@ -487,12 +487,13 @@ STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode);
  * @param proxyPassword the proxy password
  * @return a pointer to a new json_object containing the response or NULL
  **/
-struct json_object *postToolResultToOpenAI(
-    CONST_STRPTR previousResponseId, CONST_STRPTR callId, CONST_STRPTR output,
-    STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR openAiApiKey,
-    BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
-    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword);
+struct json_object *
+postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
+                       CONST_STRPTR output, STRPTR host, UWORD port,
+                       BOOL useSSL, CONST_STRPTR openAiApiKey, BOOL useProxy,
+                       CONST_STRPTR proxyHost, UWORD proxyPort,
+                       BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                       CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 
 /**
  * Post a text to speech request to the ElevenLabs API

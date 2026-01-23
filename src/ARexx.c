@@ -51,13 +51,15 @@ static LONG saveDaemonConversation(void) {
             json_object_new_string(conversationNode->content));
         json_object_array_add(messagesJsonArray, messageJsonObject);
     }
-    json_object_object_add(conversationJsonObject, "messages", messagesJsonArray);
+    json_object_object_add(conversationJsonObject, "messages",
+                           messagesJsonArray);
 
     STRPTR jsonString = (STRPTR)json_object_to_json_string_ext(
         conversationJsonObject, JSON_C_TO_STRING_PRETTY);
 
     LONG result = RETURN_OK;
-    if (Write(file, jsonString, strlen(jsonString)) != (LONG)strlen(jsonString)) {
+    if (Write(file, jsonString, strlen(jsonString)) !=
+        (LONG)strlen(jsonString)) {
         result = RETURN_ERROR;
     }
 
@@ -207,15 +209,15 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     BOOL webSearchEnabled = (BOOL)arg[13];
     STRPTR prompt = (STRPTR)arg[14];
 
-    ULONG portValue = port == NULL
-                          ? (configGetUseCustomServer() ? configGetCustomPort() : 0)
-                          : (ULONG)*port;
+    ULONG portValue =
+        port == NULL ? (configGetUseCustomServer() ? configGetCustomPort() : 0)
+                     : (ULONG)*port;
     ULONG proxyPortValue =
         proxyPort == NULL ? configGetProxyPort() : (ULONG)*proxyPort;
 
     if (apiKey == NULL) {
-        apiKey =
-            configGetUseCustomServer() ? configGetCustomApiKey() : configGetOpenAiApiKey();
+        apiKey = configGetUseCustomServer() ? configGetCustomApiKey()
+                                            : configGetOpenAiApiKey();
     }
 
     if (host == NULL || strlen(host) == 0) {
@@ -243,8 +245,9 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     }
 
     if (model == NULL || strlen(model) == 0) {
-        model = configGetUseCustomServer() ? configGetCustomChatModel()
-                                           : CHAT_MODEL_NAMES[configGetChatModel()];
+        model = configGetUseCustomServer()
+                    ? configGetCustomChatModel()
+                    : CHAT_MODEL_NAMES[configGetChatModel()];
     }
 
     /* Get the persistent daemon conversation (load from T: or create new) */
@@ -272,7 +275,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     }
 
     /* Handle shell tool calls if enabled */
-    if (!useCustomServer && configGetShellToolEnabled() && hasPendingToolCall()) {
+    if (!useCustomServer && configGetShellToolEnabled() &&
+        hasPendingToolCall()) {
         STRPTR command = getPendingToolCommand();
         STRPTR callId = getPendingToolCallId();
         STRPTR responseId = getPendingResponseId();
@@ -280,17 +284,18 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         /* Ask user for confirmation before executing the command */
         UBYTE confirmMsg[4096];
         snprintf(confirmMsg, sizeof(confirmMsg),
-                 "The AI wants to execute the following shell command:\n\n%s\n\nAllow this command to run?",
+                 "The AI wants to execute the following shell "
+                 "command:\n\n%s\n\nAllow this command to run?",
                  command);
         LONG confirmResult = MUI_Request(app, NULL,
 #ifdef __MORPHOS__
-                                  NULL,
+                                         NULL,
 #else
-                                  MUIV_Requester_Image_Warning,
+                                         MUIV_Requester_Image_Warning,
 #endif
-                                  "Shell Command Confirmation",
-                                  "*_Allow|_Deny", confirmMsg, TAG_DONE);
-        
+                                         "Shell Command Confirmation",
+                                         "*_Allow|_Deny", confirmMsg, TAG_DONE);
+
         if (confirmResult != 1) {
             /* User denied - clear pending tool call and return error */
             clearPendingToolCall();
@@ -298,7 +303,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
                 json_object_put(responses[i]);
             }
             FreeVec(responses);
-            set(app, MUIA_Application_RexxString, "Shell command denied by user");
+            set(app, MUIA_Application_RexxString,
+                "Shell command denied by user");
             updateStatusBar(STRING_READY, greenPen);
             return RETURN_OK;
         }
@@ -311,16 +317,14 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
         /* Build output string with exit code */
         UBYTE toolOutput[8192];
-        snprintf(toolOutput, sizeof(toolOutput),
-                 "Exit code: %ld\nOutput:\n%s", exitCode,
-                 output != NULL ? output : "(No output)");
+        snprintf(toolOutput, sizeof(toolOutput), "Exit code: %ld\nOutput:\n%s",
+                 exitCode, output != NULL ? output : "(No output)");
 
         /* Send the tool result back to the API */
         struct json_object *toolResponse = postToolResultToOpenAI(
-            responseId, callId, toolOutput,
-            NULL, 0, TRUE,
-            apiKey, useProxy, proxyHost, proxyPortValue,
-            proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword);
+            responseId, callId, toolOutput, NULL, 0, TRUE, apiKey, useProxy,
+            proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
+            proxyUsername, proxyPassword);
 
         /* Clear the pending tool call */
         clearPendingToolCall();
@@ -340,12 +344,14 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             struct json_object *error;
             if (json_object_object_get_ex(toolResponse, "error", &error) &&
                 !json_object_is_type(error, json_type_null)) {
-                struct json_object *message = json_object_object_get(error, "message");
+                struct json_object *message =
+                    json_object_object_get(error, "message");
                 UTF8 *messageString = json_object_get_string(message);
                 STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
-                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)messageString,
-                    CSA_MapForeignChars, TRUE, TAG_DONE);
-                set(app, MUIA_Application_RexxString, formattedMessageSystemEncoded);
+                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                    (Tag)messageString, CSA_MapForeignChars, TRUE, TAG_DONE);
+                set(app, MUIA_Application_RexxString,
+                    formattedMessageSystemEncoded);
                 CodesetsFreeA(formattedMessageSystemEncoded, NULL);
                 json_object_put(toolResponse);
                 updateStatusBar(STRING_ERROR, redPen);
@@ -357,13 +363,16 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
                 toolResponse, FALSE, TRUE, API_ENDPOINT_RESPONSES);
             if (toolContentString != NULL && strlen(toolContentString) > 0) {
                 /* Add response to conversation for context */
-                addTextToConversation(conversation, toolContentString, "assistant");
+                addTextToConversation(conversation, toolContentString,
+                                      "assistant");
                 saveDaemonConversation();
 
-                STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
-                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                    (Tag)toolContentString, CSA_MapForeignChars, TRUE, TAG_DONE);
-                set(app, MUIA_Application_RexxString, formattedMessageSystemEncoded);
+                STRPTR formattedMessageSystemEncoded =
+                    CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
+                                      CSA_Source, (Tag)toolContentString,
+                                      CSA_MapForeignChars, TRUE, TAG_DONE);
+                set(app, MUIA_Application_RexxString,
+                    formattedMessageSystemEncoded);
                 CodesetsFreeA(formattedMessageSystemEncoded, NULL);
                 json_object_put(toolResponse);
                 updateStatusBar(STRING_READY, greenPen);
