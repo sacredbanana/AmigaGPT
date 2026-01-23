@@ -1476,7 +1476,7 @@ msgstr "Profiles"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_PROFILE (276//)"
 msgid "Save Profile"
-msgstr "Save Profile"
+msgstr "Gem profil"
 
 #: src/CustomServerSettingsRequesterWindow.c
 #, fuzzy
@@ -1487,12 +1487,12 @@ msgstr "Slet chat"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_PROFILE_NAME (278//)"
 msgid "Profile Name"
-msgstr "Profile Name"
+msgstr "Profilnavn"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_NEW_PROFILE (279//)"
 msgid "(New Profile)"
-msgstr "(New Profile)"
+msgstr "(Ny profil)"
 
 #: src/CustomServerSettingsRequesterWindow.c
 #, fuzzy
@@ -1500,3 +1500,23 @@ msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
 msgid "Please enter a profile name"
 msgstr "Indtast venligst en værtsadresse først"
 
+#: src/menu.c
+msgctxt "STRING_MENU_OPENAI_SHELL_TOOL (281//)"
+msgid "Shell Tool"
+msgstr "Shell-værktøj"
+
+#: src/openai.c
+msgctxt "STRING_EXECUTING_COMMAND (282//)"
+msgid "Executing command..."
+msgstr "Udfører kommando..."
+
+#: src/openai.c
+msgctxt "STRING_SHELL_TOOL_OUTPUT (283//)"
+msgid "Shell Output"
+msgstr "Shell-output"
+
+#: src/openai.c
+#, fuzzy
+msgctxt "STRING_SHELL_TOOL_ERROR (284//)"
+msgid "Shell Error"
+msgstr "Shell-fejl"

@@ -14,17 +14,26 @@
 #include <mui/Busy_mcc.h>
 #include <proto/exec.h>
 #include <proto/socket.h>
+#include <dos/dostags.h>
+#include <dos/dosextens.h>
 #include <string.h>
 #include <stdio.h>
 #include "openai.h"
 #include "speech.h"
 #include "gui.h"
 #include "MainWindow.h"
+#include "AmigaGPTConfig.h"
 
 #define OPENAI_HOST "api.openai.com"
 #define OPENAI_PORT 443
 #define AUDIO_BUFFER_SIZE 4096
 #define MAX_CONNECTION_RETRIES 10
+
+/* Static variables to store pending tool call info captured during streaming */
+static BOOL pendingToolCall = FALSE;
+static UBYTE pendingToolCallId[256] = {0};
+static UBYTE pendingToolCommand[4096] = {0};
+static UBYTE pendingResponseId[256] = {0};
 
 static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
                                  BOOL useProxy, CONST_STRPTR proxyHost,
@@ -38,7 +47,6 @@ static BPTR GetStdErr();
 static LONG createSSLContext();
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
-static STRPTR getModelName(ChatModel model);
 static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
 static STRPTR base64Encode(CONST_STRPTR input);
 static void drainOpenSslErrorQueue(CONST_STRPTR where);
@@ -233,6 +241,352 @@ static BPTR ErrOutput() { return (((struct Process *)FindTask(NULL))->pr_CES); }
 static BPTR GetStdErr() {
     BPTR err = ErrOutput();
     return (err ? err : Output());
+}
+
+/**
+ * Execute a shell command and capture its output
+ * @param command the command to execute
+ * @param exitCode pointer to store the exit code
+ * @return a pointer to a new string containing the command output -- Free it
+ * with FreeVec() when done
+ **/
+STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode) {
+    BPTR stdoutFile = 0;
+    BPTR stderrFile = 0;
+    STRPTR outputBuffer = NULL;
+    STRPTR errorBuffer = NULL;
+    STRPTR combinedOutput = NULL;
+    LONG stdoutLen = 0;
+    LONG stderrLen = 0;
+    LONG result = -1;
+
+    /* Create temp files for stdout and stderr */
+    stdoutFile = Open("T:amigagpt_stdout.tmp", MODE_NEWFILE);
+    stderrFile = Open("T:amigagpt_stderr.tmp", MODE_NEWFILE);
+
+    if (stdoutFile == 0 || stderrFile == 0) {
+        if (stdoutFile)
+            Close(stdoutFile);
+        if (stderrFile)
+            Close(stderrFile);
+        *exitCode = -1;
+        combinedOutput = AllocVec(64, MEMF_CLEAR);
+        if (combinedOutput) {
+            strncpy(combinedOutput, "Error: Could not create temp files", 63);
+        }
+        return combinedOutput;
+    }
+
+    /* Execute the command with redirected output */
+#if defined(__MORPHOS__)
+    /* MorphOS may not support SYS_Error, so redirect both to stdout */
+    result = SystemTags(command, SYS_Input, 0, SYS_Output, stdoutFile,
+                        NP_StackSize, 32768, TAG_DONE);
+#else
+    result = SystemTags(command, SYS_Input, 0, SYS_Output, stdoutFile,
+                        SYS_Error, stderrFile, NP_StackSize, 32768, TAG_DONE);
+#endif
+
+    *exitCode = result;
+
+    Close(stdoutFile);
+    Close(stderrFile);
+
+    /* Read stdout */
+    stdoutFile = Open("T:amigagpt_stdout.tmp", MODE_OLDFILE);
+    if (stdoutFile) {
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+        Seek(stdoutFile, 0, OFFSET_END);
+        stdoutLen = Seek(stdoutFile, 0, OFFSET_BEGINNING);
+#elif defined(__AMIGAOS4__)
+        stdoutLen = GetFileSize(stdoutFile);
+#else
+        /* AROS */
+        struct FileInfoBlock fib;
+        ExamineFH64(stdoutFile, &fib, NULL);
+        stdoutLen = fib.fib_Size;
+#endif
+        if (stdoutLen > 0) {
+            outputBuffer = AllocVec(stdoutLen + 1, MEMF_CLEAR);
+            if (outputBuffer) {
+                Read(stdoutFile, outputBuffer, stdoutLen);
+                outputBuffer[stdoutLen] = '\0';
+            }
+        }
+        Close(stdoutFile);
+    }
+
+    /* Read stderr */
+    stderrFile = Open("T:amigagpt_stderr.tmp", MODE_OLDFILE);
+    if (stderrFile) {
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+        Seek(stderrFile, 0, OFFSET_END);
+        stderrLen = Seek(stderrFile, 0, OFFSET_BEGINNING);
+#elif defined(__AMIGAOS4__)
+        stderrLen = GetFileSize(stderrFile);
+#else
+        /* AROS */
+        struct FileInfoBlock fib2;
+        ExamineFH64(stderrFile, &fib2, NULL);
+        stderrLen = fib2.fib_Size;
+#endif
+        if (stderrLen > 0) {
+            errorBuffer = AllocVec(stderrLen + 1, MEMF_CLEAR);
+            if (errorBuffer) {
+                Read(stderrFile, errorBuffer, stderrLen);
+                errorBuffer[stderrLen] = '\0';
+            }
+        }
+        Close(stderrFile);
+    }
+
+    /* Delete temp files */
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+    DeleteFile("T:amigagpt_stdout.tmp");
+    DeleteFile("T:amigagpt_stderr.tmp");
+#else
+    Delete("T:amigagpt_stdout.tmp");
+    Delete("T:amigagpt_stderr.tmp");
+#endif
+
+    /* Combine stdout and stderr */
+    LONG totalLen = (stdoutLen > 0 ? stdoutLen : 0) +
+                    (stderrLen > 0 ? stderrLen + 16 : 0) + 64;
+    combinedOutput = AllocVec(totalLen, MEMF_CLEAR);
+    if (combinedOutput) {
+        if (outputBuffer && stdoutLen > 0) {
+            strncat(combinedOutput, outputBuffer, totalLen - 1);
+        }
+        if (errorBuffer && stderrLen > 0) {
+            if (stdoutLen > 0) {
+                strncat(combinedOutput, "\n\n--- STDERR ---\n", totalLen - 1);
+            }
+            strncat(combinedOutput, errorBuffer, totalLen - 1);
+        }
+        if (stdoutLen == 0 && stderrLen == 0) {
+            snprintf(combinedOutput, totalLen, "(No output)");
+        }
+    }
+
+    if (outputBuffer)
+        FreeVec(outputBuffer);
+    if (errorBuffer)
+        FreeVec(errorBuffer);
+
+    return combinedOutput;
+}
+
+/**
+ * Check if there is a pending tool call captured during streaming
+ * @return TRUE if there is a pending tool call
+ **/
+BOOL hasPendingToolCall(void) { return pendingToolCall; }
+
+/**
+ * Get the pending tool call command
+ * @return the command string (do not free)
+ **/
+STRPTR getPendingToolCommand(void) { return pendingToolCommand; }
+
+/**
+ * Get the pending tool call ID
+ * @return the call ID string (do not free)
+ **/
+STRPTR getPendingToolCallId(void) { return pendingToolCallId; }
+
+/**
+ * Get the pending response ID
+ * @return the response ID string (do not free)
+ **/
+STRPTR getPendingResponseId(void) { return pendingResponseId; }
+
+/**
+ * Clear the pending tool call after processing
+ **/
+void clearPendingToolCall(void) {
+    pendingToolCall = FALSE;
+    pendingToolCallId[0] = '\0';
+    pendingToolCommand[0] = '\0';
+    pendingResponseId[0] = '\0';
+}
+
+/**
+ * Check if a response contains a shell tool function call
+ * @param response the JSON response from the API
+ * @return TRUE if the response contains a shell function call
+ **/
+BOOL hasShellToolCall(struct json_object *response) {
+    if (response == NULL) {
+        return FALSE;
+    }
+
+    /* For streaming mode, response.completed has structure:
+     * {"type": "response.completed", "response": {"output": [...]}}
+     * For non-streaming, it's: {"output": [...]} */
+    struct json_object *outputArray =
+        json_object_object_get(response, "output");
+    struct json_object *nestedResponse = NULL;
+
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array)) {
+        /* Try nested structure for streaming mode */
+        nestedResponse = json_object_object_get(response, "response");
+        if (nestedResponse != NULL) {
+            outputArray = json_object_object_get(nestedResponse, "output");
+        }
+    }
+
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array)) {
+        return FALSE;
+    }
+
+    int arrayLength = json_object_array_length(outputArray);
+
+    for (int i = 0; i < arrayLength; i++) {
+        struct json_object *item = json_object_array_get_idx(outputArray, i);
+        struct json_object *itemTypeObj = json_object_object_get(item, "type");
+        if (itemTypeObj != NULL) {
+            const char *typeStr = json_object_get_string(itemTypeObj);
+            if (strcmp(typeStr, "function_call") == 0) {
+                struct json_object *nameObj =
+                    json_object_object_get(item, "name");
+                if (nameObj != NULL) {
+                    const char *nameStr = json_object_get_string(nameObj);
+                    if (strcmp(nameStr, "shell") == 0) {
+                        return TRUE;
+                    }
+                }
+            }
+        }
+    }
+    return FALSE;
+}
+
+/**
+ * Get the call ID from a shell tool function call response
+ * @param response the JSON response from the API
+ * @return the call ID string (do not free) or NULL
+ **/
+STRPTR getShellToolCallId(struct json_object *response) {
+    if (response == NULL)
+        return NULL;
+
+    /* For streaming mode, response.completed has structure:
+     * {"type": "response.completed", "response": {"output": [...]}}
+     * For non-streaming, it's: {"output": [...]} */
+    struct json_object *outputArray =
+        json_object_object_get(response, "output");
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array)) {
+        /* Try nested structure for streaming mode */
+        struct json_object *nestedResponse =
+            json_object_object_get(response, "response");
+        if (nestedResponse != NULL) {
+            outputArray = json_object_object_get(nestedResponse, "output");
+        }
+    }
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array))
+        return NULL;
+
+    int arrayLength = json_object_array_length(outputArray);
+    for (int i = 0; i < arrayLength; i++) {
+        struct json_object *item = json_object_array_get_idx(outputArray, i);
+        struct json_object *typeObj = json_object_object_get(item, "type");
+        if (typeObj != NULL) {
+            const char *typeStr = json_object_get_string(typeObj);
+            if (strcmp(typeStr, "function_call") == 0) {
+                struct json_object *nameObj =
+                    json_object_object_get(item, "name");
+                if (nameObj != NULL) {
+                    const char *nameStr = json_object_get_string(nameObj);
+                    if (strcmp(nameStr, "shell") == 0) {
+                        struct json_object *callIdObj =
+                            json_object_object_get(item, "call_id");
+                        if (callIdObj != NULL) {
+                            return (STRPTR)json_object_get_string(callIdObj);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return NULL;
+}
+
+/**
+ * Get the command from a shell tool function call response
+ * @param response the JSON response from the API
+ * @return the command string (must be freed with FreeVec) or NULL
+ **/
+STRPTR getShellToolCommand(struct json_object *response) {
+    if (response == NULL)
+        return NULL;
+
+    /* For streaming mode, response.completed has structure:
+     * {"type": "response.completed", "response": {"output": [...]}}
+     * For non-streaming, it's: {"output": [...]} */
+    struct json_object *outputArray =
+        json_object_object_get(response, "output");
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array)) {
+        /* Try nested structure for streaming mode */
+        struct json_object *nestedResponse =
+            json_object_object_get(response, "response");
+        if (nestedResponse != NULL) {
+            outputArray = json_object_object_get(nestedResponse, "output");
+        }
+    }
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array))
+        return NULL;
+
+    int arrayLength = json_object_array_length(outputArray);
+    for (int i = 0; i < arrayLength; i++) {
+        struct json_object *item = json_object_array_get_idx(outputArray, i);
+        struct json_object *typeObj = json_object_object_get(item, "type");
+        if (typeObj != NULL) {
+            const char *typeStr = json_object_get_string(typeObj);
+            if (strcmp(typeStr, "function_call") == 0) {
+                struct json_object *nameObj =
+                    json_object_object_get(item, "name");
+                if (nameObj != NULL) {
+                    const char *nameStr = json_object_get_string(nameObj);
+                    if (strcmp(nameStr, "shell") == 0) {
+                        struct json_object *argsObj =
+                            json_object_object_get(item, "arguments");
+                        if (argsObj != NULL) {
+                            /* Arguments is a JSON string containing another
+                             * JSON object */
+                            const char *argsStr =
+                                json_object_get_string(argsObj);
+                            struct json_object *parsedArgs =
+                                json_tokener_parse(argsStr);
+                            if (parsedArgs != NULL) {
+                                struct json_object *cmdObj =
+                                    json_object_object_get(parsedArgs,
+                                                           "command");
+                                if (cmdObj != NULL) {
+                                    const char *cmdStr =
+                                        json_object_get_string(cmdObj);
+                                    STRPTR result = AllocVec(strlen(cmdStr) + 1,
+                                                             MEMF_CLEAR);
+                                    if (result) {
+                                        strncpy(result, cmdStr, strlen(cmdStr));
+                                    }
+                                    json_object_put(parsedArgs);
+                                    return result;
+                                }
+                                json_object_put(parsedArgs);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return NULL;
 }
 
 /**
@@ -842,6 +1196,41 @@ struct json_object **postChatMessageToOpenAI(
                                        json_object_new_string("web_search"));
                 json_object_array_add(toolsArray, webSearchToolObj);
             }
+            if (configGetShellToolEnabled()) {
+                /* Add shell tool as a function tool */
+                struct json_object *shellToolObj = json_object_new_object();
+                json_object_object_add(shellToolObj, "type",
+                                       json_object_new_string("function"));
+                json_object_object_add(shellToolObj, "name",
+                                       json_object_new_string("shell"));
+                json_object_object_add(
+                    shellToolObj, "description",
+                    json_object_new_string(
+                        "Execute AmigaDOS shell commands on the user's Amiga. "
+                        "Use this to run commands, manage files, or interact "
+                        "with the system. Returns stdout, stderr, and exit "
+                        "code."));
+                struct json_object *paramsObj = json_object_new_object();
+                json_object_object_add(paramsObj, "type",
+                                       json_object_new_string("object"));
+                struct json_object *propsObj = json_object_new_object();
+                struct json_object *cmdPropObj = json_object_new_object();
+                json_object_object_add(cmdPropObj, "type",
+                                       json_object_new_string("string"));
+                json_object_object_add(
+                    cmdPropObj, "description",
+                    json_object_new_string(
+                        "The AmigaDOS command to execute (e.g. 'list RAM:', "
+                        "'type myfile.txt', 'cd Work:')"));
+                json_object_object_add(propsObj, "command", cmdPropObj);
+                json_object_object_add(paramsObj, "properties", propsObj);
+                struct json_object *requiredArr = json_object_new_array();
+                json_object_array_add(requiredArr,
+                                      json_object_new_string("command"));
+                json_object_object_add(paramsObj, "required", requiredArr);
+                json_object_object_add(shellToolObj, "parameters", paramsObj);
+                json_object_array_add(toolsArray, shellToolObj);
+            }
             json_object_object_add(obj, "tools", toolsArray);
 
             struct MinNode *conversationNode = conversation->messages->mlh_Head;
@@ -862,8 +1251,59 @@ struct json_object **postChatMessageToOpenAI(
             json_object_object_add(obj, "stream",
                                    json_object_new_boolean((json_bool)stream));
 
-            if (conversation->system != NULL &&
-                strlen(conversation->system) > 0) {
+            /* Build instructions field - include AmigaDOS info if shell tool
+             * enabled */
+            if (configGetShellToolEnabled()) {
+                CONST_STRPTR amigaInstructions =
+#ifdef __AMIGAOS3__
+                    "This system is an Amiga computer running AmigaOS. When "
+                    "using the shell tool, "
+#elif defined(__AMIGAOS4__)
+                    "This system is a PowerPC Amiga computer running AmigaOS. "
+                    "When "
+                    "using the shell tool, "
+#else
+                    "This system is a PowerPC computer running MorphOS. When "
+                    "using the shell tool, "
+#endif
+                    "use AmigaDOS commands (not Unix/Linux). Key differences:\n"
+                    "- Directory listing: 'list' or 'dir' (not 'ls')\n"
+                    "- Show file contents: 'type' (not 'cat')\n"
+                    "- Path separator is ':' for devices and '/' for "
+                    "directories (e.g. 'Work:Projects/myfile')\n"
+                    "- Devices include RAM:, SYS:, Work:, DH0:, etc.\n"
+                    "- Create directory: 'makedir' (not 'mkdir')\n"
+                    "- Delete file: 'delete' (not 'rm')\n"
+                    "- Copy: 'copy' (not 'cp')\n"
+                    "- Rename/move: 'rename' (not 'mv')\n"
+                    "- Current directory: 'cd' with no args shows current, 'cd "
+                    "<path>' changes\n"
+                    "- Redirection: '>' for output, '<' for input, '>>' to "
+                    "append\n"
+                    "- Pipe character is '|' same as Unix";
+
+                if (conversation->system != NULL &&
+                    strlen(conversation->system) > 0) {
+                    /* Combine user's system prompt with AmigaDOS instructions
+                     */
+                    ULONG combinedLen = strlen(conversation->system) +
+                                        strlen(amigaInstructions) + 10;
+                    STRPTR combinedInstr = AllocVec(combinedLen, MEMF_CLEAR);
+                    if (combinedInstr) {
+                        snprintf(combinedInstr, combinedLen, "%s\n\n%s",
+                                 conversation->system, amigaInstructions);
+                        json_object_object_add(
+                            obj, "instructions",
+                            json_object_new_string(combinedInstr));
+                        FreeVec(combinedInstr);
+                    }
+                } else {
+                    json_object_object_add(
+                        obj, "instructions",
+                        json_object_new_string(amigaInstructions));
+                }
+            } else if (conversation->system != NULL &&
+                       strlen(conversation->system) > 0) {
                 json_object_object_add(
                     obj, "instructions",
                     json_object_new_string(conversation->system));
@@ -1072,7 +1512,8 @@ struct json_object **postChatMessageToOpenAI(
                         struct json_object *parsedResponse =
                             json_tokener_parse(jsonString);
                         if (parsedResponse != NULL) {
-                            responses[responseIndex++] = parsedResponse;
+                            responses[responseIndex] = parsedResponse;
+                            responseIndex++;
                             if (!stream) {
                                 break;
                             }
@@ -1164,6 +1605,34 @@ struct json_object **postChatMessageToOpenAI(
                 json_object_object_get(responses[responseIndex - 1], "type"));
             if (type != NULL && strcmp(type, "response.completed") == 0) {
                 streamingInProgress = FALSE;
+
+                /* Check for tool call in response.completed and save it */
+                if (configGetShellToolEnabled()) {
+                    struct json_object *completedResponse =
+                        responses[responseIndex - 1];
+                    if (hasShellToolCall(completedResponse)) {
+                        STRPTR callId = getShellToolCallId(completedResponse);
+                        STRPTR command = getShellToolCommand(completedResponse);
+                        /* Get response ID from nested response object */
+                        struct json_object *nestedResp = json_object_object_get(
+                            completedResponse, "response");
+                        STRPTR respId = NULL;
+                        if (nestedResp) {
+                            respId = (STRPTR)json_object_get_string(
+                                json_object_object_get(nestedResp, "id"));
+                        }
+
+                        if (callId && command && respId) {
+                            pendingToolCall = TRUE;
+                            strncpy(pendingToolCallId, callId,
+                                    sizeof(pendingToolCallId) - 1);
+                            strncpy(pendingToolCommand, command,
+                                    sizeof(pendingToolCommand) - 1);
+                            strncpy(pendingResponseId, respId,
+                                    sizeof(pendingResponseId) - 1);
+                        }
+                    }
+                }
             }
         }
         struct json_object *error;
@@ -1180,6 +1649,28 @@ struct json_object **postChatMessageToOpenAI(
             streamingInProgress = FALSE;
         }
     } else {
+        /* Non-streaming mode - check for tool calls in the response */
+        if (responseIndex > 0 && responses[responseIndex - 1] != NULL &&
+            configGetShellToolEnabled()) {
+            struct json_object *response = responses[responseIndex - 1];
+            if (hasShellToolCall(response)) {
+                STRPTR callId = getShellToolCallId(response);
+                STRPTR command = getShellToolCommand(response);
+                /* For non-streaming, id is at top level */
+                STRPTR respId = (STRPTR)json_object_get_string(
+                    json_object_object_get(response, "id"));
+
+                if (callId && command && respId) {
+                    pendingToolCall = TRUE;
+                    strncpy(pendingToolCallId, callId,
+                            sizeof(pendingToolCallId) - 1);
+                    strncpy(pendingToolCommand, command,
+                            sizeof(pendingToolCommand) - 1);
+                    strncpy(pendingResponseId, respId,
+                            sizeof(pendingResponseId) - 1);
+                }
+            }
+        }
         CloseSocket(sock);
         if (ssl != NULL) {
             SSL_shutdown(ssl);
@@ -2897,4 +3388,218 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 #endif
     return result;
+}
+
+/**
+ * Post a tool result (shell command output) back to the OpenAI API
+ * This continues the conversation after a tool call
+ * @param previousResponseId the ID from the previous response
+ * @param callId the call_id from the function call
+ * @param output the output from the shell command
+ * @param host the host to use (or NULL for OpenAI default)
+ * @param port the port to use
+ * @param useSSL whether to use SSL
+ * @param openAiApiKey the API key
+ * @param useProxy whether to use a proxy
+ * @param proxyHost the proxy host
+ * @param proxyPort the proxy port
+ * @param proxyUsesSSL whether the proxy uses SSL
+ * @param proxyRequiresAuth whether the proxy requires auth
+ * @param proxyUsername the proxy username
+ * @param proxyPassword the proxy password
+ * @return a pointer to a new json_object containing the response or NULL --
+ * Free it with json_object_put() when done
+ **/
+struct json_object *
+postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
+                       CONST_STRPTR output, STRPTR host, UWORD port,
+                       BOOL useSSL, CONST_STRPTR openAiApiKey, BOOL useProxy,
+                       CONST_STRPTR proxyHost, UWORD proxyPort,
+                       BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                       CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
+
+    UBYTE connectionRetryCount = 0;
+    BOOL useCustomServer = host != NULL && strlen(host) > 0;
+
+    if (useCustomServer) {
+        if (port == 0) {
+            port = useSSL ? 443 : 80;
+        }
+    } else {
+        host = OPENAI_HOST;
+        port = OPENAI_PORT;
+        useSSL = TRUE;
+    }
+
+    /* Build the tool result JSON */
+    struct json_object *obj = json_object_new_object();
+
+    /* Add the model - required by the API */
+    json_object_object_add(
+        obj, "model",
+        json_object_new_string(CHAT_MODEL_NAMES[configGetChatModel()]));
+
+    /* Use the previous response ID to continue the conversation */
+    json_object_object_add(obj, "previous_response_id",
+                           json_object_new_string(previousResponseId));
+
+    /* Build the input array with the function call output */
+    struct json_object *inputArray = json_object_new_array();
+    struct json_object *toolResultObj = json_object_new_object();
+    json_object_object_add(toolResultObj, "type",
+                           json_object_new_string("function_call_output"));
+    json_object_object_add(toolResultObj, "call_id",
+                           json_object_new_string(callId));
+    json_object_object_add(toolResultObj, "output",
+                           json_object_new_string(output));
+    json_object_array_add(inputArray, toolResultObj);
+    json_object_object_add(obj, "input", inputArray);
+
+    CONST_STRPTR jsonString = json_object_to_json_string(obj);
+
+    /* Build auth header */
+    UBYTE apiAuthHeader[512];
+    memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+    if (openAiApiKey != NULL && strlen(openAiApiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader),
+                 "Authorization: Bearer %s\r\n", openAiApiKey);
+    }
+
+    /* Build proxy auth header if needed */
+    STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+    if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
+        STRPTR credentials =
+            AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                     MEMF_ANY | MEMF_CLEAR);
+        snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                 "%s:%s", proxyUsername, proxyPassword);
+        UBYTE *encodedCredentials = base64Encode(credentials);
+        snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
+                 encodedCredentials);
+        FreeVec(encodedCredentials);
+        FreeVec(credentials);
+    }
+
+    /* Build the HTTP request */
+    if (useSSL || useProxy) {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "POST %s://%s:%d/v1/responses HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "Content-Type: application/json\r\n"
+                 "%s"
+                 "User-Agent: AmigaGPT\r\n"
+                 "Content-Length: %lu\r\n"
+                 "%s\r\n"
+                 "%s\0",
+                 useSSL ? "https" : "http", host, port, host, port,
+                 apiAuthHeader, strlen(jsonString), authHeader, jsonString);
+    } else {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "POST /v1/responses HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "Content-Type: application/json\r\n"
+                 "%s"
+                 "User-Agent: AmigaGPT\r\n"
+                 "Content-Length: %lu\r\n"
+                 "%s\r\n"
+                 "%s\0",
+                 host, port, apiAuthHeader, strlen(jsonString), authHeader,
+                 jsonString);
+    }
+
+    json_object_put(obj);
+    FreeVec(authHeader);
+
+    /* Connect and send */
+    updateStatusBar(STRING_CONNECTING, yellowPen);
+    while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
+        if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+            displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
+            return NULL;
+        }
+    }
+
+    updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
+    if (useSSL) {
+        ERR_clear_error();
+        ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+        if (ssl_err <= 0) {
+            reportSslError(ssl, ssl_err, "SSL_write (tool result)");
+            return NULL;
+        }
+    } else {
+        ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+        if (ssl_err <= 0) {
+            displayError(STRING_ERROR_REQUEST_WRITE);
+            return NULL;
+        }
+    }
+
+    /* Read response */
+    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+    LONG totalBytesRead = 0;
+    WORD bytesRead = 0;
+    LONG err = 0;
+    BOOL doneReading = FALSE;
+    UBYTE statusMessage[64];
+    UBYTE *tempReadBuffer =
+        AllocVec(TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+
+    while (!doneReading) {
+#ifndef DAEMON
+        DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+        if (useSSL) {
+            ERR_clear_error();
+            bytesRead =
+                SSL_read(ssl, tempReadBuffer, TEMP_READ_BUFFER_LENGTH - 1);
+        } else {
+            bytesRead =
+                recv(sock, tempReadBuffer, TEMP_READ_BUFFER_LENGTH - 1, 0);
+        }
+
+        snprintf(statusMessage, sizeof(statusMessage),
+                 STRING_DOWNLOADING_RESPONSE);
+        updateStatusBar(statusMessage, yellowPen);
+
+        if (bytesRead <= 0) {
+            doneReading = TRUE;
+            break;
+        }
+
+        strncat(readBuffer, tempReadBuffer, bytesRead);
+        totalBytesRead += bytesRead;
+
+        /* Check if we have a complete response */
+        STRPTR jsonStart = strstr(readBuffer, "{");
+        if (jsonStart != NULL) {
+            struct json_object *parsedResponse = json_tokener_parse(jsonStart);
+            if (parsedResponse != NULL) {
+                FreeVec(tempReadBuffer);
+                updateStatusBar(STRING_READY, greenPen);
+                return parsedResponse;
+            }
+        }
+
+        if (totalBytesRead >= READ_BUFFER_LENGTH - 1) {
+            doneReading = TRUE;
+        }
+    }
+
+    FreeVec(tempReadBuffer);
+
+    /* Try to parse whatever we got */
+    STRPTR jsonStart = strstr(readBuffer, "{");
+    if (jsonStart != NULL) {
+        struct json_object *parsedResponse = json_tokener_parse(jsonStart);
+        if (parsedResponse != NULL) {
+            updateStatusBar(STRING_READY, greenPen);
+            return parsedResponse;
+        }
+    }
+
+    updateStatusBar(STRING_ERROR, redPen);
+    return NULL;
 }

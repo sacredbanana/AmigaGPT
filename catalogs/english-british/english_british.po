@@ -1497,3 +1497,23 @@ msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
 msgid "Please enter a profile name"
 msgstr "Please enter a host address first"
 
+#: src/menu.c
+msgctxt "STRING_MENU_OPENAI_SHELL_TOOL (281//)"
+msgid "Shell Tool"
+msgstr "Shell Tool"
+
+#: src/openai.c
+msgctxt "STRING_EXECUTING_COMMAND (282//)"
+msgid "Executing command..."
+msgstr "Executing command..."
+
+#: src/openai.c
+msgctxt "STRING_SHELL_TOOL_OUTPUT (283//)"
+msgid "Shell Output"
+msgstr "Shell Output"
+
+#: src/openai.c
+#, fuzzy
+msgctxt "STRING_SHELL_TOOL_ERROR (284//)"
+msgid "Shell Error"
+msgstr "Error"

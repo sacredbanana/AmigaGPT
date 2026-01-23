@@ -1533,3 +1533,23 @@ msgstr "(Neues Profil)"
 msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
 msgid "Please enter a profile name"
 msgstr "Bitte geben Sie einen Profilnamen ein"
+
+#: src/menu.c
+msgctxt "STRING_MENU_OPENAI_SHELL_TOOL (281//)"
+msgid "Shell Tool"
+msgstr "Shell-Werkzeug"
+
+#: src/openai.c
+msgctxt "STRING_EXECUTING_COMMAND (282//)"
+msgid "Executing command..."
+msgstr "Befehl wird ausgeführt..."
+
+#: src/openai.c
+msgctxt "STRING_SHELL_TOOL_OUTPUT (283//)"
+msgid "Shell Output"
+msgstr "Shell-Ausgabe"
+
+#: src/openai.c
+msgctxt "STRING_SHELL_TOOL_ERROR (284//)"
+msgid "Shell Error"
+msgstr "Shell-Fehler"

@@ -2,6 +2,9 @@
 
 ## 2.18.0 (2026-01-24)
 
+- New powerful Shell Tool option to ask ChatGPT to run any command on your system in the shell
+- The daemon (AmigaGPTD) now maintains conversation history in T: for context across ARexx calls until reboot
+- New NEWCHAT ARexx command to clear daemon conversation history
 - Support for Anthropic Claude and xAI Grok
 - Easily add new custom server profiles with easy templates for Google Gemini, LM Studio, Anthropic Claude and xAI Grok
 - Fetch list of all models from the server in the custom server options

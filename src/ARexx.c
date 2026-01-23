@@ -1,5 +1,6 @@
 #include <json-c/json.h>
 #include <libraries/mui.h>
+#include <proto/dos.h>
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
@@ -9,6 +10,179 @@
 #include "ARexx.h"
 #include "gui.h"
 #include "MainWindow.h"
+#include "openai.h"
+
+/* Path to the daemon conversation history file in T: (cleared on reboot) */
+#define DAEMON_HISTORY_PATH "T:AmigaGPTD_history.json"
+
+/* Static conversation for the daemon to maintain context across ARexx calls */
+static struct Conversation *daemonConversation = NULL;
+
+/**
+ * Save the daemon conversation to T:
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+ **/
+static LONG saveDaemonConversation(void) {
+    if (daemonConversation == NULL) {
+        return RETURN_OK;
+    }
+
+    BPTR file = Open(DAEMON_HISTORY_PATH, MODE_NEWFILE);
+    if (file == 0) {
+        return RETURN_ERROR;
+    }
+
+    struct json_object *conversationJsonObject = json_object_new_object();
+    struct json_object *messagesJsonArray = json_object_new_array();
+
+    struct ConversationNode *conversationNode;
+    for (conversationNode =
+             (struct ConversationNode *)daemonConversation->messages->mlh_Head;
+         conversationNode->node.mln_Succ != NULL;
+         conversationNode =
+             (struct ConversationNode *)conversationNode->node.mln_Succ) {
+        if (!strcmp(conversationNode->role, "system"))
+            continue;
+        struct json_object *messageJsonObject = json_object_new_object();
+        json_object_object_add(messageJsonObject, "role",
+                               json_object_new_string(conversationNode->role));
+        json_object_object_add(
+            messageJsonObject, "content",
+            json_object_new_string(conversationNode->content));
+        json_object_array_add(messagesJsonArray, messageJsonObject);
+    }
+    json_object_object_add(conversationJsonObject, "messages", messagesJsonArray);
+
+    STRPTR jsonString = (STRPTR)json_object_to_json_string_ext(
+        conversationJsonObject, JSON_C_TO_STRING_PRETTY);
+
+    LONG result = RETURN_OK;
+    if (Write(file, jsonString, strlen(jsonString)) != (LONG)strlen(jsonString)) {
+        result = RETURN_ERROR;
+    }
+
+    Close(file);
+    json_object_put(conversationJsonObject);
+    return result;
+}
+
+/**
+ * Load the daemon conversation from T:
+ * @return the loaded conversation, or NULL if not found/error
+ **/
+static struct Conversation *loadDaemonConversation(void) {
+    BPTR file = Open(DAEMON_HISTORY_PATH, MODE_OLDFILE);
+    if (file == 0) {
+        return NULL;
+    }
+
+#ifdef __AMIGAOS3__
+    Seek(file, 0, OFFSET_END);
+    LONG fileSize = Seek(file, 0, OFFSET_BEGINNING);
+#else
+#ifdef __AMIGAOS4__
+    int64_t fileSize = GetFileSize(file);
+#else
+    struct FileInfoBlock fib;
+    ExamineFH64(file, &fib, NULL);
+    int64_t fileSize = fib.fib_Size;
+#endif
+#endif
+
+    if (fileSize <= 0) {
+        Close(file);
+        return NULL;
+    }
+
+    STRPTR jsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
+    if (jsonString == NULL) {
+        Close(file);
+        return NULL;
+    }
+
+    if (Read(file, jsonString, fileSize) != fileSize) {
+        Close(file);
+        FreeVec(jsonString);
+        return NULL;
+    }
+    Close(file);
+
+    struct json_object *conversationJsonObject = json_tokener_parse(jsonString);
+    FreeVec(jsonString);
+
+    if (conversationJsonObject == NULL) {
+        return NULL;
+    }
+
+    struct json_object *messagesJsonArray;
+    if (!json_object_object_get_ex(conversationJsonObject, "messages",
+                                   &messagesJsonArray)) {
+        json_object_put(conversationJsonObject);
+        return NULL;
+    }
+
+    struct Conversation *conversation = newConversation();
+
+    for (UWORD j = 0; j < json_object_array_length(messagesJsonArray); j++) {
+        struct json_object *messageJsonObject =
+            json_object_array_get_idx(messagesJsonArray, j);
+
+        struct json_object *roleJsonObject;
+        if (!json_object_object_get_ex(messageJsonObject, "role",
+                                       &roleJsonObject)) {
+            freeConversation(conversation);
+            json_object_put(conversationJsonObject);
+            return NULL;
+        }
+        STRPTR role = (STRPTR)json_object_get_string(roleJsonObject);
+
+        struct json_object *contentJsonObject;
+        if (!json_object_object_get_ex(messageJsonObject, "content",
+                                       &contentJsonObject)) {
+            freeConversation(conversation);
+            json_object_put(conversationJsonObject);
+            return NULL;
+        }
+        UTF8 *content = (UTF8 *)json_object_get_string(contentJsonObject);
+
+        addTextToConversation(conversation, content, role);
+    }
+
+    json_object_put(conversationJsonObject);
+    return conversation;
+}
+
+/**
+ * Get or create the daemon conversation
+ * @return the daemon conversation
+ **/
+static struct Conversation *getDaemonConversation(void) {
+    if (daemonConversation == NULL) {
+        /* Try to load from T: */
+        daemonConversation = loadDaemonConversation();
+        if (daemonConversation == NULL) {
+            /* Create new if not found */
+            daemonConversation = newConversation();
+        }
+    }
+    return daemonConversation;
+}
+
+/**
+ * Clear the daemon conversation history (start a new chat)
+ **/
+static void clearDaemonConversation(void) {
+    if (daemonConversation != NULL) {
+        freeConversation(daemonConversation);
+        daemonConversation = NULL;
+    }
+    /* Delete the history file */
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+    DeleteFile(DAEMON_HISTORY_PATH);
+#else
+    Delete(DAEMON_HISTORY_PATH);
+#endif
+}
 
 HOOKPROTONH(ReplyCallbackFunc, APTR, Object *obj, struct RexxMsg *rxm) {
     printf("Args[0]: %s\nResult1: %ld   Result2: %ld\n", rxm->rm_Args[0],
@@ -73,7 +247,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
                                            : CHAT_MODEL_NAMES[configGetChatModel()];
     }
 
-    struct Conversation *conversation = newConversation();
+    /* Get the persistent daemon conversation (load from T: or create new) */
+    struct Conversation *conversation = getDaemonConversation();
     UTF8 *promptUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
                                           CSA_Source, (Tag)prompt, TAG_DONE);
     addTextToConversation(conversation, promptUTF8, "user");
@@ -81,15 +256,122 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
     setConversationSystem(conversation, system);
 
+    BOOL useCustomServer = host != NULL && strlen(host) > 0;
     struct json_object **responses = postChatMessageToOpenAI(
         conversation, host, portValue, useSSL, model, apiKey, FALSE, useProxy,
         proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
         proxyUsername, proxyPassword, webSearchEnabled, API_ENDPOINT_RESPONSES,
         NULL, AUTHORIZATION_TYPE_BEARER, NULL);
 
-    freeConversation(conversation);
+    /* Note: Don't free the conversation here - we keep it for context */
 
     if (responses == NULL) {
+        set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
+        updateStatusBar(STRING_ERROR, redPen);
+        return RETURN_OK;
+    }
+
+    /* Handle shell tool calls if enabled */
+    if (!useCustomServer && configGetShellToolEnabled() && hasPendingToolCall()) {
+        STRPTR command = getPendingToolCommand();
+        STRPTR callId = getPendingToolCallId();
+        STRPTR responseId = getPendingResponseId();
+
+        /* Ask user for confirmation before executing the command */
+        UBYTE confirmMsg[4096];
+        snprintf(confirmMsg, sizeof(confirmMsg),
+                 "The AI wants to execute the following shell command:\n\n%s\n\nAllow this command to run?",
+                 command);
+        LONG confirmResult = MUI_Request(app, NULL,
+#ifdef __MORPHOS__
+                                  NULL,
+#else
+                                  MUIV_Requester_Image_Warning,
+#endif
+                                  "Shell Command Confirmation",
+                                  "*_Allow|_Deny", confirmMsg, TAG_DONE);
+        
+        if (confirmResult != 1) {
+            /* User denied - clear pending tool call and return error */
+            clearPendingToolCall();
+            for (UWORD i = 0; responses[i] != NULL; i++) {
+                json_object_put(responses[i]);
+            }
+            FreeVec(responses);
+            set(app, MUIA_Application_RexxString, "Shell command denied by user");
+            updateStatusBar(STRING_READY, greenPen);
+            return RETURN_OK;
+        }
+
+        /* User allowed - proceed with execution */
+
+        /* Execute the shell command */
+        LONG exitCode = 0;
+        STRPTR output = executeShellCommand(command, &exitCode);
+
+        /* Build output string with exit code */
+        UBYTE toolOutput[8192];
+        snprintf(toolOutput, sizeof(toolOutput),
+                 "Exit code: %ld\nOutput:\n%s", exitCode,
+                 output != NULL ? output : "(No output)");
+
+        /* Send the tool result back to the API */
+        struct json_object *toolResponse = postToolResultToOpenAI(
+            responseId, callId, toolOutput,
+            NULL, 0, TRUE,
+            apiKey, useProxy, proxyHost, proxyPortValue,
+            proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword);
+
+        /* Clear the pending tool call */
+        clearPendingToolCall();
+
+        if (output != NULL) {
+            FreeVec(output);
+        }
+
+        /* Free the original responses */
+        for (UWORD i = 0; responses[i] != NULL; i++) {
+            json_object_put(responses[i]);
+        }
+        FreeVec(responses);
+
+        if (toolResponse != NULL) {
+            /* Check for errors */
+            struct json_object *error;
+            if (json_object_object_get_ex(toolResponse, "error", &error) &&
+                !json_object_is_type(error, json_type_null)) {
+                struct json_object *message = json_object_object_get(error, "message");
+                UTF8 *messageString = json_object_get_string(message);
+                STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
+                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)messageString,
+                    CSA_MapForeignChars, TRUE, TAG_DONE);
+                set(app, MUIA_Application_RexxString, formattedMessageSystemEncoded);
+                CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+                json_object_put(toolResponse);
+                updateStatusBar(STRING_ERROR, redPen);
+                return RETURN_OK;
+            }
+
+            /* Get the response text */
+            UTF8 *toolContentString = getMessageContentFromJson(
+                toolResponse, FALSE, TRUE, API_ENDPOINT_RESPONSES);
+            if (toolContentString != NULL && strlen(toolContentString) > 0) {
+                /* Add response to conversation for context */
+                addTextToConversation(conversation, toolContentString, "assistant");
+                saveDaemonConversation();
+
+                STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
+                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                    (Tag)toolContentString, CSA_MapForeignChars, TRUE, TAG_DONE);
+                set(app, MUIA_Application_RexxString, formattedMessageSystemEncoded);
+                CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+                json_object_put(toolResponse);
+                updateStatusBar(STRING_READY, greenPen);
+                return RETURN_OK;
+            }
+            json_object_put(toolResponse);
+        }
+
         set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
         updateStatusBar(STRING_ERROR, redPen);
         return RETURN_OK;
@@ -138,6 +420,10 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             FreeVec(responses);
             return RETURN_OK;
         }
+
+        /* Add response to conversation for context */
+        addTextToConversation(conversation, contentString, "assistant");
+        saveDaemonConversation();
 
         STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
             CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)contentString,
@@ -454,6 +740,13 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
 }
 MakeHook(SpeakTextHook, SpeakTextFunc);
 
+HOOKPROTONHNO(NewChatFunc, APTR, ULONG *arg) {
+    clearDaemonConversation();
+    set(app, MUIA_Application_RexxString, "Conversation history cleared");
+    return RETURN_OK;
+}
+MakeHook(NewChatHook, NewChatFunc);
+
 HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
     set(app, MUIA_Application_RexxString,
         "SENDMESSAGE "
@@ -469,6 +762,7 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
         "H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/"
         "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
         "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K\n"
+        "NEWCHAT - Clear conversation history and start a new chat\n"
         "LISTAUDIOFORMATS\n"
         "LISTCHATMODELS\n"
         "LISTIMAGEMODELS\n"
@@ -499,6 +793,7 @@ struct MUI_Command arexxList[] = {
      7,
      &SpeakTextHook,
      {0, 0, 0, 0, 0}},
+    {"NEWCHAT", NULL, NULL, &NewChatHook, {0, 0, 0, 0, 0}},
     {"LISTAUDIOFORMATS", NULL, NULL, &ListAudioFormatsHook, {0, 0, 0, 0, 0}},
     {"LISTSERVERMODELS",
      "H=HOST/K,PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,"

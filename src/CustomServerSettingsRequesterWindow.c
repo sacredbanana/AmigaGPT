@@ -239,7 +239,8 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
                            json_object_new_int(apiEndpoint));
 
     STRPTR apiEndpointUrl;
-    get(customServerApiEndpointUrlString, MUIA_String_Contents, &apiEndpointUrl);
+    get(customServerApiEndpointUrlString, MUIA_String_Contents,
+        &apiEndpointUrl);
     json_object_object_add(
         profile, "apiEndpointUrl",
         json_object_new_string(apiEndpointUrl ? apiEndpointUrl : ""));
@@ -281,7 +282,8 @@ MakeHook(DisplayProfileLI_TextHook, DisplayProfileLI_TextFunc);
 
 /* Hook for profile selection */
 HOOKPROTONHNONP(ProfileSelectedFunc, void) {
-    if (customServerProfileList == NULL || customServerProfileNameString == NULL)
+    if (customServerProfileList == NULL ||
+        customServerProfileNameString == NULL)
         return;
 
     LONG active = MUIV_NList_Active_Off;
@@ -373,7 +375,8 @@ MakeHook(SaveProfileHook, SaveProfileFunc);
 
 /* Hook for Delete Profile button */
 HOOKPROTONHNONP(DeleteProfileFunc, void) {
-    if (customServerProfileList == NULL || customServerProfileNameString == NULL)
+    if (customServerProfileList == NULL ||
+        customServerProfileNameString == NULL)
         return;
 
     LONG active = MUIV_NList_Active_Off;

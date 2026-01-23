@@ -1465,7 +1465,7 @@ msgstr "Profiles"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_PROFILE (276//)"
 msgid "Save Profile"
-msgstr "Save Profile"
+msgstr "Profili Kaydet"
 
 #: src/CustomServerSettingsRequesterWindow.c
 #, fuzzy
@@ -1476,12 +1476,12 @@ msgstr "Sohbeti Sil"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_PROFILE_NAME (278//)"
 msgid "Profile Name"
-msgstr "Profile Name"
+msgstr "Profil Adı"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_NEW_PROFILE (279//)"
 msgid "(New Profile)"
-msgstr "(New Profile)"
+msgstr "(Yeni Profil)"
 
 #: src/CustomServerSettingsRequesterWindow.c
 #, fuzzy
@@ -1489,3 +1489,23 @@ msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
 msgid "Please enter a profile name"
 msgstr "Lütfen önce bir ana bilgisayar adresi girin"
 
+#: src/menu.c
+msgctxt "STRING_MENU_OPENAI_SHELL_TOOL (281//)"
+msgid "Shell Tool"
+msgstr "Shell Aracı"
+
+#: src/openai.c
+msgctxt "STRING_EXECUTING_COMMAND (282//)"
+msgid "Executing command..."
+msgstr "Komut yürütülüyor..."
+
+#: src/openai.c
+msgctxt "STRING_SHELL_TOOL_OUTPUT (283//)"
+msgid "Shell Output"
+msgstr "Shell Çıktısı"
+
+#: src/openai.c
+#, fuzzy
+msgctxt "STRING_SHELL_TOOL_ERROR (284//)"
+msgid "Shell Error"
+msgstr "Shell Hatası"

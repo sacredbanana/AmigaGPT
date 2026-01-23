@@ -6,4 +6,4 @@
     APP_VERSION_MAJOR APP_VERSION_MINOR "." APP_VERSION_PATCH
 #define APP_VERSION                                                            \
     APP_VERSION_MAJOR "." APP_VERSION_MINOR "." APP_VERSION_PATCH
-#define BUILD_NUMBER "10101"
+#define BUILD_NUMBER "11634"

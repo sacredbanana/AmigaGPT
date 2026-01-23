@@ -36,6 +36,9 @@ AmigaGPT uses the o1, o3, o4, GPT-5, GPT-4o, GPT-4 and GPT-3.5 models developed 
 
 AI Image Generation with DALL-E 2, DALL-E 3 and GPT-Image-1
 
+- @{b}Shell Tool@{ub}
+Let ChatGPT execute AmigaDOS commands on your system. Ask it to list files, create directories, show file contents, and more. All commands require your approval before execution.
+
 - @{b}Seamless integration with AmigaOS and MorphOS@{ub}
 AmigaGPT takes full advantage of the MUI framework to provide a smooth, native user experience that is responsive and easy to use.
 
@@ -192,6 +195,7 @@ Click on a topic to learn about it:
 @{"Entering your OpenAI API key " link apikey}
 @{"Chatting with ChatGPT " link chatting}
 @{"Generating images " link images}
+@{"Shell Tool " link shelltool}
 @{"Conversation list " link conlist}
 @{"Edit menu " link editmenu}
 @{"Changing the appearance of the UI and chat " link appearance}
@@ -239,6 +243,50 @@ To the left of the chat box is a conversation list which you can use to go to an
 @{b}Generating Images@{ub}
 
 To generate images, simply select your desired image generation model from the "OpenAI" menu then type your prompt in the text box then hit the "Create Image" button. When it has been downloaded to your Amiga, you are then able to open the image to your desired scale, or save a copy of the file to a new location on your Amiga. Do note however that AmigaGPT will automatially save all your generated images until you delete them. This is just in case you would like to create a copy elsewhere.
+
+@endnode
+
+@node shelltool "Shell Tool"
+@{b}Shell Tool@{ub}
+
+The Shell Tool is a powerful feature that allows ChatGPT to execute AmigaDOS commands directly on your Amiga. This enables the AI to help you with tasks like listing files, creating directories, managing files, and more.
+
+@{b}Enabling the Shell Tool@{ub}
+
+To enable the Shell Tool, check "Shell Tool" in the "AI" menu. Once enabled, you can ask ChatGPT to perform tasks that require shell access.
+
+@{b}Example prompts@{ub}
+
+- "List all files in RAM:"
+- "Create a new directory called Test in Work:"
+- "Show me the contents of S:Startup-Sequence"
+- "What version of Workbench am I running?"
+- "How much free memory do I have?"
+
+@{b}Security@{ub}
+
+For security, AmigaGPT will always show you the command the AI wants to execute and ask for your permission before running it. You can Allow or Deny each command. This ensures you always have control over what runs on your system.
+
+@{b}AmigaDOS Commands@{ub}
+
+The AI is automatically instructed about AmigaDOS command syntax, so it will use the correct commands for AmigaOS:
+
+- @{b}list@{ub} or @{b}dir@{ub} instead of ls
+- @{b}type@{ub} instead of cat
+- @{b}makedir@{ub} instead of mkdir
+- @{b}delete@{ub} instead of rm
+- @{b}copy@{ub} instead of cp
+- @{b}rename@{ub} instead of mv
+
+It also understands AmigaOS path conventions (e.g. Work:Projects/myfile).
+
+@{b}ARexx Support@{ub}
+
+The Shell Tool also works via ARexx when using the SENDMESSAGE command with either AmigaGPT or the AmigaGPTD daemon.
+
+@{b}Warning@{ub}
+
+Use this feature responsibly. While you have control over which commands are executed, be cautious about allowing commands that modify or delete files.
 
 @endnode
 
@@ -321,6 +369,12 @@ Note: MorphOS does not yet have a complete ARexx implementation. You must instal
 
 AmigaGPT also comes with a companion daemon app called AmigaGPTD. You may run this in the shell. The daemon will respond to the same ARexx commands as the main app so you do not need to launch the main AmigaGPT app.
 
+@{b}Daemon Conversation History@{ub}
+
+The daemon maintains conversation history in T: so it remembers context across multiple ARexx calls until the next reboot. This allows for follow-up questions and multi-turn conversations. For example, you can ask "What is the capital of France?" and then follow up with "What is its population?" and the AI will understand you're asking about Paris.
+
+Use the NEWCHAT ARexx command to clear the conversation history and start fresh.
+
 Please note: AmigaGPT and AmigaGPTD listen on 2 differnt ARexx ports so adjust your scrips accordingly. AmigaGPT listens on @{b}AMIGAGPT@{ub} and AmigaGPTD listens on @{b}AMIGAGPTD@{ub}.
 
 The following ARexx commands are available:
@@ -356,6 +410,13 @@ SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,F=FORMAT/K,
 - O=OUTPUT - Optional, file to write audio data to instead of playing it
 - F=FORMAT - Optional, format of output file (use LISTAUDIOFORMATS to see available formats). Default is MP3 and ignored if OUTPUT is not provided
 - P=PROMPT - Required, the text to speak
+
+@{b}NEWCHAT@{ub}
+Clears the daemon's conversation history and starts a new chat. This is useful when you want to start a fresh conversation without context from previous messages.
+
+NEWCHAT
+
+This command takes no parameters and returns "Conversation history cleared" on success.
 
 @{b}List Commands@{ub}
 
@@ -840,6 +901,16 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 
 @node changelog "Changelog"
 @{b}Changelog@{ub}
+
+@{b}2.18.0 (2026-01-24)@{ub}
+
+- New powerful Shell Tool option to ask ChatGPT to run any command on your system in the shell
+- The daemon (AmigaGPTD) now maintains conversation history in T: for context across ARexx calls until reboot
+- New NEWCHAT ARexx command to clear daemon conversation history
+- Support for Anthropic Claude and xAI Grok
+- Easily add new custom server profiles with easy templates for Google Gemini, LM Studio, Anthropic Claude and xAI Grok
+- Fetch list of all models from the server in the custom server options
+- All config options are now immediately saved to disk
 
 @{b}2.17.0 (2025-12-22)@{ub}
 

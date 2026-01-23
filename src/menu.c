@@ -452,6 +452,10 @@ void createMenu() {
     MENU_ITEM_AI_OPENAI_WEB_SEARCH_ENABLED, MUIA_Menuitem_CopyStrings, FALSE,
     MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_OPENAI_SHELL_TOOL, MUIA_UserData,
+    MENU_ITEM_AI_OPENAI_SHELL_TOOL_ENABLED, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_OPENAI_CHAT_MODEL, MUIA_UserData,
     MENU_ITEM_AI_OPENAI_CHAT_MODEL, MUIA_Menuitem_CopyStrings, FALSE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
@@ -753,6 +757,14 @@ void addMenuActions() {
     DoMethod(openAIWebSearchEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, configObj, 3, MUIM_Set,
              MUIA_AmigaGPTConfig_WebSearchEnabled, MUIV_TriggerValue);
+
+    Object openAIShellToolEnabledMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_SHELL_TOOL_ENABLED);
+    set(openAIShellToolEnabledMenuItem, MUIA_Menuitem_Checked,
+        configGetShellToolEnabled());
+    DoMethod(openAIShellToolEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             MUIV_EveryTime, configObj, 3, MUIM_Set,
+             MUIA_AmigaGPTConfig_ShellToolEnabled, MUIV_TriggerValue);
 
     Object customServerEnabledMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_AI_CUSTOM_SERVER_ENABLED);

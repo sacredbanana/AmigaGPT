@@ -1500,7 +1500,7 @@ msgstr "Profiles"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_PROFILE (276//)"
 msgid "Save Profile"
-msgstr "Save Profile"
+msgstr "Αποθήκευση προφίλ"
 
 #: src/CustomServerSettingsRequesterWindow.c
 #, fuzzy
@@ -1511,12 +1511,12 @@ msgstr "Διαγραφή συνομιλίας"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_PROFILE_NAME (278//)"
 msgid "Profile Name"
-msgstr "Profile Name"
+msgstr "Όνομα προφίλ"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_NEW_PROFILE (279//)"
 msgid "(New Profile)"
-msgstr "(New Profile)"
+msgstr "(Νέο προφίλ)"
 
 #: src/CustomServerSettingsRequesterWindow.c
 #, fuzzy
@@ -1524,3 +1524,23 @@ msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
 msgid "Please enter a profile name"
 msgstr "Εισάγετε πρώτα μια διεύθυνση κεντρικού υπολογιστή"
 
+#: src/menu.c
+msgctxt "STRING_MENU_OPENAI_SHELL_TOOL (281//)"
+msgid "Shell Tool"
+msgstr "Εργαλείο Shell"
+
+#: src/openai.c
+msgctxt "STRING_EXECUTING_COMMAND (282//)"
+msgid "Executing command..."
+msgstr "Εκτέλεση εντολής..."
+
+#: src/openai.c
+msgctxt "STRING_SHELL_TOOL_OUTPUT (283//)"
+msgid "Shell Output"
+msgstr "Έξοδος Shell"
+
+#: src/openai.c
+#, fuzzy
+msgctxt "STRING_SHELL_TOOL_ERROR (284//)"
+msgid "Shell Error"
+msgstr "Σφάλμα Shell"

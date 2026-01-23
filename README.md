@@ -27,6 +27,10 @@ You can customise the look and feel of the application, including the ability to
 
 **AmigaGPT** has support for OpenAI's high quality 16 bit voices. For AmigaOS 3, **AmigaGPT** can use the Amiga's speech synthesis capability to read the generated text aloud with support for switching between the old Workbench 1.x **v34** and the Workbench 2.0 **v37** speech synthesisers. For AmigaOS 4.1, it has support for `flite.device`.
 
+- ### Shell Tool
+
+**AmigaGPT** can let ChatGPT execute AmigaDOS commands directly on your Amiga. Enable it from the **AI** menu and ask the AI to list files, create directories, show file contents, and more. All commands require your approval before execution for security.
+
 - ### ARexx integration
 
 **AmigaGPT** includes ARexx support, allowing you to control the application programmatically from external scripts or other applications. You can send prompts, generate images, and utilize speech synthesis through simple ARexx commands.
@@ -169,6 +173,8 @@ Note: MorphOS does not yet have a complete ARexx implementation. You must instal
 
 AmigaGPT also comes with a companion daemon app called AmigaGPTD. You may run this in the shell. The daemon will respond to the same ARexx commands as the main app so you do not need to launch the main AmigaGPT app.
 
+The daemon maintains conversation history in T: so it remembers context across multiple ARexx calls until the next reboot. This allows for follow-up questions and multi-turn conversations. Use the `NEWCHAT` ARexx command to clear the conversation history and start fresh.
+
 Please note: AmigaGPT and AmigaGPTD listen on 2 differnt ARexx ports so adjust your scrips accordingly. AmigaGPT listens on **AMIGAGPT** and AmigaGPTD listens on **AMIGAGPTD**.
 
 The following ARexx commands are available:
@@ -207,6 +213,13 @@ SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,F=FORMAT/K,
 - `O=OUTPUT` - Optional, file to write audio data to instead of playing it
 - `F=FORMAT` - Optional, format of output file (use LISTAUDIOFORMATS to see available formats). Default is MP3 and ignored if OUTPUT is not provided
 - `P=PROMPT` - Required, the text to speak
+
+#### NEWCHAT
+Clears the daemon's conversation history and starts a new chat. This is useful when you want to start a fresh conversation without context from previous messages.
+```
+NEWCHAT
+```
+This command takes no parameters and returns "Conversation history cleared" on success.
 
 #### List Commands
 #### LISTSERVERMODELS

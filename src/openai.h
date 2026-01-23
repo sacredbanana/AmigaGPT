@@ -410,6 +410,91 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
                     CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 
 /**
+ * Check if there is a pending tool call captured during streaming
+ * @return TRUE if there is a pending tool call
+ **/
+BOOL hasPendingToolCall(void);
+
+/**
+ * Get the pending tool call command
+ * @return the command string (do not free)
+ **/
+STRPTR getPendingToolCommand(void);
+
+/**
+ * Get the pending tool call ID
+ * @return the call ID string (do not free)
+ **/
+STRPTR getPendingToolCallId(void);
+
+/**
+ * Get the pending response ID
+ * @return the response ID string (do not free)
+ **/
+STRPTR getPendingResponseId(void);
+
+/**
+ * Clear the pending tool call after processing
+ **/
+void clearPendingToolCall(void);
+
+/**
+ * Check if a response contains a shell tool function call
+ * @param response the JSON response from the API
+ * @return TRUE if the response contains a shell function call
+ **/
+BOOL hasShellToolCall(struct json_object *response);
+
+/**
+ * Get the call ID from a shell tool function call response
+ * @param response the JSON response from the API
+ * @return the call ID string (do not free) or NULL
+ **/
+STRPTR getShellToolCallId(struct json_object *response);
+
+/**
+ * Get the command from a shell tool function call response
+ * @param response the JSON response from the API
+ * @return the command string (must be freed with FreeVec) or NULL
+ **/
+STRPTR getShellToolCommand(struct json_object *response);
+
+/**
+ * Execute a shell command and capture its output
+ * @param command the command to execute
+ * @param exitCode pointer to store the exit code
+ * @return a pointer to a new string containing the command output -- Free it
+ * with FreeVec() when done
+ **/
+STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode);
+
+/**
+ * Post a tool result (shell command output) back to the API
+ * This continues the conversation after a tool call
+ * @param previousResponseId the ID from the previous response
+ * @param callId the call_id from the function call
+ * @param output the output from the shell command
+ * @param host the host to use (or NULL for OpenAI default)
+ * @param port the port to use
+ * @param useSSL whether to use SSL
+ * @param openAiApiKey the API key
+ * @param useProxy whether to use a proxy
+ * @param proxyHost the proxy host
+ * @param proxyPort the proxy port
+ * @param proxyUsesSSL whether the proxy uses SSL
+ * @param proxyRequiresAuth whether the proxy requires auth
+ * @param proxyUsername the proxy username
+ * @param proxyPassword the proxy password
+ * @return a pointer to a new json_object containing the response or NULL
+ **/
+struct json_object *postToolResultToOpenAI(
+    CONST_STRPTR previousResponseId, CONST_STRPTR callId, CONST_STRPTR output,
+    STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR openAiApiKey,
+    BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword);
+
+/**
  * Post a text to speech request to the ElevenLabs API
  * @param text the text to be spoken
  * @param voiceId the ElevenLabs voice ID

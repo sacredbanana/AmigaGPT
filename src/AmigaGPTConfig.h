@@ -34,6 +34,7 @@
 #define MUIA_AmigaGPTConfig_UserTextAlignment (AmigaGPTConfig_Dummy + 0x10)
 #define MUIA_AmigaGPTConfig_AssistantTextAlignment (AmigaGPTConfig_Dummy + 0x11)
 #define MUIA_AmigaGPTConfig_WebSearchEnabled (AmigaGPTConfig_Dummy + 0x12)
+#define MUIA_AmigaGPTConfig_ShellToolEnabled (AmigaGPTConfig_Dummy + 0x18)
 #define MUIA_AmigaGPTConfig_UseCustomServer (AmigaGPTConfig_Dummy + 0x13)
 #define MUIA_AmigaGPTConfig_CustomPort (AmigaGPTConfig_Dummy + 0x14)
 #define MUIA_AmigaGPTConfig_CustomUseSSL (AmigaGPTConfig_Dummy + 0x15)
@@ -209,6 +210,10 @@ void configSetAssistantTextAlignment(LONG value);
 /* Web search */
 LONG configGetWebSearchEnabled(void);
 void configSetWebSearchEnabled(LONG value);
+
+/* Shell tool */
+LONG configGetShellToolEnabled(void);
+void configSetShellToolEnabled(LONG value);
 
 /* Custom server settings */
 ULONG configGetUseCustomServer(void);

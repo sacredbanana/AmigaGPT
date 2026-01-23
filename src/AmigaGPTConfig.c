@@ -45,6 +45,7 @@ struct AmigaGPTConfigData {
     LONG userTextAlignment;
     LONG assistantTextAlignment;
     LONG webSearchEnabled;
+    LONG shellToolEnabled;
     ULONG useCustomServer;
     ULONG customPort;
     ULONG customUseSSL;
@@ -137,6 +138,7 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->userTextAlignment = ALIGN_RIGHT;
     data->assistantTextAlignment = ALIGN_LEFT;
     data->webSearchEnabled = TRUE;
+    data->shellToolEnabled = FALSE;
     data->useCustomServer = FALSE;
     data->customPort = 80;
     data->customUseSSL = FALSE;
@@ -321,6 +323,9 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_WebSearchEnabled:
         *store = data->webSearchEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_ShellToolEnabled:
+        *store = data->shellToolEnabled;
         return TRUE;
     case MUIA_AmigaGPTConfig_UseCustomServer:
         *store = data->useCustomServer;
@@ -539,6 +544,12 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                 changed = TRUE;
             }
             break;
+        case MUIA_AmigaGPTConfig_ShellToolEnabled:
+            if (data->shellToolEnabled != (LONG)ti_Data) {
+                data->shellToolEnabled = (LONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
         case MUIA_AmigaGPTConfig_UseCustomServer:
             if (data->useCustomServer != (ULONG)ti_Data) {
                 data->useCustomServer = (ULONG)ti_Data;
@@ -622,7 +633,8 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                 changed = TRUE;
             break;
         case MUIA_AmigaGPTConfig_CustomServerProfiles:
-            if (setStringAttr(&data->customServerProfiles, (CONST_STRPTR)ti_Data))
+            if (setStringAttr(&data->customServerProfiles,
+                              (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
         case MUIA_AmigaGPTConfig_ActiveProfileName:
@@ -738,6 +750,9 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
         configJsonObject, "webSearchEnabled",
         json_object_new_boolean((BOOL)data->webSearchEnabled));
     json_object_object_add(
+        configJsonObject, "shellToolEnabled",
+        json_object_new_boolean((BOOL)data->shellToolEnabled));
+    json_object_object_add(
         configJsonObject, "useCustomServer",
         json_object_new_boolean((BOOL)data->useCustomServer));
     json_object_object_add(configJsonObject, "customPort",
@@ -814,10 +829,11 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
                            data->customHeaders != NULL
                                ? json_object_new_string(data->customHeaders)
                                : NULL);
-    json_object_object_add(configJsonObject, "customServerProfiles",
-                           data->customServerProfiles != NULL
-                               ? json_object_new_string(data->customServerProfiles)
-                               : NULL);
+    json_object_object_add(
+        configJsonObject, "customServerProfiles",
+        data->customServerProfiles != NULL
+            ? json_object_new_string(data->customServerProfiles)
+            : NULL);
     json_object_object_add(configJsonObject, "activeProfileName",
                            data->activeProfileName != NULL
                                ? json_object_new_string(data->activeProfileName)
@@ -1011,6 +1027,10 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     if (json_object_object_get_ex(configJsonObject, "webSearchEnabled",
                                   &valueObj))
         data->webSearchEnabled = (ULONG)json_object_get_boolean(valueObj);
+
+    if (json_object_object_get_ex(configJsonObject, "shellToolEnabled",
+                                  &valueObj))
+        data->shellToolEnabled = (ULONG)json_object_get_boolean(valueObj);
 
     if (json_object_object_get_ex(configJsonObject, "useCustomServer",
                                   &valueObj))
@@ -1651,6 +1671,18 @@ void configSetAssistantTextAlignment(LONG value) {
 void configSetWebSearchEnabled(LONG value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_WebSearchEnabled, value);
+}
+
+LONG configGetShellToolEnabled(void) {
+    LONG val = FALSE;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_ShellToolEnabled, &val);
+    return val;
+}
+
+void configSetShellToolEnabled(LONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_ShellToolEnabled, value);
 }
 
 void configSetUseCustomServer(ULONG value) {
