@@ -1480,3 +1480,35 @@ msgstr "Пользовательский Сервер"
 msgctxt "STRING_MENU_TEMPLATE_XAI_GROK (274//)"
 msgid "xAI Grok"
 msgstr "xAI Grok"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_PROFILES (275//)"
+msgid "Profiles"
+msgstr "Profiles"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_SAVE_PROFILE (276//)"
+msgid "Save Profile"
+msgstr "Save Profile"
+
+#: src/CustomServerSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_DELETE_PROFILE (277//)"
+msgid "Delete"
+msgstr "Удалить чат"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_PROFILE_NAME (278//)"
+msgid "Profile Name"
+msgstr "Profile Name"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_NEW_PROFILE (279//)"
+msgid "(New Profile)"
+msgstr "(New Profile)"
+
+#: src/CustomServerSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
+msgid "Please enter a profile name"
+msgstr "Сначала введите адрес хоста"

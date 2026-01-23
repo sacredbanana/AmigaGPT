@@ -61,6 +61,8 @@
 #define MUIA_AmigaGPTConfig_CustomAuthorizationType                            \
     (AmigaGPTConfig_Dummy + 0x30)
 #define MUIA_AmigaGPTConfig_CustomHeaders (AmigaGPTConfig_Dummy + 0x31)
+#define MUIA_AmigaGPTConfig_CustomServerProfiles (AmigaGPTConfig_Dummy + 0x32)
+#define MUIA_AmigaGPTConfig_ActiveProfileName (AmigaGPTConfig_Dummy + 0x33)
 
 /* Version tracking attributes (read-only, for internal use) */
 #define MUIA_AmigaGPTConfig_ChatModelSetVersion (AmigaGPTConfig_Dummy + 0x40)
@@ -229,6 +231,10 @@ AuthorizationType configGetCustomAuthorizationType(void);
 void configSetCustomAuthorizationType(AuthorizationType value);
 STRPTR configGetCustomHeaders(void);
 void configSetCustomHeaders(CONST_STRPTR value);
+STRPTR configGetCustomServerProfiles(void);
+void configSetCustomServerProfiles(CONST_STRPTR value);
+STRPTR configGetActiveProfileName(void);
+void configSetActiveProfileName(CONST_STRPTR value);
 
 /* ElevenLabs settings */
 STRPTR configGetElevenLabsAPIKey(void);

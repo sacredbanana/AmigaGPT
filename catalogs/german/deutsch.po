@@ -1468,3 +1468,68 @@ msgstr "Modelle konnten nicht vom Server abgerufen werden"
 msgctxt "STRING_ERROR_NO_HOST (267//)"
 msgid "Please enter a host address first"
 msgstr "Bitte geben Sie zuerst eine Hostadresse ein"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_AUTHORIZATION_TYPE (268//)"
+msgid "Authorization"
+msgstr "Autorisierung"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_AUTHORIZATION_NONE (269//)"
+msgid "None"
+msgstr "Keine"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_AUTHORIZATION_BEARER (270//)"
+msgid "Bearer Token"
+msgstr "Bearer-Token"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_AUTHORIZATION_X_API_KEY (271//)"
+msgid "x-api-key"
+msgstr "x-api-key"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_ANTHROPIC_CLAUDE (272//)"
+msgid "Anthropic Claude"
+msgstr "Anthropic Claude"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_CUSTOM_HEADERS (273//)"
+msgid "Custom Headers"
+msgstr "Benutzerdefinierte Header"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_XAI_GROK (274//)"
+msgid "xAI Grok"
+msgstr "xAI Grok"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_PROFILES (275//)"
+msgid "Profiles"
+msgstr "Profile"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_SAVE_PROFILE (276//)"
+msgid "Save Profile"
+msgstr "Profil speichern"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_DELETE_PROFILE (277//)"
+msgid "Delete"
+msgstr "Löschen"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_PROFILE_NAME (278//)"
+msgid "Profile Name"
+msgstr "Profilname"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_NEW_PROFILE (279//)"
+msgid "(New Profile)"
+msgstr "(Neues Profil)"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
+msgid "Please enter a profile name"
+msgstr "Bitte geben Sie einen Profilnamen ein"

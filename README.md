@@ -119,6 +119,34 @@ You can also chat to AmigaGPT within the Shell as long as either AmigaGPT or the
 
 To generate images, simply select your desired image generation model from the "**OpenAI**" menu then type your prompt in the text box then hit the "**Create Image**" button. When it has been downloaded to your Amiga, you are then able to open the image to your desired scale, or save a copy of the file to a new location on your Amiga. Do note however that AmigaGPT will automatially save all your generated images until you delete them. This is just in case you would like to create a copy elsewhere.
 
+### Custom Chat Servers
+
+AmigaGPT can connect to alternative LLM servers that are compatible with the OpenAI API. This allows you to use local AI models or other cloud providers.
+
+To configure a custom server, go to the "**OpenAI**" menu and select "**Custom Server Settings**". The settings window has two panels:
+
+**Profiles Panel (left)**: Save and manage multiple server configurations. Select a profile to load its settings, or create new profiles by entering a name and clicking "Save Profile".
+
+**Settings Panel (right)**: Configure the server connection:
+- **Template**: Quick-start presets for popular services
+- **Host**: Server address (e.g., `localhost` or `api.example.com`)
+- **Port**: Connection port (typically 443 for HTTPS, 80 for HTTP)
+- **Encryption**: Enable SSL/TLS for secure connections
+- **Authorization**: Authentication method (None, Bearer Token, or x-api-key)
+- **API Key**: Your authentication credentials
+- **Chat Model**: The model identifier to use
+- **API Endpoint**: The endpoint format (responses, chat/completions, or messages)
+- **API Endpoint URL**: Base path for the API (e.g., `v1`)
+- **Custom Headers**: Additional HTTP headers if required
+
+**Available Templates:**
+- **Google Gemini** - Google's Gemini AI (host: `generativelanguage.googleapis.com`, endpoint: `chat/completions`, URL: `v1beta/openai`)
+- **LM Studio** - Local LLM server (host: `localhost`, port: `1234`, no encryption)
+- **Anthropic Claude** - Anthropic's Claude AI (host: `api.anthropic.com`, endpoint: `messages`, requires `anthropic-version` header)
+- **xAI Grok** - xAI's Grok model (host: `api.x.ai`, endpoint: `chat/completions`)
+
+To use a custom server, enable it from the "**OpenAI**" menu by selecting "**Use Custom Chat Server**".
+
 ### General
 
 The "**Project**" menu includes an "**About**" option, which displays information about the program.

@@ -2,8 +2,9 @@
 
 ## 2.18.0 (2026-01-24)
 
-- Google Gemini and LM Studio are now available as templates in the custom server options window
-- List all available models on the custom server
+- Support for Anthropic Claude and xAI Grok
+- Easily add new custom server profiles with easy templates for Google Gemini, LM Studio, Anthropic Claude and xAI Grok
+- Fetch list of all models from the server in the custom server options
 - All config options are now immediately saved to disk
 
 ## 2.17.0 (2025-12-22)

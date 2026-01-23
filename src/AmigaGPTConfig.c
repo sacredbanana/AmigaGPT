@@ -72,6 +72,8 @@ struct AmigaGPTConfigData {
     STRPTR customChatModel;
     STRPTR customApiEndpointUrl;
     STRPTR customHeaders;
+    STRPTR customServerProfiles;
+    STRPTR activeProfileName;
     STRPTR elevenLabsAPIKey;
     STRPTR elevenLabsVoiceID;
     STRPTR elevenLabsVoiceName;
@@ -186,6 +188,8 @@ static void freeAllStrings(struct AmigaGPTConfigData *data) {
     freeString(&data->customChatModel);
     freeString(&data->customApiEndpointUrl);
     freeString(&data->customHeaders);
+    freeString(&data->customServerProfiles);
+    freeString(&data->activeProfileName);
     freeString(&data->elevenLabsAPIKey);
     freeString(&data->elevenLabsVoiceID);
     freeString(&data->elevenLabsVoiceName);
@@ -385,6 +389,12 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_CustomHeaders:
         *store = (ULONG)data->customHeaders;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_CustomServerProfiles:
+        *store = (ULONG)data->customServerProfiles;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_ActiveProfileName:
+        *store = (ULONG)data->activeProfileName;
         return TRUE;
     case MUIA_AmigaGPTConfig_CustomAuthorizationType:
         *store = (ULONG)data->customAuthorizationType;
@@ -611,6 +621,14 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
             if (setStringAttr(&data->customHeaders, (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
+        case MUIA_AmigaGPTConfig_CustomServerProfiles:
+            if (setStringAttr(&data->customServerProfiles, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_ActiveProfileName:
+            if (setStringAttr(&data->activeProfileName, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
         case MUIA_AmigaGPTConfig_CustomAuthorizationType:
             if (data->customAuthorizationType != (AuthorizationType)ti_Data) {
                 data->customAuthorizationType = (AuthorizationType)ti_Data;
@@ -795,6 +813,14 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
     json_object_object_add(configJsonObject, "customHeaders",
                            data->customHeaders != NULL
                                ? json_object_new_string(data->customHeaders)
+                               : NULL);
+    json_object_object_add(configJsonObject, "customServerProfiles",
+                           data->customServerProfiles != NULL
+                               ? json_object_new_string(data->customServerProfiles)
+                               : NULL);
+    json_object_object_add(configJsonObject, "activeProfileName",
+                           data->activeProfileName != NULL
+                               ? json_object_new_string(data->activeProfileName)
                                : NULL);
     json_object_object_add(configJsonObject, "elevenLabsAPIKey",
                            data->elevenLabsAPIKey != NULL
@@ -1071,6 +1097,10 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     readJsonString(configJsonObject, "customApiEndpointUrl",
                    &data->customApiEndpointUrl);
     readJsonString(configJsonObject, "customHeaders", &data->customHeaders);
+    readJsonString(configJsonObject, "customServerProfiles",
+                   &data->customServerProfiles);
+    readJsonString(configJsonObject, "activeProfileName",
+                   &data->activeProfileName);
     readJsonString(configJsonObject, "elevenLabsAPIKey",
                    &data->elevenLabsAPIKey);
     readJsonString(configJsonObject, "elevenLabsVoiceID",
@@ -1432,6 +1462,20 @@ STRPTR configGetCustomHeaders(void) {
     return val;
 }
 
+STRPTR configGetCustomServerProfiles(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomServerProfiles, &val);
+    return val;
+}
+
+STRPTR configGetActiveProfileName(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_ActiveProfileName, &val);
+    return val;
+}
+
 ImageFormat configGetImageFormat(void) {
     ImageFormat val = IMAGE_FORMAT_PNG;
     if (configObj)
@@ -1658,6 +1702,16 @@ void configSetCustomAuthorizationType(AuthorizationType value) {
 void configSetCustomHeaders(CONST_STRPTR value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_CustomHeaders, (ULONG)value);
+}
+
+void configSetCustomServerProfiles(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomServerProfiles, (ULONG)value);
+}
+
+void configSetActiveProfileName(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_ActiveProfileName, (ULONG)value);
 }
 
 void configSetElevenLabsAPIKey(CONST_STRPTR value) {

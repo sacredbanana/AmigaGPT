@@ -25,8 +25,13 @@ Object *customServerApiEndpointUrlString;
 Object *customServerCustomHeadersString;
 Object *customServerFullUrlPreviewString;
 Object *customServerSettingsRequesterWindowObject;
+Object *customServerProfileList;
+Object *customServerProfileNameString;
+Object *customServerSaveProfileButton;
+Object *customServerDeleteProfileButton;
 
 static struct json_object *customServerModelsJson = NULL;
+static struct json_object *profilesJson = NULL;
 
 /* Template definitions */
 enum {
@@ -39,6 +44,360 @@ enum {
 
 /* Forward declarations */
 static void populateModelList(void);
+static void populateProfileList(void);
+static void loadProfilesFromConfig(void);
+static void saveProfilesToConfig(void);
+
+/**
+ * Load profiles JSON from config
+ */
+static void loadProfilesFromConfig(void) {
+    if (profilesJson != NULL) {
+        json_object_put(profilesJson);
+        profilesJson = NULL;
+    }
+
+    STRPTR profilesStr = configGetCustomServerProfiles();
+    if (profilesStr != NULL && strlen(profilesStr) > 0) {
+        profilesJson = json_tokener_parse(profilesStr);
+        if (profilesJson == NULL ||
+            !json_object_is_type(profilesJson, json_type_array)) {
+            if (profilesJson != NULL) {
+                json_object_put(profilesJson);
+            }
+            profilesJson = json_object_new_array();
+        }
+    } else {
+        profilesJson = json_object_new_array();
+    }
+}
+
+/**
+ * Save profiles JSON to config
+ */
+static void saveProfilesToConfig(void) {
+    if (profilesJson != NULL) {
+        CONST_STRPTR jsonStr = json_object_to_json_string(profilesJson);
+        configSetCustomServerProfiles(jsonStr);
+    }
+}
+
+/**
+ * Populate the profile list from profilesJson
+ */
+static void populateProfileList(void) {
+    if (customServerProfileList == NULL)
+        return;
+
+    DoMethod(customServerProfileList, MUIM_NList_Clear);
+
+    /* Add "(New Profile)" entry first */
+    DoMethod(customServerProfileList, MUIM_NList_InsertSingle,
+             (ULONG)STRING_NEW_PROFILE, MUIV_NList_Insert_Bottom);
+
+    if (profilesJson != NULL &&
+        json_object_is_type(profilesJson, json_type_array)) {
+        int len = json_object_array_length(profilesJson);
+        for (int i = 0; i < len; i++) {
+            struct json_object *profile =
+                json_object_array_get_idx(profilesJson, i);
+            if (profile != NULL) {
+                struct json_object *nameObj =
+                    json_object_object_get(profile, "name");
+                if (nameObj != NULL) {
+                    CONST_STRPTR name = json_object_get_string(nameObj);
+                    if (name != NULL) {
+                        DoMethod(customServerProfileList,
+                                 MUIM_NList_InsertSingle, (ULONG)name,
+                                 MUIV_NList_Insert_Bottom);
+                    }
+                }
+            }
+        }
+    }
+
+    /* Select the active profile if any */
+    STRPTR activeProfile = configGetActiveProfileName();
+    if (activeProfile != NULL && strlen(activeProfile) > 0) {
+        if (customServerProfileNameString != NULL)
+            set(customServerProfileNameString, MUIA_String_Contents,
+                activeProfile);
+        /* Find and select it in the list */
+        if (profilesJson != NULL) {
+            int len = json_object_array_length(profilesJson);
+            for (int i = 0; i < len; i++) {
+                struct json_object *profile =
+                    json_object_array_get_idx(profilesJson, i);
+                struct json_object *nameObj =
+                    json_object_object_get(profile, "name");
+                if (nameObj != NULL) {
+                    CONST_STRPTR name = json_object_get_string(nameObj);
+                    if (name != NULL && strcmp(name, activeProfile) == 0) {
+                        set(customServerProfileList, MUIA_NList_Active, i + 1);
+                        break;
+                    }
+                }
+            }
+        }
+    } else {
+        set(customServerProfileList, MUIA_NList_Active, 0);
+    }
+}
+
+/**
+ * Load a profile's settings into the UI fields
+ */
+static void loadProfileIntoUI(struct json_object *profile) {
+    struct json_object *obj;
+
+    obj = json_object_object_get(profile, "host");
+    if (obj != NULL)
+        set(customServerHostString, MUIA_String_Contents,
+            json_object_get_string(obj));
+
+    obj = json_object_object_get(profile, "port");
+    if (obj != NULL)
+        set(customServerPortString, MUIA_String_Integer,
+            json_object_get_int(obj));
+
+    obj = json_object_object_get(profile, "useSSL");
+    if (obj != NULL)
+        set(customServerUsesSSLCycle, MUIA_Cycle_Active,
+            json_object_get_boolean(obj) ? 1 : 0);
+
+    obj = json_object_object_get(profile, "authorizationType");
+    if (obj != NULL)
+        set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
+            json_object_get_int(obj));
+
+    obj = json_object_object_get(profile, "apiKey");
+    if (obj != NULL)
+        set(customServerApiKeyString, MUIA_String_Contents,
+            json_object_get_string(obj));
+
+    obj = json_object_object_get(profile, "chatModel");
+    if (obj != NULL)
+        set(customServerChatModelString, MUIA_String_Contents,
+            json_object_get_string(obj));
+
+    obj = json_object_object_get(profile, "apiEndpoint");
+    if (obj != NULL)
+        set(customServerApiEndpointCycle, MUIA_Cycle_Active,
+            json_object_get_int(obj));
+
+    obj = json_object_object_get(profile, "apiEndpointUrl");
+    if (obj != NULL)
+        set(customServerApiEndpointUrlString, MUIA_String_Contents,
+            json_object_get_string(obj));
+
+    obj = json_object_object_get(profile, "customHeaders");
+    if (obj != NULL)
+        set(customServerCustomHeadersString, MUIA_String_Contents,
+            json_object_get_string(obj));
+}
+
+/**
+ * Create a profile JSON object from current UI values
+ */
+static struct json_object *createProfileFromUI(CONST_STRPTR name) {
+    struct json_object *profile = json_object_new_object();
+
+    json_object_object_add(profile, "name", json_object_new_string(name));
+
+    STRPTR host;
+    get(customServerHostString, MUIA_String_Contents, &host);
+    json_object_object_add(profile, "host",
+                           json_object_new_string(host ? host : ""));
+
+    LONG port;
+    get(customServerPortString, MUIA_String_Integer, &port);
+    json_object_object_add(profile, "port", json_object_new_int(port));
+
+    LONG useSSL;
+    get(customServerUsesSSLCycle, MUIA_Cycle_Active, &useSSL);
+    json_object_object_add(profile, "useSSL",
+                           json_object_new_boolean(useSSL == 1));
+
+    LONG authType;
+    get(customServerAuthorizationTypeCycle, MUIA_Cycle_Active, &authType);
+    json_object_object_add(profile, "authorizationType",
+                           json_object_new_int(authType));
+
+    STRPTR apiKey;
+    get(customServerApiKeyString, MUIA_String_Contents, &apiKey);
+    json_object_object_add(profile, "apiKey",
+                           json_object_new_string(apiKey ? apiKey : ""));
+
+    STRPTR chatModel;
+    get(customServerChatModelString, MUIA_String_Contents, &chatModel);
+    json_object_object_add(profile, "chatModel",
+                           json_object_new_string(chatModel ? chatModel : ""));
+
+    LONG apiEndpoint;
+    get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
+    json_object_object_add(profile, "apiEndpoint",
+                           json_object_new_int(apiEndpoint));
+
+    STRPTR apiEndpointUrl;
+    get(customServerApiEndpointUrlString, MUIA_String_Contents, &apiEndpointUrl);
+    json_object_object_add(
+        profile, "apiEndpointUrl",
+        json_object_new_string(apiEndpointUrl ? apiEndpointUrl : ""));
+
+    STRPTR customHeaders;
+    get(customServerCustomHeadersString, MUIA_String_Contents, &customHeaders);
+    json_object_object_add(
+        profile, "customHeaders",
+        json_object_new_string(customHeaders ? customHeaders : ""));
+
+    return profile;
+}
+
+/* NList hooks for profiles */
+HOOKPROTONHNO(ConstructProfileLI_TextFunc, APTR,
+              struct NList_ConstructMessage *ncm) {
+    STRPTR entry = (STRPTR)ncm->entry;
+    ULONG len = strlen(entry) + 1;
+    STRPTR copy = AllocVec(len, MEMF_ANY);
+    if (copy)
+        strcpy(copy, entry);
+    return copy;
+}
+MakeHook(ConstructProfileLI_TextHook, ConstructProfileLI_TextFunc);
+
+HOOKPROTONHNO(DestructProfileLI_TextFunc, void,
+              struct NList_DestructMessage *ndm) {
+    if (ndm->entry)
+        FreeVec(ndm->entry);
+}
+MakeHook(DestructProfileLI_TextHook, DestructProfileLI_TextFunc);
+
+HOOKPROTONHNO(DisplayProfileLI_TextFunc, void,
+              struct NList_DisplayMessage *ndm) {
+    STRPTR entry = (STRPTR)ndm->entry;
+    ndm->strings[0] = entry;
+}
+MakeHook(DisplayProfileLI_TextHook, DisplayProfileLI_TextFunc);
+
+/* Hook for profile selection */
+HOOKPROTONHNONP(ProfileSelectedFunc, void) {
+    if (customServerProfileList == NULL || customServerProfileNameString == NULL)
+        return;
+
+    LONG active = MUIV_NList_Active_Off;
+    get(customServerProfileList, MUIA_NList_Active, &active);
+
+    if (active == MUIV_NList_Active_Off || active == 0) {
+        /* "(New Profile)" selected or nothing - clear name */
+        set(customServerProfileNameString, MUIA_String_Contents, "");
+        return;
+    }
+
+    /* Load the selected profile (index - 1 because of "(New Profile)" entry) */
+    int profileIndex = active - 1;
+    if (profilesJson != NULL &&
+        json_object_is_type(profilesJson, json_type_array)) {
+        struct json_object *profile =
+            json_object_array_get_idx(profilesJson, profileIndex);
+        if (profile != NULL) {
+            struct json_object *nameObj =
+                json_object_object_get(profile, "name");
+            if (nameObj != NULL) {
+                set(customServerProfileNameString, MUIA_String_Contents,
+                    json_object_get_string(nameObj));
+            }
+            loadProfileIntoUI(profile);
+
+            /* Clear fetched models list since server changed */
+            if (customServerModelList != NULL) {
+                DoMethod(customServerModelList, MUIM_NList_Clear);
+            }
+            if (customServerModelsJson != NULL) {
+                json_object_put(customServerModelsJson);
+                customServerModelsJson = NULL;
+            }
+        }
+    }
+}
+MakeHook(ProfileSelectedHook, ProfileSelectedFunc);
+
+/* Hook for Save Profile button */
+HOOKPROTONHNONP(SaveProfileFunc, void) {
+    if (customServerProfileNameString == NULL)
+        return;
+
+    STRPTR profileName;
+    get(customServerProfileNameString, MUIA_String_Contents, &profileName);
+
+    if (profileName == NULL || strlen(profileName) == 0) {
+        displayError(STRING_ERROR_PROFILE_NAME_REQUIRED);
+        return;
+    }
+
+    /* Check if profile with this name already exists */
+    int existingIndex = -1;
+    if (profilesJson != NULL) {
+        int len = json_object_array_length(profilesJson);
+        for (int i = 0; i < len; i++) {
+            struct json_object *profile =
+                json_object_array_get_idx(profilesJson, i);
+            struct json_object *nameObj =
+                json_object_object_get(profile, "name");
+            if (nameObj != NULL) {
+                CONST_STRPTR name = json_object_get_string(nameObj);
+                if (name != NULL && strcmp(name, profileName) == 0) {
+                    existingIndex = i;
+                    break;
+                }
+            }
+        }
+    }
+
+    /* Create new profile from UI */
+    struct json_object *newProfile = createProfileFromUI(profileName);
+
+    if (existingIndex >= 0) {
+        /* Replace existing profile */
+        json_object_array_put_idx(profilesJson, existingIndex, newProfile);
+    } else {
+        /* Add new profile */
+        json_object_array_add(profilesJson, newProfile);
+    }
+
+    /* Save and refresh */
+    saveProfilesToConfig();
+    configSetActiveProfileName(profileName);
+    populateProfileList();
+}
+MakeHook(SaveProfileHook, SaveProfileFunc);
+
+/* Hook for Delete Profile button */
+HOOKPROTONHNONP(DeleteProfileFunc, void) {
+    if (customServerProfileList == NULL || customServerProfileNameString == NULL)
+        return;
+
+    LONG active = MUIV_NList_Active_Off;
+    get(customServerProfileList, MUIA_NList_Active, &active);
+
+    /* Can't delete "(New Profile)" entry */
+    if (active <= 0) {
+        return;
+    }
+
+    int profileIndex = active - 1;
+    if (profilesJson != NULL &&
+        json_object_is_type(profilesJson, json_type_array)) {
+        /* Remove from array */
+        json_object_array_del_idx(profilesJson, profileIndex, 1);
+
+        /* Save and refresh */
+        saveProfilesToConfig();
+        configSetActiveProfileName("");
+        set(customServerProfileNameString, MUIA_String_Contents, "");
+        populateProfileList();
+    }
+}
+MakeHook(DeleteProfileHook, DeleteProfileFunc);
 
 /* NList hooks for models */
 HOOKPROTONHNO(ConstructCustomModelLI_TextFunc, APTR,
@@ -236,6 +595,15 @@ HOOKPROTONHNONP(TemplateSelectedFunc, void) {
     /* Reset template cycle back to "None" after applying */
     if (template != TEMPLATE_NONE) {
         set(customServerTemplateCycle, MUIA_Cycle_Active, TEMPLATE_NONE);
+
+        /* Clear fetched models list since server changed */
+        if (customServerModelList != NULL) {
+            DoMethod(customServerModelList, MUIM_NList_Clear);
+        }
+        if (customServerModelsJson != NULL) {
+            json_object_put(customServerModelsJson);
+            customServerModelsJson = NULL;
+        }
     }
 }
 MakeHook(TemplateSelectedHook, TemplateSelectedFunc);
@@ -358,142 +726,172 @@ LONG createCustomServerSettingsRequesterWindow() {
         *customServerSettingsRequesterCancelButton;
     if ((customServerSettingsRequesterWindowObject = WindowObject,
         MUIA_Window_Title, STRING_MENU_CUSTOM_SERVER_SETTINGS,
-        MUIA_Window_Width, 400,
+        MUIA_Window_Width, 500,
         MUIA_Window_Height, 200,
         MUIA_Window_CloseGadget, FALSE,
-        WindowContents, VGroup,
+        WindowContents, HGroup,
+            /* Left panel - Profiles */
             Child, VGroup,
                 MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, STRING_MENU_TEMPLATE,
-                Child, customServerTemplateCycle = CycleObject,
-                    MUIA_CycleChain, TRUE,
-                    MUIA_Cycle_Entries, templateOptions,
-                    MUIA_Cycle_Active, TEMPLATE_NONE,
-                End,
-            End,
-            Child, VGroup,
-                MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, STRING_PROXY_HOST,
-                Child, customServerHostString = StringObject,
-                    MUIA_Frame, MUIV_Frame_String,
-                    MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, configGetCustomHost(),
-                End,
-            End,
-            Child, VGroup,
-                MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, STRING_PROXY_PORT,
-                Child, customServerPortString = StringObject,
-                    MUIA_Frame, MUIV_Frame_String,
-                    MUIA_CycleChain, TRUE,
-                    MUIA_String_Accept, "0123456789",
-                    MUIA_String_MaxLen, 5,
-                    MUIA_String_Integer, (LONG)configGetCustomPort(),
-                End,
-            End,
-            Child, VGroup,
-                MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, STRING_PROXY_ENCRYPTION,
-                Child, customServerUsesSSLCycle = CycleObject,
-                    MUIA_CycleChain, TRUE,
-                    MUIA_Cycle_Entries, sslOptions,
-                    MUIA_Cycle_Active, configGetCustomUseSSL() ? 1 : 0,
-                End,
-            End,
-            Child, VGroup,
-                MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, STRING_AUTHORIZATION_TYPE,
-                Child, customServerAuthorizationTypeCycle = CycleObject,
-                    MUIA_CycleChain, TRUE,
-                    MUIA_Cycle_Entries, authorizationTypeOptions,
-                    MUIA_Cycle_Active, configGetCustomAuthorizationType(),
-                End,
-            End,
-            Child, VGroup,
-                MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, STRING_MENU_OPENAI_API_KEY,
-                Child, customServerApiKeyString = StringObject,
-                    MUIA_Frame, MUIV_Frame_String,
-                    MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, configGetCustomApiKey(),
-                    MUIA_String_MaxLen, 256,
-                End,
-            End,
-            Child, VGroup,
-                MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, STRING_MENU_OPENAI_CHAT_MODEL,
-                Child, customServerChatModelString = StringObject,
-                    MUIA_Frame, MUIV_Frame_String,
-                    MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, configGetCustomChatModel() != NULL ? configGetCustomChatModel() : "gemini-2.0-flash",
-                End,
-                Child, HGroup,
-                    Child, customServerFetchModelsButton = MUI_MakeObject(
-                        MUIO_Button, STRING_FETCH_MODELS, MUIA_CycleChain, TRUE,
-                        MUIA_InputMode, MUIV_InputMode_RelVerify, TAG_DONE),
-                End,
+                MUIA_FrameTitle, STRING_PROFILES,
+                MUIA_FixWidth, 150,
                 Child, NListviewObject,
-                    MUIA_NListview_NList, customServerModelList = NListObject,
-                        MUIA_NList_ConstructHook2, &ConstructCustomModelLI_TextHook,
-                        MUIA_NList_DestructHook2, &DestructCustomModelLI_TextHook,
-                        MUIA_NList_DisplayHook2, &DisplayCustomModelLI_TextHook,
+                    MUIA_NListview_NList, customServerProfileList = NListObject,
+                        MUIA_NList_ConstructHook2, &ConstructProfileLI_TextHook,
+                        MUIA_NList_DestructHook2, &DestructProfileLI_TextHook,
+                        MUIA_NList_DisplayHook2, &DisplayProfileLI_TextHook,
                         MUIA_NList_Format, "",
                         MUIA_NList_Title, FALSE,
                         MUIA_NList_MinLineHeight, 16,
                     End,
                     MUIA_CycleChain, TRUE,
                     MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
-                    MUIA_FixHeight, 80,
                 End,
-            End,
-            Child, VGroup,
-                MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, STRING_MENU_OPENAI_API_ENDPOINT,
-                Child, customServerApiEndpointCycle = CycleObject,
-                    MUIA_CycleChain, TRUE,
-                    MUIA_Cycle_Entries, apiEndpointOptions,
-                    MUIA_Cycle_Active, configGetCustomApiEndpoint(),
-                End,
-            End,
-            Child, VGroup,
-                MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, STRING_MENU_OPENAI_API_ENDPOINT_URL,
-                Child, customServerApiEndpointUrlString = StringObject,
+                Child, customServerProfileNameString = StringObject,
                     MUIA_Frame, MUIV_Frame_String,
                     MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, configGetCustomApiEndpointUrl() != NULL ? configGetCustomApiEndpointUrl() : "v1",
+                    MUIA_String_MaxLen, 64,
                 End,
+                Child, customServerSaveProfileButton =
+                    MUI_MakeObject(MUIO_Button, STRING_SAVE_PROFILE),
+                Child, customServerDeleteProfileButton =
+                    MUI_MakeObject(MUIO_Button, STRING_DELETE_PROFILE),
             End,
+            /* Right panel - Settings */
             Child, VGroup,
-                MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, STRING_CUSTOM_HEADERS,
-                Child, customServerCustomHeadersString = StringObject,
-                    MUIA_Frame, MUIV_Frame_String,
-                    MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, configGetCustomHeaders() != NULL ? configGetCustomHeaders() : "",
-                    MUIA_String_MaxLen, 512,
+                Child, VGroup,
+                    MUIA_Frame, MUIV_Frame_Group,
+                    MUIA_FrameTitle, STRING_MENU_TEMPLATE,
+                    Child, customServerTemplateCycle = CycleObject,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_Cycle_Entries, templateOptions,
+                        MUIA_Cycle_Active, TEMPLATE_NONE,
+                    End,
                 End,
-            End,
-            Child, VGroup,
-                MUIA_Frame, MUIV_Frame_Group,
-                MUIA_FrameTitle, STRING_MENU_OPENAI_FULL_URL_PREVIEW,
-                Child, customServerFullUrlPreviewString = TextObject,
-                    MUIA_Frame, MUIV_Frame_String,
+                Child, VGroup,
+                    MUIA_Frame, MUIV_Frame_Group,
+                    MUIA_FrameTitle, STRING_PROXY_HOST,
+                    Child, customServerHostString = StringObject,
+                        MUIA_Frame, MUIV_Frame_String,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_String_Contents, configGetCustomHost(),
+                    End,
                 End,
-            End,
-            Child, HGroup,
-                Child, customServerSettingsRequesterOkButton = MUI_MakeObject(MUIO_Button, STRING_OK,
-                    MUIA_Background, MUII_FILL,
-                    MUIA_CycleChain, TRUE,
-                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                Child, VGroup,
+                    MUIA_Frame, MUIV_Frame_Group,
+                    MUIA_FrameTitle, STRING_PROXY_PORT,
+                    Child, customServerPortString = StringObject,
+                        MUIA_Frame, MUIV_Frame_String,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_String_Accept, "0123456789",
+                        MUIA_String_MaxLen, 5,
+                        MUIA_String_Integer, (LONG)configGetCustomPort(),
+                    End,
                 End,
-                Child, customServerSettingsRequesterCancelButton = MUI_MakeObject(MUIO_Button, STRING_CANCEL,
-                    MUIA_Background, MUII_FILL,
-                    MUIA_CycleChain, TRUE,
-                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                Child, VGroup,
+                    MUIA_Frame, MUIV_Frame_Group,
+                    MUIA_FrameTitle, STRING_PROXY_ENCRYPTION,
+                    Child, customServerUsesSSLCycle = CycleObject,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_Cycle_Entries, sslOptions,
+                        MUIA_Cycle_Active, configGetCustomUseSSL() ? 1 : 0,
+                    End,
                 End,
-            End,
-        End,
+                Child, VGroup,
+                    MUIA_Frame, MUIV_Frame_Group,
+                    MUIA_FrameTitle, STRING_AUTHORIZATION_TYPE,
+                    Child, customServerAuthorizationTypeCycle = CycleObject,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_Cycle_Entries, authorizationTypeOptions,
+                        MUIA_Cycle_Active, configGetCustomAuthorizationType(),
+                    End,
+                End,
+                Child, VGroup,
+                    MUIA_Frame, MUIV_Frame_Group,
+                    MUIA_FrameTitle, STRING_MENU_OPENAI_API_KEY,
+                    Child, customServerApiKeyString = StringObject,
+                        MUIA_Frame, MUIV_Frame_String,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_String_Contents, configGetCustomApiKey(),
+                        MUIA_String_MaxLen, 256,
+                    End,
+                End,
+                Child, VGroup,
+                    MUIA_Frame, MUIV_Frame_Group,
+                    MUIA_FrameTitle, STRING_MENU_OPENAI_CHAT_MODEL,
+                    Child, customServerChatModelString = StringObject,
+                        MUIA_Frame, MUIV_Frame_String,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_String_Contents, configGetCustomChatModel() != NULL ? configGetCustomChatModel() : "gemini-2.0-flash",
+                    End,
+                    Child, HGroup,
+                        Child, customServerFetchModelsButton = MUI_MakeObject(
+                            MUIO_Button, STRING_FETCH_MODELS, MUIA_CycleChain, TRUE,
+                            MUIA_InputMode, MUIV_InputMode_RelVerify, TAG_DONE),
+                    End,
+                    Child, NListviewObject,
+                        MUIA_NListview_NList, customServerModelList = NListObject,
+                            MUIA_NList_ConstructHook2, &ConstructCustomModelLI_TextHook,
+                            MUIA_NList_DestructHook2, &DestructCustomModelLI_TextHook,
+                            MUIA_NList_DisplayHook2, &DisplayCustomModelLI_TextHook,
+                            MUIA_NList_Format, "",
+                            MUIA_NList_Title, FALSE,
+                            MUIA_NList_MinLineHeight, 16,
+                        End,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
+                        MUIA_FixHeight, 80,
+                    End,
+                End,
+                Child, VGroup,
+                    MUIA_Frame, MUIV_Frame_Group,
+                    MUIA_FrameTitle, STRING_MENU_OPENAI_API_ENDPOINT,
+                    Child, customServerApiEndpointCycle = CycleObject,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_Cycle_Entries, apiEndpointOptions,
+                        MUIA_Cycle_Active, configGetCustomApiEndpoint(),
+                    End,
+                End,
+                Child, VGroup,
+                    MUIA_Frame, MUIV_Frame_Group,
+                    MUIA_FrameTitle, STRING_MENU_OPENAI_API_ENDPOINT_URL,
+                    Child, customServerApiEndpointUrlString = StringObject,
+                        MUIA_Frame, MUIV_Frame_String,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_String_Contents, configGetCustomApiEndpointUrl() != NULL ? configGetCustomApiEndpointUrl() : "v1",
+                    End,
+                End,
+                Child, VGroup,
+                    MUIA_Frame, MUIV_Frame_Group,
+                    MUIA_FrameTitle, STRING_CUSTOM_HEADERS,
+                    Child, customServerCustomHeadersString = StringObject,
+                        MUIA_Frame, MUIV_Frame_String,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_String_Contents, configGetCustomHeaders() != NULL ? configGetCustomHeaders() : "",
+                        MUIA_String_MaxLen, 512,
+                    End,
+                End,
+                Child, VGroup,
+                    MUIA_Frame, MUIV_Frame_Group,
+                    MUIA_FrameTitle, STRING_MENU_OPENAI_FULL_URL_PREVIEW,
+                    Child, customServerFullUrlPreviewString = TextObject,
+                        MUIA_Frame, MUIV_Frame_String,
+                    End,
+                End,
+                Child, HGroup,
+                    Child, customServerSettingsRequesterOkButton = MUI_MakeObject(MUIO_Button, STRING_OK,
+                        MUIA_Background, MUII_FILL,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_InputMode, MUIV_InputMode_RelVerify,
+                    End,
+                    Child, customServerSettingsRequesterCancelButton = MUI_MakeObject(MUIO_Button, STRING_CANCEL,
+                        MUIA_Background, MUII_FILL,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_InputMode, MUIV_InputMode_RelVerify,
+                    End,
+                End,
+            End, /* End right panel VGroup */
+        End, /* End outer HGroup */
     End) == NULL) {
         displayError(STRING_ERROR_CUSTOM_SERVER_SETTINGS);
         return RETURN_ERROR;
@@ -518,5 +916,19 @@ LONG createCustomServerSettingsRequesterWindow() {
     DoMethod(customServerModelList, MUIM_Notify, MUIA_NList_Active,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &CustomModelSelectedHook);
+
+    /* Initialize profile list BEFORE setting up notification hooks */
+    loadProfilesFromConfig();
+    populateProfileList();
+
+    /* Profile management hooks */
+    DoMethod(customServerProfileList, MUIM_Notify, MUIA_NList_Active,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &ProfileSelectedHook);
+    DoMethod(customServerSaveProfileButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             MUIV_Notify_Application, 2, MUIM_CallHook, &SaveProfileHook);
+    DoMethod(customServerDeleteProfileButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             MUIV_Notify_Application, 2, MUIM_CallHook, &DeleteProfileHook);
+
     return RETURN_OK;
 }

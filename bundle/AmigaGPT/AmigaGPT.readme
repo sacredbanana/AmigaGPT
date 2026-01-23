@@ -23,6 +23,8 @@ Features:
 - UI customisation
 - Full conversation history
 - Text-to-speech
+- Custom chat server support (Google Gemini, LM Studio, Anthropic Claude,
+  xAI Grok)
 
 Requirements:
 - OCS/ECS/AGA Amiga or a PowerPC machine capable of running MorphO
@@ -195,6 +197,12 @@ the encryption of the OpenAI traffic to be done on the system running AmigaGPT.
 For an easy proxy server you can run on your local network you can try out
 https://mitmproxy.org
 
+*Custom Chat Servers*
+
+AmigaGPT supports alternative LLM servers via "Custom Server Settings" in the
+"OpenAI" menu. Templates are available for Google Gemini, LM Studio, Anthropic
+Claude and xAI Grok. You can save multiple server profiles for quick switching.
+
 The "ARexx" menu allows you to import and run ARexx scripts. Also, selecting
 "Arexx Shell" will open a shell and put all ARexx scripts in trace mode so you
 can run the scripts line by line for debugging purposes. Select "Arexx Shell"
@@ -273,7 +281,7 @@ Special Thanks:
 - Bebbo for creating the Amiga GCC toolchain https://github.com/bebbo
 - OpenAI for making this all possible https://openai.com
 - EAB and everyone in it for answering my questions https://eab.abime.net/
-- Jï¿½n Zahurancï¿½k for all the thorough testing, bundling AmigaGPT into 
+- Ján Zahuran?ík for all the thorough testing, bundling AmigaGPT into 
   AmiKit and for all the moral support https://www.amikit.amiga.sk
 - CoffinOS for bundling AmigaGPT into CoffinOS https://getcoffin.net
 - Amiga Future Magazine for reviewing AmigaGPT and publishing several of

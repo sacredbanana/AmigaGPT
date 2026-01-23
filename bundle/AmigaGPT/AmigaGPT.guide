@@ -196,6 +196,7 @@ Click on a topic to learn about it:
 @{"Edit menu " link editmenu}
 @{"Changing the appearance of the UI and chat " link appearance}
 @{"Using a proxy server " link proxy}
+@{"Custom chat servers " link customservers}
 @{"ARexx integration " link arexx}
 
 @endnode
@@ -261,6 +262,53 @@ To change your settings, go to the "MUI Settings" in the "View" menu.
 @{b}Using a proxy server@{ub}
 
 The "Connection" menu allows you to connect via a proxy server. It supports both HTTP and HTTPS proxy servers but if you use an unecrypted HTTP proxy server you can improve the performance of AmigaGPT by removing the need for the encryption of the OpenAI traffic to be done on the system running AmigaGPT. For an easy proxy server you can run on your local network you can try out https://mitmproxy.org
+
+@endnode
+
+@node customservers "Custom chat servers"
+@{b}Custom Chat Servers@{ub}
+
+AmigaGPT can connect to alternative LLM servers that are compatible with the OpenAI API. This allows you to use local AI models or other cloud providers.
+
+To configure a custom server, go to the "OpenAI" menu and select "Custom Server Settings".
+
+@{b}Profiles Panel (left)@{ub}
+
+Save and manage multiple server configurations. Select a profile to load its settings, or create new profiles by entering a name and clicking "Save Profile".
+
+@{b}Settings Panel (right)@{ub}
+
+Configure the server connection:
+
+- @{b}Template@{ub} - Quick-start presets for popular services
+- @{b}Host@{ub} - Server address (e.g., localhost or api.example.com)
+- @{b}Port@{ub} - Connection port (typically 443 for HTTPS, 80 for HTTP)
+- @{b}Encryption@{ub} - Enable SSL/TLS for secure connections
+- @{b}Authorization@{ub} - Authentication method (None, Bearer Token, or x-api-key)
+- @{b}API Key@{ub} - Your authentication credentials
+- @{b}Chat Model@{ub} - The model identifier to use
+- @{b}API Endpoint@{ub} - The endpoint format (responses, chat/completions, or messages)
+- @{b}API Endpoint URL@{ub} - Base path for the API (e.g., v1)
+- @{b}Custom Headers@{ub} - Additional HTTP headers if required
+
+@{b}Available Templates@{ub}
+
+- @{b}Google Gemini@{ub} - Google's Gemini AI
+  Host: generativelanguage.googleapis.com
+  Endpoint: chat/completions, URL: v1beta/openai
+
+- @{b}LM Studio@{ub} - Local LLM server
+  Host: localhost, Port: 1234, no encryption
+
+- @{b}Anthropic Claude@{ub} - Anthropic's Claude AI
+  Host: api.anthropic.com
+  Endpoint: messages, requires anthropic-version header
+
+- @{b}xAI Grok@{ub} - xAI's Grok model
+  Host: api.x.ai
+  Endpoint: chat/completions
+
+To use a custom server, enable it from the "OpenAI" menu by selecting "Use Custom Chat Server".
 
 @endnode
 
@@ -438,7 +486,7 @@ We welcome contributions to AmigaGPT! If you have a bug to report, a feature to 
 - Bebbo for creating the Amiga GCC toolchain https://github.com/bebbo
 - OpenAI for making this all possible https://openai.com
 - EAB and everyone in it for answering my questions https://eab.abime.net/
-- Jï¿½n Zahurancï¿½k for all the thorough testing, bundling AmigaGPT into 
+- Ján Zahuran?ík for all the thorough testing, bundling AmigaGPT into 
   AmiKit and for all the moral support https://www.amikit.amiga.sk
 - CoffinOS for bundling AmigaGPT into CoffinOS https://getcoffin.net
 - Amiga Future Magazine for reviewing AmigaGPT and publishing several of
