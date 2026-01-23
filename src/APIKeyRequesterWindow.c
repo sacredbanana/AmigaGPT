@@ -3,8 +3,8 @@
 #include <SDI_hook.h>
 #include <mui/TextEditor_mcc.h>
 #include <string.h>
+#include "AmigaGPTConfig.h"
 #include "APIKeyRequesterWindow.h"
-#include "config.h"
 #include "gui.h"
 #include "MainWindow.h"
 
@@ -20,16 +20,8 @@ HOOKPROTONHNONP(APIKeyRequesterOkButtonClickedFunc, void) {
         }
     }
     set(apiKeyRequesterString, MUIA_TextEditor_Contents, apiKey);
-    if (config.openAiApiKey != NULL) {
-        FreeVec(config.openAiApiKey);
-        config.openAiApiKey = NULL;
-    }
-    config.openAiApiKey = AllocVec(strlen(apiKey) + 1, MEMF_CLEAR);
-    strncpy(config.openAiApiKey, apiKey, strlen(apiKey));
+    configSetOpenAiApiKey(apiKey);
     FreeVec(apiKey);
-    if (writeConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
-    }
 }
 MakeHook(APIKeyRequesterOkButtonClickedHook,
          APIKeyRequesterOkButtonClickedFunc);
@@ -60,7 +52,7 @@ LONG createAPIKeyRequesterWindow() {
                 End,
                 Child, apiKeyRequesterString = TextEditorObject,
                     MUIA_CycleChain, TRUE,
-                    MUIA_TextEditor_Contents, config.openAiApiKey,
+                    MUIA_TextEditor_Contents, configGetOpenAiApiKey(),
                 End,
                 Child, HGroup,
                     Child, apiKeyRequesterOkButton = MUI_MakeObject(MUIO_Button, STRING_OK,

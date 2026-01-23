@@ -10,12 +10,12 @@
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
+#include "AmigaGPTConfig.h"
 #include "APIKeyRequesterWindow.h"
 #include "AboutAmigaGPTWindow.h"
 #include "ARexx.h"
 #include "ChatSystemRequesterWindow.h"
 #include "CustomServerSettingsRequesterWindow.h"
-#include "config.h"
 #include "ElevenLabsSettingsRequesterWindow.h"
 #include "gui.h"
 #include "MainWindow.h"
@@ -70,7 +70,7 @@ MakeHook(AboutAmigaGPTMenuItemClickedHook, AboutAmigaGPTMenuItemClickedFunc);
 HOOKPROTONHNO(SpeechSystemMenuItemClickedFunc, void,
               SpeechSystem *speechSystem) {
     closeSpeech();
-    config.speechSystem = *speechSystem;
+    configSetSpeechSystem(*speechSystem);
     if (initSpeech(*speechSystem) == RETURN_ERROR) {
         switch (*speechSystem) {
         case SPEECH_SYSTEM_34:
@@ -90,9 +90,6 @@ HOOKPROTONHNO(SpeechSystemMenuItemClickedFunc, void,
             break;
         }
     }
-    if (writeConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
-    }
 }
 MakeHook(SpeechSystemMenuItemClickedHook, SpeechSystemMenuItemClickedFunc);
 
@@ -105,16 +102,7 @@ HOOKPROTONHNONP(SpeechAccentMenuItemClickedFunc, void) {
             "LOCALE:accents", ASLFR_DoPatterns, TRUE, ASLFR_InitialPattern,
             "#?.accent", TAG_DONE)) {
         if (MUI_AslRequestTags(fileRequester, TAG_DONE)) {
-            if (config.speechAccent != NULL) {
-                FreeVec(config.speechAccent);
-            }
-            config.speechAccent = AllocVec(strlen(fileRequester->fr_File) + 1,
-                                           MEMF_ANY | MEMF_CLEAR);
-            strncpy(config.speechAccent, fileRequester->fr_File,
-                    strlen(fileRequester->fr_File));
-            if (writeConfig() == RETURN_ERROR) {
-                displayError(STRING_ERROR_CONFIG_FILE_WRITE);
-            }
+            configSetSpeechAccent(fileRequester->fr_File);
         }
         FreeAslRequest(fileRequester);
     }
@@ -302,8 +290,8 @@ HOOKPROTONHNONP(RecreateMainWindowFunc, void) {
 MakeHook(RecreateMainWindowHook, RecreateMainWindowFunc);
 
 HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
-    config.fixedWidthFonts = !config.fixedWidthFonts;
-    if (writeConfig() == RETURN_ERROR) {
+    configSetFixedWidthFonts(!configGetFixedWidthFonts());
+    if (FALSE) { /* Auto-save handles this now */
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
     }
     DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
@@ -372,36 +360,37 @@ void createMenu() {
     STRING_MENU_TEXT_ALIGNMENT_LEFT, MUIA_UserData,
     MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_LEFT, MUIA_Menuitem_CopyStrings, FALSE,
     MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
-    config.userTextAlignment == ALIGN_LEFT, MUIA_Menuitem_Exclude, ~(1 << 0),
-    MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_CENTER, MUIA_UserData,
-    MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_CENTER, MUIA_Menuitem_CopyStrings, FALSE,
-    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
-    config.userTextAlignment == ALIGN_CENTER, MUIA_Menuitem_Exclude, ~(1 << 1),
-    MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_RIGHT, MUIA_UserData,
+    configGetUserTextAlignment() == ALIGN_LEFT, MUIA_Menuitem_Exclude,
+    ~(1 << 0), MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child,
+    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_CENTER,
+    MUIA_UserData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_CENTER,
+    MUIA_Menuitem_CopyStrings, FALSE, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Checked, configGetUserTextAlignment() == ALIGN_CENTER,
+    MUIA_Menuitem_Exclude, ~(1 << 1), MUIA_Menuitem_Toggle, TRUE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_TEXT_ALIGNMENT_RIGHT, MUIA_UserData,
     MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_RIGHT, MUIA_Menuitem_CopyStrings, FALSE,
     MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
-    config.userTextAlignment == ALIGN_RIGHT, MUIA_Menuitem_Exclude, ~(1 << 2),
-    MUIA_Menuitem_Toggle, TRUE, End, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_ASSISTANT_TEXT_ALIGNMENT, MUIA_UserData,
-    MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT, MUIA_Menuitem_CopyStrings, FALSE,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_TEXT_ALIGNMENT_LEFT, MUIA_UserData,
+    configGetUserTextAlignment() == ALIGN_RIGHT, MUIA_Menuitem_Exclude,
+    ~(1 << 2), MUIA_Menuitem_Toggle, TRUE, End, End, MUIA_Family_Child,
+    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_ASSISTANT_TEXT_ALIGNMENT,
+    MUIA_UserData, MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT,
+    MUIA_Menuitem_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_LEFT, MUIA_UserData,
     MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_LEFT, MUIA_Menuitem_CopyStrings,
     FALSE, MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
-    config.assistantTextAlignment == ALIGN_LEFT, MUIA_Menuitem_Exclude,
+    configGetAssistantTextAlignment() == ALIGN_LEFT, MUIA_Menuitem_Exclude,
     ~(1 << 0), MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child,
     MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_CENTER,
     MUIA_UserData, MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_CENTER,
     MUIA_Menuitem_CopyStrings, FALSE, MUIA_Menuitem_Checkit, TRUE,
-    MUIA_Menuitem_Checked, config.assistantTextAlignment == ALIGN_CENTER,
+    MUIA_Menuitem_Checked, configGetAssistantTextAlignment() == ALIGN_CENTER,
     MUIA_Menuitem_Exclude, ~(1 << 1), MUIA_Menuitem_Toggle, TRUE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_TEXT_ALIGNMENT_RIGHT, MUIA_UserData,
     MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_RIGHT, MUIA_Menuitem_CopyStrings,
     FALSE, MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
-    config.assistantTextAlignment == ALIGN_RIGHT, MUIA_Menuitem_Exclude,
+    configGetAssistantTextAlignment() == ALIGN_RIGHT, MUIA_Menuitem_Exclude,
     ~(1 << 2), MUIA_Menuitem_Toggle, TRUE, End, End, MUIA_Family_Child,
     MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL, MUIA_UserData,
     MENU_ITEM_NULL, End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
@@ -603,7 +592,8 @@ void addMenuActions() {
 
     Object fixedWidthFontsMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_FIXED_WIDTH_FONTS);
-    set(fixedWidthFontsMenuItem, MUIA_Menuitem_Checked, config.fixedWidthFonts);
+    set(fixedWidthFontsMenuItem, MUIA_Menuitem_Checked,
+        configGetFixedWidthFonts());
     DoMethod(fixedWidthFontsMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &FixedWidthFontsMenuItemClickedHook);
@@ -611,10 +601,10 @@ void addMenuActions() {
     Object userTextAlignmentLeftMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_LEFT);
     set(userTextAlignmentLeftMenuItem, MUIA_Menuitem_Checked,
-        config.userTextAlignment == ALIGN_LEFT);
+        configGetUserTextAlignment() == ALIGN_LEFT);
     DoMethod(userTextAlignmentLeftMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_WriteLong,
-             ALIGN_LEFT, &config.userTextAlignment);
+             MUIV_EveryTime, configObj, 3, MUIM_Set,
+             MUIA_AmigaGPTConfig_UserTextAlignment, ALIGN_LEFT);
     DoMethod(userTextAlignmentLeftMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &TextAlignmentChangedHook, MUIV_TriggerValue);
@@ -622,10 +612,10 @@ void addMenuActions() {
     Object userTextAlignmentCenterMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_CENTER);
     set(userTextAlignmentCenterMenuItem, MUIA_Menuitem_Checked,
-        config.userTextAlignment == ALIGN_CENTER);
+        configGetUserTextAlignment() == ALIGN_CENTER);
     DoMethod(userTextAlignmentCenterMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 3,
-             MUIM_WriteLong, ALIGN_CENTER, &config.userTextAlignment);
+             MUIA_Menuitem_Checked, MUIV_EveryTime, configObj, 3, MUIM_Set,
+             MUIA_AmigaGPTConfig_UserTextAlignment, ALIGN_CENTER);
     DoMethod(userTextAlignmentCenterMenuItem, MUIM_Notify,
              MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
              MUIM_CallHook, &TextAlignmentChangedHook, MUIV_TriggerValue);
@@ -633,10 +623,10 @@ void addMenuActions() {
     Object userTextAlignmentRightMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_RIGHT);
     set(userTextAlignmentRightMenuItem, MUIA_Menuitem_Checked,
-        config.userTextAlignment == ALIGN_RIGHT);
+        configGetUserTextAlignment() == ALIGN_RIGHT);
     DoMethod(userTextAlignmentRightMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_WriteLong,
-             ALIGN_RIGHT, &config.userTextAlignment);
+             MUIV_EveryTime, configObj, 3, MUIM_Set,
+             MUIA_AmigaGPTConfig_UserTextAlignment, ALIGN_RIGHT);
     DoMethod(userTextAlignmentRightMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &TextAlignmentChangedHook);
@@ -645,10 +635,10 @@ void addMenuActions() {
         (Object)DoMethod(menuStrip, MUIM_FindUData,
                          MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_LEFT);
     set(assistantTextAlignmentLeftMenuItem, MUIA_Menuitem_Checked,
-        config.assistantTextAlignment == ALIGN_LEFT);
+        configGetAssistantTextAlignment() == ALIGN_LEFT);
     DoMethod(assistantTextAlignmentLeftMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 3,
-             MUIM_WriteLong, ALIGN_LEFT, &config.assistantTextAlignment);
+             MUIA_Menuitem_Checked, MUIV_EveryTime, configObj, 3, MUIM_Set,
+             MUIA_AmigaGPTConfig_AssistantTextAlignment, ALIGN_LEFT);
     DoMethod(assistantTextAlignmentLeftMenuItem, MUIM_Notify,
              MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
              MUIM_CallHook, &TextAlignmentChangedHook);
@@ -657,10 +647,10 @@ void addMenuActions() {
         (Object)DoMethod(menuStrip, MUIM_FindUData,
                          MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_CENTER);
     set(assistantTextAlignmentCenterMenuItem, MUIA_Menuitem_Checked,
-        config.assistantTextAlignment == ALIGN_CENTER);
+        configGetAssistantTextAlignment() == ALIGN_CENTER);
     DoMethod(assistantTextAlignmentCenterMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 3,
-             MUIM_WriteLong, ALIGN_CENTER, &config.assistantTextAlignment);
+             MUIA_Menuitem_Checked, MUIV_EveryTime, configObj, 3, MUIM_Set,
+             MUIA_AmigaGPTConfig_AssistantTextAlignment, ALIGN_CENTER);
     DoMethod(assistantTextAlignmentCenterMenuItem, MUIM_Notify,
              MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
              MUIM_CallHook, &TextAlignmentChangedHook);
@@ -669,20 +659,20 @@ void addMenuActions() {
         (Object)DoMethod(menuStrip, MUIM_FindUData,
                          MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_RIGHT);
     set(assistantTextAlignmentRightMenuItem, MUIA_Menuitem_Checked,
-        config.assistantTextAlignment == ALIGN_RIGHT);
+        configGetAssistantTextAlignment() == ALIGN_RIGHT);
     DoMethod(assistantTextAlignmentRightMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 3,
-             MUIM_WriteLong, ALIGN_RIGHT, &config.assistantTextAlignment);
+             MUIA_Menuitem_Checked, MUIV_EveryTime, configObj, 3, MUIM_Set,
+             MUIA_AmigaGPTConfig_AssistantTextAlignment, ALIGN_RIGHT);
     DoMethod(assistantTextAlignmentRightMenuItem, MUIM_Notify,
              MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
              MUIM_CallHook, &TextAlignmentChangedHook);
 
     Object proxyEnabledMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_ENABLED);
-    set(proxyEnabledMenuItem, MUIA_Menuitem_Checked, config.proxyEnabled);
+    set(proxyEnabledMenuItem, MUIA_Menuitem_Checked, configGetProxyEnabled());
     DoMethod(proxyEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, proxyEnabledMenuItem, 3, MUIM_WriteLong,
-             MUIV_TriggerValue, &config.proxyEnabled);
+             MUIV_EveryTime, configObj, 3, MUIM_Set,
+             MUIA_AmigaGPTConfig_ProxyEnabled, MUIV_TriggerValue);
 
     Object proxySettingsMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_SETTINGS);
@@ -692,10 +682,10 @@ void addMenuActions() {
 
     Object speechEnabledMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ENABLED);
-    set(speechEnabledMenuItem, MUIA_Menuitem_Checked, config.speechEnabled);
+    set(speechEnabledMenuItem, MUIA_Menuitem_Checked, configGetSpeechEnabled());
     DoMethod(speechEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, speechEnabledMenuItem, 3, MUIM_WriteLong,
-             MUIV_TriggerValue, &config.speechEnabled);
+             MUIV_EveryTime, configObj, 3, MUIM_Set,
+             MUIA_AmigaGPTConfig_SpeechEnabled, MUIV_TriggerValue);
 
 #if defined(__AMIGAOS3__) || defined(__MORPHOS__)
     Object speechAccentMenuItem =
@@ -714,7 +704,7 @@ void addMenuActions() {
     DoMethod(openAIVoiceInstructionsMenuItem, MUIM_Notify,
              MUIA_Menuitem_Trigger, MUIV_EveryTime,
              voiceInstructionsRequesterString, 3, MUIM_Set,
-             MUIA_String_Contents, config.openAIVoiceInstructions);
+             MUIA_String_Contents, configGetOpenAIVoiceInstructions());
     DoMethod(openAIVoiceInstructionsMenuItem, MUIM_Notify,
              MUIA_Menuitem_Trigger, MUIV_EveryTime,
              voiceInstructionsRequesterWindowObject, 3, MUIM_Set,
@@ -739,7 +729,7 @@ void addMenuActions() {
              MUIA_Window_Open, TRUE);
     DoMethod(openAIAPIKeyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, apiKeyRequesterString, 3, MUIM_Set,
-             MUIA_String_Contents, config.openAiApiKey);
+             MUIA_String_Contents, configGetOpenAiApiKey());
     DoMethod(openAIAPIKeyMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, apiKeyRequesterWindowObject, 3, MUIM_Set,
              MUIA_Window_ActiveObject, apiKeyRequesterString);
@@ -751,7 +741,7 @@ void addMenuActions() {
              MUIA_Window_Open, TRUE);
     DoMethod(openAIChatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, chatSystemRequesterString, 3, MUIM_Set,
-             MUIA_String_Contents, config.chatSystem);
+             MUIA_String_Contents, configGetChatSystem());
     DoMethod(openAIChatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, chatSystemRequesterWindowObject, 3, MUIM_Set,
              MUIA_Window_ActiveObject, chatSystemRequesterString);
@@ -759,18 +749,18 @@ void addMenuActions() {
     Object openAIWebSearchEnabledMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_WEB_SEARCH_ENABLED);
     set(openAIWebSearchEnabledMenuItem, MUIA_Menuitem_Checked,
-        config.webSearchEnabled);
+        configGetWebSearchEnabled());
     DoMethod(openAIWebSearchEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, openAIWebSearchEnabledMenuItem, 3, MUIM_WriteLong,
-             MUIV_TriggerValue, &config.webSearchEnabled);
+             MUIV_EveryTime, configObj, 3, MUIM_Set,
+             MUIA_AmigaGPTConfig_WebSearchEnabled, MUIV_TriggerValue);
 
     Object customServerEnabledMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_AI_CUSTOM_SERVER_ENABLED);
     set(customServerEnabledMenuItem, MUIA_Menuitem_Checked,
-        config.useCustomServer);
+        configGetUseCustomServer());
     DoMethod(customServerEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, customServerEnabledMenuItem, 3, MUIM_WriteLong,
-             MUIV_TriggerValue, &config.useCustomServer);
+             MUIV_EveryTime, configObj, 3, MUIM_Set,
+             MUIA_AmigaGPTConfig_UseCustomServer, MUIV_TriggerValue);
 
     Object customServerSettingsMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_AI_CUSTOM_SERVER_SETTINGS);
@@ -830,7 +820,7 @@ static void populateSpeechMenu() {
 #endif
         Object *newSpeechSystemMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                SPEECH_SYSTEM_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
-               MUIA_Menuitem_Checked, config.speechSystem == i,
+               MUIA_Menuitem_Checked, configGetSpeechSystem() == i,
                MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
                MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(speechSystemMenuItem, MUIM_Family_AddTail,
@@ -855,14 +845,14 @@ static void populateSpeechMenu() {
     for (UBYTE i = 0; SPEECH_FLITE_VOICE_NAMES[i] != NULL; i++) {
         Object *newFliteVoiceMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                SPEECH_FLITE_VOICE_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
-               MUIA_Menuitem_Checked, config.speechFliteVoice == i,
+               MUIA_Menuitem_Checked, configGetSpeechFliteVoice() == i,
                MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
                MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(fliteVoiceMenuItem, MUIM_Family_AddTail,
                  newFliteVoiceMenuItem);
         DoMethod(newFliteVoiceMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-                 TRUE, MUIV_Notify_Self, 3, MUIM_WriteLong, i,
-                 &config.speechFliteVoice);
+                 TRUE, configObj, 3, MUIM_Set,
+                 MUIA_AmigaGPTConfig_SpeechFliteVoice, i);
         DoMethod(newFliteVoiceMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
                  MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
                  MUIA_Menuitem_Checked, TRUE);
@@ -881,14 +871,14 @@ static void populateSpeechMenu() {
     for (UBYTE i = 0; OPENAI_TTS_VOICE_NAMES[i] != NULL; i++) {
         Object *newOpenAIVoiceMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                OPENAI_TTS_VOICE_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
-               MUIA_Menuitem_Checked, config.openAITTSVoice == i,
+               MUIA_Menuitem_Checked, configGetOpenAITTSVoice() == i,
                MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
                MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(openAIVoiceMenuItem, MUIM_Family_AddTail,
                  newOpenAIVoiceMenuItem);
         DoMethod(newOpenAIVoiceMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-                 TRUE, MUIV_Notify_Self, 3, MUIM_WriteLong, i,
-                 &config.openAITTSVoice);
+                 TRUE, configObj, 3, MUIM_Set,
+                 MUIA_AmigaGPTConfig_OpenAITTSVoice, i);
         DoMethod(newOpenAIVoiceMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
                  MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
                  MUIA_Menuitem_Checked, TRUE);
@@ -906,14 +896,14 @@ static void populateSpeechMenu() {
     for (UBYTE i = 0; OPENAI_TTS_MODEL_NAMES[i] != NULL; i++) {
         Object *newOpenAITTSModelMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                OPENAI_TTS_MODEL_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
-               MUIA_Menuitem_Checked, config.openAITTSModel == i,
+               MUIA_Menuitem_Checked, configGetOpenAITTSModel() == i,
                MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
                MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(openAITTSModelMenuItem, MUIM_Family_AddTail,
                  newOpenAITTSModelMenuItem);
         DoMethod(newOpenAITTSModelMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-                 TRUE, MUIV_Notify_Self, 3, MUIM_WriteLong, i,
-                 &config.openAITTSModel);
+                 TRUE, configObj, 3, MUIM_Set,
+                 MUIA_AmigaGPTConfig_OpenAITTSModel, i);
         DoMethod(newOpenAITTSModelMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
                  MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
                  MUIA_Menuitem_Checked, TRUE);
@@ -943,7 +933,7 @@ static void populateOpenAIMenu() {
     for (UBYTE i = 0; CHAT_MODEL_NAMES[i] != NULL; i++) {
         Object *newChatModelMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                CHAT_MODEL_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
-               MUIA_Menuitem_Checked, config.chatModel == i,
+               MUIA_Menuitem_Checked, configGetChatModel() == i,
                MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_Exclude, ~0,
                MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(openAIChatModelMenuItem, MUIM_Family_AddTail,
@@ -952,8 +942,8 @@ static void populateOpenAIMenu() {
                  MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
                  MUIA_Menuitem_Checked, TRUE);
         DoMethod(newChatModelMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-                 MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_WriteLong, i,
-                 &config.chatModel);
+                 MUIV_EveryTime, configObj, 3, MUIM_Set,
+                 MUIA_AmigaGPTConfig_ChatModel, i);
     }
 
     Object *openAIImageModelMenuItem = (Object *)DoMethod(
@@ -972,14 +962,14 @@ static void populateOpenAIMenu() {
     for (UBYTE i = 0; IMAGE_MODEL_NAMES[i] != NULL; i++) {
         Object *newImageModelMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                IMAGE_MODEL_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
-               MUIA_Menuitem_Checked, config.imageModel == i,
+               MUIA_Menuitem_Checked, configGetImageModel() == i,
                MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
                MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(openAIImageModelMenuItem, MUIM_Family_AddTail,
                  newImageModelMenuItem);
         DoMethod(newImageModelMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-                 TRUE, MUIV_Notify_Self, 3, MUIM_WriteLong, i,
-                 &config.imageModel);
+                 TRUE, configObj, 3, MUIM_Set, MUIA_AmigaGPTConfig_ImageModel,
+                 i);
     }
 
     Object *openAIImageSizeDALL_E_2MenuItem = (Object *)DoMethod(
@@ -1000,14 +990,14 @@ static void populateOpenAIMenu() {
         Object *newImageSizeDallE2MenuItem = MenuitemObject,
                MUIA_Menuitem_Title, IMAGE_SIZE_NAMES[imageSize],
                MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
-               config.imageSizeDallE2 == imageSize, MUIA_Menuitem_Exclude,
+               configGetImageSizeDallE2() == imageSize, MUIA_Menuitem_Exclude,
                ~(1 << i), MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_CopyStrings,
                FALSE, End;
         DoMethod(openAIImageSizeDALL_E_2MenuItem, MUIM_Family_AddTail,
                  newImageSizeDallE2MenuItem);
         DoMethod(newImageSizeDallE2MenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-                 TRUE, MUIV_Notify_Self, 3, MUIM_WriteLong, imageSize,
-                 &config.imageSizeDallE2);
+                 TRUE, configObj, 3, MUIM_Set,
+                 MUIA_AmigaGPTConfig_ImageSizeDallE2, imageSize);
     }
 
     Object *openAIImageSizeDALL_E_3MenuItem = (Object *)DoMethod(
@@ -1028,14 +1018,14 @@ static void populateOpenAIMenu() {
         Object *newImageSizeDallE3MenuItem = MenuitemObject,
                MUIA_Menuitem_Title, IMAGE_SIZE_NAMES[imageSize],
                MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
-               config.imageSizeDallE3 == imageSize, MUIA_Menuitem_Exclude,
+               configGetImageSizeDallE3() == imageSize, MUIA_Menuitem_Exclude,
                ~(1 << i), MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_CopyStrings,
                FALSE, End;
         DoMethod(openAIImageSizeDALL_E_3MenuItem, MUIM_Family_AddTail,
                  newImageSizeDallE3MenuItem);
         DoMethod(newImageSizeDallE3MenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-                 TRUE, MUIV_Notify_Self, 3, MUIM_WriteLong, imageSize,
-                 &config.imageSizeDallE3);
+                 TRUE, configObj, 3, MUIM_Set,
+                 MUIA_AmigaGPTConfig_ImageSizeDallE3, imageSize);
     }
 
     Object *openAIImageSizeGPT_IMAGE_1MenuItem = (Object *)DoMethod(
@@ -1056,14 +1046,14 @@ static void populateOpenAIMenu() {
         Object *newImageSizeGptImage1MenuItem = MenuitemObject,
                MUIA_Menuitem_Title, IMAGE_SIZE_NAMES[imageSize],
                MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
-               config.imageSizeGptImage1 == imageSize, MUIA_Menuitem_Exclude,
-               ~(1 << i), MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_CopyStrings,
-               FALSE, End;
+               configGetImageSizeGptImage1() == imageSize,
+               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
+               MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(openAIImageSizeGPT_IMAGE_1MenuItem, MUIM_Family_AddTail,
                  newImageSizeGptImage1MenuItem);
         DoMethod(newImageSizeGptImage1MenuItem, MUIM_Notify,
-                 MUIA_Menuitem_Checked, TRUE, MUIV_Notify_Self, 3,
-                 MUIM_WriteLong, imageSize, &config.imageSizeGptImage1);
+                 MUIA_Menuitem_Checked, TRUE, configObj, 3, MUIM_Set,
+                 MUIA_AmigaGPTConfig_ImageSizeGptImage1, imageSize);
     }
 
     Object *openAIImageFormatMenuItem = (Object *)DoMethod(
@@ -1082,14 +1072,14 @@ static void populateOpenAIMenu() {
     for (UBYTE i = 0; IMAGE_FORMAT_NAMES[i] != NULL; i++) {
         Object *newImageFormatMenuItem = MenuitemObject, MUIA_Menuitem_Title,
                IMAGE_FORMAT_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
-               MUIA_Menuitem_Checked, config.imageFormat == i,
+               MUIA_Menuitem_Checked, configGetImageFormat() == i,
                MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_Exclude, ~(1 << i),
                MUIA_Menuitem_CopyStrings, FALSE, End;
         DoMethod(openAIImageFormatMenuItem, MUIM_Family_AddTail,
                  newImageFormatMenuItem);
         DoMethod(newImageFormatMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-                 TRUE, MUIV_Notify_Self, 3, MUIM_WriteLong, i,
-                 &config.imageFormat);
+                 TRUE, configObj, 3, MUIM_Set, MUIA_AmigaGPTConfig_ImageFormat,
+                 i);
     }
 
     DoMethod(menuStrip, MUIM_Menustrip_ExitChange);

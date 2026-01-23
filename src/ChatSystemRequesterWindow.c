@@ -5,8 +5,8 @@
 #include <mui/TextEditor_mcc.h>
 #include <SDI_hook.h>
 #include <string.h>
+#include "AmigaGPTConfig.h"
 #include "ChatSystemRequesterWindow.h"
-#include "config.h"
 #include "gui.h"
 
 Object *chatSystemRequesterString;
@@ -20,15 +20,7 @@ HOOKPROTONHNONP(ChatSystemRequesterOkButtonClickedFunc, void) {
         chatSystem =
             DoMethod(chatSystemRequesterString, MUIM_TextEditor_ExportText);
     }
-    if (config.chatSystem != NULL) {
-        FreeVec(config.chatSystem);
-        config.chatSystem = NULL;
-    }
-    config.chatSystem = AllocVec(strlen(chatSystem) + 1, MEMF_CLEAR);
-    strncpy(config.chatSystem, chatSystem, strlen(chatSystem));
-    if (writeConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
-    }
+    configSetChatSystem(chatSystem);
     if (!isAROS) {
         FreeVec(chatSystem);
     }
@@ -60,9 +52,9 @@ LONG createChatSystemRequesterWindow() {
                 Child,chatSystemRequesterString = isAROS ? BetterStringObject,
                     MUIA_String_MaxLen, CHAT_SYSTEM_LENGTH - 1,
                     MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, config.chatSystem,
+                    MUIA_String_Contents, configGetChatSystem(),
                 End : TextEditorObject,
-                    MUIA_TextEditor_Contents, config.chatSystem,
+                    MUIA_TextEditor_Contents, configGetChatSystem(),
                     MUIA_TextEditor_ReadOnly, FALSE,
                     MUIA_TextEditor_TabSize, 4,
                     MUIA_TextEditor_Rows, 6,

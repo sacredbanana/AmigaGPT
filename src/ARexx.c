@@ -5,9 +5,9 @@
 #include <string.h>
 #include <strings.h>
 #include <time.h>
+#include "AmigaGPTConfig.h"
 #include "ARexx.h"
 #include "gui.h"
-#include "config.h"
 #include "MainWindow.h"
 
 HOOKPROTONH(ReplyCallbackFunc, APTR, Object *obj, struct RexxMsg *rxm) {
@@ -34,43 +34,43 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     STRPTR prompt = (STRPTR)arg[14];
 
     ULONG portValue = port == NULL
-                          ? (config.useCustomServer ? config.customPort : NULL)
+                          ? (configGetUseCustomServer() ? configGetCustomPort() : 0)
                           : (ULONG)*port;
     ULONG proxyPortValue =
-        proxyPort == NULL ? config.proxyPort : (ULONG)*proxyPort;
+        proxyPort == NULL ? configGetProxyPort() : (ULONG)*proxyPort;
 
     if (apiKey == NULL) {
         apiKey =
-            config.useCustomServer ? config.customApiKey : config.openAiApiKey;
+            configGetUseCustomServer() ? configGetCustomApiKey() : configGetOpenAiApiKey();
     }
 
     if (host == NULL || strlen(host) == 0) {
-        host = config.useCustomServer ? config.customHost : NULL;
+        host = configGetUseCustomServer() ? configGetCustomHost() : NULL;
     }
 
     if (!useSSL) {
-        useSSL = config.useCustomServer ? config.customUseSSL : TRUE;
+        useSSL = configGetUseCustomServer() ? configGetCustomUseSSL() : TRUE;
     }
 
     if (!proxyUsesSSL) {
-        proxyUsesSSL = config.proxyUsesSSL;
+        proxyUsesSSL = configGetProxyUsesSSL();
     }
 
     if (!proxyRequiresAuth) {
-        proxyRequiresAuth = config.proxyRequiresAuth;
+        proxyRequiresAuth = configGetProxyRequiresAuth();
     }
 
     if (proxyUsername == NULL || strlen(proxyUsername) == 0) {
-        proxyUsername = config.proxyUsername;
+        proxyUsername = configGetProxyUsername();
     }
 
     if (proxyPassword == NULL || strlen(proxyPassword) == 0) {
-        proxyPassword = config.proxyPassword;
+        proxyPassword = configGetProxyPassword();
     }
 
     if (model == NULL || strlen(model) == 0) {
-        model = config.useCustomServer ? config.customChatModel
-                                       : CHAT_MODEL_NAMES[config.chatModel];
+        model = configGetUseCustomServer() ? configGetCustomChatModel()
+                                           : CHAT_MODEL_NAMES[configGetChatModel()];
     }
 
     struct Conversation *conversation = newConversation();
@@ -160,7 +160,7 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     STRPTR prompt = (STRPTR)arg[4];
 
     if (apiKey == NULL || strlen(apiKey) == 0) {
-        apiKey = config.openAiApiKey;
+        apiKey = configGetOpenAiApiKey();
     }
 
     ImageModel model;
@@ -368,7 +368,7 @@ HOOKPROTONHNO(ListServerModelsFunc, APTR, ULONG *arg) {
     ULONG proxyPortValue = proxyPort == NULL ? 8080 : (ULONG)*proxyPort;
 
     if (apiKey == NULL) {
-        apiKey = config.openAiApiKey;
+        apiKey = configGetOpenAiApiKey();
     }
 
     struct json_object *models = getChatModels(
@@ -403,7 +403,7 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     STRPTR prompt = (STRPTR)arg[6];
 
     if (apiKey == NULL || strlen(apiKey) == 0) {
-        apiKey = config.openAiApiKey;
+        apiKey = configGetOpenAiApiKey();
     }
     OpenAITTSModel model;
     if (modelString == NULL || strlen(modelString) == 0) {
@@ -440,14 +440,13 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
         }
     }
 
-    writeConfig();
-    config.openAiApiKey = apiKey;
-    config.speechSystem = SPEECH_SYSTEM_OPENAI;
-    config.openAITTSModel = model;
-    config.openAITTSVoice = voice;
-    config.openAIVoiceInstructions = instructions;
+    /* Temporarily set config for speakText */
+    configSetOpenAiApiKey(apiKey);
+    configSetSpeechSystem(SPEECH_SYSTEM_OPENAI);
+    configSetOpenAITTSModel(model);
+    configSetOpenAITTSVoice(voice);
+    configSetOpenAIVoiceInstructions(instructions);
     speakText(prompt, output, &audioFormat);
-    readConfig();
     set(app, MUIA_Application_RexxString, prompt);
     updateStatusBar(STRING_READY, greenPen);
     return RETURN_OK;

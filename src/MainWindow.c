@@ -13,8 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include "AmigaGPTConfig.h"
 #include "AmigaGPTTextEditor.h"
-#include "config.h"
 #include "gui.h"
 #include "menu.h"
 #include "MainWindow.h"
@@ -198,7 +198,8 @@ HOOKPROTONHNONP(DeleteChatButtonClickedFunc, void) {
 MakeHook(DeleteChatButtonClickedHook, DeleteChatButtonClickedFunc);
 
 HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
-    if (config.openAiApiKey != NULL && strlen(config.openAiApiKey) > 0) {
+    STRPTR apiKey = configGetOpenAiApiKey();
+    if (apiKey != NULL && strlen(apiKey) > 0) {
         sendChatMessage();
     } else {
         displayError(STRING_ERROR_NO_API_KEY);
@@ -251,7 +252,8 @@ HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
 MakeHook(DeleteImageButtonClickedHook, DeleteImageButtonClickedFunc);
 
 HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
-    if (config.openAiApiKey == NULL || strlen(config.openAiApiKey) == 0) {
+    STRPTR apiKey = configGetOpenAiApiKey();
+    if (apiKey == NULL || strlen(apiKey) == 0) {
         displayError(STRING_ERROR_NO_API_KEY);
         return;
     }
@@ -275,28 +277,30 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
                                         CSA_Source, (Tag)text, TAG_DONE);
 
+    ImageModel imageModel = configGetImageModel();
     ImageSize imageSize;
-    switch (config.imageModel) {
+    switch (imageModel) {
     case DALL_E_2:
-        imageSize = config.imageSizeDallE2;
+        imageSize = configGetImageSizeDallE2();
         break;
     case DALL_E_3:
-        imageSize = config.imageSizeDallE3;
+        imageSize = configGetImageSizeDallE3();
         break;
     case GPT_IMAGE_1:
     case GPT_IMAGE_1_MINI:
     case GPT_IMAGE_1_5:
-        imageSize = config.imageSizeGptImage1;
+        imageSize = configGetImageSizeGptImage1();
         break;
     default:
-        imageSize = config.imageSizeDallE2;
+        imageSize = configGetImageSizeDallE2();
         break;
     }
     struct json_object *response = postImageCreationRequestToOpenAI(
-        textUTF8, config.imageModel, imageSize, config.openAiApiKey,
-        config.proxyEnabled, config.proxyHost, config.proxyPort,
-        config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
-        config.proxyPassword, config.imageFormat);
+        textUTF8, imageModel, imageSize, configGetOpenAiApiKey(),
+        configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
+        configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+        configGetProxyUsername(), configGetProxyPassword(),
+        configGetImageFormat());
     CodesetsFreeA(textUTF8, NULL);
 
     if (response == NULL) {
@@ -352,13 +356,13 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 
     CreateDir("AMIGAGPT:images");
     STRPTR imageFormat;
-    switch (config.imageModel) {
+    switch (imageModel) {
     case DALL_E_2:
     case DALL_E_3:
         imageFormat = "png";
         break;
     default:
-        imageFormat = IMAGE_FORMAT_NAMES[config.imageFormat];
+        imageFormat = IMAGE_FORMAT_NAMES[configGetImageFormat()];
     }
 
     // Generate unique ID for the image
@@ -431,10 +435,10 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         "user");
     struct json_object **responses = postChatMessageToOpenAI(
         imageNameConversation, NULL, 0, FALSE, CHAT_MODEL_NAMES[GPT_5_NANO],
-        config.openAiApiKey, FALSE, config.proxyEnabled, config.proxyHost,
-        config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth,
-        config.proxyUsername, config.proxyPassword, FALSE,
-        API_ENDPOINT_RESPONSES, NULL);
+        configGetOpenAiApiKey(), FALSE, configGetProxyEnabled(),
+        configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
+        configGetProxyRequiresAuth(), configGetProxyUsername(),
+        configGetProxyPassword(), FALSE, API_ENDPOINT_RESPONSES, NULL);
 
     struct GeneratedImage *generatedImage =
         AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
@@ -479,7 +483,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     strncpy(generatedImage->filePath, fullPath, strlen(fullPath));
     generatedImage->prompt = AllocVec(strlen(text) + 1, MEMF_ANY | MEMF_CLEAR);
     strncpy(generatedImage->prompt, text, strlen(text));
-    generatedImage->imageModel = config.imageModel;
+    generatedImage->imageModel = imageModel;
     generatedImage->width = imageWidth;
     generatedImage->height = imageHeight;
     DoMethod(imageListObject, MUIM_NList_InsertSingle, generatedImage,
@@ -907,7 +911,7 @@ LONG createMainWindow() {
             MUII_BACKGROUND, MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
             MUIA_AmigaGPTTextEditor_SubmitHook, &SendMessageButtonClickedHook,
             isAROS ? TAG_DONE : TAG_SKIP, NULL, MUIA_TextEditor_FixedFont,
-            config.fixedWidthFonts, MUIA_TextEditor_ReadOnly, FALSE,
+            configGetFixedWidthFonts(), MUIA_TextEditor_ReadOnly, FALSE,
             MUIA_TextEditor_TabSize, 4, MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
@@ -916,7 +920,7 @@ LONG createMainWindow() {
             MUIC_AmigaGPTTextEditor, NULL, MUIA_Weight, 80,
             MUIA_AmigaGPTTextEditor_SubmitHook, &CreateImageButtonClickedHook,
             isAROS ? TAG_DONE : TAG_SKIP, NULL, MUIA_TextEditor_FixedFont,
-            config.fixedWidthFonts, MUIA_TextEditor_ReadOnly, FALSE,
+            configGetFixedWidthFonts(), MUIA_TextEditor_ReadOnly, FALSE,
             MUIA_TextEditor_TabSize, 4, MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
@@ -925,7 +929,7 @@ LONG createMainWindow() {
             isAROS ? MUIC_BetterString : MUIC_TextEditor, TextFrame,
             MUIA_Background, MUII_BACKGROUND, MUIA_ObjectID,
             OBJECT_ID_CHAT_INPUT_TEXT_EDITOR, isAROS ? TAG_DONE : TAG_SKIP,
-            NULL, MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+            NULL, MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
             MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
             MUIA_TextEditor_Rows, 3, MUIA_TextEditor_ExportHook,
             MUIV_TextEditor_ExportHook_EMail, TAG_DONE);
@@ -933,7 +937,7 @@ LONG createMainWindow() {
         imageInputTextEditor = MUI_NewObject(
             isAROS ? MUIC_BetterString : MUIC_TextEditor, TextFrame,
             MUIA_Background, MUIA_Weight, 80, isAROS ? TAG_DONE : TAG_SKIP,
-            NULL, MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+            NULL, MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
             MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
             MUIA_TextEditor_Rows, 3, MUIA_TextEditor_ExportHook,
             MUIV_TextEditor_ExportHook_EMail, TAG_DONE);
@@ -1007,7 +1011,7 @@ LONG createMainWindow() {
                                 MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_None,
                                 MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
                                 MUIA_NListview_NList, chatOutputTextEditor = NFloattextObject,
-                                    MUIA_Font, config.fixedWidthFonts ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
+                                    MUIA_Font, configGetFixedWidthFonts() ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
                                     MUIA_Frame, MUIV_Frame_Text,
                                     MUIA_ContextMenu, NULL,
                                     MUIA_NFloattext_Text, chatOutputTextEditorContents,
@@ -1247,7 +1251,7 @@ static void sendChatMessage() {
     }
     UBYTE userStyleString[] = "\033r\033b\0333";
     UBYTE userAlignment;
-    switch (config.userTextAlignment) {
+    switch (configGetUserTextAlignment()) {
     case ALIGN_LEFT:
         userAlignment = 'l';
         break;
@@ -1293,7 +1297,7 @@ static void sendChatMessage() {
     addTextToConversation(currentConversation, textUTF8, "user");
     CodesetsFreeA(textUTF8, NULL);
 
-    setConversationSystem(currentConversation, config.chatSystem);
+    setConversationSystem(currentConversation, configGetChatSystem());
 
     if (isAROS) {
         set(chatInputTextEditor, MUIA_String_Contents, "");
@@ -1305,24 +1309,25 @@ static void sendChatMessage() {
     BOOL dataStreamFinished = FALSE;
     ULONG speechIndex = 0;
     UWORD wordNumber = 0;
+    ULONG useCustomServer = configGetUseCustomServer();
 
     strncat(chatOutputTextEditorContents, "\n", 1);
 
     do {
         responses = postChatMessageToOpenAI(
-            currentConversation,
-            config.useCustomServer ? config.customHost : NULL,
-            config.useCustomServer ? config.customPort : 0,
-            config.useCustomServer ? config.customUseSSL : FALSE,
-            config.useCustomServer ? config.customChatModel
-                                   : CHAT_MODEL_NAMES[config.chatModel],
-            config.useCustomServer ? config.customApiKey : config.openAiApiKey,
-            !config.useCustomServer, config.proxyEnabled, config.proxyHost,
-            config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth,
-            config.proxyUsername, config.proxyPassword, config.webSearchEnabled,
-            config.useCustomServer ? config.customApiEndpoint
-                                   : API_ENDPOINT_RESPONSES,
-            config.useCustomServer ? config.customApiEndpointUrl : NULL);
+            currentConversation, useCustomServer ? configGetCustomHost() : NULL,
+            useCustomServer ? configGetCustomPort() : 0,
+            useCustomServer ? configGetCustomUseSSL() : FALSE,
+            useCustomServer ? configGetCustomChatModel()
+                            : CHAT_MODEL_NAMES[configGetChatModel()],
+            useCustomServer ? configGetCustomApiKey() : configGetOpenAiApiKey(),
+            !useCustomServer, configGetProxyEnabled(), configGetProxyHost(),
+            configGetProxyPort(), configGetProxyUsesSSL(),
+            configGetProxyRequiresAuth(), configGetProxyUsername(),
+            configGetProxyPassword(), configGetWebSearchEnabled(),
+            useCustomServer ? configGetCustomApiEndpoint()
+                            : API_ENDPOINT_RESPONSES,
+            useCustomServer ? configGetCustomApiEndpointUrl() : NULL);
         if (responses == NULL) {
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -1383,10 +1388,10 @@ static void sendChatMessage() {
             }
 
             UTF8 *contentString = getMessageContentFromJson(
-                response, !config.useCustomServer, FALSE,
-                config.useCustomServer ? config.customApiEndpoint
-                                       : API_ENDPOINT_RESPONSES);
-            if (config.useCustomServer) {
+                response, !useCustomServer, FALSE,
+                useCustomServer ? configGetCustomApiEndpoint()
+                                : API_ENDPOINT_RESPONSES);
+            if (useCustomServer) {
                 strncpy(receivedMessage, contentString,
                         READ_BUFFER_LENGTH - strlen(receivedMessage) -
                             strlen(contentString) - 1);
@@ -1423,14 +1428,14 @@ static void sendChatMessage() {
                                 chatOutputTextEditorContents);
                             set(chatOutputListView, MUIA_NList_First,
                                 MUIV_NList_First_Bottom);
-                            if (config.speechEnabled) {
+                            if (configGetSpeechEnabled()) {
                                 // Text for speaking
                                 STRPTR unformattedMessageSystemEncoded =
                                     CodesetsUTF8ToStr(
                                         CSA_DestCodeset, (Tag)systemCodeset,
                                         CSA_Source, (Tag)receivedMessage,
                                         CSA_MapForeignChars, TRUE, TAG_DONE);
-                                if (config.speechSystem !=
+                                if (configGetSpeechSystem() !=
                                     SPEECH_SYSTEM_OPENAI) {
                                     speakText(unformattedMessageSystemEncoded +
                                                   speechIndex,
@@ -1445,7 +1450,7 @@ static void sendChatMessage() {
                     }
                     STRPTR type = json_object_get_string(
                         json_object_object_get(response, "type"));
-                    if (config.useCustomServer ||
+                    if (useCustomServer ||
                         strcmp(type, "response.completed") == 0) {
                         dataStreamFinished = TRUE;
                     }
@@ -1464,8 +1469,8 @@ static void sendChatMessage() {
                               "assistant");
         displayConversation(currentConversation);
 
-        if (config.speechEnabled) {
-            if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
+        if (configGetSpeechEnabled()) {
+            if (configGetSpeechSystem() == SPEECH_SYSTEM_OPENAI) {
                 speakText(receivedMessage, NULL, AUDIO_FORMAT_PCM);
             } else {
                 STRPTR receivedMessageSystemEncoded = CodesetsUTF8ToStr(
@@ -1492,20 +1497,20 @@ static void sendChatMessage() {
             setConversationSystem(currentConversation, NULL);
             responses = postChatMessageToOpenAI(
                 currentConversation,
-                config.useCustomServer ? config.customHost : NULL,
-                config.useCustomServer ? config.customPort : 0,
-                config.useCustomServer ? config.customUseSSL : FALSE,
-                config.useCustomServer ? config.customChatModel
-                                       : CHAT_MODEL_NAMES[GPT_5_NANO],
-                config.useCustomServer ? config.customApiKey
-                                       : config.openAiApiKey,
-                FALSE, config.proxyEnabled, config.proxyHost, config.proxyPort,
-                config.proxyUsesSSL, config.proxyRequiresAuth,
-                config.proxyUsername, config.proxyPassword,
-                config.webSearchEnabled,
-                config.useCustomServer ? config.customApiEndpoint
-                                       : API_ENDPOINT_RESPONSES,
-                config.useCustomServer ? config.customApiEndpointUrl : NULL);
+                useCustomServer ? configGetCustomHost() : NULL,
+                useCustomServer ? configGetCustomPort() : 0,
+                useCustomServer ? configGetCustomUseSSL() : FALSE,
+                useCustomServer ? configGetCustomChatModel()
+                                : CHAT_MODEL_NAMES[GPT_5_NANO],
+                useCustomServer ? configGetCustomApiKey()
+                                : configGetOpenAiApiKey(),
+                FALSE, configGetProxyEnabled(), configGetProxyHost(),
+                configGetProxyPort(), configGetProxyUsesSSL(),
+                configGetProxyRequiresAuth(), configGetProxyUsername(),
+                configGetProxyPassword(), configGetWebSearchEnabled(),
+                useCustomServer ? configGetCustomApiEndpoint()
+                                : API_ENDPOINT_RESPONSES,
+                useCustomServer ? configGetCustomApiEndpointUrl() : NULL);
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);
@@ -1520,8 +1525,8 @@ static void sendChatMessage() {
             if (responses[0] != NULL) {
                 UTF8 *responseString = getMessageContentFromJson(
                     responses[0], FALSE, FALSE,
-                    config.useCustomServer ? config.customApiEndpoint
-                                           : API_ENDPOINT_RESPONSES);
+                    useCustomServer ? configGetCustomApiEndpoint()
+                                    : API_ENDPOINT_RESPONSES);
                 if (currentConversation->name == NULL) {
                     currentConversation->name =
                         AllocVec(strlen(responseString) + 1, MEMF_CLEAR);
@@ -1570,7 +1575,7 @@ void displayConversation(struct Conversation *conversation) {
         if (strcmp(conversationNode->role, "user") == 0) {
             UTF8 *content = conversationNode->content;
             UBYTE userAlignment;
-            switch (config.userTextAlignment) {
+            switch (configGetUserTextAlignment()) {
             case ALIGN_LEFT:
                 userAlignment = 'l';
                 break;
@@ -1594,7 +1599,7 @@ void displayConversation(struct Conversation *conversation) {
             }
         } else if (strcmp(conversationNode->role, "assistant") == 0) {
             set(chatOutputListView, MUIA_NFloattext_Align,
-                config.assistantTextAlignment);
+                configGetAssistantTextAlignment());
             UBYTE assistantStyleString[] = "\n\n\0332";
             strncat(chatOutputTextEditorContents, assistantStyleString,
                     strlen(assistantStyleString));

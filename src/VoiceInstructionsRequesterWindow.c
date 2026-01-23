@@ -5,8 +5,8 @@
 #include <mui/TextEditor_mcc.h>
 #include <SDI_hook.h>
 #include <string.h>
+#include "AmigaGPTConfig.h"
 #include "VoiceInstructionsRequesterWindow.h"
-#include "config.h"
 #include "gui.h"
 
 Object *voiceInstructionsRequesterString;
@@ -21,17 +21,7 @@ HOOKPROTONHNONP(VoiceInstructionsRequesterOkButtonClickedFunc, void) {
         voiceInstructions = DoMethod(voiceInstructionsRequesterString,
                                      MUIM_TextEditor_ExportText);
     }
-    if (config.openAIVoiceInstructions != NULL) {
-        FreeVec(config.openAIVoiceInstructions);
-        config.openAIVoiceInstructions = NULL;
-    }
-    config.openAIVoiceInstructions =
-        AllocVec(strlen(voiceInstructions) + 1, MEMF_CLEAR);
-    strncpy(config.openAIVoiceInstructions, voiceInstructions,
-            strlen(voiceInstructions));
-    if (writeConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
-    }
+    configSetOpenAIVoiceInstructions(voiceInstructions);
     if (!isAROS) {
         FreeVec(voiceInstructions);
     }
@@ -63,9 +53,9 @@ LONG createVoiceInstructionsRequesterWindow() {
                 Child,voiceInstructionsRequesterString = isAROS ? BetterStringObject,
                     MUIA_String_MaxLen, CHAT_SYSTEM_LENGTH - 1,
                     MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, config.openAIVoiceInstructions,
+                    MUIA_String_Contents, configGetOpenAIVoiceInstructions(),
                 End : TextEditorObject,
-                    MUIA_TextEditor_Contents, config.openAIVoiceInstructions,
+                    MUIA_TextEditor_Contents, configGetOpenAIVoiceInstructions(),
                     MUIA_TextEditor_ReadOnly, FALSE,
                     MUIA_TextEditor_TabSize, 4,
                     MUIA_TextEditor_Rows, 6,

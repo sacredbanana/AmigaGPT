@@ -3,8 +3,8 @@
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
+#include "AmigaGPTConfig.h"
 #include "CustomServerSettingsRequesterWindow.h"
-#include "config.h"
 #include "gui.h"
 
 Object *customServerHostString;
@@ -50,12 +50,7 @@ MakeHook(SettingsChangedHook, SettingsChangedFunc);
 HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     STRPTR customServerHost;
     get(customServerHostString, MUIA_String_Contents, &customServerHost);
-    if (config.customHost != NULL) {
-        FreeVec(config.customHost);
-        config.customHost = NULL;
-    }
-    config.customHost = AllocVec(strlen(customServerHost) + 1, MEMF_CLEAR);
-    strncpy(config.customHost, customServerHost, strlen(customServerHost));
+    configSetCustomHost(customServerHost);
 
     LONG port;
     get(customServerPortString, MUIA_String_Integer, &port);
@@ -63,54 +58,30 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         displayError(STRING_ERROR_INVALID_PORT);
         return;
     }
-    config.customPort = port;
+    configSetCustomPort(port);
 
     LONG usesSSL;
     get(customServerUsesSSLCycle, MUIA_Cycle_Active, &usesSSL);
-    config.customUseSSL = usesSSL == 1;
+    configSetCustomUseSSL(usesSSL == 1);
 
     STRPTR customServerApiKey;
     get(customServerApiKeyString, MUIA_String_Contents, &customServerApiKey);
-    if (config.customApiKey != NULL) {
-        FreeVec(config.customApiKey);
-        config.customApiKey = NULL;
-    }
-    config.customApiKey = AllocVec(strlen(customServerApiKey) + 1, MEMF_CLEAR);
-    strncpy(config.customApiKey, customServerApiKey,
-            strlen(customServerApiKey));
+    configSetCustomApiKey(customServerApiKey);
 
     STRPTR customServerChatModel;
     get(customServerChatModelString, MUIA_String_Contents,
         &customServerChatModel);
-    if (config.customChatModel != NULL) {
-        FreeVec(config.customChatModel);
-        config.customChatModel = NULL;
-    }
-    config.customChatModel =
-        AllocVec(strlen(customServerChatModel) + 1, MEMF_CLEAR);
-    strncpy(config.customChatModel, customServerChatModel,
-            strlen(customServerChatModel));
+    configSetCustomChatModel(customServerChatModel);
 
     LONG apiEndpoint;
     get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
-    config.customApiEndpoint = apiEndpoint;
+    configSetCustomApiEndpoint(apiEndpoint);
 
     STRPTR customServerApiEndpointUrl;
     get(customServerApiEndpointUrlString, MUIA_String_Contents,
         &customServerApiEndpointUrl);
+    configSetCustomApiEndpointUrl(customServerApiEndpointUrl);
 
-    if (config.customApiEndpointUrl != NULL) {
-        FreeVec(config.customApiEndpointUrl);
-        config.customApiEndpointUrl = NULL;
-    }
-    config.customApiEndpointUrl =
-        AllocVec(strlen(customServerApiEndpointUrl) + 1, MEMF_CLEAR);
-    strncpy(config.customApiEndpointUrl, customServerApiEndpointUrl,
-            strlen(customServerApiEndpointUrl));
-
-    if (writeConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
-    }
     set(customServerSettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
 }
 MakeHook(CustomServerSettingsRequesterOkButtonClickedHook,
@@ -143,7 +114,7 @@ LONG createCustomServerSettingsRequesterWindow() {
                 Child, customServerHostString = StringObject,
                     MUIA_Frame, MUIV_Frame_String,
                     MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, config.customHost,
+                    MUIA_String_Contents, configGetCustomHost(),
                 End,
             End,
             Child, VGroup,
@@ -154,7 +125,7 @@ LONG createCustomServerSettingsRequesterWindow() {
                     MUIA_CycleChain, TRUE,
                     MUIA_String_Accept, "0123456789",
                     MUIA_String_MaxLen, 5,
-                    MUIA_String_Integer, (LONG)config.customPort,
+                    MUIA_String_Integer, (LONG)configGetCustomPort(),
                 End,
             End,
             Child, VGroup,
@@ -163,7 +134,7 @@ LONG createCustomServerSettingsRequesterWindow() {
                 Child, customServerUsesSSLCycle = CycleObject,
                     MUIA_CycleChain, TRUE,
                     MUIA_Cycle_Entries, sslOptions,
-                    MUIA_Cycle_Active, config.customUseSSL ? 1 : 0,
+                    MUIA_Cycle_Active, configGetCustomUseSSL() ? 1 : 0,
                 End,
             End,
             Child, VGroup,
@@ -172,7 +143,7 @@ LONG createCustomServerSettingsRequesterWindow() {
                 Child, customServerApiKeyString = StringObject,
                     MUIA_Frame, MUIV_Frame_String,
                     MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, config.customApiKey,
+                    MUIA_String_Contents, configGetCustomApiKey(),
                     MUIA_String_MaxLen, 256,
                 End,
             End,
@@ -182,7 +153,7 @@ LONG createCustomServerSettingsRequesterWindow() {
                 Child, customServerChatModelString = StringObject,
                     MUIA_Frame, MUIV_Frame_String,
                     MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, config.customChatModel != NULL ? config.customChatModel : "gemini-2.0-flash",
+                    MUIA_String_Contents, configGetCustomChatModel() != NULL ? configGetCustomChatModel() : "gemini-2.0-flash",
                 End,
             End,
             Child, VGroup,
@@ -191,7 +162,7 @@ LONG createCustomServerSettingsRequesterWindow() {
                 Child, customServerApiEndpointCycle = CycleObject,
                     MUIA_CycleChain, TRUE,
                     MUIA_Cycle_Entries, apiEndpointOptions,
-                    MUIA_Cycle_Active, config.customApiEndpoint,
+                    MUIA_Cycle_Active, configGetCustomApiEndpoint(),
                 End,
             End,
             Child, VGroup,
@@ -200,7 +171,7 @@ LONG createCustomServerSettingsRequesterWindow() {
                 Child, customServerApiEndpointUrlString = StringObject,
                     MUIA_Frame, MUIV_Frame_String,
                     MUIA_CycleChain, TRUE,
-                    MUIA_String_Contents, config.customApiEndpointUrl != NULL ? config.customApiEndpointUrl : "v1",
+                    MUIA_String_Contents, configGetCustomApiEndpointUrl() != NULL ? configGetCustomApiEndpointUrl() : "v1",
                 End,
             End,
             Child, VGroup,

@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <workbench/startup.h>
+#include "AmigaGPTConfig.h"
 #include "gui.h"
-#include "config.h"
 #include "version.h"
 
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
@@ -92,18 +92,13 @@ LONG main(int argc, char **argv) {
     printf("AmigaGPTD " APP_VERSION " starting...\n");
 #endif
 
-    if (readConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_READ);
-        exit(RETURN_ERROR);
-    }
-
     if (initVideo() == RETURN_ERROR) {
         displayError(STRING_ERROR_VIDEO_INIT);
         exit(RETURN_ERROR);
     }
 
-    if (initSpeech(config.speechSystem) == RETURN_ERROR) {
-        switch (config.speechSystem) {
+    if (initSpeech(configGetSpeechSystem()) == RETURN_ERROR) {
+        switch (configGetSpeechSystem()) {
         case SPEECH_SYSTEM_34:
             displayError(STRING_ERROR_SPEECH_INIT_WORKBENCH_34);
             break;
@@ -116,7 +111,7 @@ LONG main(int argc, char **argv) {
             displayError(STRING_ERROR_SPEECH_UNKNOWN_SYSTEM);
             break;
         }
-        config.speechEnabled = FALSE;
+        configSetSpeechEnabled(FALSE);
         closeSpeech();
     }
 
@@ -148,9 +143,6 @@ static void cleanExit() {
     printf("AmigaGPTD shutting down...\n");
 #endif
 
-    if (writeConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
-    }
     freeConfig();
     shutdownGUI();
     closeSpeech();

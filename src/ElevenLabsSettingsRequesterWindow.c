@@ -7,8 +7,8 @@
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
+#include "AmigaGPTConfig.h"
 #include "ElevenLabsSettingsRequesterWindow.h"
-#include "config.h"
 #include "gui.h"
 #include "MainWindow.h"
 #include "openai.h"
@@ -78,22 +78,23 @@ MakeHook(DisplayVoiceLI_TextHook, DisplayVoiceLI_TextFunc);
 
 HOOKPROTONHNONP(ElevenLabsSettingsWindowOpenFunc, void) {
     /* Prefill the API key from the current config value */
+    STRPTR apiKey = configGetElevenLabsAPIKey();
     set(elevenLabsAPIKeyString, MUIA_String_Contents,
-        config.elevenLabsAPIKey != NULL ? config.elevenLabsAPIKey : "");
+        apiKey != NULL ? apiKey : "");
 
     /* Update current model text */
-    if (config.elevenLabsModelName != NULL) {
-        set(elevenLabsCurrentModelText, MUIA_Text_Contents,
-            config.elevenLabsModelName);
+    STRPTR modelName = configGetElevenLabsModelName();
+    if (modelName != NULL) {
+        set(elevenLabsCurrentModelText, MUIA_Text_Contents, modelName);
     } else {
         set(elevenLabsCurrentModelText, MUIA_Text_Contents,
             STRING_NONE_SELECTED);
     }
 
     /* Update current voice text */
-    if (config.elevenLabsVoiceName != NULL) {
-        set(elevenLabsCurrentVoiceText, MUIA_Text_Contents,
-            config.elevenLabsVoiceName);
+    STRPTR voiceName = configGetElevenLabsVoiceName();
+    if (voiceName != NULL) {
+        set(elevenLabsCurrentVoiceText, MUIA_Text_Contents, voiceName);
     } else {
         set(elevenLabsCurrentVoiceText, MUIA_Text_Contents,
             STRING_NONE_SELECTED);
@@ -171,14 +172,7 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
     /* Save API key */
     STRPTR apiKey;
     get(elevenLabsAPIKeyString, MUIA_String_Contents, &apiKey);
-    if (config.elevenLabsAPIKey != NULL) {
-        FreeVec(config.elevenLabsAPIKey);
-        config.elevenLabsAPIKey = NULL;
-    }
-    if (apiKey != NULL && strlen(apiKey) > 0) {
-        config.elevenLabsAPIKey = AllocVec(strlen(apiKey) + 1, MEMF_CLEAR);
-        strncpy(config.elevenLabsAPIKey, apiKey, strlen(apiKey));
-    }
+    configSetElevenLabsAPIKey(apiKey);
 
     /* Save selected model */
     LONG modelActive = MUIV_NList_Active_Off;
@@ -191,14 +185,7 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
 
         if (selectedModelName != NULL) {
             /* Save the model name */
-            if (config.elevenLabsModelName != NULL) {
-                FreeVec(config.elevenLabsModelName);
-                config.elevenLabsModelName = NULL;
-            }
-            config.elevenLabsModelName =
-                AllocVec(strlen(selectedModelName) + 1, MEMF_CLEAR);
-            strncpy(config.elevenLabsModelName, selectedModelName,
-                    strlen(selectedModelName));
+            configSetElevenLabsModelName(selectedModelName);
 
             /* Find and save the model ID */
             struct json_object *modelsArray = NULL;
@@ -222,16 +209,7 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
                                                           &modelIdObj)) {
                                 CONST_STRPTR modelId =
                                     json_object_get_string(modelIdObj);
-                                if (config.elevenLabsModel != NULL) {
-                                    FreeVec(config.elevenLabsModel);
-                                    config.elevenLabsModel = NULL;
-                                }
-                                if (modelId != NULL) {
-                                    config.elevenLabsModel = AllocVec(
-                                        strlen(modelId) + 1, MEMF_CLEAR);
-                                    strncpy(config.elevenLabsModel, modelId,
-                                            strlen(modelId));
-                                }
+                                configSetElevenLabsModel(modelId);
                             }
                             break;
                         }
@@ -252,14 +230,7 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
 
         if (selectedVoiceName != NULL) {
             /* Save the voice name */
-            if (config.elevenLabsVoiceName != NULL) {
-                FreeVec(config.elevenLabsVoiceName);
-                config.elevenLabsVoiceName = NULL;
-            }
-            config.elevenLabsVoiceName =
-                AllocVec(strlen(selectedVoiceName) + 1, MEMF_CLEAR);
-            strncpy(config.elevenLabsVoiceName, selectedVoiceName,
-                    strlen(selectedVoiceName));
+            configSetElevenLabsVoiceName(selectedVoiceName);
 
             /* Find and save the voice ID */
             struct json_object *voicesArray = NULL;
@@ -283,16 +254,7 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
                                                           &voiceIdObj)) {
                                 CONST_STRPTR voiceId =
                                     json_object_get_string(voiceIdObj);
-                                if (config.elevenLabsVoiceID != NULL) {
-                                    FreeVec(config.elevenLabsVoiceID);
-                                    config.elevenLabsVoiceID = NULL;
-                                }
-                                if (voiceId != NULL) {
-                                    config.elevenLabsVoiceID = AllocVec(
-                                        strlen(voiceId) + 1, MEMF_CLEAR);
-                                    strncpy(config.elevenLabsVoiceID, voiceId,
-                                            strlen(voiceId));
-                                }
+                                configSetElevenLabsVoiceID(voiceId);
                             }
                             break;
                         }
@@ -300,10 +262,6 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
                 }
             }
         }
-    }
-
-    if (writeConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
     }
 
     set(elevenLabsSettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
@@ -346,11 +304,12 @@ static void populateModelList(void) {
                      MUIV_NList_Insert_Bottom);
 
             /* Check if this is the currently selected model */
-            if (config.elevenLabsModel != NULL &&
+            STRPTR currentModel = configGetElevenLabsModel();
+            if (currentModel != NULL &&
                 json_object_object_get_ex(modelObj, "model_id", &modelIdObj)) {
                 CONST_STRPTR modelId = json_object_get_string(modelIdObj);
                 if (modelId != NULL &&
-                    strcmp(config.elevenLabsModel, modelId) == 0) {
+                    strcmp(currentModel, modelId) == 0) {
                     selectedIndex = i;
                 }
             }
@@ -397,11 +356,12 @@ static void populateVoiceList(void) {
                      MUIV_NList_Insert_Bottom);
 
             /* Check if this is the currently selected voice */
-            if (config.elevenLabsVoiceID != NULL &&
+            STRPTR currentVoiceID = configGetElevenLabsVoiceID();
+            if (currentVoiceID != NULL &&
                 json_object_object_get_ex(voiceObj, "voice_id", &voiceIdObj)) {
                 CONST_STRPTR voiceId = json_object_get_string(voiceIdObj);
                 if (voiceId != NULL &&
-                    strcmp(config.elevenLabsVoiceID, voiceId) == 0) {
+                    strcmp(currentVoiceID, voiceId) == 0) {
                     selectedIndex = i;
                 }
             }
@@ -420,10 +380,10 @@ static void populateVoiceList(void) {
  **/
 static struct json_object *getElevenLabsModels(CONST_STRPTR apiKey) {
     return makeHttpsGetRequest(ELEVENLABS_HOST, ELEVENLABS_PORT, "/v1/models",
-                               apiKey, "xi-api-key", FALSE, config.proxyEnabled,
-                               config.proxyHost, config.proxyPort,
-                               config.proxyUsesSSL, config.proxyRequiresAuth,
-                               config.proxyUsername, config.proxyPassword);
+                               apiKey, "xi-api-key", FALSE, configGetProxyEnabled(),
+                               configGetProxyHost(), configGetProxyPort(),
+                               configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+                               configGetProxyUsername(), configGetProxyPassword());
 }
 
 /**
@@ -441,10 +401,10 @@ static struct json_object *searchElevenLabsVoices(CONST_STRPTR apiKey,
         snprintf(endpoint, sizeof(endpoint), "/v2/voices");
     }
     return makeHttpsGetRequest(ELEVENLABS_HOST, ELEVENLABS_PORT, endpoint,
-                               apiKey, "xi-api-key", FALSE, config.proxyEnabled,
-                               config.proxyHost, config.proxyPort,
-                               config.proxyUsesSSL, config.proxyRequiresAuth,
-                               config.proxyUsername, config.proxyPassword);
+                               apiKey, "xi-api-key", FALSE, configGetProxyEnabled(),
+                               configGetProxyHost(), configGetProxyPort(),
+                               configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+                               configGetProxyUsername(), configGetProxyPassword());
 }
 
 /**
@@ -462,7 +422,7 @@ LONG createElevenLabsSettingsRequesterWindow() {
          Child, VGroup, MUIA_Frame, MUIV_Frame_Group, MUIA_FrameTitle,
          STRING_MENU_OPENAI_API_KEY, Child,
          elevenLabsAPIKeyString = StringObject, MUIA_Frame, MUIV_Frame_String,
-         MUIA_CycleChain, TRUE, MUIA_String_Contents, config.elevenLabsAPIKey,
+         MUIA_CycleChain, TRUE, MUIA_String_Contents, configGetElevenLabsAPIKey(),
          End, End,
          /* Model Section */
          Child, VGroup, MUIA_Frame, MUIV_Frame_Group, MUIA_FrameTitle,

@@ -17,12 +17,12 @@
 #include <stdio.h>
 #include <string.h>
 #include "AboutAmigaGPTWindow.h"
+#include "AmigaGPTConfig.h"
 #include "AmigaGPTTextEditor.h"
 #include "APIKeyRequesterWindow.h"
 #include "ARexx.h"
 #include "ChatSystemRequesterWindow.h"
 #include "CustomServerSettingsRequesterWindow.h"
-#include "config.h"
 #include "ElevenLabsSettingsRequesterWindow.h"
 #include "gui.h"
 #include "MainWindow.h"
@@ -133,6 +133,11 @@ LONG initVideo() {
         return RETURN_ERROR;
     }
 
+    /* Initialize the MUI config class now that MUIMasterBase is open */
+    if (initConfigMUI() == RETURN_ERROR) {
+        displayError("Failed to initialize config MUI class");
+    }
+
 #ifdef DAEMON
     if (!(app = ApplicationObject, MUIA_Application_Base, "AMIGAGPTD",
           MUIA_Application_Title, "AmigaGPT Daemon", MUIA_Application_Version,
@@ -175,7 +180,7 @@ LONG initVideo() {
     if (!(app = ApplicationObject, MUIA_Application_Base, "AMIGAGPT",
           MUIA_Application_Title, STRING_APP_NAME, MUIA_Application_Version,
           APP_VERSION, MUIA_Application_Copyright,
-          "2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
+          "2023-2026 Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Description, STRING_APP_DESCRIPTION,
           MUIA_Application_Version,
