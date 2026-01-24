@@ -6,6 +6,7 @@
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include "AmigaGPTConfig.h"
 #include "CustomServerSettingsRequesterWindow.h"
 #include "gui.h"
@@ -33,6 +34,10 @@ Object *customServerDeleteProfileButton;
 static struct json_object *customServerModelsJson = NULL;
 static struct json_object *profilesJson = NULL;
 
+static BOOL profileSettingsDirty = FALSE;
+static LONG lastSelectedProfile = -1;
+static BOOL loadingProfile = FALSE;
+
 /* Template definitions */
 enum {
     TEMPLATE_NONE = 0,
@@ -44,9 +49,12 @@ enum {
 
 /* Forward declarations */
 static void populateModelList(void);
-static void populateProfileList(void);
+static void populateProfileList(LONG forceActive);
 static void loadProfilesFromConfig(void);
 static void saveProfilesToConfig(void);
+static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
+                                         BOOL setActiveAfterSave,
+                                         LONG forceActiveForList);
 
 /**
  * Load profiles JSON from config
@@ -82,10 +90,114 @@ static void saveProfilesToConfig(void) {
     }
 }
 
+/* Number of built-in providers (OpenAI, Gemini, Grok, Anthropic) */
+#define NUM_BUILTIN_PROVIDERS 4
+
+/**
+ * Check if a list index corresponds to a built-in provider
+ * Index 0 = New Profile, 1-4 = built-in providers, 5+ = custom profiles
+ */
+static BOOL isBuiltinProviderIndex(LONG index) {
+    return (index >= 1 && index <= NUM_BUILTIN_PROVIDERS);
+}
+
+/**
+ * Get the Provider enum value from a list index
+ * Returns -1 if not a built-in provider
+ */
+static LONG getProviderFromIndex(LONG index) {
+    if (index < 1 || index > NUM_BUILTIN_PROVIDERS)
+        return -1;
+    return index - 1; /* PROVIDER_OPENAI=0, PROVIDER_GEMINI=1, etc. */
+}
+
+/**
+ * Enable or disable server/connection setting gadgets (host, port, SSL,
+ * auth, endpoint, template, fetch models). API key and chat model stay
+ * under caller control. Used to lock these when a built-in provider is
+ * selected.
+ */
+static void setServerSettingsGadgetsEnabled(BOOL enabled) {
+    if (customServerTemplateCycle != NULL)
+        set(customServerTemplateCycle, MUIA_Disabled, enabled ? FALSE : TRUE);
+    if (customServerHostString != NULL)
+        set(customServerHostString, MUIA_Disabled, enabled ? FALSE : TRUE);
+    if (customServerPortString != NULL)
+        set(customServerPortString, MUIA_Disabled, enabled ? FALSE : TRUE);
+    if (customServerUsesSSLCycle != NULL)
+        set(customServerUsesSSLCycle, MUIA_Disabled, enabled ? FALSE : TRUE);
+    if (customServerAuthorizationTypeCycle != NULL)
+        set(customServerAuthorizationTypeCycle, MUIA_Disabled,
+            enabled ? FALSE : TRUE);
+    if (customServerApiEndpointCycle != NULL)
+        set(customServerApiEndpointCycle, MUIA_Disabled,
+            enabled ? FALSE : TRUE);
+    if (customServerApiEndpointUrlString != NULL)
+        set(customServerApiEndpointUrlString, MUIA_Disabled,
+            enabled ? FALSE : TRUE);
+    if (customServerCustomHeadersString != NULL)
+        set(customServerCustomHeadersString, MUIA_Disabled,
+            enabled ? FALSE : TRUE);
+    /* Fetch Models is left enabled for built-in providers (e.g. OpenAI) */
+}
+
+/**
+ * Load built-in provider settings into UI
+ */
+static void loadBuiltinProviderIntoUI(Provider provider) {
+    struct ProviderConfig *config = getProviderConfig(provider);
+    if (config == NULL)
+        return;
+
+    set(customServerHostString, MUIA_String_Contents,
+        config->host ? config->host : "");
+    set(customServerPortString, MUIA_String_Integer, (LONG)config->port);
+    set(customServerUsesSSLCycle, MUIA_Cycle_Active, config->useSSL ? 1 : 0);
+    set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
+        (LONG)config->authorizationType);
+    set(customServerApiEndpointCycle, MUIA_Cycle_Active,
+        (LONG)config->apiEndpoint);
+    set(customServerApiEndpointUrlString, MUIA_String_Contents,
+        config->apiEndpointUrl ? config->apiEndpointUrl : "v1");
+    set(customServerCustomHeadersString, MUIA_String_Contents,
+        config->customHeaders ? config->customHeaders : "");
+
+    /* Load API key for this provider */
+    STRPTR apiKey = configGetApiKeyForProvider(provider);
+    set(customServerApiKeyString, MUIA_String_Contents,
+        apiKey ? apiKey : "");
+
+    /* Load the current model for this provider */
+    STRPTR modelName = configGetChatModelName();
+    CONST_STRPTR *modelList = NULL;
+    switch (provider) {
+    case PROVIDER_OPENAI:
+        modelList = OPENAI_CHAT_MODELS;
+        break;
+    case PROVIDER_GEMINI:
+        modelList = GEMINI_CHAT_MODELS;
+        break;
+    case PROVIDER_GROK:
+        modelList = GROK_CHAT_MODELS;
+        break;
+    case PROVIDER_ANTHROPIC:
+        modelList = ANTHROPIC_CHAT_MODELS;
+        break;
+    default:
+        modelList = NULL;
+        break;
+    }
+    /* Set first model as default if provider changed */
+    if (modelList != NULL && modelList[0] != NULL) {
+        set(customServerChatModelString, MUIA_String_Contents, modelList[0]);
+    }
+}
+
 /**
  * Populate the profile list from profilesJson
+ * @param forceActive -1 to use default selection, or >=0 to select that index
  */
-static void populateProfileList(void) {
+static void populateProfileList(LONG forceActive) {
     if (customServerProfileList == NULL)
         return;
 
@@ -95,6 +207,17 @@ static void populateProfileList(void) {
     DoMethod(customServerProfileList, MUIM_NList_InsertSingle,
              (ULONG)STRING_NEW_PROFILE, MUIV_NList_Insert_Bottom);
 
+    /* Add built-in providers (non-deletable) */
+    DoMethod(customServerProfileList, MUIM_NList_InsertSingle,
+             (ULONG)STRING_PROVIDER_OPENAI, MUIV_NList_Insert_Bottom);
+    DoMethod(customServerProfileList, MUIM_NList_InsertSingle,
+             (ULONG)STRING_PROVIDER_GEMINI, MUIV_NList_Insert_Bottom);
+    DoMethod(customServerProfileList, MUIM_NList_InsertSingle,
+             (ULONG)STRING_PROVIDER_GROK, MUIV_NList_Insert_Bottom);
+    DoMethod(customServerProfileList, MUIM_NList_InsertSingle,
+             (ULONG)STRING_PROVIDER_ANTHROPIC, MUIV_NList_Insert_Bottom);
+
+    /* Add custom profiles from JSON */
     if (profilesJson != NULL &&
         json_object_is_type(profilesJson, json_type_array)) {
         int len = json_object_array_length(profilesJson);
@@ -116,31 +239,44 @@ static void populateProfileList(void) {
         }
     }
 
-    /* Select the active profile if any */
-    STRPTR activeProfile = configGetActiveProfileName();
-    if (activeProfile != NULL && strlen(activeProfile) > 0) {
-        if (customServerProfileNameString != NULL)
-            set(customServerProfileNameString, MUIA_String_Contents,
-                activeProfile);
-        /* Find and select it in the list */
-        if (profilesJson != NULL) {
-            int len = json_object_array_length(profilesJson);
-            for (int i = 0; i < len; i++) {
-                struct json_object *profile =
-                    json_object_array_get_idx(profilesJson, i);
-                struct json_object *nameObj =
-                    json_object_object_get(profile, "name");
-                if (nameObj != NULL) {
-                    CONST_STRPTR name = json_object_get_string(nameObj);
-                    if (name != NULL && strcmp(name, activeProfile) == 0) {
-                        set(customServerProfileList, MUIA_NList_Active, i + 1);
-                        break;
+    /* Select based on current chat provider, or use forced index */
+    if (forceActive >= 0) {
+        set(customServerProfileList, MUIA_NList_Active, forceActive);
+    } else {
+        Provider currentProvider = configGetChatProvider();
+        if (currentProvider < PROVIDER_CUSTOM) {
+            set(customServerProfileList, MUIA_NList_Active,
+                currentProvider + 1);
+        } else {
+            STRPTR activeProfile = configGetActiveProfileName();
+            if (activeProfile != NULL && strlen(activeProfile) > 0) {
+                if (customServerProfileNameString != NULL)
+                    set(customServerProfileNameString, MUIA_String_Contents,
+                        activeProfile);
+                if (profilesJson != NULL) {
+                    int len = json_object_array_length(profilesJson);
+                    for (int i = 0; i < len; i++) {
+                        struct json_object *profile =
+                            json_object_array_get_idx(profilesJson, i);
+                        struct json_object *nameObj =
+                            json_object_object_get(profile, "name");
+                        if (nameObj != NULL) {
+                            CONST_STRPTR name =
+                                json_object_get_string(nameObj);
+                            if (name != NULL &&
+                                strcmp(name, activeProfile) == 0) {
+                                set(customServerProfileList,
+                                    MUIA_NList_Active,
+                                    i + 1 + NUM_BUILTIN_PROVIDERS);
+                                break;
+                            }
+                        }
                     }
                 }
+            } else {
+                set(customServerProfileList, MUIA_NList_Active, 0);
             }
         }
-    } else {
-        set(customServerProfileList, MUIA_NList_Active, 0);
     }
 }
 
@@ -254,6 +390,81 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
     return profile;
 }
 
+/**
+ * Apply current form to storage for the given profile list index.
+ * For built-in: write API key and chat model to config.
+ * For New/custom: update profilesJson and save; optionally set active.
+ * @param forceActiveForList -1 to use default selection in populateProfileList,
+ *        or >=0 to select that index after refresh.
+ * @return FALSE only when New Profile and name is empty
+ */
+static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
+                                         BOOL setActiveAfterSave,
+                                         LONG forceActiveForList) {
+    STRPTR apiKey = NULL;
+    STRPTR chatModel = NULL;
+    get(customServerApiKeyString, MUIA_String_Contents, &apiKey);
+    get(customServerChatModelString, MUIA_String_Contents, &chatModel);
+
+    if (isBuiltinProviderIndex(profileListIndex)) {
+        Provider provider = (Provider)getProviderFromIndex(profileListIndex);
+        configSetChatProvider(provider);
+        configSetImageProvider(provider);
+        switch (provider) {
+        case PROVIDER_OPENAI: configSetOpenAiApiKey(apiKey); break;
+        case PROVIDER_GEMINI: configSetGeminiApiKey(apiKey); break;
+        case PROVIDER_GROK: configSetGrokApiKey(apiKey); break;
+        case PROVIDER_ANTHROPIC: configSetAnthropicApiKey(apiKey); break;
+        default: break;
+        }
+        configSetChatModelName(chatModel);
+        return TRUE;
+    }
+
+    STRPTR profileName = NULL;
+    get(customServerProfileNameString, MUIA_String_Contents, &profileName);
+    if (profileName == NULL || strlen(profileName) == 0) {
+        if (profileListIndex == 0)
+            return FALSE;
+        /* custom: use existing name from list if form empty */
+        if (profilesJson != NULL && profileListIndex > NUM_BUILTIN_PROVIDERS) {
+            int pi = profileListIndex - 1 - NUM_BUILTIN_PROVIDERS;
+            struct json_object *p =
+                json_object_array_get_idx(profilesJson, pi);
+            if (p != NULL) {
+                struct json_object *no =
+                    json_object_object_get(p, "name");
+                if (no != NULL)
+                    profileName = (STRPTR)json_object_get_string(no);
+            }
+        }
+        if (profileName == NULL || strlen(profileName) == 0)
+            return FALSE;
+    }
+
+    struct json_object *newProfile = createProfileFromUI(profileName);
+
+    if (profileListIndex == 0) {
+        json_object_array_add(profilesJson, newProfile);
+        saveProfilesToConfig();
+        if (setActiveAfterSave)
+            configSetActiveProfileName(profileName);
+        populateProfileList(forceActiveForList);
+        return TRUE;
+    }
+
+    /* custom profile: replace at index */
+    int profileIndex = profileListIndex - 1 - NUM_BUILTIN_PROVIDERS;
+    if (profileIndex >= 0 && profilesJson != NULL) {
+        json_object_array_put_idx(profilesJson, profileIndex, newProfile);
+        saveProfilesToConfig();
+        if (setActiveAfterSave)
+            configSetActiveProfileName(profileName);
+        populateProfileList(forceActiveForList);
+    }
+    return TRUE;
+}
+
 /* NList hooks for profiles */
 HOOKPROTONHNO(ConstructProfileLI_TextFunc, APTR,
               struct NList_ConstructMessage *ncm) {
@@ -289,16 +500,117 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
     LONG active = MUIV_NList_Active_Off;
     get(customServerProfileList, MUIA_NList_Active, &active);
 
+    if (profileSettingsDirty && lastSelectedProfile >= 0 &&
+        active != lastSelectedProfile && active != MUIV_NList_Active_Off) {
+        LONG res = MUI_Request(app, customServerSettingsRequesterWindowObject,
+#ifdef __MORPHOS__
+                              NULL,
+#else
+                              MUIV_Requester_Image_Info,
+#endif
+                              "Save changes?", "*_Yes|_No|_Cancel",
+                              STRING_SAVE_CHANGES_PROMPT, TAG_DONE);
+        if (res == 3) {
+            set(customServerProfileList, MUIA_NList_Active, lastSelectedProfile);
+            return;
+        }
+        if (res == 1) {
+            loadingProfile = TRUE;
+            if (!applyProfileFromFormToStorage(lastSelectedProfile, FALSE,
+                                              active)) {
+                displayError(STRING_ERROR_PROFILE_NAME_REQUIRED);
+                set(customServerProfileList, MUIA_NList_Active,
+                    lastSelectedProfile);
+                loadingProfile = FALSE;
+                return;
+            }
+            loadingProfile = FALSE;
+        }
+        profileSettingsDirty = FALSE;
+    }
+    lastSelectedProfile = active;
+    loadingProfile = TRUE;
+
     if (active == MUIV_NList_Active_Off || active == 0) {
         /* "(New Profile)" selected or nothing - clear name */
         set(customServerProfileNameString, MUIA_String_Contents, "");
+        if (customServerProfileNameString != NULL)
+            set(customServerProfileNameString, MUIA_Disabled, FALSE);
+        /* Disable delete button for new profile */
+        if (customServerDeleteProfileButton != NULL)
+            set(customServerDeleteProfileButton, MUIA_Disabled, TRUE);
+        /* Enable Save Profile and server settings for new custom profile */
+        if (customServerSaveProfileButton != NULL)
+            set(customServerSaveProfileButton, MUIA_Disabled, FALSE);
+        setServerSettingsGadgetsEnabled(TRUE);
+        loadingProfile = FALSE;
         return;
     }
 
-    /* Load the selected profile (index - 1 because of "(New Profile)" entry) */
-    int profileIndex = active - 1;
+    /* Check if this is a built-in provider */
+    if (isBuiltinProviderIndex(active)) {
+        Provider provider = (Provider)getProviderFromIndex(active);
+        loadBuiltinProviderIntoUI(provider);
+
+        /* Set the profile name to the provider name (read-only info) */
+        set(customServerProfileNameString, MUIA_String_Contents,
+            PROVIDER_NAMES[provider]);
+
+        /* Disable delete, Save Profile and profile name for built-in;
+         * only API key and chat model are editable */
+        if (customServerDeleteProfileButton != NULL)
+            set(customServerDeleteProfileButton, MUIA_Disabled, TRUE);
+        if (customServerSaveProfileButton != NULL)
+            set(customServerSaveProfileButton, MUIA_Disabled, TRUE);
+        if (customServerProfileNameString != NULL)
+            set(customServerProfileNameString, MUIA_Disabled, TRUE);
+        setServerSettingsGadgetsEnabled(FALSE);
+
+        /* Replace fetched models with prepopulated list for this provider */
+        if (customServerModelsJson != NULL) {
+            json_object_put(customServerModelsJson);
+            customServerModelsJson = NULL;
+        }
+        {
+            CONST_STRPTR *modelList = NULL;
+            switch (provider) {
+            case PROVIDER_OPENAI: modelList = OPENAI_CHAT_MODELS; break;
+            case PROVIDER_GEMINI: modelList = GEMINI_CHAT_MODELS; break;
+            case PROVIDER_GROK: modelList = GROK_CHAT_MODELS; break;
+            case PROVIDER_ANTHROPIC: modelList = ANTHROPIC_CHAT_MODELS; break;
+            default: break;
+            }
+            if (modelList != NULL) {
+                customServerModelsJson = json_object_new_array();
+                for (UBYTE i = 0; modelList[i] != NULL; i++)
+                    json_object_array_add(customServerModelsJson,
+                        json_object_new_string(modelList[i]));
+                populateModelList();
+            } else if (customServerModelList != NULL) {
+                DoMethod(customServerModelList, MUIM_NList_Clear);
+            }
+        }
+        loadingProfile = FALSE;
+        return;
+    }
+
+    /* Enable delete, Save Profile, profile name and server settings for
+     * custom profiles */
+    if (customServerDeleteProfileButton != NULL)
+        set(customServerDeleteProfileButton, MUIA_Disabled, FALSE);
+    if (customServerSaveProfileButton != NULL)
+        set(customServerSaveProfileButton, MUIA_Disabled, FALSE);
+    if (customServerProfileNameString != NULL)
+        set(customServerProfileNameString, MUIA_Disabled, FALSE);
+    setServerSettingsGadgetsEnabled(TRUE);
+
+    /* Load the selected custom profile
+     * Custom profiles start after built-in providers:
+     * Index 0 = New Profile, 1-4 = built-in, 5+ = custom */
+    int profileIndex = active - 1 - NUM_BUILTIN_PROVIDERS;
     if (profilesJson != NULL &&
-        json_object_is_type(profilesJson, json_type_array)) {
+        json_object_is_type(profilesJson, json_type_array) &&
+        profileIndex >= 0) {
         struct json_object *profile =
             json_object_array_get_idx(profilesJson, profileIndex);
         if (profile != NULL) {
@@ -320,6 +632,7 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
             }
         }
     }
+    loadingProfile = FALSE;
 }
 MakeHook(ProfileSelectedHook, ProfileSelectedFunc);
 
@@ -334,6 +647,15 @@ HOOKPROTONHNONP(SaveProfileFunc, void) {
     if (profileName == NULL || strlen(profileName) == 0) {
         displayError(STRING_ERROR_PROFILE_NAME_REQUIRED);
         return;
+    }
+
+    /* Disallow names that match built-in providers */
+    for (int i = 0; i < NUM_BUILTIN_PROVIDERS && PROVIDER_NAMES[i] != NULL;
+         i++) {
+        if (strcasecmp(profileName, PROVIDER_NAMES[i]) == 0) {
+            displayError(STRING_ERROR_PROFILE_NAME_RESERVED);
+            return;
+        }
     }
 
     /* Check if profile with this name already exists */
@@ -369,7 +691,10 @@ HOOKPROTONHNONP(SaveProfileFunc, void) {
     /* Save and refresh */
     saveProfilesToConfig();
     configSetActiveProfileName(profileName);
-    populateProfileList();
+    loadingProfile = TRUE;
+    populateProfileList(-1);
+    loadingProfile = FALSE;
+    profileSettingsDirty = FALSE;
 }
 MakeHook(SaveProfileHook, SaveProfileFunc);
 
@@ -382,12 +707,17 @@ HOOKPROTONHNONP(DeleteProfileFunc, void) {
     LONG active = MUIV_NList_Active_Off;
     get(customServerProfileList, MUIA_NList_Active, &active);
 
-    /* Can't delete "(New Profile)" entry */
-    if (active <= 0) {
+    /* Can't delete "(New Profile)" entry or built-in providers */
+    if (active <= 0 || isBuiltinProviderIndex(active)) {
         return;
     }
 
-    int profileIndex = active - 1;
+    /* Calculate actual profile index (skip New Profile and built-in providers) */
+    int profileIndex = active - 1 - NUM_BUILTIN_PROVIDERS;
+    if (profileIndex < 0) {
+        return;
+    }
+
     if (profilesJson != NULL &&
         json_object_is_type(profilesJson, json_type_array)) {
         /* Remove from array */
@@ -397,7 +727,7 @@ HOOKPROTONHNONP(DeleteProfileFunc, void) {
         saveProfilesToConfig();
         configSetActiveProfileName("");
         set(customServerProfileNameString, MUIA_String_Contents, "");
-        populateProfileList();
+        populateProfileList(-1);
     }
 }
 MakeHook(DeleteProfileHook, DeleteProfileFunc);
@@ -612,6 +942,8 @@ HOOKPROTONHNONP(TemplateSelectedFunc, void) {
 MakeHook(TemplateSelectedHook, TemplateSelectedFunc);
 
 HOOKPROTONHNONP(SettingsChangedFunc, void) {
+    if (!loadingProfile)
+        profileSettingsDirty = TRUE;
     STRPTR customServerHost;
     get(customServerHostString, MUIA_String_Contents, &customServerHost);
 
@@ -642,6 +974,55 @@ HOOKPROTONHNONP(SettingsChangedFunc, void) {
 MakeHook(SettingsChangedHook, SettingsChangedFunc);
 
 HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
+    /* Get the currently selected profile/provider */
+    LONG active = MUIV_NList_Active_Off;
+    get(customServerProfileList, MUIA_NList_Active, &active);
+
+    /* Get common values from UI */
+    STRPTR customServerApiKey;
+    get(customServerApiKeyString, MUIA_String_Contents, &customServerApiKey);
+
+    STRPTR customServerChatModel;
+    get(customServerChatModelString, MUIA_String_Contents,
+        &customServerChatModel);
+
+    /* Handle built-in providers */
+    if (isBuiltinProviderIndex(active)) {
+        Provider provider = (Provider)getProviderFromIndex(active);
+
+        /* Set the chat provider */
+        configSetChatProvider(provider);
+        configSetImageProvider(provider);
+
+        /* Save the API key for this provider */
+        switch (provider) {
+        case PROVIDER_OPENAI:
+            configSetOpenAiApiKey(customServerApiKey);
+            break;
+        case PROVIDER_GEMINI:
+            configSetGeminiApiKey(customServerApiKey);
+            break;
+        case PROVIDER_GROK:
+            configSetGrokApiKey(customServerApiKey);
+            break;
+        case PROVIDER_ANTHROPIC:
+            configSetAnthropicApiKey(customServerApiKey);
+            break;
+        default:
+            break;
+        }
+
+        /* Save the model name */
+        configSetChatModelName(customServerChatModel);
+
+        set(customServerSettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
+        return;
+    }
+
+    /* Handle custom server (original behavior) */
+    configSetChatProvider(PROVIDER_CUSTOM);
+    configSetImageProvider(PROVIDER_CUSTOM);
+
     STRPTR customServerHost;
     get(customServerHostString, MUIA_String_Contents, &customServerHost);
     configSetCustomHost(customServerHost);
@@ -663,14 +1044,9 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         &authorizationType);
     configSetCustomAuthorizationType(authorizationType);
 
-    STRPTR customServerApiKey;
-    get(customServerApiKeyString, MUIA_String_Contents, &customServerApiKey);
     configSetCustomApiKey(customServerApiKey);
-
-    STRPTR customServerChatModel;
-    get(customServerChatModelString, MUIA_String_Contents,
-        &customServerChatModel);
     configSetCustomChatModel(customServerChatModel);
+    configSetChatModelName(customServerChatModel);
 
     LONG apiEndpoint;
     get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
@@ -914,6 +1290,12 @@ LONG createCustomServerSettingsRequesterWindow() {
     DoMethod(customServerApiKeyString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerApiEndpointCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerApiEndpointUrlString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
+    DoMethod(customServerChatModelString, MUIM_Notify, MUIA_String_Contents,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &SettingsChangedHook);
+    DoMethod(customServerProfileNameString, MUIM_Notify, MUIA_String_Contents,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &SettingsChangedHook);
     DoMethod(customServerFetchModelsButton, MUIM_Notify, MUIA_Pressed, FALSE,
              MUIV_Notify_Application, 2, MUIM_CallHook, &FetchCustomModelsHook);
     DoMethod(customServerModelList, MUIM_Notify, MUIA_NList_Active,
@@ -922,7 +1304,7 @@ LONG createCustomServerSettingsRequesterWindow() {
 
     /* Initialize profile list BEFORE setting up notification hooks */
     loadProfilesFromConfig();
-    populateProfileList();
+    populateProfileList(-1);
 
     /* Profile management hooks */
     DoMethod(customServerProfileList, MUIM_Notify, MUIA_NList_Active,

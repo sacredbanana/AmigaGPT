@@ -1310,28 +1310,41 @@ static void sendChatMessage() {
     BOOL dataStreamFinished = FALSE;
     ULONG speechIndex = 0;
     UWORD wordNumber = 0;
-    ULONG useCustomServer = configGetUseCustomServer();
+    Provider chatProvider = configGetChatProvider();
+    struct ProviderConfig *providerConfig = getProviderConfig(chatProvider);
+    BOOL isCustomProvider = (chatProvider == PROVIDER_CUSTOM);
 
     strncat(chatOutputTextEditorContents, "\n", 1);
 
     do {
         responses = postChatMessageToOpenAI(
-            currentConversation, useCustomServer ? configGetCustomHost() : NULL,
-            useCustomServer ? configGetCustomPort() : 0,
-            useCustomServer ? configGetCustomUseSSL() : FALSE,
-            useCustomServer ? configGetCustomChatModel()
-                            : CHAT_MODEL_NAMES[configGetChatModel()],
-            useCustomServer ? configGetCustomApiKey() : configGetOpenAiApiKey(),
-            !useCustomServer, configGetProxyEnabled(), configGetProxyHost(),
+            currentConversation,
+            isCustomProvider ? configGetCustomHost()
+                             : (providerConfig ? providerConfig->host : NULL),
+            isCustomProvider ? configGetCustomPort()
+                             : (providerConfig ? providerConfig->port : 443),
+            isCustomProvider ? configGetCustomUseSSL()
+                             : (providerConfig ? providerConfig->useSSL : TRUE),
+            configGetChatModelName(),
+            configGetApiKeyForProvider(chatProvider),
+            !isCustomProvider && chatProvider == PROVIDER_OPENAI,
+            configGetProxyEnabled(), configGetProxyHost(),
             configGetProxyPort(), configGetProxyUsesSSL(),
             configGetProxyRequiresAuth(), configGetProxyUsername(),
             configGetProxyPassword(), configGetWebSearchEnabled(),
-            useCustomServer ? configGetCustomApiEndpoint()
-                            : API_ENDPOINT_RESPONSES,
-            useCustomServer ? configGetCustomApiEndpointUrl() : NULL,
-            useCustomServer ? configGetCustomAuthorizationType()
-                            : AUTHORIZATION_TYPE_BEARER,
-            useCustomServer ? configGetCustomHeaders() : NULL);
+            isCustomProvider ? configGetCustomApiEndpoint()
+                             : (providerConfig ? providerConfig->apiEndpoint
+                                               : API_ENDPOINT_RESPONSES),
+            isCustomProvider ? configGetCustomApiEndpointUrl()
+                             : (providerConfig ? providerConfig->apiEndpointUrl
+                                               : "v1"),
+            isCustomProvider
+                ? configGetCustomAuthorizationType()
+                : (providerConfig ? providerConfig->authorizationType
+                                  : AUTHORIZATION_TYPE_BEARER),
+            isCustomProvider ? configGetCustomHeaders()
+                             : (providerConfig ? providerConfig->customHeaders
+                                               : NULL));
         if (responses == NULL) {
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -1392,10 +1405,12 @@ static void sendChatMessage() {
             }
 
             UTF8 *contentString = getMessageContentFromJson(
-                response, !useCustomServer, FALSE,
-                useCustomServer ? configGetCustomApiEndpoint()
-                                : API_ENDPOINT_RESPONSES);
-            if (useCustomServer) {
+                response, !isCustomProvider && chatProvider == PROVIDER_OPENAI,
+                FALSE,
+                isCustomProvider ? configGetCustomApiEndpoint()
+                                 : (providerConfig ? providerConfig->apiEndpoint
+                                                   : API_ENDPOINT_RESPONSES));
+            if (isCustomProvider) {
                 strncpy(receivedMessage, contentString,
                         READ_BUFFER_LENGTH - strlen(receivedMessage) -
                             strlen(contentString) - 1);
@@ -1454,7 +1469,7 @@ static void sendChatMessage() {
                     }
                     STRPTR type = json_object_get_string(
                         json_object_object_get(response, "type"));
-                    if (useCustomServer ||
+                    if (isCustomProvider ||
                         strcmp(type, "response.completed") == 0) {
                         dataStreamFinished = TRUE;
                     }
@@ -1467,7 +1482,8 @@ static void sendChatMessage() {
     } while (!dataStreamFinished);
 
     /* Handle shell tool calls - loop to handle multiple sequential commands */
-    while (!useCustomServer && configGetShellToolEnabled() &&
+    while (!isCustomProvider && chatProvider == PROVIDER_OPENAI &&
+           configGetShellToolEnabled() &&
            hasPendingToolCall()) {
         STRPTR command = getPendingToolCommand();
         STRPTR callId = getPendingToolCallId();
@@ -1654,23 +1670,35 @@ static void sendChatMessage() {
             setConversationSystem(currentConversation, NULL);
             responses = postChatMessageToOpenAI(
                 currentConversation,
-                useCustomServer ? configGetCustomHost() : NULL,
-                useCustomServer ? configGetCustomPort() : 0,
-                useCustomServer ? configGetCustomUseSSL() : FALSE,
-                useCustomServer ? configGetCustomChatModel()
-                                : CHAT_MODEL_NAMES[GPT_5_NANO],
-                useCustomServer ? configGetCustomApiKey()
-                                : configGetOpenAiApiKey(),
+                isCustomProvider ? configGetCustomHost()
+                                 : (providerConfig ? providerConfig->host : NULL),
+                isCustomProvider ? configGetCustomPort()
+                                 : (providerConfig ? providerConfig->port : 443),
+                isCustomProvider
+                    ? configGetCustomUseSSL()
+                    : (providerConfig ? providerConfig->useSSL : TRUE),
+                /* Use a fast model for title generation */
+                chatProvider == PROVIDER_OPENAI
+                    ? CHAT_MODEL_NAMES[GPT_5_NANO]
+                    : configGetChatModelName(),
+                configGetApiKeyForProvider(chatProvider),
                 FALSE, configGetProxyEnabled(), configGetProxyHost(),
                 configGetProxyPort(), configGetProxyUsesSSL(),
                 configGetProxyRequiresAuth(), configGetProxyUsername(),
                 configGetProxyPassword(), configGetWebSearchEnabled(),
-                useCustomServer ? configGetCustomApiEndpoint()
-                                : API_ENDPOINT_RESPONSES,
-                useCustomServer ? configGetCustomApiEndpointUrl() : NULL,
-                useCustomServer ? configGetCustomAuthorizationType()
-                                : AUTHORIZATION_TYPE_BEARER,
-                useCustomServer ? configGetCustomHeaders() : NULL);
+                isCustomProvider ? configGetCustomApiEndpoint()
+                                 : (providerConfig ? providerConfig->apiEndpoint
+                                                   : API_ENDPOINT_RESPONSES),
+                isCustomProvider ? configGetCustomApiEndpointUrl()
+                                 : (providerConfig ? providerConfig->apiEndpointUrl
+                                                   : "v1"),
+                isCustomProvider
+                    ? configGetCustomAuthorizationType()
+                    : (providerConfig ? providerConfig->authorizationType
+                                      : AUTHORIZATION_TYPE_BEARER),
+                isCustomProvider ? configGetCustomHeaders()
+                                 : (providerConfig ? providerConfig->customHeaders
+                                                   : NULL));
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);
@@ -1685,8 +1713,10 @@ static void sendChatMessage() {
             if (responses[0] != NULL) {
                 UTF8 *responseString = getMessageContentFromJson(
                     responses[0], FALSE, FALSE,
-                    useCustomServer ? configGetCustomApiEndpoint()
-                                    : API_ENDPOINT_RESPONSES);
+                    isCustomProvider ? configGetCustomApiEndpoint()
+                                     : (providerConfig
+                                            ? providerConfig->apiEndpoint
+                                            : API_ENDPOINT_RESPONSES));
                 if (currentConversation->name == NULL) {
                     currentConversation->name =
                         AllocVec(strlen(responseString) + 1, MEMF_CLEAR);

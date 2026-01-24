@@ -6,6 +6,10 @@
 #include "openai.h"
 #include "speech.h"
 
+/* Config version - increment when schema changes to trigger migration */
+#define CONFIG_SCHEMA_VERSION 2
+
+/* Legacy version tracking for enum-based models (deprecated) */
 #define CHAT_MODEL_SET_VERSION 10
 #define IMAGE_MODEL_SET_VERSION 2
 #define SPEECH_SYSTEM_SET_VERSION 1
@@ -64,6 +68,13 @@
 #define MUIA_AmigaGPTConfig_CustomHeaders (AmigaGPTConfig_Dummy + 0x31)
 #define MUIA_AmigaGPTConfig_CustomServerProfiles (AmigaGPTConfig_Dummy + 0x32)
 #define MUIA_AmigaGPTConfig_ActiveProfileName (AmigaGPTConfig_Dummy + 0x33)
+#define MUIA_AmigaGPTConfig_ChatProvider (AmigaGPTConfig_Dummy + 0x34)
+#define MUIA_AmigaGPTConfig_ImageProvider (AmigaGPTConfig_Dummy + 0x35)
+#define MUIA_AmigaGPTConfig_ChatModelName (AmigaGPTConfig_Dummy + 0x36)
+#define MUIA_AmigaGPTConfig_ImageModelName (AmigaGPTConfig_Dummy + 0x37)
+#define MUIA_AmigaGPTConfig_GeminiApiKey (AmigaGPTConfig_Dummy + 0x38)
+#define MUIA_AmigaGPTConfig_GrokApiKey (AmigaGPTConfig_Dummy + 0x39)
+#define MUIA_AmigaGPTConfig_AnthropicApiKey (AmigaGPTConfig_Dummy + 0x3A)
 
 /* Version tracking attributes (read-only, for internal use) */
 #define MUIA_AmigaGPTConfig_ChatModelSetVersion (AmigaGPTConfig_Dummy + 0x40)
@@ -252,5 +263,30 @@ STRPTR configGetElevenLabsModel(void);
 void configSetElevenLabsModel(CONST_STRPTR value);
 STRPTR configGetElevenLabsModelName(void);
 void configSetElevenLabsModelName(CONST_STRPTR value);
+
+/* Provider settings */
+Provider configGetChatProvider(void);
+void configSetChatProvider(Provider value);
+Provider configGetImageProvider(void);
+void configSetImageProvider(Provider value);
+STRPTR configGetChatModelName(void);
+void configSetChatModelName(CONST_STRPTR value);
+STRPTR configGetImageModelName(void);
+void configSetImageModelName(CONST_STRPTR value);
+
+/* Provider-specific API keys */
+STRPTR configGetGeminiApiKey(void);
+void configSetGeminiApiKey(CONST_STRPTR value);
+STRPTR configGetGrokApiKey(void);
+void configSetGrokApiKey(CONST_STRPTR value);
+STRPTR configGetAnthropicApiKey(void);
+void configSetAnthropicApiKey(CONST_STRPTR value);
+
+/**
+ * Get the API key for a specific provider
+ * @param provider the provider to get the API key for
+ * @return the API key or NULL
+ */
+STRPTR configGetApiKeyForProvider(Provider provider);
 
 #endif /* AMIGAGPTCONFIG_H */

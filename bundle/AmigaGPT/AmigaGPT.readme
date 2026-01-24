@@ -3,7 +3,7 @@ Kurz: App zum Chatten mit ChatGPT
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 2.18.0
+Version: 3.0.0
 Architecture: m68k-amigaos >= 3.1; ppc-amigaos; ppc-morphos
 Requires: AmigaOS 3.1+/68020+ util/libs/AmiSSL-v5-OS3.lha MUI
 Replaces: util/misc/AmigaGPT.lha
@@ -160,10 +160,11 @@ generate an API key for use with AmigaGPT.
 *Chat*
 
 When the app has opened, you are presented with a text input box. You can type
-any prompt into this box and press "Send" to see the GPT-4 model's response.
+any prompt into this box and press "Send" to see the GPT model's response.
 The generated text appears in the box above the input. You can choose to have
-this text read aloud using the "Speech" menu option. You can also select which
-model for OpenAI to use in the "OpenAI" menu option.
+this text read aloud using the "Speech" menu option. To choose the chat model
+and provider (OpenAI, Google Gemini, xAI Grok, Anthropic Claude or a custom
+server), open "Chat Provider Settings" from the "Chat" menu.
 
 To the left of the chat box is a conversation list which you can use to go to
 another saved conversation. New conversations can be created with the "New
@@ -174,13 +175,13 @@ between them via the tabs in the top left corner.
 
 *Image Generation*
 
-To generate images, simply select your desired image generation model from the
-"OpenAI" menu then type your prompt in the text box then hit the "Create Image"
-button. When it has been downloaded to your Amiga, you are then able to open
-the image to your desired scale, or save a copy of the file to a new location
-on your Amiga. Do note however that AmigaGPT will automatially save all your
-generated images until you delete them. This is just in case you would like to
-create a copy elsewhere.
+To generate images, open "Image Provider Settings" from the "Image" menu to
+choose your provider and image model, then type your prompt in the text box
+and hit the "Create Image" button. When it has been downloaded to your Amiga,
+you are then able to open the image to your desired scale, or save a copy of
+the file to a new location on your Amiga. Do note however that AmigaGPT will
+automatically save all your generated images until you delete them. This is
+just in case you would like to create a copy elsewhere.
 
 *Shell Tool*
 
@@ -188,7 +189,7 @@ The Shell Tool is a powerful feature that allows ChatGPT to execute AmigaDOS
 commands directly on your Amiga. This enables the AI to help you with tasks
 like listing files, creating directories, managing files, and more.
 
-To enable the Shell Tool, check "Shell Tool" in the "AI" menu. Once enabled,
+To enable the Shell Tool, check "Shell Tool" in the "Chat" menu. Once enabled,
 you can ask ChatGPT to perform tasks that require shell access. For example:
 - "List all files in RAM:"
 - "Create a new directory called Test in Work:"
@@ -225,11 +226,21 @@ the encryption of the OpenAI traffic to be done on the system running AmigaGPT.
 For an easy proxy server you can run on your local network you can try out
 https://mitmproxy.org
 
-*Custom Chat Servers*
+*Chat and Image Provider Settings*
 
-AmigaGPT supports alternative LLM servers via "Custom Server Settings" in the
-"OpenAI" menu. Templates are available for Google Gemini, LM Studio, Anthropic
-Claude and xAI Grok. You can save multiple server profiles for quick switching.
+AmigaGPT supports multiple AI providers. Open "Chat Provider Settings" from
+the "Chat" menu or "Image Provider Settings" from the "Image" menu.
+
+The provider list includes built-in entries for OpenAI, Google Gemini, xAI Grok
+and Anthropic Claude (chat only); these cannot be removed. For built-in
+providers you can set the API key and choose the model; host, port and other
+connection settings are fixed. Known models are shown for each built-in; for
+OpenAI you can also use "Fetch Models" to refresh the list. You can add custom
+server profiles (e.g. LM Studio) with templates and full control over all
+settings. Custom profile names cannot match built-in provider names.
+
+When you switch to another profile without saving, AmigaGPT will ask whether to
+save your changes (Yes, No or Cancel).
 
 The "ARexx" menu allows you to import and run ARexx scripts. Also, selecting
 "Arexx Shell" will open a shell and put all ARexx scripts in trace mode so you
@@ -314,7 +325,7 @@ Special Thanks:
 - Bebbo for creating the Amiga GCC toolchain https://github.com/bebbo
 - OpenAI for making this all possible https://openai.com
 - EAB and everyone in it for answering my questions https://eab.abime.net/
-- JÃÂ¡n ZahuranÃÂÃÂ­k for all the thorough testing, bundling AmigaGPT into 
+- J�n Zahuran?��k for all the thorough testing, bundling AmigaGPT into 
   AmiKit and for all the moral support https://www.amikit.amiga.sk
 - CoffinOS for bundling AmigaGPT into CoffinOS https://getcoffin.net
 - Amiga Future Magazine for reviewing AmigaGPT and publishing several of
@@ -336,9 +347,20 @@ Special Thanks:
 Changelog:
 
 -------------------
-2.18.0 (2026-01-24)
+3.0.0 (2026-??-??)
 -------------------
 
+- Chat and Image menus replace the single OpenAI menu; model selection is now
+  in "Chat Provider Settings" and "Image Provider Settings"
+- Provider settings: built-in OpenAI, Google Gemini, xAI Grok and Anthropic
+  Claude (chat) are pre-populated; only API key and model are editable for
+  built-ins; known models are shown for built-ins; Fetch Models works for
+  built-in OpenAI
+- When switching profiles with unsaved changes, AmigaGPT asks to save (Yes/No/
+  Cancel)
+- Custom profile names cannot match built-in provider names
+- ARexx SENDMESSAGE and CREATEIMAGE support PR=PROVIDER to choose provider;
+  new LISTPROVIDERS command
 - New powerful Shell Tool option to ask ChatGPT to run any command on your
   system in the shell
 - The daemon (AmigaGPTD) now maintains conversation history in T: for

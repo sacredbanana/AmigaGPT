@@ -209,6 +209,162 @@ CONST_STRPTR IMAGE_FORMAT_NAMES[] = {
     [IMAGE_FORMAT_JPG] = "jpeg", [IMAGE_FORMAT_PNG] = "png", NULL};
 
 /**
+ * The names of the providers
+ * @see Provider
+ **/
+CONST_STRPTR PROVIDER_NAMES[] = {[PROVIDER_OPENAI] = "OpenAI",
+                                 [PROVIDER_GEMINI] = "Google Gemini",
+                                 [PROVIDER_GROK] = "xAI Grok",
+                                 [PROVIDER_ANTHROPIC] = "Anthropic Claude",
+                                 [PROVIDER_CUSTOM] = "Custom Server",
+                                 NULL};
+
+/**
+ * Prepopulated chat models for OpenAI
+ **/
+CONST_STRPTR OPENAI_CHAT_MODELS[] = {"gpt-5-chat-latest",
+                                     "gpt-5.2-pro",
+                                     "gpt-5.2",
+                                     "gpt-5.1",
+                                     "gpt-5",
+                                     "gpt-5-mini",
+                                     "gpt-5-nano",
+                                     "gpt-4.5-preview",
+                                     "gpt-4.1",
+                                     "gpt-4.1-mini",
+                                     "gpt-4.1-nano",
+                                     "gpt-4o",
+                                     "gpt-4o-mini",
+                                     "gpt-4-turbo",
+                                     "gpt-4",
+                                     "gpt-3.5-turbo",
+                                     "o4-mini",
+                                     "o3",
+                                     "o3-mini",
+                                     "o1",
+                                     "o1-pro",
+                                     "o1-mini",
+                                     "o1-preview",
+                                     NULL};
+
+/**
+ * Prepopulated chat models for Google Gemini
+ **/
+CONST_STRPTR GEMINI_CHAT_MODELS[] = {"gemini-3-pro-preview",
+                                     "gemini-3-flash-preview",
+                                     "gemini-2.5-pro",
+                                     "gemini-2.5-flash",
+                                     "gemini-2.5-flash-lite",
+                                     "gemini-2.0-flash",
+                                     "gemini-2.0-flash-lite",
+                                     NULL};
+
+/**
+ * Prepopulated chat models for xAI Grok
+ **/
+CONST_STRPTR GROK_CHAT_MODELS[] = {"grok-4",
+                                   "grok-4-fast",
+                                   "grok-3",
+                                   "grok-3-mini",
+                                   "grok-3-fast",
+                                   "grok-3-fast-beta",
+                                   "grok-3-beta",
+                                   "grok-2",
+                                   NULL};
+
+/**
+ * Prepopulated chat models for Anthropic Claude
+ **/
+CONST_STRPTR ANTHROPIC_CHAT_MODELS[] = {"claude-opus-4-5-20250929",
+                                        "claude-sonnet-4-5-20250929",
+                                        "claude-sonnet-4-20250514",
+                                        "claude-3-5-sonnet-20241022",
+                                        "claude-3-5-haiku-20241022",
+                                        "claude-3-opus-20240229",
+                                        "claude-3-sonnet-20240229",
+                                        "claude-3-haiku-20240307",
+                                        NULL};
+
+/**
+ * Prepopulated image models for OpenAI
+ **/
+CONST_STRPTR OPENAI_IMAGE_MODELS[] = {
+    "gpt-image-1", "gpt-image-1.5", "gpt-image-1-mini", "dall-e-3", "dall-e-2",
+    NULL};
+
+/**
+ * Prepopulated image models for Google Gemini/Imagen
+ **/
+CONST_STRPTR GEMINI_IMAGE_MODELS[] = {"imagen-4-ultra",
+                                      "imagen-4",
+                                      "imagen-4-fast",
+                                      "imagen-3",
+                                      "gemini-3-pro-image-preview",
+                                      "gemini-2.5-flash-image",
+                                      NULL};
+
+/**
+ * Prepopulated image models for xAI Grok/Aurora
+ **/
+CONST_STRPTR GROK_IMAGE_MODELS[] = {"grok-2-image-1212", "grok-2-aurora", NULL};
+
+/**
+ * Static provider configurations
+ **/
+static struct ProviderConfig providerConfigs[] = {
+    /* PROVIDER_OPENAI */
+    {.host = "api.openai.com",
+     .port = 443,
+     .useSSL = TRUE,
+     .apiEndpoint = API_ENDPOINT_RESPONSES,
+     .apiEndpointUrl = "v1",
+     .authorizationType = AUTHORIZATION_TYPE_BEARER,
+     .customHeaders = NULL},
+    /* PROVIDER_GEMINI */
+    {.host = "generativelanguage.googleapis.com",
+     .port = 443,
+     .useSSL = TRUE,
+     .apiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS,
+     .apiEndpointUrl = "v1beta/openai",
+     .authorizationType = AUTHORIZATION_TYPE_BEARER,
+     .customHeaders = NULL},
+    /* PROVIDER_GROK */
+    {.host = "api.x.ai",
+     .port = 443,
+     .useSSL = TRUE,
+     .apiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS,
+     .apiEndpointUrl = "v1",
+     .authorizationType = AUTHORIZATION_TYPE_BEARER,
+     .customHeaders = NULL},
+    /* PROVIDER_ANTHROPIC */
+    {.host = "api.anthropic.com",
+     .port = 443,
+     .useSSL = TRUE,
+     .apiEndpoint = API_ENDPOINT_MESSAGES,
+     .apiEndpointUrl = "v1",
+     .authorizationType = AUTHORIZATION_TYPE_X_API_KEY,
+     .customHeaders = "anthropic-version: 2023-06-01"},
+    /* PROVIDER_CUSTOM - empty, filled from config */
+    {.host = NULL,
+     .port = 0,
+     .useSSL = FALSE,
+     .apiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS,
+     .apiEndpointUrl = NULL,
+     .authorizationType = AUTHORIZATION_TYPE_NONE,
+     .customHeaders = NULL}};
+
+/**
+ * Get the configuration for a built-in provider
+ * @param provider the provider to get the configuration for
+ * @return a pointer to the provider configuration
+ **/
+struct ProviderConfig *getProviderConfig(Provider provider) {
+    if (provider >= PROVIDER_COUNT)
+        return NULL;
+    return &providerConfigs[provider];
+}
+
+/**
  * Generate a random number
  * @param maxValue the maximum value of the random number
  * @return a random number

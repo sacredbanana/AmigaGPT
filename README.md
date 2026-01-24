@@ -29,7 +29,7 @@ You can customise the look and feel of the application, including the ability to
 
 - ### Shell Tool
 
-**AmigaGPT** can let ChatGPT execute AmigaDOS commands directly on your Amiga. Enable it from the **AI** menu and ask the AI to list files, create directories, show file contents, and more. All commands require your approval before execution for security.
+**AmigaGPT** can let ChatGPT execute AmigaDOS commands directly on your Amiga. Enable it from the **Chat** menu and ask the AI to list files, create directories, show file contents, and more. All commands require your approval before execution for security.
 
 - ### ARexx integration
 
@@ -113,7 +113,7 @@ There are 2 main modes of operation: Chat and Image Generation. You can switch b
 
 ### Chat
 
-When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "**Send**" to see the GPT model's response. The generated text appears in the box above the input. You can choose to have this text read aloud using the "**Speech**" menu option. You can also select which model for OpenAI to use in the "**OpenAI**" menu option.
+When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "**Send**" to see the GPT model's response. The generated text appears in the box above the input. You can choose to have this text read aloud using the "**Speech**" menu option. To choose the chat model and provider, open "**Chat Provider Settings**" from the "**Chat**" menu.
 
 To the left of the chat box is a conversation list which you can use to go to another saved conversation. New conversations can be created with the "**New chat**" button and conversations can be removed with the "**Delete chat**" button.
 
@@ -121,35 +121,15 @@ You can also chat to AmigaGPT within the Shell as long as either AmigaGPT or the
 
 ### Image Generation
 
-To generate images, simply select your desired image generation model from the "**OpenAI**" menu then type your prompt in the text box then hit the "**Create Image**" button. When it has been downloaded to your Amiga, you are then able to open the image to your desired scale, or save a copy of the file to a new location on your Amiga. Do note however that AmigaGPT will automatially save all your generated images until you delete them. This is just in case you would like to create a copy elsewhere.
+To generate images, open "**Image Provider Settings**" from the "**Image**" menu to choose your provider and model, then type your prompt in the text box and hit the "**Create Image**" button. When it has been downloaded to your Amiga, you are then able to open the image to your desired scale, or save a copy of the file to a new location on your Amiga. Do note however that AmigaGPT will automatially save all your generated images until you delete them. This is just in case you would like to create a copy elsewhere.
 
-### Custom Chat Servers
+### Chat and Image Provider Settings
 
-AmigaGPT can connect to alternative LLM servers that are compatible with the OpenAI API. This allows you to use local AI models or other cloud providers.
+AmigaGPT supports multiple AI providers. Open "**Chat Provider Settings**" from the "**Chat**" menu or "**Image Provider Settings**" from the "**Image**" menu.
 
-To configure a custom server, go to the "**OpenAI**" menu and select "**Custom Server Settings**". The settings window has two panels:
+The provider list includes built-in entries for **OpenAI**, **Google Gemini**, **xAI Grok** and **Anthropic Claude** (chat only); these cannot be removed. For built-in providers you can set the API key and choose the model; host, port and other connection settings are fixed. Known models are shown for each built-in; for OpenAI you can also use "Fetch Models" to refresh the list. You can add custom server profiles (e.g. LM Studio) with templates and full control over all settings. Custom profile names cannot match built-in provider names.
 
-**Profiles Panel (left)**: Save and manage multiple server configurations. Select a profile to load its settings, or create new profiles by entering a name and clicking "Save Profile".
-
-**Settings Panel (right)**: Configure the server connection:
-- **Template**: Quick-start presets for popular services
-- **Host**: Server address (e.g., `localhost` or `api.example.com`)
-- **Port**: Connection port (typically 443 for HTTPS, 80 for HTTP)
-- **Encryption**: Enable SSL/TLS for secure connections
-- **Authorization**: Authentication method (None, Bearer Token, or x-api-key)
-- **API Key**: Your authentication credentials
-- **Chat Model**: The model identifier to use
-- **API Endpoint**: The endpoint format (responses, chat/completions, or messages)
-- **API Endpoint URL**: Base path for the API (e.g., `v1`)
-- **Custom Headers**: Additional HTTP headers if required
-
-**Available Templates:**
-- **Google Gemini** - Google's Gemini AI (host: `generativelanguage.googleapis.com`, endpoint: `chat/completions`, URL: `v1beta/openai`)
-- **LM Studio** - Local LLM server (host: `localhost`, port: `1234`, no encryption)
-- **Anthropic Claude** - Anthropic's Claude AI (host: `api.anthropic.com`, endpoint: `messages`, requires `anthropic-version` header)
-- **xAI Grok** - xAI's Grok model (host: `api.x.ai`, endpoint: `chat/completions`)
-
-To use a custom server, enable it from the "**OpenAI**" menu by selecting "**Use Custom Chat Server**".
+When you switch to another profile without saving, AmigaGPT will ask whether to save your changes (Yes, No or Cancel).
 
 ### General
 
@@ -180,10 +160,11 @@ Please note: AmigaGPT and AmigaGPTD listen on 2 differnt ARexx ports so adjust y
 The following ARexx commands are available:
 
 #### SENDMESSAGE
-Sends a message to the OpenAI API and returns the response.
+Sends a message to the selected provider's API and returns the response.
 ```
-SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
+SENDMESSAGE PR=PROVIDER/K,M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
 ```
+- `PR=PROVIDER` - Optional, the provider to use (OpenAI, Google Gemini, xAI Grok, Anthropic Claude, or Custom Server). Use LISTPROVIDERS to see available providers. Default is the provider selected in AmigaGPT config
 - `M=MODEL` - Optional, the chat model to use (use LISTCHATMODELS to see available models). Default is gpt-5-mini
 - `S=SYSTEM` - Optional, system message to include
 - `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
@@ -193,8 +174,9 @@ SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
 #### CREATEIMAGE
 Generates an image using the specified model.
 ```
-CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
+CREATEIMAGE PR=PROVIDER/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
 ```
+- `PR=PROVIDER` - Optional, the provider to use (OpenAI, Google Gemini, xAI Grok, or Custom Server). Use LISTPROVIDERS to see available providers. Default is the provider selected in AmigaGPT config
 - `M=MODEL` - Optional, the image model to use (use LISTIMAGEMODELS to see available models). Default is gpt-image-1
 - `S=SIZE` - Optional, image size (use LISTIMAGESIZES to see available sizes). Default is 1024x1024
 - `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
@@ -244,6 +226,12 @@ LISTSERVERMODELS H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/
 Lists all available audio formats for saving audio files
 ```
 LISTAUDIOFORMATS
+```
+
+#### LISTPROVIDERS
+Lists all available providers (OpenAI, Google Gemini, xAI Grok, Anthropic Claude, Custom Server).
+```
+LISTPROVIDERS
 ```
 
 #### LISTCHATMODELS

@@ -11,6 +11,7 @@
 #define RESPONSE_ARRAY_BUFFER_LENGTH 1024
 #define CHAT_SYSTEM_LENGTH 512
 #define OPENAI_API_KEY_LENGTH 256
+#define MAX_PROVIDER_MODELS 32
 
 /**
  * A node in the conversation
@@ -47,9 +48,44 @@ struct Conversation {
 };
 
 /**
+ * Chat/Image provider enumeration
+ * Built-in providers that cannot be deleted
+ **/
+typedef enum {
+    PROVIDER_OPENAI = 0L,
+    PROVIDER_GEMINI,
+    PROVIDER_GROK,
+    PROVIDER_ANTHROPIC,
+    PROVIDER_CUSTOM,
+    PROVIDER_COUNT
+} Provider;
+
+/**
+ * The names of the providers
+ * @see Provider
+ **/
+extern CONST_STRPTR PROVIDER_NAMES[];
+
+/**
+ * Prepopulated chat models for each built-in provider
+ **/
+extern CONST_STRPTR OPENAI_CHAT_MODELS[];
+extern CONST_STRPTR GEMINI_CHAT_MODELS[];
+extern CONST_STRPTR GROK_CHAT_MODELS[];
+extern CONST_STRPTR ANTHROPIC_CHAT_MODELS[];
+
+/**
+ * Prepopulated image models for each built-in provider
+ **/
+extern CONST_STRPTR OPENAI_IMAGE_MODELS[];
+extern CONST_STRPTR GEMINI_IMAGE_MODELS[];
+extern CONST_STRPTR GROK_IMAGE_MODELS[];
+
+/**
  * The chat model OpenAI should use. Commented out models are not supported by
  * the responses endpoint. Do not exceed 32 models or the menu will not display
  * correctly.
+ * @deprecated Use string-based model names instead
  **/
 typedef enum {
     CHATGPT_5_LATEST = 0L,
@@ -79,13 +115,15 @@ typedef enum {
 } ChatModel;
 
 /**
- * The names of the models
+ * The names of the models (legacy, for backward compatibility)
  * @see ChatModel
+ * @deprecated Use provider-specific model arrays instead
  **/
 extern CONST_STRPTR CHAT_MODEL_NAMES[];
 
 /**
  * The image model OpenAI should use
+ * @deprecated Use string-based model names instead
  **/
 typedef enum {
     DALL_E_2 = 0L,
@@ -96,8 +134,9 @@ typedef enum {
 } ImageModel;
 
 /**
- * The names of the image models
+ * The names of the image models (legacy, for backward compatibility)
  * @see ImageModel
+ * @deprecated Use provider-specific model arrays instead
  **/
 extern CONST_STRPTR IMAGE_MODEL_NAMES[];
 
@@ -222,6 +261,24 @@ typedef enum {
  * @see AuthorizationType
  **/
 extern CONST_STRPTR AUTHORIZATION_TYPE_NAMES[];
+
+/**
+ * Provider configuration - host, port, SSL, endpoints
+ **/
+struct ProviderConfig {
+    CONST_STRPTR host;
+    UWORD port;
+    BOOL useSSL;
+    APIEndpoint apiEndpoint;
+    CONST_STRPTR apiEndpointUrl;
+    AuthorizationType authorizationType;
+    CONST_STRPTR customHeaders;
+};
+
+/**
+ * Get the configuration for a built-in provider
+ **/
+struct ProviderConfig *getProviderConfig(Provider provider);
 
 /**
  * The format of the image

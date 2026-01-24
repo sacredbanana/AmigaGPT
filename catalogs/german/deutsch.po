@@ -1553,3 +1553,13 @@ msgstr "Shell-Ausgabe"
 msgctxt "STRING_SHELL_TOOL_ERROR (284//)"
 msgid "Shell Error"
 msgstr "Shell-Fehler"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
+msgid "A custom profile cannot use the same name as a built-in provider (OpenAI, Google Gemini, xAI Grok, Anthropic Claude)."
+msgstr "Ein benutzerdefiniertes Profil darf nicht denselben Namen wie einen eingebauten Anbieter haben (OpenAI, Google Gemini, xAI Grok, Anthropic Claude)."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
+msgid "You have unsaved changes. Do you want to save them before switching?"
+msgstr "Sie haben ungespeicherte Änderungen. Möchten Sie diese vor dem Wechsel speichern?"

@@ -1527,3 +1527,102 @@ msgstr "Shell-utdata"
 msgctxt "STRING_SHELL_TOOL_ERROR (284//)"
 msgid "Shell Error"
 msgstr "Shell-fel"
+
+#: src/menu.c
+#, fuzzy
+msgctxt "STRING_MENU_CHAT (285//)"
+msgid "Chat"
+msgstr "Ny chatt"
+
+#: src/menu.c
+#, fuzzy
+msgctxt "STRING_MENU_IMAGE (286//)"
+msgid "Image"
+msgstr "Bild"
+
+#: src/menu.c
+#, fuzzy
+msgctxt "STRING_CHAT_PROVIDER_SETTINGS (287//)"
+msgid "Chat Provider Settings"
+msgstr "Egendefinert Server Inställningar"
+
+#: src/menu.c
+#, fuzzy
+msgctxt "STRING_IMAGE_PROVIDER_SETTINGS (288//)"
+msgid "Image Provider Settings"
+msgstr "Egendefinert Server Inställningar"
+
+#: src/openai.c
+#, fuzzy
+msgctxt "STRING_PROVIDER_OPENAI (289//)"
+msgid "OpenAI"
+msgstr "OpenAI"
+
+#: src/openai.c
+#, fuzzy
+msgctxt "STRING_PROVIDER_GEMINI (290//)"
+msgid "Google Gemini"
+msgstr "Google Gemini"
+
+#: src/openai.c
+#, fuzzy
+msgctxt "STRING_PROVIDER_GROK (291//)"
+msgid "xAI Grok"
+msgstr "xAI Grok"
+
+#: src/openai.c
+#, fuzzy
+msgctxt "STRING_PROVIDER_ANTHROPIC (292//)"
+msgid "Anthropic Claude"
+msgstr "Anthropic Claude"
+
+#: src/openai.c
+#, fuzzy
+msgctxt "STRING_PROVIDER_CUSTOM (293//)"
+msgid "Custom Server"
+msgstr "Egendefinert Server"
+
+#: src/menu.c
+#, fuzzy
+msgctxt "STRING_WEB_SEARCH (294//)"
+msgid "Web Search"
+msgstr "Web sökning"
+
+#: src/menu.c
+#, fuzzy
+msgctxt "STRING_SHELL_TOOL (295//)"
+msgid "Shell Tool"
+msgstr "Shell-verktyg"
+
+#: src/menu.c
+#, fuzzy
+msgctxt "STRING_CHAT_MODEL (296//)"
+msgid "Chat Model"
+msgstr "Chattmodell"
+
+#: src/menu.c
+#, fuzzy
+msgctxt "STRING_IMAGE_MODEL (297//)"
+msgid "Image Model"
+msgstr "Bildmodell"
+
+#: src/AmigaGPTConfig.c
+msgctxt "STRING_CONFIG_MIGRATED (298//)"
+msgid ""
+"Configuration has been migrated to the new format.\n"
+"Your old config has been backed up to config.bak"
+msgstr ""
+"Configuration has been migrated to the new format.\n"
+"Your old config has been backed up to config.bak"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
+msgid ""
+"A custom profile cannot use the same name as a built-in provider (OpenAI, "
+"Google Gemini, xAI Grok, Anthropic Claude)."
+msgstr "En anpassad profil kan inte ha samma namn som en inbyggd leverantör (OpenAI, Google Gemini, xAI Grok, Anthropic Claude)."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
+msgid "You have unsaved changes. Do you want to save them before switching?"
+msgstr "Du har osparade ändringar. Vill du spara dem innan du byter?"

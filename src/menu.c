@@ -27,7 +27,8 @@
 Object *menuStrip = NULL;
 
 static void populateSpeechMenu();
-static void populateOpenAIMenu();
+static void populateChatMenu();
+static void populateImageMenu();
 static void populateArexxMenu();
 static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent);
 static void FreeNPPath(BPTR listHead);
@@ -441,47 +442,50 @@ void createMenu() {
     MENU_ITEM_SPEECH_ELEVENLABS_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
     End,
 
-    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_OPENAI,
-    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_OPENAI_API_KEY, MUIA_UserData,
-    MENU_ITEM_AI_OPENAI_API_KEY, MUIA_Menuitem_CopyStrings, FALSE, End,
+    /* Chat Menu */
+    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_CHAT,
+    MUIA_Menu_CopyStrings, FALSE,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_CHAT_SYSTEM, MUIA_UserData, MENU_ITEM_AI_CHAT_SYSTEM,
-    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_OPENAI_WEB_SEARCH, MUIA_UserData,
-    MENU_ITEM_AI_OPENAI_WEB_SEARCH_ENABLED, MUIA_Menuitem_CopyStrings, FALSE,
-    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
+    STRING_MENU_OPENAI_CHAT_SYSTEM, MUIA_UserData, MENU_ITEM_CHAT_SYSTEM,
+    MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
+    MUIA_UserData, MENU_ITEM_NULL, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_SHELL_TOOL, MUIA_UserData,
-    MENU_ITEM_AI_OPENAI_SHELL_TOOL_ENABLED, MUIA_Menuitem_CopyStrings, FALSE,
-    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
+    STRING_WEB_SEARCH, MUIA_UserData, MENU_ITEM_CHAT_WEB_SEARCH_ENABLED,
+    MUIA_Menuitem_CopyStrings, FALSE, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Toggle, TRUE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_CHAT_MODEL, MUIA_UserData,
-    MENU_ITEM_AI_OPENAI_CHAT_MODEL, MUIA_Menuitem_CopyStrings, FALSE, End,
+    STRING_SHELL_TOOL, MUIA_UserData, MENU_ITEM_CHAT_SHELL_TOOL_ENABLED,
+    MUIA_Menuitem_CopyStrings, FALSE, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Toggle, TRUE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
+    MUIA_UserData, MENU_ITEM_NULL, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_IMAGE_MODEL, MUIA_UserData,
-    MENU_ITEM_AI_OPENAI_IMAGE_MODEL, MUIA_Menuitem_CopyStrings, FALSE, End,
+    STRING_CHAT_PROVIDER_SETTINGS, MUIA_UserData, MENU_ITEM_CHAT_PROVIDER_SETTINGS,
+    MUIA_Menuitem_CopyStrings, FALSE, End,
+    End,
+
+    /* Image Menu */
+    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_IMAGE,
+    MUIA_Menu_CopyStrings, FALSE,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_IMAGE_PROVIDER_SETTINGS, MUIA_UserData, MENU_ITEM_IMAGE_PROVIDER_SETTINGS,
+    MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
+    MUIA_UserData, MENU_ITEM_NULL, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_UserData,
-    MENU_ITEM_AI_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_Menuitem_CopyStrings, FALSE,
-    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3, MUIA_UserData,
-    MENU_ITEM_AI_OPENAI_IMAGE_SIZE_DALL_E_3, MUIA_Menuitem_CopyStrings, FALSE,
-    End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_UserData,
-    MENU_ITEM_AI_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_Menuitem_CopyStrings,
-    FALSE, End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_IMAGE_FORMAT, MUIA_UserData, MENU_ITEM_AI_OPENAI_IMAGE_FORMAT,
-    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuObject,
-    MUIA_UserData, MENU_ITEM_AI_CUSTOM_SERVER, MUIA_Menu_Title,
-    STRING_MENU_CUSTOM_SERVER, MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child,
-    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_ENABLED, MUIA_UserData,
-    MENU_ITEM_AI_CUSTOM_SERVER_ENABLED, MUIA_Menuitem_CopyStrings, FALSE,
-    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
+    MENU_ITEM_IMAGE_SIZE_DALL_E_2, MUIA_Menuitem_CopyStrings, FALSE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_CUSTOM_SERVER_SETTINGS, MUIA_UserData,
-    MENU_ITEM_AI_CUSTOM_SERVER_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
-    End, End,
+    STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3, MUIA_UserData,
+    MENU_ITEM_IMAGE_SIZE_DALL_E_3, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_UserData,
+    MENU_ITEM_IMAGE_SIZE_GPT_IMAGE_1, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_IMAGE_FORMAT, MUIA_UserData, MENU_ITEM_IMAGE_FORMAT,
+    MUIA_Menuitem_CopyStrings, FALSE, End,
+    End,
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_AREXX,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
@@ -503,7 +507,8 @@ void createMenu() {
     End, End;
 
     populateSpeechMenu();
-    populateOpenAIMenu();
+    populateChatMenu();
+    populateImageMenu();
     populateArexxMenu();
 }
 
@@ -738,45 +743,45 @@ void addMenuActions() {
              MUIV_EveryTime, apiKeyRequesterWindowObject, 3, MUIM_Set,
              MUIA_Window_ActiveObject, apiKeyRequesterString);
 
-    Object openAIChatSystemMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_AI_CHAT_SYSTEM);
-    DoMethod(openAIChatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+    /* Chat menu actions */
+    Object chatSystemMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_SYSTEM);
+    DoMethod(chatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, chatSystemRequesterWindowObject, 3, MUIM_Set,
              MUIA_Window_Open, TRUE);
-    DoMethod(openAIChatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+    DoMethod(chatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, chatSystemRequesterString, 3, MUIM_Set,
              MUIA_String_Contents, configGetChatSystem());
-    DoMethod(openAIChatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+    DoMethod(chatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, chatSystemRequesterWindowObject, 3, MUIM_Set,
              MUIA_Window_ActiveObject, chatSystemRequesterString);
 
-    Object openAIWebSearchEnabledMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_WEB_SEARCH_ENABLED);
-    set(openAIWebSearchEnabledMenuItem, MUIA_Menuitem_Checked,
+    Object chatWebSearchEnabledMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_WEB_SEARCH_ENABLED);
+    set(chatWebSearchEnabledMenuItem, MUIA_Menuitem_Checked,
         configGetWebSearchEnabled());
-    DoMethod(openAIWebSearchEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+    DoMethod(chatWebSearchEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, configObj, 3, MUIM_Set,
              MUIA_AmigaGPTConfig_WebSearchEnabled, MUIV_TriggerValue);
 
-    Object openAIShellToolEnabledMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_SHELL_TOOL_ENABLED);
-    set(openAIShellToolEnabledMenuItem, MUIA_Menuitem_Checked,
+    Object chatShellToolEnabledMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_SHELL_TOOL_ENABLED);
+    set(chatShellToolEnabledMenuItem, MUIA_Menuitem_Checked,
         configGetShellToolEnabled());
-    DoMethod(openAIShellToolEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+    DoMethod(chatShellToolEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, configObj, 3, MUIM_Set,
              MUIA_AmigaGPTConfig_ShellToolEnabled, MUIV_TriggerValue);
 
-    Object customServerEnabledMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_AI_CUSTOM_SERVER_ENABLED);
-    set(customServerEnabledMenuItem, MUIA_Menuitem_Checked,
-        configGetUseCustomServer());
-    DoMethod(customServerEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, configObj, 3, MUIM_Set,
-             MUIA_AmigaGPTConfig_UseCustomServer, MUIV_TriggerValue);
+    Object chatProviderSettingsMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_PROVIDER_SETTINGS);
+    DoMethod(chatProviderSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, customServerSettingsRequesterWindowObject, 3,
+             MUIM_Set, MUIA_Window_Open, TRUE);
 
-    Object customServerSettingsMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_AI_CUSTOM_SERVER_SETTINGS);
-    DoMethod(customServerSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+    /* Image menu actions */
+    Object imageProviderSettingsMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_IMAGE_PROVIDER_SETTINGS);
+    DoMethod(imageProviderSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, customServerSettingsRequesterWindowObject, 3,
              MUIM_Set, MUIA_Window_Open, TRUE);
 
@@ -924,74 +929,41 @@ static void populateSpeechMenu() {
 }
 
 /**
- * Populate the OpenAI menu with the models and image sizes
+ * Populate the Chat menu (web search and shell tool checkmarks)
  */
-static void populateOpenAIMenu() {
+static void populateChatMenu() {
     DoMethod(menuStrip, MUIM_Menustrip_InitChange);
 
-    Object *openAIChatModelMenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_CHAT_MODEL);
-
-    // Remove any existing chat model items
-    Object *chatModelMenuItem;
-    while (chatModelMenuItem = (Object *)DoMethod(openAIChatModelMenuItem,
-                                                  MUIM_Family_GetChild)) {
-        DoMethod(openAIChatModelMenuItem, MUIM_Family_Remove,
-                 chatModelMenuItem);
-        DisposeObject(chatModelMenuItem);
+    // Set the checkmarks for web search and shell tool based on config
+    Object *webSearchMenuItem = (Object *)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_WEB_SEARCH_ENABLED);
+    if (webSearchMenuItem) {
+        set(webSearchMenuItem, MUIA_Menuitem_Checked, configGetWebSearchEnabled());
     }
 
-    // Populate the chat model menu with the models
-    for (UBYTE i = 0; CHAT_MODEL_NAMES[i] != NULL; i++) {
-        Object *newChatModelMenuItem = MenuitemObject, MUIA_Menuitem_Title,
-               CHAT_MODEL_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
-               MUIA_Menuitem_Checked, configGetChatModel() == i,
-               MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_Exclude, ~0,
-               MUIA_Menuitem_CopyStrings, FALSE, End;
-        DoMethod(openAIChatModelMenuItem, MUIM_Family_AddTail,
-                 newChatModelMenuItem);
-        DoMethod(newChatModelMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-                 MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
-                 MUIA_Menuitem_Checked, TRUE);
-        DoMethod(newChatModelMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-                 MUIV_EveryTime, configObj, 3, MUIM_Set,
-                 MUIA_AmigaGPTConfig_ChatModel, i);
+    Object *shellToolMenuItem = (Object *)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_SHELL_TOOL_ENABLED);
+    if (shellToolMenuItem) {
+        set(shellToolMenuItem, MUIA_Menuitem_Checked, configGetShellToolEnabled());
     }
 
-    Object *openAIImageModelMenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_IMAGE_MODEL);
+    DoMethod(menuStrip, MUIM_Menustrip_ExitChange);
+}
 
-    // Remove any existing image model items
-    Object *imageModelMenuItem;
-    while (imageModelMenuItem = (Object *)DoMethod(openAIImageModelMenuItem,
-                                                   MUIM_Family_GetChild)) {
-        DoMethod(openAIImageModelMenuItem, MUIM_Family_Remove,
-                 imageModelMenuItem);
-        DisposeObject(imageModelMenuItem);
-    }
+/**
+ * Populate the Image menu with sizes and format
+ */
+static void populateImageMenu() {
+    DoMethod(menuStrip, MUIM_Menustrip_InitChange);
 
-    // Populate the image model menu with the models
-    for (UBYTE i = 0; IMAGE_MODEL_NAMES[i] != NULL; i++) {
-        Object *newImageModelMenuItem = MenuitemObject, MUIA_Menuitem_Title,
-               IMAGE_MODEL_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
-               MUIA_Menuitem_Checked, configGetImageModel() == i,
-               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
-               MUIA_Menuitem_CopyStrings, FALSE, End;
-        DoMethod(openAIImageModelMenuItem, MUIM_Family_AddTail,
-                 newImageModelMenuItem);
-        DoMethod(newImageModelMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-                 TRUE, configObj, 3, MUIM_Set, MUIA_AmigaGPTConfig_ImageModel,
-                 i);
-    }
-
-    Object *openAIImageSizeDALL_E_2MenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_IMAGE_SIZE_DALL_E_2);
+    Object *imageSizeDALL_E_2MenuItem = (Object *)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_IMAGE_SIZE_DALL_E_2);
 
     // Remove any existing image size items
     Object *imageSizeDallE2MenuItem;
     while (imageSizeDallE2MenuItem = (Object *)DoMethod(
-               openAIImageSizeDALL_E_2MenuItem, MUIM_Family_GetChild)) {
-        DoMethod(openAIImageSizeDALL_E_2MenuItem, MUIM_Family_Remove,
+               imageSizeDALL_E_2MenuItem, MUIM_Family_GetChild)) {
+        DoMethod(imageSizeDALL_E_2MenuItem, MUIM_Family_Remove,
                  imageSizeDallE2MenuItem);
         DisposeObject(imageSizeDallE2MenuItem);
     }
@@ -1005,21 +977,21 @@ static void populateOpenAIMenu() {
                configGetImageSizeDallE2() == imageSize, MUIA_Menuitem_Exclude,
                ~(1 << i), MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_CopyStrings,
                FALSE, End;
-        DoMethod(openAIImageSizeDALL_E_2MenuItem, MUIM_Family_AddTail,
+        DoMethod(imageSizeDALL_E_2MenuItem, MUIM_Family_AddTail,
                  newImageSizeDallE2MenuItem);
         DoMethod(newImageSizeDallE2MenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
                  TRUE, configObj, 3, MUIM_Set,
                  MUIA_AmigaGPTConfig_ImageSizeDallE2, imageSize);
     }
 
-    Object *openAIImageSizeDALL_E_3MenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_IMAGE_SIZE_DALL_E_3);
+    Object *imageSizeDALL_E_3MenuItem = (Object *)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_IMAGE_SIZE_DALL_E_3);
 
     // Remove any existing image size items
     Object *imageSizeDallE3MenuItem;
     while (imageSizeDallE3MenuItem = (Object *)DoMethod(
-               openAIImageSizeDALL_E_3MenuItem, MUIM_Family_GetChild)) {
-        DoMethod(openAIImageSizeDALL_E_3MenuItem, MUIM_Family_Remove,
+               imageSizeDALL_E_3MenuItem, MUIM_Family_GetChild)) {
+        DoMethod(imageSizeDALL_E_3MenuItem, MUIM_Family_Remove,
                  imageSizeDallE3MenuItem);
         DisposeObject(imageSizeDallE3MenuItem);
     }
@@ -1033,21 +1005,21 @@ static void populateOpenAIMenu() {
                configGetImageSizeDallE3() == imageSize, MUIA_Menuitem_Exclude,
                ~(1 << i), MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_CopyStrings,
                FALSE, End;
-        DoMethod(openAIImageSizeDALL_E_3MenuItem, MUIM_Family_AddTail,
+        DoMethod(imageSizeDALL_E_3MenuItem, MUIM_Family_AddTail,
                  newImageSizeDallE3MenuItem);
         DoMethod(newImageSizeDallE3MenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
                  TRUE, configObj, 3, MUIM_Set,
                  MUIA_AmigaGPTConfig_ImageSizeDallE3, imageSize);
     }
 
-    Object *openAIImageSizeGPT_IMAGE_1MenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_IMAGE_SIZE_GPT_IMAGE_1);
+    Object *imageSizeGPT_IMAGE_1MenuItem = (Object *)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_IMAGE_SIZE_GPT_IMAGE_1);
 
     // Remove any existing image size items
     Object *imageSizeGptImage1MenuItem;
     while (imageSizeGptImage1MenuItem = (Object *)DoMethod(
-               openAIImageSizeGPT_IMAGE_1MenuItem, MUIM_Family_GetChild)) {
-        DoMethod(openAIImageSizeGPT_IMAGE_1MenuItem, MUIM_Family_Remove,
+               imageSizeGPT_IMAGE_1MenuItem, MUIM_Family_GetChild)) {
+        DoMethod(imageSizeGPT_IMAGE_1MenuItem, MUIM_Family_Remove,
                  imageSizeGptImage1MenuItem);
         DisposeObject(imageSizeGptImage1MenuItem);
     }
@@ -1061,23 +1033,22 @@ static void populateOpenAIMenu() {
                configGetImageSizeGptImage1() == imageSize,
                MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
                MUIA_Menuitem_CopyStrings, FALSE, End;
-        DoMethod(openAIImageSizeGPT_IMAGE_1MenuItem, MUIM_Family_AddTail,
+        DoMethod(imageSizeGPT_IMAGE_1MenuItem, MUIM_Family_AddTail,
                  newImageSizeGptImage1MenuItem);
         DoMethod(newImageSizeGptImage1MenuItem, MUIM_Notify,
                  MUIA_Menuitem_Checked, TRUE, configObj, 3, MUIM_Set,
                  MUIA_AmigaGPTConfig_ImageSizeGptImage1, imageSize);
     }
 
-    Object *openAIImageFormatMenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_AI_OPENAI_IMAGE_FORMAT);
+    Object *imageFormatMenuItem =
+        (Object *)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_IMAGE_FORMAT);
 
     // Remove any existing image format items
-    Object *imageFormatMenuItem;
-    while (imageFormatMenuItem = (Object *)DoMethod(openAIImageFormatMenuItem,
-                                                    MUIM_Family_GetChild)) {
-        DoMethod(openAIImageFormatMenuItem, MUIM_Family_Remove,
-                 imageFormatMenuItem);
-        DisposeObject(imageFormatMenuItem);
+    Object *formatMenuItem;
+    while (formatMenuItem =
+               (Object *)DoMethod(imageFormatMenuItem, MUIM_Family_GetChild)) {
+        DoMethod(imageFormatMenuItem, MUIM_Family_Remove, formatMenuItem);
+        DisposeObject(formatMenuItem);
     }
 
     // Populate the image format menu with the formats
@@ -1087,7 +1058,7 @@ static void populateOpenAIMenu() {
                MUIA_Menuitem_Checked, configGetImageFormat() == i,
                MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_Exclude, ~(1 << i),
                MUIA_Menuitem_CopyStrings, FALSE, End;
-        DoMethod(openAIImageFormatMenuItem, MUIM_Family_AddTail,
+        DoMethod(imageFormatMenuItem, MUIM_Family_AddTail,
                  newImageFormatMenuItem);
         DoMethod(newImageFormatMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
                  TRUE, configObj, 3, MUIM_Set, MUIA_AmigaGPTConfig_ImageFormat,

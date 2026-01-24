@@ -30,8 +30,8 @@ struct AmigaGPTConfigData {
     ULONG speechEnabled;
     SpeechSystem speechSystem;
     SpeechFliteVoice speechFliteVoice;
-    ChatModel chatModel;
-    ImageModel imageModel;
+    ChatModel chatModel;      /* Legacy - kept for migration */
+    ImageModel imageModel;    /* Legacy - kept for migration */
     ImageSize imageSizeDallE2;
     ImageSize imageSizeDallE3;
     ImageSize imageSizeGptImage1;
@@ -46,14 +46,19 @@ struct AmigaGPTConfigData {
     LONG assistantTextAlignment;
     LONG webSearchEnabled;
     LONG shellToolEnabled;
-    ULONG useCustomServer;
+    ULONG useCustomServer;    /* Legacy - kept for migration */
     ULONG customPort;
     ULONG customUseSSL;
     APIEndpoint customApiEndpoint;
     AuthorizationType customAuthorizationType;
     ImageFormat imageFormat;
 
+    /* Provider selection (new in schema v2) */
+    Provider chatProvider;
+    Provider imageProvider;
+
     /* Version tracking */
+    UWORD configSchemaVersion;
     UWORD chatModelSetVersion;
     UWORD imageModelSetVersion;
     UWORD speechSystemSetVersion;
@@ -80,6 +85,15 @@ struct AmigaGPTConfigData {
     STRPTR elevenLabsVoiceName;
     STRPTR elevenLabsModel;
     STRPTR elevenLabsModelName;
+
+    /* New string-based model names (new in schema v2) */
+    STRPTR chatModelName;
+    STRPTR imageModelName;
+
+    /* Provider-specific API keys (new in schema v2) */
+    STRPTR geminiApiKey;
+    STRPTR grokApiKey;
+    STRPTR anthropicApiKey;
 
     /* Auto-save state */
     BOOL isDirty;
@@ -123,8 +137,8 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->speechEnabled = FALSE;
     data->speechSystem = SPEECH_SYSTEM_OPENAI;
     data->speechFliteVoice = SPEECH_FLITE_VOICE_KAL;
-    data->chatModel = CHATGPT_5_LATEST;
-    data->imageModel = GPT_IMAGE_1;
+    data->chatModel = CHATGPT_5_LATEST;      /* Legacy */
+    data->imageModel = GPT_IMAGE_1;          /* Legacy */
     data->imageSizeDallE2 = IMAGE_SIZE_256x256;
     data->imageSizeDallE3 = IMAGE_SIZE_1024x1024;
     data->imageSizeGptImage1 = IMAGE_SIZE_AUTO;
@@ -139,13 +153,19 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->assistantTextAlignment = ALIGN_LEFT;
     data->webSearchEnabled = TRUE;
     data->shellToolEnabled = FALSE;
-    data->useCustomServer = FALSE;
+    data->useCustomServer = FALSE;           /* Legacy */
     data->customPort = 80;
     data->customUseSSL = FALSE;
     data->customApiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS;
     data->customAuthorizationType = AUTHORIZATION_TYPE_BEARER;
     data->imageFormat = IMAGE_FORMAT_PNG;
 
+    /* Provider defaults (new in schema v2) */
+    data->chatProvider = PROVIDER_OPENAI;
+    data->imageProvider = PROVIDER_OPENAI;
+
+    /* Version tracking */
+    data->configSchemaVersion = CONFIG_SCHEMA_VERSION;
     data->chatModelSetVersion = CHAT_MODEL_SET_VERSION;
     data->imageModelSetVersion = IMAGE_MODEL_SET_VERSION;
     data->speechSystemSetVersion = SPEECH_SYSTEM_SET_VERSION;
@@ -169,6 +189,15 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->elevenLabsVoiceName = NULL;
     data->elevenLabsModel = NULL;
     data->elevenLabsModelName = NULL;
+
+    /* New string-based model names (new in schema v2) */
+    data->chatModelName = copyString("gpt-5-chat-latest");
+    data->imageModelName = copyString("gpt-image-1");
+
+    /* Provider-specific API keys */
+    data->geminiApiKey = NULL;
+    data->grokApiKey = NULL;
+    data->anthropicApiKey = NULL;
 
     data->isDirty = FALSE;
     data->saveInProgress = FALSE;
@@ -197,6 +226,13 @@ static void freeAllStrings(struct AmigaGPTConfigData *data) {
     freeString(&data->elevenLabsVoiceName);
     freeString(&data->elevenLabsModel);
     freeString(&data->elevenLabsModelName);
+    /* New string-based model names */
+    freeString(&data->chatModelName);
+    freeString(&data->imageModelName);
+    /* Provider-specific API keys */
+    freeString(&data->geminiApiKey);
+    freeString(&data->grokApiKey);
+    freeString(&data->anthropicApiKey);
 }
 
 /**
@@ -418,6 +454,29 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_ElevenLabsModelName:
         *store = (ULONG)data->elevenLabsModelName;
+        return TRUE;
+
+    /* Provider settings (new in schema v2) */
+    case MUIA_AmigaGPTConfig_ChatProvider:
+        *store = data->chatProvider;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_ImageProvider:
+        *store = data->imageProvider;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_ChatModelName:
+        *store = (ULONG)data->chatModelName;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_ImageModelName:
+        *store = (ULONG)data->imageModelName;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GeminiApiKey:
+        *store = (ULONG)data->geminiApiKey;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GrokApiKey:
+        *store = (ULONG)data->grokApiKey;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_AnthropicApiKey:
+        *store = (ULONG)data->anthropicApiKey;
         return TRUE;
     }
 
@@ -669,6 +728,40 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                               (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
+
+        /* Provider settings (new in schema v2) */
+        case MUIA_AmigaGPTConfig_ChatProvider:
+            if (data->chatProvider != (Provider)ti_Data) {
+                data->chatProvider = (Provider)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_ImageProvider:
+            if (data->imageProvider != (Provider)ti_Data) {
+                data->imageProvider = (Provider)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_ChatModelName:
+            if (setStringAttr(&data->chatModelName, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_ImageModelName:
+            if (setStringAttr(&data->imageModelName, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_GeminiApiKey:
+            if (setStringAttr(&data->geminiApiKey, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_GrokApiKey:
+            if (setStringAttr(&data->grokApiKey, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_AnthropicApiKey:
+            if (setStringAttr(&data->anthropicApiKey, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
         }
     }
 
@@ -861,6 +954,34 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
             ? json_object_new_string(data->elevenLabsModelName)
             : NULL);
 
+    /* Provider settings (new in schema v2) */
+    json_object_object_add(configJsonObject, "configSchemaVersion",
+                           json_object_new_int(CONFIG_SCHEMA_VERSION));
+    json_object_object_add(configJsonObject, "chatProvider",
+                           json_object_new_int(data->chatProvider));
+    json_object_object_add(configJsonObject, "imageProvider",
+                           json_object_new_int(data->imageProvider));
+    json_object_object_add(configJsonObject, "chatModelName",
+                           data->chatModelName != NULL
+                               ? json_object_new_string(data->chatModelName)
+                               : NULL);
+    json_object_object_add(configJsonObject, "imageModelName",
+                           data->imageModelName != NULL
+                               ? json_object_new_string(data->imageModelName)
+                               : NULL);
+    json_object_object_add(configJsonObject, "geminiApiKey",
+                           data->geminiApiKey != NULL
+                               ? json_object_new_string(data->geminiApiKey)
+                               : NULL);
+    json_object_object_add(configJsonObject, "grokApiKey",
+                           data->grokApiKey != NULL
+                               ? json_object_new_string(data->grokApiKey)
+                               : NULL);
+    json_object_object_add(configJsonObject, "anthropicApiKey",
+                           data->anthropicApiKey != NULL
+                               ? json_object_new_string(data->anthropicApiKey)
+                               : NULL);
+
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
 
@@ -891,6 +1012,31 @@ static void readJsonString(struct json_object *jsonObj, const char *key,
             *target = copyString(value);
         }
     }
+}
+
+/**
+ * Back up config file before migration
+ */
+static void backupConfigFile(void) {
+#define CONFIG_BACKUP_PATH "AMIGAGPT:config.bak"
+    BPTR srcFile = Open(CONFIG_FILE_PATH, MODE_OLDFILE);
+    if (srcFile == 0)
+        return;
+
+    BPTR dstFile = Open(CONFIG_BACKUP_PATH, MODE_NEWFILE);
+    if (dstFile == 0) {
+        Close(srcFile);
+        return;
+    }
+
+    UBYTE buffer[4096];
+    LONG bytesRead;
+    while ((bytesRead = Read(srcFile, buffer, sizeof(buffer))) > 0) {
+        Write(dstFile, buffer, bytesRead);
+    }
+
+    Close(srcFile);
+    Close(dstFile);
 }
 
 /**
@@ -936,6 +1082,14 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     }
 
     struct json_object *valueObj;
+
+    /* Check schema version and migrate if needed */
+    UWORD loadedSchemaVersion = 0;
+    if (json_object_object_get_ex(configJsonObject, "configSchemaVersion",
+                                  &valueObj))
+        loadedSchemaVersion = json_object_get_int(valueObj);
+
+    BOOL needsMigration = (loadedSchemaVersion < CONFIG_SCHEMA_VERSION);
 
     /* Boolean/Integer values */
     if (json_object_object_get_ex(configJsonObject, "speechEnabled", &valueObj))
@@ -1130,6 +1284,98 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     readJsonString(configJsonObject, "elevenLabsModel", &data->elevenLabsModel);
     readJsonString(configJsonObject, "elevenLabsModelName",
                    &data->elevenLabsModelName);
+
+    /* Load new provider settings (schema v2) */
+    if (json_object_object_get_ex(configJsonObject, "chatProvider", &valueObj))
+        data->chatProvider = json_object_get_int(valueObj);
+    else
+        data->chatProvider = PROVIDER_OPENAI;
+
+    if (json_object_object_get_ex(configJsonObject, "imageProvider", &valueObj))
+        data->imageProvider = json_object_get_int(valueObj);
+    else
+        data->imageProvider = PROVIDER_OPENAI;
+
+    readJsonString(configJsonObject, "chatModelName", &data->chatModelName);
+    readJsonString(configJsonObject, "imageModelName", &data->imageModelName);
+    readJsonString(configJsonObject, "geminiApiKey", &data->geminiApiKey);
+    readJsonString(configJsonObject, "grokApiKey", &data->grokApiKey);
+    readJsonString(configJsonObject, "anthropicApiKey", &data->anthropicApiKey);
+
+    /* Migration from old config format (schema v1 to v2) */
+    if (needsMigration) {
+        printf("Migrating config from schema v%d to v%d...\n",
+               loadedSchemaVersion, CONFIG_SCHEMA_VERSION);
+
+        /* Back up old config before migration */
+        backupConfigFile();
+        printf("Old config backed up to config.bak\n");
+
+        /* Migrate chatModel enum to chatModelName string */
+        /* Check bounds by verifying we can reach the index without hitting NULL */
+        if (data->chatModelName == NULL) {
+            BOOL validIndex = TRUE;
+            for (UBYTE i = 0; i <= data->chatModel && validIndex; i++) {
+                if (CHAT_MODEL_NAMES[i] == NULL) {
+                    validIndex = FALSE;
+                }
+            }
+            if (validIndex && CHAT_MODEL_NAMES[data->chatModel] != NULL) {
+                data->chatModelName =
+                    copyString(CHAT_MODEL_NAMES[data->chatModel]);
+            }
+        }
+        if (data->chatModelName == NULL) {
+            data->chatModelName = copyString("gpt-5-chat-latest");
+        }
+
+        /* Migrate imageModel enum to imageModelName string */
+        /* Check bounds by verifying we can reach the index without hitting NULL */
+        if (data->imageModelName == NULL) {
+            BOOL validIndex = TRUE;
+            for (UBYTE i = 0; i <= data->imageModel && validIndex; i++) {
+                if (IMAGE_MODEL_NAMES[i] == NULL) {
+                    validIndex = FALSE;
+                }
+            }
+            if (validIndex && IMAGE_MODEL_NAMES[data->imageModel] != NULL) {
+                data->imageModelName =
+                    copyString(IMAGE_MODEL_NAMES[data->imageModel]);
+            }
+        }
+        if (data->imageModelName == NULL) {
+            data->imageModelName = copyString("gpt-image-1");
+        }
+
+        /* If useCustomServer was enabled, migrate to PROVIDER_CUSTOM */
+        if (data->useCustomServer) {
+            data->chatProvider = PROVIDER_CUSTOM;
+            /* Copy customChatModel to chatModelName if set */
+            if (data->customChatModel != NULL &&
+                strlen(data->customChatModel) > 0) {
+                freeString(&data->chatModelName);
+                data->chatModelName = copyString(data->customChatModel);
+            }
+        }
+
+        /* Update schema version */
+        data->configSchemaVersion = CONFIG_SCHEMA_VERSION;
+
+        /* Save migrated config */
+        FreeVec(configJsonString);
+        json_object_put(configJsonObject);
+        saveConfig(data);
+
+        printf("Config migration complete. Your old settings have been "
+               "preserved.\n");
+        return RETURN_OK;
+    }
+
+    /* Set defaults for any NULL string model names */
+    if (data->chatModelName == NULL)
+        data->chatModelName = copyString("gpt-5-chat-latest");
+    if (data->imageModelName == NULL)
+        data->imageModelName = copyString("gpt-image-1");
 
     FreeVec(configJsonString);
     json_object_put(configJsonObject);
@@ -1769,4 +2015,107 @@ void configSetElevenLabsModel(CONST_STRPTR value) {
 void configSetElevenLabsModelName(CONST_STRPTR value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_ElevenLabsModelName, (ULONG)value);
+}
+
+/* Provider settings */
+
+Provider configGetChatProvider(void) {
+    Provider val = PROVIDER_OPENAI;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_ChatProvider, &val);
+    return val;
+}
+
+void configSetChatProvider(Provider value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_ChatProvider, value);
+}
+
+Provider configGetImageProvider(void) {
+    Provider val = PROVIDER_OPENAI;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_ImageProvider, &val);
+    return val;
+}
+
+void configSetImageProvider(Provider value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_ImageProvider, value);
+}
+
+STRPTR configGetChatModelName(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_ChatModelName, &val);
+    return val;
+}
+
+void configSetChatModelName(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_ChatModelName, (ULONG)value);
+}
+
+STRPTR configGetImageModelName(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_ImageModelName, &val);
+    return val;
+}
+
+void configSetImageModelName(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_ImageModelName, (ULONG)value);
+}
+
+STRPTR configGetGeminiApiKey(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_GeminiApiKey, &val);
+    return val;
+}
+
+void configSetGeminiApiKey(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_GeminiApiKey, (ULONG)value);
+}
+
+STRPTR configGetGrokApiKey(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_GrokApiKey, &val);
+    return val;
+}
+
+void configSetGrokApiKey(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_GrokApiKey, (ULONG)value);
+}
+
+STRPTR configGetAnthropicApiKey(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_AnthropicApiKey, &val);
+    return val;
+}
+
+void configSetAnthropicApiKey(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_AnthropicApiKey, (ULONG)value);
+}
+
+STRPTR configGetApiKeyForProvider(Provider provider) {
+    switch (provider) {
+    case PROVIDER_OPENAI:
+        return configGetOpenAiApiKey();
+    case PROVIDER_GEMINI:
+        return configGetGeminiApiKey();
+    case PROVIDER_GROK:
+        return configGetGrokApiKey();
+    case PROVIDER_ANTHROPIC:
+        return configGetAnthropicApiKey();
+    case PROVIDER_CUSTOM:
+        return configGetCustomApiKey();
+    default:
+        return NULL;
+    }
 }

@@ -193,42 +193,76 @@ HOOKPROTONH(ReplyCallbackFunc, APTR, Object *obj, struct RexxMsg *rxm) {
 MakeHook(ReplyCallbackHook, ReplyCallbackFunc);
 
 HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
-    STRPTR model = (STRPTR)arg[0];
-    STRPTR system = (STRPTR)arg[1];
-    STRPTR host = (STRPTR)arg[2];
-    ULONG *port = (ULONG *)arg[3];
-    BOOL useSSL = (BOOL)arg[4];
-    STRPTR apiKey = (STRPTR)arg[5];
-    BOOL useProxy = (BOOL)arg[6];
-    STRPTR proxyHost = (STRPTR)arg[7];
-    ULONG *proxyPort = (ULONG *)arg[8];
-    BOOL proxyUsesSSL = (BOOL)arg[9];
-    BOOL proxyRequiresAuth = (BOOL)arg[10];
-    STRPTR proxyUsername = (STRPTR)arg[11];
-    STRPTR proxyPassword = (STRPTR)arg[12];
-    BOOL webSearchEnabled = (BOOL)arg[13];
-    STRPTR prompt = (STRPTR)arg[14];
+    STRPTR providerString = (STRPTR)arg[0];
+    STRPTR model = (STRPTR)arg[1];
+    STRPTR system = (STRPTR)arg[2];
+    STRPTR host = (STRPTR)arg[3];
+    ULONG *port = (ULONG *)arg[4];
+    BOOL useSSL = (BOOL)arg[5];
+    STRPTR apiKey = (STRPTR)arg[6];
+    BOOL useProxy = (BOOL)arg[7];
+    STRPTR proxyHost = (STRPTR)arg[8];
+    ULONG *proxyPort = (ULONG *)arg[9];
+    BOOL proxyUsesSSL = (BOOL)arg[10];
+    BOOL proxyRequiresAuth = (BOOL)arg[11];
+    STRPTR proxyUsername = (STRPTR)arg[12];
+    STRPTR proxyPassword = (STRPTR)arg[13];
+    BOOL webSearchEnabled = (BOOL)arg[14];
+    STRPTR prompt = (STRPTR)arg[15];
 
     /* Reload config from disk to pick up any changes from the main app */
     DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
 
+    /* Determine the provider to use */
+    Provider provider = configGetChatProvider();
+    if (providerString != NULL && strlen(providerString) > 0) {
+        for (UBYTE i = 0; PROVIDER_NAMES[i] != NULL; i++) {
+            if (strcasecmp(providerString, PROVIDER_NAMES[i]) == 0) {
+                provider = (Provider)i;
+                break;
+            }
+        }
+        /* Also check for short names */
+        if (strcasecmp(providerString, "openai") == 0) {
+            provider = PROVIDER_OPENAI;
+        } else if (strcasecmp(providerString, "gemini") == 0) {
+            provider = PROVIDER_GEMINI;
+        } else if (strcasecmp(providerString, "grok") == 0) {
+            provider = PROVIDER_GROK;
+        } else if (strcasecmp(providerString, "anthropic") == 0 ||
+                   strcasecmp(providerString, "claude") == 0) {
+            provider = PROVIDER_ANTHROPIC;
+        } else if (strcasecmp(providerString, "custom") == 0) {
+            provider = PROVIDER_CUSTOM;
+        }
+    }
+
+    /* Get provider config */
+    struct ProviderConfig *providerConfig = getProviderConfig(provider);
+    BOOL useCustomServer = (provider == PROVIDER_CUSTOM);
+
     ULONG portValue =
-        port == NULL ? (configGetUseCustomServer() ? configGetCustomPort() : 0)
-                     : (ULONG)*port;
+        port == NULL
+            ? (useCustomServer ? configGetCustomPort()
+                               : (providerConfig ? providerConfig->port : 443))
+            : (ULONG)*port;
     ULONG proxyPortValue =
         proxyPort == NULL ? configGetProxyPort() : (ULONG)*proxyPort;
 
     if (apiKey == NULL) {
-        apiKey = configGetUseCustomServer() ? configGetCustomApiKey()
-                                            : configGetOpenAiApiKey();
+        apiKey = configGetApiKeyForProvider(provider);
     }
 
     if (host == NULL || strlen(host) == 0) {
-        host = configGetUseCustomServer() ? configGetCustomHost() : NULL;
+        host = useCustomServer
+                   ? configGetCustomHost()
+                   : (providerConfig ? (STRPTR)providerConfig->host : NULL);
     }
 
     if (!useSSL) {
-        useSSL = configGetUseCustomServer() ? configGetCustomUseSSL() : TRUE;
+        useSSL = useCustomServer
+                     ? configGetCustomUseSSL()
+                     : (providerConfig ? providerConfig->useSSL : TRUE);
     }
 
     if (!proxyUsesSSL) {
@@ -248,9 +282,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     }
 
     if (model == NULL || strlen(model) == 0) {
-        model = configGetUseCustomServer()
-                    ? configGetCustomChatModel()
-                    : CHAT_MODEL_NAMES[configGetChatModel()];
+        model = configGetChatModelName();
     }
 
     /* Get the persistent daemon conversation (load from T: or create new) */
@@ -262,12 +294,22 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
     setConversationSystem(conversation, system);
 
-    BOOL useCustomServer = host != NULL && strlen(host) > 0;
+    /* Determine API endpoint and auth type based on provider */
+    APIEndpoint apiEndpoint =
+        providerConfig ? providerConfig->apiEndpoint : API_ENDPOINT_RESPONSES;
+    AuthorizationType authType = providerConfig
+                                     ? providerConfig->authorizationType
+                                     : AUTHORIZATION_TYPE_BEARER;
+    CONST_STRPTR customHeaders =
+        providerConfig ? providerConfig->customHeaders : NULL;
+    CONST_STRPTR apiEndpointUrl =
+        providerConfig ? providerConfig->apiEndpointUrl : "v1";
+
     struct json_object **responses = postChatMessageToOpenAI(
         conversation, host, portValue, useSSL, model, apiKey, FALSE, useProxy,
         proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
-        proxyUsername, proxyPassword, webSearchEnabled, API_ENDPOINT_RESPONSES,
-        NULL, AUTHORIZATION_TYPE_BEARER, NULL);
+        proxyUsername, proxyPassword, webSearchEnabled, apiEndpoint,
+        apiEndpointUrl, authType, customHeaders);
 
     /* Note: Don't free the conversation here - we keep it for context */
 
@@ -396,10 +438,9 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             addTextToConversation(conversation, toolContentString, "assistant");
             saveDaemonConversation();
 
-            STRPTR formattedMessageSystemEncoded =
-                CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
-                                  CSA_Source, (Tag)toolContentString,
-                                  CSA_MapForeignChars, TRUE, TAG_DONE);
+            STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
+                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                (Tag)toolContentString, CSA_MapForeignChars, TRUE, TAG_DONE);
             set(app, MUIA_Application_RexxString,
                 formattedMessageSystemEncoded);
             CodesetsFreeA(formattedMessageSystemEncoded, NULL);
@@ -476,17 +517,39 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 MakeHook(SendMessageHook, SendMessageFunc);
 
 HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
-    STRPTR modelString = (STRPTR)arg[0];
-    STRPTR sizeString = (STRPTR)arg[1];
-    STRPTR apiKey = (STRPTR)arg[2];
-    STRPTR destination = (STRPTR)arg[3];
-    STRPTR prompt = (STRPTR)arg[4];
+    STRPTR providerString = (STRPTR)arg[0];
+    STRPTR modelString = (STRPTR)arg[1];
+    STRPTR sizeString = (STRPTR)arg[2];
+    STRPTR apiKey = (STRPTR)arg[3];
+    STRPTR destination = (STRPTR)arg[4];
+    STRPTR prompt = (STRPTR)arg[5];
 
     /* Reload config from disk to pick up any changes from the main app */
     DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
 
+    /* Determine the provider to use */
+    Provider provider = configGetImageProvider();
+    if (providerString != NULL && strlen(providerString) > 0) {
+        for (UBYTE i = 0; PROVIDER_NAMES[i] != NULL; i++) {
+            if (strcasecmp(providerString, PROVIDER_NAMES[i]) == 0) {
+                provider = (Provider)i;
+                break;
+            }
+        }
+        /* Also check for short names */
+        if (strcasecmp(providerString, "openai") == 0) {
+            provider = PROVIDER_OPENAI;
+        } else if (strcasecmp(providerString, "gemini") == 0) {
+            provider = PROVIDER_GEMINI;
+        } else if (strcasecmp(providerString, "grok") == 0) {
+            provider = PROVIDER_GROK;
+        } else if (strcasecmp(providerString, "custom") == 0) {
+            provider = PROVIDER_CUSTOM;
+        }
+    }
+
     if (apiKey == NULL || strlen(apiKey) == 0) {
-        apiKey = configGetOpenAiApiKey();
+        apiKey = configGetApiKeyForProvider(provider);
     }
 
     ImageModel model;
@@ -595,10 +658,30 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
 MakeHook(CreateImageHook, CreateImageFunc);
 
 HOOKPROTONHNO(ListChatModelsFunc, APTR, ULONG *arg) {
-    STRPTR models = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
-    for (UBYTE i = 0; CHAT_MODEL_NAMES[i] != NULL; i++) {
-        strncat(models, CHAT_MODEL_NAMES[i], 1024);
-        strncat(models, "\n", 1024);
+    STRPTR models = AllocVec(4096, MEMF_ANY | MEMF_CLEAR);
+    strncat(models, "OpenAI:\n", 4096);
+    for (UBYTE i = 0; OPENAI_CHAT_MODELS[i] != NULL; i++) {
+        strncat(models, "  ", 4096);
+        strncat(models, OPENAI_CHAT_MODELS[i], 4096);
+        strncat(models, "\n", 4096);
+    }
+    strncat(models, "\nGoogle Gemini:\n", 4096);
+    for (UBYTE i = 0; GEMINI_CHAT_MODELS[i] != NULL; i++) {
+        strncat(models, "  ", 4096);
+        strncat(models, GEMINI_CHAT_MODELS[i], 4096);
+        strncat(models, "\n", 4096);
+    }
+    strncat(models, "\nxAI Grok:\n", 4096);
+    for (UBYTE i = 0; GROK_CHAT_MODELS[i] != NULL; i++) {
+        strncat(models, "  ", 4096);
+        strncat(models, GROK_CHAT_MODELS[i], 4096);
+        strncat(models, "\n", 4096);
+    }
+    strncat(models, "\nAnthropic Claude:\n", 4096);
+    for (UBYTE i = 0; ANTHROPIC_CHAT_MODELS[i] != NULL; i++) {
+        strncat(models, "  ", 4096);
+        strncat(models, ANTHROPIC_CHAT_MODELS[i], 4096);
+        strncat(models, "\n", 4096);
     }
     set(app, MUIA_Application_RexxString, models);
     FreeVec(models);
@@ -607,16 +690,42 @@ HOOKPROTONHNO(ListChatModelsFunc, APTR, ULONG *arg) {
 MakeHook(ListChatModelsHook, ListChatModelsFunc);
 
 HOOKPROTONHNO(ListImageModelsFunc, APTR, ULONG *arg) {
-    STRPTR models = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
-    for (UBYTE i = 0; IMAGE_MODEL_NAMES[i] != NULL; i++) {
-        strncat(models, IMAGE_MODEL_NAMES[i], 1024);
-        strncat(models, "\n", 1024);
+    STRPTR models = AllocVec(4096, MEMF_ANY | MEMF_CLEAR);
+    strncat(models, "OpenAI:\n", 4096);
+    for (UBYTE i = 0; OPENAI_IMAGE_MODELS[i] != NULL; i++) {
+        strncat(models, "  ", 4096);
+        strncat(models, OPENAI_IMAGE_MODELS[i], 4096);
+        strncat(models, "\n", 4096);
+    }
+    strncat(models, "\nGoogle Gemini:\n", 4096);
+    for (UBYTE i = 0; GEMINI_IMAGE_MODELS[i] != NULL; i++) {
+        strncat(models, "  ", 4096);
+        strncat(models, GEMINI_IMAGE_MODELS[i], 4096);
+        strncat(models, "\n", 4096);
+    }
+    strncat(models, "\nxAI Grok:\n", 4096);
+    for (UBYTE i = 0; GROK_IMAGE_MODELS[i] != NULL; i++) {
+        strncat(models, "  ", 4096);
+        strncat(models, GROK_IMAGE_MODELS[i], 4096);
+        strncat(models, "\n", 4096);
     }
     set(app, MUIA_Application_RexxString, models);
     FreeVec(models);
     return RETURN_OK;
 }
 MakeHook(ListImageModelsHook, ListImageModelsFunc);
+
+HOOKPROTONHNO(ListProvidersFunc, APTR, ULONG *arg) {
+    STRPTR providers = AllocVec(512, MEMF_ANY | MEMF_CLEAR);
+    for (UBYTE i = 0; PROVIDER_NAMES[i] != NULL; i++) {
+        strncat(providers, PROVIDER_NAMES[i], 512);
+        strncat(providers, "\n", 512);
+    }
+    set(app, MUIA_Application_RexxString, providers);
+    FreeVec(providers);
+    return RETURN_OK;
+}
+MakeHook(ListProvidersHook, ListProvidersFunc);
 
 HOOKPROTONHNO(ListImageSizesFunc, APTR, ULONG *arg) {
     STRPTR sizes = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
@@ -796,11 +905,14 @@ MakeHook(NewChatHook, NewChatFunc);
 HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
     set(app, MUIA_Application_RexxString,
         "SENDMESSAGE "
-        "M=MODEL/K,S=SYSTEM/K,H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/"
+        "PR=PROVIDER/K,M=MODEL/K,S=SYSTEM/K,H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/"
+        "K,U=USEPROXY/"
         "S,PH=PROXYHOST/"
         "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
         "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,P=PROMPT/F\n"
-        "CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F\n"
+        "CREATEIMAGE "
+        "PR=PROVIDER/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/"
+        "F\n"
         "SPEAKTEXT "
         "M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,P=PROMPT/"
         "F\n"
@@ -809,6 +921,7 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
         "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
         "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K\n"
         "NEWCHAT - Clear conversation history and start a new chat\n"
+        "LISTPROVIDERS\n"
         "LISTAUDIOFORMATS\n"
         "LISTCHATMODELS\n"
         "LISTIMAGEMODELS\n"
@@ -821,16 +934,17 @@ MakeHook(HelpHook, HelpFunc);
 
 struct MUI_Command arexxList[] = {
     {"SENDMESSAGE",
-     "M=MODEL/K,S=SYSTEM/K,H=HOST/K,PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/"
+     "PR=PROVIDER/K,M=MODEL/K,S=SYSTEM/K,H=HOST/K,PO=PORT/N,S=SSL/S,K=APIKEY/"
+     "K,U=USEPROXY/"
      "S,PH=PROXYHOST/"
      "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
      "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,P=PROMPT/F",
-     15,
+     16,
      &SendMessageHook,
      {0, 0, 0, 0, 0}},
     {"CREATEIMAGE",
-     "M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F",
-     5,
+     "PR=PROVIDER/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F",
+     6,
      &CreateImageHook,
      {0, 0, 0, 0, 0}},
     {"SPEAKTEXT",
@@ -848,6 +962,7 @@ struct MUI_Command arexxList[] = {
      11,
      &ListServerModelsHook,
      {0, 0, 0, 0, 0}},
+    {"LISTPROVIDERS", NULL, NULL, &ListProvidersHook, {0, 0, 0, 0, 0}},
     {"LISTCHATMODELS", NULL, NULL, &ListChatModelsHook, {0, 0, 0, 0, 0}},
     {"LISTIMAGEMODELS", NULL, NULL, &ListImageModelsHook, {0, 0, 0, 0, 0}},
     {"LISTIMAGESIZES", NULL, NULL, &ListImageSizesHook, {0, 0, 0, 0, 0}},
