@@ -246,7 +246,7 @@ LONG initOpenAIConnector();
  * @param host the host to use
  * @param port the port to use
  * @param useSSL whether to use SSL or not
- * @param openAiApiKey the OpenAI API key (can be NULL for local LLM)
+ * @param apiKey the API key (can be NULL for local LLM)
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -261,7 +261,7 @@ LONG initOpenAIConnector();
  * NULL -- Free it with json_object_put() when you are done using it
  **/
 struct json_object *
-getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR openAiApiKey,
+getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
               BOOL useProxy, CONST_STRPTR proxyHost, ULONG proxyPort,
               BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
               CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
@@ -275,7 +275,7 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR openAiApiKey,
  * @param port the port to use set to 0 to use OpenAI default port
  * @param useSSL whether to use SSL or not
  * @param model the model to use
- * @param openAiApiKey the OpenAI API key
+ * @param apiKey the API key
  * @param stream whether to stream the response or not
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
@@ -295,7 +295,7 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR openAiApiKey,
  **/
 struct json_object **postChatMessageToOpenAI(
     struct Conversation *conversation, STRPTR host, UWORD port, BOOL useSSL,
-    CONST_STRPTR model, CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
+    CONST_STRPTR model, CONST_STRPTR apiKey, BOOL stream, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, BOOL webSearchEnabled, APIEndpoint apiEndpoint,
@@ -307,7 +307,7 @@ struct json_object **postChatMessageToOpenAI(
  * @param prompt the prompt to use
  * @param imageModel the image model to use
  * @param imageSize the size of the image to create
- * @param openAiApiKey the OpenAI API key
+ * @param apiKey the API key
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -321,10 +321,9 @@ struct json_object **postChatMessageToOpenAI(
  **/
 struct json_object *postImageCreationRequestToOpenAI(
     CONST_STRPTR prompt, ImageModel imageModel, ImageSize imageSize,
-    CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost,
-    UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
-    ImageFormat imageFormat);
+    CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, ImageFormat imageFormat);
 
 /**
  * Download a file from the internet
@@ -350,7 +349,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
  * @param openAITTSModel the TTS model to use
  * @param openAITTSVoice the voice to use
  * @param voiceInstructions the voice instructions to use
- * @param openAiApiKey the OpenAI API key
+ * @param apiKey the API key
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -365,7 +364,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
 APTR postTextToSpeechRequestToOpenAI(
     CONST_STRPTR text, OpenAITTSModel openAITTSModel,
     OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
-    CONST_STRPTR openAiApiKey, ULONG *audioLength, BOOL useProxy,
+    CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, AudioFormat *audioFormat);
@@ -477,7 +476,7 @@ STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode);
  * @param host the host to use (or NULL for OpenAI default)
  * @param port the port to use
  * @param useSSL whether to use SSL
- * @param openAiApiKey the API key
+ * @param apiKey the API key
  * @param useProxy whether to use a proxy
  * @param proxyHost the proxy host
  * @param proxyPort the proxy port
@@ -490,7 +489,7 @@ STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode);
 struct json_object *
 postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
                        CONST_STRPTR output, STRPTR host, UWORD port,
-                       BOOL useSSL, CONST_STRPTR openAiApiKey, BOOL useProxy,
+                       BOOL useSSL, CONST_STRPTR apiKey, BOOL useProxy,
                        CONST_STRPTR proxyHost, UWORD proxyPort,
                        BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
                        CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);

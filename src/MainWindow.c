@@ -1466,9 +1466,9 @@ static void sendChatMessage() {
         }
     } while (!dataStreamFinished);
 
-    /* Handle shell tool calls - check if one was captured during streaming */
-    if (!useCustomServer && configGetShellToolEnabled() &&
-        hasPendingToolCall()) {
+    /* Handle shell tool calls - loop to handle multiple sequential commands */
+    while (!useCustomServer && configGetShellToolEnabled() &&
+           hasPendingToolCall()) {
         STRPTR command = getPendingToolCommand();
         STRPTR callId = getPendingToolCallId();
         STRPTR responseId = getPendingResponseId();
@@ -1489,8 +1489,7 @@ static void sendChatMessage() {
                                   confirmMsg, TAG_DONE);
 
         if (result != 1) {
-            /* User denied - clear pending tool call and continue without
-             * executing */
+            /* User denied - clear pending tool call and break out of loop */
             clearPendingToolCall();
             strncat(chatOutputTextEditorContents,
                     "\n\n--- Shell command denied by user ---\n\n",
@@ -1502,119 +1501,123 @@ static void sendChatMessage() {
             set(chatOutputTextEditor, MUIA_NFloattext_Text,
                 chatOutputTextEditorContents);
             set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
-        } else {
-            /* User allowed - proceed with execution */
+            break; /* Stop processing more tool calls */
+        }
 
-            /* Display that we're executing a command */
-            UBYTE statusMsg[256];
-            snprintf(statusMsg, sizeof(statusMsg), STRING_EXECUTING_COMMAND);
-            updateStatusBar(statusMsg, yellowPen);
+        /* User allowed - proceed with execution */
 
-            /* Show the command in the chat output and save to history */
-            UBYTE cmdDisplay[512];
-            snprintf(cmdDisplay, sizeof(cmdDisplay),
-                     "\n\n--- Executing: %s ---\n", command);
-            strncat(chatOutputTextEditorContents, cmdDisplay,
-                    CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
-                        strlen(chatOutputTextEditorContents) - 1);
-            strncat(receivedMessage, cmdDisplay,
-                    READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
-            set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                chatOutputTextEditorContents);
-            set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
+        /* Display that we're executing a command */
+        UBYTE statusMsg[256];
+        snprintf(statusMsg, sizeof(statusMsg), STRING_EXECUTING_COMMAND);
+        updateStatusBar(statusMsg, yellowPen);
 
-            /* Execute the shell command */
-            LONG exitCode = 0;
-            STRPTR output = executeShellCommand(command, &exitCode);
+        /* Show the command in the chat output and save to history */
+        UBYTE cmdDisplay[512];
+        snprintf(cmdDisplay, sizeof(cmdDisplay),
+                 "\n\n--- Executing: %s ---\n", command);
+        strncat(chatOutputTextEditorContents, cmdDisplay,
+                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
+                    strlen(chatOutputTextEditorContents) - 1);
+        strncat(receivedMessage, cmdDisplay,
+                READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
+        set(chatOutputTextEditor, MUIA_NFloattext_Text,
+            chatOutputTextEditorContents);
+        set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
 
-            /* Display the output and save to history */
-            UBYTE outputDisplay[4096];
-            snprintf(outputDisplay, sizeof(outputDisplay),
-                     "Exit code: %ld\n%s\n--- End ---\n\n", exitCode,
-                     output != NULL ? output : "(No output)");
-            strncat(chatOutputTextEditorContents, outputDisplay,
-                    CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
-                        strlen(chatOutputTextEditorContents) - 1);
-            strncat(receivedMessage, outputDisplay,
-                    READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
-            set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                chatOutputTextEditorContents);
-            set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
+        /* Execute the shell command */
+        LONG exitCode = 0;
+        STRPTR output = executeShellCommand(command, &exitCode);
 
-            /* Build output string with exit code */
-            UBYTE toolOutput[8192];
-            snprintf(toolOutput, sizeof(toolOutput),
-                     "Exit code: %ld\nOutput:\n%s", exitCode,
-                     output != NULL ? output : "(No output)");
+        /* Display the output and save to history */
+        UBYTE outputDisplay[4096];
+        snprintf(outputDisplay, sizeof(outputDisplay),
+                 "Exit code: %ld\n%s\n--- End ---\n\n", exitCode,
+                 output != NULL ? output : "(No output)");
+        strncat(chatOutputTextEditorContents, outputDisplay,
+                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
+                    strlen(chatOutputTextEditorContents) - 1);
+        strncat(receivedMessage, outputDisplay,
+                READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
+        set(chatOutputTextEditor, MUIA_NFloattext_Text,
+            chatOutputTextEditorContents);
+        set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
 
-            /* Send the tool result back to the API */
-            struct json_object *toolResponse = postToolResultToOpenAI(
-                responseId, callId, toolOutput,
-                NULL, /* Use default OpenAI host */
-                0,    /* Use default port */
-                TRUE, /* Use SSL */
-                configGetOpenAiApiKey(), configGetProxyEnabled(),
-                configGetProxyHost(), configGetProxyPort(),
-                configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
-                configGetProxyUsername(), configGetProxyPassword());
+        /* Build output string with exit code */
+        UBYTE toolOutput[8192];
+        snprintf(toolOutput, sizeof(toolOutput),
+                 "Exit code: %ld\nOutput:\n%s", exitCode,
+                 output != NULL ? output : "(No output)");
 
-            /* Clear the pending tool call after sending the result */
-            clearPendingToolCall();
+        /* Send the tool result back to the API - this may set a new pending
+         * tool call if OpenAI wants to run another command */
+        struct json_object *toolResponse = postToolResultToOpenAI(
+            responseId, callId, toolOutput,
+            NULL, /* Use default OpenAI host */
+            0,    /* Use default port */
+            TRUE, /* Use SSL */
+            configGetOpenAiApiKey(), configGetProxyEnabled(),
+            configGetProxyHost(), configGetProxyPort(),
+            configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+            configGetProxyUsername(), configGetProxyPassword());
 
-            if (output != NULL) {
-                FreeVec(output);
-            }
+        if (output != NULL) {
+            FreeVec(output);
+        }
 
-            /* Get the text content from the new response */
-            if (toolResponse != NULL) {
-                /* Check for errors */
-                struct json_object *error;
-                if (json_object_object_get_ex(toolResponse, "error", &error) &&
-                    !json_object_is_type(error, json_type_null)) {
-                    struct json_object *message =
-                        json_object_object_get(error, "message");
-                    if (message != NULL) {
-                        displayError(json_object_get_string(message));
-                    }
-                    json_object_put(toolResponse);
-                } else {
-                    /* Get the response text */
-                    UTF8 *toolContentString = getMessageContentFromJson(
-                        toolResponse, FALSE, FALSE, API_ENDPOINT_RESPONSES);
-                    if (toolContentString != NULL &&
-                        strlen(toolContentString) > 0) {
-                        /* Append to the received message */
-                        strncat(receivedMessage, toolContentString,
-                                READ_BUFFER_LENGTH - strlen(receivedMessage) -
-                                    1);
-
-                        /* Display in chat output */
-                        STRPTR formattedToolResponse = CodesetsUTF8ToStr(
-                            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                            (Tag)toolContentString, CSA_MapForeignChars, TRUE,
-                            TAG_DONE);
-                        strncat(chatOutputTextEditorContents,
-                                formattedToolResponse,
-                                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
-                                    strlen(chatOutputTextEditorContents) - 1);
-                        CodesetsFreeA(formattedToolResponse, NULL);
-
-                        STRPTR formattedContent =
-                            convertMarkdownFormattingToMUI(
-                                chatOutputTextEditorContents);
-                        strncpy(chatOutputTextEditorContents, formattedContent,
-                                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 1);
-                        FreeVec(formattedContent);
-                        set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                            chatOutputTextEditorContents);
-                        set(chatOutputListView, MUIA_NList_First,
-                            MUIV_NList_First_Bottom);
-                    }
-                    json_object_put(toolResponse);
+        /* Get the text content from the new response */
+        if (toolResponse != NULL) {
+            /* Check for errors */
+            struct json_object *error;
+            if (json_object_object_get_ex(toolResponse, "error", &error) &&
+                !json_object_is_type(error, json_type_null)) {
+                clearPendingToolCall();
+                struct json_object *message =
+                    json_object_object_get(error, "message");
+                if (message != NULL) {
+                    displayError(json_object_get_string(message));
                 }
+                json_object_put(toolResponse);
+                break; /* Stop on error */
             }
-        } /* end of else (user allowed execution) */
-    }
+
+            /* Check if there's another tool call - if so, loop will continue.
+             * postToolResultToOpenAI will have set pendingToolCall if so */
+            if (hasPendingToolCall()) {
+                json_object_put(toolResponse);
+                continue;
+            }
+
+            /* No more tool calls - get the final response text */
+            UTF8 *toolContentString = getMessageContentFromJson(
+                toolResponse, FALSE, FALSE, API_ENDPOINT_RESPONSES);
+            if (toolContentString != NULL && strlen(toolContentString) > 0) {
+                /* Append to the received message */
+                strncat(receivedMessage, toolContentString,
+                        READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
+
+                /* Display in chat output */
+                STRPTR formattedToolResponse = CodesetsUTF8ToStr(
+                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                    (Tag)toolContentString, CSA_MapForeignChars, TRUE,
+                    TAG_DONE);
+                strncat(chatOutputTextEditorContents, formattedToolResponse,
+                        CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
+                            strlen(chatOutputTextEditorContents) - 1);
+                CodesetsFreeA(formattedToolResponse, NULL);
+
+                STRPTR formattedContent = convertMarkdownFormattingToMUI(
+                    chatOutputTextEditorContents);
+                strncpy(chatOutputTextEditorContents, formattedContent,
+                        CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 1);
+                FreeVec(formattedContent);
+                set(chatOutputTextEditor, MUIA_NFloattext_Text,
+                    chatOutputTextEditorContents);
+                set(chatOutputListView, MUIA_NList_First,
+                    MUIV_NList_First_Bottom);
+            }
+            json_object_put(toolResponse);
+        }
+    } /* end of while (tool calls) */
 
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 

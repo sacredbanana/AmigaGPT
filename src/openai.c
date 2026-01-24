@@ -373,6 +373,26 @@ STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode) {
     if (errorBuffer)
         FreeVec(errorBuffer);
 
+    /* Convert output from system encoding to UTF-8 for JSON/API compatibility */
+    if (combinedOutput != NULL) {
+        UTF8 *utf8Output = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                                               CSA_Source, (Tag)combinedOutput,
+                                               TAG_DONE);
+        if (utf8Output != NULL) {
+            /* Copy UTF-8 output to AllocVec buffer so caller can use FreeVec */
+            LONG utf8Len = strlen((char *)utf8Output);
+            STRPTR result = AllocVec(utf8Len + 1, MEMF_CLEAR);
+            if (result != NULL) {
+                strncpy(result, (char *)utf8Output, utf8Len);
+                result[utf8Len] = '\0';
+            }
+            CodesetsFreeA(utf8Output, NULL);
+            FreeVec(combinedOutput);
+            return result;
+        }
+        /* If conversion failed, return original (may have encoding issues) */
+    }
+
     return combinedOutput;
 }
 
@@ -835,7 +855,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
  * @param host the host to use
  * @param port the port to use
  * @param useSSL whether to use SSL or not
- * @param openAiApiKey the OpenAI API key (can be NULL for local LLM)
+ * @param apiKey the OpenAI API key (can be NULL for local LLM)
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -848,7 +868,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
  * NULL -- Free it with json_object_put() when you are done using it
  **/
 struct json_object *
-getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR openAiApiKey,
+getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
               BOOL useProxy, CONST_STRPTR proxyHost, ULONG proxyPort,
               BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
               CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
@@ -878,10 +898,10 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR openAiApiKey,
     /* Build the authorization header based on type */
     UBYTE apiAuthHeader[512];
     memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
-    if (authorizationType != AUTHORIZATION_TYPE_NONE && openAiApiKey != NULL &&
-        strlen(openAiApiKey) > 0) {
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
         snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
-                 AUTHORIZATION_TYPE_NAMES[authorizationType], openAiApiKey);
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
     }
 
     /* Build custom headers string with proper line ending */
@@ -1051,7 +1071,7 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR openAiApiKey,
  * @param port the port to use set to 0 to use OpenAI default port
  * @param useSSL whether to use SSL or not
  * @param model the model to use
- * @param openAiApiKey the OpenAI API key
+ * @param apiKey the API key
  * @param stream whether to stream the response or not
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
@@ -1069,7 +1089,7 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR openAiApiKey,
  **/
 struct json_object **postChatMessageToOpenAI(
     struct Conversation *conversation, STRPTR host, UWORD port, BOOL useSSL,
-    CONST_STRPTR model, CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
+    CONST_STRPTR model, CONST_STRPTR apiKey, BOOL stream, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, BOOL webSearchEnabled, APIEndpoint apiEndpoint,
@@ -1334,10 +1354,10 @@ struct json_object **postChatMessageToOpenAI(
         /* Build the API authorization header based on type */
         UBYTE apiAuthHeader[512];
         memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
-        if (authorizationType != AUTHORIZATION_TYPE_NONE &&
-            openAiApiKey != NULL && strlen(openAiApiKey) > 0) {
+        if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+            strlen(apiKey) > 0) {
             snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
-                     AUTHORIZATION_TYPE_NAMES[authorizationType], openAiApiKey);
+                     AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
         }
 
         /* Build custom headers string with proper line ending */
@@ -1703,7 +1723,7 @@ UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len) {
  * @param prompt the prompt to use
  * @param imageModel the image model to use
  * @param imageSize the size of the image to create
- * @param openAiApiKey the OpenAI API key
+ * @param apiKey the OpenAI API key
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -1717,10 +1737,9 @@ UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len) {
  **/
 struct json_object *postImageCreationRequestToOpenAI(
     CONST_STRPTR prompt, ImageModel imageModel, ImageSize imageSize,
-    CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost,
-    UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
-    ImageFormat imageFormat) {
+    CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, ImageFormat imageFormat) {
     struct json_object *response = NULL;
     UWORD responseIndex = 0;
     BOOL useSSL = !useProxy || proxyUsesSSL;
@@ -1786,8 +1805,8 @@ struct json_object *postImageCreationRequestToOpenAI(
              "Content-Length: %lu\r\n"
              "%s\r\n"
              "%s\0",
-             useSSL ? "" : "https://api.openai.com", openAiApiKey,
-             strlen(jsonString), authHeader, jsonString);
+             useSSL ? "" : "https://api.openai.com", apiKey, strlen(jsonString),
+             authHeader, jsonString);
 
     json_object_put(obj);
 
@@ -2383,7 +2402,7 @@ static void reportSslError(SSL *s, int ret, CONST_STRPTR where) {
  * @param openAITTSModel the TTS model to use
  * @param openAITTSVoice the voice to use
  * @param voiceInstructions the voice instructions to use
- * @param openAiApiKey the OpenAI API key
+ * @param apiKey the OpenAI API key
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -2398,7 +2417,7 @@ static void reportSslError(SSL *s, int ret, CONST_STRPTR where) {
 APTR postTextToSpeechRequestToOpenAI(
     CONST_STRPTR text, OpenAITTSModel openAITTSModel,
     OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
-    CONST_STRPTR openAiApiKey, ULONG *audioLength, BOOL useProxy,
+    CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, AudioFormat *audioFormat) {
@@ -2467,8 +2486,8 @@ APTR postTextToSpeechRequestToOpenAI(
              "Content-Length: %lu\r\n"
              "%s\r\n"
              "%s\0",
-             useSSL ? "" : "https://api.openai.com", openAiApiKey,
-             strlen(jsonString), authHeader, jsonString);
+             useSSL ? "" : "https://api.openai.com", apiKey, strlen(jsonString),
+             authHeader, jsonString);
 
     json_object_put(obj);
 
@@ -3399,7 +3418,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
  * @param host the host to use (or NULL for OpenAI default)
  * @param port the port to use
  * @param useSSL whether to use SSL
- * @param openAiApiKey the API key
+ * @param apiKey the API key
  * @param useProxy whether to use a proxy
  * @param proxyHost the proxy host
  * @param proxyPort the proxy port
@@ -3413,7 +3432,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
 struct json_object *
 postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
                        CONST_STRPTR output, STRPTR host, UWORD port,
-                       BOOL useSSL, CONST_STRPTR openAiApiKey, BOOL useProxy,
+                       BOOL useSSL, CONST_STRPTR apiKey, BOOL useProxy,
                        CONST_STRPTR proxyHost, UWORD proxyPort,
                        BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
                        CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
@@ -3431,7 +3450,8 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
         useSSL = TRUE;
     }
 
-    /* Build the tool result JSON */
+    /* Build the tool result JSON - do this BEFORE clearing pending tool call
+     * since callId and previousResponseId may point to the static buffers */
     struct json_object *obj = json_object_new_object();
 
     /* Add the model - required by the API */
@@ -3455,14 +3475,51 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
     json_object_array_add(inputArray, toolResultObj);
     json_object_object_add(obj, "input", inputArray);
 
+    /* Add tools array so the model knows it can still use the shell tool */
+    struct json_object *toolsArray = json_object_new_array();
+    struct json_object *shellToolObj = json_object_new_object();
+    json_object_object_add(shellToolObj, "type",
+                           json_object_new_string("function"));
+    json_object_object_add(shellToolObj, "name",
+                           json_object_new_string("shell"));
+    json_object_object_add(
+        shellToolObj, "description",
+        json_object_new_string(
+            "Execute AmigaDOS shell commands on the user's Amiga. "
+            "Use this to run commands, manage files, or interact "
+            "with the system. Returns stdout, stderr, and exit code."));
+    struct json_object *paramsObj = json_object_new_object();
+    json_object_object_add(paramsObj, "type",
+                           json_object_new_string("object"));
+    struct json_object *propsObj = json_object_new_object();
+    struct json_object *cmdPropObj = json_object_new_object();
+    json_object_object_add(cmdPropObj, "type",
+                           json_object_new_string("string"));
+    json_object_object_add(
+        cmdPropObj, "description",
+        json_object_new_string(
+            "The AmigaDOS command to execute (e.g. 'list RAM:', "
+            "'type myfile.txt', 'cd Work:')"));
+    json_object_object_add(propsObj, "command", cmdPropObj);
+    json_object_object_add(paramsObj, "properties", propsObj);
+    struct json_object *requiredArr = json_object_new_array();
+    json_object_array_add(requiredArr, json_object_new_string("command"));
+    json_object_object_add(paramsObj, "required", requiredArr);
+    json_object_object_add(shellToolObj, "parameters", paramsObj);
+    json_object_array_add(toolsArray, shellToolObj);
+    json_object_object_add(obj, "tools", toolsArray);
+
     CONST_STRPTR jsonString = json_object_to_json_string(obj);
+
+    /* Now safe to clear pending tool call - JSON has copies of the strings */
+    clearPendingToolCall();
 
     /* Build auth header */
     UBYTE apiAuthHeader[512];
     memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
-    if (openAiApiKey != NULL && strlen(openAiApiKey) > 0) {
+    if (apiKey != NULL && strlen(apiKey) > 0) {
         snprintf(apiAuthHeader, sizeof(apiAuthHeader),
-                 "Authorization: Bearer %s\r\n", openAiApiKey);
+                 "Authorization: Bearer %s\r\n", apiKey);
     }
 
     /* Build proxy auth header if needed */
@@ -3577,6 +3634,25 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
         if (jsonStart != NULL) {
             struct json_object *parsedResponse = json_tokener_parse(jsonStart);
             if (parsedResponse != NULL) {
+                /* Check if the response contains another tool call */
+                if (configGetShellToolEnabled() &&
+                    hasShellToolCall(parsedResponse)) {
+                    STRPTR cId = getShellToolCallId(parsedResponse);
+                    STRPTR cmd = getShellToolCommand(parsedResponse);
+                    /* For non-streaming, id is at top level */
+                    STRPTR rId = (STRPTR)json_object_get_string(
+                        json_object_object_get(parsedResponse, "id"));
+
+                    if (cId && cmd && rId) {
+                        pendingToolCall = TRUE;
+                        strncpy(pendingToolCallId, cId,
+                                sizeof(pendingToolCallId) - 1);
+                        strncpy(pendingToolCommand, cmd,
+                                sizeof(pendingToolCommand) - 1);
+                        strncpy(pendingResponseId, rId,
+                                sizeof(pendingResponseId) - 1);
+                    }
+                }
                 FreeVec(tempReadBuffer);
                 updateStatusBar(STRING_READY, greenPen);
                 return parsedResponse;
@@ -3595,6 +3671,24 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
     if (jsonStart != NULL) {
         struct json_object *parsedResponse = json_tokener_parse(jsonStart);
         if (parsedResponse != NULL) {
+            /* Check if the response contains another tool call */
+            if (configGetShellToolEnabled() && hasShellToolCall(parsedResponse)) {
+                STRPTR callId = getShellToolCallId(parsedResponse);
+                STRPTR command = getShellToolCommand(parsedResponse);
+                /* For non-streaming, id is at top level */
+                STRPTR respId = (STRPTR)json_object_get_string(
+                    json_object_object_get(parsedResponse, "id"));
+
+                if (callId && command && respId) {
+                    pendingToolCall = TRUE;
+                    strncpy(pendingToolCallId, callId,
+                            sizeof(pendingToolCallId) - 1);
+                    strncpy(pendingToolCommand, command,
+                            sizeof(pendingToolCommand) - 1);
+                    strncpy(pendingResponseId, respId,
+                            sizeof(pendingResponseId) - 1);
+                }
+            }
             updateStatusBar(STRING_READY, greenPen);
             return parsedResponse;
         }

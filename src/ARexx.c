@@ -209,6 +209,9 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     BOOL webSearchEnabled = (BOOL)arg[13];
     STRPTR prompt = (STRPTR)arg[14];
 
+    /* Reload config from disk to pick up any changes from the main app */
+    DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
+
     ULONG portValue =
         port == NULL ? (configGetUseCustomServer() ? configGetCustomPort() : 0)
                      : (ULONG)*port;
@@ -274,9 +277,10 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         return RETURN_OK;
     }
 
-    /* Handle shell tool calls if enabled */
-    if (!useCustomServer && configGetShellToolEnabled() &&
-        hasPendingToolCall()) {
+    /* Handle shell tool calls if enabled - loop to handle multiple sequential
+     * commands */
+    while (!useCustomServer && configGetShellToolEnabled() &&
+           hasPendingToolCall()) {
         STRPTR command = getPendingToolCommand();
         STRPTR callId = getPendingToolCallId();
         STRPTR responseId = getPendingResponseId();
@@ -320,14 +324,12 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         snprintf(toolOutput, sizeof(toolOutput), "Exit code: %ld\nOutput:\n%s",
                  exitCode, output != NULL ? output : "(No output)");
 
-        /* Send the tool result back to the API */
+        /* Send the tool result back to the API - this may set a new pending
+         * tool call if OpenAI wants to run another command */
         struct json_object *toolResponse = postToolResultToOpenAI(
             responseId, callId, toolOutput, NULL, 0, TRUE, apiKey, useProxy,
             proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
             proxyUsername, proxyPassword);
-
-        /* Clear the pending tool call */
-        clearPendingToolCall();
 
         if (output != NULL) {
             FreeVec(output);
@@ -338,48 +340,74 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             json_object_put(responses[i]);
         }
         FreeVec(responses);
+        responses = NULL;
 
-        if (toolResponse != NULL) {
-            /* Check for errors */
-            struct json_object *error;
-            if (json_object_object_get_ex(toolResponse, "error", &error) &&
-                !json_object_is_type(error, json_type_null)) {
-                struct json_object *message =
-                    json_object_object_get(error, "message");
-                UTF8 *messageString = json_object_get_string(message);
-                STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
-                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                    (Tag)messageString, CSA_MapForeignChars, TRUE, TAG_DONE);
+        if (toolResponse == NULL) {
+            clearPendingToolCall();
+            set(app, MUIA_Application_RexxString,
+                STRING_ERROR_CONNECTING_OPENAI);
+            updateStatusBar(STRING_ERROR, redPen);
+            return RETURN_OK;
+        }
+
+        /* Check for errors */
+        struct json_object *error;
+        if (json_object_object_get_ex(toolResponse, "error", &error) &&
+            !json_object_is_type(error, json_type_null)) {
+            clearPendingToolCall();
+            struct json_object *message =
+                json_object_object_get(error, "message");
+            UTF8 *messageString = json_object_get_string(message);
+            STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
+                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                (Tag)messageString, CSA_MapForeignChars, TRUE, TAG_DONE);
+            set(app, MUIA_Application_RexxString,
+                formattedMessageSystemEncoded);
+            CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+            json_object_put(toolResponse);
+            updateStatusBar(STRING_ERROR, redPen);
+            return RETURN_OK;
+        }
+
+        /* Check if there's another tool call in this response -
+         * postToolResultToOpenAI will have set pendingToolCall if so */
+        if (hasPendingToolCall()) {
+            /* There's another tool call - loop will continue */
+            json_object_put(toolResponse);
+            /* Allocate a dummy responses array for the loop */
+            responses = AllocVec(2 * sizeof(struct json_object *), MEMF_CLEAR);
+            if (responses == NULL) {
+                clearPendingToolCall();
                 set(app, MUIA_Application_RexxString,
-                    formattedMessageSystemEncoded);
-                CodesetsFreeA(formattedMessageSystemEncoded, NULL);
-                json_object_put(toolResponse);
+                    STRING_ERROR_CONNECTING_OPENAI);
                 updateStatusBar(STRING_ERROR, redPen);
                 return RETURN_OK;
             }
-
-            /* Get the response text */
-            UTF8 *toolContentString = getMessageContentFromJson(
-                toolResponse, FALSE, TRUE, API_ENDPOINT_RESPONSES);
-            if (toolContentString != NULL && strlen(toolContentString) > 0) {
-                /* Add response to conversation for context */
-                addTextToConversation(conversation, toolContentString,
-                                      "assistant");
-                saveDaemonConversation();
-
-                STRPTR formattedMessageSystemEncoded =
-                    CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
-                                      CSA_Source, (Tag)toolContentString,
-                                      CSA_MapForeignChars, TRUE, TAG_DONE);
-                set(app, MUIA_Application_RexxString,
-                    formattedMessageSystemEncoded);
-                CodesetsFreeA(formattedMessageSystemEncoded, NULL);
-                json_object_put(toolResponse);
-                updateStatusBar(STRING_READY, greenPen);
-                return RETURN_OK;
-            }
-            json_object_put(toolResponse);
+            responses[0] = NULL;
+            responses[1] = NULL;
+            continue;
         }
+
+        /* No more tool calls - get the final response text */
+        UTF8 *toolContentString = getMessageContentFromJson(
+            toolResponse, FALSE, TRUE, API_ENDPOINT_RESPONSES);
+        if (toolContentString != NULL && strlen(toolContentString) > 0) {
+            /* Add response to conversation for context */
+            addTextToConversation(conversation, toolContentString, "assistant");
+            saveDaemonConversation();
+
+            STRPTR formattedMessageSystemEncoded =
+                CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
+                                  CSA_Source, (Tag)toolContentString,
+                                  CSA_MapForeignChars, TRUE, TAG_DONE);
+            set(app, MUIA_Application_RexxString,
+                formattedMessageSystemEncoded);
+            CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+            json_object_put(toolResponse);
+            updateStatusBar(STRING_READY, greenPen);
+            return RETURN_OK;
+        }
+        json_object_put(toolResponse);
 
         set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
         updateStatusBar(STRING_ERROR, redPen);
@@ -453,6 +481,9 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     STRPTR apiKey = (STRPTR)arg[2];
     STRPTR destination = (STRPTR)arg[3];
     STRPTR prompt = (STRPTR)arg[4];
+
+    /* Reload config from disk to pick up any changes from the main app */
+    DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
 
     if (apiKey == NULL || strlen(apiKey) == 0) {
         apiKey = configGetOpenAiApiKey();
@@ -659,6 +690,9 @@ HOOKPROTONHNO(ListServerModelsFunc, APTR, ULONG *arg) {
     STRPTR proxyUsername = (STRPTR)arg[9];
     STRPTR proxyPassword = (STRPTR)arg[10];
 
+    /* Reload config from disk to pick up any changes from the main app */
+    DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
+
     ULONG portValue = port == NULL ? (useSSL ? 443 : 80) : (ULONG)*port;
     ULONG proxyPortValue = proxyPort == NULL ? 8080 : (ULONG)*proxyPort;
 
@@ -697,6 +731,9 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     STRPTR output = (STRPTR)arg[4];
     STRPTR audioFormatString = (STRPTR)arg[5];
     STRPTR prompt = (STRPTR)arg[6];
+
+    /* Reload config from disk to pick up any changes from the main app */
+    DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
 
     if (apiKey == NULL || strlen(apiKey) == 0) {
         apiKey = configGetOpenAiApiKey();
