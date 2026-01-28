@@ -317,9 +317,12 @@ HOOKPROTONHNONP(ClearMuiSettingsFunc, void) {
 MakeHook(ClearMuiSettingsHook, ClearMuiSettingsFunc);
 
 void createMenu() {
-    menuStrip = MenustripObject, MUIA_Family_Child, MenuObject, MUIA_Menu_Title,
-    STRING_MENU_PROJECT, MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child,
-    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_PRINT, MUIA_UserData,
+    menuStrip = MenustripObject,
+
+    /* Project Menu */
+        MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_PROJECT,
+    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_PRINT, MUIA_UserData,
     MENU_ITEM_PROJECT_PRINT, MUIA_Menuitem_CopyStrings, FALSE,
     MUIA_Menuitem_Shortcut, "P", End, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, NM_BARLABEL, MUIA_UserData, MENU_ITEM_NULL, End,
@@ -334,7 +337,8 @@ void createMenu() {
     MENU_ITEM_PROJECT_QUIT, MUIA_Menuitem_Shortcut, "Q",
     MUIA_Menuitem_CopyStrings, FALSE, End, End,
 
-    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_EDIT,
+    /* Edit Menu */
+        MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_EDIT,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_CUT, MUIA_UserData, MENU_ITEM_EDIT_CUT,
     MUIA_Menuitem_Shortcut, "X", MUIA_Menuitem_CopyStrings, FALSE, End,
@@ -350,7 +354,8 @@ void createMenu() {
     MENU_ITEM_EDIT_SELECT_ALL, MUIA_Menuitem_Shortcut, "A",
     MUIA_Menuitem_CopyStrings, FALSE, End, End,
 
-    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_VIEW,
+    /* View Menu */
+        MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_VIEW,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_FIXED_WIDTH_FONTS, MUIA_UserData,
     MENU_ITEM_VIEW_FIXED_WIDTH_FONTS, MUIA_Menuitem_Checkit, TRUE,
@@ -401,7 +406,8 @@ void createMenu() {
     MENU_ITEM_VIEW_CLEAR_MUI_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
     End,
 
-    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_CONNECTION,
+    /* Connection Menu */
+        MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_CONNECTION,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_PROXY, MUIA_Menuitem_CopyStrings, FALSE,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_ENABLED,
@@ -411,7 +417,46 @@ void createMenu() {
     STRING_MENU_SETTINGS, MUIA_UserData, MENU_ITEM_CONNECTION_PROXY_SETTINGS,
     MUIA_Menuitem_CopyStrings, FALSE, End, End, End,
 
-    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_SPEECH,
+    /* Chat Menu */
+        MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_CHAT,
+    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_OPENAI_CHAT_SYSTEM, MUIA_UserData,
+    MENU_ITEM_CHAT_SYSTEM, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
+    MUIA_UserData, MENU_ITEM_NULL, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_WEB_SEARCH, MUIA_UserData,
+    MENU_ITEM_CHAT_WEB_SEARCH_ENABLED, MUIA_Menuitem_CopyStrings, FALSE,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, STRING_SHELL_TOOL,
+    MUIA_UserData, MENU_ITEM_CHAT_SHELL_TOOL_ENABLED, MUIA_Menuitem_CopyStrings,
+    FALSE, MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
+    MUIA_UserData, MENU_ITEM_NULL, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_CHAT_PROVIDER_SETTINGS, MUIA_UserData,
+    MENU_ITEM_CHAT_PROVIDER_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
+    End,
+
+    /* Image Menu */
+        MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_IMAGE,
+    MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_IMAGE_PROVIDER_SETTINGS, MUIA_UserData,
+    MENU_ITEM_IMAGE_PROVIDER_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
+    MUIA_UserData, MENU_ITEM_NULL, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_UserData,
+    MENU_ITEM_IMAGE_SIZE_DALL_E_2, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3, MUIA_UserData,
+    MENU_ITEM_IMAGE_SIZE_DALL_E_3, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_UserData,
+    MENU_ITEM_IMAGE_SIZE_GPT_IMAGE_1, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, STRING_IMAGE_FORMAT,
+    MUIA_UserData, MENU_ITEM_IMAGE_FORMAT, MUIA_Menuitem_CopyStrings, FALSE,
+    End, End,
+
+    /* Speech Menu */
+        MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_SPEECH,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_ENABLED, MUIA_UserData,
     MENU_ITEM_SPEECH_ENABLED, MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle,
@@ -442,52 +487,8 @@ void createMenu() {
     MENU_ITEM_SPEECH_ELEVENLABS_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
     End,
 
-    /* Chat Menu */
-    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_CHAT,
-    MUIA_Menu_CopyStrings, FALSE,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_CHAT_SYSTEM, MUIA_UserData, MENU_ITEM_CHAT_SYSTEM,
-    MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
-    MUIA_UserData, MENU_ITEM_NULL, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_WEB_SEARCH, MUIA_UserData, MENU_ITEM_CHAT_WEB_SEARCH_ENABLED,
-    MUIA_Menuitem_CopyStrings, FALSE, MUIA_Menuitem_Checkit, TRUE,
-    MUIA_Menuitem_Toggle, TRUE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_SHELL_TOOL, MUIA_UserData, MENU_ITEM_CHAT_SHELL_TOOL_ENABLED,
-    MUIA_Menuitem_CopyStrings, FALSE, MUIA_Menuitem_Checkit, TRUE,
-    MUIA_Menuitem_Toggle, TRUE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
-    MUIA_UserData, MENU_ITEM_NULL, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_CHAT_PROVIDER_SETTINGS, MUIA_UserData, MENU_ITEM_CHAT_PROVIDER_SETTINGS,
-    MUIA_Menuitem_CopyStrings, FALSE, End,
-    End,
-
-    /* Image Menu */
-    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_IMAGE,
-    MUIA_Menu_CopyStrings, FALSE,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_IMAGE_PROVIDER_SETTINGS, MUIA_UserData, MENU_ITEM_IMAGE_PROVIDER_SETTINGS,
-    MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
-    MUIA_UserData, MENU_ITEM_NULL, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_UserData,
-    MENU_ITEM_IMAGE_SIZE_DALL_E_2, MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3, MUIA_UserData,
-    MENU_ITEM_IMAGE_SIZE_DALL_E_3, MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_UserData,
-    MENU_ITEM_IMAGE_SIZE_GPT_IMAGE_1, MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_IMAGE_FORMAT, MUIA_UserData, MENU_ITEM_IMAGE_FORMAT,
-    MUIA_Menuitem_CopyStrings, FALSE, End,
-    End,
-
-    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_AREXX,
+    /* ARexx Menu */
+        MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_AREXX,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_AREXX_AREXX_SHELL, MUIA_UserData,
     MENU_ITEM_AREXX_AREXX_SHELL, MUIA_Menuitem_CopyStrings, FALSE,
@@ -500,7 +501,8 @@ void createMenu() {
     STRING_MENU_AREXX_RUN_SCRIPT, MUIA_UserData, MENU_ITEM_AREXX_RUN_SCRIPT,
     MUIA_Menuitem_CopyStrings, FALSE, End, End,
 
-    MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_HELP,
+    /* Help Menu */
+        MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_HELP,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_OPEN_DOCUMENTATION, MUIA_UserData,
     MENU_ITEM_HELP_OPEN_DOCUMENTATION, MUIA_Menuitem_CopyStrings, FALSE, End,
@@ -938,13 +940,15 @@ static void populateChatMenu() {
     Object *webSearchMenuItem = (Object *)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_WEB_SEARCH_ENABLED);
     if (webSearchMenuItem) {
-        set(webSearchMenuItem, MUIA_Menuitem_Checked, configGetWebSearchEnabled());
+        set(webSearchMenuItem, MUIA_Menuitem_Checked,
+            configGetWebSearchEnabled());
     }
 
     Object *shellToolMenuItem = (Object *)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_SHELL_TOOL_ENABLED);
     if (shellToolMenuItem) {
-        set(shellToolMenuItem, MUIA_Menuitem_Checked, configGetShellToolEnabled());
+        set(shellToolMenuItem, MUIA_Menuitem_Checked,
+            configGetShellToolEnabled());
     }
 
     DoMethod(menuStrip, MUIM_Menustrip_ExitChange);

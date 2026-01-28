@@ -250,27 +250,18 @@ CONST_STRPTR OPENAI_CHAT_MODELS[] = {"gpt-5-chat-latest",
 /**
  * Prepopulated chat models for Google Gemini
  **/
-CONST_STRPTR GEMINI_CHAT_MODELS[] = {"gemini-3-pro-preview",
-                                     "gemini-3-flash-preview",
-                                     "gemini-2.5-pro",
-                                     "gemini-2.5-flash",
-                                     "gemini-2.5-flash-lite",
-                                     "gemini-2.0-flash",
-                                     "gemini-2.0-flash-lite",
-                                     NULL};
+CONST_STRPTR GEMINI_CHAT_MODELS[] = {
+    "gemini-2.5-flash",      "gemini-2.5-flash-lite",
+    "gemini-2.5-pro",        "gemini-2.0-flash",
+    "gemini-2.0-flash-lite", "gemini-3-flash-preview",
+    "gemini-3-pro-preview",  NULL};
 
 /**
  * Prepopulated chat models for xAI Grok
  **/
-CONST_STRPTR GROK_CHAT_MODELS[] = {"grok-4",
-                                   "grok-4-fast",
-                                   "grok-3",
-                                   "grok-3-mini",
-                                   "grok-3-fast",
-                                   "grok-3-fast-beta",
-                                   "grok-3-beta",
-                                   "grok-2",
-                                   NULL};
+CONST_STRPTR GROK_CHAT_MODELS[] = {
+    "grok-4",           "grok-4-fast", "grok-3", "grok-3-mini", "grok-3-fast",
+    "grok-3-fast-beta", "grok-3-beta", "grok-2", NULL};
 
 /**
  * Prepopulated chat models for Anthropic Claude
@@ -288,9 +279,9 @@ CONST_STRPTR ANTHROPIC_CHAT_MODELS[] = {"claude-opus-4-5-20250929",
 /**
  * Prepopulated image models for OpenAI
  **/
-CONST_STRPTR OPENAI_IMAGE_MODELS[] = {
-    "gpt-image-1", "gpt-image-1.5", "gpt-image-1-mini", "dall-e-3", "dall-e-2",
-    NULL};
+CONST_STRPTR OPENAI_IMAGE_MODELS[] = {"gpt-image-1",      "gpt-image-1.5",
+                                      "gpt-image-1-mini", "dall-e-3",
+                                      "dall-e-2",         NULL};
 
 /**
  * Prepopulated image models for Google Gemini/Imagen
@@ -529,11 +520,12 @@ STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode) {
     if (errorBuffer)
         FreeVec(errorBuffer);
 
-    /* Convert output from system encoding to UTF-8 for JSON/API compatibility */
+    /* Convert output from system encoding to UTF-8 for JSON/API compatibility
+     */
     if (combinedOutput != NULL) {
-        UTF8 *utf8Output = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
-                                               CSA_Source, (Tag)combinedOutput,
-                                               TAG_DONE);
+        UTF8 *utf8Output =
+            CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                               CSA_Source, (Tag)combinedOutput, TAG_DONE);
         if (utf8Output != NULL) {
             /* Copy UTF-8 output to AllocVec buffer so caller can use FreeVec */
             LONG utf8Len = strlen((char *)utf8Output);
@@ -3645,8 +3637,7 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
             "Use this to run commands, manage files, or interact "
             "with the system. Returns stdout, stderr, and exit code."));
     struct json_object *paramsObj = json_object_new_object();
-    json_object_object_add(paramsObj, "type",
-                           json_object_new_string("object"));
+    json_object_object_add(paramsObj, "type", json_object_new_string("object"));
     struct json_object *propsObj = json_object_new_object();
     struct json_object *cmdPropObj = json_object_new_object();
     json_object_object_add(cmdPropObj, "type",
@@ -3828,7 +3819,8 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
         struct json_object *parsedResponse = json_tokener_parse(jsonStart);
         if (parsedResponse != NULL) {
             /* Check if the response contains another tool call */
-            if (configGetShellToolEnabled() && hasShellToolCall(parsedResponse)) {
+            if (configGetShellToolEnabled() &&
+                hasShellToolCall(parsedResponse)) {
                 STRPTR callId = getShellToolCallId(parsedResponse);
                 STRPTR command = getShellToolCommand(parsedResponse);
                 /* For non-streaming, id is at top level */
