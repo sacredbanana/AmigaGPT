@@ -546,6 +546,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         "title "
         "in quotes or prefix the response with anything",
         "user");
+    LONG prevShellToolEnabled = configGetShellToolEnabled();
     configSetShellToolEnabled(FALSE);
     struct json_object **responses = postChatMessageToOpenAI(
         imageNameConversation, nameSettings.host, nameSettings.port,
@@ -555,6 +556,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         nameSettings.proxyUsername, nameSettings.proxyPassword, FALSE,
         nameSettings.apiEndpoint, nameSettings.apiEndpointUrl,
         nameSettings.authorizationType, nameSettings.customHeaders);
+    configSetShellToolEnabled(prevShellToolEnabled);
 
     struct GeneratedImage *generatedImage =
         AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);

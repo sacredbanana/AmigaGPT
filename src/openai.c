@@ -1256,7 +1256,19 @@ struct json_object **postChatMessageToOpenAI(
     UWORD responseIndex = 0;
     UBYTE connectionRetryCount = 0;
 
-    BOOL useCustomServer = host != NULL && strlen(host) > 0;
+    /* Treat OpenAI's own host + Responses endpoint as "default OpenAI",
+     * so we include tools (web_search, shell) in the request.
+     * Other providers (Gemini/Grok/Anthropic) and true custom servers use the
+     * OpenAI-compatible/custom formatting path. */
+    BOOL useCustomServer = FALSE;
+    if (host != NULL && strlen(host) > 0) {
+        BOOL isOpenAiDefault =
+            (strcmp(host, OPENAI_HOST) == 0) &&
+            (apiEndpoint == API_ENDPOINT_RESPONSES) &&
+            (apiEndpoinUrl == NULL || strlen(apiEndpoinUrl) == 0 ||
+             strcmp(apiEndpoinUrl, "v1") == 0);
+        useCustomServer = isOpenAiDefault ? FALSE : TRUE;
+    }
     if (useCustomServer) {
         if (port == 0) {
             port = useSSL ? 443 : 80;
@@ -1569,6 +1581,7 @@ struct json_object **postChatMessageToOpenAI(
         }
         connectionRetryCount = 0;
         updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
+        printf("writeBuffer: %s\n", writeBuffer);
         if (useSSL) {
             ERR_clear_error();
             ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
