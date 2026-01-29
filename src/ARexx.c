@@ -239,7 +239,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
     /* Resolve defaults from the selected profile */
     struct ChatRequestSettings rexxSettings;
-    configGetChatRequestSettings(&rexxSettings, provider, FALSE);
+    configGetChatRequestSettingsWithStreamOverride(&rexxSettings, provider,
+                                                   FALSE);
     BOOL useCustomServer = (provider == PROVIDER_CUSTOM);
 
     ULONG portValue = port == NULL ? rexxSettings.port : (ULONG)*port;

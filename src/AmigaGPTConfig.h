@@ -39,6 +39,11 @@
 #define MUIA_AmigaGPTConfig_AssistantTextAlignment (AmigaGPTConfig_Dummy + 0x11)
 #define MUIA_AmigaGPTConfig_WebSearchEnabled (AmigaGPTConfig_Dummy + 0x12)
 #define MUIA_AmigaGPTConfig_ShellToolEnabled (AmigaGPTConfig_Dummy + 0x18)
+#define MUIA_AmigaGPTConfig_CustomChatStreamEnabled (AmigaGPTConfig_Dummy + 0x19)
+#define MUIA_AmigaGPTConfig_OpenAiChatStreamEnabled (AmigaGPTConfig_Dummy + 0x1A)
+#define MUIA_AmigaGPTConfig_GeminiChatStreamEnabled (AmigaGPTConfig_Dummy + 0x1B)
+#define MUIA_AmigaGPTConfig_GrokChatStreamEnabled (AmigaGPTConfig_Dummy + 0x1C)
+#define MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled (AmigaGPTConfig_Dummy + 0x1D)
 #define MUIA_AmigaGPTConfig_UseCustomServer (AmigaGPTConfig_Dummy + 0x13)
 #define MUIA_AmigaGPTConfig_CustomPort (AmigaGPTConfig_Dummy + 0x14)
 #define MUIA_AmigaGPTConfig_CustomUseSSL (AmigaGPTConfig_Dummy + 0x15)
@@ -277,6 +282,10 @@ STRPTR configGetChatModelName(void);
 void configSetChatModelName(CONST_STRPTR value);
 STRPTR configGetChatModelNameForProvider(Provider provider);
 void configSetChatModelNameForProvider(Provider provider, CONST_STRPTR value);
+BOOL configGetChatStreamingEnabledForProvider(Provider provider);
+void configSetChatStreamingEnabledForProvider(Provider provider, BOOL enabled);
+BOOL configGetCustomChatStreamEnabled(void);
+void configSetCustomChatStreamEnabled(BOOL enabled);
 
 /* Chat request settings helper */
 struct ChatRequestSettings {
@@ -303,9 +312,11 @@ struct ChatRequestSettings {
 };
 
 void configGetChatRequestSettings(struct ChatRequestSettings *out,
-                                  Provider provider, BOOL stream);
+                                  Provider provider);
+void configGetChatRequestSettingsWithStreamOverride(
+    struct ChatRequestSettings *out, Provider provider, BOOL streamOverride);
 void configGetChatRequestSettingsForCurrentProvider(
-    struct ChatRequestSettings *out, BOOL stream);
+    struct ChatRequestSettings *out);
 STRPTR configGetImageModelName(void);
 void configSetImageModelName(CONST_STRPTR value);
 

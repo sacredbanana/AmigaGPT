@@ -1594,122 +1594,215 @@ struct json_object **postChatMessageToOpenAI(
 #ifndef DAEMON
             DoMethod(loadingBar, MUIM_Busy_Move);
 #endif
-            if (useSSL) {
-                ERR_clear_error();
-                bytesRead =
-                    SSL_read(ssl, tempReadBuffer,
-                             useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1);
+            /* IMPORTANT:
+             * In streaming mode, we may already have one-or-more complete SSE
+             * events buffered in readBuffer from a previous call. Do NOT block
+             * on SSL_read/recv if we can return an event immediately. */
+            BOOL shouldParseBuffered = FALSE;
+            if (stream && readBuffer != NULL && readBuffer[0] != '\0') {
+                STRPTR dataPos = strstr(readBuffer, "data:");
+                if (dataPos != NULL) {
+                    STRPTR end = strstr(dataPos, "\r\n\r\n");
+                    if (end == NULL)
+                        end = strstr(dataPos, "\n\n");
+                    if (end != NULL) {
+                        shouldParseBuffered = TRUE;
+                    }
+                }
+            }
+
+            BOOL didReadBytes = FALSE;
+            if (!shouldParseBuffered) {
+                if (useSSL) {
+                    ERR_clear_error();
+                    bytesRead = SSL_read(
+                        ssl, tempReadBuffer,
+                        useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1);
+                } else {
+                    bytesRead = recv(
+                        sock, tempReadBuffer,
+                        useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1, 0);
+                }
+                didReadBytes = TRUE;
             } else {
-                bytesRead =
-                    recv(sock, tempReadBuffer,
-                         useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1, 0);
+                bytesRead = 0;
             }
             snprintf(statusMessage, sizeof(statusMessage),
                      STRING_DOWNLOADING_RESPONSE);
             updateStatusBar(statusMessage, yellowPen);
-            strncat(readBuffer, tempReadBuffer, bytesRead);
+            // /* Only append when we actually read bytes. */
+            if (bytesRead > 0) {
+                strncat(readBuffer, tempReadBuffer, bytesRead);
+            }
+            printf("readBuffer: %s\n", readBuffer);
             if (useSSL) {
-                err = SSL_get_error(ssl, bytesRead);
+                /* If we skipped reading because we had buffered events, force
+                 * the parsing path. */
+                err = didReadBytes ? SSL_get_error(ssl, bytesRead)
+                                   : SSL_ERROR_NONE;
             } else {
                 err = SSL_ERROR_NONE;
             }
             switch (err) {
             case SSL_ERROR_NONE:
                 totalBytesRead += bytesRead;
-                const STRPTR jsonStart = stream ? "data: {" : "{";
-                STRPTR jsonString = readBuffer;
-                if (readBuffer == NULL) {
-                    doneReading = TRUE;
-                    streamingInProgress = FALSE;
-                    break;
-                }
-                // Check for error in stream
                 if (stream) {
-                    if (jsonString != NULL &&
-                        strstr(jsonString, jsonStart) == NULL) {
-                        jsonString = strstr(jsonString, "{");
-                        if (jsonString == NULL) {
-                            if (readBuffer != NULL) {
-                                // Check if we can safely read the first
-                                // character
-                                if (readBuffer[0] != '\0') {
+                    /* Streaming is Server-Sent Events (SSE):
+                     *   data: { ...json... }\r\n\r\n
+                     *   data: [DONE]\r\n\r\n     (chat.completions style)
+                     *
+                     * We must extract ONE complete SSE event per call. */
 
-                                    // Use strnlen or manual length calculation
-                                    // to avoid strlen issues with UTF-8
-                                    ULONG bufLen = 0;
-                                    ULONG maxLen = READ_BUFFER_LENGTH - 1;
-                                    while (bufLen < maxLen &&
-                                           readBuffer[bufLen] != '\0') {
-                                        bufLen++;
-                                    }
-
-                                    STRPTR httpResponse =
-                                        strstr(readBuffer, "HTTP/1.1");
-                                    if (httpResponse != NULL) {
-                                        STRPTR okCheck =
-                                            strstr(httpResponse, "200 OK");
-                                        if (okCheck == NULL) {
-                                            UBYTE error[256] = {0};
-                                            for (UWORD i = 0; i < 256; i++) {
-                                                if (httpResponse[i] == '\r' ||
-                                                    httpResponse[i] == '\n') {
-                                                    break;
-                                                }
-                                                error[i] = httpResponse[i];
-                                            }
-                                            displayError(error);
-                                            doneReading = TRUE;
-                                            streamingInProgress = FALSE;
-                                        }
-                                    }
+                    /* If we still have HTTP headers in the buffer, validate
+                     * status and strip them. */
+                    STRPTR httpResponse = strstr(readBuffer, "HTTP/1.1");
+                    if (httpResponse != NULL) {
+                        STRPTR okCheck = strstr(httpResponse, "200 OK");
+                        STRPTR okCheck2 = strstr(httpResponse, "HTTP/1.1 200");
+                        if (okCheck == NULL && okCheck2 == NULL) {
+                            UBYTE error[256] = {0};
+                            for (UWORD i = 0; i < 256; i++) {
+                                if (httpResponse[i] == '\r' ||
+                                    httpResponse[i] == '\n') {
+                                    break;
                                 }
-                            } else {
-                                doneReading = TRUE;
-                                streamingInProgress = FALSE;
+                                error[i] = httpResponse[i];
                             }
-                        }
-                    }
-                }
-                STRPTR lastJsonString = jsonString;
-                if (jsonString != NULL) {
-                    while (jsonString = strstr(jsonString, jsonStart)) {
-                        lastJsonString = jsonString;
-                        if (stream) {
-                            jsonString += 6; // Get to the start of the JSON
-                        }
-                        struct json_object *parsedResponse =
-                            json_tokener_parse(jsonString);
-                        if (parsedResponse != NULL) {
-                            responses[responseIndex] = parsedResponse;
-                            responseIndex++;
-                            if (!stream) {
-                                break;
-                            }
-                        } else if (!stream) {
-                            jsonString = NULL;
+                            displayError(error);
+                            doneReading = TRUE;
+                            streamingInProgress = FALSE;
                             break;
                         }
-                    }
-                }
 
-                if (stream) {
-                    if (lastJsonString != NULL) {
-                        struct json_object *parsedResponse;
-                        if ((parsedResponse = json_tokener_parse(
-                                 lastJsonString + 6)) == NULL) {
-                            snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0",
-                                     lastJsonString);
-                            if ((parsedResponse = json_tokener_parse(
-                                     lastJsonString)) != NULL) {
-                                responses[responseIndex++] = parsedResponse;
-                            }
-                        } else {
-                            memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                        STRPTR headerEnd = strstr(readBuffer, "\r\n\r\n");
+                        if (headerEnd == NULL)
+                            headerEnd = strstr(readBuffer, "\n\n");
+                        if (headerEnd != NULL) {
+                            STRPTR afterHeaders =
+                                headerEnd + ((headerEnd[0] == '\r') ? 4 : 2);
+                            memmove(readBuffer, afterHeaders,
+                                    strlen(afterHeaders) + 1);
                         }
                     }
-                    doneReading = TRUE;
-                } else if (jsonString != NULL) {
-                    doneReading = TRUE;
+
+                    /* Try to extract a complete SSE event. If we can't, keep
+                     * reading from the socket. */
+                    while (readBuffer != NULL && readBuffer[0] != '\0') {
+                        /* Trim leading CR/LF noise */
+                        while (readBuffer[0] == '\r' || readBuffer[0] == '\n') {
+                            memmove(readBuffer, readBuffer + 1,
+                                    strlen(readBuffer));
+                        }
+
+                        STRPTR dataPos = strstr(readBuffer, "data:");
+                        if (dataPos == NULL) {
+                            break; /* need more bytes */
+                        }
+
+                        /* Drop anything before the next 'data:' */
+                        if (dataPos != readBuffer) {
+                            memmove(readBuffer, dataPos, strlen(dataPos) + 1);
+                        }
+
+                        STRPTR eventEnd = strstr(readBuffer, "\r\n\r\n");
+                        ULONG delimLen = 4;
+                        if (eventEnd == NULL) {
+                            eventEnd = strstr(readBuffer, "\n\n");
+                            delimLen = 2;
+                        }
+                        if (eventEnd == NULL) {
+                            break; /* incomplete event */
+                        }
+
+                        STRPTR payloadStart = readBuffer + 5; /* after data: */
+                        while (*payloadStart == ' ' || *payloadStart == '\t') {
+                            payloadStart++;
+                        }
+                        ULONG payloadLen = (ULONG)(eventEnd - payloadStart);
+                        while (payloadLen > 0 &&
+                               (payloadStart[payloadLen - 1] == '\r' ||
+                                payloadStart[payloadLen - 1] == '\n')) {
+                            payloadLen--;
+                        }
+
+                        /* Consume this event from buffer now or later */
+                        STRPTR afterEvent = eventEnd + delimLen;
+
+                        if (payloadLen == 6 &&
+                            strncmp(payloadStart, "[DONE]", 6) == 0) {
+                            /* Synthesize a response.completed to signal the
+                             * UI loop that streaming is finished. */
+                            struct json_object *completed =
+                                json_object_new_object();
+                            json_object_object_add(
+                                completed, "type",
+                                json_object_new_string("response.completed"));
+                            responses[responseIndex++] = completed;
+
+                            memmove(readBuffer, afterEvent,
+                                    strlen(afterEvent) + 1);
+                            doneReading = TRUE;
+                            break;
+                        }
+
+                        if (payloadLen > 0 && payloadStart[0] == '{') {
+                            STRPTR oneJson =
+                                AllocVec(payloadLen + 1, MEMF_ANY | MEMF_CLEAR);
+                            if (oneJson != NULL) {
+                                CopyMem(payloadStart, oneJson, payloadLen);
+                                oneJson[payloadLen] = '\0';
+                                struct json_object *parsedResponse =
+                                    json_tokener_parse(oneJson);
+                                FreeVec(oneJson);
+                                if (parsedResponse != NULL) {
+                                    responses[responseIndex++] = parsedResponse;
+                                    memmove(readBuffer, afterEvent,
+                                            strlen(afterEvent) + 1);
+                                    doneReading = TRUE;
+                                    break;
+                                }
+                            }
+                        }
+
+                        /* If we couldn't parse it, consume and keep scanning to
+                         * avoid getting stuck on bad/unknown events. */
+                        memmove(readBuffer, afterEvent, strlen(afterEvent) + 1);
+                    }
+
+                    /* If we did not produce an event yet, keep reading. */
+                    break;
+                }
+
+                /* Non-streaming mode: parse the full JSON response. */
+                {
+                    const STRPTR jsonStart = "{";
+                    STRPTR jsonString = readBuffer;
+                    if (readBuffer == NULL) {
+                        doneReading = TRUE;
+                        streamingInProgress = FALSE;
+                        break;
+                    }
+
+                    STRPTR lastJsonString = jsonString;
+                    if (jsonString != NULL) {
+                        while (jsonString = strstr(jsonString, jsonStart)) {
+                            lastJsonString = jsonString;
+                            struct json_object *parsedResponse =
+                                json_tokener_parse(jsonString);
+                            if (parsedResponse != NULL) {
+                                responses[responseIndex] = parsedResponse;
+                                responseIndex++;
+                                break;
+                            } else {
+                                jsonString = NULL;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (jsonString != NULL) {
+                        doneReading = TRUE;
+                    }
                 }
 
                 break;
@@ -1718,6 +1811,24 @@ struct json_object **postChatMessageToOpenAI(
                 break;
             case SSL_ERROR_WANT_READ:
                 printf("SSL_ERROR_WANT_READ\n");
+                /* If we've already received the SSE terminator, stop waiting.
+                 */
+                if (stream && strstr(readBuffer, "data: [DONE]") != NULL) {
+                    /* Important: return a completion marker to the caller so
+                     * the UI loop can terminate instead of re-sending the
+                     * request. */
+                    struct json_object *completed = json_object_new_object();
+                    json_object_object_add(
+                        completed, "type",
+                        json_object_new_string("response.completed"));
+                    responses[responseIndex++] = completed;
+
+                    /* Clear buffer so we don't repeatedly trip this path. */
+                    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+
+                    doneReading = TRUE;
+                    streamingInProgress = FALSE;
+                }
                 break;
             case SSL_ERROR_WANT_WRITE:
                 printf("SSL_ERROR_WANT_WRITE\n");
@@ -1738,6 +1849,22 @@ struct json_object **postChatMessageToOpenAI(
                 if (strlen(readBuffer) > 0) {
                     // Try to parse what we have - if it's valid JSON, the
                     // connection closure is normal
+                    if (strstr(readBuffer, "data: [DONE]") != NULL) {
+                        /* Same as WANT_READ case: make sure caller sees a
+                         * completion marker. */
+                        struct json_object *completed =
+                            json_object_new_object();
+                        json_object_object_add(
+                            completed, "type",
+                            json_object_new_string("response.completed"));
+                        responses[responseIndex++] = completed;
+
+                        memset(readBuffer, 0, READ_BUFFER_LENGTH);
+
+                        doneReading = TRUE;
+                        streamingInProgress = FALSE;
+                        break;
+                    }
                     const STRPTR jsonStart = stream ? "data: {" : "{";
                     STRPTR jsonString = stream ? strstr(readBuffer, jsonStart)
                                                : strstr(readBuffer, "{");

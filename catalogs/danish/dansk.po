@@ -1619,3 +1619,18 @@ msgstr "En brugerdefineret profil kan ikke bruge samme navn som en indbygget udb
 msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
 msgid "You have unsaved changes. Do you want to save them before switching?"
 msgstr "Du har ugemte ændringer. Vil du gemme dem før skift?"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_STREAMING (301//)"
+msgid "Streaming"
+msgstr "Streaming"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ON (302//)"
+msgid "On"
+msgstr "Til"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_OFF (303//)"
+msgid "Off"
+msgstr "Fra"

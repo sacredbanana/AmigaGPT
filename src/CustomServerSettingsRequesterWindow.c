@@ -25,6 +25,7 @@ Object *customServerApiEndpointCycle;
 Object *customServerApiEndpointUrlString;
 Object *customServerCustomHeadersString;
 Object *customServerFullUrlPreviewString;
+Object *customServerStreamingCycle;
 Object *customServerSettingsRequesterWindowObject;
 Object *customServerProfileList;
 Object *customServerProfileNameString;
@@ -161,6 +162,10 @@ static void loadBuiltinProviderIntoUI(Provider provider) {
         config->apiEndpointUrl ? config->apiEndpointUrl : "v1");
     set(customServerCustomHeadersString, MUIA_String_Contents,
         config->customHeaders ? config->customHeaders : "");
+    if (customServerStreamingCycle != NULL) {
+        set(customServerStreamingCycle, MUIA_Cycle_Active,
+            configGetChatStreamingEnabledForProvider(provider) ? 1 : 0);
+    }
 
     /* Load API key for this provider */
     STRPTR apiKey = configGetApiKeyForProvider(provider);
@@ -331,6 +336,17 @@ static void loadProfileIntoUI(struct json_object *profile) {
     if (obj != NULL)
         set(customServerCustomHeadersString, MUIA_String_Contents,
             json_object_get_string(obj));
+
+    obj = json_object_object_get(profile, "streaming");
+    if (customServerStreamingCycle != NULL) {
+        if (obj != NULL) {
+            set(customServerStreamingCycle, MUIA_Cycle_Active,
+                json_object_get_boolean(obj) ? 1 : 0);
+        } else {
+            set(customServerStreamingCycle, MUIA_Cycle_Active,
+                configGetCustomChatStreamEnabled() ? 1 : 0);
+        }
+    }
 }
 
 /**
@@ -388,6 +404,12 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
         profile, "customHeaders",
         json_object_new_string(customHeaders ? customHeaders : ""));
 
+    LONG streamingEnabled = 0;
+    if (customServerStreamingCycle != NULL)
+        get(customServerStreamingCycle, MUIA_Cycle_Active, &streamingEnabled);
+    json_object_object_add(profile, "streaming",
+                           json_object_new_boolean(streamingEnabled == 1));
+
     return profile;
 }
 
@@ -404,8 +426,11 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
                                           LONG forceActiveForList) {
     STRPTR apiKey = NULL;
     STRPTR chatModel = NULL;
+    LONG streamingEnabled = 0;
     get(customServerApiKeyString, MUIA_String_Contents, &apiKey);
     get(customServerChatModelString, MUIA_String_Contents, &chatModel);
+    if (customServerStreamingCycle != NULL)
+        get(customServerStreamingCycle, MUIA_Cycle_Active, &streamingEnabled);
 
     if (isBuiltinProviderIndex(profileListIndex)) {
         Provider provider = (Provider)getProviderFromIndex(profileListIndex);
@@ -428,6 +453,8 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
             break;
         }
         configSetChatModelName(chatModel);
+        configSetChatStreamingEnabledForProvider(provider,
+                                                 streamingEnabled == 1);
         return TRUE;
     }
 
@@ -544,6 +571,9 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
         set(customServerProfileNameString, MUIA_String_Contents, "");
         if (customServerProfileNameString != NULL)
             set(customServerProfileNameString, MUIA_Disabled, FALSE);
+        if (customServerStreamingCycle != NULL)
+            set(customServerStreamingCycle, MUIA_Cycle_Active,
+                configGetCustomChatStreamEnabled() ? 1 : 0);
         /* Disable delete button for new profile */
         if (customServerDeleteProfileButton != NULL)
             set(customServerDeleteProfileButton, MUIA_Disabled, TRUE);
@@ -551,6 +581,7 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
         if (customServerSaveProfileButton != NULL)
             set(customServerSaveProfileButton, MUIA_Disabled, FALSE);
         setServerSettingsGadgetsEnabled(TRUE);
+        refreshUrlPreview();
         loadingProfile = FALSE;
         return;
     }
@@ -609,6 +640,7 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
                 DoMethod(customServerModelList, MUIM_NList_Clear);
             }
         }
+        refreshUrlPreview();
         loadingProfile = FALSE;
         return;
     }
@@ -651,6 +683,7 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
             }
         }
     }
+    refreshUrlPreview();
     loadingProfile = FALSE;
 }
 MakeHook(ProfileSelectedHook, ProfileSelectedFunc);
@@ -959,6 +992,8 @@ HOOKPROTONHNONP(TemplateSelectedFunc, void) {
             customServerModelsJson = NULL;
         }
     }
+
+    refreshUrlPreview();
 }
 MakeHook(TemplateSelectedHook, TemplateSelectedFunc);
 
@@ -966,7 +1001,7 @@ MakeHook(TemplateSelectedHook, TemplateSelectedFunc);
  * Update the URL preview string only. Does not set profileSettingsDirty.
  * Used when the window opens so opening alone does not mark settings dirty.
  */
-static void refreshUrlPreview(void) {
+SAVEDS void refreshUrlPreview(void) {
     /* Safety check: don't access gadgets if they're not ready */
     if (customServerHostString == NULL || customServerPortString == NULL ||
         customServerUsesSSLCycle == NULL ||
@@ -988,10 +1023,15 @@ static void refreshUrlPreview(void) {
     get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
 
     UBYTE fullUrlPreviewString[512];
-    snprintf(fullUrlPreviewString, 512, "%s://%s:%d%s%s/%s\0",
-             usesSSL == 1 ? "https" : "http", customServerHost, port,
-             strlen(customServerApiEndpointUrl) > 0 ? "/" : "",
-             customServerApiEndpointUrl, API_ENDPOINT_NAMES[apiEndpoint]);
+    CONST_STRPTR endpointUrl = customServerApiEndpointUrl
+                                   ? (CONST_STRPTR)customServerApiEndpointUrl
+                                   : "";
+    CONST_STRPTR host = customServerHost ? (CONST_STRPTR)customServerHost : "";
+    snprintf(fullUrlPreviewString, sizeof(fullUrlPreviewString),
+             "%s://%s:%ld%s%s/%s", usesSSL == 1 ? "https" : "http", host,
+             (long)port,
+             (endpointUrl != NULL && strlen(endpointUrl) > 0) ? "/" : "",
+             endpointUrl, API_ENDPOINT_NAMES[apiEndpoint]);
     set(customServerFullUrlPreviewString, MUIA_Text_Contents,
         fullUrlPreviewString);
 }
@@ -1053,6 +1093,9 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     STRPTR customServerChatModel;
     get(customServerChatModelString, MUIA_String_Contents,
         &customServerChatModel);
+    LONG streamingEnabled = 0;
+    if (customServerStreamingCycle != NULL)
+        get(customServerStreamingCycle, MUIA_Cycle_Active, &streamingEnabled);
 
     /* Handle built-in providers */
     if (isBuiltinProviderIndex(active)) {
@@ -1082,6 +1125,8 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
 
         /* Save the model name */
         configSetChatModelName(customServerChatModel);
+        configSetChatStreamingEnabledForProvider(provider,
+                                                 streamingEnabled == 1);
 
         set(customServerSettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
         return;
@@ -1115,6 +1160,7 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     configSetCustomApiKey(customServerApiKey);
     configSetCustomChatModel(customServerChatModel);
     configSetChatModelName(customServerChatModel);
+    configSetCustomChatStreamEnabled(streamingEnabled == 1);
 
     LONG apiEndpoint;
     get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
@@ -1168,6 +1214,9 @@ LONG createCustomServerSettingsRequesterWindow() {
         STRING_AUTHORIZATION_BEARER;
     authorizationTypeOptions[AUTHORIZATION_TYPE_X_API_KEY] =
         STRING_AUTHORIZATION_X_API_KEY;
+    static STRPTR streamingOptions[3] = {NULL};
+    streamingOptions[0] = STRING_OFF;
+    streamingOptions[1] = STRING_ON;
 
     Object *customServerSettingsRequesterOkButton,
         *customServerSettingsRequesterCancelButton;
@@ -1254,6 +1303,16 @@ LONG createCustomServerSettingsRequesterWindow() {
                                 MUIA_CycleChain, TRUE,
                                 MUIA_Cycle_Entries, authorizationTypeOptions,
                                 MUIA_Cycle_Active, configGetCustomAuthorizationType(),
+                            End,
+                        End,
+                        Child, VGroup,
+                            MUIA_Frame, MUIV_Frame_Group,
+                            MUIA_FrameTitle, STRING_STREAMING,
+                            Child, customServerStreamingCycle = CycleObject,
+                                MUIA_CycleChain, TRUE,
+                                MUIA_Cycle_Entries, streamingOptions,
+                                MUIA_Cycle_Active,
+                                    configGetCustomChatStreamEnabled() ? 1 : 0,
                             End,
                         End,
                         Child, VGroup,
@@ -1364,6 +1423,9 @@ LONG createCustomServerSettingsRequesterWindow() {
     DoMethod(customServerPortString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerUsesSSLCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerAuthorizationTypeCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
+    DoMethod(customServerStreamingCycle, MUIM_Notify, MUIA_Cycle_Active,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &SettingsChangedHook);
     DoMethod(customServerApiKeyString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerApiEndpointCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerApiEndpointUrlString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);

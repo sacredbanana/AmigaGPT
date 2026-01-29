@@ -427,7 +427,9 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     updateStatusBar(STRING_GENERATING_IMAGE_NAME, 7);
     Provider nameProvider = configGetChatProvider();
     struct ChatRequestSettings nameSettings;
-    configGetChatRequestSettings(&nameSettings, nameProvider, FALSE);
+    configGetChatRequestSettingsWithStreamOverride(&nameSettings, nameProvider,
+                                                   FALSE);
+    nameSettings.webSearchEnabled = FALSE;
     CONST_STRPTR nameModel = (!nameSettings.isCustomProvider &&
                               nameSettings.provider == PROVIDER_OPENAI)
                                  ? CHAT_MODEL_NAMES[GPT_5_NANO]
@@ -1318,10 +1320,10 @@ static void sendChatMessage() {
     BOOL dataStreamFinished = FALSE;
     ULONG speechIndex = 0;
     UWORD wordNumber = 0;
+    UWORD chunkCounter = 0;
     Provider chatProvider = configGetChatProvider();
-    BOOL streamingEnabled = (chatProvider == PROVIDER_OPENAI);
     struct ChatRequestSettings chatSettings;
-    configGetChatRequestSettings(&chatSettings, chatProvider, streamingEnabled);
+    configGetChatRequestSettings(&chatSettings, chatProvider);
 
     strncat(chatOutputTextEditorContents, "\n", 1);
 
@@ -1395,11 +1397,8 @@ static void sendChatMessage() {
             }
 
             UTF8 *contentString = getMessageContentFromJson(
-                response,
-                (!chatSettings.isCustomProvider &&
-                 chatSettings.provider == PROVIDER_OPENAI),
-                FALSE, chatSettings.apiEndpoint);
-            if (chatSettings.isCustomProvider) {
+                response, chatSettings.stream, FALSE, chatSettings.apiEndpoint);
+            if (!chatSettings.stream) {
                 strncpy(receivedMessage, contentString,
                         READ_BUFFER_LENGTH - strlen(receivedMessage) -
                             strlen(contentString) - 1);
@@ -1424,6 +1423,17 @@ static void sendChatMessage() {
                                     strlen(chatOutputTextEditorContents) -
                                     strlen(formattedMessageSystemEncoded) - 1);
                         CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+                        chunkCounter++;
+
+                        /* Keep the UI responsive during streaming. We still do
+                         * the more expensive markdown-to-MUI conversion only
+                         * periodically below. */
+                        if (chunkCounter % 5 == 0) {
+                            set(chatOutputTextEditor, MUIA_NFloattext_Text,
+                                chatOutputTextEditorContents);
+                            set(chatOutputListView, MUIA_NList_First,
+                                MUIV_NList_First_Bottom);
+                        }
                         if (++wordNumber % 50 == 0) {
                             STRPTR formattedContent =
                                 convertMarkdownFormattingToMUI(
@@ -1456,13 +1466,45 @@ static void sendChatMessage() {
                             }
                         }
                     }
+
+                    /* End-of-stream detection:
+                     * - Responses API: "type"=="response.completed"
+                     * - chat.completions: choices[0].finish_reason is set (and
+                     *   we may also synthesize response.completed from [DONE])
+                     */
                     STRPTR type = json_object_get_string(
                         json_object_object_get(response, "type"));
-                    if (!chatSettings.stream ||
-                        (type != NULL &&
-                         strcmp(type, "response.completed") == 0)) {
+                    if (type != NULL &&
+                        strcmp(type, "response.completed") == 0) {
                         dataStreamFinished = TRUE;
+                    } else if (chatSettings.apiEndpoint ==
+                                   API_ENDPOINT_CHAT_COMPLETIONS ||
+                               json_object_object_get(response, "choices") !=
+                                   NULL) {
+                        struct json_object *choices =
+                            json_object_object_get(response, "choices");
+                        if (choices != NULL &&
+                            json_object_is_type(choices, json_type_array) &&
+                            json_object_array_length(choices) > 0) {
+                            struct json_object *choice0 =
+                                json_object_array_get_idx(choices, 0);
+                            if (choice0 != NULL) {
+                                struct json_object *finishReason =
+                                    json_object_object_get(choice0,
+                                                           "finish_reason");
+                                if (finishReason != NULL &&
+                                    !json_object_is_type(finishReason,
+                                                         json_type_null)) {
+                                    STRPTR fr = (STRPTR)json_object_get_string(
+                                        finishReason);
+                                    if (fr != NULL && strlen(fr) > 0) {
+                                        dataStreamFinished = TRUE;
+                                    }
+                                }
+                            }
+                        }
                     }
+
                     json_object_put(response);
                 } else {
                     dataStreamFinished = TRUE;
@@ -1472,9 +1514,8 @@ static void sendChatMessage() {
     } while (!dataStreamFinished);
 
     /* Handle shell tool calls - loop to handle multiple sequential commands */
-    while (!chatSettings.isCustomProvider &&
-           chatSettings.provider == PROVIDER_OPENAI &&
-           configGetShellToolEnabled() && hasPendingToolCall()) {
+    while (chatSettings.stream && configGetShellToolEnabled() &&
+           hasPendingToolCall()) {
         STRPTR command = getPendingToolCommand();
         STRPTR callId = getPendingToolCallId();
         STRPTR responseId = getPendingResponseId();
@@ -1559,10 +1600,10 @@ static void sendChatMessage() {
             responseId, callId, toolOutput, NULL, /* Use default OpenAI host */
             0,                                    /* Use default port */
             TRUE,                                 /* Use SSL */
-            configGetOpenAiApiKey(), configGetProxyEnabled(),
-            configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
-            configGetProxyRequiresAuth(), configGetProxyUsername(),
-            configGetProxyPassword());
+            chatSettings.apiKey, configGetProxyEnabled(),
+            chatSettings.proxyHost, chatSettings.proxyPort,
+            chatSettings.proxyUsesSSL, chatSettings.proxyRequiresAuth,
+            chatSettings.proxyUsername, chatSettings.proxyPassword);
 
         if (output != NULL) {
             FreeVec(output);
@@ -1656,22 +1697,15 @@ static void sendChatMessage() {
                                   "quotes or prefix the response with anything",
                                   "user");
             setConversationSystem(currentConversation, NULL);
-            struct ChatRequestSettings titleSettings;
-            configGetChatRequestSettings(&titleSettings, chatProvider, FALSE);
-            CONST_STRPTR titleModel =
-                (!titleSettings.isCustomProvider &&
-                 titleSettings.provider == PROVIDER_OPENAI)
-                    ? CHAT_MODEL_NAMES[GPT_5_NANO]
-                    : titleSettings.model;
             responses = postChatMessageToOpenAI(
-                currentConversation, titleSettings.host, titleSettings.port,
-                titleSettings.useSSL, titleModel, titleSettings.apiKey, FALSE,
-                titleSettings.useProxy, titleSettings.proxyHost,
-                titleSettings.proxyPort, titleSettings.proxyUsesSSL,
-                titleSettings.proxyRequiresAuth, titleSettings.proxyUsername,
-                titleSettings.proxyPassword, titleSettings.webSearchEnabled,
-                titleSettings.apiEndpoint, titleSettings.apiEndpointUrl,
-                titleSettings.authorizationType, titleSettings.customHeaders);
+                currentConversation, chatSettings.host, chatSettings.port,
+                chatSettings.useSSL, chatSettings.model, chatSettings.apiKey,
+                FALSE, chatSettings.useProxy, chatSettings.proxyHost,
+                chatSettings.proxyPort, chatSettings.proxyUsesSSL,
+                chatSettings.proxyRequiresAuth, chatSettings.proxyUsername,
+                chatSettings.proxyPassword, chatSettings.webSearchEnabled,
+                chatSettings.apiEndpoint, chatSettings.apiEndpointUrl,
+                chatSettings.authorizationType, chatSettings.customHeaders);
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);
@@ -1685,7 +1719,7 @@ static void sendChatMessage() {
             }
             if (responses[0] != NULL) {
                 UTF8 *responseString = getMessageContentFromJson(
-                    responses[0], FALSE, FALSE, titleSettings.apiEndpoint);
+                    responses[0], FALSE, FALSE, chatSettings.apiEndpoint);
                 if (currentConversation->name == NULL) {
                     currentConversation->name =
                         AllocVec(strlen(responseString) + 1, MEMF_CLEAR);

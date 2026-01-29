@@ -46,6 +46,11 @@ struct AmigaGPTConfigData {
     LONG assistantTextAlignment;
     LONG webSearchEnabled;
     LONG shellToolEnabled;
+    ULONG customChatStreamEnabled;
+    ULONG openAiChatStreamEnabled;
+    ULONG geminiChatStreamEnabled;
+    ULONG grokChatStreamEnabled;
+    ULONG anthropicChatStreamEnabled;
     ULONG useCustomServer; /* Legacy - kept for migration */
     ULONG customPort;
     ULONG customUseSSL;
@@ -159,6 +164,11 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->assistantTextAlignment = ALIGN_LEFT;
     data->webSearchEnabled = TRUE;
     data->shellToolEnabled = FALSE;
+    data->customChatStreamEnabled = FALSE;
+    data->openAiChatStreamEnabled = TRUE;
+    data->geminiChatStreamEnabled = TRUE;
+    data->grokChatStreamEnabled = TRUE;
+    data->anthropicChatStreamEnabled = FALSE;
     data->useCustomServer = FALSE; /* Legacy */
     data->customPort = 80;
     data->customUseSSL = FALSE;
@@ -198,7 +208,7 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
 
     /* New string-based model names (new in schema v2) */
     data->chatModelName = copyString("gpt-5-chat-latest");
-    data->imageModelName = copyString("gpt-image-1");
+    data->imageModelName = copyString("gpt-image-1.5");
 
     /* Provider-specific API keys */
     data->geminiApiKey = NULL;
@@ -214,7 +224,7 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
         copyString(GROK_CHAT_MODELS[0] ? GROK_CHAT_MODELS[0] : "grok-4");
     data->anthropicChatModelName =
         copyString(ANTHROPIC_CHAT_MODELS[0] ? ANTHROPIC_CHAT_MODELS[0]
-                                            : "claude-opus-4-5-20250929");
+                                            : "claude-opus-4-5-20251101");
 
     data->isDirty = FALSE;
     data->saveInProgress = FALSE;
@@ -384,6 +394,21 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_ShellToolEnabled:
         *store = data->shellToolEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_CustomChatStreamEnabled:
+        *store = data->customChatStreamEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_OpenAiChatStreamEnabled:
+        *store = data->openAiChatStreamEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GeminiChatStreamEnabled:
+        *store = data->geminiChatStreamEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GrokChatStreamEnabled:
+        *store = data->grokChatStreamEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled:
+        *store = data->anthropicChatStreamEnabled;
         return TRUE;
     case MUIA_AmigaGPTConfig_UseCustomServer:
         *store = data->useCustomServer;
@@ -643,6 +668,36 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                 changed = TRUE;
             }
             break;
+        case MUIA_AmigaGPTConfig_CustomChatStreamEnabled:
+            if (data->customChatStreamEnabled != (ULONG)ti_Data) {
+                data->customChatStreamEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_OpenAiChatStreamEnabled:
+            if (data->openAiChatStreamEnabled != (ULONG)ti_Data) {
+                data->openAiChatStreamEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_GeminiChatStreamEnabled:
+            if (data->geminiChatStreamEnabled != (ULONG)ti_Data) {
+                data->geminiChatStreamEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_GrokChatStreamEnabled:
+            if (data->grokChatStreamEnabled != (ULONG)ti_Data) {
+                data->grokChatStreamEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled:
+            if (data->anthropicChatStreamEnabled != (ULONG)ti_Data) {
+                data->anthropicChatStreamEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
         case MUIA_AmigaGPTConfig_UseCustomServer:
             if (data->useCustomServer != (ULONG)ti_Data) {
                 data->useCustomServer = (ULONG)ti_Data;
@@ -898,6 +953,21 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
     json_object_object_add(
         configJsonObject, "shellToolEnabled",
         json_object_new_boolean((BOOL)data->shellToolEnabled));
+    json_object_object_add(
+        configJsonObject, "customChatStreamEnabled",
+        json_object_new_boolean((BOOL)data->customChatStreamEnabled));
+    json_object_object_add(
+        configJsonObject, "openAiChatStreamEnabled",
+        json_object_new_boolean((BOOL)data->openAiChatStreamEnabled));
+    json_object_object_add(
+        configJsonObject, "geminiChatStreamEnabled",
+        json_object_new_boolean((BOOL)data->geminiChatStreamEnabled));
+    json_object_object_add(
+        configJsonObject, "grokChatStreamEnabled",
+        json_object_new_boolean((BOOL)data->grokChatStreamEnabled));
+    json_object_object_add(
+        configJsonObject, "anthropicChatStreamEnabled",
+        json_object_new_boolean((BOOL)data->anthropicChatStreamEnabled));
     json_object_object_add(
         configJsonObject, "useCustomServer",
         json_object_new_boolean((BOOL)data->useCustomServer));
@@ -1257,6 +1327,25 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     if (json_object_object_get_ex(configJsonObject, "shellToolEnabled",
                                   &valueObj))
         data->shellToolEnabled = (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "customChatStreamEnabled",
+                                  &valueObj))
+        data->customChatStreamEnabled =
+            (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "openAiChatStreamEnabled",
+                                  &valueObj))
+        data->openAiChatStreamEnabled =
+            (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "geminiChatStreamEnabled",
+                                  &valueObj))
+        data->geminiChatStreamEnabled =
+            (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "grokChatStreamEnabled",
+                                  &valueObj))
+        data->grokChatStreamEnabled = (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject,
+                                  "anthropicChatStreamEnabled", &valueObj))
+        data->anthropicChatStreamEnabled =
+            (ULONG)json_object_get_boolean(valueObj);
 
     if (json_object_object_get_ex(configJsonObject, "useCustomServer",
                                   &valueObj))
@@ -2214,13 +2303,13 @@ void configSetChatModelNameForProvider(Provider provider, CONST_STRPTR value) {
 }
 
 void configGetChatRequestSettings(struct ChatRequestSettings *out,
-                                  Provider provider, BOOL stream) {
+                                  Provider provider) {
     if (out == NULL)
         return;
     memset(out, 0, sizeof(*out));
     out->provider = provider;
     out->isCustomProvider = (provider == PROVIDER_CUSTOM);
-    out->stream = stream;
+    out->stream = configGetChatStreamingEnabledForProvider(provider);
 
     out->useProxy = configGetProxyEnabled();
     out->proxyHost = configGetProxyHost();
@@ -2261,10 +2350,18 @@ void configGetChatRequestSettings(struct ChatRequestSettings *out,
     }
 }
 
+void configGetChatRequestSettingsWithStreamOverride(
+    struct ChatRequestSettings *out, Provider provider, BOOL streamOverride) {
+    configGetChatRequestSettings(out, provider);
+    if (out != NULL) {
+        out->stream = streamOverride;
+    }
+}
+
 void configGetChatRequestSettingsForCurrentProvider(
-    struct ChatRequestSettings *out, BOOL stream) {
+    struct ChatRequestSettings *out) {
     Provider provider = configGetChatProvider();
-    configGetChatRequestSettings(out, provider, stream);
+    configGetChatRequestSettings(out, provider);
 }
 
 STRPTR configGetImageModelName(void) {
@@ -2277,6 +2374,66 @@ STRPTR configGetImageModelName(void) {
 void configSetImageModelName(CONST_STRPTR value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_ImageModelName, (ULONG)value);
+}
+
+BOOL configGetChatStreamingEnabledForProvider(Provider provider) {
+    ULONG val = FALSE;
+    if (!configObj)
+        return FALSE;
+    switch (provider) {
+    case PROVIDER_OPENAI:
+        get(configObj, MUIA_AmigaGPTConfig_OpenAiChatStreamEnabled, &val);
+        break;
+    case PROVIDER_GEMINI:
+        get(configObj, MUIA_AmigaGPTConfig_GeminiChatStreamEnabled, &val);
+        break;
+    case PROVIDER_GROK:
+        get(configObj, MUIA_AmigaGPTConfig_GrokChatStreamEnabled, &val);
+        break;
+    case PROVIDER_ANTHROPIC:
+        get(configObj, MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled, &val);
+        break;
+    case PROVIDER_CUSTOM:
+    default:
+        get(configObj, MUIA_AmigaGPTConfig_CustomChatStreamEnabled, &val);
+        break;
+    }
+    return (BOOL)val;
+}
+
+void configSetChatStreamingEnabledForProvider(Provider provider, BOOL enabled) {
+    if (!configObj)
+        return;
+    switch (provider) {
+    case PROVIDER_OPENAI:
+        set(configObj, MUIA_AmigaGPTConfig_OpenAiChatStreamEnabled, enabled);
+        break;
+    case PROVIDER_GEMINI:
+        set(configObj, MUIA_AmigaGPTConfig_GeminiChatStreamEnabled, enabled);
+        break;
+    case PROVIDER_GROK:
+        set(configObj, MUIA_AmigaGPTConfig_GrokChatStreamEnabled, enabled);
+        break;
+    case PROVIDER_ANTHROPIC:
+        set(configObj, MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled, enabled);
+        break;
+    case PROVIDER_CUSTOM:
+    default:
+        set(configObj, MUIA_AmigaGPTConfig_CustomChatStreamEnabled, enabled);
+        break;
+    }
+}
+
+BOOL configGetCustomChatStreamEnabled(void) {
+    ULONG val = FALSE;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomChatStreamEnabled, &val);
+    return (BOOL)val;
+}
+
+void configSetCustomChatStreamEnabled(BOOL enabled) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomChatStreamEnabled, enabled);
 }
 
 STRPTR configGetGeminiApiKey(void) {

@@ -480,14 +480,56 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
     if (json == NULL)
         return NULL;
     if (stream) {
+        /* Streaming can be either:
+         * - OpenAI Responses streaming events (type=response.output_text.delta)
+         * - OpenAI-compatible chat.completions streaming chunks
+         *   (object=chat.completion.chunk, choices[].delta.content)
+         */
+
+        /* Responses API streaming */
         struct json_object *type = json_object_object_get(json, "type");
-        UTF8 *typeStr = json_object_get_string(type);
-        if (strcmp(typeStr, "response.output_text.delta") == 0) {
-            struct json_object *text = json_object_object_get(json, "delta");
-            return json_object_get_string(text);
-        } else {
+        if (type != NULL) {
+            UTF8 *typeStr = json_object_get_string(type);
+            if (typeStr != NULL &&
+                strcmp(typeStr, "response.output_text.delta") == 0) {
+                struct json_object *text =
+                    json_object_object_get(json, "delta");
+                return text != NULL ? (UTF8 *)json_object_get_string(text) : "";
+            }
+            /* Any other typed event (e.g. response.completed) contributes no
+             * text */
             return "";
         }
+
+        /* chat.completions streaming chunk */
+        struct json_object *choices = json_object_object_get(json, "choices");
+        if (choices != NULL && json_object_is_type(choices, json_type_array) &&
+            json_object_array_length(choices) > 0) {
+            struct json_object *choice0 = json_object_array_get_idx(choices, 0);
+            if (choice0 != NULL) {
+                struct json_object *delta =
+                    json_object_object_get(choice0, "delta");
+                if (delta != NULL) {
+                    struct json_object *content =
+                        json_object_object_get(delta, "content");
+                    if (content != NULL) {
+                        const char *s = json_object_get_string(content);
+                        return s != NULL ? (UTF8 *)s : "";
+                    }
+                }
+
+                /* Legacy /v1/completions streaming chunk:
+                 * { "choices": [{"text": "..."}], ... } */
+                struct json_object *textObj =
+                    json_object_object_get(choice0, "text");
+                if (textObj != NULL) {
+                    const char *s = json_object_get_string(textObj);
+                    return s != NULL ? (UTF8 *)s : "";
+                }
+            }
+        }
+
+        return "";
     } else {
         struct json_object *text;
         if (apiEndpoint == API_ENDPOINT_RESPONSES) {

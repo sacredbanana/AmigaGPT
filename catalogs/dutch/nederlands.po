@@ -1634,3 +1634,18 @@ msgstr "Een aangepast profiel mag niet dezelfde naam hebben als een ingebouwde a
 msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
 msgid "You have unsaved changes. Do you want to save them before switching?"
 msgstr "U hebt niet-opgeslagen wijzigingen. Wilt u deze opslaan voordat u wisselt?"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_STREAMING (301//)"
+msgid "Streaming"
+msgstr "Streaming"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ON (302//)"
+msgid "On"
+msgstr "Aan"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_OFF (303//)"
+msgid "Off"
+msgstr "Uit"
