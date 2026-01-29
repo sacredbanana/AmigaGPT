@@ -56,6 +56,10 @@ struct AmigaGPTConfigData {
     ULONG customUseSSL;
     APIEndpoint customApiEndpoint;
     AuthorizationType customAuthorizationType;
+    /* Custom image server settings (separate from chat custom server) */
+    ULONG customImagePort;
+    ULONG customImageUseSSL;
+    AuthorizationType customImageAuthorizationType;
     ImageFormat imageFormat;
 
     /* Provider selection (new in schema v2) */
@@ -85,6 +89,13 @@ struct AmigaGPTConfigData {
     STRPTR customHeaders;
     STRPTR customServerProfiles;
     STRPTR activeProfileName;
+    STRPTR customImageHost;
+    STRPTR customImageApiKey;
+    STRPTR customImageModel;
+    STRPTR customImageApiEndpointUrl;
+    STRPTR customImageHeaders;
+    STRPTR customImageServerProfiles;
+    STRPTR activeImageProfileName;
     STRPTR elevenLabsAPIKey;
     STRPTR elevenLabsVoiceID;
     STRPTR elevenLabsVoiceName;
@@ -174,6 +185,9 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->customUseSSL = FALSE;
     data->customApiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS;
     data->customAuthorizationType = AUTHORIZATION_TYPE_BEARER;
+    data->customImagePort = 80;
+    data->customImageUseSSL = FALSE;
+    data->customImageAuthorizationType = AUTHORIZATION_TYPE_BEARER;
     data->imageFormat = IMAGE_FORMAT_PNG;
 
     /* Provider defaults (new in schema v2) */
@@ -200,6 +214,16 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->customApiKey = NULL;
     data->customChatModel = NULL;
     data->customApiEndpointUrl = NULL;
+    data->customHeaders = NULL;
+    data->customServerProfiles = NULL;
+    data->activeProfileName = NULL;
+    data->customImageHost = NULL;
+    data->customImageApiKey = NULL;
+    data->customImageModel = NULL;
+    data->customImageApiEndpointUrl = NULL;
+    data->customImageHeaders = NULL;
+    data->customImageServerProfiles = NULL;
+    data->activeImageProfileName = NULL;
     data->elevenLabsAPIKey = NULL;
     data->elevenLabsVoiceID = NULL;
     data->elevenLabsVoiceName = NULL;
@@ -248,6 +272,13 @@ static void freeAllStrings(struct AmigaGPTConfigData *data) {
     freeString(&data->customHeaders);
     freeString(&data->customServerProfiles);
     freeString(&data->activeProfileName);
+    freeString(&data->customImageHost);
+    freeString(&data->customImageApiKey);
+    freeString(&data->customImageModel);
+    freeString(&data->customImageApiEndpointUrl);
+    freeString(&data->customImageHeaders);
+    freeString(&data->customImageServerProfiles);
+    freeString(&data->activeImageProfileName);
     freeString(&data->elevenLabsAPIKey);
     freeString(&data->elevenLabsVoiceID);
     freeString(&data->elevenLabsVoiceName);
@@ -422,6 +453,15 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
     case MUIA_AmigaGPTConfig_CustomApiEndpoint:
         *store = data->customApiEndpoint;
         return TRUE;
+    case MUIA_AmigaGPTConfig_CustomImagePort:
+        *store = data->customImagePort;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_CustomImageUseSSL:
+        *store = data->customImageUseSSL;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_CustomImageAuthorizationType:
+        *store = (ULONG)data->customImageAuthorizationType;
+        return TRUE;
     case MUIA_AmigaGPTConfig_ImageFormat:
         *store = data->imageFormat;
         return TRUE;
@@ -483,6 +523,27 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_ActiveProfileName:
         *store = (ULONG)data->activeProfileName;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_CustomImageHost:
+        *store = (ULONG)data->customImageHost;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_CustomImageApiKey:
+        *store = (ULONG)data->customImageApiKey;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_CustomImageModel:
+        *store = (ULONG)data->customImageModel;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_CustomImageApiEndpointUrl:
+        *store = (ULONG)data->customImageApiEndpointUrl;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_CustomImageHeaders:
+        *store = (ULONG)data->customImageHeaders;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_CustomImageServerProfiles:
+        *store = (ULONG)data->customImageServerProfiles;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_ActiveImageProfileName:
+        *store = (ULONG)data->activeImageProfileName;
         return TRUE;
     case MUIA_AmigaGPTConfig_CustomAuthorizationType:
         *store = (ULONG)data->customAuthorizationType;
@@ -722,6 +783,25 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                 changed = TRUE;
             }
             break;
+        case MUIA_AmigaGPTConfig_CustomImagePort:
+            if (data->customImagePort != (ULONG)ti_Data) {
+                data->customImagePort = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_CustomImageUseSSL:
+            if (data->customImageUseSSL != (ULONG)ti_Data) {
+                data->customImageUseSSL = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_CustomImageAuthorizationType:
+            if (data->customImageAuthorizationType !=
+                (AuthorizationType)ti_Data) {
+                data->customImageAuthorizationType = (AuthorizationType)ti_Data;
+                changed = TRUE;
+            }
+            break;
         case MUIA_AmigaGPTConfig_ImageFormat:
             if (data->imageFormat != (ImageFormat)ti_Data) {
                 data->imageFormat = (ImageFormat)ti_Data;
@@ -787,6 +867,37 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
             break;
         case MUIA_AmigaGPTConfig_ActiveProfileName:
             if (setStringAttr(&data->activeProfileName, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_CustomImageHost:
+            if (setStringAttr(&data->customImageHost, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_CustomImageApiKey:
+            if (setStringAttr(&data->customImageApiKey, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_CustomImageModel:
+            if (setStringAttr(&data->customImageModel, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_CustomImageApiEndpointUrl:
+            if (setStringAttr(&data->customImageApiEndpointUrl,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_CustomImageHeaders:
+            if (setStringAttr(&data->customImageHeaders, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_CustomImageServerProfiles:
+            if (setStringAttr(&data->customImageServerProfiles,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_ActiveImageProfileName:
+            if (setStringAttr(&data->activeImageProfileName,
+                              (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
         case MUIA_AmigaGPTConfig_CustomAuthorizationType:
@@ -979,6 +1090,14 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
                            json_object_new_int(data->customApiEndpoint));
     json_object_object_add(configJsonObject, "customAuthorizationType",
                            json_object_new_int(data->customAuthorizationType));
+    json_object_object_add(configJsonObject, "customImagePort",
+                           json_object_new_int(data->customImagePort));
+    json_object_object_add(
+        configJsonObject, "customImageUseSSL",
+        json_object_new_boolean((BOOL)data->customImageUseSSL));
+    json_object_object_add(
+        configJsonObject, "customImageAuthorizationType",
+        json_object_new_int(data->customImageAuthorizationType));
     json_object_object_add(configJsonObject, "imageFormat",
                            json_object_new_int(data->imageFormat));
 
@@ -1054,6 +1173,38 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
                            data->activeProfileName != NULL
                                ? json_object_new_string(data->activeProfileName)
                                : NULL);
+    json_object_object_add(configJsonObject, "customImageHost",
+                           data->customImageHost != NULL
+                               ? json_object_new_string(data->customImageHost)
+                               : NULL);
+    json_object_object_add(configJsonObject, "customImageApiKey",
+                           data->customImageApiKey != NULL
+                               ? json_object_new_string(data->customImageApiKey)
+                               : NULL);
+    json_object_object_add(configJsonObject, "customImageModel",
+                           data->customImageModel != NULL
+                               ? json_object_new_string(data->customImageModel)
+                               : NULL);
+    json_object_object_add(
+        configJsonObject, "customImageApiEndpointUrl",
+        data->customImageApiEndpointUrl != NULL
+            ? json_object_new_string(data->customImageApiEndpointUrl)
+            : NULL);
+    json_object_object_add(
+        configJsonObject, "customImageHeaders",
+        data->customImageHeaders != NULL
+            ? json_object_new_string(data->customImageHeaders)
+            : NULL);
+    json_object_object_add(
+        configJsonObject, "customImageServerProfiles",
+        data->customImageServerProfiles != NULL
+            ? json_object_new_string(data->customImageServerProfiles)
+            : NULL);
+    json_object_object_add(
+        configJsonObject, "activeImageProfileName",
+        data->activeImageProfileName != NULL
+            ? json_object_new_string(data->activeImageProfileName)
+            : NULL);
     json_object_object_add(configJsonObject, "elevenLabsAPIKey",
                            data->elevenLabsAPIKey != NULL
                                ? json_object_new_string(data->elevenLabsAPIKey)
@@ -1365,6 +1516,18 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
                                   &valueObj))
         data->customAuthorizationType = json_object_get_int(valueObj);
 
+    if (json_object_object_get_ex(configJsonObject, "customImagePort",
+                                  &valueObj))
+        data->customImagePort = json_object_get_int(valueObj);
+
+    if (json_object_object_get_ex(configJsonObject, "customImageUseSSL",
+                                  &valueObj))
+        data->customImageUseSSL = (ULONG)json_object_get_boolean(valueObj);
+
+    if (json_object_object_get_ex(configJsonObject,
+                                  "customImageAuthorizationType", &valueObj))
+        data->customImageAuthorizationType = json_object_get_int(valueObj);
+
     if (json_object_object_get_ex(configJsonObject, "imageFormat", &valueObj))
         data->imageFormat = json_object_get_int(valueObj);
 
@@ -1436,6 +1599,19 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
                    &data->customServerProfiles);
     readJsonString(configJsonObject, "activeProfileName",
                    &data->activeProfileName);
+    readJsonString(configJsonObject, "customImageHost", &data->customImageHost);
+    readJsonString(configJsonObject, "customImageApiKey",
+                   &data->customImageApiKey);
+    readJsonString(configJsonObject, "customImageModel",
+                   &data->customImageModel);
+    readJsonString(configJsonObject, "customImageApiEndpointUrl",
+                   &data->customImageApiEndpointUrl);
+    readJsonString(configJsonObject, "customImageHeaders",
+                   &data->customImageHeaders);
+    readJsonString(configJsonObject, "customImageServerProfiles",
+                   &data->customImageServerProfiles);
+    readJsonString(configJsonObject, "activeImageProfileName",
+                   &data->activeImageProfileName);
     readJsonString(configJsonObject, "elevenLabsAPIKey",
                    &data->elevenLabsAPIKey);
     readJsonString(configJsonObject, "elevenLabsVoiceID",
@@ -1933,6 +2109,76 @@ STRPTR configGetActiveProfileName(void) {
     return val;
 }
 
+STRPTR configGetCustomImageHost(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomImageHost, &val);
+    return val;
+}
+
+ULONG configGetCustomImagePort(void) {
+    ULONG val = 80;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomImagePort, &val);
+    return val;
+}
+
+ULONG configGetCustomImageUseSSL(void) {
+    ULONG val = FALSE;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomImageUseSSL, &val);
+    return val;
+}
+
+AuthorizationType configGetCustomImageAuthorizationType(void) {
+    AuthorizationType val = AUTHORIZATION_TYPE_BEARER;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomImageAuthorizationType, &val);
+    return val;
+}
+
+STRPTR configGetCustomImageApiKey(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomImageApiKey, &val);
+    return val;
+}
+
+STRPTR configGetCustomImageModel(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomImageModel, &val);
+    return val;
+}
+
+STRPTR configGetCustomImageApiEndpointUrl(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomImageApiEndpointUrl, &val);
+    return val;
+}
+
+STRPTR configGetCustomImageHeaders(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomImageHeaders, &val);
+    return val;
+}
+
+STRPTR configGetCustomImageServerProfiles(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_CustomImageServerProfiles, &val);
+    return val;
+}
+
+STRPTR configGetActiveImageProfileName(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_ActiveImageProfileName, &val);
+    return val;
+}
+
 ImageFormat configGetImageFormat(void) {
     ImageFormat val = IMAGE_FORMAT_PNG;
     if (configObj)
@@ -2181,6 +2427,60 @@ void configSetCustomServerProfiles(CONST_STRPTR value) {
 void configSetActiveProfileName(CONST_STRPTR value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_ActiveProfileName, (ULONG)value);
+}
+
+void configSetCustomImageHost(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomImageHost, (ULONG)value);
+}
+
+void configSetCustomImagePort(ULONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomImagePort, value);
+}
+
+void configSetCustomImageUseSSL(ULONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomImageUseSSL, value);
+}
+
+void configSetCustomImageAuthorizationType(AuthorizationType value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomImageAuthorizationType,
+            (ULONG)value);
+}
+
+void configSetCustomImageApiKey(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomImageApiKey, (ULONG)value);
+}
+
+void configSetCustomImageModel(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomImageModel, (ULONG)value);
+}
+
+void configSetCustomImageApiEndpointUrl(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomImageApiEndpointUrl,
+            (ULONG)value);
+}
+
+void configSetCustomImageHeaders(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomImageHeaders, (ULONG)value);
+}
+
+void configSetCustomImageServerProfiles(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_CustomImageServerProfiles,
+            (ULONG)value);
+}
+
+void configSetActiveImageProfileName(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_ActiveImageProfileName,
+            (ULONG)value);
 }
 
 void configSetElevenLabsAPIKey(CONST_STRPTR value) {

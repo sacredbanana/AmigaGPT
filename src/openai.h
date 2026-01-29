@@ -382,6 +382,15 @@ struct json_object *postImageCreationRequestToOpenAI(
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, ImageFormat imageFormat);
 
+/* Provider-aware image generation (OpenAI-compatible images/generations). */
+struct json_object *postImageCreationRequestToOpenAIWithServer(
+    CONST_STRPTR prompt, CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders, CONST_STRPTR modelName, ImageSize imageSize,
+    CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, ImageFormat imageFormat, Provider provider);
+
 /**
  * Download a file from the internet
  * @param url the URL to download from

@@ -39,11 +39,15 @@
 #define MUIA_AmigaGPTConfig_AssistantTextAlignment (AmigaGPTConfig_Dummy + 0x11)
 #define MUIA_AmigaGPTConfig_WebSearchEnabled (AmigaGPTConfig_Dummy + 0x12)
 #define MUIA_AmigaGPTConfig_ShellToolEnabled (AmigaGPTConfig_Dummy + 0x18)
-#define MUIA_AmigaGPTConfig_CustomChatStreamEnabled (AmigaGPTConfig_Dummy + 0x19)
-#define MUIA_AmigaGPTConfig_OpenAiChatStreamEnabled (AmigaGPTConfig_Dummy + 0x1A)
-#define MUIA_AmigaGPTConfig_GeminiChatStreamEnabled (AmigaGPTConfig_Dummy + 0x1B)
+#define MUIA_AmigaGPTConfig_CustomChatStreamEnabled                            \
+    (AmigaGPTConfig_Dummy + 0x19)
+#define MUIA_AmigaGPTConfig_OpenAiChatStreamEnabled                            \
+    (AmigaGPTConfig_Dummy + 0x1A)
+#define MUIA_AmigaGPTConfig_GeminiChatStreamEnabled                            \
+    (AmigaGPTConfig_Dummy + 0x1B)
 #define MUIA_AmigaGPTConfig_GrokChatStreamEnabled (AmigaGPTConfig_Dummy + 0x1C)
-#define MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled (AmigaGPTConfig_Dummy + 0x1D)
+#define MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled                         \
+    (AmigaGPTConfig_Dummy + 0x1D)
 #define MUIA_AmigaGPTConfig_UseCustomServer (AmigaGPTConfig_Dummy + 0x13)
 #define MUIA_AmigaGPTConfig_CustomPort (AmigaGPTConfig_Dummy + 0x14)
 #define MUIA_AmigaGPTConfig_CustomUseSSL (AmigaGPTConfig_Dummy + 0x15)
@@ -84,6 +88,22 @@
 #define MUIA_AmigaGPTConfig_GeminiChatModelName (AmigaGPTConfig_Dummy + 0x3C)
 #define MUIA_AmigaGPTConfig_GrokChatModelName (AmigaGPTConfig_Dummy + 0x3D)
 #define MUIA_AmigaGPTConfig_AnthropicChatModelName (AmigaGPTConfig_Dummy + 0x3E)
+
+/* Custom image server settings (separate from chat custom server) */
+#define MUIA_AmigaGPTConfig_CustomImagePort (AmigaGPTConfig_Dummy + 0x1E)
+#define MUIA_AmigaGPTConfig_CustomImageUseSSL (AmigaGPTConfig_Dummy + 0x1F)
+#define MUIA_AmigaGPTConfig_CustomImageAuthorizationType                       \
+    (AmigaGPTConfig_Dummy + 0x52)
+
+#define MUIA_AmigaGPTConfig_CustomImageHost (AmigaGPTConfig_Dummy + 0x60)
+#define MUIA_AmigaGPTConfig_CustomImageApiKey (AmigaGPTConfig_Dummy + 0x61)
+#define MUIA_AmigaGPTConfig_CustomImageModel (AmigaGPTConfig_Dummy + 0x62)
+#define MUIA_AmigaGPTConfig_CustomImageApiEndpointUrl                          \
+    (AmigaGPTConfig_Dummy + 0x63)
+#define MUIA_AmigaGPTConfig_CustomImageHeaders (AmigaGPTConfig_Dummy + 0x64)
+#define MUIA_AmigaGPTConfig_CustomImageServerProfiles                          \
+    (AmigaGPTConfig_Dummy + 0x65)
+#define MUIA_AmigaGPTConfig_ActiveImageProfileName (AmigaGPTConfig_Dummy + 0x66)
 
 /* Version tracking attributes (read-only, for internal use) */
 #define MUIA_AmigaGPTConfig_ChatModelSetVersion (AmigaGPTConfig_Dummy + 0x40)
@@ -260,6 +280,28 @@ STRPTR configGetCustomServerProfiles(void);
 void configSetCustomServerProfiles(CONST_STRPTR value);
 STRPTR configGetActiveProfileName(void);
 void configSetActiveProfileName(CONST_STRPTR value);
+
+/* Custom image server settings (separate from chat custom server) */
+STRPTR configGetCustomImageHost(void);
+void configSetCustomImageHost(CONST_STRPTR value);
+ULONG configGetCustomImagePort(void);
+void configSetCustomImagePort(ULONG value);
+ULONG configGetCustomImageUseSSL(void);
+void configSetCustomImageUseSSL(ULONG value);
+AuthorizationType configGetCustomImageAuthorizationType(void);
+void configSetCustomImageAuthorizationType(AuthorizationType value);
+STRPTR configGetCustomImageApiKey(void);
+void configSetCustomImageApiKey(CONST_STRPTR value);
+STRPTR configGetCustomImageModel(void);
+void configSetCustomImageModel(CONST_STRPTR value);
+STRPTR configGetCustomImageApiEndpointUrl(void);
+void configSetCustomImageApiEndpointUrl(CONST_STRPTR value);
+STRPTR configGetCustomImageHeaders(void);
+void configSetCustomImageHeaders(CONST_STRPTR value);
+STRPTR configGetCustomImageServerProfiles(void);
+void configSetCustomImageServerProfiles(CONST_STRPTR value);
+STRPTR configGetActiveImageProfileName(void);
+void configSetActiveImageProfileName(CONST_STRPTR value);
 
 /* ElevenLabs settings */
 STRPTR configGetElevenLabsAPIKey(void);

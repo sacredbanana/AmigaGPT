@@ -7,15 +7,19 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
+#include <openssl/evp.h>
 #include <json-c/json.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include "openai-key.h"
+#include "gemini-key.h"
 
 #define READ_BUFFER_LENGTH 8192
 #define WRITE_BUFFER_LENGTH 65536
 #define OPENAI_HOST "api.openai.com"
 #define OPENAI_PORT 443
+#define GEMINI_HOST "generativelanguage.googleapis.com"
+#define GEMINI_PORT 443
 #define AUDIO_BUFFER_SIZE 4096
 
 // Set to TRUE to use local LLM server instead of OpenAI
@@ -91,9 +95,134 @@ u_int8_t *postTextToSpeechRequestToOpenAI(const char *text,
                                           uint32_t *audioLength);
 char *postChatMessageToLocalLLM(const char *prompt, const char *system_message);
 
+#define STRINGIFY2(x) #x
+#define STRINGIFY(x) STRINGIFY2(x)
+
+static struct json_object *postGeminiGenerateContentImage(const char *prompt,
+                                                          const char *model,
+                                                          const char *apiKey);
+static struct json_object *readHttpJsonResponseChunked(SSL *ssl);
+static uint8_t *base64DecodeOpenSSL(const char *b64, size_t *outLen);
+
 int main(int argc, char *argv[]) {
     readBuffer = malloc(READ_BUFFER_LENGTH);
     writeBuffer = malloc(WRITE_BUFFER_LENGTH);
+
+    if (argc > 1 && strcmp(argv[1], "gemini-image") == 0) {
+        const char *prompt =
+            (argc > 2) ? argv[2]
+                       : "Create a simple image of a red ball on a blue table.";
+        const char *model = (argc > 3) ? argv[3] : "gemini-2.5-flash-image";
+
+        SSL_library_init();
+        OpenSSL_add_all_algorithms();
+        SSL_load_error_strings();
+        if (!createSSLContext()) {
+            fprintf(stderr, "Failed to init SSL context\n");
+            return EXIT_FAILURE;
+        }
+
+        struct json_object *resp = postGeminiGenerateContentImage(
+            prompt, model, STRINGIFY(GEMINI_API_KEY));
+        if (resp == NULL) {
+            fprintf(stderr, "Gemini request failed (no JSON)\n");
+        } else {
+            /* Print a small summary to confirm we parsed the whole response */
+            struct json_object *candidates = NULL;
+            if (json_object_object_get_ex(resp, "candidates", &candidates) &&
+                candidates != NULL &&
+                json_object_is_type(candidates, json_type_array) &&
+                json_object_array_length(candidates) > 0) {
+                struct json_object *cand0 =
+                    json_object_array_get_idx(candidates, 0);
+                struct json_object *content = NULL;
+                if (cand0 &&
+                    json_object_object_get_ex(cand0, "content", &content) &&
+                    content && json_object_is_type(content, json_type_object)) {
+                    struct json_object *parts = NULL;
+                    if (json_object_object_get_ex(content, "parts", &parts) &&
+                        parts && json_object_is_type(parts, json_type_array)) {
+                        size_t b64Len = 0;
+                        const char *b64Str = NULL;
+                        const char *mimeStr = NULL;
+                        for (size_t i = 0; i < json_object_array_length(parts);
+                             i++) {
+                            struct json_object *part =
+                                json_object_array_get_idx(parts, i);
+                            if (!part ||
+                                !json_object_is_type(part, json_type_object))
+                                continue;
+                            struct json_object *inlineData = NULL;
+                            if (json_object_object_get_ex(part, "inlineData",
+                                                          &inlineData) &&
+                                inlineData &&
+                                json_object_is_type(inlineData,
+                                                    json_type_object)) {
+                                struct json_object *mimeType = NULL;
+                                if (json_object_object_get_ex(
+                                        inlineData, "mimeType", &mimeType) &&
+                                    mimeType != NULL) {
+                                    mimeStr = json_object_get_string(mimeType);
+                                }
+                                struct json_object *data = NULL;
+                                if (json_object_object_get_ex(inlineData,
+                                                              "data", &data) &&
+                                    data) {
+                                    const char *b64 =
+                                        json_object_get_string(data);
+                                    if (b64) {
+                                        b64Len = strlen(b64);
+                                        b64Str = b64;
+                                    }
+                                }
+                            }
+                        }
+                        if (b64Str != NULL && b64Len > 0) {
+                            size_t imgLen = 0;
+                            uint8_t *img = base64DecodeOpenSSL(b64Str, &imgLen);
+                            if (img != NULL && imgLen > 0) {
+                                const char *ext = "bin";
+                                if (mimeStr != NULL &&
+                                    strcmp(mimeStr, "image/png") == 0) {
+                                    ext = "png";
+                                } else if (mimeStr != NULL &&
+                                           strcmp(mimeStr, "image/jpeg") == 0) {
+                                    ext = "jpg";
+                                }
+                                char outName[128];
+                                snprintf(outName, sizeof(outName),
+                                         "gemini_generated.%s", ext);
+                                FILE *f = fopen(outName, "wb");
+                                if (f != NULL) {
+                                    fwrite(img, 1, imgLen, f);
+                                    fclose(f);
+                                    printf("Saved %s (%zu bytes)\n", outName,
+                                           imgLen);
+                                } else {
+                                    fprintf(stderr,
+                                            "Failed to open output file\n");
+                                }
+                            } else {
+                                fprintf(stderr, "Base64 decode failed\n");
+                            }
+                            free(img);
+                        } else {
+                            fprintf(stderr,
+                                    "No inline image data found in response\n");
+                        }
+                    }
+                }
+            } else {
+                printf("Gemini response parsed OK (no candidates?)\n");
+            }
+            json_object_put(resp);
+        }
+
+        SSL_CTX_free(ctx);
+        free(readBuffer);
+        free(writeBuffer);
+        return EXIT_SUCCESS;
+    }
 
     if (USE_LOCAL_LLM) {
         printf("Testing local LLM server at %s:%d\n", LOCAL_LLM_HOST,
@@ -354,8 +483,6 @@ static uint32_t parseChunkLength(uint8_t *buffer) {
     // Loop until we find the CRLF which ends the chunk length line
     while (i < 8 && buffer[i] != '\r' && buffer[i + 1] != '\n') {
         chunkLenStr[i] = buffer[i];
-        printf("chunkLenStr[%d]: %x %d %p %x\n", i, chunkLenStr[i],
-               chunkLenStr[i], chunkLenStr[i], chunkLenStr[i]);
         i++;
     }
 
@@ -369,6 +496,311 @@ static uint32_t parseChunkLength(uint8_t *buffer) {
 
     // Convert hex string to unsigned long
     return strtoul(chunkLenStr, NULL, 16);
+}
+
+static uint8_t *base64DecodeOpenSSL(const char *b64, size_t *outLen) {
+    if (outLen)
+        *outLen = 0;
+    if (b64 == NULL)
+        return NULL;
+    size_t inLen = strlen(b64);
+    if (inLen == 0)
+        return NULL;
+
+    /* EVP_DecodeBlock output length is at most 3/4 input. */
+    size_t allocLen = (inLen * 3) / 4 + 4;
+    uint8_t *out = malloc(allocLen);
+    if (out == NULL)
+        return NULL;
+
+    int decoded = EVP_DecodeBlock(out, (const unsigned char *)b64, (int)inLen);
+    if (decoded < 0) {
+        free(out);
+        return NULL;
+    }
+
+    /* Adjust for '=' padding. */
+    size_t pad = 0;
+    if (inLen >= 1 && b64[inLen - 1] == '=')
+        pad++;
+    if (inLen >= 2 && b64[inLen - 2] == '=')
+        pad++;
+
+    size_t finalLen = (size_t)decoded;
+    if (finalLen >= pad)
+        finalLen -= pad;
+    if (outLen)
+        *outLen = finalLen;
+    return out;
+}
+
+static struct json_object *readHttpJsonResponseChunked(SSL *ssl) {
+    /* Read and parse a JSON HTTP response with optional chunked encoding.
+     * This is intentionally small + robust for local testing. */
+    struct json_tokener *tok = json_tokener_new();
+    json_tokener_set_flags(tok, JSON_TOKENER_STRICT);
+
+    uint8_t temp[READ_BUFFER_LENGTH + 1];
+    uint8_t headerBuf[8192];
+    size_t headerLen = 0;
+    bool headersDone = false;
+    bool isChunked = false;
+    bool startedJson = false;
+
+    /* Chunked decode state */
+    uint8_t chunkLenLine[32];
+    size_t chunkLenPos = 0;
+    uint32_t chunkRemaining = 0;
+    uint8_t crlfToSkip = 0;
+    bool chunkDone = false;
+
+    struct json_object *result = NULL;
+
+    while (1) {
+        memset(temp, 0, sizeof(temp));
+        int r = SSL_read(ssl, temp, READ_BUFFER_LENGTH);
+        if (r <= 0) {
+            int e = SSL_get_error(ssl, r);
+            if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE) {
+                /* Not fatal; try again. */
+                continue;
+            }
+            if (e == SSL_ERROR_ZERO_RETURN) {
+                /* Connection cleanly closed. */
+                break;
+            }
+            fprintf(stderr, "SSL_read error: %d\n", e);
+            break;
+        }
+
+        const uint8_t *p = temp;
+        size_t n = (size_t)r;
+
+        while (n > 0) {
+            if (!headersDone) {
+                size_t space = (sizeof(headerBuf) - 1) - headerLen;
+                size_t toCopy = (n < space) ? n : space;
+                if (toCopy == 0) {
+                    displayError("HTTP headers too large");
+                    json_tokener_free(tok);
+                    return NULL;
+                }
+                memcpy(headerBuf + headerLen, p, toCopy);
+                headerLen += toCopy;
+                headerBuf[headerLen] = '\0';
+                p += toCopy;
+                n -= toCopy;
+
+                char *hEnd = strstr((char *)headerBuf, "\r\n\r\n");
+                size_t bodyOffset = 0;
+                if (hEnd != NULL) {
+                    bodyOffset = (size_t)(hEnd - (char *)headerBuf) + 4;
+                } else {
+                    hEnd = strstr((char *)headerBuf, "\n\n");
+                    if (hEnd != NULL)
+                        bodyOffset = (size_t)(hEnd - (char *)headerBuf) + 2;
+                }
+                if (hEnd == NULL) {
+                    continue; /* need more header bytes */
+                }
+
+                headersDone = true;
+                if (strstr((char *)headerBuf, "Transfer-Encoding: chunked") ||
+                    strstr((char *)headerBuf, "transfer-encoding: chunked")) {
+                    isChunked = true;
+                }
+
+                if (bodyOffset < headerLen) {
+                    /* Process any body bytes we already received. */
+                    p = headerBuf + bodyOffset;
+                    n = headerLen - bodyOffset;
+                    headerLen = bodyOffset;
+                    /* IMPORTANT: do NOT write a '\0' at bodyOffset.
+                     * If the first chunk size arrived in the same SSL_read as
+                     * the headers, we'd overwrite it and break chunk parsing.
+                     */
+                } else {
+                    continue;
+                }
+            }
+
+            if (!isChunked) {
+                if (!startedJson) {
+                    const uint8_t *brace = memchr(p, '{', n);
+                    if (!brace) {
+                        n = 0;
+                        break;
+                    }
+                    n -= (size_t)(brace - p);
+                    p = brace;
+                    startedJson = true;
+                }
+                result = json_tokener_parse_ex(tok, (const char *)p, (int)n);
+                enum json_tokener_error jerr = json_tokener_get_error(tok);
+                if (jerr != json_tokener_success &&
+                    jerr != json_tokener_continue) {
+                    displayError(json_tokener_error_desc(jerr));
+                    json_tokener_free(tok);
+                    return NULL;
+                }
+                if (jerr == json_tokener_success && result != NULL) {
+                    json_tokener_free(tok);
+                    return result;
+                }
+                n = 0;
+                break;
+            }
+
+            /* Chunked transfer decode */
+            while (n > 0 && !chunkDone) {
+                if (crlfToSkip > 0) {
+                    crlfToSkip--;
+                    p++;
+                    n--;
+                    continue;
+                }
+                if (chunkRemaining == 0) {
+                    uint8_t c = *p++;
+                    n--;
+                    if (c == '\n') {
+                        chunkLenLine[chunkLenPos] = '\0';
+                        for (size_t i = 0; i < chunkLenPos; i++) {
+                            if (chunkLenLine[i] == '\r' ||
+                                chunkLenLine[i] == ';') {
+                                chunkLenLine[i] = '\0';
+                                break;
+                            }
+                        }
+                        chunkRemaining =
+                            (uint32_t)strtoul((char *)chunkLenLine, NULL, 16);
+                        chunkLenPos = 0;
+                        if (chunkRemaining == 0) {
+                            chunkDone = true;
+                            break;
+                        }
+                    } else {
+                        if (chunkLenPos < sizeof(chunkLenLine) - 1) {
+                            chunkLenLine[chunkLenPos++] = c;
+                        } else {
+                            displayError("Bad chunk length");
+                            json_tokener_free(tok);
+                            return NULL;
+                        }
+                    }
+                    continue;
+                }
+
+                size_t take =
+                    (n < (size_t)chunkRemaining) ? n : (size_t)chunkRemaining;
+                if (!startedJson) {
+                    const uint8_t *brace = memchr(p, '{', take);
+                    if (brace) {
+                        size_t skip = (size_t)(brace - p);
+                        p += skip;
+                        take -= skip;
+                        chunkRemaining -= (uint32_t)skip;
+                        startedJson = true;
+                    } else {
+                        p += take;
+                        n -= take;
+                        chunkRemaining -= (uint32_t)take;
+                        if (chunkRemaining == 0)
+                            crlfToSkip = 2;
+                        continue;
+                    }
+                }
+
+                if (take > 0) {
+                    result =
+                        json_tokener_parse_ex(tok, (const char *)p, (int)take);
+                    enum json_tokener_error jerr = json_tokener_get_error(tok);
+                    if (jerr != json_tokener_success &&
+                        jerr != json_tokener_continue) {
+                        displayError(json_tokener_error_desc(jerr));
+                        json_tokener_free(tok);
+                        return NULL;
+                    }
+                    if (jerr == json_tokener_success && result != NULL) {
+                        json_tokener_free(tok);
+                        return result;
+                    }
+                    p += take;
+                    n -= take;
+                    chunkRemaining -= (uint32_t)take;
+                    if (chunkRemaining == 0)
+                        crlfToSkip = 2;
+                }
+            }
+
+            if (chunkDone) {
+                /* JSON should have completed; if not, treat as failure. */
+                enum json_tokener_error jerr = json_tokener_get_error(tok);
+                if (jerr != json_tokener_success) {
+                    displayError("Incomplete JSON (chunked)");
+                    json_tokener_free(tok);
+                    return NULL;
+                }
+                json_tokener_free(tok);
+                return result;
+            }
+
+            n = 0;
+        }
+    }
+
+    json_tokener_free(tok);
+    return result;
+}
+
+static struct json_object *postGeminiGenerateContentImage(const char *prompt,
+                                                          const char *model,
+                                                          const char *apiKey) {
+    if (!prompt || !model || !apiKey) {
+        displayError("Missing prompt/model/apiKey");
+        return NULL;
+    }
+    if (!createSSLConnection(GEMINI_HOST, GEMINI_PORT)) {
+        displayError("Failed to connect to Gemini host");
+        return NULL;
+    }
+
+    struct json_object *obj = json_object_new_object();
+    struct json_object *contentsArr = json_object_new_array();
+    struct json_object *contentObj = json_object_new_object();
+    struct json_object *partsArr = json_object_new_array();
+    struct json_object *partObj = json_object_new_object();
+    json_object_object_add(partObj, "text", json_object_new_string(prompt));
+    json_object_array_add(partsArr, partObj);
+    json_object_object_add(contentObj, "parts", partsArr);
+    json_object_array_add(contentsArr, contentObj);
+    json_object_object_add(obj, "contents", contentsArr);
+
+    struct json_object *genCfg = json_object_new_object();
+    struct json_object *modalities = json_object_new_array();
+    json_object_array_add(modalities, json_object_new_string("TEXT"));
+    json_object_array_add(modalities, json_object_new_string("IMAGE"));
+    json_object_object_add(genCfg, "responseModalities", modalities);
+    json_object_object_add(obj, "generationConfig", genCfg);
+
+    const char *jsonString = json_object_to_json_string(obj);
+    snprintf((char *)writeBuffer, WRITE_BUFFER_LENGTH,
+             "POST /v1beta/models/%s:generateContent HTTP/1.1\r\n"
+             "Host: " GEMINI_HOST "\r\n"
+             "Content-Type: application/json\r\n"
+             "x-goog-api-key: %s\r\n"
+             "User-Agent: AmigaGPT-test\r\n"
+             "Content-Length: %lu\r\n\r\n"
+             "%s",
+             model, apiKey, (unsigned long)strlen(jsonString), jsonString);
+    json_object_put(obj);
+
+    ssl_err = SSL_write(ssl, writeBuffer, (int)strlen((char *)writeBuffer));
+    if (ssl_err <= 0) {
+        displayError("SSL_write failed");
+        return NULL;
+    }
+
+    return readHttpJsonResponseChunked(ssl);
 }
 
 u_int8_t *postTextToSpeechRequestToOpenAI(const char *text,
@@ -446,20 +878,13 @@ u_int8_t *postTextToSpeechRequestToOpenAI(const char *text,
         while (!doneReading) {
             memset(tempReadBuffer, 0, READ_BUFFER_LENGTH);
             bytesRead = SSL_read(ssl, tempReadBuffer, READ_BUFFER_LENGTH);
-            // printf("Read %lu bytes\n", bytesRead);
             if (newChunkNeeded && bytesRead == 1)
                 continue;
-            // if (bytesRead == 5) {
-            // 	printf("%x %x %x %x %x\n", tempReadBuffer[0], tempReadBuffer[1],
-            // tempReadBuffer[2], tempReadBuffer[3], tempReadBuffer[4]);
-            // }
 
             fwrite(tempReadBuffer, sizeof(uint8_t), bytesRead, file2);
             bytesRemainingInBuffer = bytesRead;
             dataStart = tempReadBuffer;
 
-            // snprintf(statusMessage, sizeof(statusMessage), "Downloaded %lu
-            // bytes\n", *audioLength); printf(statusMessage);
             err = SSL_get_error(ssl, bytesRead);
             switch (err) {
             case SSL_ERROR_NONE:
@@ -484,22 +909,10 @@ u_int8_t *postTextToSpeechRequestToOpenAI(const char *text,
                         }
                     } else {
                         if (newChunkNeeded) {
-                            // printf("New chunk needed\n");
-                            // printf("data start:\n");
-                            // for (int i = 0; i < 10; i++) {
-                            // 		printf("%x ", dataStart[i]);
-                            // 	}
-                            // printf("\n");
                             tempChunkDataBufferLength = 0;
                             memset(tempChunkHeaderBuffer, 0, 10);
                             while (!strstr(tempChunkHeaderBuffer, "\r\n") &&
                                    tempChunkDataBufferLength < 10) {
-                                // printf("temp chunk header length: %d\n",
-                                // tempChunkDataBufferLength); for (int i = 0; i
-                                // < tempChunkDataBufferLength; i++) {
-                                // 	printf("%x ", tempChunkHeaderBuffer[i]);
-                                // }
-                                // printf("\n");
                                 if (bytesRemainingInBuffer > 0) {
                                     memcpy(tempChunkHeaderBuffer +
                                                tempChunkDataBufferLength,
@@ -507,8 +920,6 @@ u_int8_t *postTextToSpeechRequestToOpenAI(const char *text,
                                     dataStart++;
                                     bytesRemainingInBuffer--;
                                     tempChunkDataBufferLength++;
-                                    // printf("adding byte to temp chunk header
-                                    // buffer\n");
                                 } else {
                                     UBYTE singleByte[1];
                                     bytesRead = SSL_read(ssl, singleByte, 1);
@@ -516,15 +927,11 @@ u_int8_t *postTextToSpeechRequestToOpenAI(const char *text,
                                                tempChunkDataBufferLength,
                                            singleByte, bytesRead);
                                     tempChunkDataBufferLength += bytesRead;
-                                    // printf("Read 1 byte\n");
                                 }
                             }
-                            // printf("temp chunk header length: %d\n",
-                            // tempChunkDataBufferLength);
 
                             chunkLength =
                                 parseChunkLength(tempChunkHeaderBuffer);
-                            // printf("Chunk length: %lu\n", chunkLength);
                             if (chunkLength == 0) {
                                 doneReading = TRUE;
                                 break;
@@ -532,13 +939,10 @@ u_int8_t *postTextToSpeechRequestToOpenAI(const char *text,
                             chunkBytesNeedingRead = chunkLength;
                             if (bytesRemainingInBuffer == 0) {
                                 newChunkNeeded = FALSE;
-                                // printf("No bytes remaining in buffer\n");
                                 continue;
                             }
                         }
                     }
-
-                    // printf("Chunky\n");
 
                     // Create a larger audio buffer if needed
                     if (*audioLength + chunkBytesNeedingRead >
@@ -553,13 +957,7 @@ u_int8_t *postTextToSpeechRequestToOpenAI(const char *text,
                         }
                         memcpy(audioData, oldAudioData, *audioLength);
                         FreeVec(oldAudioData);
-                        // printf("Resized audio buffer to %lu bytes\n",
-                        // audioBufferSize);
                     }
-
-                    // printf("Chunk bytes needing read: %lu\n",
-                    // chunkBytesNeedingRead); printf("Bytes remaining in
-                    // buffer: %lu\n", bytesRemainingInBuffer);
 
                     if (chunkBytesNeedingRead > bytesRemainingInBuffer) {
                         memcpy(audioData + *audioLength, dataStart,
@@ -568,8 +966,6 @@ u_int8_t *postTextToSpeechRequestToOpenAI(const char *text,
                         chunkBytesNeedingRead -= bytesRemainingInBuffer;
                         newChunkNeeded = FALSE;
                         bytesRemainingInBuffer = 0;
-                        // printf("Buffer empty. Chunk bytes still needing read:
-                        // %lu\n", chunkBytesNeedingRead);
                     } else {
                         memcpy(audioData + *audioLength, dataStart,
                                chunkBytesNeedingRead);
@@ -577,17 +973,11 @@ u_int8_t *postTextToSpeechRequestToOpenAI(const char *text,
                         bytesRemainingInBuffer -= chunkBytesNeedingRead;
                         while (bytesRemainingInBuffer < 2) {
                             bytesRead = SSL_read(ssl, tempReadBuffer, 1);
-                            // printf("Want to read 1 byte. Read %lu bytes\n",
-                            // bytesRead); printf("Read a %x\n",
-                            // tempReadBuffer[0]);
                             bytesRemainingInBuffer += bytesRead;
                         }
                         dataStart += chunkBytesNeedingRead + 2;
                         bytesRemainingInBuffer -= 2;
                         chunkBytesNeedingRead = 0;
-                        // printf("New chunk bytes needing read: %lu\n",
-                        // chunkBytesNeedingRead); printf("New bytes remaining
-                        // in buffer: %lu\n", bytesRemainingInBuffer);
                         newChunkNeeded = TRUE;
                     }
                 }

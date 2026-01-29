@@ -268,6 +268,12 @@ void startGUIRunLoop() {
         case APP_ID_PRINT:
             printConversation();
             break;
+        case APP_ID_CHAT_PROVIDER_SETTINGS:
+            openChatProviderSettingsRequesterWindow();
+            break;
+        case APP_ID_IMAGE_PROVIDER_SETTINGS:
+            openImageProviderSettingsRequesterWindow();
+            break;
 #endif
         default:
             break;

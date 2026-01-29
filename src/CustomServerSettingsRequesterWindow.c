@@ -12,6 +12,11 @@
 #include "gui.h"
 #include "openai.h"
 
+/* (Debug logging removed) */
+#define PSDPRINTF(...)                                                         \
+    do {                                                                       \
+    } while (0)
+
 Object *customServerTemplateCycle;
 Object *customServerHostString;
 Object *customServerPortString;
@@ -32,12 +37,23 @@ Object *customServerProfileNameString;
 Object *customServerSaveProfileButton;
 Object *customServerDeleteProfileButton;
 
+/* Root group for layout changes */
+static Object *customServerSettingsRootGroup = NULL;
+/* Frame group containing the Streaming option (chat-only) */
+static Object *customServerStreamingGroup = NULL;
+
+/* API endpoint options (chat vs image) */
+static STRPTR chatApiEndpointOptions[4] = {NULL};
+static STRPTR imageApiEndpointOptions[2] = {"images/generations", NULL};
+
 static struct json_object *customServerModelsJson = NULL;
 static struct json_object *profilesJson = NULL;
 
 static BOOL profileSettingsDirty = FALSE;
 static LONG lastSelectedProfile = -1;
 static BOOL loadingProfile = FALSE;
+static BOOL settingsIsImageMode = FALSE;
+static BOOL suppressProfileSelected = FALSE;
 
 /* Template definitions */
 enum {
@@ -66,7 +82,9 @@ static void loadProfilesFromConfig(void) {
         profilesJson = NULL;
     }
 
-    STRPTR profilesStr = configGetCustomServerProfiles();
+    STRPTR profilesStr = settingsIsImageMode
+                             ? configGetCustomImageServerProfiles()
+                             : configGetCustomServerProfiles();
     if (profilesStr != NULL && strlen(profilesStr) > 0) {
         profilesJson = json_tokener_parse(profilesStr);
         if (profilesJson == NULL ||
@@ -87,19 +105,27 @@ static void loadProfilesFromConfig(void) {
 static void saveProfilesToConfig(void) {
     if (profilesJson != NULL) {
         CONST_STRPTR jsonStr = json_object_to_json_string(profilesJson);
-        configSetCustomServerProfiles(jsonStr);
+        if (settingsIsImageMode) {
+            configSetCustomImageServerProfiles(jsonStr);
+        } else {
+            configSetCustomServerProfiles(jsonStr);
+        }
     }
 }
 
-/* Number of built-in providers (OpenAI, Gemini, Grok, Anthropic) */
-#define NUM_BUILTIN_PROVIDERS 4
+/* Number of built-in providers shown in the profile list.
+ * Chat mode: OpenAI, Gemini, Grok, Anthropic (4)
+ * Image mode: OpenAI, Gemini, Grok (3) */
+static LONG getBuiltinProviderCount(void) {
+    return settingsIsImageMode ? 3 : 4;
+}
 
 /**
  * Check if a list index corresponds to a built-in provider
  * Index 0 = New Profile, 1-4 = built-in providers, 5+ = custom profiles
  */
 static BOOL isBuiltinProviderIndex(LONG index) {
-    return (index >= 1 && index <= NUM_BUILTIN_PROVIDERS);
+    return (index >= 1 && index <= getBuiltinProviderCount());
 }
 
 /**
@@ -107,7 +133,7 @@ static BOOL isBuiltinProviderIndex(LONG index) {
  * Returns -1 if not a built-in provider
  */
 static LONG getProviderFromIndex(LONG index) {
-    if (index < 1 || index > NUM_BUILTIN_PROVIDERS)
+    if (index < 1 || index > getBuiltinProviderCount())
         return -1;
     return index - 1; /* PROVIDER_OPENAI=0, PROVIDER_GEMINI=1, etc. */
 }
@@ -146,6 +172,8 @@ static void setServerSettingsGadgetsEnabled(BOOL enabled) {
  * Load built-in provider settings into UI
  */
 static void loadBuiltinProviderIntoUI(Provider provider) {
+    PSDPRINTF("loadBuiltinProviderIntoUI enter provider=%ld imageMode=%ld",
+              (long)provider, (long)settingsIsImageMode);
     struct ProviderConfig *config = getProviderConfig(provider);
     if (config == NULL)
         return;
@@ -156,13 +184,17 @@ static void loadBuiltinProviderIntoUI(Provider provider) {
     set(customServerUsesSSLCycle, MUIA_Cycle_Active, config->useSSL ? 1 : 0);
     set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
         (LONG)config->authorizationType);
-    set(customServerApiEndpointCycle, MUIA_Cycle_Active,
-        (LONG)config->apiEndpoint);
+    if (!settingsIsImageMode) {
+        set(customServerApiEndpointCycle, MUIA_Cycle_Active,
+            (LONG)config->apiEndpoint);
+    } else if (customServerApiEndpointCycle != NULL) {
+        set(customServerApiEndpointCycle, MUIA_Cycle_Active, 0);
+    }
     set(customServerApiEndpointUrlString, MUIA_String_Contents,
         config->apiEndpointUrl ? config->apiEndpointUrl : "v1");
     set(customServerCustomHeadersString, MUIA_String_Contents,
         config->customHeaders ? config->customHeaders : "");
-    if (customServerStreamingCycle != NULL) {
+    if (!settingsIsImageMode && customServerStreamingCycle != NULL) {
         set(customServerStreamingCycle, MUIA_Cycle_Active,
             configGetChatStreamingEnabledForProvider(provider) ? 1 : 0);
     }
@@ -171,25 +203,44 @@ static void loadBuiltinProviderIntoUI(Provider provider) {
     STRPTR apiKey = configGetApiKeyForProvider(provider);
     set(customServerApiKeyString, MUIA_String_Contents, apiKey ? apiKey : "");
 
-    /* Load the saved model for this provider */
-    STRPTR modelName = configGetChatModelNameForProvider(provider);
+    /* Load the saved model */
+    STRPTR modelName = NULL;
     CONST_STRPTR *modelList = NULL;
-    switch (provider) {
-    case PROVIDER_OPENAI:
-        modelList = OPENAI_CHAT_MODELS;
-        break;
-    case PROVIDER_GEMINI:
-        modelList = GEMINI_CHAT_MODELS;
-        break;
-    case PROVIDER_GROK:
-        modelList = GROK_CHAT_MODELS;
-        break;
-    case PROVIDER_ANTHROPIC:
-        modelList = ANTHROPIC_CHAT_MODELS;
-        break;
-    default:
-        modelList = NULL;
-        break;
+    if (settingsIsImageMode) {
+        modelName = configGetImageModelName();
+        switch (provider) {
+        case PROVIDER_OPENAI:
+            modelList = OPENAI_IMAGE_MODELS;
+            break;
+        case PROVIDER_GEMINI:
+            modelList = GEMINI_IMAGE_MODELS;
+            break;
+        case PROVIDER_GROK:
+            modelList = GROK_IMAGE_MODELS;
+            break;
+        default:
+            modelList = OPENAI_IMAGE_MODELS;
+            break;
+        }
+    } else {
+        modelName = configGetChatModelNameForProvider(provider);
+        switch (provider) {
+        case PROVIDER_OPENAI:
+            modelList = OPENAI_CHAT_MODELS;
+            break;
+        case PROVIDER_GEMINI:
+            modelList = GEMINI_CHAT_MODELS;
+            break;
+        case PROVIDER_GROK:
+            modelList = GROK_CHAT_MODELS;
+            break;
+        case PROVIDER_ANTHROPIC:
+            modelList = ANTHROPIC_CHAT_MODELS;
+            break;
+        default:
+            modelList = NULL;
+            break;
+        }
     }
 
     if (modelName != NULL && strlen(modelName) > 0) {
@@ -198,6 +249,7 @@ static void loadBuiltinProviderIntoUI(Provider provider) {
                strlen(modelList[0]) > 0) {
         set(customServerChatModelString, MUIA_String_Contents, modelList[0]);
     }
+    PSDPRINTF("loadBuiltinProviderIntoUI exit");
 }
 
 /**
@@ -206,6 +258,10 @@ static void loadBuiltinProviderIntoUI(Provider provider) {
  * index
  */
 static void populateProfileList(LONG forceActive) {
+    PSDPRINTF(
+        "populateProfileList begin (imageMode=%ld forceActive=%ld list=%p)",
+        (long)settingsIsImageMode, (long)forceActive,
+        (void *)customServerProfileList);
     if (customServerProfileList == NULL)
         return;
 
@@ -222,8 +278,10 @@ static void populateProfileList(LONG forceActive) {
              (ULONG)STRING_PROVIDER_GEMINI, MUIV_NList_Insert_Bottom);
     DoMethod(customServerProfileList, MUIM_NList_InsertSingle,
              (ULONG)STRING_PROVIDER_GROK, MUIV_NList_Insert_Bottom);
-    DoMethod(customServerProfileList, MUIM_NList_InsertSingle,
-             (ULONG)STRING_PROVIDER_ANTHROPIC, MUIV_NList_Insert_Bottom);
+    if (!settingsIsImageMode) {
+        DoMethod(customServerProfileList, MUIM_NList_InsertSingle,
+                 (ULONG)STRING_PROVIDER_ANTHROPIC, MUIV_NList_Insert_Bottom);
+    }
 
     /* Add custom profiles from JSON */
     if (profilesJson != NULL &&
@@ -247,16 +305,25 @@ static void populateProfileList(LONG forceActive) {
         }
     }
 
-    /* Select based on current chat provider, or use forced index */
+    /* Select based on current provider for this window mode, or use forced
+     * index */
     if (forceActive >= 0) {
         set(customServerProfileList, MUIA_NList_Active, forceActive);
     } else {
-        Provider currentProvider = configGetChatProvider();
-        if (currentProvider < PROVIDER_CUSTOM) {
+        Provider currentProvider = settingsIsImageMode
+                                       ? configGetImageProvider()
+                                       : configGetChatProvider();
+        if (settingsIsImageMode && currentProvider == PROVIDER_ANTHROPIC) {
+            currentProvider = PROVIDER_OPENAI;
+        }
+        if (currentProvider < PROVIDER_CUSTOM &&
+            currentProvider < (Provider)getBuiltinProviderCount()) {
             set(customServerProfileList, MUIA_NList_Active,
                 currentProvider + 1);
         } else {
-            STRPTR activeProfile = configGetActiveProfileName();
+            STRPTR activeProfile = settingsIsImageMode
+                                       ? configGetActiveImageProfileName()
+                                       : configGetActiveProfileName();
             if (activeProfile != NULL && strlen(activeProfile) > 0) {
                 if (customServerProfileNameString != NULL)
                     set(customServerProfileNameString, MUIA_String_Contents,
@@ -273,7 +340,7 @@ static void populateProfileList(LONG forceActive) {
                             if (name != NULL &&
                                 strcmp(name, activeProfile) == 0) {
                                 set(customServerProfileList, MUIA_NList_Active,
-                                    i + 1 + NUM_BUILTIN_PROVIDERS);
+                                    i + 1 + getBuiltinProviderCount());
                                 break;
                             }
                         }
@@ -283,6 +350,11 @@ static void populateProfileList(LONG forceActive) {
                 set(customServerProfileList, MUIA_NList_Active, 0);
             }
         }
+    }
+    {
+        LONG active = MUIV_NList_Active_Off;
+        get(customServerProfileList, MUIA_NList_Active, &active);
+        PSDPRINTF("populateProfileList end (active=%ld)", (long)active);
     }
 }
 
@@ -317,15 +389,28 @@ static void loadProfileIntoUI(struct json_object *profile) {
         set(customServerApiKeyString, MUIA_String_Contents,
             json_object_get_string(obj));
 
-    obj = json_object_object_get(profile, "chatModel");
-    if (obj != NULL)
+    if (settingsIsImageMode) {
+        obj = json_object_object_get(profile, "imageModel");
+        if (obj == NULL)
+            obj = json_object_object_get(profile, "chatModel");
+    } else {
+        obj = json_object_object_get(profile, "chatModel");
+        if (obj == NULL)
+            obj = json_object_object_get(profile, "imageModel");
+    }
+    if (obj != NULL) {
         set(customServerChatModelString, MUIA_String_Contents,
             json_object_get_string(obj));
+    }
 
-    obj = json_object_object_get(profile, "apiEndpoint");
-    if (obj != NULL)
-        set(customServerApiEndpointCycle, MUIA_Cycle_Active,
-            json_object_get_int(obj));
+    if (!settingsIsImageMode) {
+        obj = json_object_object_get(profile, "apiEndpoint");
+        if (obj != NULL)
+            set(customServerApiEndpointCycle, MUIA_Cycle_Active,
+                json_object_get_int(obj));
+    } else if (customServerApiEndpointCycle != NULL) {
+        set(customServerApiEndpointCycle, MUIA_Cycle_Active, 0);
+    }
 
     obj = json_object_object_get(profile, "apiEndpointUrl");
     if (obj != NULL)
@@ -337,14 +422,16 @@ static void loadProfileIntoUI(struct json_object *profile) {
         set(customServerCustomHeadersString, MUIA_String_Contents,
             json_object_get_string(obj));
 
-    obj = json_object_object_get(profile, "streaming");
-    if (customServerStreamingCycle != NULL) {
-        if (obj != NULL) {
-            set(customServerStreamingCycle, MUIA_Cycle_Active,
-                json_object_get_boolean(obj) ? 1 : 0);
-        } else {
-            set(customServerStreamingCycle, MUIA_Cycle_Active,
-                configGetCustomChatStreamEnabled() ? 1 : 0);
+    if (!settingsIsImageMode) {
+        obj = json_object_object_get(profile, "streaming");
+        if (customServerStreamingCycle != NULL) {
+            if (obj != NULL) {
+                set(customServerStreamingCycle, MUIA_Cycle_Active,
+                    json_object_get_boolean(obj) ? 1 : 0);
+            } else {
+                set(customServerStreamingCycle, MUIA_Cycle_Active,
+                    configGetCustomChatStreamEnabled() ? 1 : 0);
+            }
         }
     }
 }
@@ -381,10 +468,14 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
     json_object_object_add(profile, "apiKey",
                            json_object_new_string(apiKey ? apiKey : ""));
 
-    STRPTR chatModel;
-    get(customServerChatModelString, MUIA_String_Contents, &chatModel);
+    STRPTR modelStr;
+    get(customServerChatModelString, MUIA_String_Contents, &modelStr);
+    /* Store both keys so chat/image windows can share the same custom profile
+     * list without losing values when saved from either window. */
     json_object_object_add(profile, "chatModel",
-                           json_object_new_string(chatModel ? chatModel : ""));
+                           json_object_new_string(modelStr ? modelStr : ""));
+    json_object_object_add(profile, "imageModel",
+                           json_object_new_string(modelStr ? modelStr : ""));
 
     LONG apiEndpoint;
     get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
@@ -404,11 +495,14 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
         profile, "customHeaders",
         json_object_new_string(customHeaders ? customHeaders : ""));
 
-    LONG streamingEnabled = 0;
-    if (customServerStreamingCycle != NULL)
-        get(customServerStreamingCycle, MUIA_Cycle_Active, &streamingEnabled);
-    json_object_object_add(profile, "streaming",
-                           json_object_new_boolean(streamingEnabled == 1));
+    if (!settingsIsImageMode) {
+        LONG streamingEnabled = 0;
+        if (customServerStreamingCycle != NULL)
+            get(customServerStreamingCycle, MUIA_Cycle_Active,
+                &streamingEnabled);
+        json_object_object_add(profile, "streaming",
+                               json_object_new_boolean(streamingEnabled == 1));
+    }
 
     return profile;
 }
@@ -429,13 +523,18 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
     LONG streamingEnabled = 0;
     get(customServerApiKeyString, MUIA_String_Contents, &apiKey);
     get(customServerChatModelString, MUIA_String_Contents, &chatModel);
-    if (customServerStreamingCycle != NULL)
+    if (!settingsIsImageMode && customServerStreamingCycle != NULL)
         get(customServerStreamingCycle, MUIA_Cycle_Active, &streamingEnabled);
 
     if (isBuiltinProviderIndex(profileListIndex)) {
         Provider provider = (Provider)getProviderFromIndex(profileListIndex);
-        configSetChatProvider(provider);
-        configSetImageProvider(provider);
+        if (settingsIsImageMode) {
+            /* Image Provider Settings */
+            configSetImageProvider(provider);
+        } else {
+            /* Chat Provider Settings */
+            configSetChatProvider(provider);
+        }
         switch (provider) {
         case PROVIDER_OPENAI:
             configSetOpenAiApiKey(apiKey);
@@ -452,9 +551,47 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
         default:
             break;
         }
-        configSetChatModelName(chatModel);
-        configSetChatStreamingEnabledForProvider(provider,
-                                                 streamingEnabled == 1);
+        if (settingsIsImageMode) {
+            /* Save image model string (stored globally for now). Validate
+             * against the built-in provider model list. */
+            CONST_STRPTR *allowed = NULL;
+            switch (provider) {
+            case PROVIDER_OPENAI:
+                allowed = OPENAI_IMAGE_MODELS;
+                break;
+            case PROVIDER_GEMINI:
+                allowed = GEMINI_IMAGE_MODELS;
+                break;
+            case PROVIDER_GROK:
+                allowed = GROK_IMAGE_MODELS;
+                break;
+            default:
+                allowed = OPENAI_IMAGE_MODELS;
+                break;
+            }
+
+            CONST_STRPTR modelName =
+                (chatModel != NULL && strlen(chatModel) > 0) ? chatModel : NULL;
+            BOOL ok = FALSE;
+            if (modelName != NULL && allowed != NULL) {
+                for (UBYTE i = 0; allowed[i] != NULL; i++) {
+                    if (strcmp(modelName, allowed[i]) == 0) {
+                        ok = TRUE;
+                        break;
+                    }
+                }
+            }
+            if (!ok && allowed != NULL && allowed[0] != NULL) {
+                modelName = allowed[0];
+            }
+            if (modelName != NULL) {
+                configSetImageModelName(modelName);
+            }
+        } else {
+            configSetChatModelName(chatModel);
+            configSetChatStreamingEnabledForProvider(provider,
+                                                     streamingEnabled == 1);
+        }
         return TRUE;
     }
 
@@ -464,8 +601,9 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
         if (profileListIndex == 0)
             return FALSE;
         /* custom: use existing name from list if form empty */
-        if (profilesJson != NULL && profileListIndex > NUM_BUILTIN_PROVIDERS) {
-            int pi = profileListIndex - 1 - NUM_BUILTIN_PROVIDERS;
+        if (profilesJson != NULL &&
+            profileListIndex > getBuiltinProviderCount()) {
+            int pi = profileListIndex - 1 - getBuiltinProviderCount();
             struct json_object *p = json_object_array_get_idx(profilesJson, pi);
             if (p != NULL) {
                 struct json_object *no = json_object_object_get(p, "name");
@@ -483,18 +621,24 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
         json_object_array_add(profilesJson, newProfile);
         saveProfilesToConfig();
         if (setActiveAfterSave)
-            configSetActiveProfileName(profileName);
+            if (settingsIsImageMode)
+                configSetActiveImageProfileName(profileName);
+            else
+                configSetActiveProfileName(profileName);
         populateProfileList(forceActiveForList);
         return TRUE;
     }
 
     /* custom profile: replace at index */
-    int profileIndex = profileListIndex - 1 - NUM_BUILTIN_PROVIDERS;
+    int profileIndex = profileListIndex - 1 - getBuiltinProviderCount();
     if (profileIndex >= 0 && profilesJson != NULL) {
         json_object_array_put_idx(profilesJson, profileIndex, newProfile);
         saveProfilesToConfig();
         if (setActiveAfterSave)
-            configSetActiveProfileName(profileName);
+            if (settingsIsImageMode)
+                configSetActiveImageProfileName(profileName);
+            else
+                configSetActiveProfileName(profileName);
         populateProfileList(forceActiveForList);
     }
     return TRUE;
@@ -528,11 +672,19 @@ MakeHook(DisplayProfileLI_TextHook, DisplayProfileLI_TextFunc);
 
 /* Hook for profile selection */
 HOOKPROTONHNONP(ProfileSelectedFunc, void) {
+    PSDPRINTF("ProfileSelectedFunc enter (imageMode=%ld dirty=%ld last=%ld)",
+              (long)settingsIsImageMode, (long)profileSettingsDirty,
+              (long)lastSelectedProfile);
+    if (suppressProfileSelected) {
+        PSDPRINTF("ProfileSelectedFunc suppressed");
+        return;
+    }
     if (customServerProfileList == NULL ||
         customServerProfileNameString == NULL)
         return;
     LONG active = MUIV_NList_Active_Off;
     get(customServerProfileList, MUIA_NList_Active, &active);
+    PSDPRINTF("ProfileSelectedFunc active=%ld", (long)active);
 
     if (profileSettingsDirty && lastSelectedProfile >= 0 &&
         active != lastSelectedProfile && active != MUIV_NList_Active_Off) {
@@ -567,11 +719,12 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
     loadingProfile = TRUE;
 
     if (active == MUIV_NList_Active_Off || active == 0) {
+        PSDPRINTF("ProfileSelectedFunc: new profile branch");
         /* "(New Profile)" selected or nothing - clear name */
         set(customServerProfileNameString, MUIA_String_Contents, "");
         if (customServerProfileNameString != NULL)
             set(customServerProfileNameString, MUIA_Disabled, FALSE);
-        if (customServerStreamingCycle != NULL)
+        if (!settingsIsImageMode && customServerStreamingCycle != NULL)
             set(customServerStreamingCycle, MUIA_Cycle_Active,
                 configGetCustomChatStreamEnabled() ? 1 : 0);
         /* Disable delete button for new profile */
@@ -581,6 +734,7 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
         if (customServerSaveProfileButton != NULL)
             set(customServerSaveProfileButton, MUIA_Disabled, FALSE);
         setServerSettingsGadgetsEnabled(TRUE);
+        PSDPRINTF("ProfileSelectedFunc: new profile refreshUrlPreview()");
         refreshUrlPreview();
         loadingProfile = FALSE;
         return;
@@ -589,6 +743,7 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
     /* Check if this is a built-in provider */
     if (isBuiltinProviderIndex(active)) {
         Provider provider = (Provider)getProviderFromIndex(active);
+        PSDPRINTF("ProfileSelectedFunc: builtin provider=%ld", (long)provider);
         loadBuiltinProviderIntoUI(provider);
 
         /* Set the profile name to the provider name (read-only info) */
@@ -615,16 +770,19 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
             CONST_STRPTR *modelList = NULL;
             switch (provider) {
             case PROVIDER_OPENAI:
-                modelList = OPENAI_CHAT_MODELS;
+                modelList = settingsIsImageMode ? OPENAI_IMAGE_MODELS
+                                                : OPENAI_CHAT_MODELS;
                 break;
             case PROVIDER_GEMINI:
-                modelList = GEMINI_CHAT_MODELS;
+                modelList = settingsIsImageMode ? GEMINI_IMAGE_MODELS
+                                                : GEMINI_CHAT_MODELS;
                 break;
             case PROVIDER_GROK:
-                modelList = GROK_CHAT_MODELS;
+                modelList =
+                    settingsIsImageMode ? GROK_IMAGE_MODELS : GROK_CHAT_MODELS;
                 break;
             case PROVIDER_ANTHROPIC:
-                modelList = ANTHROPIC_CHAT_MODELS;
+                modelList = settingsIsImageMode ? NULL : ANTHROPIC_CHAT_MODELS;
                 break;
             default:
                 break;
@@ -635,11 +793,13 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
                 for (UBYTE i = 0; modelList[i] != NULL; i++)
                     json_object_array_add(customServerModelsJson,
                                           json_object_new_string(modelList[i]));
+                PSDPRINTF("ProfileSelectedFunc: populateModelList()");
                 populateModelList();
             } else if (customServerModelList != NULL) {
                 DoMethod(customServerModelList, MUIM_NList_Clear);
             }
         }
+        PSDPRINTF("ProfileSelectedFunc: builtin refreshUrlPreview()");
         refreshUrlPreview();
         loadingProfile = FALSE;
         return;
@@ -658,7 +818,9 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
     /* Load the selected custom profile
      * Custom profiles start after built-in providers:
      * Index 0 = New Profile, 1-4 = built-in, 5+ = custom */
-    int profileIndex = active - 1 - NUM_BUILTIN_PROVIDERS;
+    int profileIndex = active - 1 - getBuiltinProviderCount();
+    PSDPRINTF("ProfileSelectedFunc: custom profileIndex=%ld",
+              (long)profileIndex);
     if (profilesJson != NULL &&
         json_object_is_type(profilesJson, json_type_array) &&
         profileIndex >= 0) {
@@ -683,6 +845,7 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
             }
         }
     }
+    PSDPRINTF("ProfileSelectedFunc: custom refreshUrlPreview()");
     refreshUrlPreview();
     loadingProfile = FALSE;
 }
@@ -702,7 +865,7 @@ HOOKPROTONHNONP(SaveProfileFunc, void) {
     }
 
     /* Disallow names that match built-in providers */
-    for (int i = 0; i < NUM_BUILTIN_PROVIDERS && PROVIDER_NAMES[i] != NULL;
+    for (int i = 0; i < getBuiltinProviderCount() && PROVIDER_NAMES[i] != NULL;
          i++) {
         if (strcasecmp(profileName, PROVIDER_NAMES[i]) == 0) {
             displayError(STRING_ERROR_PROFILE_NAME_RESERVED);
@@ -742,7 +905,10 @@ HOOKPROTONHNONP(SaveProfileFunc, void) {
 
     /* Save and refresh */
     saveProfilesToConfig();
-    configSetActiveProfileName(profileName);
+    if (settingsIsImageMode)
+        configSetActiveImageProfileName(profileName);
+    else
+        configSetActiveProfileName(profileName);
     loadingProfile = TRUE;
     populateProfileList(-1);
     loadingProfile = FALSE;
@@ -767,7 +933,7 @@ HOOKPROTONHNONP(DeleteProfileFunc, void) {
     /* Calculate actual profile index (skip New Profile and built-in
      * providers)
      */
-    int profileIndex = active - 1 - NUM_BUILTIN_PROVIDERS;
+    int profileIndex = active - 1 - getBuiltinProviderCount();
     if (profileIndex < 0) {
         return;
     }
@@ -779,7 +945,10 @@ HOOKPROTONHNONP(DeleteProfileFunc, void) {
 
         /* Save and refresh */
         saveProfilesToConfig();
-        configSetActiveProfileName("");
+        if (settingsIsImageMode)
+            configSetActiveImageProfileName("");
+        else
+            configSetActiveProfileName("");
         set(customServerProfileNameString, MUIA_String_Contents, "");
         populateProfileList(-1);
     }
@@ -919,6 +1088,8 @@ static void populateModelList(void) {
 }
 
 HOOKPROTONHNONP(TemplateSelectedFunc, void) {
+    if (settingsIsImageMode)
+        return;
     LONG template;
     get(customServerTemplateCycle, MUIA_Cycle_Active, &template);
 
@@ -1002,11 +1173,12 @@ MakeHook(TemplateSelectedHook, TemplateSelectedFunc);
  * Used when the window opens so opening alone does not mark settings dirty.
  */
 SAVEDS void refreshUrlPreview(void) {
+    PSDPRINTF("refreshUrlPreview enter (imageMode=%ld)",
+              (long)settingsIsImageMode);
     /* Safety check: don't access gadgets if they're not ready */
     if (customServerHostString == NULL || customServerPortString == NULL ||
         customServerUsesSSLCycle == NULL ||
         customServerApiEndpointUrlString == NULL ||
-        customServerApiEndpointCycle == NULL ||
         customServerFullUrlPreviewString == NULL)
         return;
 
@@ -1020,20 +1192,26 @@ SAVEDS void refreshUrlPreview(void) {
     get(customServerApiEndpointUrlString, MUIA_String_Contents,
         &customServerApiEndpointUrl);
     LONG apiEndpoint = 0;
-    get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
+    if (!settingsIsImageMode && customServerApiEndpointCycle != NULL) {
+        get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
+    }
 
     UBYTE fullUrlPreviewString[512];
     CONST_STRPTR endpointUrl = customServerApiEndpointUrl
                                    ? (CONST_STRPTR)customServerApiEndpointUrl
                                    : "";
     CONST_STRPTR host = customServerHost ? (CONST_STRPTR)customServerHost : "";
+    CONST_STRPTR endpointPath = settingsIsImageMode
+                                    ? "images/generations"
+                                    : API_ENDPOINT_NAMES[apiEndpoint];
     snprintf(fullUrlPreviewString, sizeof(fullUrlPreviewString),
              "%s://%s:%ld%s%s/%s", usesSSL == 1 ? "https" : "http", host,
              (long)port,
              (endpointUrl != NULL && strlen(endpointUrl) > 0) ? "/" : "",
-             endpointUrl, API_ENDPOINT_NAMES[apiEndpoint]);
+             endpointUrl, endpointPath);
     set(customServerFullUrlPreviewString, MUIA_Text_Contents,
         fullUrlPreviewString);
+    PSDPRINTF("refreshUrlPreview exit: %s", fullUrlPreviewString);
 }
 
 HOOKPROTONHNONP(SettingsChangedFunc, void) {
@@ -1094,16 +1272,18 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     get(customServerChatModelString, MUIA_String_Contents,
         &customServerChatModel);
     LONG streamingEnabled = 0;
-    if (customServerStreamingCycle != NULL)
+    if (!settingsIsImageMode && customServerStreamingCycle != NULL)
         get(customServerStreamingCycle, MUIA_Cycle_Active, &streamingEnabled);
 
     /* Handle built-in providers */
     if (isBuiltinProviderIndex(active)) {
         Provider provider = (Provider)getProviderFromIndex(active);
 
-        /* Set the chat provider */
-        configSetChatProvider(provider);
-        configSetImageProvider(provider);
+        if (settingsIsImageMode) {
+            configSetImageProvider(provider);
+        } else {
+            configSetChatProvider(provider);
+        }
 
         /* Save the API key for this provider */
         switch (provider) {
@@ -1124,21 +1304,31 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         }
 
         /* Save the model name */
-        configSetChatModelName(customServerChatModel);
-        configSetChatStreamingEnabledForProvider(provider,
-                                                 streamingEnabled == 1);
+        if (settingsIsImageMode) {
+            configSetImageModelName(customServerChatModel);
+        } else {
+            configSetChatModelName(customServerChatModel);
+            configSetChatStreamingEnabledForProvider(provider,
+                                                     streamingEnabled == 1);
+        }
 
         set(customServerSettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
         return;
     }
 
     /* Handle custom server (original behavior) */
-    configSetChatProvider(PROVIDER_CUSTOM);
-    configSetImageProvider(PROVIDER_CUSTOM);
+    if (settingsIsImageMode) {
+        configSetImageProvider(PROVIDER_CUSTOM);
+    } else {
+        configSetChatProvider(PROVIDER_CUSTOM);
+    }
 
     STRPTR customServerHost;
     get(customServerHostString, MUIA_String_Contents, &customServerHost);
-    configSetCustomHost(customServerHost);
+    if (settingsIsImageMode)
+        configSetCustomImageHost(customServerHost);
+    else
+        configSetCustomHost(customServerHost);
 
     LONG port;
     get(customServerPortString, MUIA_String_Integer, &port);
@@ -1146,35 +1336,60 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         displayError(STRING_ERROR_INVALID_PORT);
         return;
     }
-    configSetCustomPort(port);
+    if (settingsIsImageMode)
+        configSetCustomImagePort(port);
+    else
+        configSetCustomPort(port);
 
     LONG usesSSL;
     get(customServerUsesSSLCycle, MUIA_Cycle_Active, &usesSSL);
-    configSetCustomUseSSL(usesSSL == 1);
+    if (settingsIsImageMode)
+        configSetCustomImageUseSSL(usesSSL == 1);
+    else
+        configSetCustomUseSSL(usesSSL == 1);
 
     LONG authorizationType;
     get(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
         &authorizationType);
-    configSetCustomAuthorizationType(authorizationType);
+    if (settingsIsImageMode)
+        configSetCustomImageAuthorizationType(authorizationType);
+    else
+        configSetCustomAuthorizationType(authorizationType);
 
-    configSetCustomApiKey(customServerApiKey);
-    configSetCustomChatModel(customServerChatModel);
-    configSetChatModelName(customServerChatModel);
-    configSetCustomChatStreamEnabled(streamingEnabled == 1);
+    if (settingsIsImageMode)
+        configSetCustomImageApiKey(customServerApiKey);
+    else
+        configSetCustomApiKey(customServerApiKey);
+    if (settingsIsImageMode) {
+        configSetCustomImageModel(customServerChatModel);
+        configSetImageModelName(customServerChatModel);
+    } else {
+        configSetCustomChatModel(customServerChatModel);
+        configSetChatModelName(customServerChatModel);
+        configSetCustomChatStreamEnabled(streamingEnabled == 1);
+    }
 
-    LONG apiEndpoint;
-    get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
-    configSetCustomApiEndpoint(apiEndpoint);
+    if (!settingsIsImageMode) {
+        LONG apiEndpoint;
+        get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
+        configSetCustomApiEndpoint(apiEndpoint);
+    }
 
     STRPTR customServerApiEndpointUrl;
     get(customServerApiEndpointUrlString, MUIA_String_Contents,
         &customServerApiEndpointUrl);
-    configSetCustomApiEndpointUrl(customServerApiEndpointUrl);
+    if (settingsIsImageMode)
+        configSetCustomImageApiEndpointUrl(customServerApiEndpointUrl);
+    else
+        configSetCustomApiEndpointUrl(customServerApiEndpointUrl);
 
     STRPTR customServerCustomHeaders;
     get(customServerCustomHeadersString, MUIA_String_Contents,
         &customServerCustomHeaders);
-    configSetCustomHeaders(customServerCustomHeaders);
+    if (settingsIsImageMode)
+        configSetCustomImageHeaders(customServerCustomHeaders);
+    else
+        configSetCustomHeaders(customServerCustomHeaders);
 
     set(customServerSettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
 }
@@ -1199,13 +1414,12 @@ LONG createCustomServerSettingsRequesterWindow() {
     sslOptions[0] = STRING_ENCRYPTION_NONE;
     sslOptions[1] = STRING_ENCRYPTION_SSL;
 
-    static STRPTR apiEndpointOptions[4] = {NULL};
-    apiEndpointOptions[API_ENDPOINT_RESPONSES] =
-        API_ENDPOINT_NAMES[API_ENDPOINT_RESPONSES];
-    apiEndpointOptions[API_ENDPOINT_CHAT_COMPLETIONS] =
-        API_ENDPOINT_NAMES[API_ENDPOINT_CHAT_COMPLETIONS];
-    apiEndpointOptions[API_ENDPOINT_MESSAGES] =
-        API_ENDPOINT_NAMES[API_ENDPOINT_MESSAGES];
+    chatApiEndpointOptions[API_ENDPOINT_RESPONSES] =
+        (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_RESPONSES];
+    chatApiEndpointOptions[API_ENDPOINT_CHAT_COMPLETIONS] =
+        (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_CHAT_COMPLETIONS];
+    chatApiEndpointOptions[API_ENDPOINT_MESSAGES] =
+        (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_MESSAGES];
 
     static STRPTR authorizationTypeOptions[4] = {NULL};
     authorizationTypeOptions[AUTHORIZATION_TYPE_NONE] =
@@ -1225,7 +1439,7 @@ LONG createCustomServerSettingsRequesterWindow() {
         MUIA_Window_Width, 500,
         MUIA_Window_Height, MUIV_Window_Height_Default,
         MUIA_Window_CloseGadget, FALSE,
-        WindowContents, HGroup,
+        WindowContents, customServerSettingsRootGroup = HGroup,
             /* Left panel - Profiles */
             Child, VGroup,
                 MUIA_Frame, MUIV_Frame_Group,
@@ -1305,7 +1519,7 @@ LONG createCustomServerSettingsRequesterWindow() {
                                 MUIA_Cycle_Active, configGetCustomAuthorizationType(),
                             End,
                         End,
-                        Child, VGroup,
+                        Child, customServerStreamingGroup = VGroup,
                             MUIA_Frame, MUIV_Frame_Group,
                             MUIA_FrameTitle, STRING_STREAMING,
                             Child, customServerStreamingCycle = CycleObject,
@@ -1360,7 +1574,7 @@ LONG createCustomServerSettingsRequesterWindow() {
                             MUIA_FrameTitle, STRING_MENU_OPENAI_API_ENDPOINT,
                             Child, customServerApiEndpointCycle = CycleObject,
                                 MUIA_CycleChain, TRUE,
-                                MUIA_Cycle_Entries, apiEndpointOptions,
+                                MUIA_Cycle_Entries, chatApiEndpointOptions,
                                 MUIA_Cycle_Active, configGetCustomApiEndpoint(),
                             End,
                         End,
@@ -1466,4 +1680,114 @@ LONG createCustomServerSettingsRequesterWindow() {
     }
 
     return RETURN_OK;
+}
+
+static void applyProviderSettingsWindowMode(BOOL isImageMode) {
+    settingsIsImageMode = isImageMode ? TRUE : FALSE;
+
+    if (customServerSettingsRequesterWindowObject != NULL) {
+        set(customServerSettingsRequesterWindowObject, MUIA_Window_Title,
+            settingsIsImageMode ? STRING_IMAGE_PROVIDER_SETTINGS
+                                : STRING_CHAT_PROVIDER_SETTINGS);
+    }
+
+    /* Chat-only UI: Streaming + selectable API endpoint */
+    if (customServerSettingsRootGroup != NULL)
+        DoMethod(customServerSettingsRootGroup, MUIM_Group_InitChange);
+    if (customServerStreamingGroup != NULL) {
+        set(customServerStreamingGroup, MUIA_ShowMe,
+            settingsIsImageMode ? FALSE : TRUE);
+    }
+    if (customServerApiEndpointCycle != NULL) {
+        if (settingsIsImageMode) {
+            set(customServerApiEndpointCycle, MUIA_Cycle_Entries,
+                imageApiEndpointOptions);
+            set(customServerApiEndpointCycle, MUIA_Cycle_Active, 0);
+            set(customServerApiEndpointCycle, MUIA_Disabled, TRUE);
+        } else {
+            set(customServerApiEndpointCycle, MUIA_Cycle_Entries,
+                chatApiEndpointOptions);
+            set(customServerApiEndpointCycle, MUIA_Disabled, FALSE);
+        }
+    }
+    if (customServerSettingsRootGroup != NULL)
+        DoMethod(customServerSettingsRootGroup, MUIM_Group_ExitChange);
+
+    if (customServerTemplateCycle != NULL) {
+        set(customServerTemplateCycle, MUIA_Disabled,
+            settingsIsImageMode ? TRUE : FALSE);
+    }
+
+    /* Seed fields for "(New Profile)" from mode-specific custom settings */
+    if (settingsIsImageMode) {
+        set(customServerHostString, MUIA_String_Contents,
+            configGetCustomImageHost() ? configGetCustomImageHost() : "");
+        set(customServerPortString, MUIA_String_Integer,
+            (LONG)configGetCustomImagePort());
+        set(customServerUsesSSLCycle, MUIA_Cycle_Active,
+            configGetCustomImageUseSSL() ? 1 : 0);
+        set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
+            (LONG)configGetCustomImageAuthorizationType());
+        set(customServerApiKeyString, MUIA_String_Contents,
+            configGetCustomImageApiKey() ? configGetCustomImageApiKey() : "");
+        set(customServerChatModelString, MUIA_String_Contents,
+            configGetCustomImageModel() ? configGetCustomImageModel() : "");
+        set(customServerApiEndpointUrlString, MUIA_String_Contents,
+            configGetCustomImageApiEndpointUrl()
+                ? configGetCustomImageApiEndpointUrl()
+                : "v1");
+        set(customServerCustomHeadersString, MUIA_String_Contents,
+            configGetCustomImageHeaders() ? configGetCustomImageHeaders() : "");
+    } else {
+        set(customServerHostString, MUIA_String_Contents,
+            configGetCustomHost() ? configGetCustomHost() : "");
+        set(customServerPortString, MUIA_String_Integer,
+            (LONG)configGetCustomPort());
+        set(customServerUsesSSLCycle, MUIA_Cycle_Active,
+            configGetCustomUseSSL() ? 1 : 0);
+        set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
+            (LONG)configGetCustomAuthorizationType());
+        set(customServerApiKeyString, MUIA_String_Contents,
+            configGetCustomApiKey() ? configGetCustomApiKey() : "");
+        set(customServerChatModelString, MUIA_String_Contents,
+            configGetCustomChatModel() ? configGetCustomChatModel() : "");
+        set(customServerApiEndpointUrlString, MUIA_String_Contents,
+            configGetCustomApiEndpointUrl() ? configGetCustomApiEndpointUrl()
+                                            : "v1");
+        set(customServerCustomHeadersString, MUIA_String_Contents,
+            configGetCustomHeaders() ? configGetCustomHeaders() : "");
+        if (customServerStreamingCycle != NULL)
+            set(customServerStreamingCycle, MUIA_Cycle_Active,
+                configGetCustomChatStreamEnabled() ? 1 : 0);
+        if (customServerApiEndpointCycle != NULL)
+            set(customServerApiEndpointCycle, MUIA_Cycle_Active,
+                (LONG)configGetCustomApiEndpoint());
+    }
+
+    /* Rebuild profile list with mode-appropriate built-ins */
+    loadingProfile = TRUE;
+    suppressProfileSelected = TRUE;
+    profileSettingsDirty = FALSE;
+    lastSelectedProfile = -1;
+    loadProfilesFromConfig();
+    populateProfileList(-1);
+    suppressProfileSelected = FALSE;
+    loadingProfile = FALSE;
+    /* Force selection hook to run once after list rebuild */
+    if (customServerProfileList != NULL) {
+        LONG active = MUIV_NList_Active_Off;
+        get(customServerProfileList, MUIA_NList_Active, &active);
+        set(customServerProfileList, MUIA_NList_Active, MUIV_NList_Active_Off);
+        set(customServerProfileList, MUIA_NList_Active, active);
+    }
+}
+
+void openChatProviderSettingsRequesterWindow(void) {
+    applyProviderSettingsWindowMode(FALSE);
+    set(customServerSettingsRequesterWindowObject, MUIA_Window_Open, TRUE);
+}
+
+void openImageProviderSettingsRequesterWindow(void) {
+    applyProviderSettingsWindowMode(TRUE);
+    set(customServerSettingsRequesterWindowObject, MUIA_Window_Open, TRUE);
 }

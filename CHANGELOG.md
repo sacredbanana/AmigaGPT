@@ -3,16 +3,18 @@
 ## 3.0.0 (2026-??-??)
 
 - Chat and Image menus replace the single OpenAI menu; model selection is now in "Chat Provider Settings" and "Image Provider Settings"
-- Provider settings: built-in OpenAI, Google Gemini, xAI Grok and Anthropic Claude (chat) are pre-populated; only API key and model are editable for built-ins; known models are shown for built-ins; Fetch Models works for built-in OpenAI
-- When switching profiles with unsaved changes, AmigaGPT asks to save (Yes/No/Cancel)
-- Custom profile names cannot match built-in provider names
+- Provider settings: New panels to manage chat and image providers
+- Fetch latest models available from the server
 - ARexx SENDMESSAGE and CREATEIMAGE support PR=PROVIDER to choose provider; new LISTPROVIDERS command
 - New powerful Shell Tool option to ask ChatGPT to run any command on your system in the shell
 - The daemon (AmigaGPTD) now maintains conversation history in T: for context across ARexx calls until reboot
 - New NEWCHAT ARexx command to clear daemon conversation history
-- Support for Anthropic Claude and xAI Grok
-- Easily add new custom server profiles with easy templates for Google Gemini, LM Studio, Anthropic Claude and xAI Grok
-- Fetch list of all models from the server in the custom server options
+- Support for Anthropic Claude for chat
+- Support for Anthropic Claude for image generation
+- Support for xAI Grok for chat
+- Support for xAI Grok for image generation
+- Added streaming support in chat for Google Gemini
+- Support for Google Gemini for image generation
 - All config options are now immediately saved to disk
 
 ## 2.17.0 (2025-12-22)

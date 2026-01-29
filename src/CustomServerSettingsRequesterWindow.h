@@ -15,3 +15,7 @@ extern Object *customServerSettingsRequesterWindowObject;
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createCustomServerSettingsRequesterWindow();
+
+/* Open provider settings in Chat/Image mode */
+void openChatProviderSettingsRequesterWindow(void);
+void openImageProviderSettingsRequesterWindow(void);

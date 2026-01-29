@@ -541,61 +541,68 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
         apiKey = configGetApiKeyForProvider(provider);
     }
 
-    ImageModel model;
-    if (modelString == NULL || strlen(modelString) == 0) {
-        model = GPT_IMAGE_1;
-    } else {
-        for (UBYTE i = 0; IMAGE_MODEL_NAMES[i] != NULL; i++) {
-            if (IMAGE_MODEL_NAMES[i + 1] == NULL) {
-                return (RETURN_ERROR);
-            }
-            if (strcmp(modelString, IMAGE_MODEL_NAMES[i]) == 0) {
-                model = i;
-                break;
-            }
+    /* Model is a string for OpenAI-compatible image endpoints */
+    CONST_STRPTR modelName = modelString;
+    if (modelName == NULL || strlen(modelName) == 0) {
+        switch (provider) {
+        case PROVIDER_GEMINI:
+            modelName = GEMINI_IMAGE_MODELS[0];
+            break;
+        case PROVIDER_GROK:
+            modelName = GROK_IMAGE_MODELS[0];
+            break;
+        case PROVIDER_OPENAI:
+        case PROVIDER_CUSTOM:
+        default:
+            modelName = OPENAI_IMAGE_MODELS[0];
+            break;
         }
     }
+
     ImageSize size = IMAGE_SIZE_1024x1024;
     if (sizeString != NULL && strlen(sizeString) > 0) {
-        // Set a default size in case no match is found
-        switch (model) {
-        case DALL_E_2:
-            for (UBYTE i = 0; IMAGE_SIZES_DALL_E_2[i] != IMAGE_SIZE_NULL; i++) {
-                ImageSize currentSize = IMAGE_SIZES_DALL_E_2[i];
-                if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
-                    size = currentSize;
-                    break;
-                }
+        for (UBYTE i = 0; IMAGE_SIZE_NAMES[i] != NULL; i++) {
+            if (strcmp(sizeString, IMAGE_SIZE_NAMES[i]) == 0) {
+                size = (ImageSize)i;
+                break;
             }
-            break;
-        case DALL_E_3:
-            for (UBYTE i = 0; IMAGE_SIZES_DALL_E_3[i] != IMAGE_SIZE_NULL; i++) {
-                ImageSize currentSize = IMAGE_SIZES_DALL_E_3[i];
-                if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
-                    size = currentSize;
-                    break;
-                }
-            }
-            break;
-        default:
-            for (UBYTE i = 0; IMAGE_SIZES_GPT_IMAGE_1[i] != IMAGE_SIZE_NULL;
-                 i++) {
-                ImageSize currentSize = IMAGE_SIZES_GPT_IMAGE_1[i];
-                if (strcmp(sizeString, IMAGE_SIZE_NAMES[currentSize]) == 0) {
-                    size = currentSize;
-                    break;
-                }
-            }
-            break;
         }
     }
 
     UTF8 *promptUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
                                           CSA_Source, (Tag)prompt, TAG_DONE);
 
-    struct json_object *response = postImageCreationRequestToOpenAI(
-        promptUTF8, model, size, apiKey, FALSE, NULL, 0, FALSE, FALSE, NULL,
-        NULL, IMAGE_FORMAT_JPG);
+    /* Resolve provider connection settings */
+    CONST_STRPTR host = NULL;
+    UWORD port = 443;
+    BOOL useSSL = TRUE;
+    CONST_STRPTR apiEndpointUrl = "v1";
+    AuthorizationType authType = AUTHORIZATION_TYPE_BEARER;
+    CONST_STRPTR customHeaders = NULL;
+
+    if (provider == PROVIDER_CUSTOM) {
+        host = configGetCustomImageHost();
+        port = (UWORD)configGetCustomImagePort();
+        useSSL = configGetCustomImageUseSSL();
+        apiEndpointUrl = configGetCustomImageApiEndpointUrl();
+        authType = configGetCustomImageAuthorizationType();
+        customHeaders = configGetCustomImageHeaders();
+    } else {
+        struct ProviderConfig *cfg = getProviderConfig(provider);
+        if (cfg != NULL) {
+            host = cfg->host;
+            port = (UWORD)cfg->port;
+            useSSL = cfg->useSSL;
+            apiEndpointUrl = cfg->apiEndpointUrl;
+            authType = cfg->authorizationType;
+            customHeaders = cfg->customHeaders;
+        }
+    }
+
+    struct json_object *response = postImageCreationRequestToOpenAIWithServer(
+        promptUTF8, host, port, useSSL, apiEndpointUrl, authType, customHeaders,
+        modelName, size, apiKey, FALSE, NULL, 0, FALSE, FALSE, NULL, NULL,
+        IMAGE_FORMAT_JPG, provider);
     CodesetsFreeA(promptUTF8, NULL);
 
     if (response == NULL) {

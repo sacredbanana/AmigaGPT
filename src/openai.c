@@ -297,7 +297,9 @@ CONST_STRPTR GEMINI_IMAGE_MODELS[] = {"imagen-4-ultra",
 /**
  * Prepopulated image models for xAI Grok/Aurora
  **/
-CONST_STRPTR GROK_IMAGE_MODELS[] = {"grok-2-image-1212", "grok-2-aurora", NULL};
+/* xAI docs currently advertise "grok-2-image" for image generation. */
+CONST_STRPTR GROK_IMAGE_MODELS[] = {"grok-2-image", "grok-2-image-1212",
+                                    "grok-2-aurora", NULL};
 
 /**
  * Static provider configurations
@@ -323,7 +325,7 @@ static struct ProviderConfig providerConfigs[] = {
     {.host = "api.x.ai",
      .port = 443,
      .useSSL = TRUE,
-     .apiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS,
+     .apiEndpoint = API_ENDPOINT_RESPONSES,
      .apiEndpointUrl = "v1",
      .authorizationType = AUTHORIZATION_TYPE_BEARER,
      .customHeaders = NULL},
@@ -1634,7 +1636,6 @@ struct json_object **postChatMessageToOpenAI(
             if (bytesRead > 0) {
                 strncat(readBuffer, tempReadBuffer, bytesRead);
             }
-            printf("readBuffer: %s\n", readBuffer);
             if (useSSL) {
                 /* If we skipped reading because we had buffered events, force
                  * the parsing path. */
@@ -2015,9 +2016,34 @@ struct json_object *postImageCreationRequestToOpenAI(
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, ImageFormat imageFormat) {
+    /* Backward-compatible wrapper for OpenAI defaults. */
+    CONST_STRPTR modelName = NULL;
+    if (imageModel >= 0 && IMAGE_MODEL_NAMES[imageModel] != NULL) {
+        modelName = IMAGE_MODEL_NAMES[imageModel];
+    } else {
+        modelName = "gpt-image-1";
+    }
+    return postImageCreationRequestToOpenAIWithServer(
+        prompt, OPENAI_HOST, OPENAI_PORT, TRUE, "v1", AUTHORIZATION_TYPE_BEARER,
+        NULL, modelName, imageSize, apiKey, useProxy, proxyHost, proxyPort,
+        proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword,
+        imageFormat, PROVIDER_OPENAI);
+}
+
+struct json_object *postImageCreationRequestToOpenAIWithServer(
+    CONST_STRPTR prompt, CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders, CONST_STRPTR modelName, ImageSize imageSize,
+    CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, ImageFormat imageFormat, Provider provider) {
     struct json_object *response = NULL;
     UWORD responseIndex = 0;
-    BOOL useSSL = !useProxy || proxyUsesSSL;
+    BOOL requestUsesSSL = useSSL;
+    BOOL isGeminiGenerateContent = (provider == PROVIDER_GEMINI);
+    if (useProxy && proxyUsesSSL) {
+        requestUsesSSL = TRUE;
+    }
     struct json_tokener *tokener = json_tokener_new();
     json_tokener_set_flags(tokener, JSON_TOKENER_STRICT);
 
@@ -2025,10 +2051,9 @@ struct json_object *postImageCreationRequestToOpenAI(
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
     UBYTE connectionRetryCount = 0;
-    while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useSSL, useProxy,
-                               proxyHost, proxyPort, proxyUsesSSL,
-                               proxyRequiresAuth, proxyUsername,
-                               proxyPassword) == RETURN_ERROR) {
+    while (createSSLConnection(host, port, requestUsesSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
             json_tokener_free(tokener);
@@ -2038,27 +2063,67 @@ struct json_object *postImageCreationRequestToOpenAI(
     connectionRetryCount = 0;
 
     struct json_object *obj = json_object_new_object();
-    json_object_object_add(
-        obj, "model", json_object_new_string(IMAGE_MODEL_NAMES[imageModel]));
-    json_object_object_add(obj, "prompt", json_object_new_string(prompt));
-    json_object_object_add(obj, "size",
-                           json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
-    if (imageModel == GPT_IMAGE_1 || imageModel == GPT_IMAGE_1_MINI ||
-        imageModel == GPT_IMAGE_1_5) {
-        json_object_object_add(obj, "moderation",
-                               json_object_new_string("low"));
-        json_object_object_add(
-            obj, "output_format",
-            json_object_new_string(IMAGE_FORMAT_NAMES[imageFormat]));
-        json_object_object_add(obj, "output_compression",
-                               json_object_new_int(100));
+    if (isGeminiGenerateContent) {
+        /* Gemini native text-to-image endpoint:
+         * POST /v1beta/models/<model>:generateContent
+         * Header: x-goog-api-key
+         * Body: { "contents":[{"parts":[{"text":"..."}]}],
+         *         "generationConfig":{"responseModalities":["TEXT","IMAGE"]} }
+         * Docs: https://ai.google.dev/gemini-api/docs/image-generation#rest */
+        struct json_object *contentsArr = json_object_new_array();
+        struct json_object *contentObj = json_object_new_object();
+        struct json_object *partsArr = json_object_new_array();
+        struct json_object *partObj = json_object_new_object();
+        json_object_object_add(partObj, "text",
+                               json_object_new_string(prompt ? prompt : ""));
+        json_object_array_add(partsArr, partObj);
+        json_object_object_add(contentObj, "parts", partsArr);
+        json_object_array_add(contentsArr, contentObj);
+        json_object_object_add(obj, "contents", contentsArr);
+
+        struct json_object *generationConfigObj = json_object_new_object();
+        struct json_object *modalitiesArr = json_object_new_array();
+        json_object_array_add(modalitiesArr, json_object_new_string("TEXT"));
+        json_object_array_add(modalitiesArr, json_object_new_string("IMAGE"));
+        json_object_object_add(generationConfigObj, "responseModalities",
+                               modalitiesArr);
+        json_object_object_add(obj, "generationConfig", generationConfigObj);
     } else {
-        json_object_object_add(obj, "response_format",
-                               json_object_new_string("b64_json"));
+        json_object_object_add(
+            obj, "model", json_object_new_string(modelName ? modelName : ""));
+        json_object_object_add(obj, "prompt", json_object_new_string(prompt));
+        /* Provider differences:
+         * - xAI image generation docs: size/quality/style not supported.
+         * - Gemini OpenAI-compat examples omit size; keep request minimal.
+         * - OpenAI gpt-image-* supports size/output_format. */
+        BOOL isGptImage =
+            (modelName != NULL && strncmp(modelName, "gpt-image-", 10) == 0);
+
+        if (provider == PROVIDER_OPENAI || provider == PROVIDER_CUSTOM) {
+            if (imageSize != IMAGE_SIZE_NULL &&
+                IMAGE_SIZE_NAMES[imageSize] != NULL)
+                json_object_object_add(
+                    obj, "size",
+                    json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
+        }
+
+        if (isGptImage &&
+            (provider == PROVIDER_OPENAI || provider == PROVIDER_CUSTOM)) {
+            json_object_object_add(obj, "moderation",
+                                   json_object_new_string("low"));
+            json_object_object_add(
+                obj, "output_format",
+                json_object_new_string(IMAGE_FORMAT_NAMES[imageFormat]));
+            json_object_object_add(obj, "output_compression",
+                                   json_object_new_int(100));
+        } else {
+            json_object_object_add(obj, "response_format",
+                                   json_object_new_string("b64_json"));
+        }
     }
     CONST_STRPTR jsonString = json_object_to_json_string(obj);
 
-    STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+    STRPTR authHeader = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
         // Construct the Proxy-Authorization header
         STRPTR credentials =
@@ -2071,24 +2136,92 @@ struct json_object *postImageCreationRequestToOpenAI(
                  encodedCredentials);
         FreeVec(encodedCredentials);
     }
-    snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-             "POST %s/v1/images/generations HTTP/1.1\r\n"
-             "Host: api.openai.com\r\n"
-             "Content-Type: application/json\r\n"
-             "Authorization: Bearer %s\r\n"
-             "User-Agent: AmigaGPT\r\n"
-             "Content-Length: %lu\r\n"
-             "%s\r\n"
-             "%s\0",
-             useSSL ? "" : "https://api.openai.com", apiKey, strlen(jsonString),
-             authHeader, jsonString);
+
+    /* Build auth header based on type */
+    UBYTE apiAuthHeader[512];
+    memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+    if (isGeminiGenerateContent) {
+        if (apiKey != NULL && strlen(apiKey) > 0) {
+            snprintf(apiAuthHeader, sizeof(apiAuthHeader),
+                     "x-goog-api-key: %s\r\n", apiKey);
+        }
+    } else {
+        if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+            strlen(apiKey) > 0) {
+            snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                     AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+        }
+    }
+
+    /* Custom headers string with line ending */
+    UBYTE customHeadersFormatted[1024];
+    memset(customHeadersFormatted, 0, sizeof(customHeadersFormatted));
+    if (customHeaders != NULL && strlen(customHeaders) > 0) {
+        snprintf(customHeadersFormatted, sizeof(customHeadersFormatted),
+                 "%s\r\n", customHeaders);
+    }
+
+    const char *endpointUrl = NULL;
+    if (isGeminiGenerateContent) {
+        endpointUrl = "v1beta";
+    } else {
+        endpointUrl = (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0)
+                          ? apiEndpointUrl
+                          : "v1";
+    }
+
+    UBYTE requestPath[256];
+    memset(requestPath, 0, sizeof(requestPath));
+    if (isGeminiGenerateContent) {
+        if (modelName == NULL || strlen(modelName) == 0) {
+            displayError("Gemini model not specified");
+            json_object_put(obj);
+            FreeVec(authHeader);
+            json_tokener_free(tokener);
+            return NULL;
+        }
+        snprintf(requestPath, sizeof(requestPath),
+                 "%s/models/%s:generateContent", endpointUrl, modelName);
+    } else {
+        snprintf(requestPath, sizeof(requestPath), "%s/images/generations",
+                 endpointUrl);
+    }
+
+    if (requestUsesSSL || useProxy) {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "POST %s://%s:%d/%s HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "Content-Type: application/json\r\n"
+                 "%s"
+                 "%s"
+                 "User-Agent: AmigaGPT\r\n"
+                 "Content-Length: %lu\r\n"
+                 "%s\r\n"
+                 "%s\0",
+                 requestUsesSSL ? "https" : "http", host, port, requestPath,
+                 host, port, apiAuthHeader, customHeadersFormatted,
+                 strlen(jsonString), authHeader, jsonString);
+    } else {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "POST /%s HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "Content-Type: application/json\r\n"
+                 "%s"
+                 "%s"
+                 "User-Agent: AmigaGPT\r\n"
+                 "Content-Length: %lu\r\n"
+                 "%s\r\n"
+                 "%s\0",
+                 requestPath, host, port, apiAuthHeader, customHeadersFormatted,
+                 strlen(jsonString), authHeader, jsonString);
+    }
 
     json_object_put(obj);
 
     FreeVec(authHeader);
 
     updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
-    if (useSSL) {
+    if (requestUsesSSL) {
         ERR_clear_error();
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
         if (ssl_err <= 0) {
@@ -2110,13 +2243,26 @@ struct json_object *postImageCreationRequestToOpenAI(
         UBYTE statusMessage[64];
         UBYTE *tempReadBuffer = AllocVec(
             useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
-        BOOL foundJson = FALSE;
+
+        /* Robust HTTP body handling (supports chunked transfer encoding). */
+        UBYTE headerBuf[8192];
+        ULONG headerLen = 0;
+        BOOL headersDone = FALSE;
+        BOOL isChunked = FALSE;
+        BOOL startedJson = FALSE;
+
+        /* Chunked decoding state */
+        UBYTE chunkLenLine[32];
+        UBYTE chunkLenPos = 0;
+        ULONG chunkRemaining = 0;
+        UBYTE chunkCrlfToSkip = 0;
+        BOOL chunkDone = FALSE;
 
         while (!doneReading) {
 #ifndef DAEMON
             DoMethod(loadingBar, MUIM_Busy_Move);
 #endif
-            if (useSSL) {
+            if (requestUsesSSL) {
                 ERR_clear_error();
                 bytesRead =
                     SSL_read(ssl, tempReadBuffer,
@@ -2126,84 +2272,278 @@ struct json_object *postImageCreationRequestToOpenAI(
                     recv(sock, tempReadBuffer,
                          useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1, 0);
             }
+            if (bytesRead > 0) {
+                /* Ensure string safety for any incidental debug/str ops. */
+                tempReadBuffer[bytesRead] = '\0';
+            }
             snprintf(statusMessage, sizeof(statusMessage), "%s (%lu %s)",
                      STRING_DOWNLOADING_IMAGE, totalBytesRead, STRING_BYTES);
             updateStatusBar(statusMessage, yellowPen);
-            if (!foundJson) {
-                strcat(readBuffer, tempReadBuffer);
-            }
-            if (useSSL) {
+            if (requestUsesSSL) {
                 err = SSL_get_error(ssl, bytesRead);
             } else {
                 err = SSL_ERROR_NONE;
             }
             switch (err) {
             case SSL_ERROR_NONE: {
-                STRPTR httpResponse = strstr(readBuffer, "HTTP/1.1");
-                if (httpResponse != NULL &&
-                    strstr(httpResponse, "200 OK") == NULL) {
-                    UBYTE error[256] = {0};
-                    for (UWORD i = 0; i < 256; i++) {
-                        if (httpResponse[i] == '\r' ||
-                            httpResponse[i] == '\n') {
+                totalBytesRead += bytesRead;
+                if (bytesRead <= 0) {
+                    /* Connection closed / no more data */
+                    doneReading = TRUE;
+                    break;
+                }
+
+                /* Feed bytes into either header accumulator or body decoder. */
+                const UBYTE *p = tempReadBuffer;
+                ULONG n = (ULONG)bytesRead;
+
+                while (n > 0 && !doneReading) {
+                    if (!headersDone) {
+                        /* Accumulate headers until \r\n\r\n (or \n\n). */
+                        ULONG space = (sizeof(headerBuf) - 1) - headerLen;
+                        ULONG toCopy = (n < space) ? n : space;
+                        if (toCopy > 0) {
+                            CopyMem((APTR)p, (APTR)(headerBuf + headerLen),
+                                    toCopy);
+                            headerLen += toCopy;
+                            headerBuf[headerLen] = '\0';
+                            p += toCopy;
+                            n -= toCopy;
+                        } else {
+                            displayError("HTTP headers too large");
+                            doneReading = TRUE;
                             break;
                         }
-                        error[i] = httpResponse[i];
+
+                        STRPTR hEnd = strstr((STRPTR)headerBuf, "\r\n\r\n");
+                        ULONG bodyOffset = 0;
+                        if (hEnd != NULL) {
+                            bodyOffset = (ULONG)(hEnd - (STRPTR)headerBuf) + 4;
+                        } else {
+                            hEnd = strstr((STRPTR)headerBuf, "\n\n");
+                            if (hEnd != NULL) {
+                                bodyOffset =
+                                    (ULONG)(hEnd - (STRPTR)headerBuf) + 2;
+                            }
+                        }
+                        if (hEnd == NULL) {
+                            /* Need more header bytes. */
+                            continue;
+                        }
+
+                        headersDone = TRUE;
+                        /* Parse status line quickly; fail early if not 200. */
+                        STRPTR http = strstr((STRPTR)headerBuf, "HTTP/");
+                        if (http != NULL) {
+                            STRPTR sp = strchr(http, ' ');
+                            if (sp != NULL) {
+                                LONG code = atol(sp + 1);
+                                if (code != 200) {
+                                    UBYTE errorLine[256] = {0};
+                                    for (UWORD i = 0; i < 255; i++) {
+                                        UBYTE c = (UBYTE)http[i];
+                                        if (c == '\r' || c == '\n' || c == 0)
+                                            break;
+                                        errorLine[i] = c;
+                                    }
+                                    displayError(errorLine);
+                                    doneReading = TRUE;
+                                    break;
+                                }
+                            }
+                        }
+
+                        /* Detect chunked transfer encoding. */
+                        if (strstr((STRPTR)headerBuf,
+                                   "Transfer-Encoding: chunked") != NULL ||
+                            strstr((STRPTR)headerBuf,
+                                   "transfer-encoding: chunked") != NULL) {
+                            isChunked = TRUE;
+                        }
+
+                        /* Any body bytes already in headerBuf should be
+                         * processed now. */
+                        if (bodyOffset < headerLen) {
+                            const UBYTE *body = headerBuf + bodyOffset;
+                            ULONG bodyLen = headerLen - bodyOffset;
+
+                            /* Process body bytes via the same loop by
+                             * re-pointing p/n to the remaining body segment,
+                             * then continuing with headersDone=TRUE. */
+                            p = body;
+                            n = bodyLen;
+                            /* Prevent re-processing these bytes via headerBuf
+                             * on the next iteration. */
+                            headerLen = bodyOffset;
+                            /* IMPORTANT: do NOT write a '\0' at bodyOffset.
+                             * We may have already received part of the body
+                             * (e.g. the first chunk size) in headerBuf, and
+                             * null-terminating here would overwrite it. */
+                        } else {
+                            /* No body bytes yet; continue with remaining input
+                             * (if any). */
+                            continue;
+                        }
+                    } /* end header accumulation */
+
+                    /* Body processing: handle chunked or plain bodies. */
+                    if (!isChunked) {
+                        /* Find the start of JSON once. */
+                        if (!startedJson) {
+                            const UBYTE *brace =
+                                (const UBYTE *)memchr(p, '{', n);
+                            if (brace == NULL) {
+                                /* No JSON start in this slice. */
+                                n = 0;
+                                break;
+                            }
+                            /* Skip everything up to '{'. */
+                            n -= (ULONG)(brace - p);
+                            p = brace;
+                            startedJson = TRUE;
+                        }
+                        response =
+                            json_tokener_parse_ex(tokener, (const char *)p, n);
+                        enum json_tokener_error jerr =
+                            json_tokener_get_error(tokener);
+                        if (jerr != json_tokener_success &&
+                            jerr != json_tokener_continue) {
+                            displayError(json_tokener_error_desc(jerr));
+                            doneReading = TRUE;
+                            break;
+                        }
+                        if (jerr == json_tokener_success && response != NULL) {
+                            doneReading = TRUE;
+                            break;
+                        }
+                        /* Need more bytes. */
+                        n = 0;
+                        break;
                     }
-                    displayError(error);
-                    doneReading = TRUE;
-                }
-                totalBytesRead += bytesRead;
-                if (!foundJson) {
-                    CONST_STRPTR jsonStart = "{";
-                    jsonString = readBuffer;
-                    jsonString = strstr(jsonString, jsonStart);
-                    if (jsonString == NULL) {
-                        continue;
+
+                    /* Chunked transfer decoding:
+                     * Read chunk size line -> read chunk bytes -> skip CRLF. */
+                    while (n > 0 && !doneReading && !chunkDone) {
+                        if (chunkCrlfToSkip > 0) {
+                            /* Skip CRLF after a chunk payload. */
+                            chunkCrlfToSkip--;
+                            p++;
+                            n--;
+                            continue;
+                        }
+                        if (chunkRemaining == 0) {
+                            /* Parse chunk length line until '\n'. */
+                            UBYTE c = *p;
+                            p++;
+                            n--;
+                            if (c == '\n') {
+                                chunkLenLine[chunkLenPos] = '\0';
+                                /* Strip optional '\r' and chunk extensions. */
+                                for (UBYTE i = 0; i < chunkLenPos; i++) {
+                                    if (chunkLenLine[i] == '\r' ||
+                                        chunkLenLine[i] == ';') {
+                                        chunkLenLine[i] = '\0';
+                                        break;
+                                    }
+                                }
+                                chunkRemaining = (ULONG)strtoul(
+                                    (char *)chunkLenLine, NULL, 16);
+                                chunkLenPos = 0;
+                                if (chunkRemaining == 0) {
+                                    chunkDone = TRUE;
+                                    /* There may be trailing headers; ignore. */
+                                    break;
+                                }
+                            } else {
+                                if (chunkLenPos < sizeof(chunkLenLine) - 1) {
+                                    chunkLenLine[chunkLenPos++] = c;
+                                } else {
+                                    displayError("Bad chunk length");
+                                    doneReading = TRUE;
+                                    break;
+                                }
+                            }
+                            continue;
+                        }
+
+                        /* We have chunk payload bytes to consume. */
+                        ULONG take = (n < chunkRemaining) ? n : chunkRemaining;
+                        if (!startedJson) {
+                            const UBYTE *brace =
+                                (const UBYTE *)memchr(p, '{', take);
+                            if (brace != NULL) {
+                                /* Skip up to JSON start within this chunk. */
+                                ULONG skip = (ULONG)(brace - p);
+                                p += skip;
+                                take -= skip;
+                                chunkRemaining -= skip;
+                                startedJson = TRUE;
+                            } else {
+                                /* No JSON start yet; skip these bytes. */
+                                p += take;
+                                n -= take;
+                                chunkRemaining -= take;
+                                if (chunkRemaining == 0)
+                                    chunkCrlfToSkip = 2;
+                                continue;
+                            }
+                        }
+
+                        if (take > 0) {
+                            response = json_tokener_parse_ex(
+                                tokener, (const char *)p, take);
+                            enum json_tokener_error jerr =
+                                json_tokener_get_error(tokener);
+                            if (jerr != json_tokener_success &&
+                                jerr != json_tokener_continue) {
+                                displayError(json_tokener_error_desc(jerr));
+                                doneReading = TRUE;
+                                break;
+                            }
+                            if (jerr == json_tokener_success &&
+                                response != NULL) {
+                                /* JSON is complete; no need to read more. */
+                                doneReading = TRUE;
+                                break;
+                            }
+                            p += take;
+                            n -= take;
+                            chunkRemaining -= take;
+                        }
+                        if (chunkRemaining == 0) {
+                            chunkCrlfToSkip = 2;
+                        }
+                    } /* end chunk decoder */
+
+                    if (chunkDone) {
+                        /* Finished chunk stream; if JSON wasn't complete,
+                         * surface an error. */
+                        enum json_tokener_error jerr =
+                            json_tokener_get_error(tokener);
+                        if (jerr != json_tokener_success) {
+                            displayError("Incomplete JSON (chunked)");
+                        }
+                        doneReading = TRUE;
+                        break;
                     }
-                    foundJson = TRUE;
-                }
-                enum json_tokener_error jerr;
-                jerr = json_tokener_get_error(tokener);
-                if (jsonString != NULL && jerr != json_tokener_continue) {
-                    response = json_tokener_parse_ex(tokener, jsonString,
-                                                     strlen(jsonString));
-                } else {
-                    response = json_tokener_parse_ex(tokener, tempReadBuffer,
-                                                     bytesRead);
-                }
-                jerr = json_tokener_get_error(tokener);
 
-                if (jerr != json_tokener_success &&
-                    jerr != json_tokener_continue) {
-                    displayError(json_tokener_error_desc(jerr));
+                    /* All available bytes consumed. */
+                    n = 0;
                 }
-
-                if (response == NULL) {
-                    continue;
-                }
-
-                doneReading = TRUE;
                 break;
             }
             case SSL_ERROR_ZERO_RETURN:
-                printf("SSL_ERROR_ZERO_RETURN\n");
                 doneReading = TRUE;
                 break;
             case SSL_ERROR_WANT_READ:
-                printf("SSL_ERROR_WANT_READ\n");
                 break;
             case SSL_ERROR_WANT_WRITE:
-                printf("SSL_ERROR_WANT_WRITE\n");
                 break;
             case SSL_ERROR_WANT_CONNECT:
-                printf("SSL_ERROR_WANT_CONNECT\n");
                 break;
             case SSL_ERROR_WANT_ACCEPT:
-                printf("SSL_ERROR_WANT_ACCEPT\n");
                 break;
             case SSL_ERROR_WANT_X509_LOOKUP:
-                printf("SSL_ERROR_WANT_X509_LOOKUP\n");
                 break;
             case SSL_ERROR_SYSCALL:
             case SSL_ERROR_SSL:
@@ -2211,8 +2551,7 @@ struct json_object *postImageCreationRequestToOpenAI(
                 doneReading = TRUE;
                 break;
             default:
-                printf(STRING_ERROR_UNKNOWN);
-                putchar('\n');
+                displayError(STRING_ERROR_UNKNOWN);
                 break;
             }
         }
@@ -2229,6 +2568,108 @@ struct json_object *postImageCreationRequestToOpenAI(
         ssl = NULL;
     }
     sock = -1;
+
+    if (isGeminiGenerateContent && response != NULL) {
+        /* Normalize Gemini response to match OpenAI image JSON shape:
+         * { "data": [ { "b64_json": "<base64>" } ] }
+         * so existing callers can keep reading response.data[0].b64_json */
+        struct json_object *geminiErr = NULL;
+        if (json_object_object_get_ex(response, "error", &geminiErr) &&
+            geminiErr != NULL &&
+            json_object_is_type(geminiErr, json_type_object)) {
+            struct json_object *msgObj =
+                json_object_object_get(geminiErr, "message");
+            CONST_STRPTR msg =
+                (msgObj != NULL) ? json_object_get_string(msgObj) : NULL;
+            struct json_object *wrapped = json_object_new_object();
+            struct json_object *errObj = json_object_new_object();
+            json_object_object_add(
+                errObj, "message",
+                json_object_new_string(msg ? msg
+                                           : "Gemini image request failed"));
+            json_object_object_add(
+                errObj, "type",
+                json_object_new_string("invalid_request_error"));
+            json_object_object_add(wrapped, "error", errObj);
+            json_object_put(response);
+            response = wrapped;
+        } else {
+            CONST_STRPTR b64 = NULL;
+            struct json_object *candidates = NULL;
+            if (json_object_object_get_ex(response, "candidates",
+                                          &candidates) &&
+                candidates != NULL &&
+                json_object_is_type(candidates, json_type_array) &&
+                json_object_array_length(candidates) > 0) {
+                struct json_object *cand0 =
+                    json_object_array_get_idx(candidates, 0);
+                struct json_object *content = NULL;
+                if (cand0 != NULL &&
+                    json_object_object_get_ex(cand0, "content", &content) &&
+                    content != NULL &&
+                    json_object_is_type(content, json_type_object)) {
+                    struct json_object *parts = NULL;
+                    if (json_object_object_get_ex(content, "parts", &parts) &&
+                        parts != NULL &&
+                        json_object_is_type(parts, json_type_array)) {
+                        for (size_t i = 0; i < json_object_array_length(parts);
+                             i++) {
+                            struct json_object *part =
+                                json_object_array_get_idx(parts, i);
+                            if (part == NULL ||
+                                !json_object_is_type(part, json_type_object))
+                                continue;
+                            struct json_object *inlineObj = NULL;
+                            if (!json_object_object_get_ex(part, "inlineData",
+                                                           &inlineObj)) {
+                                json_object_object_get_ex(part, "inline_data",
+                                                          &inlineObj);
+                            }
+                            if (inlineObj == NULL ||
+                                !json_object_is_type(inlineObj,
+                                                     json_type_object))
+                                continue;
+                            struct json_object *dataObj = NULL;
+                            if (json_object_object_get_ex(inlineObj, "data",
+                                                          &dataObj) &&
+                                dataObj != NULL) {
+                                b64 = json_object_get_string(dataObj);
+                                if (b64 != NULL && strlen(b64) > 0)
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (b64 != NULL && strlen(b64) > 0) {
+                struct json_object *normalized = json_object_new_object();
+                struct json_object *dataArr = json_object_new_array();
+                struct json_object *dataObj = json_object_new_object();
+                json_object_object_add(dataObj, "b64_json",
+                                       json_object_new_string(b64));
+                json_object_array_add(dataArr, dataObj);
+                json_object_object_add(normalized, "data", dataArr);
+                json_object_put(response);
+                response = normalized;
+            } else {
+                struct json_object *wrapped = json_object_new_object();
+                struct json_object *errObj = json_object_new_object();
+                json_object_object_add(
+                    errObj, "message",
+                    json_object_new_string(
+                        "Gemini image response did not include inline image "
+                        "data"));
+                json_object_object_add(
+                    errObj, "type",
+                    json_object_new_string("invalid_request_error"));
+                json_object_object_add(wrapped, "error", errObj);
+                json_object_put(response);
+                response = wrapped;
+            }
+        }
+    }
+
     json_tokener_free(tokener);
     return response;
 }

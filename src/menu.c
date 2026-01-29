@@ -514,6 +514,16 @@ void createMenu() {
     populateArexxMenu();
 }
 
+HOOKPROTONHNONP(OpenChatProviderSettingsMenuFunc, void) {
+    openChatProviderSettingsRequesterWindow();
+}
+MakeHook(OpenChatProviderSettingsMenuHook, OpenChatProviderSettingsMenuFunc);
+
+HOOKPROTONHNONP(OpenImageProviderSettingsMenuFunc, void) {
+    openImageProviderSettingsRequesterWindow();
+}
+MakeHook(OpenImageProviderSettingsMenuHook, OpenImageProviderSettingsMenuFunc);
+
 void addMenuActions() {
     Object printMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_PRINT);
@@ -777,15 +787,15 @@ void addMenuActions() {
     Object chatProviderSettingsMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_PROVIDER_SETTINGS);
     DoMethod(chatProviderSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, customServerSettingsRequesterWindowObject, 3,
-             MUIM_Set, MUIA_Window_Open, TRUE);
+             MUIV_EveryTime, MUIV_Notify_Application, 2,
+             MUIM_Application_ReturnID, APP_ID_CHAT_PROVIDER_SETTINGS);
 
     /* Image menu actions */
     Object imageProviderSettingsMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_IMAGE_PROVIDER_SETTINGS);
     DoMethod(imageProviderSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, customServerSettingsRequesterWindowObject, 3,
-             MUIM_Set, MUIA_Window_Open, TRUE);
+             MUIV_EveryTime, MUIV_Notify_Application, 2,
+             MUIM_Application_ReturnID, APP_ID_IMAGE_PROVIDER_SETTINGS);
 
     Object arexShellMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
                                                 MENU_ITEM_AREXX_AREXX_SHELL);

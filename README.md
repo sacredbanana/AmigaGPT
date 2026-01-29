@@ -177,8 +177,8 @@ Generates an image using the specified model.
 CREATEIMAGE PR=PROVIDER/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
 ```
 - `PR=PROVIDER` - Optional, the provider to use (OpenAI, Google Gemini, xAI Grok, or Custom Server). Use LISTPROVIDERS to see available providers. Default is the provider selected in AmigaGPT config
-- `M=MODEL` - Optional, the image model to use (use LISTIMAGEMODELS to see available models). Default is gpt-image-1
-- `S=SIZE` - Optional, image size (use LISTIMAGESIZES to see available sizes). Default is 1024x1024
+- `M=MODEL` - Optional, the image model to use (use LISTIMAGEMODELS to see available models). Defaults to the first model in the selected provider's list (e.g. `gpt-image-1` for OpenAI, `gemini-2.5-flash-image` for Gemini, `grok-2-image` for Grok)
+- `S=SIZE` - Optional, image size (use LISTIMAGESIZES to see available sizes). Default is 1024x1024. Note: some providers may ignore unsupported parameters (e.g. xAI currently does not support `size`) - see [xAI Image Generations](https://docs.x.ai/docs/guides/image-generations) and [Gemini OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai)
 - `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
 - `D=DESTINATION` - Optional, the path where the image will be saved. Default is the creation of a temporary file. The destination will be the returned string from this function
 - `P=PROMPT` - Required, description of the image to generate

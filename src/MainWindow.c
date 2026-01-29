@@ -251,8 +251,19 @@ HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
 }
 MakeHook(DeleteImageButtonClickedHook, DeleteImageButtonClickedFunc);
 
+static BOOL isStringInList(CONST_STRPTR str, CONST_STRPTR *list) {
+    if (str == NULL || list == NULL)
+        return FALSE;
+    for (UBYTE i = 0; list[i] != NULL; i++) {
+        if (strcmp(str, list[i]) == 0)
+            return TRUE;
+    }
+    return FALSE;
+}
+
 HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
-    STRPTR apiKey = configGetOpenAiApiKey();
+    Provider imageProvider = configGetImageProvider();
+    STRPTR apiKey = configGetApiKeyForProvider(imageProvider);
     if (apiKey == NULL || strlen(apiKey) == 0) {
         displayError(STRING_ERROR_NO_API_KEY);
         return;
@@ -277,6 +288,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
                                         CSA_Source, (Tag)text, TAG_DONE);
 
+    /* Keep legacy image model enum for history + size selection. */
     ImageModel imageModel = configGetImageModel();
     ImageSize imageSize;
     switch (imageModel) {
@@ -292,15 +304,59 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         imageSize = configGetImageSizeGptImage1();
         break;
     default:
-        imageSize = configGetImageSizeDallE2();
+        imageSize = configGetImageSizeGptImage1();
         break;
     }
-    struct json_object *response = postImageCreationRequestToOpenAI(
-        textUTF8, imageModel, imageSize, configGetOpenAiApiKey(),
-        configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
-        configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
-        configGetProxyUsername(), configGetProxyPassword(),
-        configGetImageFormat());
+    STRPTR imageModelName = configGetImageModelName();
+    if (imageModelName == NULL || strlen(imageModelName) == 0) {
+        switch (imageProvider) {
+        case PROVIDER_GEMINI:
+            imageModelName = (STRPTR)GEMINI_IMAGE_MODELS[0];
+            break;
+        case PROVIDER_GROK:
+            imageModelName = (STRPTR)GROK_IMAGE_MODELS[0];
+            break;
+        case PROVIDER_OPENAI:
+        case PROVIDER_CUSTOM:
+        default:
+            imageModelName = (STRPTR)OPENAI_IMAGE_MODELS[0];
+            break;
+        }
+    }
+
+    /* Resolve provider connection settings */
+    CONST_STRPTR host = NULL;
+    UWORD port = 443;
+    BOOL useSSL = TRUE;
+    CONST_STRPTR apiEndpointUrl = "v1";
+    AuthorizationType authType = AUTHORIZATION_TYPE_BEARER;
+    CONST_STRPTR customHeaders = NULL;
+
+    if (imageProvider == PROVIDER_CUSTOM) {
+        host = configGetCustomImageHost();
+        port = (UWORD)configGetCustomImagePort();
+        useSSL = configGetCustomImageUseSSL();
+        apiEndpointUrl = configGetCustomImageApiEndpointUrl();
+        authType = configGetCustomImageAuthorizationType();
+        customHeaders = configGetCustomImageHeaders();
+    } else {
+        struct ProviderConfig *cfg = getProviderConfig(imageProvider);
+        if (cfg != NULL) {
+            host = cfg->host;
+            port = (UWORD)cfg->port;
+            useSSL = cfg->useSSL;
+            apiEndpointUrl = cfg->apiEndpointUrl;
+            authType = cfg->authorizationType;
+            customHeaders = cfg->customHeaders;
+        }
+    }
+
+    struct json_object *response = postImageCreationRequestToOpenAIWithServer(
+        textUTF8, host, port, useSSL, apiEndpointUrl, authType, customHeaders,
+        imageModelName, imageSize, apiKey, configGetProxyEnabled(),
+        configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
+        configGetProxyRequiresAuth(), configGetProxyUsername(),
+        configGetProxyPassword(), configGetImageFormat(), imageProvider);
     CodesetsFreeA(textUTF8, NULL);
 
     if (response == NULL) {
@@ -356,13 +412,27 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 
     CreateDir("AMIGAGPT:images");
     STRPTR imageFormat;
-    switch (imageModel) {
-    case DALL_E_2:
-    case DALL_E_3:
+    if (imageProvider == PROVIDER_GROK) {
+        /* xAI docs: generated image is jpg. */
+        imageFormat = "jpg";
+    } else if (imageProvider == PROVIDER_GEMINI) {
+        /* Gemini native image generation returns inlineData with mimeType
+         * "image/png" (see Gemini REST docs). */
         imageFormat = "png";
-        break;
-    default:
-        imageFormat = IMAGE_FORMAT_NAMES[configGetImageFormat()];
+    } else {
+        /* Fall back to user preference, but try to match the actual bytes so
+         * the file extension is correct. */
+        if (data_len >= 8 && imageData[0] == 0x89 && imageData[1] == 0x50 &&
+            imageData[2] == 0x4E && imageData[3] == 0x47 &&
+            imageData[4] == 0x0D && imageData[5] == 0x0A &&
+            imageData[6] == 0x1A && imageData[7] == 0x0A) {
+            imageFormat = "png";
+        } else if (data_len >= 3 && imageData[0] == 0xFF &&
+                   imageData[1] == 0xD8 && imageData[2] == 0xFF) {
+            imageFormat = "jpg";
+        } else {
+            imageFormat = IMAGE_FORMAT_NAMES[configGetImageFormat()];
+        }
     }
 
     // Generate unique ID for the image
@@ -427,13 +497,47 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     updateStatusBar(STRING_GENERATING_IMAGE_NAME, 7);
     Provider nameProvider = configGetChatProvider();
     struct ChatRequestSettings nameSettings;
-    configGetChatRequestSettingsWithStreamOverride(&nameSettings, nameProvider,
-                                                   FALSE);
+    configGetChatRequestSettings(&nameSettings, nameProvider);
     nameSettings.webSearchEnabled = FALSE;
-    CONST_STRPTR nameModel = (!nameSettings.isCustomProvider &&
-                              nameSettings.provider == PROVIDER_OPENAI)
-                                 ? CHAT_MODEL_NAMES[GPT_5_NANO]
-                                 : nameSettings.model;
+    /* Image title generation must use a chat-capable model. If the user has
+     * (accidentally) selected an image model as their chat model, fall back to
+     * a sane chat default for the active provider to avoid bad requests. */
+    CONST_STRPTR titleModel = nameSettings.model;
+    if (titleModel != NULL && strlen(titleModel) > 0) {
+        BOOL isImageModel = FALSE;
+        switch (nameProvider) {
+        case PROVIDER_OPENAI:
+            isImageModel = isStringInList(titleModel, OPENAI_IMAGE_MODELS);
+            break;
+        case PROVIDER_GEMINI:
+            isImageModel = isStringInList(titleModel, GEMINI_IMAGE_MODELS);
+            break;
+        case PROVIDER_GROK:
+            isImageModel = isStringInList(titleModel, GROK_IMAGE_MODELS);
+            break;
+        case PROVIDER_ANTHROPIC:
+        case PROVIDER_CUSTOM:
+        default:
+            isImageModel = FALSE;
+            break;
+        }
+        if (isImageModel) {
+            switch (nameProvider) {
+            case PROVIDER_OPENAI:
+                titleModel = "gpt-5-chat-latest";
+                break;
+            case PROVIDER_GEMINI:
+                titleModel = "gemini-2.5-flash";
+                break;
+            case PROVIDER_GROK:
+                titleModel = "grok-4";
+                break;
+            default:
+                /* Leave as-is for providers we can't validate */
+                break;
+            }
+        }
+    }
     struct Conversation *imageNameConversation = newConversation();
     addTextToConversation(imageNameConversation, text, "user");
     addTextToConversation(
@@ -442,9 +546,10 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         "title "
         "in quotes or prefix the response with anything",
         "user");
+    configSetShellToolEnabled(FALSE);
     struct json_object **responses = postChatMessageToOpenAI(
         imageNameConversation, nameSettings.host, nameSettings.port,
-        nameSettings.useSSL, nameModel, nameSettings.apiKey, FALSE,
+        nameSettings.useSSL, titleModel, nameSettings.apiKey, FALSE,
         nameSettings.useProxy, nameSettings.proxyHost, nameSettings.proxyPort,
         nameSettings.proxyUsesSSL, nameSettings.proxyRequiresAuth,
         nameSettings.proxyUsername, nameSettings.proxyPassword, FALSE,

@@ -21,6 +21,8 @@
 #include "openai.h"
 
 #define APP_ID_PRINT 1000L
+#define APP_ID_CHAT_PROVIDER_SETTINGS 1001L
+#define APP_ID_IMAGE_PROVIDER_SETTINGS 1002L
 
 /**
  *  The object IDs for the GUI
