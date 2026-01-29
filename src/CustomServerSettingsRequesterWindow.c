@@ -72,6 +72,7 @@ static void saveProfilesToConfig(void);
 static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
                                           BOOL setActiveAfterSave,
                                           LONG forceActiveForList);
+SAVEDS void refreshUrlPreview(void);
 
 /**
  * Load profiles JSON from config
@@ -1028,7 +1029,7 @@ HOOKPROTONHNONP(FetchCustomModelsFunc, void) {
         customServerModelsJson = NULL;
     }
 
-    /* Fetch models from the custom server */
+    /* Fetch models from the custom provider */
     customServerModelsJson =
         getChatModels(host, port, usesSSL == 1, apiKey, configGetProxyEnabled(),
                       configGetProxyHost(), configGetProxyPort(),
@@ -1316,7 +1317,7 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         return;
     }
 
-    /* Handle custom server (original behavior) */
+    /* Handle custom provider (original behavior) */
     if (settingsIsImageMode) {
         configSetImageProvider(PROVIDER_CUSTOM);
     } else {
@@ -1397,7 +1398,7 @@ MakeHook(CustomServerSettingsRequesterOkButtonClickedHook,
          CustomServerSettingsRequesterOkButtonClickedFunc);
 
 /**
- * Create the custom server settings requester window
+ * Create the provider settings requester window
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createCustomServerSettingsRequesterWindow() {
@@ -1435,7 +1436,7 @@ LONG createCustomServerSettingsRequesterWindow() {
     Object *customServerSettingsRequesterOkButton,
         *customServerSettingsRequesterCancelButton;
     if ((customServerSettingsRequesterWindowObject = WindowObject,
-        MUIA_Window_Title, STRING_MENU_CUSTOM_SERVER_SETTINGS,
+        MUIA_Window_Title, STRING_CHAT_PROVIDER_SETTINGS,
         MUIA_Window_Width, 500,
         MUIA_Window_Height, MUIV_Window_Height_Default,
         MUIA_Window_CloseGadget, FALSE,
@@ -1621,7 +1622,7 @@ LONG createCustomServerSettingsRequesterWindow() {
             End, /* End right panel VGroup */
         End, /* End outer HGroup */
     End) == NULL) {
-        displayError(STRING_ERROR_CUSTOM_SERVER_SETTINGS);
+        displayError(STRING_ERROR_CUSTOM_PROVIDER_SETTINGS);
         return RETURN_ERROR;
     }
     DoMethod(customServerSettingsRequesterOkButton, MUIM_Notify, MUIA_Pressed,

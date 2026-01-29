@@ -241,8 +241,6 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     struct ChatRequestSettings rexxSettings;
     configGetChatRequestSettingsWithStreamOverride(&rexxSettings, provider,
                                                    FALSE);
-    BOOL useCustomServer = (provider == PROVIDER_CUSTOM);
-
     ULONG portValue = port == NULL ? rexxSettings.port : (ULONG)*port;
     ULONG proxyPortValue =
         proxyPort == NULL ? rexxSettings.proxyPort : (ULONG)*proxyPort;
@@ -310,8 +308,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
     /* Handle shell tool calls if enabled - loop to handle multiple sequential
      * commands */
-    while (!useCustomServer && configGetShellToolEnabled() &&
-           hasPendingToolCall()) {
+    while (configGetShellToolEnabled() && hasPendingToolCall()) {
         STRPTR command = getPendingToolCommand();
         STRPTR callId = getPendingToolCallId();
         STRPTR responseId = getPendingResponseId();
@@ -358,9 +355,10 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         /* Send the tool result back to the API - this may set a new pending
          * tool call if OpenAI wants to run another command */
         struct json_object *toolResponse = postToolResultToOpenAI(
-            responseId, callId, toolOutput, NULL, 0, TRUE, apiKey, useProxy,
-            proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
-            proxyUsername, proxyPassword);
+            responseId, callId, toolOutput, model, (STRPTR)host,
+            (UWORD)portValue, useSSL, apiKey, useProxy, proxyHost,
+            proxyPortValue, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+            proxyPassword);
 
         if (output != NULL) {
             FreeVec(output);

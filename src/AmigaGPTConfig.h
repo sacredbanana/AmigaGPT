@@ -48,7 +48,6 @@
 #define MUIA_AmigaGPTConfig_GrokChatStreamEnabled (AmigaGPTConfig_Dummy + 0x1C)
 #define MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled                         \
     (AmigaGPTConfig_Dummy + 0x1D)
-#define MUIA_AmigaGPTConfig_UseCustomServer (AmigaGPTConfig_Dummy + 0x13)
 #define MUIA_AmigaGPTConfig_CustomPort (AmigaGPTConfig_Dummy + 0x14)
 #define MUIA_AmigaGPTConfig_CustomUseSSL (AmigaGPTConfig_Dummy + 0x15)
 #define MUIA_AmigaGPTConfig_CustomApiEndpoint (AmigaGPTConfig_Dummy + 0x16)
@@ -89,7 +88,7 @@
 #define MUIA_AmigaGPTConfig_GrokChatModelName (AmigaGPTConfig_Dummy + 0x3D)
 #define MUIA_AmigaGPTConfig_AnthropicChatModelName (AmigaGPTConfig_Dummy + 0x3E)
 
-/* Custom image server settings (separate from chat custom server) */
+/* Custom image provider settings (separate from chat custom provider) */
 #define MUIA_AmigaGPTConfig_CustomImagePort (AmigaGPTConfig_Dummy + 0x1E)
 #define MUIA_AmigaGPTConfig_CustomImageUseSSL (AmigaGPTConfig_Dummy + 0x1F)
 #define MUIA_AmigaGPTConfig_CustomImageAuthorizationType                       \
@@ -255,9 +254,7 @@ void configSetWebSearchEnabled(LONG value);
 LONG configGetShellToolEnabled(void);
 void configSetShellToolEnabled(LONG value);
 
-/* Custom server settings */
-ULONG configGetUseCustomServer(void);
-void configSetUseCustomServer(ULONG value);
+/* Custom provider settings */
 STRPTR configGetCustomHost(void);
 void configSetCustomHost(CONST_STRPTR value);
 ULONG configGetCustomPort(void);
@@ -281,7 +278,7 @@ void configSetCustomServerProfiles(CONST_STRPTR value);
 STRPTR configGetActiveProfileName(void);
 void configSetActiveProfileName(CONST_STRPTR value);
 
-/* Custom image server settings (separate from chat custom server) */
+/* Custom image provider settings (separate from chat custom provider) */
 STRPTR configGetCustomImageHost(void);
 void configSetCustomImageHost(CONST_STRPTR value);
 ULONG configGetCustomImagePort(void);

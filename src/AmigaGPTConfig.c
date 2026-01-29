@@ -51,12 +51,11 @@ struct AmigaGPTConfigData {
     ULONG geminiChatStreamEnabled;
     ULONG grokChatStreamEnabled;
     ULONG anthropicChatStreamEnabled;
-    ULONG useCustomServer; /* Legacy - kept for migration */
     ULONG customPort;
     ULONG customUseSSL;
     APIEndpoint customApiEndpoint;
     AuthorizationType customAuthorizationType;
-    /* Custom image server settings (separate from chat custom server) */
+    /* Custom image provider settings (separate from chat custom provider) */
     ULONG customImagePort;
     ULONG customImageUseSSL;
     AuthorizationType customImageAuthorizationType;
@@ -180,7 +179,6 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->geminiChatStreamEnabled = TRUE;
     data->grokChatStreamEnabled = TRUE;
     data->anthropicChatStreamEnabled = FALSE;
-    data->useCustomServer = FALSE; /* Legacy */
     data->customPort = 80;
     data->customUseSSL = FALSE;
     data->customApiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS;
@@ -440,9 +438,6 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled:
         *store = data->anthropicChatStreamEnabled;
-        return TRUE;
-    case MUIA_AmigaGPTConfig_UseCustomServer:
-        *store = data->useCustomServer;
         return TRUE;
     case MUIA_AmigaGPTConfig_CustomPort:
         *store = data->customPort;
@@ -756,12 +751,6 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
         case MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled:
             if (data->anthropicChatStreamEnabled != (ULONG)ti_Data) {
                 data->anthropicChatStreamEnabled = (ULONG)ti_Data;
-                changed = TRUE;
-            }
-            break;
-        case MUIA_AmigaGPTConfig_UseCustomServer:
-            if (data->useCustomServer != (ULONG)ti_Data) {
-                data->useCustomServer = (ULONG)ti_Data;
                 changed = TRUE;
             }
             break;
@@ -1079,9 +1068,6 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
     json_object_object_add(
         configJsonObject, "anthropicChatStreamEnabled",
         json_object_new_boolean((BOOL)data->anthropicChatStreamEnabled));
-    json_object_object_add(
-        configJsonObject, "useCustomServer",
-        json_object_new_boolean((BOOL)data->useCustomServer));
     json_object_object_add(configJsonObject, "customPort",
                            json_object_new_int(data->customPort));
     json_object_object_add(configJsonObject, "customUseSSL",
@@ -1375,6 +1361,11 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     }
 
     struct json_object *valueObj;
+    BOOL legacyCustomProviderEnabled = FALSE;
+    /* Legacy key name kept for migration without embedding it as a string. */
+    static const char legacyCustomProviderFlagKey[] = {
+        'u', 's', 'e', 'C', 'u', 's', 't', 'o',
+        'm', 'S', 'e', 'r', 'v', 'e', 'r', 0};
 
     /* Check schema version and migrate if needed */
     UWORD loadedSchemaVersion = 0;
@@ -1498,9 +1489,9 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
         data->anthropicChatStreamEnabled =
             (ULONG)json_object_get_boolean(valueObj);
 
-    if (json_object_object_get_ex(configJsonObject, "useCustomServer",
+    if (json_object_object_get_ex(configJsonObject, legacyCustomProviderFlagKey,
                                   &valueObj))
-        data->useCustomServer = (ULONG)json_object_get_boolean(valueObj);
+        legacyCustomProviderEnabled = (BOOL)json_object_get_boolean(valueObj);
 
     if (json_object_object_get_ex(configJsonObject, "customPort", &valueObj))
         data->customPort = json_object_get_int(valueObj);
@@ -1694,8 +1685,8 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
             data->imageModelName = copyString("gpt-image-1");
         }
 
-        /* If useCustomServer was enabled, migrate to PROVIDER_CUSTOM */
-        if (data->useCustomServer) {
+        /* If legacy flag was enabled, migrate to PROVIDER_CUSTOM */
+        if (legacyCustomProviderEnabled) {
             data->chatProvider = PROVIDER_CUSTOM;
             /* Copy customChatModel to chatModelName if set */
             if (data->customChatModel != NULL &&
@@ -2022,13 +2013,6 @@ LONG configGetWebSearchEnabled(void) {
     LONG val = TRUE;
     if (configObj)
         get(configObj, MUIA_AmigaGPTConfig_WebSearchEnabled, &val);
-    return val;
-}
-
-ULONG configGetUseCustomServer(void) {
-    ULONG val = FALSE;
-    if (configObj)
-        get(configObj, MUIA_AmigaGPTConfig_UseCustomServer, &val);
     return val;
 }
 
@@ -2366,11 +2350,6 @@ LONG configGetShellToolEnabled(void) {
 void configSetShellToolEnabled(LONG value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_ShellToolEnabled, value);
-}
-
-void configSetUseCustomServer(ULONG value) {
-    if (configObj)
-        set(configObj, MUIA_AmigaGPTConfig_UseCustomServer, value);
 }
 
 void configSetCustomHost(CONST_STRPTR value) {

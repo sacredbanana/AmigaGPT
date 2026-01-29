@@ -1289,19 +1289,19 @@ msgid "Web Search"
 msgstr "Web Search"
 
 #: src/menu.c:146
-msgctxt "STRING_MENU_CUSTOM_SERVER (239//)"
-msgid "Custom Server"
-msgstr "Custom Server"
+msgctxt "STRING_MENU_CUSTOM_PROVIDER (239//)"
+msgid "Custom Provider"
+msgstr "Custom Provider"
 
 #: src/menu.c:148
-msgctxt "STRING_MENU_CUSTOM_SERVER_SETTINGS (241//)"
-msgid "Custom Server Settings"
-msgstr "Custom Server Settings"
+msgctxt "STRING_MENU_CUSTOM_PROVIDER_SETTINGS (241//)"
+msgid "Custom Provider Settings"
+msgstr "Custom Provider Settings"
 
 #: src/CustomServerSettingsRequesterWindow.c:11
-msgctxt "STRING_ERROR_CUSTOM_SERVER_SETTINGS (242//)"
-msgid "Failed to create custom server settings window"
-msgstr "Could not create customServerSettingsRequesterWindowObject"
+msgctxt "STRING_ERROR_CUSTOM_PROVIDER_SETTINGS (242//)"
+msgid "Failed to create provider settings window"
+msgstr "Failed to create provider settings window"
 
 #: src/CustomServerSettingsRequesterWindow.c:111
 msgctxt "STRING_MENU_OPENAI_API_ENDPOINT (243//)"
@@ -1458,7 +1458,7 @@ msgstr "Anthropic Claude"
 #, fuzzy
 msgctxt "STRING_CUSTOM_HEADERS (273//)"
 msgid "Custom Headers"
-msgstr "Custom Server"
+msgstr "Custom Headers"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_MENU_TEMPLATE_XAI_GROK (274//)"
@@ -1534,13 +1534,13 @@ msgstr "Image"
 #, fuzzy
 msgctxt "STRING_CHAT_PROVIDER_SETTINGS (287//)"
 msgid "Chat Provider Settings"
-msgstr "Custom Server Settings"
+msgstr "Chat Provider Settings"
 
 #: src/menu.c
 #, fuzzy
 msgctxt "STRING_IMAGE_PROVIDER_SETTINGS (288//)"
 msgid "Image Provider Settings"
-msgstr "Custom Server Settings"
+msgstr "Image Provider Settings"
 
 #: src/openai.c
 #, fuzzy
@@ -1569,8 +1569,8 @@ msgstr "Anthropic Claude"
 #: src/openai.c
 #, fuzzy
 msgctxt "STRING_PROVIDER_CUSTOM (293//)"
-msgid "Custom Server"
-msgstr "Custom Server"
+msgid "Custom Provider"
+msgstr "Custom Provider"
 
 #: src/menu.c
 #, fuzzy

@@ -367,9 +367,9 @@ Changelog:
   context across ARexx calls until reboot
 - New NEWCHAT ARexx command to clear daemon conversation history
 - Support for Anthropic Claude and xAI Grok
-- Easily add new custom server profiles with easy templates for Google
+- Easily add new custom provider profiles with easy templates for Google
   Gemini, LM Studio, Anthropic Claude and xAI Grok
-- Fetch list of all models from the server in the custom server options
+- Fetch list of all models from the provider in the custom provider options
 - All config options are now immediately saved to disk
 
 -------------------
@@ -393,8 +393,8 @@ Changelog:
 2.15.0 (2025-12-13)
 -------------------
 
-- Add support for setting custom server endpoint and endpoint URL
-- Add chat/completions endpoint support for custom server for compatibility
+- Add support for setting custom provider endpoint and endpoint URL
+- Add chat/completions endpoint support for custom providers for compatibility
   with servers such as Google Gemini
 
 -------------------

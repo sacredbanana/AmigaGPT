@@ -500,11 +500,12 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                 strcmp(typeStr, "response.output_text.delta") == 0) {
                 struct json_object *text =
                     json_object_object_get(json, "delta");
-                return text != NULL ? (UTF8 *)json_object_get_string(text) : "";
+                return text != NULL ? (UTF8 *)json_object_get_string(text)
+                                    : (UTF8 *)"";
             }
             /* Any other typed event (e.g. response.completed) contributes no
              * text */
-            return "";
+            return (UTF8 *)"";
         }
 
         /* chat.completions streaming chunk */
@@ -520,7 +521,7 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                         json_object_object_get(delta, "content");
                     if (content != NULL) {
                         const char *s = json_object_get_string(content);
-                        return s != NULL ? (UTF8 *)s : "";
+                        return s != NULL ? (UTF8 *)s : (UTF8 *)"";
                     }
                 }
 
@@ -530,12 +531,12 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                     json_object_object_get(choice0, "text");
                 if (textObj != NULL) {
                     const char *s = json_object_get_string(textObj);
-                    return s != NULL ? (UTF8 *)s : "";
+                    return s != NULL ? (UTF8 *)s : (UTF8 *)"";
                 }
             }
         }
 
-        return "";
+        return (UTF8 *)"";
     } else {
         struct json_object *text;
         if (apiEndpoint == API_ENDPOINT_RESPONSES) {
@@ -559,7 +560,7 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
             }
 
             if (output == NULL) {
-                return "";
+                return (UTF8 *)"";
             }
 
             struct json_object *contentArray =
@@ -574,7 +575,7 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                 json_object_object_get(json, "content");
             if (contentArray == NULL ||
                 !json_object_is_type(contentArray, json_type_array)) {
-                return "";
+                return (UTF8 *)"";
             }
 
             /* Find the first text block in the content array */
@@ -594,7 +595,7 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
             }
 
             if (text == NULL) {
-                return "";
+                return (UTF8 *)"";
             }
         } else {
             /* OpenAI chat/completions format:

@@ -31,8 +31,8 @@
 
 ## 2.15.0 (2025-12-13)
 
-- Add support for setting custom server endpoint and endpoint URL
-- Add chat/completions endpoint support for custom server for compatibility with servers such as Google Gemini
+- Add support for setting custom provider endpoint and endpoint URL
+- Add chat/completions endpoint support for custom providers for compatibility with providers such as Google Gemini
 
 ## 2.14.0 (2025-12-13)
 

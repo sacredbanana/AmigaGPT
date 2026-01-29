@@ -127,7 +127,7 @@ To generate images, open "**Image Provider Settings**" from the "**Image**" menu
 
 AmigaGPT supports multiple AI providers. Open "**Chat Provider Settings**" from the "**Chat**" menu or "**Image Provider Settings**" from the "**Image**" menu.
 
-The provider list includes built-in entries for **OpenAI**, **Google Gemini**, **xAI Grok** and **Anthropic Claude** (chat only); these cannot be removed. For built-in providers you can set the API key and choose the model; host, port and other connection settings are fixed. Known models are shown for each built-in; for OpenAI you can also use "Fetch Models" to refresh the list. You can add custom server profiles (e.g. LM Studio) with templates and full control over all settings. Custom profile names cannot match built-in provider names.
+The provider list includes built-in entries for **OpenAI**, **Google Gemini**, **xAI Grok** and **Anthropic Claude** (chat only); these cannot be removed. For built-in providers you can set the API key and choose the model; host, port and other connection settings are fixed. Known models are shown for each built-in; for OpenAI you can also use "Fetch Models" to refresh the list. You can add custom provider profiles (e.g. LM Studio) with templates and full control over all settings. Custom profile names cannot match built-in provider names.
 
 When you switch to another profile without saving, AmigaGPT will ask whether to save your changes (Yes, No or Cancel).
 
@@ -164,7 +164,7 @@ Sends a message to the selected provider's API and returns the response.
 ```
 SENDMESSAGE PR=PROVIDER/K,M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
 ```
-- `PR=PROVIDER` - Optional, the provider to use (OpenAI, Google Gemini, xAI Grok, Anthropic Claude, or Custom Server). Use LISTPROVIDERS to see available providers. Default is the provider selected in AmigaGPT config
+- `PR=PROVIDER` - Optional, the provider to use (OpenAI, Google Gemini, xAI Grok, Anthropic Claude, or Custom Provider). Use LISTPROVIDERS to see available providers. Default is the provider selected in AmigaGPT config
 - `M=MODEL` - Optional, the chat model to use (use LISTCHATMODELS to see available models). Default is gpt-5-mini
 - `S=SYSTEM` - Optional, system message to include
 - `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
@@ -176,7 +176,7 @@ Generates an image using the specified model.
 ```
 CREATEIMAGE PR=PROVIDER/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
 ```
-- `PR=PROVIDER` - Optional, the provider to use (OpenAI, Google Gemini, xAI Grok, or Custom Server). Use LISTPROVIDERS to see available providers. Default is the provider selected in AmigaGPT config
+- `PR=PROVIDER` - Optional, the provider to use (OpenAI, Google Gemini, xAI Grok, or Custom Provider). Use LISTPROVIDERS to see available providers. Default is the provider selected in AmigaGPT config
 - `M=MODEL` - Optional, the image model to use (use LISTIMAGEMODELS to see available models). Defaults to the first model in the selected provider's list (e.g. `gpt-image-1` for OpenAI, `gemini-2.5-flash-image` for Gemini, `grok-2-image` for Grok)
 - `S=SIZE` - Optional, image size (use LISTIMAGESIZES to see available sizes). Default is 1024x1024. Note: some providers may ignore unsupported parameters (e.g. xAI currently does not support `size`) - see [xAI Image Generations](https://docs.x.ai/docs/guides/image-generations) and [Gemini OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai)
 - `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
@@ -229,7 +229,7 @@ LISTAUDIOFORMATS
 ```
 
 #### LISTPROVIDERS
-Lists all available providers (OpenAI, Google Gemini, xAI Grok, Anthropic Claude, Custom Server).
+Lists all available providers (OpenAI, Google Gemini, xAI Grok, Anthropic Claude, Custom Provider).
 ```
 LISTPROVIDERS
 ```

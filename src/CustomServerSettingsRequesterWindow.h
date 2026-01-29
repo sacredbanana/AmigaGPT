@@ -11,7 +11,7 @@ extern Object *customServerFullUrlPreviewString;
 extern Object *customServerSettingsRequesterWindowObject;
 
 /**
- * Create the custom server settings requester window
+ * Create the provider settings requester window
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createCustomServerSettingsRequesterWindow();

@@ -1704,9 +1704,8 @@ static void sendChatMessage() {
         /* Send the tool result back to the API - this may set a new pending
          * tool call if OpenAI wants to run another command */
         struct json_object *toolResponse = postToolResultToOpenAI(
-            responseId, callId, toolOutput, NULL, /* Use default OpenAI host */
-            0,                                    /* Use default port */
-            TRUE,                                 /* Use SSL */
+            responseId, callId, toolOutput, chatSettings.model,
+            chatSettings.host, chatSettings.port, chatSettings.useSSL,
             chatSettings.apiKey, configGetProxyEnabled(),
             chatSettings.proxyHost, chatSettings.proxyPort,
             chatSettings.proxyUsesSSL, chatSettings.proxyRequiresAuth,

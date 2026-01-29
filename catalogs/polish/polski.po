@@ -1297,19 +1297,19 @@ msgid "Web Search"
 msgstr "Web wyszukiwanie"
 
 #: src/menu.c:146
-msgctxt "STRING_MENU_CUSTOM_SERVER (239//)"
-msgid "Custom Server"
-msgstr "Serwer niestandardowy"
+msgctxt "STRING_MENU_CUSTOM_PROVIDER (239//)"
+msgid "Custom Provider"
+msgstr "Niestandardowy dostawca"
 
 #: src/menu.c:148
-msgctxt "STRING_MENU_CUSTOM_SERVER_SETTINGS (241//)"
-msgid "Custom Server Settings"
-msgstr "Ustawienia serwera niestandardowego"
+msgctxt "STRING_MENU_CUSTOM_PROVIDER_SETTINGS (241//)"
+msgid "Custom Provider Settings"
+msgstr "Ustawienia niestandardowego dostawcy"
 
 #: src/CustomServerSettingsRequesterWindow.c:11
-msgctxt "STRING_ERROR_CUSTOM_SERVER_SETTINGS (242//)"
-msgid "Failed to create custom server settings window"
-msgstr "Nie można utworzyć customServerSettingsRequesterWindowObject"
+msgctxt "STRING_ERROR_CUSTOM_PROVIDER_SETTINGS (242//)"
+msgid "Failed to create provider settings window"
+msgstr "Nie można utworzyć okna ustawień dostawcy"
 
 #: src/CustomServerSettingsRequesterWindow.c:111
 msgctxt "STRING_MENU_OPENAI_API_ENDPOINT (243//)"
@@ -1578,8 +1578,8 @@ msgstr "Anthropic Claude"
 #: src/openai.c
 #, fuzzy
 msgctxt "STRING_PROVIDER_CUSTOM (293//)"
-msgid "Custom Server"
-msgstr "Serwer niestandardowy"
+msgid "Custom Provider"
+msgstr "Niestandardowy dostawca"
 
 #: src/menu.c
 #, fuzzy

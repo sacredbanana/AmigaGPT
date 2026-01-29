@@ -216,7 +216,7 @@ CONST_STRPTR PROVIDER_NAMES[] = {[PROVIDER_OPENAI] = "OpenAI",
                                  [PROVIDER_GEMINI] = "Google Gemini",
                                  [PROVIDER_GROK] = "xAI Grok",
                                  [PROVIDER_ANTHROPIC] = "Anthropic Claude",
-                                 [PROVIDER_CUSTOM] = "Custom Server",
+                                 [PROVIDER_CUSTOM] = "Custom Provider",
                                  NULL};
 
 /**
@@ -1256,28 +1256,24 @@ struct json_object **postChatMessageToOpenAI(
     UWORD responseIndex = 0;
     UBYTE connectionRetryCount = 0;
 
-    /* Treat OpenAI's own host + Responses endpoint as "default OpenAI",
-     * so we include tools (web_search, shell) in the request.
-     * Other providers (Gemini/Grok/Anthropic) and true custom servers use the
-     * OpenAI-compatible/custom formatting path. */
-    BOOL useCustomServer = FALSE;
-    if (host != NULL && strlen(host) > 0) {
-        BOOL isOpenAiDefault =
-            (strcmp(host, OPENAI_HOST) == 0) &&
-            (apiEndpoint == API_ENDPOINT_RESPONSES) &&
-            (apiEndpoinUrl == NULL || strlen(apiEndpoinUrl) == 0 ||
-             strcmp(apiEndpoinUrl, "v1") == 0);
-        useCustomServer = isOpenAiDefault ? FALSE : TRUE;
+    /* Always use the connection settings passed in (from the active profile).
+     * We do not silently fall back to hardcoded OpenAI defaults here. */
+    if (host == NULL || strlen(host) == 0) {
+        displayError("Host not specified");
+        FreeVec(responses);
+        return NULL;
     }
-    if (useCustomServer) {
-        if (port == 0) {
-            port = useSSL ? 443 : 80;
-        }
-    } else {
-        host = OPENAI_HOST;
-        port = OPENAI_PORT;
-        useSSL = TRUE;
+    if (port == 0) {
+        port = useSSL ? 443 : 80;
     }
+
+    /* Only OpenAI Responses API supports built-in tools like web_search in this
+     * app. Enable tool injection when talking to OpenAI's own host on /v1. */
+    BOOL includeOpenAiTools =
+        (strcmp(host, OPENAI_HOST) == 0) &&
+        (apiEndpoint == API_ENDPOINT_RESPONSES) &&
+        (apiEndpoinUrl == NULL || strlen(apiEndpoinUrl) == 0 ||
+         strcmp(apiEndpoinUrl, "v1") == 0);
 
     if (useProxy && proxyUsesSSL) {
         useSSL = TRUE;
@@ -1291,131 +1287,114 @@ struct json_object **postChatMessageToOpenAI(
         json_object_object_add(obj, "model", json_object_new_string(model));
         struct json_object *conversationArray = json_object_new_array();
 
-        if (useCustomServer) {
-            struct MinNode *conversationNode = conversation->messages->mlh_Head;
+        struct MinNode *conversationNode = conversation->messages->mlh_Head;
 
-            if (apiEndpoint == API_ENDPOINT_MESSAGES) {
-                /* Anthropic/Claude Messages API format */
-                /* System prompt is a top-level parameter, not in messages */
-                if (conversation->system != NULL &&
-                    strlen(conversation->system) > 0) {
-                    json_object_object_add(
-                        obj, "system",
-                        json_object_new_string(conversation->system));
-                }
-
-                /* max_tokens is required for Claude API */
-                json_object_object_add(obj, "max_tokens",
-                                       json_object_new_int(4096));
-
-                /* Build messages array (no system role in messages) */
-                while (conversationNode->mln_Succ != NULL) {
-                    struct ConversationNode *message =
-                        (struct ConversationNode *)conversationNode;
-                    struct json_object *messageObj = json_object_new_object();
-                    json_object_object_add(
-                        messageObj, "role",
-                        json_object_new_string(message->role));
-                    json_object_object_add(
-                        messageObj, "content",
-                        json_object_new_string(message->content));
-                    json_object_array_add(conversationArray, messageObj);
-                    conversationNode = conversationNode->mln_Succ;
-                }
-
-                json_object_object_add(obj, "messages", conversationArray);
-                /* Note: Claude streaming is handled differently, disable for
-                 * now */
-                json_object_object_add(obj, "stream",
-                                       json_object_new_boolean(FALSE));
-            } else {
-                /* OpenAI-compatible endpoints (responses, chat/completions) */
-                if (apiEndpoint == API_ENDPOINT_CHAT_COMPLETIONS) {
-                    struct json_object *messageObj = json_object_new_object();
-                    json_object_object_add(messageObj, "role",
-                                           json_object_new_string("system"));
-                    json_object_object_add(
-                        messageObj, "content",
-                        json_object_new_string(conversation->system));
-                    json_object_array_add(conversationArray, messageObj);
-                }
-                while (conversationNode->mln_Succ != NULL) {
-                    struct ConversationNode *message =
-                        (struct ConversationNode *)conversationNode;
-                    struct json_object *messageObj = json_object_new_object();
-                    json_object_object_add(
-                        messageObj, "role",
-                        json_object_new_string(message->role));
-                    json_object_object_add(
-                        messageObj, "content",
-                        json_object_new_string(message->content));
-                    json_object_array_add(conversationArray, messageObj);
-                    conversationNode = conversationNode->mln_Succ;
-                }
-
-                json_object_object_add(obj,
-                                       apiEndpoint == API_ENDPOINT_RESPONSES
-                                           ? "input"
-                                           : "messages",
-                                       conversationArray);
+        if (apiEndpoint == API_ENDPOINT_MESSAGES) {
+            /* Anthropic/Claude Messages API format */
+            if (conversation->system != NULL &&
+                strlen(conversation->system) > 0)
                 json_object_object_add(
-                    obj, "stream", json_object_new_boolean((json_bool)stream));
+                    obj, "system",
+                    json_object_new_string(conversation->system));
+            /* max_tokens is required for Claude API */
+            json_object_object_add(obj, "max_tokens",
+                                   json_object_new_int(4096));
 
-                if (apiEndpoint == API_ENDPOINT_RESPONSES) {
-                    if (conversation->system != NULL &&
-                        strlen(conversation->system) > 0) {
-                        json_object_object_add(
-                            obj, "instructions",
-                            json_object_new_string(conversation->system));
-                    }
-                }
+            /* Build messages array (no system role in messages) */
+            while (conversationNode->mln_Succ != NULL) {
+                struct ConversationNode *message =
+                    (struct ConversationNode *)conversationNode;
+                struct json_object *messageObj = json_object_new_object();
+                json_object_object_add(messageObj, "role",
+                                       json_object_new_string(message->role));
+                json_object_object_add(
+                    messageObj, "content",
+                    json_object_new_string(message->content));
+                json_object_array_add(conversationArray, messageObj);
+                conversationNode = conversationNode->mln_Succ;
             }
+            json_object_object_add(obj, "messages", conversationArray);
+            /* Claude streaming is handled differently, disable for now */
+            json_object_object_add(obj, "stream",
+                                   json_object_new_boolean(FALSE));
+        } else if (apiEndpoint == API_ENDPOINT_CHAT_COMPLETIONS) {
+            /* OpenAI-compatible chat/completions */
+            if (conversation->system != NULL &&
+                strlen(conversation->system) > 0) {
+                struct json_object *messageObj = json_object_new_object();
+                json_object_object_add(messageObj, "role",
+                                       json_object_new_string("system"));
+                json_object_object_add(
+                    messageObj, "content",
+                    json_object_new_string(conversation->system));
+                json_object_array_add(conversationArray, messageObj);
+            }
+            while (conversationNode->mln_Succ != NULL) {
+                struct ConversationNode *message =
+                    (struct ConversationNode *)conversationNode;
+                struct json_object *messageObj = json_object_new_object();
+                json_object_object_add(messageObj, "role",
+                                       json_object_new_string(message->role));
+                json_object_object_add(
+                    messageObj, "content",
+                    json_object_new_string(message->content));
+                json_object_array_add(conversationArray, messageObj);
+                conversationNode = conversationNode->mln_Succ;
+            }
+            json_object_object_add(obj, "messages", conversationArray);
+            json_object_object_add(obj, "stream",
+                                   json_object_new_boolean((json_bool)stream));
         } else {
-            struct json_object *toolsArray = json_object_new_array();
-            if (webSearchEnabled) {
-                struct json_object *webSearchToolObj = json_object_new_object();
-                json_object_object_add(webSearchToolObj, "type",
-                                       json_object_new_string("web_search"));
-                json_object_array_add(toolsArray, webSearchToolObj);
+            /* Responses-style requests (OpenAI + compatible providers) */
+            if (includeOpenAiTools) {
+                struct json_object *toolsArray = json_object_new_array();
+                if (webSearchEnabled) {
+                    struct json_object *webSearchToolObj =
+                        json_object_new_object();
+                    json_object_object_add(
+                        webSearchToolObj, "type",
+                        json_object_new_string("web_search"));
+                    json_object_array_add(toolsArray, webSearchToolObj);
+                }
+                if (configGetShellToolEnabled()) {
+                    struct json_object *shellToolObj = json_object_new_object();
+                    json_object_object_add(shellToolObj, "type",
+                                           json_object_new_string("function"));
+                    json_object_object_add(shellToolObj, "name",
+                                           json_object_new_string("shell"));
+                    json_object_object_add(
+                        shellToolObj, "description",
+                        json_object_new_string(
+                            "Execute AmigaDOS shell commands on the user's "
+                            "Amiga. Use this to run commands, manage files, or "
+                            "interact with the system. Returns stdout, stderr, "
+                            "and exit code."));
+                    struct json_object *paramsObj = json_object_new_object();
+                    json_object_object_add(paramsObj, "type",
+                                           json_object_new_string("object"));
+                    struct json_object *propsObj = json_object_new_object();
+                    struct json_object *cmdPropObj = json_object_new_object();
+                    json_object_object_add(cmdPropObj, "type",
+                                           json_object_new_string("string"));
+                    json_object_object_add(
+                        cmdPropObj, "description",
+                        json_object_new_string(
+                            "The AmigaDOS command to execute (e.g. 'list "
+                            "RAM:', "
+                            "'type myfile.txt', 'cd Work:')"));
+                    json_object_object_add(propsObj, "command", cmdPropObj);
+                    json_object_object_add(paramsObj, "properties", propsObj);
+                    struct json_object *requiredArr = json_object_new_array();
+                    json_object_array_add(requiredArr,
+                                          json_object_new_string("command"));
+                    json_object_object_add(paramsObj, "required", requiredArr);
+                    json_object_object_add(shellToolObj, "parameters",
+                                           paramsObj);
+                    json_object_array_add(toolsArray, shellToolObj);
+                }
+                json_object_object_add(obj, "tools", toolsArray);
             }
-            if (configGetShellToolEnabled()) {
-                /* Add shell tool as a function tool */
-                struct json_object *shellToolObj = json_object_new_object();
-                json_object_object_add(shellToolObj, "type",
-                                       json_object_new_string("function"));
-                json_object_object_add(shellToolObj, "name",
-                                       json_object_new_string("shell"));
-                json_object_object_add(
-                    shellToolObj, "description",
-                    json_object_new_string(
-                        "Execute AmigaDOS shell commands on the user's Amiga. "
-                        "Use this to run commands, manage files, or interact "
-                        "with the system. Returns stdout, stderr, and exit "
-                        "code."));
-                struct json_object *paramsObj = json_object_new_object();
-                json_object_object_add(paramsObj, "type",
-                                       json_object_new_string("object"));
-                struct json_object *propsObj = json_object_new_object();
-                struct json_object *cmdPropObj = json_object_new_object();
-                json_object_object_add(cmdPropObj, "type",
-                                       json_object_new_string("string"));
-                json_object_object_add(
-                    cmdPropObj, "description",
-                    json_object_new_string(
-                        "The AmigaDOS command to execute (e.g. 'list RAM:', "
-                        "'type myfile.txt', 'cd Work:')"));
-                json_object_object_add(propsObj, "command", cmdPropObj);
-                json_object_object_add(paramsObj, "properties", propsObj);
-                struct json_object *requiredArr = json_object_new_array();
-                json_object_array_add(requiredArr,
-                                      json_object_new_string("command"));
-                json_object_object_add(paramsObj, "required", requiredArr);
-                json_object_object_add(shellToolObj, "parameters", paramsObj);
-                json_object_array_add(toolsArray, shellToolObj);
-            }
-            json_object_object_add(obj, "tools", toolsArray);
 
-            struct MinNode *conversationNode = conversation->messages->mlh_Head;
             while (conversationNode->mln_Succ != NULL) {
                 struct ConversationNode *message =
                     (struct ConversationNode *)conversationNode;
@@ -1433,17 +1412,14 @@ struct json_object **postChatMessageToOpenAI(
             json_object_object_add(obj, "stream",
                                    json_object_new_boolean((json_bool)stream));
 
-            /* Build instructions field - include AmigaDOS info if shell tool
-             * enabled */
-            if (configGetShellToolEnabled()) {
+            if (includeOpenAiTools && configGetShellToolEnabled()) {
                 CONST_STRPTR amigaInstructions =
 #ifdef __AMIGAOS3__
                     "This system is an Amiga computer running AmigaOS. When "
                     "using the shell tool, "
 #elif defined(__AMIGAOS4__)
                     "This system is a PowerPC Amiga computer running AmigaOS. "
-                    "When "
-                    "using the shell tool, "
+                    "When using the shell tool, "
 #else
                     "This system is a PowerPC computer running MorphOS. When "
                     "using the shell tool, "
@@ -1466,8 +1442,6 @@ struct json_object **postChatMessageToOpenAI(
 
                 if (conversation->system != NULL &&
                     strlen(conversation->system) > 0) {
-                    /* Combine user's system prompt with AmigaDOS instructions
-                     */
                     ULONG combinedLen = strlen(conversation->system) +
                                         strlen(amigaInstructions) + 10;
                     STRPTR combinedInstr = AllocVec(combinedLen, MEMF_CLEAR);
@@ -1581,7 +1555,6 @@ struct json_object **postChatMessageToOpenAI(
         }
         connectionRetryCount = 0;
         updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
-        printf("writeBuffer: %s\n", writeBuffer);
         if (useSSL) {
             ERR_clear_error();
             ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
@@ -4144,7 +4117,8 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
  * @param previousResponseId the ID from the previous response
  * @param callId the call_id from the function call
  * @param output the output from the shell command
- * @param host the host to use (or NULL for OpenAI default)
+ * @param model the model to use
+ * @param host the host to use
  * @param port the port to use
  * @param useSSL whether to use SSL
  * @param apiKey the API key
@@ -4160,22 +4134,21 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
  **/
 struct json_object *
 postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
-                       CONST_STRPTR output, STRPTR host, UWORD port,
-                       BOOL useSSL, CONST_STRPTR apiKey, BOOL useProxy,
-                       CONST_STRPTR proxyHost, UWORD proxyPort,
+                       CONST_STRPTR output, CONST_STRPTR model, STRPTR host,
+                       UWORD port, BOOL useSSL, CONST_STRPTR apiKey,
+                       BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
                        BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
                        CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
 
     UBYTE connectionRetryCount = 0;
-    BOOL useCustomServer = host != NULL && strlen(host) > 0;
-
-    if (useCustomServer) {
-        if (port == 0) {
-            port = useSSL ? 443 : 80;
-        }
-    } else {
-        host = OPENAI_HOST;
-        port = OPENAI_PORT;
+    if (host == NULL || strlen(host) == 0) {
+        displayError("Host not specified");
+        return NULL;
+    }
+    if (port == 0) {
+        port = useSSL ? 443 : 80;
+    }
+    if (useProxy && proxyUsesSSL) {
         useSSL = TRUE;
     }
 
@@ -4184,9 +4157,12 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
     struct json_object *obj = json_object_new_object();
 
     /* Add the model - required by the API */
-    json_object_object_add(
-        obj, "model",
-        json_object_new_string(CHAT_MODEL_NAMES[configGetChatModel()]));
+    if (model == NULL || strlen(model) == 0) {
+        json_object_put(obj);
+        displayError("Model not specified");
+        return NULL;
+    }
+    json_object_object_add(obj, "model", json_object_new_string(model));
 
     /* Use the previous response ID to continue the conversation */
     json_object_object_add(obj, "previous_response_id",

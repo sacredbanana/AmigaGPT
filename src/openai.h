@@ -539,7 +539,8 @@ STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode);
  * @param previousResponseId the ID from the previous response
  * @param callId the call_id from the function call
  * @param output the output from the shell command
- * @param host the host to use (or NULL for OpenAI default)
+ * @param model the model to use
+ * @param host the host to use
  * @param port the port to use
  * @param useSSL whether to use SSL
  * @param apiKey the API key
@@ -554,9 +555,9 @@ STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode);
  **/
 struct json_object *
 postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
-                       CONST_STRPTR output, STRPTR host, UWORD port,
-                       BOOL useSSL, CONST_STRPTR apiKey, BOOL useProxy,
-                       CONST_STRPTR proxyHost, UWORD proxyPort,
+                       CONST_STRPTR output, CONST_STRPTR model, STRPTR host,
+                       UWORD port, BOOL useSSL, CONST_STRPTR apiKey,
+                       BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
                        BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
                        CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 

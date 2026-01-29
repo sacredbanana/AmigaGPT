@@ -1305,19 +1305,19 @@ msgid "Web Search"
 msgstr "Web поиск"
 
 #: src/menu.c:146
-msgctxt "STRING_MENU_CUSTOM_SERVER (239//)"
-msgid "Custom Server"
-msgstr "Пользовательский Сервер"
+msgctxt "STRING_MENU_CUSTOM_PROVIDER (239//)"
+msgid "Custom Provider"
+msgstr "Пользовательский провайдер"
 
 #: src/menu.c:148
-msgctxt "STRING_MENU_CUSTOM_SERVER_SETTINGS (241//)"
-msgid "Custom Server Settings"
-msgstr "Настройки Пользовательского Сервера"
+msgctxt "STRING_MENU_CUSTOM_PROVIDER_SETTINGS (241//)"
+msgid "Custom Provider Settings"
+msgstr "Настройки пользовательского провайдера"
 
 #: src/CustomServerSettingsRequesterWindow.c:11
-msgctxt "STRING_ERROR_CUSTOM_SERVER_SETTINGS (242//)"
-msgid "Failed to create custom server settings window"
-msgstr "Не удалось создать customServerSettingsRequesterWindowObject"
+msgctxt "STRING_ERROR_CUSTOM_PROVIDER_SETTINGS (242//)"
+msgid "Failed to create provider settings window"
+msgstr "Не удалось создать окно настроек провайдера"
 
 #: src/CustomServerSettingsRequesterWindow.c:111
 msgctxt "STRING_MENU_OPENAI_API_ENDPOINT (243//)"
@@ -1585,8 +1585,8 @@ msgstr "Anthropic Claude"
 #: src/openai.c
 #, fuzzy
 msgctxt "STRING_PROVIDER_CUSTOM (293//)"
-msgid "Custom Server"
-msgstr "Пользовательский Сервер"
+msgid "Custom Provider"
+msgstr "Пользовательский провайдер"
 
 #: src/menu.c
 #, fuzzy
