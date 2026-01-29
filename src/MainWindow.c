@@ -577,14 +577,47 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             freeConversation(imageNameConversation);
             return;
         }
-        STRPTR responseString = getMessageContentFromJson(
-            responses[0], FALSE, FALSE, nameSettings.apiEndpoint);
+        /* Some providers (e.g. Claude with web search) may return text in
+         * multiple response objects. Concatenate all text parts. */
+        ULONG combinedLen = 1;
+        UWORD ri = 0;
+        struct json_object *r = NULL;
+        while ((r = responses[ri++]) != NULL) {
+            UTF8 *part = getMessageContentFromJson(r, FALSE, FALSE,
+                                                   nameSettings.apiEndpoint);
+            if (part != NULL)
+                combinedLen += strlen(part) + 1;
+        }
+        STRPTR combined = AllocVec(combinedLen, MEMF_ANY | MEMF_CLEAR);
+        if (combined == NULL) {
+            combined = (STRPTR) "";
+        } else {
+            ri = 0;
+            while ((r = responses[ri++]) != NULL) {
+                UTF8 *part = getMessageContentFromJson(
+                    r, FALSE, FALSE, nameSettings.apiEndpoint);
+                if (part != NULL && strlen(part) > 0) {
+                    strncat(combined, part, combinedLen - strlen(combined) - 1);
+                }
+            }
+        }
+        STRPTR responseString = combined;
         generatedImage->name =
             AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
         strncpy(generatedImage->name, responseString, strlen(responseString));
         updateStatusBar(STRING_READY, 5);
-        json_object_put(responses[0]);
+        ri = 0;
+        while ((r = responses[ri++]) != NULL) {
+            json_object_put(r);
+        }
         FreeVec(responses);
+        if (combined != NULL && combined != (STRPTR) "" &&
+            combined != (STRPTR)responseString) {
+            /* unreachable, but keep for safety */
+        }
+        if (combined != NULL && combined != (STRPTR) "") {
+            FreeVec(combined);
+        }
     } else {
         generatedImage->name = AllocVec(11, MEMF_ANY | MEMF_CLEAR);
         strncpy(generatedImage->name, id, 10);
@@ -1578,16 +1611,17 @@ static void sendChatMessage() {
                      * - Responses API: "type"=="response.completed"
                      * - chat.completions: choices[0].finish_reason is set (and
                      *   we may also synthesize response.completed from [DONE])
+                     * - Gemini streamGenerateContent:
+                     * candidates[0].finishReason
                      */
                     STRPTR type = json_object_get_string(
                         json_object_object_get(response, "type"));
                     if (type != NULL &&
                         strcmp(type, "response.completed") == 0) {
                         dataStreamFinished = TRUE;
-                    } else if (chatSettings.apiEndpoint ==
-                                   API_ENDPOINT_CHAT_COMPLETIONS ||
-                               json_object_object_get(response, "choices") !=
-                                   NULL) {
+                    } else if (json_object_object_get(response, "choices") !=
+                               NULL) {
+                        /* OpenAI-compatible chat.completions streaming chunk */
                         struct json_object *choices =
                             json_object_object_get(response, "choices");
                         if (choices != NULL &&
@@ -1599,6 +1633,35 @@ static void sendChatMessage() {
                                 struct json_object *finishReason =
                                     json_object_object_get(choice0,
                                                            "finish_reason");
+                                if (finishReason != NULL &&
+                                    !json_object_is_type(finishReason,
+                                                         json_type_null)) {
+                                    STRPTR fr = (STRPTR)json_object_get_string(
+                                        finishReason);
+                                    if (fr != NULL && strlen(fr) > 0) {
+                                        dataStreamFinished = TRUE;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        /* Gemini streamGenerateContent */
+                        struct json_object *candidates =
+                            json_object_object_get(response, "candidates");
+                        if (candidates != NULL &&
+                            json_object_is_type(candidates, json_type_array) &&
+                            json_object_array_length(candidates) > 0) {
+                            struct json_object *cand0 =
+                                json_object_array_get_idx(candidates, 0);
+                            if (cand0 != NULL &&
+                                json_object_is_type(cand0, json_type_object)) {
+                                struct json_object *finishReason =
+                                    json_object_object_get(cand0,
+                                                           "finishReason");
+                                if (finishReason == NULL) {
+                                    finishReason = json_object_object_get(
+                                        cand0, "finish_reason");
+                                }
                                 if (finishReason != NULL &&
                                     !json_object_is_type(finishReason,
                                                          json_type_null)) {
@@ -1824,8 +1887,31 @@ static void sendChatMessage() {
                 return;
             }
             if (responses[0] != NULL) {
-                UTF8 *responseString = getMessageContentFromJson(
-                    responses[0], FALSE, FALSE, chatSettings.apiEndpoint);
+                /* Concatenate all text parts across response objects */
+                ULONG combinedLen = 1;
+                UWORD ri = 0;
+                struct json_object *r = NULL;
+                while ((r = responses[ri++]) != NULL) {
+                    UTF8 *part = getMessageContentFromJson(
+                        r, FALSE, FALSE, chatSettings.apiEndpoint);
+                    if (part != NULL)
+                        combinedLen += strlen(part) + 1;
+                }
+                STRPTR combined = AllocVec(combinedLen, MEMF_ANY | MEMF_CLEAR);
+                if (combined == NULL) {
+                    combined = (STRPTR) "";
+                } else {
+                    ri = 0;
+                    while ((r = responses[ri++]) != NULL) {
+                        UTF8 *part = getMessageContentFromJson(
+                            r, FALSE, FALSE, chatSettings.apiEndpoint);
+                        if (part != NULL && strlen(part) > 0) {
+                            strncat(combined, part,
+                                    combinedLen - strlen(combined) - 1);
+                        }
+                    }
+                }
+                UTF8 *responseString = combined;
                 if (currentConversation->name == NULL) {
                     currentConversation->name =
                         AllocVec(strlen(responseString) + 1, MEMF_CLEAR);
@@ -1836,8 +1922,15 @@ static void sendChatMessage() {
                          currentConversation, MUIV_NList_Insert_Top);
                 DoMethod(conversationListObject, MUIM_NList_SetActive,
                          MUIV_NList_Active_Top, NULL);
+                if (combined != NULL && combined != (STRPTR) "") {
+                    FreeVec(combined);
+                }
             }
-            json_object_put(responses[0]);
+            UWORD ri = 0;
+            struct json_object *r = NULL;
+            while ((r = responses[ri++]) != NULL) {
+                json_object_put(r);
+            }
             FreeVec(responses);
         }
     }

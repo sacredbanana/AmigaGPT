@@ -266,7 +266,7 @@ CONST_STRPTR GROK_CHAT_MODELS[] = {
 /**
  * Prepopulated chat models for Anthropic Claude
  **/
-CONST_STRPTR ANTHROPIC_CHAT_MODELS[] = {"claude-opus-4-5-20250929",
+CONST_STRPTR ANTHROPIC_CHAT_MODELS[] = {"claude-opus-4-5-20251101",
                                         "claude-sonnet-4-5-20250929",
                                         "claude-sonnet-4-20250514",
                                         "claude-3-5-sonnet-20241022",
@@ -1267,29 +1267,110 @@ struct json_object **postChatMessageToOpenAI(
         port = useSSL ? 443 : 80;
     }
 
-    /* Only OpenAI Responses API supports built-in tools like web_search in this
-     * app. Enable tool injection when talking to OpenAI's own host on /v1. */
+    /* Identify provider based on the host we are calling. */
+    Provider requestProvider = PROVIDER_CUSTOM;
+    if (strcmp(host, providerConfigs[PROVIDER_OPENAI].host) == 0) {
+        requestProvider = PROVIDER_OPENAI;
+    } else if (strcmp(host, providerConfigs[PROVIDER_GEMINI].host) == 0) {
+        requestProvider = PROVIDER_GEMINI;
+    } else if (strcmp(host, providerConfigs[PROVIDER_GROK].host) == 0) {
+        requestProvider = PROVIDER_GROK;
+    } else if (strcmp(host, providerConfigs[PROVIDER_ANTHROPIC].host) == 0) {
+        requestProvider = PROVIDER_ANTHROPIC;
+    }
+
+    /* OpenAI Responses API supports built-in tools like web_search (and the
+     * "shell" tool) in this app. Enable tool injection when talking to OpenAI's
+     * own host on /v1. */
     BOOL includeOpenAiTools =
         (strcmp(host, OPENAI_HOST) == 0) &&
         (apiEndpoint == API_ENDPOINT_RESPONSES) &&
         (apiEndpoinUrl == NULL || strlen(apiEndpoinUrl) == 0 ||
          strcmp(apiEndpoinUrl, "v1") == 0);
 
+    /* Gemini OpenAI-compatible endpoint does not support tool calling for web
+     * search. When web search is enabled, use Gemini's native generateContent
+     * API instead. */
+    BOOL useGeminiGenerateContent =
+        (requestProvider == PROVIDER_GEMINI) && webSearchEnabled;
+    BOOL effectiveStream = stream;
+
     if (useProxy && proxyUsesSSL) {
         useSSL = TRUE;
     }
 
-    if (!stream || !streamingInProgress) {
+    if (!effectiveStream || !streamingInProgress) {
         memset(readBuffer, 0, READ_BUFFER_LENGTH);
-        streamingInProgress = stream;
+        streamingInProgress = effectiveStream;
 
         struct json_object *obj = json_object_new_object();
-        json_object_object_add(obj, "model", json_object_new_string(model));
+        if (!useGeminiGenerateContent) {
+            json_object_object_add(obj, "model", json_object_new_string(model));
+        }
         struct json_object *conversationArray = json_object_new_array();
 
         struct MinNode *conversationNode = conversation->messages->mlh_Head;
 
-        if (apiEndpoint == API_ENDPOINT_MESSAGES) {
+        if (useGeminiGenerateContent) {
+            /* Gemini native generateContent format:
+             * POST /v1beta/models/<model>:generateContent
+             * {
+             *   "contents": [{ "role": "...", "parts":[{"text":"..."}] }, ...],
+             *   "systemInstruction": { "parts":[{"text":"..."}] },
+             *   "tools": [{ "google_search": {} }]
+             * } */
+
+            if (conversation->system != NULL &&
+                strlen(conversation->system) > 0) {
+                struct json_object *sysObj = json_object_new_object();
+                struct json_object *sysParts = json_object_new_array();
+                struct json_object *sysPart0 = json_object_new_object();
+                json_object_object_add(
+                    sysPart0, "text",
+                    json_object_new_string(conversation->system));
+                json_object_array_add(sysParts, sysPart0);
+                json_object_object_add(sysObj, "parts", sysParts);
+                json_object_object_add(obj, "systemInstruction", sysObj);
+            }
+
+            while (conversationNode->mln_Succ != NULL) {
+                struct ConversationNode *message =
+                    (struct ConversationNode *)conversationNode;
+                struct json_object *contentObj = json_object_new_object();
+
+                CONST_STRPTR role = "user";
+                if (strcmp(message->role, "assistant") == 0) {
+                    role = "model";
+                } else if (strcmp(message->role, "user") == 0) {
+                    role = "user";
+                }
+                json_object_object_add(contentObj, "role",
+                                       json_object_new_string(role));
+
+                struct json_object *partsArr = json_object_new_array();
+                struct json_object *partObj = json_object_new_object();
+                json_object_object_add(
+                    partObj, "text",
+                    json_object_new_string(message->content != NULL
+                                               ? (const char *)message->content
+                                               : ""));
+                json_object_array_add(partsArr, partObj);
+                json_object_object_add(contentObj, "parts", partsArr);
+
+                json_object_array_add(conversationArray, contentObj);
+                conversationNode = conversationNode->mln_Succ;
+            }
+            json_object_object_add(obj, "contents", conversationArray);
+
+            /* Web search tool */
+            struct json_object *toolsArray = json_object_new_array();
+            struct json_object *toolObj = json_object_new_object();
+            json_object_object_add(toolObj, "google_search",
+                                   json_object_new_object());
+            json_object_array_add(toolsArray, toolObj);
+            json_object_object_add(obj, "tools", toolsArray);
+
+        } else if (apiEndpoint == API_ENDPOINT_MESSAGES) {
             /* Anthropic/Claude Messages API format */
             if (conversation->system != NULL &&
                 strlen(conversation->system) > 0)
@@ -1317,6 +1398,19 @@ struct json_object **postChatMessageToOpenAI(
             /* Claude streaming is handled differently, disable for now */
             json_object_object_add(obj, "stream",
                                    json_object_new_boolean(FALSE));
+
+            /* Provider web search tools */
+            if (webSearchEnabled && requestProvider == PROVIDER_ANTHROPIC) {
+                struct json_object *toolsArray = json_object_new_array();
+                struct json_object *toolObj = json_object_new_object();
+                json_object_object_add(
+                    toolObj, "type",
+                    json_object_new_string("web_search_20250305"));
+                json_object_object_add(toolObj, "name",
+                                       json_object_new_string("web_search"));
+                json_object_array_add(toolsArray, toolObj);
+                json_object_object_add(obj, "tools", toolsArray);
+            }
         } else if (apiEndpoint == API_ENDPOINT_CHAT_COMPLETIONS) {
             /* OpenAI-compatible chat/completions */
             if (conversation->system != NULL &&
@@ -1342,21 +1436,53 @@ struct json_object **postChatMessageToOpenAI(
                 conversationNode = conversationNode->mln_Succ;
             }
             json_object_object_add(obj, "messages", conversationArray);
-            json_object_object_add(obj, "stream",
-                                   json_object_new_boolean((json_bool)stream));
+            json_object_object_add(
+                obj, "stream",
+                json_object_new_boolean((json_bool)effectiveStream));
+
+            /* Provider web search tools */
+            if (webSearchEnabled && requestProvider == PROVIDER_GROK) {
+                /* Some providers accept this on chat/completions too. */
+                struct json_object *toolsArray = json_object_new_array();
+                struct json_object *webObj = json_object_new_object();
+                json_object_object_add(webObj, "type",
+                                       json_object_new_string("web_search"));
+                json_object_array_add(toolsArray, webObj);
+                struct json_object *xObj = json_object_new_object();
+                json_object_object_add(xObj, "type",
+                                       json_object_new_string("x_search"));
+                json_object_array_add(toolsArray, xObj);
+                json_object_object_add(obj, "tools", toolsArray);
+            }
         } else {
             /* Responses-style requests (OpenAI + compatible providers) */
-            if (includeOpenAiTools) {
+            if (includeOpenAiTools ||
+                (webSearchEnabled && (requestProvider == PROVIDER_GROK))) {
                 struct json_object *toolsArray = json_object_new_array();
                 if (webSearchEnabled) {
-                    struct json_object *webSearchToolObj =
-                        json_object_new_object();
-                    json_object_object_add(
-                        webSearchToolObj, "type",
-                        json_object_new_string("web_search"));
-                    json_object_array_add(toolsArray, webSearchToolObj);
+                    if (requestProvider == PROVIDER_GROK) {
+                        struct json_object *webSearchToolObj =
+                            json_object_new_object();
+                        json_object_object_add(
+                            webSearchToolObj, "type",
+                            json_object_new_string("web_search"));
+                        json_object_array_add(toolsArray, webSearchToolObj);
+                        struct json_object *xSearchToolObj =
+                            json_object_new_object();
+                        json_object_object_add(
+                            xSearchToolObj, "type",
+                            json_object_new_string("x_search"));
+                        json_object_array_add(toolsArray, xSearchToolObj);
+                    } else if (includeOpenAiTools) {
+                        struct json_object *webSearchToolObj =
+                            json_object_new_object();
+                        json_object_object_add(
+                            webSearchToolObj, "type",
+                            json_object_new_string("web_search"));
+                        json_object_array_add(toolsArray, webSearchToolObj);
+                    }
                 }
-                if (configGetShellToolEnabled()) {
+                if (includeOpenAiTools && configGetShellToolEnabled()) {
                     struct json_object *shellToolObj = json_object_new_object();
                     json_object_object_add(shellToolObj, "type",
                                            json_object_new_string("function"));
@@ -1409,10 +1535,12 @@ struct json_object **postChatMessageToOpenAI(
             }
 
             json_object_object_add(obj, "input", conversationArray);
-            json_object_object_add(obj, "stream",
-                                   json_object_new_boolean((json_bool)stream));
+            json_object_object_add(
+                obj, "stream",
+                json_object_new_boolean((json_bool)effectiveStream));
 
-            if (includeOpenAiTools && configGetShellToolEnabled()) {
+            if (requestProvider == PROVIDER_OPENAI && includeOpenAiTools &&
+                configGetShellToolEnabled()) {
                 CONST_STRPTR amigaInstructions =
 #ifdef __AMIGAOS3__
                     "This system is an Amiga computer running AmigaOS. When "
@@ -1483,17 +1611,27 @@ struct json_object **postChatMessageToOpenAI(
             FreeVec(encodedCredentials);
         }
 
-        if (apiEndpoinUrl == NULL) {
-            apiEndpoinUrl = "v1";
+        CONST_STRPTR effectiveApiEndpointUrl = apiEndpoinUrl;
+        if (useGeminiGenerateContent) {
+            effectiveApiEndpointUrl = "v1beta";
+        } else if (effectiveApiEndpointUrl == NULL) {
+            effectiveApiEndpointUrl = "v1";
         }
 
         /* Build the API authorization header based on type */
         UBYTE apiAuthHeader[512];
         memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
-        if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
-            strlen(apiKey) > 0) {
-            snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
-                     AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+        if (useGeminiGenerateContent) {
+            if (apiKey != NULL && strlen(apiKey) > 0) {
+                snprintf(apiAuthHeader, sizeof(apiAuthHeader),
+                         "x-goog-api-key: %s\r\n", apiKey);
+            }
+        } else {
+            if (authorizationType != AUTHORIZATION_TYPE_NONE &&
+                apiKey != NULL && strlen(apiKey) > 0) {
+                snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                         AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+            }
         }
 
         /* Build custom headers string with proper line ending */
@@ -1502,6 +1640,20 @@ struct json_object **postChatMessageToOpenAI(
         if (customHeaders != NULL && strlen(customHeaders) > 0) {
             snprintf(customHeadersFormatted, sizeof(customHeadersFormatted),
                      "%s\r\n", customHeaders);
+        }
+
+        char endpointNameBuf[256];
+        memset(endpointNameBuf, 0, sizeof(endpointNameBuf));
+        CONST_STRPTR endpointName = API_ENDPOINT_NAMES[apiEndpoint];
+        if (useGeminiGenerateContent) {
+            if (effectiveStream) {
+                snprintf(endpointNameBuf, sizeof(endpointNameBuf),
+                         "models/%s:streamGenerateContent?alt=sse", model);
+            } else {
+                snprintf(endpointNameBuf, sizeof(endpointNameBuf),
+                         "models/%s:generateContent", model);
+            }
+            endpointName = endpointNameBuf;
         }
 
         if (useSSL || useProxy) {
@@ -1516,10 +1668,10 @@ struct json_object **postChatMessageToOpenAI(
                      "%s\r\n"
                      "%s\0",
                      useSSL ? "https" : "http", host, port,
-                     strlen(apiEndpoinUrl) > 0 ? "/" : "", apiEndpoinUrl,
-                     API_ENDPOINT_NAMES[apiEndpoint], host, port, apiAuthHeader,
-                     customHeadersFormatted, strlen(jsonString), authHeader,
-                     jsonString);
+                     strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
+                     effectiveApiEndpointUrl, endpointName, host, port,
+                     apiAuthHeader, customHeadersFormatted, strlen(jsonString),
+                     authHeader, jsonString);
         } else {
             snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
                      "POST %s%s/%s HTTP/1.1\r\n"
@@ -1531,10 +1683,10 @@ struct json_object **postChatMessageToOpenAI(
                      "Content-Length: %lu\r\n"
                      "%s\r\n"
                      "%s\0",
-                     strlen(apiEndpoinUrl) > 0 ? "/" : "", apiEndpoinUrl,
-                     API_ENDPOINT_NAMES[apiEndpoint], host, port, apiAuthHeader,
-                     customHeadersFormatted, strlen(jsonString), authHeader,
-                     jsonString);
+                     strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
+                     effectiveApiEndpointUrl, endpointName, host, port,
+                     apiAuthHeader, customHeadersFormatted, strlen(jsonString),
+                     authHeader, jsonString);
         }
 
         json_object_put(obj);
@@ -1570,7 +1722,7 @@ struct json_object **postChatMessageToOpenAI(
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 #endif
 
-    if (ssl_err > 0 || stream) {
+    if (ssl_err > 0 || effectiveStream) {
         ULONG totalBytesRead = 0;
         WORD bytesRead = 0;
         BOOL doneReading = FALSE;
@@ -1587,7 +1739,8 @@ struct json_object **postChatMessageToOpenAI(
              * events buffered in readBuffer from a previous call. Do NOT block
              * on SSL_read/recv if we can return an event immediately. */
             BOOL shouldParseBuffered = FALSE;
-            if (stream && readBuffer != NULL && readBuffer[0] != '\0') {
+            if (effectiveStream && readBuffer != NULL &&
+                readBuffer[0] != '\0') {
                 STRPTR dataPos = strstr(readBuffer, "data:");
                 if (dataPos != NULL) {
                     STRPTR end = strstr(dataPos, "\r\n\r\n");
@@ -1633,7 +1786,7 @@ struct json_object **postChatMessageToOpenAI(
             switch (err) {
             case SSL_ERROR_NONE:
                 totalBytesRead += bytesRead;
-                if (stream) {
+                if (effectiveStream) {
                     /* Streaming is Server-Sent Events (SSE):
                      *   data: { ...json... }\r\n\r\n
                      *   data: [DONE]\r\n\r\n     (chat.completions style)
@@ -1794,13 +1947,27 @@ struct json_object **postChatMessageToOpenAI(
 
                 break;
             case SSL_ERROR_ZERO_RETURN:
+                /* Gemini streamGenerateContent typically ends by closing the
+                 * connection (no [DONE]). If we reach EOF without having
+                 * produced a chunk in this call, synthesize a completion event
+                 * so the UI loop doesn't re-send the request forever. */
+                if (useGeminiGenerateContent && effectiveStream &&
+                    responseIndex == 0) {
+                    struct json_object *completed = json_object_new_object();
+                    json_object_object_add(
+                        completed, "type",
+                        json_object_new_string("response.completed"));
+                    responses[responseIndex++] = completed;
+                    streamingInProgress = FALSE;
+                }
                 doneReading = TRUE;
                 break;
             case SSL_ERROR_WANT_READ:
                 printf("SSL_ERROR_WANT_READ\n");
                 /* If we've already received the SSE terminator, stop waiting.
                  */
-                if (stream && strstr(readBuffer, "data: [DONE]") != NULL) {
+                if (effectiveStream &&
+                    strstr(readBuffer, "data: [DONE]") != NULL) {
                     /* Important: return a completion marker to the caller so
                      * the UI loop can terminate instead of re-sending the
                      * request. */
@@ -1852,9 +2019,10 @@ struct json_object **postChatMessageToOpenAI(
                         streamingInProgress = FALSE;
                         break;
                     }
-                    const STRPTR jsonStart = stream ? "data: {" : "{";
-                    STRPTR jsonString = stream ? strstr(readBuffer, jsonStart)
-                                               : strstr(readBuffer, "{");
+                    const STRPTR jsonStart = effectiveStream ? "data: {" : "{";
+                    STRPTR jsonString = effectiveStream
+                                            ? strstr(readBuffer, jsonStart)
+                                            : strstr(readBuffer, "{");
                     if (jsonString != NULL) {
                         // We have JSON data - this might be a normal connection
                         // closure
@@ -1877,7 +2045,7 @@ struct json_object **postChatMessageToOpenAI(
         displayError(STRING_ERROR_REQUEST_WRITE);
         reportSslError(ssl, ssl_err, "SSL_write");
     }
-    if (stream) {
+    if (effectiveStream) {
         // Check if the last response is the end of the stream and set the
         // streamingInProgress flag to FALSE so that the next request will
         // establish a new connection because OpenAI will close the connection

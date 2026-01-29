@@ -1127,7 +1127,7 @@ HOOKPROTONHNONP(TemplateSelectedFunc, void) {
         set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
             AUTHORIZATION_TYPE_X_API_KEY);
         set(customServerChatModelString, MUIA_String_Contents,
-            "claude-sonnet-4-5-20250929");
+            "claude-opus-4-5-20251101");
         set(customServerApiEndpointCycle, MUIA_Cycle_Active,
             API_ENDPOINT_MESSAGES);
         set(customServerApiEndpointUrlString, MUIA_String_Contents, "v1");

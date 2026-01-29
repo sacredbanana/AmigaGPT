@@ -1732,7 +1732,7 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     if (data->anthropicChatModelName == NULL) {
         data->anthropicChatModelName =
             copyString(ANTHROPIC_CHAT_MODELS[0] ? ANTHROPIC_CHAT_MODELS[0]
-                                                : "claude-opus-4-5-20250929");
+                                                : "claude-opus-4-5-20251101");
     }
 
     FreeVec(configJsonString);

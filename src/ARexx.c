@@ -442,64 +442,97 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         return RETURN_OK;
     }
 
-    struct json_object *response = responses[0];
-    if (response == NULL) {
+    if (responses[0] == NULL) {
         set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
         updateStatusBar(STRING_ERROR, redPen);
         FreeVec(responses);
         return RETURN_OK;
     }
 
-    struct json_object *error;
-    if (json_object_object_get_ex(response, "error", &error) &&
-        !json_object_is_type(error, json_type_null)) {
-        struct json_object *message = json_object_object_get(error, "message");
-        UTF8 *messageString = json_object_get_string(message);
-        STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
-            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)messageString,
-            CSA_MapForeignChars, TRUE, TAG_DONE);
-        set(app, MUIA_Application_RexxString, formattedMessageSystemEncoded);
-        CodesetsFreeA(formattedMessageSystemEncoded, NULL);
-        json_object_put(response);
-        FreeVec(responses);
+    /* Concatenate all assistant text across response objects. Some providers
+     * return web-search results as additional message objects. */
+    ULONG combinedLen = 1;
+    UWORD ri = 0;
+    struct json_object *response = NULL;
+    while ((response = responses[ri++]) != NULL) {
+        struct json_object *error;
+        if (json_object_object_get_ex(response, "error", &error) &&
+            !json_object_is_type(error, json_type_null)) {
+            struct json_object *message =
+                json_object_object_get(error, "message");
+            UTF8 *messageString = json_object_get_string(message);
+            STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
+                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                (Tag)messageString, CSA_MapForeignChars, TRUE, TAG_DONE);
+            set(app, MUIA_Application_RexxString,
+                formattedMessageSystemEncoded);
+            CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+            /* Cleanup */
+            ri = 0;
+            while ((response = responses[ri++]) != NULL) {
+                json_object_put(response);
+            }
+            FreeVec(responses);
+            updateStatusBar(STRING_ERROR, redPen);
+            return RETURN_OK;
+        }
+        UTF8 *part = getMessageContentFromJson(response, FALSE, TRUE,
+                                               API_ENDPOINT_RESPONSES);
+        if (part != NULL)
+            combinedLen += strlen(part) + 1;
+    }
+
+    STRPTR combined = AllocVec(combinedLen, MEMF_ANY | MEMF_CLEAR);
+    if (combined == NULL) {
         updateStatusBar(STRING_ERROR, redPen);
-        return RETURN_OK;
-    } else {
-        UTF8 *contentString = getMessageContentFromJson(response, FALSE, TRUE,
-                                                        API_ENDPOINT_RESPONSES);
-
-        if (!contentString) {
-            updateStatusBar(STRING_ERROR, redPen);
-            set(app, MUIA_Application_RexxString,
-                STRING_ERROR_CONNECTING_OPENAI);
+        set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
+        ri = 0;
+        while ((response = responses[ri++]) != NULL) {
             json_object_put(response);
-            FreeVec(responses);
-            return RETURN_OK;
         }
-
-        if (strlen(contentString) == 0) {
-            set(app, MUIA_Application_RexxString,
-                STRING_ERROR_CONNECTING_OPENAI);
-            updateStatusBar(STRING_ERROR, redPen);
-            json_object_put(response);
-            FreeVec(responses);
-            return RETURN_OK;
-        }
-
-        /* Add response to conversation for context */
-        addTextToConversation(conversation, contentString, "assistant");
-        saveDaemonConversation();
-
-        STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
-            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)contentString,
-            CSA_MapForeignChars, TRUE, TAG_DONE);
-        set(app, MUIA_Application_RexxString, formattedMessageSystemEncoded);
-        CodesetsFreeA(formattedMessageSystemEncoded, NULL);
-        json_object_put(response);
         FreeVec(responses);
-        updateStatusBar(STRING_READY, greenPen);
         return RETURN_OK;
     }
+
+    ri = 0;
+    while ((response = responses[ri++]) != NULL) {
+        UTF8 *part = getMessageContentFromJson(response, FALSE, TRUE,
+                                               API_ENDPOINT_RESPONSES);
+        if (part != NULL && strlen(part) > 0) {
+            strncat(combined, part, combinedLen - strlen(combined) - 1);
+        }
+    }
+
+    if (strlen(combined) == 0) {
+        set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
+        updateStatusBar(STRING_ERROR, redPen);
+        ri = 0;
+        while ((response = responses[ri++]) != NULL) {
+            json_object_put(response);
+        }
+        FreeVec(responses);
+        FreeVec(combined);
+        return RETURN_OK;
+    }
+
+    /* Add response to conversation for context */
+    addTextToConversation(conversation, combined, "assistant");
+    saveDaemonConversation();
+
+    STRPTR formattedMessageSystemEncoded =
+        CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                          (Tag)combined, CSA_MapForeignChars, TRUE, TAG_DONE);
+    set(app, MUIA_Application_RexxString, formattedMessageSystemEncoded);
+    CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+
+    ri = 0;
+    while ((response = responses[ri++]) != NULL) {
+        json_object_put(response);
+    }
+    FreeVec(responses);
+    FreeVec(combined);
+    updateStatusBar(STRING_READY, greenPen);
+    return RETURN_OK;
 }
 MakeHook(SendMessageHook, SendMessageFunc);
 
