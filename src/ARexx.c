@@ -171,6 +171,60 @@ static struct Conversation *getDaemonConversation(void) {
 }
 
 /**
+ * Read an entire text file into a null-terminated string.
+ * The returned buffer must be freed with FreeVec().
+ * @param path path to the file
+ * @return allocated null-terminated buffer, or NULL on error
+ **/
+static STRPTR readTextFileToString(CONST_STRPTR path) {
+    if (path == NULL || strlen(path) == 0) {
+        return NULL;
+    }
+
+    BPTR file = Open(path, MODE_OLDFILE);
+    if (file == 0) {
+        return NULL;
+    }
+
+#ifdef __AMIGAOS3__
+    Seek(file, 0, OFFSET_END);
+    LONG fileSize = Seek(file, 0, OFFSET_BEGINNING);
+#else
+#ifdef __AMIGAOS4__
+    int64_t fileSize = GetFileSize(file);
+#else
+    struct FileInfoBlock fib;
+    ExamineFH64(file, &fib, NULL);
+    int64_t fileSize = fib.fib_Size;
+#endif
+#endif
+
+    if (fileSize < 0 || fileSize > 0x7fffffff) {
+        Close(file);
+        return NULL;
+    }
+
+    STRPTR buf = AllocVec((ULONG)fileSize + 1, MEMF_ANY | MEMF_CLEAR);
+    if (buf == NULL) {
+        Close(file);
+        return NULL;
+    }
+
+    if (fileSize > 0) {
+        LONG readLen = Read(file, buf, (LONG)fileSize);
+        if (readLen != (LONG)fileSize) {
+            Close(file);
+            FreeVec(buf);
+            return NULL;
+        }
+    }
+
+    Close(file);
+    buf[(ULONG)fileSize] = '\0';
+    return buf;
+}
+
+/**
  * Clear the daemon conversation history (start a new chat)
  **/
 static void clearDaemonConversation(void) {
@@ -196,19 +250,20 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     STRPTR providerString = (STRPTR)arg[0];
     STRPTR model = (STRPTR)arg[1];
     STRPTR system = (STRPTR)arg[2];
-    STRPTR host = (STRPTR)arg[3];
-    ULONG *port = (ULONG *)arg[4];
-    BOOL useSSL = (BOOL)arg[5];
-    STRPTR apiKey = (STRPTR)arg[6];
-    BOOL useProxy = (BOOL)arg[7];
-    STRPTR proxyHost = (STRPTR)arg[8];
-    ULONG *proxyPort = (ULONG *)arg[9];
-    BOOL proxyUsesSSL = (BOOL)arg[10];
-    BOOL proxyRequiresAuth = (BOOL)arg[11];
-    STRPTR proxyUsername = (STRPTR)arg[12];
-    STRPTR proxyPassword = (STRPTR)arg[13];
-    BOOL webSearchEnabled = (BOOL)arg[14];
-    STRPTR prompt = (STRPTR)arg[15];
+    STRPTR systemFile = (STRPTR)arg[3];
+    STRPTR host = (STRPTR)arg[4];
+    ULONG *port = (ULONG *)arg[5];
+    BOOL useSSL = (BOOL)arg[6];
+    STRPTR apiKey = (STRPTR)arg[7];
+    BOOL useProxy = (BOOL)arg[8];
+    STRPTR proxyHost = (STRPTR)arg[9];
+    ULONG *proxyPort = (ULONG *)arg[10];
+    BOOL proxyUsesSSL = (BOOL)arg[11];
+    BOOL proxyRequiresAuth = (BOOL)arg[12];
+    STRPTR proxyUsername = (STRPTR)arg[13];
+    STRPTR proxyPassword = (STRPTR)arg[14];
+    BOOL webSearchEnabled = (BOOL)arg[15];
+    STRPTR prompt = (STRPTR)arg[16];
 
     /* Reload config from disk to pick up any changes from the main app */
     DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
@@ -284,7 +339,47 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     addTextToConversation(conversation, promptUTF8, "user");
     CodesetsFreeA(promptUTF8, NULL);
 
-    setConversationSystem(conversation, system);
+    /* Resolve effective system message from SYSTEMFILE and SYSTEM. */
+    STRPTR systemFromFile = NULL;
+    STRPTR combinedSystem = NULL;
+    CONST_STRPTR effectiveSystem = system;
+
+    if (systemFile != NULL && strlen(systemFile) > 0) {
+        systemFromFile = readTextFileToString(systemFile);
+        if (systemFromFile == NULL) {
+            UBYTE errMsg[512];
+            snprintf(errMsg, sizeof(errMsg), "Could not read system file: %s",
+                     systemFile);
+            set(app, MUIA_Application_RexxString, errMsg);
+            updateStatusBar(STRING_ERROR, redPen);
+            return RETURN_OK;
+        }
+
+        effectiveSystem = systemFromFile;
+        if (system != NULL && strlen(system) > 0) {
+            ULONG need =
+                (ULONG)strlen(systemFromFile) + (ULONG)strlen(system) + 1;
+            combinedSystem = AllocVec(need, MEMF_ANY | MEMF_CLEAR);
+            if (combinedSystem == NULL) {
+                FreeVec(systemFromFile);
+                set(app, MUIA_Application_RexxString,
+                    "Out of memory reading system file");
+                updateStatusBar(STRING_ERROR, redPen);
+                return RETURN_OK;
+            }
+            strncat(combinedSystem, systemFromFile, need - 1);
+            strncat(combinedSystem, system, need - strlen(combinedSystem) - 1);
+            effectiveSystem = combinedSystem;
+        }
+    }
+
+    setConversationSystem(conversation, effectiveSystem);
+    if (combinedSystem != NULL) {
+        FreeVec(combinedSystem);
+    }
+    if (systemFromFile != NULL) {
+        FreeVec(systemFromFile);
+    }
 
     /* Determine API endpoint and auth type based on selected profile */
     APIEndpoint apiEndpoint = rexxSettings.apiEndpoint;
@@ -940,7 +1035,8 @@ MakeHook(NewChatHook, NewChatFunc);
 HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
     set(app, MUIA_Application_RexxString,
         "SENDMESSAGE "
-        "PR=PROVIDER/K,M=MODEL/K,S=SYSTEM/K,H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/"
+        "PR=PROVIDER/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,H=HOST/K,P=PORT/N,"
+        "S=SSL/S,K=APIKEY/"
         "K,U=USEPROXY/"
         "S,PH=PROXYHOST/"
         "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
@@ -969,12 +1065,13 @@ MakeHook(HelpHook, HelpFunc);
 
 struct MUI_Command arexxList[] = {
     {"SENDMESSAGE",
-     "PR=PROVIDER/K,M=MODEL/K,S=SYSTEM/K,H=HOST/K,PO=PORT/N,S=SSL/S,K=APIKEY/"
+     "PR=PROVIDER/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,H=HOST/K,PO=PORT/N,"
+     "S=SSL/S,K=APIKEY/"
      "K,U=USEPROXY/"
      "S,PH=PROXYHOST/"
      "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
      "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,P=PROMPT/F",
-     16,
+     17,
      &SendMessageHook,
      {0, 0, 0, 0, 0}},
     {"CREATEIMAGE",

@@ -74,7 +74,7 @@ NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT
 
   ADDRESS VALUE AMIGAGPT_PORT
   SAY "Retrieving answer using AmigaGPT. Please wait..."
-  'SENDMESSAGE WEBSEARCH M=gpt-5-mini P='PROMPT
+  'SENDMESSAGE WEBSEARCH M=gpt-5-mini PR=openai P='PROMPT
   ANSWER = ReplaceAll(RESULT, "\n", '0A'X)
   SAY ANSWER
   RETURN
@@ -85,7 +85,7 @@ GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT
   CALL SetAttr("asktext","Contents", "Retrieving answer using AmigaGPT. Please wait...")
   CALL SetAttr("asktext", "ReadOnly", 1)
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE WEBSEARCH M=gpt-5-mini P='QUESTION
+  'SENDMESSAGE WEBSEARCH M=gpt-5-mini PR=openai P='QUESTION
   ADDRESS COMMAND
   ANSWER = ParseText(RESULT)
   CALL SetAttr("asktext","Contents", '1B'X"b"QUESTION '0A'X'0A'X ANSWER)

@@ -162,11 +162,12 @@ The following ARexx commands are available:
 #### SENDMESSAGE
 Sends a message to the selected provider's API and returns the response.
 ```
-SENDMESSAGE PR=PROVIDER/K,M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
+SENDMESSAGE PR=PROVIDER/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
 ```
 - `PR=PROVIDER` - Optional, the provider to use (OpenAI, Google Gemini, xAI Grok, Anthropic Claude, or Custom Provider). Use LISTPROVIDERS to see available providers. Default is the provider selected in AmigaGPT config
 - `M=MODEL` - Optional, the chat model to use (use LISTCHATMODELS to see available models). Default is gpt-5-mini
 - `S=SYSTEM` - Optional, system message to include
+- `SF=SYSTEMFILE` - Optional, file containing the system message to include. If both `SF` and `S` are provided, the effective system message is the file contents concatenated with `S`.
 - `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
 - `W=WEBSEARCH` - Optional, enable ChatGPT to search the web
 - `P=PROMPT` - Required, the prompt or question to send

@@ -6,6 +6,7 @@
 - Provider settings: New panels to manage chat and image providers
 - Fetch latest models available from the server
 - ARexx SENDMESSAGE and CREATEIMAGE support PR=PROVIDER to choose provider; new LISTPROVIDERS command
+- ARexx SENDMESSAGE supports SF=SYSTEMFILE to use the contents of a file as the system prompt
 - New powerful Shell Tool option to ask ChatGPT to run any command on your system in the shell
 - The daemon (AmigaGPTD) now maintains conversation history in T: for context across ARexx calls until reboot
 - New NEWCHAT ARexx command to clear daemon conversation history
