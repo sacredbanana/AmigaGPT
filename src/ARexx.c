@@ -237,52 +237,45 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         }
     }
 
-    /* Get provider config */
-    struct ProviderConfig *providerConfig = getProviderConfig(provider);
+    /* Resolve defaults from the selected profile */
+    struct ChatRequestSettings rexxSettings;
+    configGetChatRequestSettings(&rexxSettings, provider, FALSE);
     BOOL useCustomServer = (provider == PROVIDER_CUSTOM);
 
-    ULONG portValue =
-        port == NULL
-            ? (useCustomServer ? configGetCustomPort()
-                               : (providerConfig ? providerConfig->port : 443))
-            : (ULONG)*port;
+    ULONG portValue = port == NULL ? rexxSettings.port : (ULONG)*port;
     ULONG proxyPortValue =
-        proxyPort == NULL ? configGetProxyPort() : (ULONG)*proxyPort;
+        proxyPort == NULL ? rexxSettings.proxyPort : (ULONG)*proxyPort;
 
-    if (apiKey == NULL) {
-        apiKey = configGetApiKeyForProvider(provider);
+    if (apiKey == NULL || strlen(apiKey) == 0) {
+        apiKey = rexxSettings.apiKey;
     }
 
     if (host == NULL || strlen(host) == 0) {
-        host = useCustomServer
-                   ? configGetCustomHost()
-                   : (providerConfig ? (STRPTR)providerConfig->host : NULL);
+        host = rexxSettings.host;
     }
 
     if (!useSSL) {
-        useSSL = useCustomServer
-                     ? configGetCustomUseSSL()
-                     : (providerConfig ? providerConfig->useSSL : TRUE);
+        useSSL = rexxSettings.useSSL;
     }
 
     if (!proxyUsesSSL) {
-        proxyUsesSSL = configGetProxyUsesSSL();
+        proxyUsesSSL = rexxSettings.proxyUsesSSL;
     }
 
     if (!proxyRequiresAuth) {
-        proxyRequiresAuth = configGetProxyRequiresAuth();
+        proxyRequiresAuth = rexxSettings.proxyRequiresAuth;
     }
 
     if (proxyUsername == NULL || strlen(proxyUsername) == 0) {
-        proxyUsername = configGetProxyUsername();
+        proxyUsername = rexxSettings.proxyUsername;
     }
 
     if (proxyPassword == NULL || strlen(proxyPassword) == 0) {
-        proxyPassword = configGetProxyPassword();
+        proxyPassword = rexxSettings.proxyPassword;
     }
 
     if (model == NULL || strlen(model) == 0) {
-        model = configGetChatModelName();
+        model = rexxSettings.model;
     }
 
     /* Get the persistent daemon conversation (load from T: or create new) */
@@ -294,16 +287,11 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
     setConversationSystem(conversation, system);
 
-    /* Determine API endpoint and auth type based on provider */
-    APIEndpoint apiEndpoint =
-        providerConfig ? providerConfig->apiEndpoint : API_ENDPOINT_RESPONSES;
-    AuthorizationType authType = providerConfig
-                                     ? providerConfig->authorizationType
-                                     : AUTHORIZATION_TYPE_BEARER;
-    CONST_STRPTR customHeaders =
-        providerConfig ? providerConfig->customHeaders : NULL;
-    CONST_STRPTR apiEndpointUrl =
-        providerConfig ? providerConfig->apiEndpointUrl : "v1";
+    /* Determine API endpoint and auth type based on selected profile */
+    APIEndpoint apiEndpoint = rexxSettings.apiEndpoint;
+    AuthorizationType authType = rexxSettings.authorizationType;
+    CONST_STRPTR customHeaders = rexxSettings.customHeaders;
+    CONST_STRPTR apiEndpointUrl = rexxSettings.apiEndpointUrl;
 
     struct json_object **responses = postChatMessageToOpenAI(
         conversation, host, portValue, useSSL, model, apiKey, FALSE, useProxy,

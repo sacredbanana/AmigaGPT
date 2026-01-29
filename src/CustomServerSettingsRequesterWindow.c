@@ -166,8 +166,8 @@ static void loadBuiltinProviderIntoUI(Provider provider) {
     STRPTR apiKey = configGetApiKeyForProvider(provider);
     set(customServerApiKeyString, MUIA_String_Contents, apiKey ? apiKey : "");
 
-    /* Load the current model for this provider */
-    STRPTR modelName = configGetChatModelName();
+    /* Load the saved model for this provider */
+    STRPTR modelName = configGetChatModelNameForProvider(provider);
     CONST_STRPTR *modelList = NULL;
     switch (provider) {
     case PROVIDER_OPENAI:
@@ -186,15 +186,19 @@ static void loadBuiltinProviderIntoUI(Provider provider) {
         modelList = NULL;
         break;
     }
-    /* Set first model as default if provider changed */
-    if (modelList != NULL && modelList[0] != NULL) {
+
+    if (modelName != NULL && strlen(modelName) > 0) {
+        set(customServerChatModelString, MUIA_String_Contents, modelName);
+    } else if (modelList != NULL && modelList[0] != NULL &&
+               strlen(modelList[0]) > 0) {
         set(customServerChatModelString, MUIA_String_Contents, modelList[0]);
     }
 }
 
 /**
  * Populate the profile list from profilesJson
- * @param forceActive -1 to use default selection, or >=0 to select that index
+ * @param forceActive -1 to use default selection, or >=0 to select that
+ * index
  */
 static void populateProfileList(LONG forceActive) {
     if (customServerProfileList == NULL)
@@ -391,8 +395,8 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
  * Apply current form to storage for the given profile list index.
  * For built-in: write API key and chat model to config.
  * For New/custom: update profilesJson and save; optionally set active.
- * @param forceActiveForList -1 to use default selection in populateProfileList,
- *        or >=0 to select that index after refresh.
+ * @param forceActiveForList -1 to use default selection in
+ * populateProfileList, or >=0 to select that index after refresh.
  * @return FALSE only when New Profile and name is empty
  */
 static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
@@ -500,7 +504,6 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
     if (customServerProfileList == NULL ||
         customServerProfileNameString == NULL)
         return;
-
     LONG active = MUIV_NList_Active_Off;
     get(customServerProfileList, MUIA_NList_Active, &active);
 
@@ -571,7 +574,8 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
             set(customServerProfileNameString, MUIA_Disabled, TRUE);
         setServerSettingsGadgetsEnabled(FALSE);
 
-        /* Replace fetched models with prepopulated list for this provider */
+        /* Replace fetched models with prepopulated list for this provider
+         */
         if (customServerModelsJson != NULL) {
             json_object_put(customServerModelsJson);
             customServerModelsJson = NULL;
@@ -594,6 +598,7 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
             default:
                 break;
             }
+
             if (modelList != NULL) {
                 customServerModelsJson = json_object_new_array();
                 for (UBYTE i = 0; modelList[i] != NULL; i++)
@@ -726,7 +731,8 @@ HOOKPROTONHNONP(DeleteProfileFunc, void) {
         return;
     }
 
-    /* Calculate actual profile index (skip New Profile and built-in providers)
+    /* Calculate actual profile index (skip New Profile and built-in
+     * providers)
      */
     int profileIndex = active - 1 - NUM_BUILTIN_PROVIDERS;
     if (profileIndex < 0) {
@@ -956,27 +962,30 @@ HOOKPROTONHNONP(TemplateSelectedFunc, void) {
 }
 MakeHook(TemplateSelectedHook, TemplateSelectedFunc);
 
-HOOKPROTONHNONP(SettingsChangedFunc, void) {
-    if (!loadingProfile)
-        profileSettingsDirty = TRUE;
-    STRPTR customServerHost;
+/**
+ * Update the URL preview string only. Does not set profileSettingsDirty.
+ * Used when the window opens so opening alone does not mark settings dirty.
+ */
+static void refreshUrlPreview(void) {
+    /* Safety check: don't access gadgets if they're not ready */
+    if (customServerHostString == NULL || customServerPortString == NULL ||
+        customServerUsesSSLCycle == NULL ||
+        customServerApiEndpointUrlString == NULL ||
+        customServerApiEndpointCycle == NULL ||
+        customServerFullUrlPreviewString == NULL)
+        return;
+
+    STRPTR customServerHost = NULL;
     get(customServerHostString, MUIA_String_Contents, &customServerHost);
-
-    LONG port;
+    LONG port = 0;
     get(customServerPortString, MUIA_String_Integer, &port);
-
-    LONG usesSSL;
+    LONG usesSSL = 0;
     get(customServerUsesSSLCycle, MUIA_Cycle_Active, &usesSSL);
-
-    STRPTR customServerApiKey;
-    get(customServerApiKeyString, MUIA_String_Contents, &customServerApiKey);
-
-    LONG apiEndpoint;
-    get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
-
-    STRPTR customServerApiEndpointUrl;
+    STRPTR customServerApiEndpointUrl = NULL;
     get(customServerApiEndpointUrlString, MUIA_String_Contents,
         &customServerApiEndpointUrl);
+    LONG apiEndpoint = 0;
+    get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
 
     UBYTE fullUrlPreviewString[512];
     snprintf(fullUrlPreviewString, 512, "%s://%s:%d%s%s/%s\0",
@@ -986,12 +995,56 @@ HOOKPROTONHNONP(SettingsChangedFunc, void) {
     set(customServerFullUrlPreviewString, MUIA_Text_Contents,
         fullUrlPreviewString);
 }
+
+HOOKPROTONHNONP(SettingsChangedFunc, void) {
+    if (!loadingProfile)
+        profileSettingsDirty = TRUE;
+    refreshUrlPreview();
+}
 MakeHook(SettingsChangedHook, SettingsChangedFunc);
+
+HOOKPROTONHNONP(RefreshUrlPreviewOnlyFunc, void) { refreshUrlPreview(); }
+MakeHook(RefreshUrlPreviewOnlyHook, RefreshUrlPreviewOnlyFunc);
 
 HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     /* Get the currently selected profile/provider */
     LONG active = MUIV_NList_Active_Off;
     get(customServerProfileList, MUIA_NList_Active, &active);
+
+    /* If there are unsaved changes, prompt before applying and closing */
+    if (profileSettingsDirty && active != MUIV_NList_Active_Off) {
+        LONG res = MUI_Request(app, customServerSettingsRequesterWindowObject,
+#ifdef __MORPHOS__
+                               NULL,
+#else
+                               MUIV_Requester_Image_Info,
+#endif
+                               "Save changes?", "*_Yes|_No|_Cancel",
+                               STRING_SAVE_CHANGES_PROMPT, TAG_DONE);
+        if (res == 3) {
+            /* Cancel - stay in window */
+            return;
+        }
+        if (res == 1) {
+            /* Yes - save current form to storage */
+            loadingProfile = TRUE;
+            if (!applyProfileFromFormToStorage(active, FALSE, -1)) {
+                displayError(STRING_ERROR_PROFILE_NAME_REQUIRED);
+                loadingProfile = FALSE;
+                return;
+            }
+            loadingProfile = FALSE;
+        }
+        if (res == 2) {
+            /* No - close without saving */
+            profileSettingsDirty = FALSE;
+            set(customServerSettingsRequesterWindowObject, MUIA_Window_Open,
+                FALSE);
+            return;
+        }
+        /* Yes - clear dirty and fall through to apply and close */
+        profileSettingsDirty = FALSE;
+    }
 
     /* Get common values from UI */
     STRPTR customServerApiKey;
@@ -1304,8 +1357,8 @@ LONG createCustomServerSettingsRequesterWindow() {
     DoMethod(customServerSettingsRequesterCancelButton, MUIM_Notify,
              MUIA_Pressed, FALSE, MUIV_Notify_Window, 3, MUIM_Set,
              MUIA_Window_Open, FALSE);
-    DoMethod(customServerSettingsRequesterWindowObject, MUIM_Notify, MUIA_Window_Open, MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerSettingsRequesterWindowObject, MUIM_Notify, MUIA_Window_Open, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &ProfileSelectedHook);
+    DoMethod(customServerSettingsRequesterWindowObject, MUIM_Notify, MUIA_Window_Open, TRUE, MUIV_Notify_Application, 2, MUIM_CallHook, &RefreshUrlPreviewOnlyHook);
     DoMethod(customServerTemplateCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &TemplateSelectedHook);
     DoMethod(customServerHostString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerPortString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
@@ -1338,6 +1391,17 @@ LONG createCustomServerSettingsRequesterWindow() {
              MUIV_Notify_Application, 2, MUIM_CallHook, &SaveProfileHook);
     DoMethod(customServerDeleteProfileButton, MUIM_Notify, MUIA_Pressed, FALSE,
              MUIV_Notify_Application, 2, MUIM_CallHook, &DeleteProfileHook);
+
+    /* Prefill fields for the initially selected profile/provider by
+     * re-applying the current Active index, which will trigger the
+     * ProfileSelectedHook via the existing MUI notification. */
+    {
+        LONG active = MUIV_NList_Active_Off;
+        get(customServerProfileList, MUIA_NList_Active, &active);
+        if (active != MUIV_NList_Active_Off) {
+            set(customServerProfileList, MUIA_NList_Active, active);
+        }
+    }
 
     return RETURN_OK;
 }

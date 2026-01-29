@@ -75,6 +75,10 @@
 #define MUIA_AmigaGPTConfig_GeminiApiKey (AmigaGPTConfig_Dummy + 0x38)
 #define MUIA_AmigaGPTConfig_GrokApiKey (AmigaGPTConfig_Dummy + 0x39)
 #define MUIA_AmigaGPTConfig_AnthropicApiKey (AmigaGPTConfig_Dummy + 0x3A)
+#define MUIA_AmigaGPTConfig_OpenAiChatModelName (AmigaGPTConfig_Dummy + 0x3B)
+#define MUIA_AmigaGPTConfig_GeminiChatModelName (AmigaGPTConfig_Dummy + 0x3C)
+#define MUIA_AmigaGPTConfig_GrokChatModelName (AmigaGPTConfig_Dummy + 0x3D)
+#define MUIA_AmigaGPTConfig_AnthropicChatModelName (AmigaGPTConfig_Dummy + 0x3E)
 
 /* Version tracking attributes (read-only, for internal use) */
 #define MUIA_AmigaGPTConfig_ChatModelSetVersion (AmigaGPTConfig_Dummy + 0x40)
@@ -271,6 +275,37 @@ Provider configGetImageProvider(void);
 void configSetImageProvider(Provider value);
 STRPTR configGetChatModelName(void);
 void configSetChatModelName(CONST_STRPTR value);
+STRPTR configGetChatModelNameForProvider(Provider provider);
+void configSetChatModelNameForProvider(Provider provider, CONST_STRPTR value);
+
+/* Chat request settings helper */
+struct ChatRequestSettings {
+    Provider provider;
+    BOOL isCustomProvider;
+    STRPTR host;
+    UWORD port;
+    BOOL useSSL;
+    CONST_STRPTR model;
+    CONST_STRPTR apiKey;
+    BOOL stream;
+    BOOL useProxy;
+    STRPTR proxyHost;
+    UWORD proxyPort;
+    BOOL proxyUsesSSL;
+    BOOL proxyRequiresAuth;
+    STRPTR proxyUsername;
+    STRPTR proxyPassword;
+    BOOL webSearchEnabled;
+    APIEndpoint apiEndpoint;
+    CONST_STRPTR apiEndpointUrl;
+    AuthorizationType authorizationType;
+    CONST_STRPTR customHeaders;
+};
+
+void configGetChatRequestSettings(struct ChatRequestSettings *out,
+                                  Provider provider, BOOL stream);
+void configGetChatRequestSettingsForCurrentProvider(
+    struct ChatRequestSettings *out, BOOL stream);
 STRPTR configGetImageModelName(void);
 void configSetImageModelName(CONST_STRPTR value);
 

@@ -425,6 +425,13 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     }
 
     updateStatusBar(STRING_GENERATING_IMAGE_NAME, 7);
+    Provider nameProvider = configGetChatProvider();
+    struct ChatRequestSettings nameSettings;
+    configGetChatRequestSettings(&nameSettings, nameProvider, FALSE);
+    CONST_STRPTR nameModel = (!nameSettings.isCustomProvider &&
+                              nameSettings.provider == PROVIDER_OPENAI)
+                                 ? CHAT_MODEL_NAMES[GPT_5_NANO]
+                                 : nameSettings.model;
     struct Conversation *imageNameConversation = newConversation();
     addTextToConversation(imageNameConversation, text, "user");
     addTextToConversation(
@@ -434,12 +441,13 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         "in quotes or prefix the response with anything",
         "user");
     struct json_object **responses = postChatMessageToOpenAI(
-        imageNameConversation, NULL, 0, FALSE, CHAT_MODEL_NAMES[GPT_5_NANO],
-        configGetOpenAiApiKey(), FALSE, configGetProxyEnabled(),
-        configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
-        configGetProxyRequiresAuth(), configGetProxyUsername(),
-        configGetProxyPassword(), FALSE, API_ENDPOINT_RESPONSES, NULL,
-        AUTHORIZATION_TYPE_BEARER, NULL);
+        imageNameConversation, nameSettings.host, nameSettings.port,
+        nameSettings.useSSL, nameModel, nameSettings.apiKey, FALSE,
+        nameSettings.useProxy, nameSettings.proxyHost, nameSettings.proxyPort,
+        nameSettings.proxyUsesSSL, nameSettings.proxyRequiresAuth,
+        nameSettings.proxyUsername, nameSettings.proxyPassword, FALSE,
+        nameSettings.apiEndpoint, nameSettings.apiEndpointUrl,
+        nameSettings.authorizationType, nameSettings.customHeaders);
 
     struct GeneratedImage *generatedImage =
         AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
@@ -461,7 +469,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             return;
         }
         STRPTR responseString = getMessageContentFromJson(
-            responses[0], FALSE, FALSE, API_ENDPOINT_RESPONSES);
+            responses[0], FALSE, FALSE, nameSettings.apiEndpoint);
         generatedImage->name =
             AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
         strncpy(generatedImage->name, responseString, strlen(responseString));
@@ -1311,40 +1319,22 @@ static void sendChatMessage() {
     ULONG speechIndex = 0;
     UWORD wordNumber = 0;
     Provider chatProvider = configGetChatProvider();
-    struct ProviderConfig *providerConfig = getProviderConfig(chatProvider);
-    BOOL isCustomProvider = (chatProvider == PROVIDER_CUSTOM);
+    BOOL streamingEnabled = (chatProvider == PROVIDER_OPENAI);
+    struct ChatRequestSettings chatSettings;
+    configGetChatRequestSettings(&chatSettings, chatProvider, streamingEnabled);
 
     strncat(chatOutputTextEditorContents, "\n", 1);
 
     do {
         responses = postChatMessageToOpenAI(
-            currentConversation,
-            isCustomProvider ? configGetCustomHost()
-                             : (providerConfig ? providerConfig->host : NULL),
-            isCustomProvider ? configGetCustomPort()
-                             : (providerConfig ? providerConfig->port : 443),
-            isCustomProvider ? configGetCustomUseSSL()
-                             : (providerConfig ? providerConfig->useSSL : TRUE),
-            configGetChatModelName(),
-            configGetApiKeyForProvider(chatProvider),
-            !isCustomProvider && chatProvider == PROVIDER_OPENAI,
-            configGetProxyEnabled(), configGetProxyHost(),
-            configGetProxyPort(), configGetProxyUsesSSL(),
-            configGetProxyRequiresAuth(), configGetProxyUsername(),
-            configGetProxyPassword(), configGetWebSearchEnabled(),
-            isCustomProvider ? configGetCustomApiEndpoint()
-                             : (providerConfig ? providerConfig->apiEndpoint
-                                               : API_ENDPOINT_RESPONSES),
-            isCustomProvider ? configGetCustomApiEndpointUrl()
-                             : (providerConfig ? providerConfig->apiEndpointUrl
-                                               : "v1"),
-            isCustomProvider
-                ? configGetCustomAuthorizationType()
-                : (providerConfig ? providerConfig->authorizationType
-                                  : AUTHORIZATION_TYPE_BEARER),
-            isCustomProvider ? configGetCustomHeaders()
-                             : (providerConfig ? providerConfig->customHeaders
-                                               : NULL));
+            currentConversation, chatSettings.host, chatSettings.port,
+            chatSettings.useSSL, chatSettings.model, chatSettings.apiKey,
+            chatSettings.stream, chatSettings.useProxy, chatSettings.proxyHost,
+            chatSettings.proxyPort, chatSettings.proxyUsesSSL,
+            chatSettings.proxyRequiresAuth, chatSettings.proxyUsername,
+            chatSettings.proxyPassword, chatSettings.webSearchEnabled,
+            chatSettings.apiEndpoint, chatSettings.apiEndpointUrl,
+            chatSettings.authorizationType, chatSettings.customHeaders);
         if (responses == NULL) {
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -1405,12 +1395,11 @@ static void sendChatMessage() {
             }
 
             UTF8 *contentString = getMessageContentFromJson(
-                response, !isCustomProvider && chatProvider == PROVIDER_OPENAI,
-                FALSE,
-                isCustomProvider ? configGetCustomApiEndpoint()
-                                 : (providerConfig ? providerConfig->apiEndpoint
-                                                   : API_ENDPOINT_RESPONSES));
-            if (isCustomProvider) {
+                response,
+                (!chatSettings.isCustomProvider &&
+                 chatSettings.provider == PROVIDER_OPENAI),
+                FALSE, chatSettings.apiEndpoint);
+            if (chatSettings.isCustomProvider) {
                 strncpy(receivedMessage, contentString,
                         READ_BUFFER_LENGTH - strlen(receivedMessage) -
                             strlen(contentString) - 1);
@@ -1469,8 +1458,9 @@ static void sendChatMessage() {
                     }
                     STRPTR type = json_object_get_string(
                         json_object_object_get(response, "type"));
-                    if (isCustomProvider ||
-                        strcmp(type, "response.completed") == 0) {
+                    if (!chatSettings.stream ||
+                        (type != NULL &&
+                         strcmp(type, "response.completed") == 0)) {
                         dataStreamFinished = TRUE;
                     }
                     json_object_put(response);
@@ -1482,9 +1472,9 @@ static void sendChatMessage() {
     } while (!dataStreamFinished);
 
     /* Handle shell tool calls - loop to handle multiple sequential commands */
-    while (!isCustomProvider && chatProvider == PROVIDER_OPENAI &&
-           configGetShellToolEnabled() &&
-           hasPendingToolCall()) {
+    while (!chatSettings.isCustomProvider &&
+           chatSettings.provider == PROVIDER_OPENAI &&
+           configGetShellToolEnabled() && hasPendingToolCall()) {
         STRPTR command = getPendingToolCommand();
         STRPTR callId = getPendingToolCallId();
         STRPTR responseId = getPendingResponseId();
@@ -1529,8 +1519,8 @@ static void sendChatMessage() {
 
         /* Show the command in the chat output and save to history */
         UBYTE cmdDisplay[512];
-        snprintf(cmdDisplay, sizeof(cmdDisplay),
-                 "\n\n--- Executing: %s ---\n", command);
+        snprintf(cmdDisplay, sizeof(cmdDisplay), "\n\n--- Executing: %s ---\n",
+                 command);
         strncat(chatOutputTextEditorContents, cmdDisplay,
                 CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
                     strlen(chatOutputTextEditorContents) - 1);
@@ -1560,21 +1550,19 @@ static void sendChatMessage() {
 
         /* Build output string with exit code */
         UBYTE toolOutput[8192];
-        snprintf(toolOutput, sizeof(toolOutput),
-                 "Exit code: %ld\nOutput:\n%s", exitCode,
-                 output != NULL ? output : "(No output)");
+        snprintf(toolOutput, sizeof(toolOutput), "Exit code: %ld\nOutput:\n%s",
+                 exitCode, output != NULL ? output : "(No output)");
 
         /* Send the tool result back to the API - this may set a new pending
          * tool call if OpenAI wants to run another command */
         struct json_object *toolResponse = postToolResultToOpenAI(
-            responseId, callId, toolOutput,
-            NULL, /* Use default OpenAI host */
-            0,    /* Use default port */
-            TRUE, /* Use SSL */
+            responseId, callId, toolOutput, NULL, /* Use default OpenAI host */
+            0,                                    /* Use default port */
+            TRUE,                                 /* Use SSL */
             configGetOpenAiApiKey(), configGetProxyEnabled(),
-            configGetProxyHost(), configGetProxyPort(),
-            configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
-            configGetProxyUsername(), configGetProxyPassword());
+            configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
+            configGetProxyRequiresAuth(), configGetProxyUsername(),
+            configGetProxyPassword());
 
         if (output != NULL) {
             FreeVec(output);
@@ -1612,10 +1600,10 @@ static void sendChatMessage() {
                         READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
 
                 /* Display in chat output */
-                STRPTR formattedToolResponse = CodesetsUTF8ToStr(
-                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                    (Tag)toolContentString, CSA_MapForeignChars, TRUE,
-                    TAG_DONE);
+                STRPTR formattedToolResponse =
+                    CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
+                                      CSA_Source, (Tag)toolContentString,
+                                      CSA_MapForeignChars, TRUE, TAG_DONE);
                 strncat(chatOutputTextEditorContents, formattedToolResponse,
                         CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
                             strlen(chatOutputTextEditorContents) - 1);
@@ -1668,37 +1656,22 @@ static void sendChatMessage() {
                                   "quotes or prefix the response with anything",
                                   "user");
             setConversationSystem(currentConversation, NULL);
-            responses = postChatMessageToOpenAI(
-                currentConversation,
-                isCustomProvider ? configGetCustomHost()
-                                 : (providerConfig ? providerConfig->host : NULL),
-                isCustomProvider ? configGetCustomPort()
-                                 : (providerConfig ? providerConfig->port : 443),
-                isCustomProvider
-                    ? configGetCustomUseSSL()
-                    : (providerConfig ? providerConfig->useSSL : TRUE),
-                /* Use a fast model for title generation */
-                chatProvider == PROVIDER_OPENAI
+            struct ChatRequestSettings titleSettings;
+            configGetChatRequestSettings(&titleSettings, chatProvider, FALSE);
+            CONST_STRPTR titleModel =
+                (!titleSettings.isCustomProvider &&
+                 titleSettings.provider == PROVIDER_OPENAI)
                     ? CHAT_MODEL_NAMES[GPT_5_NANO]
-                    : configGetChatModelName(),
-                configGetApiKeyForProvider(chatProvider),
-                FALSE, configGetProxyEnabled(), configGetProxyHost(),
-                configGetProxyPort(), configGetProxyUsesSSL(),
-                configGetProxyRequiresAuth(), configGetProxyUsername(),
-                configGetProxyPassword(), configGetWebSearchEnabled(),
-                isCustomProvider ? configGetCustomApiEndpoint()
-                                 : (providerConfig ? providerConfig->apiEndpoint
-                                                   : API_ENDPOINT_RESPONSES),
-                isCustomProvider ? configGetCustomApiEndpointUrl()
-                                 : (providerConfig ? providerConfig->apiEndpointUrl
-                                                   : "v1"),
-                isCustomProvider
-                    ? configGetCustomAuthorizationType()
-                    : (providerConfig ? providerConfig->authorizationType
-                                      : AUTHORIZATION_TYPE_BEARER),
-                isCustomProvider ? configGetCustomHeaders()
-                                 : (providerConfig ? providerConfig->customHeaders
-                                                   : NULL));
+                    : titleSettings.model;
+            responses = postChatMessageToOpenAI(
+                currentConversation, titleSettings.host, titleSettings.port,
+                titleSettings.useSSL, titleModel, titleSettings.apiKey, FALSE,
+                titleSettings.useProxy, titleSettings.proxyHost,
+                titleSettings.proxyPort, titleSettings.proxyUsesSSL,
+                titleSettings.proxyRequiresAuth, titleSettings.proxyUsername,
+                titleSettings.proxyPassword, titleSettings.webSearchEnabled,
+                titleSettings.apiEndpoint, titleSettings.apiEndpointUrl,
+                titleSettings.authorizationType, titleSettings.customHeaders);
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);
@@ -1712,11 +1685,7 @@ static void sendChatMessage() {
             }
             if (responses[0] != NULL) {
                 UTF8 *responseString = getMessageContentFromJson(
-                    responses[0], FALSE, FALSE,
-                    isCustomProvider ? configGetCustomApiEndpoint()
-                                     : (providerConfig
-                                            ? providerConfig->apiEndpoint
-                                            : API_ENDPOINT_RESPONSES));
+                    responses[0], FALSE, FALSE, titleSettings.apiEndpoint);
                 if (currentConversation->name == NULL) {
                     currentConversation->name =
                         AllocVec(strlen(responseString) + 1, MEMF_CLEAR);

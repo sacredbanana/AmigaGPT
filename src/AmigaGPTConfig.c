@@ -30,8 +30,8 @@ struct AmigaGPTConfigData {
     ULONG speechEnabled;
     SpeechSystem speechSystem;
     SpeechFliteVoice speechFliteVoice;
-    ChatModel chatModel;      /* Legacy - kept for migration */
-    ImageModel imageModel;    /* Legacy - kept for migration */
+    ChatModel chatModel;   /* Legacy - kept for migration */
+    ImageModel imageModel; /* Legacy - kept for migration */
     ImageSize imageSizeDallE2;
     ImageSize imageSizeDallE3;
     ImageSize imageSizeGptImage1;
@@ -46,7 +46,7 @@ struct AmigaGPTConfigData {
     LONG assistantTextAlignment;
     LONG webSearchEnabled;
     LONG shellToolEnabled;
-    ULONG useCustomServer;    /* Legacy - kept for migration */
+    ULONG useCustomServer; /* Legacy - kept for migration */
     ULONG customPort;
     ULONG customUseSSL;
     APIEndpoint customApiEndpoint;
@@ -95,6 +95,12 @@ struct AmigaGPTConfigData {
     STRPTR grokApiKey;
     STRPTR anthropicApiKey;
 
+    /* Provider-specific chat model names */
+    STRPTR openAiChatModelName;
+    STRPTR geminiChatModelName;
+    STRPTR grokChatModelName;
+    STRPTR anthropicChatModelName;
+
     /* Auto-save state */
     BOOL isDirty;
     BOOL saveInProgress;
@@ -137,8 +143,8 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->speechEnabled = FALSE;
     data->speechSystem = SPEECH_SYSTEM_OPENAI;
     data->speechFliteVoice = SPEECH_FLITE_VOICE_KAL;
-    data->chatModel = CHATGPT_5_LATEST;      /* Legacy */
-    data->imageModel = GPT_IMAGE_1;          /* Legacy */
+    data->chatModel = CHATGPT_5_LATEST; /* Legacy */
+    data->imageModel = GPT_IMAGE_1;     /* Legacy */
     data->imageSizeDallE2 = IMAGE_SIZE_256x256;
     data->imageSizeDallE3 = IMAGE_SIZE_1024x1024;
     data->imageSizeGptImage1 = IMAGE_SIZE_AUTO;
@@ -153,7 +159,7 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->assistantTextAlignment = ALIGN_LEFT;
     data->webSearchEnabled = TRUE;
     data->shellToolEnabled = FALSE;
-    data->useCustomServer = FALSE;           /* Legacy */
+    data->useCustomServer = FALSE; /* Legacy */
     data->customPort = 80;
     data->customUseSSL = FALSE;
     data->customApiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS;
@@ -199,6 +205,17 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->grokApiKey = NULL;
     data->anthropicApiKey = NULL;
 
+    /* Provider-specific chat model names */
+    data->openAiChatModelName = copyString(
+        OPENAI_CHAT_MODELS[0] ? OPENAI_CHAT_MODELS[0] : "gpt-5-chat-latest");
+    data->geminiChatModelName = copyString(
+        GEMINI_CHAT_MODELS[0] ? GEMINI_CHAT_MODELS[0] : "gemini-2.5-flash");
+    data->grokChatModelName =
+        copyString(GROK_CHAT_MODELS[0] ? GROK_CHAT_MODELS[0] : "grok-4");
+    data->anthropicChatModelName =
+        copyString(ANTHROPIC_CHAT_MODELS[0] ? ANTHROPIC_CHAT_MODELS[0]
+                                            : "claude-opus-4-5-20250929");
+
     data->isDirty = FALSE;
     data->saveInProgress = FALSE;
 }
@@ -233,6 +250,11 @@ static void freeAllStrings(struct AmigaGPTConfigData *data) {
     freeString(&data->geminiApiKey);
     freeString(&data->grokApiKey);
     freeString(&data->anthropicApiKey);
+    /* Provider-specific chat model names */
+    freeString(&data->openAiChatModelName);
+    freeString(&data->geminiChatModelName);
+    freeString(&data->grokChatModelName);
+    freeString(&data->anthropicChatModelName);
 }
 
 /**
@@ -477,6 +499,18 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_AnthropicApiKey:
         *store = (ULONG)data->anthropicApiKey;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_OpenAiChatModelName:
+        *store = (ULONG)data->openAiChatModelName;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GeminiChatModelName:
+        *store = (ULONG)data->geminiChatModelName;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GrokChatModelName:
+        *store = (ULONG)data->grokChatModelName;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_AnthropicChatModelName:
+        *store = (ULONG)data->anthropicChatModelName;
         return TRUE;
     }
 
@@ -762,6 +796,25 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
             if (setStringAttr(&data->anthropicApiKey, (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
+        case MUIA_AmigaGPTConfig_OpenAiChatModelName:
+            if (setStringAttr(&data->openAiChatModelName,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_GeminiChatModelName:
+            if (setStringAttr(&data->geminiChatModelName,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_GrokChatModelName:
+            if (setStringAttr(&data->grokChatModelName, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_AnthropicChatModelName:
+            if (setStringAttr(&data->anthropicChatModelName,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
         }
     }
 
@@ -981,6 +1034,25 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
                            data->anthropicApiKey != NULL
                                ? json_object_new_string(data->anthropicApiKey)
                                : NULL);
+    json_object_object_add(
+        configJsonObject, "openAiChatModelName",
+        data->openAiChatModelName != NULL
+            ? json_object_new_string(data->openAiChatModelName)
+            : NULL);
+    json_object_object_add(
+        configJsonObject, "geminiChatModelName",
+        data->geminiChatModelName != NULL
+            ? json_object_new_string(data->geminiChatModelName)
+            : NULL);
+    json_object_object_add(configJsonObject, "grokChatModelName",
+                           data->grokChatModelName != NULL
+                               ? json_object_new_string(data->grokChatModelName)
+                               : NULL);
+    json_object_object_add(
+        configJsonObject, "anthropicChatModelName",
+        data->anthropicChatModelName != NULL
+            ? json_object_new_string(data->anthropicChatModelName)
+            : NULL);
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
@@ -1301,6 +1373,14 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     readJsonString(configJsonObject, "geminiApiKey", &data->geminiApiKey);
     readJsonString(configJsonObject, "grokApiKey", &data->grokApiKey);
     readJsonString(configJsonObject, "anthropicApiKey", &data->anthropicApiKey);
+    readJsonString(configJsonObject, "openAiChatModelName",
+                   &data->openAiChatModelName);
+    readJsonString(configJsonObject, "geminiChatModelName",
+                   &data->geminiChatModelName);
+    readJsonString(configJsonObject, "grokChatModelName",
+                   &data->grokChatModelName);
+    readJsonString(configJsonObject, "anthropicChatModelName",
+                   &data->anthropicChatModelName);
 
     /* Migration from old config format (schema v1 to v2) */
     if (needsMigration) {
@@ -1312,7 +1392,8 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
         printf("Old config backed up to config.bak\n");
 
         /* Migrate chatModel enum to chatModelName string */
-        /* Check bounds by verifying we can reach the index without hitting NULL */
+        /* Check bounds by verifying we can reach the index without hitting NULL
+         */
         if (data->chatModelName == NULL) {
             BOOL validIndex = TRUE;
             for (UBYTE i = 0; i <= data->chatModel && validIndex; i++) {
@@ -1330,7 +1411,8 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
         }
 
         /* Migrate imageModel enum to imageModelName string */
-        /* Check bounds by verifying we can reach the index without hitting NULL */
+        /* Check bounds by verifying we can reach the index without hitting NULL
+         */
         if (data->imageModelName == NULL) {
             BOOL validIndex = TRUE;
             for (UBYTE i = 0; i <= data->imageModel && validIndex; i++) {
@@ -1376,6 +1458,26 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
         data->chatModelName = copyString("gpt-5-chat-latest");
     if (data->imageModelName == NULL)
         data->imageModelName = copyString("gpt-image-1");
+    if (data->openAiChatModelName == NULL) {
+        data->openAiChatModelName =
+            copyString(data->chatModelName
+                           ? data->chatModelName
+                           : (OPENAI_CHAT_MODELS[0] ? OPENAI_CHAT_MODELS[0]
+                                                    : "gpt-5-chat-latest"));
+    }
+    if (data->geminiChatModelName == NULL) {
+        data->geminiChatModelName = copyString(
+            GEMINI_CHAT_MODELS[0] ? GEMINI_CHAT_MODELS[0] : "gemini-2.5-flash");
+    }
+    if (data->grokChatModelName == NULL) {
+        data->grokChatModelName =
+            copyString(GROK_CHAT_MODELS[0] ? GROK_CHAT_MODELS[0] : "grok-4");
+    }
+    if (data->anthropicChatModelName == NULL) {
+        data->anthropicChatModelName =
+            copyString(ANTHROPIC_CHAT_MODELS[0] ? ANTHROPIC_CHAT_MODELS[0]
+                                                : "claude-opus-4-5-20250929");
+    }
 
     FreeVec(configJsonString);
     json_object_put(configJsonObject);
@@ -2044,15 +2146,125 @@ void configSetImageProvider(Provider value) {
 }
 
 STRPTR configGetChatModelName(void) {
-    STRPTR val = NULL;
+    Provider provider = PROVIDER_OPENAI;
     if (configObj)
-        get(configObj, MUIA_AmigaGPTConfig_ChatModelName, &val);
-    return val;
+        get(configObj, MUIA_AmigaGPTConfig_ChatProvider, &provider);
+    return configGetChatModelNameForProvider(provider);
 }
 
 void configSetChatModelName(CONST_STRPTR value) {
+    Provider provider = PROVIDER_OPENAI;
     if (configObj)
-        set(configObj, MUIA_AmigaGPTConfig_ChatModelName, (ULONG)value);
+        get(configObj, MUIA_AmigaGPTConfig_ChatProvider, &provider);
+    configSetChatModelNameForProvider(provider, value);
+}
+
+STRPTR configGetChatModelNameForProvider(Provider provider) {
+    STRPTR val = NULL;
+    if (!configObj)
+        return NULL;
+    switch (provider) {
+    case PROVIDER_OPENAI:
+        get(configObj, MUIA_AmigaGPTConfig_OpenAiChatModelName, &val);
+        break;
+    case PROVIDER_GEMINI:
+        get(configObj, MUIA_AmigaGPTConfig_GeminiChatModelName, &val);
+        break;
+    case PROVIDER_GROK:
+        get(configObj, MUIA_AmigaGPTConfig_GrokChatModelName, &val);
+        break;
+    case PROVIDER_ANTHROPIC:
+        get(configObj, MUIA_AmigaGPTConfig_AnthropicChatModelName, &val);
+        break;
+    case PROVIDER_CUSTOM:
+    default:
+        get(configObj, MUIA_AmigaGPTConfig_CustomChatModel, &val);
+        break;
+    }
+    if (val == NULL || strlen(val) == 0) {
+        get(configObj, MUIA_AmigaGPTConfig_ChatModelName, &val);
+    }
+    return val;
+}
+
+void configSetChatModelNameForProvider(Provider provider, CONST_STRPTR value) {
+    if (!configObj)
+        return;
+    /* Keep the global chatModelName in sync with the latest selection */
+    set(configObj, MUIA_AmigaGPTConfig_ChatModelName, (ULONG)value);
+    switch (provider) {
+    case PROVIDER_OPENAI:
+        set(configObj, MUIA_AmigaGPTConfig_OpenAiChatModelName, (ULONG)value);
+        break;
+    case PROVIDER_GEMINI:
+        set(configObj, MUIA_AmigaGPTConfig_GeminiChatModelName, (ULONG)value);
+        break;
+    case PROVIDER_GROK:
+        set(configObj, MUIA_AmigaGPTConfig_GrokChatModelName, (ULONG)value);
+        break;
+    case PROVIDER_ANTHROPIC:
+        set(configObj, MUIA_AmigaGPTConfig_AnthropicChatModelName,
+            (ULONG)value);
+        break;
+    case PROVIDER_CUSTOM:
+    default:
+        set(configObj, MUIA_AmigaGPTConfig_CustomChatModel, (ULONG)value);
+        break;
+    }
+}
+
+void configGetChatRequestSettings(struct ChatRequestSettings *out,
+                                  Provider provider, BOOL stream) {
+    if (out == NULL)
+        return;
+    memset(out, 0, sizeof(*out));
+    out->provider = provider;
+    out->isCustomProvider = (provider == PROVIDER_CUSTOM);
+    out->stream = stream;
+
+    out->useProxy = configGetProxyEnabled();
+    out->proxyHost = configGetProxyHost();
+    out->proxyPort = (UWORD)configGetProxyPort();
+    out->proxyUsesSSL = configGetProxyUsesSSL();
+    out->proxyRequiresAuth = configGetProxyRequiresAuth();
+    out->proxyUsername = configGetProxyUsername();
+    out->proxyPassword = configGetProxyPassword();
+    out->webSearchEnabled = configGetWebSearchEnabled();
+
+    out->apiKey = configGetApiKeyForProvider(provider);
+    out->model = configGetChatModelNameForProvider(provider);
+
+    if (out->isCustomProvider) {
+        out->host = configGetCustomHost();
+        out->port = (UWORD)configGetCustomPort();
+        out->useSSL = configGetCustomUseSSL();
+        out->apiEndpoint = configGetCustomApiEndpoint();
+        out->apiEndpointUrl = configGetCustomApiEndpointUrl();
+        out->authorizationType = configGetCustomAuthorizationType();
+        out->customHeaders = configGetCustomHeaders();
+    } else {
+        struct ProviderConfig *providerConfig = getProviderConfig(provider);
+        out->host = providerConfig ? (STRPTR)providerConfig->host : NULL;
+        out->port = providerConfig ? (UWORD)providerConfig->port : 443;
+        out->useSSL = providerConfig ? providerConfig->useSSL : TRUE;
+        out->apiEndpoint = providerConfig ? providerConfig->apiEndpoint
+                                          : API_ENDPOINT_RESPONSES;
+        out->apiEndpointUrl =
+            providerConfig && providerConfig->apiEndpointUrl != NULL
+                ? providerConfig->apiEndpointUrl
+                : "v1";
+        out->authorizationType = providerConfig
+                                     ? providerConfig->authorizationType
+                                     : AUTHORIZATION_TYPE_BEARER;
+        out->customHeaders =
+            providerConfig ? providerConfig->customHeaders : NULL;
+    }
+}
+
+void configGetChatRequestSettingsForCurrentProvider(
+    struct ChatRequestSettings *out, BOOL stream) {
+    Provider provider = configGetChatProvider();
+    configGetChatRequestSettings(out, provider, stream);
 }
 
 STRPTR configGetImageModelName(void) {
