@@ -630,10 +630,18 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
         }
     }
 
+    APIEndpoint imageEndpoint = (APIEndpoint)configGetImageApiEndpoint();
+    if (provider == PROVIDER_GEMINI &&
+        configGetImageProvider() != PROVIDER_GEMINI) {
+        /* If ARexx overrides the provider to Gemini, default to native
+         * endpoint. */
+        imageEndpoint = API_ENDPOINT_GEMINI_GENERATE_CONTENT;
+    }
+
     struct json_object *response = postImageCreationRequestToOpenAIWithServer(
         promptUTF8, host, port, useSSL, apiEndpointUrl, authType, customHeaders,
         modelName, size, apiKey, FALSE, NULL, 0, FALSE, FALSE, NULL, NULL,
-        IMAGE_FORMAT_JPG, provider);
+        IMAGE_FORMAT_JPG, provider, imageEndpoint);
     CodesetsFreeA(promptUTF8, NULL);
 
     if (response == NULL) {

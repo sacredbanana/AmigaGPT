@@ -52,6 +52,7 @@
 #define MUIA_AmigaGPTConfig_CustomUseSSL (AmigaGPTConfig_Dummy + 0x15)
 #define MUIA_AmigaGPTConfig_CustomApiEndpoint (AmigaGPTConfig_Dummy + 0x16)
 #define MUIA_AmigaGPTConfig_ImageFormat (AmigaGPTConfig_Dummy + 0x17)
+#define MUIA_AmigaGPTConfig_ImageApiEndpoint (AmigaGPTConfig_Dummy + 0x53)
 
 /* String attributes (STRPTR) */
 #define MUIA_AmigaGPTConfig_SpeechAccent (AmigaGPTConfig_Dummy + 0x20)
@@ -208,7 +209,9 @@ void configSetImageSizeDallE3(ImageSize value);
 ImageSize configGetImageSizeGptImage1(void);
 void configSetImageSizeGptImage1(ImageSize value);
 ImageFormat configGetImageFormat(void);
+ULONG configGetImageApiEndpoint(void);
 void configSetImageFormat(ImageFormat value);
+void configSetImageApiEndpoint(ULONG value);
 
 /* OpenAI TTS settings */
 OpenAITTSModel configGetOpenAITTSModel(void);

@@ -60,6 +60,7 @@ struct AmigaGPTConfigData {
     ULONG customImageUseSSL;
     AuthorizationType customImageAuthorizationType;
     ImageFormat imageFormat;
+    ULONG imageApiEndpoint;
 
     /* Provider selection (new in schema v2) */
     Provider chatProvider;
@@ -187,6 +188,7 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->customImageUseSSL = FALSE;
     data->customImageAuthorizationType = AUTHORIZATION_TYPE_BEARER;
     data->imageFormat = IMAGE_FORMAT_PNG;
+    data->imageApiEndpoint = API_ENDPOINT_IMAGES_GENERATIONS;
 
     /* Provider defaults (new in schema v2) */
     data->chatProvider = PROVIDER_OPENAI;
@@ -459,6 +461,9 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_ImageFormat:
         *store = data->imageFormat;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_ImageApiEndpoint:
+        *store = data->imageApiEndpoint;
         return TRUE;
     case MUIA_AmigaGPTConfig_ChatModelSetVersion:
         *store = data->chatModelSetVersion;
@@ -797,6 +802,12 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                 changed = TRUE;
             }
             break;
+        case MUIA_AmigaGPTConfig_ImageApiEndpoint:
+            if (data->imageApiEndpoint != (ULONG)ti_Data) {
+                data->imageApiEndpoint = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
 
         /* String attributes */
         case MUIA_AmigaGPTConfig_SpeechAccent:
@@ -1086,6 +1097,8 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
         json_object_new_int(data->customImageAuthorizationType));
     json_object_object_add(configJsonObject, "imageFormat",
                            json_object_new_int(data->imageFormat));
+    json_object_object_add(configJsonObject, "imageApiEndpoint",
+                           json_object_new_int((int)data->imageApiEndpoint));
 
     /* Version tracking */
     json_object_object_add(configJsonObject, "chatModelSetVersion",
@@ -1521,6 +1534,17 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
 
     if (json_object_object_get_ex(configJsonObject, "imageFormat", &valueObj))
         data->imageFormat = json_object_get_int(valueObj);
+
+    if (json_object_object_get_ex(configJsonObject, "imageApiEndpoint",
+                                  &valueObj)) {
+        data->imageApiEndpoint = (ULONG)json_object_get_int(valueObj);
+    } else {
+        /* Default based on selected image provider */
+        data->imageApiEndpoint =
+            (data->imageProvider == PROVIDER_GEMINI)
+                ? (ULONG)API_ENDPOINT_GEMINI_GENERATE_CONTENT
+                : (ULONG)API_ENDPOINT_IMAGES_GENERATIONS;
+    }
 
     /* Version tracking - check and reset defaults if versions changed */
     if (json_object_object_get_ex(configJsonObject, "chatModelSetVersion",
@@ -2170,6 +2194,13 @@ ImageFormat configGetImageFormat(void) {
     return val;
 }
 
+ULONG configGetImageApiEndpoint(void) {
+    ULONG val = (ULONG)API_ENDPOINT_IMAGES_GENERATIONS;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_ImageApiEndpoint, &val);
+    return val;
+}
+
 STRPTR configGetElevenLabsAPIKey(void) {
     STRPTR val = NULL;
     if (configObj)
@@ -2262,6 +2293,11 @@ void configSetImageSizeGptImage1(ImageSize value) {
 void configSetImageFormat(ImageFormat value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_ImageFormat, value);
+}
+
+void configSetImageApiEndpoint(ULONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_ImageApiEndpoint, value);
 }
 
 void configSetOpenAITTSModel(OpenAITTSModel value) {

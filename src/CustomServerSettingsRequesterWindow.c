@@ -43,8 +43,8 @@ static Object *customServerSettingsRootGroup = NULL;
 static Object *customServerStreamingGroup = NULL;
 
 /* API endpoint options (chat vs image) */
-static STRPTR chatApiEndpointOptions[4] = {NULL};
-static STRPTR imageApiEndpointOptions[2] = {"images/generations", NULL};
+static STRPTR chatApiEndpointOptions[6] = {NULL};
+static STRPTR imageApiEndpointOptions[3] = {NULL};
 
 static struct json_object *customServerModelsJson = NULL;
 static struct json_object *profilesJson = NULL;
@@ -189,7 +189,25 @@ static void loadBuiltinProviderIntoUI(Provider provider) {
         set(customServerApiEndpointCycle, MUIA_Cycle_Active,
             (LONG)config->apiEndpoint);
     } else if (customServerApiEndpointCycle != NULL) {
-        set(customServerApiEndpointCycle, MUIA_Cycle_Active, 0);
+        /* Image endpoint defaults:
+         * - Gemini: native generateContent
+         * - Others: images/generations
+         * If Gemini is currently the selected image provider, load the saved
+         * endpoint; otherwise default to native for the Gemini profile. */
+        LONG active = 0;
+        if (provider == PROVIDER_GEMINI) {
+            if (configGetImageProvider() == PROVIDER_GEMINI) {
+                active = (configGetImageApiEndpoint() ==
+                          (ULONG)API_ENDPOINT_GEMINI_GENERATE_CONTENT)
+                             ? 1
+                             : 0;
+            } else {
+                active = 1;
+            }
+        } else {
+            active = 0;
+        }
+        set(customServerApiEndpointCycle, MUIA_Cycle_Active, active);
     }
     set(customServerApiEndpointUrlString, MUIA_String_Contents,
         config->apiEndpointUrl ? config->apiEndpointUrl : "v1");
@@ -404,13 +422,17 @@ static void loadProfileIntoUI(struct json_object *profile) {
             json_object_get_string(obj));
     }
 
-    if (!settingsIsImageMode) {
-        obj = json_object_object_get(profile, "apiEndpoint");
-        if (obj != NULL)
+    obj = json_object_object_get(profile, "apiEndpoint");
+    if (obj != NULL && customServerApiEndpointCycle != NULL) {
+        if (settingsIsImageMode) {
+            LONG ep = json_object_get_int(obj);
+            LONG active =
+                (ep == (LONG)API_ENDPOINT_GEMINI_GENERATE_CONTENT) ? 1 : 0;
+            set(customServerApiEndpointCycle, MUIA_Cycle_Active, active);
+        } else {
             set(customServerApiEndpointCycle, MUIA_Cycle_Active,
                 json_object_get_int(obj));
-    } else if (customServerApiEndpointCycle != NULL) {
-        set(customServerApiEndpointCycle, MUIA_Cycle_Active, 0);
+        }
     }
 
     obj = json_object_object_get(profile, "apiEndpointUrl");
@@ -480,6 +502,10 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
 
     LONG apiEndpoint;
     get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
+    if (settingsIsImageMode) {
+        apiEndpoint = (apiEndpoint == 1) ? API_ENDPOINT_GEMINI_GENERATE_CONTENT
+                                         : API_ENDPOINT_IMAGES_GENERATIONS;
+    }
     json_object_object_add(profile, "apiEndpoint",
                            json_object_new_int(apiEndpoint));
 
@@ -553,6 +579,17 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
             break;
         }
         if (settingsIsImageMode) {
+            /* Save image endpoint selection */
+            LONG imageEndpointActive = 0;
+            if (customServerApiEndpointCycle != NULL)
+                get(customServerApiEndpointCycle, MUIA_Cycle_Active,
+                    &imageEndpointActive);
+            ULONG imageEndpoint =
+                (imageEndpointActive == 1)
+                    ? (ULONG)API_ENDPOINT_GEMINI_GENERATE_CONTENT
+                    : (ULONG)API_ENDPOINT_IMAGES_GENERATIONS;
+            configSetImageApiEndpoint(imageEndpoint);
+
             /* Save image model string (stored globally for now). Validate
              * against the built-in provider model list. */
             CONST_STRPTR *allowed = NULL;
@@ -1101,13 +1138,12 @@ HOOKPROTONHNONP(TemplateSelectedFunc, void) {
         set(customServerPortString, MUIA_String_Integer, 443);
         set(customServerUsesSSLCycle, MUIA_Cycle_Active, 1); /* SSL enabled */
         set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
-            AUTHORIZATION_TYPE_BEARER);
+            AUTHORIZATION_TYPE_NONE);
         set(customServerChatModelString, MUIA_String_Contents,
             "gemini-2.5-flash");
         set(customServerApiEndpointCycle, MUIA_Cycle_Active,
-            API_ENDPOINT_CHAT_COMPLETIONS);
-        set(customServerApiEndpointUrlString, MUIA_String_Contents,
-            "v1beta/openai");
+            API_ENDPOINT_GEMINI_GENERATE_CONTENT);
+        set(customServerApiEndpointUrlString, MUIA_String_Contents, "v1beta");
         break;
     case TEMPLATE_LM_STUDIO:
         set(customServerHostString, MUIA_String_Contents, "localhost");
@@ -1192,9 +1228,10 @@ SAVEDS void refreshUrlPreview(void) {
     STRPTR customServerApiEndpointUrl = NULL;
     get(customServerApiEndpointUrlString, MUIA_String_Contents,
         &customServerApiEndpointUrl);
-    LONG apiEndpoint = 0;
-    if (!settingsIsImageMode && customServerApiEndpointCycle != NULL) {
-        get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
+    LONG apiEndpointActive = 0;
+    if (customServerApiEndpointCycle != NULL) {
+        get(customServerApiEndpointCycle, MUIA_Cycle_Active,
+            &apiEndpointActive);
     }
 
     UBYTE fullUrlPreviewString[512];
@@ -1202,9 +1239,15 @@ SAVEDS void refreshUrlPreview(void) {
                                    ? (CONST_STRPTR)customServerApiEndpointUrl
                                    : "";
     CONST_STRPTR host = customServerHost ? (CONST_STRPTR)customServerHost : "";
-    CONST_STRPTR endpointPath = settingsIsImageMode
-                                    ? "images/generations"
-                                    : API_ENDPOINT_NAMES[apiEndpoint];
+    CONST_STRPTR endpointPath = NULL;
+    if (settingsIsImageMode) {
+        endpointPath =
+            (apiEndpointActive == 1)
+                ? API_ENDPOINT_NAMES[API_ENDPOINT_GEMINI_GENERATE_CONTENT]
+                : API_ENDPOINT_NAMES[API_ENDPOINT_IMAGES_GENERATIONS];
+    } else {
+        endpointPath = API_ENDPOINT_NAMES[apiEndpointActive];
+    }
     snprintf(fullUrlPreviewString, sizeof(fullUrlPreviewString),
              "%s://%s:%ld%s%s/%s", usesSSL == 1 ? "https" : "http", host,
              (long)port,
@@ -1384,6 +1427,17 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     else
         configSetCustomApiEndpointUrl(customServerApiEndpointUrl);
 
+    if (settingsIsImageMode) {
+        LONG imageEndpointActive = 0;
+        if (customServerApiEndpointCycle != NULL)
+            get(customServerApiEndpointCycle, MUIA_Cycle_Active,
+                &imageEndpointActive);
+        ULONG imageEndpoint = (imageEndpointActive == 1)
+                                  ? (ULONG)API_ENDPOINT_GEMINI_GENERATE_CONTENT
+                                  : (ULONG)API_ENDPOINT_IMAGES_GENERATIONS;
+        configSetImageApiEndpoint(imageEndpoint);
+    }
+
     STRPTR customServerCustomHeaders;
     get(customServerCustomHeadersString, MUIA_String_Contents,
         &customServerCustomHeaders);
@@ -1421,6 +1475,14 @@ LONG createCustomServerSettingsRequesterWindow() {
         (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_CHAT_COMPLETIONS];
     chatApiEndpointOptions[API_ENDPOINT_MESSAGES] =
         (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_MESSAGES];
+    chatApiEndpointOptions[API_ENDPOINT_GEMINI_GENERATE_CONTENT] =
+        (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_GEMINI_GENERATE_CONTENT];
+
+    /* Image endpoint options (index-based, not enum-based) */
+    imageApiEndpointOptions[0] =
+        (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_IMAGES_GENERATIONS];
+    imageApiEndpointOptions[1] =
+        (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_GEMINI_GENERATE_CONTENT];
 
     static STRPTR authorizationTypeOptions[4] = {NULL};
     authorizationTypeOptions[AUTHORIZATION_TYPE_NONE] =
@@ -1703,8 +1765,7 @@ static void applyProviderSettingsWindowMode(BOOL isImageMode) {
         if (settingsIsImageMode) {
             set(customServerApiEndpointCycle, MUIA_Cycle_Entries,
                 imageApiEndpointOptions);
-            set(customServerApiEndpointCycle, MUIA_Cycle_Active, 0);
-            set(customServerApiEndpointCycle, MUIA_Disabled, TRUE);
+            set(customServerApiEndpointCycle, MUIA_Disabled, FALSE);
         } else {
             set(customServerApiEndpointCycle, MUIA_Cycle_Entries,
                 chatApiEndpointOptions);

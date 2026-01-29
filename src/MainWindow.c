@@ -356,7 +356,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         imageModelName, imageSize, apiKey, configGetProxyEnabled(),
         configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
         configGetProxyRequiresAuth(), configGetProxyUsername(),
-        configGetProxyPassword(), configGetImageFormat(), imageProvider);
+        configGetProxyPassword(), configGetImageFormat(), imageProvider,
+        (APIEndpoint)configGetImageApiEndpoint());
     CodesetsFreeA(textUTF8, NULL);
 
     if (response == NULL) {

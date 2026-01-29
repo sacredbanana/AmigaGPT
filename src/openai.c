@@ -185,11 +185,13 @@ CONST_STRPTR OPENAI_TTS_VOICE_NAMES[] = {[OPENAI_TTS_VOICE_ALLOY] = "alloy",
  * The names of the API endpoints
  * @see APIEndpoint
  **/
-CONST_STRPTR API_ENDPOINT_NAMES[] = {[API_ENDPOINT_RESPONSES] = "responses",
-                                     [API_ENDPOINT_CHAT_COMPLETIONS] =
-                                         "chat/completions",
-                                     [API_ENDPOINT_MESSAGES] = "messages",
-                                     NULL};
+CONST_STRPTR API_ENDPOINT_NAMES[] = {
+    [API_ENDPOINT_RESPONSES] = "responses",
+    [API_ENDPOINT_CHAT_COMPLETIONS] = "chat/completions",
+    [API_ENDPOINT_MESSAGES] = "messages",
+    [API_ENDPOINT_GEMINI_GENERATE_CONTENT] = "models/:generateContent",
+    [API_ENDPOINT_IMAGES_GENERATIONS] = "images/generations",
+    NULL};
 
 /**
  * The names of the authorization types
@@ -317,9 +319,9 @@ static struct ProviderConfig providerConfigs[] = {
     {.host = "generativelanguage.googleapis.com",
      .port = 443,
      .useSSL = TRUE,
-     .apiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS,
-     .apiEndpointUrl = "v1beta/openai",
-     .authorizationType = AUTHORIZATION_TYPE_BEARER,
+     .apiEndpoint = API_ENDPOINT_GEMINI_GENERATE_CONTENT,
+     .apiEndpointUrl = "v1beta",
+     .authorizationType = AUTHORIZATION_TYPE_NONE,
      .customHeaders = NULL},
     /* PROVIDER_GROK */
     {.host = "api.x.ai",
@@ -1288,11 +1290,9 @@ struct json_object **postChatMessageToOpenAI(
         (apiEndpoinUrl == NULL || strlen(apiEndpoinUrl) == 0 ||
          strcmp(apiEndpoinUrl, "v1") == 0);
 
-    /* Gemini OpenAI-compatible endpoint does not support tool calling for web
-     * search. When web search is enabled, use Gemini's native generateContent
-     * API instead. */
+    /* Use Gemini native generateContent when requested by endpoint. */
     BOOL useGeminiGenerateContent =
-        (requestProvider == PROVIDER_GEMINI) && webSearchEnabled;
+        (apiEndpoint == API_ENDPOINT_GEMINI_GENERATE_CONTENT);
     BOOL effectiveStream = stream;
 
     if (useProxy && proxyUsesSSL) {
@@ -1362,13 +1362,15 @@ struct json_object **postChatMessageToOpenAI(
             }
             json_object_object_add(obj, "contents", conversationArray);
 
-            /* Web search tool */
-            struct json_object *toolsArray = json_object_new_array();
-            struct json_object *toolObj = json_object_new_object();
-            json_object_object_add(toolObj, "google_search",
-                                   json_object_new_object());
-            json_object_array_add(toolsArray, toolObj);
-            json_object_object_add(obj, "tools", toolsArray);
+            /* Web search tool (optional) */
+            if (webSearchEnabled) {
+                struct json_object *toolsArray = json_object_new_array();
+                struct json_object *toolObj = json_object_new_object();
+                json_object_object_add(toolObj, "google_search",
+                                       json_object_new_object());
+                json_object_array_add(toolsArray, toolObj);
+                json_object_object_add(obj, "tools", toolsArray);
+            }
 
         } else if (apiEndpoint == API_ENDPOINT_MESSAGES) {
             /* Anthropic/Claude Messages API format */
@@ -2181,7 +2183,7 @@ struct json_object *postImageCreationRequestToOpenAI(
         prompt, OPENAI_HOST, OPENAI_PORT, TRUE, "v1", AUTHORIZATION_TYPE_BEARER,
         NULL, modelName, imageSize, apiKey, useProxy, proxyHost, proxyPort,
         proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword,
-        imageFormat, PROVIDER_OPENAI);
+        imageFormat, PROVIDER_OPENAI, API_ENDPOINT_IMAGES_GENERATIONS);
 }
 
 struct json_object *postImageCreationRequestToOpenAIWithServer(
@@ -2190,11 +2192,13 @@ struct json_object *postImageCreationRequestToOpenAIWithServer(
     CONST_STRPTR customHeaders, CONST_STRPTR modelName, ImageSize imageSize,
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, ImageFormat imageFormat, Provider provider) {
+    CONST_STRPTR proxyPassword, ImageFormat imageFormat, Provider provider,
+    APIEndpoint imageApiEndpoint) {
     struct json_object *response = NULL;
     UWORD responseIndex = 0;
     BOOL requestUsesSSL = useSSL;
-    BOOL isGeminiGenerateContent = (provider == PROVIDER_GEMINI);
+    BOOL isGeminiGenerateContent =
+        (imageApiEndpoint == API_ENDPOINT_GEMINI_GENERATE_CONTENT);
     if (useProxy && proxyUsesSSL) {
         requestUsesSSL = TRUE;
     }

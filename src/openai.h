@@ -237,7 +237,11 @@ struct GeneratedImage {
 typedef enum {
     API_ENDPOINT_RESPONSES = 0L,
     API_ENDPOINT_CHAT_COMPLETIONS,
-    API_ENDPOINT_MESSAGES
+    API_ENDPOINT_MESSAGES,
+    /* Gemini native text endpoint (generateContent / streamGenerateContent) */
+    API_ENDPOINT_GEMINI_GENERATE_CONTENT,
+    /* OpenAI-compatible image generation endpoint */
+    API_ENDPOINT_IMAGES_GENERATIONS
 } APIEndpoint;
 
 /**
@@ -389,7 +393,8 @@ struct json_object *postImageCreationRequestToOpenAIWithServer(
     CONST_STRPTR customHeaders, CONST_STRPTR modelName, ImageSize imageSize,
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, ImageFormat imageFormat, Provider provider);
+    CONST_STRPTR proxyPassword, ImageFormat imageFormat, Provider provider,
+    APIEndpoint imageApiEndpoint);
 
 /**
  * Download a file from the internet
