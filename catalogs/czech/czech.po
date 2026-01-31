@@ -1636,3 +1636,81 @@ msgstr "Zapnuto"
 msgctxt "STRING_OFF (303//)"
 msgid "Off"
 msgstr "Vypnuto"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_BODY (304//)"
+msgid ""
+"The AI wants to execute the following shell command:\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this command to run?"
+msgstr ""
+"AI chce spustit následující shellový příkaz:\n"
+"\n"
+"%s\n"
+"\n"
+"Povolit spuštění tohoto příkazu?"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_TITLE (305//)"
+msgid "Shell Command Confirmation"
+msgstr "Potvrzení shellového příkazu"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_BUTTONS (306//)"
+msgid "*_Allow|_Deny"
+msgstr "*_Povolit|_Zakázat"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_DENIED_BANNER (307//)"
+msgid ""
+"\n"
+"\n"
+"--- Shell command denied by user ---\n"
+"\n"
+msgstr ""
+"\n"
+"\n"
+"--- Shellový příkaz byl uživatelem odmítnut ---\n"
+"\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT (308//)"
+msgid ""
+"\n"
+"\n"
+"--- Executing: %s ---\n"
+msgstr ""
+"\n"
+"\n"
+"--- Spouštím: %s ---\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT (309//)"
+msgid ""
+"Exit code: %ld\n"
+"%s\n"
+"--- End ---\n"
+"\n"
+msgstr ""
+"Návratový kód: %ld\n"
+"%s\n"
+"--- Konec ---\n"
+"\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_NO_OUTPUT (310//)"
+msgid "(No output)"
+msgstr "(Bez výstupu)"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT (311//)"
+msgid ""
+"Exit code: %ld\n"
+"Output:\n"
+"%s"
+msgstr ""
+"Návratový kód: %ld\n"
+"Výstup:\n"
+"%s"

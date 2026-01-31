@@ -1653,3 +1653,81 @@ msgstr "Activado"
 msgctxt "STRING_OFF (303//)"
 msgid "Off"
 msgstr "Desactivado"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_BODY (304//)"
+msgid ""
+"The AI wants to execute the following shell command:\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this command to run?"
+msgstr ""
+"La IA quiere ejecutar el siguiente comando de shell:\n"
+"\n"
+"%s\n"
+"\n"
+"¿Permitir ejecutar este comando?"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_TITLE (305//)"
+msgid "Shell Command Confirmation"
+msgstr "Confirmación de comando de shell"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_BUTTONS (306//)"
+msgid "*_Allow|_Deny"
+msgstr "*_Permitir|_Denegar"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_DENIED_BANNER (307//)"
+msgid ""
+"\n"
+"\n"
+"--- Shell command denied by user ---\n"
+"\n"
+msgstr ""
+"\n"
+"\n"
+"--- Comando de shell denegado por el usuario ---\n"
+"\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT (308//)"
+msgid ""
+"\n"
+"\n"
+"--- Executing: %s ---\n"
+msgstr ""
+"\n"
+"\n"
+"--- Ejecutando: %s ---\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT (309//)"
+msgid ""
+"Exit code: %ld\n"
+"%s\n"
+"--- End ---\n"
+"\n"
+msgstr ""
+"Código de salida: %ld\n"
+"%s\n"
+"--- Fin ---\n"
+"\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_NO_OUTPUT (310//)"
+msgid "(No output)"
+msgstr "(Sin salida)"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT (311//)"
+msgid ""
+"Exit code: %ld\n"
+"Output:\n"
+"%s"
+msgstr ""
+"Código de salida: %ld\n"
+"Salida:\n"
+"%s"

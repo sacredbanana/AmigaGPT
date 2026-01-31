@@ -1645,3 +1645,81 @@ msgstr "Uključeno"
 msgctxt "STRING_OFF (303//)"
 msgid "Off"
 msgstr "Isključeno"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_BODY (304//)"
+msgid ""
+"The AI wants to execute the following shell command:\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this command to run?"
+msgstr ""
+"AI želi izvršiti sljedeću shell naredbu:\n"
+"\n"
+"%s\n"
+"\n"
+"Dopustiti izvršavanje ove naredbe?"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_TITLE (305//)"
+msgid "Shell Command Confirmation"
+msgstr "Potvrda shell naredbe"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_BUTTONS (306//)"
+msgid "*_Allow|_Deny"
+msgstr "*_Dopusti|_Odbij"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_DENIED_BANNER (307//)"
+msgid ""
+"\n"
+"\n"
+"--- Shell command denied by user ---\n"
+"\n"
+msgstr ""
+"\n"
+"\n"
+"--- Shell naredba odbijena od strane korisnika ---\n"
+"\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT (308//)"
+msgid ""
+"\n"
+"\n"
+"--- Executing: %s ---\n"
+msgstr ""
+"\n"
+"\n"
+"--- Izvršavam: %s ---\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT (309//)"
+msgid ""
+"Exit code: %ld\n"
+"%s\n"
+"--- End ---\n"
+"\n"
+msgstr ""
+"Izlazni kod: %ld\n"
+"%s\n"
+"--- Kraj ---\n"
+"\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_NO_OUTPUT (310//)"
+msgid "(No output)"
+msgstr "(Nema izlaza)"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT (311//)"
+msgid ""
+"Exit code: %ld\n"
+"Output:\n"
+"%s"
+msgstr ""
+"Izlazni kod: %ld\n"
+"Izlaz:\n"
+"%s"

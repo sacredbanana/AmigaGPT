@@ -1677,3 +1677,81 @@ msgstr "Ein"
 msgctxt "STRING_OFF (303//)"
 msgid "Off"
 msgstr "Aus"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_BODY (304//)"
+msgid ""
+"The AI wants to execute the following shell command:\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this command to run?"
+msgstr ""
+"Die KI möchte den folgenden Shell-Befehl ausführen:\n"
+"\n"
+"%s\n"
+"\n"
+"Diesen Befehl ausführen?"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_TITLE (305//)"
+msgid "Shell Command Confirmation"
+msgstr "Bestätigung des Shell-Befehls"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_BUTTONS (306//)"
+msgid "*_Allow|_Deny"
+msgstr "*_Zulassen|_Ablehnen"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_DENIED_BANNER (307//)"
+msgid ""
+"\n"
+"\n"
+"--- Shell command denied by user ---\n"
+"\n"
+msgstr ""
+"\n"
+"\n"
+"--- Shell-Befehl vom Benutzer abgelehnt ---\n"
+"\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT (308//)"
+msgid ""
+"\n"
+"\n"
+"--- Executing: %s ---\n"
+msgstr ""
+"\n"
+"\n"
+"--- Ausführung: %s ---\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT (309//)"
+msgid ""
+"Exit code: %ld\n"
+"%s\n"
+"--- End ---\n"
+"\n"
+msgstr ""
+"Exit-Code: %ld\n"
+"%s\n"
+"--- Ende ---\n"
+"\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_NO_OUTPUT (310//)"
+msgid "(No output)"
+msgstr "(Keine Ausgabe)"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT (311//)"
+msgid ""
+"Exit code: %ld\n"
+"Output:\n"
+"%s"
+msgstr ""
+"Exit-Code: %ld\n"
+"Ausgabe:\n"
+"%s"

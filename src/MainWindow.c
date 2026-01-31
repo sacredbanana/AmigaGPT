@@ -1694,8 +1694,7 @@ static void sendChatMessage() {
         /* Ask user for confirmation before executing the command */
         UBYTE confirmMsg[4096];
         snprintf(confirmMsg, sizeof(confirmMsg),
-                 "The AI wants to execute the following shell "
-                 "command:\n\n%s\n\nAllow this command to run?",
+                 STRING_SHELL_TOOL_CONFIRMATION_BODY,
                  command);
         LONG result = MUI_Request(app, mainWindowObject,
 #ifdef __MORPHOS__
@@ -1703,18 +1702,19 @@ static void sendChatMessage() {
 #else
                                   MUIV_Requester_Image_Warning,
 #endif
-                                  "Shell Command Confirmation", "*_Allow|_Deny",
+                                  STRING_SHELL_TOOL_CONFIRMATION_TITLE,
+                                  STRING_SHELL_TOOL_CONFIRMATION_BUTTONS,
                                   confirmMsg, TAG_DONE);
 
         if (result != 1) {
             /* User denied - clear pending tool call and break out of loop */
             clearPendingToolCall();
             strncat(chatOutputTextEditorContents,
-                    "\n\n--- Shell command denied by user ---\n\n",
+                    STRING_SHELL_TOOL_DENIED_BANNER,
                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
                         strlen(chatOutputTextEditorContents) - 1);
             strncat(receivedMessage,
-                    "\n\n--- Shell command denied by user ---\n\n",
+                    STRING_SHELL_TOOL_DENIED_BANNER,
                     READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
             set(chatOutputTextEditor, MUIA_NFloattext_Text,
                 chatOutputTextEditorContents);
@@ -1731,8 +1731,8 @@ static void sendChatMessage() {
 
         /* Show the command in the chat output and save to history */
         UBYTE cmdDisplay[512];
-        snprintf(cmdDisplay, sizeof(cmdDisplay), "\n\n--- Executing: %s ---\n",
-                 command);
+        snprintf(cmdDisplay, sizeof(cmdDisplay),
+                 STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT, command);
         strncat(chatOutputTextEditorContents, cmdDisplay,
                 CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
                     strlen(chatOutputTextEditorContents) - 1);
@@ -1749,8 +1749,8 @@ static void sendChatMessage() {
         /* Display the output and save to history */
         UBYTE outputDisplay[4096];
         snprintf(outputDisplay, sizeof(outputDisplay),
-                 "Exit code: %ld\n%s\n--- End ---\n\n", exitCode,
-                 output != NULL ? output : "(No output)");
+                 STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT, exitCode,
+                 output != NULL ? output : STRING_SHELL_TOOL_NO_OUTPUT);
         strncat(chatOutputTextEditorContents, outputDisplay,
                 CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
                     strlen(chatOutputTextEditorContents) - 1);
@@ -1762,8 +1762,9 @@ static void sendChatMessage() {
 
         /* Build output string with exit code */
         UBYTE toolOutput[8192];
-        snprintf(toolOutput, sizeof(toolOutput), "Exit code: %ld\nOutput:\n%s",
-                 exitCode, output != NULL ? output : "(No output)");
+        snprintf(toolOutput, sizeof(toolOutput),
+                 STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT, exitCode,
+                 output != NULL ? output : STRING_SHELL_TOOL_NO_OUTPUT);
 
         /* Send the tool result back to the API - this may set a new pending
          * tool call if OpenAI wants to run another command */
