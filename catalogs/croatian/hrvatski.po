@@ -270,8 +270,8 @@ msgstr "Način generiranja slike"
 
 #: src/MainWindow.c:199 src/MainWindow.c:435
 msgctxt "STRING_ERROR_NO_API_KEY (27//)"
-msgid "Please enter your OpenAI API key in the Open AI settings in the menu."
-msgstr "Unesite svoj OpenAI API ključ u Open AI postavke u izborniku."
+msgid "Please enter your API key"
+msgstr "Molimo unesite svoj API ključ"
 
 #: src/MainWindow.c:283
 msgctxt "STRING_ERROR_CONNECTION (28//)"
@@ -1346,11 +1346,6 @@ msgstr "ElevenLabs Postavke"
 msgctxt "STRING_NONE_SELECTED (248//)"
 msgid "None Selected"
 msgstr "Nije odabrano"
-
-#: src/ElevenLabsSettingsRequesterWindow.c:111
-msgctxt "STRING_ERROR_ELEVENLABS_API_KEY_REQUIRED (249//)"
-msgid "Please enter your ElevenLabs API key first"
-msgstr "Molimo unesite vaš ElevenLabs API ključ prvo"
 
 #: src/ElevenLabsSettingsRequesterWindow.c:112
 msgctxt "STRING_FETCHING_ELEVENLABS_MODELS (250//)"

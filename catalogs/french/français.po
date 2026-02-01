@@ -272,9 +272,8 @@ msgstr "Mode de génération d'image"
 
 #: src/MainWindow.c:199 src/MainWindow.c:435
 msgctxt "STRING_ERROR_NO_API_KEY (27//)"
-msgid "Please enter your OpenAI API key in the Open AI settings in the menu."
-msgstr ""
-"Veuillez saisir votre clé API OpenAI dans les paramètres Open AI du menu."
+msgid "Please enter your API key"
+msgstr "Veuillez saisir votre clé API"
 
 #: src/MainWindow.c:283
 msgctxt "STRING_ERROR_CONNECTION (28//)"
@@ -1359,11 +1358,6 @@ msgstr "Paramètres ElevenLabs"
 msgctxt "STRING_NONE_SELECTED (248//)"
 msgid "None Selected"
 msgstr "Aucun sélectionné"
-
-#: src/ElevenLabsSettingsRequesterWindow.c:111
-msgctxt "STRING_ERROR_ELEVENLABS_API_KEY_REQUIRED (249//)"
-msgid "Please enter your ElevenLabs API key first"
-msgstr "Veuillez entrer votre clé API ElevenLabs d'abord"
 
 #: src/ElevenLabsSettingsRequesterWindow.c:112
 msgctxt "STRING_FETCHING_ELEVENLABS_MODELS (250//)"

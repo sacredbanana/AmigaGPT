@@ -1810,7 +1810,24 @@ struct json_object **postChatMessageToOpenAI(
                                 }
                                 error[i] = httpResponse[i];
                             }
-                            displayError(error);
+                            /* IMPORTANT:
+                             * In streaming mode, the UI will keep calling us
+                             * until it sees either an "error" object or a
+                             * completion marker. If we only show an error
+                             * dialog here and return no JSON objects, the UI
+                             * will retry forever and spam the requester.
+                             *
+                             * Return a standard {"error":{"message":...}}
+                             * object in responses[0] so the caller can stop.
+                             */
+                            struct json_object *errObj = json_object_new_object();
+                            struct json_object *errInner =
+                                json_object_new_object();
+                            json_object_object_add(
+                                errInner, "message",
+                                json_object_new_string((CONST_STRPTR)error));
+                            json_object_object_add(errObj, "error", errInner);
+                            responses[responseIndex++] = errObj;
                             doneReading = TRUE;
                             streamingInProgress = FALSE;
                             break;
@@ -3299,6 +3316,12 @@ APTR postTextToSpeechRequestToOpenAI(
     BOOL useSSL = !useProxy || proxyUsesSSL;
 
     *audioLength = 0;
+
+    /* Prevent crashes on NULL apiKey (also avoids a guaranteed 401). */
+    if (apiKey == NULL || strlen(apiKey) == 0) {
+        displayError(STRING_ERROR_NO_API_KEY);
+        return NULL;
+    }
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
     UBYTE connectionRetryCount = 0;

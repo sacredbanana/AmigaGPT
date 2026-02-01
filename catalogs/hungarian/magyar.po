@@ -269,8 +269,8 @@ msgstr "Képgenerálási mód"
 
 #: src/MainWindow.c:199 src/MainWindow.c:435
 msgctxt "STRING_ERROR_NO_API_KEY (27//)"
-msgid "Please enter your OpenAI API key in the Open AI settings in the menu."
-msgstr "Kérjük, adja meg OpenAI API kulcsát a menü Open AI beállításaiban."
+msgid "Please enter your API key"
+msgstr "Kérjük, adja meg az API-kulcsát"
 
 #: src/MainWindow.c:283
 msgctxt "STRING_ERROR_CONNECTION (28//)"
@@ -1349,11 +1349,6 @@ msgstr "ElevenLabs Beállítások"
 msgctxt "STRING_NONE_SELECTED (248//)"
 msgid "None Selected"
 msgstr "Nincs kiválasztva"
-
-#: src/ElevenLabsSettingsRequesterWindow.c:111
-msgctxt "STRING_ERROR_ELEVENLABS_API_KEY_REQUIRED (249//)"
-msgid "Please enter your ElevenLabs API key first"
-msgstr "Kérjük, adja meg először az ElevenLabs API kulcsát"
 
 #: src/ElevenLabsSettingsRequesterWindow.c:112
 msgctxt "STRING_FETCHING_ELEVENLABS_MODELS (250//)"

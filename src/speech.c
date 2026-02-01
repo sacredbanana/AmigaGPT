@@ -53,7 +53,7 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
                                       [SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
                                       [SPEECH_SYSTEM_FLITE] = "Flite",
                                       [SPEECH_SYSTEM_OPENAI] = "OpenAI",
-                                      [SPEECH_SYSTEM_ELEVENLABS] = "Elevenlabs",
+                                      [SPEECH_SYSTEM_ELEVENLABS] = "ElevenLabs",
                                       NULL};
 
 /**
@@ -241,6 +241,20 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
 
     if (speechSystem == SPEECH_SYSTEM_OPENAI ||
         speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
+        if (speechSystem == SPEECH_SYSTEM_OPENAI) {
+            if (settings->openAiApiKey == NULL ||
+                strlen(settings->openAiApiKey) == 0) {
+                displayError(STRING_ERROR_NO_API_KEY);
+                return;
+            }
+        } else if (speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
+            if (settings->elevenLabsApiKey == NULL ||
+                strlen(settings->elevenLabsApiKey) == 0) {
+                displayError(STRING_ERROR_NO_API_KEY);
+                return;
+            }
+        }
+
         struct MsgPort *AHImp;
         struct AHIRequest *ahiRequest;
         BYTE ahiError;

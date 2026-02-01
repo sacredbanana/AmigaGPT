@@ -20,6 +20,7 @@
 - New Speech Provider Settings window for setting your speech provider and options, creating speech profiles and testing your current speech settings
 - New config options for the Workbench speech systems: rate, pitch, mode (natural/robotic) and sex
 - Fix bug where the first paragraph in every response is always black even if you have custom colours set
+- Fix bug where a missing or incorrect API key could cause the app to enter an infinite loop of displaying an error and retrying
 
 ## 2.17.0 (2025-12-22)
 

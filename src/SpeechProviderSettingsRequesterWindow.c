@@ -427,7 +427,7 @@ HOOKPROTONHNONP(ElevenLabsFetchModelsButtonClickedFunc, void) {
     get(elevenLabsAPIKeyString, MUIA_String_Contents, &apiKey);
 
     if (apiKey == NULL || strlen(apiKey) == 0) {
-        displayError(STRING_ERROR_ELEVENLABS_API_KEY_REQUIRED);
+        displayError(STRING_ERROR_NO_API_KEY);
         return;
     }
 
@@ -457,7 +457,7 @@ HOOKPROTONHNONP(ElevenLabsSearchVoicesButtonClickedFunc, void) {
     STRPTR apiKey = NULL;
     get(elevenLabsAPIKeyString, MUIA_String_Contents, &apiKey);
     if (apiKey == NULL || strlen(apiKey) == 0) {
-        displayError(STRING_ERROR_ELEVENLABS_API_KEY_REQUIRED);
+        displayError(STRING_ERROR_NO_API_KEY);
         return;
     }
 
