@@ -1710,7 +1710,7 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
     End,
 
     Child, workbenchGroup = VGroup, MUIA_Frame, MUIV_Frame_Group,
-    MUIA_FrameTitle, STRING_MENU_SPEECH_ACCENT, Child, ColGroup(2), Child,
+    MUIA_FrameTitle, "Workbench narrator.device", Child, ColGroup(2), Child,
     Label(STRING_MENU_SPEECH_ACCENT), Child, HGroup, Child,
     workbenchAccentString = StringObject, MUIA_Frame, MUIV_Frame_String,
     MUIA_CycleChain, TRUE, End, Child,

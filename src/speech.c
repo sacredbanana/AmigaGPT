@@ -49,13 +49,12 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size);
  * The names of the speech systems
  * @see SpeechSystem
  **/
-const STRPTR SPEECH_SYSTEM_NAMES[] = {
-    [SPEECH_SYSTEM_34] = "Workbench 1.x v34",
-    [SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
-    [SPEECH_SYSTEM_FLITE] = "Flite",
-    [SPEECH_SYSTEM_OPENAI] = "OpenAI Text To Speech",
-    [SPEECH_SYSTEM_ELEVENLABS] = "Elevenlabs Text To Speech",
-    NULL};
+const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
+                                      [SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
+                                      [SPEECH_SYSTEM_FLITE] = "Flite",
+                                      [SPEECH_SYSTEM_OPENAI] = "OpenAI",
+                                      [SPEECH_SYSTEM_ELEVENLABS] = "Elevenlabs",
+                                      NULL};
 
 /**
  * The names of the audio formats
@@ -266,10 +265,11 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         } else if (speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
             audioBuffer = postTextToSpeechRequestToElevenLabs(
                 text, settings->elevenLabsVoiceID, settings->elevenLabsModel,
-                settings->elevenLabsApiKey, &audioLength, configGetProxyEnabled(),
-                configGetProxyHost(), configGetProxyPort(),
-                configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
-                configGetProxyUsername(), configGetProxyPassword());
+                settings->elevenLabsApiKey, &audioLength,
+                configGetProxyEnabled(), configGetProxyHost(),
+                configGetProxyPort(), configGetProxyUsesSSL(),
+                configGetProxyRequiresAuth(), configGetProxyUsername(),
+                configGetProxyPassword());
         }
 
         if (!audioBuffer) {
@@ -371,8 +371,7 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         return;
     }
 #ifdef __AMIGAOS3__
-    if (speechSystem == SPEECH_SYSTEM_34 ||
-        speechSystem == SPEECH_SYSTEM_37) {
+    if (speechSystem == SPEECH_SYSTEM_34 || speechSystem == SPEECH_SYSTEM_37) {
         memset(translationBuffer, 0, TRANSLATION_BUFFER_SIZE);
         if (CheckIO((struct IORequest *)NarratorIO) == 0) {
             WaitIO((struct IORequest *)NarratorIO);
