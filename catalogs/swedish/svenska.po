@@ -1620,7 +1620,9 @@ msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
 msgid ""
 "A custom profile cannot use the same name as a built-in provider (OpenAI, "
 "Google Gemini, xAI Grok, Anthropic Claude)."
-msgstr "En anpassad profil kan inte ha samma namn som en inbyggd leverantör (OpenAI, Google Gemini, xAI Grok, Anthropic Claude)."
+msgstr ""
+"En anpassad profil kan inte ha samma namn som en inbyggd leverantör (OpenAI, "
+"Google Gemini, xAI Grok, Anthropic Claude)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
@@ -1719,3 +1721,18 @@ msgstr ""
 "Exitkod: %ld\n"
 "Utdata:\n"
 "%s"
+
+#: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
+msgid "Speech Provider Settings"
+msgstr "Inställningar för talprovider"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_WARNING_MISSING_FORMAT (313//)"
+msgid "Warning: required component is missing: %s"
+msgstr "Varning: nödvändig komponent saknas: %s"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
+msgid "Failed to create Speech Provider Settings window"
+msgstr "Kunde inte skapa fönstret Inställningar för talprovider"

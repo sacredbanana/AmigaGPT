@@ -1711,3 +1711,18 @@ msgstr ""
 "Exit code: %ld\n"
 "Output:\n"
 "%s"
+
+#: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
+msgid "Speech Provider Settings"
+msgstr "Speech Provider Settings"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_WARNING_MISSING_FORMAT (313//)"
+msgid "Warning: required component is missing: %s"
+msgstr "Warning: required component is missing: %s"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
+msgid "Failed to create Speech Provider Settings window"
+msgstr "Failed to create Speech Provider Settings window"

@@ -226,7 +226,10 @@ void closeSpeech() {
  * @param audioFormat the audio format to save the audio to
  **/
 void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
-    SpeechSystem speechSystem = configGetSpeechSystem();
+    struct SpeechRequestSettings settings;
+    configGetSpeechRequestSettings(&settings);
+    SpeechSystem speechSystem = settings.speechSystem;
+
     if (speechSystem == SPEECH_SYSTEM_OPENAI ||
         speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
         struct MsgPort *AHImp;
@@ -244,21 +247,23 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
 
         if (speechSystem == SPEECH_SYSTEM_OPENAI) {
             audioBuffer = postTextToSpeechRequestToOpenAI(
-                text, configGetOpenAITTSModel(), configGetOpenAITTSVoice(),
-                configGetOpenAIVoiceInstructions(), configGetOpenAiApiKey(),
+                text, settings.openAiTtsModel, settings.openAiTtsVoice,
+                settings.openAiVoiceInstructions, settings.openAiApiKey,
                 &audioLength, configGetProxyEnabled(), configGetProxyHost(),
-                configGetProxyPort(), configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
-                configGetProxyUsername(), configGetProxyPassword(), audioFormat);
+                configGetProxyPort(), configGetProxyUsesSSL(),
+                configGetProxyRequiresAuth(), configGetProxyUsername(),
+                configGetProxyPassword(), audioFormat);
         } else if (speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
             audioBuffer = postTextToSpeechRequestToElevenLabs(
-                text, configGetElevenLabsVoiceID(), configGetElevenLabsModel(),
-                configGetElevenLabsAPIKey(), &audioLength, configGetProxyEnabled(),
-                configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
-                configGetProxyRequiresAuth(), configGetProxyUsername(),
-                configGetProxyPassword());
+                text, settings.elevenLabsVoiceID, settings.elevenLabsModel,
+                settings.elevenLabsApiKey, &audioLength, configGetProxyEnabled(),
+                configGetProxyHost(), configGetProxyPort(),
+                configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+                configGetProxyUsername(), configGetProxyPassword());
         }
 
         if (!audioBuffer) {
+            configFreeSpeechRequestSettings(&settings);
             return;
         }
 
@@ -306,6 +311,7 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
                 Close(outputFile);
             }
             FreeVec(audioBuffer);
+            configFreeSpeechRequestSettings(&settings);
             return;
         }
 
@@ -337,6 +343,7 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
             displayError(errorBuffer);
             configSetSpeechEnabled(FALSE);
             FreeVec(audioBuffer);
+            configFreeSpeechRequestSettings(&settings);
             return;
         }
 
@@ -353,6 +360,7 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
         DeleteMsgPort(AHImp);
 
         FreeVec(audioBuffer);
+        configFreeSpeechRequestSettings(&settings);
 
         return;
     }
@@ -363,7 +371,9 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
         if (CheckIO((struct IORequest *)NarratorIO) == 0) {
             WaitIO((struct IORequest *)NarratorIO);
         }
-        STRPTR accent = configGetSpeechAccent();
+        STRPTR accent = settings.accentPath;
+        if (accent == NULL || strlen(accent) == 0)
+            accent = "american.accent";
         LoadAccent(accent);
         SetAccent(accent);
         Translate(text, strlen(text), translationBuffer,
@@ -382,10 +392,11 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
         voice = NULL;
         UBYTE voiceName[32];
         snprintf(voiceName, 32, "%s.voice\0",
-                 SPEECH_FLITE_VOICE_NAMES[configGetSpeechFliteVoice()]);
+                 SPEECH_FLITE_VOICE_NAMES[settings.fliteVoice]);
         voice = OpenVoice(voiceName);
         if (!voice) {
             displayError(STRING_ERROR_VOICE_OPEN);
+            configFreeSpeechRequestSettings(&settings);
             return;
         }
         fliteRequest->fr_Std.io_Command = CMD_WRITE;
@@ -423,6 +434,8 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
         }
     }
 #endif
+
+    configFreeSpeechRequestSettings(&settings);
 }
 
 /**

@@ -1321,8 +1321,7 @@ msgstr "Configuración del proveedor personalizado"
 #: src/CustomServerSettingsRequesterWindow.c:11
 msgctxt "STRING_ERROR_CUSTOM_PROVIDER_SETTINGS (242//)"
 msgid "Failed to create provider settings window"
-msgstr ""
-"No se pudo crear la ventana de configuración del proveedor"
+msgstr "No se pudo crear la ventana de configuración del proveedor"
 
 #: src/CustomServerSettingsRequesterWindow.c:111
 msgctxt "STRING_MENU_OPENAI_API_ENDPOINT (243//)"
@@ -1632,7 +1631,9 @@ msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
 msgid ""
 "A custom profile cannot use the same name as a built-in provider (OpenAI, "
 "Google Gemini, xAI Grok, Anthropic Claude)."
-msgstr "Un perfil personalizado no puede usar el mismo nombre que un proveedor integrado (OpenAI, Google Gemini, xAI Grok, Anthropic Claude)."
+msgstr ""
+"Un perfil personalizado no puede usar el mismo nombre que un proveedor "
+"integrado (OpenAI, Google Gemini, xAI Grok, Anthropic Claude)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
@@ -1731,3 +1732,18 @@ msgstr ""
 "Código de salida: %ld\n"
 "Salida:\n"
 "%s"
+
+#: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
+msgid "Speech Provider Settings"
+msgstr "Configuración del proveedor de voz"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_WARNING_MISSING_FORMAT (313//)"
+msgid "Warning: required component is missing: %s"
+msgstr "Advertencia: falta un componente necesario: %s"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
+msgid "Failed to create Speech Provider Settings window"
+msgstr "No se pudo crear la ventana de Configuración del proveedor de voz"

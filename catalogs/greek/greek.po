@@ -1637,12 +1637,15 @@ msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
 msgid ""
 "A custom profile cannot use the same name as a built-in provider (OpenAI, "
 "Google Gemini, xAI Grok, Anthropic Claude)."
-msgstr "Ένα προσαρμοσμένο προφίλ δεν μπορεί να έχει το ίδιο όνομα με μια ενσωματωμένη υπηρεσία (OpenAI, Google Gemini, xAI Grok, Anthropic Claude)."
+msgstr ""
+"Ένα προσαρμοσμένο προφίλ δεν μπορεί να έχει το ίδιο όνομα με μια "
+"ενσωματωμένη υπηρεσία (OpenAI, Google Gemini, xAI Grok, Anthropic Claude)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
 msgid "You have unsaved changes. Do you want to save them before switching?"
-msgstr "Έχετε μη αποθηκευμένες αλλαγές. Θέλετε να τις αποθηκεύσετε πριν αλλάξετε;"
+msgstr ""
+"Έχετε μη αποθηκευμένες αλλαγές. Θέλετε να τις αποθηκεύσετε πριν αλλάξετε;"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_STREAMING (301//)"
@@ -1736,3 +1739,18 @@ msgstr ""
 "Κωδικός εξόδου: %ld\n"
 "Έξοδος:\n"
 "%s"
+
+#: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
+msgid "Speech Provider Settings"
+msgstr "Ρυθμίσεις παρόχου ομιλίας"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_WARNING_MISSING_FORMAT (313//)"
+msgid "Warning: required component is missing: %s"
+msgstr "Προειδοποίηση: λείπει απαιτούμενο στοιχείο: %s"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
+msgid "Failed to create Speech Provider Settings window"
+msgstr "Αποτυχία δημιουργίας παραθύρου Ρυθμίσεις παρόχου ομιλίας"

@@ -1750,7 +1750,7 @@ static void sendChatMessage() {
         UBYTE outputDisplay[4096];
         snprintf(outputDisplay, sizeof(outputDisplay),
                  STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT, exitCode,
-                 output != NULL ? output : STRING_SHELL_TOOL_NO_OUTPUT);
+                 output != NULL ? output : (STRPTR)STRING_SHELL_TOOL_NO_OUTPUT);
         strncat(chatOutputTextEditorContents, outputDisplay,
                 CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
                     strlen(chatOutputTextEditorContents) - 1);
@@ -1764,7 +1764,7 @@ static void sendChatMessage() {
         UBYTE toolOutput[8192];
         snprintf(toolOutput, sizeof(toolOutput),
                  STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT, exitCode,
-                 output != NULL ? output : STRING_SHELL_TOOL_NO_OUTPUT);
+                 output != NULL ? output : (STRPTR)STRING_SHELL_TOOL_NO_OUTPUT);
 
         /* Send the tool result back to the API - this may set a new pending
          * tool call if OpenAI wants to run another command */

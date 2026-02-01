@@ -1616,12 +1616,16 @@ msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
 msgid ""
 "A custom profile cannot use the same name as a built-in provider (OpenAI, "
 "Google Gemini, xAI Grok, Anthropic Claude)."
-msgstr "Mukautettu profiili ei voi käyttää samaa nimeä kuin sisäänrakennettu toimittaja (OpenAI, Google Gemini, xAI Grok, Anthropic Claude)."
+msgstr ""
+"Mukautettu profiili ei voi käyttää samaa nimeä kuin sisäänrakennettu "
+"toimittaja (OpenAI, Google Gemini, xAI Grok, Anthropic Claude)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
 msgid "You have unsaved changes. Do you want to save them before switching?"
-msgstr "Sinulla on tallentamattomia muutoksia. Haluatko tallentaa ne ennen vaihtamista?"
+msgstr ""
+"Sinulla on tallentamattomia muutoksia. Haluatko tallentaa ne ennen "
+"vaihtamista?"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_STREAMING (301//)"
@@ -1715,3 +1719,18 @@ msgstr ""
 "Poistumiskoodi: %ld\n"
 "Tuloste:\n"
 "%s"
+
+#: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
+msgid "Speech Provider Settings"
+msgstr "Puhepalvelun asetukset"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_WARNING_MISSING_FORMAT (313//)"
+msgid "Warning: required component is missing: %s"
+msgstr "Varoitus: tarvittava komponentti puuttuu: %s"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
+msgid "Failed to create Speech Provider Settings window"
+msgstr "Puhepalvelun asetukset -ikkunan luonti epäonnistui"

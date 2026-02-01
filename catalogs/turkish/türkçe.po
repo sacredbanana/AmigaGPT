@@ -1602,12 +1602,16 @@ msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
 msgid ""
 "A custom profile cannot use the same name as a built-in provider (OpenAI, "
 "Google Gemini, xAI Grok, Anthropic Claude)."
-msgstr "Özel bir profil, yerleşik bir sağlayıcı (OpenAI, Google Gemini, xAI Grok, Anthropic Claude) ile aynı ada sahip olamaz."
+msgstr ""
+"Özel bir profil, yerleşik bir sağlayıcı (OpenAI, Google Gemini, xAI Grok, "
+"Anthropic Claude) ile aynı ada sahip olamaz."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
 msgid "You have unsaved changes. Do you want to save them before switching?"
-msgstr "Kaydedilmemiş değişiklikleriniz var. Değiştirmeden önce kaydetmek ister misiniz?"
+msgstr ""
+"Kaydedilmemiş değişiklikleriniz var. Değiştirmeden önce kaydetmek ister "
+"misiniz?"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_STREAMING (301//)"
@@ -1701,3 +1705,18 @@ msgstr ""
 "Çıkış kodu: %ld\n"
 "Çıktı:\n"
 "%s"
+
+#: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
+msgid "Speech Provider Settings"
+msgstr "Konuşma Sağlayıcısı Ayarları"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_WARNING_MISSING_FORMAT (313//)"
+msgid "Warning: required component is missing: %s"
+msgstr "Uyarı: gerekli bileşen eksik: %s"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
+msgid "Failed to create Speech Provider Settings window"
+msgstr "Konuşma Sağlayıcısı Ayarları penceresi oluşturulamadı"

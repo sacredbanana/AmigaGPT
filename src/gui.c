@@ -23,12 +23,11 @@
 #include "ARexx.h"
 #include "ChatSystemRequesterWindow.h"
 #include "CustomServerSettingsRequesterWindow.h"
-#include "ElevenLabsSettingsRequesterWindow.h"
+#include "SpeechProviderSettingsRequesterWindow.h"
 #include "gui.h"
 #include "MainWindow.h"
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
-#include "VoiceInstructionsRequesterWindow.h"
 #include "version.h"
 
 #ifdef __AMIGAOS4__
@@ -171,10 +170,7 @@ LONG initVideo() {
     if (createProxySettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
-    if (createVoiceInstructionsRequesterWindow() == RETURN_ERROR)
-        return RETURN_ERROR;
-
-    if (createElevenLabsSettingsRequesterWindow() == RETURN_ERROR)
+    if (createSpeechProviderSettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
     if (!(app = ApplicationObject, MUIA_Application_Base, "AMIGAGPT",
@@ -192,8 +188,7 @@ LONG initVideo() {
           chatSystemRequesterWindowObject, SubWindow,
           customServerSettingsRequesterWindowObject, SubWindow,
           proxySettingsRequesterWindowObject, SubWindow,
-          voiceInstructionsRequesterWindowObject, SubWindow,
-          elevenLabsSettingsRequesterWindowObject, SubWindow,
+          speechProviderSettingsRequesterWindowObject, SubWindow,
           imageWindowObject = WindowObject, MUIA_Window_Title, STRING_IMAGE,
           MUIA_Window_ID, OBJECT_ID_IMAGE_WINDOW, MUIA_Window_Width, 320,
           MUIA_Window_Height, 240, MUIA_Window_CloseGadget, TRUE,
@@ -273,6 +268,9 @@ void startGUIRunLoop() {
             break;
         case APP_ID_IMAGE_PROVIDER_SETTINGS:
             openImageProviderSettingsRequesterWindow();
+            break;
+        case APP_ID_SPEECH_PROVIDER_SETTINGS:
+            openSpeechProviderSettingsRequesterWindow();
             break;
 #endif
         default:

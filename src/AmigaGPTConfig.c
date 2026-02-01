@@ -76,6 +76,10 @@ struct AmigaGPTConfigData {
 
     /* String values */
     STRPTR speechAccent;
+    STRPTR speechAccent34;
+    STRPTR speechAccent37;
+    STRPTR speechProfiles;
+    STRPTR activeSpeechProfileName;
     STRPTR chatSystem;
     STRPTR openAIVoiceInstructions;
     STRPTR openAiApiKey;
@@ -204,6 +208,13 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
 
     /* String defaults */
     data->speechAccent = copyString(DEFAULT_ACCENT);
+    data->speechAccent34 = copyString(DEFAULT_ACCENT);
+    data->speechAccent37 = copyString(DEFAULT_ACCENT);
+    data->speechProfiles = NULL;
+    data->activeSpeechProfileName = copyString(
+        SPEECH_SYSTEM_NAMES[data->speechSystem]
+            ? SPEECH_SYSTEM_NAMES[data->speechSystem]
+            : SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENAI]);
     data->chatSystem = NULL;
     data->openAIVoiceInstructions = NULL;
     data->openAiApiKey = NULL;
@@ -259,6 +270,10 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
  */
 static void freeAllStrings(struct AmigaGPTConfigData *data) {
     freeString(&data->speechAccent);
+    freeString(&data->speechAccent34);
+    freeString(&data->speechAccent37);
+    freeString(&data->speechProfiles);
+    freeString(&data->activeSpeechProfileName);
     freeString(&data->chatSystem);
     freeString(&data->openAIVoiceInstructions);
     freeString(&data->openAiApiKey);
@@ -484,6 +499,18 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
     /* String attributes */
     case MUIA_AmigaGPTConfig_SpeechAccent:
         *store = (ULONG)data->speechAccent;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_SpeechAccent34:
+        *store = (ULONG)data->speechAccent34;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_SpeechAccent37:
+        *store = (ULONG)data->speechAccent37;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_SpeechProfiles:
+        *store = (ULONG)data->speechProfiles;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_ActiveSpeechProfileName:
+        *store = (ULONG)data->activeSpeechProfileName;
         return TRUE;
     case MUIA_AmigaGPTConfig_ChatSystem:
         *store = (ULONG)data->chatSystem;
@@ -814,6 +841,23 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
             if (setStringAttr(&data->speechAccent, (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
+        case MUIA_AmigaGPTConfig_SpeechAccent34:
+            if (setStringAttr(&data->speechAccent34, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_SpeechAccent37:
+            if (setStringAttr(&data->speechAccent37, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_SpeechProfiles:
+            if (setStringAttr(&data->speechProfiles, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_ActiveSpeechProfileName:
+            if (setStringAttr(&data->activeSpeechProfileName,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
         case MUIA_AmigaGPTConfig_ChatSystem:
             if (setStringAttr(&data->chatSystem, (CONST_STRPTR)ti_Data))
                 changed = TRUE;
@@ -1116,6 +1160,23 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
     json_object_object_add(configJsonObject, "speechAccent",
                            data->speechAccent != NULL
                                ? json_object_new_string(data->speechAccent)
+                               : NULL);
+    json_object_object_add(configJsonObject, "speechAccent34",
+                           data->speechAccent34 != NULL
+                               ? json_object_new_string(data->speechAccent34)
+                               : NULL);
+    json_object_object_add(configJsonObject, "speechAccent37",
+                           data->speechAccent37 != NULL
+                               ? json_object_new_string(data->speechAccent37)
+                               : NULL);
+    json_object_object_add(
+        configJsonObject, "speechProfiles",
+        data->speechProfiles != NULL ? json_object_new_string(data->speechProfiles)
+                                     : NULL);
+    json_object_object_add(configJsonObject, "activeSpeechProfileName",
+                           data->activeSpeechProfileName != NULL
+                               ? json_object_new_string(
+                                     data->activeSpeechProfileName)
                                : NULL);
     json_object_object_add(configJsonObject, "chatSystem",
                            data->chatSystem != NULL
@@ -1597,6 +1658,56 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     if (data->speechAccent == NULL)
         data->speechAccent = copyString(DEFAULT_ACCENT);
 
+    readJsonString(configJsonObject, "speechAccent34", &data->speechAccent34);
+    readJsonString(configJsonObject, "speechAccent37", &data->speechAccent37);
+    /* Migration from legacy speechAccent */
+    if (data->speechAccent34 == NULL)
+        data->speechAccent34 = copyString(data->speechAccent);
+    if (data->speechAccent37 == NULL)
+        data->speechAccent37 = copyString(data->speechAccent);
+
+    readJsonString(configJsonObject, "speechProfiles", &data->speechProfiles);
+    readJsonString(configJsonObject, "activeSpeechProfileName",
+                   &data->activeSpeechProfileName);
+    if (data->activeSpeechProfileName == NULL) {
+        data->activeSpeechProfileName = copyString(
+            SPEECH_SYSTEM_NAMES[data->speechSystem]
+                ? SPEECH_SYSTEM_NAMES[data->speechSystem]
+                : SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENAI]);
+    }
+
+    /* If the active speech profile name matches a built-in system, align the
+     * legacy speechSystem field and validate OS support. */
+    if (data->activeSpeechProfileName != NULL) {
+        for (int s = 0; SPEECH_SYSTEM_NAMES[s] != NULL; s++) {
+            if (strcmp(data->activeSpeechProfileName, SPEECH_SYSTEM_NAMES[s]) ==
+                0) {
+                data->speechSystem = (SpeechSystem)s;
+#ifdef __AMIGAOS3__
+                if (data->speechSystem == SPEECH_SYSTEM_FLITE)
+                    data->speechSystem = SPEECH_SYSTEM_OPENAI;
+#elif defined(__AMIGAOS4__)
+                if (data->speechSystem == SPEECH_SYSTEM_34 ||
+                    data->speechSystem == SPEECH_SYSTEM_37)
+                    data->speechSystem = SPEECH_SYSTEM_OPENAI;
+#elif defined(__MORPHOS__)
+                if (data->speechSystem == SPEECH_SYSTEM_34 ||
+                    data->speechSystem == SPEECH_SYSTEM_37 ||
+                    data->speechSystem == SPEECH_SYSTEM_FLITE)
+                    data->speechSystem = SPEECH_SYSTEM_OPENAI;
+#endif
+                /* If we had to override, also override the active profile name. */
+                if (strcmp(data->activeSpeechProfileName,
+                           SPEECH_SYSTEM_NAMES[data->speechSystem]) != 0) {
+                    freeString(&data->activeSpeechProfileName);
+                    data->activeSpeechProfileName =
+                        copyString(SPEECH_SYSTEM_NAMES[data->speechSystem]);
+                }
+                break;
+            }
+        }
+    }
+
     readJsonString(configJsonObject, "chatSystem", &data->chatSystem);
     readJsonString(configJsonObject, "openAIVoiceInstructions",
                    &data->openAIVoiceInstructions);
@@ -1886,11 +1997,237 @@ STRPTR configGetSpeechAccent(void) {
     return val;
 }
 
+STRPTR configGetSpeechAccent34(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_SpeechAccent34, &val);
+    return val;
+}
+
+STRPTR configGetSpeechAccent37(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_SpeechAccent37, &val);
+    return val;
+}
+
+STRPTR configGetSpeechProfiles(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_SpeechProfiles, &val);
+    return val;
+}
+
+STRPTR configGetActiveSpeechProfileName(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_ActiveSpeechProfileName, &val);
+    return val;
+}
+
 SpeechFliteVoice configGetSpeechFliteVoice(void) {
     SpeechFliteVoice val = SPEECH_FLITE_VOICE_KAL;
     if (configObj)
         get(configObj, MUIA_AmigaGPTConfig_SpeechFliteVoice, &val);
     return val;
+}
+
+static STRPTR dupStrCfg(CONST_STRPTR s) {
+    if (s == NULL)
+        return NULL;
+    ULONG len = strlen(s);
+    STRPTR out = AllocVec(len + 1, MEMF_CLEAR);
+    if (out != NULL)
+        strncpy(out, s, len);
+    return out;
+}
+
+void configFreeSpeechRequestSettings(struct SpeechRequestSettings *out) {
+    if (out == NULL)
+        return;
+    if (out->activeProfileName != NULL)
+        FreeVec(out->activeProfileName);
+    if (out->accentPath != NULL)
+        FreeVec(out->accentPath);
+    if (out->openAiApiKey != NULL)
+        FreeVec(out->openAiApiKey);
+    if (out->openAiVoiceInstructions != NULL)
+        FreeVec(out->openAiVoiceInstructions);
+    if (out->elevenLabsApiKey != NULL)
+        FreeVec(out->elevenLabsApiKey);
+    if (out->elevenLabsVoiceID != NULL)
+        FreeVec(out->elevenLabsVoiceID);
+    if (out->elevenLabsVoiceName != NULL)
+        FreeVec(out->elevenLabsVoiceName);
+    if (out->elevenLabsModel != NULL)
+        FreeVec(out->elevenLabsModel);
+    if (out->elevenLabsModelName != NULL)
+        FreeVec(out->elevenLabsModelName);
+    memset(out, 0, sizeof(*out));
+}
+
+void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
+    if (out == NULL)
+        return;
+
+    memset(out, 0, sizeof(*out));
+
+    out->activeProfileName = dupStrCfg(configGetActiveSpeechProfileName());
+    out->speechSystem = (SpeechSystem)configGetSpeechSystem();
+    out->fliteVoice = configGetSpeechFliteVoice();
+    out->openAiApiKey = dupStrCfg(configGetOpenAiApiKey());
+    out->openAiTtsModel = configGetOpenAITTSModel();
+    out->openAiTtsVoice = configGetOpenAITTSVoice();
+    out->openAiVoiceInstructions =
+        dupStrCfg(configGetOpenAIVoiceInstructions());
+    out->elevenLabsApiKey = dupStrCfg(configGetElevenLabsAPIKey());
+    out->elevenLabsVoiceID = dupStrCfg(configGetElevenLabsVoiceID());
+    out->elevenLabsVoiceName = dupStrCfg(configGetElevenLabsVoiceName());
+    out->elevenLabsModel = dupStrCfg(configGetElevenLabsModel());
+    out->elevenLabsModelName = dupStrCfg(configGetElevenLabsModelName());
+
+    /* Default accent based on system */
+    if (out->speechSystem == SPEECH_SYSTEM_34) {
+        out->accentPath = dupStrCfg(configGetSpeechAccent34());
+    } else if (out->speechSystem == SPEECH_SYSTEM_37) {
+        out->accentPath = dupStrCfg(configGetSpeechAccent37());
+    } else {
+        out->accentPath = dupStrCfg(configGetSpeechAccent());
+    }
+
+    /* If an active custom speech profile is selected, override fields from it. */
+    STRPTR activeName = out->activeProfileName;
+    if (activeName == NULL || strlen(activeName) == 0)
+        return;
+
+    /* If activeName matches a built-in system name, we're done. */
+    for (int s = 0; SPEECH_SYSTEM_NAMES[s] != NULL; s++) {
+        if (strcmp(activeName, SPEECH_SYSTEM_NAMES[s]) == 0) {
+            out->speechSystem = (SpeechSystem)s;
+            if (out->accentPath != NULL) {
+                FreeVec(out->accentPath);
+                out->accentPath = NULL;
+            }
+            if (out->speechSystem == SPEECH_SYSTEM_34)
+                out->accentPath = dupStrCfg(configGetSpeechAccent34());
+            else if (out->speechSystem == SPEECH_SYSTEM_37)
+                out->accentPath = dupStrCfg(configGetSpeechAccent37());
+            return;
+        }
+    }
+
+    STRPTR profilesStr = configGetSpeechProfiles();
+    if (profilesStr == NULL || strlen(profilesStr) == 0)
+        return;
+
+    struct json_object *arr = json_tokener_parse(profilesStr);
+    if (arr == NULL || !json_object_is_type(arr, json_type_array)) {
+        if (arr != NULL)
+            json_object_put(arr);
+        return;
+    }
+
+    int len = json_object_array_length(arr);
+    for (int i = 0; i < len; i++) {
+        struct json_object *p = json_object_array_get_idx(arr, i);
+        if (p == NULL || !json_object_is_type(p, json_type_object))
+            continue;
+        struct json_object *nameObj = json_object_object_get(p, "name");
+        CONST_STRPTR name = nameObj ? json_object_get_string(nameObj) : NULL;
+        if (name == NULL || strcmp(name, activeName) != 0)
+            continue;
+
+        struct json_object *sysObj = json_object_object_get(p, "speechSystem");
+        if (sysObj != NULL)
+            out->speechSystem = (SpeechSystem)json_object_get_int(sysObj);
+
+        struct json_object *accentObj =
+            json_object_object_get(p, "speechAccent");
+        if (accentObj != NULL) {
+            if (out->accentPath != NULL) {
+                FreeVec(out->accentPath);
+                out->accentPath = NULL;
+            }
+            out->accentPath = dupStrCfg(json_object_get_string(accentObj));
+        }
+
+        struct json_object *fvObj = json_object_object_get(p, "speechFliteVoice");
+        if (fvObj != NULL)
+            out->fliteVoice = (SpeechFliteVoice)json_object_get_int(fvObj);
+
+        struct json_object *k = json_object_object_get(p, "openAiApiKey");
+        if (k != NULL) {
+            if (out->openAiApiKey != NULL) {
+                FreeVec(out->openAiApiKey);
+                out->openAiApiKey = NULL;
+            }
+            out->openAiApiKey = dupStrCfg(json_object_get_string(k));
+        }
+        struct json_object *m = json_object_object_get(p, "openAITTSModel");
+        if (m != NULL)
+            out->openAiTtsModel = (OpenAITTSModel)json_object_get_int(m);
+        struct json_object *v = json_object_object_get(p, "openAITTSVoice");
+        if (v != NULL)
+            out->openAiTtsVoice = (OpenAITTSVoice)json_object_get_int(v);
+        struct json_object *instr =
+            json_object_object_get(p, "openAIVoiceInstructions");
+        if (instr != NULL) {
+            if (out->openAiVoiceInstructions != NULL) {
+                FreeVec(out->openAiVoiceInstructions);
+                out->openAiVoiceInstructions = NULL;
+            }
+            out->openAiVoiceInstructions = dupStrCfg(json_object_get_string(instr));
+        }
+
+        struct json_object *eKey =
+            json_object_object_get(p, "elevenLabsAPIKey");
+        if (eKey != NULL) {
+            if (out->elevenLabsApiKey != NULL) {
+                FreeVec(out->elevenLabsApiKey);
+                out->elevenLabsApiKey = NULL;
+            }
+            out->elevenLabsApiKey = dupStrCfg(json_object_get_string(eKey));
+        }
+        struct json_object *eVid =
+            json_object_object_get(p, "elevenLabsVoiceID");
+        if (eVid != NULL) {
+            if (out->elevenLabsVoiceID != NULL) {
+                FreeVec(out->elevenLabsVoiceID);
+                out->elevenLabsVoiceID = NULL;
+            }
+            out->elevenLabsVoiceID = dupStrCfg(json_object_get_string(eVid));
+        }
+        struct json_object *eVn =
+            json_object_object_get(p, "elevenLabsVoiceName");
+        if (eVn != NULL) {
+            if (out->elevenLabsVoiceName != NULL) {
+                FreeVec(out->elevenLabsVoiceName);
+                out->elevenLabsVoiceName = NULL;
+            }
+            out->elevenLabsVoiceName = dupStrCfg(json_object_get_string(eVn));
+        }
+        struct json_object *eMid = json_object_object_get(p, "elevenLabsModel");
+        if (eMid != NULL) {
+            if (out->elevenLabsModel != NULL) {
+                FreeVec(out->elevenLabsModel);
+                out->elevenLabsModel = NULL;
+            }
+            out->elevenLabsModel = dupStrCfg(json_object_get_string(eMid));
+        }
+        struct json_object *eMn =
+            json_object_object_get(p, "elevenLabsModelName");
+        if (eMn != NULL) {
+            if (out->elevenLabsModelName != NULL) {
+                FreeVec(out->elevenLabsModelName);
+                out->elevenLabsModelName = NULL;
+            }
+            out->elevenLabsModelName = dupStrCfg(json_object_get_string(eMn));
+        }
+
+        break;
+    }
+
+    json_object_put(arr);
 }
 
 STRPTR configGetChatSystem(void) {
@@ -2253,6 +2590,26 @@ void configSetSpeechSystem(SpeechSystem value) {
 void configSetSpeechAccent(CONST_STRPTR value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_SpeechAccent, (ULONG)value);
+}
+
+void configSetSpeechAccent34(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_SpeechAccent34, (ULONG)value);
+}
+
+void configSetSpeechAccent37(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_SpeechAccent37, (ULONG)value);
+}
+
+void configSetSpeechProfiles(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_SpeechProfiles, (ULONG)value);
+}
+
+void configSetActiveSpeechProfileName(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_ActiveSpeechProfileName, (ULONG)value);
 }
 
 void configSetSpeechFliteVoice(SpeechFliteVoice value) {

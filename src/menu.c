@@ -16,12 +16,10 @@
 #include "ARexx.h"
 #include "ChatSystemRequesterWindow.h"
 #include "CustomServerSettingsRequesterWindow.h"
-#include "ElevenLabsSettingsRequesterWindow.h"
 #include "gui.h"
 #include "MainWindow.h"
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
-#include "VoiceInstructionsRequesterWindow.h"
 #include "version.h"
 
 Object *menuStrip = NULL;
@@ -459,31 +457,12 @@ void createMenu() {
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_ENABLED, MUIA_UserData,
     MENU_ITEM_SPEECH_ENABLED, MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle,
-    TRUE, MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child,
-    MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_SPEECH_SYSTEM,
-    MUIA_UserData, MENU_ITEM_SPEECH_SYSTEM, MUIA_Menuitem_CopyStrings, FALSE,
-    End,
-#ifdef __AMIGAOS3__
+    TRUE, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
+    MUIA_UserData, MENU_ITEM_NULL, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_SPEECH_ACCENT, MUIA_UserData, MENU_ITEM_SPEECH_ACCENT,
-    MUIA_Menuitem_CopyStrings, FALSE, End,
-#endif
-#ifdef __AMIGAOS4__
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_FLITE_VOICE, MUIA_UserData, MENU_ITEM_SPEECH_FLITE_VOICE,
-    MUIA_Menuitem_CopyStrings, FALSE, End,
-#endif
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_VOICE, MUIA_UserData, MENU_ITEM_SPEECH_OPENAI_VOICE,
-    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_SPEECH_OPENAI_MODEL, MUIA_UserData,
-    MENU_ITEM_SPEECH_OPENAI_MODEL, MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_VOICE_INSTRUCTIONS, MUIA_UserData,
-    MENU_ITEM_SPEECH_OPENAI_VOICE_INSTRUCTIONS, MUIA_Menuitem_CopyStrings,
-    FALSE, End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_ELEVENLABS_SETTINGS, MUIA_UserData,
-    MENU_ITEM_SPEECH_ELEVENLABS_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
+    STRING_SPEECH_PROVIDER_SETTINGS, MUIA_UserData,
+    MENU_ITEM_SPEECH_PROVIDER_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
     End,
 
     /* ARexx Menu */
@@ -507,7 +486,7 @@ void createMenu() {
     MENU_ITEM_HELP_OPEN_DOCUMENTATION, MUIA_Menuitem_CopyStrings, FALSE, End,
     End, End;
 
-    populateSpeechMenu();
+    /* Speech menu is no longer populated dynamically. */
     populateChatMenu();
     populateImageMenu();
     populateArexxMenu();
@@ -707,40 +686,11 @@ void addMenuActions() {
              MUIV_EveryTime, configObj, 3, MUIM_Set,
              MUIA_AmigaGPTConfig_SpeechEnabled, MUIV_TriggerValue);
 
-#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-    Object speechAccentMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ACCENT);
-    DoMethod(speechAccentMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
-             &SpeechAccentMenuItemClickedHook);
-#endif
-
-    Object openAIVoiceInstructionsMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_OPENAI_VOICE_INSTRUCTIONS);
-    DoMethod(openAIVoiceInstructionsMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Trigger, MUIV_EveryTime,
-             voiceInstructionsRequesterWindowObject, 3, MUIM_Set,
-             MUIA_Window_Open, TRUE);
-    DoMethod(openAIVoiceInstructionsMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Trigger, MUIV_EveryTime,
-             voiceInstructionsRequesterString, 3, MUIM_Set,
-             MUIA_String_Contents, configGetOpenAIVoiceInstructions());
-    DoMethod(openAIVoiceInstructionsMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Trigger, MUIV_EveryTime,
-             voiceInstructionsRequesterWindowObject, 3, MUIM_Set,
-             MUIA_Window_ActiveObject, voiceInstructionsRequesterString);
-
-    Object elevenLabsSettingsMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_ELEVENLABS_SETTINGS);
-    DoMethod(elevenLabsSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
-             &ElevenLabsSettingsWindowOpenHook);
-    DoMethod(elevenLabsSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, elevenLabsSettingsRequesterWindowObject, 3,
-             MUIM_Set, MUIA_Window_Open, TRUE);
-    DoMethod(elevenLabsSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, elevenLabsSettingsRequesterWindowObject, 3,
-             MUIM_Set, MUIA_Window_ActiveObject, elevenLabsAPIKeyString);
+    Object speechProviderSettingsMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_SPEECH_PROVIDER_SETTINGS);
+    DoMethod(speechProviderSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Application, 2,
+             MUIM_Application_ReturnID, APP_ID_SPEECH_PROVIDER_SETTINGS);
 
     Object openAIAPIKeyMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
                                                    MENU_ITEM_AI_OPENAI_API_KEY);

@@ -7,7 +7,7 @@
 #include "speech.h"
 
 /* Config version - increment when schema changes to trigger migration */
-#define CONFIG_SCHEMA_VERSION 2
+#define CONFIG_SCHEMA_VERSION 3
 
 /* Legacy version tracking for enum-based models (deprecated) */
 #define CHAT_MODEL_SET_VERSION 10
@@ -56,6 +56,8 @@
 
 /* String attributes (STRPTR) */
 #define MUIA_AmigaGPTConfig_SpeechAccent (AmigaGPTConfig_Dummy + 0x20)
+#define MUIA_AmigaGPTConfig_SpeechAccent34 (AmigaGPTConfig_Dummy + 0x67)
+#define MUIA_AmigaGPTConfig_SpeechAccent37 (AmigaGPTConfig_Dummy + 0x68)
 #define MUIA_AmigaGPTConfig_ChatSystem (AmigaGPTConfig_Dummy + 0x21)
 #define MUIA_AmigaGPTConfig_OpenAIVoiceInstructions                            \
     (AmigaGPTConfig_Dummy + 0x22)
@@ -105,6 +107,10 @@
     (AmigaGPTConfig_Dummy + 0x65)
 #define MUIA_AmigaGPTConfig_ActiveImageProfileName (AmigaGPTConfig_Dummy + 0x66)
 
+/* Speech provider profiles */
+#define MUIA_AmigaGPTConfig_SpeechProfiles (AmigaGPTConfig_Dummy + 0x69)
+#define MUIA_AmigaGPTConfig_ActiveSpeechProfileName (AmigaGPTConfig_Dummy + 0x6A)
+
 /* Version tracking attributes (read-only, for internal use) */
 #define MUIA_AmigaGPTConfig_ChatModelSetVersion (AmigaGPTConfig_Dummy + 0x40)
 #define MUIA_AmigaGPTConfig_ImageModelSetVersion (AmigaGPTConfig_Dummy + 0x41)
@@ -138,6 +144,33 @@ extern struct MUI_CustomClass *amigaGPTConfigClass;
  * @brief The global config object instance
  */
 extern Object *configObj;
+
+/* ============================================== */
+/* Speech provider request settings               */
+/* ============================================== */
+
+struct SpeechRequestSettings {
+    SpeechSystem speechSystem;
+    STRPTR activeProfileName;
+    STRPTR accentPath;
+    SpeechFliteVoice fliteVoice;
+
+    /* OpenAI TTS */
+    STRPTR openAiApiKey;
+    OpenAITTSModel openAiTtsModel;
+    OpenAITTSVoice openAiTtsVoice;
+    STRPTR openAiVoiceInstructions;
+
+    /* ElevenLabs */
+    STRPTR elevenLabsApiKey;
+    STRPTR elevenLabsVoiceID;
+    STRPTR elevenLabsVoiceName;
+    STRPTR elevenLabsModel;
+    STRPTR elevenLabsModelName;
+};
+
+void configGetSpeechRequestSettings(struct SpeechRequestSettings *out);
+void configFreeSpeechRequestSettings(struct SpeechRequestSettings *out);
 
 /**
  * @brief Create the AmigaGPTConfig class
@@ -190,6 +223,14 @@ SpeechSystem configGetSpeechSystem(void);
 void configSetSpeechSystem(SpeechSystem value);
 STRPTR configGetSpeechAccent(void);
 void configSetSpeechAccent(CONST_STRPTR value);
+STRPTR configGetSpeechAccent34(void);
+void configSetSpeechAccent34(CONST_STRPTR value);
+STRPTR configGetSpeechAccent37(void);
+void configSetSpeechAccent37(CONST_STRPTR value);
+STRPTR configGetSpeechProfiles(void);
+void configSetSpeechProfiles(CONST_STRPTR value);
+STRPTR configGetActiveSpeechProfileName(void);
+void configSetActiveSpeechProfileName(CONST_STRPTR value);
 SpeechFliteVoice configGetSpeechFliteVoice(void);
 void configSetSpeechFliteVoice(SpeechFliteVoice value);
 
