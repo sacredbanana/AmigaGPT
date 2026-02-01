@@ -17,6 +17,9 @@
 - Added streaming support in chat for Google Gemini
 - Support for Google Gemini for image generation
 - All config options are now immediately saved to disk
+- New Speech Provider Settings window for setting your speech provider and options, creating speech profiles and testing your current speech settings
+- New config options for the Workbench speech systems: rate, pitch, mode (natural/robotic) and sex
+- Fix bug where the first paragraph in every response is always black even if you have custom colours set
 
 ## 2.17.0 (2025-12-22)
 

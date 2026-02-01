@@ -54,6 +54,16 @@
 #define MUIA_AmigaGPTConfig_ImageFormat (AmigaGPTConfig_Dummy + 0x17)
 #define MUIA_AmigaGPTConfig_ImageApiEndpoint (AmigaGPTConfig_Dummy + 0x53)
 
+/* Workbench narrator.device settings (AmigaOS 3.x profiles) */
+#define MUIA_AmigaGPTConfig_NarratorRate34 (AmigaGPTConfig_Dummy + 0x6B)
+#define MUIA_AmigaGPTConfig_NarratorPitch34 (AmigaGPTConfig_Dummy + 0x6C)
+#define MUIA_AmigaGPTConfig_NarratorMode34 (AmigaGPTConfig_Dummy + 0x6D)
+#define MUIA_AmigaGPTConfig_NarratorSex34 (AmigaGPTConfig_Dummy + 0x6E)
+#define MUIA_AmigaGPTConfig_NarratorRate37 (AmigaGPTConfig_Dummy + 0x6F)
+#define MUIA_AmigaGPTConfig_NarratorPitch37 (AmigaGPTConfig_Dummy + 0x70)
+#define MUIA_AmigaGPTConfig_NarratorMode37 (AmigaGPTConfig_Dummy + 0x71)
+#define MUIA_AmigaGPTConfig_NarratorSex37 (AmigaGPTConfig_Dummy + 0x72)
+
 /* String attributes (STRPTR) */
 #define MUIA_AmigaGPTConfig_SpeechAccent (AmigaGPTConfig_Dummy + 0x20)
 #define MUIA_AmigaGPTConfig_SpeechAccent34 (AmigaGPTConfig_Dummy + 0x67)
@@ -155,6 +165,14 @@ struct SpeechRequestSettings {
     STRPTR accentPath;
     SpeechFliteVoice fliteVoice;
 
+    /* Workbench narrator.device settings (rate is words/minute, pitch in Hz) */
+    UWORD narratorRate;
+    UWORD narratorPitch;
+    /* mode: 0 natural, 1 robotic */
+    UWORD narratorMode;
+    /* sex: 0 male, 1 female */
+    UWORD narratorSex;
+
     /* OpenAI TTS */
     STRPTR openAiApiKey;
     OpenAITTSModel openAiTtsModel;
@@ -227,6 +245,22 @@ STRPTR configGetSpeechAccent34(void);
 void configSetSpeechAccent34(CONST_STRPTR value);
 STRPTR configGetSpeechAccent37(void);
 void configSetSpeechAccent37(CONST_STRPTR value);
+ULONG configGetNarratorRate34(void);
+void configSetNarratorRate34(ULONG value);
+ULONG configGetNarratorPitch34(void);
+void configSetNarratorPitch34(ULONG value);
+ULONG configGetNarratorMode34(void);
+void configSetNarratorMode34(ULONG value);
+ULONG configGetNarratorSex34(void);
+void configSetNarratorSex34(ULONG value);
+ULONG configGetNarratorRate37(void);
+void configSetNarratorRate37(ULONG value);
+ULONG configGetNarratorPitch37(void);
+void configSetNarratorPitch37(ULONG value);
+ULONG configGetNarratorMode37(void);
+void configSetNarratorMode37(ULONG value);
+ULONG configGetNarratorSex37(void);
+void configSetNarratorSex37(ULONG value);
 STRPTR configGetSpeechProfiles(void);
 void configSetSpeechProfiles(CONST_STRPTR value);
 STRPTR configGetActiveSpeechProfileName(void);

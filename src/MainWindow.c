@@ -1694,8 +1694,7 @@ static void sendChatMessage() {
         /* Ask user for confirmation before executing the command */
         UBYTE confirmMsg[4096];
         snprintf(confirmMsg, sizeof(confirmMsg),
-                 STRING_SHELL_TOOL_CONFIRMATION_BODY,
-                 command);
+                 STRING_SHELL_TOOL_CONFIRMATION_BODY, command);
         LONG result = MUI_Request(app, mainWindowObject,
 #ifdef __MORPHOS__
                                   NULL,
@@ -1713,8 +1712,7 @@ static void sendChatMessage() {
                     STRING_SHELL_TOOL_DENIED_BANNER,
                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
                         strlen(chatOutputTextEditorContents) - 1);
-            strncat(receivedMessage,
-                    STRING_SHELL_TOOL_DENIED_BANNER,
+            strncat(receivedMessage, STRING_SHELL_TOOL_DENIED_BANNER,
                     READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
             set(chatOutputTextEditor, MUIA_NFloattext_Text,
                 chatOutputTextEditorContents);
@@ -1994,7 +1992,7 @@ void displayConversation(struct Conversation *conversation) {
         } else if (strcmp(conversationNode->role, "assistant") == 0) {
             set(chatOutputListView, MUIA_NFloattext_Align,
                 configGetAssistantTextAlignment());
-            UBYTE assistantStyleString[] = "\n\n\0332";
+            UBYTE assistantStyleString[] = "\n\n";
             strncat(chatOutputTextEditorContents, assistantStyleString,
                     strlen(assistantStyleString));
             STRPTR formattedContent =

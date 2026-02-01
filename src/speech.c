@@ -228,7 +228,17 @@ void closeSpeech() {
 void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
     struct SpeechRequestSettings settings;
     configGetSpeechRequestSettings(&settings);
-    SpeechSystem speechSystem = settings.speechSystem;
+    speakTextWithSettings(text, output, audioFormat, &settings);
+    configFreeSpeechRequestSettings(&settings);
+}
+
+void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
+                           AudioFormat *audioFormat,
+                           const struct SpeechRequestSettings *settings) {
+    if (settings == NULL)
+        return;
+
+    SpeechSystem speechSystem = settings->speechSystem;
 
     if (speechSystem == SPEECH_SYSTEM_OPENAI ||
         speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
@@ -247,23 +257,22 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
 
         if (speechSystem == SPEECH_SYSTEM_OPENAI) {
             audioBuffer = postTextToSpeechRequestToOpenAI(
-                text, settings.openAiTtsModel, settings.openAiTtsVoice,
-                settings.openAiVoiceInstructions, settings.openAiApiKey,
+                text, settings->openAiTtsModel, settings->openAiTtsVoice,
+                settings->openAiVoiceInstructions, settings->openAiApiKey,
                 &audioLength, configGetProxyEnabled(), configGetProxyHost(),
                 configGetProxyPort(), configGetProxyUsesSSL(),
                 configGetProxyRequiresAuth(), configGetProxyUsername(),
                 configGetProxyPassword(), audioFormat);
         } else if (speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
             audioBuffer = postTextToSpeechRequestToElevenLabs(
-                text, settings.elevenLabsVoiceID, settings.elevenLabsModel,
-                settings.elevenLabsApiKey, &audioLength, configGetProxyEnabled(),
+                text, settings->elevenLabsVoiceID, settings->elevenLabsModel,
+                settings->elevenLabsApiKey, &audioLength, configGetProxyEnabled(),
                 configGetProxyHost(), configGetProxyPort(),
                 configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
                 configGetProxyUsername(), configGetProxyPassword());
         }
 
         if (!audioBuffer) {
-            configFreeSpeechRequestSettings(&settings);
             return;
         }
 
@@ -311,7 +320,6 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
                 Close(outputFile);
             }
             FreeVec(audioBuffer);
-            configFreeSpeechRequestSettings(&settings);
             return;
         }
 
@@ -360,8 +368,6 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
         DeleteMsgPort(AHImp);
 
         FreeVec(audioBuffer);
-        configFreeSpeechRequestSettings(&settings);
-
         return;
     }
 #ifdef __AMIGAOS3__
@@ -371,7 +377,7 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
         if (CheckIO((struct IORequest *)NarratorIO) == 0) {
             WaitIO((struct IORequest *)NarratorIO);
         }
-        STRPTR accent = settings.accentPath;
+        STRPTR accent = settings->accentPath;
         if (accent == NULL || strlen(accent) == 0)
             accent = "american.accent";
         LoadAccent(accent);
@@ -380,6 +386,11 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
                   TRANSLATION_BUFFER_SIZE - 1);
         NarratorIO->ch_masks = audioChannels;
         NarratorIO->nm_masks = sizeof(audioChannels);
+        NarratorIO->rate = settings->narratorRate;
+        NarratorIO->pitch = settings->narratorPitch;
+        NarratorIO->mode =
+            settings->narratorMode ? 1 : 0; /* 0 natural, 1 robotic */
+        NarratorIO->sex = settings->narratorSex ? 1 : 0; /* 0 male, 1 female */
         NarratorIO->message.io_Command = CMD_WRITE;
         NarratorIO->message.io_Data = translationBuffer;
         NarratorIO->message.io_Length = strlen(translationBuffer);
@@ -392,11 +403,10 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
         voice = NULL;
         UBYTE voiceName[32];
         snprintf(voiceName, 32, "%s.voice\0",
-                 SPEECH_FLITE_VOICE_NAMES[settings.fliteVoice]);
+                 SPEECH_FLITE_VOICE_NAMES[settings->fliteVoice]);
         voice = OpenVoice(voiceName);
         if (!voice) {
             displayError(STRING_ERROR_VOICE_OPEN);
-            configFreeSpeechRequestSettings(&settings);
             return;
         }
         fliteRequest->fr_Std.io_Command = CMD_WRITE;
@@ -434,8 +444,6 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
         }
     }
 #endif
-
-    configFreeSpeechRequestSettings(&settings);
 }
 
 /**

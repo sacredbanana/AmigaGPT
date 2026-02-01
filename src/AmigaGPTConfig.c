@@ -17,6 +17,11 @@
 #include "gui.h"
 
 #define DEFAULT_ACCENT "american.accent"
+/* Default narrator.device parameters (Workbench speech) */
+#define DEFAULT_NARRATOR_RATE 150
+#define DEFAULT_NARRATOR_PITCH 110
+#define DEFAULT_NARRATOR_MODE 0 /* natural */
+#define DEFAULT_NARRATOR_SEX 0  /* male */
 #define CONFIG_FILE_PATH "AMIGAGPT:config.json"
 
 struct MUI_CustomClass *amigaGPTConfigClass = NULL;
@@ -30,6 +35,15 @@ struct AmigaGPTConfigData {
     ULONG speechEnabled;
     SpeechSystem speechSystem;
     SpeechFliteVoice speechFliteVoice;
+    /* narrator.device (Workbench) parameters */
+    ULONG narratorRate34;
+    ULONG narratorPitch34;
+    ULONG narratorMode34;
+    ULONG narratorSex34;
+    ULONG narratorRate37;
+    ULONG narratorPitch37;
+    ULONG narratorMode37;
+    ULONG narratorSex37;
     ChatModel chatModel;   /* Legacy - kept for migration */
     ImageModel imageModel; /* Legacy - kept for migration */
     ImageSize imageSizeDallE2;
@@ -163,6 +177,14 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->speechEnabled = FALSE;
     data->speechSystem = SPEECH_SYSTEM_OPENAI;
     data->speechFliteVoice = SPEECH_FLITE_VOICE_KAL;
+    data->narratorRate34 = DEFAULT_NARRATOR_RATE;
+    data->narratorPitch34 = DEFAULT_NARRATOR_PITCH;
+    data->narratorMode34 = DEFAULT_NARRATOR_MODE;
+    data->narratorSex34 = DEFAULT_NARRATOR_SEX;
+    data->narratorRate37 = DEFAULT_NARRATOR_RATE;
+    data->narratorPitch37 = DEFAULT_NARRATOR_PITCH;
+    data->narratorMode37 = DEFAULT_NARRATOR_MODE;
+    data->narratorSex37 = DEFAULT_NARRATOR_SEX;
     data->chatModel = CHATGPT_5_LATEST; /* Legacy */
     data->imageModel = GPT_IMAGE_1;     /* Legacy */
     data->imageSizeDallE2 = IMAGE_SIZE_256x256;
@@ -479,6 +501,30 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_ImageApiEndpoint:
         *store = data->imageApiEndpoint;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_NarratorRate34:
+        *store = data->narratorRate34;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_NarratorPitch34:
+        *store = data->narratorPitch34;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_NarratorMode34:
+        *store = data->narratorMode34;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_NarratorSex34:
+        *store = data->narratorSex34;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_NarratorRate37:
+        *store = data->narratorRate37;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_NarratorPitch37:
+        *store = data->narratorPitch37;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_NarratorMode37:
+        *store = data->narratorMode37;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_NarratorSex37:
+        *store = data->narratorSex37;
         return TRUE;
     case MUIA_AmigaGPTConfig_ChatModelSetVersion:
         *store = data->chatModelSetVersion;
@@ -836,6 +882,55 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
             }
             break;
 
+        case MUIA_AmigaGPTConfig_NarratorRate34:
+            if (data->narratorRate34 != (ULONG)ti_Data) {
+                data->narratorRate34 = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_NarratorPitch34:
+            if (data->narratorPitch34 != (ULONG)ti_Data) {
+                data->narratorPitch34 = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_NarratorMode34:
+            if (data->narratorMode34 != (ULONG)ti_Data) {
+                data->narratorMode34 = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_NarratorSex34:
+            if (data->narratorSex34 != (ULONG)ti_Data) {
+                data->narratorSex34 = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_NarratorRate37:
+            if (data->narratorRate37 != (ULONG)ti_Data) {
+                data->narratorRate37 = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_NarratorPitch37:
+            if (data->narratorPitch37 != (ULONG)ti_Data) {
+                data->narratorPitch37 = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_NarratorMode37:
+            if (data->narratorMode37 != (ULONG)ti_Data) {
+                data->narratorMode37 = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_NarratorSex37:
+            if (data->narratorSex37 != (ULONG)ti_Data) {
+                data->narratorSex37 = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+
         /* String attributes */
         case MUIA_AmigaGPTConfig_SpeechAccent:
             if (setStringAttr(&data->speechAccent, (CONST_STRPTR)ti_Data))
@@ -1143,6 +1238,22 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
                            json_object_new_int(data->imageFormat));
     json_object_object_add(configJsonObject, "imageApiEndpoint",
                            json_object_new_int((int)data->imageApiEndpoint));
+    json_object_object_add(configJsonObject, "narratorRate34",
+                           json_object_new_int((int)data->narratorRate34));
+    json_object_object_add(configJsonObject, "narratorPitch34",
+                           json_object_new_int((int)data->narratorPitch34));
+    json_object_object_add(configJsonObject, "narratorMode34",
+                           json_object_new_int((int)data->narratorMode34));
+    json_object_object_add(configJsonObject, "narratorSex34",
+                           json_object_new_int((int)data->narratorSex34));
+    json_object_object_add(configJsonObject, "narratorRate37",
+                           json_object_new_int((int)data->narratorRate37));
+    json_object_object_add(configJsonObject, "narratorPitch37",
+                           json_object_new_int((int)data->narratorPitch37));
+    json_object_object_add(configJsonObject, "narratorMode37",
+                           json_object_new_int((int)data->narratorMode37));
+    json_object_object_add(configJsonObject, "narratorSex37",
+                           json_object_new_int((int)data->narratorSex37));
 
     /* Version tracking */
     json_object_object_add(configJsonObject, "chatModelSetVersion",
@@ -1473,6 +1584,25 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     if (json_object_object_get_ex(configJsonObject, "speechFliteVoice",
                                   &valueObj))
         data->speechFliteVoice = json_object_get_int(valueObj);
+
+    if (json_object_object_get_ex(configJsonObject, "narratorRate34", &valueObj))
+        data->narratorRate34 = (ULONG)json_object_get_int(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "narratorPitch34",
+                                  &valueObj))
+        data->narratorPitch34 = (ULONG)json_object_get_int(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "narratorMode34", &valueObj))
+        data->narratorMode34 = (ULONG)json_object_get_int(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "narratorSex34", &valueObj))
+        data->narratorSex34 = (ULONG)json_object_get_int(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "narratorRate37", &valueObj))
+        data->narratorRate37 = (ULONG)json_object_get_int(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "narratorPitch37",
+                                  &valueObj))
+        data->narratorPitch37 = (ULONG)json_object_get_int(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "narratorMode37", &valueObj))
+        data->narratorMode37 = (ULONG)json_object_get_int(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "narratorSex37", &valueObj))
+        data->narratorSex37 = (ULONG)json_object_get_int(valueObj);
 
     if (json_object_object_get_ex(configJsonObject, "chatModel", &valueObj) ||
         json_object_object_get_ex(configJsonObject, "model", &valueObj))
@@ -2011,6 +2141,55 @@ STRPTR configGetSpeechAccent37(void) {
     return val;
 }
 
+ULONG configGetNarratorRate34(void) {
+    ULONG val = DEFAULT_NARRATOR_RATE;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_NarratorRate34, &val);
+    return val;
+}
+ULONG configGetNarratorPitch34(void) {
+    ULONG val = DEFAULT_NARRATOR_PITCH;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_NarratorPitch34, &val);
+    return val;
+}
+ULONG configGetNarratorMode34(void) {
+    ULONG val = DEFAULT_NARRATOR_MODE;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_NarratorMode34, &val);
+    return val;
+}
+ULONG configGetNarratorSex34(void) {
+    ULONG val = DEFAULT_NARRATOR_SEX;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_NarratorSex34, &val);
+    return val;
+}
+ULONG configGetNarratorRate37(void) {
+    ULONG val = DEFAULT_NARRATOR_RATE;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_NarratorRate37, &val);
+    return val;
+}
+ULONG configGetNarratorPitch37(void) {
+    ULONG val = DEFAULT_NARRATOR_PITCH;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_NarratorPitch37, &val);
+    return val;
+}
+ULONG configGetNarratorMode37(void) {
+    ULONG val = DEFAULT_NARRATOR_MODE;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_NarratorMode37, &val);
+    return val;
+}
+ULONG configGetNarratorSex37(void) {
+    ULONG val = DEFAULT_NARRATOR_SEX;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_NarratorSex37, &val);
+    return val;
+}
+
 STRPTR configGetSpeechProfiles(void) {
     STRPTR val = NULL;
     if (configObj)
@@ -2086,13 +2265,25 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
     out->elevenLabsModel = dupStrCfg(configGetElevenLabsModel());
     out->elevenLabsModelName = dupStrCfg(configGetElevenLabsModelName());
 
-    /* Default accent based on system */
+    /* Default accent + narrator params based on system */
     if (out->speechSystem == SPEECH_SYSTEM_34) {
         out->accentPath = dupStrCfg(configGetSpeechAccent34());
+        out->narratorRate = (UWORD)configGetNarratorRate34();
+        out->narratorPitch = (UWORD)configGetNarratorPitch34();
+        out->narratorMode = (UWORD)configGetNarratorMode34();
+        out->narratorSex = (UWORD)configGetNarratorSex34();
     } else if (out->speechSystem == SPEECH_SYSTEM_37) {
         out->accentPath = dupStrCfg(configGetSpeechAccent37());
+        out->narratorRate = (UWORD)configGetNarratorRate37();
+        out->narratorPitch = (UWORD)configGetNarratorPitch37();
+        out->narratorMode = (UWORD)configGetNarratorMode37();
+        out->narratorSex = (UWORD)configGetNarratorSex37();
     } else {
         out->accentPath = dupStrCfg(configGetSpeechAccent());
+        out->narratorRate = DEFAULT_NARRATOR_RATE;
+        out->narratorPitch = DEFAULT_NARRATOR_PITCH;
+        out->narratorMode = DEFAULT_NARRATOR_MODE;
+        out->narratorSex = DEFAULT_NARRATOR_SEX;
     }
 
     /* If an active custom speech profile is selected, override fields from it. */
@@ -2112,6 +2303,17 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
                 out->accentPath = dupStrCfg(configGetSpeechAccent34());
             else if (out->speechSystem == SPEECH_SYSTEM_37)
                 out->accentPath = dupStrCfg(configGetSpeechAccent37());
+            if (out->speechSystem == SPEECH_SYSTEM_34) {
+                out->narratorRate = (UWORD)configGetNarratorRate34();
+                out->narratorPitch = (UWORD)configGetNarratorPitch34();
+                out->narratorMode = (UWORD)configGetNarratorMode34();
+                out->narratorSex = (UWORD)configGetNarratorSex34();
+            } else if (out->speechSystem == SPEECH_SYSTEM_37) {
+                out->narratorRate = (UWORD)configGetNarratorRate37();
+                out->narratorPitch = (UWORD)configGetNarratorPitch37();
+                out->narratorMode = (UWORD)configGetNarratorMode37();
+                out->narratorSex = (UWORD)configGetNarratorSex37();
+            }
             return;
         }
     }
@@ -2141,6 +2343,19 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
         if (sysObj != NULL)
             out->speechSystem = (SpeechSystem)json_object_get_int(sysObj);
 
+        /* narrator defaults follow the chosen system unless profile overrides */
+        if (out->speechSystem == SPEECH_SYSTEM_34) {
+            out->narratorRate = (UWORD)configGetNarratorRate34();
+            out->narratorPitch = (UWORD)configGetNarratorPitch34();
+            out->narratorMode = (UWORD)configGetNarratorMode34();
+            out->narratorSex = (UWORD)configGetNarratorSex34();
+        } else if (out->speechSystem == SPEECH_SYSTEM_37) {
+            out->narratorRate = (UWORD)configGetNarratorRate37();
+            out->narratorPitch = (UWORD)configGetNarratorPitch37();
+            out->narratorMode = (UWORD)configGetNarratorMode37();
+            out->narratorSex = (UWORD)configGetNarratorSex37();
+        }
+
         struct json_object *accentObj =
             json_object_object_get(p, "speechAccent");
         if (accentObj != NULL) {
@@ -2154,6 +2369,19 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
         struct json_object *fvObj = json_object_object_get(p, "speechFliteVoice");
         if (fvObj != NULL)
             out->fliteVoice = (SpeechFliteVoice)json_object_get_int(fvObj);
+
+        struct json_object *nr = json_object_object_get(p, "narratorRate");
+        if (nr != NULL)
+            out->narratorRate = (UWORD)json_object_get_int(nr);
+        struct json_object *np = json_object_object_get(p, "narratorPitch");
+        if (np != NULL)
+            out->narratorPitch = (UWORD)json_object_get_int(np);
+        struct json_object *nm = json_object_object_get(p, "narratorMode");
+        if (nm != NULL)
+            out->narratorMode = (UWORD)json_object_get_int(nm);
+        struct json_object *ns = json_object_object_get(p, "narratorSex");
+        if (ns != NULL)
+            out->narratorSex = (UWORD)json_object_get_int(ns);
 
         struct json_object *k = json_object_object_get(p, "openAiApiKey");
         if (k != NULL) {
@@ -2600,6 +2828,39 @@ void configSetSpeechAccent34(CONST_STRPTR value) {
 void configSetSpeechAccent37(CONST_STRPTR value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_SpeechAccent37, (ULONG)value);
+}
+
+void configSetNarratorRate34(ULONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_NarratorRate34, value);
+}
+void configSetNarratorPitch34(ULONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_NarratorPitch34, value);
+}
+void configSetNarratorMode34(ULONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_NarratorMode34, value);
+}
+void configSetNarratorSex34(ULONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_NarratorSex34, value);
+}
+void configSetNarratorRate37(ULONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_NarratorRate37, value);
+}
+void configSetNarratorPitch37(ULONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_NarratorPitch37, value);
+}
+void configSetNarratorMode37(ULONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_NarratorMode37, value);
+}
+void configSetNarratorSex37(ULONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_NarratorSex37, value);
 }
 
 void configSetSpeechProfiles(CONST_STRPTR value) {

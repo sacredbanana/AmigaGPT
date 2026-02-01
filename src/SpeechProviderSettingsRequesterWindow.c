@@ -14,6 +14,7 @@ void openSpeechProviderSettingsRequesterWindow(void) {}
 #include <json-c/json.h>
 #include <libraries/asl.h>
 #include <libraries/mui.h>
+#include <utility/tagitem.h>
 #include <mui/BetterString_mcc.h>
 #include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
@@ -36,6 +37,12 @@ void openSpeechProviderSettingsRequesterWindow(void) {}
 #ifndef MAKE_ID
 #define MAKE_ID(a, b, c, d)                                                    \
     (((ULONG)(a) << 24) | ((ULONG)(b) << 16) | ((ULONG)(c) << 8) | (ULONG)(d))
+#endif
+
+/* Some older MUI SDKs may not define this attribute.
+ * If it's missing, treat it as TAG_IGNORE so the taglist still compiles. */
+#ifndef MUIA_Window_AutoAdjust
+#define MUIA_Window_AutoAdjust TAG_IGNORE
 #endif
 
 Object *speechProviderSettingsRequesterWindowObject = NULL;
@@ -64,6 +71,10 @@ static Object *elevenLabsCurrentVoiceText = NULL;
 static Object *workbenchAccentString = NULL;
 static Object *workbenchAccentBrowseButton = NULL;
 static Object *workbenchWarningText = NULL;
+static Object *workbenchRateString = NULL;
+static Object *workbenchPitchString = NULL;
+static Object *workbenchModeCycle = NULL;
+static Object *workbenchSexCycle = NULL;
 
 /* Flite fields */
 static Object *fliteVoiceCycle = NULL;
@@ -80,6 +91,7 @@ static Object *openAiGroup = NULL;
 static Object *elevenLabsGroup = NULL;
 static Object *okButton = NULL;
 static Object *cancelButton = NULL;
+static Object *testButton = NULL;
 
 static struct json_object *speechProfilesJson = NULL;
 static struct json_object *elevenLabsModelsJson = NULL;
@@ -89,6 +101,12 @@ static BOOL speechSettingsDirty = FALSE;
 static LONG lastSelectedProfile = MUIV_NList_Active_Off;
 
 static STRPTR speechSystemOptions[8] = {NULL};
+
+#ifdef __AMIGAOS3__
+static STRPTR narratorModeOptions[] = {(STRPTR) "Natural", (STRPTR) "Robotic",
+                                       NULL};
+static STRPTR narratorSexOptions[] = {(STRPTR) "Male", (STRPTR) "Female", NULL};
+#endif
 
 #define ELEVENLABS_HOST "api.elevenlabs.io"
 #define ELEVENLABS_PORT 443
@@ -512,6 +530,18 @@ static SpeechSystem getSpeechSystemFromCycle(void) {
 }
 
 HOOKPROTONHNONP(SpeechProviderSystemChangedFunc, void) {
+    /* Changing the system toggles group visibility; keep window height stable.
+     */
+    LONG wasOpen = FALSE;
+    LONG h = 0;
+    if (speechProviderSettingsRequesterWindowObject != NULL) {
+        get(speechProviderSettingsRequesterWindowObject, MUIA_Window_Open,
+            &wasOpen);
+        if (wasOpen)
+            get(speechProviderSettingsRequesterWindowObject, MUIA_Window_Height,
+                &h);
+    }
+
     SpeechSystem sys = getSpeechSystemFromCycle();
     updateGroupVisibilityForSystem(sys, TRUE);
     setFieldsEnabledForSystem(sys, TRUE);
@@ -522,6 +552,11 @@ HOOKPROTONHNONP(SpeechProviderSystemChangedFunc, void) {
     } else {
         updateRequirementWarningForSystem(sys, workbenchWarningText);
         updateRequirementWarningForSystem(sys, fliteWarningText);
+    }
+
+    if (speechProviderSettingsRequesterWindowObject != NULL && wasOpen &&
+        h > 0) {
+        set(speechProviderSettingsRequesterWindowObject, MUIA_Window_Height, h);
     }
 }
 MakeHook(SpeechProviderSystemChangedHook, SpeechProviderSystemChangedFunc);
@@ -628,6 +663,20 @@ static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
     if (workbenchAccentBrowseButton != NULL)
         set(workbenchAccentBrowseButton, MUIA_Disabled,
             !(sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37));
+#ifdef __AMIGAOS3__
+    if (workbenchRateString != NULL)
+        set(workbenchRateString, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37));
+    if (workbenchPitchString != NULL)
+        set(workbenchPitchString, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37));
+    if (workbenchModeCycle != NULL)
+        set(workbenchModeCycle, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37));
+    if (workbenchSexCycle != NULL)
+        set(workbenchSexCycle, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37));
+#endif
 
     if (fliteVoiceCycle != NULL)
         set(fliteVoiceCycle, MUIA_Disabled, !(sys == SPEECH_SYSTEM_FLITE));
@@ -752,6 +801,46 @@ static void loadProfileIntoUI(LONG activeIndex) {
         set(workbenchAccentString, MUIA_String_Contents, accent ? accent : "");
     }
 
+#ifdef __AMIGAOS3__
+    /* narrator.device parameters (Workbench profiles) */
+    if (sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37) {
+        LONG rate = (sys == SPEECH_SYSTEM_34) ? (LONG)configGetNarratorRate34()
+                                              : (LONG)configGetNarratorRate37();
+        LONG pitch = (sys == SPEECH_SYSTEM_34)
+                         ? (LONG)configGetNarratorPitch34()
+                         : (LONG)configGetNarratorPitch37();
+        LONG mode = (sys == SPEECH_SYSTEM_34) ? (LONG)configGetNarratorMode34()
+                                              : (LONG)configGetNarratorMode37();
+        LONG sex = (sys == SPEECH_SYSTEM_34) ? (LONG)configGetNarratorSex34()
+                                             : (LONG)configGetNarratorSex37();
+
+        if (customProfile != NULL) {
+            struct json_object *o = NULL;
+            o = json_object_object_get(customProfile, "narratorRate");
+            if (o != NULL)
+                rate = (LONG)json_object_get_int(o);
+            o = json_object_object_get(customProfile, "narratorPitch");
+            if (o != NULL)
+                pitch = (LONG)json_object_get_int(o);
+            o = json_object_object_get(customProfile, "narratorMode");
+            if (o != NULL)
+                mode = (LONG)json_object_get_int(o);
+            o = json_object_object_get(customProfile, "narratorSex");
+            if (o != NULL)
+                sex = (LONG)json_object_get_int(o);
+        }
+
+        if (workbenchRateString != NULL)
+            set(workbenchRateString, MUIA_String_Integer, rate);
+        if (workbenchPitchString != NULL)
+            set(workbenchPitchString, MUIA_String_Integer, pitch);
+        if (workbenchModeCycle != NULL)
+            set(workbenchModeCycle, MUIA_Cycle_Active, (mode != 0) ? 1 : 0);
+        if (workbenchSexCycle != NULL)
+            set(workbenchSexCycle, MUIA_Cycle_Active, (sex != 0) ? 1 : 0);
+    }
+#endif
+
     /* Flite voice */
     if (fliteVoiceCycle != NULL) {
         LONG fv = (LONG)configGetSpeechFliteVoice();
@@ -869,7 +958,25 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
         return;
     LONG active = 0;
     get(speechProfileList, MUIA_NList_Active, &active);
+
+    /* Profile selection toggles group visibility; keep window height stable. */
+    LONG wasOpen = FALSE;
+    LONG h = 0;
+    if (speechProviderSettingsRequesterWindowObject != NULL) {
+        get(speechProviderSettingsRequesterWindowObject, MUIA_Window_Open,
+            &wasOpen);
+        if (wasOpen)
+            get(speechProviderSettingsRequesterWindowObject, MUIA_Window_Height,
+                &h);
+    }
+
     loadProfileIntoUI(active);
+
+    if (speechProviderSettingsRequesterWindowObject != NULL && wasOpen &&
+        h > 0) {
+        set(speechProviderSettingsRequesterWindowObject, MUIA_Window_Height, h);
+    }
+
     lastSelectedProfile = active;
     speechSettingsDirty = FALSE;
 }
@@ -902,6 +1009,29 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
         json_object_object_add(p, "speechAccent",
                                json_object_new_string(accent));
     }
+
+#ifdef __AMIGAOS3__
+    if (sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37) {
+        LONG rate = 0, pitch = 0, mode = 0, sex = 0;
+        if (workbenchRateString != NULL)
+            get(workbenchRateString, MUIA_String_Integer, &rate);
+        if (workbenchPitchString != NULL)
+            get(workbenchPitchString, MUIA_String_Integer, &pitch);
+        if (workbenchModeCycle != NULL)
+            get(workbenchModeCycle, MUIA_Cycle_Active, &mode);
+        if (workbenchSexCycle != NULL)
+            get(workbenchSexCycle, MUIA_Cycle_Active, &sex);
+
+        json_object_object_add(p, "narratorRate",
+                               json_object_new_int((int)rate));
+        json_object_object_add(p, "narratorPitch",
+                               json_object_new_int((int)pitch));
+        json_object_object_add(p, "narratorMode",
+                               json_object_new_int((int)((mode != 0) ? 1 : 0)));
+        json_object_object_add(p, "narratorSex",
+                               json_object_new_int((int)((sex != 0) ? 1 : 0)));
+    }
+#endif
 
     /* Flite voice */
     LONG fv = 0;
@@ -1051,6 +1181,29 @@ static void applyBuiltinProfileSelection(SpeechSystem sys) {
             else
                 configSetSpeechAccent37(accent);
         }
+#ifdef __AMIGAOS3__
+        LONG rate = 0, pitch = 0, mode = 0, sex = 0;
+        if (workbenchRateString != NULL)
+            get(workbenchRateString, MUIA_String_Integer, &rate);
+        if (workbenchPitchString != NULL)
+            get(workbenchPitchString, MUIA_String_Integer, &pitch);
+        if (workbenchModeCycle != NULL)
+            get(workbenchModeCycle, MUIA_Cycle_Active, &mode);
+        if (workbenchSexCycle != NULL)
+            get(workbenchSexCycle, MUIA_Cycle_Active, &sex);
+
+        if (sys == SPEECH_SYSTEM_34) {
+            configSetNarratorRate34((ULONG)rate);
+            configSetNarratorPitch34((ULONG)pitch);
+            configSetNarratorMode34((ULONG)((mode != 0) ? 1 : 0));
+            configSetNarratorSex34((ULONG)((sex != 0) ? 1 : 0));
+        } else {
+            configSetNarratorRate37((ULONG)rate);
+            configSetNarratorPitch37((ULONG)pitch);
+            configSetNarratorMode37((ULONG)((mode != 0) ? 1 : 0));
+            configSetNarratorSex37((ULONG)((sex != 0) ? 1 : 0));
+        }
+#endif
     } else if (sys == SPEECH_SYSTEM_FLITE) {
         LONG fv = 0;
         if (fliteVoiceCycle != NULL)
@@ -1308,6 +1461,97 @@ HOOKPROTONHNONP(SpeechProviderCancelFunc, void) {
 }
 MakeHook(SpeechProviderCancelHook, SpeechProviderCancelFunc);
 
+HOOKPROTONHNONP(SpeechProviderTestFunc, void) {
+    /* Build a temporary settings struct from the current UI state. */
+    struct SpeechRequestSettings s;
+    memset(&s, 0, sizeof(s));
+
+    s.speechSystem = getSpeechSystemFromCycle();
+
+    /* Accent (Workbench) */
+    if (workbenchAccentString != NULL) {
+        STRPTR a = NULL;
+        get(workbenchAccentString, MUIA_String_Contents, &a);
+        s.accentPath = a;
+    }
+
+#ifdef __AMIGAOS3__
+    if (workbenchRateString != NULL) {
+        LONG v = 0;
+        get(workbenchRateString, MUIA_String_Integer, &v);
+        s.narratorRate = (UWORD)v;
+    }
+    if (workbenchPitchString != NULL) {
+        LONG v = 0;
+        get(workbenchPitchString, MUIA_String_Integer, &v);
+        s.narratorPitch = (UWORD)v;
+    }
+    if (workbenchModeCycle != NULL) {
+        LONG v = 0;
+        get(workbenchModeCycle, MUIA_Cycle_Active, &v);
+        s.narratorMode = (UWORD)((v != 0) ? 1 : 0);
+    }
+    if (workbenchSexCycle != NULL) {
+        LONG v = 0;
+        get(workbenchSexCycle, MUIA_Cycle_Active, &v);
+        s.narratorSex = (UWORD)((v != 0) ? 1 : 0);
+    }
+#endif
+
+    /* Flite */
+    if (fliteVoiceCycle != NULL) {
+        LONG fv = 0;
+        get(fliteVoiceCycle, MUIA_Cycle_Active, &fv);
+        s.fliteVoice = (SpeechFliteVoice)fv;
+    }
+
+    /* OpenAI */
+    if (openAiApiKeyString != NULL) {
+        STRPTR k = NULL;
+        get(openAiApiKeyString, MUIA_String_Contents, &k);
+        s.openAiApiKey = k;
+    }
+    if (openAiTtsModelCycle != NULL) {
+        LONG m = 0;
+        get(openAiTtsModelCycle, MUIA_Cycle_Active, &m);
+        s.openAiTtsModel = (OpenAITTSModel)m;
+    }
+    if (openAiTtsVoiceCycle != NULL) {
+        LONG v = 0;
+        get(openAiTtsVoiceCycle, MUIA_Cycle_Active, &v);
+        s.openAiTtsVoice = (OpenAITTSVoice)v;
+    }
+    if (openAiVoiceInstructionsEditor != NULL) {
+        STRPTR instr = NULL;
+        get(openAiVoiceInstructionsEditor, MUIA_TextEditor_Contents, &instr);
+        s.openAiVoiceInstructions = instr;
+    }
+
+    /* ElevenLabs */
+    if (elevenLabsAPIKeyString != NULL) {
+        STRPTR k = NULL;
+        get(elevenLabsAPIKeyString, MUIA_String_Contents, &k);
+        s.elevenLabsApiKey = k;
+    }
+
+    /* Prefer the already-selected model/voice IDs from config fields if they
+     * exist in the UI state (these are just pointers, not ownership). */
+    s.elevenLabsModel = configGetElevenLabsModel();
+    s.elevenLabsVoiceID = configGetElevenLabsVoiceID();
+
+    /* Test phrase */
+    STRPTR test =
+        (STRPTR) "Aurora borealis, at this time of year, at this time of day, "
+                 "in "
+                 "this part of the country, localized entirely within your "
+                 "kitchen? - Yes.\n"
+                 "May I see it? No.";
+
+    AudioFormat fmt = AUDIO_FORMAT_PCM;
+    speakTextWithSettings(test, NULL, &fmt, &s);
+}
+MakeHook(SpeechProviderTestHook, SpeechProviderTestFunc);
+
 HOOKPROTONHNONP(SaveProfileFunc, void) {
     LONG active = 0;
     get(speechProfileList, MUIA_NList_Active, &active);
@@ -1432,17 +1676,20 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
     speechProviderSettingsRequesterWindowObject = WindowObject,
     MUIA_Window_Title, STRING_SPEECH_PROVIDER_SETTINGS, MUIA_Window_ID,
     MAKE_ID('S', 'P', 'R', 'V'), MUIA_Window_CloseGadget, TRUE,
-    MUIA_Window_SizeGadget, TRUE, MUIA_Window_DepthGadget, TRUE,
-    MUIA_Window_DragBar, TRUE, MUIA_Window_LeftEdge,
-    MUIV_Window_LeftEdge_Centered, MUIA_Window_TopEdge,
-    MUIV_Window_TopEdge_Centered, WindowContents, HGroup,
+    /* Keep window size stable when switching profiles (ShowMe toggles). */
+        MUIA_Window_AutoAdjust, FALSE, MUIA_Window_SizeGadget, TRUE,
+    MUIA_Window_DepthGadget, TRUE, MUIA_Window_DragBar, TRUE,
+    MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered, MUIA_Window_TopEdge,
+    MUIV_Window_TopEdge_Centered,
+    /* Start at a reasonable height; user can resize vertically. */
+        MUIA_Window_Height, 340, WindowContents, HGroup,
     /* Left panel - Profiles */
-        Child, VGroup, MUIA_Frame, MUIV_Frame_Group, MUIA_FrameTitle,
-    STRING_PROFILES, MUIA_FixWidth, 170, Child, NListviewObject,
-    MUIA_NListview_NList, speechProfileList = NListObject, MUIA_NList_Format,
-    "", MUIA_NList_Title, FALSE, MUIA_NList_MinLineHeight, 16, End,
-    MUIA_CycleChain, TRUE, MUIA_NListview_Vert_ScrollBar,
-    MUIV_NListview_VSB_Auto, End, Child,
+        Child, VGroup, MUIA_VertWeight, 100, MUIA_Frame, MUIV_Frame_Group,
+    MUIA_FrameTitle, STRING_PROFILES, MUIA_FixWidth, 170, Child,
+    NListviewObject, MUIA_VertWeight, 100, MUIA_NListview_NList,
+    speechProfileList = NListObject, MUIA_NList_Format, "", MUIA_NList_Title,
+    FALSE, MUIA_NList_MinLineHeight, 16, End, MUIA_CycleChain, TRUE,
+    MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto, End, Child,
     saveProfileButton =
         MUI_MakeObject(MUIO_Button, STRING_SAVE_PROFILE, TAG_DONE),
     Child,
@@ -1450,7 +1697,8 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
         MUI_MakeObject(MUIO_Button, STRING_DELETE_PROFILE, TAG_DONE),
     End,
     /* Right panel - Scrollable settings + OK/Cancel */
-        Child, VGroup, Child, rightScrollgroup = ScrollgroupObject,
+        Child, VGroup, MUIA_VertWeight, 100, Child,
+    rightScrollgroup = ScrollgroupObject, MUIA_VertWeight, 100,
     MUIA_Scrollgroup_FreeHoriz, TRUE, MUIA_Scrollgroup_Contents,
     VirtgroupObject, Child, customCommonGroup = VGroup, MUIA_Frame,
     MUIV_Frame_Group, MUIA_FrameTitle, STRING_PROFILE_NAME, Child, ColGroup(2),
@@ -1462,13 +1710,27 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
     End,
 
     Child, workbenchGroup = VGroup, MUIA_Frame, MUIV_Frame_Group,
-    MUIA_FrameTitle, STRING_MENU_SPEECH_ACCENT, Child, ColGroup(3), Child,
-    Label(STRING_MENU_SPEECH_ACCENT), Child,
+    MUIA_FrameTitle, STRING_MENU_SPEECH_ACCENT, Child, ColGroup(2), Child,
+    Label(STRING_MENU_SPEECH_ACCENT), Child, HGroup, Child,
     workbenchAccentString = StringObject, MUIA_Frame, MUIV_Frame_String,
     MUIA_CycleChain, TRUE, End, Child,
     workbenchAccentBrowseButton = MUI_MakeObject(MUIO_Button, "...", TAG_DONE),
-    End, Child, workbenchWarningText = TextObject, MUIA_Text_Contents, "", End,
     End,
+#ifdef __AMIGAOS3__
+    Child, Label("Rate (wpm)"), Child, workbenchRateString = StringObject,
+    MUIA_Frame, MUIV_Frame_String, MUIA_CycleChain, TRUE, MUIA_String_Accept,
+    "0123456789", MUIA_String_MaxLen, 5, MUIA_String_Integer, (LONG)150, End,
+    Child, Label("Pitch (Hz)"), Child, workbenchPitchString = StringObject,
+    MUIA_Frame, MUIV_Frame_String, MUIA_CycleChain, TRUE, MUIA_String_Accept,
+    "0123456789", MUIA_String_MaxLen, 5, MUIA_String_Integer, (LONG)110, End,
+    Child, Label("Mode"), Child, workbenchModeCycle = CycleObject,
+    MUIA_CycleChain, TRUE, MUIA_Cycle_Entries, narratorModeOptions,
+    MUIA_Cycle_Active, 0, End, Child, Label("Sex"), Child,
+    workbenchSexCycle = CycleObject, MUIA_CycleChain, TRUE, MUIA_Cycle_Entries,
+    narratorSexOptions, MUIA_Cycle_Active, 0, End,
+#endif
+    Child, Label(""), Child, workbenchWarningText = TextObject,
+    MUIA_Text_Contents, "", End, End, Child, VSpace(0), End,
 
     Child, fliteGroup = VGroup, MUIA_Frame, MUIV_Frame_Group, MUIA_FrameTitle,
     STRING_MENU_FLITE_VOICE, Child, ColGroup(2), Child,
@@ -1526,7 +1788,8 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
     MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto, MUIA_FixHeight, 120,
     End, End, End, End, End, Child, HGroup, Child,
     okButton = MUI_MakeObject(MUIO_Button, STRING_OK, TAG_DONE), Child,
-    cancelButton = MUI_MakeObject(MUIO_Button, STRING_CANCEL, TAG_DONE), End,
+    cancelButton = MUI_MakeObject(MUIO_Button, STRING_CANCEL, TAG_DONE), Child,
+    testButton = MUI_MakeObject(MUIO_Button, (STRPTR) "Test", TAG_DONE), End,
     End, End, End;
 
     if (speechProviderSettingsRequesterWindowObject == NULL) {
@@ -1535,6 +1798,11 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
     }
 
     /* Notifications */
+    /* Close gadget should behave like Cancel. */
+    DoMethod(speechProviderSettingsRequesterWindowObject, MUIM_Notify,
+             MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Application, 2,
+             MUIM_CallHook, &SpeechProviderCancelHook);
+
     DoMethod(speechProfileList, MUIM_Notify, MUIA_NList_Active, MUIV_EveryTime,
              MUIV_Notify_Application, 2, MUIM_CallHook,
              &SpeechProviderProfileSelectedHook);
@@ -1568,6 +1836,9 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
     DoMethod(cancelButton, MUIM_Notify, MUIA_Pressed, FALSE,
              MUIV_Notify_Application, 2, MUIM_CallHook,
              &SpeechProviderCancelHook);
+    DoMethod(testButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             MUIV_Notify_Application, 2, MUIM_CallHook,
+             &SpeechProviderTestHook);
 
     return RETURN_OK;
 }
