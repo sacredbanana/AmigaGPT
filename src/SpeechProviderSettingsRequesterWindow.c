@@ -84,6 +84,7 @@ static Object *saveProfileButton = NULL;
 static Object *deleteProfileButton = NULL;
 
 static Object *rightScrollgroup = NULL;
+static Object *rightVirtgroup = NULL;
 static Object *customCommonGroup = NULL;
 static Object *workbenchGroup = NULL;
 static Object *fliteGroup = NULL;
@@ -122,6 +123,20 @@ static SpeechSystem getSpeechSystemFromCycle(void);
 static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew);
 static void updateGroupVisibilityForSystem(SpeechSystem sys,
                                            BOOL isCustomOrNew);
+
+static void beginRightPanelUpdate(void) {
+    if (speechProviderSettingsRequesterWindowObject != NULL)
+        set(speechProviderSettingsRequesterWindowObject, MUIA_Window_Sleep, TRUE);
+    if (rightVirtgroup != NULL)
+        DoMethod(rightVirtgroup, MUIM_Group_InitChange);
+}
+
+static void endRightPanelUpdate(void) {
+    if (rightVirtgroup != NULL)
+        DoMethod(rightVirtgroup, MUIM_Group_ExitChange);
+    if (speechProviderSettingsRequesterWindowObject != NULL)
+        set(speechProviderSettingsRequesterWindowObject, MUIA_Window_Sleep, FALSE);
+}
 
 static LONG getBuiltinSpeechProviderCount(void) {
     LONG count = 0;
@@ -734,6 +749,8 @@ static void loadProfileIntoUI(LONG activeIndex) {
     if (activeIndex < 0)
         return;
 
+    beginRightPanelUpdate();
+
     BOOL isCustom = !isBuiltinListIndex(activeIndex) && activeIndex > 0;
     SpeechSystem sys = SPEECH_SYSTEM_OPENAI;
     struct json_object *customProfile = NULL;
@@ -951,6 +968,8 @@ static void loadProfileIntoUI(LONG activeIndex) {
     /* Save only makes sense for custom/new profiles. */
     if (saveProfileButton != NULL)
         set(saveProfileButton, MUIA_Disabled, !isCustomOrNew);
+
+    endRightPanelUpdate();
 }
 
 HOOKPROTONHNONP(ProfileSelectedFunc, void) {
@@ -1700,7 +1719,7 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
         Child, VGroup, MUIA_VertWeight, 100, Child,
     rightScrollgroup = ScrollgroupObject, MUIA_VertWeight, 100,
     MUIA_Scrollgroup_FreeHoriz, TRUE, MUIA_Scrollgroup_Contents,
-    VirtgroupObject, Child, customCommonGroup = VGroup, MUIA_Frame,
+    rightVirtgroup = VirtgroupObject, Child, customCommonGroup = VGroup, MUIA_Frame,
     MUIV_Frame_Group, MUIA_FrameTitle, STRING_PROFILE_NAME, Child, ColGroup(2),
     Child, Label(STRING_PROFILE_NAME), Child,
     speechProfileNameString = StringObject, MUIA_Frame, MUIV_Frame_String,
