@@ -141,7 +141,7 @@ LONG initVideo() {
     if (!(app = ApplicationObject, MUIA_Application_Base, "AMIGAGPTD",
           MUIA_Application_Title, "AmigaGPT Daemon", MUIA_Application_Version,
           APP_VERSION, MUIA_Application_Copyright,
-          "2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
+          "2023-2026 Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Description, "AmigaGPT Daemon",
           MUIA_Application_Version,

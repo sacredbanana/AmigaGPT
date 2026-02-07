@@ -1728,3 +1728,9 @@ msgstr "Aviso: falta um componente necessário: %s"
 msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
 msgid "Failed to create Speech Provider Settings window"
 msgstr "Falha ao criar a janela Definições do fornecedor de fala"
+
+#: src/CustomServerSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_MENU_TEMPLATE_OPENAI (315//)"
+msgid "OpenAI"
+msgstr "IA aberta"

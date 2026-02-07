@@ -1729,3 +1729,9 @@ msgstr "Varoitus: tarvittava komponentti puuttuu: %s"
 msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
 msgid "Failed to create Speech Provider Settings window"
 msgstr "Puhepalvelun asetukset -ikkunan luonti epäonnistui"
+
+#: src/CustomServerSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_MENU_TEMPLATE_OPENAI (315//)"
+msgid "OpenAI"
+msgstr "OpenAI"

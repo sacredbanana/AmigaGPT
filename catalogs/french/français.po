@@ -1751,3 +1751,9 @@ msgid "Failed to create Speech Provider Settings window"
 msgstr ""
 "Échec de la création de la fenêtre Paramètres du fournisseur de synthèse "
 "vocale"
+
+#: src/CustomServerSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_MENU_TEMPLATE_OPENAI (315//)"
+msgid "OpenAI"
+msgstr "OpenAI"

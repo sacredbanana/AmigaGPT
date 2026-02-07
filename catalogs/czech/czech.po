@@ -1726,3 +1726,9 @@ msgstr "Upozornění: chybí požadovaná součást: %s"
 msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
 msgid "Failed to create Speech Provider Settings window"
 msgstr "Nepodařilo se vytvořit okno Nastavení poskytovatele řeči"
+
+#: src/CustomServerSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_MENU_TEMPLATE_OPENAI (315//)"
+msgid "OpenAI"
+msgstr "OpenAI"

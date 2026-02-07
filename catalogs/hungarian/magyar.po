@@ -1738,3 +1738,9 @@ msgstr "Figyelmeztetés: hiányzik a szükséges összetevő: %s"
 msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
 msgid "Failed to create Speech Provider Settings window"
 msgstr "Nem sikerült létrehozni a Beszédszolgáltató beállításai ablakot"
+
+#: src/CustomServerSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_MENU_TEMPLATE_OPENAI (315//)"
+msgid "OpenAI"
+msgstr "OpenAI"

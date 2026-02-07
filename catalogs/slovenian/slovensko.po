@@ -1729,3 +1729,9 @@ msgstr "Opozorilo: manjka zahtevana komponenta: %s"
 msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
 msgid "Failed to create Speech Provider Settings window"
 msgstr "Ni bilo mogoče ustvariti okna Nastavitve ponudnika govora"
+
+#: src/CustomServerSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_MENU_TEMPLATE_OPENAI (315//)"
+msgid "OpenAI"
+msgstr "OpenAI"

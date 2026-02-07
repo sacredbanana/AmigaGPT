@@ -22,10 +22,10 @@ unsigned long __stack = 32768;
 
 #ifdef DAEMON
 CONST_STRPTR version = "$VER: AmigaGPTD " APP_VERSION " (" BUILD_DATE
-                       ") � 2023-2025 Cameron Armstrong";
+                       ") � 2023-2026 Cameron Armstrong";
 #else
 CONST_STRPTR version = "$VER: AmigaGPT " APP_VERSION " (" BUILD_DATE
-                       ") � 2023-2025 Cameron Armstrong";
+                       ") � 2023-2026 Cameron Armstrong";
 #endif
 
 #ifdef __AMIGAOS4__

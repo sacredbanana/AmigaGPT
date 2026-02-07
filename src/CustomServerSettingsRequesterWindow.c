@@ -58,6 +58,7 @@ static BOOL suppressProfileSelected = FALSE;
 /* Template definitions */
 enum {
     TEMPLATE_NONE = 0,
+    TEMPLATE_OPENAI,
     TEMPLATE_GOOGLE_GEMINI,
     TEMPLATE_LM_STUDIO,
     TEMPLATE_ANTHROPIC_CLAUDE,
@@ -1043,8 +1044,6 @@ HOOKPROTONHNONP(FetchCustomModelsFunc, void) {
     STRPTR endpointUrl;
     STRPTR customHeaders;
 
-    printf("FetchCustomModelsFunc\n");
-
     get(customServerHostString, MUIA_String_Contents, &host);
     get(customServerPortString, MUIA_String_Integer, &port);
     get(customServerUsesSSLCycle, MUIA_Cycle_Active, &usesSSL);
@@ -1134,6 +1133,19 @@ HOOKPROTONHNONP(TemplateSelectedFunc, void) {
     get(customServerTemplateCycle, MUIA_Cycle_Active, &template);
 
     switch (template) {
+    case TEMPLATE_OPENAI:
+        set(customServerHostString, MUIA_String_Contents, "api.openai.com");
+        set(customServerPortString, MUIA_String_Integer, 443);
+        set(customServerUsesSSLCycle, MUIA_Cycle_Active, 1); /* SSL enabled */
+        set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
+            AUTHORIZATION_TYPE_BEARER);
+        set(customServerChatModelString, MUIA_String_Contents,
+            "gpt-5-chat-latest");
+        set(customServerApiEndpointCycle, MUIA_Cycle_Active,
+            API_ENDPOINT_RESPONSES);
+        set(customServerApiEndpointUrlString, MUIA_String_Contents, "v1");
+        set(customServerCustomHeadersString, MUIA_String_Contents, "");
+        break;
     case TEMPLATE_GOOGLE_GEMINI:
         set(customServerHostString, MUIA_String_Contents,
             "generativelanguage.googleapis.com");
@@ -1458,8 +1470,9 @@ MakeHook(CustomServerSettingsRequesterOkButtonClickedHook,
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createCustomServerSettingsRequesterWindow() {
-    static STRPTR templateOptions[6] = {NULL};
+    static STRPTR templateOptions[7] = {NULL};
     templateOptions[TEMPLATE_NONE] = STRING_MENU_TEMPLATE_NONE;
+    templateOptions[TEMPLATE_OPENAI] = STRING_MENU_TEMPLATE_OPENAI;
     templateOptions[TEMPLATE_GOOGLE_GEMINI] =
         STRING_MENU_TEMPLATE_GOOGLE_GEMINI;
     templateOptions[TEMPLATE_LM_STUDIO] = STRING_MENU_TEMPLATE_LM_STUDIO;
