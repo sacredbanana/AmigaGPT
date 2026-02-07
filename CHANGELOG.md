@@ -21,6 +21,7 @@
 - New config options for the Workbench speech systems: rate, pitch, mode (natural/robotic) and sex
 - Fix bug where the first paragraph in every response is always black even if you have custom colours set
 - Fix bug where a missing or incorrect API key could cause the app to enter an infinite loop of displaying an error and retrying
+- Correctly handle reponses that contain JSON in the response header such as those received from Cloudfare 
 
 ## 2.17.0 (2025-12-22)
 

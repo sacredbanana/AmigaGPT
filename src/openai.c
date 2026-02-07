@@ -1820,7 +1820,8 @@ struct json_object **postChatMessageToOpenAI(
                              * Return a standard {"error":{"message":...}}
                              * object in responses[0] so the caller can stop.
                              */
-                            struct json_object *errObj = json_object_new_object();
+                            struct json_object *errObj =
+                                json_object_new_object();
                             struct json_object *errInner =
                                 json_object_new_object();
                             json_object_object_add(
@@ -1932,35 +1933,62 @@ struct json_object **postChatMessageToOpenAI(
                     break;
                 }
 
-                /* Non-streaming mode: parse the full JSON response. */
+                /* Non-streaming mode: parse the full JSON response.
+                 *
+                 * IMPORTANT: Some servers (e.g. Cloudflare) include JSON blobs
+                 * in HTTP headers (e.g. Report-To / NEL). If we scan from the
+                 * start of the buffer, we can accidentally parse a header JSON
+                 * object instead of the response body, resulting in an empty
+                 * assistant message being saved.
+                 *
+                 * Always strip HTTP headers first, then parse JSON from body.
+                 */
                 {
-                    const STRPTR jsonStart = "{";
-                    STRPTR jsonString = readBuffer;
                     if (readBuffer == NULL) {
                         doneReading = TRUE;
                         streamingInProgress = FALSE;
                         break;
                     }
 
-                    STRPTR lastJsonString = jsonString;
-                    if (jsonString != NULL) {
-                        while (jsonString = strstr(jsonString, jsonStart)) {
-                            lastJsonString = jsonString;
-                            struct json_object *parsedResponse =
-                                json_tokener_parse(jsonString);
-                            if (parsedResponse != NULL) {
-                                responses[responseIndex] = parsedResponse;
-                                responseIndex++;
-                                break;
-                            } else {
-                                jsonString = NULL;
-                                break;
-                            }
+                    STRPTR body = NULL;
+                    STRPTR headerEnd = strstr(readBuffer, "\r\n\r\n");
+                    ULONG headerDelimLen = 4;
+                    if (headerEnd == NULL) {
+                        headerEnd = strstr(readBuffer, "\n\n");
+                        headerDelimLen = 2;
+                    }
+                    if (headerEnd != NULL) {
+                        body = headerEnd + headerDelimLen;
+                    }
+
+                    /* Skip leading whitespace/newlines */
+                    while (body != NULL && (*body == '\r' || *body == '\n' ||
+                                            *body == ' ' || *body == '\t')) {
+                        body++;
+                    }
+
+                    /* Find first JSON token in body */
+                    STRPTR jsonString = NULL;
+                    if (body != NULL) {
+                        STRPTR objStart = strchr(body, '{');
+                        STRPTR arrStart = strchr(body, '[');
+                        if (objStart != NULL && arrStart != NULL) {
+                            jsonString =
+                                (objStart < arrStart) ? objStart : arrStart;
+                        } else if (objStart != NULL) {
+                            jsonString = objStart;
+                        } else if (arrStart != NULL) {
+                            jsonString = arrStart;
                         }
                     }
 
                     if (jsonString != NULL) {
-                        doneReading = TRUE;
+                        struct json_object *parsedResponse =
+                            json_tokener_parse(jsonString);
+                        if (parsedResponse != NULL) {
+                            responses[responseIndex++] = parsedResponse;
+                            doneReading = TRUE;
+                        }
                     }
                 }
 
