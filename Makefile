@@ -155,4 +155,6 @@ $(catalog_object): $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.c | catalog
 
 copy_bundle_files:
 	$(info Copying bundle files...)
+	@$(RM) $(BUNDLE_DIR)/$(PROGRAM_NAME)/$(PROGRAM_NAME)/$(PROGRAM_NAME)_OS3
+	@$(RM) $(BUNDLE_DIR)/$(PROGRAM_NAME)/$(PROGRAM_NAME)/$(DAEMON_NAME)_OS3
 	@cp -R $(BUNDLE_DIR)/$(PROGRAM_NAME)/$(PROGRAM_NAME)/* $(EXECUTABLE_DIR)/
