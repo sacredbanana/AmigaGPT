@@ -1043,6 +1043,8 @@ HOOKPROTONHNONP(FetchCustomModelsFunc, void) {
     STRPTR endpointUrl;
     STRPTR customHeaders;
 
+    printf("FetchCustomModelsFunc\n");
+
     get(customServerHostString, MUIA_String_Contents, &host);
     get(customServerPortString, MUIA_String_Integer, &port);
     get(customServerUsesSSLCycle, MUIA_Cycle_Active, &usesSSL);

@@ -365,7 +365,6 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             displayError(errorBuffer);
             configSetSpeechEnabled(FALSE);
             FreeVec(audioBuffer);
-            configFreeSpeechRequestSettings(&settings);
             return;
         }
 

@@ -1137,7 +1137,7 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
 #endif
 
     // Read response
-    struct json_object *response;
+    struct json_object *response = NULL;
     ULONG totalBytesRead = 0;
     WORD bytesRead = 0;
     BOOL doneReading = FALSE;
@@ -1161,11 +1161,44 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
             totalBytesRead += bytesRead;
         }
 
-        // Parse response
-        STRPTR jsonStart = strstr(readBuffer, "{");
-        if (jsonStart) {
+        /* Parse response.
+         *
+         * IMPORTANT: Some servers (e.g. Cloudflare) include JSON blobs in HTTP
+         * headers (e.g. Report-To / NEL). Do NOT parse from the first '{' in
+         * the whole buffer; strip HTTP headers first and parse JSON from body.
+         */
+        STRPTR body = NULL;
+        STRPTR headerEnd = strstr(readBuffer, "\r\n\r\n");
+        ULONG headerDelimLen = 4;
+        if (headerEnd == NULL) {
+            headerEnd = strstr(readBuffer, "\n\n");
+            headerDelimLen = 2;
+        }
+        if (headerEnd != NULL) {
+            body = headerEnd + headerDelimLen;
+        }
+
+        while (body != NULL && (*body == '\r' || *body == '\n' ||
+                                *body == ' ' || *body == '\t')) {
+            body++;
+        }
+
+        STRPTR jsonStart = NULL;
+        if (body != NULL) {
+            STRPTR objStart = strchr(body, '{');
+            STRPTR arrStart = strchr(body, '[');
+            if (objStart != NULL && arrStart != NULL) {
+                jsonStart = (objStart < arrStart) ? objStart : arrStart;
+            } else if (objStart != NULL) {
+                jsonStart = objStart;
+            } else if (arrStart != NULL) {
+                jsonStart = arrStart;
+            }
+        }
+
+        if (jsonStart != NULL) {
             response = json_tokener_parse(jsonStart);
-            if (response) {
+            if (response != NULL) {
                 doneReading = TRUE;
             }
         }
@@ -1180,6 +1213,11 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
         ssl = NULL;
     }
     sock = -1;
+
+    if (response == NULL) {
+        displayError("Failed to parse models response");
+        return NULL;
+    }
 
     // Display error if any
     struct json_object *error = json_object_object_get(response, "error");
@@ -4556,8 +4594,40 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
         strncat(readBuffer, tempReadBuffer, bytesRead);
         totalBytesRead += bytesRead;
 
-        /* Check if we have a complete response */
-        STRPTR jsonStart = strstr(readBuffer, "{");
+        /* Check if we have a complete response.
+         *
+         * IMPORTANT: Some servers (e.g. Cloudflare) include JSON blobs in HTTP
+         * headers (e.g. Report-To / NEL). Only parse JSON from the HTTP body.
+         */
+        STRPTR jsonStart = NULL;
+        {
+            STRPTR body = NULL;
+            STRPTR headerEnd = strstr(readBuffer, "\r\n\r\n");
+            ULONG headerDelimLen = 4;
+            if (headerEnd == NULL) {
+                headerEnd = strstr(readBuffer, "\n\n");
+                headerDelimLen = 2;
+            }
+            if (headerEnd != NULL) {
+                body = headerEnd + headerDelimLen;
+            }
+            while (body != NULL && (*body == '\r' || *body == '\n' ||
+                                    *body == ' ' || *body == '\t')) {
+                body++;
+            }
+            if (body != NULL) {
+                STRPTR objStart = strchr(body, '{');
+                STRPTR arrStart = strchr(body, '[');
+                if (objStart != NULL && arrStart != NULL) {
+                    jsonStart = (objStart < arrStart) ? objStart : arrStart;
+                } else if (objStart != NULL) {
+                    jsonStart = objStart;
+                } else if (arrStart != NULL) {
+                    jsonStart = arrStart;
+                }
+            }
+        }
+
         if (jsonStart != NULL) {
             struct json_object *parsedResponse = json_tokener_parse(jsonStart);
             if (parsedResponse != NULL) {
@@ -4594,7 +4664,34 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
     FreeVec(tempReadBuffer);
 
     /* Try to parse whatever we got */
-    STRPTR jsonStart = strstr(readBuffer, "{");
+    STRPTR jsonStart = NULL;
+    {
+        STRPTR body = NULL;
+        STRPTR headerEnd = strstr(readBuffer, "\r\n\r\n");
+        ULONG headerDelimLen = 4;
+        if (headerEnd == NULL) {
+            headerEnd = strstr(readBuffer, "\n\n");
+            headerDelimLen = 2;
+        }
+        if (headerEnd != NULL) {
+            body = headerEnd + headerDelimLen;
+        }
+        while (body != NULL && (*body == '\r' || *body == '\n' ||
+                                *body == ' ' || *body == '\t')) {
+            body++;
+        }
+        if (body != NULL) {
+            STRPTR objStart = strchr(body, '{');
+            STRPTR arrStart = strchr(body, '[');
+            if (objStart != NULL && arrStart != NULL) {
+                jsonStart = (objStart < arrStart) ? objStart : arrStart;
+            } else if (objStart != NULL) {
+                jsonStart = objStart;
+            } else if (arrStart != NULL) {
+                jsonStart = arrStart;
+            }
+        }
+    }
     if (jsonStart != NULL) {
         struct json_object *parsedResponse = json_tokener_parse(jsonStart);
         if (parsedResponse != NULL) {
