@@ -1755,3 +1755,93 @@ msgstr "Αποτυχία δημιουργίας παραθύρου Ρυθμίσ�
 msgctxt "STRING_MENU_TEMPLATE_OPENAI (315//)"
 msgid "OpenAI"
 msgstr "OpenAI"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_NEW (316//)"
+msgid "New"
+msgstr "New"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_DUPLICATE (317//)"
+msgid "Duplicate"
+msgstr "Duplicate"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST (318//)"
+msgid "Test"
+msgstr "Test"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_IMAGE_TEST_TITLE (319//)"
+msgid "Image Test"
+msgstr "Image Test"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_DEFAULT_NEW_PROFILE_NAME (320//)"
+msgid "New Profile"
+msgstr "New Profile"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_PROFILE_COPY_SUFFIX (321//)"
+msgid " copy"
+msgstr " copy"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_PASS (322//)"
+msgid "PASS"
+msgstr "PASS"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_FAIL (323//)"
+msgid "FAIL"
+msgstr "FAIL"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_RESULT_TITLE (324//)"
+msgid "Test Result"
+msgstr "Test Result"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_CHAT_TEST_RESULT_TITLE (325//)"
+msgid "Chat Test Result"
+msgstr "Chat Test Result"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_IMAGE_TEST_RESULT_TITLE (326//)"
+msgid "Image Test Result"
+msgstr "Image Test Result"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_NO_PROFILE_SELECTED (327//)"
+msgid "No profile selected."
+msgstr "No profile selected."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_RECEIVED_JSON_RESPONSE (328//)"
+msgid "Received JSON response."
+msgstr "Received JSON response."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_NO_JSON_RESPONSE_RECEIVED (329//)"
+msgid "No JSON response received."
+msgstr "No JSON response received."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_NO_IMAGE_DATA_RECEIVED_SHOWING_JSON (330//)"
+msgid "No image data received (showing JSON)."
+msgstr "No image data received (showing JSON)."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_IMAGE_DATA_DECODE_FAILED_SHOWING_JSON (331//)"
+msgid "Image data decode failed (showing JSON)."
+msgstr "Image data decode failed (showing JSON)."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_IMAGE_RECEIVED_COULD_NOT_SAVE_SHOWING_JSON (332//)"
+msgid "Image received but could not be saved (showing JSON)."
+msgstr "Image received but could not be saved (showing JSON)."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_ERROR_RESPONSE_RECEIVED (333//)"
+msgid "Error response received."
+msgstr "Error response received."
