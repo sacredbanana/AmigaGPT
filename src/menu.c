@@ -439,15 +439,7 @@ void createMenu() {
     MUIA_Menuitem_Title, STRING_IMAGE_PROVIDER_SETTINGS, MUIA_UserData,
     MENU_ITEM_IMAGE_PROVIDER_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
-    MUIA_UserData, MENU_ITEM_NULL, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2, MUIA_UserData,
-    MENU_ITEM_IMAGE_SIZE_DALL_E_2, MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3, MUIA_UserData,
-    MENU_ITEM_IMAGE_SIZE_DALL_E_3, MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1, MUIA_UserData,
-    MENU_ITEM_IMAGE_SIZE_GPT_IMAGE_1, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_UserData, MENU_ITEM_NULL, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, STRING_IMAGE_FORMAT,
     MUIA_UserData, MENU_ITEM_IMAGE_FORMAT, MUIA_Menuitem_CopyStrings, FALSE,
     End, End,
@@ -919,90 +911,6 @@ static void populateChatMenu() {
 static void populateImageMenu() {
     DoMethod(menuStrip, MUIM_Menustrip_InitChange);
 
-    Object *imageSizeDALL_E_2MenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_IMAGE_SIZE_DALL_E_2);
-
-    // Remove any existing image size items
-    Object *imageSizeDallE2MenuItem;
-    while (imageSizeDallE2MenuItem = (Object *)DoMethod(
-               imageSizeDALL_E_2MenuItem, MUIM_Family_GetChild)) {
-        DoMethod(imageSizeDALL_E_2MenuItem, MUIM_Family_Remove,
-                 imageSizeDallE2MenuItem);
-        DisposeObject(imageSizeDallE2MenuItem);
-    }
-
-    // Populate the image size menu with the sizes
-    for (UBYTE i = 0; IMAGE_SIZES_DALL_E_2[i] != IMAGE_SIZE_NULL; i++) {
-        ImageSize imageSize = IMAGE_SIZES_DALL_E_2[i];
-        Object *newImageSizeDallE2MenuItem = MenuitemObject,
-               MUIA_Menuitem_Title, IMAGE_SIZE_NAMES[imageSize],
-               MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
-               configGetImageSizeDallE2() == imageSize, MUIA_Menuitem_Exclude,
-               ~(1 << i), MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_CopyStrings,
-               FALSE, End;
-        DoMethod(imageSizeDALL_E_2MenuItem, MUIM_Family_AddTail,
-                 newImageSizeDallE2MenuItem);
-        DoMethod(newImageSizeDallE2MenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-                 TRUE, configObj, 3, MUIM_Set,
-                 MUIA_AmigaGPTConfig_ImageSizeDallE2, imageSize);
-    }
-
-    Object *imageSizeDALL_E_3MenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_IMAGE_SIZE_DALL_E_3);
-
-    // Remove any existing image size items
-    Object *imageSizeDallE3MenuItem;
-    while (imageSizeDallE3MenuItem = (Object *)DoMethod(
-               imageSizeDALL_E_3MenuItem, MUIM_Family_GetChild)) {
-        DoMethod(imageSizeDALL_E_3MenuItem, MUIM_Family_Remove,
-                 imageSizeDallE3MenuItem);
-        DisposeObject(imageSizeDallE3MenuItem);
-    }
-
-    // Populate the image size menu with the sizes
-    for (UBYTE i = 0; IMAGE_SIZES_DALL_E_3[i] != IMAGE_SIZE_NULL; i++) {
-        ImageSize imageSize = IMAGE_SIZES_DALL_E_3[i];
-        Object *newImageSizeDallE3MenuItem = MenuitemObject,
-               MUIA_Menuitem_Title, IMAGE_SIZE_NAMES[imageSize],
-               MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
-               configGetImageSizeDallE3() == imageSize, MUIA_Menuitem_Exclude,
-               ~(1 << i), MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_CopyStrings,
-               FALSE, End;
-        DoMethod(imageSizeDALL_E_3MenuItem, MUIM_Family_AddTail,
-                 newImageSizeDallE3MenuItem);
-        DoMethod(newImageSizeDallE3MenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-                 TRUE, configObj, 3, MUIM_Set,
-                 MUIA_AmigaGPTConfig_ImageSizeDallE3, imageSize);
-    }
-
-    Object *imageSizeGPT_IMAGE_1MenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_IMAGE_SIZE_GPT_IMAGE_1);
-
-    // Remove any existing image size items
-    Object *imageSizeGptImage1MenuItem;
-    while (imageSizeGptImage1MenuItem = (Object *)DoMethod(
-               imageSizeGPT_IMAGE_1MenuItem, MUIM_Family_GetChild)) {
-        DoMethod(imageSizeGPT_IMAGE_1MenuItem, MUIM_Family_Remove,
-                 imageSizeGptImage1MenuItem);
-        DisposeObject(imageSizeGptImage1MenuItem);
-    }
-
-    // Populate the image size menu with the sizes
-    for (UBYTE i = 0; IMAGE_SIZES_GPT_IMAGE_1[i] != IMAGE_SIZE_NULL; i++) {
-        ImageSize imageSize = IMAGE_SIZES_GPT_IMAGE_1[i];
-        Object *newImageSizeGptImage1MenuItem = MenuitemObject,
-               MUIA_Menuitem_Title, IMAGE_SIZE_NAMES[imageSize],
-               MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
-               configGetImageSizeGptImage1() == imageSize,
-               MUIA_Menuitem_Exclude, ~(1 << i), MUIA_Menuitem_Toggle, TRUE,
-               MUIA_Menuitem_CopyStrings, FALSE, End;
-        DoMethod(imageSizeGPT_IMAGE_1MenuItem, MUIM_Family_AddTail,
-                 newImageSizeGptImage1MenuItem);
-        DoMethod(newImageSizeGptImage1MenuItem, MUIM_Notify,
-                 MUIA_Menuitem_Checked, TRUE, configObj, 3, MUIM_Set,
-                 MUIA_AmigaGPTConfig_ImageSizeGptImage1, imageSize);
-    }
-
     Object *imageFormatMenuItem =
         (Object *)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_IMAGE_FORMAT);
 
@@ -1118,17 +1026,17 @@ static void populateArexxMenu() {
  * @brief Build a NP_Path list.
  * @param extraDirs[]: array of assigns/paths like "SYS:Utilities",
  *MOSSYS:Utilities"
- * @param addParent: if TRUE, duplicate the caller’s existing CLI path first
+ * @param addParent: if TRUE, duplicate the callerâs existing CLI path first
  * @returns BPTR to first node, or ZERO on failure (nothing allocated).
  **/
 static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent) {
     struct PathNodeCompat *head = NULL, *tail = NULL;
 
-// Optionally copy the caller’s current shell path (duplicates the locks).
+// Optionally copy the callerâs current shell path (duplicates the locks).
 #ifndef __AMIGAOS4__
     if (addParent) {
         struct CommandLineInterface *cli =
-            Cli(); // NULL if we’re not in a shell
+            Cli(); // NULL if weâre not in a shell
         if (cli && cli->cli_CommandDir) {
             for (struct PathNodeCompat *src =
                      (struct PathNodeCompat *)BADDR(cli->cli_CommandDir);
@@ -1179,7 +1087,7 @@ static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent) {
         tail = node;
     }
 
-    /* Note: current directory and C: are implicit; don’t add them yourself. */
+    /* Note: current directory and C: are implicit; donât add them yourself. */
     /* C: is always searched last, current dir always first.                 */ /*  */
 
     return MKBADDR(head);

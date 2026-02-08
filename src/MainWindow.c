@@ -262,9 +262,11 @@ static BOOL isStringInList(CONST_STRPTR str, CONST_STRPTR *list) {
 }
 
 HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
-    Provider imageProvider = configGetImageProvider();
-    STRPTR apiKey = configGetApiKeyForProvider(imageProvider);
-    if (apiKey == NULL || strlen(apiKey) == 0) {
+    struct ImageRequestSettings imageSettings;
+    configGetActiveImageRequestSettings(&imageSettings);
+    CONST_STRPTR apiKey = imageSettings.apiKey;
+    if (imageSettings.authorizationType != AUTHORIZATION_TYPE_NONE &&
+        (apiKey == NULL || strlen(apiKey) == 0)) {
         displayError(STRING_ERROR_NO_API_KEY);
         return;
     }
@@ -307,57 +309,15 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         imageSize = configGetImageSizeGptImage1();
         break;
     }
-    STRPTR imageModelName = configGetImageModelName();
-    if (imageModelName == NULL || strlen(imageModelName) == 0) {
-        switch (imageProvider) {
-        case PROVIDER_GEMINI:
-            imageModelName = (STRPTR)GEMINI_IMAGE_MODELS[0];
-            break;
-        case PROVIDER_GROK:
-            imageModelName = (STRPTR)GROK_IMAGE_MODELS[0];
-            break;
-        case PROVIDER_OPENAI:
-        case PROVIDER_CUSTOM:
-        default:
-            imageModelName = (STRPTR)OPENAI_IMAGE_MODELS[0];
-            break;
-        }
-    }
-
-    /* Resolve provider connection settings */
-    CONST_STRPTR host = NULL;
-    UWORD port = 443;
-    BOOL useSSL = TRUE;
-    CONST_STRPTR apiEndpointUrl = "v1";
-    AuthorizationType authType = AUTHORIZATION_TYPE_BEARER;
-    CONST_STRPTR customHeaders = NULL;
-
-    if (imageProvider == PROVIDER_CUSTOM) {
-        host = configGetCustomImageHost();
-        port = (UWORD)configGetCustomImagePort();
-        useSSL = configGetCustomImageUseSSL();
-        apiEndpointUrl = configGetCustomImageApiEndpointUrl();
-        authType = configGetCustomImageAuthorizationType();
-        customHeaders = configGetCustomImageHeaders();
-    } else {
-        struct ProviderConfig *cfg = getProviderConfig(imageProvider);
-        if (cfg != NULL) {
-            host = cfg->host;
-            port = (UWORD)cfg->port;
-            useSSL = cfg->useSSL;
-            apiEndpointUrl = cfg->apiEndpointUrl;
-            authType = cfg->authorizationType;
-            customHeaders = cfg->customHeaders;
-        }
-    }
-
-    struct json_object *response = postImageCreationRequestToOpenAIWithServer(
-        textUTF8, host, port, useSSL, apiEndpointUrl, authType, customHeaders,
-        imageModelName, imageSize, apiKey, configGetProxyEnabled(),
+    struct json_object *response = postImageCreationRequestToOpenAI(
+        textUTF8, imageSettings.host, imageSettings.port, imageSettings.useSSL,
+        imageSettings.apiEndpointUrl, imageSettings.authorizationType,
+        imageSettings.customHeaders, imageSettings.model, imageSize, apiKey,
+        configGetProxyEnabled(),
         configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
         configGetProxyRequiresAuth(), configGetProxyUsername(),
-        configGetProxyPassword(), configGetImageFormat(), imageProvider,
-        (APIEndpoint)configGetImageApiEndpoint());
+        configGetProxyPassword(), configGetImageFormat(),
+        imageSettings.imageApiEndpoint);
     CodesetsFreeA(textUTF8, NULL);
 
     if (response == NULL) {
@@ -412,28 +372,18 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     UBYTE *imageData = decodeBase64(b64, &data_len);
 
     CreateDir("AMIGAGPT:images");
+    /* Try to match file extension to actual bytes; fallback to user preference. */
     STRPTR imageFormat;
-    if (imageProvider == PROVIDER_GROK) {
-        /* xAI docs: generated image is jpg. */
-        imageFormat = "jpg";
-    } else if (imageProvider == PROVIDER_GEMINI) {
-        /* Gemini native image generation returns inlineData with mimeType
-         * "image/png" (see Gemini REST docs). */
+    if (data_len >= 8 && imageData[0] == 0x89 && imageData[1] == 0x50 &&
+        imageData[2] == 0x4E && imageData[3] == 0x47 &&
+        imageData[4] == 0x0D && imageData[5] == 0x0A &&
+        imageData[6] == 0x1A && imageData[7] == 0x0A) {
         imageFormat = "png";
+    } else if (data_len >= 3 && imageData[0] == 0xFF && imageData[1] == 0xD8 &&
+               imageData[2] == 0xFF) {
+        imageFormat = "jpg";
     } else {
-        /* Fall back to user preference, but try to match the actual bytes so
-         * the file extension is correct. */
-        if (data_len >= 8 && imageData[0] == 0x89 && imageData[1] == 0x50 &&
-            imageData[2] == 0x4E && imageData[3] == 0x47 &&
-            imageData[4] == 0x0D && imageData[5] == 0x0A &&
-            imageData[6] == 0x1A && imageData[7] == 0x0A) {
-            imageFormat = "png";
-        } else if (data_len >= 3 && imageData[0] == 0xFF &&
-                   imageData[1] == 0xD8 && imageData[2] == 0xFF) {
-            imageFormat = "jpg";
-        } else {
-            imageFormat = IMAGE_FORMAT_NAMES[configGetImageFormat()];
-        }
+        imageFormat = IMAGE_FORMAT_NAMES[configGetImageFormat()];
     }
 
     // Generate unique ID for the image
@@ -496,9 +446,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     }
 
     updateStatusBar(STRING_GENERATING_IMAGE_NAME, 7);
-    Provider nameProvider = configGetChatProvider();
     struct ChatRequestSettings nameSettings;
-    configGetChatRequestSettings(&nameSettings, nameProvider);
+    configGetActiveChatRequestSettings(&nameSettings);
     nameSettings.webSearchEnabled = FALSE;
     /* Image title generation must use a chat-capable model. If the user has
      * (accidentally) selected an image model as their chat model, fall back to
@@ -506,36 +455,28 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     CONST_STRPTR titleModel = nameSettings.model;
     if (titleModel != NULL && strlen(titleModel) > 0) {
         BOOL isImageModel = FALSE;
-        switch (nameProvider) {
-        case PROVIDER_OPENAI:
+        if (nameSettings.host != NULL &&
+            strcmp(nameSettings.host, "api.openai.com") == 0) {
             isImageModel = isStringInList(titleModel, OPENAI_IMAGE_MODELS);
-            break;
-        case PROVIDER_GEMINI:
+        } else if (nameSettings.host != NULL &&
+                   strcmp(nameSettings.host,
+                          "generativelanguage.googleapis.com") == 0) {
             isImageModel = isStringInList(titleModel, GEMINI_IMAGE_MODELS);
-            break;
-        case PROVIDER_GROK:
+        } else if (nameSettings.host != NULL &&
+                   strcmp(nameSettings.host, "api.x.ai") == 0) {
             isImageModel = isStringInList(titleModel, GROK_IMAGE_MODELS);
-            break;
-        case PROVIDER_ANTHROPIC:
-        case PROVIDER_CUSTOM:
-        default:
-            isImageModel = FALSE;
-            break;
         }
         if (isImageModel) {
-            switch (nameProvider) {
-            case PROVIDER_OPENAI:
+            if (nameSettings.host != NULL &&
+                strcmp(nameSettings.host, "api.openai.com") == 0) {
                 titleModel = "gpt-5-chat-latest";
-                break;
-            case PROVIDER_GEMINI:
+            } else if (nameSettings.host != NULL &&
+                       strcmp(nameSettings.host,
+                              "generativelanguage.googleapis.com") == 0) {
                 titleModel = "gemini-2.5-flash";
-                break;
-            case PROVIDER_GROK:
+            } else if (nameSettings.host != NULL &&
+                       strcmp(nameSettings.host, "api.x.ai") == 0) {
                 titleModel = "grok-4";
-                break;
-            default:
-                /* Leave as-is for providers we can't validate */
-                break;
             }
         }
     }
@@ -1462,9 +1403,8 @@ static void sendChatMessage() {
     ULONG speechIndex = 0;
     UWORD wordNumber = 0;
     UWORD chunkCounter = 0;
-    Provider chatProvider = configGetChatProvider();
     struct ChatRequestSettings chatSettings;
-    configGetChatRequestSettings(&chatSettings, chatProvider);
+    configGetActiveChatRequestSettings(&chatSettings);
 
     strncat(chatOutputTextEditorContents, "\n", 1);
 
@@ -1803,7 +1743,7 @@ static void sendChatMessage() {
 
             /* No more tool calls - get the final response text */
             UTF8 *toolContentString = getMessageContentFromJson(
-                toolResponse, FALSE, FALSE, API_ENDPOINT_RESPONSES);
+                toolResponse, FALSE, FALSE, API_CHAT_ENDPOINT_RESPONSES);
             if (toolContentString != NULL && strlen(toolContentString) > 0) {
                 /* Append to the received message */
                 strncat(receivedMessage, toolContentString,

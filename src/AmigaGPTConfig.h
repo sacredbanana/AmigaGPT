@@ -7,7 +7,7 @@
 #include "speech.h"
 
 /* Config version - increment when schema changes to trigger migration */
-#define CONFIG_SCHEMA_VERSION 3
+#define CONFIG_SCHEMA_VERSION 4
 
 /* Legacy version tracking for enum-based models (deprecated) */
 #define CHAT_MODEL_SET_VERSION 10
@@ -89,8 +89,6 @@
 #define MUIA_AmigaGPTConfig_CustomHeaders (AmigaGPTConfig_Dummy + 0x31)
 #define MUIA_AmigaGPTConfig_CustomServerProfiles (AmigaGPTConfig_Dummy + 0x32)
 #define MUIA_AmigaGPTConfig_ActiveProfileName (AmigaGPTConfig_Dummy + 0x33)
-#define MUIA_AmigaGPTConfig_ChatProvider (AmigaGPTConfig_Dummy + 0x34)
-#define MUIA_AmigaGPTConfig_ImageProvider (AmigaGPTConfig_Dummy + 0x35)
 #define MUIA_AmigaGPTConfig_ChatModelName (AmigaGPTConfig_Dummy + 0x36)
 #define MUIA_AmigaGPTConfig_ImageModelName (AmigaGPTConfig_Dummy + 0x37)
 #define MUIA_AmigaGPTConfig_GeminiApiKey (AmigaGPTConfig_Dummy + 0x38)
@@ -284,9 +282,9 @@ void configSetImageSizeDallE3(ImageSize value);
 ImageSize configGetImageSizeGptImage1(void);
 void configSetImageSizeGptImage1(ImageSize value);
 ImageFormat configGetImageFormat(void);
-ULONG configGetImageApiEndpoint(void);
+APIImageEndpoint configGetImageApiEndpoint(void);
 void configSetImageFormat(ImageFormat value);
-void configSetImageApiEndpoint(ULONG value);
+void configSetImageApiEndpoint(APIImageEndpoint value);
 
 /* OpenAI TTS settings */
 OpenAITTSModel configGetOpenAITTSModel(void);
@@ -343,8 +341,8 @@ STRPTR configGetCustomApiKey(void);
 void configSetCustomApiKey(CONST_STRPTR value);
 STRPTR configGetCustomChatModel(void);
 void configSetCustomChatModel(CONST_STRPTR value);
-APIEndpoint configGetCustomApiEndpoint(void);
-void configSetCustomApiEndpoint(APIEndpoint value);
+APIChatEndpoint configGetCustomApiEndpoint(void);
+void configSetCustomApiEndpoint(APIChatEndpoint value);
 STRPTR configGetCustomApiEndpointUrl(void);
 void configSetCustomApiEndpointUrl(CONST_STRPTR value);
 AuthorizationType configGetCustomAuthorizationType(void);
@@ -355,6 +353,8 @@ STRPTR configGetCustomServerProfiles(void);
 void configSetCustomServerProfiles(CONST_STRPTR value);
 STRPTR configGetActiveProfileName(void);
 void configSetActiveProfileName(CONST_STRPTR value);
+BOOL configGetCustomChatStreamEnabled(void);
+void configSetCustomChatStreamEnabled(BOOL enabled);
 
 /* Custom image provider settings (separate from chat custom provider) */
 STRPTR configGetCustomImageHost(void);
@@ -390,24 +390,9 @@ void configSetElevenLabsModel(CONST_STRPTR value);
 STRPTR configGetElevenLabsModelName(void);
 void configSetElevenLabsModelName(CONST_STRPTR value);
 
-/* Provider settings */
-Provider configGetChatProvider(void);
-void configSetChatProvider(Provider value);
-Provider configGetImageProvider(void);
-void configSetImageProvider(Provider value);
-STRPTR configGetChatModelName(void);
-void configSetChatModelName(CONST_STRPTR value);
-STRPTR configGetChatModelNameForProvider(Provider provider);
-void configSetChatModelNameForProvider(Provider provider, CONST_STRPTR value);
-BOOL configGetChatStreamingEnabledForProvider(Provider provider);
-void configSetChatStreamingEnabledForProvider(Provider provider, BOOL enabled);
-BOOL configGetCustomChatStreamEnabled(void);
-void configSetCustomChatStreamEnabled(BOOL enabled);
-
-/* Chat request settings helper */
+/* Active chat request settings helper (driven by active profile name) */
 struct ChatRequestSettings {
-    Provider provider;
-    BOOL isCustomProvider;
+    CONST_STRPTR profileName;
     STRPTR host;
     UWORD port;
     BOOL useSSL;
@@ -422,18 +407,15 @@ struct ChatRequestSettings {
     STRPTR proxyUsername;
     STRPTR proxyPassword;
     BOOL webSearchEnabled;
-    APIEndpoint apiEndpoint;
+    APIChatEndpoint apiEndpoint;
     CONST_STRPTR apiEndpointUrl;
     AuthorizationType authorizationType;
     CONST_STRPTR customHeaders;
 };
 
-void configGetChatRequestSettings(struct ChatRequestSettings *out,
-                                  Provider provider);
+void configGetActiveChatRequestSettings(struct ChatRequestSettings *out);
 void configGetChatRequestSettingsWithStreamOverride(
-    struct ChatRequestSettings *out, Provider provider, BOOL streamOverride);
-void configGetChatRequestSettingsForCurrentProvider(
-    struct ChatRequestSettings *out);
+    struct ChatRequestSettings *out, BOOL streamOverride);
 STRPTR configGetImageModelName(void);
 void configSetImageModelName(CONST_STRPTR value);
 
@@ -445,11 +427,27 @@ void configSetGrokApiKey(CONST_STRPTR value);
 STRPTR configGetAnthropicApiKey(void);
 void configSetAnthropicApiKey(CONST_STRPTR value);
 
-/**
- * Get the API key for a specific provider
- * @param provider the provider to get the API key for
- * @return the API key or NULL
- */
-STRPTR configGetApiKeyForProvider(Provider provider);
+/* Image request settings helper (driven by active image profile name) */
+struct ImageRequestSettings {
+    CONST_STRPTR profileName;
+    STRPTR host;
+    UWORD port;
+    BOOL useSSL;
+    CONST_STRPTR model;
+    CONST_STRPTR apiKey;
+    BOOL useProxy;
+    STRPTR proxyHost;
+    UWORD proxyPort;
+    BOOL proxyUsesSSL;
+    BOOL proxyRequiresAuth;
+    STRPTR proxyUsername;
+    STRPTR proxyPassword;
+    CONST_STRPTR apiEndpointUrl;
+    AuthorizationType authorizationType;
+    CONST_STRPTR customHeaders;
+    APIImageEndpoint imageApiEndpoint;
+};
+
+void configGetActiveImageRequestSettings(struct ImageRequestSettings *out);
 
 #endif /* AMIGAGPTCONFIG_H */

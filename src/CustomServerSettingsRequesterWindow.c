@@ -29,6 +29,7 @@ Object *customServerApiKeyString;
 Object *customServerChatModelString;
 Object *customServerModelList;
 Object *customServerFetchModelsButton;
+Object *customServerImageSizeCycle;
 Object *customServerApiEndpointCycle;
 Object *customServerApiEndpointUrlString;
 Object *customServerCustomHeadersString;
@@ -43,8 +44,8 @@ Object *customServerDeleteProfileButton;
 
 /* Profiles list entry (so names can update live from JSON) */
 typedef struct ProfileListEntry {
-    BOOL isBuiltin;
-    Provider provider;
+    BOOL isLocked;
+    LONG lockedIndex;            /* 0..n-1 for locked profiles */
     struct json_object *profile; /* only for custom profiles */
 } ProfileListEntry;
 
@@ -52,25 +53,70 @@ typedef struct ProfileListEntry {
 static Object *customServerSettingsRootGroup = NULL;
 /* Frame group containing the Streaming option (chat-only) */
 static Object *customServerStreamingGroup = NULL;
+/* Frame group containing Image Size (image-only) */
+static Object *customServerImageSizeGroup = NULL;
 
 /* API endpoint options (chat vs image) */
 static STRPTR chatApiEndpointOptions[6] = {NULL};
 static STRPTR imageApiEndpointOptions[3] = {NULL};
+static STRPTR imageSizeOptions[12] = {NULL};
+static const ImageSize imageSizeOptionValues[] = {
+    IMAGE_SIZE_NULL,      IMAGE_SIZE_256x256,   IMAGE_SIZE_512x512,
+    IMAGE_SIZE_1024x1024, IMAGE_SIZE_1792x1024, IMAGE_SIZE_1024x1792,
+    IMAGE_SIZE_1536x1024, IMAGE_SIZE_1024x1536, IMAGE_SIZE_AUTO};
+
+static LONG imageSizeToOptionIndex(ImageSize size) {
+    for (LONG i = 0; i < (LONG)(sizeof(imageSizeOptionValues) /
+                                sizeof(imageSizeOptionValues[0]));
+         i++) {
+        if (imageSizeOptionValues[i] == size)
+            return i;
+    }
+    return 0; /* None */
+}
+
+static ImageSize optionIndexToImageSize(LONG idx) {
+    LONG count = (LONG)(sizeof(imageSizeOptionValues) /
+                        sizeof(imageSizeOptionValues[0]));
+    if (idx < 0 || idx >= count)
+        return IMAGE_SIZE_NULL;
+    return imageSizeOptionValues[idx];
+}
 
 static struct json_object *customServerModelsJson = NULL;
 static struct json_object *profilesJson = NULL;
 
 /* In-window pending (not persisted until OK) */
-static STRPTR pendingBuiltinApiKeys[PROVIDER_COUNT] = {0};
-static STRPTR pendingBuiltinChatModels[PROVIDER_COUNT] = {0};
-static BOOL pendingBuiltinStreaming[PROVIDER_COUNT] = {0};
+#define LOCKED_PROFILE_OPENAI 0
+#define LOCKED_PROFILE_GEMINI 1
+#define LOCKED_PROFILE_GROK 2
+#define LOCKED_PROFILE_ANTHROPIC 3
+#define LOCKED_CHAT_PROFILE_COUNT 4
+#define LOCKED_IMAGE_PROFILE_COUNT 3 /* OpenAI, Gemini, Grok */
+
+static STRPTR pendingLockedApiKeys[LOCKED_CHAT_PROFILE_COUNT] = {0};
+static STRPTR pendingLockedChatModels[LOCKED_CHAT_PROFILE_COUNT] = {0};
+static BOOL pendingLockedStreaming[LOCKED_CHAT_PROFILE_COUNT] = {0};
 static STRPTR pendingImageModelName = NULL; /* image model name is global */
+static LONG pendingImageModelLockedIndex = -1; /* which locked image profile */
+static ImageSize pendingImageSize = IMAGE_SIZE_1024x1024;
+static LONG pendingImageSizeLockedIndex = -1; /* which locked image profile */
 
 static BOOL profileSettingsDirty = FALSE;
 static LONG lastSelectedProfile = -1;
 static BOOL loadingProfile = FALSE;
 static BOOL settingsIsImageMode = FALSE;
 static BOOL suppressProfileSelected = FALSE;
+
+/* Stable (non-localized) locked profile names for persistence/matching */
+static const CONST_STRPTR LOCKED_PROFILE_NAMES[LOCKED_CHAT_PROFILE_COUNT] = {
+    "OpenAI", "Google Gemini", "xAI Grok", "Anthropic Claude"};
+
+static CONST_STRPTR getLockedProfileName(LONG lockedIndex) {
+    if (lockedIndex < 0 || lockedIndex >= LOCKED_CHAT_PROFILE_COUNT)
+        return NULL;
+    return LOCKED_PROFILE_NAMES[lockedIndex];
+}
 
 /* Forward declarations */
 static void populateModelList(void);
@@ -320,17 +366,17 @@ static STRPTR dupStrLocal(CONST_STRPTR s) {
     return out;
 }
 
-static void freePendingBuiltins(void) {
-    for (int i = 0; i < PROVIDER_COUNT; i++) {
-        if (pendingBuiltinApiKeys[i] != NULL) {
-            FreeVec(pendingBuiltinApiKeys[i]);
-            pendingBuiltinApiKeys[i] = NULL;
+static void freePendingLockedProfiles(void) {
+    for (int i = 0; i < LOCKED_CHAT_PROFILE_COUNT; i++) {
+        if (pendingLockedApiKeys[i] != NULL) {
+            FreeVec(pendingLockedApiKeys[i]);
+            pendingLockedApiKeys[i] = NULL;
         }
-        if (pendingBuiltinChatModels[i] != NULL) {
-            FreeVec(pendingBuiltinChatModels[i]);
-            pendingBuiltinChatModels[i] = NULL;
+        if (pendingLockedChatModels[i] != NULL) {
+            FreeVec(pendingLockedChatModels[i]);
+            pendingLockedChatModels[i] = NULL;
         }
-        pendingBuiltinStreaming[i] = FALSE;
+        pendingLockedStreaming[i] = FALSE;
     }
     if (pendingImageModelName != NULL) {
         FreeVec(pendingImageModelName);
@@ -338,61 +384,92 @@ static void freePendingBuiltins(void) {
     }
 }
 
-static void loadPendingBuiltinsFromConfig(void) {
-    freePendingBuiltins();
+static void loadPendingLockedProfilesFromConfig(void) {
+    freePendingLockedProfiles();
 
-    pendingBuiltinApiKeys[PROVIDER_OPENAI] =
+    pendingLockedApiKeys[LOCKED_PROFILE_OPENAI] =
         dupStrLocal(configGetOpenAiApiKey());
-    pendingBuiltinApiKeys[PROVIDER_GEMINI] =
+    pendingLockedApiKeys[LOCKED_PROFILE_GEMINI] =
         dupStrLocal(configGetGeminiApiKey());
-    pendingBuiltinApiKeys[PROVIDER_GROK] = dupStrLocal(configGetGrokApiKey());
-    pendingBuiltinApiKeys[PROVIDER_ANTHROPIC] =
+    pendingLockedApiKeys[LOCKED_PROFILE_GROK] =
+        dupStrLocal(configGetGrokApiKey());
+    pendingLockedApiKeys[LOCKED_PROFILE_ANTHROPIC] =
         dupStrLocal(configGetAnthropicApiKey());
 
-    pendingBuiltinChatModels[PROVIDER_OPENAI] =
-        dupStrLocal(configGetChatModelNameForProvider(PROVIDER_OPENAI));
-    pendingBuiltinChatModels[PROVIDER_GEMINI] =
-        dupStrLocal(configGetChatModelNameForProvider(PROVIDER_GEMINI));
-    pendingBuiltinChatModels[PROVIDER_GROK] =
-        dupStrLocal(configGetChatModelNameForProvider(PROVIDER_GROK));
-    pendingBuiltinChatModels[PROVIDER_ANTHROPIC] =
-        dupStrLocal(configGetChatModelNameForProvider(PROVIDER_ANTHROPIC));
+    /* Per-locked-profile chat model names */
+    STRPTR val = NULL;
+    if (configObj) {
+        get(configObj, MUIA_AmigaGPTConfig_OpenAiChatModelName, &val);
+        pendingLockedChatModels[LOCKED_PROFILE_OPENAI] = dupStrLocal(val);
+        val = NULL;
+        get(configObj, MUIA_AmigaGPTConfig_GeminiChatModelName, &val);
+        pendingLockedChatModels[LOCKED_PROFILE_GEMINI] = dupStrLocal(val);
+        val = NULL;
+        get(configObj, MUIA_AmigaGPTConfig_GrokChatModelName, &val);
+        pendingLockedChatModels[LOCKED_PROFILE_GROK] = dupStrLocal(val);
+        val = NULL;
+        get(configObj, MUIA_AmigaGPTConfig_AnthropicChatModelName, &val);
+        pendingLockedChatModels[LOCKED_PROFILE_ANTHROPIC] = dupStrLocal(val);
+    }
 
-    pendingBuiltinStreaming[PROVIDER_OPENAI] =
-        configGetChatStreamingEnabledForProvider(PROVIDER_OPENAI);
-    pendingBuiltinStreaming[PROVIDER_GEMINI] =
-        configGetChatStreamingEnabledForProvider(PROVIDER_GEMINI);
-    pendingBuiltinStreaming[PROVIDER_GROK] =
-        configGetChatStreamingEnabledForProvider(PROVIDER_GROK);
-    pendingBuiltinStreaming[PROVIDER_ANTHROPIC] =
-        configGetChatStreamingEnabledForProvider(PROVIDER_ANTHROPIC);
+    /* Per-locked-profile streaming (chat only) */
+    {
+        ULONG v = TRUE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_OpenAiChatStreamEnabled, &v);
+        pendingLockedStreaming[LOCKED_PROFILE_OPENAI] = (BOOL)v;
+        v = TRUE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_GeminiChatStreamEnabled, &v);
+        pendingLockedStreaming[LOCKED_PROFILE_GEMINI] = (BOOL)v;
+        v = TRUE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_GrokChatStreamEnabled, &v);
+        pendingLockedStreaming[LOCKED_PROFILE_GROK] = (BOOL)v;
+        v = FALSE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled, &v);
+        pendingLockedStreaming[LOCKED_PROFILE_ANTHROPIC] = (BOOL)v;
+    }
 
     pendingImageModelName = dupStrLocal(configGetImageModelName());
+    pendingImageSize = configGetImageSizeDallE3();
+
+    /* The global image model name applies to whichever locked image profile is
+     * currently active. Track that so switching profiles in the UI doesn't
+     * incorrectly show the same model for all locked profiles. */
+    pendingImageModelLockedIndex = -1;
+    pendingImageSizeLockedIndex = -1;
+    {
+        STRPTR activeImageProfile = configGetActiveImageProfileName();
+        if (activeImageProfile != NULL && strlen(activeImageProfile) > 0) {
+            for (LONG li = 0; li < LOCKED_IMAGE_PROFILE_COUNT; li++) {
+                CONST_STRPTR lockedName = getLockedProfileName(li);
+                if (lockedName != NULL &&
+                    strcmp(lockedName, activeImageProfile) == 0) {
+                    pendingImageModelLockedIndex = li;
+                    pendingImageSizeLockedIndex = li;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 /* Number of built-in providers shown in the profile list.
  * Chat mode: OpenAI, Gemini, Grok, Anthropic (4)
  * Image mode: OpenAI, Gemini, Grok (3) */
-static LONG getBuiltinProviderCount(void) {
-    return settingsIsImageMode ? 3 : 4;
+static LONG getLockedProfileCount(void) {
+    return settingsIsImageMode ? LOCKED_IMAGE_PROFILE_COUNT
+                               : LOCKED_CHAT_PROFILE_COUNT;
 }
 
 /**
  * Check if a list index corresponds to a built-in provider
  * Index 0..builtinCount-1 = built-in providers, builtinCount+ = custom profiles
  */
-static BOOL isBuiltinProviderIndex(LONG index) {
-    return (index >= 0 && index < getBuiltinProviderCount());
-}
-
-/**
- * Get the Provider enum value from a list index
- * Returns -1 if not a built-in provider
- */
-static LONG getProviderFromIndex(LONG index) {
-    if (index < 0 || index >= getBuiltinProviderCount())
-        return -1;
-    return index; /* PROVIDER_OPENAI=0, PROVIDER_GEMINI=1, etc. */
+static BOOL isLockedProfileListIndex(LONG index) {
+    return (index >= 0 && index < getLockedProfileCount());
 }
 
 /**
@@ -424,95 +501,129 @@ static void setServerSettingsGadgetsEnabled(BOOL enabled) {
 }
 
 /**
- * Load built-in provider settings into UI
+ * Load locked (hardcoded) profile settings into UI.
+ * These profiles are non-deletable and have fixed connection defaults.
  */
-static void loadBuiltinProviderIntoUI(Provider provider) {
-    PSDPRINTF("loadBuiltinProviderIntoUI enter provider=%ld imageMode=%ld",
-              (long)provider, (long)settingsIsImageMode);
-    struct ProviderConfig *config = getProviderConfig(provider);
-    if (config == NULL)
-        return;
+static void loadLockedProfileIntoUI(LONG lockedIndex) {
+    PSDPRINTF("loadLockedProfileIntoUI enter lockedIndex=%ld imageMode=%ld",
+              (long)lockedIndex, (long)settingsIsImageMode);
 
-    set(customServerHostString, MUIA_String_Contents,
-        config->host ? config->host : "");
-    set(customServerPortString, MUIA_String_Integer, (LONG)config->port);
-    set(customServerUsesSSLCycle, MUIA_Cycle_Active, config->useSSL ? 1 : 0);
-    set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active,
-        (LONG)config->authorizationType);
+    /* Connection defaults */
+    CONST_STRPTR host = "";
+    LONG port = 443;
+    BOOL useSSL = TRUE;
+    AuthorizationType authType = AUTHORIZATION_TYPE_BEARER;
+    APIChatEndpoint chatEndpoint = API_CHAT_ENDPOINT_RESPONSES;
+    CONST_STRPTR endpointUrl = "v1";
+    CONST_STRPTR headers = "";
+
+    switch (lockedIndex) {
+    case LOCKED_PROFILE_OPENAI:
+        host = "api.openai.com";
+        chatEndpoint = API_CHAT_ENDPOINT_RESPONSES;
+        authType = AUTHORIZATION_TYPE_BEARER;
+        endpointUrl = "v1";
+        headers = "";
+        break;
+    case LOCKED_PROFILE_GEMINI:
+        host = "generativelanguage.googleapis.com";
+        chatEndpoint = API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT;
+        authType = AUTHORIZATION_TYPE_X_GOOGLE_API_KEY;
+        endpointUrl = "v1beta";
+        headers = "";
+        break;
+    case LOCKED_PROFILE_GROK:
+        host = "api.x.ai";
+        chatEndpoint = API_CHAT_ENDPOINT_RESPONSES;
+        authType = AUTHORIZATION_TYPE_BEARER;
+        endpointUrl = "v1";
+        headers = "";
+        break;
+    case LOCKED_PROFILE_ANTHROPIC:
+    default:
+        host = "api.anthropic.com";
+        chatEndpoint = API_CHAT_ENDPOINT_MESSAGES;
+        authType = AUTHORIZATION_TYPE_X_API_KEY;
+        endpointUrl = "v1";
+        headers = "anthropic-version: 2023-06-01";
+        break;
+    }
+
+    set(customServerHostString, MUIA_String_Contents, host);
+    set(customServerPortString, MUIA_String_Integer, port);
+    set(customServerUsesSSLCycle, MUIA_Cycle_Active, useSSL ? 1 : 0);
+    set(customServerAuthorizationTypeCycle, MUIA_Cycle_Active, (LONG)authType);
     updateApiKeyEnabledFromAuthType();
+
     if (!settingsIsImageMode) {
         set(customServerApiEndpointCycle, MUIA_Cycle_Active,
-            (LONG)config->apiEndpoint);
+            (LONG)chatEndpoint);
     } else if (customServerApiEndpointCycle != NULL) {
-        /* Image endpoint defaults:
-         * - Gemini: native generateContent
-         * - Others: images/generations
-         * If Gemini is currently the selected image provider, load the saved
-         * endpoint; otherwise default to native for the Gemini profile. */
-        LONG active = 0;
-        if (provider == PROVIDER_GEMINI) {
-            if (configGetImageProvider() == PROVIDER_GEMINI) {
-                active = (configGetImageApiEndpoint() ==
-                          (ULONG)API_ENDPOINT_GEMINI_GENERATE_CONTENT)
-                             ? 1
-                             : 0;
-            } else {
-                active = 1;
-            }
-        } else {
-            active = 0;
-        }
-        set(customServerApiEndpointCycle, MUIA_Cycle_Active, active);
+        /* Image endpoint cycle: 0=OpenAI images/generations, 1=Gemini native */
+        set(customServerApiEndpointCycle, MUIA_Cycle_Active,
+            (lockedIndex == LOCKED_PROFILE_GEMINI) ? 1 : 0);
     }
-    set(customServerApiEndpointUrlString, MUIA_String_Contents,
-        config->apiEndpointUrl ? config->apiEndpointUrl : "v1");
-    set(customServerCustomHeadersString, MUIA_String_Contents,
-        config->customHeaders ? config->customHeaders : "");
+    set(customServerApiEndpointUrlString, MUIA_String_Contents, endpointUrl);
+    set(customServerCustomHeadersString, MUIA_String_Contents, headers);
+
     if (!settingsIsImageMode && customServerStreamingCycle != NULL) {
         set(customServerStreamingCycle, MUIA_Cycle_Active,
-            pendingBuiltinStreaming[provider] ? 1 : 0);
+            pendingLockedStreaming[lockedIndex] ? 1 : 0);
+    }
+    if (settingsIsImageMode && customServerImageSizeCycle != NULL) {
+        ImageSize defaultSize = IMAGE_SIZE_1024x1024;
+        /* Default to None for providers that don't support size. */
+        if (lockedIndex == LOCKED_PROFILE_GEMINI ||
+            lockedIndex == LOCKED_PROFILE_GROK) {
+            defaultSize = IMAGE_SIZE_NULL;
+        }
+        ImageSize sizeToShow =
+            (pendingImageSizeLockedIndex == lockedIndex) ? pendingImageSize
+                                                         : defaultSize;
+        set(customServerImageSizeCycle, MUIA_Cycle_Active,
+            imageSizeToOptionIndex(sizeToShow));
     }
 
-    /* Load API key for this provider */
-    STRPTR apiKey = pendingBuiltinApiKeys[provider];
+    /* API key + model */
+    STRPTR apiKey = pendingLockedApiKeys[lockedIndex];
     set(customServerApiKeyString, MUIA_String_Contents, apiKey ? apiKey : "");
 
-    /* Load the saved model */
     STRPTR modelName = NULL;
     CONST_STRPTR *modelList = NULL;
     if (settingsIsImageMode) {
-        modelName = pendingImageModelName;
-        switch (provider) {
-        case PROVIDER_OPENAI:
-            modelList = OPENAI_IMAGE_MODELS;
-            break;
-        case PROVIDER_GEMINI:
+        switch (lockedIndex) {
+        case LOCKED_PROFILE_GEMINI:
             modelList = GEMINI_IMAGE_MODELS;
             break;
-        case PROVIDER_GROK:
+        case LOCKED_PROFILE_GROK:
             modelList = GROK_IMAGE_MODELS;
             break;
+        case LOCKED_PROFILE_OPENAI:
         default:
             modelList = OPENAI_IMAGE_MODELS;
             break;
         }
+        /* Show the saved global image model only for the currently-active
+         * locked image profile (it may be a newer model not in our list). */
+        if (pendingImageModelLockedIndex == lockedIndex &&
+            pendingImageModelName != NULL && strlen(pendingImageModelName) > 0) {
+            modelName = pendingImageModelName;
+        }
     } else {
-        modelName = pendingBuiltinChatModels[provider];
-        switch (provider) {
-        case PROVIDER_OPENAI:
-            modelList = OPENAI_CHAT_MODELS;
-            break;
-        case PROVIDER_GEMINI:
+        modelName = pendingLockedChatModels[lockedIndex];
+        switch (lockedIndex) {
+        case LOCKED_PROFILE_GEMINI:
             modelList = GEMINI_CHAT_MODELS;
             break;
-        case PROVIDER_GROK:
+        case LOCKED_PROFILE_GROK:
             modelList = GROK_CHAT_MODELS;
             break;
-        case PROVIDER_ANTHROPIC:
+        case LOCKED_PROFILE_ANTHROPIC:
             modelList = ANTHROPIC_CHAT_MODELS;
             break;
+        case LOCKED_PROFILE_OPENAI:
         default:
-            modelList = NULL;
+            modelList = OPENAI_CHAT_MODELS;
             break;
         }
     }
@@ -523,7 +634,7 @@ static void loadBuiltinProviderIntoUI(Provider provider) {
                strlen(modelList[0]) > 0) {
         set(customServerChatModelString, MUIA_String_Contents, modelList[0]);
     }
-    PSDPRINTF("loadBuiltinProviderIntoUI exit");
+    PSDPRINTF("loadLockedProfileIntoUI exit");
 }
 
 /**
@@ -541,25 +652,25 @@ static void populateProfileList(LONG forceActive) {
 
     DoMethod(customServerProfileList, MUIM_NList_Clear);
 
-    /* Add built-in providers (non-deletable) */
+    /* Add locked (hardcoded) profiles (non-deletable) */
     {
         ProfileListEntry e = {0};
-        e.isBuiltin = TRUE;
+        e.isLocked = TRUE;
 
-        e.provider = PROVIDER_OPENAI;
+        e.lockedIndex = LOCKED_PROFILE_OPENAI;
         DoMethod(customServerProfileList, MUIM_NList_InsertSingle, (ULONG)&e,
                  MUIV_NList_Insert_Bottom);
-        e.provider = PROVIDER_GEMINI;
+        e.lockedIndex = LOCKED_PROFILE_GEMINI;
         DoMethod(customServerProfileList, MUIM_NList_InsertSingle, (ULONG)&e,
                  MUIV_NList_Insert_Bottom);
-        e.provider = PROVIDER_GROK;
+        e.lockedIndex = LOCKED_PROFILE_GROK;
         DoMethod(customServerProfileList, MUIM_NList_InsertSingle, (ULONG)&e,
                  MUIV_NList_Insert_Bottom);
     }
     if (!settingsIsImageMode) {
         ProfileListEntry e = {0};
-        e.isBuiltin = TRUE;
-        e.provider = PROVIDER_ANTHROPIC;
+        e.isLocked = TRUE;
+        e.lockedIndex = LOCKED_PROFILE_ANTHROPIC;
         DoMethod(customServerProfileList, MUIM_NList_InsertSingle, (ULONG)&e,
                  MUIV_NList_Insert_Bottom);
     }
@@ -573,7 +684,8 @@ static void populateProfileList(LONG forceActive) {
                 json_object_array_get_idx(profilesJson, i);
             if (profile != NULL) {
                 ProfileListEntry e = {0};
-                e.isBuiltin = FALSE;
+                e.isLocked = FALSE;
+                e.lockedIndex = -1;
                 e.profile = profile;
                 DoMethod(customServerProfileList, MUIM_NList_InsertSingle,
                          (ULONG)&e, MUIV_NList_Insert_Bottom);
@@ -581,49 +693,44 @@ static void populateProfileList(LONG forceActive) {
         }
     }
 
-    /* Select based on current provider for this window mode, or use forced
+    /* Select based on active profile name for this window mode, or use forced
      * index */
     if (forceActive >= 0) {
         set(customServerProfileList, MUIA_NList_Active, forceActive);
     } else {
-        Provider currentProvider = settingsIsImageMode
-                                       ? configGetImageProvider()
-                                       : configGetChatProvider();
-        if (settingsIsImageMode && currentProvider == PROVIDER_ANTHROPIC) {
-            currentProvider = PROVIDER_OPENAI;
-        }
-        if (currentProvider < PROVIDER_CUSTOM &&
-            currentProvider < (Provider)getBuiltinProviderCount()) {
-            set(customServerProfileList, MUIA_NList_Active, currentProvider);
-        } else {
-            STRPTR activeProfile = settingsIsImageMode
-                                       ? configGetActiveImageProfileName()
-                                       : configGetActiveProfileName();
-            if (activeProfile != NULL && strlen(activeProfile) > 0) {
-                if (customServerProfileNameString != NULL)
-                    set(customServerProfileNameString, MUIA_String_Contents,
-                        activeProfile);
-                if (profilesJson != NULL) {
-                    int len = json_object_array_length(profilesJson);
-                    for (int i = 0; i < len; i++) {
-                        struct json_object *profile =
-                            json_object_array_get_idx(profilesJson, i);
-                        struct json_object *nameObj =
-                            json_object_object_get(profile, "name");
-                        if (nameObj != NULL) {
-                            CONST_STRPTR name = json_object_get_string(nameObj);
-                            if (name != NULL &&
-                                strcmp(name, activeProfile) == 0) {
-                                set(customServerProfileList, MUIA_NList_Active,
-                                    i + getBuiltinProviderCount());
-                                break;
-                            }
+        STRPTR activeProfile = settingsIsImageMode
+                                   ? configGetActiveImageProfileName()
+                                   : configGetActiveProfileName();
+        if (activeProfile != NULL && strlen(activeProfile) > 0) {
+            BOOL matchedLocked = FALSE;
+            for (LONG li = 0; li < getLockedProfileCount(); li++) {
+                CONST_STRPTR lockedName = getLockedProfileName(li);
+                if (lockedName != NULL &&
+                    strcmp(lockedName, activeProfile) == 0) {
+                    set(customServerProfileList, MUIA_NList_Active, li);
+                    matchedLocked = TRUE;
+                    break;
+                }
+            }
+            if (!matchedLocked && profilesJson != NULL) {
+                int len = json_object_array_length(profilesJson);
+                for (int i = 0; i < len; i++) {
+                    struct json_object *profile =
+                        json_object_array_get_idx(profilesJson, i);
+                    struct json_object *nameObj =
+                        json_object_object_get(profile, "name");
+                    if (nameObj != NULL) {
+                        CONST_STRPTR name = json_object_get_string(nameObj);
+                        if (name != NULL && strcmp(name, activeProfile) == 0) {
+                            set(customServerProfileList, MUIA_NList_Active,
+                                i + getLockedProfileCount());
+                            break;
                         }
                     }
                 }
-            } else {
-                set(customServerProfileList, MUIA_NList_Active, 0);
             }
+        } else {
+            set(customServerProfileList, MUIA_NList_Active, 0);
         }
     }
     {
@@ -683,7 +790,10 @@ static void loadProfileIntoUI(struct json_object *profile) {
         if (settingsIsImageMode) {
             LONG ep = json_object_get_int(obj);
             LONG active =
-                (ep == (LONG)API_ENDPOINT_GEMINI_GENERATE_CONTENT) ? 1 : 0;
+                (ep == (LONG)API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT ||
+                 ep == 3 /* legacy API_ENDPOINT_GEMINI_GENERATE_CONTENT */)
+                    ? 1
+                    : 0;
             set(customServerApiEndpointCycle, MUIA_Cycle_Active, active);
         } else {
             set(customServerApiEndpointCycle, MUIA_Cycle_Active,
@@ -761,8 +871,9 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
     LONG apiEndpoint;
     get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
     if (settingsIsImageMode) {
-        apiEndpoint = (apiEndpoint == 1) ? API_ENDPOINT_GEMINI_GENERATE_CONTENT
-                                         : API_ENDPOINT_IMAGES_GENERATIONS;
+        apiEndpoint = (apiEndpoint == 1)
+                          ? (LONG)API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT
+                          : (LONG)API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
     }
     json_object_object_add(profile, "apiEndpoint",
                            json_object_new_int(apiEndpoint));
@@ -808,36 +919,45 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
 
     STRPTR apiKey = NULL;
     STRPTR modelStr = NULL;
+    LONG imageSizeActive = 0;
     LONG streamingEnabled = 0;
     if (customServerApiKeyString != NULL)
         get(customServerApiKeyString, MUIA_String_Contents, &apiKey);
     if (customServerChatModelString != NULL)
         get(customServerChatModelString, MUIA_String_Contents, &modelStr);
+    if (settingsIsImageMode && customServerImageSizeCycle != NULL)
+        get(customServerImageSizeCycle, MUIA_Cycle_Active, &imageSizeActive);
     if (!settingsIsImageMode && customServerStreamingCycle != NULL)
         get(customServerStreamingCycle, MUIA_Cycle_Active, &streamingEnabled);
 
-    if (isBuiltinProviderIndex(profileListIndex)) {
-        Provider provider = (Provider)getProviderFromIndex(profileListIndex);
+    if (settingsIsImageMode) {
+        pendingImageSize = optionIndexToImageSize(imageSizeActive);
+    }
 
-        if (pendingBuiltinApiKeys[provider] != NULL) {
-            FreeVec(pendingBuiltinApiKeys[provider]);
-            pendingBuiltinApiKeys[provider] = NULL;
+    if (isLockedProfileListIndex(profileListIndex)) {
+        LONG lockedIndex = profileListIndex;
+
+        if (pendingLockedApiKeys[lockedIndex] != NULL) {
+            FreeVec(pendingLockedApiKeys[lockedIndex]);
+            pendingLockedApiKeys[lockedIndex] = NULL;
         }
-        pendingBuiltinApiKeys[provider] = dupStrLocal(apiKey);
+        pendingLockedApiKeys[lockedIndex] = dupStrLocal(apiKey);
 
         if (!settingsIsImageMode) {
-            if (pendingBuiltinChatModels[provider] != NULL) {
-                FreeVec(pendingBuiltinChatModels[provider]);
-                pendingBuiltinChatModels[provider] = NULL;
+            if (pendingLockedChatModels[lockedIndex] != NULL) {
+                FreeVec(pendingLockedChatModels[lockedIndex]);
+                pendingLockedChatModels[lockedIndex] = NULL;
             }
-            pendingBuiltinChatModels[provider] = dupStrLocal(modelStr);
-            pendingBuiltinStreaming[provider] = (streamingEnabled == 1);
+            pendingLockedChatModels[lockedIndex] = dupStrLocal(modelStr);
+            pendingLockedStreaming[lockedIndex] = (streamingEnabled == 1);
         } else {
             if (pendingImageModelName != NULL) {
                 FreeVec(pendingImageModelName);
                 pendingImageModelName = NULL;
             }
             pendingImageModelName = dupStrLocal(modelStr);
+            pendingImageModelLockedIndex = lockedIndex;
+            pendingImageSizeLockedIndex = lockedIndex;
         }
 
         if (forceActiveForList >= 0)
@@ -846,8 +966,8 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
     }
 
     /* Custom profile */
-    LONG builtinCount = getBuiltinProviderCount();
-    int profileIndex = (int)(profileListIndex - builtinCount);
+    LONG lockedCount = getLockedProfileCount();
+    int profileIndex = (int)(profileListIndex - lockedCount);
     if (profilesJson == NULL ||
         !json_object_is_type(profilesJson, json_type_array) ||
         profileIndex < 0 ||
@@ -861,10 +981,10 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
         return FALSE;
     }
 
-    /* Disallow names that match built-in providers */
-    for (int i = 0; i < getBuiltinProviderCount() && PROVIDER_NAMES[i] != NULL;
-         i++) {
-        if (strcasecmp(profileName, PROVIDER_NAMES[i]) == 0) {
+    /* Disallow names that match locked profiles */
+    for (int i = 0; i < getLockedProfileCount(); i++) {
+        CONST_STRPTR lockedName = getLockedProfileName(i);
+        if (lockedName != NULL && strcasecmp(profileName, lockedName) == 0) {
             displayError(STRING_ERROR_PROFILE_NAME_RESERVED);
             return FALSE;
         }
@@ -923,18 +1043,18 @@ HOOKPROTONHNO(DisplayProfileLI_TextFunc, void,
         ndm->strings[0] = (STRPTR) "";
         return;
     }
-    if (entry->isBuiltin) {
-        switch (entry->provider) {
-        case PROVIDER_OPENAI:
+    if (entry->isLocked) {
+        switch (entry->lockedIndex) {
+        case LOCKED_PROFILE_OPENAI:
             ndm->strings[0] = (STRPTR)STRING_PROVIDER_OPENAI;
             break;
-        case PROVIDER_GEMINI:
+        case LOCKED_PROFILE_GEMINI:
             ndm->strings[0] = (STRPTR)STRING_PROVIDER_GEMINI;
             break;
-        case PROVIDER_GROK:
+        case LOCKED_PROFILE_GROK:
             ndm->strings[0] = (STRPTR)STRING_PROVIDER_GROK;
             break;
-        case PROVIDER_ANTHROPIC:
+        case LOCKED_PROFILE_ANTHROPIC:
             ndm->strings[0] = (STRPTR)STRING_PROVIDER_ANTHROPIC;
             break;
         default:
@@ -1001,15 +1121,15 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
         return;
     }
 
-    /* Check if this is a built-in provider */
-    if (isBuiltinProviderIndex(active)) {
-        Provider provider = (Provider)getProviderFromIndex(active);
-        PSDPRINTF("ProfileSelectedFunc: builtin provider=%ld", (long)provider);
-        loadBuiltinProviderIntoUI(provider);
+    /* Check if this is a locked (hardcoded) profile */
+    if (isLockedProfileListIndex(active)) {
+        LONG lockedIndex = active;
+        PSDPRINTF("ProfileSelectedFunc: lockedIndex=%ld", (long)lockedIndex);
+        loadLockedProfileIntoUI(lockedIndex);
 
-        /* Set the profile name to the provider name (read-only info) */
+        /* Set the profile name to the stable locked profile name (read-only) */
         set(customServerProfileNameString, MUIA_String_Contents,
-            PROVIDER_NAMES[provider]);
+            getLockedProfileName(lockedIndex));
 
         /* Built-ins cannot be deleted; profile name is read-only info. */
         if (customServerDeleteProfileButton != NULL)
@@ -1028,20 +1148,20 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
         }
         {
             CONST_STRPTR *modelList = NULL;
-            switch (provider) {
-            case PROVIDER_OPENAI:
+            switch (lockedIndex) {
+            case LOCKED_PROFILE_OPENAI:
                 modelList = settingsIsImageMode ? OPENAI_IMAGE_MODELS
                                                 : OPENAI_CHAT_MODELS;
                 break;
-            case PROVIDER_GEMINI:
+            case LOCKED_PROFILE_GEMINI:
                 modelList = settingsIsImageMode ? GEMINI_IMAGE_MODELS
                                                 : GEMINI_CHAT_MODELS;
                 break;
-            case PROVIDER_GROK:
+            case LOCKED_PROFILE_GROK:
                 modelList =
                     settingsIsImageMode ? GROK_IMAGE_MODELS : GROK_CHAT_MODELS;
                 break;
-            case PROVIDER_ANTHROPIC:
+            case LOCKED_PROFILE_ANTHROPIC:
                 modelList = settingsIsImageMode ? NULL : ANTHROPIC_CHAT_MODELS;
                 break;
             default:
@@ -1076,7 +1196,7 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
 
     /* Load the selected custom profile
      * Custom profiles start after built-in providers */
-    int profileIndex = (int)(active - getBuiltinProviderCount());
+    int profileIndex = (int)(active - getLockedProfileCount());
     PSDPRINTF("ProfileSelectedFunc: custom profileIndex=%ld",
               (long)profileIndex);
     if (profilesJson != NULL &&
@@ -1109,12 +1229,12 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
 }
 MakeHook(ProfileSelectedHook, ProfileSelectedFunc);
 
-static BOOL isNameReservedForBuiltinProviders(CONST_STRPTR profileName) {
+static BOOL isNameReservedForLockedProfiles(CONST_STRPTR profileName) {
     if (profileName == NULL)
         return TRUE;
-    for (int i = 0; i < getBuiltinProviderCount() && PROVIDER_NAMES[i] != NULL;
-         i++) {
-        if (strcasecmp(profileName, PROVIDER_NAMES[i]) == 0) {
+    for (int i = 0; i < getLockedProfileCount(); i++) {
+        CONST_STRPTR lockedName = getLockedProfileName(i);
+        if (lockedName != NULL && strcasecmp(profileName, lockedName) == 0) {
             return TRUE;
         }
     }
@@ -1158,7 +1278,7 @@ static STRPTR makeUniqueProfileName(CONST_STRPTR base, CONST_STRPTR suffix) {
         } else {
             snprintf(candidate, sizeof(candidate), "%s%s %d", base, suffix, n);
         }
-        if (isNameReservedForBuiltinProviders(candidate))
+        if (isNameReservedForLockedProfiles(candidate))
             continue;
         if (!isCustomProfileNameTaken(candidate, -1)) {
             return dupStrLocal(candidate);
@@ -1194,7 +1314,7 @@ HOOKPROTONHNONP(NewProfileFunc, void) {
                                json_object_new_string(""));
         json_object_object_add(
             profile, "apiEndpoint",
-            json_object_new_int((LONG)API_ENDPOINT_IMAGES_GENERATIONS));
+            json_object_new_int((LONG)API_IMAGE_ENDPOINT_IMAGES_GENERATIONS));
         json_object_object_add(profile, "apiEndpointUrl",
                                json_object_new_string("v1"));
         json_object_object_add(profile, "customHeaders",
@@ -1214,7 +1334,7 @@ HOOKPROTONHNONP(NewProfileFunc, void) {
                                json_object_new_string(""));
         json_object_object_add(
             profile, "apiEndpoint",
-            json_object_new_int((LONG)API_ENDPOINT_CHAT_COMPLETIONS));
+            json_object_new_int((LONG)API_CHAT_ENDPOINT_CHAT_COMPLETIONS));
         json_object_object_add(profile, "apiEndpointUrl",
                                json_object_new_string("v1"));
         json_object_object_add(profile, "customHeaders",
@@ -1226,9 +1346,9 @@ HOOKPROTONHNONP(NewProfileFunc, void) {
     json_object_array_add(profilesJson, profile);
     FreeVec(newName);
 
-    LONG builtinCount = getBuiltinProviderCount();
+    LONG lockedCount = getLockedProfileCount();
     LONG newListIndex =
-        builtinCount + (LONG)json_object_array_length(profilesJson) - 1;
+        lockedCount + (LONG)json_object_array_length(profilesJson) - 1;
     loadingProfile = TRUE;
     populateProfileList(newListIndex);
     loadingProfile = FALSE;
@@ -1259,10 +1379,9 @@ HOOKPROTONHNONP(DuplicateProfileFunc, void) {
     STRPTR currentName = NULL;
     get(customServerProfileNameString, MUIA_String_Contents, &currentName);
     if (currentName == NULL || strlen(currentName) == 0) {
-        /* Fall back to provider name if built-in */
-        if (isBuiltinProviderIndex(active)) {
-            Provider p = (Provider)getProviderFromIndex(active);
-            currentName = (STRPTR)PROVIDER_NAMES[p];
+        /* Fall back to locked profile name if locked */
+        if (isLockedProfileListIndex(active)) {
+            currentName = (STRPTR)getLockedProfileName(active);
         }
     }
     STRPTR newName =
@@ -1275,9 +1394,9 @@ HOOKPROTONHNONP(DuplicateProfileFunc, void) {
     struct json_object *dupProfile = createProfileFromUI(newName);
     json_object_array_add(profilesJson, dupProfile);
 
-    LONG builtinCount = getBuiltinProviderCount();
+    LONG lockedCount = getLockedProfileCount();
     LONG newListIndex =
-        builtinCount + (LONG)json_object_array_length(profilesJson) - 1;
+        lockedCount + (LONG)json_object_array_length(profilesJson) - 1;
     loadingProfile = TRUE;
     populateProfileList(newListIndex);
     loadingProfile = FALSE;
@@ -1305,12 +1424,12 @@ HOOKPROTONHNONP(DeleteProfileFunc, void) {
     LONG active = MUIV_NList_Active_Off;
     get(customServerProfileList, MUIA_NList_Active, &active);
 
-    /* Built-in providers are non-deletable */
-    if (active == MUIV_NList_Active_Off || isBuiltinProviderIndex(active)) {
+    /* Locked profiles are non-deletable */
+    if (active == MUIV_NList_Active_Off || isLockedProfileListIndex(active)) {
         return;
     }
 
-    int profileIndex = (int)(active - getBuiltinProviderCount());
+    int profileIndex = (int)(active - getLockedProfileCount());
     if (profileIndex < 0) {
         return;
     }
@@ -1321,16 +1440,16 @@ HOOKPROTONHNONP(DeleteProfileFunc, void) {
         json_object_array_del_idx(profilesJson, profileIndex, 1);
 
         /* Refresh list and select the nearest entry */
-        LONG builtinCount = getBuiltinProviderCount();
+        LONG lockedCount = getLockedProfileCount();
         LONG remainingCustom = (LONG)json_object_array_length(profilesJson);
         LONG newActive = 0;
         if (remainingCustom > 0) {
             LONG desired = active;
-            LONG maxIdx = builtinCount + remainingCustom - 1;
+            LONG maxIdx = lockedCount + remainingCustom - 1;
             if (desired > maxIdx)
                 desired = maxIdx;
-            if (desired < builtinCount)
-                desired = builtinCount;
+            if (desired < lockedCount)
+                desired = lockedCount;
             newActive = desired;
         } else {
             newActive = 0; /* first built-in */
@@ -1508,12 +1627,13 @@ SAVEDS void refreshUrlPreview(void) {
     CONST_STRPTR host = customServerHost ? (CONST_STRPTR)customServerHost : "";
     CONST_STRPTR endpointPath = NULL;
     if (settingsIsImageMode) {
-        endpointPath =
-            (apiEndpointActive == 1)
-                ? API_ENDPOINT_NAMES[API_ENDPOINT_GEMINI_GENERATE_CONTENT]
-                : API_ENDPOINT_NAMES[API_ENDPOINT_IMAGES_GENERATIONS];
+        endpointPath = (apiEndpointActive == 1)
+                           ? API_IMAGE_ENDPOINT_NAMES
+                                 [API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT]
+                           : API_IMAGE_ENDPOINT_NAMES
+                                 [API_IMAGE_ENDPOINT_IMAGES_GENERATIONS];
     } else {
-        endpointPath = API_ENDPOINT_NAMES[apiEndpointActive];
+        endpointPath = API_CHAT_ENDPOINT_NAMES[apiEndpointActive];
     }
     snprintf(fullUrlPreviewString, sizeof(fullUrlPreviewString),
              "%s://%s:%ld%s%s/%s", usesSSL == 1 ? "https" : "http", host,
@@ -1551,8 +1671,8 @@ HOOKPROTONHNONP(ProfileNameChangedFunc, void) {
         LONG active = MUIV_NList_Active_Off;
         get(customServerProfileList, MUIA_NList_Active, &active);
         if (active != MUIV_NList_Active_Off &&
-            !isBuiltinProviderIndex(active)) {
-            int profileIndex = (int)(active - getBuiltinProviderCount());
+            !isLockedProfileListIndex(active)) {
+            int profileIndex = (int)(active - getLockedProfileCount());
             if (profileIndex >= 0 &&
                 profileIndex < (int)json_object_array_length(profilesJson)) {
                 struct json_object *profile =
@@ -1611,74 +1731,134 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     if (!settingsIsImageMode && customServerStreamingCycle != NULL)
         get(customServerStreamingCycle, MUIA_Cycle_Active, &streamingEnabled);
 
-    /* Handle built-in providers */
-    if (isBuiltinProviderIndex(active)) {
-        Provider provider = (Provider)getProviderFromIndex(active);
+    /* Handle locked (hardcoded) profiles */
+    if (isLockedProfileListIndex(active)) {
+        LONG lockedIndex = active;
 
+        /* Persist active profile name (so requests use it) */
         if (settingsIsImageMode) {
-            configSetImageProvider(provider);
+            configSetActiveImageProfileName(getLockedProfileName(lockedIndex));
         } else {
-            configSetChatProvider(provider);
+            configSetActiveProfileName(getLockedProfileName(lockedIndex));
         }
 
-        /* Save the API key for this provider from pending state */
-        CONST_STRPTR apiKeyToSave = pendingBuiltinApiKeys[provider];
-        switch (provider) {
-        case PROVIDER_OPENAI:
+        /* Save API key from pending state */
+        CONST_STRPTR apiKeyToSave = pendingLockedApiKeys[lockedIndex];
+        switch (lockedIndex) {
+        case LOCKED_PROFILE_OPENAI:
             configSetOpenAiApiKey(apiKeyToSave);
             break;
-        case PROVIDER_GEMINI:
+        case LOCKED_PROFILE_GEMINI:
             configSetGeminiApiKey(apiKeyToSave);
             break;
-        case PROVIDER_GROK:
+        case LOCKED_PROFILE_GROK:
             configSetGrokApiKey(apiKeyToSave);
             break;
-        case PROVIDER_ANTHROPIC:
+        case LOCKED_PROFILE_ANTHROPIC:
             configSetAnthropicApiKey(apiKeyToSave);
             break;
         default:
             break;
         }
 
-        /* Save the model/streaming */
         if (settingsIsImageMode) {
-            CONST_STRPTR imageModelName =
-                pendingImageModelName != NULL
-                    ? pendingImageModelName
-                    : (CONST_STRPTR)customServerChatModel;
-            if (imageModelName != NULL)
-                configSetImageModelName(imageModelName);
-
-            /* Persist image endpoint selection too (even if disabled). */
-            LONG imageEndpointActive = 0;
-            if (customServerApiEndpointCycle != NULL)
-                get(customServerApiEndpointCycle, MUIA_Cycle_Active,
-                    &imageEndpointActive);
-            ULONG imageEndpoint =
-                (imageEndpointActive == 1)
-                    ? (ULONG)API_ENDPOINT_GEMINI_GENERATE_CONTENT
-                    : (ULONG)API_ENDPOINT_IMAGES_GENERATIONS;
-            configSetImageApiEndpoint(imageEndpoint);
-        } else {
-            CONST_STRPTR modelToSave = pendingBuiltinChatModels[provider];
-            if (modelToSave != NULL && strlen(modelToSave) > 0) {
-                configSetChatModelNameForProvider(provider, modelToSave);
-                configSetChatModelName(modelToSave);
+            /* Persist the model currently shown in the UI. */
+            CONST_STRPTR imageModelName = NULL;
+            if (customServerChatModel != NULL &&
+                strlen(customServerChatModel) > 0) {
+                imageModelName = (CONST_STRPTR)customServerChatModel;
+            } else if (pendingImageModelName != NULL &&
+                       strlen(pendingImageModelName) > 0) {
+                imageModelName = (CONST_STRPTR)pendingImageModelName;
             }
-            configSetChatStreamingEnabledForProvider(
-                provider, pendingBuiltinStreaming[provider]);
+            if (imageModelName != NULL) {
+                configSetImageModelName(imageModelName);
+                /* Keep in-window pending state in sync */
+                if (pendingImageModelName != NULL) {
+                    FreeVec(pendingImageModelName);
+                    pendingImageModelName = NULL;
+                }
+                pendingImageModelName = dupStrLocal(imageModelName);
+                pendingImageModelLockedIndex = lockedIndex;
+            }
+
+            /* Persist the image size currently shown in the UI. */
+            if (customServerImageSizeCycle != NULL) {
+                LONG imageSizeActive = 0;
+                get(customServerImageSizeCycle, MUIA_Cycle_Active,
+                    &imageSizeActive);
+                pendingImageSize = optionIndexToImageSize(imageSizeActive);
+            }
+            pendingImageSizeLockedIndex = lockedIndex;
+
+            /* Persist image size selection (None = omit size field in request)
+             */
+            configSetImageSizeDallE2(pendingImageSize);
+            configSetImageSizeDallE3(pendingImageSize);
+            configSetImageSizeGptImage1(pendingImageSize);
+
+            /* Locked image endpoint selection */
+            configSetImageApiEndpoint(
+                (lockedIndex == LOCKED_PROFILE_GEMINI)
+                    ? API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT
+                    : API_IMAGE_ENDPOINT_IMAGES_GENERATIONS);
+        } else {
+            CONST_STRPTR modelToSave = pendingLockedChatModels[lockedIndex];
+            if (modelToSave != NULL && strlen(modelToSave) > 0 && configObj) {
+                set(configObj, MUIA_AmigaGPTConfig_ChatModelName,
+                    (ULONG)modelToSave);
+                switch (lockedIndex) {
+                case LOCKED_PROFILE_OPENAI:
+                    set(configObj, MUIA_AmigaGPTConfig_OpenAiChatModelName,
+                        (ULONG)modelToSave);
+                    break;
+                case LOCKED_PROFILE_GEMINI:
+                    set(configObj, MUIA_AmigaGPTConfig_GeminiChatModelName,
+                        (ULONG)modelToSave);
+                    break;
+                case LOCKED_PROFILE_GROK:
+                    set(configObj, MUIA_AmigaGPTConfig_GrokChatModelName,
+                        (ULONG)modelToSave);
+                    break;
+                case LOCKED_PROFILE_ANTHROPIC:
+                    set(configObj, MUIA_AmigaGPTConfig_AnthropicChatModelName,
+                        (ULONG)modelToSave);
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            if (configObj) {
+                ULONG v = pendingLockedStreaming[lockedIndex] ? TRUE : FALSE;
+                switch (lockedIndex) {
+                case LOCKED_PROFILE_OPENAI:
+                    set(configObj, MUIA_AmigaGPTConfig_OpenAiChatStreamEnabled,
+                        v);
+                    break;
+                case LOCKED_PROFILE_GEMINI:
+                    set(configObj, MUIA_AmigaGPTConfig_GeminiChatStreamEnabled,
+                        v);
+                    break;
+                case LOCKED_PROFILE_GROK:
+                    set(configObj, MUIA_AmigaGPTConfig_GrokChatStreamEnabled,
+                        v);
+                    break;
+                case LOCKED_PROFILE_ANTHROPIC:
+                    set(configObj,
+                        MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled, v);
+                    break;
+                default:
+                    break;
+                }
+            }
         }
 
         set(customServerSettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
         return;
     }
 
-    /* Handle custom provider (commit current selection + fields) */
-    if (settingsIsImageMode) {
-        configSetImageProvider(PROVIDER_CUSTOM);
-    } else {
-        configSetChatProvider(PROVIDER_CUSTOM);
-    }
+    /* Handle custom profile (commit current selection + fields) */
 
     STRPTR customServerHost;
     get(customServerHostString, MUIA_String_Contents, &customServerHost);
@@ -1722,14 +1902,16 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         configSetImageModelName(customServerChatModel);
     } else {
         configSetCustomChatModel(customServerChatModel);
-        configSetChatModelName(customServerChatModel);
+        if (configObj)
+            set(configObj, MUIA_AmigaGPTConfig_ChatModelName,
+                (ULONG)customServerChatModel);
         configSetCustomChatStreamEnabled(streamingEnabled == 1);
     }
 
     if (!settingsIsImageMode) {
         LONG apiEndpoint;
         get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
-        configSetCustomApiEndpoint(apiEndpoint);
+        configSetCustomApiEndpoint((APIChatEndpoint)apiEndpoint);
     }
 
     STRPTR customServerApiEndpointUrl;
@@ -1741,13 +1923,24 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         configSetCustomApiEndpointUrl(customServerApiEndpointUrl);
 
     if (settingsIsImageMode) {
+        /* Persist image size selection (None = omit size field in request) */
+        if (customServerImageSizeCycle != NULL) {
+            LONG imageSizeActive = 0;
+            get(customServerImageSizeCycle, MUIA_Cycle_Active, &imageSizeActive);
+            pendingImageSize = optionIndexToImageSize(imageSizeActive);
+        }
+        configSetImageSizeDallE2(pendingImageSize);
+        configSetImageSizeDallE3(pendingImageSize);
+        configSetImageSizeGptImage1(pendingImageSize);
+
         LONG imageEndpointActive = 0;
         if (customServerApiEndpointCycle != NULL)
             get(customServerApiEndpointCycle, MUIA_Cycle_Active,
                 &imageEndpointActive);
-        ULONG imageEndpoint = (imageEndpointActive == 1)
-                                  ? (ULONG)API_ENDPOINT_GEMINI_GENERATE_CONTENT
-                                  : (ULONG)API_ENDPOINT_IMAGES_GENERATIONS;
+        APIImageEndpoint imageEndpoint =
+            (imageEndpointActive == 1)
+                ? API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT
+                : API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
         configSetImageApiEndpoint(imageEndpoint);
     }
 
@@ -1822,7 +2015,7 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterTestButtonClickedFunc, void) {
     CONST_STRPTR proxyPassword = configGetProxyPassword();
 
     if (!settingsIsImageMode) {
-        APIEndpoint apiEndpoint = (APIEndpoint)apiEndpointActive;
+        APIChatEndpoint apiEndpoint = (APIChatEndpoint)apiEndpointActive;
         struct Conversation *conv = newConversation();
         if (conv != NULL) {
             addTextToConversation(
@@ -1868,17 +2061,23 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterTestButtonClickedFunc, void) {
     }
 
     /* Image mode test */
-    APIEndpoint imageEndpoint = (apiEndpointActive == 1)
-                                    ? API_ENDPOINT_GEMINI_GENERATE_CONTENT
-                                    : API_ENDPOINT_IMAGES_GENERATIONS;
+    APIImageEndpoint imageEndpoint =
+        (apiEndpointActive == 1) ? API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT
+                                 : API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
     ImageFormat imageFormat = configGetImageFormat();
+    ImageSize imageSize = pendingImageSize;
+    if (customServerImageSizeCycle != NULL) {
+        LONG imageSizeActive = 0;
+        get(customServerImageSizeCycle, MUIA_Cycle_Active, &imageSizeActive);
+        imageSize = optionIndexToImageSize(imageSizeActive);
+    }
 
-    struct json_object *resp = postImageCreationRequestToOpenAIWithServer(
+    struct json_object *resp = postImageCreationRequestToOpenAI(
         (CONST_STRPTR) "an Amiga boing ball", host, port, useSSL,
         (CONST_STRPTR)apiEndpointUrl, authType, (CONST_STRPTR)customHeaders,
-        (CONST_STRPTR)modelName, IMAGE_SIZE_512x512, apiKeyToUse, useProxy,
-        proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-        proxyPassword, imageFormat, PROVIDER_CUSTOM, imageEndpoint);
+        (CONST_STRPTR)modelName, imageSize, apiKeyToUse, useProxy, proxyHost,
+        proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+        proxyPassword, imageFormat, imageEndpoint);
 
     if (resp == NULL) {
         updateStatusBar(STRING_ERROR, redPen);
@@ -1958,28 +2157,41 @@ LONG createCustomServerSettingsRequesterWindow() {
     sslOptions[0] = STRING_ENCRYPTION_NONE;
     sslOptions[1] = STRING_ENCRYPTION_SSL;
 
-    chatApiEndpointOptions[API_ENDPOINT_RESPONSES] =
-        (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_RESPONSES];
-    chatApiEndpointOptions[API_ENDPOINT_CHAT_COMPLETIONS] =
-        (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_CHAT_COMPLETIONS];
-    chatApiEndpointOptions[API_ENDPOINT_MESSAGES] =
-        (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_MESSAGES];
-    chatApiEndpointOptions[API_ENDPOINT_GEMINI_GENERATE_CONTENT] =
-        (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_GEMINI_GENERATE_CONTENT];
+    /* Image size options (cycle indices map to imageSizeOptionValues[]) */
+    imageSizeOptions[0] = STRING_AUTHORIZATION_NONE;
+    imageSizeOptions[1] = (STRPTR)IMAGE_SIZE_NAMES[IMAGE_SIZE_256x256];
+    imageSizeOptions[2] = (STRPTR)IMAGE_SIZE_NAMES[IMAGE_SIZE_512x512];
+    imageSizeOptions[3] = (STRPTR)IMAGE_SIZE_NAMES[IMAGE_SIZE_1024x1024];
+    imageSizeOptions[4] = (STRPTR)IMAGE_SIZE_NAMES[IMAGE_SIZE_1792x1024];
+    imageSizeOptions[5] = (STRPTR)IMAGE_SIZE_NAMES[IMAGE_SIZE_1024x1792];
+    imageSizeOptions[6] = (STRPTR)IMAGE_SIZE_NAMES[IMAGE_SIZE_1536x1024];
+    imageSizeOptions[7] = (STRPTR)IMAGE_SIZE_NAMES[IMAGE_SIZE_1024x1536];
+    imageSizeOptions[8] = (STRPTR)IMAGE_SIZE_NAMES[IMAGE_SIZE_AUTO];
+    imageSizeOptions[9] = NULL;
+
+    chatApiEndpointOptions[API_CHAT_ENDPOINT_RESPONSES] =
+        (STRPTR)API_CHAT_ENDPOINT_NAMES[API_CHAT_ENDPOINT_RESPONSES];
+    chatApiEndpointOptions[API_CHAT_ENDPOINT_CHAT_COMPLETIONS] =
+        (STRPTR)API_CHAT_ENDPOINT_NAMES[API_CHAT_ENDPOINT_CHAT_COMPLETIONS];
+    chatApiEndpointOptions[API_CHAT_ENDPOINT_MESSAGES] =
+        (STRPTR)API_CHAT_ENDPOINT_NAMES[API_CHAT_ENDPOINT_MESSAGES];
+    chatApiEndpointOptions[API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT] = (STRPTR)
+        API_CHAT_ENDPOINT_NAMES[API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT];
 
     /* Image endpoint options (index-based, not enum-based) */
     imageApiEndpointOptions[0] =
-        (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_IMAGES_GENERATIONS];
-    imageApiEndpointOptions[1] =
-        (STRPTR)API_ENDPOINT_NAMES[API_ENDPOINT_GEMINI_GENERATE_CONTENT];
+        (STRPTR)API_IMAGE_ENDPOINT_NAMES[API_IMAGE_ENDPOINT_IMAGES_GENERATIONS];
+    imageApiEndpointOptions[1] = (STRPTR)
+        API_IMAGE_ENDPOINT_NAMES[API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT];
 
     static STRPTR authorizationTypeOptions[4] = {NULL};
     authorizationTypeOptions[AUTHORIZATION_TYPE_NONE] =
         STRING_AUTHORIZATION_NONE;
     authorizationTypeOptions[AUTHORIZATION_TYPE_BEARER] =
         STRING_AUTHORIZATION_BEARER;
-    authorizationTypeOptions[AUTHORIZATION_TYPE_X_API_KEY] =
-        STRING_AUTHORIZATION_X_API_KEY;
+    authorizationTypeOptions[AUTHORIZATION_TYPE_X_API_KEY] = "x-api-key";
+    authorizationTypeOptions[AUTHORIZATION_TYPE_X_GOOGLE_API_KEY] =
+        "x-goog-api-key";
     static STRPTR streamingOptions[3] = {NULL};
     streamingOptions[0] = STRING_OFF;
     streamingOptions[1] = STRING_ON;
@@ -2122,6 +2334,17 @@ LONG createCustomServerSettingsRequesterWindow() {
                                 MUIA_FixHeight, 80,
                             End,
                         End,
+                        Child, customServerImageSizeGroup = VGroup,
+                            MUIA_Frame, MUIV_Frame_Group,
+                            MUIA_FrameTitle, STRING_IMAGE_SIZE,
+                            MUIA_ShowMe, FALSE,
+                            Child, customServerImageSizeCycle = CycleObject,
+                                MUIA_CycleChain, TRUE,
+                                MUIA_Cycle_Entries, imageSizeOptions,
+                                MUIA_Cycle_Active,
+                                    imageSizeToOptionIndex(pendingImageSize),
+                            End,
+                        End,
                         Child, VGroup,
                             MUIA_Frame, MUIV_Frame_Group,
                             MUIA_FrameTitle, STRING_MENU_OPENAI_API_ENDPOINT,
@@ -2206,6 +2429,11 @@ LONG createCustomServerSettingsRequesterWindow() {
     DoMethod(customServerChatModelString, MUIM_Notify, MUIA_String_Contents,
              MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
              &SettingsChangedHook);
+    if (customServerImageSizeCycle != NULL) {
+        DoMethod(customServerImageSizeCycle, MUIM_Notify, MUIA_Cycle_Active,
+                 MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+                 &SettingsChangedHook);
+    }
     DoMethod(customServerProfileNameString, MUIM_Notify, MUIA_String_Contents,
              MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
              &ProfileNameChangedHook);
@@ -2249,7 +2477,7 @@ static void applyProviderSettingsWindowMode(BOOL isImageMode) {
     settingsIsImageMode = isImageMode ? TRUE : FALSE;
 
     /* Reload in-window pending state from config each open. */
-    loadPendingBuiltinsFromConfig();
+    loadPendingLockedProfilesFromConfig();
 
     if (customServerSettingsRequesterWindowObject != NULL) {
         set(customServerSettingsRequesterWindowObject, MUIA_Window_Title,
@@ -2263,6 +2491,10 @@ static void applyProviderSettingsWindowMode(BOOL isImageMode) {
     if (customServerStreamingGroup != NULL) {
         set(customServerStreamingGroup, MUIA_ShowMe,
             settingsIsImageMode ? FALSE : TRUE);
+    }
+    if (customServerImageSizeGroup != NULL) {
+        set(customServerImageSizeGroup, MUIA_ShowMe,
+            settingsIsImageMode ? TRUE : FALSE);
     }
     if (customServerApiEndpointCycle != NULL) {
         if (settingsIsImageMode) {
@@ -2326,6 +2558,10 @@ static void applyProviderSettingsWindowMode(BOOL isImageMode) {
                 : "v1");
         set(customServerCustomHeadersString, MUIA_String_Contents,
             configGetCustomImageHeaders() ? configGetCustomImageHeaders() : "");
+        if (customServerImageSizeCycle != NULL) {
+            set(customServerImageSizeCycle, MUIA_Cycle_Active,
+                imageSizeToOptionIndex(pendingImageSize));
+        }
     } else {
         set(customServerHostString, MUIA_String_Contents,
             configGetCustomHost() ? configGetCustomHost() : "");

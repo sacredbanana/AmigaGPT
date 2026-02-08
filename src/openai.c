@@ -185,12 +185,16 @@ CONST_STRPTR OPENAI_TTS_VOICE_NAMES[] = {[OPENAI_TTS_VOICE_ALLOY] = "alloy",
  * The names of the API endpoints
  * @see APIEndpoint
  **/
-CONST_STRPTR API_ENDPOINT_NAMES[] = {
-    [API_ENDPOINT_RESPONSES] = "responses",
-    [API_ENDPOINT_CHAT_COMPLETIONS] = "chat/completions",
-    [API_ENDPOINT_MESSAGES] = "messages",
-    [API_ENDPOINT_GEMINI_GENERATE_CONTENT] = "models/:generateContent",
-    [API_ENDPOINT_IMAGES_GENERATIONS] = "images/generations",
+CONST_STRPTR API_CHAT_ENDPOINT_NAMES[] = {
+    [API_CHAT_ENDPOINT_RESPONSES] = "responses",
+    [API_CHAT_ENDPOINT_CHAT_COMPLETIONS] = "chat/completions",
+    [API_CHAT_ENDPOINT_MESSAGES] = "messages",
+    [API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT] = "models/:generateContent",
+    NULL};
+
+CONST_STRPTR API_IMAGE_ENDPOINT_NAMES[] = {
+    [API_IMAGE_ENDPOINT_IMAGES_GENERATIONS] = "images/generations",
+    [API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT] = "models/:generateContent",
     NULL};
 
 /**
@@ -201,6 +205,7 @@ CONST_STRPTR AUTHORIZATION_TYPE_NAMES[] = {
     [AUTHORIZATION_TYPE_NONE] = "",
     [AUTHORIZATION_TYPE_BEARER] = "Authorization: Bearer",
     [AUTHORIZATION_TYPE_X_API_KEY] = "x-api-key:",
+    [AUTHORIZATION_TYPE_X_GOOGLE_API_KEY] = "x-goog-api-key:",
     NULL};
 
 /**
@@ -209,17 +214,6 @@ CONST_STRPTR AUTHORIZATION_TYPE_NAMES[] = {
  **/
 CONST_STRPTR IMAGE_FORMAT_NAMES[] = {
     [IMAGE_FORMAT_JPG] = "jpeg", [IMAGE_FORMAT_PNG] = "png", NULL};
-
-/**
- * The names of the providers
- * @see Provider
- **/
-CONST_STRPTR PROVIDER_NAMES[] = {[PROVIDER_OPENAI] = "OpenAI",
-                                 [PROVIDER_GEMINI] = "Google Gemini",
-                                 [PROVIDER_GROK] = "xAI Grok",
-                                 [PROVIDER_ANTHROPIC] = "Anthropic Claude",
-                                 [PROVIDER_CUSTOM] = "Custom Provider",
-                                 NULL};
 
 /**
  * Prepopulated chat models for OpenAI
@@ -302,62 +296,6 @@ CONST_STRPTR GEMINI_IMAGE_MODELS[] = {"imagen-4-ultra",
 /* xAI docs currently advertise "grok-2-image" for image generation. */
 CONST_STRPTR GROK_IMAGE_MODELS[] = {"grok-2-image", "grok-2-image-1212",
                                     "grok-2-aurora", NULL};
-
-/**
- * Static provider configurations
- **/
-static struct ProviderConfig providerConfigs[] = {
-    /* PROVIDER_OPENAI */
-    {.host = "api.openai.com",
-     .port = 443,
-     .useSSL = TRUE,
-     .apiEndpoint = API_ENDPOINT_RESPONSES,
-     .apiEndpointUrl = "v1",
-     .authorizationType = AUTHORIZATION_TYPE_BEARER,
-     .customHeaders = NULL},
-    /* PROVIDER_GEMINI */
-    {.host = "generativelanguage.googleapis.com",
-     .port = 443,
-     .useSSL = TRUE,
-     .apiEndpoint = API_ENDPOINT_GEMINI_GENERATE_CONTENT,
-     .apiEndpointUrl = "v1beta",
-     .authorizationType = AUTHORIZATION_TYPE_NONE,
-     .customHeaders = NULL},
-    /* PROVIDER_GROK */
-    {.host = "api.x.ai",
-     .port = 443,
-     .useSSL = TRUE,
-     .apiEndpoint = API_ENDPOINT_RESPONSES,
-     .apiEndpointUrl = "v1",
-     .authorizationType = AUTHORIZATION_TYPE_BEARER,
-     .customHeaders = NULL},
-    /* PROVIDER_ANTHROPIC */
-    {.host = "api.anthropic.com",
-     .port = 443,
-     .useSSL = TRUE,
-     .apiEndpoint = API_ENDPOINT_MESSAGES,
-     .apiEndpointUrl = "v1",
-     .authorizationType = AUTHORIZATION_TYPE_X_API_KEY,
-     .customHeaders = "anthropic-version: 2023-06-01"},
-    /* PROVIDER_CUSTOM - empty, filled from config */
-    {.host = NULL,
-     .port = 0,
-     .useSSL = FALSE,
-     .apiEndpoint = API_ENDPOINT_CHAT_COMPLETIONS,
-     .apiEndpointUrl = NULL,
-     .authorizationType = AUTHORIZATION_TYPE_NONE,
-     .customHeaders = NULL}};
-
-/**
- * Get the configuration for a built-in provider
- * @param provider the provider to get the configuration for
- * @return a pointer to the provider configuration
- **/
-struct ProviderConfig *getProviderConfig(Provider provider) {
-    if (provider >= PROVIDER_COUNT)
-        return NULL;
-    return &providerConfigs[provider];
-}
 
 /**
  * Generate a random number
@@ -1044,7 +982,7 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
     if (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0) {
         snprintf(modelsPath, sizeof(modelsPath), "/%s/models", apiEndpointUrl);
     } else {
-        snprintf(modelsPath, sizeof(modelsPath), "/v1/models");
+        snprintf(modelsPath, sizeof(modelsPath), "/models");
     }
 
     /* Build the authorization header based on type */
@@ -1227,24 +1165,59 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
         return NULL;
     }
 
-    // Extract model IDs from response
-    struct json_object *dataArray = json_object_object_get(response, "data");
-    if (dataArray == NULL) {
-        json_object_put(response);
-        displayError("No 'data' field in models response");
-        return NULL;
-    }
-
-    // Create array of model names
+    /* Extract model IDs from response.
+     *
+     * OpenAI format: { "data": [ { "id": "gpt-4.1" }, ... ] }
+     * Gemini format: { "models": [ { "name": "models/gemini-2.0-flash" }, ... ] }
+     */
     struct json_object *modelNames = json_object_new_array();
-    int arrayLength = json_object_array_length(dataArray);
 
-    for (int i = 0; i < arrayLength; i++) {
-        struct json_object *modelObj = json_object_array_get_idx(dataArray, i);
-        struct json_object *idObj = json_object_object_get(modelObj, "id");
-        if (idObj != NULL) {
-            CONST_STRPTR modelId = json_object_get_string(idObj);
-            json_object_array_add(modelNames, json_object_new_string(modelId));
+    struct json_object *dataArray = json_object_object_get(response, "data");
+    if (dataArray != NULL && json_object_is_type(dataArray, json_type_array)) {
+        int arrayLength = json_object_array_length(dataArray);
+        for (int i = 0; i < arrayLength; i++) {
+            struct json_object *modelObj =
+                json_object_array_get_idx(dataArray, i);
+            if (modelObj == NULL)
+                continue;
+            struct json_object *idObj = json_object_object_get(modelObj, "id");
+            if (idObj != NULL) {
+                CONST_STRPTR modelId = json_object_get_string(idObj);
+                if (modelId != NULL && strlen(modelId) > 0)
+                    json_object_array_add(modelNames,
+                                          json_object_new_string(modelId));
+            }
+        }
+    } else {
+        struct json_object *modelsArray =
+            json_object_object_get(response, "models");
+        if (modelsArray == NULL ||
+            !json_object_is_type(modelsArray, json_type_array)) {
+            json_object_put(response);
+            json_object_put(modelNames);
+            displayError("No 'data' or 'models' field in models response");
+            return NULL;
+        }
+
+        int arrayLength = json_object_array_length(modelsArray);
+        for (int i = 0; i < arrayLength; i++) {
+            struct json_object *modelObj =
+                json_object_array_get_idx(modelsArray, i);
+            if (modelObj == NULL)
+                continue;
+            struct json_object *nameObj =
+                json_object_object_get(modelObj, "name");
+            if (nameObj != NULL) {
+                CONST_STRPTR fullName = json_object_get_string(nameObj);
+                if (fullName != NULL && strlen(fullName) > 0) {
+                    /* Gemini prefixes model names with "models/" */
+                    CONST_STRPTR name = fullName;
+                    if (strncmp(fullName, "models/", 7) == 0)
+                        name = fullName + 7;
+                    json_object_array_add(modelNames,
+                                          json_object_new_string(name));
+                }
+            }
         }
     }
 
@@ -1272,7 +1245,9 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
  * @param proxyPassword the proxy password to use
  * @param webSearchEnabled whether to enable web search or not
  * @param apiEndpoint the API endpoint to use
- * @param apiEndpoinUrl the API endpoint URL to use
+ * @param apiEndpointUrl the API endpoint URL to use
+ * @param authorizationType the authorization type to use
+ * @param customHeaders custom HTTP headers to add to the request
  * @return a pointer to a new array of json_object containing the response(s) or
  *NULL -- Free it with json_object_put() for all responses then FreeVec() for
  *the array when you are done using it
@@ -1282,9 +1257,9 @@ struct json_object **postChatMessageToOpenAI(
     CONST_STRPTR model, CONST_STRPTR apiKey, BOOL stream, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, BOOL webSearchEnabled, APIEndpoint apiEndpoint,
-    CONST_STRPTR apiEndpoinUrl, AuthorizationType authorizationType,
-    CONST_STRPTR customHeaders) {
+    CONST_STRPTR proxyPassword, BOOL webSearchEnabled,
+    APIChatEndpoint apiEndpoint, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders) {
     if (model == NULL || strlen(model) == 0) {
         displayError("Model not specified");
         return NULL;
@@ -1307,30 +1282,19 @@ struct json_object **postChatMessageToOpenAI(
         port = useSSL ? 443 : 80;
     }
 
-    /* Identify provider based on the host we are calling. */
-    Provider requestProvider = PROVIDER_CUSTOM;
-    if (strcmp(host, providerConfigs[PROVIDER_OPENAI].host) == 0) {
-        requestProvider = PROVIDER_OPENAI;
-    } else if (strcmp(host, providerConfigs[PROVIDER_GEMINI].host) == 0) {
-        requestProvider = PROVIDER_GEMINI;
-    } else if (strcmp(host, providerConfigs[PROVIDER_GROK].host) == 0) {
-        requestProvider = PROVIDER_GROK;
-    } else if (strcmp(host, providerConfigs[PROVIDER_ANTHROPIC].host) == 0) {
-        requestProvider = PROVIDER_ANTHROPIC;
-    }
+    /* Host heuristics for provider-specific behavior (kept host-driven). */
+    BOOL isOpenAiHost = (strcmp(host, OPENAI_HOST) == 0);
+    BOOL isXaiHost = (strcmp(host, "api.x.ai") == 0);
 
     /* OpenAI Responses API supports built-in tools like web_search (and the
      * "shell" tool) in this app. Enable tool injection when talking to OpenAI's
-     * own host on /v1. */
+     * own host. */
     BOOL includeOpenAiTools =
-        (strcmp(host, OPENAI_HOST) == 0) &&
-        (apiEndpoint == API_ENDPOINT_RESPONSES) &&
-        (apiEndpoinUrl == NULL || strlen(apiEndpoinUrl) == 0 ||
-         strcmp(apiEndpoinUrl, "v1") == 0);
+        (isOpenAiHost && (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES));
 
     /* Use Gemini native generateContent when requested by endpoint. */
     BOOL useGeminiGenerateContent =
-        (apiEndpoint == API_ENDPOINT_GEMINI_GENERATE_CONTENT);
+        (apiEndpoint == API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT);
     BOOL effectiveStream = stream;
 
     if (useProxy && proxyUsesSSL) {
@@ -1410,7 +1374,7 @@ struct json_object **postChatMessageToOpenAI(
                 json_object_object_add(obj, "tools", toolsArray);
             }
 
-        } else if (apiEndpoint == API_ENDPOINT_MESSAGES) {
+        } else if (apiEndpoint == API_CHAT_ENDPOINT_MESSAGES) {
             /* Anthropic/Claude Messages API format */
             if (conversation->system != NULL &&
                 strlen(conversation->system) > 0)
@@ -1439,8 +1403,8 @@ struct json_object **postChatMessageToOpenAI(
             json_object_object_add(obj, "stream",
                                    json_object_new_boolean(FALSE));
 
-            /* Provider web search tools */
-            if (webSearchEnabled && requestProvider == PROVIDER_ANTHROPIC) {
+            /* Anthropic web search tools (only for Messages API). */
+            if (webSearchEnabled) {
                 struct json_object *toolsArray = json_object_new_array();
                 struct json_object *toolObj = json_object_new_object();
                 json_object_object_add(
@@ -1451,7 +1415,7 @@ struct json_object **postChatMessageToOpenAI(
                 json_object_array_add(toolsArray, toolObj);
                 json_object_object_add(obj, "tools", toolsArray);
             }
-        } else if (apiEndpoint == API_ENDPOINT_CHAT_COMPLETIONS) {
+        } else if (apiEndpoint == API_CHAT_ENDPOINT_CHAT_COMPLETIONS) {
             /* OpenAI-compatible chat/completions */
             if (conversation->system != NULL &&
                 strlen(conversation->system) > 0) {
@@ -1480,8 +1444,8 @@ struct json_object **postChatMessageToOpenAI(
                 obj, "stream",
                 json_object_new_boolean((json_bool)effectiveStream));
 
-            /* Provider web search tools */
-            if (webSearchEnabled && requestProvider == PROVIDER_GROK) {
+            /* xAI Grok web search tools (host-based heuristic). */
+            if (webSearchEnabled && isXaiHost) {
                 /* Some providers accept this on chat/completions too. */
                 struct json_object *toolsArray = json_object_new_array();
                 struct json_object *webObj = json_object_new_object();
@@ -1496,11 +1460,10 @@ struct json_object **postChatMessageToOpenAI(
             }
         } else {
             /* Responses-style requests (OpenAI + compatible providers) */
-            if (includeOpenAiTools ||
-                (webSearchEnabled && (requestProvider == PROVIDER_GROK))) {
+            if (includeOpenAiTools || (webSearchEnabled && isXaiHost)) {
                 struct json_object *toolsArray = json_object_new_array();
                 if (webSearchEnabled) {
-                    if (requestProvider == PROVIDER_GROK) {
+                    if (isXaiHost) {
                         struct json_object *webSearchToolObj =
                             json_object_new_object();
                         json_object_object_add(
@@ -1579,8 +1542,7 @@ struct json_object **postChatMessageToOpenAI(
                 obj, "stream",
                 json_object_new_boolean((json_bool)effectiveStream));
 
-            if (requestProvider == PROVIDER_OPENAI && includeOpenAiTools &&
-                configGetShellToolEnabled()) {
+            if (includeOpenAiTools && configGetShellToolEnabled()) {
                 CONST_STRPTR amigaInstructions =
 #ifdef __AMIGAOS3__
                     "This system is an Amiga computer running AmigaOS. When "
@@ -1651,27 +1613,18 @@ struct json_object **postChatMessageToOpenAI(
             FreeVec(encodedCredentials);
         }
 
-        CONST_STRPTR effectiveApiEndpointUrl = apiEndpoinUrl;
-        if (useGeminiGenerateContent) {
-            effectiveApiEndpointUrl = "v1beta";
-        } else if (effectiveApiEndpointUrl == NULL) {
-            effectiveApiEndpointUrl = "v1";
+        CONST_STRPTR effectiveApiEndpointUrl = apiEndpointUrl;
+        if (effectiveApiEndpointUrl == NULL) {
+            effectiveApiEndpointUrl = "";
         }
 
         /* Build the API authorization header based on type */
         UBYTE apiAuthHeader[512];
         memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
-        if (useGeminiGenerateContent) {
-            if (apiKey != NULL && strlen(apiKey) > 0) {
-                snprintf(apiAuthHeader, sizeof(apiAuthHeader),
-                         "x-goog-api-key: %s\r\n", apiKey);
-            }
-        } else {
-            if (authorizationType != AUTHORIZATION_TYPE_NONE &&
-                apiKey != NULL && strlen(apiKey) > 0) {
-                snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
-                         AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
-            }
+        if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+            strlen(apiKey) > 0) {
+            snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                     AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
         }
 
         /* Build custom headers string with proper line ending */
@@ -1684,7 +1637,7 @@ struct json_object **postChatMessageToOpenAI(
 
         char endpointNameBuf[256];
         memset(endpointNameBuf, 0, sizeof(endpointNameBuf));
-        CONST_STRPTR endpointName = API_ENDPOINT_NAMES[apiEndpoint];
+        CONST_STRPTR endpointName = API_CHAT_ENDPOINT_NAMES[apiEndpoint];
         if (useGeminiGenerateContent) {
             if (effectiveStream) {
                 snprintf(endpointNameBuf, sizeof(endpointNameBuf),
@@ -2247,41 +2200,24 @@ UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len) {
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
  * @param imageFormat the image format to use
+ * @param apiEndpoint the API endpoint to use
  * @return a pointer to a new json_object containing the response or NULL --
  *Free it with json_object_put when you are done using it
  **/
 struct json_object *postImageCreationRequestToOpenAI(
-    CONST_STRPTR prompt, ImageModel imageModel, ImageSize imageSize,
-    CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
-    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, ImageFormat imageFormat) {
-    /* Backward-compatible wrapper for OpenAI defaults. */
-    CONST_STRPTR modelName = NULL;
-    if (imageModel >= 0 && IMAGE_MODEL_NAMES[imageModel] != NULL) {
-        modelName = IMAGE_MODEL_NAMES[imageModel];
-    } else {
-        modelName = "gpt-image-1";
-    }
-    return postImageCreationRequestToOpenAIWithServer(
-        prompt, OPENAI_HOST, OPENAI_PORT, TRUE, "v1", AUTHORIZATION_TYPE_BEARER,
-        NULL, modelName, imageSize, apiKey, useProxy, proxyHost, proxyPort,
-        proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword,
-        imageFormat, PROVIDER_OPENAI, API_ENDPOINT_IMAGES_GENERATIONS);
-}
-
-struct json_object *postImageCreationRequestToOpenAIWithServer(
     CONST_STRPTR prompt, CONST_STRPTR host, UWORD port, BOOL useSSL,
     CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
     CONST_STRPTR customHeaders, CONST_STRPTR modelName, ImageSize imageSize,
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, ImageFormat imageFormat, Provider provider,
-    APIEndpoint imageApiEndpoint) {
+    CONST_STRPTR proxyPassword, ImageFormat imageFormat,
+    APIImageEndpoint apiEndpoint) {
     struct json_object *response = NULL;
     UWORD responseIndex = 0;
     BOOL requestUsesSSL = useSSL;
     BOOL isGeminiGenerateContent =
-        (imageApiEndpoint == API_ENDPOINT_GEMINI_GENERATE_CONTENT);
+        (apiEndpoint == API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT);
+
     if (useProxy && proxyUsesSSL) {
         requestUsesSSL = TRUE;
     }
@@ -2304,7 +2240,7 @@ struct json_object *postImageCreationRequestToOpenAIWithServer(
     connectionRetryCount = 0;
 
     struct json_object *obj = json_object_new_object();
-    if (isGeminiGenerateContent) {
+    if (apiEndpoint == API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT) {
         /* Gemini native text-to-image endpoint:
          * POST /v1beta/models/<model>:generateContent
          * Header: x-goog-api-key
@@ -2339,8 +2275,12 @@ struct json_object *postImageCreationRequestToOpenAIWithServer(
          * - OpenAI gpt-image-* supports size/output_format. */
         BOOL isGptImage =
             (modelName != NULL && strncmp(modelName, "gpt-image-", 10) == 0);
-
-        if (provider == PROVIDER_OPENAI || provider == PROVIDER_CUSTOM) {
+        printf("modelName: %s\n", modelName);
+        printf("apiEndpoint: %s\n", API_IMAGE_ENDPOINT_NAMES[apiEndpoint]);
+        printf("imageSize: %s\n", IMAGE_SIZE_NAMES[imageSize]);
+        printf("imageFormat: %s\n", IMAGE_FORMAT_NAMES[imageFormat]);
+        printf("isGptImage: %d\n", isGptImage);
+        if (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS) {
             if (imageSize != IMAGE_SIZE_NULL &&
                 IMAGE_SIZE_NAMES[imageSize] != NULL)
                 json_object_object_add(
@@ -2348,8 +2288,7 @@ struct json_object *postImageCreationRequestToOpenAIWithServer(
                     json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
         }
 
-        if (isGptImage &&
-            (provider == PROVIDER_OPENAI || provider == PROVIDER_CUSTOM)) {
+        if (isGptImage && (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS)) {
             json_object_object_add(obj, "moderation",
                                    json_object_new_string("low"));
             json_object_object_add(
@@ -2381,17 +2320,10 @@ struct json_object *postImageCreationRequestToOpenAIWithServer(
     /* Build auth header based on type */
     UBYTE apiAuthHeader[512];
     memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
-    if (isGeminiGenerateContent) {
-        if (apiKey != NULL && strlen(apiKey) > 0) {
-            snprintf(apiAuthHeader, sizeof(apiAuthHeader),
-                     "x-goog-api-key: %s\r\n", apiKey);
-        }
-    } else {
-        if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
-            strlen(apiKey) > 0) {
-            snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
-                     AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
-        }
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
     }
 
     /* Custom headers string with line ending */
@@ -2403,17 +2335,13 @@ struct json_object *postImageCreationRequestToOpenAIWithServer(
     }
 
     const char *endpointUrl = NULL;
-    if (isGeminiGenerateContent) {
-        endpointUrl = "v1beta";
-    } else {
-        endpointUrl = (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0)
-                          ? apiEndpointUrl
-                          : "v1";
-    }
+    endpointUrl = (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0)
+                      ? apiEndpointUrl
+                      : "";
 
     UBYTE requestPath[256];
     memset(requestPath, 0, sizeof(requestPath));
-    if (isGeminiGenerateContent) {
+    if (apiEndpoint == API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT) {
         if (modelName == NULL || strlen(modelName) == 0) {
             displayError("Gemini model not specified");
             json_object_put(obj);
@@ -2458,7 +2386,7 @@ struct json_object *postImageCreationRequestToOpenAIWithServer(
     }
 
     json_object_put(obj);
-
+    printf("writeBuffer: %s\n", writeBuffer);
     FreeVec(authHeader);
 
     updateStatusBar(STRING_SENDING_REQUEST, yellowPen);

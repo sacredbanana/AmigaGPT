@@ -115,7 +115,8 @@ void setConversationSystem(struct Conversation *conversation,
  * If it found role in the JSON instead of content then return an empty string
  **/
 UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
-                                BOOL retainJSONFormat, APIEndpoint apiEndpoint);
+                                BOOL retainJSONFormat,
+                                APIChatEndpoint apiEndpoint);
 
 /**
  * Add a block of text to the conversation list

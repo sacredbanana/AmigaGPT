@@ -48,25 +48,6 @@ struct Conversation {
 };
 
 /**
- * Chat/Image provider enumeration
- * Built-in providers that cannot be deleted
- **/
-typedef enum {
-    PROVIDER_OPENAI = 0L,
-    PROVIDER_GEMINI,
-    PROVIDER_GROK,
-    PROVIDER_ANTHROPIC,
-    PROVIDER_CUSTOM,
-    PROVIDER_COUNT
-} Provider;
-
-/**
- * The names of the providers
- * @see Provider
- **/
-extern CONST_STRPTR PROVIDER_NAMES[];
-
-/**
  * Prepopulated chat models for each built-in provider
  **/
 extern CONST_STRPTR OPENAI_CHAT_MODELS[];
@@ -231,24 +212,29 @@ struct GeneratedImage {
 };
 
 /**
- * The API endpoint to use
- * @see APIEndpoint
+ * Chat API endpoint to use
  **/
 typedef enum {
-    API_ENDPOINT_RESPONSES = 0L,
-    API_ENDPOINT_CHAT_COMPLETIONS,
-    API_ENDPOINT_MESSAGES,
+    API_CHAT_ENDPOINT_RESPONSES = 0L,
+    API_CHAT_ENDPOINT_CHAT_COMPLETIONS,
+    API_CHAT_ENDPOINT_MESSAGES,
     /* Gemini native text endpoint (generateContent / streamGenerateContent) */
-    API_ENDPOINT_GEMINI_GENERATE_CONTENT,
-    /* OpenAI-compatible image generation endpoint */
-    API_ENDPOINT_IMAGES_GENERATIONS
-} APIEndpoint;
+    API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT
+} APIChatEndpoint;
+
+extern CONST_STRPTR API_CHAT_ENDPOINT_NAMES[];
 
 /**
- * The names of the API endpoints
- * @see APIEndpoint
+ * Image API endpoint to use
  **/
-extern CONST_STRPTR API_ENDPOINT_NAMES[];
+typedef enum {
+    /* OpenAI-compatible image generation endpoint */
+    API_IMAGE_ENDPOINT_IMAGES_GENERATIONS = 0L,
+    /* Gemini native image endpoint (generateContent with responseModalities) */
+    API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT
+} APIImageEndpoint;
+
+extern CONST_STRPTR API_IMAGE_ENDPOINT_NAMES[];
 
 /**
  * The authorization type to use
@@ -257,7 +243,8 @@ extern CONST_STRPTR API_ENDPOINT_NAMES[];
 typedef enum {
     AUTHORIZATION_TYPE_NONE = 0,
     AUTHORIZATION_TYPE_BEARER,
-    AUTHORIZATION_TYPE_X_API_KEY
+    AUTHORIZATION_TYPE_X_API_KEY,
+    AUTHORIZATION_TYPE_X_GOOGLE_API_KEY
 } AuthorizationType;
 
 /**
@@ -265,24 +252,6 @@ typedef enum {
  * @see AuthorizationType
  **/
 extern CONST_STRPTR AUTHORIZATION_TYPE_NAMES[];
-
-/**
- * Provider configuration - host, port, SSL, endpoints
- **/
-struct ProviderConfig {
-    CONST_STRPTR host;
-    UWORD port;
-    BOOL useSSL;
-    APIEndpoint apiEndpoint;
-    CONST_STRPTR apiEndpointUrl;
-    AuthorizationType authorizationType;
-    CONST_STRPTR customHeaders;
-};
-
-/**
- * Get the configuration for a built-in provider
- **/
-struct ProviderConfig *getProviderConfig(Provider provider);
 
 /**
  * The format of the image
@@ -347,7 +316,7 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
  * @param proxyPassword the proxy password to use
  * @param webSearchEnabled whether to enable web search or not
  * @param apiEndpoint the API endpoint to use
- * @param apiEndpoinUrl the API endpoint URL to use
+ * @param apiEndpointUrl the API endpoint URL to use
  * @param authorizationType the authorization type to use
  * @param customHeaders custom HTTP headers to add to the request
  * @return a pointer to a new array of json_object containing the response(s) or
@@ -359,9 +328,9 @@ struct json_object **postChatMessageToOpenAI(
     CONST_STRPTR model, CONST_STRPTR apiKey, BOOL stream, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, BOOL webSearchEnabled, APIEndpoint apiEndpoint,
-    CONST_STRPTR apiEndpoinUrl, AuthorizationType authorizationType,
-    CONST_STRPTR customHeaders);
+    CONST_STRPTR proxyPassword, BOOL webSearchEnabled,
+    APIChatEndpoint apiEndpoint, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders);
 
 /**
  * Post a image creation request to OpenAI
@@ -377,24 +346,18 @@ struct json_object **postChatMessageToOpenAI(
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
  * @param imageFormat the image format to use
+ * @param apiEndpoint the API endpoint to use
  * @return a pointer to a new json_object containing the response or NULL --
  *Free it with json_object_put when you are done using it
  **/
 struct json_object *postImageCreationRequestToOpenAI(
-    CONST_STRPTR prompt, ImageModel imageModel, ImageSize imageSize,
-    CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
-    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, ImageFormat imageFormat);
-
-/* Provider-aware image generation (OpenAI-compatible images/generations). */
-struct json_object *postImageCreationRequestToOpenAIWithServer(
     CONST_STRPTR prompt, CONST_STRPTR host, UWORD port, BOOL useSSL,
     CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
     CONST_STRPTR customHeaders, CONST_STRPTR modelName, ImageSize imageSize,
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, ImageFormat imageFormat, Provider provider,
-    APIEndpoint imageApiEndpoint);
+    CONST_STRPTR proxyPassword, ImageFormat imageFormat,
+    APIImageEndpoint apiEndpoint);
 
 /**
  * Download a file from the internet

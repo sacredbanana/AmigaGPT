@@ -565,7 +565,7 @@ static void appendJsonStringToMessageScratch(struct json_object *obj,
 
 UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                                 BOOL retainJSONFormat,
-                                APIEndpoint apiEndpoint) {
+                                APIChatEndpoint apiEndpoint) {
     if (json == NULL)
         return NULL;
     if (stream) {
@@ -670,7 +670,7 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
     } else {
         struct json_object *text = NULL;
         resetMessageScratch();
-        if (apiEndpoint == API_ENDPOINT_RESPONSES) {
+        if (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES) {
             struct json_object *outputArray =
                 json_object_object_get(json, "output");
             struct json_object *output = NULL;
@@ -718,7 +718,7 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                 }
             }
             return (UTF8 *)"";
-        } else if (apiEndpoint == API_ENDPOINT_MESSAGES) {
+        } else if (apiEndpoint == API_CHAT_ENDPOINT_MESSAGES) {
             /* Anthropic/Claude Messages API response format:
              * { "content": [{"type": "text", "text": "..."}], ... } */
             struct json_object *contentArray =

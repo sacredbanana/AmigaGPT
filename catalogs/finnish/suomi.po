@@ -1825,3 +1825,9 @@ msgstr "Image received but could not be saved (showing JSON)."
 msgctxt "STRING_TEST_DETAIL_ERROR_RESPONSE_RECEIVED (333//)"
 msgid "Error response received."
 msgstr "Error response received."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_IMAGE_SIZE (334//)"
+msgid "Image Size"
+msgstr "Image Size"
+

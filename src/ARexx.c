@@ -268,34 +268,9 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     /* Reload config from disk to pick up any changes from the main app */
     DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
 
-    /* Determine the provider to use */
-    Provider provider = configGetChatProvider();
-    if (providerString != NULL && strlen(providerString) > 0) {
-        for (UBYTE i = 0; PROVIDER_NAMES[i] != NULL; i++) {
-            if (strcasecmp(providerString, PROVIDER_NAMES[i]) == 0) {
-                provider = (Provider)i;
-                break;
-            }
-        }
-        /* Also check for short names */
-        if (strcasecmp(providerString, "openai") == 0) {
-            provider = PROVIDER_OPENAI;
-        } else if (strcasecmp(providerString, "gemini") == 0) {
-            provider = PROVIDER_GEMINI;
-        } else if (strcasecmp(providerString, "grok") == 0) {
-            provider = PROVIDER_GROK;
-        } else if (strcasecmp(providerString, "anthropic") == 0 ||
-                   strcasecmp(providerString, "claude") == 0) {
-            provider = PROVIDER_ANTHROPIC;
-        } else if (strcasecmp(providerString, "custom") == 0) {
-            provider = PROVIDER_CUSTOM;
-        }
-    }
-
-    /* Resolve defaults from the selected profile */
+    /* Resolve defaults from the active chat profile */
     struct ChatRequestSettings rexxSettings;
-    configGetChatRequestSettingsWithStreamOverride(&rexxSettings, provider,
-                                                   FALSE);
+    configGetChatRequestSettingsWithStreamOverride(&rexxSettings, FALSE);
     ULONG portValue = port == NULL ? rexxSettings.port : (ULONG)*port;
     ULONG proxyPortValue =
         proxyPort == NULL ? rexxSettings.proxyPort : (ULONG)*proxyPort;
@@ -382,7 +357,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     }
 
     /* Determine API endpoint and auth type based on selected profile */
-    APIEndpoint apiEndpoint = rexxSettings.apiEndpoint;
+    APIChatEndpoint apiEndpoint = rexxSettings.apiEndpoint;
     AuthorizationType authType = rexxSettings.authorizationType;
     CONST_STRPTR customHeaders = rexxSettings.customHeaders;
     CONST_STRPTR apiEndpointUrl = rexxSettings.apiEndpointUrl;
@@ -514,7 +489,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
         /* No more tool calls - get the final response text */
         UTF8 *toolContentString = getMessageContentFromJson(
-            toolResponse, FALSE, TRUE, API_ENDPOINT_RESPONSES);
+            toolResponse, FALSE, TRUE, API_CHAT_ENDPOINT_RESPONSES);
         if (toolContentString != NULL && strlen(toolContentString) > 0) {
             /* Add response to conversation for context */
             addTextToConversation(conversation, toolContentString, "assistant");
@@ -572,7 +547,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             return RETURN_OK;
         }
         UTF8 *part = getMessageContentFromJson(response, FALSE, TRUE,
-                                               API_ENDPOINT_RESPONSES);
+                                               API_CHAT_ENDPOINT_RESPONSES);
         if (part != NULL)
             combinedLen += strlen(part) + 1;
     }
@@ -592,7 +567,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     ri = 0;
     while ((response = responses[ri++]) != NULL) {
         UTF8 *part = getMessageContentFromJson(response, FALSE, TRUE,
-                                               API_ENDPOINT_RESPONSES);
+                                               API_CHAT_ENDPOINT_RESPONSES);
         if (part != NULL && strlen(part) > 0) {
             strncat(combined, part, combinedLen - strlen(combined) - 1);
         }
@@ -642,46 +617,20 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     /* Reload config from disk to pick up any changes from the main app */
     DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
 
-    /* Determine the provider to use */
-    Provider provider = configGetImageProvider();
-    if (providerString != NULL && strlen(providerString) > 0) {
-        for (UBYTE i = 0; PROVIDER_NAMES[i] != NULL; i++) {
-            if (strcasecmp(providerString, PROVIDER_NAMES[i]) == 0) {
-                provider = (Provider)i;
-                break;
-            }
-        }
-        /* Also check for short names */
-        if (strcasecmp(providerString, "openai") == 0) {
-            provider = PROVIDER_OPENAI;
-        } else if (strcasecmp(providerString, "gemini") == 0) {
-            provider = PROVIDER_GEMINI;
-        } else if (strcasecmp(providerString, "grok") == 0) {
-            provider = PROVIDER_GROK;
-        } else if (strcasecmp(providerString, "custom") == 0) {
-            provider = PROVIDER_CUSTOM;
-        }
-    }
+    /* Resolve defaults from the active image profile */
+    struct ImageRequestSettings imgSettings;
+    configGetActiveImageRequestSettings(&imgSettings);
 
     if (apiKey == NULL || strlen(apiKey) == 0) {
-        apiKey = configGetApiKeyForProvider(provider);
+        apiKey = (STRPTR)imgSettings.apiKey;
     }
 
     /* Model is a string for OpenAI-compatible image endpoints */
     CONST_STRPTR modelName = modelString;
     if (modelName == NULL || strlen(modelName) == 0) {
-        switch (provider) {
-        case PROVIDER_GEMINI:
-            modelName = GEMINI_IMAGE_MODELS[0];
-            break;
-        case PROVIDER_GROK:
-            modelName = GROK_IMAGE_MODELS[0];
-            break;
-        case PROVIDER_OPENAI:
-        case PROVIDER_CUSTOM:
-        default:
+        modelName = imgSettings.model;
+        if (modelName == NULL || strlen(modelName) == 0) {
             modelName = OPENAI_IMAGE_MODELS[0];
-            break;
         }
     }
 
@@ -698,45 +647,20 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     UTF8 *promptUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
                                           CSA_Source, (Tag)prompt, TAG_DONE);
 
-    /* Resolve provider connection settings */
-    CONST_STRPTR host = NULL;
-    UWORD port = 443;
-    BOOL useSSL = TRUE;
-    CONST_STRPTR apiEndpointUrl = "v1";
-    AuthorizationType authType = AUTHORIZATION_TYPE_BEARER;
-    CONST_STRPTR customHeaders = NULL;
+    /* Use active image profile connection settings */
+    CONST_STRPTR resolvedHost = imgSettings.host;
+    UWORD resolvedPort = imgSettings.port;
+    BOOL resolvedUseSSL = imgSettings.useSSL;
+    CONST_STRPTR resolvedEndpointUrl = imgSettings.apiEndpointUrl;
+    AuthorizationType resolvedAuthType = imgSettings.authorizationType;
+    CONST_STRPTR resolvedHeaders = imgSettings.customHeaders;
+    APIImageEndpoint imageEndpoint = imgSettings.imageApiEndpoint;
 
-    if (provider == PROVIDER_CUSTOM) {
-        host = configGetCustomImageHost();
-        port = (UWORD)configGetCustomImagePort();
-        useSSL = configGetCustomImageUseSSL();
-        apiEndpointUrl = configGetCustomImageApiEndpointUrl();
-        authType = configGetCustomImageAuthorizationType();
-        customHeaders = configGetCustomImageHeaders();
-    } else {
-        struct ProviderConfig *cfg = getProviderConfig(provider);
-        if (cfg != NULL) {
-            host = cfg->host;
-            port = (UWORD)cfg->port;
-            useSSL = cfg->useSSL;
-            apiEndpointUrl = cfg->apiEndpointUrl;
-            authType = cfg->authorizationType;
-            customHeaders = cfg->customHeaders;
-        }
-    }
-
-    APIEndpoint imageEndpoint = (APIEndpoint)configGetImageApiEndpoint();
-    if (provider == PROVIDER_GEMINI &&
-        configGetImageProvider() != PROVIDER_GEMINI) {
-        /* If ARexx overrides the provider to Gemini, default to native
-         * endpoint. */
-        imageEndpoint = API_ENDPOINT_GEMINI_GENERATE_CONTENT;
-    }
-
-    struct json_object *response = postImageCreationRequestToOpenAIWithServer(
-        promptUTF8, host, port, useSSL, apiEndpointUrl, authType, customHeaders,
-        modelName, size, apiKey, FALSE, NULL, 0, FALSE, FALSE, NULL, NULL,
-        IMAGE_FORMAT_JPG, provider, imageEndpoint);
+    struct json_object *response = postImageCreationRequestToOpenAI(
+        promptUTF8, resolvedHost, resolvedPort, resolvedUseSSL,
+        resolvedEndpointUrl, resolvedAuthType, resolvedHeaders, modelName, size,
+        apiKey, FALSE, NULL, 0, FALSE, FALSE, NULL, NULL, IMAGE_FORMAT_JPG,
+        imageEndpoint);
     CodesetsFreeA(promptUTF8, NULL);
 
     if (response == NULL) {
@@ -846,11 +770,41 @@ HOOKPROTONHNO(ListImageModelsFunc, APTR, ULONG *arg) {
 MakeHook(ListImageModelsHook, ListImageModelsFunc);
 
 HOOKPROTONHNO(ListProvidersFunc, APTR, ULONG *arg) {
-    STRPTR providers = AllocVec(512, MEMF_ANY | MEMF_CLEAR);
-    for (UBYTE i = 0; PROVIDER_NAMES[i] != NULL; i++) {
-        strncat(providers, PROVIDER_NAMES[i], 512);
-        strncat(providers, "\n", 512);
+    STRPTR providers = AllocVec(2048, MEMF_ANY | MEMF_CLEAR);
+    if (providers == NULL)
+        return RETURN_ERROR;
+
+    /* Locked profiles */
+    strncat(providers, "OpenAI\n", 2048);
+    strncat(providers, "Google Gemini\n", 2048);
+    strncat(providers, "xAI Grok\n", 2048);
+    strncat(providers, "Anthropic Claude\n", 2048);
+
+    /* Custom chat profiles */
+    CONST_STRPTR profilesStr = configGetCustomServerProfiles();
+    if (profilesStr != NULL && strlen(profilesStr) > 0) {
+        struct json_object *arr = json_tokener_parse(profilesStr);
+        if (arr != NULL && json_object_is_type(arr, json_type_array)) {
+            int len = json_object_array_length(arr);
+            for (int i = 0; i < len; i++) {
+                struct json_object *p = json_object_array_get_idx(arr, i);
+                if (p == NULL)
+                    continue;
+                struct json_object *nameObj =
+                    json_object_object_get(p, "name");
+                if (nameObj == NULL)
+                    continue;
+                CONST_STRPTR name = json_object_get_string(nameObj);
+                if (name != NULL && strlen(name) > 0) {
+                    strncat(providers, name, 2048);
+                    strncat(providers, "\n", 2048);
+                }
+            }
+        }
+        if (arr != NULL)
+            json_object_put(arr);
     }
+
     set(app, MUIA_Application_RexxString, providers);
     FreeVec(providers);
     return RETURN_OK;
