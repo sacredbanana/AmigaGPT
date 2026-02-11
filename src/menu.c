@@ -26,7 +26,6 @@ Object *menuStrip = NULL;
 
 static void populateSpeechMenu();
 static void populateChatMenu();
-static void populateImageMenu();
 static void populateArexxMenu();
 static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent);
 static void FreeNPPath(BPTR listHead);
@@ -438,11 +437,7 @@ void createMenu() {
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_IMAGE_PROVIDER_SETTINGS, MUIA_UserData,
     MENU_ITEM_IMAGE_PROVIDER_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
-    MUIA_UserData, MENU_ITEM_NULL, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, STRING_IMAGE_FORMAT,
-    MUIA_UserData, MENU_ITEM_IMAGE_FORMAT, MUIA_Menuitem_CopyStrings, FALSE,
-    End, End,
+    End,
 
     /* Speech Menu */
         MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_SPEECH,
@@ -480,7 +475,6 @@ void createMenu() {
 
     /* Speech menu is no longer populated dynamically. */
     populateChatMenu();
-    populateImageMenu();
     populateArexxMenu();
 }
 
@@ -906,40 +900,6 @@ static void populateChatMenu() {
 }
 
 /**
- * Populate the Image menu with sizes and format
- */
-static void populateImageMenu() {
-    DoMethod(menuStrip, MUIM_Menustrip_InitChange);
-
-    Object *imageFormatMenuItem =
-        (Object *)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_IMAGE_FORMAT);
-
-    // Remove any existing image format items
-    Object *formatMenuItem;
-    while (formatMenuItem =
-               (Object *)DoMethod(imageFormatMenuItem, MUIM_Family_GetChild)) {
-        DoMethod(imageFormatMenuItem, MUIM_Family_Remove, formatMenuItem);
-        DisposeObject(formatMenuItem);
-    }
-
-    // Populate the image format menu with the formats
-    for (UBYTE i = 0; IMAGE_FORMAT_NAMES[i] != NULL; i++) {
-        Object *newImageFormatMenuItem = MenuitemObject, MUIA_Menuitem_Title,
-               IMAGE_FORMAT_NAMES[i], MUIA_Menuitem_Checkit, TRUE,
-               MUIA_Menuitem_Checked, configGetImageFormat() == i,
-               MUIA_Menuitem_Toggle, TRUE, MUIA_Menuitem_Exclude, ~(1 << i),
-               MUIA_Menuitem_CopyStrings, FALSE, End;
-        DoMethod(imageFormatMenuItem, MUIM_Family_AddTail,
-                 newImageFormatMenuItem);
-        DoMethod(newImageFormatMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-                 TRUE, configObj, 3, MUIM_Set, MUIA_AmigaGPTConfig_ImageFormat,
-                 i);
-    }
-
-    DoMethod(menuStrip, MUIM_Menustrip_ExitChange);
-}
-
-/**
  * Populate the AREXX menu with the installed scripts
  **/
 static void populateArexxMenu() {
@@ -1026,17 +986,17 @@ static void populateArexxMenu() {
  * @brief Build a NP_Path list.
  * @param extraDirs[]: array of assigns/paths like "SYS:Utilities",
  *MOSSYS:Utilities"
- * @param addParent: if TRUE, duplicate the callerâs existing CLI path first
+ * @param addParent: if TRUE, duplicate the callerÃÂ¢ÃÂÃÂs existing CLI path first
  * @returns BPTR to first node, or ZERO on failure (nothing allocated).
  **/
 static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent) {
     struct PathNodeCompat *head = NULL, *tail = NULL;
 
-// Optionally copy the callerâs current shell path (duplicates the locks).
+// Optionally copy the callerÃÂ¢ÃÂÃÂs current shell path (duplicates the locks).
 #ifndef __AMIGAOS4__
     if (addParent) {
         struct CommandLineInterface *cli =
-            Cli(); // NULL if weâre not in a shell
+            Cli(); // NULL if weÃÂ¢ÃÂÃÂre not in a shell
         if (cli && cli->cli_CommandDir) {
             for (struct PathNodeCompat *src =
                      (struct PathNodeCompat *)BADDR(cli->cli_CommandDir);
@@ -1087,7 +1047,7 @@ static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent) {
         tail = node;
     }
 
-    /* Note: current directory and C: are implicit; donât add them yourself. */
+    /* Note: current directory and C: are implicit; donÃÂ¢ÃÂÃÂt add them yourself. */
     /* C: is always searched last, current dir always first.                 */ /*  */
 
     return MKBADDR(head);

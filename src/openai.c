@@ -2278,7 +2278,11 @@ struct json_object *postImageCreationRequestToOpenAI(
         printf("modelName: %s\n", modelName);
         printf("apiEndpoint: %s\n", API_IMAGE_ENDPOINT_NAMES[apiEndpoint]);
         printf("imageSize: %s\n", IMAGE_SIZE_NAMES[imageSize]);
-        printf("imageFormat: %s\n", IMAGE_FORMAT_NAMES[imageFormat]);
+        printf("imageFormat: %s\n",
+               (imageFormat != IMAGE_FORMAT_NULL &&
+                IMAGE_FORMAT_NAMES[imageFormat] != NULL)
+                   ? IMAGE_FORMAT_NAMES[imageFormat]
+                   : "(none)");
         printf("isGptImage: %d\n", isGptImage);
         if (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS) {
             if (imageSize != IMAGE_SIZE_NULL &&
@@ -2288,17 +2292,25 @@ struct json_object *postImageCreationRequestToOpenAI(
                     json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
         }
 
-        if (isGptImage && (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS)) {
+        if (isGptImage &&
+            (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS)) {
             json_object_object_add(obj, "moderation",
                                    json_object_new_string("low"));
-            json_object_object_add(
-                obj, "output_format",
-                json_object_new_string(IMAGE_FORMAT_NAMES[imageFormat]));
-            json_object_object_add(obj, "output_compression",
-                                   json_object_new_int(100));
+            if (imageFormat != IMAGE_FORMAT_NULL &&
+                IMAGE_FORMAT_NAMES[imageFormat] != NULL) {
+                json_object_object_add(
+                    obj, "output_format",
+                    json_object_new_string(IMAGE_FORMAT_NAMES[imageFormat]));
+                json_object_object_add(obj, "output_compression",
+                                       json_object_new_int(100));
+            }
         } else {
-            json_object_object_add(obj, "response_format",
-                                   json_object_new_string("b64_json"));
+            /* response_format controls base64 output for OpenAI-compatible
+             * endpoints. Allow omitting it when the user selects "None". */
+            if (imageFormat != IMAGE_FORMAT_NULL) {
+                json_object_object_add(obj, "response_format",
+                                       json_object_new_string("b64_json"));
+            }
         }
     }
     CONST_STRPTR jsonString = json_object_to_json_string(obj);

@@ -131,6 +131,11 @@ struct AmigaGPTConfigData {
     STRPTR grokChatModelName;
     STRPTR anthropicChatModelName;
 
+    /* Provider-specific image model names (locked image profiles) */
+    STRPTR openAiImageModelName;
+    STRPTR geminiImageModelName;
+    STRPTR grokImageModelName;
+
     /* Auto-save state */
     BOOL isDirty;
     BOOL saveInProgress;
@@ -276,6 +281,14 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
         copyString(ANTHROPIC_CHAT_MODELS[0] ? ANTHROPIC_CHAT_MODELS[0]
                                             : "claude-opus-4-5-20251101");
 
+    /* Provider-specific image model names */
+    data->openAiImageModelName = copyString(
+        OPENAI_IMAGE_MODELS[0] ? OPENAI_IMAGE_MODELS[0] : "gpt-image-1.5");
+    data->geminiImageModelName = copyString(
+        GEMINI_IMAGE_MODELS[0] ? GEMINI_IMAGE_MODELS[0] : "imagen-4-ultra");
+    data->grokImageModelName = copyString(
+        GROK_IMAGE_MODELS[0] ? GROK_IMAGE_MODELS[0] : "grok-2-image");
+
     data->isDirty = FALSE;
     data->saveInProgress = FALSE;
 }
@@ -326,6 +339,9 @@ static void freeAllStrings(struct AmigaGPTConfigData *data) {
     freeString(&data->geminiChatModelName);
     freeString(&data->grokChatModelName);
     freeString(&data->anthropicChatModelName);
+    freeString(&data->openAiImageModelName);
+    freeString(&data->geminiImageModelName);
+    freeString(&data->grokImageModelName);
 }
 
 /**
@@ -656,6 +672,15 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_AnthropicChatModelName:
         *store = (ULONG)data->anthropicChatModelName;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_OpenAiImageModelName:
+        *store = (ULONG)data->openAiImageModelName;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GeminiImageModelName:
+        *store = (ULONG)data->geminiImageModelName;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GrokImageModelName:
+        *store = (ULONG)data->grokImageModelName;
         return TRUE;
     }
 
@@ -1093,6 +1118,20 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                               (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
+        case MUIA_AmigaGPTConfig_OpenAiImageModelName:
+            if (setStringAttr(&data->openAiImageModelName,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_GeminiImageModelName:
+            if (setStringAttr(&data->geminiImageModelName,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_GrokImageModelName:
+            if (setStringAttr(&data->grokImageModelName, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
         }
     }
 
@@ -1382,6 +1421,21 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
                            data->imageModelName != NULL
                                ? json_object_new_string(data->imageModelName)
                                : NULL);
+    json_object_object_add(
+        configJsonObject, "openAiImageModelName",
+        data->openAiImageModelName != NULL
+            ? json_object_new_string(data->openAiImageModelName)
+            : NULL);
+    json_object_object_add(
+        configJsonObject, "geminiImageModelName",
+        data->geminiImageModelName != NULL
+            ? json_object_new_string(data->geminiImageModelName)
+            : NULL);
+    json_object_object_add(
+        configJsonObject, "grokImageModelName",
+        data->grokImageModelName != NULL
+            ? json_object_new_string(data->grokImageModelName)
+            : NULL);
     json_object_object_add(configJsonObject, "geminiApiKey",
                            data->geminiApiKey != NULL
                                ? json_object_new_string(data->geminiApiKey)
@@ -1861,6 +1915,13 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
 
     readJsonString(configJsonObject, "chatModelName", &data->chatModelName);
     readJsonString(configJsonObject, "imageModelName", &data->imageModelName);
+    /* Provider-specific image model names (locked image profiles) */
+    readJsonString(configJsonObject, "openAiImageModelName",
+                   &data->openAiImageModelName);
+    readJsonString(configJsonObject, "geminiImageModelName",
+                   &data->geminiImageModelName);
+    readJsonString(configJsonObject, "grokImageModelName",
+                   &data->grokImageModelName);
     readJsonString(configJsonObject, "geminiApiKey", &data->geminiApiKey);
     readJsonString(configJsonObject, "grokApiKey", &data->grokApiKey);
     readJsonString(configJsonObject, "anthropicApiKey", &data->anthropicApiKey);
@@ -1958,6 +2019,49 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
             copyString(ANTHROPIC_CHAT_MODELS[0] ? ANTHROPIC_CHAT_MODELS[0]
                                                 : "claude-opus-4-5-20251101");
     }
+
+    /* If provider-specific image model keys are missing (older configs), map
+     * legacy imageModelName to whichever locked image profile is active. */
+    {
+        struct json_object *tmp = NULL;
+        BOOL hasOpenAi = json_object_object_get_ex(
+            configJsonObject, "openAiImageModelName", &tmp);
+        BOOL hasGemini = json_object_object_get_ex(
+            configJsonObject, "geminiImageModelName", &tmp);
+        BOOL hasGrok = json_object_object_get_ex(
+            configJsonObject, "grokImageModelName", &tmp);
+        if (!hasOpenAi && !hasGemini && !hasGrok && data->imageModelName != NULL) {
+            CONST_STRPTR activeImg = data->activeImageProfileName;
+            if (activeImg != NULL && strlen(activeImg) > 0) {
+                if (strcmp(activeImg, "Google Gemini") == 0) {
+                    freeString(&data->geminiImageModelName);
+                    data->geminiImageModelName = copyString(data->imageModelName);
+                } else if (strcmp(activeImg, "xAI Grok") == 0) {
+                    freeString(&data->grokImageModelName);
+                    data->grokImageModelName = copyString(data->imageModelName);
+                } else {
+                    freeString(&data->openAiImageModelName);
+                    data->openAiImageModelName = copyString(data->imageModelName);
+                }
+            } else {
+                freeString(&data->openAiImageModelName);
+                data->openAiImageModelName = copyString(data->imageModelName);
+            }
+        }
+    }
+
+    if (data->openAiImageModelName == NULL)
+        data->openAiImageModelName =
+            copyString(OPENAI_IMAGE_MODELS[0] ? OPENAI_IMAGE_MODELS[0]
+                                              : "gpt-image-1.5");
+    if (data->geminiImageModelName == NULL)
+        data->geminiImageModelName =
+            copyString(GEMINI_IMAGE_MODELS[0] ? GEMINI_IMAGE_MODELS[0]
+                                              : "imagen-4-ultra");
+    if (data->grokImageModelName == NULL)
+        data->grokImageModelName =
+            copyString(GROK_IMAGE_MODELS[0] ? GROK_IMAGE_MODELS[0]
+                                            : "grok-2-image");
 
     FreeVec(configJsonString);
     json_object_put(configJsonObject);
@@ -3391,7 +3495,7 @@ void configGetActiveImageRequestSettings(struct ImageRequestSettings *out) {
             out->authorizationType = AUTHORIZATION_TYPE_BEARER;
             out->customHeaders = NULL;
             out->apiKey = configGetOpenAiApiKey();
-            out->model = configGetImageModelName();
+            out->model = configGetOpenAiImageModelName();
             out->imageApiEndpoint = API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
         } else if (strcmp(activeName, LOCKED_PROFILE_NAME_GEMINI) == 0) {
             out->host = (STRPTR)"generativelanguage.googleapis.com";
@@ -3401,7 +3505,7 @@ void configGetActiveImageRequestSettings(struct ImageRequestSettings *out) {
             out->authorizationType = AUTHORIZATION_TYPE_X_GOOGLE_API_KEY;
             out->customHeaders = NULL;
             out->apiKey = configGetGeminiApiKey();
-            out->model = configGetImageModelName();
+            out->model = configGetGeminiImageModelName();
             out->imageApiEndpoint = API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT;
         } else {
             out->host = (STRPTR)"api.x.ai";
@@ -3411,7 +3515,7 @@ void configGetActiveImageRequestSettings(struct ImageRequestSettings *out) {
             out->authorizationType = AUTHORIZATION_TYPE_BEARER;
             out->customHeaders = NULL;
             out->apiKey = configGetGrokApiKey();
-            out->model = configGetImageModelName();
+            out->model = configGetGrokImageModelName();
             out->imageApiEndpoint = API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
         }
         return;
@@ -3459,6 +3563,42 @@ STRPTR configGetImageModelName(void) {
 void configSetImageModelName(CONST_STRPTR value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_ImageModelName, (ULONG)value);
+}
+
+STRPTR configGetOpenAiImageModelName(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_OpenAiImageModelName, &val);
+    return val;
+}
+
+void configSetOpenAiImageModelName(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_OpenAiImageModelName, (ULONG)value);
+}
+
+STRPTR configGetGeminiImageModelName(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_GeminiImageModelName, &val);
+    return val;
+}
+
+void configSetGeminiImageModelName(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_GeminiImageModelName, (ULONG)value);
+}
+
+STRPTR configGetGrokImageModelName(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_GrokImageModelName, &val);
+    return val;
+}
+
+void configSetGrokImageModelName(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_GrokImageModelName, (ULONG)value);
 }
 
 BOOL configGetCustomChatStreamEnabled(void) {

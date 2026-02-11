@@ -30,6 +30,7 @@ Object *customServerChatModelString;
 Object *customServerModelList;
 Object *customServerFetchModelsButton;
 Object *customServerImageSizeCycle;
+Object *customServerImageFormatCycle;
 Object *customServerApiEndpointCycle;
 Object *customServerApiEndpointUrlString;
 Object *customServerCustomHeadersString;
@@ -55,6 +56,8 @@ static Object *customServerSettingsRootGroup = NULL;
 static Object *customServerStreamingGroup = NULL;
 /* Frame group containing Image Size (image-only) */
 static Object *customServerImageSizeGroup = NULL;
+/* Frame group containing Image Format (image-only) */
+static Object *customServerImageFormatGroup = NULL;
 
 /* API endpoint options (chat vs image) */
 static STRPTR chatApiEndpointOptions[6] = {NULL};
@@ -83,6 +86,32 @@ static ImageSize optionIndexToImageSize(LONG idx) {
     return imageSizeOptionValues[idx];
 }
 
+static STRPTR imageFormatOptions[4] = {NULL};
+
+static LONG imageFormatToOptionIndex(ImageFormat fmt) {
+    switch (fmt) {
+    case IMAGE_FORMAT_JPG:
+        return 1;
+    case IMAGE_FORMAT_PNG:
+        return 2;
+    case IMAGE_FORMAT_NULL:
+    default:
+        return 0;
+    }
+}
+
+static ImageFormat optionIndexToImageFormat(LONG idx) {
+    switch (idx) {
+    case 1:
+        return IMAGE_FORMAT_JPG;
+    case 2:
+        return IMAGE_FORMAT_PNG;
+    case 0:
+    default:
+        return IMAGE_FORMAT_NULL;
+    }
+}
+
 static struct json_object *customServerModelsJson = NULL;
 static struct json_object *profilesJson = NULL;
 
@@ -97,10 +126,9 @@ static struct json_object *profilesJson = NULL;
 static STRPTR pendingLockedApiKeys[LOCKED_CHAT_PROFILE_COUNT] = {0};
 static STRPTR pendingLockedChatModels[LOCKED_CHAT_PROFILE_COUNT] = {0};
 static BOOL pendingLockedStreaming[LOCKED_CHAT_PROFILE_COUNT] = {0};
-static STRPTR pendingImageModelName = NULL; /* image model name is global */
-static LONG pendingImageModelLockedIndex = -1; /* which locked image profile */
+static STRPTR pendingLockedImageModels[LOCKED_IMAGE_PROFILE_COUNT] = {0};
 static ImageSize pendingImageSize = IMAGE_SIZE_1024x1024;
-static LONG pendingImageSizeLockedIndex = -1; /* which locked image profile */
+static ImageFormat pendingImageFormat = IMAGE_FORMAT_PNG;
 
 static BOOL profileSettingsDirty = FALSE;
 static LONG lastSelectedProfile = -1;
@@ -378,9 +406,11 @@ static void freePendingLockedProfiles(void) {
         }
         pendingLockedStreaming[i] = FALSE;
     }
-    if (pendingImageModelName != NULL) {
-        FreeVec(pendingImageModelName);
-        pendingImageModelName = NULL;
+    for (int i = 0; i < LOCKED_IMAGE_PROFILE_COUNT; i++) {
+        if (pendingLockedImageModels[i] != NULL) {
+            FreeVec(pendingLockedImageModels[i]);
+            pendingLockedImageModels[i] = NULL;
+        }
     }
 }
 
@@ -432,28 +462,14 @@ static void loadPendingLockedProfilesFromConfig(void) {
         pendingLockedStreaming[LOCKED_PROFILE_ANTHROPIC] = (BOOL)v;
     }
 
-    pendingImageModelName = dupStrLocal(configGetImageModelName());
+    pendingLockedImageModels[LOCKED_PROFILE_OPENAI] =
+        dupStrLocal(configGetOpenAiImageModelName());
+    pendingLockedImageModels[LOCKED_PROFILE_GEMINI] =
+        dupStrLocal(configGetGeminiImageModelName());
+    pendingLockedImageModels[LOCKED_PROFILE_GROK] =
+        dupStrLocal(configGetGrokImageModelName());
     pendingImageSize = configGetImageSizeDallE3();
-
-    /* The global image model name applies to whichever locked image profile is
-     * currently active. Track that so switching profiles in the UI doesn't
-     * incorrectly show the same model for all locked profiles. */
-    pendingImageModelLockedIndex = -1;
-    pendingImageSizeLockedIndex = -1;
-    {
-        STRPTR activeImageProfile = configGetActiveImageProfileName();
-        if (activeImageProfile != NULL && strlen(activeImageProfile) > 0) {
-            for (LONG li = 0; li < LOCKED_IMAGE_PROFILE_COUNT; li++) {
-                CONST_STRPTR lockedName = getLockedProfileName(li);
-                if (lockedName != NULL &&
-                    strcmp(lockedName, activeImageProfile) == 0) {
-                    pendingImageModelLockedIndex = li;
-                    pendingImageSizeLockedIndex = li;
-                    break;
-                }
-            }
-        }
-    }
+    pendingImageFormat = configGetImageFormat();
 }
 
 /* Number of built-in providers shown in the profile list.
@@ -578,10 +594,22 @@ static void loadLockedProfileIntoUI(LONG lockedIndex) {
             defaultSize = IMAGE_SIZE_NULL;
         }
         ImageSize sizeToShow =
-            (pendingImageSizeLockedIndex == lockedIndex) ? pendingImageSize
-                                                         : defaultSize;
+            (lockedIndex == LOCKED_PROFILE_OPENAI) ? pendingImageSize
+                                                   : defaultSize;
         set(customServerImageSizeCycle, MUIA_Cycle_Active,
             imageSizeToOptionIndex(sizeToShow));
+    }
+    if (settingsIsImageMode && customServerImageFormatCycle != NULL) {
+        ImageFormat defaultFmt = IMAGE_FORMAT_PNG;
+        if (lockedIndex == LOCKED_PROFILE_GEMINI ||
+            lockedIndex == LOCKED_PROFILE_GROK) {
+            defaultFmt = IMAGE_FORMAT_NULL;
+        }
+        ImageFormat fmtToShow =
+            (lockedIndex == LOCKED_PROFILE_OPENAI) ? pendingImageFormat
+                                                   : defaultFmt;
+        set(customServerImageFormatCycle, MUIA_Cycle_Active,
+            imageFormatToOptionIndex(fmtToShow));
     }
 
     /* API key + model */
@@ -603,12 +631,7 @@ static void loadLockedProfileIntoUI(LONG lockedIndex) {
             modelList = OPENAI_IMAGE_MODELS;
             break;
         }
-        /* Show the saved global image model only for the currently-active
-         * locked image profile (it may be a newer model not in our list). */
-        if (pendingImageModelLockedIndex == lockedIndex &&
-            pendingImageModelName != NULL && strlen(pendingImageModelName) > 0) {
-            modelName = pendingImageModelName;
-        }
+        modelName = pendingLockedImageModels[lockedIndex];
     } else {
         modelName = pendingLockedChatModels[lockedIndex];
         switch (lockedIndex) {
@@ -920,6 +943,7 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
     STRPTR apiKey = NULL;
     STRPTR modelStr = NULL;
     LONG imageSizeActive = 0;
+    LONG imageFormatActive = 0;
     LONG streamingEnabled = 0;
     if (customServerApiKeyString != NULL)
         get(customServerApiKeyString, MUIA_String_Contents, &apiKey);
@@ -927,11 +951,20 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
         get(customServerChatModelString, MUIA_String_Contents, &modelStr);
     if (settingsIsImageMode && customServerImageSizeCycle != NULL)
         get(customServerImageSizeCycle, MUIA_Cycle_Active, &imageSizeActive);
+    if (settingsIsImageMode && customServerImageFormatCycle != NULL)
+        get(customServerImageFormatCycle, MUIA_Cycle_Active, &imageFormatActive);
     if (!settingsIsImageMode && customServerStreamingCycle != NULL)
         get(customServerStreamingCycle, MUIA_Cycle_Active, &streamingEnabled);
 
     if (settingsIsImageMode) {
-        pendingImageSize = optionIndexToImageSize(imageSizeActive);
+        /* Treat image size/format as OpenAI (and custom) settings; do not
+         * overwrite them when switching to locked profiles that don't support
+         * these fields. */
+        if (!isLockedProfileListIndex(profileListIndex) ||
+            profileListIndex == LOCKED_PROFILE_OPENAI) {
+            pendingImageSize = optionIndexToImageSize(imageSizeActive);
+            pendingImageFormat = optionIndexToImageFormat(imageFormatActive);
+        }
     }
 
     if (isLockedProfileListIndex(profileListIndex)) {
@@ -951,13 +984,13 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
             pendingLockedChatModels[lockedIndex] = dupStrLocal(modelStr);
             pendingLockedStreaming[lockedIndex] = (streamingEnabled == 1);
         } else {
-            if (pendingImageModelName != NULL) {
-                FreeVec(pendingImageModelName);
-                pendingImageModelName = NULL;
+            if (lockedIndex >= 0 && lockedIndex < LOCKED_IMAGE_PROFILE_COUNT) {
+                if (pendingLockedImageModels[lockedIndex] != NULL) {
+                    FreeVec(pendingLockedImageModels[lockedIndex]);
+                    pendingLockedImageModels[lockedIndex] = NULL;
+                }
+                pendingLockedImageModels[lockedIndex] = dupStrLocal(modelStr);
             }
-            pendingImageModelName = dupStrLocal(modelStr);
-            pendingImageModelLockedIndex = lockedIndex;
-            pendingImageSizeLockedIndex = lockedIndex;
         }
 
         if (forceActiveForList >= 0)
@@ -1742,57 +1775,58 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
             configSetActiveProfileName(getLockedProfileName(lockedIndex));
         }
 
-        /* Save API key from pending state */
-        CONST_STRPTR apiKeyToSave = pendingLockedApiKeys[lockedIndex];
-        switch (lockedIndex) {
-        case LOCKED_PROFILE_OPENAI:
-            configSetOpenAiApiKey(apiKeyToSave);
-            break;
-        case LOCKED_PROFILE_GEMINI:
-            configSetGeminiApiKey(apiKeyToSave);
-            break;
-        case LOCKED_PROFILE_GROK:
-            configSetGrokApiKey(apiKeyToSave);
-            break;
-        case LOCKED_PROFILE_ANTHROPIC:
-            configSetAnthropicApiKey(apiKeyToSave);
-            break;
-        default:
-            break;
+        /* Save API keys from pending state */
+        if (settingsIsImageMode) {
+            configSetOpenAiApiKey(pendingLockedApiKeys[LOCKED_PROFILE_OPENAI]);
+            configSetGeminiApiKey(pendingLockedApiKeys[LOCKED_PROFILE_GEMINI]);
+            configSetGrokApiKey(pendingLockedApiKeys[LOCKED_PROFILE_GROK]);
+        } else {
+            CONST_STRPTR apiKeyToSave = pendingLockedApiKeys[lockedIndex];
+            switch (lockedIndex) {
+            case LOCKED_PROFILE_OPENAI:
+                configSetOpenAiApiKey(apiKeyToSave);
+                break;
+            case LOCKED_PROFILE_GEMINI:
+                configSetGeminiApiKey(apiKeyToSave);
+                break;
+            case LOCKED_PROFILE_GROK:
+                configSetGrokApiKey(apiKeyToSave);
+                break;
+            case LOCKED_PROFILE_ANTHROPIC:
+                configSetAnthropicApiKey(apiKeyToSave);
+                break;
+            default:
+                break;
+            }
         }
 
         if (settingsIsImageMode) {
-            /* Persist the model currently shown in the UI. */
-            CONST_STRPTR imageModelName = NULL;
-            if (customServerChatModel != NULL &&
-                strlen(customServerChatModel) > 0) {
-                imageModelName = (CONST_STRPTR)customServerChatModel;
-            } else if (pendingImageModelName != NULL &&
-                       strlen(pendingImageModelName) > 0) {
-                imageModelName = (CONST_STRPTR)pendingImageModelName;
+            /* Persist all locked image profile models (OpenAI/Gemini/xAI). */
+            if (pendingLockedImageModels[LOCKED_PROFILE_OPENAI] != NULL &&
+                strlen(pendingLockedImageModels[LOCKED_PROFILE_OPENAI]) > 0) {
+                configSetOpenAiImageModelName(
+                    pendingLockedImageModels[LOCKED_PROFILE_OPENAI]);
             }
-            if (imageModelName != NULL) {
-                configSetImageModelName(imageModelName);
-                /* Keep in-window pending state in sync */
-                if (pendingImageModelName != NULL) {
-                    FreeVec(pendingImageModelName);
-                    pendingImageModelName = NULL;
-                }
-                pendingImageModelName = dupStrLocal(imageModelName);
-                pendingImageModelLockedIndex = lockedIndex;
+            if (pendingLockedImageModels[LOCKED_PROFILE_GEMINI] != NULL &&
+                strlen(pendingLockedImageModels[LOCKED_PROFILE_GEMINI]) > 0) {
+                configSetGeminiImageModelName(
+                    pendingLockedImageModels[LOCKED_PROFILE_GEMINI]);
+            }
+            if (pendingLockedImageModels[LOCKED_PROFILE_GROK] != NULL &&
+                strlen(pendingLockedImageModels[LOCKED_PROFILE_GROK]) > 0) {
+                configSetGrokImageModelName(
+                    pendingLockedImageModels[LOCKED_PROFILE_GROK]);
             }
 
-            /* Persist the image size currently shown in the UI. */
-            if (customServerImageSizeCycle != NULL) {
-                LONG imageSizeActive = 0;
-                get(customServerImageSizeCycle, MUIA_Cycle_Active,
-                    &imageSizeActive);
-                pendingImageSize = optionIndexToImageSize(imageSizeActive);
+            /* Keep legacy global value for compatibility (active selection). */
+            if (lockedIndex >= 0 && lockedIndex < LOCKED_IMAGE_PROFILE_COUNT &&
+                pendingLockedImageModels[lockedIndex] != NULL &&
+                strlen(pendingLockedImageModels[lockedIndex]) > 0) {
+                configSetImageModelName(pendingLockedImageModels[lockedIndex]);
             }
-            pendingImageSizeLockedIndex = lockedIndex;
 
-            /* Persist image size selection (None = omit size field in request)
-             */
+            /* Persist OpenAI image preferences */
+            configSetImageFormat(pendingImageFormat);
             configSetImageSizeDallE2(pendingImageSize);
             configSetImageSizeDallE3(pendingImageSize);
             configSetImageSizeGptImage1(pendingImageSize);
@@ -1929,6 +1963,13 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
             get(customServerImageSizeCycle, MUIA_Cycle_Active, &imageSizeActive);
             pendingImageSize = optionIndexToImageSize(imageSizeActive);
         }
+        if (customServerImageFormatCycle != NULL) {
+            LONG imageFormatActive = 0;
+            get(customServerImageFormatCycle, MUIA_Cycle_Active,
+                &imageFormatActive);
+            pendingImageFormat = optionIndexToImageFormat(imageFormatActive);
+        }
+        configSetImageFormat(pendingImageFormat);
         configSetImageSizeDallE2(pendingImageSize);
         configSetImageSizeDallE3(pendingImageSize);
         configSetImageSizeGptImage1(pendingImageSize);
@@ -2064,12 +2105,17 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterTestButtonClickedFunc, void) {
     APIImageEndpoint imageEndpoint =
         (apiEndpointActive == 1) ? API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT
                                  : API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
-    ImageFormat imageFormat = configGetImageFormat();
+    ImageFormat imageFormat = pendingImageFormat;
     ImageSize imageSize = pendingImageSize;
     if (customServerImageSizeCycle != NULL) {
         LONG imageSizeActive = 0;
         get(customServerImageSizeCycle, MUIA_Cycle_Active, &imageSizeActive);
         imageSize = optionIndexToImageSize(imageSizeActive);
+    }
+    if (customServerImageFormatCycle != NULL) {
+        LONG imageFormatActive = 0;
+        get(customServerImageFormatCycle, MUIA_Cycle_Active, &imageFormatActive);
+        imageFormat = optionIndexToImageFormat(imageFormatActive);
     }
 
     struct json_object *resp = postImageCreationRequestToOpenAI(
@@ -2168,6 +2214,12 @@ LONG createCustomServerSettingsRequesterWindow() {
     imageSizeOptions[7] = (STRPTR)IMAGE_SIZE_NAMES[IMAGE_SIZE_1024x1536];
     imageSizeOptions[8] = (STRPTR)IMAGE_SIZE_NAMES[IMAGE_SIZE_AUTO];
     imageSizeOptions[9] = NULL;
+
+    /* Image format options (None = omit request fields) */
+    imageFormatOptions[0] = STRING_AUTHORIZATION_NONE;
+    imageFormatOptions[1] = (STRPTR)IMAGE_FORMAT_NAMES[IMAGE_FORMAT_JPG];
+    imageFormatOptions[2] = (STRPTR)IMAGE_FORMAT_NAMES[IMAGE_FORMAT_PNG];
+    imageFormatOptions[3] = NULL;
 
     chatApiEndpointOptions[API_CHAT_ENDPOINT_RESPONSES] =
         (STRPTR)API_CHAT_ENDPOINT_NAMES[API_CHAT_ENDPOINT_RESPONSES];
@@ -2345,6 +2397,17 @@ LONG createCustomServerSettingsRequesterWindow() {
                                     imageSizeToOptionIndex(pendingImageSize),
                             End,
                         End,
+                        Child, customServerImageFormatGroup = VGroup,
+                            MUIA_Frame, MUIV_Frame_Group,
+                            MUIA_FrameTitle, STRING_IMAGE_FORMAT,
+                            MUIA_ShowMe, FALSE,
+                            Child, customServerImageFormatCycle = CycleObject,
+                                MUIA_CycleChain, TRUE,
+                                MUIA_Cycle_Entries, imageFormatOptions,
+                                MUIA_Cycle_Active,
+                                    imageFormatToOptionIndex(pendingImageFormat),
+                            End,
+                        End,
                         Child, VGroup,
                             MUIA_Frame, MUIV_Frame_Group,
                             MUIA_FrameTitle, STRING_MENU_OPENAI_API_ENDPOINT,
@@ -2383,21 +2446,18 @@ LONG createCustomServerSettingsRequesterWindow() {
                     End,
                 End,
                 Child, HGroup,
-                    Child, customServerSettingsRequesterOkButton = MUI_MakeObject(MUIO_Button, STRING_OK,
-                        MUIA_Background, MUII_FILL,
-                        MUIA_CycleChain, TRUE,
-                        MUIA_InputMode, MUIV_InputMode_RelVerify,
-                    End,
-                    Child, customServerSettingsRequesterTestButton = MUI_MakeObject(MUIO_Button, STRING_TEST,
-                        MUIA_Background, MUII_FILL,
-                        MUIA_CycleChain, TRUE,
-                        MUIA_InputMode, MUIV_InputMode_RelVerify,
-                    End,
-                    Child, customServerSettingsRequesterCancelButton = MUI_MakeObject(MUIO_Button, STRING_CANCEL,
-                        MUIA_Background, MUII_FILL,
-                        MUIA_CycleChain, TRUE,
-                        MUIA_InputMode, MUIV_InputMode_RelVerify,
-                    End,
+                    Child, customServerSettingsRequesterOkButton = MUI_MakeObject(
+                        MUIO_Button, STRING_OK, MUIA_Background, MUII_FILL,
+                        MUIA_CycleChain, TRUE, MUIA_InputMode,
+                        MUIV_InputMode_RelVerify, TAG_DONE),
+                    Child, customServerSettingsRequesterTestButton = MUI_MakeObject(
+                        MUIO_Button, STRING_TEST, MUIA_Background, MUII_FILL,
+                        MUIA_CycleChain, TRUE, MUIA_InputMode,
+                        MUIV_InputMode_RelVerify, TAG_DONE),
+                    Child, customServerSettingsRequesterCancelButton = MUI_MakeObject(
+                        MUIO_Button, STRING_CANCEL, MUIA_Background, MUII_FILL,
+                        MUIA_CycleChain, TRUE, MUIA_InputMode,
+                        MUIV_InputMode_RelVerify, TAG_DONE),
                 End,
             End, /* End right panel VGroup */
         End, /* End outer HGroup */
@@ -2431,6 +2491,11 @@ LONG createCustomServerSettingsRequesterWindow() {
              &SettingsChangedHook);
     if (customServerImageSizeCycle != NULL) {
         DoMethod(customServerImageSizeCycle, MUIM_Notify, MUIA_Cycle_Active,
+                 MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+                 &SettingsChangedHook);
+    }
+    if (customServerImageFormatCycle != NULL) {
+        DoMethod(customServerImageFormatCycle, MUIM_Notify, MUIA_Cycle_Active,
                  MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
                  &SettingsChangedHook);
     }
@@ -2494,6 +2559,10 @@ static void applyProviderSettingsWindowMode(BOOL isImageMode) {
     }
     if (customServerImageSizeGroup != NULL) {
         set(customServerImageSizeGroup, MUIA_ShowMe,
+            settingsIsImageMode ? TRUE : FALSE);
+    }
+    if (customServerImageFormatGroup != NULL) {
+        set(customServerImageFormatGroup, MUIA_ShowMe,
             settingsIsImageMode ? TRUE : FALSE);
     }
     if (customServerApiEndpointCycle != NULL) {
@@ -2561,6 +2630,10 @@ static void applyProviderSettingsWindowMode(BOOL isImageMode) {
         if (customServerImageSizeCycle != NULL) {
             set(customServerImageSizeCycle, MUIA_Cycle_Active,
                 imageSizeToOptionIndex(pendingImageSize));
+        }
+        if (customServerImageFormatCycle != NULL) {
+            set(customServerImageFormatCycle, MUIA_Cycle_Active,
+                imageFormatToOptionIndex(pendingImageFormat));
         }
     } else {
         set(customServerHostString, MUIA_String_Contents,

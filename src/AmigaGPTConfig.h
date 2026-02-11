@@ -98,6 +98,10 @@
 #define MUIA_AmigaGPTConfig_GeminiChatModelName (AmigaGPTConfig_Dummy + 0x3C)
 #define MUIA_AmigaGPTConfig_GrokChatModelName (AmigaGPTConfig_Dummy + 0x3D)
 #define MUIA_AmigaGPTConfig_AnthropicChatModelName (AmigaGPTConfig_Dummy + 0x3E)
+/* Provider-specific image model names (locked image profiles) */
+#define MUIA_AmigaGPTConfig_OpenAiImageModelName (AmigaGPTConfig_Dummy + 0x45)
+#define MUIA_AmigaGPTConfig_GeminiImageModelName (AmigaGPTConfig_Dummy + 0x46)
+#define MUIA_AmigaGPTConfig_GrokImageModelName (AmigaGPTConfig_Dummy + 0x47)
 
 /* Custom image provider settings (separate from chat custom provider) */
 #define MUIA_AmigaGPTConfig_CustomImagePort (AmigaGPTConfig_Dummy + 0x1E)
@@ -418,6 +422,12 @@ void configGetChatRequestSettingsWithStreamOverride(
     struct ChatRequestSettings *out, BOOL streamOverride);
 STRPTR configGetImageModelName(void);
 void configSetImageModelName(CONST_STRPTR value);
+STRPTR configGetOpenAiImageModelName(void);
+void configSetOpenAiImageModelName(CONST_STRPTR value);
+STRPTR configGetGeminiImageModelName(void);
+void configSetGeminiImageModelName(CONST_STRPTR value);
+STRPTR configGetGrokImageModelName(void);
+void configSetGrokImageModelName(CONST_STRPTR value);
 
 /* Provider-specific API keys */
 STRPTR configGetGeminiApiKey(void);

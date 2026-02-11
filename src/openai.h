@@ -257,7 +257,11 @@ extern CONST_STRPTR AUTHORIZATION_TYPE_NAMES[];
  * The format of the image
  * @see ImageFormat
  **/
-typedef enum { IMAGE_FORMAT_JPG = 0L, IMAGE_FORMAT_PNG } ImageFormat;
+typedef enum {
+    IMAGE_FORMAT_NULL = -1L,
+    IMAGE_FORMAT_JPG = 0L,
+    IMAGE_FORMAT_PNG
+} ImageFormat;
 
 /**
  * The names of the image formats

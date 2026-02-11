@@ -383,7 +383,12 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
                imageData[2] == 0xFF) {
         imageFormat = "jpg";
     } else {
-        imageFormat = IMAGE_FORMAT_NAMES[configGetImageFormat()];
+        ImageFormat cfgFmt = configGetImageFormat();
+        if (cfgFmt != IMAGE_FORMAT_NULL && IMAGE_FORMAT_NAMES[cfgFmt] != NULL) {
+            imageFormat = IMAGE_FORMAT_NAMES[cfgFmt];
+        } else {
+            imageFormat = "png";
+        }
     }
 
     // Generate unique ID for the image
@@ -406,6 +411,11 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 
     WORD imageWidth, imageHeight;
     switch (imageSize) {
+    case IMAGE_SIZE_NULL:
+        /* "None" means don't send size; image may still be returned. */
+        imageWidth = 1024;
+        imageHeight = 1024;
+        break;
     case IMAGE_SIZE_256x256:
         imageWidth = 256;
         imageHeight = 256;
