@@ -198,12 +198,14 @@ HOOKPROTONHNONP(DeleteChatButtonClickedFunc, void) {
 MakeHook(DeleteChatButtonClickedHook, DeleteChatButtonClickedFunc);
 
 HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
-    STRPTR apiKey = configGetOpenAiApiKey();
-    if (apiKey != NULL && strlen(apiKey) > 0) {
-        sendChatMessage();
-    } else {
+    struct ChatRequestSettings chatSettings;
+    configGetActiveChatRequestSettings(&chatSettings);
+    if (chatSettings.authorizationType != AUTHORIZATION_TYPE_NONE &&
+        (chatSettings.apiKey == NULL || strlen(chatSettings.apiKey) == 0)) {
         displayError(STRING_ERROR_NO_API_KEY);
+        return;
     }
+    sendChatMessage();
 }
 MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
 
