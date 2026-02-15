@@ -3400,6 +3400,22 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
     }
 }
 
+/* NOTE: When resolving custom profiles from JSON, json-c strings are owned by
+ * the json_object tree. Since we release that tree before returning, we must
+ * copy strings into persistent buffers here. These are overwritten on each
+ * call. */
+static STRPTR resolvedChatHost = NULL;
+static STRPTR resolvedChatApiKey = NULL;
+static STRPTR resolvedChatModel = NULL;
+static STRPTR resolvedChatApiEndpointUrl = NULL;
+static STRPTR resolvedChatCustomHeaders = NULL;
+
+static STRPTR resolvedImageHost = NULL;
+static STRPTR resolvedImageApiKey = NULL;
+static STRPTR resolvedImageModel = NULL;
+static STRPTR resolvedImageApiEndpointUrl = NULL;
+static STRPTR resolvedImageCustomHeaders = NULL;
+
 void configGetActiveChatRequestSettings(struct ChatRequestSettings *out) {
     if (out == NULL)
         return;
@@ -3428,20 +3444,36 @@ void configGetActiveChatRequestSettings(struct ChatRequestSettings *out) {
     struct json_object *arr = parseProfilesJsonArray(configGetCustomServerProfiles());
     struct json_object *profile = findProfileObjectByName(arr, activeName);
     if (profile != NULL) {
-        out->host = (STRPTR)jsonGetStringDefault(profile, "host", "");
+        freeString(&resolvedChatHost);
+        resolvedChatHost = copyString(jsonGetStringDefault(profile, "host", ""));
+        out->host = resolvedChatHost;
         out->port = (UWORD)jsonGetIntDefault(profile, "port", 443);
         out->useSSL = jsonGetBoolDefault(profile, "useSSL", TRUE);
         out->authorizationType = (AuthorizationType)jsonGetIntDefault(
             profile, "authorizationType", (LONG)AUTHORIZATION_TYPE_BEARER);
-        out->apiKey = jsonGetStringDefault(profile, "apiKey", "");
-        out->model = jsonGetStringDefault(profile, "chatModel",
-                                          jsonGetStringDefault(profile, "imageModel", ""));
+        freeString(&resolvedChatApiKey);
+        resolvedChatApiKey =
+            copyString(jsonGetStringDefault(profile, "apiKey", ""));
+        out->apiKey = resolvedChatApiKey;
+
+        freeString(&resolvedChatModel);
+        resolvedChatModel = copyString(
+            jsonGetStringDefault(profile, "chatModel",
+                                 jsonGetStringDefault(profile, "imageModel", "")));
+        out->model = resolvedChatModel;
         out->stream = jsonGetBoolDefault(profile, "streaming", FALSE);
         out->apiEndpoint = coerceChatEndpointFromStoredInt(
             jsonGetIntDefault(profile, "apiEndpoint",
                               (LONG)API_CHAT_ENDPOINT_CHAT_COMPLETIONS));
-        out->apiEndpointUrl = jsonGetStringDefault(profile, "apiEndpointUrl", "v1");
-        out->customHeaders = jsonGetStringDefault(profile, "customHeaders", "");
+        freeString(&resolvedChatApiEndpointUrl);
+        resolvedChatApiEndpointUrl = copyString(
+            jsonGetStringDefault(profile, "apiEndpointUrl", "v1"));
+        out->apiEndpointUrl = resolvedChatApiEndpointUrl;
+
+        freeString(&resolvedChatCustomHeaders);
+        resolvedChatCustomHeaders = copyString(
+            jsonGetStringDefault(profile, "customHeaders", ""));
+        out->customHeaders = resolvedChatCustomHeaders;
     } else {
         /* Fallback to custom settings */
         out->host = configGetCustomHost();
@@ -3525,16 +3557,33 @@ void configGetActiveImageRequestSettings(struct ImageRequestSettings *out) {
         parseProfilesJsonArray(configGetCustomImageServerProfiles());
     struct json_object *profile = findProfileObjectByName(arr, activeName);
     if (profile != NULL) {
-        out->host = (STRPTR)jsonGetStringDefault(profile, "host", "");
+        freeString(&resolvedImageHost);
+        resolvedImageHost = copyString(jsonGetStringDefault(profile, "host", ""));
+        out->host = resolvedImageHost;
         out->port = (UWORD)jsonGetIntDefault(profile, "port", 443);
         out->useSSL = jsonGetBoolDefault(profile, "useSSL", TRUE);
         out->authorizationType = (AuthorizationType)jsonGetIntDefault(
             profile, "authorizationType", (LONG)AUTHORIZATION_TYPE_BEARER);
-        out->apiKey = jsonGetStringDefault(profile, "apiKey", "");
-        out->model = jsonGetStringDefault(profile, "imageModel",
-                                          jsonGetStringDefault(profile, "chatModel", ""));
-        out->apiEndpointUrl = jsonGetStringDefault(profile, "apiEndpointUrl", "v1");
-        out->customHeaders = jsonGetStringDefault(profile, "customHeaders", "");
+        freeString(&resolvedImageApiKey);
+        resolvedImageApiKey =
+            copyString(jsonGetStringDefault(profile, "apiKey", ""));
+        out->apiKey = resolvedImageApiKey;
+
+        freeString(&resolvedImageModel);
+        resolvedImageModel = copyString(
+            jsonGetStringDefault(profile, "imageModel",
+                                 jsonGetStringDefault(profile, "chatModel", "")));
+        out->model = resolvedImageModel;
+
+        freeString(&resolvedImageApiEndpointUrl);
+        resolvedImageApiEndpointUrl =
+            copyString(jsonGetStringDefault(profile, "apiEndpointUrl", "v1"));
+        out->apiEndpointUrl = resolvedImageApiEndpointUrl;
+
+        freeString(&resolvedImageCustomHeaders);
+        resolvedImageCustomHeaders =
+            copyString(jsonGetStringDefault(profile, "customHeaders", ""));
+        out->customHeaders = resolvedImageCustomHeaders;
         out->imageApiEndpoint = coerceImageEndpointFromStoredInt(
             jsonGetIntDefault(profile, "apiEndpoint",
                               (LONG)API_IMAGE_ENDPOINT_IMAGES_GENERATIONS));

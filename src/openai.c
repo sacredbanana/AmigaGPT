@@ -1168,7 +1168,8 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
     /* Extract model IDs from response.
      *
      * OpenAI format: { "data": [ { "id": "gpt-4.1" }, ... ] }
-     * Gemini format: { "models": [ { "name": "models/gemini-2.0-flash" }, ... ] }
+     * Gemini format: { "models": [ { "name": "models/gemini-2.0-flash" }, ... ]
+     * }
      */
     struct json_object *modelNames = json_object_new_array();
 
@@ -2278,11 +2279,10 @@ struct json_object *postImageCreationRequestToOpenAI(
         printf("modelName: %s\n", modelName);
         printf("apiEndpoint: %s\n", API_IMAGE_ENDPOINT_NAMES[apiEndpoint]);
         printf("imageSize: %s\n", IMAGE_SIZE_NAMES[imageSize]);
-        printf("imageFormat: %s\n",
-               (imageFormat != IMAGE_FORMAT_NULL &&
-                IMAGE_FORMAT_NAMES[imageFormat] != NULL)
-                   ? IMAGE_FORMAT_NAMES[imageFormat]
-                   : "(none)");
+        printf("imageFormat: %s\n", (imageFormat != IMAGE_FORMAT_NULL &&
+                                     IMAGE_FORMAT_NAMES[imageFormat] != NULL)
+                                        ? IMAGE_FORMAT_NAMES[imageFormat]
+                                        : "(none)");
         printf("isGptImage: %d\n", isGptImage);
         if (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS) {
             if (imageSize != IMAGE_SIZE_NULL &&
