@@ -21,7 +21,6 @@
 #include "AmigaGPTTextEditor.h"
 #include "APIKeyRequesterWindow.h"
 #include "ARexx.h"
-#include "ChatSystemRequesterWindow.h"
 #include "CustomServerSettingsRequesterWindow.h"
 #include "SpeechProviderSettingsRequesterWindow.h"
 #include "gui.h"
@@ -161,9 +160,6 @@ LONG initVideo() {
     if (createAPIKeyRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
-    if (createChatSystemRequesterWindow() == RETURN_ERROR)
-        return RETURN_ERROR;
-
     if (createCustomServerSettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
@@ -185,7 +181,6 @@ LONG initVideo() {
           "AMIGAGPT:AmigaGPT.guide", MUIA_Application_SingleTask, TRUE,
           MUIA_Application_Commands, arexxList, MUIA_Application_UseRexx, TRUE,
           SubWindow, apiKeyRequesterWindowObject, SubWindow,
-          chatSystemRequesterWindowObject, SubWindow,
           customServerSettingsRequesterWindowObject, SubWindow,
           proxySettingsRequesterWindowObject, SubWindow,
           speechProviderSettingsRequesterWindowObject, SubWindow,

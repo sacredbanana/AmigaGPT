@@ -333,8 +333,9 @@ struct json_object **postChatMessageToOpenAI(
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, BOOL webSearchEnabled,
-    APIChatEndpoint apiEndpoint, CONST_STRPTR apiEndpointUrl,
-    AuthorizationType authorizationType, CONST_STRPTR customHeaders);
+    BOOL shellToolEnabled, APIChatEndpoint apiEndpoint,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders);
 
 /**
  * Post a image creation request to OpenAI
@@ -531,7 +532,8 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
                        UWORD port, BOOL useSSL, CONST_STRPTR apiKey,
                        BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
                        BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                       CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
+                       CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+                       BOOL shellToolEnabled);
 
 /**
  * Post a text to speech request to the ElevenLabs API

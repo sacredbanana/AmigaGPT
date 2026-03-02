@@ -42,9 +42,6 @@ enum MenuItemID {
     MENU_ITEM_SPEECH_OPENAI_MODEL,
     /* Chat menu (replaces OpenAI menu for chat features) */
     MENU_ITEM_CHAT,
-    MENU_ITEM_CHAT_SYSTEM,
-    MENU_ITEM_CHAT_WEB_SEARCH_ENABLED,
-    MENU_ITEM_CHAT_SHELL_TOOL_ENABLED,
     MENU_ITEM_CHAT_PROVIDER_SETTINGS,
     /* Image menu (replaces OpenAI menu for image features) */
     MENU_ITEM_IMAGE,

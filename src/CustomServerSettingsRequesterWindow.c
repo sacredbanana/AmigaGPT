@@ -36,6 +36,9 @@ Object *customServerApiEndpointUrlString;
 Object *customServerCustomHeadersString;
 Object *customServerFullUrlPreviewString;
 Object *customServerStreamingCycle;
+Object *customServerWebSearchCycle;
+Object *customServerShellToolCycle;
+Object *customServerChatSystemString;
 Object *customServerSettingsRequesterWindowObject;
 Object *customServerProfileList;
 Object *customServerProfileNameString;
@@ -54,6 +57,12 @@ typedef struct ProfileListEntry {
 static Object *customServerSettingsRootGroup = NULL;
 /* Frame group containing the Streaming option (chat-only) */
 static Object *customServerStreamingGroup = NULL;
+/* Frame group containing Web Search option (chat-only) */
+static Object *customServerWebSearchGroup = NULL;
+/* Frame group containing Shell Tool option (chat-only) */
+static Object *customServerShellToolGroup = NULL;
+/* Frame group containing Chat System prompt (chat-only) */
+static Object *customServerChatSystemGroup = NULL;
 /* Frame group containing Image Size (image-only) */
 static Object *customServerImageSizeGroup = NULL;
 /* Frame group containing Image Format (image-only) */
@@ -126,6 +135,9 @@ static struct json_object *profilesJson = NULL;
 static STRPTR pendingLockedApiKeys[LOCKED_CHAT_PROFILE_COUNT] = {0};
 static STRPTR pendingLockedChatModels[LOCKED_CHAT_PROFILE_COUNT] = {0};
 static BOOL pendingLockedStreaming[LOCKED_CHAT_PROFILE_COUNT] = {0};
+static BOOL pendingLockedWebSearch[LOCKED_CHAT_PROFILE_COUNT] = {0};
+static BOOL pendingLockedShellTool[LOCKED_CHAT_PROFILE_COUNT] = {0};
+static STRPTR pendingLockedChatSystem[LOCKED_CHAT_PROFILE_COUNT] = {0};
 static STRPTR pendingLockedImageModels[LOCKED_IMAGE_PROFILE_COUNT] = {0};
 static ImageSize pendingImageSize = IMAGE_SIZE_1024x1024;
 static ImageFormat pendingImageFormat = IMAGE_FORMAT_PNG;
@@ -404,7 +416,13 @@ static void freePendingLockedProfiles(void) {
             FreeVec(pendingLockedChatModels[i]);
             pendingLockedChatModels[i] = NULL;
         }
+        if (pendingLockedChatSystem[i] != NULL) {
+            FreeVec(pendingLockedChatSystem[i]);
+            pendingLockedChatSystem[i] = NULL;
+        }
         pendingLockedStreaming[i] = FALSE;
+        pendingLockedWebSearch[i] = FALSE;
+        pendingLockedShellTool[i] = FALSE;
     }
     for (int i = 0; i < LOCKED_IMAGE_PROFILE_COUNT; i++) {
         if (pendingLockedImageModels[i] != NULL) {
@@ -460,6 +478,57 @@ static void loadPendingLockedProfilesFromConfig(void) {
         if (configObj)
             get(configObj, MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled, &v);
         pendingLockedStreaming[LOCKED_PROFILE_ANTHROPIC] = (BOOL)v;
+    }
+
+    /* Per-locked-profile web search */
+    {
+        ULONG v = TRUE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_OpenAiWebSearchEnabled, &v);
+        pendingLockedWebSearch[LOCKED_PROFILE_OPENAI] = (BOOL)v;
+        v = TRUE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_GeminiWebSearchEnabled, &v);
+        pendingLockedWebSearch[LOCKED_PROFILE_GEMINI] = (BOOL)v;
+        v = TRUE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_GrokWebSearchEnabled, &v);
+        pendingLockedWebSearch[LOCKED_PROFILE_GROK] = (BOOL)v;
+        v = TRUE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_AnthropicWebSearchEnabled, &v);
+        pendingLockedWebSearch[LOCKED_PROFILE_ANTHROPIC] = (BOOL)v;
+    }
+
+    /* Per-locked-profile shell tool */
+    {
+        ULONG v = FALSE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_OpenAiShellToolEnabled, &v);
+        pendingLockedShellTool[LOCKED_PROFILE_OPENAI] = (BOOL)v;
+        pendingLockedShellTool[LOCKED_PROFILE_GEMINI] = FALSE;
+        pendingLockedShellTool[LOCKED_PROFILE_GROK] = FALSE;
+        pendingLockedShellTool[LOCKED_PROFILE_ANTHROPIC] = FALSE;
+    }
+
+    /* Per-locked-profile chat system prompt */
+    {
+        STRPTR s = NULL;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_OpenAiChatSystem, &s);
+        pendingLockedChatSystem[LOCKED_PROFILE_OPENAI] = dupStrLocal(s);
+        s = NULL;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_GeminiChatSystem, &s);
+        pendingLockedChatSystem[LOCKED_PROFILE_GEMINI] = dupStrLocal(s);
+        s = NULL;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_GrokChatSystem, &s);
+        pendingLockedChatSystem[LOCKED_PROFILE_GROK] = dupStrLocal(s);
+        s = NULL;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_AnthropicChatSystem, &s);
+        pendingLockedChatSystem[LOCKED_PROFILE_ANTHROPIC] = dupStrLocal(s);
     }
 
     pendingLockedImageModels[LOCKED_PROFILE_OPENAI] =
@@ -585,6 +654,21 @@ static void loadLockedProfileIntoUI(LONG lockedIndex) {
     if (!settingsIsImageMode && customServerStreamingCycle != NULL) {
         set(customServerStreamingCycle, MUIA_Cycle_Active,
             pendingLockedStreaming[lockedIndex] ? 1 : 0);
+    }
+    if (!settingsIsImageMode && customServerWebSearchCycle != NULL) {
+        set(customServerWebSearchCycle, MUIA_Cycle_Active,
+            pendingLockedWebSearch[lockedIndex] ? 1 : 0);
+    }
+    if (!settingsIsImageMode && customServerShellToolCycle != NULL) {
+        BOOL shellSupported = (lockedIndex == LOCKED_PROFILE_OPENAI);
+        set(customServerShellToolCycle, MUIA_Cycle_Active,
+            pendingLockedShellTool[lockedIndex] ? 1 : 0);
+        set(customServerShellToolCycle, MUIA_Disabled, !shellSupported);
+    }
+    if (!settingsIsImageMode && customServerChatSystemString != NULL) {
+        STRPTR sys = pendingLockedChatSystem[lockedIndex];
+        set(customServerChatSystemString, MUIA_String_Contents,
+            sys ? sys : "");
     }
     if (settingsIsImageMode && customServerImageSizeCycle != NULL) {
         ImageSize defaultSize = IMAGE_SIZE_1024x1024;
@@ -845,6 +929,22 @@ static void loadProfileIntoUI(struct json_object *profile) {
                     configGetCustomChatStreamEnabled() ? 1 : 0);
             }
         }
+        obj = json_object_object_get(profile, "webSearchEnabled");
+        if (customServerWebSearchCycle != NULL) {
+            set(customServerWebSearchCycle, MUIA_Cycle_Active,
+                obj != NULL ? (json_object_get_boolean(obj) ? 1 : 0) : 1);
+        }
+        obj = json_object_object_get(profile, "shellToolEnabled");
+        if (customServerShellToolCycle != NULL) {
+            set(customServerShellToolCycle, MUIA_Cycle_Active,
+                obj != NULL ? (json_object_get_boolean(obj) ? 1 : 0) : 0);
+            set(customServerShellToolCycle, MUIA_Disabled, FALSE);
+        }
+        obj = json_object_object_get(profile, "chatSystem");
+        if (customServerChatSystemString != NULL) {
+            set(customServerChatSystemString, MUIA_String_Contents,
+                obj != NULL ? json_object_get_string(obj) : "");
+        }
     }
 
     updateApiKeyEnabledFromAuthType();
@@ -921,6 +1021,27 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
                 &streamingEnabled);
         json_object_object_add(profile, "streaming",
                                json_object_new_boolean(streamingEnabled == 1));
+
+        LONG webSearch = 1;
+        if (customServerWebSearchCycle != NULL)
+            get(customServerWebSearchCycle, MUIA_Cycle_Active, &webSearch);
+        json_object_object_add(
+            profile, "webSearchEnabled",
+            json_object_new_boolean(webSearch == 1));
+
+        LONG shellTool = 0;
+        if (customServerShellToolCycle != NULL)
+            get(customServerShellToolCycle, MUIA_Cycle_Active, &shellTool);
+        json_object_object_add(
+            profile, "shellToolEnabled",
+            json_object_new_boolean(shellTool == 1));
+
+        STRPTR chatSys = NULL;
+        if (customServerChatSystemString != NULL)
+            get(customServerChatSystemString, MUIA_String_Contents, &chatSys);
+        json_object_object_add(
+            profile, "chatSystem",
+            json_object_new_string(chatSys ? chatSys : ""));
     }
 
     return profile;
@@ -983,6 +1104,25 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
             }
             pendingLockedChatModels[lockedIndex] = dupStrLocal(modelStr);
             pendingLockedStreaming[lockedIndex] = (streamingEnabled == 1);
+
+            LONG webSearch = 1;
+            if (customServerWebSearchCycle != NULL)
+                get(customServerWebSearchCycle, MUIA_Cycle_Active, &webSearch);
+            pendingLockedWebSearch[lockedIndex] = (webSearch == 1);
+
+            LONG shellTool = 0;
+            if (customServerShellToolCycle != NULL)
+                get(customServerShellToolCycle, MUIA_Cycle_Active, &shellTool);
+            pendingLockedShellTool[lockedIndex] = (shellTool == 1);
+
+            STRPTR chatSys = NULL;
+            if (customServerChatSystemString != NULL)
+                get(customServerChatSystemString, MUIA_String_Contents, &chatSys);
+            if (pendingLockedChatSystem[lockedIndex] != NULL) {
+                FreeVec(pendingLockedChatSystem[lockedIndex]);
+                pendingLockedChatSystem[lockedIndex] = NULL;
+            }
+            pendingLockedChatSystem[lockedIndex] = dupStrLocal(chatSys);
         } else {
             if (lockedIndex >= 0 && lockedIndex < LOCKED_IMAGE_PROFILE_COUNT) {
                 if (pendingLockedImageModels[lockedIndex] != NULL) {
@@ -1886,6 +2026,82 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
                     break;
                 }
             }
+
+            if (configObj) {
+                ULONG ws =
+                    pendingLockedWebSearch[lockedIndex] ? TRUE : FALSE;
+                switch (lockedIndex) {
+                case LOCKED_PROFILE_OPENAI:
+                    set(configObj,
+                        MUIA_AmigaGPTConfig_OpenAiWebSearchEnabled, ws);
+                    break;
+                case LOCKED_PROFILE_GEMINI:
+                    set(configObj,
+                        MUIA_AmigaGPTConfig_GeminiWebSearchEnabled, ws);
+                    break;
+                case LOCKED_PROFILE_GROK:
+                    set(configObj,
+                        MUIA_AmigaGPTConfig_GrokWebSearchEnabled, ws);
+                    break;
+                case LOCKED_PROFILE_ANTHROPIC:
+                    set(configObj,
+                        MUIA_AmigaGPTConfig_AnthropicWebSearchEnabled, ws);
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            if (configObj) {
+                ULONG st =
+                    pendingLockedShellTool[lockedIndex] ? TRUE : FALSE;
+                switch (lockedIndex) {
+                case LOCKED_PROFILE_OPENAI:
+                    set(configObj,
+                        MUIA_AmigaGPTConfig_OpenAiShellToolEnabled, st);
+                    break;
+                case LOCKED_PROFILE_GEMINI:
+                    set(configObj,
+                        MUIA_AmigaGPTConfig_GeminiShellToolEnabled, st);
+                    break;
+                case LOCKED_PROFILE_GROK:
+                    set(configObj,
+                        MUIA_AmigaGPTConfig_GrokShellToolEnabled, st);
+                    break;
+                case LOCKED_PROFILE_ANTHROPIC:
+                    set(configObj,
+                        MUIA_AmigaGPTConfig_AnthropicShellToolEnabled, st);
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            if (configObj) {
+                CONST_STRPTR cs = pendingLockedChatSystem[lockedIndex];
+                if (cs == NULL)
+                    cs = "";
+                switch (lockedIndex) {
+                case LOCKED_PROFILE_OPENAI:
+                    set(configObj, MUIA_AmigaGPTConfig_OpenAiChatSystem,
+                        (ULONG)cs);
+                    break;
+                case LOCKED_PROFILE_GEMINI:
+                    set(configObj, MUIA_AmigaGPTConfig_GeminiChatSystem,
+                        (ULONG)cs);
+                    break;
+                case LOCKED_PROFILE_GROK:
+                    set(configObj, MUIA_AmigaGPTConfig_GrokChatSystem,
+                        (ULONG)cs);
+                    break;
+                case LOCKED_PROFILE_ANTHROPIC:
+                    set(configObj, MUIA_AmigaGPTConfig_AnthropicChatSystem,
+                        (ULONG)cs);
+                    break;
+                default:
+                    break;
+                }
+            }
         }
 
         set(customServerSettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
@@ -2068,8 +2284,8 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterTestButtonClickedFunc, void) {
         struct json_object **responses = postChatMessageToOpenAI(
             conv, host, port, useSSL, (CONST_STRPTR)modelName, apiKeyToUse,
             FALSE, useProxy, proxyHost, proxyPort, proxyUsesSSL,
-            proxyRequiresAuth, proxyUsername, proxyPassword, FALSE, apiEndpoint,
-            (CONST_STRPTR)apiEndpointUrl, authType,
+            proxyRequiresAuth, proxyUsername, proxyPassword, FALSE, FALSE,
+            apiEndpoint, (CONST_STRPTR)apiEndpointUrl, authType,
             (CONST_STRPTR)customHeaders);
 
         if (responses != NULL && responses[0] != NULL) {
@@ -2346,6 +2562,24 @@ LONG createCustomServerSettingsRequesterWindow() {
                                     configGetCustomChatStreamEnabled() ? 1 : 0,
                             End,
                         End,
+                        Child, customServerWebSearchGroup = VGroup,
+                            MUIA_Frame, MUIV_Frame_Group,
+                            MUIA_FrameTitle, STRING_WEB_SEARCH,
+                            Child, customServerWebSearchCycle = CycleObject,
+                                MUIA_CycleChain, TRUE,
+                                MUIA_Cycle_Entries, streamingOptions,
+                                MUIA_Cycle_Active, 1,
+                            End,
+                        End,
+                        Child, customServerShellToolGroup = VGroup,
+                            MUIA_Frame, MUIV_Frame_Group,
+                            MUIA_FrameTitle, STRING_SHELL_TOOL,
+                            Child, customServerShellToolCycle = CycleObject,
+                                MUIA_CycleChain, TRUE,
+                                MUIA_Cycle_Entries, streamingOptions,
+                                MUIA_Cycle_Active, 0,
+                            End,
+                        End,
                         Child, VGroup,
                             MUIA_Frame, MUIV_Frame_Group,
                             MUIA_FrameTitle, STRING_MENU_OPENAI_API_KEY,
@@ -2436,6 +2670,16 @@ LONG createCustomServerSettingsRequesterWindow() {
                                 MUIA_String_MaxLen, 512,
                             End,
                         End,
+                        Child, customServerChatSystemGroup = VGroup,
+                            MUIA_Frame, MUIV_Frame_Group,
+                            MUIA_FrameTitle, STRING_MENU_OPENAI_CHAT_SYSTEM,
+                            Child, customServerChatSystemString = StringObject,
+                                MUIA_Frame, MUIV_Frame_String,
+                                MUIA_CycleChain, TRUE,
+                                MUIA_String_Contents, "",
+                                MUIA_String_MaxLen, CHAT_SYSTEM_LENGTH - 1,
+                            End,
+                        End,
                         Child, VGroup,
                             MUIA_Frame, MUIV_Frame_Group,
                             MUIA_FrameTitle, STRING_MENU_OPENAI_FULL_URL_PREVIEW,
@@ -2481,6 +2725,15 @@ LONG createCustomServerSettingsRequesterWindow() {
     DoMethod(customServerUsesSSLCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerAuthorizationTypeCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &AuthTypeChangedHook);
     DoMethod(customServerStreamingCycle, MUIM_Notify, MUIA_Cycle_Active,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &SettingsChangedHook);
+    DoMethod(customServerWebSearchCycle, MUIM_Notify, MUIA_Cycle_Active,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &SettingsChangedHook);
+    DoMethod(customServerShellToolCycle, MUIM_Notify, MUIA_Cycle_Active,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &SettingsChangedHook);
+    DoMethod(customServerChatSystemString, MUIM_Notify, MUIA_String_Contents,
              MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
              &SettingsChangedHook);
     DoMethod(customServerApiKeyString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
@@ -2555,6 +2808,18 @@ static void applyProviderSettingsWindowMode(BOOL isImageMode) {
         DoMethod(customServerSettingsRootGroup, MUIM_Group_InitChange);
     if (customServerStreamingGroup != NULL) {
         set(customServerStreamingGroup, MUIA_ShowMe,
+            settingsIsImageMode ? FALSE : TRUE);
+    }
+    if (customServerWebSearchGroup != NULL) {
+        set(customServerWebSearchGroup, MUIA_ShowMe,
+            settingsIsImageMode ? FALSE : TRUE);
+    }
+    if (customServerShellToolGroup != NULL) {
+        set(customServerShellToolGroup, MUIA_ShowMe,
+            settingsIsImageMode ? FALSE : TRUE);
+    }
+    if (customServerChatSystemGroup != NULL) {
+        set(customServerChatSystemGroup, MUIA_ShowMe,
             settingsIsImageMode ? FALSE : TRUE);
     }
     if (customServerImageSizeGroup != NULL) {

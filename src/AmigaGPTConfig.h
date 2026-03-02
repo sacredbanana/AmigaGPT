@@ -123,6 +123,30 @@
 #define MUIA_AmigaGPTConfig_SpeechProfiles (AmigaGPTConfig_Dummy + 0x69)
 #define MUIA_AmigaGPTConfig_ActiveSpeechProfileName (AmigaGPTConfig_Dummy + 0x6A)
 
+/* Per-locked-profile web search */
+#define MUIA_AmigaGPTConfig_OpenAiWebSearchEnabled                             \
+    (AmigaGPTConfig_Dummy + 0x73)
+#define MUIA_AmigaGPTConfig_GeminiWebSearchEnabled                             \
+    (AmigaGPTConfig_Dummy + 0x74)
+#define MUIA_AmigaGPTConfig_GrokWebSearchEnabled (AmigaGPTConfig_Dummy + 0x75)
+#define MUIA_AmigaGPTConfig_AnthropicWebSearchEnabled                          \
+    (AmigaGPTConfig_Dummy + 0x76)
+
+/* Per-locked-profile shell tool */
+#define MUIA_AmigaGPTConfig_OpenAiShellToolEnabled                             \
+    (AmigaGPTConfig_Dummy + 0x77)
+#define MUIA_AmigaGPTConfig_GeminiShellToolEnabled                             \
+    (AmigaGPTConfig_Dummy + 0x78)
+#define MUIA_AmigaGPTConfig_GrokShellToolEnabled (AmigaGPTConfig_Dummy + 0x79)
+#define MUIA_AmigaGPTConfig_AnthropicShellToolEnabled                          \
+    (AmigaGPTConfig_Dummy + 0x7A)
+
+/* Per-locked-profile chat system prompt */
+#define MUIA_AmigaGPTConfig_OpenAiChatSystem (AmigaGPTConfig_Dummy + 0x7B)
+#define MUIA_AmigaGPTConfig_GeminiChatSystem (AmigaGPTConfig_Dummy + 0x7C)
+#define MUIA_AmigaGPTConfig_GrokChatSystem (AmigaGPTConfig_Dummy + 0x7D)
+#define MUIA_AmigaGPTConfig_AnthropicChatSystem (AmigaGPTConfig_Dummy + 0x7E)
+
 /* Version tracking attributes (read-only, for internal use) */
 #define MUIA_AmigaGPTConfig_ChatModelSetVersion (AmigaGPTConfig_Dummy + 0x40)
 #define MUIA_AmigaGPTConfig_ImageModelSetVersion (AmigaGPTConfig_Dummy + 0x41)
@@ -411,10 +435,12 @@ struct ChatRequestSettings {
     STRPTR proxyUsername;
     STRPTR proxyPassword;
     BOOL webSearchEnabled;
+    BOOL shellToolEnabled;
     APIChatEndpoint apiEndpoint;
     CONST_STRPTR apiEndpointUrl;
     AuthorizationType authorizationType;
     CONST_STRPTR customHeaders;
+    CONST_STRPTR chatSystem;
 };
 
 void configGetActiveChatRequestSettings(struct ChatRequestSettings *out);

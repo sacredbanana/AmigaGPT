@@ -5,6 +5,7 @@
 - Chat and Image menus replace the single OpenAI menu; model selection is now in "Chat Provider Settings" and "Image Provider Settings"
 - Provider settings: New panels to manage chat and image providers
 - Fetch latest models available from the server
+- System prompt setting is now a chat profile setting rather than a global one
 - ARexx SENDMESSAGE and CREATEIMAGE support PR=PROVIDER to choose provider; new LISTPROVIDERS command
 - ARexx SENDMESSAGE supports SF=SYSTEMFILE to use the contents of a file as the system prompt
 - New powerful Shell Tool option to ask ChatGPT to run any command on your system in the shell

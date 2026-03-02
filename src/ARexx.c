@@ -365,8 +365,9 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     struct json_object **responses = postChatMessageToOpenAI(
         conversation, host, portValue, useSSL, model, apiKey, FALSE, useProxy,
         proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
-        proxyUsername, proxyPassword, webSearchEnabled, apiEndpoint,
-        apiEndpointUrl, authType, customHeaders);
+        proxyUsername, proxyPassword, webSearchEnabled,
+        rexxSettings.shellToolEnabled, apiEndpoint, apiEndpointUrl, authType,
+        customHeaders);
 
     /* Note: Don't free the conversation here - we keep it for context */
 
@@ -378,7 +379,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
     /* Handle shell tool calls if enabled - loop to handle multiple sequential
      * commands */
-    while (configGetShellToolEnabled() && hasPendingToolCall()) {
+    while (rexxSettings.shellToolEnabled && hasPendingToolCall()) {
         STRPTR command = getPendingToolCommand();
         STRPTR callId = getPendingToolCallId();
         STRPTR responseId = getPendingResponseId();
@@ -428,7 +429,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             responseId, callId, toolOutput, model, (STRPTR)host,
             (UWORD)portValue, useSSL, apiKey, useProxy, proxyHost,
             proxyPortValue, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-            proxyPassword);
+            proxyPassword, rexxSettings.shellToolEnabled);
 
         if (output != NULL) {
             FreeVec(output);

@@ -65,6 +65,14 @@ struct AmigaGPTConfigData {
     ULONG geminiChatStreamEnabled;
     ULONG grokChatStreamEnabled;
     ULONG anthropicChatStreamEnabled;
+    ULONG openAiWebSearchEnabled;
+    ULONG geminiWebSearchEnabled;
+    ULONG grokWebSearchEnabled;
+    ULONG anthropicWebSearchEnabled;
+    ULONG openAiShellToolEnabled;
+    ULONG geminiShellToolEnabled;
+    ULONG grokShellToolEnabled;
+    ULONG anthropicShellToolEnabled;
     ULONG customPort;
     ULONG customUseSSL;
     APIChatEndpoint customApiEndpoint;
@@ -135,6 +143,12 @@ struct AmigaGPTConfigData {
     STRPTR openAiImageModelName;
     STRPTR geminiImageModelName;
     STRPTR grokImageModelName;
+
+    /* Per-locked-profile chat system prompts */
+    STRPTR openAiChatSystem;
+    STRPTR geminiChatSystem;
+    STRPTR grokChatSystem;
+    STRPTR anthropicChatSystem;
 
     /* Auto-save state */
     BOOL isDirty;
@@ -208,6 +222,14 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->geminiChatStreamEnabled = TRUE;
     data->grokChatStreamEnabled = TRUE;
     data->anthropicChatStreamEnabled = FALSE;
+    data->openAiWebSearchEnabled = TRUE;
+    data->geminiWebSearchEnabled = TRUE;
+    data->grokWebSearchEnabled = TRUE;
+    data->anthropicWebSearchEnabled = TRUE;
+    data->openAiShellToolEnabled = FALSE;
+    data->geminiShellToolEnabled = FALSE;
+    data->grokShellToolEnabled = FALSE;
+    data->anthropicShellToolEnabled = FALSE;
     data->customPort = 80;
     data->customUseSSL = FALSE;
     data->customApiEndpoint = API_CHAT_ENDPOINT_CHAT_COMPLETIONS;
@@ -342,6 +364,11 @@ static void freeAllStrings(struct AmigaGPTConfigData *data) {
     freeString(&data->openAiImageModelName);
     freeString(&data->geminiImageModelName);
     freeString(&data->grokImageModelName);
+    /* Per-locked-profile chat system prompts */
+    freeString(&data->openAiChatSystem);
+    freeString(&data->geminiChatSystem);
+    freeString(&data->grokChatSystem);
+    freeString(&data->anthropicChatSystem);
 }
 
 /**
@@ -486,6 +513,30 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled:
         *store = data->anthropicChatStreamEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_OpenAiWebSearchEnabled:
+        *store = data->openAiWebSearchEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GeminiWebSearchEnabled:
+        *store = data->geminiWebSearchEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GrokWebSearchEnabled:
+        *store = data->grokWebSearchEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_AnthropicWebSearchEnabled:
+        *store = data->anthropicWebSearchEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_OpenAiShellToolEnabled:
+        *store = data->openAiShellToolEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GeminiShellToolEnabled:
+        *store = data->geminiShellToolEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GrokShellToolEnabled:
+        *store = data->grokShellToolEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_AnthropicShellToolEnabled:
+        *store = data->anthropicShellToolEnabled;
         return TRUE;
     case MUIA_AmigaGPTConfig_CustomPort:
         *store = data->customPort;
@@ -682,6 +733,18 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
     case MUIA_AmigaGPTConfig_GrokImageModelName:
         *store = (ULONG)data->grokImageModelName;
         return TRUE;
+    case MUIA_AmigaGPTConfig_OpenAiChatSystem:
+        *store = (ULONG)data->openAiChatSystem;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GeminiChatSystem:
+        *store = (ULONG)data->geminiChatSystem;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GrokChatSystem:
+        *store = (ULONG)data->grokChatSystem;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_AnthropicChatSystem:
+        *store = (ULONG)data->anthropicChatSystem;
+        return TRUE;
     }
 
     return DoSuperMethodA(cl, obj, (Msg)msg);
@@ -840,6 +903,54 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
         case MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled:
             if (data->anthropicChatStreamEnabled != (ULONG)ti_Data) {
                 data->anthropicChatStreamEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_OpenAiWebSearchEnabled:
+            if (data->openAiWebSearchEnabled != (ULONG)ti_Data) {
+                data->openAiWebSearchEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_GeminiWebSearchEnabled:
+            if (data->geminiWebSearchEnabled != (ULONG)ti_Data) {
+                data->geminiWebSearchEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_GrokWebSearchEnabled:
+            if (data->grokWebSearchEnabled != (ULONG)ti_Data) {
+                data->grokWebSearchEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_AnthropicWebSearchEnabled:
+            if (data->anthropicWebSearchEnabled != (ULONG)ti_Data) {
+                data->anthropicWebSearchEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_OpenAiShellToolEnabled:
+            if (data->openAiShellToolEnabled != (ULONG)ti_Data) {
+                data->openAiShellToolEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_GeminiShellToolEnabled:
+            if (data->geminiShellToolEnabled != (ULONG)ti_Data) {
+                data->geminiShellToolEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_GrokShellToolEnabled:
+            if (data->grokShellToolEnabled != (ULONG)ti_Data) {
+                data->grokShellToolEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_AnthropicShellToolEnabled:
+            if (data->anthropicShellToolEnabled != (ULONG)ti_Data) {
+                data->anthropicShellToolEnabled = (ULONG)ti_Data;
                 changed = TRUE;
             }
             break;
@@ -1132,6 +1243,22 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
             if (setStringAttr(&data->grokImageModelName, (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
+        case MUIA_AmigaGPTConfig_OpenAiChatSystem:
+            if (setStringAttr(&data->openAiChatSystem, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_GeminiChatSystem:
+            if (setStringAttr(&data->geminiChatSystem, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_GrokChatSystem:
+            if (setStringAttr(&data->grokChatSystem, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_AnthropicChatSystem:
+            if (setStringAttr(&data->anthropicChatSystem, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
         }
     }
 
@@ -1230,6 +1357,30 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
     json_object_object_add(
         configJsonObject, "anthropicChatStreamEnabled",
         json_object_new_boolean((BOOL)data->anthropicChatStreamEnabled));
+    json_object_object_add(
+        configJsonObject, "openAiWebSearchEnabled",
+        json_object_new_boolean((BOOL)data->openAiWebSearchEnabled));
+    json_object_object_add(
+        configJsonObject, "geminiWebSearchEnabled",
+        json_object_new_boolean((BOOL)data->geminiWebSearchEnabled));
+    json_object_object_add(
+        configJsonObject, "grokWebSearchEnabled",
+        json_object_new_boolean((BOOL)data->grokWebSearchEnabled));
+    json_object_object_add(
+        configJsonObject, "anthropicWebSearchEnabled",
+        json_object_new_boolean((BOOL)data->anthropicWebSearchEnabled));
+    json_object_object_add(
+        configJsonObject, "openAiShellToolEnabled",
+        json_object_new_boolean((BOOL)data->openAiShellToolEnabled));
+    json_object_object_add(
+        configJsonObject, "geminiShellToolEnabled",
+        json_object_new_boolean((BOOL)data->geminiShellToolEnabled));
+    json_object_object_add(
+        configJsonObject, "grokShellToolEnabled",
+        json_object_new_boolean((BOOL)data->grokShellToolEnabled));
+    json_object_object_add(
+        configJsonObject, "anthropicShellToolEnabled",
+        json_object_new_boolean((BOOL)data->anthropicShellToolEnabled));
     json_object_object_add(configJsonObject, "customPort",
                            json_object_new_int(data->customPort));
     json_object_object_add(configJsonObject, "customUseSSL",
@@ -1466,6 +1617,25 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
         configJsonObject, "anthropicChatModelName",
         data->anthropicChatModelName != NULL
             ? json_object_new_string(data->anthropicChatModelName)
+            : NULL);
+    json_object_object_add(
+        configJsonObject, "openAiChatSystem",
+        data->openAiChatSystem != NULL
+            ? json_object_new_string(data->openAiChatSystem)
+            : NULL);
+    json_object_object_add(
+        configJsonObject, "geminiChatSystem",
+        data->geminiChatSystem != NULL
+            ? json_object_new_string(data->geminiChatSystem)
+            : NULL);
+    json_object_object_add(configJsonObject, "grokChatSystem",
+                           data->grokChatSystem != NULL
+                               ? json_object_new_string(data->grokChatSystem)
+                               : NULL);
+    json_object_object_add(
+        configJsonObject, "anthropicChatSystem",
+        data->anthropicChatSystem != NULL
+            ? json_object_new_string(data->anthropicChatSystem)
             : NULL);
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
@@ -1715,6 +1885,33 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
         data->anthropicChatStreamEnabled =
             (ULONG)json_object_get_boolean(valueObj);
 
+    if (json_object_object_get_ex(configJsonObject, "openAiWebSearchEnabled",
+                                  &valueObj))
+        data->openAiWebSearchEnabled = (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "geminiWebSearchEnabled",
+                                  &valueObj))
+        data->geminiWebSearchEnabled = (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "grokWebSearchEnabled",
+                                  &valueObj))
+        data->grokWebSearchEnabled = (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "anthropicWebSearchEnabled",
+                                  &valueObj))
+        data->anthropicWebSearchEnabled =
+            (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "openAiShellToolEnabled",
+                                  &valueObj))
+        data->openAiShellToolEnabled = (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "geminiShellToolEnabled",
+                                  &valueObj))
+        data->geminiShellToolEnabled = (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "grokShellToolEnabled",
+                                  &valueObj))
+        data->grokShellToolEnabled = (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject, "anthropicShellToolEnabled",
+                                  &valueObj))
+        data->anthropicShellToolEnabled =
+            (ULONG)json_object_get_boolean(valueObj);
+
     if (json_object_object_get_ex(configJsonObject, legacyCustomProviderFlagKey,
                                   &valueObj))
         legacyCustomProviderEnabled = (BOOL)json_object_get_boolean(valueObj);
@@ -1933,6 +2130,13 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
                    &data->grokChatModelName);
     readJsonString(configJsonObject, "anthropicChatModelName",
                    &data->anthropicChatModelName);
+    readJsonString(configJsonObject, "openAiChatSystem",
+                   &data->openAiChatSystem);
+    readJsonString(configJsonObject, "geminiChatSystem",
+                   &data->geminiChatSystem);
+    readJsonString(configJsonObject, "grokChatSystem", &data->grokChatSystem);
+    readJsonString(configJsonObject, "anthropicChatSystem",
+                   &data->anthropicChatSystem);
 
     /* Migration from old config format (schema v1 to v2) */
     if (needsMigration) {
@@ -2062,6 +2266,92 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
         data->grokImageModelName =
             copyString(GROK_IMAGE_MODELS[0] ? GROK_IMAGE_MODELS[0]
                                             : "grok-2-image");
+
+    /* Migrate global webSearchEnabled / shellToolEnabled / chatSystem into
+     * per-profile fields if this is the first run after the upgrade. */
+    {
+        struct json_object *tmp = NULL;
+        BOOL hasPerProfileKeys = json_object_object_get_ex(
+            configJsonObject, "openAiWebSearchEnabled", &tmp);
+        if (!hasPerProfileKeys) {
+            CONST_STRPTR active = data->activeProfileName;
+            BOOL isOpenAi =
+                (active != NULL && strcmp(active, "OpenAI") == 0);
+            BOOL isGemini =
+                (active != NULL && strcmp(active, "Google Gemini") == 0);
+            BOOL isGrok =
+                (active != NULL && strcmp(active, "xAI Grok") == 0);
+            BOOL isAnthropic =
+                (active != NULL && strcmp(active, "Anthropic Claude") == 0);
+            BOOL isLocked = isOpenAi || isGemini || isGrok || isAnthropic;
+
+            if (isLocked) {
+                if (isOpenAi) {
+                    data->openAiWebSearchEnabled = data->webSearchEnabled;
+                    data->openAiShellToolEnabled = data->shellToolEnabled;
+                    freeString(&data->openAiChatSystem);
+                    data->openAiChatSystem = copyString(data->chatSystem);
+                } else if (isGemini) {
+                    data->geminiWebSearchEnabled = data->webSearchEnabled;
+                    freeString(&data->geminiChatSystem);
+                    data->geminiChatSystem = copyString(data->chatSystem);
+                } else if (isGrok) {
+                    data->grokWebSearchEnabled = data->webSearchEnabled;
+                    freeString(&data->grokChatSystem);
+                    data->grokChatSystem = copyString(data->chatSystem);
+                } else if (isAnthropic) {
+                    data->anthropicWebSearchEnabled = data->webSearchEnabled;
+                    freeString(&data->anthropicChatSystem);
+                    data->anthropicChatSystem = copyString(data->chatSystem);
+                }
+            } else if (active != NULL && strlen(active) > 0) {
+                /* Custom profile -- inject into the JSON array */
+                struct json_object *arr =
+                    json_tokener_parse(data->customServerProfiles
+                                           ? data->customServerProfiles
+                                           : "[]");
+                if (arr != NULL &&
+                    json_object_is_type(arr, json_type_array)) {
+                    int len = json_object_array_length(arr);
+                    for (int i = 0; i < len; i++) {
+                        struct json_object *p =
+                            json_object_array_get_idx(arr, i);
+                        struct json_object *nameObj =
+                            json_object_object_get(p, "name");
+                        if (nameObj != NULL &&
+                            strcmp(json_object_get_string(nameObj), active) ==
+                                0) {
+                            json_object_object_add(
+                                p, "webSearchEnabled",
+                                json_object_new_boolean(
+                                    (BOOL)data->webSearchEnabled));
+                            json_object_object_add(
+                                p, "shellToolEnabled",
+                                json_object_new_boolean(
+                                    (BOOL)data->shellToolEnabled));
+                            json_object_object_add(
+                                p, "chatSystem",
+                                json_object_new_string(
+                                    data->chatSystem ? data->chatSystem : ""));
+                            break;
+                        }
+                    }
+                    CONST_STRPTR arrStr = json_object_to_json_string(arr);
+                    freeString(&data->customServerProfiles);
+                    data->customServerProfiles = copyString(arrStr);
+                    json_object_put(arr);
+                }
+            } else {
+                /* No active profile at all (pre-profiles user) -- default to
+                 * OpenAI */
+                data->openAiWebSearchEnabled = data->webSearchEnabled;
+                data->openAiShellToolEnabled = data->shellToolEnabled;
+                freeString(&data->openAiChatSystem);
+                data->openAiChatSystem = copyString(data->chatSystem);
+            }
+            saveConfig(data);
+        }
+    }
 
     FreeVec(configJsonString);
     json_object_put(configJsonObject);
@@ -3315,6 +3605,8 @@ static APIChatEndpoint coerceChatEndpointFromStoredInt(LONG v) {
     return API_CHAT_ENDPOINT_CHAT_COMPLETIONS;
 }
 
+static STRPTR resolvedChatSystem = NULL;
+
 static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
                                          CONST_STRPTR profileName) {
     /* Connection defaults */
@@ -3338,6 +3630,26 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
                 get(configObj, MUIA_AmigaGPTConfig_OpenAiChatStreamEnabled, &v);
             out->stream = (BOOL)v;
         }
+        {
+            ULONG v = TRUE;
+            if (configObj)
+                get(configObj, MUIA_AmigaGPTConfig_OpenAiWebSearchEnabled, &v);
+            out->webSearchEnabled = (BOOL)v;
+        }
+        {
+            ULONG v = FALSE;
+            if (configObj)
+                get(configObj, MUIA_AmigaGPTConfig_OpenAiShellToolEnabled, &v);
+            out->shellToolEnabled = (BOOL)v;
+        }
+        {
+            STRPTR s = NULL;
+            if (configObj)
+                get(configObj, MUIA_AmigaGPTConfig_OpenAiChatSystem, &s);
+            freeString(&resolvedChatSystem);
+            resolvedChatSystem = copyString(s);
+            out->chatSystem = resolvedChatSystem;
+        }
     } else if (strcmp(profileName, LOCKED_PROFILE_NAME_GEMINI) == 0) {
         out->host = (STRPTR)"generativelanguage.googleapis.com";
         out->port = 443;
@@ -3358,6 +3670,21 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
                 get(configObj, MUIA_AmigaGPTConfig_GeminiChatStreamEnabled, &v);
             out->stream = (BOOL)v;
         }
+        {
+            ULONG v = TRUE;
+            if (configObj)
+                get(configObj, MUIA_AmigaGPTConfig_GeminiWebSearchEnabled, &v);
+            out->webSearchEnabled = (BOOL)v;
+        }
+        out->shellToolEnabled = FALSE;
+        {
+            STRPTR s = NULL;
+            if (configObj)
+                get(configObj, MUIA_AmigaGPTConfig_GeminiChatSystem, &s);
+            freeString(&resolvedChatSystem);
+            resolvedChatSystem = copyString(s);
+            out->chatSystem = resolvedChatSystem;
+        }
     } else if (strcmp(profileName, LOCKED_PROFILE_NAME_GROK) == 0) {
         out->host = (STRPTR)"api.x.ai";
         out->port = 443;
@@ -3376,6 +3703,21 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
             if (configObj)
                 get(configObj, MUIA_AmigaGPTConfig_GrokChatStreamEnabled, &v);
             out->stream = (BOOL)v;
+        }
+        {
+            ULONG v = TRUE;
+            if (configObj)
+                get(configObj, MUIA_AmigaGPTConfig_GrokWebSearchEnabled, &v);
+            out->webSearchEnabled = (BOOL)v;
+        }
+        out->shellToolEnabled = FALSE;
+        {
+            STRPTR s = NULL;
+            if (configObj)
+                get(configObj, MUIA_AmigaGPTConfig_GrokChatSystem, &s);
+            freeString(&resolvedChatSystem);
+            resolvedChatSystem = copyString(s);
+            out->chatSystem = resolvedChatSystem;
         }
     } else {
         out->host = (STRPTR)"api.anthropic.com";
@@ -3396,6 +3738,21 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
             if (configObj)
                 get(configObj, MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled, &v);
             out->stream = (BOOL)v;
+        }
+        {
+            ULONG v = TRUE;
+            if (configObj)
+                get(configObj, MUIA_AmigaGPTConfig_AnthropicWebSearchEnabled, &v);
+            out->webSearchEnabled = (BOOL)v;
+        }
+        out->shellToolEnabled = FALSE;
+        {
+            STRPTR s = NULL;
+            if (configObj)
+                get(configObj, MUIA_AmigaGPTConfig_AnthropicChatSystem, &s);
+            freeString(&resolvedChatSystem);
+            resolvedChatSystem = copyString(s);
+            out->chatSystem = resolvedChatSystem;
         }
     }
 }
@@ -3428,7 +3785,6 @@ void configGetActiveChatRequestSettings(struct ChatRequestSettings *out) {
     out->proxyRequiresAuth = configGetProxyRequiresAuth();
     out->proxyUsername = configGetProxyUsername();
     out->proxyPassword = configGetProxyPassword();
-    out->webSearchEnabled = configGetWebSearchEnabled();
 
     CONST_STRPTR activeName = configGetActiveProfileName();
     if (activeName == NULL || strlen(activeName) == 0) {
@@ -3474,6 +3830,15 @@ void configGetActiveChatRequestSettings(struct ChatRequestSettings *out) {
         resolvedChatCustomHeaders = copyString(
             jsonGetStringDefault(profile, "customHeaders", ""));
         out->customHeaders = resolvedChatCustomHeaders;
+
+        out->webSearchEnabled =
+            jsonGetBoolDefault(profile, "webSearchEnabled", TRUE);
+        out->shellToolEnabled =
+            jsonGetBoolDefault(profile, "shellToolEnabled", FALSE);
+        freeString(&resolvedChatSystem);
+        resolvedChatSystem = copyString(
+            jsonGetStringDefault(profile, "chatSystem", ""));
+        out->chatSystem = resolvedChatSystem;
     } else {
         /* Fallback to custom settings */
         out->host = configGetCustomHost();
@@ -3486,6 +3851,9 @@ void configGetActiveChatRequestSettings(struct ChatRequestSettings *out) {
         out->apiEndpoint = configGetCustomApiEndpoint();
         out->apiEndpointUrl = configGetCustomApiEndpointUrl();
         out->customHeaders = configGetCustomHeaders();
+        out->webSearchEnabled = TRUE;
+        out->shellToolEnabled = FALSE;
+        out->chatSystem = "";
     }
     if (arr != NULL)
         json_object_put(arr);

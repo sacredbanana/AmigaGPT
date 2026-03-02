@@ -14,7 +14,6 @@
 #include "APIKeyRequesterWindow.h"
 #include "AboutAmigaGPTWindow.h"
 #include "ARexx.h"
-#include "ChatSystemRequesterWindow.h"
 #include "CustomServerSettingsRequesterWindow.h"
 #include "gui.h"
 #include "MainWindow.h"
@@ -25,7 +24,6 @@
 Object *menuStrip = NULL;
 
 static void populateSpeechMenu();
-static void populateChatMenu();
 static void populateArexxMenu();
 static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent);
 static void FreeNPPath(BPTR listHead);
@@ -419,18 +417,7 @@ void createMenu() {
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_CHAT_PROVIDER_SETTINGS, MUIA_UserData,
     MENU_ITEM_CHAT_PROVIDER_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
-    MUIA_UserData, MENU_ITEM_NULL, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_WEB_SEARCH, MUIA_UserData,
-    MENU_ITEM_CHAT_WEB_SEARCH_ENABLED, MUIA_Menuitem_CopyStrings, FALSE,
-    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, STRING_SHELL_TOOL,
-    MUIA_UserData, MENU_ITEM_CHAT_SHELL_TOOL_ENABLED, MUIA_Menuitem_CopyStrings,
-    FALSE, MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
-    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
-    MUIA_UserData, MENU_ITEM_NULL, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_OPENAI_CHAT_SYSTEM, MUIA_UserData,
-    MENU_ITEM_CHAT_SYSTEM, MUIA_Menuitem_CopyStrings, FALSE, End, End,
+    End,
 
     /* Image Menu */
         MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_IMAGE,
@@ -474,7 +461,6 @@ void createMenu() {
     End, End;
 
     /* Speech menu is no longer populated dynamically. */
-    populateChatMenu();
     populateArexxMenu();
 }
 
@@ -691,34 +677,6 @@ void addMenuActions() {
              MUIA_Window_ActiveObject, apiKeyRequesterString);
 
     /* Chat menu actions */
-    Object chatSystemMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_SYSTEM);
-    DoMethod(chatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, chatSystemRequesterWindowObject, 3, MUIM_Set,
-             MUIA_Window_Open, TRUE);
-    DoMethod(chatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, chatSystemRequesterString, 3, MUIM_Set,
-             MUIA_String_Contents, configGetChatSystem());
-    DoMethod(chatSystemMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
-             MUIV_EveryTime, chatSystemRequesterWindowObject, 3, MUIM_Set,
-             MUIA_Window_ActiveObject, chatSystemRequesterString);
-
-    Object chatWebSearchEnabledMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_WEB_SEARCH_ENABLED);
-    set(chatWebSearchEnabledMenuItem, MUIA_Menuitem_Checked,
-        configGetWebSearchEnabled());
-    DoMethod(chatWebSearchEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, configObj, 3, MUIM_Set,
-             MUIA_AmigaGPTConfig_WebSearchEnabled, MUIV_TriggerValue);
-
-    Object chatShellToolEnabledMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_SHELL_TOOL_ENABLED);
-    set(chatShellToolEnabledMenuItem, MUIA_Menuitem_Checked,
-        configGetShellToolEnabled());
-    DoMethod(chatShellToolEnabledMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, configObj, 3, MUIM_Set,
-             MUIA_AmigaGPTConfig_ShellToolEnabled, MUIV_TriggerValue);
-
     Object chatProviderSettingsMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_PROVIDER_SETTINGS);
     DoMethod(chatProviderSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
@@ -876,30 +834,6 @@ static void populateSpeechMenu() {
 }
 
 /**
- * Populate the Chat menu (web search and shell tool checkmarks)
- */
-static void populateChatMenu() {
-    DoMethod(menuStrip, MUIM_Menustrip_InitChange);
-
-    // Set the checkmarks for web search and shell tool based on config
-    Object *webSearchMenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_WEB_SEARCH_ENABLED);
-    if (webSearchMenuItem) {
-        set(webSearchMenuItem, MUIA_Menuitem_Checked,
-            configGetWebSearchEnabled());
-    }
-
-    Object *shellToolMenuItem = (Object *)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_CHAT_SHELL_TOOL_ENABLED);
-    if (shellToolMenuItem) {
-        set(shellToolMenuItem, MUIA_Menuitem_Checked,
-            configGetShellToolEnabled());
-    }
-
-    DoMethod(menuStrip, MUIM_Menustrip_ExitChange);
-}
-
-/**
  * Populate the AREXX menu with the installed scripts
  **/
 static void populateArexxMenu() {
@@ -986,17 +920,17 @@ static void populateArexxMenu() {
  * @brief Build a NP_Path list.
  * @param extraDirs[]: array of assigns/paths like "SYS:Utilities",
  *MOSSYS:Utilities"
- * @param addParent: if TRUE, duplicate the callerÃÂ¢ÃÂÃÂs existing CLI path first
+ * @param addParent: if TRUE, duplicate the callerÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂs existing CLI path first
  * @returns BPTR to first node, or ZERO on failure (nothing allocated).
  **/
 static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent) {
     struct PathNodeCompat *head = NULL, *tail = NULL;
 
-// Optionally copy the callerÃÂ¢ÃÂÃÂs current shell path (duplicates the locks).
+// Optionally copy the callerÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂs current shell path (duplicates the locks).
 #ifndef __AMIGAOS4__
     if (addParent) {
         struct CommandLineInterface *cli =
-            Cli(); // NULL if weÃÂ¢ÃÂÃÂre not in a shell
+            Cli(); // NULL if weÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂre not in a shell
         if (cli && cli->cli_CommandDir) {
             for (struct PathNodeCompat *src =
                      (struct PathNodeCompat *)BADDR(cli->cli_CommandDir);
@@ -1047,7 +981,7 @@ static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent) {
         tail = node;
     }
 
-    /* Note: current directory and C: are implicit; donÃÂ¢ÃÂÃÂt add them yourself. */
+    /* Note: current directory and C: are implicit; donÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂt add them yourself. */
     /* C: is always searched last, current dir always first.                 */ /*  */
 
     return MKBADDR(head);

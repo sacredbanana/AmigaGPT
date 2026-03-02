@@ -500,17 +500,14 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         "title "
         "in quotes or prefix the response with anything",
         "user");
-    LONG prevShellToolEnabled = configGetShellToolEnabled();
-    configSetShellToolEnabled(FALSE);
     struct json_object **responses = postChatMessageToOpenAI(
         imageNameConversation, nameSettings.host, nameSettings.port,
         nameSettings.useSSL, titleModel, nameSettings.apiKey, FALSE,
         nameSettings.useProxy, nameSettings.proxyHost, nameSettings.proxyPort,
         nameSettings.proxyUsesSSL, nameSettings.proxyRequiresAuth,
-        nameSettings.proxyUsername, nameSettings.proxyPassword, FALSE,
+        nameSettings.proxyUsername, nameSettings.proxyPassword, FALSE, FALSE,
         nameSettings.apiEndpoint, nameSettings.apiEndpointUrl,
         nameSettings.authorizationType, nameSettings.customHeaders);
-    configSetShellToolEnabled(prevShellToolEnabled);
 
     struct GeneratedImage *generatedImage =
         AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
@@ -1402,8 +1399,6 @@ static void sendChatMessage() {
     addTextToConversation(currentConversation, textUTF8, "user");
     CodesetsFreeA(textUTF8, NULL);
 
-    setConversationSystem(currentConversation, configGetChatSystem());
-
     if (isAROS) {
         set(chatInputTextEditor, MUIA_String_Contents, "");
     } else {
@@ -1418,6 +1413,8 @@ static void sendChatMessage() {
     struct ChatRequestSettings chatSettings;
     configGetActiveChatRequestSettings(&chatSettings);
 
+    setConversationSystem(currentConversation, chatSettings.chatSystem);
+
     strncat(chatOutputTextEditorContents, "\n", 1);
 
     do {
@@ -1428,8 +1425,9 @@ static void sendChatMessage() {
             chatSettings.proxyPort, chatSettings.proxyUsesSSL,
             chatSettings.proxyRequiresAuth, chatSettings.proxyUsername,
             chatSettings.proxyPassword, chatSettings.webSearchEnabled,
-            chatSettings.apiEndpoint, chatSettings.apiEndpointUrl,
-            chatSettings.authorizationType, chatSettings.customHeaders);
+            chatSettings.shellToolEnabled, chatSettings.apiEndpoint,
+            chatSettings.apiEndpointUrl, chatSettings.authorizationType,
+            chatSettings.customHeaders);
         if (responses == NULL) {
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -1637,7 +1635,7 @@ static void sendChatMessage() {
     } while (!dataStreamFinished);
 
     /* Handle shell tool calls - loop to handle multiple sequential commands */
-    while (chatSettings.stream && configGetShellToolEnabled() &&
+    while (chatSettings.stream && chatSettings.shellToolEnabled &&
            hasPendingToolCall()) {
         STRPTR command = getPendingToolCommand();
         STRPTR callId = getPendingToolCallId();
@@ -1724,7 +1722,8 @@ static void sendChatMessage() {
             chatSettings.apiKey, configGetProxyEnabled(),
             chatSettings.proxyHost, chatSettings.proxyPort,
             chatSettings.proxyUsesSSL, chatSettings.proxyRequiresAuth,
-            chatSettings.proxyUsername, chatSettings.proxyPassword);
+            chatSettings.proxyUsername, chatSettings.proxyPassword,
+            chatSettings.shellToolEnabled);
 
         if (output != NULL) {
             FreeVec(output);
@@ -1825,7 +1824,7 @@ static void sendChatMessage() {
                 chatSettings.proxyPort, chatSettings.proxyUsesSSL,
                 chatSettings.proxyRequiresAuth, chatSettings.proxyUsername,
                 chatSettings.proxyPassword, chatSettings.webSearchEnabled,
-                chatSettings.apiEndpoint, chatSettings.apiEndpointUrl,
+                FALSE, chatSettings.apiEndpoint, chatSettings.apiEndpointUrl,
                 chatSettings.authorizationType, chatSettings.customHeaders);
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);

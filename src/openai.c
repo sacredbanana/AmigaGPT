@@ -1259,8 +1259,9 @@ struct json_object **postChatMessageToOpenAI(
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, BOOL webSearchEnabled,
-    APIChatEndpoint apiEndpoint, CONST_STRPTR apiEndpointUrl,
-    AuthorizationType authorizationType, CONST_STRPTR customHeaders) {
+    BOOL shellToolEnabled, APIChatEndpoint apiEndpoint,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders) {
     if (model == NULL || strlen(model) == 0) {
         displayError("Model not specified");
         return NULL;
@@ -1486,7 +1487,7 @@ struct json_object **postChatMessageToOpenAI(
                         json_object_array_add(toolsArray, webSearchToolObj);
                     }
                 }
-                if (includeOpenAiTools && configGetShellToolEnabled()) {
+                if (includeOpenAiTools && shellToolEnabled) {
                     struct json_object *shellToolObj = json_object_new_object();
                     json_object_object_add(shellToolObj, "type",
                                            json_object_new_string("function"));
@@ -1543,7 +1544,7 @@ struct json_object **postChatMessageToOpenAI(
                 obj, "stream",
                 json_object_new_boolean((json_bool)effectiveStream));
 
-            if (includeOpenAiTools && configGetShellToolEnabled()) {
+            if (includeOpenAiTools && shellToolEnabled) {
                 CONST_STRPTR amigaInstructions =
 #ifdef __AMIGAOS3__
                     "This system is an Amiga computer running AmigaOS. When "
@@ -2096,7 +2097,7 @@ struct json_object **postChatMessageToOpenAI(
                 streamingInProgress = FALSE;
 
                 /* Check for tool call in response.completed and save it */
-                if (configGetShellToolEnabled()) {
+                if (shellToolEnabled) {
                     struct json_object *completedResponse =
                         responses[responseIndex - 1];
                     if (hasShellToolCall(completedResponse)) {
@@ -2140,7 +2141,7 @@ struct json_object **postChatMessageToOpenAI(
     } else {
         /* Non-streaming mode - check for tool calls in the response */
         if (responseIndex > 0 && responses[responseIndex - 1] != NULL &&
-            configGetShellToolEnabled()) {
+            shellToolEnabled) {
             struct json_object *response = responses[responseIndex - 1];
             if (hasShellToolCall(response)) {
                 STRPTR callId = getShellToolCallId(response);
@@ -4339,7 +4340,8 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
                        UWORD port, BOOL useSSL, CONST_STRPTR apiKey,
                        BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
                        BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                       CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
+                       CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+                       BOOL shellToolEnabled) {
 
     UBYTE connectionRetryCount = 0;
     if (host == NULL || strlen(host) == 0) {
@@ -4572,7 +4574,7 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
             struct json_object *parsedResponse = json_tokener_parse(jsonStart);
             if (parsedResponse != NULL) {
                 /* Check if the response contains another tool call */
-                if (configGetShellToolEnabled() &&
+                if (shellToolEnabled &&
                     hasShellToolCall(parsedResponse)) {
                     STRPTR cId = getShellToolCallId(parsedResponse);
                     STRPTR cmd = getShellToolCommand(parsedResponse);
@@ -4636,7 +4638,7 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
         struct json_object *parsedResponse = json_tokener_parse(jsonStart);
         if (parsedResponse != NULL) {
             /* Check if the response contains another tool call */
-            if (configGetShellToolEnabled() &&
+            if (shellToolEnabled &&
                 hasShellToolCall(parsedResponse)) {
                 STRPTR callId = getShellToolCallId(parsedResponse);
                 STRPTR command = getShellToolCommand(parsedResponse);
