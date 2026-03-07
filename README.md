@@ -191,7 +191,7 @@ SPEAKTEXT PR=PROFILE/K,M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/
 ```
 - `PR=PROFILE` - Optional, the speech profile to use. This can be a built-in speech system name or a saved custom speech profile name. Use `LISTPROFILES` to see available profiles. If omitted, the active speech profile from AmigaGPT config is used
 - `M=MODEL` - Optional, the OpenAI voice model to use. Use `LISTMODELS PR=<profile>` to inspect the models for a speech profile. If omitted, the selected speech profile's model is used
-- `V=VOICE` - Optional, the OpenAI voice to use (use LISTVOICES to see available voices). If omitted, the selected speech profile's voice is used
+- `V=VOICE` - Optional voice override (use `LISTVOICES` to see available voices). For OpenAI speech profiles, this selects the OpenAI voice. For Workbench speech profiles, `male`, `female`, `male robot`, and `female robot` override the profile's narrator sex/mode. If omitted, the selected speech profile's voice settings are used
 - `I=INSTRUCTIONS` - Optional, OpenAI voice instructions override
 - `K=APIKEY` - Optional, API key override. If omitted, the selected speech profile's API key is used
 - `O=OUTPUT` - Optional, file to write audio data to instead of playing it
@@ -234,10 +234,11 @@ LISTIMAGESIZES
 ```
 
 #### LISTVOICES
-Lists all available TTS voices
+Lists the available TTS voices for a speech profile. If `PR` is omitted, it uses the active speech profile from AmigaGPT config.
 ```
-LISTVOICES
+LISTVOICES PR=PROFILE/K
 ```
+- `PR=PROFILE` - Optional, the speech profile to inspect. If the resolved profile uses ElevenLabs, `LISTVOICES` fetches the available voices from ElevenLabs. For Workbench speech profiles, it returns `male`, `female`, `male robot`, and `female robot`
 
 #### Help (?)
 Displays a list of available commands

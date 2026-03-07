@@ -21,9 +21,9 @@ SAY RESULT
 SAY "Models for active profiles:"
 'LISTMODELS'
 SAY RESULT
+SAY "Voices for active profile:"
+'LISTVOICES'
+SAY RESULT
 SAY "Image sizes:"
 'LISTIMAGESIZES'
-SAY RESULT
-SAY "Voices:"
-'LISTVOICES'
 SAY RESULT

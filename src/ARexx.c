@@ -1495,18 +1495,12 @@ static void rexxAppendSectionHeader(STRPTR buffer, ULONG bufferSize,
     rexxAppendText(buffer, bufferSize, ":\n");
 }
 
-static void rexxAppendIndentedLine(STRPTR buffer, ULONG bufferSize,
-                                   CONST_STRPTR text) {
-    rexxAppendText(buffer, bufferSize, "  ");
-    rexxAppendLine(buffer, bufferSize, text);
-}
-
 static void rexxAppendStringArray(STRPTR buffer, ULONG bufferSize,
                                   CONST_STRPTR values[]) {
     if (buffer == NULL || values == NULL)
         return;
     for (UBYTE i = 0; values[i] != NULL; i++) {
-        rexxAppendIndentedLine(buffer, bufferSize, values[i]);
+        rexxAppendLine(buffer, bufferSize, values[i]);
     }
 }
 
@@ -1522,7 +1516,7 @@ static void rexxAppendProfileNamesFromJson(STRPTR buffer, ULONG bufferSize,
             continue;
         CONST_STRPTR name = rexxJsonGetStringDefault(profile, "name", NULL);
         if (name != NULL && strlen(name) > 0)
-            rexxAppendIndentedLine(buffer, bufferSize, name);
+            rexxAppendLine(buffer, bufferSize, name);
     }
     json_object_put(arr);
 }
@@ -1540,7 +1534,7 @@ static void rexxAppendModelNamesFromJsonArray(STRPTR buffer, ULONG bufferSize,
             continue;
         CONST_STRPTR name = json_object_get_string(model);
         if (name != NULL && strlen(name) > 0)
-            rexxAppendIndentedLine(buffer, bufferSize, name);
+            rexxAppendLine(buffer, bufferSize, name);
     }
 }
 
@@ -1552,8 +1546,8 @@ static void rexxAppendElevenLabsModelNames(STRPTR buffer, ULONG bufferSize,
         configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
         configGetProxyUsername(), configGetProxyPassword());
     if (response == NULL) {
-        rexxAppendIndentedLine(buffer, bufferSize,
-                               "(Unable to fetch ElevenLabs models)");
+        rexxAppendLine(buffer, bufferSize,
+                       "(Unable to fetch ElevenLabs models)");
         return;
     }
 
@@ -1563,8 +1557,8 @@ static void rexxAppendElevenLabsModelNames(STRPTR buffer, ULONG bufferSize,
             modelsArray = response;
         } else {
             json_object_put(response);
-            rexxAppendIndentedLine(buffer, bufferSize,
-                                   "(Unable to parse ElevenLabs models)");
+            rexxAppendLine(buffer, bufferSize,
+                           "(Unable to parse ElevenLabs models)");
             return;
         }
     }
@@ -1579,9 +1573,59 @@ static void rexxAppendElevenLabsModelNames(STRPTR buffer, ULONG bufferSize,
         CONST_STRPTR name = rexxJsonGetStringDefault(modelObj, "name", NULL);
         CONST_STRPTR id = rexxJsonGetStringDefault(modelObj, "model_id", NULL);
         if (name != NULL && strlen(name) > 0) {
-            rexxAppendIndentedLine(buffer, bufferSize, name);
+            rexxAppendLine(buffer, bufferSize, name);
         } else if (id != NULL && strlen(id) > 0) {
-            rexxAppendIndentedLine(buffer, bufferSize, id);
+            rexxAppendLine(buffer, bufferSize, id);
+        }
+    }
+
+    json_object_put(response);
+}
+
+static void rexxAppendElevenLabsVoiceNames(STRPTR buffer, ULONG bufferSize,
+                                           CONST_STRPTR apiKey) {
+    struct json_object *response = makeHttpsGetRequest(
+        "api.elevenlabs.io", 443, "/v2/voices", apiKey, "xi-api-key", FALSE,
+        configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
+        configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+        configGetProxyUsername(), configGetProxyPassword());
+    if (response == NULL) {
+        rexxAppendLine(buffer, bufferSize,
+                       "(Unable to fetch ElevenLabs voices)");
+        return;
+    }
+
+    struct json_object *voicesArray = NULL;
+    if (!json_object_object_get_ex(response, "voices", &voicesArray)) {
+        if (json_object_is_type(response, json_type_array)) {
+            voicesArray = response;
+        } else {
+            json_object_put(response);
+            rexxAppendLine(buffer, bufferSize,
+                           "(Unable to parse ElevenLabs voices)");
+            return;
+        }
+    }
+    if (!json_object_is_type(voicesArray, json_type_array)) {
+        json_object_put(response);
+        rexxAppendLine(buffer, bufferSize,
+                       "(Unable to parse ElevenLabs voices)");
+        return;
+    }
+
+    LONG voiceCount = json_object_array_length(voicesArray);
+    for (LONG i = 0; i < voiceCount; i++) {
+        struct json_object *voiceObj =
+            json_object_array_get_idx(voicesArray, i);
+        if (voiceObj == NULL ||
+            !json_object_is_type(voiceObj, json_type_object))
+            continue;
+        CONST_STRPTR name = rexxJsonGetStringDefault(voiceObj, "name", NULL);
+        CONST_STRPTR id = rexxJsonGetStringDefault(voiceObj, "voice_id", NULL);
+        if (name != NULL && strlen(name) > 0) {
+            rexxAppendLine(buffer, bufferSize, name);
+        } else if (id != NULL && strlen(id) > 0) {
+            rexxAppendLine(buffer, bufferSize, id);
         }
     }
 
@@ -1607,7 +1651,7 @@ static void rexxAppendChatModelsForProfile(STRPTR buffer, ULONG bufferSize,
         settings.proxyUsername, settings.proxyPassword, settings.apiEndpointUrl,
         settings.authorizationType, settings.customHeaders);
     if (models == NULL) {
-        rexxAppendIndentedLine(
+        rexxAppendLine(
             buffer, bufferSize,
             "(Unable to fetch models for this chat profile)");
         return;
@@ -1635,7 +1679,7 @@ static void rexxAppendImageModelsForProfile(STRPTR buffer, ULONG bufferSize,
         settings.proxyUsername, settings.proxyPassword, settings.apiEndpointUrl,
         settings.authorizationType, settings.customHeaders);
     if (models == NULL) {
-        rexxAppendIndentedLine(
+        rexxAppendLine(
             buffer, bufferSize,
             "(Unable to fetch models for this image profile)");
         return;
@@ -1659,13 +1703,13 @@ static void rexxAppendSpeechModelsForProfile(STRPTR buffer, ULONG bufferSize,
 
     if (settings.speechSystem == SPEECH_SYSTEM_OPENAI) {
         struct json_object *models = getChatModels(
-            (STRPTR)"api.openai.com", 443, TRUE, settings.openAiApiKey,
+            (STRPTR) "api.openai.com", 443, TRUE, settings.openAiApiKey,
             configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
             configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
             configGetProxyUsername(), configGetProxyPassword(), "v1",
             AUTHORIZATION_TYPE_BEARER, NULL);
         if (models == NULL) {
-            rexxAppendIndentedLine(
+            rexxAppendLine(
                 buffer, bufferSize,
                 "(Unable to fetch models for this speech profile)");
         } else {
@@ -1676,12 +1720,73 @@ static void rexxAppendSpeechModelsForProfile(STRPTR buffer, ULONG bufferSize,
         rexxAppendElevenLabsModelNames(buffer, bufferSize,
                                        settings.elevenLabsApiKey);
     } else {
-        rexxAppendIndentedLine(
+        rexxAppendLine(
             buffer, bufferSize,
             "(No selectable models for this speech profile)");
     }
 
     configFreeSpeechRequestSettings(&settings);
+}
+
+static void rexxAppendVoicesForSpeechProfile(STRPTR buffer, ULONG bufferSize,
+                                             CONST_STRPTR requestedProfile) {
+    struct SpeechRequestSettings settings;
+    if (!rexxResolveSpeechProfileSettings(requestedProfile, &settings))
+        return;
+
+    if (settings.speechSystem == SPEECH_SYSTEM_OPENAI) {
+        rexxAppendStringArray(buffer, bufferSize, OPENAI_TTS_VOICE_NAMES);
+    } else if (settings.speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
+        rexxAppendElevenLabsVoiceNames(buffer, bufferSize,
+                                       settings.elevenLabsApiKey);
+    } else if (settings.speechSystem == SPEECH_SYSTEM_34 ||
+               settings.speechSystem == SPEECH_SYSTEM_37) {
+        rexxAppendLine(buffer, bufferSize, "male");
+        rexxAppendLine(buffer, bufferSize, "female");
+        rexxAppendLine(buffer, bufferSize, "male robot");
+        rexxAppendLine(buffer, bufferSize, "female robot");
+    } else if (settings.speechSystem == SPEECH_SYSTEM_FLITE) {
+        rexxAppendStringArray(buffer, bufferSize, SPEECH_FLITE_VOICE_NAMES);
+    } else {
+        rexxAppendLine(
+            buffer, bufferSize,
+            "(No selectable voices for this speech profile)");
+    }
+
+    configFreeSpeechRequestSettings(&settings);
+}
+
+static BOOL
+rexxApplyWorkbenchVoiceOverride(struct SpeechRequestSettings *settings,
+                                CONST_STRPTR voiceString) {
+    if (settings == NULL || voiceString == NULL || strlen(voiceString) == 0)
+        return FALSE;
+    if (settings->speechSystem != SPEECH_SYSTEM_34 &&
+        settings->speechSystem != SPEECH_SYSTEM_37)
+        return FALSE;
+
+    if (strcasecmp(voiceString, "male") == 0) {
+        settings->narratorSex = 0;
+        settings->narratorMode = 0;
+        return TRUE;
+    }
+    if (strcasecmp(voiceString, "female") == 0) {
+        settings->narratorSex = 1;
+        settings->narratorMode = 0;
+        return TRUE;
+    }
+    if (strcasecmp(voiceString, "male robot") == 0) {
+        settings->narratorSex = 0;
+        settings->narratorMode = 1;
+        return TRUE;
+    }
+    if (strcasecmp(voiceString, "female robot") == 0) {
+        settings->narratorSex = 1;
+        settings->narratorMode = 1;
+        return TRUE;
+    }
+
+    return FALSE;
 }
 
 HOOKPROTONHNO(ListProfilesFunc, APTR, ULONG *arg) {
@@ -1690,23 +1795,23 @@ HOOKPROTONHNO(ListProfilesFunc, APTR, ULONG *arg) {
         return RETURN_ERROR;
 
     rexxAppendSectionHeader(profiles, 16384, "Chat");
-    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_OPENAI);
-    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GEMINI);
-    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GROK);
-    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_ANTHROPIC);
+    rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_OPENAI);
+    rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GEMINI);
+    rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GROK);
+    rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_ANTHROPIC);
     rexxAppendProfileNamesFromJson(profiles, 16384,
                                    configGetCustomServerProfiles());
 
     rexxAppendSectionHeader(profiles, 16384, "Image");
-    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_OPENAI);
-    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GEMINI);
-    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GROK);
+    rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_OPENAI);
+    rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GEMINI);
+    rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GROK);
     rexxAppendProfileNamesFromJson(profiles, 16384,
                                    configGetCustomImageServerProfiles());
 
     rexxAppendSectionHeader(profiles, 16384, "Speech");
     for (UBYTE i = 0; SPEECH_SYSTEM_NAMES[i] != NULL; i++) {
-        rexxAppendIndentedLine(profiles, 16384, SPEECH_SYSTEM_NAMES[i]);
+        rexxAppendLine(profiles, 16384, SPEECH_SYSTEM_NAMES[i]);
     }
     rexxAppendProfileNamesFromJson(profiles, 16384, configGetSpeechProfiles());
 
@@ -1740,11 +1845,33 @@ HOOKPROTONHNO(ListImageSizesFunc, APTR, ULONG *arg) {
 MakeHook(ListImageSizesHook, ListImageSizesFunc);
 
 HOOKPROTONHNO(ListVoicesFunc, APTR, ULONG *arg) {
-    STRPTR voices = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
-    for (UBYTE i = 0; OPENAI_TTS_VOICE_NAMES[i] != NULL; i++) {
-        strncat(voices, OPENAI_TTS_VOICE_NAMES[i], 1024);
-        strncat(voices, "\n", 1024);
+    STRPTR profileString = (STRPTR)arg[0];
+    STRPTR voices = AllocVec(16384, MEMF_ANY | MEMF_CLEAR);
+    if (voices == NULL)
+        return RETURN_ERROR;
+
+    DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
+
+    if (profileString == NULL || strlen(profileString) == 0) {
+        rexxAppendVoicesForSpeechProfile(voices, 16384,
+                                         configGetActiveSpeechProfileName());
+    } else {
+        struct SpeechRequestSettings speechSettings;
+        if (!rexxResolveSpeechProfileSettings(profileString, &speechSettings)) {
+            FreeVec(voices);
+            rexxSetProfileNotFoundError("Speech", profileString);
+            return RETURN_ERROR;
+        }
+        configFreeSpeechRequestSettings(&speechSettings);
+        rexxAppendVoicesForSpeechProfile(voices, 16384, profileString);
     }
+
+    if (strlen(voices) == 0) {
+        FreeVec(voices);
+        rexxSetProfileNotFoundError("Speech", profileString);
+        return RETURN_ERROR;
+    }
+
     set(app, MUIA_Application_RexxString, voices);
     FreeVec(voices);
     return RETURN_OK;
@@ -1855,10 +1982,12 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     }
     OpenAITTSVoice voice = speechSettings.openAiTtsVoice;
     if (voiceString != NULL && strlen(voiceString) > 0) {
-        for (UBYTE i = 0; OPENAI_TTS_VOICE_NAMES[i] != NULL; i++) {
-            if (strcasecmp(voiceString, OPENAI_TTS_VOICE_NAMES[i]) == 0) {
-                voice = i;
-                break;
+        if (!rexxApplyWorkbenchVoiceOverride(&speechSettings, voiceString)) {
+            for (UBYTE i = 0; OPENAI_TTS_VOICE_NAMES[i] != NULL; i++) {
+                if (strcasecmp(voiceString, OPENAI_TTS_VOICE_NAMES[i]) == 0) {
+                    voice = i;
+                    break;
+                }
             }
         }
     }
@@ -1916,7 +2045,7 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
         "LISTPROFILES\n"
         "LISTAUDIOFORMATS\n"
         "LISTIMAGESIZES\n"
-        "LISTVOICES\n");
+        "LISTVOICES PR=PROFILE/K\n");
     return RETURN_OK;
 }
 MakeHook(HelpHook, HelpFunc);
@@ -1948,6 +2077,6 @@ struct MUI_Command arexxList[] = {
     {"LISTMODELS", "PR=PROFILE/K", 1, &ListModelsHook, {0, 0, 0, 0, 0}},
     {"LISTPROFILES", NULL, NULL, &ListProfilesHook, {0, 0, 0, 0, 0}},
     {"LISTIMAGESIZES", NULL, NULL, &ListImageSizesHook, {0, 0, 0, 0, 0}},
-    {"LISTVOICES", NULL, NULL, &ListVoicesHook, {0, 0, 0, 0, 0}},
+    {"LISTVOICES", "PR=PROFILE/K", 1, &ListVoicesHook, {0, 0, 0, 0, 0}},
     {"?", NULL, NULL, &HelpHook, {0, 0, 0, 0, 0}},
     {NULL, NULL, 0, NULL, {0, 0, 0, 0, 0}}};

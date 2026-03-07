@@ -12,6 +12,7 @@
 - ARexx SENDMESSAGE supports SF=SYSTEMFILE to use the contents of a file as the system prompt
 - New powerful Shell Tool option to ask ChatGPT to run any command on your system in the shell
 - The daemon (AmigaGPTD) now maintains conversation history in T: for context across ARexx calls until reboot
+- ARexx SPEAKTEXT and LISTVOICES support voices for all speech profiles
 - New NEWCHAT ARexx command to clear daemon conversation history
 - Support for Anthropic Claude for chat
 - Support for Anthropic Claude for image generation
@@ -21,6 +22,8 @@
 - Support for Google Gemini for image generation
 - All config options are now immediately saved to disk
 - Added NEWCHAT and PROFILE=PR options for AskGPT
+- ARexx say.rexx now supports different profiles and voices
+- Fix bug where say.rexx did not ask you what you want to say
 - Fix bug where the first paragraph in every response is always black even if you have custom colours set
 - Fix bug where a missing or incorrect API key could cause the app to enter an infinite loop of displaying an error and retrying
 - Correctly handle reponses that contain JSON in the response header such as those received from Cloudfare 
