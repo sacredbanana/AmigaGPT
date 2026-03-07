@@ -164,8 +164,8 @@ Sends a message using the selected chat profile and returns the response.
 ```
 SENDMESSAGE PR=PROFILE/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
 ```
-- `PR=PROFILE` - Optional, the chat profile to use. This can be a built-in profile such as OpenAI, Google Gemini, xAI Grok or Anthropic Claude, or a saved custom chat profile name. If omitted, the active chat profile from AmigaGPT config is used
-- `M=MODEL` - Optional, the chat model to use (use LISTCHATMODELS to see available models). If omitted, the selected profile's model is used
+- `PR=PROFILE` - Optional, the chat profile to use. This can be a built-in profile such as OpenAI, Google Gemini, xAI Grok or Anthropic Claude, or a saved custom chat profile name. Use `LISTPROFILES` to see available profiles. If omitted, the active chat profile from AmigaGPT config is used
+- `M=MODEL` - Optional, the chat model to use. Use `LISTMODELS PR=<profile>` to inspect the models for a profile. If omitted, the selected profile's model is used
 - `S=SYSTEM` - Optional, system message to include
 - `SF=SYSTEMFILE` - Optional, file containing the system message to include. If both `SF` and `S` are provided, the effective system message is the file contents concatenated with `S`.
 - `K=APIKEY` - Optional, API key override. If omitted, the selected profile's API key is used
@@ -177,8 +177,8 @@ Generates an image using the specified model.
 ```
 CREATEIMAGE PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
 ```
-- `PR=PROFILE` - Optional, the image profile to use. This can be a built-in profile such as OpenAI, Google Gemini or xAI Grok, or a saved custom image profile name. If omitted, the active image profile from AmigaGPT config is used
-- `M=MODEL` - Optional, the image model to use (use LISTIMAGEMODELS to see available models). If omitted, the selected profile's model is used
+- `PR=PROFILE` - Optional, the image profile to use. This can be a built-in profile such as OpenAI, Google Gemini or xAI Grok, or a saved custom image profile name. Use `LISTPROFILES` to see available profiles. If omitted, the active image profile from AmigaGPT config is used
+- `M=MODEL` - Optional, the image model to use. Use `LISTMODELS PR=<profile>` to inspect the models for a profile. If omitted, the selected profile's model is used
 - `S=SIZE` - Optional, image size (use LISTIMAGESIZES to see available sizes). Default is 1024x1024. Note: some providers may ignore unsupported parameters (e.g. xAI currently does not support `size`) - see [xAI Image Generations](https://docs.x.ai/docs/guides/image-generations) and [Gemini OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai)
 - `K=APIKEY` - Optional, API key override. If omitted, the selected profile's API key is used
 - `D=DESTINATION` - Optional, the path where the image will be saved. Default is the creation of a temporary file. The destination will be the returned string from this function
@@ -189,8 +189,8 @@ Uses text-to-speech to speak the specified text.
 ```
 SPEAKTEXT PR=PROFILE/K,M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,F=FORMAT/K,P=PROMPT/F
 ```
-- `PR=PROFILE` - Optional, the speech profile to use. This can be a built-in speech system name or a saved custom speech profile name. If omitted, the active speech profile from AmigaGPT config is used
-- `M=MODEL` - Optional, the OpenAI voice model to use (use LISTVOICEMODELS to see available models). If omitted, the selected speech profile's model is used
+- `PR=PROFILE` - Optional, the speech profile to use. This can be a built-in speech system name or a saved custom speech profile name. Use `LISTPROFILES` to see available profiles. If omitted, the active speech profile from AmigaGPT config is used
+- `M=MODEL` - Optional, the OpenAI voice model to use. Use `LISTMODELS PR=<profile>` to inspect the models for a speech profile. If omitted, the selected speech profile's model is used
 - `V=VOICE` - Optional, the OpenAI voice to use (use LISTVOICES to see available voices). If omitted, the selected speech profile's voice is used
 - `I=INSTRUCTIONS` - Optional, OpenAI voice instructions override
 - `K=APIKEY` - Optional, API key override. If omitted, the selected speech profile's API key is used
@@ -206,23 +206,14 @@ NEWCHAT
 This command takes no parameters and returns "Conversation history cleared" on success.
 
 #### List Commands
-#### LISTSERVERMODELS
-Lists all models available on a server
+#### LISTMODELS
+Fetches the models available from the server for a profile. If `PR` is omitted, it fetches model sections for the active chat, image and speech profiles.
 
 ```
-LISTSERVERMODELS H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K
+LISTMODELS PR=PROFILE/K
 ```
-- `H=HOST` - Optional, the URL of the host of the server. Defaults to api.openai.com
-- `P=PORT` - Optional, the port to connect to. Defaults to 443 for SSL or 80 insecure
-- `S=SSL` - Optional, flag to indicate if this is an SSL connection
-- `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
-- `U=USEPROXY` - Optional, flag to indicate if you want to connect via a proxy server
-- `PH=PROXYHOST` - Optional, the URL of the proxy server if you are using one
-- `PP=PROXYPORT` - Optional, the port of the proxy server if you are using one
-- `PS=PROXYUSESSSL` - Optional, flag to indicate if the proxy uses an SSL connection
-- `PA=PROXYREQUIRESAUTH` - Optional, flag to indicate if the proxy server requires authentication
-- `PU=PROXYUSERNAME` - Optional, username of the proxy server if needed
-- `PP=PROXYPASSWORD` - Optional, password of the proxy server if needed
+- `PR=PROFILE` - Optional, the profile to inspect. The same name can match chat, image and speech profiles, and `LISTMODELS` will include a section for each matching subsystem. Built-in aliases such as `ChatGPT`, `Gemini`, `Grok` and `Claude` are also accepted
+- `LISTMODELS` queries the profile's configured server where possible, so the results reflect what that server currently exposes rather than only AmigaGPT's built-in known model lists
 
 #### LISTAUDIOFORMATS
 Lists all available audio formats for saving audio files
@@ -230,34 +221,16 @@ Lists all available audio formats for saving audio files
 LISTAUDIOFORMATS
 ```
 
-#### LISTPROVIDERS
-Lists all available providers (OpenAI, Google Gemini, xAI Grok, Anthropic Claude, Custom Provider).
+#### LISTPROFILES
+Lists all available chat, image and speech profiles.
 ```
-LISTPROVIDERS
-```
-
-#### LISTCHATMODELS
-Lists all available chat models
-```
-LISTCHATMODELS
-```
-
-#### LISTIMAGEMODELS
-Lists all available image models
-```
-LISTIMAGEMODELS
+LISTPROFILES
 ```
 
 #### LISTIMAGESIZES
 Lists all available image sizes
 ```
 LISTIMAGESIZES
-```
-
-#### LISTVOICEMODELS
-Lists all available TTS models
-```
-LISTVOICEMODELS
 ```
 
 #### LISTVOICES

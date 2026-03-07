@@ -298,7 +298,8 @@ static BOOL rexxJsonGetBoolDefault(struct json_object *obj, CONST_STRPTR key,
     return json_object_get_boolean(v) ? TRUE : FALSE;
 }
 
-static struct json_object *rexxParseProfilesJsonArray(CONST_STRPTR profilesStr) {
+static struct json_object *
+rexxParseProfilesJsonArray(CONST_STRPTR profilesStr) {
     if (profilesStr == NULL || strlen(profilesStr) == 0)
         return NULL;
     struct json_object *arr = json_tokener_parse(profilesStr);
@@ -349,8 +350,7 @@ static CONST_STRPTR rexxResolveChatProfileAlias(CONST_STRPTR name) {
         return REXX_LOCKED_PROFILE_NAME_GROK;
     }
     if (strcasecmp(name, REXX_LOCKED_PROFILE_NAME_ANTHROPIC) == 0 ||
-        strcasecmp(name, "Anthropic") == 0 ||
-        strcasecmp(name, "Claude") == 0) {
+        strcasecmp(name, "Anthropic") == 0 || strcasecmp(name, "Claude") == 0) {
         return REXX_LOCKED_PROFILE_NAME_ANTHROPIC;
     }
     return NULL;
@@ -405,7 +405,7 @@ static BOOL rexxIsLockedImageProfileName(CONST_STRPTR name) {
 static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
                                               CONST_STRPTR profileName) {
     if (strcmp(profileName, REXX_LOCKED_PROFILE_NAME_OPENAI) == 0) {
-        out->host = (STRPTR)"api.openai.com";
+        out->host = (STRPTR) "api.openai.com";
         out->port = 443;
         out->useSSL = TRUE;
         out->apiEndpoint = API_CHAT_ENDPOINT_RESPONSES;
@@ -432,7 +432,7 @@ static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
         rexxReplaceString(&rexxResolvedChatSystem, system);
         out->chatSystem = rexxResolvedChatSystem;
     } else if (strcmp(profileName, REXX_LOCKED_PROFILE_NAME_GEMINI) == 0) {
-        out->host = (STRPTR)"generativelanguage.googleapis.com";
+        out->host = (STRPTR) "generativelanguage.googleapis.com";
         out->port = 443;
         out->useSSL = TRUE;
         out->apiEndpoint = API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT;
@@ -456,7 +456,7 @@ static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
         rexxReplaceString(&rexxResolvedChatSystem, system);
         out->chatSystem = rexxResolvedChatSystem;
     } else if (strcmp(profileName, REXX_LOCKED_PROFILE_NAME_GROK) == 0) {
-        out->host = (STRPTR)"api.x.ai";
+        out->host = (STRPTR) "api.x.ai";
         out->port = 443;
         out->useSSL = TRUE;
         out->apiEndpoint = API_CHAT_ENDPOINT_RESPONSES;
@@ -479,7 +479,7 @@ static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
         rexxReplaceString(&rexxResolvedChatSystem, system);
         out->chatSystem = rexxResolvedChatSystem;
     } else {
-        out->host = (STRPTR)"api.anthropic.com";
+        out->host = (STRPTR) "api.anthropic.com";
         out->port = 443;
         out->useSSL = TRUE;
         out->apiEndpoint = API_CHAT_ENDPOINT_MESSAGES;
@@ -574,9 +574,9 @@ static BOOL rexxResolveChatProfileSettings(CONST_STRPTR profileName,
     out->stream = FALSE;
     out->apiEndpoint = (APIChatEndpoint)rexxJsonGetIntDefault(
         profile, "apiEndpoint", (LONG)API_CHAT_ENDPOINT_CHAT_COMPLETIONS);
-    rexxReplaceString(&rexxResolvedChatApiEndpointUrl,
-                      rexxJsonGetStringDefault(profile, "apiEndpointUrl",
-                                               "v1"));
+    rexxReplaceString(
+        &rexxResolvedChatApiEndpointUrl,
+        rexxJsonGetStringDefault(profile, "apiEndpointUrl", "v1"));
     out->apiEndpointUrl = rexxResolvedChatApiEndpointUrl;
     rexxReplaceString(&rexxResolvedChatCustomHeaders,
                       rexxJsonGetStringDefault(profile, "customHeaders", ""));
@@ -618,7 +618,7 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
 
     if (rexxIsLockedImageProfileName(resolvedProfileName)) {
         if (strcmp(resolvedProfileName, REXX_LOCKED_PROFILE_NAME_OPENAI) == 0) {
-            out->host = (STRPTR)"api.openai.com";
+            out->host = (STRPTR) "api.openai.com";
             out->port = 443;
             out->useSSL = TRUE;
             out->apiEndpointUrl = "v1";
@@ -627,9 +627,9 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
             out->apiKey = configGetOpenAiApiKey();
             out->model = configGetOpenAiImageModelName();
             out->imageApiEndpoint = API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
-        } else if (strcmp(resolvedProfileName, REXX_LOCKED_PROFILE_NAME_GEMINI) ==
-                   0) {
-            out->host = (STRPTR)"generativelanguage.googleapis.com";
+        } else if (strcmp(resolvedProfileName,
+                          REXX_LOCKED_PROFILE_NAME_GEMINI) == 0) {
+            out->host = (STRPTR) "generativelanguage.googleapis.com";
             out->port = 443;
             out->useSSL = TRUE;
             out->apiEndpointUrl = "v1beta";
@@ -637,10 +637,9 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
             out->customHeaders = NULL;
             out->apiKey = configGetGeminiApiKey();
             out->model = configGetGeminiImageModelName();
-            out->imageApiEndpoint =
-                API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT;
+            out->imageApiEndpoint = API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT;
         } else {
-            out->host = (STRPTR)"api.x.ai";
+            out->host = (STRPTR) "api.x.ai";
             out->port = 443;
             out->useSSL = TRUE;
             out->apiEndpointUrl = "v1";
@@ -665,7 +664,7 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
                 json_object_put(arr);
             if (strcmp(resolvedProfileName, REXX_LOCKED_PROFILE_NAME_OPENAI) ==
                 0) {
-                out->host = (STRPTR)"api.openai.com";
+                out->host = (STRPTR) "api.openai.com";
                 out->port = 443;
                 out->useSSL = TRUE;
                 out->apiEndpointUrl = "v1";
@@ -676,7 +675,7 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
                 out->imageApiEndpoint = API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
             } else if (strcmp(resolvedProfileName,
                               REXX_LOCKED_PROFILE_NAME_GEMINI) == 0) {
-                out->host = (STRPTR)"generativelanguage.googleapis.com";
+                out->host = (STRPTR) "generativelanguage.googleapis.com";
                 out->port = 443;
                 out->useSSL = TRUE;
                 out->apiEndpointUrl = "v1beta";
@@ -687,7 +686,7 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
                 out->imageApiEndpoint =
                     API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT;
             } else {
-                out->host = (STRPTR)"api.x.ai";
+                out->host = (STRPTR) "api.x.ai";
                 out->port = 443;
                 out->useSSL = TRUE;
                 out->apiEndpointUrl = "v1";
@@ -722,9 +721,9 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
                           profile, "imageModel",
                           rexxJsonGetStringDefault(profile, "chatModel", "")));
     out->model = rexxResolvedImageModel;
-    rexxReplaceString(&rexxResolvedImageApiEndpointUrl,
-                      rexxJsonGetStringDefault(profile, "apiEndpointUrl",
-                                               "v1"));
+    rexxReplaceString(
+        &rexxResolvedImageApiEndpointUrl,
+        rexxJsonGetStringDefault(profile, "apiEndpointUrl", "v1"));
     out->apiEndpointUrl = rexxResolvedImageApiEndpointUrl;
     rexxReplaceString(&rexxResolvedImageCustomHeaders,
                       rexxJsonGetStringDefault(profile, "customHeaders", ""));
@@ -766,8 +765,9 @@ static void rexxApplySpeechSystemDefaults(struct SpeechRequestSettings *out) {
     }
 }
 
-static BOOL rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
-                                             struct SpeechRequestSettings *out) {
+static BOOL
+rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
+                                 struct SpeechRequestSettings *out) {
     if (out == NULL)
         return FALSE;
     if (profileName == NULL || strlen(profileName) == 0) {
@@ -782,7 +782,8 @@ static BOOL rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
     out->openAiApiKey = rexxDupStr(configGetOpenAiApiKey());
     out->openAiTtsModel = configGetOpenAITTSModel();
     out->openAiTtsVoice = configGetOpenAITTSVoice();
-    out->openAiVoiceInstructions = rexxDupStr(configGetOpenAIVoiceInstructions());
+    out->openAiVoiceInstructions =
+        rexxDupStr(configGetOpenAIVoiceInstructions());
     out->elevenLabsApiKey = rexxDupStr(configGetElevenLabsAPIKey());
     out->elevenLabsVoiceID = rexxDupStr(configGetElevenLabsVoiceID());
     out->elevenLabsVoiceName = rexxDupStr(configGetElevenLabsVoiceName());
@@ -801,7 +802,8 @@ static BOOL rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
         }
     }
 
-    struct json_object *arr = rexxParseProfilesJsonArray(configGetSpeechProfiles());
+    struct json_object *arr =
+        rexxParseProfilesJsonArray(configGetSpeechProfiles());
     struct json_object *profile =
         rexxFindProfileObjectByName(arr, resolvedProfileName);
     if (profile == NULL && aliasProfileName != NULL) {
@@ -828,7 +830,8 @@ static BOOL rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
         return FALSE;
     }
 
-    struct json_object *sysObj = json_object_object_get(profile, "speechSystem");
+    struct json_object *sysObj =
+        json_object_object_get(profile, "speechSystem");
     if (sysObj != NULL)
         out->speechSystem = (SpeechSystem)json_object_get_int(sysObj);
 
@@ -857,8 +860,7 @@ static BOOL rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
     struct json_object *fliteVoiceObj =
         json_object_object_get(profile, "speechFliteVoice");
     if (fliteVoiceObj != NULL)
-        out->fliteVoice =
-            (SpeechFliteVoice)json_object_get_int(fliteVoiceObj);
+        out->fliteVoice = (SpeechFliteVoice)json_object_get_int(fliteVoiceObj);
 
     struct json_object *narratorRateObj =
         json_object_object_get(profile, "narratorRate");
@@ -1067,8 +1069,9 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     /* Resolve effective system message from SYSTEMFILE and SYSTEM. */
     STRPTR systemFromFile = NULL;
     STRPTR combinedSystem = NULL;
-    CONST_STRPTR effectiveSystem =
-        (system != NULL && strlen(system) > 0) ? system : rexxSettings.chatSystem;
+    CONST_STRPTR effectiveSystem = (system != NULL && strlen(system) > 0)
+                                       ? system
+                                       : rexxSettings.chatSystem;
 
     if (systemFile != NULL && strlen(systemFile) > 0) {
         systemFromFile = readTextFileToString(systemFile);
@@ -1240,8 +1243,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         }
 
         /* No more tool calls - get the final response text */
-        UTF8 *toolContentString = getMessageContentFromJson(
-            toolResponse, FALSE, TRUE, apiEndpoint);
+        UTF8 *toolContentString =
+            getMessageContentFromJson(toolResponse, FALSE, TRUE, apiEndpoint);
         if (toolContentString != NULL && strlen(toolContentString) > 0) {
             /* Add response to conversation for context */
             addTextToConversation(conversation, toolContentString, "assistant");
@@ -1414,10 +1417,10 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     struct json_object *response = postImageCreationRequestToOpenAI(
         promptUTF8, resolvedHost, resolvedPort, resolvedUseSSL,
         resolvedEndpointUrl, resolvedAuthType, resolvedHeaders, modelName, size,
-        apiKey, imgSettings.useProxy, imgSettings.proxyHost, imgSettings.proxyPort,
-        imgSettings.proxyUsesSSL, imgSettings.proxyRequiresAuth,
-        imgSettings.proxyUsername, imgSettings.proxyPassword, IMAGE_FORMAT_JPG,
-        imageEndpoint);
+        apiKey, imgSettings.useProxy, imgSettings.proxyHost,
+        imgSettings.proxyPort, imgSettings.proxyUsesSSL,
+        imgSettings.proxyRequiresAuth, imgSettings.proxyUsername,
+        imgSettings.proxyPassword, IMAGE_FORMAT_JPG, imageEndpoint);
     CodesetsFreeA(promptUTF8, NULL);
 
     if (response == NULL) {
@@ -1468,105 +1471,250 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
 }
 MakeHook(CreateImageHook, CreateImageFunc);
 
-HOOKPROTONHNO(ListChatModelsFunc, APTR, ULONG *arg) {
-    STRPTR models = AllocVec(4096, MEMF_ANY | MEMF_CLEAR);
-    strncat(models, "OpenAI:\n", 4096);
-    for (UBYTE i = 0; OPENAI_CHAT_MODELS[i] != NULL; i++) {
-        strncat(models, "  ", 4096);
-        strncat(models, OPENAI_CHAT_MODELS[i], 4096);
-        strncat(models, "\n", 4096);
-    }
-    strncat(models, "\nGoogle Gemini:\n", 4096);
-    for (UBYTE i = 0; GEMINI_CHAT_MODELS[i] != NULL; i++) {
-        strncat(models, "  ", 4096);
-        strncat(models, GEMINI_CHAT_MODELS[i], 4096);
-        strncat(models, "\n", 4096);
-    }
-    strncat(models, "\nxAI Grok:\n", 4096);
-    for (UBYTE i = 0; GROK_CHAT_MODELS[i] != NULL; i++) {
-        strncat(models, "  ", 4096);
-        strncat(models, GROK_CHAT_MODELS[i], 4096);
-        strncat(models, "\n", 4096);
-    }
-    strncat(models, "\nAnthropic Claude:\n", 4096);
-    for (UBYTE i = 0; ANTHROPIC_CHAT_MODELS[i] != NULL; i++) {
-        strncat(models, "  ", 4096);
-        strncat(models, ANTHROPIC_CHAT_MODELS[i], 4096);
-        strncat(models, "\n", 4096);
-    }
-    set(app, MUIA_Application_RexxString, models);
-    FreeVec(models);
-    return RETURN_OK;
+static void rexxAppendText(STRPTR buffer, ULONG bufferSize, CONST_STRPTR text) {
+    if (buffer == NULL || text == NULL || bufferSize == 0)
+        return;
+    ULONG currentLength = strlen(buffer);
+    if (currentLength >= bufferSize - 1)
+        return;
+    strncat(buffer, text, bufferSize - currentLength - 1);
 }
-MakeHook(ListChatModelsHook, ListChatModelsFunc);
 
-HOOKPROTONHNO(ListImageModelsFunc, APTR, ULONG *arg) {
-    STRPTR models = AllocVec(4096, MEMF_ANY | MEMF_CLEAR);
-    strncat(models, "OpenAI:\n", 4096);
-    for (UBYTE i = 0; OPENAI_IMAGE_MODELS[i] != NULL; i++) {
-        strncat(models, "  ", 4096);
-        strncat(models, OPENAI_IMAGE_MODELS[i], 4096);
-        strncat(models, "\n", 4096);
-    }
-    strncat(models, "\nGoogle Gemini:\n", 4096);
-    for (UBYTE i = 0; GEMINI_IMAGE_MODELS[i] != NULL; i++) {
-        strncat(models, "  ", 4096);
-        strncat(models, GEMINI_IMAGE_MODELS[i], 4096);
-        strncat(models, "\n", 4096);
-    }
-    strncat(models, "\nxAI Grok:\n", 4096);
-    for (UBYTE i = 0; GROK_IMAGE_MODELS[i] != NULL; i++) {
-        strncat(models, "  ", 4096);
-        strncat(models, GROK_IMAGE_MODELS[i], 4096);
-        strncat(models, "\n", 4096);
-    }
-    set(app, MUIA_Application_RexxString, models);
-    FreeVec(models);
-    return RETURN_OK;
+static void rexxAppendLine(STRPTR buffer, ULONG bufferSize, CONST_STRPTR text) {
+    rexxAppendText(buffer, bufferSize, text);
+    rexxAppendText(buffer, bufferSize, "\n");
 }
-MakeHook(ListImageModelsHook, ListImageModelsFunc);
 
-HOOKPROTONHNO(ListProvidersFunc, APTR, ULONG *arg) {
-    STRPTR providers = AllocVec(2048, MEMF_ANY | MEMF_CLEAR);
-    if (providers == NULL)
+static void rexxAppendSectionHeader(STRPTR buffer, ULONG bufferSize,
+                                    CONST_STRPTR title) {
+    if (buffer == NULL || title == NULL)
+        return;
+    if (strlen(buffer) > 0)
+        rexxAppendText(buffer, bufferSize, "\n");
+    rexxAppendText(buffer, bufferSize, title);
+    rexxAppendText(buffer, bufferSize, ":\n");
+}
+
+static void rexxAppendIndentedLine(STRPTR buffer, ULONG bufferSize,
+                                   CONST_STRPTR text) {
+    rexxAppendText(buffer, bufferSize, "  ");
+    rexxAppendLine(buffer, bufferSize, text);
+}
+
+static void rexxAppendStringArray(STRPTR buffer, ULONG bufferSize,
+                                  CONST_STRPTR values[]) {
+    if (buffer == NULL || values == NULL)
+        return;
+    for (UBYTE i = 0; values[i] != NULL; i++) {
+        rexxAppendIndentedLine(buffer, bufferSize, values[i]);
+    }
+}
+
+static void rexxAppendProfileNamesFromJson(STRPTR buffer, ULONG bufferSize,
+                                           CONST_STRPTR profilesStr) {
+    struct json_object *arr = rexxParseProfilesJsonArray(profilesStr);
+    if (arr == NULL)
+        return;
+    int len = json_object_array_length(arr);
+    for (int i = 0; i < len; i++) {
+        struct json_object *profile = json_object_array_get_idx(arr, i);
+        if (profile == NULL || !json_object_is_type(profile, json_type_object))
+            continue;
+        CONST_STRPTR name = rexxJsonGetStringDefault(profile, "name", NULL);
+        if (name != NULL && strlen(name) > 0)
+            rexxAppendIndentedLine(buffer, bufferSize, name);
+    }
+    json_object_put(arr);
+}
+
+static void rexxAppendModelNamesFromJsonArray(STRPTR buffer, ULONG bufferSize,
+                                              struct json_object *models) {
+    if (buffer == NULL || models == NULL ||
+        !json_object_is_type(models, json_type_array)) {
+        return;
+    }
+    int len = json_object_array_length(models);
+    for (int i = 0; i < len; i++) {
+        struct json_object *model = json_object_array_get_idx(models, i);
+        if (model == NULL)
+            continue;
+        CONST_STRPTR name = json_object_get_string(model);
+        if (name != NULL && strlen(name) > 0)
+            rexxAppendIndentedLine(buffer, bufferSize, name);
+    }
+}
+
+static void rexxAppendElevenLabsModelNames(STRPTR buffer, ULONG bufferSize,
+                                           CONST_STRPTR apiKey) {
+    struct json_object *response = makeHttpsGetRequest(
+        "api.elevenlabs.io", 443, "/v1/models", apiKey, "xi-api-key", FALSE,
+        configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
+        configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+        configGetProxyUsername(), configGetProxyPassword());
+    if (response == NULL) {
+        rexxAppendIndentedLine(buffer, bufferSize,
+                               "(Unable to fetch ElevenLabs models)");
+        return;
+    }
+
+    struct json_object *modelsArray = NULL;
+    if (!json_object_object_get_ex(response, "models", &modelsArray)) {
+        if (json_object_is_type(response, json_type_array)) {
+            modelsArray = response;
+        } else {
+            json_object_put(response);
+            rexxAppendIndentedLine(buffer, bufferSize,
+                                   "(Unable to parse ElevenLabs models)");
+            return;
+        }
+    }
+
+    LONG modelCount = json_object_array_length(modelsArray);
+    for (LONG i = 0; i < modelCount; i++) {
+        struct json_object *modelObj =
+            json_object_array_get_idx(modelsArray, i);
+        if (modelObj == NULL ||
+            !json_object_is_type(modelObj, json_type_object))
+            continue;
+        CONST_STRPTR name = rexxJsonGetStringDefault(modelObj, "name", NULL);
+        CONST_STRPTR id = rexxJsonGetStringDefault(modelObj, "model_id", NULL);
+        if (name != NULL && strlen(name) > 0) {
+            rexxAppendIndentedLine(buffer, bufferSize, name);
+        } else if (id != NULL && strlen(id) > 0) {
+            rexxAppendIndentedLine(buffer, bufferSize, id);
+        }
+    }
+
+    json_object_put(response);
+}
+
+static void rexxAppendChatModelsForProfile(STRPTR buffer, ULONG bufferSize,
+                                           CONST_STRPTR requestedProfile) {
+    struct ChatRequestSettings settings;
+    if (!rexxResolveChatProfileSettings(requestedProfile, &settings))
+        return;
+
+    CONST_STRPTR titleProfile =
+        settings.profileName != NULL ? settings.profileName : "Chat";
+    UBYTE title[256];
+    snprintf(title, sizeof(title), "Chat (%s)", titleProfile);
+    rexxAppendSectionHeader(buffer, bufferSize, title);
+
+    struct json_object *models = getChatModels(
+        settings.host, settings.port, settings.useSSL, settings.apiKey,
+        settings.useProxy, settings.proxyHost, settings.proxyPort,
+        settings.proxyUsesSSL, settings.proxyRequiresAuth,
+        settings.proxyUsername, settings.proxyPassword, settings.apiEndpointUrl,
+        settings.authorizationType, settings.customHeaders);
+    if (models == NULL) {
+        rexxAppendIndentedLine(
+            buffer, bufferSize,
+            "(Unable to fetch models for this chat profile)");
+        return;
+    }
+    rexxAppendModelNamesFromJsonArray(buffer, bufferSize, models);
+    json_object_put(models);
+}
+
+static void rexxAppendImageModelsForProfile(STRPTR buffer, ULONG bufferSize,
+                                            CONST_STRPTR requestedProfile) {
+    struct ImageRequestSettings settings;
+    if (!rexxResolveImageProfileSettings(requestedProfile, &settings))
+        return;
+
+    CONST_STRPTR titleProfile =
+        settings.profileName != NULL ? settings.profileName : "Image";
+    UBYTE title[256];
+    snprintf(title, sizeof(title), "Image (%s)", titleProfile);
+    rexxAppendSectionHeader(buffer, bufferSize, title);
+
+    struct json_object *models = getChatModels(
+        settings.host, settings.port, settings.useSSL, settings.apiKey,
+        settings.useProxy, settings.proxyHost, settings.proxyPort,
+        settings.proxyUsesSSL, settings.proxyRequiresAuth,
+        settings.proxyUsername, settings.proxyPassword, settings.apiEndpointUrl,
+        settings.authorizationType, settings.customHeaders);
+    if (models == NULL) {
+        rexxAppendIndentedLine(
+            buffer, bufferSize,
+            "(Unable to fetch models for this image profile)");
+        return;
+    }
+    rexxAppendModelNamesFromJsonArray(buffer, bufferSize, models);
+    json_object_put(models);
+}
+
+static void rexxAppendSpeechModelsForProfile(STRPTR buffer, ULONG bufferSize,
+                                             CONST_STRPTR requestedProfile) {
+    struct SpeechRequestSettings settings;
+    if (!rexxResolveSpeechProfileSettings(requestedProfile, &settings))
+        return;
+
+    CONST_STRPTR titleProfile = settings.activeProfileName != NULL
+                                    ? settings.activeProfileName
+                                    : "Speech";
+    UBYTE title[256];
+    snprintf(title, sizeof(title), "Speech (%s)", titleProfile);
+    rexxAppendSectionHeader(buffer, bufferSize, title);
+
+    if (settings.speechSystem == SPEECH_SYSTEM_OPENAI) {
+        struct json_object *models = getChatModels(
+            (STRPTR)"api.openai.com", 443, TRUE, settings.openAiApiKey,
+            configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
+            configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+            configGetProxyUsername(), configGetProxyPassword(), "v1",
+            AUTHORIZATION_TYPE_BEARER, NULL);
+        if (models == NULL) {
+            rexxAppendIndentedLine(
+                buffer, bufferSize,
+                "(Unable to fetch models for this speech profile)");
+        } else {
+            rexxAppendModelNamesFromJsonArray(buffer, bufferSize, models);
+            json_object_put(models);
+        }
+    } else if (settings.speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
+        rexxAppendElevenLabsModelNames(buffer, bufferSize,
+                                       settings.elevenLabsApiKey);
+    } else {
+        rexxAppendIndentedLine(
+            buffer, bufferSize,
+            "(No selectable models for this speech profile)");
+    }
+
+    configFreeSpeechRequestSettings(&settings);
+}
+
+HOOKPROTONHNO(ListProfilesFunc, APTR, ULONG *arg) {
+    STRPTR profiles = AllocVec(16384, MEMF_ANY | MEMF_CLEAR);
+    if (profiles == NULL)
         return RETURN_ERROR;
 
-    /* Locked profiles */
-    strncat(providers, "OpenAI\n", 2048);
-    strncat(providers, "Google Gemini\n", 2048);
-    strncat(providers, "xAI Grok\n", 2048);
-    strncat(providers, "Anthropic Claude\n", 2048);
+    rexxAppendSectionHeader(profiles, 16384, "Chat");
+    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_OPENAI);
+    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GEMINI);
+    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GROK);
+    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_ANTHROPIC);
+    rexxAppendProfileNamesFromJson(profiles, 16384,
+                                   configGetCustomServerProfiles());
 
-    /* Custom chat profiles */
-    CONST_STRPTR profilesStr = configGetCustomServerProfiles();
-    if (profilesStr != NULL && strlen(profilesStr) > 0) {
-        struct json_object *arr = json_tokener_parse(profilesStr);
-        if (arr != NULL && json_object_is_type(arr, json_type_array)) {
-            int len = json_object_array_length(arr);
-            for (int i = 0; i < len; i++) {
-                struct json_object *p = json_object_array_get_idx(arr, i);
-                if (p == NULL)
-                    continue;
-                struct json_object *nameObj =
-                    json_object_object_get(p, "name");
-                if (nameObj == NULL)
-                    continue;
-                CONST_STRPTR name = json_object_get_string(nameObj);
-                if (name != NULL && strlen(name) > 0) {
-                    strncat(providers, name, 2048);
-                    strncat(providers, "\n", 2048);
-                }
-            }
-        }
-        if (arr != NULL)
-            json_object_put(arr);
+    rexxAppendSectionHeader(profiles, 16384, "Image");
+    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_OPENAI);
+    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GEMINI);
+    rexxAppendIndentedLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GROK);
+    rexxAppendProfileNamesFromJson(profiles, 16384,
+                                   configGetCustomImageServerProfiles());
+
+    rexxAppendSectionHeader(profiles, 16384, "Speech");
+    for (UBYTE i = 0; SPEECH_SYSTEM_NAMES[i] != NULL; i++) {
+        rexxAppendIndentedLine(profiles, 16384, SPEECH_SYSTEM_NAMES[i]);
     }
+    rexxAppendProfileNamesFromJson(profiles, 16384, configGetSpeechProfiles());
 
-    set(app, MUIA_Application_RexxString, providers);
-    FreeVec(providers);
+    set(app, MUIA_Application_RexxString, profiles);
+    FreeVec(profiles);
     return RETURN_OK;
 }
-MakeHook(ListProvidersHook, ListProvidersFunc);
+MakeHook(ListProfilesHook, ListProfilesFunc);
 
 HOOKPROTONHNO(ListImageSizesFunc, APTR, ULONG *arg) {
     STRPTR sizes = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
@@ -1590,18 +1738,6 @@ HOOKPROTONHNO(ListImageSizesFunc, APTR, ULONG *arg) {
     return RETURN_OK;
 }
 MakeHook(ListImageSizesHook, ListImageSizesFunc);
-
-HOOKPROTONHNO(ListVoiceModelsFunc, APTR, ULONG *arg) {
-    STRPTR models = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
-    for (UBYTE i = 0; OPENAI_TTS_MODEL_NAMES[i] != NULL; i++) {
-        strncat(models, OPENAI_TTS_MODEL_NAMES[i], 1024);
-        strncat(models, "\n", 1024);
-    }
-    set(app, MUIA_Application_RexxString, models);
-    FreeVec(models);
-    return RETURN_OK;
-}
-MakeHook(ListVoiceModelsHook, ListVoiceModelsFunc);
 
 HOOKPROTONHNO(ListVoicesFunc, APTR, ULONG *arg) {
     STRPTR voices = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
@@ -1627,51 +1763,55 @@ HOOKPROTONHNO(ListAudioFormatsFunc, APTR, ULONG *arg) {
 }
 MakeHook(ListAudioFormatsHook, ListAudioFormatsFunc);
 
-HOOKPROTONHNO(ListServerModelsFunc, APTR, ULONG *arg) {
-    STRPTR host = (STRPTR)arg[0];
-    LONG *port = (LONG *)arg[1];
-    BOOL useSSL = (BOOL)arg[2];
-    STRPTR apiKey = (STRPTR)arg[3];
-    BOOL useProxy = (BOOL)arg[4];
-    STRPTR proxyHost = (STRPTR)arg[5];
-    LONG *proxyPort = (LONG *)arg[6];
-    BOOL proxyUsesSSL = (BOOL)arg[7];
-    BOOL proxyRequiresAuth = (BOOL)arg[8];
-    STRPTR proxyUsername = (STRPTR)arg[9];
-    STRPTR proxyPassword = (STRPTR)arg[10];
+HOOKPROTONHNO(ListModelsFunc, APTR, ULONG *arg) {
+    STRPTR profileString = (STRPTR)arg[0];
+    STRPTR models = AllocVec(16384, MEMF_ANY | MEMF_CLEAR);
+    BOOL foundAny = FALSE;
+    if (models == NULL)
+        return RETURN_ERROR;
 
-    /* Reload config from disk to pick up any changes from the main app */
     DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
 
-    ULONG portValue = port == NULL ? (useSSL ? 443 : 80) : (ULONG)*port;
-    ULONG proxyPortValue = proxyPort == NULL ? 8080 : (ULONG)*proxyPort;
+    if (profileString == NULL || strlen(profileString) == 0) {
+        rexxAppendChatModelsForProfile(models, 16384,
+                                       configGetActiveProfileName());
+        rexxAppendImageModelsForProfile(models, 16384,
+                                        configGetActiveImageProfileName());
+        rexxAppendSpeechModelsForProfile(models, 16384,
+                                         configGetActiveSpeechProfileName());
+        foundAny = strlen(models) > 0;
+    } else {
+        struct ChatRequestSettings chatSettings;
+        if (rexxResolveChatProfileSettings(profileString, &chatSettings)) {
+            rexxAppendChatModelsForProfile(models, 16384, profileString);
+            foundAny = TRUE;
+        }
 
-    if (apiKey == NULL) {
-        apiKey = configGetOpenAiApiKey();
+        struct ImageRequestSettings imageSettings;
+        if (rexxResolveImageProfileSettings(profileString, &imageSettings)) {
+            rexxAppendImageModelsForProfile(models, 16384, profileString);
+            foundAny = TRUE;
+        }
+
+        struct SpeechRequestSettings speechSettings;
+        if (rexxResolveSpeechProfileSettings(profileString, &speechSettings)) {
+            configFreeSpeechRequestSettings(&speechSettings);
+            rexxAppendSpeechModelsForProfile(models, 16384, profileString);
+            foundAny = TRUE;
+        }
     }
 
-    struct json_object *models = getChatModels(
-        host, portValue, useSSL, apiKey, useProxy, proxyHost, proxyPortValue,
-        proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword, NULL,
-        AUTHORIZATION_TYPE_BEARER, NULL);
-
-    if (models == NULL) {
+    if (!foundAny || strlen(models) == 0) {
+        FreeVec(models);
+        rexxSetProfileNotFoundError("Profile", profileString);
         return RETURN_ERROR;
     }
 
-    STRPTR modelsString = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
-    for (UBYTE i = 0; i < json_object_array_length(models); i++) {
-        struct json_object *model = json_object_array_get_idx(models, i);
-        strncat(modelsString, json_object_get_string(model), 1024);
-        strncat(modelsString, "\n", 1024);
-    }
-
-    set(app, MUIA_Application_RexxString, modelsString);
-    FreeVec(modelsString);
-    json_object_put(models);
+    set(app, MUIA_Application_RexxString, models);
+    FreeVec(models);
     return RETURN_OK;
 }
-MakeHook(ListServerModelsHook, ListServerModelsFunc);
+MakeHook(ListModelsHook, ListModelsFunc);
 
 HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     STRPTR profileString = (STRPTR)arg[0];
@@ -1771,17 +1911,11 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
         "SPEAKTEXT "
         "PR=PROFILE/K,M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,"
         "O=OUTPUT/K,F=FORMAT/K,P=PROMPT/F\n"
-        "LISTSERVERMODELS "
-        "H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/"
-        "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
-        "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K\n"
-        "NEWCHAT - Clear conversation history and start a new chat\n"
-        "LISTPROVIDERS\n"
+        "LISTMODELS PR=PROFILE/K\n"
+        "NEWCHAT\n"
+        "LISTPROFILES\n"
         "LISTAUDIOFORMATS\n"
-        "LISTCHATMODELS\n"
-        "LISTIMAGEMODELS\n"
         "LISTIMAGESIZES\n"
-        "LISTVOICEMODELS\n"
         "LISTVOICES\n");
     return RETURN_OK;
 }
@@ -1811,18 +1945,9 @@ struct MUI_Command arexxList[] = {
      {0, 0, 0, 0, 0}},
     {"NEWCHAT", NULL, NULL, &NewChatHook, {0, 0, 0, 0, 0}},
     {"LISTAUDIOFORMATS", NULL, NULL, &ListAudioFormatsHook, {0, 0, 0, 0, 0}},
-    {"LISTSERVERMODELS",
-     "H=HOST/K,PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,"
-     "PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,"
-     "PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K",
-     11,
-     &ListServerModelsHook,
-     {0, 0, 0, 0, 0}},
-    {"LISTPROVIDERS", NULL, NULL, &ListProvidersHook, {0, 0, 0, 0, 0}},
-    {"LISTCHATMODELS", NULL, NULL, &ListChatModelsHook, {0, 0, 0, 0, 0}},
-    {"LISTIMAGEMODELS", NULL, NULL, &ListImageModelsHook, {0, 0, 0, 0, 0}},
+    {"LISTMODELS", "PR=PROFILE/K", 1, &ListModelsHook, {0, 0, 0, 0, 0}},
+    {"LISTPROFILES", NULL, NULL, &ListProfilesHook, {0, 0, 0, 0, 0}},
     {"LISTIMAGESIZES", NULL, NULL, &ListImageSizesHook, {0, 0, 0, 0, 0}},
-    {"LISTVOICEMODELS", NULL, NULL, &ListVoiceModelsHook, {0, 0, 0, 0, 0}},
     {"LISTVOICES", NULL, NULL, &ListVoicesHook, {0, 0, 0, 0, 0}},
     {"?", NULL, NULL, &HelpHook, {0, 0, 0, 0, 0}},
     {NULL, NULL, 0, NULL, {0, 0, 0, 0, 0}}};
