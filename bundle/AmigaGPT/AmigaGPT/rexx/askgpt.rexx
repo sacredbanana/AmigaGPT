@@ -1,17 +1,16 @@
 /* Asks AmigaGPT a question then displays it */
-/* If the first argument is GUI, then it uses RxMUI to create a GUI or fallback to a simple requester if RxMUI is not installed */
+/* If the GUI argument is provided, then it uses RxMUI to create a GUI or fallback to a simple requester if RxMUI is not installed */
+/* If the PROFILE/PR argument is provided, then it uses the specified profile */
 OPTIONS RESULTS
 SIGNAL ON HALT
 SIGNAL ON BREAK_C
 
-ARG ARG1 PROMPT
-PARSE ARG PROMPT
-
 GUI = 0
-IF ARG1 = "GUI" THEN DO
-  GUI = 1
-  PARSE ARG ARG1 PROMPT
-END
+PROFILE = ""
+PROMPT = ""
+
+PARSE ARG CMDLINE
+CALL ParseArgs CMDLINE
 
 /* -------- main -------- */
 AMIGAGPT_PORT = "AMIGAGPT"
@@ -50,6 +49,87 @@ Init: PROCEDURE EXPOSE AMIGAGPT_PORT GUI
   CALL RxMUIOpt("DebugMode ShowErr")
   RETURN
 
+Trim: PROCEDURE
+  PARSE ARG s
+  RETURN STRIP(s)
+
+ParseArgs: PROCEDURE EXPOSE GUI PROFILE PROMPT
+  PARSE ARG s
+
+  s = STRIP(s)
+  PROFILE = ""
+  PROMPT = ""
+
+  /* Optional GUI argument */
+  IF TRANSLATE(WORD(s,1)) = "GUI" THEN DO
+    GUI = 1
+    s = STRIP(SUBWORD(s,2))
+  END
+
+  rest = ExtractProfile(s)
+
+  PROMPT = STRIP(rest)
+  RETURN
+
+ExtractProfile: PROCEDURE EXPOSE PROFILE
+  PARSE ARG rest
+
+  PROFILE = ""
+  rest = STRIP(rest)
+  upper = TRANSLATE(rest)
+
+  p = FindProfilePos(upper)
+  IF p = 0 THEN RETURN rest
+
+  IF SUBSTR(upper,p,8) = "PROFILE=" THEN
+    keylen = 8
+  ELSE
+    keylen = 3
+
+  vstart = p + keylen
+  ch = SUBSTR(rest,vstart,1)
+
+  IF ch = '"' THEN DO
+    q = POS('"', rest, vstart + 1)
+    IF q = 0 THEN q = LENGTH(rest) + 1
+    PROFILE = SUBSTR(rest, vstart + 1, q - vstart - 1)
+    vend = q
+  END
+  ELSE DO
+    sp = POS(' ', rest, vstart)
+    IF sp = 0 THEN sp = LENGTH(rest) + 1
+    PROFILE = SUBSTR(rest, vstart, sp - vstart)
+    vend = sp - 1
+  END
+
+  before = STRIP(SUBSTR(rest,1,p-1))
+  after  = STRIP(SUBSTR(rest,vend+1))
+
+  IF before ~= "" & after ~= "" THEN
+    RETURN before || " " || after
+  ELSE
+    RETURN before || after
+
+FindProfilePos: PROCEDURE
+  PARSE ARG s
+  p = 1
+  DO WHILE p <= LENGTH(s)
+    p1 = POS("PROFILE=", s, p)
+    p2 = POS("PR=", s, p)
+
+    IF p1 = 0 THEN p1 = 999999
+    IF p2 = 0 THEN p2 = 999999
+
+    p = MIN(p1, p2)
+    IF p = 999999 THEN RETURN 0
+
+    IF p = 1 THEN RETURN p
+    IF SUBSTR(s,p-1,1) = " " THEN RETURN p
+
+    p = p + 1
+  END
+  RETURN 0
+
 /* Replace all non-overlapping occurrences of old with new in s */
 ReplaceAll: PROCEDURE
   PARSE ARG s, old, new
@@ -66,7 +146,7 @@ ReplaceAll: PROCEDURE
   END
   RETURN out
 
-NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT
+NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT PROFILE
   IF PROMPT = "" THEN DO
     SAY "What do you want to ask?"
     PARSE PULL PROMPT
@@ -74,21 +154,27 @@ NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT
 
   ADDRESS VALUE AMIGAGPT_PORT
   SAY "Retrieving answer using AmigaGPT. Please wait..."
-  'SENDMESSAGE WEBSEARCH M=gpt-5-mini PR=openai P='PROMPT
+  CMD = 'SENDMESSAGE'
+  IF PROFILE ~= "" THEN CMD = CMD 'PR="' || PROFILE || '"'
+  CMD = CMD 'P='PROMPT
+  CMD
   ANSWER = ReplaceAll(RESULT, "\n", '0A'X)
   SAY ANSWER
   RETURN
 
-GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT
-  CALL GetAttr("asktext","Contents", QUESTION)
-  QUESTION = TRANSLATE(QUESTION, ", ", '0A'X)
+GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT PROFILE
+  CALL GetAttr("asktext","Contents", PROMPT)
+  PROMPT = TRANSLATE(PROMPT, ", ", '0A'X)
   CALL SetAttr("asktext","Contents", "Retrieving answer using AmigaGPT. Please wait...")
   CALL SetAttr("asktext", "ReadOnly", 1)
   ADDRESS VALUE AMIGAGPT_PORT
-  'SENDMESSAGE WEBSEARCH M=gpt-5-mini PR=openai P='QUESTION
+  CMD = 'SENDMESSAGE'
+  IF PROFILE ~= "" THEN CMD = CMD ' PR="' || PROFILE || '"'
+  CMD = CMD ' P='PROMPT
+  CMD
   ADDRESS COMMAND
   ANSWER = ParseText(RESULT)
-  CALL SetAttr("asktext","Contents", '1B'X"b"QUESTION '0A'X'0A'X ANSWER)
+  CALL SetAttr("asktext","Contents", '1B'X"b"PROMPT '0A'X'0A'X ANSWER)
   CALL KillNotify("btnOk","app")
   CALL Notify("btnOk","pressed",1,"app","ReturnID", "quit")
   RETURN
@@ -142,7 +228,7 @@ CreateApp: PROCEDURE
   CALL Set("win", "ActiveObject", "asktext")
   RETURN
 
-HandleApp: PROCEDURE EXPOSE AMIGAGPT_PORT
+HandleApp: PROCEDURE EXPOSE AMIGAGPT_PORT PROFILE
   ctrl_c = 2**12
   DO FOREVER
     CALL NewHandle("APP","H",ctrl_c)

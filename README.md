@@ -160,39 +160,40 @@ Please note: AmigaGPT and AmigaGPTD listen on 2 differnt ARexx ports so adjust y
 The following ARexx commands are available:
 
 #### SENDMESSAGE
-Sends a message to the selected provider's API and returns the response.
+Sends a message using the selected chat profile and returns the response.
 ```
-SENDMESSAGE PR=PROVIDER/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
+SENDMESSAGE PR=PROFILE/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
 ```
-- `PR=PROVIDER` - Optional, the provider to use (OpenAI, Google Gemini, xAI Grok, Anthropic Claude, or Custom Provider). Use LISTPROVIDERS to see available providers. Default is the provider selected in AmigaGPT config
-- `M=MODEL` - Optional, the chat model to use (use LISTCHATMODELS to see available models). Default is gpt-5-mini
+- `PR=PROFILE` - Optional, the chat profile to use. This can be a built-in profile such as OpenAI, Google Gemini, xAI Grok or Anthropic Claude, or a saved custom chat profile name. If omitted, the active chat profile from AmigaGPT config is used
+- `M=MODEL` - Optional, the chat model to use (use LISTCHATMODELS to see available models). If omitted, the selected profile's model is used
 - `S=SYSTEM` - Optional, system message to include
 - `SF=SYSTEMFILE` - Optional, file containing the system message to include. If both `SF` and `S` are provided, the effective system message is the file contents concatenated with `S`.
-- `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
-- `W=WEBSEARCH` - Optional, enable ChatGPT to search the web
+- `K=APIKEY` - Optional, API key override. If omitted, the selected profile's API key is used
+- `W=WEBSEARCH` - Optional, enable web search. If omitted, the selected profile's setting is used
 - `P=PROMPT` - Required, the prompt or question to send
 
 #### CREATEIMAGE
 Generates an image using the specified model.
 ```
-CREATEIMAGE PR=PROVIDER/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
+CREATEIMAGE PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
 ```
-- `PR=PROVIDER` - Optional, the provider to use (OpenAI, Google Gemini, xAI Grok, or Custom Provider). Use LISTPROVIDERS to see available providers. Default is the provider selected in AmigaGPT config
-- `M=MODEL` - Optional, the image model to use (use LISTIMAGEMODELS to see available models). Defaults to the first model in the selected provider's list (e.g. `gpt-image-1` for OpenAI, `gemini-2.5-flash-image` for Gemini, `grok-2-image` for Grok)
+- `PR=PROFILE` - Optional, the image profile to use. This can be a built-in profile such as OpenAI, Google Gemini or xAI Grok, or a saved custom image profile name. If omitted, the active image profile from AmigaGPT config is used
+- `M=MODEL` - Optional, the image model to use (use LISTIMAGEMODELS to see available models). If omitted, the selected profile's model is used
 - `S=SIZE` - Optional, image size (use LISTIMAGESIZES to see available sizes). Default is 1024x1024. Note: some providers may ignore unsupported parameters (e.g. xAI currently does not support `size`) - see [xAI Image Generations](https://docs.x.ai/docs/guides/image-generations) and [Gemini OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai)
-- `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
+- `K=APIKEY` - Optional, API key override. If omitted, the selected profile's API key is used
 - `D=DESTINATION` - Optional, the path where the image will be saved. Default is the creation of a temporary file. The destination will be the returned string from this function
 - `P=PROMPT` - Required, description of the image to generate
 
 #### SPEAKTEXT
 Uses text-to-speech to speak the specified text.
 ```
-SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,F=FORMAT/K,P=PROMPT/F
+SPEAKTEXT PR=PROFILE/K,M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,F=FORMAT/K,P=PROMPT/F
 ```
-- `M=MODEL` - Optional, the voice model to use (use LISTVOICEMODELS to see available models). Default is gpt-4o-mini-tts
-- `V=VOICE` - Optional, the voice to use (use LISTVOICES to see available voices). Default is alloy
-- `I=INSTRUCTIONS` - Optional, special instructions for the voice
-- `K=APIKEY` - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
+- `PR=PROFILE` - Optional, the speech profile to use. This can be a built-in speech system name or a saved custom speech profile name. If omitted, the active speech profile from AmigaGPT config is used
+- `M=MODEL` - Optional, the OpenAI voice model to use (use LISTVOICEMODELS to see available models). If omitted, the selected speech profile's model is used
+- `V=VOICE` - Optional, the OpenAI voice to use (use LISTVOICES to see available voices). If omitted, the selected speech profile's voice is used
+- `I=INSTRUCTIONS` - Optional, OpenAI voice instructions override
+- `K=APIKEY` - Optional, API key override. If omitted, the selected speech profile's API key is used
 - `O=OUTPUT` - Optional, file to write audio data to instead of playing it
 - `F=FORMAT` - Optional, format of output file (use LISTAUDIOFORMATS to see available formats). Default is MP3 and ignored if OUTPUT is not provided
 - `P=PROMPT` - Required, the text to speak
