@@ -20,6 +20,7 @@
 - Support for xAI Grok for image generation
 - Added streaming support in chat for Google Gemini
 - Support for Google Gemini for image generation
+- Automatically instructs the chat server to not use unicode characters the Amiga cannot display such as emoji since these characters display in AmigaGPT as question marks
 - All config options are now immediately saved to disk
 - Added NEWCHAT and PROFILE=PR options for AskGPT
 - ARexx say.rexx now supports different profiles and voices

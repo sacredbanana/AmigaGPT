@@ -29,6 +29,15 @@
 #define AUDIO_BUFFER_SIZE 4096
 #define MAX_CONNECTION_RETRIES 10
 
+static CONST_STRPTR AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS =
+    "Output text using characters that can be represented or sensibly remapped "
+    "for the Amiga character set. Normal letters used in European languages "
+    "(for example French, German, Spanish, or Russian text) are fine, but do "
+    "not use emoji or special Unicode symbols that cannot be remapped "
+    "cleanly. Avoid typographic quotes, em/en dashes, ellipses, bullets, and "
+    "other decorative Unicode punctuation; use simple plain-text equivalents "
+    "instead.";
+
 /* Static variables to store pending tool call info captured during streaming */
 static BOOL pendingToolCall = FALSE;
 static UBYTE pendingToolCallId[256] = {0};
@@ -52,6 +61,8 @@ static STRPTR base64Encode(CONST_STRPTR input);
 static void drainOpenSslErrorQueue(CONST_STRPTR where);
 static void reportSslError(SSL *s, int ret, CONST_STRPTR where);
 static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage);
+static STRPTR combineInstructionText(CONST_STRPTR first,
+                                     CONST_STRPTR second);
 
 struct Library *SocketBase;
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
@@ -318,6 +329,34 @@ static ULONG rangeRand(ULONG maxValue) {
     if ((UWORD)maxValue)
         return (UWORD)((UWORD)a * (UWORD)maxValue >> 16);
     return (UWORD)a;
+}
+
+static STRPTR combineInstructionText(CONST_STRPTR first,
+                                     CONST_STRPTR second) {
+    BOOL hasFirst = (first != NULL && strlen(first) > 0);
+    BOOL hasSecond = (second != NULL && strlen(second) > 0);
+    if (!hasFirst && !hasSecond)
+        return NULL;
+
+    if (!hasFirst) {
+        STRPTR out = AllocVec(strlen(second) + 1, MEMF_CLEAR);
+        if (out != NULL)
+            strncpy(out, second, strlen(second));
+        return out;
+    }
+
+    if (!hasSecond) {
+        STRPTR out = AllocVec(strlen(first) + 1, MEMF_CLEAR);
+        if (out != NULL)
+            strncpy(out, first, strlen(first));
+        return out;
+    }
+
+    ULONG combinedLen = strlen(first) + strlen(second) + 3;
+    STRPTR out = AllocVec(combinedLen, MEMF_CLEAR);
+    if (out != NULL)
+        snprintf(out, combinedLen, "%s\n\n%s", first, second);
+    return out;
 }
 
 /**
@@ -1316,6 +1355,9 @@ struct json_object **postChatMessageToOpenAI(
         struct json_object *conversationArray = json_object_new_array();
 
         struct MinNode *conversationNode = conversation->messages->mlh_Head;
+        STRPTR systemInstructions =
+            combineInstructionText(conversation->system,
+                                   AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS);
 
         if (useGeminiGenerateContent) {
             /* Gemini native generateContent format:
@@ -1326,14 +1368,14 @@ struct json_object **postChatMessageToOpenAI(
              *   "tools": [{ "google_search": {} }]
              * } */
 
-            if (conversation->system != NULL &&
-                strlen(conversation->system) > 0) {
+            if (systemInstructions != NULL &&
+                strlen(systemInstructions) > 0) {
                 struct json_object *sysObj = json_object_new_object();
                 struct json_object *sysParts = json_object_new_array();
                 struct json_object *sysPart0 = json_object_new_object();
                 json_object_object_add(
                     sysPart0, "text",
-                    json_object_new_string(conversation->system));
+                    json_object_new_string(systemInstructions));
                 json_object_array_add(sysParts, sysPart0);
                 json_object_object_add(sysObj, "parts", sysParts);
                 json_object_object_add(obj, "systemInstruction", sysObj);
@@ -1380,11 +1422,10 @@ struct json_object **postChatMessageToOpenAI(
 
         } else if (apiEndpoint == API_CHAT_ENDPOINT_MESSAGES) {
             /* Anthropic/Claude Messages API format */
-            if (conversation->system != NULL &&
-                strlen(conversation->system) > 0)
+            if (systemInstructions != NULL && strlen(systemInstructions) > 0)
                 json_object_object_add(
                     obj, "system",
-                    json_object_new_string(conversation->system));
+                    json_object_new_string(systemInstructions));
             /* max_tokens is required for Claude API */
             json_object_object_add(obj, "max_tokens",
                                    json_object_new_int(4096));
@@ -1421,14 +1462,13 @@ struct json_object **postChatMessageToOpenAI(
             }
         } else if (apiEndpoint == API_CHAT_ENDPOINT_CHAT_COMPLETIONS) {
             /* OpenAI-compatible chat/completions */
-            if (conversation->system != NULL &&
-                strlen(conversation->system) > 0) {
+            if (systemInstructions != NULL && strlen(systemInstructions) > 0) {
                 struct json_object *messageObj = json_object_new_object();
                 json_object_object_add(messageObj, "role",
                                        json_object_new_string("system"));
                 json_object_object_add(
                     messageObj, "content",
-                    json_object_new_string(conversation->system));
+                    json_object_new_string(systemInstructions));
                 json_object_array_add(conversationArray, messageObj);
             }
             while (conversationNode->mln_Succ != NULL) {
@@ -1574,30 +1614,26 @@ struct json_object **postChatMessageToOpenAI(
                     "append\n"
                     "- Pipe character is '|' same as Unix";
 
-                if (conversation->system != NULL &&
-                    strlen(conversation->system) > 0) {
-                    ULONG combinedLen = strlen(conversation->system) +
-                                        strlen(amigaInstructions) + 10;
-                    STRPTR combinedInstr = AllocVec(combinedLen, MEMF_CLEAR);
-                    if (combinedInstr) {
-                        snprintf(combinedInstr, combinedLen, "%s\n\n%s",
-                                 conversation->system, amigaInstructions);
-                        json_object_object_add(
-                            obj, "instructions",
-                            json_object_new_string(combinedInstr));
-                        FreeVec(combinedInstr);
-                    }
-                } else {
+                STRPTR combinedInstr =
+                    combineInstructionText(systemInstructions,
+                                           amigaInstructions);
+                if (combinedInstr != NULL) {
                     json_object_object_add(
                         obj, "instructions",
-                        json_object_new_string(amigaInstructions));
+                        json_object_new_string(combinedInstr));
+                    FreeVec(combinedInstr);
                 }
-            } else if (conversation->system != NULL &&
-                       strlen(conversation->system) > 0) {
+            } else if (systemInstructions != NULL &&
+                       strlen(systemInstructions) > 0) {
                 json_object_object_add(
                     obj, "instructions",
-                    json_object_new_string(conversation->system));
+                    json_object_new_string(systemInstructions));
             }
+        }
+
+        if (systemInstructions != NULL) {
+            FreeVec(systemInstructions);
+            systemInstructions = NULL;
         }
 
         CONST_STRPTR jsonString = json_object_to_json_string(obj);
