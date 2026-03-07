@@ -63,6 +63,8 @@ static void reportSslError(SSL *s, int ret, CONST_STRPTR where);
 static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage);
 static STRPTR combineInstructionText(CONST_STRPTR first,
                                      CONST_STRPTR second);
+static void closeActiveResponseConnection(void);
+static BOOL responseMarksStreamFinished(struct json_object *response);
 
 struct Library *SocketBase;
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
@@ -357,6 +359,65 @@ static STRPTR combineInstructionText(CONST_STRPTR first,
     if (out != NULL)
         snprintf(out, combinedLen, "%s\n\n%s", first, second);
     return out;
+}
+
+static void closeActiveResponseConnection(void) {
+    if (sock > -1) {
+        CloseSocket(sock);
+        sock = -1;
+    }
+    if (ssl != NULL) {
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
+        ssl = NULL;
+    }
+}
+
+static BOOL responseMarksStreamFinished(struct json_object *response) {
+    if (response == NULL)
+        return FALSE;
+
+    STRPTR type = json_object_get_string(json_object_object_get(response, "type"));
+    if (type != NULL && strcmp(type, "response.completed") == 0)
+        return TRUE;
+
+    struct json_object *choices = json_object_object_get(response, "choices");
+    if (choices != NULL && json_object_is_type(choices, json_type_array) &&
+        json_object_array_length(choices) > 0) {
+        struct json_object *choice0 = json_object_array_get_idx(choices, 0);
+        if (choice0 != NULL) {
+            struct json_object *finishReason =
+                json_object_object_get(choice0, "finish_reason");
+            if (finishReason != NULL &&
+                !json_object_is_type(finishReason, json_type_null)) {
+                STRPTR fr = (STRPTR)json_object_get_string(finishReason);
+                if (fr != NULL && strlen(fr) > 0)
+                    return TRUE;
+            }
+        }
+    }
+
+    struct json_object *candidates =
+        json_object_object_get(response, "candidates");
+    if (candidates != NULL && json_object_is_type(candidates, json_type_array) &&
+        json_object_array_length(candidates) > 0) {
+        struct json_object *cand0 = json_object_array_get_idx(candidates, 0);
+        if (cand0 != NULL && json_object_is_type(cand0, json_type_object)) {
+            struct json_object *finishReason =
+                json_object_object_get(cand0, "finishReason");
+            if (finishReason == NULL) {
+                finishReason = json_object_object_get(cand0, "finish_reason");
+            }
+            if (finishReason != NULL &&
+                !json_object_is_type(finishReason, json_type_null)) {
+                STRPTR fr = (STRPTR)json_object_get_string(finishReason);
+                if (fr != NULL && strlen(fr) > 0)
+                    return TRUE;
+            }
+        }
+    }
+
+    return FALSE;
 }
 
 /**
@@ -1947,6 +2008,13 @@ struct json_object **postChatMessageToOpenAI(
                                 FreeVec(oneJson);
                                 if (parsedResponse != NULL) {
                                     responses[responseIndex++] = parsedResponse;
+                                    if (responseMarksStreamFinished(
+                                            parsedResponse)) {
+                                        streamingInProgress = FALSE;
+                                        closeActiveResponseConnection();
+                                        memset(readBuffer, 0,
+                                               READ_BUFFER_LENGTH);
+                                    }
                                     memmove(readBuffer, afterEvent,
                                             strlen(afterEvent) + 1);
                                     doneReading = TRUE;
@@ -2025,17 +2093,18 @@ struct json_object **postChatMessageToOpenAI(
 
                 break;
             case SSL_ERROR_ZERO_RETURN:
-                /* Gemini streamGenerateContent typically ends by closing the
-                 * connection (no [DONE]). If we reach EOF without having
-                 * produced a chunk in this call, synthesize a completion event
-                 * so the UI loop doesn't re-send the request forever. */
-                if (useGeminiGenerateContent && effectiveStream &&
-                    responseIndex == 0) {
+                /* Some providers end a stream by closing the connection rather
+                 * than sending an explicit final marker. If we reach EOF
+                 * without producing a chunk in this call, synthesize a
+                 * completion event so the caller does not spin forever waiting
+                 * for more data from a closed stream. */
+                if (effectiveStream && responseIndex == 0) {
                     struct json_object *completed = json_object_new_object();
                     json_object_object_add(
                         completed, "type",
                         json_object_new_string("response.completed"));
                     responses[responseIndex++] = completed;
+                    memset(readBuffer, 0, READ_BUFFER_LENGTH);
                     streamingInProgress = FALSE;
                 }
                 doneReading = TRUE;
@@ -2133,6 +2202,7 @@ struct json_object **postChatMessageToOpenAI(
                 json_object_object_get(responses[responseIndex - 1], "type"));
             if (type != NULL && strcmp(type, "response.completed") == 0) {
                 streamingInProgress = FALSE;
+                closeActiveResponseConnection();
 
                 /* Check for tool call in response.completed and save it */
                 if (shellToolEnabled) {
@@ -2163,18 +2233,14 @@ struct json_object **postChatMessageToOpenAI(
                 }
             }
         }
-        struct json_object *error;
-        if (json_object_object_get_ex(responses[responseIndex - 1], "error",
-                                      &error) &&
-            !json_object_is_type(error, json_type_null)) {
-            CloseSocket(sock);
-            if (ssl != NULL) {
-                SSL_shutdown(ssl);
-                SSL_free(ssl);
-                ssl = NULL;
+        if (responseIndex > 0 && responses[responseIndex - 1] != NULL) {
+            struct json_object *error;
+            if (json_object_object_get_ex(responses[responseIndex - 1], "error",
+                                          &error) &&
+                !json_object_is_type(error, json_type_null)) {
+                closeActiveResponseConnection();
+                streamingInProgress = FALSE;
             }
-            sock = -1;
-            streamingInProgress = FALSE;
         }
     } else {
         /* Non-streaming mode - check for tool calls in the response */
