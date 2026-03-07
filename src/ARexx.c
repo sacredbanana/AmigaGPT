@@ -1241,7 +1241,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
         /* No more tool calls - get the final response text */
         UTF8 *toolContentString = getMessageContentFromJson(
-            toolResponse, FALSE, TRUE, API_CHAT_ENDPOINT_RESPONSES);
+            toolResponse, FALSE, TRUE, apiEndpoint);
         if (toolContentString != NULL && strlen(toolContentString) > 0) {
             /* Add response to conversation for context */
             addTextToConversation(conversation, toolContentString, "assistant");
@@ -1298,8 +1298,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             updateStatusBar(STRING_ERROR, redPen);
             return RETURN_OK;
         }
-        UTF8 *part = getMessageContentFromJson(response, FALSE, TRUE,
-                                               API_CHAT_ENDPOINT_RESPONSES);
+        UTF8 *part =
+            getMessageContentFromJson(response, FALSE, TRUE, apiEndpoint);
         if (part != NULL)
             combinedLen += strlen(part) + 1;
     }
@@ -1318,8 +1318,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
     ri = 0;
     while ((response = responses[ri++]) != NULL) {
-        UTF8 *part = getMessageContentFromJson(response, FALSE, TRUE,
-                                               API_CHAT_ENDPOINT_RESPONSES);
+        UTF8 *part =
+            getMessageContentFromJson(response, FALSE, TRUE, apiEndpoint);
         if (part != NULL && strlen(part) > 0) {
             strncat(combined, part, combinedLen - strlen(combined) - 1);
         }

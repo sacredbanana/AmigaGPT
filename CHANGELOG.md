@@ -2,11 +2,13 @@
 
 ## 3.0.0 (2026-??-??)
 
+- Profile settings: New panels to manage chat, image and speech providers
 - Chat and Image menus replace the single OpenAI menu; model selection is now in "Chat Provider Settings" and "Image Provider Settings"
-- Provider settings: New panels to manage chat and image providers
 - Fetch latest models available from the server
 - System prompt setting is now a chat profile setting rather than a global one
-- ARexx SENDMESSAGE and CREATEIMAGE support PR=PROVIDER to choose provider; new LISTPROVIDERS command
+- New Speech Provider Settings window for setting your speech provider and options, creating speech profiles and testing your current speech settings
+- New config options for the Workbench speech systems: rate, pitch, mode (natural/robotic) and sex
+- ARexx SENDMESSAGE, CREATEIMAGE and SPEAKTEXT support PR=PROFILE to choose profile; new LISTPROFILES command
 - ARexx SENDMESSAGE supports SF=SYSTEMFILE to use the contents of a file as the system prompt
 - New powerful Shell Tool option to ask ChatGPT to run any command on your system in the shell
 - The daemon (AmigaGPTD) now maintains conversation history in T: for context across ARexx calls until reboot
@@ -18,8 +20,6 @@
 - Added streaming support in chat for Google Gemini
 - Support for Google Gemini for image generation
 - All config options are now immediately saved to disk
-- New Speech Provider Settings window for setting your speech provider and options, creating speech profiles and testing your current speech settings
-- New config options for the Workbench speech systems: rate, pitch, mode (natural/robotic) and sex
 - Fix bug where the first paragraph in every response is always black even if you have custom colours set
 - Fix bug where a missing or incorrect API key could cause the app to enter an infinite loop of displaying an error and retrying
 - Correctly handle reponses that contain JSON in the response header such as those received from Cloudfare 
