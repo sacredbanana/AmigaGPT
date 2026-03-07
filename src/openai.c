@@ -1258,10 +1258,9 @@ struct json_object **postChatMessageToOpenAI(
     CONST_STRPTR model, CONST_STRPTR apiKey, BOOL stream, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, BOOL webSearchEnabled,
-    BOOL shellToolEnabled, APIChatEndpoint apiEndpoint,
-    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
-    CONST_STRPTR customHeaders) {
+    CONST_STRPTR proxyPassword, BOOL webSearchEnabled, BOOL shellToolEnabled,
+    APIChatEndpoint apiEndpoint, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders) {
     if (model == NULL || strlen(model) == 0) {
         displayError("Model not specified");
         return NULL;
@@ -2277,6 +2276,8 @@ struct json_object *postImageCreationRequestToOpenAI(
          * - OpenAI gpt-image-* supports size/output_format. */
         BOOL isGptImage =
             (modelName != NULL && strncmp(modelName, "gpt-image-", 10) == 0);
+        BOOL isGrok =
+            (modelName != NULL && strncmp(modelName, "grok-", 5) == 0);
         printf("modelName: %s\n", modelName);
         printf("apiEndpoint: %s\n", API_IMAGE_ENDPOINT_NAMES[apiEndpoint]);
         printf("imageSize: %s\n", IMAGE_SIZE_NAMES[imageSize]);
@@ -2306,12 +2307,8 @@ struct json_object *postImageCreationRequestToOpenAI(
                                        json_object_new_int(100));
             }
         } else {
-            /* response_format controls base64 output for OpenAI-compatible
-             * endpoints. Allow omitting it when the user selects "None". */
-            if (imageFormat != IMAGE_FORMAT_NULL) {
-                json_object_object_add(obj, "response_format",
-                                       json_object_new_string("b64_json"));
-            }
+            json_object_object_add(obj, "response_format",
+                                   json_object_new_string("b64_json"));
         }
     }
     CONST_STRPTR jsonString = json_object_to_json_string(obj);
@@ -3274,7 +3271,7 @@ static void reportSslError(SSL *s, int ret, CONST_STRPTR where) {
                (why == SSL_ERROR_WANT_READ)      ? "SSL_ERROR_WANT_READ"
                : (why == SSL_ERROR_WANT_WRITE)   ? "SSL_ERROR_WANT_WRITE"
                : (why == SSL_ERROR_WANT_CONNECT) ? "SSL_ERROR_WANT_CONNECT"
-               : (why == SSL_ERROR_WANT_ACCEPT)  ? "SSL_ERROR_WANT_ACCEPT"
+               : (why == SSL_ERROR_WANT_ACCEPT) ? "SSL_ERROR_WANT_ACCEPT"
                                                 : "SSL_ERROR_WANT_X509_LOOKUP");
         break;
     case SSL_ERROR_ZERO_RETURN:
@@ -4334,14 +4331,12 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
  * @return a pointer to a new json_object containing the response or NULL --
  * Free it with json_object_put() when done
  **/
-struct json_object *
-postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
-                       CONST_STRPTR output, CONST_STRPTR model, STRPTR host,
-                       UWORD port, BOOL useSSL, CONST_STRPTR apiKey,
-                       BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
-                       BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                       CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
-                       BOOL shellToolEnabled) {
+struct json_object *postToolResultToOpenAI(
+    CONST_STRPTR previousResponseId, CONST_STRPTR callId, CONST_STRPTR output,
+    CONST_STRPTR model, STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, BOOL shellToolEnabled) {
 
     UBYTE connectionRetryCount = 0;
     if (host == NULL || strlen(host) == 0) {
@@ -4574,8 +4569,7 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
             struct json_object *parsedResponse = json_tokener_parse(jsonStart);
             if (parsedResponse != NULL) {
                 /* Check if the response contains another tool call */
-                if (shellToolEnabled &&
-                    hasShellToolCall(parsedResponse)) {
+                if (shellToolEnabled && hasShellToolCall(parsedResponse)) {
                     STRPTR cId = getShellToolCallId(parsedResponse);
                     STRPTR cmd = getShellToolCommand(parsedResponse);
                     /* For non-streaming, id is at top level */
@@ -4638,8 +4632,7 @@ postToolResultToOpenAI(CONST_STRPTR previousResponseId, CONST_STRPTR callId,
         struct json_object *parsedResponse = json_tokener_parse(jsonStart);
         if (parsedResponse != NULL) {
             /* Check if the response contains another tool call */
-            if (shellToolEnabled &&
-                hasShellToolCall(parsedResponse)) {
+            if (shellToolEnabled && hasShellToolCall(parsedResponse)) {
                 STRPTR callId = getShellToolCallId(parsedResponse);
                 STRPTR command = getShellToolCommand(parsedResponse);
                 /* For non-streaming, id is at top level */
