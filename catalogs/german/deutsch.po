@@ -118,25 +118,21 @@ msgid "Click the version string above for build details."
 msgstr "Klicken Sie oben auf die Versionszeichenfolge, um Details zum Build anzuzeigen."
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_BEBBO (201//)"
 msgid "for creating the Amiga GCC toolchain"
 msgstr "zum Erstellen der Amiga GCC-Toolchain"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_OPENAI (202//)"
 msgid "for creating the GPT and DALL-E models"
 msgstr "zur Erstellung der GPT- und DALL-E-Modelle"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_EAB (203//)"
 msgid "for being a great community!"
 msgstr "dafür, dass ihr eine tolle Community seid!"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
 msgid ""
 "for all the thorough testing, bundling AmigaGPT into AmiKit and for all the "
@@ -144,13 +140,11 @@ msgid ""
 msgstr "für all die gründlichen Tests, die Einbindung von AmigaGPT in AmiKit und für all die moralische Unterstützung"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_COFFINOS (205//)"
 msgid "for bundling AmigaGPT into CoffinOS"
 msgstr "zum Bündeln von AmigaGPT in CoffinOS"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
 msgid ""
 "for reviewing AmigaGPT and publishing several of its updates in the News "
@@ -158,19 +152,16 @@ msgid ""
 msgstr "für die Besprechung von AmigaGPT und die Veröffentlichung mehrerer Updates im Bereich Neuigkeiten aus dem Aminet"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_WHATIFF (207//)"
 msgid "for reviewing AmigaGPT and interviewing me in issue 14"
 msgstr "für die Rezension von AmigaGPT und das Interview mit mir in Ausgabe 14"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_YOUTUBE_REVIEW (208//)"
 msgid "for reviewing AmigaGPT on his YouTube channel"
 msgstr "für die Rezension von AmigaGPT auf seinem YouTube-Kanal"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
 msgid ""
 "for covering AmigaGPT in the Amiga News section on his Twitch streams and "
@@ -178,7 +169,6 @@ msgid ""
 msgstr "für die Berichterstattung über AmigaGPT in der Amiga News-Sektion seiner Twitch-Streams und dafür, dass ich an seinem Stream teilnehmen durfte, um dafür zu werben"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
 msgid ""
 "for making a video review and giving a tutorial on how to add support for "
@@ -196,7 +186,6 @@ msgid "Enter how you would like AmigaGPT to respond"
 msgstr "Geben Sie ein, wie AmigaGPT antworten soll"
 
 #: src/ChatSystemRequesterWindow.c:38
-#, fuzzy
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
 msgid ""
 "If you would like AmigaGPT to respond in a certain way, or add some "
@@ -1014,7 +1003,7 @@ msgstr "Heruntergeladen"
 #: src/openai.c:1189
 msgctxt "STRING_ERROR_LOST_CONNECTION (178//)"
 msgid "Lost connection. Reconnecting..."
-msgstr "Verbindung verloren. Verbindung wird wiederhergestellt …"
+msgstr "Verbindung verloren. Verbindung wird wiederhergestellt..."
 
 #: src/openai.c:1304
 msgctxt "STRING_ERROR_SSL_CONTEXT (179//)"
@@ -1446,79 +1435,66 @@ msgid "Shell Error"
 msgstr "Shell-Fehler"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_MENU_CHAT (285//)"
 msgid "Chat"
-msgstr "Neuer Chat"
+msgstr "Chat"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_MENU_IMAGE (286//)"
 msgid "Image"
 msgstr "Bild"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_CHAT_PROVIDER_SETTINGS (287//)"
 msgid "Chat Provider Settings"
-msgstr "Eigener Server Einstellungen"
+msgstr "Einstellungen für Chat-Anbieter"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_IMAGE_PROVIDER_SETTINGS (288//)"
 msgid "Image Provider Settings"
-msgstr "Eigener Server Einstellungen"
+msgstr "Einstellungen für Bild-Anbieter"
 
 #: src/openai.c
-#, fuzzy
 msgctxt "STRING_PROVIDER_OPENAI (289//)"
 msgid "OpenAI"
 msgstr "OpenAI"
 
 #: src/openai.c
-#, fuzzy
 msgctxt "STRING_PROVIDER_GEMINI (290//)"
 msgid "Google Gemini"
 msgstr "Google Gemini"
 
 #: src/openai.c
-#, fuzzy
 msgctxt "STRING_PROVIDER_GROK (291//)"
 msgid "xAI Grok"
 msgstr "xAI Grok"
 
 #: src/openai.c
-#, fuzzy
 msgctxt "STRING_PROVIDER_ANTHROPIC (292//)"
 msgid "Anthropic Claude"
 msgstr "Anthropic Claude"
 
 #: src/openai.c
-#, fuzzy
 msgctxt "STRING_PROVIDER_CUSTOM (293//)"
 msgid "Custom Provider"
 msgstr "Eigener Anbieter"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_WEB_SEARCH (294//)"
 msgid "Web Search"
 msgstr "Web-Suche"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_SHELL_TOOL (295//)"
 msgid "Shell Tool"
 msgstr "Shell-Werkzeug"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_CHAT_MODEL (296//)"
 msgid "Chat Model"
 msgstr "Chat-Modell"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_IMAGE_MODEL (297//)"
 msgid "Image Model"
 msgstr "Bildmodell"
@@ -1528,8 +1504,9 @@ msgctxt "STRING_CONFIG_MIGRATED (298//)"
 msgid ""
 "Configuration has been migrated to the new format.\n"
 "Your old config has been backed up to config.bak"
-msgstr "Die Konfiguration wurde in das neue Format migriert.
-Ihre alte Konfiguration wurde als Sicherung in config.bak gespeichert"
+msgstr ""
+"Die Konfiguration wurde in das neue Format migriert.\n"
+"Ihre alte Konfiguration wurde als Sicherung in config.bak gespeichert"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
@@ -1564,11 +1541,12 @@ msgid ""
 "%s\n"
 "\n"
 "Allow this command to run?"
-msgstr "Die KI möchte den folgenden Shell-Befehl ausführen:
-
-%s
-
-Diesen Befehl ausführen?"
+msgstr ""
+"Die KI möchte den folgenden Shell-Befehl ausführen:\n"
+"\n"
+"%s\n"
+"\n"
+"Diesen Befehl ausführen?"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_CONFIRMATION_TITLE (305//)"
@@ -1587,11 +1565,11 @@ msgid ""
 "\n"
 "--- Shell command denied by user ---\n"
 "\n"
-msgstr "
-
---- Shell-Befehl vom Benutzer abgelehnt ---
-
-"
+msgstr ""
+"\n"
+"\n"
+"--- Shell-Befehl vom Benutzer abgelehnt ---\n"
+"\n"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT (308//)"
@@ -1599,10 +1577,10 @@ msgid ""
 "\n"
 "\n"
 "--- Executing: %s ---\n"
-msgstr "
-
---- Ausführung: %s ---
-"
+msgstr ""
+"\n"
+"\n"
+"--- Ausführung: %s ---\n"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT (309//)"
@@ -1611,11 +1589,11 @@ msgid ""
 "%s\n"
 "--- End ---\n"
 "\n"
-msgstr "Exit-Code: %ld
-%s
---- Ende ---
-
-"
+msgstr ""
+"Exit-Code: %ld\n"
+"%s\n"
+"--- Ende ---\n"
+"\n"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_NO_OUTPUT (310//)"
@@ -1628,9 +1606,10 @@ msgid ""
 "Exit code: %ld\n"
 "Output:\n"
 "%s"
-msgstr "Exit-Code: %ld
-Ausgabe:
-%s"
+msgstr ""
+"Exit-Code: %ld\n"
+"Ausgabe:\n"
+"%s"
 
 #: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
@@ -1645,10 +1624,9 @@ msgstr "Warnung: Erforderliche Komponente fehlt: %s"
 #: src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
 msgid "Failed to create Speech Provider Settings window"
-msgstr "Fenster „Einstellungen für Sprachanbieter“ konnte nicht erstellt werden"
+msgstr "Fenster \"Einstellungen für Sprachanbieter\" konnte nicht erstellt werden"
 
 #: src/CustomServerSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_MENU_TEMPLATE_OPENAI (315//)"
 msgid "OpenAI"
 msgstr "OpenAI"
@@ -1787,4 +1765,5 @@ msgstr "Keine auswählbaren Modelle für dieses Sprachprofil"
 msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_VOICES (342//)"
 msgid "No selectable voices for this speech profile"
 msgstr "Keine auswählbaren Stimmen für dieses Sprachprofil"
+
 

@@ -590,12 +590,11 @@ msgid "Could not get interface for muimaster.library"
 msgstr "Could not get interface for muimaster.library"
 
 #: src/gui.c:91
-#, fuzzy
 msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
 msgid ""
 "Could not open codesets.library. Please make sure you have codesets "
 "installed. Refer to the documentation for more info."
-msgstr "Could not open codesets.library. Please make sure you have codesets installed.Refer to the documentation for more info."
+msgstr "Could not open codesets.library. Please make sure you have codesets installed. Refer to the documentation for more info."
 
 #: src/gui.c:98
 msgctxt "STRING_ERROR_CODESETS_INTERFACE_OPEN (93//)"
@@ -642,10 +641,9 @@ msgid ""
 msgstr "Failed to open speech system. Make sure translator.library v42 and the narrator.device v37 are installed. See the guide for more information."
 
 #: src/menu.c:70
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
 msgid "Could not initialize speech system OpenAI"
-msgstr "Could not initialise speech system OpenAI"
+msgstr "Could not initialise OpenAI speech system"
 
 #: src/menu.c:73
 msgctxt "STRING_ERROR_SPEECH_UNKNOWN_SYSTEM (102//)"
@@ -1353,10 +1351,9 @@ msgid "Please enter a host address first"
 msgstr "Please enter a host address first"
 
 #: src/CustomServerSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_AUTHORIZATION_TYPE (268//)"
 msgid "Authorization"
-msgstr "Authentication"
+msgstr "Authorisation"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_AUTHORIZATION_NONE (269//)"
@@ -1379,7 +1376,6 @@ msgid "Anthropic Claude"
 msgstr "Anthropic Claude"
 
 #: src/CustomServerSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_CUSTOM_HEADERS (273//)"
 msgid "Custom Headers"
 msgstr "Custom Headers"
@@ -1400,10 +1396,9 @@ msgid "Save Profile"
 msgstr "Save Profile"
 
 #: src/CustomServerSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_DELETE_PROFILE (277//)"
 msgid "Delete"
-msgstr "Delete Chat"
+msgstr "Delete"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_PROFILE_NAME (278//)"
@@ -1416,10 +1411,9 @@ msgid "(New Profile)"
 msgstr "(New Profile)"
 
 #: src/CustomServerSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
 msgid "Please enter a profile name"
-msgstr "Please enter a host address first"
+msgstr "Please enter a profile name"
 
 #: src/menu.c
 msgctxt "STRING_MENU_OPENAI_SHELL_TOOL (281//)"
@@ -1437,85 +1431,71 @@ msgid "Shell Output"
 msgstr "Shell Output"
 
 #: src/openai.c
-#, fuzzy
 msgctxt "STRING_SHELL_TOOL_ERROR (284//)"
 msgid "Shell Error"
-msgstr "Error"
+msgstr "Shell Error"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_MENU_CHAT (285//)"
 msgid "Chat"
-msgstr "New Chat"
+msgstr "Chat"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_MENU_IMAGE (286//)"
 msgid "Image"
 msgstr "Image"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_CHAT_PROVIDER_SETTINGS (287//)"
 msgid "Chat Provider Settings"
 msgstr "Chat Provider Settings"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_IMAGE_PROVIDER_SETTINGS (288//)"
 msgid "Image Provider Settings"
 msgstr "Image Provider Settings"
 
 #: src/openai.c
-#, fuzzy
 msgctxt "STRING_PROVIDER_OPENAI (289//)"
 msgid "OpenAI"
 msgstr "OpenAI"
 
 #: src/openai.c
-#, fuzzy
 msgctxt "STRING_PROVIDER_GEMINI (290//)"
 msgid "Google Gemini"
 msgstr "Google Gemini"
 
 #: src/openai.c
-#, fuzzy
 msgctxt "STRING_PROVIDER_GROK (291//)"
 msgid "xAI Grok"
 msgstr "xAI Grok"
 
 #: src/openai.c
-#, fuzzy
 msgctxt "STRING_PROVIDER_ANTHROPIC (292//)"
 msgid "Anthropic Claude"
 msgstr "Anthropic Claude"
 
 #: src/openai.c
-#, fuzzy
 msgctxt "STRING_PROVIDER_CUSTOM (293//)"
 msgid "Custom Provider"
 msgstr "Custom Provider"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_WEB_SEARCH (294//)"
 msgid "Web Search"
 msgstr "Web Search"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_SHELL_TOOL (295//)"
 msgid "Shell Tool"
 msgstr "Shell Tool"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_CHAT_MODEL (296//)"
 msgid "Chat Model"
 msgstr "Chat Model"
 
 #: src/menu.c
-#, fuzzy
 msgctxt "STRING_IMAGE_MODEL (297//)"
 msgid "Image Model"
 msgstr "Image Model"
@@ -1525,8 +1505,9 @@ msgctxt "STRING_CONFIG_MIGRATED (298//)"
 msgid ""
 "Configuration has been migrated to the new format.\n"
 "Your old config has been backed up to config.bak"
-msgstr "Configuration has been migrated to the new format.
-Your old config has been backed up to config.bak"
+msgstr ""
+"Configuration has been migrated to the new format.\n"
+"Your old config has been backed up to config.bak"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
@@ -1561,11 +1542,12 @@ msgid ""
 "%s\n"
 "\n"
 "Allow this command to run?"
-msgstr "The AI wants to execute the following shell command:
-
-%s
-
-Allow this command to run?"
+msgstr ""
+"The AI wants to execute the following shell command:\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this command to run?"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_CONFIRMATION_TITLE (305//)"
@@ -1584,11 +1566,11 @@ msgid ""
 "\n"
 "--- Shell command denied by user ---\n"
 "\n"
-msgstr "
-
---- Shell command denied by user ---
-
-"
+msgstr ""
+"\n"
+"\n"
+"--- Shell command denied by user ---\n"
+"\n"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT (308//)"
@@ -1596,10 +1578,10 @@ msgid ""
 "\n"
 "\n"
 "--- Executing: %s ---\n"
-msgstr "
-
---- Executing: %s ---
-"
+msgstr ""
+"\n"
+"\n"
+"--- Executing: %s ---\n"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT (309//)"
@@ -1608,11 +1590,11 @@ msgid ""
 "%s\n"
 "--- End ---\n"
 "\n"
-msgstr "Exit code: %ld
-%s
---- End ---
-
-"
+msgstr ""
+"Exit code: %ld\n"
+"%s\n"
+"--- End ---\n"
+"\n"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_NO_OUTPUT (310//)"
@@ -1625,9 +1607,10 @@ msgid ""
 "Exit code: %ld\n"
 "Output:\n"
 "%s"
-msgstr "Exit code: %ld
-Output:
-%s"
+msgstr ""
+"Exit code: %ld\n"
+"Output:\n"
+"%s"
 
 #: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
@@ -1645,7 +1628,6 @@ msgid "Failed to create Speech Provider Settings window"
 msgstr "Failed to create Speech Provider Settings window"
 
 #: src/CustomServerSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_MENU_TEMPLATE_OPENAI (315//)"
 msgid "OpenAI"
 msgstr "OpenAI"
@@ -1784,4 +1766,5 @@ msgstr "No selectable models for this speech profile"
 msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_VOICES (342//)"
 msgid "No selectable voices for this speech profile"
 msgstr "No selectable voices for this speech profile"
+
 
