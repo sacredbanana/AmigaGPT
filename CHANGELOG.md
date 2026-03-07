@@ -20,6 +20,7 @@
 - Added streaming support in chat for Google Gemini
 - Support for Google Gemini for image generation
 - All config options are now immediately saved to disk
+- Added NEWCHAT and PROFILE=PR options for AskGPT
 - Fix bug where the first paragraph in every response is always black even if you have custom colours set
 - Fix bug where a missing or incorrect API key could cause the app to enter an infinite loop of displaying an error and retrying
 - Correctly handle reponses that contain JSON in the response header such as those received from Cloudfare 

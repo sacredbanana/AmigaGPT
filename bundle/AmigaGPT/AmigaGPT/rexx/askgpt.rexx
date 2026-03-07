@@ -1,11 +1,13 @@
 /* Asks AmigaGPT a question then displays it */
 /* If the GUI argument is provided, then it uses RxMUI to create a GUI or fallback to a simple requester if RxMUI is not installed */
+/* If the NEWCHAT argument is provided, then it clears the conversation history and starts a new chat */
 /* If the PROFILE/PR argument is provided, then it uses the specified profile */
 OPTIONS RESULTS
 SIGNAL ON HALT
 SIGNAL ON BREAK_C
 
 GUI = 0
+NEWCHAT = 0
 PROFILE = ""
 PROMPT = ""
 
@@ -53,21 +55,31 @@ Trim: PROCEDURE
   PARSE ARG s
   RETURN STRIP(s)
 
-ParseArgs: PROCEDURE EXPOSE GUI PROFILE PROMPT
+ParseArgs: PROCEDURE EXPOSE GUI PROFILE PROMPT NEWCHAT
   PARSE ARG s
 
   s = STRIP(s)
   PROFILE = ""
   PROMPT = ""
+  NEWCHAT = 0
 
-  /* Optional GUI argument */
-  IF TRANSLATE(WORD(s,1)) = "GUI" THEN DO
-    GUI = 1
-    s = STRIP(SUBWORD(s,2))
+  /* Optional GUI / NEWCHAT arguments at the front, in any order */
+  DO FOREVER
+    first = TRANSLATE(WORD(s,1))
+    SELECT
+      WHEN first = "GUI" THEN DO
+        GUI = 1
+        s = STRIP(SUBWORD(s,2))
+      END
+      WHEN first = "NEWCHAT" THEN DO
+        NEWCHAT = 1
+        s = STRIP(SUBWORD(s,2))
+      END
+      OTHERWISE LEAVE
+    END
   END
 
   rest = ExtractProfile(s)
-
   PROMPT = STRIP(rest)
   RETURN
 
@@ -146,7 +158,7 @@ ReplaceAll: PROCEDURE
   END
   RETURN out
 
-NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT PROFILE
+NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT PROFILE NEWCHAT
   IF PROMPT = "" THEN DO
     SAY "What do you want to ask?"
     PARSE PULL PROMPT
@@ -154,20 +166,22 @@ NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT PROFILE
 
   ADDRESS VALUE AMIGAGPT_PORT
   SAY "Retrieving answer using AmigaGPT. Please wait..."
+  IF NEWCHAT THEN 'NEWCHAT'
   CMD = 'SENDMESSAGE'
-  IF PROFILE ~= "" THEN CMD = CMD 'PR="' || PROFILE || '"'
-  CMD = CMD 'P='PROMPT
+  IF PROFILE ~= "" THEN CMD = CMD ' PR="' || PROFILE || '"'
+  CMD = CMD ' P='PROMPT
   CMD
   ANSWER = ReplaceAll(RESULT, "\n", '0A'X)
   SAY ANSWER
   RETURN
 
-GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT PROFILE
+GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT PROFILE NEWCHAT
   CALL GetAttr("asktext","Contents", PROMPT)
   PROMPT = TRANSLATE(PROMPT, ", ", '0A'X)
   CALL SetAttr("asktext","Contents", "Retrieving answer using AmigaGPT. Please wait...")
   CALL SetAttr("asktext", "ReadOnly", 1)
   ADDRESS VALUE AMIGAGPT_PORT
+  IF NEWCHAT THEN 'NEWCHAT'
   CMD = 'SENDMESSAGE'
   IF PROFILE ~= "" THEN CMD = CMD ' PR="' || PROFILE || '"'
   CMD = CMD ' P='PROMPT
