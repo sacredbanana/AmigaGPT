@@ -1602,17 +1602,13 @@ msgid ""
 "Configuration has been migrated to the new format.\n"
 "Your old config has been backed up to config.bak"
 msgstr ""
-"Configuration has been migrated to the new format.\n"
-"Your old config has been backed up to config.bak"
+"Konfiguracija je prebačena u novi format.\n"
+"Vaša stara konfiguracija je sačuvana kao rezervna kopija u config.bak"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
-msgid ""
-"A custom profile cannot use the same name as a built-in provider (OpenAI, "
-"Google Gemini, xAI Grok, Anthropic Claude)."
-msgstr ""
-"Prilagođeni profil ne može imati isto ime kao ugrađeni provajder (OpenAI, "
-"Google Gemini, xAI Grok, Anthropic Claude)."
+msgid "A profile with this name already exists."
+msgstr "Profil sa ovim imenom već postoji."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
