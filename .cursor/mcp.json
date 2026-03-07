@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "openaiDeveloperDocs": {
+      "url": "https://developers.openai.com/mcp"
+    },
+    "xaiDocs": {
+      "url": "https://docs.x.ai/api/mcp"
+    }
+  }
+}

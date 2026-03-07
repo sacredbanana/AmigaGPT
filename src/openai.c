@@ -61,8 +61,7 @@ static STRPTR base64Encode(CONST_STRPTR input);
 static void drainOpenSslErrorQueue(CONST_STRPTR where);
 static void reportSslError(SSL *s, int ret, CONST_STRPTR where);
 static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage);
-static STRPTR combineInstructionText(CONST_STRPTR first,
-                                     CONST_STRPTR second);
+static STRPTR combineInstructionText(CONST_STRPTR first, CONST_STRPTR second);
 static void closeActiveResponseConnection(void);
 static BOOL responseMarksStreamFinished(struct json_object *response);
 
@@ -90,7 +89,8 @@ LONG ssl_err = 0;
 ULONG RangeSeed;
 
 /**
- * The names of the chat models
+ * The names of the chat models before the migration to string-based model
+ * names. Do not modify this array!
  * @see ChatModel
  **/
 CONST_STRPTR CHAT_MODEL_NAMES[] = {[CHATGPT_5_LATEST] = "gpt-5-chat-latest",
@@ -333,8 +333,7 @@ static ULONG rangeRand(ULONG maxValue) {
     return (UWORD)a;
 }
 
-static STRPTR combineInstructionText(CONST_STRPTR first,
-                                     CONST_STRPTR second) {
+static STRPTR combineInstructionText(CONST_STRPTR first, CONST_STRPTR second) {
     BOOL hasFirst = (first != NULL && strlen(first) > 0);
     BOOL hasSecond = (second != NULL && strlen(second) > 0);
     if (!hasFirst && !hasSecond)
@@ -377,7 +376,8 @@ static BOOL responseMarksStreamFinished(struct json_object *response) {
     if (response == NULL)
         return FALSE;
 
-    STRPTR type = json_object_get_string(json_object_object_get(response, "type"));
+    STRPTR type =
+        json_object_get_string(json_object_object_get(response, "type"));
     if (type != NULL && strcmp(type, "response.completed") == 0)
         return TRUE;
 
@@ -399,7 +399,8 @@ static BOOL responseMarksStreamFinished(struct json_object *response) {
 
     struct json_object *candidates =
         json_object_object_get(response, "candidates");
-    if (candidates != NULL && json_object_is_type(candidates, json_type_array) &&
+    if (candidates != NULL &&
+        json_object_is_type(candidates, json_type_array) &&
         json_object_array_length(candidates) > 0) {
         struct json_object *cand0 = json_object_array_get_idx(candidates, 0);
         if (cand0 != NULL && json_object_is_type(cand0, json_type_object)) {
@@ -1416,9 +1417,8 @@ struct json_object **postChatMessageToOpenAI(
         struct json_object *conversationArray = json_object_new_array();
 
         struct MinNode *conversationNode = conversation->messages->mlh_Head;
-        STRPTR systemInstructions =
-            combineInstructionText(conversation->system,
-                                   AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS);
+        STRPTR systemInstructions = combineInstructionText(
+            conversation->system, AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS);
 
         if (useGeminiGenerateContent) {
             /* Gemini native generateContent format:
@@ -1429,8 +1429,7 @@ struct json_object **postChatMessageToOpenAI(
              *   "tools": [{ "google_search": {} }]
              * } */
 
-            if (systemInstructions != NULL &&
-                strlen(systemInstructions) > 0) {
+            if (systemInstructions != NULL && strlen(systemInstructions) > 0) {
                 struct json_object *sysObj = json_object_new_object();
                 struct json_object *sysParts = json_object_new_array();
                 struct json_object *sysPart0 = json_object_new_object();
@@ -1485,8 +1484,7 @@ struct json_object **postChatMessageToOpenAI(
             /* Anthropic/Claude Messages API format */
             if (systemInstructions != NULL && strlen(systemInstructions) > 0)
                 json_object_object_add(
-                    obj, "system",
-                    json_object_new_string(systemInstructions));
+                    obj, "system", json_object_new_string(systemInstructions));
             /* max_tokens is required for Claude API */
             json_object_object_add(obj, "max_tokens",
                                    json_object_new_int(4096));
@@ -1675,9 +1673,8 @@ struct json_object **postChatMessageToOpenAI(
                     "append\n"
                     "- Pipe character is '|' same as Unix";
 
-                STRPTR combinedInstr =
-                    combineInstructionText(systemInstructions,
-                                           amigaInstructions);
+                STRPTR combinedInstr = combineInstructionText(
+                    systemInstructions, amigaInstructions);
                 if (combinedInstr != NULL) {
                     json_object_object_add(
                         obj, "instructions",
