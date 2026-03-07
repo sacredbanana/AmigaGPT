@@ -169,7 +169,7 @@ SENDMESSAGE PR=PROFILE/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,K=APIKEY/K,W=WEBSE
 - `S=SYSTEM` - Optional, system message to include
 - `SF=SYSTEMFILE` - Optional, file containing the system message to include. If both `SF` and `S` are provided, the effective system message is the file contents concatenated with `S`.
 - `K=APIKEY` - Optional, API key override. If omitted, the selected profile's API key is used
-- `W=WEBSEARCH` - Optional, enable web search. If omitted, the selected profile's setting is used
+- `W=WEBSEARCH` - Optional, enable web search. If omitted, the selected profile's setting is used. If provided, it forces web search on even when the selected profile has it disabled
 - `P=PROMPT` - Required, the prompt or question to send
 
 #### CREATEIMAGE

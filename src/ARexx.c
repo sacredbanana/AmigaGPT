@@ -999,7 +999,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     BOOL proxyRequiresAuth = (BOOL)arg[12];
     STRPTR proxyUsername = (STRPTR)arg[13];
     STRPTR proxyPassword = (STRPTR)arg[14];
-    BOOL webSearchEnabled = (BOOL)arg[15];
+    BOOL webSearchRequested = (BOOL)arg[15];
     STRPTR prompt = (STRPTR)arg[16];
 
     /* Reload config from disk to pick up any changes from the main app */
@@ -1055,9 +1055,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         model = rexxSettings.model;
     }
 
-    if (!webSearchEnabled) {
-        webSearchEnabled = rexxSettings.webSearchEnabled;
-    }
+    BOOL webSearchEnabled =
+        rexxSettings.webSearchEnabled || webSearchRequested;
 
     /* Get the persistent daemon conversation (load from T: or create new) */
     struct Conversation *conversation = getDaemonConversation();
