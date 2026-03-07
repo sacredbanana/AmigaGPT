@@ -954,8 +954,8 @@ rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
 static void rexxSetProfileNotFoundError(CONST_STRPTR kind,
                                         CONST_STRPTR profileName) {
     UBYTE errMsg[512];
-    snprintf(errMsg, sizeof(errMsg), "%s profile not found: %s",
-             kind != NULL ? kind : "Requested",
+    snprintf(errMsg, sizeof(errMsg), STRING_ERROR_REXX_PROFILE_NOT_FOUND,
+             kind != NULL ? kind : STRING_REXX_REQUESTED,
              profileName != NULL ? profileName : "");
     set(app, MUIA_Application_RexxString, errMsg);
     updateStatusBar(STRING_ERROR, redPen);
@@ -1008,7 +1008,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     /* Resolve defaults from the selected chat profile. */
     struct ChatRequestSettings rexxSettings;
     if (!rexxResolveChatProfileSettings(profileString, &rexxSettings)) {
-        rexxSetProfileNotFoundError("Chat", profileString);
+        rexxSetProfileNotFoundError(STRING_MENU_CHAT, profileString);
         return RETURN_OK;
     }
     ULONG portValue = port == NULL ? rexxSettings.port : (ULONG)*port;
@@ -1076,7 +1076,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         systemFromFile = readTextFileToString(systemFile);
         if (systemFromFile == NULL) {
             UBYTE errMsg[512];
-            snprintf(errMsg, sizeof(errMsg), "Could not read system file: %s",
+            snprintf(errMsg, sizeof(errMsg), STRING_ERROR_REXX_SYSTEM_FILE_READ,
                      systemFile);
             set(app, MUIA_Application_RexxString, errMsg);
             updateStatusBar(STRING_ERROR, redPen);
@@ -1091,7 +1091,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             if (combinedSystem == NULL) {
                 FreeVec(systemFromFile);
                 set(app, MUIA_Application_RexxString,
-                    "Out of memory reading system file");
+                    STRING_ERROR_REXX_SYSTEM_FILE_MEMORY);
                 updateStatusBar(STRING_ERROR, redPen);
                 return RETURN_OK;
             }
@@ -1140,17 +1140,16 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         /* Ask user for confirmation before executing the command */
         UBYTE confirmMsg[4096];
         snprintf(confirmMsg, sizeof(confirmMsg),
-                 "The AI wants to execute the following shell "
-                 "command:\n\n%s\n\nAllow this command to run?",
-                 command);
+                 STRING_SHELL_TOOL_CONFIRMATION_BODY, command);
         LONG confirmResult = MUI_Request(app, NULL,
 #ifdef __MORPHOS__
                                          NULL,
 #else
                                          MUIV_Requester_Image_Warning,
 #endif
-                                         "Shell Command Confirmation",
-                                         "*_Allow|_Deny", confirmMsg, TAG_DONE);
+                                         STRING_SHELL_TOOL_CONFIRMATION_TITLE,
+                                         STRING_SHELL_TOOL_CONFIRMATION_BUTTONS,
+                                         confirmMsg, TAG_DONE);
 
         if (confirmResult != 1) {
             /* User denied - clear pending tool call and return error */
@@ -1160,12 +1159,13 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             }
             FreeVec(responses);
             set(app, MUIA_Application_RexxString,
-                "Shell command denied by user");
+                STRING_SHELL_TOOL_DENIED_BANNER);
             updateStatusBar(STRING_READY, greenPen);
             return RETURN_OK;
         }
 
         /* User allowed - proceed with execution */
+        updateStatusBar(STRING_EXECUTING_COMMAND, yellowPen);
 
         /* Execute the shell command */
         LONG exitCode = 0;
@@ -1173,8 +1173,9 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
         /* Build output string with exit code */
         UBYTE toolOutput[8192];
-        snprintf(toolOutput, sizeof(toolOutput), "Exit code: %ld\nOutput:\n%s",
-                 exitCode, output != NULL ? output : "(No output)");
+        snprintf(toolOutput, sizeof(toolOutput), STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT,
+                 exitCode,
+                 output != NULL ? output : (STRPTR)STRING_SHELL_TOOL_NO_OUTPUT);
 
         /* Send the tool result back to the API - this may set a new pending
          * tool call if OpenAI wants to run another command */
@@ -1374,7 +1375,7 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     /* Resolve defaults from the selected image profile. */
     struct ImageRequestSettings imgSettings;
     if (!rexxResolveImageProfileSettings(profileString, &imgSettings)) {
-        rexxSetProfileNotFoundError("Image", profileString);
+        rexxSetProfileNotFoundError(STRING_IMAGE, profileString);
         return RETURN_ERROR;
     }
 
@@ -1545,8 +1546,7 @@ static void rexxAppendElevenLabsModelNames(STRPTR buffer, ULONG bufferSize,
         configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
         configGetProxyUsername(), configGetProxyPassword());
     if (response == NULL) {
-        rexxAppendLine(buffer, bufferSize,
-                       "(Unable to fetch ElevenLabs models)");
+        rexxAppendLine(buffer, bufferSize, STRING_ERROR_FETCHING_MODELS);
         return;
     }
 
@@ -1556,8 +1556,7 @@ static void rexxAppendElevenLabsModelNames(STRPTR buffer, ULONG bufferSize,
             modelsArray = response;
         } else {
             json_object_put(response);
-            rexxAppendLine(buffer, bufferSize,
-                           "(Unable to parse ElevenLabs models)");
+            rexxAppendLine(buffer, bufferSize, STRING_ERROR_FETCHING_MODELS);
             return;
         }
     }
@@ -1589,8 +1588,7 @@ static void rexxAppendElevenLabsVoiceNames(STRPTR buffer, ULONG bufferSize,
         configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
         configGetProxyUsername(), configGetProxyPassword());
     if (response == NULL) {
-        rexxAppendLine(buffer, bufferSize,
-                       "(Unable to fetch ElevenLabs voices)");
+        rexxAppendLine(buffer, bufferSize, STRING_ERROR_REXX_FETCHING_VOICES);
         return;
     }
 
@@ -1601,14 +1599,13 @@ static void rexxAppendElevenLabsVoiceNames(STRPTR buffer, ULONG bufferSize,
         } else {
             json_object_put(response);
             rexxAppendLine(buffer, bufferSize,
-                           "(Unable to parse ElevenLabs voices)");
+                           STRING_ERROR_REXX_FETCHING_VOICES);
             return;
         }
     }
     if (!json_object_is_type(voicesArray, json_type_array)) {
         json_object_put(response);
-        rexxAppendLine(buffer, bufferSize,
-                       "(Unable to parse ElevenLabs voices)");
+        rexxAppendLine(buffer, bufferSize, STRING_ERROR_REXX_FETCHING_VOICES);
         return;
     }
 
@@ -1638,9 +1635,9 @@ static void rexxAppendChatModelsForProfile(STRPTR buffer, ULONG bufferSize,
         return;
 
     CONST_STRPTR titleProfile =
-        settings.profileName != NULL ? settings.profileName : "Chat";
+        settings.profileName != NULL ? settings.profileName : STRING_MENU_CHAT;
     UBYTE title[256];
-    snprintf(title, sizeof(title), "Chat (%s)", titleProfile);
+    snprintf(title, sizeof(title), "%s (%s)", STRING_MENU_CHAT, titleProfile);
     rexxAppendSectionHeader(buffer, bufferSize, title);
 
     struct json_object *models = getChatModels(
@@ -1650,9 +1647,7 @@ static void rexxAppendChatModelsForProfile(STRPTR buffer, ULONG bufferSize,
         settings.proxyUsername, settings.proxyPassword, settings.apiEndpointUrl,
         settings.authorizationType, settings.customHeaders);
     if (models == NULL) {
-        rexxAppendLine(
-            buffer, bufferSize,
-            "(Unable to fetch models for this chat profile)");
+        rexxAppendLine(buffer, bufferSize, STRING_ERROR_FETCHING_MODELS);
         return;
     }
     rexxAppendModelNamesFromJsonArray(buffer, bufferSize, models);
@@ -1666,9 +1661,9 @@ static void rexxAppendImageModelsForProfile(STRPTR buffer, ULONG bufferSize,
         return;
 
     CONST_STRPTR titleProfile =
-        settings.profileName != NULL ? settings.profileName : "Image";
+        settings.profileName != NULL ? settings.profileName : STRING_IMAGE;
     UBYTE title[256];
-    snprintf(title, sizeof(title), "Image (%s)", titleProfile);
+    snprintf(title, sizeof(title), "%s (%s)", STRING_IMAGE, titleProfile);
     rexxAppendSectionHeader(buffer, bufferSize, title);
 
     struct json_object *models = getChatModels(
@@ -1678,9 +1673,7 @@ static void rexxAppendImageModelsForProfile(STRPTR buffer, ULONG bufferSize,
         settings.proxyUsername, settings.proxyPassword, settings.apiEndpointUrl,
         settings.authorizationType, settings.customHeaders);
     if (models == NULL) {
-        rexxAppendLine(
-            buffer, bufferSize,
-            "(Unable to fetch models for this image profile)");
+        rexxAppendLine(buffer, bufferSize, STRING_ERROR_FETCHING_MODELS);
         return;
     }
     rexxAppendModelNamesFromJsonArray(buffer, bufferSize, models);
@@ -1695,9 +1688,9 @@ static void rexxAppendSpeechModelsForProfile(STRPTR buffer, ULONG bufferSize,
 
     CONST_STRPTR titleProfile = settings.activeProfileName != NULL
                                     ? settings.activeProfileName
-                                    : "Speech";
+                                    : STRING_MENU_SPEECH;
     UBYTE title[256];
-    snprintf(title, sizeof(title), "Speech (%s)", titleProfile);
+    snprintf(title, sizeof(title), "%s (%s)", STRING_MENU_SPEECH, titleProfile);
     rexxAppendSectionHeader(buffer, bufferSize, title);
 
     if (settings.speechSystem == SPEECH_SYSTEM_OPENAI) {
@@ -1708,9 +1701,7 @@ static void rexxAppendSpeechModelsForProfile(STRPTR buffer, ULONG bufferSize,
             configGetProxyUsername(), configGetProxyPassword(), "v1",
             AUTHORIZATION_TYPE_BEARER, NULL);
         if (models == NULL) {
-            rexxAppendLine(
-                buffer, bufferSize,
-                "(Unable to fetch models for this speech profile)");
+            rexxAppendLine(buffer, bufferSize, STRING_ERROR_FETCHING_MODELS);
         } else {
             rexxAppendModelNamesFromJsonArray(buffer, bufferSize, models);
             json_object_put(models);
@@ -1719,9 +1710,8 @@ static void rexxAppendSpeechModelsForProfile(STRPTR buffer, ULONG bufferSize,
         rexxAppendElevenLabsModelNames(buffer, bufferSize,
                                        settings.elevenLabsApiKey);
     } else {
-        rexxAppendLine(
-            buffer, bufferSize,
-            "(No selectable models for this speech profile)");
+        rexxAppendLine(buffer, bufferSize,
+                       STRING_REXX_NO_SELECTABLE_SPEECH_MODELS);
     }
 
     configFreeSpeechRequestSettings(&settings);
@@ -1747,9 +1737,8 @@ static void rexxAppendVoicesForSpeechProfile(STRPTR buffer, ULONG bufferSize,
     } else if (settings.speechSystem == SPEECH_SYSTEM_FLITE) {
         rexxAppendStringArray(buffer, bufferSize, SPEECH_FLITE_VOICE_NAMES);
     } else {
-        rexxAppendLine(
-            buffer, bufferSize,
-            "(No selectable voices for this speech profile)");
+        rexxAppendLine(buffer, bufferSize,
+                       STRING_REXX_NO_SELECTABLE_SPEECH_VOICES);
     }
 
     configFreeSpeechRequestSettings(&settings);
@@ -1793,7 +1782,7 @@ HOOKPROTONHNO(ListProfilesFunc, APTR, ULONG *arg) {
     if (profiles == NULL)
         return RETURN_ERROR;
 
-    rexxAppendSectionHeader(profiles, 16384, "Chat");
+    rexxAppendSectionHeader(profiles, 16384, STRING_MENU_CHAT);
     rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_OPENAI);
     rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GEMINI);
     rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GROK);
@@ -1801,14 +1790,14 @@ HOOKPROTONHNO(ListProfilesFunc, APTR, ULONG *arg) {
     rexxAppendProfileNamesFromJson(profiles, 16384,
                                    configGetCustomServerProfiles());
 
-    rexxAppendSectionHeader(profiles, 16384, "Image");
+    rexxAppendSectionHeader(profiles, 16384, STRING_IMAGE);
     rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_OPENAI);
     rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GEMINI);
     rexxAppendLine(profiles, 16384, REXX_LOCKED_PROFILE_NAME_GROK);
     rexxAppendProfileNamesFromJson(profiles, 16384,
                                    configGetCustomImageServerProfiles());
 
-    rexxAppendSectionHeader(profiles, 16384, "Speech");
+    rexxAppendSectionHeader(profiles, 16384, STRING_MENU_SPEECH);
     for (UBYTE i = 0; SPEECH_SYSTEM_NAMES[i] != NULL; i++) {
         rexxAppendLine(profiles, 16384, SPEECH_SYSTEM_NAMES[i]);
     }
@@ -1858,7 +1847,7 @@ HOOKPROTONHNO(ListVoicesFunc, APTR, ULONG *arg) {
         struct SpeechRequestSettings speechSettings;
         if (!rexxResolveSpeechProfileSettings(profileString, &speechSettings)) {
             FreeVec(voices);
-            rexxSetProfileNotFoundError("Speech", profileString);
+            rexxSetProfileNotFoundError(STRING_MENU_SPEECH, profileString);
             return RETURN_ERROR;
         }
         configFreeSpeechRequestSettings(&speechSettings);
@@ -1867,7 +1856,7 @@ HOOKPROTONHNO(ListVoicesFunc, APTR, ULONG *arg) {
 
     if (strlen(voices) == 0) {
         FreeVec(voices);
-        rexxSetProfileNotFoundError("Speech", profileString);
+        rexxSetProfileNotFoundError(STRING_MENU_SPEECH, profileString);
         return RETURN_ERROR;
     }
 
@@ -1929,7 +1918,7 @@ HOOKPROTONHNO(ListModelsFunc, APTR, ULONG *arg) {
 
     if (!foundAny || strlen(models) == 0) {
         FreeVec(models);
-        rexxSetProfileNotFoundError("Profile", profileString);
+        rexxSetProfileNotFoundError(STRING_PROFILES, profileString);
         return RETURN_ERROR;
     }
 
@@ -1954,7 +1943,7 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
 
     struct SpeechRequestSettings speechSettings;
     if (!rexxResolveSpeechProfileSettings(profileString, &speechSettings)) {
-        rexxSetProfileNotFoundError("Speech", profileString);
+        rexxSetProfileNotFoundError(STRING_MENU_SPEECH, profileString);
         return RETURN_ERROR;
     }
 
@@ -2019,7 +2008,7 @@ MakeHook(SpeakTextHook, SpeakTextFunc);
 
 HOOKPROTONHNO(NewChatFunc, APTR, ULONG *arg) {
     clearDaemonConversation();
-    set(app, MUIA_Application_RexxString, "Conversation history cleared");
+    set(app, MUIA_Application_RexxString, STRING_REXX_CONVERSATION_CLEARED);
     return RETURN_OK;
 }
 MakeHook(NewChatHook, NewChatFunc);

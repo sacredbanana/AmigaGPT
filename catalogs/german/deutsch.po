@@ -17,9 +17,7 @@ msgstr ""
 msgctxt "STRING_APP_DESCRIPTION (0//)"
 msgid ""
 "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
-msgstr ""
-"AmigaGPT ist eine App zum Chatten mit ChatGPT oder zum Erstellen von KI-"
-"Bildern mit DALL-E"
+msgstr "AmigaGPT ist eine App zum Chatten mit ChatGPT oder zum Erstellen von KI-Bildern mit DALL-E"
 
 #: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
@@ -31,19 +29,14 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
-msgstr ""
-"Das Sprachsystem konnte nicht geöffnet werden. Stellen Sie sicher, dass "
-"translator.library v42 und narrator.device v34 installiert sind. Weitere "
-"Informationen finden Sie im Handbuch."
+msgstr "Das Sprachsystem konnte nicht geöffnet werden. Stellen Sie sicher, dass translator.library v42 und narrator.device v34 installiert sind. Weitere Informationen finden Sie im Handbuch."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
 msgid ""
 "Failed to open speech system. Make sure Flite Device is installed. See the "
 "guide for more information."
-msgstr ""
-"Das Sprachsystem konnte nicht geöffnet werden. Stellen Sie sicher, dass das "
-"Flite-Gerät installiert ist. Weitere Informationen finden Sie im Handbuch."
+msgstr "Das Sprachsystem konnte nicht geöffnet werden. Stellen Sie sicher, dass das Flite-Gerät installiert ist. Weitere Informationen finden Sie im Handbuch."
 
 #: src/main.c:88 src/main.c:89 src/main.c:90 src/main.c:87
 msgctxt "STRING_ERROR_OPENAI_INIT (4//)"
@@ -55,9 +48,7 @@ msgctxt "STRING_WARNING_STACK (5//)"
 msgid ""
 "Warning: The stack size is too small. The minimum recommended stack size is "
 "32768 bytes to avoid crashes. Your stack size is: "
-msgstr ""
-"Warnung: Die Stapelgröße ist zu klein. Die empfohlene Mindeststapelgröße "
-"beträgt 32768 Bytes, um Abstürze zu vermeiden. Ihre Stapelgröße ist: "
+msgstr "Warnung: Die Stapelgröße ist zu klein. Die empfohlene Mindeststapelgröße beträgt 32768 Bytes, um Abstürze zu vermeiden. Ihre Stapelgröße ist: "
 
 #: src/APIKeyRequesterWindow.c:40
 msgctxt "STRING_API_KEY_REQUESTER_TITLE (6//)"
@@ -67,9 +58,7 @@ msgstr "OpenAI API-Schlüssel"
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_INSTRUCTION (7//)"
 msgid "Type or paste (Right-Amiga + V) your OpenAI API key here."
-msgstr ""
-"Geben Sie hier Ihren OpenAI-API-Schlüssel ein oder fügen Sie ihn ein (Rechts-"
-"Amiga + V)."
+msgstr "Geben Sie hier Ihren OpenAI-API-Schlüssel ein oder fügen Sie ihn ein (Rechts-Amiga + V)."
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_REASON (199//)"
@@ -81,9 +70,7 @@ msgctxt "STRING_API_KEY_REQUESTER_BODY_HELP (200//)"
 msgid ""
 "If you do not have an API key, consult the AmigaGPT documentation for "
 "instructions on how to obtain one."
-msgstr ""
-"Wenn Sie keinen API-Schlüssel haben, finden Sie in der AmigaGPT-"
-"Dokumentation Anweisungen zum Erhalten eines solchen."
+msgstr "Wenn Sie keinen API-Schlüssel haben, finden Sie in der AmigaGPT-Dokumentation Anweisungen zum Erhalten eines solchen."
 
 #: src/APIKeyRequesterWindow.c:53 src/ChatSystemRequesterWindow.c:52
 #: src/ProxySettingsRequesterWindow.c:147 src/StartupOptionsWindow.c:129
@@ -101,8 +88,7 @@ msgstr "Abbrechen"
 #: src/APIKeyRequesterWindow.c:66
 msgctxt "STRING_ERROR_API_KEY_REQUESTER (10//)"
 msgid "Could not create API key requester window"
-msgstr ""
-"Das Fenster zur Anforderung des API-Schlüssels konnte nicht erstellt werden."
+msgstr "Das Fenster zur Anforderung des API-Schlüssels konnte nicht erstellt werden."
 
 #: src/AboutAmigaGPTWindow.c:16
 msgctxt "STRING_GIT_COMMIT (11//)"
@@ -124,16 +110,12 @@ msgctxt "STRING_ABOUT_WINDOW_SUPPORT (14//)"
 msgid ""
 "This app will always remain free but if you would like to support me you can "
 "do so at:"
-msgstr ""
-"Diese App wird immer kostenlos bleiben, aber wenn Sie mich unterstützen "
-"möchten, können Sie dies hier tun:"
+msgstr "Diese App wird immer kostenlos bleiben, aber wenn Sie mich unterstützen möchten, können Sie dies hier tun:"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BUILD_DETAILS (214//)"
 msgid "Click the version string above for build details."
-msgstr ""
-"Klicken Sie oben auf die Versionszeichenfolge, um Details zum Build "
-"anzuzeigen."
+msgstr "Klicken Sie oben auf die Versionszeichenfolge, um Details zum Build anzuzeigen."
 
 #: src/AboutAmigaGPTWindow.c:20
 #, fuzzy
@@ -159,9 +141,7 @@ msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
 msgid ""
 "for all the thorough testing, bundling AmigaGPT into AmiKit and for all the "
 "moral support"
-msgstr ""
-"für all die gründlichen Tests, die Einbindung von AmigaGPT in AmiKit und für "
-"all die moralische Unterstützung"
+msgstr "für all die gründlichen Tests, die Einbindung von AmigaGPT in AmiKit und für all die moralische Unterstützung"
 
 #: src/AboutAmigaGPTWindow.c:20
 #, fuzzy
@@ -175,9 +155,7 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
 msgid ""
 "for reviewing AmigaGPT and publishing several of its updates in the News "
 "from Aminet section"
-msgstr ""
-"für die Besprechung von AmigaGPT und die Veröffentlichung mehrerer Updates "
-"im Bereich Neuigkeiten aus dem Aminet"
+msgstr "für die Besprechung von AmigaGPT und die Veröffentlichung mehrerer Updates im Bereich Neuigkeiten aus dem Aminet"
 
 #: src/AboutAmigaGPTWindow.c:20
 #, fuzzy
@@ -197,10 +175,7 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
 msgid ""
 "for covering AmigaGPT in the Amiga News section on his Twitch streams and "
 "allowing me to join his stream to promote it"
-msgstr ""
-"für die Berichterstattung über AmigaGPT in der Amiga News-Sektion seiner "
-"Twitch-Streams und dafür, dass ich an seinem Stream teilnehmen durfte, um "
-"dafür zu werben"
+msgstr "für die Berichterstattung über AmigaGPT in der Amiga News-Sektion seiner Twitch-Streams und dafür, dass ich an seinem Stream teilnehmen durfte, um dafür zu werben"
 
 #: src/AboutAmigaGPTWindow.c:20
 #, fuzzy
@@ -208,9 +183,7 @@ msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
 msgid ""
 "for making a video review and giving a tutorial on how to add support for "
 "the French accent"
-msgstr ""
-"für die Erstellung einer Videorezension und eines Tutorials zum Hinzufügen "
-"von Unterstützung für den französischen Akzent"
+msgstr "für die Erstellung einer Videorezension und eines Tutorials zum Hinzufügen von Unterstützung für den französischen Akzent"
 
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
@@ -231,19 +204,12 @@ msgid ""
 "pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
 "normally, leave this blank. This setting will be applied to new "
 "conversations only."
-msgstr ""
-"Wenn Sie möchten, dass AmigaGPT auf eine bestimmte Weise antwortet oder "
-"etwas Persönlichkeit hinzufügt, geben Sie es hier ein. Sie könnten "
-"beispielsweise 'Sprich wie ein Pirat' oder 'Sprich wie ein Roboter' "
-"eingeben. Wenn Sie möchten, dass AmigaGPT normal antwortet, lassen Sie "
-"dieses Feld leer. Diese Einstellung wird nur auf neue Konversationen "
-"angewendet."
+msgstr "Wenn Sie möchten, dass AmigaGPT auf eine bestimmte Weise antwortet oder etwas Persönlichkeit hinzufügt, geben Sie es hier ein. Sie könnten beispielsweise 'Sprich wie ein Pirat' oder 'Sprich wie ein Roboter' eingeben. Wenn Sie möchten, dass AmigaGPT normal antwortet, lassen Sie dieses Feld leer. Diese Einstellung wird nur auf neue Konversationen angewendet."
 
 #: src/ChatSystemRequesterWindow.c:65
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_ERROR (18//)"
 msgid "Could not create Chat System requester window"
-msgstr ""
-"Das Anforderungsfenster für das Chat-System konnte nicht erstellt werden"
+msgstr "Das Anforderungsfenster für das Chat-System konnte nicht erstellt werden"
 
 #: src/MainWindow.c:31
 msgctxt "STRING_NEW_CHAT (19//)"
@@ -294,8 +260,7 @@ msgstr "Bitte geben Sie Ihren API-Schlüssel ein"
 #: src/MainWindow.c:283
 msgctxt "STRING_ERROR_CONNECTION (28//)"
 msgid "Error connecting. Please try again."
-msgstr ""
-"Beim Verbinden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+msgstr "Beim Verbinden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
 
 #: src/MainWindow.c:288 src/MainWindow.c:305 src/MainWindow.c:387
 #: src/MainWindow.c:1584 src/MainWindow.c:1600 src/MainWindow.c:1603
@@ -316,9 +281,7 @@ msgstr "Bildname wird generiert ..."
 #: src/MainWindow.c:386 src/MainWindow.c:406
 msgctxt "STRING_ERROR_GENERATING_IMAGE_NAME (32//)"
 msgid "Failed to generate image name. Using ID instead."
-msgstr ""
-"Der Bildname konnte nicht generiert werden. Stattdessen wird die ID "
-"verwendet."
+msgstr "Der Bildname konnte nicht generiert werden. Stattdessen wird die ID verwendet."
 
 #: src/MainWindow.c:396 src/MainWindow.c:402 src/MainWindow.c:552
 #: src/MainWindow.c:963 src/MainWindow.c:1421 src/MainWindow.c:1773
@@ -399,41 +362,31 @@ msgctxt "STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED (47//)"
 msgid ""
 "The conversation has exceeded the maximum length. Please start a new "
 "conversation."
-msgstr ""
-"Die Konversation hat die maximale Länge überschritten. Bitte starten Sie "
-"eine neue Konversation."
+msgstr "Die Konversation hat die maximale Länge überschritten. Bitte starten Sie eine neue Konversation."
 
 #: src/MainWindow.c:1619
 msgctxt "STRING_ERROR_CHAT_HISTORY_CREATE (49//)"
 msgid ""
 "Failed to create message history file. Conversation history will not be "
 "saved."
-msgstr ""
-"Erstellen der Nachrichtenverlaufsdatei fehlgeschlagen. Der "
-"Konversationsverlauf wird nicht gespeichert."
+msgstr "Erstellen der Nachrichtenverlaufsdatei fehlgeschlagen. Der Konversationsverlauf wird nicht gespeichert."
 
 #: src/MainWindow.c:1663
 msgctxt "STRING_ERROR_CHAT_HISTORY_SAVE (50//)"
 msgid ""
 "Failed to write to message history file. Conversation history will not be "
 "saved."
-msgstr ""
-"Schreiben in die Nachrichtenverlaufsdatei fehlgeschlagen. Der "
-"Konversationsverlauf wird nicht gespeichert."
+msgstr "Schreiben in die Nachrichtenverlaufsdatei fehlgeschlagen. Der Konversationsverlauf wird nicht gespeichert."
 
 #: src/MainWindow.c:1682
 msgctxt "STRING_ERROR_IMAGE_HISTORY_CREATE (51//)"
 msgid "Failed to create image history file. Image history will not be saved."
-msgstr ""
-"Erstellen der Bildverlaufsdatei fehlgeschlagen. Der Bildverlauf wird nicht "
-"gespeichert."
+msgstr "Erstellen der Bildverlaufsdatei fehlgeschlagen. Der Bildverlauf wird nicht gespeichert."
 
 #: src/MainWindow.c:1717
 msgctxt "STRING_ERROR_IMAGE_HISTORY_WRITE (52//)"
 msgid "Failed to write to image history file. Image history will not be saved."
-msgstr ""
-"Schreiben in Bildverlaufsdatei fehlgeschlagen. Bildverlauf wird nicht "
-"gespeichert."
+msgstr "Schreiben in Bildverlaufsdatei fehlgeschlagen. Bildverlauf wird nicht gespeichert."
 
 #: src/MainWindow.c:1745
 msgctxt "STRING_LOADING_IMAGE (53//)"
@@ -445,9 +398,7 @@ msgctxt "STRING_ERROR_CHAT_HISTORY_READ (55//)"
 msgid ""
 "Failed to read from message history file. Conversation history will not be "
 "loaded"
-msgstr ""
-"Fehler beim Lesen aus der Nachrichtenverlaufsdatei. Der Konversationsverlauf "
-"wird nicht geladen."
+msgstr "Fehler beim Lesen aus der Nachrichtenverlaufsdatei. Der Konversationsverlauf wird nicht geladen."
 
 #: src/MainWindow.c:1814
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP (56//)"
@@ -455,11 +406,7 @@ msgid ""
 "Failed to parse chat history. Malformed JSON. The chat-history.json file is "
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
-msgstr ""
-"Chatverlauf konnte nicht analysiert werden. Fehlerhaftes JSON. Die Datei "
-"chat-history.json ist wahrscheinlich beschädigt. Der Konversationsverlauf "
-"wird nicht geladen. Eine Sicherungskopie der Datei chat-history.json wurde "
-"als chat-history.json.bak erstellt."
+msgstr "Chatverlauf konnte nicht analysiert werden. Fehlerhaftes JSON. Die Datei chat-history.json ist wahrscheinlich beschädigt. Der Konversationsverlauf wird nicht geladen. Eine Sicherungskopie der Datei chat-history.json wurde als chat-history.json.bak erstellt."
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -468,37 +415,26 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. There was an "
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
-msgstr ""
-"Chatverlauf konnte nicht analysiert werden. Fehlerhaftes JSON. Die Datei "
-"chat-history.json ist wahrscheinlich beschädigt. Der Gesprächsverlauf wird "
-"nicht geladen. Beim Schreiben einer Sicherungskopie des Chatverlaufs auf die "
-"Festplatte ist ein Fehler aufgetreten, aber eine Kopie wurde im RAM "
-"gespeichert: chat-history.json.bak"
+msgstr "Chatverlauf konnte nicht analysiert werden. Fehlerhaftes JSON. Die Datei chat-history.json ist wahrscheinlich beschädigt. Der Gesprächsverlauf wird nicht geladen. Beim Schreiben einer Sicherungskopie des Chatverlaufs auf die Festplatte ist ein Fehler aufgetreten, aber eine Kopie wurde im RAM gespeichert: chat-history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
 msgid "Failed to delete chat-history.json. Please delete this file manually."
-msgstr ""
-"chat-history.json konnte nicht gelöscht werden. Bitte löschen Sie diese "
-"Datei manuell."
+msgstr "chat-history.json konnte nicht gelöscht werden. Bitte löschen Sie diese Datei manuell."
 
 #: src/MainWindow.c:1852
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP (59//)"
 msgid ""
 "Failed to parse chat history.The chat-history.json file is probably "
 "corrupted. Conversation history will not be loaded."
-msgstr ""
-"Chatverlauf konnte nicht analysiert werden. Die Datei chat-history.json ist "
-"wahrscheinlich beschädigt. Der Konversationsverlauf wird nicht geladen."
+msgstr "Chatverlauf konnte nicht analysiert werden. Die Datei chat-history.json ist wahrscheinlich beschädigt. Der Konversationsverlauf wird nicht geladen."
 
 #: src/MainWindow.c:1950
 msgctxt "STRING_ERROR_IMAGE_HISTORY_READ (60//)"
 msgid ""
 "Failed to read from image history file. Image generation history will not be "
 "loaded"
-msgstr ""
-"Das Lesen aus der Bildverlaufsdatei ist fehlgeschlagen. Der "
-"Bildgenerierungsverlauf wird nicht geladen."
+msgstr "Das Lesen aus der Bildverlaufsdatei ist fehlgeschlagen. Der Bildgenerierungsverlauf wird nicht geladen."
 
 #: src/MainWindow.c:1964
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP (61//)"
@@ -506,11 +442,7 @@ msgid ""
 "Failed to parse image history. Malformed JSON. The image-history.json file "
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
-msgstr ""
-"Bildverlauf konnte nicht analysiert werden. Fehlerhaftes JSON. Die Datei "
-"image-history.json ist wahrscheinlich beschädigt. Der Bildverlauf wird nicht "
-"geladen. Eine Sicherungskopie der Datei image-history.json wurde als image-"
-"history.json.bak erstellt."
+msgstr "Bildverlauf konnte nicht analysiert werden. Fehlerhaftes JSON. Die Datei image-history.json ist wahrscheinlich beschädigt. Der Bildverlauf wird nicht geladen. Eine Sicherungskopie der Datei image-history.json wurde als image-history.json.bak erstellt."
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -519,19 +451,12 @@ msgid ""
 "is probably corrupted. Image history will not be loaded. There was an error "
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
-msgstr ""
-"Bildverlauf konnte nicht analysiert werden. Fehlerhaftes JSON. Die Datei "
-"image-history.json ist wahrscheinlich beschädigt. Der Bildverlauf wird nicht "
-"geladen. Beim Schreiben einer Sicherungskopie des Bildverlaufs auf die "
-"Festplatte ist ein Fehler aufgetreten, aber eine Kopie wurde im RAM "
-"gespeichert: image-history.json.bak"
+msgstr "Bildverlauf konnte nicht analysiert werden. Fehlerhaftes JSON. Die Datei image-history.json ist wahrscheinlich beschädigt. Der Bildverlauf wird nicht geladen. Beim Schreiben einer Sicherungskopie des Bildverlaufs auf die Festplatte ist ein Fehler aufgetreten, aber eine Kopie wurde im RAM gespeichert: image-history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
 msgid "Failed to delete image-history.json. Please delete this file manually."
-msgstr ""
-"Das Löschen von image-history.json ist fehlgeschlagen. Bitte löschen Sie "
-"diese Datei manuell."
+msgstr "Das Löschen von image-history.json ist fehlgeschlagen. Bitte löschen Sie diese Datei manuell."
 
 #: src/MainWindow.c:2120
 msgctxt "STRING_ERROR_FILE_COPY_OPEN (64//)"
@@ -556,8 +481,7 @@ msgstr "Fehler beim Kopieren der Datei"
 #: src/ProxySettingsRequesterWindow.c:30
 msgctxt "STRING_ERROR_INVALID_PORT (68//)"
 msgid "Invalid port number. Please enter a number between 0 and 65535."
-msgstr ""
-"Ungültige Portnummer. Bitte geben Sie eine Zahl zwischen 0 und 65535 ein."
+msgstr "Ungültige Portnummer. Bitte geben Sie eine Zahl zwischen 0 und 65535 ein."
 
 #: src/ProxySettingsRequesterWindow.c:72
 msgctxt "STRING_ENCRYPTION_NONE (69//)"
@@ -617,9 +541,7 @@ msgstr "Passwort"
 #: src/ProxySettingsRequesterWindow.c:160
 msgctxt "STRING_ERROR_PROXY_SETTINGS (80//)"
 msgid "Could not create proxy settings requester window"
-msgstr ""
-"Das Anforderungsfenster für die Proxy-Einstellungen konnte nicht erstellt "
-"werden"
+msgstr "Das Anforderungsfenster für die Proxy-Einstellungen konnte nicht erstellt werden"
 
 #: src/StartupOptionsWindow.c:18
 msgctxt "STRING_OPEN_IN_WORKBENCH (81//)"
@@ -670,9 +592,7 @@ msgstr "Die Konfigurationsdatei konnte nicht analysiert werden"
 msgctxt "STRING_ERROR_MUI_LIB_OPEN (90//)"
 msgid ""
 "Could not open muimaster.library. Please make sure you have MUI installed"
-msgstr ""
-"muimaster.library konnte nicht geöffnet werden. Bitte stellen Sie sicher, "
-"dass MUI installiert ist"
+msgstr "muimaster.library konnte nicht geöffnet werden. Bitte stellen Sie sicher, dass MUI installiert ist"
 
 #: src/gui.c:84
 msgctxt "STRING_ERROR_MUI_INTERFACE_OPEN (91//)"
@@ -684,10 +604,7 @@ msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
 msgid ""
 "Could not open codesets.library. Please make sure you have codesets "
 "installed. Refer to the documentation for more info."
-msgstr ""
-"codesets.library konnte nicht geöffnet werden. Bitte stellen Sie sicher, "
-"dass Sie Codesets installiert haben. Weitere Informationen finden Sie in der "
-"Dokumentation."
+msgstr "codesets.library konnte nicht geöffnet werden. Bitte stellen Sie sicher, dass Sie Codesets installiert haben. Weitere Informationen finden Sie in der Dokumentation."
 
 #: src/gui.c:98
 msgctxt "STRING_ERROR_CODESETS_INTERFACE_OPEN (93//)"
@@ -704,10 +621,7 @@ msgctxt "STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED (95//)"
 msgid ""
 "Could not find all the MUI custom classes. Please make sure they are "
 "installed. Refer to the documentation for more information."
-msgstr ""
-"Es konnten nicht alle benutzerdefinierten MUI-Klassen gefunden werden. Bitte "
-"stellen Sie sicher, dass sie installiert sind. Weitere Informationen finden "
-"Sie in der Dokumentation."
+msgstr "Es konnten nicht alle benutzerdefinierten MUI-Klassen gefunden werden. Bitte stellen Sie sicher, dass sie installiert sind. Weitere Informationen finden Sie in der Dokumentation."
 
 #: src/gui.c:178
 msgctxt "STRING_IMAGE (96//)"
@@ -734,10 +648,7 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
-msgstr ""
-"Das Sprachsystem konnte nicht geöffnet werden. Stellen Sie sicher, dass "
-"translator.library v42 und narrator.device v37 installiert sind. Weitere "
-"Informationen finden Sie im Handbuch."
+msgstr "Das Sprachsystem konnte nicht geöffnet werden. Stellen Sie sicher, dass translator.library v42 und narrator.device v37 installiert sind. Weitere Informationen finden Sie im Handbuch."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
@@ -961,10 +872,7 @@ msgid ""
 "Failed to open bsdsocket.library. You have to install a TCP/IP stack such as "
 "AmiTCP, Miami or Roadshow. Please refer to the documentation for more "
 "information."
-msgstr ""
-"bsdsocket.library konnte nicht geöffnet werden. Sie müssen einen TCP/IP-"
-"Stack wie AmiTCP, Miami oder Roadshow installieren. Weitere Informationen "
-"finden Sie in der Dokumentation."
+msgstr "bsdsocket.library konnte nicht geöffnet werden. Sie müssen einen TCP/IP-Stack wie AmiTCP, Miami oder Roadshow installieren. Weitere Informationen finden Sie in der Dokumentation."
 
 #: src/openai.c:182
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN_OS4 (151//)"
@@ -981,25 +889,19 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_OPEN (153//)"
 msgid ""
 "Failed to open amisslmaster.library version 5. You have to install AmiSSL 5. "
 "Please refer to the documentation for more information."
-msgstr ""
-"amisslmaster.library Version 5 konnte nicht geöffnet werden. Sie müssen "
-"AmiSSL 5 installieren. Weitere Informationen finden Sie in der Dokumentation."
+msgstr "amisslmaster.library Version 5 konnte nicht geöffnet werden. Sie müssen AmiSSL 5 installieren. Weitere Informationen finden Sie in der Dokumentation."
 
 #: src/openai.c:211
 msgctxt "STRING_ERROR_AMISSLMASTER_INTERFACE_OPEN (154//)"
 msgid "Failed to get the interface of amisslmaster.library"
-msgstr ""
-"Die Schnittstelle von amisslmaster.library konnte nicht abgerufen werden."
+msgstr "Die Schnittstelle von amisslmaster.library konnte nicht abgerufen werden."
 
 #: src/openai.c:223
 msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
 msgid ""
 "Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
 "newer. Please refer to the documentation for more information."
-msgstr ""
-"Initialisierung von amisslmaster.library fehlgeschlagen. AmigaGPT erfordert "
-"AmiSSL 5.18 oder neuer. Weitere Informationen finden Sie in der "
-"Dokumentation."
+msgstr "Initialisierung von amisslmaster.library fehlgeschlagen. AmigaGPT erfordert AmiSSL 5.18 oder neuer. Weitere Informationen finden Sie in der Dokumentation."
 
 #: src/openai.c:233
 msgctxt "STRING_ERROR_AMISSL_INTERFACE_INIT (156//)"
@@ -1026,9 +928,7 @@ msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
 msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
-msgstr ""
-"Verbindung zum Server konnte nicht hergestellt werden. Überprüfen Sie, ob "
-"Proxy-Host und -Port korrekt sind, oder deaktivieren Sie diese Option."
+msgstr "Verbindung zum Server konnte nicht hergestellt werden. Überprüfen Sie, ob Proxy-Host und -Port korrekt sind, oder deaktivieren Sie diese Option."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
@@ -1059,8 +959,7 @@ msgstr "Verbinden..."
 #: src/openai.c:1075 src/openai.c:1406 src/openai.c:1664
 msgctxt "STRING_ERROR_CONNECTING_MAX_RETRIES (167//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr ""
-"Fehler beim Verbinden mit dem Host! Maximale Wiederholungsversuche erreicht."
+msgstr "Fehler beim Verbinden mit dem Host! Maximale Wiederholungsversuche erreicht."
 
 #: src/openai.c:539 src/openai.c:827 src/openai.c:1082 src/openai.c:1458
 msgctxt "STRING_SENDING_REQUEST (168//)"
@@ -1075,8 +974,7 @@ msgstr "Antwort wird heruntergeladen..."
 #: src/openai.c:683 src/openai.c:934 src/openai.c:1658
 msgctxt "STRING_ERROR_CONNECTION_MAX_RETRIES (171//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr ""
-"Fehler beim Verbinden mit dem Host! Maximale Wiederholungsversuche erreicht."
+msgstr "Fehler beim Verbinden mit dem Host! Maximale Wiederholungsversuche erreicht."
 
 #: src/openai.c:705 src/openai.c:947 src/openai.c:1672
 msgctxt "STRING_ERROR_UNKNOWN (172//)"
@@ -1223,10 +1121,7 @@ msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
 msgid ""
 "Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
 "voice'. This only works for the gpt-4o-mini-tts model."
-msgstr ""
-"Geben Sie an, wie Sie möchten, dass die AI spricht. Beispiel: 'Sprich in "
-"einer tiefen und mysteriösen Stimme'. Dies funktioniert nur mit dem gpt-4o-"
-"mini-tts-Modell."
+msgstr "Geben Sie an, wie Sie möchten, dass die AI spricht. Beispiel: 'Sprich in einer tiefen und mysteriösen Stimme'. Dies funktioniert nur mit dem gpt-4o-mini-tts-Modell."
 
 #: src/VoiceInstructionsRequesterWindow.c:87
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
@@ -1278,9 +1173,7 @@ msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
 msgid ""
 "Invalid request. Your OpenAI API account probably has no credit left to run "
 "this model. Please check your account balance."
-msgstr ""
-"Ungültige Anfrage. Ihr OpenAI API-Konto hat wahrscheinlich keine Kredite "
-"mehr für das Ausführen dieses Modells. Bitte überprüfen Sie Ihr Kontostand."
+msgstr "Ungültige Anfrage. Ihr OpenAI API-Konto hat wahrscheinlich keine Kredite mehr für das Ausführen dieses Modells. Bitte überprüfen Sie Ihr Kontostand."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1635,9 +1528,8 @@ msgctxt "STRING_CONFIG_MIGRATED (298//)"
 msgid ""
 "Configuration has been migrated to the new format.\n"
 "Your old config has been backed up to config.bak"
-msgstr ""
-"Die Konfiguration wurde in das neue Format migriert.\n"
-"Ihre alte Konfiguration wurde als Sicherung in config.bak gespeichert"
+msgstr "Die Konfiguration wurde in das neue Format migriert.
+Ihre alte Konfiguration wurde als Sicherung in config.bak gespeichert"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
@@ -1647,14 +1539,12 @@ msgstr "Ein Profil mit diesem Namen existiert bereits."
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
 msgid "You have unsaved changes. Do you want to save them before switching?"
-msgstr ""
-"Sie haben ungespeicherte Änderungen. Möchten Sie diese vor dem Wechsel "
-"speichern?"
+msgstr "Sie haben ungespeicherte Änderungen. Möchten Sie diese vor dem Wechsel speichern?"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_STREAMING (301//)"
 msgid "Streaming"
-msgstr "Streaming"
+msgstr "Streamen"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_ON (302//)"
@@ -1674,12 +1564,11 @@ msgid ""
 "%s\n"
 "\n"
 "Allow this command to run?"
-msgstr ""
-"Die KI möchte den folgenden Shell-Befehl ausführen:\n"
-"\n"
-"%s\n"
-"\n"
-"Diesen Befehl ausführen?"
+msgstr "Die KI möchte den folgenden Shell-Befehl ausführen:
+
+%s
+
+Diesen Befehl ausführen?"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_CONFIRMATION_TITLE (305//)"
@@ -1698,11 +1587,11 @@ msgid ""
 "\n"
 "--- Shell command denied by user ---\n"
 "\n"
-msgstr ""
-"\n"
-"\n"
-"--- Shell-Befehl vom Benutzer abgelehnt ---\n"
-"\n"
+msgstr "
+
+--- Shell-Befehl vom Benutzer abgelehnt ---
+
+"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT (308//)"
@@ -1710,10 +1599,10 @@ msgid ""
 "\n"
 "\n"
 "--- Executing: %s ---\n"
-msgstr ""
-"\n"
-"\n"
-"--- Ausführung: %s ---\n"
+msgstr "
+
+--- Ausführung: %s ---
+"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT (309//)"
@@ -1722,11 +1611,11 @@ msgid ""
 "%s\n"
 "--- End ---\n"
 "\n"
-msgstr ""
-"Exit-Code: %ld\n"
-"%s\n"
-"--- Ende ---\n"
-"\n"
+msgstr "Exit-Code: %ld
+%s
+--- Ende ---
+
+"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_NO_OUTPUT (310//)"
@@ -1739,10 +1628,9 @@ msgid ""
 "Exit code: %ld\n"
 "Output:\n"
 "%s"
-msgstr ""
-"Exit-Code: %ld\n"
-"Ausgabe:\n"
-"%s"
+msgstr "Exit-Code: %ld
+Ausgabe:
+%s"
 
 #: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
@@ -1757,8 +1645,7 @@ msgstr "Warnung: Erforderliche Komponente fehlt: %s"
 #: src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
 msgid "Failed to create Speech Provider Settings window"
-msgstr ""
-"Fenster „Einstellungen für Sprachanbieter“ konnte nicht erstellt werden"
+msgstr "Fenster „Einstellungen für Sprachanbieter“ konnte nicht erstellt werden"
 
 #: src/CustomServerSettingsRequesterWindow.c
 #, fuzzy
@@ -1769,12 +1656,12 @@ msgstr "OpenAI"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_NEW (316//)"
 msgid "New"
-msgstr "New"
+msgstr "Neu"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_DUPLICATE (317//)"
 msgid "Duplicate"
-msgstr "Duplicate"
+msgstr "Duplizieren"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST (318//)"
@@ -1784,80 +1671,120 @@ msgstr "Test"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_IMAGE_TEST_TITLE (319//)"
 msgid "Image Test"
-msgstr "Image Test"
+msgstr "Bildtest"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_DEFAULT_NEW_PROFILE_NAME (320//)"
 msgid "New Profile"
-msgstr "New Profile"
+msgstr "Neues Profil"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_PROFILE_COPY_SUFFIX (321//)"
 msgid " copy"
-msgstr " copy"
+msgstr " Kopie"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_PASS (322//)"
 msgid "PASS"
-msgstr "PASS"
+msgstr "ERFOLG"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_FAIL (323//)"
 msgid "FAIL"
-msgstr "FAIL"
+msgstr "FEHLER"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_RESULT_TITLE (324//)"
 msgid "Test Result"
-msgstr "Test Result"
+msgstr "Testergebnis"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_CHAT_TEST_RESULT_TITLE (325//)"
 msgid "Chat Test Result"
-msgstr "Chat Test Result"
+msgstr "Ergebnis des Chat-Tests"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_IMAGE_TEST_RESULT_TITLE (326//)"
 msgid "Image Test Result"
-msgstr "Image Test Result"
+msgstr "Ergebnis des Bildtests"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_NO_PROFILE_SELECTED (327//)"
 msgid "No profile selected."
-msgstr "No profile selected."
+msgstr "Kein Profil ausgewählt."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_RECEIVED_JSON_RESPONSE (328//)"
 msgid "Received JSON response."
-msgstr "Received JSON response."
+msgstr "JSON-Antwort empfangen."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_NO_JSON_RESPONSE_RECEIVED (329//)"
 msgid "No JSON response received."
-msgstr "No JSON response received."
+msgstr "Keine JSON-Antwort empfangen."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_NO_IMAGE_DATA_RECEIVED_SHOWING_JSON (330//)"
 msgid "No image data received (showing JSON)."
-msgstr "No image data received (showing JSON)."
+msgstr "Keine Bilddaten empfangen (JSON wird angezeigt)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_IMAGE_DATA_DECODE_FAILED_SHOWING_JSON (331//)"
 msgid "Image data decode failed (showing JSON)."
-msgstr "Image data decode failed (showing JSON)."
+msgstr "Dekodieren der Bilddaten fehlgeschlagen (JSON wird angezeigt)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_IMAGE_RECEIVED_COULD_NOT_SAVE_SHOWING_JSON (332//)"
 msgid "Image received but could not be saved (showing JSON)."
-msgstr "Image received but could not be saved (showing JSON)."
+msgstr "Bild empfangen, konnte aber nicht gespeichert werden (JSON wird angezeigt)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_ERROR_RESPONSE_RECEIVED (333//)"
 msgid "Error response received."
-msgstr "Error response received."
+msgstr "Fehlerantwort empfangen."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_IMAGE_SIZE (334//)"
 msgid "Image Size"
-msgstr "Image Size"
+msgstr "Bildgröße"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_PROFILE_NOT_FOUND (335//)"
+msgid "%s profile not found: %s"
+msgstr "%s-Profil nicht gefunden: %s"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_REQUESTED (336//)"
+msgid "Requested"
+msgstr "Angefordert"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SYSTEM_FILE_READ (337//)"
+msgid "Could not read system file: %s"
+msgstr "Systemdatei konnte nicht gelesen werden: %s"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SYSTEM_FILE_MEMORY (338//)"
+msgid "Out of memory reading system file"
+msgstr "Nicht genügend Speicher beim Lesen der Systemdatei"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_CONVERSATION_CLEARED (339//)"
+msgid "Conversation history cleared"
+msgstr "Gesprächsverlauf gelöscht"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_FETCHING_VOICES (340//)"
+msgid "Failed to fetch voices from server"
+msgstr "Stimmen konnten nicht vom Server abgerufen werden"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_MODELS (341//)"
+msgid "No selectable models for this speech profile"
+msgstr "Keine auswählbaren Modelle für dieses Sprachprofil"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_VOICES (342//)"
+msgid "No selectable voices for this speech profile"
+msgstr "Keine auswählbaren Stimmen für dieses Sprachprofil"
 

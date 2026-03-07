@@ -1778,3 +1778,43 @@ msgstr "Error response received."
 msgctxt "STRING_IMAGE_SIZE (334//)"
 msgid "Image Size"
 msgstr "Image Size"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_PROFILE_NOT_FOUND (335//)"
+msgid "%s profile not found: %s"
+msgstr "%s profile not found: %s"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_REQUESTED (336//)"
+msgid "Requested"
+msgstr "Requested"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SYSTEM_FILE_READ (337//)"
+msgid "Could not read system file: %s"
+msgstr "Could not read system file: %s"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SYSTEM_FILE_MEMORY (338//)"
+msgid "Out of memory reading system file"
+msgstr "Out of memory reading system file"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_CONVERSATION_CLEARED (339//)"
+msgid "Conversation history cleared"
+msgstr "Conversation history cleared"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_FETCHING_VOICES (340//)"
+msgid "Failed to fetch voices from server"
+msgstr "Failed to fetch voices from server"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_MODELS (341//)"
+msgid "No selectable models for this speech profile"
+msgstr "No selectable models for this speech profile"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_VOICES (342//)"
+msgid "No selectable voices for this speech profile"
+msgstr "No selectable voices for this speech profile"

@@ -17,9 +17,7 @@ msgstr ""
 msgctxt "STRING_APP_DESCRIPTION (0//)"
 msgid ""
 "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
-msgstr ""
-"Το AmigaGPT είναι μια εφαρμογή για συνομιλία στο ChatGPT ή δημιουργία "
-"εικόνων AI με το DALL-E"
+msgstr "Το AmigaGPT είναι μια εφαρμογή για συνομιλία στο ChatGPT ή δημιουργία εικόνων AI με το DALL-E"
 
 #: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
@@ -31,19 +29,14 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
-msgstr ""
-"Απέτυχε το άνοιγμα του συστήματος ομιλίας. Βεβαιωθείτε ότι το "
-"translator.library v42 και το narrator.device v34 είναι εγκατεστημένα. Δείτε "
-"τον οδηγό για περισσότερες πληροφορίες."
+msgstr "Απέτυχε το άνοιγμα του συστήματος ομιλίας. Βεβαιωθείτε ότι το translator.library v42 και το narrator.device v34 είναι εγκατεστημένα. Δείτε τον οδηγό για περισσότερες πληροφορίες."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
 msgid ""
 "Failed to open speech system. Make sure Flite Device is installed. See the "
 "guide for more information."
-msgstr ""
-"Απέτυχε το άνοιγμα του συστήματος ομιλίας. Βεβαιωθείτε ότι η συσκευή Flite "
-"είναι εγκατεστημένη. Δείτε τον οδηγό για περισσότερες πληροφορίες."
+msgstr "Απέτυχε το άνοιγμα του συστήματος ομιλίας. Βεβαιωθείτε ότι η συσκευή Flite είναι εγκατεστημένη. Δείτε τον οδηγό για περισσότερες πληροφορίες."
 
 #: src/main.c:88 src/main.c:89 src/main.c:90 src/main.c:87
 msgctxt "STRING_ERROR_OPENAI_INIT (4//)"
@@ -55,10 +48,7 @@ msgctxt "STRING_WARNING_STACK (5//)"
 msgid ""
 "Warning: The stack size is too small. The minimum recommended stack size is "
 "32768 bytes to avoid crashes. Your stack size is: "
-msgstr ""
-"Προειδοποίηση: Το μέγεθος της στοίβας είναι πολύ μικρό. Το ελάχιστο "
-"συνιστώμενο μέγεθος στοίβας είναι 32768 byte για την αποφυγή σφαλμάτων. Το "
-"μέγεθος της στοίβας σας είναι: "
+msgstr "Προειδοποίηση: Το μέγεθος της στοίβας είναι πολύ μικρό. Το ελάχιστο συνιστώμενο μέγεθος στοίβας είναι 32768 byte για την αποφυγή σφαλμάτων. Το μέγεθος της στοίβας σας είναι: "
 
 #: src/APIKeyRequesterWindow.c:40
 msgctxt "STRING_API_KEY_REQUESTER_TITLE (6//)"
@@ -68,8 +58,7 @@ msgstr "Κλειδί OpenAI API"
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_INSTRUCTION (7//)"
 msgid "Type or paste (Right-Amiga + V) your OpenAI API key here."
-msgstr ""
-"Πληκτρολογήστε ή επικολλήστε (Δεξιά-Amiga + V) το κλειδί OpenAI API σας εδώ."
+msgstr "Πληκτρολογήστε ή επικολλήστε (Δεξιά-Amiga + V) το κλειδί OpenAI API σας εδώ."
 
 #: src/APIKeyRequesterWindow.c:46
 msgctxt "STRING_API_KEY_REQUESTER_BODY_REASON (199//)"
@@ -81,9 +70,7 @@ msgctxt "STRING_API_KEY_REQUESTER_BODY_HELP (200//)"
 msgid ""
 "If you do not have an API key, consult the AmigaGPT documentation for "
 "instructions on how to obtain one."
-msgstr ""
-"Εάν δεν διαθέτετε κλειδί API, συμβουλευτείτε την τεκμηρίωση του AmigaGPT για "
-"οδηγίες σχετικά με τον τρόπο απόκτησης ενός."
+msgstr "Εάν δεν διαθέτετε κλειδί API, συμβουλευτείτε την τεκμηρίωση του AmigaGPT για οδηγίες σχετικά με τον τρόπο απόκτησης ενός."
 
 #: src/APIKeyRequesterWindow.c:53 src/ChatSystemRequesterWindow.c:52
 #: src/ProxySettingsRequesterWindow.c:147 src/StartupOptionsWindow.c:129
@@ -123,15 +110,12 @@ msgctxt "STRING_ABOUT_WINDOW_SUPPORT (14//)"
 msgid ""
 "This app will always remain free but if you would like to support me you can "
 "do so at:"
-msgstr ""
-"Αυτή η εφαρμογή θα παραμείνει πάντα δωρεάν, αλλά αν θέλετε να με "
-"υποστηρίξετε, μπορείτε να το κάνετε στη διεύθυνση:"
+msgstr "Αυτή η εφαρμογή θα παραμείνει πάντα δωρεάν, αλλά αν θέλετε να με υποστηρίξετε, μπορείτε να το κάνετε στη διεύθυνση:"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BUILD_DETAILS (214//)"
 msgid "Click the version string above for build details."
-msgstr ""
-"Κάντε κλικ στη συμβολοσειρά έκδοσης παραπάνω για λεπτομέρειες κατασκευής."
+msgstr "Κάντε κλικ στη συμβολοσειρά έκδοσης παραπάνω για λεπτομέρειες κατασκευής."
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BEBBO (201//)"
@@ -153,9 +137,7 @@ msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
 msgid ""
 "for all the thorough testing, bundling AmigaGPT into AmiKit and for all the "
 "moral support"
-msgstr ""
-"για όλες τις διεξοδικές δοκιμές, τη ομαδοποίηση του AmigaGPT στο AmiKit και "
-"για όλη την ηθική υποστήριξη"
+msgstr "για όλες τις διεξοδικές δοκιμές, τη ομαδοποίηση του AmigaGPT στο AmiKit και για όλη την ηθική υποστήριξη"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_COFFINOS (205//)"
@@ -167,15 +149,12 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
 msgid ""
 "for reviewing AmigaGPT and publishing several of its updates in the News "
 "from Aminet section"
-msgstr ""
-"για την αναθεώρηση του AmigaGPT και τη δημοσίευση πολλών από τις ενημερώσεις "
-"του στην ενότητα Ειδήσεις από το Aminet"
+msgstr "για την αναθεώρηση του AmigaGPT και τη δημοσίευση πολλών από τις ενημερώσεις του στην ενότητα Ειδήσεις από το Aminet"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_WHATIFF (207//)"
 msgid "for reviewing AmigaGPT and interviewing me in issue 14"
-msgstr ""
-"για την ανασκόπηση του AmigaGPT και τη συνέντευξη μαζί μου στο τεύχος 14"
+msgstr "για την ανασκόπηση του AmigaGPT και τη συνέντευξη μαζί μου στο τεύχος 14"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_YOUTUBE_REVIEW (208//)"
@@ -187,18 +166,14 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
 msgid ""
 "for covering AmigaGPT in the Amiga News section on his Twitch streams and "
 "allowing me to join his stream to promote it"
-msgstr ""
-"για την κάλυψη του AmigaGPT στην ενότητα Amiga News στις ροές του στο Twitch "
-"και μου επέτρεψε να συμμετάσχω στη ροή του για να το προωθήσω"
+msgstr "για την κάλυψη του AmigaGPT στην ενότητα Amiga News στις ροές του στο Twitch και μου επέτρεψε να συμμετάσχω στη ροή του για να το προωθήσω"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
 msgid ""
 "for making a video review and giving a tutorial on how to add support for "
 "the French accent"
-msgstr ""
-"για τη δημιουργία μιας κριτικής βίντεο και την παροχή ενός σεμιναρίου "
-"σχετικά με τον τρόπο προσθήκης υποστήριξης για τη γαλλική προφορά"
+msgstr "για τη δημιουργία μιας κριτικής βίντεο και την παροχή ενός σεμιναρίου σχετικά με τον τρόπο προσθήκης υποστήριξης για τη γαλλική προφορά"
 
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
@@ -219,12 +194,7 @@ msgid ""
 "pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
 "normally, leave this blank. This setting will be applied to new "
 "conversations only."
-msgstr ""
-"Εάν θέλετε το AmigaGPT να απαντήσει με συγκεκριμένο τρόπο ή να προσθέσει "
-"κάποια προσωπικότητα, πληκτρολογήστε εδώ. Για παράδειγμα, θα μπορούσατε να "
-"πληκτρολογήσετε \"Μίλα σαν πειρατής\" ή \"Μίλα σαν ρομπότ\". Εάν θέλετε το "
-"AmigaGPT να ανταποκρίνεται κανονικά, αφήστε αυτό το κενό. Αυτή η ρύθμιση θα "
-"εφαρμοστεί μόνο σε νέες συνομιλίες."
+msgstr "Εάν θέλετε το AmigaGPT να απαντήσει με συγκεκριμένο τρόπο ή να προσθέσει κάποια προσωπικότητα, πληκτρολογήστε εδώ. Για παράδειγμα, θα μπορούσατε να πληκτρολογήσετε \"Μίλα σαν πειρατής\" ή \"Μίλα σαν ρομπότ\". Εάν θέλετε το AmigaGPT να ανταποκρίνεται κανονικά, αφήστε αυτό το κενό. Αυτή η ρύθμιση θα εφαρμοστεί μόνο σε νέες συνομιλίες."
 
 #: src/ChatSystemRequesterWindow.c:65
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_ERROR (18//)"
@@ -382,40 +352,31 @@ msgctxt "STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED (47//)"
 msgid ""
 "The conversation has exceeded the maximum length. Please start a new "
 "conversation."
-msgstr ""
-"Η συνομιλία έχει υπερβεί τη μέγιστη διάρκεια. Ξεκινήστε μια νέα συνομιλία."
+msgstr "Η συνομιλία έχει υπερβεί τη μέγιστη διάρκεια. Ξεκινήστε μια νέα συνομιλία."
 
 #: src/MainWindow.c:1619
 msgctxt "STRING_ERROR_CHAT_HISTORY_CREATE (49//)"
 msgid ""
 "Failed to create message history file. Conversation history will not be "
 "saved."
-msgstr ""
-"Αποτυχία δημιουργίας αρχείου ιστορικού μηνυμάτων. Το ιστορικό συνομιλιών δεν "
-"θα αποθηκευτεί."
+msgstr "Αποτυχία δημιουργίας αρχείου ιστορικού μηνυμάτων. Το ιστορικό συνομιλιών δεν θα αποθηκευτεί."
 
 #: src/MainWindow.c:1663
 msgctxt "STRING_ERROR_CHAT_HISTORY_SAVE (50//)"
 msgid ""
 "Failed to write to message history file. Conversation history will not be "
 "saved."
-msgstr ""
-"Αποτυχία εγγραφής στο αρχείο ιστορικού μηνυμάτων. Το ιστορικό συνομιλιών δεν "
-"θα αποθηκευτεί."
+msgstr "Αποτυχία εγγραφής στο αρχείο ιστορικού μηνυμάτων. Το ιστορικό συνομιλιών δεν θα αποθηκευτεί."
 
 #: src/MainWindow.c:1682
 msgctxt "STRING_ERROR_IMAGE_HISTORY_CREATE (51//)"
 msgid "Failed to create image history file. Image history will not be saved."
-msgstr ""
-"Αποτυχία δημιουργίας αρχείου ιστορικού εικόνας. Το ιστορικό εικόνας δεν θα "
-"αποθηκευτεί."
+msgstr "Αποτυχία δημιουργίας αρχείου ιστορικού εικόνας. Το ιστορικό εικόνας δεν θα αποθηκευτεί."
 
 #: src/MainWindow.c:1717
 msgctxt "STRING_ERROR_IMAGE_HISTORY_WRITE (52//)"
 msgid "Failed to write to image history file. Image history will not be saved."
-msgstr ""
-"Αποτυχία εγγραφής στο αρχείο ιστορικού εικόνας. Το ιστορικό εικόνας δεν θα "
-"αποθηκευτεί."
+msgstr "Αποτυχία εγγραφής στο αρχείο ιστορικού εικόνας. Το ιστορικό εικόνας δεν θα αποθηκευτεί."
 
 #: src/MainWindow.c:1745
 msgctxt "STRING_LOADING_IMAGE (53//)"
@@ -427,9 +388,7 @@ msgctxt "STRING_ERROR_CHAT_HISTORY_READ (55//)"
 msgid ""
 "Failed to read from message history file. Conversation history will not be "
 "loaded"
-msgstr ""
-"Αποτυχία ανάγνωσης από το αρχείο ιστορικού μηνυμάτων. Το ιστορικό συνομιλιών "
-"δεν θα φορτωθεί"
+msgstr "Αποτυχία ανάγνωσης από το αρχείο ιστορικού μηνυμάτων. Το ιστορικό συνομιλιών δεν θα φορτωθεί"
 
 #: src/MainWindow.c:1814
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP (56//)"
@@ -437,11 +396,7 @@ msgid ""
 "Failed to parse chat history. Malformed JSON. The chat-history.json file is "
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
-msgstr ""
-"Απέτυχε η ανάλυση του ιστορικού συνομιλίας. Κακόμορφο JSON. Το αρχείο chat-"
-"history.json είναι πιθανώς κατεστραμμένο. Το ιστορικό συνομιλιών δεν θα "
-"φορτωθεί. Ένα αντίγραφο ασφαλείας του αρχείου chat-history.json έχει "
-"δημιουργηθεί ως chat-history.json.bak"
+msgstr "Απέτυχε η ανάλυση του ιστορικού συνομιλίας. Κακόμορφο JSON. Το αρχείο chat-history.json είναι πιθανώς κατεστραμμένο. Το ιστορικό συνομιλιών δεν θα φορτωθεί. Ένα αντίγραφο ασφαλείας του αρχείου chat-history.json έχει δημιουργηθεί ως chat-history.json.bak"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -450,37 +405,26 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. There was an "
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
-msgstr ""
-"Απέτυχε η ανάλυση του ιστορικού συνομιλίας. Κακόμορφο JSON. Το αρχείο chat-"
-"history.json είναι πιθανώς κατεστραμμένο. Το ιστορικό συνομιλιών δεν θα "
-"φορτωθεί. Παρουσιάστηκε σφάλμα κατά την εγγραφή ενός αντιγράφου ασφαλείας "
-"του ιστορικού συνομιλίας στο δίσκο, αλλά ένα αντίγραφο έχει αποθηκευτεί στη "
-"μνήμη RAM:chat-history.json.bak"
+msgstr "Απέτυχε η ανάλυση του ιστορικού συνομιλίας. Κακόμορφο JSON. Το αρχείο chat-history.json είναι πιθανώς κατεστραμμένο. Το ιστορικό συνομιλιών δεν θα φορτωθεί. Παρουσιάστηκε σφάλμα κατά την εγγραφή ενός αντιγράφου ασφαλείας του ιστορικού συνομιλίας στο δίσκο, αλλά ένα αντίγραφο έχει αποθηκευτεί στη μνήμη RAM:chat-history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
 msgid "Failed to delete chat-history.json. Please delete this file manually."
-msgstr ""
-"Η διαγραφή του chat-history.json απέτυχε. Διαγράψτε αυτό το αρχείο με μη "
-"αυτόματο τρόπο."
+msgstr "Η διαγραφή του chat-history.json απέτυχε. Διαγράψτε αυτό το αρχείο με μη αυτόματο τρόπο."
 
 #: src/MainWindow.c:1852
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP (59//)"
 msgid ""
 "Failed to parse chat history.The chat-history.json file is probably "
 "corrupted. Conversation history will not be loaded."
-msgstr ""
-"Απέτυχε η ανάλυση του ιστορικού συνομιλίας. Το αρχείο chat-history.json "
-"είναι πιθανώς κατεστραμμένο. Το ιστορικό συνομιλιών δεν θα φορτωθεί."
+msgstr "Απέτυχε η ανάλυση του ιστορικού συνομιλίας. Το αρχείο chat-history.json είναι πιθανώς κατεστραμμένο. Το ιστορικό συνομιλιών δεν θα φορτωθεί."
 
 #: src/MainWindow.c:1950
 msgctxt "STRING_ERROR_IMAGE_HISTORY_READ (60//)"
 msgid ""
 "Failed to read from image history file. Image generation history will not be "
 "loaded"
-msgstr ""
-"Αποτυχία ανάγνωσης από το αρχείο ιστορικού εικόνας. Το ιστορικό δημιουργίας "
-"εικόνων δεν θα φορτωθεί"
+msgstr "Αποτυχία ανάγνωσης από το αρχείο ιστορικού εικόνας. Το ιστορικό δημιουργίας εικόνων δεν θα φορτωθεί"
 
 #: src/MainWindow.c:1964
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP (61//)"
@@ -488,11 +432,7 @@ msgid ""
 "Failed to parse image history. Malformed JSON. The image-history.json file "
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
-msgstr ""
-"Απέτυχε η ανάλυση του ιστορικού εικόνων. Κακόμορφο JSON. Το αρχείο image-"
-"history.json είναι πιθανώς κατεστραμμένο. Το ιστορικό εικόνας δεν θα "
-"φορτωθεί. Ένα αντίγραφο ασφαλείας του αρχείου image-history.json έχει "
-"δημιουργηθεί ως image-history.json.bak"
+msgstr "Απέτυχε η ανάλυση του ιστορικού εικόνων. Κακόμορφο JSON. Το αρχείο image-history.json είναι πιθανώς κατεστραμμένο. Το ιστορικό εικόνας δεν θα φορτωθεί. Ένα αντίγραφο ασφαλείας του αρχείου image-history.json έχει δημιουργηθεί ως image-history.json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -501,19 +441,12 @@ msgid ""
 "is probably corrupted. Image history will not be loaded. There was an error "
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
-msgstr ""
-"Απέτυχε η ανάλυση του ιστορικού εικόνων. Κακόμορφο JSON. Το αρχείο image-"
-"history.json είναι πιθανώς κατεστραμμένο. Το ιστορικό εικόνας δεν θα "
-"φορτωθεί. Παρουσιάστηκε σφάλμα κατά την εγγραφή ενός αντιγράφου ασφαλείας "
-"του ιστορικού εικόνας στο δίσκο, αλλά ένα αντίγραφο έχει αποθηκευτεί στη "
-"μνήμη RAM:image-history.json.bak"
+msgstr "Απέτυχε η ανάλυση του ιστορικού εικόνων. Κακόμορφο JSON. Το αρχείο image-history.json είναι πιθανώς κατεστραμμένο. Το ιστορικό εικόνας δεν θα φορτωθεί. Παρουσιάστηκε σφάλμα κατά την εγγραφή ενός αντιγράφου ασφαλείας του ιστορικού εικόνας στο δίσκο, αλλά ένα αντίγραφο έχει αποθηκευτεί στη μνήμη RAM:image-history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
 msgid "Failed to delete image-history.json. Please delete this file manually."
-msgstr ""
-"Απέτυχε η διαγραφή του image-history.json. Διαγράψτε αυτό το αρχείο με μη "
-"αυτόματο τρόπο."
+msgstr "Απέτυχε η διαγραφή του image-history.json. Διαγράψτε αυτό το αρχείο με μη αυτόματο τρόπο."
 
 #: src/MainWindow.c:2120
 msgctxt "STRING_ERROR_FILE_COPY_OPEN (64//)"
@@ -598,9 +531,7 @@ msgstr "Σύνθημα"
 #: src/ProxySettingsRequesterWindow.c:160
 msgctxt "STRING_ERROR_PROXY_SETTINGS (80//)"
 msgid "Could not create proxy settings requester window"
-msgstr ""
-"Δεν ήταν δυνατή η δημιουργία παραθύρου αιτήματος ρυθμίσεων διακομιστή "
-"μεσολάβησης"
+msgstr "Δεν ήταν δυνατή η δημιουργία παραθύρου αιτήματος ρυθμίσεων διακομιστή μεσολάβησης"
 
 #: src/StartupOptionsWindow.c:18
 msgctxt "STRING_OPEN_IN_WORKBENCH (81//)"
@@ -651,9 +582,7 @@ msgstr "Αποτυχία ανάλυσης του αρχείου διαμόρφω
 msgctxt "STRING_ERROR_MUI_LIB_OPEN (90//)"
 msgid ""
 "Could not open muimaster.library. Please make sure you have MUI installed"
-msgstr ""
-"Δεν ήταν δυνατό το άνοιγμα του muimaster.library. Βεβαιωθείτε ότι έχετε "
-"εγκαταστήσει το MUI"
+msgstr "Δεν ήταν δυνατό το άνοιγμα του muimaster.library. Βεβαιωθείτε ότι έχετε εγκαταστήσει το MUI"
 
 #: src/gui.c:84
 msgctxt "STRING_ERROR_MUI_INTERFACE_OPEN (91//)"
@@ -665,10 +594,7 @@ msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
 msgid ""
 "Could not open codesets.library. Please make sure you have codesets "
 "installed. Refer to the documentation for more info."
-msgstr ""
-"Δεν ήταν δυνατό το άνοιγμα του codesets.library. Βεβαιωθείτε ότι έχετε "
-"εγκαταστήσει σύνολα κωδικών. Ανατρέξτε στην τεκμηρίωση για περισσότερες "
-"πληροφορίες."
+msgstr "Δεν ήταν δυνατό το άνοιγμα του codesets.library. Βεβαιωθείτε ότι έχετε εγκαταστήσει σύνολα κωδικών. Ανατρέξτε στην τεκμηρίωση για περισσότερες πληροφορίες."
 
 #: src/gui.c:98
 msgctxt "STRING_ERROR_CODESETS_INTERFACE_OPEN (93//)"
@@ -685,10 +611,7 @@ msgctxt "STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED (95//)"
 msgid ""
 "Could not find all the MUI custom classes. Please make sure they are "
 "installed. Refer to the documentation for more information."
-msgstr ""
-"Δεν ήταν δυνατή η εύρεση όλων των προσαρμοσμένων κλάσεων MUI. Βεβαιωθείτε "
-"ότι είναι εγκατεστημένα. Ανατρέξτε στην τεκμηρίωση για περισσότερες "
-"πληροφορίες."
+msgstr "Δεν ήταν δυνατή η εύρεση όλων των προσαρμοσμένων κλάσεων MUI. Βεβαιωθείτε ότι είναι εγκατεστημένα. Ανατρέξτε στην τεκμηρίωση για περισσότερες πληροφορίες."
 
 #: src/gui.c:178
 msgctxt "STRING_IMAGE (96//)"
@@ -716,10 +639,7 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
-msgstr ""
-"Απέτυχε το άνοιγμα του συστήματος ομιλίας. Βεβαιωθείτε ότι το "
-"translator.library v42 και το narrator.device v37 είναι εγκατεστημένα. Δείτε "
-"τον οδηγό για περισσότερες πληροφορίες."
+msgstr "Απέτυχε το άνοιγμα του συστήματος ομιλίας. Βεβαιωθείτε ότι το translator.library v42 και το narrator.device v37 είναι εγκατεστημένα. Δείτε τον οδηγό για περισσότερες πληροφορίες."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
@@ -944,10 +864,7 @@ msgid ""
 "Failed to open bsdsocket.library. You have to install a TCP/IP stack such as "
 "AmiTCP, Miami or Roadshow. Please refer to the documentation for more "
 "information."
-msgstr ""
-"Απέτυχε το άνοιγμα του bsdsocket.library. Πρέπει να εγκαταστήσετε μια στοίβα "
-"TCP/IP όπως AmiTCP, Miami ή Roadshow. Ανατρέξτε στην τεκμηρίωση για "
-"περισσότερες πληροφορίες."
+msgstr "Απέτυχε το άνοιγμα του bsdsocket.library. Πρέπει να εγκαταστήσετε μια στοίβα TCP/IP όπως AmiTCP, Miami ή Roadshow. Ανατρέξτε στην τεκμηρίωση για περισσότερες πληροφορίες."
 
 #: src/openai.c:182
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN_OS4 (151//)"
@@ -964,10 +881,7 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_OPEN (153//)"
 msgid ""
 "Failed to open amisslmaster.library version 5. You have to install AmiSSL 5. "
 "Please refer to the documentation for more information."
-msgstr ""
-"Απέτυχε το άνοιγμα του amisslmaster.library έκδοση 5. Πρέπει να "
-"εγκαταστήσετε το AmiSSL 5. Ανατρέξτε στην τεκμηρίωση για περισσότερες "
-"πληροφορίες."
+msgstr "Απέτυχε το άνοιγμα του amisslmaster.library έκδοση 5. Πρέπει να εγκαταστήσετε το AmiSSL 5. Ανατρέξτε στην τεκμηρίωση για περισσότερες πληροφορίες."
 
 #: src/openai.c:211
 msgctxt "STRING_ERROR_AMISSLMASTER_INTERFACE_OPEN (154//)"
@@ -979,10 +893,7 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
 msgid ""
 "Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
 "newer. Please refer to the documentation for more information."
-msgstr ""
-"Απέτυχε η προετοιμασία του amislmaster.library. Το AmigaGPT απαιτεί AmiSSL "
-"5.18 ή νεότερη έκδοση. Ανατρέξτε στην τεκμηρίωση για περισσότερες "
-"πληροφορίες."
+msgstr "Απέτυχε η προετοιμασία του amislmaster.library. Το AmigaGPT απαιτεί AmiSSL 5.18 ή νεότερη έκδοση. Ανατρέξτε στην τεκμηρίωση για περισσότερες πληροφορίες."
 
 #: src/openai.c:233
 msgctxt "STRING_ERROR_AMISSL_INTERFACE_INIT (156//)"
@@ -1009,9 +920,7 @@ msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
 msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
-msgstr ""
-"Δεν ήταν δυνατή η σύνδεση με τον διακομιστή. Ελέγξτε εάν ο διακομιστής "
-"μεσολάβησης και η θύρα είναι σωστά ή απενεργοποιήστε το."
+msgstr "Δεν ήταν δυνατή η σύνδεση με τον διακομιστή. Ελέγξτε εάν ο διακομιστής μεσολάβησης και η θύρα είναι σωστά ή απενεργοποιήστε το."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
@@ -1042,9 +951,7 @@ msgstr "Συνδετικός..."
 #: src/openai.c:1075 src/openai.c:1406 src/openai.c:1664
 msgctxt "STRING_ERROR_CONNECTING_MAX_RETRIES (167//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr ""
-"Σφάλμα σύνδεσης με τον κεντρικό υπολογιστή! Επιτεύχθηκαν οι μέγιστες "
-"επαναλήψεις."
+msgstr "Σφάλμα σύνδεσης με τον κεντρικό υπολογιστή! Επιτεύχθηκαν οι μέγιστες επαναλήψεις."
 
 #: src/openai.c:539 src/openai.c:827 src/openai.c:1082 src/openai.c:1458
 msgctxt "STRING_SENDING_REQUEST (168//)"
@@ -1059,9 +966,7 @@ msgstr "Λήψη απάντησης..."
 #: src/openai.c:683 src/openai.c:934 src/openai.c:1658
 msgctxt "STRING_ERROR_CONNECTION_MAX_RETRIES (171//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr ""
-"Σφάλμα σύνδεσης με τον κεντρικό υπολογιστή! Επιτεύχθηκαν οι μέγιστες "
-"επαναλήψεις."
+msgstr "Σφάλμα σύνδεσης με τον κεντρικό υπολογιστή! Επιτεύχθηκαν οι μέγιστες επαναλήψεις."
 
 #: src/openai.c:705 src/openai.c:947 src/openai.c:1672
 msgctxt "STRING_ERROR_UNKNOWN (172//)"
@@ -1208,10 +1113,7 @@ msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
 msgid ""
 "Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
 "voice'. This only works for the gpt-4o-mini-tts model."
-msgstr ""
-"Εισάγετε πώς θέλετε να μιλήσει η AI. Παράδειγμα: 'Μιλήστε σε βαθιά και "
-"μυστηριώδη φωνή'. Αυτή η λειτουργία λειτουργεί μόνο με το gpt-4o-mini-tts "
-"μοντέλο."
+msgstr "Εισάγετε πώς θέλετε να μιλήσει η AI. Παράδειγμα: 'Μιλήστε σε βαθιά και μυστηριώδη φωνή'. Αυτή η λειτουργία λειτουργεί μόνο με το gpt-4o-mini-tts μοντέλο."
 
 #: src/VoiceInstructionsRequesterWindow.c:87
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
@@ -1490,7 +1392,7 @@ msgstr "xAI Grok"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_PROFILES (275//)"
 msgid "Profiles"
-msgstr "Profiles"
+msgstr "Προφίλ"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_PROFILE (276//)"
@@ -1623,9 +1525,8 @@ msgctxt "STRING_CONFIG_MIGRATED (298//)"
 msgid ""
 "Configuration has been migrated to the new format.\n"
 "Your old config has been backed up to config.bak"
-msgstr ""
-"Η διαμόρφωση μεταφέρθηκε στη νέα μορφή.\n"
-"Το παλιό σας αρχείο ρυθμίσεων αποθηκεύτηκε ως config.bak"
+msgstr "Η διαμόρφωση μεταφέρθηκε στη νέα μορφή.
+Το παλιό σας αρχείο ρυθμίσεων αποθηκεύτηκε ως config.bak"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
@@ -1635,8 +1536,7 @@ msgstr "Υπάρχει ήδη ένα προφίλ με αυτό το όνομα.
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
 msgid "You have unsaved changes. Do you want to save them before switching?"
-msgstr ""
-"Έχετε μη αποθηκευμένες αλλαγές. Θέλετε να τις αποθηκεύσετε πριν αλλάξετε;"
+msgstr "Έχετε μη αποθηκευμένες αλλαγές. Θέλετε να τις αποθηκεύσετε πριν αλλάξετε;"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_STREAMING (301//)"
@@ -1661,12 +1561,11 @@ msgid ""
 "%s\n"
 "\n"
 "Allow this command to run?"
-msgstr ""
-"Η AI θέλει να εκτελέσει την ακόλουθη εντολή κελύφους:\n"
-"\n"
-"%s\n"
-"\n"
-"Να επιτραπεί η εκτέλεση αυτής της εντολής;"
+msgstr "Η AI θέλει να εκτελέσει την ακόλουθη εντολή κελύφους:
+
+%s
+
+Να επιτραπεί η εκτέλεση αυτής της εντολής;"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_CONFIRMATION_TITLE (305//)"
@@ -1685,11 +1584,11 @@ msgid ""
 "\n"
 "--- Shell command denied by user ---\n"
 "\n"
-msgstr ""
-"\n"
-"\n"
-"--- Η εντολή κελύφους απορρίφθηκε από τον χρήστη ---\n"
-"\n"
+msgstr "
+
+--- Η εντολή κελύφους απορρίφθηκε από τον χρήστη ---
+
+"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT (308//)"
@@ -1697,10 +1596,10 @@ msgid ""
 "\n"
 "\n"
 "--- Executing: %s ---\n"
-msgstr ""
-"\n"
-"\n"
-"--- Εκτελείται: %s ---\n"
+msgstr "
+
+--- Εκτελείται: %s ---
+"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT (309//)"
@@ -1709,11 +1608,11 @@ msgid ""
 "%s\n"
 "--- End ---\n"
 "\n"
-msgstr ""
-"Κωδικός εξόδου: %ld\n"
-"%s\n"
-"--- Τέλος ---\n"
-"\n"
+msgstr "Κωδικός εξόδου: %ld
+%s
+--- Τέλος ---
+
+"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_NO_OUTPUT (310//)"
@@ -1726,10 +1625,9 @@ msgid ""
 "Exit code: %ld\n"
 "Output:\n"
 "%s"
-msgstr ""
-"Κωδικός εξόδου: %ld\n"
-"Έξοδος:\n"
-"%s"
+msgstr "Κωδικός εξόδου: %ld
+Έξοδος:
+%s"
 
 #: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
@@ -1755,95 +1653,135 @@ msgstr "OpenAI"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_NEW (316//)"
 msgid "New"
-msgstr "New"
+msgstr "Νέο"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_DUPLICATE (317//)"
 msgid "Duplicate"
-msgstr "Duplicate"
+msgstr "Αντιγραφή"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST (318//)"
 msgid "Test"
-msgstr "Test"
+msgstr "Δοκιμή"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_IMAGE_TEST_TITLE (319//)"
 msgid "Image Test"
-msgstr "Image Test"
+msgstr "Δοκιμή εικόνας"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_DEFAULT_NEW_PROFILE_NAME (320//)"
 msgid "New Profile"
-msgstr "New Profile"
+msgstr "Νέο προφίλ"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_PROFILE_COPY_SUFFIX (321//)"
 msgid " copy"
-msgstr " copy"
+msgstr " αντίγραφο"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_PASS (322//)"
 msgid "PASS"
-msgstr "PASS"
+msgstr "ΕΠΙΤΥΧΙΑ"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_FAIL (323//)"
 msgid "FAIL"
-msgstr "FAIL"
+msgstr "ΑΠΟΤΥΧΙΑ"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_RESULT_TITLE (324//)"
 msgid "Test Result"
-msgstr "Test Result"
+msgstr "Αποτέλεσμα δοκιμής"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_CHAT_TEST_RESULT_TITLE (325//)"
 msgid "Chat Test Result"
-msgstr "Chat Test Result"
+msgstr "Αποτέλεσμα δοκιμής συνομιλίας"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_IMAGE_TEST_RESULT_TITLE (326//)"
 msgid "Image Test Result"
-msgstr "Image Test Result"
+msgstr "Αποτέλεσμα δοκιμής εικόνας"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_NO_PROFILE_SELECTED (327//)"
 msgid "No profile selected."
-msgstr "No profile selected."
+msgstr "Δεν έχει επιλεγεί προφίλ."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_RECEIVED_JSON_RESPONSE (328//)"
 msgid "Received JSON response."
-msgstr "Received JSON response."
+msgstr "Ελήφθη απόκριση JSON."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_NO_JSON_RESPONSE_RECEIVED (329//)"
 msgid "No JSON response received."
-msgstr "No JSON response received."
+msgstr "Δεν ελήφθη απόκριση JSON."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_NO_IMAGE_DATA_RECEIVED_SHOWING_JSON (330//)"
 msgid "No image data received (showing JSON)."
-msgstr "No image data received (showing JSON)."
+msgstr "Δεν ελήφθησαν δεδομένα εικόνας (εμφάνιση JSON)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_IMAGE_DATA_DECODE_FAILED_SHOWING_JSON (331//)"
 msgid "Image data decode failed (showing JSON)."
-msgstr "Image data decode failed (showing JSON)."
+msgstr "Η αποκωδικοποίηση των δεδομένων εικόνας απέτυχε (εμφάνιση JSON)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_IMAGE_RECEIVED_COULD_NOT_SAVE_SHOWING_JSON (332//)"
 msgid "Image received but could not be saved (showing JSON)."
-msgstr "Image received but could not be saved (showing JSON)."
+msgstr "Η εικόνα ελήφθη αλλά δεν ήταν δυνατή η αποθήκευσή της (εμφάνιση JSON)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_ERROR_RESPONSE_RECEIVED (333//)"
 msgid "Error response received."
-msgstr "Error response received."
+msgstr "Ελήφθη απόκριση σφάλματος."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_IMAGE_SIZE (334//)"
 msgid "Image Size"
-msgstr "Image Size"
+msgstr "Μέγεθος εικόνας"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_PROFILE_NOT_FOUND (335//)"
+msgid "%s profile not found: %s"
+msgstr "Δεν βρέθηκε το προφίλ %s: %s"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_REQUESTED (336//)"
+msgid "Requested"
+msgstr "Ζητούμενο"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SYSTEM_FILE_READ (337//)"
+msgid "Could not read system file: %s"
+msgstr "Δεν ήταν δυνατή η ανάγνωση του αρχείου συστήματος: %s"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SYSTEM_FILE_MEMORY (338//)"
+msgid "Out of memory reading system file"
+msgstr "Ανεπαρκής μνήμη κατά την ανάγνωση του αρχείου συστήματος"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_CONVERSATION_CLEARED (339//)"
+msgid "Conversation history cleared"
+msgstr "Το ιστορικό συνομιλίας διαγράφηκε"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_FETCHING_VOICES (340//)"
+msgid "Failed to fetch voices from server"
+msgstr "Αποτυχία ανάκτησης φωνών από τον διακομιστή"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_MODELS (341//)"
+msgid "No selectable models for this speech profile"
+msgstr "Δεν υπάρχουν επιλέξιμα μοντέλα για αυτό το προφίλ ομιλίας"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_VOICES (342//)"
+msgid "No selectable voices for this speech profile"
+msgstr "Δεν υπάρχουν επιλέξιμες φωνές για αυτό το προφίλ ομιλίας"
 

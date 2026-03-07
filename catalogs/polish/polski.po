@@ -18,9 +18,7 @@ msgstr ""
 msgctxt "STRING_APP_DESCRIPTION (0//)"
 msgid ""
 "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
-msgstr ""
-"AmigaGPT to aplikacja do czatowania z ChatGPT lub tworzenia obrazów AI za "
-"pomocą DALL-E"
+msgstr "AmigaGPT to aplikacja do czatowania z ChatGPT lub tworzenia obrazów AI za pomocą DALL-E"
 
 #: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
@@ -32,19 +30,14 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
-msgstr ""
-"Nie udało się otworzyć systemu mowy. Upewnij się, że translator.library v42 "
-"i narrator.device v34 są zainstalowane. Więcej informacji znajdziesz w "
-"przewodniku."
+msgstr "Nie udało się otworzyć systemu mowy. Upewnij się, że translator.library v42 i narrator.device v34 są zainstalowane. Więcej informacji znajdziesz w przewodniku."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
 msgid ""
 "Failed to open speech system. Make sure Flite Device is installed. See the "
 "guide for more information."
-msgstr ""
-"Nie udało się otworzyć systemu mowy. Upewnij się, że urządzenie Flite jest "
-"zainstalowane. Więcej informacji znajdziesz w przewodniku."
+msgstr "Nie udało się otworzyć systemu mowy. Upewnij się, że urządzenie Flite jest zainstalowane. Więcej informacji znajdziesz w przewodniku."
 
 #: src/main.c:88 src/main.c:89 src/main.c:90 src/main.c:87
 msgctxt "STRING_ERROR_OPENAI_INIT (4//)"
@@ -56,9 +49,7 @@ msgctxt "STRING_WARNING_STACK (5//)"
 msgid ""
 "Warning: The stack size is too small. The minimum recommended stack size is "
 "32768 bytes to avoid crashes. Your stack size is: "
-msgstr ""
-"Ostrzeżenie: Rozmiar stosu jest za mały. Minimalny zalecany rozmiar stosu to "
-"32768 bajtów, aby uniknąć awarii. Twój rozmiar stosu to: "
+msgstr "Ostrzeżenie: Rozmiar stosu jest za mały. Minimalny zalecany rozmiar stosu to 32768 bajtów, aby uniknąć awarii. Twój rozmiar stosu to: "
 
 #: src/APIKeyRequesterWindow.c:40
 msgctxt "STRING_API_KEY_REQUESTER_TITLE (6//)"
@@ -80,9 +71,7 @@ msgctxt "STRING_API_KEY_REQUESTER_BODY_HELP (200//)"
 msgid ""
 "If you do not have an API key, consult the AmigaGPT documentation for "
 "instructions on how to obtain one."
-msgstr ""
-"Jeśli nie posiadasz klucza API, zapoznaj się z dokumentacją AmigaGPT, aby "
-"uzyskać instrukcje dotyczące jego uzyskania."
+msgstr "Jeśli nie posiadasz klucza API, zapoznaj się z dokumentacją AmigaGPT, aby uzyskać instrukcje dotyczące jego uzyskania."
 
 #: src/APIKeyRequesterWindow.c:53 src/ChatSystemRequesterWindow.c:52
 #: src/ProxySettingsRequesterWindow.c:147 src/StartupOptionsWindow.c:129
@@ -122,9 +111,7 @@ msgctxt "STRING_ABOUT_WINDOW_SUPPORT (14//)"
 msgid ""
 "This app will always remain free but if you would like to support me you can "
 "do so at:"
-msgstr ""
-"Ta aplikacja zawsze pozostanie darmowa, ale jeśli chcesz mnie wesprzeć, "
-"możesz to zrobić pod adresem:"
+msgstr "Ta aplikacja zawsze pozostanie darmowa, ale jeśli chcesz mnie wesprzeć, możesz to zrobić pod adresem:"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BUILD_DETAILS (214//)"
@@ -151,9 +138,7 @@ msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
 msgid ""
 "for all the thorough testing, bundling AmigaGPT into AmiKit and for all the "
 "moral support"
-msgstr ""
-"za dokładne testowanie, dołączenie AmigaGPT do AmiKit i za całe wsparcie "
-"moralne"
+msgstr "za dokładne testowanie, dołączenie AmigaGPT do AmiKit i za całe wsparcie moralne"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_COFFINOS (205//)"
@@ -165,9 +150,7 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
 msgid ""
 "for reviewing AmigaGPT and publishing several of its updates in the News "
 "from Aminet section"
-msgstr ""
-"za recenzję AmigaGPT i opublikowanie kilku jego aktualizacji w sekcji "
-"Wiadomości z Aminetu"
+msgstr "za recenzję AmigaGPT i opublikowanie kilku jego aktualizacji w sekcji Wiadomości z Aminetu"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_WHATIFF (207//)"
@@ -184,18 +167,14 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
 msgid ""
 "for covering AmigaGPT in the Amiga News section on his Twitch streams and "
 "allowing me to join his stream to promote it"
-msgstr ""
-"za zamieszczenie AmigaGPT w sekcji Amiga News na jego transmisjach na "
-"Twitchu i umożliwienie mi dołączenia do jego transmisji w celu jej promocji"
+msgstr "za zamieszczenie AmigaGPT w sekcji Amiga News na jego transmisjach na Twitchu i umożliwienie mi dołączenia do jego transmisji w celu jej promocji"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
 msgid ""
 "for making a video review and giving a tutorial on how to add support for "
 "the French accent"
-msgstr ""
-"za nagranie recenzji wideo i pokazanie samouczka, jak dodać obsługę akcentu "
-"francuskiego"
+msgstr "za nagranie recenzji wideo i pokazanie samouczka, jak dodać obsługę akcentu francuskiego"
 
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
@@ -215,11 +194,7 @@ msgid ""
 "pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
 "normally, leave this blank. This setting will be applied to new "
 "conversations only."
-msgstr ""
-"Jeśli chcesz, aby AmigaGPT odpowiadał w określony sposób lub dodał trochę "
-"osobowości, wpisz to tutaj. Na przykład, możesz wpisać „Mów jak pirat” lub "
-"„Mów jak robot”. Jeśli chcesz, aby AmigaGPT odpowiadał normalnie, pozostaw "
-"to pole puste. To ustawienie będzie stosowane tylko do nowych konwersacji."
+msgstr "Jeśli chcesz, aby AmigaGPT odpowiadał w określony sposób lub dodał trochę osobowości, wpisz to tutaj. Na przykład, możesz wpisać „Mów jak pirat” lub „Mów jak robot”. Jeśli chcesz, aby AmigaGPT odpowiadał normalnie, pozostaw to pole puste. To ustawienie będzie stosowane tylko do nowych konwersacji."
 
 #: src/ChatSystemRequesterWindow.c:65
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_ERROR (18//)"
@@ -377,40 +352,31 @@ msgctxt "STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED (47//)"
 msgid ""
 "The conversation has exceeded the maximum length. Please start a new "
 "conversation."
-msgstr ""
-"Rozmowa przekroczyła maksymalną długość. Proszę rozpocząć nową rozmowę."
+msgstr "Rozmowa przekroczyła maksymalną długość. Proszę rozpocząć nową rozmowę."
 
 #: src/MainWindow.c:1619
 msgctxt "STRING_ERROR_CHAT_HISTORY_CREATE (49//)"
 msgid ""
 "Failed to create message history file. Conversation history will not be "
 "saved."
-msgstr ""
-"Nie udało się utworzyć pliku historii wiadomości. Historia konwersacji nie "
-"zostanie zapisana."
+msgstr "Nie udało się utworzyć pliku historii wiadomości. Historia konwersacji nie zostanie zapisana."
 
 #: src/MainWindow.c:1663
 msgctxt "STRING_ERROR_CHAT_HISTORY_SAVE (50//)"
 msgid ""
 "Failed to write to message history file. Conversation history will not be "
 "saved."
-msgstr ""
-"Nie udało się zapisać do pliku historii wiadomości. Historia konwersacji nie "
-"zostanie zapisana."
+msgstr "Nie udało się zapisać do pliku historii wiadomości. Historia konwersacji nie zostanie zapisana."
 
 #: src/MainWindow.c:1682
 msgctxt "STRING_ERROR_IMAGE_HISTORY_CREATE (51//)"
 msgid "Failed to create image history file. Image history will not be saved."
-msgstr ""
-"Nie udało się utworzyć pliku historii obrazu. Historia obrazu nie zostanie "
-"zapisana."
+msgstr "Nie udało się utworzyć pliku historii obrazu. Historia obrazu nie zostanie zapisana."
 
 #: src/MainWindow.c:1717
 msgctxt "STRING_ERROR_IMAGE_HISTORY_WRITE (52//)"
 msgid "Failed to write to image history file. Image history will not be saved."
-msgstr ""
-"Nie udało się zapisać do pliku historii obrazu. Historia obrazu nie zostanie "
-"zapisana."
+msgstr "Nie udało się zapisać do pliku historii obrazu. Historia obrazu nie zostanie zapisana."
 
 #: src/MainWindow.c:1745
 msgctxt "STRING_LOADING_IMAGE (53//)"
@@ -422,9 +388,7 @@ msgctxt "STRING_ERROR_CHAT_HISTORY_READ (55//)"
 msgid ""
 "Failed to read from message history file. Conversation history will not be "
 "loaded"
-msgstr ""
-"Nie udało się odczytać pliku historii wiadomości. Historia konwersacji nie "
-"zostanie załadowana"
+msgstr "Nie udało się odczytać pliku historii wiadomości. Historia konwersacji nie zostanie załadowana"
 
 #: src/MainWindow.c:1814
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP (56//)"
@@ -432,11 +396,7 @@ msgid ""
 "Failed to parse chat history. Malformed JSON. The chat-history.json file is "
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
-msgstr ""
-"Nie udało się przeanalizować historii czatu. Nieprawidłowo sformatowany "
-"JSON. Plik chat-history.json jest prawdopodobnie uszkodzony. Historia "
-"konwersacji nie zostanie załadowana. Utworzono kopię zapasową pliku chat-"
-"history.json jako chat-history.json.bak"
+msgstr "Nie udało się przeanalizować historii czatu. Nieprawidłowo sformatowany JSON. Plik chat-history.json jest prawdopodobnie uszkodzony. Historia konwersacji nie zostanie załadowana. Utworzono kopię zapasową pliku chat-history.json jako chat-history.json.bak"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -445,12 +405,7 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. There was an "
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
-msgstr ""
-"Nie udało się przeanalizować historii czatu. Nieprawidłowo sformatowany "
-"JSON. Plik chat-history.json jest prawdopodobnie uszkodzony. Historia "
-"konwersacji nie zostanie załadowana. Wystąpił błąd podczas zapisywania kopii "
-"zapasowej historii czatu na dysku, ale kopia została zapisana w pamięci "
-"RAM:chat-history.json.bak"
+msgstr "Nie udało się przeanalizować historii czatu. Nieprawidłowo sformatowany JSON. Plik chat-history.json jest prawdopodobnie uszkodzony. Historia konwersacji nie zostanie załadowana. Wystąpił błąd podczas zapisywania kopii zapasowej historii czatu na dysku, ale kopia została zapisana w pamięci RAM:chat-history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
@@ -462,18 +417,14 @@ msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP (59//)"
 msgid ""
 "Failed to parse chat history.The chat-history.json file is probably "
 "corrupted. Conversation history will not be loaded."
-msgstr ""
-"Nie udało się przeanalizować historii czatu.Plik chat-history.json jest "
-"prawdopodobnie uszkodzony. Historia konwersacji nie zostanie załadowana."
+msgstr "Nie udało się przeanalizować historii czatu.Plik chat-history.json jest prawdopodobnie uszkodzony. Historia konwersacji nie zostanie załadowana."
 
 #: src/MainWindow.c:1950
 msgctxt "STRING_ERROR_IMAGE_HISTORY_READ (60//)"
 msgid ""
 "Failed to read from image history file. Image generation history will not be "
 "loaded"
-msgstr ""
-"Nie udało się odczytać pliku historii obrazu. Historia generowania obrazu "
-"nie zostanie załadowana"
+msgstr "Nie udało się odczytać pliku historii obrazu. Historia generowania obrazu nie zostanie załadowana"
 
 #: src/MainWindow.c:1964
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP (61//)"
@@ -481,11 +432,7 @@ msgid ""
 "Failed to parse image history. Malformed JSON. The image-history.json file "
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
-msgstr ""
-"Nie udało się przeanalizować historii obrazu. Nieprawidłowo sformatowany "
-"JSON. Plik image-history.json jest prawdopodobnie uszkodzony. Historia "
-"obrazu nie zostanie załadowana. Utworzono kopię zapasową pliku image-"
-"history.json jako image-history.json.bak"
+msgstr "Nie udało się przeanalizować historii obrazu. Nieprawidłowo sformatowany JSON. Plik image-history.json jest prawdopodobnie uszkodzony. Historia obrazu nie zostanie załadowana. Utworzono kopię zapasową pliku image-history.json jako image-history.json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -494,12 +441,7 @@ msgid ""
 "is probably corrupted. Image history will not be loaded. There was an error "
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
-msgstr ""
-"Nie udało się przeanalizować historii obrazu. Nieprawidłowo sformatowany "
-"JSON. Plik image-history.json jest prawdopodobnie uszkodzony. Historia "
-"obrazu nie zostanie załadowana. Wystąpił błąd podczas zapisywania kopii "
-"zapasowej historii obrazu na dysku, ale kopia została zapisana w pamięci "
-"RAM:image-history.json.bak"
+msgstr "Nie udało się przeanalizować historii obrazu. Nieprawidłowo sformatowany JSON. Plik image-history.json jest prawdopodobnie uszkodzony. Historia obrazu nie zostanie załadowana. Wystąpił błąd podczas zapisywania kopii zapasowej historii obrazu na dysku, ale kopia została zapisana w pamięci RAM:image-history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
@@ -640,8 +582,7 @@ msgstr "Nie udało się przeanalizować pliku konfiguracyjnego"
 msgctxt "STRING_ERROR_MUI_LIB_OPEN (90//)"
 msgid ""
 "Could not open muimaster.library. Please make sure you have MUI installed"
-msgstr ""
-"Nie można otworzyć muimaster.library. Upewnij się, że masz zainstalowane MUI"
+msgstr "Nie można otworzyć muimaster.library. Upewnij się, że masz zainstalowane MUI"
 
 #: src/gui.c:84
 msgctxt "STRING_ERROR_MUI_INTERFACE_OPEN (91//)"
@@ -653,9 +594,7 @@ msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
 msgid ""
 "Could not open codesets.library. Please make sure you have codesets "
 "installed. Refer to the documentation for more info."
-msgstr ""
-"Nie można otworzyć codesets.library. Upewnij się, że masz zainstalowane "
-"codesets. Więcej informacji znajdziesz w dokumentacji."
+msgstr "Nie można otworzyć codesets.library. Upewnij się, że masz zainstalowane codesets. Więcej informacji znajdziesz w dokumentacji."
 
 #: src/gui.c:98
 msgctxt "STRING_ERROR_CODESETS_INTERFACE_OPEN (93//)"
@@ -672,9 +611,7 @@ msgctxt "STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED (95//)"
 msgid ""
 "Could not find all the MUI custom classes. Please make sure they are "
 "installed. Refer to the documentation for more information."
-msgstr ""
-"Nie można znaleźć wszystkich niestandardowych klas MUI. Upewnij się, że są "
-"zainstalowane. Więcej informacji znajdziesz w dokumentacji."
+msgstr "Nie można znaleźć wszystkich niestandardowych klas MUI. Upewnij się, że są zainstalowane. Więcej informacji znajdziesz w dokumentacji."
 
 #: src/gui.c:178
 msgctxt "STRING_IMAGE (96//)"
@@ -702,10 +639,7 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
-msgstr ""
-"Nie udało się otworzyć systemu mowy. Upewnij się, że translator.library v42 "
-"i narrator.device v37 są zainstalowane. Więcej informacji znajdziesz w "
-"przewodniku."
+msgstr "Nie udało się otworzyć systemu mowy. Upewnij się, że translator.library v42 i narrator.device v37 są zainstalowane. Więcej informacji znajdziesz w przewodniku."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
@@ -930,10 +864,7 @@ msgid ""
 "Failed to open bsdsocket.library. You have to install a TCP/IP stack such as "
 "AmiTCP, Miami or Roadshow. Please refer to the documentation for more "
 "information."
-msgstr ""
-"Nie udało się otworzyć bsdsocket.library. Musisz zainstalować stos TCP/IP, "
-"taki jak AmiTCP, Miami lub Roadshow. Więcej informacji znajdziesz w "
-"dokumentacji."
+msgstr "Nie udało się otworzyć bsdsocket.library. Musisz zainstalować stos TCP/IP, taki jak AmiTCP, Miami lub Roadshow. Więcej informacji znajdziesz w dokumentacji."
 
 #: src/openai.c:182
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN_OS4 (151//)"
@@ -950,9 +881,7 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_OPEN (153//)"
 msgid ""
 "Failed to open amisslmaster.library version 5. You have to install AmiSSL 5. "
 "Please refer to the documentation for more information."
-msgstr ""
-"Nie udało się otworzyć amisslmaster.library w wersji 5. Musisz zainstalować "
-"AmiSSL 5. Więcej informacji znajdziesz w dokumentacji."
+msgstr "Nie udało się otworzyć amisslmaster.library w wersji 5. Musisz zainstalować AmiSSL 5. Więcej informacji znajdziesz w dokumentacji."
 
 #: src/openai.c:211
 msgctxt "STRING_ERROR_AMISSLMASTER_INTERFACE_OPEN (154//)"
@@ -964,9 +893,7 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
 msgid ""
 "Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
 "newer. Please refer to the documentation for more information."
-msgstr ""
-"Nie udało się zainicjować amisslmaster.library. AmigaGPT wymaga AmiSSL 5.18 "
-"lub nowszego. Więcej informacji można znaleźć w dokumentacji."
+msgstr "Nie udało się zainicjować amisslmaster.library. AmigaGPT wymaga AmiSSL 5.18 lub nowszego. Więcej informacji można znaleźć w dokumentacji."
 
 #: src/openai.c:233
 msgctxt "STRING_ERROR_AMISSL_INTERFACE_INIT (156//)"
@@ -993,9 +920,7 @@ msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
 msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
-msgstr ""
-"Nie można połączyć się z serwerem. Sprawdź, czy host proxy i port są "
-"poprawne lub wyłącz je."
+msgstr "Nie można połączyć się z serwerem. Sprawdź, czy host proxy i port są poprawne lub wyłącz je."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
@@ -1188,9 +1113,7 @@ msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
 msgid ""
 "Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
 "voice'. This only works for the gpt-4o-mini-tts model."
-msgstr ""
-"Wpisz, jak chcesz, żeby AI mówił. Przykład: 'Mów głęboko i tajemniczo'. Ta "
-"funkcja działa tylko z modelem gpt-4o-mini-tts."
+msgstr "Wpisz, jak chcesz, żeby AI mówił. Przykład: 'Mów głęboko i tajemniczo'. Ta funkcja działa tylko z modelem gpt-4o-mini-tts."
 
 #: src/VoiceInstructionsRequesterWindow.c:87
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
@@ -1242,9 +1165,7 @@ msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
 msgid ""
 "Invalid request. Your OpenAI API account probably has no credit left to run "
 "this model. Please check your account balance."
-msgstr ""
-"Nieprawidłowa żądana operacja. Twoje konto OpenAI API prawdopodobnie nie ma "
-"kredytów pozostałych do uruchomienia tego modelu. Sprawdź swój bilans konta."
+msgstr "Nieprawidłowa żądana operacja. Twoje konto OpenAI API prawdopodobnie nie ma kredytów pozostałych do uruchomienia tego modelu. Sprawdź swój bilans konta."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1472,7 +1393,7 @@ msgstr "xAI Grok"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_PROFILES (275//)"
 msgid "Profiles"
-msgstr "Profiles"
+msgstr "Profile"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_PROFILE (276//)"
@@ -1605,9 +1526,8 @@ msgctxt "STRING_CONFIG_MIGRATED (298//)"
 msgid ""
 "Configuration has been migrated to the new format.\n"
 "Your old config has been backed up to config.bak"
-msgstr ""
-"Konfiguracja została przeniesiona do nowego formatu.\n"
-"Twoja stara konfiguracja została zapisana jako kopia zapasowa w pliku config.bak"
+msgstr "Konfiguracja została przeniesiona do nowego formatu.
+Twoja stara konfiguracja została zapisana jako kopia zapasowa w pliku config.bak"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
@@ -1642,12 +1562,11 @@ msgid ""
 "%s\n"
 "\n"
 "Allow this command to run?"
-msgstr ""
-"SI chce wykonać następujące polecenie powłoki:\n"
-"\n"
-"%s\n"
-"\n"
-"Zezwolić na uruchomienie tego polecenia?"
+msgstr "SI chce wykonać następujące polecenie powłoki:
+
+%s
+
+Zezwolić na uruchomienie tego polecenia?"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_CONFIRMATION_TITLE (305//)"
@@ -1666,11 +1585,11 @@ msgid ""
 "\n"
 "--- Shell command denied by user ---\n"
 "\n"
-msgstr ""
-"\n"
-"\n"
-"--- Polecenie powłoki odrzucone przez użytkownika ---\n"
-"\n"
+msgstr "
+
+--- Polecenie powłoki odrzucone przez użytkownika ---
+
+"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT (308//)"
@@ -1678,10 +1597,10 @@ msgid ""
 "\n"
 "\n"
 "--- Executing: %s ---\n"
-msgstr ""
-"\n"
-"\n"
-"--- Wykonuję: %s ---\n"
+msgstr "
+
+--- Wykonuję: %s ---
+"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT (309//)"
@@ -1690,11 +1609,11 @@ msgid ""
 "%s\n"
 "--- End ---\n"
 "\n"
-msgstr ""
-"Kod wyjścia: %ld\n"
-"%s\n"
-"--- Koniec ---\n"
-"\n"
+msgstr "Kod wyjścia: %ld
+%s
+--- Koniec ---
+
+"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_NO_OUTPUT (310//)"
@@ -1707,10 +1626,9 @@ msgid ""
 "Exit code: %ld\n"
 "Output:\n"
 "%s"
-msgstr ""
-"Kod wyjścia: %ld\n"
-"Wyjście:\n"
-"%s"
+msgstr "Kod wyjścia: %ld
+Wyjście:
+%s"
 
 #: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
@@ -1736,12 +1654,12 @@ msgstr "OtwórzAI"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_NEW (316//)"
 msgid "New"
-msgstr "New"
+msgstr "Nowy"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_DUPLICATE (317//)"
 msgid "Duplicate"
-msgstr "Duplicate"
+msgstr "Duplikuj"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST (318//)"
@@ -1751,80 +1669,120 @@ msgstr "Test"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_IMAGE_TEST_TITLE (319//)"
 msgid "Image Test"
-msgstr "Image Test"
+msgstr "Test obrazu"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_DEFAULT_NEW_PROFILE_NAME (320//)"
 msgid "New Profile"
-msgstr "New Profile"
+msgstr "Nowy profil"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_PROFILE_COPY_SUFFIX (321//)"
 msgid " copy"
-msgstr " copy"
+msgstr " kopia"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_PASS (322//)"
 msgid "PASS"
-msgstr "PASS"
+msgstr "ZALICZONO"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_FAIL (323//)"
 msgid "FAIL"
-msgstr "FAIL"
+msgstr "NIEPOWODZENIE"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_RESULT_TITLE (324//)"
 msgid "Test Result"
-msgstr "Test Result"
+msgstr "Wynik testu"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_CHAT_TEST_RESULT_TITLE (325//)"
 msgid "Chat Test Result"
-msgstr "Chat Test Result"
+msgstr "Wynik testu czatu"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_IMAGE_TEST_RESULT_TITLE (326//)"
 msgid "Image Test Result"
-msgstr "Image Test Result"
+msgstr "Wynik testu obrazu"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_NO_PROFILE_SELECTED (327//)"
 msgid "No profile selected."
-msgstr "No profile selected."
+msgstr "Nie wybrano profilu."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_RECEIVED_JSON_RESPONSE (328//)"
 msgid "Received JSON response."
-msgstr "Received JSON response."
+msgstr "Otrzymano odpowiedź JSON."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_NO_JSON_RESPONSE_RECEIVED (329//)"
 msgid "No JSON response received."
-msgstr "No JSON response received."
+msgstr "Nie otrzymano odpowiedzi JSON."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_NO_IMAGE_DATA_RECEIVED_SHOWING_JSON (330//)"
 msgid "No image data received (showing JSON)."
-msgstr "No image data received (showing JSON)."
+msgstr "Nie otrzymano danych obrazu (wyświetlanie JSON)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_IMAGE_DATA_DECODE_FAILED_SHOWING_JSON (331//)"
 msgid "Image data decode failed (showing JSON)."
-msgstr "Image data decode failed (showing JSON)."
+msgstr "Dekodowanie danych obrazu nie powiodło się (wyświetlanie JSON)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_IMAGE_RECEIVED_COULD_NOT_SAVE_SHOWING_JSON (332//)"
 msgid "Image received but could not be saved (showing JSON)."
-msgstr "Image received but could not be saved (showing JSON)."
+msgstr "Obraz został odebrany, ale nie można go było zapisać (wyświetlanie JSON)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_ERROR_RESPONSE_RECEIVED (333//)"
 msgid "Error response received."
-msgstr "Error response received."
+msgstr "Otrzymano odpowiedź z błędem."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_IMAGE_SIZE (334//)"
 msgid "Image Size"
-msgstr "Image Size"
+msgstr "Rozmiar obrazu"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_PROFILE_NOT_FOUND (335//)"
+msgid "%s profile not found: %s"
+msgstr "Nie znaleziono profilu %s: %s"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_REQUESTED (336//)"
+msgid "Requested"
+msgstr "Żądany"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SYSTEM_FILE_READ (337//)"
+msgid "Could not read system file: %s"
+msgstr "Nie można odczytać pliku systemowego: %s"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SYSTEM_FILE_MEMORY (338//)"
+msgid "Out of memory reading system file"
+msgstr "Za mało pamięci podczas odczytu pliku systemowego"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_CONVERSATION_CLEARED (339//)"
+msgid "Conversation history cleared"
+msgstr "Historia rozmowy wyczyszczona"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_FETCHING_VOICES (340//)"
+msgid "Failed to fetch voices from server"
+msgstr "Nie udało się pobrać głosów z serwera"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_MODELS (341//)"
+msgid "No selectable models for this speech profile"
+msgstr "Brak modeli do wyboru dla tego profilu mowy"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_VOICES (342//)"
+msgid "No selectable voices for this speech profile"
+msgstr "Brak głosów do wyboru dla tego profilu mowy"
 

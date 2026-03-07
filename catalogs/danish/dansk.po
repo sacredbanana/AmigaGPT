@@ -17,9 +17,7 @@ msgstr ""
 msgctxt "STRING_APP_DESCRIPTION (0//)"
 msgid ""
 "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
-msgstr ""
-"AmigaGPT er en app til at chatte til ChatGPT eller skabe AI-billeder med "
-"DALL-E"
+msgstr "AmigaGPT er en app til at chatte til ChatGPT eller skabe AI-billeder med DALL-E"
 
 #: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
@@ -31,18 +29,14 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
-msgstr ""
-"Kunne ikke åbne talesystemet. Sørg for, at translator.library v42 og "
-"narrator.device v34 er installeret. Se vejledningen for mere information."
+msgstr "Kunne ikke åbne talesystemet. Sørg for, at translator.library v42 og narrator.device v34 er installeret. Se vejledningen for mere information."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
 msgid ""
 "Failed to open speech system. Make sure Flite Device is installed. See the "
 "guide for more information."
-msgstr ""
-"Kunne ikke åbne talesystemet. Sørg for, at Flite-enheden er installeret. Se "
-"vejledningen for mere information."
+msgstr "Kunne ikke åbne talesystemet. Sørg for, at Flite-enheden er installeret. Se vejledningen for mere information."
 
 #: src/main.c:88 src/main.c:89 src/main.c:90 src/main.c:87
 msgctxt "STRING_ERROR_OPENAI_INIT (4//)"
@@ -54,9 +48,7 @@ msgctxt "STRING_WARNING_STACK (5//)"
 msgid ""
 "Warning: The stack size is too small. The minimum recommended stack size is "
 "32768 bytes to avoid crashes. Your stack size is: "
-msgstr ""
-"Advarsel: Stakstørrelsen er for lille. Den anbefalede mindste stakstørrelse "
-"er 32768 bytes for at undgå nedbrud. Din stakstørrelse er: "
+msgstr "Advarsel: Stakstørrelsen er for lille. Den anbefalede mindste stakstørrelse er 32768 bytes for at undgå nedbrud. Din stakstørrelse er: "
 
 #: src/APIKeyRequesterWindow.c:40
 msgctxt "STRING_API_KEY_REQUESTER_TITLE (6//)"
@@ -78,9 +70,7 @@ msgctxt "STRING_API_KEY_REQUESTER_BODY_HELP (200//)"
 msgid ""
 "If you do not have an API key, consult the AmigaGPT documentation for "
 "instructions on how to obtain one."
-msgstr ""
-"Hvis du ikke har en API-nøgle, se AmigaGPT-dokumentationen for instruktioner "
-"om, hvordan du får en."
+msgstr "Hvis du ikke har en API-nøgle, se AmigaGPT-dokumentationen for instruktioner om, hvordan du får en."
 
 #: src/APIKeyRequesterWindow.c:53 src/ChatSystemRequesterWindow.c:52
 #: src/ProxySettingsRequesterWindow.c:147 src/StartupOptionsWindow.c:129
@@ -120,9 +110,7 @@ msgctxt "STRING_ABOUT_WINDOW_SUPPORT (14//)"
 msgid ""
 "This app will always remain free but if you would like to support me you can "
 "do so at:"
-msgstr ""
-"Denne app vil altid forblive gratis, men hvis du gerne vil støtte mig, kan "
-"du gøre det på:"
+msgstr "Denne app vil altid forblive gratis, men hvis du gerne vil støtte mig, kan du gøre det på:"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BUILD_DETAILS (214//)"
@@ -149,9 +137,7 @@ msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
 msgid ""
 "for all the thorough testing, bundling AmigaGPT into AmiKit and for all the "
 "moral support"
-msgstr ""
-"for al den grundige test, bundling af AmigaGPT i AmiKit og for al den "
-"moralske støtte"
+msgstr "for al den grundige test, bundling af AmigaGPT i AmiKit og for al den moralske støtte"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_COFFINOS (205//)"
@@ -163,9 +149,7 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
 msgid ""
 "for reviewing AmigaGPT and publishing several of its updates in the News "
 "from Aminet section"
-msgstr ""
-"for at gennemgå AmigaGPT og udgive flere af dets opdateringer i sektionen "
-"Nyheder fra Aminet"
+msgstr "for at gennemgå AmigaGPT og udgive flere af dets opdateringer i sektionen Nyheder fra Aminet"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_WHATIFF (207//)"
@@ -182,18 +166,14 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
 msgid ""
 "for covering AmigaGPT in the Amiga News section on his Twitch streams and "
 "allowing me to join his stream to promote it"
-msgstr ""
-"for at have dækket AmigaGPT i Amiga News-sektionen på hans Twitch-streams og "
-"givet mig lov til at deltage i hans stream for at promovere den"
+msgstr "for at have dækket AmigaGPT i Amiga News-sektionen på hans Twitch-streams og givet mig lov til at deltage i hans stream for at promovere den"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
 msgid ""
 "for making a video review and giving a tutorial on how to add support for "
 "the French accent"
-msgstr ""
-"for at lave en videoanmeldelse og give en vejledning i, hvordan man tilføjer "
-"støtte til den franske accent"
+msgstr "for at lave en videoanmeldelse og give en vejledning i, hvordan man tilføjer støtte til den franske accent"
 
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
@@ -214,12 +194,7 @@ msgid ""
 "pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
 "normally, leave this blank. This setting will be applied to new "
 "conversations only."
-msgstr ""
-"Hvis du gerne vil have AmigaGPT til at svare på en bestemt måde eller "
-"tilføje noget personlighed, så skriv det her. For eksempel kan du skrive "
-"\"Tal som en pirat\" eller \"Tal som en robot\". Hvis du gerne vil have "
-"AmigaGPT til at svare normalt, så lad dette stå tomt. Denne indstilling vil "
-"kun blive anvendt på nye samtaler."
+msgstr "Hvis du gerne vil have AmigaGPT til at svare på en bestemt måde eller tilføje noget personlighed, så skriv det her. For eksempel kan du skrive \"Tal som en pirat\" eller \"Tal som en robot\". Hvis du gerne vil have AmigaGPT til at svare normalt, så lad dette stå tomt. Denne indstilling vil kun blive anvendt på nye samtaler."
 
 #: src/ChatSystemRequesterWindow.c:65
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_ERROR (18//)"
@@ -384,30 +359,24 @@ msgctxt "STRING_ERROR_CHAT_HISTORY_CREATE (49//)"
 msgid ""
 "Failed to create message history file. Conversation history will not be "
 "saved."
-msgstr ""
-"Kunne ikke oprette beskedhistorikfil. Samtalehistorikken vil ikke blive gemt."
+msgstr "Kunne ikke oprette beskedhistorikfil. Samtalehistorikken vil ikke blive gemt."
 
 #: src/MainWindow.c:1663
 msgctxt "STRING_ERROR_CHAT_HISTORY_SAVE (50//)"
 msgid ""
 "Failed to write to message history file. Conversation history will not be "
 "saved."
-msgstr ""
-"Kunne ikke skrive til meddelelseshistorikfilen. Samtalehistorikken vil ikke "
-"blive gemt."
+msgstr "Kunne ikke skrive til meddelelseshistorikfilen. Samtalehistorikken vil ikke blive gemt."
 
 #: src/MainWindow.c:1682
 msgctxt "STRING_ERROR_IMAGE_HISTORY_CREATE (51//)"
 msgid "Failed to create image history file. Image history will not be saved."
-msgstr ""
-"Kunne ikke oprette billedhistorikfil. Billedhistorikken vil ikke blive gemt."
+msgstr "Kunne ikke oprette billedhistorikfil. Billedhistorikken vil ikke blive gemt."
 
 #: src/MainWindow.c:1717
 msgctxt "STRING_ERROR_IMAGE_HISTORY_WRITE (52//)"
 msgid "Failed to write to image history file. Image history will not be saved."
-msgstr ""
-"Kunne ikke skrive til billedhistorikfil. Billedhistorikken vil ikke blive "
-"gemt."
+msgstr "Kunne ikke skrive til billedhistorikfil. Billedhistorikken vil ikke blive gemt."
 
 #: src/MainWindow.c:1745
 msgctxt "STRING_LOADING_IMAGE (53//)"
@@ -419,9 +388,7 @@ msgctxt "STRING_ERROR_CHAT_HISTORY_READ (55//)"
 msgid ""
 "Failed to read from message history file. Conversation history will not be "
 "loaded"
-msgstr ""
-"Kunne ikke læse fra meddelelseshistorikfilen. Samtalehistorikken vil ikke "
-"blive indlæst"
+msgstr "Kunne ikke læse fra meddelelseshistorikfilen. Samtalehistorikken vil ikke blive indlæst"
 
 #: src/MainWindow.c:1814
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP (56//)"
@@ -429,11 +396,7 @@ msgid ""
 "Failed to parse chat history. Malformed JSON. The chat-history.json file is "
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
-msgstr ""
-"Kunne ikke parse chathistorik. Forkert JSON. Chat-history.json-filen er "
-"sandsynligvis beskadiget. Samtalehistorikken vil ikke blive indlæst. En "
-"sikkerhedskopi af chat-history.json-filen er blevet oprettet som chat-"
-"history.json.bak"
+msgstr "Kunne ikke parse chathistorik. Forkert JSON. Chat-history.json-filen er sandsynligvis beskadiget. Samtalehistorikken vil ikke blive indlæst. En sikkerhedskopi af chat-history.json-filen er blevet oprettet som chat-history.json.bak"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -442,11 +405,7 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. There was an "
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
-msgstr ""
-"Kunne ikke parse chathistorik. Forkert JSON. Chat-history.json-filen er "
-"sandsynligvis beskadiget. Samtalehistorikken vil ikke blive indlæst. Der "
-"opstod en fejl ved at skrive en sikkerhedskopi af chathistorikken til "
-"disken, men en kopi er blevet gemt i RAM:chat-history.json.bak"
+msgstr "Kunne ikke parse chathistorik. Forkert JSON. Chat-history.json-filen er sandsynligvis beskadiget. Samtalehistorikken vil ikke blive indlæst. Der opstod en fejl ved at skrive en sikkerhedskopi af chathistorikken til disken, men en kopi er blevet gemt i RAM:chat-history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
@@ -458,18 +417,14 @@ msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP (59//)"
 msgid ""
 "Failed to parse chat history.The chat-history.json file is probably "
 "corrupted. Conversation history will not be loaded."
-msgstr ""
-"Kunne ikke parse chathistorik. Chat-history.json-filen er sandsynligvis "
-"beskadiget. Samtalehistorikken vil ikke blive indlæst."
+msgstr "Kunne ikke parse chathistorik. Chat-history.json-filen er sandsynligvis beskadiget. Samtalehistorikken vil ikke blive indlæst."
 
 #: src/MainWindow.c:1950
 msgctxt "STRING_ERROR_IMAGE_HISTORY_READ (60//)"
 msgid ""
 "Failed to read from image history file. Image generation history will not be "
 "loaded"
-msgstr ""
-"Kunne ikke læse fra billedhistorikfil. Billedgenereringshistorik vil ikke "
-"blive indlæst"
+msgstr "Kunne ikke læse fra billedhistorikfil. Billedgenereringshistorik vil ikke blive indlæst"
 
 #: src/MainWindow.c:1964
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP (61//)"
@@ -477,11 +432,7 @@ msgid ""
 "Failed to parse image history. Malformed JSON. The image-history.json file "
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
-msgstr ""
-"Billedhistorikken kunne ikke parses. Forkert JSON. Filen image-history.json "
-"er sandsynligvis beskadiget. Billedhistorik vil ikke blive indlæst. En "
-"sikkerhedskopi af filen image-history.json er blevet oprettet som image-"
-"history.json.bak"
+msgstr "Billedhistorikken kunne ikke parses. Forkert JSON. Filen image-history.json er sandsynligvis beskadiget. Billedhistorik vil ikke blive indlæst. En sikkerhedskopi af filen image-history.json er blevet oprettet som image-history.json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -490,11 +441,7 @@ msgid ""
 "is probably corrupted. Image history will not be loaded. There was an error "
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
-msgstr ""
-"Billedhistorikken kunne ikke parses. Forkert JSON. Filen image-history.json "
-"er sandsynligvis beskadiget. Billedhistorik vil ikke blive indlæst. Der "
-"opstod en fejl ved at skrive en sikkerhedskopi af billedhistorikken til "
-"disken, men en kopi er blevet gemt i RAM:image-history.json.bak"
+msgstr "Billedhistorikken kunne ikke parses. Forkert JSON. Filen image-history.json er sandsynligvis beskadiget. Billedhistorik vil ikke blive indlæst. Der opstod en fejl ved at skrive en sikkerhedskopi af billedhistorikken til disken, men en kopi er blevet gemt i RAM:image-history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
@@ -635,8 +582,7 @@ msgstr "Konfigurationsfilen kunne ikke parses"
 msgctxt "STRING_ERROR_MUI_LIB_OPEN (90//)"
 msgid ""
 "Could not open muimaster.library. Please make sure you have MUI installed"
-msgstr ""
-"Muimaster.library kunne ikke åbnes. Sørg for, at du har MUI installeret"
+msgstr "Muimaster.library kunne ikke åbnes. Sørg for, at du har MUI installeret"
 
 #: src/gui.c:84
 msgctxt "STRING_ERROR_MUI_INTERFACE_OPEN (91//)"
@@ -648,9 +594,7 @@ msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
 msgid ""
 "Could not open codesets.library. Please make sure you have codesets "
 "installed. Refer to the documentation for more info."
-msgstr ""
-"Kunne ikke åbne codesets.library. Sørg for, at du har kodesæt installeret. "
-"Se dokumentationen for mere information."
+msgstr "Kunne ikke åbne codesets.library. Sørg for, at du har kodesæt installeret. Se dokumentationen for mere information."
 
 #: src/gui.c:98
 msgctxt "STRING_ERROR_CODESETS_INTERFACE_OPEN (93//)"
@@ -667,9 +611,7 @@ msgctxt "STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED (95//)"
 msgid ""
 "Could not find all the MUI custom classes. Please make sure they are "
 "installed. Refer to the documentation for more information."
-msgstr ""
-"Kunne ikke finde alle brugerdefinerede MUI-klasser. Sørg for, at de er "
-"installeret. Se dokumentationen for mere information."
+msgstr "Kunne ikke finde alle brugerdefinerede MUI-klasser. Sørg for, at de er installeret. Se dokumentationen for mere information."
 
 #: src/gui.c:178
 msgctxt "STRING_IMAGE (96//)"
@@ -697,9 +639,7 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
-msgstr ""
-"Kunne ikke åbne talesystemet. Sørg for, at translator.library v42 og "
-"narrator.device v37 er installeret. Se vejledningen for mere information."
+msgstr "Kunne ikke åbne talesystemet. Sørg for, at translator.library v42 og narrator.device v37 er installeret. Se vejledningen for mere information."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
@@ -924,10 +864,7 @@ msgid ""
 "Failed to open bsdsocket.library. You have to install a TCP/IP stack such as "
 "AmiTCP, Miami or Roadshow. Please refer to the documentation for more "
 "information."
-msgstr ""
-"Kunne ikke åbne bsdsocket.library. Du skal installere en TCP/IP-stak som "
-"AmiTCP, Miami eller Roadshow. Se venligst dokumentationen for mere "
-"information."
+msgstr "Kunne ikke åbne bsdsocket.library. Du skal installere en TCP/IP-stak som AmiTCP, Miami eller Roadshow. Se venligst dokumentationen for mere information."
 
 #: src/openai.c:182
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN_OS4 (151//)"
@@ -944,9 +881,7 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_OPEN (153//)"
 msgid ""
 "Failed to open amisslmaster.library version 5. You have to install AmiSSL 5. "
 "Please refer to the documentation for more information."
-msgstr ""
-"Kunne ikke åbne amisslmaster.library version 5. Du skal installere AmiSSL 5. "
-"Se venligst dokumentationen for mere information."
+msgstr "Kunne ikke åbne amisslmaster.library version 5. Du skal installere AmiSSL 5. Se venligst dokumentationen for mere information."
 
 #: src/openai.c:211
 msgctxt "STRING_ERROR_AMISSLMASTER_INTERFACE_OPEN (154//)"
@@ -958,9 +893,7 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
 msgid ""
 "Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
 "newer. Please refer to the documentation for more information."
-msgstr ""
-"Kunne ikke initialisere amisslmaster.library. AmigaGPT kræver AmiSSL 5.18 "
-"eller nyere. Se venligst dokumentationen for mere information."
+msgstr "Kunne ikke initialisere amisslmaster.library. AmigaGPT kræver AmiSSL 5.18 eller nyere. Se venligst dokumentationen for mere information."
 
 #: src/openai.c:233
 msgctxt "STRING_ERROR_AMISSL_INTERFACE_INIT (156//)"
@@ -987,9 +920,7 @@ msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
 msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
-msgstr ""
-"Kunne ikke oprette forbindelse til serveren. Tjek, om proxy host og porten "
-"er korrekte, eller deaktiver den."
+msgstr "Kunne ikke oprette forbindelse til serveren. Tjek, om proxy host og porten er korrekte, eller deaktiver den."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
@@ -1182,9 +1113,7 @@ msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
 msgid ""
 "Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
 "voice'. This only works for the gpt-4o-mini-tts model."
-msgstr ""
-"Indtast, hvordan du vil have AI at tale. Eksempel: 'Tal i en dyb og mystisk "
-"stemme'. Denne funktion fungerer kun med gpt-4o-mini-tts-modellen."
+msgstr "Indtast, hvordan du vil have AI at tale. Eksempel: 'Tal i en dyb og mystisk stemme'. Denne funktion fungerer kun med gpt-4o-mini-tts-modellen."
 
 #: src/VoiceInstructionsRequesterWindow.c:87
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
@@ -1236,9 +1165,7 @@ msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
 msgid ""
 "Invalid request. Your OpenAI API account probably has no credit left to run "
 "this model. Please check your account balance."
-msgstr ""
-"Ugyldigt anmodning. Din OpenAI API-konto har sandsynligvis ingen kredit "
-"tilbage til at køre denne model. Tjek din kontobalance."
+msgstr "Ugyldigt anmodning. Din OpenAI API-konto har sandsynligvis ingen kredit tilbage til at køre denne model. Tjek din kontobalance."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1465,7 +1392,7 @@ msgstr "xAI Grok"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_PROFILES (275//)"
 msgid "Profiles"
-msgstr "Profiles"
+msgstr "Profiler"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_PROFILE (276//)"
@@ -1598,9 +1525,8 @@ msgctxt "STRING_CONFIG_MIGRATED (298//)"
 msgid ""
 "Configuration has been migrated to the new format.\n"
 "Your old config has been backed up to config.bak"
-msgstr ""
-"Konfigurationen er blevet migreret til det nye format.\n"
-"Din gamle konfiguration er blevet sikkerhedskopieret til config.bak"
+msgstr "Konfigurationen er blevet migreret til det nye format.
+Din gamle konfiguration er blevet sikkerhedskopieret til config.bak"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
@@ -1635,12 +1561,11 @@ msgid ""
 "%s\n"
 "\n"
 "Allow this command to run?"
-msgstr ""
-"AI'en vil udføre følgende shell-kommando:\n"
-"\n"
-"%s\n"
-"\n"
-"Tillad at denne kommando køres?"
+msgstr "AI'en vil udføre følgende shell-kommando:
+
+%s
+
+Tillad at denne kommando køres?"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_CONFIRMATION_TITLE (305//)"
@@ -1659,11 +1584,11 @@ msgid ""
 "\n"
 "--- Shell command denied by user ---\n"
 "\n"
-msgstr ""
-"\n"
-"\n"
-"--- Shell-kommando afvist af brugeren ---\n"
-"\n"
+msgstr "
+
+--- Shell-kommando afvist af brugeren ---
+
+"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT (308//)"
@@ -1671,10 +1596,10 @@ msgid ""
 "\n"
 "\n"
 "--- Executing: %s ---\n"
-msgstr ""
-"\n"
-"\n"
-"--- Udfører: %s ---\n"
+msgstr "
+
+--- Udfører: %s ---
+"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT (309//)"
@@ -1683,11 +1608,11 @@ msgid ""
 "%s\n"
 "--- End ---\n"
 "\n"
-msgstr ""
-"Exit-kode: %ld\n"
-"%s\n"
-"--- Slut ---\n"
-"\n"
+msgstr "Exit-kode: %ld
+%s
+--- Slut ---
+
+"
 
 #: src/MainWindow.c
 msgctxt "STRING_SHELL_TOOL_NO_OUTPUT (310//)"
@@ -1700,10 +1625,9 @@ msgid ""
 "Exit code: %ld\n"
 "Output:\n"
 "%s"
-msgstr ""
-"Exit-kode: %ld\n"
-"Output:\n"
-"%s"
+msgstr "Exit-kode: %ld
+Output:
+%s"
 
 #: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
@@ -1729,12 +1653,12 @@ msgstr "OpenAI"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_NEW (316//)"
 msgid "New"
-msgstr "New"
+msgstr "Ny"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_DUPLICATE (317//)"
 msgid "Duplicate"
-msgstr "Duplicate"
+msgstr "Dupliker"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST (318//)"
@@ -1744,80 +1668,120 @@ msgstr "Test"
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_IMAGE_TEST_TITLE (319//)"
 msgid "Image Test"
-msgstr "Image Test"
+msgstr "Billedtest"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_DEFAULT_NEW_PROFILE_NAME (320//)"
 msgid "New Profile"
-msgstr "New Profile"
+msgstr "Ny profil"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_PROFILE_COPY_SUFFIX (321//)"
 msgid " copy"
-msgstr " copy"
+msgstr " kopi"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_PASS (322//)"
 msgid "PASS"
-msgstr "PASS"
+msgstr "BESTÅET"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_FAIL (323//)"
 msgid "FAIL"
-msgstr "FAIL"
+msgstr "FEJLET"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_RESULT_TITLE (324//)"
 msgid "Test Result"
-msgstr "Test Result"
+msgstr "Testresultat"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_CHAT_TEST_RESULT_TITLE (325//)"
 msgid "Chat Test Result"
-msgstr "Chat Test Result"
+msgstr "Resultat af chattest"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_IMAGE_TEST_RESULT_TITLE (326//)"
 msgid "Image Test Result"
-msgstr "Image Test Result"
+msgstr "Resultat af billedtest"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_NO_PROFILE_SELECTED (327//)"
 msgid "No profile selected."
-msgstr "No profile selected."
+msgstr "Ingen profil valgt."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_RECEIVED_JSON_RESPONSE (328//)"
 msgid "Received JSON response."
-msgstr "Received JSON response."
+msgstr "Modtog JSON-svar."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_NO_JSON_RESPONSE_RECEIVED (329//)"
 msgid "No JSON response received."
-msgstr "No JSON response received."
+msgstr "Intet JSON-svar modtaget."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_NO_IMAGE_DATA_RECEIVED_SHOWING_JSON (330//)"
 msgid "No image data received (showing JSON)."
-msgstr "No image data received (showing JSON)."
+msgstr "Ingen billeddata modtaget (viser JSON)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_IMAGE_DATA_DECODE_FAILED_SHOWING_JSON (331//)"
 msgid "Image data decode failed (showing JSON)."
-msgstr "Image data decode failed (showing JSON)."
+msgstr "Afkodning af billeddata mislykkedes (viser JSON)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_IMAGE_RECEIVED_COULD_NOT_SAVE_SHOWING_JSON (332//)"
 msgid "Image received but could not be saved (showing JSON)."
-msgstr "Image received but could not be saved (showing JSON)."
+msgstr "Billede modtaget, men kunne ikke gemmes (viser JSON)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_ERROR_RESPONSE_RECEIVED (333//)"
 msgid "Error response received."
-msgstr "Error response received."
+msgstr "Fejlsvar modtaget."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_IMAGE_SIZE (334//)"
 msgid "Image Size"
-msgstr "Image Size"
+msgstr "Billedstørrelse"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_PROFILE_NOT_FOUND (335//)"
+msgid "%s profile not found: %s"
+msgstr "%s-profil blev ikke fundet: %s"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_REQUESTED (336//)"
+msgid "Requested"
+msgstr "Anmodet"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SYSTEM_FILE_READ (337//)"
+msgid "Could not read system file: %s"
+msgstr "Kunne ikke læse systemfilen: %s"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SYSTEM_FILE_MEMORY (338//)"
+msgid "Out of memory reading system file"
+msgstr "Ikke nok hukommelse ved læsning af systemfilen"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_CONVERSATION_CLEARED (339//)"
+msgid "Conversation history cleared"
+msgstr "Samtalehistorik ryddet"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_FETCHING_VOICES (340//)"
+msgid "Failed to fetch voices from server"
+msgstr "Kunne ikke hente stemmer fra serveren"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_MODELS (341//)"
+msgid "No selectable models for this speech profile"
+msgstr "Ingen valgbare modeller for denne taleprofil"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_VOICES (342//)"
+msgid "No selectable voices for this speech profile"
+msgstr "Ingen valgbare stemmer for denne taleprofil"
 
