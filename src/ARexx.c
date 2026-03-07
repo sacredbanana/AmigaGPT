@@ -954,8 +954,10 @@ rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
 static void rexxSetProfileNotFoundError(CONST_STRPTR kind,
                                         CONST_STRPTR profileName) {
     UBYTE errMsg[512];
+    CONST_STRPTR displayKind =
+        kind != NULL ? kind : (CONST_STRPTR)STRING_REXX_REQUESTED;
     snprintf(errMsg, sizeof(errMsg), STRING_ERROR_REXX_PROFILE_NOT_FOUND,
-             kind != NULL ? kind : STRING_REXX_REQUESTED,
+             displayKind,
              profileName != NULL ? profileName : "");
     set(app, MUIA_Application_RexxString, errMsg);
     updateStatusBar(STRING_ERROR, redPen);
@@ -1504,6 +1506,15 @@ static void rexxAppendStringArray(STRPTR buffer, ULONG bufferSize,
     }
 }
 
+static void rexxAppendMutableStringArray(STRPTR buffer, ULONG bufferSize,
+                                         STRPTR const values[]) {
+    if (buffer == NULL || values == NULL)
+        return;
+    for (UBYTE i = 0; values[i] != NULL; i++) {
+        rexxAppendLine(buffer, bufferSize, values[i]);
+    }
+}
+
 static void rexxAppendProfileNamesFromJson(STRPTR buffer, ULONG bufferSize,
                                            CONST_STRPTR profilesStr) {
     struct json_object *arr = rexxParseProfilesJsonArray(profilesStr);
@@ -1635,7 +1646,8 @@ static void rexxAppendChatModelsForProfile(STRPTR buffer, ULONG bufferSize,
         return;
 
     CONST_STRPTR titleProfile =
-        settings.profileName != NULL ? settings.profileName : STRING_MENU_CHAT;
+        settings.profileName != NULL ? settings.profileName
+                                     : (CONST_STRPTR)STRING_MENU_CHAT;
     UBYTE title[256];
     snprintf(title, sizeof(title), "%s (%s)", STRING_MENU_CHAT, titleProfile);
     rexxAppendSectionHeader(buffer, bufferSize, title);
@@ -1661,7 +1673,8 @@ static void rexxAppendImageModelsForProfile(STRPTR buffer, ULONG bufferSize,
         return;
 
     CONST_STRPTR titleProfile =
-        settings.profileName != NULL ? settings.profileName : STRING_IMAGE;
+        settings.profileName != NULL ? settings.profileName
+                                     : (CONST_STRPTR)STRING_IMAGE;
     UBYTE title[256];
     snprintf(title, sizeof(title), "%s (%s)", STRING_IMAGE, titleProfile);
     rexxAppendSectionHeader(buffer, bufferSize, title);
@@ -1688,7 +1701,7 @@ static void rexxAppendSpeechModelsForProfile(STRPTR buffer, ULONG bufferSize,
 
     CONST_STRPTR titleProfile = settings.activeProfileName != NULL
                                     ? settings.activeProfileName
-                                    : STRING_MENU_SPEECH;
+                                    : (CONST_STRPTR)STRING_MENU_SPEECH;
     UBYTE title[256];
     snprintf(title, sizeof(title), "%s (%s)", STRING_MENU_SPEECH, titleProfile);
     rexxAppendSectionHeader(buffer, bufferSize, title);
@@ -1735,7 +1748,8 @@ static void rexxAppendVoicesForSpeechProfile(STRPTR buffer, ULONG bufferSize,
         rexxAppendLine(buffer, bufferSize, "male robot");
         rexxAppendLine(buffer, bufferSize, "female robot");
     } else if (settings.speechSystem == SPEECH_SYSTEM_FLITE) {
-        rexxAppendStringArray(buffer, bufferSize, SPEECH_FLITE_VOICE_NAMES);
+        rexxAppendMutableStringArray(buffer, bufferSize,
+                                     SPEECH_FLITE_VOICE_NAMES);
     } else {
         rexxAppendLine(buffer, bufferSize,
                        STRING_REXX_NO_SELECTABLE_SPEECH_VOICES);
