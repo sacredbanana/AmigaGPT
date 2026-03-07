@@ -219,10 +219,19 @@ CONST_STRPTR IMAGE_FORMAT_NAMES[] = {
  * Prepopulated chat models for OpenAI
  **/
 CONST_STRPTR OPENAI_CHAT_MODELS[] = {"gpt-5-chat-latest",
-                                     "gpt-5.2-pro",
+                                     "gpt-5.4",
+                                     "gpt-5.4-pro",
+                                     "gpt-5.3",
+                                     "gpt-5.3-codex",
                                      "gpt-5.2",
+                                     "gpt-5.2-codex",
+                                     "gpt-5.2-pro",
                                      "gpt-5.1",
+                                     "gpt-5.1-codex",
+                                     "gpt-5.1-codex-mini",
+                                     "gpt-5.1-codex-max",
                                      "gpt-5",
+                                     "gpt-5-codex",
                                      "gpt-5-mini",
                                      "gpt-5-nano",
                                      "gpt-4.5-preview",
@@ -280,22 +289,16 @@ CONST_STRPTR OPENAI_IMAGE_MODELS[] = {"gpt-image-1",      "gpt-image-1.5",
                                       "dall-e-2",         NULL};
 
 /**
- * Prepopulated image models for Google Gemini/Imagen
+ * Prepopulated image models for Google Gemini
  **/
-CONST_STRPTR GEMINI_IMAGE_MODELS[] = {"imagen-4-ultra",
-                                      "imagen-4",
-                                      "imagen-4-fast",
-                                      "imagen-3",
-                                      "gemini-3-pro-image-preview",
-                                      "gemini-2.5-flash-image",
-                                      NULL};
+CONST_STRPTR GEMINI_IMAGE_MODELS[] = {"gemini-2.5-flash-image",
+                                      "gemini-3-pro-image-preview", NULL};
 
 /**
- * Prepopulated image models for xAI Grok/Aurora
+ * Prepopulated image models for xAI Grok
  **/
-/* xAI docs currently advertise "grok-2-image" for image generation. */
-CONST_STRPTR GROK_IMAGE_MODELS[] = {"grok-2-image", "grok-2-image-1212",
-                                    "grok-2-aurora", NULL};
+CONST_STRPTR GROK_IMAGE_MODELS[] = {"grok-imagine-image",
+                                    "grok-imagine-image-pro", NULL};
 
 /**
  * Generate a random number
@@ -2278,14 +2281,6 @@ struct json_object *postImageCreationRequestToOpenAI(
             (modelName != NULL && strncmp(modelName, "gpt-image-", 10) == 0);
         BOOL isGrok =
             (modelName != NULL && strncmp(modelName, "grok-", 5) == 0);
-        printf("modelName: %s\n", modelName);
-        printf("apiEndpoint: %s\n", API_IMAGE_ENDPOINT_NAMES[apiEndpoint]);
-        printf("imageSize: %s\n", IMAGE_SIZE_NAMES[imageSize]);
-        printf("imageFormat: %s\n", (imageFormat != IMAGE_FORMAT_NULL &&
-                                     IMAGE_FORMAT_NAMES[imageFormat] != NULL)
-                                        ? IMAGE_FORMAT_NAMES[imageFormat]
-                                        : "(none)");
-        printf("isGptImage: %d\n", isGptImage);
         if (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS) {
             if (imageSize != IMAGE_SIZE_NULL &&
                 IMAGE_SIZE_NAMES[imageSize] != NULL)

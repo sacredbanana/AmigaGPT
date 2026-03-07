@@ -253,10 +253,10 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->speechAccent34 = copyString(DEFAULT_ACCENT);
     data->speechAccent37 = copyString(DEFAULT_ACCENT);
     data->speechProfiles = NULL;
-    data->activeSpeechProfileName = copyString(
-        SPEECH_SYSTEM_NAMES[data->speechSystem]
-            ? SPEECH_SYSTEM_NAMES[data->speechSystem]
-            : SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENAI]);
+    data->activeSpeechProfileName =
+        copyString(SPEECH_SYSTEM_NAMES[data->speechSystem]
+                       ? SPEECH_SYSTEM_NAMES[data->speechSystem]
+                       : SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENAI]);
     data->chatSystem = NULL;
     data->openAIVoiceInstructions = NULL;
     data->openAiApiKey = NULL;
@@ -1256,7 +1256,8 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                 changed = TRUE;
             break;
         case MUIA_AmigaGPTConfig_AnthropicChatSystem:
-            if (setStringAttr(&data->anthropicChatSystem, (CONST_STRPTR)ti_Data))
+            if (setStringAttr(&data->anthropicChatSystem,
+                              (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
         }
@@ -1443,15 +1444,15 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
                            data->speechAccent37 != NULL
                                ? json_object_new_string(data->speechAccent37)
                                : NULL);
-    json_object_object_add(
-        configJsonObject, "speechProfiles",
-        data->speechProfiles != NULL ? json_object_new_string(data->speechProfiles)
-                                     : NULL);
-    json_object_object_add(configJsonObject, "activeSpeechProfileName",
-                           data->activeSpeechProfileName != NULL
-                               ? json_object_new_string(
-                                     data->activeSpeechProfileName)
+    json_object_object_add(configJsonObject, "speechProfiles",
+                           data->speechProfiles != NULL
+                               ? json_object_new_string(data->speechProfiles)
                                : NULL);
+    json_object_object_add(
+        configJsonObject, "activeSpeechProfileName",
+        data->activeSpeechProfileName != NULL
+            ? json_object_new_string(data->activeSpeechProfileName)
+            : NULL);
     json_object_object_add(configJsonObject, "chatSystem",
                            data->chatSystem != NULL
                                ? json_object_new_string(data->chatSystem)
@@ -1618,16 +1619,14 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
         data->anthropicChatModelName != NULL
             ? json_object_new_string(data->anthropicChatModelName)
             : NULL);
-    json_object_object_add(
-        configJsonObject, "openAiChatSystem",
-        data->openAiChatSystem != NULL
-            ? json_object_new_string(data->openAiChatSystem)
-            : NULL);
-    json_object_object_add(
-        configJsonObject, "geminiChatSystem",
-        data->geminiChatSystem != NULL
-            ? json_object_new_string(data->geminiChatSystem)
-            : NULL);
+    json_object_object_add(configJsonObject, "openAiChatSystem",
+                           data->openAiChatSystem != NULL
+                               ? json_object_new_string(data->openAiChatSystem)
+                               : NULL);
+    json_object_object_add(configJsonObject, "geminiChatSystem",
+                           data->geminiChatSystem != NULL
+                               ? json_object_new_string(data->geminiChatSystem)
+                               : NULL);
     json_object_object_add(configJsonObject, "grokChatSystem",
                            data->grokChatSystem != NULL
                                ? json_object_new_string(data->grokChatSystem)
@@ -1777,21 +1776,25 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
                                   &valueObj))
         data->speechFliteVoice = json_object_get_int(valueObj);
 
-    if (json_object_object_get_ex(configJsonObject, "narratorRate34", &valueObj))
+    if (json_object_object_get_ex(configJsonObject, "narratorRate34",
+                                  &valueObj))
         data->narratorRate34 = (ULONG)json_object_get_int(valueObj);
     if (json_object_object_get_ex(configJsonObject, "narratorPitch34",
                                   &valueObj))
         data->narratorPitch34 = (ULONG)json_object_get_int(valueObj);
-    if (json_object_object_get_ex(configJsonObject, "narratorMode34", &valueObj))
+    if (json_object_object_get_ex(configJsonObject, "narratorMode34",
+                                  &valueObj))
         data->narratorMode34 = (ULONG)json_object_get_int(valueObj);
     if (json_object_object_get_ex(configJsonObject, "narratorSex34", &valueObj))
         data->narratorSex34 = (ULONG)json_object_get_int(valueObj);
-    if (json_object_object_get_ex(configJsonObject, "narratorRate37", &valueObj))
+    if (json_object_object_get_ex(configJsonObject, "narratorRate37",
+                                  &valueObj))
         data->narratorRate37 = (ULONG)json_object_get_int(valueObj);
     if (json_object_object_get_ex(configJsonObject, "narratorPitch37",
                                   &valueObj))
         data->narratorPitch37 = (ULONG)json_object_get_int(valueObj);
-    if (json_object_object_get_ex(configJsonObject, "narratorMode37", &valueObj))
+    if (json_object_object_get_ex(configJsonObject, "narratorMode37",
+                                  &valueObj))
         data->narratorMode37 = (ULONG)json_object_get_int(valueObj);
     if (json_object_object_get_ex(configJsonObject, "narratorSex37", &valueObj))
         data->narratorSex37 = (ULONG)json_object_get_int(valueObj);
@@ -2032,10 +2035,10 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     readJsonString(configJsonObject, "activeSpeechProfileName",
                    &data->activeSpeechProfileName);
     if (data->activeSpeechProfileName == NULL) {
-        data->activeSpeechProfileName = copyString(
-            SPEECH_SYSTEM_NAMES[data->speechSystem]
-                ? SPEECH_SYSTEM_NAMES[data->speechSystem]
-                : SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENAI]);
+        data->activeSpeechProfileName =
+            copyString(SPEECH_SYSTEM_NAMES[data->speechSystem]
+                           ? SPEECH_SYSTEM_NAMES[data->speechSystem]
+                           : SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENAI]);
     }
 
     /* If the active speech profile name matches a built-in system, align the
@@ -2058,7 +2061,8 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
                     data->speechSystem == SPEECH_SYSTEM_FLITE)
                     data->speechSystem = SPEECH_SYSTEM_OPENAI;
 #endif
-                /* If we had to override, also override the active profile name. */
+                /* If we had to override, also override the active profile name.
+                 */
                 if (strcmp(data->activeSpeechProfileName,
                            SPEECH_SYSTEM_NAMES[data->speechSystem]) != 0) {
                     freeString(&data->activeSpeechProfileName);
@@ -2182,7 +2186,7 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
             }
         }
         if (data->imageModelName == NULL) {
-            data->imageModelName = copyString("gpt-image-1");
+            data->imageModelName = copyString("gpt-image-1.5");
         }
 
         /* Update schema version */
@@ -2202,7 +2206,7 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     if (data->chatModelName == NULL)
         data->chatModelName = copyString("gpt-5-chat-latest");
     if (data->imageModelName == NULL)
-        data->imageModelName = copyString("gpt-image-1");
+        data->imageModelName = copyString("gpt-image-1.5");
     if (data->openAiChatModelName == NULL) {
         data->openAiChatModelName =
             copyString(data->chatModelName
@@ -2232,20 +2236,23 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
             configJsonObject, "openAiImageModelName", &tmp);
         BOOL hasGemini = json_object_object_get_ex(
             configJsonObject, "geminiImageModelName", &tmp);
-        BOOL hasGrok = json_object_object_get_ex(
-            configJsonObject, "grokImageModelName", &tmp);
-        if (!hasOpenAi && !hasGemini && !hasGrok && data->imageModelName != NULL) {
+        BOOL hasGrok = json_object_object_get_ex(configJsonObject,
+                                                 "grokImageModelName", &tmp);
+        if (!hasOpenAi && !hasGemini && !hasGrok &&
+            data->imageModelName != NULL) {
             CONST_STRPTR activeImg = data->activeImageProfileName;
             if (activeImg != NULL && strlen(activeImg) > 0) {
                 if (strcmp(activeImg, "Google Gemini") == 0) {
                     freeString(&data->geminiImageModelName);
-                    data->geminiImageModelName = copyString(data->imageModelName);
+                    data->geminiImageModelName =
+                        copyString(data->imageModelName);
                 } else if (strcmp(activeImg, "xAI Grok") == 0) {
                     freeString(&data->grokImageModelName);
                     data->grokImageModelName = copyString(data->imageModelName);
                 } else {
                     freeString(&data->openAiImageModelName);
-                    data->openAiImageModelName = copyString(data->imageModelName);
+                    data->openAiImageModelName =
+                        copyString(data->imageModelName);
                 }
             } else {
                 freeString(&data->openAiImageModelName);
@@ -2255,17 +2262,15 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     }
 
     if (data->openAiImageModelName == NULL)
-        data->openAiImageModelName =
-            copyString(OPENAI_IMAGE_MODELS[0] ? OPENAI_IMAGE_MODELS[0]
-                                              : "gpt-image-1.5");
+        data->openAiImageModelName = copyString(
+            OPENAI_IMAGE_MODELS[0] ? OPENAI_IMAGE_MODELS[0] : "gpt-image-1.5");
     if (data->geminiImageModelName == NULL)
         data->geminiImageModelName =
             copyString(GEMINI_IMAGE_MODELS[0] ? GEMINI_IMAGE_MODELS[0]
-                                              : "imagen-4-ultra");
+                                              : "gemini-2.5-flash-image");
     if (data->grokImageModelName == NULL)
-        data->grokImageModelName =
-            copyString(GROK_IMAGE_MODELS[0] ? GROK_IMAGE_MODELS[0]
-                                            : "grok-2-image");
+        data->grokImageModelName = copyString(
+            GROK_IMAGE_MODELS[0] ? GROK_IMAGE_MODELS[0] : "grok-imagine-image");
 
     /* Migrate global webSearchEnabled / shellToolEnabled / chatSystem into
      * per-profile fields if this is the first run after the upgrade. */
@@ -2275,12 +2280,10 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
             configJsonObject, "openAiWebSearchEnabled", &tmp);
         if (!hasPerProfileKeys) {
             CONST_STRPTR active = data->activeProfileName;
-            BOOL isOpenAi =
-                (active != NULL && strcmp(active, "OpenAI") == 0);
+            BOOL isOpenAi = (active != NULL && strcmp(active, "OpenAI") == 0);
             BOOL isGemini =
                 (active != NULL && strcmp(active, "Google Gemini") == 0);
-            BOOL isGrok =
-                (active != NULL && strcmp(active, "xAI Grok") == 0);
+            BOOL isGrok = (active != NULL && strcmp(active, "xAI Grok") == 0);
             BOOL isAnthropic =
                 (active != NULL && strcmp(active, "Anthropic Claude") == 0);
             BOOL isLocked = isOpenAi || isGemini || isGrok || isAnthropic;
@@ -2306,12 +2309,10 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
                 }
             } else if (active != NULL && strlen(active) > 0) {
                 /* Custom profile -- inject into the JSON array */
-                struct json_object *arr =
-                    json_tokener_parse(data->customServerProfiles
-                                           ? data->customServerProfiles
-                                           : "[]");
-                if (arr != NULL &&
-                    json_object_is_type(arr, json_type_array)) {
+                struct json_object *arr = json_tokener_parse(
+                    data->customServerProfiles ? data->customServerProfiles
+                                               : "[]");
+                if (arr != NULL && json_object_is_type(arr, json_type_array)) {
                     int len = json_object_array_length(arr);
                     for (int i = 0; i < len; i++) {
                         struct json_object *p =
@@ -2639,7 +2640,8 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
         out->narratorSex = DEFAULT_NARRATOR_SEX;
     }
 
-    /* If an active custom speech profile is selected, override fields from it. */
+    /* If an active custom speech profile is selected, override fields from it.
+     */
     STRPTR activeName = out->activeProfileName;
     if (activeName == NULL || strlen(activeName) == 0)
         return;
@@ -2696,7 +2698,8 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
         if (sysObj != NULL)
             out->speechSystem = (SpeechSystem)json_object_get_int(sysObj);
 
-        /* narrator defaults follow the chosen system unless profile overrides */
+        /* narrator defaults follow the chosen system unless profile overrides
+         */
         if (out->speechSystem == SPEECH_SYSTEM_34) {
             out->narratorRate = (UWORD)configGetNarratorRate34();
             out->narratorPitch = (UWORD)configGetNarratorPitch34();
@@ -2719,7 +2722,8 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
             out->accentPath = dupStrCfg(json_object_get_string(accentObj));
         }
 
-        struct json_object *fvObj = json_object_object_get(p, "speechFliteVoice");
+        struct json_object *fvObj =
+            json_object_object_get(p, "speechFliteVoice");
         if (fvObj != NULL)
             out->fliteVoice = (SpeechFliteVoice)json_object_get_int(fvObj);
 
@@ -2757,7 +2761,8 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
                 FreeVec(out->openAiVoiceInstructions);
                 out->openAiVoiceInstructions = NULL;
             }
-            out->openAiVoiceInstructions = dupStrCfg(json_object_get_string(instr));
+            out->openAiVoiceInstructions =
+                dupStrCfg(json_object_get_string(instr));
         }
 
         struct json_object *eKey =
@@ -3223,7 +3228,8 @@ void configSetSpeechProfiles(CONST_STRPTR value) {
 
 void configSetActiveSpeechProfileName(CONST_STRPTR value) {
     if (configObj)
-        set(configObj, MUIA_AmigaGPTConfig_ActiveSpeechProfileName, (ULONG)value);
+        set(configObj, MUIA_AmigaGPTConfig_ActiveSpeechProfileName,
+            (ULONG)value);
 }
 
 void configSetSpeechFliteVoice(SpeechFliteVoice value) {
@@ -3533,7 +3539,8 @@ static struct json_object *parseProfilesJsonArray(CONST_STRPTR profilesStr) {
 
 static struct json_object *findProfileObjectByName(struct json_object *arr,
                                                    CONST_STRPTR name) {
-    if (arr == NULL || !json_object_is_type(arr, json_type_array) || name == NULL)
+    if (arr == NULL || !json_object_is_type(arr, json_type_array) ||
+        name == NULL)
         return NULL;
     int len = json_object_array_length(arr);
     for (int i = 0; i < len; i++) {
@@ -3551,8 +3558,7 @@ static struct json_object *findProfileObjectByName(struct json_object *arr,
 }
 
 static CONST_STRPTR jsonGetStringDefault(struct json_object *obj,
-                                        CONST_STRPTR key,
-                                        CONST_STRPTR def) {
+                                         CONST_STRPTR key, CONST_STRPTR def) {
     if (obj == NULL || key == NULL)
         return def;
     struct json_object *v = json_object_object_get(obj, key);
@@ -3608,10 +3614,10 @@ static APIChatEndpoint coerceChatEndpointFromStoredInt(LONG v) {
 static STRPTR resolvedChatSystem = NULL;
 
 static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
-                                         CONST_STRPTR profileName) {
+                                          CONST_STRPTR profileName) {
     /* Connection defaults */
     if (strcmp(profileName, LOCKED_PROFILE_NAME_OPENAI) == 0) {
-        out->host = (STRPTR)"api.openai.com";
+        out->host = (STRPTR) "api.openai.com";
         out->port = 443;
         out->useSSL = TRUE;
         out->apiEndpoint = API_CHAT_ENDPOINT_RESPONSES;
@@ -3622,8 +3628,8 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
         STRPTR model = NULL;
         if (configObj)
             get(configObj, MUIA_AmigaGPTConfig_OpenAiChatModelName, &model);
-        out->model = (model != NULL && strlen(model) > 0) ? model
-                                                          : "gpt-5-chat-latest";
+        out->model =
+            (model != NULL && strlen(model) > 0) ? model : "gpt-5-chat-latest";
         {
             ULONG v = TRUE;
             if (configObj)
@@ -3651,7 +3657,7 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
             out->chatSystem = resolvedChatSystem;
         }
     } else if (strcmp(profileName, LOCKED_PROFILE_NAME_GEMINI) == 0) {
-        out->host = (STRPTR)"generativelanguage.googleapis.com";
+        out->host = (STRPTR) "generativelanguage.googleapis.com";
         out->port = 443;
         out->useSSL = TRUE;
         out->apiEndpoint = API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT;
@@ -3662,8 +3668,8 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
         STRPTR model = NULL;
         if (configObj)
             get(configObj, MUIA_AmigaGPTConfig_GeminiChatModelName, &model);
-        out->model = (model != NULL && strlen(model) > 0) ? model
-                                                          : "gemini-2.5-flash";
+        out->model =
+            (model != NULL && strlen(model) > 0) ? model : "gemini-2.5-flash";
         {
             ULONG v = TRUE;
             if (configObj)
@@ -3686,7 +3692,7 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
             out->chatSystem = resolvedChatSystem;
         }
     } else if (strcmp(profileName, LOCKED_PROFILE_NAME_GROK) == 0) {
-        out->host = (STRPTR)"api.x.ai";
+        out->host = (STRPTR) "api.x.ai";
         out->port = 443;
         out->useSSL = TRUE;
         out->apiEndpoint = API_CHAT_ENDPOINT_RESPONSES;
@@ -3720,7 +3726,7 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
             out->chatSystem = resolvedChatSystem;
         }
     } else {
-        out->host = (STRPTR)"api.anthropic.com";
+        out->host = (STRPTR) "api.anthropic.com";
         out->port = 443;
         out->useSSL = TRUE;
         out->apiEndpoint = API_CHAT_ENDPOINT_MESSAGES;
@@ -3731,18 +3737,21 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
         STRPTR model = NULL;
         if (configObj)
             get(configObj, MUIA_AmigaGPTConfig_AnthropicChatModelName, &model);
-        out->model =
-            (model != NULL && strlen(model) > 0) ? model : "claude-3-5-sonnet-latest";
+        out->model = (model != NULL && strlen(model) > 0)
+                         ? model
+                         : "claude-3-5-sonnet-latest";
         {
             ULONG v = FALSE;
             if (configObj)
-                get(configObj, MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled, &v);
+                get(configObj, MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled,
+                    &v);
             out->stream = (BOOL)v;
         }
         {
             ULONG v = TRUE;
             if (configObj)
-                get(configObj, MUIA_AmigaGPTConfig_AnthropicWebSearchEnabled, &v);
+                get(configObj, MUIA_AmigaGPTConfig_AnthropicWebSearchEnabled,
+                    &v);
             out->webSearchEnabled = (BOOL)v;
         }
         out->shellToolEnabled = FALSE;
@@ -3797,11 +3806,13 @@ void configGetActiveChatRequestSettings(struct ChatRequestSettings *out) {
         return;
     }
 
-    struct json_object *arr = parseProfilesJsonArray(configGetCustomServerProfiles());
+    struct json_object *arr =
+        parseProfilesJsonArray(configGetCustomServerProfiles());
     struct json_object *profile = findProfileObjectByName(arr, activeName);
     if (profile != NULL) {
         freeString(&resolvedChatHost);
-        resolvedChatHost = copyString(jsonGetStringDefault(profile, "host", ""));
+        resolvedChatHost =
+            copyString(jsonGetStringDefault(profile, "host", ""));
         out->host = resolvedChatHost;
         out->port = (UWORD)jsonGetIntDefault(profile, "port", 443);
         out->useSSL = jsonGetBoolDefault(profile, "useSSL", TRUE);
@@ -3813,22 +3824,21 @@ void configGetActiveChatRequestSettings(struct ChatRequestSettings *out) {
         out->apiKey = resolvedChatApiKey;
 
         freeString(&resolvedChatModel);
-        resolvedChatModel = copyString(
-            jsonGetStringDefault(profile, "chatModel",
-                                 jsonGetStringDefault(profile, "imageModel", "")));
+        resolvedChatModel = copyString(jsonGetStringDefault(
+            profile, "chatModel",
+            jsonGetStringDefault(profile, "imageModel", "")));
         out->model = resolvedChatModel;
         out->stream = jsonGetBoolDefault(profile, "streaming", FALSE);
-        out->apiEndpoint = coerceChatEndpointFromStoredInt(
-            jsonGetIntDefault(profile, "apiEndpoint",
-                              (LONG)API_CHAT_ENDPOINT_CHAT_COMPLETIONS));
+        out->apiEndpoint = coerceChatEndpointFromStoredInt(jsonGetIntDefault(
+            profile, "apiEndpoint", (LONG)API_CHAT_ENDPOINT_CHAT_COMPLETIONS));
         freeString(&resolvedChatApiEndpointUrl);
-        resolvedChatApiEndpointUrl = copyString(
-            jsonGetStringDefault(profile, "apiEndpointUrl", "v1"));
+        resolvedChatApiEndpointUrl =
+            copyString(jsonGetStringDefault(profile, "apiEndpointUrl", "v1"));
         out->apiEndpointUrl = resolvedChatApiEndpointUrl;
 
         freeString(&resolvedChatCustomHeaders);
-        resolvedChatCustomHeaders = copyString(
-            jsonGetStringDefault(profile, "customHeaders", ""));
+        resolvedChatCustomHeaders =
+            copyString(jsonGetStringDefault(profile, "customHeaders", ""));
         out->customHeaders = resolvedChatCustomHeaders;
 
         out->webSearchEnabled =
@@ -3836,8 +3846,8 @@ void configGetActiveChatRequestSettings(struct ChatRequestSettings *out) {
         out->shellToolEnabled =
             jsonGetBoolDefault(profile, "shellToolEnabled", FALSE);
         freeString(&resolvedChatSystem);
-        resolvedChatSystem = copyString(
-            jsonGetStringDefault(profile, "chatSystem", ""));
+        resolvedChatSystem =
+            copyString(jsonGetStringDefault(profile, "chatSystem", ""));
         out->chatSystem = resolvedChatSystem;
     } else {
         /* Fallback to custom settings */
@@ -3888,7 +3898,7 @@ void configGetActiveImageRequestSettings(struct ImageRequestSettings *out) {
 
     if (isLockedImageProfileName(activeName)) {
         if (strcmp(activeName, LOCKED_PROFILE_NAME_OPENAI) == 0) {
-            out->host = (STRPTR)"api.openai.com";
+            out->host = (STRPTR) "api.openai.com";
             out->port = 443;
             out->useSSL = TRUE;
             out->apiEndpointUrl = "v1";
@@ -3898,7 +3908,7 @@ void configGetActiveImageRequestSettings(struct ImageRequestSettings *out) {
             out->model = configGetOpenAiImageModelName();
             out->imageApiEndpoint = API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
         } else if (strcmp(activeName, LOCKED_PROFILE_NAME_GEMINI) == 0) {
-            out->host = (STRPTR)"generativelanguage.googleapis.com";
+            out->host = (STRPTR) "generativelanguage.googleapis.com";
             out->port = 443;
             out->useSSL = TRUE;
             out->apiEndpointUrl = "v1beta";
@@ -3908,7 +3918,7 @@ void configGetActiveImageRequestSettings(struct ImageRequestSettings *out) {
             out->model = configGetGeminiImageModelName();
             out->imageApiEndpoint = API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT;
         } else {
-            out->host = (STRPTR)"api.x.ai";
+            out->host = (STRPTR) "api.x.ai";
             out->port = 443;
             out->useSSL = TRUE;
             out->apiEndpointUrl = "v1";
@@ -3926,7 +3936,8 @@ void configGetActiveImageRequestSettings(struct ImageRequestSettings *out) {
     struct json_object *profile = findProfileObjectByName(arr, activeName);
     if (profile != NULL) {
         freeString(&resolvedImageHost);
-        resolvedImageHost = copyString(jsonGetStringDefault(profile, "host", ""));
+        resolvedImageHost =
+            copyString(jsonGetStringDefault(profile, "host", ""));
         out->host = resolvedImageHost;
         out->port = (UWORD)jsonGetIntDefault(profile, "port", 443);
         out->useSSL = jsonGetBoolDefault(profile, "useSSL", TRUE);
@@ -3938,9 +3949,9 @@ void configGetActiveImageRequestSettings(struct ImageRequestSettings *out) {
         out->apiKey = resolvedImageApiKey;
 
         freeString(&resolvedImageModel);
-        resolvedImageModel = copyString(
-            jsonGetStringDefault(profile, "imageModel",
-                                 jsonGetStringDefault(profile, "chatModel", "")));
+        resolvedImageModel = copyString(jsonGetStringDefault(
+            profile, "imageModel",
+            jsonGetStringDefault(profile, "chatModel", "")));
         out->model = resolvedImageModel;
 
         freeString(&resolvedImageApiEndpointUrl);
