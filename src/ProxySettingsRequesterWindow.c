@@ -62,6 +62,7 @@ LONG createProxySettingsRequesterWindow() {
     authOptions[1] = STRING_AUTH_USER_PASS;
 
     Object *proxySettingsRequesterOkButton, *proxySettingsRequesterCancelButton;
+    // clang-format off
     if ((proxySettingsRequesterWindowObject = WindowObject,
 			MUIA_Window_Title, STRING_PROXY_SETTINGS,
 			MUIA_Window_Width, 400,
@@ -143,6 +144,7 @@ LONG createProxySettingsRequesterWindow() {
 				End,
 			End,
 		End) == NULL) {
+    // clang-format on
         displayError(STRING_ERROR_PROXY_SETTINGS);
         return RETURN_ERROR;
     }

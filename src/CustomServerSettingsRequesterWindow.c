@@ -215,24 +215,32 @@ static void showTestResultTextWithStatus(CONST_STRPTR title, BOOL success,
 
     if (customServerTestResultWindowObject == NULL) {
         Object *closeButton = NULL;
+        // clang-format off
         if ((customServerTestResultWindowObject = WindowObject,
-             MUIA_Window_Title,
-             title != NULL ? title : (CONST_STRPTR)STRING_TEST,
-             MUIA_Window_CloseGadget, TRUE, MUIA_Window_SizeGadget, TRUE,
-             MUIA_Window_DepthGadget, TRUE, MUIA_Window_DragBar, TRUE,
+             MUIA_Window_Title, title != NULL ? title : (CONST_STRPTR)STRING_TEST,
+             MUIA_Window_CloseGadget, TRUE,
+             MUIA_Window_SizeGadget, TRUE,
+             MUIA_Window_DepthGadget, TRUE,
+             MUIA_Window_DragBar, TRUE,
              MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
-             MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered, WindowContents,
-             VGroup, Child, NListviewObject, MUIA_NListview_Horiz_ScrollBar,
-             MUIV_NListview_HSB_None, MUIA_NListview_Vert_ScrollBar,
-             MUIV_NListview_VSB_Auto, MUIA_NListview_NList,
-             customServerTestResultFloattextObject = NFloattextObject,
-             MUIA_Font,
-             configGetFixedWidthFonts() ? MUIV_NList_Font_Fixed
-                                        : MUIV_NList_Font,
-             MUIA_Frame, MUIV_Frame_Text, MUIA_ContextMenu, NULL,
-             MUIA_NFloattext_Text, "", End, End, Child, HGroup, Child,
-             closeButton = MUI_MakeObject(MUIO_Button, STRING_OK, TAG_DONE),
-             End, End, End) == NULL) {
+             MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
+             WindowContents, VGroup,
+                 Child, NListviewObject,
+                     MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_None,
+                     MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
+                     MUIA_NListview_NList, customServerTestResultFloattextObject = NFloattextObject,
+                         MUIA_Font, configGetFixedWidthFonts() ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
+                         MUIA_Frame, MUIV_Frame_Text,
+                         MUIA_ContextMenu, NULL,
+                         MUIA_NFloattext_Text, "",
+                     End,
+                 End,
+                 Child, HGroup,
+                     Child, closeButton = MUI_MakeObject(MUIO_Button, STRING_OK, TAG_DONE),
+                 End,
+             End,
+        End) == NULL) {
+        // clang-format on
             return;
         }
 
@@ -305,21 +313,30 @@ static void showTestImage(CONST_STRPTR title, CONST_STRPTR filePath) {
 
     if (customServerTestImageWindowObject == NULL) {
         Object *closeButton = NULL;
+        // clang-format off
         if ((customServerTestImageWindowObject = WindowObject,
-             MUIA_Window_Title,
-             title != NULL ? title : (CONST_STRPTR)STRING_IMAGE_TEST_TITLE,
-             MUIA_Window_CloseGadget, TRUE, MUIA_Window_SizeGadget, TRUE,
-             MUIA_Window_DepthGadget, TRUE, MUIA_Window_DragBar, TRUE,
+             MUIA_Window_Title, title != NULL ? title : (CONST_STRPTR)STRING_IMAGE_TEST_TITLE,
+             MUIA_Window_CloseGadget, TRUE,
+             MUIA_Window_SizeGadget, TRUE,
+             MUIA_Window_DepthGadget, TRUE,
+             MUIA_Window_DragBar, TRUE,
              MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
-             MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered, WindowContents,
-             VGroup, Child, customServerTestImageViewGroup = VGroup, Child,
-             customServerTestImageView = GuigfxObject, MUIA_Guigfx_FileName,
-             filePath, MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Low,
-             MUIA_Guigfx_ScaleMode, NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE,
-             MUIA_Guigfx_Transparency, NITRF_MASK, End, End, Child, HGroup,
-             Child,
-             closeButton = MUI_MakeObject(MUIO_Button, STRING_OK, TAG_DONE),
-             End, End, End) == NULL) {
+             MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
+             WindowContents, VGroup,
+                 Child, customServerTestImageViewGroup = VGroup,
+                     Child, customServerTestImageView = GuigfxObject,
+                         MUIA_Guigfx_FileName, filePath,
+                         MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Low,
+                         MUIA_Guigfx_ScaleMode, NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE,
+                         MUIA_Guigfx_Transparency, NITRF_MASK,
+                     End,
+                 End,
+                 Child, HGroup,
+                     Child, closeButton = MUI_MakeObject(MUIO_Button, STRING_OK, TAG_DONE),
+                 End,
+             End,
+        End) == NULL) {
+        // clang-format on
             return;
         }
 
@@ -2467,6 +2484,7 @@ LONG createCustomServerSettingsRequesterWindow() {
     Object *customServerSettingsRequesterOkButton,
         *customServerSettingsRequesterCancelButton,
         *customServerSettingsRequesterTestButton;
+    // clang-format off
     if ((customServerSettingsRequesterWindowObject = WindowObject,
         MUIA_Window_Title, STRING_CHAT_PROVIDER_SETTINGS,
         MUIA_Window_Width, 500,
@@ -2706,6 +2724,7 @@ LONG createCustomServerSettingsRequesterWindow() {
             End, /* End right panel VGroup */
         End, /* End outer HGroup */
     End) == NULL) {
+    // clang-format on
         displayError(STRING_ERROR_CUSTOM_PROVIDER_SETTINGS);
         return RETURN_ERROR;
     }

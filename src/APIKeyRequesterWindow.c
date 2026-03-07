@@ -32,6 +32,7 @@ MakeHook(APIKeyRequesterOkButtonClickedHook,
  **/
 LONG createAPIKeyRequesterWindow() {
     Object *apiKeyRequesterOkButton, *apiKeyRequesterCancelButton;
+    // clang-format off
     if ((apiKeyRequesterWindowObject = WindowObject,
             MUIA_Window_Title, STRING_API_KEY_REQUESTER_TITLE,
             MUIA_Window_Width, 800,
@@ -68,6 +69,7 @@ LONG createAPIKeyRequesterWindow() {
                 End,
             End,
         End) == NULL) {
+    // clang-format on
         displayError(STRING_ERROR_API_KEY_REQUESTER);
         return RETURN_ERROR;
     }

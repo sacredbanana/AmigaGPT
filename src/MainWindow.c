@@ -170,10 +170,14 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
         DoMethod(imageViewGroup, MUIM_Group_InitChange);
         DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
         MUI_DisposeObject(imageView);
-        imageView = GuigfxObject, MUIA_Guigfx_FileName, image->filePath,
-        MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Low, MUIA_Guigfx_ScaleMode,
-        NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE, MUIA_Guigfx_Transparency,
-        NITRF_MASK, End;
+        // clang-format off
+        imageView = GuigfxObject,
+            MUIA_Guigfx_FileName, image->filePath,
+            MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Low,
+            MUIA_Guigfx_ScaleMode, NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE,
+            MUIA_Guigfx_Transparency, NITRF_MASK,
+        End;
+        // clang-format on
         DoMethod(imageViewGroup, OM_ADDMEMBER, imageView);
         DoMethod(imageViewGroup, MUIM_Group_MoveMember, imageView, 0);
         DoMethod(imageViewGroup, MUIM_Group_ExitChange);
@@ -224,7 +228,9 @@ HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
     DoMethod(imageViewGroup, MUIM_Group_InitChange);
     DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
     MUI_DisposeObject(imageView);
+    // clang-format off
     imageView = RectangleObject, MUIA_Frame, MUIV_Frame_ImageButton, End;
+    // clang-format on
     DoMethod(imageViewGroup, OM_ADDMEMBER, imageView);
     DoMethod(imageViewGroup, MUIM_Group_MoveMember, imageView, 0);
     DoMethod(imageViewGroup, MUIM_Group_ExitChange);
@@ -245,7 +251,9 @@ HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
     DoMethod(imageViewGroup, MUIM_Group_InitChange);
     DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
     MUI_DisposeObject(imageView);
+    // clang-format off
     imageView = RectangleObject, MUIA_Frame, MUIV_Frame_ImageButton, End;
+    // clang-format on
     DoMethod(imageViewGroup, OM_ADDMEMBER, imageView);
     DoMethod(imageViewGroup, MUIM_Group_MoveMember, imageView, 0);
     DoMethod(imageViewGroup, MUIM_Group_ExitChange);
@@ -315,11 +323,10 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         textUTF8, imageSettings.host, imageSettings.port, imageSettings.useSSL,
         imageSettings.apiEndpointUrl, imageSettings.authorizationType,
         imageSettings.customHeaders, imageSettings.model, imageSize, apiKey,
-        configGetProxyEnabled(),
-        configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
-        configGetProxyRequiresAuth(), configGetProxyUsername(),
-        configGetProxyPassword(), configGetImageFormat(),
-        imageSettings.imageApiEndpoint);
+        configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
+        configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+        configGetProxyUsername(), configGetProxyPassword(),
+        configGetImageFormat(), imageSettings.imageApiEndpoint);
     CodesetsFreeA(textUTF8, NULL);
 
     if (response == NULL) {
@@ -374,12 +381,12 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     UBYTE *imageData = decodeBase64(b64, &data_len);
 
     CreateDir("AMIGAGPT:images");
-    /* Try to match file extension to actual bytes; fallback to user preference. */
+    /* Try to match file extension to actual bytes; fallback to user preference.
+     */
     STRPTR imageFormat;
     if (data_len >= 8 && imageData[0] == 0x89 && imageData[1] == 0x50 &&
-        imageData[2] == 0x4E && imageData[3] == 0x47 &&
-        imageData[4] == 0x0D && imageData[5] == 0x0A &&
-        imageData[6] == 0x1A && imageData[7] == 0x0A) {
+        imageData[2] == 0x4E && imageData[3] == 0x47 && imageData[4] == 0x0D &&
+        imageData[5] == 0x0A && imageData[6] == 0x1A && imageData[7] == 0x0A) {
         imageFormat = "png";
     } else if (data_len >= 3 && imageData[0] == 0xFF && imageData[1] == 0xD8 &&
                imageData[2] == 0xFF) {
@@ -1007,43 +1014,61 @@ LONG createMainWindow() {
         MUI_DisposeObject(mainWindowObject);
     }
 
+    // clang-format off
     if (isMUI5 || isMUI39) {
         chatInputTextEditor = NewObject(
-            MUIC_AmigaGPTTextEditor, NULL, TextFrame, MUIA_Background,
-            MUII_BACKGROUND, MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
+            MUIC_AmigaGPTTextEditor, NULL,
+            TextFrame,
+            MUIA_Background, MUII_BACKGROUND,
+            MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
             MUIA_AmigaGPTTextEditor_SubmitHook, &SendMessageButtonClickedHook,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL, MUIA_TextEditor_FixedFont,
-            configGetFixedWidthFonts(), MUIA_TextEditor_ReadOnly, FALSE,
-            MUIA_TextEditor_TabSize, 4, MUIA_TextEditor_Rows, 3,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL,
+            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
+            MUIA_TextEditor_ReadOnly, FALSE,
+            MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
 
         imageInputTextEditor = NewObject(
-            MUIC_AmigaGPTTextEditor, NULL, MUIA_Weight, 80,
+            MUIC_AmigaGPTTextEditor, NULL,
+            MUIA_Weight, 80,
             MUIA_AmigaGPTTextEditor_SubmitHook, &CreateImageButtonClickedHook,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL, MUIA_TextEditor_FixedFont,
-            configGetFixedWidthFonts(), MUIA_TextEditor_ReadOnly, FALSE,
-            MUIA_TextEditor_TabSize, 4, MUIA_TextEditor_Rows, 3,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL,
+            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
+            MUIA_TextEditor_ReadOnly, FALSE,
+            MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
     } else {
         chatInputTextEditor = MUI_NewObject(
-            isAROS ? MUIC_BetterString : MUIC_TextEditor, TextFrame,
-            MUIA_Background, MUII_BACKGROUND, MUIA_ObjectID,
-            OBJECT_ID_CHAT_INPUT_TEXT_EDITOR, isAROS ? TAG_DONE : TAG_SKIP,
-            NULL, MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
-            MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
-            MUIA_TextEditor_Rows, 3, MUIA_TextEditor_ExportHook,
-            MUIV_TextEditor_ExportHook_EMail, TAG_DONE);
+            isAROS ? MUIC_BetterString : MUIC_TextEditor,
+            TextFrame,
+            MUIA_Background, MUII_BACKGROUND,
+            MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL,
+            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
+            MUIA_TextEditor_ReadOnly, FALSE,
+            MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3,
+            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+            TAG_DONE);
 
         imageInputTextEditor = MUI_NewObject(
-            isAROS ? MUIC_BetterString : MUIC_TextEditor, TextFrame,
-            MUIA_Background, MUIA_Weight, 80, isAROS ? TAG_DONE : TAG_SKIP,
-            NULL, MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
-            MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
-            MUIA_TextEditor_Rows, 3, MUIA_TextEditor_ExportHook,
-            MUIV_TextEditor_ExportHook_EMail, TAG_DONE);
+            isAROS ? MUIC_BetterString : MUIC_TextEditor,
+            TextFrame,
+            MUIA_Background, MUII_BACKGROUND,
+            MUIA_Weight, 80,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL,
+            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
+            MUIA_TextEditor_ReadOnly, FALSE,
+            MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3,
+            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+            TAG_DONE);
     }
+    // clang-format on
 
     createMenu();
 
@@ -1055,6 +1080,7 @@ LONG createMainWindow() {
     pages[0] = STRING_CHAT_MODE;
     pages[1] = STRING_IMAGE_GENERATION_MODE;
 
+    // clang-format off
     if ((mainWindowObject = WindowObject,
             MUIA_Window_Title, STRING_APP_NAME,
             MUIA_Window_ID, OBJECT_ID_MAIN_WINDOW,
@@ -1212,6 +1238,7 @@ LONG createMainWindow() {
                 End,
             End,
         End) == NULL) {
+    // clang-format on
         displayError(STRING_ERROR_MAIN_WINDOW);
         return RETURN_ERROR;
     }
@@ -2156,9 +2183,16 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth,
 
     updateStatusBar(STRING_LOADING_IMAGE, yellowPen);
 
-    Object *imageWindowLoadingTextObject = VGroup, Child, VSpace(0), Child,
-           TextObject, MUIA_Text_Contents, STRING_LOADING_IMAGE,
-           MUIA_Text_PreParse, "\033c", End, Child, VSpace(0), End;
+    // clang-format off
+    Object *imageWindowLoadingTextObject = VGroup,
+        Child, VSpace(0),
+        Child, TextObject,
+            MUIA_Text_Contents, STRING_LOADING_IMAGE,
+            MUIA_Text_PreParse, "\033c",
+        End,
+        Child, VSpace(0),
+    End;
+    // clang-format on
     DoMethod(imageWindowImageViewGroup, OM_ADDMEMBER,
              imageWindowLoadingTextObject);
     DoMethod(imageWindowImageViewGroup, OM_REMMEMBER, imageWindowImageView);
@@ -2171,10 +2205,14 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth,
     set(imageWindowObject, MUIA_Window_Open, TRUE);
 
     DoMethod(imageWindowImageViewGroup, MUIM_Group_InitChange);
-    imageWindowImageView = GuigfxObject, MUIA_Guigfx_FileName, image->filePath,
-    MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Best, MUIA_Guigfx_ScaleMode,
-    NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE | NISMF_KEEPASPECT_SCREEN,
-    MUIA_Guigfx_Transparency, NITRF_MASK, End;
+    // clang-format off
+    imageWindowImageView = GuigfxObject,
+        MUIA_Guigfx_FileName, image->filePath,
+        MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Best,
+        MUIA_Guigfx_ScaleMode, NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE | NISMF_KEEPASPECT_SCREEN,
+        MUIA_Guigfx_Transparency, NITRF_MASK,
+    End;
+    // clang-format on
     DoMethod(imageWindowImageViewGroup, OM_ADDMEMBER, imageWindowImageView);
     DoMethod(imageWindowImageViewGroup, OM_REMMEMBER,
              imageWindowLoadingTextObject);
