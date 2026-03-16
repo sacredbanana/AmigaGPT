@@ -1750,7 +1750,8 @@ static void sendChatMessage() {
             chatSettings.proxyHost, chatSettings.proxyPort,
             chatSettings.proxyUsesSSL, chatSettings.proxyRequiresAuth,
             chatSettings.proxyUsername, chatSettings.proxyPassword,
-            chatSettings.shellToolEnabled);
+            chatSettings.shellToolEnabled, chatSettings.apiEndpointUrl,
+            chatSettings.authorizationType, chatSettings.customHeaders);
 
         if (output != NULL) {
             FreeVec(output);

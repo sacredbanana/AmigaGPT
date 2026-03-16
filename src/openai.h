@@ -524,6 +524,10 @@ STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode);
  * @param proxyRequiresAuth whether the proxy requires auth
  * @param proxyUsername the proxy username
  * @param proxyPassword the proxy password
+ * @param shellToolEnabled whether the shell tool is enabled
+ * @param apiEndpointUrl the API endpoint base URL (e.g. "v1")
+ * @param authorizationType the authorization type to use
+ * @param customHeaders custom HTTP headers to add to the request
  * @return a pointer to a new json_object containing the response or NULL
  **/
 struct json_object *postToolResultToOpenAI(
@@ -531,7 +535,9 @@ struct json_object *postToolResultToOpenAI(
     CONST_STRPTR model, STRPTR host, UWORD port, BOOL useSSL,
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, BOOL shellToolEnabled);
+    CONST_STRPTR proxyPassword, BOOL shellToolEnabled,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders);
 
 /**
  * Post a text to speech request to the ElevenLabs API

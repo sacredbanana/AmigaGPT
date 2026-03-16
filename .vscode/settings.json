@@ -5,6 +5,7 @@
         "/opt/amiga/m68k-amigaos/libnix/include",
         "/opt/amiga/m68k-amigaos/sys-include",
         "/opt/amiga/m68k-amigaos/clib2/include",
+        "/Users/cameron/.cursor/extensions/bartmanabyss.amiga-debug-1.7.9/bin/darwin/opt/m68k-amiga-elf/sys-include"
     ],
     "editor.formatOnSave": true,
     "files.associations": {

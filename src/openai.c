@@ -1391,11 +1391,11 @@ struct json_object **postChatMessageToOpenAI(
     BOOL isOpenAiHost = (strcmp(host, OPENAI_HOST) == 0);
     BOOL isXaiHost = (strcmp(host, "api.x.ai") == 0);
 
-    /* OpenAI Responses API supports built-in tools like web_search (and the
-     * "shell" tool) in this app. Enable tool injection when talking to OpenAI's
-     * own host. */
+    /* The Responses API supports built-in tools like web_search and the
+     * "shell" function tool.  Enable tool injection for ANY host using the
+     * Responses endpoint so that custom / third-party profiles get tools too. */
     BOOL includeOpenAiTools =
-        (isOpenAiHost && (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES));
+        (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES);
 
     /* Use Gemini native generateContent when requested by endpoint. */
     BOOL useGeminiGenerateContent =
@@ -1547,23 +1547,30 @@ struct json_object **postChatMessageToOpenAI(
                 obj, "stream",
                 json_object_new_boolean((json_bool)effectiveStream));
 
-            /* xAI Grok web search tools (host-based heuristic). */
-            if (webSearchEnabled && isXaiHost) {
-                /* Some providers accept this on chat/completions too. */
+            /* Web search tools for chat/completions.  xAI gets its
+             * provider-specific x_search alongside web_search; other
+             * OpenAI-compatible providers get a plain web_search entry. */
+            if (webSearchEnabled) {
                 struct json_object *toolsArray = json_object_new_array();
                 struct json_object *webObj = json_object_new_object();
                 json_object_object_add(webObj, "type",
                                        json_object_new_string("web_search"));
                 json_object_array_add(toolsArray, webObj);
-                struct json_object *xObj = json_object_new_object();
-                json_object_object_add(xObj, "type",
-                                       json_object_new_string("x_search"));
-                json_object_array_add(toolsArray, xObj);
+                if (isXaiHost) {
+                    struct json_object *xObj = json_object_new_object();
+                    json_object_object_add(xObj, "type",
+                                           json_object_new_string("x_search"));
+                    json_object_array_add(toolsArray, xObj);
+                }
                 json_object_object_add(obj, "tools", toolsArray);
             }
         } else {
-            /* Responses-style requests (OpenAI + compatible providers) */
-            if (includeOpenAiTools || (webSearchEnabled && isXaiHost)) {
+            /* Responses-style requests (OpenAI + compatible providers).
+             * Only emit the tools array when at least one tool is active. */
+            BOOL wantTools = (includeOpenAiTools &&
+                              (webSearchEnabled || shellToolEnabled)) ||
+                             (webSearchEnabled && isXaiHost);
+            if (wantTools) {
                 struct json_object *toolsArray = json_object_new_array();
                 if (webSearchEnabled) {
                     if (isXaiHost) {
@@ -4422,6 +4429,10 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
  * @param proxyRequiresAuth whether the proxy requires auth
  * @param proxyUsername the proxy username
  * @param proxyPassword the proxy password
+ * @param shellToolEnabled whether the shell tool is enabled
+ * @param apiEndpointUrl the API endpoint base URL (e.g. "v1")
+ * @param authorizationType the authorization type to use
+ * @param customHeaders custom HTTP headers to add to the request
  * @return a pointer to a new json_object containing the response or NULL --
  * Free it with json_object_put() when done
  **/
@@ -4430,7 +4441,9 @@ struct json_object *postToolResultToOpenAI(
     CONST_STRPTR model, STRPTR host, UWORD port, BOOL useSSL,
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, BOOL shellToolEnabled) {
+    CONST_STRPTR proxyPassword, BOOL shellToolEnabled,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders) {
 
     UBYTE connectionRetryCount = 0;
     if (host == NULL || strlen(host) == 0) {
@@ -4510,12 +4523,26 @@ struct json_object *postToolResultToOpenAI(
     /* Now safe to clear pending tool call - JSON has copies of the strings */
     clearPendingToolCall();
 
-    /* Build auth header */
+    /* Build the API authorization header based on type */
     UBYTE apiAuthHeader[512];
     memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
-    if (apiKey != NULL && strlen(apiKey) > 0) {
-        snprintf(apiAuthHeader, sizeof(apiAuthHeader),
-                 "Authorization: Bearer %s\r\n", apiKey);
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+    }
+
+    /* Build custom headers string with proper line ending */
+    UBYTE customHeadersFormatted[1024];
+    memset(customHeadersFormatted, 0, sizeof(customHeadersFormatted));
+    if (customHeaders != NULL && strlen(customHeaders) > 0) {
+        snprintf(customHeadersFormatted, sizeof(customHeadersFormatted),
+                 "%s\r\n", customHeaders);
+    }
+
+    CONST_STRPTR effectiveApiEndpointUrl = apiEndpointUrl;
+    if (effectiveApiEndpointUrl == NULL) {
+        effectiveApiEndpointUrl = "";
     }
 
     /* Build proxy auth header if needed */
@@ -4533,31 +4560,38 @@ struct json_object *postToolResultToOpenAI(
         FreeVec(credentials);
     }
 
-    /* Build the HTTP request */
+    /* Build the HTTP request using the profile's endpoint URL */
     if (useSSL || useProxy) {
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                 "POST %s://%s:%d/v1/responses HTTP/1.1\r\n"
+                 "POST %s://%s:%d%s%s/responses HTTP/1.1\r\n"
                  "Host: %s:%d\r\n"
                  "Content-Type: application/json\r\n"
+                 "%s"
                  "%s"
                  "User-Agent: AmigaGPT\r\n"
                  "Content-Length: %lu\r\n"
                  "%s\r\n"
                  "%s\0",
-                 useSSL ? "https" : "http", host, port, host, port,
-                 apiAuthHeader, strlen(jsonString), authHeader, jsonString);
+                 useSSL ? "https" : "http", host, port,
+                 strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
+                 effectiveApiEndpointUrl, host, port,
+                 apiAuthHeader, customHeadersFormatted, strlen(jsonString),
+                 authHeader, jsonString);
     } else {
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                 "POST /v1/responses HTTP/1.1\r\n"
+                 "POST %s%s/responses HTTP/1.1\r\n"
                  "Host: %s:%d\r\n"
                  "Content-Type: application/json\r\n"
+                 "%s"
                  "%s"
                  "User-Agent: AmigaGPT\r\n"
                  "Content-Length: %lu\r\n"
                  "%s\r\n"
                  "%s\0",
-                 host, port, apiAuthHeader, strlen(jsonString), authHeader,
-                 jsonString);
+                 strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
+                 effectiveApiEndpointUrl, host, port,
+                 apiAuthHeader, customHeadersFormatted, strlen(jsonString),
+                 authHeader, jsonString);
     }
 
     json_object_put(obj);

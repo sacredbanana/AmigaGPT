@@ -1185,7 +1185,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             responseId, callId, toolOutput, model, (STRPTR)host,
             (UWORD)portValue, useSSL, apiKey, useProxy, proxyHost,
             proxyPortValue, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-            proxyPassword, rexxSettings.shellToolEnabled);
+            proxyPassword, rexxSettings.shellToolEnabled, apiEndpointUrl,
+            authType, customHeaders);
 
         if (output != NULL) {
             FreeVec(output);
