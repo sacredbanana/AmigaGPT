@@ -1853,3 +1853,13 @@ msgstr "HTTP zaglavlja su prevelika"
 msgctxt "STRING_ERROR_MODELS_RESPONSE_PARSE (344//)"
 msgid "Failed to parse models response"
 msgstr "Neuspjelo parsiranje odgovora modela"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_CHAT_REQUEST_TOO_LARGE (345//)"
+msgid "Chat request too large"
+msgstr "Zahtjev za chat je prevelik"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_SSL_READ_FAILED_FORMAT (346//)"
+msgid "SSL read failed: %s"
+msgstr "SSL čitanje nije uspjelo: %s"

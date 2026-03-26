@@ -1852,3 +1852,13 @@ msgstr "HTTP hlavičky jsou příliš velké"
 msgctxt "STRING_ERROR_MODELS_RESPONSE_PARSE (344//)"
 msgid "Failed to parse models response"
 msgstr "Nepodařilo se analyzovat odpověď modelů"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_CHAT_REQUEST_TOO_LARGE (345//)"
+msgid "Chat request too large"
+msgstr "Požadavek chatu je příliš velký"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_SSL_READ_FAILED_FORMAT (346//)"
+msgid "SSL read failed: %s"
+msgstr "Čtení SSL se nezdařilo: %s"

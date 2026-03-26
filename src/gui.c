@@ -452,6 +452,7 @@ struct Conversation *newConversation() {
     conversation->messages = messages;
     conversation->name = NULL;
     conversation->system = NULL;
+    conversation->lastResponseId = NULL;
 
     return conversation;
 }
@@ -907,6 +908,8 @@ void freeConversation(struct Conversation *conversation) {
         FreeVec(conversation->name);
     if (conversation->system != NULL)
         CodesetsFreeA(conversation->system, NULL);
+    if (conversation->lastResponseId != NULL)
+        FreeVec(conversation->lastResponseId);
     FreeVec(conversation);
 }
 

@@ -1864,3 +1864,13 @@ msgstr "A HTTP-fejlécek túl nagyok"
 msgctxt "STRING_ERROR_MODELS_RESPONSE_PARSE (344//)"
 msgid "Failed to parse models response"
 msgstr "Nem sikerült értelmezni a modellek válaszát"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_CHAT_REQUEST_TOO_LARGE (345//)"
+msgid "Chat request too large"
+msgstr "A chatkérés túl nagy"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_SSL_READ_FAILED_FORMAT (346//)"
+msgid "SSL read failed: %s"
+msgstr "Az SSL-olvasás sikertelen: %s"

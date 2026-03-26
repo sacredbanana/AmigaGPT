@@ -1879,3 +1879,13 @@ msgstr "En-têtes HTTP trop volumineux"
 msgctxt "STRING_ERROR_MODELS_RESPONSE_PARSE (344//)"
 msgid "Failed to parse models response"
 msgstr "Échec de l'analyse de la réponse des modèles"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_CHAT_REQUEST_TOO_LARGE (345//)"
+msgid "Chat request too large"
+msgstr "La requête de chat est trop volumineuse"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_SSL_READ_FAILED_FORMAT (346//)"
+msgid "SSL read failed: %s"
+msgstr "Échec de la lecture SSL : %s"

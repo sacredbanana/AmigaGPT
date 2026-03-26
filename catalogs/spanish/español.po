@@ -1869,3 +1869,13 @@ msgstr "Los encabezados HTTP son demasiado grandes"
 msgctxt "STRING_ERROR_MODELS_RESPONSE_PARSE (344//)"
 msgid "Failed to parse models response"
 msgstr "No se pudo analizar la respuesta de los modelos"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_CHAT_REQUEST_TOO_LARGE (345//)"
+msgid "Chat request too large"
+msgstr "La solicitud de chat es demasiado grande"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_SSL_READ_FAILED_FORMAT (346//)"
+msgid "SSL read failed: %s"
+msgstr "Error al leer SSL: %s"

@@ -64,6 +64,13 @@ static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage);
 static STRPTR combineInstructionText(CONST_STRPTR first, CONST_STRPTR second);
 static void closeActiveResponseConnection(void);
 static BOOL responseMarksStreamFinished(struct json_object *response);
+static void setConversationLastResponseId(struct Conversation *conversation,
+                                          CONST_STRPTR responseId);
+static STRPTR extractResponseIdFromPayload(struct json_object *response);
+static BOOL responseIndicatesMissingPreviousId(struct json_object *response);
+static BOOL responseIndicatesBadRequest(struct json_object *response);
+static struct ConversationNode *
+getLastNonSystemConversationMessage(struct Conversation *conversation);
 
 struct Library *SocketBase;
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
@@ -419,6 +426,109 @@ static BOOL responseMarksStreamFinished(struct json_object *response) {
     }
 
     return FALSE;
+}
+
+static void setConversationLastResponseId(struct Conversation *conversation,
+                                          CONST_STRPTR responseId) {
+    if (conversation == NULL)
+        return;
+    if (conversation->lastResponseId != NULL) {
+        FreeVec(conversation->lastResponseId);
+        conversation->lastResponseId = NULL;
+    }
+    if (responseId == NULL || strlen(responseId) == 0)
+        return;
+    conversation->lastResponseId =
+        AllocVec(strlen(responseId) + 1, MEMF_ANY | MEMF_CLEAR);
+    if (conversation->lastResponseId != NULL) {
+        strncpy(conversation->lastResponseId, responseId, strlen(responseId));
+    }
+}
+
+static STRPTR extractResponseIdFromPayload(struct json_object *response) {
+    if (response == NULL)
+        return NULL;
+    struct json_object *idObj = json_object_object_get(response, "id");
+    STRPTR id = (STRPTR)json_object_get_string(idObj);
+    if (id != NULL && strlen(id) > 0) {
+        return id;
+    }
+    struct json_object *nestedResp =
+        json_object_object_get(response, "response");
+    if (nestedResp != NULL &&
+        json_object_is_type(nestedResp, json_type_object)) {
+        struct json_object *nestedIdObj =
+            json_object_object_get(nestedResp, "id");
+        id = (STRPTR)json_object_get_string(nestedIdObj);
+        if (id != NULL && strlen(id) > 0) {
+            return id;
+        }
+    }
+    return NULL;
+}
+
+static BOOL responseIndicatesMissingPreviousId(struct json_object *response) {
+    if (response == NULL)
+        return FALSE;
+    struct json_object *error = json_object_object_get(response, "error");
+    if (error == NULL || json_object_is_type(error, json_type_null))
+        return FALSE;
+    struct json_object *messageObj = json_object_object_get(error, "message");
+    STRPTR message = (STRPTR)json_object_get_string(messageObj);
+    if (message == NULL || strlen(message) == 0)
+        return FALSE;
+
+    ULONG len = strlen(message);
+    STRPTR lower = AllocVec(len + 1, MEMF_ANY | MEMF_CLEAR);
+    if (lower == NULL)
+        return FALSE;
+    for (ULONG i = 0; i < len; i++) {
+        UBYTE c = (UBYTE)message[i];
+        if (c >= 'A' && c <= 'Z')
+            c = (UBYTE)(c - 'A' + 'a');
+        lower[i] = (char)c;
+    }
+
+    BOOL missing = (strstr(lower, "previous_response_id") != NULL &&
+                    (strstr(lower, "not found") != NULL ||
+                     strstr(lower, "does not exist") != NULL ||
+                     strstr(lower, "object not found") != NULL ||
+                     strstr(lower, "invalid") != NULL)) ||
+                   (strstr(lower, "response") != NULL &&
+                    strstr(lower, "not found") != NULL);
+    FreeVec(lower);
+    return missing;
+}
+
+static BOOL responseIndicatesBadRequest(struct json_object *response) {
+    if (response == NULL)
+        return FALSE;
+    struct json_object *error = json_object_object_get(response, "error");
+    if (error == NULL || json_object_is_type(error, json_type_null))
+        return FALSE;
+    struct json_object *messageObj = json_object_object_get(error, "message");
+    STRPTR message = (STRPTR)json_object_get_string(messageObj);
+    if (message == NULL || strlen(message) == 0)
+        return FALSE;
+
+    return (strstr(message, "400 Bad Request") != NULL ||
+            strstr(message, "HTTP/1.1 400") != NULL);
+}
+
+static struct ConversationNode *
+getLastNonSystemConversationMessage(struct Conversation *conversation) {
+    if (conversation == NULL || conversation->messages == NULL)
+        return NULL;
+    struct MinNode *node = conversation->messages->mlh_TailPred;
+    while (node != (struct MinNode *)&conversation->messages->mlh_Head &&
+           node != NULL) {
+        struct ConversationNode *msg = (struct ConversationNode *)node;
+        if (strcmp(msg->role, "system") != 0) {
+            return msg;
+        }
+        node = node->mln_Pred;
+    }
+    return NULL;
 }
 
 /**
@@ -1542,8 +1652,11 @@ struct json_object **postChatMessageToOpenAI(
         AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH,
                  MEMF_ANY | MEMF_CLEAR);
     static BOOL streamingInProgress = FALSE;
+    static UBYTE streamReconnectStreak = 0;
+    static BOOL streamSawAnyContent = FALSE;
     UWORD responseIndex = 0;
     UBYTE connectionRetryCount = 0;
+    BOOL reconnectCurrentStream = FALSE;
 
     /* Always use the connection settings passed in (from the active profile).
      * We do not silently fall back to hardcoded OpenAI defaults here. */
@@ -1570,6 +1683,10 @@ struct json_object **postChatMessageToOpenAI(
     BOOL useGeminiGenerateContent =
         (apiEndpoint == API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT);
     BOOL effectiveStream = stream;
+    BOOL canUseStatefulResponses =
+        (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES && conversation != NULL &&
+         conversation->lastResponseId != NULL &&
+         strlen(conversation->lastResponseId) > 0);
 
     if (useProxy && proxyUsesSSL) {
         useSSL = TRUE;
@@ -1578,6 +1695,7 @@ struct json_object **postChatMessageToOpenAI(
     if (!effectiveStream || !streamingInProgress) {
         memset(readBuffer, 0, READ_BUFFER_LENGTH);
         streamingInProgress = effectiveStream;
+        streamSawAnyContent = FALSE;
 
         struct json_object *obj = json_object_new_object();
         if (!useGeminiGenerateContent) {
@@ -1803,17 +1921,36 @@ struct json_object **postChatMessageToOpenAI(
                 json_object_object_add(obj, "tools", toolsArray);
             }
 
-            while (conversationNode->mln_Succ != NULL) {
-                struct ConversationNode *message =
-                    (struct ConversationNode *)conversationNode;
-                struct json_object *messageObj = json_object_new_object();
-                json_object_object_add(messageObj, "role",
-                                       json_object_new_string(message->role));
+            if (canUseStatefulResponses) {
+                struct ConversationNode *latestMessage =
+                    getLastNonSystemConversationMessage(conversation);
+                if (latestMessage != NULL) {
+                    struct json_object *messageObj = json_object_new_object();
+                    json_object_object_add(
+                        messageObj, "role",
+                        json_object_new_string(latestMessage->role));
+                    json_object_object_add(
+                        messageObj, "content",
+                        json_object_new_string(latestMessage->content));
+                    json_object_array_add(conversationArray, messageObj);
+                }
                 json_object_object_add(
-                    messageObj, "content",
-                    json_object_new_string(message->content));
-                json_object_array_add(conversationArray, messageObj);
-                conversationNode = conversationNode->mln_Succ;
+                    obj, "previous_response_id",
+                    json_object_new_string(conversation->lastResponseId));
+            } else {
+                while (conversationNode->mln_Succ != NULL) {
+                    struct ConversationNode *message =
+                        (struct ConversationNode *)conversationNode;
+                    struct json_object *messageObj = json_object_new_object();
+                    json_object_object_add(
+                        messageObj, "role",
+                        json_object_new_string(message->role));
+                    json_object_object_add(
+                        messageObj, "content",
+                        json_object_new_string(message->content));
+                    json_object_array_add(conversationArray, messageObj);
+                    conversationNode = conversationNode->mln_Succ;
+                }
             }
 
             json_object_object_add(obj, "input", conversationArray);
@@ -1923,42 +2060,61 @@ struct json_object **postChatMessageToOpenAI(
             endpointName = endpointNameBuf;
         }
 
+        ULONG requestCapacity = strlen(jsonString) + 8192;
+        STRPTR requestBuffer = AllocVec(requestCapacity, MEMF_ANY | MEMF_CLEAR);
+        if (requestBuffer == NULL) {
+            json_object_put(obj);
+            FreeVec(authHeader);
+            FreeVec(responses);
+            displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+            return NULL;
+        }
+        LONG requestLength = 0;
         if (useSSL || useProxy) {
-            snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                     "POST %s://%s:%d%s%s/%s HTTP/1.1\r\n"
-                     "Host: %s:%d\r\n"
-                     "Content-Type: application/json\r\n"
-                     "%s"
-                     "%s"
-                     "User-Agent: AmigaGPT\r\n"
-                     "Content-Length: %lu\r\n"
-                     "%s\r\n"
-                     "%s\0",
-                     useSSL ? "https" : "http", host, port,
-                     strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
-                     effectiveApiEndpointUrl, endpointName, host, port,
-                     apiAuthHeader, customHeadersFormatted, strlen(jsonString),
-                     authHeader, jsonString);
+            requestLength =
+                snprintf(requestBuffer, requestCapacity,
+                         "POST %s://%s:%d%s%s/%s HTTP/1.1\r\n"
+                         "Host: %s:%d\r\n"
+                         "Content-Type: application/json\r\n"
+                         "%s"
+                         "%s"
+                         "User-Agent: AmigaGPT\r\n"
+                         "Content-Length: %lu\r\n"
+                         "%s\r\n"
+                         "%s\0",
+                         useSSL ? "https" : "http", host, port,
+                         strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
+                         effectiveApiEndpointUrl, endpointName, host, port,
+                         apiAuthHeader, customHeadersFormatted,
+                         strlen(jsonString), authHeader, jsonString);
         } else {
-            snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                     "POST %s%s/%s HTTP/1.1\r\n"
-                     "Host: %s:%d\r\n"
-                     "Content-Type: application/json\r\n"
-                     "%s"
-                     "%s"
-                     "User-Agent: AmigaGPT\r\n"
-                     "Content-Length: %lu\r\n"
-                     "%s\r\n"
-                     "%s\0",
-                     strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
-                     effectiveApiEndpointUrl, endpointName, host, port,
-                     apiAuthHeader, customHeadersFormatted, strlen(jsonString),
-                     authHeader, jsonString);
+            requestLength =
+                snprintf(requestBuffer, requestCapacity,
+                         "POST %s%s/%s HTTP/1.1\r\n"
+                         "Host: %s:%d\r\n"
+                         "Content-Type: application/json\r\n"
+                         "%s"
+                         "%s"
+                         "User-Agent: AmigaGPT\r\n"
+                         "Content-Length: %lu\r\n"
+                         "%s\r\n"
+                         "%s\0",
+                         strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
+                         effectiveApiEndpointUrl, endpointName, host, port,
+                         apiAuthHeader, customHeadersFormatted,
+                         strlen(jsonString), authHeader, jsonString);
         }
 
         json_object_put(obj);
 
         FreeVec(authHeader);
+
+        if (requestLength < 0 || (ULONG)requestLength >= requestCapacity) {
+            FreeVec(requestBuffer);
+            FreeVec(responses);
+            displayError(STRING_ERROR_CHAT_REQUEST_TOO_LARGE);
+            return NULL;
+        }
 
         updateStatusBar(STRING_CONNECTING, yellowPen);
         while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
@@ -1974,15 +2130,38 @@ struct json_object **postChatMessageToOpenAI(
         }
         connectionRetryCount = 0;
         updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
+        ULONG sentTotal = 0;
+        ULONG reqLen = (ULONG)requestLength;
         if (useSSL) {
-            ERR_clear_error();
-            ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
-            if (ssl_err <= 0) {
+            while (sentTotal < reqLen) {
+                ERR_clear_error();
+                LONG written = SSL_write(ssl, requestBuffer + sentTotal,
+                                         reqLen - sentTotal);
+                if (written > 0) {
+                    sentTotal += written;
+                    continue;
+                }
+                ssl_err = written;
                 reportSslError(ssl, ssl_err, "SSL_write (responses)");
+                break;
             }
+            ssl_err = (sentTotal == reqLen) ? (LONG)sentTotal : -1;
         } else {
-            ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+            while (sentTotal < reqLen) {
+                LONG written = send(sock, requestBuffer + sentTotal,
+                                    reqLen - sentTotal, 0);
+                if (written > 0) {
+                    sentTotal += written;
+                    continue;
+                }
+                ssl_err = written;
+                break;
+            }
+            if (sentTotal == reqLen) {
+                ssl_err = (LONG)sentTotal;
+            }
         }
+        FreeVec(requestBuffer);
     }
 
 #ifndef DAEMON
@@ -2181,6 +2360,7 @@ struct json_object **postChatMessageToOpenAI(
                                 FreeVec(oneJson);
                                 if (parsedResponse != NULL) {
                                     responses[responseIndex++] = parsedResponse;
+                                    streamSawAnyContent = TRUE;
                                     if (responseMarksStreamFinished(
                                             parsedResponse)) {
                                         streamingInProgress = FALSE;
@@ -2350,8 +2530,78 @@ struct json_object **postChatMessageToOpenAI(
                         break;
                     }
                 }
-                // No valid data received - this is a real error
-                reportSslError(ssl, bytesRead, "SSL_read (responses)");
+                /* Recoverable stream disconnects (peer reset/pipe closed) can
+                 * happen mid-generation. Re-open the stream connection and let
+                 * the caller continue polling instead of surfacing an error
+                 * immediately.
+                 */
+                if (effectiveStream &&
+                    (errno == ECONNRESET || errno == EPIPE ||
+                     errno == ENOTCONN) &&
+                    streamSawAnyContent) {
+                    struct json_object *completed = json_object_new_object();
+                    json_object_object_add(
+                        completed, "type",
+                        json_object_new_string("response.completed"));
+                    responses[responseIndex++] = completed;
+                    streamingInProgress = FALSE;
+                    closeActiveResponseConnection();
+                    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                    doneReading = TRUE;
+                    break;
+                }
+
+                if (effectiveStream &&
+                    (errno == ECONNRESET || errno == EPIPE ||
+                     errno == ENOTCONN) &&
+                    streamReconnectStreak < 2) {
+                    streamReconnectStreak++;
+                    reconnectCurrentStream = TRUE;
+                    streamingInProgress = FALSE;
+                    closeActiveResponseConnection();
+                    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                    doneReading = TRUE;
+                    break;
+                }
+                /* No valid data received - return a structured error object so
+                 * the caller can stop streaming instead of retrying forever.
+                 * Avoid popping multiple low-level SSL dialogs here.
+                 */
+                {
+                    UBYTE errorLine[256] = {0};
+                    unsigned long sslQueueErr = ERR_peek_error();
+                    if (sslQueueErr != 0) {
+                        const char *reason =
+                            ERR_reason_error_string(sslQueueErr);
+                        const char *text = ERR_error_string(sslQueueErr, NULL);
+                        snprintf(
+                            errorLine, sizeof(errorLine),
+                            STRING_ERROR_SSL_READ_FAILED_FORMAT,
+                            reason != NULL
+                                ? reason
+                                : (text != NULL ? text : "unknown SSL error"));
+                        while (ERR_get_error() != 0) {
+                        }
+                    } else {
+                        snprintf(errorLine, sizeof(errorLine),
+                                 STRING_ERROR_SSL_READ_FAILED_FORMAT,
+                                 strerror(errno));
+                    }
+
+                    if (responseIndex == 0) {
+                        struct json_object *errObj = json_object_new_object();
+                        struct json_object *errInner = json_object_new_object();
+                        json_object_object_add(
+                            errInner, "message",
+                            json_object_new_string((CONST_STRPTR)errorLine));
+                        json_object_object_add(errObj, "error", errInner);
+                        responses[responseIndex++] = errObj;
+                    }
+
+                    streamingInProgress = FALSE;
+                    closeActiveResponseConnection();
+                    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                }
                 doneReading = TRUE;
                 break;
             default:
@@ -2361,9 +2611,23 @@ struct json_object **postChatMessageToOpenAI(
             }
         }
         FreeVec(tempReadBuffer);
+
+        if (reconnectCurrentStream) {
+            FreeVec(responses);
+            return postChatMessageToOpenAI(
+                conversation, host, port, useSSL, model, apiKey, stream,
+                useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                proxyUsername, proxyPassword, webSearchEnabled,
+                shellToolEnabled, apiEndpoint, apiEndpointUrl,
+                authorizationType, customHeaders);
+        }
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
         reportSslError(ssl, ssl_err, "SSL_write");
+    }
+
+    if (effectiveStream && responseIndex > 0) {
+        streamReconnectStreak = 0;
     }
     if (effectiveStream) {
         // Check if the last response is the end of the stream and set the
@@ -2445,6 +2709,42 @@ struct json_object **postChatMessageToOpenAI(
             ssl = NULL;
         }
         sock = -1;
+    }
+
+    if (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES && responseIndex > 0) {
+        struct json_object *lastResponse = responses[responseIndex - 1];
+        if (canUseStatefulResponses &&
+            (responseIndicatesMissingPreviousId(lastResponse) ||
+             responseIndicatesBadRequest(lastResponse))) {
+            setConversationLastResponseId(conversation, NULL);
+            if (effectiveStream) {
+                closeActiveResponseConnection();
+                streamingInProgress = FALSE;
+            }
+            for (UWORD i = 0; i < responseIndex; i++) {
+                if (responses[i] != NULL) {
+                    json_object_put(responses[i]);
+                }
+            }
+            FreeVec(responses);
+            return postChatMessageToOpenAI(
+                conversation, host, port, useSSL, model, apiKey, stream,
+                useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                proxyUsername, proxyPassword, webSearchEnabled,
+                shellToolEnabled, apiEndpoint, apiEndpointUrl,
+                authorizationType, customHeaders);
+        }
+
+        STRPTR newestResponseId = NULL;
+        for (UWORD i = 0; i < responseIndex; i++) {
+            STRPTR candidate = extractResponseIdFromPayload(responses[i]);
+            if (candidate != NULL && strlen(candidate) > 0) {
+                newestResponseId = candidate;
+            }
+        }
+        if (newestResponseId != NULL) {
+            setConversationLastResponseId(conversation, newestResponseId);
+        }
     }
     return responses;
 }

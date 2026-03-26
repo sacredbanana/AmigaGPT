@@ -23,7 +23,8 @@
 /* Max nesting depth for B/I/U combined. Adjust as needed. */
 #define MAX_STYLE_STACK 32
 
-#define CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH 1024 * 100
+#define CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH (1024 * 512)
+#define CHAT_OUTPUT_WIDGET_SAFE_LIMIT (60 * 1024)
 
 typedef enum { STYLE_BOLD, STYLE_ITALIC, STYLE_UNDERLINE } StyleType;
 
@@ -55,6 +56,8 @@ Object *openImageButton;
 Object *saveImageCopyButton;
 Object *modeRegisterGroup;
 STRPTR chatOutputTextEditorContents = NULL;
+static ULONG chatOutputTextEditorContentsCapacity =
+    CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH;
 WORD pens[NUMDRIPENS + 1];
 struct Conversation *currentConversation = NULL;
 struct GeneratedImage *currentImage = NULL;
@@ -79,6 +82,7 @@ static void outputStyleOn(STRPTR out, size_t outSize, StyleType style);
 static void outputStyleOff(STRPTR out, size_t outSize);
 static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
                          StyleType *foundStyle);
+static BOOL ensureChatOutputBufferCapacity(ULONG required);
 static PICTURE *generateThumbnail(struct GeneratedImage *image);
 static void addMainWindowActions();
 
@@ -1001,6 +1005,35 @@ static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
     return out;
 }
 
+static BOOL ensureChatOutputBufferCapacity(ULONG required) {
+    if (chatOutputTextEditorContents == NULL)
+        return FALSE;
+    if (required <= chatOutputTextEditorContentsCapacity)
+        return TRUE;
+
+    ULONG newCapacity = chatOutputTextEditorContentsCapacity;
+    while (newCapacity < required) {
+        if (newCapacity > 8 * 1024 * 1024) {
+            break;
+        }
+        newCapacity *= 2;
+    }
+    if (newCapacity < required) {
+        return FALSE;
+    }
+
+    STRPTR bigger = AllocVec(newCapacity, MEMF_ANY | MEMF_CLEAR);
+    if (bigger == NULL) {
+        return FALSE;
+    }
+    strncpy(bigger, chatOutputTextEditorContents,
+            chatOutputTextEditorContentsCapacity - 1);
+    FreeVec(chatOutputTextEditorContents);
+    chatOutputTextEditorContents = bigger;
+    chatOutputTextEditorContentsCapacity = newCapacity;
+    return TRUE;
+}
+
 /**
  * Create the main window
  * @return RETURN_OK on success, RETURN_ERROR on failure
@@ -1075,6 +1108,8 @@ LONG createMainWindow() {
     if (chatOutputTextEditorContents == NULL) {
         chatOutputTextEditorContents = AllocVec(
             CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, MEMF_ANY | MEMF_CLEAR);
+        chatOutputTextEditorContentsCapacity =
+            CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH;
     }
 
     pages[0] = STRING_CHAT_MODE;
@@ -1238,7 +1273,7 @@ LONG createMainWindow() {
                 End,
             End,
         End) == NULL) {
-    // clang-format on
+        // clang-format on
         displayError(STRING_ERROR_MAIN_WINDOW);
         return RETURN_ERROR;
     }
@@ -1396,7 +1431,7 @@ static void sendChatMessage() {
             strlen(userStyleString));
     size_t currentLength = strlen(chatOutputTextEditorContents);
     for (ULONG i = 0; i < strlen(text); i++) {
-        if (currentLength >= CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 10)
+        if (currentLength >= chatOutputTextEditorContentsCapacity - 10)
             break;
 
         chatOutputTextEditorContents[currentLength++] = text[i];
@@ -1435,8 +1470,11 @@ static void sendChatMessage() {
 
     BOOL dataStreamFinished = FALSE;
     ULONG speechIndex = 0;
-    UWORD wordNumber = 0;
     UWORD chunkCounter = 0;
+    ULONG streamedCharsSinceFlush = 0;
+    ULONG flushesSinceScroll = 0;
+    const clock_t uiFlushIntervalTicks = CLOCKS_PER_SEC / 2;
+    clock_t nextUiFlushTick = clock() + uiFlushIntervalTicks;
     struct ChatRequestSettings chatSettings;
     configGetActiveChatRequestSettings(&chatSettings);
 
@@ -1537,33 +1575,28 @@ static void sendChatMessage() {
                                     strlen(contentString) - 1);
                         strncat(chatOutputTextEditorContents,
                                 formattedMessageSystemEncoded,
-                                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
+                                chatOutputTextEditorContentsCapacity -
                                     strlen(chatOutputTextEditorContents) -
                                     strlen(formattedMessageSystemEncoded) - 1);
                         CodesetsFreeA(formattedMessageSystemEncoded, NULL);
                         chunkCounter++;
+                        streamedCharsSinceFlush +=
+                            strlen(formattedMessageSystemEncoded);
 
-                        /* Keep the UI responsive during streaming. We still do
-                         * the more expensive markdown-to-MUI conversion only
-                         * periodically below. */
-                        if (chunkCounter % 5 == 0) {
+                        /* Reduce flicker/jitter by coalescing frequent tiny
+                         * updates into timed UI flushes.
+                         */
+                        clock_t nowTick = clock();
+                        if (streamedCharsSinceFlush >= 256 ||
+                            nowTick >= nextUiFlushTick) {
                             set(chatOutputTextEditor, MUIA_NFloattext_Text,
                                 chatOutputTextEditorContents);
-                            set(chatOutputListView, MUIA_NList_First,
-                                MUIV_NList_First_Bottom);
-                        }
-                        if (++wordNumber % 50 == 0) {
-                            STRPTR formattedContent =
-                                convertMarkdownFormattingToMUI(
-                                    chatOutputTextEditorContents);
-                            strncpy(
-                                chatOutputTextEditorContents, formattedContent,
-                                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 1);
-                            FreeVec(formattedContent);
-                            set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                                chatOutputTextEditorContents);
-                            set(chatOutputListView, MUIA_NList_First,
-                                MUIV_NList_First_Bottom);
+                            if (++flushesSinceScroll % 3 == 0) {
+                                set(chatOutputListView, MUIA_NList_First,
+                                    MUIV_NList_First_Bottom);
+                            }
+                            streamedCharsSinceFlush = 0;
+                            nextUiFlushTick = nowTick + uiFlushIntervalTicks;
                             if (configGetSpeechEnabled()) {
                                 // Text for speaking
                                 STRPTR unformattedMessageSystemEncoded =
@@ -1661,6 +1694,14 @@ static void sendChatMessage() {
         }
     } while (!dataStreamFinished);
 
+    /* Ensure the final streamed text is shown immediately even when the stream
+     * ended before the next coalesced refresh threshold. */
+    if (chatSettings.stream && chunkCounter > 0) {
+        set(chatOutputTextEditor, MUIA_NFloattext_Text,
+            chatOutputTextEditorContents);
+        set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
+    }
+
     /* Handle shell tool calls - loop to handle multiple sequential commands */
     while (chatSettings.stream && chatSettings.shellToolEnabled &&
            hasPendingToolCall()) {
@@ -1687,7 +1728,7 @@ static void sendChatMessage() {
             clearPendingToolCall();
             strncat(chatOutputTextEditorContents,
                     STRING_SHELL_TOOL_DENIED_BANNER,
-                    CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
+                    chatOutputTextEditorContentsCapacity -
                         strlen(chatOutputTextEditorContents) - 1);
             strncat(receivedMessage, STRING_SHELL_TOOL_DENIED_BANNER,
                     READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
@@ -1709,7 +1750,7 @@ static void sendChatMessage() {
         snprintf(cmdDisplay, sizeof(cmdDisplay),
                  STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT, command);
         strncat(chatOutputTextEditorContents, cmdDisplay,
-                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
+                chatOutputTextEditorContentsCapacity -
                     strlen(chatOutputTextEditorContents) - 1);
         strncat(receivedMessage, cmdDisplay,
                 READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
@@ -1727,7 +1768,7 @@ static void sendChatMessage() {
                  STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT, exitCode,
                  output != NULL ? output : (STRPTR)STRING_SHELL_TOOL_NO_OUTPUT);
         strncat(chatOutputTextEditorContents, outputDisplay,
-                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
+                chatOutputTextEditorContentsCapacity -
                     strlen(chatOutputTextEditorContents) - 1);
         strncat(receivedMessage, outputDisplay,
                 READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
@@ -1794,14 +1835,14 @@ static void sendChatMessage() {
                                       CSA_Source, (Tag)toolContentString,
                                       CSA_MapForeignChars, TRUE, TAG_DONE);
                 strncat(chatOutputTextEditorContents, formattedToolResponse,
-                        CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
+                        chatOutputTextEditorContentsCapacity -
                             strlen(chatOutputTextEditorContents) - 1);
                 CodesetsFreeA(formattedToolResponse, NULL);
 
                 STRPTR formattedContent = convertMarkdownFormattingToMUI(
                     chatOutputTextEditorContents);
                 strncpy(chatOutputTextEditorContents, formattedContent,
-                        CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 1);
+                        chatOutputTextEditorContentsCapacity - 1);
                 FreeVec(formattedContent);
                 set(chatOutputTextEditor, MUIA_NFloattext_Text,
                     chatOutputTextEditorContents);
@@ -1932,16 +1973,37 @@ void displayConversation(struct Conversation *conversation) {
     }
     struct ConversationNode *conversationNode;
     chatOutputTextEditorContents[0] = '\0';
+
+    ULONG estimatedRequired = 1024;
+    for (conversationNode =
+             (struct ConversationNode *)conversation->messages->mlh_Head;
+         conversationNode->node.mln_Succ != NULL;
+         conversationNode =
+             (struct ConversationNode *)conversationNode->node.mln_Succ) {
+        estimatedRequired += strlen(conversationNode->content) * 3 + 512;
+    }
+    if (!ensureChatOutputBufferCapacity(estimatedRequired)) {
+        displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
+        set(sendMessageButton, MUIA_Disabled, TRUE);
+        return;
+    }
+
     for (conversationNode =
              (struct ConversationNode *)conversation->messages->mlh_Head;
          conversationNode->node.mln_Succ != NULL;
          conversationNode =
              (struct ConversationNode *)conversationNode->node.mln_Succ) {
         if ((strlen(chatOutputTextEditorContents) +
-             strlen(conversationNode->content) + 256) > WRITE_BUFFER_LENGTH) {
+             strlen(conversationNode->content) + 256) >
+            chatOutputTextEditorContentsCapacity) {
+            ULONG need =
+                strlen(chatOutputTextEditorContents) +
+                strlen(conversationNode->content) * 3 + 1024;
+            if (!ensureChatOutputBufferCapacity(need)) {
             displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
             set(sendMessageButton, MUIA_Disabled, TRUE);
             return;
+            }
         }
         if (strcmp(conversationNode->role, "user") == 0) {
             UTF8 *content = conversationNode->content;
@@ -1989,8 +2051,40 @@ void displayConversation(struct Conversation *conversation) {
         CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
         (Tag)chatOutputTextEditorContents, CSA_MapForeignChars, TRUE, TAG_DONE);
 
-    snprintf(chatOutputTextEditorContents, WRITE_BUFFER_LENGTH, "%s\0",
-             convertedConversationString);
+    if (convertedConversationString != NULL) {
+        ULONG convertedLen = strlen(convertedConversationString) + 1;
+        if (!ensureChatOutputBufferCapacity(convertedLen)) {
+            CodesetsFreeA(convertedConversationString, NULL);
+            displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
+            set(sendMessageButton, MUIA_Disabled, TRUE);
+            return;
+        }
+    }
+
+    if (convertedConversationString == NULL) {
+        displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
+        set(sendMessageButton, MUIA_Disabled, TRUE);
+        return;
+    }
+
+    ULONG convertedLen = (ULONG)strlen(convertedConversationString);
+    STRPTR displayPtr = convertedConversationString;
+    ULONG displayLen = convertedLen;
+    if (convertedLen > CHAT_OUTPUT_WIDGET_SAFE_LIMIT) {
+        displayPtr = convertedConversationString +
+                     (convertedLen - CHAT_OUTPUT_WIDGET_SAFE_LIMIT);
+        displayLen = CHAT_OUTPUT_WIDGET_SAFE_LIMIT;
+    }
+
+    if (!ensureChatOutputBufferCapacity(displayLen + 1)) {
+        CodesetsFreeA(convertedConversationString, NULL);
+        displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
+        set(sendMessageButton, MUIA_Disabled, TRUE);
+        return;
+    }
+
+    chatOutputTextEditorContents[0] = '\0';
+    strncat(chatOutputTextEditorContents, displayPtr, displayLen);
 
     CodesetsFreeA(convertedConversationString, NULL);
 
@@ -2019,6 +2113,16 @@ copyConversation(struct Conversation *conversation) {
     if (conversation->name != NULL) {
         copy->name = AllocVec(strlen(conversation->name) + 1, MEMF_CLEAR);
         strncpy(copy->name, conversation->name, strlen(conversation->name));
+    }
+    if (conversation->lastResponseId != NULL &&
+        strlen(conversation->lastResponseId) > 0) {
+        copy->lastResponseId =
+            AllocVec(strlen(conversation->lastResponseId) + 1,
+                     MEMF_ANY | MEMF_CLEAR);
+        if (copy->lastResponseId != NULL) {
+            strncpy(copy->lastResponseId, conversation->lastResponseId,
+                    strlen(conversation->lastResponseId));
+        }
     }
     return copy;
 }
@@ -2069,6 +2173,12 @@ static LONG saveConversations() {
         DoMethod(conversationListObject, MUIM_NList_GetEntry, i, &conversation);
         json_object_object_add(conversationJsonObject, "name",
                                json_object_new_string(conversation->name));
+        if (conversation->lastResponseId != NULL &&
+            strlen(conversation->lastResponseId) > 0) {
+            json_object_object_add(
+                conversationJsonObject, "lastResponseId",
+                json_object_new_string(conversation->lastResponseId));
+        }
         struct json_object *messagesJsonArray = json_object_new_array();
         struct ConversationNode *conversationNode;
         for (conversationNode =
@@ -2306,6 +2416,22 @@ static LONG loadConversations() {
         conversation->name =
             AllocVec(strlen(conversationName) + 1, MEMF_ANY | MEMF_CLEAR);
         strncpy(conversation->name, conversationName, strlen(conversationName));
+
+        struct json_object *lastResponseIdJsonObject;
+        if (json_object_object_get_ex(conversationJsonObject, "lastResponseId",
+                                      &lastResponseIdJsonObject)) {
+            STRPTR lastResponseId =
+                (STRPTR)json_object_get_string(lastResponseIdJsonObject);
+            if (lastResponseId != NULL && strlen(lastResponseId) > 0) {
+                conversation->lastResponseId =
+                    AllocVec(strlen(lastResponseId) + 1,
+                             MEMF_ANY | MEMF_CLEAR);
+                if (conversation->lastResponseId != NULL) {
+                    strncpy(conversation->lastResponseId, lastResponseId,
+                            strlen(lastResponseId));
+                }
+            }
+        }
 
         set(conversationListObject, MUIA_NList_Quiet, TRUE);
 

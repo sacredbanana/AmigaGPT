@@ -34,6 +34,12 @@ static LONG saveDaemonConversation(void) {
 
     struct json_object *conversationJsonObject = json_object_new_object();
     struct json_object *messagesJsonArray = json_object_new_array();
+    if (daemonConversation->lastResponseId != NULL &&
+        strlen(daemonConversation->lastResponseId) > 0) {
+        json_object_object_add(
+            conversationJsonObject, "lastResponseId",
+            json_object_new_string(daemonConversation->lastResponseId));
+    }
 
     struct ConversationNode *conversationNode;
     for (conversationNode =
@@ -124,6 +130,20 @@ static struct Conversation *loadDaemonConversation(void) {
     }
 
     struct Conversation *conversation = newConversation();
+    struct json_object *lastResponseIdJsonObject;
+    if (json_object_object_get_ex(conversationJsonObject, "lastResponseId",
+                                  &lastResponseIdJsonObject)) {
+        STRPTR lastResponseId = (STRPTR)json_object_get_string(
+            lastResponseIdJsonObject);
+        if (lastResponseId != NULL && strlen(lastResponseId) > 0) {
+            conversation->lastResponseId =
+                AllocVec(strlen(lastResponseId) + 1, MEMF_ANY | MEMF_CLEAR);
+            if (conversation->lastResponseId != NULL) {
+                strncpy(conversation->lastResponseId, lastResponseId,
+                        strlen(lastResponseId));
+            }
+        }
+    }
 
     for (UWORD j = 0; j < json_object_array_length(messagesJsonArray); j++) {
         struct json_object *messageJsonObject =

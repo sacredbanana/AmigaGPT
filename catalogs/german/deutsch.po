@@ -1886,3 +1886,13 @@ msgstr "HTTP-Header sind zu groß"
 msgctxt "STRING_ERROR_MODELS_RESPONSE_PARSE (344//)"
 msgid "Failed to parse models response"
 msgstr "Modelantwort konnte nicht geparst werden"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_CHAT_REQUEST_TOO_LARGE (345//)"
+msgid "Chat request too large"
+msgstr "Chat-Anfrage ist zu groß"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_SSL_READ_FAILED_FORMAT (346//)"
+msgid "SSL read failed: %s"
+msgstr "SSL-Lesen fehlgeschlagen: %s"

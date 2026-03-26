@@ -45,6 +45,10 @@ struct Conversation {
      * The system of the conversation
      **/
     UTF8 *system;
+    /**
+     * Last response ID returned by the Responses API for stateful follow-ups
+     **/
+    UTF8 *lastResponseId;
 };
 
 /**
