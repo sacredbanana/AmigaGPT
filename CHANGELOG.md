@@ -24,6 +24,7 @@
 - All config options are now immediately saved to disk
 - Added NEWCHAT and PROFILE=PR options for AskGPT
 - ARexx say.rexx now supports different profiles and voices
+- The returned chat response string in ARexx will no longer contain unnecessary characters such as escape backslashes and escaped markdown characters
 - Fix bug where the app would get stuck after sending a few messages to Gemini
 - Fix bug where say.rexx did not ask you what you want to say
 - Fix bug where the first paragraph in every response is always black even if you have custom colours set

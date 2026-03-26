@@ -957,8 +957,7 @@ static void rexxSetProfileNotFoundError(CONST_STRPTR kind,
     CONST_STRPTR displayKind =
         kind != NULL ? kind : (CONST_STRPTR)STRING_REXX_REQUESTED;
     snprintf(errMsg, sizeof(errMsg), STRING_ERROR_REXX_PROFILE_NOT_FOUND,
-             displayKind,
-             profileName != NULL ? profileName : "");
+             displayKind, profileName != NULL ? profileName : "");
     set(app, MUIA_Application_RexxString, errMsg);
     updateStatusBar(STRING_ERROR, redPen);
 }
@@ -1057,8 +1056,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         model = rexxSettings.model;
     }
 
-    BOOL webSearchEnabled =
-        rexxSettings.webSearchEnabled || webSearchRequested;
+    BOOL webSearchEnabled = rexxSettings.webSearchEnabled || webSearchRequested;
 
     /* Get the persistent daemon conversation (load from T: or create new) */
     struct Conversation *conversation = getDaemonConversation();
@@ -1175,8 +1173,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
         /* Build output string with exit code */
         UBYTE toolOutput[8192];
-        snprintf(toolOutput, sizeof(toolOutput), STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT,
-                 exitCode,
+        snprintf(toolOutput, sizeof(toolOutput),
+                 STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT, exitCode,
                  output != NULL ? output : (STRPTR)STRING_SHELL_TOOL_NO_OUTPUT);
 
         /* Send the tool result back to the API - this may set a new pending
@@ -1249,16 +1247,36 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         UTF8 *toolContentString =
             getMessageContentFromJson(toolResponse, FALSE, TRUE, apiEndpoint);
         if (toolContentString != NULL && strlen(toolContentString) > 0) {
-            /* Add response to conversation for context */
-            addTextToConversation(conversation, toolContentString, "assistant");
-            saveDaemonConversation();
+            /* Create a copy and strip unnecessary escape backslashes. */
+            STRPTR cleanedContent = AllocVec(
+                strlen((STRPTR)toolContentString) + 1, MEMF_ANY | MEMF_CLEAR);
+            if (cleanedContent != NULL) {
+                STRPTR rPtr = (STRPTR)toolContentString;
+                STRPTR wPtr = cleanedContent;
+                while (*rPtr) {
+                    if (*rPtr == '\\' &&
+                        (*(rPtr + 1) == '"' || *(rPtr + 1) == '\'' ||
+                         *(rPtr + 1) == '*' || *(rPtr + 1) == '_' ||
+                         *(rPtr + 1) == '`')) {
+                        rPtr++; /* Skip the escape backslash. */
+                    }
+                    *wPtr++ = *rPtr++;
+                }
+                *wPtr = '\0';
 
-            STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
-                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                (Tag)toolContentString, CSA_MapForeignChars, TRUE, TAG_DONE);
-            set(app, MUIA_Application_RexxString,
-                formattedMessageSystemEncoded);
-            CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+                /* Add response to conversation history for context. */
+                addTextToConversation(conversation, cleanedContent,
+                                      "assistant");
+                saveDaemonConversation();
+
+                STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
+                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                    (Tag)cleanedContent, CSA_MapForeignChars, TRUE, TAG_DONE);
+                set(app, MUIA_Application_RexxString,
+                    formattedMessageSystemEncoded);
+                CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+                FreeVec(cleanedContent);
+            }
             json_object_put(toolResponse);
             updateStatusBar(STRING_READY, greenPen);
             return RETURN_OK;
@@ -1343,7 +1361,21 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         return RETURN_OK;
     }
 
-    /* Add response to conversation for context */
+    /* Remove escaped markdown/shell characters the LLM may emit. */
+    STRPTR readPtr = combined;
+    STRPTR writePtr = combined;
+    while (*readPtr) {
+        if (*readPtr == '\\' &&
+            (*(readPtr + 1) == '"' || *(readPtr + 1) == '\'' ||
+             *(readPtr + 1) == '*' || *(readPtr + 1) == '_' ||
+             *(readPtr + 1) == '`')) {
+            readPtr++; /* Skip the escape backslash. */
+        }
+        *writePtr++ = *readPtr++;
+    }
+    *writePtr = '\0';
+
+    /* Add response to conversation history for context. */
     addTextToConversation(conversation, combined, "assistant");
     saveDaemonConversation();
 
@@ -1646,9 +1678,9 @@ static void rexxAppendChatModelsForProfile(STRPTR buffer, ULONG bufferSize,
     if (!rexxResolveChatProfileSettings(requestedProfile, &settings))
         return;
 
-    CONST_STRPTR titleProfile =
-        settings.profileName != NULL ? settings.profileName
-                                     : (CONST_STRPTR)STRING_MENU_CHAT;
+    CONST_STRPTR titleProfile = settings.profileName != NULL
+                                    ? settings.profileName
+                                    : (CONST_STRPTR)STRING_MENU_CHAT;
     UBYTE title[256];
     snprintf(title, sizeof(title), "%s (%s)", STRING_MENU_CHAT, titleProfile);
     rexxAppendSectionHeader(buffer, bufferSize, title);
@@ -1673,9 +1705,9 @@ static void rexxAppendImageModelsForProfile(STRPTR buffer, ULONG bufferSize,
     if (!rexxResolveImageProfileSettings(requestedProfile, &settings))
         return;
 
-    CONST_STRPTR titleProfile =
-        settings.profileName != NULL ? settings.profileName
-                                     : (CONST_STRPTR)STRING_IMAGE;
+    CONST_STRPTR titleProfile = settings.profileName != NULL
+                                    ? settings.profileName
+                                    : (CONST_STRPTR)STRING_IMAGE;
     UBYTE title[256];
     snprintf(title, sizeof(title), "%s (%s)", STRING_IMAGE, titleProfile);
     rexxAppendSectionHeader(buffer, bufferSize, title);
