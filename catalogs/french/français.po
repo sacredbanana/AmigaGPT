@@ -17,7 +17,9 @@ msgstr ""
 msgctxt "STRING_APP_DESCRIPTION (0//)"
 msgid ""
 "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
-msgstr "AmigaGPT est une application pour discuter avec ChatGPT ou créer des images IA avec DALL-E"
+msgstr ""
+"AmigaGPT est une application pour discuter avec ChatGPT ou créer des images "
+"IA avec DALL-E"
 
 #: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
@@ -29,14 +31,19 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
-msgstr "Impossible d'ouvrir le système vocal. Assurez-vous que la bibliothèque de traducteurs v42 et le dispositif narrateur v34 sont installés. Consultez le guide pour plus d'informations."
+msgstr ""
+"Impossible d'ouvrir le système vocal. Assurez-vous que la bibliothèque de "
+"traducteurs v42 et le dispositif narrateur v34 sont installés. Consultez le "
+"guide pour plus d'informations."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
 msgid ""
 "Failed to open speech system. Make sure Flite Device is installed. See the "
 "guide for more information."
-msgstr "Impossible d'ouvrir le système vocal. Assurez-vous que Flite Device est installé. Consultez le guide pour plus d'informations."
+msgstr ""
+"Impossible d'ouvrir le système vocal. Assurez-vous que Flite Device est "
+"installé. Consultez le guide pour plus d'informations."
 
 #: src/main.c:88 src/main.c:89 src/main.c:90 src/main.c:87
 msgctxt "STRING_ERROR_OPENAI_INIT (4//)"
@@ -48,7 +55,10 @@ msgctxt "STRING_WARNING_STACK (5//)"
 msgid ""
 "Warning: The stack size is too small. The minimum recommended stack size is "
 "32768 bytes to avoid crashes. Your stack size is: "
-msgstr "Attention : la taille de la pile est trop petite. La taille minimale recommandée pour la pile est de 32 768 octets pour éviter les plantages. La taille de votre pile est : "
+msgstr ""
+"Attention : la taille de la pile est trop petite. La taille minimale "
+"recommandée pour la pile est de 32 768 octets pour éviter les plantages. La "
+"taille de votre pile est : "
 
 #: src/APIKeyRequesterWindow.c:40
 msgctxt "STRING_API_KEY_REQUESTER_TITLE (6//)"
@@ -70,7 +80,9 @@ msgctxt "STRING_API_KEY_REQUESTER_BODY_HELP (200//)"
 msgid ""
 "If you do not have an API key, consult the AmigaGPT documentation for "
 "instructions on how to obtain one."
-msgstr "Si vous n'avez pas de clé API, consultez la documentation AmigaGPT pour obtenir des instructions sur la façon d'en obtenir une."
+msgstr ""
+"Si vous n'avez pas de clé API, consultez la documentation AmigaGPT pour "
+"obtenir des instructions sur la façon d'en obtenir une."
 
 #: src/APIKeyRequesterWindow.c:53 src/ChatSystemRequesterWindow.c:52
 #: src/ProxySettingsRequesterWindow.c:147 src/StartupOptionsWindow.c:129
@@ -110,12 +122,16 @@ msgctxt "STRING_ABOUT_WINDOW_SUPPORT (14//)"
 msgid ""
 "This app will always remain free but if you would like to support me you can "
 "do so at:"
-msgstr "Cette application restera toujours gratuite mais si vous souhaitez me soutenir, vous pouvez le faire à l'adresse suivante :"
+msgstr ""
+"Cette application restera toujours gratuite mais si vous souhaitez me "
+"soutenir, vous pouvez le faire à l'adresse suivante :"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BUILD_DETAILS (214//)"
 msgid "Click the version string above for build details."
-msgstr "Cliquez sur la chaîne de version ci-dessus pour obtenir les détails de la build."
+msgstr ""
+"Cliquez sur la chaîne de version ci-dessus pour obtenir les détails de la "
+"build."
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BEBBO (201//)"
@@ -137,7 +153,9 @@ msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
 msgid ""
 "for all the thorough testing, bundling AmigaGPT into AmiKit and for all the "
 "moral support"
-msgstr "pour tous les tests approfondis, l'intégration d'AmigaGPT dans AmiKit et pour tout le soutien moral"
+msgstr ""
+"pour tous les tests approfondis, l'intégration d'AmigaGPT dans AmiKit et "
+"pour tout le soutien moral"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_COFFINOS (205//)"
@@ -149,7 +167,9 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
 msgid ""
 "for reviewing AmigaGPT and publishing several of its updates in the News "
 "from Aminet section"
-msgstr "pour avoir examiné AmigaGPT et publié plusieurs de ses mises à jour dans la section News from Aminet"
+msgstr ""
+"pour avoir examiné AmigaGPT et publié plusieurs de ses mises à jour dans la "
+"section News from Aminet"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_WHATIFF (207//)"
@@ -166,14 +186,18 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
 msgid ""
 "for covering AmigaGPT in the Amiga News section on his Twitch streams and "
 "allowing me to join his stream to promote it"
-msgstr "pour avoir couvert AmigaGPT dans la section Amiga News de ses streams Twitch et m'avoir permis de rejoindre son stream pour le promouvoir"
+msgstr ""
+"pour avoir couvert AmigaGPT dans la section Amiga News de ses streams Twitch "
+"et m'avoir permis de rejoindre son stream pour le promouvoir"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
 msgid ""
 "for making a video review and giving a tutorial on how to add support for "
 "the French accent"
-msgstr "pour faire une revue vidéo et donner un tutoriel sur la façon d'ajouter la prise en charge de l'accent français"
+msgstr ""
+"pour faire une revue vidéo et donner un tutoriel sur la façon d'ajouter la "
+"prise en charge de l'accent français"
 
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
@@ -193,7 +217,12 @@ msgid ""
 "pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
 "normally, leave this blank. This setting will be applied to new "
 "conversations only."
-msgstr "Si vous souhaitez qu'AmigaGPT réponde d'une certaine manière ou ajoute une touche personnelle, saisissez-le ici. Par exemple, vous pouvez saisir « Parlez comme un pirate » ou « Parlez comme un robot ». Si vous souhaitez qu'AmigaGPT réponde normalement, laissez ce champ vide. Ce paramètre ne s'appliquera qu'aux nouvelles conversations."
+msgstr ""
+"Si vous souhaitez qu'AmigaGPT réponde d'une certaine manière ou ajoute une "
+"touche personnelle, saisissez-le ici. Par exemple, vous pouvez saisir "
+"« Parlez comme un pirate » ou « Parlez comme un robot ». Si vous souhaitez "
+"qu'AmigaGPT réponde normalement, laissez ce champ vide. Ce paramètre ne "
+"s'appliquera qu'aux nouvelles conversations."
 
 #: src/ChatSystemRequesterWindow.c:65
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_ERROR (18//)"
@@ -270,7 +299,8 @@ msgstr "Génération du nom de l'image..."
 #: src/MainWindow.c:386 src/MainWindow.c:406
 msgctxt "STRING_ERROR_GENERATING_IMAGE_NAME (32//)"
 msgid "Failed to generate image name. Using ID instead."
-msgstr "Échec de la génération du nom de l'image. Utilisation de l'ID à la place."
+msgstr ""
+"Échec de la génération du nom de l'image. Utilisation de l'ID à la place."
 
 #: src/MainWindow.c:396 src/MainWindow.c:402 src/MainWindow.c:552
 #: src/MainWindow.c:963 src/MainWindow.c:1421 src/MainWindow.c:1773
@@ -351,31 +381,41 @@ msgctxt "STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED (47//)"
 msgid ""
 "The conversation has exceeded the maximum length. Please start a new "
 "conversation."
-msgstr "La conversation a dépassé la durée maximale. Veuillez démarrer une nouvelle conversation."
+msgstr ""
+"La conversation a dépassé la durée maximale. Veuillez démarrer une nouvelle "
+"conversation."
 
 #: src/MainWindow.c:1619
 msgctxt "STRING_ERROR_CHAT_HISTORY_CREATE (49//)"
 msgid ""
 "Failed to create message history file. Conversation history will not be "
 "saved."
-msgstr "Impossible de créer le fichier d'historique des messages. L'historique des conversations ne sera pas enregistré."
+msgstr ""
+"Impossible de créer le fichier d'historique des messages. L'historique des "
+"conversations ne sera pas enregistré."
 
 #: src/MainWindow.c:1663
 msgctxt "STRING_ERROR_CHAT_HISTORY_SAVE (50//)"
 msgid ""
 "Failed to write to message history file. Conversation history will not be "
 "saved."
-msgstr "Échec de l'écriture dans le fichier d'historique des messages. L'historique des conversations ne sera pas enregistré."
+msgstr ""
+"Échec de l'écriture dans le fichier d'historique des messages. L'historique "
+"des conversations ne sera pas enregistré."
 
 #: src/MainWindow.c:1682
 msgctxt "STRING_ERROR_IMAGE_HISTORY_CREATE (51//)"
 msgid "Failed to create image history file. Image history will not be saved."
-msgstr "Échec de la création du fichier d'historique des images. L'historique des images ne sera pas enregistré."
+msgstr ""
+"Échec de la création du fichier d'historique des images. L'historique des "
+"images ne sera pas enregistré."
 
 #: src/MainWindow.c:1717
 msgctxt "STRING_ERROR_IMAGE_HISTORY_WRITE (52//)"
 msgid "Failed to write to image history file. Image history will not be saved."
-msgstr "Échec de l'écriture dans le fichier d'historique des images. L'historique des images ne sera pas enregistré."
+msgstr ""
+"Échec de l'écriture dans le fichier d'historique des images. L'historique "
+"des images ne sera pas enregistré."
 
 #: src/MainWindow.c:1745
 msgctxt "STRING_LOADING_IMAGE (53//)"
@@ -387,7 +427,9 @@ msgctxt "STRING_ERROR_CHAT_HISTORY_READ (55//)"
 msgid ""
 "Failed to read from message history file. Conversation history will not be "
 "loaded"
-msgstr "Impossible de lire le fichier d'historique des messages. L'historique des conversations ne sera pas chargé"
+msgstr ""
+"Impossible de lire le fichier d'historique des messages. L'historique des "
+"conversations ne sera pas chargé"
 
 #: src/MainWindow.c:1814
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP (56//)"
@@ -395,7 +437,11 @@ msgid ""
 "Failed to parse chat history. Malformed JSON. The chat-history.json file is "
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
-msgstr "Impossible d'analyser l'historique des conversations. JSON mal formé. Le fichier chat-history.json est probablement corrompu. L'historique des conversations ne sera pas chargé. Une sauvegarde du fichier chat-history.json a été créée sous le nom chat-history.json.bak"
+msgstr ""
+"Impossible d'analyser l'historique des conversations. JSON mal formé. Le "
+"fichier chat-history.json est probablement corrompu. L'historique des "
+"conversations ne sera pas chargé. Une sauvegarde du fichier chat-"
+"history.json a été créée sous le nom chat-history.json.bak"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -404,26 +450,38 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. There was an "
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
-msgstr "Impossible d'analyser l'historique des conversations. JSON mal formé. Le fichier chat-history.json est probablement corrompu. L'historique des conversations ne sera pas chargé. Une erreur s'est produite lors de l'écriture d'une sauvegarde de l'historique des conversations sur le disque, mais une copie a été enregistrée dans la RAM :chat-history.json.bak"
+msgstr ""
+"Impossible d'analyser l'historique des conversations. JSON mal formé. Le "
+"fichier chat-history.json est probablement corrompu. L'historique des "
+"conversations ne sera pas chargé. Une erreur s'est produite lors de "
+"l'écriture d'une sauvegarde de l'historique des conversations sur le disque, "
+"mais une copie a été enregistrée dans la RAM :chat-history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
 msgid "Failed to delete chat-history.json. Please delete this file manually."
-msgstr "Impossible de supprimer chat-history.json. Veuillez supprimer ce fichier manuellement."
+msgstr ""
+"Impossible de supprimer chat-history.json. Veuillez supprimer ce fichier "
+"manuellement."
 
 #: src/MainWindow.c:1852
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP (59//)"
 msgid ""
 "Failed to parse chat history.The chat-history.json file is probably "
 "corrupted. Conversation history will not be loaded."
-msgstr "Impossible d'analyser l'historique des conversations. Le fichier chat-history.json est probablement corrompu. L'historique des conversations ne sera pas chargé."
+msgstr ""
+"Impossible d'analyser l'historique des conversations. Le fichier chat-"
+"history.json est probablement corrompu. L'historique des conversations ne "
+"sera pas chargé."
 
 #: src/MainWindow.c:1950
 msgctxt "STRING_ERROR_IMAGE_HISTORY_READ (60//)"
 msgid ""
 "Failed to read from image history file. Image generation history will not be "
 "loaded"
-msgstr "Impossible de lire le fichier d'historique des images. L'historique de génération des images ne sera pas chargé"
+msgstr ""
+"Impossible de lire le fichier d'historique des images. L'historique de "
+"génération des images ne sera pas chargé"
 
 #: src/MainWindow.c:1964
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP (61//)"
@@ -431,7 +489,11 @@ msgid ""
 "Failed to parse image history. Malformed JSON. The image-history.json file "
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
-msgstr "Impossible d'analyser l'historique de l'image. JSON mal formé. Le fichier image-history.json est probablement corrompu. L'historique de l'image ne sera pas chargé. Une sauvegarde du fichier image-history.json a été créée sous le nom image-history.json.bak"
+msgstr ""
+"Impossible d'analyser l'historique de l'image. JSON mal formé. Le fichier "
+"image-history.json est probablement corrompu. L'historique de l'image ne "
+"sera pas chargé. Une sauvegarde du fichier image-history.json a été créée "
+"sous le nom image-history.json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -440,12 +502,19 @@ msgid ""
 "is probably corrupted. Image history will not be loaded. There was an error "
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
-msgstr "Impossible d'analyser l'historique de l'image. JSON mal formé. Le fichier image-history.json est probablement corrompu. L'historique de l'image ne sera pas chargé. Une erreur s'est produite lors de l'écriture d'une sauvegarde de l'historique de l'image sur le disque, mais une copie a été enregistrée dans la RAM : image-history.json.bak"
+msgstr ""
+"Impossible d'analyser l'historique de l'image. JSON mal formé. Le fichier "
+"image-history.json est probablement corrompu. L'historique de l'image ne "
+"sera pas chargé. Une erreur s'est produite lors de l'écriture d'une "
+"sauvegarde de l'historique de l'image sur le disque, mais une copie a été "
+"enregistrée dans la RAM : image-history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
 msgid "Failed to delete image-history.json. Please delete this file manually."
-msgstr "Impossible de supprimer image-history.json. Veuillez supprimer ce fichier manuellement."
+msgstr ""
+"Impossible de supprimer image-history.json. Veuillez supprimer ce fichier "
+"manuellement."
 
 #: src/MainWindow.c:2120
 msgctxt "STRING_ERROR_FILE_COPY_OPEN (64//)"
@@ -470,7 +539,9 @@ msgstr "Erreur lors de la copie du fichier"
 #: src/ProxySettingsRequesterWindow.c:30
 msgctxt "STRING_ERROR_INVALID_PORT (68//)"
 msgid "Invalid port number. Please enter a number between 0 and 65535."
-msgstr "Numéro de port non valide. Veuillez saisir un numéro compris entre 0 et 65535."
+msgstr ""
+"Numéro de port non valide. Veuillez saisir un numéro compris entre 0 et "
+"65535."
 
 #: src/ProxySettingsRequesterWindow.c:72
 msgctxt "STRING_ENCRYPTION_NONE (69//)"
@@ -581,7 +652,9 @@ msgstr "Impossible d'analyser le fichier de configuration"
 msgctxt "STRING_ERROR_MUI_LIB_OPEN (90//)"
 msgid ""
 "Could not open muimaster.library. Please make sure you have MUI installed"
-msgstr "Impossible d'ouvrir muimaster.library. Veuillez vous assurer que MUI est installé"
+msgstr ""
+"Impossible d'ouvrir muimaster.library. Veuillez vous assurer que MUI est "
+"installé"
 
 #: src/gui.c:84
 msgctxt "STRING_ERROR_MUI_INTERFACE_OPEN (91//)"
@@ -593,7 +666,10 @@ msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
 msgid ""
 "Could not open codesets.library. Please make sure you have codesets "
 "installed. Refer to the documentation for more info."
-msgstr "Impossible d'ouvrir la bibliothèque codesets.library. Veuillez vous assurer que vous avez installé les codesets. Reportez-vous à la documentation pour plus d'informations."
+msgstr ""
+"Impossible d'ouvrir la bibliothèque codesets.library. Veuillez vous assurer "
+"que vous avez installé les codesets. Reportez-vous à la documentation pour "
+"plus d'informations."
 
 #: src/gui.c:98
 msgctxt "STRING_ERROR_CODESETS_INTERFACE_OPEN (93//)"
@@ -610,7 +686,10 @@ msgctxt "STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED (95//)"
 msgid ""
 "Could not find all the MUI custom classes. Please make sure they are "
 "installed. Refer to the documentation for more information."
-msgstr "Impossible de trouver toutes les classes personnalisées MUI. Veuillez vous assurer qu'elles sont installées. Reportez-vous à la documentation pour plus d'informations."
+msgstr ""
+"Impossible de trouver toutes les classes personnalisées MUI. Veuillez vous "
+"assurer qu'elles sont installées. Reportez-vous à la documentation pour plus "
+"d'informations."
 
 #: src/gui.c:178
 msgctxt "STRING_IMAGE (96//)"
@@ -637,7 +716,10 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
-msgstr "Impossible d'ouvrir le système vocal. Assurez-vous que la bibliothèque de traducteurs v42 et le narrateur.device v37 sont installés. Consultez le guide pour plus d'informations."
+msgstr ""
+"Impossible d'ouvrir le système vocal. Assurez-vous que la bibliothèque de "
+"traducteurs v42 et le narrateur.device v37 sont installés. Consultez le "
+"guide pour plus d'informations."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
@@ -861,7 +943,10 @@ msgid ""
 "Failed to open bsdsocket.library. You have to install a TCP/IP stack such as "
 "AmiTCP, Miami or Roadshow. Please refer to the documentation for more "
 "information."
-msgstr "Impossible d'ouvrir bsdsocket.library. Vous devez installer une pile TCP/IP telle que AmiTCP, Miami ou Roadshow. Veuillez vous référer à la documentation pour plus d'informations."
+msgstr ""
+"Impossible d'ouvrir bsdsocket.library. Vous devez installer une pile TCP/IP "
+"telle que AmiTCP, Miami ou Roadshow. Veuillez vous référer à la "
+"documentation pour plus d'informations."
 
 #: src/openai.c:182
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN_OS4 (151//)"
@@ -878,7 +963,10 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_OPEN (153//)"
 msgid ""
 "Failed to open amisslmaster.library version 5. You have to install AmiSSL 5. "
 "Please refer to the documentation for more information."
-msgstr "Échec de l'ouverture de la version 5 d'amisslmaster.library. Vous devez installer AmiSSL 5. Veuillez vous référer à la documentation pour plus d'informations."
+msgstr ""
+"Échec de l'ouverture de la version 5 d'amisslmaster.library. Vous devez "
+"installer AmiSSL 5. Veuillez vous référer à la documentation pour plus "
+"d'informations."
 
 #: src/openai.c:211
 msgctxt "STRING_ERROR_AMISSLMASTER_INTERFACE_OPEN (154//)"
@@ -890,7 +978,10 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
 msgid ""
 "Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
 "newer. Please refer to the documentation for more information."
-msgstr "Impossible d'initialiser amisslmaster.library. AmigaGPT nécessite AmiSSL 5.18 ou une version plus récente. Veuillez vous référer à la documentation pour plus d'informations."
+msgstr ""
+"Impossible d'initialiser amisslmaster.library. AmigaGPT nécessite AmiSSL "
+"5.18 ou une version plus récente. Veuillez vous référer à la documentation "
+"pour plus d'informations."
 
 #: src/openai.c:233
 msgctxt "STRING_ERROR_AMISSL_INTERFACE_INIT (156//)"
@@ -917,7 +1008,9 @@ msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
 msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
-msgstr "Impossible de se connecter au serveur. Vérifiez si l'hôte et le port proxy sont corrects ou désactivez-les."
+msgstr ""
+"Impossible de se connecter au serveur. Vérifiez si l'hôte et le port proxy "
+"sont corrects ou désactivez-les."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
@@ -948,7 +1041,8 @@ msgstr "De liaison..."
 #: src/openai.c:1075 src/openai.c:1406 src/openai.c:1664
 msgctxt "STRING_ERROR_CONNECTING_MAX_RETRIES (167//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr "Erreur de connexion à l'hôte ! Le nombre maximal de tentatives a été atteint."
+msgstr ""
+"Erreur de connexion à l'hôte ! Le nombre maximal de tentatives a été atteint."
 
 #: src/openai.c:539 src/openai.c:827 src/openai.c:1082 src/openai.c:1458
 msgctxt "STRING_SENDING_REQUEST (168//)"
@@ -963,7 +1057,8 @@ msgstr "Téléchargement de la réponse..."
 #: src/openai.c:683 src/openai.c:934 src/openai.c:1658
 msgctxt "STRING_ERROR_CONNECTION_MAX_RETRIES (171//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr "Erreur de connexion à l'hôte ! Le nombre maximal de tentatives a été atteint."
+msgstr ""
+"Erreur de connexion à l'hôte ! Le nombre maximal de tentatives a été atteint."
 
 #: src/openai.c:705 src/openai.c:947 src/openai.c:1672
 msgctxt "STRING_ERROR_UNKNOWN (172//)"
@@ -1110,7 +1205,10 @@ msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
 msgid ""
 "Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
 "voice'. This only works for the gpt-4o-mini-tts model."
-msgstr "Entrez comment vous voulez que l'IA parle. Exemple: 'Parlez de manière profonde et mystérieuse'. Cette fonctionnalité ne fonctionne que pour le modèle gpt-4o-mini-tts."
+msgstr ""
+"Entrez comment vous voulez que l'IA parle. Exemple: 'Parlez de manière "
+"profonde et mystérieuse'. Cette fonctionnalité ne fonctionne que pour le "
+"modèle gpt-4o-mini-tts."
 
 #: src/VoiceInstructionsRequesterWindow.c:87
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
@@ -1162,7 +1260,9 @@ msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
 msgid ""
 "Invalid request. Your OpenAI API account probably has no credit left to run "
 "this model. Please check your account balance."
-msgstr "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
+msgstr ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1516,7 +1616,9 @@ msgstr "Un profil portant ce nom existe déjà."
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
 msgid "You have unsaved changes. Do you want to save them before switching?"
-msgstr "Vous avez des modifications non enregistrées. Voulez-vous les enregistrer avant de changer ?"
+msgstr ""
+"Vous avez des modifications non enregistrées. Voulez-vous les enregistrer "
+"avant de changer ?"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_STREAMING (301//)"
@@ -1624,7 +1726,9 @@ msgstr "Avertissement : un composant requis est manquant : %s"
 #: src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
 msgid "Failed to create Speech Provider Settings window"
-msgstr "Échec de la création de la fenêtre Paramètres du fournisseur de synthèse vocale"
+msgstr ""
+"Échec de la création de la fenêtre Paramètres du fournisseur de synthèse "
+"vocale"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_MENU_TEMPLATE_OPENAI (315//)"
@@ -1766,4 +1870,12 @@ msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_VOICES (342//)"
 msgid "No selectable voices for this speech profile"
 msgstr "Aucune voix sélectionnable pour ce profil vocal"
 
+#: src/openai.c
+msgctxt "STRING_ERROR_HTTP_HEADERS_TOO_LARGE (343//)"
+msgid "HTTP headers too large"
+msgstr "En-têtes HTTP trop volumineux"
 
+#: src/openai.c
+msgctxt "STRING_ERROR_MODELS_RESPONSE_PARSE (344//)"
+msgid "Failed to parse models response"
+msgstr "Échec de l'analyse de la réponse des modèles"

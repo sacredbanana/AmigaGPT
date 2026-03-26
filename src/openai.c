@@ -1186,6 +1186,20 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
     UBYTE *tempReadBuffer = AllocVec(useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH,
                                      MEMF_ANY | MEMF_CLEAR);
 
+    /* Keep a small rolling copy of the HTTP headers so we can detect
+     * Transfer-Encoding and split headers from body even when they arrive
+     * across multiple recv()/SSL_read() calls.
+     */
+    UBYTE headerBuf[8192];
+    ULONG headerLen = 0;
+    BOOL headersDone = FALSE;
+    BOOL isChunked = FALSE;
+    UBYTE chunkLenLine[32];
+    UBYTE chunkLenPos = 0;
+    ULONG chunkRemaining = 0;
+    UBYTE chunkCrlfToSkip = 0;
+    BOOL chunkDone = FALSE;
+
     while (!doneReading && totalBytesRead < READ_BUFFER_LENGTH - 1) {
         if (useSSL) {
             ERR_clear_error();
@@ -1199,8 +1213,163 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
         }
 
         if (bytesRead > 0) {
-            strncat(readBuffer, tempReadBuffer, bytesRead);
-            totalBytesRead += bytesRead;
+            const UBYTE *p = tempReadBuffer;
+            ULONG n = (ULONG)bytesRead;
+
+            while (n > 0 && !doneReading) {
+                if (!headersDone) {
+                    /* Accumulate header bytes until we find the header/body
+                     * delimiter (\r\n\r\n or \n\n).
+                     */
+                    ULONG space = (sizeof(headerBuf) - 1) - headerLen;
+                    ULONG toCopy = (n < space) ? n : space;
+                    if (toCopy > 0) {
+                        CopyMem((APTR)p, (APTR)(headerBuf + headerLen), toCopy);
+                        headerLen += toCopy;
+                        headerBuf[headerLen] = '\0';
+                        p += toCopy;
+                        n -= toCopy;
+                    } else {
+                        displayError(STRING_ERROR_HTTP_HEADERS_TOO_LARGE);
+                        doneReading = TRUE;
+                        break;
+                    }
+
+                    STRPTR hEnd = strstr((STRPTR)headerBuf, "\r\n\r\n");
+                    ULONG bodyOffset = 0;
+                    if (hEnd != NULL) {
+                        bodyOffset = (ULONG)(hEnd - (STRPTR)headerBuf) + 4;
+                    } else {
+                        hEnd = strstr((STRPTR)headerBuf, "\n\n");
+                        if (hEnd != NULL) {
+                            bodyOffset = (ULONG)(hEnd - (STRPTR)headerBuf) + 2;
+                        }
+                    }
+
+                    if (hEnd == NULL) {
+                        continue;
+                    }
+
+                    headersDone = TRUE;
+
+                    /* Some providers stream model lists with chunked transfer.
+                     * Detect it now so body handling can switch modes.
+                     */
+                    if (strstr((STRPTR)headerBuf,
+                               "Transfer-Encoding: chunked") != NULL ||
+                        strstr((STRPTR)headerBuf,
+                               "transfer-encoding: chunked") != NULL) {
+                        isChunked = TRUE;
+                    }
+
+                    ULONG rbLen = strlen((STRPTR)readBuffer);
+                    ULONG spaceLeft = (READ_BUFFER_LENGTH - 1) > rbLen
+                                          ? (READ_BUFFER_LENGTH - 1) - rbLen
+                                          : 0;
+                    ULONG toWrite =
+                        (bodyOffset < spaceLeft) ? bodyOffset : spaceLeft;
+                    if (toWrite > 0) {
+                        CopyMem((APTR)headerBuf, readBuffer + rbLen, toWrite);
+                        readBuffer[rbLen + toWrite] = '\0';
+                    }
+
+                    /* If this read contained both headers and body, continue
+                     * parsing immediately from the first body byte.
+                     */
+                    if (bodyOffset < headerLen) {
+                        p = headerBuf + bodyOffset;
+                        n = headerLen - bodyOffset;
+                        headerLen = bodyOffset;
+                    } else {
+                        continue;
+                    }
+                }
+
+                /* Non-chunked response: append remaining bytes as-is. */
+                if (!isChunked) {
+                    ULONG rbLen = strlen((STRPTR)readBuffer);
+                    ULONG spaceLeft = (READ_BUFFER_LENGTH - 1) > rbLen
+                                          ? (READ_BUFFER_LENGTH - 1) - rbLen
+                                          : 0;
+                    ULONG actualTake = (n < spaceLeft) ? n : spaceLeft;
+                    if (actualTake > 0) {
+                        CopyMem((APTR)p, readBuffer + rbLen, actualTake);
+                        readBuffer[rbLen + actualTake] = '\0';
+                    }
+                    n = 0;
+                    break;
+                }
+
+                /* Chunked response parser:
+                 * 1) read chunk length line (hex),
+                 * 2) copy exactly that many payload bytes,
+                 * 3) skip trailing CRLF,
+                 * 4) stop when chunk size is 0.
+                 */
+                while (n > 0 && !doneReading && !chunkDone) {
+                    if (chunkCrlfToSkip > 0) {
+                        chunkCrlfToSkip--;
+                        p++;
+                        n--;
+                        continue;
+                    }
+
+                    if (chunkRemaining == 0) {
+                        UBYTE c = *p;
+                        p++;
+                        n--;
+                        if (c == '\n') {
+                            chunkLenLine[chunkLenPos] = '\0';
+                            /* Ignore CR and optional chunk extensions
+                             * (";...") before parsing the hex size.
+                             */
+                            for (UBYTE i = 0; i < chunkLenPos; i++) {
+                                if (chunkLenLine[i] == '\r' ||
+                                    chunkLenLine[i] == ';') {
+                                    chunkLenLine[i] = '\0';
+                                    break;
+                                }
+                            }
+                            chunkRemaining =
+                                (ULONG)strtoul((char *)chunkLenLine, NULL, 16);
+                            chunkLenPos = 0;
+                            if (chunkRemaining == 0) {
+                                chunkDone = TRUE;
+                            }
+                        } else {
+                            if (chunkLenPos < sizeof(chunkLenLine) - 1) {
+                                chunkLenLine[chunkLenPos++] = c;
+                            }
+                        }
+                        continue;
+                    }
+
+                    ULONG take = (n < chunkRemaining) ? n : chunkRemaining;
+                    if (take > 0) {
+                        ULONG rbLen = strlen((STRPTR)readBuffer);
+                        ULONG spaceLeft = (READ_BUFFER_LENGTH - 1) > rbLen
+                                              ? (READ_BUFFER_LENGTH - 1) - rbLen
+                                              : 0;
+                        ULONG actualTake =
+                            (take < spaceLeft) ? take : spaceLeft;
+                        if (actualTake > 0) {
+                            CopyMem((APTR)p, readBuffer + rbLen, actualTake);
+                            readBuffer[rbLen + actualTake] = '\0';
+                        }
+                        p += take;
+                        n -= take;
+                        chunkRemaining -= take;
+                    }
+
+                    if (chunkRemaining == 0) {
+                        chunkCrlfToSkip = 2;
+                    }
+                }
+
+                if (chunkDone) {
+                    break;
+                }
+            }
         }
 
         /* Parse response.
@@ -1257,7 +1426,7 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
     sock = -1;
 
     if (response == NULL) {
-        displayError("Failed to parse models response");
+        displayError(STRING_ERROR_MODELS_RESPONSE_PARSE);
         return NULL;
     }
 
@@ -1393,9 +1562,9 @@ struct json_object **postChatMessageToOpenAI(
 
     /* The Responses API supports built-in tools like web_search and the
      * "shell" function tool.  Enable tool injection for ANY host using the
-     * Responses endpoint so that custom / third-party profiles get tools too. */
-    BOOL includeOpenAiTools =
-        (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES);
+     * Responses endpoint so that custom / third-party profiles get tools too.
+     */
+    BOOL includeOpenAiTools = (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES);
 
     /* Use Gemini native generateContent when requested by endpoint. */
     BOOL useGeminiGenerateContent =
@@ -2590,7 +2759,7 @@ struct json_object *postImageCreationRequestToOpenAI(
                             p += toCopy;
                             n -= toCopy;
                         } else {
-                            displayError("HTTP headers too large");
+                            displayError(STRING_ERROR_HTTP_HEADERS_TOO_LARGE);
                             doneReading = TRUE;
                             break;
                         }
@@ -4574,9 +4743,9 @@ struct json_object *postToolResultToOpenAI(
                  "%s\0",
                  useSSL ? "https" : "http", host, port,
                  strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
-                 effectiveApiEndpointUrl, host, port,
-                 apiAuthHeader, customHeadersFormatted, strlen(jsonString),
-                 authHeader, jsonString);
+                 effectiveApiEndpointUrl, host, port, apiAuthHeader,
+                 customHeadersFormatted, strlen(jsonString), authHeader,
+                 jsonString);
     } else {
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
                  "POST %s%s/responses HTTP/1.1\r\n"
@@ -4589,9 +4758,9 @@ struct json_object *postToolResultToOpenAI(
                  "%s\r\n"
                  "%s\0",
                  strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
-                 effectiveApiEndpointUrl, host, port,
-                 apiAuthHeader, customHeadersFormatted, strlen(jsonString),
-                 authHeader, jsonString);
+                 effectiveApiEndpointUrl, host, port, apiAuthHeader,
+                 customHeadersFormatted, strlen(jsonString), authHeader,
+                 jsonString);
     }
 
     json_object_put(obj);

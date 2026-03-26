@@ -17,7 +17,9 @@ msgstr ""
 msgctxt "STRING_APP_DESCRIPTION (0//)"
 msgid ""
 "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
-msgstr "AmigaGPT je aplikace pro chatování s ChatGPT nebo vytváření AI obrázků pomocí DALL-E"
+msgstr ""
+"AmigaGPT je aplikace pro chatování s ChatGPT nebo vytváření AI obrázků "
+"pomocí DALL-E"
 
 #: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
@@ -29,14 +31,19 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
-msgstr "Nepodařilo se otevřít řečový systém. Ujistěte se, že jsou nainstalovány translator.library v42 a narrator.device v34. Další informace naleznete v průvodci."
+msgstr ""
+"Nepodařilo se otevřít řečový systém. Ujistěte se, že jsou nainstalovány "
+"translator.library v42 a narrator.device v34. Další informace naleznete v "
+"průvodci."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
 msgid ""
 "Failed to open speech system. Make sure Flite Device is installed. See the "
 "guide for more information."
-msgstr "Nepodařilo se otevřít řečový systém. Ujistěte se, že je nainstalováno zařízení Flite. Další informace naleznete v průvodci."
+msgstr ""
+"Nepodařilo se otevřít řečový systém. Ujistěte se, že je nainstalováno "
+"zařízení Flite. Další informace naleznete v průvodci."
 
 #: src/main.c:88 src/main.c:89 src/main.c:90 src/main.c:87
 msgctxt "STRING_ERROR_OPENAI_INIT (4//)"
@@ -48,7 +55,10 @@ msgctxt "STRING_WARNING_STACK (5//)"
 msgid ""
 "Warning: The stack size is too small. The minimum recommended stack size is "
 "32768 bytes to avoid crashes. Your stack size is: "
-msgstr "Upozornění: Velikost zásobníku je příliš malá. Minimální doporučená velikost zásobníku je 32768 bajtů, aby se předešlo zhroucení. Velikost vašeho zásobníku je: "
+msgstr ""
+"Upozornění: Velikost zásobníku je příliš malá. Minimální doporučená velikost "
+"zásobníku je 32768 bajtů, aby se předešlo zhroucení. Velikost vašeho "
+"zásobníku je: "
 
 #: src/APIKeyRequesterWindow.c:40
 msgctxt "STRING_API_KEY_REQUESTER_TITLE (6//)"
@@ -70,7 +80,9 @@ msgctxt "STRING_API_KEY_REQUESTER_BODY_HELP (200//)"
 msgid ""
 "If you do not have an API key, consult the AmigaGPT documentation for "
 "instructions on how to obtain one."
-msgstr "Pokud nemáte klíč API, podívejte se do dokumentace AmigaGPT, kde najdete pokyny, jak jej získat."
+msgstr ""
+"Pokud nemáte klíč API, podívejte se do dokumentace AmigaGPT, kde najdete "
+"pokyny, jak jej získat."
 
 #: src/APIKeyRequesterWindow.c:53 src/ChatSystemRequesterWindow.c:52
 #: src/ProxySettingsRequesterWindow.c:147 src/StartupOptionsWindow.c:129
@@ -110,7 +122,9 @@ msgctxt "STRING_ABOUT_WINDOW_SUPPORT (14//)"
 msgid ""
 "This app will always remain free but if you would like to support me you can "
 "do so at:"
-msgstr "Tato aplikace bude vždy zdarma, ale pokud mě chcete podpořit, můžete tak učinit na:"
+msgstr ""
+"Tato aplikace bude vždy zdarma, ale pokud mě chcete podpořit, můžete tak "
+"učinit na:"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BUILD_DETAILS (214//)"
@@ -137,7 +151,9 @@ msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
 msgid ""
 "for all the thorough testing, bundling AmigaGPT into AmiKit and for all the "
 "moral support"
-msgstr "za veškeré důkladné testování, začlenění AmigaGPT do AmiKitu a za veškerou morální podporu"
+msgstr ""
+"za veškeré důkladné testování, začlenění AmigaGPT do AmiKitu a za veškerou "
+"morální podporu"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_COFFINOS (205//)"
@@ -149,7 +165,9 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
 msgid ""
 "for reviewing AmigaGPT and publishing several of its updates in the News "
 "from Aminet section"
-msgstr "za recenzování AmigaGPT a publikování několika jeho aktualizací v sekci Novinky z Aminetu"
+msgstr ""
+"za recenzování AmigaGPT a publikování několika jeho aktualizací v sekci "
+"Novinky z Aminetu"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_WHATIFF (207//)"
@@ -166,14 +184,18 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
 msgid ""
 "for covering AmigaGPT in the Amiga News section on his Twitch streams and "
 "allowing me to join his stream to promote it"
-msgstr "za pokrytí AmigaGPT v sekci Amiga News na svých Twitch streamech a umožnění mi připojit se k jeho streamu a propagovat to"
+msgstr ""
+"za pokrytí AmigaGPT v sekci Amiga News na svých Twitch streamech a umožnění "
+"mi připojit se k jeho streamu a propagovat to"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
 msgid ""
 "for making a video review and giving a tutorial on how to add support for "
 "the French accent"
-msgstr "za vytvoření videorecenze a poskytnutí návodu, jak přidat podporu pro francouzský přízvuk"
+msgstr ""
+"za vytvoření videorecenze a poskytnutí návodu, jak přidat podporu pro "
+"francouzský přízvuk"
 
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
@@ -193,7 +215,11 @@ msgid ""
 "pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
 "normally, leave this blank. This setting will be applied to new "
 "conversations only."
-msgstr "Pokud chcete, aby AmigaGPT reagovala určitým způsobem nebo přidali nějakou osobnost, napište to sem. Můžete například napsat \"Mluv jako pirát\" nebo \"Mluv jako robot\". Pokud chcete, aby AmigaGPT reagovala normálně, nechte toto pole prázdné. Toto nastavení bude použito pouze na nové konverzace."
+msgstr ""
+"Pokud chcete, aby AmigaGPT reagovala určitým způsobem nebo přidali nějakou "
+"osobnost, napište to sem. Můžete například napsat \"Mluv jako pirát\" nebo "
+"\"Mluv jako robot\". Pokud chcete, aby AmigaGPT reagovala normálně, nechte "
+"toto pole prázdné. Toto nastavení bude použito pouze na nové konverzace."
 
 #: src/ChatSystemRequesterWindow.c:65
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_ERROR (18//)"
@@ -358,24 +384,30 @@ msgctxt "STRING_ERROR_CHAT_HISTORY_CREATE (49//)"
 msgid ""
 "Failed to create message history file. Conversation history will not be "
 "saved."
-msgstr "Nepodařilo se vytvořit soubor historie zpráv. Historie konverzace nebude uložena."
+msgstr ""
+"Nepodařilo se vytvořit soubor historie zpráv. Historie konverzace nebude "
+"uložena."
 
 #: src/MainWindow.c:1663
 msgctxt "STRING_ERROR_CHAT_HISTORY_SAVE (50//)"
 msgid ""
 "Failed to write to message history file. Conversation history will not be "
 "saved."
-msgstr "Zápis do souboru historie zpráv se nezdařil. Historie konverzace nebude uložena."
+msgstr ""
+"Zápis do souboru historie zpráv se nezdařil. Historie konverzace nebude "
+"uložena."
 
 #: src/MainWindow.c:1682
 msgctxt "STRING_ERROR_IMAGE_HISTORY_CREATE (51//)"
 msgid "Failed to create image history file. Image history will not be saved."
-msgstr "Vytvoření souboru historie obrázku se nezdařilo. Historie snímků se neuloží."
+msgstr ""
+"Vytvoření souboru historie obrázku se nezdařilo. Historie snímků se neuloží."
 
 #: src/MainWindow.c:1717
 msgctxt "STRING_ERROR_IMAGE_HISTORY_WRITE (52//)"
 msgid "Failed to write to image history file. Image history will not be saved."
-msgstr "Zápis do souboru historie obrázků se nezdařil. Historie snímků se neuloží."
+msgstr ""
+"Zápis do souboru historie obrázků se nezdařil. Historie snímků se neuloží."
 
 #: src/MainWindow.c:1745
 msgctxt "STRING_LOADING_IMAGE (53//)"
@@ -387,7 +419,9 @@ msgctxt "STRING_ERROR_CHAT_HISTORY_READ (55//)"
 msgid ""
 "Failed to read from message history file. Conversation history will not be "
 "loaded"
-msgstr "Čtení ze souboru historie zpráv se nezdařilo. Historie konverzace nebude načtena"
+msgstr ""
+"Čtení ze souboru historie zpráv se nezdařilo. Historie konverzace nebude "
+"načtena"
 
 #: src/MainWindow.c:1814
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP (56//)"
@@ -395,7 +429,10 @@ msgid ""
 "Failed to parse chat history. Malformed JSON. The chat-history.json file is "
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
-msgstr "Historii chatu se nepodařilo analyzovat. Poškozený JSON. Soubor chat-history.json je pravděpodobně poškozen. Historie konverzace nebude načtena. Záloha souboru chat-history.json byla vytvořena jako chat-history.json.bak"
+msgstr ""
+"Historii chatu se nepodařilo analyzovat. Poškozený JSON. Soubor chat-"
+"history.json je pravděpodobně poškozen. Historie konverzace nebude načtena. "
+"Záloha souboru chat-history.json byla vytvořena jako chat-history.json.bak"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -404,26 +441,35 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. There was an "
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
-msgstr "Historii chatu se nepodařilo analyzovat. Poškozený JSON. Soubor chat-history.json je pravděpodobně poškozen. Historie konverzace nebude načtena. Při zápisu zálohy historie chatu na disk došlo k chybě, ale kopie byla uložena do RAM:chat-history.json.bak"
+msgstr ""
+"Historii chatu se nepodařilo analyzovat. Poškozený JSON. Soubor chat-"
+"history.json je pravděpodobně poškozen. Historie konverzace nebude načtena. "
+"Při zápisu zálohy historie chatu na disk došlo k chybě, ale kopie byla "
+"uložena do RAM:chat-history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
 msgid "Failed to delete chat-history.json. Please delete this file manually."
-msgstr "Smazání chat-history.json se nezdařilo. Odstraňte prosím tento soubor ručně."
+msgstr ""
+"Smazání chat-history.json se nezdařilo. Odstraňte prosím tento soubor ručně."
 
 #: src/MainWindow.c:1852
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP (59//)"
 msgid ""
 "Failed to parse chat history.The chat-history.json file is probably "
 "corrupted. Conversation history will not be loaded."
-msgstr "Analýza historie chatu se nezdařila. Soubor chat-history.json je pravděpodobně poškozen. Historie konverzace nebude načtena."
+msgstr ""
+"Analýza historie chatu se nezdařila. Soubor chat-history.json je "
+"pravděpodobně poškozen. Historie konverzace nebude načtena."
 
 #: src/MainWindow.c:1950
 msgctxt "STRING_ERROR_IMAGE_HISTORY_READ (60//)"
 msgid ""
 "Failed to read from image history file. Image generation history will not be "
 "loaded"
-msgstr "Nepodařilo se číst ze souboru historie obrázků. Historie generování obrázků nebude načtena"
+msgstr ""
+"Nepodařilo se číst ze souboru historie obrázků. Historie generování obrázků "
+"nebude načtena"
 
 #: src/MainWindow.c:1964
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP (61//)"
@@ -431,7 +477,10 @@ msgid ""
 "Failed to parse image history. Malformed JSON. The image-history.json file "
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
-msgstr "Analýza historie obrázků se nezdařila. Poškozený JSON. Soubor image-history.json je pravděpodobně poškozen. Historie obrázků nebude načtena. Záloha souboru image-history.json byla vytvořena jako image-history.json.bak"
+msgstr ""
+"Analýza historie obrázků se nezdařila. Poškozený JSON. Soubor image-"
+"history.json je pravděpodobně poškozen. Historie obrázků nebude načtena. "
+"Záloha souboru image-history.json byla vytvořena jako image-history.json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -440,12 +489,17 @@ msgid ""
 "is probably corrupted. Image history will not be loaded. There was an error "
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
-msgstr "Analýza historie obrázků se nezdařila. Poškozený JSON. Soubor image-history.json je pravděpodobně poškozen. Historie obrázků nebude načtena. Při zápisu zálohy historie bitové kopie na disk došlo k chybě, ale kopie byla uložena do paměti RAM:image-history.json.bak"
+msgstr ""
+"Analýza historie obrázků se nezdařila. Poškozený JSON. Soubor image-"
+"history.json je pravděpodobně poškozen. Historie obrázků nebude načtena. Při "
+"zápisu zálohy historie bitové kopie na disk došlo k chybě, ale kopie byla "
+"uložena do paměti RAM:image-history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
 msgid "Failed to delete image-history.json. Please delete this file manually."
-msgstr "Smazání image-history.json se nezdařilo. Odstraňte prosím tento soubor ručně."
+msgstr ""
+"Smazání image-history.json se nezdařilo. Odstraňte prosím tento soubor ručně."
 
 #: src/MainWindow.c:2120
 msgctxt "STRING_ERROR_FILE_COPY_OPEN (64//)"
@@ -581,7 +635,8 @@ msgstr "Nepodařilo se analyzovat konfigurační soubor"
 msgctxt "STRING_ERROR_MUI_LIB_OPEN (90//)"
 msgid ""
 "Could not open muimaster.library. Please make sure you have MUI installed"
-msgstr "Nelze otevřít muimaster.library. Ujistěte se, že máte nainstalované MUI"
+msgstr ""
+"Nelze otevřít muimaster.library. Ujistěte se, že máte nainstalované MUI"
 
 #: src/gui.c:84
 msgctxt "STRING_ERROR_MUI_INTERFACE_OPEN (91//)"
@@ -593,7 +648,9 @@ msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
 msgid ""
 "Could not open codesets.library. Please make sure you have codesets "
 "installed. Refer to the documentation for more info."
-msgstr "Nelze otevřít codesets.library. Ujistěte se, že máte nainstalované kódové sady. Další informace naleznete v dokumentaci."
+msgstr ""
+"Nelze otevřít codesets.library. Ujistěte se, že máte nainstalované kódové "
+"sady. Další informace naleznete v dokumentaci."
 
 #: src/gui.c:98
 msgctxt "STRING_ERROR_CODESETS_INTERFACE_OPEN (93//)"
@@ -610,7 +667,9 @@ msgctxt "STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED (95//)"
 msgid ""
 "Could not find all the MUI custom classes. Please make sure they are "
 "installed. Refer to the documentation for more information."
-msgstr "Nepodařilo se najít všechny vlastní třídy MUI. Ujistěte se, že jsou nainstalovány. Další informace naleznete v dokumentaci."
+msgstr ""
+"Nepodařilo se najít všechny vlastní třídy MUI. Ujistěte se, že jsou "
+"nainstalovány. Další informace naleznete v dokumentaci."
 
 #: src/gui.c:178
 msgctxt "STRING_IMAGE (96//)"
@@ -637,7 +696,10 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
-msgstr "Otevření řečového systému se nezdařilo. Ujistěte se, že jsou nainstalovány translator.library v42 a narrator.device v37. Další informace naleznete v průvodci."
+msgstr ""
+"Otevření řečového systému se nezdařilo. Ujistěte se, že jsou nainstalovány "
+"translator.library v42 a narrator.device v37. Další informace naleznete v "
+"průvodci."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
@@ -861,7 +923,10 @@ msgid ""
 "Failed to open bsdsocket.library. You have to install a TCP/IP stack such as "
 "AmiTCP, Miami or Roadshow. Please refer to the documentation for more "
 "information."
-msgstr "Nepodařilo se otevřít knihovnu bsdsocket.library. Musíte nainstalovat zásobník TCP/IP, jako je AmiTCP, Miami nebo Roadshow. Další informace naleznete v dokumentaci."
+msgstr ""
+"Nepodařilo se otevřít knihovnu bsdsocket.library. Musíte nainstalovat "
+"zásobník TCP/IP, jako je AmiTCP, Miami nebo Roadshow. Další informace "
+"naleznete v dokumentaci."
 
 #: src/openai.c:182
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN_OS4 (151//)"
@@ -878,7 +943,9 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_OPEN (153//)"
 msgid ""
 "Failed to open amisslmaster.library version 5. You have to install AmiSSL 5. "
 "Please refer to the documentation for more information."
-msgstr "Nepodařilo se otevřít amisslmaster.library verze 5. Musíte nainstalovat AmiSSL 5. Další informace najdete v dokumentaci."
+msgstr ""
+"Nepodařilo se otevřít amisslmaster.library verze 5. Musíte nainstalovat "
+"AmiSSL 5. Další informace najdete v dokumentaci."
 
 #: src/openai.c:211
 msgctxt "STRING_ERROR_AMISSLMASTER_INTERFACE_OPEN (154//)"
@@ -890,7 +957,9 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
 msgid ""
 "Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
 "newer. Please refer to the documentation for more information."
-msgstr "Inicializace amisslmaster.library se nezdařila. AmigaGPT vyžaduje AmiSSL 5.18 nebo novější. Další informace naleznete v dokumentaci."
+msgstr ""
+"Inicializace amisslmaster.library se nezdařila. AmigaGPT vyžaduje AmiSSL "
+"5.18 nebo novější. Další informace naleznete v dokumentaci."
 
 #: src/openai.c:233
 msgctxt "STRING_ERROR_AMISSL_INTERFACE_INIT (156//)"
@@ -917,7 +986,9 @@ msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
 msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
-msgstr "Nelze se připojit k serveru. Zkontrolujte, zda jsou hostitel a port proxy správné, nebo je deaktivujte."
+msgstr ""
+"Nelze se připojit k serveru. Zkontrolujte, zda jsou hostitel a port proxy "
+"správné, nebo je deaktivujte."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
@@ -948,7 +1019,8 @@ msgstr "Spojovací..."
 #: src/openai.c:1075 src/openai.c:1406 src/openai.c:1664
 msgctxt "STRING_ERROR_CONNECTING_MAX_RETRIES (167//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr "Chyba při připojování k hostiteli! Bylo dosaženo maximálního počtu opakování."
+msgstr ""
+"Chyba při připojování k hostiteli! Bylo dosaženo maximálního počtu opakování."
 
 #: src/openai.c:539 src/openai.c:827 src/openai.c:1082 src/openai.c:1458
 msgctxt "STRING_SENDING_REQUEST (168//)"
@@ -963,7 +1035,8 @@ msgstr "Stahování odpovědi..."
 #: src/openai.c:683 src/openai.c:934 src/openai.c:1658
 msgctxt "STRING_ERROR_CONNECTION_MAX_RETRIES (171//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr "Chyba při připojování k hostiteli! Bylo dosaženo maximálního počtu opakování."
+msgstr ""
+"Chyba při připojování k hostiteli! Bylo dosaženo maximálního počtu opakování."
 
 #: src/openai.c:705 src/openai.c:947 src/openai.c:1672
 msgctxt "STRING_ERROR_UNKNOWN (172//)"
@@ -1110,7 +1183,9 @@ msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
 msgid ""
 "Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
 "voice'. This only works for the gpt-4o-mini-tts model."
-msgstr "Zadejte, jak chcete, aby AI mluvil. Příklad: 'Mluvte hluboce a tajně'. Tato funkce funguje pouze s modelem gpt-4o-mini-tts."
+msgstr ""
+"Zadejte, jak chcete, aby AI mluvil. Příklad: 'Mluvte hluboce a tajně'. Tato "
+"funkce funguje pouze s modelem gpt-4o-mini-tts."
 
 #: src/VoiceInstructionsRequesterWindow.c:87
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
@@ -1162,7 +1237,9 @@ msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
 msgid ""
 "Invalid request. Your OpenAI API account probably has no credit left to run "
 "this model. Please check your account balance."
-msgstr "Neplatný požadavek. Vaš OpenAI API účet pravděpodobně nemá žádné kredity na spuštění tohoto modelu. Zkontrolujte svůj účet."
+msgstr ""
+"Neplatný požadavek. Vaš OpenAI API účet pravděpodobně nemá žádné kredity na "
+"spuštění tohoto modelu. Zkontrolujte svůj účet."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1766,4 +1843,12 @@ msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_VOICES (342//)"
 msgid "No selectable voices for this speech profile"
 msgstr "Pro tento hlasový profil nejsou k dispozici žádné volitelné hlasy"
 
+#: src/openai.c
+msgctxt "STRING_ERROR_HTTP_HEADERS_TOO_LARGE (343//)"
+msgid "HTTP headers too large"
+msgstr "HTTP hlavičky jsou příliš velké"
 
+#: src/openai.c
+msgctxt "STRING_ERROR_MODELS_RESPONSE_PARSE (344//)"
+msgid "Failed to parse models response"
+msgstr "Nepodařilo se analyzovat odpověď modelů"

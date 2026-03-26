@@ -18,7 +18,8 @@ msgstr ""
 msgctxt "STRING_APP_DESCRIPTION (0//)"
 msgid ""
 "AmigaGPT is an app for chatting to ChatGPT or creating AI images with DALL-E"
-msgstr "AmigaGPT je aplikacija za klepet s ChatGPT ali ustvarjanje slik AI z DALL-E"
+msgstr ""
+"AmigaGPT je aplikacija za klepet s ChatGPT ali ustvarjanje slik AI z DALL-E"
 
 #: src/main.c:70 src/main.c:71 src/main.c:72 src/main.c:69
 msgctxt "STRING_ERROR_VIDEO_INIT (1//)"
@@ -30,14 +31,19 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_34 (2//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v34 are installed. See the guide for more information."
-msgstr "Govornega sistema ni bilo mogoče odpreti. Prepričajte se, da sta nameščeni translator.library v42 in narrator.device v34. Za več informacij glejte vodnik."
+msgstr ""
+"Govornega sistema ni bilo mogoče odpreti. Prepričajte se, da sta nameščeni "
+"translator.library v42 in narrator.device v34. Za več informacij glejte "
+"vodnik."
 
 #: src/main.c:80 src/main.c:81 src/main.c:82 src/main.c:79
 msgctxt "STRING_ERROR_SPEECH_INIT_FLITE (3//)"
 msgid ""
 "Failed to open speech system. Make sure Flite Device is installed. See the "
 "guide for more information."
-msgstr "Govornega sistema ni bilo mogoče odpreti. Prepričajte se, da je nameščena naprava Flite. Za več informacij glejte vodnik."
+msgstr ""
+"Govornega sistema ni bilo mogoče odpreti. Prepričajte se, da je nameščena "
+"naprava Flite. Za več informacij glejte vodnik."
 
 #: src/main.c:88 src/main.c:89 src/main.c:90 src/main.c:87
 msgctxt "STRING_ERROR_OPENAI_INIT (4//)"
@@ -49,7 +55,9 @@ msgctxt "STRING_WARNING_STACK (5//)"
 msgid ""
 "Warning: The stack size is too small. The minimum recommended stack size is "
 "32768 bytes to avoid crashes. Your stack size is: "
-msgstr "Opozorilo: Velikost sklada je premajhna. Najmanjša priporočena velikost sklada je 32768 bajtov, da se izognete zrušitvam. Velikost vašega sklada je: "
+msgstr ""
+"Opozorilo: Velikost sklada je premajhna. Najmanjša priporočena velikost "
+"sklada je 32768 bajtov, da se izognete zrušitvam. Velikost vašega sklada je: "
 
 #: src/APIKeyRequesterWindow.c:40
 msgctxt "STRING_API_KEY_REQUESTER_TITLE (6//)"
@@ -71,7 +79,9 @@ msgctxt "STRING_API_KEY_REQUESTER_BODY_HELP (200//)"
 msgid ""
 "If you do not have an API key, consult the AmigaGPT documentation for "
 "instructions on how to obtain one."
-msgstr "Če nimate ključa API, si oglejte dokumentacijo AmigaGPT za navodila, kako ga pridobiti."
+msgstr ""
+"Če nimate ključa API, si oglejte dokumentacijo AmigaGPT za navodila, kako ga "
+"pridobiti."
 
 #: src/APIKeyRequesterWindow.c:53 src/ChatSystemRequesterWindow.c:52
 #: src/ProxySettingsRequesterWindow.c:147 src/StartupOptionsWindow.c:129
@@ -111,7 +121,9 @@ msgctxt "STRING_ABOUT_WINDOW_SUPPORT (14//)"
 msgid ""
 "This app will always remain free but if you would like to support me you can "
 "do so at:"
-msgstr "Ta aplikacija bo vedno brezplačna, če pa me želite podpreti, lahko to storite na:"
+msgstr ""
+"Ta aplikacija bo vedno brezplačna, če pa me želite podpreti, lahko to "
+"storite na:"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_BUILD_DETAILS (214//)"
@@ -138,7 +150,9 @@ msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
 msgid ""
 "for all the thorough testing, bundling AmigaGPT into AmiKit and for all the "
 "moral support"
-msgstr "za vse temeljito testiranje, združevanje AmigaGPT v AmiKit in za vso moralno podporo"
+msgstr ""
+"za vse temeljito testiranje, združevanje AmigaGPT v AmiKit in za vso moralno "
+"podporo"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_COFFINOS (205//)"
@@ -150,7 +164,9 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
 msgid ""
 "for reviewing AmigaGPT and publishing several of its updates in the News "
 "from Aminet section"
-msgstr "za pregled AmigaGPT in objavo več njegovih posodobitev v razdelku Novice iz Amineta"
+msgstr ""
+"za pregled AmigaGPT in objavo več njegovih posodobitev v razdelku Novice iz "
+"Amineta"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_WHATIFF (207//)"
@@ -167,14 +183,17 @@ msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
 msgid ""
 "for covering AmigaGPT in the Amiga News section on his Twitch streams and "
 "allowing me to join his stream to promote it"
-msgstr "za pokrivanje AmigaGPT v razdelku Amiga News na njegovih tokovih Twitch in mi dovolil, da se pridružim njegovemu toku in ga promoviram"
+msgstr ""
+"za pokrivanje AmigaGPT v razdelku Amiga News na njegovih tokovih Twitch in "
+"mi dovolil, da se pridružim njegovemu toku in ga promoviram"
 
 #: src/AboutAmigaGPTWindow.c:20
 msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
 msgid ""
 "for making a video review and giving a tutorial on how to add support for "
 "the French accent"
-msgstr "za video pregled in vadnico o tem, kako dodati podporo za francoski naglas"
+msgstr ""
+"za video pregled in vadnico o tem, kako dodati podporo za francoski naglas"
 
 #: src/AboutAmigaGPTWindow.c:87
 msgctxt "STRING_ABOUT_WINDOW_URL_TEXT (212//)"
@@ -194,7 +213,11 @@ msgid ""
 "pirate\" or \"Speak like a robot\". If you would like AmigaGPT to respond "
 "normally, leave this blank. This setting will be applied to new "
 "conversations only."
-msgstr "Če želite, da se AmigaGPT odzove na določen način ali doda nekaj osebnosti, vnesite to tukaj. Lahko bi na primer vnesli \"Govori kot pirat\" ali \"Govori kot arobot\". Če želite, da se AmigaGPT odziva normalno, pustite to polje prazno. Ta nastavitev bo uporabljena samo za nove pogovore."
+msgstr ""
+"Če želite, da se AmigaGPT odzove na določen način ali doda nekaj osebnosti, "
+"vnesite to tukaj. Lahko bi na primer vnesli \"Govori kot pirat\" ali "
+"\"Govori kot arobot\". Če želite, da se AmigaGPT odziva normalno, pustite to "
+"polje prazno. Ta nastavitev bo uporabljena samo za nove pogovore."
 
 #: src/ChatSystemRequesterWindow.c:65
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_ERROR (18//)"
@@ -359,24 +382,31 @@ msgctxt "STRING_ERROR_CHAT_HISTORY_CREATE (49//)"
 msgid ""
 "Failed to create message history file. Conversation history will not be "
 "saved."
-msgstr "Datoteke z zgodovino sporočil ni bilo mogoče ustvariti. Zgodovina pogovorov ne bo shranjena."
+msgstr ""
+"Datoteke z zgodovino sporočil ni bilo mogoče ustvariti. Zgodovina pogovorov "
+"ne bo shranjena."
 
 #: src/MainWindow.c:1663
 msgctxt "STRING_ERROR_CHAT_HISTORY_SAVE (50//)"
 msgid ""
 "Failed to write to message history file. Conversation history will not be "
 "saved."
-msgstr "Pisanje v datoteko z zgodovino sporočil ni uspelo. Zgodovina pogovorov ne bo shranjena."
+msgstr ""
+"Pisanje v datoteko z zgodovino sporočil ni uspelo. Zgodovina pogovorov ne bo "
+"shranjena."
 
 #: src/MainWindow.c:1682
 msgctxt "STRING_ERROR_IMAGE_HISTORY_CREATE (51//)"
 msgid "Failed to create image history file. Image history will not be saved."
-msgstr "Datoteke z zgodovino slik ni bilo mogoče ustvariti. Zgodovina slik ne bo shranjena."
+msgstr ""
+"Datoteke z zgodovino slik ni bilo mogoče ustvariti. Zgodovina slik ne bo "
+"shranjena."
 
 #: src/MainWindow.c:1717
 msgctxt "STRING_ERROR_IMAGE_HISTORY_WRITE (52//)"
 msgid "Failed to write to image history file. Image history will not be saved."
-msgstr "Pisanje v datoteko zgodovine slik ni uspelo. Zgodovina slik ne bo shranjena."
+msgstr ""
+"Pisanje v datoteko zgodovine slik ni uspelo. Zgodovina slik ne bo shranjena."
 
 #: src/MainWindow.c:1745
 msgctxt "STRING_LOADING_IMAGE (53//)"
@@ -388,7 +418,9 @@ msgctxt "STRING_ERROR_CHAT_HISTORY_READ (55//)"
 msgid ""
 "Failed to read from message history file. Conversation history will not be "
 "loaded"
-msgstr "Branje iz datoteke zgodovine sporočil ni uspelo. Zgodovina pogovorov se ne bo naložila"
+msgstr ""
+"Branje iz datoteke zgodovine sporočil ni uspelo. Zgodovina pogovorov se ne "
+"bo naložila"
 
 #: src/MainWindow.c:1814
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP (56//)"
@@ -396,7 +428,11 @@ msgid ""
 "Failed to parse chat history. Malformed JSON. The chat-history.json file is "
 "probably corrupted. Conversation history will not be loaded. A backup of the "
 "chat-history.json file has been created as chat-history.json.bak"
-msgstr "Zgodovine klepeta ni bilo mogoče razčleniti. Napačen JSON. Datoteka chat-history.json je verjetno poškodovana. Zgodovina pogovorov se ne bo naložila. Varnostna kopija datoteke chat-history.json je bila ustvarjena kot chat-history.json.bak"
+msgstr ""
+"Zgodovine klepeta ni bilo mogoče razčleniti. Napačen JSON. Datoteka chat-"
+"history.json je verjetno poškodovana. Zgodovina pogovorov se ne bo naložila. "
+"Varnostna kopija datoteke chat-history.json je bila ustvarjena kot chat-"
+"history.json.bak"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -405,26 +441,35 @@ msgid ""
 "probably corrupted. Conversation history will not be loaded. There was an "
 "error writing a backup of the chat history to disk but a copy has been saved "
 "to RAM:chat-history.json.bak"
-msgstr "Zgodovine klepeta ni bilo mogoče razčleniti. Napačen JSON. Datoteka chat-history.json je verjetno poškodovana. Zgodovina pogovorov se ne bo naložila. Pri zapisovanju varnostne kopije zgodovine klepeta na disk je prišlo do napake, vendar je bila kopija shranjena v RAM:chat-history.json.bak"
+msgstr ""
+"Zgodovine klepeta ni bilo mogoče razčleniti. Napačen JSON. Datoteka chat-"
+"history.json je verjetno poškodovana. Zgodovina pogovorov se ne bo naložila. "
+"Pri zapisovanju varnostne kopije zgodovine klepeta na disk je prišlo do "
+"napake, vendar je bila kopija shranjena v RAM:chat-history.json.bak"
 
 #: src/MainWindow.c:1835
 msgctxt "STRING_ERROR_CHAT_HISTORY_DELETE (58//)"
 msgid "Failed to delete chat-history.json. Please delete this file manually."
-msgstr "Brisanje chat-history.json ni uspelo. Prosimo, izbrišite to datoteko ročno."
+msgstr ""
+"Brisanje chat-history.json ni uspelo. Prosimo, izbrišite to datoteko ročno."
 
 #: src/MainWindow.c:1852
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP (59//)"
 msgid ""
 "Failed to parse chat history.The chat-history.json file is probably "
 "corrupted. Conversation history will not be loaded."
-msgstr "Zgodovine klepeta ni bilo mogoče razčleniti. Datoteka chat-history.json je verjetno poškodovana. Zgodovina pogovorov se ne bo naložila."
+msgstr ""
+"Zgodovine klepeta ni bilo mogoče razčleniti. Datoteka chat-history.json je "
+"verjetno poškodovana. Zgodovina pogovorov se ne bo naložila."
 
 #: src/MainWindow.c:1950
 msgctxt "STRING_ERROR_IMAGE_HISTORY_READ (60//)"
 msgid ""
 "Failed to read from image history file. Image generation history will not be "
 "loaded"
-msgstr "Branje iz datoteke zgodovine slike ni uspelo. Zgodovina ustvarjanja slik ne bo naložena"
+msgstr ""
+"Branje iz datoteke zgodovine slike ni uspelo. Zgodovina ustvarjanja slik ne "
+"bo naložena"
 
 #: src/MainWindow.c:1964
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP (61//)"
@@ -432,7 +477,11 @@ msgid ""
 "Failed to parse image history. Malformed JSON. The image-history.json file "
 "is probably corrupted. Image history will not be loaded. A backup of the "
 "image-history.json file has been created as image-history.json.bak"
-msgstr "Zgodovine slike ni bilo mogoče razčleniti. Napačen JSON. Datoteka image-history.json je verjetno poškodovana. Zgodovina slik se ne bo naložila. Varnostna kopija datoteke image-history.json je bila ustvarjena kot image-history.json.bak"
+msgstr ""
+"Zgodovine slike ni bilo mogoče razčleniti. Napačen JSON. Datoteka image-"
+"history.json je verjetno poškodovana. Zgodovina slik se ne bo naložila. "
+"Varnostna kopija datoteke image-history.json je bila ustvarjena kot image-"
+"history.json.bak"
 
 #: src/MainWindow.c:1972
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_BACKUP_RAM (62//)"
@@ -441,12 +490,18 @@ msgid ""
 "is probably corrupted. Image history will not be loaded. There was an error "
 "writing a backup of the image history to disk but a copy has been saved to "
 "RAM:image-history.json.bak"
-msgstr "Zgodovine slike ni bilo mogoče razčleniti. Napačen JSON. Datoteka image-history.json je verjetno poškodovana. Zgodovina slik ne bo naložena. Pri pisanju varnostne kopije zgodovine slik na disk je prišlo do napake, vendar je bila kopija shranjena v RAM:image-history.json.bak"
+msgstr ""
+"Zgodovine slike ni bilo mogoče razčleniti. Napačen JSON. Datoteka image-"
+"history.json je verjetno poškodovana. Zgodovina slik ne bo naložena. Pri "
+"pisanju varnostne kopije zgodovine slik na disk je prišlo do napake, vendar "
+"je bila kopija shranjena v RAM:image-history.json.bak"
 
 #: src/MainWindow.c:1982
 msgctxt "STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP (63//)"
 msgid "Failed to delete image-history.json. Please delete this file manually."
-msgstr "Brisanje datoteke image-history.json ni uspelo. Prosimo, izbrišite to datoteko ročno."
+msgstr ""
+"Brisanje datoteke image-history.json ni uspelo. Prosimo, izbrišite to "
+"datoteko ročno."
 
 #: src/MainWindow.c:2120
 msgctxt "STRING_ERROR_FILE_COPY_OPEN (64//)"
@@ -582,7 +637,8 @@ msgstr "Konfiguracijske datoteke ni bilo mogoče razčleniti"
 msgctxt "STRING_ERROR_MUI_LIB_OPEN (90//)"
 msgid ""
 "Could not open muimaster.library. Please make sure you have MUI installed"
-msgstr "Ni bilo mogoče odpreti muimaster.library. Preverite, ali imate nameščen MUI"
+msgstr ""
+"Ni bilo mogoče odpreti muimaster.library. Preverite, ali imate nameščen MUI"
 
 #: src/gui.c:84
 msgctxt "STRING_ERROR_MUI_INTERFACE_OPEN (91//)"
@@ -594,7 +650,9 @@ msgctxt "STRING_ERROR_CODESETS_LIB_OPEN (92//)"
 msgid ""
 "Could not open codesets.library. Please make sure you have codesets "
 "installed. Refer to the documentation for more info."
-msgstr "Ni bilo mogoče odpreti codesets.library. Preverite, ali imate nameščene kodne desetine. Za več informacij glejte dokumentacijo."
+msgstr ""
+"Ni bilo mogoče odpreti codesets.library. Preverite, ali imate nameščene "
+"kodne desetine. Za več informacij glejte dokumentacijo."
 
 #: src/gui.c:98
 msgctxt "STRING_ERROR_CODESETS_INTERFACE_OPEN (93//)"
@@ -611,7 +669,9 @@ msgctxt "STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED (95//)"
 msgid ""
 "Could not find all the MUI custom classes. Please make sure they are "
 "installed. Refer to the documentation for more information."
-msgstr "Ni bilo mogoče najti vseh razredov MUI po meri. Preverite, ali so nameščeni. Za več informacij glejte dokumentacijo."
+msgstr ""
+"Ni bilo mogoče najti vseh razredov MUI po meri. Preverite, ali so nameščeni. "
+"Za več informacij glejte dokumentacijo."
 
 #: src/gui.c:178
 msgctxt "STRING_IMAGE (96//)"
@@ -638,7 +698,10 @@ msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
 msgid ""
 "Failed to open speech system. Make sure translator.library v42 and the "
 "narrator.device v37 are installed. See the guide for more information."
-msgstr "Govornega sistema ni bilo mogoče odpreti. Prepričajte se, da sta nameščeni translator.library v42 in narrator.device v37. Za več informacij glejte vodnik."
+msgstr ""
+"Govornega sistema ni bilo mogoče odpreti. Prepričajte se, da sta nameščeni "
+"translator.library v42 in narrator.device v37. Za več informacij glejte "
+"vodnik."
 
 #: src/menu.c:70
 msgctxt "STRING_ERROR_SPEECH_INIT_OPENAI (101//)"
@@ -862,7 +925,9 @@ msgid ""
 "Failed to open bsdsocket.library. You have to install a TCP/IP stack such as "
 "AmiTCP, Miami or Roadshow. Please refer to the documentation for more "
 "information."
-msgstr "Ni bilo mogoče odpreti bsdsocket.library. Namestiti morate sklad TCP/IP, kot je AmiTCP, Miami ali Roadshow. Za več informacij glejte dokumentacijo."
+msgstr ""
+"Ni bilo mogoče odpreti bsdsocket.library. Namestiti morate sklad TCP/IP, kot "
+"je AmiTCP, Miami ali Roadshow. Za več informacij glejte dokumentacijo."
 
 #: src/openai.c:182
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN_OS4 (151//)"
@@ -879,7 +944,9 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_OPEN (153//)"
 msgid ""
 "Failed to open amisslmaster.library version 5. You have to install AmiSSL 5. "
 "Please refer to the documentation for more information."
-msgstr "Amisslmaster.library različice 5 ni bilo mogoče odpreti. Namestiti morate AmiSSL 5. Za več informacij glejte dokumentacijo."
+msgstr ""
+"Amisslmaster.library različice 5 ni bilo mogoče odpreti. Namestiti morate "
+"AmiSSL 5. Za več informacij glejte dokumentacijo."
 
 #: src/openai.c:211
 msgctxt "STRING_ERROR_AMISSLMASTER_INTERFACE_OPEN (154//)"
@@ -891,7 +958,9 @@ msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
 msgid ""
 "Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
 "newer. Please refer to the documentation for more information."
-msgstr "Inicializacija amisslmaster.library ni uspela. AmigaGPT zahteva AmiSSL 5.18 ali novejši. Za več informacij glejte dokumentacijo."
+msgstr ""
+"Inicializacija amisslmaster.library ni uspela. AmigaGPT zahteva AmiSSL 5.18 "
+"ali novejši. Za več informacij glejte dokumentacijo."
 
 #: src/openai.c:233
 msgctxt "STRING_ERROR_AMISSL_INTERFACE_INIT (156//)"
@@ -918,7 +987,9 @@ msgctxt "STRING_ERROR_CONNECTION_PROXY (160//)"
 msgid ""
 "Couldn't connect to server. Check if the proxy host and port are correct or "
 "disable it."
-msgstr "Povezave s strežnikom ni bilo mogoče vzpostaviti. Preverite, ali sta proxy host in vrata pravilna ali ju onemogočite."
+msgstr ""
+"Povezave s strežnikom ni bilo mogoče vzpostaviti. Preverite, ali sta proxy "
+"host in vrata pravilna ali ju onemogočite."
 
 #: src/openai.c:321
 msgctxt "STRING_ERROR_SOCKET_CREATE (161//)"
@@ -949,7 +1020,9 @@ msgstr "Povezovanje ..."
 #: src/openai.c:1075 src/openai.c:1406 src/openai.c:1664
 msgctxt "STRING_ERROR_CONNECTING_MAX_RETRIES (167//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr "Napaka pri povezovanju z gostiteljem! Doseženo največje število ponovnih poskusov."
+msgstr ""
+"Napaka pri povezovanju z gostiteljem! Doseženo največje število ponovnih "
+"poskusov."
 
 #: src/openai.c:539 src/openai.c:827 src/openai.c:1082 src/openai.c:1458
 msgctxt "STRING_SENDING_REQUEST (168//)"
@@ -964,7 +1037,9 @@ msgstr "Prenašanje odgovora ..."
 #: src/openai.c:683 src/openai.c:934 src/openai.c:1658
 msgctxt "STRING_ERROR_CONNECTION_MAX_RETRIES (171//)"
 msgid "Error connecting to host! Maximum retries reached."
-msgstr "Napaka pri povezovanju z gostiteljem! Doseženo največje število ponovnih poskusov."
+msgstr ""
+"Napaka pri povezovanju z gostiteljem! Doseženo največje število ponovnih "
+"poskusov."
 
 #: src/openai.c:705 src/openai.c:947 src/openai.c:1672
 msgctxt "STRING_ERROR_UNKNOWN (172//)"
@@ -1111,7 +1186,9 @@ msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_BODY (217//)"
 msgid ""
 "Enter how you want the AI to speak. Example: 'Speak in a deep and mysterious "
 "voice'. This only works for the gpt-4o-mini-tts model."
-msgstr "Vpišite, kako želite, da AI govori. Primer: 'Govori v globoki in tajni glasu'. Ta funkcija deluje samo z modelom gpt-4o-mini-tts."
+msgstr ""
+"Vpišite, kako želite, da AI govori. Primer: 'Govori v globoki in tajni "
+"glasu'. Ta funkcija deluje samo z modelom gpt-4o-mini-tts."
 
 #: src/VoiceInstructionsRequesterWindow.c:87
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
@@ -1163,7 +1240,9 @@ msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
 msgid ""
 "Invalid request. Your OpenAI API account probably has no credit left to run "
 "this model. Please check your account balance."
-msgstr "Nepravilna zahteva. Vaš OpenAI API račun verjetno nima kreditov za izvajanje te modele. Preverite svoj račun."
+msgstr ""
+"Nepravilna zahteva. Vaš OpenAI API račun verjetno nima kreditov za izvajanje "
+"te modele. Preverite svoj račun."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1715,7 +1794,8 @@ msgstr "Dekodiranje slikovnih podatkov ni uspelo (prikazan je JSON)."
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_IMAGE_RECEIVED_COULD_NOT_SAVE_SHOWING_JSON (332//)"
 msgid "Image received but could not be saved (showing JSON)."
-msgstr "Slika je bila prejeta, vendar je ni bilo mogoče shraniti (prikazan je JSON)."
+msgstr ""
+"Slika je bila prejeta, vendar je ni bilo mogoče shraniti (prikazan je JSON)."
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_TEST_DETAIL_ERROR_RESPONSE_RECEIVED (333//)"
@@ -1767,4 +1847,12 @@ msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_VOICES (342//)"
 msgid "No selectable voices for this speech profile"
 msgstr "Za ta govorni profil ni izbirnih glasov"
 
+#: src/openai.c
+msgctxt "STRING_ERROR_HTTP_HEADERS_TOO_LARGE (343//)"
+msgid "HTTP headers too large"
+msgstr "Glave HTTP so prevelike"
 
+#: src/openai.c
+msgctxt "STRING_ERROR_MODELS_RESPONSE_PARSE (344//)"
+msgid "Failed to parse models response"
+msgstr "Odgovora modelov ni bilo mogoče razčleniti"

@@ -1818,3 +1818,13 @@ msgstr "No selectable models for this speech profile"
 msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_VOICES (342//)"
 msgid "No selectable voices for this speech profile"
 msgstr "No selectable voices for this speech profile"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_HTTP_HEADERS_TOO_LARGE (343//)"
+msgid "HTTP headers too large"
+msgstr "HTTP headers too large"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_MODELS_RESPONSE_PARSE (344//)"
+msgid "Failed to parse models response"
+msgstr "Failed to parse models response"
