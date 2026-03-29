@@ -683,6 +683,10 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                 json_object_object_get(json, "output");
             struct json_object *output = NULL;
 
+            if (outputArray == NULL ||
+                !json_object_is_type(outputArray, json_type_array)) {
+                return (UTF8 *)"";
+            }
             int arrayLength = json_object_array_length(outputArray);
             for (int i = 0; i < arrayLength; i++) {
                 struct json_object *currentOutput =

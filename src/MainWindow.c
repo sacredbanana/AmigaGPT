@@ -106,32 +106,17 @@ HOOKPROTONHNO(DisplayConversationLI_TextFunc, void,
     if (entry == NULL || entry->name == NULL) {
         ndm->strings[0] = (STRPTR)"";
     } else {
-        UTF8 *src = entry->name;
-        ULONG si = 0, di = 0;
-        while (src[si] && di < sizeof(nameBuf) - 1) {
-            UBYTE c = (UBYTE)src[si];
-            if (c == '\n' || c == '\r') {
-                nameBuf[di++] = ' ';
-                si++;
-            } else if (c < 0x80) {
-                nameBuf[di++] = c;
-                si++;
-            } else if ((c & 0xE0) == 0xC0 && src[si + 1] &&
-                       ((UBYTE)src[si + 1] & 0xC0) == 0x80) {
-                UWORD cp = ((c & 0x1F) << 6) | (src[si + 1] & 0x3F);
-                nameBuf[di++] = (cp <= 0xFF) ? (UBYTE)cp : '?';
-                si += 2;
-            } else if ((c & 0xF0) == 0xE0 && si + 2 < (ULONG)strlen(src)) {
-                nameBuf[di++] = '?';
-                si += 3;
-            } else if ((c & 0xF8) == 0xF0 && si + 3 < (ULONG)strlen(src)) {
-                nameBuf[di++] = '?';
-                si += 4;
-            } else {
-                si++;
-            }
+        STRPTR converted = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+            (Tag)entry->name, CSA_MapForeignChars, TRUE, TAG_DONE);
+        if (converted != NULL) {
+            strncpy(nameBuf, converted, sizeof(nameBuf) - 1);
+            nameBuf[sizeof(nameBuf) - 1] = '\0';
+            CodesetsFreeA(converted, NULL);
+        } else {
+            strncpy(nameBuf, entry->name, sizeof(nameBuf) - 1);
+            nameBuf[sizeof(nameBuf) - 1] = '\0';
         }
-        nameBuf[di] = '\0';
         ndm->strings[0] = nameBuf;
     }
 }
@@ -169,32 +154,17 @@ HOOKPROTONHNO(DisplayImageLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
     if (entry == NULL || entry->name == NULL) {
         ndm->strings[0] = (STRPTR)"";
     } else {
-        UTF8 *src = entry->name;
-        ULONG si = 0, di = 0;
-        while (src[si] && di < sizeof(imgNameBuf) - 1) {
-            UBYTE c = (UBYTE)src[si];
-            if (c == '\n' || c == '\r') {
-                imgNameBuf[di++] = ' ';
-                si++;
-            } else if (c < 0x80) {
-                imgNameBuf[di++] = c;
-                si++;
-            } else if ((c & 0xE0) == 0xC0 && src[si + 1] &&
-                       ((UBYTE)src[si + 1] & 0xC0) == 0x80) {
-                UWORD cp = ((c & 0x1F) << 6) | (src[si + 1] & 0x3F);
-                imgNameBuf[di++] = (cp <= 0xFF) ? (UBYTE)cp : '?';
-                si += 2;
-            } else if ((c & 0xF0) == 0xE0 && si + 2 < (ULONG)strlen(src)) {
-                imgNameBuf[di++] = '?';
-                si += 3;
-            } else if ((c & 0xF8) == 0xF0 && si + 3 < (ULONG)strlen(src)) {
-                imgNameBuf[di++] = '?';
-                si += 4;
-            } else {
-                si++;
-            }
+        STRPTR converted = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+            (Tag)entry->name, CSA_MapForeignChars, TRUE, TAG_DONE);
+        if (converted != NULL) {
+            strncpy(imgNameBuf, converted, sizeof(imgNameBuf) - 1);
+            imgNameBuf[sizeof(imgNameBuf) - 1] = '\0';
+            CodesetsFreeA(converted, NULL);
+        } else {
+            strncpy(imgNameBuf, entry->name, sizeof(imgNameBuf) - 1);
+            imgNameBuf[sizeof(imgNameBuf) - 1] = '\0';
         }
-        imgNameBuf[di] = '\0';
         ndm->strings[0] = imgNameBuf;
     }
 }
