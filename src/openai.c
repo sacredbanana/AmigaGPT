@@ -1740,7 +1740,7 @@ struct json_object **postChatMessageToOpenAI(
                 json_object_object_add(
                     partObj, "text",
                     json_object_new_string(
-                        message->content != NULL ? message->content : ""));
+                        message->content != NULL ? message->content : (UTF8 *)""));
                 json_object_array_add(partsArr, partObj);
                 json_object_object_add(contentObj, "parts", partsArr);
 
@@ -2818,7 +2818,7 @@ struct json_object *postImageCreationRequestToOpenAI(
         struct json_object *partObj = json_object_new_object();
         json_object_object_add(
             partObj, "text",
-            json_object_new_string(promptUTF8 ? promptUTF8 : ""));
+            json_object_new_string(promptUTF8 ? promptUTF8 : (UTF8 *)""));
         json_object_array_add(partsArr, partObj);
         json_object_object_add(contentObj, "parts", partsArr);
         json_object_array_add(contentsArr, contentObj);
@@ -2836,7 +2836,7 @@ struct json_object *postImageCreationRequestToOpenAI(
             obj, "model", json_object_new_string(modelName ? modelName : ""));
         json_object_object_add(
             obj, "prompt",
-            json_object_new_string(promptUTF8 ? promptUTF8 : ""));
+            json_object_new_string(promptUTF8 ? promptUTF8 : (UTF8 *)""));
         /* Provider differences:
          * - xAI image generation docs: size/quality/style not supported.
          * - Gemini OpenAI-compat examples omit size; keep request minimal.
@@ -3927,12 +3927,12 @@ APTR postTextToSpeechRequestToOpenAI(
         obj, "voice",
         json_object_new_string(OPENAI_TTS_VOICE_NAMES[openAITTSVoice]));
     json_object_object_add(obj, "input",
-                           json_object_new_string(textUTF8 ? textUTF8 : ""));
+                           json_object_new_string(textUTF8 ? textUTF8 : (UTF8 *)""));
     if (voiceInstructions != NULL) {
         json_object_object_add(
             obj, "instructions",
             json_object_new_string(voiceInstructionsUTF8 ? voiceInstructionsUTF8
-                                                         : ""));
+                                                         : (UTF8 *)""));
     }
     json_object_object_add(
         obj, "response_format",
@@ -4514,7 +4514,7 @@ APTR postTextToSpeechRequestToElevenLabs(
                            (Tag)text, CSA_MapForeignChars, TRUE, TAG_DONE);
     struct json_object *obj = json_object_new_object();
     json_object_object_add(obj, "text",
-                           json_object_new_string(textUTF8 ? textUTF8 : ""));
+                           json_object_new_string(textUTF8 ? textUTF8 : (UTF8 *)""));
     if (modelId != NULL && strlen(modelId) > 0) {
         json_object_object_add(obj, "model_id",
                                json_object_new_string(modelId));

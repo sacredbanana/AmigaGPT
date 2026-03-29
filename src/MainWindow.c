@@ -1634,8 +1634,9 @@ static void sendChatMessage() {
                         STRPTR latin1StreamFb = NULL;
                         if (displayStr == NULL) {
                             latin1StreamFb = utf8ToLatin1(contentString);
-                            displayStr = latin1StreamFb ? latin1StreamFb
-                                                        : contentString;
+                            displayStr = latin1StreamFb
+                                           ? latin1StreamFb
+                                           : (CONST_STRPTR)contentString;
                         }
                         ULONG displayLen = strlen(displayStr);
                         strncat(chatOutputTextEditorContents, displayStr,
@@ -2096,8 +2097,9 @@ void displayConversation(struct Conversation *conversation) {
             BOOL freeWithCodesets = (content != NULL);
             if (content == NULL) {
                 latin1Fallback = utf8ToLatin1(conversationNode->content);
-                content = latin1Fallback ? latin1Fallback
-                                         : conversationNode->content;
+                content = latin1Fallback
+                              ? latin1Fallback
+                              : (STRPTR)conversationNode->content;
             }
             UBYTE userAlignment;
             switch (configGetUserTextAlignment()) {
@@ -2140,8 +2142,9 @@ void displayConversation(struct Conversation *conversation) {
             STRPTR latin1Fallback = NULL;
             if (contentForFormatting == NULL) {
                 latin1Fallback = utf8ToLatin1(conversationNode->content);
-                contentForFormatting =
-                    latin1Fallback ? latin1Fallback : conversationNode->content;
+                contentForFormatting = latin1Fallback
+                                         ? latin1Fallback
+                                         : (STRPTR)conversationNode->content;
             }
             STRPTR formattedContent =
                 convertMarkdownFormattingToMUI(contentForFormatting);
