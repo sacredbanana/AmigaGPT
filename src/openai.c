@@ -57,16 +57,15 @@ static LONG createSSLContext();
 static void generateRandomSeed(UBYTE *buffer, LONG size);
 static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
-static STRPTR base64Encode(CONST_STRPTR input);
 static void drainOpenSslErrorQueue(CONST_STRPTR where);
 static void reportSslError(SSL *s, int ret, CONST_STRPTR where);
-static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage);
+static UTF8 *extractUserFriendlyErrorMessage(UTF8 *rawMessage);
 static STRPTR combineInstructionText(CONST_STRPTR first, CONST_STRPTR second);
 static void closeActiveResponseConnection(void);
 static BOOL responseMarksStreamFinished(struct json_object *response);
 static void setConversationLastResponseId(struct Conversation *conversation,
-                                          CONST_STRPTR responseId);
-static STRPTR extractResponseIdFromPayload(struct json_object *response);
+                                          UTF8 *responseId);
+static UTF8 *extractResponseIdFromPayload(struct json_object *response);
 static BOOL responseIndicatesMissingPreviousId(struct json_object *response);
 static BOOL responseIndicatesBadRequest(struct json_object *response);
 static struct ConversationNode *
@@ -85,8 +84,8 @@ struct SocketIFace *ISocket;
 static SSL_CTX *_ssl_context;
 LONG UsesOpenSSLStructs = FALSE;
 BOOL amiSSLInitialized = FALSE;
-UBYTE *writeBuffer = NULL;
-UBYTE *readBuffer = NULL;
+UTF8 *writeBuffer = NULL;
+UTF8 *readBuffer = NULL;
 X509 *server_cert;
 SSL_CTX *ctx = NULL;
 BIO *bio, *bio_err;
@@ -383,9 +382,9 @@ static BOOL responseMarksStreamFinished(struct json_object *response) {
     if (response == NULL)
         return FALSE;
 
-    STRPTR type =
+    UTF8 *type =
         json_object_get_string(json_object_object_get(response, "type"));
-    if (type != NULL && strcmp(type, "response.completed") == 0)
+    if (type != NULL && strcmp((char *)type, "response.completed") == 0)
         return TRUE;
 
     struct json_object *choices = json_object_object_get(response, "choices");
@@ -397,7 +396,7 @@ static BOOL responseMarksStreamFinished(struct json_object *response) {
                 json_object_object_get(choice0, "finish_reason");
             if (finishReason != NULL &&
                 !json_object_is_type(finishReason, json_type_null)) {
-                STRPTR fr = (STRPTR)json_object_get_string(finishReason);
+                UTF8 *fr = json_object_get_string(finishReason);
                 if (fr != NULL && strlen(fr) > 0)
                     return TRUE;
             }
@@ -418,7 +417,7 @@ static BOOL responseMarksStreamFinished(struct json_object *response) {
             }
             if (finishReason != NULL &&
                 !json_object_is_type(finishReason, json_type_null)) {
-                STRPTR fr = (STRPTR)json_object_get_string(finishReason);
+                UTF8 *fr = json_object_get_string(finishReason);
                 if (fr != NULL && strlen(fr) > 0)
                     return TRUE;
             }
@@ -429,7 +428,7 @@ static BOOL responseMarksStreamFinished(struct json_object *response) {
 }
 
 static void setConversationLastResponseId(struct Conversation *conversation,
-                                          CONST_STRPTR responseId) {
+                                          UTF8 *responseId) {
     if (conversation == NULL)
         return;
     if (conversation->lastResponseId != NULL) {
@@ -445,11 +444,11 @@ static void setConversationLastResponseId(struct Conversation *conversation,
     }
 }
 
-static STRPTR extractResponseIdFromPayload(struct json_object *response) {
+static UTF8 *extractResponseIdFromPayload(struct json_object *response) {
     if (response == NULL)
         return NULL;
     struct json_object *idObj = json_object_object_get(response, "id");
-    STRPTR id = (STRPTR)json_object_get_string(idObj);
+    UTF8 *id = json_object_get_string(idObj);
     if (id != NULL && strlen(id) > 0) {
         return id;
     }
@@ -459,7 +458,7 @@ static STRPTR extractResponseIdFromPayload(struct json_object *response) {
         json_object_is_type(nestedResp, json_type_object)) {
         struct json_object *nestedIdObj =
             json_object_object_get(nestedResp, "id");
-        id = (STRPTR)json_object_get_string(nestedIdObj);
+        id = json_object_get_string(nestedIdObj);
         if (id != NULL && strlen(id) > 0) {
             return id;
         }
@@ -474,7 +473,7 @@ static BOOL responseIndicatesMissingPreviousId(struct json_object *response) {
     if (error == NULL || json_object_is_type(error, json_type_null))
         return FALSE;
     struct json_object *messageObj = json_object_object_get(error, "message");
-    STRPTR message = (STRPTR)json_object_get_string(messageObj);
+    UTF8 *message = json_object_get_string(messageObj);
     if (message == NULL || strlen(message) == 0)
         return FALSE;
 
@@ -507,7 +506,7 @@ static BOOL responseIndicatesBadRequest(struct json_object *response) {
     if (error == NULL || json_object_is_type(error, json_type_null))
         return FALSE;
     struct json_object *messageObj = json_object_object_get(error, "message");
-    STRPTR message = (STRPTR)json_object_get_string(messageObj);
+    UTF8 *message = json_object_get_string(messageObj);
     if (message == NULL || strlen(message) == 0)
         return FALSE;
 
@@ -550,10 +549,10 @@ static BPTR GetStdErr() {
  * Execute a shell command and capture its output
  * @param command the command to execute
  * @param exitCode pointer to store the exit code
- * @return a pointer to a new string containing the command output -- Free it
- * with FreeVec() when done
+ * @return a pointer to a new string containing the command output -- Free
+ * it with FreeVec() when done
  **/
-STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode) {
+STRPTR executeShellCommand(UTF8 *command, LONG *exitCode) {
     BPTR stdoutFile = 0;
     BPTR stderrFile = 0;
     STRPTR outputBuffer = NULL;
@@ -562,6 +561,14 @@ STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode) {
     LONG stdoutLen = 0;
     LONG stderrLen = 0;
     LONG result = -1;
+
+    STRPTR commandStr =
+        CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                          (Tag)command, CSA_MapForeignChars, TRUE, TAG_DONE);
+    if (commandStr == NULL) {
+        *exitCode = -1;
+        return NULL;
+    }
 
     /* Create temp files for stdout and stderr */
     stdoutFile = Open("T:amigagpt_stdout.tmp", MODE_NEWFILE);
@@ -583,10 +590,10 @@ STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode) {
     /* Execute the command with redirected output */
 #if defined(__MORPHOS__)
     /* MorphOS may not support SYS_Error, so redirect both to stdout */
-    result = SystemTags(command, SYS_Input, 0, SYS_Output, stdoutFile,
+    result = SystemTags(commandStr, SYS_Input, 0, SYS_Output, stdoutFile,
                         NP_StackSize, 32768, TAG_DONE);
 #else
-    result = SystemTags(command, SYS_Input, 0, SYS_Output, stdoutFile,
+    result = SystemTags(commandStr, SYS_Input, 0, SYS_Output, stdoutFile,
                         SYS_Error, stderrFile, NP_StackSize, 32768, TAG_DONE);
 #endif
 
@@ -675,27 +682,8 @@ STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode) {
         FreeVec(outputBuffer);
     if (errorBuffer)
         FreeVec(errorBuffer);
-
-    /* Convert output from system encoding to UTF-8 for JSON/API compatibility
-     */
-    if (combinedOutput != NULL) {
-        UTF8 *utf8Output =
-            CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
-                               CSA_Source, (Tag)combinedOutput, TAG_DONE);
-        if (utf8Output != NULL) {
-            /* Copy UTF-8 output to AllocVec buffer so caller can use FreeVec */
-            LONG utf8Len = strlen((char *)utf8Output);
-            STRPTR result = AllocVec(utf8Len + 1, MEMF_CLEAR);
-            if (result != NULL) {
-                strncpy(result, (char *)utf8Output, utf8Len);
-                result[utf8Len] = '\0';
-            }
-            CodesetsFreeA(utf8Output, NULL);
-            FreeVec(combinedOutput);
-            return result;
-        }
-        /* If conversion failed, return original (may have encoding issues) */
-    }
+    if (commandStr)
+        CodesetsFreeA(commandStr, NULL);
 
     return combinedOutput;
 }
@@ -771,12 +759,12 @@ BOOL hasShellToolCall(struct json_object *response) {
         struct json_object *item = json_object_array_get_idx(outputArray, i);
         struct json_object *itemTypeObj = json_object_object_get(item, "type");
         if (itemTypeObj != NULL) {
-            const char *typeStr = json_object_get_string(itemTypeObj);
+            UTF8 *typeStr = json_object_get_string(itemTypeObj);
             if (strcmp(typeStr, "function_call") == 0) {
                 struct json_object *nameObj =
                     json_object_object_get(item, "name");
                 if (nameObj != NULL) {
-                    const char *nameStr = json_object_get_string(nameObj);
+                    UTF8 *nameStr = json_object_get_string(nameObj);
                     if (strcmp(nameStr, "shell") == 0) {
                         return TRUE;
                     }
@@ -792,7 +780,7 @@ BOOL hasShellToolCall(struct json_object *response) {
  * @param response the JSON response from the API
  * @return the call ID string (do not free) or NULL
  **/
-STRPTR getShellToolCallId(struct json_object *response) {
+UTF8 *getShellToolCallId(struct json_object *response) {
     if (response == NULL)
         return NULL;
 
@@ -819,17 +807,17 @@ STRPTR getShellToolCallId(struct json_object *response) {
         struct json_object *item = json_object_array_get_idx(outputArray, i);
         struct json_object *typeObj = json_object_object_get(item, "type");
         if (typeObj != NULL) {
-            const char *typeStr = json_object_get_string(typeObj);
+            UTF8 *typeStr = json_object_get_string(typeObj);
             if (strcmp(typeStr, "function_call") == 0) {
                 struct json_object *nameObj =
                     json_object_object_get(item, "name");
                 if (nameObj != NULL) {
-                    const char *nameStr = json_object_get_string(nameObj);
+                    UTF8 *nameStr = json_object_get_string(nameObj);
                     if (strcmp(nameStr, "shell") == 0) {
                         struct json_object *callIdObj =
                             json_object_object_get(item, "call_id");
                         if (callIdObj != NULL) {
-                            return (STRPTR)json_object_get_string(callIdObj);
+                            return json_object_get_string(callIdObj);
                         }
                     }
                 }
@@ -844,7 +832,7 @@ STRPTR getShellToolCallId(struct json_object *response) {
  * @param response the JSON response from the API
  * @return the command string (must be freed with FreeVec) or NULL
  **/
-STRPTR getShellToolCommand(struct json_object *response) {
+UTF8 *getShellToolCommand(struct json_object *response) {
     if (response == NULL)
         return NULL;
 
@@ -871,20 +859,19 @@ STRPTR getShellToolCommand(struct json_object *response) {
         struct json_object *item = json_object_array_get_idx(outputArray, i);
         struct json_object *typeObj = json_object_object_get(item, "type");
         if (typeObj != NULL) {
-            const char *typeStr = json_object_get_string(typeObj);
+            UTF8 *typeStr = json_object_get_string(typeObj);
             if (strcmp(typeStr, "function_call") == 0) {
                 struct json_object *nameObj =
                     json_object_object_get(item, "name");
                 if (nameObj != NULL) {
-                    const char *nameStr = json_object_get_string(nameObj);
+                    UTF8 *nameStr = json_object_get_string(nameObj);
                     if (strcmp(nameStr, "shell") == 0) {
                         struct json_object *argsObj =
                             json_object_object_get(item, "arguments");
                         if (argsObj != NULL) {
                             /* Arguments is a JSON string containing another
                              * JSON object */
-                            const char *argsStr =
-                                json_object_get_string(argsObj);
+                            UTF8 *argsStr = json_object_get_string(argsObj);
                             struct json_object *parsedArgs =
                                 json_tokener_parse(argsStr);
                             if (parsedArgs != NULL) {
@@ -892,7 +879,7 @@ STRPTR getShellToolCommand(struct json_object *response) {
                                     json_object_object_get(parsedArgs,
                                                            "command");
                                 if (cmdObj != NULL) {
-                                    const char *cmdStr =
+                                    UTF8 *cmdStr =
                                         json_object_get_string(cmdObj);
                                     STRPTR result = AllocVec(strlen(cmdStr) + 1,
                                                              MEMF_CLEAR);
@@ -1087,10 +1074,13 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
             snprintf(credentials,
                      strlen(proxyUsername) + strlen(proxyPassword) + 2, "%s:%s",
                      proxyUsername, proxyPassword);
-            UBYTE *encodedCredentials = base64Encode(credentials);
+            UTF8 *encodedCredentials = CodesetsEncodeB64(
+                CSA_B64SourceString, (Tag)credentials, CSA_B64SourceLen,
+                (Tag)strlen(credentials), CSA_B64DestPtr,
+                (Tag)&encodedCredentials, TAG_DONE);
             snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                      encodedCredentials);
-            FreeVec(encodedCredentials);
+            CodesetsFreeA(encodedCredentials, NULL);
         }
 
         // Send CONNECT request with optional Proxy-Authorization header
@@ -1227,10 +1217,13 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
+        UTF8 *encodedCredentials = CodesetsEncodeB64(
+            CSA_B64SourceString, (Tag)credentials, CSA_B64SourceLen,
+            (Tag)strlen(credentials), CSA_B64DestPtr, (Tag)&encodedCredentials,
+            TAG_DONE);
         snprintf(proxyAuthHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
         FreeVec(credentials);
     }
 
@@ -1566,7 +1559,7 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
                 continue;
             struct json_object *idObj = json_object_object_get(modelObj, "id");
             if (idObj != NULL) {
-                CONST_STRPTR modelId = json_object_get_string(idObj);
+                UTF8 *modelId = json_object_get_string(idObj);
                 if (modelId != NULL && strlen(modelId) > 0)
                     json_object_array_add(modelNames,
                                           json_object_new_string(modelId));
@@ -1592,10 +1585,10 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
             struct json_object *nameObj =
                 json_object_object_get(modelObj, "name");
             if (nameObj != NULL) {
-                CONST_STRPTR fullName = json_object_get_string(nameObj);
+                UTF8 *fullName = json_object_get_string(nameObj);
                 if (fullName != NULL && strlen(fullName) > 0) {
                     /* Gemini prefixes model names with "models/" */
-                    CONST_STRPTR name = fullName;
+                    UTF8 *name = fullName;
                     if (strncmp(fullName, "models/", 7) == 0)
                         name = fullName + 7;
                     json_object_array_add(modelNames,
@@ -1746,9 +1739,8 @@ struct json_object **postChatMessageToOpenAI(
                 struct json_object *partObj = json_object_new_object();
                 json_object_object_add(
                     partObj, "text",
-                    json_object_new_string(message->content != NULL
-                                               ? (const char *)message->content
-                                               : ""));
+                    json_object_new_string(
+                        message->content != NULL ? message->content : ""));
                 json_object_array_add(partsArr, partObj);
                 json_object_object_add(contentObj, "parts", partsArr);
 
@@ -2007,7 +1999,7 @@ struct json_object **postChatMessageToOpenAI(
             systemInstructions = NULL;
         }
 
-        CONST_STRPTR jsonString = json_object_to_json_string(obj);
+        UTF8 *jsonString = json_object_to_json_string(obj);
 
         STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
         if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
@@ -2018,10 +2010,16 @@ struct json_object **postChatMessageToOpenAI(
             snprintf(credentials,
                      strlen(proxyUsername) + strlen(proxyPassword) + 2, "%s:%s",
                      proxyUsername, proxyPassword);
-            UBYTE *encodedCredentials = base64Encode(credentials);
+            STRPTR encodedCredentials;
+            CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                              CSA_B64SourceLen, (Tag)strlen(credentials),
+
+                              CSA_B64DestPtr, (Tag)&encodedCredentials,
+                              TAG_DONE);
             snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                      encodedCredentials);
-            FreeVec(encodedCredentials);
+            CodesetsFreeA(encodedCredentials, NULL);
+            FreeVec(credentials);
         }
 
         CONST_STRPTR effectiveApiEndpointUrl = apiEndpointUrl;
@@ -2420,10 +2418,10 @@ struct json_object **postChatMessageToOpenAI(
                     }
 
                     /* Find first JSON token in body */
-                    STRPTR jsonString = NULL;
+                    UTF8 *jsonString = NULL;
                     if (body != NULL) {
-                        STRPTR objStart = strchr(body, '{');
-                        STRPTR arrStart = strchr(body, '[');
+                        UTF8 *objStart = strchr(body, '{');
+                        UTF8 *arrStart = strchr(body, '[');
                         if (objStart != NULL && arrStart != NULL) {
                             jsonString =
                                 (objStart < arrStart) ? objStart : arrStart;
@@ -2519,10 +2517,10 @@ struct json_object **postChatMessageToOpenAI(
                         streamingInProgress = FALSE;
                         break;
                     }
-                    const STRPTR jsonStart = effectiveStream ? "data: {" : "{";
-                    STRPTR jsonString = effectiveStream
-                                            ? strstr(readBuffer, jsonStart)
-                                            : strstr(readBuffer, "{");
+                    const UTF8 *jsonStart = effectiveStream ? "data: {" : "{";
+                    UTF8 *jsonString = effectiveStream
+                                           ? strstr(readBuffer, jsonStart)
+                                           : strstr(readBuffer, "{");
                     if (jsonString != NULL) {
                         // We have JSON data - this might be a normal connection
                         // closure
@@ -2647,13 +2645,13 @@ struct json_object **postChatMessageToOpenAI(
                         responses[responseIndex - 1];
                     if (hasShellToolCall(completedResponse)) {
                         STRPTR callId = getShellToolCallId(completedResponse);
-                        STRPTR command = getShellToolCommand(completedResponse);
+                        UTF8 *command = getShellToolCommand(completedResponse);
                         /* Get response ID from nested response object */
                         struct json_object *nestedResp = json_object_object_get(
                             completedResponse, "response");
-                        STRPTR respId = NULL;
+                        UTF8 *respId = NULL;
                         if (nestedResp) {
-                            respId = (STRPTR)json_object_get_string(
+                            respId = json_object_get_string(
                                 json_object_object_get(nestedResp, "id"));
                         }
 
@@ -2686,9 +2684,9 @@ struct json_object **postChatMessageToOpenAI(
             struct json_object *response = responses[responseIndex - 1];
             if (hasShellToolCall(response)) {
                 STRPTR callId = getShellToolCallId(response);
-                STRPTR command = getShellToolCommand(response);
+                UTF8 *command = getShellToolCommand(response);
                 /* For non-streaming, id is at top level */
-                STRPTR respId = (STRPTR)json_object_get_string(
+                UTF8 *respId = json_object_get_string(
                     json_object_object_get(response, "id"));
 
                 if (callId && command && respId) {
@@ -2750,22 +2748,6 @@ struct json_object **postChatMessageToOpenAI(
 }
 
 /**
- * Decode a base64 encoded string
- * @param dataB64 the base64 encoded string
- * @param data_len the length of the decoded data
- * @return a pointer to the decoded data
- */
-UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len) {
-    LONG dataB64_len = strlen(dataB64);
-    *data_len = 3 * dataB64_len / 4;
-    UBYTE *data = AllocVec(*data_len, MEMF_ANY | MEMF_CLEAR);
-    EVP_DecodeBlock(data, dataB64, dataB64_len);
-    while (dataB64[--dataB64_len] == '=')
-        (*data_len)--;
-    return data;
-}
-
-/**
  * Post a image creation request to OpenAI
  * @param prompt the prompt to use
  * @param imageModel the image model to use
@@ -2818,6 +2800,10 @@ struct json_object *postImageCreationRequestToOpenAI(
     }
     connectionRetryCount = 0;
 
+    UTF8 *promptUTF8 =
+        CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
+                           (Tag)prompt, CSA_MapForeignChars, TRUE, TAG_DONE);
+
     struct json_object *obj = json_object_new_object();
     if (apiEndpoint == API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT) {
         /* Gemini native text-to-image endpoint:
@@ -2830,8 +2816,9 @@ struct json_object *postImageCreationRequestToOpenAI(
         struct json_object *contentObj = json_object_new_object();
         struct json_object *partsArr = json_object_new_array();
         struct json_object *partObj = json_object_new_object();
-        json_object_object_add(partObj, "text",
-                               json_object_new_string(prompt ? prompt : ""));
+        json_object_object_add(
+            partObj, "text",
+            json_object_new_string(promptUTF8 ? promptUTF8 : ""));
         json_object_array_add(partsArr, partObj);
         json_object_object_add(contentObj, "parts", partsArr);
         json_object_array_add(contentsArr, contentObj);
@@ -2847,7 +2834,9 @@ struct json_object *postImageCreationRequestToOpenAI(
     } else {
         json_object_object_add(
             obj, "model", json_object_new_string(modelName ? modelName : ""));
-        json_object_object_add(obj, "prompt", json_object_new_string(prompt));
+        json_object_object_add(
+            obj, "prompt",
+            json_object_new_string(promptUTF8 ? promptUTF8 : ""));
         /* Provider differences:
          * - xAI image generation docs: size/quality/style not supported.
          * - Gemini OpenAI-compat examples omit size; keep request minimal.
@@ -2881,20 +2870,26 @@ struct json_object *postImageCreationRequestToOpenAI(
                                    json_object_new_string("b64_json"));
         }
     }
-    CONST_STRPTR jsonString = json_object_to_json_string(obj);
+    CodesetsFreeA(promptUTF8, NULL);
+    UTF8 *jsonString = json_object_to_json_string(obj);
 
-    STRPTR authHeader = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
+    UTF8 *authHeader = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
         // Construct the Proxy-Authorization header
-        STRPTR credentials =
+        UTF8 *credentials =
             AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
+        STRPTR encodedCredentials;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
         snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
+        FreeVec(credentials);
     }
 
     /* Build auth header based on type */
@@ -2966,7 +2961,6 @@ struct json_object *postImageCreationRequestToOpenAI(
     }
 
     json_object_put(obj);
-    printf("writeBuffer: %s\n", writeBuffer);
     FreeVec(authHeader);
 
     updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
@@ -3485,10 +3479,13 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
+        UTF8 *encodedCredentials = CodesetsEncodeB64(
+            CSA_B64SourceString, (Tag)credentials, CSA_B64SourceLen,
+            (Tag)strlen(credentials), CSA_B64DestPtr, (Tag)&encodedCredentials,
+            TAG_DONE);
         snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
     }
 
     // Construct the HTTP GET request
@@ -3915,6 +3912,13 @@ APTR postTextToSpeechRequestToOpenAI(
     ULONG audioBufferSize = AUDIO_BUFFER_SIZE;
     UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
 
+    UTF8 *textUTF8 =
+        CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
+                           (Tag)text, CSA_MapForeignChars, TRUE, TAG_DONE);
+    UTF8 *voiceInstructionsUTF8 = CodesetsUTF8Create(
+        CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
+        (Tag)voiceInstructions, CSA_MapForeignChars, TRUE, TAG_DONE);
+
     struct json_object *obj = json_object_new_object();
     json_object_object_add(
         obj, "model",
@@ -3922,17 +3926,22 @@ APTR postTextToSpeechRequestToOpenAI(
     json_object_object_add(
         obj, "voice",
         json_object_new_string(OPENAI_TTS_VOICE_NAMES[openAITTSVoice]));
-    json_object_object_add(obj, "input", json_object_new_string(text));
+    json_object_object_add(obj, "input",
+                           json_object_new_string(textUTF8 ? textUTF8 : ""));
     if (voiceInstructions != NULL) {
-        json_object_object_add(obj, "instructions",
-                               json_object_new_string(voiceInstructions));
+        json_object_object_add(
+            obj, "instructions",
+            json_object_new_string(voiceInstructionsUTF8 ? voiceInstructionsUTF8
+                                                         : ""));
     }
     json_object_object_add(
         obj, "response_format",
         json_object_new_string(
             AUDIO_FORMAT_NAMES[audioFormat != NULL ? *audioFormat
                                                    : AUDIO_FORMAT_PCM]));
-    CONST_STRPTR jsonString = json_object_to_json_string(obj);
+    UTF8 *jsonString = json_object_to_json_string(obj);
+    CodesetsFreeA(textUTF8, NULL);
+    CodesetsFreeA(voiceInstructionsUTF8, NULL);
 
     STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
@@ -3942,10 +3951,15 @@ APTR postTextToSpeechRequestToOpenAI(
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
+        STRPTR encodedCredentials;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
         snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
+        FreeVec(credentials);
     }
 
     snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
@@ -4407,56 +4421,20 @@ void closeOpenAIConnector() {
 }
 
 /**
- * Encode a string to base64
- * @param input the string to encode
- * @return a pointer to a buffer containing the base64 encoded string -- Free it
- * with FreeVec() when you are done using it
- */
-static STRPTR base64Encode(CONST_STRPTR input) {
-    const UBYTE base64Table[] =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    ULONG len = strlen(input);
-    UBYTE *encoded = AllocVec((len + 2) / 3 * 4 + 1, MEMF_CLEAR | MEMF_ANY);
-    UBYTE *p = encoded;
-    ULONG i;
-    for (i = 0; i < len - 2; i += 3) {
-        *p++ = base64Table[(input[i] >> 2) & 0x3F];
-        *p++ = base64Table[((input[i] & 0x03) << 4) |
-                           ((input[i + 1] >> 4) & 0x0F)];
-        *p++ = base64Table[((input[i + 1] & 0x0F) << 2) |
-                           ((input[i + 2] >> 6) & 0x03)];
-        *p++ = base64Table[input[i + 2] & 0x3F];
-    }
-    if (i < len) {
-        *p++ = base64Table[(input[i] >> 2) & 0x3F];
-        if (i == (len - 1)) {
-            *p++ = base64Table[(input[i] & 0x03) << 4];
-            *p++ = '=';
-        } else {
-            *p++ = base64Table[((input[i] & 0x03) << 4) |
-                               ((input[i + 1] >> 4) & 0x0F)];
-            *p++ = base64Table[(input[i + 1] & 0x0F) << 2];
-        }
-        *p++ = '=';
-    }
-    return encoded;
-}
-
-/**
  * Extract user-friendly error message from OpenAI validation error
  * @param rawMessage The raw error message from OpenAI API
  * @return A user-friendly error message, or the original if parsing fails
  */
-static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage) {
+static UTF8 *extractUserFriendlyErrorMessage(UTF8 *rawMessage) {
     if (rawMessage == NULL) {
         return "Unknown error occurred";
     }
 
     // Look for the 'msg': pattern in validation errors
-    STRPTR msgStart = strstr(rawMessage, "'msg': \"");
+    UTF8 *msgStart = strstr(rawMessage, "'msg': \"");
     if (msgStart != NULL) {
         msgStart += 8; // Skip past "'msg': \""
-        STRPTR msgEnd = strstr(msgStart, "\"");
+        UTF8 *msgEnd = strstr(msgStart, "\"");
         if (msgEnd != NULL) {
             // Calculate length and create a copy
             ULONG msgLength = msgEnd - msgStart;
@@ -4471,9 +4449,10 @@ static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage) {
 
     // Fallback: return a copy of the original message
     ULONG originalLength = strlen(rawMessage);
-    STRPTR messageCopy = AllocVec(originalLength + 1, MEMF_ANY);
+    UTF8 *messageCopy = AllocVec(originalLength + 1, MEMF_ANY);
     if (messageCopy != NULL) {
-        strcpy(messageCopy, rawMessage);
+        strncpy(messageCopy, rawMessage, originalLength);
+        messageCopy[originalLength] = '\0';
     }
     return messageCopy;
 }
@@ -4530,31 +4509,40 @@ APTR postTextToSpeechRequestToElevenLabs(
     }
 
     /* Build JSON request body */
+    UTF8 *textUTF8 =
+        CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
+                           (Tag)text, CSA_MapForeignChars, TRUE, TAG_DONE);
     struct json_object *obj = json_object_new_object();
-    json_object_object_add(obj, "text", json_object_new_string(text));
+    json_object_object_add(obj, "text",
+                           json_object_new_string(textUTF8 ? textUTF8 : ""));
     if (modelId != NULL && strlen(modelId) > 0) {
         json_object_object_add(obj, "model_id",
                                json_object_new_string(modelId));
     }
-    CONST_STRPTR jsonString = json_object_to_json_string(obj);
+    UTF8 *jsonString = json_object_to_json_string(obj);
+    CodesetsFreeA(textUTF8, NULL);
 
     /* Build proxy auth header if needed */
-    STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+    UTF8 *authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
         STRPTR credentials =
             AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
+        STRPTR encodedCredentials;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
         snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
         FreeVec(credentials);
     }
 
     /* Build the endpoint with voice ID and output format */
-    UBYTE endpoint[256];
+    UTF8 endpoint[256];
     snprintf(endpoint, sizeof(endpoint),
              "/v1/text-to-speech/%s?output_format=pcm_24000",
              voiceId != NULL ? voiceId : "");
@@ -4738,22 +4726,26 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
     memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 
     /* Build HTTP GET request */
-    STRPTR authHeader = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
+    UTF8 *authHeader = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
-        STRPTR credentials =
+        UTF8 *credentials =
             AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
+        STRPTR encodedCredentials;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
         snprintf(authHeader, 512, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
         FreeVec(credentials);
     }
 
     /* Build the API key header */
-    UBYTE apiKeyHeaderStr[512];
+    UTF8 apiKeyHeaderStr[512];
     if (useBearer) {
         snprintf(apiKeyHeaderStr, sizeof(apiKeyHeaderStr), "%s: Bearer %s\r\n",
                  apiKeyHeader, apiKey ? apiKey : "");
@@ -5022,10 +5014,14 @@ struct json_object *postToolResultToOpenAI(
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
+        STRPTR encodedCredentials;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
         snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
         FreeVec(credentials);
     }
 
@@ -5167,8 +5163,8 @@ struct json_object *postToolResultToOpenAI(
             if (parsedResponse != NULL) {
                 /* Check if the response contains another tool call */
                 if (shellToolEnabled && hasShellToolCall(parsedResponse)) {
-                    STRPTR cId = getShellToolCallId(parsedResponse);
-                    STRPTR cmd = getShellToolCommand(parsedResponse);
+                    UTF8 *cId = getShellToolCallId(parsedResponse);
+                    UTF8 *cmd = getShellToolCommand(parsedResponse);
                     /* For non-streaming, id is at top level */
                     STRPTR rId = (STRPTR)json_object_get_string(
                         json_object_object_get(parsedResponse, "id"));
@@ -5197,13 +5193,13 @@ struct json_object *postToolResultToOpenAI(
     FreeVec(tempReadBuffer);
 
     /* Try to parse whatever we got */
-    STRPTR jsonStart = NULL;
+    UTF8 *jsonStart = NULL;
     {
         STRPTR body = NULL;
-        STRPTR headerEnd = strstr(readBuffer, "\r\n\r\n");
+        UTF8 *headerEnd = strstr(readBuffer, "\r\n\r\n");
         ULONG headerDelimLen = 4;
         if (headerEnd == NULL) {
-            headerEnd = strstr(readBuffer, "\n\n");
+            headerEnd = strstr((UTF8 *)readBuffer, "\n\n");
             headerDelimLen = 2;
         }
         if (headerEnd != NULL) {
@@ -5214,8 +5210,8 @@ struct json_object *postToolResultToOpenAI(
             body++;
         }
         if (body != NULL) {
-            STRPTR objStart = strchr(body, '{');
-            STRPTR arrStart = strchr(body, '[');
+            UTF8 *objStart = strchr(body, '{');
+            UTF8 *arrStart = strchr(body, '[');
             if (objStart != NULL && arrStart != NULL) {
                 jsonStart = (objStart < arrStart) ? objStart : arrStart;
             } else if (objStart != NULL) {
@@ -5230,10 +5226,10 @@ struct json_object *postToolResultToOpenAI(
         if (parsedResponse != NULL) {
             /* Check if the response contains another tool call */
             if (shellToolEnabled && hasShellToolCall(parsedResponse)) {
-                STRPTR callId = getShellToolCallId(parsedResponse);
-                STRPTR command = getShellToolCommand(parsedResponse);
+                UTF8 *callId = getShellToolCallId(parsedResponse);
+                UTF8 *command = getShellToolCommand(parsedResponse);
                 /* For non-streaming, id is at top level */
-                STRPTR respId = (STRPTR)json_object_get_string(
+                UTF8 *respId = json_object_get_string(
                     json_object_object_get(parsedResponse, "id"));
 
                 if (callId && command && respId) {

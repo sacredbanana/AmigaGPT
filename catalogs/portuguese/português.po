@@ -1866,3 +1866,8 @@ msgstr "O pedido de chat é demasiado grande"
 msgctxt "STRING_ERROR_SSL_READ_FAILED_FORMAT (346//)"
 msgid "SSL read failed: %s"
 msgstr "Falha na leitura SSL: %s"
+
+#: src/MainWindow.c:395
+msgctxt "STRING_ERROR_INVALID_BASE64 (347//)"
+msgid "Invalid base64 image data"
+msgstr "Dados de imagem base64 inválidos"

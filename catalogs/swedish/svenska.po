@@ -1867,3 +1867,8 @@ msgstr "Chattbegäran är för stor"
 msgctxt "STRING_ERROR_SSL_READ_FAILED_FORMAT (346//)"
 msgid "SSL read failed: %s"
 msgstr "SSL-läsning misslyckades: %s"
+
+#: src/MainWindow.c:395
+msgctxt "STRING_ERROR_INVALID_BASE64 (347//)"
+msgid "Invalid base64 image data"
+msgstr "Ogiltiga base64-bilddata"

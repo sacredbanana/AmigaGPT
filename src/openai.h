@@ -208,9 +208,9 @@ extern const ImageSize IMAGE_SIZES_GPT_IMAGE_1[];
  * @see ImageModel
  **/
 struct GeneratedImage {
-    STRPTR name;
+    UTF8 *name;
     STRPTR filePath;
-    STRPTR prompt;
+    UTF8 *prompt;
     ImageModel imageModel;
     ULONG width;
     ULONG height;
@@ -418,14 +418,6 @@ APTR postTextToSpeechRequestToOpenAI(
 void closeOpenAIConnector();
 
 /**
- * Decode a base64 encoded string
- * @param dataB64 the base64 encoded string
- * @param data_len the length of the decoded data
- * @return a pointer to the decoded data
- */
-UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len);
-
-/**
  * Make a generic HTTPS GET request and return the JSON response
  * @param host the host to connect to
  * @param port the port to use
@@ -492,23 +484,23 @@ BOOL hasShellToolCall(struct json_object *response);
  * @param response the JSON response from the API
  * @return the call ID string (do not free) or NULL
  **/
-STRPTR getShellToolCallId(struct json_object *response);
+UTF8 *getShellToolCallId(struct json_object *response);
 
 /**
  * Get the command from a shell tool function call response
  * @param response the JSON response from the API
  * @return the command string (must be freed with FreeVec) or NULL
  **/
-STRPTR getShellToolCommand(struct json_object *response);
+UTF8 *getShellToolCommand(struct json_object *response);
 
 /**
  * Execute a shell command and capture its output
  * @param command the command to execute
  * @param exitCode pointer to store the exit code
- * @return a pointer to a new string containing the command output -- Free it
- * with FreeVec() when done
+ * @return a pointer to a new string containing the command output -- Free
+ * it with FreeVec() when done
  **/
-STRPTR executeShellCommand(CONST_STRPTR command, LONG *exitCode);
+STRPTR executeShellCommand(UTF8 *command, LONG *exitCode);
 
 /**
  * Post a tool result (shell command output) back to the API

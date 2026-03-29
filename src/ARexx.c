@@ -133,8 +133,8 @@ static struct Conversation *loadDaemonConversation(void) {
     struct json_object *lastResponseIdJsonObject;
     if (json_object_object_get_ex(conversationJsonObject, "lastResponseId",
                                   &lastResponseIdJsonObject)) {
-        STRPTR lastResponseId = (STRPTR)json_object_get_string(
-            lastResponseIdJsonObject);
+        STRPTR lastResponseId =
+            (STRPTR)json_object_get_string(lastResponseIdJsonObject);
         if (lastResponseId != NULL && strlen(lastResponseId) > 0) {
             conversation->lastResponseId =
                 AllocVec(strlen(lastResponseId) + 1, MEMF_ANY | MEMF_CLEAR);
@@ -1498,8 +1498,14 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     STRPTR b64 =
         json_object_get_string(json_object_object_get(dataObject, "b64_json"));
 
-    LONG data_len;
-    UBYTE *imageData = decodeBase64(b64, &data_len);
+    UTF8 *imageData = CodesetsDecodeB64(
+        CSA_B64SourceString, (Tag)b64, CSA_B64SourceLen, (Tag)strlen(b64),
+        CSA_B64DestPtr, (Tag)&imageData, TAG_DONE);
+    if (imageData == NULL) {
+        updateStatusBar(STRING_ERROR, redPen);
+        return RETURN_ERROR;
+    }
+    LONG data_len = strlen(imageData);
 
     if (destination == NULL) {
         // Generate unique ID for the image
@@ -1517,7 +1523,7 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     FILE *file = fopen(destination, "wb");
     fwrite(imageData, 1, data_len, file);
     fclose(file);
-    FreeVec(imageData);
+    CodesetsFreeA(imageData, NULL);
 
     json_object_put(response);
     updateStatusBar(STRING_READY, greenPen);

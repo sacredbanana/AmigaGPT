@@ -83,7 +83,6 @@ static void outputStyleOff(STRPTR out, size_t outSize);
 static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
                          StyleType *foundStyle);
 static BOOL ensureChatOutputBufferCapacity(ULONG required);
-static PICTURE *generateThumbnail(struct GeneratedImage *image);
 static void addMainWindowActions();
 
 HOOKPROTONHNO(ConstructConversationLI_TextFunc, APTR,
@@ -102,8 +101,39 @@ MakeHook(DestructConversationLI_TextHook, DestructConversationLI_TextFunc);
 
 HOOKPROTONHNO(DisplayConversationLI_TextFunc, void,
               struct NList_DisplayMessage *ndm) {
+    static char nameBuf[512];
     struct Conversation *entry = (struct Conversation *)ndm->entry;
-    ndm->strings[0] = (STRPTR)entry->name;
+    if (entry == NULL || entry->name == NULL) {
+        ndm->strings[0] = (STRPTR)"";
+    } else {
+        UTF8 *src = entry->name;
+        ULONG si = 0, di = 0;
+        while (src[si] && di < sizeof(nameBuf) - 1) {
+            UBYTE c = (UBYTE)src[si];
+            if (c == '\n' || c == '\r') {
+                nameBuf[di++] = ' ';
+                si++;
+            } else if (c < 0x80) {
+                nameBuf[di++] = c;
+                si++;
+            } else if ((c & 0xE0) == 0xC0 && src[si + 1] &&
+                       ((UBYTE)src[si + 1] & 0xC0) == 0x80) {
+                UWORD cp = ((c & 0x1F) << 6) | (src[si + 1] & 0x3F);
+                nameBuf[di++] = (cp <= 0xFF) ? (UBYTE)cp : '?';
+                si += 2;
+            } else if ((c & 0xF0) == 0xE0 && si + 2 < (ULONG)strlen(src)) {
+                nameBuf[di++] = '?';
+                si += 3;
+            } else if ((c & 0xF8) == 0xF0 && si + 3 < (ULONG)strlen(src)) {
+                nameBuf[di++] = '?';
+                si += 4;
+            } else {
+                si++;
+            }
+        }
+        nameBuf[di] = '\0';
+        ndm->strings[0] = nameBuf;
+    }
 }
 MakeHook(DisplayConversationLI_TextHook, DisplayConversationLI_TextFunc);
 
@@ -134,15 +164,43 @@ HOOKPROTONHNO(DestructImageLI_TextFunc, void,
 MakeHook(DestructImageLI_TextHook, DestructImageLI_TextFunc);
 
 HOOKPROTONHNO(DisplayImageLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
+    static char imgNameBuf[512];
     struct GeneratedImage *entry = (struct GeneratedImage *)ndm->entry;
-    ndm->strings[0] = (STRPTR)entry->name;
+    if (entry == NULL || entry->name == NULL) {
+        ndm->strings[0] = (STRPTR)"";
+    } else {
+        UTF8 *src = entry->name;
+        ULONG si = 0, di = 0;
+        while (src[si] && di < sizeof(imgNameBuf) - 1) {
+            UBYTE c = (UBYTE)src[si];
+            if (c == '\n' || c == '\r') {
+                imgNameBuf[di++] = ' ';
+                si++;
+            } else if (c < 0x80) {
+                imgNameBuf[di++] = c;
+                si++;
+            } else if ((c & 0xE0) == 0xC0 && src[si + 1] &&
+                       ((UBYTE)src[si + 1] & 0xC0) == 0x80) {
+                UWORD cp = ((c & 0x1F) << 6) | (src[si + 1] & 0x3F);
+                imgNameBuf[di++] = (cp <= 0xFF) ? (UBYTE)cp : '?';
+                si += 2;
+            } else if ((c & 0xF0) == 0xE0 && si + 2 < (ULONG)strlen(src)) {
+                imgNameBuf[di++] = '?';
+                si += 3;
+            } else if ((c & 0xF8) == 0xF0 && si + 3 < (ULONG)strlen(src)) {
+                imgNameBuf[di++] = '?';
+                si += 4;
+            } else {
+                si++;
+            }
+        }
+        imgNameBuf[di] = '\0';
+        ndm->strings[0] = imgNameBuf;
+    }
 }
 MakeHook(DisplayImageLI_TextHook, DisplayImageLI_TextFunc);
 
-BOOL thing = FALSE;
-
 HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
-    thing = !thing;
     set(chatInputTextEditor, MUIA_TextEditor_FixedFont, TRUE);
     struct Conversation *conversation;
     DoMethod(conversationListObject, MUIM_NList_GetEntry,
@@ -301,9 +359,6 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         text[strlen(text) - 1] = '\0';
     }
 
-    UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
-                                        CSA_Source, (Tag)text, TAG_DONE);
-
     /* Keep legacy image model enum for history + size selection. */
     ImageModel imageModel = configGetImageModel();
     ImageSize imageSize;
@@ -324,14 +379,13 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         break;
     }
     struct json_object *response = postImageCreationRequestToOpenAI(
-        textUTF8, imageSettings.host, imageSettings.port, imageSettings.useSSL,
+        text, imageSettings.host, imageSettings.port, imageSettings.useSSL,
         imageSettings.apiEndpointUrl, imageSettings.authorizationType,
         imageSettings.customHeaders, imageSettings.model, imageSize, apiKey,
         configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
         configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
         configGetProxyUsername(), configGetProxyPassword(),
         configGetImageFormat(), imageSettings.imageApiEndpoint);
-    CodesetsFreeA(textUTF8, NULL);
 
     if (response == NULL) {
         displayError(STRING_ERROR_CONNECTION);
@@ -349,12 +403,16 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     if (json_object_object_get_ex(response, "error", &error) &&
         !json_object_is_type(error, json_type_null)) {
         struct json_object *message = json_object_object_get(error, "message");
-        STRPTR messageString = json_object_get_string(message);
-        if (messageString != NULL) {
-            displayError(messageString);
+        UTF8 *messageString = json_object_get_string(message);
+        STRPTR messageStringSystemEncoded = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)messageString,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
+        if (messageStringSystemEncoded != NULL) {
+            displayError(messageStringSystemEncoded);
+            CodesetsFreeA(messageStringSystemEncoded, NULL);
         } else {
             struct json_object *type = json_object_object_get(error, "type");
-            STRPTR typeString = json_object_get_string(type);
+            UTF8 *typeString = json_object_get_string(type);
             if (typeString != NULL) {
                 if (strcmp(typeString, "invalid_request_error") == 0) {
                     displayError(STRING_ERROR_INVALID_REQUEST);
@@ -381,8 +439,23 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     STRPTR b64 =
         json_object_get_string(json_object_object_get(dataObject, "b64_json"));
 
-    LONG data_len;
-    UBYTE *imageData = decodeBase64(b64, &data_len);
+    STRPTR imageData;
+    ULONG b64Len = strlen(b64);
+    CodesetsDecodeB64(CSA_B64SourceString, (Tag)b64, CSA_B64SourceLen,
+                      (Tag)b64Len, CSA_B64DestPtr, (Tag)&imageData, TAG_DONE);
+    if (imageData == NULL) {
+        displayError(STRING_ERROR_INVALID_BASE64);
+        set(createImageButton, MUIA_Disabled, FALSE);
+        set(newImageButton, MUIA_Disabled, FALSE);
+        set(deleteImageButton, MUIA_Disabled, FALSE);
+        set(imageInputTextEditor, MUIA_Disabled, FALSE);
+        json_object_put(response);
+        return;
+    }
+
+    LONG data_len = (b64Len * 3) / 4;
+    while (b64Len > 0 && b64[--b64Len] == '=')
+        data_len--;
 
     CreateDir("AMIGAGPT:images");
     /* Try to match file extension to actual bytes; fallback to user preference.
@@ -418,7 +491,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     FILE *file = fopen(fullPath, "wb");
     fwrite(imageData, 1, data_len, file);
     fclose(file);
-    FreeVec(imageData);
+    CodesetsFreeA(imageData, NULL);
 
     json_object_put(response);
 
@@ -503,8 +576,11 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             }
         }
     }
+    UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                                        CSA_Source, (Tag)text, TAG_DONE);
     struct Conversation *imageNameConversation = newConversation();
-    addTextToConversation(imageNameConversation, text, "user");
+    addTextToConversation(imageNameConversation, textUTF8, "user");
+    CodesetsFreeA(textUTF8, NULL);
     addTextToConversation(
         imageNameConversation,
         "generate a short title for this image and don't enclose the "
@@ -550,9 +626,9 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             if (part != NULL)
                 combinedLen += strlen(part) + 1;
         }
-        STRPTR combined = AllocVec(combinedLen, MEMF_ANY | MEMF_CLEAR);
+        UTF8 *combined = AllocVec(combinedLen, MEMF_ANY | MEMF_CLEAR);
         if (combined == NULL) {
-            combined = (STRPTR) "";
+            combined = (UTF8 *)"";
         } else {
             ri = 0;
             while ((r = responses[ri++]) != NULL) {
@@ -563,10 +639,11 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
                 }
             }
         }
-        STRPTR responseString = combined;
+        UTF8 *responseString = combined;
         generatedImage->name =
             AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
-        strncpy(generatedImage->name, responseString, strlen(responseString));
+        strncpy(generatedImage->name, responseString,
+                strlen(responseString));
         updateStatusBar(STRING_READY, 5);
         ri = 0;
         while ((r = responses[ri++]) != NULL) {
@@ -1028,6 +1105,7 @@ static BOOL ensureChatOutputBufferCapacity(ULONG required) {
     }
     strncpy(bigger, chatOutputTextEditorContents,
             chatOutputTextEditorContentsCapacity - 1);
+    set(chatOutputTextEditor, MUIA_NFloattext_Text, "");
     FreeVec(chatOutputTextEditorContents);
     chatOutputTextEditorContents = bigger;
     chatOutputTextEditorContentsCapacity = newCapacity;
@@ -1456,7 +1534,8 @@ static void sendChatMessage() {
 
     UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
 
-                                        CSA_Source, (Tag)text, TAG_DONE);
+                                        CSA_Source, (Tag)text,
+                                        CSA_MapForeignChars, TRUE, TAG_DONE);
 
     addTextToConversation(currentConversation, textUTF8, "user");
     CodesetsFreeA(textUTF8, NULL);
@@ -1519,8 +1598,12 @@ static void sendChatMessage() {
                 STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                     (Tag)messageString, CSA_MapForeignChars, TRUE, TAG_DONE);
-                displayError(formattedMessageSystemEncoded);
-                CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+                if (formattedMessageSystemEncoded != NULL) {
+                    displayError(formattedMessageSystemEncoded);
+                    CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+                } else {
+                    displayError(messageString);
+                }
                 set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
                 if (isAROS) {
                     set(chatInputTextEditor, MUIA_String_Contents, text);
@@ -1573,15 +1656,24 @@ static void sendChatMessage() {
                         strncat(receivedMessage, contentString,
                                 READ_BUFFER_LENGTH - strlen(receivedMessage) -
                                     strlen(contentString) - 1);
-                        strncat(chatOutputTextEditorContents,
-                                formattedMessageSystemEncoded,
+                        CONST_STRPTR displayStr =
+                            formattedMessageSystemEncoded;
+                        STRPTR latin1StreamFb = NULL;
+                        if (displayStr == NULL) {
+                            latin1StreamFb = utf8ToLatin1(contentString);
+                            displayStr = latin1StreamFb ? latin1StreamFb
+                                                        : contentString;
+                        }
+                        ULONG displayLen = strlen(displayStr);
+                        strncat(chatOutputTextEditorContents, displayStr,
                                 chatOutputTextEditorContentsCapacity -
-                                    strlen(chatOutputTextEditorContents) -
-                                    strlen(formattedMessageSystemEncoded) - 1);
-                        CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+                                    strlen(chatOutputTextEditorContents) - 1);
+                        if (formattedMessageSystemEncoded != NULL)
+                            CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+                        if (latin1StreamFb != NULL)
+                            FreeVec(latin1StreamFb);
                         chunkCounter++;
-                        streamedCharsSinceFlush +=
-                            strlen(formattedMessageSystemEncoded);
+                        streamedCharsSinceFlush += displayLen;
 
                         /* Reduce flicker/jitter by coalescing frequent tiny
                          * updates into timed UI flushes.
@@ -1604,16 +1696,19 @@ static void sendChatMessage() {
                                         CSA_DestCodeset, (Tag)systemCodeset,
                                         CSA_Source, (Tag)receivedMessage,
                                         CSA_MapForeignChars, TRUE, TAG_DONE);
-                                if (configGetSpeechSystem() !=
-                                    SPEECH_SYSTEM_OPENAI) {
-                                    speakText(unformattedMessageSystemEncoded +
-                                                  speechIndex,
-                                              NULL, NULL);
+                                if (unformattedMessageSystemEncoded != NULL) {
+                                    if (configGetSpeechSystem() !=
+                                        SPEECH_SYSTEM_OPENAI) {
+                                        speakText(
+                                            unformattedMessageSystemEncoded +
+                                                speechIndex,
+                                            NULL, NULL);
+                                    }
+                                    speechIndex = strlen(
+                                        unformattedMessageSystemEncoded);
+                                    CodesetsFreeA(
+                                        unformattedMessageSystemEncoded, NULL);
                                 }
-                                speechIndex =
-                                    strlen(unformattedMessageSystemEncoded);
-                                CodesetsFreeA(unformattedMessageSystemEncoded,
-                                              NULL);
                             }
                         }
                     }
@@ -1647,8 +1742,8 @@ static void sendChatMessage() {
                                 if (finishReason != NULL &&
                                     !json_object_is_type(finishReason,
                                                          json_type_null)) {
-                                    STRPTR fr = (STRPTR)json_object_get_string(
-                                        finishReason);
+                                    UTF8 *fr =
+                                        json_object_get_string(finishReason);
                                     if (fr != NULL && strlen(fr) > 0) {
                                         dataStreamFinished = TRUE;
                                     }
@@ -1676,8 +1771,8 @@ static void sendChatMessage() {
                                 if (finishReason != NULL &&
                                     !json_object_is_type(finishReason,
                                                          json_type_null)) {
-                                    STRPTR fr = (STRPTR)json_object_get_string(
-                                        finishReason);
+                                    UTF8 *fr =
+                                        json_object_get_string(finishReason);
                                     if (fr != NULL && strlen(fr) > 0) {
                                         dataStreamFinished = TRUE;
                                     }
@@ -1705,9 +1800,9 @@ static void sendChatMessage() {
     /* Handle shell tool calls - loop to handle multiple sequential commands */
     while (chatSettings.stream && chatSettings.shellToolEnabled &&
            hasPendingToolCall()) {
-        STRPTR command = getPendingToolCommand();
+        UTF8 *command = getPendingToolCommand();
         STRPTR callId = getPendingToolCallId();
-        STRPTR responseId = getPendingResponseId();
+        UTF8 *responseId = getPendingResponseId();
 
         /* Ask user for confirmation before executing the command */
         UBYTE confirmMsg[4096];
@@ -1834,16 +1929,28 @@ static void sendChatMessage() {
                     CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
                                       CSA_Source, (Tag)toolContentString,
                                       CSA_MapForeignChars, TRUE, TAG_DONE);
-                strncat(chatOutputTextEditorContents, formattedToolResponse,
-                        chatOutputTextEditorContentsCapacity -
-                            strlen(chatOutputTextEditorContents) - 1);
-                CodesetsFreeA(formattedToolResponse, NULL);
+                if (formattedToolResponse != NULL) {
+                    strncat(chatOutputTextEditorContents, formattedToolResponse,
+                            chatOutputTextEditorContentsCapacity -
+                                strlen(chatOutputTextEditorContents) - 1);
+                    CodesetsFreeA(formattedToolResponse, NULL);
+                } else {
+                    STRPTR latin1 = utf8ToLatin1(toolContentString);
+                    if (latin1 != NULL) {
+                        strncat(chatOutputTextEditorContents, latin1,
+                                chatOutputTextEditorContentsCapacity -
+                                    strlen(chatOutputTextEditorContents) - 1);
+                        FreeVec(latin1);
+                    }
+                }
 
                 STRPTR formattedContent = convertMarkdownFormattingToMUI(
                     chatOutputTextEditorContents);
-                strncpy(chatOutputTextEditorContents, formattedContent,
-                        chatOutputTextEditorContentsCapacity - 1);
-                FreeVec(formattedContent);
+                if (formattedContent != NULL) {
+                    strncpy(chatOutputTextEditorContents, formattedContent,
+                            chatOutputTextEditorContentsCapacity - 1);
+                    FreeVec(formattedContent);
+                }
                 set(chatOutputTextEditor, MUIA_NFloattext_Text,
                     chatOutputTextEditorContents);
                 set(chatOutputListView, MUIA_NList_First,
@@ -1867,9 +1974,11 @@ static void sendChatMessage() {
                 STRPTR receivedMessageSystemEncoded = CodesetsUTF8ToStr(
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                     (Tag)receivedMessage, CSA_MapForeignChars, TRUE, TAG_DONE);
-                speakText(receivedMessageSystemEncoded + speechIndex, NULL,
-                          NULL);
-                CodesetsFreeA(receivedMessageSystemEncoded, NULL);
+                if (receivedMessageSystemEncoded != NULL) {
+                    speakText(receivedMessageSystemEncoded + speechIndex, NULL,
+                              NULL);
+                    CodesetsFreeA(receivedMessageSystemEncoded, NULL);
+                }
             }
         }
         FreeVec(responses);
@@ -1935,8 +2044,9 @@ static void sendChatMessage() {
                 if (currentConversation->name == NULL) {
                     currentConversation->name =
                         AllocVec(strlen(responseString) + 1, MEMF_CLEAR);
-                    strncpy(currentConversation->name, responseString,
-                            strlen(responseString));
+                    if (currentConversation->name != NULL)
+                        strncpy(currentConversation->name, responseString,
+                                strlen(responseString));
                 }
                 DoMethod(conversationListObject, MUIM_NList_InsertSingle,
                          currentConversation, MUIV_NList_Insert_Top);
@@ -1996,17 +2106,26 @@ void displayConversation(struct Conversation *conversation) {
         if ((strlen(chatOutputTextEditorContents) +
              strlen(conversationNode->content) + 256) >
             chatOutputTextEditorContentsCapacity) {
-            ULONG need =
-                strlen(chatOutputTextEditorContents) +
-                strlen(conversationNode->content) * 3 + 1024;
+            ULONG need = strlen(chatOutputTextEditorContents) +
+                         strlen(conversationNode->content) * 3 + 1024;
             if (!ensureChatOutputBufferCapacity(need)) {
-            displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
-            set(sendMessageButton, MUIA_Disabled, TRUE);
-            return;
+                displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
+                set(sendMessageButton, MUIA_Disabled, TRUE);
+                return;
             }
         }
         if (strcmp(conversationNode->role, "user") == 0) {
-            UTF8 *content = conversationNode->content;
+            STRPTR content =
+                CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
+                                  CSA_Source, (Tag)conversationNode->content,
+                                  CSA_MapForeignChars, TRUE, TAG_DONE);
+            STRPTR latin1Fallback = NULL;
+            BOOL freeWithCodesets = (content != NULL);
+            if (content == NULL) {
+                latin1Fallback = utf8ToLatin1(conversationNode->content);
+                content = latin1Fallback ? latin1Fallback
+                                         : conversationNode->content;
+            }
             UBYTE userAlignment;
             switch (configGetUserTextAlignment()) {
             case ALIGN_LEFT:
@@ -2030,63 +2149,51 @@ void displayConversation(struct Conversation *conversation) {
                             strlen(userStyleString));
                 }
             }
+            if (freeWithCodesets)
+                CodesetsFreeA(content, NULL);
+            else if (latin1Fallback != NULL)
+                FreeVec(latin1Fallback);
         } else if (strcmp(conversationNode->role, "assistant") == 0) {
             set(chatOutputListView, MUIA_NFloattext_Align,
                 configGetAssistantTextAlignment());
             UBYTE assistantStyleString[] = "\n\n";
             strncat(chatOutputTextEditorContents, assistantStyleString,
                     strlen(assistantStyleString));
+            UTF8 *formattedContentSystemEncoded =
+                CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
+                                  CSA_Source, (Tag)conversationNode->content,
+                                  CSA_MapForeignChars, TRUE, TAG_DONE);
+            CONST_STRPTR contentForFormatting = formattedContentSystemEncoded;
+            STRPTR latin1Fallback = NULL;
+            if (contentForFormatting == NULL) {
+                latin1Fallback = utf8ToLatin1(conversationNode->content);
+                contentForFormatting =
+                    latin1Fallback ? latin1Fallback : conversationNode->content;
+            }
             STRPTR formattedContent =
-                convertMarkdownFormattingToMUI(conversationNode->content);
-            strncat(chatOutputTextEditorContents, formattedContent,
-                    strlen(formattedContent));
-            FreeVec(formattedContent);
+                convertMarkdownFormattingToMUI(contentForFormatting);
+            if (formattedContentSystemEncoded != NULL)
+                CodesetsFreeA(formattedContentSystemEncoded, NULL);
+            if (latin1Fallback != NULL)
+                FreeVec(latin1Fallback);
+            if (formattedContent != NULL) {
+                strncat(chatOutputTextEditorContents, formattedContent,
+                        strlen(formattedContent));
+                FreeVec(formattedContent);
+            }
             const UBYTE messageSeparatorStyleString[] = "\n\n";
             strncat(chatOutputTextEditorContents, messageSeparatorStyleString,
                     strlen(messageSeparatorStyleString));
         }
     }
 
-    STRPTR convertedConversationString = CodesetsUTF8ToStr(
-        CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-        (Tag)chatOutputTextEditorContents, CSA_MapForeignChars, TRUE, TAG_DONE);
-
-    if (convertedConversationString != NULL) {
-        ULONG convertedLen = strlen(convertedConversationString) + 1;
-        if (!ensureChatOutputBufferCapacity(convertedLen)) {
-            CodesetsFreeA(convertedConversationString, NULL);
-            displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
-            set(sendMessageButton, MUIA_Disabled, TRUE);
-            return;
-        }
+    ULONG totalLen = (ULONG)strlen(chatOutputTextEditorContents);
+    if (totalLen > CHAT_OUTPUT_WIDGET_SAFE_LIMIT) {
+        STRPTR truncated = chatOutputTextEditorContents +
+                           (totalLen - CHAT_OUTPUT_WIDGET_SAFE_LIMIT);
+        memmove(chatOutputTextEditorContents, truncated,
+                CHAT_OUTPUT_WIDGET_SAFE_LIMIT + 1);
     }
-
-    if (convertedConversationString == NULL) {
-        displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
-        set(sendMessageButton, MUIA_Disabled, TRUE);
-        return;
-    }
-
-    ULONG convertedLen = (ULONG)strlen(convertedConversationString);
-    STRPTR displayPtr = convertedConversationString;
-    ULONG displayLen = convertedLen;
-    if (convertedLen > CHAT_OUTPUT_WIDGET_SAFE_LIMIT) {
-        displayPtr = convertedConversationString +
-                     (convertedLen - CHAT_OUTPUT_WIDGET_SAFE_LIMIT);
-        displayLen = CHAT_OUTPUT_WIDGET_SAFE_LIMIT;
-    }
-
-    if (!ensureChatOutputBufferCapacity(displayLen + 1)) {
-        CodesetsFreeA(convertedConversationString, NULL);
-        displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
-        set(sendMessageButton, MUIA_Disabled, TRUE);
-        return;
-    }
-
-    chatOutputTextEditorContents[0] = '\0';
-    strncat(chatOutputTextEditorContents, displayPtr, displayLen);
-
-    CodesetsFreeA(convertedConversationString, NULL);
 
     set(chatOutputTextEditor, MUIA_NFloattext_Text,
         chatOutputTextEditorContents);
@@ -2116,9 +2223,8 @@ copyConversation(struct Conversation *conversation) {
     }
     if (conversation->lastResponseId != NULL &&
         strlen(conversation->lastResponseId) > 0) {
-        copy->lastResponseId =
-            AllocVec(strlen(conversation->lastResponseId) + 1,
-                     MEMF_ANY | MEMF_CLEAR);
+        copy->lastResponseId = AllocVec(
+            strlen(conversation->lastResponseId) + 1, MEMF_ANY | MEMF_CLEAR);
         if (copy->lastResponseId != NULL) {
             strncpy(copy->lastResponseId, conversation->lastResponseId,
                     strlen(conversation->lastResponseId));
@@ -2387,6 +2493,7 @@ static LONG loadConversations() {
         return RETURN_ERROR;
     }
 
+    set(conversationListObject, MUIA_NList_Quiet, TRUE);
     for (UWORD i = 0; i < json_object_array_length(conversationsJsonArray);
          i++) {
         struct json_object *conversationJsonObject =
@@ -2397,6 +2504,7 @@ static LONG loadConversations() {
             displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
             FreeVec(conversationsJsonString);
             json_object_put(conversationsJsonArray);
+            set(conversationListObject, MUIA_NList_Quiet, FALSE);
             return RETURN_ERROR;
         }
 
@@ -2409,6 +2517,7 @@ static LONG loadConversations() {
             displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
             FreeVec(conversationsJsonString);
             json_object_put(conversationsJsonArray);
+            set(conversationListObject, MUIA_NList_Quiet, FALSE);
             return RETURN_ERROR;
         }
 
@@ -2424,16 +2533,13 @@ static LONG loadConversations() {
                 (STRPTR)json_object_get_string(lastResponseIdJsonObject);
             if (lastResponseId != NULL && strlen(lastResponseId) > 0) {
                 conversation->lastResponseId =
-                    AllocVec(strlen(lastResponseId) + 1,
-                             MEMF_ANY | MEMF_CLEAR);
+                    AllocVec(strlen(lastResponseId) + 1, MEMF_ANY | MEMF_CLEAR);
                 if (conversation->lastResponseId != NULL) {
                     strncpy(conversation->lastResponseId, lastResponseId,
                             strlen(lastResponseId));
                 }
             }
         }
-
-        set(conversationListObject, MUIA_NList_Quiet, TRUE);
 
         for (UWORD j = 0; j < json_object_array_length(messagesJsonArray);
              j++) {
@@ -2445,6 +2551,7 @@ static LONG loadConversations() {
                 displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
                 FreeVec(conversationsJsonString);
                 json_object_put(conversationsJsonArray);
+                set(conversationListObject, MUIA_NList_Quiet, FALSE);
                 return RETURN_ERROR;
             }
             STRPTR role = json_object_get_string(roleJsonObject);
@@ -2456,6 +2563,7 @@ static LONG loadConversations() {
                 displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
                 FreeVec(conversationsJsonString);
                 json_object_put(conversationsJsonArray);
+                set(conversationListObject, MUIA_NList_Quiet, FALSE);
                 return RETURN_ERROR;
             }
             UTF8 *content = json_object_get_string(contentJsonObject);
@@ -2638,10 +2746,12 @@ LONG printConversation() {
                 STRPTR convertedConversationString = CodesetsUTF8ToStr(
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                     (Tag)content, CSA_MapForeignChars, TRUE, TAG_DONE);
-
-                Write(printerFile, convertedConversationString, -1);
-
-                CodesetsFreeA(convertedConversationString, NULL);
+                if (convertedConversationString != NULL) {
+                    Write(printerFile, convertedConversationString, -1);
+                    CodesetsFreeA(convertedConversationString, NULL);
+                } else {
+                    Write(printerFile, content, -1);
+                }
             } else if (strcmp(conversationNode->role, "assistant") == 0) {
                 Write(printerFile, "\n\n", -1);
                 Write(printerFile, "*******************\n", -1);
@@ -2650,10 +2760,12 @@ LONG printConversation() {
                 STRPTR convertedConversationString = CodesetsUTF8ToStr(
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                     (Tag)content, CSA_MapForeignChars, TRUE, TAG_DONE);
-
-                Write(printerFile, convertedConversationString, -1);
-
-                CodesetsFreeA(convertedConversationString, NULL);
+                if (convertedConversationString != NULL) {
+                    Write(printerFile, convertedConversationString, -1);
+                    CodesetsFreeA(convertedConversationString, NULL);
+                } else {
+                    Write(printerFile, content, -1);
+                }
 
                 Write(printerFile, "\n\n", -1);
             }

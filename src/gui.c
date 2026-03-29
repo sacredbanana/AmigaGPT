@@ -209,7 +209,7 @@ LONG initVideo() {
               End,
           End,
     End)) {
-    // clang-format on
+        // clang-format on
         displayError(STRING_ERROR_APP_CREATE);
         return RETURN_ERROR;
     }
@@ -538,11 +538,11 @@ static void appendJsonStringToMessageScratch(struct json_object *obj,
     if (messageScratch == NULL)
         return;
 
-    const char *piece = NULL;
+    UTF8 *piece = NULL;
     size_t pieceLen = 0;
 
     if (retainJSONFormat) {
-        const char *raw =
+        UTF8 *raw =
             json_object_to_json_string_ext(obj, JSON_C_TO_STRING_NOSLASHESCAPE);
         if (raw != NULL) {
             size_t rawLen = strlen(raw);
@@ -563,12 +563,12 @@ static void appendJsonStringToMessageScratch(struct json_object *obj,
     if (piece == NULL || pieceLen == 0)
         return;
 
-    ULONG curLen = (ULONG)strlen((char *)messageScratch);
+    ULONG curLen = (ULONG)strlen((UTF8 *)messageScratch);
     ensureMessageScratch(curLen + (ULONG)pieceLen + 4);
     if (messageScratch == NULL)
         return;
 
-    strncat((char *)messageScratch, piece,
+    strncat((UTF8 *)messageScratch, piece,
             messageScratchCap - strlen((char *)messageScratch) - 1);
 }
 
@@ -614,8 +614,8 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                     struct json_object *content =
                         json_object_object_get(delta, "content");
                     if (content != NULL) {
-                        const char *s = json_object_get_string(content);
-                        return s != NULL ? (UTF8 *)s : (UTF8 *)"";
+                        UTF8 *s = json_object_get_string(content);
+                        return s != NULL ? s : (UTF8 *)"";
                     }
                 }
 
@@ -624,8 +624,8 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                 struct json_object *textObj =
                     json_object_object_get(choice0, "text");
                 if (textObj != NULL) {
-                    const char *s = json_object_get_string(textObj);
-                    return s != NULL ? (UTF8 *)s : (UTF8 *)"";
+                    UTF8 *s = json_object_get_string(textObj);
+                    return s != NULL ? s : (UTF8 *)"";
                 }
             }
         }
@@ -677,7 +677,6 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
 
         return (UTF8 *)"";
     } else {
-        struct json_object *text = NULL;
         resetMessageScratch();
         if (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES) {
             struct json_object *outputArray =
@@ -691,7 +690,7 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                 struct json_object *typeObj =
                     json_object_object_get(currentOutput, "type");
                 if (typeObj != NULL) {
-                    const char *typeStr = json_object_get_string(typeObj);
+                    UTF8 *typeStr = json_object_get_string(typeObj);
                     if (strcmp(typeStr, "message") == 0) {
                         output = currentOutput;
                         break;
@@ -745,7 +744,7 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                 struct json_object *typeObj =
                     json_object_object_get(block, "type");
                 if (typeObj != NULL) {
-                    const char *typeStr = json_object_get_string(typeObj);
+                    UTF8 *typeStr = json_object_get_string(typeObj);
                     if (strcmp(typeStr, "text") == 0) {
                         struct json_object *t =
                             json_object_object_get(block, "text");
@@ -848,10 +847,9 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                         struct json_object *typeObj =
                             json_object_object_get(part, "type");
                         if (typeObj != NULL) {
-                            const char *typeStr =
-                                json_object_get_string(typeObj);
+                            UTF8 *typeStr = json_object_get_string(typeObj);
                             if (typeStr != NULL &&
-                                strcmp(typeStr, "text") == 0) {
+                                strcmp((char *)typeStr, "text") == 0) {
                                 struct json_object *t =
                                     json_object_object_get(part, "text");
                                 appendJsonStringToMessageScratch(
@@ -904,6 +902,7 @@ void freeConversation(struct Conversation *conversation) {
         FreeVec(conversationNode->content);
         FreeVec(conversationNode);
     }
+    FreeVec(conversation->messages);
     if (conversation->name != NULL)
         FreeVec(conversation->name);
     if (conversation->system != NULL)
@@ -911,6 +910,39 @@ void freeConversation(struct Conversation *conversation) {
     if (conversation->lastResponseId != NULL)
         FreeVec(conversation->lastResponseId);
     FreeVec(conversation);
+}
+
+STRPTR utf8ToLatin1(UTF8 *src) {
+    if (src == NULL)
+        return NULL;
+    ULONG srcLen = strlen(src);
+    STRPTR dest = AllocVec(srcLen + 1, MEMF_ANY | MEMF_CLEAR);
+    if (dest == NULL)
+        return NULL;
+    ULONG si = 0, di = 0;
+    while (si < srcLen) {
+        UBYTE c = (UBYTE)src[si];
+        if (c < 0x80) {
+            dest[di++] = c;
+            si++;
+        } else if ((c & 0xE0) == 0xC0 && si + 1 < srcLen &&
+                   ((UBYTE)src[si + 1] & 0xC0) == 0x80) {
+            UWORD codepoint = ((c & 0x1F) << 6) | (src[si + 1] & 0x3F);
+            dest[di++] = (codepoint <= 0xFF) ? (UBYTE)codepoint : '?';
+            si += 2;
+        } else if ((c & 0xF0) == 0xE0 && si + 2 < srcLen) {
+            dest[di++] = '?';
+            si += 3;
+        } else if ((c & 0xF8) == 0xF0 && si + 3 < srcLen) {
+            dest[di++] = '?';
+            si += 4;
+        } else {
+            dest[di++] = c;
+            si++;
+        }
+    }
+    dest[di] = '\0';
+    return dest;
 }
 
 /**

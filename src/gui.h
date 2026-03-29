@@ -134,6 +134,12 @@ void addTextToConversation(struct Conversation *conversation, UTF8 *text,
 void freeConversation(struct Conversation *conversation);
 
 /**
+ * Convert a UTF-8 string to Latin-1 (ISO 8859-1).
+ * Returns an AllocVec'd buffer -- free with FreeVec().
+ **/
+STRPTR utf8ToLatin1(UTF8 *src);
+
+/**
  * Shutdown the GUI
  **/
 void shutdownGUI();

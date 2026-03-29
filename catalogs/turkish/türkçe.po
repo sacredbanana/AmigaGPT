@@ -1853,3 +1853,8 @@ msgstr "Sohbet isteği çok büyük"
 msgctxt "STRING_ERROR_SSL_READ_FAILED_FORMAT (346//)"
 msgid "SSL read failed: %s"
 msgstr "SSL okuma başarısız oldu: %s"
+
+#: src/MainWindow.c:395
+msgctxt "STRING_ERROR_INVALID_BASE64 (347//)"
+msgid "Invalid base64 image data"
+msgstr "Geçersiz base64 görüntü verisi"

@@ -240,7 +240,7 @@ static void showTestResultTextWithStatus(CONST_STRPTR title, BOOL success,
                  End,
              End,
         End) == NULL) {
-        // clang-format on
+            // clang-format on
             return;
         }
 
@@ -336,7 +336,7 @@ static void showTestImage(CONST_STRPTR title, CONST_STRPTR filePath) {
                  End,
              End,
         End) == NULL) {
-        // clang-format on
+            // clang-format on
             return;
         }
 
@@ -684,8 +684,7 @@ static void loadLockedProfileIntoUI(LONG lockedIndex) {
     }
     if (!settingsIsImageMode && customServerChatSystemString != NULL) {
         STRPTR sys = pendingLockedChatSystem[lockedIndex];
-        set(customServerChatSystemString, MUIA_String_Contents,
-            sys ? sys : "");
+        set(customServerChatSystemString, MUIA_String_Contents, sys ? sys : "");
     }
     if (settingsIsImageMode && customServerImageSizeCycle != NULL) {
         ImageSize defaultSize = IMAGE_SIZE_1024x1024;
@@ -694,9 +693,9 @@ static void loadLockedProfileIntoUI(LONG lockedIndex) {
             lockedIndex == LOCKED_PROFILE_GROK) {
             defaultSize = IMAGE_SIZE_NULL;
         }
-        ImageSize sizeToShow =
-            (lockedIndex == LOCKED_PROFILE_OPENAI) ? pendingImageSize
-                                                   : defaultSize;
+        ImageSize sizeToShow = (lockedIndex == LOCKED_PROFILE_OPENAI)
+                                   ? pendingImageSize
+                                   : defaultSize;
         set(customServerImageSizeCycle, MUIA_Cycle_Active,
             imageSizeToOptionIndex(sizeToShow));
     }
@@ -706,9 +705,9 @@ static void loadLockedProfileIntoUI(LONG lockedIndex) {
             lockedIndex == LOCKED_PROFILE_GROK) {
             defaultFmt = IMAGE_FORMAT_NULL;
         }
-        ImageFormat fmtToShow =
-            (lockedIndex == LOCKED_PROFILE_OPENAI) ? pendingImageFormat
-                                                   : defaultFmt;
+        ImageFormat fmtToShow = (lockedIndex == LOCKED_PROFILE_OPENAI)
+                                    ? pendingImageFormat
+                                    : defaultFmt;
         set(customServerImageFormatCycle, MUIA_Cycle_Active,
             imageFormatToOptionIndex(fmtToShow));
     }
@@ -1042,23 +1041,20 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
         LONG webSearch = 1;
         if (customServerWebSearchCycle != NULL)
             get(customServerWebSearchCycle, MUIA_Cycle_Active, &webSearch);
-        json_object_object_add(
-            profile, "webSearchEnabled",
-            json_object_new_boolean(webSearch == 1));
+        json_object_object_add(profile, "webSearchEnabled",
+                               json_object_new_boolean(webSearch == 1));
 
         LONG shellTool = 0;
         if (customServerShellToolCycle != NULL)
             get(customServerShellToolCycle, MUIA_Cycle_Active, &shellTool);
-        json_object_object_add(
-            profile, "shellToolEnabled",
-            json_object_new_boolean(shellTool == 1));
+        json_object_object_add(profile, "shellToolEnabled",
+                               json_object_new_boolean(shellTool == 1));
 
         STRPTR chatSys = NULL;
         if (customServerChatSystemString != NULL)
             get(customServerChatSystemString, MUIA_String_Contents, &chatSys);
-        json_object_object_add(
-            profile, "chatSystem",
-            json_object_new_string(chatSys ? chatSys : ""));
+        json_object_object_add(profile, "chatSystem",
+                               json_object_new_string(chatSys ? chatSys : ""));
     }
 
     return profile;
@@ -1090,7 +1086,8 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
     if (settingsIsImageMode && customServerImageSizeCycle != NULL)
         get(customServerImageSizeCycle, MUIA_Cycle_Active, &imageSizeActive);
     if (settingsIsImageMode && customServerImageFormatCycle != NULL)
-        get(customServerImageFormatCycle, MUIA_Cycle_Active, &imageFormatActive);
+        get(customServerImageFormatCycle, MUIA_Cycle_Active,
+            &imageFormatActive);
     if (!settingsIsImageMode && customServerStreamingCycle != NULL)
         get(customServerStreamingCycle, MUIA_Cycle_Active, &streamingEnabled);
 
@@ -1134,7 +1131,8 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
 
             STRPTR chatSys = NULL;
             if (customServerChatSystemString != NULL)
-                get(customServerChatSystemString, MUIA_String_Contents, &chatSys);
+                get(customServerChatSystemString, MUIA_String_Contents,
+                    &chatSys);
             if (pendingLockedChatSystem[lockedIndex] != NULL) {
                 FreeVec(pendingLockedChatSystem[lockedIndex]);
                 pendingLockedChatSystem[lockedIndex] = NULL;
@@ -2045,20 +2043,19 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
             }
 
             if (configObj) {
-                ULONG ws =
-                    pendingLockedWebSearch[lockedIndex] ? TRUE : FALSE;
+                ULONG ws = pendingLockedWebSearch[lockedIndex] ? TRUE : FALSE;
                 switch (lockedIndex) {
                 case LOCKED_PROFILE_OPENAI:
-                    set(configObj,
-                        MUIA_AmigaGPTConfig_OpenAiWebSearchEnabled, ws);
+                    set(configObj, MUIA_AmigaGPTConfig_OpenAiWebSearchEnabled,
+                        ws);
                     break;
                 case LOCKED_PROFILE_GEMINI:
-                    set(configObj,
-                        MUIA_AmigaGPTConfig_GeminiWebSearchEnabled, ws);
+                    set(configObj, MUIA_AmigaGPTConfig_GeminiWebSearchEnabled,
+                        ws);
                     break;
                 case LOCKED_PROFILE_GROK:
-                    set(configObj,
-                        MUIA_AmigaGPTConfig_GrokWebSearchEnabled, ws);
+                    set(configObj, MUIA_AmigaGPTConfig_GrokWebSearchEnabled,
+                        ws);
                     break;
                 case LOCKED_PROFILE_ANTHROPIC:
                     set(configObj,
@@ -2070,20 +2067,19 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
             }
 
             if (configObj) {
-                ULONG st =
-                    pendingLockedShellTool[lockedIndex] ? TRUE : FALSE;
+                ULONG st = pendingLockedShellTool[lockedIndex] ? TRUE : FALSE;
                 switch (lockedIndex) {
                 case LOCKED_PROFILE_OPENAI:
-                    set(configObj,
-                        MUIA_AmigaGPTConfig_OpenAiShellToolEnabled, st);
+                    set(configObj, MUIA_AmigaGPTConfig_OpenAiShellToolEnabled,
+                        st);
                     break;
                 case LOCKED_PROFILE_GEMINI:
-                    set(configObj,
-                        MUIA_AmigaGPTConfig_GeminiShellToolEnabled, st);
+                    set(configObj, MUIA_AmigaGPTConfig_GeminiShellToolEnabled,
+                        st);
                     break;
                 case LOCKED_PROFILE_GROK:
-                    set(configObj,
-                        MUIA_AmigaGPTConfig_GrokShellToolEnabled, st);
+                    set(configObj, MUIA_AmigaGPTConfig_GrokShellToolEnabled,
+                        st);
                     break;
                 case LOCKED_PROFILE_ANTHROPIC:
                     set(configObj,
@@ -2193,7 +2189,8 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         /* Persist image size selection (None = omit size field in request) */
         if (customServerImageSizeCycle != NULL) {
             LONG imageSizeActive = 0;
-            get(customServerImageSizeCycle, MUIA_Cycle_Active, &imageSizeActive);
+            get(customServerImageSizeCycle, MUIA_Cycle_Active,
+                &imageSizeActive);
             pendingImageSize = optionIndexToImageSize(imageSizeActive);
         }
         if (customServerImageFormatCycle != NULL) {
@@ -2347,7 +2344,8 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterTestButtonClickedFunc, void) {
     }
     if (customServerImageFormatCycle != NULL) {
         LONG imageFormatActive = 0;
-        get(customServerImageFormatCycle, MUIA_Cycle_Active, &imageFormatActive);
+        get(customServerImageFormatCycle, MUIA_Cycle_Active,
+            &imageFormatActive);
         imageFormat = optionIndexToImageFormat(imageFormatActive);
     }
 
@@ -2380,9 +2378,11 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterTestButtonClickedFunc, void) {
     }
 
     if (b64 != NULL && strlen(b64) > 0) {
-        LONG dataLen = 0;
-        UBYTE *decoded = decodeBase64((UBYTE *)b64, &dataLen);
-        if (decoded != NULL && dataLen > 0) {
+        UTF8 *decoded = CodesetsDecodeB64(
+            CSA_B64SourceString, (Tag)b64, CSA_B64SourceLen, (Tag)strlen(b64),
+            CSA_B64DestPtr, (Tag)&decoded, TAG_DONE);
+        LONG dataLen = strlen(decoded);
+        if (decoded != NULL) {
             static ULONG testCounter = 0;
             UBYTE outPath[128];
             snprintf(outPath, sizeof(outPath),
@@ -2412,7 +2412,7 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterTestButtonClickedFunc, void) {
                 jsonStr);
         }
         if (decoded != NULL)
-            FreeVec(decoded);
+            CodesetsFreeA(decoded, NULL);
     } else {
         updateStatusBar(STRING_ERROR, redPen);
         CONST_STRPTR jsonStr =
@@ -2724,7 +2724,7 @@ LONG createCustomServerSettingsRequesterWindow() {
             End, /* End right panel VGroup */
         End, /* End outer HGroup */
     End) == NULL) {
-    // clang-format on
+        // clang-format on
         displayError(STRING_ERROR_CUSTOM_PROVIDER_SETTINGS);
         return RETURN_ERROR;
     }
@@ -2737,12 +2737,24 @@ LONG createCustomServerSettingsRequesterWindow() {
     DoMethod(customServerSettingsRequesterCancelButton, MUIM_Notify,
              MUIA_Pressed, FALSE, MUIV_Notify_Window, 3, MUIM_Set,
              MUIA_Window_Open, FALSE);
-    DoMethod(customServerSettingsRequesterWindowObject, MUIM_Notify, MUIA_Window_Open, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &ProfileSelectedHook);
-    DoMethod(customServerSettingsRequesterWindowObject, MUIM_Notify, MUIA_Window_Open, TRUE, MUIV_Notify_Application, 2, MUIM_CallHook, &RefreshUrlPreviewOnlyHook);
-    DoMethod(customServerHostString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
-    DoMethod(customServerPortString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
-    DoMethod(customServerUsesSSLCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
-    DoMethod(customServerAuthorizationTypeCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &AuthTypeChangedHook);
+    DoMethod(customServerSettingsRequesterWindowObject, MUIM_Notify,
+             MUIA_Window_Open, MUIV_EveryTime, MUIV_Notify_Self, 2,
+             MUIM_CallHook, &ProfileSelectedHook);
+    DoMethod(customServerSettingsRequesterWindowObject, MUIM_Notify,
+             MUIA_Window_Open, TRUE, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &RefreshUrlPreviewOnlyHook);
+    DoMethod(customServerHostString, MUIM_Notify, MUIA_String_Contents,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &SettingsChangedHook);
+    DoMethod(customServerPortString, MUIM_Notify, MUIA_String_Contents,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &SettingsChangedHook);
+    DoMethod(customServerUsesSSLCycle, MUIM_Notify, MUIA_Cycle_Active,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &SettingsChangedHook);
+    DoMethod(customServerAuthorizationTypeCycle, MUIM_Notify, MUIA_Cycle_Active,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &AuthTypeChangedHook);
     DoMethod(customServerStreamingCycle, MUIM_Notify, MUIA_Cycle_Active,
              MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
              &SettingsChangedHook);
@@ -2755,9 +2767,15 @@ LONG createCustomServerSettingsRequesterWindow() {
     DoMethod(customServerChatSystemString, MUIM_Notify, MUIA_String_Contents,
              MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
              &SettingsChangedHook);
-    DoMethod(customServerApiKeyString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
-    DoMethod(customServerApiEndpointCycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
-    DoMethod(customServerApiEndpointUrlString, MUIM_Notify, MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &SettingsChangedHook);
+    DoMethod(customServerApiKeyString, MUIM_Notify, MUIA_String_Contents,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &SettingsChangedHook);
+    DoMethod(customServerApiEndpointCycle, MUIM_Notify, MUIA_Cycle_Active,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &SettingsChangedHook);
+    DoMethod(customServerApiEndpointUrlString, MUIM_Notify,
+             MUIA_String_Contents, MUIV_EveryTime, MUIV_Notify_Self, 2,
+             MUIM_CallHook, &SettingsChangedHook);
     DoMethod(customServerChatModelString, MUIM_Notify, MUIA_String_Contents,
              MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
              &SettingsChangedHook);
