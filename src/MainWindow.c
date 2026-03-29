@@ -133,13 +133,6 @@ HOOKPROTONHNO(DestructImageLI_TextFunc, void,
               struct NList_DestructMessage *ndm) {
     if (ndm->entry) {
         struct GeneratedImage *entry = (struct GeneratedImage *)ndm->entry;
-        if (entry->filePath != NULL) {
-#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-            DeleteFile(entry->filePath);
-#else
-            Delete(entry->filePath);
-#endif
-        }
         FreeVec(entry->name);
         FreeVec(entry->filePath);
         FreeVec(entry->prompt);
@@ -270,6 +263,16 @@ HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
 MakeHook(NewImageButtonClickedHook, NewImageButtonClickedFunc);
 
 HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
+    struct GeneratedImage *entry;
+    DoMethod(imageListObject, MUIM_NList_GetEntry, MUIV_NList_GetEntry_Active,
+             &entry);
+    if (entry != NULL && entry->filePath != NULL) {
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+        DeleteFile(entry->filePath);
+#else
+        Delete(entry->filePath);
+#endif
+    }
     DoMethod(imageListObject, MUIM_NList_Remove, MUIV_NList_Remove_Active);
     DoMethod(imageListObject, MUIM_NList_Select, MUIV_NList_Select_All,
              MUIV_NList_Select_Off, NULL);
