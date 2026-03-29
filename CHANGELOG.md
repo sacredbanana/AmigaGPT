@@ -27,6 +27,7 @@
 - The returned chat response string in ARexx will no longer contain unnecessary characters such as escape backslashes and escaped markdown characters
 - Removed the maximum size limit for conversations. Chat max length is now only determined by available memory and the model's context window
 - Greatly improved performance and memory usage when sending chat messages in the Responses API
+- Fix bug where the conversation titles will not display international characters and sometimes cause a crash
 - Fix bug where the app would get stuck after sending a few messages to Gemini
 - Fix bug where say.rexx did not ask you what you want to say
 - Fix bug where the first paragraph in every response is always black even if you have custom colours set

@@ -564,9 +564,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             }
         }
         STRPTR responseString = combined;
-        generatedImage->name =
-            AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
-        strncpy(generatedImage->name, responseString, strlen(responseString));
+        generatedImage->name = utf8ToSystem(responseString);
         updateStatusBar(STRING_READY, 5);
         ri = 0;
         while ((r = responses[ri++]) != NULL) {
@@ -1933,10 +1931,7 @@ static void sendChatMessage() {
                 }
                 UTF8 *responseString = combined;
                 if (currentConversation->name == NULL) {
-                    currentConversation->name =
-                        AllocVec(strlen(responseString) + 1, MEMF_CLEAR);
-                    strncpy(currentConversation->name, responseString,
-                            strlen(responseString));
+                    currentConversation->name = utf8ToSystem(responseString);
                 }
                 DoMethod(conversationListObject, MUIM_NList_InsertSingle,
                          currentConversation, MUIV_NList_Insert_Top);
@@ -1996,13 +1991,12 @@ void displayConversation(struct Conversation *conversation) {
         if ((strlen(chatOutputTextEditorContents) +
              strlen(conversationNode->content) + 256) >
             chatOutputTextEditorContentsCapacity) {
-            ULONG need =
-                strlen(chatOutputTextEditorContents) +
-                strlen(conversationNode->content) * 3 + 1024;
+            ULONG need = strlen(chatOutputTextEditorContents) +
+                         strlen(conversationNode->content) * 3 + 1024;
             if (!ensureChatOutputBufferCapacity(need)) {
-            displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
-            set(sendMessageButton, MUIA_Disabled, TRUE);
-            return;
+                displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
+                set(sendMessageButton, MUIA_Disabled, TRUE);
+                return;
             }
         }
         if (strcmp(conversationNode->role, "user") == 0) {
@@ -2116,9 +2110,8 @@ copyConversation(struct Conversation *conversation) {
     }
     if (conversation->lastResponseId != NULL &&
         strlen(conversation->lastResponseId) > 0) {
-        copy->lastResponseId =
-            AllocVec(strlen(conversation->lastResponseId) + 1,
-                     MEMF_ANY | MEMF_CLEAR);
+        copy->lastResponseId = AllocVec(
+            strlen(conversation->lastResponseId) + 1, MEMF_ANY | MEMF_CLEAR);
         if (copy->lastResponseId != NULL) {
             strncpy(copy->lastResponseId, conversation->lastResponseId,
                     strlen(conversation->lastResponseId));
@@ -2192,9 +2185,14 @@ static LONG saveConversations() {
             json_object_object_add(
                 messageJsonObject, "role",
                 json_object_new_string(conversationNode->role));
+            STRPTR sysContent = utf8ToSystem(conversationNode->content);
             json_object_object_add(
                 messageJsonObject, "content",
-                json_object_new_string(conversationNode->content));
+                json_object_new_string(
+                    sysContent != NULL ? sysContent
+                                       : (STRPTR)conversationNode->content));
+            if (sysContent != NULL)
+                FreeVec(sysContent);
             json_object_array_add(messagesJsonArray, messageJsonObject);
         }
         json_object_object_add(conversationJsonObject, "messages",
@@ -2415,7 +2413,8 @@ static LONG loadConversations() {
         struct Conversation *conversation = newConversation();
         conversation->name =
             AllocVec(strlen(conversationName) + 1, MEMF_ANY | MEMF_CLEAR);
-        strncpy(conversation->name, conversationName, strlen(conversationName));
+        if (conversation->name != NULL)
+            strcpy(conversation->name, conversationName);
 
         struct json_object *lastResponseIdJsonObject;
         if (json_object_object_get_ex(conversationJsonObject, "lastResponseId",
@@ -2424,8 +2423,7 @@ static LONG loadConversations() {
                 (STRPTR)json_object_get_string(lastResponseIdJsonObject);
             if (lastResponseId != NULL && strlen(lastResponseId) > 0) {
                 conversation->lastResponseId =
-                    AllocVec(strlen(lastResponseId) + 1,
-                             MEMF_ANY | MEMF_CLEAR);
+                    AllocVec(strlen(lastResponseId) + 1, MEMF_ANY | MEMF_CLEAR);
                 if (conversation->lastResponseId != NULL) {
                     strncpy(conversation->lastResponseId, lastResponseId,
                             strlen(lastResponseId));
@@ -2458,8 +2456,14 @@ static LONG loadConversations() {
                 json_object_put(conversationsJsonArray);
                 return RETURN_ERROR;
             }
-            UTF8 *content = json_object_get_string(contentJsonObject);
-            addTextToConversation(conversation, content, role);
+            STRPTR rawContent = json_object_get_string(contentJsonObject);
+            UTF8 *contentUTF8 = systemToUtf8(rawContent);
+            addTextToConversation(conversation,
+                                  contentUTF8 != NULL ? contentUTF8
+                                                      : (UTF8 *)rawContent,
+                                  role);
+            if (contentUTF8 != NULL)
+                FreeVec(contentUTF8);
         }
         DoMethod(conversationListObject, MUIM_NList_InsertSingle, conversation,
                  MUIV_NList_Insert_Top);
@@ -2594,7 +2598,8 @@ static LONG loadImages() {
         struct GeneratedImage *generatedImage =
             AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
         generatedImage->name = AllocVec(strlen(imageName) + 1, MEMF_ANY);
-        strcpy(generatedImage->name, imageName);
+        if (generatedImage->name != NULL)
+            strcpy(generatedImage->name, imageName);
         generatedImage->filePath =
             AllocVec(strlen(imageFilePath) + 1, MEMF_ANY);
         strcpy(generatedImage->filePath, imageFilePath);

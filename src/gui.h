@@ -134,6 +134,24 @@ void addTextToConversation(struct Conversation *conversation, UTF8 *text,
 void freeConversation(struct Conversation *conversation);
 
 /**
+ * Convert a UTF-8 string to the system codeset.
+ * Returns an AllocVec'd copy (free with FreeVec).
+ * Falls back to a plain copy if conversion fails.
+ * @param utf8 the UTF-8 string to convert
+ * @return the converted string, or NULL on allocation failure
+ **/
+STRPTR utf8ToSystem(UTF8 *utf8);
+
+/**
+ * Convert a system-codeset string to UTF-8.
+ * Returns an AllocVec'd copy (free with FreeVec).
+ * Falls back to a plain copy if conversion fails.
+ * @param sys the system-encoded string to convert
+ * @return the UTF-8 string, or NULL on allocation failure
+ **/
+UTF8 *systemToUtf8(CONST_STRPTR sys);
+
+/**
  * Shutdown the GUI
  **/
 void shutdownGUI();

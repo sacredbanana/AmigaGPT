@@ -52,9 +52,14 @@ static LONG saveDaemonConversation(void) {
         struct json_object *messageJsonObject = json_object_new_object();
         json_object_object_add(messageJsonObject, "role",
                                json_object_new_string(conversationNode->role));
+        STRPTR sysContent = utf8ToSystem(conversationNode->content);
         json_object_object_add(
             messageJsonObject, "content",
-            json_object_new_string(conversationNode->content));
+            json_object_new_string(
+                sysContent != NULL ? sysContent
+                                   : (STRPTR)conversationNode->content));
+        if (sysContent != NULL)
+            FreeVec(sysContent);
         json_object_array_add(messagesJsonArray, messageJsonObject);
     }
     json_object_object_add(conversationJsonObject, "messages",
@@ -165,9 +170,15 @@ static struct Conversation *loadDaemonConversation(void) {
             json_object_put(conversationJsonObject);
             return NULL;
         }
-        UTF8 *content = (UTF8 *)json_object_get_string(contentJsonObject);
-
-        addTextToConversation(conversation, content, role);
+        STRPTR rawContent =
+            (STRPTR)json_object_get_string(contentJsonObject);
+        UTF8 *contentUTF8 = systemToUtf8(rawContent);
+        addTextToConversation(conversation,
+                              contentUTF8 != NULL ? contentUTF8
+                                                  : (UTF8 *)rawContent,
+                              role);
+        if (contentUTF8 != NULL)
+            FreeVec(contentUTF8);
     }
 
     json_object_put(conversationJsonObject);

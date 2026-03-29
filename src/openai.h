@@ -40,15 +40,15 @@ struct Conversation {
     /**
      * The name of the conversation
      **/
-    UTF8 *name;
+    STRPTR name;
     /**
      * The system of the conversation
      **/
-    UTF8 *system;
+    STRPTR system;
     /**
      * Last response ID returned by the Responses API for stateful follow-ups
      **/
-    UTF8 *lastResponseId;
+    STRPTR lastResponseId;
 };
 
 /**
@@ -208,7 +208,7 @@ extern const ImageSize IMAGE_SIZES_GPT_IMAGE_1[];
  * @see ImageModel
  **/
 struct GeneratedImage {
-    STRPTR name;
+    UTF8 *name;
     STRPTR filePath;
     STRPTR prompt;
     ImageModel imageModel;

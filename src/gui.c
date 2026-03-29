@@ -209,7 +209,7 @@ LONG initVideo() {
               End,
           End,
     End)) {
-    // clang-format on
+        // clang-format on
         displayError(STRING_ERROR_APP_CREATE);
         return RETURN_ERROR;
     }
@@ -911,6 +911,35 @@ void freeConversation(struct Conversation *conversation) {
     if (conversation->lastResponseId != NULL)
         FreeVec(conversation->lastResponseId);
     FreeVec(conversation);
+}
+
+STRPTR utf8ToSystem(UTF8 *utf8) {
+    if (utf8 == NULL)
+        return NULL;
+    STRPTR converted = CodesetsUTF8ToStr(
+        CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)utf8,
+        CSA_MapForeignChars, TRUE, TAG_DONE);
+    STRPTR src = converted != NULL ? converted : (STRPTR)utf8;
+    STRPTR result = AllocVec(strlen(src) + 1, MEMF_ANY);
+    if (result != NULL)
+        strcpy(result, src);
+    if (converted != NULL)
+        CodesetsFreeA(converted, NULL);
+    return result;
+}
+
+UTF8 *systemToUtf8(CONST_STRPTR sys) {
+    if (sys == NULL)
+        return NULL;
+    UTF8 *converted = CodesetsUTF8Create(
+        CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source, (Tag)sys, TAG_DONE);
+    STRPTR src = converted != NULL ? (STRPTR)converted : (STRPTR)sys;
+    UTF8 *result = AllocVec(strlen(src) + 1, MEMF_ANY);
+    if (result != NULL)
+        strcpy(result, src);
+    if (converted != NULL)
+        CodesetsFreeA(converted, NULL);
+    return result;
 }
 
 /**
