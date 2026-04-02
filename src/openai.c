@@ -466,6 +466,15 @@ static UTF8 *extractResponseIdFromPayload(struct json_object *response) {
     return NULL;
 }
 
+void conversationSyncLastResponseIdFromPayload(
+    struct Conversation *conversation, struct json_object *payload) {
+    if (conversation == NULL || payload == NULL) {
+        return;
+    }
+    STRPTR id = extractResponseIdFromPayload(payload);
+    setConversationLastResponseId(conversation, (UTF8 *)id);
+}
+
 static BOOL responseIndicatesMissingPreviousId(struct json_object *response) {
     if (response == NULL)
         return FALSE;

@@ -1244,6 +1244,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             return RETURN_OK;
         }
 
+        conversationSyncLastResponseIdFromPayload(conversation, toolResponse);
+
         /* Check if there's another tool call in this response -
          * postToolResultToOpenAI will have set pendingToolCall if so */
         if (hasPendingToolCall()) {

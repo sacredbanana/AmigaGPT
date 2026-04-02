@@ -1883,6 +1883,12 @@ static void sendChatMessage() {
                 break; /* Stop on error */
             }
 
+            /* Each tool result creates a new response id; keep it in sync so
+             * stateful requests (e.g. auto-generated conversation title) chain
+             * from the latest response, not the pre-tool id. */
+            conversationSyncLastResponseIdFromPayload(currentConversation,
+                                                      toolResponse);
+
             /* Check if there's another tool call - if so, loop will continue.
              * postToolResultToOpenAI will have set pendingToolCall if so */
             if (hasPendingToolCall()) {

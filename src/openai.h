@@ -52,6 +52,14 @@ struct Conversation {
 };
 
 /**
+ * Sets conversation->lastResponseId from a Responses API JSON payload (e.g.
+ * after submitting function_call_output). Keeps stateful follow-ups aligned
+ * with the latest response in the chain.
+ **/
+void conversationSyncLastResponseIdFromPayload(struct Conversation *conversation,
+                                               struct json_object *payload);
+
+/**
  * Prepopulated chat models for each built-in provider
  **/
 extern CONST_STRPTR OPENAI_CHAT_MODELS[];
