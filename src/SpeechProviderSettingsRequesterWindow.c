@@ -126,7 +126,8 @@ static void updateGroupVisibilityForSystem(SpeechSystem sys,
 
 static void beginRightPanelUpdate(void) {
     if (speechProviderSettingsRequesterWindowObject != NULL)
-        set(speechProviderSettingsRequesterWindowObject, MUIA_Window_Sleep, TRUE);
+        set(speechProviderSettingsRequesterWindowObject, MUIA_Window_Sleep,
+            TRUE);
     if (rightVirtgroup != NULL)
         DoMethod(rightVirtgroup, MUIM_Group_InitChange);
 }
@@ -135,7 +136,8 @@ static void endRightPanelUpdate(void) {
     if (rightVirtgroup != NULL)
         DoMethod(rightVirtgroup, MUIM_Group_ExitChange);
     if (speechProviderSettingsRequesterWindowObject != NULL)
-        set(speechProviderSettingsRequesterWindowObject, MUIA_Window_Sleep, FALSE);
+        set(speechProviderSettingsRequesterWindowObject, MUIA_Window_Sleep,
+            FALSE);
 }
 
 static LONG getBuiltinSpeechProviderCount(void) {
@@ -665,8 +667,8 @@ static void populateProfileList(void) {
 }
 
 static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
-    /* Enable/disable the “custom common” controls. Provider groups are
-     * shown/hidden separately. */
+    /* Enable/disable the “custom common” controls. Provider groups
+     * are shown/hidden separately. */
     if (speechProfileNameString != NULL)
         set(speechProfileNameString, MUIA_Disabled, !isCustomOrNew);
     if (speechSystemCycle != NULL)
@@ -1705,7 +1707,6 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
     // clang-format off
     speechProviderSettingsRequesterWindowObject = WindowObject,
         MUIA_Window_Title, STRING_SPEECH_PROVIDER_SETTINGS,
-        MUIA_Window_ID, MAKE_ID('S', 'P', 'R', 'V'),
         MUIA_Window_CloseGadget, TRUE,
         /* Keep window size stable when switching profiles (ShowMe toggles). */
         MUIA_Window_AutoAdjust, FALSE,
@@ -1715,7 +1716,7 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
         MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
         MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
         /* Start at a reasonable height; user can resize vertically. */
-        MUIA_Window_Height, 340,
+        MUIA_Window_Height, 500,
         WindowContents, HGroup,
             /* Left panel - Profiles */
             Child, VGroup,
