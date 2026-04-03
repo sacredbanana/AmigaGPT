@@ -1715,8 +1715,8 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
         MUIA_Window_DragBar, TRUE,
         MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
         MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
-        /* Start at a reasonable height; user can resize vertically. */
-        MUIA_Window_Height, 500,
+        MUIA_Window_Width, MUIV_Window_Width_Screen(80),
+        MUIA_Window_Height, MUIV_Window_Height_Screen(80),
         WindowContents, HGroup,
             /* Left panel - Profiles */
             Child, VGroup,
