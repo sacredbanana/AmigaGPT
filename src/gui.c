@@ -542,22 +542,27 @@ static void appendJsonStringToMessageScratch(struct json_object *obj,
     size_t pieceLen = 0;
 
     if (retainJSONFormat) {
-        UTF8 *raw =
-            json_object_to_json_string_ext(obj, JSON_C_TO_STRING_NOSLASHESCAPE);
-        if (raw != NULL) {
-            size_t rawLen = strlen(raw);
-            if (rawLen >= 2 && raw[0] == '"' && raw[rawLen - 1] == '"') {
-                piece = raw + 1;
-                pieceLen = rawLen - 2;
-            } else {
+        /* When the source is a JSON string, preserve the textual content
+         * without wrapping quotes. Using json_object_get_string() here avoids
+         * leaving a stray trailing quote in ARexx responses while still
+         * keeping any JSON-style escaping already present in the string data.
+         */
+        if (json_object_is_type(obj, json_type_string)) {
+            piece = (UTF8 *)json_object_get_string(obj);
+            if (piece != NULL)
+                pieceLen = strlen((char *)piece);
+        } else {
+            UTF8 *raw = (UTF8 *)json_object_to_json_string_ext(
+                obj, JSON_C_TO_STRING_NOSLASHESCAPE);
+            if (raw != NULL) {
                 piece = raw;
-                pieceLen = rawLen;
+                pieceLen = strlen((char *)raw);
             }
         }
     } else {
-        piece = json_object_get_string(obj);
+        piece = (UTF8 *)json_object_get_string(obj);
         if (piece != NULL)
-            pieceLen = strlen(piece);
+            pieceLen = strlen((char *)piece);
     }
 
     if (piece == NULL || pieceLen == 0)

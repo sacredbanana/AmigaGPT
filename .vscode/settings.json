@@ -144,4 +144,9 @@
     "[m68k]": {
         "editor.rulers": []
     },
+    "[rexx]": {
+        "editor.rulers": [
+            80
+        ]
+    },
 }
