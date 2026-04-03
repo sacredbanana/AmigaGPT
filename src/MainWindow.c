@@ -25,6 +25,7 @@
 
 #define CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH (1024 * 512)
 #define CHAT_OUTPUT_WIDGET_SAFE_LIMIT (60 * 1024)
+#define CONVERSATION_TITLE_FALLBACK_MAX 96
 
 typedef enum { STYLE_BOLD, STYLE_ITALIC, STYLE_UNDERLINE } StyleType;
 
@@ -84,6 +85,64 @@ static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
                          StyleType *foundStyle);
 static BOOL ensureChatOutputBufferCapacity(ULONG required);
 static void addMainWindowActions();
+
+/**
+ * Title for a new conversation: model text if non-empty, otherwise a truncated
+ * first user line, otherwise the localized "New chat" string.
+ **/
+static STRPTR allocNewConversationTitle(struct Conversation *conv,
+                                        const UTF8 *apiText) {
+    if (apiText != NULL && strlen((const char *)apiText) > 0) {
+        ULONG n = (ULONG)strlen((const char *)apiText) + 1;
+        STRPTR out = AllocVec(n, MEMF_ANY | MEMF_CLEAR);
+        if (out != NULL) {
+            strncpy(out, (const char *)apiText, n - 1);
+            out[n - 1] = '\0';
+        }
+        return out;
+    }
+    if (conv != NULL && conv->messages != NULL) {
+        struct MinNode *node = conv->messages->mlh_Head;
+        while (node->mln_Succ != NULL) {
+            struct ConversationNode *m = (struct ConversationNode *)node;
+            if (strcmp((const char *)m->role, "user") == 0 &&
+                m->content != NULL &&
+                strlen((const char *)m->content) > 0) {
+                STRPTR out = AllocVec(CONVERSATION_TITLE_FALLBACK_MAX + 1,
+                                      MEMF_ANY | MEMF_CLEAR);
+                if (out == NULL)
+                    return NULL;
+                ULONG pos = 0;
+                const UTF8 *s = m->content;
+                for (; *s != '\0' && pos < CONVERSATION_TITLE_FALLBACK_MAX;
+                     s++) {
+                    UBYTE c = (UBYTE)*s;
+                    if (c == '\n' || c == '\r')
+                        out[pos++] = ' ';
+                    else
+                        out[pos++] = (char)c;
+                }
+                while (pos > 0 && out[pos - 1] == ' ')
+                    pos--;
+                out[pos] = '\0';
+                if (pos > 0)
+                    return out;
+                FreeVec(out);
+            }
+            node = node->mln_Succ;
+        }
+    }
+    {
+        const char *d = STRING_NEW_CHAT;
+        ULONG n = (ULONG)strlen(d) + 1;
+        STRPTR out = AllocVec(n, MEMF_ANY | MEMF_CLEAR);
+        if (out != NULL) {
+            strncpy(out, d, n - 1);
+            out[n - 1] = '\0';
+        }
+        return out;
+    }
+}
 
 HOOKPROTONHNO(ConstructConversationLI_TextFunc, APTR,
               struct NList_ConstructMessage *ncm) {
@@ -1976,14 +2035,18 @@ static void sendChatMessage() {
                                   "quotes or prefix the response with anything",
                                   "user");
             setConversationSystem(currentConversation, NULL);
+            /* Do not send web search / server tools on the title request: xAI
+             * injects search tools when web search is on, and the model may
+             * return only tool calls with no assistant message text ? leaving
+             * the title empty and the row blank in the list. */
             responses = postChatMessageToOpenAI(
                 currentConversation, chatSettings.host, chatSettings.port,
                 chatSettings.useSSL, chatSettings.model, chatSettings.apiKey,
                 FALSE, chatSettings.useProxy, chatSettings.proxyHost,
                 chatSettings.proxyPort, chatSettings.proxyUsesSSL,
                 chatSettings.proxyRequiresAuth, chatSettings.proxyUsername,
-                chatSettings.proxyPassword, chatSettings.webSearchEnabled,
-                FALSE, chatSettings.apiEndpoint, chatSettings.apiEndpointUrl,
+                chatSettings.proxyPassword, FALSE, FALSE,
+                chatSettings.apiEndpoint, chatSettings.apiEndpointUrl,
                 chatSettings.authorizationType, chatSettings.customHeaders);
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
@@ -2023,11 +2086,8 @@ static void sendChatMessage() {
                 }
                 UTF8 *responseString = combined;
                 if (currentConversation->name == NULL) {
-                    currentConversation->name =
-                        AllocVec(strlen(responseString) + 1, MEMF_CLEAR);
-                    if (currentConversation->name != NULL)
-                        strncpy(currentConversation->name, responseString,
-                                strlen(responseString));
+                    currentConversation->name = allocNewConversationTitle(
+                        currentConversation, responseString);
                 }
                 DoMethod(conversationListObject, MUIM_NList_InsertSingle,
                          currentConversation, MUIV_NList_Insert_Top);
