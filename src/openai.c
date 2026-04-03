@@ -2847,7 +2847,7 @@ struct json_object *postImageCreationRequestToOpenAI(
             obj, "prompt",
             json_object_new_string(promptUTF8 ? promptUTF8 : (UTF8 *)""));
         /* Provider differences:
-         * - xAI image generation docs: size/quality/style not supported.
+         * - xAI/Grok: no OpenAI "size" field; use aspect_ratio (see below).
          * - Gemini OpenAI-compat examples omit size; keep request minimal.
          * - OpenAI gpt-image-* supports size/output_format. */
         BOOL isGptImage =
@@ -2855,11 +2855,36 @@ struct json_object *postImageCreationRequestToOpenAI(
         BOOL isGrok =
             (modelName != NULL && strncmp(modelName, "grok-", 5) == 0);
         if (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS) {
-            if (imageSize != IMAGE_SIZE_NULL &&
-                IMAGE_SIZE_NAMES[imageSize] != NULL)
+            /* xAI rejects OpenAI-style "size" (docs: not supported). Use their
+             * aspect_ratio when the model is Grok Imagine. */
+            if (isGrok) {
+                if (imageSize != IMAGE_SIZE_NULL) {
+                    CONST_STRPTR aspectRatio = NULL;
+                    switch (imageSize) {
+                    case IMAGE_SIZE_1792x1024:
+                    case IMAGE_SIZE_1536x1024:
+                        aspectRatio = "16:9";
+                        break;
+                    case IMAGE_SIZE_1024x1792:
+                    case IMAGE_SIZE_1024x1536:
+                        aspectRatio = "9:16";
+                        break;
+                    case IMAGE_SIZE_AUTO:
+                        aspectRatio = "auto";
+                        break;
+                    default:
+                        aspectRatio = "1:1";
+                        break;
+                    }
+                    json_object_object_add(obj, "aspect_ratio",
+                                           json_object_new_string(aspectRatio));
+                }
+            } else if (imageSize != IMAGE_SIZE_NULL &&
+                       IMAGE_SIZE_NAMES[imageSize] != NULL) {
                 json_object_object_add(
                     obj, "size",
                     json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
+            }
         }
 
         if (isGptImage &&

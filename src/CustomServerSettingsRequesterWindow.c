@@ -2360,11 +2360,23 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterTestButtonClickedFunc, void) {
     }
 
     if (b64 != NULL && strlen(b64) > 0) {
-        UTF8 *decoded = CodesetsDecodeB64(
-            CSA_B64SourceString, (Tag)b64, CSA_B64SourceLen, (Tag)strlen(b64),
-            CSA_B64DestPtr, (Tag)&decoded, TAG_DONE);
-        LONG dataLen = strlen(decoded);
+        /* Match MainWindow image path: do not assign CodesetsDecodeB64's return
+         * value into the same pointer passed as CSA_B64DestPtr ? on some
+         * Codesets versions the result is only written via DestPtr and the
+         * return value is NULL, which would clobber the decoded buffer pointer.
+         * Image bytes may contain NULs; length must come from base64, not
+         * strlen(decoded). */
+        STRPTR decoded = NULL;
+        ULONG b64Len = strlen(b64);
+        CodesetsDecodeB64(CSA_B64SourceString, (Tag)b64, CSA_B64SourceLen,
+                          (Tag)b64Len, CSA_B64DestPtr, (Tag)&decoded, TAG_DONE);
         if (decoded != NULL) {
+            LONG dataLen = (LONG)((b64Len * 3) / 4);
+            ULONG padScan = b64Len;
+            while (padScan > 0 && b64[padScan - 1] == '=') {
+                dataLen--;
+                padScan--;
+            }
             static ULONG testCounter = 0;
             UBYTE outPath[128];
             snprintf(outPath, sizeof(outPath),
@@ -2384,6 +2396,7 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterTestButtonClickedFunc, void) {
                     STRING_TEST_DETAIL_IMAGE_RECEIVED_COULD_NOT_SAVE_SHOWING_JSON,
                     jsonStr);
             }
+            CodesetsFreeA(decoded, NULL);
         } else {
             updateStatusBar(STRING_ERROR, redPen);
             CONST_STRPTR jsonStr =
@@ -2393,8 +2406,6 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterTestButtonClickedFunc, void) {
                 STRING_TEST_DETAIL_IMAGE_DATA_DECODE_FAILED_SHOWING_JSON,
                 jsonStr);
         }
-        if (decoded != NULL)
-            CodesetsFreeA(decoded, NULL);
     } else {
         updateStatusBar(STRING_ERROR, redPen);
         CONST_STRPTR jsonStr =

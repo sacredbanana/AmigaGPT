@@ -1500,14 +1500,20 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     STRPTR b64 =
         json_object_get_string(json_object_object_get(dataObject, "b64_json"));
 
-    UTF8 *imageData = CodesetsDecodeB64(
-        CSA_B64SourceString, (Tag)b64, CSA_B64SourceLen, (Tag)strlen(b64),
-        CSA_B64DestPtr, (Tag)&imageData, TAG_DONE);
+    STRPTR imageData = NULL;
+    ULONG b64Len = strlen(b64);
+    CodesetsDecodeB64(CSA_B64SourceString, (Tag)b64, CSA_B64SourceLen,
+                      (Tag)b64Len, CSA_B64DestPtr, (Tag)&imageData, TAG_DONE);
     if (imageData == NULL) {
         updateStatusBar(STRING_ERROR, redPen);
         return RETURN_ERROR;
     }
-    LONG data_len = strlen(imageData);
+    LONG data_len = (LONG)((b64Len * 3) / 4);
+    ULONG padScan = b64Len;
+    while (padScan > 0 && b64[padScan - 1] == '=') {
+        data_len--;
+        padScan--;
+    }
 
     if (destination == NULL) {
         // Generate unique ID for the image
