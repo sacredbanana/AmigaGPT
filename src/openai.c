@@ -3801,6 +3801,23 @@ static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength) {
 }
 
 /**
+ * Parse the last Content-Length value from a NUL-terminated HTTP header block.
+ */
+static LONG httpParseContentLengthNullTerminated(STRPTR hdr) {
+    LONG v = -1;
+    for (STRPTR p = hdr; *p; p++) {
+        if (strncmp(p, "Content-Length:", 15) == 0 ||
+            strncmp(p, "content-length:", 15) == 0) {
+            STRPTR q = p + 15;
+            while (*q == ' ' || *q == '\t')
+                q++;
+            v = (LONG)strtoul(q, NULL, 10);
+        }
+    }
+    return v;
+}
+
+/**
  * Drain and print the entire OpenSSL error queue with context.
  * Uses ERR_error_string_n/ERR_lib_error_string/ERR_reason_error_string when
  * available.
@@ -4005,14 +4022,215 @@ APTR postTextToSpeechRequestToOpenAI(
     BOOL isErrorResponse = FALSE;
 
     if (ssl_err > 0) {
+        BOOL useSeed = FALSE;
+        ULONG seedLen = 0;
+
+        /* Accumulate response headers (may span multiple TLS records). */
+        UBYTE headerAccum[8192];
+        ULONG ha = 0;
+        headerAccum[0] = '\0';
+        while (ha < sizeof(headerAccum) - 1) {
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+            ERR_clear_error();
+            LONG hbr =
+                useSSL ? SSL_read(ssl, headerAccum + ha,
+                                  (int)(sizeof(headerAccum) - 1 - ha))
+                       : recv(sock, headerAccum + ha,
+                              (int)(sizeof(headerAccum) - 1 - ha), 0);
+            if (hbr > 0) {
+                ha += (ULONG)hbr;
+                headerAccum[ha] = '\0';
+                if (strstr((STRPTR)headerAccum, "\r\n\r\n") != NULL)
+                    break;
+                continue;
+            }
+            if (useSSL && hbr <= 0) {
+                int he = SSL_get_error(ssl, (int)hbr);
+                if (he == SSL_ERROR_WANT_READ || he == SSL_ERROR_WANT_WRITE)
+                    continue;
+            }
+            FreeVec(audioData);
+            return NULL;
+        }
+
+        STRPTR hstr = (STRPTR)headerAccum;
+        STRPTR hend = strstr(hstr, "\r\n\r\n");
+        if (hend == NULL) {
+            FreeVec(audioData);
+            return NULL;
+        }
+        ULONG bodyOff = (ULONG)(hend - hstr) + 4;
+
+        UBYTE hdrTerm[8192];
+        ULONG hcopy = bodyOff;
+        if (hcopy > sizeof(hdrTerm) - 1)
+            hcopy = sizeof(hdrTerm) - 1;
+        memcpy(hdrTerm, headerAccum, hcopy);
+        hdrTerm[hcopy] = '\0';
+
+        BOOL chunked =
+            strstr((STRPTR)hdrTerm, "Transfer-Encoding: chunked") != NULL ||
+            strstr((STRPTR)hdrTerm, "transfer-encoding: chunked") != NULL;
+        LONG ttsContentLen =
+            httpParseContentLengthNullTerminated((STRPTR)hdrTerm);
+
+        if (bodyOff < ha && headerAccum[bodyOff] == '{') {
+            response = json_tokener_parse((STRPTR)(headerAccum + bodyOff));
+            struct json_object *error;
+            if (response != NULL &&
+                json_object_object_get_ex(response, "error", &error)) {
+                struct json_object *message =
+                    json_object_object_get(error, "message");
+                STRPTR rawMessageString =
+                    message ? json_object_get_string(message) : NULL;
+                if (rawMessageString != NULL) {
+                    STRPTR cleanMessage =
+                        extractUserFriendlyErrorMessage(rawMessageString);
+                    displayError(cleanMessage);
+                    if (cleanMessage != rawMessageString) {
+                        FreeVec(cleanMessage);
+                    }
+                }
+                json_object_put(response);
+                FreeVec(audioData);
+                return NULL;
+            }
+            if (response != NULL)
+                json_object_put(response);
+        }
+
+        STRPTR httpLine = strstr((STRPTR)hdrTerm, "HTTP/");
+        if (httpLine != NULL && strstr(httpLine, "200 OK") == NULL) {
+            isErrorResponse = TRUE;
+        }
+
+        ULONG initialBody = (ha > bodyOff) ? (ha - bodyOff) : 0;
+        UBYTE statusMessage[64];
+
+        /* Non-chunked body: read exactly Content-Length bytes, or until close if
+         * no length (OpenAI speech often uses identity + Content-Length). */
+        if (!chunked && ttsContentLen > 0) {
+            if ((ULONG)ttsContentLen > audioBufferSize) {
+                audioBufferSize = (ULONG)ttsContentLen + 4096;
+                APTR oldad = audioData;
+                audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                if (audioData == NULL) {
+                    FreeVec(oldad);
+                    displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                    return NULL;
+                }
+                FreeVec(oldad);
+            }
+            ULONG need = (ULONG)ttsContentLen;
+            ULONG got = initialBody;
+            if (got > need)
+                got = need;
+            memcpy(audioData, headerAccum + bodyOff, got);
+            *audioLength = got;
+            while (*audioLength < need) {
+#ifndef DAEMON
+                DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+                ULONG space = need - *audioLength;
+                if (space > READ_BUFFER_LENGTH - 1)
+                    space = READ_BUFFER_LENGTH - 1;
+                ERR_clear_error();
+                LONG n = useSSL
+                             ? SSL_read(ssl, audioData + *audioLength, (int)space)
+                             : recv(sock, audioData + *audioLength, (int)space,
+                                    0);
+                if (n > 0) {
+                    *audioLength += (ULONG)n;
+                    snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                             STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+                    updateStatusBar(statusMessage, yellowPen);
+                    continue;
+                }
+                if (useSSL && n <= 0) {
+                    int e = SSL_get_error(ssl, (int)n);
+                    if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+                        continue;
+                }
+                break;
+            }
+            goto openai_tts_skip_trailing;
+        }
+
+        if (!chunked) {
+            ULONG got = initialBody;
+            if (got > 0) {
+                while (*audioLength + got > audioBufferSize) {
+                    audioBufferSize <<= 1;
+                    APTR oldAudioData = audioData;
+                    audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                    if (audioData == NULL) {
+                        FreeVec(oldAudioData);
+                        displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                        return NULL;
+                    }
+                    memcpy(audioData, oldAudioData, *audioLength);
+                    FreeVec(oldAudioData);
+                }
+                memcpy(audioData + *audioLength, headerAccum + bodyOff, got);
+                *audioLength += got;
+            }
+            while (1) {
+#ifndef DAEMON
+                DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+                memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                ERR_clear_error();
+                LONG n =
+                    useSSL ? SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH - 1)
+                           : recv(sock, readBuffer, READ_BUFFER_LENGTH - 1, 0);
+                if (n > 0) {
+                    if (*audioLength + (ULONG)n > audioBufferSize) {
+                        audioBufferSize <<= 1;
+                        APTR oldAudioData = audioData;
+                        audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                        if (audioData == NULL) {
+                            FreeVec(oldAudioData);
+                            displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                            return NULL;
+                        }
+                        memcpy(audioData, oldAudioData, *audioLength);
+                        FreeVec(oldAudioData);
+                    }
+                    memcpy(audioData + *audioLength, readBuffer, (ULONG)n);
+                    *audioLength += (ULONG)n;
+                    snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                             STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+                    updateStatusBar(statusMessage, yellowPen);
+                    continue;
+                }
+                if (useSSL && n <= 0) {
+                    int e = SSL_get_error(ssl, (int)n);
+                    if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+                        continue;
+                }
+                break;
+            }
+            goto openai_tts_skip_trailing;
+        }
+
+        seedLen = initialBody;
+        if (seedLen > READ_BUFFER_LENGTH - 1) {
+            displayError(STRING_ERROR_BAD_CHUNK);
+            FreeVec(audioData);
+            return NULL;
+        }
+        memcpy(readBuffer, headerAccum + bodyOff, seedLen);
+        useSeed = (seedLen > 0);
+
         LONG bytesRead = 0;
         ULONG bytesRemainingInBuffer = 0;
         BOOL doneReading = FALSE;
         LONG err = 0;
-        UBYTE statusMessage[64];
         UBYTE tempChunkHeaderBuffer[10] = {0};
         UBYTE tempChunkDataBufferLength = 0;
-        BOOL hasReadHeader = FALSE;
+        BOOL hasReadHeader = TRUE;
         BOOL newChunkNeeded = TRUE;
         ULONG chunkLength = 0;
         ULONG chunkBytesNeedingRead = 0;
@@ -4022,20 +4240,37 @@ APTR postTextToSpeechRequestToOpenAI(
 #ifndef DAEMON
             DoMethod(loadingBar, MUIM_Busy_Move);
 #endif
-            memset(readBuffer, 0, READ_BUFFER_LENGTH);
-            if (useSSL) {
-                ERR_clear_error();
-                bytesRead =
-                    SSL_read(ssl, readBuffer,
-                             useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1);
+            BOOL readFromSeed = FALSE;
+            if (useSeed) {
+                bytesRead = (LONG)seedLen;
+                readFromSeed = TRUE;
+                err = SSL_ERROR_NONE;
+                useSeed = FALSE;
             } else {
-                bytesRead =
-                    recv(sock, readBuffer,
-                         useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1, 0);
+                memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                if (useSSL) {
+                    ERR_clear_error();
+                    bytesRead =
+                        SSL_read(ssl, readBuffer,
+                                 useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1);
+                    err = SSL_get_error(ssl, bytesRead);
+                } else {
+                    bytesRead =
+                        recv(sock, readBuffer,
+                             useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1, 0);
+                    err = SSL_ERROR_NONE;
+                }
+                if (bytesRead <= 0 && useSSL &&
+                    (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE ||
+                     err == SSL_ERROR_WANT_CONNECT ||
+                     err == SSL_ERROR_WANT_ACCEPT ||
+                     err == SSL_ERROR_WANT_X509_LOOKUP)) {
+                    continue;
+                }
             }
-            if (newChunkNeeded && bytesRead == 1)
+            if (newChunkNeeded && bytesRead == 1 && !readFromSeed)
                 continue;
-            bytesRemainingInBuffer = bytesRead;
+            bytesRemainingInBuffer = (ULONG)bytesRead;
             dataStart = readBuffer;
 
             snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
@@ -4243,20 +4478,11 @@ APTR postTextToSpeechRequestToOpenAI(
                 doneReading = TRUE;
                 break;
             case SSL_ERROR_WANT_READ:
-                printf("SSL_ERROR_WANT_READ\n");
-                break;
             case SSL_ERROR_WANT_WRITE:
-                printf("SSL_ERROR_WANT_WRITE\n");
-                break;
             case SSL_ERROR_WANT_CONNECT:
-                printf("SSL_ERROR_WANT_CONNECT\n");
-                break;
             case SSL_ERROR_WANT_ACCEPT:
-                printf("SSL_ERROR_WANT_ACCEPT\n");
-                break;
             case SSL_ERROR_WANT_X509_LOOKUP:
-                printf("SSL_ERROR_WANT_X509_LOOKUP\n");
-                break;
+                continue;
             case SSL_ERROR_SYSCALL:
             case SSL_ERROR_SSL: {
                 reportSslError(ssl, bytesRead, "SSL_read (tts)");
@@ -4274,6 +4500,8 @@ APTR postTextToSpeechRequestToOpenAI(
                     // Successful reconnection - restart the download
                     *audioLength = 0; // Reset audio length
                     hasReadHeader = FALSE;
+                    useSeed = FALSE;
+                    seedLen = 0;
                     newChunkNeeded = TRUE;
                     chunkBytesNeedingRead = 0;
                     bytesRemainingInBuffer = 0;
@@ -4327,6 +4555,7 @@ APTR postTextToSpeechRequestToOpenAI(
             memcpy(audioData + *audioLength, dataStart, bytesToSave);
             *audioLength += bytesToSave;
         }
+    openai_tts_skip_trailing:;
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
         reportSslError(ssl, ssl_err, "SSL_write");
@@ -4595,72 +4824,128 @@ APTR postTextToSpeechRequestToElevenLabs(
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 #endif
 
-    /* Read response */
-    LONG bytesRead = 0;
-    BOOL hasReadHeader = FALSE;
-    UBYTE *dataStart = NULL;
-    UBYTE statusMessage[64];
+    /* Read response: accumulate headers across TLS records, then read the full
+     * body using Content-Length when present (avoids truncated audio). */
+    UBYTE headerAccum[8192];
+    ULONG ha = 0;
+    headerAccum[0] = '\0';
 
-    while (1) {
+    while (ha < sizeof(headerAccum) - 1) {
 #ifndef DAEMON
         DoMethod(loadingBar, MUIM_Busy_Move);
 #endif
-        memset(readBuffer, 0, READ_BUFFER_LENGTH);
-        if (useSSL) {
-            ERR_clear_error();
-            bytesRead = SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH - 1);
-        } else {
-            bytesRead = recv(sock, readBuffer, READ_BUFFER_LENGTH - 1, 0);
+        ERR_clear_error();
+        LONG br =
+            useSSL ? SSL_read(ssl, headerAccum + ha,
+                              (int)(sizeof(headerAccum) - 1 - ha))
+                   : recv(sock, headerAccum + ha,
+                          (int)(sizeof(headerAccum) - 1 - ha), 0);
+        if (br > 0) {
+            ha += (ULONG)br;
+            headerAccum[ha] = '\0';
+            if (strstr((STRPTR)headerAccum, "\r\n\r\n") != NULL)
+                break;
+            continue;
         }
-
-        if (bytesRead <= 0) {
-            break;
-        }
-
-        dataStart = readBuffer;
-        ULONG bytesToCopy = bytesRead;
-
-        if (!hasReadHeader) {
-            /* Look for end of HTTP headers */
-            dataStart = strstr(readBuffer, "\r\n\r\n");
-            if (dataStart != NULL) {
-                hasReadHeader = TRUE;
-                dataStart += 4;
-                bytesToCopy = bytesRead - (dataStart - readBuffer);
-
-                /* Check for error response */
-                if (strstr(readBuffer, "HTTP/1.1 200") == NULL) {
-                    /* Try to parse error JSON */
-                    if (dataStart[0] == '{') {
-                        struct json_object *response =
-                            json_tokener_parse(dataStart);
-                        if (response != NULL) {
-                            struct json_object *detail;
-                            if (json_object_object_get_ex(response, "detail",
-                                                          &detail)) {
-                                struct json_object *message =
-                                    json_object_object_get(detail, "message");
-                                if (message != NULL) {
-                                    displayError(
-                                        json_object_get_string(message));
-                                } else {
-                                    displayError(
-                                        json_object_get_string(detail));
-                                }
-                            }
-                            json_object_put(response);
-                        }
-                    }
-                    FreeVec(audioData);
-                    return NULL;
-                }
-            } else {
+        if (useSSL && br <= 0) {
+            int e = SSL_get_error(ssl, (int)br);
+            if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
                 continue;
+        }
+        FreeVec(audioData);
+        return NULL;
+    }
+
+    STRPTR hstr = (STRPTR)headerAccum;
+    STRPTR hend = strstr(hstr, "\r\n\r\n");
+    if (hend == NULL) {
+        FreeVec(audioData);
+        return NULL;
+    }
+    ULONG bodyOff = (ULONG)(hend - hstr) + 4;
+
+    UBYTE hdrTerm[8192];
+    ULONG hcopy = bodyOff;
+    if (hcopy > sizeof(hdrTerm) - 1)
+        hcopy = sizeof(hdrTerm) - 1;
+    memcpy(hdrTerm, headerAccum, hcopy);
+    hdrTerm[hcopy] = '\0';
+
+    if (strstr((STRPTR)hdrTerm, "HTTP/1.1 200") == NULL &&
+        strstr((STRPTR)hdrTerm, "HTTP/1.0 200") == NULL) {
+        if (bodyOff < ha && headerAccum[bodyOff] == '{') {
+            struct json_object *response =
+                json_tokener_parse((STRPTR)(headerAccum + bodyOff));
+            if (response != NULL) {
+                struct json_object *detail;
+                if (json_object_object_get_ex(response, "detail", &detail)) {
+                    struct json_object *message =
+                        json_object_object_get(detail, "message");
+                    if (message != NULL) {
+                        displayError(json_object_get_string(message));
+                    } else {
+                        displayError(json_object_get_string(detail));
+                    }
+                }
+                json_object_put(response);
             }
         }
+        FreeVec(audioData);
+        return NULL;
+    }
 
-        /* Expand buffer if needed */
-        if (*audioLength + bytesToCopy > audioBufferSize) {
+    LONG contentLen = httpParseContentLengthNullTerminated((STRPTR)hdrTerm);
+    ULONG initialBody = (ha > bodyOff) ? (ha - bodyOff) : 0;
+    UBYTE statusMessage[64];
+
+    if (contentLen > 0) {
+        if ((ULONG)contentLen > audioBufferSize) {
+            audioBufferSize = (ULONG)contentLen + 4096;
+            APTR old = audioData;
+            audioData = AllocVec(audioBufferSize, MEMF_ANY);
+            if (audioData == NULL) {
+                FreeVec(old);
+                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                return NULL;
+            }
+            if (old != NULL)
+                FreeVec(old);
+        }
+        ULONG need = (ULONG)contentLen;
+        ULONG got = initialBody;
+        if (got > need)
+            got = need;
+        memcpy(audioData, headerAccum + bodyOff, got);
+        *audioLength = got;
+        while (*audioLength < need) {
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+            ULONG space = need - *audioLength;
+            if (space > READ_BUFFER_LENGTH - 1)
+                space = READ_BUFFER_LENGTH - 1;
+            ERR_clear_error();
+            LONG n = useSSL ? SSL_read(ssl, audioData + *audioLength, (int)space)
+                            : recv(sock, audioData + *audioLength, (int)space,
+                                   0);
+            if (n > 0) {
+                *audioLength += (ULONG)n;
+                snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                         STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+                updateStatusBar(statusMessage, yellowPen);
+                continue;
+            }
+            if (useSSL && n <= 0) {
+                int e = SSL_get_error(ssl, (int)n);
+                if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+                    continue;
+            }
+            break;
+        }
+    } else {
+        /* No Content-Length: read until the server closes the connection. */
+        ULONG got = initialBody;
+        while (*audioLength + got > audioBufferSize) {
             audioBufferSize <<= 1;
             APTR oldAudioData = audioData;
             audioData = AllocVec(audioBufferSize, MEMF_ANY);
@@ -4672,13 +4957,45 @@ APTR postTextToSpeechRequestToElevenLabs(
             memcpy(audioData, oldAudioData, *audioLength);
             FreeVec(oldAudioData);
         }
-
-        memcpy(audioData + *audioLength, dataStart, bytesToCopy);
-        *audioLength += bytesToCopy;
-
-        snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
-                 STRING_DOWNLOADED, *audioLength, STRING_BYTES);
-        updateStatusBar(statusMessage, yellowPen);
+        if (got > 0) {
+            memcpy(audioData + *audioLength, headerAccum + bodyOff, got);
+            *audioLength += got;
+        }
+        while (1) {
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+            memset(readBuffer, 0, READ_BUFFER_LENGTH);
+            ERR_clear_error();
+            LONG n = useSSL ? SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH - 1)
+                            : recv(sock, readBuffer, READ_BUFFER_LENGTH - 1, 0);
+            if (n > 0) {
+                if (*audioLength + (ULONG)n > audioBufferSize) {
+                    audioBufferSize <<= 1;
+                    APTR oldAudioData = audioData;
+                    audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                    if (audioData == NULL) {
+                        FreeVec(oldAudioData);
+                        displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                        return NULL;
+                    }
+                    memcpy(audioData, oldAudioData, *audioLength);
+                    FreeVec(oldAudioData);
+                }
+                memcpy(audioData + *audioLength, readBuffer, (ULONG)n);
+                *audioLength += (ULONG)n;
+                snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                         STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+                updateStatusBar(statusMessage, yellowPen);
+                continue;
+            }
+            if (useSSL && n <= 0) {
+                int e = SSL_get_error(ssl, (int)n);
+                if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+                    continue;
+            }
+            break;
+        }
     }
 
 #ifndef DAEMON
