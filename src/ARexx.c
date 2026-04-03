@@ -644,7 +644,7 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
             out->apiEndpointUrl = "v1";
             out->authorizationType = AUTHORIZATION_TYPE_BEARER;
             out->customHeaders = NULL;
-            out->apiKey = configGetOpenAiApiKey();
+            out->apiKey = configGetOpenAiImageApiKey();
             out->model = configGetOpenAiImageModelName();
             out->imageApiEndpoint = API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
         } else if (strcmp(resolvedProfileName,
@@ -655,7 +655,7 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
             out->apiEndpointUrl = "v1beta";
             out->authorizationType = AUTHORIZATION_TYPE_X_GOOGLE_API_KEY;
             out->customHeaders = NULL;
-            out->apiKey = configGetGeminiApiKey();
+            out->apiKey = configGetGeminiImageApiKey();
             out->model = configGetGeminiImageModelName();
             out->imageApiEndpoint = API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT;
         } else {
@@ -665,7 +665,7 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
             out->apiEndpointUrl = "v1";
             out->authorizationType = AUTHORIZATION_TYPE_BEARER;
             out->customHeaders = NULL;
-            out->apiKey = configGetGrokApiKey();
+            out->apiKey = configGetGrokImageApiKey();
             out->model = configGetGrokImageModelName();
             out->imageApiEndpoint = API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
         }
@@ -690,7 +690,7 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
                 out->apiEndpointUrl = "v1";
                 out->authorizationType = AUTHORIZATION_TYPE_BEARER;
                 out->customHeaders = NULL;
-                out->apiKey = configGetOpenAiApiKey();
+                out->apiKey = configGetOpenAiImageApiKey();
                 out->model = configGetOpenAiImageModelName();
                 out->imageApiEndpoint = API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
             } else if (strcmp(resolvedProfileName,
@@ -701,7 +701,7 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
                 out->apiEndpointUrl = "v1beta";
                 out->authorizationType = AUTHORIZATION_TYPE_X_GOOGLE_API_KEY;
                 out->customHeaders = NULL;
-                out->apiKey = configGetGeminiApiKey();
+                out->apiKey = configGetGeminiImageApiKey();
                 out->model = configGetGeminiImageModelName();
                 out->imageApiEndpoint =
                     API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT;
@@ -712,7 +712,7 @@ static BOOL rexxResolveImageProfileSettings(CONST_STRPTR profileName,
                 out->apiEndpointUrl = "v1";
                 out->authorizationType = AUTHORIZATION_TYPE_BEARER;
                 out->customHeaders = NULL;
-                out->apiKey = configGetGrokApiKey();
+                out->apiKey = configGetGrokImageApiKey();
                 out->model = configGetGrokImageModelName();
                 out->imageApiEndpoint = API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
             }
@@ -799,7 +799,7 @@ rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
     out->activeProfileName = rexxDupStr(profileName);
     out->speechSystem = (SpeechSystem)configGetSpeechSystem();
     out->fliteVoice = configGetSpeechFliteVoice();
-    out->openAiApiKey = rexxDupStr(configGetOpenAiApiKey());
+    out->openAiApiKey = rexxDupStr(configGetOpenAiSpeechApiKey());
     out->openAiTtsModel = configGetOpenAITTSModel();
     out->openAiTtsVoice = configGetOpenAITTSVoice();
     out->openAiVoiceInstructions =

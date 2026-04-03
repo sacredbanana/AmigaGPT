@@ -13,7 +13,6 @@ Object *apiKeyRequesterWindowObject;
 
 HOOKPROTONHNONP(APIKeyRequesterOkButtonClickedFunc, void) {
     STRPTR apiKey = DoMethod(apiKeyRequesterString, MUIM_TextEditor_ExportText);
-    // Remove trailing newline characters
     for (ULONG i = 0; i < strlen(apiKey); i++) {
         if (apiKey[i] == '\n') {
             apiKey[i] = '\0';
@@ -21,6 +20,8 @@ HOOKPROTONHNONP(APIKeyRequesterOkButtonClickedFunc, void) {
     }
     set(apiKeyRequesterString, MUIA_TextEditor_Contents, apiKey);
     configSetOpenAiApiKey(apiKey);
+    configSetOpenAiImageApiKey(apiKey);
+    configSetOpenAiSpeechApiKey(apiKey);
     FreeVec(apiKey);
 }
 MakeHook(APIKeyRequesterOkButtonClickedHook,

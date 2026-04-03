@@ -872,7 +872,7 @@ static void loadProfileIntoUI(LONG activeIndex) {
 
     /* OpenAI fields */
     if (openAiApiKeyString != NULL) {
-        STRPTR key = configGetOpenAiApiKey();
+        STRPTR key = configGetOpenAiSpeechApiKey();
         if (customProfile != NULL) {
             struct json_object *kObj =
                 json_object_object_get(customProfile, "openAiApiKey");
@@ -1232,7 +1232,17 @@ static void applyBuiltinProfileSelection(SpeechSystem sys) {
         STRPTR key = NULL;
         if (openAiApiKeyString != NULL)
             get(openAiApiKeyString, MUIA_String_Contents, &key);
-        configSetOpenAiApiKey(key);
+        configSetOpenAiSpeechApiKey(key);
+
+        /* Copy to chat/image if those are blank */
+        if (key != NULL && strlen(key) > 0) {
+            STRPTR existing = configGetOpenAiApiKey();
+            if (existing == NULL || strlen(existing) == 0)
+                configSetOpenAiApiKey(key);
+            existing = configGetOpenAiImageApiKey();
+            if (existing == NULL || strlen(existing) == 0)
+                configSetOpenAiImageApiKey(key);
+        }
 
         LONG m = 0, v = 0;
         if (openAiTtsModelCycle != NULL)

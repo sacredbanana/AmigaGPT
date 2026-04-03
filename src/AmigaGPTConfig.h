@@ -147,6 +147,12 @@
 #define MUIA_AmigaGPTConfig_GrokChatSystem (AmigaGPTConfig_Dummy + 0x7D)
 #define MUIA_AmigaGPTConfig_AnthropicChatSystem (AmigaGPTConfig_Dummy + 0x7E)
 
+/* Per-mode (image/speech) API keys for locked providers */
+#define MUIA_AmigaGPTConfig_OpenAiImageApiKey (AmigaGPTConfig_Dummy + 0x82)
+#define MUIA_AmigaGPTConfig_OpenAiSpeechApiKey (AmigaGPTConfig_Dummy + 0x83)
+#define MUIA_AmigaGPTConfig_GeminiImageApiKey (AmigaGPTConfig_Dummy + 0x84)
+#define MUIA_AmigaGPTConfig_GrokImageApiKey (AmigaGPTConfig_Dummy + 0x85)
+
 /* Version tracking attributes (read-only, for internal use) */
 #define MUIA_AmigaGPTConfig_ChatModelSetVersion (AmigaGPTConfig_Dummy + 0x40)
 #define MUIA_AmigaGPTConfig_ImageModelSetVersion (AmigaGPTConfig_Dummy + 0x41)
@@ -322,10 +328,6 @@ void configSetOpenAITTSVoice(OpenAITTSVoice value);
 STRPTR configGetOpenAIVoiceInstructions(void);
 void configSetOpenAIVoiceInstructions(CONST_STRPTR value);
 
-/* API keys */
-STRPTR configGetOpenAiApiKey(void);
-void configSetOpenAiApiKey(CONST_STRPTR value);
-
 /* Proxy settings */
 ULONG configGetProxyEnabled(void);
 void configSetProxyEnabled(ULONG value);
@@ -455,13 +457,27 @@ void configSetGeminiImageModelName(CONST_STRPTR value);
 STRPTR configGetGrokImageModelName(void);
 void configSetGrokImageModelName(CONST_STRPTR value);
 
-/* Provider-specific API keys */
+/* Provider-specific API keys (chat mode -- the "primary" key) */
+STRPTR configGetOpenAiApiKey(void);
+void configSetOpenAiApiKey(CONST_STRPTR value);
 STRPTR configGetGeminiApiKey(void);
 void configSetGeminiApiKey(CONST_STRPTR value);
 STRPTR configGetGrokApiKey(void);
 void configSetGrokApiKey(CONST_STRPTR value);
 STRPTR configGetAnthropicApiKey(void);
 void configSetAnthropicApiKey(CONST_STRPTR value);
+
+/* Provider-specific API keys (image mode) */
+STRPTR configGetOpenAiImageApiKey(void);
+void configSetOpenAiImageApiKey(CONST_STRPTR value);
+STRPTR configGetGeminiImageApiKey(void);
+void configSetGeminiImageApiKey(CONST_STRPTR value);
+STRPTR configGetGrokImageApiKey(void);
+void configSetGrokImageApiKey(CONST_STRPTR value);
+
+/* Provider-specific API keys (speech mode -- OpenAI only) */
+STRPTR configGetOpenAiSpeechApiKey(void);
+void configSetOpenAiSpeechApiKey(CONST_STRPTR value);
 
 /* Image request settings helper (driven by active image profile name) */
 struct ImageRequestSettings {

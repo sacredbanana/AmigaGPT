@@ -150,6 +150,12 @@ struct AmigaGPTConfigData {
     STRPTR grokChatSystem;
     STRPTR anthropicChatSystem;
 
+    /* Per-mode (image/speech) API keys for locked providers */
+    STRPTR openAiImageApiKey;
+    STRPTR openAiSpeechApiKey;
+    STRPTR geminiImageApiKey;
+    STRPTR grokImageApiKey;
+
     /* Auto-save state */
     BOOL isDirty;
     BOOL saveInProgress;
@@ -311,6 +317,12 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->grokImageModelName = copyString(
         GROK_IMAGE_MODELS[0] ? GROK_IMAGE_MODELS[0] : "grok-2-image");
 
+    /* Per-mode API keys */
+    data->openAiImageApiKey = NULL;
+    data->openAiSpeechApiKey = NULL;
+    data->geminiImageApiKey = NULL;
+    data->grokImageApiKey = NULL;
+
     data->isDirty = FALSE;
     data->saveInProgress = FALSE;
 }
@@ -369,6 +381,11 @@ static void freeAllStrings(struct AmigaGPTConfigData *data) {
     freeString(&data->geminiChatSystem);
     freeString(&data->grokChatSystem);
     freeString(&data->anthropicChatSystem);
+    /* Per-mode API keys */
+    freeString(&data->openAiImageApiKey);
+    freeString(&data->openAiSpeechApiKey);
+    freeString(&data->geminiImageApiKey);
+    freeString(&data->grokImageApiKey);
 }
 
 /**
@@ -744,6 +761,18 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_AnthropicChatSystem:
         *store = (ULONG)data->anthropicChatSystem;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_OpenAiImageApiKey:
+        *store = (ULONG)data->openAiImageApiKey;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_OpenAiSpeechApiKey:
+        *store = (ULONG)data->openAiSpeechApiKey;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GeminiImageApiKey:
+        *store = (ULONG)data->geminiImageApiKey;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GrokImageApiKey:
+        *store = (ULONG)data->grokImageApiKey;
         return TRUE;
     }
 
@@ -1260,6 +1289,26 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                               (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
+        case MUIA_AmigaGPTConfig_OpenAiImageApiKey:
+            if (setStringAttr(&data->openAiImageApiKey,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_OpenAiSpeechApiKey:
+            if (setStringAttr(&data->openAiSpeechApiKey,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_GeminiImageApiKey:
+            if (setStringAttr(&data->geminiImageApiKey,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
+        case MUIA_AmigaGPTConfig_GrokImageApiKey:
+            if (setStringAttr(&data->grokImageApiKey,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
         }
     }
 
@@ -1635,6 +1684,28 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
         configJsonObject, "anthropicChatSystem",
         data->anthropicChatSystem != NULL
             ? json_object_new_string(data->anthropicChatSystem)
+            : NULL);
+
+    /* Per-mode API keys */
+    json_object_object_add(
+        configJsonObject, "openAiImageApiKey",
+        data->openAiImageApiKey != NULL
+            ? json_object_new_string(data->openAiImageApiKey)
+            : NULL);
+    json_object_object_add(
+        configJsonObject, "openAiSpeechApiKey",
+        data->openAiSpeechApiKey != NULL
+            ? json_object_new_string(data->openAiSpeechApiKey)
+            : NULL);
+    json_object_object_add(
+        configJsonObject, "geminiImageApiKey",
+        data->geminiImageApiKey != NULL
+            ? json_object_new_string(data->geminiImageApiKey)
+            : NULL);
+    json_object_object_add(
+        configJsonObject, "grokImageApiKey",
+        data->grokImageApiKey != NULL
+            ? json_object_new_string(data->grokImageApiKey)
             : NULL);
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
@@ -2142,6 +2213,41 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     readJsonString(configJsonObject, "anthropicChatSystem",
                    &data->anthropicChatSystem);
 
+    /* Per-mode API keys */
+    readJsonString(configJsonObject, "openAiImageApiKey",
+                   &data->openAiImageApiKey);
+    readJsonString(configJsonObject, "openAiSpeechApiKey",
+                   &data->openAiSpeechApiKey);
+    readJsonString(configJsonObject, "geminiImageApiKey",
+                   &data->geminiImageApiKey);
+    readJsonString(configJsonObject, "grokImageApiKey",
+                   &data->grokImageApiKey);
+
+    /* Migrate from shared API keys to per-mode keys.
+     * If the per-mode keys are absent but the shared key exists,
+     * copy the shared key to all applicable modes. */
+    {
+        BOOL hasPerModeKeys =
+            json_object_object_get(configJsonObject, "openAiImageApiKey") !=
+            NULL;
+        if (!hasPerModeKeys) {
+            if (data->openAiApiKey != NULL && strlen(data->openAiApiKey) > 0) {
+                if (data->openAiImageApiKey == NULL)
+                    data->openAiImageApiKey = copyString(data->openAiApiKey);
+                if (data->openAiSpeechApiKey == NULL)
+                    data->openAiSpeechApiKey = copyString(data->openAiApiKey);
+            }
+            if (data->geminiApiKey != NULL && strlen(data->geminiApiKey) > 0) {
+                if (data->geminiImageApiKey == NULL)
+                    data->geminiImageApiKey = copyString(data->geminiApiKey);
+            }
+            if (data->grokApiKey != NULL && strlen(data->grokApiKey) > 0) {
+                if (data->grokImageApiKey == NULL)
+                    data->grokImageApiKey = copyString(data->grokApiKey);
+            }
+        }
+    }
+
     /* Migration from old config format (schema v1 to v2) */
     if (needsMigration) {
         printf("Migrating config from schema v%d to v%d...\n",
@@ -2608,7 +2714,7 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
     out->activeProfileName = dupStrCfg(configGetActiveSpeechProfileName());
     out->speechSystem = (SpeechSystem)configGetSpeechSystem();
     out->fliteVoice = configGetSpeechFliteVoice();
-    out->openAiApiKey = dupStrCfg(configGetOpenAiApiKey());
+    out->openAiApiKey = dupStrCfg(configGetOpenAiSpeechApiKey());
     out->openAiTtsModel = configGetOpenAITTSModel();
     out->openAiTtsVoice = configGetOpenAITTSVoice();
     out->openAiVoiceInstructions =
@@ -3904,7 +4010,7 @@ void configGetActiveImageRequestSettings(struct ImageRequestSettings *out) {
             out->apiEndpointUrl = "v1";
             out->authorizationType = AUTHORIZATION_TYPE_BEARER;
             out->customHeaders = NULL;
-            out->apiKey = configGetOpenAiApiKey();
+            out->apiKey = configGetOpenAiImageApiKey();
             out->model = configGetOpenAiImageModelName();
             out->imageApiEndpoint = API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
         } else if (strcmp(activeName, LOCKED_PROFILE_NAME_GEMINI) == 0) {
@@ -3914,7 +4020,7 @@ void configGetActiveImageRequestSettings(struct ImageRequestSettings *out) {
             out->apiEndpointUrl = "v1beta";
             out->authorizationType = AUTHORIZATION_TYPE_X_GOOGLE_API_KEY;
             out->customHeaders = NULL;
-            out->apiKey = configGetGeminiApiKey();
+            out->apiKey = configGetGeminiImageApiKey();
             out->model = configGetGeminiImageModelName();
             out->imageApiEndpoint = API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT;
         } else {
@@ -3924,7 +4030,7 @@ void configGetActiveImageRequestSettings(struct ImageRequestSettings *out) {
             out->apiEndpointUrl = "v1";
             out->authorizationType = AUTHORIZATION_TYPE_BEARER;
             out->customHeaders = NULL;
-            out->apiKey = configGetGrokApiKey();
+            out->apiKey = configGetGrokImageApiKey();
             out->model = configGetGrokImageModelName();
             out->imageApiEndpoint = API_IMAGE_ENDPOINT_IMAGES_GENERATIONS;
         }
@@ -4075,4 +4181,52 @@ STRPTR configGetAnthropicApiKey(void) {
 void configSetAnthropicApiKey(CONST_STRPTR value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_AnthropicApiKey, (ULONG)value);
+}
+
+STRPTR configGetOpenAiImageApiKey(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_OpenAiImageApiKey, &val);
+    return val;
+}
+
+void configSetOpenAiImageApiKey(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_OpenAiImageApiKey, (ULONG)value);
+}
+
+STRPTR configGetOpenAiSpeechApiKey(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_OpenAiSpeechApiKey, &val);
+    return val;
+}
+
+void configSetOpenAiSpeechApiKey(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_OpenAiSpeechApiKey, (ULONG)value);
+}
+
+STRPTR configGetGeminiImageApiKey(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_GeminiImageApiKey, &val);
+    return val;
+}
+
+void configSetGeminiImageApiKey(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_GeminiImageApiKey, (ULONG)value);
+}
+
+STRPTR configGetGrokImageApiKey(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_GrokImageApiKey, &val);
+    return val;
+}
+
+void configSetGrokImageApiKey(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_GrokImageApiKey, (ULONG)value);
 }

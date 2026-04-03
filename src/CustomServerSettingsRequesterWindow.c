@@ -452,14 +452,24 @@ static void freePendingLockedProfiles(void) {
 static void loadPendingLockedProfilesFromConfig(void) {
     freePendingLockedProfiles();
 
-    pendingLockedApiKeys[LOCKED_PROFILE_OPENAI] =
-        dupStrLocal(configGetOpenAiApiKey());
-    pendingLockedApiKeys[LOCKED_PROFILE_GEMINI] =
-        dupStrLocal(configGetGeminiApiKey());
-    pendingLockedApiKeys[LOCKED_PROFILE_GROK] =
-        dupStrLocal(configGetGrokApiKey());
-    pendingLockedApiKeys[LOCKED_PROFILE_ANTHROPIC] =
-        dupStrLocal(configGetAnthropicApiKey());
+    if (settingsIsImageMode) {
+        pendingLockedApiKeys[LOCKED_PROFILE_OPENAI] =
+            dupStrLocal(configGetOpenAiImageApiKey());
+        pendingLockedApiKeys[LOCKED_PROFILE_GEMINI] =
+            dupStrLocal(configGetGeminiImageApiKey());
+        pendingLockedApiKeys[LOCKED_PROFILE_GROK] =
+            dupStrLocal(configGetGrokImageApiKey());
+        pendingLockedApiKeys[LOCKED_PROFILE_ANTHROPIC] = NULL;
+    } else {
+        pendingLockedApiKeys[LOCKED_PROFILE_OPENAI] =
+            dupStrLocal(configGetOpenAiApiKey());
+        pendingLockedApiKeys[LOCKED_PROFILE_GEMINI] =
+            dupStrLocal(configGetGeminiApiKey());
+        pendingLockedApiKeys[LOCKED_PROFILE_GROK] =
+            dupStrLocal(configGetGrokApiKey());
+        pendingLockedApiKeys[LOCKED_PROFILE_ANTHROPIC] =
+            dupStrLocal(configGetAnthropicApiKey());
+    }
 
     /* Per-locked-profile chat model names */
     STRPTR val = NULL;
@@ -1930,28 +1940,69 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
             configSetActiveProfileName(getLockedProfileName(lockedIndex));
         }
 
-        /* Save API keys from pending state */
+        /* Save ALL pending locked API keys (not just the selected profile) */
         if (settingsIsImageMode) {
-            configSetOpenAiApiKey(pendingLockedApiKeys[LOCKED_PROFILE_OPENAI]);
-            configSetGeminiApiKey(pendingLockedApiKeys[LOCKED_PROFILE_GEMINI]);
-            configSetGrokApiKey(pendingLockedApiKeys[LOCKED_PROFILE_GROK]);
+            configSetOpenAiImageApiKey(
+                pendingLockedApiKeys[LOCKED_PROFILE_OPENAI]);
+            configSetGeminiImageApiKey(
+                pendingLockedApiKeys[LOCKED_PROFILE_GEMINI]);
+            configSetGrokImageApiKey(
+                pendingLockedApiKeys[LOCKED_PROFILE_GROK]);
         } else {
-            CONST_STRPTR apiKeyToSave = pendingLockedApiKeys[lockedIndex];
-            switch (lockedIndex) {
-            case LOCKED_PROFILE_OPENAI:
-                configSetOpenAiApiKey(apiKeyToSave);
-                break;
-            case LOCKED_PROFILE_GEMINI:
-                configSetGeminiApiKey(apiKeyToSave);
-                break;
-            case LOCKED_PROFILE_GROK:
-                configSetGrokApiKey(apiKeyToSave);
-                break;
-            case LOCKED_PROFILE_ANTHROPIC:
-                configSetAnthropicApiKey(apiKeyToSave);
-                break;
-            default:
-                break;
+            configSetOpenAiApiKey(
+                pendingLockedApiKeys[LOCKED_PROFILE_OPENAI]);
+            configSetGeminiApiKey(
+                pendingLockedApiKeys[LOCKED_PROFILE_GEMINI]);
+            configSetGrokApiKey(
+                pendingLockedApiKeys[LOCKED_PROFILE_GROK]);
+            configSetAnthropicApiKey(
+                pendingLockedApiKeys[LOCKED_PROFILE_ANTHROPIC]);
+        }
+
+        /* Copy keys to sibling modes if those are blank */
+        {
+            CONST_STRPTR k;
+            k = pendingLockedApiKeys[LOCKED_PROFILE_OPENAI];
+            if (k != NULL && strlen(k) > 0) {
+                if (settingsIsImageMode) {
+                    STRPTR e = configGetOpenAiApiKey();
+                    if (e == NULL || strlen(e) == 0)
+                        configSetOpenAiApiKey(k);
+                    e = configGetOpenAiSpeechApiKey();
+                    if (e == NULL || strlen(e) == 0)
+                        configSetOpenAiSpeechApiKey(k);
+                } else {
+                    STRPTR e = configGetOpenAiImageApiKey();
+                    if (e == NULL || strlen(e) == 0)
+                        configSetOpenAiImageApiKey(k);
+                    e = configGetOpenAiSpeechApiKey();
+                    if (e == NULL || strlen(e) == 0)
+                        configSetOpenAiSpeechApiKey(k);
+                }
+            }
+            k = pendingLockedApiKeys[LOCKED_PROFILE_GEMINI];
+            if (k != NULL && strlen(k) > 0) {
+                if (settingsIsImageMode) {
+                    STRPTR e = configGetGeminiApiKey();
+                    if (e == NULL || strlen(e) == 0)
+                        configSetGeminiApiKey(k);
+                } else {
+                    STRPTR e = configGetGeminiImageApiKey();
+                    if (e == NULL || strlen(e) == 0)
+                        configSetGeminiImageApiKey(k);
+                }
+            }
+            k = pendingLockedApiKeys[LOCKED_PROFILE_GROK];
+            if (k != NULL && strlen(k) > 0) {
+                if (settingsIsImageMode) {
+                    STRPTR e = configGetGrokApiKey();
+                    if (e == NULL || strlen(e) == 0)
+                        configSetGrokApiKey(k);
+                } else {
+                    STRPTR e = configGetGrokImageApiKey();
+                    if (e == NULL || strlen(e) == 0)
+                        configSetGrokImageApiKey(k);
+                }
             }
         }
 
@@ -1992,128 +2043,59 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
                     ? API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT
                     : API_IMAGE_ENDPOINT_IMAGES_GENERATIONS);
         } else {
-            CONST_STRPTR modelToSave = pendingLockedChatModels[lockedIndex];
-            if (modelToSave != NULL && strlen(modelToSave) > 0 && configObj) {
-                set(configObj, MUIA_AmigaGPTConfig_ChatModelName,
-                    (ULONG)modelToSave);
-                switch (lockedIndex) {
-                case LOCKED_PROFILE_OPENAI:
-                    set(configObj, MUIA_AmigaGPTConfig_OpenAiChatModelName,
-                        (ULONG)modelToSave);
-                    break;
-                case LOCKED_PROFILE_GEMINI:
-                    set(configObj, MUIA_AmigaGPTConfig_GeminiChatModelName,
-                        (ULONG)modelToSave);
-                    break;
-                case LOCKED_PROFILE_GROK:
-                    set(configObj, MUIA_AmigaGPTConfig_GrokChatModelName,
-                        (ULONG)modelToSave);
-                    break;
-                case LOCKED_PROFILE_ANTHROPIC:
-                    set(configObj, MUIA_AmigaGPTConfig_AnthropicChatModelName,
-                        (ULONG)modelToSave);
-                    break;
-                default:
-                    break;
+            /* Persist ALL locked chat profile settings, not just the
+             * selected one, so switching between profiles and editing
+             * multiple providers is saved on OK. */
+            static const ULONG chatModelAttrs[] = {
+                MUIA_AmigaGPTConfig_OpenAiChatModelName,
+                MUIA_AmigaGPTConfig_GeminiChatModelName,
+                MUIA_AmigaGPTConfig_GrokChatModelName,
+                MUIA_AmigaGPTConfig_AnthropicChatModelName};
+            static const ULONG streamAttrs[] = {
+                MUIA_AmigaGPTConfig_OpenAiChatStreamEnabled,
+                MUIA_AmigaGPTConfig_GeminiChatStreamEnabled,
+                MUIA_AmigaGPTConfig_GrokChatStreamEnabled,
+                MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled};
+            static const ULONG webSearchAttrs[] = {
+                MUIA_AmigaGPTConfig_OpenAiWebSearchEnabled,
+                MUIA_AmigaGPTConfig_GeminiWebSearchEnabled,
+                MUIA_AmigaGPTConfig_GrokWebSearchEnabled,
+                MUIA_AmigaGPTConfig_AnthropicWebSearchEnabled};
+            static const ULONG shellToolAttrs[] = {
+                MUIA_AmigaGPTConfig_OpenAiShellToolEnabled,
+                MUIA_AmigaGPTConfig_GeminiShellToolEnabled,
+                MUIA_AmigaGPTConfig_GrokShellToolEnabled,
+                MUIA_AmigaGPTConfig_AnthropicShellToolEnabled};
+            static const ULONG chatSystemAttrs[] = {
+                MUIA_AmigaGPTConfig_OpenAiChatSystem,
+                MUIA_AmigaGPTConfig_GeminiChatSystem,
+                MUIA_AmigaGPTConfig_GrokChatSystem,
+                MUIA_AmigaGPTConfig_AnthropicChatSystem};
+
+            if (configObj) {
+                for (int i = 0; i < LOCKED_CHAT_PROFILE_COUNT; i++) {
+                    CONST_STRPTR m = pendingLockedChatModels[i];
+                    if (m != NULL && strlen(m) > 0)
+                        set(configObj, chatModelAttrs[i], (ULONG)m);
+
+                    set(configObj, streamAttrs[i],
+                        pendingLockedStreaming[i] ? TRUE : FALSE);
+                    set(configObj, webSearchAttrs[i],
+                        pendingLockedWebSearch[i] ? TRUE : FALSE);
+                    set(configObj, shellToolAttrs[i],
+                        pendingLockedShellTool[i] ? TRUE : FALSE);
+
+                    CONST_STRPTR cs = pendingLockedChatSystem[i];
+                    set(configObj, chatSystemAttrs[i],
+                        (ULONG)(cs != NULL ? cs : ""));
                 }
             }
 
-            if (configObj) {
-                ULONG v = pendingLockedStreaming[lockedIndex] ? TRUE : FALSE;
-                switch (lockedIndex) {
-                case LOCKED_PROFILE_OPENAI:
-                    set(configObj, MUIA_AmigaGPTConfig_OpenAiChatStreamEnabled,
-                        v);
-                    break;
-                case LOCKED_PROFILE_GEMINI:
-                    set(configObj, MUIA_AmigaGPTConfig_GeminiChatStreamEnabled,
-                        v);
-                    break;
-                case LOCKED_PROFILE_GROK:
-                    set(configObj, MUIA_AmigaGPTConfig_GrokChatStreamEnabled,
-                        v);
-                    break;
-                case LOCKED_PROFILE_ANTHROPIC:
-                    set(configObj,
-                        MUIA_AmigaGPTConfig_AnthropicChatStreamEnabled, v);
-                    break;
-                default:
-                    break;
-                }
-            }
-
-            if (configObj) {
-                ULONG ws = pendingLockedWebSearch[lockedIndex] ? TRUE : FALSE;
-                switch (lockedIndex) {
-                case LOCKED_PROFILE_OPENAI:
-                    set(configObj, MUIA_AmigaGPTConfig_OpenAiWebSearchEnabled,
-                        ws);
-                    break;
-                case LOCKED_PROFILE_GEMINI:
-                    set(configObj, MUIA_AmigaGPTConfig_GeminiWebSearchEnabled,
-                        ws);
-                    break;
-                case LOCKED_PROFILE_GROK:
-                    set(configObj, MUIA_AmigaGPTConfig_GrokWebSearchEnabled,
-                        ws);
-                    break;
-                case LOCKED_PROFILE_ANTHROPIC:
-                    set(configObj,
-                        MUIA_AmigaGPTConfig_AnthropicWebSearchEnabled, ws);
-                    break;
-                default:
-                    break;
-                }
-            }
-
-            if (configObj) {
-                ULONG st = pendingLockedShellTool[lockedIndex] ? TRUE : FALSE;
-                switch (lockedIndex) {
-                case LOCKED_PROFILE_OPENAI:
-                    set(configObj, MUIA_AmigaGPTConfig_OpenAiShellToolEnabled,
-                        st);
-                    break;
-                case LOCKED_PROFILE_GEMINI:
-                    set(configObj, MUIA_AmigaGPTConfig_GeminiShellToolEnabled,
-                        st);
-                    break;
-                case LOCKED_PROFILE_GROK:
-                    set(configObj, MUIA_AmigaGPTConfig_GrokShellToolEnabled,
-                        st);
-                    break;
-                case LOCKED_PROFILE_ANTHROPIC:
-                    set(configObj,
-                        MUIA_AmigaGPTConfig_AnthropicShellToolEnabled, st);
-                    break;
-                default:
-                    break;
-                }
-            }
-
-            if (configObj) {
-                CONST_STRPTR cs = pendingLockedChatSystem[lockedIndex];
-                if (cs == NULL)
-                    cs = "";
-                switch (lockedIndex) {
-                case LOCKED_PROFILE_OPENAI:
-                    set(configObj, MUIA_AmigaGPTConfig_OpenAiChatSystem,
-                        (ULONG)cs);
-                    break;
-                case LOCKED_PROFILE_GEMINI:
-                    set(configObj, MUIA_AmigaGPTConfig_GeminiChatSystem,
-                        (ULONG)cs);
-                    break;
-                case LOCKED_PROFILE_GROK:
-                    set(configObj, MUIA_AmigaGPTConfig_GrokChatSystem,
-                        (ULONG)cs);
-                    break;
-                case LOCKED_PROFILE_ANTHROPIC:
-                    set(configObj, MUIA_AmigaGPTConfig_AnthropicChatSystem,
-                        (ULONG)cs);
-                    break;
-                default:
-                    break;
-                }
+            /* Keep legacy global ChatModelName in sync with active profile */
+            {
+                CONST_STRPTR m = pendingLockedChatModels[lockedIndex];
+                if (m != NULL && strlen(m) > 0 && configObj)
+                    set(configObj, MUIA_AmigaGPTConfig_ChatModelName, (ULONG)m);
             }
         }
 
