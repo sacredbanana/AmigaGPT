@@ -1671,15 +1671,16 @@ static void sendChatMessage() {
                                         CSA_Source, (Tag)receivedMessage,
                                         CSA_MapForeignChars, TRUE, TAG_DONE);
                                 if (unformattedMessageSystemEncoded != NULL) {
-                                    if (configGetSpeechSystem() !=
-                                        SPEECH_SYSTEM_OPENAI) {
+                                    SpeechSystem ss = configGetSpeechSystem();
+                                    if (ss != SPEECH_SYSTEM_OPENAI &&
+                                        ss != SPEECH_SYSTEM_ELEVENLABS) {
                                         speakText(
                                             unformattedMessageSystemEncoded +
                                                 speechIndex,
                                             NULL, NULL);
+                                        speechIndex = strlen(
+                                            unformattedMessageSystemEncoded);
                                     }
-                                    speechIndex = strlen(
-                                        unformattedMessageSystemEncoded);
                                     CodesetsFreeA(
                                         unformattedMessageSystemEncoded, NULL);
                                 }
