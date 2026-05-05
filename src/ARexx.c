@@ -952,18 +952,24 @@ rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
     struct json_object *elevenLabsModelObj =
         json_object_object_get(profile, "elevenLabsModel");
     if (elevenLabsModelObj != NULL) {
+        CONST_STRPTR model = json_object_get_string(elevenLabsModelObj);
         if (out->elevenLabsModel != NULL)
             FreeVec(out->elevenLabsModel);
         out->elevenLabsModel =
-            rexxDupStr(json_object_get_string(elevenLabsModelObj));
+            rexxDupStr((model != NULL && strlen(model) > 0)
+                           ? model
+                           : ELEVENLABS_MODEL_FLASH_V2_5_ID);
     }
     struct json_object *elevenLabsModelNameObj =
         json_object_object_get(profile, "elevenLabsModelName");
     if (elevenLabsModelNameObj != NULL) {
+        CONST_STRPTR modelName = json_object_get_string(elevenLabsModelNameObj);
         if (out->elevenLabsModelName != NULL)
             FreeVec(out->elevenLabsModelName);
         out->elevenLabsModelName =
-            rexxDupStr(json_object_get_string(elevenLabsModelNameObj));
+            rexxDupStr((modelName != NULL && strlen(modelName) > 0)
+                           ? modelName
+                           : ELEVENLABS_MODEL_FLASH_V2_5_NAME);
     }
 
     if (arr != NULL)
@@ -1619,7 +1625,8 @@ static void rexxAppendModelNamesFromJsonArray(STRPTR buffer, ULONG bufferSize,
 static void rexxAppendElevenLabsModelNames(STRPTR buffer, ULONG bufferSize,
                                            CONST_STRPTR apiKey) {
     struct json_object *response = makeHttpsGetRequest(
-        "api.elevenlabs.io", 443, "/v1/models", apiKey, "xi-api-key", FALSE,
+        "api.elevenlabs.io", 443, TRUE, "/v1/models", apiKey, "xi-api-key",
+        FALSE,
         configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
         configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
         configGetProxyUsername(), configGetProxyPassword());
@@ -1661,7 +1668,8 @@ static void rexxAppendElevenLabsModelNames(STRPTR buffer, ULONG bufferSize,
 static void rexxAppendElevenLabsVoiceNames(STRPTR buffer, ULONG bufferSize,
                                            CONST_STRPTR apiKey) {
     struct json_object *response = makeHttpsGetRequest(
-        "api.elevenlabs.io", 443, "/v2/voices", apiKey, "xi-api-key", FALSE,
+        "api.elevenlabs.io", 443, TRUE, "/v2/voices", apiKey, "xi-api-key",
+        FALSE,
         configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
         configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
         configGetProxyUsername(), configGetProxyPassword());

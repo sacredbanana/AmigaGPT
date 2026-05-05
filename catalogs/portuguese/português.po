@@ -1871,3 +1871,58 @@ msgstr "Falha na leitura SSL: %s"
 msgctxt "STRING_ERROR_INVALID_BASE64 (347//)"
 msgid "Invalid base64 image data"
 msgstr "Dados de imagem base64 inválidos"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_GET_ALL_VOICES (348//)"
+msgid "Get All Voices"
+msgstr "Obter todas as vozes"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_CONNECTION_SETTINGS (349//)"
+msgid "Connection settings"
+msgstr "Definições de ligação"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_WORKBENCH_NARRATOR_DEVICE (350//)"
+msgid "Workbench narrator.device"
+msgstr "Workbench narrator.device"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_MODE_NATURAL (351//)"
+msgid "Natural"
+msgstr "Natural"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_MODE_ROBOTIC (352//)"
+msgid "Robotic"
+msgstr "Robótico"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_SEX_MALE (353//)"
+msgid "Male"
+msgstr "Masculino"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_SEX_FEMALE (354//)"
+msgid "Female"
+msgstr "Feminino"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_RATE_WPM (355//)"
+msgid "Rate (wpm)"
+msgstr "Velocidade (wpm)"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_PITCH_HZ (356//)"
+msgid "Pitch (Hz)"
+msgstr "Tom (Hz)"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_MODE (357//)"
+msgid "Mode"
+msgstr "Modo"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_SEX (358//)"
+msgid "Sex"
+msgstr "Sexo"

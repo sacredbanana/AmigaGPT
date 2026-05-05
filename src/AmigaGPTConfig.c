@@ -286,8 +286,8 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->elevenLabsAPIKey = NULL;
     data->elevenLabsVoiceID = NULL;
     data->elevenLabsVoiceName = NULL;
-    data->elevenLabsModel = NULL;
-    data->elevenLabsModelName = NULL;
+    data->elevenLabsModel = copyString(ELEVENLABS_MODEL_FLASH_V2_5_ID);
+    data->elevenLabsModelName = copyString(ELEVENLABS_MODEL_FLASH_V2_5_NAME);
 
     /* New string-based model names (new in schema v2) */
     data->chatModelName = copyString("gpt-5-chat-latest");
@@ -2184,6 +2184,12 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     readJsonString(configJsonObject, "elevenLabsModel", &data->elevenLabsModel);
     readJsonString(configJsonObject, "elevenLabsModelName",
                    &data->elevenLabsModelName);
+    if (data->elevenLabsModel == NULL || strlen(data->elevenLabsModel) == 0)
+        setStringAttr(&data->elevenLabsModel, ELEVENLABS_MODEL_FLASH_V2_5_ID);
+    if (data->elevenLabsModelName == NULL ||
+        strlen(data->elevenLabsModelName) == 0)
+        setStringAttr(&data->elevenLabsModelName,
+                      ELEVENLABS_MODEL_FLASH_V2_5_NAME);
 
     readJsonString(configJsonObject, "chatModelName", &data->chatModelName);
     readJsonString(configJsonObject, "imageModelName", &data->imageModelName);
@@ -2688,6 +2694,10 @@ void configFreeSpeechRequestSettings(struct SpeechRequestSettings *out) {
         FreeVec(out->activeProfileName);
     if (out->accentPath != NULL)
         FreeVec(out->accentPath);
+    if (out->host != NULL)
+        FreeVec(out->host);
+    if (out->apiEndpointUrl != NULL)
+        FreeVec(out->apiEndpointUrl);
     if (out->openAiApiKey != NULL)
         FreeVec(out->openAiApiKey);
     if (out->openAiVoiceInstructions != NULL)
@@ -2714,6 +2724,11 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
     out->activeProfileName = dupStrCfg(configGetActiveSpeechProfileName());
     out->speechSystem = (SpeechSystem)configGetSpeechSystem();
     out->fliteVoice = configGetSpeechFliteVoice();
+    out->host = dupStrCfg("api.openai.com");
+    out->port = 443;
+    out->useSSL = TRUE;
+    out->apiEndpointUrl = dupStrCfg("v1");
+    out->authorizationType = AUTHORIZATION_TYPE_BEARER;
     out->openAiApiKey = dupStrCfg(configGetOpenAiSpeechApiKey());
     out->openAiTtsModel = configGetOpenAITTSModel();
     out->openAiTtsVoice = configGetOpenAITTSVoice();
@@ -2752,7 +2767,8 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
     if (activeName == NULL || strlen(activeName) == 0)
         return;
 
-    /* If activeName matches a built-in system name, we're done. */
+    /* If activeName matches a built-in system name, select its defaults first.
+     */
     for (int s = 0; SPEECH_SYSTEM_NAMES[s] != NULL; s++) {
         if (strcmp(activeName, SPEECH_SYSTEM_NAMES[s]) == 0) {
             out->speechSystem = (SpeechSystem)s;
@@ -2775,7 +2791,16 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
                 out->narratorMode = (UWORD)configGetNarratorMode37();
                 out->narratorSex = (UWORD)configGetNarratorSex37();
             }
-            return;
+            if (out->speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
+                if (out->host != NULL)
+                    FreeVec(out->host);
+                out->host = dupStrCfg("api.elevenlabs.io");
+                if (out->apiEndpointUrl != NULL)
+                    FreeVec(out->apiEndpointUrl);
+                out->apiEndpointUrl = dupStrCfg("v1");
+                out->authorizationType = AUTHORIZATION_TYPE_XI_API_KEY;
+            }
+            break;
         }
     }
 
@@ -2803,6 +2828,53 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
         struct json_object *sysObj = json_object_object_get(p, "speechSystem");
         if (sysObj != NULL)
             out->speechSystem = (SpeechSystem)json_object_get_int(sysObj);
+
+        if (out->speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
+            if (out->host != NULL)
+                FreeVec(out->host);
+            out->host = dupStrCfg("api.elevenlabs.io");
+            if (out->apiEndpointUrl != NULL)
+                FreeVec(out->apiEndpointUrl);
+            out->apiEndpointUrl = dupStrCfg("v1");
+            out->authorizationType = AUTHORIZATION_TYPE_XI_API_KEY;
+        } else if (out->speechSystem == SPEECH_SYSTEM_OPENAI) {
+            if (out->host != NULL)
+                FreeVec(out->host);
+            out->host = dupStrCfg("api.openai.com");
+            if (out->apiEndpointUrl != NULL)
+                FreeVec(out->apiEndpointUrl);
+            out->apiEndpointUrl = dupStrCfg("v1");
+            out->authorizationType = AUTHORIZATION_TYPE_BEARER;
+        }
+
+        struct json_object *hostObj = json_object_object_get(p, "host");
+        if (hostObj != NULL) {
+            if (out->host != NULL) {
+                FreeVec(out->host);
+                out->host = NULL;
+            }
+            out->host = dupStrCfg(json_object_get_string(hostObj));
+        }
+        struct json_object *portObj = json_object_object_get(p, "port");
+        if (portObj != NULL)
+            out->port = (UWORD)json_object_get_int(portObj);
+        struct json_object *sslObj = json_object_object_get(p, "useSSL");
+        if (sslObj != NULL)
+            out->useSSL = (BOOL)json_object_get_boolean(sslObj);
+        struct json_object *endpointObj =
+            json_object_object_get(p, "apiEndpointUrl");
+        if (endpointObj != NULL) {
+            if (out->apiEndpointUrl != NULL) {
+                FreeVec(out->apiEndpointUrl);
+                out->apiEndpointUrl = NULL;
+            }
+            out->apiEndpointUrl = dupStrCfg(json_object_get_string(endpointObj));
+        }
+        struct json_object *authObj =
+            json_object_object_get(p, "authorizationType");
+        if (authObj != NULL)
+            out->authorizationType =
+                (AuthorizationType)json_object_get_int(authObj);
 
         /* narrator defaults follow the chosen system unless profile overrides
          */
@@ -2900,20 +2972,28 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
         }
         struct json_object *eMid = json_object_object_get(p, "elevenLabsModel");
         if (eMid != NULL) {
+            CONST_STRPTR model = json_object_get_string(eMid);
             if (out->elevenLabsModel != NULL) {
                 FreeVec(out->elevenLabsModel);
                 out->elevenLabsModel = NULL;
             }
-            out->elevenLabsModel = dupStrCfg(json_object_get_string(eMid));
+            out->elevenLabsModel =
+                dupStrCfg((model != NULL && strlen(model) > 0)
+                              ? model
+                              : ELEVENLABS_MODEL_FLASH_V2_5_ID);
         }
         struct json_object *eMn =
             json_object_object_get(p, "elevenLabsModelName");
         if (eMn != NULL) {
+            CONST_STRPTR modelName = json_object_get_string(eMn);
             if (out->elevenLabsModelName != NULL) {
                 FreeVec(out->elevenLabsModelName);
                 out->elevenLabsModelName = NULL;
             }
-            out->elevenLabsModelName = dupStrCfg(json_object_get_string(eMn));
+            out->elevenLabsModelName =
+                dupStrCfg((modelName != NULL && strlen(modelName) > 0)
+                              ? modelName
+                              : ELEVENLABS_MODEL_FLASH_V2_5_NAME);
         }
 
         break;
@@ -3255,6 +3335,8 @@ STRPTR configGetElevenLabsModel(void) {
     STRPTR val = NULL;
     if (configObj)
         get(configObj, MUIA_AmigaGPTConfig_ElevenLabsModel, &val);
+    if (val == NULL || strlen(val) == 0)
+        return (STRPTR)ELEVENLABS_MODEL_FLASH_V2_5_ID;
     return val;
 }
 
@@ -3262,6 +3344,8 @@ STRPTR configGetElevenLabsModelName(void) {
     STRPTR val = NULL;
     if (configObj)
         get(configObj, MUIA_AmigaGPTConfig_ElevenLabsModelName, &val);
+    if (val == NULL || strlen(val) == 0)
+        return (STRPTR)ELEVENLABS_MODEL_FLASH_V2_5_NAME;
     return val;
 }
 

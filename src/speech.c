@@ -242,14 +242,16 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
     if (speechSystem == SPEECH_SYSTEM_OPENAI ||
         speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
         if (speechSystem == SPEECH_SYSTEM_OPENAI) {
-            if (settings->openAiApiKey == NULL ||
-                strlen(settings->openAiApiKey) == 0) {
+            if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
+                (settings->openAiApiKey == NULL ||
+                 strlen(settings->openAiApiKey) == 0)) {
                 displayError(STRING_ERROR_NO_API_KEY);
                 return;
             }
         } else if (speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
-            if (settings->elevenLabsApiKey == NULL ||
-                strlen(settings->elevenLabsApiKey) == 0) {
+            if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
+                (settings->elevenLabsApiKey == NULL ||
+                 strlen(settings->elevenLabsApiKey) == 0)) {
                 displayError(STRING_ERROR_NO_API_KEY);
                 return;
             }
@@ -271,7 +273,9 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         if (speechSystem == SPEECH_SYSTEM_OPENAI) {
             audioBuffer = postTextToSpeechRequestToOpenAI(
                 text, settings->openAiTtsModel, settings->openAiTtsVoice,
-                settings->openAiVoiceInstructions, settings->openAiApiKey,
+                settings->openAiVoiceInstructions, settings->host,
+                settings->port, settings->useSSL, settings->apiEndpointUrl,
+                settings->authorizationType, settings->openAiApiKey,
                 &audioLength, configGetProxyEnabled(), configGetProxyHost(),
                 configGetProxyPort(), configGetProxyUsesSSL(),
                 configGetProxyRequiresAuth(), configGetProxyUsername(),
@@ -279,6 +283,8 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         } else if (speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
             audioBuffer = postTextToSpeechRequestToElevenLabs(
                 text, settings->elevenLabsVoiceID, settings->elevenLabsModel,
+                settings->host, settings->port, settings->useSSL,
+                settings->apiEndpointUrl, settings->authorizationType,
                 settings->elevenLabsApiKey, &audioLength,
                 configGetProxyEnabled(), configGetProxyHost(),
                 configGetProxyPort(), configGetProxyUsesSSL(),

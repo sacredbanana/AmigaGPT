@@ -50,6 +50,12 @@ Object *speechProviderSettingsRequesterWindowObject = NULL;
 static Object *speechProfileList = NULL;
 static Object *speechProfileNameString = NULL;
 static Object *speechSystemCycle = NULL;
+static Object *speechConnectionGroup = NULL;
+static Object *speechHostString = NULL;
+static Object *speechPortString = NULL;
+static Object *speechUsesSSLCycle = NULL;
+static Object *speechAuthorizationTypeCycle = NULL;
+static Object *speechEndpointUrlString = NULL;
 
 /* OpenAI fields */
 static Object *openAiApiKeyString = NULL;
@@ -80,7 +86,8 @@ static Object *workbenchSexCycle = NULL;
 static Object *fliteVoiceCycle = NULL;
 static Object *fliteWarningText = NULL;
 
-static Object *saveProfileButton = NULL;
+static Object *newProfileButton = NULL;
+static Object *duplicateProfileButton = NULL;
 static Object *deleteProfileButton = NULL;
 
 static Object *rightScrollgroup = NULL;
@@ -95,29 +102,67 @@ static Object *cancelButton = NULL;
 static Object *testButton = NULL;
 
 static struct json_object *speechProfilesJson = NULL;
+static struct json_object *builtinSpeechProfilesJson[8] = {NULL};
 static struct json_object *elevenLabsModelsJson = NULL;
 static struct json_object *elevenLabsVoicesJson = NULL;
 static BOOL suppressProfileSelected = FALSE;
 static BOOL speechSettingsDirty = FALSE;
 static LONG lastSelectedProfile = MUIV_NList_Active_Off;
+static LONG pendingProfileListSelect = MUIV_NList_Active_Off;
 
 static STRPTR speechSystemOptions[8] = {NULL};
+static STRPTR speechSslOptions[3] = {NULL};
+static STRPTR speechAuthorizationTypeOptions[6] = {NULL};
 
 #ifdef __AMIGAOS3__
-static STRPTR narratorModeOptions[] = {(STRPTR) "Natural", (STRPTR) "Robotic",
-                                       NULL};
-static STRPTR narratorSexOptions[] = {(STRPTR) "Male", (STRPTR) "Female", NULL};
+static STRPTR narratorModeOptions[3] = {NULL};
+static STRPTR narratorSexOptions[3] = {NULL};
 #endif
 
 #define ELEVENLABS_HOST "api.elevenlabs.io"
 #define ELEVENLABS_PORT 443
 
+static BOOL speechSystemUsesNetwork(SpeechSystem sys) {
+    return (sys == SPEECH_SYSTEM_OPENAI || sys == SPEECH_SYSTEM_ELEVENLABS);
+}
+
+static CONST_STRPTR defaultHostForSpeechSystem(SpeechSystem sys) {
+    return (sys == SPEECH_SYSTEM_ELEVENLABS) ? ELEVENLABS_HOST
+                                             : "api.openai.com";
+}
+
+static AuthorizationType defaultAuthForSpeechSystem(SpeechSystem sys) {
+    return (sys == SPEECH_SYSTEM_ELEVENLABS) ? AUTHORIZATION_TYPE_XI_API_KEY
+                                             : AUTHORIZATION_TYPE_BEARER;
+}
+
+static CONST_STRPTR headerNameForAuthorizationType(AuthorizationType authType) {
+    switch (authType) {
+    case AUTHORIZATION_TYPE_BEARER:
+        return "Authorization";
+    case AUTHORIZATION_TYPE_X_API_KEY:
+        return "x-api-key";
+    case AUTHORIZATION_TYPE_X_GOOGLE_API_KEY:
+        return "x-goog-api-key";
+    case AUTHORIZATION_TYPE_XI_API_KEY:
+        return "xi-api-key";
+    case AUTHORIZATION_TYPE_NONE:
+    default:
+        return "";
+    }
+}
+
 static void loadProfilesFromConfig(void);
 static void saveProfilesToConfig(void);
 static void populateProfileList(void);
 static void loadProfileIntoUI(LONG activeIndex);
+static struct json_object *createDefaultProfile(CONST_STRPTR name);
+static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys);
 static struct json_object *createProfileFromUI(CONST_STRPTR name);
-static void applyBuiltinProfileSelection(SpeechSystem sys);
+static struct json_object *getWorkingProfileForListIndex(LONG activeIndex);
+static BOOL applyProfileFromUIToWorking(LONG activeIndex);
+static void commitBuiltinProfileToConfig(struct json_object *profile);
+static void updateProfileManagementButtonLabels(void);
 static void reinitSpeechForActiveProfile(void);
 static SpeechSystem getSpeechSystemFromCycle(void);
 static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew);
@@ -140,6 +185,35 @@ static void endRightPanelUpdate(void) {
             FALSE);
 }
 
+static void updateProfileManagementButtonLabels(void) {
+    if (greenPen == 0 || redPen == 0 || bluePen == 0)
+        return;
+
+    const UBYTE BUTTON_LABEL_BUFFER_SIZE = 64;
+    STRPTR buttonLabelText =
+        AllocVec(BUTTON_LABEL_BUFFER_SIZE, MEMF_ANY | MEMF_CLEAR);
+    if (buttonLabelText == NULL)
+        return;
+
+    if (newProfileButton != NULL) {
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]+ %s",
+                 greenPen, STRING_NEW);
+        set(newProfileButton, MUIA_Text_Contents, buttonLabelText);
+    }
+    if (duplicateProfileButton != NULL) {
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s",
+                 bluePen, STRING_DUPLICATE);
+        set(duplicateProfileButton, MUIA_Text_Contents, buttonLabelText);
+    }
+    if (deleteProfileButton != NULL) {
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s",
+                 redPen, STRING_DELETE_PROFILE);
+        set(deleteProfileButton, MUIA_Text_Contents, buttonLabelText);
+    }
+
+    FreeVec(buttonLabelText);
+}
+
 static LONG getBuiltinSpeechProviderCount(void) {
     LONG count = 0;
 #ifdef __AMIGAOS3__
@@ -158,31 +232,30 @@ static LONG getBuiltinSpeechProviderCount(void) {
 }
 
 static BOOL isBuiltinListIndex(LONG idx) {
-    /* Index 0 = New Profile, 1..builtinCount = built-ins */
-    return (idx >= 1 && idx <= getBuiltinSpeechProviderCount());
+    return (idx >= 0 && idx < getBuiltinSpeechProviderCount());
 }
 
 static SpeechSystem builtinSystemForListIndex(LONG idx) {
 #ifdef __AMIGAOS3__
-    /* 1=v34, 2=v37, 3=OpenAI, 4=ElevenLabs */
-    if (idx == 1)
+    /* 0=v34, 1=v37, 2=OpenAI, 3=ElevenLabs */
+    if (idx == 0)
         return SPEECH_SYSTEM_34;
-    if (idx == 2)
+    if (idx == 1)
         return SPEECH_SYSTEM_37;
-    if (idx == 3)
+    if (idx == 2)
         return SPEECH_SYSTEM_OPENAI;
     return SPEECH_SYSTEM_ELEVENLABS;
 #else
 #ifdef __AMIGAOS4__
-    /* 1=Flite, 2=OpenAI, 3=ElevenLabs */
-    if (idx == 1)
+    /* 0=Flite, 1=OpenAI, 2=ElevenLabs */
+    if (idx == 0)
         return SPEECH_SYSTEM_FLITE;
-    if (idx == 2)
+    if (idx == 1)
         return SPEECH_SYSTEM_OPENAI;
     return SPEECH_SYSTEM_ELEVENLABS;
 #else
-    /* 1=OpenAI, 2=ElevenLabs */
-    if (idx == 1)
+    /* 0=OpenAI, 1=ElevenLabs */
+    if (idx == 0)
         return SPEECH_SYSTEM_OPENAI;
     return SPEECH_SYSTEM_ELEVENLABS;
 #endif
@@ -194,6 +267,64 @@ static CONST_STRPTR builtinNameForSystem(SpeechSystem sys) {
     if (sys >= 0 && SPEECH_SYSTEM_NAMES[sys] != NULL)
         return SPEECH_SYSTEM_NAMES[sys];
     return SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENAI];
+}
+
+static BOOL profileNameIsBuiltin(CONST_STRPTR name) {
+    if (name == NULL)
+        return FALSE;
+    for (LONG bi = 0; bi < getBuiltinSpeechProviderCount(); bi++) {
+        CONST_STRPTR bn = builtinNameForSystem(builtinSystemForListIndex(bi));
+        if (bn != NULL && strcmp(name, bn) == 0)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+static int profileArrayIndexForVisibleCustomIndex(int visibleIndex) {
+    if (visibleIndex < 0 || speechProfilesJson == NULL ||
+        !json_object_is_type(speechProfilesJson, json_type_array))
+        return -1;
+    int seen = 0;
+    int len = json_object_array_length(speechProfilesJson);
+    for (int i = 0; i < len; i++) {
+        struct json_object *p = json_object_array_get_idx(speechProfilesJson, i);
+        struct json_object *nameObj =
+            p ? json_object_object_get(p, "name") : NULL;
+        CONST_STRPTR name = nameObj ? json_object_get_string(nameObj) : NULL;
+        if (profileNameIsBuiltin(name))
+            continue;
+        if (seen == visibleIndex)
+            return i;
+        seen++;
+    }
+    return -1;
+}
+
+static LONG visibleCustomCount(void) {
+    LONG count = 0;
+    if (speechProfilesJson == NULL ||
+        !json_object_is_type(speechProfilesJson, json_type_array))
+        return 0;
+    int len = json_object_array_length(speechProfilesJson);
+    for (int i = 0; i < len; i++) {
+        struct json_object *p = json_object_array_get_idx(speechProfilesJson, i);
+        struct json_object *nameObj =
+            p ? json_object_object_get(p, "name") : NULL;
+        CONST_STRPTR name = nameObj ? json_object_get_string(nameObj) : NULL;
+        if (!profileNameIsBuiltin(name))
+            count++;
+    }
+    return count;
+}
+
+static STRPTR dupStrLocal(CONST_STRPTR s) {
+    if (s == NULL)
+        return NULL;
+    ULONG len = strlen(s);
+    STRPTR copy = AllocVec(len + 1, MEMF_ANY | MEMF_CLEAR);
+    if (copy != NULL)
+        strcpy(copy, s);
+    return copy;
 }
 
 static BOOL fileExists(CONST_STRPTR path) {
@@ -285,28 +416,106 @@ static void updateRequirementWarningForSystem(SpeechSystem sys,
     set(warningTextObject, MUIA_Text_Contents, warningBuf);
 }
 
-static struct json_object *getElevenLabsModels(CONST_STRPTR apiKey) {
+static struct json_object *
+getElevenLabsModels(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                    CONST_STRPTR endpointUrl, AuthorizationType authType,
+                    CONST_STRPTR apiKey) {
+    UBYTE endpoint[512];
+    if (host == NULL || strlen(host) == 0)
+        host = ELEVENLABS_HOST;
+    if (port == 0)
+        port = ELEVENLABS_PORT;
+    snprintf(endpoint, sizeof(endpoint), "/%s/models",
+             (endpointUrl != NULL && strlen(endpointUrl) > 0) ? endpointUrl
+                                                              : "v1");
     return makeHttpsGetRequest(
-        ELEVENLABS_HOST, ELEVENLABS_PORT, "/v1/models", apiKey, "xi-api-key",
-        FALSE, configGetProxyEnabled(), configGetProxyHost(),
-        configGetProxyPort(), configGetProxyUsesSSL(),
+        host, port, useSSL, endpoint, apiKey,
+        headerNameForAuthorizationType(authType),
+        authType == AUTHORIZATION_TYPE_BEARER, configGetProxyEnabled(),
+        configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
         configGetProxyRequiresAuth(), configGetProxyUsername(),
         configGetProxyPassword());
 }
 
-static struct json_object *searchElevenLabsVoices(CONST_STRPTR apiKey,
-                                                  CONST_STRPTR query) {
+static void addDefaultElevenLabsModel(struct json_object *models,
+                                      CONST_STRPTR modelId,
+                                      CONST_STRPTR name) {
+    struct json_object *model = json_object_new_object();
+    json_object_object_add(model, "model_id",
+                           json_object_new_string(modelId ? modelId : ""));
+    json_object_object_add(model, "name",
+                           json_object_new_string(name ? name : ""));
+    json_object_array_add(models, model);
+}
+
+static void ensureDefaultElevenLabsModelsJson(void) {
+    if (elevenLabsModelsJson != NULL)
+        return;
+
+    elevenLabsModelsJson = json_object_new_object();
+    struct json_object *models = json_object_new_array();
+    addDefaultElevenLabsModel(models, ELEVENLABS_MODEL_V3_ID,
+                              ELEVENLABS_MODEL_V3_NAME);
+    addDefaultElevenLabsModel(models, ELEVENLABS_MODEL_MULTILINGUAL_V2_ID,
+                              ELEVENLABS_MODEL_MULTILINGUAL_V2_NAME);
+    addDefaultElevenLabsModel(models, ELEVENLABS_MODEL_FLASH_V2_5_ID,
+                              ELEVENLABS_MODEL_FLASH_V2_5_NAME);
+    addDefaultElevenLabsModel(models, ELEVENLABS_MODEL_TURBO_V2_5_ID,
+                              ELEVENLABS_MODEL_TURBO_V2_5_NAME);
+    json_object_object_add(elevenLabsModelsJson, "models", models);
+}
+
+static void setElevenLabsModelListActiveById(CONST_STRPTR modelId) {
+    if (elevenLabsModelList == NULL || elevenLabsModelsJson == NULL ||
+        modelId == NULL)
+        return;
+
+    struct json_object *modelsArray = NULL;
+    if (!json_object_object_get_ex(elevenLabsModelsJson, "models",
+                                   &modelsArray)) {
+        if (json_object_is_type(elevenLabsModelsJson, json_type_array))
+            modelsArray = elevenLabsModelsJson;
+        else
+            return;
+    }
+
+    LONG modelCount = json_object_array_length(modelsArray);
+    for (LONG i = 0; i < modelCount; i++) {
+        struct json_object *modelObj =
+            json_object_array_get_idx(modelsArray, i);
+        struct json_object *modelIdObj = NULL;
+        if (modelObj != NULL &&
+            json_object_object_get_ex(modelObj, "model_id", &modelIdObj)) {
+            CONST_STRPTR mid = json_object_get_string(modelIdObj);
+            if (mid != NULL && strcmp(mid, modelId) == 0) {
+                set(elevenLabsModelList, MUIA_NList_Active, i);
+                return;
+            }
+        }
+    }
+}
+
+static struct json_object *
+searchElevenLabsVoices(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                       AuthorizationType authType, CONST_STRPTR apiKey,
+                       CONST_STRPTR query) {
     UBYTE endpoint[512];
+    if (host == NULL || strlen(host) == 0)
+        host = ELEVENLABS_HOST;
+    if (port == 0)
+        port = ELEVENLABS_PORT;
     if (query != NULL && strlen(query) > 0) {
         snprintf(endpoint, sizeof(endpoint), "/v2/voices?search=%s", query);
     } else {
         snprintf(endpoint, sizeof(endpoint), "/v2/voices");
     }
     return makeHttpsGetRequest(
-        ELEVENLABS_HOST, ELEVENLABS_PORT, endpoint, apiKey, "xi-api-key", FALSE,
-        configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
-        configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
-        configGetProxyUsername(), configGetProxyPassword());
+        host, port, useSSL, endpoint, apiKey,
+        headerNameForAuthorizationType(authType),
+        authType == AUTHORIZATION_TYPE_BEARER, configGetProxyEnabled(),
+        configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
+        configGetProxyRequiresAuth(), configGetProxyUsername(),
+        configGetProxyPassword());
 }
 
 /* NList hooks for simple string lists (do not free entries) */
@@ -334,6 +543,7 @@ static void populateElevenLabsModelList(void) {
     if (elevenLabsModelList == NULL)
         return;
     DoMethod(elevenLabsModelList, MUIM_NList_Clear);
+    ensureDefaultElevenLabsModelsJson();
     if (elevenLabsModelsJson == NULL)
         return;
 
@@ -350,6 +560,9 @@ static void populateElevenLabsModelList(void) {
     LONG modelCount = json_object_array_length(modelsArray);
     LONG selectedIndex = MUIV_NList_Active_Off;
     STRPTR currentModelId = configGetElevenLabsModel();
+    STRPTR currentModelName = NULL;
+    if (elevenLabsCurrentModelText != NULL)
+        get(elevenLabsCurrentModelText, MUIA_Text_Contents, &currentModelName);
 
     for (LONG i = 0; i < modelCount; i++) {
         struct json_object *modelObj =
@@ -368,6 +581,12 @@ static void populateElevenLabsModelList(void) {
                 if (mid != NULL && strcmp(currentModelId, mid) == 0) {
                     selectedIndex = i;
                 }
+            }
+            if (selectedIndex == MUIV_NList_Active_Off &&
+                currentModelName != NULL &&
+                strcmp(currentModelName, STRING_NONE_SELECTED) != 0 &&
+                strcmp(currentModelName, name) == 0) {
+                selectedIndex = i;
             }
         }
     }
@@ -427,6 +646,16 @@ static void populateElevenLabsVoiceList(void) {
 HOOKPROTONHNONP(ElevenLabsFetchModelsButtonClickedFunc, void) {
     STRPTR apiKey = NULL;
     get(elevenLabsAPIKeyString, MUIA_String_Contents, &apiKey);
+    STRPTR host = NULL;
+    LONG port = ELEVENLABS_PORT;
+    LONG useSSL = 1;
+    LONG authType = AUTHORIZATION_TYPE_XI_API_KEY;
+    STRPTR endpointUrl = NULL;
+    get(speechHostString, MUIA_String_Contents, &host);
+    get(speechPortString, MUIA_String_Integer, &port);
+    get(speechUsesSSLCycle, MUIA_Cycle_Active, &useSSL);
+    get(speechAuthorizationTypeCycle, MUIA_Cycle_Active, &authType);
+    get(speechEndpointUrlString, MUIA_String_Contents, &endpointUrl);
 
     if (apiKey == NULL || strlen(apiKey) == 0) {
         displayError(STRING_ERROR_NO_API_KEY);
@@ -441,7 +670,9 @@ HOOKPROTONHNONP(ElevenLabsFetchModelsButtonClickedFunc, void) {
         elevenLabsModelsJson = NULL;
     }
 
-    elevenLabsModelsJson = getElevenLabsModels(apiKey);
+    elevenLabsModelsJson =
+        getElevenLabsModels(host, (UWORD)port, useSSL == 1, endpointUrl,
+                            (AuthorizationType)authType, apiKey);
     if (elevenLabsModelsJson != NULL) {
         populateElevenLabsModelList();
         updateStatusBar(STRING_READY, greenPen);
@@ -458,6 +689,14 @@ MakeHook(ElevenLabsFetchModelsButtonClickedHook,
 HOOKPROTONHNONP(ElevenLabsSearchVoicesButtonClickedFunc, void) {
     STRPTR apiKey = NULL;
     get(elevenLabsAPIKeyString, MUIA_String_Contents, &apiKey);
+    STRPTR host = NULL;
+    LONG port = ELEVENLABS_PORT;
+    LONG useSSL = 1;
+    LONG authType = AUTHORIZATION_TYPE_XI_API_KEY;
+    get(speechHostString, MUIA_String_Contents, &host);
+    get(speechPortString, MUIA_String_Integer, &port);
+    get(speechUsesSSLCycle, MUIA_Cycle_Active, &useSSL);
+    get(speechAuthorizationTypeCycle, MUIA_Cycle_Active, &authType);
     if (apiKey == NULL || strlen(apiKey) == 0) {
         displayError(STRING_ERROR_NO_API_KEY);
         return;
@@ -474,7 +713,9 @@ HOOKPROTONHNONP(ElevenLabsSearchVoicesButtonClickedFunc, void) {
         elevenLabsVoicesJson = NULL;
     }
 
-    elevenLabsVoicesJson = searchElevenLabsVoices(apiKey, query);
+    elevenLabsVoicesJson = searchElevenLabsVoices(
+        host, (UWORD)port, useSSL == 1, (AuthorizationType)authType, apiKey,
+        query);
     if (elevenLabsVoicesJson != NULL) {
         populateElevenLabsVoiceList();
         updateStatusBar(STRING_READY, greenPen);
@@ -488,12 +729,26 @@ HOOKPROTONHNONP(ElevenLabsSearchVoicesButtonClickedFunc, void) {
 MakeHook(ElevenLabsSearchVoicesButtonClickedHook,
          ElevenLabsSearchVoicesButtonClickedFunc);
 
+static void updateElevenLabsSearchButtonLabel(void) {
+    if (elevenLabsSearchButton == NULL || elevenLabsVoiceSearchString == NULL)
+        return;
+    STRPTR query = NULL;
+    get(elevenLabsVoiceSearchString, MUIA_String_Contents, &query);
+    set(elevenLabsSearchButton, MUIA_Text_Contents,
+        (query != NULL && strlen(query) > 0) ? STRING_SEARCH
+                                             : STRING_GET_ALL_VOICES);
+}
+
+HOOKPROTONHNONP(ElevenLabsVoiceSearchChangedFunc, void) {
+    updateElevenLabsSearchButtonLabel();
+}
+MakeHook(ElevenLabsVoiceSearchChangedHook, ElevenLabsVoiceSearchChangedFunc);
+
 static void loadProfilesFromConfig(void) {
     if (speechProfilesJson != NULL) {
         json_object_put(speechProfilesJson);
         speechProfilesJson = NULL;
     }
-
     STRPTR profilesStr = configGetSpeechProfiles();
     if (profilesStr != NULL && strlen(profilesStr) > 0) {
         speechProfilesJson = json_tokener_parse(profilesStr);
@@ -505,6 +760,37 @@ static void loadProfilesFromConfig(void) {
         }
     } else {
         speechProfilesJson = json_object_new_array();
+    }
+
+    for (LONG i = 0; i < getBuiltinSpeechProviderCount(); i++) {
+        if (builtinSpeechProfilesJson[i] != NULL) {
+            json_object_put(builtinSpeechProfilesJson[i]);
+            builtinSpeechProfilesJson[i] = NULL;
+        }
+        SpeechSystem sys = builtinSystemForListIndex(i);
+        CONST_STRPTR builtinName = builtinNameForSystem(sys);
+        struct json_object *storedProfile = NULL;
+        int len = speechProfilesJson != NULL
+                      ? json_object_array_length(speechProfilesJson)
+                      : 0;
+        for (int j = 0; j < len; j++) {
+            struct json_object *p = json_object_array_get_idx(speechProfilesJson, j);
+            struct json_object *nameObj =
+                p ? json_object_object_get(p, "name") : NULL;
+            CONST_STRPTR name =
+                nameObj ? json_object_get_string(nameObj) : NULL;
+            if (name != NULL && strcmp(name, builtinName) == 0) {
+                storedProfile = p;
+                break;
+            }
+        }
+        if (storedProfile != NULL) {
+            builtinSpeechProfilesJson[i] =
+                json_tokener_parse(json_object_to_json_string(storedProfile));
+        }
+        if (builtinSpeechProfilesJson[i] == NULL) {
+            builtinSpeechProfilesJson[i] = createBuiltinProfileFromConfig(sys);
+        }
     }
 }
 
@@ -562,6 +848,20 @@ HOOKPROTONHNONP(SpeechProviderSystemChangedFunc, void) {
     SpeechSystem sys = getSpeechSystemFromCycle();
     updateGroupVisibilityForSystem(sys, TRUE);
     setFieldsEnabledForSystem(sys, TRUE);
+    if (speechSystemUsesNetwork(sys)) {
+        if (speechHostString != NULL)
+            set(speechHostString, MUIA_String_Contents,
+                defaultHostForSpeechSystem(sys));
+        if (speechPortString != NULL)
+            set(speechPortString, MUIA_String_Integer, 443);
+        if (speechUsesSSLCycle != NULL)
+            set(speechUsesSSLCycle, MUIA_Cycle_Active, 1);
+        if (speechAuthorizationTypeCycle != NULL)
+            set(speechAuthorizationTypeCycle, MUIA_Cycle_Active,
+                (LONG)defaultAuthForSpeechSystem(sys));
+        if (speechEndpointUrlString != NULL)
+            set(speechEndpointUrlString, MUIA_String_Contents, "v1");
+    }
     if (sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37) {
         updateRequirementWarningForSystem(sys, workbenchWarningText);
     } else if (sys == SPEECH_SYSTEM_FLITE) {
@@ -584,10 +884,6 @@ static void populateProfileList(void) {
 
     suppressProfileSelected = TRUE;
     DoMethod(speechProfileList, MUIM_NList_Clear);
-
-    /* New Profile */
-    DoMethod(speechProfileList, MUIM_NList_InsertSingle,
-             (ULONG)STRING_NEW_PROFILE, MUIV_NList_Insert_Bottom);
 
     /* Built-ins */
 #ifdef __AMIGAOS3__
@@ -623,6 +919,8 @@ static void populateProfileList(void) {
             if (nameObj == NULL)
                 continue;
             CONST_STRPTR name = json_object_get_string(nameObj);
+            if (profileNameIsBuiltin(name))
+                continue;
             if (name != NULL && strlen(name) > 0) {
                 DoMethod(speechProfileList, MUIM_NList_InsertSingle,
                          (ULONG)name, MUIV_NList_Insert_Bottom);
@@ -631,11 +929,11 @@ static void populateProfileList(void) {
     }
 
     /* Select active */
-    LONG select = 1; /* default */
+    LONG select = 0; /* default */
     STRPTR activeName = configGetActiveSpeechProfileName();
     if (activeName != NULL && strlen(activeName) > 0) {
         /* Built-ins */
-        for (LONG bi = 1; bi <= getBuiltinSpeechProviderCount(); bi++) {
+        for (LONG bi = 0; bi < getBuiltinSpeechProviderCount(); bi++) {
             SpeechSystem sys = builtinSystemForListIndex(bi);
             CONST_STRPTR bn = builtinNameForSystem(sys);
             if (bn != NULL && strcmp(activeName, bn) == 0) {
@@ -646,6 +944,7 @@ static void populateProfileList(void) {
         /* Custom */
         if (speechProfilesJson != NULL) {
             int len = json_object_array_length(speechProfilesJson);
+            LONG visible = 0;
             for (int i = 0; i < len; i++) {
                 struct json_object *p =
                     json_object_array_get_idx(speechProfilesJson, i);
@@ -653,16 +952,25 @@ static void populateProfileList(void) {
                     p ? json_object_object_get(p, "name") : NULL;
                 CONST_STRPTR name =
                     nameObj ? json_object_get_string(nameObj) : NULL;
+                if (profileNameIsBuiltin(name))
+                    continue;
                 if (name != NULL && strcmp(activeName, name) == 0) {
-                    select = 1 + getBuiltinSpeechProviderCount() + i;
+                    select = getBuiltinSpeechProviderCount() + visible;
                     break;
                 }
+                visible++;
             }
         }
     }
 
+    if (pendingProfileListSelect != MUIV_NList_Active_Off) {
+        select = pendingProfileListSelect;
+        pendingProfileListSelect = MUIV_NList_Active_Off;
+    }
+
     set(speechProfileList, MUIA_NList_Active, select);
     suppressProfileSelected = FALSE;
+    lastSelectedProfile = select;
     loadProfileIntoUI(select);
 }
 
@@ -697,6 +1005,19 @@ static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
 
     if (fliteVoiceCycle != NULL)
         set(fliteVoiceCycle, MUIA_Disabled, !(sys == SPEECH_SYSTEM_FLITE));
+
+    if (speechHostString != NULL)
+        set(speechHostString, MUIA_Disabled, !speechSystemUsesNetwork(sys));
+    if (speechPortString != NULL)
+        set(speechPortString, MUIA_Disabled, !speechSystemUsesNetwork(sys));
+    if (speechUsesSSLCycle != NULL)
+        set(speechUsesSSLCycle, MUIA_Disabled, !speechSystemUsesNetwork(sys));
+    if (speechAuthorizationTypeCycle != NULL)
+        set(speechAuthorizationTypeCycle, MUIA_Disabled,
+            !speechSystemUsesNetwork(sys));
+    if (speechEndpointUrlString != NULL)
+        set(speechEndpointUrlString, MUIA_Disabled,
+            !speechSystemUsesNetwork(sys));
 
     if (openAiApiKeyString != NULL)
         set(openAiApiKeyString, MUIA_Disabled, !(sys == SPEECH_SYSTEM_OPENAI));
@@ -738,6 +1059,8 @@ static void updateGroupVisibilityForSystem(SpeechSystem sys,
             (sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37));
     if (fliteGroup != NULL)
         set(fliteGroup, MUIA_ShowMe, (sys == SPEECH_SYSTEM_FLITE));
+    if (speechConnectionGroup != NULL)
+        set(speechConnectionGroup, MUIA_ShowMe, speechSystemUsesNetwork(sys));
     if (openAiGroup != NULL)
         set(openAiGroup, MUIA_ShowMe, (sys == SPEECH_SYSTEM_OPENAI));
     if (elevenLabsGroup != NULL)
@@ -753,25 +1076,22 @@ static void loadProfileIntoUI(LONG activeIndex) {
 
     beginRightPanelUpdate();
 
-    BOOL isCustom = !isBuiltinListIndex(activeIndex) && activeIndex > 0;
+    BOOL isCustom = !isBuiltinListIndex(activeIndex);
     SpeechSystem sys = SPEECH_SYSTEM_OPENAI;
     struct json_object *customProfile = NULL;
-    BOOL isCustomOrNew = (isCustom || activeIndex == 0);
+    BOOL isCustomOrNew = isCustom;
 
     if (isBuiltinListIndex(activeIndex)) {
         sys = builtinSystemForListIndex(activeIndex);
+        customProfile = builtinSpeechProfilesJson[activeIndex];
         set(speechProfileNameString, MUIA_String_Contents,
             builtinNameForSystem(sys));
-    } else if (activeIndex == 0) {
-        /* New profile */
-        set(speechProfileNameString, MUIA_String_Contents, "");
-        sys = SPEECH_SYSTEM_OPENAI;
     } else {
         /* Custom */
-        int profileIndex =
-            (int)(activeIndex - 1 - getBuiltinSpeechProviderCount());
+        int profileIndex = profileArrayIndexForVisibleCustomIndex(
+            (int)(activeIndex - getBuiltinSpeechProviderCount()));
         struct json_object *p =
-            (speechProfilesJson != NULL)
+            (profileIndex >= 0 && speechProfilesJson != NULL)
                 ? json_object_array_get_idx(speechProfilesJson, profileIndex)
                 : NULL;
         customProfile = p;
@@ -801,19 +1121,61 @@ static void loadProfileIntoUI(LONG activeIndex) {
 
     updateGroupVisibilityForSystem(sys, isCustomOrNew);
 
+    if (speechSystemUsesNetwork(sys)) {
+        CONST_STRPTR host = defaultHostForSpeechSystem(sys);
+        LONG port = 443;
+        LONG useSSL = 1;
+        LONG authType = (LONG)defaultAuthForSpeechSystem(sys);
+        CONST_STRPTR endpointUrl = "v1";
+        if (customProfile != NULL) {
+            struct json_object *hostObj =
+                json_object_object_get(customProfile, "host");
+            struct json_object *portObj =
+                json_object_object_get(customProfile, "port");
+            struct json_object *sslObj =
+                json_object_object_get(customProfile, "useSSL");
+            struct json_object *authObj =
+                json_object_object_get(customProfile, "authorizationType");
+            struct json_object *endpointObj =
+                json_object_object_get(customProfile, "apiEndpointUrl");
+            if (hostObj != NULL)
+                host = json_object_get_string(hostObj);
+            if (portObj != NULL)
+                port = json_object_get_int(portObj);
+            if (sslObj != NULL)
+                useSSL = json_object_get_boolean(sslObj) ? 1 : 0;
+            if (authObj != NULL)
+                authType = json_object_get_int(authObj);
+            if (endpointObj != NULL)
+                endpointUrl = json_object_get_string(endpointObj);
+        }
+        if (speechHostString != NULL)
+            set(speechHostString, MUIA_String_Contents, host ? host : "");
+        if (speechPortString != NULL)
+            set(speechPortString, MUIA_String_Integer, port);
+        if (speechUsesSSLCycle != NULL)
+            set(speechUsesSSLCycle, MUIA_Cycle_Active, useSSL);
+        if (speechAuthorizationTypeCycle != NULL)
+            set(speechAuthorizationTypeCycle, MUIA_Cycle_Active, authType);
+        if (speechEndpointUrlString != NULL)
+            set(speechEndpointUrlString, MUIA_String_Contents,
+                endpointUrl ? endpointUrl : "v1");
+    }
+
     /* Accent */
     if (workbenchAccentString != NULL) {
         CONST_STRPTR accent = NULL;
-        if (isBuiltinListIndex(activeIndex)) {
-            if (sys == SPEECH_SYSTEM_34)
-                accent = configGetSpeechAccent34();
-            else if (sys == SPEECH_SYSTEM_37)
-                accent = configGetSpeechAccent37();
-        } else if (customProfile != NULL) {
+        if (customProfile != NULL) {
             struct json_object *aObj =
                 json_object_object_get(customProfile, "speechAccent");
             if (aObj != NULL)
                 accent = json_object_get_string(aObj);
+        }
+        if (accent == NULL && isBuiltinListIndex(activeIndex)) {
+            if (sys == SPEECH_SYSTEM_34)
+                accent = configGetSpeechAccent34();
+            else if (sys == SPEECH_SYSTEM_37)
+                accent = configGetSpeechAccent37();
         }
         if (accent == NULL)
             accent = configGetSpeechAccent();
@@ -927,15 +1289,29 @@ static void loadProfileIntoUI(LONG activeIndex) {
         set(elevenLabsAPIKeyString, MUIA_String_Contents, k ? k : "");
     }
     if (elevenLabsCurrentModelText != NULL) {
+        STRPTR mid = configGetElevenLabsModel();
         STRPTR mn = configGetElevenLabsModelName();
         if (customProfile != NULL) {
+            struct json_object *midObj =
+                json_object_object_get(customProfile, "elevenLabsModel");
             struct json_object *mno =
                 json_object_object_get(customProfile, "elevenLabsModelName");
-            if (mno != NULL)
-                mn = (STRPTR)json_object_get_string(mno);
+            if (midObj != NULL) {
+                CONST_STRPTR storedMid = json_object_get_string(midObj);
+                if (storedMid != NULL && strlen(storedMid) > 0)
+                    mid = (STRPTR)storedMid;
+            }
+            if (mno != NULL) {
+                CONST_STRPTR storedName = json_object_get_string(mno);
+                if (storedName != NULL && strlen(storedName) > 0)
+                    mn = (STRPTR)storedName;
+            }
         }
         set(elevenLabsCurrentModelText, MUIA_Text_Contents,
             mn != NULL ? mn : (STRPTR)STRING_NONE_SELECTED);
+        ensureDefaultElevenLabsModelsJson();
+        populateElevenLabsModelList();
+        setElevenLabsModelListActiveById(mid);
     }
     if (elevenLabsCurrentVoiceText != NULL) {
         STRPTR vn = configGetElevenLabsVoiceName();
@@ -962,14 +1338,16 @@ static void loadProfileIntoUI(LONG activeIndex) {
         updateRequirementWarningForSystem(sys, fliteWarningText);
     }
 
-    /* Built-ins can’t be deleted; New profile can’t be deleted */
+    /* Built-ins can’t be deleted. */
     if (deleteProfileButton != NULL)
         set(deleteProfileButton, MUIA_Disabled,
-            (activeIndex <= getBuiltinSpeechProviderCount()));
-
-    /* Save only makes sense for custom/new profiles. */
-    if (saveProfileButton != NULL)
-        set(saveProfileButton, MUIA_Disabled, !isCustomOrNew);
+            (activeIndex < getBuiltinSpeechProviderCount()));
+    if (duplicateProfileButton != NULL)
+        set(duplicateProfileButton, MUIA_Disabled,
+            (activeIndex == MUIV_NList_Active_Off));
+    if (newProfileButton != NULL)
+        set(newProfileButton, MUIA_Disabled, FALSE);
+    updateElevenLabsSearchButtonLabel();
 
     endRightPanelUpdate();
 }
@@ -979,6 +1357,16 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
         return;
     LONG active = 0;
     get(speechProfileList, MUIA_NList_Active, &active);
+
+    if (lastSelectedProfile != MUIV_NList_Active_Off &&
+        active != lastSelectedProfile) {
+        if (!applyProfileFromUIToWorking(lastSelectedProfile)) {
+            suppressProfileSelected = TRUE;
+            set(speechProfileList, MUIA_NList_Active, lastSelectedProfile);
+            suppressProfileSelected = FALSE;
+            return;
+        }
+    }
 
     /* Profile selection toggles group visibility; keep window height stable. */
     LONG wasOpen = FALSE;
@@ -1003,6 +1391,158 @@ HOOKPROTONHNONP(ProfileSelectedFunc, void) {
 }
 MakeHook(SpeechProviderProfileSelectedHook, ProfileSelectedFunc);
 
+static struct json_object *createDefaultProfile(CONST_STRPTR name) {
+    struct json_object *p = json_object_new_object();
+    json_object_object_add(p, "name", json_object_new_string(name ? name : ""));
+    json_object_object_add(p, "speechSystem",
+                           json_object_new_int((int)SPEECH_SYSTEM_OPENAI));
+    json_object_object_add(p, "speechAccent", json_object_new_string(""));
+    json_object_object_add(
+        p, "speechFliteVoice",
+        json_object_new_int((int)configGetSpeechFliteVoice()));
+    json_object_object_add(p, "host", json_object_new_string("api.openai.com"));
+    json_object_object_add(p, "port", json_object_new_int(443));
+    json_object_object_add(p, "useSSL", json_object_new_boolean(TRUE));
+    json_object_object_add(
+        p, "authorizationType",
+        json_object_new_int((int)AUTHORIZATION_TYPE_BEARER));
+    json_object_object_add(p, "apiEndpointUrl", json_object_new_string("v1"));
+    json_object_object_add(p, "openAiApiKey", json_object_new_string(""));
+    json_object_object_add(
+        p, "openAITTSModel", json_object_new_int((int)configGetOpenAITTSModel()));
+    json_object_object_add(
+        p, "openAITTSVoice", json_object_new_int((int)configGetOpenAITTSVoice()));
+    json_object_object_add(p, "openAIVoiceInstructions",
+                           json_object_new_string(""));
+    json_object_object_add(p, "elevenLabsAPIKey", json_object_new_string(""));
+    json_object_object_add(p, "elevenLabsModel",
+                           json_object_new_string(ELEVENLABS_MODEL_FLASH_V2_5_ID));
+    json_object_object_add(
+        p, "elevenLabsModelName",
+        json_object_new_string(ELEVENLABS_MODEL_FLASH_V2_5_NAME));
+    return p;
+}
+
+static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys) {
+    struct json_object *p = json_object_new_object();
+    json_object_object_add(p, "name",
+                           json_object_new_string(builtinNameForSystem(sys)));
+    json_object_object_add(p, "speechSystem", json_object_new_int((int)sys));
+
+    if (sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37) {
+        CONST_STRPTR accent = (sys == SPEECH_SYSTEM_34)
+                                  ? configGetSpeechAccent34()
+                                  : configGetSpeechAccent37();
+        json_object_object_add(p, "speechAccent",
+                               json_object_new_string(accent ? accent : ""));
+#ifdef __AMIGAOS3__
+        json_object_object_add(
+            p, "narratorRate",
+            json_object_new_int((int)((sys == SPEECH_SYSTEM_34)
+                                          ? configGetNarratorRate34()
+                                          : configGetNarratorRate37())));
+        json_object_object_add(
+            p, "narratorPitch",
+            json_object_new_int((int)((sys == SPEECH_SYSTEM_34)
+                                          ? configGetNarratorPitch34()
+                                          : configGetNarratorPitch37())));
+        json_object_object_add(
+            p, "narratorMode",
+            json_object_new_int((int)((sys == SPEECH_SYSTEM_34)
+                                          ? configGetNarratorMode34()
+                                          : configGetNarratorMode37())));
+        json_object_object_add(
+            p, "narratorSex",
+            json_object_new_int((int)((sys == SPEECH_SYSTEM_34)
+                                          ? configGetNarratorSex34()
+                                          : configGetNarratorSex37())));
+#endif
+    }
+
+    if (sys == SPEECH_SYSTEM_FLITE) {
+        json_object_object_add(
+            p, "speechFliteVoice",
+            json_object_new_int((int)configGetSpeechFliteVoice()));
+    }
+
+    if (sys == SPEECH_SYSTEM_OPENAI) {
+        json_object_object_add(p, "host", json_object_new_string("api.openai.com"));
+        json_object_object_add(p, "port", json_object_new_int(443));
+        json_object_object_add(p, "useSSL", json_object_new_boolean(TRUE));
+        json_object_object_add(
+            p, "authorizationType",
+            json_object_new_int((int)AUTHORIZATION_TYPE_BEARER));
+        json_object_object_add(p, "apiEndpointUrl",
+                               json_object_new_string("v1"));
+        json_object_object_add(
+            p, "openAiApiKey",
+            json_object_new_string(configGetOpenAiSpeechApiKey()
+                                       ? configGetOpenAiSpeechApiKey()
+                                       : ""));
+        json_object_object_add(
+            p, "openAITTSModel",
+            json_object_new_int((int)configGetOpenAITTSModel()));
+        json_object_object_add(
+            p, "openAITTSVoice",
+            json_object_new_int((int)configGetOpenAITTSVoice()));
+        json_object_object_add(
+            p, "openAIVoiceInstructions",
+            json_object_new_string(configGetOpenAIVoiceInstructions()
+                                       ? configGetOpenAIVoiceInstructions()
+                                       : ""));
+    }
+
+    if (sys == SPEECH_SYSTEM_ELEVENLABS) {
+        json_object_object_add(p, "host", json_object_new_string(ELEVENLABS_HOST));
+        json_object_object_add(p, "port", json_object_new_int(ELEVENLABS_PORT));
+        json_object_object_add(p, "useSSL", json_object_new_boolean(TRUE));
+        json_object_object_add(
+            p, "authorizationType",
+            json_object_new_int((int)AUTHORIZATION_TYPE_XI_API_KEY));
+        json_object_object_add(p, "apiEndpointUrl",
+                               json_object_new_string("v1"));
+        json_object_object_add(
+            p, "elevenLabsAPIKey",
+            json_object_new_string(configGetElevenLabsAPIKey()
+                                       ? configGetElevenLabsAPIKey()
+                                       : ""));
+        json_object_object_add(
+            p, "elevenLabsModel",
+            json_object_new_string(configGetElevenLabsModel()
+                                       ? configGetElevenLabsModel()
+                                       : ""));
+        json_object_object_add(
+            p, "elevenLabsModelName",
+            json_object_new_string(configGetElevenLabsModelName()
+                                       ? configGetElevenLabsModelName()
+                                       : ""));
+        json_object_object_add(
+            p, "elevenLabsVoiceID",
+            json_object_new_string(configGetElevenLabsVoiceID()
+                                       ? configGetElevenLabsVoiceID()
+                                       : ""));
+        json_object_object_add(
+            p, "elevenLabsVoiceName",
+            json_object_new_string(configGetElevenLabsVoiceName()
+                                       ? configGetElevenLabsVoiceName()
+                                       : ""));
+    }
+
+    return p;
+}
+
+static struct json_object *getWorkingProfileForListIndex(LONG activeIndex) {
+    if (isBuiltinListIndex(activeIndex))
+        return builtinSpeechProfilesJson[activeIndex];
+
+    int profileIndex = profileArrayIndexForVisibleCustomIndex(
+        (int)(activeIndex - getBuiltinSpeechProviderCount()));
+    if (profileIndex < 0 || speechProfilesJson == NULL ||
+        !json_object_is_type(speechProfilesJson, json_type_array))
+        return NULL;
+    return json_object_array_get_idx(speechProfilesJson, profileIndex);
+}
+
 static struct json_object *createProfileFromUI(CONST_STRPTR name) {
     struct json_object *p = json_object_new_object();
     json_object_object_add(p, "name", json_object_new_string(name ? name : ""));
@@ -1026,10 +1566,8 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
     STRPTR accent = NULL;
     if (workbenchAccentString != NULL)
         get(workbenchAccentString, MUIA_String_Contents, &accent);
-    if (accent != NULL && strlen(accent) > 0) {
-        json_object_object_add(p, "speechAccent",
-                               json_object_new_string(accent));
-    }
+    json_object_object_add(p, "speechAccent",
+                           json_object_new_string(accent ? accent : ""));
 
 #ifdef __AMIGAOS3__
     if (sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37) {
@@ -1060,13 +1598,46 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
         get(fliteVoiceCycle, MUIA_Cycle_Active, &fv);
     json_object_object_add(p, "speechFliteVoice", json_object_new_int((int)fv));
 
+    if (speechSystemUsesNetwork(sys)) {
+        STRPTR host = NULL;
+        LONG port = 443;
+        LONG useSSL = 1;
+        LONG authType = defaultAuthForSpeechSystem(sys);
+        STRPTR endpointUrl = NULL;
+        if (speechHostString != NULL)
+            get(speechHostString, MUIA_String_Contents, &host);
+        if (speechPortString != NULL)
+            get(speechPortString, MUIA_String_Integer, &port);
+        if (speechUsesSSLCycle != NULL)
+            get(speechUsesSSLCycle, MUIA_Cycle_Active, &useSSL);
+        if (speechAuthorizationTypeCycle != NULL)
+            get(speechAuthorizationTypeCycle, MUIA_Cycle_Active, &authType);
+        if (speechEndpointUrlString != NULL)
+            get(speechEndpointUrlString, MUIA_String_Contents, &endpointUrl);
+        json_object_object_add(
+            p, "host",
+            json_object_new_string((host != NULL && strlen(host) > 0)
+                                       ? host
+                                       : defaultHostForSpeechSystem(sys)));
+        json_object_object_add(p, "port", json_object_new_int((int)port));
+        json_object_object_add(p, "useSSL",
+                               json_object_new_boolean(useSSL == 1));
+        json_object_object_add(p, "authorizationType",
+                               json_object_new_int((int)authType));
+        json_object_object_add(
+            p, "apiEndpointUrl",
+            json_object_new_string((endpointUrl != NULL &&
+                                    strlen(endpointUrl) > 0)
+                                       ? endpointUrl
+                                       : "v1"));
+    }
+
     /* OpenAI */
     STRPTR apiKey = NULL;
     if (openAiApiKeyString != NULL)
         get(openAiApiKeyString, MUIA_String_Contents, &apiKey);
-    if (apiKey != NULL && strlen(apiKey) > 0)
-        json_object_object_add(p, "openAiApiKey",
-                               json_object_new_string(apiKey));
+    json_object_object_add(p, "openAiApiKey",
+                           json_object_new_string(apiKey ? apiKey : ""));
 
     LONG m = 0, v = 0;
     if (openAiTtsModelCycle != NULL)
@@ -1079,18 +1650,15 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
     STRPTR instr = NULL;
     if (openAiVoiceInstructionsEditor != NULL)
         get(openAiVoiceInstructionsEditor, MUIA_TextEditor_Contents, &instr);
-    if (instr != NULL && strlen(instr) > 0)
-        json_object_object_add(p, "openAIVoiceInstructions",
-                               json_object_new_string(instr));
+    json_object_object_add(p, "openAIVoiceInstructions",
+                           json_object_new_string(instr ? instr : ""));
 
     /* ElevenLabs */
     STRPTR eApiKey = NULL;
     if (elevenLabsAPIKeyString != NULL)
         get(elevenLabsAPIKeyString, MUIA_String_Contents, &eApiKey);
-    if (eApiKey != NULL && strlen(eApiKey) > 0) {
-        json_object_object_add(p, "elevenLabsAPIKey",
-                               json_object_new_string(eApiKey));
-    }
+    json_object_object_add(p, "elevenLabsAPIKey",
+                           json_object_new_string(eApiKey ? eApiKey : ""));
 
     LONG modelActive = MUIV_NList_Active_Off;
     if (elevenLabsModelList != NULL)
@@ -1135,6 +1703,27 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
                     }
                 }
             }
+        }
+    } else {
+        struct json_object *oldProfile =
+            getWorkingProfileForListIndex(lastSelectedProfile);
+        struct json_object *oldModel = oldProfile
+                                           ? json_object_object_get(
+                                                 oldProfile, "elevenLabsModel")
+                                           : NULL;
+        struct json_object *oldModelName =
+            oldProfile ? json_object_object_get(oldProfile,
+                                                "elevenLabsModelName")
+                       : NULL;
+        if (oldModel != NULL) {
+            json_object_object_add(
+                p, "elevenLabsModel",
+                json_object_new_string(json_object_get_string(oldModel)));
+        }
+        if (oldModelName != NULL) {
+            json_object_object_add(
+                p, "elevenLabsModelName",
+                json_object_new_string(json_object_get_string(oldModelName)));
         }
     }
 
@@ -1182,61 +1771,97 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
                 }
             }
         }
+    } else {
+        struct json_object *oldProfile =
+            getWorkingProfileForListIndex(lastSelectedProfile);
+        struct json_object *oldVoice = oldProfile
+                                           ? json_object_object_get(
+                                                 oldProfile, "elevenLabsVoiceID")
+                                           : NULL;
+        struct json_object *oldVoiceName =
+            oldProfile ? json_object_object_get(oldProfile,
+                                                "elevenLabsVoiceName")
+                       : NULL;
+        if (oldVoice != NULL) {
+            json_object_object_add(
+                p, "elevenLabsVoiceID",
+                json_object_new_string(json_object_get_string(oldVoice)));
+        }
+        if (oldVoiceName != NULL) {
+            json_object_object_add(
+                p, "elevenLabsVoiceName",
+                json_object_new_string(json_object_get_string(oldVoiceName)));
+        }
     }
 
     return p;
 }
 
-static void applyBuiltinProfileSelection(SpeechSystem sys) {
-    configSetActiveSpeechProfileName(builtinNameForSystem(sys));
-    configSetSpeechSystem(sys);
+static CONST_STRPTR jsonStringOrEmpty(struct json_object *profile,
+                                      CONST_STRPTR key) {
+    struct json_object *obj =
+        profile ? json_object_object_get(profile, key) : NULL;
+    CONST_STRPTR value = obj ? json_object_get_string(obj) : NULL;
+    return value ? value : "";
+}
 
-    /* Save system-specific settings from UI into config */
+static LONG jsonIntOrDefault(struct json_object *profile, CONST_STRPTR key,
+                             LONG defaultValue) {
+    struct json_object *obj =
+        profile ? json_object_object_get(profile, key) : NULL;
+    return obj ? (LONG)json_object_get_int(obj) : defaultValue;
+}
+
+static void commitBuiltinProfileToConfig(struct json_object *profile) {
+    if (profile == NULL)
+        return;
+
+    struct json_object *sysObj = json_object_object_get(profile, "speechSystem");
+    if (sysObj == NULL)
+        return;
+    SpeechSystem sys = (SpeechSystem)json_object_get_int(sysObj);
+
     if (sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37) {
-        STRPTR accent = NULL;
-        if (workbenchAccentString != NULL)
-            get(workbenchAccentString, MUIA_String_Contents, &accent);
-        if (accent != NULL && strlen(accent) > 0) {
-            if (sys == SPEECH_SYSTEM_34)
-                configSetSpeechAccent34(accent);
-            else
-                configSetSpeechAccent37(accent);
-        }
-#ifdef __AMIGAOS3__
-        LONG rate = 0, pitch = 0, mode = 0, sex = 0;
-        if (workbenchRateString != NULL)
-            get(workbenchRateString, MUIA_String_Integer, &rate);
-        if (workbenchPitchString != NULL)
-            get(workbenchPitchString, MUIA_String_Integer, &pitch);
-        if (workbenchModeCycle != NULL)
-            get(workbenchModeCycle, MUIA_Cycle_Active, &mode);
-        if (workbenchSexCycle != NULL)
-            get(workbenchSexCycle, MUIA_Cycle_Active, &sex);
-
+        CONST_STRPTR accent = jsonStringOrEmpty(profile, "speechAccent");
         if (sys == SPEECH_SYSTEM_34) {
-            configSetNarratorRate34((ULONG)rate);
-            configSetNarratorPitch34((ULONG)pitch);
-            configSetNarratorMode34((ULONG)((mode != 0) ? 1 : 0));
-            configSetNarratorSex34((ULONG)((sex != 0) ? 1 : 0));
-        } else {
-            configSetNarratorRate37((ULONG)rate);
-            configSetNarratorPitch37((ULONG)pitch);
-            configSetNarratorMode37((ULONG)((mode != 0) ? 1 : 0));
-            configSetNarratorSex37((ULONG)((sex != 0) ? 1 : 0));
-        }
+            configSetSpeechAccent34(accent);
+#ifdef __AMIGAOS3__
+            configSetNarratorRate34(
+                (ULONG)jsonIntOrDefault(profile, "narratorRate",
+                                        (LONG)configGetNarratorRate34()));
+            configSetNarratorPitch34(
+                (ULONG)jsonIntOrDefault(profile, "narratorPitch",
+                                        (LONG)configGetNarratorPitch34()));
+            configSetNarratorMode34(
+                (ULONG)jsonIntOrDefault(profile, "narratorMode",
+                                        (LONG)configGetNarratorMode34()));
+            configSetNarratorSex34(
+                (ULONG)jsonIntOrDefault(profile, "narratorSex",
+                                        (LONG)configGetNarratorSex34()));
 #endif
+        } else {
+            configSetSpeechAccent37(accent);
+#ifdef __AMIGAOS3__
+            configSetNarratorRate37(
+                (ULONG)jsonIntOrDefault(profile, "narratorRate",
+                                        (LONG)configGetNarratorRate37()));
+            configSetNarratorPitch37(
+                (ULONG)jsonIntOrDefault(profile, "narratorPitch",
+                                        (LONG)configGetNarratorPitch37()));
+            configSetNarratorMode37(
+                (ULONG)jsonIntOrDefault(profile, "narratorMode",
+                                        (LONG)configGetNarratorMode37()));
+            configSetNarratorSex37(
+                (ULONG)jsonIntOrDefault(profile, "narratorSex",
+                                        (LONG)configGetNarratorSex37()));
+#endif
+        }
     } else if (sys == SPEECH_SYSTEM_FLITE) {
-        LONG fv = 0;
-        if (fliteVoiceCycle != NULL)
-            get(fliteVoiceCycle, MUIA_Cycle_Active, &fv);
-        configSetSpeechFliteVoice((SpeechFliteVoice)fv);
+        configSetSpeechFliteVoice((SpeechFliteVoice)jsonIntOrDefault(
+            profile, "speechFliteVoice", (LONG)configGetSpeechFliteVoice()));
     } else if (sys == SPEECH_SYSTEM_OPENAI) {
-        STRPTR key = NULL;
-        if (openAiApiKeyString != NULL)
-            get(openAiApiKeyString, MUIA_String_Contents, &key);
+        CONST_STRPTR key = jsonStringOrEmpty(profile, "openAiApiKey");
         configSetOpenAiSpeechApiKey(key);
-
-        /* Copy to chat/image if those are blank */
         if (key != NULL && strlen(key) > 0) {
             STRPTR existing = configGetOpenAiApiKey();
             if (existing == NULL || strlen(existing) == 0)
@@ -1245,122 +1870,23 @@ static void applyBuiltinProfileSelection(SpeechSystem sys) {
             if (existing == NULL || strlen(existing) == 0)
                 configSetOpenAiImageApiKey(key);
         }
-
-        LONG m = 0, v = 0;
-        if (openAiTtsModelCycle != NULL)
-            get(openAiTtsModelCycle, MUIA_Cycle_Active, &m);
-        if (openAiTtsVoiceCycle != NULL)
-            get(openAiTtsVoiceCycle, MUIA_Cycle_Active, &v);
-        configSetOpenAITTSModel((OpenAITTSModel)m);
-        configSetOpenAITTSVoice((OpenAITTSVoice)v);
-
-        STRPTR instr = NULL;
-        if (openAiVoiceInstructionsEditor != NULL)
-            get(openAiVoiceInstructionsEditor, MUIA_TextEditor_Contents,
-                &instr);
-        configSetOpenAIVoiceInstructions(instr);
+        configSetOpenAITTSModel((OpenAITTSModel)jsonIntOrDefault(
+            profile, "openAITTSModel", (LONG)configGetOpenAITTSModel()));
+        configSetOpenAITTSVoice((OpenAITTSVoice)jsonIntOrDefault(
+            profile, "openAITTSVoice", (LONG)configGetOpenAITTSVoice()));
+        configSetOpenAIVoiceInstructions(
+            jsonStringOrEmpty(profile, "openAIVoiceInstructions"));
     } else if (sys == SPEECH_SYSTEM_ELEVENLABS) {
-        STRPTR apiKey = NULL;
-        if (elevenLabsAPIKeyString != NULL)
-            get(elevenLabsAPIKeyString, MUIA_String_Contents, &apiKey);
-        configSetElevenLabsAPIKey(apiKey);
-
-        /* Save model selection */
-        LONG modelActive = MUIV_NList_Active_Off;
-        if (elevenLabsModelList != NULL)
-            get(elevenLabsModelList, MUIA_NList_Active, &modelActive);
-        if (modelActive != MUIV_NList_Active_Off &&
-            elevenLabsModelsJson != NULL) {
-            STRPTR selectedModelName = NULL;
-            DoMethod(elevenLabsModelList, MUIM_NList_GetEntry, modelActive,
-                     &selectedModelName);
-            if (selectedModelName != NULL) {
-                configSetElevenLabsModelName(selectedModelName);
-
-                struct json_object *modelsArray = NULL;
-                if (json_object_object_get_ex(elevenLabsModelsJson, "models",
-                                              &modelsArray) ||
-                    json_object_is_type(elevenLabsModelsJson,
-                                        json_type_array)) {
-                    if (modelsArray == NULL)
-                        modelsArray = elevenLabsModelsJson;
-                    LONG modelCount = json_object_array_length(modelsArray);
-                    for (LONG i = 0; i < modelCount; i++) {
-                        struct json_object *modelObj =
-                            json_object_array_get_idx(modelsArray, i);
-                        struct json_object *nameObj = NULL;
-                        if (modelObj == NULL)
-                            continue;
-                        if (json_object_object_get_ex(modelObj, "name",
-                                                      &nameObj)) {
-                            CONST_STRPTR n = json_object_get_string(nameObj);
-                            if (n != NULL &&
-                                strcmp(n, selectedModelName) == 0) {
-                                struct json_object *modelIdObj = NULL;
-                                if (json_object_object_get_ex(
-                                        modelObj, "model_id", &modelIdObj)) {
-                                    CONST_STRPTR modelId =
-                                        json_object_get_string(modelIdObj);
-                                    if (modelId != NULL)
-                                        configSetElevenLabsModel(modelId);
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        /* Save voice selection */
-        LONG voiceActive = MUIV_NList_Active_Off;
-        if (elevenLabsVoiceList != NULL)
-            get(elevenLabsVoiceList, MUIA_NList_Active, &voiceActive);
-        if (voiceActive != MUIV_NList_Active_Off &&
-            elevenLabsVoicesJson != NULL) {
-            STRPTR selectedVoiceName = NULL;
-            DoMethod(elevenLabsVoiceList, MUIM_NList_GetEntry, voiceActive,
-                     &selectedVoiceName);
-            if (selectedVoiceName != NULL) {
-                configSetElevenLabsVoiceName(selectedVoiceName);
-
-                struct json_object *voicesArray = NULL;
-                if (json_object_object_get_ex(elevenLabsVoicesJson, "voices",
-                                              &voicesArray) ||
-                    json_object_is_type(elevenLabsVoicesJson,
-                                        json_type_array)) {
-                    if (voicesArray == NULL)
-                        voicesArray = elevenLabsVoicesJson;
-                    LONG voiceCount = json_object_array_length(voicesArray);
-                    for (LONG i = 0; i < voiceCount; i++) {
-                        struct json_object *voiceObj =
-                            json_object_array_get_idx(voicesArray, i);
-                        struct json_object *nameObj = NULL;
-                        if (voiceObj == NULL)
-                            continue;
-                        if (json_object_object_get_ex(voiceObj, "name",
-                                                      &nameObj)) {
-                            CONST_STRPTR n = json_object_get_string(nameObj);
-                            if (n != NULL &&
-                                strcmp(n, selectedVoiceName) == 0) {
-                                struct json_object *voiceIdObj = NULL;
-                                if (json_object_object_get_ex(
-                                        voiceObj, "voice_id", &voiceIdObj)) {
-                                    CONST_STRPTR voiceId =
-                                        json_object_get_string(voiceIdObj);
-                                    if (voiceId != NULL)
-                                        configSetElevenLabsVoiceID(voiceId);
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        configSetElevenLabsAPIKey(jsonStringOrEmpty(profile, "elevenLabsAPIKey"));
+        configSetElevenLabsModel(jsonStringOrEmpty(profile, "elevenLabsModel"));
+        configSetElevenLabsModelName(
+            jsonStringOrEmpty(profile, "elevenLabsModelName"));
+        configSetElevenLabsVoiceID(
+            jsonStringOrEmpty(profile, "elevenLabsVoiceID"));
+        configSetElevenLabsVoiceName(
+            jsonStringOrEmpty(profile, "elevenLabsVoiceName"));
     }
 
-    /* Apply accent for Workbench profiles into legacy speechAccent for now */
     if (sys == SPEECH_SYSTEM_34) {
         STRPTR a = configGetSpeechAccent34();
         if (a != NULL)
@@ -1427,59 +1953,146 @@ static int findCustomProfileIndexByName(CONST_STRPTR name) {
     return -1;
 }
 
+static BOOL isCustomProfileNameTaken(CONST_STRPTR name) {
+    return findCustomProfileIndexByName(name) >= 0;
+}
+
+static STRPTR makeUniqueProfileName(CONST_STRPTR base, CONST_STRPTR suffix) {
+    if (base == NULL || strlen(base) == 0)
+        base = STRING_DEFAULT_NEW_PROFILE_NAME;
+    if (suffix == NULL)
+        suffix = "";
+
+    for (int n = 1; n < 1000; n++) {
+        char candidate[128];
+        if (n == 1)
+            snprintf(candidate, sizeof(candidate), "%s%s", base, suffix);
+        else
+            snprintf(candidate, sizeof(candidate), "%s%s %d", base, suffix, n);
+
+        if (isNameReservedForBuiltin(candidate))
+            continue;
+        if (!isCustomProfileNameTaken(candidate))
+            return dupStrLocal(candidate);
+    }
+
+    return dupStrLocal(STRING_DEFAULT_NEW_PROFILE_NAME);
+}
+
+static BOOL applyProfileFromUIToWorking(LONG activeIndex) {
+    if (activeIndex == MUIV_NList_Active_Off)
+        return TRUE;
+
+    if (speechSystemUsesNetwork(getSpeechSystemFromCycle())) {
+        LONG port = 0;
+        if (speechPortString != NULL)
+            get(speechPortString, MUIA_String_Integer, &port);
+        if (port < 0 || port > 65535) {
+            displayError(STRING_ERROR_INVALID_PORT);
+            return FALSE;
+        }
+    }
+
+    if (isBuiltinListIndex(activeIndex)) {
+        SpeechSystem sys = builtinSystemForListIndex(activeIndex);
+        struct json_object *newProfile =
+            createProfileFromUI(builtinNameForSystem(sys));
+        json_object_object_del(newProfile, "speechSystem");
+        json_object_object_add(newProfile, "speechSystem",
+                               json_object_new_int((int)sys));
+        if (builtinSpeechProfilesJson[activeIndex] != NULL)
+            json_object_put(builtinSpeechProfilesJson[activeIndex]);
+        builtinSpeechProfilesJson[activeIndex] = newProfile;
+        return TRUE;
+    }
+
+    int profileIndex = profileArrayIndexForVisibleCustomIndex(
+        (int)(activeIndex - getBuiltinSpeechProviderCount()));
+    if (profileIndex < 0 || speechProfilesJson == NULL ||
+        !json_object_is_type(speechProfilesJson, json_type_array))
+        return TRUE;
+
+    STRPTR profileName = NULL;
+    get(speechProfileNameString, MUIA_String_Contents, &profileName);
+    if (profileName == NULL || strlen(profileName) == 0) {
+        displayError(STRING_ERROR_PROFILE_NAME_REQUIRED);
+        return FALSE;
+    }
+    if (isNameReservedForBuiltin(profileName)) {
+        displayError(STRING_ERROR_PROFILE_NAME_RESERVED);
+        return FALSE;
+    }
+    {
+        int existingIdx = findCustomProfileIndexByName(profileName);
+        if (existingIdx >= 0 && existingIdx != profileIndex) {
+            displayError(STRING_ERROR_PROFILE_NAME_RESERVED);
+            return FALSE;
+        }
+    }
+
+    struct json_object *newProfile = createProfileFromUI(profileName);
+    json_object_array_put_idx(speechProfilesJson, profileIndex, newProfile);
+    return TRUE;
+}
+
+static void upsertBuiltinProfilesIntoSavedProfiles(void) {
+    if (speechProfilesJson == NULL ||
+        !json_object_is_type(speechProfilesJson, json_type_array))
+        speechProfilesJson = json_object_new_array();
+
+    for (LONG i = 0; i < getBuiltinSpeechProviderCount(); i++) {
+        struct json_object *profile = builtinSpeechProfilesJson[i];
+        struct json_object *nameObj =
+            profile ? json_object_object_get(profile, "name") : NULL;
+        CONST_STRPTR name = nameObj ? json_object_get_string(nameObj) : NULL;
+        if (profile == NULL || name == NULL)
+            continue;
+
+        int existing = findCustomProfileIndexByName(name);
+        struct json_object *clone =
+            json_tokener_parse(json_object_to_json_string(profile));
+        if (clone == NULL)
+            continue;
+        if (existing >= 0) {
+            json_object_array_put_idx(speechProfilesJson, existing, clone);
+        } else {
+            json_object_array_add(speechProfilesJson, clone);
+        }
+    }
+}
+
 HOOKPROTONHNONP(SpeechProviderOkFunc, void) {
     LONG active = MUIV_NList_Active_Off;
     get(speechProfileList, MUIA_NList_Active, &active);
     if (active == MUIV_NList_Active_Off)
         return;
 
+    if (!applyProfileFromUIToWorking(active))
+        return;
+
+    for (LONG i = 0; i < getBuiltinSpeechProviderCount(); i++)
+        commitBuiltinProfileToConfig(builtinSpeechProfilesJson[i]);
+
+    upsertBuiltinProfilesIntoSavedProfiles();
+    saveProfilesToConfig();
+
     if (isBuiltinListIndex(active)) {
         SpeechSystem sys = builtinSystemForListIndex(active);
-        applyBuiltinProfileSelection(sys);
-        reinitSpeechForActiveProfile();
-        speechSettingsDirty = FALSE;
-        set(speechProviderSettingsRequesterWindowObject, MUIA_Window_Open,
-            FALSE);
-        return;
-    }
-
-    /* Custom / New Profile: save/update profile JSON and activate it */
-    STRPTR profileName = NULL;
-    get(speechProfileNameString, MUIA_String_Contents, &profileName);
-    if (profileName == NULL || strlen(profileName) == 0) {
-        displayError(STRING_ERROR_PROFILE_NAME_REQUIRED);
-        return;
-    }
-    if (isNameReservedForBuiltin(profileName)) {
-        displayError(STRING_ERROR_PROFILE_NAME_RESERVED);
-        return;
-    }
-
-    if (speechProfilesJson == NULL)
-        speechProfilesJson = json_object_new_array();
-
-    struct json_object *newProfile = createProfileFromUI(profileName);
-
-    if (active == 0) {
-        /* New profile: update if name already exists, else add */
-        int existingIdx = findCustomProfileIndexByName(profileName);
-        if (existingIdx >= 0)
-            json_object_array_put_idx(speechProfilesJson, existingIdx,
-                                      newProfile);
-        else
-            json_object_array_add(speechProfilesJson, newProfile);
+        configSetActiveSpeechProfileName(builtinNameForSystem(sys));
+        configSetSpeechSystem(sys);
     } else {
-        int profileIndex = (int)(active - 1 - getBuiltinSpeechProviderCount());
-        if (profileIndex < 0) {
-            json_object_put(newProfile);
-            return;
-        }
-        json_object_array_put_idx(speechProfilesJson, profileIndex, newProfile);
+        struct json_object *profile = getWorkingProfileForListIndex(active);
+        struct json_object *nameObj =
+            profile ? json_object_object_get(profile, "name") : NULL;
+        struct json_object *sysObj =
+            profile ? json_object_object_get(profile, "speechSystem") : NULL;
+        CONST_STRPTR profileName =
+            nameObj ? json_object_get_string(nameObj) : NULL;
+        configSetActiveSpeechProfileName(profileName ? profileName : "");
+        configSetSpeechSystem(sysObj ? (SpeechSystem)json_object_get_int(sysObj)
+                                     : getSpeechSystemFromCycle());
     }
 
-    saveProfilesToConfig();
-    configSetActiveSpeechProfileName(profileName);
-    configSetSpeechSystem(getSpeechSystemFromCycle());
     reinitSpeechForActiveProfile();
     speechSettingsDirty = FALSE;
     set(speechProviderSettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
@@ -1536,6 +2149,24 @@ HOOKPROTONHNONP(SpeechProviderTestFunc, void) {
         s.fliteVoice = (SpeechFliteVoice)fv;
     }
 
+    if (speechSystemUsesNetwork(s.speechSystem)) {
+        STRPTR host = NULL;
+        LONG port = 443;
+        LONG useSSL = 1;
+        LONG authType = defaultAuthForSpeechSystem(s.speechSystem);
+        STRPTR endpointUrl = NULL;
+        get(speechHostString, MUIA_String_Contents, &host);
+        get(speechPortString, MUIA_String_Integer, &port);
+        get(speechUsesSSLCycle, MUIA_Cycle_Active, &useSSL);
+        get(speechAuthorizationTypeCycle, MUIA_Cycle_Active, &authType);
+        get(speechEndpointUrlString, MUIA_String_Contents, &endpointUrl);
+        s.host = host;
+        s.port = (UWORD)port;
+        s.useSSL = (useSSL == 1);
+        s.authorizationType = (AuthorizationType)authType;
+        s.apiEndpointUrl = endpointUrl;
+    }
+
     /* OpenAI */
     if (openAiApiKeyString != NULL) {
         STRPTR k = NULL;
@@ -1583,86 +2214,99 @@ HOOKPROTONHNONP(SpeechProviderTestFunc, void) {
 }
 MakeHook(SpeechProviderTestHook, SpeechProviderTestFunc);
 
-HOOKPROTONHNONP(SaveProfileFunc, void) {
-    LONG active = 0;
+HOOKPROTONHNONP(NewProfileFunc, void) {
+    LONG active = MUIV_NList_Active_Off;
     get(speechProfileList, MUIA_NList_Active, &active);
-
-    if (active <= 0) {
-        /* Create new custom profile */
-        STRPTR profileName = NULL;
-        get(speechProfileNameString, MUIA_String_Contents, &profileName);
-        if (profileName == NULL || strlen(profileName) == 0) {
-            displayError(STRING_ERROR_PROFILE_NAME_REQUIRED);
-            return;
-        }
-
-        if (isNameReservedForBuiltin(profileName)) {
-            displayError(STRING_ERROR_PROFILE_NAME_RESERVED);
-            return;
-        }
-
-        if (speechProfilesJson == NULL)
-            speechProfilesJson = json_object_new_array();
-
-        /* Update if existing name, else add */
-        struct json_object *p = createProfileFromUI(profileName);
-        int existingIdx = findCustomProfileIndexByName(profileName);
-        if (existingIdx >= 0)
-            json_object_array_put_idx(speechProfilesJson, existingIdx, p);
-        else
-            json_object_array_add(speechProfilesJson, p);
-        saveProfilesToConfig();
-        populateProfileList();
+    if (!applyProfileFromUIToWorking(active))
         return;
+
+    if (speechProfilesJson == NULL ||
+        !json_object_is_type(speechProfilesJson, json_type_array)) {
+        speechProfilesJson = json_object_new_array();
     }
 
-    if (isBuiltinListIndex(active)) {
-        /* Save button is disabled for built-ins */
-        return;
-    }
+    STRPTR newName = makeUniqueProfileName(STRING_DEFAULT_NEW_PROFILE_NAME, "");
+    struct json_object *profile = createDefaultProfile(newName);
+    json_object_array_add(speechProfilesJson, profile);
 
-    /* Update existing custom profile */
-    int profileIndex = (int)(active - 1 - getBuiltinSpeechProviderCount());
-    if (profileIndex < 0 || speechProfilesJson == NULL)
-        return;
-
-    STRPTR profileName = NULL;
-    get(speechProfileNameString, MUIA_String_Contents, &profileName);
-    if (profileName == NULL || strlen(profileName) == 0) {
-        displayError(STRING_ERROR_PROFILE_NAME_REQUIRED);
-        return;
-    }
-
-    struct json_object *newProfile = createProfileFromUI(profileName);
-    json_object_array_put_idx(speechProfilesJson, profileIndex, newProfile);
-    saveProfilesToConfig();
+    LONG newListIndex = getBuiltinSpeechProviderCount() + visibleCustomCount() - 1;
+    pendingProfileListSelect = newListIndex;
     populateProfileList();
+    set(speechProfileList, MUIA_NList_Active, newListIndex);
+    loadProfileIntoUI(newListIndex);
+
+    if (speechProviderSettingsRequesterWindowObject != NULL &&
+        speechProfileNameString != NULL) {
+        SetAttrs(speechProviderSettingsRequesterWindowObject,
+                 MUIA_Window_ActiveObject, speechProfileNameString, TAG_DONE);
+    }
+
+    if (newName != NULL)
+        FreeVec(newName);
+    speechSettingsDirty = FALSE;
 }
-MakeHook(SpeechProviderSaveProfileHook, SaveProfileFunc);
+MakeHook(SpeechProviderNewProfileHook, NewProfileFunc);
+
+HOOKPROTONHNONP(DuplicateProfileFunc, void) {
+    LONG active = MUIV_NList_Active_Off;
+    get(speechProfileList, MUIA_NList_Active, &active);
+    if (active == MUIV_NList_Active_Off)
+        return;
+    if (!applyProfileFromUIToWorking(active))
+        return;
+
+    STRPTR currentName = NULL;
+    get(speechProfileNameString, MUIA_String_Contents, &currentName);
+    if ((currentName == NULL || strlen(currentName) == 0) &&
+        isBuiltinListIndex(active)) {
+        currentName = (STRPTR)builtinNameForSystem(
+            builtinSystemForListIndex(active));
+    }
+
+    STRPTR newName =
+        makeUniqueProfileName(currentName, STRING_PROFILE_COPY_SUFFIX);
+
+    if (speechProfilesJson == NULL ||
+        !json_object_is_type(speechProfilesJson, json_type_array)) {
+        speechProfilesJson = json_object_new_array();
+    }
+
+    struct json_object *profile = createProfileFromUI(newName);
+    json_object_array_add(speechProfilesJson, profile);
+
+    LONG newListIndex = getBuiltinSpeechProviderCount() + visibleCustomCount() - 1;
+    pendingProfileListSelect = newListIndex;
+    populateProfileList();
+    set(speechProfileList, MUIA_NList_Active, newListIndex);
+    loadProfileIntoUI(newListIndex);
+
+    if (speechProviderSettingsRequesterWindowObject != NULL &&
+        speechProfileNameString != NULL) {
+        SetAttrs(speechProviderSettingsRequesterWindowObject,
+                 MUIA_Window_ActiveObject, speechProfileNameString, TAG_DONE);
+    }
+
+    if (newName != NULL)
+        FreeVec(newName);
+    speechSettingsDirty = FALSE;
+}
+MakeHook(SpeechProviderDuplicateProfileHook, DuplicateProfileFunc);
 
 HOOKPROTONHNONP(DeleteProfileFunc, void) {
     LONG active = 0;
     get(speechProfileList, MUIA_NList_Active, &active);
-    if (active <= getBuiltinSpeechProviderCount())
+    if (active < getBuiltinSpeechProviderCount())
         return;
-    int profileIndex = (int)(active - 1 - getBuiltinSpeechProviderCount());
+    if (!applyProfileFromUIToWorking(active))
+        return;
+    int profileIndex = profileArrayIndexForVisibleCustomIndex(
+        (int)(active - getBuiltinSpeechProviderCount()));
     if (profileIndex < 0 || speechProfilesJson == NULL)
         return;
 
-    /* If deleting the currently active profile, fall back to OpenAI. */
-    STRPTR activeName = configGetActiveSpeechProfileName();
-    struct json_object *p =
-        json_object_array_get_idx(speechProfilesJson, profileIndex);
-    struct json_object *nameObj = p ? json_object_object_get(p, "name") : NULL;
-    CONST_STRPTR name = nameObj ? json_object_get_string(nameObj) : NULL;
-    if (activeName != NULL && name != NULL && strcmp(activeName, name) == 0) {
-        configSetActiveSpeechProfileName(
-            builtinNameForSystem(SPEECH_SYSTEM_OPENAI));
-        configSetSpeechSystem(SPEECH_SYSTEM_OPENAI);
-    }
-
     json_object_array_del_idx(speechProfilesJson, profileIndex, 1);
-    saveProfilesToConfig();
+    pendingProfileListSelect =
+        (active > 0) ? active - 1 : MUIV_NList_Active_Off;
     populateProfileList();
 }
 MakeHook(SpeechProviderDeleteProfileHook, DeleteProfileFunc);
@@ -1681,15 +2325,6 @@ HOOKPROTONHNONP(SelectAccentFunc, void) {
         if (MUI_AslRequestTags(fileRequester, TAG_DONE)) {
             set(workbenchAccentString, MUIA_String_Contents,
                 fileRequester->fr_File);
-
-            if (isBuiltinListIndex(active)) {
-                SpeechSystem sys = builtinSystemForListIndex(active);
-                if (sys == SPEECH_SYSTEM_34) {
-                    configSetSpeechAccent34(fileRequester->fr_File);
-                } else if (sys == SPEECH_SYSTEM_37) {
-                    configSetSpeechAccent37(fileRequester->fr_File);
-                }
-            }
         }
         FreeAslRequest(fileRequester);
     }
@@ -1702,6 +2337,26 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
         return RETURN_OK;
 
     populateSpeechSystemOptions();
+#ifdef __AMIGAOS3__
+    narratorModeOptions[0] = STRING_NARRATOR_MODE_NATURAL;
+    narratorModeOptions[1] = STRING_NARRATOR_MODE_ROBOTIC;
+    narratorModeOptions[2] = NULL;
+    narratorSexOptions[0] = STRING_NARRATOR_SEX_MALE;
+    narratorSexOptions[1] = STRING_NARRATOR_SEX_FEMALE;
+    narratorSexOptions[2] = NULL;
+#endif
+    speechSslOptions[0] = STRING_ENCRYPTION_NONE;
+    speechSslOptions[1] = STRING_ENCRYPTION_SSL;
+    speechSslOptions[2] = NULL;
+    speechAuthorizationTypeOptions[AUTHORIZATION_TYPE_NONE] =
+        STRING_AUTHORIZATION_NONE;
+    speechAuthorizationTypeOptions[AUTHORIZATION_TYPE_BEARER] =
+        STRING_AUTHORIZATION_BEARER;
+    speechAuthorizationTypeOptions[AUTHORIZATION_TYPE_X_API_KEY] = "x-api-key";
+    speechAuthorizationTypeOptions[AUTHORIZATION_TYPE_X_GOOGLE_API_KEY] =
+        "x-goog-api-key";
+    speechAuthorizationTypeOptions[AUTHORIZATION_TYPE_XI_API_KEY] =
+        "xi-api-key";
     loadProfilesFromConfig();
 
     // clang-format off
@@ -1734,10 +2389,14 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                     MUIA_CycleChain, TRUE,
                     MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
                 End,
-                Child, saveProfileButton =
-                    MUI_MakeObject(MUIO_Button, STRING_SAVE_PROFILE, TAG_DONE),
-                Child, deleteProfileButton =
-                    MUI_MakeObject(MUIO_Button, STRING_DELETE_PROFILE, TAG_DONE),
+                Child, HGroup,
+                    Child, newProfileButton =
+                        MUI_MakeObject(MUIO_Button, STRING_NEW, TAG_DONE),
+                    Child, duplicateProfileButton =
+                        MUI_MakeObject(MUIO_Button, STRING_DUPLICATE, TAG_DONE),
+                    Child, deleteProfileButton =
+                        MUI_MakeObject(MUIO_Button, STRING_DELETE_PROFILE, TAG_DONE),
+                End,
             End,
             /* Right panel - Scrollable settings + OK/Cancel */
             Child, VGroup,
@@ -1764,9 +2423,49 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                             End,
                         End,
 
+                        Child, speechConnectionGroup = VGroup,
+                            MUIA_Frame, MUIV_Frame_Group,
+                            MUIA_FrameTitle, STRING_CONNECTION_SETTINGS,
+                            Child, ColGroup(2),
+                                Child, Label(STRING_PROXY_HOST),
+                                Child, speechHostString = StringObject,
+                                    MUIA_Frame, MUIV_Frame_String,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_String_MaxLen, 255,
+                                End,
+                                Child, Label(STRING_PROXY_PORT),
+                                Child, speechPortString = StringObject,
+                                    MUIA_Frame, MUIV_Frame_String,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_String_Accept, "0123456789",
+                                    MUIA_String_MaxLen, 5,
+                                    MUIA_String_Integer, (LONG)443,
+                                End,
+                                Child, Label(STRING_PROXY_ENCRYPTION),
+                                Child, speechUsesSSLCycle = CycleObject,
+                                    MUIA_Cycle_Entries, speechSslOptions,
+                                    MUIA_Cycle_Active, 1,
+                                    MUIA_CycleChain, TRUE,
+                                End,
+                                Child, Label(STRING_AUTHORIZATION_TYPE),
+                                Child, speechAuthorizationTypeCycle = CycleObject,
+                                    MUIA_Cycle_Entries, speechAuthorizationTypeOptions,
+                                    MUIA_Cycle_Active, (LONG)AUTHORIZATION_TYPE_BEARER,
+                                    MUIA_CycleChain, TRUE,
+                                End,
+                                Child, Label(STRING_MENU_OPENAI_API_ENDPOINT_URL),
+                                Child, speechEndpointUrlString = StringObject,
+                                    MUIA_Frame, MUIV_Frame_String,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_String_MaxLen, 255,
+                                    MUIA_String_Contents, "v1",
+                                End,
+                            End,
+                        End,
+
                         Child, workbenchGroup = VGroup,
                             MUIA_Frame, MUIV_Frame_Group,
-                            MUIA_FrameTitle, "Workbench narrator.device",
+                            MUIA_FrameTitle, STRING_WORKBENCH_NARRATOR_DEVICE,
                             Child, ColGroup(2),
                                 Child, Label(STRING_MENU_SPEECH_ACCENT),
                                 Child, HGroup,
@@ -1778,7 +2477,7 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                                         MUI_MakeObject(MUIO_Button, "...", TAG_DONE),
                                 End,
 #ifdef __AMIGAOS3__
-                                Child, Label("Rate (wpm)"),
+                                Child, Label(STRING_NARRATOR_RATE_WPM),
                                 Child, workbenchRateString = StringObject,
                                     MUIA_Frame, MUIV_Frame_String,
                                     MUIA_CycleChain, TRUE,
@@ -1786,7 +2485,7 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                                     MUIA_String_MaxLen, 5,
                                     MUIA_String_Integer, (LONG)150,
                                 End,
-                                Child, Label("Pitch (Hz)"),
+                                Child, Label(STRING_NARRATOR_PITCH_HZ),
                                 Child, workbenchPitchString = StringObject,
                                     MUIA_Frame, MUIV_Frame_String,
                                     MUIA_CycleChain, TRUE,
@@ -1794,13 +2493,13 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                                     MUIA_String_MaxLen, 5,
                                     MUIA_String_Integer, (LONG)110,
                                 End,
-                                Child, Label("Mode"),
+                                Child, Label(STRING_NARRATOR_MODE),
                                 Child, workbenchModeCycle = CycleObject,
                                     MUIA_CycleChain, TRUE,
                                     MUIA_Cycle_Entries, narratorModeOptions,
                                     MUIA_Cycle_Active, 0,
                                 End,
-                                Child, Label("Sex"),
+                                Child, Label(STRING_NARRATOR_SEX),
                                 Child, workbenchSexCycle = CycleObject,
                                     MUIA_CycleChain, TRUE,
                                     MUIA_Cycle_Entries, narratorSexOptions,
@@ -1915,7 +2614,7 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                                         MUIA_CycleChain, TRUE,
                                     End,
                                     Child, elevenLabsSearchButton =
-                                        MUI_MakeObject(MUIO_Button, STRING_SEARCH, TAG_DONE),
+                                        MUI_MakeObject(MUIO_Button, STRING_GET_ALL_VOICES, TAG_DONE),
                                 End,
                                 Child, NListviewObject,
                                     MUIA_NListview_NList, elevenLabsVoiceList = NListObject,
@@ -1937,7 +2636,7 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                 Child, HGroup,
                     Child, okButton = MUI_MakeObject(MUIO_Button, STRING_OK, TAG_DONE),
                     Child, cancelButton = MUI_MakeObject(MUIO_Button, STRING_CANCEL, TAG_DONE),
-                    Child, testButton = MUI_MakeObject(MUIO_Button, (STRPTR)"Test", TAG_DONE),
+                    Child, testButton = MUI_MakeObject(MUIO_Button, STRING_TEST, TAG_DONE),
                 End,
             End,
         End,
@@ -1948,6 +2647,7 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
         displayError(STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE);
         return RETURN_ERROR;
     }
+    updateProfileManagementButtonLabels();
 
     /* Notifications */
     /* Close gadget should behave like Cancel. */
@@ -1959,9 +2659,12 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
              MUIV_Notify_Application, 2, MUIM_CallHook,
              &SpeechProviderProfileSelectedHook);
 
-    DoMethod(saveProfileButton, MUIM_Notify, MUIA_Pressed, FALSE,
+    DoMethod(newProfileButton, MUIM_Notify, MUIA_Pressed, FALSE,
              MUIV_Notify_Application, 2, MUIM_CallHook,
-             &SpeechProviderSaveProfileHook);
+             &SpeechProviderNewProfileHook);
+    DoMethod(duplicateProfileButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             MUIV_Notify_Application, 2, MUIM_CallHook,
+             &SpeechProviderDuplicateProfileHook);
     DoMethod(deleteProfileButton, MUIM_Notify, MUIA_Pressed, FALSE,
              MUIV_Notify_Application, 2, MUIM_CallHook,
              &SpeechProviderDeleteProfileHook);
@@ -1976,6 +2679,9 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
     DoMethod(elevenLabsSearchButton, MUIM_Notify, MUIA_Pressed, FALSE,
              MUIV_Notify_Application, 2, MUIM_CallHook,
              &ElevenLabsSearchVoicesButtonClickedHook);
+    DoMethod(elevenLabsVoiceSearchString, MUIM_Notify, MUIA_String_Contents,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &ElevenLabsVoiceSearchChangedHook);
 
 #if defined(__AMIGAOS3__) || defined(__MORPHOS__)
     DoMethod(workbenchAccentBrowseButton, MUIM_Notify, MUIA_Pressed, FALSE,
@@ -1992,6 +2698,10 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
              MUIV_Notify_Application, 2, MUIM_CallHook,
              &SpeechProviderTestHook);
 
+    ensureDefaultElevenLabsModelsJson();
+    populateElevenLabsModelList();
+    updateElevenLabsSearchButtonLabel();
+
     return RETURN_OK;
 }
 
@@ -2000,6 +2710,7 @@ void openSpeechProviderSettingsRequesterWindow(void) {
         /* Reload profiles to pick up any changes */
         loadProfilesFromConfig();
         populateProfileList();
+        updateProfileManagementButtonLabels();
         set(speechProviderSettingsRequesterWindowObject, MUIA_Window_Open,
             TRUE);
     }

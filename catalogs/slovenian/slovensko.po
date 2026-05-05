@@ -1871,3 +1871,58 @@ msgstr "Branje SSL ni uspelo: %s"
 msgctxt "STRING_ERROR_INVALID_BASE64 (347//)"
 msgid "Invalid base64 image data"
 msgstr "Neveljavni slikovni podatki base64"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_GET_ALL_VOICES (348//)"
+msgid "Get All Voices"
+msgstr "Pridobi vse glasove"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_CONNECTION_SETTINGS (349//)"
+msgid "Connection settings"
+msgstr "Nastavitve povezave"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_WORKBENCH_NARRATOR_DEVICE (350//)"
+msgid "Workbench narrator.device"
+msgstr "Workbench narrator.device"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_MODE_NATURAL (351//)"
+msgid "Natural"
+msgstr "Naraven"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_MODE_ROBOTIC (352//)"
+msgid "Robotic"
+msgstr "Robotski"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_SEX_MALE (353//)"
+msgid "Male"
+msgstr "Moški"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_SEX_FEMALE (354//)"
+msgid "Female"
+msgstr "Ženski"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_RATE_WPM (355//)"
+msgid "Rate (wpm)"
+msgstr "Hitrost (wpm)"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_PITCH_HZ (356//)"
+msgid "Pitch (Hz)"
+msgstr "Višina (Hz)"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_MODE (357//)"
+msgid "Mode"
+msgstr "Način"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_SEX (358//)"
+msgid "Sex"
+msgstr "Spol"

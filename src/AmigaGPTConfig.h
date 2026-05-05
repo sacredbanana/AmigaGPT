@@ -16,6 +16,15 @@
 #define OPENAI_TTS_MODEL_SET_VERSION 1
 #define OPENAI_TTS_VOICE_SET_VERSION 1
 
+#define ELEVENLABS_MODEL_V3_ID "eleven_v3"
+#define ELEVENLABS_MODEL_V3_NAME "Eleven v3"
+#define ELEVENLABS_MODEL_MULTILINGUAL_V2_ID "eleven_multilingual_v2"
+#define ELEVENLABS_MODEL_MULTILINGUAL_V2_NAME "Eleven Multilingual v2"
+#define ELEVENLABS_MODEL_FLASH_V2_5_ID "eleven_flash_v2_5"
+#define ELEVENLABS_MODEL_FLASH_V2_5_NAME "Eleven Flash v2.5"
+#define ELEVENLABS_MODEL_TURBO_V2_5_ID "eleven_turbo_v2_5"
+#define ELEVENLABS_MODEL_TURBO_V2_5_NAME "Eleven Turbo v2.5"
+
 /* Base tag for AmigaGPTConfig attributes */
 #define AmigaGPTConfig_Dummy (0xbe000000UL)
 
@@ -206,6 +215,11 @@ struct SpeechRequestSettings {
     UWORD narratorSex;
 
     /* OpenAI TTS */
+    STRPTR host;
+    UWORD port;
+    BOOL useSSL;
+    STRPTR apiEndpointUrl;
+    AuthorizationType authorizationType;
     STRPTR openAiApiKey;
     OpenAITTSModel openAiTtsModel;
     OpenAITTSVoice openAiTtsVoice;

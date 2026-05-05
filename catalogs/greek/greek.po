@@ -1889,3 +1889,58 @@ msgstr "Η ανάγνωση SSL απέτυχε: %s"
 msgctxt "STRING_ERROR_INVALID_BASE64 (347//)"
 msgid "Invalid base64 image data"
 msgstr "Μη έγκυρα δεδομένα εικόνας base64"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_GET_ALL_VOICES (348//)"
+msgid "Get All Voices"
+msgstr "Λήψη όλων των φωνών"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_CONNECTION_SETTINGS (349//)"
+msgid "Connection settings"
+msgstr "Ρυθμίσεις σύνδεσης"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_WORKBENCH_NARRATOR_DEVICE (350//)"
+msgid "Workbench narrator.device"
+msgstr "Workbench narrator.device"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_MODE_NATURAL (351//)"
+msgid "Natural"
+msgstr "Φυσική"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_MODE_ROBOTIC (352//)"
+msgid "Robotic"
+msgstr "Ρομποτική"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_SEX_MALE (353//)"
+msgid "Male"
+msgstr "Αρσενικό"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_SEX_FEMALE (354//)"
+msgid "Female"
+msgstr "Θηλυκό"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_RATE_WPM (355//)"
+msgid "Rate (wpm)"
+msgstr "Ρυθμός (wpm)"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_PITCH_HZ (356//)"
+msgid "Pitch (Hz)"
+msgstr "Τόνος (Hz)"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_MODE (357//)"
+msgid "Mode"
+msgstr "Λειτουργία"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_SEX (358//)"
+msgid "Sex"
+msgstr "Φύλο"

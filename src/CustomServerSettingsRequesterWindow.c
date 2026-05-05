@@ -2462,7 +2462,7 @@ LONG createCustomServerSettingsRequesterWindow() {
     imageApiEndpointOptions[1] = (STRPTR)
         API_IMAGE_ENDPOINT_NAMES[API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT];
 
-    static STRPTR authorizationTypeOptions[4] = {NULL};
+    static STRPTR authorizationTypeOptions[6] = {NULL};
     authorizationTypeOptions[AUTHORIZATION_TYPE_NONE] =
         STRING_AUTHORIZATION_NONE;
     authorizationTypeOptions[AUTHORIZATION_TYPE_BEARER] =
@@ -2470,6 +2470,7 @@ LONG createCustomServerSettingsRequesterWindow() {
     authorizationTypeOptions[AUTHORIZATION_TYPE_X_API_KEY] = "x-api-key";
     authorizationTypeOptions[AUTHORIZATION_TYPE_X_GOOGLE_API_KEY] =
         "x-goog-api-key";
+    authorizationTypeOptions[AUTHORIZATION_TYPE_XI_API_KEY] = "xi-api-key";
     static STRPTR streamingOptions[3] = {NULL};
     streamingOptions[0] = STRING_OFF;
     streamingOptions[1] = STRING_ON;

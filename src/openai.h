@@ -257,7 +257,8 @@ typedef enum {
     AUTHORIZATION_TYPE_NONE = 0,
     AUTHORIZATION_TYPE_BEARER,
     AUTHORIZATION_TYPE_X_API_KEY,
-    AUTHORIZATION_TYPE_X_GOOGLE_API_KEY
+    AUTHORIZATION_TYPE_X_GOOGLE_API_KEY,
+    AUTHORIZATION_TYPE_XI_API_KEY
 } AuthorizationType;
 
 /**
@@ -415,6 +416,8 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
 APTR postTextToSpeechRequestToOpenAI(
     CONST_STRPTR text, OpenAITTSModel openAITTSModel,
     OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
+    CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
     CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
@@ -445,8 +448,9 @@ void closeOpenAIConnector();
  * json_object_put() when you are done using it
  **/
 struct json_object *
-makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
-                    CONST_STRPTR apiKey, CONST_STRPTR apiKeyHeader,
+makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                    CONST_STRPTR endpoint, CONST_STRPTR apiKey,
+                    CONST_STRPTR apiKeyHeader,
                     BOOL useBearer, BOOL useProxy, CONST_STRPTR proxyHost,
                     UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
                     CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
@@ -563,6 +567,8 @@ struct json_object *postToolResultToOpenAI(
  **/
 APTR postTextToSpeechRequestToElevenLabs(
     CONST_STRPTR text, CONST_STRPTR voiceId, CONST_STRPTR modelId,
+    CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
     CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,

@@ -225,6 +225,7 @@ CONST_STRPTR AUTHORIZATION_TYPE_NAMES[] = {
     [AUTHORIZATION_TYPE_BEARER] = "Authorization: Bearer",
     [AUTHORIZATION_TYPE_X_API_KEY] = "x-api-key:",
     [AUTHORIZATION_TYPE_X_GOOGLE_API_KEY] = "x-goog-api-key:",
+    [AUTHORIZATION_TYPE_XI_API_KEY] = "xi-api-key:",
     NULL};
 
 /**
@@ -3930,27 +3931,34 @@ static void reportSslError(SSL *s, int ret, CONST_STRPTR where) {
 APTR postTextToSpeechRequestToOpenAI(
     CONST_STRPTR text, OpenAITTSModel openAITTSModel,
     OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
+    CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
     CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, AudioFormat *audioFormat) {
     struct json_object *response;
-    BOOL useSSL = !useProxy || proxyUsesSSL;
+    if (host == NULL || strlen(host) == 0)
+        host = OPENAI_HOST;
+    if (port == 0)
+        port = OPENAI_PORT;
+    if (apiEndpointUrl == NULL)
+        apiEndpointUrl = "v1";
 
     *audioLength = 0;
 
     /* Prevent crashes on NULL apiKey (also avoids a guaranteed 401). */
-    if (apiKey == NULL || strlen(apiKey) == 0) {
+    if (authorizationType != AUTHORIZATION_TYPE_NONE &&
+        (apiKey == NULL || strlen(apiKey) == 0)) {
         displayError(STRING_ERROR_NO_API_KEY);
         return NULL;
     }
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
     UBYTE connectionRetryCount = 0;
-    while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useSSL, useProxy,
-                               proxyHost, proxyPort, proxyUsesSSL,
-                               proxyRequiresAuth, proxyUsername,
-                               proxyPassword) == RETURN_ERROR) {
+    while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
             return NULL;
@@ -4013,16 +4021,37 @@ APTR postTextToSpeechRequestToOpenAI(
         FreeVec(credentials);
     }
 
+    UBYTE apiAuthHeader[512];
+    memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+    }
+
+    UBYTE endpoint[512];
+    snprintf(endpoint, sizeof(endpoint), "/%s/audio/speech",
+             (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0)
+                 ? apiEndpointUrl
+                 : "v1");
+
+    UBYTE absolutePrefix[768];
+    absolutePrefix[0] = '\0';
+    if (!useSSL) {
+        snprintf(absolutePrefix, sizeof(absolutePrefix), "http://%s:%u", host,
+                 (unsigned int)port);
+    }
+
     snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-             "POST %s/v1/audio/speech HTTP/1.1\r\n"
-             "Host: api.openai.com\r\n"
+             "POST %s%s HTTP/1.1\r\n"
+             "Host: %s\r\n"
              "Content-Type: application/json\r\n"
-             "Authorization: Bearer %s\r\n"
+             "%s"
              "User-Agent: AmigaGPT\r\n"
              "Content-Length: %lu\r\n"
              "%s\r\n"
              "%s\0",
-             useSSL ? "" : "https://api.openai.com", apiKey, strlen(jsonString),
+             absolutePrefix, endpoint, host, apiAuthHeader, strlen(jsonString),
              authHeader, jsonString);
 
     json_object_put(obj);
@@ -4513,9 +4542,9 @@ APTR postTextToSpeechRequestToOpenAI(
                 reportSslError(ssl, bytesRead, "SSL_read (tts)");
                 updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
                 if (createSSLConnection(
-                        OPENAI_HOST, OPENAI_PORT, useSSL, useProxy, proxyHost,
-                        proxyPort, proxyUsesSSL, proxyRequiresAuth,
-                        proxyUsername, proxyPassword) == RETURN_ERROR) {
+                        host, port, useSSL, useProxy, proxyHost, proxyPort,
+                        proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+                        proxyPassword) == RETURN_ERROR) {
                     if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
                         displayError(STRING_ERROR_CONNECTION_MAX_RETRIES);
                         FreeVec(audioData);
@@ -4740,6 +4769,8 @@ static UTF8 *extractUserFriendlyErrorMessage(UTF8 *rawMessage) {
  **/
 APTR postTextToSpeechRequestToElevenLabs(
     CONST_STRPTR text, CONST_STRPTR voiceId, CONST_STRPTR modelId,
+    CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
     CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
@@ -4748,15 +4779,19 @@ APTR postTextToSpeechRequestToElevenLabs(
 #define ELEVENLABS_HOST "api.elevenlabs.io"
 #define ELEVENLABS_PORT 443
 
-    BOOL useSSL = !useProxy || proxyUsesSSL;
+    if (host == NULL || strlen(host) == 0)
+        host = ELEVENLABS_HOST;
+    if (port == 0)
+        port = ELEVENLABS_PORT;
+    if (apiEndpointUrl == NULL)
+        apiEndpointUrl = "v1";
     *audioLength = 0;
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
     UBYTE connectionRetryCount = 0;
-    while (createSSLConnection(ELEVENLABS_HOST, ELEVENLABS_PORT, useSSL,
-                               useProxy, proxyHost, proxyPort, proxyUsesSSL,
-                               proxyRequiresAuth, proxyUsername,
-                               proxyPassword) == RETURN_ERROR) {
+    while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
             return NULL;
@@ -4807,21 +4842,38 @@ APTR postTextToSpeechRequestToElevenLabs(
     /* Build the endpoint with voice ID and output format */
     UTF8 endpoint[256];
     snprintf(endpoint, sizeof(endpoint),
-             "/v1/text-to-speech/%s?output_format=pcm_24000",
+             "/%s/text-to-speech/%s?output_format=pcm_24000",
+             (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0)
+                 ? apiEndpointUrl
+                 : "v1",
              voiceId != NULL ? voiceId : "");
+
+    UBYTE apiAuthHeader[512];
+    memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+    }
+
+    UBYTE absolutePrefix[768];
+    absolutePrefix[0] = '\0';
+    if (!useSSL) {
+        snprintf(absolutePrefix, sizeof(absolutePrefix), "http://%s:%u", host,
+                 (unsigned int)port);
+    }
 
     snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
              "POST %s%s HTTP/1.1\r\n"
              "Host: %s\r\n"
              "Content-Type: application/json\r\n"
-             "xi-api-key: %s\r\n"
+             "%s"
              "User-Agent: AmigaGPT\r\n"
              "Content-Length: %lu\r\n"
              "Connection: close\r\n"
              "%s\r\n"
              "%s",
-             useSSL ? "" : "https://api.elevenlabs.io", endpoint,
-             ELEVENLABS_HOST, apiKey ? apiKey : "", strlen(jsonString),
+             absolutePrefix, endpoint, host, apiAuthHeader, strlen(jsonString),
              authHeader, jsonString);
 
     json_object_put(obj);
@@ -5057,14 +5109,14 @@ APTR postTextToSpeechRequestToElevenLabs(
  * json_object_put() when you are done using it
  **/
 struct json_object *
-makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
-                    CONST_STRPTR apiKey, CONST_STRPTR apiKeyHeader,
+makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                    CONST_STRPTR endpoint, CONST_STRPTR apiKey,
+                    CONST_STRPTR apiKeyHeader,
                     BOOL useBearer, BOOL useProxy, CONST_STRPTR proxyHost,
                     UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
                     CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
 
     UBYTE connectionRetryCount = 0;
-    BOOL useSSL = TRUE;
 
     if (port == 0) {
         port = 443;
@@ -5097,12 +5149,16 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
 
     /* Build the API key header */
     UTF8 apiKeyHeaderStr[512];
-    if (useBearer) {
+    apiKeyHeaderStr[0] = '\0';
+    if (apiKeyHeader == NULL || strlen(apiKeyHeader) == 0 || apiKey == NULL ||
+        strlen(apiKey) == 0) {
+        apiKeyHeaderStr[0] = '\0';
+    } else if (useBearer) {
         snprintf(apiKeyHeaderStr, sizeof(apiKeyHeaderStr), "%s: Bearer %s\r\n",
-                 apiKeyHeader, apiKey ? apiKey : "");
+                 apiKeyHeader, apiKey);
     } else {
         snprintf(apiKeyHeaderStr, sizeof(apiKeyHeaderStr), "%s: %s\r\n",
-                 apiKeyHeader, apiKey ? apiKey : "");
+                 apiKeyHeader, apiKey);
     }
 
     if (useSSL || useProxy) {
