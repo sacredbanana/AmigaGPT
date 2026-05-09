@@ -4971,11 +4971,14 @@ APTR postTextToSpeechRequestToElevenLabs(
         return NULL;
     }
 
+    BOOL chunked =
+        strstr((STRPTR)hdrTerm, "Transfer-Encoding: chunked") != NULL ||
+        strstr((STRPTR)hdrTerm, "transfer-encoding: chunked") != NULL;
     LONG contentLen = httpParseContentLengthNullTerminated((STRPTR)hdrTerm);
     ULONG initialBody = (ha > bodyOff) ? (ha - bodyOff) : 0;
     UBYTE statusMessage[64];
 
-    if (contentLen > 0) {
+    if (!chunked && contentLen > 0) {
         if ((ULONG)contentLen > audioBufferSize) {
             audioBufferSize = (ULONG)contentLen + 4096;
             APTR old = audioData;
@@ -5019,7 +5022,7 @@ APTR postTextToSpeechRequestToElevenLabs(
             }
             break;
         }
-    } else {
+    } else if (!chunked) {
         /* No Content-Length: read until the server closes the connection. */
         ULONG got = initialBody;
         while (*audioLength + got > audioBufferSize) {
@@ -5072,6 +5075,249 @@ APTR postTextToSpeechRequestToElevenLabs(
                     continue;
             }
             break;
+        }
+    } else {
+        /* Transfer-Encoding: chunked (e.g. Cloudflare Workers in front of
+         * ElevenLabs). Curl decodes chunks automatically; we must strip framing
+         * or raw PCM picks up hex chunk sizes + CRLFs and sounds corrupted. */
+        BOOL useSeed = FALSE;
+        ULONG seedLen = initialBody;
+        if (seedLen > READ_BUFFER_LENGTH - 1) {
+            displayError(STRING_ERROR_BAD_CHUNK);
+            FreeVec(audioData);
+            return NULL;
+        }
+        memcpy(readBuffer, headerAccum + bodyOff, seedLen);
+        useSeed = (seedLen > 0);
+
+        LONG bytesRead = 0;
+        ULONG bytesRemainingInBuffer = 0;
+        BOOL doneReading = FALSE;
+        LONG err = 0;
+        UBYTE tempChunkHeaderBuffer[10] = {0};
+        UBYTE tempChunkDataBufferLength = 0;
+        BOOL newChunkNeeded = TRUE;
+        ULONG chunkLength = 0;
+        ULONG chunkBytesNeedingRead = 0;
+        UBYTE *dataStart = NULL;
+
+        while (!doneReading) {
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+            BOOL readFromSeed = FALSE;
+            if (useSeed) {
+                bytesRead = (LONG)seedLen;
+                readFromSeed = TRUE;
+                err = SSL_ERROR_NONE;
+                useSeed = FALSE;
+            } else {
+                memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                if (useSSL) {
+                    ERR_clear_error();
+                    bytesRead =
+                        SSL_read(ssl, readBuffer,
+                                 useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1);
+                    err = SSL_get_error(ssl, bytesRead);
+                } else {
+                    bytesRead =
+                        recv(sock, readBuffer,
+                             useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1, 0);
+                    err = SSL_ERROR_NONE;
+                }
+                if (bytesRead <= 0 && useSSL &&
+                    (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE ||
+                     err == SSL_ERROR_WANT_CONNECT ||
+                     err == SSL_ERROR_WANT_ACCEPT ||
+                     err == SSL_ERROR_WANT_X509_LOOKUP)) {
+                    continue;
+                }
+            }
+            if (newChunkNeeded && bytesRead == 1 && !readFromSeed)
+                continue;
+            bytesRemainingInBuffer = (ULONG)bytesRead;
+            dataStart = readBuffer;
+
+            snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                     STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+            updateStatusBar(statusMessage, yellowPen);
+            if (useSSL) {
+                err = SSL_get_error(ssl, bytesRead);
+            } else {
+                err = SSL_ERROR_NONE;
+            }
+            switch (err) {
+            case SSL_ERROR_NONE:
+                while (bytesRemainingInBuffer > 0) {
+                    if (newChunkNeeded) {
+                        tempChunkDataBufferLength = 0;
+                        memset(tempChunkHeaderBuffer, 0, 10);
+                        while (!strstr((STRPTR)tempChunkHeaderBuffer, "\r\n") &&
+                               tempChunkDataBufferLength < 10) {
+                            if (bytesRemainingInBuffer > 0) {
+                                memcpy(tempChunkHeaderBuffer +
+                                           tempChunkDataBufferLength,
+                                       dataStart, 1);
+                                dataStart++;
+                                bytesRemainingInBuffer--;
+                                tempChunkDataBufferLength++;
+                            } else {
+                                UBYTE singleByte[1];
+                                if (useSSL) {
+                                    bytesRead = SSL_read(ssl, singleByte, 1);
+                                } else {
+                                    bytesRead = recv(sock, singleByte, 1, 0);
+                                }
+                                if (bytesRead <= 0) {
+                                    err = SSL_ERROR_SYSCALL;
+                                    doneReading = TRUE;
+                                    break;
+                                }
+                                memcpy(tempChunkHeaderBuffer +
+                                           tempChunkDataBufferLength,
+                                       singleByte, bytesRead);
+                                tempChunkDataBufferLength += bytesRead;
+                            }
+                        }
+                        if (doneReading)
+                            break;
+
+                        chunkLength = parseChunkLength(
+                            tempChunkHeaderBuffer, tempChunkDataBufferLength);
+                        if (chunkLength == 0) {
+                            doneReading = TRUE;
+                            break;
+                        }
+                        chunkBytesNeedingRead = chunkLength;
+                        if (bytesRemainingInBuffer == 0) {
+                            newChunkNeeded = FALSE;
+                            continue;
+                        }
+                    }
+
+                    if (*audioLength + chunkBytesNeedingRead > audioBufferSize) {
+                        audioBufferSize <<= 1;
+                        APTR oldAudioData = audioData;
+                        audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                        if (audioData == NULL) {
+                            FreeVec(oldAudioData);
+                            displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                            return NULL;
+                        }
+                        memcpy(audioData, oldAudioData, *audioLength);
+                        FreeVec(oldAudioData);
+                    }
+
+                    if (chunkBytesNeedingRead > bytesRemainingInBuffer) {
+                        memcpy(audioData + *audioLength, dataStart,
+                               bytesRemainingInBuffer);
+                        *audioLength += bytesRemainingInBuffer;
+                        chunkBytesNeedingRead -= bytesRemainingInBuffer;
+                        newChunkNeeded = FALSE;
+                        bytesRemainingInBuffer = 0;
+                    } else {
+                        memcpy(audioData + *audioLength, dataStart,
+                               chunkBytesNeedingRead);
+                        *audioLength += chunkBytesNeedingRead;
+                        bytesRemainingInBuffer -= chunkBytesNeedingRead;
+                        while (bytesRemainingInBuffer < 2) {
+                            if (useSSL) {
+                                bytesRead = SSL_read(ssl, readBuffer, 1);
+                            } else {
+                                bytesRead = recv(sock, readBuffer, 1, 0);
+                            }
+                            if (bytesRead <= 0) {
+                                if (chunkBytesNeedingRead == 0) {
+                                    newChunkNeeded = TRUE;
+                                    break;
+                                }
+                                err = SSL_ERROR_SYSCALL;
+                                doneReading = TRUE;
+                                break;
+                            }
+                            bytesRemainingInBuffer += bytesRead;
+                        }
+                        if (doneReading)
+                            break;
+                        dataStart += chunkBytesNeedingRead + 2;
+                        bytesRemainingInBuffer -= 2;
+                        chunkBytesNeedingRead = 0;
+                        newChunkNeeded = TRUE;
+                    }
+                }
+                break;
+            case SSL_ERROR_ZERO_RETURN:
+                if (bytesRemainingInBuffer > 0 && chunkBytesNeedingRead > 0) {
+                    while (bytesRemainingInBuffer > 0 &&
+                           chunkBytesNeedingRead > 0) {
+                        if (*audioLength + chunkBytesNeedingRead >
+                            audioBufferSize) {
+                            audioBufferSize <<= 1;
+                            APTR oldAudioData = audioData;
+                            audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                            if (audioData == NULL) {
+                                FreeVec(oldAudioData);
+                                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                                return NULL;
+                            }
+                            memcpy(audioData, oldAudioData, *audioLength);
+                            FreeVec(oldAudioData);
+                        }
+
+                        if (chunkBytesNeedingRead > bytesRemainingInBuffer) {
+                            memcpy(audioData + *audioLength, dataStart,
+                                   bytesRemainingInBuffer);
+                            *audioLength += bytesRemainingInBuffer;
+                            chunkBytesNeedingRead -= bytesRemainingInBuffer;
+                            bytesRemainingInBuffer = 0;
+                        } else {
+                            memcpy(audioData + *audioLength, dataStart,
+                                   chunkBytesNeedingRead);
+                            *audioLength += chunkBytesNeedingRead;
+                            bytesRemainingInBuffer -= chunkBytesNeedingRead;
+                            chunkBytesNeedingRead = 0;
+                            newChunkNeeded = TRUE;
+                        }
+                    }
+                }
+                doneReading = TRUE;
+                break;
+            case SSL_ERROR_WANT_READ:
+            case SSL_ERROR_WANT_WRITE:
+            case SSL_ERROR_WANT_CONNECT:
+            case SSL_ERROR_WANT_ACCEPT:
+            case SSL_ERROR_WANT_X509_LOOKUP:
+                continue;
+            case SSL_ERROR_SYSCALL:
+            case SSL_ERROR_SSL:
+                reportSslError(ssl, bytesRead, "SSL_read (elevenlabs tts)");
+                doneReading = TRUE;
+                break;
+            default:
+                printf(STRING_ERROR_UNKNOWN);
+                putchar('\n');
+                break;
+            }
+        }
+
+        if (bytesRemainingInBuffer > 0 && chunkBytesNeedingRead > 0) {
+            if (*audioLength + chunkBytesNeedingRead > audioBufferSize) {
+                audioBufferSize <<= 1;
+                APTR oldAudioData = audioData;
+                audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                if (audioData == NULL) {
+                    FreeVec(oldAudioData);
+                    displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                    return NULL;
+                }
+                memcpy(audioData, oldAudioData, *audioLength);
+                FreeVec(oldAudioData);
+            }
+            ULONG bytesToSave = (chunkBytesNeedingRead < bytesRemainingInBuffer)
+                                    ? chunkBytesNeedingRead
+                                    : bytesRemainingInBuffer;
+            memcpy(audioData + *audioLength, dataStart, bytesToSave);
+            *audioLength += bytesToSave;
         }
     }
 
