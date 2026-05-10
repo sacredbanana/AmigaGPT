@@ -1749,8 +1749,9 @@ struct json_object **postChatMessageToOpenAI(
                 struct json_object *partObj = json_object_new_object();
                 json_object_object_add(
                     partObj, "text",
-                    json_object_new_string(
-                        message->content != NULL ? message->content : (UTF8 *)""));
+                    json_object_new_string(message->content != NULL
+                                               ? message->content
+                                               : (UTF8 *)""));
                 json_object_array_add(partsArr, partObj);
                 json_object_object_add(contentObj, "parts", partsArr);
 
@@ -3890,7 +3891,7 @@ static void reportSslError(SSL *s, int ret, CONST_STRPTR where) {
                (why == SSL_ERROR_WANT_READ)      ? "SSL_ERROR_WANT_READ"
                : (why == SSL_ERROR_WANT_WRITE)   ? "SSL_ERROR_WANT_WRITE"
                : (why == SSL_ERROR_WANT_CONNECT) ? "SSL_ERROR_WANT_CONNECT"
-               : (why == SSL_ERROR_WANT_ACCEPT) ? "SSL_ERROR_WANT_ACCEPT"
+               : (why == SSL_ERROR_WANT_ACCEPT)  ? "SSL_ERROR_WANT_ACCEPT"
                                                 : "SSL_ERROR_WANT_X509_LOOKUP");
         break;
     case SSL_ERROR_ZERO_RETURN:
@@ -3931,11 +3932,10 @@ static void reportSslError(SSL *s, int ret, CONST_STRPTR where) {
 APTR postTextToSpeechRequestToOpenAI(
     CONST_STRPTR text, OpenAITTSModel openAITTSModel,
     OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
-    CONST_STRPTR host, UWORD port, BOOL useSSL,
-    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
-    CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
-    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
-    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR apiKey,
+    ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, AudioFormat *audioFormat) {
     struct json_object *response;
     if (host == NULL || strlen(host) == 0)
@@ -3985,8 +3985,8 @@ APTR postTextToSpeechRequestToOpenAI(
     json_object_object_add(
         obj, "voice",
         json_object_new_string(OPENAI_TTS_VOICE_NAMES[openAITTSVoice]));
-    json_object_object_add(obj, "input",
-                           json_object_new_string(textUTF8 ? textUTF8 : (UTF8 *)""));
+    json_object_object_add(
+        obj, "input", json_object_new_string(textUTF8 ? textUTF8 : (UTF8 *)""));
     if (voiceInstructions != NULL) {
         json_object_object_add(
             obj, "instructions",
@@ -4088,11 +4088,10 @@ APTR postTextToSpeechRequestToOpenAI(
             DoMethod(loadingBar, MUIM_Busy_Move);
 #endif
             ERR_clear_error();
-            LONG hbr =
-                useSSL ? SSL_read(ssl, headerAccum + ha,
-                                  (int)(sizeof(headerAccum) - 1 - ha))
-                       : recv(sock, headerAccum + ha,
-                              (int)(sizeof(headerAccum) - 1 - ha), 0);
+            LONG hbr = useSSL ? SSL_read(ssl, headerAccum + ha,
+                                         (int)(sizeof(headerAccum) - 1 - ha))
+                              : recv(sock, headerAccum + ha,
+                                     (int)(sizeof(headerAccum) - 1 - ha), 0);
             if (hbr > 0) {
                 ha += (ULONG)hbr;
                 headerAccum[ha] = '\0';
@@ -4163,8 +4162,8 @@ APTR postTextToSpeechRequestToOpenAI(
         ULONG initialBody = (ha > bodyOff) ? (ha - bodyOff) : 0;
         UBYTE statusMessage[64];
 
-        /* Non-chunked body: read exactly Content-Length bytes, or until close if
-         * no length (OpenAI speech often uses identity + Content-Length). */
+        /* Non-chunked body: read exactly Content-Length bytes, or until close
+         * if no length (OpenAI speech often uses identity + Content-Length). */
         if (!chunked && ttsContentLen > 0) {
             if ((ULONG)ttsContentLen > audioBufferSize) {
                 audioBufferSize = (ULONG)ttsContentLen + 4096;
@@ -4191,10 +4190,10 @@ APTR postTextToSpeechRequestToOpenAI(
                 if (space > READ_BUFFER_LENGTH - 1)
                     space = READ_BUFFER_LENGTH - 1;
                 ERR_clear_error();
-                LONG n = useSSL
-                             ? SSL_read(ssl, audioData + *audioLength, (int)space)
-                             : recv(sock, audioData + *audioLength, (int)space,
-                                    0);
+                LONG n =
+                    useSSL
+                        ? SSL_read(ssl, audioData + *audioLength, (int)space)
+                        : recv(sock, audioData + *audioLength, (int)space, 0);
                 if (n > 0) {
                     *audioLength += (ULONG)n;
                     snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
@@ -4315,7 +4314,8 @@ APTR postTextToSpeechRequestToOpenAI(
                     err = SSL_ERROR_NONE;
                 }
                 if (bytesRead <= 0 && useSSL &&
-                    (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE ||
+                    (err == SSL_ERROR_WANT_READ ||
+                     err == SSL_ERROR_WANT_WRITE ||
                      err == SSL_ERROR_WANT_CONNECT ||
                      err == SSL_ERROR_WANT_ACCEPT ||
                      err == SSL_ERROR_WANT_X509_LOOKUP)) {
@@ -4541,10 +4541,10 @@ APTR postTextToSpeechRequestToOpenAI(
             case SSL_ERROR_SSL: {
                 reportSslError(ssl, bytesRead, "SSL_read (tts)");
                 updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
-                if (createSSLConnection(
-                        host, port, useSSL, useProxy, proxyHost, proxyPort,
-                        proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-                        proxyPassword) == RETURN_ERROR) {
+                if (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                                        proxyPort, proxyUsesSSL,
+                                        proxyRequiresAuth, proxyUsername,
+                                        proxyPassword) == RETURN_ERROR) {
                     if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
                         displayError(STRING_ERROR_CONNECTION_MAX_RETRIES);
                         FreeVec(audioData);
@@ -4769,11 +4769,10 @@ static UTF8 *extractUserFriendlyErrorMessage(UTF8 *rawMessage) {
  **/
 APTR postTextToSpeechRequestToElevenLabs(
     CONST_STRPTR text, CONST_STRPTR voiceId, CONST_STRPTR modelId,
-    CONST_STRPTR host, UWORD port, BOOL useSSL,
-    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
-    CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
-    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
-    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR apiKey,
+    ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword) {
 
 #define ELEVENLABS_HOST "api.elevenlabs.io"
@@ -4811,8 +4810,8 @@ APTR postTextToSpeechRequestToElevenLabs(
         CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
                            (Tag)text, CSA_MapForeignChars, TRUE, TAG_DONE);
     struct json_object *obj = json_object_new_object();
-    json_object_object_add(obj, "text",
-                           json_object_new_string(textUTF8 ? textUTF8 : (UTF8 *)""));
+    json_object_object_add(
+        obj, "text", json_object_new_string(textUTF8 ? textUTF8 : (UTF8 *)""));
     if (modelId != NULL && strlen(modelId) > 0) {
         json_object_object_add(obj, "model_id",
                                json_object_new_string(modelId));
@@ -4912,11 +4911,10 @@ APTR postTextToSpeechRequestToElevenLabs(
         DoMethod(loadingBar, MUIM_Busy_Move);
 #endif
         ERR_clear_error();
-        LONG br =
-            useSSL ? SSL_read(ssl, headerAccum + ha,
-                              (int)(sizeof(headerAccum) - 1 - ha))
-                   : recv(sock, headerAccum + ha,
-                          (int)(sizeof(headerAccum) - 1 - ha), 0);
+        LONG br = useSSL ? SSL_read(ssl, headerAccum + ha,
+                                    (int)(sizeof(headerAccum) - 1 - ha))
+                         : recv(sock, headerAccum + ha,
+                                (int)(sizeof(headerAccum) - 1 - ha), 0);
         if (br > 0) {
             ha += (ULONG)br;
             headerAccum[ha] = '\0';
@@ -5005,9 +5003,9 @@ APTR postTextToSpeechRequestToElevenLabs(
             if (space > READ_BUFFER_LENGTH - 1)
                 space = READ_BUFFER_LENGTH - 1;
             ERR_clear_error();
-            LONG n = useSSL ? SSL_read(ssl, audioData + *audioLength, (int)space)
-                            : recv(sock, audioData + *audioLength, (int)space,
-                                   0);
+            LONG n = useSSL
+                         ? SSL_read(ssl, audioData + *audioLength, (int)space)
+                         : recv(sock, audioData + *audioLength, (int)space, 0);
             if (n > 0) {
                 *audioLength += (ULONG)n;
                 snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
@@ -5126,7 +5124,8 @@ APTR postTextToSpeechRequestToElevenLabs(
                     err = SSL_ERROR_NONE;
                 }
                 if (bytesRead <= 0 && useSSL &&
-                    (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE ||
+                    (err == SSL_ERROR_WANT_READ ||
+                     err == SSL_ERROR_WANT_WRITE ||
                      err == SSL_ERROR_WANT_CONNECT ||
                      err == SSL_ERROR_WANT_ACCEPT ||
                      err == SSL_ERROR_WANT_X509_LOOKUP)) {
@@ -5195,7 +5194,8 @@ APTR postTextToSpeechRequestToElevenLabs(
                         }
                     }
 
-                    if (*audioLength + chunkBytesNeedingRead > audioBufferSize) {
+                    if (*audioLength + chunkBytesNeedingRead >
+                        audioBufferSize) {
                         audioBufferSize <<= 1;
                         APTR oldAudioData = audioData;
                         audioData = AllocVec(audioBufferSize, MEMF_ANY);
@@ -5357,10 +5357,10 @@ APTR postTextToSpeechRequestToElevenLabs(
 struct json_object *
 makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
                     CONST_STRPTR endpoint, CONST_STRPTR apiKey,
-                    CONST_STRPTR apiKeyHeader,
-                    BOOL useBearer, BOOL useProxy, CONST_STRPTR proxyHost,
-                    UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
+                    CONST_STRPTR apiKeyHeader, BOOL useBearer, BOOL useProxy,
+                    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+                    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+                    CONST_STRPTR proxyPassword) {
 
     UBYTE connectionRetryCount = 0;
 

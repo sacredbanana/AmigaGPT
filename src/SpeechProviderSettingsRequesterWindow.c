@@ -159,6 +159,7 @@ static void loadProfileIntoUI(LONG activeIndex);
 static struct json_object *createDefaultProfile(CONST_STRPTR name);
 static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys);
 static struct json_object *createProfileFromUI(CONST_STRPTR name);
+static STRPTR getOpenAiVoiceInstructionsText(BOOL *needsFree);
 static struct json_object *getWorkingProfileForListIndex(LONG activeIndex);
 static BOOL applyProfileFromUIToWorking(LONG activeIndex);
 static void commitBuiltinProfileToConfig(struct json_object *profile);
@@ -1647,11 +1648,12 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
     json_object_object_add(p, "openAITTSModel", json_object_new_int((int)m));
     json_object_object_add(p, "openAITTSVoice", json_object_new_int((int)v));
 
-    STRPTR instr = NULL;
-    if (openAiVoiceInstructionsEditor != NULL)
-        get(openAiVoiceInstructionsEditor, MUIA_TextEditor_Contents, &instr);
+    BOOL freeInstr = FALSE;
+    STRPTR instr = getOpenAiVoiceInstructionsText(&freeInstr);
     json_object_object_add(p, "openAIVoiceInstructions",
                            json_object_new_string(instr ? instr : ""));
+    if (freeInstr)
+        FreeVec(instr);
 
     /* ElevenLabs */
     STRPTR eApiKey = NULL;
@@ -2105,6 +2107,113 @@ HOOKPROTONHNONP(SpeechProviderCancelFunc, void) {
 }
 MakeHook(SpeechProviderCancelHook, SpeechProviderCancelFunc);
 
+/* Read the OpenAI voice-instructions editor as plain text. MUIA_TextEditor_Contents
+ * returns the editor's internal markup format (or NULL) and is unsafe for
+ * round-tripping via JSON, so we use MUIM_TextEditor_ExportText on Amiga and
+ * fall back to MUIA_String_Contents on AROS, matching the pattern used for
+ * the other TextEditor objects in the project.
+ *
+ * On non-AROS the returned buffer is freshly allocated and must be released
+ * with FreeVec(); *needsFree is set to TRUE in that case. */
+static STRPTR getOpenAiVoiceInstructionsText(BOOL *needsFree) {
+    if (needsFree != NULL)
+        *needsFree = FALSE;
+    if (openAiVoiceInstructionsEditor == NULL)
+        return NULL;
+    STRPTR text = NULL;
+    if (isAROS) {
+        get(openAiVoiceInstructionsEditor, MUIA_String_Contents, &text);
+    } else {
+        text = (STRPTR)DoMethod(openAiVoiceInstructionsEditor,
+                                MUIM_TextEditor_ExportText);
+        if (needsFree != NULL)
+            *needsFree = (text != NULL);
+    }
+    return text;
+}
+
+/* Look up the ElevenLabs model_id/voice_id matching the currently selected
+ * row in the UI lists. Returns a pointer owned by elevenLabsModelsJson /
+ * elevenLabsVoicesJson, or NULL if no row is selected or no match is found.
+ */
+static CONST_STRPTR currentElevenLabsModelIdFromUI(void) {
+    if (elevenLabsModelList == NULL || elevenLabsModelsJson == NULL)
+        return NULL;
+    LONG active = MUIV_NList_Active_Off;
+    get(elevenLabsModelList, MUIA_NList_Active, &active);
+    if (active == MUIV_NList_Active_Off)
+        return NULL;
+    STRPTR selectedName = NULL;
+    DoMethod(elevenLabsModelList, MUIM_NList_GetEntry, active, &selectedName);
+    if (selectedName == NULL)
+        return NULL;
+    struct json_object *modelsArray = NULL;
+    if (!json_object_object_get_ex(elevenLabsModelsJson, "models",
+                                   &modelsArray)) {
+        if (json_object_is_type(elevenLabsModelsJson, json_type_array))
+            modelsArray = elevenLabsModelsJson;
+    }
+    if (modelsArray == NULL)
+        return NULL;
+    LONG count = json_object_array_length(modelsArray);
+    for (LONG i = 0; i < count; i++) {
+        struct json_object *modelObj =
+            json_object_array_get_idx(modelsArray, i);
+        struct json_object *nameObj = NULL;
+        if (modelObj == NULL)
+            continue;
+        if (!json_object_object_get_ex(modelObj, "name", &nameObj))
+            continue;
+        CONST_STRPTR n = json_object_get_string(nameObj);
+        if (n == NULL || strcmp(n, selectedName) != 0)
+            continue;
+        struct json_object *idObj = NULL;
+        if (json_object_object_get_ex(modelObj, "model_id", &idObj))
+            return json_object_get_string(idObj);
+        return NULL;
+    }
+    return NULL;
+}
+
+static CONST_STRPTR currentElevenLabsVoiceIdFromUI(void) {
+    if (elevenLabsVoiceList == NULL || elevenLabsVoicesJson == NULL)
+        return NULL;
+    LONG active = MUIV_NList_Active_Off;
+    get(elevenLabsVoiceList, MUIA_NList_Active, &active);
+    if (active == MUIV_NList_Active_Off)
+        return NULL;
+    STRPTR selectedName = NULL;
+    DoMethod(elevenLabsVoiceList, MUIM_NList_GetEntry, active, &selectedName);
+    if (selectedName == NULL)
+        return NULL;
+    struct json_object *voicesArray = NULL;
+    if (!json_object_object_get_ex(elevenLabsVoicesJson, "voices",
+                                   &voicesArray)) {
+        if (json_object_is_type(elevenLabsVoicesJson, json_type_array))
+            voicesArray = elevenLabsVoicesJson;
+    }
+    if (voicesArray == NULL)
+        return NULL;
+    LONG count = json_object_array_length(voicesArray);
+    for (LONG i = 0; i < count; i++) {
+        struct json_object *voiceObj =
+            json_object_array_get_idx(voicesArray, i);
+        struct json_object *nameObj = NULL;
+        if (voiceObj == NULL)
+            continue;
+        if (!json_object_object_get_ex(voiceObj, "name", &nameObj))
+            continue;
+        CONST_STRPTR n = json_object_get_string(nameObj);
+        if (n == NULL || strcmp(n, selectedName) != 0)
+            continue;
+        struct json_object *idObj = NULL;
+        if (json_object_object_get_ex(voiceObj, "voice_id", &idObj))
+            return json_object_get_string(idObj);
+        return NULL;
+    }
+    return NULL;
+}
+
 HOOKPROTONHNONP(SpeechProviderTestFunc, void) {
     /* Build a temporary settings struct from the current UI state. */
     struct SpeechRequestSettings s;
@@ -2183,11 +2292,9 @@ HOOKPROTONHNONP(SpeechProviderTestFunc, void) {
         get(openAiTtsVoiceCycle, MUIA_Cycle_Active, &v);
         s.openAiTtsVoice = (OpenAITTSVoice)v;
     }
-    if (openAiVoiceInstructionsEditor != NULL) {
-        STRPTR instr = NULL;
-        get(openAiVoiceInstructionsEditor, MUIA_TextEditor_Contents, &instr);
-        s.openAiVoiceInstructions = instr;
-    }
+    BOOL freeVoiceInstructions = FALSE;
+    s.openAiVoiceInstructions =
+        getOpenAiVoiceInstructionsText(&freeVoiceInstructions);
 
     /* ElevenLabs */
     if (elevenLabsAPIKeyString != NULL) {
@@ -2196,10 +2303,15 @@ HOOKPROTONHNONP(SpeechProviderTestFunc, void) {
         s.elevenLabsApiKey = k;
     }
 
-    /* Prefer the already-selected model/voice IDs from config fields if they
-     * exist in the UI state (these are just pointers, not ownership). */
-    s.elevenLabsModel = configGetElevenLabsModel();
-    s.elevenLabsVoiceID = configGetElevenLabsVoiceID();
+    /* Prefer the model/voice currently selected in the UI lists; fall back to
+     * the saved config when nothing is selected (these are just pointers, not
+     * ownership — they remain valid for the duration of this call). */
+    CONST_STRPTR uiModelId = currentElevenLabsModelIdFromUI();
+    CONST_STRPTR uiVoiceId = currentElevenLabsVoiceIdFromUI();
+    s.elevenLabsModel =
+        uiModelId ? (STRPTR)uiModelId : configGetElevenLabsModel();
+    s.elevenLabsVoiceID =
+        uiVoiceId ? (STRPTR)uiVoiceId : configGetElevenLabsVoiceID();
 
     /* Test phrase */
     STRPTR test =
@@ -2211,6 +2323,9 @@ HOOKPROTONHNONP(SpeechProviderTestFunc, void) {
 
     AudioFormat fmt = AUDIO_FORMAT_PCM;
     speakTextWithSettings(test, NULL, &fmt, &s);
+
+    if (freeVoiceInstructions && s.openAiVoiceInstructions != NULL)
+        FreeVec(s.openAiVoiceInstructions);
 }
 MakeHook(SpeechProviderTestHook, SpeechProviderTestFunc);
 
