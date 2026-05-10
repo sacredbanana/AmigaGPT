@@ -343,6 +343,24 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             return;
         }
 
+        // Add 0.5s of silence to the audio buffer to make sure AHI plays the
+        // entire audio buffer. Unsure if this is an AHI bug or an emulator bug.
+        {
+            ULONG padBytes = 24000; /* 0.5s @ 24kHz 16-bit mono */
+            UBYTE *padded =
+                AllocVec(audioLength + padBytes, MEMF_ANY | MEMF_CLEAR);
+            if (padded) {
+                memcpy(padded, audioBuffer, audioLength);
+                FreeVec(audioBuffer);
+                audioBuffer = padded;
+                audioLength += padBytes;
+            } else {
+                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                FreeVec(audioBuffer);
+                return;
+            }
+        }
+
         // Create a message port for AHI communication
         AHImp = CreateMsgPort();
 
