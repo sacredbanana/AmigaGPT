@@ -3930,13 +3930,16 @@ static void reportSslError(SSL *s, int ret, CONST_STRPTR where) {
  *with FreeVec() when you are done using it
  **/
 APTR postTextToSpeechRequestToOpenAI(
-    CONST_STRPTR text, OpenAITTSModel openAITTSModel,
+    CONST_STRPTR text, CONST_STRPTR openAITTSModelId,
     OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
     CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR apiEndpointUrl,
     AuthorizationType authorizationType, CONST_STRPTR apiKey,
     ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, AudioFormat *audioFormat) {
+    if (openAITTSModelId == NULL || strlen(openAITTSModelId) == 0)
+        openAITTSModelId =
+            OPENAI_TTS_MODEL_NAMES[OPENAI_TTS_MODEL_GPT_4o_MINI_TTS];
     struct json_object *response;
     if (host == NULL || strlen(host) == 0)
         host = OPENAI_HOST;
@@ -3979,9 +3982,8 @@ APTR postTextToSpeechRequestToOpenAI(
         (Tag)voiceInstructions, CSA_MapForeignChars, TRUE, TAG_DONE);
 
     struct json_object *obj = json_object_new_object();
-    json_object_object_add(
-        obj, "model",
-        json_object_new_string(OPENAI_TTS_MODEL_NAMES[openAITTSModel]));
+    json_object_object_add(obj, "model",
+                           json_object_new_string(openAITTSModelId));
     json_object_object_add(
         obj, "voice",
         json_object_new_string(OPENAI_TTS_VOICE_NAMES[openAITTSVoice]));

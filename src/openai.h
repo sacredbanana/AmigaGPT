@@ -398,7 +398,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
 /**
  * Post a text to speech request to OpenAI
  * @param text the text to speak
- * @param openAITTSModel the TTS model to use
+ * @param openAITTSModelId the TTS model id (e.g., "tts-1", "gpt-4o-mini-tts")
  * @param openAITTSVoice the voice to use
  * @param voiceInstructions the voice instructions to use
  * @param apiKey the API key
@@ -414,7 +414,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
  *with FreeVec() when you are done using it
  **/
 APTR postTextToSpeechRequestToOpenAI(
-    CONST_STRPTR text, OpenAITTSModel openAITTSModel,
+    CONST_STRPTR text, CONST_STRPTR openAITTSModelId,
     OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
     CONST_STRPTR host, UWORD port, BOOL useSSL,
     CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,

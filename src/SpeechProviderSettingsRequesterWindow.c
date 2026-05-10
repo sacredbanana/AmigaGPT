@@ -59,7 +59,9 @@ static Object *speechEndpointUrlString = NULL;
 
 /* OpenAI fields */
 static Object *openAiApiKeyString = NULL;
-static Object *openAiTtsModelCycle = NULL;
+static Object *openAiTtsCurrentModelText = NULL;
+static Object *openAiTtsFetchModelsButton = NULL;
+static Object *openAiTtsModelList = NULL;
 static Object *openAiTtsVoiceCycle = NULL;
 static Object *openAiVoiceInstructionsEditor = NULL;
 
@@ -105,6 +107,7 @@ static struct json_object *speechProfilesJson = NULL;
 static struct json_object *builtinSpeechProfilesJson[8] = {NULL};
 static struct json_object *elevenLabsModelsJson = NULL;
 static struct json_object *elevenLabsVoicesJson = NULL;
+static struct json_object *openAITTSModelsJson = NULL;
 static BOOL suppressProfileSelected = FALSE;
 static BOOL speechSettingsDirty = FALSE;
 static LONG lastSelectedProfile = MUIV_NList_Active_Off;
@@ -166,6 +169,7 @@ static void commitBuiltinProfileToConfig(struct json_object *profile);
 static void updateProfileManagementButtonLabels(void);
 static void reinitSpeechForActiveProfile(void);
 static SpeechSystem getSpeechSystemFromCycle(void);
+static void updateSpeechApiKeyStringEnabledFromAuth(SpeechSystem sys);
 static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew);
 static void updateGroupVisibilityForSystem(SpeechSystem sys,
                                            BOOL isCustomOrNew);
@@ -496,6 +500,132 @@ static void setElevenLabsModelListActiveById(CONST_STRPTR modelId) {
     }
 }
 
+static void addDefaultOpenAITTSModel(struct json_object *models,
+                                     CONST_STRPTR modelId) {
+    if (modelId == NULL)
+        return;
+    struct json_object *model = json_object_new_object();
+    /* For OpenAI the id IS the human-friendly name. */
+    json_object_object_add(model, "id", json_object_new_string(modelId));
+    json_object_array_add(models, model);
+}
+
+static void ensureDefaultOpenAITTSModelsJson(void) {
+    if (openAITTSModelsJson != NULL)
+        return;
+
+    openAITTSModelsJson = json_object_new_object();
+    struct json_object *models = json_object_new_array();
+    for (UBYTE i = 0; OPENAI_TTS_MODEL_NAMES[i] != NULL; i++)
+        addDefaultOpenAITTSModel(models, OPENAI_TTS_MODEL_NAMES[i]);
+    json_object_object_add(openAITTSModelsJson, "data", models);
+}
+
+static struct json_object *
+getOpenAITTSModels(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                   CONST_STRPTR endpointUrl, AuthorizationType authType,
+                   CONST_STRPTR apiKey) {
+    /* getChatModels already targets /<endpointUrl>/models and handles auth /
+     * proxy, so reuse it. The response is the raw OpenAI models payload. */
+    return getChatModels((STRPTR)host, (ULONG)port, useSSL, apiKey,
+                         configGetProxyEnabled(), configGetProxyHost(),
+                         configGetProxyPort(), configGetProxyUsesSSL(),
+                         configGetProxyRequiresAuth(), configGetProxyUsername(),
+                         configGetProxyPassword(), endpointUrl, authType, NULL);
+}
+
+/* Build a "models cache" json object from an OpenAI /v1/models response,
+ * keeping only entries whose id contains "tts" — the API doesn't expose a
+ * modality flag, so this filter is the closest we can get. */
+static struct json_object *
+filterOpenAITTSModels(struct json_object *rawModels) {
+    if (rawModels == NULL)
+        return NULL;
+
+    struct json_object *dataArray = NULL;
+    if (!json_object_object_get_ex(rawModels, "data", &dataArray)) {
+        if (json_object_is_type(rawModels, json_type_array))
+            dataArray = rawModels;
+        else
+            return NULL;
+    }
+    if (!json_object_is_type(dataArray, json_type_array))
+        return NULL;
+
+    struct json_object *out = json_object_new_object();
+    struct json_object *filtered = json_object_new_array();
+
+    /* Always include the well-known TTS defaults so the user sees them even
+     * if /v1/models on the configured host omits them. */
+    for (UBYTE i = 0; OPENAI_TTS_MODEL_NAMES[i] != NULL; i++)
+        addDefaultOpenAITTSModel(filtered, OPENAI_TTS_MODEL_NAMES[i]);
+
+    LONG count = json_object_array_length(dataArray);
+    for (LONG i = 0; i < count; i++) {
+        struct json_object *entry = json_object_array_get_idx(dataArray, i);
+        struct json_object *idObj = NULL;
+        if (entry == NULL ||
+            !json_object_object_get_ex(entry, "id", &idObj))
+            continue;
+        CONST_STRPTR id = json_object_get_string(idObj);
+        if (id == NULL || strstr(id, "tts") == NULL)
+            continue;
+
+        /* Skip duplicates already added from the defaults. */
+        BOOL alreadyPresent = FALSE;
+        LONG existingCount = json_object_array_length(filtered);
+        for (LONG j = 0; j < existingCount; j++) {
+            struct json_object *existing =
+                json_object_array_get_idx(filtered, j);
+            struct json_object *existingId = NULL;
+            if (existing == NULL ||
+                !json_object_object_get_ex(existing, "id", &existingId))
+                continue;
+            CONST_STRPTR existingIdStr = json_object_get_string(existingId);
+            if (existingIdStr != NULL && strcmp(existingIdStr, id) == 0) {
+                alreadyPresent = TRUE;
+                break;
+            }
+        }
+        if (alreadyPresent)
+            continue;
+
+        addDefaultOpenAITTSModel(filtered, id);
+    }
+    json_object_object_add(out, "data", filtered);
+    return out;
+}
+
+static void setOpenAITtsModelListActiveById(CONST_STRPTR modelId) {
+    if (openAiTtsModelList == NULL || openAITTSModelsJson == NULL ||
+        modelId == NULL)
+        return;
+
+    struct json_object *modelsArray = NULL;
+    if (!json_object_object_get_ex(openAITTSModelsJson, "data",
+                                   &modelsArray)) {
+        if (json_object_is_type(openAITTSModelsJson, json_type_array))
+            modelsArray = openAITTSModelsJson;
+        else
+            return;
+    }
+
+    LONG modelCount = json_object_array_length(modelsArray);
+    for (LONG i = 0; i < modelCount; i++) {
+        struct json_object *modelObj =
+            json_object_array_get_idx(modelsArray, i);
+        struct json_object *idObj = NULL;
+        if (modelObj != NULL &&
+            json_object_object_get_ex(modelObj, "id", &idObj)) {
+            CONST_STRPTR mid = json_object_get_string(idObj);
+            if (mid != NULL && strcmp(mid, modelId) == 0) {
+                set(openAiTtsModelList, MUIA_NList_Active, i);
+                return;
+            }
+        }
+    }
+}
+
 static struct json_object *
 searchElevenLabsVoices(CONST_STRPTR host, UWORD port, BOOL useSSL,
                        AuthorizationType authType, CONST_STRPTR apiKey,
@@ -539,6 +669,48 @@ HOOKPROTONHNO(DisplayStringLI_TextFunc, void,
     ndm->strings[0] = entry;
 }
 MakeHook(DisplayStringLI_TextHook, DisplayStringLI_TextFunc);
+
+static void populateOpenAITtsModelList(void) {
+    if (openAiTtsModelList == NULL)
+        return;
+    DoMethod(openAiTtsModelList, MUIM_NList_Clear);
+    ensureDefaultOpenAITTSModelsJson();
+    if (openAITTSModelsJson == NULL)
+        return;
+
+    struct json_object *modelsArray = NULL;
+    if (!json_object_object_get_ex(openAITTSModelsJson, "data",
+                                   &modelsArray)) {
+        if (json_object_is_type(openAITTSModelsJson, json_type_array))
+            modelsArray = openAITTSModelsJson;
+        else
+            return;
+    }
+
+    LONG modelCount = json_object_array_length(modelsArray);
+    LONG selectedIndex = MUIV_NList_Active_Off;
+    STRPTR currentModelId = configGetOpenAITTSModelId();
+
+    for (LONG i = 0; i < modelCount; i++) {
+        struct json_object *modelObj =
+            json_object_array_get_idx(modelsArray, i);
+        struct json_object *idObj = NULL;
+        if (modelObj == NULL)
+            continue;
+        if (!json_object_object_get_ex(modelObj, "id", &idObj))
+            continue;
+        CONST_STRPTR id = json_object_get_string(idObj);
+        if (id == NULL)
+            continue;
+        DoMethod(openAiTtsModelList, MUIM_NList_InsertSingle, id,
+                 MUIV_NList_Insert_Bottom);
+        if (currentModelId != NULL && strcmp(currentModelId, id) == 0)
+            selectedIndex = i;
+    }
+
+    if (selectedIndex != MUIV_NList_Active_Off)
+        set(openAiTtsModelList, MUIA_NList_Active, selectedIndex);
+}
 
 static void populateElevenLabsModelList(void) {
     if (elevenLabsModelList == NULL)
@@ -643,6 +815,53 @@ static void populateElevenLabsVoiceList(void) {
         set(elevenLabsVoiceList, MUIA_NList_Active, selectedIndex);
     }
 }
+
+HOOKPROTONHNONP(OpenAITTSFetchModelsButtonClickedFunc, void) {
+    STRPTR apiKey = NULL;
+    if (openAiApiKeyString != NULL)
+        get(openAiApiKeyString, MUIA_String_Contents, &apiKey);
+    STRPTR host = NULL;
+    LONG port = 443;
+    LONG useSSL = 1;
+    LONG authType = AUTHORIZATION_TYPE_BEARER;
+    STRPTR endpointUrl = NULL;
+    get(speechHostString, MUIA_String_Contents, &host);
+    get(speechPortString, MUIA_String_Integer, &port);
+    get(speechUsesSSLCycle, MUIA_Cycle_Active, &useSSL);
+    get(speechAuthorizationTypeCycle, MUIA_Cycle_Active, &authType);
+    get(speechEndpointUrlString, MUIA_String_Contents, &endpointUrl);
+
+    if (((AuthorizationType)authType) != AUTHORIZATION_TYPE_NONE &&
+        (apiKey == NULL || strlen(apiKey) == 0)) {
+        displayError(STRING_ERROR_NO_API_KEY);
+        return;
+    }
+
+    updateStatusBar(STRING_FETCHING_OPENAI_MODELS, yellowPen);
+    set(openAiTtsFetchModelsButton, MUIA_Disabled, TRUE);
+
+    struct json_object *raw = getOpenAITTSModels(
+        host, (UWORD)port, useSSL == 1, endpointUrl,
+        (AuthorizationType)authType, apiKey);
+    struct json_object *filtered = filterOpenAITTSModels(raw);
+    if (raw != NULL)
+        json_object_put(raw);
+
+    if (filtered != NULL) {
+        if (openAITTSModelsJson != NULL)
+            json_object_put(openAITTSModelsJson);
+        openAITTSModelsJson = filtered;
+        populateOpenAITtsModelList();
+        updateStatusBar(STRING_READY, greenPen);
+    } else {
+        displayError(STRING_ERROR_FETCHING_OPENAI_MODELS);
+        updateStatusBar(STRING_READY, greenPen);
+    }
+
+    set(openAiTtsFetchModelsButton, MUIA_Disabled, FALSE);
+}
+MakeHook(OpenAITTSFetchModelsButtonClickedHook,
+         OpenAITTSFetchModelsButtonClickedFunc);
 
 HOOKPROTONHNONP(ElevenLabsFetchModelsButtonClickedFunc, void) {
     STRPTR apiKey = NULL;
@@ -848,7 +1067,6 @@ HOOKPROTONHNONP(SpeechProviderSystemChangedFunc, void) {
 
     SpeechSystem sys = getSpeechSystemFromCycle();
     updateGroupVisibilityForSystem(sys, TRUE);
-    setFieldsEnabledForSystem(sys, TRUE);
     if (speechSystemUsesNetwork(sys)) {
         if (speechHostString != NULL)
             set(speechHostString, MUIA_String_Contents,
@@ -863,6 +1081,7 @@ HOOKPROTONHNONP(SpeechProviderSystemChangedFunc, void) {
         if (speechEndpointUrlString != NULL)
             set(speechEndpointUrlString, MUIA_String_Contents, "v1");
     }
+    setFieldsEnabledForSystem(sys, TRUE);
     if (sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37) {
         updateRequirementWarningForSystem(sys, workbenchWarningText);
     } else if (sys == SPEECH_SYSTEM_FLITE) {
@@ -878,6 +1097,12 @@ HOOKPROTONHNONP(SpeechProviderSystemChangedFunc, void) {
     }
 }
 MakeHook(SpeechProviderSystemChangedHook, SpeechProviderSystemChangedFunc);
+
+HOOKPROTONHNONP(SpeechProviderSpeechAuthTypeChangedFunc, void) {
+    updateSpeechApiKeyStringEnabledFromAuth(getSpeechSystemFromCycle());
+}
+MakeHook(SpeechProviderSpeechAuthTypeChangedHook,
+         SpeechProviderSpeechAuthTypeChangedFunc);
 
 static void populateProfileList(void) {
     if (speechProfileList == NULL)
@@ -975,6 +1200,20 @@ static void populateProfileList(void) {
     loadProfileIntoUI(select);
 }
 
+static void updateSpeechApiKeyStringEnabledFromAuth(SpeechSystem sys) {
+    LONG authType = (LONG)AUTHORIZATION_TYPE_BEARER;
+    if (speechAuthorizationTypeCycle != NULL)
+        get(speechAuthorizationTypeCycle, MUIA_Cycle_Active, &authType);
+    BOOL authNone =
+        ((AuthorizationType)authType == AUTHORIZATION_TYPE_NONE);
+    if (openAiApiKeyString != NULL)
+        set(openAiApiKeyString, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_OPENAI) || authNone);
+    if (elevenLabsAPIKeyString != NULL)
+        set(elevenLabsAPIKeyString, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_ELEVENLABS) || authNone);
+}
+
 static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
     /* Enable/disable the “custom common” controls. Provider groups
      * are shown/hidden separately. */
@@ -1007,32 +1246,36 @@ static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
     if (fliteVoiceCycle != NULL)
         set(fliteVoiceCycle, MUIA_Disabled, !(sys == SPEECH_SYSTEM_FLITE));
 
+    /* Built-in OpenAI / ElevenLabs profiles ship with locked connection
+     * settings — users who want to point at a different host should clone
+     * to a custom profile first. */
+    BOOL connectionEditable = speechSystemUsesNetwork(sys) && isCustomOrNew;
     if (speechHostString != NULL)
-        set(speechHostString, MUIA_Disabled, !speechSystemUsesNetwork(sys));
+        set(speechHostString, MUIA_Disabled, !connectionEditable);
     if (speechPortString != NULL)
-        set(speechPortString, MUIA_Disabled, !speechSystemUsesNetwork(sys));
+        set(speechPortString, MUIA_Disabled, !connectionEditable);
     if (speechUsesSSLCycle != NULL)
-        set(speechUsesSSLCycle, MUIA_Disabled, !speechSystemUsesNetwork(sys));
+        set(speechUsesSSLCycle, MUIA_Disabled, !connectionEditable);
     if (speechAuthorizationTypeCycle != NULL)
-        set(speechAuthorizationTypeCycle, MUIA_Disabled,
-            !speechSystemUsesNetwork(sys));
+        set(speechAuthorizationTypeCycle, MUIA_Disabled, !connectionEditable);
     if (speechEndpointUrlString != NULL)
-        set(speechEndpointUrlString, MUIA_Disabled,
-            !speechSystemUsesNetwork(sys));
+        set(speechEndpointUrlString, MUIA_Disabled, !connectionEditable);
 
-    if (openAiApiKeyString != NULL)
-        set(openAiApiKeyString, MUIA_Disabled, !(sys == SPEECH_SYSTEM_OPENAI));
-    if (openAiTtsModelCycle != NULL)
-        set(openAiTtsModelCycle, MUIA_Disabled, !(sys == SPEECH_SYSTEM_OPENAI));
+    updateSpeechApiKeyStringEnabledFromAuth(sys);
+    if (openAiTtsCurrentModelText != NULL)
+        set(openAiTtsCurrentModelText, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_OPENAI));
+    if (openAiTtsFetchModelsButton != NULL)
+        set(openAiTtsFetchModelsButton, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_OPENAI));
+    if (openAiTtsModelList != NULL)
+        set(openAiTtsModelList, MUIA_Disabled, !(sys == SPEECH_SYSTEM_OPENAI));
     if (openAiTtsVoiceCycle != NULL)
         set(openAiTtsVoiceCycle, MUIA_Disabled, !(sys == SPEECH_SYSTEM_OPENAI));
     if (openAiVoiceInstructionsEditor != NULL)
         set(openAiVoiceInstructionsEditor, MUIA_Disabled,
             !(sys == SPEECH_SYSTEM_OPENAI));
 
-    if (elevenLabsAPIKeyString != NULL)
-        set(elevenLabsAPIKeyString, MUIA_Disabled,
-            !(sys == SPEECH_SYSTEM_ELEVENLABS));
     if (elevenLabsFetchModelsButton != NULL)
         set(elevenLabsFetchModelsButton, MUIA_Disabled,
             !(sys == SPEECH_SYSTEM_ELEVENLABS));
@@ -1246,15 +1489,38 @@ static void loadProfileIntoUI(LONG activeIndex) {
         }
         set(openAiApiKeyString, MUIA_String_Contents, key ? key : "");
     }
-    if (openAiTtsModelCycle != NULL) {
-        LONG m = (LONG)configGetOpenAITTSModel();
+    if (openAiTtsModelList != NULL) {
+        STRPTR mid = configGetOpenAITTSModelId();
         if (customProfile != NULL) {
-            struct json_object *mObj =
-                json_object_object_get(customProfile, "openAITTSModel");
-            if (mObj != NULL)
-                m = (LONG)json_object_get_int(mObj);
+            struct json_object *midObj =
+                json_object_object_get(customProfile, "openAITTSModelId");
+            if (midObj != NULL) {
+                CONST_STRPTR storedMid = json_object_get_string(midObj);
+                if (storedMid != NULL && strlen(storedMid) > 0)
+                    mid = (STRPTR)storedMid;
+            } else {
+                /* Legacy enum-based profile JSON */
+                struct json_object *mObj =
+                    json_object_object_get(customProfile, "openAITTSModel");
+                if (mObj != NULL) {
+                    OpenAITTSModel legacy =
+                        (OpenAITTSModel)json_object_get_int(mObj);
+                    CONST_STRPTR fallback =
+                        OPENAI_TTS_MODEL_NAMES[legacy]
+                            ? OPENAI_TTS_MODEL_NAMES[legacy]
+                            : OPENAI_TTS_MODEL_NAMES
+                                  [OPENAI_TTS_MODEL_GPT_4o_MINI_TTS];
+                    mid = (STRPTR)fallback;
+                }
+            }
         }
-        set(openAiTtsModelCycle, MUIA_Cycle_Active, m);
+        if (openAiTtsCurrentModelText != NULL)
+            set(openAiTtsCurrentModelText, MUIA_Text_Contents,
+                (mid != NULL && strlen(mid) > 0) ? mid
+                                                 : (STRPTR)STRING_NONE_SELECTED);
+        ensureDefaultOpenAITTSModelsJson();
+        populateOpenAITtsModelList();
+        setOpenAITtsModelListActiveById(mid);
     }
     if (openAiTtsVoiceCycle != NULL) {
         LONG v = (LONG)configGetOpenAITTSVoice();
@@ -1409,8 +1675,13 @@ static struct json_object *createDefaultProfile(CONST_STRPTR name) {
         json_object_new_int((int)AUTHORIZATION_TYPE_BEARER));
     json_object_object_add(p, "apiEndpointUrl", json_object_new_string("v1"));
     json_object_object_add(p, "openAiApiKey", json_object_new_string(""));
-    json_object_object_add(
-        p, "openAITTSModel", json_object_new_int((int)configGetOpenAITTSModel()));
+    {
+        STRPTR mid = configGetOpenAITTSModelId();
+        json_object_object_add(
+            p, "openAITTSModelId",
+            json_object_new_string(mid ? mid : OPENAI_TTS_MODEL_NAMES
+                                              [OPENAI_TTS_MODEL_GPT_4o_MINI_TTS]));
+    }
     json_object_object_add(
         p, "openAITTSVoice", json_object_new_int((int)configGetOpenAITTSVoice()));
     json_object_object_add(p, "openAIVoiceInstructions",
@@ -1480,9 +1751,13 @@ static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys) {
             json_object_new_string(configGetOpenAiSpeechApiKey()
                                        ? configGetOpenAiSpeechApiKey()
                                        : ""));
-        json_object_object_add(
-            p, "openAITTSModel",
-            json_object_new_int((int)configGetOpenAITTSModel()));
+        {
+            STRPTR mid = configGetOpenAITTSModelId();
+            json_object_object_add(
+                p, "openAITTSModelId",
+                json_object_new_string(mid ? mid : OPENAI_TTS_MODEL_NAMES
+                                                  [OPENAI_TTS_MODEL_GPT_4o_MINI_TTS]));
+        }
         json_object_object_add(
             p, "openAITTSVoice",
             json_object_new_int((int)configGetOpenAITTSVoice()));
@@ -1640,13 +1915,35 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
     json_object_object_add(p, "openAiApiKey",
                            json_object_new_string(apiKey ? apiKey : ""));
 
-    LONG m = 0, v = 0;
-    if (openAiTtsModelCycle != NULL)
-        get(openAiTtsModelCycle, MUIA_Cycle_Active, &m);
+    LONG v = 0;
     if (openAiTtsVoiceCycle != NULL)
         get(openAiTtsVoiceCycle, MUIA_Cycle_Active, &v);
-    json_object_object_add(p, "openAITTSModel", json_object_new_int((int)m));
     json_object_object_add(p, "openAITTSVoice", json_object_new_int((int)v));
+
+    /* OpenAI TTS model: take whatever id is currently selected in the list,
+     * or fall back to the saved config value. */
+    {
+        CONST_STRPTR selectedId = NULL;
+        LONG modelActive = MUIV_NList_Active_Off;
+        if (openAiTtsModelList != NULL)
+            get(openAiTtsModelList, MUIA_NList_Active, &modelActive);
+        if (modelActive != MUIV_NList_Active_Off) {
+            STRPTR selected = NULL;
+            DoMethod(openAiTtsModelList, MUIM_NList_GetEntry, modelActive,
+                     &selected);
+            if (selected != NULL && strlen(selected) > 0)
+                selectedId = (CONST_STRPTR)selected;
+        }
+        if (selectedId == NULL || strlen(selectedId) == 0) {
+            STRPTR fallback = configGetOpenAITTSModelId();
+            selectedId = (fallback != NULL && strlen(fallback) > 0)
+                             ? (CONST_STRPTR)fallback
+                             : OPENAI_TTS_MODEL_NAMES
+                                   [OPENAI_TTS_MODEL_GPT_4o_MINI_TTS];
+        }
+        json_object_object_add(p, "openAITTSModelId",
+                               json_object_new_string(selectedId));
+    }
 
     BOOL freeInstr = FALSE;
     STRPTR instr = getOpenAiVoiceInstructionsText(&freeInstr);
@@ -1872,8 +2169,27 @@ static void commitBuiltinProfileToConfig(struct json_object *profile) {
             if (existing == NULL || strlen(existing) == 0)
                 configSetOpenAiImageApiKey(key);
         }
-        configSetOpenAITTSModel((OpenAITTSModel)jsonIntOrDefault(
-            profile, "openAITTSModel", (LONG)configGetOpenAITTSModel()));
+        {
+            struct json_object *midObj =
+                json_object_object_get(profile, "openAITTSModelId");
+            CONST_STRPTR midStr =
+                midObj ? json_object_get_string(midObj) : NULL;
+            if (midStr == NULL || strlen(midStr) == 0) {
+                /* Legacy enum-based profile JSON */
+                struct json_object *m =
+                    json_object_object_get(profile, "openAITTSModel");
+                if (m != NULL) {
+                    OpenAITTSModel legacy =
+                        (OpenAITTSModel)json_object_get_int(m);
+                    midStr = OPENAI_TTS_MODEL_NAMES[legacy]
+                                 ? OPENAI_TTS_MODEL_NAMES[legacy]
+                                 : OPENAI_TTS_MODEL_NAMES
+                                       [OPENAI_TTS_MODEL_GPT_4o_MINI_TTS];
+                }
+            }
+            if (midStr != NULL && strlen(midStr) > 0)
+                configSetOpenAITTSModelId(midStr);
+        }
         configSetOpenAITTSVoice((OpenAITTSVoice)jsonIntOrDefault(
             profile, "openAITTSVoice", (LONG)configGetOpenAITTSVoice()));
         configSetOpenAIVoiceInstructions(
@@ -2282,10 +2598,20 @@ HOOKPROTONHNONP(SpeechProviderTestFunc, void) {
         get(openAiApiKeyString, MUIA_String_Contents, &k);
         s.openAiApiKey = k;
     }
-    if (openAiTtsModelCycle != NULL) {
-        LONG m = 0;
-        get(openAiTtsModelCycle, MUIA_Cycle_Active, &m);
-        s.openAiTtsModel = (OpenAITTSModel)m;
+    /* OpenAI TTS model id: prefer the row currently selected in the list,
+     * fall back to the saved config so the test always has *some* model. */
+    {
+        STRPTR uiModelId = NULL;
+        LONG modelActive = MUIV_NList_Active_Off;
+        if (openAiTtsModelList != NULL)
+            get(openAiTtsModelList, MUIA_NList_Active, &modelActive);
+        if (modelActive != MUIV_NList_Active_Off) {
+            DoMethod(openAiTtsModelList, MUIM_NList_GetEntry, modelActive,
+                     &uiModelId);
+        }
+        s.openAiTtsModelId = (uiModelId != NULL && strlen(uiModelId) > 0)
+                                 ? uiModelId
+                                 : configGetOpenAITTSModelId();
     }
     if (openAiTtsVoiceCycle != NULL) {
         LONG v = 0;
@@ -2647,18 +2973,43 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                         Child, openAiGroup = VGroup,
                             MUIA_Frame, MUIV_Frame_Group,
                             MUIA_FrameTitle, STRING_PROVIDER_OPENAI,
-                            Child, ColGroup(2),
-                                Child, Label(STRING_MENU_OPENAI_API_KEY),
+                            Child, VGroup,
+                                MUIA_Frame, MUIV_Frame_Group,
+                                MUIA_FrameTitle, STRING_MENU_OPENAI_API_KEY,
                                 Child, openAiApiKeyString = StringObject,
                                     MUIA_Frame, MUIV_Frame_String,
                                     MUIA_CycleChain, TRUE,
                                     MUIA_String_MaxLen, 256,
                                 End,
-                                Child, Label(STRING_MENU_SPEECH_OPENAI_MODEL),
-                                Child, openAiTtsModelCycle = CycleObject,
-                                    MUIA_Cycle_Entries, (ULONG)OPENAI_TTS_MODEL_NAMES,
-                                    MUIA_CycleChain, TRUE,
+                            End,
+                            Child, VGroup,
+                                MUIA_Frame, MUIV_Frame_Group,
+                                MUIA_FrameTitle, STRING_MENU_SPEECH_OPENAI_MODEL,
+                                Child, HGroup,
+                                    Child, Label(STRING_CURRENT),
+                                    Child, openAiTtsCurrentModelText = TextObject,
+                                        MUIA_Text_Contents, STRING_NONE_SELECTED,
+                                    End,
                                 End,
+                                Child, HGroup,
+                                    Child, openAiTtsFetchModelsButton =
+                                        MUI_MakeObject(MUIO_Button, STRING_FETCH_MODELS, TAG_DONE),
+                                End,
+                                Child, NListviewObject,
+                                    MUIA_NListview_NList, openAiTtsModelList = NListObject,
+                                        MUIA_NList_ConstructHook2, &ConstructStringLI_TextHook,
+                                        MUIA_NList_DestructHook2, &DestructStringLI_TextHook,
+                                        MUIA_NList_DisplayHook2, &DisplayStringLI_TextHook,
+                                        MUIA_NList_Format, "",
+                                        MUIA_NList_Title, FALSE,
+                                        MUIA_NList_MinLineHeight, 16,
+                                    End,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
+                                    MUIA_FixHeight, 80,
+                                End,
+                            End,
+                            Child, ColGroup(2),
                                 Child, Label(STRING_MENU_OPENAI_VOICE),
                                 Child, openAiTtsVoiceCycle = CycleObject,
                                     MUIA_Cycle_Entries, (ULONG)OPENAI_TTS_VOICE_NAMES,
@@ -2788,6 +3139,13 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
              MUIV_Notify_Application, 2, MUIM_CallHook,
              &SpeechProviderSystemChangedHook);
 
+    DoMethod(speechAuthorizationTypeCycle, MUIM_Notify, MUIA_Cycle_Active,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &SpeechProviderSpeechAuthTypeChangedHook);
+
+    DoMethod(openAiTtsFetchModelsButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             MUIV_Notify_Application, 2, MUIM_CallHook,
+             &OpenAITTSFetchModelsButtonClickedHook);
     DoMethod(elevenLabsFetchModelsButton, MUIM_Notify, MUIA_Pressed, FALSE,
              MUIV_Notify_Application, 2, MUIM_CallHook,
              &ElevenLabsFetchModelsButtonClickedHook);

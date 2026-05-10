@@ -162,6 +162,11 @@
 #define MUIA_AmigaGPTConfig_GeminiImageApiKey (AmigaGPTConfig_Dummy + 0x84)
 #define MUIA_AmigaGPTConfig_GrokImageApiKey (AmigaGPTConfig_Dummy + 0x85)
 
+/* OpenAI TTS model id (string). Replaces the legacy enum-based
+ * MUIA_AmigaGPTConfig_OpenAITTSModel for selection; the enum field is kept for
+ * backwards-compatible reads from older configs. */
+#define MUIA_AmigaGPTConfig_OpenAITTSModelId (AmigaGPTConfig_Dummy + 0x86)
+
 /* Version tracking attributes (read-only, for internal use) */
 #define MUIA_AmigaGPTConfig_ChatModelSetVersion (AmigaGPTConfig_Dummy + 0x40)
 #define MUIA_AmigaGPTConfig_ImageModelSetVersion (AmigaGPTConfig_Dummy + 0x41)
@@ -221,7 +226,7 @@ struct SpeechRequestSettings {
     STRPTR apiEndpointUrl;
     AuthorizationType authorizationType;
     STRPTR openAiApiKey;
-    OpenAITTSModel openAiTtsModel;
+    STRPTR openAiTtsModelId;
     OpenAITTSVoice openAiTtsVoice;
     STRPTR openAiVoiceInstructions;
 
@@ -337,6 +342,8 @@ void configSetImageApiEndpoint(APIImageEndpoint value);
 /* OpenAI TTS settings */
 OpenAITTSModel configGetOpenAITTSModel(void);
 void configSetOpenAITTSModel(OpenAITTSModel value);
+STRPTR configGetOpenAITTSModelId(void);
+void configSetOpenAITTSModelId(CONST_STRPTR value);
 OpenAITTSVoice configGetOpenAITTSVoice(void);
 void configSetOpenAITTSVoice(OpenAITTSVoice value);
 STRPTR configGetOpenAIVoiceInstructions(void);

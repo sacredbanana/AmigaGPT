@@ -872,14 +872,16 @@ msgid "slt (slow)"
 msgstr "slt (lassú)"
 
 #: src/menu.c:181 src/menu.c:173
+#, fuzzy
 msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
-msgid "OpenAI Voice"
-msgstr "OpenAI Voice"
+msgid "Voice"
+msgstr "Hang"
 
 #: src/menu.c:194 src/menu.c:186
+#, fuzzy
 msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
-msgid "OpenAI Speech Model"
-msgstr "OpenAI beszédmodell"
+msgid "Model"
+msgstr "Modell"
 
 #: src/menu.c:199 src/menu.c:192
 msgctxt "STRING_MENU_OPENAI (141//)"
@@ -1934,3 +1936,23 @@ msgstr "Mód"
 msgctxt "STRING_NARRATOR_SEX (358//)"
 msgid "Sex"
 msgstr "Nem"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_FETCHING_OPENAI_MODELS (359//)"
+msgid "Fetching OpenAI models..."
+msgstr "Modellek lekérése..."
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_FETCHING_OPENAI_MODELS (360//)"
+msgid "Failed to fetch OpenAI models"
+msgstr "Nem sikerült lekérni az ElevenLabs modelleket"
+
+#~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
+#~ msgid "OpenAI Voice"
+#~ msgstr "OpenAI Voice"
+
+#~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
+#~ msgid "OpenAI Speech Model"
+#~ msgstr "OpenAI beszédmodell"

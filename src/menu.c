@@ -953,12 +953,16 @@ static void populateSpeechMenu() {
                  oldOpenAITTSModelMenuItem);
         DisposeObject(oldOpenAITTSModelMenuItem);
     }
+    STRPTR currentTtsModelId = configGetOpenAITTSModelId();
     for (UBYTE i = 0; OPENAI_TTS_MODEL_NAMES[i] != NULL; i++) {
+        BOOL isCurrent = currentTtsModelId != NULL &&
+                         strcmp(currentTtsModelId, OPENAI_TTS_MODEL_NAMES[i]) ==
+                             0;
         // clang-format off
         Object *newOpenAITTSModelMenuItem = MenuitemObject,
             MUIA_Menuitem_Title, OPENAI_TTS_MODEL_NAMES[i],
             MUIA_Menuitem_Checkit, TRUE,
-            MUIA_Menuitem_Checked, configGetOpenAITTSModel() == i,
+            MUIA_Menuitem_Checked, isCurrent,
             MUIA_Menuitem_Exclude, ~(1 << i),
             MUIA_Menuitem_Toggle, TRUE,
             MUIA_Menuitem_CopyStrings, FALSE,
@@ -968,7 +972,8 @@ static void populateSpeechMenu() {
                  newOpenAITTSModelMenuItem);
         DoMethod(newOpenAITTSModelMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
                  TRUE, configObj, 3, MUIM_Set,
-                 MUIA_AmigaGPTConfig_OpenAITTSModel, i);
+                 MUIA_AmigaGPTConfig_OpenAITTSModelId,
+                 OPENAI_TTS_MODEL_NAMES[i]);
         DoMethod(newOpenAITTSModelMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
                  MUIV_EveryTime, MUIV_Notify_Self, 3, MUIM_Set,
                  MUIA_Menuitem_Checked, TRUE);

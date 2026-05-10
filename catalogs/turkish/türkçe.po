@@ -853,14 +853,16 @@ msgid "slt (slow)"
 msgstr "slt (yavaş)"
 
 #: src/menu.c:181 src/menu.c:173
+#, fuzzy
 msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
-msgid "OpenAI Voice"
-msgstr "OpenAI Ses"
+msgid "Voice"
+msgstr "Ses"
 
 #: src/menu.c:194 src/menu.c:186
+#, fuzzy
 msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
-msgid "OpenAI Speech Model"
-msgstr "OpenAI Konuşma Modeli"
+msgid "Model"
+msgstr "Model"
 
 #: src/menu.c:199 src/menu.c:192
 msgctxt "STRING_MENU_OPENAI (141//)"
@@ -1913,3 +1915,23 @@ msgstr "Mod"
 msgctxt "STRING_NARRATOR_SEX (358//)"
 msgid "Sex"
 msgstr "Cinsiyet"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_FETCHING_OPENAI_MODELS (359//)"
+msgid "Fetching OpenAI models..."
+msgstr "Modeller alınıyor..."
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_FETCHING_OPENAI_MODELS (360//)"
+msgid "Failed to fetch OpenAI models"
+msgstr "ElevenLabs modelleri alınamadı"
+
+#~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
+#~ msgid "OpenAI Voice"
+#~ msgstr "OpenAI Ses"
+
+#~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
+#~ msgid "OpenAI Speech Model"
+#~ msgstr "OpenAI Konuşma Modeli"

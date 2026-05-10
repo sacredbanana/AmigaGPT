@@ -100,6 +100,7 @@ struct AmigaGPTConfigData {
     STRPTR activeSpeechProfileName;
     STRPTR chatSystem;
     STRPTR openAIVoiceInstructions;
+    STRPTR openAITTSModelId;
     STRPTR openAiApiKey;
     STRPTR proxyHost;
     STRPTR proxyUsername;
@@ -265,6 +266,10 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
                        : SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENAI]);
     data->chatSystem = NULL;
     data->openAIVoiceInstructions = NULL;
+    data->openAITTSModelId =
+        copyString(OPENAI_TTS_MODEL_NAMES[data->openAITTSModel]
+                       ? OPENAI_TTS_MODEL_NAMES[data->openAITTSModel]
+                       : OPENAI_TTS_MODEL_NAMES[OPENAI_TTS_MODEL_GPT_4o_MINI_TTS]);
     data->openAiApiKey = NULL;
     data->proxyHost = NULL;
     data->proxyUsername = NULL;
@@ -338,6 +343,7 @@ static void freeAllStrings(struct AmigaGPTConfigData *data) {
     freeString(&data->activeSpeechProfileName);
     freeString(&data->chatSystem);
     freeString(&data->openAIVoiceInstructions);
+    freeString(&data->openAITTSModelId);
     freeString(&data->openAiApiKey);
     freeString(&data->proxyHost);
     freeString(&data->proxyUsername);
@@ -640,6 +646,9 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_OpenAIVoiceInstructions:
         *store = (ULONG)data->openAIVoiceInstructions;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_OpenAITTSModelId:
+        *store = (ULONG)data->openAITTSModelId;
         return TRUE;
     case MUIA_AmigaGPTConfig_OpenAiApiKey:
         *store = (ULONG)data->openAiApiKey;
@@ -1113,6 +1122,11 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                               (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
+        case MUIA_AmigaGPTConfig_OpenAITTSModelId:
+            if (setStringAttr(&data->openAITTSModelId,
+                              (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
         case MUIA_AmigaGPTConfig_OpenAiApiKey:
             if (setStringAttr(&data->openAiApiKey, (CONST_STRPTR)ti_Data))
                 changed = TRUE;
@@ -1510,6 +1524,11 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
         configJsonObject, "openAIVoiceInstructions",
         data->openAIVoiceInstructions != NULL
             ? json_object_new_string(data->openAIVoiceInstructions)
+            : NULL);
+    json_object_object_add(
+        configJsonObject, "openAITTSModelId",
+        data->openAITTSModelId != NULL
+            ? json_object_new_string(data->openAITTSModelId)
             : NULL);
     json_object_object_add(configJsonObject, "openAiApiKey",
                            data->openAiApiKey != NULL
@@ -2148,6 +2167,21 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     readJsonString(configJsonObject, "chatSystem", &data->chatSystem);
     readJsonString(configJsonObject, "openAIVoiceInstructions",
                    &data->openAIVoiceInstructions);
+    readJsonString(configJsonObject, "openAITTSModelId",
+                   &data->openAITTSModelId);
+    /* Backwards-compat: if the new string is missing/empty, derive it from the
+     * legacy enum so existing configs migrate cleanly. */
+    if (data->openAITTSModelId == NULL ||
+        strlen(data->openAITTSModelId) == 0) {
+        OpenAITTSModel legacy = data->openAITTSModel;
+        CONST_STRPTR fallback =
+            OPENAI_TTS_MODEL_NAMES[legacy]
+                ? OPENAI_TTS_MODEL_NAMES[legacy]
+                : OPENAI_TTS_MODEL_NAMES[OPENAI_TTS_MODEL_GPT_4o_MINI_TTS];
+        if (data->openAITTSModelId != NULL)
+            freeString(&data->openAITTSModelId);
+        data->openAITTSModelId = copyString(fallback);
+    }
     readJsonString(configJsonObject, "openAiApiKey", &data->openAiApiKey);
     readJsonString(configJsonObject, "proxyHost", &data->proxyHost);
     readJsonString(configJsonObject, "proxyUsername", &data->proxyUsername);
@@ -2702,6 +2736,8 @@ void configFreeSpeechRequestSettings(struct SpeechRequestSettings *out) {
         FreeVec(out->openAiApiKey);
     if (out->openAiVoiceInstructions != NULL)
         FreeVec(out->openAiVoiceInstructions);
+    if (out->openAiTtsModelId != NULL)
+        FreeVec(out->openAiTtsModelId);
     if (out->elevenLabsApiKey != NULL)
         FreeVec(out->elevenLabsApiKey);
     if (out->elevenLabsVoiceID != NULL)
@@ -2730,7 +2766,7 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
     out->apiEndpointUrl = dupStrCfg("v1");
     out->authorizationType = AUTHORIZATION_TYPE_BEARER;
     out->openAiApiKey = dupStrCfg(configGetOpenAiSpeechApiKey());
-    out->openAiTtsModel = configGetOpenAITTSModel();
+    out->openAiTtsModelId = dupStrCfg(configGetOpenAITTSModelId());
     out->openAiTtsVoice = configGetOpenAITTSVoice();
     out->openAiVoiceInstructions =
         dupStrCfg(configGetOpenAIVoiceInstructions());
@@ -2926,9 +2962,34 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
             }
             out->openAiApiKey = dupStrCfg(json_object_get_string(k));
         }
-        struct json_object *m = json_object_object_get(p, "openAITTSModel");
-        if (m != NULL)
-            out->openAiTtsModel = (OpenAITTSModel)json_object_get_int(m);
+        struct json_object *mid =
+            json_object_object_get(p, "openAITTSModelId");
+        if (mid != NULL) {
+            CONST_STRPTR midStr = json_object_get_string(mid);
+            if (midStr != NULL && strlen(midStr) > 0) {
+                if (out->openAiTtsModelId != NULL) {
+                    FreeVec(out->openAiTtsModelId);
+                    out->openAiTtsModelId = NULL;
+                }
+                out->openAiTtsModelId = dupStrCfg(midStr);
+            }
+        } else {
+            /* Backwards-compat: legacy profile JSON may store the enum int. */
+            struct json_object *m =
+                json_object_object_get(p, "openAITTSModel");
+            if (m != NULL) {
+                OpenAITTSModel legacy = (OpenAITTSModel)json_object_get_int(m);
+                CONST_STRPTR fallback =
+                    OPENAI_TTS_MODEL_NAMES[legacy]
+                        ? OPENAI_TTS_MODEL_NAMES[legacy]
+                        : OPENAI_TTS_MODEL_NAMES[OPENAI_TTS_MODEL_GPT_4o_MINI_TTS];
+                if (out->openAiTtsModelId != NULL) {
+                    FreeVec(out->openAiTtsModelId);
+                    out->openAiTtsModelId = NULL;
+                }
+                out->openAiTtsModelId = dupStrCfg(fallback);
+            }
+        }
         struct json_object *v = json_object_object_get(p, "openAITTSVoice");
         if (v != NULL)
             out->openAiTtsVoice = (OpenAITTSVoice)json_object_get_int(v);
@@ -3048,6 +3109,13 @@ OpenAITTSModel configGetOpenAITTSModel(void) {
     OpenAITTSModel val = OPENAI_TTS_MODEL_GPT_4o_MINI_TTS;
     if (configObj)
         get(configObj, MUIA_AmigaGPTConfig_OpenAITTSModel, &val);
+    return val;
+}
+
+STRPTR configGetOpenAITTSModelId(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_OpenAITTSModelId, &val);
     return val;
 }
 
@@ -3470,6 +3538,11 @@ void configSetImageApiEndpoint(APIImageEndpoint value) {
 void configSetOpenAITTSModel(OpenAITTSModel value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_OpenAITTSModel, value);
+}
+
+void configSetOpenAITTSModelId(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_OpenAITTSModelId, (ULONG)value);
 }
 
 void configSetOpenAITTSVoice(OpenAITTSVoice value) {

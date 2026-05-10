@@ -800,7 +800,7 @@ rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
     out->speechSystem = (SpeechSystem)configGetSpeechSystem();
     out->fliteVoice = configGetSpeechFliteVoice();
     out->openAiApiKey = rexxDupStr(configGetOpenAiSpeechApiKey());
-    out->openAiTtsModel = configGetOpenAITTSModel();
+    out->openAiTtsModelId = rexxDupStr(configGetOpenAITTSModelId());
     out->openAiTtsVoice = configGetOpenAITTSVoice();
     out->openAiVoiceInstructions =
         rexxDupStr(configGetOpenAIVoiceInstructions());
@@ -906,11 +906,30 @@ rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
             FreeVec(out->openAiApiKey);
         out->openAiApiKey = rexxDupStr(json_object_get_string(openAiApiKeyObj));
     }
-    struct json_object *openAiModelObj =
-        json_object_object_get(profile, "openAITTSModel");
-    if (openAiModelObj != NULL)
-        out->openAiTtsModel =
-            (OpenAITTSModel)json_object_get_int(openAiModelObj);
+    struct json_object *openAiModelIdObj =
+        json_object_object_get(profile, "openAITTSModelId");
+    if (openAiModelIdObj != NULL) {
+        CONST_STRPTR midStr = json_object_get_string(openAiModelIdObj);
+        if (midStr != NULL && strlen(midStr) > 0) {
+            if (out->openAiTtsModelId != NULL)
+                FreeVec(out->openAiTtsModelId);
+            out->openAiTtsModelId = rexxDupStr(midStr);
+        }
+    } else {
+        struct json_object *openAiModelObj =
+            json_object_object_get(profile, "openAITTSModel");
+        if (openAiModelObj != NULL) {
+            OpenAITTSModel legacy =
+                (OpenAITTSModel)json_object_get_int(openAiModelObj);
+            CONST_STRPTR fallback =
+                OPENAI_TTS_MODEL_NAMES[legacy]
+                    ? OPENAI_TTS_MODEL_NAMES[legacy]
+                    : OPENAI_TTS_MODEL_NAMES[OPENAI_TTS_MODEL_GPT_4o_MINI_TTS];
+            if (out->openAiTtsModelId != NULL)
+                FreeVec(out->openAiTtsModelId);
+            out->openAiTtsModelId = rexxDupStr(fallback);
+        }
+    }
     struct json_object *openAiVoiceObj =
         json_object_object_get(profile, "openAITTSVoice");
     if (openAiVoiceObj != NULL)
@@ -2048,15 +2067,8 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
         }
     }
 
-    OpenAITTSModel model = speechSettings.openAiTtsModel;
-    if (modelString != NULL && strlen(modelString) > 0) {
-        for (UBYTE i = 0; OPENAI_TTS_MODEL_NAMES[i] != NULL; i++) {
-            if (strcasecmp(modelString, OPENAI_TTS_MODEL_NAMES[i]) == 0) {
-                model = i;
-                break;
-            }
-        }
-    }
+    /* Accept any string the caller passed; we no longer constrain to the
+     * built-in enum values, so newly fetched models are usable from ARexx. */
     OpenAITTSVoice voice = speechSettings.openAiTtsVoice;
     if (voiceString != NULL && strlen(voiceString) > 0) {
         if (!rexxApplyWorkbenchVoiceOverride(&speechSettings, voiceString)) {
@@ -2079,7 +2091,11 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
         }
     }
 
-    speechSettings.openAiTtsModel = model;
+    if (modelString != NULL && strlen(modelString) > 0) {
+        if (speechSettings.openAiTtsModelId != NULL)
+            FreeVec(speechSettings.openAiTtsModelId);
+        speechSettings.openAiTtsModelId = rexxDupStr(modelString);
+    }
     speechSettings.openAiTtsVoice = voice;
     if (instructions != NULL && strlen(instructions) > 0) {
         if (speechSettings.openAiVoiceInstructions != NULL)

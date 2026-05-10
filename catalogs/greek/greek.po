@@ -881,14 +881,16 @@ msgid "slt (slow)"
 msgstr "slt (αργή)"
 
 #: src/menu.c:181 src/menu.c:173
+#, fuzzy
 msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
-msgid "OpenAI Voice"
-msgstr "OpenAI Voice"
+msgid "Voice"
+msgstr "Φωνή"
 
 #: src/menu.c:194 src/menu.c:186
+#, fuzzy
 msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
-msgid "OpenAI Speech Model"
-msgstr "Μοντέλο ομιλίας OpenAI"
+msgid "Model"
+msgstr "Μοντέλο"
 
 #: src/menu.c:199 src/menu.c:192
 msgctxt "STRING_MENU_OPENAI (141//)"
@@ -1944,3 +1946,23 @@ msgstr "Λειτουργία"
 msgctxt "STRING_NARRATOR_SEX (358//)"
 msgid "Sex"
 msgstr "Φύλο"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_FETCHING_OPENAI_MODELS (359//)"
+msgid "Fetching OpenAI models..."
+msgstr "Λήψη μοντέλων..."
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_FETCHING_OPENAI_MODELS (360//)"
+msgid "Failed to fetch OpenAI models"
+msgstr "Απέτυχε η λήψη των ElevenLabs model"
+
+#~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
+#~ msgid "OpenAI Voice"
+#~ msgstr "OpenAI Voice"
+
+#~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
+#~ msgid "OpenAI Speech Model"
+#~ msgstr "Μοντέλο ομιλίας OpenAI"

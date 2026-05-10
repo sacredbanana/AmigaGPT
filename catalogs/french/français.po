@@ -883,14 +883,16 @@ msgid "slt (slow)"
 msgstr "slt (lent)"
 
 #: src/menu.c:181 src/menu.c:173
+#, fuzzy
 msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
-msgid "OpenAI Voice"
-msgstr "Voix OpenAI"
+msgid "Voice"
+msgstr "Voix"
 
 #: src/menu.c:194 src/menu.c:186
+#, fuzzy
 msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
-msgid "OpenAI Speech Model"
-msgstr "Modèle de parole OpenAI"
+msgid "Model"
+msgstr "Modèle"
 
 #: src/menu.c:199 src/menu.c:192
 msgctxt "STRING_MENU_OPENAI (141//)"
@@ -1949,3 +1951,23 @@ msgstr "Mode"
 msgctxt "STRING_NARRATOR_SEX (358//)"
 msgid "Sex"
 msgstr "Sexe"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_FETCHING_OPENAI_MODELS (359//)"
+msgid "Fetching OpenAI models..."
+msgstr "Récupération des modèles..."
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_FETCHING_OPENAI_MODELS (360//)"
+msgid "Failed to fetch OpenAI models"
+msgstr "Échec de la récupération des modèles ElevenLabs"
+
+#~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
+#~ msgid "OpenAI Voice"
+#~ msgstr "Voix OpenAI"
+
+#~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
+#~ msgid "OpenAI Speech Model"
+#~ msgstr "Modèle de parole OpenAI"
