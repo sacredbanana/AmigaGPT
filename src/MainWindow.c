@@ -1732,7 +1732,8 @@ static void sendChatMessage() {
                                 if (unformattedMessageSystemEncoded != NULL) {
                                     SpeechSystem ss = configGetSpeechSystem();
                                     if (ss != SPEECH_SYSTEM_OPENAI &&
-                                        ss != SPEECH_SYSTEM_ELEVENLABS) {
+                                        ss != SPEECH_SYSTEM_ELEVENLABS &&
+                                        ss != SPEECH_SYSTEM_XAI) {
                                         speakText(
                                             unformattedMessageSystemEncoded +
                                                 speechIndex,
@@ -2008,7 +2009,9 @@ static void sendChatMessage() {
         displayConversation(currentConversation);
 
         if (configGetSpeechEnabled()) {
-            if (configGetSpeechSystem() == SPEECH_SYSTEM_OPENAI) {
+            SpeechSystem speechSys = configGetSpeechSystem();
+            if (speechSys == SPEECH_SYSTEM_OPENAI ||
+                speechSys == SPEECH_SYSTEM_XAI) {
                 speakText(receivedMessage, NULL, AUDIO_FORMAT_PCM);
             } else {
                 STRPTR receivedMessageSystemEncoded = CodesetsUTF8ToStr(

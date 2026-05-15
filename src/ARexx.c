@@ -1832,6 +1832,8 @@ static void rexxAppendVoicesForSpeechProfile(STRPTR buffer, ULONG bufferSize,
 
     if (settings.speechSystem == SPEECH_SYSTEM_OPENAI) {
         rexxAppendStringArray(buffer, bufferSize, OPENAI_TTS_VOICE_NAMES);
+    } else if (settings.speechSystem == SPEECH_SYSTEM_XAI) {
+        rexxAppendStringArray(buffer, bufferSize, XAI_TTS_VOICE_NAMES);
     } else if (settings.speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
         rexxAppendElevenLabsVoiceNames(buffer, bufferSize,
                                        settings.elevenLabsApiKey);
@@ -2060,6 +2062,10 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
             if (speechSettings.elevenLabsApiKey != NULL)
                 FreeVec(speechSettings.elevenLabsApiKey);
             speechSettings.elevenLabsApiKey = rexxDupStr(apiKey);
+        } else if (speechSettings.speechSystem == SPEECH_SYSTEM_XAI) {
+            if (speechSettings.xaiApiKey != NULL)
+                FreeVec(speechSettings.xaiApiKey);
+            speechSettings.xaiApiKey = rexxDupStr(apiKey);
         } else {
             if (speechSettings.openAiApiKey != NULL)
                 FreeVec(speechSettings.openAiApiKey);
@@ -2077,6 +2083,18 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
                     voice = i;
                     break;
                 }
+            }
+            for (UBYTE i = 0; XAI_TTS_VOICE_NAMES[i] != NULL; i++) {
+                if (strcasecmp(voiceString, XAI_TTS_VOICE_NAMES[i]) == 0) {
+                    speechSettings.xaiVoice = (XAITTSVoice)i;
+                    break;
+                }
+            }
+            /* Accept any voice_id string for xAI (built-in or custom). */
+            if (speechSettings.speechSystem == SPEECH_SYSTEM_XAI) {
+                if (speechSettings.xaiVoiceId != NULL)
+                    FreeVec(speechSettings.xaiVoiceId);
+                speechSettings.xaiVoiceId = rexxDupStr(voiceString);
             }
         }
     }

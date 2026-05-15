@@ -167,6 +167,12 @@
  * backwards-compatible reads from older configs. */
 #define MUIA_AmigaGPTConfig_OpenAITTSModelId (AmigaGPTConfig_Dummy + 0x86)
 
+/* xAI TTS voice (ULONG, XAITTSVoice enum). */
+#define MUIA_AmigaGPTConfig_XAITTSVoice (AmigaGPTConfig_Dummy + 0x87)
+
+/* xAI TTS voice id (string, supports custom voices). */
+#define MUIA_AmigaGPTConfig_XAITTSVoiceId (AmigaGPTConfig_Dummy + 0x88)
+
 /* Version tracking attributes (read-only, for internal use) */
 #define MUIA_AmigaGPTConfig_ChatModelSetVersion (AmigaGPTConfig_Dummy + 0x40)
 #define MUIA_AmigaGPTConfig_ImageModelSetVersion (AmigaGPTConfig_Dummy + 0x41)
@@ -236,6 +242,15 @@ struct SpeechRequestSettings {
     STRPTR elevenLabsVoiceName;
     STRPTR elevenLabsModel;
     STRPTR elevenLabsModelName;
+
+    /* xAI TTS */
+    STRPTR xaiApiKey;
+    /* Preferred form: a voice_id string (works for built-in *and* custom
+     * voices fetched from /v1/custom-voices). When empty, fall back to the
+     * legacy enum-based xaiVoice. */
+    STRPTR xaiVoiceId;
+    XAITTSVoice xaiVoice;
+    STRPTR xaiLanguage;
 };
 
 void configGetSpeechRequestSettings(struct SpeechRequestSettings *out);
@@ -348,6 +363,12 @@ OpenAITTSVoice configGetOpenAITTSVoice(void);
 void configSetOpenAITTSVoice(OpenAITTSVoice value);
 STRPTR configGetOpenAIVoiceInstructions(void);
 void configSetOpenAIVoiceInstructions(CONST_STRPTR value);
+
+/* xAI TTS settings */
+XAITTSVoice configGetXAITTSVoice(void);
+void configSetXAITTSVoice(XAITTSVoice value);
+STRPTR configGetXAITTSVoiceId(void);
+void configSetXAITTSVoiceId(CONST_STRPTR value);
 
 /* Proxy settings */
 ULONG configGetProxyEnabled(void);

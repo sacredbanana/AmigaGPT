@@ -54,6 +54,7 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
                                       [SPEECH_SYSTEM_FLITE] = "Flite",
                                       [SPEECH_SYSTEM_OPENAI] = "OpenAI",
                                       [SPEECH_SYSTEM_ELEVENLABS] = "ElevenLabs",
+                                      [SPEECH_SYSTEM_XAI] = "xAI",
                                       NULL};
 
 /**
@@ -75,7 +76,8 @@ const STRPTR AUDIO_FORMAT_NAMES[] = {[AUDIO_FORMAT_PCM] = "pcm",
  **/
 LONG initSpeech(SpeechSystem speechSystem) {
     if (speechSystem == SPEECH_SYSTEM_OPENAI ||
-        speechSystem == SPEECH_SYSTEM_ELEVENLABS)
+        speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
+        speechSystem == SPEECH_SYSTEM_XAI)
         return RETURN_OK;
 #ifdef __AMIGAOS3__
     if (!translationBuffer)
@@ -240,7 +242,8 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
     SpeechSystem speechSystem = settings->speechSystem;
 
     if (speechSystem == SPEECH_SYSTEM_OPENAI ||
-        speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
+        speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
+        speechSystem == SPEECH_SYSTEM_XAI) {
         if (speechSystem == SPEECH_SYSTEM_OPENAI) {
             if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
                 (settings->openAiApiKey == NULL ||
@@ -252,6 +255,13 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
                 (settings->elevenLabsApiKey == NULL ||
                  strlen(settings->elevenLabsApiKey) == 0)) {
+                displayError(STRING_ERROR_NO_API_KEY);
+                return;
+            }
+        } else if (speechSystem == SPEECH_SYSTEM_XAI) {
+            if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
+                (settings->xaiApiKey == NULL ||
+                 strlen(settings->xaiApiKey) == 0)) {
                 displayError(STRING_ERROR_NO_API_KEY);
                 return;
             }
@@ -290,6 +300,24 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                 configGetProxyPort(), configGetProxyUsesSSL(),
                 configGetProxyRequiresAuth(), configGetProxyUsername(),
                 configGetProxyPassword());
+        } else if (speechSystem == SPEECH_SYSTEM_XAI) {
+            CONST_STRPTR voiceId = settings->xaiVoiceId;
+            if (voiceId == NULL || strlen(voiceId) == 0) {
+                XAITTSVoice v = settings->xaiVoice;
+                if (v >= 0 && XAI_TTS_VOICE_NAMES[v] != NULL)
+                    voiceId = XAI_TTS_VOICE_NAMES[v];
+                else
+                    voiceId = XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE];
+            }
+            audioBuffer = postTextToSpeechRequestToXAI(
+                text, voiceId, settings->xaiLanguage,
+                settings->host, settings->port, settings->useSSL,
+                settings->apiEndpointUrl, settings->authorizationType,
+                settings->xaiApiKey, &audioLength,
+                configGetProxyEnabled(), configGetProxyHost(),
+                configGetProxyPort(), configGetProxyUsesSSL(),
+                configGetProxyRequiresAuth(), configGetProxyUsername(),
+                configGetProxyPassword(), audioFormat);
         }
 
         if (!audioBuffer) {

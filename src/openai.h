@@ -173,6 +173,23 @@ typedef enum {
 extern CONST_STRPTR OPENAI_TTS_VOICE_NAMES[];
 
 /**
+ * The voice xAI should use
+ **/
+typedef enum {
+    XAI_TTS_VOICE_ARA = 0L,
+    XAI_TTS_VOICE_EVE,
+    XAI_TTS_VOICE_LEO,
+    XAI_TTS_VOICE_REX,
+    XAI_TTS_VOICE_SAL
+} XAITTSVoice;
+
+/**
+ * The names of the xAI voices (id strings sent to the API)
+ * @see XAITTSVoice
+ **/
+extern CONST_STRPTR XAI_TTS_VOICE_NAMES[];
+
+/**
  * The size of the requested image
  **/
 typedef enum {
@@ -570,6 +587,45 @@ APTR postTextToSpeechRequestToElevenLabs(
     CONST_STRPTR host, UWORD port, BOOL useSSL,
     CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
     CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword);
+
+/**
+ * Post a text to speech request to xAI
+ * @param text the text to speak
+ * @param voiceId the voice_id string (built-in like "eve" or 8-char custom id)
+ * @param language the BCP-47 language code (e.g. "en", "auto"); defaults to
+ * "en" if NULL/empty
+ * @param apiKey the xAI API key
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
+ * @param audioFormat the audio format to use
+ * @return a pointer to a buffer containing the audio data or NULL -- Free it
+ * with FreeVec() when you are done using it
+ **/
+APTR postTextToSpeechRequestToXAI(
+    CONST_STRPTR text, CONST_STRPTR voiceId, CONST_STRPTR language,
+    CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, AudioFormat *audioFormat);
+
+/**
+ * Fetch the list of custom voices from xAI (GET /v1/custom-voices).
+ * Returns the parsed JSON object or NULL on error. The caller must
+ * json_object_put() the result.
+ **/
+struct json_object *getXAICustomVoices(
+    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR apiKey, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword);

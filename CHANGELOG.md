@@ -18,6 +18,7 @@
 - Support for Anthropic Claude for image generation
 - Support for xAI Grok for chat
 - Support for xAI Grok for image generation
+- Support for xAI Grok for Text-To-Speech
 - Added streaming support in chat for Google Gemini
 - Support for Google Gemini for image generation
 - Automatically instructs the chat server to not use unicode characters the Amiga cannot display such as emoji since these characters display in AmigaGPT as question marks

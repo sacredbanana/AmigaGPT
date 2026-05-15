@@ -75,6 +75,12 @@ static Object *elevenLabsFetchModelsButton = NULL;
 static Object *elevenLabsCurrentModelText = NULL;
 static Object *elevenLabsCurrentVoiceText = NULL;
 
+/* xAI fields */
+static Object *xaiApiKeyString = NULL;
+static Object *xaiVoiceList = NULL;
+static Object *xaiFetchVoicesButton = NULL;
+static Object *xaiCurrentVoiceText = NULL;
+
 /* Workbench fields */
 static Object *workbenchAccentString = NULL;
 static Object *workbenchAccentBrowseButton = NULL;
@@ -99,6 +105,7 @@ static Object *workbenchGroup = NULL;
 static Object *fliteGroup = NULL;
 static Object *openAiGroup = NULL;
 static Object *elevenLabsGroup = NULL;
+static Object *xaiGroup = NULL;
 static Object *okButton = NULL;
 static Object *cancelButton = NULL;
 static Object *testButton = NULL;
@@ -108,6 +115,7 @@ static struct json_object *builtinSpeechProfilesJson[8] = {NULL};
 static struct json_object *elevenLabsModelsJson = NULL;
 static struct json_object *elevenLabsVoicesJson = NULL;
 static struct json_object *openAITTSModelsJson = NULL;
+static struct json_object *xaiVoicesJson = NULL;
 static BOOL suppressProfileSelected = FALSE;
 static BOOL speechSettingsDirty = FALSE;
 static LONG lastSelectedProfile = MUIV_NList_Active_Off;
@@ -124,14 +132,20 @@ static STRPTR narratorSexOptions[3] = {NULL};
 
 #define ELEVENLABS_HOST "api.elevenlabs.io"
 #define ELEVENLABS_PORT 443
+#define XAI_TTS_HOST "api.x.ai"
+#define XAI_TTS_PORT 443
 
 static BOOL speechSystemUsesNetwork(SpeechSystem sys) {
-    return (sys == SPEECH_SYSTEM_OPENAI || sys == SPEECH_SYSTEM_ELEVENLABS);
+    return (sys == SPEECH_SYSTEM_OPENAI || sys == SPEECH_SYSTEM_ELEVENLABS ||
+            sys == SPEECH_SYSTEM_XAI);
 }
 
 static CONST_STRPTR defaultHostForSpeechSystem(SpeechSystem sys) {
-    return (sys == SPEECH_SYSTEM_ELEVENLABS) ? ELEVENLABS_HOST
-                                             : "api.openai.com";
+    if (sys == SPEECH_SYSTEM_ELEVENLABS)
+        return ELEVENLABS_HOST;
+    if (sys == SPEECH_SYSTEM_XAI)
+        return XAI_TTS_HOST;
+    return "api.openai.com";
 }
 
 static AuthorizationType defaultAuthForSpeechSystem(SpeechSystem sys) {
@@ -222,15 +236,15 @@ static void updateProfileManagementButtonLabels(void) {
 static LONG getBuiltinSpeechProviderCount(void) {
     LONG count = 0;
 #ifdef __AMIGAOS3__
-    /* Workbench v34/v37 + OpenAI + ElevenLabs */
-    count = 4;
+    /* Workbench v34/v37 + OpenAI + ElevenLabs + xAI */
+    count = 5;
 #else
 #ifdef __AMIGAOS4__
-    /* Flite + OpenAI + ElevenLabs */
-    count = 3;
+    /* Flite + OpenAI + ElevenLabs + xAI */
+    count = 4;
 #else
-    /* MorphOS: OpenAI + ElevenLabs */
-    count = 2;
+    /* MorphOS: OpenAI + ElevenLabs + xAI */
+    count = 3;
 #endif
 #endif
     return count;
@@ -242,27 +256,33 @@ static BOOL isBuiltinListIndex(LONG idx) {
 
 static SpeechSystem builtinSystemForListIndex(LONG idx) {
 #ifdef __AMIGAOS3__
-    /* 0=v34, 1=v37, 2=OpenAI, 3=ElevenLabs */
+    /* 0=v34, 1=v37, 2=OpenAI, 3=ElevenLabs, 4=xAI */
     if (idx == 0)
         return SPEECH_SYSTEM_34;
     if (idx == 1)
         return SPEECH_SYSTEM_37;
     if (idx == 2)
         return SPEECH_SYSTEM_OPENAI;
-    return SPEECH_SYSTEM_ELEVENLABS;
+    if (idx == 3)
+        return SPEECH_SYSTEM_ELEVENLABS;
+    return SPEECH_SYSTEM_XAI;
 #else
 #ifdef __AMIGAOS4__
-    /* 0=Flite, 1=OpenAI, 2=ElevenLabs */
+    /* 0=Flite, 1=OpenAI, 2=ElevenLabs, 3=xAI */
     if (idx == 0)
         return SPEECH_SYSTEM_FLITE;
     if (idx == 1)
         return SPEECH_SYSTEM_OPENAI;
-    return SPEECH_SYSTEM_ELEVENLABS;
+    if (idx == 2)
+        return SPEECH_SYSTEM_ELEVENLABS;
+    return SPEECH_SYSTEM_XAI;
 #else
-    /* 0=OpenAI, 1=ElevenLabs */
+    /* 0=OpenAI, 1=ElevenLabs, 2=xAI */
     if (idx == 0)
         return SPEECH_SYSTEM_OPENAI;
-    return SPEECH_SYSTEM_ELEVENLABS;
+    if (idx == 1)
+        return SPEECH_SYSTEM_ELEVENLABS;
+    return SPEECH_SYSTEM_XAI;
 #endif
 #endif
 }
@@ -626,6 +646,169 @@ static void setOpenAITtsModelListActiveById(CONST_STRPTR modelId) {
     }
 }
 
+/* Build a unified xAI voices array: built-in voices first (no name field),
+ * then any custom voices fetched from the API (with name + voice_id). */
+static void ensureXAIVoicesJson(void) {
+    if (xaiVoicesJson != NULL)
+        return;
+    xaiVoicesJson = json_object_new_object();
+    struct json_object *voices = json_object_new_array();
+    for (UBYTE i = 0; XAI_TTS_VOICE_NAMES[i] != NULL; i++) {
+        struct json_object *v = json_object_new_object();
+        json_object_object_add(v, "voice_id",
+                               json_object_new_string(XAI_TTS_VOICE_NAMES[i]));
+        json_object_object_add(v, "builtin", json_object_new_boolean(TRUE));
+        json_object_array_add(voices, v);
+    }
+    json_object_object_add(xaiVoicesJson, "voices", voices);
+}
+
+static void mergeFetchedXAICustomVoices(struct json_object *fetched) {
+    if (fetched == NULL)
+        return;
+    ensureXAIVoicesJson();
+    struct json_object *voices = NULL;
+    if (!json_object_object_get_ex(xaiVoicesJson, "voices", &voices))
+        return;
+
+    struct json_object *fetchedVoices = NULL;
+    if (!json_object_object_get_ex(fetched, "voices", &fetchedVoices))
+        return;
+    if (!json_object_is_type(fetchedVoices, json_type_array))
+        return;
+
+    /* Drop existing non-builtin entries before merging so a refresh reflects
+     * the current account state. */
+    LONG existing = json_object_array_length(voices);
+    for (LONG i = existing - 1; i >= 0; i--) {
+        struct json_object *v = json_object_array_get_idx(voices, i);
+        struct json_object *b = json_object_object_get(v, "builtin");
+        if (b == NULL || !json_object_get_boolean(b))
+            json_object_array_del_idx(voices, i, 1);
+    }
+
+    LONG fc = json_object_array_length(fetchedVoices);
+    for (LONG i = 0; i < fc; i++) {
+        struct json_object *src = json_object_array_get_idx(fetchedVoices, i);
+        struct json_object *idObj = json_object_object_get(src, "voice_id");
+        CONST_STRPTR vid = idObj ? json_object_get_string(idObj) : NULL;
+        if (vid == NULL || strlen(vid) == 0)
+            continue;
+        struct json_object *v = json_object_new_object();
+        json_object_object_add(v, "voice_id", json_object_new_string(vid));
+        json_object_object_add(v, "builtin", json_object_new_boolean(FALSE));
+        struct json_object *nameObj = json_object_object_get(src, "name");
+        if (nameObj != NULL) {
+            CONST_STRPTR n = json_object_get_string(nameObj);
+            if (n != NULL && strlen(n) > 0)
+                json_object_object_add(v, "name", json_object_new_string(n));
+        }
+        json_object_array_add(voices, v);
+    }
+}
+
+/* Returns the display string for a voice (caller-provided buffer used for
+ * "name (voice_id)" formatting; lifetime tied to the buffer). */
+static CONST_STRPTR xaiVoiceDisplayString(struct json_object *voice,
+                                          STRPTR buffer, ULONG bufferSize) {
+    if (voice == NULL)
+        return "";
+    struct json_object *nameObj = json_object_object_get(voice, "name");
+    struct json_object *idObj = json_object_object_get(voice, "voice_id");
+    CONST_STRPTR n = nameObj ? json_object_get_string(nameObj) : NULL;
+    CONST_STRPTR id = idObj ? json_object_get_string(idObj) : NULL;
+    if (n != NULL && strlen(n) > 0 && id != NULL && strlen(id) > 0) {
+        snprintf(buffer, bufferSize, "%s (%s)", n, id);
+        return buffer;
+    }
+    return id != NULL ? id : "";
+}
+
+static void populateXAIVoiceList(void) {
+    if (xaiVoiceList == NULL)
+        return;
+    DoMethod(xaiVoiceList, MUIM_NList_Clear);
+    ensureXAIVoicesJson();
+
+    struct json_object *voices = NULL;
+    if (!json_object_object_get_ex(xaiVoicesJson, "voices", &voices))
+        return;
+
+    LONG count = json_object_array_length(voices);
+    for (LONG i = 0; i < count; i++) {
+        struct json_object *v = json_object_array_get_idx(voices, i);
+        /* Reuse the stored "display" field if already built; otherwise
+         * compute and stash it so the NList display hook has stable
+         * memory to point at. */
+        struct json_object *disp = json_object_object_get(v, "display");
+        if (disp == NULL) {
+            UBYTE buf[128];
+            CONST_STRPTR d = xaiVoiceDisplayString(v, buf, sizeof(buf));
+            json_object_object_add(v, "display",
+                                   json_object_new_string(d ? d : ""));
+            disp = json_object_object_get(v, "display");
+        }
+        STRPTR entry = (STRPTR)json_object_get_string(disp);
+        DoMethod(xaiVoiceList, MUIM_NList_InsertSingle, entry,
+                 MUIV_NList_Insert_Bottom);
+    }
+}
+
+static void setXAIVoiceListActiveById(CONST_STRPTR voiceId) {
+    if (xaiVoiceList == NULL || xaiVoicesJson == NULL || voiceId == NULL ||
+        strlen(voiceId) == 0)
+        return;
+    struct json_object *voices = NULL;
+    if (!json_object_object_get_ex(xaiVoicesJson, "voices", &voices))
+        return;
+    LONG count = json_object_array_length(voices);
+    for (LONG i = 0; i < count; i++) {
+        struct json_object *v = json_object_array_get_idx(voices, i);
+        struct json_object *idObj = json_object_object_get(v, "voice_id");
+        CONST_STRPTR vid = idObj ? json_object_get_string(idObj) : NULL;
+        if (vid != NULL && strcmp(vid, voiceId) == 0) {
+            set(xaiVoiceList, MUIA_NList_Active, i);
+            return;
+        }
+    }
+}
+
+static CONST_STRPTR currentXAIVoiceIdFromUI(void) {
+    if (xaiVoiceList == NULL || xaiVoicesJson == NULL)
+        return NULL;
+    LONG active = MUIV_NList_Active_Off;
+    get(xaiVoiceList, MUIA_NList_Active, &active);
+    if (active == MUIV_NList_Active_Off)
+        return NULL;
+    struct json_object *voices = NULL;
+    if (!json_object_object_get_ex(xaiVoicesJson, "voices", &voices))
+        return NULL;
+    if (active < 0 || active >= (LONG)json_object_array_length(voices))
+        return NULL;
+    struct json_object *v = json_object_array_get_idx(voices, active);
+    struct json_object *idObj =
+        v ? json_object_object_get(v, "voice_id") : NULL;
+    return idObj ? json_object_get_string(idObj) : NULL;
+}
+
+static CONST_STRPTR currentXAIVoiceDisplayFromUI(void) {
+    if (xaiVoiceList == NULL || xaiVoicesJson == NULL)
+        return NULL;
+    LONG active = MUIV_NList_Active_Off;
+    get(xaiVoiceList, MUIA_NList_Active, &active);
+    if (active == MUIV_NList_Active_Off)
+        return NULL;
+    struct json_object *voices = NULL;
+    if (!json_object_object_get_ex(xaiVoicesJson, "voices", &voices))
+        return NULL;
+    if (active < 0 || active >= (LONG)json_object_array_length(voices))
+        return NULL;
+    struct json_object *v = json_object_array_get_idx(voices, active);
+    struct json_object *disp =
+        v ? json_object_object_get(v, "display") : NULL;
+    return disp ? json_object_get_string(disp) : NULL;
+}
+
 static struct json_object *
 searchElevenLabsVoices(CONST_STRPTR host, UWORD port, BOOL useSSL,
                        AuthorizationType authType, CONST_STRPTR apiKey,
@@ -949,6 +1132,70 @@ HOOKPROTONHNONP(ElevenLabsSearchVoicesButtonClickedFunc, void) {
 MakeHook(ElevenLabsSearchVoicesButtonClickedHook,
          ElevenLabsSearchVoicesButtonClickedFunc);
 
+HOOKPROTONHNONP(XAIFetchVoicesButtonClickedFunc, void) {
+    STRPTR apiKey = NULL;
+    if (xaiApiKeyString != NULL)
+        get(xaiApiKeyString, MUIA_String_Contents, &apiKey);
+    STRPTR host = NULL;
+    LONG port = XAI_TTS_PORT;
+    LONG useSSL = 1;
+    LONG authType = AUTHORIZATION_TYPE_BEARER;
+    STRPTR endpointUrl = NULL;
+    if (speechHostString != NULL)
+        get(speechHostString, MUIA_String_Contents, &host);
+    if (speechPortString != NULL)
+        get(speechPortString, MUIA_String_Integer, &port);
+    if (speechUsesSSLCycle != NULL)
+        get(speechUsesSSLCycle, MUIA_Cycle_Active, &useSSL);
+    if (speechAuthorizationTypeCycle != NULL)
+        get(speechAuthorizationTypeCycle, MUIA_Cycle_Active, &authType);
+    if (speechEndpointUrlString != NULL)
+        get(speechEndpointUrlString, MUIA_String_Contents, &endpointUrl);
+
+    if (apiKey == NULL || strlen(apiKey) == 0) {
+        displayError(STRING_ERROR_NO_API_KEY);
+        return;
+    }
+
+    if (xaiFetchVoicesButton != NULL)
+        set(xaiFetchVoicesButton, MUIA_Disabled, TRUE);
+    updateStatusBar(STRING_FETCHING_MODELS, yellowPen);
+
+    struct json_object *fetched = getXAICustomVoices(
+        host, (UWORD)port, useSSL == 1, endpointUrl,
+        (AuthorizationType)authType, apiKey, configGetProxyEnabled(),
+        configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
+        configGetProxyRequiresAuth(), configGetProxyUsername(),
+        configGetProxyPassword());
+
+    if (fetched != NULL) {
+        /* Drop NList entries first — they reference strings owned by the
+         * old xaiVoicesJson, which we're about to free. */
+        if (xaiVoiceList != NULL)
+            DoMethod(xaiVoiceList, MUIM_NList_Clear);
+        /* Reset the cached list so built-ins are re-seeded before merging. */
+        if (xaiVoicesJson != NULL) {
+            json_object_put(xaiVoicesJson);
+            xaiVoicesJson = NULL;
+        }
+        ensureXAIVoicesJson();
+        mergeFetchedXAICustomVoices(fetched);
+        json_object_put(fetched);
+        CONST_STRPTR current = configGetXAITTSVoiceId();
+        populateXAIVoiceList();
+        if (current != NULL && strlen(current) > 0)
+            setXAIVoiceListActiveById(current);
+        updateStatusBar(STRING_READY, greenPen);
+    } else {
+        displayError(STRING_ERROR_FETCHING_MODELS);
+        updateStatusBar(STRING_READY, greenPen);
+    }
+
+    if (xaiFetchVoicesButton != NULL)
+        set(xaiFetchVoicesButton, MUIA_Disabled, FALSE);
+}
+MakeHook(XAIFetchVoicesButtonClickedHook, XAIFetchVoicesButtonClickedFunc);
+
 static void updateElevenLabsSearchButtonLabel(void) {
     if (elevenLabsSearchButton == NULL || elevenLabsVoiceSearchString == NULL)
         return;
@@ -1034,6 +1281,7 @@ static void populateSpeechSystemOptions(void) {
         (STRPTR)SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENAI];
     speechSystemOptions[n++] =
         (STRPTR)SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_ELEVENLABS];
+    speechSystemOptions[n++] = (STRPTR)SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_XAI];
     speechSystemOptions[n] = NULL;
 }
 
@@ -1131,6 +1379,9 @@ static void populateProfileList(void) {
     DoMethod(speechProfileList, MUIM_NList_InsertSingle,
              (ULONG)SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_ELEVENLABS],
              MUIV_NList_Insert_Bottom);
+    DoMethod(speechProfileList, MUIM_NList_InsertSingle,
+             (ULONG)SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_XAI],
+             MUIV_NList_Insert_Bottom);
 
     /* Custom profiles */
     if (speechProfilesJson != NULL &&
@@ -1212,6 +1463,9 @@ static void updateSpeechApiKeyStringEnabledFromAuth(SpeechSystem sys) {
     if (elevenLabsAPIKeyString != NULL)
         set(elevenLabsAPIKeyString, MUIA_Disabled,
             !(sys == SPEECH_SYSTEM_ELEVENLABS) || authNone);
+    if (xaiApiKeyString != NULL)
+        set(xaiApiKeyString, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_XAI) || authNone);
 }
 
 static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
@@ -1291,6 +1545,14 @@ static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
     if (elevenLabsVoiceList != NULL)
         set(elevenLabsVoiceList, MUIA_Disabled,
             !(sys == SPEECH_SYSTEM_ELEVENLABS));
+
+    if (xaiVoiceList != NULL)
+        set(xaiVoiceList, MUIA_Disabled, !(sys == SPEECH_SYSTEM_XAI));
+    if (xaiFetchVoicesButton != NULL)
+        set(xaiFetchVoicesButton, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_XAI));
+    if (xaiCurrentVoiceText != NULL)
+        set(xaiCurrentVoiceText, MUIA_Disabled, !(sys == SPEECH_SYSTEM_XAI));
 }
 
 static void updateGroupVisibilityForSystem(SpeechSystem sys,
@@ -1309,6 +1571,8 @@ static void updateGroupVisibilityForSystem(SpeechSystem sys,
         set(openAiGroup, MUIA_ShowMe, (sys == SPEECH_SYSTEM_OPENAI));
     if (elevenLabsGroup != NULL)
         set(elevenLabsGroup, MUIA_ShowMe, (sys == SPEECH_SYSTEM_ELEVENLABS));
+    if (xaiGroup != NULL)
+        set(xaiGroup, MUIA_ShowMe, (sys == SPEECH_SYSTEM_XAI));
 }
 
 static void loadProfileIntoUI(LONG activeIndex) {
@@ -1592,6 +1856,75 @@ static void loadProfileIntoUI(LONG activeIndex) {
             vn != NULL ? vn : (STRPTR)STRING_NONE_SELECTED);
     }
 
+    /* xAI fields */
+    if (xaiApiKeyString != NULL) {
+        STRPTR key = configGetGrokApiKey();
+        if (customProfile != NULL) {
+            struct json_object *kObj =
+                json_object_object_get(customProfile, "xaiApiKey");
+            if (kObj != NULL)
+                key = (STRPTR)json_object_get_string(kObj);
+        }
+        set(xaiApiKeyString, MUIA_String_Contents, key ? key : "");
+    }
+    if (xaiVoiceList != NULL) {
+        CONST_STRPTR vid = configGetXAITTSVoiceId();
+        if (vid == NULL || strlen(vid) == 0) {
+            XAITTSVoice legacy = configGetXAITTSVoice();
+            vid = (legacy >= 0 && XAI_TTS_VOICE_NAMES[legacy] != NULL)
+                      ? XAI_TTS_VOICE_NAMES[legacy]
+                      : XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE];
+        }
+        if (customProfile != NULL) {
+            struct json_object *vidObj =
+                json_object_object_get(customProfile, "xaiTTSVoiceId");
+            if (vidObj != NULL) {
+                CONST_STRPTR stored = json_object_get_string(vidObj);
+                if (stored != NULL && strlen(stored) > 0)
+                    vid = stored;
+            } else {
+                struct json_object *vObj =
+                    json_object_object_get(customProfile, "xaiTTSVoice");
+                if (vObj != NULL) {
+                    XAITTSVoice legacy =
+                        (XAITTSVoice)json_object_get_int(vObj);
+                    if (legacy >= 0 && XAI_TTS_VOICE_NAMES[legacy] != NULL)
+                        vid = XAI_TTS_VOICE_NAMES[legacy];
+                }
+            }
+        }
+        ensureXAIVoicesJson();
+        populateXAIVoiceList();
+        if (vid != NULL && strlen(vid) > 0)
+            setXAIVoiceListActiveById(vid);
+        if (xaiCurrentVoiceText != NULL) {
+            UBYTE buf[128];
+            CONST_STRPTR disp = NULL;
+            struct json_object *voices = NULL;
+            if (xaiVoicesJson != NULL &&
+                json_object_object_get_ex(xaiVoicesJson, "voices", &voices)) {
+                LONG count = json_object_array_length(voices);
+                for (LONG i = 0; i < count; i++) {
+                    struct json_object *v =
+                        json_object_array_get_idx(voices, i);
+                    struct json_object *idObj =
+                        v ? json_object_object_get(v, "voice_id") : NULL;
+                    CONST_STRPTR id =
+                        idObj ? json_object_get_string(idObj) : NULL;
+                    if (id != NULL && vid != NULL &&
+                        strcmp(id, vid) == 0) {
+                        disp = xaiVoiceDisplayString(v, buf, sizeof(buf));
+                        break;
+                    }
+                }
+            }
+            set(xaiCurrentVoiceText, MUIA_Text_Contents,
+                (disp != NULL && strlen(disp) > 0)
+                    ? disp
+                    : (vid != NULL ? vid : (CONST_STRPTR)STRING_NONE_SELECTED));
+        }
+    }
+
     setFieldsEnabledForSystem(sys, isCustomOrNew);
     /* Update per-provider dependency warnings (shown only in relevant groups)
      */
@@ -1692,6 +2025,12 @@ static struct json_object *createDefaultProfile(CONST_STRPTR name) {
     json_object_object_add(
         p, "elevenLabsModelName",
         json_object_new_string(ELEVENLABS_MODEL_FLASH_V2_5_NAME));
+    json_object_object_add(p, "xaiApiKey", json_object_new_string(""));
+    json_object_object_add(p, "xaiTTSVoice",
+                           json_object_new_int((int)XAI_TTS_VOICE_EVE));
+    json_object_object_add(
+        p, "xaiTTSVoiceId",
+        json_object_new_string(XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE]));
     return p;
 }
 
@@ -1802,6 +2141,31 @@ static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys) {
             json_object_new_string(configGetElevenLabsVoiceName()
                                        ? configGetElevenLabsVoiceName()
                                        : ""));
+    }
+
+    if (sys == SPEECH_SYSTEM_XAI) {
+        json_object_object_add(p, "host", json_object_new_string(XAI_TTS_HOST));
+        json_object_object_add(p, "port", json_object_new_int(XAI_TTS_PORT));
+        json_object_object_add(p, "useSSL", json_object_new_boolean(TRUE));
+        json_object_object_add(
+            p, "authorizationType",
+            json_object_new_int((int)AUTHORIZATION_TYPE_BEARER));
+        json_object_object_add(p, "apiEndpointUrl",
+                               json_object_new_string("v1"));
+        json_object_object_add(p, "xaiApiKey",
+                               json_object_new_string(configGetGrokApiKey()
+                                                          ? configGetGrokApiKey()
+                                                          : ""));
+        json_object_object_add(
+            p, "xaiTTSVoice",
+            json_object_new_int((int)configGetXAITTSVoice()));
+        {
+            STRPTR vid = configGetXAITTSVoiceId();
+            if (vid == NULL || strlen(vid) == 0)
+                vid = (STRPTR)XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE];
+            json_object_object_add(p, "xaiTTSVoiceId",
+                                   json_object_new_string(vid));
+        }
     }
 
     return p;
@@ -2093,6 +2457,33 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
         }
     }
 
+    /* xAI */
+    STRPTR xKey = NULL;
+    if (xaiApiKeyString != NULL)
+        get(xaiApiKeyString, MUIA_String_Contents, &xKey);
+    json_object_object_add(p, "xaiApiKey",
+                           json_object_new_string(xKey ? xKey : ""));
+    {
+        CONST_STRPTR uiVid = currentXAIVoiceIdFromUI();
+        if (uiVid == NULL || strlen(uiVid) == 0)
+            uiVid = configGetXAITTSVoiceId();
+        if (uiVid == NULL || strlen(uiVid) == 0)
+            uiVid = XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE];
+        json_object_object_add(p, "xaiTTSVoiceId",
+                               json_object_new_string(uiVid));
+        /* Keep the legacy enum field in sync for old readers — match the
+         * id to a builtin index when possible. */
+        LONG enumIdx = (LONG)XAI_TTS_VOICE_EVE;
+        for (LONG i = 0; XAI_TTS_VOICE_NAMES[i] != NULL; i++) {
+            if (strcmp(uiVid, XAI_TTS_VOICE_NAMES[i]) == 0) {
+                enumIdx = i;
+                break;
+            }
+        }
+        json_object_object_add(p, "xaiTTSVoice",
+                               json_object_new_int((int)enumIdx));
+    }
+
     return p;
 }
 
@@ -2203,6 +2594,15 @@ static void commitBuiltinProfileToConfig(struct json_object *profile) {
             jsonStringOrEmpty(profile, "elevenLabsVoiceID"));
         configSetElevenLabsVoiceName(
             jsonStringOrEmpty(profile, "elevenLabsVoiceName"));
+    } else if (sys == SPEECH_SYSTEM_XAI) {
+        CONST_STRPTR key = jsonStringOrEmpty(profile, "xaiApiKey");
+        if (key != NULL && strlen(key) > 0)
+            configSetGrokApiKey(key);
+        configSetXAITTSVoice((XAITTSVoice)jsonIntOrDefault(
+            profile, "xaiTTSVoice", (LONG)configGetXAITTSVoice()));
+        CONST_STRPTR vid = jsonStringOrEmpty(profile, "xaiTTSVoiceId");
+        if (vid != NULL && strlen(vid) > 0)
+            configSetXAITTSVoiceId(vid);
     }
 
     if (sys == SPEECH_SYSTEM_34) {
@@ -2638,6 +3038,19 @@ HOOKPROTONHNONP(SpeechProviderTestFunc, void) {
         uiModelId ? (STRPTR)uiModelId : configGetElevenLabsModel();
     s.elevenLabsVoiceID =
         uiVoiceId ? (STRPTR)uiVoiceId : configGetElevenLabsVoiceID();
+
+    /* xAI */
+    if (xaiApiKeyString != NULL) {
+        STRPTR k = NULL;
+        get(xaiApiKeyString, MUIA_String_Contents, &k);
+        s.xaiApiKey = k;
+    }
+    {
+        CONST_STRPTR uiXaiVoiceId = currentXAIVoiceIdFromUI();
+        s.xaiVoiceId =
+            uiXaiVoiceId ? (STRPTR)uiXaiVoiceId : configGetXAITTSVoiceId();
+    }
+    s.xaiLanguage = (STRPTR) "en";
 
     /* Test phrase */
     STRPTR test =
@@ -3097,6 +3510,47 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                                 End,
                             End,
                         End,
+
+                        Child, xaiGroup = VGroup,
+                            MUIA_Frame, MUIV_Frame_Group,
+                            MUIA_FrameTitle, "xAI",
+                            Child, VGroup,
+                                MUIA_Frame, MUIV_Frame_Group,
+                                MUIA_FrameTitle, STRING_MENU_OPENAI_API_KEY,
+                                Child, xaiApiKeyString = StringObject,
+                                    MUIA_Frame, MUIV_Frame_String,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_String_MaxLen, 256,
+                                End,
+                            End,
+                            Child, VGroup,
+                                MUIA_Frame, MUIV_Frame_Group,
+                                MUIA_FrameTitle, STRING_MENU_OPENAI_VOICE,
+                                Child, HGroup,
+                                    Child, Label(STRING_CURRENT),
+                                    Child, xaiCurrentVoiceText = TextObject,
+                                        MUIA_Text_Contents, STRING_NONE_SELECTED,
+                                    End,
+                                End,
+                                Child, HGroup,
+                                    Child, xaiFetchVoicesButton =
+                                        MUI_MakeObject(MUIO_Button, STRING_FETCH_MODELS, TAG_DONE),
+                                End,
+                                Child, NListviewObject,
+                                    MUIA_NListview_NList, xaiVoiceList = NListObject,
+                                        MUIA_NList_ConstructHook2, &ConstructStringLI_TextHook,
+                                        MUIA_NList_DestructHook2, &DestructStringLI_TextHook,
+                                        MUIA_NList_DisplayHook2, &DisplayStringLI_TextHook,
+                                        MUIA_NList_Format, "",
+                                        MUIA_NList_Title, FALSE,
+                                        MUIA_NList_MinLineHeight, 16,
+                                    End,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
+                                    MUIA_FixHeight, 120,
+                                End,
+                            End,
+                        End,
                     End,
                 End,
                 Child, HGroup,
@@ -3152,6 +3606,9 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
     DoMethod(elevenLabsSearchButton, MUIM_Notify, MUIA_Pressed, FALSE,
              MUIV_Notify_Application, 2, MUIM_CallHook,
              &ElevenLabsSearchVoicesButtonClickedHook);
+    DoMethod(xaiFetchVoicesButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             MUIV_Notify_Application, 2, MUIM_CallHook,
+             &XAIFetchVoicesButtonClickedHook);
     DoMethod(elevenLabsVoiceSearchString, MUIM_Notify, MUIA_String_Contents,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &ElevenLabsVoiceSearchChangedHook);

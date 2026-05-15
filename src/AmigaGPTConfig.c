@@ -51,6 +51,7 @@ struct AmigaGPTConfigData {
     ImageSize imageSizeGptImage1;
     OpenAITTSModel openAITTSModel;
     OpenAITTSVoice openAITTSVoice;
+    XAITTSVoice xaiTTSVoice;
     ULONG proxyEnabled;
     ULONG proxyPort;
     ULONG proxyUsesSSL;
@@ -101,6 +102,7 @@ struct AmigaGPTConfigData {
     STRPTR chatSystem;
     STRPTR openAIVoiceInstructions;
     STRPTR openAITTSModelId;
+    STRPTR xaiTTSVoiceId;
     STRPTR openAiApiKey;
     STRPTR proxyHost;
     STRPTR proxyUsername;
@@ -215,6 +217,7 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->imageSizeGptImage1 = IMAGE_SIZE_1024x1024;
     data->openAITTSModel = OPENAI_TTS_MODEL_GPT_4o_MINI_TTS;
     data->openAITTSVoice = OPENAI_TTS_VOICE_ALLOY;
+    data->xaiTTSVoice = XAI_TTS_VOICE_EVE;
     data->proxyEnabled = FALSE;
     data->proxyPort = 8080;
     data->proxyUsesSSL = FALSE;
@@ -270,6 +273,9 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
         copyString(OPENAI_TTS_MODEL_NAMES[data->openAITTSModel]
                        ? OPENAI_TTS_MODEL_NAMES[data->openAITTSModel]
                        : OPENAI_TTS_MODEL_NAMES[OPENAI_TTS_MODEL_GPT_4o_MINI_TTS]);
+    data->xaiTTSVoiceId = copyString(XAI_TTS_VOICE_NAMES[data->xaiTTSVoice]
+                                         ? XAI_TTS_VOICE_NAMES[data->xaiTTSVoice]
+                                         : XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE]);
     data->openAiApiKey = NULL;
     data->proxyHost = NULL;
     data->proxyUsername = NULL;
@@ -344,6 +350,7 @@ static void freeAllStrings(struct AmigaGPTConfigData *data) {
     freeString(&data->chatSystem);
     freeString(&data->openAIVoiceInstructions);
     freeString(&data->openAITTSModelId);
+    freeString(&data->xaiTTSVoiceId);
     freeString(&data->openAiApiKey);
     freeString(&data->proxyHost);
     freeString(&data->proxyUsername);
@@ -494,6 +501,9 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_OpenAITTSVoice:
         *store = data->openAITTSVoice;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_XAITTSVoice:
+        *store = data->xaiTTSVoice;
         return TRUE;
     case MUIA_AmigaGPTConfig_ProxyEnabled:
         *store = data->proxyEnabled;
@@ -649,6 +659,9 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_OpenAITTSModelId:
         *store = (ULONG)data->openAITTSModelId;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_XAITTSVoiceId:
+        *store = (ULONG)data->xaiTTSVoiceId;
         return TRUE;
     case MUIA_AmigaGPTConfig_OpenAiApiKey:
         *store = (ULONG)data->openAiApiKey;
@@ -857,6 +870,12 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
         case MUIA_AmigaGPTConfig_OpenAITTSVoice:
             if (data->openAITTSVoice != (OpenAITTSVoice)ti_Data) {
                 data->openAITTSVoice = (OpenAITTSVoice)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_XAITTSVoice:
+            if (data->xaiTTSVoice != (XAITTSVoice)ti_Data) {
+                data->xaiTTSVoice = (XAITTSVoice)ti_Data;
                 changed = TRUE;
             }
             break;
@@ -1127,6 +1146,10 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                               (CONST_STRPTR)ti_Data))
                 changed = TRUE;
             break;
+        case MUIA_AmigaGPTConfig_XAITTSVoiceId:
+            if (setStringAttr(&data->xaiTTSVoiceId, (CONST_STRPTR)ti_Data))
+                changed = TRUE;
+            break;
         case MUIA_AmigaGPTConfig_OpenAiApiKey:
             if (setStringAttr(&data->openAiApiKey, (CONST_STRPTR)ti_Data))
                 changed = TRUE;
@@ -1384,6 +1407,12 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
                            json_object_new_int(data->openAITTSModel));
     json_object_object_add(configJsonObject, "openAITTSVoice",
                            json_object_new_int(data->openAITTSVoice));
+    json_object_object_add(configJsonObject, "xaiTTSVoice",
+                           json_object_new_int(data->xaiTTSVoice));
+    json_object_object_add(configJsonObject, "xaiTTSVoiceId",
+                           data->xaiTTSVoiceId != NULL
+                               ? json_object_new_string(data->xaiTTSVoiceId)
+                               : json_object_new_string(""));
     json_object_object_add(configJsonObject, "proxyEnabled",
                            json_object_new_boolean((BOOL)data->proxyEnabled));
     json_object_object_add(configJsonObject, "proxyPort",
@@ -1915,6 +1944,18 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     if (json_object_object_get_ex(configJsonObject, "openAITTSVoice",
                                   &valueObj))
         data->openAITTSVoice = json_object_get_int(valueObj);
+
+    if (json_object_object_get_ex(configJsonObject, "xaiTTSVoice", &valueObj))
+        data->xaiTTSVoice = json_object_get_int(valueObj);
+
+    if (json_object_object_get_ex(configJsonObject, "xaiTTSVoiceId",
+                                  &valueObj)) {
+        CONST_STRPTR str = json_object_get_string(valueObj);
+        if (str != NULL && strlen(str) > 0) {
+            freeString(&data->xaiTTSVoiceId);
+            data->xaiTTSVoiceId = copyString(str);
+        }
+    }
 
     if (json_object_object_get_ex(configJsonObject, "proxyEnabled", &valueObj))
         data->proxyEnabled = (ULONG)json_object_get_boolean(valueObj);
@@ -2748,6 +2789,12 @@ void configFreeSpeechRequestSettings(struct SpeechRequestSettings *out) {
         FreeVec(out->elevenLabsModel);
     if (out->elevenLabsModelName != NULL)
         FreeVec(out->elevenLabsModelName);
+    if (out->xaiApiKey != NULL)
+        FreeVec(out->xaiApiKey);
+    if (out->xaiVoiceId != NULL)
+        FreeVec(out->xaiVoiceId);
+    if (out->xaiLanguage != NULL)
+        FreeVec(out->xaiLanguage);
     memset(out, 0, sizeof(*out));
 }
 
@@ -2775,6 +2822,10 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
     out->elevenLabsVoiceName = dupStrCfg(configGetElevenLabsVoiceName());
     out->elevenLabsModel = dupStrCfg(configGetElevenLabsModel());
     out->elevenLabsModelName = dupStrCfg(configGetElevenLabsModelName());
+    out->xaiApiKey = dupStrCfg(configGetGrokApiKey());
+    out->xaiVoice = configGetXAITTSVoice();
+    out->xaiVoiceId = dupStrCfg(configGetXAITTSVoiceId());
+    out->xaiLanguage = dupStrCfg("en");
 
     /* Default accent + narrator params based on system */
     if (out->speechSystem == SPEECH_SYSTEM_34) {
@@ -2835,6 +2886,14 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
                     FreeVec(out->apiEndpointUrl);
                 out->apiEndpointUrl = dupStrCfg("v1");
                 out->authorizationType = AUTHORIZATION_TYPE_XI_API_KEY;
+            } else if (out->speechSystem == SPEECH_SYSTEM_XAI) {
+                if (out->host != NULL)
+                    FreeVec(out->host);
+                out->host = dupStrCfg("api.x.ai");
+                if (out->apiEndpointUrl != NULL)
+                    FreeVec(out->apiEndpointUrl);
+                out->apiEndpointUrl = dupStrCfg("v1");
+                out->authorizationType = AUTHORIZATION_TYPE_BEARER;
             }
             break;
         }
@@ -2877,6 +2936,14 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
             if (out->host != NULL)
                 FreeVec(out->host);
             out->host = dupStrCfg("api.openai.com");
+            if (out->apiEndpointUrl != NULL)
+                FreeVec(out->apiEndpointUrl);
+            out->apiEndpointUrl = dupStrCfg("v1");
+            out->authorizationType = AUTHORIZATION_TYPE_BEARER;
+        } else if (out->speechSystem == SPEECH_SYSTEM_XAI) {
+            if (out->host != NULL)
+                FreeVec(out->host);
+            out->host = dupStrCfg("api.x.ai");
             if (out->apiEndpointUrl != NULL)
                 FreeVec(out->apiEndpointUrl);
             out->apiEndpointUrl = dupStrCfg("v1");
@@ -3057,6 +3124,41 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
                               : ELEVENLABS_MODEL_FLASH_V2_5_NAME);
         }
 
+        struct json_object *xKey = json_object_object_get(p, "xaiApiKey");
+        if (xKey != NULL) {
+            if (out->xaiApiKey != NULL) {
+                FreeVec(out->xaiApiKey);
+                out->xaiApiKey = NULL;
+            }
+            out->xaiApiKey = dupStrCfg(json_object_get_string(xKey));
+        }
+        struct json_object *xVoice = json_object_object_get(p, "xaiTTSVoice");
+        if (xVoice != NULL)
+            out->xaiVoice = (XAITTSVoice)json_object_get_int(xVoice);
+        struct json_object *xVoiceId =
+            json_object_object_get(p, "xaiTTSVoiceId");
+        if (xVoiceId != NULL) {
+            CONST_STRPTR vid = json_object_get_string(xVoiceId);
+            if (vid != NULL && strlen(vid) > 0) {
+                if (out->xaiVoiceId != NULL) {
+                    FreeVec(out->xaiVoiceId);
+                    out->xaiVoiceId = NULL;
+                }
+                out->xaiVoiceId = dupStrCfg(vid);
+            }
+        }
+        struct json_object *xLang = json_object_object_get(p, "xaiLanguage");
+        if (xLang != NULL) {
+            CONST_STRPTR lang = json_object_get_string(xLang);
+            if (lang != NULL && strlen(lang) > 0) {
+                if (out->xaiLanguage != NULL) {
+                    FreeVec(out->xaiLanguage);
+                    out->xaiLanguage = NULL;
+                }
+                out->xaiLanguage = dupStrCfg(lang);
+            }
+        }
+
         break;
     }
 
@@ -3124,6 +3226,30 @@ OpenAITTSVoice configGetOpenAITTSVoice(void) {
     if (configObj)
         get(configObj, MUIA_AmigaGPTConfig_OpenAITTSVoice, &val);
     return val;
+}
+
+XAITTSVoice configGetXAITTSVoice(void) {
+    XAITTSVoice val = XAI_TTS_VOICE_EVE;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_XAITTSVoice, &val);
+    return val;
+}
+
+void configSetXAITTSVoice(XAITTSVoice value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_XAITTSVoice, value);
+}
+
+STRPTR configGetXAITTSVoiceId(void) {
+    STRPTR val = NULL;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_XAITTSVoiceId, &val);
+    return val;
+}
+
+void configSetXAITTSVoiceId(CONST_STRPTR value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_XAITTSVoiceId, (ULONG)value);
 }
 
 STRPTR configGetOpenAIVoiceInstructions(void) {
