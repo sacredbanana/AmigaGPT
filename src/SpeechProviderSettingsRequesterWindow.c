@@ -312,7 +312,8 @@ static int profileArrayIndexForVisibleCustomIndex(int visibleIndex) {
     int seen = 0;
     int len = json_object_array_length(speechProfilesJson);
     for (int i = 0; i < len; i++) {
-        struct json_object *p = json_object_array_get_idx(speechProfilesJson, i);
+        struct json_object *p =
+            json_object_array_get_idx(speechProfilesJson, i);
         struct json_object *nameObj =
             p ? json_object_object_get(p, "name") : NULL;
         CONST_STRPTR name = nameObj ? json_object_get_string(nameObj) : NULL;
@@ -332,7 +333,8 @@ static LONG visibleCustomCount(void) {
         return 0;
     int len = json_object_array_length(speechProfilesJson);
     for (int i = 0; i < len; i++) {
-        struct json_object *p = json_object_array_get_idx(speechProfilesJson, i);
+        struct json_object *p =
+            json_object_array_get_idx(speechProfilesJson, i);
         struct json_object *nameObj =
             p ? json_object_object_get(p, "name") : NULL;
         CONST_STRPTR name = nameObj ? json_object_get_string(nameObj) : NULL;
@@ -441,10 +443,11 @@ static void updateRequirementWarningForSystem(SpeechSystem sys,
     set(warningTextObject, MUIA_Text_Contents, warningBuf);
 }
 
-static struct json_object *
-getElevenLabsModels(CONST_STRPTR host, UWORD port, BOOL useSSL,
-                    CONST_STRPTR endpointUrl, AuthorizationType authType,
-                    CONST_STRPTR apiKey) {
+static struct json_object *getElevenLabsModels(CONST_STRPTR host, UWORD port,
+                                               BOOL useSSL,
+                                               CONST_STRPTR endpointUrl,
+                                               AuthorizationType authType,
+                                               CONST_STRPTR apiKey) {
     UBYTE endpoint[512];
     if (host == NULL || strlen(host) == 0)
         host = ELEVENLABS_HOST;
@@ -463,8 +466,7 @@ getElevenLabsModels(CONST_STRPTR host, UWORD port, BOOL useSSL,
 }
 
 static void addDefaultElevenLabsModel(struct json_object *models,
-                                      CONST_STRPTR modelId,
-                                      CONST_STRPTR name) {
+                                      CONST_STRPTR modelId, CONST_STRPTR name) {
     struct json_object *model = json_object_new_object();
     json_object_object_add(model, "model_id",
                            json_object_new_string(modelId ? modelId : ""));
@@ -541,10 +543,11 @@ static void ensureDefaultOpenAITTSModelsJson(void) {
     json_object_object_add(openAITTSModelsJson, "data", models);
 }
 
-static struct json_object *
-getOpenAITTSModels(CONST_STRPTR host, UWORD port, BOOL useSSL,
-                   CONST_STRPTR endpointUrl, AuthorizationType authType,
-                   CONST_STRPTR apiKey) {
+static struct json_object *getOpenAITTSModels(CONST_STRPTR host, UWORD port,
+                                              BOOL useSSL,
+                                              CONST_STRPTR endpointUrl,
+                                              AuthorizationType authType,
+                                              CONST_STRPTR apiKey) {
     /* getChatModels already targets /<endpointUrl>/models and handles auth /
      * proxy, so reuse it. The response is the raw OpenAI models payload. */
     return getChatModels((STRPTR)host, (ULONG)port, useSSL, apiKey,
@@ -584,8 +587,7 @@ filterOpenAITTSModels(struct json_object *rawModels) {
     for (LONG i = 0; i < count; i++) {
         struct json_object *entry = json_object_array_get_idx(dataArray, i);
         struct json_object *idObj = NULL;
-        if (entry == NULL ||
-            !json_object_object_get_ex(entry, "id", &idObj))
+        if (entry == NULL || !json_object_object_get_ex(entry, "id", &idObj))
             continue;
         CONST_STRPTR id = json_object_get_string(idObj);
         if (id == NULL || strstr(id, "tts") == NULL)
@@ -622,8 +624,7 @@ static void setOpenAITtsModelListActiveById(CONST_STRPTR modelId) {
         return;
 
     struct json_object *modelsArray = NULL;
-    if (!json_object_object_get_ex(openAITTSModelsJson, "data",
-                                   &modelsArray)) {
+    if (!json_object_object_get_ex(openAITTSModelsJson, "data", &modelsArray)) {
         if (json_object_is_type(openAITTSModelsJson, json_type_array))
             modelsArray = openAITTSModelsJson;
         else
@@ -804,15 +805,15 @@ static CONST_STRPTR currentXAIVoiceDisplayFromUI(void) {
     if (active < 0 || active >= (LONG)json_object_array_length(voices))
         return NULL;
     struct json_object *v = json_object_array_get_idx(voices, active);
-    struct json_object *disp =
-        v ? json_object_object_get(v, "display") : NULL;
+    struct json_object *disp = v ? json_object_object_get(v, "display") : NULL;
     return disp ? json_object_get_string(disp) : NULL;
 }
 
-static struct json_object *
-searchElevenLabsVoices(CONST_STRPTR host, UWORD port, BOOL useSSL,
-                       AuthorizationType authType, CONST_STRPTR apiKey,
-                       CONST_STRPTR query) {
+static struct json_object *searchElevenLabsVoices(CONST_STRPTR host, UWORD port,
+                                                  BOOL useSSL,
+                                                  AuthorizationType authType,
+                                                  CONST_STRPTR apiKey,
+                                                  CONST_STRPTR query) {
     UBYTE endpoint[512];
     if (host == NULL || strlen(host) == 0)
         host = ELEVENLABS_HOST;
@@ -862,8 +863,7 @@ static void populateOpenAITtsModelList(void) {
         return;
 
     struct json_object *modelsArray = NULL;
-    if (!json_object_object_get_ex(openAITTSModelsJson, "data",
-                                   &modelsArray)) {
+    if (!json_object_object_get_ex(openAITTSModelsJson, "data", &modelsArray)) {
         if (json_object_is_type(openAITTSModelsJson, json_type_array))
             modelsArray = openAITTSModelsJson;
         else
@@ -1023,9 +1023,9 @@ HOOKPROTONHNONP(OpenAITTSFetchModelsButtonClickedFunc, void) {
     updateStatusBar(STRING_FETCHING_OPENAI_MODELS, yellowPen);
     set(openAiTtsFetchModelsButton, MUIA_Disabled, TRUE);
 
-    struct json_object *raw = getOpenAITTSModels(
-        host, (UWORD)port, useSSL == 1, endpointUrl,
-        (AuthorizationType)authType, apiKey);
+    struct json_object *raw =
+        getOpenAITTSModels(host, (UWORD)port, useSSL == 1, endpointUrl,
+                           (AuthorizationType)authType, apiKey);
     struct json_object *filtered = filterOpenAITTSModels(raw);
     if (raw != NULL)
         json_object_put(raw);
@@ -1116,9 +1116,9 @@ HOOKPROTONHNONP(ElevenLabsSearchVoicesButtonClickedFunc, void) {
         elevenLabsVoicesJson = NULL;
     }
 
-    elevenLabsVoicesJson = searchElevenLabsVoices(
-        host, (UWORD)port, useSSL == 1, (AuthorizationType)authType, apiKey,
-        query);
+    elevenLabsVoicesJson =
+        searchElevenLabsVoices(host, (UWORD)port, useSSL == 1,
+                               (AuthorizationType)authType, apiKey, query);
     if (elevenLabsVoicesJson != NULL) {
         populateElevenLabsVoiceList();
         updateStatusBar(STRING_READY, greenPen);
@@ -1241,7 +1241,8 @@ static void loadProfilesFromConfig(void) {
                       ? json_object_array_length(speechProfilesJson)
                       : 0;
         for (int j = 0; j < len; j++) {
-            struct json_object *p = json_object_array_get_idx(speechProfilesJson, j);
+            struct json_object *p =
+                json_object_array_get_idx(speechProfilesJson, j);
             struct json_object *nameObj =
                 p ? json_object_object_get(p, "name") : NULL;
             CONST_STRPTR name =
@@ -1455,8 +1456,7 @@ static void updateSpeechApiKeyStringEnabledFromAuth(SpeechSystem sys) {
     LONG authType = (LONG)AUTHORIZATION_TYPE_BEARER;
     if (speechAuthorizationTypeCycle != NULL)
         get(speechAuthorizationTypeCycle, MUIA_Cycle_Active, &authType);
-    BOOL authNone =
-        ((AuthorizationType)authType == AUTHORIZATION_TYPE_NONE);
+    BOOL authNone = ((AuthorizationType)authType == AUTHORIZATION_TYPE_NONE);
     if (openAiApiKeyString != NULL)
         set(openAiApiKeyString, MUIA_Disabled,
             !(sys == SPEECH_SYSTEM_OPENAI) || authNone);
@@ -1549,8 +1549,7 @@ static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
     if (xaiVoiceList != NULL)
         set(xaiVoiceList, MUIA_Disabled, !(sys == SPEECH_SYSTEM_XAI));
     if (xaiFetchVoicesButton != NULL)
-        set(xaiFetchVoicesButton, MUIA_Disabled,
-            !(sys == SPEECH_SYSTEM_XAI));
+        set(xaiFetchVoicesButton, MUIA_Disabled, !(sys == SPEECH_SYSTEM_XAI));
     if (xaiCurrentVoiceText != NULL)
         set(xaiCurrentVoiceText, MUIA_Disabled, !(sys == SPEECH_SYSTEM_XAI));
 }
@@ -1780,8 +1779,9 @@ static void loadProfileIntoUI(LONG activeIndex) {
         }
         if (openAiTtsCurrentModelText != NULL)
             set(openAiTtsCurrentModelText, MUIA_Text_Contents,
-                (mid != NULL && strlen(mid) > 0) ? mid
-                                                 : (STRPTR)STRING_NONE_SELECTED);
+                (mid != NULL && strlen(mid) > 0)
+                    ? mid
+                    : (STRPTR)STRING_NONE_SELECTED);
         ensureDefaultOpenAITTSModelsJson();
         populateOpenAITtsModelList();
         setOpenAITtsModelListActiveById(mid);
@@ -1886,8 +1886,7 @@ static void loadProfileIntoUI(LONG activeIndex) {
                 struct json_object *vObj =
                     json_object_object_get(customProfile, "xaiTTSVoice");
                 if (vObj != NULL) {
-                    XAITTSVoice legacy =
-                        (XAITTSVoice)json_object_get_int(vObj);
+                    XAITTSVoice legacy = (XAITTSVoice)json_object_get_int(vObj);
                     if (legacy >= 0 && XAI_TTS_VOICE_NAMES[legacy] != NULL)
                         vid = XAI_TTS_VOICE_NAMES[legacy];
                 }
@@ -1911,8 +1910,7 @@ static void loadProfileIntoUI(LONG activeIndex) {
                         v ? json_object_object_get(v, "voice_id") : NULL;
                     CONST_STRPTR id =
                         idObj ? json_object_get_string(idObj) : NULL;
-                    if (id != NULL && vid != NULL &&
-                        strcmp(id, vid) == 0) {
+                    if (id != NULL && vid != NULL && strcmp(id, vid) == 0) {
                         disp = xaiVoiceDisplayString(v, buf, sizeof(buf));
                         break;
                     }
@@ -2003,25 +2001,27 @@ static struct json_object *createDefaultProfile(CONST_STRPTR name) {
     json_object_object_add(p, "host", json_object_new_string("api.openai.com"));
     json_object_object_add(p, "port", json_object_new_int(443));
     json_object_object_add(p, "useSSL", json_object_new_boolean(TRUE));
-    json_object_object_add(
-        p, "authorizationType",
-        json_object_new_int((int)AUTHORIZATION_TYPE_BEARER));
+    json_object_object_add(p, "authorizationType",
+                           json_object_new_int((int)AUTHORIZATION_TYPE_BEARER));
     json_object_object_add(p, "apiEndpointUrl", json_object_new_string("v1"));
     json_object_object_add(p, "openAiApiKey", json_object_new_string(""));
     {
         STRPTR mid = configGetOpenAITTSModelId();
         json_object_object_add(
             p, "openAITTSModelId",
-            json_object_new_string(mid ? mid : OPENAI_TTS_MODEL_NAMES
-                                              [OPENAI_TTS_MODEL_GPT_4o_MINI_TTS]));
+            json_object_new_string(
+                mid ? mid
+                    : OPENAI_TTS_MODEL_NAMES
+                          [OPENAI_TTS_MODEL_GPT_4o_MINI_TTS]));
     }
-    json_object_object_add(
-        p, "openAITTSVoice", json_object_new_int((int)configGetOpenAITTSVoice()));
+    json_object_object_add(p, "openAITTSVoice",
+                           json_object_new_int((int)configGetOpenAITTSVoice()));
     json_object_object_add(p, "openAIVoiceInstructions",
                            json_object_new_string(""));
     json_object_object_add(p, "elevenLabsAPIKey", json_object_new_string(""));
-    json_object_object_add(p, "elevenLabsModel",
-                           json_object_new_string(ELEVENLABS_MODEL_FLASH_V2_5_ID));
+    json_object_object_add(
+        p, "elevenLabsModel",
+        json_object_new_string(ELEVENLABS_MODEL_FLASH_V2_5_ID));
     json_object_object_add(
         p, "elevenLabsModelName",
         json_object_new_string(ELEVENLABS_MODEL_FLASH_V2_5_NAME));
@@ -2077,7 +2077,8 @@ static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys) {
     }
 
     if (sys == SPEECH_SYSTEM_OPENAI) {
-        json_object_object_add(p, "host", json_object_new_string("api.openai.com"));
+        json_object_object_add(p, "host",
+                               json_object_new_string("api.openai.com"));
         json_object_object_add(p, "port", json_object_new_int(443));
         json_object_object_add(p, "useSSL", json_object_new_boolean(TRUE));
         json_object_object_add(
@@ -2094,8 +2095,10 @@ static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys) {
             STRPTR mid = configGetOpenAITTSModelId();
             json_object_object_add(
                 p, "openAITTSModelId",
-                json_object_new_string(mid ? mid : OPENAI_TTS_MODEL_NAMES
-                                                  [OPENAI_TTS_MODEL_GPT_4o_MINI_TTS]));
+                json_object_new_string(
+                    mid ? mid
+                        : OPENAI_TTS_MODEL_NAMES
+                              [OPENAI_TTS_MODEL_GPT_4o_MINI_TTS]));
         }
         json_object_object_add(
             p, "openAITTSVoice",
@@ -2108,7 +2111,8 @@ static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys) {
     }
 
     if (sys == SPEECH_SYSTEM_ELEVENLABS) {
-        json_object_object_add(p, "host", json_object_new_string(ELEVENLABS_HOST));
+        json_object_object_add(p, "host",
+                               json_object_new_string(ELEVENLABS_HOST));
         json_object_object_add(p, "port", json_object_new_int(ELEVENLABS_PORT));
         json_object_object_add(p, "useSSL", json_object_new_boolean(TRUE));
         json_object_object_add(
@@ -2123,9 +2127,8 @@ static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys) {
                                        : ""));
         json_object_object_add(
             p, "elevenLabsModel",
-            json_object_new_string(configGetElevenLabsModel()
-                                       ? configGetElevenLabsModel()
-                                       : ""));
+            json_object_new_string(
+                configGetElevenLabsModel() ? configGetElevenLabsModel() : ""));
         json_object_object_add(
             p, "elevenLabsModelName",
             json_object_new_string(configGetElevenLabsModelName()
@@ -2152,13 +2155,12 @@ static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys) {
             json_object_new_int((int)AUTHORIZATION_TYPE_BEARER));
         json_object_object_add(p, "apiEndpointUrl",
                                json_object_new_string("v1"));
-        json_object_object_add(p, "xaiApiKey",
-                               json_object_new_string(configGetGrokApiKey()
-                                                          ? configGetGrokApiKey()
-                                                          : ""));
         json_object_object_add(
-            p, "xaiTTSVoice",
-            json_object_new_int((int)configGetXAITTSVoice()));
+            p, "xaiApiKey",
+            json_object_new_string(configGetGrokApiKey() ? configGetGrokApiKey()
+                                                         : ""));
+        json_object_object_add(
+            p, "xaiTTSVoice", json_object_new_int((int)configGetXAITTSVoice()));
         {
             STRPTR vid = configGetXAITTSVoiceId();
             if (vid == NULL || strlen(vid) == 0)
@@ -2264,12 +2266,11 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
                                json_object_new_boolean(useSSL == 1));
         json_object_object_add(p, "authorizationType",
                                json_object_new_int((int)authType));
-        json_object_object_add(
-            p, "apiEndpointUrl",
-            json_object_new_string((endpointUrl != NULL &&
-                                    strlen(endpointUrl) > 0)
-                                       ? endpointUrl
-                                       : "v1"));
+        json_object_object_add(p, "apiEndpointUrl",
+                               json_object_new_string((endpointUrl != NULL &&
+                                                       strlen(endpointUrl) > 0)
+                                                          ? endpointUrl
+                                                          : "v1"));
     }
 
     /* OpenAI */
@@ -2300,10 +2301,10 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
         }
         if (selectedId == NULL || strlen(selectedId) == 0) {
             STRPTR fallback = configGetOpenAITTSModelId();
-            selectedId = (fallback != NULL && strlen(fallback) > 0)
-                             ? (CONST_STRPTR)fallback
-                             : OPENAI_TTS_MODEL_NAMES
-                                   [OPENAI_TTS_MODEL_GPT_4o_MINI_TTS];
+            selectedId =
+                (fallback != NULL && strlen(fallback) > 0)
+                    ? (CONST_STRPTR)fallback
+                    : OPENAI_TTS_MODEL_NAMES[OPENAI_TTS_MODEL_GPT_4o_MINI_TTS];
         }
         json_object_object_add(p, "openAITTSModelId",
                                json_object_new_string(selectedId));
@@ -2370,14 +2371,13 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
     } else {
         struct json_object *oldProfile =
             getWorkingProfileForListIndex(lastSelectedProfile);
-        struct json_object *oldModel = oldProfile
-                                           ? json_object_object_get(
-                                                 oldProfile, "elevenLabsModel")
-                                           : NULL;
-        struct json_object *oldModelName =
-            oldProfile ? json_object_object_get(oldProfile,
-                                                "elevenLabsModelName")
+        struct json_object *oldModel =
+            oldProfile ? json_object_object_get(oldProfile, "elevenLabsModel")
                        : NULL;
+        struct json_object *oldModelName =
+            oldProfile
+                ? json_object_object_get(oldProfile, "elevenLabsModelName")
+                : NULL;
         if (oldModel != NULL) {
             json_object_object_add(
                 p, "elevenLabsModel",
@@ -2437,14 +2437,13 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
     } else {
         struct json_object *oldProfile =
             getWorkingProfileForListIndex(lastSelectedProfile);
-        struct json_object *oldVoice = oldProfile
-                                           ? json_object_object_get(
-                                                 oldProfile, "elevenLabsVoiceID")
-                                           : NULL;
-        struct json_object *oldVoiceName =
-            oldProfile ? json_object_object_get(oldProfile,
-                                                "elevenLabsVoiceName")
+        struct json_object *oldVoice =
+            oldProfile ? json_object_object_get(oldProfile, "elevenLabsVoiceID")
                        : NULL;
+        struct json_object *oldVoiceName =
+            oldProfile
+                ? json_object_object_get(oldProfile, "elevenLabsVoiceName")
+                : NULL;
         if (oldVoice != NULL) {
             json_object_object_add(
                 p, "elevenLabsVoiceID",
@@ -2506,7 +2505,8 @@ static void commitBuiltinProfileToConfig(struct json_object *profile) {
     if (profile == NULL)
         return;
 
-    struct json_object *sysObj = json_object_object_get(profile, "speechSystem");
+    struct json_object *sysObj =
+        json_object_object_get(profile, "speechSystem");
     if (sysObj == NULL)
         return;
     SpeechSystem sys = (SpeechSystem)json_object_get_int(sysObj);
@@ -2516,34 +2516,26 @@ static void commitBuiltinProfileToConfig(struct json_object *profile) {
         if (sys == SPEECH_SYSTEM_34) {
             configSetSpeechAccent34(accent);
 #ifdef __AMIGAOS3__
-            configSetNarratorRate34(
-                (ULONG)jsonIntOrDefault(profile, "narratorRate",
-                                        (LONG)configGetNarratorRate34()));
-            configSetNarratorPitch34(
-                (ULONG)jsonIntOrDefault(profile, "narratorPitch",
-                                        (LONG)configGetNarratorPitch34()));
-            configSetNarratorMode34(
-                (ULONG)jsonIntOrDefault(profile, "narratorMode",
-                                        (LONG)configGetNarratorMode34()));
-            configSetNarratorSex34(
-                (ULONG)jsonIntOrDefault(profile, "narratorSex",
-                                        (LONG)configGetNarratorSex34()));
+            configSetNarratorRate34((ULONG)jsonIntOrDefault(
+                profile, "narratorRate", (LONG)configGetNarratorRate34()));
+            configSetNarratorPitch34((ULONG)jsonIntOrDefault(
+                profile, "narratorPitch", (LONG)configGetNarratorPitch34()));
+            configSetNarratorMode34((ULONG)jsonIntOrDefault(
+                profile, "narratorMode", (LONG)configGetNarratorMode34()));
+            configSetNarratorSex34((ULONG)jsonIntOrDefault(
+                profile, "narratorSex", (LONG)configGetNarratorSex34()));
 #endif
         } else {
             configSetSpeechAccent37(accent);
 #ifdef __AMIGAOS3__
-            configSetNarratorRate37(
-                (ULONG)jsonIntOrDefault(profile, "narratorRate",
-                                        (LONG)configGetNarratorRate37()));
-            configSetNarratorPitch37(
-                (ULONG)jsonIntOrDefault(profile, "narratorPitch",
-                                        (LONG)configGetNarratorPitch37()));
-            configSetNarratorMode37(
-                (ULONG)jsonIntOrDefault(profile, "narratorMode",
-                                        (LONG)configGetNarratorMode37()));
-            configSetNarratorSex37(
-                (ULONG)jsonIntOrDefault(profile, "narratorSex",
-                                        (LONG)configGetNarratorSex37()));
+            configSetNarratorRate37((ULONG)jsonIntOrDefault(
+                profile, "narratorRate", (LONG)configGetNarratorRate37()));
+            configSetNarratorPitch37((ULONG)jsonIntOrDefault(
+                profile, "narratorPitch", (LONG)configGetNarratorPitch37()));
+            configSetNarratorMode37((ULONG)jsonIntOrDefault(
+                profile, "narratorMode", (LONG)configGetNarratorMode37()));
+            configSetNarratorSex37((ULONG)jsonIntOrDefault(
+                profile, "narratorSex", (LONG)configGetNarratorSex37()));
 #endif
         }
     } else if (sys == SPEECH_SYSTEM_FLITE) {
@@ -2586,7 +2578,8 @@ static void commitBuiltinProfileToConfig(struct json_object *profile) {
         configSetOpenAIVoiceInstructions(
             jsonStringOrEmpty(profile, "openAIVoiceInstructions"));
     } else if (sys == SPEECH_SYSTEM_ELEVENLABS) {
-        configSetElevenLabsAPIKey(jsonStringOrEmpty(profile, "elevenLabsAPIKey"));
+        configSetElevenLabsAPIKey(
+            jsonStringOrEmpty(profile, "elevenLabsAPIKey"));
         configSetElevenLabsModel(jsonStringOrEmpty(profile, "elevenLabsModel"));
         configSetElevenLabsModelName(
             jsonStringOrEmpty(profile, "elevenLabsModelName"));
@@ -2823,11 +2816,12 @@ HOOKPROTONHNONP(SpeechProviderCancelFunc, void) {
 }
 MakeHook(SpeechProviderCancelHook, SpeechProviderCancelFunc);
 
-/* Read the OpenAI voice-instructions editor as plain text. MUIA_TextEditor_Contents
- * returns the editor's internal markup format (or NULL) and is unsafe for
- * round-tripping via JSON, so we use MUIM_TextEditor_ExportText on Amiga and
- * fall back to MUIA_String_Contents on AROS, matching the pattern used for
- * the other TextEditor objects in the project.
+/* Read the OpenAI voice-instructions editor as plain text.
+ * MUIA_TextEditor_Contents returns the editor's internal markup format (or
+ * NULL) and is unsafe for round-tripping via JSON, so we use
+ * MUIM_TextEditor_ExportText on Amiga and fall back to MUIA_String_Contents on
+ * AROS, matching the pattern used for the other TextEditor objects in the
+ * project.
  *
  * On non-AROS the returned buffer is freshly allocated and must be released
  * with FreeVec(); *needsFree is set to TRUE in that case. */
@@ -3083,7 +3077,8 @@ HOOKPROTONHNONP(NewProfileFunc, void) {
     struct json_object *profile = createDefaultProfile(newName);
     json_object_array_add(speechProfilesJson, profile);
 
-    LONG newListIndex = getBuiltinSpeechProviderCount() + visibleCustomCount() - 1;
+    LONG newListIndex =
+        getBuiltinSpeechProviderCount() + visibleCustomCount() - 1;
     pendingProfileListSelect = newListIndex;
     populateProfileList();
     set(speechProfileList, MUIA_NList_Active, newListIndex);
@@ -3113,8 +3108,8 @@ HOOKPROTONHNONP(DuplicateProfileFunc, void) {
     get(speechProfileNameString, MUIA_String_Contents, &currentName);
     if ((currentName == NULL || strlen(currentName) == 0) &&
         isBuiltinListIndex(active)) {
-        currentName = (STRPTR)builtinNameForSystem(
-            builtinSystemForListIndex(active));
+        currentName =
+            (STRPTR)builtinNameForSystem(builtinSystemForListIndex(active));
     }
 
     STRPTR newName =
@@ -3128,7 +3123,8 @@ HOOKPROTONHNONP(DuplicateProfileFunc, void) {
     struct json_object *profile = createProfileFromUI(newName);
     json_object_array_add(speechProfilesJson, profile);
 
-    LONG newListIndex = getBuiltinSpeechProviderCount() + visibleCustomCount() - 1;
+    LONG newListIndex =
+        getBuiltinSpeechProviderCount() + visibleCustomCount() - 1;
     pendingProfileListSelect = newListIndex;
     populateProfileList();
     set(speechProfileList, MUIA_NList_Active, newListIndex);
@@ -3534,7 +3530,7 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                                 End,
                                 Child, HGroup,
                                     Child, xaiFetchVoicesButton =
-                                        MUI_MakeObject(MUIO_Button, STRING_FETCH_MODELS, TAG_DONE),
+                                        MUI_MakeObject(MUIO_Button, STRING_GET_ALL_VOICES, TAG_DONE),
                                 End,
                                 Child, NListviewObject,
                                     MUIA_NListview_NList, xaiVoiceList = NListObject,
