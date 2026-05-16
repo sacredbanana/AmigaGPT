@@ -1908,3 +1908,8 @@ msgstr "Fetching OpenAI models..."
 msgctxt "STRING_ERROR_FETCHING_OPENAI_MODELS (360//)"
 msgid "Failed to fetch OpenAI models"
 msgstr "Failed to fetch OpenAI models"
+
+#: src/MainWindow.c
+msgctxt "STRING_STOP_SPEAKING (361//)"
+msgid "Stop speaking"
+msgstr "Stop speaking"

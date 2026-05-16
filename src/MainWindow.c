@@ -18,6 +18,7 @@
 #include "gui.h"
 #include "menu.h"
 #include "MainWindow.h"
+#include "speech.h"
 #include <dos/dos.h>
 
 /* Max nesting depth for B/I/U combined. Adjust as needed. */
@@ -40,6 +41,7 @@ Object *mainWindowObject = NULL;
 Object *newChatButton;
 Object *deleteChatButton;
 Object *sendMessageButton;
+Object *stopSpeakingButton;
 Object *chatInputTextEditor;
 Object *chatOutputListView;
 Object *chatOutputTextEditor;
@@ -106,8 +108,7 @@ static STRPTR allocNewConversationTitle(struct Conversation *conv,
         while (node->mln_Succ != NULL) {
             struct ConversationNode *m = (struct ConversationNode *)node;
             if (strcmp((const char *)m->role, "user") == 0 &&
-                m->content != NULL &&
-                strlen((const char *)m->content) > 0) {
+                m->content != NULL && strlen((const char *)m->content) > 0) {
                 STRPTR out = AllocVec(CONVERSATION_TITLE_FALLBACK_MAX + 1,
                                       MEMF_ANY | MEMF_CLEAR);
                 if (out == NULL)
@@ -163,11 +164,11 @@ HOOKPROTONHNO(DisplayConversationLI_TextFunc, void,
     static char nameBuf[512];
     struct Conversation *entry = (struct Conversation *)ndm->entry;
     if (entry == NULL || entry->name == NULL) {
-        ndm->strings[0] = (STRPTR)"";
+        ndm->strings[0] = (STRPTR) "";
     } else {
         STRPTR converted = CodesetsUTF8ToStr(
-            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-            (Tag)entry->name, CSA_MapForeignChars, TRUE, TAG_DONE);
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)entry->name,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
         if (converted != NULL) {
             strncpy(nameBuf, converted, sizeof(nameBuf) - 1);
             nameBuf[sizeof(nameBuf) - 1] = '\0';
@@ -204,11 +205,11 @@ HOOKPROTONHNO(DisplayImageLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
     static char imgNameBuf[512];
     struct GeneratedImage *entry = (struct GeneratedImage *)ndm->entry;
     if (entry == NULL || entry->name == NULL) {
-        ndm->strings[0] = (STRPTR)"";
+        ndm->strings[0] = (STRPTR) "";
     } else {
         STRPTR converted = CodesetsUTF8ToStr(
-            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-            (Tag)entry->name, CSA_MapForeignChars, TRUE, TAG_DONE);
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)entry->name,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
         if (converted != NULL) {
             strncpy(imgNameBuf, converted, sizeof(imgNameBuf) - 1);
             imgNameBuf[sizeof(imgNameBuf) - 1] = '\0';
@@ -296,6 +297,30 @@ HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
     sendChatMessage();
 }
 MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
+
+HOOKPROTONHNONP(StopSpeakingButtonClickedFunc, void) {
+#ifdef __AMIGAOS3__
+    if (NarratorIO != NULL &&
+        ((struct IORequest *)NarratorIO)->io_Device != NULL) {
+        if (!CheckIO((struct IORequest *)NarratorIO)) {
+            AbortIO((struct IORequest *)NarratorIO);
+            WaitIO((struct IORequest *)NarratorIO);
+        }
+    }
+#elif defined(__AMIGAOS4__)
+    if (fliteRequest != NULL &&
+        ((struct IORequest *)fliteRequest)->io_Device != NULL &&
+        !CheckIO((struct IORequest *)fliteRequest)) {
+        AbortIO((struct IORequest *)fliteRequest);
+        WaitIO((struct IORequest *)fliteRequest);
+    }
+#endif
+    if (ahiRequest != NULL && !CheckIO((struct IORequest *)ahiRequest)) {
+        AbortIO((struct IORequest *)ahiRequest);
+        WaitIO((struct IORequest *)ahiRequest);
+    }
+}
+MakeHook(StopSpeakingButtonClickedHook, StopSpeakingButtonClickedFunc);
 
 HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
     currentImage = NULL;
@@ -674,8 +699,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         UTF8 *responseString = combined;
         generatedImage->name =
             AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
-        strncpy(generatedImage->name, responseString,
-                strlen(responseString));
+        strncpy(generatedImage->name, responseString, strlen(responseString));
         updateStatusBar(STRING_READY, 5);
         ri = 0;
         while ((r = responses[ri++]) != NULL) {
@@ -853,6 +877,9 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]+ %s\0",
              greenPen, STRING_NEW_IMAGE);
     set(newImageButton, MUIA_Text_Contents, buttonLabelText);
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+             redPen, STRING_STOP_SPEAKING);
+    set(stopSpeakingButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s\0",
              redPen, STRING_DELETE_IMAGE);
     set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
@@ -1295,9 +1322,13 @@ LONG createMainWindow() {
                                 // Chat input text editor
                                 Child, chatInputTextEditor,
                                 // Send message button
-                                Child, HGroup, MUIA_HorizWeight, 10,
+                                Child, VGroup, MUIA_HorizWeight, 10,
                                     Child, sendMessageButton = MUI_MakeObject(MUIO_Button, STRING_SEND,
                                         MUIA_ObjectID, OBJECT_ID_SEND_MESSAGE_BUTTON,
+                                        MUIA_CycleChain, TRUE,
+                                        MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                    End,
+                                    Child, stopSpeakingButton = MUI_MakeObject(MUIO_Button, STRING_STOP_SPEAKING,
                                         MUIA_CycleChain, TRUE,
                                         MUIA_InputMode, MUIV_InputMode_RelVerify,
                                     End,
@@ -1429,6 +1460,9 @@ LONG createMainWindow() {
         snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
                  bluePen, STRING_SEND);
         set(sendMessageButton, MUIA_Text_Contents, buttonLabelText);
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+                 redPen, STRING_STOP_SPEAKING);
+        set(stopSpeakingButton, MUIA_Text_Contents, buttonLabelText);
         snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
                  "\33c\33P[%ld]+ %s\0", greenPen, STRING_NEW_IMAGE);
         set(newImageButton, MUIA_Text_Contents, buttonLabelText);
@@ -1468,6 +1502,9 @@ static void addMainWindowActions() {
     DoMethod(sendMessageButton, MUIM_Notify, MUIA_Pressed, FALSE,
              sendMessageButton, 2, MUIM_CallHook,
              &SendMessageButtonClickedHook);
+    DoMethod(stopSpeakingButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             stopSpeakingButton, 2, MUIM_CallHook,
+             &StopSpeakingButtonClickedHook);
     DoMethod(createImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
              createImageButton, 2, MUIM_CallHook,
              &CreateImageButtonClickedHook);
@@ -1688,14 +1725,13 @@ static void sendChatMessage() {
                         strncat(receivedMessage, contentString,
                                 READ_BUFFER_LENGTH - strlen(receivedMessage) -
                                     strlen(contentString) - 1);
-                        CONST_STRPTR displayStr =
-                            formattedMessageSystemEncoded;
+                        CONST_STRPTR displayStr = formattedMessageSystemEncoded;
                         STRPTR latin1StreamFb = NULL;
                         if (displayStr == NULL) {
                             latin1StreamFb = utf8ToLatin1(contentString);
                             displayStr = latin1StreamFb
-                                           ? latin1StreamFb
-                                           : (CONST_STRPTR)contentString;
+                                             ? latin1StreamFb
+                                             : (CONST_STRPTR)contentString;
                         }
                         ULONG displayLen = strlen(displayStr);
                         strncat(chatOutputTextEditorContents, displayStr,
@@ -1722,29 +1758,6 @@ static void sendChatMessage() {
                             }
                             streamedCharsSinceFlush = 0;
                             nextUiFlushTick = nowTick + uiFlushIntervalTicks;
-                            if (configGetSpeechEnabled()) {
-                                // Text for speaking
-                                STRPTR unformattedMessageSystemEncoded =
-                                    CodesetsUTF8ToStr(
-                                        CSA_DestCodeset, (Tag)systemCodeset,
-                                        CSA_Source, (Tag)receivedMessage,
-                                        CSA_MapForeignChars, TRUE, TAG_DONE);
-                                if (unformattedMessageSystemEncoded != NULL) {
-                                    SpeechSystem ss = configGetSpeechSystem();
-                                    if (ss != SPEECH_SYSTEM_OPENAI &&
-                                        ss != SPEECH_SYSTEM_ELEVENLABS &&
-                                        ss != SPEECH_SYSTEM_XAI) {
-                                        speakText(
-                                            unformattedMessageSystemEncoded +
-                                                speechIndex,
-                                            NULL, NULL);
-                                        speechIndex = strlen(
-                                            unformattedMessageSystemEncoded);
-                                    }
-                                    CodesetsFreeA(
-                                        unformattedMessageSystemEncoded, NULL);
-                                }
-                            }
                         }
                     }
 
@@ -2018,8 +2031,7 @@ static void sendChatMessage() {
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                     (Tag)receivedMessage, CSA_MapForeignChars, TRUE, TAG_DONE);
                 if (receivedMessageSystemEncoded != NULL) {
-                    speakText(receivedMessageSystemEncoded + speechIndex, NULL,
-                              NULL);
+                    speakText(receivedMessageSystemEncoded, NULL, NULL);
                     CodesetsFreeA(receivedMessageSystemEncoded, NULL);
                 }
             }
@@ -2167,9 +2179,8 @@ void displayConversation(struct Conversation *conversation) {
             BOOL freeWithCodesets = (content != NULL);
             if (content == NULL) {
                 latin1Fallback = utf8ToLatin1(conversationNode->content);
-                content = latin1Fallback
-                              ? latin1Fallback
-                              : (STRPTR)conversationNode->content;
+                content = latin1Fallback ? latin1Fallback
+                                         : (STRPTR)conversationNode->content;
             }
             UBYTE userAlignment;
             switch (configGetUserTextAlignment()) {
@@ -2213,8 +2224,8 @@ void displayConversation(struct Conversation *conversation) {
             if (contentForFormatting == NULL) {
                 latin1Fallback = utf8ToLatin1(conversationNode->content);
                 contentForFormatting = latin1Fallback
-                                         ? latin1Fallback
-                                         : (STRPTR)conversationNode->content;
+                                           ? latin1Fallback
+                                           : (STRPTR)conversationNode->content;
             }
             STRPTR formattedContent =
                 convertMarkdownFormattingToMUI(contentForFormatting);

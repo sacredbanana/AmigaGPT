@@ -12,6 +12,9 @@
 - ARexx SENDMESSAGE supports SF=SYSTEMFILE to use the contents of a file as the system prompt
 - New powerful Shell Tool option to ask ChatGPT to run any command on your system in the shell
 - The daemon (AmigaGPTD) now maintains conversation history in T: for context across ARexx calls until reboot
+- The installer is now compatible with AmiKit
+- Speech now runs in the background so the app can remain responsive while it's speaking
+- Added a button to stop speaking
 - ARexx SPEAKTEXT and LISTVOICES support voices for all speech profiles
 - New NEWCHAT ARexx command to clear daemon conversation history
 - Support for Anthropic Claude for chat

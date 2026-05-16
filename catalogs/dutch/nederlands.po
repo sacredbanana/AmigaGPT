@@ -1952,6 +1952,11 @@ msgctxt "STRING_ERROR_FETCHING_OPENAI_MODELS (360//)"
 msgid "Failed to fetch OpenAI models"
 msgstr "Het ophalen van ElevenLabs modellen is mislukt"
 
+#: src/MainWindow.c
+msgctxt "STRING_STOP_SPEAKING (361//)"
+msgid "Stop speaking"
+msgstr "Stop speaking"
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI-stem"

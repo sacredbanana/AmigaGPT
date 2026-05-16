@@ -1,7 +1,15 @@
 #ifndef SPEECH_H
 #define SPEECH_H
 
+#include <devices/narrator.h>
 #include <proto/dos.h>
+
+#ifdef __AMIGAOS3__
+extern struct narrator_rb *NarratorIO;
+#elif defined(__AMIGAOS4__)
+extern struct FliteRequest *fliteRequest;
+#endif
+extern struct AHIRequest *ahiRequest;
 
 /**
  * A speech system
@@ -72,7 +80,8 @@ LONG initSpeech(SpeechSystem speechSystem);
  **/
 void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat);
 
-/* Speak using an explicitly provided settings struct (no config reads/writes). */
+/* Speak using an explicitly provided settings struct (no config reads/writes).
+ */
 struct SpeechRequestSettings;
 void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                            AudioFormat *audioFormat,
