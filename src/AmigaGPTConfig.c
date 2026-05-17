@@ -52,6 +52,7 @@ struct AmigaGPTConfigData {
     OpenAITTSModel openAITTSModel;
     OpenAITTSVoice openAITTSVoice;
     XAITTSVoice xaiTTSVoice;
+    ULONG xaiAutoSpeechTags;
     ULONG proxyEnabled;
     ULONG proxyPort;
     ULONG proxyUsesSSL;
@@ -218,6 +219,7 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->openAITTSModel = OPENAI_TTS_MODEL_GPT_4o_MINI_TTS;
     data->openAITTSVoice = OPENAI_TTS_VOICE_ALLOY;
     data->xaiTTSVoice = XAI_TTS_VOICE_EVE;
+    data->xaiAutoSpeechTags = TRUE;
     data->proxyEnabled = FALSE;
     data->proxyPort = 8080;
     data->proxyUsesSSL = FALSE;
@@ -504,6 +506,9 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_XAITTSVoice:
         *store = data->xaiTTSVoice;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_XAIAutoSpeechTags:
+        *store = data->xaiAutoSpeechTags;
         return TRUE;
     case MUIA_AmigaGPTConfig_ProxyEnabled:
         *store = data->proxyEnabled;
@@ -876,6 +881,12 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
         case MUIA_AmigaGPTConfig_XAITTSVoice:
             if (data->xaiTTSVoice != (XAITTSVoice)ti_Data) {
                 data->xaiTTSVoice = (XAITTSVoice)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_XAIAutoSpeechTags:
+            if (data->xaiAutoSpeechTags != (ULONG)ti_Data) {
+                data->xaiAutoSpeechTags = (ULONG)ti_Data;
                 changed = TRUE;
             }
             break;
@@ -1413,6 +1424,9 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
                            data->xaiTTSVoiceId != NULL
                                ? json_object_new_string(data->xaiTTSVoiceId)
                                : json_object_new_string(""));
+    json_object_object_add(
+        configJsonObject, "xaiAutoSpeechTags",
+        json_object_new_boolean((BOOL)data->xaiAutoSpeechTags));
     json_object_object_add(configJsonObject, "proxyEnabled",
                            json_object_new_boolean((BOOL)data->proxyEnabled));
     json_object_object_add(configJsonObject, "proxyPort",
@@ -1956,6 +1970,11 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
             data->xaiTTSVoiceId = copyString(str);
         }
     }
+
+    if (json_object_object_get_ex(configJsonObject, "xaiAutoSpeechTags",
+                                  &valueObj))
+        data->xaiAutoSpeechTags =
+            (ULONG)json_object_get_boolean(valueObj) ? TRUE : FALSE;
 
     if (json_object_object_get_ex(configJsonObject, "proxyEnabled", &valueObj))
         data->proxyEnabled = (ULONG)json_object_get_boolean(valueObj);
@@ -2826,6 +2845,7 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
     out->xaiVoice = configGetXAITTSVoice();
     out->xaiVoiceId = dupStrCfg(configGetXAITTSVoiceId());
     out->xaiLanguage = dupStrCfg("en");
+    out->xaiAutoSpeechTags = configGetXAIAutoSpeechTags() ? TRUE : FALSE;
 
     /* Default accent + narrator params based on system */
     if (out->speechSystem == SPEECH_SYSTEM_34) {
@@ -3158,6 +3178,11 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
                 out->xaiLanguage = dupStrCfg(lang);
             }
         }
+        struct json_object *xAutoTags =
+            json_object_object_get(p, "xaiAutoSpeechTags");
+        if (xAutoTags != NULL)
+            out->xaiAutoSpeechTags =
+                json_object_get_boolean(xAutoTags) ? TRUE : FALSE;
 
         break;
     }
@@ -3250,6 +3275,18 @@ STRPTR configGetXAITTSVoiceId(void) {
 void configSetXAITTSVoiceId(CONST_STRPTR value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_XAITTSVoiceId, (ULONG)value);
+}
+
+ULONG configGetXAIAutoSpeechTags(void) {
+    ULONG val = FALSE;
+    if (configObj)
+        get(configObj, MUIA_AmigaGPTConfig_XAIAutoSpeechTags, &val);
+    return val;
+}
+
+void configSetXAIAutoSpeechTags(ULONG value) {
+    if (configObj)
+        set(configObj, MUIA_AmigaGPTConfig_XAIAutoSpeechTags, value);
 }
 
 STRPTR configGetOpenAIVoiceInstructions(void) {

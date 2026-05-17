@@ -40,6 +40,47 @@ static CONST_STRPTR AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS =
     "other decorative Unicode punctuation; use simple plain-text equivalents "
     "instead.";
 
+/* System-prompt addendum injected when the active speech profile is xAI TTS
+ * and the user has enabled automatic speech tag insertion. Teaches the LLM
+ * the inline and wrapping tags supported by xAI's TTS engine so that its
+ * spoken replies can carry pauses, laughter, whispers, etc. */
+static CONST_STRPTR XAI_AUTO_SPEECH_TAG_INSTRUCTIONS =
+    "Your reply will be read aloud by xAI's text-to-speech engine. You may "
+    "embed xAI speech tags inline so the spoken delivery is more expressive. "
+    "Use them sparingly and only where they add natural emphasis or feeling "
+    "- never on every sentence, never to describe what you are doing, and "
+    "never invent tags that are not on this list.\n"
+    "\n"
+    "Inline tags (single point, no closing tag):\n"
+    "  Pauses: [pause], [long-pause]\n"
+    "  Laughter & crying: [laugh], [chuckle], [giggle], [cry]\n"
+    "  Mouth sounds: [tsk], [tongue-click], [lip-smack], [hum-tune]\n"
+    "  Breathing: [breath], [inhale], [exhale], [sigh]\n"
+    "\n"
+    "Wrapping tags (open tag + text + matching close tag):\n"
+    "  Volume & intensity: <soft>...</soft>, <loud>...</loud>, "
+    "<build-intensity>...</build-intensity>, "
+    "<decrease-intensity>...</decrease-intensity>\n"
+    "  Pitch & speed: <higher-pitch>...</higher-pitch>, "
+    "<lower-pitch>...</lower-pitch>, <slow>...</slow>, <fast>...</fast>\n"
+    "  Vocal style: <whisper>...</whisper>, <sing-song>...</sing-song>, "
+    "<singing>...</singing>, <laugh-speak>...</laugh-speak>, "
+    "<emphasis>...</emphasis>\n"
+    "\n"
+    "Guidelines:\n"
+    "- Place inline tags where the expression would naturally occur, e.g. "
+    "\"Really? [laugh] That's incredible!\".\n"
+    "- Wrap whole phrases, not single words, e.g. \"<whisper>It's a "
+    "secret.</whisper>\" reads more naturally than wrapping one word.\n"
+    "- Wrapping tags may be layered, e.g. \"<slow><soft>Goodnight, sleep "
+    "well.</soft></slow>\".\n"
+    "- Output tags inline as plain text exactly as shown above - do not "
+    "escape them, wrap them in code fences, or explain that you are using "
+    "them.\n"
+    "- Tags themselves are never spoken; they only shape the surrounding "
+    "delivery. Punctuation still drives natural rhythm, so keep writing "
+    "normal sentences and add tags where they enhance the read.";
+
 /* Static variables to store pending tool call info captured during streaming */
 static BOOL pendingToolCall = FALSE;
 static UBYTE pendingToolCallId[256] = {0};
@@ -1722,6 +1763,25 @@ struct json_object **postChatMessageToOpenAI(
         struct MinNode *conversationNode = conversation->messages->mlh_Head;
         STRPTR systemInstructions = combineInstructionText(
             conversation->system, AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS);
+
+        /* If speech is on and the active speech profile is xAI TTS with
+         * automatic speech tag insertion enabled, append a tag cheat sheet to
+         * the system prompt so the LLM produces tagged output for playback. */
+        if (configGetSpeechEnabled()) {
+            struct SpeechRequestSettings speechSettings;
+            configGetSpeechRequestSettings(&speechSettings);
+            if (speechSettings.speechSystem == SPEECH_SYSTEM_XAI &&
+                speechSettings.xaiAutoSpeechTags) {
+                STRPTR withTags = combineInstructionText(
+                    systemInstructions, XAI_AUTO_SPEECH_TAG_INSTRUCTIONS);
+                if (withTags != NULL) {
+                    if (systemInstructions != NULL)
+                        FreeVec(systemInstructions);
+                    systemInstructions = withTags;
+                }
+            }
+            configFreeSpeechRequestSettings(&speechSettings);
+        }
 
         if (useGeminiGenerateContent) {
             /* Gemini native generateContent format:

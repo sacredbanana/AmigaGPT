@@ -173,6 +173,10 @@
 /* xAI TTS voice id (string, supports custom voices). */
 #define MUIA_AmigaGPTConfig_XAITTSVoiceId (AmigaGPTConfig_Dummy + 0x88)
 
+/* When the active speech profile uses xAI TTS, ask the LLM to insert xAI
+ * speech tags into its replies for more expressive playback (ULONG bool). */
+#define MUIA_AmigaGPTConfig_XAIAutoSpeechTags (AmigaGPTConfig_Dummy + 0x89)
+
 /* Version tracking attributes (read-only, for internal use) */
 #define MUIA_AmigaGPTConfig_ChatModelSetVersion (AmigaGPTConfig_Dummy + 0x40)
 #define MUIA_AmigaGPTConfig_ImageModelSetVersion (AmigaGPTConfig_Dummy + 0x41)
@@ -251,6 +255,10 @@ struct SpeechRequestSettings {
     STRPTR xaiVoiceId;
     XAITTSVoice xaiVoice;
     STRPTR xaiLanguage;
+    /* When TRUE (and the profile uses xAI TTS) the chat builder appends
+     * instructions asking the LLM to insert xAI speech tags into its replies
+     * for more expressive playback. */
+    BOOL xaiAutoSpeechTags;
 };
 
 void configGetSpeechRequestSettings(struct SpeechRequestSettings *out);
@@ -369,6 +377,8 @@ XAITTSVoice configGetXAITTSVoice(void);
 void configSetXAITTSVoice(XAITTSVoice value);
 STRPTR configGetXAITTSVoiceId(void);
 void configSetXAITTSVoiceId(CONST_STRPTR value);
+ULONG configGetXAIAutoSpeechTags(void);
+void configSetXAIAutoSpeechTags(ULONG value);
 
 /* Proxy settings */
 ULONG configGetProxyEnabled(void);

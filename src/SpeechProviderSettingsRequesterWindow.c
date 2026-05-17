@@ -80,6 +80,7 @@ static Object *xaiApiKeyString = NULL;
 static Object *xaiVoiceList = NULL;
 static Object *xaiFetchVoicesButton = NULL;
 static Object *xaiCurrentVoiceText = NULL;
+static Object *xaiAutoSpeechTagsCheckbox = NULL;
 
 /* Workbench fields */
 static Object *workbenchAccentString = NULL;
@@ -1922,6 +1923,17 @@ static void loadProfileIntoUI(LONG activeIndex) {
                     : (vid != NULL ? vid : (CONST_STRPTR)STRING_NONE_SELECTED));
         }
     }
+    if (xaiAutoSpeechTagsCheckbox != NULL) {
+        LONG autoTags = (LONG)(configGetXAIAutoSpeechTags() ? TRUE : FALSE);
+        if (customProfile != NULL) {
+            struct json_object *atObj =
+                json_object_object_get(customProfile, "xaiAutoSpeechTags");
+            if (atObj != NULL)
+                autoTags =
+                    json_object_get_boolean(atObj) ? (LONG)TRUE : (LONG)FALSE;
+        }
+        set(xaiAutoSpeechTagsCheckbox, MUIA_Selected, autoTags);
+    }
 
     setFieldsEnabledForSystem(sys, isCustomOrNew);
     /* Update per-provider dependency warnings (shown only in relevant groups)
@@ -2031,6 +2043,8 @@ static struct json_object *createDefaultProfile(CONST_STRPTR name) {
     json_object_object_add(
         p, "xaiTTSVoiceId",
         json_object_new_string(XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE]));
+    json_object_object_add(p, "xaiAutoSpeechTags",
+                           json_object_new_boolean(TRUE));
     return p;
 }
 
@@ -2168,6 +2182,10 @@ static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys) {
             json_object_object_add(p, "xaiTTSVoiceId",
                                    json_object_new_string(vid));
         }
+        json_object_object_add(
+            p, "xaiAutoSpeechTags",
+            json_object_new_boolean(
+                configGetXAIAutoSpeechTags() ? TRUE : FALSE));
     }
 
     return p;
@@ -2482,6 +2500,13 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
         json_object_object_add(p, "xaiTTSVoice",
                                json_object_new_int((int)enumIdx));
     }
+    {
+        LONG autoTags = FALSE;
+        if (xaiAutoSpeechTagsCheckbox != NULL)
+            get(xaiAutoSpeechTagsCheckbox, MUIA_Selected, &autoTags);
+        json_object_object_add(p, "xaiAutoSpeechTags",
+                               json_object_new_boolean((BOOL)autoTags));
+    }
 
     return p;
 }
@@ -2596,6 +2621,11 @@ static void commitBuiltinProfileToConfig(struct json_object *profile) {
         CONST_STRPTR vid = jsonStringOrEmpty(profile, "xaiTTSVoiceId");
         if (vid != NULL && strlen(vid) > 0)
             configSetXAITTSVoiceId(vid);
+        struct json_object *atObj =
+            json_object_object_get(profile, "xaiAutoSpeechTags");
+        if (atObj != NULL)
+            configSetXAIAutoSpeechTags(
+                json_object_get_boolean(atObj) ? TRUE : FALSE);
     }
 
     if (sys == SPEECH_SYSTEM_34) {
@@ -3518,6 +3548,12 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                                     MUIA_CycleChain, TRUE,
                                     MUIA_String_MaxLen, 256,
                                 End,
+                            End,
+                            Child, HGroup,
+                                Child, xaiAutoSpeechTagsCheckbox =
+                                    MUI_MakeObject(MUIO_Checkmark, NULL),
+                                Child, LLabel(STRING_XAI_AUTO_INSERT_SPEECH_TAGS),
+                                Child, HSpace(0),
                             End,
                             Child, VGroup,
                                 MUIA_Frame, MUIV_Frame_Group,

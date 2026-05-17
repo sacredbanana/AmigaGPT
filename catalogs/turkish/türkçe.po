@@ -1933,6 +1933,11 @@ msgctxt "STRING_STOP_SPEAKING (361//)"
 msgid "Stop speaking"
 msgstr "Stop speaking"
 
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_XAI_AUTO_INSERT_SPEECH_TAGS (362//)"
+msgid "Auto-insert speech tags into LLM replies"
+msgstr "Auto-insert speech tags into LLM replies"
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Ses"
