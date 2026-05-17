@@ -112,9 +112,8 @@ LONG initSpeech(SpeechSystem speechSystem) {
         }
 
         return RETURN_OK;
-    } else {
-        return RETURN_ERROR;
     }
+
 #ifdef __AMIGAOS3__
     if (!translationBuffer)
         translationBuffer = AllocVec(TRANSLATION_BUFFER_SIZE, MEMF_ANY);
