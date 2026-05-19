@@ -1,5 +1,19 @@
 # Git: Fork und Upstream (dieses Repository)
 
+## Branch-Regel (dieser Fork)
+
+**Nicht direkt auf `master` committen.** Feature-Arbeit auf Topic-Branches (z. B. `scintilla`), dann per Pull Request oder Merge nach `master`, wenn es stabil ist.
+
+```bash
+git checkout scintilla    # oder neuen Branch von master
+# … arbeiten, committen …
+git push -u origin scintilla
+```
+
+`master` soll `origin/master` bzw. nach Sync mit `upstream` dem stabilen Stand entsprechen.
+
+---
+
 Dieses Repo ist typischerweise ein **Fork** von [sacredbanana/AmigaGPT](https://github.com/sacredbanana/AmigaGPT). Lokal solltest du zwei Remotes haben:
 
 | Remote     | Zweck |
