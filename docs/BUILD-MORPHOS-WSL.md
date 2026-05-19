@@ -2,7 +2,7 @@
 
 Anleitung zum Bauen von **AmigaGPT** für MorphOS auf **WSL2** mit **Debian 11/12**. Das Projekt nutzt `Makefile.MorphOS` und erwartet ein SDK unter `/opt/amiga/`.
 
-Siehe auch: [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md), [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md).
+Siehe auch: [docs/README.md](README.md) (Index), [WSL-SETUP-STATUS.md](WSL-SETUP-STATUS.md) (Ist-Stand), [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md), [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md).
 
 ---
 
@@ -169,12 +169,19 @@ ls /opt/amiga/lib/gcc/ppc-morphos/
 
 ## 5. Zusätzliche SDKs (Pflicht für AmigaGPT)
 
-Aus https://github.com/sacredbanana/AmigaSDK-gcc — u. a.:
+### Was ist „AmigaSDK-gcc“?
 
-- **json-c**, **ssl**, **crypto** (Link)
-- **SDI** / `SDI_hook.h` und weitere Dev-Includes
+**Kein zweiter Compiler.** Der Name ist historisch irreführend: Es ist ein **SDK-Zusatzpaket** (Header, Libraries, FlexCat-`.sd`) für Builds mit der **bestehenden** Cross-GCC (`ppc-morphos-gcc`).
 
-Nach `/opt/amiga` bzw. in die Include-Pfade legen, wie im AmigaSDK-gcc-Repo beschrieben.
+| Komponente | Rolle |
+| ---------- | ----- |
+| BIGFOOT `morphos-sdk` | Compiler + MorphOS-Basis-SDK (`/gg`) |
+| **AmigaSDK-gcc** | Fehlende Includes/Libs (json-c, SDI, ssl, …) |
+| FlexCat (selbst gebaut) | Katalog-Tool für `AmigaGPT_cat.c/h` |
+
+Quelle: https://github.com/sacredbanana/AmigaSDK-gcc — Ordner **`sdk/`** ins Dev-Layout kopieren (README dort). Für MorphOS sind u. a. json-c, codesets, guigfx gelistet; AmigaGPT benötigt zusätzlich **SDI** (`SDI_hook.h`).
+
+Nach `/opt/amiga` bzw. passend zu `/gg` legen.
 
 Typische Fehler ohne diesen Schritt:
 

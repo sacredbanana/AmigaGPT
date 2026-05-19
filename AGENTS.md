@@ -16,12 +16,15 @@ Cursor rule: `.cursor/rules/git-branch-policy.mdc` (always applied).
 
 ## Docs map
 
+Start: `docs/README.md`
+
 | Document | Purpose |
 | -------- | ------- |
 | `docs/HANDLUNGSANWEISUNG-GIT.md` | Binding git workflow (DE) |
 | `docs/GIT-FORK-WORKFLOW.md` | Remotes, upstream sync, PRs |
 | `docs/SCINTILLA-ARCHITECTURE.md` | Scintilla / streaming / UTF-8 plan |
 | `docs/BUILD-MORPHOS-WSL.md` | MorphOS cross-build on WSL2 Debian (incl. FlexCat bootstrap) |
+| `docs/WSL-SETUP-STATUS.md` | WSL environment setup status / checklist (DE) |
 
 ## Build (MorphOS)
 

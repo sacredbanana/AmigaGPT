@@ -54,6 +54,9 @@ Auf GitHub einen **Pull Request** von einem Branch auf **deinem** Fork (`origin`
 
 ## Weitere Doku
 
+Übersicht: [README.md](README.md)
+
 - [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) — verbindliche Git-Arbeitsweise (Menschen & Agenten).
 - [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) — Plan für Scintilla.mcc, Streaming und UTF-8.
 - [BUILD-MORPHOS-WSL.md](BUILD-MORPHOS-WSL.md) — MorphOS Cross-Build unter WSL2 (Debian) und BIGFOOT SDK.
+- [WSL-SETUP-STATUS.md](WSL-SETUP-STATUS.md) — dokumentierter Ist-Stand der WSL-Einrichtung.
