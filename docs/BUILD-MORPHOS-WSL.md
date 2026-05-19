@@ -118,6 +118,21 @@ Von [MorphZone / BIGFOOT](https://www.morphzone.org/) — May 2023 SDK als `.deb
 cd /tmp
 wget 'https://bigfoot.morphos-team.net/test/morphos-sdk_20230510-1_amd64.deb'
 sudo apt install ./morphos-sdk_20230510-1_amd64.deb
+ppc-morphos-gcc --version
+```
+
+**BIGFOOT-Paket installiert nach `/gg`, nicht nach `/opt/amiga`.**  
+`Makefile.MorphOS` erwartet Bebbo-Layout unter `/opt/amiga`. Einmalig Symlinks anlegen (als root):
+
+```bash
+sudo mkdir -p /opt/amiga/ppc-morphos /opt/amiga/lib/gcc/ppc-morphos
+sudo ln -sfn /gg/os-include      /opt/amiga/os-include
+sudo ln -sfn /gg/includestd      /opt/amiga/includestd
+sudo ln -sfn /gg/include         /opt/amiga/ppc-morphos/include
+sudo ln -sfn /gg/ppc-morphos/lib /opt/amiga/ppc-morphos/lib
+sudo ln -sfn /gg/lib             /opt/amiga/lib
+# Makefile nennt 11.2.0, Paket liefert 11.3.0:
+sudo ln -sfn /gg/lib/gcc/ppc-morphos/11.3.0 /opt/amiga/lib/gcc/ppc-morphos/11.2.0
 ```
 
 ### Variante B: `setup-cross-sdk.sh`
@@ -152,25 +167,45 @@ ls /opt/amiga/lib/gcc/ppc-morphos/
 
 ---
 
-## 5. Zusätzliche Bibliotheken (Link)
+## 5. Zusätzliche SDKs (Pflicht für AmigaGPT)
 
-`Makefile.MorphOS` linkt u. a. **json-c**, **ssl**, **crypto**. Diese liegen oft im Maintainer-SDK-Bundle:
+Aus https://github.com/sacredbanana/AmigaSDK-gcc — u. a.:
 
-- https://github.com/sacredbanana/AmigaSDK-gcc  
+- **json-c**, **ssl**, **crypto** (Link)
+- **SDI** / `SDI_hook.h` und weitere Dev-Includes
 
-Bibliotheken und Includes wie dort beschrieben nach `/opt/amiga` legen. Typischer Linkerfehler ohne diese Schritte: `cannot find -ljson-c` oder `-lssl`.
+Nach `/opt/amiga` bzw. in die Include-Pfade legen, wie im AmigaSDK-gcc-Repo beschrieben.
+
+Typische Fehler ohne diesen Schritt:
+
+- `fatal error: SDI_hook.h: No such file or directory`
+- `cannot find -ljson-c` / `-lssl`
+
+**FlexCat `C_h.sd`:** Das Makefile nutzt relative Pfade; bei Fehler `cannot open … C_h.sd` aus dem FlexCat-Repo kopieren oder verlinken:
+
+```bash
+ln -sf ~/development/morphos/flexcat/src/sd/C_h.sd ~/development/AmigaGPT/
+ln -sf ~/development/morphos/flexcat/src/sd/C_c.sd ~/development/AmigaGPT/
+```
 
 ---
 
-## 6. Quellcode
+## 6. Quellcode (WSL-Home)
 
 **Empfohlen** (schnellere Builds, ext4):
 
 ```bash
-cd ~
+mkdir -p ~/development
+cd ~/development
 git clone https://github.com/weiseb78/AmigaGPT.git
 cd AmigaGPT
 git checkout scintilla
+```
+
+Von Windows rüberkopieren (falls lokale Commits noch nicht gepusht):
+
+```bash
+cp -a /mnt/c/Users/xbox/cursorWorkspace/AmigaGPT/. ~/development/AmigaGPT/
 ```
 
 Von Windows aus: `\\wsl$\Debian\home\<user>\AmigaGPT`
@@ -237,6 +272,9 @@ CLEAN=1 ./build_morphos.sh
 | `Unable to locate package flexcat` | Normal — FlexCat aus Quellen bauen (Abschnitt 2), nicht per APT |
 | `flexcat: No such file or directory` beim FlexCat-Build | `make bootstrap` vor `make` im FlexCat-Repo |
 | `ppc-morphos-gcc: not found` | SDK-Paket nicht installiert oder `PATH` prüfen |
+| `SDI_hook.h: No such file` | [AmigaSDK-gcc](https://github.com/sacredbanana/AmigaSDK-gcc) installieren |
+| `cannot open … C_h.sd` | Symlinks zu `flexcat/src/sd/C_*.sd` im AmigaGPT-Root (siehe Abschnitt 5) |
+| SDK unter `/gg`, Build sucht `/opt/amiga` | Symlinks aus Abschnitt 3 anlegen |
 | `cannot find -ljson-c` / `-lssl` | [AmigaSDK-gcc](https://github.com/sacredbanana/AmigaSDK-gcc) nachinstallieren |
 | Linker sucht falsche GCC-Version | `GCCLIBDIR` in `Makefile.MorphOS` anpassen |
 | Katalog-Fehler bei AmigaGPT | `which flexcat`; PATH auf `bin_unix/flexcat` setzen |
