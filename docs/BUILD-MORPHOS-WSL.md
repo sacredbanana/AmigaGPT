@@ -14,6 +14,8 @@ Siehe auch: [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md), [SCINTILLA-ARCHITECTUR
 | **`setup-cross-sdk.sh`** | SDK selbst bauen / andere Version |
 | **`./build_morphos.sh` + Docker** | Vorkonfiguriertes Image, ohne natives SDK |
 
+**Reihenfolge:** WSL2 → Debian-Pakete → **FlexCat** → MorphOS-SDK → ggf. AmigaSDK-gcc-Libs → AmigaGPT bauen.
+
 ---
 
 ## 1. WSL2 mit Debian
@@ -24,19 +26,89 @@ In PowerShell (Admin):
 wsl --install -d Debian
 ```
 
+Nach Neustart prüfen, dass **VERSION 2** gilt:
+
+```powershell
+wsl -l -v
+```
+
 In der Debian-Shell:
 
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y build-essential git wget curl make flex bison \
-  gettext flexcat pkg-config
+  gettext pkg-config
 ```
+
+**Hinweis:** `flexcat` gibt es **nicht** in Debian-APT (und nicht im BIGFOOT-SDK-Paket, siehe Abschnitt 2).
 
 **Debian 12 (Bookworm)** oder **11 (Bullseye)** auf **amd64** — passend zum offiziellen SDK-Paket.
 
 ---
 
-## 2. MorphOS Cross-SDK installieren
+## 2. FlexCat bauen (Pflicht für AmigaGPT)
+
+AmigaGPT erzeugt beim Build `src/AmigaGPT_cat.c` und `src/AmigaGPT_cat.h` per **FlexCat** (nicht in `.git`, in `.gitignore`). Ohne `flexcat` im `PATH` scheitert `make -f Makefile.MorphOS`.
+
+### Nicht enthalten
+
+| Quelle | `flexcat`? |
+| ------ | ---------- |
+| `apt install flexcat` | **Nein** — Paket existiert in Debian nicht |
+| `morphos-sdk_20230510-1_amd64.deb` (BIGFOOT) | **Nein** — nur Toolchain/SDK (`ppc-morphos-gcc`, …); ggf. `FlexLexer.h` (unrelated) |
+
+### Quellcode holen
+
+```bash
+mkdir -p ~/development/morphos
+cd ~/development/morphos
+git clone https://github.com/adtools/flexcat.git
+cd flexcat
+```
+
+### Bootstrap (wichtig beim ersten Build)
+
+FlexCat will seine Katalog-Header beim Build mit `flexcat` neu erzeugen — das Programm existiert noch nicht. Dafür gibt es das Make-Ziel **`bootstrap`** (setzt Timestamps auf die mitgelieferten Dateien):
+
+```bash
+make bootstrap
+make
+```
+
+**Typischer Fehler ohne `bootstrap`:**
+
+```text
+make[1]: flexcat: No such file or directory
+make[1]: *** [Makefile:516: FlexCat_cat.h] Error 127
+```
+
+### Binary und PATH
+
+Ergebnis (Linux/WSL, `OS=unix`):
+
+```text
+~/development/morphos/flexcat/src/bin_unix/flexcat
+```
+
+Prüfen:
+
+```bash
+~/development/morphos/flexcat/src/bin_unix/flexcat -h
+```
+
+Dauerhaft im `PATH` (Beispiel):
+
+```bash
+echo 'export PATH="$HOME/development/morphos/flexcat/src/bin_unix:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+which flexcat
+```
+
+Compiler-Warnungen (`-gstabs`, Format) beim FlexCat-Build sind unkritisch.
+
+---
+
+## 3. MorphOS Cross-SDK installieren
 
 ### Variante A: Debian-Paket (schnell)
 
@@ -54,9 +126,10 @@ Skript **1.11** zum Aufsetzen der Cross-Umgebung auf Unix-Systemen (primär gete
 
 ---
 
-## 3. Installation prüfen
+## 4. Installation prüfen
 
 ```bash
+which flexcat
 which ppc-morphos-gcc
 ppc-morphos-gcc --version
 ls -la /opt/amiga/
@@ -79,7 +152,7 @@ ls /opt/amiga/lib/gcc/ppc-morphos/
 
 ---
 
-## 4. Zusätzliche Bibliotheken (Link)
+## 5. Zusätzliche Bibliotheken (Link)
 
 `Makefile.MorphOS` linkt u. a. **json-c**, **ssl**, **crypto**. Diese liegen oft im Maintainer-SDK-Bundle:
 
@@ -89,7 +162,7 @@ Bibliotheken und Includes wie dort beschrieben nach `/opt/amiga` legen. Typische
 
 ---
 
-## 5. Quellcode
+## 6. Quellcode
 
 **Empfohlen** (schnellere Builds, ext4):
 
@@ -97,6 +170,7 @@ Bibliotheken und Includes wie dort beschrieben nach `/opt/amiga` legen. Typische
 cd ~
 git clone https://github.com/weiseb78/AmigaGPT.git
 cd AmigaGPT
+git checkout scintilla
 ```
 
 Von Windows aus: `\\wsl$\Debian\home\<user>\AmigaGPT`
@@ -109,7 +183,7 @@ cd /mnt/c/Users/xbox/cursorWorkspace/AmigaGPT
 
 ---
 
-## 6. Bauen
+## 7. Bauen
 
 ```bash
 make -f Makefile.MorphOS
@@ -140,7 +214,7 @@ make -f Makefile.MorphOS clean
 
 ---
 
-## 7. Docker-Alternative
+## 8. Docker-Alternative
 
 ```bash
 ./build_morphos.sh
@@ -160,10 +234,12 @@ CLEAN=1 ./build_morphos.sh
 
 | Symptom | Maßnahme |
 | ------- | -------- |
+| `Unable to locate package flexcat` | Normal — FlexCat aus Quellen bauen (Abschnitt 2), nicht per APT |
+| `flexcat: No such file or directory` beim FlexCat-Build | `make bootstrap` vor `make` im FlexCat-Repo |
 | `ppc-morphos-gcc: not found` | SDK-Paket nicht installiert oder `PATH` prüfen |
 | `cannot find -ljson-c` / `-lssl` | [AmigaSDK-gcc](https://github.com/sacredbanana/AmigaSDK-gcc) nachinstallieren |
 | Linker sucht falsche GCC-Version | `GCCLIBDIR` in `Makefile.MorphOS` anpassen |
-| `flexcat` / Katalog-Warnungen | `sudo apt install flexcat gettext` |
+| Katalog-Fehler bei AmigaGPT | `which flexcat`; PATH auf `bin_unix/flexcat` setzen |
 | Sehr langsamer Build auf `/mnt/c` | Repo nach `~/` klonen |
 
 ---
