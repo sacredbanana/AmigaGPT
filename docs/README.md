@@ -1,5 +1,7 @@
 # Dokumentation (Fork weiseb78 / Branch scintilla)
 
+**Projektordner:** nur `~/development/AmigaGPT` in WSL — nicht `C:\Users\xbox\cursorWorkspace\AmigaGPT`. Details: [WSL-SETUP-STATUS.md](WSL-SETUP-STATUS.md).
+
 | Dokument | Inhalt |
 | -------- | ------ |
 | [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) | Verbindliche Git-Arbeitsweise (kein Commit auf `master`) |

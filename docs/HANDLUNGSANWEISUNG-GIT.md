@@ -4,6 +4,15 @@ Verbindliche Arbeitsweise für Menschen und Assistenten (Cursor, CI, Reviews).
 
 ---
 
+## 0. Projektordner (WSL)
+
+**Kanonisch:** `~/development/AmigaGPT` in WSL (Debian).  
+**Cursor-Workspace:** `\\wsl$\Debian\home\<user>\development\AmigaGPT`
+
+**Nicht** mehr: `C:\Users\xbox\cursorWorkspace\AmigaGPT` — siehe [WSL-SETUP-STATUS.md](WSL-SETUP-STATUS.md).
+
+---
+
 ## 1. Grundregel
 
 | Erlaubt | Verboten |

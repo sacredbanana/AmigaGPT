@@ -2,6 +2,8 @@
 
 This repository is **weiseb78/AmigaGPT** — a fork of [sacredbanana/AmigaGPT](https://github.com/sacredbanana/AmigaGPT).
 
+**Canonical workspace path (WSL only):** `~/development/AmigaGPT` — not `C:\Users\xbox\cursorWorkspace\AmigaGPT`. Open via `\\wsl$\Debian\home\<user>\development\AmigaGPT` in Cursor.
+
 ## Git (required)
 
 Read and follow **`docs/HANDLUNGSANWEISUNG-GIT.md`**.

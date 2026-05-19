@@ -24,28 +24,30 @@ Chronik und Checkliste dessen, was für **AmigaGPT / MorphOS** in **WSL2 (Debian
 
 ---
 
-## Verzeichnislayout (WSL)
+## Verzeichnislayout (kanonisch — nur WSL)
+
+**Einziger Projektordner für Git, Build und Doku:**
 
 ```text
 ~/development/
   morphos/
     flexcat/              ← gebaut (FlexCat 2.18)
-  AmigaGPT/               ← Arbeitskopie für Build (von Windows kopiert)
+  AmigaGPT/               ← Git-Clone, Branch scintilla, `make -f Makefile.MorphOS`
 ```
 
-**Parallel (Windows / Cursor):**
-
-```text
-C:\Users\xbox\cursorWorkspace\AmigaGPT   ← Git-Repo, Branch scintilla, Doku-Commits
-```
-
-**Empfehlung:** Cursor-Workspace auf WSL umstellen:
+**Cursor / IDE** (Workspace hier öffnen, nicht unter Windows):
 
 ```text
 \\wsl$\Debian\home\weimer\development\AmigaGPT
 ```
 
-Bis dahin: nach Doku-Commits ggf. `cp -a` von Windows nach WSL oder `git pull` nach Push.
+**Nicht mehr verwenden** (veraltet, führt zu CRLF-/Pull-Konflikten):
+
+```text
+C:\Users\xbox\cursorWorkspace\AmigaGPT
+```
+
+Sync nur noch per Git: `git pull` / `git push` in `~/development/AmigaGPT` — kein `cp` von `/mnt/c/…` mehr.
 
 ---
 
@@ -163,7 +165,8 @@ make -f Makefile.MorphOS
 - [ ] `AmigaSDK-gcc` installieren **oder** Docker-Build testen
 - [ ] `make -f Makefile.MorphOS` erfolgreich bis `out/AmigaGPT_MorphOS`
 - [ ] `~/.bashrc`: FlexCat-PATH dauerhaft
-- [ ] Cursor-Workspace auf `\\wsl$\Debian\home\weimer\development\AmigaGPT`
+- [x] Dokumentation: kanonischer Pfad nur noch WSL (`~/development/AmigaGPT`)
+- [ ] Cursor-Workspace dauerhaft auf `\\wsl$\Debian\home\weimer\development\AmigaGPT` (nicht `C:\Users\xbox\cursorWorkspace\AmigaGPT`)
 - [ ] `git push origin scintilla` (lokale Doku-Commits)
 - [ ] Optional: `upstream` einmal `git fetch` + Merge in `scintilla`
 

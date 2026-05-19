@@ -197,9 +197,9 @@ ln -sf ~/development/morphos/flexcat/src/sd/C_c.sd ~/development/AmigaGPT/
 
 ---
 
-## 6. Quellcode (WSL-Home)
+## 6. Quellcode (nur WSL-Home)
 
-**Empfohlen** (schnellere Builds, ext4):
+**Kanonischer Projektordner** — Git, Build und Bearbeitung ausschließlich hier:
 
 ```bash
 mkdir -p ~/development
@@ -207,20 +207,28 @@ cd ~/development
 git clone https://github.com/weiseb78/AmigaGPT.git
 cd AmigaGPT
 git checkout scintilla
+git pull origin scintilla
 ```
 
-Von Windows rüberkopieren (falls lokale Commits noch nicht gepusht):
+**Cursor / VS Code:** Ordner öffnen als
 
-```bash
-cp -a /mnt/c/Users/xbox/cursorWorkspace/AmigaGPT/. ~/development/AmigaGPT/
+```text
+\\wsl$\Debian\home\<dein-wsl-user>\development\AmigaGPT
 ```
 
-Von Windows aus: `\\wsl$\Debian\home\<user>\AmigaGPT`
+(z. B. `weimer` statt `<dein-wsl-user>`)
 
-**Alternativ** Windows-Pfad (langsamer):
+**Nicht mehr nutzen:**
+
+- `C:\Users\xbox\cursorWorkspace\AmigaGPT` (veraltet)
+- Build oder `git pull` unter `/mnt/c/Users/...` (langsam, Git-Konflikte durch CRLF)
+
+Einmalige Migration von einem alten Windows-Clone (nur wenn nötig, danach löschen/ignorieren):
 
 ```bash
-cd /mnt/c/Users/xbox/cursorWorkspace/AmigaGPT
+# nur einmalig — danach nur noch git pull in ~/development/AmigaGPT
+git clone https://github.com/weiseb78/AmigaGPT.git ~/development/AmigaGPT
+cd ~/development/AmigaGPT && git checkout scintilla
 ```
 
 ---
@@ -285,7 +293,8 @@ CLEAN=1 ./build_morphos.sh
 | `cannot find -ljson-c` / `-lssl` | [AmigaSDK-gcc](https://github.com/sacredbanana/AmigaSDK-gcc) nachinstallieren |
 | Linker sucht falsche GCC-Version | `GCCLIBDIR` in `Makefile.MorphOS` anpassen |
 | Katalog-Fehler bei AmigaGPT | `which flexcat`; PATH auf `bin_unix/flexcat` setzen |
-| Sehr langsamer Build auf `/mnt/c` | Repo nach `~/` klonen |
+| Sehr langsamer Build auf `/mnt/c` | Nur `~/development/AmigaGPT` nutzen |
+| Pull blockiert durch hunderte `M`-Dateien | Kein `cp` von Windows — `git reset --hard origin/scintilla` in WSL |
 
 ---
 
