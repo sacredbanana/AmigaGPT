@@ -36,3 +36,4 @@ Auf GitHub einen **Pull Request** von einem Branch auf **deinem** Fork (`origin`
 ## Weitere Doku
 
 - [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) — Plan für Scintilla.mcc, Streaming und UTF-8.
+- [BUILD-MORPHOS-WSL.md](BUILD-MORPHOS-WSL.md) — MorphOS Cross-Build unter WSL2 (Debian) und BIGFOOT SDK.
