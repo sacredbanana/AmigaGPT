@@ -1,0 +1,28 @@
+# Agent instructions (AmigaGPT fork)
+
+This repository is **weiseb78/AmigaGPT** — a fork of [sacredbanana/AmigaGPT](https://github.com/sacredbanana/AmigaGPT).
+
+## Git (required)
+
+Read and follow **`docs/HANDLUNGSANWEISUNG-GIT.md`**.
+
+Summary:
+
+- **Do not commit on `master`.** Use topic branches; default: **`scintilla`**.
+- Push only when the user asks. Never force-push `master`.
+- `origin` = fork; `upstream` = upstream original (fetch/merge into feature branches).
+
+Cursor rule: `.cursor/rules/git-branch-policy.mdc` (always applied).
+
+## Docs map
+
+| Document | Purpose |
+| -------- | ------- |
+| `docs/HANDLUNGSANWEISUNG-GIT.md` | Binding git workflow (DE) |
+| `docs/GIT-FORK-WORKFLOW.md` | Remotes, upstream sync, PRs |
+| `docs/SCINTILLA-ARCHITECTURE.md` | Scintilla / streaming / UTF-8 plan |
+| `docs/BUILD-MORPHOS-WSL.md` | MorphOS cross-build on WSL2 Debian |
+
+## Build (MorphOS)
+
+`make -f Makefile.MorphOS` — see `docs/BUILD-MORPHOS-WSL.md`.

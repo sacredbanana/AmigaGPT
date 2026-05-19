@@ -1,0 +1,28 @@
+---
+description: Git branch policy — never commit directly on master; use topic branches (e.g. scintilla)
+alwaysApply: true
+---
+
+# Git: Branch policy (weiseb78/AmigaGPT fork)
+
+## Mandatory
+
+- **Never create commits on `master`.** All work goes on topic branches (`scintilla`, `feature/*`, `fix/*`).
+- Before committing: run `git branch --show-current` and abort if the branch is `master`.
+- Default development branch for this fork: **`scintilla`** (unless the user names another topic branch).
+- Do not push unless the user explicitly asks. Never force-push `master`.
+- Do not change `git config`. Do not commit secrets.
+
+## Workflow
+
+1. `git fetch origin`
+2. `git checkout <topic-branch>` (e.g. `scintilla`)
+3. Commit, then `git push -u origin <topic-branch>` only when requested
+4. Stable work merges to `master` via PR/merge by the user — not by committing directly on `master`
+
+## Remotes
+
+- `origin` — weiseb78 fork (push work here)
+- `upstream` — sacredbanana/AmigaGPT (fetch only; merge into topic branches)
+
+Full checklist: `docs/HANDLUNGSANWEISUNG-GIT.md`

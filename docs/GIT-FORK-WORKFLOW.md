@@ -2,7 +2,12 @@
 
 ## Branch-Regel (dieser Fork)
 
-**Nicht direkt auf `master` committen.** Feature-Arbeit auf Topic-Branches (z. B. `scintilla`), dann per Pull Request oder Merge nach `master`, wenn es stabil ist.
+**Nicht direkt auf `master` committen.**
+
+Vollständige Handlungsanweisung (Checklisten, Agenten, Fehlerfälle): **[HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md)**  
+Für Cursor zusätzlich: `.cursor/rules/git-branch-policy.mdc` und [AGENTS.md](../AGENTS.md).
+
+Kurz:
 
 ```bash
 git checkout scintilla    # oder neuen Branch von master
@@ -49,5 +54,6 @@ Auf GitHub einen **Pull Request** von einem Branch auf **deinem** Fork (`origin`
 
 ## Weitere Doku
 
+- [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) — verbindliche Git-Arbeitsweise (Menschen & Agenten).
 - [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) — Plan für Scintilla.mcc, Streaming und UTF-8.
 - [BUILD-MORPHOS-WSL.md](BUILD-MORPHOS-WSL.md) — MorphOS Cross-Build unter WSL2 (Debian) und BIGFOOT SDK.
