@@ -1,0 +1,294 @@
+# Architektur- und Implementierungsplan: AmigaGPT + Scintilla.mcc (MorphOS)
+
+Dieses Dokument beschreibt die Zielarchitektur für den Branch **scintilla** und darüber hinaus. Es ergänzt die Git-Hinweise in [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md).
+
+---
+
+## Phase 1 — Zieldefinition und Minimal-Architektur
+
+**Ziel zuerst:**
+
+- stabile AI-Chat-Ausgabe
+- verlustfreie Code-Darstellung
+- robustes UTF-8
+- korrektes Copy/Paste
+- möglichst wenig Magie
+
+**NICHT zuerst:**
+
+- Syntax Highlighting
+- komplexes Markdown
+- HTML
+- Richtext
+- Themes
+- fancy UI
+
+Das spart Zeit und verhindert frühe Architekturfehler.
+
+---
+
+## Phase 2 — Interne Datenarchitektur
+
+### 2.1 Rohdaten strikt getrennt speichern
+
+**Kernregel:** Niemals direkt auf GUI-Strings arbeiten.
+
+Empfohlene Struktur:
+
+```c
+struct AIMessage
+{
+    STRPTR raw_utf8;
+    ULONG  raw_length;
+
+    STRPTR display_text;
+
+    struct MinList codeblocks;
+};
+```
+
+Codeblock:
+
+```c
+struct AICodeBlock
+{
+    struct MinNode node;
+
+    STRPTR language;
+
+    STRPTR raw_code;
+    ULONG  code_length;
+};
+```
+
+*(Namen und Felder können bei der Implementierung leicht angepasst werden; die Trennung „Rohdaten vs. Anzeige vs. Codeblöcke“ ist verbindlich.)*
+
+---
+
+## Phase 3 — Streaming-System
+
+### 3.1 Netzwerkstream niemals direkt rendern
+
+**Falsch:** `curl_chunk → GUI`
+
+**Richtig:**
+
+```text
+curl_chunk
+→ stream buffer
+→ utf8 validator
+→ parser
+→ internal message
+→ GUI
+```
+
+### 3.2 UTF-8 State Machine
+
+UTF-8-Zeichen können über Chunk-Grenzen hinweg zerteilt sein.
+
+```c
+struct UTF8StreamBuffer
+{
+    UBYTE *buffer;
+    ULONG size;
+    ULONG used;
+};
+```
+
+Vorgehen:
+
+- neue Chunks anhängen
+- UTF-8 validieren
+- unvollständige Sequenzen puffern
+- erst komplette Zeichen an die nächste Stufe geben
+
+---
+
+## Phase 4 — Minimal-Markdown-Parser
+
+### 4.1 Kein vollständiger Markdown-Parser
+
+Nur erkennen:
+
+````text
+```lang
+...
+```
+````
+
+Mehr nicht.
+
+### 4.2 Parser-State-Machine
+
+```c
+enum ParserState
+{
+    PARSER_TEXT,
+    PARSER_CODE
+};
+```
+
+### 4.3 Parserlogik
+
+**TEXT-Modus:** Suche nach öffnendem Fence ` ``` ` (optional Sprache in derselben Zeile). Bei Treffer: Sprache extrahieren, neuen Codeblock anlegen, in **CODE-Modus** wechseln.
+
+**CODE-Modus:** Alles **RAW** übernehmen. Keine Escape-Interpretation, keine `%-`Verarbeitung, keine zusätzliche UTF-8-Konvertierung, keine Zeilenmanipulation — nur speichern, bis schließendes Fence ` ``` `.
+
+---
+
+## Phase 5 — GUI-Architektur
+
+### 5.1 Chatfenster
+
+MUI Text oder einfacher **TextEditor.mcc**:
+
+- Plain Text
+- minimale Formatierung
+- keine komplexen Styles
+- kein Richtext
+
+Nur z. B.:
+
+```text
+User:
+Assistant:
+```
+
+und Hinweise wie:
+
+```text
+[Codeblock verfügbar]
+```
+
+### 5.2 Codefenster separat
+
+**Scintilla.mcc nur für Code** — zentrale Architekturentscheidung.
+
+---
+
+## Phase 6 — Scintilla.mcc Integration
+
+### 6.1 Erste Minimalintegration
+
+Nur:
+
+- `SCI_SETTEXT` / `SCI_GETTEXT`
+- `SCI_SETLEXER` (Basis; echtes Highlighting erst in Phase 11)
+
+### 6.2 Initialisierung (Pseudo)
+
+```c
+Object *sci = NewObject(
+    ScintillaMCC_GetClass(),
+    NULL,
+    TAG_DONE);
+```
+
+*(Konkrete Tags und Klassenname an die tatsächliche Scintilla.mcc-API anpassen.)*
+
+### 6.3 Code setzen
+
+```c
+DoMethod(sci,
+    SCI_SETTEXT,
+    0,
+    (IPTR)raw_code);
+```
+
+**RAW UTF-8** direkt — keine Zwischenformatierung.
+
+---
+
+## Phase 7 — Copy/Paste
+
+- Niemals nur „Anzeige-Text“ kopieren; immer **`raw_code`** oder **`raw_utf8`**.
+- Zeilenenden intern idealerweise **LF (`\n`)**; CRLF/CR nur beim Export optional.
+
+---
+
+## Phase 8 — String- und Sicherheitsdisziplin
+
+**Vermeiden:**
+
+- `sprintf(buf, text);` / `printf(text);` mit unbekanntem Inhalt
+- feste Mini-Buffer (`char buf[1024];`) für unbegrenzte Modell-Ausgaben
+
+**Stattdessen:**
+
+- explizite Formatstrings: `snprintf(buf, size, "%s", text);`
+- dynamische Allokation oder dokumentierte Obergrenzen mit sauberem Fehlerpfad
+
+---
+
+## Phase 9 — Debugging-Infrastruktur
+
+- Optional **Raw-Stream-Log** (z. B. `T:amigagpt_raw.log`) zur Einordnung: Netzwerk vs. Parser vs. GUI.
+- **UTF-8-Fehlerlog:** ungültige Sequenzen, abgeschnittene Chunks, Parserfehler.
+
+---
+
+## Phase 10 — Erste Version (0.1)
+
+**Enthalten:**
+
+- Chat senden / Antwort empfangen
+- UTF-8 korrekt
+- Codeblock-Erkennung (Fences)
+- „Open in Scintilla“
+- Copy/Paste korrekt
+
+**Ausgeschlossen:**
+
+- Syntaxhighlighting
+- Inline-Markdown
+- aufwendige GUI
+- Themes
+- HTML
+
+---
+
+## Phase 11 — Komfort (erst nach Stabilität)
+
+- **Syntax Highlighting:** `SCI_SETLEXER` für C, Python, JSON, Shell, Lua, …
+- **Inline-Code** (optional, oft entbehrlich)
+- **Tabs** für mehrere Codeblöcke
+- **Export:** Save as, Copy raw, Save markdown
+
+---
+
+## Phase 12 — MorphOS-spezifisch
+
+- **MUI Worker-Task** für Streaming — UI nicht blockieren.
+- **Signal/Event-Modell:** `network task → parser task → ui task`
+- **Keine GUI-Updates pro Zeichen** — sammeln, batchweise aktualisieren (Lag, Repaint, CPU).
+
+---
+
+## Aufwand (Orientierung)
+
+| Bereich                 | Schwierigkeit     |
+| ----------------------- | ----------------- |
+| libcurl / OpenAI        | leicht            |
+| Streaming               | mittel           |
+| UTF-8 korrekt           | mittel–schwer     |
+| Markdown-Minimalparser  | leicht            |
+| MUI Chatfenster         | leicht            |
+| Scintilla-Integration   | leicht            |
+| Copy/Paste korrekt      | mittel            |
+| Full Markdown           | sehr schwer       |
+
+**Grobe Spanne für eine stabile Minimalversion:** oft **2–6 Wochen** für eine erfahrene MorphOS/C-Person — abhängig vom Refaktor-Umfang im bestehenden AmigaGPT-Code.
+
+---
+
+## Leitlinie
+
+**„AI-Terminal“ statt „Discord-Klon“:** robuste Textausgabe, verlässliche Codeblöcke, stabile UTF-8-Pipeline, minimale Formatierung — passt zu Amiga/MUI und reduziert Risiko.
+
+---
+
+## Anknüpfung an den aktuellen Code (Stand Fork)
+
+- Nachrichten: `struct ConversationNode` / `struct Conversation` in `openai.h` — Ausgangspunkt für Migration zu getrennten Roh-/Anzeige-/Codeblock-Daten.
+- Streaming: Logik in `openai.c` und Anbindung in `MainWindow.c` — Ziel ist die oben beschriebene Pipeline zwischen Netz und UI.
+- Chat-UI: `MainWindow.c` nutzt u. a. NList/TextEditor und Rich-Text-Hilfen — für v0.1 bewusst vereinfachen oder parallel neu aufsetzen, je nach Refaktor-Strategie.
