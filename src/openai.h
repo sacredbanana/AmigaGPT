@@ -1,6 +1,7 @@
 #ifndef OPENAI_H
 #define OPENAI_H
 
+#include <exec/lists.h>
 #include <libraries/codesets.h>
 #include <proto/dos.h>
 #include "speech.h"
@@ -13,22 +14,37 @@
 #define OPENAI_API_KEY_LENGTH 256
 
 /**
+ * A fenced code block extracted from assistant output (Phase 2; parser in Phase 4).
+ **/
+struct AICodeBlock {
+    struct MinNode node;
+    STRPTR language;
+    STRPTR raw_code;
+    ULONG code_length;
+};
+
+/**
  * A node in the conversation
  **/
 struct ConversationNode {
-    /**
-     * The linking node
-     **/
     struct MinNode node;
     /**
-     * The role of the speaker. Currently the only roles supported by OpenAI are
-     *"user", "assistant" and "system"
+     * The role of the speaker ("user", "assistant", "system").
      **/
     UBYTE role[10];
     /**
-     * The text of the message
+     * Raw message text from API / user input (UTF-8).
      **/
-    UTF8 *content;
+    UTF8 *raw_utf8;
+    ULONG raw_length;
+    /**
+     * Optional display string; NULL means use raw_utf8 for the chat view.
+     **/
+    UTF8 *display_text;
+    /**
+     * Parsed ``` code fences (may be empty).
+     **/
+    struct MinList *codeblocks;
 };
 
 struct Conversation {

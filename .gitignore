@@ -5,6 +5,8 @@ bundle/AmigaGPT/catalogs
 catalogs/*/*.catalog
 catalogs/*/*.po~
 src/AmigaGPT_cat.*
+C_h.sd
+C_c.sd
 src/test/build
 src/test/openai-key.h
 

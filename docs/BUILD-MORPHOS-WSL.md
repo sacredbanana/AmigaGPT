@@ -169,30 +169,21 @@ ls /opt/amiga/lib/gcc/ppc-morphos/
 
 ## 5. Zusätzliche SDKs (Pflicht für AmigaGPT)
 
-### Was ist „AmigaSDK-gcc“?
+**Ausführliche Liste** (Header, Libs, typische Fehler, Makefile-Auto-Erkennung): **[MORPHOS-SDK-ERGAENZUNGEN.md](MORPHOS-SDK-ERGAENZUNGEN.md)**.
 
-**Kein zweiter Compiler.** Der Name ist historisch irreführend: Es ist ein **SDK-Zusatzpaket** (Header, Libraries, FlexCat-`.sd`) für Builds mit der **bestehenden** Cross-GCC (`ppc-morphos-gcc`).
+Kurz: **AmigaSDK-gcc** ist kein zweiter Compiler, sondern ein Zusatz-SDK. Clone nach `~/development/morphos/AmigaSDK-gcc`. `Makefile.MorphOS` nutzt `morphos/sdk/` automatisch, wenn `SDI_hook.h` dort liegt — **ohne** `sudo cp` nach `/opt/amiga` (optional weiterhin möglich).
 
 | Komponente | Rolle |
 | ---------- | ----- |
 | BIGFOOT `morphos-sdk` | Compiler + MorphOS-Basis-SDK (`/gg`) |
-| **AmigaSDK-gcc** | Fehlende Includes/Libs (json-c, SDI, ssl, …) |
+| **AmigaSDK-gcc** | SDI, json-c, ssl/crypto, codesets, guigfx, neuere MUI-Aboutbox-Header |
 | FlexCat (selbst gebaut) | Katalog-Tool für `AmigaGPT_cat.c/h` |
-
-Quelle: https://github.com/sacredbanana/AmigaSDK-gcc — Ordner **`sdk/`** ins Dev-Layout kopieren (README dort). Für MorphOS sind u. a. json-c, codesets, guigfx gelistet; AmigaGPT benötigt zusätzlich **SDI** (`SDI_hook.h`).
-
-Nach `/opt/amiga` bzw. passend zu `/gg` legen.
-
-Typische Fehler ohne diesen Schritt:
-
-- `fatal error: SDI_hook.h: No such file or directory`
-- `cannot find -ljson-c` / `-lssl`
 
 **FlexCat `C_h.sd`:** Das Makefile nutzt relative Pfade; bei Fehler `cannot open … C_h.sd` aus dem FlexCat-Repo kopieren oder verlinken:
 
 ```bash
-ln -sf ~/development/morphos/flexcat/src/sd/C_h.sd ~/development/AmigaGPT/
-ln -sf ~/development/morphos/flexcat/src/sd/C_c.sd ~/development/AmigaGPT/
+ln -sf ~/development/morphos/flexcat/src/sd/C_h.sd ~/development/morphos/AmigaGPT/
+ln -sf ~/development/morphos/flexcat/src/sd/C_c.sd ~/development/morphos/AmigaGPT/
 ```
 
 ---
@@ -202,8 +193,8 @@ ln -sf ~/development/morphos/flexcat/src/sd/C_c.sd ~/development/AmigaGPT/
 **Kanonischer Projektordner** — Git, Build und Bearbeitung ausschließlich hier:
 
 ```bash
-mkdir -p ~/development
-cd ~/development
+mkdir -p ~/development/morphos
+cd ~/development/morphos
 git clone https://github.com/weiseb78/AmigaGPT.git
 cd AmigaGPT
 git checkout scintilla
@@ -213,7 +204,7 @@ git pull origin scintilla
 **Cursor / VS Code:** Ordner öffnen als
 
 ```text
-\\wsl$\Debian\home\<dein-wsl-user>\development\AmigaGPT
+\\wsl$\Debian\home\<dein-wsl-user>\development\morphos\AmigaGPT
 ```
 
 (z. B. `weimer` statt `<dein-wsl-user>`)
@@ -226,9 +217,9 @@ git pull origin scintilla
 Einmalige Migration von einem alten Windows-Clone (nur wenn nötig, danach löschen/ignorieren):
 
 ```bash
-# nur einmalig — danach nur noch git pull in ~/development/AmigaGPT
-git clone https://github.com/weiseb78/AmigaGPT.git ~/development/AmigaGPT
-cd ~/development/AmigaGPT && git checkout scintilla
+# nur einmalig — danach nur noch git pull in ~/development/morphos/AmigaGPT
+git clone https://github.com/weiseb78/AmigaGPT.git ~/development/morphos/AmigaGPT
+cd ~/development/morphos/AmigaGPT && git checkout scintilla
 ```
 
 ---
@@ -293,7 +284,7 @@ CLEAN=1 ./build_morphos.sh
 | `cannot find -ljson-c` / `-lssl` | [AmigaSDK-gcc](https://github.com/sacredbanana/AmigaSDK-gcc) nachinstallieren |
 | Linker sucht falsche GCC-Version | `GCCLIBDIR` in `Makefile.MorphOS` anpassen |
 | Katalog-Fehler bei AmigaGPT | `which flexcat`; PATH auf `bin_unix/flexcat` setzen |
-| Sehr langsamer Build auf `/mnt/c` | Nur `~/development/AmigaGPT` nutzen |
+| Sehr langsamer Build auf `/mnt/c` | Nur `~/development/morphos/AmigaGPT` nutzen |
 | Pull blockiert durch hunderte `M`-Dateien | Kein `cp` von Windows — `git reset --hard origin/scintilla` in WSL |
 
 ---

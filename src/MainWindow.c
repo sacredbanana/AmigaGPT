@@ -18,6 +18,7 @@
 #include "gui.h"
 #include "menu.h"
 #include "MainWindow.h"
+#include "utf8stream.h"
 #include <dos/dos.h>
 
 /* Max nesting depth for B/I/U combined. Adjust as needed. */
@@ -1215,6 +1216,114 @@ static void addMainWindowActions() {
 }
 
 /**
+ * Append one validated UTF-8 piece to the live chat view and receivedMessage.
+ */
+static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
+                                    UWORD *wordNumber, ULONG *speechIndex) {
+    STRPTR formattedMessageSystemEncoded;
+    size_t receivedRemaining;
+    size_t pieceLen;
+    size_t displayRemaining;
+
+    if (piece == NULL || piece[0] == '\0') {
+        return;
+    }
+
+    pieceLen = strlen(piece);
+    receivedRemaining =
+        READ_BUFFER_LENGTH - strlen(receivedMessage) - pieceLen - 1;
+    if (receivedRemaining > 0) {
+        strncat(receivedMessage, piece, receivedRemaining);
+    }
+
+    formattedMessageSystemEncoded = CodesetsUTF8ToStr(
+        CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)piece,
+        CSA_MapForeignChars, TRUE, TAG_DONE);
+
+    displayRemaining = CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
+                       strlen(chatOutputTextEditorContents) -
+                       strlen(formattedMessageSystemEncoded) - 1;
+    if (displayRemaining > 0) {
+        strncat(chatOutputTextEditorContents, formattedMessageSystemEncoded,
+                displayRemaining);
+    }
+    CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+
+    if (++(*wordNumber) % 50 == 0) {
+        STRPTR formattedContent =
+            convertMarkdownFormattingToMUI(chatOutputTextEditorContents);
+        strncpy(chatOutputTextEditorContents, formattedContent,
+                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 1);
+        chatOutputTextEditorContents[CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
+                                     1] = '\0';
+        FreeVec(formattedContent);
+        set(chatOutputTextEditor, MUIA_NFloattext_Text,
+            chatOutputTextEditorContents);
+        set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
+        if (config.speechEnabled) {
+            STRPTR unformattedMessageSystemEncoded = CodesetsUTF8ToStr(
+                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                (Tag)receivedMessage, CSA_MapForeignChars, TRUE, TAG_DONE);
+            if (config.speechSystem != SPEECH_SYSTEM_OPENAI) {
+                speakText(unformattedMessageSystemEncoded + *speechIndex, NULL,
+                          NULL);
+            }
+            *speechIndex = strlen(unformattedMessageSystemEncoded);
+            CodesetsFreeA(unformattedMessageSystemEncoded, NULL);
+        }
+    }
+}
+
+static void appendValidatedUtf8Chunk(struct UTF8StreamBuffer *stream,
+                                     const STRPTR chunk,
+                                     STRPTR receivedMessage, UWORD *wordNumber,
+                                     ULONG *speechIndex) {
+    UBYTE piece[2048];
+    ULONG taken;
+
+    if (chunk == NULL || chunk[0] == '\0') {
+        return;
+    }
+
+    if (stream == NULL) {
+        appendAssistantStreamText((STRPTR)chunk, receivedMessage, wordNumber,
+                                  speechIndex);
+        return;
+    }
+
+    if (!utf8stream_append(stream, (const UBYTE *)chunk, strlen(chunk))) {
+        appendAssistantStreamText((STRPTR)chunk, receivedMessage, wordNumber,
+                                  speechIndex);
+        return;
+    }
+
+    while ((taken = utf8stream_take_complete(stream, piece, sizeof(piece) - 1)) >
+           0) {
+        piece[taken] = '\0';
+        appendAssistantStreamText((STRPTR)piece, receivedMessage, wordNumber,
+                                  speechIndex);
+    }
+}
+
+static void flushUtf8StreamToMessage(struct UTF8StreamBuffer *stream,
+                                     STRPTR receivedMessage, UWORD *wordNumber,
+                                     ULONG *speechIndex) {
+    UBYTE piece[2048];
+    ULONG taken;
+
+    if (stream == NULL) {
+        return;
+    }
+
+    taken = utf8stream_flush(stream, piece, sizeof(piece) - 1);
+    if (taken > 0) {
+        piece[taken] = '\0';
+        appendAssistantStreamText((STRPTR)piece, receivedMessage, wordNumber,
+                                  speechIndex);
+    }
+}
+
+/**
  * @brief Sends a chat message to the OpenAI API and displays the response
  *and speaks it if speech is enabled
  * @details This function sends a chat message to the OpenAI API and
@@ -1305,6 +1414,7 @@ static void sendChatMessage() {
     BOOL dataStreamFinished = FALSE;
     ULONG speechIndex = 0;
     UWORD wordNumber = 0;
+    struct UTF8StreamBuffer *utf8Stream = utf8stream_create(4096);
 
     strncat(chatOutputTextEditorContents, "\n", 1);
 
@@ -1329,6 +1439,7 @@ static void sendChatMessage() {
             set(sendMessageButton, MUIA_Disabled, FALSE);
             set(newChatButton, MUIA_Disabled, FALSE);
             set(deleteChatButton, MUIA_Disabled, FALSE);
+            utf8stream_free(utf8Stream);
             FreeVec(receivedMessage);
             if (!isAROS) {
                 FreeVec(text);
@@ -1375,6 +1486,7 @@ static void sendChatMessage() {
                 set(newChatButton, MUIA_Disabled, FALSE);
                 set(deleteChatButton, MUIA_Disabled, FALSE);
 
+                utf8stream_free(utf8Stream);
                 FreeVec(receivedMessage);
                 if (!isAROS) {
                     FreeVec(text);
@@ -1387,61 +1499,19 @@ static void sendChatMessage() {
                 config.useCustomServer ? config.customApiEndpoint
                                        : API_ENDPOINT_RESPONSES);
             if (config.useCustomServer) {
-                strncpy(receivedMessage, contentString,
-                        READ_BUFFER_LENGTH - strlen(receivedMessage) -
-                            strlen(contentString) - 1);
+                receivedMessage[0] = '\0';
+                appendValidatedUtf8Chunk(utf8Stream, contentString,
+                                         receivedMessage, &wordNumber,
+                                         &speechIndex);
                 json_object_put(response);
                 dataStreamFinished = TRUE;
                 continue;
             } else {
                 if (contentString != NULL) {
-                    // Text for printing
                     if (strlen(contentString) > 0) {
-                        STRPTR formattedMessageSystemEncoded =
-                            CodesetsUTF8ToStr(
-                                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                                (Tag)contentString, CSA_MapForeignChars, TRUE,
-                                TAG_DONE);
-                        strncat(receivedMessage, contentString,
-                                READ_BUFFER_LENGTH - strlen(receivedMessage) -
-                                    strlen(contentString) - 1);
-                        strncat(chatOutputTextEditorContents,
-                                formattedMessageSystemEncoded,
-                                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
-                                    strlen(chatOutputTextEditorContents) -
-                                    strlen(formattedMessageSystemEncoded) - 1);
-                        CodesetsFreeA(formattedMessageSystemEncoded, NULL);
-                        if (++wordNumber % 50 == 0) {
-                            STRPTR formattedContent =
-                                convertMarkdownFormattingToMUI(
-                                    chatOutputTextEditorContents);
-                            strncpy(
-                                chatOutputTextEditorContents, formattedContent,
-                                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 1);
-                            FreeVec(formattedContent);
-                            set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                                chatOutputTextEditorContents);
-                            set(chatOutputListView, MUIA_NList_First,
-                                MUIV_NList_First_Bottom);
-                            if (config.speechEnabled) {
-                                // Text for speaking
-                                STRPTR unformattedMessageSystemEncoded =
-                                    CodesetsUTF8ToStr(
-                                        CSA_DestCodeset, (Tag)systemCodeset,
-                                        CSA_Source, (Tag)receivedMessage,
-                                        CSA_MapForeignChars, TRUE, TAG_DONE);
-                                if (config.speechSystem !=
-                                    SPEECH_SYSTEM_OPENAI) {
-                                    speakText(unformattedMessageSystemEncoded +
-                                                  speechIndex,
-                                              NULL, NULL);
-                                }
-                                speechIndex =
-                                    strlen(unformattedMessageSystemEncoded);
-                                CodesetsFreeA(unformattedMessageSystemEncoded,
-                                              NULL);
-                            }
-                        }
+                        appendValidatedUtf8Chunk(utf8Stream, contentString,
+                                                 receivedMessage, &wordNumber,
+                                                 &speechIndex);
                     }
                     STRPTR type = json_object_get_string(
                         json_object_object_get(response, "type"));
@@ -1456,6 +1526,10 @@ static void sendChatMessage() {
             }
         }
     } while (!dataStreamFinished);
+
+    flushUtf8StreamToMessage(utf8Stream, receivedMessage, &wordNumber,
+                             &speechIndex);
+    utf8stream_free(utf8Stream);
 
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 
@@ -1562,13 +1636,14 @@ void displayConversation(struct Conversation *conversation) {
          conversationNode =
              (struct ConversationNode *)conversationNode->node.mln_Succ) {
         if ((strlen(chatOutputTextEditorContents) +
-             strlen(conversationNode->content) + 256) > WRITE_BUFFER_LENGTH) {
+             strlen(conversationNodeGetDisplay(conversationNode)) + 256) >
+            WRITE_BUFFER_LENGTH) {
             displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
             set(sendMessageButton, MUIA_Disabled, TRUE);
             return;
         }
         if (strcmp(conversationNode->role, "user") == 0) {
-            UTF8 *content = conversationNode->content;
+            UTF8 *content = conversationNodeGetDisplay(conversationNode);
             UBYTE userAlignment;
             switch (config.userTextAlignment) {
             case ALIGN_LEFT:
@@ -1599,7 +1674,8 @@ void displayConversation(struct Conversation *conversation) {
             strncat(chatOutputTextEditorContents, assistantStyleString,
                     strlen(assistantStyleString));
             STRPTR formattedContent =
-                convertMarkdownFormattingToMUI(conversationNode->content);
+                convertMarkdownFormattingToMUI(
+                    conversationNodeGetDisplay(conversationNode));
             strncat(chatOutputTextEditorContents, formattedContent,
                     strlen(formattedContent));
             FreeVec(formattedContent);
@@ -1637,7 +1713,7 @@ copyConversation(struct Conversation *conversation) {
          conversationNode->node.mln_Succ != NULL;
          conversationNode =
              (struct ConversationNode *)conversationNode->node.mln_Succ) {
-        addTextToConversation(copy, conversationNode->content,
+        addTextToConversation(copy, conversationNodeGetRaw(conversationNode),
                               conversationNode->role);
     }
     if (conversation->name != NULL) {
@@ -1708,7 +1784,8 @@ static LONG saveConversations() {
                 json_object_new_string(conversationNode->role));
             json_object_object_add(
                 messageJsonObject, "content",
-                json_object_new_string(conversationNode->content));
+                json_object_new_string(
+                    conversationNodeGetRaw(conversationNode)));
             json_object_array_add(messagesJsonArray, messageJsonObject);
         }
         json_object_object_add(conversationJsonObject, "messages",
@@ -2117,7 +2194,7 @@ LONG printConversation() {
              conversationNode->node.mln_Succ != NULL;
              conversationNode =
                  (struct ConversationNode *)conversationNode->node.mln_Succ) {
-            UTF8 *content = conversationNode->content;
+            UTF8 *content = conversationNodeGetDisplay(conversationNode);
             if (strcmp(conversationNode->role, "user") == 0) {
                 Write(printerFile, "*******************\n", -1);
                 Write(printerFile, "User:\n\n", -1);

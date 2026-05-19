@@ -1,0 +1,15 @@
+# Host tests (WSL/Linux): make -f Makefile.utf8stream test
+CC ?= gcc
+CFLAGS = -Wall -Wextra -g -O0 -DUTF8STREAM_HOST -I..
+OUT = ../../out/utf8stream_host_test
+
+.PHONY: test clean
+
+test: $(OUT)
+	./$(OUT)
+
+$(OUT): utf8stream_host_test.c ../utf8stream.c ../utf8stream.h
+	$(CC) $(CFLAGS) -o $@ utf8stream_host_test.c ../utf8stream.c
+
+clean:
+	$(RM) $(OUT)

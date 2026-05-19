@@ -53,6 +53,7 @@ daemon_objects := $(cpp_objects) $(daemon_c_objects) $(s_objects) $(vasm_objects
 
 AUTOGEN_FILE = $(SOURCE_DIR)/version.h
 AUTOGEN_NEXT = $(shell expr $$(awk '/#define BUILD_NUMBER/' $(AUTOGEN_FILE) | tr -cd "[0-9]") + 1)
+PATCH_NEXT = $(shell expr $$(awk '/#define APP_VERSION_PATCH/' $(AUTOGEN_FILE) | tr -cd "[0-9]") + 1)
 
 GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT = $(shell git rev-parse HEAD)
@@ -65,14 +66,27 @@ ifeq ($(DEBUG),1)
 else
 	CCFLAGS += -Ofast
 endif
+
+# AmigaSDK-gcc Zusatz-SDK (native WSL, kein Docker): SDI, json-c, aktuelle MUI-Header
+AMIGA_SDK_EXTRA ?= $(HOME)/development/morphos/AmigaSDK-gcc/morphos/sdk
+ifneq ($(wildcard $(AMIGA_SDK_EXTRA)/ppc-morphos/include/SDI_hook.h),)
+SDKDIR := $(AMIGA_SDK_EXTRA)/os-include
+NETINCDIR := $(AMIGA_SDK_EXTRA)/includestd
+INCDIR := $(AMIGA_SDK_EXTRA)/ppc-morphos/include
+LIBDIR := $(AMIGA_SDK_EXTRA)/lib
+SDKLIBDIR := $(AMIGA_SDK_EXTRA)/ppc-morphos/lib
+GCCLIBDIR := $(AMIGA_SDK_EXTRA)/lib/gcc/ppc-morphos/11.2.0/
+CCFLAGS += -I$(SDKDIR) -I$(INCDIR)
+endif
+
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NETINCDIR),-I$(INCDIR),-D
 LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-ljson-c,-lssl,-lcrypto,-L$(GCCLIBDIR),-latomic
 VASMFLAGS = -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__MORPHOS__ -I$(INCDIR) -I$(NETINCDIR) -I$(SDKDIR)
 
-.PHONY: all clean copy_bundle_files catalog catalog_definition daemon
+.PHONY: all clean copy_bundle_files catalog catalog_definition daemon version-bump
 
-all: $(EXECUTABLE_OUT) copy_bundle_files
+all: version-bump $(EXECUTABLE_OUT) copy_bundle_files
 
 daemon: $(DAEMON_OUT)
 
@@ -80,6 +94,11 @@ clean:
 	$(info Cleaning...)
 	$(RM) -dr $(BUNDLE_DIR)/$(PROGRAM_NAME)/catalogs
 	$(RM) -dr $(BUILD_DIR)
+
+version-bump:
+	$(info AmigaGPT version $(APP_VERSION_MAJOR).$(APP_VERSION_MINOR).$(PATCH_NEXT) build $(AUTOGEN_NEXT))
+	@$(SED) 's|#define APP_VERSION_PATCH ".*"|#define APP_VERSION_PATCH "$(PATCH_NEXT)"|' $(AUTOGEN_FILE)
+	@$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 
 catalog_definition:
 	$(info Generating catalog definition)
@@ -135,12 +154,10 @@ $(cpp_objects): $(BUILD_DIR)/%.o : %.cpp | $(BUILD_DIR)/%.dir
 
 $(c_objects): $(BUILD_DIR)/%.o : %.c $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.h | catalog
 	$(info Compiling $<)
-	@$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -c -o $@ $(CURDIR)/$<
 
 $(daemon_c_objects): $(BUILD_DIR)/daemon_%.o : $(SOURCE_DIR)/%.c $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.h | catalog
 	$(info Compiling daemon $<)
-	@$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 	$(CC) $(CCFLAGS) -DDAEMON -c -o $@ $<
 
 $(s_objects): $(BUILD_DIR)/%.o : %.s

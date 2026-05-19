@@ -730,7 +730,8 @@ struct json_object **postChatMessageToOpenAI(
                                        json_object_new_string(message->role));
                 json_object_object_add(
                     messageObj, "content",
-                    json_object_new_string(message->content));
+                    json_object_new_string(
+                        conversationNodeGetRaw(message)));
                 json_object_array_add(conversationArray, messageObj);
                 conversationNode = conversationNode->mln_Succ;
             }
@@ -769,7 +770,8 @@ struct json_object **postChatMessageToOpenAI(
                                        json_object_new_string(message->role));
                 json_object_object_add(
                     messageObj, "content",
-                    json_object_new_string(message->content));
+                    json_object_new_string(
+                        conversationNodeGetRaw(message)));
                 json_object_array_add(conversationArray, messageObj);
                 conversationNode = conversationNode->mln_Succ;
             }

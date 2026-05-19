@@ -123,6 +123,12 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
 void addTextToConversation(struct Conversation *conversation, UTF8 *text,
                            STRPTR role);
 
+/** Raw UTF-8 for API, history JSON, copy/paste. */
+UTF8 *conversationNodeGetRaw(const struct ConversationNode *node);
+
+/** Text for chat rendering (display_text or raw_utf8). */
+UTF8 *conversationNodeGetDisplay(const struct ConversationNode *node);
+
 /**
  * Free the conversation
  * @param conversation The conversation to free

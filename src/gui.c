@@ -538,6 +538,57 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
     }
 }
 
+static struct MinList *newEmptyMinList(void) {
+    struct MinList *list = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
+    if (list) {
+        list->mlh_Tail = 0;
+        list->mlh_Head = (struct MinNode *)&list->mlh_Tail;
+        list->mlh_TailPred = (struct MinNode *)&list->mlh_Head;
+    }
+    return list;
+}
+
+static void freeConversationNode(struct ConversationNode *conversationNode) {
+    struct AICodeBlock *block;
+
+    if (conversationNode->codeblocks != NULL) {
+        while ((block = (struct AICodeBlock *)RemHead(
+                    (struct List *)conversationNode->codeblocks)) != NULL) {
+            if (block->language != NULL) {
+                FreeVec(block->language);
+            }
+            if (block->raw_code != NULL) {
+                FreeVec(block->raw_code);
+            }
+            FreeVec(block);
+        }
+        FreeVec(conversationNode->codeblocks);
+    }
+    if (conversationNode->display_text != NULL) {
+        FreeVec(conversationNode->display_text);
+    }
+    if (conversationNode->raw_utf8 != NULL) {
+        FreeVec(conversationNode->raw_utf8);
+    }
+}
+
+UTF8 *conversationNodeGetRaw(const struct ConversationNode *node) {
+    if (node == NULL) {
+        return NULL;
+    }
+    return node->raw_utf8;
+}
+
+UTF8 *conversationNodeGetDisplay(const struct ConversationNode *node) {
+    if (node == NULL) {
+        return NULL;
+    }
+    if (node->display_text != NULL) {
+        return node->display_text;
+    }
+    return node->raw_utf8;
+}
+
 /**
  * Add a block of text to the conversation list
  * @param conversation The conversation to add the text to
@@ -546,16 +597,39 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
  **/
 void addTextToConversation(struct Conversation *conversation, UTF8 *text,
                            STRPTR role) {
-    struct ConversationNode *conversationNode =
-        AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
+    struct ConversationNode *conversationNode;
+    ULONG textLength;
+
+    if (text == NULL) {
+        text = (UTF8 *)"";
+    }
+    textLength = strlen(text);
+
+    conversationNode = AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
     if (conversationNode == NULL) {
         displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
         return;
     }
     strncpy(conversationNode->role, role, sizeof(conversationNode->role) - 1);
     conversationNode->role[sizeof(conversationNode->role) - 1] = '\0';
-    conversationNode->content = AllocVec(strlen(text) + 1, MEMF_CLEAR);
-    strncpy(conversationNode->content, text, strlen(text));
+
+    conversationNode->raw_utf8 = AllocVec(textLength + 1, MEMF_CLEAR);
+    if (conversationNode->raw_utf8 == NULL) {
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        FreeVec(conversationNode);
+        return;
+    }
+    strncpy(conversationNode->raw_utf8, text, textLength);
+    conversationNode->raw_length = textLength;
+    conversationNode->display_text = NULL;
+    conversationNode->codeblocks = newEmptyMinList();
+    if (conversationNode->codeblocks == NULL) {
+        FreeVec(conversationNode->raw_utf8);
+        FreeVec(conversationNode);
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        return;
+    }
+
     AddTail((struct List *)conversation->messages,
             (struct Node *)conversationNode);
 }
@@ -568,7 +642,7 @@ void freeConversation(struct Conversation *conversation) {
     struct ConversationNode *conversationNode;
     while ((conversationNode = (struct ConversationNode *)RemHead(
                 (struct List *)conversation->messages)) != NULL) {
-        FreeVec(conversationNode->content);
+        freeConversationNode(conversationNode);
         FreeVec(conversationNode);
     }
     if (conversation->name != NULL)

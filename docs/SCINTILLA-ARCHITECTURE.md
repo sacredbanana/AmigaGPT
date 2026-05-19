@@ -292,3 +292,20 @@ DoMethod(sci,
 - Nachrichten: `struct ConversationNode` / `struct Conversation` in `openai.h` — Ausgangspunkt für Migration zu getrennten Roh-/Anzeige-/Codeblock-Daten.
 - Streaming: Logik in `openai.c` und Anbindung in `MainWindow.c` — Ziel ist die oben beschriebene Pipeline zwischen Netz und UI.
 - Chat-UI: `MainWindow.c` nutzt u. a. NList/TextEditor und Rich-Text-Hilfen — für v0.1 bewusst vereinfachen oder parallel neu aufsetzen, je nach Refaktor-Strategie.
+
+### Umgesetzt (Branch scintilla)
+
+**Phase 3.2**
+
+- `src/utf8stream.c` / `utf8stream.h` — `UTF8StreamBuffer`, nur vollständige UTF-8-Sequenzen werden weitergereicht.
+- `sendChatMessage()` in `MainWindow.c`: SSE-Chunks → `utf8stream` → `receivedMessage` / Live-Anzeige; `utf8stream_flush()` am Stream-Ende.
+- Host-Tests: `tools/test-utf8stream.sh`
+
+**Phase 2 (Datenmodell, Verhalten unverändert)**
+
+- `struct AICodeBlock` + `struct ConversationNode` mit `raw_utf8`, `raw_length`, `display_text`, `codeblocks` (`openai.h`).
+- `conversationNodeGetRaw()` / `conversationNodeGetDisplay()` (`gui.c`).
+- History/API nutzen `raw_utf8`; Anzeige nutzt `display_text` falls gesetzt, sonst `raw_utf8`.
+- `codeblocks`-Liste pro Nachricht ist leer (bis Phase 4 Parser).
+
+**Nächster Schritt:** Phase 4 — Minimal-Fence-Parser (` ``` `), Befüllen von `codeblocks`.

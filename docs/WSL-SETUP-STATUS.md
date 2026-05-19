@@ -32,13 +32,13 @@ Chronik und Checkliste dessen, was für **AmigaGPT / MorphOS** in **WSL2 (Debian
 ~/development/
   morphos/
     flexcat/              ← gebaut (FlexCat 2.18)
-  AmigaGPT/               ← Git-Clone, Branch scintilla, `make -f Makefile.MorphOS`
+    AmigaGPT/             ← Git-Clone, Branch scintilla, `make -f Makefile.MorphOS`
 ```
 
 **Cursor / IDE** (Workspace hier öffnen, nicht unter Windows):
 
 ```text
-\\wsl$\Debian\home\weimer\development\AmigaGPT
+\\wsl$\Debian\home\weimer\development\morphos\AmigaGPT
 ```
 
 **Nicht mehr verwenden** (veraltet, führt zu CRLF-/Pull-Konflikten):
@@ -47,7 +47,7 @@ Chronik und Checkliste dessen, was für **AmigaGPT / MorphOS** in **WSL2 (Debian
 C:\Users\xbox\cursorWorkspace\AmigaGPT
 ```
 
-Sync nur noch per Git: `git pull` / `git push` in `~/development/AmigaGPT` — kein `cp` von `/mnt/c/…` mehr.
+Sync nur noch per Git: `git pull` / `git push` in `~/development/morphos/AmigaGPT` — kein `cp` von `/mnt/c/…` mehr.
 
 ---
 
@@ -78,8 +78,8 @@ Sync nur noch per Git: `git pull` / `git push` in `~/development/AmigaGPT` — k
 **AmigaGPT:** Symlinks im Repo-Root (weil Makefile relative `C_h.sd` / `C_c.sd` erwartet):
 
 ```bash
-ln -sf ~/development/morphos/flexcat/src/sd/C_h.sd ~/development/AmigaGPT/
-ln -sf ~/development/morphos/flexcat/src/sd/C_c.sd ~/development/AmigaGPT/
+ln -sf ~/development/morphos/flexcat/src/sd/C_h.sd ~/development/morphos/AmigaGPT/
+ln -sf ~/development/morphos/flexcat/src/sd/C_c.sd ~/development/morphos/AmigaGPT/
 ```
 
 ---
@@ -113,35 +113,31 @@ sudo ln -sfn /gg/lib/gcc/ppc-morphos/11.3.0 /opt/amiga/lib/gcc/ppc-morphos/11.2.
 
 ---
 
-## AmigaSDK-gcc (noch offen)
+## AmigaSDK-gcc (erledigt)
 
-**Kein Compiler**, sondern **SDK-Zusatzpaket** (Header, Libraries, FlexCat-SD) für GCC-Builds:
-
-https://github.com/sacredbanana/AmigaSDK-gcc
-
-Für MorphOS listet das Repo u. a.: **json-c**, **codesets**, **guigfx**, FlexCat-SD.  
-AmigaGPT braucht zusätzlich z. B. **`SDI_hook.h`** (SDI eher im OS4-Teil des Pakets).
-
-Installation laut README: Inhalt von `sdk/` ins Dev-Layout legen (bei uns: passend zu `/opt/amiga` / `/gg`).
-
-**Alternative:** Docker `sacredbanana/amiga-compiler:ppc-morphos` + `./build_morphos.sh` (alles vorkonfiguriert).
+| Schritt | Details |
+| ------- | ------- |
+| Clone | `~/development/morphos/AmigaSDK-gcc` |
+| Nutzung | `Makefile.MorphOS` bindet `morphos/sdk/` automatisch ein (`AMIGA_SDK_EXTRA`) — **kein** `sudo cp` nötig |
+| Doku | [MORPHOS-SDK-ERGAENZUNGEN.md](MORPHOS-SDK-ERGAENZUNGEN.md) — exakte Header/Libs |
 
 ---
 
-## Erster Build-Versuch AmigaGPT
+## MorphOS-Build (erledigt, nativ ohne Docker)
 
 ```bash
-cd ~/development/AmigaGPT
-export PATH="$HOME/development/morphos/flexcat/src/bin_unix:/usr/bin:/bin"
+cd ~/development/morphos/AmigaGPT
+export PATH="$HOME/development/morphos/flexcat/src/bin_unix:$PATH"
 make -f Makefile.MorphOS
+make -f Makefile.MorphOS daemon
 ```
 
-| Phase | Ergebnis |
-| ----- | -------- |
-| Kataloge / flexcat | läuft (mit Warnungen bei einzelnen `.po`) |
-| Kompilieren | **Abbruch:** `fatal error: SDI_hook.h: No such file or directory` |
+| Ausgabe | Pfad |
+| ------- | ---- |
+| Hauptprogramm | `out/AmigaGPT_MorphOS` (~4,9 MB) |
+| Daemon | `out/AmigaGPTD_MorphOS` (~4,8 MB) |
 
-→ Nächster Schritt: **AmigaSDK-gcc** (oder Docker-Image) einspielen.
+**Test-Kopie für MorphOS-Maschine:** `Z:\morphos\out-crosscompile\` (Binaries + `.info` + `rexx/`, `devs/`).
 
 ---
 
@@ -153,6 +149,7 @@ make -f Makefile.MorphOS
 | `docs/GIT-FORK-WORKFLOW.md` | Fork, upstream, Branch-Hinweis |
 | `docs/HANDLUNGSANWEISUNG-GIT.md` | Git-Regeln Mensch + Agent |
 | `docs/BUILD-MORPHOS-WSL.md` | Schritt-für-Schritt Build-Anleitung |
+| `docs/MORPHOS-SDK-ERGAENZUNGEN.md` | Welche SDK-Ergänzungen genau nötig sind |
 | `docs/WSL-SETUP-STATUS.md` | dieser Ist-Stand |
 | `docs/README.md` | Index aller Docs |
 | `AGENTS.md` | Kurzinfo für Cursor-Agenten |
@@ -162,11 +159,11 @@ make -f Makefile.MorphOS
 
 ## Offene Punkte (Checkliste)
 
-- [ ] `AmigaSDK-gcc` installieren **oder** Docker-Build testen
-- [ ] `make -f Makefile.MorphOS` erfolgreich bis `out/AmigaGPT_MorphOS`
+- [x] `AmigaSDK-gcc` geklont; Makefile nutzt `morphos/sdk` automatisch
+- [x] `make -f Makefile.MorphOS` + `daemon` → `out/AmigaGPT_MorphOS`, `out/AmigaGPTD_MorphOS`
 - [ ] `~/.bashrc`: FlexCat-PATH dauerhaft
-- [x] Dokumentation: kanonischer Pfad nur noch WSL (`~/development/AmigaGPT`)
-- [ ] Cursor-Workspace dauerhaft auf `\\wsl$\Debian\home\weimer\development\AmigaGPT` (nicht `C:\Users\xbox\cursorWorkspace\AmigaGPT`)
+- [x] Dokumentation: kanonischer Pfad nur noch WSL (`~/development/morphos/AmigaGPT`)
+- [ ] Cursor-Workspace dauerhaft auf `\\wsl$\Debian\home\weimer\development\morphos\AmigaGPT` (nicht `C:\Users\xbox\cursorWorkspace\AmigaGPT`)
 - [ ] `git push origin scintilla` (lokale Doku-Commits)
 - [ ] Optional: `upstream` einmal `git fetch` + Merge in `scintilla`
 
@@ -184,5 +181,5 @@ which flexcat
 flexcat -h
 
 # Build
-cd ~/development/AmigaGPT && make -f Makefile.MorphOS
+cd ~/development/morphos/AmigaGPT && make -f Makefile.MorphOS
 ```
