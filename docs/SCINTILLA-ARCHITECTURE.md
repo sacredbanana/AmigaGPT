@@ -299,6 +299,7 @@ DoMethod(sci,
 
 - `src/utf8stream.c` / `utf8stream.h` — `UTF8StreamBuffer`, nur vollständige UTF-8-Sequenzen werden weitergereicht.
 - `sendChatMessage()` in `MainWindow.c`: SSE-Chunks → `utf8stream` → `receivedMessage` / Live-Anzeige; `utf8stream_flush()` am Stream-Ende.
+- **Hinweis:** Während des **Live-Streams** baut die UI den laufenden Text noch aus dem Rohpuffer; **`display_text`** / Fence-Platzhalter (Phase 5.1) entstehen erst beim Abschluss der Antwort in **`addTextToConversation()`** und greifen sichtbar, wenn der Chat aus den gespeicherten Knoten neu gezeichnet wird (`displayConversation()`).
 - Host-Tests: `tools/test-utf8stream.sh`
 
 **Phase 2 (Datenmodell, Verhalten unverändert)**
@@ -306,6 +307,15 @@ DoMethod(sci,
 - `struct AICodeBlock` + `struct ConversationNode` mit `raw_utf8`, `raw_length`, `display_text`, `codeblocks` (`openai.h`).
 - `conversationNodeGetRaw()` / `conversationNodeGetDisplay()` (`gui.c`).
 - History/API nutzen `raw_utf8`; Anzeige nutzt `display_text` falls gesetzt, sonst `raw_utf8`.
-- `codeblocks`-Liste pro Nachricht ist leer (bis Phase 4 Parser).
 
-**Nächster Schritt:** Phase 4 — Minimal-Fence-Parser (` ``` `), Befüllen von `codeblocks`.
+**Phase 4 (Minimal-Fence-Parser)**
+
+- `src/codefence.c` / `codefence.h` — erkennt Zeilen mit öffnendem ` ``` ` (optional Sprache in derselben Zeile) und schließendem ` ``` ` am Zeilenanfang; füllt `codeblocks` mit `struct AICodeBlock` (`language`, `raw_code`, `code_length`). Unvollständiges schließendes Fence am Textende wird ignoriert.
+- Aufruf aus `addTextToConversation()` in `gui.c` — jede neue Nachricht (inkl. Import/Kopie) wird geparst.
+
+**Phase 5.1 (Chat vs. Code, ohne Scintilla)**
+
+- Wenn mindestens ein vollständiger Fence-Block erkannt wurde: `display_text` enthält den Fließtext mit jedem Block ersetzt durch den **katalogisierten** Platzhalter `STRING_CHAT_CODEBLOCK_PLACEHOLDER` (Standard: `[Codeblock]\n` in `AmigaGPT.pot`; Übersetzungen in den `.po`-Dateien). Ohne vollständige Fences bleibt `display_text` NULL — Anzeige wie bisher über `raw_utf8`.
+- Konversationstitel in der **linken NList**: kein natives UTF-8 in `NList_mcc.h`; `name` bleibt UTF-8 (JSON/API), Anzeige über **`name_list_display`** (`CodesetsUTF8ToStr`, `conversationRefreshNameListDisplay()` in `gui.c`).
+
+**Nächster Schritt:** Phase 5.2 / 6 — Code aus `codeblocks` in separates Fenster/Scintilla.

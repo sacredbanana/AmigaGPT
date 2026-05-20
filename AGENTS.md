@@ -24,7 +24,7 @@ Start: `docs/README.md`
 | -------- | ------- |
 | `docs/HANDLUNGSANWEISUNG-GIT.md` | Binding git workflow (DE) |
 | `docs/GIT-FORK-WORKFLOW.md` | Remotes, upstream sync, PRs |
-| `docs/SCINTILLA-ARCHITECTURE.md` | Scintilla / streaming / UTF-8 plan |
+| `docs/SCINTILLA-ARCHITECTURE.md` | Scintilla / streaming / UTF-8 / Fence-Parser / Chat-Anzeige vs. `codeblocks` |
 | `docs/BUILD-MORPHOS-WSL.md` | MorphOS cross-build on WSL2 Debian (incl. FlexCat bootstrap) |
 | `docs/MORPHOS-SDK-ERGAENZUNGEN.md` | Exact SDK supplements (BIGFOOT vs AmigaSDK-gcc) |
 | `docs/WSL-SETUP-STATUS.md` | WSL environment setup status / checklist (DE) |

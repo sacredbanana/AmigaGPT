@@ -100,7 +100,11 @@ MakeHook(DestructConversationLI_TextHook, DestructConversationLI_TextFunc);
 HOOKPROTONHNO(DisplayConversationLI_TextFunc, void,
               struct NList_DisplayMessage *ndm) {
     struct Conversation *entry = (struct Conversation *)ndm->entry;
-    ndm->strings[0] = (STRPTR)entry->name;
+    if (entry->name_list_display != NULL) {
+        ndm->strings[0] = entry->name_list_display;
+    } else {
+        ndm->strings[0] = (STRPTR)entry->name;
+    }
 }
 MakeHook(DisplayConversationLI_TextHook, DisplayConversationLI_TextFunc);
 
@@ -1601,6 +1605,7 @@ static void sendChatMessage() {
                         AllocVec(strlen(responseString) + 1, MEMF_CLEAR);
                     strncpy(currentConversation->name, responseString,
                             strlen(responseString));
+                    conversationRefreshNameListDisplay(currentConversation);
                 }
                 DoMethod(conversationListObject, MUIM_NList_InsertSingle,
                          currentConversation, MUIV_NList_Insert_Top);
@@ -1719,6 +1724,7 @@ copyConversation(struct Conversation *conversation) {
     if (conversation->name != NULL) {
         copy->name = AllocVec(strlen(conversation->name) + 1, MEMF_CLEAR);
         strncpy(copy->name, conversation->name, strlen(conversation->name));
+        conversationRefreshNameListDisplay(copy);
     }
     return copy;
 }
@@ -1996,6 +2002,7 @@ static LONG loadConversations() {
         conversation->name =
             AllocVec(strlen(conversationName) + 1, MEMF_ANY | MEMF_CLEAR);
         strncpy(conversation->name, conversationName, strlen(conversationName));
+        conversationRefreshNameListDisplay(conversation);
 
         set(conversationListObject, MUIA_NList_Quiet, TRUE);
 

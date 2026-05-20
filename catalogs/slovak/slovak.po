@@ -1235,8 +1235,12 @@ msgstr "GPT Image 1 Veľkosť obrázku"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
-msgstr "Nepodarilo sa odošleť žiadosť. Vaš OpenAI API účet pravdepodobne nemá kredity na spustenie tejto modelu. Skontrolujte svoj účet."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
+msgstr ""
+"Nepodarilo sa odošleť žiadosť. Vaš OpenAI API účet pravdepodobne nemá "
+"kredity na spustenie tejto modelu. Skontrolujte svoj účet."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1387,3 +1391,8 @@ msgstr "Hľadať"
 msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "Nepodarilo sa vytvoriť ElevenLabs settings window"
+
+#: src/codefence.c:65
+msgctxt "STRING_CHAT_CODEBLOCK_PLACEHOLDER (260//)"
+msgid "[Codeblock]\n"
+msgstr "[Codeblock]\n"

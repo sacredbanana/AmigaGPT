@@ -1396,3 +1396,8 @@ msgstr "Wyszukiwanie"
 msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "Nie udało się utworzenia okna ustawień ElevenLabs"
+
+#: src/codefence.c:65
+msgctxt "STRING_CHAT_CODEBLOCK_PLACEHOLDER (260//)"
+msgid "[Codeblock]\n"
+msgstr "[Codeblock]\n"

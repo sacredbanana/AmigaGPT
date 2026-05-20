@@ -166,6 +166,8 @@ make -f Makefile.MorphOS daemon
 - [ ] Cursor-Workspace dauerhaft auf `\\wsl$\Debian\home\weimer\development\morphos\AmigaGPT` (nicht `C:\Users\xbox\cursorWorkspace\AmigaGPT`)
 - [ ] `git push origin scintilla` (lokale Doku-Commits)
 - [ ] Optional: `upstream` einmal `git fetch` + Merge in `scintilla`
+- [ ] Optional: nach `.pot`/`.po`-Änderung einmal **`make catalog`** bzw. vollständiger Build, damit `AmigaGPT_cat.*` aktuell sind
+- [ ] Optional: Phase 5.1 (Fence-Platzhalter, Konversationsliste-Zeichensatz) kurz auf **MorphOS** gegengetestet
 
 ---
 

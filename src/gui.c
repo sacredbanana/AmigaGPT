@@ -22,6 +22,7 @@
 #include "ARexx.h"
 #include "ChatSystemRequesterWindow.h"
 #include "CustomServerSettingsRequesterWindow.h"
+#include "codefence.h"
 #include "config.h"
 #include "ElevenLabsSettingsRequesterWindow.h"
 #include "gui.h"
@@ -434,9 +435,26 @@ struct Conversation *newConversation() {
 
     conversation->messages = messages;
     conversation->name = NULL;
+    conversation->name_list_display = NULL;
     conversation->system = NULL;
 
     return conversation;
+}
+
+void conversationRefreshNameListDisplay(struct Conversation *conversation) {
+    if (conversation == NULL) {
+        return;
+    }
+    if (conversation->name_list_display != NULL) {
+        CodesetsFreeA(conversation->name_list_display, NULL);
+        conversation->name_list_display = NULL;
+    }
+    if (conversation->name == NULL || conversation->name[0] == '\0') {
+        return;
+    }
+    conversation->name_list_display = CodesetsUTF8ToStr(
+        CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)conversation->name,
+        CSA_MapForeignChars, TRUE, TAG_DONE);
 }
 
 /**
@@ -632,6 +650,8 @@ void addTextToConversation(struct Conversation *conversation, UTF8 *text,
 
     AddTail((struct List *)conversation->messages,
             (struct Node *)conversationNode);
+
+    conversationNodeParseCodeFences(conversationNode);
 }
 
 /**
@@ -647,6 +667,8 @@ void freeConversation(struct Conversation *conversation) {
     }
     if (conversation->name != NULL)
         FreeVec(conversation->name);
+    if (conversation->name_list_display != NULL)
+        CodesetsFreeA(conversation->name_list_display, NULL);
     if (conversation->system != NULL)
         CodesetsFreeA(conversation->system, NULL);
     FreeVec(conversation);

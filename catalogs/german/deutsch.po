@@ -1227,8 +1227,8 @@ msgid ""
 "voice'. This only works for the gpt-4o-mini-tts model."
 msgstr ""
 "Geben Sie an, wie Sie möchten, dass die AI spricht. Beispiel: 'Sprich in "
-"einer tiefen und mysteriösen Stimme'. Dies funktioniert nur mit dem "
-"gpt-4o-mini-tts-Modell."
+"einer tiefen und mysteriösen Stimme'. Dies funktioniert nur mit dem gpt-4o-"
+"mini-tts-Modell."
 
 #: src/VoiceInstructionsRequesterWindow.c:87
 msgctxt "STRING_VOICE_INSTRUCTIONS_WINDOW_ERROR (218//)"
@@ -1277,8 +1277,12 @@ msgstr "GPT Image 1 Bildgröße"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
-msgstr "Ungültige Anfrage. Ihr OpenAI API-Konto hat wahrscheinlich keine Kredite mehr für das Ausführen dieses Modells. Bitte überprüfen Sie Ihr Kontostand."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
+msgstr ""
+"Ungültige Anfrage. Ihr OpenAI API-Konto hat wahrscheinlich keine Kredite "
+"mehr für das Ausführen dieses Modells. Bitte überprüfen Sie Ihr Kontostand."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1429,3 +1433,8 @@ msgstr "Suchen"
 msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "ElevenLabs-Einstellungen-Fenster konnte nicht erstellt werden"
+
+#: src/codefence.c:65
+msgctxt "STRING_CHAT_CODEBLOCK_PLACEHOLDER (260//)"
+msgid "[Codeblock]\n"
+msgstr "[Codeblock]\n"

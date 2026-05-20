@@ -57,6 +57,11 @@ struct Conversation {
      **/
     UTF8 *name;
     /**
+     * Title for MUI NList (system codeset), derived from UTF-8 name.
+     * NULL if absent. Allocated via CodesetsUTF8ToStr — free with CodesetsFreeA.
+     **/
+    STRPTR name_list_display;
+    /**
      * The system of the conversation
      **/
     UTF8 *system;

@@ -435,8 +435,8 @@ msgid ""
 msgstr ""
 "Nem sikerült elemezni a csevegési előzményeket. Rosszul formázott JSON. A "
 "chat-history.json fájl valószínűleg sérült. A beszélgetési előzmények nem "
-"töltődnek be. A chat-history.json fájl biztonsági másolata chat-history.json."
-"bak néven készült"
+"töltődnek be. A chat-history.json fájl biztonsági másolata chat-"
+"history.json.bak néven készült"
 
 #: src/MainWindow.c:1823
 msgctxt "STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP_RAM (57//)"
@@ -1248,8 +1248,12 @@ msgstr "GPT Image 1 Kép Mérete"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
-msgid "Invalid request. Your OpenAI API account probably has no credit left to run this model. Please check your account balance."
-msgstr "Érvénytelen kérés. A OpenAI API-fiókja valószínűleg nincs kredite a modell futtatásához. Ellenőrizze a fiókja egyenlegét."
+msgid ""
+"Invalid request. Your OpenAI API account probably has no credit left to run "
+"this model. Please check your account balance."
+msgstr ""
+"Érvénytelen kérés. A OpenAI API-fiókja valószínűleg nincs kredite a modell "
+"futtatásához. Ellenőrizze a fiókja egyenlegét."
 
 #: src/menu.c:137
 msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
@@ -1314,7 +1318,8 @@ msgstr "Egyedi Szerver Beállítások"
 #: src/CustomServerSettingsRequesterWindow.c:11
 msgctxt "STRING_ERROR_CUSTOM_SERVER_SETTINGS (242//)"
 msgid "Failed to create custom server settings window"
-msgstr "Nem sikerült létrehozni a customServerSettingsRequesterWindowObject elemet"
+msgstr ""
+"Nem sikerült létrehozni a customServerSettingsRequesterWindowObject elemet"
 
 #: src/CustomServerSettingsRequesterWindow.c:111
 msgctxt "STRING_MENU_OPENAI_API_ENDPOINT (243//)"
@@ -1400,3 +1405,8 @@ msgstr "Keresés"
 msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "Nem sikerült létrehozni az ElevenLabs beállításokat kérő ablakot"
+
+#: src/codefence.c:65
+msgctxt "STRING_CHAT_CODEBLOCK_PLACEHOLDER (260//)"
+msgid "[Codeblock]\n"
+msgstr "[Codeblock]\n"

@@ -123,6 +123,12 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
 void addTextToConversation(struct Conversation *conversation, UTF8 *text,
                            STRPTR role);
 
+/**
+ * Rebuild name_list_display from conversation->name (UTF-8) for NList/MUI.
+ * Call after assigning name; safe if name is NULL.
+ **/
+void conversationRefreshNameListDisplay(struct Conversation *conversation);
+
 /** Raw UTF-8 for API, history JSON, copy/paste. */
 UTF8 *conversationNodeGetRaw(const struct ConversationNode *node);
 
