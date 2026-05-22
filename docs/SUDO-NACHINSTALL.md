@@ -6,7 +6,7 @@ Wenn der Agent oder Build-Skripte an **Permission denied** / **sudo password** s
 
 ## 1. Paketierung (empfohlen)
 
-Für **ein Archiv** statt vieler Einzeldateien nach `Z:\morphos\…`:
+Für **ein Archiv** statt vieler Einzeldateien nach `Z:\morphos\…` — **Paketieren** = Skript bis **erfolgreichem** Deploy nach **`Z:\morphos\out-crosscompile\`** (Standard `DEPLOY=1`), siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) Abschnitt 8:
 
 ```bash
 sudo apt update
@@ -29,7 +29,7 @@ chmod +x package-morphos-cross.sh
 # sudo chown -R "$USER:$USER" tools && mv package-morphos-cross.sh tools/
 ```
 
-Erzeugt u. a. `out/AmigaGPT-MorphOS-cross.lha` (oder `.zip`) und kopiert nach `Z:\morphos\out-crosscompile\`.
+Erzeugt `out/AmigaGPT-MorphOS-cross.lha` (oder `.zip`) und kopiert nach **`Z:\morphos\out-crosscompile\`**; bei Deploy-Fehler **Exit 1**. Nur LHA ohne Z: bewusst mit **`DEPLOY=0`** (kein abgeschlossenes Paketieren im projektinternen Sinn).
 
 ---
 

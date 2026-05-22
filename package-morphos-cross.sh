@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 # MorphOS-only test package from native WSL cross-build (no Docker).
+#
+# Handlungsanweisung (Projekt): „Paketieren“ = LHA/Staging erzeugen **und**
+# die Bereitstellung unter Z: (Deploy) erfolgreich — siehe docs/HANDLUNGSANWEISUNG-GIT.md.
+# Mit DEPLOY=0 wird nur lokal gebündelt (kein Z:); Exit 0, aber kein abgeschlossenes Paketieren.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -73,16 +77,25 @@ oder von Hand:
   protect AmigaGPTD_MorphOS +e
   protect rexx/#? +s
 
-Ohne +e startet das Programm von Workbench oft nicht; ohne +s scheitern ARexx-Skripte.
+Ohne +s koennen mitgelieferte ARexx-Skripte in rexx/ scheitern (+e fuer Workbench
+oft optional — Shell/run funktioniert bei vielen Cross-Builds auch ohne fix-protection).
 Die .info-Dateien (Icon, Stack) sind im Archiv und getrennt von den Protection Bits.
+
+ARexx — erste Zeile MUSS /* Kommentar */ sein
+--------------------------------------------
+Laut AmigaOS-Handbuch (Elements of ARexx): Jedes Programm beginnt mit /* ... */.
+Ohne diesen Kopf: rx meldet oft Fehler 5. fix-protection.rexx beginnt mit /* ... */.
 
 Installation
 ------------
-1. LHA entpacken, Ordner nach z.B. Work:AmigaGPT/
-2. fix-protection.rexx ausfuehren (siehe oben)
-3. assign AMIGAGPT: Work:AmigaGPT/AmigaGPT
+1. LHA entpacken (z.B. nach Work:AmigaGPT/), Ordner package-morphos/AmigaGPT/...
+2. Optional in AmigaGPT/AmigaGPT/: rx fix-protection.rexx (vor allem fuer rexx/#?)
+3. assign AMIGAGPT: Work:AmigaGPT/AmigaGPT/AmigaGPT  (Pfad nach eurem Entpacken)
 4. Optional: run >nil: AMIGAGPT:AmigaGPTD_MorphOS
 5. Start: run AMIGAGPT:AmigaGPT_MorphOS  (oder Doppelklick)
+
+Share-Deploy (WSL): LHA + package-morphos unter morphos/out-crosscompile/
+(z.B. HDSFGO4-share:morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha).
 
 Kataloge: catalogs/<sprache>/AmigaGPT.catalog → LOCALE:Catalogs/<sprache>/
 
@@ -108,18 +121,41 @@ else
   log "Kein lha/jlha/zip — nur Staging-Ordner"
 fi
 
-if [[ "${DEPLOY:-1}" == "1" ]] && command -v powershell.exe >/dev/null 2>&1; then
-  WSL_STAGE=$(wslpath -w "$STAGE")
-  WSL_ARCH=""
-  [[ -n "$ARCHIVE" ]] && WSL_ARCH=$(wslpath -w "$ARCHIVE")
-  log "Deploy → $DEPLOY_WIN"
-  powershell.exe -NoProfile -Command "
-    \$d='${DEPLOY_WIN}'; New-Item -ItemType Directory -Force -Path \$d | Out-Null
-    if ('${WSL_ARCH}' -ne '') { Copy-Item -Force '${WSL_ARCH}' \$d }
-    Copy-Item -Recurse -Force '${WSL_STAGE}' (Join-Path \$d 'package-morphos')
-    Get-ChildItem \$d | Select-Object Name,Length
-  " || log "Deploy übersprungen (Z: nicht erreichbar? DEPLOY=0)"
+DEPLOY_FAILED=0
+if [[ "${DEPLOY:-1}" == "1" ]]; then
+  if command -v powershell.exe >/dev/null 2>&1; then
+    WSL_STAGE=$(wslpath -w "$STAGE")
+    WSL_ARCH=""
+    [[ -n "$ARCHIVE" ]] && WSL_ARCH=$(wslpath -w "$ARCHIVE")
+    log "Deploy → $DEPLOY_WIN"
+    if ! powershell.exe -NoProfile -Command "
+      \$d='${DEPLOY_WIN}'; New-Item -ItemType Directory -Force -Path \$d | Out-Null
+      if ('${WSL_ARCH}' -ne '') { Copy-Item -Force '${WSL_ARCH}' \$d }
+      Copy-Item -Recurse -Force '${WSL_STAGE}' (Join-Path \$d 'package-morphos')
+      Get-ChildItem \$d | Select-Object Name,Length
+    "; then
+      log "Fehler: Deploy nach $DEPLOY_WIN fehlgeschlagen (Laufwerk nicht erreichbar?)."
+      DEPLOY_FAILED=1
+    fi
+  else
+    log "Fehler: DEPLOY=1, aber powershell.exe nicht gefunden — kein Deploy nach Z: möglich."
+    DEPLOY_FAILED=1
+  fi
+else
+  log "DEPLOY=0 — kein automatischer Deploy."
+fi
+
+if [[ "$DEPLOY_FAILED" -ne 0 ]] || [[ "${DEPLOY:-1}" == "0" ]]; then
+  log "Manuell auf MorphOS-Share kopieren (z.B. HDSFGO4-share:morphos/out-crosscompile/):"
+  [[ -n "$ARCHIVE" ]] && wslpath -w "$ARCHIVE" 2>/dev/null && log "  → AmigaGPT-MorphOS-cross.lha"
+  wslpath -w "$STAGE" 2>/dev/null && log "  → package-morphos/"
+  log "  Windows: Explorer Z:\\morphos\\out-crosscompile oder anderes Laufwerk statt Z:"
 fi
 
 log "Fertig: $STAGE"
 [[ -n "$ARCHIVE" ]] && log "Archiv: $ARCHIVE"
+
+if [[ "${DEPLOY:-1}" == "1" ]] && [[ "$DEPLOY_FAILED" -ne 0 ]]; then
+  log "Abbruch mit Exit 1: Paketieren verlangt erfolgreiche Bereitstellung unter Z:."
+  exit 1
+fi

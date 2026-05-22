@@ -109,7 +109,22 @@ Technische Regel für Cursor: `.cursor/rules/git-branch-policy.mdc`
 
 ---
 
-## 8. Verwandte Dokumente
+## 8. MorphOS-Testpaket: Begriff **Paketieren**
+
+Verbindlich in diesem Fork:
+
+| Begriff | Bedeutung |
+| ------- | --------- |
+| **Paketieren** | Cross-Build **und** erfolgreiche Bereitstellung unter **`Z:\morphos\out-crosscompile\`** (LHA + Staging `package-morphos`), wie `package-morphos-cross.sh` mit Standard **`DEPLOY=1`**. |
+| **Kein abgeschlossenes Paketieren** | Nur `out/AmigaGPT-MorphOS-cross.lha` und/oder `out/package-morphos/` **ohne** erfolgreichen Deploy nach **`Z:`**. |
+
+**Fehler:** Läuft das Skript mit **`DEPLOY=1`** und der Deploy schlägt fehl, ist das ein **fehlgeschlagener Paketierungslauf** (Exit-Code 1). Ursache beheben (`Z:` erreichbar, gleiche Windows-Session wie die Laufwerkszuordnung, PowerShell von WSL) und erneut ausführen. **`DEPLOY=0`** bewusst nur, wenn **kein** Z:-Deploy gewünscht ist (dann liegt **kein** abgeschlossenes Paketieren im obigen Sinn vor).
+
+Skript: `package-morphos-cross.sh` · Kurzbeschreibung: [README.md](README.md).
+
+---
+
+## 9. Verwandte Dokumente
 
 - [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md) — Remotes, Sync, PR ins Original
 - [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) — Architektur Branch `scintilla`

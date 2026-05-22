@@ -126,19 +126,19 @@ Ausgabe: `out/AmigaGPT_MorphOS`, `out/AmigaGPTD_MorphOS`.
 
 ## Test auf echter MorphOS-Hardware
 
-**Empfohlen:** ein Paket statt Einzeldateien kopieren:
+**Empfohlen:** ein Paket statt Einzeldateien kopieren (Begriff **Paketieren** = inkl. erfolgreicher Bereitstellung unter **`Z:\morphos\out-crosscompile\`**, siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) Abschnitt 8):
 
 ```bash
 # einmalig (sudo): siehe docs/SUDO-NACHINSTALL.md
 sudo apt install -y jlha-utils zip
 
 cd ~/development/morphos/AmigaGPT
-./package-morphos-cross.sh          # BUILD=1 Standard, erzeugt .lha/.zip
+./package-morphos-cross.sh          # BUILD=1 Standard, DEPLOY=1: .lha + Z:
 ```
 
-Ausgabe: `out/package-morphos/` + `out/AmigaGPT-MorphOS-cross.lha` (oder `.zip`), Deploy nach `Z:\morphos\out-crosscompile\`. Anleitung im Paket: `INSTALL-MORPHOS-CROSSBUILD.txt`.
+Ausgabe bei Erfolg: `out/package-morphos/` + `out/AmigaGPT-MorphOS-cross.lha` (oder `.zip`) **und** Kopie nach `Z:\morphos\out-crosscompile\`. Schlägt der Deploy fehl, endet das Skript mit **Exit 1**. Anleitung im Paket: `INSTALL-MORPHOS-CROSSBUILD.txt`.
 
-Manuell geht weiterhin das Kopieren einzelner Dateien nach `Z:\morphos\out-crosscompile\`.
+Manuell geht weiterhin das Kopieren einzelner Dateien nach `Z:\morphos\out-crosscompile\` (ersetzt dann den automatischen Deploy-Schritt, sofern das Ergebnis dort liegt).
 
 Auf MorphOS zusätzlich Laufzeit-Voraussetzungen aus dem AmigaGPT-README (MUI, AmiSSL, codesets.library, ggf. guigfx MCC, …).
 
