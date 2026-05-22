@@ -14,6 +14,8 @@
 #include <mui/Busy_mcc.h>
 #include <proto/exec.h>
 #include <proto/socket.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #include <string.h>
 #include <stdio.h>
 #include "openai.h"
@@ -25,6 +27,9 @@
 #define OPENAI_PORT 443
 #define AUDIO_BUFFER_SIZE 4096
 #define MAX_CONNECTION_RETRIES 10
+/** Wait up to ~15 min for more TLS stream data (200 ms × 4500). */
+#define SSL_STREAM_WAIT_US 200000
+#define SSL_STREAM_WAIT_MAX 4500
 
 static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
                                  BOOL useProxy, CONST_STRPTR proxyHost,
@@ -44,6 +49,11 @@ static STRPTR base64Encode(CONST_STRPTR input);
 static void drainOpenSslErrorQueue(CONST_STRPTR where);
 static void reportSslError(SSL *s, int ret, CONST_STRPTR where);
 static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage);
+static BOOL sslWaitForReadReady(LONG sock, ULONG *stallCount);
+static BOOL streamBatchHasCompleted(struct json_object **responses, UWORD count);
+
+/** OpenAI chat SSE still active on the current TLS connection. */
+static BOOL chatStreamInProgress = FALSE;
 
 struct Library *SocketBase;
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
@@ -684,7 +694,6 @@ struct json_object **postChatMessageToOpenAI(
     struct json_object **responses =
         AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH,
                  MEMF_ANY | MEMF_CLEAR);
-    static BOOL streamingInProgress = FALSE;
     UWORD responseIndex = 0;
     UBYTE connectionRetryCount = 0;
 
@@ -703,9 +712,9 @@ struct json_object **postChatMessageToOpenAI(
         useSSL = TRUE;
     }
 
-    if (!stream || !streamingInProgress) {
+    if (!stream || !chatStreamInProgress) {
         memset(readBuffer, 0, READ_BUFFER_LENGTH);
-        streamingInProgress = stream;
+        chatStreamInProgress = stream;
 
         struct json_object *obj = json_object_new_object();
         json_object_object_add(obj, "model", json_object_new_string(model));
@@ -849,7 +858,7 @@ struct json_object **postChatMessageToOpenAI(
                                    proxyPassword) == RETURN_ERROR) {
             if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
                 displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
-                streamingInProgress = FALSE;
+                chatStreamInProgress = FALSE;
                 FreeVec(responses);
                 return NULL;
             }
@@ -879,9 +888,19 @@ struct json_object **postChatMessageToOpenAI(
         UBYTE statusMessage[64];
         UBYTE *tempReadBuffer = AllocVec(
             useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+        ULONG readBufferLen = 0;
+        ULONG sslWaitStalls = 0;
+
+        if (readBuffer != NULL) {
+            readBufferLen = (ULONG)strlen((char *)readBuffer);
+        }
         while (!doneReading) {
 #ifndef DAEMON
             DoMethod(loadingBar, MUIM_Busy_Move);
+            if (app != NULL) {
+                ULONG muiSig = 0;
+                DoMethod(app, MUIM_Application_NewInput, &muiSig);
+            }
 #endif
             if (useSSL) {
                 ERR_clear_error();
@@ -896,7 +915,24 @@ struct json_object **postChatMessageToOpenAI(
             snprintf(statusMessage, sizeof(statusMessage),
                      STRING_DOWNLOADING_RESPONSE);
             updateStatusBar(statusMessage, yellowPen);
-            strncat(readBuffer, tempReadBuffer, bytesRead);
+            if (bytesRead > 0) {
+                ULONG space = READ_BUFFER_LENGTH - 1 - readBufferLen;
+                ULONG copyLen = (ULONG)bytesRead;
+
+                if (space == 0) {
+                    displayError(
+                        "Stream read buffer full (64 KB). Response truncated.");
+                    doneReading = TRUE;
+                    chatStreamInProgress = FALSE;
+                    break;
+                }
+                if (copyLen > space) {
+                    copyLen = space;
+                }
+                CopyMem(tempReadBuffer, readBuffer + readBufferLen, copyLen);
+                readBufferLen += copyLen;
+                readBuffer[readBufferLen] = '\0';
+            }
             if (useSSL) {
                 err = SSL_get_error(ssl, bytesRead);
             } else {
@@ -909,7 +945,7 @@ struct json_object **postChatMessageToOpenAI(
                 STRPTR jsonString = readBuffer;
                 if (readBuffer == NULL) {
                     doneReading = TRUE;
-                    streamingInProgress = FALSE;
+                    chatStreamInProgress = FALSE;
                     break;
                 }
                 // Check for error in stream
@@ -948,13 +984,13 @@ struct json_object **postChatMessageToOpenAI(
                                             }
                                             displayError(error);
                                             doneReading = TRUE;
-                                            streamingInProgress = FALSE;
+                                            chatStreamInProgress = FALSE;
                                         }
                                     }
                                 }
                             } else {
                                 doneReading = TRUE;
-                                streamingInProgress = FALSE;
+                                chatStreamInProgress = FALSE;
                             }
                         }
                     }
@@ -969,7 +1005,12 @@ struct json_object **postChatMessageToOpenAI(
                         struct json_object *parsedResponse =
                             json_tokener_parse(jsonString);
                         if (parsedResponse != NULL) {
-                            responses[responseIndex++] = parsedResponse;
+                            if (responseIndex <
+                                RESPONSE_ARRAY_BUFFER_LENGTH - 1) {
+                                responses[responseIndex++] = parsedResponse;
+                            } else {
+                                json_object_put(parsedResponse);
+                            }
                             if (!stream) {
                                 break;
                             }
@@ -981,21 +1022,45 @@ struct json_object **postChatMessageToOpenAI(
                 }
 
                 if (stream) {
-                    if (lastJsonString != NULL) {
-                        struct json_object *parsedResponse;
-                        if ((parsedResponse = json_tokener_parse(
-                                 lastJsonString + 6)) == NULL) {
-                            snprintf(readBuffer, READ_BUFFER_LENGTH, "%s\0",
-                                     lastJsonString);
+                    if (bytesRead > 0) {
+                        sslWaitStalls = 0;
+                        if (lastJsonString != NULL) {
+                            struct json_object *parsedResponse;
                             if ((parsedResponse = json_tokener_parse(
-                                     lastJsonString)) != NULL) {
-                                responses[responseIndex++] = parsedResponse;
+                                     lastJsonString + 6)) == NULL) {
+                                snprintf(readBuffer, READ_BUFFER_LENGTH,
+                                         "%s\0", lastJsonString);
+                                if ((parsedResponse = json_tokener_parse(
+                                         lastJsonString)) != NULL) {
+                                    if (responseIndex <
+                                        RESPONSE_ARRAY_BUFFER_LENGTH - 1) {
+                                        responses[responseIndex++] =
+                                            parsedResponse;
+                                    } else {
+                                        json_object_put(parsedResponse);
+                                    }
+                                }
+                            } else {
+                                memset(readBuffer, 0, READ_BUFFER_LENGTH);
                             }
-                        } else {
-                            memset(readBuffer, 0, READ_BUFFER_LENGTH);
                         }
+                        if (streamBatchHasCompleted(responses,
+                                                    responseIndex)) {
+                            doneReading = TRUE;
+                            chatStreamInProgress = FALSE;
+                        } else if (useSSL && ssl != NULL &&
+                                   SSL_pending(ssl) > 0) {
+                            /* drain buffered TLS records in this call */
+                        } else {
+                            doneReading = TRUE;
+                        }
+                    } else if (!sslWaitForReadReady(sock, &sslWaitStalls)) {
+                        displayError(
+                            "SSL: timeout waiting for stream data "
+                            "(WANT_READ)");
+                        doneReading = TRUE;
+                        chatStreamInProgress = FALSE;
                     }
-                    doneReading = TRUE;
                 } else if (jsonString != NULL) {
                     doneReading = TRUE;
                 }
@@ -1003,21 +1068,21 @@ struct json_object **postChatMessageToOpenAI(
                 break;
             case SSL_ERROR_ZERO_RETURN:
                 doneReading = TRUE;
+                chatStreamInProgress = FALSE;
                 break;
             case SSL_ERROR_WANT_READ:
-                printf("SSL_ERROR_WANT_READ\n");
-                break;
             case SSL_ERROR_WANT_WRITE:
-                printf("SSL_ERROR_WANT_WRITE\n");
+                if (!sslWaitForReadReady(sock, &sslWaitStalls)) {
+                    displayError(
+                        "SSL: timeout waiting for stream data (WANT_READ)");
+                    doneReading = TRUE;
+                    chatStreamInProgress = FALSE;
+                }
                 break;
             case SSL_ERROR_WANT_CONNECT:
-                printf("SSL_ERROR_WANT_CONNECT\n");
-                break;
             case SSL_ERROR_WANT_ACCEPT:
-                printf("SSL_ERROR_WANT_ACCEPT\n");
-                break;
             case SSL_ERROR_WANT_X509_LOOKUP:
-                printf("SSL_ERROR_WANT_X509_LOOKUP\n");
+                reportSslError(ssl, bytesRead, "SSL_read (responses)");
                 break;
             case SSL_ERROR_SYSCALL:
             case SSL_ERROR_SSL:
@@ -1053,19 +1118,20 @@ struct json_object **postChatMessageToOpenAI(
     }
     if (stream) {
         // Check if the last response is the end of the stream and set the
-        // streamingInProgress flag to FALSE so that the next request will
+        // chatStreamInProgress flag to FALSE so that the next request will
         // establish a new connection because OpenAI will close the connection
         // after the stream is finished
         if (responseIndex > 0 && responses[responseIndex - 1] != NULL) {
             STRPTR type = json_object_get_string(
                 json_object_object_get(responses[responseIndex - 1], "type"));
             if (type != NULL && strcmp(type, "response.completed") == 0) {
-                streamingInProgress = FALSE;
+                chatStreamInProgress = FALSE;
             }
         }
         struct json_object *error;
-        if (json_object_object_get_ex(responses[responseIndex - 1], "error",
-                                      &error) &&
+        if (responseIndex > 0 &&
+            json_object_object_get_ex(responses[responseIndex - 1], "error",
+                                     &error) &&
             !json_object_is_type(error, json_type_null)) {
             CloseSocket(sock);
             if (ssl != NULL) {
@@ -1074,7 +1140,7 @@ struct json_object **postChatMessageToOpenAI(
                 ssl = NULL;
             }
             sock = -1;
-            streamingInProgress = FALSE;
+            chatStreamInProgress = FALSE;
         }
     } else {
         CloseSocket(sock);
@@ -1714,6 +1780,53 @@ static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength) {
 
     // Convert hex string to unsigned long
     return strtoul(chunkLenStr, NULL, 16);
+}
+
+/**
+ * Wait until the TCP socket may have data (or timeout). Used for
+ * SSL_ERROR_WANT_READ instead of spinning and freezing the UI.
+ */
+BOOL openAIChatStreamInProgress(void) { return chatStreamInProgress; }
+
+static BOOL streamBatchHasCompleted(struct json_object **responses, UWORD count) {
+    UWORD i;
+
+    for (i = 0; i < count && responses[i] != NULL; i++) {
+        struct json_object *typeObj =
+            json_object_object_get(responses[i], "type");
+        CONST_STRPTR typeStr;
+
+        if (typeObj == NULL) {
+            continue;
+        }
+        typeStr = json_object_get_string(typeObj);
+        if (typeStr != NULL && strcmp(typeStr, "response.completed") == 0) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static BOOL sslWaitForReadReady(LONG sock, ULONG *stallCount) {
+    struct timeval tv;
+    fd_set readfds;
+    LONG ready;
+
+    if (sock < 0) {
+        return FALSE;
+    }
+    if (stallCount != NULL) {
+        if (*stallCount >= SSL_STREAM_WAIT_MAX) {
+            return FALSE;
+        }
+        (*stallCount)++;
+    }
+    FD_ZERO(&readfds);
+    FD_SET(sock, &readfds);
+    tv.tv_sec = 0;
+    tv.tv_usec = SSL_STREAM_WAIT_US;
+    ready = WaitSelect(sock + 1, &readfds, NULL, NULL, &tv, NULL);
+    return ready > 0;
 }
 
 /**

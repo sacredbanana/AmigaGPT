@@ -10,6 +10,9 @@
 #define TEMP_READ_BUFFER_LENGTH READ_BUFFER_LENGTH / 2
 #define WRITE_BUFFER_LENGTH 131072
 #define RESPONSE_ARRAY_BUFFER_LENGTH 1024
+
+/** TRUE while an OpenAI chat SSE response is still on the open TLS socket. */
+BOOL openAIChatStreamInProgress(void);
 #define CHAT_SYSTEM_LENGTH 512
 #define OPENAI_API_KEY_LENGTH 256
 
@@ -18,6 +21,8 @@
  **/
 struct AICodeBlock {
     struct MinNode node;
+    /** 1-based index across the whole conversation (stable in UI). */
+    ULONG index;
     STRPTR language;
     STRPTR raw_code;
     ULONG code_length;
