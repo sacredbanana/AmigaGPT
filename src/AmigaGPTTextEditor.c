@@ -94,7 +94,8 @@ SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
                         }
                         return rc;
                     }
-                } else if (msg->imsg->Qualifier & IEQUALIFIER_RSHIFT) {
+                } else if (msg->imsg->Qualifier &
+                           (IEQUALIFIER_LSHIFT | IEQUALIFIER_RSHIFT)) {
                     msg->imsg->Qualifier = 32768;
                 }
             }

@@ -16,7 +16,7 @@
  * @brief The AmigaGPTTextEditor class
  * @note This custom class is used to create a text editor that can run a hook
  * when the user hits return. The base class's normal return handler is now
- * called when Right Shift + Return is pressed
+ * called when Shift + Return is pressed (left or right shift)
  */
 extern struct MUI_CustomClass *amigaGPTTextEditorClass;
 
