@@ -1,15 +1,15 @@
 #ifndef CODEFENCE_H
 #define CODEFENCE_H
 
+struct Conversation;
 struct ConversationNode;
 
 /**
  * Parse ``` fenced code blocks from raw_utf8 into node->codeblocks.
- * Clears any previous blocks. Safe to call on every message (user/assistant).
- * Incomplete trailing fences (no closing ```) are ignored.
- * When at least one complete block exists, sets display_text (chat) with
- * fenced regions replaced by STRING_CHAT_CODEBLOCK_PLACEHOLDER (catalog).
+ * Placeholder numbers continue from earlier messages in conv (not per message).
+ * Clears any previous blocks on this node. Incomplete trailing fences ignored.
  */
-void conversationNodeParseCodeFences(struct ConversationNode *node);
+void conversationNodeParseCodeFences(struct Conversation *conv,
+                                     struct ConversationNode *node);
 
 #endif

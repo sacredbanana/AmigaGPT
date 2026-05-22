@@ -42,6 +42,7 @@ struct Config config = {
     .proxyUsername = NULL,
     .proxyPassword = NULL,
     .fixedWidthFonts = FALSE,
+    .markdownFormatting = TRUE,
     .userTextAlignment = ALIGN_RIGHT,
     .assistantTextAlignment = ALIGN_LEFT,
     .webSearchEnabled = TRUE,
@@ -146,6 +147,9 @@ LONG writeConfig() {
     json_object_object_add(
         configJsonObject, "fixedWidthFonts",
         json_object_new_boolean((BOOL)config.fixedWidthFonts));
+    json_object_object_add(
+        configJsonObject, "markdownFormatting",
+        json_object_new_boolean((BOOL)config.markdownFormatting));
 
     json_object_object_add(configJsonObject, "userTextAlignment",
                            json_object_new_int(config.userTextAlignment));
@@ -573,6 +577,16 @@ LONG readConfig() {
             (ULONG)json_object_get_boolean(fixedWidthFontsObj);
     } else {
         config.fixedWidthFonts = FALSE;
+    }
+
+    struct json_object *markdownFormattingObj;
+
+    if (json_object_object_get_ex(configJsonObject, "markdownFormatting",
+                                  &markdownFormattingObj)) {
+        config.markdownFormatting =
+            (ULONG)json_object_get_boolean(markdownFormattingObj);
+    } else {
+        config.markdownFormatting = TRUE;
     }
 
     struct json_object *userTextAlignmentObj;

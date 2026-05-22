@@ -1,6 +1,8 @@
 #include <proto/dos.h>
 #include <intuition/intuition.h>
 
+struct Conversation;
+
 extern struct Window *mainWindow;
 extern Object *mainWindowObject;
 extern Object *newChatButton;
@@ -30,6 +32,9 @@ extern LONG deleteButtonPen;
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createMainWindow();
+
+/** Current chat (NULL if none). For tools like the code-block viewer. */
+struct Conversation *getCurrentConversation(void);
 
 /**
  * Prints the conversation to the conversation window

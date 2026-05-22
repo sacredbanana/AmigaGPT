@@ -4,16 +4,16 @@
 
 | Dokument | Inhalt |
 | -------- | ------ |
-| [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) | Verbindliche Git-Arbeitsweise (kein Commit auf `master`) |
+| [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) | Git (kein Commit auf `master`) **und** Begriff **Paketieren** = Z:-Deploy |
 | [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md) | Remotes `origin` / `upstream`, Sync, PRs |
 | [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) | Plan Scintilla.mcc, Streaming, UTF-8 |
 | [BUILD-MORPHOS-WSL.md](BUILD-MORPHOS-WSL.md) | MorphOS Cross-Build: WSL2, Debian, BIGFOOT, FlexCat, Make |
 | [MORPHOS-SDK-ERGAENZUNGEN.md](MORPHOS-SDK-ERGAENZUNGEN.md) | **Welche SDK-Ergänzungen** genau nötig sind (BIGFOOT vs. AmigaSDK-gcc) |
 | [SUDO-NACHINSTALL.md](SUDO-NACHINSTALL.md) | Einmalige `sudo apt` / Rechte / optional `/opt/amiga` |
-| [MORPHOS-PROTECTION-BITS.md](MORPHOS-PROTECTION-BITS.md) | Amiga Protection Bits nach Cross-Build/LHA |
+| [MORPHOS-PROTECTION-BITS.md](MORPHOS-PROTECTION-BITS.md) | Protection Bits, `fix-protection.rexx`, Cross-LHA → Share |
 | [WSL-SETUP-STATUS.md](WSL-SETUP-STATUS.md) | **Ist-Stand** der eingerichteten WSL-Umgebung (was erledigt ist, was fehlt) |
 
-## Bauen & Testpaket (WSL)
+## Bauen & Paketieren (WSL)
 
 ```bash
 cd ~/development/morphos/AmigaGPT
@@ -22,9 +22,11 @@ make -f Makefile.MorphOS              # je Lauf: APP_VERSION_PATCH + BUILD_NUMBE
 ./package-morphos-cross.sh            # BUILD=0 überspringt Make, wenn Binary schon da
 ```
 
-Ausgabe: `out/AmigaGPT-MorphOS-cross.lha` (Staging unter `out/package-morphos/`), optional Deploy nach `Z:\morphos\out-crosscompile\`. Anleitung im Archiv: `INSTALL-MORPHOS-CROSSBUILD.txt`. SDK/Paket-Details: [MORPHOS-SDK-ERGAENZUNGEN.md](MORPHOS-SDK-ERGAENZUNGEN.md).
+**Paketieren** (verbindlich): siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) Abschnitt 8 — heißt: Skript **`package-morphos-cross.sh`** mit Standard **`DEPLOY=1`** bis zum **erfolgreichen** Kopieren nach **`Z:\morphos\out-crosscompile\`** (LHA + Ordner `package-morphos`). Schlägt der Deploy fehl, ist der Lauf **fehlgeschlagen** (Exit 1), nicht „fast fertig“.
 
-Wenn der Deploy-Schritt **„Netzwerkpfad nicht gefunden“** meldet (kein `Z:` in der von WSL gestarteten PowerShell): nur Archiv/Staging nutzen oder `DEPLOY=0 ./package-morphos-cross.sh` — oder Paket von Windows aus nach `Z:\…` kopieren.
+Ergebnis bei Erfolg: zusätzlich `out/AmigaGPT-MorphOS-cross.lha` und Staging unter `out/package-morphos/`. Anleitung im Archiv: `INSTALL-MORPHOS-CROSSBUILD.txt`. SDK/Paket-Details: [MORPHOS-SDK-ERGAENZUNGEN.md](MORPHOS-SDK-ERGAENZUNGEN.md).
+
+**`DEPLOY=0`:** nur LHA/Staging **ohne** Z: — bewusst für Umgebungen ohne Netzlaufwerk; **kein** abgeschlossenes Paketieren im projektinternen Sinn. Wenn Z: zeitweise fehlt: Ursache beheben und Skript **mit** Deploy erneut ausführen (oder von Hand nach `Z:\…` kopieren und den Lauf intern trotzdem als „Deploy manuell nachgeholt“ dokumentieren — technisch prüft das Skript nur den automatischen Schritt).
 
 **Cross-Build vs. echter Test:** `make -f Makefile.MorphOS` prüft nur **Übersetzen und Linken** auf die MorphOS-Toolchain. Ob die App auf **MorphOS** korrekt läuft (UI, Netz, Zeichensatz), sieht man erst auf Hardware oder in einer passenden VM. Host-Tests unter Linux decken nur **portabel ausgelagerte** Logik ab (z. B. `utf8stream`).
 
@@ -53,6 +55,7 @@ Neue oder geänderte Strings: `catalogs/AmigaGPT.pot` bzw. die `catalogs/*/*.po`
 
 - **Chat (NFloattext):** UTF-8 aus der API → nach Aufbau des Buffers `CodesetsUTF8ToStr` → System-Codeset (wie bisher in `displayConversation()` / Stream-Pfad).
 - **Konversationsliste (NList):** `name` UTF-8 für Speichern; Anzeige `name_list_display` (Codesets), siehe Architektur-Dokument Phase 5.1.
-- **Assistant mit Code-Fences:** `display_text` ersetzt erkannte Blöcke durch den Katalog-String `STRING_CHAT_CODEBLOCK_PLACEHOLDER` (vgl. `AmigaGPT.pot`); vollständiger Text und Code liegen in `raw_utf8` / `codeblocks`.
+- **Assistant mit Code-Fences:** `display_text` ersetzt erkannte Blöcke durch nummerierte Platzhalter `[Codeblock %ld]` **fortlaufend über die ganze Unterhaltung** (nicht pro Antwort neu ab 1). **Ansicht → View code blocks…** listet alle Blöcke des aktuellen Chats (siehe [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md), Phase 5.2). Während des Live-Streams bleibt der Roh-Text sichtbar; Platzhalter erscheinen nach Ende der Antwort beim Neuzeichnen.
+- **Mini-Markdown (Fett/Kursiv):** **Ansicht → Markdown formatting** — abschaltbar (`config.json`: `markdownFormatting`); aus = Rohtext ohne `*`/`_`/`\`-Escape-Probleme im NFloattext.
 
 Agenten: zusätzlich [AGENTS.md](../AGENTS.md) und `.cursor/rules/git-branch-policy.mdc`.

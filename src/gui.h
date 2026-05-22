@@ -42,6 +42,7 @@ enum {
     OBJECT_ID_IMAGE_DATA_TYPE,
     OBJECT_ID_IMAGE_GROUP,
     OBJECT_ID_IMAGE_WINDOW_OBJECT,
+    OBJECT_ID_CODEBLOCKS_WINDOW,
     OBJECT_ID_ABOUT_AMIGAGPT
 };
 
@@ -50,6 +51,7 @@ extern ULONG redPen, greenPen, bluePen, yellowPen;
 extern Object *imageWindowObject;
 extern Object *imageWindowImageView;
 extern Object *imageWindowImageViewGroup;
+extern Object *codeBlocksWindowObject;
 extern BOOL isMUI5;
 extern BOOL isMUI39;
 extern BOOL isAROS;
@@ -134,6 +136,11 @@ UTF8 *conversationNodeGetRaw(const struct ConversationNode *node);
 
 /** Text for chat rendering (display_text or raw_utf8). */
 UTF8 *conversationNodeGetDisplay(const struct ConversationNode *node);
+
+/**
+ * Open the code-blocks viewer (last assistant message with ``` fences).
+ **/
+void openCodeBlocksViewerWindow(void);
 
 /**
  * Free the conversation

@@ -318,4 +318,23 @@ DoMethod(sci,
 - Wenn mindestens ein vollständiger Fence-Block erkannt wurde: `display_text` enthält den Fließtext mit jedem Block ersetzt durch den **katalogisierten** Platzhalter `STRING_CHAT_CODEBLOCK_PLACEHOLDER` (Standard: `[Codeblock]\n` in `AmigaGPT.pot`; Übersetzungen in den `.po`-Dateien). Ohne vollständige Fences bleibt `display_text` NULL — Anzeige wie bisher über `raw_utf8`.
 - Konversationstitel in der **linken NList**: kein natives UTF-8 in `NList_mcc.h`; `name` bleibt UTF-8 (JSON/API), Anzeige über **`name_list_display`** (`CodesetsUTF8ToStr`, `conversationRefreshNameListDisplay()` in `gui.c`).
 
-**Nächster Schritt:** Phase 5.2 / 6 — Code aus `codeblocks` in separates Fenster/Scintilla.
+**Phase 5.2 (separates Codefenster, ohne Scintilla)**
+
+- Menü **Ansicht → „View code blocks…“** (`STRING_MENU_VIEW_CODEBLOCKS`): eigenes MUI-Fenster mit **NFloattext** (fixe Schrift), Inhalt = **alle** `codeblocks` der aktuellen Unterhaltung in Reihenfolge; Platzhalter-Nummer (`AICodeBlock.index`) läuft **gesamt** über den Chat (nicht pro Assistant-Antwort neu ab 1). Pro Block ``` + optional Sprache + Rohcode (UTF-8). Puffer 100 KB; bei Überlauf Fehlermeldung.
+- **`getCurrentConversation()`** (`MainWindow.c`) liefert den aktuellen Chat für diese Aktion.
+
+**Nächster Schritt:** Phase 6 — gleiche Datenquelle (`codeblocks`) in **Scintilla.mcc** (Syntax, größere Puffer), optional Ersetzung oder Ergänzung des NFloattext-Fensters.
+
+---
+
+## Optionales Aufräumen (nicht dringend)
+
+- **`MainWindow.c` / `MainWindow.h`:** Der Zeiger auf die Chat-**Ausgabe** heißt noch `chatOutputTextEditor`, ist aber ein **`NFloattextObject`** (`NFloattext.mcc`), kein `TextEditor`. Umbenennung z. B. in `chatOutputFloattext` (und ggf. `chatOutputTextEditorContents` → `chatOutputFloattextContents`) würde die Lesbarkeit verbessern — reiner Refactor, viele Treffer, **keine** Verhaltensänderung.
+
+- **Mini-Markdown schlauer machen** (nach abschaltbarer Option, siehe unten umgesetzt): `\n` in `\n`-Sequenzen nicht als Escape werten; `*`/`_` nur in echten `**`/`*`-/`__`-Markern; Markdown-Lauf beim Streaming **nur** auf Assistant-Anteil, nicht User+Assistant gemeinsam; Formatierung außerhalb von Code-Platzhaltern. Eigene Parser-/Puffer-Schritte, Speicher auf MorphOS vorsichtig (AllocVec/FreeVec, keine Doppel-Frees).
+
+### Umgesetzt: Mini-Markdown abschaltbar
+
+- Menü **Ansicht → Markdown formatting** (`config.markdownFormatting`, Default **an**), persistiert in `config.json`.
+- Aus: Assistant-Text unverändert (UTF-8-Kopie) → Codesets → NFloattext; kein `convertMarkdownFormattingToMUI`.
+- Umschalten: `displayConversation(NULL)` (kein Fenster-Neubau).

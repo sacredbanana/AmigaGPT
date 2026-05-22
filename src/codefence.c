@@ -2,6 +2,7 @@
 #include <exec/lists.h>
 #include <exec/memory.h>
 #include <proto/exec.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "codefence.h"
@@ -50,11 +51,63 @@ static STRPTR dup_range(const UBYTE *start, ULONG len) {
     return s;
 }
 
+static ULONG count_codeblocks(const struct ConversationNode *node) {
+    struct MinNode *mn;
+    ULONG n = 0;
+
+    if (node == NULL || node->codeblocks == NULL) {
+        return 0;
+    }
+    for (mn = node->codeblocks->mlh_Head; mn->mln_Succ != NULL;
+         mn = mn->mln_Succ) {
+        n++;
+    }
+    return n;
+}
+
+static ULONG conversation_codeblock_offset(struct Conversation *conv,
+                                         struct ConversationNode *node) {
+    struct MinNode *mn;
+    ULONG offset = 0;
+
+    if (conv == NULL || conv->messages == NULL || node == NULL) {
+        return 0;
+    }
+    for (mn = conv->messages->mlh_Head; mn->mln_Succ != NULL;
+         mn = mn->mln_Succ) {
+        struct ConversationNode *m = (struct ConversationNode *)mn;
+        if (m == node) {
+            break;
+        }
+        offset += count_codeblocks(m);
+    }
+    return offset;
+}
+
 static BOOL minlist_is_empty(const struct MinList *list) {
     if (list == NULL) {
         return TRUE;
     }
-    return list->mlh_Head->mln_Succ == (struct MinNode *)&list->mlh_Tail;
+    /* Same as gui.c codeblocks_empty / Exec NEWLIST empty test */
+    return (APTR)list->mlh_TailPred == (APTR)list;
+}
+
+#define CODEBLOCK_PLACEHOLDER_MAX 48
+
+static ULONG format_codeblock_placeholder(UBYTE *buf, ULONG buf_len,
+                                          ULONG index) {
+    int n;
+
+    n = snprintf((char *)buf, (size_t)buf_len,
+                 (const char *)STRING_CHAT_CODEBLOCK_PLACEHOLDER,
+                 (long)index);
+    if (n < 0) {
+        return 0;
+    }
+    if ((ULONG)n >= buf_len) {
+        return buf_len - 1;
+    }
+    return (ULONG)n;
 }
 
 /**
@@ -63,8 +116,7 @@ static BOOL minlist_is_empty(const struct MinList *list) {
  * Otherwise display_text stays NULL (use raw in UI).
  */
 static void conversationNodeBuildDisplayOmittingCode(
-    struct ConversationNode *node) {
-    CONST_STRPTR ph;
+    struct ConversationNode *node, ULONG index_offset) {
     ULONG placeholder_len;
     const UBYTE *raw;
     const UBYTE *end;
@@ -74,6 +126,7 @@ static void conversationNodeBuildDisplayOmittingCode(
     STRPTR out;
     ULONG out_pos;
     ULONG tail_len;
+    ULONG block_index;
 
     if (node == NULL || node->raw_utf8 == NULL || node->codeblocks == NULL) {
         return;
@@ -83,22 +136,27 @@ static void conversationNodeBuildDisplayOmittingCode(
         return;
     }
 
-    ph = (CONST_STRPTR)STRING_CHAT_CODEBLOCK_PLACEHOLDER;
-    placeholder_len = (ULONG)strlen((const char *)ph);
     raw = (const UBYTE *)node->raw_utf8;
     if (node->raw_length == 0) {
         return;
     }
     end = raw + node->raw_length;
-    out_cap = node->raw_length * 3 + 256;
+    out_cap = node->raw_length + 256;
+    out = AllocVec(out_cap, MEMF_CLEAR);
+    if (out == NULL) {
+        return;
+    }
+    out_pos = 0;
     segment_start = raw;
     p = raw;
+    block_index = index_offset;
 
     while (p < end) {
         const UBYTE *fence;
         const UBYTE *closing;
         const UBYTE *q;
         ULONG seg_len;
+        UBYTE ph_buf[CODEBLOCK_PLACEHOLDER_MAX];
 
         fence = p;
         for (; fence + 3 <= end; fence++) {
@@ -115,17 +173,6 @@ static void conversationNodeBuildDisplayOmittingCode(
             continue;
         }
 
-        seg_len = (ULONG)(fence - segment_start);
-        if (out_pos + seg_len + placeholder_len + 1 >= out_cap) {
-            goto fail;
-        }
-        if (seg_len > 0) {
-            CopyMem((APTR)segment_start, out + out_pos, seg_len);
-            out_pos += seg_len;
-        }
-        CopyMem((APTR)ph, out + out_pos, placeholder_len);
-        out_pos += placeholder_len;
-
         p = fence + 3;
         while (p < end && (*p == ' ' || *p == '\t')) {
             p++;
@@ -134,7 +181,7 @@ static void conversationNodeBuildDisplayOmittingCode(
             p++;
         }
         if (p >= end) {
-            goto fail;
+            break;
         }
         if (p < end && *p == '\r') {
             p++;
@@ -159,8 +206,27 @@ static void conversationNodeBuildDisplayOmittingCode(
             }
         }
         if (closing == NULL) {
+            break;
+        }
+
+        block_index++;
+        placeholder_len =
+            format_codeblock_placeholder(ph_buf, CODEBLOCK_PLACEHOLDER_MAX,
+                                         block_index);
+        if (placeholder_len == 0) {
             goto fail;
         }
+
+        seg_len = (ULONG)(fence - segment_start);
+        if (out_pos + seg_len + placeholder_len + 1 >= out_cap) {
+            goto fail;
+        }
+        if (seg_len > 0) {
+            CopyMem((APTR)segment_start, out + out_pos, seg_len);
+            out_pos += seg_len;
+        }
+        CopyMem(ph_buf, out + out_pos, placeholder_len);
+        out_pos += placeholder_len;
 
         p = closing + 3;
         while (p < end && (*p == ' ' || *p == '\t')) {
@@ -192,13 +258,18 @@ static void conversationNodeBuildDisplayOmittingCode(
     return;
 
 fail:
-    FreeVec(out);
+    if (out != NULL) {
+        FreeVec(out);
+    }
 }
 
-void conversationNodeParseCodeFences(struct ConversationNode *node) {
+void conversationNodeParseCodeFences(struct Conversation *conv,
+                                     struct ConversationNode *node) {
     const UBYTE *raw;
     const UBYTE *end;
     const UBYTE *p;
+    ULONG index_offset;
+    ULONG block_index;
 
     if (node == NULL || node->raw_utf8 == NULL || node->codeblocks == NULL) {
         return;
@@ -210,6 +281,9 @@ void conversationNodeParseCodeFences(struct ConversationNode *node) {
     }
 
     clear_codeblocks(node);
+
+    index_offset = conversation_codeblock_offset(conv, node);
+    block_index = index_offset;
 
     raw = (const UBYTE *)node->raw_utf8;
     if (node->raw_length == 0) {
@@ -329,6 +403,9 @@ void conversationNodeParseCodeFences(struct ConversationNode *node) {
         }
         block->code_length = code_len;
 
+        block_index++;
+        block->index = block_index;
+
         AddTail((struct List *)node->codeblocks, (struct Node *)block);
 
         p = closing + 3;
@@ -343,5 +420,5 @@ void conversationNodeParseCodeFences(struct ConversationNode *node) {
         }
     }
 
-    conversationNodeBuildDisplayOmittingCode(node);
+    conversationNodeBuildDisplayOmittingCode(node, index_offset);
 }

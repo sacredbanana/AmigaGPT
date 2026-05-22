@@ -1417,5 +1417,27 @@ msgstr "Impossible de créer la fenêtre de paramètres ElevenLabs"
 
 #: src/codefence.c:65
 msgctxt "STRING_CHAT_CODEBLOCK_PLACEHOLDER (260//)"
-msgid "[Codeblock]\n"
-msgstr "[Codeblock]\n"
+msgid "[Codeblock %ld]\n"
+msgstr "[Codeblock %ld]\n"
+
+#: src/gui.c
+#, fuzzy
+msgctxt "STRING_MENU_VIEW_CODEBLOCKS (261//)"
+msgid "View code blocks..."
+msgstr "View code blocks..."
+
+#: src/gui.c
+msgctxt "STRING_ERROR_NO_ACTIVE_CONVERSATION (262//)"
+msgid "No active conversation. Open or start a chat first."
+msgstr "No active conversation. Open or start a chat first."
+
+#: src/gui.c
+#, fuzzy
+msgctxt "STRING_ERROR_NO_CODEBLOCKS_IN_CHAT (263//)"
+msgid "No fenced code blocks in this conversation yet."
+msgstr "No fenced code blocks in this conversation yet."
+
+#: src/menu.c:320
+msgctxt "STRING_MENU_MARKDOWN_FORMATTING (264//)"
+msgid "Markdown formatting"
+msgstr "Markdown formatting"

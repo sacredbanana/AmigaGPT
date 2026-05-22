@@ -25,8 +25,32 @@
 #define MAX_STYLE_STACK 32
 
 #define CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH 1024 * 100
+/** UI refresh during stream: every N validated UTF-8 chunks (not words). */
+#define STREAM_UI_REFRESH_CHUNK_INTERVAL 8
 
 typedef enum { STYLE_BOLD, STYLE_ITALIC, STYLE_UNDERLINE } StyleType;
+
+/** Frees the pointer array only; each json_object must already be json_object_put. */
+static void freeOpenAIResponseArray(struct json_object **responses) {
+    if (responses != NULL) {
+        FreeVec(responses);
+    }
+}
+
+/** Release from index onward (error path); caller may have put [0..fromIndex-1]. */
+static void discardOpenAIResponseArray(struct json_object **responses,
+                                       UWORD fromIndex) {
+    UWORD i;
+
+    if (responses == NULL) {
+        return;
+    }
+    for (i = fromIndex; i < RESPONSE_ARRAY_BUFFER_LENGTH && responses[i] != NULL;
+         i++) {
+        json_object_put(responses[i]);
+    }
+    FreeVec(responses);
+}
 
 /* A small stack to track active styles in the order they were opened. */
 typedef struct {
@@ -644,7 +668,6 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
 
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
     set(mainWindowObject, MUIA_Window_Open, TRUE);
-    addMenuActions();
 
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);
@@ -891,6 +914,33 @@ static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
     }
 
     return out;
+}
+
+/**
+ * Prepare assistant text for NFloattext. Returns a newly AllocVec'd string,
+ * or NULL if input is NULL or allocation fails. Caller must FreeVec() when
+ * non-NULL.
+ */
+static STRPTR formatAssistantTextForDisplay(CONST_STRPTR input) {
+    STRPTR out;
+    size_t len;
+
+    if (input == NULL) {
+        return NULL;
+    }
+    if (!config.markdownFormatting) {
+        len = strlen(input);
+        out = AllocVec(len + 1, MEMF_CLEAR);
+        if (out == NULL) {
+            return NULL;
+        }
+        if (len > 0) {
+            strncpy(out, input, len);
+        }
+        out[len] = '\0';
+        return out;
+    }
+    return convertMarkdownFormattingToMUI(input);
 }
 
 /**
@@ -1244,23 +1294,22 @@ static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
         CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)piece,
         CSA_MapForeignChars, TRUE, TAG_DONE);
 
-    displayRemaining = CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
-                       strlen(chatOutputTextEditorContents) -
-                       strlen(formattedMessageSystemEncoded) - 1;
-    if (displayRemaining > 0) {
-        strncat(chatOutputTextEditorContents, formattedMessageSystemEncoded,
-                displayRemaining);
+    if (formattedMessageSystemEncoded != NULL) {
+        displayRemaining = CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
+                           strlen(chatOutputTextEditorContents) -
+                           strlen(formattedMessageSystemEncoded) - 1;
+        if (displayRemaining > 0) {
+            strncat(chatOutputTextEditorContents, formattedMessageSystemEncoded,
+                    displayRemaining);
+        }
+        CodesetsFreeA(formattedMessageSystemEncoded, NULL);
     }
-    CodesetsFreeA(formattedMessageSystemEncoded, NULL);
 
-    if (++(*wordNumber) % 50 == 0) {
-        STRPTR formattedContent =
-            convertMarkdownFormattingToMUI(chatOutputTextEditorContents);
-        strncpy(chatOutputTextEditorContents, formattedContent,
-                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 1);
-        chatOutputTextEditorContents[CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
-                                     1] = '\0';
-        FreeVec(formattedContent);
+    ++(*wordNumber);
+    /* Markdown only after stream (displayConversation); avoids full-buffer
+     * convertMarkdownFormattingToMUI on every chunk. */
+    if (*wordNumber == 1 ||
+        *wordNumber % STREAM_UI_REFRESH_CHUNK_INTERVAL == 0) {
         set(chatOutputTextEditor, MUIA_NFloattext_Text,
             chatOutputTextEditorContents);
         set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
@@ -1268,12 +1317,14 @@ static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
             STRPTR unformattedMessageSystemEncoded = CodesetsUTF8ToStr(
                 CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                 (Tag)receivedMessage, CSA_MapForeignChars, TRUE, TAG_DONE);
-            if (config.speechSystem != SPEECH_SYSTEM_OPENAI) {
-                speakText(unformattedMessageSystemEncoded + *speechIndex, NULL,
-                          NULL);
+            if (unformattedMessageSystemEncoded != NULL) {
+                if (config.speechSystem != SPEECH_SYSTEM_OPENAI) {
+                    speakText(unformattedMessageSystemEncoded + *speechIndex,
+                              NULL, NULL);
+                }
+                *speechIndex = strlen(unformattedMessageSystemEncoded);
+                CodesetsFreeA(unformattedMessageSystemEncoded, NULL);
             }
-            *speechIndex = strlen(unformattedMessageSystemEncoded);
-            CodesetsFreeA(unformattedMessageSystemEncoded, NULL);
         }
     }
 }
@@ -1485,6 +1536,8 @@ static void sendChatMessage() {
                     displayConversation(currentConversation);
                 }
                 json_object_put(response);
+                discardOpenAIResponseArray(responses, responseIndex);
+                responses = NULL;
 
                 set(sendMessageButton, MUIA_Disabled, FALSE);
                 set(newChatButton, MUIA_Disabled, FALSE);
@@ -1520,7 +1573,8 @@ static void sendChatMessage() {
                     STRPTR type = json_object_get_string(
                         json_object_object_get(response, "type"));
                     if (config.useCustomServer ||
-                        strcmp(type, "response.completed") == 0) {
+                        (type != NULL &&
+                         strcmp(type, "response.completed") == 0)) {
                         dataStreamFinished = TRUE;
                     }
                     json_object_put(response);
@@ -1528,6 +1582,18 @@ static void sendChatMessage() {
                     dataStreamFinished = TRUE;
                 }
             }
+        }
+        freeOpenAIResponseArray(responses);
+        responses = NULL;
+
+#ifndef DAEMON
+        if (app != NULL) {
+            ULONG muiSig = 0;
+            DoMethod(app, MUIM_Application_NewInput, &muiSig);
+        }
+#endif
+        if (!config.useCustomServer && !openAIChatStreamInProgress()) {
+            dataStreamFinished = TRUE;
         }
     } while (!dataStreamFinished);
 
@@ -1537,7 +1603,9 @@ static void sendChatMessage() {
 
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 
-    if (responses != NULL) {
+    if (receivedMessage[0] != '\0') {
+        set(chatOutputTextEditor, MUIA_NFloattext_Text,
+            chatOutputTextEditorContents);
         addTextToConversation(currentConversation, receivedMessage,
                               "assistant");
         displayConversation(currentConversation);
@@ -1554,7 +1622,6 @@ static void sendChatMessage() {
                 CodesetsFreeA(receivedMessageSystemEncoded, NULL);
             }
         }
-        FreeVec(responses);
         FreeVec(receivedMessage);
         if (!isAROS) {
             FreeVec(text);
@@ -1614,6 +1681,11 @@ static void sendChatMessage() {
             }
             json_object_put(responses[0]);
             FreeVec(responses);
+        }
+    } else {
+        FreeVec(receivedMessage);
+        if (!isAROS) {
+            FreeVec(text);
         }
     }
 
@@ -1678,12 +1750,13 @@ void displayConversation(struct Conversation *conversation) {
             UBYTE assistantStyleString[] = "\n\n\0332";
             strncat(chatOutputTextEditorContents, assistantStyleString,
                     strlen(assistantStyleString));
-            STRPTR formattedContent =
-                convertMarkdownFormattingToMUI(
-                    conversationNodeGetDisplay(conversationNode));
-            strncat(chatOutputTextEditorContents, formattedContent,
-                    strlen(formattedContent));
-            FreeVec(formattedContent);
+            STRPTR formattedContent = formatAssistantTextForDisplay(
+                conversationNodeGetDisplay(conversationNode));
+            if (formattedContent != NULL) {
+                strncat(chatOutputTextEditorContents, formattedContent,
+                        strlen(formattedContent));
+                FreeVec(formattedContent);
+            }
             const UBYTE messageSeparatorStyleString[] = "\n\n";
             strncat(chatOutputTextEditorContents, messageSeparatorStyleString,
                     strlen(messageSeparatorStyleString));
@@ -2237,3 +2310,5 @@ LONG printConversation() {
 
     return RETURN_OK;
 }
+
+struct Conversation *getCurrentConversation(void) { return currentConversation; }

@@ -16,6 +16,7 @@
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
+#include <exec/memory.h>
 #include "AboutAmigaGPTWindow.h"
 #include "AmigaGPTTextEditor.h"
 #include "APIKeyRequesterWindow.h"
@@ -61,10 +62,25 @@ ULONG redPen = 0, greenPen = 0, bluePen = 0, yellowPen = 0;
 Object *imageWindowObject;
 Object *imageWindowImageView;
 Object *imageWindowImageViewGroup;
+Object *codeBlocksWindowObject;
+Object *codeBlocksOutputListView;
+Object *codeBlocksOutputFloat;
 BOOL isMUI5;
 BOOL isMUI39;
 BOOL isAROS;
 struct codeset *systemCodeset;
+
+#ifndef DAEMON
+#define CODEBLOCKS_VIEW_BUFFER_LENGTH (1024 * 100)
+#define CODEBLOCK_PLACEHOLDER_MAX 48
+static STRPTR codeBlocksViewContents = NULL;
+
+static BOOL append_cstr(STRPTR buf, ULONG cap, ULONG *off, const char *s);
+static BOOL append_bytes(STRPTR buf, ULONG cap, ULONG *off, const void *p,
+                         ULONG len);
+static BOOL build_conversation_codeblocks_utf8(struct Conversation *conv,
+                                              STRPTR buf, ULONG cap);
+#endif
 
 static BOOL checkMUICustomClassInstalled();
 static void closeGUILibraries();
@@ -190,6 +206,26 @@ LONG initVideo() {
           proxySettingsRequesterWindowObject, SubWindow,
           voiceInstructionsRequesterWindowObject, SubWindow,
           elevenLabsSettingsRequesterWindowObject, SubWindow,
+          codeBlocksWindowObject = WindowObject, MUIA_Window_Title,
+          STRING_MENU_VIEW_CODEBLOCKS, MUIA_Window_ID, OBJECT_ID_CODEBLOCKS_WINDOW,
+          MUIA_Window_Width, 480, MUIA_Window_Height, 360,
+          MUIA_Window_CloseGadget, TRUE, MUIA_Window_SizeGadget, TRUE,
+          MUIA_Window_DepthGadget, TRUE, MUIA_Window_DragBar, TRUE,
+          MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
+          MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
+          MUIA_Window_SizeRight, TRUE, MUIA_Window_UseBottomBorderScroller, FALSE,
+          MUIA_Window_UseRightBorderScroller, FALSE,
+          MUIA_Window_UseLeftBorderScroller, FALSE, WindowContents, VGroup,
+            Child, codeBlocksOutputListView = NListviewObject,
+              MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_On,
+              MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_On,
+              MUIA_NListview_NList, codeBlocksOutputFloat = NFloattextObject,
+                MUIA_Font, MUIV_NList_Font_Fixed, MUIA_Frame, MUIV_Frame_Text,
+                MUIA_ContextMenu, NULL, MUIA_NFloattext_Text, "",
+              End,
+            End,
+          End, End,
+          SubWindow,
           imageWindowObject = WindowObject, MUIA_Window_Title, STRING_IMAGE,
           MUIA_Window_ID, OBJECT_ID_IMAGE_WINDOW, MUIA_Window_Width, 320,
           MUIA_Window_Height, 240, MUIA_Window_CloseGadget, TRUE,
@@ -209,6 +245,18 @@ LONG initVideo() {
 
     DoMethod(imageWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
              MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
+
+    DoMethod(codeBlocksWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
+             MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
+
+    if (codeBlocksViewContents == NULL) {
+        codeBlocksViewContents =
+            AllocVec(CODEBLOCKS_VIEW_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+        if (codeBlocksViewContents == NULL) {
+            displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+            return RETURN_ERROR;
+        }
+    }
 
     if (createAboutAmigaGPTWindow() == RETURN_OK)
         DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
@@ -494,7 +542,15 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
         return NULL;
     if (stream) {
         struct json_object *type = json_object_object_get(json, "type");
-        UTF8 *typeStr = json_object_get_string(type);
+        CONST_STRPTR typeStr;
+
+        if (type == NULL) {
+            return "";
+        }
+        typeStr = json_object_get_string(type);
+        if (typeStr == NULL) {
+            return "";
+        }
         if (strcmp(typeStr, "response.output_text.delta") == 0) {
             struct json_object *text = json_object_object_get(json, "delta");
             return json_object_get_string(text);
@@ -651,7 +707,7 @@ void addTextToConversation(struct Conversation *conversation, UTF8 *text,
     AddTail((struct List *)conversation->messages,
             (struct Node *)conversationNode);
 
-    conversationNodeParseCodeFences(conversationNode);
+    conversationNodeParseCodeFences(conversation, conversationNode);
 }
 
 /**
@@ -673,6 +729,118 @@ void freeConversation(struct Conversation *conversation) {
         CodesetsFreeA(conversation->system, NULL);
     FreeVec(conversation);
 }
+
+#ifndef DAEMON
+static BOOL append_bytes(STRPTR buf, ULONG cap, ULONG *off, const void *p,
+                         ULONG len) {
+    if (len > cap || *off > cap - len) {
+        return FALSE;
+    }
+    CopyMem(p, buf + *off, len);
+    *off += len;
+    buf[*off] = '\0';
+    return TRUE;
+}
+
+static BOOL append_cstr(STRPTR buf, ULONG cap, ULONG *off, const char *s) {
+    return append_bytes(buf, cap, off, s, (ULONG)strlen(s));
+}
+
+static BOOL build_conversation_codeblocks_utf8(struct Conversation *conv,
+                                              STRPTR buf, ULONG cap) {
+    struct MinNode *mn;
+    ULONG off = 0;
+    char header[CODEBLOCK_PLACEHOLDER_MAX];
+
+    buf[0] = '\0';
+    if (conv == NULL || conv->messages == NULL) {
+        return FALSE;
+    }
+    for (mn = conv->messages->mlh_Head; mn->mln_Succ != NULL;
+         mn = mn->mln_Succ) {
+        struct ConversationNode *node = (struct ConversationNode *)mn;
+        struct MinNode *bn;
+
+        if (node->codeblocks == NULL) {
+            continue;
+        }
+        for (bn = node->codeblocks->mlh_Head; bn->mln_Succ != NULL;
+             bn = bn->mln_Succ) {
+            struct AICodeBlock *block = (struct AICodeBlock *)bn;
+            const char *lang =
+                (block->language != NULL && block->language[0] != '\0')
+                    ? (const char *)block->language
+                    : "";
+            int header_len;
+
+            header_len =
+                snprintf(header, sizeof(header),
+                         (const char *)STRING_CHAT_CODEBLOCK_PLACEHOLDER,
+                         (long)block->index);
+            if (header_len <= 0) {
+                return FALSE;
+            }
+            if (!append_bytes(buf, cap, &off, header, (ULONG)header_len)) {
+                return FALSE;
+            }
+
+            if (!append_cstr(buf, cap, &off, "```") ||
+                !append_cstr(buf, cap, &off, lang) ||
+                !append_cstr(buf, cap, &off, "\n")) {
+                return FALSE;
+            }
+            if (block->raw_code != NULL && block->code_length > 0) {
+                if (!append_bytes(buf, cap, &off, block->raw_code,
+                                  block->code_length)) {
+                    return FALSE;
+                }
+            }
+            if (!append_cstr(buf, cap, &off, "\n```\n\n")) {
+                return FALSE;
+            }
+        }
+    }
+    return off > 0;
+}
+
+void openCodeBlocksViewerWindow(void) {
+    struct Conversation *conv = getCurrentConversation();
+    STRPTR utf8Buf = NULL;
+    STRPTR formatted = NULL;
+
+    if (conv == NULL) {
+        displayError(STRING_ERROR_NO_ACTIVE_CONVERSATION);
+        return;
+    }
+
+    utf8Buf = AllocVec(CODEBLOCKS_VIEW_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+    if (utf8Buf == NULL) {
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        return;
+    }
+    if (!build_conversation_codeblocks_utf8(conv, utf8Buf,
+                                            CODEBLOCKS_VIEW_BUFFER_LENGTH)) {
+        FreeVec(utf8Buf);
+        displayError(STRING_ERROR_NO_CODEBLOCKS_IN_CHAT);
+        return;
+    }
+
+    formatted = CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                                  (Tag)utf8Buf, CSA_MapForeignChars, TRUE, TAG_DONE);
+    FreeVec(utf8Buf);
+    if (formatted == NULL) {
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        return;
+    }
+
+    strncpy(codeBlocksViewContents, formatted, CODEBLOCKS_VIEW_BUFFER_LENGTH - 1);
+    codeBlocksViewContents[CODEBLOCKS_VIEW_BUFFER_LENGTH - 1] = '\0';
+    CodesetsFreeA(formatted, NULL);
+
+    set(codeBlocksOutputFloat, MUIA_NFloattext_Text, codeBlocksViewContents);
+    set(codeBlocksWindowObject, MUIA_Window_Open, TRUE);
+}
+#endif
 
 /**
  * Shutdown the GUI
@@ -705,6 +873,10 @@ void shutdownGUI() {
 #ifndef DAEMON
     if (chatOutputTextEditorContents) {
         FreeVec(chatOutputTextEditorContents);
+    }
+    if (codeBlocksViewContents) {
+        FreeVec(codeBlocksViewContents);
+        codeBlocksViewContents = NULL;
     }
     if (isMUI5 || isMUI39) {
         deleteAmigaGPTTextEditor();

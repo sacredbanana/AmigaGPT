@@ -1436,5 +1436,25 @@ msgstr "ElevenLabs-Einstellungen-Fenster konnte nicht erstellt werden"
 
 #: src/codefence.c:65
 msgctxt "STRING_CHAT_CODEBLOCK_PLACEHOLDER (260//)"
-msgid "[Codeblock]\n"
-msgstr "[Codeblock]\n"
+msgid "[Codeblock %ld]\n"
+msgstr "[Codeblock %ld]\n"
+
+#: src/gui.c
+msgctxt "STRING_MENU_VIEW_CODEBLOCKS (261//)"
+msgid "View code blocks..."
+msgstr "Codeblöcke anzeigen..."
+
+#: src/gui.c
+msgctxt "STRING_ERROR_NO_ACTIVE_CONVERSATION (262//)"
+msgid "No active conversation. Open or start a chat first."
+msgstr "Keine aktive Konversation. Bitte zuerst einen Chat öffnen oder anlegen."
+
+#: src/gui.c
+msgctxt "STRING_ERROR_NO_CODEBLOCKS_IN_CHAT (263//)"
+msgid "No fenced code blocks in this conversation yet."
+msgstr "In dieser Konversation sind noch keine eingezäunten Codeblöcke (Markdown-Fences)."
+
+#: src/menu.c:320
+msgctxt "STRING_MENU_MARKDOWN_FORMATTING (264//)"
+msgid "Markdown formatting"
+msgstr "Markdown-Formatierung"

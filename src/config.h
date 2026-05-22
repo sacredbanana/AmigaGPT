@@ -39,6 +39,7 @@ struct Config {
     STRPTR proxyUsername;
     STRPTR proxyPassword;
     ULONG fixedWidthFonts;
+    ULONG markdownFormatting;
     LONG userTextAlignment;
     LONG assistantTextAlignment;
     LONG webSearchEnabled;

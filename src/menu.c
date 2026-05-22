@@ -289,6 +289,11 @@ HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
 MakeHook(OpenDocumentationMenuItemClickedHook,
          OpenDocumentationMenuItemClickedFunc);
 
+HOOKPROTONHNONP(ViewCodeBlocksMenuItemClickedFunc, void) {
+    openCodeBlocksViewerWindow();
+}
+MakeHook(ViewCodeBlocksMenuItemClickedHook, ViewCodeBlocksMenuItemClickedFunc);
+
 HOOKPROTONHNONP(RecreateMainWindowFunc, void) {
     set(mainWindowObject, MUIA_Window_Open, FALSE);
     DoMethod(mainWindowObject, MUIM_KillNotify, MUIA_Window_Screen);
@@ -301,8 +306,25 @@ HOOKPROTONHNONP(RecreateMainWindowFunc, void) {
 }
 MakeHook(RecreateMainWindowHook, RecreateMainWindowFunc);
 
+static BOOL syncMenuCheckbox(LONG menuItemId, ULONG *configValue) {
+    Object *item = (Object)DoMethod(menuStrip, MUIM_FindUData, menuItemId);
+    LONG checked = FALSE;
+
+    if (item != NULL) {
+        get(item, MUIA_Menuitem_Checked, &checked);
+    }
+    if ((ULONG)checked == *configValue) {
+        return FALSE;
+    }
+    *configValue = (ULONG)checked;
+    return TRUE;
+}
+
 HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
-    config.fixedWidthFonts = !config.fixedWidthFonts;
+    if (!syncMenuCheckbox(MENU_ITEM_VIEW_FIXED_WIDTH_FONTS,
+                          &config.fixedWidthFonts)) {
+        return;
+    }
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
     }
@@ -311,6 +333,23 @@ HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
 }
 MakeHook(FixedWidthFontsMenuItemClickedHook,
          FixedWidthFontsMenuItemClickedFunc);
+
+HOOKPROTONHNONP(MarkdownRefreshFunc, void) { displayConversation(NULL); }
+MakeHook(MarkdownRefreshHook, MarkdownRefreshFunc);
+
+HOOKPROTONHNONP(MarkdownFormattingMenuItemClickedFunc, void) {
+    if (!syncMenuCheckbox(MENU_ITEM_VIEW_MARKDOWN_FORMATTING,
+                          &config.markdownFormatting)) {
+        return;
+    }
+    if (writeConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+    }
+    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+             &MarkdownRefreshHook);
+}
+MakeHook(MarkdownFormattingMenuItemClickedHook,
+         MarkdownFormattingMenuItemClickedFunc);
 
 HOOKPROTONHNONP(TextAlignmentChangedFunc, void) { displayConversation(NULL); }
 MakeHook(TextAlignmentChangedHook, TextAlignmentChangedFunc);
@@ -327,7 +366,15 @@ HOOKPROTONHNONP(ClearMuiSettingsFunc, void) {
 }
 MakeHook(ClearMuiSettingsHook, ClearMuiSettingsFunc);
 
+static Object *menuActionsMenuStrip = NULL;
+
 void createMenu() {
+    if (menuStrip != NULL) {
+        MUI_DisposeObject(menuStrip);
+        menuStrip = NULL;
+        menuActionsMenuStrip = NULL;
+    }
+
     menuStrip = MenustripObject, MUIA_Family_Child, MenuObject, MUIA_Menu_Title,
     STRING_MENU_PROJECT, MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child,
     MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_PRINT, MUIA_UserData,
@@ -365,6 +412,9 @@ void createMenu() {
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_FIXED_WIDTH_FONTS, MUIA_UserData,
     MENU_ITEM_VIEW_FIXED_WIDTH_FONTS, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_MARKDOWN_FORMATTING, MUIA_UserData,
+    MENU_ITEM_VIEW_MARKDOWN_FORMATTING, MUIA_Menuitem_Checkit, TRUE,
     MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_USER_TEXT_ALIGNMENT, MUIA_UserData,
     MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT, MUIA_Menuitem_CopyStrings, FALSE,
@@ -409,7 +459,9 @@ void createMenu() {
     MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_CLEAR_MUI_SETTINGS, MUIA_UserData,
     MENU_ITEM_VIEW_CLEAR_MUI_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
-    End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_VIEW_CODEBLOCKS, MUIA_UserData, MENU_ITEM_VIEW_CODEBLOCKS,
+    MUIA_Menuitem_CopyStrings, FALSE, End, End,
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_CONNECTION,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
@@ -515,6 +567,11 @@ void createMenu() {
 }
 
 void addMenuActions() {
+    if (menuStrip == NULL || menuActionsMenuStrip == menuStrip) {
+        return;
+    }
+    menuActionsMenuStrip = menuStrip;
+
     Object printMenuItem =
         (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_PROJECT_PRINT);
     DoMethod(printMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
@@ -607,6 +664,14 @@ void addMenuActions() {
     DoMethod(fixedWidthFontsMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &FixedWidthFontsMenuItemClickedHook);
+
+    Object markdownFormattingMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_MARKDOWN_FORMATTING);
+    set(markdownFormattingMenuItem, MUIA_Menuitem_Checked,
+        config.markdownFormatting);
+    DoMethod(markdownFormattingMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &MarkdownFormattingMenuItemClickedHook);
 
     Object userTextAlignmentLeftMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_LEFT);
@@ -798,6 +863,12 @@ void addMenuActions() {
     DoMethod(openDocumentationMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, MUIV_Notify_Application, 3, MUIM_CallHook,
              &OpenDocumentationMenuItemClickedHook, MUIV_TriggerValue);
+
+    Object viewCodeBlocksMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_CODEBLOCKS);
+    DoMethod(viewCodeBlocksMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &ViewCodeBlocksMenuItemClickedHook);
 }
 
 /**
