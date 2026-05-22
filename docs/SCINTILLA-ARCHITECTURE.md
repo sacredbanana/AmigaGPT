@@ -2,6 +2,22 @@
 
 Dieses Dokument beschreibt die Zielarchitektur für den Branch **scintilla** und darüber hinaus. Es ergänzt die Git-Hinweise in [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md).
 
+Zeichensatz, NFloattext, MorphOS-Prüfung (`??` bei Emoji) und Cairo-Abwägung: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md).
+
+---
+
+## Roadmap (Übersicht)
+
+| Phase | Status / Inhalt |
+|-------|-----------------|
+| **1–5** | Ziel, Datenmodell, Stream, Fences, GUI-Grundlagen |
+| **6–10** | **Ein Implementierungsblock:** Scintilla **Code-Viewer** v0.1 (siehe unten) |
+| **11** | Komfort am Code-Viewer (Lexer, Highlighting, Tabs, Export) |
+| **12** | **Hauptfenster Chat-Ausgabe** → Scintilla.mcc + TTEngine (UTF-8, ohne NFloattext/codesets für diese Fläche) |
+| **13** | MorphOS Worker / UI-Batching für Stream (bewusst **nach** Phase 12) |
+
+**Bereits umgesetzt, unverändert in Phase 12:** NList-Titel über `name_list_display` + codesets (Phase 5.1). **Nicht** in 6–12: Chat-**Eingabe** (`TextEditor`), Cairo.
+
 ---
 
 ## Phase 1 — Zieldefinition und Minimal-Architektur
@@ -166,7 +182,23 @@ und Hinweise wie:
 
 ---
 
-## Phase 6 — Scintilla.mcc Integration
+## Phase 6–10 — Scintilla Code-Viewer v0.1 (ein Implementierungsblock)
+
+Die Kapitel **6–10** sind **ein** Release-Schritt, keine fünf getrennte Meilensteine:
+
+| Kapitel | Rolle |
+|---------|--------|
+| **6** | Technik: Scintilla im Fenster „View code blocks“ |
+| **7** | Regel: Copy aus `raw_code` / `raw_utf8`, nicht Anzeige-Text |
+| **8** | String-Sicherheit beim Einbau |
+| **9** | Optional: Debug-Logs (nicht Blocker für v0.1) |
+| **10** | Definition of Done für den Code-Viewer |
+
+**Nächster Implementierungsschritt:** Phase 6–10. Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
+
+---
+
+## Phase 6 — Scintilla.mcc Integration (Code-Viewer)
 
 ### 6.1 Erste Minimalintegration
 
@@ -227,23 +259,22 @@ DoMethod(sci,
 
 ---
 
-## Phase 10 — Erste Version (0.1)
+## Phase 10 — Erste Version (0.1) — Definition of Done für 6–10
 
-**Enthalten:**
+**Enthalten (Code-Viewer):**
 
-- Chat senden / Antwort empfangen
-- UTF-8 korrekt
-- Codeblock-Erkennung (Fences)
-- „Open in Scintilla“
-- Copy/Paste korrekt
+- Menü **View code blocks…** zeigt alle `codeblocks` in **Scintilla** (read-only)
+- Text aus `raw_code` als **RAW UTF-8** (`SCI_SETTEXT`), Rendering über **TTEngine**
+- Copy/Paste aus Rohdaten, nicht nur aus konvertierter Anzeige
+- Codeblock-Erkennung (Fences) unverändert in `addTextToConversation()`
 
-**Ausgeschlossen:**
+**Ausgeschlossen in 6–10:**
 
-- Syntaxhighlighting
-- Inline-Markdown
-- aufwendige GUI
-- Themes
-- HTML
+- Syntax-Highlighting (Phase 11)
+- Chat-Hauptfenster auf Scintilla (Phase 12)
+- Chat-Eingabe-Editor umstellen
+- Cairo
+- Themes / HTML / vollständiges Markdown
 
 ---
 
@@ -256,11 +287,35 @@ DoMethod(sci,
 
 ---
 
-## Phase 12 — MorphOS-spezifisch
+## Phase 12 — Hauptfenster Chat-Ausgabe → Scintilla
 
-- **MUI Worker-Task** für Streaming — UI nicht blockieren.
+**Ziel:** Unicode-Anzeige im Chat ohne `CodesetsUTF8ToStr` → NFloattext (Motivation: MorphOS-Prüfung Emoji → `??`, siehe [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md)).
+
+**Enthalten:**
+
+- Große **Chat-Ausgabe** im Hauptfenster: NFloattext durch **read-only Scintilla** ersetzen
+- `conversationNodeGetDisplay()` / Stream: UTF-8 direkt an Scintilla (`SCI_SETTEXT` / `SCI_APPENDTEXT` o. Ä.)
+- Rendering: **TTEngine** (wie Code-Viewer aus 6–10)
+- Markdown: Scintilla-Styles oder Plain (Fortführung `config.markdownFormatting`)
+
+**Ausgeschlossen:**
+
+- Chat-**Eingabe** (`TextEditor` / `AmigaGPTTextEditor`) — eigenes Thema
+- NList-Titel (`name_list_display` + codesets) — bleibt
+- Code-Viewer-Fenster — bleibt separates Fenster (oder gleiches Muster wie 6–10)
+- Cairo
+
+**Abhängigkeit:** Phase 6–10 und 11 abgeschlossen oder stabil (Scintilla+TTEngine im Projekt bewährt).
+
+---
+
+## Phase 13 — MorphOS-spezifisch (Worker / UI-Batching)
+
+*Bisherige „Phase 12“ — bewusst **nach** Phase 12, nicht davor (Worker soll den Scintilla-Chat-Stream optimieren, nicht NFloattext nachrüsten).*
+
+- **MUI Worker-Task** für Streaming — UI nicht blockieren
 - **Signal/Event-Modell:** `network task → parser task → ui task`
-- **Keine GUI-Updates pro Zeichen** — sammeln, batchweise aktualisieren (Lag, Repaint, CPU).
+- **Keine GUI-Updates pro Zeichen** — sammeln, batchweise aktualisieren (Lag, Repaint, CPU)
 
 ---
 
@@ -323,7 +378,7 @@ DoMethod(sci,
 - Menü **Ansicht → „View code blocks…“** (`STRING_MENU_VIEW_CODEBLOCKS`): eigenes MUI-Fenster mit **NFloattext** (fixe Schrift), Inhalt = **alle** `codeblocks` der aktuellen Unterhaltung in Reihenfolge; Platzhalter-Nummer (`AICodeBlock.index`) läuft **gesamt** über den Chat (nicht pro Assistant-Antwort neu ab 1). Pro Block ``` + optional Sprache + Rohcode (UTF-8). Puffer 100 KB; bei Überlauf Fehlermeldung.
 - **`getCurrentConversation()`** (`MainWindow.c`) liefert den aktuellen Chat für diese Aktion.
 
-**Nächster Schritt:** Phase 6 — gleiche Datenquelle (`codeblocks`) in **Scintilla.mcc** (Syntax, größere Puffer), optional Ersetzung oder Ergänzung des NFloattext-Fensters.
+**Nächster Schritt:** **Phase 6–10** — `codeblocks` / „View code blocks“ in **Scintilla.mcc** (+ TTEngine), NFloattext nur im Code-Viewer-Fenster ersetzen. Danach Phase 11 (Komfort), **Phase 12** (Chat-Ausgabe), **Phase 13** (Worker).
 
 ---
 

@@ -6,7 +6,8 @@
 | -------- | ------ |
 | [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) | Git (kein Commit auf `master`) **und** Begriff **Paketieren** = Z:-Deploy |
 | [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md) | Remotes `origin` / `upstream`, Sync, PRs |
-| [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) | Plan Scintilla.mcc, Streaming, UTF-8 |
+| [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) | Plan Scintilla.mcc, Phasen 6–13, Streaming |
+| [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) | Unicode, NFloattext, codesets, MorphOS-Prüfung, Cairo vs. Scintilla |
 | [BUILD-MORPHOS-WSL.md](BUILD-MORPHOS-WSL.md) | MorphOS Cross-Build: WSL2, Debian, BIGFOOT, FlexCat, Make |
 | [MORPHOS-SDK-ERGAENZUNGEN.md](MORPHOS-SDK-ERGAENZUNGEN.md) | **Welche SDK-Ergänzungen** genau nötig sind (BIGFOOT vs. AmigaSDK-gcc) |
 | [SUDO-NACHINSTALL.md](SUDO-NACHINSTALL.md) | Einmalige `sudo apt` / Rechte / optional `/opt/amiga` |
@@ -53,9 +54,14 @@ Neue oder geänderte Strings: `catalogs/AmigaGPT.pot` bzw. die `catalogs/*/*.po`
 
 ## Text / Zeichensatz (MorphOS)
 
-- **Chat (NFloattext):** UTF-8 aus der API → nach Aufbau des Buffers `CodesetsUTF8ToStr` → System-Codeset (wie bisher in `displayConversation()` / Stream-Pfad).
-- **Konversationsliste (NList):** `name` UTF-8 für Speichern; Anzeige `name_list_display` (Codesets), siehe Architektur-Dokument Phase 5.1.
-- **Assistant mit Code-Fences:** `display_text` ersetzt erkannte Blöcke durch nummerierte Platzhalter `[Codeblock %ld]` **fortlaufend über die ganze Unterhaltung** (nicht pro Antwort neu ab 1). **Ansicht → View code blocks…** listet alle Blöcke des aktuellen Chats (siehe [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md), Phase 5.2). Während des Live-Streams bleibt der Roh-Text sichtbar; Platzhalter erscheinen nach Ende der Antwort beim Neuzeichnen.
-- **Mini-Markdown (Fett/Kursiv):** **Ansicht → Markdown formatting** — abschaltbar (`config.json`: `markdownFormatting`); aus = Rohtext ohne `*`/`_`/`\`-Escape-Probleme im NFloattext.
+Ausführlich: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) (inkl. Prüfung: `GETENV Charset` nicht gesetzt, Emoji im Chat → `??`).
+
+- **Chat-Ausgabe (heute, NFloattext):** UTF-8 intern → `CodesetsUTF8ToStr` → System-Codeset → Anzeige. Geplant **Phase 12:** Scintilla + TTEngine, UTF-8 direkt.
+- **Chat-Eingabe:** `TextEditor` → `CodesetsUTF8Create` → UTF-8 zur API — **nicht** Phase 6–10 / 12 (Eingabe).
+- **Konversationsliste (NList):** `name` UTF-8; Anzeige **`name_list_display`** (Codesets) — **bereits umgesetzt** (Phase 5.1).
+- **Code-Fences / Viewer:** Platzhalter im Chat; **Ansicht → View code blocks…** — **Phase 6–10:** Scintilla statt NFloattext im Code-Fenster.
+- **Mini-Markdown:** **Ansicht → Markdown formatting** — abschaltbar (`config.markdownFormatting`).
+
+**Roadmap:** 6–10 Code-Viewer · 11 Komfort · **12 Chat-Ausgabe Scintilla** · **13 Worker** — siehe [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md).
 
 Agenten: zusätzlich [AGENTS.md](../AGENTS.md) und `.cursor/rules/git-branch-policy.mdc`.
