@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # MorphOS-only test package from native WSL cross-build (no Docker).
 #
-# Handlungsanweisung (Projekt): „Paketieren“ = LHA/Staging erzeugen **und**
-# die Bereitstellung unter Z: (Deploy) erfolgreich — siehe docs/HANDLUNGSANWEISUNG-GIT.md.
-# Mit DEPLOY=0 wird nur lokal gebündelt (kein Z:); Exit 0, aber kein abgeschlossenes Paketieren.
+# Handlungsanweisung (Projekt): „Paketieren“ = LHA bauen **und** nach Z: deployen
+# (nur AmigaGPT-MorphOS-cross.lha) — siehe docs/HANDLUNGSANWEISUNG-GIT.md.
+# Entpacken/Install auf MorphOS: separates Deploy-Skript auf der MorphOS-Seite (nicht im Repo).
+# Mit DEPLOY=0 nur lokal out/*.lha; Exit 0, aber kein abgeschlossenes Paketieren.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -50,6 +51,32 @@ for cat in "$ROOT"/catalogs/*/*.catalog; do
   cp -f "$cat" "$STAGE/catalogs/$lang/"
 done
 
+APP_VER="$(
+  awk -F'"' '
+    /#define APP_VERSION_MAJOR/ { m = $2 }
+    /#define APP_VERSION_MINOR/ { n = $2 }
+    /#define APP_VERSION_PATCH/ { p = $2 }
+    END { if (m != "" && n != "" && p != "") print m "." n "." p }
+  ' "$ROOT/src/version.h"
+)"
+BUILD_NUM="$(awk -F'"' '/#define BUILD_NUMBER/ { print $2; exit }' "$ROOT/src/version.h")"
+PKG_SHA="$(sha256sum "$STAGE/AmigaGPT/AmigaGPT/AmigaGPT_MorphOS" | awk '{print $1}')"
+PKG_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+GIT_REV="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+cat >"$STAGE/PACKAGE-BUILDINFO.txt" <<EOF
+AmigaGPT MorphOS cross-package
+==============================
+version=${APP_VER:-?}
+build=${BUILD_NUM:-?}
+git=${GIT_REV}
+packaged_utc=${PKG_UTC}
+AmigaGPT_MorphOS.sha256=${PKG_SHA}
+
+Prüfen auf MorphOS: diese Datei nach dem Entpacken lesen (nicht nur LHA-Datum
+am Share — SMB/Copy-Item kann altes Erstellungsdatum behalten).
+EOF
+log "Buildinfo: ${APP_VER:-?} build ${BUILD_NUM:-?} (${PKG_UTC})"
+
 cat >"$STAGE/AmigaGPT/AmigaGPT/fix-protection.rexx" <<'EOF'
 /* Einmal nach Entpacken: AmigaDOS-Protection-Bits (fehlen nach LHA aus Linux/WSL). */
 Address COMMAND
@@ -94,12 +121,15 @@ Installation
 4. Optional: run >nil: AMIGAGPT:AmigaGPTD_MorphOS
 5. Start: run AMIGAGPT:AmigaGPT_MorphOS  (oder Doppelklick)
 
-Share-Deploy (WSL): LHA + package-morphos unter morphos/out-crosscompile/
-(z.B. HDSFGO4-share:morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha).
+Share-Deploy (WSL): nur AmigaGPT-MorphOS-cross.lha nach morphos/out-crosscompile/
+(z.B. HDSFGO4-share:morphos/out-crosscompile/). Entpacken: MorphOS-Deploy-Skript.
+
+Version prüfen: PACKAGE-BUILDINFO.txt im Archiv (oder About: Version/Build).
 
 Kataloge: catalogs/<sprache>/AmigaGPT.catalog → LOCALE:Catalogs/<sprache>/
 
 Laufzeit: MUI, AmiSSL 5.x, codesets.library, guigfx, TCP/IP
+Code-Viewer (Phase 6): Scintilla.mcc (MUI-Classes), ttengine.library (UTF-8/FreeType)
 EOF
 
 ARCHIVE=""
@@ -123,19 +153,42 @@ fi
 
 DEPLOY_FAILED=0
 if [[ "${DEPLOY:-1}" == "1" ]]; then
-  if command -v powershell.exe >/dev/null 2>&1; then
-    WSL_STAGE=$(wslpath -w "$STAGE")
-    WSL_ARCH=""
-    [[ -n "$ARCHIVE" ]] && WSL_ARCH=$(wslpath -w "$ARCHIVE")
-    log "Deploy → $DEPLOY_WIN"
+  if [[ -z "$ARCHIVE" ]]; then
+    log "Fehler: DEPLOY=1, aber kein Archiv (lha/jlha/zip fehlt)."
+    DEPLOY_FAILED=1
+  elif command -v powershell.exe >/dev/null 2>&1; then
+    WSL_ARCH=$(wslpath -w "$ARCHIVE")
+    ARCH_NAME="$(basename "$ARCHIVE")"
+    LOCAL_BYTES="$(wc -c <"$ARCHIVE" | tr -d ' ')"
+    LOCAL_SHA="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
+    log "Deploy (nur LHA) → $DEPLOY_WIN/$ARCH_NAME (${LOCAL_BYTES} Bytes)"
     if ! powershell.exe -NoProfile -Command "
-      \$d='${DEPLOY_WIN}'; New-Item -ItemType Directory -Force -Path \$d | Out-Null
-      if ('${WSL_ARCH}' -ne '') { Copy-Item -Force '${WSL_ARCH}' \$d }
-      Copy-Item -Recurse -Force '${WSL_STAGE}' (Join-Path \$d 'package-morphos')
-      Get-ChildItem \$d | Select-Object Name,Length
+      \$ErrorActionPreference = 'Stop'
+      \$d='${DEPLOY_WIN}'
+      New-Item -ItemType Directory -Force -Path \$d | Out-Null
+      \$arch = Join-Path \$d '${ARCH_NAME}'
+      \$src = '${WSL_ARCH}'
+      if (Test-Path \$arch) { Remove-Item -Force -LiteralPath \$arch }
+      if (Test-Path \$arch) { throw \"Alte LHA konnte nicht gelöscht werden: \$arch\" }
+      Copy-Item -LiteralPath \$src -Destination \$d -Force
+      if (-not (Test-Path -LiteralPath \$arch)) { throw \"Kopie fehlgeschlagen: \$arch\" }
+      \$dst = Get-Item -LiteralPath \$arch
+      if (\$dst.Length -ne ${LOCAL_BYTES}) {
+        throw \"Größe abweichend: Ziel=\$(\$dst.Length) erwartet=${LOCAL_BYTES}\"
+      }
+      \$h = (Get-FileHash -LiteralPath \$arch -Algorithm SHA256).Hash.ToLower()
+      if (\$h -ne '${LOCAL_SHA}') {
+        throw \"SHA256 abweichend auf Z: (erwartet ${LOCAL_SHA})\"
+      }
+      \$legacy = Join-Path \$d 'package-morphos'
+      if (Test-Path \$legacy) { Remove-Item -Recurse -Force \$legacy }
+      Write-Host \"LHA ersetzt OK: \$(\$dst.Name) \$(\$dst.Length) Bytes SHA256=\$h\"
+      \$dst | Format-List Name,Length,LastWriteTime
     "; then
       log "Fehler: Deploy nach $DEPLOY_WIN fehlgeschlagen (Laufwerk nicht erreichbar?)."
       DEPLOY_FAILED=1
+    else
+      log "Z: LHA verifiziert (Größe + SHA256)."
     fi
   else
     log "Fehler: DEPLOY=1, aber powershell.exe nicht gefunden — kein Deploy nach Z: möglich."
@@ -146,10 +199,9 @@ else
 fi
 
 if [[ "$DEPLOY_FAILED" -ne 0 ]] || [[ "${DEPLOY:-1}" == "0" ]]; then
-  log "Manuell auf MorphOS-Share kopieren (z.B. HDSFGO4-share:morphos/out-crosscompile/):"
-  [[ -n "$ARCHIVE" ]] && wslpath -w "$ARCHIVE" 2>/dev/null && log "  → AmigaGPT-MorphOS-cross.lha"
-  wslpath -w "$STAGE" 2>/dev/null && log "  → package-morphos/"
-  log "  Windows: Explorer Z:\\morphos\\out-crosscompile oder anderes Laufwerk statt Z:"
+  log "Manuell auf MorphOS-Share (nur LHA):"
+  [[ -n "$ARCHIVE" ]] && wslpath -w "$ARCHIVE" 2>/dev/null
+  log "  Ziel: $DEPLOY_WIN/$(basename "${ARCHIVE:-AmigaGPT-MorphOS-cross.lha}")"
 fi
 
 log "Fertig: $STAGE"

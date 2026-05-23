@@ -1,0 +1,12 @@
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c11
+
+codeblocks_memory_host_test: codeblocks_memory_host_test.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+test: codeblocks_memory_host_test
+	./codeblocks_memory_host_test
+
+.PHONY: test clean
+clean:
+	rm -f codeblocks_memory_host_test

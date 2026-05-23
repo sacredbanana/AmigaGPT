@@ -67,3 +67,8 @@ extern Object *menuStrip;
 void createMenu();
 
 void addMenuActions();
+
+#ifdef __MORPHOS__
+/** Enable "View code blocks…" when the current chat has ``` blocks. */
+void refreshViewCodeBlocksMenuState(void);
+#endif

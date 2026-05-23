@@ -20,6 +20,9 @@
 #include "gui.h"
 #include "MainWindow.h"
 #include "menu.h"
+#ifdef __MORPHOS__
+#include "CodeBlocksViewer.h"
+#endif
 #include "ProxySettingsRequesterWindow.h"
 #include "VoiceInstructionsRequesterWindow.h"
 #include "version.h"
@@ -233,6 +236,19 @@ HOOKPROTONHNONP(EditCutFunc, void) {
 MakeHook(EditCutHook, EditCutFunc);
 
 HOOKPROTONHNONP(EditCopyFunc, void) {
+#ifdef __MORPHOS__
+    LONG open = FALSE;
+
+    if (codeBlocksWindowObject != NULL) {
+        get(codeBlocksWindowObject, MUIA_Window_Open, &open);
+        if (open) {
+            if (!codeBlocksViewerCopyActiveBlockUtf8()) {
+                displayError(STRING_ERROR_CLIPBOARD_COPY);
+            }
+            return;
+        }
+    }
+#endif
     Object *activeEditor = getActiveTextEditor();
     DoMethod(activeEditor, MUIM_TextEditor_ARexxCmd, "Copy");
 }
@@ -293,6 +309,27 @@ HOOKPROTONHNONP(ViewCodeBlocksMenuItemClickedFunc, void) {
     openCodeBlocksViewerWindow();
 }
 MakeHook(ViewCodeBlocksMenuItemClickedHook, ViewCodeBlocksMenuItemClickedFunc);
+
+#ifdef __MORPHOS__
+#include "CodeBlocksViewer.h"
+#include "MainWindow.h"
+
+void refreshViewCodeBlocksMenuState(void) {
+    Object *item;
+    BOOL enabled;
+
+    if (menuStrip == NULL) {
+        return;
+    }
+    item = (Object)DoMethod(menuStrip, MUIM_FindUData,
+                            MENU_ITEM_VIEW_CODEBLOCKS);
+    if (item == NULL) {
+        return;
+    }
+    enabled = codeBlocksConversationHasBlocks(getCurrentConversation());
+    set(item, MUIA_Menuitem_Enabled, enabled);
+}
+#endif
 
 HOOKPROTONHNONP(RecreateMainWindowFunc, void) {
     set(mainWindowObject, MUIA_Window_Open, FALSE);
@@ -869,6 +906,9 @@ void addMenuActions() {
     DoMethod(viewCodeBlocksMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &ViewCodeBlocksMenuItemClickedHook);
+#ifdef __MORPHOS__
+    refreshViewCodeBlocksMenuState();
+#endif
 }
 
 /**

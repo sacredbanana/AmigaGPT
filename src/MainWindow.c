@@ -18,6 +18,9 @@
 #include "gui.h"
 #include "menu.h"
 #include "MainWindow.h"
+#ifdef __MORPHOS__
+#include "CodeBlocksViewer.h"
+#endif
 #include "utf8stream.h"
 #include <dos/dos.h>
 
@@ -175,6 +178,10 @@ HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
     if (conversation) {
         currentConversation = conversation;
         displayConversation(currentConversation);
+#ifdef __MORPHOS__
+        codeBlocksViewerDismiss();
+        refreshViewCodeBlocksMenuState();
+#endif
         DoMethod(chatInputTextEditor, MUIM_GoActive);
     }
 }
@@ -213,6 +220,10 @@ MakeHook(ImageRowClickedHook, ImageRowClickedFunc);
 HOOKPROTONHNONP(NewChatButtonClickedFunc, void) {
     currentConversation = NULL;
     DoMethod(chatOutputTextEditor, MUIM_NList_Clear);
+#ifdef __MORPHOS__
+    codeBlocksViewerDismiss();
+    refreshViewCodeBlocksMenuState();
+#endif
     DoMethod(chatInputTextEditor, MUIM_GoActive);
 }
 MakeHook(NewChatButtonClickedHook, NewChatButtonClickedFunc);
@@ -222,6 +233,10 @@ HOOKPROTONHNONP(DeleteChatButtonClickedFunc, void) {
              MUIV_NList_Remove_Active);
     currentConversation = NULL;
     DoMethod(chatOutputTextEditor, MUIM_NList_Clear);
+#ifdef __MORPHOS__
+    codeBlocksViewerDismiss();
+    refreshViewCodeBlocksMenuState();
+#endif
     saveConversations();
 }
 MakeHook(DeleteChatButtonClickedHook, DeleteChatButtonClickedFunc);
@@ -1534,6 +1549,9 @@ static void sendChatMessage() {
                         chatOutputTextEditorContents);
                 } else {
                     displayConversation(currentConversation);
+#ifdef __MORPHOS__
+                    refreshViewCodeBlocksMenuState();
+#endif
                 }
                 json_object_put(response);
                 discardOpenAIResponseArray(responses, responseIndex);
@@ -1609,6 +1627,9 @@ static void sendChatMessage() {
         addTextToConversation(currentConversation, receivedMessage,
                               "assistant");
         displayConversation(currentConversation);
+#ifdef __MORPHOS__
+        refreshViewCodeBlocksMenuState();
+#endif
 
         if (config.speechEnabled) {
             if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
@@ -1745,7 +1766,7 @@ void displayConversation(struct Conversation *conversation) {
                 }
             }
         } else if (strcmp(conversationNode->role, "assistant") == 0) {
-            set(chatOutputListView, MUIA_NFloattext_Align,
+            set(chatOutputTextEditor, MUIA_NFloattext_Align,
                 config.assistantTextAlignment);
             UBYTE assistantStyleString[] = "\n\n\0332";
             strncat(chatOutputTextEditorContents, assistantStyleString,

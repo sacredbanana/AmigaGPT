@@ -73,7 +73,7 @@ Ohne `/* … */` in **Zeile 1** meldet `rx` oft **Fehler 5** — auch wenn der r
 
 ## Cross-Paket bereitstellen (WSL → Share)
 
-`./package-morphos-cross.sh` baut (optional), erzeugt `out/package-morphos/` und `out/AmigaGPT-MorphOS-cross.lha`, kopiert bei **`DEPLOY=1`** nach **`Z:\morphos\out-crosscompile\`** (LHA + Ordner `package-morphos`).
+`./package-morphos-cross.sh` baut (optional), erzeugt lokal `out/package-morphos/` und `out/AmigaGPT-MorphOS-cross.lha`, kopiert bei **`DEPLOY=1`** nur die **LHA** nach **`Z:\morphos\out-crosscompile\`** (alter Ordner `package-morphos` auf Z: wird entfernt).
 
 Auf MorphOS z. B.:
 

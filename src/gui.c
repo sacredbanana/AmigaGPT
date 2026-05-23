@@ -4,6 +4,9 @@
 #include <json-c/json.h>
 #include <intuition/icclass.h>
 #include <libraries/codesets.h>
+#ifdef __MORPHOS__
+#include <libraries/ttengine.h>
+#endif
 #include <libraries/mui.h>
 #include <mui/Aboutbox_mcc.h>
 #include <mui/BetterString_mcc.h>
@@ -13,6 +16,11 @@
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
+#ifdef __MORPHOS__
+#include <mui/Scintilla_mcc.h>
+#include "CodeBlocksScintilla.h"
+#include "CodeBlocksViewer.h"
+#endif
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,8 +35,8 @@
 #include "config.h"
 #include "ElevenLabsSettingsRequesterWindow.h"
 #include "gui.h"
-#include "MainWindow.h"
 #include "menu.h"
+#include "MainWindow.h"
 #include "ProxySettingsRequesterWindow.h"
 #include "VoiceInstructionsRequesterWindow.h"
 #include "version.h"
@@ -57,14 +65,25 @@ struct EmulLibEntry muiDispatcherEntry = {TRAP_LIB, 0,
 
 struct Library *MUIMasterBase;
 struct Library *CodesetsBase;
+#ifdef __MORPHOS__
+struct Library *TTEngineBase;
+#endif
 Object *app = NULL;
 ULONG redPen = 0, greenPen = 0, bluePen = 0, yellowPen = 0;
 Object *imageWindowObject;
 Object *imageWindowImageView;
 Object *imageWindowImageViewGroup;
 Object *codeBlocksWindowObject;
+#ifdef __MORPHOS__
+Object *codeBlocksListView;
+Object *codeBlocksList;
+Object *codeBlocksScintillaGroup;
+Object *codeBlocksScintilla;
+Object *codeBlocksCopyButton;
+#else
 Object *codeBlocksOutputListView;
 Object *codeBlocksOutputFloat;
+#endif
 BOOL isMUI5;
 BOOL isMUI39;
 BOOL isAROS;
@@ -73,7 +92,9 @@ struct codeset *systemCodeset;
 #ifndef DAEMON
 #define CODEBLOCKS_VIEW_BUFFER_LENGTH (1024 * 100)
 #define CODEBLOCK_PLACEHOLDER_MAX 48
+#ifndef __MORPHOS__
 static STRPTR codeBlocksViewContents = NULL;
+#endif
 
 static BOOL append_cstr(STRPTR buf, ULONG cap, ULONG *off, const char *s);
 static BOOL append_bytes(STRPTR buf, ULONG cap, ULONG *off, const void *p,
@@ -88,7 +109,11 @@ static void closeGUILibraries();
 static CONST_STRPTR USED_CLASSES[] = {
     MUIC_Aboutbox,   MUIC_Busy,       MUIC_NList,
     MUIC_NListview,  MUIC_TextEditor, MUIC_BetterString,
-    MUIC_NFloattext, MUIC_Guigfx,     NULL};
+    MUIC_NFloattext, MUIC_Guigfx,
+#ifdef __MORPHOS__
+    MUIC_Scintilla,
+#endif
+    NULL};
 
 /**
  * Open the libraries needed for the GUI
@@ -124,6 +149,14 @@ LONG openGUILibraries() {
         return RETURN_ERROR;
     }
 
+#ifdef __MORPHOS__
+    if ((TTEngineBase = OpenLibrary("ttengine.library", TTENGINEMINVERSION)) ==
+        NULL) {
+        displayError(STRING_ERROR_TTENGINE_LIB_OPEN);
+        return RETURN_ERROR;
+    }
+#endif
+
     isMUI5 = MUIMasterBase->lib_Version >= 21;
     isMUI39 = MUIMasterBase->lib_Version == 20;
     return RETURN_OK;
@@ -139,6 +172,16 @@ static void closeGUILibraries() {
 #endif
     CloseLibrary(MUIMasterBase);
     CloseLibrary(CodesetsBase);
+#ifdef __MORPHOS__
+    if (TTEngineBase) {
+        CloseLibrary(TTEngineBase);
+        TTEngineBase = NULL;
+    }
+    if (ClipboardBase) {
+        CloseLibrary(ClipboardBase);
+        ClipboardBase = NULL;
+    }
+#endif
 }
 
 /**
@@ -206,6 +249,7 @@ LONG initVideo() {
           proxySettingsRequesterWindowObject, SubWindow,
           voiceInstructionsRequesterWindowObject, SubWindow,
           elevenLabsSettingsRequesterWindowObject, SubWindow,
+#ifndef __MORPHOS__
           codeBlocksWindowObject = WindowObject, MUIA_Window_Title,
           STRING_MENU_VIEW_CODEBLOCKS, MUIA_Window_ID, OBJECT_ID_CODEBLOCKS_WINDOW,
           MUIA_Window_Width, 480, MUIA_Window_Height, 360,
@@ -225,6 +269,39 @@ LONG initVideo() {
               End,
             End,
           End, End,
+#else
+          codeBlocksWindowObject = WindowObject, MUIA_Window_Title,
+          STRING_MENU_VIEW_CODEBLOCKS, MUIA_Window_ID, OBJECT_ID_CODEBLOCKS_WINDOW,
+          MUIA_Window_Width, 560, MUIA_Window_Height, 360,
+          MUIA_Window_CloseGadget, TRUE, MUIA_Window_SizeGadget, TRUE,
+          MUIA_Window_DepthGadget, TRUE, MUIA_Window_DragBar, TRUE,
+          MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
+          MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
+          MUIA_Window_SizeRight, TRUE, MUIA_Window_UseBottomBorderScroller, FALSE,
+          MUIA_Window_UseRightBorderScroller, FALSE,
+          MUIA_Window_UseLeftBorderScroller, FALSE, WindowContents, VGroup,
+            Child, HGroup, MUIA_VertWeight, 100,
+              Child, codeBlocksListView = NListviewObject,
+                MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_Off,
+                MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_On,
+                MUIA_NListview_NList, codeBlocksList = NListObject,
+                  MUIA_NList_ConstructHook2, &ConstructCodeBlockListHook,
+                  MUIA_NList_DestructHook2, &DestructCodeBlockListHook,
+                  MUIA_NList_DisplayHook2, &DisplayCodeBlockListHook,
+                  MUIA_NList_Format, "BAR MINW=72 MAXW=120",
+                  MUIA_NList_AutoVisible, TRUE, MUIA_NList_Title, FALSE,
+                End,
+              End,
+              Child, codeBlocksScintillaGroup = ScrollgroupObject,
+                MUIA_HorizWeight, 100, MUIA_Scrollgroup_AutoBars, TRUE,
+                MUIA_Scrollgroup_Contents, codeBlocksScintilla = ScintillaObject,
+                  MUIA_Frame, MUIV_Frame_Text, End, End,
+            End,
+            Child, HGroup,
+              Child, codeBlocksCopyButton = MUI_MakeObject(
+                  MUIO_Button, STRING_MENU_COPY_CODEBLOCK, End,
+            End, End, End,
+#endif
           SubWindow,
           imageWindowObject = WindowObject, MUIA_Window_Title, STRING_IMAGE,
           MUIA_Window_ID, OBJECT_ID_IMAGE_WINDOW, MUIA_Window_Width, 320,
@@ -246,9 +323,25 @@ LONG initVideo() {
     DoMethod(imageWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
              MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
 
+    /* CloseRequest only: never notify on MUIA_Window_Open FALSE — that also fires
+     * during MUI_DisposeObject() and NList_Clear in the hook freezes on restart. */
+    DoMethod(codeBlocksWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
+             MUIV_Notify_Application, 2, MUIM_CallHook,
+             &CodeBlocksWindowClosedHook);
     DoMethod(codeBlocksWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
              MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
 
+#ifdef __MORPHOS__
+    if ((ClipboardBase = OpenLibrary("clipboard.library", 51)) == NULL) {
+        displayError(STRING_ERROR_CLIPBOARD_LIB_OPEN);
+        return RETURN_ERROR;
+    }
+    codeBlocksViewerSetObjects(codeBlocksList, codeBlocksScintilla);
+    codeBlocksViewerSetCopyButton(codeBlocksCopyButton);
+    codeBlocksViewerAttachListHooks();
+    codeBlocksViewerAttachCopyButton();
+    codeBlocksScintillaInitViewer(codeBlocksScintilla);
+#else
     if (codeBlocksViewContents == NULL) {
         codeBlocksViewContents =
             AllocVec(CODEBLOCKS_VIEW_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
@@ -257,6 +350,7 @@ LONG initVideo() {
             return RETURN_ERROR;
         }
     }
+#endif
 
     if (createAboutAmigaGPTWindow() == RETURN_OK)
         DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
@@ -708,6 +802,9 @@ void addTextToConversation(struct Conversation *conversation, UTF8 *text,
             (struct Node *)conversationNode);
 
     conversationNodeParseCodeFences(conversation, conversationNode);
+#if defined(__MORPHOS__) && !defined(DAEMON)
+    refreshViewCodeBlocksMenuState();
+#endif
 }
 
 /**
@@ -806,13 +903,26 @@ static BOOL build_conversation_codeblocks_utf8(struct Conversation *conv,
 void openCodeBlocksViewerWindow(void) {
     struct Conversation *conv = getCurrentConversation();
     STRPTR utf8Buf = NULL;
-    STRPTR formatted = NULL;
+
+#ifdef __MORPHOS__
+    if (conv == NULL || !codeBlocksConversationHasBlocks(conv)) {
+        return;
+    }
+    if (!codeBlocksViewerPopulate(conv)) {
+        return;
+    }
+    set(codeBlocksWindowObject, MUIA_Window_Open, TRUE);
+    DoMethod(codeBlocksList, MUIM_NList_SetActive, MUIV_NList_Active_Top, NULL);
+    codeBlocksViewerSyncSelectionFromList();
+    return;
+#endif
 
     if (conv == NULL) {
         displayError(STRING_ERROR_NO_ACTIVE_CONVERSATION);
         return;
     }
 
+#ifndef __MORPHOS__
     utf8Buf = AllocVec(CODEBLOCKS_VIEW_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
     if (utf8Buf == NULL) {
         displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
@@ -825,20 +935,24 @@ void openCodeBlocksViewerWindow(void) {
         return;
     }
 
-    formatted = CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                                  (Tag)utf8Buf, CSA_MapForeignChars, TRUE, TAG_DONE);
-    FreeVec(utf8Buf);
-    if (formatted == NULL) {
-        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
-        return;
+    {
+        STRPTR formatted =
+            CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                              (Tag)utf8Buf, CSA_MapForeignChars, TRUE, TAG_DONE);
+        FreeVec(utf8Buf);
+        if (formatted == NULL) {
+            displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+            return;
+        }
+        strncpy(codeBlocksViewContents, formatted,
+                CODEBLOCKS_VIEW_BUFFER_LENGTH - 1);
+        codeBlocksViewContents[CODEBLOCKS_VIEW_BUFFER_LENGTH - 1] = '\0';
+        CodesetsFreeA(formatted, NULL);
+        set(codeBlocksOutputFloat, MUIA_NFloattext_Text, codeBlocksViewContents);
     }
 
-    strncpy(codeBlocksViewContents, formatted, CODEBLOCKS_VIEW_BUFFER_LENGTH - 1);
-    codeBlocksViewContents[CODEBLOCKS_VIEW_BUFFER_LENGTH - 1] = '\0';
-    CodesetsFreeA(formatted, NULL);
-
-    set(codeBlocksOutputFloat, MUIA_NFloattext_Text, codeBlocksViewContents);
     set(codeBlocksWindowObject, MUIA_Window_Open, TRUE);
+#endif
 }
 #endif
 
@@ -874,10 +988,12 @@ void shutdownGUI() {
     if (chatOutputTextEditorContents) {
         FreeVec(chatOutputTextEditorContents);
     }
+#ifndef __MORPHOS__
     if (codeBlocksViewContents) {
         FreeVec(codeBlocksViewContents);
         codeBlocksViewContents = NULL;
     }
+#endif
     if (isMUI5 || isMUI39) {
         deleteAmigaGPTTextEditor();
     }

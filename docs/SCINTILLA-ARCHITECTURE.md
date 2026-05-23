@@ -4,6 +4,8 @@ Dieses Dokument beschreibt die Zielarchitektur für den Branch **scintilla** und
 
 Zeichensatz, NFloattext, MorphOS-Prüfung (`??` bei Emoji) und Cairo-Abwägung: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md).
 
+SDK nativ (MorphOS) vs. WSL, `MUIM_Scintilla_Command`, Inventar `devfiles.txt`: [MORPHOS-SDK-NATIV-UND-WSL.md](MORPHOS-SDK-NATIV-UND-WSL.md). AmigaGuide-Kopie: [VON-MORPHOS-SDK-SCINTILLA.md](VON-MORPHOS-SDK-SCINTILLA.md) (`morphos/VonMorphosSDK/Scintilla.guide`).
+
 ---
 
 ## Roadmap (Übersicht)
@@ -11,7 +13,7 @@ Zeichensatz, NFloattext, MorphOS-Prüfung (`??` bei Emoji) und Cairo-Abwägung: 
 | Phase | Status / Inhalt |
 |-------|-----------------|
 | **1–5** | Ziel, Datenmodell, Stream, Fences, GUI-Grundlagen |
-| **6–10** | **Ein Implementierungsblock:** Scintilla **Code-Viewer** v0.1 (siehe unten) |
+| **6–10** | Scintilla **Code-Viewer** v0.1 — **Phase 6 erledigt**; **Phase 7a erledigt** (2026-05); **7b** + **7c** offen; 8–10 offen |
 | **11** | Komfort am Code-Viewer (Lexer, Highlighting, Tabs, Export) |
 | **12** | **Hauptfenster Chat-Ausgabe** → Scintilla.mcc + TTEngine (UTF-8, ohne NFloattext/codesets für diese Fläche) |
 | **13** | MorphOS Worker / UI-Batching für Stream (bewusst **nach** Phase 12) |
@@ -194,7 +196,15 @@ Die Kapitel **6–10** sind **ein** Release-Schritt, keine fünf getrennte Meile
 | **9** | Optional: Debug-Logs (nicht Blocker für v0.1) |
 | **10** | Definition of Done für den Code-Viewer |
 
-**Nächster Implementierungsschritt:** Phase 6–10. Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
+**Nächster Implementierungsschritt:** **Phase 7a** (NList + ein Block + Copy UTF-8), danach **7b** (Save + Copy/Save System-Codeset). Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
+
+### Umgesetzt (Phase 6, Branch scintilla — auf MorphOS validiert)
+
+- `src/CodeBlocksScintilla.c` — `MUIM_Scintilla_Command` = `MUIA_Scintilla_dummy + 2`, `DoMethodA` + `MUIP_Scintilla_Command` → `SCI_SETTEXT` / `SCI_SETCODEPAGE` (UTF-8), read-only Viewer-Init (Details: [MORPHOS-SDK-NATIV-UND-WSL.md](MORPHOS-SDK-NATIV-UND-WSL.md) §5)
+- `gui.c` — Fenster „View code blocks…“ mit **Scintilla** + Scrollgroup statt NFloattext; `build_conversation_codeblocks_utf8` → direkt UTF-8 an Scintilla (ohne `CodesetsUTF8ToStr`)
+- `MUIC_Scintilla` in `MUIA_Application_UsedClasses`; MorphOS: `ttengine.library` öffnen
+- Cross-Build: nur SDK-Header, keine zusätzliche `-l` in `Makefile.MorphOS`
+- **OS3/OS4:** `#ifndef __MORPHOS__` — Code-Viewer bleibt NFloattext + `codesets`; `CodeBlocksScintilla.c` nur in `Makefile.MorphOS`
 
 ---
 
@@ -220,21 +230,134 @@ Object *sci = NewObject(
 
 ### 6.3 Code setzen
 
+Über **MUI** (nicht direkt `SCI_*` als Top-Level-`DoMethod`):
+
 ```c
-DoMethod(sci,
-    SCI_SETTEXT,
-    0,
-    (IPTR)raw_code);
+struct MUIP_Scintilla_Command cmd;
+cmd.MethodID = MUIM_Scintilla_Command;  /* MUIA_Scintilla_dummy + 2 */
+cmd.iMessage = SCI_SETTEXT;
+cmd.wParam = 0;
+cmd.lParam = (LONG)raw_code;
+DoMethodA(sci, (Msg)&cmd);
 ```
 
-**RAW UTF-8** direkt — keine Zwischenformatierung.
+Vorher `SCI_SETCODEPAGE` mit `SC_CP_UTF8`. **RAW UTF-8** direkt — keine `CodesetsUTF8ToStr` im Code-Viewer.
 
 ---
 
-## Phase 7 — Copy/Paste
+## Phase 7 — Block-Auswahl, Copy, Export (Planung festgehalten 2026-05-22)
 
-- Niemals nur „Anzeige-Text“ kopieren; immer **`raw_code`** oder **`raw_utf8`**.
-- Zeilenenden intern idealerweise **LF (`\n`)**; CRLF/CR nur beim Export optional.
+### Ist-Zustand nach Phase 6 (MorphOS)
+
+- Fenster „View code blocks…“: **ein** Scintilla mit **allen** Blöcken (`build_conversation_codeblocks_utf8`).
+- Anzeige pro Block: `[Codeblock n]\n` + ` ```lang\n` + **`raw_code`** + `\n```\n\n` (Chat-Platzhalter-Format).
+- **Strg+C / Markierung:** Scintilla-Standard → Zwischenablage = **nur der markierte sichtbare Text** (oft mit Platzhalter/Fences, **nicht** garantiert reines `raw_code`). Encoding UTF-8 (Scintilla `SC_CP_UTF8` + TTEngine).
+- **Font (Anzeige):** DejaVu Sans Mono via TTEngine (in Flow Studio mit UTF-Testdatei bestätigt).
+
+### Zielbild
+
+Ein Nutzer arbeitet mit **einem** Codeblock; Copy/Save liefern bewusst **Rohdaten** oder optional **System-Codeset** — analog zueinander, nicht vom Zufall der Textmarkierung abhängig.
+
+---
+
+### Phase 7a — UI + Copy UTF-8 — **erledigt** (MorphOS, getestet 2026-05)
+
+**Layout (nur `#ifdef __MORPHOS__`; OS3/OS4 vorerst unverändert NFloattext):**
+
+```text
+┌─────────────────┬──────────────────────────────┐
+│ 1:python        │  Scintilla (read-only)        │
+│ 2:-             │  nur raw_code des aktiven    │
+│ 3:javascript    │  Blocks, UTF-8 + TTEngine    │
+│  (NList)        │                              │
+└─────────────────┴──────────────────────────────┘
+        [ Copy code block (UTF-8) ]
+```
+
+| Element | Spezifikation |
+|---------|----------------|
+| **NList links** | Ein Eintrag pro `AICodeBlock` der aktuellen `Conversation`, Reihenfolge wie heute (globaler `index`). |
+| **Listentext** | `"%lu:%s"` → z. B. `3:python`; leere Sprache → `2:-` (nicht Chat-String `[Codeblock n]`). |
+| **Scintilla rechts** | `SCI_SETTEXT` nur mit `block->raw_code` (keine Fences, kein Platzhalter). |
+| **Auswahl** | Klick/Liste aktiv → Scintilla neu laden; `AICodeBlock` nur referenzieren (Owner = Conversation). |
+| **Copy (UTF-8)** | Button unter Liste+Scintilla; `WriteClipText` mit `MIBENUM_UTF_8` (**Rückgabe 0 = Erfolg**). |
+| **Strg+C** | Im Code-Fenster = gleich wie Copy-Button (kein Hauptmenü-Copy). |
+| **Menü Ansicht** | „Codeblöcke anzeigen…“ per `MUIA_Menuitem_Enabled` wenn keine Blöcke (kein Fehler-Dialog). |
+| **Paste** | Kein Ziel (read-only Viewer). |
+
+**Code:** `CodeBlocksViewer.c`, `gui.c` (Fenster), `menu.c` (`refreshViewCodeBlocksMenuState`). Deploy: nur **LHA** nach Z: (`package-morphos-cross.sh`).
+
+**Entfällt in 7a:** `build_conversation_codeblocks_utf8()` für die MorphOS-Anzeige (bleibt für OS3/OS4).
+
+**Nicht Teil von 7a:** Mausrad-Scroll im **Haupt-Chat** (NFloattext) — siehe **Phase 7c** (älteres Verhalten, Scrollbar funktioniert).
+
+---
+
+### Phase 7b — Save + Copy System-Codeset (nach 7a)
+
+**Gemeinsame Konvertierung** (eine Hilfsfunktion, z. B. in `gui.c`):
+
+| Modus | Bytes | Verwendung |
+|-------|--------|------------|
+| **Raw** | `raw_code` / `code_length` | Copy UTF-8, Save UTF-8 |
+| **System** | `CodesetsUTF8ToStr(CSA_DestCodeset, systemCodeset, raw_code, …)` | Copy System, Save System; Free mit `CodesetsFreeA` |
+
+**Menü (Code-Fenster oder Untermenü Ansicht)** — zwei feste Einträge pro Aktion (kein versteckter Modus-Schalter in v0.1):
+
+| Menüeintrag | Wirkung |
+|-------------|---------|
+| Copy block (UTF-8) | 7a, Default |
+| Copy block (system charset) | 7b |
+| Save block (UTF-8) … | ASL Save, 7b |
+| Save block (system charset) … | ASL Save, 7b |
+
+**Save:** ASL Dateirequester (Muster wie Bild-Save in `MainWindow.c`); **ein** Block = **eine** Datei.
+
+**Default-Dateiname:** `block-<index>.<ext>` — Extension aus `language` (heuristisch: `python`→`.py`, `c`→`.c`, …), sonst `.txt`.
+
+**Hinweise:**
+
+- **UTF-8 Raw:** IDE, WSL, Git, moderne Editoren — **empfohlen**.
+- **System-Codeset:** alte Amiga-Editoren, manche MUI-Felder; Emoji/Sonderzeichen können fehlen oder `?` werden (wie im Chat mit NFloattext).
+- Copy (UTF-8) und Save (UTF-8) liefern dieselben Bytes; nur Ziel unterscheidet sich.
+
+---
+
+### Abgrenzung Chat
+
+| Ort | Copy heute | Nach Phase 7 |
+|-----|------------|----------------|
+| **Code-Viewer** | Sichtbarer Mischtext (Phase 6) | 7a/7b: aktiver Block, Raw oder Codeset |
+| **Chat (NFloattext)** | Anzeige/`display_text`, codesets | unverändert bis **Phase 12** |
+
+---
+
+### Implementierungsreihenfolge
+
+1. ~~**7a**~~ — erledigt (NList, Scintilla, Copy-Button, Menü-Ghosting, Speicher-Dismiss).
+2. **7b** — Konvertierungs-Helfer, Buttons Copy/Save System-Codeset, ASL Save.
+3. **7c** — Mausrad → Chat-NListview/NFloattext scrollen (optional, klein).
+4. **Phase 8** — Buffer/`snprintf` beim Umbau prüfen (100 KB-Grenze, dynamische Pfade).
+4. **Phase 9** — optional Logs.
+5. **Phase 10** — DoD-Checkliste abhaken.
+
+**Katalog:** neue Menü-Strings → `AmigaGPT.pot` / `.po`, FlexCat beim Build.
+
+Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
+
+---
+
+### Phase 7c — Chat-Ausgabe: Mausrad-Scroll (geplant, unabhängig von 7b)
+
+**Problem (Ist, auch ohne Scintilla-Branch):** `chatOutputListView` + `NFloattext` — **vertikale Scrollbar** der NListview scrollt; **Mausrad** tut nichts. Kein Regression aus 7a; optionaler UX-Fix.
+
+**Ziel:** Mausrad über der Chat-Ausgabe scrollt wie die Scrollbar (Zeilen/Seiten über NList-API, z. B. `MUIM_Wheel` / `MUIA_NList_First` / `MUIM_NList_Scroll` — konkrete Tags an MUI-Version anpassen).
+
+**Ort:** `MainWindow.c` — `chatOutputListView` / eingebettetes `chatOutputTextEditor` (NFloattext).
+
+**Abgrenzung:** **Phase 12** ersetzt die Chat-**Ausgabe** durch Scintilla; 7c betrifft bis dahin das bestehende NFloattext-Setup.
+
+**Priorität:** nach **7b** oder parallel, kleiner Scope (ein Notify-Hook, kein Datenmodell).
 
 ---
 
@@ -261,12 +384,12 @@ DoMethod(sci,
 
 ## Phase 10 — Erste Version (0.1) — Definition of Done für 6–10
 
-**Enthalten (Code-Viewer):**
+**Enthalten (Code-Viewer, MorphOS):**
 
-- Menü **View code blocks…** zeigt alle `codeblocks` in **Scintilla** (read-only)
-- Text aus `raw_code` als **RAW UTF-8** (`SCI_SETTEXT`), Rendering über **TTEngine**
-- Copy/Paste aus Rohdaten, nicht nur aus konvertierter Anzeige
-- Codeblock-Erkennung (Fences) unverändert in `addTextToConversation()`
+- Menü **View code blocks…** mit **NList** (`index:language`) + **Scintilla** (ein Block, `raw_code`, UTF-8, TTEngine, DejaVu Sans Mono)
+- **Copy block (UTF-8)** und **Save block (UTF-8)** (7b) aus aktivem Block; optional **System-Codeset** für Copy/Save
+- Strg+C im Code-Fenster = Copy UTF-8 des aktiven Blocks
+- Codeblock-Erkennung (Fences) unverändert in `addTextToConversation()`; Chat-Platzhalter unverändert
 
 **Ausgeschlossen in 6–10:**
 
@@ -282,8 +405,8 @@ DoMethod(sci,
 
 - **Syntax Highlighting:** `SCI_SETLEXER` für C, Python, JSON, Shell, Lua, …
 - **Inline-Code** (optional, oft entbehrlich)
-- **Tabs** für mehrere Codeblöcke
-- **Export:** Save as, Copy raw, Save markdown
+- **Tabs** für mehrere Codeblöcke (Alternative zur NList aus 7a)
+- **Lexer** (siehe oben); Save markdown o. Ä. nur falls zusätzlich gewünscht — Copy/Save Raw/Codeset in **7b**
 
 ---
 
@@ -373,12 +496,13 @@ DoMethod(sci,
 - Wenn mindestens ein vollständiger Fence-Block erkannt wurde: `display_text` enthält den Fließtext mit jedem Block ersetzt durch den **katalogisierten** Platzhalter `STRING_CHAT_CODEBLOCK_PLACEHOLDER` (Standard: `[Codeblock]\n` in `AmigaGPT.pot`; Übersetzungen in den `.po`-Dateien). Ohne vollständige Fences bleibt `display_text` NULL — Anzeige wie bisher über `raw_utf8`.
 - Konversationstitel in der **linken NList**: kein natives UTF-8 in `NList_mcc.h`; `name` bleibt UTF-8 (JSON/API), Anzeige über **`name_list_display`** (`CodesetsUTF8ToStr`, `conversationRefreshNameListDisplay()` in `gui.c`).
 
-**Phase 5.2 (separates Codefenster, ohne Scintilla)**
+**Phase 5.2 (separates Codefenster — historisch NFloattext)**
 
-- Menü **Ansicht → „View code blocks…“** (`STRING_MENU_VIEW_CODEBLOCKS`): eigenes MUI-Fenster mit **NFloattext** (fixe Schrift), Inhalt = **alle** `codeblocks` der aktuellen Unterhaltung in Reihenfolge; Platzhalter-Nummer (`AICodeBlock.index`) läuft **gesamt** über den Chat (nicht pro Assistant-Antwort neu ab 1). Pro Block ``` + optional Sprache + Rohcode (UTF-8). Puffer 100 KB; bei Überlauf Fehlermeldung.
-- **`getCurrentConversation()`** (`MainWindow.c`) liefert den aktuellen Chat für diese Aktion.
+- Menü **Ansicht → „View code blocks…“**: Inhalt = **alle** `codeblocks` der aktuellen Unterhaltung; Platzhalter-Nummer (`AICodeBlock.index`) **gesamt** über den Chat. **`getCurrentConversation()`** (`MainWindow.c`).
 
-**Nächster Schritt:** **Phase 6–10** — `codeblocks` / „View code blocks“ in **Scintilla.mcc** (+ TTEngine), NFloattext nur im Code-Viewer-Fenster ersetzen. Danach Phase 11 (Komfort), **Phase 12** (Chat-Ausgabe), **Phase 13** (Worker).
+**Phase 6 (MorphOS):** dasselbe Fenster mit **Scintilla** statt NFloattext — siehe oben „Umgesetzt (Phase 6)“.
+
+**Nächster Schritt:** **Phase 7b** (Save + Copy/Save System-Codeset). Optional danach **7c** (Chat-Mausrad). Danach 8–10, Phase 11 (Lexer), **Phase 12** (Chat-Scintilla), **Phase 13** (Worker).
 
 ---
 

@@ -1415,7 +1415,32 @@ msgctxt "STRING_ERROR_NO_CODEBLOCKS_IN_CHAT (263//)"
 msgid "No fenced code blocks in this conversation yet."
 msgstr "No fenced code blocks in this conversation yet."
 
+#: src/gui.c
+msgctxt "STRING_ERROR_TTENGINE_LIB_OPEN (265//)"
+msgid ""
+"Could not open ttengine.library. Install TTEngine (FreeType fonts) for "
+"Scintilla UTF-8 display."
+msgstr ""
+"Could not open ttengine.library. Install TTEngine (FreeType fonts) for "
+"Scintilla UTF-8 display."
+
 #: src/menu.c:320
 msgctxt "STRING_MENU_MARKDOWN_FORMATTING (264//)"
 msgid "Markdown formatting"
 msgstr "Markdown formatting"
+
+#: src/gui.c
+#, fuzzy
+msgctxt "STRING_ERROR_CLIPBOARD_LIB_OPEN (266//)"
+msgid "Could not open clipboard.library."
+msgstr "Nelze otevřít translator.library"
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_ERROR_CLIPBOARD_COPY (267//)"
+msgid "Could not copy the active code block to the clipboard."
+msgstr "Could not copy the active code block to the clipboard."
+
+#: src/menu.c
+msgctxt "STRING_MENU_COPY_CODEBLOCK (268//)"
+msgid "Copy code block (UTF-8)"
+msgstr "Copy code block (UTF-8)"

@@ -2,7 +2,9 @@
 
 Dokumentation der **zusätzlichen** Komponenten, die für einen nativen Cross-Build von AmigaGPT unter WSL **neben** dem BIGFOOT `morphos-sdk` nötig sind. **Kein Docker**, kein zweiter Compiler.
 
-**Stand:** 2026-05-19 · erfolgreicher Build mit `make -f Makefile.MorphOS` auf Branch `scintilla`.
+**Stand:** 2026-05-20 · erfolgreicher Build mit `make -f Makefile.MorphOS` auf Branch `scintilla`.
+
+**Nativ vs. WSL (vollständig):** [MORPHOS-SDK-NATIV-UND-WSL.md](MORPHOS-SDK-NATIV-UND-WSL.md) — MorphOS-Voll-SDK als Referenz, `devfiles.txt`-Inventar, `pack`/`sdk.pack`, Scintilla Phase 6.
 
 ---
 
@@ -16,6 +18,24 @@ Dokumentation der **zusätzlichen** Komponenten, die für einen nativen Cross-Bu
 
 `Makefile.MorphOS` erkennt (3) automatisch, wenn  
 `~/development/morphos/AmigaSDK-gcc/morphos/sdk/ppc-morphos/include/SDI_hook.h` existiert, und setzt Include-/Lib-Pfade auf dieses Verzeichnis (siehe Block `AMIGA_SDK_EXTRA` im Makefile).
+
+---
+
+## MorphOS-Team-SDK vs. BIGFOOT-Deb
+
+| Paket | Quelle | Inhalt (WSL) |
+|-------|--------|----------------|
+| **`sdk-20230510.lha`** | https://www.morphos-team.net/files/sdk-20230510.lha | **Voll-SDK** für Entwicklung **auf MorphOS**: GeekGadgets, **Installer**, `morphossdk/sdk.pack` (kein LHA — erst mit **SDK Installer** auf MorphOS entpacken), danach **`docs/`** (Examples, Guide, Autodocs), `SDK.readme` |
+| **`morphos-sdk_20230510-1_amd64.deb`** (BIGFOOT) | https://bigfoot.morphos-team.net/test/ | **Nur Cross-Toolchain** nach **`/gg`**: Header, Libs, GCC — **kein** `docs/`, **kein** `Examples/` (geprüft: `dpkg -L morphos-sdk` → ausschließlich `/gg/…`) |
+
+Im Workspace liegt ein **Auszug der Doku** aus dem Team-SDK unter  
+`~/development/morphos/AmigaSDK-gcc/morphos/docs/` (gleiche `SDK.readme`, `Examples/MUI/`, …) — **ohne** separates Scintilla-Demo-C-File; nur Header in `morphos/sdk/os-include/mui/Scintilla_mcc.h`.
+
+**Scintilla-Beispielcode:** eher im **Scintilla.mcc**-Archiv (MorphOS: `DEV:MUI` / morphos-storage → MUI-Classes) oder in Apps (z. B. Flow Studio), nicht zwingend unter `docs/Examples/`.
+
+### Nativ installiertes SDK (MorphOS)
+
+Auf **MorphOS** liegt typischerweise das **vollständige** Team-SDK (`Guide/`, `Examples/`, `gg/`, …) — unabhängig vom WSL-Cross-Build. Inventar und Scintilla-Pfade: [MORPHOS-SDK-NATIV-UND-WSL.md](MORPHOS-SDK-NATIV-UND-WSL.md) (Quelle: `~/development/morphos/devfiles.txt`). Dateien von dort können bei Bedarf in den Workspace kopiert werden (z. B. `Scintilla.guide` für Phase 11); WSL braucht sie nicht zum Linken.
 
 ---
 
@@ -53,6 +73,8 @@ Pfad im Workspace: `~/development/morphos/AmigaSDK-gcc/morphos/sdk/`
 | **guigfx** | `os-include/guigfx/guigfx.h`, `proto/guigfx.h` | `gui.h` (Bildvorschau) |
 | **MUI Aboutbox (neu)** | `os-include/mui/Aboutbox_mcc.h` | `AboutAmigaGPTWindow.c`, `gui.c` — u. a. `MUIA_Aboutbox_URL`, `MUIA_Aboutbox_URLText` (in `/gg` nicht vorhanden) |
 | Weitere MUI-MCCs | z. B. `mui/Busy_mcc.h`, `BetterString_mcc.h`, `TextEditor_mcc.h` | über `os-include` / bestehende MUI-Includes |
+| **Scintilla.mcc** | `mui/Scintilla_mcc.h`, `Scintilla/Scintilla.h` | `CodeBlocksScintilla.c`, Code-Viewer in `gui.c` — **kein** Link gegen eine Scintilla-Lib; MCC zur Laufzeit auf MorphOS |
+| **ttengine.library** | `libraries/ttengine.h` | `OpenLibrary` in `gui.c` (UTF-8-Anzeige für Scintilla) |
 
 **Wichtig:** Nur `os-include` und `ppc-morphos/include` aus dem Zusatz-SDK per `-I` vor `/gg` legen — **nicht** blind `sdk/include` voranstellen (sonst Konflikte z. B. bei `netdb.h` / `socket_protos.h`).
 
@@ -133,10 +155,10 @@ Ausgabe: `out/AmigaGPT_MorphOS`, `out/AmigaGPTD_MorphOS`.
 sudo apt install -y jlha-utils zip
 
 cd ~/development/morphos/AmigaGPT
-./package-morphos-cross.sh          # BUILD=1 Standard, DEPLOY=1: .lha + Z:
+./package-morphos-cross.sh          # BUILD=1, DEPLOY=1: nur .lha nach Z:
 ```
 
-Ausgabe bei Erfolg: `out/package-morphos/` + `out/AmigaGPT-MorphOS-cross.lha` (oder `.zip`) **und** Kopie nach `Z:\morphos\out-crosscompile\`. Schlägt der Deploy fehl, endet das Skript mit **Exit 1**. Anleitung im Paket: `INSTALL-MORPHOS-CROSSBUILD.txt`.
+Ausgabe bei Erfolg: lokal `out/package-morphos/` + `out/AmigaGPT-MorphOS-cross.lha`; Deploy nach `Z:\morphos\out-crosscompile\` **nur die LHA**. Schlägt der Deploy fehl, endet das Skript mit **Exit 1**. Entpacken auf MorphOS: separates Deploy-Skript (nicht im Repo).
 
 Manuell geht weiterhin das Kopieren einzelner Dateien nach `Z:\morphos\out-crosscompile\` (ersetzt dann den automatischen Deploy-Schritt, sofern das Ergebnis dort liegt).
 
@@ -146,5 +168,6 @@ Auf MorphOS zusätzlich Laufzeit-Voraussetzungen aus dem AmigaGPT-README (MUI, A
 
 ## Siehe auch
 
+- [MORPHOS-SDK-NATIV-UND-WSL.md](MORPHOS-SDK-NATIV-UND-WSL.md) — nativ vs. WSL, Scintilla-API, Phase 6, `devfiles.txt`
 - [BUILD-MORPHOS-WSL.md](BUILD-MORPHOS-WSL.md) — vollständige WSL-Anleitung
 - [WSL-SETUP-STATUS.md](WSL-SETUP-STATUS.md) — Checkliste Ist-Stand

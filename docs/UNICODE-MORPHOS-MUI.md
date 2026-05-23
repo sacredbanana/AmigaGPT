@@ -45,6 +45,15 @@ systemCodeset = CodesetsFindA(NULL, NULL);
 - MUI-Standardgadgets (NFloattext, viele Listen): Strings im lokalen Charset.
 - **TTEngine** (`ttengine.library`, FreeType): UTF-8/Unicode-Ausgabe ins `RastPort` — von **Scintilla.mcc** (und spezialisierten Apps) genutzt, nicht von NFloattext.
 
+### Zwei Font-Listen (wichtig für Tests)
+
+| Modus | Typische Namen | Wo sichtbar |
+|-------|----------------|-------------|
+| **graphics.library / MUI** | Andale Mono, Arial, Times New Roman, Verdana, … | MUI-Font-Auswahl, klassische Apps |
+| **TTEngine** (FreeType) | DejaVu Sans Mono, Bitstream Vera Sans Mono, Liberation Mono, Noto Sans Mono, Roboto Mono, Luxi Mono, Arimo, … | Apps mit TTEngine (z. B. **Flow Studio** mit TTEngine aktiv), **Scintilla** mit `SCI_SETFONTQUALITY(1)` |
+
+AmigaGPT Code-Viewer: `SCI_SETFONTQUALITY(1)` + `ttengine.library` → **`SCI_STYLESETFONT`** muss einen **TTEngine-Family-Namen** verwenden (Default in `CodeBlocksScintilla.c`: `DejaVu Sans Mono`), nicht zwingend die kurze MUI-Liste.
+
 **locale.library** kann UTF-8 verarbeiten; das ersetzt nicht die NFloattext-Pipeline.
 
 ---
