@@ -9,6 +9,11 @@ C_h.sd
 C_c.sd
 src/test/build
 src/test/openai-key.h
+src/test/codeblocks_memory_host_test
+
+# Accidental compile in src/ (normal objects live under build/)
+src/*.o
+src/*.d
 
 # Super-linter outputs
 super-linter-output
