@@ -124,6 +124,8 @@ Nach erfolgreichem Z:-Deploy schreibt das Skript **`DEPLOY-HISTORY.txt`** im sel
 
 Skript: `package-morphos-cross.sh` · Kurzbeschreibung: [README.md](README.md).
 
+**Agent/Cursor (Standard):** Nach jedem erfolgreichen Cross-Build **immer paketieren** (`./package-morphos-cross.sh`), solange der Nutzer nichts anderes sagt (z. B. „nur bauen“, `DEPLOY=0`). Regel: `.cursor/rules/morphos-build-package.mdc`.
+
 ---
 
 ## 9. Verwandte Dokumente

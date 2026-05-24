@@ -1,0 +1,25 @@
+---
+description: After MorphOS cross-build, always package and deploy LHA to Z: unless user opts out
+alwaysApply: true
+---
+
+# MorphOS: Build → always package
+
+## Default workflow (AmigaGPT fork)
+
+After a **successful** cross-build (`make -f Makefile.MorphOS`) or any change that required rebuilding for MorphOS testing:
+
+1. Run **`./package-morphos-cross.sh`** from the repo root (default `DEPLOY=1`).
+2. Report **version** (`2.18.BUILD_NUMBER`), **MD5**, and deploy path **`Z:/morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha`**.
+
+Do **not** stop at `out/AmigaGPT_MorphOS` or `make` alone — that is incomplete for the user’s test loop.
+
+## Exceptions (only when the user says so)
+
+- Skip packaging: e.g. “nur bauen”, “ohne Paket”, `DEPLOY=0`, “nicht deployen”.
+- Skip build: `package-morphos-cross.sh` with `BUILD=0` if the binary is already current and only repackaging was requested.
+
+## On failure
+
+- Deploy to `Z:` failed → report exit 1; do not claim “paketiert” until redeploy succeeds.
+- See `docs/HANDLUNGSANWEISUNG-GIT.md` §8 (Begriff **Paketieren**).
