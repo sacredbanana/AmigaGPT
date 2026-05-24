@@ -8,6 +8,7 @@
 | [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md)       | Git (kein Commit auf `master`) **und** Begriff **Paketieren** = Z:-Deploy          |
 | [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md)                 | Remotes `origin` / `upstream`, Sync, PRs                                           |
 | [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)       | Plan Scintilla.mcc, Phasen 6–13 (7a/7b erledigt; 7c offen), Streaming              |
+| [STREAM-RECOVERY.md](STREAM-RECOVERY.md)                     | Plan Stream- & Chat-Recovery (R1–R4): WANT_READ, UI-Sync, Freeze                   |
 | [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md)             | Unicode, NFloattext, codesets, MorphOS-Prüfung, Cairo vs. Scintilla                |
 | [BUILD-MORPHOS-WSL.md](BUILD-MORPHOS-WSL.md)                 | MorphOS Cross-Build: WSL2, Debian, BIGFOOT, FlexCat, Make                          |
 | [MORPHOS-SDK-ERGAENZUNGEN.md](MORPHOS-SDK-ERGAENZUNGEN.md)   | **Welche SDK-Ergänzungen** genau nötig sind (BIGFOOT vs. AmigaSDK-gcc)             |
@@ -65,9 +66,9 @@ Ausführlich: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) (inkl. Prüfung: 
 - **Chat-Ausgabe (heute, NFloattext):** UTF-8 intern → `CodesetsUTF8ToStr` → System-Codeset → Anzeige. Geplant **Phase 12:** Scintilla + TTEngine, UTF-8 direkt.
 - **Chat-Eingabe:** `TextEditor` → `CodesetsUTF8Create` → UTF-8 zur API — **nicht** Phase 6–10 / 12 (Eingabe).
 - **Konversationsliste (NList):** `name` UTF-8; Anzeige `**name_list_display`** (Codesets) — **bereits umgesetzt** (Phase 5.1).
-- **Code-Fences / Viewer:** Platzhalter im Chat; **Ansicht → View code blocks…** — **Phase 6** erledigt (Scintilla, UTF-8); **Phase 7a/7b geplant:** NList `index:lang`, ein Block, Copy/Save Raw oder System-Codeset ([SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)).
+- **Code-Fences / Viewer:** Platzhalter im Chat; **Ansicht → Codeblöcke…** — **Phase 6–7b erledigt** (NList, Scintilla, Copy/Save UTF-8 + System). Recovery Chat/Stream: [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
 - **Mini-Markdown:** **Ansicht → Markdown formatting** — abschaltbar (`config.markdownFormatting`).
 
-**Roadmap:** 6 ✓ · **7a** Block-Liste + Copy UTF-8 · **7b** Save + Copy/Save Codeset · 8–10 · 11 Lexer · **12 Chat** · **13 Worker** — [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md).
+**Roadmap:** 6 ✓ · 7a/7b ✓ · **R1–R2 Recovery** · 7c Mausrad · 8–10 · 11 Lexer · **12 Chat** · **13 Worker** — [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md), [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
 
 Agenten: zusätzlich [AGENTS.md](../AGENTS.md) und `.cursor/rules/git-branch-policy.mdc`.

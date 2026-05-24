@@ -5,6 +5,7 @@
 #include <libraries/clipboard.h>
 #include <libraries/mui.h>
 #include <mui/NList_mcc.h>
+#include <dos/dos.h>
 #include <proto/asl.h>
 #include <proto/clipboard.h>
 #include <proto/dos.h>
@@ -18,6 +19,7 @@
 #include "CodeBlocksScintilla.h"
 #include "CodeBlocksViewer.h"
 #include "gui.h"
+#include "MainWindow.h"
 
 struct Library *ClipboardBase;
 
@@ -43,6 +45,12 @@ static Object *codeBlocksSaveUtf8ButtonObject;
 static Object *codeBlocksSaveSystemButtonObject;
 /** Last block chosen in the list (survives focus loss on the NList). */
 static struct AICodeBlock *codeBlocksCachedBlock;
+/** Set by save button hooks; read in deferred save hook after PushMethod. */
+static BOOL codeBlocksPendingSaveSystemCharset;
+/** Block to save (snapshot at button press; list may lose active on defer). */
+static struct AICodeBlock *codeBlocksPendingSaveBlock;
+/** Intuition window for ASL parent (main window, not the code-blocks subwindow). */
+static struct Window *codeBlocksAslParentWindow;
 
 static void codeBlocksListFormatLabel(struct CodeBlockListItem *item,
                                       struct AICodeBlock *block) {
@@ -251,23 +259,36 @@ static void codeBlocksPayloadFree(CodeBlockPayload *payload) {
     }
 }
 
+static struct Window *codeBlocksGetAslParentWindow(void) {
+    if (codeBlocksAslParentWindow != NULL) {
+        return codeBlocksAslParentWindow;
+    }
+    if (mainWindowObject != NULL) {
+        struct Window *win = NULL;
+
+        get(mainWindowObject, MUIA_Window, &win);
+        return win;
+    }
+    return NULL;
+}
+
 static BOOL codeBlocksWritePayloadToPath(const CodeBlockPayload *payload,
                                          STRPTR path) {
-    FILE *file;
-    size_t written;
+    BPTR file;
+    LONG written;
 
     if (payload == NULL || path == NULL || payload->data == NULL ||
         payload->length == 0) {
         return FALSE;
     }
 
-    file = fopen(path, "wb");
-    if (file == NULL) {
+    file = Open(path, MODE_NEWFILE);
+    if (file == (BPTR)0) {
         return FALSE;
     }
-    written = fwrite(payload->data, 1, payload->length, file);
-    fclose(file);
-    return written == payload->length;
+    written = Write(file, (CONST_STRPTR)payload->data, payload->length);
+    Close(file);
+    return written == (LONG)payload->length;
 }
 
 static BOOL codeBlocksCopyPayload(const CodeBlockPayload *payload,
@@ -325,47 +346,63 @@ BOOL codeBlocksViewerCopyActiveBlockSystem(void) {
     return codeBlocksViewerCopyActiveBlock(TRUE);
 }
 
-BOOL codeBlocksViewerSaveActiveBlock(BOOL systemCharset) {
-    struct AICodeBlock *block = codeBlocksViewerGetSelectedBlock();
+BOOL codeBlocksViewerSaveBlock(struct AICodeBlock *block, BOOL systemCharset) {
     CodeBlockPayload payload;
     BOOL ok = FALSE;
     BOOL cancelled = FALSE;
     UBYTE defaultName[CODEBLOCK_DEFAULT_NAME_MAX];
     struct FileRequester *fileReq;
+    struct Window *aslParent;
 
-    if (!codeBlocksPayloadFromBlock(block, systemCharset, &payload)) {
+    if (block == NULL) {
         return FALSE;
     }
 
     codeBlocksViewerDefaultFileName(block, defaultName, sizeof(defaultName));
-    fileReq = AllocAslRequestTags(ASL_FileRequest, TAG_END);
-    if (fileReq != NULL) {
-        if (AslRequestTags(fileReq, ASLFR_Window, codeBlocksWindowObject,
-                           ASLFR_TitleText, STRING_SAVE_CODEBLOCK,
-                           ASLFR_InitialFile, defaultName,
-                           ASLFR_InitialDrawer, "SYS:", ASLFR_DoSaveMode, TRUE,
-                           TAG_DONE)) {
-            STRPTR savePath = fileReq->fr_Drawer;
-            STRPTR saveName = fileReq->fr_File;
-            UWORD fullPathLength =
-                (UWORD)(strlen(savePath) + strlen(saveName) + 2);
-            STRPTR fullPath = AllocVec(fullPathLength, MEMF_CLEAR);
-
-            if (fullPath != NULL) {
-                strncpy(fullPath, savePath, strlen(savePath));
-                AddPart(fullPath, saveName, fullPathLength);
-                ok = codeBlocksWritePayloadToPath(&payload, fullPath);
-                FreeVec(fullPath);
-            }
-        } else {
-            cancelled = TRUE;
-            ok = TRUE;
-        }
-        FreeAslRequest(fileReq);
+    aslParent = codeBlocksGetAslParentWindow();
+    if (aslParent == NULL) {
+        return FALSE;
     }
 
-    codeBlocksPayloadFree(&payload);
+    /*
+     * ASL on mainWindow (Intuition), not the code-blocks MUI subwindow.
+     * Payload is built only after the user confirms a path.
+     */
+    fileReq = (struct FileRequester *)MUI_AllocAslRequestTags(
+        ASL_FileRequest, ASLFR_Window, aslParent, ASLFR_PopToFront, TRUE,
+        ASLFR_Activate, TRUE, ASLFR_TitleText, STRING_SAVE_CODEBLOCK,
+        ASLFR_InitialFile, defaultName, ASLFR_InitialDrawer, "SYS:",
+        ASLFR_DoSaveMode, TRUE, TAG_DONE);
+    if (fileReq == NULL) {
+        return FALSE;
+    }
+
+    if (MUI_AslRequestTags(fileReq, TAG_DONE)) {
+        STRPTR savePath = fileReq->fr_Drawer;
+        STRPTR saveName = fileReq->fr_File;
+        UWORD fullPathLength = (UWORD)(strlen(savePath) + strlen(saveName) + 2);
+        STRPTR fullPath = AllocVec(fullPathLength, MEMF_CLEAR);
+
+        if (fullPath != NULL) {
+            strncpy(fullPath, savePath, strlen(savePath));
+            AddPart(fullPath, saveName, fullPathLength);
+            if (codeBlocksPayloadFromBlock(block, systemCharset, &payload)) {
+                ok = codeBlocksWritePayloadToPath(&payload, fullPath);
+                codeBlocksPayloadFree(&payload);
+            }
+            FreeVec(fullPath);
+        }
+    } else {
+        cancelled = TRUE;
+        ok = TRUE;
+    }
+    FreeAslRequest(fileReq);
     return cancelled ? TRUE : ok;
+}
+
+BOOL codeBlocksViewerSaveActiveBlock(BOOL systemCharset) {
+    return codeBlocksViewerSaveBlock(codeBlocksViewerGetSelectedBlock(),
+                                     systemCharset);
 }
 
 HOOKPROTONHNONP(CodeBlockCopyUtf8ButtonFunc, void) {
@@ -382,19 +419,39 @@ HOOKPROTONHNONP(CodeBlockCopySystemButtonFunc, void) {
 }
 MakeHook(CodeBlockCopySystemButtonHook, CodeBlockCopySystemButtonFunc);
 
-HOOKPROTONHNONP(CodeBlockSaveUtf8ButtonFunc, void) {
-    if (!codeBlocksViewerSaveActiveBlock(FALSE)) {
+HOOKPROTONHNONP(CodeBlockSaveDeferredFunc, void) {
+    if (codeBlocksPendingSaveBlock == NULL) {
+        displayError(STRING_ERROR_NO_ACTIVE_CODEBLOCK);
+        return;
+    }
+    if (!codeBlocksViewerSaveBlock(codeBlocksPendingSaveBlock,
+                                   codeBlocksPendingSaveSystemCharset)) {
         displayError(STRING_ERROR_CODEBLOCK_SAVE);
     }
+}
+MakeHook(CodeBlockSaveDeferredHook, CodeBlockSaveDeferredFunc);
+
+HOOKPROTONHNONP(CodeBlockSaveUtf8ButtonFunc, void) {
+    codeBlocksViewerSyncSelectionFromList();
+    codeBlocksPendingSaveBlock = codeBlocksViewerGetSelectedBlock();
+    codeBlocksPendingSaveSystemCharset = FALSE;
+    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+             &CodeBlockSaveDeferredHook);
 }
 MakeHook(CodeBlockSaveUtf8ButtonHook, CodeBlockSaveUtf8ButtonFunc);
 
 HOOKPROTONHNONP(CodeBlockSaveSystemButtonFunc, void) {
-    if (!codeBlocksViewerSaveActiveBlock(TRUE)) {
-        displayError(STRING_ERROR_CODEBLOCK_SAVE);
-    }
+    codeBlocksViewerSyncSelectionFromList();
+    codeBlocksPendingSaveBlock = codeBlocksViewerGetSelectedBlock();
+    codeBlocksPendingSaveSystemCharset = TRUE;
+    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+             &CodeBlockSaveDeferredHook);
 }
 MakeHook(CodeBlockSaveSystemButtonHook, CodeBlockSaveSystemButtonFunc);
+
+void codeBlocksViewerSetAslParentWindow(struct Window *parent) {
+    codeBlocksAslParentWindow = parent;
+}
 
 void codeBlocksViewerSetObjects(Object *list, Object *scintilla) {
     codeBlocksListObject = list;
@@ -443,6 +500,7 @@ void codeBlocksViewerAttachActionButtons(void) {
 
 void codeBlocksViewerClearList(void) {
     codeBlocksCachedBlock = NULL;
+    codeBlocksPendingSaveBlock = NULL;
     if (codeBlocksListObject != NULL) {
         DoMethod(codeBlocksListObject, MUIM_NList_Clear);
     }
@@ -455,6 +513,26 @@ MakeHook(CodeBlocksWindowClosedHook, CodeBlocksWindowClosedFunc);
 
 void codeBlocksViewerDismiss(void) {
     codeBlocksViewerClearList();
+    if (codeBlocksWindowObject != NULL) {
+        set(codeBlocksWindowObject, MUIA_Window_Open, FALSE);
+    }
+}
+
+void codeBlocksViewerPrepareShutdown(void) {
+    /*
+     * Conversation AICodeBlocks may be freed when the main NList is destroyed
+     * during MUI_DisposeObject(app). Drop cached pointers and empty Scintilla
+     * before that so nothing dereferences conversation-owned raw_code.
+     */
+    codeBlocksCachedBlock = NULL;
+    codeBlocksPendingSaveBlock = NULL;
+
+    if (codeBlocksScintillaObject != NULL) {
+        codeBlocksScintillaSetUtf8Text(codeBlocksScintillaObject, "");
+    }
+    if (codeBlocksListObject != NULL) {
+        DoMethod(codeBlocksListObject, MUIM_NList_Clear);
+    }
     if (codeBlocksWindowObject != NULL) {
         set(codeBlocksWindowObject, MUIA_Window_Open, FALSE);
     }

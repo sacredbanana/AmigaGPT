@@ -18,6 +18,8 @@ extern struct Hook DisplayCodeBlockListHook;
 extern struct Hook CodeBlockListActiveHook;
 extern struct Hook CodeBlocksWindowClosedHook;
 
+void codeBlocksViewerSetAslParentWindow(struct Window *parent);
+
 void codeBlocksViewerSetObjects(Object *list, Object *scintilla);
 
 void codeBlocksViewerSetActionButtons(Object *copyUtf8, Object *copySystem,
@@ -39,6 +41,9 @@ void codeBlocksViewerClearList(void);
 /** Close code viewer and clear list (e.g. chat switch/delete). */
 void codeBlocksViewerDismiss(void);
 
+/** Before MUI_DisposeObject(app): drop stale block pointers, clear UI refs. */
+void codeBlocksViewerPrepareShutdown(void);
+
 void codeBlocksViewerSyncSelectionFromList(void);
 
 void codeBlocksViewerShowActiveBlock(void);
@@ -50,6 +55,8 @@ void codeBlocksViewerDefaultFileName(struct AICodeBlock *block, STRPTR buf,
 BOOL codeBlocksViewerCopyActiveBlockUtf8(void);
 
 BOOL codeBlocksViewerCopyActiveBlockSystem(void);
+
+BOOL codeBlocksViewerSaveBlock(struct AICodeBlock *block, BOOL systemCharset);
 
 BOOL codeBlocksViewerSaveActiveBlock(BOOL systemCharset);
 

@@ -1453,6 +1453,11 @@ msgid "Save code block"
 msgstr "Save code block"
 
 #: src/CodeBlocksViewer.c
+msgctxt "STRING_ERROR_NO_ACTIVE_CODEBLOCK (274//)"
+msgid "No code block is selected."
+msgstr "No code block is selected."
+
+#: src/CodeBlocksViewer.c
 msgctxt "STRING_ERROR_CODEBLOCK_SAVE (273//)"
 msgid "Could not save the active code block."
 msgstr "Could not save the active code block."

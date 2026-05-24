@@ -13,7 +13,8 @@ SDK nativ (MorphOS) vs. WSL, `MUIM_Scintilla_Command`, Inventar `devfiles.txt`: 
 | Phase | Status / Inhalt |
 |-------|-----------------|
 | **1–5** | Ziel, Datenmodell, Stream, Fences, GUI-Grundlagen |
-| **6–10** | Scintilla **Code-Viewer** v0.1 — **Phase 6 erledigt**; **Phase 7a/7b erledigt** (2026-05); **7c** offen; 8–10 offen |
+| **6–10** | Scintilla **Code-Viewer** v0.1 — **Phase 6 erledigt**; **7a/7b erledigt** (2026-05); **7c** offen; 8–10 offen |
+| **R1–R4** | **Stream- & Chat-Recovery** — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) (parallel zu 7c/8–10, vorrangig R1+R2) |
 | **11** | Komfort am Code-Viewer (Lexer, Highlighting, Tabs, Export) |
 | **12** | **Hauptfenster Chat-Ausgabe** → Scintilla.mcc + TTEngine (UTF-8, ohne NFloattext/codesets für diese Fläche) |
 | **13** | MorphOS Worker / UI-Batching für Stream (bewusst **nach** Phase 12) |
@@ -361,6 +362,8 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 
 ## Phase 8 — String- und Sicherheitsdisziplin
 
+**Hinweis:** [Stream- & Chat-Recovery (R1–R4)](STREAM-RECOVERY.md) ist **kein** Unterpunkt von Phase 8, sondern ein **parallel priorisierter Track** (vor allem R1+R2 vor dem reinen Safety-Sweep). Recovery nutzt Phase-8-Regeln, ersetzt sie aber nicht.
+
 **Vermeiden:**
 
 - `sprintf(buf, text);` / `printf(text);` mit unbekanntem Inhalt
@@ -500,7 +503,7 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 
 **Phase 6 (MorphOS):** dasselbe Fenster mit **Scintilla** statt NFloattext — siehe oben „Umgesetzt (Phase 6)“.
 
-**Nächster Schritt:** **Phase 7c** (Chat-Mausrad, optional) oder **Phase 8**. Danach 9–10, Phase 11 (Lexer), **Phase 12** (Chat-Scintilla), **Phase 13** (Worker).
+**Nächster Schritt (Empfehlung):** **Stream-Recovery R1+R2** ([STREAM-RECOVERY.md](STREAM-RECOVERY.md)), optional parallel **7c** (Mausrad). Danach R3, **Phase 8**, 9–10, Phase 11, **Phase 12**, **Phase 13**.
 
 ---
 

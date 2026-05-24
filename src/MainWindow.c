@@ -1181,6 +1181,9 @@ LONG createMainWindow() {
     }
 
     get(mainWindowObject, MUIA_Window, &mainWindow);
+#ifdef __MORPHOS__
+    codeBlocksViewerSetAslParentWindow(mainWindow);
+#endif
 
     DoMethod(app, OM_ADDMEMBER, mainWindowObject);
 

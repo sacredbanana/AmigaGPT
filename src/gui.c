@@ -975,6 +975,9 @@ void shutdownGUI() {
         DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 
 #ifndef DAEMON
+#ifdef __MORPHOS__
+        codeBlocksViewerPrepareShutdown();
+#endif
         // Release pens if they were allocated
         if (mainWindowObject && (redPen || greenPen || bluePen || yellowPen)) {
             struct Screen *currentScreen;
