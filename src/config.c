@@ -14,6 +14,23 @@
 
 #define DEFAULT_ACCENT "american.accent"
 
+STRPTR configDupString(CONST_STRPTR src) {
+    ULONG len;
+    STRPTR dest;
+
+    if (src == NULL) {
+        return NULL;
+    }
+    len = strlen(src);
+    dest = AllocVec(len + 1, MEMF_ANY);
+    if (dest == NULL) {
+        return NULL;
+    }
+    CopyMem(src, dest, len);
+    dest[len] = '\0';
+    return dest;
+}
+
 struct Config config = {
     .speechEnabled = FALSE,
     .speechAccent = NULL,
@@ -319,14 +336,11 @@ LONG readConfig() {
                                   &speechAccentObj)) {
         CONST_STRPTR speechAccent = json_object_get_string(speechAccentObj);
         if (speechAccent != NULL) {
-            config.speechAccent =
-                AllocVec(strlen(speechAccent) + 1, MEMF_CLEAR);
-            strncpy(config.speechAccent, speechAccent, strlen(speechAccent));
+            config.speechAccent = configDupString(speechAccent);
         }
     }
     if (config.speechAccent == NULL) {
-        config.speechAccent = AllocVec(strlen(DEFAULT_ACCENT) + 1, MEMF_CLEAR);
-        strncpy(config.speechAccent, DEFAULT_ACCENT, strlen(DEFAULT_ACCENT));
+        config.speechAccent = configDupString(DEFAULT_ACCENT);
     }
 
     struct json_object *speechVoiceObj;
@@ -344,8 +358,7 @@ LONG readConfig() {
                                   &chatSystemObj)) {
         CONST_STRPTR chatSystem = json_object_get_string(chatSystemObj);
         if (chatSystem != NULL) {
-            config.chatSystem = AllocVec(strlen(chatSystem) + 1, MEMF_CLEAR);
-            strncpy(config.chatSystem, chatSystem, strlen(chatSystem));
+            config.chatSystem = configDupString(chatSystem);
         }
     }
 
@@ -402,10 +415,7 @@ LONG readConfig() {
         CONST_STRPTR openAIVoiceInstructions =
             json_object_get_string(openAIVoiceInstructionsObj);
         if (openAIVoiceInstructions != NULL) {
-            config.openAIVoiceInstructions =
-                AllocVec(strlen(openAIVoiceInstructions) + 1, MEMF_CLEAR);
-            strncpy(config.openAIVoiceInstructions, openAIVoiceInstructions,
-                    strlen(openAIVoiceInstructions));
+            config.openAIVoiceInstructions = configDupString(openAIVoiceInstructions);
         }
     }
 
@@ -418,9 +428,7 @@ LONG readConfig() {
                                   &openAiApiKeyObj)) {
         CONST_STRPTR openAiApiKey = json_object_get_string(openAiApiKeyObj);
         if (openAiApiKey != NULL) {
-            config.openAiApiKey =
-                AllocVec(strlen(openAiApiKey) + 1, MEMF_CLEAR);
-            strncpy(config.openAiApiKey, openAiApiKey, strlen(openAiApiKey));
+            config.openAiApiKey = configDupString(openAiApiKey);
         }
     }
 
@@ -507,8 +515,7 @@ LONG readConfig() {
                                   &proxyHostObj)) {
         CONST_STRPTR proxyHost = json_object_get_string(proxyHostObj);
         if (proxyHost != NULL) {
-            config.proxyHost = AllocVec(strlen(proxyHost) + 1, MEMF_CLEAR);
-            strncpy(config.proxyHost, proxyHost, strlen(proxyHost));
+            config.proxyHost = configDupString(proxyHost);
         }
     }
 
@@ -547,9 +554,7 @@ LONG readConfig() {
                                   &proxyUsernameObj)) {
         CONST_STRPTR proxyUsername = json_object_get_string(proxyUsernameObj);
         if (proxyUsername != NULL) {
-            config.proxyUsername =
-                AllocVec(strlen(proxyUsername) + 1, MEMF_CLEAR);
-            strncpy(config.proxyUsername, proxyUsername, strlen(proxyUsername));
+            config.proxyUsername = configDupString(proxyUsername);
         }
     }
 
@@ -563,9 +568,7 @@ LONG readConfig() {
                                   &proxyPasswordObj)) {
         CONST_STRPTR proxyPassword = json_object_get_string(proxyPasswordObj);
         if (proxyPassword != NULL) {
-            config.proxyPassword =
-                AllocVec(strlen(proxyPassword) + 1, MEMF_CLEAR);
-            strncpy(config.proxyPassword, proxyPassword, strlen(proxyPassword));
+            config.proxyPassword = configDupString(proxyPassword);
         }
     }
 
@@ -652,8 +655,7 @@ LONG readConfig() {
                                   &customHostObj)) {
         CONST_STRPTR customHost = json_object_get_string(customHostObj);
         if (customHost != NULL) {
-            config.customHost = AllocVec(strlen(customHost) + 1, MEMF_CLEAR);
-            strncpy(config.customHost, customHost, strlen(customHost));
+            config.customHost = configDupString(customHost);
         }
     }
 
@@ -678,9 +680,7 @@ LONG readConfig() {
                                   &customApiKeyObj)) {
         CONST_STRPTR customApiKey = json_object_get_string(customApiKeyObj);
         if (customApiKey != NULL) {
-            config.customApiKey =
-                AllocVec(strlen(customApiKey) + 1, MEMF_CLEAR);
-            strncpy(config.customApiKey, customApiKey, strlen(customApiKey));
+            config.customApiKey = configDupString(customApiKey);
         }
     }
 
@@ -690,10 +690,7 @@ LONG readConfig() {
         CONST_STRPTR customChatModel =
             json_object_get_string(customChatModelObj);
         if (customChatModel != NULL) {
-            config.customChatModel =
-                AllocVec(strlen(customChatModel) + 1, MEMF_CLEAR);
-            strncpy(config.customChatModel, customChatModel,
-                    strlen(customChatModel));
+            config.customChatModel = configDupString(customChatModel);
         }
     }
 
@@ -711,10 +708,7 @@ LONG readConfig() {
         CONST_STRPTR customApiEndpointUrl =
             json_object_get_string(customApiEndpointUrlObj);
         if (customApiEndpointUrl != NULL) {
-            config.customApiEndpointUrl =
-                AllocVec(strlen(customApiEndpointUrl) + 1, MEMF_CLEAR);
-            strncpy(config.customApiEndpointUrl, customApiEndpointUrl,
-                    strlen(customApiEndpointUrl));
+            config.customApiEndpointUrl = configDupString(customApiEndpointUrl);
         }
     }
 
@@ -736,10 +730,7 @@ LONG readConfig() {
         CONST_STRPTR elevenLabsAPIKey =
             json_object_get_string(elevenLabsAPIKeyObj);
         if (elevenLabsAPIKey != NULL) {
-            config.elevenLabsAPIKey =
-                AllocVec(strlen(elevenLabsAPIKey) + 1, MEMF_CLEAR);
-            strncpy(config.elevenLabsAPIKey, elevenLabsAPIKey,
-                    strlen(elevenLabsAPIKey));
+            config.elevenLabsAPIKey = configDupString(elevenLabsAPIKey);
         }
     }
 
@@ -753,10 +744,7 @@ LONG readConfig() {
         CONST_STRPTR elevenLabsVoiceID =
             json_object_get_string(elevenLabsVoiceIDObj);
         if (elevenLabsVoiceID != NULL) {
-            config.elevenLabsVoiceID =
-                AllocVec(strlen(elevenLabsVoiceID) + 1, MEMF_CLEAR);
-            strncpy(config.elevenLabsVoiceID, elevenLabsVoiceID,
-                    strlen(elevenLabsVoiceID));
+            config.elevenLabsVoiceID = configDupString(elevenLabsVoiceID);
         }
     }
 
@@ -770,10 +758,7 @@ LONG readConfig() {
         CONST_STRPTR elevenLabsVoiceName =
             json_object_get_string(elevenLabsVoiceNameObj);
         if (elevenLabsVoiceName != NULL) {
-            config.elevenLabsVoiceName =
-                AllocVec(strlen(elevenLabsVoiceName) + 1, MEMF_CLEAR);
-            strncpy(config.elevenLabsVoiceName, elevenLabsVoiceName,
-                    strlen(elevenLabsVoiceName));
+            config.elevenLabsVoiceName = configDupString(elevenLabsVoiceName);
         }
     }
 
@@ -787,10 +772,7 @@ LONG readConfig() {
         CONST_STRPTR elevenLabsModel =
             json_object_get_string(elevenLabsModelObj);
         if (elevenLabsModel != NULL) {
-            config.elevenLabsModel =
-                AllocVec(strlen(elevenLabsModel) + 1, MEMF_CLEAR);
-            strncpy(config.elevenLabsModel, elevenLabsModel,
-                    strlen(elevenLabsModel));
+            config.elevenLabsModel = configDupString(elevenLabsModel);
         }
     }
 
@@ -804,10 +786,7 @@ LONG readConfig() {
         CONST_STRPTR elevenLabsModelName =
             json_object_get_string(elevenLabsModelNameObj);
         if (elevenLabsModelName != NULL) {
-            config.elevenLabsModelName =
-                AllocVec(strlen(elevenLabsModelName) + 1, MEMF_CLEAR);
-            strncpy(config.elevenLabsModelName, elevenLabsModelName,
-                    strlen(elevenLabsModelName));
+            config.elevenLabsModelName = configDupString(elevenLabsModelName);
         }
     }
 

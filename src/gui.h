@@ -75,6 +75,9 @@ void startGUIRunLoop();
  *
  **/
 void updateStatusBar(CONST_STRPTR message, const ULONG pen);
+
+/** Append piece to fixed buffer; truncates if full (Phase 8). */
+void strbufAppend(STRPTR buf, ULONG bufSize, CONST_STRPTR piece);
 /**
  * Copies a file from one location to another
  * @param source The source file to copy

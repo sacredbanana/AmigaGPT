@@ -770,13 +770,13 @@ static BOOL isTopStyle(const StyleStack *s, StyleType style) {
 static void outputStyleOn(STRPTR out, size_t outSize, StyleType style) {
     switch (style) {
     case STYLE_BOLD:
-        strncat(out, "\033b", outSize - strlen(out) - 1);
+        strbufAppend(out, (ULONG)outSize, "\033b");
         break;
     case STYLE_ITALIC:
-        strncat(out, "\033i", outSize - strlen(out) - 1);
+        strbufAppend(out, (ULONG)outSize, "\033i");
         break;
     case STYLE_UNDERLINE:
-        strncat(out, "\033u", outSize - strlen(out) - 1);
+        strbufAppend(out, (ULONG)outSize, "\033u");
         break;
     }
 }
@@ -791,7 +791,7 @@ static void outputStyleOff(STRPTR out, size_t outSize) {
        MCC_NList's docs say \033n sets the soft style back to normal,
        thus turning off bold/italic/underline.
     */
-    strncat(out, "\033n", outSize - strlen(out) - 1);
+    strbufAppend(out, (ULONG)outSize, "\033n");
 }
 
 /*
@@ -921,7 +921,7 @@ static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
                     memcpy(tempBuf, &input[i], copyLen);
                     tempBuf[copyLen] = '\0';
 
-                    strncat(out, tempBuf, availableSpace);
+                    strbufAppend(out, (ULONG)outCap, (STRPTR)tempBuf);
                 }
             }
             i += markerLen;
@@ -1525,33 +1525,23 @@ static void speakStreamUtf8Tail(STRPTR receivedMessage, ULONG *utf8Spoken) {
 static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
                                     UWORD *wordNumber, ULONG *speechUtf8Index) {
     STRPTR formattedMessageSystemEncoded;
-    size_t receivedRemaining;
     size_t pieceLen;
-    size_t displayRemaining;
 
     if (piece == NULL || piece[0] == '\0') {
         return;
     }
 
     pieceLen = strlen(piece);
-    receivedRemaining =
-        READ_BUFFER_LENGTH - strlen(receivedMessage) - pieceLen - 1;
-    if (receivedRemaining > 0) {
-        strncat(receivedMessage, piece, receivedRemaining);
-    }
+    strbufAppend(receivedMessage, READ_BUFFER_LENGTH, piece);
 
     formattedMessageSystemEncoded = CodesetsUTF8ToStr(
         CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)piece,
         CSA_MapForeignChars, TRUE, TAG_DONE);
 
     if (formattedMessageSystemEncoded != NULL) {
-        displayRemaining = CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH -
-                           strlen(chatOutputTextEditorContents) -
-                           strlen(formattedMessageSystemEncoded) - 1;
-        if (displayRemaining > 0) {
-            strncat(chatOutputTextEditorContents, formattedMessageSystemEncoded,
-                    displayRemaining);
-        }
+        strbufAppend(chatOutputTextEditorContents,
+                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
+                     formattedMessageSystemEncoded);
         CodesetsFreeA(formattedMessageSystemEncoded, NULL);
     }
 
@@ -1771,21 +1761,22 @@ static void sendChatMessage() {
         break;
     }
     userStyleString[1] = userAlignment;
-    strncat(chatOutputTextEditorContents, userStyleString,
-            strlen(userStyleString));
-    size_t currentLength = strlen(chatOutputTextEditorContents);
+    strbufAppend(chatOutputTextEditorContents,
+                 CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, userStyleString);
     for (ULONG i = 0; i < strlen(text); i++) {
-        if (currentLength >= CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 10)
+        UBYTE oneChar[2] = {0, 0};
+
+        if (strlen(chatOutputTextEditorContents) >=
+            CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 10) {
             break;
-
-        chatOutputTextEditorContents[currentLength++] = text[i];
-        chatOutputTextEditorContents[currentLength] = '\0';
-
-        // If it's a newline, add the styling codes after it
+        }
+        oneChar[0] = text[i];
+        strbufAppend(chatOutputTextEditorContents,
+                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, (STRPTR)oneChar);
         if (text[i] == '\n') {
-            strncat(chatOutputTextEditorContents, userStyleString,
-                    strlen(userStyleString));
-            currentLength = strlen(chatOutputTextEditorContents);
+            strbufAppend(chatOutputTextEditorContents,
+                         CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
+                         userStyleString);
         }
     }
 
@@ -1819,7 +1810,8 @@ static void sendChatMessage() {
     UWORD wordNumber = 0;
     struct UTF8StreamBuffer *utf8Stream = utf8stream_create(4096);
 
-    strncat(chatOutputTextEditorContents, "\n", 1);
+    strbufAppend(chatOutputTextEditorContents,
+                 CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\n");
     streamUiResetRefreshClock();
 
     do {
@@ -2001,31 +1993,40 @@ void displayConversation(struct Conversation *conversation) {
             }
             UBYTE userStyleString[] = "\033r\033b\0333";
             userStyleString[1] = userAlignment;
-            strncat(chatOutputTextEditorContents, userStyleString,
-                    strlen(userStyleString));
+            strbufAppend(chatOutputTextEditorContents,
+                         CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
+                         userStyleString);
             for (ULONG i = 0; i < strlen(content); i++) {
-                strncat(chatOutputTextEditorContents, content + i, 1);
+                UBYTE oneChar[2] = {0, 0};
+
+                oneChar[0] = content[i];
+                strbufAppend(chatOutputTextEditorContents,
+                             CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
+                             (STRPTR)oneChar);
                 if (content[i] == '\n') {
-                    strncat(chatOutputTextEditorContents, userStyleString,
-                            strlen(userStyleString));
+                    strbufAppend(chatOutputTextEditorContents,
+                                 CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
+                                 userStyleString);
                 }
             }
         } else if (strcmp(conversationNode->role, "assistant") == 0) {
             set(chatOutputTextEditor, MUIA_NFloattext_Align,
                 config.assistantTextAlignment);
             UBYTE assistantStyleString[] = "\n\n\0332";
-            strncat(chatOutputTextEditorContents, assistantStyleString,
-                    strlen(assistantStyleString));
             STRPTR formattedContent = formatAssistantTextForDisplay(
                 conversationNodeGetDisplay(conversationNode));
+
+            strbufAppend(chatOutputTextEditorContents,
+                         CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
+                         assistantStyleString);
             if (formattedContent != NULL) {
-                strncat(chatOutputTextEditorContents, formattedContent,
-                        strlen(formattedContent));
+                strbufAppend(chatOutputTextEditorContents,
+                             CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
+                             formattedContent);
                 FreeVec(formattedContent);
             }
-            const UBYTE messageSeparatorStyleString[] = "\n\n";
-            strncat(chatOutputTextEditorContents, messageSeparatorStyleString,
-                    strlen(messageSeparatorStyleString));
+            strbufAppend(chatOutputTextEditorContents,
+                         CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\n\n");
         }
     }
 
@@ -2504,13 +2505,26 @@ static LONG loadImages() {
 
         struct GeneratedImage *generatedImage =
             AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
-        generatedImage->name = AllocVec(strlen(imageName) + 1, MEMF_ANY);
-        strcpy(generatedImage->name, imageName);
-        generatedImage->filePath =
-            AllocVec(strlen(imageFilePath) + 1, MEMF_ANY);
-        strcpy(generatedImage->filePath, imageFilePath);
-        generatedImage->prompt = AllocVec(strlen(imagePrompt) + 1, MEMF_ANY);
-        strcpy(generatedImage->prompt, imagePrompt);
+        generatedImage->name = configDupString(imageName);
+        generatedImage->filePath = configDupString(imageFilePath);
+        generatedImage->prompt = configDupString(imagePrompt);
+        if (generatedImage->name == NULL || generatedImage->filePath == NULL ||
+            generatedImage->prompt == NULL) {
+            if (generatedImage->name != NULL) {
+                FreeVec(generatedImage->name);
+            }
+            if (generatedImage->filePath != NULL) {
+                FreeVec(generatedImage->filePath);
+            }
+            if (generatedImage->prompt != NULL) {
+                FreeVec(generatedImage->prompt);
+            }
+            FreeVec(generatedImage);
+            displayError(STRING_ERROR_IMAGE_HISTORY_PARSE_NO_BACKUP);
+            FreeVec(imagesJsonString);
+            json_object_put(imagesJsonArray);
+            return RETURN_ERROR;
+        }
         generatedImage->imageModel = imageModel;
         generatedImage->width = imageWidth;
         generatedImage->height = imageHeight;

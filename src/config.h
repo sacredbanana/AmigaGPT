@@ -80,3 +80,6 @@ LONG readConfig();
  * Free the config
  **/
 void freeConfig();
+
+/** Allocated copy of src (Phase 8); NULL if src is NULL or OOM. */
+STRPTR configDupString(CONST_STRPTR src);

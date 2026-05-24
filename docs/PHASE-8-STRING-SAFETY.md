@@ -42,9 +42,12 @@ R2 ist **nicht abgeschlossen**. Vor Phase-8-Start festgehalten (2026-05):
 | URL host/path | `openai.c` `downloadFile` | hoch | **Fix 8.1** |
 | Conversation UTF-8 copy | `gui.c` `addTextToConversation` | mittel | **Fix 8.1** |
 | Statusleiste alloc | `gui.c` `updateStatusBar` | mittel | **Fix 8.1** |
-| Image-History load | `MainWindow.c` `strcpy` nach `AllocVec` | niedrig | offen (alloc passt, Stil) |
-| Config/UI `strncpy` | diverse Requester | niedrig | offen (Feldgrößen prüfen) |
-| Rexx `strncat` 1024 | `ARexx.c` | niedrig | offen |
+| Image-History load | `MainWindow.c` `configDupString` | niedrig | **Fix 8.2** |
+| Config JSON strings | `config.c` `configDupString` | mittel | **Fix 8.2** |
+| Chat `strncat` / Stream | `MainWindow.c` `strbufAppend` | hoch | **Fix 8.2** |
+| Rexx list buffers | `ARexx.c` `strbufAppend` | niedrig | **Fix 8.2** |
+| `displayError` alloc | `gui.c` | mittel | **Fix 8.2** |
+| API key requester | `APIKeyRequesterWindow.c` | niedrig | **Fix 8.2** |
 
 ---
 
@@ -56,10 +59,17 @@ R2 ist **nicht abgeschlossen**. Vor Phase-8-Start festgehalten (2026-05):
 - `openai.c`: begrenztes Anhängen an `readBuffer`; URL-Parsing mit `sizeof(hostString)` / `sizeof(pathString)`.
 - `gui.c`: `addTextToConversation` — `CopyMem` + NUL; `updateStatusBar` — `snprintf` mit Alloc-Größe.
 
-### 8.2+ (geplant)
+### 8.2 (2026-05) — Zweiter Sweep
 
-- Weitere `strncpy`-Felder in `config.c` / Requestern auf `sizeof(field)-1` + NUL prüfen.
-- `MainWindow.c` Chat-`strncat`-Hilfsmakro oder Helper.
+- `configDupString()` in `config.c` / `config.h`; alle JSON-String-Felder beim Laden.
+- `strbufAppend()` in `gui.c` / `gui.h` — Chat-Ausgabe, Stream-Puffer, Markdown-Hilfen, ARexx-Listen.
+- `displayError`: Alloc-Größen, OOM-Guard, `errorTitle` freigeben.
+- `APIKeyRequesterWindow.c`: `configDupString` statt `strncpy`.
+
+### 8.3+ (geplant)
+
+- Weitere Requester (`ProxySettings`, `CustomServer`, …) auf `configDupString` umstellen.
+- `strncpy` in `copyConversation` / Bild-Pfaden prüfen.
 - Host-Tests nur wo schon `src/test/` (kein Pflicht-DoD für MorphOS).
 
 ---
@@ -72,4 +82,4 @@ R2 ist **nicht abgeschlossen**. Vor Phase-8-Start festgehalten (2026-05):
 
 ---
 
-*Stand: 2026-05-24 — Phase 8 gestartet; R2-Rest dokumentiert.*
+*Stand: 2026-05-24 — Phase 8.1+8.2; R2-Rest dokumentiert; 8.3 optional.*

@@ -433,6 +433,27 @@ void startGUIRunLoop() {
  * @param pen the pen to use for the text
  *
  **/
+void strbufAppend(STRPTR buf, ULONG bufSize, CONST_STRPTR piece) {
+    ULONG used, avail, n;
+
+    if (buf == NULL || bufSize < 2 || piece == NULL || piece[0] == '\0') {
+        return;
+    }
+    used = (ULONG)strlen(buf);
+    if (used >= bufSize - 1) {
+        return;
+    }
+    avail = bufSize - 1 - used;
+    n = (ULONG)strlen(piece);
+    if (n > avail) {
+        n = avail;
+    }
+    if (n > 0) {
+        CopyMem(piece, buf + used, n);
+        buf[used + n] = '\0';
+    }
+}
+
 void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
 #ifndef DAEMON
     ULONG cap = strlen(message) + 32;
@@ -520,15 +541,21 @@ void displayError(STRPTR message) {
 #else
     const UBYTE appName[] = "AmigaGPTD";
 #endif
-    UBYTE *errorTitle = AllocVec(strlen(appName) + strlen(STRING_ERROR) + 2,
-                                 MEMF_ANY | MEMF_CLEAR);
-    snprintf(errorTitle, strlen(appName) + strlen(STRING_ERROR) + 2, "%s %s",
-             appName, STRING_ERROR);
+    ULONG titleCap = (ULONG)strlen(appName) + (ULONG)strlen(STRING_ERROR) + 2;
+    UBYTE *errorTitle = AllocVec(titleCap, MEMF_ANY | MEMF_CLEAR);
+    ULONG okCap = (ULONG)strlen(STRING_OK) + 2;
+    STRPTR okString = AllocVec(okCap, MEMF_ANY | MEMF_CLEAR);
     const UBYTE ERROR_BUFFER_LENGTH = 255;
     STRPTR errorMessage = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
-    CONST_STRPTR okString =
-        AllocVec(strlen(STRING_OK) + 2, MEMF_ANY | MEMF_CLEAR);
-    snprintf(okString, strlen(STRING_OK) + 2, "*%s", STRING_OK);
+
+    if (errorTitle == NULL || okString == NULL || errorMessage == NULL) {
+        FreeVec(errorTitle);
+        FreeVec(okString);
+        FreeVec(errorMessage);
+        return;
+    }
+    snprintf((char *)errorTitle, titleCap, "%s %s", appName, STRING_ERROR);
+    snprintf(okString, okCap, "*%s", STRING_OK);
     const LONG ERROR_CODE = IoErr();
     if (ERROR_CODE == 0) {
 #ifndef DAEMON
@@ -570,6 +597,7 @@ void displayError(STRPTR message) {
     }
     FreeVec(errorMessage);
     FreeVec(okString);
+    FreeVec(errorTitle);
 }
 
 /**

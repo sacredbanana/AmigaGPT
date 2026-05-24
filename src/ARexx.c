@@ -271,8 +271,8 @@ MakeHook(CreateImageHook, CreateImageFunc);
 HOOKPROTONHNO(ListChatModelsFunc, APTR, ULONG *arg) {
     STRPTR models = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
     for (UBYTE i = 0; CHAT_MODEL_NAMES[i] != NULL; i++) {
-        strncat(models, CHAT_MODEL_NAMES[i], 1024);
-        strncat(models, "\n", 1024);
+        strbufAppend(models, 1024, CHAT_MODEL_NAMES[i]);
+        strbufAppend(models, 1024, "\n");
     }
     set(app, MUIA_Application_RexxString, models);
     FreeVec(models);
@@ -283,8 +283,8 @@ MakeHook(ListChatModelsHook, ListChatModelsFunc);
 HOOKPROTONHNO(ListImageModelsFunc, APTR, ULONG *arg) {
     STRPTR models = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
     for (UBYTE i = 0; IMAGE_MODEL_NAMES[i] != NULL; i++) {
-        strncat(models, IMAGE_MODEL_NAMES[i], 1024);
-        strncat(models, "\n", 1024);
+        strbufAppend(models, 1024, IMAGE_MODEL_NAMES[i]);
+        strbufAppend(models, 1024, "\n");
     }
     set(app, MUIA_Application_RexxString, models);
     FreeVec(models);
@@ -294,20 +294,20 @@ MakeHook(ListImageModelsHook, ListImageModelsFunc);
 
 HOOKPROTONHNO(ListImageSizesFunc, APTR, ULONG *arg) {
     STRPTR sizes = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
-    strncat(sizes, "DALL-E 2:\n", 1024);
+    strbufAppend(sizes, 1024, "DALL-E 2:\n");
     for (UBYTE i = 0; i < 3; i++) {
-        strncat(sizes, IMAGE_SIZE_NAMES[IMAGE_SIZES_DALL_E_2[i]], 1024);
-        strncat(sizes, "\n", 1024);
+        strbufAppend(sizes, 1024, IMAGE_SIZE_NAMES[IMAGE_SIZES_DALL_E_2[i]]);
+        strbufAppend(sizes, 1024, "\n");
     }
-    strncat(sizes, "DALL-E 3:\n", 1024);
+    strbufAppend(sizes, 1024, "DALL-E 3:\n");
     for (UBYTE i = 0; i < 3; i++) {
-        strncat(sizes, IMAGE_SIZE_NAMES[IMAGE_SIZES_DALL_E_3[i]], 1024);
-        strncat(sizes, "\n", 1024);
+        strbufAppend(sizes, 1024, IMAGE_SIZE_NAMES[IMAGE_SIZES_DALL_E_3[i]]);
+        strbufAppend(sizes, 1024, "\n");
     }
-    strncat(sizes, "GPT Image 1:\n", 1024);
+    strbufAppend(sizes, 1024, "GPT Image 1:\n");
     for (UBYTE i = 0; i < 3; i++) {
-        strncat(sizes, IMAGE_SIZE_NAMES[IMAGE_SIZES_GPT_IMAGE_1[i]], 1024);
-        strncat(sizes, "\n", 1024);
+        strbufAppend(sizes, 1024, IMAGE_SIZE_NAMES[IMAGE_SIZES_GPT_IMAGE_1[i]]);
+        strbufAppend(sizes, 1024, "\n");
     }
     set(app, MUIA_Application_RexxString, sizes);
     FreeVec(sizes);
@@ -318,8 +318,8 @@ MakeHook(ListImageSizesHook, ListImageSizesFunc);
 HOOKPROTONHNO(ListVoiceModelsFunc, APTR, ULONG *arg) {
     STRPTR models = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
     for (UBYTE i = 0; OPENAI_TTS_MODEL_NAMES[i] != NULL; i++) {
-        strncat(models, OPENAI_TTS_MODEL_NAMES[i], 1024);
-        strncat(models, "\n", 1024);
+        strbufAppend(models, 1024, OPENAI_TTS_MODEL_NAMES[i]);
+        strbufAppend(models, 1024, "\n");
     }
     set(app, MUIA_Application_RexxString, models);
     FreeVec(models);
@@ -330,8 +330,8 @@ MakeHook(ListVoiceModelsHook, ListVoiceModelsFunc);
 HOOKPROTONHNO(ListVoicesFunc, APTR, ULONG *arg) {
     STRPTR voices = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
     for (UBYTE i = 0; OPENAI_TTS_VOICE_NAMES[i] != NULL; i++) {
-        strncat(voices, OPENAI_TTS_VOICE_NAMES[i], 1024);
-        strncat(voices, "\n", 1024);
+        strbufAppend(voices, 1024, OPENAI_TTS_VOICE_NAMES[i]);
+        strbufAppend(voices, 1024, "\n");
     }
     set(app, MUIA_Application_RexxString, voices);
     FreeVec(voices);
@@ -342,8 +342,8 @@ MakeHook(ListVoicesHook, ListVoicesFunc);
 HOOKPROTONHNO(ListAudioFormatsFunc, APTR, ULONG *arg) {
     STRPTR formats = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
     for (UBYTE i = 0; AUDIO_FORMAT_NAMES[i] != NULL; i++) {
-        strncat(formats, AUDIO_FORMAT_NAMES[i], 1024);
-        strncat(formats, "\n", 1024);
+        strbufAppend(formats, 1024, AUDIO_FORMAT_NAMES[i]);
+        strbufAppend(formats, 1024, "\n");
     }
     set(app, MUIA_Application_RexxString, formats);
     FreeVec(formats);
@@ -382,8 +382,8 @@ HOOKPROTONHNO(ListServerModelsFunc, APTR, ULONG *arg) {
     STRPTR modelsString = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
     for (UBYTE i = 0; i < json_object_array_length(models); i++) {
         struct json_object *model = json_object_array_get_idx(models, i);
-        strncat(modelsString, json_object_get_string(model), 1024);
-        strncat(modelsString, "\n", 1024);
+        strbufAppend(modelsString, 1024, json_object_get_string(model));
+        strbufAppend(modelsString, 1024, "\n");
     }
 
     set(app, MUIA_Application_RexxString, modelsString);

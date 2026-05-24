@@ -24,8 +24,7 @@ HOOKPROTONHNONP(APIKeyRequesterOkButtonClickedFunc, void) {
         FreeVec(config.openAiApiKey);
         config.openAiApiKey = NULL;
     }
-    config.openAiApiKey = AllocVec(strlen(apiKey) + 1, MEMF_CLEAR);
-    strncpy(config.openAiApiKey, apiKey, strlen(apiKey));
+    config.openAiApiKey = configDupString(apiKey);
     FreeVec(apiKey);
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
