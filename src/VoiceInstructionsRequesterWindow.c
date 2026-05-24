@@ -25,10 +25,7 @@ HOOKPROTONHNONP(VoiceInstructionsRequesterOkButtonClickedFunc, void) {
         FreeVec(config.openAIVoiceInstructions);
         config.openAIVoiceInstructions = NULL;
     }
-    config.openAIVoiceInstructions =
-        AllocVec(strlen(voiceInstructions) + 1, MEMF_CLEAR);
-    strncpy(config.openAIVoiceInstructions, voiceInstructions,
-            strlen(voiceInstructions));
+    config.openAIVoiceInstructions = configDupString(voiceInstructions);
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
     }

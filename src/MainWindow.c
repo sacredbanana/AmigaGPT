@@ -519,15 +519,12 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         }
         STRPTR responseString = getMessageContentFromJson(
             responses[0], FALSE, FALSE, API_ENDPOINT_RESPONSES);
-        generatedImage->name =
-            AllocVec(strlen(responseString) + 1, MEMF_ANY | MEMF_CLEAR);
-        strncpy(generatedImage->name, responseString, strlen(responseString));
+        generatedImage->name = configDupString(responseString);
         updateStatusBar(STRING_READY, 5);
         json_object_put(responses[0]);
         FreeVec(responses);
     } else {
-        generatedImage->name = AllocVec(11, MEMF_ANY | MEMF_CLEAR);
-        strncpy(generatedImage->name, id, 10);
+        generatedImage->name = configDupString(id);
         updateStatusBar(STRING_READY, 5);
         if (responses != NULL) {
             FreeVec(responses);
@@ -536,11 +533,30 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     }
     freeConversation(imageNameConversation);
 
-    generatedImage->filePath =
-        AllocVec(strlen(fullPath) + 1, MEMF_ANY | MEMF_CLEAR);
-    strncpy(generatedImage->filePath, fullPath, strlen(fullPath));
-    generatedImage->prompt = AllocVec(strlen(text) + 1, MEMF_ANY | MEMF_CLEAR);
-    strncpy(generatedImage->prompt, text, strlen(text));
+    generatedImage->filePath = configDupString(fullPath);
+    generatedImage->prompt = configDupString(text);
+    if (generatedImage->name == NULL || generatedImage->filePath == NULL ||
+        generatedImage->prompt == NULL) {
+        if (generatedImage->name != NULL) {
+            FreeVec(generatedImage->name);
+        }
+        if (generatedImage->filePath != NULL) {
+            FreeVec(generatedImage->filePath);
+        }
+        if (generatedImage->prompt != NULL) {
+            FreeVec(generatedImage->prompt);
+        }
+        FreeVec(generatedImage);
+        set(createImageButton, MUIA_Disabled, FALSE);
+        set(newImageButton, MUIA_Disabled, FALSE);
+        set(deleteImageButton, MUIA_Disabled, FALSE);
+        set(imageInputTextEditor, MUIA_Disabled, FALSE);
+        if (!isAROS) {
+            FreeVec(text);
+        }
+        displayError(STRING_ERROR_GENERATING_IMAGE_NAME);
+        return;
+    }
     generatedImage->imageModel = config.imageModel;
     generatedImage->width = imageWidth;
     generatedImage->height = imageHeight;
@@ -1691,9 +1707,7 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
                 if (currentConversation->name == NULL &&
                     responseString != NULL) {
                     currentConversation->name =
-                        AllocVec(strlen(responseString) + 1, MEMF_CLEAR);
-                    strncpy(currentConversation->name, responseString,
-                            strlen(responseString));
+                        configDupString(responseString);
                     conversationRefreshNameListDisplay(currentConversation);
                 }
                 DoMethod(conversationListObject, MUIM_NList_InsertSingle,
@@ -2063,9 +2077,10 @@ copyConversation(struct Conversation *conversation) {
                               conversationNode->role);
     }
     if (conversation->name != NULL) {
-        copy->name = AllocVec(strlen(conversation->name) + 1, MEMF_CLEAR);
-        strncpy(copy->name, conversation->name, strlen(conversation->name));
-        conversationRefreshNameListDisplay(copy);
+        copy->name = configDupString(conversation->name);
+        if (copy->name != NULL) {
+            conversationRefreshNameListDisplay(copy);
+        }
     }
     return copy;
 }
@@ -2079,15 +2094,9 @@ static struct GeneratedImage *
 copyGeneratedImage(struct GeneratedImage *generatedImage) {
     struct GeneratedImage *newEntry =
         AllocVec(sizeof(struct GeneratedImage), MEMF_CLEAR);
-    newEntry->name = AllocVec(strlen(generatedImage->name) + 1, MEMF_CLEAR);
-    strncpy(newEntry->name, generatedImage->name, strlen(generatedImage->name));
-    newEntry->filePath =
-        AllocVec(strlen(generatedImage->filePath) + 1, MEMF_CLEAR);
-    strncpy(newEntry->filePath, generatedImage->filePath,
-            strlen(generatedImage->filePath));
-    newEntry->prompt = AllocVec(strlen(generatedImage->prompt) + 1, MEMF_CLEAR);
-    strncpy(newEntry->prompt, generatedImage->prompt,
-            strlen(generatedImage->prompt));
+    newEntry->name = configDupString(generatedImage->name);
+    newEntry->filePath = configDupString(generatedImage->filePath);
+    newEntry->prompt = configDupString(generatedImage->prompt);
     newEntry->imageModel = generatedImage->imageModel;
     newEntry->width = generatedImage->width;
     newEntry->height = generatedImage->height;
@@ -2340,9 +2349,14 @@ static LONG loadConversations() {
         }
 
         struct Conversation *conversation = newConversation();
-        conversation->name =
-            AllocVec(strlen(conversationName) + 1, MEMF_ANY | MEMF_CLEAR);
-        strncpy(conversation->name, conversationName, strlen(conversationName));
+        conversation->name = configDupString(conversationName);
+        if (conversation->name == NULL) {
+            freeConversation(conversation);
+            displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
+            FreeVec(conversationsJsonString);
+            json_object_put(conversationsJsonArray);
+            return RETURN_ERROR;
+        }
         conversationRefreshNameListDisplay(conversation);
 
         set(conversationListObject, MUIA_NList_Quiet, TRUE);

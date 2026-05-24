@@ -176,8 +176,7 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
         config.elevenLabsAPIKey = NULL;
     }
     if (apiKey != NULL && strlen(apiKey) > 0) {
-        config.elevenLabsAPIKey = AllocVec(strlen(apiKey) + 1, MEMF_CLEAR);
-        strncpy(config.elevenLabsAPIKey, apiKey, strlen(apiKey));
+        config.elevenLabsAPIKey = configDupString(apiKey);
     }
 
     /* Save selected model */
@@ -196,9 +195,7 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
                 config.elevenLabsModelName = NULL;
             }
             config.elevenLabsModelName =
-                AllocVec(strlen(selectedModelName) + 1, MEMF_CLEAR);
-            strncpy(config.elevenLabsModelName, selectedModelName,
-                    strlen(selectedModelName));
+                configDupString(selectedModelName);
 
             /* Find and save the model ID */
             struct json_object *modelsArray = NULL;
@@ -227,10 +224,8 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
                                     config.elevenLabsModel = NULL;
                                 }
                                 if (modelId != NULL) {
-                                    config.elevenLabsModel = AllocVec(
-                                        strlen(modelId) + 1, MEMF_CLEAR);
-                                    strncpy(config.elevenLabsModel, modelId,
-                                            strlen(modelId));
+                                    config.elevenLabsModel =
+                                        configDupString(modelId);
                                 }
                             }
                             break;
@@ -257,9 +252,7 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
                 config.elevenLabsVoiceName = NULL;
             }
             config.elevenLabsVoiceName =
-                AllocVec(strlen(selectedVoiceName) + 1, MEMF_CLEAR);
-            strncpy(config.elevenLabsVoiceName, selectedVoiceName,
-                    strlen(selectedVoiceName));
+                configDupString(selectedVoiceName);
 
             /* Find and save the voice ID */
             struct json_object *voicesArray = NULL;
@@ -288,10 +281,8 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
                                     config.elevenLabsVoiceID = NULL;
                                 }
                                 if (voiceId != NULL) {
-                                    config.elevenLabsVoiceID = AllocVec(
-                                        strlen(voiceId) + 1, MEMF_CLEAR);
-                                    strncpy(config.elevenLabsVoiceID, voiceId,
-                                            strlen(voiceId));
+                                    config.elevenLabsVoiceID =
+                                        configDupString(voiceId);
                                 }
                             }
                             break;

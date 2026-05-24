@@ -54,8 +54,7 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         FreeVec(config.customHost);
         config.customHost = NULL;
     }
-    config.customHost = AllocVec(strlen(customServerHost) + 1, MEMF_CLEAR);
-    strncpy(config.customHost, customServerHost, strlen(customServerHost));
+    config.customHost = configDupString(customServerHost);
 
     LONG port;
     get(customServerPortString, MUIA_String_Integer, &port);
@@ -75,9 +74,7 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         FreeVec(config.customApiKey);
         config.customApiKey = NULL;
     }
-    config.customApiKey = AllocVec(strlen(customServerApiKey) + 1, MEMF_CLEAR);
-    strncpy(config.customApiKey, customServerApiKey,
-            strlen(customServerApiKey));
+    config.customApiKey = configDupString(customServerApiKey);
 
     STRPTR customServerChatModel;
     get(customServerChatModelString, MUIA_String_Contents,
@@ -86,10 +83,7 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         FreeVec(config.customChatModel);
         config.customChatModel = NULL;
     }
-    config.customChatModel =
-        AllocVec(strlen(customServerChatModel) + 1, MEMF_CLEAR);
-    strncpy(config.customChatModel, customServerChatModel,
-            strlen(customServerChatModel));
+    config.customChatModel = configDupString(customServerChatModel);
 
     LONG apiEndpoint;
     get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
@@ -104,9 +98,7 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
         config.customApiEndpointUrl = NULL;
     }
     config.customApiEndpointUrl =
-        AllocVec(strlen(customServerApiEndpointUrl) + 1, MEMF_CLEAR);
-    strncpy(config.customApiEndpointUrl, customServerApiEndpointUrl,
-            strlen(customServerApiEndpointUrl));
+        configDupString(customServerApiEndpointUrl);
 
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);

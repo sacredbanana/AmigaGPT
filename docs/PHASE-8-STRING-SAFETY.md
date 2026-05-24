@@ -48,6 +48,10 @@ R2 ist **nicht abgeschlossen**. Vor Phase-8-Start festgehalten (2026-05):
 | Rexx list buffers | `ARexx.c` `strbufAppend` | niedrig | **Fix 8.2** |
 | `displayError` alloc | `gui.c` | mittel | **Fix 8.2** |
 | API key requester | `APIKeyRequesterWindow.c` | niedrig | **Fix 8.2** |
+| Proxy / Custom server requester | `*RequesterWindow.c` | mittel | **Fix 8.3** |
+| Chat system / Voice instructions | `*RequesterWindow.c` | niedrig | **Fix 8.3** |
+| ElevenLabs settings | `ElevenLabsSettingsRequesterWindow.c` | niedrig | **Fix 8.3** |
+| Image create/copy + conversation copy/load | `MainWindow.c` | mittel | **Fix 8.3** |
 
 ---
 
@@ -66,10 +70,14 @@ R2 ist **nicht abgeschlossen**. Vor Phase-8-Start festgehalten (2026-05):
 - `displayError`: Alloc-Größen, OOM-Guard, `errorTitle` freigeben.
 - `APIKeyRequesterWindow.c`: `configDupString` statt `strncpy`.
 
-### 8.3+ (geplant)
+### 8.3 (2026-05) — Requester + Copy-Pfade
 
-- Weitere Requester (`ProxySettings`, `CustomServer`, …) auf `configDupString` umstellen.
-- `strncpy` in `copyConversation` / Bild-Pfaden prüfen.
+- Alle verbleibenden Config-Requester: `ProxySettings`, `CustomServer`, `ChatSystem`, `VoiceInstructions`, `ElevenLabsSettings` → `configDupString`.
+- `MainWindow.c`: neues Bild (`configDupString` + OOM), `copyGeneratedImage`, `copyConversation`, Chat-History-Laden, Auto-Titel.
+
+### 8.4+ (optional)
+
+- `menu.c` `speechAccent` / Rexx-Pfade; verbleibende `strncpy` in `gui.c` / `openai.c` (feste Puffer).
 - Host-Tests nur wo schon `src/test/` (kein Pflicht-DoD für MorphOS).
 
 ---
@@ -82,4 +90,4 @@ R2 ist **nicht abgeschlossen**. Vor Phase-8-Start festgehalten (2026-05):
 
 ---
 
-*Stand: 2026-05-24 — Phase 8.1+8.2; R2-Rest dokumentiert; 8.3 optional.*
+*Stand: 2026-05-24 — Phase 8.1–8.3; R2-Rest dokumentiert; 8.4 optional.*

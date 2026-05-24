@@ -21,8 +21,7 @@ HOOKPROTONHNONP(ProxySettingsRequesterOkButtonClickedFunc, void) {
         FreeVec(config.proxyHost);
         config.proxyHost = NULL;
     }
-    config.proxyHost = AllocVec(strlen(proxyHost) + 1, MEMF_CLEAR);
-    strncpy(config.proxyHost, proxyHost, strlen(proxyHost));
+    config.proxyHost = configDupString(proxyHost);
 
     LONG port;
     get(proxyPortString, MUIA_String_Integer, &port);
@@ -46,8 +45,7 @@ HOOKPROTONHNONP(ProxySettingsRequesterOkButtonClickedFunc, void) {
         FreeVec(config.proxyUsername);
         config.proxyUsername = NULL;
     }
-    config.proxyUsername = AllocVec(strlen(proxyUsername) + 1, MEMF_CLEAR);
-    strncpy(config.proxyUsername, proxyUsername, strlen(proxyUsername));
+    config.proxyUsername = configDupString(proxyUsername);
 
     STRPTR proxyPassword;
     get(proxyPasswordString, MUIA_String_Contents, &proxyPassword);
@@ -55,8 +53,7 @@ HOOKPROTONHNONP(ProxySettingsRequesterOkButtonClickedFunc, void) {
         FreeVec(config.proxyPassword);
         config.proxyPassword = NULL;
     }
-    config.proxyPassword = AllocVec(strlen(proxyPassword) + 1, MEMF_CLEAR);
-    strncpy(config.proxyPassword, proxyPassword, strlen(proxyPassword));
+    config.proxyPassword = configDupString(proxyPassword);
 
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
