@@ -190,7 +190,7 @@ make -f Makefile.MorphOS              # bump BUILD_NUMBER; Anzeige 2.18.<build> 
 | Phase | Inhalt | Abhängigkeit |
 |-------|--------|--------------|
 | **R1–R2** | Stream-Ende, UI-Sync, WANT_READ weich | parallel zu 7c/8 — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
-| **7c** | Mausrad-Scroll im Chat (NFloattext) | optional, klein |
+| **7c** | Mausrad-Scroll im Chat (NFloattext) | ✓ erledigt |
 | **8–10** | String-Safety, optionale Logs, formale DoD | 7a/7b ✓ |
 | **11** | Syntax-Highlighting (`SCI_SETLEXER`), Komfort — **`Scintilla.guide` von MorphOS hilfreich** | 8–10 stabil |
 | **12** | Chat-Ausgabe: NFloattext → Scintilla + TTEngine | Scintilla im Projekt bewährt |

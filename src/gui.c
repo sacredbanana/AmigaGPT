@@ -974,6 +974,7 @@ void shutdownGUI() {
         DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 
 #ifndef DAEMON
+        chatOutputWheelShutdown();
 #ifdef __MORPHOS__
         codeBlocksViewerPrepareShutdown();
 #endif

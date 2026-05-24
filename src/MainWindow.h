@@ -33,6 +33,9 @@ extern LONG deleteButtonPen;
  **/
 LONG createMainWindow();
 
+/** Phase 7c: remove chat wheel event handler before MUI_DisposeObject(app). */
+void chatOutputWheelShutdown(void);
+
 /** Current chat (NULL if none). For tools like the code-block viewer. */
 struct Conversation *getCurrentConversation(void);
 

@@ -1,6 +1,8 @@
+#include <devices/inputevent.h>
 #include <devices/printer.h>
 #include <devices/prtbase.h>
 #include <devices/trackdisk.h>
+#include <libraries/mui.h>
 #include <json-c/json.h>
 #include <mui/BetterString_mcc.h>
 #include <mui/Busy_mcc.h>
@@ -109,6 +111,8 @@ static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
                          StyleType *foundStyle);
 static PICTURE *generateThumbnail(struct GeneratedImage *image);
 static void addMainWindowActions();
+static Object *newChatOutputFloattextObject(void);
+static void installChatOutputWheelHandler(void);
 
 HOOKPROTONHNO(ConstructConversationLI_TextFunc, APTR,
               struct NList_ConstructMessage *ncm) {
@@ -958,6 +962,157 @@ static STRPTR formatAssistantTextForDisplay(CONST_STRPTR input) {
     return convertMarkdownFormattingToMUI(input);
 }
 
+/* Phase 7c: mouse wheel on chat NFloattext (HandleInput + window EH on same class) */
+static struct MUI_CustomClass *chatOutputFloattextClass;
+static struct MUI_EventHandlerNode *chatOutputWheelEH;
+static BOOL chatOutputWheelEHInstalled;
+
+static LONG chatOutputWheelScrollCommand(struct MUIP_HandleInput *msg) {
+    if (msg == NULL) {
+        return 0;
+    }
+    if (msg->muikey == MUIKEY_UP) {
+        return MUIV_NList_First_Up;
+    }
+    if (msg->muikey == MUIKEY_DOWN) {
+        return MUIV_NList_First_Down;
+    }
+    if (msg->muikey == MUIKEY_PAGEUP) {
+        return MUIV_NList_First_PageUp;
+    }
+    if (msg->muikey == MUIKEY_PAGEDOWN) {
+        return MUIV_NList_First_PageDown;
+    }
+    if (msg->imsg != NULL) {
+        BOOL shift =
+            (msg->imsg->Qualifier &
+             (IEQUALIFIER_LSHIFT | IEQUALIFIER_RSHIFT)) != 0;
+        UWORD code = msg->imsg->Code;
+
+        if (msg->imsg->Class == IDCMP_RAWKEY ||
+            msg->imsg->Class == IECLASS_RAWKEY ||
+            msg->imsg->Class == IECLASS_NEWMOUSE) {
+            switch (code) {
+            case NM_WHEEL_UP:
+                return shift ? MUIV_NList_First_PageUp : MUIV_NList_First_Up;
+            case NM_WHEEL_DOWN:
+                return shift ? MUIV_NList_First_PageDown
+                             : MUIV_NList_First_Down;
+            default:
+                break;
+            }
+        }
+    }
+    return 0;
+}
+
+SAVEDS static ULONG ChatOutputFloattext_HandleInput(struct IClass *cl, Object *obj,
+                                                   struct MUIP_HandleInput *msg) {
+    LONG cmd = chatOutputWheelScrollCommand(msg);
+
+    if (cmd != 0) {
+        set(obj, MUIA_NList_First, cmd);
+        return TRUE;
+    }
+    return DoSuperMethodA(cl, obj, msg);
+}
+
+SAVEDS static ULONG ChatOutputFloattext_HandleEvent(struct IClass *cl, Object *obj,
+                                                    struct MUIP_HandleEvent *msg) {
+    struct MUIP_HandleInput inputMsg;
+    LONG cmd;
+
+    inputMsg.MethodID = MUIM_HandleInput;
+    inputMsg.imsg = msg->imsg;
+    inputMsg.muikey = msg->muikey;
+    cmd = chatOutputWheelScrollCommand(&inputMsg);
+    if (cmd != 0) {
+        set(obj, MUIA_NList_First, cmd);
+        return MUI_EventHandlerRC_Eat;
+    }
+    return DoSuperMethodA(cl, obj, msg);
+}
+
+DISPATCHER(ChatOutputFloattextDispatcher) {
+    switch (msg->MethodID) {
+    case MUIM_HandleInput:
+        return ChatOutputFloattext_HandleInput(cl, obj, (APTR)msg);
+    case MUIM_HandleEvent:
+        return ChatOutputFloattext_HandleEvent(cl, obj, (APTR)msg);
+    }
+    return DoSuperMethodA(cl, obj, msg);
+}
+
+static LONG createChatOutputFloattextClass(void) {
+    if (chatOutputFloattextClass != NULL) {
+        return RETURN_OK;
+    }
+    chatOutputFloattextClass = MUI_CreateCustomClass(
+        NULL, MUIC_NFloattext, NULL, 0, ENTRY(ChatOutputFloattextDispatcher));
+    if (chatOutputFloattextClass == NULL) {
+        return RETURN_ERROR;
+    }
+    chatOutputFloattextClass->mcc_Class->cl_ID =
+        (ClassID) "AmigaGPTChatOutputFloattext";
+    return RETURN_OK;
+}
+
+static void deleteChatOutputFloattextClass(void) {
+    if (chatOutputFloattextClass != NULL) {
+        MUI_DeleteCustomClass(chatOutputFloattextClass);
+        chatOutputFloattextClass = NULL;
+    }
+}
+
+static void installChatOutputWheelHandler(void) {
+    if (chatOutputWheelEHInstalled || chatOutputTextEditor == NULL ||
+        mainWindowObject == NULL || chatOutputFloattextClass == NULL) {
+        return;
+    }
+    if (chatOutputWheelEH == NULL) {
+        chatOutputWheelEH = (struct MUI_EventHandlerNode *)AllocVec(
+            sizeof(struct MUI_EventHandlerNode), MEMF_PUBLIC | MEMF_CLEAR);
+        if (chatOutputWheelEH == NULL) {
+            return;
+        }
+        chatOutputWheelEH->ehn_Class = chatOutputFloattextClass->mcc_Class;
+        chatOutputWheelEH->ehn_Object = chatOutputTextEditor;
+        chatOutputWheelEH->ehn_Events = IDCMP_RAWKEY;
+        chatOutputWheelEH->ehn_Flags = MUI_EHF_GUIMODE;
+        chatOutputWheelEH->ehn_Priority = 100;
+    }
+    DoMethod(mainWindowObject, MUIM_Window_AddEventHandler, chatOutputWheelEH);
+    chatOutputWheelEHInstalled = TRUE;
+}
+
+void chatOutputWheelShutdown(void) {
+    if (chatOutputWheelEHInstalled && mainWindowObject != NULL &&
+        chatOutputWheelEH != NULL) {
+        DoMethod(mainWindowObject, MUIM_Window_RemEventHandler, chatOutputWheelEH);
+    }
+    chatOutputWheelEHInstalled = FALSE;
+    if (chatOutputWheelEH != NULL) {
+        FreeVec(chatOutputWheelEH);
+        chatOutputWheelEH = NULL;
+    }
+    deleteChatOutputFloattextClass();
+}
+
+static Object *newChatOutputFloattextObject(void) {
+    if (createChatOutputFloattextClass() == RETURN_OK) {
+        return (Object *)NewObject(chatOutputFloattextClass->mcc_Class, NULL,
+            MUIA_Font,
+            config.fixedWidthFonts ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
+            MUIA_Frame, MUIV_Frame_Text, MUIA_ContextMenu, NULL,
+            MUIA_NFloattext_Text, chatOutputTextEditorContents, TAG_DONE);
+    }
+    return (Object *)MUI_NewObject(
+        MUIC_NFloattext, MUIA_Font,
+        config.fixedWidthFonts ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
+        MUIA_Frame, MUIV_Frame_Text, MUIA_ContextMenu, NULL,
+        MUIA_NFloattext_Text, chatOutputTextEditorContents, TAG_DONE);
+}
+
 /**
  * Create the main window
  * @return RETURN_OK on success, RETURN_ERROR on failure
@@ -966,6 +1121,7 @@ LONG createMainWindow() {
     if ((isMUI5 || isMUI39) && createAmigaGPTTextEditor() == RETURN_ERROR) {
         displayError("Could not create custom class.");
     }
+    (void)createChatOutputFloattextClass();
 
     if (mainWindowObject != NULL) {
         MUI_DisposeObject(mainWindowObject);
@@ -1076,12 +1232,9 @@ LONG createMainWindow() {
                                 Child, chatOutputListView = NListviewObject,
                                 MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_None,
                                 MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
-                                MUIA_NListview_NList, chatOutputTextEditor = NFloattextObject,
-                                    MUIA_Font, config.fixedWidthFonts ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
-                                    MUIA_Frame, MUIV_Frame_Text,
-                                    MUIA_ContextMenu, NULL,
-                                    MUIA_NFloattext_Text, chatOutputTextEditorContents,
-                                    End,
+                                MUIA_NListview_NList,
+                                    chatOutputTextEditor =
+                                        newChatOutputFloattextObject(),
                                 End,
                             End,
                             Child, HGroup, MUIA_VertWeight, 20,
@@ -1247,6 +1400,8 @@ LONG createMainWindow() {
 
     loadConversations();
     loadImages();
+
+    installChatOutputWheelHandler();
 
     return RETURN_OK;
 }

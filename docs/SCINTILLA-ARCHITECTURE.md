@@ -13,7 +13,7 @@ SDK nativ (MorphOS) vs. WSL, `MUIM_Scintilla_Command`, Inventar `devfiles.txt`: 
 | Phase | Status / Inhalt |
 |-------|-----------------|
 | **1–5** | Ziel, Datenmodell, Stream, Fences, GUI-Grundlagen |
-| **6–10** | Scintilla **Code-Viewer** v0.1 — **6, 7a, 7b erledigt** (MorphOS, 2026-05); **7c** offen; **8–10** offen (Safety/Logs/DoD) |
+| **6–10** | Scintilla **Code-Viewer** v0.1 — **6, 7a, 7b, 7c erledigt** (MorphOS, 2026-05); **8–10** offen (Safety/Logs/DoD) |
 | **R1–R4** | **Stream- & Chat-Recovery** — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) (parallel zu 7c/8–10, vorrangig R1+R2) |
 | **11** | Komfort am Code-Viewer (Lexer, Highlighting, Tabs, Export) |
 | **12** | **Hauptfenster Chat-Ausgabe** → Scintilla.mcc + TTEngine (UTF-8, ohne NFloattext/codesets für diese Fläche) |
@@ -197,7 +197,7 @@ Die Kapitel **6–10** sind **ein** Release-Schritt, keine fünf getrennte Meile
 | **9** | Optional: Debug-Logs (nicht Blocker für v0.1) |
 | **10** | Definition of Done für den Code-Viewer |
 
-**Nächster Implementierungsschritt (Empfehlung):** [Stream-Recovery R1+R2](STREAM-RECOVERY.md), optional parallel **7c** (Mausrad Chat). Danach **Phase 8–10** (String-Safety, Logs, DoD), **11**, **12** (Chat-Scintilla), **13**. Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
+**Nächster Implementierungsschritt (Empfehlung):** [Stream-Recovery R1+R2](STREAM-RECOVERY.md). Danach **Phase 8–10** (String-Safety, Logs, DoD), **11**, **12** (Chat-Scintilla), **13**. Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
 
 ### Umgesetzt (Phase 6, Branch scintilla — auf MorphOS validiert)
 
@@ -342,7 +342,7 @@ Button-Beschriftung **ohne** „Code block“ (Kontext: Code-Blöcke-Fenster). A
 
 1. ~~**7a**~~ — erledigt (NList, Scintilla, Copy-Button, Menü-Ghosting, Speicher-Dismiss).
 2. ~~**7b**~~ — erledigt (Copy/Save UTF-8 + System, ASL, vier Buttons).
-3. **7c** — Mausrad → Chat-NListview/NFloattext scrollen (optional, klein).
+3. **7c** — Mausrad → Chat-NListview/NFloattext scrollen ✓.
 4. **Phase 8** — Buffer/`snprintf` beim Umbau prüfen (100 KB-Grenze, dynamische Pfade).
 5. **Phase 9** — optional Logs.
 6. **Phase 10** — DoD-Checkliste abhaken.
@@ -353,15 +353,11 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 
 ---
 
-### Phase 7c — Chat-Ausgabe: Mausrad-Scroll (geplant, unabhängig von 7b)
+### Phase 7c — Chat-Ausgabe: Mausrad-Scroll ✓ (2026-05)
 
-**Problem (Ist, auch ohne Scintilla-Branch):** `chatOutputListView` + `NFloattext` — **vertikale Scrollbar** der NListview scrollt; **Mausrad** tut nichts. Kein Regression aus 7a; optionaler UX-Fix.
+**Umgesetzt:** `MainWindow.c` — Fenster-Event-Handler (`IDCMP_RAWKEY`, NewMouse `NM_WHEEL_*` / MUIKEY_UP|DOWN) scrollt `chatOutputListView` per `MUIA_NList_First` (`Up`/`Down`, mit Shift `PageUp`/`PageDown`), nur wenn der Mauszeiger über der Chat-Liste liegt.
 
-**Ziel:** Mausrad über der Chat-Ausgabe scrollt wie die Scrollbar (Zeilen/Seiten über NList-API, z. B. `MUIM_Wheel` / `MUIA_NList_First` / `MUIM_NList_Scroll` — konkrete Tags an MUI-Version anpassen).
-
-**Ort:** `MainWindow.c` — `chatOutputListView` / eingebettetes `chatOutputTextEditor` (NFloattext).
-
-**Abgrenzung:** **Phase 12** ersetzt die Chat-**Ausgabe** durch Scintilla; 7c betrifft bis dahin das bestehende NFloattext-Setup.
+**Abgrenzung:** **Phase 12** ersetzt die Chat-**Ausgabe** durch Scintilla; 7c betrifft bis dahin das NFloattext-Setup.
 
 **Priorität:** nach **7b** oder parallel, kleiner Scope (ein Notify-Hook, kein Datenmodell).
 
