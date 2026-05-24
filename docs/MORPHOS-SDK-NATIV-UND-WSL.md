@@ -143,7 +143,8 @@ DoMethodA(sci, (Msg)&cmd);
 | Copy/Save UTF-8 + System-Codeset (7b) | **Erledigt** (MorphOS, inkl. Quit mit offenem Viewer) |
 | Cross-Build `Makefile.MorphOS` + Daemon ohne Viewer | **Erledigt** |
 | Stream/Chat-Sync, WANT_READ (Recovery R1–R2) | **Offen** — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
-| String-Safety / Logs (Phase 8–9) | **Offen** |
+| String-Safety (Phase 8) | **In Arbeit** — [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md) (8.1); R2-Rest dokumentiert |
+| Logs (Phase 9) | **Offen** |
 | Vollständiges DoD Phase 10 (formal) | **Offen** |
 
 Chat-Hauptfenster bleibt **NFloattext** bis Phase 12.

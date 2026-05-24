@@ -2033,7 +2033,8 @@ void displayConversation(struct Conversation *conversation) {
         CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
         (Tag)chatOutputTextEditorContents, CSA_MapForeignChars, TRUE, TAG_DONE);
 
-    snprintf(chatOutputTextEditorContents, WRITE_BUFFER_LENGTH, "%s\0",
+    snprintf(chatOutputTextEditorContents,
+             CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "%s",
              convertedConversationString);
 
     CodesetsFreeA(convertedConversationString, NULL);

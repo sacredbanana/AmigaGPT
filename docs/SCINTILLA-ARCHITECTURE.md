@@ -197,7 +197,7 @@ Die Kapitel **6–10** sind **ein** Release-Schritt, keine fünf getrennte Meile
 | **9** | Optional: Debug-Logs (nicht Blocker für v0.1) |
 | **10** | Definition of Done für den Code-Viewer |
 
-**Nächster Implementierungsschritt (Empfehlung):** [Stream-Recovery R1+R2](STREAM-RECOVERY.md). Danach **Phase 8–10** (String-Safety, Logs, DoD), **11**, **12** (Chat-Scintilla), **13**. Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
+**Aktuell:** [Phase 8 — String-Safety](PHASE-8-STRING-SAFETY.md) (in Arbeit). Recovery: R1/R3 erledigt; **R2-Rest** (R2.1/R2.3/R2.4) dokumentiert, nicht blockierend. R4 optional. Danach **9–10**, **11**, **12** (Chat-Scintilla), **13**. Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
 
 ### Umgesetzt (Phase 6, Branch scintilla — auf MorphOS validiert)
 
@@ -367,7 +367,9 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 
 ## Phase 8 — String- und Sicherheitsdisziplin
 
-**Hinweis:** [Stream- & Chat-Recovery (R1–R4)](STREAM-RECOVERY.md) ist **kein** Unterpunkt von Phase 8, sondern ein **parallel priorisierter Track** (vor allem R1+R2 vor dem reinen Safety-Sweep). Recovery nutzt Phase-8-Regeln, ersetzt sie aber nicht.
+**In Arbeit (2026-05):** [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md) — Audit, R2-Rest-Verweis, erster Fix-Sweep (8.1).
+
+**Hinweis:** [Stream- & Chat-Recovery (R1–R4)](STREAM-RECOVERY.md) ist **kein** Unterpunkt von Phase 8. **R2** nur teilweise erledigt (R2.2); Rest siehe Phase-8-Doc.
 
 **Vermeiden:**
 

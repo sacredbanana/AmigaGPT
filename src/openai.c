@@ -52,6 +52,29 @@ static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage);
 static BOOL sslWaitForReadReady(LONG sock, ULONG *stallCount);
 static BOOL streamBatchHasCompleted(struct json_object **responses, UWORD count);
 
+static void appendToReadBuffer(UBYTE *buf, ULONG capacity, ULONG *used,
+                               const void *chunk, ULONG chunkLen) {
+    ULONG space;
+    ULONG n;
+
+    if (buf == NULL || used == NULL || chunk == NULL || chunkLen == 0) {
+        return;
+    }
+    if (*used >= capacity - 1) {
+        return;
+    }
+    space = capacity - 1 - *used;
+    n = chunkLen;
+    if (n > space) {
+        n = space;
+    }
+    if (n > 0) {
+        CopyMem(chunk, buf + *used, n);
+        *used += n;
+        buf[*used] = '\0';
+    }
+}
+
 /** OpenAI chat SSE still active on the current TLS connection. */
 static BOOL chatStreamInProgress = FALSE;
 
@@ -620,8 +643,8 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
         }
 
         if (bytesRead > 0) {
-            strncat(readBuffer, tempReadBuffer, bytesRead);
-            totalBytesRead += bytesRead;
+            appendToReadBuffer(readBuffer, READ_BUFFER_LENGTH, &totalBytesRead,
+                               tempReadBuffer, (ULONG)bytesRead);
         } else {
             doneReading = TRUE;
         }
@@ -1329,8 +1352,11 @@ struct json_object *postImageCreationRequestToOpenAI(
             snprintf(statusMessage, sizeof(statusMessage), "%s (%lu %s)",
                      STRING_DOWNLOADING_IMAGE, totalBytesRead, STRING_BYTES);
             updateStatusBar(statusMessage, yellowPen);
-            if (!foundJson) {
-                strcat(readBuffer, tempReadBuffer);
+            if (!foundJson && bytesRead > 0) {
+                ULONG rbUsed = strlen((char *)readBuffer);
+
+                appendToReadBuffer(readBuffer, READ_BUFFER_LENGTH, &rbUsed,
+                                   tempReadBuffer, (ULONG)bytesRead);
             }
             if (useSSL) {
                 err = SSL_get_error(ssl, bytesRead);
@@ -1476,15 +1502,17 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
     // Find the first slash after http:// or https:// to separate host and path
     CONST_STRPTR pathStart = strchr(urlStart, '/');
     if (pathStart == NULL) {
-        // URL doesn't have a path, use '/' as default
-        strcpy(hostString, urlStart);
-        strcpy(pathString, "/");
+        snprintf((char *)hostString, sizeof(hostString), "%s", urlStart);
+        snprintf((char *)pathString, sizeof(pathString), "/");
     } else {
-        // Copy host and path into separate strings
-        ULONG hostLength = pathStart - urlStart;
-        strncpy(hostString, urlStart, hostLength);
-        hostString[hostLength] = '\0'; // Null-terminate the host string
-        strcpy(pathString, pathStart); // The rest is the path
+        ULONG hostLength = (ULONG)(pathStart - urlStart);
+
+        if (hostLength >= sizeof(hostString)) {
+            hostLength = sizeof(hostString) - 1;
+        }
+        CopyMem(urlStart, hostString, hostLength);
+        hostString[hostLength] = '\0';
+        snprintf((char *)pathString, sizeof(pathString), "%s", pathStart);
     }
 
     STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
@@ -2524,7 +2552,8 @@ static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage) {
     ULONG originalLength = strlen(rawMessage);
     STRPTR messageCopy = AllocVec(originalLength + 1, MEMF_ANY);
     if (messageCopy != NULL) {
-        strcpy(messageCopy, rawMessage);
+        CopyMem((APTR)rawMessage, messageCopy, originalLength);
+        messageCopy[originalLength] = '\0';
     }
     return messageCopy;
 }

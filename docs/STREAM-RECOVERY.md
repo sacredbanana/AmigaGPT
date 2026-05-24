@@ -15,7 +15,7 @@ Eigenständiger Planabschnitt für den Branch **scintilla**. Ergänzt [SCINTILLA
 | Phase | Inhalt | Priorität |
 |-------|--------|-----------|
 | **R1** | Einheitliches Stream-Ende + UI-Sync (Chat = Modell) | hoch — **umgesetzt** (2026-05) |
-| **R2** | Transport: WANT_READ / partieller Stream weich beenden | hoch — **R2.2 teilweise** (mit R1: kein SSL-Dialog bei vorhandenen Daten) |
+| **R2** | Transport: WANT_READ / partieller Stream weich beenden | hoch — **teilweise** (R2.2 erledigt; **R2.1/R2.3/R2.4 offen** → [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md#recovery-r2--rest-bewusst-zurückgestellt)) |
 | **R3** | Stream-UI-Last (Freeze reduzieren) | mittel — **umgesetzt** (2026-05) |
 | **R4** | Fence-Heuristik + Logs (optional) | niedrig |
 
@@ -198,6 +198,17 @@ void finishChatStream(enum ChatStreamOutcome outcome,
 
 **DoD R2:** Simulierter Abbruch / langsames Netz — kein SSL-Dialog wenn Antworttext schon im Chat-Modell; Status „unvollständig“.
 
+### R2 — Offen (Stand 2026-05, Phase 8 parallel)
+
+| ID | Status | Kurz |
+|----|--------|------|
+| R2.1 | **offen** | PARTIAL/FAILED-Outcome aus Transport zurück an `sendChatMessage` |
+| R2.2 | **erledigt** | WANT_READ: kein `displayError` bei vorhandenen Daten |
+| R2.3 | **offen** | Frühes `doneReading` ohne `response.completed` prüfen |
+| R2.4 | **teilweise** | `finishChatStream(PARTIAL)` — mit R2.1 verfeinern |
+
+Details: [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md#recovery-r2--rest-bewusst-zurückgestellt).
+
 ---
 
 ## Phase R3 — Stream-UI-Last
@@ -271,4 +282,4 @@ void finishChatStream(enum ChatStreamOutcome outcome,
 
 ---
 
-*Stand: 2026-05-24 — Plan nach MorphOS-Tests (7b inkl. Save/Quit, Kyrillisch, WANT_READ, Chat vs. Code-Viewer). Shutdown-Fix umgesetzt; Recovery R1–R4 noch offen.*
+*Stand: 2026-05-24 — R1/R3 erledigt; R2 teilweise (Rest dokumentiert); R4 optional zurückgestellt; Phase 8 gestartet ([PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md)).*

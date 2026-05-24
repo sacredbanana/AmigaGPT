@@ -435,9 +435,13 @@ void startGUIRunLoop() {
  **/
 void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
 #ifndef DAEMON
-    STRPTR formattedMessage = AllocVec(strlen(message) + 32, MEMF_ANY);
-    snprintf(formattedMessage, strlen(message) + 32, "\33P[%lu]  %s\t\0", pen,
-             message);
+    ULONG cap = strlen(message) + 32;
+    STRPTR formattedMessage = AllocVec(cap, MEMF_ANY);
+
+    if (formattedMessage == NULL) {
+        return;
+    }
+    snprintf((char *)formattedMessage, cap, "\33P[%lu]  %s\t", pen, message);
     set(statusBar, MUIA_Text_Contents, formattedMessage);
     FreeVec(formattedMessage);
 #else
@@ -797,7 +801,8 @@ void addTextToConversation(struct Conversation *conversation, UTF8 *text,
         FreeVec(conversationNode);
         return;
     }
-    strncpy(conversationNode->raw_utf8, text, textLength);
+    CopyMem(text, conversationNode->raw_utf8, textLength);
+    conversationNode->raw_utf8[textLength] = '\0';
     conversationNode->raw_length = textLength;
     conversationNode->display_text = NULL;
     conversationNode->codeblocks = newEmptyMinList();
