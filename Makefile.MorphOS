@@ -53,7 +53,6 @@ daemon_objects := $(cpp_objects) $(daemon_c_objects) $(s_objects) $(vasm_objects
 
 AUTOGEN_FILE = $(SOURCE_DIR)/version.h
 AUTOGEN_NEXT = $(shell expr $$(awk '/#define BUILD_NUMBER/' $(AUTOGEN_FILE) | tr -cd "[0-9]") + 1)
-PATCH_NEXT = $(shell expr $$(awk '/#define APP_VERSION_PATCH/' $(AUTOGEN_FILE) | tr -cd "[0-9]") + 1)
 
 GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT = $(shell git rev-parse HEAD)
@@ -96,8 +95,7 @@ clean:
 	$(RM) -dr $(BUILD_DIR)
 
 version-bump:
-	$(info AmigaGPT version $(APP_VERSION_MAJOR).$(APP_VERSION_MINOR).$(PATCH_NEXT) build $(AUTOGEN_NEXT))
-	@$(SED) 's|#define APP_VERSION_PATCH ".*"|#define APP_VERSION_PATCH "$(PATCH_NEXT)"|' $(AUTOGEN_FILE)
+	$(info AmigaGPT version $(APP_VERSION_MAJOR).$(APP_VERSION_MINOR).$(AUTOGEN_NEXT) ($(BUILD_DATE)))
 	@$(SED) 's|#define BUILD_NUMBER ".*"|#define BUILD_NUMBER "$(AUTOGEN_NEXT)"|' $(AUTOGEN_FILE)
 
 catalog_definition:

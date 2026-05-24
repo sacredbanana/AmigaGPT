@@ -29,11 +29,11 @@ LONG createAboutAmigaGPTWindow() {
     bodyString = AllocVec(2048, MEMF_CLEAR | MEMF_ANY);
     LONG success = RETURN_ERROR;
     snprintf(buildString, 512,
-             BUILD_NUMBER " ("__DATE__
-                          ")\n"
-                          "%s: " GIT_COMMIT "\n"
-                          "%s: " GIT_BRANCH "\n"
-                          "%s: " GIT_TIMESTAMP,
+             APP_VERSION_VER_REV " (" BUILD_DATE ")\n"
+             "Revision " BUILD_NUMBER "\n"
+             "%s: " GIT_COMMIT "\n"
+             "%s: " GIT_BRANCH "\n"
+             "%s: " GIT_TIMESTAMP,
              STRING_GIT_COMMIT, STRING_GIT_BRANCH, STRING_GIT_COMMIT_TIMESTAMP);
     snprintf(bodyString, 2048,
              "%s https://paypal.me/sacredbanana\n\n"

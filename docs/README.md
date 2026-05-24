@@ -6,6 +6,7 @@
 | Dokument                                                     | Inhalt                                                                             |
 | ------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
 | [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md)       | Git (kein Commit auf `master`) **und** Begriff **Paketieren** = Z:-Deploy          |
+| [MORPHOS-VERSION.md](MORPHOS-VERSION.md)                     | `$VER:` Version.Revision (MorphOS Style Guide), `version.h`                        |
 | [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md)                 | Remotes `origin` / `upstream`, Sync, PRs                                           |
 | [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)       | Plan Scintilla.mcc, Phasen 6–13 (7a/7b erledigt; 7c offen), Streaming              |
 | [STREAM-RECOVERY.md](STREAM-RECOVERY.md)                     | Plan Stream- & Chat-Recovery (R1–R4): WANT_READ, UI-Sync, Freeze                   |
@@ -24,7 +25,7 @@
 ```bash
 cd ~/development/morphos/AmigaGPT
 export PATH="$HOME/development/morphos/flexcat/src/bin_unix:$PATH"
-make -f Makefile.MorphOS              # je Lauf: APP_VERSION_PATCH + BUILD_NUMBER
+make -f Makefile.MorphOS              # je Lauf: BUILD_NUMBER + Datum; Anzeige = 2.18.<build>
 ./package-morphos-cross.sh            # BUILD=0 überspringt Make, wenn Binary schon da
 ```
 

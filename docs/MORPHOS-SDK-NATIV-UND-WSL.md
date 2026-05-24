@@ -175,12 +175,13 @@ Weitere optionale Kopien:
 ```bash
 cd ~/development/morphos/AmigaGPT
 export PATH="$HOME/development/morphos/flexcat/src/bin_unix:$PATH"
-make -f Makefile.MorphOS              # bump APP_VERSION_PATCH + BUILD_NUMBER
-./package-morphos-cross.sh            # DEPLOY=1 → Z:\morphos\out-crosscompile\
+make -f Makefile.MorphOS              # bump BUILD_NUMBER; Anzeige 2.18.<build> — siehe [MORPHOS-VERSION.md](MORPHOS-VERSION.md)
+./package-morphos-cross.sh            # DEPLOY=1 → Z:\morphos\out-crosscompile\ + DEPLOY-HISTORY.txt
 ```
 
 - `make` **ohne** explizites `all` führt **nicht** zwingend `version-bump` aus — Versionsnummer kann vom Binary abweichen, wenn nur teilweise gelinkt wurde.
 - Paketieren im Projektsinn: erfolgreicher Deploy nach `Z:\morphos\out-crosscompile\` — siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md).
+- **AmigaOS3/OS4** (`Makefile`): `BUILD_NUMBER` wird pro `.c`-Compile erhöht (abweichend von MorphOS) — nur dokumentiert, Makefile unverändert.
 
 ---
 

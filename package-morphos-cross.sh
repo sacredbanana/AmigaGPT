@@ -17,6 +17,16 @@ FLEXCAT_BIN="${FLEXCAT_BIN:-$HOME/development/morphos/flexcat/src/bin_unix}"
 export PATH="${FLEXCAT_BIN}:${PATH:-}"
 log() { printf '==> %s\n' "$*"; }
 
+file_md5() {
+  if command -v md5sum >/dev/null 2>&1; then
+    md5sum "$1" | awk '{print $1}'
+  elif command -v md5 >/dev/null 2>&1; then
+    md5 -q "$1"
+  else
+    openssl md5 "$1" | awk '{print $NF}'
+  fi
+}
+
 if [[ "$BUILD" == "1" ]]; then
   log "Building AmigaGPT + daemon…"
   make -C "$ROOT" -f Makefile.MorphOS
@@ -51,31 +61,39 @@ for cat in "$ROOT"/catalogs/*/*.catalog; do
   cp -f "$cat" "$STAGE/catalogs/$lang/"
 done
 
-APP_VER="$(
-  awk -F'"' '
-    /#define APP_VERSION_MAJOR/ { m = $2 }
-    /#define APP_VERSION_MINOR/ { n = $2 }
-    /#define APP_VERSION_PATCH/ { p = $2 }
-    END { if (m != "" && n != "" && p != "") print m "." n "." p }
-  ' "$ROOT/src/version.h"
-)"
-BUILD_NUM="$(awk -F'"' '/#define BUILD_NUMBER/ { print $2; exit }' "$ROOT/src/version.h")"
-PKG_SHA="$(sha256sum "$STAGE/AmigaGPT/AmigaGPT/AmigaGPT_MorphOS" | awk '{print $1}')"
+read_version_field() {
+  awk -F'"' -v def="$1" '$0 ~ "^#define " def " " { print $2; exit }' "$ROOT/src/version.h"
+}
+APP_VER_MAJOR="$(read_version_field 'APP_VERSION_MAJOR')"
+APP_VER_MINOR="$(read_version_field 'APP_VERSION_MINOR')"
+BUILD_NUM="$(read_version_field 'BUILD_NUMBER')"
+FULL_VERSION="${APP_VER_MAJOR}.${APP_VER_MINOR}.${BUILD_NUM}"
+BIN_PATH="$STAGE/AmigaGPT/AmigaGPT/AmigaGPT_MorphOS"
+PKG_MD5="$(file_md5 "$BIN_PATH")"
 PKG_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+BUILD_UTC="$(date -u -r "$BIN_PATH" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "$PKG_UTC")"
 GIT_REV="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+if git -C "$ROOT" diff --quiet 2>/dev/null; then
+  GIT_LABEL="$GIT_REV"
+else
+  GIT_LABEL="${GIT_REV}-dirty"
+fi
 cat >"$STAGE/PACKAGE-BUILDINFO.txt" <<EOF
 AmigaGPT MorphOS cross-package
 ==============================
-version=${APP_VER:-?}
-build=${BUILD_NUM:-?}
-git=${GIT_REV}
+full_version=${FULL_VERSION}
+version=${APP_VER_MAJOR}.${APP_VER_MINOR}
+revision=${BUILD_NUM}
+git=${GIT_LABEL}
+build_utc=${BUILD_UTC}
 packaged_utc=${PKG_UTC}
-AmigaGPT_MorphOS.sha256=${PKG_SHA}
+AmigaGPT_MorphOS.md5=${PKG_MD5}
 
 Prüfen auf MorphOS: diese Datei nach dem Entpacken lesen (nicht nur LHA-Datum
 am Share — SMB/Copy-Item kann altes Erstellungsdatum behalten).
+Deploy-Protokoll auf dem Share: DEPLOY-HISTORY.txt (letzte 10 Z:-Kopien).
 EOF
-log "Buildinfo: ${APP_VER:-?} build ${BUILD_NUM:-?} (${PKG_UTC})"
+log "Buildinfo: ${FULL_VERSION} git=${GIT_LABEL} build=${BUILD_UTC}"
 
 cat >"$STAGE/AmigaGPT/AmigaGPT/fix-protection.rexx" <<'EOF'
 /* Einmal nach Entpacken: AmigaDOS-Protection-Bits (fehlen nach LHA aus Linux/WSL). */
@@ -124,7 +142,9 @@ Installation
 Share-Deploy (WSL): nur AmigaGPT-MorphOS-cross.lha nach morphos/out-crosscompile/
 (z.B. HDSFGO4-share:morphos/out-crosscompile/). Entpacken: MorphOS-Deploy-Skript.
 
-Version prüfen: PACKAGE-BUILDINFO.txt im Archiv (oder About: Version/Build).
+Version prüfen: PACKAGE-BUILDINFO.txt (full_version, AmigaGPT_MorphOS.md5) oder About.
+MD5 in Ambient (Datei-Info) mit BUILDINFO / DEPLOY-HISTORY.txt auf dem Share vergleichen.
+Share: DEPLOY-HISTORY.txt = letzte 10 erfolgreiche Z:-Deploys (WSL).
 
 Kataloge: catalogs/<sprache>/AmigaGPT.catalog → LOCALE:Catalogs/<sprache>/
 
@@ -160,7 +180,7 @@ if [[ "${DEPLOY:-1}" == "1" ]]; then
     WSL_ARCH=$(wslpath -w "$ARCHIVE")
     ARCH_NAME="$(basename "$ARCHIVE")"
     LOCAL_BYTES="$(wc -c <"$ARCHIVE" | tr -d ' ')"
-    LOCAL_SHA="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
+    LOCAL_MD5="$(file_md5 "$ARCHIVE")"
     log "Deploy (nur LHA) → $DEPLOY_WIN/$ARCH_NAME (${LOCAL_BYTES} Bytes)"
     if ! powershell.exe -NoProfile -Command "
       \$ErrorActionPreference = 'Stop'
@@ -176,19 +196,50 @@ if [[ "${DEPLOY:-1}" == "1" ]]; then
       if (\$dst.Length -ne ${LOCAL_BYTES}) {
         throw \"Größe abweichend: Ziel=\$(\$dst.Length) erwartet=${LOCAL_BYTES}\"
       }
-      \$h = (Get-FileHash -LiteralPath \$arch -Algorithm SHA256).Hash.ToLower()
-      if (\$h -ne '${LOCAL_SHA}') {
-        throw \"SHA256 abweichend auf Z: (erwartet ${LOCAL_SHA})\"
+      \$h = (Get-FileHash -LiteralPath \$arch -Algorithm MD5).Hash.ToLower()
+      if (\$h -ne '${LOCAL_MD5}') {
+        throw \"MD5 abweichend auf Z: (erwartet ${LOCAL_MD5})\"
       }
       \$legacy = Join-Path \$d 'package-morphos'
       if (Test-Path \$legacy) { Remove-Item -Recurse -Force \$legacy }
-      Write-Host \"LHA ersetzt OK: \$(\$dst.Name) \$(\$dst.Length) Bytes SHA256=\$h\"
+      Write-Host \"LHA ersetzt OK: \$(\$dst.Name) \$(\$dst.Length) Bytes MD5=\$h\"
       \$dst | Format-List Name,Length,LastWriteTime
     "; then
       log "Fehler: Deploy nach $DEPLOY_WIN fehlgeschlagen (Laufwerk nicht erreichbar?)."
       DEPLOY_FAILED=1
     else
-      log "Z: LHA verifiziert (Größe + SHA256)."
+      log "Z: LHA verifiziert (Größe + MD5)."
+      COPY_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+      HISTORY_LINE="${FULL_VERSION}|${GIT_LABEL}|${BUILD_UTC}|${COPY_UTC}|${LOCAL_MD5}"
+      if powershell.exe -NoProfile -Command "
+        \$ErrorActionPreference = 'Stop'
+        \$d = '${DEPLOY_WIN}'
+        \$history = Join-Path \$d 'DEPLOY-HISTORY.txt'
+        \$header = @(
+          '# DEPLOY-HISTORY.txt — last 10 successful deploys to this folder (newest last)',
+          '# version | git | build_utc | copy_utc | lha_md5 (Ambient-kompatibel)',
+          ''
+        )
+        \$lines = @()
+        if (Test-Path -LiteralPath \$history) {
+          \$blob = (Get-Content -LiteralPath \$history | Where-Object {
+            \$_ -and \$_ -notmatch '^\s*#'
+          }) -join ''
+          foreach (\$m in [regex]::Matches(\$blob, '\d+\.\d+\.\d+\|[^|]+\|[^|]+\|[^|]+\|[a-f0-9]{32}(?![a-f0-9])')) {
+            \$lines += \$m.Value
+          }
+        }
+        \$lines += '${HISTORY_LINE}'
+        if (\$lines.Count -gt 10) {
+          \$lines = \$lines[(\$lines.Count - 10)..(\$lines.Count - 1)]
+        }
+        (\$header + \$lines) | Set-Content -LiteralPath \$history -Encoding utf8
+        Write-Host \"DEPLOY-HISTORY: \$(\$lines.Count) Eintrag(e), neueste: ${FULL_VERSION}\"
+      "; then
+        log "Deploy-Protokoll: $DEPLOY_WIN/DEPLOY-HISTORY.txt"
+      else
+        log "Warnung: DEPLOY-HISTORY.txt konnte nicht geschrieben werden."
+      fi
     fi
   else
     log "Fehler: DEPLOY=1, aber powershell.exe nicht gefunden — kein Deploy nach Z: möglich."

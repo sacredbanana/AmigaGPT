@@ -56,9 +56,8 @@ HOOKPROTONHNONP(AboutAmigaGPTMenuItemClickedFunc, void) {
 #else
             "AmigaGPT for PPC AmigaOS 4\n\n"
 #endif
-            "Version " APP_VERSION "\n"
-            "Build date: " __DATE__ "\n"
-            "Build number: " BUILD_NUMBER "\n\n"
+            "Version " APP_VERSION_VER_REV " (" BUILD_DATE ")\n"
+            "Revision " BUILD_NUMBER "\n\n"
             "Developed by Cameron Armstrong (@sacredbanana on GitHub,\n"
             "YouTube and Twitter, @Nightfox on EAB)\n\n"
             "This app will always remain free but if you would like to\n"

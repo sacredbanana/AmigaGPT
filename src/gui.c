@@ -203,8 +203,7 @@ LONG initVideo() {
           "2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Description, "AmigaGPT Daemon",
-          MUIA_Application_Version,
-          "$VER: AmigaGPTD " APP_VERSION " (" BUILD_DATE ")",
+          MUIA_Application_Version, APP_VER_STRING_AMIGAGPTD,
           MUIA_Application_SingleTask, TRUE, MUIA_Application_Commands,
           arexxList, MUIA_Application_UseRexx, TRUE, End)) {
         fprintf(stderr, "Failed to create MUI application. There may be "
@@ -241,8 +240,7 @@ LONG initVideo() {
           "2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Description, STRING_APP_DESCRIPTION,
-          MUIA_Application_Version,
-          "$VER: AmigaGPT " APP_VERSION " (" BUILD_DATE ")",
+          MUIA_Application_Version, APP_VER_STRING_AMIGAGPT,
           MUIA_Application_UsedClasses, USED_CLASSES, MUIA_Application_HelpFile,
           "AMIGAGPT:AmigaGPT.guide", MUIA_Application_SingleTask, TRUE,
           MUIA_Application_Commands, arexxList, MUIA_Application_UseRexx, TRUE,

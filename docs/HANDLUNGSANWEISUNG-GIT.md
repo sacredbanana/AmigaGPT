@@ -120,6 +120,8 @@ Verbindlich in diesem Fork:
 
 **Fehler:** Läuft das Skript mit **`DEPLOY=1`** und der Deploy schlägt fehl, ist das ein **fehlgeschlagener Paketierungslauf** (Exit-Code 1). Ursache beheben (`Z:` erreichbar, gleiche Windows-Session wie die Laufwerkszuordnung, PowerShell von WSL) und erneut ausführen. **`DEPLOY=0`** bewusst nur, wenn **kein** Z:-Deploy gewünscht ist (dann liegt **kein** abgeschlossenes Paketieren im obigen Sinn vor).
 
+Nach erfolgreichem Z:-Deploy schreibt das Skript **`DEPLOY-HISTORY.txt`** im selben Ordner (letzte 10 Einträge: Version, Git, Build-, Kopierzeit, LHA-MD5 für Abgleich mit Ambient). Details: [MORPHOS-VERSION.md](MORPHOS-VERSION.md).
+
 Skript: `package-morphos-cross.sh` · Kurzbeschreibung: [README.md](README.md).
 
 ---
