@@ -16,7 +16,7 @@ Eigenständiger Planabschnitt für den Branch **scintilla**. Ergänzt [SCINTILLA
 |-------|--------|-----------|
 | **R1** | Einheitliches Stream-Ende + UI-Sync (Chat = Modell) | hoch — **umgesetzt** (2026-05) |
 | **R2** | Transport: WANT_READ / partieller Stream weich beenden | hoch — **R2.2 teilweise** (mit R1: kein SSL-Dialog bei vorhandenen Daten) |
-| **R3** | Stream-UI-Last (Freeze reduzieren) | mittel |
+| **R3** | Stream-UI-Last (Freeze reduzieren) | mittel — **umgesetzt** (2026-05) |
 | **R4** | Fence-Heuristik + Logs (optional) | niedrig |
 
 **Reihenfolge zur Umsetzung:** **R1 → R2 → R3** (R4 bei Bedarf). Parallel möglich: **7c** (Mausrad Chat) — klein, kein Überschneidungskonflikt.
@@ -211,6 +211,8 @@ void finishChatStream(enum ChatStreamOutcome outcome,
 | R3.3 | Optional: während Stream nur ASCII-Zwischenstatus in Statusleiste, kein Voll-Chat-Rebuild |
 
 **DoD R3:** Lange Antwort mit UTF-8 (Kyrillisch) — spürbar weniger Freeze; Endzustand weiterhin R1.
+
+**Umsetzung (2026-05):** `MainWindow.c` — NFloattext-Refresh max. ~5/s (`gettimeofday`, 200 ms); System-TTS nur noch `CodesetsUTF8ToStr` auf UTF-8-Tail statt vollem `receivedMessage`; finaler `streamUiFlushChatDisplay()` vor `finishChatStream`.
 
 ---
 

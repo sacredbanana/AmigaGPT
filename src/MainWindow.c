@@ -14,6 +14,7 @@
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/time.h>
 #include <time.h>
 #include "AmigaGPTTextEditor.h"
 #include "config.h"
@@ -30,8 +31,11 @@
 #define MAX_STYLE_STACK 32
 
 #define CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH 1024 * 100
-/** UI refresh during stream: every N validated UTF-8 chunks (not words). */
-#define STREAM_UI_REFRESH_CHUNK_INTERVAL 8
+/** UI refresh during stream: at most ~5 updates per second (R3). */
+#define STREAM_UI_MIN_REFRESH_MS 200
+
+static struct timeval streamUiLastRefresh;
+static BOOL streamUiLastRefreshValid;
 
 typedef enum { STYLE_BOLD, STYLE_ITALIC, STYLE_UNDERLINE } StyleType;
 
@@ -104,7 +108,7 @@ typedef enum {
 
 static ChatStreamOutcome chatStreamClassifyOutcome(UTF8 *receivedMessage);
 static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
-                             ULONG speechIndex, BOOL isNewConversation);
+                             ULONG speechUtf8Index, BOOL isNewConversation);
 static LONG loadConversations();
 static LONG saveConversations();
 static LONG loadImages();
@@ -1456,11 +1460,70 @@ static void addMainWindowActions() {
              MUIV_Application_ReturnID_Quit);
 }
 
+static void streamUiResetRefreshClock(void) {
+    streamUiLastRefreshValid = FALSE;
+}
+
+static BOOL streamUiShouldRefresh(UWORD chunkCount) {
+    struct timeval now;
+
+    if (chunkCount == 1) {
+        gettimeofday(&streamUiLastRefresh, NULL);
+        streamUiLastRefreshValid = TRUE;
+        return TRUE;
+    }
+    if (!streamUiLastRefreshValid) {
+        gettimeofday(&streamUiLastRefresh, NULL);
+        streamUiLastRefreshValid = TRUE;
+        return TRUE;
+    }
+    gettimeofday(&now, NULL);
+    {
+        long elapsedMs =
+            (long)(now.tv_sec - streamUiLastRefresh.tv_sec) * 1000L +
+            (long)(now.tv_usec - streamUiLastRefresh.tv_usec) / 1000L;
+
+        if (elapsedMs >= STREAM_UI_MIN_REFRESH_MS) {
+            streamUiLastRefresh = now;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void streamUiFlushChatDisplay(void) {
+    set(chatOutputTextEditor, MUIA_NFloattext_Text,
+        chatOutputTextEditorContents);
+    set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
+}
+
+/** Speak only UTF-8 not yet spoken (system TTS); avoids full-buffer convert. */
+static void speakStreamUtf8Tail(STRPTR receivedMessage, ULONG *utf8Spoken) {
+    ULONG totalLen;
+    STRPTR tailSystem;
+
+    if (receivedMessage == NULL || utf8Spoken == NULL) {
+        return;
+    }
+    totalLen = strlen(receivedMessage);
+    if (*utf8Spoken >= totalLen) {
+        return;
+    }
+    tailSystem = CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                                   (Tag)(receivedMessage + *utf8Spoken),
+                                   CSA_MapForeignChars, TRUE, TAG_DONE);
+    if (tailSystem != NULL && tailSystem[0] != '\0') {
+        speakText(tailSystem, NULL, NULL);
+        CodesetsFreeA(tailSystem, NULL);
+    }
+    *utf8Spoken = totalLen;
+}
+
 /**
  * Append one validated UTF-8 piece to the live chat view and receivedMessage.
  */
 static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
-                                    UWORD *wordNumber, ULONG *speechIndex) {
+                                    UWORD *wordNumber, ULONG *speechUtf8Index) {
     STRPTR formattedMessageSystemEncoded;
     size_t receivedRemaining;
     size_t pieceLen;
@@ -1495,23 +1558,11 @@ static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
     ++(*wordNumber);
     /* Markdown only after stream (displayConversation); avoids full-buffer
      * convertMarkdownFormattingToMUI on every chunk. */
-    if (*wordNumber == 1 ||
-        *wordNumber % STREAM_UI_REFRESH_CHUNK_INTERVAL == 0) {
-        set(chatOutputTextEditor, MUIA_NFloattext_Text,
-            chatOutputTextEditorContents);
-        set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
-        if (config.speechEnabled) {
-            STRPTR unformattedMessageSystemEncoded = CodesetsUTF8ToStr(
-                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                (Tag)receivedMessage, CSA_MapForeignChars, TRUE, TAG_DONE);
-            if (unformattedMessageSystemEncoded != NULL) {
-                if (config.speechSystem != SPEECH_SYSTEM_OPENAI) {
-                    speakText(unformattedMessageSystemEncoded + *speechIndex,
-                              NULL, NULL);
-                }
-                *speechIndex = strlen(unformattedMessageSystemEncoded);
-                CodesetsFreeA(unformattedMessageSystemEncoded, NULL);
-            }
+    if (streamUiShouldRefresh(*wordNumber)) {
+        streamUiFlushChatDisplay();
+        if (config.speechEnabled &&
+            config.speechSystem != SPEECH_SYSTEM_OPENAI) {
+            speakStreamUtf8Tail(receivedMessage, speechUtf8Index);
         }
     }
 }
@@ -1519,7 +1570,7 @@ static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
 static void appendValidatedUtf8Chunk(struct UTF8StreamBuffer *stream,
                                      const STRPTR chunk,
                                      STRPTR receivedMessage, UWORD *wordNumber,
-                                     ULONG *speechIndex) {
+                                     ULONG *speechUtf8Index) {
     UBYTE piece[2048];
     ULONG taken;
 
@@ -1529,13 +1580,13 @@ static void appendValidatedUtf8Chunk(struct UTF8StreamBuffer *stream,
 
     if (stream == NULL) {
         appendAssistantStreamText((STRPTR)chunk, receivedMessage, wordNumber,
-                                  speechIndex);
+                                  speechUtf8Index);
         return;
     }
 
     if (!utf8stream_append(stream, (const UBYTE *)chunk, strlen(chunk))) {
         appendAssistantStreamText((STRPTR)chunk, receivedMessage, wordNumber,
-                                  speechIndex);
+                                  speechUtf8Index);
         return;
     }
 
@@ -1543,13 +1594,13 @@ static void appendValidatedUtf8Chunk(struct UTF8StreamBuffer *stream,
            0) {
         piece[taken] = '\0';
         appendAssistantStreamText((STRPTR)piece, receivedMessage, wordNumber,
-                                  speechIndex);
+                                  speechUtf8Index);
     }
 }
 
 static void flushUtf8StreamToMessage(struct UTF8StreamBuffer *stream,
                                      STRPTR receivedMessage, UWORD *wordNumber,
-                                     ULONG *speechIndex) {
+                                     ULONG *speechUtf8Index) {
     UBYTE piece[2048];
     ULONG taken;
 
@@ -1561,7 +1612,7 @@ static void flushUtf8StreamToMessage(struct UTF8StreamBuffer *stream,
     if (taken > 0) {
         piece[taken] = '\0';
         appendAssistantStreamText((STRPTR)piece, receivedMessage, wordNumber,
-                                  speechIndex);
+                                  speechUtf8Index);
     }
 }
 
@@ -1588,7 +1639,7 @@ static ChatStreamOutcome chatStreamClassifyOutcome(UTF8 *receivedMessage) {
 }
 
 static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
-                             ULONG speechIndex, BOOL isNewConversation) {
+                             ULONG speechUtf8Index, BOOL isNewConversation) {
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 
     if (outcome == CHAT_STREAM_OK || outcome == CHAT_STREAM_PARTIAL) {
@@ -1605,12 +1656,7 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
             if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
                 speakText(receivedMessage, NULL, AUDIO_FORMAT_PCM);
             } else {
-                STRPTR receivedMessageSystemEncoded = CodesetsUTF8ToStr(
-                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                    (Tag)receivedMessage, CSA_MapForeignChars, TRUE, TAG_DONE);
-                speakText(receivedMessageSystemEncoded + speechIndex, NULL,
-                          NULL);
-                CodesetsFreeA(receivedMessageSystemEncoded, NULL);
+                speakStreamUtf8Tail(receivedMessage, &speechUtf8Index);
             }
         }
 
@@ -1769,11 +1815,12 @@ static void sendChatMessage() {
     DoMethod(chatInputTextEditor, MUIM_GoActive);
 
     BOOL dataStreamFinished = FALSE;
-    ULONG speechIndex = 0;
+    ULONG speechUtf8Index = 0;
     UWORD wordNumber = 0;
     struct UTF8StreamBuffer *utf8Stream = utf8stream_create(4096);
 
     strncat(chatOutputTextEditorContents, "\n", 1);
+    streamUiResetRefreshClock();
 
     do {
         responses = postChatMessageToOpenAI(
@@ -1864,7 +1911,7 @@ static void sendChatMessage() {
                 receivedMessage[0] = '\0';
                 appendValidatedUtf8Chunk(utf8Stream, contentString,
                                          receivedMessage, &wordNumber,
-                                         &speechIndex);
+                                         &speechUtf8Index);
                 json_object_put(response);
                 dataStreamFinished = TRUE;
                 continue;
@@ -1873,7 +1920,7 @@ static void sendChatMessage() {
                     if (strlen(contentString) > 0) {
                         appendValidatedUtf8Chunk(utf8Stream, contentString,
                                                  receivedMessage, &wordNumber,
-                                                 &speechIndex);
+                                                 &speechUtf8Index);
                     }
                     STRPTR type = json_object_get_string(
                         json_object_object_get(response, "type"));
@@ -1903,11 +1950,13 @@ static void sendChatMessage() {
     } while (!dataStreamFinished);
 
     flushUtf8StreamToMessage(utf8Stream, receivedMessage, &wordNumber,
-                             &speechIndex);
+                             &speechUtf8Index);
     utf8stream_free(utf8Stream);
 
+    streamUiFlushChatDisplay();
+
     finishChatStream(chatStreamClassifyOutcome(receivedMessage), receivedMessage,
-                     speechIndex, isNewConversation);
+                     speechUtf8Index, isNewConversation);
 
     FreeVec(receivedMessage);
     if (!isAROS) {
