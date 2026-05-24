@@ -285,6 +285,7 @@ LONG initVideo() {
           MUIA_Window_UseLeftBorderScroller, FALSE, WindowContents, VGroup,
             Child, HGroup, MUIA_VertWeight, 100,
               Child, codeBlocksListView = NListviewObject,
+                MUIA_HorizWeight, 0, MUIA_FixWidth, 128,
                 MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_Off,
                 MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_On,
                 MUIA_NListview_NList, codeBlocksList = NListObject,
