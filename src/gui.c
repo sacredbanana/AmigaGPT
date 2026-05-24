@@ -996,6 +996,10 @@ void shutdownGUI() {
 #endif
 
         MUI_DisposeObject(app);
+        app = NULL;
+#ifndef DAEMON
+        chatOutputWheelDisposeClass();
+#endif
     }
 
 #ifndef DAEMON

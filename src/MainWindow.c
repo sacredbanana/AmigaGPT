@@ -1105,6 +1105,10 @@ void chatOutputWheelShutdown(void) {
         FreeVec(chatOutputWheelEH);
         chatOutputWheelEH = NULL;
     }
+    /* Custom class must outlive chatOutputTextEditor until MUI_DisposeObject(app). */
+}
+
+void chatOutputWheelDisposeClass(void) {
     deleteChatOutputFloattextClass();
 }
 

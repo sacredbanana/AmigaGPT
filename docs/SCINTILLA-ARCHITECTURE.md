@@ -355,6 +355,8 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 
 ### Phase 7c — Chat-Ausgabe: Mausrad-Scroll ✓ (2026-05)
 
+**Shutdown:** `chatOutputWheelShutdown()` nur Event-Handler entfernen; `chatOutputWheelDisposeClass()` **nach** `MUI_DisposeObject(app)` — sonst Privilege Violation (Custom-Class gelöscht, NFloattext-Instanz noch aktiv).
+
 **Umgesetzt:** `MainWindow.c` — Fenster-Event-Handler (`IDCMP_RAWKEY`, NewMouse `NM_WHEEL_*` / MUIKEY_UP|DOWN) scrollt `chatOutputListView` per `MUIA_NList_First` (`Up`/`Down`, mit Shift `PageUp`/`PageDown`), nur wenn der Mauszeiger über der Chat-Liste liegt.
 
 **Abgrenzung:** **Phase 12** ersetzt die Chat-**Ausgabe** durch Scintilla; 7c betrifft bis dahin das NFloattext-Setup.
