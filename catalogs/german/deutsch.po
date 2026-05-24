@@ -1505,3 +1505,13 @@ msgstr "Kein Codeblock ausgewählt."
 msgctxt "STRING_ERROR_CODEBLOCK_SAVE (273//)"
 msgid "Could not save the active code block."
 msgstr "Der aktive Codeblock konnte nicht gespeichert werden."
+
+#: src/MainWindow.c
+msgctxt "STRING_CHAT_RESPONSE_PARTIAL (275//)"
+msgid "Response incomplete (connection ended early)."
+msgstr "Antwort unvollständig (Verbindung vorzeitig beendet)."
+
+#: src/MainWindow.c
+msgctxt "STRING_CHAT_STREAM_TRUNCATED (276//)"
+msgid "Response truncated (stream buffer limit reached)."
+msgstr "Antwort gekürzt (Stream-Pufferlimit erreicht)."

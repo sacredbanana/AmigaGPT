@@ -13,6 +13,15 @@
 
 /** TRUE while an OpenAI chat SSE response is still on the open TLS socket. */
 BOOL openAIChatStreamInProgress(void);
+
+/** TRUE if the last stream ended with response.completed (OpenAI). */
+BOOL openAIChatStreamCompletedOk(void);
+
+/** TRUE if the last stream stopped early but had received data (timeout, etc.). */
+BOOL openAIChatStreamTruncated(void);
+
+/** Reset stream outcome flags before a new chat request. */
+void openAIChatStreamResetOutcome(void);
 #define CHAT_SYSTEM_LENGTH 512
 #define OPENAI_API_KEY_LENGTH 256
 

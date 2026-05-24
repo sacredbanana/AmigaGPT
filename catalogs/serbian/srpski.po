@@ -1470,6 +1470,16 @@ msgctxt "STRING_ERROR_CODEBLOCK_SAVE (273//)"
 msgid "Could not save the active code block."
 msgstr "Could not save the active code block."
 
+#: src/MainWindow.c
+msgctxt "STRING_CHAT_RESPONSE_PARTIAL (275//)"
+msgid "Response incomplete (connection ended early)."
+msgstr "Response incomplete (connection ended early)."
+
+#: src/MainWindow.c
+msgctxt "STRING_CHAT_STREAM_TRUNCATED (276//)"
+msgid "Response truncated (stream buffer limit reached)."
+msgstr "Response truncated (stream buffer limit reached)."
+
 #~ msgctxt "STRING_MENU_COPY_CODEBLOCK_SYSTEM (269//)"
 #~ msgid "Copy (system)"
 #~ msgstr "Copy (system)"

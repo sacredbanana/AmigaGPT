@@ -55,6 +55,27 @@ static BOOL streamBatchHasCompleted(struct json_object **responses, UWORD count)
 /** OpenAI chat SSE still active on the current TLS connection. */
 static BOOL chatStreamInProgress = FALSE;
 
+static BOOL chatStreamCompletedOk = FALSE;
+static BOOL chatStreamTruncated = FALSE;
+
+static void chatStreamNoteReadTimeout(UWORD responseIndex, ULONG readBufferLen) {
+    if (responseIndex > 0 || readBufferLen > 0) {
+        chatStreamTruncated = TRUE;
+    } else {
+        displayError(
+            "SSL: timeout waiting for stream data (WANT_READ)");
+    }
+}
+
+BOOL openAIChatStreamCompletedOk(void) { return chatStreamCompletedOk; }
+
+BOOL openAIChatStreamTruncated(void) { return chatStreamTruncated; }
+
+void openAIChatStreamResetOutcome(void) {
+    chatStreamCompletedOk = FALSE;
+    chatStreamTruncated = FALSE;
+}
+
 struct Library *SocketBase;
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
 struct Library *AmiSSLMasterBase, *AmiSSLBase, *AmiSSLExtBase;
@@ -880,7 +901,10 @@ struct json_object **postChatMessageToOpenAI(
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 #endif
 
-    if (ssl_err > 0 || stream) {
+        if (stream) {
+            openAIChatStreamResetOutcome();
+        }
+        if (ssl_err > 0 || stream) {
         ULONG totalBytesRead = 0;
         WORD bytesRead = 0;
         BOOL doneReading = FALSE;
@@ -920,8 +944,7 @@ struct json_object **postChatMessageToOpenAI(
                 ULONG copyLen = (ULONG)bytesRead;
 
                 if (space == 0) {
-                    displayError(
-                        "Stream read buffer full (64 KB). Response truncated.");
+                    chatStreamTruncated = TRUE;
                     doneReading = TRUE;
                     chatStreamInProgress = FALSE;
                     break;
@@ -1046,6 +1069,7 @@ struct json_object **postChatMessageToOpenAI(
                         }
                         if (streamBatchHasCompleted(responses,
                                                     responseIndex)) {
+                            chatStreamCompletedOk = TRUE;
                             doneReading = TRUE;
                             chatStreamInProgress = FALSE;
                         } else if (useSSL && ssl != NULL &&
@@ -1055,9 +1079,7 @@ struct json_object **postChatMessageToOpenAI(
                             doneReading = TRUE;
                         }
                     } else if (!sslWaitForReadReady(sock, &sslWaitStalls)) {
-                        displayError(
-                            "SSL: timeout waiting for stream data "
-                            "(WANT_READ)");
+                        chatStreamNoteReadTimeout(responseIndex, readBufferLen);
                         doneReading = TRUE;
                         chatStreamInProgress = FALSE;
                     }
@@ -1073,8 +1095,7 @@ struct json_object **postChatMessageToOpenAI(
             case SSL_ERROR_WANT_READ:
             case SSL_ERROR_WANT_WRITE:
                 if (!sslWaitForReadReady(sock, &sslWaitStalls)) {
-                    displayError(
-                        "SSL: timeout waiting for stream data (WANT_READ)");
+                    chatStreamNoteReadTimeout(responseIndex, readBufferLen);
                     doneReading = TRUE;
                     chatStreamInProgress = FALSE;
                 }
@@ -1125,6 +1146,7 @@ struct json_object **postChatMessageToOpenAI(
             STRPTR type = json_object_get_string(
                 json_object_object_get(responses[responseIndex - 1], "type"));
             if (type != NULL && strcmp(type, "response.completed") == 0) {
+                chatStreamCompletedOk = TRUE;
                 chatStreamInProgress = FALSE;
             }
         }

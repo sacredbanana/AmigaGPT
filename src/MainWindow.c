@@ -95,6 +95,16 @@ static struct Conversation *copyConversation(struct Conversation *conversation);
 static struct GeneratedImage *
 copyGeneratedImage(struct GeneratedImage *generatedImage);
 static void sendChatMessage();
+
+typedef enum {
+    CHAT_STREAM_OK,
+    CHAT_STREAM_PARTIAL,
+    CHAT_STREAM_FAILED
+} ChatStreamOutcome;
+
+static ChatStreamOutcome chatStreamClassifyOutcome(UTF8 *receivedMessage);
+static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
+                             ULONG speechIndex, BOOL isNewConversation);
 static LONG loadConversations();
 static LONG saveConversations();
 static LONG loadImages();
@@ -1558,6 +1568,121 @@ static void flushUtf8StreamToMessage(struct UTF8StreamBuffer *stream,
  *displays the response in the chat window. It also speaks the response if
  *speech is enabled.
  **/
+/* msgctxt "STRING_CHAT_RESPONSE_PARTIAL (275//)" */
+/* msgid "Response incomplete (connection ended early)." */
+/* msgctxt "STRING_CHAT_STREAM_TRUNCATED (276//)" */
+/* msgid "Response truncated (stream buffer limit reached)." */
+
+static ChatStreamOutcome chatStreamClassifyOutcome(UTF8 *receivedMessage) {
+    if (receivedMessage[0] == '\0') {
+        return CHAT_STREAM_FAILED;
+    }
+    if (config.useCustomServer || openAIChatStreamCompletedOk()) {
+        return CHAT_STREAM_OK;
+    }
+    return CHAT_STREAM_PARTIAL;
+}
+
+static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
+                             ULONG speechIndex, BOOL isNewConversation) {
+    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+
+    if (outcome == CHAT_STREAM_OK || outcome == CHAT_STREAM_PARTIAL) {
+        set(chatOutputTextEditor, MUIA_NFloattext_Text,
+            chatOutputTextEditorContents);
+        addTextToConversation(currentConversation, receivedMessage,
+                              "assistant");
+        displayConversation(currentConversation);
+#ifdef __MORPHOS__
+        refreshViewCodeBlocksMenuState();
+#endif
+
+        if (config.speechEnabled) {
+            if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
+                speakText(receivedMessage, NULL, AUDIO_FORMAT_PCM);
+            } else {
+                STRPTR receivedMessageSystemEncoded = CodesetsUTF8ToStr(
+                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                    (Tag)receivedMessage, CSA_MapForeignChars, TRUE, TAG_DONE);
+                speakText(receivedMessageSystemEncoded + speechIndex, NULL,
+                          NULL);
+                CodesetsFreeA(receivedMessageSystemEncoded, NULL);
+            }
+        }
+
+        if (isNewConversation) {
+            struct json_object **responses;
+
+            updateStatusBar(STRING_GENERATING_CONVERSATION_TITLE, 7);
+            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
+            addTextToConversation(currentConversation,
+                                  "generate a short title for this "
+                                  "conversation and don't enclose the title in "
+                                  "quotes or prefix the response with anything",
+                                  "user");
+            setConversationSystem(currentConversation, NULL);
+            responses = postChatMessageToOpenAI(
+                currentConversation,
+                config.useCustomServer ? config.customHost : NULL,
+                config.useCustomServer ? config.customPort : 0,
+                config.useCustomServer ? config.customUseSSL : FALSE,
+                config.useCustomServer ? config.customChatModel
+                                       : CHAT_MODEL_NAMES[GPT_5_NANO],
+                config.useCustomServer ? config.customApiKey
+                                       : config.openAiApiKey,
+                FALSE, config.proxyEnabled, config.proxyHost, config.proxyPort,
+                config.proxyUsesSSL, config.proxyRequiresAuth,
+                config.proxyUsername, config.proxyPassword,
+                config.webSearchEnabled,
+                config.useCustomServer ? config.customApiEndpoint
+                                       : API_ENDPOINT_RESPONSES,
+                config.useCustomServer ? config.customApiEndpointUrl : NULL);
+            struct Node *titleRequestNode =
+                RemTail((struct List *)currentConversation->messages);
+            FreeVec(titleRequestNode);
+            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+            if (responses == NULL) {
+                displayError(STRING_ERROR_CONNECTING_OPENAI);
+            } else if (responses[0] != NULL) {
+                UTF8 *responseString = getMessageContentFromJson(
+                    responses[0], FALSE, FALSE,
+                    config.useCustomServer ? config.customApiEndpoint
+                                           : API_ENDPOINT_RESPONSES);
+                if (currentConversation->name == NULL &&
+                    responseString != NULL) {
+                    currentConversation->name =
+                        AllocVec(strlen(responseString) + 1, MEMF_CLEAR);
+                    strncpy(currentConversation->name, responseString,
+                            strlen(responseString));
+                    conversationRefreshNameListDisplay(currentConversation);
+                }
+                DoMethod(conversationListObject, MUIM_NList_InsertSingle,
+                         currentConversation, MUIV_NList_Insert_Top);
+                DoMethod(conversationListObject, MUIM_NList_SetActive,
+                         MUIV_NList_Active_Top, NULL);
+                json_object_put(responses[0]);
+            }
+            FreeVec(responses);
+        }
+    }
+
+    if (outcome == CHAT_STREAM_PARTIAL) {
+        if (openAIChatStreamTruncated()) {
+            updateStatusBar(STRING_CHAT_STREAM_TRUNCATED, yellowPen);
+        } else {
+            updateStatusBar(STRING_CHAT_RESPONSE_PARTIAL, yellowPen);
+        }
+    } else {
+        updateStatusBar(STRING_READY, greenPen);
+    }
+
+    saveConversations();
+
+    set(sendMessageButton, MUIA_Disabled, FALSE);
+    set(newChatButton, MUIA_Disabled, FALSE);
+    set(deleteChatButton, MUIA_Disabled, FALSE);
+}
+
 static void sendChatMessage() {
     BOOL isNewConversation = FALSE;
     struct json_object **responses;
@@ -1777,103 +1902,13 @@ static void sendChatMessage() {
                              &speechIndex);
     utf8stream_free(utf8Stream);
 
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    finishChatStream(chatStreamClassifyOutcome(receivedMessage), receivedMessage,
+                     speechIndex, isNewConversation);
 
-    if (receivedMessage[0] != '\0') {
-        set(chatOutputTextEditor, MUIA_NFloattext_Text,
-            chatOutputTextEditorContents);
-        addTextToConversation(currentConversation, receivedMessage,
-                              "assistant");
-        displayConversation(currentConversation);
-#ifdef __MORPHOS__
-        refreshViewCodeBlocksMenuState();
-#endif
-
-        if (config.speechEnabled) {
-            if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
-                speakText(receivedMessage, NULL, AUDIO_FORMAT_PCM);
-            } else {
-                STRPTR receivedMessageSystemEncoded = CodesetsUTF8ToStr(
-                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                    (Tag)receivedMessage, CSA_MapForeignChars, TRUE, TAG_DONE);
-                speakText(receivedMessageSystemEncoded + speechIndex, NULL,
-                          NULL);
-                CodesetsFreeA(receivedMessageSystemEncoded, NULL);
-            }
-        }
-        FreeVec(receivedMessage);
-        if (!isAROS) {
-            FreeVec(text);
-        }
-        if (isNewConversation) {
-            updateStatusBar(STRING_GENERATING_CONVERSATION_TITLE, 7);
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
-            addTextToConversation(currentConversation,
-                                  "generate a short title for this "
-                                  "conversation and don't enclose the title in "
-                                  "quotes or prefix the response with anything",
-                                  "user");
-            setConversationSystem(currentConversation, NULL);
-            responses = postChatMessageToOpenAI(
-                currentConversation,
-                config.useCustomServer ? config.customHost : NULL,
-                config.useCustomServer ? config.customPort : 0,
-                config.useCustomServer ? config.customUseSSL : FALSE,
-                config.useCustomServer ? config.customChatModel
-                                       : CHAT_MODEL_NAMES[GPT_5_NANO],
-                config.useCustomServer ? config.customApiKey
-                                       : config.openAiApiKey,
-                FALSE, config.proxyEnabled, config.proxyHost, config.proxyPort,
-                config.proxyUsesSSL, config.proxyRequiresAuth,
-                config.proxyUsername, config.proxyPassword,
-                config.webSearchEnabled,
-                config.useCustomServer ? config.customApiEndpoint
-                                       : API_ENDPOINT_RESPONSES,
-                config.useCustomServer ? config.customApiEndpointUrl : NULL);
-            struct Node *titleRequestNode =
-                RemTail((struct List *)currentConversation->messages);
-            FreeVec(titleRequestNode);
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
-            if (responses == NULL) {
-                displayError(STRING_ERROR_CONNECTING_OPENAI);
-                set(sendMessageButton, MUIA_Disabled, FALSE);
-                set(newChatButton, MUIA_Disabled, FALSE);
-                set(deleteChatButton, MUIA_Disabled, FALSE);
-                return;
-            }
-            if (responses[0] != NULL) {
-                UTF8 *responseString = getMessageContentFromJson(
-                    responses[0], FALSE, FALSE,
-                    config.useCustomServer ? config.customApiEndpoint
-                                           : API_ENDPOINT_RESPONSES);
-                if (currentConversation->name == NULL) {
-                    currentConversation->name =
-                        AllocVec(strlen(responseString) + 1, MEMF_CLEAR);
-                    strncpy(currentConversation->name, responseString,
-                            strlen(responseString));
-                    conversationRefreshNameListDisplay(currentConversation);
-                }
-                DoMethod(conversationListObject, MUIM_NList_InsertSingle,
-                         currentConversation, MUIV_NList_Insert_Top);
-                DoMethod(conversationListObject, MUIM_NList_SetActive,
-                         MUIV_NList_Active_Top, NULL);
-            }
-            json_object_put(responses[0]);
-            FreeVec(responses);
-        }
-    } else {
-        FreeVec(receivedMessage);
-        if (!isAROS) {
-            FreeVec(text);
-        }
+    FreeVec(receivedMessage);
+    if (!isAROS) {
+        FreeVec(text);
     }
-
-    updateStatusBar(STRING_READY, greenPen);
-    saveConversations();
-
-    set(sendMessageButton, MUIA_Disabled, FALSE);
-    set(newChatButton, MUIA_Disabled, FALSE);
-    set(deleteChatButton, MUIA_Disabled, FALSE);
 }
 
 /**
@@ -1895,8 +1930,7 @@ void displayConversation(struct Conversation *conversation) {
              strlen(conversationNodeGetDisplay(conversationNode)) + 256) >
             WRITE_BUFFER_LENGTH) {
             displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
-            set(sendMessageButton, MUIA_Disabled, TRUE);
-            return;
+            break;
         }
         if (strcmp(conversationNode->role, "user") == 0) {
             UTF8 *content = conversationNodeGetDisplay(conversationNode);

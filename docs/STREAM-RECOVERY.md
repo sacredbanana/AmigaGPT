@@ -14,8 +14,8 @@ Eigenständiger Planabschnitt für den Branch **scintilla**. Ergänzt [SCINTILLA
 
 | Phase | Inhalt | Priorität |
 |-------|--------|-----------|
-| **R1** | Einheitliches Stream-Ende + UI-Sync (Chat = Modell) | hoch |
-| **R2** | Transport: WANT_READ / partieller Stream weich beenden | hoch |
+| **R1** | Einheitliches Stream-Ende + UI-Sync (Chat = Modell) | hoch — **umgesetzt** (2026-05) |
+| **R2** | Transport: WANT_READ / partieller Stream weich beenden | hoch — **R2.2 teilweise** (mit R1: kein SSL-Dialog bei vorhandenen Daten) |
 | **R3** | Stream-UI-Last (Freeze reduzieren) | mittel |
 | **R4** | Fence-Heuristik + Logs (optional) | niedrig |
 
