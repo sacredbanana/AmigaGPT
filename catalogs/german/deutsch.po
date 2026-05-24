@@ -136,25 +136,21 @@ msgstr ""
 "anzuzeigen."
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_BEBBO (201//)"
 msgid "for creating the Amiga GCC toolchain"
 msgstr "zum Erstellen der Amiga GCC-Toolchain"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_OPENAI (202//)"
 msgid "for creating the GPT and DALL-E models"
 msgstr "zur Erstellung der GPT- und DALL-E-Modelle"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_EAB (203//)"
 msgid "for being a great community!"
 msgstr "dafür, dass ihr eine tolle Community seid!"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_JAN (204//)"
 msgid ""
 "for all the thorough testing, bundling AmigaGPT into AmiKit and for all the "
@@ -164,13 +160,11 @@ msgstr ""
 "all die moralische Unterstützung"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_COFFINOS (205//)"
 msgid "for bundling AmigaGPT into CoffinOS"
 msgstr "zum Bündeln von AmigaGPT in CoffinOS"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_AMIGA_FUTURE (206//)"
 msgid ""
 "for reviewing AmigaGPT and publishing several of its updates in the News "
@@ -180,19 +174,16 @@ msgstr ""
 "im Bereich \"Neuigkeiten aus dem Aminet\""
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_WHATIFF (207//)"
 msgid "for reviewing AmigaGPT and interviewing me in issue 14"
 msgstr "für die Rezension von AmigaGPT und das Interview mit mir in Ausgabe 14"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_YOUTUBE_REVIEW (208//)"
 msgid "for reviewing AmigaGPT on his YouTube channel"
 msgstr "für die Rezension von AmigaGPT auf seinem YouTube-Kanal"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_AMIGABILL (209//)"
 msgid ""
 "for covering AmigaGPT in the Amiga News section on his Twitch streams and "
@@ -203,7 +194,6 @@ msgstr ""
 "dafür zu werben"
 
 #: src/AboutAmigaGPTWindow.c:20
-#, fuzzy
 msgctxt "STRING_ABOUT_WINDOW_LES_DOCS (210//)"
 msgid ""
 "for making a video review and giving a tutorial on how to add support for "
@@ -223,7 +213,6 @@ msgid "Enter how you would like AmigaGPT to respond"
 msgstr "Geben Sie ein, wie AmigaGPT antworten soll"
 
 #: src/ChatSystemRequesterWindow.c:38
-#, fuzzy
 msgctxt "STRING_CHAT_SYSTEM_WINDOW_BODY (17//)"
 msgid ""
 "If you would like AmigaGPT to respond in a certain way, or add some "
@@ -1463,8 +1452,8 @@ msgid ""
 "Could not open ttengine.library. Install TTEngine (FreeType fonts) for "
 "Scintilla UTF-8 display."
 msgstr ""
-"Could not open ttengine.library. Install TTEngine (FreeType fonts) for "
-"Scintilla UTF-8 display."
+"ttengine.library konnte nicht geöffnet werden. Für die Scintilla-UTF-8-"
+"Anzeige TTEngine (FreeType-Schriftarten) installieren."
 
 #: src/menu.c:320
 msgctxt "STRING_MENU_MARKDOWN_FORMATTING (264//)"
@@ -1484,35 +1473,35 @@ msgstr ""
 
 #: src/menu.c
 msgctxt "STRING_MENU_COPY_CODEBLOCK (268//)"
-msgid "Copy code block (UTF-8)"
-msgstr "Codeblock kopieren (UTF-8)"
+msgid "Copy (UTF-8)"
+msgstr "Kopieren (UTF-8)"
 
 #: src/CodeBlocksViewer.c
 msgctxt "STRING_MENU_COPY_CODEBLOCK_SYSTEM (269//)"
-msgid "Copy code block (system charset)"
-msgstr "Copy code block (system charset)"
+msgid "Copy (system charset)"
+msgstr "Kopieren (System-Zeichensatz)"
 
 #: src/CodeBlocksViewer.c
 msgctxt "STRING_MENU_SAVE_CODEBLOCK_UTF8 (270//)"
-msgid "Save code block (UTF-8)..."
-msgstr "Save code block (UTF-8)..."
+msgid "Save (UTF-8)..."
+msgstr "Speichern (UTF-8)..."
 
 #: src/CodeBlocksViewer.c
 msgctxt "STRING_MENU_SAVE_CODEBLOCK_SYSTEM (271//)"
-msgid "Save code block (system charset)..."
-msgstr "Save code block (system charset)..."
+msgid "Save (system charset)..."
+msgstr "Speichern (System-Zeichensatz)..."
 
 #: src/CodeBlocksViewer.c
 msgctxt "STRING_SAVE_CODEBLOCK (272//)"
 msgid "Save code block"
-msgstr "Save code block"
+msgstr "Codeblock speichern"
 
 #: src/CodeBlocksViewer.c
 msgctxt "STRING_ERROR_NO_ACTIVE_CODEBLOCK (274//)"
 msgid "No code block is selected."
-msgstr "No code block is selected."
+msgstr "Kein Codeblock ausgewählt."
 
 #: src/CodeBlocksViewer.c
 msgctxt "STRING_ERROR_CODEBLOCK_SAVE (273//)"
 msgid "Could not save the active code block."
-msgstr "Could not save the active code block."
+msgstr "Der aktive Codeblock konnte nicht gespeichert werden."
