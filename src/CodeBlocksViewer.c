@@ -5,11 +5,14 @@
 #include <libraries/clipboard.h>
 #include <libraries/mui.h>
 #include <mui/NList_mcc.h>
+#include <proto/asl.h>
 #include <proto/clipboard.h>
+#include <proto/dos.h>
 #include <proto/exec.h>
 #include <proto/muimaster.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <SDI_hook.h>
 #include "AmigaGPT_cat.h"
 #include "CodeBlocksScintilla.h"
@@ -19,15 +22,25 @@
 struct Library *ClipboardBase;
 
 #define CODEBLOCK_LIST_LABEL_MAX 64
+#define CODEBLOCK_DEFAULT_NAME_MAX 64
 
 struct CodeBlockListItem {
     struct AICodeBlock *block;
     char label[CODEBLOCK_LIST_LABEL_MAX];
 };
 
+typedef struct {
+    STRPTR data;
+    ULONG length;
+    BOOL mustFree;
+} CodeBlockPayload;
+
 static Object *codeBlocksListObject;
 static Object *codeBlocksScintillaObject;
-static Object *codeBlocksCopyButtonObject;
+static Object *codeBlocksCopyUtf8ButtonObject;
+static Object *codeBlocksCopySystemButtonObject;
+static Object *codeBlocksSaveUtf8ButtonObject;
+static Object *codeBlocksSaveSystemButtonObject;
 /** Last block chosen in the list (survives focus loss on the NList). */
 static struct AICodeBlock *codeBlocksCachedBlock;
 
@@ -121,20 +134,279 @@ HOOKPROTONHNONP(CodeBlockListActiveFunc, void) {
 }
 MakeHook(CodeBlockListActiveHook, CodeBlockListActiveFunc);
 
-HOOKPROTONHNONP(CodeBlockCopyButtonFunc, void) {
+static struct AICodeBlock *codeBlocksViewerGetSelectedBlock(void) {
+    if (codeBlocksCachedBlock != NULL) {
+        return codeBlocksCachedBlock;
+    }
+
+    if (codeBlocksListObject != NULL) {
+        struct CodeBlockListItem *item = NULL;
+
+        DoMethod(codeBlocksListObject, MUIM_NList_GetEntry,
+                 MUIV_NList_GetEntry_Active, &item);
+        if (item != NULL && item->block != NULL) {
+            return item->block;
+        }
+    }
+    return NULL;
+}
+
+static const char *codeBlocksLanguageExtension(const char *language) {
+    static const struct {
+        const char *lang;
+        const char *ext;
+    } map[] = {
+        {"python", ".py"},     {"javascript", ".js"}, {"js", ".js"},
+        {"typescript", ".ts"}, {"ts", ".ts"},         {"c", ".c"},
+        {"cpp", ".cpp"},       {"c++", ".cpp"},       {"csharp", ".cs"},
+        {"cs", ".cs"},         {"java", ".java"},     {"go", ".go"},
+        {"rust", ".rs"},       {"ruby", ".rb"},       {"php", ".php"},
+        {"shell", ".sh"},      {"bash", ".sh"},       {"sh", ".sh"},
+        {"html", ".html"},     {"css", ".css"},       {"json", ".json"},
+        {"xml", ".xml"},       {"yaml", ".yaml"},     {"yml", ".yaml"},
+        {"markdown", ".md"},   {"md", ".md"},         {"sql", ".sql"},
+        {"kotlin", ".kt"},     {"swift", ".swift"},   {"lua", ".lua"},
+        {"perl", ".pl"},       {"r", ".r"},           {"text", ".txt"},
+    };
+    ULONG i;
+
+    if (language == NULL || language[0] == '\0') {
+        return ".txt";
+    }
+    for (i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
+        if (strcasecmp(language, map[i].lang) == 0) {
+            return map[i].ext;
+        }
+    }
+    return ".txt";
+}
+
+void codeBlocksViewerDefaultFileName(struct AICodeBlock *block, STRPTR buf,
+                                     ULONG buflen) {
+    const char *ext = ".txt";
+
+    if (buf == NULL || buflen == 0) {
+        return;
+    }
+    buf[0] = '\0';
+    if (block == NULL) {
+        return;
+    }
+    if (block->language != NULL && block->language[0] != '\0') {
+        ext = codeBlocksLanguageExtension((const char *)block->language);
+    }
+    snprintf(buf, buflen, "block-%lu%s", (unsigned long)block->index, ext);
+}
+
+static BOOL codeBlocksPayloadFromBlock(struct AICodeBlock *block,
+                                       BOOL systemCharset,
+                                       CodeBlockPayload *payload) {
+    ULONG rawLen;
+
+    if (payload == NULL) {
+        return FALSE;
+    }
+    payload->data = NULL;
+    payload->length = 0;
+    payload->mustFree = FALSE;
+
+    if (block == NULL || block->raw_code == NULL) {
+        return FALSE;
+    }
+    rawLen = block->code_length;
+    if (rawLen == 0) {
+        rawLen = (ULONG)strlen((const char *)block->raw_code);
+    }
+    if (rawLen == 0) {
+        return FALSE;
+    }
+
+    if (!systemCharset) {
+        payload->data = block->raw_code;
+        payload->length = rawLen;
+        return TRUE;
+    }
+
+    if (systemCodeset == NULL) {
+        return FALSE;
+    }
+
+    payload->data = CodesetsUTF8ToStr(
+        CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)block->raw_code,
+        CSA_MapForeignChars, TRUE, TAG_DONE);
+    if (payload->data == NULL) {
+        return FALSE;
+    }
+    payload->length = (ULONG)strlen(payload->data);
+    payload->mustFree = TRUE;
+    return payload->length > 0;
+}
+
+static void codeBlocksPayloadFree(CodeBlockPayload *payload) {
+    if (payload != NULL && payload->mustFree && payload->data != NULL) {
+        CodesetsFreeA(payload->data, NULL);
+        payload->data = NULL;
+        payload->length = 0;
+        payload->mustFree = FALSE;
+    }
+}
+
+static BOOL codeBlocksWritePayloadToPath(const CodeBlockPayload *payload,
+                                         STRPTR path) {
+    FILE *file;
+    size_t written;
+
+    if (payload == NULL || path == NULL || payload->data == NULL ||
+        payload->length == 0) {
+        return FALSE;
+    }
+
+    file = fopen(path, "wb");
+    if (file == NULL) {
+        return FALSE;
+    }
+    written = fwrite(payload->data, 1, payload->length, file);
+    fclose(file);
+    return written == payload->length;
+}
+
+static BOOL codeBlocksCopyPayload(const CodeBlockPayload *payload,
+                                  BOOL utf8Charset) {
+    LONG err;
+    ULONG charsetTag;
+
+    if (payload == NULL || payload->data == NULL || payload->length == 0) {
+        return FALSE;
+    }
+    if (ClipboardBase == NULL) {
+        return FALSE;
+    }
+
+    if (utf8Charset) {
+        charsetTag = MIBENUM_UTF_8;
+    } else {
+        if (systemCodeset == NULL) {
+            return FALSE;
+        }
+        charsetTag = (ULONG)systemCodeset->MIBenum;
+    }
+
+    /* clipboard.library: 0 = success (IFFERR_* on failure). */
+    {
+        struct TagItem tags[] = {
+            {CLP_Charset, charsetTag},
+            {CLP_Size, payload->length},
+            {TAG_DONE, 0},
+        };
+
+        err = WriteClipTextA(payload->data, tags);
+    }
+    return err == 0;
+}
+
+static BOOL codeBlocksViewerCopyActiveBlock(BOOL systemCharset) {
+    struct AICodeBlock *block = codeBlocksViewerGetSelectedBlock();
+    CodeBlockPayload payload;
+    BOOL ok;
+
+    if (!codeBlocksPayloadFromBlock(block, systemCharset, &payload)) {
+        return FALSE;
+    }
+    ok = codeBlocksCopyPayload(&payload, !systemCharset);
+    codeBlocksPayloadFree(&payload);
+    return ok;
+}
+
+BOOL codeBlocksViewerCopyActiveBlockUtf8(void) {
+    return codeBlocksViewerCopyActiveBlock(FALSE);
+}
+
+BOOL codeBlocksViewerCopyActiveBlockSystem(void) {
+    return codeBlocksViewerCopyActiveBlock(TRUE);
+}
+
+BOOL codeBlocksViewerSaveActiveBlock(BOOL systemCharset) {
+    struct AICodeBlock *block = codeBlocksViewerGetSelectedBlock();
+    CodeBlockPayload payload;
+    BOOL ok = FALSE;
+    BOOL cancelled = FALSE;
+    UBYTE defaultName[CODEBLOCK_DEFAULT_NAME_MAX];
+    struct FileRequester *fileReq;
+
+    if (!codeBlocksPayloadFromBlock(block, systemCharset, &payload)) {
+        return FALSE;
+    }
+
+    codeBlocksViewerDefaultFileName(block, defaultName, sizeof(defaultName));
+    fileReq = AllocAslRequestTags(ASL_FileRequest, TAG_END);
+    if (fileReq != NULL) {
+        if (AslRequestTags(fileReq, ASLFR_Window, codeBlocksWindowObject,
+                           ASLFR_TitleText, STRING_SAVE_CODEBLOCK,
+                           ASLFR_InitialFile, defaultName,
+                           ASLFR_InitialDrawer, "SYS:", ASLFR_DoSaveMode, TRUE,
+                           TAG_DONE)) {
+            STRPTR savePath = fileReq->fr_Drawer;
+            STRPTR saveName = fileReq->fr_File;
+            UWORD fullPathLength =
+                (UWORD)(strlen(savePath) + strlen(saveName) + 2);
+            STRPTR fullPath = AllocVec(fullPathLength, MEMF_CLEAR);
+
+            if (fullPath != NULL) {
+                strncpy(fullPath, savePath, strlen(savePath));
+                AddPart(fullPath, saveName, fullPathLength);
+                ok = codeBlocksWritePayloadToPath(&payload, fullPath);
+                FreeVec(fullPath);
+            }
+        } else {
+            cancelled = TRUE;
+            ok = TRUE;
+        }
+        FreeAslRequest(fileReq);
+    }
+
+    codeBlocksPayloadFree(&payload);
+    return cancelled ? TRUE : ok;
+}
+
+HOOKPROTONHNONP(CodeBlockCopyUtf8ButtonFunc, void) {
     if (!codeBlocksViewerCopyActiveBlockUtf8()) {
         displayError(STRING_ERROR_CLIPBOARD_COPY);
     }
 }
-MakeHook(CodeBlockCopyButtonHook, CodeBlockCopyButtonFunc);
+MakeHook(CodeBlockCopyUtf8ButtonHook, CodeBlockCopyUtf8ButtonFunc);
+
+HOOKPROTONHNONP(CodeBlockCopySystemButtonFunc, void) {
+    if (!codeBlocksViewerCopyActiveBlockSystem()) {
+        displayError(STRING_ERROR_CLIPBOARD_COPY);
+    }
+}
+MakeHook(CodeBlockCopySystemButtonHook, CodeBlockCopySystemButtonFunc);
+
+HOOKPROTONHNONP(CodeBlockSaveUtf8ButtonFunc, void) {
+    if (!codeBlocksViewerSaveActiveBlock(FALSE)) {
+        displayError(STRING_ERROR_CODEBLOCK_SAVE);
+    }
+}
+MakeHook(CodeBlockSaveUtf8ButtonHook, CodeBlockSaveUtf8ButtonFunc);
+
+HOOKPROTONHNONP(CodeBlockSaveSystemButtonFunc, void) {
+    if (!codeBlocksViewerSaveActiveBlock(TRUE)) {
+        displayError(STRING_ERROR_CODEBLOCK_SAVE);
+    }
+}
+MakeHook(CodeBlockSaveSystemButtonHook, CodeBlockSaveSystemButtonFunc);
 
 void codeBlocksViewerSetObjects(Object *list, Object *scintilla) {
     codeBlocksListObject = list;
     codeBlocksScintillaObject = scintilla;
 }
 
-void codeBlocksViewerSetCopyButton(Object *button) {
-    codeBlocksCopyButtonObject = button;
+void codeBlocksViewerSetActionButtons(Object *copyUtf8, Object *copySystem,
+                                      Object *saveUtf8, Object *saveSystem) {
+    codeBlocksCopyUtf8ButtonObject = copyUtf8;
+    codeBlocksCopySystemButtonObject = copySystem;
+    codeBlocksSaveUtf8ButtonObject = saveUtf8;
+    codeBlocksSaveSystemButtonObject = saveSystem;
 }
 
 void codeBlocksViewerAttachListHooks(void) {
@@ -146,13 +418,27 @@ void codeBlocksViewerAttachListHooks(void) {
              &CodeBlockListActiveHook);
 }
 
-void codeBlocksViewerAttachCopyButton(void) {
-    if (codeBlocksCopyButtonObject == NULL) {
-        return;
+void codeBlocksViewerAttachActionButtons(void) {
+    if (codeBlocksCopyUtf8ButtonObject != NULL) {
+        DoMethod(codeBlocksCopyUtf8ButtonObject, MUIM_Notify, MUIA_Pressed,
+                 FALSE, codeBlocksCopyUtf8ButtonObject, 2, MUIM_CallHook,
+                 &CodeBlockCopyUtf8ButtonHook);
     }
-    DoMethod(codeBlocksCopyButtonObject, MUIM_Notify, MUIA_Pressed, FALSE,
-             codeBlocksCopyButtonObject, 2, MUIM_CallHook,
-             &CodeBlockCopyButtonHook);
+    if (codeBlocksCopySystemButtonObject != NULL) {
+        DoMethod(codeBlocksCopySystemButtonObject, MUIM_Notify, MUIA_Pressed,
+                 FALSE, codeBlocksCopySystemButtonObject, 2, MUIM_CallHook,
+                 &CodeBlockCopySystemButtonHook);
+    }
+    if (codeBlocksSaveUtf8ButtonObject != NULL) {
+        DoMethod(codeBlocksSaveUtf8ButtonObject, MUIM_Notify, MUIA_Pressed,
+                 FALSE, codeBlocksSaveUtf8ButtonObject, 2, MUIM_CallHook,
+                 &CodeBlockSaveUtf8ButtonHook);
+    }
+    if (codeBlocksSaveSystemButtonObject != NULL) {
+        DoMethod(codeBlocksSaveSystemButtonObject, MUIM_Notify, MUIA_Pressed,
+                 FALSE, codeBlocksSaveSystemButtonObject, 2, MUIM_CallHook,
+                 &CodeBlockSaveSystemButtonHook);
+    }
 }
 
 void codeBlocksViewerClearList(void) {
@@ -215,23 +501,6 @@ BOOL codeBlocksViewerPopulate(struct Conversation *conv) {
     return count > 0;
 }
 
-static struct AICodeBlock *codeBlocksViewerGetSelectedBlock(void) {
-    if (codeBlocksCachedBlock != NULL) {
-        return codeBlocksCachedBlock;
-    }
-
-    if (codeBlocksListObject != NULL) {
-        struct CodeBlockListItem *item = NULL;
-
-        DoMethod(codeBlocksListObject, MUIM_NList_GetEntry,
-                 MUIV_NList_GetEntry_Active, &item);
-        if (item != NULL && item->block != NULL) {
-            return item->block;
-        }
-    }
-    return NULL;
-}
-
 void codeBlocksViewerShowActiveBlock(void) {
     struct AICodeBlock *block = codeBlocksViewerGetSelectedBlock();
     const char *text = "";
@@ -243,38 +512,6 @@ void codeBlocksViewerShowActiveBlock(void) {
         text = (const char *)block->raw_code;
     }
     codeBlocksScintillaSetUtf8Text(codeBlocksScintillaObject, text);
-}
-
-BOOL codeBlocksViewerCopyActiveBlockUtf8(void) {
-    struct AICodeBlock *block = codeBlocksViewerGetSelectedBlock();
-    ULONG nbytes;
-    LONG err;
-
-    if (block == NULL || block->raw_code == NULL) {
-        return FALSE;
-    }
-    nbytes = block->code_length;
-    if (nbytes == 0) {
-        nbytes = (ULONG)strlen((const char *)block->raw_code);
-    }
-    if (nbytes == 0) {
-        return FALSE;
-    }
-    if (ClipboardBase == NULL) {
-        return FALSE;
-    }
-
-    /* clipboard.library: 0 = success (IFFERR_* on failure). */
-    {
-        struct TagItem tags[] = {
-            {CLP_Charset, MIBENUM_UTF_8},
-            {CLP_Size, nbytes},
-            {TAG_DONE, 0},
-        };
-
-        err = WriteClipTextA(block->raw_code, tags);
-    }
-    return err == 0;
 }
 
 #endif /* __MORPHOS__ */

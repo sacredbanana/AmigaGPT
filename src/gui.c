@@ -79,7 +79,10 @@ Object *codeBlocksListView;
 Object *codeBlocksList;
 Object *codeBlocksScintillaGroup;
 Object *codeBlocksScintilla;
-Object *codeBlocksCopyButton;
+Object *codeBlocksCopyUtf8Button;
+Object *codeBlocksCopySystemButton;
+Object *codeBlocksSaveUtf8Button;
+Object *codeBlocksSaveSystemButton;
 #else
 Object *codeBlocksOutputListView;
 Object *codeBlocksOutputFloat;
@@ -298,8 +301,14 @@ LONG initVideo() {
                   MUIA_Frame, MUIV_Frame_Text, End, End,
             End,
             Child, HGroup,
-              Child, codeBlocksCopyButton = MUI_MakeObject(
+              Child, codeBlocksCopyUtf8Button = MUI_MakeObject(
                   MUIO_Button, STRING_MENU_COPY_CODEBLOCK, End,
+              Child, codeBlocksCopySystemButton = MUI_MakeObject(
+                  MUIO_Button, STRING_MENU_COPY_CODEBLOCK_SYSTEM, End,
+              Child, codeBlocksSaveUtf8Button = MUI_MakeObject(
+                  MUIO_Button, STRING_MENU_SAVE_CODEBLOCK_UTF8, End,
+              Child, codeBlocksSaveSystemButton = MUI_MakeObject(
+                  MUIO_Button, STRING_MENU_SAVE_CODEBLOCK_SYSTEM, End,
             End, End, End,
 #endif
           SubWindow,
@@ -337,9 +346,11 @@ LONG initVideo() {
         return RETURN_ERROR;
     }
     codeBlocksViewerSetObjects(codeBlocksList, codeBlocksScintilla);
-    codeBlocksViewerSetCopyButton(codeBlocksCopyButton);
+    codeBlocksViewerSetActionButtons(
+        codeBlocksCopyUtf8Button, codeBlocksCopySystemButton,
+        codeBlocksSaveUtf8Button, codeBlocksSaveSystemButton);
     codeBlocksViewerAttachListHooks();
-    codeBlocksViewerAttachCopyButton();
+    codeBlocksViewerAttachActionButtons();
     codeBlocksScintillaInitViewer(codeBlocksScintilla);
 #else
     if (codeBlocksViewContents == NULL) {

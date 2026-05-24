@@ -1466,3 +1466,28 @@ msgstr "Could not copy the active code block to the clipboard."
 msgctxt "STRING_MENU_COPY_CODEBLOCK (268//)"
 msgid "Copy code block (UTF-8)"
 msgstr "Copy code block (UTF-8)"
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_MENU_COPY_CODEBLOCK_SYSTEM (269//)"
+msgid "Copy code block (system charset)"
+msgstr "Copy code block (system charset)"
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_MENU_SAVE_CODEBLOCK_UTF8 (270//)"
+msgid "Save code block (UTF-8)..."
+msgstr "Save code block (UTF-8)..."
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_MENU_SAVE_CODEBLOCK_SYSTEM (271//)"
+msgid "Save code block (system charset)..."
+msgstr "Save code block (system charset)..."
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_SAVE_CODEBLOCK (272//)"
+msgid "Save code block"
+msgstr "Save code block"
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_ERROR_CODEBLOCK_SAVE (273//)"
+msgid "Could not save the active code block."
+msgstr "Could not save the active code block."

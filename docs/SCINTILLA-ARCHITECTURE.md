@@ -13,7 +13,7 @@ SDK nativ (MorphOS) vs. WSL, `MUIM_Scintilla_Command`, Inventar `devfiles.txt`: 
 | Phase | Status / Inhalt |
 |-------|-----------------|
 | **1–5** | Ziel, Datenmodell, Stream, Fences, GUI-Grundlagen |
-| **6–10** | Scintilla **Code-Viewer** v0.1 — **Phase 6 erledigt**; **Phase 7a erledigt** (2026-05); **7b** + **7c** offen; 8–10 offen |
+| **6–10** | Scintilla **Code-Viewer** v0.1 — **Phase 6 erledigt**; **Phase 7a/7b erledigt** (2026-05); **7c** offen; 8–10 offen |
 | **11** | Komfort am Code-Viewer (Lexer, Highlighting, Tabs, Export) |
 | **12** | **Hauptfenster Chat-Ausgabe** → Scintilla.mcc + TTEngine (UTF-8, ohne NFloattext/codesets für diese Fläche) |
 | **13** | MorphOS Worker / UI-Batching für Stream (bewusst **nach** Phase 12) |
@@ -293,27 +293,25 @@ Ein Nutzer arbeitet mit **einem** Codeblock; Copy/Save liefern bewusst **Rohdate
 
 ---
 
-### Phase 7b — Save + Copy System-Codeset (nach 7a)
+### Phase 7b — Save + Copy System-Codeset — **erledigt** (MorphOS)
 
-**Gemeinsame Konvertierung** (eine Hilfsfunktion, z. B. in `gui.c`):
+**Gemeinsame Konvertierung** (`CodeBlocksViewer.c` — `codeBlocksPayloadFromBlock`):
 
 | Modus | Bytes | Verwendung |
 |-------|--------|------------|
 | **Raw** | `raw_code` / `code_length` | Copy UTF-8, Save UTF-8 |
 | **System** | `CodesetsUTF8ToStr(CSA_DestCodeset, systemCodeset, raw_code, …)` | Copy System, Save System; Free mit `CodesetsFreeA` |
 
-**Menü (Code-Fenster oder Untermenü Ansicht)** — zwei feste Einträge pro Aktion (kein versteckter Modus-Schalter in v0.1):
+**UI (MorphOS Code-Fenster):** vier Buttons unter Liste+Scintilla:
 
-| Menüeintrag | Wirkung |
-|-------------|---------|
-| Copy block (UTF-8) | 7a, Default |
-| Copy block (system charset) | 7b |
-| Save block (UTF-8) … | ASL Save, 7b |
-| Save block (system charset) … | ASL Save, 7b |
+| Button | Wirkung |
+|--------|---------|
+| Copy code block (UTF-8) | 7a |
+| Copy code block (system charset) | Zwischenablage, `systemCodeset->MIBenum` |
+| Save code block (UTF-8)… | ASL Save, Raw-Bytes |
+| Save code block (system charset)… | ASL Save, konvertiert |
 
-**Save:** ASL Dateirequester (Muster wie Bild-Save in `MainWindow.c`); **ein** Block = **eine** Datei.
-
-**Default-Dateiname:** `block-<index>.<ext>` — Extension aus `language` (heuristisch: `python`→`.py`, `c`→`.c`, …), sonst `.txt`.
+**Save:** ASL (`codeBlocksWindowObject` als Parent); Default-Dateiname `block-<index>.<ext>` (Sprache → Extension-Heuristik); ASL-Abbruch = kein Fehlerdialog.
 
 **Hinweise:**
 
@@ -335,11 +333,11 @@ Ein Nutzer arbeitet mit **einem** Codeblock; Copy/Save liefern bewusst **Rohdate
 ### Implementierungsreihenfolge
 
 1. ~~**7a**~~ — erledigt (NList, Scintilla, Copy-Button, Menü-Ghosting, Speicher-Dismiss).
-2. **7b** — Konvertierungs-Helfer, Buttons Copy/Save System-Codeset, ASL Save.
+2. ~~**7b**~~ — erledigt (Copy/Save UTF-8 + System, ASL, vier Buttons).
 3. **7c** — Mausrad → Chat-NListview/NFloattext scrollen (optional, klein).
 4. **Phase 8** — Buffer/`snprintf` beim Umbau prüfen (100 KB-Grenze, dynamische Pfade).
-4. **Phase 9** — optional Logs.
-5. **Phase 10** — DoD-Checkliste abhaken.
+5. **Phase 9** — optional Logs.
+6. **Phase 10** — DoD-Checkliste abhaken.
 
 **Katalog:** neue Menü-Strings → `AmigaGPT.pot` / `.po`, FlexCat beim Build.
 
@@ -502,7 +500,7 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 
 **Phase 6 (MorphOS):** dasselbe Fenster mit **Scintilla** statt NFloattext — siehe oben „Umgesetzt (Phase 6)“.
 
-**Nächster Schritt:** **Phase 7b** (Save + Copy/Save System-Codeset). Optional danach **7c** (Chat-Mausrad). Danach 8–10, Phase 11 (Lexer), **Phase 12** (Chat-Scintilla), **Phase 13** (Worker).
+**Nächster Schritt:** **Phase 7c** (Chat-Mausrad, optional) oder **Phase 8**. Danach 9–10, Phase 11 (Lexer), **Phase 12** (Chat-Scintilla), **Phase 13** (Worker).
 
 ---
 

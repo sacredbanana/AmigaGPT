@@ -20,11 +20,12 @@ extern struct Hook CodeBlocksWindowClosedHook;
 
 void codeBlocksViewerSetObjects(Object *list, Object *scintilla);
 
-void codeBlocksViewerSetCopyButton(Object *button);
+void codeBlocksViewerSetActionButtons(Object *copyUtf8, Object *copySystem,
+                                      Object *saveUtf8, Object *saveSystem);
 
 void codeBlocksViewerAttachListHooks(void);
 
-void codeBlocksViewerAttachCopyButton(void);
+void codeBlocksViewerAttachActionButtons(void);
 
 /** TRUE if the conversation has at least one parsed code block. */
 BOOL codeBlocksConversationHasBlocks(struct Conversation *conv);
@@ -42,7 +43,15 @@ void codeBlocksViewerSyncSelectionFromList(void);
 
 void codeBlocksViewerShowActiveBlock(void);
 
+/** Default ASL filename: block-<index>.<ext> from language. */
+void codeBlocksViewerDefaultFileName(struct AICodeBlock *block, STRPTR buf,
+                                     ULONG buflen);
+
 BOOL codeBlocksViewerCopyActiveBlockUtf8(void);
+
+BOOL codeBlocksViewerCopyActiveBlockSystem(void);
+
+BOOL codeBlocksViewerSaveActiveBlock(BOOL systemCharset);
 
 #endif /* __MORPHOS__ */
 
