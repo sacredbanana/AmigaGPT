@@ -128,6 +128,12 @@ Im gesamten Repo (`src/*.c`, Rexx unter `bundle/`) gibt es **kein** `Delete("RAM
 - **Heute:** Kein Block / kein `display_text`; Roh-``` im Chat.
 - **Soll (R4, optional):** Unverändert dokumentieren **oder** Heuristik „offenes Fence bis EOF“ als ein Block (bewusst riskant).
 
+### S6b — Eingerückte Fences (Chat zeigt ```, Viewer hat Blöcke)
+
+- **Trigger:** Modell liefert ` ``` ` mit führenden Leerzeichen/Tabs (z. B. in Listen); Parser verlangte bisher Zeilenanfang **ohne** Einrückung.
+- **Fix (2026-05):** `codefence.c` — CommonMark-konform bis **3 Spalten** Einrückung vor öffnendem/schließendem Fence.
+- **Grenze:** Einrückung **> 3** Spalten bleibt Roh-``` im Chat (kein Block).
+
 ### S7 — `displayConversation` bricht ab (Puffer zu groß)
 
 - **Trigger:** `STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED` — früher Return, NFloattext unverändert.

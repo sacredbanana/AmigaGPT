@@ -9,14 +9,40 @@
 #include "AmigaGPT_cat.h"
 #include "openai.h"
 
-static BOOL is_line_start(const UBYTE *raw_base, const UBYTE *pos) {
-    if (pos < raw_base) {
+/** CommonMark: fenced code may be indented by up to 3 columns on the line. */
+#define FENCE_MAX_INDENT_COLS 3
+
+static ULONG fence_line_indent_cols(const UBYTE *line_start,
+                                    const UBYTE *fence) {
+    ULONG cols = 0;
+    const UBYTE *q;
+
+    for (q = line_start; q < fence; q++) {
+        if (*q == ' ') {
+            cols++;
+        } else if (*q == '\t') {
+            cols += 4 - (cols % 4);
+        } else {
+            return (ULONG)-1;
+        }
+        if (cols > FENCE_MAX_INDENT_COLS) {
+            return (ULONG)-1;
+        }
+    }
+    return cols;
+}
+
+static BOOL is_fence_line(const UBYTE *raw_base, const UBYTE *fence) {
+    const UBYTE *line_start;
+
+    if (fence < raw_base) {
         return FALSE;
     }
-    if (pos == raw_base) {
-        return TRUE;
+    line_start = fence;
+    while (line_start > raw_base && line_start[-1] != '\n') {
+        line_start--;
     }
-    return pos[-1] == '\n';
+    return fence_line_indent_cols(line_start, fence) != (ULONG)-1;
 }
 
 static void clear_codeblocks(struct ConversationNode *node) {
@@ -168,7 +194,7 @@ static void conversationNodeBuildDisplayOmittingCode(
             break;
         }
 
-        if (!is_line_start(raw, fence)) {
+        if (!is_fence_line(raw, fence)) {
             p = fence + 3;
             continue;
         }
@@ -193,7 +219,7 @@ static void conversationNodeBuildDisplayOmittingCode(
         closing = NULL;
         for (q = p; q + 3 <= end; q++) {
             if (q[0] == '`' && q[1] == '`' && q[2] == '`' &&
-                is_line_start(raw, q)) {
+                is_fence_line(raw, q)) {
                 const UBYTE *r = q + 3;
 
                 while (r < end && (*r == ' ' || *r == '\t')) {
@@ -313,7 +339,7 @@ void conversationNodeParseCodeFences(struct Conversation *conv,
             break;
         }
 
-        if (!is_line_start(raw, fence)) {
+        if (!is_fence_line(raw, fence)) {
             p = fence + 3;
             continue;
         }
@@ -353,7 +379,7 @@ void conversationNodeParseCodeFences(struct Conversation *conv,
         closing = NULL;
         for (q = code_start; q + 3 <= end; q++) {
             if (q[0] == '`' && q[1] == '`' && q[2] == '`' &&
-                is_line_start(raw, q)) {
+                is_fence_line(raw, q)) {
                 const UBYTE *r = q + 3;
 
                 while (r < end && (*r == ' ' || *r == '\t')) {
