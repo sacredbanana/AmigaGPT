@@ -75,6 +75,11 @@ R2 ist **nicht abgeschlossen**. Vor Phase-8-Start festgehalten (2026-05):
 - Alle verbleibenden Config-Requester: `ProxySettings`, `CustomServer`, `ChatSystem`, `VoiceInstructions`, `ElevenLabsSettings` → `configDupString`.
 - `MainWindow.c`: neues Bild (`configDupString` + OOM), `copyGeneratedImage`, `copyConversation`, Chat-History-Laden, Auto-Titel.
 
+### 8.3.1 (2026-05) — Requester UAF-Fix
+
+- `configAssignString()`: zuerst duplizieren, dann altes Feld freigeben (MUI `String` nutzt oft direkt `config.*` als `MUIA_String_Contents`).
+- Symptom ohne Fix: Proxy leeren, speichern, beenden → System-Freeze (Use-after-free beim Shutdown).
+
 ### 8.4+ (optional)
 
 - `menu.c` `speechAccent` / Rexx-Pfade; verbleibende `strncpy` in `gui.c` / `openai.c` (feste Puffer).

@@ -19,12 +19,8 @@ HOOKPROTONHNONP(APIKeyRequesterOkButtonClickedFunc, void) {
             apiKey[i] = '\0';
         }
     }
-    set(apiKeyRequesterString, MUIA_TextEditor_Contents, apiKey);
-    if (config.openAiApiKey != NULL) {
-        FreeVec(config.openAiApiKey);
-        config.openAiApiKey = NULL;
-    }
-    config.openAiApiKey = configDupString(apiKey);
+    configAssignString(&config.openAiApiKey, apiKey);
+    set(apiKeyRequesterString, MUIA_TextEditor_Contents, config.openAiApiKey);
     FreeVec(apiKey);
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);

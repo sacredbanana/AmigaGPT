@@ -17,11 +17,8 @@ Object *proxySettingsRequesterWindowObject;
 HOOKPROTONHNONP(ProxySettingsRequesterOkButtonClickedFunc, void) {
     STRPTR proxyHost;
     get(proxyHostString, MUIA_String_Contents, &proxyHost);
-    if (config.proxyHost != NULL) {
-        FreeVec(config.proxyHost);
-        config.proxyHost = NULL;
-    }
-    config.proxyHost = configDupString(proxyHost);
+    configAssignString(&config.proxyHost, proxyHost);
+    set(proxyHostString, MUIA_String_Contents, config.proxyHost);
 
     LONG port;
     get(proxyPortString, MUIA_String_Integer, &port);
@@ -41,19 +38,13 @@ HOOKPROTONHNONP(ProxySettingsRequesterOkButtonClickedFunc, void) {
 
     STRPTR proxyUsername;
     get(proxyUsernameString, MUIA_String_Contents, &proxyUsername);
-    if (config.proxyUsername != NULL) {
-        FreeVec(config.proxyUsername);
-        config.proxyUsername = NULL;
-    }
-    config.proxyUsername = configDupString(proxyUsername);
+    configAssignString(&config.proxyUsername, proxyUsername);
+    set(proxyUsernameString, MUIA_String_Contents, config.proxyUsername);
 
     STRPTR proxyPassword;
     get(proxyPasswordString, MUIA_String_Contents, &proxyPassword);
-    if (config.proxyPassword != NULL) {
-        FreeVec(config.proxyPassword);
-        config.proxyPassword = NULL;
-    }
-    config.proxyPassword = configDupString(proxyPassword);
+    configAssignString(&config.proxyPassword, proxyPassword);
+    set(proxyPasswordString, MUIA_String_Contents, config.proxyPassword);
 
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);

@@ -31,6 +31,19 @@ STRPTR configDupString(CONST_STRPTR src) {
     return dest;
 }
 
+void configAssignString(STRPTR *slot, CONST_STRPTR src) {
+    STRPTR copy;
+
+    if (slot == NULL) {
+        return;
+    }
+    copy = configDupString(src);
+    if (*slot != NULL) {
+        FreeVec(*slot);
+    }
+    *slot = copy;
+}
+
 struct Config config = {
     .speechEnabled = FALSE,
     .speechAccent = NULL,

@@ -171,13 +171,12 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
     /* Save API key */
     STRPTR apiKey;
     get(elevenLabsAPIKeyString, MUIA_String_Contents, &apiKey);
-    if (config.elevenLabsAPIKey != NULL) {
-        FreeVec(config.elevenLabsAPIKey);
-        config.elevenLabsAPIKey = NULL;
-    }
     if (apiKey != NULL && strlen(apiKey) > 0) {
-        config.elevenLabsAPIKey = configDupString(apiKey);
+        configAssignString(&config.elevenLabsAPIKey, apiKey);
+    } else {
+        configAssignString(&config.elevenLabsAPIKey, "");
     }
+    set(elevenLabsAPIKeyString, MUIA_String_Contents, config.elevenLabsAPIKey);
 
     /* Save selected model */
     LONG modelActive = MUIV_NList_Active_Off;
@@ -190,12 +189,7 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
 
         if (selectedModelName != NULL) {
             /* Save the model name */
-            if (config.elevenLabsModelName != NULL) {
-                FreeVec(config.elevenLabsModelName);
-                config.elevenLabsModelName = NULL;
-            }
-            config.elevenLabsModelName =
-                configDupString(selectedModelName);
+            configAssignString(&config.elevenLabsModelName, selectedModelName);
 
             /* Find and save the model ID */
             struct json_object *modelsArray = NULL;
@@ -219,13 +213,9 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
                                                           &modelIdObj)) {
                                 CONST_STRPTR modelId =
                                     json_object_get_string(modelIdObj);
-                                if (config.elevenLabsModel != NULL) {
-                                    FreeVec(config.elevenLabsModel);
-                                    config.elevenLabsModel = NULL;
-                                }
                                 if (modelId != NULL) {
-                                    config.elevenLabsModel =
-                                        configDupString(modelId);
+                                    configAssignString(&config.elevenLabsModel,
+                                                       modelId);
                                 }
                             }
                             break;
@@ -247,12 +237,7 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
 
         if (selectedVoiceName != NULL) {
             /* Save the voice name */
-            if (config.elevenLabsVoiceName != NULL) {
-                FreeVec(config.elevenLabsVoiceName);
-                config.elevenLabsVoiceName = NULL;
-            }
-            config.elevenLabsVoiceName =
-                configDupString(selectedVoiceName);
+            configAssignString(&config.elevenLabsVoiceName, selectedVoiceName);
 
             /* Find and save the voice ID */
             struct json_object *voicesArray = NULL;
@@ -276,13 +261,9 @@ HOOKPROTONHNONP(ElevenLabsSettingsOkButtonClickedFunc, void) {
                                                           &voiceIdObj)) {
                                 CONST_STRPTR voiceId =
                                     json_object_get_string(voiceIdObj);
-                                if (config.elevenLabsVoiceID != NULL) {
-                                    FreeVec(config.elevenLabsVoiceID);
-                                    config.elevenLabsVoiceID = NULL;
-                                }
                                 if (voiceId != NULL) {
-                                    config.elevenLabsVoiceID =
-                                        configDupString(voiceId);
+                                    configAssignString(&config.elevenLabsVoiceID,
+                                                       voiceId);
                                 }
                             }
                             break;

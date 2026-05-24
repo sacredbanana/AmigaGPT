@@ -83,3 +83,6 @@ void freeConfig();
 
 /** Allocated copy of src (Phase 8); NULL if src is NULL or OOM. */
 STRPTR configDupString(CONST_STRPTR src);
+
+/** Replace *slot with a dup of src; safe when src points into *slot (MUI strings). */
+void configAssignString(STRPTR *slot, CONST_STRPTR src);

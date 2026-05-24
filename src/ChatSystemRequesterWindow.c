@@ -20,11 +20,13 @@ HOOKPROTONHNONP(ChatSystemRequesterOkButtonClickedFunc, void) {
         chatSystem =
             DoMethod(chatSystemRequesterString, MUIM_TextEditor_ExportText);
     }
-    if (config.chatSystem != NULL) {
-        FreeVec(config.chatSystem);
-        config.chatSystem = NULL;
+    configAssignString(&config.chatSystem, chatSystem);
+    if (!isAROS) {
+        set(chatSystemRequesterString, MUIA_TextEditor_Contents,
+            config.chatSystem);
+    } else {
+        set(chatSystemRequesterString, MUIA_String_Contents, config.chatSystem);
     }
-    config.chatSystem = configDupString(chatSystem);
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
     }

@@ -21,11 +21,14 @@ HOOKPROTONHNONP(VoiceInstructionsRequesterOkButtonClickedFunc, void) {
         voiceInstructions = DoMethod(voiceInstructionsRequesterString,
                                      MUIM_TextEditor_ExportText);
     }
-    if (config.openAIVoiceInstructions != NULL) {
-        FreeVec(config.openAIVoiceInstructions);
-        config.openAIVoiceInstructions = NULL;
+    configAssignString(&config.openAIVoiceInstructions, voiceInstructions);
+    if (!isAROS) {
+        set(voiceInstructionsRequesterString, MUIA_TextEditor_Contents,
+            config.openAIVoiceInstructions);
+    } else {
+        set(voiceInstructionsRequesterString, MUIA_String_Contents,
+            config.openAIVoiceInstructions);
     }
-    config.openAIVoiceInstructions = configDupString(voiceInstructions);
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
     }

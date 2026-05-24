@@ -50,11 +50,8 @@ MakeHook(SettingsChangedHook, SettingsChangedFunc);
 HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     STRPTR customServerHost;
     get(customServerHostString, MUIA_String_Contents, &customServerHost);
-    if (config.customHost != NULL) {
-        FreeVec(config.customHost);
-        config.customHost = NULL;
-    }
-    config.customHost = configDupString(customServerHost);
+    configAssignString(&config.customHost, customServerHost);
+    set(customServerHostString, MUIA_String_Contents, config.customHost);
 
     LONG port;
     get(customServerPortString, MUIA_String_Integer, &port);
@@ -70,20 +67,15 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
 
     STRPTR customServerApiKey;
     get(customServerApiKeyString, MUIA_String_Contents, &customServerApiKey);
-    if (config.customApiKey != NULL) {
-        FreeVec(config.customApiKey);
-        config.customApiKey = NULL;
-    }
-    config.customApiKey = configDupString(customServerApiKey);
+    configAssignString(&config.customApiKey, customServerApiKey);
+    set(customServerApiKeyString, MUIA_String_Contents, config.customApiKey);
 
     STRPTR customServerChatModel;
     get(customServerChatModelString, MUIA_String_Contents,
         &customServerChatModel);
-    if (config.customChatModel != NULL) {
-        FreeVec(config.customChatModel);
-        config.customChatModel = NULL;
-    }
-    config.customChatModel = configDupString(customServerChatModel);
+    configAssignString(&config.customChatModel, customServerChatModel);
+    set(customServerChatModelString, MUIA_String_Contents,
+        config.customChatModel);
 
     LONG apiEndpoint;
     get(customServerApiEndpointCycle, MUIA_Cycle_Active, &apiEndpoint);
@@ -93,12 +85,10 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
     get(customServerApiEndpointUrlString, MUIA_String_Contents,
         &customServerApiEndpointUrl);
 
-    if (config.customApiEndpointUrl != NULL) {
-        FreeVec(config.customApiEndpointUrl);
-        config.customApiEndpointUrl = NULL;
-    }
-    config.customApiEndpointUrl =
-        configDupString(customServerApiEndpointUrl);
+    configAssignString(&config.customApiEndpointUrl,
+                       customServerApiEndpointUrl);
+    set(customServerApiEndpointUrlString, MUIA_String_Contents,
+        config.customApiEndpointUrl);
 
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
