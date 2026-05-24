@@ -12,7 +12,7 @@
 | [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md)             | Unicode, NFloattext, codesets, MorphOS-Prüfung, Cairo vs. Scintilla                |
 | [BUILD-MORPHOS-WSL.md](BUILD-MORPHOS-WSL.md)                 | MorphOS Cross-Build: WSL2, Debian, BIGFOOT, FlexCat, Make                          |
 | [MORPHOS-SDK-ERGAENZUNGEN.md](MORPHOS-SDK-ERGAENZUNGEN.md)   | **Welche SDK-Ergänzungen** genau nötig sind (BIGFOOT vs. AmigaSDK-gcc)             |
-| [MORPHOS-SDK-NATIV-UND-WSL.md](MORPHOS-SDK-NATIV-UND-WSL.md) | **MorphOS-Voll-SDK** (Referenz) vs. WSL, `devfiles.txt`, Scintilla Phase 6, `pack` |
+| [MORPHOS-SDK-NATIV-UND-WSL.md](MORPHOS-SDK-NATIV-UND-WSL.md) | **MorphOS-Voll-SDK** (Referenz) vs. WSL, `devfiles.txt`, Scintilla Code-Viewer (6–7b), `pack` |
 | [VON-MORPHOS-SDK-SCINTILLA.md](VON-MORPHOS-SDK-SCINTILLA.md) | `**morphos/VonMorphosSDK/Scintilla.guide`** (AmigaGuide), TTEngine, Lexer, API     |
 | [SUDO-NACHINSTALL.md](SUDO-NACHINSTALL.md)                   | Einmalige `sudo apt` / Rechte / optional `/opt/amiga`                              |
 | [MORPHOS-PROTECTION-BITS.md](MORPHOS-PROTECTION-BITS.md)     | Protection Bits, `fix-protection.rexx`, Cross-LHA → Share                          |

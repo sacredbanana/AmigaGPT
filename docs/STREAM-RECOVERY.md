@@ -37,7 +37,7 @@ Ausführlicher Chat mit Bitte um **Hello World in C mit kyrillischen Zeichen**:
 
 Dieser Fall ist die **DoD-Referenz** für R1+R2.
 
-**Shutdown (2026-05):** Beenden von AmigaGPT kann unter MorphOS das **gesamte System** instabil machen (u. a. nach Save nach `RAM:`). Wahrscheinlich **Use-after-free**: Code-Viewer-Cache zeigt auf `AICodeBlock` in der Conversation; `MUI_DisposeObject(app)` gibt Konversationen frei, während Scintilla/NList noch hängen. **Fix (Code):** `codeBlocksViewerPrepareShutdown()` in `shutdownGUI()` vor `MUI_DisposeObject`. **Zusätzlich:** `RAM:` auf MorphOS ist **systemkritisch** (siehe unten) — Absturz kann auch von bereits instabilem `RAM:` / ENV kommen, nicht nur von AmigaGPT.
+**Shutdown (2026-05):** Beenden mit offenem Code-Viewer konnte MorphOS instabil machen (UAF: Cache auf `AICodeBlock` nach `MUI_DisposeObject`). **Fix (Code, Commit `1048e16`):** `codeBlocksViewerPrepareShutdown()` in `shutdownGUI()` vor `MUI_DisposeObject` — auf MorphOS **getestet** (Build 8552 / 2.17.70). **Zusätzlich:** `RAM:` ist **systemkritisch** (ENV) — kein Pattern-`Delete` in AmigaGPT; Absturz kann von instabilem System/ENV kommen, nicht nur von Save einer Datei nach `RAM:`.
 
 ### MorphOS: `RAM:` und ENV (systemkritisch)
 
@@ -263,4 +263,4 @@ void finishChatStream(enum ChatStreamOutcome outcome,
 
 ---
 
-*Stand: 2026-05 — Plan festgehalten nach MorphOS-Tests (7b, Kyrillisch, WANT_READ, Chat vs. Code-Viewer).*
+*Stand: 2026-05-24 — Plan nach MorphOS-Tests (7b inkl. Save/Quit, Kyrillisch, WANT_READ, Chat vs. Code-Viewer). Shutdown-Fix umgesetzt; Recovery R1–R4 noch offen.*

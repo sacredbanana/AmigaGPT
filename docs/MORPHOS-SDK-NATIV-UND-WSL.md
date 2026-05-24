@@ -84,16 +84,18 @@ Vollständige Tabelle: [MORPHOS-SDK-ERGAENZUNGEN.md](MORPHOS-SDK-ERGAENZUNGEN.md
 
 ---
 
-## 5. Scintilla Code-Viewer — technische Festlegung (Phase 6)
+## 5. Scintilla Code-Viewer — technische Festlegung (Phase 6–7b)
 
 ### 5.1 Implementierte Dateien
 
 | Datei | Rolle |
 |-------|--------|
 | `src/CodeBlocksScintilla.c` / `.h` | Wrapper um `MUIM_Scintilla_Command` → `SCI_*` |
-| `src/gui.c` | Fenster „View code blocks…“: Scintilla + Scrollgroup; `build_conversation_codeblocks_utf8()`; `ttengine.library` unter `#ifdef __MORPHOS__` |
-| `Makefile.MorphOS` | baut `CodeBlocksScintilla.c`; **keine** extra `-l` für Scintilla |
-| `Makefile` / `Makefile.OS4` | **ohne** `CodeBlocksScintilla.c` — OS3/OS4: NFloattext + codesets |
+| `src/CodeBlocksViewer.c` / `.h` | MorphOS: NList, Copy/Save, ASL, `codeBlocksViewerPrepareShutdown()` |
+| `src/gui.c` | Fenster „View code blocks…“; MorphOS: `codeBlocksViewerPopulate()`; OS3/OS4: `build_conversation_codeblocks_utf8()` + NFloattext; `ttengine.library` unter `#ifdef __MORPHOS__` |
+| `src/MainWindow.c` | `codeBlocksViewerSetAslParentWindow(mainWindow)` |
+| `Makefile.MorphOS` | baut `CodeBlocksScintilla.c` + `CodeBlocksViewer.c`; Daemon **ohne** diese Dateien; **keine** extra `-l` für Scintilla |
+| `Makefile` / `Makefile.OS4` | **ohne** Scintilla/Viewer — OS3/OS4: NFloattext + codesets |
 
 ### 5.2 `MUIM_Scintilla_Command` = `MUIA_Scintilla_dummy + 2`
 
@@ -126,22 +128,23 @@ DoMethodA(sci, (Msg)&cmd);
 - `SCI_SETCODEPAGE` mit `SC_CP_UTF8`
 - `SCI_SETTEXT` mit **Roh-UTF-8** — **kein** `CodesetsUTF8ToStr` im Code-Viewer
 - Fenster **offen**, dann setzen; danach read-only (`SCI_SETREADONLY`)
-- Datenquelle unverändert: `AICodeBlock.raw_code` über `build_conversation_codeblocks_utf8()` in `gui.c`
+- Datenquelle MorphOS: `AICodeBlock.raw_code` des aktiven Blocks in `CodeBlocksViewer.c` (OS3/OS4 weiterhin `build_conversation_codeblocks_utf8()` in `gui.c`)
 
 ### 5.4 Laufzeit auf MorphOS
 
 - **Scintilla.mcc** (MUI Custom Class) — nicht statisch gelinkt
 - **ttengine.library** (`gui.c`) + **`SCI_SETFONTQUALITY(1)`** in `CodeBlocksScintilla.c` (TTEngine-Rendering laut Guide)
 
-### 5.5 Phase-6-Status (Definition of Done, Teil)
+### 5.5 Code-Viewer-Status (Definition of Done, Teil)
 
-| Kriterium | Status (2026-05-20) |
+| Kriterium | Status (2026-05-24) |
 |-----------|---------------------|
-| Menü „View code blocks…“ zeigt Inhalt in Scintilla | **Erledigt** (auf MorphOS getestet) |
-| Cross-Build `Makefile.MorphOS` | **Erledigt** |
-| Copy aus `raw_code` (Phase 7) | **Offen** |
+| Menü „View code blocks…“ + Scintilla + NList (7a) | **Erledigt** (MorphOS) |
+| Copy/Save UTF-8 + System-Codeset (7b) | **Erledigt** (MorphOS, inkl. Quit mit offenem Viewer) |
+| Cross-Build `Makefile.MorphOS` + Daemon ohne Viewer | **Erledigt** |
+| Stream/Chat-Sync, WANT_READ (Recovery R1–R2) | **Offen** — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
 | String-Safety / Logs (Phase 8–9) | **Offen** |
-| Vollständiges DoD Phase 10 | **Offen** |
+| Vollständiges DoD Phase 10 (formal) | **Offen** |
 
 Chat-Hauptfenster bleibt **NFloattext** bis Phase 12.
 
@@ -185,8 +188,10 @@ make -f Makefile.MorphOS              # bump APP_VERSION_PATCH + BUILD_NUMBER
 
 | Phase | Inhalt | Abhängigkeit |
 |-------|--------|--------------|
-| **7–10** | Copy aus `raw_code`, String-Safety, optional Logs, DoD Code-Viewer | Phase 6 ✓ |
-| **11** | Syntax-Highlighting (`SCI_SETLEXER`), Komfort — **`Scintilla.guide` von MorphOS hilfreich** | 7–10 stabil |
+| **R1–R2** | Stream-Ende, UI-Sync, WANT_READ weich | parallel zu 7c/8 — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
+| **7c** | Mausrad-Scroll im Chat (NFloattext) | optional, klein |
+| **8–10** | String-Safety, optionale Logs, formale DoD | 7a/7b ✓ |
+| **11** | Syntax-Highlighting (`SCI_SETLEXER`), Komfort — **`Scintilla.guide` von MorphOS hilfreich** | 8–10 stabil |
 | **12** | Chat-Ausgabe: NFloattext → Scintilla + TTEngine | Scintilla im Projekt bewährt |
 | **13** | Stream-Worker / UI-Batching | nach Phase 12 |
 

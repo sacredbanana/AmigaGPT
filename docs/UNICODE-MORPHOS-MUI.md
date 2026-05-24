@@ -10,7 +10,7 @@ Ergänzt [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md). Beschreibt, war
 |--------|--------|----------|-----------|
 | **Chat-Ausgabe** | NFloattext (in NListview) | UTF-8 (`raw_utf8`) → `CodesetsUTF8ToStr` → System → Anzeige | Emoji-Test: `??` |
 | **Chat-Eingabe** | `TextEditor` / `AmigaGPTTextEditor` | System → `CodesetsUTF8Create` → UTF-8 → API | **Nicht** Phase 6–10 / 12 Scope für Editor-Umstellung |
-| **Code-Viewer** | NFloattext (interim) | `raw_code` UTF-8 | **Phase 6–10:** Scintilla + TTEngine |
+| **Code-Viewer** | Scintilla + TTEngine (MorphOS, ab Phase 6/7) | `raw_code` UTF-8 direkt | **Erledigt** auf MorphOS; OS3/OS4 noch NFloattext |
 | **NList-Titel** | NList | `name` UTF-8; Anzeige `name_list_display` | **Bereits umgesetzt** (`conversationRefreshNameListDisplay()` in `gui.c`) |
 
 **Speicher/API:** `raw_utf8`, JSON, `utf8stream` sind durchgehend UTF-8 (verlustfrei in RAM).
@@ -82,12 +82,12 @@ Optional in der Shell: `GETENV Language`, `GETENV Country` (Locale-Preferences s
 
 | Kriterium | Scintilla + TTEngine | Cairo |
 |-----------|----------------------|--------|
-| Branch-Ziel Code-Viewer (6–10) | **Ja** | Nein |
+| Branch-Ziel Code-Viewer (6–7b MorphOS) | **Ja** (umgesetzt) | Nein |
 | UTF-8 ohne NFloattext/codesets | **Ja** (im Scintilla-Fenster) | **Ja**, wenn selbst gebaut |
 | Aufwand in AmigaGPT | Mittel (eine MCC) | Hoch (eigenes Layout, Scroll, MUI-Glue) |
 | Chat `??` beheben | Nur mit **Chat-Phase 12** | Nur wenn **gesamte** Chat-Ausgabe über Cairo |
 
-**Entscheidung:** **Cairo** bewusst nicht geplant (zu komplex für MUI-Chat). **Phase 6–10** = Code-Viewer; **Phase 12** = Hauptfenster-Chat-Ausgabe auf Scintilla.
+**Entscheidung:** **Cairo** bewusst nicht geplant (zu komplex für MUI-Chat). **Code-Viewer** auf MorphOS: Scintilla + TTEngine (**6, 7a, 7b erledigt**). **Phase 12** = Hauptfenster-Chat-Ausgabe auf Scintilla. Stream/Chat-Sync: [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
 
 **Worker (Phase 13)** bewusst **nach** Chat-Scintilla (nicht davor), damit Batching den neuen Stream-Pfad optimiert.
 
@@ -98,7 +98,9 @@ Optional in der Shell: `GETENV Language`, `GETENV Country` (Locale-Preferences s
 | Phase | Inhalt |
 |-------|--------|
 | 1–5 | Erledigt: Datenmodell, Stream, Fences, NFloattext interim, NList `name_list_display` |
-| **6–10** | **Ein Implementierungsblock:** Code-Viewer Scintilla v0.1 |
+| **6, 7a, 7b** | **Erledigt (MorphOS):** Code-Viewer Scintilla, NList, Copy/Save UTF-8 + System |
+| **7c, 8–10** | Mausrad Chat; String-Safety, Logs, formale DoD v0.1 |
+| **R1–R4** | Stream- & Chat-Recovery — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
 | 11 | Komfort am Code-Viewer (Lexer, Highlighting, …) |
 | **12** | Hauptfenster **Chat-Ausgabe** → Scintilla (+ TTEngine); Eingabe-Editor unverändert |
 | **13** | MorphOS Worker / UI-Batching (altes „Phase 12“) |
@@ -109,4 +111,4 @@ Optional in der Shell: `GETENV Language`, `GETENV Country` (Locale-Preferences s
 
 ## 6. Kurzfassung
 
-AmigaGPT speichert in **UTF-8**. **NFloattext** und die klassische MUI-Kette erwarten **System-Codeset-Strings** → auf typischem MorphOS **Konvertierungsverluste** (Prüfung: Emoji → `??`). **Scintilla.mcc mit TTEngine** umgeht das für Code (6–10) und geplant für die Chat-**Ausgabe** (12). **Cairo** wäre ein separater, schwerer Gesamt-Renderer.
+AmigaGPT speichert in **UTF-8**. **NFloattext** und die klassische MUI-Kette erwarten **System-Codeset-Strings** → auf typischem MorphOS **Konvertierungsverluste** im **Chat** (Prüfung: Emoji → `??`). **Scintilla.mcc mit TTEngine** umgeht das im **Code-Viewer** (MorphOS, erledigt) und geplant für die Chat-**Ausgabe** (Phase 12). **Cairo** wäre ein separater, schwerer Gesamt-Renderer.

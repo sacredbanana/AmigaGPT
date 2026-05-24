@@ -167,7 +167,8 @@ make -f Makefile.MorphOS daemon
 - [ ] `git push origin scintilla` (lokale Doku-Commits)
 - [ ] Optional: `upstream` einmal `git fetch` + Merge in `scintilla`
 - [ ] Optional: nach `.pot`/`.po`-Änderung einmal **`make catalog`** bzw. vollständiger Build, damit `AmigaGPT_cat.*` aktuell sind
-- [ ] Optional: Phase 5.1 (Fence-Platzhalter, Konversationsliste-Zeichensatz) kurz auf **MorphOS** gegengetestet
+- [x] MorphOS: Code-Viewer 7a/7b (Copy/Save, Quit mit offenem Viewer) — siehe [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)
+- [ ] Optional: Stream-Recovery R1/R2 auf MorphOS (WANT_READ, Chat vs. `display_text`) — [STREAM-RECOVERY.md](STREAM-RECOVERY.md)
 
 ---
 

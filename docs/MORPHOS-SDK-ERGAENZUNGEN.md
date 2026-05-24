@@ -4,7 +4,7 @@ Dokumentation der **zusätzlichen** Komponenten, die für einen nativen Cross-Bu
 
 **Stand:** 2026-05-20 · erfolgreicher Build mit `make -f Makefile.MorphOS` auf Branch `scintilla`.
 
-**Nativ vs. WSL (vollständig):** [MORPHOS-SDK-NATIV-UND-WSL.md](MORPHOS-SDK-NATIV-UND-WSL.md) — MorphOS-Voll-SDK als Referenz, `devfiles.txt`-Inventar, `pack`/`sdk.pack`, Scintilla Phase 6.
+**Nativ vs. WSL (vollständig):** [MORPHOS-SDK-NATIV-UND-WSL.md](MORPHOS-SDK-NATIV-UND-WSL.md) — MorphOS-Voll-SDK als Referenz, `devfiles.txt`-Inventar, `pack`/`sdk.pack`, Scintilla Code-Viewer (Phase 6–7b).
 
 ---
 
@@ -168,6 +168,6 @@ Auf MorphOS zusätzlich Laufzeit-Voraussetzungen aus dem AmigaGPT-README (MUI, A
 
 ## Siehe auch
 
-- [MORPHOS-SDK-NATIV-UND-WSL.md](MORPHOS-SDK-NATIV-UND-WSL.md) — nativ vs. WSL, Scintilla-API, Phase 6, `devfiles.txt`
+- [MORPHOS-SDK-NATIV-UND-WSL.md](MORPHOS-SDK-NATIV-UND-WSL.md) — nativ vs. WSL, Scintilla-API, Code-Viewer 6–7b, `devfiles.txt`
 - [BUILD-MORPHOS-WSL.md](BUILD-MORPHOS-WSL.md) — vollständige WSL-Anleitung
 - [WSL-SETUP-STATUS.md](WSL-SETUP-STATUS.md) — Checkliste Ist-Stand
