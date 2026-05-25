@@ -81,12 +81,28 @@ static BOOL chatStreamInProgress = FALSE;
 
 static BOOL chatStreamCompletedOk = FALSE;
 static BOOL chatStreamTruncated = FALSE;
+static ChatTransportOutcome chatStreamTransport = CHAT_TRANSPORT_UNKNOWN;
 static UBYTE openaiLastSseSnippet[STREAMLOG_SSE_SNIPPET_MAX + 1];
+
+static void chatStreamFinalizeTransport(UWORD responseIndex, ULONG readBufferLen) {
+    if (chatStreamCompletedOk) {
+        chatStreamTransport = CHAT_TRANSPORT_OK;
+    } else if (chatStreamTruncated || responseIndex > 0 || readBufferLen > 0) {
+        chatStreamTransport = CHAT_TRANSPORT_PARTIAL;
+    } else {
+        chatStreamTransport = CHAT_TRANSPORT_FAILED;
+    }
+}
 
 void openAIChatStreamResetOutcome(void) {
     chatStreamCompletedOk = FALSE;
     chatStreamTruncated = FALSE;
+    chatStreamTransport = CHAT_TRANSPORT_UNKNOWN;
     openaiLastSseSnippet[0] = '\0';
+}
+
+ChatTransportOutcome openAIChatStreamTransportOutcome(void) {
+    return chatStreamTransport;
 }
 
 CONST_STRPTR openAIChatStreamLastSseSnippet(void) {
@@ -956,7 +972,7 @@ struct json_object **postChatMessageToOpenAI(
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 #endif
 
-        if (stream) {
+        if (stream && !chatStreamInProgress) {
             openAIChatStreamResetOutcome();
         }
         if (ssl_err > 0 || stream) {
@@ -1135,6 +1151,7 @@ struct json_object **postChatMessageToOpenAI(
                                    SSL_pending(ssl) > 0) {
                             /* drain buffered TLS records in this call */
                         } else {
+                            /* Yield batch to MainWindow; keep TLS stream open */
                             doneReading = TRUE;
                         }
                     } else if (!sslWaitForReadReady(sock, &sslWaitStalls)) {
@@ -1190,6 +1207,9 @@ struct json_object **postChatMessageToOpenAI(
                 putchar('\n');
                 break;
             }
+        }
+        if (stream) {
+            chatStreamFinalizeTransport(responseIndex, readBufferLen);
         }
         FreeVec(tempReadBuffer);
     } else {

@@ -17,7 +17,7 @@ Verwandt: [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) (Plan), [PHASE-
 | String-Safety-Sweep (**8**) | Raw-Stream-Log (`T:amigagpt_raw.log`) |
 | Optionale Debug-Logs (**9**, minimal) | **R2.1/R2.3/R2.4** vollständig (dokumentiert, nicht Blocker) |
 
-**Recovery:** R1 + R3 **erledigt**; R2.2 **erledigt**; R2.1/R2.3/R2.4 **offen** — blockiert **nicht** Phase-10-DoD (siehe [STREAM-RECOVERY.md](STREAM-RECOVERY.md)).
+**Recovery:** R1–R3 + **R2 (vollständig)** erledigt — siehe [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
 
 ---
 
@@ -130,7 +130,7 @@ Aus [STREAM-RECOVERY.md](STREAM-RECOVERY.md#testplan-morphos) + Phase-7/9-Tests:
 
 | ID | Thema | Phase |
 |----|--------|-------|
-| R2.1, R2.3, R2.4 | Transport / PARTIAL-Feintuning | Recovery |
+| R4.1, R4.3 | Fence-Heuristik / Host-Tests (optional) | Recovery |
 | R4.1, R4.3 | Fence-Heuristik / Host-Tests | Recovery optional |
 | 11+ | Lexer, Chat-Scintilla, Worker | SCINTILLA-ARCHITECTURE |
 

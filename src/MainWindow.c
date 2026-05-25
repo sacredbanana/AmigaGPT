@@ -1639,13 +1639,26 @@ static void flushUtf8StreamToMessage(struct UTF8StreamBuffer *stream,
 /* msgid "Response truncated (stream buffer limit reached)." */
 
 static ChatStreamOutcome chatStreamClassifyOutcome(UTF8 *receivedMessage) {
-    if (receivedMessage[0] == '\0') {
+    if (receivedMessage == NULL || receivedMessage[0] == '\0') {
         return CHAT_STREAM_FAILED;
     }
-    if (config.useCustomServer || openAIChatStreamCompletedOk()) {
+    if (config.useCustomServer) {
         return CHAT_STREAM_OK;
     }
-    return CHAT_STREAM_PARTIAL;
+    switch (openAIChatStreamTransportOutcome()) {
+    case CHAT_TRANSPORT_OK:
+        return CHAT_STREAM_OK;
+    case CHAT_TRANSPORT_PARTIAL:
+        return CHAT_STREAM_PARTIAL;
+    case CHAT_TRANSPORT_FAILED:
+        return CHAT_STREAM_FAILED;
+    default:
+        /* Continuation read: outcome set at end of each batch */
+        if (openAIChatStreamCompletedOk()) {
+            return CHAT_STREAM_OK;
+        }
+        return CHAT_STREAM_PARTIAL;
+    }
 }
 
 static CONST_STRPTR chatStreamOutcomeName(ChatStreamOutcome outcome) {

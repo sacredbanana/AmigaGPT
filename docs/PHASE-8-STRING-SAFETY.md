@@ -8,18 +8,16 @@ Branch **scintilla**, MorphOS-Fork. Ergänzt [SCINTILLA-ARCHITECTURE.md](SCINTIL
 
 ---
 
-## Recovery R2 — Rest (bewusst zurückgestellt)
-
-R2 ist **nicht abgeschlossen**. Vor Phase-8-Start festgehalten (2026-05):
+## Recovery R2 — erledigt (2026-05-25)
 
 | ID | Status | Inhalt |
 |----|--------|--------|
-| **R2.2** | erledigt | WANT_READ ohne `displayError`, wenn bereits Stream-Daten (`openai.c` + R1-Status) |
-| **R2.1** | offen | Outcome PARTIAL/FAILED sauber aus `postChatMessageToOpenAI` / Stream-Loop zurückgeben |
-| **R2.3** | offen | `doneReading` bei `bytesRead > 0` ohne `response.completed` — prüfen/dokumentieren |
-| **R2.4** | teilweise | `finishChatStream(PARTIAL)` via `chatStreamClassifyOutcome` — Feintuning mit R2.1 |
+| **R2.2** | erledigt | WANT_READ ohne `displayError`, wenn bereits Stream-Daten |
+| **R2.1** | erledigt | `ChatTransportOutcome` in `openai.h` / `chatStreamFinalizeTransport()` |
+| **R2.3** | erledigt | Stream-Loop: ohne `response.completed` weiterlesen bis `sslWaitForReadReady` scheitert |
+| **R2.4** | erledigt | `chatStreamClassifyOutcome()` → `finishChatStream` nach Transport-Outcome |
 
-**Wann nachziehen:** reproduzierbare Transport-Abbrüche oder klare Lücken in Partial-Erkennung — nicht blockierend für Phase 8.
+Details und DoD: [STREAM-RECOVERY.md](STREAM-RECOVERY.md) Phase R2.
 
 ---
 

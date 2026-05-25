@@ -20,6 +20,17 @@ BOOL openAIChatStreamCompletedOk(void);
 /** TRUE if the last stream stopped early but had received data (timeout, etc.). */
 BOOL openAIChatStreamTruncated(void);
 
+/** How the last OpenAI chat stream transport ended (R2.1). */
+typedef enum {
+    CHAT_TRANSPORT_UNKNOWN = 0,
+    CHAT_TRANSPORT_OK,
+    CHAT_TRANSPORT_PARTIAL,
+    CHAT_TRANSPORT_FAILED
+} ChatTransportOutcome;
+
+/** Outcome of the last stream read in postChatMessageToOpenAI (OpenAI SSE). */
+ChatTransportOutcome openAIChatStreamTransportOutcome(void);
+
 /** Reset stream outcome flags before a new chat request. */
 void openAIChatStreamResetOutcome(void);
 

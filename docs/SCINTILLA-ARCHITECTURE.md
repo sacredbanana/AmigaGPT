@@ -197,7 +197,7 @@ Die Kapitel **6–10** sind **ein** Release-Schritt, keine fünf getrennte Meile
 | **9** | Optional: Debug-Logs (nicht Blocker für v0.1) |
 | **10** | Definition of Done für den Code-Viewer |
 
-**Aktuell:** Phasen **6–10** abgeschlossen (DoD: [PHASE-10-DOD.md](PHASE-10-DOD.md)). Recovery: R1/R3 erledigt; **R2-Rest** dokumentiert, nicht Blocker. **Nächster Schritt:** **11** (Lexer/Komfort), **12** (Chat-Scintilla), **13** (Worker). Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
+**Aktuell:** Phasen **6–10** abgeschlossen (DoD: [PHASE-10-DOD.md](PHASE-10-DOD.md)). Recovery **R1–R3 + R2** erledigt ([STREAM-RECOVERY.md](STREAM-RECOVERY.md)). **Nächster Schritt:** **11** (Lexer/Komfort), **12** (Chat-Scintilla), **13** (Worker). Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
 
 ### Umgesetzt (Phase 6, Branch scintilla — auf MorphOS validiert)
 

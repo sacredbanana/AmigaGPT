@@ -15,7 +15,7 @@ Eigenständiger Planabschnitt für den Branch **scintilla**. Ergänzt [SCINTILLA
 | Phase | Inhalt | Priorität |
 |-------|--------|-----------|
 | **R1** | Einheitliches Stream-Ende + UI-Sync (Chat = Modell) | hoch — **umgesetzt** (2026-05) |
-| **R2** | Transport: WANT_READ / partieller Stream weich beenden | hoch — **teilweise** (R2.2 erledigt; **R2.1/R2.3/R2.4 offen** → [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md#recovery-r2--rest-bewusst-zurückgestellt)) |
+| **R2** | Transport: WANT_READ / partieller Stream weich beenden | hoch — **erledigt** (2026-05-25) |
 | **R3** | Stream-UI-Last (Freeze reduzieren) | mittel — **umgesetzt** (2026-05) |
 | **R4** | Fence-Heuristik + Logs (optional) | niedrig |
 
@@ -198,14 +198,14 @@ void finishChatStream(enum ChatStreamOutcome outcome,
 
 **DoD R2:** Simulierter Abbruch / langsames Netz — kein SSL-Dialog wenn Antworttext schon im Chat-Modell; Status „unvollständig“.
 
-### R2 — Offen (Stand 2026-05, Phase 8 parallel)
+### R2 — Stand (2026-05-25)
 
 | ID | Status | Kurz |
 |----|--------|------|
-| R2.1 | **offen** | PARTIAL/FAILED-Outcome aus Transport zurück an `sendChatMessage` |
+| R2.1 | **erledigt** | `ChatTransportOutcome` + `openAIChatStreamTransportOutcome()` nach Stream-Read |
 | R2.2 | **erledigt** | WANT_READ: kein `displayError` bei vorhandenen Daten |
-| R2.3 | **offen** | Frühes `doneReading` ohne `response.completed` prüfen |
-| R2.4 | **teilweise** | `finishChatStream(PARTIAL)` — mit R2.1 verfeinern |
+| R2.3 | **erledigt** | Batch-Yield: `doneReading` bei Daten ohne `response.completed`, `chatStreamInProgress` bleibt TRUE; Stall nur bei `bytesRead==0` |
+| R2.4 | **erledigt** | `chatStreamClassifyOutcome()` nutzt Transport-Outcome → `finishChatStream(PARTIAL\|FAILED)` |
 
 Details: [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md#recovery-r2--rest-bewusst-zurückgestellt).
 
