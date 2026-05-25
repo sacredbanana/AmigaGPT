@@ -216,7 +216,7 @@ if [[ "${DEPLOY:-1}" == "1" ]]; then
         \$d = '${DEPLOY_WIN}'
         \$history = Join-Path \$d 'DEPLOY-HISTORY.txt'
         \$header = @(
-          '# DEPLOY-HISTORY.txt — last 10 successful deploys to this folder (newest last)',
+          '# DEPLOY-HISTORY.txt - last 10 successful deploys to this folder (newest last)',
           '# version | git | build_utc | copy_utc | lha_md5 (Ambient-kompatibel)',
           ''
         )
