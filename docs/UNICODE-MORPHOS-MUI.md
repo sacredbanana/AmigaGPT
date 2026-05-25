@@ -76,6 +76,8 @@ Optional in der Shell: `GETENV Language`, `GETENV Country` (Locale-Preferences s
 2. Emoji ins Eingabefeld einfügen (z. B. aus Browser/Zwischenablage) oder API: „Antworte nur mit: 😀“.
 3. **Return** = senden; **Shift+Return** = neue Zeile ([`AmigaGPTTextEditor`](../src/AmigaGPTTextEditor.c)).
 
+**MorphOS Chat (Phase 12 + Midi-Markdown):** Farb-Emoji sind mit TTEngine/DejaVu nicht darstellbar (Flow Studio: andere Fonts helfen kaum; Stylos/Cairo nur teilweise, nicht farbig). Mit **Markdown formatting an** ersetzt AmigaGPT häufige Emoji in der **Assistant-Anzeige** durch kurze Texte (z. B. 🌍→`[Welt]`, 👍→`(+1)`); **Export raw UTF-8** und `raw_utf8` bleiben original. **Markdown aus** → keine Ersetzung (oft □ oder fehlende Glyphe).
+
 ---
 
 ## 4. Scintilla + TTEngine vs. Cairo

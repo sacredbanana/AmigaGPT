@@ -3,7 +3,7 @@
 ## Priorität
 
 1. **Export Chat (raw UTF-8)** — **umgesetzt:** Ansicht → *Export chat (raw UTF-8)…* → `conversationNodeGetRaw()` pro Nachricht, inkl. ` ``` `; siehe `ChatExport.c`.
-2. Midi-Markdown: MD nur **außerhalb** Fences, nur **Assistant**, `**` / `*` / `__`, Überschriften `#`.
+2. **Midi-Markdown (MorphOS):** `chatOutputScintillaBuildMidiMarkdownDisplay` — Marker werden **nicht** angezeigt (wie MUI), nur **Assistant**, `**` / `*` / `__`, `#`-Überschriften ohne `#`-Prefix; `[Codeblock …]` unverändert. **Emoji→Text** nur bei aktivem Menü *Markdown formatting* (Anzeige; `raw_utf8`/Export unverändert) — TTEngine/DejaVu ohne Farb-Emoji.
 3. Platzhalter `[Codeblock n]` → Code-Viewer (Klick).
 4. **Tabellen** (optional): eigener Block wie Code, **nach** Punkten 2–3 — nicht Spaltenausrichtung im Fließtext.
 

@@ -36,7 +36,8 @@ Siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) §8–9:
 | **Kein** `ConfigureForScreen`-Hook auf `MUIA_Window_Screen`, der ENVARC lädt und Fenster wieder öffnet | Entfernt in `360a0dd`; nicht zurückbauen |
 | **`mainWindowPrepareShutdown()`** vor `MUI_DisposeObject(app)` | In `shutdownGUI()` |
 | **Pens freigeben, solange Fenster/Screen noch gültig** | `mainWindowReleasePens()` **vor** `MUIA_Window_Open, FALSE` |
-| Konversationsliste leeren mit **Destruct** | `NList_Remove` in Schleife (nicht blind `NList_Clear` im Codeblock-Fenster — dort Freeze-Risiko) |
+| Konversations-/Bilderliste leeren **vor** Fenster zu | `MUIM_NList_Clear` mit `MUIA_NList_Quiet` (Hauptfenster) |
+| Codeblock-Liste beim Shutdown | **Kein** `NList_Clear` — nur `codeBlocksViewerCloseWindow()`; Clear nur bei Chat-Wechsel (`Dismiss`) |
 | Chat-Scintilla leeren vor Dispose | `chatOutputScintillaSetUtf8Text(..., "")` |
 | `KillNotify` auf `MUIA_Window_Screen` und `CloseRequest` | Vor Dispose |
 | Zeiger nullen **nach** Dispose | `mainWindowInvalidateAfterShutdown()` |
@@ -107,7 +108,7 @@ Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [MIDI-MARKDOW
 | Commit nach Build ohne MorphOS-OK | Warten auf Nutzer-Rückmeldung |
 | ASL direkt im Menü-Hook | `PushMethod` + Deferred-Hook |
 | Pens in `shutdownGUI()` nach Fenster zu | Pens in `mainWindowPrepareShutdown()` **vor** Close |
-| `MUIM_NList_Clear` auf Codeblock-Liste beim Shutdown | Nur Dismiss / leeren Scintilla-Text (siehe `CodeBlocksViewer.c`) |
+| `codeBlocksViewerDismiss()` beim Shutdown (macht `NList_Clear`) | `codeBlocksViewerCloseWindow()` in `mainWindowPrepareShutdown()` |
 | Markdown-Lexer im Chat „schnell testen“ | Midi-Markdown-Plan lesen; Scintilla-Styles portieren |
 | Neues Feature + Restart nicht testen lassen | Restart-Checkliste §3 nennen |
 

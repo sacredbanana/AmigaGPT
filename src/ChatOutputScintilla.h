@@ -21,6 +21,16 @@ void chatOutputScintillaSetUtf8TextWithRoleStyles(Object *sci, const char *utf8,
 /** Reapply TTEngine font from config.fixedWidthFonts (no full window rebuild). */
 void chatOutputScintillaRefreshFont(Object *sci);
 
+/**
+ * Build display text + style bytes: strips ** / * / __ and ATX # prefixes on assistant
+ * text; optional emoji→ASCII substitutes (display only); user and "[Codeblock …]"
+ * lines unchanged. Only used when config.markdownFormatting is on. Returns length.
+ */
+ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
+                                                  const UBYTE *inRoleStyles,
+                                                  ULONG inLen, char *outUtf8,
+                                                  UBYTE *outStyles);
+
 #endif /* __MORPHOS__ */
 
 #endif

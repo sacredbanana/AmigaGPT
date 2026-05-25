@@ -7,7 +7,7 @@ Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8T
 | Thema | Umsetzung |
 |-------|-----------|
 | Layout | **Scrollgroup** + Scintilla (wie Code-Viewer); NListview-Wrapper und Phase-7c-Wheel entfallen auf MorphOS |
-| Markdown | Plain UTF-8 + Role-Styles; Menü wirkt auf MorphOS erst mit **Midi-Markdown** (geplant) |
+| Markdown | **Midi-Markdown** (Scintilla-Styles 2–8 auf Assistant); Menü `config.markdownFormatting` |
 | User/Assistant | **Scintilla-Styles:** User = fett, dunkelblau, hellgrauer Hintergrund; Assistant = normal schwarz; `\n\n` zwischen Nodes |
 | Font | **`config.fixedWidthFonts`**: an → DejaVu Sans Mono, aus → DejaVu Sans; Umschalten **ohne** Fenster-Neuaufbau (`applyFixedWidthFontsSetting`, nicht `RecreateMainWindow`) |
 
@@ -23,7 +23,7 @@ Hilfsfunktionen (nur MorphOS): `chatOutputUpdateFromBuffer()`, `clearChatOutputD
 
 ## Menüs auf MorphOS (12.0)
 
-- **Markdown formatting** — No-op bis **Midi-Markdown** ([MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md)); `SCLEX_MARKDOWN` im Chat getestet, auf MorphOS wirkungslos.
+- **Markdown formatting** — **Midi-Markdown** ([MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md)); kein `SCLEX_MARKDOWN` im Chat.
 - **Export chat (raw UTF-8)…** — siehe `ChatExport.c`, [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md).
 - **User / Assistant text alignment** — No-op (Hervorhebung über Role-Styles)
 
@@ -45,7 +45,9 @@ Hilfsfunktionen (nur MorphOS): `chatOutputUpdateFromBuffer()`, `clearChatOutputD
 6. Code-Fence-Platzhalter im Chat; Code-Viewer unverändert
 7. **Fixed width fonts** an/aus → Mono vs. Sans
 8. **Export chat (raw)** → Datei mit `raw_utf8`, Fences sichtbar
-9. Alignment/Markdown umschalten → kein Absturz (Markdown noch No-op)
+9. **Markdown formatting** an: `**fett**`, `*kursiv*`, `__unterstrichen__`, `# Überschrift` nur bei Assistant; Emoji Assistant z. B. 🌍→`[Welt]`, 👍→`(+1)` (nur Anzeige)
+10. **Markdown formatting** aus: Emoji unverändert (oft □)
+11. Alignment umschalten → kein Absturz (No-op)
 
 ## Phase 12.1 / Midi-Markdown
 

@@ -41,6 +41,9 @@ void codeBlocksViewerClearList(void);
 /** Close code viewer and clear list (e.g. chat switch/delete). */
 void codeBlocksViewerDismiss(void);
 
+/** Close viewer only — no NList_Clear (safe during app shutdown). */
+void codeBlocksViewerCloseWindow(void);
+
 /** Before MUI_DisposeObject(app): drop stale block pointers, clear UI refs. */
 void codeBlocksViewerPrepareShutdown(void);
 

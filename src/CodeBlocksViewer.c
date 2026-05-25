@@ -511,11 +511,17 @@ HOOKPROTONHNONP(CodeBlocksWindowClosedFunc, void) {
 }
 MakeHook(CodeBlocksWindowClosedHook, CodeBlocksWindowClosedFunc);
 
-void codeBlocksViewerDismiss(void) {
-    codeBlocksViewerClearList();
+void codeBlocksViewerCloseWindow(void) {
+    codeBlocksCachedBlock = NULL;
+    codeBlocksPendingSaveBlock = NULL;
     if (codeBlocksWindowObject != NULL) {
         set(codeBlocksWindowObject, MUIA_Window_Open, FALSE);
     }
+}
+
+void codeBlocksViewerDismiss(void) {
+    codeBlocksViewerClearList();
+    codeBlocksViewerCloseWindow();
 }
 
 void codeBlocksViewerPrepareShutdown(void) {

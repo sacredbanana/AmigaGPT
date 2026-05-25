@@ -851,6 +851,25 @@ static void outputStyleOff(STRPTR out, size_t outSize) {
  *
  * Also outputs which style it corresponds to in 'foundStyle'.
  */
+static BOOL parseMarkerIsAsciiAlnum(char ch) {
+    return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
+           (ch >= '0' && ch <= '9');
+}
+
+static BOOL parseMarkerIsItalicStar(CONST_STRPTR input, size_t pos, size_t len) {
+    if (pos >= len || input[pos] != '*') {
+        return FALSE;
+    }
+    if (pos + 1 < len && input[pos + 1] == '*') {
+        return FALSE;
+    }
+    if (pos > 0 && parseMarkerIsAsciiAlnum(input[pos - 1]) && pos + 1 < len &&
+        parseMarkerIsAsciiAlnum(input[pos + 1])) {
+        return FALSE;
+    }
+    return TRUE;
+}
+
 static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
                          StyleType *foundStyle) {
     if (pos >= len)
@@ -866,8 +885,8 @@ static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
         *foundStyle = STYLE_BOLD;
         return 2;
     }
-    // Check for single "*"
-    if (input[pos] == '*') {
+    // Check for single "*" (not Spieler*innen)
+    if (parseMarkerIsItalicStar(input, pos, len)) {
         *foundStyle = STYLE_ITALIC;
         return 1;
     }
@@ -1061,11 +1080,14 @@ static void chatOutputFillRoleStyles(struct Conversation *conversation,
     }
 }
 
+static BOOL mainWindowShuttingDown = FALSE;
+
 static void chatOutputUpdateFromBuffer(void) {
     ULONG textLen;
     UBYTE *roleStyles = NULL;
 
-    if (chatOutputTextEditor == NULL || chatOutputTextEditorContents == NULL) {
+    if (mainWindowShuttingDown || mainWindowObject == NULL ||
+        chatOutputTextEditor == NULL || chatOutputTextEditorContents == NULL) {
         return;
     }
 
@@ -1078,7 +1100,38 @@ static void chatOutputUpdateFromBuffer(void) {
     if (currentConversation != NULL) {
         roleStyles = (UBYTE *)AllocVec(textLen, MEMF_ANY);
         if (roleStyles != NULL) {
+            char *displayText = NULL;
+            UBYTE *displayStyles = NULL;
+
             chatOutputFillRoleStyles(currentConversation, roleStyles, textLen);
+
+            if (config.markdownFormatting) {
+                displayText = (char *)AllocVec(textLen + 1, MEMF_ANY);
+                displayStyles = (UBYTE *)AllocVec(textLen, MEMF_ANY);
+            }
+
+            if (displayText != NULL && displayStyles != NULL) {
+                textLen = chatOutputScintillaBuildMidiMarkdownDisplay(
+                    chatOutputTextEditorContents, roleStyles, textLen,
+                    displayText, displayStyles);
+                chatOutputScintillaSetUtf8TextWithRoleStyles(
+                    chatOutputTextEditor, displayText, displayStyles, textLen);
+                FreeVec(displayText);
+                FreeVec(displayStyles);
+            } else {
+                if (displayText != NULL) {
+                    FreeVec(displayText);
+                }
+                if (displayStyles != NULL) {
+                    FreeVec(displayStyles);
+                }
+                chatOutputScintillaSetUtf8TextWithRoleStyles(
+                    chatOutputTextEditor, chatOutputTextEditorContents,
+                    roleStyles, textLen);
+            }
+
+            FreeVec(roleStyles);
+            return;
         }
     }
 
@@ -1611,36 +1664,30 @@ static void mainWindowReleasePens(void) {
     redPen = greenPen = bluePen = yellowPen = 0;
 }
 
-static void mainWindowEmptyConversationList(void) {
-    ULONG entries = 0;
-
-    if (conversationListObject == NULL) {
+static void mainWindowEmptyNList(Object *list) {
+    if (list == NULL) {
         return;
     }
-
-    set(conversationListObject, MUIA_NList_Quiet, TRUE);
-    for (;;) {
-        get(conversationListObject, MUIA_NList_Entries, &entries);
-        if (entries == 0) {
-            break;
-        }
-        DoMethod(conversationListObject, MUIM_NList_Remove, 0);
-    }
-    set(conversationListObject, MUIA_NList_Quiet, FALSE);
+    set(list, MUIA_NList_Quiet, TRUE);
+    DoMethod(list, MUIM_NList_Clear);
+    set(list, MUIA_NList_Quiet, FALSE);
 }
 
 void mainWindowPrepareShutdown(void) {
+    mainWindowShuttingDown = TRUE;
     currentConversation = NULL;
     currentImage = NULL;
 
 #ifdef __MORPHOS__
-    codeBlocksViewerDismiss();
+    /* No NList_Clear on code-block list here — freezes next start (see gui.c). */
+    codeBlocksViewerCloseWindow();
 #endif
 
     /* Pens must be released while the window/screen is still valid. */
     mainWindowReleasePens();
 
-    mainWindowEmptyConversationList();
+    mainWindowEmptyNList(conversationListObject);
+    mainWindowEmptyNList(imageListObject);
 
 #ifdef __MORPHOS__
     if (chatOutputTextEditor != NULL) {
@@ -1656,6 +1703,7 @@ void mainWindowPrepareShutdown(void) {
 }
 
 void mainWindowInvalidateAfterShutdown(void) {
+    mainWindowShuttingDown = FALSE;
     mainWindow = NULL;
     mainWindowObject = NULL;
     newChatButton = NULL;
@@ -2111,13 +2159,8 @@ static void sendChatMessage() {
 
     addTextToConversation(currentConversation, textUTF8, "user");
 #ifdef __MORPHOS__
-    if (textUTF8 != NULL) {
-        strbufAppend(chatOutputTextEditorContents,
-                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, textUTF8);
-        strbufAppend(chatOutputTextEditorContents,
-                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\n\n");
-        chatOutputUpdateFromBuffer();
-    }
+    /* Rebuild buffer from nodes; do not append (buffer still held full history). */
+    displayConversation(currentConversation);
 #endif
     CodesetsFreeA(textUTF8, NULL);
 
