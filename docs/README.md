@@ -74,6 +74,6 @@ Ausführlich: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) (inkl. Prüfung: 
 - **Code-Fences / Viewer:** Platzhalter im Chat; **Ansicht → Codeblöcke…** — **Phase 6–7b erledigt** (NList, Scintilla, Copy/Save UTF-8 + System). Recovery Chat/Stream: [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
 - **Mini-Markdown:** **Ansicht → Markdown formatting** — abschaltbar (`config.markdownFormatting`).
 
-**Roadmap:** 6–12 ✓ (MorphOS) · Stream = **R3** · **13 Worker** zurückgestellt — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [STREAM-RECOVERY.md](STREAM-RECOVERY.md), [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md).
+**Roadmap:** 6–12 ✓ (MorphOS) · **Export Chat (raw)** ✓ · **Midi-Markdown** — [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) · **13 Worker** zurückgestellt — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
 
 Agenten: zusätzlich [AGENTS.md](../AGENTS.md) und `.cursor/rules/git-branch-policy.mdc`.

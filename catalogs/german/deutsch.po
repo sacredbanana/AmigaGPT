@@ -1515,3 +1515,23 @@ msgstr "Antwort unvollständig (Verbindung vorzeitig beendet)."
 msgctxt "STRING_CHAT_STREAM_TRUNCATED (276//)"
 msgid "Response truncated (stream buffer limit reached)."
 msgstr "Antwort gekürzt (Stream-Pufferlimit erreicht)."
+
+#: src/menu.c
+msgctxt "STRING_MENU_EXPORT_CHAT_RAW (277//)"
+msgid "Export chat (raw UTF-8)..."
+msgstr "Chat exportieren (Roh-UTF-8)..."
+
+#: src/ChatExport.c
+msgctxt "STRING_EXPORT_CHAT_RAW (278//)"
+msgid "Export chat (raw)"
+msgstr "Chat exportieren (Roh)"
+
+#: src/ChatExport.c
+msgctxt "STRING_ERROR_NO_CONVERSATION_EXPORT (279//)"
+msgid "No conversation is open to export."
+msgstr "Keine Konversation zum Exportieren geöffnet."
+
+#: src/ChatExport.c
+msgctxt "STRING_ERROR_CHAT_EXPORT_SAVE (280//)"
+msgid "Could not save the chat export."
+msgstr "Chat-Export konnte nicht gespeichert werden."

@@ -17,12 +17,22 @@
 #include "CustomServerSettingsRequesterWindow.h"
 #include "config.h"
 #include "ElevenLabsSettingsRequesterWindow.h"
+#include "ChatExport.h"
 #include "gui.h"
 #include "MainWindow.h"
 #include "menu.h"
 #ifdef __MORPHOS__
 #include "CodeBlocksViewer.h"
 #endif
+
+/* msgctxt "STRING_MENU_EXPORT_CHAT_RAW" */
+/* msgid "Export chat (raw UTF-8)..." */
+/* msgctxt "STRING_EXPORT_CHAT_RAW" */
+/* msgid "Export chat (raw)" */
+/* msgctxt "STRING_ERROR_NO_CONVERSATION_EXPORT" */
+/* msgid "No conversation is open to export." */
+/* msgctxt "STRING_ERROR_CHAT_EXPORT_SAVE" */
+/* msgid "Could not save the chat export." */
 #include "ProxySettingsRequesterWindow.h"
 #include "VoiceInstructionsRequesterWindow.h"
 #include "version.h"
@@ -309,9 +319,12 @@ HOOKPROTONHNONP(ViewCodeBlocksMenuItemClickedFunc, void) {
 }
 MakeHook(ViewCodeBlocksMenuItemClickedHook, ViewCodeBlocksMenuItemClickedFunc);
 
+HOOKPROTONHNONP(ExportChatRawMenuItemClickedFunc, void) {
+    (void)chatExportConversationRaw(getCurrentConversation(), mainWindow);
+}
+MakeHook(ExportChatRawMenuItemClickedHook, ExportChatRawMenuItemClickedFunc);
+
 #ifdef __MORPHOS__
-#include "CodeBlocksViewer.h"
-#include "MainWindow.h"
 
 void refreshViewCodeBlocksMenuState(void) {
     Object *item;
@@ -507,7 +520,9 @@ void createMenu() {
     MENU_ITEM_VIEW_CLEAR_MUI_SETTINGS, MUIA_Menuitem_CopyStrings, FALSE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_VIEW_CODEBLOCKS, MUIA_UserData, MENU_ITEM_VIEW_CODEBLOCKS,
-    MUIA_Menuitem_CopyStrings, FALSE, End, End,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_EXPORT_CHAT_RAW, MUIA_UserData,
+    MENU_ITEM_VIEW_EXPORT_CHAT_RAW, MUIA_Menuitem_CopyStrings, FALSE, End, End,
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_CONNECTION,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
@@ -915,6 +930,13 @@ void addMenuActions() {
     DoMethod(viewCodeBlocksMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &ViewCodeBlocksMenuItemClickedHook);
+
+    Object exportChatRawMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_EXPORT_CHAT_RAW);
+    DoMethod(exportChatRawMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &ExportChatRawMenuItemClickedHook);
+
 #ifdef __MORPHOS__
     refreshViewCodeBlocksMenuState();
 #endif

@@ -7,7 +7,7 @@ Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8T
 | Thema | Umsetzung |
 |-------|-----------|
 | Layout | **Scrollgroup** + Scintilla (wie Code-Viewer); NListview-Wrapper und Phase-7c-Wheel entfallen auf MorphOS |
-| Markdown | **Plain UTF-8**; Menü „Markdown formatting“ bleibt, wirkt auf MorphOS in 12.0 nicht |
+| Markdown | Plain UTF-8 + Role-Styles; Menü wirkt auf MorphOS erst mit **Midi-Markdown** (geplant) |
 | User/Assistant | **Scintilla-Styles:** User = fett, dunkelblau, hellgrauer Hintergrund; Assistant = normal schwarz; `\n\n` zwischen Nodes |
 | Font | **`config.fixedWidthFonts`**: an → DejaVu Sans Mono, aus → DejaVu Sans; Umschalten **ohne** Fenster-Neuaufbau (`applyFixedWidthFontsSetting`, nicht `RecreateMainWindow`) |
 
@@ -21,12 +21,11 @@ Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8T
 
 Hilfsfunktionen (nur MorphOS): `chatOutputUpdateFromBuffer()`, `clearChatOutputDisplay()`.
 
-## Menüs auf MorphOS (12.0) — bewusst No-op
+## Menüs auf MorphOS (12.0)
 
-Einträge und `config.json` bleiben (OS3/OS4 + spätere 12.1). Umschalten ruft weiter `displayConversation(NULL)` auf; **sichtbar** ändert sich auf MorphOS in 12.0 nicht:
-
-- **Markdown formatting** — kein Scintilla-Markdown-Lexer (12.1-Experiment optional)
-- **User / Assistant text alignment** — No-op (Ausrichtung; Hervorhebung über Styles)
+- **Markdown formatting** — No-op bis **Midi-Markdown** ([MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md)); `SCLEX_MARKDOWN` im Chat getestet, auf MorphOS wirkungslos.
+- **Export chat (raw UTF-8)…** — siehe `ChatExport.c`, [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md).
+- **User / Assistant text alignment** — No-op (Hervorhebung über Role-Styles)
 
 ## Nicht in Phase 12
 
@@ -45,11 +44,12 @@ Einträge und `config.json` bleiben (OS3/OS4 + spätere 12.1). Umschalten ruft w
 5. Langer Stream: live + vollständig nach Ende (R1/R2)
 6. Code-Fence-Platzhalter im Chat; Code-Viewer unverändert
 7. **Fixed width fonts** an/aus → Mono vs. Sans
-8. Alignment/Markdown umschalten → Anzeige unverändert, kein Absturz
+8. **Export chat (raw)** → Datei mit `raw_utf8`, Fences sichtbar
+9. Alignment/Markdown umschalten → kein Absturz (Markdown noch No-op)
 
-## Phase 12.1 (optional)
+## Phase 12.1 / Midi-Markdown
 
-- `SCLEX_MARKDOWN` wenn `markdownFormatting` an
+Siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) — kein `SCLEX_MARKDOWN` im Chat.
 - Scintilla-Styling für Alignment
 - Dediziertes Chat-Font-Menü
 - Stream nur Append-Delta (Vorbereitung Phase 13)

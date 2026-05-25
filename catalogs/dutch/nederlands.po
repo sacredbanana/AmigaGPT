@@ -1493,6 +1493,27 @@ msgctxt "STRING_CHAT_STREAM_TRUNCATED (276//)"
 msgid "Response truncated (stream buffer limit reached)."
 msgstr "Response truncated (stream buffer limit reached)."
 
+#: src/menu.c
+msgctxt "STRING_MENU_EXPORT_CHAT_RAW (277//)"
+msgid "Export chat (raw UTF-8)..."
+msgstr "Export chat (raw UTF-8)..."
+
+#: src/ChatExport.c
+msgctxt "STRING_EXPORT_CHAT_RAW (278//)"
+msgid "Export chat (raw)"
+msgstr "Export chat (raw)"
+
+#: src/ChatExport.c
+msgctxt "STRING_ERROR_NO_CONVERSATION_EXPORT (279//)"
+msgid "No conversation is open to export."
+msgstr "No conversation is open to export."
+
+#: src/ChatExport.c
+#, fuzzy
+msgctxt "STRING_ERROR_CHAT_EXPORT_SAVE (280//)"
+msgid "Could not save the chat export."
+msgstr "Could not save the active code block."
+
 #~ msgctxt "STRING_MENU_COPY_CODEBLOCK_SYSTEM (269//)"
 #~ msgid "Copy (system)"
 #~ msgstr "Copy (system)"

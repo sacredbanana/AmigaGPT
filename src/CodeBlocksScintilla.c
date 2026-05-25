@@ -162,6 +162,25 @@ static void codeBlocksScintillaApplyPythonLexerPalette(Object *sci) {
     codeBlocksScintillaStyleFore(sci, SCE_P_WORD, SC_COL_NAVY);
 }
 
+static void codeBlocksScintillaApplyMarkdownLexerPalette(Object *sci) {
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_DEFAULT, SC_COL_BLACK);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_STRONG1, SC_COL_NAVY);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_STRONG2, SC_COL_NAVY);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_EM1, SC_COL_MAROON);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_EM2, SC_COL_MAROON);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_HEADER1, SC_COL_NAVY);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_HEADER2, SC_COL_NAVY);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_HEADER3, SC_COL_NAVY);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_HEADER4, SC_COL_NAVY);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_HEADER5, SC_COL_NAVY);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_HEADER6, SC_COL_NAVY);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_LINK, SC_COL_TEAL);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_CODE, SC_COL_PURPLE);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_CODE2, SC_COL_PURPLE);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_CODEBK, SC_COL_PURPLE);
+    codeBlocksScintillaStyleFore(sci, SCE_MARKDOWN_BLOCKQUOTE, SC_COL_GREEN);
+}
+
 static const CodeBlocksLexerEntry *
 codeBlocksScintillaFindLexer(const char *language) {
     ULONG i;
@@ -371,6 +390,8 @@ static BOOL codeBlocksScintillaTryBuiltinLexer(Object *sci,
         codeBlocksScintillaApplyPythonLexerPalette(sci);
     } else if (entry->lexer == SCLEX_CPP || entry->lexer == SCLEX_JSON) {
         codeBlocksScintillaApplyCppLexerPalette(sci);
+    } else if (entry->lexer == SCLEX_MARKDOWN) {
+        codeBlocksScintillaApplyMarkdownLexerPalette(sci);
     }
 
     return TRUE;
