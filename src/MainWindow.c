@@ -1869,6 +1869,7 @@ static void sendChatMessage() {
                                    : API_ENDPOINT_RESPONSES,
             config.useCustomServer ? config.customApiEndpointUrl : NULL);
         if (responses == NULL) {
+            streamLogApiError("connect", "postChatMessageToOpenAI returned NULL");
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
             set(sendMessageButton, MUIA_Disabled, FALSE);
@@ -1892,6 +1893,7 @@ static void sendChatMessage() {
                 struct json_object *message =
                     json_object_object_get(error, "message");
                 UTF8 *messageString = json_object_get_string(message);
+                streamLogApiError("api_json_error", messageString);
                 STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                     (Tag)messageString, CSA_MapForeignChars, TRUE, TAG_DONE);

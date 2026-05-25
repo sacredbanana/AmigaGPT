@@ -28,17 +28,16 @@ void streamLogChatEnd(CONST_STRPTR outcome, ULONG messageLen, BOOL completedOk,
     (void)lastSseSnippet;
 }
 
+void streamLogApiError(CONST_STRPTR kind, CONST_STRPTR detail) {
+    (void)kind;
+    (void)detail;
+}
+
 void streamLogUtf8(CONST_STRPTR detail) { (void)detail; }
 
 #else
 
 static BOOL streamLogEnabled = FALSE;
-
-void streamLogSyncFromConfig(void) {
-    streamLogEnabled = (BOOL)config.debugStreamLog;
-}
-
-BOOL streamLogIsEnabled(void) { return streamLogEnabled; }
 
 static void streamLogSanitizeSnippet(STRPTR dest, ULONG destSize,
                                      CONST_STRPTR src) {
@@ -55,7 +54,7 @@ static void streamLogSanitizeSnippet(STRPTR dest, ULONG destSize,
     for (i = 0; src[i] != '\0' && out + 1 < destSize; i++) {
         UBYTE c = (UBYTE)src[i];
         if (c == '\r' || c == '\n' || c == '\t') {
-            if (out + 1 < destSize) {
+            if (out + 0 < destSize - 1) {
                 dest[out++] = '|';
             }
             continue;
@@ -85,7 +84,7 @@ static void streamLogAppendFile(CONST_STRPTR path, CONST_STRPTR line) {
     BPTR fh;
     ULONG len;
 
-    if (!streamLogEnabled || path == NULL || line == NULL) {
+    if (!streamLogEnabled || path == NULL || line == NULL || line[0] == '\0') {
         return;
     }
     len = (ULONG)strlen(line);
@@ -112,6 +111,17 @@ static void streamLogEmit(CONST_STRPTR path, CONST_STRPTR line) {
 #endif
 }
 
+void streamLogSyncFromConfig(void) {
+    BOOL wasEnabled = streamLogEnabled;
+
+    streamLogEnabled = (BOOL)config.debugStreamLog;
+    if (streamLogEnabled && !wasEnabled) {
+        streamLogEmit(STREAMLOG_STREAM_PATH, "debug logging enabled");
+    }
+}
+
+BOOL streamLogIsEnabled(void) { return streamLogEnabled; }
+
 void streamLogChatEnd(CONST_STRPTR outcome, ULONG messageLen,
                       BOOL completedOk, BOOL truncated,
                       CONST_STRPTR lastSseSnippet) {
@@ -125,17 +135,35 @@ void streamLogChatEnd(CONST_STRPTR outcome, ULONG messageLen,
     if (streamLogLooksSensitive((STRPTR)snippet)) {
         snprintf((STRPTR)line, sizeof(line),
                  "stream end outcome=%s len=%lu completed=%u truncated=%u "
-                 "sse=(redacted)\n",
+                 "sse=(redacted)",
                  outcome != NULL ? outcome : "?",
                  (unsigned long)messageLen, (unsigned)completedOk,
                  (unsigned)truncated);
     } else {
         snprintf((STRPTR)line, sizeof(line),
                  "stream end outcome=%s len=%lu completed=%u truncated=%u "
-                 "sse=%s\n",
+                 "sse=%s",
                  outcome != NULL ? outcome : "?",
                  (unsigned long)messageLen, (unsigned)completedOk,
                  (unsigned)truncated, snippet);
+    }
+    streamLogEmit(STREAMLOG_STREAM_PATH, (STRPTR)line);
+}
+
+void streamLogApiError(CONST_STRPTR kind, CONST_STRPTR detail) {
+    UBYTE line[STREAMLOG_LINE_MAX];
+    UBYTE detailBuf[STREAMLOG_SSE_SNIPPET_MAX + 1];
+
+    if (!streamLogEnabled) {
+        return;
+    }
+    streamLogSanitizeSnippet((STRPTR)detailBuf, sizeof(detailBuf), detail);
+    if (streamLogLooksSensitive((STRPTR)detailBuf)) {
+        snprintf((STRPTR)line, sizeof(line), "api_error kind=%s detail=(redacted)",
+                 kind != NULL ? kind : "?");
+    } else {
+        snprintf((STRPTR)line, sizeof(line), "api_error kind=%s detail=%s",
+                 kind != NULL ? kind : "?", detailBuf);
     }
     streamLogEmit(STREAMLOG_STREAM_PATH, (STRPTR)line);
 }
@@ -146,7 +174,7 @@ void streamLogUtf8(CONST_STRPTR detail) {
     if (!streamLogEnabled || detail == NULL) {
         return;
     }
-    snprintf((STRPTR)line, sizeof(line), "utf8 %s\n", detail);
+    snprintf((STRPTR)line, sizeof(line), "utf8 %s", detail);
     streamLogEmit(STREAMLOG_UTF8_PATH, (STRPTR)line);
 }
 

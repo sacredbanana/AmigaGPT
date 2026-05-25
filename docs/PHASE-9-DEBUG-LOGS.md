@@ -29,7 +29,7 @@ Default: **false**. Nach Änderung App neu starten (oder erneut `readConfig`).
 | `T:amigagpt_stream.log` | Pro Chat-Stream-Ende eine Zeile |
 | `T:amigagpt_utf8.log` | Seltene UTF-8-Puffer-Hinweise |
 
-`T:` ist RAM — nach Reboot weg. Für persistente Logs Pfad in `streamlog.c` später auf `ENVARC:AmigaGPT/logs/` erweiterbar.
+`T:` ist das übliche MorphOS-RAM-Volume (bei intaktem System immer verfügbar) — nach Reboot leer.
 
 ## Stream-Zeile (Format)
 
@@ -51,11 +51,14 @@ Link: `-ldebug` (`Makefile.MorphOS`) für `KPrintF`.
 
 ## MorphOS-Test
 
-1. `"debugStreamLog": true` in config.json
-2. Kurzer Chat
-3. `type T:amigagpt_stream.log` (Shell) oder Datei unter Z:
-4. Optional **LogTool** öffnen — `[AmigaGPT]`-Zeilen vom `KPrintF`
-5. Wieder `"debugStreamLog": false` für Alltag
+1. Paket mit Phase-9-Build (≥ 2.18.8587) deployen
+2. `AMIGAGPT:config.json`: `"debugStreamLog": true` (oder `1`) — **App komplett beenden und neu starten**
+3. Nach Start: `type T:amigagpt_stream.log` → erste Zeile **`debug logging enabled`**
+4. **Erfolgreicher** kurzer Chat (Web-Suche aus oder passendes Modell) → Zeile `stream end outcome=...`
+5. Optional **LogTool**: **LogServer** muss laufen; nach `[AmigaGPT]` filtern (nicht jede Ansicht zeigt `KPrintF`)
+6. Für Alltag wieder `"debugStreamLog": false`
+
+**Wenn die Datei leer/fehlt:** Config wirklich geladen? (`writeConfig` beim Beenden überschreibt die Datei — Eintrag vor dem Test setzen, dann Neustart). Nur den Web-Search/GPT-3.5-Repro zu testen reicht **nach Fix 9.1** (siehe unten); vorher wurde dieser Pfad nicht geloggt.
 
 ## Reproduzierbarer API-Fehler (Test, kein Fix geplant)
 
@@ -79,7 +82,7 @@ Link: `-ldebug` (`Makefile.MorphOS`) für `KPrintF`.
 
 - Fehler-Requester / `displayError` mit der API-Meldung
 - Kein Guru; App bleibt bedienbar
-- Mit `debugStreamLog: true`: ggf. `stream end outcome=FAILED` (oder kein vollständiger Stream) in `T:amigagpt_stream.log` — je nach Abbruchpfad prüfen
+- Mit `debugStreamLog: true`: Zeile `api_error kind=api_json_error detail=...` in `T:amigagpt_stream.log` (kein `stream end`, weil **kein** `finishChatStream` — das ist normal für diesen Repro)
 
 **Gegenprobe:** Web-Suche **aus** oder Modell mit Web-Search (z. B. neueres GPT) → normaler Chat.
 

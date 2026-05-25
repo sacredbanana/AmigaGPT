@@ -811,8 +811,13 @@ LONG readConfig() {
     struct json_object *debugStreamLogObj;
     if (json_object_object_get_ex(configJsonObject, "debugStreamLog",
                                   &debugStreamLogObj)) {
-        config.debugStreamLog =
-            (ULONG)json_object_get_boolean(debugStreamLogObj);
+        if (json_object_is_type(debugStreamLogObj, json_type_boolean)) {
+            config.debugStreamLog =
+                (ULONG)json_object_get_boolean(debugStreamLogObj);
+        } else if (json_object_is_type(debugStreamLogObj, json_type_int)) {
+            config.debugStreamLog =
+                json_object_get_int(debugStreamLogObj) != 0 ? 1 : 0;
+        }
     }
 
     FreeVec(configJsonString);
