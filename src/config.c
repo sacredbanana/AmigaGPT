@@ -12,6 +12,8 @@
 #include "AmigaGPT_cat.h"
 #include "config.h"
 
+void streamLogSyncFromConfig(void);
+
 #define DEFAULT_ACCENT "american.accent"
 
 STRPTR configDupString(CONST_STRPTR src) {
@@ -90,6 +92,7 @@ struct Config config = {
     .elevenLabsVoiceName = NULL,
     .elevenLabsModel = NULL,
     .elevenLabsModelName = NULL,
+    .debugStreamLog = FALSE,
 };
 
 /**
@@ -250,6 +253,8 @@ LONG writeConfig() {
         config.elevenLabsModelName != NULL
             ? json_object_new_string(config.elevenLabsModelName)
             : NULL);
+    json_object_object_add(configJsonObject, "debugStreamLog",
+                           json_object_new_boolean((BOOL)config.debugStreamLog));
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
@@ -803,8 +808,16 @@ LONG readConfig() {
         }
     }
 
+    struct json_object *debugStreamLogObj;
+    if (json_object_object_get_ex(configJsonObject, "debugStreamLog",
+                                  &debugStreamLogObj)) {
+        config.debugStreamLog =
+            (ULONG)json_object_get_boolean(debugStreamLogObj);
+    }
+
     FreeVec(configJsonString);
     json_object_put(configJsonObject);
+    streamLogSyncFromConfig();
     return RETURN_OK;
 }
 

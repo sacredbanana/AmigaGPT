@@ -80,7 +80,7 @@ endif
 
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NETINCDIR),-I$(INCDIR),-D
-LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-ljson-c,-lssl,-lcrypto,-L$(GCCLIBDIR),-latomic
+LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-ljson-c,-lssl,-lcrypto,-ldebug,-L$(GCCLIBDIR),-latomic
 VASMFLAGS = -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__MORPHOS__ -I$(INCDIR) -I$(NETINCDIR) -I$(SDKDIR)
 
 .PHONY: all clean copy_bundle_files catalog catalog_definition daemon version-bump

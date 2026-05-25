@@ -57,6 +57,8 @@ struct Config {
     STRPTR elevenLabsVoiceName;
     STRPTR elevenLabsModel;
     STRPTR elevenLabsModelName;
+    /** Phase 9: append T:amigagpt_stream.log (+ KPrintF for LogTool). */
+    ULONG debugStreamLog;
 };
 
 /**

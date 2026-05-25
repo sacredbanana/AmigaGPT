@@ -108,4 +108,4 @@ R2 ist **nicht abgeschlossen**. Vor Phase-8-Start festgehalten (2026-05):
 
 ---
 
-*Stand: 2026-05-24 — Phase 8.1–8.4 erledigt; R2-Rest dokumentiert.*
+*Stand: 2026-05-24 — Phase 8.1–8.4 erledigt; Phase 9 minimal: [PHASE-9-DEBUG-LOGS.md](PHASE-9-DEBUG-LOGS.md); R2-Rest dokumentiert.*

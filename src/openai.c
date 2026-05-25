@@ -19,6 +19,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "openai.h"
+#include "streamlog.h"
 #include "speech.h"
 #include "gui.h"
 #include "MainWindow.h"
@@ -80,6 +81,41 @@ static BOOL chatStreamInProgress = FALSE;
 
 static BOOL chatStreamCompletedOk = FALSE;
 static BOOL chatStreamTruncated = FALSE;
+static UBYTE openaiLastSseSnippet[STREAMLOG_SSE_SNIPPET_MAX + 1];
+
+void openAIChatStreamResetOutcome(void) {
+    chatStreamCompletedOk = FALSE;
+    chatStreamTruncated = FALSE;
+    openaiLastSseSnippet[0] = '\0';
+}
+
+CONST_STRPTR openAIChatStreamLastSseSnippet(void) {
+    return (CONST_STRPTR)openaiLastSseSnippet;
+}
+
+void openAIChatStreamCaptureLastSse(CONST_STRPTR fromBuffer) {
+    ULONG i;
+    ULONG out = 0;
+
+    openaiLastSseSnippet[0] = '\0';
+    if (fromBuffer == NULL) {
+        return;
+    }
+    for (i = 0; fromBuffer[i] != '\0' && out < STREAMLOG_SSE_SNIPPET_MAX; i++) {
+        UBYTE c = (UBYTE)fromBuffer[i];
+        if (c == '\r' || c == '\n' || c == '\t') {
+            if (out > 0 && out < STREAMLOG_SSE_SNIPPET_MAX) {
+                openaiLastSseSnippet[out++] = '|';
+            }
+            continue;
+        }
+        if (c < 32) {
+            continue;
+        }
+        openaiLastSseSnippet[out++] = c;
+    }
+    openaiLastSseSnippet[out] = '\0';
+}
 
 static void chatStreamNoteReadTimeout(UWORD responseIndex, ULONG readBufferLen) {
     if (responseIndex > 0 || readBufferLen > 0) {
@@ -94,10 +130,6 @@ BOOL openAIChatStreamCompletedOk(void) { return chatStreamCompletedOk; }
 
 BOOL openAIChatStreamTruncated(void) { return chatStreamTruncated; }
 
-void openAIChatStreamResetOutcome(void) {
-    chatStreamCompletedOk = FALSE;
-    chatStreamTruncated = FALSE;
-}
 
 struct Library *SocketBase;
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
@@ -1065,6 +1097,10 @@ struct json_object **postChatMessageToOpenAI(
                             break;
                         }
                     }
+                }
+
+                if (stream && lastJsonString != NULL) {
+                    openAIChatStreamCaptureLastSse(lastJsonString);
                 }
 
                 if (stream) {

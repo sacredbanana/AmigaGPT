@@ -22,6 +22,12 @@ BOOL openAIChatStreamTruncated(void);
 
 /** Reset stream outcome flags before a new chat request. */
 void openAIChatStreamResetOutcome(void);
+
+/** Last SSE fragment seen on the wire (Phase 9 log); may be empty. */
+CONST_STRPTR openAIChatStreamLastSseSnippet(void);
+
+/** Update last-SSE snapshot from read buffer (stream mode only). */
+void openAIChatStreamCaptureLastSse(CONST_STRPTR fromBuffer);
 #define CHAT_SYSTEM_LENGTH 512
 #define OPENAI_API_KEY_LENGTH 256
 

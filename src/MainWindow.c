@@ -18,6 +18,7 @@
 #include <time.h>
 #include "AmigaGPTTextEditor.h"
 #include "config.h"
+#include "streamlog.h"
 #include "gui.h"
 #include "menu.h"
 #include "MainWindow.h"
@@ -1593,6 +1594,7 @@ static void appendValidatedUtf8Chunk(struct UTF8StreamBuffer *stream,
     }
 
     if (!utf8stream_append(stream, (const UBYTE *)chunk, strlen(chunk))) {
+        streamLogUtf8("append failed (buffer grow)");
         appendAssistantStreamText((STRPTR)chunk, receivedMessage, wordNumber,
                                   speechUtf8Index);
         return;
@@ -1646,8 +1648,29 @@ static ChatStreamOutcome chatStreamClassifyOutcome(UTF8 *receivedMessage) {
     return CHAT_STREAM_PARTIAL;
 }
 
+static CONST_STRPTR chatStreamOutcomeName(ChatStreamOutcome outcome) {
+    switch (outcome) {
+    case CHAT_STREAM_OK:
+        return "OK";
+    case CHAT_STREAM_PARTIAL:
+        return "PARTIAL";
+    case CHAT_STREAM_FAILED:
+    default:
+        return "FAILED";
+    }
+}
+
 static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
                              ULONG speechUtf8Index, BOOL isNewConversation) {
+    if (streamLogIsEnabled()) {
+        ULONG msgLen =
+            receivedMessage != NULL ? (ULONG)strlen(receivedMessage) : 0;
+        streamLogChatEnd(chatStreamOutcomeName(outcome), msgLen,
+                         openAIChatStreamCompletedOk(),
+                         openAIChatStreamTruncated(),
+                         openAIChatStreamLastSseSnippet());
+    }
+
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 
     if (outcome == CHAT_STREAM_OK || outcome == CHAT_STREAM_PARTIAL) {

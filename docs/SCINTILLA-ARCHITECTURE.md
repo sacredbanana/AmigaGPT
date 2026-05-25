@@ -197,7 +197,7 @@ Die Kapitel **6–10** sind **ein** Release-Schritt, keine fünf getrennte Meile
 | **9** | Optional: Debug-Logs (nicht Blocker für v0.1) |
 | **10** | Definition of Done für den Code-Viewer |
 
-**Aktuell:** [Phase 8 — String-Safety](PHASE-8-STRING-SAFETY.md) **erledigt** (8.1–8.4). Recovery: R1/R3 erledigt; **R2-Rest** dokumentiert, nicht blockierend. R4 optional. **Nächster Schritt:** **9–10**, **11**, **12** (Chat-Scintilla), **13**. Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
+**Aktuell:** [Phase 8 — String-Safety](PHASE-8-STRING-SAFETY.md) **erledigt** (8.1–8.4). [Phase 9 — Debug-Logs](PHASE-9-DEBUG-LOGS.md) **minimal erledigt**. Recovery: R1/R3 erledigt; **R2-Rest** dokumentiert. **Nächster Schritt:** **10** (DoD), **11**, **12** (Chat-Scintilla), **13**. Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
 
 ### Umgesetzt (Phase 6, Branch scintilla — auf MorphOS validiert)
 
@@ -385,8 +385,9 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 
 ## Phase 9 — Debugging-Infrastruktur
 
-- Optional **Raw-Stream-Log** (z. B. `T:amigagpt_raw.log`) zur Einordnung: Netzwerk vs. Parser vs. GUI.
-- **UTF-8-Fehlerlog:** ungültige Sequenzen, abgeschnittene Chunks, Parserfehler.
+**Erledigt (minimal):** [PHASE-9-DEBUG-LOGS.md](PHASE-9-DEBUG-LOGS.md) — `T:amigagpt_stream.log`, optional `T:amigagpt_utf8.log`, Config `debugStreamLog`, `KPrintF` → LogTool.
+
+**Optional später:** Raw-Stream-Log (`T:amigagpt_raw.log`), erweiterte UTF-8-Parser-Zeilen.
 
 ---
 
