@@ -23,6 +23,7 @@ Start: `docs/README.md`
 | Document | Purpose |
 | -------- | ------- |
 | `docs/HANDLUNGSANWEISUNG-GIT.md` | Binding git workflow (DE) |
+| `docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md` | MorphOS runtime: restart, ASL, Scintilla (Agent, DE) |
 | `docs/GIT-FORK-WORKFLOW.md` | Remotes, upstream sync, PRs |
 | `docs/SCINTILLA-ARCHITECTURE.md` | Scintilla / streaming / UTF-8 / Fence-Parser / Chat-Anzeige vs. `codeblocks` |
 | `docs/PHASE-10-DOD.md` | DoD Code-Viewer v0.1 (Phasen 6–10, MorphOS) |
@@ -42,4 +43,4 @@ Binding cycle: **build → package to Z: → user tests → commit only after OK
 4. User tests on MorphOS and confirms
 5. Then commit (not on `master`)
 
-See `docs/HANDLUNGSANWEISUNG-GIT.md` §8–9 and `.cursor/rules/morphos-build-package.mdc`.
+See `docs/HANDLUNGSANWEISUNG-GIT.md` §8–9, `docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md`, `.cursor/rules/morphos-build-package.mdc`, `.cursor/rules/morphos-runtime-agent.mdc`.

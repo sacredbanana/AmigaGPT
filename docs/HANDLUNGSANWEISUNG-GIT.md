@@ -149,6 +149,7 @@ Push weiterhin nur auf Anfrage. Branch: nicht `master` (Standard `scintilla`).
 
 ## 10. Verwandte Dokumente
 
+- [HANDLUNGSANWEISUNG-MORPHOS-AGENT.md](HANDLUNGSANWEISUNG-MORPHOS-AGENT.md) — **Agent:** Restart, ASL/PushMethod, Scintilla-Chat, Regressionen
 - [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md) — Remotes, Sync, PR ins Original
 - [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) — Architektur Branch `scintilla`
 - [BUILD-MORPHOS-WSL.md](BUILD-MORPHOS-WSL.md) — Cross-Build WSL2/Debian

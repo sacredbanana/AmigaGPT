@@ -1,0 +1,23 @@
+---
+description: MorphOS runtime — restart stability, ASL PushMethod, Scintilla chat rules
+globs: src/**,docs/**
+alwaysApply: false
+---
+
+# MorphOS runtime (Agent)
+
+Read **`docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md`** when touching:
+
+- `MainWindow.c`, `gui.c`, `menu.c`, `ChatExport.c`, `ChatOutputScintilla.c`, `CodeBlocksViewer.c`, shutdown, MUI menus, ASL
+
+## Must not regress
+
+1. **Quit/restart:** `mainWindowPrepareShutdown()` — release **pens before** closing window; empty conversation list with destruct; single `Application_Load` before open; no Screen-hook that reloads ENVARC.
+2. **Menu → file dialog:** use `MUIM_Application_PushMethod` + deferred hook (not direct ASL from app notify).
+3. **Chat markdown:** no `SCLEX_MARKDOWN` in chat (MorphOS ineffective); use midi-markdown plan (Scintilla styles).
+
+## User test when UI/shutdown changes
+
+Ask user to verify **3× quit → restart** after packaging. Do not commit until MorphOS OK (see `HANDLUNGSANWEISUNG-GIT.md` §9).
+
+Build/package: `.cursor/rules/morphos-build-package.mdc`
