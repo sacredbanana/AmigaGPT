@@ -15,7 +15,7 @@ SDK nativ (MorphOS) vs. WSL, `MUIM_Scintilla_Command`, Inventar `devfiles.txt`: 
 | **1–5** | Ziel, Datenmodell, Stream, Fences, GUI-Grundlagen |
 | **6–10** | Scintilla **Code-Viewer** v0.1 — **erledigt** (MorphOS, 2026-05); DoD: [PHASE-10-DOD.md](PHASE-10-DOD.md) |
 | **R1–R4** | **Stream- & Chat-Recovery** — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) (parallel zu 7c/8–10, vorrangig R1+R2) |
-| **11** | Komfort am Code-Viewer (Lexer, Highlighting, Tabs, Export) |
+| **11** | Code-Viewer Lexer/Highlighting — [PHASE-11-LEXER.md](PHASE-11-LEXER.md) (minimal umgesetzt) |
 | **12** | **Hauptfenster Chat-Ausgabe** → Scintilla.mcc + TTEngine (UTF-8, ohne NFloattext/codesets für diese Fläche) |
 | **13** | MorphOS Worker / UI-Batching für Stream (bewusst **nach** Phase 12) |
 
@@ -197,7 +197,7 @@ Die Kapitel **6–10** sind **ein** Release-Schritt, keine fünf getrennte Meile
 | **9** | Optional: Debug-Logs (nicht Blocker für v0.1) |
 | **10** | Definition of Done für den Code-Viewer |
 
-**Aktuell:** Phasen **6–10** abgeschlossen (DoD: [PHASE-10-DOD.md](PHASE-10-DOD.md)). Recovery **R1–R3 + R2** erledigt ([STREAM-RECOVERY.md](STREAM-RECOVERY.md)). **Nächster Schritt:** **11** (Lexer/Komfort), **12** (Chat-Scintilla), **13** (Worker). Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
+**Aktuell:** Phasen **6–10** abgeschlossen; **11** Lexer minimal ([PHASE-11-LEXER.md](PHASE-11-LEXER.md)). Recovery **R1–R3 + R2** erledigt. **Nächster Schritt:** **12** (Chat-Scintilla), **13** (Worker); optional 11-Komfort (Tabs). Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
 
 ### Umgesetzt (Phase 6, Branch scintilla — auf MorphOS validiert)
 
@@ -412,12 +412,15 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 
 ---
 
-## Phase 11 — Komfort (erst nach Stabilität)
+## Phase 11 — Komfort (Code-Viewer Lexer)
 
-- **Syntax Highlighting:** `SCI_SETLEXER` für C, Python, JSON, Shell, Lua, …
-- **Inline-Code** (optional, oft entbehrlich)
+**Erledigt (minimal, 2026-05):** [PHASE-11-LEXER.md](PHASE-11-LEXER.md) — `SCI_SETLEXER` / `SCI_SETLEXERLANGUAGE` / `SCI_COLOURISE` in `CodeBlocksScintilla.c`, Sprache aus `AICodeBlock.language`.
+
+**Optional später:**
+
 - **Tabs** für mehrere Codeblöcke (Alternative zur NList aus 7a)
-- **Lexer** (siehe oben); Save markdown o. Ä. nur falls zusätzlich gewünscht — Copy/Save Raw/Codeset in **7b**
+- **Inline-Code** im Chat
+- Save markdown o. Ä. — Copy/Save Raw/Codeset bleibt **7b**
 
 ---
 

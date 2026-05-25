@@ -10,6 +10,7 @@
 | [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md)                 | Remotes `origin` / `upstream`, Sync, PRs                                           |
 | [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)       | Plan Scintilla.mcc, Phasen 6–13; **6–10 v0.1 erledigt**                            |
 | [PHASE-10-DOD.md](PHASE-10-DOD.md)                           | **DoD Code-Viewer v0.1** (Phasen 6–10, MorphOS-Abnahme)                            |
+| [PHASE-11-LEXER.md](PHASE-11-LEXER.md)                       | Phase 11 Syntax-Highlighting im Code-Viewer                                          |
 | [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md)         | Phase 8 String-Safety (8.1–8.4)                                                    |
 | [PHASE-9-DEBUG-LOGS.md](PHASE-9-DEBUG-LOGS.md)               | Phase 9 Debug-Logs (Stream / UTF-8)                                                |
 | [STREAM-RECOVERY.md](STREAM-RECOVERY.md)                     | Plan Stream- & Chat-Recovery (R1–R4): WANT_READ, UI-Sync, Freeze                   |
@@ -73,6 +74,6 @@ Ausführlich: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) (inkl. Prüfung: 
 - **Code-Fences / Viewer:** Platzhalter im Chat; **Ansicht → Codeblöcke…** — **Phase 6–7b erledigt** (NList, Scintilla, Copy/Save UTF-8 + System). Recovery Chat/Stream: [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
 - **Mini-Markdown:** **Ansicht → Markdown formatting** — abschaltbar (`config.markdownFormatting`).
 
-**Roadmap:** 6–10 ✓ (v0.1) · **R1/R3 ✓, R2 teilweise** · 11 Lexer · **12 Chat** · **13 Worker** — [PHASE-10-DOD.md](PHASE-10-DOD.md), [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md), [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
+**Roadmap:** 6–10 ✓ · R1–R3 + R2 ✓ · **11 Lexer** (testen) · **12 Chat** · **13 Worker** — [PHASE-10-DOD.md](PHASE-10-DOD.md), [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md), [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
 
 Agenten: zusätzlich [AGENTS.md](../AGENTS.md) und `.cursor/rules/git-branch-policy.mdc`.

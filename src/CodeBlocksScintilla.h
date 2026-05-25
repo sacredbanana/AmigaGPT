@@ -12,8 +12,12 @@
 sptr_t codeBlocksScintillaCommand(Object *sci, unsigned int iMessage,
                                   uptr_t wParam, sptr_t lParam);
 
-/** Replace document text with a NUL-terminated UTF-8 string. */
-void codeBlocksScintillaSetUtf8Text(Object *sci, const char *utf8);
+/** Apply SCI_SETLEXER / SCI_SETLEXERLANGUAGE from a fence language tag (may be NULL). */
+void codeBlocksScintillaApplyLexer(Object *sci, const char *language);
+
+/** Replace document text with a NUL-terminated UTF-8 string and optional lexer. */
+void codeBlocksScintillaSetUtf8Text(Object *sci, const char *utf8,
+                                    const char *language);
 
 /** Read-only viewer defaults (UTF-8 code page, no editing). */
 void codeBlocksScintillaInitViewer(Object *sci);

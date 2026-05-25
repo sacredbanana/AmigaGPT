@@ -528,7 +528,7 @@ void codeBlocksViewerPrepareShutdown(void) {
     codeBlocksPendingSaveBlock = NULL;
 
     if (codeBlocksScintillaObject != NULL) {
-        codeBlocksScintillaSetUtf8Text(codeBlocksScintillaObject, "");
+        codeBlocksScintillaSetUtf8Text(codeBlocksScintillaObject, "", NULL);
     }
     if (codeBlocksListObject != NULL) {
         DoMethod(codeBlocksListObject, MUIM_NList_Clear);
@@ -582,14 +582,20 @@ BOOL codeBlocksViewerPopulate(struct Conversation *conv) {
 void codeBlocksViewerShowActiveBlock(void) {
     struct AICodeBlock *block = codeBlocksViewerGetSelectedBlock();
     const char *text = "";
+    const char *language = NULL;
 
     if (codeBlocksScintillaObject == NULL) {
         return;
     }
-    if (block != NULL && block->raw_code != NULL) {
-        text = (const char *)block->raw_code;
+    if (block != NULL) {
+        if (block->raw_code != NULL) {
+            text = (const char *)block->raw_code;
+        }
+        if (block->language != NULL && block->language[0] != '\0') {
+            language = (const char *)block->language;
+        }
     }
-    codeBlocksScintillaSetUtf8Text(codeBlocksScintillaObject, text);
+    codeBlocksScintillaSetUtf8Text(codeBlocksScintillaObject, text, language);
 }
 
 #endif /* __MORPHOS__ */
