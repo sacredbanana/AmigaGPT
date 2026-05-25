@@ -23,6 +23,8 @@
 #include "menu.h"
 #include "MainWindow.h"
 #ifdef __MORPHOS__
+#include <mui/Scintilla_mcc.h>
+#include "ChatOutputScintilla.h"
 #include "CodeBlocksViewer.h"
 #endif
 #include "utf8stream.h"
@@ -74,7 +76,12 @@ Object *newChatButton;
 Object *deleteChatButton;
 Object *sendMessageButton;
 Object *chatInputTextEditor;
+#ifndef __MORPHOS__
 Object *chatOutputListView;
+#endif
+#ifdef __MORPHOS__
+Object *chatOutputScroller;
+#endif
 Object *chatOutputTextEditor;
 Object *statusBar;
 Object *conversationListObject;
@@ -126,8 +133,14 @@ static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
                          StyleType *foundStyle);
 static PICTURE *generateThumbnail(struct GeneratedImage *image);
 static void addMainWindowActions();
+#ifndef __MORPHOS__
 static Object *newChatOutputFloattextObject(void);
 static void installChatOutputWheelHandler(void);
+#endif
+#ifdef __MORPHOS__
+static void chatOutputUpdateFromBuffer(void);
+static void clearChatOutputDisplay(void);
+#endif
 
 HOOKPROTONHNO(ConstructConversationLI_TextFunc, APTR,
               struct NList_ConstructMessage *ncm) {
@@ -238,7 +251,11 @@ MakeHook(ImageRowClickedHook, ImageRowClickedFunc);
 
 HOOKPROTONHNONP(NewChatButtonClickedFunc, void) {
     currentConversation = NULL;
+#ifdef __MORPHOS__
+    clearChatOutputDisplay();
+#else
     DoMethod(chatOutputTextEditor, MUIM_NList_Clear);
+#endif
 #ifdef __MORPHOS__
     codeBlocksViewerDismiss();
     refreshViewCodeBlocksMenuState();
@@ -251,7 +268,11 @@ HOOKPROTONHNONP(DeleteChatButtonClickedFunc, void) {
     DoMethod(conversationListObject, MUIM_NList_Remove,
              MUIV_NList_Remove_Active);
     currentConversation = NULL;
+#ifdef __MORPHOS__
+    clearChatOutputDisplay();
+#else
     DoMethod(chatOutputTextEditor, MUIM_NList_Clear);
+#endif
 #ifdef __MORPHOS__
     codeBlocksViewerDismiss();
     refreshViewCodeBlocksMenuState();
@@ -995,6 +1016,24 @@ static STRPTR formatAssistantTextForDisplay(CONST_STRPTR input) {
     return convertMarkdownFormattingToMUI(input);
 }
 
+#ifdef __MORPHOS__
+
+static void chatOutputUpdateFromBuffer(void) {
+    if (chatOutputTextEditor != NULL && chatOutputTextEditorContents != NULL) {
+        chatOutputScintillaSetUtf8Text(chatOutputTextEditor,
+                                       chatOutputTextEditorContents);
+    }
+}
+
+static void clearChatOutputDisplay(void) {
+    if (chatOutputTextEditorContents != NULL) {
+        chatOutputTextEditorContents[0] = '\0';
+    }
+    chatOutputUpdateFromBuffer();
+}
+
+#else /* !__MORPHOS__ */
+
 /* Phase 7c: mouse wheel on chat NFloattext (HandleInput + window EH on same class) */
 static struct MUI_CustomClass *chatOutputFloattextClass;
 static struct MUI_EventHandlerNode *chatOutputWheelEH;
@@ -1150,6 +1189,31 @@ static Object *newChatOutputFloattextObject(void) {
         MUIA_NFloattext_Text, chatOutputTextEditorContents, TAG_DONE);
 }
 
+#endif /* !__MORPHOS__ */
+
+#ifdef __MORPHOS__
+void chatOutputWheelShutdown(void) {}
+void chatOutputWheelDisposeClass(void) {}
+
+void applyFixedWidthFontsSetting(void) {
+    if (chatInputTextEditor != NULL) {
+        set(chatInputTextEditor, MUIA_TextEditor_FixedFont,
+            config.fixedWidthFonts);
+    }
+    if (imageInputTextEditor != NULL) {
+        set(imageInputTextEditor, MUIA_TextEditor_FixedFont,
+            config.fixedWidthFonts);
+    }
+    if (chatOutputTextEditor != NULL) {
+        chatOutputScintillaRefreshFont(chatOutputTextEditor);
+        if (chatOutputTextEditorContents != NULL &&
+            chatOutputTextEditorContents[0] != '\0') {
+            chatOutputUpdateFromBuffer();
+        }
+    }
+}
+#endif
+
 /**
  * Create the main window
  * @return RETURN_OK on success, RETURN_ERROR on failure
@@ -1158,7 +1222,9 @@ LONG createMainWindow() {
     if ((isMUI5 || isMUI39) && createAmigaGPTTextEditor() == RETURN_ERROR) {
         displayError("Could not create custom class.");
     }
+#ifndef __MORPHOS__
     (void)createChatOutputFloattextClass();
+#endif
 
     if (mainWindowObject != NULL) {
         MUI_DisposeObject(mainWindowObject);
@@ -1266,6 +1332,15 @@ LONG createMainWindow() {
                         Child, VGroup,
                             // Chat output text display
                             Child, HGroup, MUIA_VertWeight, 60,
+#ifdef __MORPHOS__
+                                Child, chatOutputScroller = ScrollgroupObject,
+                                    MUIA_Scrollgroup_AutoBars, TRUE,
+                                    MUIA_Scrollgroup_Contents,
+                                        chatOutputTextEditor = ScintillaObject,
+                                        MUIA_Frame, MUIV_Frame_Text,
+                                    End,
+                                End,
+#else
                                 Child, chatOutputListView = NListviewObject,
                                 MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_None,
                                 MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
@@ -1273,6 +1348,7 @@ LONG createMainWindow() {
                                     chatOutputTextEditor =
                                         newChatOutputFloattextObject(),
                                 End,
+#endif
                             End,
                             Child, HGroup, MUIA_VertWeight, 20,
                                 // Chat input text editor
@@ -1373,6 +1449,7 @@ LONG createMainWindow() {
     get(mainWindowObject, MUIA_Window, &mainWindow);
 #ifdef __MORPHOS__
     codeBlocksViewerSetAslParentWindow(mainWindow);
+    chatOutputScintillaInitViewer(chatOutputTextEditor);
 #endif
 
     DoMethod(app, OM_ADDMEMBER, mainWindowObject);
@@ -1438,7 +1515,9 @@ LONG createMainWindow() {
     loadConversations();
     loadImages();
 
+#ifndef __MORPHOS__
     installChatOutputWheelHandler();
+#endif
 
     return RETURN_OK;
 }
@@ -1511,9 +1590,13 @@ static BOOL streamUiShouldRefresh(UWORD chunkCount) {
 }
 
 static void streamUiFlushChatDisplay(void) {
+#ifdef __MORPHOS__
+    chatOutputUpdateFromBuffer();
+#else
     set(chatOutputTextEditor, MUIA_NFloattext_Text,
         chatOutputTextEditorContents);
     set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
+#endif
 }
 
 /** Speak only UTF-8 not yet spoken (system TTS); avoids full-buffer convert. */
@@ -1543,7 +1626,6 @@ static void speakStreamUtf8Tail(STRPTR receivedMessage, ULONG *utf8Spoken) {
  */
 static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
                                     UWORD *wordNumber, ULONG *speechUtf8Index) {
-    STRPTR formattedMessageSystemEncoded;
     size_t pieceLen;
 
     if (piece == NULL || piece[0] == '\0') {
@@ -1553,16 +1635,23 @@ static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
     pieceLen = strlen(piece);
     strbufAppend(receivedMessage, READ_BUFFER_LENGTH, piece);
 
-    formattedMessageSystemEncoded = CodesetsUTF8ToStr(
-        CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)piece,
-        CSA_MapForeignChars, TRUE, TAG_DONE);
+#ifdef __MORPHOS__
+    strbufAppend(chatOutputTextEditorContents,
+                 CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, piece);
+#else
+    {
+        STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)piece,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
 
-    if (formattedMessageSystemEncoded != NULL) {
-        strbufAppend(chatOutputTextEditorContents,
-                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
-                     formattedMessageSystemEncoded);
-        CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+        if (formattedMessageSystemEncoded != NULL) {
+            strbufAppend(chatOutputTextEditorContents,
+                         CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
+                         formattedMessageSystemEncoded);
+            CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+        }
     }
+#endif
 
     ++(*wordNumber);
     /* Markdown only after stream (displayConversation); avoids full-buffer
@@ -1687,8 +1776,10 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 
     if (outcome == CHAT_STREAM_OK || outcome == CHAT_STREAM_PARTIAL) {
+#ifndef __MORPHOS__
         set(chatOutputTextEditor, MUIA_NFloattext_Text,
             chatOutputTextEditorContents);
+#endif
         addTextToConversation(currentConversation, receivedMessage,
                               "assistant");
         displayConversation(currentConversation);
@@ -1781,9 +1872,13 @@ static void sendChatMessage() {
     if (currentConversation == NULL) {
         isNewConversation = TRUE;
         currentConversation = newConversation();
+#ifdef __MORPHOS__
+        clearChatOutputDisplay();
+#else
         chatOutputTextEditorContents[0] = '\0';
         set(chatOutputTextEditor, MUIA_NFloattext_Text,
             chatOutputTextEditorContents);
+#endif
         set(conversationListObject, MUIA_NList_Active, MUIV_NList_Active_Off);
     }
     set(sendMessageButton, MUIA_Disabled, TRUE);
@@ -1799,51 +1894,64 @@ static void sendChatMessage() {
     } else {
         text = DoMethod(chatInputTextEditor, MUIM_TextEditor_ExportText);
     }
-    UBYTE userStyleString[] = "\033r\033b\0333";
-    UBYTE userAlignment;
-    switch (config.userTextAlignment) {
-    case ALIGN_LEFT:
-        userAlignment = 'l';
-        break;
-    case ALIGN_CENTER:
-        userAlignment = 'c';
-        break;
-    case ALIGN_RIGHT:
-        userAlignment = 'r';
-        break;
-    }
-    userStyleString[1] = userAlignment;
-    strbufAppend(chatOutputTextEditorContents,
-                 CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, userStyleString);
-    for (ULONG i = 0; i < strlen(text); i++) {
-        UBYTE oneChar[2] = {0, 0};
-
-        if (strlen(chatOutputTextEditorContents) >=
-            CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 10) {
-            break;
-        }
-        oneChar[0] = text[i];
-        strbufAppend(chatOutputTextEditorContents,
-                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, (STRPTR)oneChar);
-        if (text[i] == '\n') {
-            strbufAppend(chatOutputTextEditorContents,
-                         CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
-                         userStyleString);
-        }
-    }
-
-    set(chatOutputTextEditor, MUIA_NFloattext_Text,
-        chatOutputTextEditorContents);
-    set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
 
     // Remove trailing newline characters
-    while (text[strlen(text) - 1] == '\n') {
+    while (text != NULL && text[0] != '\0' && text[strlen(text) - 1] == '\n') {
         text[strlen(text) - 1] = '\0';
     }
 
     UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
-
                                         CSA_Source, (Tag)text, TAG_DONE);
+
+#ifdef __MORPHOS__
+    if (textUTF8 != NULL) {
+        strbufAppend(chatOutputTextEditorContents,
+                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, textUTF8);
+        strbufAppend(chatOutputTextEditorContents,
+                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\n\n");
+        chatOutputUpdateFromBuffer();
+    }
+#else
+    {
+        UBYTE userStyleString[] = "\033r\033b\0333";
+        UBYTE userAlignment;
+        switch (config.userTextAlignment) {
+        case ALIGN_LEFT:
+            userAlignment = 'l';
+            break;
+        case ALIGN_CENTER:
+            userAlignment = 'c';
+            break;
+        case ALIGN_RIGHT:
+            userAlignment = 'r';
+            break;
+        }
+        userStyleString[1] = userAlignment;
+        strbufAppend(chatOutputTextEditorContents,
+                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, userStyleString);
+        for (ULONG i = 0; i < strlen(text); i++) {
+            UBYTE oneChar[2] = {0, 0};
+
+            if (strlen(chatOutputTextEditorContents) >=
+                CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH - 10) {
+                break;
+            }
+            oneChar[0] = text[i];
+            strbufAppend(chatOutputTextEditorContents,
+                         CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
+                         (STRPTR)oneChar);
+            if (text[i] == '\n') {
+                strbufAppend(chatOutputTextEditorContents,
+                             CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
+                             userStyleString);
+            }
+        }
+
+        set(chatOutputTextEditor, MUIA_NFloattext_Text,
+            chatOutputTextEditorContents);
+        set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
+    }
+#endif
 
     addTextToConversation(currentConversation, textUTF8, "user");
     CodesetsFreeA(textUTF8, NULL);
@@ -1924,9 +2032,13 @@ static void sendChatMessage() {
                 if (currentConversation ==
                     currentConversation->messages->mlh_TailPred) {
                     currentConversation = NULL;
+#ifdef __MORPHOS__
+                    clearChatOutputDisplay();
+#else
                     chatOutputTextEditorContents[0] = '\0';
                     set(chatOutputTextEditor, MUIA_NFloattext_Text,
                         chatOutputTextEditorContents);
+#endif
                 } else {
                     displayConversation(currentConversation);
 #ifdef __MORPHOS__
@@ -2015,24 +2127,40 @@ static void sendChatMessage() {
  * @param conversation the conversation to display
  **/
 void displayConversation(struct Conversation *conversation) {
+    struct ConversationNode *conversationNode;
+    UTF8 *content;
+
     if (conversation == NULL) {
         conversation = currentConversation;
     }
-    struct ConversationNode *conversationNode;
+    if (conversation == NULL || chatOutputTextEditorContents == NULL) {
+        return;
+    }
+
     chatOutputTextEditorContents[0] = '\0';
     for (conversationNode =
              (struct ConversationNode *)conversation->messages->mlh_Head;
          conversationNode->node.mln_Succ != NULL;
          conversationNode =
              (struct ConversationNode *)conversationNode->node.mln_Succ) {
-        if ((strlen(chatOutputTextEditorContents) +
-             strlen(conversationNodeGetDisplay(conversationNode)) + 256) >
+        content = conversationNodeGetDisplay(conversationNode);
+        if (content == NULL) {
+            content = (UTF8 *)"";
+        }
+        if ((strlen(chatOutputTextEditorContents) + strlen(content) + 256) >
             WRITE_BUFFER_LENGTH) {
             displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
             break;
         }
+#ifdef __MORPHOS__
+        if (chatOutputTextEditorContents[0] != '\0') {
+            strbufAppend(chatOutputTextEditorContents,
+                         CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\n\n");
+        }
+        strbufAppend(chatOutputTextEditorContents,
+                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, content);
+#else
         if (strcmp(conversationNode->role, "user") == 0) {
-            UTF8 *content = conversationNodeGetDisplay(conversationNode);
             UBYTE userAlignment;
             switch (config.userTextAlignment) {
             case ALIGN_LEFT:
@@ -2067,8 +2195,7 @@ void displayConversation(struct Conversation *conversation) {
             set(chatOutputTextEditor, MUIA_NFloattext_Align,
                 config.assistantTextAlignment);
             UBYTE assistantStyleString[] = "\n\n\0332";
-            STRPTR formattedContent = formatAssistantTextForDisplay(
-                conversationNodeGetDisplay(conversationNode));
+            STRPTR formattedContent = formatAssistantTextForDisplay(content);
 
             strbufAppend(chatOutputTextEditorContents,
                          CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH,
@@ -2082,21 +2209,29 @@ void displayConversation(struct Conversation *conversation) {
             strbufAppend(chatOutputTextEditorContents,
                          CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\n\n");
         }
+#endif
     }
 
-    STRPTR convertedConversationString = CodesetsUTF8ToStr(
-        CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-        (Tag)chatOutputTextEditorContents, CSA_MapForeignChars, TRUE, TAG_DONE);
+#ifdef __MORPHOS__
+    chatOutputUpdateFromBuffer();
+#else
+    {
+        STRPTR convertedConversationString = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+            (Tag)chatOutputTextEditorContents, CSA_MapForeignChars, TRUE,
+            TAG_DONE);
 
-    snprintf(chatOutputTextEditorContents,
-             CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "%s",
-             convertedConversationString);
+        snprintf(chatOutputTextEditorContents,
+                 CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "%s",
+                 convertedConversationString);
 
-    CodesetsFreeA(convertedConversationString, NULL);
+        CodesetsFreeA(convertedConversationString, NULL);
 
-    set(chatOutputTextEditor, MUIA_NFloattext_Text,
-        chatOutputTextEditorContents);
-    set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
+        set(chatOutputTextEditor, MUIA_NFloattext_Text,
+            chatOutputTextEditorContents);
+        set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
+    }
+#endif
 }
 
 /**

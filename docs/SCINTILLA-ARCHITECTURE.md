@@ -197,7 +197,7 @@ Die Kapitel **6–10** sind **ein** Release-Schritt, keine fünf getrennte Meile
 | **9** | Optional: Debug-Logs (nicht Blocker für v0.1) |
 | **10** | Definition of Done für den Code-Viewer |
 
-**Aktuell:** Phasen **6–10** abgeschlossen; **11** Lexer minimal ([PHASE-11-LEXER.md](PHASE-11-LEXER.md)). Recovery **R1–R3 + R2** erledigt. **Nächster Schritt:** **12** (Chat-Scintilla), **13** (Worker); optional 11-Komfort (Tabs). Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
+**Aktuell:** Phasen **6–11** abgeschlossen; **12** Chat-Scintilla implementiert ([PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), MorphOS-Test ausstehend). Recovery **R1–R3 + R2** erledigt. **Nächster Schritt:** MorphOS-Validierung **12**, dann **13** (Worker).
 
 ### Umgesetzt (Phase 6, Branch scintilla — auf MorphOS validiert)
 
@@ -425,6 +425,8 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 ---
 
 ## Phase 12 — Hauptfenster Chat-Ausgabe → Scintilla
+
+**Status:** Implementiert auf MorphOS (Branch `scintilla`); Details und Testplan: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md).
 
 **Ziel:** Unicode-Anzeige im Chat ohne `CodesetsUTF8ToStr` → NFloattext (Motivation: MorphOS-Prüfung Emoji → `??`, siehe [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md)).
 

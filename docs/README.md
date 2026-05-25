@@ -68,12 +68,12 @@ Neue oder geänderte Strings: `catalogs/AmigaGPT.pot` bzw. die `catalogs/*/*.po`
 
 Ausführlich: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) (inkl. Prüfung: `GETENV Charset` nicht gesetzt, Emoji im Chat → `??`).
 
-- **Chat-Ausgabe (heute, NFloattext):** UTF-8 intern → `CodesetsUTF8ToStr` → System-Codeset → Anzeige. Geplant **Phase 12:** Scintilla + TTEngine, UTF-8 direkt.
+- **Chat-Ausgabe (MorphOS, Phase 12):** Scintilla + TTEngine, UTF-8 direkt — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md). OS3/OS4 weiter NFloattext + codesets.
 - **Chat-Eingabe:** `TextEditor` → `CodesetsUTF8Create` → UTF-8 zur API — **nicht** Phase 6–10 / 12 (Eingabe).
 - **Konversationsliste (NList):** `name` UTF-8; Anzeige `**name_list_display`** (Codesets) — **bereits umgesetzt** (Phase 5.1).
 - **Code-Fences / Viewer:** Platzhalter im Chat; **Ansicht → Codeblöcke…** — **Phase 6–7b erledigt** (NList, Scintilla, Copy/Save UTF-8 + System). Recovery Chat/Stream: [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
 - **Mini-Markdown:** **Ansicht → Markdown formatting** — abschaltbar (`config.markdownFormatting`).
 
-**Roadmap:** 6–10 ✓ · R1–R3 + R2 ✓ · **11 Lexer** (testen) · **12 Chat** · **13 Worker** — [PHASE-10-DOD.md](PHASE-10-DOD.md), [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md), [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
+**Roadmap:** 6–11 ✓ · **12 Chat** (MorphOS-Test) · **13 Worker** — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [PHASE-10-DOD.md](PHASE-10-DOD.md), [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md), [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
 
 Agenten: zusätzlich [AGENTS.md](../AGENTS.md) und `.cursor/rules/git-branch-policy.mdc`.

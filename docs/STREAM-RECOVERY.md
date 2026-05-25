@@ -247,7 +247,7 @@ Details: [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md#recovery-r2--rest-b
 | `snprintf`/Buffer-Grenzen | **Phase 8** — überlappt S7; gemeinsam angehen |
 | Debug-Logs | **Phase 9** — R4.2 |
 | DoD Code-Viewer | **Phase 10** ✓ — [PHASE-10-DOD.md](PHASE-10-DOD.md); Recovery blockiert v0.1 nicht |
-| Chat UTF-8 ohne codesets | **Phase 12** — ändert Schicht 3 langfristig |
+| Chat UTF-8 ohne codesets (MorphOS) | **Phase 12** — Scintilla-Anzeige, Stream-Puffer UTF-8; TTS weiter codesets — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md) |
 | Worker / UI-Batching | **Phase 13** — nach 12; kann R3 ersetzen |
 
 ---

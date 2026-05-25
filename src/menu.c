@@ -356,6 +356,11 @@ static BOOL syncMenuCheckbox(LONG menuItemId, ULONG *configValue) {
     return TRUE;
 }
 
+#ifdef __MORPHOS__
+HOOKPROTONHNONP(ApplyFixedWidthFontsFunc, void) { applyFixedWidthFontsSetting(); }
+MakeHook(ApplyFixedWidthFontsHook, ApplyFixedWidthFontsFunc);
+#endif
+
 HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
     if (!syncMenuCheckbox(MENU_ITEM_VIEW_FIXED_WIDTH_FONTS,
                           &config.fixedWidthFonts)) {
@@ -364,8 +369,13 @@ HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
     }
+#ifdef __MORPHOS__
+    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+             &ApplyFixedWidthFontsHook);
+#else
     DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
              &RecreateMainWindowHook);
+#endif
 }
 MakeHook(FixedWidthFontsMenuItemClickedHook,
          FixedWidthFontsMenuItemClickedFunc);

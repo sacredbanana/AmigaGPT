@@ -48,6 +48,11 @@ struct Conversation *getCurrentConversation(void);
  **/
 void displayConversation(struct Conversation *conversation);
 
+#ifdef __MORPHOS__
+/** Apply config.fixedWidthFonts to chat/image editors and chat Scintilla (no window rebuild). */
+void applyFixedWidthFontsSetting(void);
+#endif
+
 /**
  * Print the conversation text to the printer
  * @return RETURN_OK on success, RETURN_ERROR on failure
