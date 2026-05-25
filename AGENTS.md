@@ -25,6 +25,7 @@ Start: `docs/README.md`
 | `docs/HANDLUNGSANWEISUNG-GIT.md` | Binding git workflow (DE) |
 | `docs/GIT-FORK-WORKFLOW.md` | Remotes, upstream sync, PRs |
 | `docs/SCINTILLA-ARCHITECTURE.md` | Scintilla / streaming / UTF-8 / Fence-Parser / Chat-Anzeige vs. `codeblocks` |
+| `docs/PHASE-10-DOD.md` | DoD Code-Viewer v0.1 (Phasen 6–10, MorphOS) |
 | `docs/STREAM-RECOVERY.md` | Stream & chat recovery (R1–R4): WANT_READ, UI sync, freeze |
 | `docs/BUILD-MORPHOS-WSL.md` | MorphOS cross-build on WSL2 Debian (incl. FlexCat bootstrap) |
 | `docs/MORPHOS-SDK-ERGAENZUNGEN.md` | Exact SDK supplements (BIGFOOT vs AmigaSDK-gcc) |

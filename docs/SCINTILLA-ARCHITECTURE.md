@@ -13,7 +13,7 @@ SDK nativ (MorphOS) vs. WSL, `MUIM_Scintilla_Command`, Inventar `devfiles.txt`: 
 | Phase | Status / Inhalt |
 |-------|-----------------|
 | **1–5** | Ziel, Datenmodell, Stream, Fences, GUI-Grundlagen |
-| **6–10** | Scintilla **Code-Viewer** v0.1 — **6, 7a, 7b, 7c erledigt** (MorphOS, 2026-05); **8–10** offen (Safety/Logs/DoD) |
+| **6–10** | Scintilla **Code-Viewer** v0.1 — **erledigt** (MorphOS, 2026-05); DoD: [PHASE-10-DOD.md](PHASE-10-DOD.md) |
 | **R1–R4** | **Stream- & Chat-Recovery** — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) (parallel zu 7c/8–10, vorrangig R1+R2) |
 | **11** | Komfort am Code-Viewer (Lexer, Highlighting, Tabs, Export) |
 | **12** | **Hauptfenster Chat-Ausgabe** → Scintilla.mcc + TTEngine (UTF-8, ohne NFloattext/codesets für diese Fläche) |
@@ -197,7 +197,7 @@ Die Kapitel **6–10** sind **ein** Release-Schritt, keine fünf getrennte Meile
 | **9** | Optional: Debug-Logs (nicht Blocker für v0.1) |
 | **10** | Definition of Done für den Code-Viewer |
 
-**Aktuell:** [Phase 8 — String-Safety](PHASE-8-STRING-SAFETY.md) **erledigt** (8.1–8.4). [Phase 9 — Debug-Logs](PHASE-9-DEBUG-LOGS.md) **minimal erledigt**. Recovery: R1/R3 erledigt; **R2-Rest** dokumentiert. **Nächster Schritt:** **10** (DoD), **11**, **12** (Chat-Scintilla), **13**. Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
+**Aktuell:** Phasen **6–10** abgeschlossen (DoD: [PHASE-10-DOD.md](PHASE-10-DOD.md)). Recovery: R1/R3 erledigt; **R2-Rest** dokumentiert, nicht Blocker. **Nächster Schritt:** **11** (Lexer/Komfort), **12** (Chat-Scintilla), **13** (Worker). Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
 
 ### Umgesetzt (Phase 6, Branch scintilla — auf MorphOS validiert)
 
@@ -345,7 +345,7 @@ Button-Beschriftung **ohne** „Code block“ (Kontext: Code-Blöcke-Fenster). A
 3. **7c** — Mausrad → Chat-NListview/NFloattext scrollen ✓.
 4. **Phase 8** — Buffer/`snprintf` beim Umbau prüfen (100 KB-Grenze, dynamische Pfade).
 5. **Phase 9** — optional Logs.
-6. **Phase 10** — DoD-Checkliste abhaken.
+6. ~~**Phase 10**~~ — DoD: [PHASE-10-DOD.md](PHASE-10-DOD.md) ✓
 
 **Katalog:** neue Menü-Strings → `AmigaGPT.pot` / `.po`, FlexCat beim Build.
 
@@ -393,13 +393,14 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 
 ## Phase 10 — Erste Version (0.1) — Definition of Done für 6–10
 
-**Enthalten (Code-Viewer, MorphOS) — größtenteils erledigt (6, 7a, 7b):**
+**Erledigt (2026-05):** formale Checkliste und Abnahme — [PHASE-10-DOD.md](PHASE-10-DOD.md).
 
-- Menü **View code blocks…** mit **NList** (`index:language`) + **Scintilla** (ein Block, `raw_code`, UTF-8, TTEngine, DejaVu Sans Mono) — **erledigt**
-- **Copy/Save UTF-8** und **Copy/Save System-Codeset** aus aktivem Block — **erledigt (7b)**
-- Bearbeiten→Kopieren bei offenem Code-Fenster = Copy UTF-8 des aktiven Blocks — **erledigt**
-- Codeblock-Erkennung (Fences) unverändert in `addTextToConversation()`; Chat-Platzhalter unverändert
-- **Offen in 8–10:** String-Safety-Sweep, optionale Logs, formale DoD-Abhakung
+**Enthalten (Code-Viewer, MorphOS) — alle Punkte ✓:**
+
+- Menü **View code blocks…** mit **NList** + **Scintilla** (UTF-8, TTEngine, DejaVu Sans Mono)
+- **Copy/Save UTF-8** und **Copy/Save System-Codeset** (7b); Bearbeiten→Kopieren = Copy UTF-8
+- Mausrad-Scroll Chat (7c); String-Safety 8.1–8.4; Debug-Logs minimal (9)
+- Fence/Platzhalter unverändert; Chat-Ausgabe weiter NFloattext bis Phase 12
 
 **Ausgeschlossen in 6–10:**
 

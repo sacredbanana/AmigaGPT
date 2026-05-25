@@ -246,7 +246,7 @@ Details: [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md#recovery-r2--rest-b
 | Mausrad Chat | **7c** — UX, kein Recovery |
 | `snprintf`/Buffer-Grenzen | **Phase 8** — überlappt S7; gemeinsam angehen |
 | Debug-Logs | **Phase 9** — R4.2 |
-| DoD Code-Viewer | **Phase 10** — Recovery nicht blockieren |
+| DoD Code-Viewer | **Phase 10** ✓ — [PHASE-10-DOD.md](PHASE-10-DOD.md); Recovery blockiert v0.1 nicht |
 | Chat UTF-8 ohne codesets | **Phase 12** — ändert Schicht 3 langfristig |
 | Worker / UI-Batching | **Phase 13** — nach 12; kann R3 ersetzen |
 
@@ -269,7 +269,7 @@ Details: [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md#recovery-r2--rest-b
 3. **R2** — WANT_READ / partial
 4. **7c** — Mausrad (optional parallel)
 5. **R3** — Freeze
-6. **8–10** — Strings, Logs, DoD
+6. ~~**8–10**~~ — Strings, Logs, DoD ✓ ([PHASE-10-DOD.md](PHASE-10-DOD.md))
 7. **R4** — optional
 
 ---

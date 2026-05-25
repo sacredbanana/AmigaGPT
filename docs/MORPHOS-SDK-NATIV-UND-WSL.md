@@ -145,7 +145,7 @@ DoMethodA(sci, (Msg)&cmd);
 | Stream/Chat-Sync, WANT_READ (Recovery R1–R2) | **Offen** — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
 | String-Safety (Phase 8) | **In Arbeit** — [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md) (8.1); R2-Rest dokumentiert |
 | Logs (Phase 9) | **Offen** |
-| Vollständiges DoD Phase 10 (formal) | **Offen** |
+| DoD Phase 10 (formal) | **Erledigt** — [PHASE-10-DOD.md](PHASE-10-DOD.md) |
 
 Chat-Hauptfenster bleibt **NFloattext** bis Phase 12.
 
@@ -192,8 +192,8 @@ make -f Makefile.MorphOS              # bump BUILD_NUMBER; Anzeige 2.18.<build> 
 |-------|--------|--------------|
 | **R1–R2** | Stream-Ende, UI-Sync, WANT_READ weich | parallel zu 7c/8 — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
 | **7c** | Mausrad-Scroll im Chat (NFloattext) | ✓ erledigt |
-| **8–10** | String-Safety, optionale Logs, formale DoD | 7a/7b ✓ |
-| **11** | Syntax-Highlighting (`SCI_SETLEXER`), Komfort — **`Scintilla.guide` von MorphOS hilfreich** | 8–10 stabil |
+| **8–10** | String-Safety, Debug-Logs, DoD v0.1 | **Erledigt** — [PHASE-10-DOD.md](PHASE-10-DOD.md) |
+| **11** | Syntax-Highlighting (`SCI_SETLEXER`), Komfort — **`Scintilla.guide` von MorphOS hilfreich** | 6–10 ✓ |
 | **12** | Chat-Ausgabe: NFloattext → Scintilla + TTEngine | Scintilla im Projekt bewährt |
 | **13** | Stream-Worker / UI-Batching | nach Phase 12 |
 

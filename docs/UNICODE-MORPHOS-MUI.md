@@ -99,7 +99,7 @@ Optional in der Shell: `GETENV Language`, `GETENV Country` (Locale-Preferences s
 |-------|--------|
 | 1–5 | Erledigt: Datenmodell, Stream, Fences, NFloattext interim, NList `name_list_display` |
 | **6, 7a, 7b** | **Erledigt (MorphOS):** Code-Viewer Scintilla, NList, Copy/Save UTF-8 + System |
-| **7c, 8–10** | Mausrad Chat; String-Safety, Logs, formale DoD v0.1 |
+| **6–10** | Code-Viewer v0.1 ✓ — [PHASE-10-DOD.md](PHASE-10-DOD.md); Chat-Ausgabe NFloattext bis Phase 12 |
 | **R1–R4** | Stream- & Chat-Recovery — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
 | 11 | Komfort am Code-Viewer (Lexer, Highlighting, …) |
 | **12** | Hauptfenster **Chat-Ausgabe** → Scintilla (+ TTEngine); Eingabe-Editor unverändert |

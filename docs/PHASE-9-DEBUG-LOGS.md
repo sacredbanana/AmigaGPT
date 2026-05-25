@@ -94,4 +94,4 @@ API-Keys, Passwörter, volle Prompts, Raw-Socket-Dumps.
 
 ---
 
-*Stand: 2026-05-25 — Phase 9 minimal (R4.2); Web-Search + GPT-3.5 Repro dokumentiert.*
+*Stand: 2026-05-25 — Phase 9 minimal (R4.2); MorphOS getestet; v0.1 DoD: [PHASE-10-DOD.md](PHASE-10-DOD.md).*
