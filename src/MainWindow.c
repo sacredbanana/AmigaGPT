@@ -651,10 +651,12 @@ HOOKPROTONHNONP(SaveImageCopyButtonClickedFunc, void) {
             STRPTR saveName = fileReq->fr_File;
             UWORD fullPathLength = strlen(savePath) + strlen(saveName) + 2;
             STRPTR fullPath = AllocVec(fullPathLength, MEMF_CLEAR);
-            strncpy(fullPath, savePath, strlen(savePath));
-            AddPart(fullPath, saveName, fullPathLength);
-            copyFile(filePath, fullPath);
-            FreeVec(fullPath);
+            if (fullPath != NULL) {
+                snprintf(fullPath, fullPathLength, "%s", savePath);
+                AddPart(fullPath, saveName, fullPathLength);
+                copyFile(filePath, fullPath);
+                FreeVec(fullPath);
+            }
         }
         FreeAslRequest(fileReq);
     }
@@ -984,7 +986,7 @@ static STRPTR formatAssistantTextForDisplay(CONST_STRPTR input) {
             return NULL;
         }
         if (len > 0) {
-            strncpy(out, input, len);
+            CopyMem(input, out, len);
         }
         out[len] = '\0';
         return out;

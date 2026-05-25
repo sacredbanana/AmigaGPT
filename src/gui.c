@@ -820,8 +820,7 @@ void addTextToConversation(struct Conversation *conversation, UTF8 *text,
         displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
         return;
     }
-    strncpy(conversationNode->role, role, sizeof(conversationNode->role) - 1);
-    conversationNode->role[sizeof(conversationNode->role) - 1] = '\0';
+    snprintf(conversationNode->role, sizeof(conversationNode->role), "%s", role);
 
     conversationNode->raw_utf8 = AllocVec(textLength + 1, MEMF_CLEAR);
     if (conversationNode->raw_utf8 == NULL) {
@@ -987,9 +986,8 @@ void openCodeBlocksViewerWindow(void) {
             displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
             return;
         }
-        strncpy(codeBlocksViewContents, formatted,
-                CODEBLOCKS_VIEW_BUFFER_LENGTH - 1);
-        codeBlocksViewContents[CODEBLOCKS_VIEW_BUFFER_LENGTH - 1] = '\0';
+        snprintf(codeBlocksViewContents, CODEBLOCKS_VIEW_BUFFER_LENGTH, "%s",
+                 formatted);
         CodesetsFreeA(formatted, NULL);
         set(codeBlocksOutputFloat, MUIA_NFloattext_Text, codeBlocksViewContents);
     }

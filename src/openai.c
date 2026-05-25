@@ -2541,7 +2541,7 @@ static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage) {
             ULONG msgLength = msgEnd - msgStart;
             STRPTR cleanMessage = AllocVec(msgLength + 1, MEMF_ANY);
             if (cleanMessage != NULL) {
-                strncpy(cleanMessage, msgStart, msgLength);
+                CopyMem(msgStart, cleanMessage, msgLength);
                 cleanMessage[msgLength] = '\0';
                 return cleanMessage;
             }

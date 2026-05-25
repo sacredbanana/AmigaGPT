@@ -107,13 +107,7 @@ HOOKPROTONHNONP(SpeechAccentMenuItemClickedFunc, void) {
             "LOCALE:accents", ASLFR_DoPatterns, TRUE, ASLFR_InitialPattern,
             "#?.accent", TAG_DONE)) {
         if (MUI_AslRequestTags(fileRequester, TAG_DONE)) {
-            if (config.speechAccent != NULL) {
-                FreeVec(config.speechAccent);
-            }
-            config.speechAccent = AllocVec(strlen(fileRequester->fr_File) + 1,
-                                           MEMF_ANY | MEMF_CLEAR);
-            strncpy(config.speechAccent, fileRequester->fr_File,
-                    strlen(fileRequester->fr_File));
+            configAssignString(&config.speechAccent, fileRequester->fr_File);
             if (writeConfig() == RETURN_ERROR) {
                 displayError(STRING_ERROR_CONFIG_FILE_WRITE);
             }
@@ -153,19 +147,25 @@ HOOKPROTONHNONP(ARexxImportScriptMenuItemClickedFunc, void) {
             STRPTR filePath = fileReq->fr_Drawer;
             STRPTR fileName = fileReq->fr_File;
             UWORD fullPathLength = strlen(filePath) + strlen(fileName) + 2;
-            STRPTR fullPath = AllocVec(fullPathLength, MEMF_CLEAR);
-            strncpy(fullPath, filePath, strlen(filePath));
-            AddPart(fullPath, fileName, fullPathLength);
             UWORD destinationPathLength =
                 strlen("AMIGAGPT:rexx/") + strlen(fileName) + 1;
+            STRPTR fullPath = AllocVec(fullPathLength, MEMF_CLEAR);
             STRPTR destinationPath =
                 AllocVec(destinationPathLength, MEMF_CLEAR);
-            strncpy(destinationPath, "AMIGAGPT:rexx/",
-                    strlen("AMIGAGPT:rexx/"));
-            AddPart(destinationPath, fileName, destinationPathLength);
-            copyFile(fullPath, destinationPath);
-            FreeVec(fullPath);
-            FreeVec(destinationPath);
+            if (fullPath != NULL && destinationPath != NULL) {
+                snprintf(fullPath, fullPathLength, "%s", filePath);
+                AddPart(fullPath, fileName, fullPathLength);
+                snprintf(destinationPath, destinationPathLength, "%s",
+                         "AMIGAGPT:rexx/");
+                AddPart(destinationPath, fileName, destinationPathLength);
+                copyFile(fullPath, destinationPath);
+            }
+            if (fullPath != NULL) {
+                FreeVec(fullPath);
+            }
+            if (destinationPath != NULL) {
+                FreeVec(destinationPath);
+            }
         }
         FreeAslRequest(fileReq);
     }

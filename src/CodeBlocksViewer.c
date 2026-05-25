@@ -384,7 +384,7 @@ BOOL codeBlocksViewerSaveBlock(struct AICodeBlock *block, BOOL systemCharset) {
         STRPTR fullPath = AllocVec(fullPathLength, MEMF_CLEAR);
 
         if (fullPath != NULL) {
-            strncpy(fullPath, savePath, strlen(savePath));
+            snprintf(fullPath, fullPathLength, "%s", savePath);
             AddPart(fullPath, saveName, fullPathLength);
             if (codeBlocksPayloadFromBlock(block, systemCharset, &payload)) {
                 ok = codeBlocksWritePayloadToPath(&payload, fullPath);

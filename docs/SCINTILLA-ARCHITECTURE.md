@@ -197,7 +197,7 @@ Die Kapitel **6–10** sind **ein** Release-Schritt, keine fünf getrennte Meile
 | **9** | Optional: Debug-Logs (nicht Blocker für v0.1) |
 | **10** | Definition of Done für den Code-Viewer |
 
-**Aktuell:** [Phase 8 — String-Safety](PHASE-8-STRING-SAFETY.md) (in Arbeit). Recovery: R1/R3 erledigt; **R2-Rest** (R2.1/R2.3/R2.4) dokumentiert, nicht blockierend. R4 optional. Danach **9–10**, **11**, **12** (Chat-Scintilla), **13**. Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
+**Aktuell:** [Phase 8 — String-Safety](PHASE-8-STRING-SAFETY.md) **erledigt** (8.1–8.4). Recovery: R1/R3 erledigt; **R2-Rest** dokumentiert, nicht blockierend. R4 optional. **Nächster Schritt:** **9–10**, **11**, **12** (Chat-Scintilla), **13**. Chat-Ausgabe bleibt NFloattext bis **Phase 12**.
 
 ### Umgesetzt (Phase 6, Branch scintilla — auf MorphOS validiert)
 

@@ -52,6 +52,12 @@ R2 ist **nicht abgeschlossen**. Vor Phase-8-Start festgehalten (2026-05):
 | Chat system / Voice instructions | `*RequesterWindow.c` | niedrig | **Fix 8.3** |
 | ElevenLabs settings | `ElevenLabsSettingsRequesterWindow.c` | niedrig | **Fix 8.3** |
 | Image create/copy + conversation copy/load | `MainWindow.c` | mittel | **Fix 8.3** |
+| Speech accent (ASL) | `menu.c` `configAssignString` | niedrig | **Fix 8.4** |
+| ARexx import paths | `menu.c` `snprintf` + AddPart | niedrig | **Fix 8.4** |
+| Conversation role | `gui.c` `snprintf` | niedrig | **Fix 8.4** |
+| Code-Viewer view buffer | `gui.c` `snprintf` | niedrig | **Fix 8.4** |
+| OpenAI error extract | `openai.c` `CopyMem` | niedrig | **Fix 8.4** |
+| ASL save paths | `MainWindow.c`, `CodeBlocksViewer.c` | niedrig | **Fix 8.4** |
 
 ---
 
@@ -80,9 +86,16 @@ R2 ist **nicht abgeschlossen**. Vor Phase-8-Start festgehalten (2026-05):
 - `configAssignString()`: zuerst duplizieren, dann altes Feld freigeben (MUI `String` nutzt oft direkt `config.*` als `MUIA_String_Contents`).
 - Symptom ohne Fix: Proxy leeren, speichern, beenden → System-Freeze (Use-after-free beim Shutdown).
 
-### 8.4+ (optional)
+### 8.4 (2026-05) — Restliche feste Puffer
 
-- `menu.c` `speechAccent` / Rexx-Pfade; verbleibende `strncpy` in `gui.c` / `openai.c` (feste Puffer).
+- `menu.c`: `configAssignString` für Speech-Accent; ARexx-Import `snprintf` + `AddPart` (OOM-Guard).
+- `gui.c`: `snprintf` für `conversationNode->role` und Code-Viewer-Puffer.
+- `openai.c`: `extractUserFriendlyErrorMessage` — `CopyMem` statt `strncpy`.
+- `MainWindow.c` / `CodeBlocksViewer.c`: ASL-Save-Pfade mit `snprintf` + `AddPart`.
+- **`src/`:** kein `strncpy` mehr (Stand 8.4).
+
+### Danach (optional)
+
 - Host-Tests nur wo schon `src/test/` (kein Pflicht-DoD für MorphOS).
 
 ---
@@ -95,4 +108,4 @@ R2 ist **nicht abgeschlossen**. Vor Phase-8-Start festgehalten (2026-05):
 
 ---
 
-*Stand: 2026-05-24 — Phase 8.1–8.3; R2-Rest dokumentiert; 8.4 optional.*
+*Stand: 2026-05-24 — Phase 8.1–8.4 erledigt; R2-Rest dokumentiert.*
