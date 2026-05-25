@@ -48,7 +48,7 @@ git checkout -b feature/kurzbeschreibung
 ## 3. Während der Arbeit
 
 - Kleine, nachvollziehbare Commits (Thema klar im Subject).
-- Nur committen, wenn ausdrücklich gewünscht (Team-/Agent-Regel).
+- **MorphOS-Code:** erst **committen**, wenn der Nutzer den **MorphOS-Test** nach Paketierung als **erfolgreich** bestätigt hat (siehe §9). Ausnahme: Nutzer sagt ausdrücklich „committen“ / reine Doku ohne Laufzeit-Test.
 - Keine Secrets (API-Keys, `.env`) ins Repo.
 - `git config` im Repo nicht ändern.
 
@@ -90,8 +90,10 @@ Details: [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md).
 
 1. Aktiven Branch prüfen: **nicht `master`** für neue Commits.
 2. Fehlender Branch → `scintilla` oder vom User genannten Topic-Branch verwenden.
-3. Nach `git reset`/`merge` auf `master`: User informieren, nicht still auf `master` weitercommitten.
-4. Push nur auf Anfrage; nie `master` force-pushen.
+3. MorphOS-Änderungen: **bauen → paketieren (Z:)** → Nutzer testet → **dann** commit (§9).
+4. Z:-Deploy fehlgeschlagen → melden, nicht als paketiert verkaufen, nicht committen.
+5. Nach `git reset`/`merge` auf `master`: User informieren, nicht still auf `master` weitercommitten.
+6. Push nur auf Anfrage; nie `master` force-pushen.
 
 Technische Regel für Cursor: `.cursor/rules/git-branch-policy.mdc`  
 Übersicht für Tools: [AGENTS.md](../AGENTS.md).
@@ -124,11 +126,28 @@ Nach erfolgreichem Z:-Deploy schreibt das Skript **`DEPLOY-HISTORY.txt`** im sel
 
 Skript: `package-morphos-cross.sh` · Kurzbeschreibung: [README.md](README.md).
 
-**Agent/Cursor (Standard):** Nach jedem erfolgreichen Cross-Build **immer paketieren** (`./package-morphos-cross.sh`), solange der Nutzer nichts anderes sagt (z. B. „nur bauen“, `DEPLOY=0`). Regel: `.cursor/rules/morphos-build-package.mdc`.
+**Agent/Cursor (Standard):** Nach jedem Cross-Build für MorphOS-Tests **immer paketieren** (`./package-morphos-cross.sh`), solange der Nutzer nichts anderes sagt (z. B. „nur bauen“, `DEPLOY=0`). Regel: `.cursor/rules/morphos-build-package.mdc`.
 
 ---
 
-## 9. Verwandte Dokumente
+## 9. MorphOS-Entwicklungszyklus (verbindlich)
+
+| Schritt | Wer | Was |
+| ------- | --- | --- |
+| 1 | Agent | Änderung umsetzen |
+| 2 | Agent | `make -f Makefile.MorphOS` |
+| 3 | Agent | `./package-morphos-cross.sh` (Standard `DEPLOY=1`) |
+| 4 | Agent | Version, MD5, Z:-Pfad melden; bei **Deploy-Fehler** klar sagen, dass **nicht** paketiert wurde — **kein Commit** |
+| 5 | Nutzer | Auf MorphOS testen (LHA von Z:, eigenes Deploy-Skript), Rückmeldung |
+| 6 | Agent | **Commit** erst nach **erfolgreicher** Rückmeldung (oder auf ausdrückliche Anweisung) |
+
+**Paketieren** im Sinne von §8 ist nur bei **erfolgreichem** Z:-Deploy abgeschlossen. Lokal nur `out/…lha` ohne Z: reicht dem Nutzer für den Testloop nicht als „fertig paketiert“.
+
+Push weiterhin nur auf Anfrage. Branch: nicht `master` (Standard `scintilla`).
+
+---
+
+## 10. Verwandte Dokumente
 
 - [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md) — Remotes, Sync, PR ins Original
 - [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) — Architektur Branch `scintilla`

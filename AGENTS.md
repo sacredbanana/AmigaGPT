@@ -31,6 +31,14 @@ Start: `docs/README.md`
 | `docs/WSL-SETUP-STATUS.md` | WSL environment setup status / checklist (DE) |
 | `tools/test-utf8stream.sh` | Host unit tests for `utf8stream` (WSL `gcc`) |
 
-## Build (MorphOS)
+## Build & test loop (MorphOS)
 
-`make -f Makefile.MorphOS` — see `docs/BUILD-MORPHOS-WSL.md`.
+Binding cycle: **build → package to Z: → user tests → commit only after OK.**
+
+1. `make -f Makefile.MorphOS`
+2. `./package-morphos-cross.sh` (unless user opts out)
+3. If `Z:` deploy fails → report; do not claim “paketiert”; do not commit
+4. User tests on MorphOS and confirms
+5. Then commit (not on `master`)
+
+See `docs/HANDLUNGSANWEISUNG-GIT.md` §8–9 and `.cursor/rules/morphos-build-package.mdc`.
