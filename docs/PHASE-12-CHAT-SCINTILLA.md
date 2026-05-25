@@ -8,7 +8,7 @@ Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8T
 |-------|-----------|
 | Layout | **Scrollgroup** + Scintilla (wie Code-Viewer); NListview-Wrapper und Phase-7c-Wheel entfallen auf MorphOS |
 | Markdown | **Plain UTF-8**; Menü „Markdown formatting“ bleibt, wirkt auf MorphOS in 12.0 nicht |
-| User/Assistant | **Fließtext**, `\n\n` zwischen Nodes; keine `\033`-Ausrichtung/Fettdruck |
+| User/Assistant | **Scintilla-Styles:** User = fett, dunkelblau, hellgrauer Hintergrund; Assistant = normal schwarz; `\n\n` zwischen Nodes |
 | Font | **`config.fixedWidthFonts`**: an → DejaVu Sans Mono, aus → DejaVu Sans; Umschalten **ohne** Fenster-Neuaufbau (`applyFixedWidthFontsSetting`, nicht `RecreateMainWindow`) |
 
 ## Code
@@ -25,8 +25,8 @@ Hilfsfunktionen (nur MorphOS): `chatOutputUpdateFromBuffer()`, `clearChatOutputD
 
 Einträge und `config.json` bleiben (OS3/OS4 + spätere 12.1). Umschalten ruft weiter `displayConversation(NULL)` auf; **sichtbar** ändert sich auf MorphOS in 12.0 nicht:
 
-- **Markdown formatting** — kein Scintilla-Markdown-Lexer in 12.0
-- **User / Assistant text alignment** — kein Scintilla-Styling in 12.0
+- **Markdown formatting** — kein Scintilla-Markdown-Lexer (12.1-Experiment optional)
+- **User / Assistant text alignment** — No-op (Ausrichtung; Hervorhebung über Styles)
 
 ## Nicht in Phase 12
 

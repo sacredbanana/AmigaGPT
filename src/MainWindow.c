@@ -1018,10 +1018,78 @@ static STRPTR formatAssistantTextForDisplay(CONST_STRPTR input) {
 
 #ifdef __MORPHOS__
 
+static void chatOutputFillRoleStyles(struct Conversation *conversation,
+                                     UBYTE *styles, ULONG bufLen) {
+    struct ConversationNode *conversationNode;
+    UTF8 *content;
+    ULONG contentLen;
+    ULONG pos = 0;
+    UBYTE styleByte;
+
+    if (styles == NULL || conversation == NULL || bufLen == 0) {
+        return;
+    }
+
+    memset(styles, 0, bufLen);
+
+    for (conversationNode =
+             (struct ConversationNode *)conversation->messages->mlh_Head;
+         conversationNode->node.mln_Succ != NULL;
+         conversationNode =
+             (struct ConversationNode *)conversationNode->node.mln_Succ) {
+        content = conversationNodeGetDisplay(conversationNode);
+        if (content == NULL) {
+            content = (UTF8 *)"";
+        }
+        contentLen = (ULONG)strlen((const char *)content);
+
+        if (pos > 0) {
+            if (pos + 2 > bufLen) {
+                return;
+            }
+            pos += 2;
+        }
+
+        styleByte =
+            (strcmp(conversationNode->role, "user") == 0) ? (UBYTE)1 : (UBYTE)0;
+
+        if (pos + contentLen > bufLen) {
+            if (pos < bufLen) {
+                memset(styles + pos, styleByte, bufLen - pos);
+            }
+            return;
+        }
+        memset(styles + pos, styleByte, contentLen);
+        pos += contentLen;
+    }
+}
+
 static void chatOutputUpdateFromBuffer(void) {
-    if (chatOutputTextEditor != NULL && chatOutputTextEditorContents != NULL) {
-        chatOutputScintillaSetUtf8Text(chatOutputTextEditor,
-                                       chatOutputTextEditorContents);
+    ULONG textLen;
+    UBYTE *roleStyles = NULL;
+
+    if (chatOutputTextEditor == NULL || chatOutputTextEditorContents == NULL) {
+        return;
+    }
+
+    textLen = (ULONG)strlen(chatOutputTextEditorContents);
+    if (textLen == 0) {
+        chatOutputScintillaSetUtf8Text(chatOutputTextEditor, "");
+        return;
+    }
+
+    if (currentConversation != NULL) {
+        roleStyles = (UBYTE *)AllocVec(textLen, MEMF_ANY);
+        if (roleStyles != NULL) {
+            chatOutputFillRoleStyles(currentConversation, roleStyles, textLen);
+        }
+    }
+
+    chatOutputScintillaSetUtf8TextWithRoleStyles(
+        chatOutputTextEditor, chatOutputTextEditorContents, roleStyles, textLen);
+
+    if (roleStyles != NULL) {
+        FreeVec(roleStyles);
     }
 }
 
@@ -1903,15 +1971,7 @@ static void sendChatMessage() {
     UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
                                         CSA_Source, (Tag)text, TAG_DONE);
 
-#ifdef __MORPHOS__
-    if (textUTF8 != NULL) {
-        strbufAppend(chatOutputTextEditorContents,
-                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, textUTF8);
-        strbufAppend(chatOutputTextEditorContents,
-                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\n\n");
-        chatOutputUpdateFromBuffer();
-    }
-#else
+#ifndef __MORPHOS__
     {
         UBYTE userStyleString[] = "\033r\033b\0333";
         UBYTE userAlignment;
@@ -1954,6 +2014,15 @@ static void sendChatMessage() {
 #endif
 
     addTextToConversation(currentConversation, textUTF8, "user");
+#ifdef __MORPHOS__
+    if (textUTF8 != NULL) {
+        strbufAppend(chatOutputTextEditorContents,
+                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, textUTF8);
+        strbufAppend(chatOutputTextEditorContents,
+                     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\n\n");
+        chatOutputUpdateFromBuffer();
+    }
+#endif
     CodesetsFreeA(textUTF8, NULL);
 
     setConversationSystem(currentConversation, config.chatSystem);
