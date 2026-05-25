@@ -197,7 +197,7 @@ Die Kapitel **6–10** sind **ein** Release-Schritt, keine fünf getrennte Meile
 | **9** | Optional: Debug-Logs (nicht Blocker für v0.1) |
 | **10** | Definition of Done für den Code-Viewer |
 
-**Aktuell:** Phasen **6–11** abgeschlossen; **12** Chat-Scintilla implementiert ([PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), MorphOS-Test ausstehend). Recovery **R1–R3 + R2** erledigt. **Nächster Schritt:** MorphOS-Validierung **12**, dann **13** (Worker).
+**Aktuell:** Phasen **6–12** auf MorphOS erledigt (Chat-Scintilla, User/Assistant-Styling, Restart-Stabilität — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md)). Recovery **R1–R3 + R2** erledigt; Stream-Performance = **R3** (gedrosseltes Scintilla-Update). **Phase 13** (Worker/UI-Batching) **zurückgestellt** — nur wenn R3 auf MorphOS nicht reicht.
 
 ### Umgesetzt (Phase 6, Branch scintilla — auf MorphOS validiert)
 
@@ -449,6 +449,8 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 ---
 
 ## Phase 13 — MorphOS-spezifisch (Worker / UI-Batching)
+
+**Status: zurückgestellt** (2026-05) — R3 reicht vorerst; bei erneutem spürbarem Freeze während langer Streams wieder aufnehmen.
 
 *Bisherige „Phase 12“ — bewusst **nach** Phase 12, nicht davor (Worker soll den Scintilla-Chat-Stream optimieren, nicht NFloattext nachrüsten).*
 

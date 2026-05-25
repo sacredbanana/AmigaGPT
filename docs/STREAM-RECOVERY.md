@@ -248,7 +248,7 @@ Details: [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md#recovery-r2--rest-b
 | Debug-Logs | **Phase 9** — R4.2 |
 | DoD Code-Viewer | **Phase 10** ✓ — [PHASE-10-DOD.md](PHASE-10-DOD.md); Recovery blockiert v0.1 nicht |
 | Chat UTF-8 ohne codesets (MorphOS) | **Phase 12** — Scintilla-Anzeige, Stream-Puffer UTF-8; TTS weiter codesets — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md) |
-| Worker / UI-Batching | **Phase 13** — nach 12; kann R3 ersetzen |
+| Worker / UI-Batching | **Phase 13** — zurückgestellt; nur wenn R3 nicht reicht |
 
 ---
 
