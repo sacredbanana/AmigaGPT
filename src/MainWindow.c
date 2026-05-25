@@ -1585,13 +1585,62 @@ LONG createMainWindow() {
     return RETURN_OK;
 }
 
+static void mainWindowReleasePens(void) {
+    struct Screen *currentScreen = NULL;
+
+    if (mainWindowObject == NULL) {
+        redPen = greenPen = bluePen = yellowPen = 0;
+        return;
+    }
+
+    get(mainWindowObject, MUIA_Window_Screen, &currentScreen);
+    if (currentScreen != NULL) {
+        if (redPen) {
+            ReleasePen(currentScreen->ViewPort.ColorMap, redPen);
+        }
+        if (greenPen) {
+            ReleasePen(currentScreen->ViewPort.ColorMap, greenPen);
+        }
+        if (bluePen) {
+            ReleasePen(currentScreen->ViewPort.ColorMap, bluePen);
+        }
+        if (yellowPen) {
+            ReleasePen(currentScreen->ViewPort.ColorMap, yellowPen);
+        }
+    }
+    redPen = greenPen = bluePen = yellowPen = 0;
+}
+
+static void mainWindowEmptyConversationList(void) {
+    ULONG entries = 0;
+
+    if (conversationListObject == NULL) {
+        return;
+    }
+
+    set(conversationListObject, MUIA_NList_Quiet, TRUE);
+    for (;;) {
+        get(conversationListObject, MUIA_NList_Entries, &entries);
+        if (entries == 0) {
+            break;
+        }
+        DoMethod(conversationListObject, MUIM_NList_Remove, 0);
+    }
+    set(conversationListObject, MUIA_NList_Quiet, FALSE);
+}
+
 void mainWindowPrepareShutdown(void) {
     currentConversation = NULL;
     currentImage = NULL;
 
-    if (conversationListObject != NULL) {
-        DoMethod(conversationListObject, MUIM_NList_Clear);
-    }
+#ifdef __MORPHOS__
+    codeBlocksViewerDismiss();
+#endif
+
+    /* Pens must be released while the window/screen is still valid. */
+    mainWindowReleasePens();
+
+    mainWindowEmptyConversationList();
 
 #ifdef __MORPHOS__
     if (chatOutputTextEditor != NULL) {

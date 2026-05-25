@@ -15,6 +15,7 @@
 #include "AmigaGPT_cat.h"
 #include "ChatExport.h"
 #include "gui.h"
+#include "MainWindow.h"
 
 #define CHAT_EXPORT_DEFAULT_FILE "chat-raw.txt"
 #define CHAT_EXPORT_INITIAL_NAME_MAX 96
@@ -133,6 +134,18 @@ static BOOL chatExportWriteConversation(BPTR fh, struct Conversation *conv) {
     return TRUE;
 }
 
+static struct Window *chatExportAslParentWindow(void) {
+    struct Window *w = NULL;
+
+    if (mainWindowObject != NULL) {
+        get(mainWindowObject, MUIA_Window, &w);
+    }
+    if (w == NULL) {
+        w = mainWindow;
+    }
+    return w;
+}
+
 BOOL chatExportConversationRaw(struct Conversation *conversation,
                                struct Window *aslParent) {
     struct FileRequester *fileReq;
@@ -144,6 +157,10 @@ BOOL chatExportConversationRaw(struct Conversation *conversation,
         return FALSE;
     }
     if (aslParent == NULL) {
+        aslParent = chatExportAslParentWindow();
+    }
+    if (aslParent == NULL) {
+        displayError(STRING_ERROR_CHAT_EXPORT_SAVE);
         return FALSE;
     }
 
@@ -161,6 +178,7 @@ BOOL chatExportConversationRaw(struct Conversation *conversation,
 #endif
 
     if (fileReq == NULL) {
+        displayError(STRING_ERROR_CHAT_EXPORT_SAVE);
         return FALSE;
     }
 
@@ -199,7 +217,11 @@ BOOL chatExportConversationRaw(struct Conversation *conversation,
         ok = TRUE;
     }
 
+#ifdef __MORPHOS__
+    MUI_FreeAslRequest(fileReq);
+#else
     FreeAslRequest(fileReq);
+#endif
     return ok;
 }
 

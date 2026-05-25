@@ -1008,27 +1008,9 @@ void shutdownGUI() {
 #ifdef __MORPHOS__
         codeBlocksViewerPrepareShutdown();
 #endif
-        // Release pens if they were allocated
-        if (mainWindowObject && (redPen || greenPen || bluePen || yellowPen)) {
-            struct Screen *currentScreen;
-            get(mainWindowObject, MUIA_Window_Screen, &currentScreen);
-            if (currentScreen) {
-                if (redPen)
-                    ReleasePen(currentScreen->ViewPort.ColorMap, redPen);
-                if (greenPen)
-                    ReleasePen(currentScreen->ViewPort.ColorMap, greenPen);
-                if (bluePen)
-                    ReleasePen(currentScreen->ViewPort.ColorMap, bluePen);
-                if (yellowPen)
-                    ReleasePen(currentScreen->ViewPort.ColorMap, yellowPen);
-            }
-        }
-        redPen = greenPen = bluePen = yellowPen = 0;
-#endif
 
         MUI_DisposeObject(app);
         app = NULL;
-#ifndef DAEMON
         chatOutputWheelDisposeClass();
         mainWindowInvalidateAfterShutdown();
 #ifdef __MORPHOS__

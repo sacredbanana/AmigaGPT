@@ -319,8 +319,16 @@ HOOKPROTONHNONP(ViewCodeBlocksMenuItemClickedFunc, void) {
 }
 MakeHook(ViewCodeBlocksMenuItemClickedHook, ViewCodeBlocksMenuItemClickedFunc);
 
+HOOKPROTONHNONP(ExportChatRawDoExportFunc, void) {
+    (void)chatExportConversationRaw(getCurrentConversation(), NULL);
+}
+MakeHook(ExportChatRawDoExportHook, ExportChatRawDoExportFunc);
+
 HOOKPROTONHNONP(ExportChatRawMenuItemClickedFunc, void) {
-    (void)chatExportConversationRaw(getCurrentConversation(), mainWindow);
+    if (app != NULL) {
+        DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+                 &ExportChatRawDoExportHook);
+    }
 }
 MakeHook(ExportChatRawMenuItemClickedHook, ExportChatRawMenuItemClickedFunc);
 
