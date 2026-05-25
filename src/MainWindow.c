@@ -199,11 +199,7 @@ HOOKPROTONHNO(DisplayImageLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
 }
 MakeHook(DisplayImageLI_TextHook, DisplayImageLI_TextFunc);
 
-BOOL thing = FALSE;
-
 HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
-    thing = !thing;
-    set(chatInputTextEditor, MUIA_TextEditor_FixedFont, TRUE);
     struct Conversation *conversation;
     DoMethod(conversationListObject, MUIM_NList_GetEntry,
              MUIV_NList_GetEntry_Active, &conversation);
@@ -686,8 +682,12 @@ HOOKPROTONHNONP(SaveImageCopyButtonClickedFunc, void) {
 MakeHook(SaveImageCopyButtonClickedHook, SaveImageCopyButtonClickedFunc);
 
 HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
-    // Get the current screen to allocate pens
     struct Screen *currentScreen;
+
+    if (mainWindowObject == NULL || app == NULL) {
+        return;
+    }
+
     get(mainWindowObject, MUIA_Window_Screen, &currentScreen);
 
     if (currentScreen) {
@@ -738,9 +738,6 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
     FreeVec(buttonLabelText);
     SetAttrs(mainWindowObject, MUIA_Window_ActiveObject, chatInputTextEditor,
              TAG_DONE);
-
-    DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
-    set(mainWindowObject, MUIA_Window_Open, TRUE);
 
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);
@@ -1522,11 +1519,9 @@ LONG createMainWindow() {
 
     DoMethod(app, OM_ADDMEMBER, mainWindowObject);
 
-    DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_Screen, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &ConfigureForScreenHook);
-
     addMainWindowActions();
-    
-    // Open the main window immediately after creation
+
+    /* Once before open; second Load after loadConversations broke NList on restart. */
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
     set(mainWindowObject, MUIA_Window_Open, TRUE);
     addMenuActions();
@@ -1588,6 +1583,58 @@ LONG createMainWindow() {
 #endif
 
     return RETURN_OK;
+}
+
+void mainWindowPrepareShutdown(void) {
+    currentConversation = NULL;
+    currentImage = NULL;
+
+    if (conversationListObject != NULL) {
+        DoMethod(conversationListObject, MUIM_NList_Clear);
+    }
+
+#ifdef __MORPHOS__
+    if (chatOutputTextEditor != NULL) {
+        chatOutputScintillaSetUtf8Text(chatOutputTextEditor, "");
+    }
+#endif
+
+    if (mainWindowObject != NULL) {
+        set(mainWindowObject, MUIA_Window_Open, FALSE);
+        DoMethod(mainWindowObject, MUIM_KillNotify, MUIA_Window_Screen);
+        DoMethod(mainWindowObject, MUIM_KillNotify, MUIA_Window_CloseRequest);
+    }
+}
+
+void mainWindowInvalidateAfterShutdown(void) {
+    mainWindow = NULL;
+    mainWindowObject = NULL;
+    newChatButton = NULL;
+    deleteChatButton = NULL;
+    sendMessageButton = NULL;
+    chatInputTextEditor = NULL;
+#ifndef __MORPHOS__
+    chatOutputListView = NULL;
+#endif
+#ifdef __MORPHOS__
+    chatOutputScroller = NULL;
+#endif
+    chatOutputTextEditor = NULL;
+    statusBar = NULL;
+    conversationListObject = NULL;
+    loadingBar = NULL;
+    imageInputTextEditor = NULL;
+    createImageButton = NULL;
+    newImageButton = NULL;
+    deleteImageButton = NULL;
+    imageListObject = NULL;
+    imageView = NULL;
+    imageViewGroup = NULL;
+    openImageButton = NULL;
+    saveImageCopyButton = NULL;
+    modeRegisterGroup = NULL;
+    currentConversation = NULL;
+    currentImage = NULL;
 }
 
 /**

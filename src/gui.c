@@ -370,8 +370,6 @@ LONG initVideo() {
 
 #endif
 
-    DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
-
     return RETURN_OK;
 }
 
@@ -1005,6 +1003,7 @@ void shutdownGUI() {
         DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 
 #ifndef DAEMON
+        mainWindowPrepareShutdown();
         chatOutputWheelShutdown();
 #ifdef __MORPHOS__
         codeBlocksViewerPrepareShutdown();
@@ -1024,18 +1023,36 @@ void shutdownGUI() {
                     ReleasePen(currentScreen->ViewPort.ColorMap, yellowPen);
             }
         }
+        redPen = greenPen = bluePen = yellowPen = 0;
 #endif
 
         MUI_DisposeObject(app);
         app = NULL;
 #ifndef DAEMON
         chatOutputWheelDisposeClass();
+        mainWindowInvalidateAfterShutdown();
+#ifdef __MORPHOS__
+        codeBlocksWindowObject = NULL;
+        codeBlocksListView = NULL;
+        codeBlocksList = NULL;
+        codeBlocksScintillaGroup = NULL;
+        codeBlocksScintilla = NULL;
+        codeBlocksCopyUtf8Button = NULL;
+        codeBlocksCopySystemButton = NULL;
+        codeBlocksSaveUtf8Button = NULL;
+        codeBlocksSaveSystemButton = NULL;
+#endif
+        imageWindowObject = NULL;
+        imageWindowImageView = NULL;
+        imageWindowImageViewGroup = NULL;
+        menuStrip = NULL;
 #endif
     }
 
 #ifndef DAEMON
     if (chatOutputTextEditorContents) {
         FreeVec(chatOutputTextEditorContents);
+        chatOutputTextEditorContents = NULL;
     }
 #ifndef __MORPHOS__
     if (codeBlocksViewContents) {

@@ -530,12 +530,17 @@ void codeBlocksViewerPrepareShutdown(void) {
     if (codeBlocksScintillaObject != NULL) {
         codeBlocksScintillaSetUtf8Text(codeBlocksScintillaObject, "", NULL);
     }
-    if (codeBlocksListObject != NULL) {
-        DoMethod(codeBlocksListObject, MUIM_NList_Clear);
-    }
+    /* Do not MUIM_NList_Clear here — can freeze on next start (see gui.c). */
     if (codeBlocksWindowObject != NULL) {
         set(codeBlocksWindowObject, MUIA_Window_Open, FALSE);
     }
+
+    codeBlocksListObject = NULL;
+    codeBlocksScintillaObject = NULL;
+    codeBlocksCopyUtf8ButtonObject = NULL;
+    codeBlocksCopySystemButtonObject = NULL;
+    codeBlocksSaveUtf8ButtonObject = NULL;
+    codeBlocksSaveSystemButtonObject = NULL;
 }
 
 BOOL codeBlocksViewerPopulate(struct Conversation *conv) {

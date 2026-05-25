@@ -53,6 +53,12 @@ void displayConversation(struct Conversation *conversation);
 void applyFixedWidthFontsSetting(void);
 #endif
 
+/** Before MUI_DisposeObject(app): close UI, clear lists, drop window notifies. */
+void mainWindowPrepareShutdown(void);
+
+/** After MUI_DisposeObject(app): avoid stale Object pointers and pen IDs. */
+void mainWindowInvalidateAfterShutdown(void);
+
 /**
  * Print the conversation text to the printer
  * @return RETURN_OK on success, RETURN_ERROR on failure
