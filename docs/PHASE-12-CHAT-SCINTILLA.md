@@ -15,8 +15,8 @@ Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8T
 
 | Datei | Rolle |
 |-------|--------|
-| [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) | Init, `SetUtf8Text`, Font; **3a offen:** Doppelklick → `codeBlocksViewerOpenAtIndex()` |
-| [CodeBlocksViewer.c](../src/CodeBlocksViewer.c) | `codeBlocksViewerOpenAtIndex(ULONG)` — API da, noch **nicht** vom Chat aus aufgerufen |
+| [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) | Init, `SetUtf8Text`, Font; **3a:** `SCIA_Notify` → `SCN_HOTSPOTCLICK` → `codeBlocksViewerOpenAtIndex()` |
+| [CodeBlocksViewer.c](../src/CodeBlocksViewer.c) | `codeBlocksViewerOpenAtIndex(ULONG)` |
 | [MainWindow.c](../src/MainWindow.c) | Layout, `displayConversation`, Stream, `sendChatMessage`, Clear |
 | [CodeBlocksScintilla.c](../src/CodeBlocksScintilla.c) | `codeBlocksScintillaCommand` (SCI_*) |
 
@@ -57,17 +57,17 @@ Siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) — kein `SCLEX_MARKD
 - Dediziertes Chat-Font-Menü
 - Stream nur Append-Delta (Vorbereitung Phase 13)
 
-## 3a — Doppelklick auf `[Codeblock n]` (offen)
+## 3a — Klick auf `[Codeblock n]`
 
-**Ziel:** Doppelklick auf die Platzhalter-Zeile im Chat → Code-Blocks-Viewer öffnen, Block `n` aktiv (`codeBlocksViewerOpenAtIndex`). **Export/raw unverändert.**
+**Ziel:** Ein Klick auf die Platzhalter-Zeile im Chat (Hotspot-Link) → Code-Blocks-Viewer öffnen, Block `n` aktiv (`codeBlocksViewerOpenAtIndex`). **Export/raw unverändert.**
 
-**Stand:** `codeBlocksViewerOpenAtIndex()` in [CodeBlocksViewer.c](../src/CodeBlocksViewer.c) implementiert; Anbindung aus [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) fehlt noch.
+**Gewählte Lösung (MorphOS):** `[Codeblock n]`-Zeilen mit Scintilla-**Hotspot**-Stil (Link-Optik). Viewer erst bei **`SCN_HOTSPOTRELEASECLICK`** (Maus-Up), nicht bei `SCN_HOTSPOTCLICK` — sonst bleibt das Hauptfenster/Scrollgroup auf Mouse-Down hängen (Zieh-Scroll). `PushMethod` + Fenster-EH auf Button-Up: `SCI_CANCEL` am Chat-Scintilla. `MM_SciHandler` = `MUIA_Scintilla_dummy + 9`.
 
 ### Constraint (nicht wieder verletzen)
 
 - Chat-Scintilla bleibt **`ScintillaObject` im `WindowObject`-Macro** in [MainWindow.c](../src/MainWindow.c) — gleiche Einrückung wie Commit `0cda730` (`MUIA_Scrollgroup_Contents` → `chatOutputTextEditor = ScintillaObject, …`).
 - **Kein** vorgefertigtes Objekt, **keine** Variable/Klasse im Macro, **kein** nachträgliches `Child` mit Pointer-Tag.
-- Doppelklick nur über **Notify / SCI-Handler / Fenster-EventHandler** am bestehenden Objekt — nach `createMainWindow()` bzw. in `chatOutputScintillaInitViewer()` oder Hook-Registrierung.
+- Klick nur über **Hotspot + Notify / SCI-Handler** am bestehenden Objekt — in `chatOutputScintillaInitViewer()` / `AttachNotify`.
 
 ### Verworfene Ansätze (MorphOS, 2026-05)
 
@@ -85,8 +85,6 @@ Siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) — kein `SCLEX_MARKD
 - **`streamLogBootPhase`:** voller Boot-Pfad im Stream-Log hilft, „Log ja, Fenster nein“ von echtem Init-Fehler zu trennen.
 - **Icon-Start (`cli == NULL`):** `GetMsg` + frühes `ReplyMsg` in [main.c](../src/main.c) — nur für diesen Startweg relevant; bei Shell-Start prüfen, ob überhaupt `WBStartup` anliegt (nicht von AmigaOS-3.1-„Workbench“-Docs auf MorphOS übernehmen).
 
-### Noch zu prüfen (wenn 3a umgesetzt wird)
+### MorphOS-Test (3a)
 
-- Scintilla.mcc: `MUIA_Scintilla_Notify` / `SCN_*` / `MM_SciHandler` (MorphOS-SDK / Scintilla.mcc-Doku)
-- EventHandler am Hauptfenster, falls Notify nicht reicht
-- Nach Lösung: diesen Abschnitt um **„Gewählte Lösung“** + Testpunkt im Testplan ergänzen
+12. Ein Klick auf `[Codeblock n]` (blauer Link) in der Chat-Ausgabe → Code-Blocks-Fenster, Block `n` aktiv (Menü „Codeblöcke“ weiterhin ok).

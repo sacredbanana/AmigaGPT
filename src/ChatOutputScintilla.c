@@ -1,13 +1,74 @@
 #ifdef __MORPHOS__
 
+#include <devices/inputevent.h>
+#include <exec/types.h>
+#include <exec/memory.h>
 #include <libraries/mui.h>
 #include <proto/muimaster.h>
+#include <mui/Scintilla_mcc.h>
 #include <Scintilla/Scintilla.h>
 #include <Scintilla/SciLexer.h>
+#include <SDI_hook.h>
+#include <stdio.h>
 #include <string.h>
 #include "ChatOutputScintilla.h"
 #include "CodeBlocksScintilla.h"
+#include "CodeBlocksViewer.h"
 #include "config.h"
+#include "gui.h"
+#include "MainWindow.h"
+
+/*
+ * MorphOS Scintilla.guide: MUIM_Notify on SCIA_Notify → MM_SciHandler on a sink object;
+ * struct SCNotification * in msg->scn. Not exported in public Scintilla_mcc.h — slot +9
+ * between MUIM_Scintilla_Definition (+8) and MUIA_Scintilla_LexerChanged (+10).
+ */
+#ifndef MM_SciHandler
+#define MM_SciHandler (MUIA_Scintilla_dummy + 9)
+#endif
+
+struct MUIP_SciHandler {
+    ULONG MethodID;
+    struct SCNotification *scn;
+};
+
+static struct MUI_CustomClass *chatOutputSciNotifyClass;
+static Object *chatOutputSciNotifySink;
+static Object *chatOutputSciNotifySource;
+static BOOL chatOutputSciNotifyAttached;
+
+static struct MUI_EventHandlerNode *chatOutputSciMouseUpEH;
+static BOOL chatOutputSciMouseUpEHInstalled;
+
+static ULONG chatOutputSciHotspotPendingIndex;
+static ULONG chatOutputSciHotspotOpenIndex;
+static ULONG chatOutputSciHotspotOpenToken;
+
+static void chatOutputScintillaReleaseChatMouse(Object *sci) {
+    if (sci == NULL) {
+        return;
+    }
+    codeBlocksScintillaCommand(sci, SCI_CANCEL, 0, 0);
+    codeBlocksScintillaCommand(sci, SCI_SETEMPTYSELECTION,
+                               codeBlocksScintillaCommand(sci, SCI_GETCURRENTPOS, 0, 0),
+                               0);
+}
+
+HOOKPROTONHNONP(ChatOutputSciOpenCodeblockDeferredFunc, void) {
+    ULONG blockIndex = chatOutputSciHotspotOpenIndex;
+    ULONG openToken = chatOutputSciHotspotOpenToken;
+
+    chatOutputSciHotspotOpenIndex = 0;
+    chatOutputSciHotspotOpenToken = 0;
+    if (blockIndex > 0) {
+        (void)codeBlocksViewerOpenAtIndexWithToken(blockIndex, openToken);
+    }
+    if (chatOutputSciNotifySource != NULL) {
+        chatOutputScintillaReleaseChatMouse(chatOutputSciNotifySource);
+    }
+}
+
+MakeHook(ChatOutputSciOpenCodeblockDeferredHook, ChatOutputSciOpenCodeblockDeferredFunc);
 
 #define CHAT_OUTPUT_SCINTILLA_FONTQUALITY_TTENGINE 1
 #define CHAT_OUTPUT_SCINTILLA_FONT_MONO "DejaVu Sans Mono"
@@ -25,8 +86,11 @@
 #define CHAT_OUTPUT_STYLE_MD_BOLD_UL 6
 #define CHAT_OUTPUT_STYLE_MD_ITALIC_UL 7
 #define CHAT_OUTPUT_STYLE_MD_ALL 8
+/** Hotspot style for `[Codeblock n]` — open on SCN_HOTSPOTRELEASECLICK (after mouse-up). */
+#define CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT 9
 
 #define CHAT_MD_MAX_STACK 32
+#define CHAT_OUTPUT_CODEBLOCK_LINK_FORE 0x00CC6600 /* BBGGRR link blue */
 #define CHAT_MD_CODEBLOCK_PREFIX "[Codeblock"
 
 typedef enum {
@@ -160,6 +224,17 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETBOLD, CHAT_OUTPUT_STYLE_MD_ALL, 1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETITALIC, CHAT_OUTPUT_STYLE_MD_ALL, 1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE, CHAT_OUTPUT_STYLE_MD_ALL, 1);
+
+    codeBlocksScintillaCommand(sci, SCI_STYLESETFORE, CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT,
+                               CHAT_OUTPUT_CODEBLOCK_LINK_FORE);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT,
+                               (sptr_t)fontFace);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT,
+                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE,
+                               CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT, 1);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETHOTSPOT,
+                               CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT, 1);
 }
 
 static void chatMdInitStack(ChatMdStyleStack *s) { s->top = -1; }
@@ -292,13 +367,117 @@ static BOOL chatMdIsCodeblockPlaceholder(const char *text, ULONG len, ULONG pos)
     return TRUE;
 }
 
+/** Past leading whitespace and markdown list markers (-, *, +, 1. ). */
+static ULONG chatMdSkipLinePrefixBounded(const char *text, ULONG len, ULONG pos) {
+    BOOL advanced;
+
+    while (pos < len && text[pos] != '\n' &&
+           (text[pos] == ' ' || text[pos] == '\t')) {
+        pos++;
+    }
+    do {
+        advanced = FALSE;
+        if (pos + 1 < len && text[pos] != '\n') {
+            if ((text[pos] == '-' || text[pos] == '*' || text[pos] == '+') &&
+                text[pos + 1] == ' ') {
+                pos += 2;
+                advanced = TRUE;
+            } else if (text[pos] >= '0' && text[pos] <= '9') {
+                ULONG digitStart = pos;
+
+                while (pos < len && text[pos] >= '0' && text[pos] <= '9') {
+                    pos++;
+                }
+                if (pos > digitStart && pos + 1 < len && text[pos] == '.' &&
+                    text[pos + 1] == ' ') {
+                    pos += 2;
+                    advanced = TRUE;
+                } else {
+                    pos = digitStart;
+                }
+            }
+        }
+        if (advanced) {
+            while (pos < len && text[pos] != '\n' &&
+                   (text[pos] == ' ' || text[pos] == '\t')) {
+                pos++;
+            }
+        }
+    } while (advanced);
+    return pos;
+}
+
+static const char *chatMdSkipLinePrefixZ(const char *line) {
+    const char *p = line;
+    BOOL advanced;
+
+    if (line == NULL) {
+        return "";
+    }
+    while (*p == ' ' || *p == '\t') {
+        p++;
+    }
+    do {
+        advanced = FALSE;
+        if ((*p == '-' || *p == '*' || *p == '+') && p[1] == ' ') {
+            p += 2;
+            advanced = TRUE;
+        } else if (*p >= '0' && *p <= '9') {
+            const char *digitStart = p;
+
+            while (*p >= '0' && *p <= '9') {
+                p++;
+            }
+            if (p > digitStart && *p == '.' && p[1] == ' ') {
+                p += 2;
+                advanced = TRUE;
+            } else {
+                p = digitStart;
+            }
+        }
+        if (advanced) {
+            while (*p == ' ' || *p == '\t') {
+                p++;
+            }
+        }
+    } while (advanced);
+    return p;
+}
+
+/** TRUE if the line contains `[Codeblock n]` (indent / list prefix allowed). */
+static BOOL chatMdFindCodeblockPlaceholderOnLine(const char *text, ULONG len,
+                                                 ULONG lineStart, ULONG *outPos) {
+    ULONG lineEnd = lineStart;
+    ULONG p;
+
+    while (lineEnd < len && text[lineEnd] != '\n') {
+        lineEnd++;
+    }
+    p = chatMdSkipLinePrefixBounded(text, len, lineStart);
+    if (p < lineEnd && chatMdIsCodeblockPlaceholder(text, len, p)) {
+        if (outPos != NULL) {
+            *outPos = p;
+        }
+        return TRUE;
+    }
+    for (p = lineStart; p < lineEnd; p++) {
+        if (text[p] == '[' && chatMdIsCodeblockPlaceholder(text, len, p)) {
+            if (outPos != NULL) {
+                *outPos = p;
+            }
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 static BOOL chatMdInSkippedRegion(const char *text, ULONG len, ULONG pos) {
     ULONG lineStart = pos;
 
     while (lineStart > 0 && text[lineStart - 1] != '\n') {
         lineStart--;
     }
-    return chatMdIsCodeblockPlaceholder(text, len, lineStart);
+    return chatMdFindCodeblockPlaceholderOnLine(text, len, lineStart, NULL);
 }
 
 static ULONG chatMdHeadingContentStart(const char *text, ULONG len, ULONG lineStart) {
@@ -478,7 +657,7 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
         }
         if (chatMdInSkippedRegion(inUtf8, inLen, i)) {
             chatMdEmit(&outPos, outUtf8, outStyles, inUtf8[i],
-                       CHAT_OUTPUT_STYLE_ASSISTANT);
+                       CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT);
             continue;
         }
         if (inUtf8[i] == '\n') {
@@ -557,6 +736,34 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
     return outPos;
 }
 
+/** Mark each `[Codeblock n]` line with the hotspot style byte. */
+static void chatOutputScintillaApplyCodeblockHotspotStyles(const char *utf8,
+                                                           UBYTE *styleBytes,
+                                                           ULONG byteLen) {
+    ULONG pos = 0;
+
+    if (utf8 == NULL || styleBytes == NULL || byteLen == 0) {
+        return;
+    }
+
+    while (pos < byteLen) {
+        ULONG lineStart = pos;
+        ULONG lineEnd = pos;
+
+        while (lineEnd < byteLen && utf8[lineEnd] != '\n') {
+            lineEnd++;
+        }
+        if (chatMdFindCodeblockPlaceholderOnLine(utf8, byteLen, lineStart, NULL)) {
+            memset(styleBytes + lineStart, CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT,
+                   lineEnd - lineStart);
+        }
+        if (lineEnd >= byteLen) {
+            break;
+        }
+        pos = lineEnd + 1;
+    }
+}
+
 static void chatOutputScintillaApplyRoleStyleBytes(Object *sci,
                                                    const UBYTE *styleBytes,
                                                    ULONG byteLen) {
@@ -575,6 +782,275 @@ void chatOutputScintillaRefreshFont(Object *sci) {
     chatOutputScintillaApplyFont(sci);
 }
 
+static ULONG chatOutputScintillaParseCodeblockIndexAt(const char *atBracket) {
+    static const char prefix[] = CHAT_MD_CODEBLOCK_PREFIX;
+    const ULONG prefixLen = sizeof(prefix) - 1;
+    ULONG idx = 0;
+    const char *p;
+
+    if (atBracket == NULL || atBracket[0] != '[' ||
+        strncmp(atBracket, prefix, prefixLen) != 0) {
+        return 0;
+    }
+    p = atBracket + prefixLen;
+    while (*p == ' ') {
+        p++;
+    }
+    if (*p < '0' || *p > '9') {
+        return 0;
+    }
+    while (*p >= '0' && *p <= '9') {
+        idx = idx * 10 + (ULONG)(*p - '0');
+        p++;
+    }
+    if (idx == 0) {
+        return 0;
+    }
+    while (*p == ' ' || *p == '\t') {
+        p++;
+    }
+    if (*p != ']') {
+        return 0;
+    }
+    p++;
+    if (*p != '\0' && *p != '\n' && *p != '\r') {
+        return 0;
+    }
+    return idx;
+}
+
+static ULONG chatOutputScintillaCodeblockIndexFromLine(const char *line) {
+    ULONG idx;
+    const char *p;
+
+    if (line == NULL) {
+        return 0;
+    }
+    idx = chatOutputScintillaParseCodeblockIndexAt(chatMdSkipLinePrefixZ(line));
+    if (idx > 0) {
+        return idx;
+    }
+    for (p = line; *p != '\0'; p++) {
+        if (*p == '[') {
+            idx = chatOutputScintillaParseCodeblockIndexAt(p);
+            if (idx > 0) {
+                return idx;
+            }
+        }
+    }
+    return 0;
+}
+
+static ULONG chatOutputScintillaCodeblockIndexAtPos(Object *sci, Sci_Position pos) {
+    Sci_Position line;
+    Sci_Position lineStart;
+    Sci_Position lineEnd;
+    ULONG lineLen;
+    char *buf;
+    ULONG idx;
+
+    if (sci == NULL || pos < 0) {
+        return 0;
+    }
+    line = codeBlocksScintillaCommand(sci, SCI_LINEFROMPOSITION, pos, 0);
+    lineStart = codeBlocksScintillaCommand(sci, SCI_POSITIONFROMLINE, line, 0);
+    lineEnd = codeBlocksScintillaCommand(sci, SCI_GETLINEENDPOSITION, line, 0);
+    if (lineEnd <= lineStart) {
+        return 0;
+    }
+    lineLen = (ULONG)(lineEnd - lineStart);
+    if (lineLen > 255) {
+        return 0;
+    }
+    buf = (char *)AllocVec(lineLen + 2, MEMF_ANY);
+    if (buf == NULL) {
+        return 0;
+    }
+    buf[0] = '\0';
+    codeBlocksScintillaCommand(sci, SCI_GETLINE, line, (sptr_t)buf);
+    idx = chatOutputScintillaCodeblockIndexFromLine(buf);
+    FreeVec(buf);
+    return idx;
+}
+
+static void chatOutputScintillaScheduleCodeblockOpen(ULONG blockIndex) {
+    if (blockIndex == 0) {
+        return;
+    }
+    chatOutputSciHotspotOpenIndex = blockIndex;
+    chatOutputSciHotspotOpenToken = codeBlocksViewerCaptureOpenToken();
+    if (app != NULL) {
+        DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+                 &ChatOutputSciOpenCodeblockDeferredHook);
+    } else {
+        ChatOutputSciOpenCodeblockDeferredFunc();
+    }
+}
+
+static void chatOutputScintillaOnSciNotify(struct SCNotification *scn) {
+    ULONG blockIndex;
+    Object *sci;
+
+    if (scn == NULL || chatOutputSciNotifySource == NULL) {
+        return;
+    }
+    sci = chatOutputSciNotifySource;
+
+    if (scn->nmhdr.code == SCN_HOTSPOTCLICK) {
+        blockIndex = chatOutputScintillaCodeblockIndexAtPos(sci, scn->position);
+        if (blockIndex > 0) {
+            chatOutputSciHotspotPendingIndex = blockIndex;
+            codeBlocksScintillaCommand(sci, SCI_SETEMPTYSELECTION, scn->position, 0);
+            codeBlocksScintillaCommand(sci, SCI_CANCEL, 0, 0);
+        }
+        return;
+    }
+
+    if (scn->nmhdr.code == SCN_HOTSPOTRELEASECLICK) {
+        blockIndex = chatOutputScintillaCodeblockIndexAtPos(sci, scn->position);
+        if (blockIndex == 0) {
+            blockIndex = chatOutputSciHotspotPendingIndex;
+        }
+        chatOutputSciHotspotPendingIndex = 0;
+        if (blockIndex > 0) {
+            chatOutputScintillaScheduleCodeblockOpen(blockIndex);
+        }
+    }
+}
+
+SAVEDS static ULONG ChatOutputSciNotifySink_MouseUpEvent(struct IClass *cl, Object *obj,
+                                                         struct MUIP_HandleEvent *msg) {
+    if (msg != NULL && msg->imsg != NULL && msg->imsg->Class == IECLASS_NEWMOUSE &&
+        (msg->imsg->Code & IECODE_UP_PREFIX) != 0 && chatOutputSciNotifySource != NULL) {
+        chatOutputScintillaReleaseChatMouse(chatOutputSciNotifySource);
+        chatOutputSciHotspotPendingIndex = 0;
+    }
+    return DoSuperMethodA(cl, obj, (Msg)msg);
+}
+
+SAVEDS static ULONG ChatOutputSciNotifySink_Dispatcher(struct IClass *cl, Object *obj,
+                                                       Msg msg) {
+    switch (msg->MethodID) {
+    case MM_SciHandler:
+        chatOutputScintillaOnSciNotify(((struct MUIP_SciHandler *)msg)->scn);
+        return 0;
+    case MUIM_HandleEvent:
+        return ChatOutputSciNotifySink_MouseUpEvent(
+            cl, obj, (struct MUIP_HandleEvent *)msg);
+    }
+    return DoSuperMethodA(cl, obj, msg);
+}
+
+DISPATCHER(ChatOutputSciNotifySink_Dispatcher);
+
+static LONG chatOutputScintillaEnsureNotifySink(void) {
+    if (chatOutputSciNotifyClass == NULL) {
+        chatOutputSciNotifyClass = MUI_CreateCustomClass(
+            NULL, MUIC_Area, NULL, 0, ENTRY(ChatOutputSciNotifySink_Dispatcher));
+        if (chatOutputSciNotifyClass == NULL) {
+            return RETURN_ERROR;
+        }
+    }
+    if (chatOutputSciNotifySink == NULL) {
+        chatOutputSciNotifySink =
+            (Object *)NewObject(chatOutputSciNotifyClass->mcc_Class, NULL, TAG_DONE);
+        if (chatOutputSciNotifySink == NULL) {
+            return RETURN_ERROR;
+        }
+    }
+    return RETURN_OK;
+}
+
+void chatOutputScintillaCancelPendingCodeblockOpen(void) {
+    chatOutputSciHotspotPendingIndex = 0;
+    chatOutputSciHotspotOpenIndex = 0;
+    chatOutputSciHotspotOpenToken = 0;
+}
+
+void chatOutputScintillaRemoveMouseUpGuard(void) {
+    if (chatOutputSciMouseUpEHInstalled && mainWindowObject != NULL &&
+        chatOutputSciMouseUpEH != NULL) {
+        DoMethod(mainWindowObject, MUIM_Window_RemEventHandler, chatOutputSciMouseUpEH);
+    }
+    chatOutputSciMouseUpEHInstalled = FALSE;
+    if (chatOutputSciMouseUpEH != NULL) {
+        FreeVec(chatOutputSciMouseUpEH);
+        chatOutputSciMouseUpEH = NULL;
+    }
+    chatOutputSciHotspotPendingIndex = 0;
+    chatOutputSciHotspotOpenIndex = 0;
+    chatOutputSciHotspotOpenToken = 0;
+}
+
+void chatOutputScintillaInstallMouseUpGuard(void) {
+    Object *target;
+
+    if (chatOutputSciMouseUpEHInstalled || mainWindowObject == NULL) {
+        return;
+    }
+    if (chatOutputScintillaEnsureNotifySink() != RETURN_OK) {
+        return;
+    }
+    target = chatOutputScroller != NULL ? chatOutputScroller : chatOutputTextEditor;
+    if (target == NULL) {
+        return;
+    }
+    if (chatOutputSciMouseUpEH == NULL) {
+        chatOutputSciMouseUpEH = (struct MUI_EventHandlerNode *)AllocVec(
+            sizeof(struct MUI_EventHandlerNode), MEMF_PUBLIC | MEMF_CLEAR);
+        if (chatOutputSciMouseUpEH == NULL) {
+            return;
+        }
+        chatOutputSciMouseUpEH->ehn_Class = chatOutputSciNotifyClass->mcc_Class;
+        chatOutputSciMouseUpEH->ehn_Object = target;
+        chatOutputSciMouseUpEH->ehn_Events = IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS;
+        chatOutputSciMouseUpEH->ehn_Flags = MUI_EHF_GUIMODE;
+        chatOutputSciMouseUpEH->ehn_Priority = 200;
+    }
+    DoMethod(mainWindowObject, MUIM_Window_AddEventHandler, chatOutputSciMouseUpEH);
+    chatOutputSciMouseUpEHInstalled = TRUE;
+}
+
+void chatOutputScintillaDetachNotify(void) {
+    chatOutputScintillaRemoveMouseUpGuard();
+    if (chatOutputSciNotifyAttached && chatOutputSciNotifySource != NULL) {
+        DoMethod(chatOutputSciNotifySource, MUIM_KillNotify, SCIA_Notify);
+    }
+    chatOutputSciNotifyAttached = FALSE;
+    chatOutputSciNotifySource = NULL;
+}
+
+void chatOutputScintillaDisposeNotifyClass(void) {
+    chatOutputScintillaDetachNotify();
+    if (chatOutputSciNotifySink != NULL) {
+        MUI_DisposeObject(chatOutputSciNotifySink);
+        chatOutputSciNotifySink = NULL;
+    }
+    if (chatOutputSciNotifyClass != NULL) {
+        MUI_DeleteCustomClass(chatOutputSciNotifyClass);
+        chatOutputSciNotifyClass = NULL;
+    }
+}
+
+void chatOutputScintillaAttachNotify(Object *sci) {
+    if (sci == NULL) {
+        return;
+    }
+    if (chatOutputSciNotifyAttached) {
+        if (chatOutputSciNotifySource == sci) {
+            return;
+        }
+        chatOutputScintillaDetachNotify();
+    }
+    if (chatOutputScintillaEnsureNotifySink() != RETURN_OK) {
+        return;
+    }
+    chatOutputSciNotifySource = sci;
+    DoMethod(sci, MUIM_Notify, SCIA_Notify, MUIV_EveryTime, chatOutputSciNotifySink, 3,
+             MM_SciHandler, MUIV_TriggerValue, FALSE);
+    chatOutputSciNotifyAttached = TRUE;
+}
+
 void chatOutputScintillaInitViewer(Object *sci) {
     if (sci == NULL) {
         return;
@@ -589,7 +1065,11 @@ void chatOutputScintillaInitViewer(Object *sci) {
     chatOutputScintillaInitRoleStyles(sci);
     codeBlocksScintillaCommand(sci, SCI_SETUNDOCOLLECTION, 0, 0);
     codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
+    /* Read-only chat: no mouse capture → no selection drag / scroll while moving mouse. */
+    codeBlocksScintillaCommand(sci, SCI_SETMOUSEDOWNCAPTURES, 0, 0);
+    codeBlocksScintillaCommand(sci, SCI_SETHOTSPOTSINGLELINE, 1, 0);
     codeBlocksScintillaCommand(sci, SCI_SETTEXT, 0, (sptr_t)"");
+    chatOutputScintillaAttachNotify(sci);
 }
 
 void chatOutputScintillaSetUtf8Text(Object *sci, const char *utf8) {
@@ -614,10 +1094,29 @@ void chatOutputScintillaSetUtf8TextWithRoleStyles(Object *sci, const char *utf8,
     codeBlocksScintillaCommand(sci, SCI_SETTEXT, 0, (sptr_t)utf8);
     chatOutputScintillaInitRoleStyles(sci);
     if (roleStyles != NULL && roleStyleLen > 0) {
+        UBYTE *styleBuf = NULL;
+
         if (roleStyleLen > textLen) {
             roleStyleLen = textLen;
         }
-        chatOutputScintillaApplyRoleStyleBytes(sci, roleStyles, roleStyleLen);
+        styleBuf = (UBYTE *)AllocVec(roleStyleLen, MEMF_ANY);
+        if (styleBuf != NULL) {
+            memcpy(styleBuf, roleStyles, roleStyleLen);
+            chatOutputScintillaApplyCodeblockHotspotStyles(utf8, styleBuf, roleStyleLen);
+            chatOutputScintillaApplyRoleStyleBytes(sci, styleBuf, roleStyleLen);
+            FreeVec(styleBuf);
+        } else {
+            chatOutputScintillaApplyRoleStyleBytes(sci, roleStyles, roleStyleLen);
+        }
+    } else if (textLen > 0) {
+        UBYTE *styleBuf = (UBYTE *)AllocVec(textLen, MEMF_ANY);
+
+        if (styleBuf != NULL) {
+            memset(styleBuf, CHAT_OUTPUT_STYLE_ASSISTANT, textLen);
+            chatOutputScintillaApplyCodeblockHotspotStyles(utf8, styleBuf, textLen);
+            chatOutputScintillaApplyRoleStyleBytes(sci, styleBuf, textLen);
+            FreeVec(styleBuf);
+        }
     }
     codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
 

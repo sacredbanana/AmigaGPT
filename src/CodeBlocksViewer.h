@@ -35,8 +35,24 @@ BOOL codeBlocksConversationHasBlocks(struct Conversation *conv);
 /** Fills the block list; returns FALSE if empty or on error. */
 BOOL codeBlocksViewerPopulate(struct Conversation *conv);
 
+/** Snapshot before deferred open; invalidated by codeBlocksViewerDismiss(). */
+ULONG codeBlocksViewerCaptureOpenToken(void);
+
+/**
+ * Open viewer for block index only if openToken is still valid (current chat).
+ */
+BOOL codeBlocksViewerOpenAtIndexWithToken(ULONG blockIndex, ULONG openToken);
+
+/**
+ * Open the code-blocks viewer and select block index (1-based, matches placeholder).
+ */
+BOOL codeBlocksViewerOpenAtIndex(ULONG blockIndex);
+
 /** Frees NList wrapper rows only; AICodeBlock data stays owned by the conversation. */
 void codeBlocksViewerClearList(void);
+
+/** Open viewer after menu action (deferred PushMethod). */
+void codeBlocksViewerScheduleOpenWindow(void);
 
 /** Close code viewer and clear list (e.g. chat switch/delete). */
 void codeBlocksViewerDismiss(void);

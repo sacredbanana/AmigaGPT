@@ -11,7 +11,9 @@
 #include <stdlib.h>
 #include <workbench/startup.h>
 #include "gui.h"
+#include "MainWindow.h"
 #include "config.h"
+#include "streamlog.h"
 #include "version.h"
 
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
@@ -52,6 +54,10 @@ LONG main(int argc, char **argv) {
      the program directory. */
     if (cli == NULL) {
         wbStartupMessage = (struct WBStartup *)GetMsg(&currentTask->pr_MsgPort);
+        if (wbStartupMessage != NULL) {
+            ReplyMsg((struct Message *)wbStartupMessage);
+            wbStartupMessage = NULL;
+        }
     }
 
 #ifdef __AMIGAOS3__
@@ -95,10 +101,13 @@ LONG main(int argc, char **argv) {
         exit(RETURN_ERROR);
     }
 
+    streamLogBootPhase("initVideo call");
     if (initVideo() == RETURN_ERROR) {
+        streamLogBootPhase("initVideo fail");
         displayError(STRING_ERROR_VIDEO_INIT);
         exit(RETURN_ERROR);
     }
+    streamLogBootPhase("initVideo done");
 
     if (initSpeech(config.speechSystem) == RETURN_ERROR) {
         switch (config.speechSystem) {
@@ -123,11 +132,6 @@ LONG main(int argc, char **argv) {
         exit(RETURN_ERROR);
     }
 
-#ifdef __AMIGAOS3__
-    if (wbStartupMessage != NULL)
-        ReplyMsg((struct Message *)wbStartupMessage);
-#endif
-
 #ifdef DAEMON
     printf("AmigaGPTD ready - listening for ARexx commands...\n");
 #endif
@@ -145,6 +149,8 @@ static void cleanExit() {
 #ifdef DAEMON
     printf("AmigaGPTD shutting down...\n");
 #endif
+
+    mainWindowSignalQuit();
 
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);

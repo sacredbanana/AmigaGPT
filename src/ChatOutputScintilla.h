@@ -21,6 +21,22 @@ void chatOutputScintillaSetUtf8TextWithRoleStyles(Object *sci, const char *utf8,
 /** Reapply TTEngine font from config.fixedWidthFonts (no full window rebuild). */
 void chatOutputScintillaRefreshFont(Object *sci);
 
+/** SCIA_Notify → hotspot release on `[Codeblock n]` opens code-blocks viewer. */
+void chatOutputScintillaAttachNotify(Object *sci);
+
+/** Main-window EH: clear stuck mouse-down on chat scrollgroup after button-up. */
+void chatOutputScintillaInstallMouseUpGuard(void);
+void chatOutputScintillaRemoveMouseUpGuard(void);
+
+/** Drop deferred codeblock open (e.g. before code-blocks viewer dismiss). */
+void chatOutputScintillaCancelPendingCodeblockOpen(void);
+
+/** Remove SCIA_Notify before chat Scintilla is disposed. */
+void chatOutputScintillaDetachNotify(void);
+
+/** After MUI_DisposeObject(app): delete notify sink custom class. */
+void chatOutputScintillaDisposeNotifyClass(void);
+
 /**
  * Build display text + style bytes: strips ** / * / __ and ATX # prefixes on assistant
  * text; optional emoji→ASCII substitutes (display only); user and "[Codeblock …]"

@@ -106,8 +106,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     struct json_object *error;
     if (json_object_object_get_ex(response, "error", &error) &&
         !json_object_is_type(error, json_type_null)) {
-        struct json_object *message = json_object_object_get(error, "message");
-        UTF8 *messageString = json_object_get_string(message);
+        CONST_STRPTR messageString = jsonGetApiErrorMessage(error);
         STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
             CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)messageString,
             CSA_MapForeignChars, TRUE, TAG_DONE);
@@ -233,12 +232,29 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
         return RETURN_ERROR;
     }
 
-    struct array_list *data =
-        json_object_get_array(json_object_object_get(response, "data"));
-    struct json_object *dataObject = (struct json_object *)data->array[0];
+    struct json_object *dataArrayObj = NULL;
+    struct array_list *data = NULL;
+    struct json_object *dataObject = NULL;
+    STRPTR b64 = NULL;
 
-    STRPTR b64 =
-        json_object_get_string(json_object_object_get(dataObject, "b64_json"));
+    if (json_object_object_get_ex(response, "data", &dataArrayObj) &&
+        json_object_is_type(dataArrayObj, json_type_array)) {
+        data = json_object_get_array(dataArrayObj);
+    }
+    if (data != NULL && data->length > 0) {
+        dataObject = (struct json_object *)data->array[0];
+    }
+    if (dataObject != NULL && json_object_is_type(dataObject, json_type_object)) {
+        struct json_object *b64Obj = NULL;
+        if (json_object_object_get_ex(dataObject, "b64_json", &b64Obj)) {
+            b64 = (STRPTR)json_object_get_string(b64Obj);
+        }
+    }
+    if (b64 == NULL) {
+        json_object_put(response);
+        updateStatusBar(STRING_ERROR, redPen);
+        return RETURN_ERROR;
+    }
 
     LONG data_len;
     UBYTE *imageData = decodeBase64(b64, &data_len);

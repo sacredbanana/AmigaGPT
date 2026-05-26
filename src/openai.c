@@ -717,14 +717,19 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
     jsonStart += 4;
 
     struct json_object *response = json_tokener_parse(jsonStart);
-    if (response == NULL) {
+    struct json_object *dataArray;
+
+    if (response == NULL || !json_object_is_type(response, json_type_object)) {
+        if (response != NULL) {
+            json_object_put(response);
+        }
         displayError("Failed to parse models response");
         return NULL;
     }
 
     // Extract model IDs from response
-    struct json_object *dataArray = json_object_object_get(response, "data");
-    if (dataArray == NULL) {
+    if (!json_object_object_get_ex(response, "data", &dataArray) ||
+        !json_object_is_type(dataArray, json_type_array)) {
         json_object_put(response);
         displayError("No 'data' field in models response");
         return NULL;
@@ -736,7 +741,12 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
 
     for (int i = 0; i < arrayLength; i++) {
         struct json_object *modelObj = json_object_array_get_idx(dataArray, i);
-        struct json_object *idObj = json_object_object_get(modelObj, "id");
+        struct json_object *idObj;
+
+        if (modelObj == NULL || !json_object_is_type(modelObj, json_type_object) ||
+            !json_object_object_get_ex(modelObj, "id", &idObj)) {
+            continue;
+        }
         if (idObj != NULL) {
             CONST_STRPTR modelId = json_object_get_string(idObj);
             json_object_array_add(modelNames, json_object_new_string(modelId));
@@ -1221,9 +1231,15 @@ struct json_object **postChatMessageToOpenAI(
         // chatStreamInProgress flag to FALSE so that the next request will
         // establish a new connection because OpenAI will close the connection
         // after the stream is finished
-        if (responseIndex > 0 && responses[responseIndex - 1] != NULL) {
-            STRPTR type = json_object_get_string(
-                json_object_object_get(responses[responseIndex - 1], "type"));
+        if (responseIndex > 0 && responses[responseIndex - 1] != NULL &&
+            json_object_is_type(responses[responseIndex - 1], json_type_object)) {
+            struct json_object *typeObj = NULL;
+            CONST_STRPTR type = NULL;
+
+            if (json_object_object_get_ex(responses[responseIndex - 1], "type",
+                                         &typeObj)) {
+                type = json_object_get_string(typeObj);
+            }
             if (type != NULL && strcmp(type, "response.completed") == 0) {
                 chatStreamCompletedOk = TRUE;
                 chatStreamInProgress = FALSE;
@@ -1898,11 +1914,11 @@ static BOOL streamBatchHasCompleted(struct json_object **responses, UWORD count)
     UWORD i;
 
     for (i = 0; i < count && responses[i] != NULL; i++) {
-        struct json_object *typeObj =
-            json_object_object_get(responses[i], "type");
+        struct json_object *typeObj;
         CONST_STRPTR typeStr;
 
-        if (typeObj == NULL) {
+        if (!json_object_is_type(responses[i], json_type_object) ||
+            !json_object_object_get_ex(responses[i], "type", &typeObj)) {
             continue;
         }
         typeStr = json_object_get_string(typeObj);
@@ -2174,13 +2190,12 @@ APTR postTextToSpeechRequestToOpenAI(
                                 response = json_tokener_parse(jsonString);
                                 struct json_object *error;
                                 if (response != NULL &&
+                                    json_object_is_type(response,
+                                                        json_type_object) &&
                                     json_object_object_get_ex(response, "error",
                                                               &error)) {
-                                    struct json_object *message =
-                                        json_object_object_get(error,
-                                                               "message");
-                                    STRPTR rawMessageString =
-                                        json_object_get_string(message);
+                                    CONST_STRPTR rawMessageString =
+                                        jsonGetApiErrorMessage(error);
                                     STRPTR cleanMessage =
                                         extractUserFriendlyErrorMessage(
                                             rawMessageString);
@@ -2463,11 +2478,9 @@ APTR postTextToSpeechRequestToOpenAI(
             if (errorResponse != NULL) {
                 struct json_object *error;
                 if (json_object_object_get_ex(errorResponse, "error", &error)) {
-                    struct json_object *message =
-                        json_object_object_get(error, "message");
-                    if (message != NULL) {
-                        STRPTR rawMessageString =
-                            json_object_get_string(message);
+                    CONST_STRPTR rawMessageString = jsonGetApiErrorMessage(error);
+
+                    if (rawMessageString != NULL) {
                         STRPTR cleanMessage =
                             extractUserFriendlyErrorMessage(rawMessageString);
                         displayError(cleanMessage);
@@ -2777,14 +2790,16 @@ APTR postTextToSpeechRequestToElevenLabs(
                             struct json_object *detail;
                             if (json_object_object_get_ex(response, "detail",
                                                           &detail)) {
-                                struct json_object *message =
-                                    json_object_object_get(detail, "message");
-                                if (message != NULL) {
-                                    displayError(
-                                        json_object_get_string(message));
-                                } else {
-                                    displayError(
-                                        json_object_get_string(detail));
+                                CONST_STRPTR errMsg = NULL;
+
+                                if (json_object_is_type(detail, json_type_object)) {
+                                    errMsg = jsonGetApiErrorMessage(detail);
+                                } else if (json_object_is_type(detail,
+                                                               json_type_string)) {
+                                    errMsg = json_object_get_string(detail);
+                                }
+                                if (errMsg != NULL) {
+                                    displayError(errMsg);
                                 }
                             }
                             json_object_put(response);

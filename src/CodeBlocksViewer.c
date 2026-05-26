@@ -18,6 +18,7 @@
 #include "AmigaGPT_cat.h"
 #include "CodeBlocksScintilla.h"
 #include "CodeBlocksViewer.h"
+#include "ChatOutputScintilla.h"
 #include "gui.h"
 #include "MainWindow.h"
 
@@ -51,6 +52,31 @@ static BOOL codeBlocksPendingSaveSystemCharset;
 static struct AICodeBlock *codeBlocksPendingSaveBlock;
 /** Intuition window for ASL parent (main window, not the code-blocks subwindow). */
 static struct Window *codeBlocksAslParentWindow;
+static BOOL codeBlocksListSuppressActiveHook;
+/** Incremented on chat switch / dismiss; invalidates deferred opens. */
+static ULONG codeBlocksViewerOpenEpoch;
+static ULONG codeBlocksViewerScheduledOpenEpoch;
+
+static BOOL codeBlocksViewerTokenValid(ULONG openToken) {
+    return openToken == codeBlocksViewerOpenEpoch;
+}
+
+static void codeBlocksViewerSetWindowOpen(BOOL open) {
+    if (codeBlocksWindowObject != NULL) {
+        set(codeBlocksWindowObject, MUIA_Window_Open, open ? TRUE : FALSE);
+    }
+}
+
+static void codeBlocksListClearQuiet(void) {
+    if (codeBlocksListObject == NULL) {
+        return;
+    }
+    codeBlocksListSuppressActiveHook = TRUE;
+    set(codeBlocksListObject, MUIA_NList_Quiet, TRUE);
+    DoMethod(codeBlocksListObject, MUIM_NList_Clear);
+    set(codeBlocksListObject, MUIA_NList_Quiet, FALSE);
+    codeBlocksListSuppressActiveHook = FALSE;
+}
 
 static void codeBlocksListFormatLabel(struct CodeBlockListItem *item,
                                       struct AICodeBlock *block) {
@@ -138,6 +164,9 @@ void codeBlocksViewerSyncSelectionFromList(void) {
 }
 
 HOOKPROTONHNONP(CodeBlockListActiveFunc, void) {
+    if (codeBlocksListSuppressActiveHook) {
+        return;
+    }
     codeBlocksViewerSyncSelectionFromList();
 }
 MakeHook(CodeBlockListActiveHook, CodeBlockListActiveFunc);
@@ -501,9 +530,7 @@ void codeBlocksViewerAttachActionButtons(void) {
 void codeBlocksViewerClearList(void) {
     codeBlocksCachedBlock = NULL;
     codeBlocksPendingSaveBlock = NULL;
-    if (codeBlocksListObject != NULL) {
-        DoMethod(codeBlocksListObject, MUIM_NList_Clear);
-    }
+    codeBlocksListClearQuiet();
 }
 
 HOOKPROTONHNONP(CodeBlocksWindowClosedFunc, void) {
@@ -511,17 +538,35 @@ HOOKPROTONHNONP(CodeBlocksWindowClosedFunc, void) {
 }
 MakeHook(CodeBlocksWindowClosedHook, CodeBlocksWindowClosedFunc);
 
+ULONG codeBlocksViewerCaptureOpenToken(void) {
+    return codeBlocksViewerOpenEpoch;
+}
+
 void codeBlocksViewerCloseWindow(void) {
     codeBlocksCachedBlock = NULL;
     codeBlocksPendingSaveBlock = NULL;
-    if (codeBlocksWindowObject != NULL) {
-        set(codeBlocksWindowObject, MUIA_Window_Open, FALSE);
-    }
+    codeBlocksViewerSetWindowOpen(FALSE);
 }
 
 void codeBlocksViewerDismiss(void) {
-    codeBlocksViewerClearList();
-    codeBlocksViewerCloseWindow();
+    /*
+     * Chat switch / delete: drop all viewer state tied to the previous
+     * conversation before any deferred open from the old chat can run.
+     */
+    codeBlocksViewerOpenEpoch++;
+    chatOutputScintillaCancelPendingCodeblockOpen();
+
+    codeBlocksCachedBlock = NULL;
+    codeBlocksPendingSaveBlock = NULL;
+
+    /* Close before clearing widgets — avoids empty window staying on screen. */
+    codeBlocksViewerSetWindowOpen(FALSE);
+
+    if (codeBlocksScintillaObject != NULL) {
+        codeBlocksScintillaSetUtf8Text(codeBlocksScintillaObject, "", NULL);
+    }
+
+    codeBlocksListClearQuiet();
 }
 
 void codeBlocksViewerPrepareShutdown(void) {
@@ -549,6 +594,42 @@ void codeBlocksViewerPrepareShutdown(void) {
     codeBlocksSaveSystemButtonObject = NULL;
 }
 
+static void codeBlocksViewerOpenWindowInternal(ULONG openToken) {
+    struct Conversation *conv = getCurrentConversation();
+
+    if (!codeBlocksViewerTokenValid(openToken)) {
+        return;
+    }
+    if (conv == NULL || !codeBlocksConversationHasBlocksImpl(conv)) {
+        return;
+    }
+    if (!codeBlocksViewerPopulate(conv)) {
+        return;
+    }
+    if (!codeBlocksViewerTokenValid(openToken)) {
+        return;
+    }
+    set(codeBlocksWindowObject, MUIA_Window_Open, TRUE);
+    DoMethod(codeBlocksListObject, MUIM_NList_SetActive, MUIV_NList_Active_Top,
+             NULL);
+    codeBlocksViewerSyncSelectionFromList();
+}
+
+HOOKPROTONHNONP(CodeBlocksViewerOpenWindowDeferredFunc, void) {
+    codeBlocksViewerOpenWindowInternal(codeBlocksViewerScheduledOpenEpoch);
+}
+MakeHook(CodeBlocksViewerOpenWindowDeferredHook, CodeBlocksViewerOpenWindowDeferredFunc);
+
+void codeBlocksViewerScheduleOpenWindow(void) {
+    codeBlocksViewerScheduledOpenEpoch = codeBlocksViewerCaptureOpenToken();
+    if (app != NULL) {
+        DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+                 &CodeBlocksViewerOpenWindowDeferredHook);
+    } else {
+        codeBlocksViewerOpenWindowInternal(codeBlocksViewerScheduledOpenEpoch);
+    }
+}
+
 BOOL codeBlocksViewerPopulate(struct Conversation *conv) {
     struct MinNode *mn;
     ULONG count = 0;
@@ -560,6 +641,8 @@ BOOL codeBlocksViewerPopulate(struct Conversation *conv) {
         return FALSE;
     }
 
+    codeBlocksListSuppressActiveHook = TRUE;
+    set(codeBlocksListObject, MUIA_NList_Quiet, TRUE);
     DoMethod(codeBlocksListObject, MUIM_NList_Clear);
 
     for (mn = conv->messages->mlh_Head; mn->mln_Succ != NULL;
@@ -577,7 +660,9 @@ BOOL codeBlocksViewerPopulate(struct Conversation *conv) {
 
             item = AllocVec(sizeof(*item), MEMF_CLEAR);
             if (item == NULL) {
-                DoMethod(codeBlocksListObject, MUIM_NList_Clear);
+                set(codeBlocksListObject, MUIA_NList_Quiet, FALSE);
+                codeBlocksListSuppressActiveHook = FALSE;
+                codeBlocksListClearQuiet();
                 return FALSE;
             }
             codeBlocksListFormatLabel(item, block);
@@ -587,7 +672,55 @@ BOOL codeBlocksViewerPopulate(struct Conversation *conv) {
         }
     }
 
+    set(codeBlocksListObject, MUIA_NList_Quiet, FALSE);
+    codeBlocksListSuppressActiveHook = FALSE;
     return count > 0;
+}
+
+BOOL codeBlocksViewerOpenAtIndexWithToken(ULONG blockIndex, ULONG openToken) {
+    struct Conversation *conv = getCurrentConversation();
+    ULONG pos;
+    struct CodeBlockListItem *item = NULL;
+
+    if (!codeBlocksViewerTokenValid(openToken)) {
+        return FALSE;
+    }
+    if (blockIndex == 0 || conv == NULL ||
+        !codeBlocksConversationHasBlocksImpl(conv)) {
+        return FALSE;
+    }
+    if (codeBlocksListObject == NULL || codeBlocksWindowObject == NULL) {
+        return FALSE;
+    }
+    if (!codeBlocksViewerPopulate(conv)) {
+        return FALSE;
+    }
+    if (!codeBlocksViewerTokenValid(openToken)) {
+        return FALSE;
+    }
+
+    for (pos = 0;; pos++) {
+        DoMethod(codeBlocksListObject, MUIM_NList_GetEntry, (LONG)pos, &item);
+        if (item == NULL) {
+            return FALSE;
+        }
+        if (item->block != NULL && item->block->index == blockIndex) {
+            DoMethod(codeBlocksListObject, MUIM_NList_SetActive, (LONG)pos,
+                     NULL);
+            codeBlocksViewerSyncSelectionFromList();
+            set(codeBlocksWindowObject, MUIA_Window_Open, TRUE);
+            if (codeBlocksListObject != NULL) {
+                set(codeBlocksWindowObject, MUIA_Window_ActiveObject,
+                    codeBlocksListObject);
+            }
+            return TRUE;
+        }
+    }
+}
+
+BOOL codeBlocksViewerOpenAtIndex(ULONG blockIndex) {
+    return codeBlocksViewerOpenAtIndexWithToken(
+        blockIndex, codeBlocksViewerCaptureOpenToken());
 }
 
 void codeBlocksViewerShowActiveBlock(void) {

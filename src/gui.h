@@ -119,6 +119,12 @@ void setConversationSystem(struct Conversation *conversation,
 UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                                 BOOL retainJSONFormat, APIEndpoint apiEndpoint);
 
+/** Safe read of API/proxy "error" (object or string). Returns NULL if none. */
+CONST_STRPTR jsonGetApiErrorMessage(struct json_object *error);
+
+void mainWindowSignalQuit(void);
+BOOL mainWindowIsShuttingDown(void);
+
 /**
  * Add a block of text to the conversation list
  * @param conversation The conversation to add the text to

@@ -21,3 +21,8 @@ Read **`docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md`** when touching:
 Ask user to verify **3× quit → restart** after packaging. Do not commit until MorphOS OK (see `HANDLUNGSANWEISUNG-GIT.md` §9).
 
 Build/package: `.cursor/rules/morphos-build-package.mdc`
+
+## Agent search paths
+
+- **Do not** run broad `find`/`grep` under `/mnt/c` or `/mnt/d` for SDK or project files.
+- Use workspace paths only (e.g. `~/development/morphos/VonMorphosSDK/`, `AmigaSDK-gcc/`). Ask the user to copy missing SDK files into the repo.

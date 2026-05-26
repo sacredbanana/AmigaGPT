@@ -220,20 +220,20 @@ if [[ "${DEPLOY:-1}" == "1" ]]; then
           '# version | git | build_utc | copy_utc | lha_md5 (Ambient-kompatibel)',
           ''
         )
-        \$lines = @()
+        \$lines = [System.Collections.ArrayList]@()
         if (Test-Path -LiteralPath \$history) {
-          \$blob = (Get-Content -LiteralPath \$history | Where-Object {
-            \$_ -and \$_ -notmatch '^\s*#'
-          }) -join ''
-          foreach (\$m in [regex]::Matches(\$blob, '\d+\.\d+\.\d+\|[^|]+\|[^|]+\|[^|]+\|[a-f0-9]{32}(?![a-f0-9])')) {
-            \$lines += \$m.Value
+          foreach (\$row in Get-Content -LiteralPath \$history -Encoding utf8) {
+            \$t = \$row.Trim()
+            if (\$t -match '^\d+\.\d+\.\d+\|[^\|]+\|[^|]+\|[^|]+\|[a-fA-F0-9]{32}\$') {
+              [void]\$lines.Add(\$t)
+            }
           }
         }
-        \$lines += '${HISTORY_LINE}'
-        if (\$lines.Count -gt 10) {
-          \$lines = \$lines[(\$lines.Count - 10)..(\$lines.Count - 1)]
+        [void]\$lines.Add('${HISTORY_LINE}')
+        while (\$lines.Count -gt 10) {
+          \$lines.RemoveAt(0)
         }
-        (\$header + \$lines) | Set-Content -LiteralPath \$history -Encoding utf8
+        (\$header + [string[]]\$lines.ToArray()) | Set-Content -LiteralPath \$history -Encoding utf8
         Write-Host \"DEPLOY-HISTORY: \$(\$lines.Count) Eintrag(e), neueste: ${FULL_VERSION}\"
       "; then
         log "Deploy-Protokoll: $DEPLOY_WIN/DEPLOY-HISTORY.txt"

@@ -35,6 +35,8 @@ void streamLogApiError(CONST_STRPTR kind, CONST_STRPTR detail) {
 
 void streamLogUtf8(CONST_STRPTR detail) { (void)detail; }
 
+void streamLogBootPhase(CONST_STRPTR phase) { (void)phase; }
+
 #else
 
 static BOOL streamLogEnabled = FALSE;
@@ -176,6 +178,16 @@ void streamLogUtf8(CONST_STRPTR detail) {
     }
     snprintf((STRPTR)line, sizeof(line), "utf8 %s", detail);
     streamLogEmit(STREAMLOG_UTF8_PATH, (STRPTR)line);
+}
+
+void streamLogBootPhase(CONST_STRPTR phase) {
+    UBYTE line[STREAMLOG_LINE_MAX];
+
+    if (!streamLogEnabled || phase == NULL) {
+        return;
+    }
+    snprintf((STRPTR)line, sizeof(line), "boot %s", phase);
+    streamLogEmit(STREAMLOG_STREAM_PATH, (STRPTR)line);
 }
 
 #endif /* DAEMON */

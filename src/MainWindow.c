@@ -394,18 +394,22 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 
     if (json_object_object_get_ex(response, "error", &error) &&
         !json_object_is_type(error, json_type_null)) {
-        struct json_object *message = json_object_object_get(error, "message");
-        STRPTR messageString = json_object_get_string(message);
+        STRPTR messageString = (STRPTR)jsonGetApiErrorMessage(error);
+
         if (messageString != NULL) {
             displayError(messageString);
-        } else {
-            struct json_object *type = json_object_object_get(error, "type");
-            STRPTR typeString = json_object_get_string(type);
-            if (typeString != NULL) {
-                if (strcmp(typeString, "invalid_request_error") == 0) {
-                    displayError(STRING_ERROR_INVALID_REQUEST);
-                } else {
-                    displayError(typeString);
+        } else if (json_object_is_type(error, json_type_object)) {
+            struct json_object *type;
+
+            if (json_object_object_get_ex(error, "type", &type)) {
+                STRPTR typeString = json_object_get_string(type);
+
+                if (typeString != NULL) {
+                    if (strcmp(typeString, "invalid_request_error") == 0) {
+                        displayError(STRING_ERROR_INVALID_REQUEST);
+                    } else {
+                        displayError(typeString);
+                    }
                 }
             }
         }
@@ -420,12 +424,34 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         return;
     }
 
-    struct array_list *data =
-        json_object_get_array(json_object_object_get(response, "data"));
-    struct json_object *dataObject = (struct json_object *)data->array[0];
+    struct json_object *dataArrayObj = NULL;
+    struct array_list *data = NULL;
+    struct json_object *dataObject = NULL;
+    STRPTR b64 = NULL;
 
-    STRPTR b64 =
-        json_object_get_string(json_object_object_get(dataObject, "b64_json"));
+    if (json_object_object_get_ex(response, "data", &dataArrayObj) &&
+        json_object_is_type(dataArrayObj, json_type_array)) {
+        data = json_object_get_array(dataArrayObj);
+    }
+    if (data != NULL && data->length > 0) {
+        dataObject = (struct json_object *)data->array[0];
+    }
+    if (dataObject != NULL && json_object_is_type(dataObject, json_type_object)) {
+        struct json_object *b64Obj = NULL;
+        if (json_object_object_get_ex(dataObject, "b64_json", &b64Obj)) {
+            b64 = (STRPTR)json_object_get_string(b64Obj);
+        }
+    }
+    if (b64 == NULL) {
+        displayError(STRING_ERROR_CONNECTION);
+        json_object_put(response);
+        set(createImageButton, MUIA_Disabled, FALSE);
+        set(newImageButton, MUIA_Disabled, FALSE);
+        set(deleteImageButton, MUIA_Disabled, FALSE);
+        set(imageInputTextEditor, MUIA_Disabled, FALSE);
+        if (!isAROS) { FreeVec(text); }
+        return;
+    }
 
     LONG data_len;
     UBYTE *imageData = decodeBase64(b64, &data_len);
@@ -452,9 +478,22 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     snprintf(fullPath, sizeof(fullPath), "AMIGAGPT:images/%s.%s", id,
              imageFormat);
 
+    if (imageData == NULL || data_len <= 0) {
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        json_object_put(response);
+        set(createImageButton, MUIA_Disabled, FALSE);
+        set(newImageButton, MUIA_Disabled, FALSE);
+        set(deleteImageButton, MUIA_Disabled, FALSE);
+        set(imageInputTextEditor, MUIA_Disabled, FALSE);
+        if (!isAROS) { FreeVec(text); }
+        return;
+    }
+
     FILE *file = fopen(fullPath, "wb");
-    fwrite(imageData, 1, data_len, file);
-    fclose(file);
+    if (file != NULL) {
+        fwrite(imageData, 1, data_len, file);
+        fclose(file);
+    }
     FreeVec(imageData);
 
     json_object_put(response);
@@ -1337,6 +1376,8 @@ void applyFixedWidthFontsSetting(void) {
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createMainWindow() {
+    streamLogBootPhase("createMainWindow start");
+
     if ((isMUI5 || isMUI39) && createAmigaGPTTextEditor() == RETURN_ERROR) {
         displayError("Could not create custom class.");
     }
@@ -1345,6 +1386,9 @@ LONG createMainWindow() {
 #endif
 
     if (mainWindowObject != NULL) {
+#ifdef __MORPHOS__
+        chatOutputScintillaDetachNotify();
+#endif
         MUI_DisposeObject(mainWindowObject);
     }
 
@@ -1568,6 +1612,7 @@ LONG createMainWindow() {
 #ifdef __MORPHOS__
     codeBlocksViewerSetAslParentWindow(mainWindow);
     chatOutputScintillaInitViewer(chatOutputTextEditor);
+    streamLogBootPhase("chat scintilla init");
 #endif
 
     DoMethod(app, OM_ADDMEMBER, mainWindowObject);
@@ -1577,6 +1622,8 @@ LONG createMainWindow() {
     /* Once before open; second Load after loadConversations broke NList on restart. */
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
     set(mainWindowObject, MUIA_Window_Open, TRUE);
+    streamLogBootPhase("main window open");
+    chatOutputScintillaInstallMouseUpGuard();
     addMenuActions();
     
     // Allocate pens after window is opened
@@ -1628,8 +1675,11 @@ LONG createMainWindow() {
     
     updateStatusBar(STRING_READY, greenPen);
 
+    streamLogBootPhase("loadConversations call");
     loadConversations();
+    streamLogBootPhase("loadConversations done");
     loadImages();
+    streamLogBootPhase("createMainWindow ok");
 
 #ifndef __MORPHOS__
     installChatOutputWheelHandler();
@@ -1675,6 +1725,7 @@ static void mainWindowEmptyNList(Object *list) {
 
 void mainWindowPrepareShutdown(void) {
     mainWindowShuttingDown = TRUE;
+    mainWindowSignalQuit();
     currentConversation = NULL;
     currentImage = NULL;
 
@@ -1690,6 +1741,7 @@ void mainWindowPrepareShutdown(void) {
     mainWindowEmptyNList(imageListObject);
 
 #ifdef __MORPHOS__
+    chatOutputScintillaDetachNotify();
     if (chatOutputTextEditor != NULL) {
         chatOutputScintillaSetUtf8Text(chatOutputTextEditor, "");
     }
@@ -2071,7 +2123,9 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
         updateStatusBar(STRING_READY, greenPen);
     }
 
-    saveConversations();
+    if (!mainWindowIsShuttingDown()) {
+        saveConversations();
+    }
 
     set(sendMessageButton, MUIA_Disabled, FALSE);
     set(newChatButton, MUIA_Disabled, FALSE);
@@ -2215,17 +2269,23 @@ static void sendChatMessage() {
         UWORD responseIndex = 0;
 
         struct json_object *response;
+        if (mainWindowIsShuttingDown()) {
+            freeOpenAIResponseArray(responses);
+            responses = NULL;
+            dataStreamFinished = TRUE;
+            break;
+        }
+
         while (response = responses[responseIndex++]) {
             struct json_object *error;
             if (json_object_object_get_ex(response, "error", &error) &&
                 !json_object_is_type(error, json_type_null)) {
-                struct json_object *message =
-                    json_object_object_get(error, "message");
-                UTF8 *messageString = json_object_get_string(message);
+                CONST_STRPTR messageString = jsonGetApiErrorMessage(error);
                 streamLogApiError("api_json_error", messageString);
                 STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                    (Tag)messageString, CSA_MapForeignChars, TRUE, TAG_DONE);
+                    (Tag)(messageString != NULL ? messageString : ""),
+                    CSA_MapForeignChars, TRUE, TAG_DONE);
                 displayError(formattedMessageSystemEncoded);
                 CodesetsFreeA(formattedMessageSystemEncoded, NULL);
                 set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -2269,6 +2329,11 @@ static void sendChatMessage() {
                 return;
             }
 
+            if (!json_object_is_type(response, json_type_object)) {
+                json_object_put(response);
+                continue;
+            }
+
             UTF8 *contentString = getMessageContentFromJson(
                 response, !config.useCustomServer, FALSE,
                 config.useCustomServer ? config.customApiEndpoint
@@ -2288,8 +2353,12 @@ static void sendChatMessage() {
                                                  receivedMessage, &wordNumber,
                                                  &speechUtf8Index);
                     }
-                    STRPTR type = json_object_get_string(
-                        json_object_object_get(response, "type"));
+                    struct json_object *typeObj = NULL;
+                    STRPTR type = NULL;
+
+                    if (json_object_object_get_ex(response, "type", &typeObj)) {
+                        type = json_object_get_string(typeObj);
+                    }
                     if (config.useCustomServer ||
                         (type != NULL &&
                          strcmp(type, "response.completed") == 0)) {
@@ -2313,7 +2382,7 @@ static void sendChatMessage() {
         if (!config.useCustomServer && !openAIChatStreamInProgress()) {
             dataStreamFinished = TRUE;
         }
-    } while (!dataStreamFinished);
+    } while (!dataStreamFinished && !mainWindowIsShuttingDown());
 
     flushUtf8StreamToMessage(utf8Stream, receivedMessage, &wordNumber,
                              &speechUtf8Index);
@@ -2686,7 +2755,12 @@ static LONG loadConversations() {
 
     struct json_object *conversationsJsonArray =
         json_tokener_parse(conversationsJsonString);
-    if (conversationsJsonArray == NULL) {
+    if (conversationsJsonArray == NULL ||
+        !json_object_is_type(conversationsJsonArray, json_type_array)) {
+        if (conversationsJsonArray != NULL) {
+            json_object_put(conversationsJsonArray);
+            conversationsJsonArray = NULL;
+        }
         if (Rename("AMIGAGPT:chat-history.json",
                    "AMIGAGPT:chat-history.json.bak")) {
             displayError(STRING_ERROR_CHAT_HISTORY_PARSE_BACKUP);
@@ -2711,6 +2785,11 @@ static LONG loadConversations() {
         struct json_object *conversationJsonObject =
             json_object_array_get_idx(conversationsJsonArray, i);
         struct json_object *conversationNameJsonObject;
+
+        if (conversationJsonObject == NULL ||
+            !json_object_is_type(conversationJsonObject, json_type_object)) {
+            continue;
+        }
         if (!json_object_object_get_ex(conversationJsonObject, "name",
                                        &conversationNameJsonObject)) {
             displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
@@ -2724,7 +2803,8 @@ static LONG loadConversations() {
 
         struct json_object *messagesJsonArray;
         if (!json_object_object_get_ex(conversationJsonObject, "messages",
-                                       &messagesJsonArray)) {
+                                       &messagesJsonArray) ||
+            !json_object_is_type(messagesJsonArray, json_type_array)) {
             displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
             FreeVec(conversationsJsonString);
             json_object_put(conversationsJsonArray);
@@ -2749,6 +2829,11 @@ static LONG loadConversations() {
             struct json_object *messageJsonObject =
                 json_object_array_get_idx(messagesJsonArray, j);
             struct json_object *roleJsonObject;
+
+            if (messageJsonObject == NULL ||
+                !json_object_is_type(messageJsonObject, json_type_object)) {
+                continue;
+            }
             if (!json_object_object_get_ex(messageJsonObject, "role",
                                            &roleJsonObject)) {
                 displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
@@ -2757,9 +2842,8 @@ static LONG loadConversations() {
                 return RETURN_ERROR;
             }
             STRPTR role = json_object_get_string(roleJsonObject);
+            struct json_object *contentJsonObject;
 
-            struct json_object *contentJsonObject =
-                json_object_array_get_idx(messagesJsonArray, j);
             if (!json_object_object_get_ex(messageJsonObject, "content",
                                            &contentJsonObject)) {
                 displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);

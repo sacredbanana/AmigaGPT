@@ -1,9 +1,11 @@
 ---
-description: MorphOS loop — build, package to Z, user tests, commit only after OK
+description: MorphOS — ALWAYS package after build (default); deploy to Z
 alwaysApply: true
 ---
 
 # MorphOS: Build → package → test → commit
+
+**Default after any MorphOS code change:** `make -f Makefile.MorphOS` **and** `./package-morphos-cross.sh` — in the **same** turn, without waiting for the user to ask. Treat “build done” without packaging as **incomplete**.
 
 Binding cycle for this fork (unless the user says otherwise):
 

@@ -18,6 +18,7 @@
 #include <mui/TextEditor_mcc.h>
 #ifdef __MORPHOS__
 #include <mui/Scintilla_mcc.h>
+#include "ChatOutputScintilla.h"
 #include "CodeBlocksScintilla.h"
 #include "CodeBlocksViewer.h"
 #endif
@@ -33,6 +34,7 @@
 #include "CustomServerSettingsRequesterWindow.h"
 #include "codefence.h"
 #include "config.h"
+#include "streamlog.h"
 #include "ElevenLabsSettingsRequesterWindow.h"
 #include "gui.h"
 #include "menu.h"
@@ -69,6 +71,12 @@ struct Library *CodesetsBase;
 struct Library *TTEngineBase;
 #endif
 Object *app = NULL;
+
+static BOOL appQuitting = FALSE;
+
+void mainWindowSignalQuit(void) { appQuitting = TRUE; }
+
+BOOL mainWindowIsShuttingDown(void) { return appQuitting; }
 ULONG redPen = 0, greenPen = 0, bluePen = 0, yellowPen = 0;
 Object *imageWindowObject;
 Object *imageWindowImageView;
@@ -192,7 +200,10 @@ static void closeGUILibraries() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG initVideo() {
+    streamLogBootPhase("initVideo start");
+
     if (openGUILibraries() == RETURN_ERROR) {
+        streamLogBootPhase("initVideo fail openGUILibraries");
         return RETURN_ERROR;
     }
 
@@ -365,8 +376,12 @@ LONG initVideo() {
     if (createAboutAmigaGPTWindow() == RETURN_OK)
         DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
 
-    if (createMainWindow() == RETURN_ERROR)
+    streamLogBootPhase("createMainWindow call");
+    if (createMainWindow() == RETURN_ERROR) {
+        streamLogBootPhase("createMainWindow fail");
         return RETURN_ERROR;
+    }
+    streamLogBootPhase("initVideo ok");
 
 #endif
 
@@ -401,11 +416,14 @@ void startGUIRunLoop() {
     ULONG signals;
     BOOL running = TRUE;
 
+    streamLogBootPhase("NewInput loop start");
+
     while (running) {
         ULONG id = DoMethod(app, MUIM_Application_NewInput, &signals);
 
         switch (id) {
         case MUIV_Application_ReturnID_Quit: {
+            mainWindowSignalQuit();
             running = FALSE;
             break;
         }
@@ -420,8 +438,10 @@ void startGUIRunLoop() {
         }
         if (running && signals)
             signals = Wait(signals | SIGBREAKF_CTRL_C);
-        if (signals & SIGBREAKF_CTRL_C)
+        if (signals & SIGBREAKF_CTRL_C) {
+            mainWindowSignalQuit();
             running = FALSE;
+        }
     }
 }
 
@@ -659,6 +679,24 @@ void setConversationSystem(struct Conversation *conversation,
     conversation->system = systemUTF8;
 }
 
+CONST_STRPTR jsonGetApiErrorMessage(struct json_object *error) {
+    struct json_object *message;
+
+    if (error == NULL || json_object_is_type(error, json_type_null)) {
+        return NULL;
+    }
+    if (json_object_is_type(error, json_type_string)) {
+        return json_object_get_string(error);
+    }
+    if (!json_object_is_type(error, json_type_object)) {
+        return NULL;
+    }
+    if (json_object_object_get_ex(error, "message", &message)) {
+        return json_object_get_string(message);
+    }
+    return NULL;
+}
+
 /**
  * Get the message content from the JSON response from OpenAI
  * @param json the JSON response from OpenAI
@@ -672,77 +710,129 @@ void setConversationSystem(struct Conversation *conversation,
 UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                                 BOOL retainJSONFormat,
                                 APIEndpoint apiEndpoint) {
-    if (json == NULL)
-        return NULL;
+    if (json == NULL || !json_object_is_type(json, json_type_object)) {
+        return stream ? (UTF8 *)"" : NULL;
+    }
     if (stream) {
-        struct json_object *type = json_object_object_get(json, "type");
+        struct json_object *type;
         CONST_STRPTR typeStr;
 
-        if (type == NULL) {
-            return "";
+        if (!json_object_object_get_ex(json, "type", &type)) {
+            return (UTF8 *)"";
         }
         typeStr = json_object_get_string(type);
         if (typeStr == NULL) {
-            return "";
+            return (UTF8 *)"";
         }
         if (strcmp(typeStr, "response.output_text.delta") == 0) {
-            struct json_object *text = json_object_object_get(json, "delta");
-            return json_object_get_string(text);
-        } else {
-            return "";
+            struct json_object *delta;
+
+            if (!json_object_object_get_ex(json, "delta", &delta)) {
+                return (UTF8 *)"";
+            }
+            if (json_object_is_type(delta, json_type_string)) {
+                return (UTF8 *)json_object_get_string(delta);
+            }
+            if (json_object_is_type(delta, json_type_object) &&
+                json_object_object_get_ex(delta, "text", &delta)) {
+                return (UTF8 *)json_object_get_string(delta);
+            }
+            return (UTF8 *)"";
         }
+        return (UTF8 *)"";
     } else {
-        struct json_object *text;
+        struct json_object *text = NULL;
+
         if (apiEndpoint == API_ENDPOINT_RESPONSES) {
-            struct json_object *outputArray =
-                json_object_object_get(json, "output");
+            struct json_object *outputArray;
             struct json_object *output = NULL;
 
-            int arrayLength = json_object_array_length(outputArray);
-            for (int i = 0; i < arrayLength; i++) {
-                struct json_object *currentOutput =
-                    json_object_array_get_idx(outputArray, i);
-                struct json_object *typeObj =
-                    json_object_object_get(currentOutput, "type");
-                if (typeObj != NULL) {
-                    const char *typeStr = json_object_get_string(typeObj);
-                    if (strcmp(typeStr, "message") == 0) {
-                        output = currentOutput;
-                        break;
+            if (!json_object_object_get_ex(json, "output", &outputArray) ||
+                !json_object_is_type(outputArray, json_type_array)) {
+                return (UTF8 *)"";
+            }
+
+            {
+                int arrayLength = json_object_array_length(outputArray);
+                int i;
+
+                for (i = 0; i < arrayLength; i++) {
+                    struct json_object *currentOutput =
+                        json_object_array_get_idx(outputArray, i);
+                    struct json_object *typeObj;
+
+                    if (currentOutput == NULL ||
+                        !json_object_is_type(currentOutput, json_type_object)) {
+                        continue;
+                    }
+                    if (!json_object_object_get_ex(currentOutput, "type",
+                                                 &typeObj)) {
+                        continue;
+                    }
+                    {
+                        const char *typeStr = json_object_get_string(typeObj);
+
+                        if (typeStr != NULL && strcmp(typeStr, "message") == 0) {
+                            output = currentOutput;
+                            break;
+                        }
                     }
                 }
             }
 
             if (output == NULL) {
-                return "";
+                return (UTF8 *)"";
             }
 
-            struct json_object *contentArray =
-                json_object_object_get(output, "content");
-            struct json_object *content =
-                json_object_array_get_idx(contentArray, 0);
-            text = json_object_object_get(content, "text");
+            {
+                struct json_object *contentArray;
+                struct json_object *content;
+
+                if (!json_object_object_get_ex(output, "content",
+                                             &contentArray) ||
+                    !json_object_is_type(contentArray, json_type_array)) {
+                    return (UTF8 *)"";
+                }
+                content = json_object_array_get_idx(contentArray, 0);
+                if (content == NULL ||
+                    !json_object_is_type(content, json_type_object) ||
+                    !json_object_object_get_ex(content, "text", &text)) {
+                    return (UTF8 *)"";
+                }
+            }
         } else {
-            struct json_object *contentArray =
-                json_object_object_get(json, "choices");
-            struct json_object *content =
-                json_object_array_get_idx(contentArray, 0);
-            struct json_object *message =
-                json_object_object_get(content, "message");
-            text = json_object_object_get(message, "content");
+            struct json_object *choices;
+            struct json_object *choice;
+            struct json_object *message;
+
+            if (!json_object_object_get_ex(json, "choices", &choices) ||
+                !json_object_is_type(choices, json_type_array)) {
+                return NULL;
+            }
+            choice = json_object_array_get_idx(choices, 0);
+            if (choice == NULL || !json_object_is_type(choice, json_type_object) ||
+                !json_object_object_get_ex(choice, "message", &message) ||
+                !json_object_is_type(message, json_type_object) ||
+                !json_object_object_get_ex(message, "content", &text)) {
+                return NULL;
+            }
         }
 
-        UTF8 *textStr;
+        if (text == NULL) {
+            return NULL;
+        }
         if (retainJSONFormat) {
-            textStr = json_object_to_json_string_ext(
+            UTF8 *textStr = json_object_to_json_string_ext(
                 text, JSON_C_TO_STRING_NOSLASHESCAPE);
-            // remove the enclosing quotes
+
+            if (textStr == NULL) {
+                return NULL;
+            }
             textStr++;
             textStr[strlen(textStr) - 1] = '\0';
-        } else {
-            textStr = json_object_get_string(text);
+            return textStr;
         }
-        return textStr;
+        return (UTF8 *)json_object_get_string(text);
     }
 }
 
@@ -945,15 +1035,7 @@ void openCodeBlocksViewerWindow(void) {
     STRPTR utf8Buf = NULL;
 
 #ifdef __MORPHOS__
-    if (conv == NULL || !codeBlocksConversationHasBlocks(conv)) {
-        return;
-    }
-    if (!codeBlocksViewerPopulate(conv)) {
-        return;
-    }
-    set(codeBlocksWindowObject, MUIA_Window_Open, TRUE);
-    DoMethod(codeBlocksList, MUIM_NList_SetActive, MUIV_NList_Active_Top, NULL);
-    codeBlocksViewerSyncSelectionFromList();
+    codeBlocksViewerScheduleOpenWindow();
     return;
 #endif
 
@@ -1007,6 +1089,7 @@ void shutdownGUI() {
         chatOutputWheelShutdown();
 #ifdef __MORPHOS__
         codeBlocksViewerPrepareShutdown();
+        chatOutputScintillaDisposeNotifyClass();
 #endif
 
         MUI_DisposeObject(app);

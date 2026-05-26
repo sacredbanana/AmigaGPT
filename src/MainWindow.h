@@ -56,6 +56,9 @@ void applyFixedWidthFontsSetting(void);
 /** Before MUI_DisposeObject(app): close UI, clear lists, drop window notifies. */
 void mainWindowPrepareShutdown(void);
 
+void mainWindowSignalQuit(void);
+BOOL mainWindowIsShuttingDown(void);
+
 /** After MUI_DisposeObject(app): avoid stale Object pointers and pen IDs. */
 void mainWindowInvalidateAfterShutdown(void);
 

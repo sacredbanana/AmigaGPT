@@ -309,7 +309,11 @@ LONG readConfig() {
     Close(file);
 
     struct json_object *configJsonObject = json_tokener_parse(configJsonString);
-    if (configJsonObject == NULL) {
+    if (configJsonObject == NULL ||
+        !json_object_is_type(configJsonObject, json_type_object)) {
+        if (configJsonObject != NULL) {
+            json_object_put(configJsonObject);
+        }
         printf(STRING_ERROR_CONFIG_FILE_PARSE);
         putchar('\n');
         FreeVec(configJsonString);

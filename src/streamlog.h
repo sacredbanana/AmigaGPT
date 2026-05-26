@@ -22,4 +22,7 @@ void streamLogApiError(CONST_STRPTR kind, CONST_STRPTR detail);
 
 void streamLogUtf8(CONST_STRPTR detail);
 
+/** Startup trace (only when debugStreamLog is on); helps diagnose silent WB start. */
+void streamLogBootPhase(CONST_STRPTR phase);
+
 #endif
