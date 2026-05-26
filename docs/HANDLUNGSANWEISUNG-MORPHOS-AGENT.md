@@ -78,7 +78,7 @@ Parent-Fenster: `get(mainWindowObject, MUIA_Window, &w)` oder `codeBlocksViewerS
 | ----- | ----- |
 | Anzeige | Read-only **Scintilla** + TTEngine (`SC_CP_UTF8`), nicht NFloattext/Codesets |
 | User/Assistant | `SCLEX_NULL` + Style-Bytes (User = fett/blau/grau) |
-| **`SCLEX_MARKDOWN` im Chat** | **Nicht** — auf MorphOS-Lexer praktisch wirkungslos; Menü „Markdown formatting“ = No-op bis **Midi-Markdown** |
+| **`SCLEX_MARKDOWN` im Chat** | **Nicht** — Lexer wirkungslos; Menü „Markdown formatting“ schaltet **Midi-Markdown** (`chatOutputScintillaBuildMidiMarkdownDisplay`) |
 | Stream | Roh-UTF-8 während Stream; kein Markdown-Parse pro Chunk (R3) |
 | Code-Fences | Parser in `codefence.c`; Chat zeigt `[Codeblock n]` oder Roh-`raw_utf8` — Diagnose über **Export raw** |
 
@@ -91,8 +91,8 @@ Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [MIDI-MARKDOW
 | Prio | Thema | Status |
 | ---- | ----- | ------ |
 | 1 | **Export Chat (raw UTF-8)** — Diagnose | Menü *Export chat (raw UTF-8)…*, `ChatExport.c` |
-| 2 | Midi-Markdown: nur außerhalb Fences, Assistant, `**`/`*`/`__`, `#` | Geplant |
-| 3 | Klick `[Codeblock]` → Code-Viewer | Geplant |
+| 2 | Midi-Markdown: nur außerhalb Fences, Assistant, `**`/`*`/`__`, `#` | **Erledigt** (MorphOS, Branch `scintilla`) |
+| 3 | Klick `[Codeblock]` → Code-Viewer (`SCN_HOTSPOTRELEASECLICK`, Epoch) | **Erledigt** (MorphOS, Branch `scintilla`) |
 | 4 | Tabellen ggf. als eigener Block (wie Code) | Später |
 | — | Phase 13 Worker/UI-Batching | Zurückgestellt (R3 reicht vorerst) |
 

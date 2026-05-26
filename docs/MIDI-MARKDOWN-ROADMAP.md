@@ -3,8 +3,8 @@
 ## Priorität
 
 1. **Export Chat (raw UTF-8)** — **umgesetzt:** Ansicht → *Export chat (raw UTF-8)…* → `conversationNodeGetRaw()` pro Nachricht, inkl. ` ``` `; siehe `ChatExport.c`.
-2. **Midi-Markdown (MorphOS):** `chatOutputScintillaBuildMidiMarkdownDisplay` — Marker werden **nicht** angezeigt (wie MUI), nur **Assistant**, `**` / `*` / `__`, `#`-Überschriften ohne `#`-Prefix; `[Codeblock …]` unverändert. **Emoji→Text** nur bei aktivem Menü *Markdown formatting* (Anzeige; `raw_utf8`/Export unverändert) — TTEngine/DejaVu ohne Farb-Emoji.
-3. **Platzhalter `[Codeblock n]` → Code-Viewer (Klick):** Hotspot-Stil, `SCN_HOTSPOTCLICK` in [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) → `codeBlocksViewerOpenAtIndex()`. Verworfene Ansätze: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md#3a--klick-auf-codeblock-n). Export/raw unverändert.
+2. **Midi-Markdown (MorphOS)** — **umgesetzt:** `chatOutputScintillaBuildMidiMarkdownDisplay` — Marker werden **nicht** angezeigt (wie MUI), nur **Assistant**, `**` / `*` / `__`, `#`-Überschriften ohne `#`-Prefix; `[Codeblock …]` unverändert. **Emoji→Text** nur bei aktivem Menü *Markdown formatting* (Anzeige; `raw_utf8`/Export unverändert) — TTEngine/DejaVu ohne Farb-Emoji.
+3. **Platzhalter `[Codeblock n]` → Code-Viewer** — **umgesetzt:** Hotspot-Stil; Öffnen bei **`SCN_HOTSPOTRELEASECLICK`** (Maus-Up), `SCN_HOTSPOTCLICK` nur für Auswahl abbrechen; `codeBlocksViewerOpenAtIndexWithToken()` + Epoch beim Chat-Wechsel. Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md#3a--klick-auf-codeblock-n). Export/raw unverändert.
 4. **Tabellen** (optional): eigener Block wie Code, **nach** Punkten 2–3 — nicht Spaltenausrichtung im Fließtext.
 
 ## Export-Format (Diagnose)

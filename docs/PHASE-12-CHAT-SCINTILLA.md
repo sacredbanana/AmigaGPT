@@ -15,8 +15,8 @@ Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8T
 
 | Datei | Rolle |
 |-------|--------|
-| [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) | Init, `SetUtf8Text`, Font; **3a:** `SCIA_Notify` → `SCN_HOTSPOTCLICK` → `codeBlocksViewerOpenAtIndex()` |
-| [CodeBlocksViewer.c](../src/CodeBlocksViewer.c) | `codeBlocksViewerOpenAtIndex(ULONG)` |
+| [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) | Init, `SetUtf8Text`, Font; **3a:** `SCIA_Notify` → `SCN_HOTSPOTRELEASECLICK` → deferred `codeBlocksViewerOpenAtIndexWithToken()`; `SCN_HOTSPOTCLICK` + `SCI_CANCEL` nur gegen hängende Auswahl |
+| [CodeBlocksViewer.c](../src/CodeBlocksViewer.c) | `codeBlocksViewerOpenAtIndex` / `OpenAtIndexWithToken`, `Dismiss`, Menü `ScheduleOpenWindow` |
 | [MainWindow.c](../src/MainWindow.c) | Layout, `displayConversation`, Stream, `sendChatMessage`, Clear |
 | [CodeBlocksScintilla.c](../src/CodeBlocksScintilla.c) | `codeBlocksScintillaCommand` (SCI_*) |
 
@@ -37,6 +37,8 @@ Hilfsfunktionen (nur MorphOS): `chatOutputUpdateFromBuffer()`, `clearChatOutputD
 - Phase **13** (Worker / UI-Batching)
 
 ## MorphOS-Testplan
+
+**Abnahme:** Kurztest MorphOS 2026-05 (Hotspot, Chat-Wechsel, Beenden) — vollständige Liste optional bei größeren Änderungen.
 
 1. Build + `package-morphos-cross.sh` → Z:
 2. Emoji Assistant: Markdown aus, „Antworte nur mit: 😀“ → kein `??`
