@@ -11,6 +11,9 @@
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
+#include <libraries/openurl.h>
+#include <proto/exec.h>
+#include <proto/openurl.h>
 #include "ChatOutputScintilla.h"
 #include "CodeBlocksScintilla.h"
 #include "CodeBlocksViewer.h"
@@ -43,6 +46,21 @@ static BOOL chatOutputSciMouseUpEHInstalled;
 static ULONG chatOutputSciHotspotPendingIndex;
 static ULONG chatOutputSciHotspotOpenIndex;
 static ULONG chatOutputSciHotspotOpenToken;
+static BOOL chatOutputSciHotspotUrlArmed;
+
+#define CHAT_OUTPUT_URL_MAX 2048
+#define CHAT_OUTPUT_MD_LINK_SPANS_MAX 128
+
+typedef struct {
+    ULONG start;
+    ULONG end;
+    char url[CHAT_OUTPUT_URL_MAX];
+} ChatOutputMdLinkSpan;
+
+static ULONG chatOutputMdLinkSpanCount;
+static ChatOutputMdLinkSpan chatOutputMdLinkSpans[CHAT_OUTPUT_MD_LINK_SPANS_MAX];
+
+void chatOutputScintillaForgetMarkdownLinkSpans(void) { chatOutputMdLinkSpanCount = 0; }
 
 static void chatOutputScintillaReleaseChatMouse(Object *sci) {
     if (sci == NULL) {
@@ -88,6 +106,8 @@ MakeHook(ChatOutputSciOpenCodeblockDeferredHook, ChatOutputSciOpenCodeblockDefer
 #define CHAT_OUTPUT_STYLE_MD_ALL 8
 /** Hotspot style for `[Codeblock n]` — open on SCN_HOTSPOTRELEASECLICK (after mouse-up). */
 #define CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT 9
+/** Hotspot style for bare `http://` / `https://` URLs — OpenURL on release. */
+#define CHAT_OUTPUT_STYLE_URL_HOTSPOT 10
 
 #define CHAT_MD_MAX_STACK 32
 #define CHAT_OUTPUT_CODEBLOCK_LINK_FORE 0x00CC6600 /* BBGGRR link blue */
@@ -235,6 +255,16 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
                                CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT, 1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETHOTSPOT,
                                CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT, 1);
+
+    codeBlocksScintillaCommand(sci, SCI_STYLESETFORE, CHAT_OUTPUT_STYLE_URL_HOTSPOT,
+                               CHAT_OUTPUT_CODEBLOCK_LINK_FORE);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_URL_HOTSPOT,
+                               (sptr_t)fontFace);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_URL_HOTSPOT,
+                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE, CHAT_OUTPUT_STYLE_URL_HOTSPOT,
+                               1);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETHOTSPOT, CHAT_OUTPUT_STYLE_URL_HOTSPOT, 1);
 }
 
 static void chatMdInitStack(ChatMdStyleStack *s) { s->top = -1; }
@@ -268,6 +298,220 @@ static BOOL chatMdIsTop(const ChatMdStyleStack *s, ChatMdStyleType style) {
 static BOOL chatMdIsAsciiAlnum(char ch) {
     return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
            (ch >= '0' && ch <= '9');
+}
+
+static BOOL chatMdIsUrlBodyByte(unsigned char c) {
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+        return TRUE;
+    }
+    switch (c) {
+    case '-':
+    case '_':
+    case '.':
+    case '~':
+    case ':':
+    case '/':
+    case '?':
+    case '#':
+    case '[':
+    case ']':
+    case '@':
+    case '!':
+    case '$':
+    case '&':
+    case '\'':
+    case '(':
+    case ')':
+    case '*':
+    case '+':
+    case ',':
+    case ';':
+    case '=':
+    case '%':
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+static BOOL chatMdUrlSchemeOkPrefix(const char *t, ULONG pos) {
+    if (pos == 0) {
+        return TRUE;
+    }
+    {
+        unsigned char p = (unsigned char)t[pos - 1];
+
+        if (p <= ' ') {
+            return TRUE;
+        }
+        if (strchr("([{\"'<", (char)p) != NULL) {
+            return TRUE;
+        }
+        if (chatMdIsAsciiAlnum((char)p) || p == '_' || p == '.') {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/**
+ * If `t[pos…]` starts http(s):// with a sane prefix, set *outEnd to byte after the URL
+ * and return scheme length (7 or 8); else 0 and *outEnd == pos.
+ */
+static ULONG chatMdUrlSchemeSpanAt(const char *t, ULONG len, ULONG pos, ULONG *outEnd) {
+    ULONG scheme = 0;
+
+    *outEnd = pos;
+    if (pos + 8 <= len && strncmp(t + pos, "https://", 8) == 0) {
+        scheme = 8;
+    } else if (pos + 7 <= len && strncmp(t + pos, "http://", 7) == 0) {
+        scheme = 7;
+    } else {
+        return 0;
+    }
+    if (!chatMdUrlSchemeOkPrefix(t, pos)) {
+        return 0;
+    }
+    *outEnd = pos + scheme;
+    while (*outEnd < len && chatMdIsUrlBodyByte((unsigned char)t[*outEnd])) {
+        (*outEnd)++;
+    }
+    while (*outEnd > pos + scheme) {
+        unsigned char c = (unsigned char)t[*outEnd - 1];
+
+        if (strchr(".,;:!?)]}", (char)c) != NULL) {
+            (*outEnd)--;
+        } else {
+            break;
+        }
+    }
+    if (*outEnd <= pos + scheme) {
+        *outEnd = pos + scheme;
+    }
+    return scheme;
+}
+
+static void chatOutputMdLinkSpansPush(ULONG docStart, ULONG docEndExclusive, const char *url,
+                                      ULONG urlLen) {
+    if (chatOutputMdLinkSpanCount >= CHAT_OUTPUT_MD_LINK_SPANS_MAX || url == NULL ||
+        urlLen >= CHAT_OUTPUT_URL_MAX) {
+        return;
+    }
+    memcpy(chatOutputMdLinkSpans[chatOutputMdLinkSpanCount].url, url, urlLen);
+    chatOutputMdLinkSpans[chatOutputMdLinkSpanCount].url[urlLen] = '\0';
+    chatOutputMdLinkSpans[chatOutputMdLinkSpanCount].start = docStart;
+    chatOutputMdLinkSpans[chatOutputMdLinkSpanCount].end = docEndExclusive;
+    chatOutputMdLinkSpanCount++;
+}
+
+static void chatMdEmit(ULONG *outPos, char *outUtf8, UBYTE *outStyles, char ch, UBYTE style);
+
+static void chatMdEmitMarkdownLinkDisplay(const char *inUtf8, ULONG labelStart, ULONG labelLen,
+                                         const char *urlBytes, ULONG urlLen, ULONG *outPos,
+                                         char *outUtf8, UBYTE *outStyles) {
+    ULONG ds = *outPos;
+    ULONG k;
+
+    if (labelLen > 0) {
+        for (k = 0; k < labelLen; k++) {
+            chatMdEmit(outPos, outUtf8, outStyles, inUtf8[labelStart + k],
+                       CHAT_OUTPUT_STYLE_URL_HOTSPOT);
+        }
+        chatOutputMdLinkSpansPush(ds, *outPos, urlBytes, urlLen);
+    } else {
+        for (k = 0; k < urlLen; k++) {
+            chatMdEmit(outPos, outUtf8, outStyles, urlBytes[k], CHAT_OUTPUT_STYLE_URL_HOTSPOT);
+        }
+        chatOutputMdLinkSpansPush(ds, *outPos, urlBytes, urlLen);
+    }
+}
+
+/**
+ * Parse `[label](http…url…)` with url ending at first `)`. `bracketPos` must index `[`.
+ * On success *outAfter is the index after the closing `)` of the URL.
+ */
+static BOOL chatMdParseInnerMarkdownHttpLink(const char *t, ULONG len, ULONG bracketPos,
+                                            ULONG *outAfter, ULONG *outLabelStart,
+                                            ULONG *outLabelLen, ULONG *outUrlStart,
+                                            ULONG *outUrlLen) {
+    ULONG labelStart;
+    ULONG closeBracket;
+    ULONG urlStart;
+    ULONG p;
+
+    if (bracketPos >= len || t[bracketPos] != '[') {
+        return FALSE;
+    }
+    labelStart = bracketPos + 1;
+    closeBracket = labelStart;
+    while (closeBracket < len && t[closeBracket] != ']') {
+        if (t[closeBracket] == '\n' || t[closeBracket] == '\r') {
+            return FALSE;
+        }
+        closeBracket++;
+    }
+    if (closeBracket >= len || t[closeBracket] != ']' || closeBracket + 1 >= len ||
+        t[closeBracket + 1] != '(') {
+        return FALSE;
+    }
+    urlStart = closeBracket + 2;
+    if (urlStart + 7 > len) {
+        return FALSE;
+    }
+    if (strncmp(t + urlStart, "https://", 8) != 0 && strncmp(t + urlStart, "http://", 7) != 0) {
+        return FALSE;
+    }
+    p = urlStart;
+    while (p < len) {
+        if (t[p] == ')') {
+            *outAfter = p + 1;
+            *outLabelStart = labelStart;
+            *outLabelLen = closeBracket - labelStart;
+            *outUrlStart = urlStart;
+            *outUrlLen = p - urlStart;
+            return TRUE;
+        }
+        if (!chatMdIsUrlBodyByte((unsigned char)t[p])) {
+            return FALSE;
+        }
+        p++;
+    }
+    return FALSE;
+}
+
+static ULONG chatMdTryConsumeMarkdownHttpLinks(const char *inUtf8, ULONG len, ULONG i,
+                                              ULONG *outPos, char *outUtf8, UBYTE *outStyles,
+                                              UBYTE parenStyle) {
+    ULONG after;
+    ULONG ls;
+    ULONG ll;
+    ULONG urlStart;
+    ULONG urlLen;
+
+    if (i + 2 < len && inUtf8[i] == '(' && inUtf8[i + 1] == '[') {
+        if (!chatMdParseInnerMarkdownHttpLink(inUtf8, len, i + 1, &after, &ls, &ll, &urlStart,
+                                              &urlLen)) {
+            return 0;
+        }
+        if (after >= len || inUtf8[after] != ')') {
+            return 0;
+        }
+        chatMdEmit(outPos, outUtf8, outStyles, '(', parenStyle);
+        chatMdEmitMarkdownLinkDisplay(inUtf8, ls, ll, inUtf8 + urlStart, urlLen, outPos, outUtf8,
+                                      outStyles);
+        chatMdEmit(outPos, outUtf8, outStyles, ')', parenStyle);
+        return after + 1 - i;
+    }
+    if (inUtf8[i] == '[') {
+        if (!chatMdParseInnerMarkdownHttpLink(inUtf8, len, i, &after, &ls, &ll, &urlStart,
+                                              &urlLen)) {
+            return 0;
+        }
+        chatMdEmitMarkdownLinkDisplay(inUtf8, ls, ll, inUtf8 + urlStart, urlLen, outPos, outUtf8,
+                                      outStyles);
+        return after - i;
+    }
+    return 0;
 }
 
 /* Single * is not markdown inside words (e.g. Spieler*innen). */
@@ -633,6 +877,7 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
     ChatMdStyleStack styleStack;
     ULONG i;
     ULONG outPos = 0;
+    const BOOL stripMidi = config.markdownFormatting;
 
     if (inUtf8 == NULL || outUtf8 == NULL || outStyles == NULL || inLen == 0) {
         if (outUtf8 != NULL) {
@@ -641,18 +886,25 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
         return 0;
     }
 
+    chatOutputScintillaForgetMarkdownLinkSpans();
     chatMdInitStack(&styleStack);
 
     for (i = 0; i < inLen; i++) {
         ULONG lineStart;
         ULONG contentStart;
         ULONG lineEnd;
+        ULONG linkEat;
         UBYTE role =
             (inRoleStyles != NULL) ? inRoleStyles[i] : CHAT_OUTPUT_STYLE_ASSISTANT;
 
         if (role == CHAT_OUTPUT_STYLE_USER) {
-            chatMdEmit(&outPos, outUtf8, outStyles, inUtf8[i],
-                       CHAT_OUTPUT_STYLE_USER);
+            linkEat = chatMdTryConsumeMarkdownHttpLinks(inUtf8, inLen, i, &outPos, outUtf8,
+                                                       outStyles, CHAT_OUTPUT_STYLE_USER);
+            if (linkEat > 0) {
+                i += linkEat - 1;
+                continue;
+            }
+            chatMdEmit(&outPos, outUtf8, outStyles, inUtf8[i], CHAT_OUTPUT_STYLE_USER);
             continue;
         }
         if (chatMdInSkippedRegion(inUtf8, inLen, i)) {
@@ -666,70 +918,96 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
             continue;
         }
 
-        lineStart = i;
-        while (lineStart > 0 && inUtf8[lineStart - 1] != '\n') {
-            lineStart--;
-        }
-        contentStart = chatMdHeadingContentStart(inUtf8, inLen, lineStart);
-        if (contentStart > 0) {
-            lineEnd = lineStart;
-            while (lineEnd < inLen && inUtf8[lineEnd] != '\n') {
-                lineEnd++;
+        if (stripMidi) {
+            lineStart = i;
+            while (lineStart > 0 && inUtf8[lineStart - 1] != '\n') {
+                lineStart--;
             }
-            if (i < contentStart) {
-                continue;
-            }
-            if (i < lineEnd) {
-                {
-                    ULONG emojiLen = chatMdEmitEmojiSubstitute(
-                        inUtf8, i, inLen, &outPos, outUtf8, outStyles,
+            contentStart = chatMdHeadingContentStart(inUtf8, inLen, lineStart);
+            if (contentStart > 0) {
+                lineEnd = lineStart;
+                while (lineEnd < inLen && inUtf8[lineEnd] != '\n') {
+                    lineEnd++;
+                }
+                if (i < contentStart) {
+                    continue;
+                }
+                if (i < lineEnd) {
+                    linkEat = chatMdTryConsumeMarkdownHttpLinks(
+                        inUtf8, inLen, i, &outPos, outUtf8, outStyles,
                         CHAT_OUTPUT_STYLE_MD_BOLD);
-                    if (emojiLen > 0) {
-                        i += emojiLen - 1;
+                    if (linkEat > 0) {
+                        i += linkEat - 1;
                         continue;
                     }
-                }
-                if (inUtf8[i] == '\\' && i + 1 < inLen) {
-                    i++;
+                    {
+                        ULONG emojiLen = chatMdEmitEmojiSubstitute(
+                            inUtf8, i, inLen, &outPos, outUtf8, outStyles,
+                            CHAT_OUTPUT_STYLE_MD_BOLD);
+                        if (emojiLen > 0) {
+                            i += emojiLen - 1;
+                            continue;
+                        }
+                    }
+                    if (inUtf8[i] == '\\' && i + 1 < inLen) {
+                        i++;
+                        chatMdEmit(&outPos, outUtf8, outStyles, inUtf8[i],
+                                   CHAT_OUTPUT_STYLE_MD_BOLD);
+                        continue;
+                    }
+                    if (chatMdHandleMarker(&styleStack, inUtf8, &i, inLen, &outPos,
+                                           outUtf8, outStyles,
+                                           CHAT_OUTPUT_STYLE_MD_BOLD)) {
+                        continue;
+                    }
                     chatMdEmit(&outPos, outUtf8, outStyles, inUtf8[i],
                                CHAT_OUTPUT_STYLE_MD_BOLD);
                     continue;
                 }
-                if (chatMdHandleMarker(&styleStack, inUtf8, &i, inLen, &outPos,
-                                       outUtf8, outStyles,
-                                       CHAT_OUTPUT_STYLE_MD_BOLD)) {
+            }
+
+            linkEat = chatMdTryConsumeMarkdownHttpLinks(
+                inUtf8, inLen, i, &outPos, outUtf8, outStyles,
+                chatMdStyleFromStack(&styleStack));
+            if (linkEat > 0) {
+                i += linkEat - 1;
+                continue;
+            }
+
+            {
+                ULONG emojiLen = chatMdEmitEmojiSubstitute(
+                    inUtf8, i, inLen, &outPos, outUtf8, outStyles,
+                    chatMdStyleFromStack(&styleStack));
+                if (emojiLen > 0) {
+                    i += emojiLen - 1;
                     continue;
                 }
+            }
+
+            if (inUtf8[i] == '\\' && i + 1 < inLen) {
+                i++;
                 chatMdEmit(&outPos, outUtf8, outStyles, inUtf8[i],
-                           CHAT_OUTPUT_STYLE_MD_BOLD);
+                           chatMdStyleFromStack(&styleStack));
                 continue;
             }
-        }
 
-        {
-            ULONG emojiLen = chatMdEmitEmojiSubstitute(
-                inUtf8, i, inLen, &outPos, outUtf8, outStyles,
-                chatMdStyleFromStack(&styleStack));
-            if (emojiLen > 0) {
-                i += emojiLen - 1;
+            if (chatMdHandleMarker(&styleStack, inUtf8, &i, inLen, &outPos, outUtf8,
+                                   outStyles, chatMdStyleFromStack(&styleStack))) {
                 continue;
             }
-        }
 
-        if (inUtf8[i] == '\\' && i + 1 < inLen) {
-            i++;
             chatMdEmit(&outPos, outUtf8, outStyles, inUtf8[i],
                        chatMdStyleFromStack(&styleStack));
             continue;
         }
 
-        if (chatMdHandleMarker(&styleStack, inUtf8, &i, inLen, &outPos, outUtf8,
-                               outStyles, chatMdStyleFromStack(&styleStack))) {
+        linkEat = chatMdTryConsumeMarkdownHttpLinks(inUtf8, inLen, i, &outPos, outUtf8,
+                                                   outStyles, CHAT_OUTPUT_STYLE_ASSISTANT);
+        if (linkEat > 0) {
+            i += linkEat - 1;
             continue;
         }
-
-        chatMdEmit(&outPos, outUtf8, outStyles, inUtf8[i],
-                   chatMdStyleFromStack(&styleStack));
+        chatMdEmit(&outPos, outUtf8, outStyles, inUtf8[i], CHAT_OUTPUT_STYLE_ASSISTANT);
     }
 
     outUtf8[outPos] = '\0';
@@ -761,6 +1039,36 @@ static void chatOutputScintillaApplyCodeblockHotspotStyles(const char *utf8,
             break;
         }
         pos = lineEnd + 1;
+    }
+}
+
+/** Mark bare http(s):// spans (ASCII path) with URL hotspot; skips codeblock lines. */
+static void chatOutputScintillaApplyUrlHotspotStyles(const char *utf8, UBYTE *styleBytes,
+                                                     ULONG byteLen) {
+    ULONG pos = 0;
+
+    if (utf8 == NULL || styleBytes == NULL || byteLen == 0) {
+        return;
+    }
+    while (pos < byteLen) {
+        ULONG end = pos;
+        ULONG schemeLen;
+
+        if (styleBytes[pos] == CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT) {
+            pos++;
+            continue;
+        }
+        schemeLen = chatMdUrlSchemeSpanAt(utf8, byteLen, pos, &end);
+        if (schemeLen == 0) {
+            pos++;
+            continue;
+        }
+        if (end > pos) {
+            memset(styleBytes + pos, CHAT_OUTPUT_STYLE_URL_HOTSPOT, end - pos);
+            pos = end;
+        } else {
+            pos++;
+        }
     }
 }
 
@@ -873,6 +1181,123 @@ static ULONG chatOutputScintillaCodeblockIndexAtPos(Object *sci, Sci_Position po
     return idx;
 }
 
+static BOOL chatOutputScintillaUrlSpanContaining(const char *line, ULONG lineLen,
+                                                 ULONG relClick, ULONG *spanStart,
+                                                 ULONG *spanEnd) {
+    ULONG pos = 0;
+
+    while (pos < lineLen) {
+        ULONG end;
+        ULONG schemeLen = chatMdUrlSchemeSpanAt(line, lineLen, pos, &end);
+
+        if (schemeLen > 0) {
+            if (relClick >= pos && relClick < end) {
+                *spanStart = pos;
+                *spanEnd = end;
+                return TRUE;
+            }
+            pos = end;
+        } else {
+            pos++;
+        }
+    }
+    return FALSE;
+}
+
+static BOOL chatOutputScintillaMdLinkUrlAtDocPos(Sci_Position pos, char *urlBuf,
+                                                 ULONG urlBufLen) {
+    ULONG p = (ULONG)pos;
+    ULONG n;
+    ULONG len;
+
+    if (urlBuf == NULL || urlBufLen == 0) {
+        return FALSE;
+    }
+    for (n = 0; n < chatOutputMdLinkSpanCount; n++) {
+        if (p >= chatOutputMdLinkSpans[n].start && p < chatOutputMdLinkSpans[n].end) {
+            len = (ULONG)strlen(chatOutputMdLinkSpans[n].url);
+            if (len >= urlBufLen) {
+                len = urlBufLen - 1;
+            }
+            memcpy(urlBuf, chatOutputMdLinkSpans[n].url, len);
+            urlBuf[len] = '\0';
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void chatOutputScintillaOpenUrlAtSciPos(Object *sci, Sci_Position pos) {
+    Sci_Position line;
+    Sci_Position lineStart;
+    Sci_Position lineEnd;
+    ULONG lineLen;
+    ULONG spanStart;
+    ULONG spanEnd;
+    ULONG urlLen;
+    char *buf = NULL;
+    char *urlBuf = NULL;
+    char mdUrl[CHAT_OUTPUT_URL_MAX];
+
+    if (sci == NULL || pos < 0) {
+        return;
+    }
+    if (chatOutputScintillaMdLinkUrlAtDocPos(pos, mdUrl, (ULONG)sizeof mdUrl)) {
+        {
+            struct Library *OpenURLBase = OpenLibrary((CONST_STRPTR)OPENURLNAME, 0);
+
+            if (OpenURLBase != NULL) {
+                (void)URL_OpenA((STRPTR)mdUrl, NULL);
+                CloseLibrary(OpenURLBase);
+            }
+        }
+        chatOutputScintillaReleaseChatMouse(sci);
+        return;
+    }
+    line = codeBlocksScintillaCommand(sci, SCI_LINEFROMPOSITION, pos, 0);
+    lineStart = codeBlocksScintillaCommand(sci, SCI_POSITIONFROMLINE, line, 0);
+    lineEnd = codeBlocksScintillaCommand(sci, SCI_GETLINEENDPOSITION, line, 0);
+    if (lineEnd <= lineStart) {
+        return;
+    }
+    lineLen = (ULONG)(lineEnd - lineStart);
+    buf = (char *)AllocVec(lineLen + 2, MEMF_ANY);
+    if (buf == NULL) {
+        return;
+    }
+    buf[0] = '\0';
+    codeBlocksScintillaCommand(sci, SCI_GETLINE, line, (sptr_t)buf);
+    if (!chatOutputScintillaUrlSpanContaining(buf, lineLen, (ULONG)(pos - lineStart),
+                                              &spanStart, &spanEnd)) {
+        FreeVec(buf);
+        return;
+    }
+    urlLen = spanEnd - spanStart;
+    if (urlLen == 0 || urlLen >= CHAT_OUTPUT_URL_MAX) {
+        FreeVec(buf);
+        return;
+    }
+    urlBuf = (char *)AllocVec(urlLen + 1, MEMF_ANY);
+    if (urlBuf == NULL) {
+        FreeVec(buf);
+        return;
+    }
+    memcpy(urlBuf, buf + spanStart, urlLen);
+    urlBuf[urlLen] = '\0';
+    FreeVec(buf);
+
+    {
+        struct Library *OpenURLBase = OpenLibrary((CONST_STRPTR)OPENURLNAME, 0);
+
+        if (OpenURLBase != NULL) {
+            (void)URL_OpenA((STRPTR)urlBuf, NULL);
+            CloseLibrary(OpenURLBase);
+        }
+    }
+    FreeVec(urlBuf);
+    chatOutputScintillaReleaseChatMouse(sci);
+}
+
 static void chatOutputScintillaScheduleCodeblockOpen(ULONG blockIndex) {
     if (blockIndex == 0) {
         return;
@@ -890,6 +1315,7 @@ static void chatOutputScintillaScheduleCodeblockOpen(ULONG blockIndex) {
 static void chatOutputScintillaOnSciNotify(struct SCNotification *scn) {
     ULONG blockIndex;
     Object *sci;
+    int styleAt;
 
     if (scn == NULL || chatOutputSciNotifySource == NULL) {
         return;
@@ -897,6 +1323,15 @@ static void chatOutputScintillaOnSciNotify(struct SCNotification *scn) {
     sci = chatOutputSciNotifySource;
 
     if (scn->nmhdr.code == SCN_HOTSPOTCLICK) {
+        styleAt = (int)codeBlocksScintillaCommand(sci, SCI_GETSTYLEAT, scn->position, 0);
+        if (styleAt == CHAT_OUTPUT_STYLE_URL_HOTSPOT) {
+            chatOutputSciHotspotUrlArmed = TRUE;
+            chatOutputSciHotspotPendingIndex = 0;
+            codeBlocksScintillaCommand(sci, SCI_SETEMPTYSELECTION, scn->position, 0);
+            codeBlocksScintillaCommand(sci, SCI_CANCEL, 0, 0);
+            return;
+        }
+        chatOutputSciHotspotUrlArmed = FALSE;
         blockIndex = chatOutputScintillaCodeblockIndexAtPos(sci, scn->position);
         if (blockIndex > 0) {
             chatOutputSciHotspotPendingIndex = blockIndex;
@@ -907,6 +1342,20 @@ static void chatOutputScintillaOnSciNotify(struct SCNotification *scn) {
     }
 
     if (scn->nmhdr.code == SCN_HOTSPOTRELEASECLICK) {
+        BOOL openedUrl = FALSE;
+
+        if (chatOutputSciHotspotUrlArmed) {
+            chatOutputSciHotspotUrlArmed = FALSE;
+            styleAt = (int)codeBlocksScintillaCommand(sci, SCI_GETSTYLEAT, scn->position, 0);
+            if (styleAt == CHAT_OUTPUT_STYLE_URL_HOTSPOT) {
+                chatOutputScintillaOpenUrlAtSciPos(sci, scn->position);
+                chatOutputSciHotspotPendingIndex = 0;
+                openedUrl = TRUE;
+            }
+        }
+        if (openedUrl) {
+            return;
+        }
         blockIndex = chatOutputScintillaCodeblockIndexAtPos(sci, scn->position);
         if (blockIndex == 0) {
             blockIndex = chatOutputSciHotspotPendingIndex;
@@ -924,6 +1373,7 @@ SAVEDS static ULONG ChatOutputSciNotifySink_MouseUpEvent(struct IClass *cl, Obje
         (msg->imsg->Code & IECODE_UP_PREFIX) != 0 && chatOutputSciNotifySource != NULL) {
         chatOutputScintillaReleaseChatMouse(chatOutputSciNotifySource);
         chatOutputSciHotspotPendingIndex = 0;
+        chatOutputSciHotspotUrlArmed = FALSE;
     }
     return DoSuperMethodA(cl, obj, (Msg)msg);
 }
@@ -965,6 +1415,7 @@ void chatOutputScintillaCancelPendingCodeblockOpen(void) {
     chatOutputSciHotspotPendingIndex = 0;
     chatOutputSciHotspotOpenIndex = 0;
     chatOutputSciHotspotOpenToken = 0;
+    chatOutputSciHotspotUrlArmed = FALSE;
 }
 
 void chatOutputScintillaRemoveMouseUpGuard(void) {
@@ -980,6 +1431,7 @@ void chatOutputScintillaRemoveMouseUpGuard(void) {
     chatOutputSciHotspotPendingIndex = 0;
     chatOutputSciHotspotOpenIndex = 0;
     chatOutputSciHotspotOpenToken = 0;
+    chatOutputSciHotspotUrlArmed = FALSE;
 }
 
 void chatOutputScintillaInstallMouseUpGuard(void) {
@@ -1103,6 +1555,7 @@ void chatOutputScintillaSetUtf8TextWithRoleStyles(Object *sci, const char *utf8,
         if (styleBuf != NULL) {
             memcpy(styleBuf, roleStyles, roleStyleLen);
             chatOutputScintillaApplyCodeblockHotspotStyles(utf8, styleBuf, roleStyleLen);
+            chatOutputScintillaApplyUrlHotspotStyles(utf8, styleBuf, roleStyleLen);
             chatOutputScintillaApplyRoleStyleBytes(sci, styleBuf, roleStyleLen);
             FreeVec(styleBuf);
         } else {
@@ -1114,6 +1567,7 @@ void chatOutputScintillaSetUtf8TextWithRoleStyles(Object *sci, const char *utf8,
         if (styleBuf != NULL) {
             memset(styleBuf, CHAT_OUTPUT_STYLE_ASSISTANT, textLen);
             chatOutputScintillaApplyCodeblockHotspotStyles(utf8, styleBuf, textLen);
+            chatOutputScintillaApplyUrlHotspotStyles(utf8, styleBuf, textLen);
             chatOutputScintillaApplyRoleStyleBytes(sci, styleBuf, textLen);
             FreeVec(styleBuf);
         }

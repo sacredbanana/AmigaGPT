@@ -15,7 +15,7 @@ Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8T
 
 | Datei | Rolle |
 |-------|--------|
-| [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) | Init, `SetUtf8Text`, Font; **3a:** `SCIA_Notify` → `SCN_HOTSPOTRELEASECLICK` → deferred `codeBlocksViewerOpenAtIndexWithToken()`; `SCN_HOTSPOTCLICK` + `SCI_CANCEL` nur gegen hängende Auswahl |
+| [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) | Init, `SetUtf8Text`, Font; **3a:** Codeblock-Hotspot → deferred `codeBlocksViewerOpenAtIndexWithToken()`; **3b:** URL-Hotspot → `URL_OpenA`; gemeinsam: `SCIA_Notify`, `SCN_HOTSPOTRELEASECLICK`, `SCI_GETSTYLEAT`, `SCN_HOTSPOTCLICK` + `SCI_CANCEL` |
 | [CodeBlocksViewer.c](../src/CodeBlocksViewer.c) | `codeBlocksViewerOpenAtIndex` / `OpenAtIndexWithToken`, `Dismiss`, Menü `ScheduleOpenWindow` |
 | [MainWindow.c](../src/MainWindow.c) | Layout, `displayConversation`, Stream, `sendChatMessage`, Clear |
 | [CodeBlocksScintilla.c](../src/CodeBlocksScintilla.c) | `codeBlocksScintillaCommand` (SCI_*) |
@@ -51,6 +51,8 @@ Hilfsfunktionen (nur MorphOS): `chatOutputUpdateFromBuffer()`, `clearChatOutputD
 9. **Markdown formatting** an: `**fett**`, `*kursiv*`, `__unterstrichen__`, `# Überschrift` nur bei Assistant; Emoji Assistant z. B. 🌍→`[Welt]`, 👍→`(+1)` (nur Anzeige)
 10. **Markdown formatting** aus: Emoji unverändert (oft □)
 11. Alignment umschalten → kein Absturz (No-op)
+12. **[Codeblock n]** (3a): blauer Link → Code-Viewer, Block `n` aktiv
+13. **Bare URL + Markdown-Link** (3b): `https://…` klickbar; `[Siehe hier](https://…)` zeigt nur Label, Klick öffnet URL; `([Label](https://…))` mit äußeren Klammern sichtbar
 
 ## Phase 12.1 / Midi-Markdown
 
@@ -58,6 +60,7 @@ Siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) — kein `SCLEX_MARKD
 - Scintilla-Styling für Alignment
 - Dediziertes Chat-Font-Menü
 - Stream nur Append-Delta (Vorbereitung Phase 13)
+- Bare `http(s)://`-Links: **3b** — Hotspot + `openurl.library` (ASCII-Span); [Roadmap](MIDI-MARKDOWN-ROADMAP.md), Abschnitt [3b](#3b-url-hotspots-openurl) unten
 
 ## 3a — Klick auf `[Codeblock n]`
 
@@ -90,3 +93,27 @@ Siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) — kein `SCLEX_MARKD
 ### MorphOS-Test (3a)
 
 12. Ein Klick auf `[Codeblock n]` (blauer Link) in der Chat-Ausgabe → Code-Blocks-Fenster, Block `n` aktiv (Menü „Codeblöcke“ weiterhin ok).
+
+<a id="3b-url-hotspots-openurl"></a>
+
+## 3b — URL-Hotspots (OpenURL)
+
+**Ziel:** **Bare** `http://` / `https://` sowie Markdown **`[Beschriftung](http…)`** und optional umschlossen **`([Beschriftung](http…))`** in der Chat-Ausgabe (User und Assistant): sichtbarer Text als Link-Hotspot, **Maus-Up** → `openurl.library`. **Export/raw unverändert** (`raw_utf8` in den Nodes unverändert).
+
+**Umsetzung (MorphOS):** In `chatOutputScintillaBuildMidiMarkdownDisplay()` werden `http`/`https`-Links in Klammer-Syntax erkannt; in der Anzeige erscheint nur die **Beschriftung** (bei leerem `[]` die URL selbst). Die Ziel-URL liegt in einem kleinen **Span-Cache** (`chatOutputMdLinkSpans`), damit `chatOutputScintillaOpenUrlAtSciPos()` auch ohne sichtbare URL im Text öffnen kann. Zusätzlich markiert `chatOutputScintillaApplyUrlHotspotStyles()` weiterhin **bare** URLs im fertigen UTF-8. Scintilla-Stil **`CHAT_OUTPUT_STYLE_URL_HOTSPOT`**, gleicher Notify-Pfad wie **3a** (`SCN_HOTSPOT*` + `SCI_CANCEL`).
+
+**Menü *Markdown formatting*:** Aus = keine `**`/`#`/Emoji-Ersetzung, aber **Link-Syntax** und bare URLs werden weiter aufgelöst (`config.markdownFormatting` steuert nur Midi-Markdown-Stripping).
+
+### Abgrenzung
+
+- Nur Ziele mit Schema **`http://`** oder **`https://`** (kein `mailto:`, keine relativen Pfade).
+- URL in Klammern endet am **ersten** `)` (keine `)` in der URL ohne Encoding — typische GPT-Links ok).
+- Ohne funktionierendes **OpenURL** / Browser passiert beim Klick nichts (kein Fehlerdialog in AmigaGPT vorgesehen).
+
+### MorphOS-Test (3b)
+
+Siehe Testplan **Punkt 13** oben. Zusätzlich: Zeile nur `[Codeblock n]` darf nach wie vor **3a** sein (URL-Scanner überschreibt keine Codeblock-Zeilen).
+
+### Constraint (wie 3a)
+
+- Kein zweites Scintilla außerhalb des `WindowObject`-Macros; nur **Hotspot + bestehendes** `SCIA_Notify`-Sink-Objekt.

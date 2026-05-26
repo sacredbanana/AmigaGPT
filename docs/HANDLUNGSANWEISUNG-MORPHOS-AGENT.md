@@ -79,7 +79,7 @@ Parent-Fenster: `get(mainWindowObject, MUIA_Window, &w)` oder `codeBlocksViewerS
 | Anzeige | Read-only **Scintilla** + TTEngine (`SC_CP_UTF8`), nicht NFloattext/Codesets |
 | User/Assistant | `SCLEX_NULL` + Style-Bytes (User = fett/blau/grau) |
 | **`SCLEX_MARKDOWN` im Chat** | **Nicht** — Lexer wirkungslos; Menü „Markdown formatting“ schaltet **Midi-Markdown** (`chatOutputScintillaBuildMidiMarkdownDisplay`) |
-| Stream | Roh-UTF-8 während Stream; kein Markdown-Parse pro Chunk (R3) |
+| Stream | Roh-UTF-8 während Stream; kein Markdown-Parse pro Chunk (R3). **MorphOS:** `morphosChatStreamRawScintillaRefresh` — live nur `SetUtf8TextWithRoleStyles` (roh), Midi-Markdown/Links erst nach `finishChatStream` → `displayConversation`. |
 | Code-Fences | Parser in `codefence.c`; Chat zeigt `[Codeblock n]` oder Roh-`raw_utf8` — Diagnose über **Export raw** |
 
 Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md).

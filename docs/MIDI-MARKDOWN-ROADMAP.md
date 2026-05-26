@@ -1,11 +1,12 @@
-# Midi-Markdown & Chat-Export (Roadmap)
+# /home/weimer/development/morphos/AmigaGPT & Chat-Export (Roadmap)
 
 ## Priorität
 
 1. **Export Chat (raw UTF-8)** — **umgesetzt:** Ansicht → *Export chat (raw UTF-8)…* → `conversationNodeGetRaw()` pro Nachricht, inkl. ` ``` `; siehe `ChatExport.c`.
 2. **Midi-Markdown (MorphOS)** — **umgesetzt:** `chatOutputScintillaBuildMidiMarkdownDisplay` — Marker werden **nicht** angezeigt (wie MUI), nur **Assistant**, `**` / `*` / `__`, `#`-Überschriften ohne `#`-Prefix; `[Codeblock …]` unverändert. **Emoji→Text** nur bei aktivem Menü *Markdown formatting* (Anzeige; `raw_utf8`/Export unverändert) — TTEngine/DejaVu ohne Farb-Emoji.
 3. **Platzhalter `[Codeblock n]` → Code-Viewer** — **umgesetzt:** Hotspot-Stil; Öffnen bei **`SCN_HOTSPOTRELEASECLICK`** (Maus-Up), `SCN_HOTSPOTCLICK` nur für Auswahl abbrechen; `codeBlocksViewerOpenAtIndexWithToken()` + Epoch beim Chat-Wechsel. Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md#3a--klick-auf-codeblock-n). Export/raw unverändert.
-4. **Tabellen** (optional): eigener Block wie Code, **nach** Punkten 2–3 — nicht Spaltenausrichtung im Fließtext.
+4. **Bare `http://` / `https://` + Markdown `[label](http…)` / `([label](http…))`** — **umgesetzt:** **3b** in [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md#3b-url-hotspots-openurl): Hotspot-Stil `CHAT_OUTPUT_STYLE_URL_HOTSPOT`; Klick wie **3a** (Release) → **`openurl.library`** (`URL_OpenA`). Anzeige nur **Label** (oder URL bei leerem Label); Ziel-URL in Span-Cache. **Nur** `http`/`https`-Ziele; Markdown `[text](url)` bleibt in `raw_utf8`/Export. Ohne OpenURL/Browser passiert nichts. Link-Auflösung **immer** aktiv (auch wenn *Markdown formatting* aus ist); `**`/Emoji-Stripping nur bei *Markdown formatting* an.
+5. **Tabellen** (optional): eigener Block wie Code, **nach** Punkten 2–4 — nicht Spaltenausrichtung im Fließtext.
 
 ## Export-Format (Diagnose)
 

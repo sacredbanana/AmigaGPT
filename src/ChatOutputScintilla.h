@@ -5,6 +5,9 @@
 
 #include <libraries/mui.h>
 
+/** Clear markdown `[label](http…)` URL span cache (e.g. when display bypasses buildMidiMarkdown). */
+void chatOutputScintillaForgetMarkdownLinkSpans(void);
+
 /** Read-only chat output: UTF-8, TTEngine, font from config.fixedWidthFonts. */
 void chatOutputScintillaInitViewer(Object *sci);
 
@@ -21,7 +24,7 @@ void chatOutputScintillaSetUtf8TextWithRoleStyles(Object *sci, const char *utf8,
 /** Reapply TTEngine font from config.fixedWidthFonts (no full window rebuild). */
 void chatOutputScintillaRefreshFont(Object *sci);
 
-/** SCIA_Notify → hotspot release on `[Codeblock n]` opens code-blocks viewer. */
+/** SCIA_Notify → hotspot release: `[Codeblock n]` opens code viewer; bare http(s):// opens OpenURL. */
 void chatOutputScintillaAttachNotify(Object *sci);
 
 /** Main-window EH: clear stuck mouse-down on chat scrollgroup after button-up. */
@@ -38,9 +41,9 @@ void chatOutputScintillaDetachNotify(void);
 void chatOutputScintillaDisposeNotifyClass(void);
 
 /**
- * Build display text + style bytes: strips ** / * / __ and ATX # prefixes on assistant
- * text; optional emoji→ASCII substitutes (display only); user and "[Codeblock …]"
- * lines unchanged. Only used when config.markdownFormatting is on. Returns length.
+ * Build display text + style bytes: optional Midi-Markdown (when config.markdownFormatting);
+ * always resolves `[label](http…)` / `([label](http…))` for display + URL hotspots.
+ * raw_utf8 / export unchanged. Returns output length.
  */
 ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
                                                   const UBYTE *inRoleStyles,

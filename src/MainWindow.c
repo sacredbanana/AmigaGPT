@@ -40,6 +40,16 @@
 static struct timeval streamUiLastRefresh;
 static BOOL streamUiLastRefreshValid;
 
+#ifdef __MORPHOS__
+/**
+ * TRUE while `sendChatMessage` is streaming assistant deltas into
+ * `chatOutputTextEditorContents`. Chat Scintilla then refreshes **raw UTF-8** only
+ * (no `chatOutputScintillaBuildMidiMarkdownDisplay` / link spans) — Handlungsanweisung
+ * §5 / R3: kein Markdown-Parse pro Chunk. Cleared in `finishChatStream` and on early exits.
+ */
+static BOOL morphosChatStreamRawScintillaRefresh = FALSE;
+#endif
+
 typedef enum { STYLE_BOLD, STYLE_ITALIC, STYLE_UNDERLINE } StyleType;
 
 /** Frees the pointer array only; each json_object must already be json_object_put. */
@@ -1144,10 +1154,19 @@ static void chatOutputUpdateFromBuffer(void) {
 
             chatOutputFillRoleStyles(currentConversation, roleStyles, textLen);
 
-            if (config.markdownFormatting) {
-                displayText = (char *)AllocVec(textLen + 1, MEMF_ANY);
-                displayStyles = (UBYTE *)AllocVec(textLen, MEMF_ANY);
+#ifdef __MORPHOS__
+            if (morphosChatStreamRawScintillaRefresh) {
+                chatOutputScintillaForgetMarkdownLinkSpans();
+                chatOutputScintillaSetUtf8TextWithRoleStyles(
+                    chatOutputTextEditor, chatOutputTextEditorContents, roleStyles,
+                    textLen);
+                FreeVec(roleStyles);
+                return;
             }
+#endif
+
+            displayText = (char *)AllocVec(textLen + 1, MEMF_ANY);
+            displayStyles = (UBYTE *)AllocVec(textLen, MEMF_ANY);
 
             if (displayText != NULL && displayStyles != NULL) {
                 textLen = chatOutputScintillaBuildMidiMarkdownDisplay(
@@ -1164,6 +1183,7 @@ static void chatOutputUpdateFromBuffer(void) {
                 if (displayStyles != NULL) {
                     FreeVec(displayStyles);
                 }
+                chatOutputScintillaForgetMarkdownLinkSpans();
                 chatOutputScintillaSetUtf8TextWithRoleStyles(
                     chatOutputTextEditor, chatOutputTextEditorContents,
                     roleStyles, textLen);
@@ -1918,8 +1938,12 @@ static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
 #endif
 
     ++(*wordNumber);
-    /* Markdown only after stream (displayConversation); avoids full-buffer
-     * convertMarkdownFormattingToMUI on every chunk. */
+    /*
+     * OS3/OS4: markdown only after stream (displayConversation); avoids full-buffer
+     * convertMarkdownFormattingToMUI on every chunk.
+     * MorphOS: live refresh stays raw UTF-8 while morphosChatStreamRawScintillaRefresh
+     * (Handlungsanweisung §5 / R3 — no Midi-Markdown or link-parse per chunk).
+     */
     if (streamUiShouldRefresh(*wordNumber)) {
         streamUiFlushChatDisplay();
         if (config.speechEnabled &&
@@ -2028,6 +2052,9 @@ static CONST_STRPTR chatStreamOutcomeName(ChatStreamOutcome outcome) {
 
 static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
                              ULONG speechUtf8Index, BOOL isNewConversation) {
+#ifdef __MORPHOS__
+    morphosChatStreamRawScintillaRefresh = FALSE;
+#endif
     if (streamLogIsEnabled()) {
         ULONG msgLen =
             receivedMessage != NULL ? (ULONG)strlen(receivedMessage) : 0;
@@ -2235,6 +2262,9 @@ static void sendChatMessage() {
     strbufAppend(chatOutputTextEditorContents,
                  CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "\n");
     streamUiResetRefreshClock();
+#ifdef __MORPHOS__
+    morphosChatStreamRawScintillaRefresh = TRUE;
+#endif
 
     do {
         responses = postChatMessageToOpenAI(
@@ -2263,6 +2293,9 @@ static void sendChatMessage() {
             if (!isAROS) {
                 FreeVec(text);
             }
+#ifdef __MORPHOS__
+            morphosChatStreamRawScintillaRefresh = FALSE;
+#endif
             return;
         }
 
@@ -2326,6 +2359,9 @@ static void sendChatMessage() {
                 if (!isAROS) {
                     FreeVec(text);
                 }
+#ifdef __MORPHOS__
+                morphosChatStreamRawScintillaRefresh = FALSE;
+#endif
                 return;
             }
 

@@ -104,7 +104,7 @@ Optional in der Shell: `GETENV Language`, `GETENV Country` (Locale-Preferences s
 | **6–10** | Code-Viewer v0.1 ✓ — [PHASE-10-DOD.md](PHASE-10-DOD.md) |
 | **R1–R4** | Stream- & Chat-Recovery — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
 | 11 | Code-Viewer Lexer ✓ — [PHASE-11-LEXER.md](PHASE-11-LEXER.md) |
-| **12** | Chat-Ausgabe Scintilla — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md) (MorphOS: Midi-Markdown + 3a Hotspot, Abnahme 2026-05) |
+| **12** | Chat-Ausgabe Scintilla — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md) (MorphOS: Midi-Markdown + **3a** Codeblock-Hotspot + **3b** URL-Hotspot, Abnahme 2026-05) |
 | **13** | MorphOS Worker / UI-Batching (altes „Phase 12“) |
 
 **Nicht Phase 6–12:** Chat-Eingabe (`TextEditor`), Cairo, NList-Titel (bleibt wie implementiert).
