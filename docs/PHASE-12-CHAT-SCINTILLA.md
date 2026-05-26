@@ -15,7 +15,8 @@ Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8T
 
 | Datei | Rolle |
 |-------|--------|
-| [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) | Init, `SetUtf8Text`, Font |
+| [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) | Init, `SetUtf8Text`, Font; **3a offen:** Doppelklick → `codeBlocksViewerOpenAtIndex()` |
+| [CodeBlocksViewer.c](../src/CodeBlocksViewer.c) | `codeBlocksViewerOpenAtIndex(ULONG)` — API da, noch **nicht** vom Chat aus aufgerufen |
 | [MainWindow.c](../src/MainWindow.c) | Layout, `displayConversation`, Stream, `sendChatMessage`, Clear |
 | [CodeBlocksScintilla.c](../src/CodeBlocksScintilla.c) | `codeBlocksScintillaCommand` (SCI_*) |
 
@@ -55,3 +56,37 @@ Siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) — kein `SCLEX_MARKD
 - Scintilla-Styling für Alignment
 - Dediziertes Chat-Font-Menü
 - Stream nur Append-Delta (Vorbereitung Phase 13)
+
+## 3a — Doppelklick auf `[Codeblock n]` (offen)
+
+**Ziel:** Doppelklick auf die Platzhalter-Zeile im Chat → Code-Blocks-Viewer öffnen, Block `n` aktiv (`codeBlocksViewerOpenAtIndex`). **Export/raw unverändert.**
+
+**Stand:** `codeBlocksViewerOpenAtIndex()` in [CodeBlocksViewer.c](../src/CodeBlocksViewer.c) implementiert; Anbindung aus [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) fehlt noch.
+
+### Constraint (nicht wieder verletzen)
+
+- Chat-Scintilla bleibt **`ScintillaObject` im `WindowObject`-Macro** in [MainWindow.c](../src/MainWindow.c) — gleiche Einrückung wie Commit `0cda730` (`MUIA_Scrollgroup_Contents` → `chatOutputTextEditor = ScintillaObject, …`).
+- **Kein** vorgefertigtes Objekt, **keine** Variable/Klasse im Macro, **kein** nachträgliches `Child` mit Pointer-Tag.
+- Doppelklick nur über **Notify / SCI-Handler / Fenster-EventHandler** am bestehenden Objekt — nach `createMainWindow()` bzw. in `chatOutputScintillaInitViewer()` oder Hook-Registrierung.
+
+### Verworfene Ansätze (MorphOS, 2026-05)
+
+| Ansatz | Ergebnis |
+|--------|----------|
+| Scintilla vorab mit `NewObject`, dann `Child, chatOutputTextEditor` im `WindowObject` | MUI: „Ungültiger Zahlenwert“, danach „Hauptfenster konnte nicht erstellt werden“ (Pointer als Tag) |
+| `MUI_NewObject((STRPTR)variableClass, …)` im `WindowObject`-Macro | Macro bricht (`End` / Compile-Fehler) |
+| Eigene MUI-Klasse `MUIC_AmigaGPTChatOutputScintilla` im gleichen Macro-Kontext | Gleiche Fehlerklasse wie oben |
+| `set(MUIA_Scrollgroup_Contents, prebuiltObject)` nach Fensterbau | Instabiler Start (Fenster/Startup-Probleme) |
+| Subclass + `MUIM_HandleEvent` am Chat-Scintilla (eigene Klasse) | Zurückgerollt mit Chat-Output-Restore |
+| `chatOutputScintillaInitViewer()` **nach** `MUIA_Window_Open` / `OM_ADDMEMBER` | Boot-Log lief durch (`boot …` bis `NewInput loop start`), **Hauptfenster unsichtbar**; Fix: Init wieder **vor** `OM_ADDMEMBER` wie `0cda730` |
+
+### Startup (nicht 3a, aber gleiche Session)
+
+- **`streamLogBootPhase`:** voller Boot-Pfad im Stream-Log hilft, „Log ja, Fenster nein“ von echtem Init-Fehler zu trennen.
+- **Icon-Start (`cli == NULL`):** `GetMsg` + frühes `ReplyMsg` in [main.c](../src/main.c) — nur für diesen Startweg relevant; bei Shell-Start prüfen, ob überhaupt `WBStartup` anliegt (nicht von AmigaOS-3.1-„Workbench“-Docs auf MorphOS übernehmen).
+
+### Noch zu prüfen (wenn 3a umgesetzt wird)
+
+- Scintilla.mcc: `MUIA_Scintilla_Notify` / `SCN_*` / `MM_SciHandler` (MorphOS-SDK / Scintilla.mcc-Doku)
+- EventHandler am Hauptfenster, falls Notify nicht reicht
+- Nach Lösung: diesen Abschnitt um **„Gewählte Lösung“** + Testpunkt im Testplan ergänzen
