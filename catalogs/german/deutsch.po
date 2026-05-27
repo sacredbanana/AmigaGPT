@@ -1535,3 +1535,8 @@ msgstr "Keine Konversation zum Exportieren geöffnet."
 msgctxt "STRING_ERROR_CHAT_EXPORT_SAVE (280//)"
 msgid "Could not save the chat export."
 msgstr "Chat-Export konnte nicht gespeichert werden."
+
+#: src/menu.c
+msgctxt "STRING_MENU_CHAT_LINE_WRAP (281//)"
+msgid "Wrap long lines (chat)"
+msgstr "Lange Zeilen umbrechen (Chat)"
