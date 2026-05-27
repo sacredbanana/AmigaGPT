@@ -889,10 +889,17 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
     chatOutputScintillaForgetMarkdownLinkSpans();
     chatMdInitStack(&styleStack);
 
+    /*
+     * Heading detection used to rescan to line start for every byte when
+     * stripMidi is on — O(n²) on long single lines (huge assistant payloads),
+     * which freezes the UI when switching chats. Refresh line bounds only at
+     * each physical line start.
+     */
+    ULONG mdLineStart = 0;
+    ULONG mdLineEnd = 0;
+    ULONG mdContentStart = 0;
+
     for (i = 0; i < inLen; i++) {
-        ULONG lineStart;
-        ULONG contentStart;
-        ULONG lineEnd;
         ULONG linkEat;
         UBYTE role =
             (inRoleStyles != NULL) ? inRoleStyles[i] : CHAT_OUTPUT_STYLE_ASSISTANT;
@@ -919,20 +926,20 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
         }
 
         if (stripMidi) {
-            lineStart = i;
-            while (lineStart > 0 && inUtf8[lineStart - 1] != '\n') {
-                lineStart--;
-            }
-            contentStart = chatMdHeadingContentStart(inUtf8, inLen, lineStart);
-            if (contentStart > 0) {
-                lineEnd = lineStart;
-                while (lineEnd < inLen && inUtf8[lineEnd] != '\n') {
-                    lineEnd++;
+            if (i == 0 || inUtf8[i - 1] == '\n') {
+                mdLineStart = i;
+                mdLineEnd = i;
+                while (mdLineEnd < inLen && inUtf8[mdLineEnd] != '\n') {
+                    mdLineEnd++;
                 }
-                if (i < contentStart) {
+                mdContentStart =
+                    chatMdHeadingContentStart(inUtf8, inLen, mdLineStart);
+            }
+            if (mdContentStart > 0) {
+                if (i < mdContentStart) {
                     continue;
                 }
-                if (i < lineEnd) {
+                if (i < mdLineEnd) {
                     linkEat = chatMdTryConsumeMarkdownHttpLinks(
                         inUtf8, inLen, i, &outPos, outUtf8, outStyles,
                         CHAT_OUTPUT_STYLE_MD_BOLD);
@@ -1012,7 +1019,6 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
 
     outUtf8[outPos] = '\0';
     return outPos;
-}
 
 #define CHAT_MD_TABLE_MAX_COLS 16
 #define CHAT_MD_TABLE_MAX_ROWS 64
