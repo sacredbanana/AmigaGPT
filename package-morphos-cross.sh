@@ -10,7 +10,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 STAGE="${PACKAGE_STAGE:-$ROOT/out/package-morphos}"
 ARCHIVE_BASE="${PACKAGE_ARCHIVE:-$ROOT/out/AmigaGPT-MorphOS-cross}"
-DEPLOY_WIN="${MORPHOS_DEPLOY:-Z:/morphos/out-crosscompile}"
+DEPLOY_WIN="${MORPHOS_DEPLOY:-\\\\hdsfgo4\\share\\morphos\\out-crosscompile}"
 BUILD="${BUILD:-1}"
 FLEXCAT_BIN="${FLEXCAT_BIN:-$HOME/development/morphos/flexcat/src/bin_unix}"
 
