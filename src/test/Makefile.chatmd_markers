@@ -1,0 +1,14 @@
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c99 -DCHATMD_MARKERS_HOST -I..
+OUT = ../../out/chatmd_markers_host_test
+
+.PHONY: test clean
+
+$(OUT): chatmd_markers_host_test.c ../chatmd_markers.c ../chatmd_markers.h
+	$(CC) $(CFLAGS) -o $@ chatmd_markers_host_test.c ../chatmd_markers.c
+
+test: $(OUT)
+	./$(OUT)
+
+clean:
+	rm -f $(OUT)

@@ -15,6 +15,7 @@
 #include <proto/exec.h>
 #include <proto/openurl.h>
 #include "ChatOutputScintilla.h"
+#include "chatmd_markers.h"
 #include "CodeBlocksScintilla.h"
 #include "CodeBlocksViewer.h"
 #include "config.h"
@@ -514,23 +515,9 @@ static ULONG chatMdTryConsumeMarkdownHttpLinks(const char *inUtf8, ULONG len, UL
     return 0;
 }
 
-/* Single * is not markdown inside words (e.g. Spieler*innen). */
-static BOOL chatMdIsItalicStarMarker(const char *input, ULONG pos, ULONG len) {
-    if (pos >= len || input[pos] != '*') {
-        return FALSE;
-    }
-    if (pos + 1 < len && input[pos + 1] == '*') {
-        return FALSE;
-    }
-    if (pos > 0 && chatMdIsAsciiAlnum(input[pos - 1]) && pos + 1 < len &&
-        chatMdIsAsciiAlnum(input[pos + 1])) {
-        return FALSE;
-    }
-    return TRUE;
-}
-
 static UBYTE chatMdParseMarker(const char *input, ULONG pos, ULONG len,
-                               ChatMdStyleType *foundStyle) {
+                               ChatMdStyleType *foundStyle,
+                               const ChatMdStyleStack *stack) {
     if (pos >= len) {
         return 0;
     }
@@ -542,9 +529,15 @@ static UBYTE chatMdParseMarker(const char *input, ULONG pos, ULONG len,
         *foundStyle = CHAT_MD_STYLE_BOLD;
         return 2;
     }
-    if (chatMdIsItalicStarMarker(input, pos, len)) {
-        *foundStyle = CHAT_MD_STYLE_ITALIC;
-        return 1;
+    if (input[pos] == '*') {
+        BOOL closing = chatMdIsTop(stack, CHAT_MD_STYLE_ITALIC);
+
+        if (closing ? chatMdItalicStarCanClose(input, pos, len)
+                    : chatMdItalicStarCanOpen(input, pos, len)) {
+            *foundStyle = CHAT_MD_STYLE_ITALIC;
+            return 1;
+        }
+        return 0;
     }
     return 0;
 }
@@ -855,7 +848,7 @@ static BOOL chatMdHandleMarker(ChatMdStyleStack *styleStack, const char *inUtf8,
                                ULONG *i, ULONG len, ULONG *outPos, char *outUtf8,
                                UBYTE *outStyles, UBYTE mdStyle) {
     ChatMdStyleType styleFound;
-    UBYTE markerLen = chatMdParseMarker(inUtf8, *i, len, &styleFound);
+    UBYTE markerLen = chatMdParseMarker(inUtf8, *i, len, &styleFound, styleStack);
 
     if (markerLen == 0) {
         return FALSE;

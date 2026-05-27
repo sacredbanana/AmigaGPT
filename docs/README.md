@@ -48,6 +48,7 @@ Logik-Tests mit normalem `gcc` — z. B. **UTF-8-Stream-Puffer** (`src/utf8str
 
 ```bash
 ~/development/morphos/AmigaGPT/tools/test-utf8stream.sh
+~/development/morphos/AmigaGPT/tools/test-chatmd-markers.sh
 ```
 
 
@@ -57,6 +58,8 @@ Logik-Tests mit normalem `gcc` — z. B. **UTF-8-Stream-Puffer** (`src/utf8str
 | `src/test/Makefile.utf8stream`    | `make test`            |
 | `tools/test-utf8stream.sh`        | Wrapper                |
 | `out/utf8stream_host_test`        | Binary (nach dem Lauf) |
+| `tools/test-chatmd-markers.sh`    | Nur Kursiv-`*` (Delimiter); Fett `**` ohne Extra-Tests — siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md#delimiter-policy-keine-markdown-bibliothek) |
+| `out/chatmd_markers_host_test`    | Binary (nach dem Lauf) |
 
 
 Details zum Modul: [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) (Phase 3.2).

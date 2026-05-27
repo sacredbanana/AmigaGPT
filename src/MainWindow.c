@@ -27,6 +27,7 @@
 #include "ChatOutputScintilla.h"
 #include "CodeBlocksViewer.h"
 #endif
+#include "chatmd_markers.h"
 #include "utf8stream.h"
 #include <dos/dos.h>
 
@@ -140,7 +141,7 @@ static BOOL isTopStyle(const StyleStack *s, StyleType style);
 static void outputStyleOn(STRPTR out, size_t outSize, StyleType style);
 static void outputStyleOff(STRPTR out, size_t outSize);
 static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
-                         StyleType *foundStyle);
+                         StyleType *foundStyle, const StyleStack *stack);
 static PICTURE *generateThumbnail(struct GeneratedImage *image);
 static void addMainWindowActions();
 #ifndef __MORPHOS__
@@ -900,29 +901,11 @@ static void outputStyleOff(STRPTR out, size_t outSize) {
  *
  * Also outputs which style it corresponds to in 'foundStyle'.
  */
-static BOOL parseMarkerIsAsciiAlnum(char ch) {
-    return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
-           (ch >= '0' && ch <= '9');
-}
-
-static BOOL parseMarkerIsItalicStar(CONST_STRPTR input, size_t pos, size_t len) {
-    if (pos >= len || input[pos] != '*') {
-        return FALSE;
-    }
-    if (pos + 1 < len && input[pos + 1] == '*') {
-        return FALSE;
-    }
-    if (pos > 0 && parseMarkerIsAsciiAlnum(input[pos - 1]) && pos + 1 < len &&
-        parseMarkerIsAsciiAlnum(input[pos + 1])) {
-        return FALSE;
-    }
-    return TRUE;
-}
-
 static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
-                         StyleType *foundStyle) {
-    if (pos >= len)
+                         StyleType *foundStyle, const StyleStack *stack) {
+    if (pos >= len) {
         return 0;
+    }
 
     // Check for "__" (underline)
     if (pos + 1 < len && input[pos] == '_' && input[pos + 1] == '_') {
@@ -934,10 +917,17 @@ static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
         *foundStyle = STYLE_BOLD;
         return 2;
     }
-    // Check for single "*" (not Spieler*innen)
-    if (parseMarkerIsItalicStar(input, pos, len)) {
-        *foundStyle = STYLE_ITALIC;
-        return 1;
+    if (input[pos] == '*') {
+        BOOL closing = isTopStyle(stack, STYLE_ITALIC);
+
+        if (closing ? chatMdItalicStarCanClose((const char *)input, (ULONG)pos,
+                                               (ULONG)len)
+                    : chatMdItalicStarCanOpen((const char *)input, (ULONG)pos,
+                                              (ULONG)len)) {
+            *foundStyle = STYLE_ITALIC;
+            return 1;
+        }
+        return 0;
     }
     return 0;
 }
@@ -992,7 +982,7 @@ static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
 
         // 2) Try to parse a formatting marker
         StyleType styleFound;
-        UBYTE markerLen = parseMarker(input, i, inLen, &styleFound);
+        UBYTE markerLen = parseMarker(input, i, inLen, &styleFound, &styleStack);
         if (markerLen > 0) {
             // It's either a 1-char or 2-char marker
             if (isTopStyle(&styleStack, styleFound)) {

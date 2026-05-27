@@ -11,6 +11,18 @@
 
 **Performance (Chat-Wechsel):** Heading-Erkennung in `chatOutputScintillaBuildMidiMarkdownDisplay()` pro physikalischer Zeile, nicht pro Byte (vermeidet O(n²) auf langen Zeilen bei aktivem *Markdown formatting*).
 
+### Delimiter-Policy (keine Markdown-Bibliothek)
+
+Parser-Reihenfolge in `chatOutputScintilla.c` / `MainWindow.c` (`parseMarker` / `chatMdParseMarker`): `__` → `**` → einzelnes `*`. Style-Stack für Ein/Aus; Escape `\`, `\*`, `\_`.
+
+| Marker | Verhalten | Begründung |
+|--------|-----------|------------|
+| **Kursiv** `*` | CommonMark-ähnlich: `chatmd_markers.c` — *left/right-flanking*, Wort-intern (`Spieler*innen`) aus, Heuristik Multiplikation (`8 *9=444`). Open/Close über Stack (`chatMdItalicStarCanOpen` / `CanClose`). | Ein `*` kommt oft „falsch“ vor (Mathe, Wörter, mitten im Satz). |
+| **Fett** `**` | **Naiv:** jedes `**` = Toggle Bold (kein `chatmd_markers`, keine Flanking-Regeln). | In Alltag/LLM-Text selten versehentlich; bisher nur Kursiv-Fehler gemeldet. |
+| **Unterstreichen** `__` | **Naiv:** jedes `__` = Toggle (wie Fett). | Gleiche pragmatische Linie wie Fett. |
+
+Host-Tests nur für Kursiv: `tools/test-chatmd-markers.sh` → `out/chatmd_markers_host_test`. Erweiterung auf Fett (`x**2`, …) erst bei realem Bedarf — nicht geplant für v0.1.
+
 ## Export-Format (Diagnose)
 
 ```text
