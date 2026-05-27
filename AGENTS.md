@@ -4,6 +4,8 @@ This repository is **weiseb78/AmigaGPT** — a fork of [sacredbanana/AmigaGPT](h
 
 **Canonical workspace path (WSL only):** `~/development/morphos/AmigaGPT` — not `C:\Users\xbox\cursorWorkspace\AmigaGPT`. Open via `\\wsl$\Debian\home\<user>\development\morphos\AmigaGPT` in Cursor.
 
+**Rules vs. Handlung:** `.cursor/rules/*.mdc` sind die **kurzen, immer (bzw. projektweit) geladenen** Checklisten für das Modell. `docs/HANDLUNGSANWEISUNG-*.md` ist der **vollständige** verbindliche Text — gleicher Ablauf, nicht zwei verschiedene Flows. Wenn etwas kollidiert, gewinnt die Handlung; die Rules sollten dann angepasst werden.
+
 ## Git (required)
 
 Read and follow **`docs/HANDLUNGSANWEISUNG-GIT.md`**.

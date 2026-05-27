@@ -7,6 +7,14 @@ alwaysApply: true
 
 **Default after any MorphOS code change:** `make -f Makefile.MorphOS` **and** `./package-morphos-cross.sh` — in the **same** turn, without waiting for the user to ask. Treat “build done” without packaging as **incomplete**.
 
+## Agent handoff (avoid half-done)
+
+The user should **never** have to guess whether packaging ran. Ending a turn with only `make` for MorphOS runtime code is **wrong** unless the user explicitly asked to skip packaging.
+
+- **Agent NOT done until:** steps 2–3 below succeeded **or** you reported deploy failure with exit code (and did not imply “ready to test on MorphOS”).
+- **User’s turn (MorphOS test)** only **after** successful package **and** you reported version + MD5 + `Z:` path (or user said they will copy `out/*.lha` themselves after `DEPLOY=0`).
+- **Do not** write summaries that sound like the task is finished if packaging was skipped by mistake.
+
 Binding cycle for this fork (unless the user says otherwise):
 
 1. **Implement** (code/docs as needed).

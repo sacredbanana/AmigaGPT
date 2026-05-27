@@ -1,7 +1,6 @@
 ---
 description: MorphOS runtime — restart stability, ASL PushMethod, Scintilla chat rules
-globs: src/**,docs/**
-alwaysApply: false
+alwaysApply: true
 ---
 
 # MorphOS runtime (Agent)
