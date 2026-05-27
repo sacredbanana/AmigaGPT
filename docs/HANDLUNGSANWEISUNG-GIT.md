@@ -126,6 +126,8 @@ Nach erfolgreichem Z:-Deploy schreibt das Skript **`DEPLOY-HISTORY.txt`** im sel
 
 Skript: `package-morphos-cross.sh` · Kurzbeschreibung: [README.md](README.md).
 
+**Optional (TODO, noch nicht umgesetzt):** Deploy aus reinem WSL per **`smbclient`** auf `//hdsfgo4/share/…` (Credentials per Env), damit kein `Z:` / keine PowerShell-Session nötig ist. Checkliste und Anforderungen: [WSL-SETUP-STATUS.md](WSL-SETUP-STATUS.md) („Deploy per smbclient“). Bis dahin: `DEPLOY=0` + manuell nach `Z:\…`, oder persistentes `net use` in Windows.
+
 **Agent/Cursor (Standard):** Nach jedem Cross-Build für MorphOS-Tests **immer paketieren** (`./package-morphos-cross.sh`), solange der Nutzer nichts anderes sagt (z. B. „nur bauen“, `DEPLOY=0`). Regel: `.cursor/rules/morphos-build-package.mdc`.
 
 ---

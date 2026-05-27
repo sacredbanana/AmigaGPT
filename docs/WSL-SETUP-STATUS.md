@@ -169,6 +169,19 @@ make -f Makefile.MorphOS daemon
 - [ ] Optional: nach `.pot`/`.po`-Änderung einmal **`make catalog`** bzw. vollständiger Build, damit `AmigaGPT_cat.*` aktuell sind
 - [x] MorphOS: Code-Viewer 7a/7b (Copy/Save, Quit mit offenem Viewer) — siehe [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)
 - [ ] Optional: Stream-Recovery R1/R2 auf MorphOS (WANT_READ, Chat vs. `display_text`) — [STREAM-RECOVERY.md](STREAM-RECOVERY.md)
+- [ ] **Optional (TODO):** Deploy in `package-morphos-cross.sh` zusätzlich/alternativ per **`smbclient`** (reines WSL, ohne `powershell.exe` / gemapptes `Z:`). Siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) §8.
+
+---
+
+## Optional (TODO): Deploy per `smbclient` (WSL)
+
+**Problem heute:** Deploy nutzt `powershell.exe` → `Z:\morphos\out-crosscompile\`. Das funktioniert nur, wenn Windows `Z:` (Share `\\hdsfgo4\share`) in **derselben Session** sieht und Credentials hat. Aus dem **WSL-Terminal** fehlt das oft (`DriveNotFound`); UNC ohne Login ebenfalls.
+
+**Ziel:** LHA nach `//hdsfgo4/share/morphos/out-crosscompile/` direkt aus Bash kopieren (z. B. `smbclient put`), mit Credentials aus Umgebungsvariablen (nicht ins Repo committen).
+
+**Beibehalten:** Größen-/MD5-Prüfung am Ziel, `DEPLOY-HISTORY.txt`, Exit 1 bei Deploy-Fehler, Fallback `DEPLOY=0` + manuell.
+
+**Nicht ersetzen ohne Absprache:** PowerShell-Pfad kann als Fallback bleiben, wenn `Z:` in der Cursor-/Windows-Session verfügbar ist.
 
 ---
 

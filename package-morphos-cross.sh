@@ -5,12 +5,15 @@
 # (nur AmigaGPT-MorphOS-cross.lha) — siehe docs/HANDLUNGSANWEISUNG-GIT.md.
 # Entpacken/Install auf MorphOS: separates Deploy-Skript auf der MorphOS-Seite (nicht im Repo).
 # Mit DEPLOY=0 nur lokal out/*.lha; Exit 0, aber kein abgeschlossenes Paketieren.
+#
+# TODO (optional): Deploy alternativ per smbclient aus WSL (//hdsfgo4/share/…, Credentials
+# per Env) — siehe docs/WSL-SETUP-STATUS.md und HANDLUNGSANWEISUNG-GIT.md §8.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 STAGE="${PACKAGE_STAGE:-$ROOT/out/package-morphos}"
 ARCHIVE_BASE="${PACKAGE_ARCHIVE:-$ROOT/out/AmigaGPT-MorphOS-cross}"
-DEPLOY_WIN="${MORPHOS_DEPLOY:-\\\\hdsfgo4\\share\\morphos\\out-crosscompile}"
+DEPLOY_WIN="${MORPHOS_DEPLOY:-Z:/morphos/out-crosscompile}"
 BUILD="${BUILD:-1}"
 FLEXCAT_BIN="${FLEXCAT_BIN:-$HOME/development/morphos/flexcat/src/bin_unix}"
 
