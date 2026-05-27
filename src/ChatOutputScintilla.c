@@ -1019,6 +1019,7 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
 
     outUtf8[outPos] = '\0';
     return outPos;
+}
 
 #define CHAT_MD_TABLE_MAX_COLS 16
 #define CHAT_MD_TABLE_MAX_ROWS 64
