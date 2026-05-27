@@ -27,6 +27,13 @@ void chatOutputScintillaRefreshFont(Object *sci);
 /** SCIA_Notify → hotspot release: `[Codeblock n]` opens code viewer; bare http(s):// opens OpenURL. */
 void chatOutputScintillaAttachNotify(Object *sci);
 
+/**
+ * Pad simple GFM pipe tables in display text (after buildMidiMarkdownDisplay / links).
+ * Assistant lines only; skips `[Codeblock n]`; raw_utf8 unchanged. May grow text; updates
+ * MD link span positions. Mono aligns best; Sans is approximate.
+ */
+ULONG chatOutputScintillaFormatPipeTables(char *text, UBYTE *styles, ULONG len, ULONG cap);
+
 /** Main-window EH: clear stuck mouse-down on chat scrollgroup after button-up. */
 void chatOutputScintillaInstallMouseUpGuard(void);
 void chatOutputScintillaRemoveMouseUpGuard(void);

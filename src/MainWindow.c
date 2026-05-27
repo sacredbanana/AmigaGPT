@@ -1165,13 +1165,17 @@ static void chatOutputUpdateFromBuffer(void) {
             }
 #endif
 
-            displayText = (char *)AllocVec(textLen + 1, MEMF_ANY);
-            displayStyles = (UBYTE *)AllocVec(textLen, MEMF_ANY);
+            displayText = (char *)AllocVec((textLen * 2) + 1, MEMF_ANY);
+            displayStyles = (UBYTE *)AllocVec(textLen * 2, MEMF_ANY);
 
             if (displayText != NULL && displayStyles != NULL) {
+                ULONG displayCap = textLen * 2;
+
                 textLen = chatOutputScintillaBuildMidiMarkdownDisplay(
                     chatOutputTextEditorContents, roleStyles, textLen,
                     displayText, displayStyles);
+                textLen = chatOutputScintillaFormatPipeTables(
+                    displayText, displayStyles, textLen, displayCap);
                 chatOutputScintillaSetUtf8TextWithRoleStyles(
                     chatOutputTextEditor, displayText, displayStyles, textLen);
                 FreeVec(displayText);

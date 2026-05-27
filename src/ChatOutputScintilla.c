@@ -1014,6 +1014,689 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
     return outPos;
 }
 
+#define CHAT_MD_TABLE_MAX_COLS 16
+#define CHAT_MD_TABLE_MAX_ROWS 64
+
+/** UTF-8 codepoint count (display width for pipe-table padding). */
+static ULONG chatMdUtf8CharCount(const char *s, ULONG byteLen) {
+    ULONG i = 0;
+    ULONG n = 0;
+
+    while (i < byteLen) {
+        unsigned char c = (unsigned char)s[i];
+
+        if (c < 0x80) {
+            i++;
+        } else if ((c & 0xE0) == 0xC0 && i + 1 < byteLen) {
+            i += 2;
+        } else if ((c & 0xF0) == 0xE0 && i + 2 < byteLen) {
+            i += 3;
+        } else if ((c & 0xF8) == 0xF0 && i + 3 < byteLen) {
+            i += 4;
+        } else {
+            i++;
+        }
+        n++;
+    }
+    return n;
+}
+
+static void chatMdShiftMdLinkSpansFrom(ULONG docPos, LONG delta) {
+    ULONG n;
+
+    if (delta == 0) {
+        return;
+    }
+    for (n = 0; n < chatOutputMdLinkSpanCount; n++) {
+        if (chatOutputMdLinkSpans[n].start >= docPos) {
+            chatOutputMdLinkSpans[n].start =
+                (ULONG)((LONG)chatOutputMdLinkSpans[n].start + delta);
+        }
+        if (chatOutputMdLinkSpans[n].end >= docPos) {
+            chatOutputMdLinkSpans[n].end =
+                (ULONG)((LONG)chatOutputMdLinkSpans[n].end + delta);
+        }
+    }
+}
+
+static void chatMdRemapMdLinkSpansOnLine(ULONG oldLineStart, ULONG oldLineLen,
+                                         ULONG newLineStart, ULONG newLineLen,
+                                         const char *oldLine, const char *newLine) {
+    ULONG oldLineEnd = oldLineStart + oldLineLen;
+    ULONG n;
+
+    for (n = 0; n < chatOutputMdLinkSpanCount; n++) {
+        ULONG s = chatOutputMdLinkSpans[n].start;
+        ULONG e = chatOutputMdLinkSpans[n].end;
+
+        if (e <= oldLineStart || s >= oldLineEnd) {
+            continue;
+        }
+        if (s >= oldLineStart && e <= oldLineEnd) {
+            ULONG relS = s - oldLineStart;
+            ULONG relE = e - oldLineStart;
+            ULONG mapS = 0;
+            ULONG mapE = 0;
+            ULONG oi = 0;
+            ULONG ni = 0;
+            BOOL haveS = FALSE;
+            BOOL haveE = FALSE;
+
+            while (oi < oldLineLen && ni < newLineLen) {
+                if (!haveS && oi == relS) {
+                    mapS = ni;
+                    haveS = TRUE;
+                }
+                if (!haveE && oi == relE) {
+                    mapE = ni;
+                    haveE = TRUE;
+                }
+                if (oi < oldLineLen && ni < newLineLen &&
+                    oldLine[oi] == newLine[ni]) {
+                    oi++;
+                    ni++;
+                    continue;
+                }
+                if (oi < oldLineLen && oldLine[oi] == ' ') {
+                    oi++;
+                    continue;
+                }
+                if (ni < newLineLen && newLine[ni] == ' ') {
+                    ni++;
+                    continue;
+                }
+                break;
+            }
+            if (!haveS && oi == relS && ni <= newLineLen) {
+                mapS = ni;
+            }
+            if (!haveE && oi == relE && ni <= newLineLen) {
+                mapE = ni;
+            }
+            if (haveS && haveE && mapE >= mapS) {
+                chatOutputMdLinkSpans[n].start = newLineStart + mapS;
+                chatOutputMdLinkSpans[n].end = newLineStart + mapE;
+            }
+        }
+    }
+}
+
+static BOOL chatMdLineIsUserRole(const UBYTE *styles, ULONG lineStart, ULONG lineEnd) {
+    ULONG p;
+
+    if (styles == NULL) {
+        return FALSE;
+    }
+    for (p = lineStart; p < lineEnd; p++) {
+        if (styles[p] == CHAT_OUTPUT_STYLE_USER) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static BOOL chatMdLineSkipsPipeTable(const char *text, ULONG len, ULONG lineStart) {
+    ULONG lineEnd = lineStart;
+
+    while (lineEnd < len && text[lineEnd] != '\n') {
+        lineEnd++;
+    }
+    if (chatMdFindCodeblockPlaceholderOnLine(text, len, lineStart, NULL)) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/** After list/indent prefix, line must contain `|`. */
+static BOOL chatMdIsPipeTableRowLine(const char *text, ULONG len, ULONG lineStart,
+                                   ULONG lineEnd) {
+    ULONG p = chatMdSkipLinePrefixBounded(text, len, lineStart);
+    ULONG q;
+
+    if (p >= lineEnd) {
+        return FALSE;
+    }
+    for (q = p; q < lineEnd; q++) {
+        if (text[q] == '|') {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static BOOL chatMdIsPipeTableSeparatorLine(const char *text, ULONG len, ULONG lineStart,
+                                           ULONG lineEnd) {
+    ULONG p = chatMdSkipLinePrefixBounded(text, len, lineStart);
+    BOOL seenPipe = FALSE;
+
+    if (p >= lineEnd || text[p] != '|') {
+        return FALSE;
+    }
+    p++;
+    while (p < lineEnd) {
+        if (text[p] == '|') {
+            seenPipe = TRUE;
+            p++;
+            continue;
+        }
+        if (text[p] == '-' || text[p] == ':' || text[p] == ' ') {
+            p++;
+            continue;
+        }
+        return FALSE;
+    }
+    return seenPipe;
+}
+
+static ULONG chatMdTrimAsciiSpaces(const char *s, ULONG len, ULONG *outStart) {
+    ULONG start = 0;
+    ULONG end = len;
+
+    while (start < end && (s[start] == ' ' || s[start] == '\t')) {
+        start++;
+    }
+    while (end > start && (s[end - 1] == ' ' || s[end - 1] == '\t')) {
+        end--;
+    }
+    *outStart = start;
+    return end - start;
+}
+
+/**
+ * Split a pipe row into cells (no nested `|`). Returns column count or 0 on failure.
+ */
+static ULONG chatMdParsePipeRowCells(const char *text, ULONG len, ULONG lineStart,
+                                     ULONG lineEnd, ULONG cellStarts[CHAT_MD_TABLE_MAX_COLS],
+                                     ULONG cellLens[CHAT_MD_TABLE_MAX_COLS]) {
+    ULONG p = chatMdSkipLinePrefixBounded(text, len, lineStart);
+    ULONG col = 0;
+
+    if (p >= lineEnd || text[p] != '|') {
+        return 0;
+    }
+    p++;
+    while (p <= lineEnd && col < CHAT_MD_TABLE_MAX_COLS) {
+        ULONG cellStart = p;
+        ULONG cellEnd = p;
+
+        while (cellEnd < lineEnd && text[cellEnd] != '|') {
+            cellEnd++;
+        }
+        {
+            ULONG trimAt;
+            ULONG trimLen = chatMdTrimAsciiSpaces(text + cellStart, cellEnd - cellStart,
+                                                  &trimAt);
+
+            cellStarts[col] = cellStart + trimAt;
+            cellLens[col] = trimLen;
+            col++;
+        }
+        if (cellEnd >= lineEnd) {
+            break;
+        }
+        p = cellEnd + 1;
+    }
+    if (col == 0) {
+        return 0;
+    }
+    return col;
+}
+
+static BOOL chatMdSeparatorMatchesColumns(const char *text, ULONG len, ULONG lineStart,
+                                          ULONG lineEnd, ULONG ncol) {
+    ULONG cellStarts[CHAT_MD_TABLE_MAX_COLS];
+    ULONG cellLens[CHAT_MD_TABLE_MAX_COLS];
+    ULONG c;
+    ULONG got = chatMdParsePipeRowCells(text, len, lineStart, lineEnd, cellStarts, cellLens);
+    BOOL seenDashSegment = FALSE;
+
+    if (got != ncol) {
+        return FALSE;
+    }
+    for (c = 0; c < ncol; c++) {
+        ULONG i;
+
+        /* GFM: leading/trailing `|` → empty first/last cell; still a valid separator row */
+        if (cellLens[c] == 0) {
+            continue;
+        }
+        for (i = 0; i < cellLens[c]; i++) {
+            char ch = text[cellStarts[c] + i];
+
+            if (ch != '-' && ch != ':' && ch != ' ') {
+                return FALSE;
+            }
+        }
+        for (i = 0; i < cellLens[c]; i++) {
+            if (text[cellStarts[c] + i] == '-') {
+                seenDashSegment = TRUE;
+                break;
+            }
+        }
+        if (i == cellLens[c]) {
+            return FALSE;
+        }
+    }
+    return seenDashSegment;
+}
+
+static void chatMdCopyEmit(ULONG *outPos, char *outUtf8, UBYTE *outStyles, const char *src,
+                           const UBYTE *srcStyles, ULONG srcOff, ULONG count, UBYTE padStyle) {
+    ULONG k;
+
+    for (k = 0; k < count; k++) {
+        UBYTE st = (srcStyles != NULL) ? srcStyles[srcOff + k] : padStyle;
+
+        outUtf8[*outPos] = src[srcOff + k];
+        outStyles[*outPos] = st;
+        (*outPos)++;
+    }
+}
+
+/** True if column `colIdx` is empty (trimmed) on every line; `ncolPerRow` = parsed cells per line (constant). */
+static BOOL chatMdPipeTableColumnAllEmpty(const char *text, ULONG len,
+                                          const ULONG *lineStarts, const ULONG *lineEnds,
+                                          ULONG rowCount, ULONG ncolPerRow, ULONG colIdx) {
+    ULONG r;
+    ULONG cs[CHAT_MD_TABLE_MAX_COLS];
+    ULONG cl[CHAT_MD_TABLE_MAX_COLS];
+
+    if (colIdx >= ncolPerRow) {
+        return FALSE;
+    }
+    for (r = 0; r < rowCount; r++) {
+        ULONG got = chatMdParsePipeRowCells(text, len, lineStarts[r], lineEnds[r], cs, cl);
+
+        if (got != ncolPerRow) {
+            return FALSE;
+        }
+        if (cl[colIdx] != 0) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static BOOL chatMdEmitPaddedPipeRow(const char *text, ULONG len, const UBYTE *styles,
+                                    ULONG lineStart, ULONG lineEnd, ULONG ncol,
+                                    const ULONG colWidths[CHAT_MD_TABLE_MAX_COLS],
+                                    ULONG *outPos, char *outUtf8, UBYTE *outStyles) {
+    ULONG cellStarts[CHAT_MD_TABLE_MAX_COLS];
+    ULONG cellLens[CHAT_MD_TABLE_MAX_COLS];
+    ULONG c;
+    ULONG pipeAt = chatMdSkipLinePrefixBounded(text, len, lineStart);
+    ULONG got = chatMdParsePipeRowCells(text, len, lineStart, lineEnd, cellStarts, cellLens);
+    UBYTE lineStyle = CHAT_OUTPUT_STYLE_ASSISTANT;
+
+    if (got < ncol || pipeAt >= lineEnd || text[pipeAt] != '|') {
+        return FALSE;
+    }
+    if (styles != NULL && lineStart < lineEnd) {
+        lineStyle = styles[lineStart];
+    }
+    if (pipeAt > lineStart) {
+        chatMdCopyEmit(outPos, outUtf8, outStyles, text, styles, lineStart, pipeAt - lineStart,
+                       lineStyle);
+    }
+    chatMdEmit(outPos, outUtf8, outStyles, '|', lineStyle);
+    for (c = 0; c < ncol; c++) {
+        UBYTE cellStyle = lineStyle;
+        ULONG pad;
+
+        chatMdEmit(outPos, outUtf8, outStyles, ' ', lineStyle);
+        if (cellLens[c] > 0 && styles != NULL) {
+            cellStyle = styles[cellStarts[c]];
+        }
+        chatMdCopyEmit(outPos, outUtf8, outStyles, text, styles, cellStarts[c], cellLens[c],
+                       cellStyle);
+        pad = colWidths[c] - chatMdUtf8CharCount(text + cellStarts[c], cellLens[c]);
+        while (pad > 0) {
+            chatMdEmit(outPos, outUtf8, outStyles, ' ', cellStyle);
+            pad--;
+        }
+        chatMdEmit(outPos, outUtf8, outStyles, ' ', lineStyle);
+        chatMdEmit(outPos, outUtf8, outStyles, '|', lineStyle);
+    }
+    return TRUE;
+}
+
+/**
+ * Separator cell: preserve GFM leading/trailing ':' when present; fill to `targetChars`
+ * with '-' (ASCII width = UTF-8 count for these chars).
+ */
+static void chatMdEmitSeparatorCellInterior(ULONG *outPos, char *outUtf8, UBYTE *outStyles,
+                                            const char *cellBase, ULONG cellLen, ULONG targetChars,
+                                            UBYTE lineStyle) {
+    BOOL leadColon = FALSE;
+    BOOL trailColon = FALSE;
+    ULONG dashCount;
+    ULONG k;
+
+    if (targetChars == 0) {
+        return;
+    }
+    if (cellLen == 0) {
+        for (k = 0; k < targetChars; k++) {
+            chatMdEmit(outPos, outUtf8, outStyles, '-', lineStyle);
+        }
+        return;
+    }
+    if (cellLen >= 1 && cellBase[0] == ':') {
+        leadColon = TRUE;
+    }
+    if (cellLen >= 2 && cellBase[cellLen - 1] == ':') {
+        trailColon = TRUE;
+    }
+    if (leadColon && trailColon && targetChars < 2) {
+        leadColon = FALSE;
+        trailColon = FALSE;
+    }
+    dashCount = targetChars;
+    if (leadColon && dashCount > 0) {
+        dashCount--;
+    }
+    if (trailColon && dashCount > 0) {
+        dashCount--;
+    }
+    if (leadColon && targetChars > 0) {
+        chatMdEmit(outPos, outUtf8, outStyles, ':', lineStyle);
+    }
+    for (k = 0; k < dashCount; k++) {
+        chatMdEmit(outPos, outUtf8, outStyles, '-', lineStyle);
+    }
+    if (trailColon && targetChars > 0) {
+        chatMdEmit(outPos, outUtf8, outStyles, ':', lineStyle);
+    }
+}
+
+/** Separator row: match column widths; optional ':' from original GFM alignment. */
+static BOOL chatMdEmitSyntheticSeparatorRow(const char *text, ULONG len, const UBYTE *styles,
+                                           ULONG lineStart, ULONG lineEnd, ULONG ncol,
+                                           const ULONG colWidths[CHAT_MD_TABLE_MAX_COLS],
+                                           ULONG *outPos, char *outUtf8, UBYTE *outStyles) {
+    ULONG pipeAt = chatMdSkipLinePrefixBounded(text, len, lineStart);
+    ULONG c;
+    UBYTE lineStyle = CHAT_OUTPUT_STYLE_ASSISTANT;
+    ULONG scs[CHAT_MD_TABLE_MAX_COLS];
+    ULONG scl[CHAT_MD_TABLE_MAX_COLS];
+    ULONG gotSep;
+
+    if (pipeAt >= lineEnd || text[pipeAt] != '|') {
+        return FALSE;
+    }
+    if (styles != NULL && lineStart < lineEnd) {
+        lineStyle = styles[lineStart];
+    }
+    gotSep = chatMdParsePipeRowCells(text, len, lineStart, lineEnd, scs, scl);
+    if (gotSep < ncol) {
+        return FALSE;
+    }
+    if (pipeAt > lineStart) {
+        chatMdCopyEmit(outPos, outUtf8, outStyles, text, styles, lineStart, pipeAt - lineStart,
+                       lineStyle);
+    }
+    chatMdEmit(outPos, outUtf8, outStyles, '|', lineStyle);
+    for (c = 0; c < ncol; c++) {
+        chatMdEmit(outPos, outUtf8, outStyles, ' ', lineStyle);
+        chatMdEmitSeparatorCellInterior(outPos, outUtf8, outStyles, text + scs[c], scl[c],
+                                        colWidths[c], lineStyle);
+        chatMdEmit(outPos, outUtf8, outStyles, ' ', lineStyle);
+        chatMdEmit(outPos, outUtf8, outStyles, '|', lineStyle);
+    }
+    return TRUE;
+}
+
+static ULONG chatMdFormatPipeTableBlock(const char *text, const UBYTE *styles, ULONG len,
+                                        ULONG blockStart, ULONG blockEnd, ULONG *outPos,
+                                        char *outUtf8, UBYTE *outStyles, ULONG cap) {
+    ULONG lineStarts[CHAT_MD_TABLE_MAX_ROWS];
+    ULONG lineEnds[CHAT_MD_TABLE_MAX_ROWS];
+    ULONG rowCount = 0;
+    ULONG pos = blockStart;
+    ULONG ncol;
+    ULONG colWidths[CHAT_MD_TABLE_MAX_COLS];
+    ULONG cellStarts[CHAT_MD_TABLE_MAX_COLS];
+    ULONG cellLens[CHAT_MD_TABLE_MAX_COLS];
+    ULONG r;
+    ULONG c;
+    ULONG oldBlockLen = blockEnd - blockStart;
+    ULONG newBlockStart = *outPos;
+
+    while (pos < blockEnd && rowCount < CHAT_MD_TABLE_MAX_ROWS) {
+        ULONG lineEnd = pos;
+
+        while (lineEnd < len && text[lineEnd] != '\n') {
+            lineEnd++;
+        }
+        lineStarts[rowCount] = pos;
+        lineEnds[rowCount] = lineEnd;
+        rowCount++;
+        pos = (lineEnd < len) ? lineEnd + 1 : lineEnd;
+    }
+    if (rowCount < 2) {
+        return 0;
+    }
+    ncol = chatMdParsePipeRowCells(text, len, lineStarts[0], lineEnds[0], cellStarts, cellLens);
+    if (ncol < 1 || ncol > CHAT_MD_TABLE_MAX_COLS) {
+        return 0;
+    }
+    {
+        ULONG ncol0 = ncol;
+
+        if (!chatMdIsPipeTableSeparatorLine(text, len, lineStarts[1], lineEnds[1]) ||
+            !chatMdSeparatorMatchesColumns(text, len, lineStarts[1], lineEnds[1], ncol0)) {
+            return 0;
+        }
+        for (r = 0; r < rowCount; r++) {
+            ULONG got;
+
+            if (r == 1) {
+                continue;
+            }
+            if (!chatMdIsPipeTableRowLine(text, len, lineStarts[r], lineEnds[r])) {
+                return 0;
+            }
+            got = chatMdParsePipeRowCells(text, len, lineStarts[r], lineEnds[r], cellStarts,
+                                          cellLens);
+            if (got != ncol0) {
+                return 0;
+            }
+        }
+        while (ncol > 1 &&
+               chatMdPipeTableColumnAllEmpty(text, len, lineStarts, lineEnds, rowCount, ncol0,
+                                             ncol - 1)) {
+            ncol--;
+        }
+        if (ncol == 0) {
+            return 0;
+        }
+    }
+    for (c = 0; c < ncol; c++) {
+        colWidths[c] = 0;
+    }
+    for (r = 0; r < rowCount; r++) {
+        if (r == 1) {
+            continue;
+        }
+        {
+            chatMdParsePipeRowCells(text, len, lineStarts[r], lineEnds[r], cellStarts, cellLens);
+            for (c = 0; c < ncol; c++) {
+                ULONG w = chatMdUtf8CharCount(text + cellStarts[c], cellLens[c]);
+
+                if (w > colWidths[c]) {
+                    colWidths[c] = w;
+                }
+            }
+        }
+    }
+    for (r = 0; r < rowCount; r++) {
+        ULONG oldLineStart = lineStarts[r];
+        ULONG oldLineLen = lineEnds[r] - lineStarts[r];
+        ULONG newLineStart = *outPos;
+        char oldLineBuf[4096];
+        char newLineBuf[4096];
+        ULONG rowBudget;
+        ULONG pipeAtB = chatMdSkipLinePrefixBounded(text, len, lineStarts[r]);
+        ULONG b;
+
+        rowBudget = (pipeAtB > lineStarts[r]) ? (pipeAtB - lineStarts[r]) : 0;
+        rowBudget += 2;
+        for (b = 0; b < ncol; b++) {
+            rowBudget += 4 + colWidths[b];
+        }
+        if (*outPos + rowBudget > cap) {
+            return 0;
+        }
+        if (r == 1) {
+            if (!chatMdEmitSyntheticSeparatorRow(text, len, styles, lineStarts[r], lineEnds[r],
+                                                 ncol, colWidths, outPos, outUtf8, outStyles)) {
+                return 0;
+            }
+        } else if (!chatMdEmitPaddedPipeRow(text, len, styles, lineStarts[r], lineEnds[r], ncol,
+                                            colWidths, outPos, outUtf8, outStyles)) {
+            return 0;
+        }
+        if (oldLineLen < sizeof(oldLineBuf)) {
+            memcpy(oldLineBuf, text + oldLineStart, oldLineLen);
+            oldLineBuf[oldLineLen] = '\0';
+        }
+        {
+            ULONG newLineLen = *outPos - newLineStart;
+
+            if (newLineLen < sizeof(newLineBuf)) {
+                memcpy(newLineBuf, outUtf8 + newLineStart, newLineLen);
+                newLineBuf[newLineLen] = '\0';
+            }
+            if (oldLineLen < sizeof(oldLineBuf) && newLineLen < sizeof(newLineBuf)) {
+                chatMdRemapMdLinkSpansOnLine(oldLineStart, oldLineLen, newLineStart, newLineLen,
+                                             oldLineBuf, newLineBuf);
+            }
+        }
+        if (lineEnds[r] < len) {
+            ULONG nlStyle = (styles != NULL) ? styles[lineEnds[r]] : CHAT_OUTPUT_STYLE_ASSISTANT;
+
+            chatMdEmit(outPos, outUtf8, outStyles, '\n', nlStyle);
+        }
+    }
+  {
+    LONG blockDelta = (LONG)(*outPos - newBlockStart) - (LONG)oldBlockLen;
+
+    if (blockDelta != 0) {
+        chatMdShiftMdLinkSpansFrom(blockEnd, blockDelta);
+    }
+  }
+    return blockEnd - blockStart;
+}
+
+ULONG chatOutputScintillaFormatPipeTables(char *text, UBYTE *styles, ULONG len, ULONG cap) {
+    char *outUtf8;
+    UBYTE *outStyles;
+    ULONG outPos = 0;
+    ULONG pos = 0;
+
+    if (text == NULL || styles == NULL || len == 0 || cap < len + 1) {
+        return len;
+    }
+    outUtf8 = (char *)AllocVec(cap, MEMF_ANY);
+    outStyles = (UBYTE *)AllocVec(cap, MEMF_ANY);
+    if (outUtf8 == NULL || outStyles == NULL) {
+        if (outUtf8 != NULL) {
+            FreeVec(outUtf8);
+        }
+        if (outStyles != NULL) {
+            FreeVec(outStyles);
+        }
+        return len;
+    }
+
+    while (pos < len) {
+        ULONG lineEnd = pos;
+        ULONG blockEnd;
+        ULONG consumed;
+
+        while (lineEnd < len && text[lineEnd] != '\n') {
+            lineEnd++;
+        }
+        if (chatMdLineIsUserRole(styles, pos, lineEnd) ||
+            chatMdLineSkipsPipeTable(text, len, pos) ||
+            !chatMdIsPipeTableRowLine(text, len, pos, lineEnd)) {
+            if (outPos + (lineEnd - pos) + 1 > cap) {
+                break;
+            }
+            chatMdCopyEmit(&outPos, outUtf8, outStyles, text, styles, pos, lineEnd - pos,
+                           CHAT_OUTPUT_STYLE_ASSISTANT);
+            if (lineEnd < len) {
+                chatMdEmit(&outPos, outUtf8, outStyles, '\n', styles[lineEnd]);
+            }
+            pos = (lineEnd < len) ? lineEnd + 1 : lineEnd;
+            continue;
+        }
+        blockEnd = (lineEnd < len) ? lineEnd + 1 : lineEnd;
+        if (blockEnd < len) {
+            ULONG line2End = blockEnd;
+
+            while (line2End < len && text[line2End] != '\n') {
+                line2End++;
+            }
+            if (line2End > blockEnd &&
+                chatMdIsPipeTableSeparatorLine(text, len, blockEnd, line2End) &&
+                !chatMdLineIsUserRole(styles, blockEnd, line2End) &&
+                !chatMdLineSkipsPipeTable(text, len, blockEnd)) {
+                ULONG scan = (line2End < len) ? line2End + 1 : line2End;
+
+                blockEnd = scan;
+                while (scan < len) {
+                    ULONG rowEnd = scan;
+
+                    while (rowEnd < len && text[rowEnd] != '\n') {
+                        rowEnd++;
+                    }
+                    if (rowEnd == scan) {
+                        break;
+                    }
+                    if (text[scan] == '\n' && rowEnd == scan) {
+                        break;
+                    }
+                    if (!chatMdIsPipeTableRowLine(text, len, scan, rowEnd) ||
+                        chatMdLineIsUserRole(styles, scan, rowEnd) ||
+                        chatMdLineSkipsPipeTable(text, len, scan)) {
+                        break;
+                    }
+                    blockEnd = (rowEnd < len) ? rowEnd + 1 : rowEnd;
+                    scan = blockEnd;
+                }
+                consumed = chatMdFormatPipeTableBlock(text, styles, len, pos, blockEnd,
+                                                      &outPos, outUtf8, outStyles, cap);
+                if (consumed > 0) {
+                    pos = blockEnd;
+                    continue;
+                }
+            }
+        }
+        if (outPos + (lineEnd - pos) + 1 > cap) {
+            break;
+        }
+        chatMdCopyEmit(&outPos, outUtf8, outStyles, text, styles, pos, lineEnd - pos,
+                       CHAT_OUTPUT_STYLE_ASSISTANT);
+        if (lineEnd < len) {
+            chatMdEmit(&outPos, outUtf8, outStyles, '\n', styles[lineEnd]);
+        }
+        pos = (lineEnd < len) ? lineEnd + 1 : lineEnd;
+    }
+
+    if (pos < len || outPos == 0) {
+        FreeVec(outUtf8);
+        FreeVec(outStyles);
+        return len;
+    }
+    memcpy(text, outUtf8, outPos);
+    memcpy(styles, outStyles, outPos);
+    text[outPos] = '\0';
+    FreeVec(outUtf8);
+    FreeVec(outStyles);
+    return outPos;
+}
+
 /** Mark each `[Codeblock n]` line with the hotspot style byte. */
 static void chatOutputScintillaApplyCodeblockHotspotStyles(const char *utf8,
                                                            UBYTE *styleBytes,
