@@ -24,9 +24,12 @@ Hilfsfunktionen (nur MorphOS): `chatOutputUpdateFromBuffer()`, `clearChatOutputD
 
 ## Menüs auf MorphOS (12.0)
 
+Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloattext-Chat ohne diese Einträge.
+
 - **Markdown formatting** — **Midi-Markdown** ([MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md)); kein `SCLEX_MARKDOWN` im Chat.
 - **Export chat (raw UTF-8)…** — siehe `ChatExport.c`, [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md).
 - **User / Assistant text alignment** — No-op (Hervorhebung über Role-Styles)
+- **Wrap long lines (chat)** — `SCI_SETWRAPMODE` (`SC_WRAP_WORD` / `SC_WRAP_NONE`); `config.chatLineWrap` in `config.json`; `chatOutputScintillaApplyLineWrap()` auch nach Font-Wechsel
 
 ## Nicht in Phase 12
 
@@ -53,6 +56,7 @@ Hilfsfunktionen (nur MorphOS): `chatOutputUpdateFromBuffer()`, `clearChatOutputD
 11. Alignment umschalten → kein Absturz (No-op)
 12. **[Codeblock n]** (3a): blauer Link → Code-Viewer, Block `n` aktiv
 13. **Bare URL + Markdown-Link** (3b): `https://…` klickbar; `[Siehe hier](https://…)` zeigt nur Label, Klick öffnet URL; `([Label](https://…))` mit äußeren Klammern sichtbar
+14. **Pipe-Tabelle** (3c): Assistant-Tabelle nach Antwort-Ende ausgerichtet; Mono besser als Sans; Export/raw enthält ungepaddete Markdown-Tabelle
 
 ## Phase 12.1 / Midi-Markdown
 
@@ -113,6 +117,22 @@ Siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) — kein `SCLEX_MARKD
 ### MorphOS-Test (3b)
 
 Siehe Testplan **Punkt 13** oben. Zusätzlich: Zeile nur `[Codeblock n]` darf nach wie vor **3a** sein (URL-Scanner überschreibt keine Codeblock-Zeilen).
+
+<a id="3c-pipe-tables"></a>
+
+## 3c — Pipe-Tabellen (Anzeige)
+
+**Ziel:** Einfache GFM-Pipe-Tabellen in Assistant-Antworten lesbar ausrichten (Spalten per UTF-8-Zeichenanzahl mit Leerzeichen auffüllen). **Export/raw unverändert.**
+
+**Pipeline:** `chatOutputScintillaBuildMidiMarkdownDisplay()` (Links, optional Midi-Markdown) → **`chatOutputScintillaFormatPipeTables()`** → Scintilla. Tabellen **nicht** während Live-Stream (`morphosChatStreamRawScintillaRefresh`). Link-Span-Positionen werden nach Padding angepasst.
+
+**Performance:** Zeilenanfang und Heading-`contentStart` werden pro physikalischer Zeile nur einmal berechnet (nicht pro Byte), damit sehr lange Zeilen beim Chat-Wechsel nicht O(n²) blockieren.
+
+**Regeln:** Header + Trennzeile `|---|` + Datenzeilen; gleiche Spaltenzahl; keine `\|` in Zellen. **GFM mit führendem/abschließendem `|`** (leere Rand-Spalte) wird erkannt — Trennzeile darf dabei leere Zellen enthalten, solange mindestens ein Segment `---` enthält. In der **Anzeige** wird die Trennzeile **neu erzeugt**: pro Spalte genau so viele `-` wie die breiteste Zelle in dieser Spalte (UTF‑8-Zeichenanzahl), damit die Linie optisch zu den Daten passt. Durchgängig leere **trailing** Spalten (typisch nur vom abschließenden `|` in **jeder** Zeile inkl. Trennzeile) werden nicht mit ausgegeben — nicht anhand von `colWidths` gekürzt (sonst gingen Spalten verloren, die nur in der Trennzeile `---` haben). Trennzeile: führende/abschließende `:` der GFM-Ausrichtung bleiben erhalten, Innenraum mit `-` auf die Zielbreite aufgefüllt. User-Text und `[Codeblock n]`-Zeilen unverändert. *Fixed width fonts* aus = Sans (Näherung); an = Mono (empfohlen).
+
+### MorphOS-Test (3c)
+
+14. Assistant-Antwort mit Pipe-Tabelle nach Stream-Ende: Spalten visuell ausgerichtet (Mono); Link in Tabellenzelle `[Label](https://…)` klickbar nach Padding.
 
 ### Constraint (wie 3a)
 

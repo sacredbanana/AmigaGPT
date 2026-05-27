@@ -20,6 +20,15 @@ Siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) §8–9:
 3. **Nutzer testet** (inkl. mehrfach Beenden/Neustart, wenn UI betroffen)
 4. **Erst dann** commit (nicht auf `master`)
 
+### Übergabe Agent → Nutzer (kein Halbfertig)
+
+Der Nutzer übernimmt erst am **Ende des definierten Agent-Teils**. Solange **Paketieren** (LHA + Z:, siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) §8) nicht gelaufen ist bzw. der Agent den **Exit-Code** und bei Erfolg **Version + MD5 + Z:-Pfad** nicht gemeldet hat, ist die Aufgabe **nicht** „bis zum MorphOS-Test vorbereitet“ — auch wenn `make` grün war.
+
+- **Falsch:** Antwort wirkt abgeschlossen, aber nur `out/AmigaGPT_MorphOS` existiert / kein `./package-morphos-cross.sh`.
+- **Richtig:** In derselben Bearbeitung **Bauen + Paketieren** (sofern der Nutzer nicht ausdrücklich „ohne Paket“ / `DEPLOY=0` gesagt hat), dann klare **Übergabezeile** („Dein Teil: MorphOS …“).
+
+`.cursor/rules/morphos-build-package.mdc` ist die Kurz-Checkliste für Cursor; dieser Abschnitt ist die verbindliche Einordnung für Mensch und Agent.
+
 ---
 
 ## 3. Quit / Neustart (kritisch — Regression vermeiden)
@@ -76,11 +85,13 @@ Parent-Fenster: `get(mainWindowObject, MUIA_Window, &w)` oder `codeBlocksViewerS
 
 | Thema | Regel |
 | ----- | ----- |
-| Anzeige | Read-only **Scintilla** + TTEngine (`SC_CP_UTF8`), nicht NFloattext/Codesets |
+| Anzeige | Read-only **Scintilla** + TTEngine (`SC_CP_UTF8`), nicht NFloattext/Codesets — **nur MorphOS**; OS3/OS4/AROS: NFloattext unverändert |
 | User/Assistant | `SCLEX_NULL` + Style-Bytes (User = fett/blau/grau) |
 | **`SCLEX_MARKDOWN` im Chat** | **Nicht** — Lexer wirkungslos; Menü „Markdown formatting“ schaltet **Midi-Markdown** (`chatOutputScintillaBuildMidiMarkdownDisplay`) |
+| **Zeilenumbruch** | Menü *Wrap long lines (chat)*, `config.chatLineWrap` → `chatOutputScintillaApplyLineWrap()` — **nur MorphOS** (`#ifdef __MORPHOS__` in `menu.c`); kein Port auf NFloattext-Targets |
 | Stream | Roh-UTF-8 während Stream; kein Markdown-Parse pro Chunk (R3). **MorphOS:** `morphosChatStreamRawScintillaRefresh` — live nur `SetUtf8TextWithRoleStyles` (roh), Midi-Markdown/Links erst nach `finishChatStream` → `displayConversation`. |
 | Code-Fences | Parser in `codefence.c`; Chat zeigt `[Codeblock n]` oder Roh-`raw_utf8` — Diagnose über **Export raw** |
+| Chat-Wechsel | `displayConversation` → volle Markdown-Pipeline; Heading-Zeilen **einmal pro Zeile** berechnen (kein Rückscan pro Byte) |
 
 Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md).
 
@@ -93,7 +104,8 @@ Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [MIDI-MARKDOW
 | 1 | **Export Chat (raw UTF-8)** — Diagnose | Menü *Export chat (raw UTF-8)…*, `ChatExport.c` |
 | 2 | Midi-Markdown: nur außerhalb Fences, Assistant, `**`/`*`/`__`, `#` | **Erledigt** (MorphOS, Branch `scintilla`) |
 | 3 | Klick `[Codeblock]` → Code-Viewer (`SCN_HOTSPOTRELEASECLICK`, Epoch) | **Erledigt** (MorphOS, Branch `scintilla`) |
-| 4 | Tabellen ggf. als eigener Block (wie Code) | Später |
+| 4 | Einfache Pipe-Tabellen (Anzeige, nach Links) | **Erledigt** (`chatOutputScintillaFormatPipeTables`); optional später: eigener Block/NList |
+| 5 | Zeilenumbruch Chat (`config.chatLineWrap`, nur MorphOS) | **Erledigt** |
 | — | Phase 13 Worker/UI-Batching | Zurückgestellt (R3 reicht vorerst) |
 
 **Nicht** ohne Nutzer-Anlass: Fence-Parser-Tests erzwingen, `SCLEX_MARKDOWN` im Chat erneut „probieren“.
@@ -111,6 +123,7 @@ Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [MIDI-MARKDOW
 | `codeBlocksViewerDismiss()` beim Shutdown (macht `NList_Clear`) | `codeBlocksViewerCloseWindow()` in `mainWindowPrepareShutdown()` |
 | Markdown-Lexer im Chat „schnell testen“ | Midi-Markdown-Plan lesen; Scintilla-Styles portieren |
 | Neues Feature + Restart nicht testen lassen | Restart-Checkliste §3 nennen |
+| Antwort klingt „fertig“ nach nur `make` | Zuerst `package-morphos-cross.sh`, dann Version+MD5+Z:; sonst kein MorphOS-Übergabe |
 
 ---
 

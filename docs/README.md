@@ -65,16 +65,20 @@ Details zum Modul: [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) (Phase
 
 Neue oder geänderte Strings: `catalogs/AmigaGPT.pot` bzw. die `catalogs/*/*.po` anpassen, dann **FlexCat** im `PATH` und Ziel `**make -f Makefile.MorphOS catalog`** (wird auch beim normalen Build mitangezogen, sobald die Katalog-Quellen fehlen). Die Dateien `**src/AmigaGPT_cat.c**` / `**src/AmigaGPT_cat.h**` sind **generiert** — nicht von Hand bearbeiten. Details: [BUILD-MORPHOS-WSL.md](BUILD-MORPHOS-WSL.md) (FlexCat).
 
+**Pflege-Policy (Fork):** Aktiv gepflegt wird nur **`catalogs/german/deutsch.po`** (Deutsch). Nach `msgmerge` haben die übrigen `catalogs/*/*.po` für neue Strings typischerweise **`msgstr` = englisches `msgid`** — das ist beabsichtigt (englische UI-Fallbacks), kein Review nötig. Keine maschinellen Übersetzungen in andere Sprachen ohne Muttersprachler-Review.
+
 ## Text / Zeichensatz (MorphOS)
 
 Ausführlich: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) (inkl. Prüfung: `GETENV Charset` nicht gesetzt, Emoji im Chat → `??`).
 
-- **Chat-Ausgabe (MorphOS, Phase 12):** Scintilla + TTEngine, UTF-8 direkt — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md). OS3/OS4 weiter NFloattext + codesets.
+- **Chat-Ausgabe (MorphOS, Phase 12):** Scintilla + TTEngine, UTF-8 direkt — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md). OS3/OS4/AROS weiter **NFloattext** + codesets (kein Scintilla im Chat).
+- **Chat-Ansicht nur MorphOS:** Menü **Ansicht** — *Markdown formatting*, *Wrap long lines (chat)*, Export raw, Codeblöcke-Hotspots, Pipe-Tabellen-Anzeige gelten nur unter `#ifdef __MORPHOS__` (gleicher Grund: nur dort Chat-Scintilla). `config.chatLineWrap` / `config.markdownFormatting` in `config.json` werden auf MorphOS gelesen; auf anderen Targets ohne Chat-Scintilla ohne Wirkung.
 - **Chat-Eingabe:** `TextEditor` → `CodesetsUTF8Create` → UTF-8 zur API — **nicht** Phase 6–10 / 12 (Eingabe).
 - **Konversationsliste (NList):** `name` UTF-8; Anzeige `**name_list_display`** (Codesets) — **bereits umgesetzt** (Phase 5.1).
 - **Code-Fences / Viewer:** Platzhalter im Chat; **Ansicht → Codeblöcke…** — **Phase 6–7b erledigt** (NList, Scintilla, Copy/Save UTF-8 + System). Recovery Chat/Stream: [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
 - **Mini-Markdown:** **Ansicht → Markdown formatting** — abschaltbar (`config.markdownFormatting`).
+- **Zeilenumbruch (Chat):** **Ansicht → Wrap long lines (chat)** — `SCI_SETWRAPMODE` / `config.chatLineWrap` (Standard: an); nur MorphOS.
 
-**Roadmap:** 6–12 ✓ (MorphOS) · **Export Chat (raw)** ✓ · **Midi-Markdown + 3a/3b Hotspots** (Codeblock + URL) ✓ — [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) · **13 Worker** zurückgestellt — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
+**Roadmap:** 6–12 ✓ (MorphOS) · **Export Chat (raw)** ✓ · **Midi-Markdown + 3a/3b Hotspots** (Codeblock + URL) ✓ · **Zeilenumbruch Chat** ✓ — [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) · **13 Worker** zurückgestellt — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
 
 Agenten: zusätzlich [AGENTS.md](../AGENTS.md) und `.cursor/rules/git-branch-policy.mdc`.
