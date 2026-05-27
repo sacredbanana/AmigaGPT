@@ -40,6 +40,8 @@ struct Config {
     STRPTR proxyPassword;
     ULONG fixedWidthFonts;
     ULONG markdownFormatting;
+    /** MorphOS chat Scintilla: SCI_SETWRAPMODE SC_WRAP_WORD when TRUE (Ansicht-Menü). */
+    ULONG chatLineWrap;
     LONG userTextAlignment;
     LONG assistantTextAlignment;
     LONG webSearchEnabled;

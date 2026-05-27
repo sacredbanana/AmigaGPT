@@ -1777,6 +1777,16 @@ void chatOutputScintillaRefreshFont(Object *sci) {
         return;
     }
     chatOutputScintillaApplyFont(sci);
+    chatOutputScintillaApplyLineWrap(sci);
+}
+
+void chatOutputScintillaApplyLineWrap(Object *sci) {
+    if (sci == NULL) {
+        return;
+    }
+    codeBlocksScintillaCommand(
+        sci, SCI_SETWRAPMODE,
+        config.chatLineWrap ? (uptr_t)SC_WRAP_WORD : (uptr_t)SC_WRAP_NONE, 0);
 }
 
 static ULONG chatOutputScintillaParseCodeblockIndexAt(const char *atBracket) {
@@ -2206,6 +2216,7 @@ void chatOutputScintillaInitViewer(Object *sci) {
     chatOutputScintillaInitRoleStyles(sci);
     codeBlocksScintillaCommand(sci, SCI_SETUNDOCOLLECTION, 0, 0);
     codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
+    chatOutputScintillaApplyLineWrap(sci);
     /* Read-only chat: no mouse capture → no selection drag / scroll while moving mouse. */
     codeBlocksScintillaCommand(sci, SCI_SETMOUSEDOWNCAPTURES, 0, 0);
     codeBlocksScintillaCommand(sci, SCI_SETHOTSPOTSINGLELINE, 1, 0);

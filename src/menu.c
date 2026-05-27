@@ -23,8 +23,11 @@
 #include "menu.h"
 #ifdef __MORPHOS__
 #include "CodeBlocksViewer.h"
+#include "ChatOutputScintilla.h"
 #endif
 
+/* msgctxt "STRING_MENU_CHAT_LINE_WRAP" */
+/* msgid "Wrap long lines (chat)" */
 /* msgctxt "STRING_MENU_EXPORT_CHAT_RAW" */
 /* msgid "Export chat (raw UTF-8)..." */
 /* msgctxt "STRING_EXPORT_CHAT_RAW" */
@@ -418,6 +421,19 @@ HOOKPROTONHNONP(MarkdownFormattingMenuItemClickedFunc, void) {
 MakeHook(MarkdownFormattingMenuItemClickedHook,
          MarkdownFormattingMenuItemClickedFunc);
 
+#ifdef __MORPHOS__
+HOOKPROTONHNONP(ChatLineWrapMenuItemClickedFunc, void) {
+    if (!syncMenuCheckbox(MENU_ITEM_VIEW_CHAT_LINE_WRAP, &config.chatLineWrap)) {
+        return;
+    }
+    if (writeConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+    }
+    chatOutputScintillaApplyLineWrap(chatOutputTextEditor);
+}
+MakeHook(ChatLineWrapMenuItemClickedHook, ChatLineWrapMenuItemClickedFunc);
+#endif
+
 HOOKPROTONHNONP(TextAlignmentChangedFunc, void) { displayConversation(NULL); }
 MakeHook(TextAlignmentChangedHook, TextAlignmentChangedFunc);
 
@@ -482,8 +498,14 @@ void createMenu() {
     MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_MARKDOWN_FORMATTING, MUIA_UserData,
     MENU_ITEM_VIEW_MARKDOWN_FORMATTING, MUIA_Menuitem_Checkit, TRUE,
-    MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_USER_TEXT_ALIGNMENT, MUIA_UserData,
+    MUIA_Menuitem_Toggle, TRUE, End,
+#ifdef __MORPHOS__
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_CHAT_LINE_WRAP, MUIA_UserData, MENU_ITEM_VIEW_CHAT_LINE_WRAP,
+    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
+#endif
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_USER_TEXT_ALIGNMENT, MUIA_UserData,
     MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT, MUIA_Menuitem_CopyStrings, FALSE,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_TEXT_ALIGNMENT_LEFT, MUIA_UserData,
@@ -741,6 +763,15 @@ void addMenuActions() {
     DoMethod(markdownFormattingMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &MarkdownFormattingMenuItemClickedHook);
+
+#ifdef __MORPHOS__
+    Object chatLineWrapMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_CHAT_LINE_WRAP);
+    set(chatLineWrapMenuItem, MUIA_Menuitem_Checked, config.chatLineWrap);
+    DoMethod(chatLineWrapMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &ChatLineWrapMenuItemClickedHook);
+#endif
 
     Object userTextAlignmentLeftMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_LEFT);

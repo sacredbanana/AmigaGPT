@@ -75,6 +75,7 @@ struct Config config = {
     .proxyPassword = NULL,
     .fixedWidthFonts = FALSE,
     .markdownFormatting = TRUE,
+    .chatLineWrap = TRUE,
     .userTextAlignment = ALIGN_RIGHT,
     .assistantTextAlignment = ALIGN_LEFT,
     .webSearchEnabled = TRUE,
@@ -183,6 +184,8 @@ LONG writeConfig() {
     json_object_object_add(
         configJsonObject, "markdownFormatting",
         json_object_new_boolean((BOOL)config.markdownFormatting));
+    json_object_object_add(configJsonObject, "chatLineWrap",
+                            json_object_new_boolean((BOOL)config.chatLineWrap));
 
     json_object_object_add(configJsonObject, "userTextAlignment",
                            json_object_new_int(config.userTextAlignment));
@@ -612,6 +615,14 @@ LONG readConfig() {
             (ULONG)json_object_get_boolean(markdownFormattingObj);
     } else {
         config.markdownFormatting = TRUE;
+    }
+
+    struct json_object *chatLineWrapObj;
+
+    if (json_object_object_get_ex(configJsonObject, "chatLineWrap", &chatLineWrapObj)) {
+        config.chatLineWrap = (ULONG)json_object_get_boolean(chatLineWrapObj);
+    } else {
+        config.chatLineWrap = TRUE;
     }
 
     struct json_object *userTextAlignmentObj;

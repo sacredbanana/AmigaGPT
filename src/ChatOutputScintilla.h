@@ -24,6 +24,9 @@ void chatOutputScintillaSetUtf8TextWithRoleStyles(Object *sci, const char *utf8,
 /** Reapply TTEngine font from config.fixedWidthFonts (no full window rebuild). */
 void chatOutputScintillaRefreshFont(Object *sci);
 
+/** SCI_SETWRAPMODE from config.chatLineWrap (Ansicht-Menü). */
+void chatOutputScintillaApplyLineWrap(Object *sci);
+
 /** SCIA_Notify → hotspot release: `[Codeblock n]` opens code viewer; bare http(s):// opens OpenURL. */
 void chatOutputScintillaAttachNotify(Object *sci);
 
