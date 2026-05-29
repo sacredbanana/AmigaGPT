@@ -9,7 +9,7 @@ Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8T
 | Layout | **Scrollgroup** + Scintilla (wie Code-Viewer); NListview-Wrapper und Phase-7c-Wheel entfallen auf MorphOS |
 | Markdown | **Midi-Markdown** (Scintilla-Styles 2–8 auf Assistant); Menü `config.markdownFormatting` |
 | User/Assistant | **Scintilla-Styles:** User = fett, dunkelblau, hellgrauer Hintergrund; Assistant = normal schwarz; `\n\n` zwischen Nodes |
-| Font | **`config.fixedWidthFonts`**: an → DejaVu Sans Mono, aus → DejaVu Sans; Umschalten **ohne** Fenster-Neuaufbau (`applyFixedWidthFontsSetting`, nicht `RecreateMainWindow`) |
+| Font | **`config.chatFixedWidthFont`** + **`config.chatFontSize`** (Ansicht: *Monospace font (chat output)*, *Increase/Decrease chat font size*); unabhängig von globalem *Fixed width fonts* (Eingabe/Bilder) |
 
 ## Code
 
@@ -30,6 +30,8 @@ Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloatt
 - **Export chat (raw UTF-8)…** — siehe `ChatExport.c`, [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md).
 - **User / Assistant text alignment** — No-op (Hervorhebung über Role-Styles)
 - **Wrap long lines (chat)** — `SCI_SETWRAPMODE` (`SC_WRAP_WORD` / `SC_WRAP_NONE`); `config.chatLineWrap` in `config.json`; `chatOutputScintillaApplyLineWrap()` auch nach Font-Wechsel
+- **Monospace font (chat output)** — `config.chatFixedWidthFont` (unabhängig von *Fixed width fonts*)
+- **Increase / Decrease chat font size** — `config.chatFontSize` (8–24 pt)
 
 ## Nicht in Phase 12
 
@@ -62,7 +64,7 @@ Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloatt
 
 Siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) — kein `SCLEX_MARKDOWN` im Chat.
 - Scintilla-Styling für Alignment
-- Dediziertes Chat-Font-Menü
+- ~~Dediziertes Chat-Font-Menü~~ **erledigt** (`chatFixedWidthFont`, `chatFontSize`)
 - Stream nur Append-Delta (Vorbereitung Phase 13)
 - Bare `http(s)://`-Links: **3b** — Hotspot + `openurl.library` (ASCII-Span); [Roadmap](MIDI-MARKDOWN-ROADMAP.md), Abschnitt [3b](#3b-url-hotspots-openurl) unten
 

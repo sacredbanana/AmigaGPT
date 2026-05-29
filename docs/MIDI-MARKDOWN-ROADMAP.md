@@ -17,11 +17,13 @@ Parser-Reihenfolge in `chatOutputScintilla.c` / `MainWindow.c` (`parseMarker` / 
 
 | Marker | Verhalten | Begründung |
 |--------|-----------|------------|
-| **Kursiv** `*` | CommonMark-ähnlich: `chatmd_markers.c` — *left/right-flanking*, Wort-intern (`Spieler*innen`) aus, Heuristik Multiplikation (`8 *9=444`). Open/Close über Stack (`chatMdItalicStarCanOpen` / `CanClose`). | Ein `*` kommt oft „falsch“ vor (Mathe, Wörter, mitten im Satz). |
-| **Fett** `**` | **Naiv:** jedes `**` = Toggle Bold (kein `chatmd_markers`, keine Flanking-Regeln). | In Alltag/LLM-Text selten versehentlich; bisher nur Kursiv-Fehler gemeldet. |
+| **Kursiv** `*` | CommonMark-ähnlich: `chatmd_markers.c` — *left/right-flanking*, Wort-intern (`Spieler*innen`) aus, Heuristik Multiplikation (`8 *9=444`), kein Marker bei `\*` / `'*'`. Open/Close über Stack (`chatMdItalicStarCanOpen` / `CanClose`). Escape im Chat: `\` + nächstes Zeichen literal (`ChatOutputScintilla.c` / `MainWindow.c`). | Ein `*` kommt oft „falsch“ vor (Mathe, Wörter, Doku mit Anführungs-Stern). |
+| **Fett** `**` | `chatMdBoldDoubleStarCanOpen` / `CanClose`: Open mit left-flanking (nicht `**.`); Close wenn Bold im Stack (auch nach `.` wie `satzende.**`). `chatMdPopBoldRun` beendet verschachtelte Reste. | Schließen nach Satzzeichen im Fetttext; kein „alles danach fett“. |
 | **Unterstreichen** `__` | **Naiv:** jedes `__` = Toggle (wie Fett). | Gleiche pragmatische Linie wie Fett. |
 
 Host-Tests nur für Kursiv: `tools/test-chatmd-markers.sh` → `out/chatmd_markers_host_test`. Erweiterung auf Fett (`x**2`, …) erst bei realem Bedarf — nicht geplant für v0.1.
+
+Bekannte Einschränkung (MorphOS/Scintilla.mcc): Beim Wechsel zwischen Chat-Scintilla und Code-Scintilla kann Rest-Scroll/Wheel-Zustand übernommen werden ("Scroll-Vererbung"). Gleiches Verhalten ist auch in anderen Scintilla-Apps auf MorphOS reproduzierbar; aggressive App-Workarounds wurden zurückgebaut.
 
 ## Export-Format (Diagnose)
 

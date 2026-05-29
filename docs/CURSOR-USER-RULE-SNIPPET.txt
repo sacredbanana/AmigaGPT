@@ -1,0 +1,5 @@
+Paste into Cursor Settings → Rules → User Rules (global):
+
+---
+Bei jeder Shell-Ausführung von `make` für morphos/AmigaGPT (Makefile.MorphOS): in derselben Antwort sofort `./ship-morphos.sh` oder `BUILD=0 ./package-morphos-cross.sh` ausführen und Version + MD5 + Z:-Pfad melden. Nur `make` ohne Paket = Aufgabe unvollständig. Ausnahme nur wenn ich explizit „ohne Paket“ / „nur bauen“ / DEPLOY=0 sage.
+---

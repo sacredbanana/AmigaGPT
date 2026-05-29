@@ -15,7 +15,7 @@ Der Nutzer testet auf **echter MorphOS-Hardware**. Der Agent liefert **baubare, 
 
 Siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) §8–9:
 
-1. Implementieren → `make -f Makefile.MorphOS` → `./package-morphos-cross.sh` (Z:)
+1. Implementieren → `make -f Makefile.MorphOS` → **sofort** `./package-morphos-cross.sh` (Z:) — **in derselben Agent-Antwort** wie jedes `make`, außer der Nutzer hat explizit anders verlangt. Kurzweg: `./ship-morphos.sh`
 2. Version + MD5 melden
 3. **Nutzer testet** (inkl. mehrfach Beenden/Neustart, wenn UI betroffen)
 4. **Erst dann** commit (nicht auf `master`)
@@ -42,12 +42,16 @@ Der Nutzer übernimmt erst am **Ende des definierten Agent-Teils**. Solange **Pa
 | Regel | Umsetzung im Code |
 | ----- | ----------------- |
 | **Ein** `MUIM_Application_Load` vor Fenster-Open | In `createMainWindow()` — **kein** zweites Load nach `loadConversations()` |
+| **Letzte Konversation** | `ENVARC:AmigaGPT/last-conversation` — nicht `AMIGAGPT:` für UI-Zustand; nach `loadConversations()` wiederherstellen (siehe [MORPHOS-STABILITAET.md](MORPHOS-STABILITAET.md) §1b) |
+| **Config / API-Keys** | `ENVARC:AmigaGPT/config.json` — Lesen mit Fallback `AMIGAGPT:config.json`, Schreiben nur ENVARC; Log: `config read envarc` / `config read fallback amigagpt` |
 | **Kein** `ConfigureForScreen`-Hook auf `MUIA_Window_Screen`, der ENVARC lädt und Fenster wieder öffnet | Entfernt in `360a0dd`; nicht zurückbauen |
 | **`mainWindowPrepareShutdown()`** vor `MUI_DisposeObject(app)` | In `shutdownGUI()` |
 | **Pens freigeben, solange Fenster/Screen noch gültig** | `mainWindowReleasePens()` **vor** `MUIA_Window_Open, FALSE` |
 | Konversations-/Bilderliste leeren **vor** Fenster zu | `MUIM_NList_Clear` mit `MUIA_NList_Quiet` (Hauptfenster) |
 | Codeblock-Liste beim Shutdown | **Kein** `NList_Clear` — nur `codeBlocksViewerCloseWindow()`; Clear nur bei Chat-Wechsel (`Dismiss`) |
-| Chat-Scintilla leeren vor Dispose | `chatOutputScintillaSetUtf8Text(..., "")` |
+| Chat-Scintilla leeren vor Dispose | **Nicht mehr** — kein `ClearDocument` beim Quit (Freeze-Risiko); siehe [MORPHOS-STABILITAET.md](MORPHOS-STABILITAET.md) §2 |
+| Scintilla-Notify-Klasse | `chatOutputScintillaDisposeNotifyClass()` **nach** `MUI_DisposeObject(app)` |
+| Laufender Chat-Stream beim Quit | `openAIChatStreamRequestCancel()`; kein `finishChatStream`/`displayConversation` bei Shutdown |
 | `KillNotify` auf `MUIA_Window_Screen` und `CloseRequest` | Vor Dispose |
 | Zeiger nullen **nach** Dispose | `mainWindowInvalidateAfterShutdown()` |
 
@@ -92,6 +96,7 @@ Parent-Fenster: `get(mainWindowObject, MUIA_Window, &w)` oder `codeBlocksViewerS
 | Stream | Roh-UTF-8 während Stream; kein Markdown-Parse pro Chunk (R3). **MorphOS:** `morphosChatStreamRawScintillaRefresh` — live nur `SetUtf8TextWithRoleStyles` (roh), Midi-Markdown/Links erst nach `finishChatStream` → `displayConversation`. |
 | Code-Fences | Parser in `codefence.c`; Chat zeigt `[Codeblock n]` oder Roh-`raw_utf8` — Diagnose über **Export raw** |
 | Chat-Wechsel | `displayConversation` → volle Markdown-Pipeline; Heading-Zeilen **einmal pro Zeile** berechnen (kein Rückscan pro Byte) |
+| Scintilla-Wheel zwischen Fenstern | **Bekannte MorphOS/Scintilla.mcc-Einschränkung:** Rest-Scroll kann beim Wechsel Chat-Scintilla ↔ Code-Scintilla übernommen werden (auch in anderen Scintilla-Apps reproduzierbar). App-seitige Workarounds nur zurückhaltend einsetzen, da sie Stabilität/UX verschlechtern können. |
 
 Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md).
 
@@ -129,6 +134,7 @@ Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [MIDI-MARKDOW
 
 ## 8. Verwandte Dokumente
 
+- [MORPHOS-STABILITAET.md](MORPHOS-STABILITAET.md) — **umgesetzte Stabilitätsmaßnahmen** (Shutdown, Scintilla, Neustart, Log)
 - [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) — Git, Paketieren, Commit-Zyklus  
 - [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) — Phasen, Parser, Stream  
 - [STREAM-RECOVERY.md](STREAM-RECOVERY.md) — R1–R3  

@@ -7,6 +7,7 @@
 | ------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
 | [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md)       | Git (kein Commit auf `master`) **und** Begriff **Paketieren** = Z:-Deploy          |
 | [HANDLUNGSANWEISUNG-MORPHOS-AGENT.md](HANDLUNGSANWEISUNG-MORPHOS-AGENT.md) | **Agent:** Restart, ASL/PushMethod, Scintilla-Chat, bekannte Regressionen |
+| [MORPHOS-STABILITAET.md](MORPHOS-STABILITAET.md)             | **Umgesetzte Stabilitätsmaßnahmen** (Shutdown, Neustart, Scintilla, Lifecycle-Log) |
 | [MORPHOS-VERSION.md](MORPHOS-VERSION.md)                     | `$VER:` Version.Revision (MorphOS Style Guide), `version.h`                        |
 | [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md)                 | Remotes `origin` / `upstream`, Sync, PRs                                           |
 | [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)       | Plan Scintilla.mcc, Phasen 6–13; **6–10 v0.1 erledigt**                            |
@@ -31,6 +32,8 @@
 cd ~/development/morphos/AmigaGPT
 export PATH="$HOME/development/morphos/flexcat/src/bin_unix:$PATH"
 make -f Makefile.MorphOS              # je Lauf: BUILD_NUMBER + Datum; Anzeige = 2.18.<build>
+./ship-morphos.sh                       # = make -f Makefile.MorphOS ship (Standard nach Code-Änderung)
+make -f Makefile.MorphOS ship           # build + daemon + package + Z:
 ./package-morphos-cross.sh            # BUILD=0 überspringt Make, wenn Binary schon da
 ```
 
