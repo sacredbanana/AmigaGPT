@@ -11,10 +11,50 @@
 #include <stdio.h>
 #include "AmigaGPT_cat.h"
 #include "config.h"
+#include "streamlog.h"
 
 void streamLogSyncFromConfig(void);
 
 #define DEFAULT_ACCENT "american.accent"
+
+#define CONFIG_ENVARC_DIR "ENVARC:AmigaGPT"
+#define CONFIG_ENVARC_PATH "ENVARC:AmigaGPT/config.json"
+#define CONFIG_ENVARC_TMP_PATH "ENVARC:AmigaGPT/config.json.tmp"
+#define CONFIG_LEGACY_PATH "AMIGAGPT:config.json"
+#define CONFIG_MAX_BYTES (512UL * 1024UL)
+
+typedef enum {
+    CONFIG_SOURCE_NONE = 0,
+    CONFIG_SOURCE_ENVARC,
+    CONFIG_SOURCE_LEGACY
+} ConfigReadSource;
+
+static void ensureConfigEnvarcDir(void) {
+    CreateDir(CONFIG_ENVARC_DIR);
+}
+
+static BPTR openConfigForRead(ConfigReadSource *source) {
+    BPTR file;
+
+    if (source != NULL) {
+        *source = CONFIG_SOURCE_NONE;
+    }
+    file = Open(CONFIG_ENVARC_PATH, MODE_OLDFILE);
+    if (file != 0) {
+        if (source != NULL) {
+            *source = CONFIG_SOURCE_ENVARC;
+        }
+        return file;
+    }
+    file = Open(CONFIG_LEGACY_PATH, MODE_OLDFILE);
+    if (file != 0) {
+        if (source != NULL) {
+            *source = CONFIG_SOURCE_LEGACY;
+        }
+        return file;
+    }
+    return 0;
+}
 
 STRPTR configDupString(CONST_STRPTR src) {
     ULONG len;
@@ -75,6 +115,8 @@ struct Config config = {
     .proxyPassword = NULL,
     .fixedWidthFonts = FALSE,
     .markdownFormatting = TRUE,
+    .chatFixedWidthFont = FALSE,
+    .chatFontSize = CHAT_OUTPUT_FONT_SIZE_DEFAULT,
     .chatLineWrap = TRUE,
     .userTextAlignment = ALIGN_RIGHT,
     .assistantTextAlignment = ALIGN_LEFT,
@@ -96,12 +138,46 @@ struct Config config = {
     .debugStreamLog = FALSE,
 };
 
+ULONG configClampChatFontSize(ULONG size) {
+    if (size < CHAT_OUTPUT_FONT_SIZE_MIN) {
+        return CHAT_OUTPUT_FONT_SIZE_MIN;
+    }
+    if (size > CHAT_OUTPUT_FONT_SIZE_MAX) {
+        return CHAT_OUTPUT_FONT_SIZE_MAX;
+    }
+    return size;
+}
+
 /**
  * Write the config to disk
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
+static LONG configCommitEnvarcFile(BPTR file, STRPTR jsonBody, ULONG jsonLen) {
+    LONG wrote;
+
+    if (file == 0 || jsonBody == NULL) {
+        return RETURN_ERROR;
+    }
+    wrote = Write(file, jsonBody, jsonLen);
+    Close(file);
+    if (wrote != (LONG)jsonLen) {
+        DeleteFile(CONFIG_ENVARC_TMP_PATH);
+        return RETURN_ERROR;
+    }
+    DeleteFile(CONFIG_ENVARC_PATH);
+    if (Rename(CONFIG_ENVARC_TMP_PATH, CONFIG_ENVARC_PATH)) {
+        streamLogLifecycle("config write envarc");
+        return RETURN_OK;
+    }
+    DeleteFile(CONFIG_ENVARC_TMP_PATH);
+    return RETURN_ERROR;
+}
+
 LONG writeConfig() {
-    BPTR file = Open("AMIGAGPT:config.json", MODE_NEWFILE);
+    BPTR file;
+
+    ensureConfigEnvarcDir();
+    file = Open(CONFIG_ENVARC_TMP_PATH, MODE_NEWFILE);
     if (file == 0) {
         printf(STRING_ERROR_CONFIG_FILE_READ);
         putchar('\n');
@@ -186,6 +262,11 @@ LONG writeConfig() {
         json_object_new_boolean((BOOL)config.markdownFormatting));
     json_object_object_add(configJsonObject, "chatLineWrap",
                             json_object_new_boolean((BOOL)config.chatLineWrap));
+    json_object_object_add(
+        configJsonObject, "chatFixedWidthFont",
+        json_object_new_boolean((BOOL)config.chatFixedWidthFont));
+    json_object_object_add(configJsonObject, "chatFontSize",
+                           json_object_new_int((int)config.chatFontSize));
 
     json_object_object_add(configJsonObject, "userTextAlignment",
                            json_object_new_int(config.userTextAlignment));
@@ -261,18 +342,16 @@ LONG writeConfig() {
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
+    ULONG configJsonLen = (ULONG)strlen(configJsonString);
+    LONG result;
 
-    if (Write(file, configJsonString, strlen(configJsonString)) !=
-        strlen(configJsonString)) {
+    result = configCommitEnvarcFile(file, configJsonString, configJsonLen);
+    json_object_put(configJsonObject);
+    if (result != RETURN_OK) {
         printf(STRING_ERROR_CONFIG_FILE_WRITE);
         putchar('\n');
-        Close(file);
-        json_object_put(configJsonObject);
         return RETURN_ERROR;
     }
-
-    Close(file);
-    json_object_put(configJsonObject);
     return RETURN_OK;
 }
 
@@ -281,11 +360,19 @@ LONG writeConfig() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG readConfig() {
-    BPTR file = Open("AMIGAGPT:config.json", MODE_OLDFILE);
+    BPTR file;
+    ConfigReadSource source = CONFIG_SOURCE_NONE;
+
+    file = openConfigForRead(&source);
     if (file == 0) {
-        // No config exists. Create a new one from defaults
+        streamLogLifecycle("config read missing create envarc");
         writeConfig();
         return RETURN_OK;
+    }
+    if (source == CONFIG_SOURCE_ENVARC) {
+        streamLogLifecycle("config read envarc");
+    } else if (source == CONFIG_SOURCE_LEGACY) {
+        streamLogLifecycle("config read fallback amigagpt");
     }
 
 #ifdef __AMIGAOS3__
@@ -300,7 +387,18 @@ LONG readConfig() {
     int64_t fileSize = fib.fib_Size;
 #endif
 #endif
-    STRPTR configJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
+    if (fileSize <= 0 || (ULONG)fileSize > CONFIG_MAX_BYTES) {
+        streamLogLifecycle("config read size reject");
+        Close(file);
+        return RETURN_ERROR;
+    }
+    streamLogLifecycle("config read size ok");
+    STRPTR configJsonString = AllocVec((ULONG)fileSize + 1, MEMF_CLEAR);
+    if (configJsonString == NULL) {
+        Close(file);
+        streamLogLifecycle("config read alloc fail");
+        return RETURN_ERROR;
+    }
     if (Read(file, configJsonString, fileSize) != fileSize) {
         printf(STRING_ERROR_CONFIG_FILE_READ);
         putchar('\n');
@@ -310,6 +408,7 @@ LONG readConfig() {
     }
 
     Close(file);
+    streamLogLifecycle("config read bytes ok");
 
     struct json_object *configJsonObject = json_tokener_parse(configJsonString);
     if (configJsonObject == NULL ||
@@ -322,6 +421,7 @@ LONG readConfig() {
         FreeVec(configJsonString);
         return RETURN_ERROR;
     }
+    streamLogLifecycle("config parse ok");
 
     struct json_object *speechEnabledObj;
     if (json_object_object_get_ex(configJsonObject, "speechEnabled",
@@ -625,6 +725,26 @@ LONG readConfig() {
         config.chatLineWrap = TRUE;
     }
 
+    struct json_object *chatFixedWidthFontObj;
+
+    if (json_object_object_get_ex(configJsonObject, "chatFixedWidthFont",
+                                  &chatFixedWidthFontObj)) {
+        config.chatFixedWidthFont =
+            (ULONG)json_object_get_boolean(chatFixedWidthFontObj);
+    } else {
+        config.chatFixedWidthFont = config.fixedWidthFonts;
+    }
+
+    struct json_object *chatFontSizeObj;
+
+    if (json_object_object_get_ex(configJsonObject, "chatFontSize",
+                                  &chatFontSizeObj)) {
+        config.chatFontSize =
+            configClampChatFontSize((ULONG)json_object_get_int(chatFontSizeObj));
+    } else {
+        config.chatFontSize = CHAT_OUTPUT_FONT_SIZE_DEFAULT;
+    }
+
     struct json_object *userTextAlignmentObj;
     if (json_object_object_get_ex(configJsonObject, "userTextAlignment",
                                   &userTextAlignmentObj)) {
@@ -837,7 +957,13 @@ LONG readConfig() {
 
     FreeVec(configJsonString);
     json_object_put(configJsonObject);
+    if (source == CONFIG_SOURCE_LEGACY) {
+        if (writeConfig() == RETURN_OK) {
+            streamLogLifecycle("config migrate amigagpt to envarc");
+        }
+    }
     streamLogSyncFromConfig();
+    streamLogLifecycle("config read done");
     return RETURN_OK;
 }
 

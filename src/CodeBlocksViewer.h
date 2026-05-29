@@ -25,6 +25,9 @@ void codeBlocksViewerSetObjects(Object *list, Object *scintilla);
 void codeBlocksViewerSetActionButtons(Object *copyUtf8, Object *copySystem,
                                       Object *saveUtf8, Object *saveSystem);
 
+/** Safe minimal Scintilla setup before ENVARC load (MorphOS startup). */
+void codeBlocksViewerPrimeScintillaAtStartup(void);
+
 void codeBlocksViewerAttachListHooks(void);
 
 void codeBlocksViewerAttachActionButtons(void);
@@ -62,6 +65,8 @@ void codeBlocksViewerCloseWindow(void);
 
 /** Before MUI_DisposeObject(app): drop stale block pointers, clear UI refs. */
 void codeBlocksViewerPrepareShutdown(void);
+/** Enter shutdown mode: invalidate deferred hooks and ignore new UI actions. */
+void codeBlocksViewerBeginShutdown(void);
 
 void codeBlocksViewerSyncSelectionFromList(void);
 

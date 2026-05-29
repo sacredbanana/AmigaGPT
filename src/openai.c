@@ -78,6 +78,7 @@ static void appendToReadBuffer(UBYTE *buf, ULONG capacity, ULONG *used,
 
 /** OpenAI chat SSE still active on the current TLS connection. */
 static BOOL chatStreamInProgress = FALSE;
+static BOOL chatStreamCancelRequested = FALSE;
 
 static BOOL chatStreamCompletedOk = FALSE;
 static BOOL chatStreamTruncated = FALSE;
@@ -816,6 +817,7 @@ struct json_object **postChatMessageToOpenAI(
 
     if (!stream || !chatStreamInProgress) {
         memset(readBuffer, 0, READ_BUFFER_LENGTH);
+        chatStreamCancelRequested = FALSE;
         chatStreamInProgress = stream;
 
         struct json_object *obj = json_object_new_object();
@@ -954,6 +956,7 @@ struct json_object **postChatMessageToOpenAI(
         FreeVec(authHeader);
 
         updateStatusBar(STRING_CONNECTING, yellowPen);
+        streamLogLifecycle("chat send ssl connect begin");
         while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
                                    proxyPort, proxyUsesSSL, proxyRequiresAuth,
                                    proxyUsername,
@@ -966,6 +969,7 @@ struct json_object **postChatMessageToOpenAI(
             }
         }
         connectionRetryCount = 0;
+        streamLogLifecycle("chat send ssl connect done");
         updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
         if (useSSL) {
             ERR_clear_error();
@@ -1004,9 +1008,23 @@ struct json_object **postChatMessageToOpenAI(
             DoMethod(loadingBar, MUIM_Busy_Move);
             if (app != NULL) {
                 ULONG muiSig = 0;
-                DoMethod(app, MUIM_Application_NewInput, &muiSig);
+                ULONG appRet =
+                    DoMethod(app, MUIM_Application_NewInput, &muiSig);
+
+                if (appRet == MUIV_Application_ReturnID_Quit ||
+                    mainWindowIsShuttingDown() || chatStreamCancelRequested) {
+                    mainWindowSignalQuit();
+                    doneReading = TRUE;
+                    chatStreamInProgress = FALSE;
+                    break;
+                }
             }
 #endif
+            if (mainWindowIsShuttingDown() || chatStreamCancelRequested) {
+                doneReading = TRUE;
+                chatStreamInProgress = FALSE;
+                break;
+            }
             if (useSSL) {
                 ERR_clear_error();
                 bytesRead =
@@ -1909,6 +1927,11 @@ static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength) {
  * SSL_ERROR_WANT_READ instead of spinning and freezing the UI.
  */
 BOOL openAIChatStreamInProgress(void) { return chatStreamInProgress; }
+
+void openAIChatStreamRequestCancel(void) {
+    chatStreamCancelRequested = TRUE;
+    chatStreamInProgress = FALSE;
+}
 
 static BOOL streamBatchHasCompleted(struct json_object **responses, UWORD count) {
     UWORD i;

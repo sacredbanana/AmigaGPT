@@ -1510,6 +1510,21 @@ msgctxt "STRING_MENU_CHAT_LINE_WRAP (281//)"
 msgid "Wrap long lines (chat)"
 msgstr "Wrap long lines (chat)"
 
+#: src/menu.c
+msgctxt "STRING_MENU_CHAT_FIXED_WIDTH_FONT (282//)"
+msgid "Monospace font (chat output)"
+msgstr "Monospace font (chat output)"
+
+#: src/menu.c
+msgctxt "STRING_MENU_CHAT_FONT_LARGER (283//)"
+msgid "Increase chat font size"
+msgstr "Increase chat font size"
+
+#: src/menu.c
+msgctxt "STRING_MENU_CHAT_FONT_SMALLER (284//)"
+msgid "Decrease chat font size"
+msgstr "Decrease chat font size"
+
 #~ msgctxt "STRING_MENU_COPY_CODEBLOCK_SYSTEM (269//)"
 #~ msgid "Copy (system)"
 #~ msgstr "Copy (system)"

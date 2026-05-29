@@ -21,6 +21,7 @@
 #include "ChatOutputScintilla.h"
 #include "gui.h"
 #include "MainWindow.h"
+#include "streamlog.h"
 
 struct Library *ClipboardBase;
 
@@ -56,15 +57,36 @@ static BOOL codeBlocksListSuppressActiveHook;
 /** Incremented on chat switch / dismiss; invalidates deferred opens. */
 static ULONG codeBlocksViewerOpenEpoch;
 static ULONG codeBlocksViewerScheduledOpenEpoch;
+static BOOL codeBlocksViewerShuttingDown;
+static BOOL codeBlocksScintillaViewerPrimed;
+static BOOL codeBlocksScintillaViewerInited;
+
+void codeBlocksViewerPrimeScintillaAtStartup(void) {
+    if (codeBlocksScintillaObject == NULL || codeBlocksScintillaViewerPrimed) {
+        return;
+    }
+    codeBlocksScintillaPrimeViewer(codeBlocksScintillaObject);
+    codeBlocksScintillaViewerPrimed = TRUE;
+}
+
+static void codeBlocksViewerEnsureScintillaInited(void) {
+    if (codeBlocksScintillaViewerInited || codeBlocksScintillaObject == NULL) {
+        return;
+    }
+    codeBlocksScintillaInitViewer(codeBlocksScintillaObject);
+    codeBlocksScintillaViewerPrimed = TRUE;
+    codeBlocksScintillaViewerInited = TRUE;
+}
 
 static BOOL codeBlocksViewerTokenValid(ULONG openToken) {
     return openToken == codeBlocksViewerOpenEpoch;
 }
 
 static void codeBlocksViewerSetWindowOpen(BOOL open) {
-    if (codeBlocksWindowObject != NULL) {
-        set(codeBlocksWindowObject, MUIA_Window_Open, open ? TRUE : FALSE);
+    if (codeBlocksWindowObject == NULL) {
+        return;
     }
+    set(codeBlocksWindowObject, MUIA_Window_Open, open ? TRUE : FALSE);
 }
 
 static void codeBlocksListClearQuiet(void) {
@@ -435,6 +457,9 @@ BOOL codeBlocksViewerSaveActiveBlock(BOOL systemCharset) {
 }
 
 HOOKPROTONHNONP(CodeBlockCopyUtf8ButtonFunc, void) {
+    if (mainWindowIsShuttingDown() || codeBlocksViewerShuttingDown) {
+        return;
+    }
     if (!codeBlocksViewerCopyActiveBlockUtf8()) {
         displayError(STRING_ERROR_CLIPBOARD_COPY);
     }
@@ -442,6 +467,9 @@ HOOKPROTONHNONP(CodeBlockCopyUtf8ButtonFunc, void) {
 MakeHook(CodeBlockCopyUtf8ButtonHook, CodeBlockCopyUtf8ButtonFunc);
 
 HOOKPROTONHNONP(CodeBlockCopySystemButtonFunc, void) {
+    if (mainWindowIsShuttingDown() || codeBlocksViewerShuttingDown) {
+        return;
+    }
     if (!codeBlocksViewerCopyActiveBlockSystem()) {
         displayError(STRING_ERROR_CLIPBOARD_COPY);
     }
@@ -449,6 +477,9 @@ HOOKPROTONHNONP(CodeBlockCopySystemButtonFunc, void) {
 MakeHook(CodeBlockCopySystemButtonHook, CodeBlockCopySystemButtonFunc);
 
 HOOKPROTONHNONP(CodeBlockSaveDeferredFunc, void) {
+    if (mainWindowIsShuttingDown() || codeBlocksViewerShuttingDown) {
+        return;
+    }
     if (codeBlocksPendingSaveBlock == NULL) {
         displayError(STRING_ERROR_NO_ACTIVE_CODEBLOCK);
         return;
@@ -461,6 +492,9 @@ HOOKPROTONHNONP(CodeBlockSaveDeferredFunc, void) {
 MakeHook(CodeBlockSaveDeferredHook, CodeBlockSaveDeferredFunc);
 
 HOOKPROTONHNONP(CodeBlockSaveUtf8ButtonFunc, void) {
+    if (mainWindowIsShuttingDown() || codeBlocksViewerShuttingDown) {
+        return;
+    }
     codeBlocksViewerSyncSelectionFromList();
     codeBlocksPendingSaveBlock = codeBlocksViewerGetSelectedBlock();
     codeBlocksPendingSaveSystemCharset = FALSE;
@@ -470,6 +504,9 @@ HOOKPROTONHNONP(CodeBlockSaveUtf8ButtonFunc, void) {
 MakeHook(CodeBlockSaveUtf8ButtonHook, CodeBlockSaveUtf8ButtonFunc);
 
 HOOKPROTONHNONP(CodeBlockSaveSystemButtonFunc, void) {
+    if (mainWindowIsShuttingDown() || codeBlocksViewerShuttingDown) {
+        return;
+    }
     codeBlocksViewerSyncSelectionFromList();
     codeBlocksPendingSaveBlock = codeBlocksViewerGetSelectedBlock();
     codeBlocksPendingSaveSystemCharset = TRUE;
@@ -485,6 +522,9 @@ void codeBlocksViewerSetAslParentWindow(struct Window *parent) {
 void codeBlocksViewerSetObjects(Object *list, Object *scintilla) {
     codeBlocksListObject = list;
     codeBlocksScintillaObject = scintilla;
+    codeBlocksViewerShuttingDown = FALSE;
+    codeBlocksScintillaViewerPrimed = FALSE;
+    codeBlocksScintillaViewerInited = FALSE;
 }
 
 void codeBlocksViewerSetActionButtons(Object *copyUtf8, Object *copySystem,
@@ -534,7 +574,16 @@ void codeBlocksViewerClearList(void) {
 }
 
 HOOKPROTONHNONP(CodeBlocksWindowClosedFunc, void) {
-    codeBlocksViewerClearList();
+    if (mainWindowIsShuttingDown() || codeBlocksViewerShuttingDown) {
+        return;
+    }
+    /*
+     * Close gadget only — do not MUIM_NList_Clear here (gui.c, HANDLUNGSANWEISUNG):
+     * clears during CloseRequest freeze the app; list refill happens in Populate().
+     */
+    codeBlocksCachedBlock = NULL;
+    codeBlocksPendingSaveBlock = NULL;
+    chatOutputScintillaCancelPendingCodeblockOpen();
 }
 MakeHook(CodeBlocksWindowClosedHook, CodeBlocksWindowClosedFunc);
 
@@ -545,7 +594,17 @@ ULONG codeBlocksViewerCaptureOpenToken(void) {
 void codeBlocksViewerCloseWindow(void) {
     codeBlocksCachedBlock = NULL;
     codeBlocksPendingSaveBlock = NULL;
+    chatOutputScintillaCancelPendingCodeblockOpen();
     codeBlocksViewerSetWindowOpen(FALSE);
+}
+
+void codeBlocksViewerBeginShutdown(void) {
+    codeBlocksViewerShuttingDown = TRUE;
+    /* Invalidate all deferred UI hooks tied to previous run-loop state. */
+    codeBlocksViewerOpenEpoch++;
+    codeBlocksViewerScheduledOpenEpoch = codeBlocksViewerOpenEpoch;
+    codeBlocksPendingSaveBlock = NULL;
+    chatOutputScintillaCancelPendingCodeblockOpen();
 }
 
 void codeBlocksViewerDismiss(void) {
@@ -553,6 +612,7 @@ void codeBlocksViewerDismiss(void) {
      * Chat switch / delete: drop all viewer state tied to the previous
      * conversation before any deferred open from the old chat can run.
      */
+    streamLogLifecycle("codeBlocksViewerDismiss begin");
     codeBlocksViewerOpenEpoch++;
     chatOutputScintillaCancelPendingCodeblockOpen();
 
@@ -562,11 +622,13 @@ void codeBlocksViewerDismiss(void) {
     /* Close before clearing widgets — avoids empty window staying on screen. */
     codeBlocksViewerSetWindowOpen(FALSE);
 
-    if (codeBlocksScintillaObject != NULL) {
-        codeBlocksScintillaSetUtf8Text(codeBlocksScintillaObject, "", NULL);
-    }
+    /*
+     * Do not clear code Scintilla here — CLEARALL/SETTEXT can freeze the app when
+     * switching chats (same class of bug as shutdown). Window close + epoch is enough.
+     */
 
     codeBlocksListClearQuiet();
+    streamLogLifecycle("codeBlocksViewerDismiss done");
 }
 
 void codeBlocksViewerPrepareShutdown(void) {
@@ -574,17 +636,42 @@ void codeBlocksViewerPrepareShutdown(void) {
      * Conversation AICodeBlocks may be freed when the main NList is destroyed
      * during MUI_DisposeObject(app). Drop cached pointers and empty Scintilla
      * before that so nothing dereferences conversation-owned raw_code.
+     *
+     * mainWindowPrepareShutdown() already called codeBlocksViewerCloseWindow();
+     * do not SetWindowOpen(FALSE) again here — that can re-enter CloseRequest
+     * notifies and freeze before MUI_DisposeObject(app).
      */
+    streamLogLifecycle("codeBlocksViewerPrepareShutdown begin");
+    codeBlocksViewerBeginShutdown();
+
     codeBlocksCachedBlock = NULL;
     codeBlocksPendingSaveBlock = NULL;
 
-    if (codeBlocksScintillaObject != NULL) {
-        codeBlocksScintillaSetUtf8Text(codeBlocksScintillaObject, "", NULL);
-    }
-    /* Do not MUIM_NList_Clear here — can freeze on next start (see gui.c). */
+    /* Detach notifies/handlers deterministically before app dispose. */
     if (codeBlocksWindowObject != NULL) {
-        set(codeBlocksWindowObject, MUIA_Window_Open, FALSE);
+        DoMethod(codeBlocksWindowObject, MUIM_KillNotify, MUIA_Window_CloseRequest);
     }
+    if (codeBlocksListObject != NULL) {
+        DoMethod(codeBlocksListObject, MUIM_KillNotify, MUIA_NList_Active);
+    }
+    if (codeBlocksCopyUtf8ButtonObject != NULL) {
+        DoMethod(codeBlocksCopyUtf8ButtonObject, MUIM_KillNotify, MUIA_Pressed);
+    }
+    if (codeBlocksCopySystemButtonObject != NULL) {
+        DoMethod(codeBlocksCopySystemButtonObject, MUIM_KillNotify, MUIA_Pressed);
+    }
+    if (codeBlocksSaveUtf8ButtonObject != NULL) {
+        DoMethod(codeBlocksSaveUtf8ButtonObject, MUIM_KillNotify, MUIA_Pressed);
+    }
+    if (codeBlocksSaveSystemButtonObject != NULL) {
+        DoMethod(codeBlocksSaveSystemButtonObject, MUIM_KillNotify, MUIA_Pressed);
+    }
+    streamLogLifecycle("codeBlocksViewerPrepareShutdown killnotify done");
+
+    /* Do not clear code Scintilla on quit — CLEARALL can freeze OS; dispose tears down. */
+    streamLogLifecycle("codeBlocksViewerPrepareShutdown scintilla skip clear");
+
+    /* Do not MUIM_NList_Clear here — can freeze on next start (see gui.c). */
 
     codeBlocksListObject = NULL;
     codeBlocksScintillaObject = NULL;
@@ -592,11 +679,15 @@ void codeBlocksViewerPrepareShutdown(void) {
     codeBlocksCopySystemButtonObject = NULL;
     codeBlocksSaveUtf8ButtonObject = NULL;
     codeBlocksSaveSystemButtonObject = NULL;
+    codeBlocksScintillaViewerPrimed = FALSE;
+    codeBlocksScintillaViewerInited = FALSE;
+    streamLogLifecycle("codeBlocksViewerPrepareShutdown done");
 }
 
 static void codeBlocksViewerOpenWindowInternal(ULONG openToken) {
     struct Conversation *conv = getCurrentConversation();
 
+    codeBlocksViewerEnsureScintillaInited();
     if (!codeBlocksViewerTokenValid(openToken)) {
         return;
     }
@@ -609,18 +700,24 @@ static void codeBlocksViewerOpenWindowInternal(ULONG openToken) {
     if (!codeBlocksViewerTokenValid(openToken)) {
         return;
     }
-    set(codeBlocksWindowObject, MUIA_Window_Open, TRUE);
+    codeBlocksViewerSetWindowOpen(TRUE);
     DoMethod(codeBlocksListObject, MUIM_NList_SetActive, MUIV_NList_Active_Top,
-             NULL);
+             MUIV_NList_SetActive_Jump_Center);
     codeBlocksViewerSyncSelectionFromList();
 }
 
 HOOKPROTONHNONP(CodeBlocksViewerOpenWindowDeferredFunc, void) {
+    if (mainWindowIsShuttingDown() || codeBlocksViewerShuttingDown) {
+        return;
+    }
     codeBlocksViewerOpenWindowInternal(codeBlocksViewerScheduledOpenEpoch);
 }
 MakeHook(CodeBlocksViewerOpenWindowDeferredHook, CodeBlocksViewerOpenWindowDeferredFunc);
 
 void codeBlocksViewerScheduleOpenWindow(void) {
+    if (mainWindowIsShuttingDown() || codeBlocksViewerShuttingDown) {
+        return;
+    }
     codeBlocksViewerScheduledOpenEpoch = codeBlocksViewerCaptureOpenToken();
     if (app != NULL) {
         DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
@@ -705,10 +802,11 @@ BOOL codeBlocksViewerOpenAtIndexWithToken(ULONG blockIndex, ULONG openToken) {
             return FALSE;
         }
         if (item->block != NULL && item->block->index == blockIndex) {
+            codeBlocksCachedBlock = item->block;
+            codeBlocksViewerSetWindowOpen(TRUE);
             DoMethod(codeBlocksListObject, MUIM_NList_SetActive, (LONG)pos,
-                     NULL);
-            codeBlocksViewerSyncSelectionFromList();
-            set(codeBlocksWindowObject, MUIA_Window_Open, TRUE);
+                     MUIV_NList_SetActive_Jump_Center);
+            codeBlocksViewerShowActiveBlock();
             if (codeBlocksListObject != NULL) {
                 set(codeBlocksWindowObject, MUIA_Window_ActiveObject,
                     codeBlocksListObject);
@@ -731,6 +829,7 @@ void codeBlocksViewerShowActiveBlock(void) {
     if (codeBlocksScintillaObject == NULL) {
         return;
     }
+    codeBlocksViewerEnsureScintillaInited();
     if (block != NULL) {
         if (block->raw_code != NULL) {
             text = (const char *)block->raw_code;

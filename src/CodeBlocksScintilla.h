@@ -19,7 +19,13 @@ void codeBlocksScintillaApplyLexer(Object *sci, const char *language);
 void codeBlocksScintillaSetUtf8Text(Object *sci, const char *utf8,
                                     const char *language);
 
-/** Read-only viewer defaults (UTF-8 code page, no editing). */
+/** Drop document text without lexer/font work (safe during shutdown). */
+void codeBlocksScintillaClearDocument(Object *sci);
+
+/** Minimal setup at app init (before ENVARC load); avoids MUI/Scintilla freeze on restart. */
+void codeBlocksScintillaPrimeViewer(Object *sci);
+
+/** Full read-only viewer defaults (font, lexer, colours). */
 void codeBlocksScintillaInitViewer(Object *sci);
 
 /** SCI_GETLENGTH via resolved MUIM_Scintilla_Command (0 if unavailable). */

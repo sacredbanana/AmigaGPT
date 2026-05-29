@@ -3,6 +3,7 @@
 #endif
 #include <json-c/json.h>
 #include <intuition/icclass.h>
+#include <proto/dos.h>
 #include <libraries/codesets.h>
 #ifdef __MORPHOS__
 #include <libraries/ttengine.h>
@@ -35,6 +36,10 @@
 #include "codefence.h"
 #include "config.h"
 #include "streamlog.h"
+#if defined(__MORPHOS__) && !defined(DAEMON)
+#include "morphos_relaunch.h"
+#include "openai.h"
+#endif
 #include "ElevenLabsSettingsRequesterWindow.h"
 #include "gui.h"
 #include "menu.h"
@@ -76,7 +81,13 @@ static BOOL appQuitting = FALSE;
 
 void mainWindowSignalQuit(void) { appQuitting = TRUE; }
 
-BOOL mainWindowIsShuttingDown(void) { return appQuitting; }
+BOOL mainWindowIsShuttingDown(void) {
+#ifndef DAEMON
+    return appQuitting || mainWindowMorphosPrepareShutdownActive();
+#else
+    return appQuitting;
+#endif
+}
 ULONG redPen = 0, greenPen = 0, bluePen = 0, yellowPen = 0;
 Object *imageWindowObject;
 Object *imageWindowImageView;
@@ -200,6 +211,9 @@ static void closeGUILibraries() {
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG initVideo() {
+#ifdef __MORPHOS__
+    streamLogLifecycle("initVideo begin");
+#endif
     streamLogBootPhase("initVideo start");
 
     if (openGUILibraries() == RETURN_ERROR) {
@@ -245,7 +259,14 @@ LONG initVideo() {
     if (createElevenLabsSettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
-    if (!(app = ApplicationObject, MUIA_Application_Base, "AMIGAGPT",
+    {
+      ULONG appCreateAttempts = 0;
+#ifdef __MORPHOS__
+      Delay(30);
+      streamLogLifecycle("initVideo app create cooldown done");
+#endif
+retryCreateApp:
+      if (!(app = ApplicationObject, MUIA_Application_Base, "AMIGAGPT",
           MUIA_Application_Title, STRING_APP_NAME, MUIA_Application_Version,
           APP_VERSION, MUIA_Application_Copyright,
           "2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
@@ -335,8 +356,28 @@ LONG initVideo() {
           imageWindowImageViewGroup = VGroup, Child,
           imageWindowImageView = RectangleObject, MUIA_Frame,
           MUIV_Frame_ImageButton, End, End, End, End)) {
+        UBYTE phase[96];
+        snprintf((STRPTR)phase, sizeof(phase),
+                 "app create fail attempt=%lu", (unsigned long)(appCreateAttempts + 1));
+        streamLogLifecycle((CONST_STRPTR)phase);
+        /*
+         * MorphOS restart race: previous task may still be tearing down MUI objects
+         * for a short time. Retry app creation a few times before failing hard.
+         */
+        if (++appCreateAttempts < 12) {
+            Delay(appCreateAttempts > 4 ? 40 : 25);
+            streamLogLifecycle("initVideo app create retry");
+            goto retryCreateApp;
+        }
         displayError(STRING_ERROR_APP_CREATE);
         return RETURN_ERROR;
+      }
+      {
+          UBYTE phase[96];
+          snprintf((STRPTR)phase, sizeof(phase), "app create ok attempts=%lu",
+                   (unsigned long)(appCreateAttempts + 1));
+          streamLogLifecycle((CONST_STRPTR)phase);
+      }
     }
 
     DoMethod(imageWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
@@ -349,19 +390,24 @@ LONG initVideo() {
              &CodeBlocksWindowClosedHook);
     DoMethod(codeBlocksWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
              MUIV_Notify_Self, 3, MUIM_Set, MUIA_Window_Open, FALSE);
+    streamLogLifecycle("initVideo subwindow notifies done");
 
 #ifdef __MORPHOS__
+    streamLogLifecycle("initVideo clipboard open begin");
     if ((ClipboardBase = OpenLibrary("clipboard.library", 51)) == NULL) {
         displayError(STRING_ERROR_CLIPBOARD_LIB_OPEN);
         return RETURN_ERROR;
     }
+    streamLogLifecycle("initVideo clipboard open done");
     codeBlocksViewerSetObjects(codeBlocksList, codeBlocksScintilla);
     codeBlocksViewerSetActionButtons(
         codeBlocksCopyUtf8Button, codeBlocksCopySystemButton,
         codeBlocksSaveUtf8Button, codeBlocksSaveSystemButton);
+    streamLogLifecycle("initVideo codeblocks hooks begin");
     codeBlocksViewerAttachListHooks();
     codeBlocksViewerAttachActionButtons();
-    codeBlocksScintillaInitViewer(codeBlocksScintilla);
+    codeBlocksViewerPrimeScintillaAtStartup();
+    streamLogLifecycle("initVideo codeblocks hooks done");
 #else
     if (codeBlocksViewContents == NULL) {
         codeBlocksViewContents =
@@ -373,14 +419,25 @@ LONG initVideo() {
     }
 #endif
 
+    streamLogLifecycle("initVideo about window begin");
     if (createAboutAmigaGPTWindow() == RETURN_OK)
         DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
+    streamLogLifecycle("initVideo about window done");
 
     streamLogBootPhase("createMainWindow call");
+    streamLogLifecycle("mainWindow create begin");
     if (createMainWindow() == RETURN_ERROR) {
         streamLogBootPhase("createMainWindow fail");
+        streamLogLifecycle("mainWindow create fail");
+        if (app != NULL) {
+            streamLogLifecycle("MUI_DisposeObject(app) begin after mainWindow fail");
+            MUI_DisposeObject(app);
+            streamLogLifecycle("MUI_DisposeObject(app) done after mainWindow fail");
+            app = NULL;
+        }
         return RETURN_ERROR;
     }
+    streamLogLifecycle("mainWindow create ok");
     streamLogBootPhase("initVideo ok");
 
 #endif
@@ -417,6 +474,9 @@ void startGUIRunLoop() {
     BOOL running = TRUE;
 
     streamLogBootPhase("NewInput loop start");
+#if defined(__MORPHOS__) && !defined(DAEMON)
+    morphosRunStartupDeferred();
+#endif
 
     while (running) {
         ULONG id = DoMethod(app, MUIM_Application_NewInput, &signals);
@@ -1082,19 +1142,62 @@ void openCodeBlocksViewerWindow(void) {
  **/
 void shutdownGUI() {
     if (app) {
-        DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
-
 #ifndef DAEMON
+#if defined(__MORPHOS__)
+        morphosRelaunchShutdownBegin();
+#endif
+        /*
+         * Close windows, detach Scintilla notifies, clear documents before ENVARC
+         * save — saving while large styled chat docs are active can freeze MUI/OS.
+         */
         mainWindowPrepareShutdown();
+        streamLogLifecycle("chatOutputWheelShutdown begin");
         chatOutputWheelShutdown();
+        streamLogLifecycle("chatOutputWheelShutdown done");
 #ifdef __MORPHOS__
         codeBlocksViewerPrepareShutdown();
-        chatOutputScintillaDisposeNotifyClass();
 #endif
 
+#if defined(__MORPHOS__)
+        {
+            ULONG chatLen = 0;
+
+            if (chatOutputTextEditorContents != NULL) {
+                chatLen = (ULONG)strlen(chatOutputTextEditorContents);
+            }
+            if (chatLen > (32U * 1024U)) {
+                streamLogLifecycle("shutdown ENVARC save skipped heavy chat");
+            } else {
+                DoMethod(app, MUIM_Application_Save,
+                         MUIV_Application_Save_ENVARC);
+                streamLogLifecycle("shutdown ENVARC save done");
+            }
+        }
+#else
+        DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
+        streamLogLifecycle("shutdown ENVARC save done");
+#endif
+
+        if (openAIChatStreamInProgress()) {
+            streamLogLifecycle("shutdown dispose stream in progress");
+        }
+        streamLogLifecycle("MUI_DisposeObject(app) begin");
         MUI_DisposeObject(app);
+        streamLogLifecycle("MUI_DisposeObject(app) done");
         app = NULL;
+#if defined(__MORPHOS__) && !defined(DAEMON)
+        /*
+         * Let Intuition/MUI finish teardown before the next WB launch (freeze with no
+         * "startup begin" if the next process starts during DisposeObject teardown).
+         */
+        Delay(MORPHOS_RELAUNCH_POST_DISPOSE_DELAY);
+        streamLogLifecycle("shutdown post-dispose cooldown done");
+        morphosRelaunchShutdownEnd();
+#endif
         chatOutputWheelDisposeClass();
+#ifdef __MORPHOS__
+        chatOutputScintillaDisposeNotifyClass();
+#endif
         mainWindowInvalidateAfterShutdown();
 #ifdef __MORPHOS__
         codeBlocksWindowObject = NULL;

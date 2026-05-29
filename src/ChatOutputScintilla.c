@@ -21,6 +21,7 @@
 #include "config.h"
 #include "gui.h"
 #include "MainWindow.h"
+#include "streamlog.h"
 
 /*
  * MorphOS Scintilla.guide: MUIM_Notify on SCIA_Notify → MM_SciHandler on a sink object;
@@ -35,6 +36,9 @@ struct MUIP_SciHandler {
     ULONG MethodID;
     struct SCNotification *scn;
 };
+
+static BOOL chatOutputScintillaViewerPrimed;
+static BOOL chatOutputScintillaViewerFinished;
 
 static struct MUI_CustomClass *chatOutputSciNotifyClass;
 static Object *chatOutputSciNotifySink;
@@ -60,17 +64,22 @@ typedef struct {
 
 static ULONG chatOutputMdLinkSpanCount;
 static ChatOutputMdLinkSpan chatOutputMdLinkSpans[CHAT_OUTPUT_MD_LINK_SPANS_MAX];
+static void chatOutputScintillaReleaseChatMouse(Object *sci);
 
 void chatOutputScintillaForgetMarkdownLinkSpans(void) { chatOutputMdLinkSpanCount = 0; }
 
 static void chatOutputScintillaReleaseChatMouse(Object *sci) {
+    sptr_t firstVisibleLine;
+
     if (sci == NULL) {
         return;
     }
+    firstVisibleLine = codeBlocksScintillaCommand(sci, SCI_GETFIRSTVISIBLELINE, 0, 0);
     codeBlocksScintillaCommand(sci, SCI_CANCEL, 0, 0);
     codeBlocksScintillaCommand(sci, SCI_SETEMPTYSELECTION,
                                codeBlocksScintillaCommand(sci, SCI_GETCURRENTPOS, 0, 0),
                                0);
+    codeBlocksScintillaCommand(sci, SCI_SETFIRSTVISIBLELINE, firstVisibleLine, 0);
 }
 
 HOOKPROTONHNONP(ChatOutputSciOpenCodeblockDeferredFunc, void) {
@@ -79,12 +88,10 @@ HOOKPROTONHNONP(ChatOutputSciOpenCodeblockDeferredFunc, void) {
 
     chatOutputSciHotspotOpenIndex = 0;
     chatOutputSciHotspotOpenToken = 0;
-    if (blockIndex > 0) {
-        (void)codeBlocksViewerOpenAtIndexWithToken(blockIndex, openToken);
+    if (mainWindowIsShuttingDown() || blockIndex == 0) {
+        return;
     }
-    if (chatOutputSciNotifySource != NULL) {
-        chatOutputScintillaReleaseChatMouse(chatOutputSciNotifySource);
-    }
+    (void)codeBlocksViewerOpenAtIndexWithToken(blockIndex, openToken);
 }
 
 MakeHook(ChatOutputSciOpenCodeblockDeferredHook, ChatOutputSciOpenCodeblockDeferredFunc);
@@ -92,7 +99,10 @@ MakeHook(ChatOutputSciOpenCodeblockDeferredHook, ChatOutputSciOpenCodeblockDefer
 #define CHAT_OUTPUT_SCINTILLA_FONTQUALITY_TTENGINE 1
 #define CHAT_OUTPUT_SCINTILLA_FONT_MONO "DejaVu Sans Mono"
 #define CHAT_OUTPUT_SCINTILLA_FONT_SANS "DejaVu Sans"
-#define CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS 12
+
+static int chatOutputScintillaFontSizePoints(void) {
+    return (int)configClampChatFontSize(config.chatFontSize);
+}
 
 /** Style 0 = assistant (default); style 1 = user (bold, distinct colour). */
 #define CHAT_OUTPUT_STYLE_ASSISTANT 0
@@ -131,8 +141,8 @@ typedef struct {
 #define CHAT_OUTPUT_ASSISTANT_FORE 0x000000
 
 static const char *chatOutputScintillaFontFace(void) {
-    return config.fixedWidthFonts ? CHAT_OUTPUT_SCINTILLA_FONT_MONO
-                                 : CHAT_OUTPUT_SCINTILLA_FONT_SANS;
+    return config.chatFixedWidthFont ? CHAT_OUTPUT_SCINTILLA_FONT_MONO
+                                    : CHAT_OUTPUT_SCINTILLA_FONT_SANS;
 }
 
 static void chatOutputScintillaApplyFont(Object *sci) {
@@ -144,10 +154,10 @@ static void chatOutputScintillaApplyFont(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, STYLE_DEFAULT,
                                (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, STYLE_DEFAULT,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, 0, (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, 0,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
 }
 
 static void chatOutputScintillaInitRoleStyles(Object *sci) {
@@ -161,14 +171,14 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_ASSISTANT,
                                (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_ASSISTANT,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
 
     codeBlocksScintillaCommand(sci, SCI_STYLESETFORE, CHAT_OUTPUT_STYLE_USER,
                                CHAT_OUTPUT_USER_FORE);
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_USER,
                                (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_USER,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
     codeBlocksScintillaCommand(sci, SCI_STYLESETBOLD, CHAT_OUTPUT_STYLE_USER, 1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETBACK, CHAT_OUTPUT_STYLE_USER,
                                CHAT_OUTPUT_USER_BACK);
@@ -178,7 +188,7 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_MD_BOLD,
                                (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_MD_BOLD,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
     codeBlocksScintillaCommand(sci, SCI_STYLESETBOLD, CHAT_OUTPUT_STYLE_MD_BOLD, 1);
 
     codeBlocksScintillaCommand(sci, SCI_STYLESETFORE, CHAT_OUTPUT_STYLE_MD_ITALIC,
@@ -186,7 +196,7 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_MD_ITALIC,
                                (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_MD_ITALIC,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
     codeBlocksScintillaCommand(sci, SCI_STYLESETITALIC, CHAT_OUTPUT_STYLE_MD_ITALIC,
                                1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETBOLD, CHAT_OUTPUT_STYLE_MD_ITALIC, 0);
@@ -196,7 +206,7 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_MD_UNDERLINE,
                                (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_MD_UNDERLINE,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
     codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE, CHAT_OUTPUT_STYLE_MD_UNDERLINE,
                                1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETBOLD, CHAT_OUTPUT_STYLE_MD_UNDERLINE, 0);
@@ -208,7 +218,7 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_MD_BOLD_ITALIC,
                                (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_MD_BOLD_ITALIC,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
     codeBlocksScintillaCommand(sci, SCI_STYLESETBOLD, CHAT_OUTPUT_STYLE_MD_BOLD_ITALIC,
                                1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETITALIC, CHAT_OUTPUT_STYLE_MD_BOLD_ITALIC,
@@ -219,7 +229,7 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_MD_BOLD_UL,
                                (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_MD_BOLD_UL,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
     codeBlocksScintillaCommand(sci, SCI_STYLESETBOLD, CHAT_OUTPUT_STYLE_MD_BOLD_UL, 1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE, CHAT_OUTPUT_STYLE_MD_BOLD_UL,
                                1);
@@ -229,7 +239,7 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_MD_ITALIC_UL,
                                (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_MD_ITALIC_UL,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
     codeBlocksScintillaCommand(sci, SCI_STYLESETITALIC, CHAT_OUTPUT_STYLE_MD_ITALIC_UL,
                                1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE, CHAT_OUTPUT_STYLE_MD_ITALIC_UL,
@@ -241,7 +251,7 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_MD_ALL,
                                (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_MD_ALL,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
     codeBlocksScintillaCommand(sci, SCI_STYLESETBOLD, CHAT_OUTPUT_STYLE_MD_ALL, 1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETITALIC, CHAT_OUTPUT_STYLE_MD_ALL, 1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE, CHAT_OUTPUT_STYLE_MD_ALL, 1);
@@ -251,7 +261,7 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT,
                                (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
     codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE,
                                CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT, 1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETHOTSPOT,
@@ -262,7 +272,7 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_URL_HOTSPOT,
                                (sptr_t)fontFace);
     codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_URL_HOTSPOT,
-                               CHAT_OUTPUT_SCINTILLA_FONT_SIZE_POINTS);
+                               chatOutputScintillaFontSizePoints());
     codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE, CHAT_OUTPUT_STYLE_URL_HOTSPOT,
                                1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETHOTSPOT, CHAT_OUTPUT_STYLE_URL_HOTSPOT, 1);
@@ -294,6 +304,26 @@ static BOOL chatMdIsTop(const ChatMdStyleStack *s, ChatMdStyleType style) {
         return FALSE;
     }
     return (s->stack[s->top] == style);
+}
+
+static BOOL chatMdStackHasBold(const ChatMdStyleStack *s) {
+    int i;
+
+    for (i = 0; i <= s->top; i++) {
+        if (s->stack[i] == CHAT_MD_STYLE_BOLD) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void chatMdPopBoldRun(ChatMdStyleStack *s) {
+    while (s->top >= 0 && s->stack[s->top] != CHAT_MD_STYLE_BOLD) {
+        s->top--;
+    }
+    if (s->top >= 0) {
+        s->top--;
+    }
 }
 
 static BOOL chatMdIsAsciiAlnum(char ch) {
@@ -526,6 +556,13 @@ static UBYTE chatMdParseMarker(const char *input, ULONG pos, ULONG len,
         return 2;
     }
     if (pos + 1 < len && input[pos] == '*' && input[pos + 1] == '*') {
+        if (chatMdStackHasBold(stack)) {
+            if (!chatMdBoldDoubleStarCanClose(input, pos, len)) {
+                return 0;
+            }
+        } else if (!chatMdBoldDoubleStarCanOpen(input, pos, len)) {
+            return 0;
+        }
         *foundStyle = CHAT_MD_STYLE_BOLD;
         return 2;
     }
@@ -853,7 +890,14 @@ static BOOL chatMdHandleMarker(ChatMdStyleStack *styleStack, const char *inUtf8,
     if (markerLen == 0) {
         return FALSE;
     }
-    if (chatMdIsTop(styleStack, styleFound)) {
+    if (styleFound == CHAT_MD_STYLE_BOLD) {
+        if (chatMdStackHasBold(styleStack)) {
+            chatMdPopBoldRun(styleStack);
+        } else if (!chatMdPush(styleStack, CHAT_MD_STYLE_BOLD)) {
+            chatMdEmitMarkerLiteral(outPos, outUtf8, outStyles, inUtf8, *i, markerLen,
+                                    mdStyle);
+        }
+    } else if (chatMdIsTop(styleStack, styleFound)) {
         chatMdPop(styleStack, styleFound);
     } else if (!chatMdPush(styleStack, styleFound)) {
         chatMdEmitMarkerLiteral(outPos, outUtf8, outStyles, inUtf8, *i, markerLen,
@@ -1755,22 +1799,153 @@ static void chatOutputScintillaApplyUrlHotspotStyles(const char *utf8, UBYTE *st
     }
 }
 
+static UBYTE *chatOutputDeferredRoleStyles;
+static ULONG chatOutputDeferredRoleStyleLen;
+static BOOL chatOutputDeferredPreserveViewport;
+static Object *chatOutputDeferredSci;
+BOOL chatOutputScintillaMorphosSkipViewport;
+
+void chatOutputScintillaAugmentStyleBytesHotspots(const char *utf8, UBYTE *styleBytes,
+                                                  ULONG byteLen) {
+    streamLogLifecycle("chat scintilla hotspots codeblock begin");
+    chatOutputScintillaApplyCodeblockHotspotStyles(utf8, styleBytes, byteLen);
+    streamLogLifecycle("chat scintilla hotspots codeblock done");
+    streamLogLifecycle("chat scintilla hotspots url begin");
+    chatOutputScintillaApplyUrlHotspotStyles(utf8, styleBytes, byteLen);
+    streamLogLifecycle("chat scintilla hotspots url done");
+}
+
 static void chatOutputScintillaApplyRoleStyleBytes(Object *sci,
                                                    const UBYTE *styleBytes,
                                                    ULONG byteLen) {
-    if (sci == NULL || styleBytes == NULL || byteLen == 0) {
+    ULONG pos;
+
+    if (sci == NULL || styleBytes == NULL || byteLen == 0 ||
+        mainWindowIsShuttingDown()) {
         return;
     }
-    codeBlocksScintillaCommand(sci, SCI_SETLEXER, SCLEX_NULL, 0);
+    /*
+     * MorphOS: SCI_SETSTYLINGEX on large docs can freeze; run-length SCI_SETSTYLING
+     * is cheaper. Lexer is already SCLEX_NULL from prime — skip SCI_SETLEXER here.
+     */
+    streamLogLifecycle("chat scintilla setstyling runs begin");
     codeBlocksScintillaCommand(sci, SCI_STARTSTYLING, 0, 0xFF);
-    codeBlocksScintillaCommand(sci, SCI_SETSTYLINGEX, byteLen, (sptr_t)styleBytes);
+    for (pos = 0; pos < byteLen;) {
+        UBYTE style = styleBytes[pos];
+        ULONG run = 1;
+
+        while (pos + run < byteLen && styleBytes[pos + run] == style) {
+            run++;
+        }
+        codeBlocksScintillaCommand(sci, SCI_SETSTYLING, run, style);
+        pos += run;
+    }
+    streamLogLifecycle("chat scintilla setstyling runs done");
 }
 
+void chatOutputScintillaCancelDeferredStyles(void) {
+    if (chatOutputDeferredRoleStyles != NULL) {
+        FreeVec(chatOutputDeferredRoleStyles);
+        chatOutputDeferredRoleStyles = NULL;
+    }
+    chatOutputDeferredRoleStyleLen = 0;
+    chatOutputDeferredSci = NULL;
+    chatOutputDeferredPreserveViewport = FALSE;
+    chatOutputScintillaMorphosSkipViewport = FALSE;
+}
+
+BOOL chatOutputScintillaHasDeferredWorkPending(void) {
+    return chatOutputDeferredRoleStyles != NULL;
+}
+
+void chatOutputScintillaQuiesceForShutdown(Object *sci) {
+    streamLogLifecycle("chat scintilla quiesce for shutdown begin");
+    chatOutputScintillaCancelPendingCodeblockOpen();
+    chatOutputScintillaCancelDeferredStyles();
+    if (sci != NULL) {
+        codeBlocksScintillaCommand(sci, SCI_CANCEL, 0, 0);
+        codeBlocksScintillaCommand(sci, SCI_SETMODEVENTMASK, 0, 0);
+        codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
+    }
+    streamLogLifecycle("chat scintilla quiesce for shutdown done");
+}
+
+static void chatOutputScintillaFinishViewport(Object *sci, sptr_t firstVisibleLine,
+                                              sptr_t oldLineCount, BOOL preserveViewport) {
+    if (preserveViewport) {
+        sptr_t newLineCount = codeBlocksScintillaCommand(sci, SCI_GETLINECOUNT, 0, 0);
+        sptr_t targetLine = 0;
+
+        if (newLineCount < 1) {
+            newLineCount = 1;
+        }
+        if (oldLineCount < 1) {
+            oldLineCount = 1;
+        }
+        if (firstVisibleLine < 0) {
+            firstVisibleLine = 0;
+        }
+        if (firstVisibleLine >= oldLineCount) {
+            firstVisibleLine = oldLineCount - 1;
+        }
+        if (oldLineCount > 1) {
+            targetLine = (firstVisibleLine * (newLineCount - 1)) / (oldLineCount - 1);
+        }
+        if (targetLine >= newLineCount) {
+            targetLine = newLineCount - 1;
+        }
+        codeBlocksScintillaCommand(sci, SCI_SETFIRSTVISIBLELINE, targetLine, 0);
+        return;
+    }
+
+    {
+        ULONG docLen = (ULONG)codeBlocksScintillaCommand(sci, SCI_GETLENGTH, 0, 0);
+
+        codeBlocksScintillaCommand(sci, SCI_GOTOPOS, docLen, 0);
+        codeBlocksScintillaCommand(sci, SCI_SCROLLCARET, 0, 0);
+    }
+}
+
+HOOKPROTONHNONP(ChatOutputSciApplyStylesDeferredFunc, void) {
+    Object *sci = chatOutputDeferredSci;
+    UBYTE *styles = chatOutputDeferredRoleStyles;
+    ULONG styleLen = chatOutputDeferredRoleStyleLen;
+    BOOL preserve = chatOutputDeferredPreserveViewport;
+
+    chatOutputDeferredSci = NULL;
+    chatOutputDeferredRoleStyles = NULL;
+    chatOutputDeferredRoleStyleLen = 0;
+
+    if (mainWindowIsShuttingDown() || sci == NULL || styles == NULL || styleLen == 0) {
+        if (styles != NULL) {
+            FreeVec(styles);
+        }
+        chatOutputScintillaMorphosSkipViewport = FALSE;
+        return;
+    }
+
+    streamLogLifecycle("chat scintilla apply styles deferred begin");
+    chatOutputScintillaApplyRoleStyleBytes(sci, styles, styleLen);
+    FreeVec(styles);
+    codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
+    if (!chatOutputScintillaMorphosSkipViewport &&
+        (!preserve || styleLen <= (24 * 1024))) {
+        streamLogLifecycle("chat scintilla viewport begin");
+        chatOutputScintillaFinishViewport(sci, 0, 1, preserve);
+        streamLogLifecycle("chat scintilla viewport done");
+    }
+    chatOutputScintillaMorphosSkipViewport = FALSE;
+    streamLogLifecycle("chat scintilla apply styles deferred done");
+}
+MakeHook(ChatOutputSciApplyStylesDeferredHook, ChatOutputSciApplyStylesDeferredFunc);
+
 void chatOutputScintillaRefreshFont(Object *sci) {
+    chatOutputScintillaEnsureViewerReady(sci);
     if (sci == NULL) {
         return;
     }
     chatOutputScintillaApplyFont(sci);
+    chatOutputScintillaInitRoleStyles(sci);
     chatOutputScintillaApplyLineWrap(sci);
 }
 
@@ -2010,7 +2185,7 @@ static void chatOutputScintillaOnSciNotify(struct SCNotification *scn) {
     Object *sci;
     int styleAt;
 
-    if (scn == NULL || chatOutputSciNotifySource == NULL) {
+    if (mainWindowIsShuttingDown() || scn == NULL || chatOutputSciNotifySource == NULL) {
         return;
     }
     sci = chatOutputSciNotifySource;
@@ -2060,13 +2235,31 @@ static void chatOutputScintillaOnSciNotify(struct SCNotification *scn) {
     }
 }
 
-SAVEDS static ULONG ChatOutputSciNotifySink_MouseUpEvent(struct IClass *cl, Object *obj,
-                                                         struct MUIP_HandleEvent *msg) {
-    if (msg != NULL && msg->imsg != NULL && msg->imsg->Class == IECLASS_NEWMOUSE &&
-        (msg->imsg->Code & IECODE_UP_PREFIX) != 0 && chatOutputSciNotifySource != NULL) {
-        chatOutputScintillaReleaseChatMouse(chatOutputSciNotifySource);
-        chatOutputSciHotspotPendingIndex = 0;
-        chatOutputSciHotspotUrlArmed = FALSE;
+SAVEDS static ULONG ChatOutputSciNotifySink_MouseButtonEvent(struct IClass *cl, Object *obj,
+                                                           struct MUIP_HandleEvent *msg) {
+    if (mainWindowIsShuttingDown() || msg == NULL || msg->imsg == NULL ||
+        chatOutputSciNotifySource == NULL) {
+        return DoSuperMethodA(cl, obj, (Msg)msg);
+    }
+
+    if (msg->imsg->Class == IECLASS_NEWMOUSE) {
+        UWORD code = msg->imsg->Code;
+
+        if ((code & IECODE_UP_PREFIX) == 0) {
+            return DoSuperMethodA(cl, obj, (Msg)msg);
+        }
+        if (code == (IECODE_LBUTTON | IECODE_UP_PREFIX)) {
+            /*
+             * Only after hotspot mouse-down (SCN_HOTSPOTCLICK), not scrollbar drags:
+             * SCI_CANCEL on every LMB-up was resetting the viewport when the pointer
+             * left the window after using the scroll bar.
+             */
+            if (chatOutputSciHotspotPendingIndex != 0 || chatOutputSciHotspotUrlArmed) {
+                chatOutputScintillaReleaseChatMouse(chatOutputSciNotifySource);
+            }
+            chatOutputSciHotspotPendingIndex = 0;
+            chatOutputSciHotspotUrlArmed = FALSE;
+        }
     }
     return DoSuperMethodA(cl, obj, (Msg)msg);
 }
@@ -2078,7 +2271,7 @@ SAVEDS static ULONG ChatOutputSciNotifySink_Dispatcher(struct IClass *cl, Object
         chatOutputScintillaOnSciNotify(((struct MUIP_SciHandler *)msg)->scn);
         return 0;
     case MUIM_HandleEvent:
-        return ChatOutputSciNotifySink_MouseUpEvent(
+        return ChatOutputSciNotifySink_MouseButtonEvent(
             cl, obj, (struct MUIP_HandleEvent *)msg);
     }
     return DoSuperMethodA(cl, obj, msg);
@@ -2130,14 +2323,15 @@ void chatOutputScintillaRemoveMouseUpGuard(void) {
 void chatOutputScintillaInstallMouseUpGuard(void) {
     Object *target;
 
-    if (chatOutputSciMouseUpEHInstalled || mainWindowObject == NULL) {
-        return;
-    }
-    if (chatOutputScintillaEnsureNotifySink() != RETURN_OK) {
+    if (mainWindowIsShuttingDown() || chatOutputSciMouseUpEHInstalled ||
+        mainWindowObject == NULL) {
         return;
     }
     target = chatOutputScroller != NULL ? chatOutputScroller : chatOutputTextEditor;
     if (target == NULL) {
+        return;
+    }
+    if (chatOutputScintillaEnsureNotifySink() != RETURN_OK) {
         return;
     }
     if (chatOutputSciMouseUpEH == NULL) {
@@ -2148,12 +2342,17 @@ void chatOutputScintillaInstallMouseUpGuard(void) {
         }
         chatOutputSciMouseUpEH->ehn_Class = chatOutputSciNotifyClass->mcc_Class;
         chatOutputSciMouseUpEH->ehn_Object = target;
-        chatOutputSciMouseUpEH->ehn_Events = IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS;
+        chatOutputSciMouseUpEH->ehn_Events = IDCMP_MOUSEBUTTONS;
         chatOutputSciMouseUpEH->ehn_Flags = MUI_EHF_GUIMODE;
         chatOutputSciMouseUpEH->ehn_Priority = 200;
     }
     DoMethod(mainWindowObject, MUIM_Window_AddEventHandler, chatOutputSciMouseUpEH);
     chatOutputSciMouseUpEHInstalled = TRUE;
+}
+
+static void chatOutputScintillaResetViewerState(void) {
+    chatOutputScintillaViewerPrimed = FALSE;
+    chatOutputScintillaViewerFinished = FALSE;
 }
 
 void chatOutputScintillaDetachNotify(void) {
@@ -2163,6 +2362,7 @@ void chatOutputScintillaDetachNotify(void) {
     }
     chatOutputSciNotifyAttached = FALSE;
     chatOutputSciNotifySource = NULL;
+    chatOutputScintillaResetViewerState();
 }
 
 void chatOutputScintillaDisposeNotifyClass(void) {
@@ -2196,81 +2396,151 @@ void chatOutputScintillaAttachNotify(Object *sci) {
     chatOutputSciNotifyAttached = TRUE;
 }
 
-void chatOutputScintillaInitViewer(Object *sci) {
-    if (sci == NULL) {
+void chatOutputScintillaPrimeViewer(Object *sci) {
+    if (sci == NULL || chatOutputScintillaViewerPrimed) {
         return;
     }
-    codeBlocksScintillaCommand(sci, SCI_SETFONTQUALITY,
-                               CHAT_OUTPUT_SCINTILLA_FONTQUALITY_TTENGINE, 0);
     codeBlocksScintillaCommand(sci, SCI_SETCODEPAGE, SC_CP_UTF8, 0);
     codeBlocksScintillaCommand(sci, SCI_SETLEXER, SCLEX_NULL, 0);
+    codeBlocksScintillaCommand(sci, SCI_SETMOUSEDOWNCAPTURES, 0, 0);
+    codeBlocksScintillaCommand(sci, SCI_SETMOUSEWHEELCAPTURES, 0, 0);
+    codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
+    chatOutputScintillaViewerPrimed = TRUE;
+}
+
+void chatOutputScintillaFinishViewerInit(Object *sci) {
+    if (sci == NULL || chatOutputScintillaViewerFinished) {
+        return;
+    }
+    chatOutputScintillaPrimeViewer(sci);
+    streamLogLifecycle("chat scintilla finish fontquality begin");
+    codeBlocksScintillaCommand(sci, SCI_SETFONTQUALITY,
+                               CHAT_OUTPUT_SCINTILLA_FONTQUALITY_TTENGINE, 0);
+    streamLogLifecycle("chat scintilla finish font begin");
     chatOutputScintillaApplyFont(sci);
+    streamLogLifecycle("chat scintilla finish rolestyles begin");
     chatOutputScintillaInitRoleStyles(sci);
     codeBlocksScintillaCommand(sci, SCI_STYLECLEARALL, 0, 0);
     chatOutputScintillaInitRoleStyles(sci);
+    streamLogLifecycle("chat scintilla finish rolestyles done");
     codeBlocksScintillaCommand(sci, SCI_SETUNDOCOLLECTION, 0, 0);
     codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
     chatOutputScintillaApplyLineWrap(sci);
-    /* Read-only chat: no mouse capture → no selection drag / scroll while moving mouse. */
-    codeBlocksScintillaCommand(sci, SCI_SETMOUSEDOWNCAPTURES, 0, 0);
     codeBlocksScintillaCommand(sci, SCI_SETHOTSPOTSINGLELINE, 1, 0);
+    streamLogLifecycle("chat scintilla finish settext begin");
     codeBlocksScintillaCommand(sci, SCI_SETTEXT, 0, (sptr_t)"");
+    streamLogLifecycle("chat scintilla finish notify begin");
     chatOutputScintillaAttachNotify(sci);
+    streamLogLifecycle("chat scintilla finish notify done");
+    chatOutputScintillaViewerFinished = TRUE;
+}
+
+void chatOutputScintillaEnsureViewerReady(Object *sci) {
+    if (sci == NULL || mainWindowIsShuttingDown()) {
+        return;
+    }
+    if (!chatOutputScintillaViewerFinished) {
+        chatOutputScintillaFinishViewerInit(sci);
+    }
+}
+
+void chatOutputScintillaInitViewer(Object *sci) {
+    chatOutputScintillaPrimeViewer(sci);
+    chatOutputScintillaFinishViewerInit(sci);
 }
 
 void chatOutputScintillaSetUtf8Text(Object *sci, const char *utf8) {
-    chatOutputScintillaSetUtf8TextWithRoleStyles(sci, utf8, NULL, 0);
+    chatOutputScintillaSetUtf8TextWithRoleStyles(sci, utf8, NULL, 0, FALSE);
+}
+
+void chatOutputScintillaClearDocument(Object *sci) {
+    if (sci == NULL) {
+        return;
+    }
+    /*
+     * SETTEXT "" on large per-byte styled documents can freeze MorphOS on quit;
+     * CLEARALL + CLEARDOCUMENTSTYLE matches code-block viewer shutdown path.
+     */
+    streamLogLifecycle("chat scintilla clear begin");
+    codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 0, 0);
+    codeBlocksScintillaCommand(sci, SCI_CLEARDOCUMENTSTYLE, 0, 0);
+    codeBlocksScintillaCommand(sci, SCI_CLEARALL, 0, 0);
+    codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
+    streamLogLifecycle("chat scintilla clear done");
 }
 
 void chatOutputScintillaSetUtf8TextWithRoleStyles(Object *sci, const char *utf8,
                                                 const UBYTE *roleStyles,
-                                                ULONG roleStyleLen) {
-    ULONG docLen;
+                                                ULONG roleStyleLen,
+                                                BOOL preserveViewport) {
     ULONG textLen;
+    sptr_t firstVisibleLine = 0;
+    sptr_t oldLineCount = 1;
 
-    if (sci == NULL) {
+    if (sci == NULL || mainWindowIsShuttingDown()) {
         return;
     }
+    chatOutputScintillaEnsureViewerReady(sci);
     if (utf8 == NULL) {
         utf8 = "";
     }
     textLen = (ULONG)strlen(utf8);
 
-    codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 0, 0);
-    codeBlocksScintillaCommand(sci, SCI_SETTEXT, 0, (sptr_t)utf8);
-    chatOutputScintillaInitRoleStyles(sci);
-    if (roleStyles != NULL && roleStyleLen > 0) {
-        UBYTE *styleBuf = NULL;
+    if (preserveViewport) {
+        firstVisibleLine = codeBlocksScintillaCommand(sci, SCI_GETFIRSTVISIBLELINE, 0, 0);
+        oldLineCount = codeBlocksScintillaCommand(sci, SCI_GETLINECOUNT, 0, 0);
+    }
 
+    codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 0, 0);
+    streamLogLifecycle("chat scintilla settext begin");
+    codeBlocksScintillaCommand(sci, SCI_SETTEXT, 0, (sptr_t)utf8);
+    streamLogLifecycle("chat scintilla settext done");
+    if (roleStyles != NULL && roleStyleLen > 0) {
         if (roleStyleLen > textLen) {
             roleStyleLen = textLen;
         }
-        styleBuf = (UBYTE *)AllocVec(roleStyleLen, MEMF_ANY);
-        if (styleBuf != NULL) {
-            memcpy(styleBuf, roleStyles, roleStyleLen);
-            chatOutputScintillaApplyCodeblockHotspotStyles(utf8, styleBuf, roleStyleLen);
-            chatOutputScintillaApplyUrlHotspotStyles(utf8, styleBuf, roleStyleLen);
-            chatOutputScintillaApplyRoleStyleBytes(sci, styleBuf, roleStyleLen);
-            FreeVec(styleBuf);
-        } else {
-            chatOutputScintillaApplyRoleStyleBytes(sci, roleStyles, roleStyleLen);
+        chatOutputScintillaCancelDeferredStyles();
+        if (app != NULL && chatOutputDeferredRoleStyles == NULL) {
+            chatOutputDeferredRoleStyles =
+                (UBYTE *)AllocVec(roleStyleLen, MEMF_ANY);
+            if (chatOutputDeferredRoleStyles != NULL) {
+                memcpy(chatOutputDeferredRoleStyles, roleStyles, roleStyleLen);
+                chatOutputDeferredRoleStyleLen = roleStyleLen;
+                chatOutputDeferredPreserveViewport = preserveViewport;
+                chatOutputDeferredSci = sci;
+                streamLogLifecycle("chat scintilla apply styles defer scheduled");
+                DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+                         &ChatOutputSciApplyStylesDeferredHook);
+                return;
+            }
         }
+        streamLogLifecycle("chat scintilla apply styles begin");
+        chatOutputScintillaApplyRoleStyleBytes(sci, roleStyles, roleStyleLen);
+        streamLogLifecycle("chat scintilla apply styles done");
     } else if (textLen > 0) {
         UBYTE *styleBuf = (UBYTE *)AllocVec(textLen, MEMF_ANY);
 
+        streamLogLifecycle("chat scintilla apply styles begin");
         if (styleBuf != NULL) {
             memset(styleBuf, CHAT_OUTPUT_STYLE_ASSISTANT, textLen);
-            chatOutputScintillaApplyCodeblockHotspotStyles(utf8, styleBuf, textLen);
-            chatOutputScintillaApplyUrlHotspotStyles(utf8, styleBuf, textLen);
+            chatOutputScintillaAugmentStyleBytesHotspots(utf8, styleBuf, textLen);
             chatOutputScintillaApplyRoleStyleBytes(sci, styleBuf, textLen);
             FreeVec(styleBuf);
         }
+        streamLogLifecycle("chat scintilla apply styles done");
     }
     codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
-
-    docLen = (ULONG)codeBlocksScintillaCommand(sci, SCI_GETLENGTH, 0, 0);
-    codeBlocksScintillaCommand(sci, SCI_GOTOPOS, docLen, 0);
-    codeBlocksScintillaCommand(sci, SCI_SCROLLCARET, 0, 0);
+    /*
+     * GOTOPOS/SCROLLCARET on large styled docs can hang; skip scroll-to-end for heavy docs
+     * and for NList chat switches (list refresh sets chatOutputScintillaMorphosSkipViewport).
+     */
+    if (!chatOutputScintillaMorphosSkipViewport &&
+        (preserveViewport || textLen <= (24 * 1024))) {
+        streamLogLifecycle("chat scintilla viewport begin");
+        chatOutputScintillaFinishViewport(sci, firstVisibleLine, oldLineCount,
+                                          preserveViewport);
+        streamLogLifecycle("chat scintilla viewport done");
+    }
 }
 
 #endif /* __MORPHOS__ */

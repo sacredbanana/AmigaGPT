@@ -40,6 +40,10 @@ struct Config {
     STRPTR proxyPassword;
     ULONG fixedWidthFonts;
     ULONG markdownFormatting;
+    /** MorphOS chat Scintilla: DejaVu Sans Mono vs Sans (Ansicht-Menü, unabhängig von fixedWidthFonts). */
+    ULONG chatFixedWidthFont;
+    /** MorphOS chat Scintilla font size in points (8–24). */
+    ULONG chatFontSize;
     /** MorphOS chat Scintilla: SCI_SETWRAPMODE SC_WRAP_WORD when TRUE (Ansicht-Menü). */
     ULONG chatLineWrap;
     LONG userTextAlignment;
@@ -67,6 +71,12 @@ struct Config {
  * The global app config
  **/
 extern struct Config config;
+
+#define CHAT_OUTPUT_FONT_SIZE_DEFAULT 12
+#define CHAT_OUTPUT_FONT_SIZE_MIN 8
+#define CHAT_OUTPUT_FONT_SIZE_MAX 24
+
+ULONG configClampChatFontSize(ULONG size);
 
 /**
  * Write the config to disk

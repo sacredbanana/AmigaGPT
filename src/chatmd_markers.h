@@ -20,4 +20,8 @@ BOOL chatMdItalicStarCanOpen(const char *input, ULONG pos, ULONG len);
 /** CommonMark-style: may this `*` close emphasis (right-flanking + heuristics)? */
 BOOL chatMdItalicStarCanClose(const char *input, ULONG pos, ULONG len);
 
+/** `**` at pos (two asterisks); use with stack: open when !boldActive, close when boldActive. */
+BOOL chatMdBoldDoubleStarCanOpen(const char *input, ULONG pos, ULONG len);
+BOOL chatMdBoldDoubleStarCanClose(const char *input, ULONG pos, ULONG len);
+
 #endif

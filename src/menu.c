@@ -28,6 +28,12 @@
 
 /* msgctxt "STRING_MENU_CHAT_LINE_WRAP" */
 /* msgid "Wrap long lines (chat)" */
+/* msgctxt "STRING_MENU_CHAT_FIXED_WIDTH_FONT" */
+/* msgid "Monospace font (chat output)" */
+/* msgctxt "STRING_MENU_CHAT_FONT_LARGER" */
+/* msgid "Increase chat font size" */
+/* msgctxt "STRING_MENU_CHAT_FONT_SMALLER" */
+/* msgid "Decrease chat font size" */
 /* msgctxt "STRING_MENU_EXPORT_CHAT_RAW" */
 /* msgid "Export chat (raw UTF-8)..." */
 /* msgctxt "STRING_EXPORT_CHAT_RAW" */
@@ -352,6 +358,27 @@ void refreshViewCodeBlocksMenuState(void) {
     enabled = codeBlocksConversationHasBlocks(getCurrentConversation());
     set(item, MUIA_Menuitem_Enabled, enabled);
 }
+
+void refreshChatFontMenuState(void) {
+    Object *larger;
+    Object *smaller;
+
+    if (menuStrip == NULL) {
+        return;
+    }
+    larger = (Object)DoMethod(menuStrip, MUIM_FindUData,
+                              MENU_ITEM_VIEW_CHAT_FONT_LARGER);
+    smaller = (Object)DoMethod(menuStrip, MUIM_FindUData,
+                               MENU_ITEM_VIEW_CHAT_FONT_SMALLER);
+    if (larger != NULL) {
+        set(larger, MUIA_Menuitem_Enabled,
+            config.chatFontSize < CHAT_OUTPUT_FONT_SIZE_MAX);
+    }
+    if (smaller != NULL) {
+        set(smaller, MUIA_Menuitem_Enabled,
+            config.chatFontSize > CHAT_OUTPUT_FONT_SIZE_MIN);
+    }
+}
 #endif
 
 HOOKPROTONHNONP(RecreateMainWindowFunc, void) {
@@ -404,7 +431,13 @@ HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
 MakeHook(FixedWidthFontsMenuItemClickedHook,
          FixedWidthFontsMenuItemClickedFunc);
 
-HOOKPROTONHNONP(MarkdownRefreshFunc, void) { displayConversation(NULL); }
+HOOKPROTONHNONP(MarkdownRefreshFunc, void) {
+#ifdef __MORPHOS__
+    morphosScheduleChatOutputRefresh(TRUE);
+#else
+    displayConversation(NULL);
+#endif
+}
 MakeHook(MarkdownRefreshHook, MarkdownRefreshFunc);
 
 HOOKPROTONHNONP(MarkdownFormattingMenuItemClickedFunc, void) {
@@ -432,6 +465,59 @@ HOOKPROTONHNONP(ChatLineWrapMenuItemClickedFunc, void) {
     chatOutputScintillaApplyLineWrap(chatOutputTextEditor);
 }
 MakeHook(ChatLineWrapMenuItemClickedHook, ChatLineWrapMenuItemClickedFunc);
+
+HOOKPROTONHNONP(ApplyChatFontSettingFunc, void) {
+    if (mainWindowIsShuttingDown()) {
+        return;
+    }
+    applyChatFontSetting();
+}
+MakeHook(ApplyChatFontSettingHook, ApplyChatFontSettingFunc);
+
+HOOKPROTONHNONP(ChatFixedWidthFontMenuItemClickedFunc, void) {
+    if (!syncMenuCheckbox(MENU_ITEM_VIEW_CHAT_FIXED_WIDTH_FONT,
+                          &config.chatFixedWidthFont)) {
+        return;
+    }
+    if (writeConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+        return;
+    }
+    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+             &ApplyChatFontSettingHook);
+}
+MakeHook(ChatFixedWidthFontMenuItemClickedHook,
+         ChatFixedWidthFontMenuItemClickedFunc);
+
+HOOKPROTONHNONP(ChatFontLargerMenuItemClickedFunc, void) {
+    if (config.chatFontSize >= CHAT_OUTPUT_FONT_SIZE_MAX) {
+        return;
+    }
+    config.chatFontSize = configClampChatFontSize(config.chatFontSize + 1);
+    if (writeConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+        return;
+    }
+    refreshChatFontMenuState();
+    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+             &ApplyChatFontSettingHook);
+}
+MakeHook(ChatFontLargerMenuItemClickedHook, ChatFontLargerMenuItemClickedFunc);
+
+HOOKPROTONHNONP(ChatFontSmallerMenuItemClickedFunc, void) {
+    if (config.chatFontSize <= CHAT_OUTPUT_FONT_SIZE_MIN) {
+        return;
+    }
+    config.chatFontSize = configClampChatFontSize(config.chatFontSize - 1);
+    if (writeConfig() == RETURN_ERROR) {
+        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+        return;
+    }
+    refreshChatFontMenuState();
+    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+             &ApplyChatFontSettingHook);
+}
+MakeHook(ChatFontSmallerMenuItemClickedHook, ChatFontSmallerMenuItemClickedFunc);
 #endif
 
 HOOKPROTONHNONP(TextAlignmentChangedFunc, void) { displayConversation(NULL); }
@@ -503,6 +589,15 @@ void createMenu() {
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_CHAT_LINE_WRAP, MUIA_UserData, MENU_ITEM_VIEW_CHAT_LINE_WRAP,
     MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_CHAT_FIXED_WIDTH_FONT, MUIA_UserData,
+    MENU_ITEM_VIEW_CHAT_FIXED_WIDTH_FONT, MUIA_Menuitem_Checkit, TRUE,
+    MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_CHAT_FONT_LARGER, MUIA_UserData,
+    MENU_ITEM_VIEW_CHAT_FONT_LARGER, MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
+    STRING_MENU_CHAT_FONT_SMALLER, MUIA_UserData,
+    MENU_ITEM_VIEW_CHAT_FONT_SMALLER, MUIA_Menuitem_CopyStrings, FALSE, End,
 #endif
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_USER_TEXT_ALIGNMENT, MUIA_UserData,
@@ -771,6 +866,27 @@ void addMenuActions() {
     DoMethod(chatLineWrapMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &ChatLineWrapMenuItemClickedHook);
+
+    Object chatFixedWidthFontMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_CHAT_FIXED_WIDTH_FONT);
+    set(chatFixedWidthFontMenuItem, MUIA_Menuitem_Checked,
+        config.chatFixedWidthFont);
+    DoMethod(chatFixedWidthFontMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &ChatFixedWidthFontMenuItemClickedHook);
+
+    Object chatFontLargerMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_CHAT_FONT_LARGER);
+    DoMethod(chatFontLargerMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &ChatFontLargerMenuItemClickedHook);
+
+    Object chatFontSmallerMenuItem = (Object)DoMethod(
+        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_CHAT_FONT_SMALLER);
+    DoMethod(chatFontSmallerMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &ChatFontSmallerMenuItemClickedHook);
+    refreshChatFontMenuState();
 #endif
 
     Object userTextAlignmentLeftMenuItem = (Object)DoMethod(

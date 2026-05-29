@@ -421,6 +421,16 @@ ULONG codeBlocksScintillaDocumentLength(Object *sci) {
     return (ULONG)scintillaCommand(sci, SCI_GETLENGTH, 0, 0);
 }
 
+void codeBlocksScintillaClearDocument(Object *sci) {
+    if (sci == NULL) {
+        return;
+    }
+    scintillaCommand(sci, SCI_SETREADONLY, 0, 0);
+    scintillaCommand(sci, SCI_CLEARDOCUMENTSTYLE, 0, 0);
+    scintillaCommand(sci, SCI_CLEARALL, 0, 0);
+    scintillaCommand(sci, SCI_SETREADONLY, 1, 0);
+}
+
 void codeBlocksScintillaSetUtf8Text(Object *sci, const char *utf8,
                                     const char *language) {
     const CodeBlocksLexerEntry *entry;
@@ -461,16 +471,33 @@ void codeBlocksScintillaSetUtf8Text(Object *sci, const char *utf8,
     scintillaCommand(sci, SCI_SETREADONLY, 1, 0);
 }
 
+void codeBlocksScintillaPrimeViewer(Object *sci) {
+    if (sci == NULL) {
+        return;
+    }
+    scintillaCommand(sci, SCI_SETCODEPAGE, SC_CP_UTF8, 0);
+    scintillaCommand(sci, SCI_SETMOUSEDOWNCAPTURES, 0, 0);
+    scintillaCommand(sci, SCI_SETMOUSEWHEELCAPTURES, 0, 0);
+    scintillaCommand(sci, SCI_SETREADONLY, 1, 0);
+}
+
 void codeBlocksScintillaInitViewer(Object *sci) {
     if (sci == NULL) {
         return;
     }
+    codeBlocksScintillaPrimeViewer(sci);
     scintillaCommand(sci, SCI_SETFONTQUALITY, CODEBLOCKS_SCINTILLA_FONTQUALITY_TTENGINE, 0);
     scintillaCommand(sci, SCI_SETCODEPAGE, SC_CP_UTF8, 0);
     codeBlocksScintillaApplyViewerFont(sci, TRUE);
     codeBlocksScintillaInitFallbackStyleColours(sci);
     scintillaCommand(sci, SCI_SETLEXER, SCLEX_NULL, 0);
     scintillaCommand(sci, SCI_SETUNDOCOLLECTION, 0, 0);
+    /*
+     * Mirror chat Scintilla behavior: no drag capture on mouse-down.
+     * This avoids cross-window wheel/drag state leaking into chat Scintilla.
+     */
+    scintillaCommand(sci, SCI_SETMOUSEDOWNCAPTURES, 0, 0);
+    scintillaCommand(sci, SCI_SETMOUSEWHEELCAPTURES, 0, 0);
 }
 
 #endif /* __MORPHOS__ */

@@ -14,6 +14,9 @@
 /** TRUE while an OpenAI chat SSE response is still on the open TLS socket. */
 BOOL openAIChatStreamInProgress(void);
 
+/** Stop an in-flight chat SSE read (app quit); safe from mainWindowPrepareShutdown. */
+void openAIChatStreamRequestCancel(void);
+
 /** TRUE if the last stream ended with response.completed (OpenAI). */
 BOOL openAIChatStreamCompletedOk(void);
 

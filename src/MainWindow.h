@@ -49,8 +49,22 @@ struct Conversation *getCurrentConversation(void);
 void displayConversation(struct Conversation *conversation);
 
 #ifdef __MORPHOS__
-/** Apply config.fixedWidthFonts to chat/image editors and chat Scintilla (no window rebuild). */
+/** Apply config.fixedWidthFonts to chat/image input editors (not chat Scintilla on MorphOS). */
 void applyFixedWidthFontsSetting(void);
+/** MorphOS: chat output font from config.chatFixedWidthFont / config.chatFontSize. */
+void applyChatFontSetting(void);
+
+/** Rebuild chat Scintilla from chatOutputTextEditorContents; preserveViewport for Markdown toggle. */
+void chatOutputUpdateFromBuffer(BOOL preserveViewport);
+
+/** First NewInput tick: finish chat Scintilla + mouse guard (not in createMainWindow). */
+void morphosRunStartupDeferred(void);
+
+/** PushMethod: heavy SetUtf8/styling outside list-click / displayConversation stack. */
+void morphosScheduleChatOutputRefresh(BOOL preserveViewport);
+
+/** Like above but raw UTF-8 + role bytes only (NList chat switch; avoids Markdown freeze). */
+void morphosScheduleChatOutputRefreshFromList(void);
 #endif
 
 /** Before MUI_DisposeObject(app): close UI, clear lists, drop window notifies. */
@@ -58,6 +72,8 @@ void mainWindowPrepareShutdown(void);
 
 void mainWindowSignalQuit(void);
 BOOL mainWindowIsShuttingDown(void);
+/** TRUE during mainWindowPrepareShutdown() (MorphOS UI teardown). */
+BOOL mainWindowMorphosPrepareShutdownActive(void);
 
 /** After MUI_DisposeObject(app): avoid stale Object pointers and pen IDs. */
 void mainWindowInvalidateAfterShutdown(void);

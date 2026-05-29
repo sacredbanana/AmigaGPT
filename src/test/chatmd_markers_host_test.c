@@ -76,11 +76,87 @@ static void test_bold_not_single_italic(void) {
     ASSERT(!chatMdItalicStarCanOpen(s, 0, (ULONG)strlen(s)), "** at 0");
 }
 
+static ULONG double_star_at(const char *s) {
+    const char *p = strstr(s, "**");
+
+    return p ? (ULONG)(p - s) : (ULONG)-1;
+}
+
+static void test_bold_open_close(void) {
+    const char *s = "**fett**";
+    ULONG openAt = 0;
+    ULONG closeAt = 6;
+
+    ASSERT(chatMdBoldDoubleStarCanOpen(s, openAt, (ULONG)strlen(s)), "open");
+    ASSERT(!chatMdBoldDoubleStarCanOpen(s, closeAt, (ULONG)strlen(s)),
+           "no open on close");
+    ASSERT(chatMdBoldDoubleStarCanClose(s, closeAt, (ULONG)strlen(s)), "close");
+}
+
+static void test_bold_close_after_period(void) {
+    const char *s =
+        "Normal formatierter anfang mit **fettem text am satzende.** hier";
+    ULONG closeAt = strstr(s, "satzende.") - s + 9;
+
+    ASSERT(closeAt < strlen(s), "close index");
+    ASSERT(chatMdBoldDoubleStarCanClose(s, closeAt, (ULONG)strlen(s)),
+           "satzende.** closes");
+    ASSERT(chatMdBoldDoubleStarCanOpen(s, double_star_at(s), (ULONG)strlen(s)),
+           "opening ** after mit");
+}
+
+static void test_bold_no_open_on_star_dot(void) {
+    const char *s = "foo **. bar";
+    ULONG p = strstr(s, "**") - s;
+
+    ASSERT(!chatMdBoldDoubleStarCanOpen(s, p, (ULONG)strlen(s)), "**. not open");
+}
+
+static void test_escaped_and_quoted_star(void) {
+    const char *s;
+    ULONG p;
+
+    s = "\\*";
+    p = 1;
+    ASSERT(!chatMdItalicStarCanOpen(s, p, (ULONG)strlen(s)), "\\* not italic open");
+    ASSERT(!chatMdItalicStarCanClose(s, p, (ULONG)strlen(s)), "\\* not italic close");
+
+    s = "'*'";
+    p = 1;
+    ASSERT(!chatMdItalicStarCanOpen(s, p, (ULONG)strlen(s)), "'*' not open");
+    ASSERT(!chatMdItalicStarCanClose(s, p, (ULONG)strlen(s)), "'*' not close");
+
+    s = "Use '\\*' for '*', then normal.";
+    p = strchr(s, '*') - s;
+    while (p < strlen(s)) {
+        ASSERT(!chatMdItalicStarCanOpen(s, (ULONG)p, (ULONG)strlen(s)),
+               "no spurious italic in doc line");
+        p = strchr(s + p + 1, '*') - s;
+        if (p == (ULONG)-1) {
+            break;
+        }
+    }
+}
+
+static void test_italic_still_works(void) {
+    const char *s = "see *emphasis* here";
+    ULONG openAt = strchr(s, '*') - s;
+    ULONG closeAt = strrchr(s, '*') - s;
+
+    ASSERT(chatMdItalicStarCanOpen(s, openAt, (ULONG)strlen(s)), "emphasis open");
+    ASSERT(chatMdItalicStarCanClose(s, closeAt, (ULONG)strlen(s)), "emphasis close");
+}
+
 int main(void) {
     test_not_open();
     test_open_and_close();
     test_mid_sentence_italic();
     test_bold_not_single_italic();
+    test_bold_open_close();
+    test_bold_close_after_period();
+    test_bold_no_open_on_star_dot();
+    test_escaped_and_quoted_star();
+    test_italic_still_works();
 
     printf("chatmd_markers_host_test: %d run, %d failed\n", tests_run, tests_failed);
     return tests_failed != 0 ? 1 : 0;

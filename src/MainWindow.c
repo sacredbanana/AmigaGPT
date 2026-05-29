@@ -22,6 +22,7 @@
 #include "gui.h"
 #include "menu.h"
 #include "MainWindow.h"
+#include "openai.h"
 #ifdef __MORPHOS__
 #include <mui/Scintilla_mcc.h>
 #include "ChatOutputScintilla.h"
@@ -130,6 +131,105 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
                              ULONG speechUtf8Index, BOOL isNewConversation);
 static LONG loadConversations();
 static LONG saveConversations();
+#define LAST_CONVERSATION_DIR "ENVARC:AmigaGPT"
+#define LAST_CONVERSATION_PATH "ENVARC:AmigaGPT/last-conversation"
+#define LAST_CONVERSATION_LEGACY "AMIGAGPT:last-conversation.txt"
+#define LAST_CONVERSATION_NAME_MAX 512
+
+static void ensureLastConversationEnvarcDir(void) {
+    CreateDir(LAST_CONVERSATION_DIR);
+}
+
+static void saveLastSelectedConversationName(struct Conversation *conversation) {
+    BPTR file;
+
+    if (conversation == NULL || conversation->name == NULL ||
+        conversation->name[0] == '\0') {
+        return;
+    }
+    ensureLastConversationEnvarcDir();
+    file = Open(LAST_CONVERSATION_PATH, MODE_NEWFILE);
+    if (file == 0) {
+        return;
+    }
+    Write(file, conversation->name, (LONG)strlen(conversation->name));
+    Close(file);
+}
+
+static BPTR openLastConversationFile(void) {
+    BPTR file = Open(LAST_CONVERSATION_PATH, MODE_OLDFILE);
+
+    if (file == 0) {
+        file = Open(LAST_CONVERSATION_LEGACY, MODE_OLDFILE);
+    }
+    return file;
+}
+
+static BOOL restoreLastSelectedConversation(void) {
+    BPTR file;
+    STRPTR nameBuf;
+    LONG fileSize;
+    LONG total;
+    LONG i;
+    BOOL restored = FALSE;
+
+    if (conversationListObject == NULL) {
+        return FALSE;
+    }
+    file = openLastConversationFile();
+    if (file == 0) {
+        return FALSE;
+    }
+#ifdef __AMIGAOS3__
+    Seek(file, 0, OFFSET_END);
+    fileSize = Seek(file, 0, OFFSET_BEGINNING);
+#else
+#ifdef __AMIGAOS4__
+    fileSize = (LONG)GetFileSize(file);
+#else
+    struct FileInfoBlock fib;
+
+    ExamineFH64(file, &fib, NULL);
+    fileSize = (LONG)fib.fib_Size;
+#endif
+#endif
+    if (fileSize <= 0 || fileSize >= LAST_CONVERSATION_NAME_MAX) {
+        Close(file);
+        return FALSE;
+    }
+    nameBuf = AllocVec((ULONG)fileSize + 1, MEMF_CLEAR);
+    if (nameBuf == NULL) {
+        Close(file);
+        return FALSE;
+    }
+    if (Read(file, nameBuf, fileSize) != fileSize) {
+        FreeVec(nameBuf);
+        Close(file);
+        return FALSE;
+    }
+    Close(file);
+    nameBuf[fileSize] = '\0';
+
+    get(conversationListObject, MUIA_NList_Entries, &total);
+    for (i = 0; i < total; i++) {
+        struct Conversation *conversation = NULL;
+
+        DoMethod(conversationListObject, MUIM_NList_GetEntry, i, &conversation);
+        if (conversation != NULL && conversation->name != NULL &&
+            strcmp(conversation->name, nameBuf) == 0) {
+            DoMethod(conversationListObject, MUIM_NList_SetActive, i, NULL);
+            streamLogLifecycle("restore last conversation ok");
+            saveLastSelectedConversationName(conversation);
+            restored = TRUE;
+            break;
+        }
+    }
+    if (!restored) {
+        streamLogLifecycle("restore last conversation miss");
+    }
+    FreeVec(nameBuf);
+    return restored;
+}
 static LONG loadImages();
 static LONG saveImages();
 static void openImage(struct GeneratedImage *image, WORD scaledWidth,
@@ -149,7 +249,6 @@ static Object *newChatOutputFloattextObject(void);
 static void installChatOutputWheelHandler(void);
 #endif
 #ifdef __MORPHOS__
-static void chatOutputUpdateFromBuffer(void);
 static void clearChatOutputDisplay(void);
 #endif
 
@@ -210,20 +309,194 @@ HOOKPROTONHNO(DisplayImageLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
 }
 MakeHook(DisplayImageLI_TextHook, DisplayImageLI_TextFunc);
 
+#ifdef __MORPHOS__
+static struct Conversation *conversationRowPending;
+static BOOL morphosStartupDeferredDone;
+static BOOL morphosConversationSelectEnabled;
+static BOOL chatOutputRefreshPending;
+static BOOL chatOutputRefreshPreserveViewport;
+static BOOL chatOutputRefreshFromList;
+static BOOL chatOutputMorphosListRefreshActive;
+
+HOOKPROTONHNONP(ChatOutputRefreshDeferredFunc, void) {
+    BOOL preserve = chatOutputRefreshPreserveViewport;
+
+    chatOutputRefreshPending = FALSE;
+    chatOutputMorphosListRefreshActive = chatOutputRefreshFromList;
+    chatOutputRefreshFromList = FALSE;
+    if (mainWindowIsShuttingDown()) {
+        chatOutputMorphosListRefreshActive = FALSE;
+        return;
+    }
+    streamLogLifecycle("displayConversation scintilla refresh begin");
+    chatOutputUpdateFromBuffer(preserve);
+    chatOutputMorphosListRefreshActive = FALSE;
+    streamLogLifecycle("displayConversation scintilla refresh done");
+}
+MakeHook(ChatOutputRefreshDeferredHook, ChatOutputRefreshDeferredFunc);
+
+void morphosScheduleChatOutputRefresh(BOOL preserveViewport) {
+    if (mainWindowIsShuttingDown() || app == NULL) {
+        return;
+    }
+    chatOutputRefreshPreserveViewport = preserveViewport;
+    if (!chatOutputRefreshPending) {
+        chatOutputRefreshFromList = FALSE;
+        chatOutputRefreshPending = TRUE;
+        DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+                 &ChatOutputRefreshDeferredHook);
+    }
+}
+
+void morphosScheduleChatOutputRefreshFromList(void) {
+    if (mainWindowIsShuttingDown() || app == NULL) {
+        return;
+    }
+    chatOutputRefreshPreserveViewport = FALSE;
+    chatOutputRefreshFromList = TRUE;
+    if (!chatOutputRefreshPending) {
+        chatOutputRefreshPending = TRUE;
+        DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+                 &ChatOutputRefreshDeferredHook);
+    }
+}
+
+static void morphosApplyPendingConversationSelection(void) {
+    struct Conversation *conversation = conversationRowPending;
+
+    conversationRowPending = NULL;
+    if (mainWindowIsShuttingDown() || conversation == NULL) {
+        return;
+    }
+    currentConversation = conversation;
+    saveLastSelectedConversationName(currentConversation);
+    streamLogLifecycle("conversation select deferred begin");
+    codeBlocksViewerDismiss();
+    displayConversation(currentConversation);
+    refreshViewCodeBlocksMenuState();
+    streamLogLifecycle("conversation select deferred done");
+    if (chatInputTextEditor != NULL) {
+        DoMethod(chatInputTextEditor, MUIM_GoActive);
+    }
+}
+
+static void morphosFlushPendingPushMethods(void) {
+    ULONG muiSig = 0;
+    ULONG pass;
+
+    if (app == NULL) {
+        return;
+    }
+    streamLogLifecycle("morphos flush pushmethods begin");
+    for (pass = 0; pass < 12; pass++) {
+        BOOL hadPending = chatOutputRefreshPending ||
+                          (conversationRowPending != NULL) ||
+                          chatOutputScintillaHasDeferredWorkPending();
+
+        (void)DoMethod(app, MUIM_Application_CheckRefresh);
+        (void)DoMethod(app, MUIM_Application_NewInput, &muiSig);
+        if (!hadPending) {
+            break;
+        }
+        if (mainWindowIsShuttingDown()) {
+            conversationRowPending = NULL;
+            chatOutputRefreshPending = FALSE;
+            chatOutputRefreshFromList = FALSE;
+            chatOutputScintillaCancelDeferredStyles();
+        }
+    }
+    streamLogLifecycle("morphos flush pushmethods done");
+}
+
+static void morphosEnableConversationSelect(void);
+
+void morphosRunStartupDeferred(void) {
+    if (morphosStartupDeferredDone || mainWindowObject == NULL ||
+        chatOutputTextEditor == NULL) {
+        return;
+    }
+    morphosStartupDeferredDone = TRUE;
+    streamLogLifecycle("morphos startup deferred begin");
+    chatOutputScintillaFinishViewerInit(chatOutputTextEditor);
+    streamLogBootPhase("chat scintilla init");
+    streamLogLifecycle("morphos startup deferred finish done");
+    chatOutputScintillaInstallMouseUpGuard();
+    streamLogLifecycle("morphos startup deferred mouse guard done");
+    morphosEnableConversationSelect();
+}
+
+HOOKPROTONHNONP(ConversationRowClickedDeferredFunc, void) {
+    if (!morphosConversationSelectEnabled || mainWindowIsShuttingDown()) {
+        return;
+    }
+    morphosApplyPendingConversationSelection();
+}
+MakeHook(ConversationRowClickedDeferredHook, ConversationRowClickedDeferredFunc);
+
+static void morphosEnableConversationSelect(void) {
+    struct Conversation *active = NULL;
+    struct Conversation *pick = NULL;
+
+    morphosConversationSelectEnabled = TRUE;
+    streamLogLifecycle("morphos conversation select enabled");
+    if (conversationListObject != NULL) {
+        DoMethod(conversationListObject, MUIM_NList_GetEntry,
+                 MUIV_NList_GetEntry_Active, &active);
+        if (active == NULL) {
+            DoMethod(conversationListObject, MUIM_NList_GetEntry, 0, &active);
+            if (active != NULL) {
+                DoMethod(conversationListObject, MUIM_NList_SetActive, 0,
+                         NULL);
+                streamLogLifecycle("morphos conversation auto-select first");
+            }
+        } else {
+            streamLogLifecycle("morphos conversation auto-select active");
+        }
+    }
+    if (conversationRowPending != NULL) {
+        pick = conversationRowPending;
+    } else if (active != NULL) {
+        pick = active;
+    }
+    if (pick != NULL && app != NULL) {
+        conversationRowPending = pick;
+        DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+                 &ConversationRowClickedDeferredHook);
+    } else {
+        streamLogLifecycle("morphos conversation auto-select none");
+    }
+}
+
+HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
+    struct Conversation *conversation;
+
+    DoMethod(conversationListObject, MUIM_NList_GetEntry,
+             MUIV_NList_GetEntry_Active, &conversation);
+    if (conversation == NULL || app == NULL) {
+        return;
+    }
+    conversationRowPending = conversation;
+    if (!morphosConversationSelectEnabled) {
+        streamLogLifecycle("conversation select queued until startup ready");
+        return;
+    }
+    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+             &ConversationRowClickedDeferredHook);
+}
+
+#else /* !__MORPHOS__ */
 HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
     struct Conversation *conversation;
     DoMethod(conversationListObject, MUIM_NList_GetEntry,
              MUIV_NList_GetEntry_Active, &conversation);
     if (conversation) {
         currentConversation = conversation;
+        saveLastSelectedConversationName(currentConversation);
         displayConversation(currentConversation);
-#ifdef __MORPHOS__
-        codeBlocksViewerDismiss();
-        refreshViewCodeBlocksMenuState();
-#endif
         DoMethod(chatInputTextEditor, MUIM_GoActive);
     }
 }
+#endif
 MakeHook(ConversationRowClickedHook, ConversationRowClickedFunc);
 
 HOOKPROTONHNONP(ImageRowClickedFunc, void) {
@@ -843,6 +1116,26 @@ static BOOL isTopStyle(const StyleStack *s, StyleType style) {
     return (s->stack[s->top] == style);
 }
 
+static BOOL stackHasBold(const StyleStack *s) {
+    int i;
+
+    for (i = 0; i <= s->top; i++) {
+        if (s->stack[i] == STYLE_BOLD) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void popBoldRun(StyleStack *s) {
+    while (s->top >= 0 && s->stack[s->top] != STYLE_BOLD) {
+        s->top--;
+    }
+    if (s->top >= 0) {
+        s->top--;
+    }
+}
+
 /**
  * Output MUI escape codes for turning on/off styles:
  *   \033b = bold on
@@ -912,8 +1205,16 @@ static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
         *foundStyle = STYLE_UNDERLINE;
         return 2;
     }
-    // Check for "**" (bold)
     if (pos + 1 < len && input[pos] == '*' && input[pos + 1] == '*') {
+        if (stackHasBold(stack)) {
+            if (!chatMdBoldDoubleStarCanClose((const char *)input, (ULONG)pos,
+                                              (ULONG)len)) {
+                return 0;
+            }
+        } else if (!chatMdBoldDoubleStarCanOpen((const char *)input, (ULONG)pos,
+                                                (ULONG)len)) {
+            return 0;
+        }
         *foundStyle = STYLE_BOLD;
         return 2;
     }
@@ -984,20 +1285,39 @@ static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
         StyleType styleFound;
         UBYTE markerLen = parseMarker(input, i, inLen, &styleFound, &styleStack);
         if (markerLen > 0) {
-            // It's either a 1-char or 2-char marker
-            if (isTopStyle(&styleStack, styleFound)) {
-                // It's a closing marker for the top style
+            if (styleFound == STYLE_BOLD) {
+                if (stackHasBold(&styleStack)) {
+                    popBoldRun(&styleStack);
+                    outputStyleOff(out, outCap);
+                    for (UWORD s = 0; s <= styleStack.top; s++) {
+                        outputStyleOn(out, outCap, styleStack.stack[s]);
+                    }
+                } else if (pushStyle(&styleStack, STYLE_BOLD)) {
+                    outputStyleOn(out, outCap, STYLE_BOLD);
+                } else {
+                    size_t availableSpace = outCap - strlen(out) - 1;
+                    size_t copyLen = (markerLen < availableSpace)
+                                         ? markerLen
+                                         : availableSpace;
+
+                    UBYTE tempBuf[256];
+                    if (copyLen > sizeof(tempBuf) - 1) {
+                        copyLen = sizeof(tempBuf) - 1;
+                    }
+
+                    memcpy(tempBuf, &input[i], copyLen);
+                    tempBuf[copyLen] = '\0';
+
+                    strbufAppend(out, (ULONG)outCap, (STRPTR)tempBuf);
+                }
+            } else if (isTopStyle(&styleStack, styleFound)) {
                 popStyle(&styleStack, styleFound);
-                // Output style off
                 outputStyleOff(out, outCap);
 
-                // Now re-enable any style(s) that remain on the stack
-                // because \033n turns off everything.
                 for (UWORD s = 0; s <= styleStack.top; s++) {
                     outputStyleOn(out, outCap, styleStack.stack[s]);
                 }
             } else {
-                // It's an opening marker for a new style
                 if (pushStyle(&styleStack, styleFound)) {
                     outputStyleOn(out, outCap, styleFound);
                 } else {
@@ -1121,7 +1441,9 @@ static void chatOutputFillRoleStyles(struct Conversation *conversation,
 
 static BOOL mainWindowShuttingDown = FALSE;
 
-static void chatOutputUpdateFromBuffer(void) {
+BOOL mainWindowMorphosPrepareShutdownActive(void) { return mainWindowShuttingDown; }
+
+void chatOutputUpdateFromBuffer(BOOL preserveViewport) {
     ULONG textLen;
     UBYTE *roleStyles = NULL;
 
@@ -1132,7 +1454,9 @@ static void chatOutputUpdateFromBuffer(void) {
 
     textLen = (ULONG)strlen(chatOutputTextEditorContents);
     if (textLen == 0) {
-        chatOutputScintillaSetUtf8Text(chatOutputTextEditor, "");
+        streamLogLifecycle("chatOutputUpdateFromBuffer empty");
+        chatOutputScintillaSetUtf8TextWithRoleStyles(chatOutputTextEditor, "", NULL, 0,
+                                                     preserveViewport);
         return;
     }
 
@@ -1142,16 +1466,44 @@ static void chatOutputUpdateFromBuffer(void) {
             char *displayText = NULL;
             UBYTE *displayStyles = NULL;
 
+            streamLogLifecycle("chatOutputUpdateFromBuffer roleStyles begin");
             chatOutputFillRoleStyles(currentConversation, roleStyles, textLen);
+            streamLogLifecycle("chatOutputUpdateFromBuffer roleStyles done");
 
 #ifdef __MORPHOS__
-            if (morphosChatStreamRawScintillaRefresh) {
-                chatOutputScintillaForgetMarkdownLinkSpans();
-                chatOutputScintillaSetUtf8TextWithRoleStyles(
-                    chatOutputTextEditor, chatOutputTextEditorContents, roleStyles,
-                    textLen);
-                FreeVec(roleStyles);
-                return;
+            {
+                BOOL morphosUseRawRefresh =
+                    !config.markdownFormatting ||
+                    morphosChatStreamRawScintillaRefresh;
+
+                if (morphosUseRawRefresh) {
+                    if (morphosChatStreamRawScintillaRefresh) {
+                        streamLogLifecycle(
+                            "chatOutput refresh stream raw path");
+                    } else {
+                        streamLogLifecycle("chatOutput refresh raw path");
+                    }
+                    chatOutputScintillaMorphosSkipViewport =
+                        chatOutputMorphosListRefreshActive ||
+                        morphosChatStreamRawScintillaRefresh;
+                    chatOutputScintillaAugmentStyleBytesHotspots(
+                        chatOutputTextEditorContents, roleStyles, textLen);
+                    streamLogLifecycle(
+                        "chatOutputUpdateFromBuffer scintilla raw begin");
+                    chatOutputScintillaForgetMarkdownLinkSpans();
+                    chatOutputScintillaSetUtf8TextWithRoleStyles(
+                        chatOutputTextEditor, chatOutputTextEditorContents,
+                        roleStyles, textLen, preserveViewport);
+                    streamLogLifecycle(
+                        "chatOutputUpdateFromBuffer scintilla raw done");
+                    FreeVec(roleStyles);
+                    return;
+                }
+                if (chatOutputMorphosListRefreshActive) {
+                    streamLogLifecycle("chatOutput refresh list markdown path");
+                } else {
+                    streamLogLifecycle("chatOutput refresh markdown path");
+                }
             }
 #endif
 
@@ -1161,13 +1513,20 @@ static void chatOutputUpdateFromBuffer(void) {
             if (displayText != NULL && displayStyles != NULL) {
                 ULONG displayCap = textLen * 2;
 
+                streamLogLifecycle("chatOutputUpdateFromBuffer markdown begin");
                 textLen = chatOutputScintillaBuildMidiMarkdownDisplay(
                     chatOutputTextEditorContents, roleStyles, textLen,
                     displayText, displayStyles);
+                streamLogLifecycle("chatOutputUpdateFromBuffer markdown done");
+                streamLogLifecycle("chatOutputUpdateFromBuffer pipeTables begin");
                 textLen = chatOutputScintillaFormatPipeTables(
                     displayText, displayStyles, textLen, displayCap);
+                streamLogLifecycle("chatOutputUpdateFromBuffer pipeTables done");
+                streamLogLifecycle("chatOutputUpdateFromBuffer scintilla set begin");
                 chatOutputScintillaSetUtf8TextWithRoleStyles(
-                    chatOutputTextEditor, displayText, displayStyles, textLen);
+                    chatOutputTextEditor, displayText, displayStyles, textLen,
+                    preserveViewport);
+                streamLogLifecycle("chatOutputUpdateFromBuffer scintilla set done");
                 FreeVec(displayText);
                 FreeVec(displayStyles);
             } else {
@@ -1177,19 +1536,27 @@ static void chatOutputUpdateFromBuffer(void) {
                 if (displayStyles != NULL) {
                     FreeVec(displayStyles);
                 }
+                streamLogLifecycle("chatOutputUpdateFromBuffer scintilla fallback begin");
                 chatOutputScintillaForgetMarkdownLinkSpans();
+                chatOutputScintillaAugmentStyleBytesHotspots(
+                    chatOutputTextEditorContents, roleStyles, textLen);
                 chatOutputScintillaSetUtf8TextWithRoleStyles(
                     chatOutputTextEditor, chatOutputTextEditorContents,
-                    roleStyles, textLen);
+                    roleStyles, textLen, preserveViewport);
+                streamLogLifecycle("chatOutputUpdateFromBuffer scintilla fallback done");
             }
 
             FreeVec(roleStyles);
             return;
         }
+        streamLogLifecycle("chatOutputUpdateFromBuffer roleStyles alloc fail");
     }
 
+    streamLogLifecycle("chatOutputUpdateFromBuffer scintilla plain begin");
     chatOutputScintillaSetUtf8TextWithRoleStyles(
-        chatOutputTextEditor, chatOutputTextEditorContents, roleStyles, textLen);
+        chatOutputTextEditor, chatOutputTextEditorContents, roleStyles, textLen,
+        preserveViewport);
+    streamLogLifecycle("chatOutputUpdateFromBuffer scintilla plain done");
 
     if (roleStyles != NULL) {
         FreeVec(roleStyles);
@@ -1200,7 +1567,7 @@ static void clearChatOutputDisplay(void) {
     if (chatOutputTextEditorContents != NULL) {
         chatOutputTextEditorContents[0] = '\0';
     }
-    chatOutputUpdateFromBuffer();
+    chatOutputUpdateFromBuffer(FALSE);
 }
 
 #else /* !__MORPHOS__ */
@@ -1329,6 +1696,7 @@ static void installChatOutputWheelHandler(void) {
 }
 
 void chatOutputWheelShutdown(void) {
+    streamLogLifecycle("chatOutputWheelShutdown begin");
     if (chatOutputWheelEHInstalled && mainWindowObject != NULL &&
         chatOutputWheelEH != NULL) {
         DoMethod(mainWindowObject, MUIM_Window_RemEventHandler, chatOutputWheelEH);
@@ -1339,6 +1707,7 @@ void chatOutputWheelShutdown(void) {
         chatOutputWheelEH = NULL;
     }
     /* Custom class must outlive chatOutputTextEditor until MUI_DisposeObject(app). */
+    streamLogLifecycle("chatOutputWheelShutdown done");
 }
 
 void chatOutputWheelDisposeClass(void) {
@@ -1375,13 +1744,16 @@ void applyFixedWidthFontsSetting(void) {
         set(imageInputTextEditor, MUIA_TextEditor_FixedFont,
             config.fixedWidthFonts);
     }
-    if (chatOutputTextEditor != NULL) {
-        chatOutputScintillaRefreshFont(chatOutputTextEditor);
-        if (chatOutputTextEditorContents != NULL &&
-            chatOutputTextEditorContents[0] != '\0') {
-            chatOutputUpdateFromBuffer();
-        }
+}
+
+void applyChatFontSetting(void) {
+    if (chatOutputTextEditor == NULL || mainWindowIsShuttingDown()) {
+        return;
     }
+    streamLogLifecycle("chat font apply begin");
+    chatOutputScintillaCancelDeferredStyles();
+    chatOutputScintillaRefreshFont(chatOutputTextEditor);
+    streamLogLifecycle("chat font apply done");
 }
 #endif
 
@@ -1391,6 +1763,7 @@ void applyFixedWidthFontsSetting(void) {
  **/
 LONG createMainWindow() {
     streamLogBootPhase("createMainWindow start");
+    streamLogLifecycle("createMainWindow start");
 
     if ((isMUI5 || isMUI39) && createAmigaGPTTextEditor() == RETURN_ERROR) {
         displayError("Could not create custom class.");
@@ -1454,6 +1827,7 @@ LONG createMainWindow() {
     pages[0] = STRING_CHAT_MODE;
     pages[1] = STRING_IMAGE_GENERATION_MODE;
 
+    streamLogLifecycle("createMainWindow WindowObject begin");
     if ((mainWindowObject = WindowObject,
             MUIA_Window_Title, STRING_APP_NAME,
             MUIA_Window_ID, OBJECT_ID_MAIN_WINDOW,
@@ -1618,26 +1992,47 @@ LONG createMainWindow() {
                 End,
             End,
         End) == NULL) {
+        streamLogLifecycle("createMainWindow WindowObject fail");
         displayError(STRING_ERROR_MAIN_WINDOW);
         return RETURN_ERROR;
     }
+    streamLogLifecycle("createMainWindow WindowObject ok");
 
     get(mainWindowObject, MUIA_Window, &mainWindow);
 #ifdef __MORPHOS__
+    streamLogLifecycle("createMainWindow codeBlocksViewerSetAslParentWindow begin");
     codeBlocksViewerSetAslParentWindow(mainWindow);
-    chatOutputScintillaInitViewer(chatOutputTextEditor);
-    streamLogBootPhase("chat scintilla init");
+    streamLogLifecycle("createMainWindow codeBlocksViewerSetAslParentWindow done");
+    streamLogLifecycle("createMainWindow chat scintilla prime begin");
+    chatOutputScintillaPrimeViewer(chatOutputTextEditor);
+    streamLogLifecycle("createMainWindow chat scintilla prime done");
 #endif
 
+    streamLogLifecycle("createMainWindow OM_ADDMEMBER begin");
     DoMethod(app, OM_ADDMEMBER, mainWindowObject);
+    streamLogLifecycle("createMainWindow OM_ADDMEMBER done");
 
     addMainWindowActions();
 
     /* Once before open; second Load after loadConversations broke NList on restart. */
+    streamLogLifecycle("createMainWindow Application_Load begin");
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
+    streamLogLifecycle("createMainWindow Application_Load done");
+#ifdef __MORPHOS__
+    /* ENVARC must not reopen code viewer before Scintilla is fully ready. */
+    if (codeBlocksWindowObject != NULL) {
+        streamLogLifecycle("createMainWindow codeBlocksWindow close begin");
+        set(codeBlocksWindowObject, MUIA_Window_Open, FALSE);
+        streamLogLifecycle("createMainWindow codeBlocksWindow close done");
+    }
+    streamLogLifecycle("createMainWindow chat scintilla finish deferred");
+#endif
     set(mainWindowObject, MUIA_Window_Open, TRUE);
+#ifdef __MORPHOS__
+    DoMethod(mainWindowObject, MUIM_Window_ToFront, NULL);
+#endif
     streamLogBootPhase("main window open");
-    chatOutputScintillaInstallMouseUpGuard();
+    streamLogLifecycle("createMainWindow window open done");
     addMenuActions();
     
     // Allocate pens after window is opened
@@ -1690,10 +2085,14 @@ LONG createMainWindow() {
     updateStatusBar(STRING_READY, greenPen);
 
     streamLogBootPhase("loadConversations call");
+    streamLogLifecycle("createMainWindow loadConversations begin");
     loadConversations();
     streamLogBootPhase("loadConversations done");
+    streamLogLifecycle("createMainWindow loadConversations done");
+    restoreLastSelectedConversation();
     loadImages();
     streamLogBootPhase("createMainWindow ok");
+    streamLogLifecycle("createMainWindow ok");
 
 #ifndef __MORPHOS__
     installChatOutputWheelHandler();
@@ -1738,14 +2137,29 @@ static void mainWindowEmptyNList(Object *list) {
 }
 
 void mainWindowPrepareShutdown(void) {
+    streamLogLifecycle("mainWindowPrepareShutdown begin");
     mainWindowShuttingDown = TRUE;
     mainWindowSignalQuit();
+    openAIChatStreamRequestCancel();
+    saveLastSelectedConversationName(currentConversation);
     currentConversation = NULL;
     currentImage = NULL;
 
 #ifdef __MORPHOS__
-    /* No NList_Clear on code-block list here — freezes next start (see gui.c). */
+    morphosConversationSelectEnabled = FALSE;
+    conversationRowPending = NULL;
+    codeBlocksViewerBeginShutdown();
+    chatOutputScintillaCancelPendingCodeblockOpen();
+    chatOutputScintillaCancelDeferredStyles();
+    chatOutputRefreshPending = FALSE;
+    chatOutputRefreshFromList = FALSE;
+    morphosFlushPendingPushMethods();
+    /* Close code viewer + drop chat notifies while main window is still open. */
     codeBlocksViewerCloseWindow();
+    chatOutputScintillaQuiesceForShutdown(chatOutputTextEditor);
+    chatOutputScintillaDetachNotify();
+    /* No SCI_CLEARALL/SETTEXT on quit — can freeze MorphOS after styled large docs. */
+    chatOutputScintillaForgetMarkdownLinkSpans();
 #endif
 
     /* Pens must be released while the window/screen is still valid. */
@@ -1754,22 +2168,22 @@ void mainWindowPrepareShutdown(void) {
     mainWindowEmptyNList(conversationListObject);
     mainWindowEmptyNList(imageListObject);
 
-#ifdef __MORPHOS__
-    chatOutputScintillaDetachNotify();
-    if (chatOutputTextEditor != NULL) {
-        chatOutputScintillaSetUtf8Text(chatOutputTextEditor, "");
-    }
-#endif
-
     if (mainWindowObject != NULL) {
         set(mainWindowObject, MUIA_Window_Open, FALSE);
         DoMethod(mainWindowObject, MUIM_KillNotify, MUIA_Window_Screen);
         DoMethod(mainWindowObject, MUIM_KillNotify, MUIA_Window_CloseRequest);
     }
+    streamLogLifecycle("mainWindowPrepareShutdown done");
 }
 
 void mainWindowInvalidateAfterShutdown(void) {
     mainWindowShuttingDown = FALSE;
+#ifdef __MORPHOS__
+    morphosStartupDeferredDone = FALSE;
+    morphosConversationSelectEnabled = FALSE;
+    conversationRowPending = NULL;
+    chatOutputRefreshPending = FALSE;
+#endif
     mainWindow = NULL;
     mainWindowObject = NULL;
     newChatButton = NULL;
@@ -1869,7 +2283,7 @@ static BOOL streamUiShouldRefresh(UWORD chunkCount) {
 
 static void streamUiFlushChatDisplay(void) {
 #ifdef __MORPHOS__
-    chatOutputUpdateFromBuffer();
+    chatOutputUpdateFromBuffer(FALSE);
 #else
     set(chatOutputTextEditor, MUIA_NFloattext_Text,
         chatOutputTextEditorContents);
@@ -1932,6 +2346,9 @@ static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
 #endif
 
     ++(*wordNumber);
+    if (*wordNumber == 1) {
+        streamLogLifecycle("chat stream first chunk");
+    }
     /*
      * OS3/OS4: markdown only after stream (displayConversation); avoids full-buffer
      * convertMarkdownFormattingToMUI on every chunk.
@@ -2049,6 +2466,9 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
 #ifdef __MORPHOS__
     morphosChatStreamRawScintillaRefresh = FALSE;
 #endif
+    if (mainWindowIsShuttingDown()) {
+        return;
+    }
     if (streamLogIsEnabled()) {
         ULONG msgLen =
             receivedMessage != NULL ? (ULONG)strlen(receivedMessage) : 0;
@@ -2156,6 +2576,8 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
 static void sendChatMessage() {
     BOOL isNewConversation = FALSE;
     struct json_object **responses;
+
+    streamLogLifecycle("sendChatMessage begin");
     if (currentConversation == NULL) {
         isNewConversation = TRUE;
         currentConversation = newConversation();
@@ -2261,6 +2683,7 @@ static void sendChatMessage() {
 #endif
 
     do {
+        streamLogLifecycle("chat send postChat begin");
         responses = postChatMessageToOpenAI(
             currentConversation,
             config.useCustomServer ? config.customHost : NULL,
@@ -2276,6 +2699,7 @@ static void sendChatMessage() {
                                    : API_ENDPOINT_RESPONSES,
             config.useCustomServer ? config.customApiEndpointUrl : NULL);
         if (responses == NULL) {
+            streamLogLifecycle("chat send postChat returned null");
             streamLogApiError("connect", "postChatMessageToOpenAI returned NULL");
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
@@ -2292,6 +2716,8 @@ static void sendChatMessage() {
 #endif
             return;
         }
+
+        streamLogLifecycle("chat send postChat returned batch");
 
         UWORD responseIndex = 0;
 
@@ -2418,11 +2844,13 @@ static void sendChatMessage() {
                              &speechUtf8Index);
     utf8stream_free(utf8Stream);
 
-    streamUiFlushChatDisplay();
+    if (!mainWindowIsShuttingDown()) {
+        streamUiFlushChatDisplay();
+        finishChatStream(chatStreamClassifyOutcome(receivedMessage), receivedMessage,
+                         speechUtf8Index, isNewConversation);
+    }
 
-    finishChatStream(chatStreamClassifyOutcome(receivedMessage), receivedMessage,
-                     speechUtf8Index, isNewConversation);
-
+    streamLogLifecycle("sendChatMessage end");
     FreeVec(receivedMessage);
     if (!isAROS) {
         FreeVec(text);
@@ -2437,6 +2865,12 @@ void displayConversation(struct Conversation *conversation) {
     struct ConversationNode *conversationNode;
     UTF8 *content;
 
+    if (mainWindowIsShuttingDown()) {
+        return;
+    }
+#ifdef __MORPHOS__
+    streamLogLifecycle("displayConversation build buffer begin");
+#endif
     if (conversation == NULL) {
         conversation = currentConversation;
     }
@@ -2520,7 +2954,8 @@ void displayConversation(struct Conversation *conversation) {
     }
 
 #ifdef __MORPHOS__
-    chatOutputUpdateFromBuffer();
+    streamLogLifecycle("displayConversation build buffer done");
+    morphosScheduleChatOutputRefreshFromList();
 #else
     {
         STRPTR convertedConversationString = CodesetsUTF8ToStr(

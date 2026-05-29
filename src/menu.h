@@ -19,6 +19,9 @@ enum MenuItemID {
     MENU_ITEM_VIEW_FIXED_WIDTH_FONTS,
     MENU_ITEM_VIEW_MARKDOWN_FORMATTING,
     MENU_ITEM_VIEW_CHAT_LINE_WRAP,
+    MENU_ITEM_VIEW_CHAT_FIXED_WIDTH_FONT,
+    MENU_ITEM_VIEW_CHAT_FONT_LARGER,
+    MENU_ITEM_VIEW_CHAT_FONT_SMALLER,
     MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT,
     MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_LEFT,
     MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_CENTER,
@@ -73,4 +76,6 @@ void addMenuActions();
 #ifdef __MORPHOS__
 /** Enable "View code blocks…" when the current chat has ``` blocks. */
 void refreshViewCodeBlocksMenuState(void);
+/** Gray out chat font +/- at min/max size (8–24 pt). */
+void refreshChatFontMenuState(void);
 #endif
