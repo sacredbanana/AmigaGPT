@@ -37,6 +37,8 @@ void streamLogUtf8(CONST_STRPTR detail) { (void)detail; }
 
 void streamLogBootPhase(CONST_STRPTR phase) { (void)phase; }
 
+void streamLogLifecycle(CONST_STRPTR phase) { (void)phase; }
+
 #else
 
 static BOOL streamLogEnabled = FALSE;
@@ -87,6 +89,27 @@ static void streamLogAppendFile(CONST_STRPTR path, CONST_STRPTR line) {
     ULONG len;
 
     if (!streamLogEnabled || path == NULL || line == NULL || line[0] == '\0') {
+        return;
+    }
+    len = (ULONG)strlen(line);
+    fh = Open((STRPTR)path, MODE_READWRITE);
+    if (fh == 0) {
+        fh = Open((STRPTR)path, MODE_NEWFILE);
+    }
+    if (fh == 0) {
+        return;
+    }
+    Seek(fh, 0, OFFSET_END);
+    Write(fh, (APTR)line, len);
+    Write(fh, (APTR)"\n", 1);
+    Close(fh);
+}
+
+static void streamLogAppendAlways(CONST_STRPTR path, CONST_STRPTR line) {
+    BPTR fh;
+    ULONG len;
+
+    if (path == NULL || line == NULL || line[0] == '\0') {
         return;
     }
     len = (ULONG)strlen(line);
@@ -188,6 +211,24 @@ void streamLogBootPhase(CONST_STRPTR phase) {
     }
     snprintf((STRPTR)line, sizeof(line), "boot %s", phase);
     streamLogEmit(STREAMLOG_STREAM_PATH, (STRPTR)line);
+}
+
+void streamLogLifecycle(CONST_STRPTR phase) {
+    struct DateStamp ds;
+    APTR currentTask;
+    UBYTE line[STREAMLOG_LINE_MAX];
+
+    DateStamp(&ds);
+    currentTask = (APTR)FindTask(NULL);
+    snprintf((STRPTR)line, sizeof(line),
+             "lifecycle ds=%lu:%lu:%lu task=%p %s", (unsigned long)ds.ds_Days,
+             (unsigned long)ds.ds_Minute, (unsigned long)ds.ds_Tick, currentTask,
+             phase != NULL ? phase : "?");
+    streamLogAppendAlways(STREAMLOG_LIFECYCLE_PATH, (STRPTR)line);
+    streamLogAppendAlways(STREAMLOG_LIFECYCLE_MIRROR_PATH, (STRPTR)line);
+#ifdef __MORPHOS__
+    KPrintF("[AmigaGPT lifecycle] %s\n", line);
+#endif
 }
 
 #endif /* DAEMON */

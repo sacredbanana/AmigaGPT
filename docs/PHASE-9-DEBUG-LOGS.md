@@ -14,7 +14,7 @@ LogTool ersetzt **keine** Datei: die App schreibt nicht „in LogTool“, sonder
 
 ## Aktivierung
 
-In `AMIGAGPT:config.json`:
+In `ENVARC:AmigaGPT/config.json` (Fallback beim ersten Start: `AMIGAGPT:config.json`):
 
 ```json
 "debugStreamLog": true
@@ -52,7 +52,7 @@ Link: `-ldebug` (`Makefile.MorphOS`) für `KPrintF`.
 ## MorphOS-Test
 
 1. Paket mit Phase-9-Build (≥ 2.18.8587) deployen
-2. `AMIGAGPT:config.json`: `"debugStreamLog": true` (oder `1`) — **App komplett beenden und neu starten**
+2. `ENVARC:AmigaGPT/config.json`: `"debugStreamLog": true` (oder `1`) — **App komplett beenden und neu starten** (Log: `config read envarc`)
 3. Nach Start: `type T:amigagpt_stream.log` → erste Zeile **`debug logging enabled`**
 4. **Erfolgreicher** kurzer Chat (Web-Suche aus oder passendes Modell) → Zeile `stream end outcome=...`
 5. Optional **LogTool**: **LogServer** muss laufen; nach `[AmigaGPT]` filtern (nicht jede Ansicht zeigt `KPrintF`)

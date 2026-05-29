@@ -62,6 +62,8 @@ Im gesamten Repo (`src/*.c`, Rexx unter `bundle/`) gibt es **kein** `Delete("RAM
 | `MainWindow.c` | `Delete("AMIGAGPT:chat-history.json")` | Nur bei **kaputtem JSON** nach Laden |
 | `MainWindow.c` | `copyFile(…, "RAM:chat-history.json")` | **Kopie eine Datei** ins RAM (kein Löschen) |
 | `menu.c` | `Delete("ENVARC:mui/…")`, `Delete("ENV:mui/…")` | Menü „MUI-Einstellungen löschen“ — **feste Pfade**, nicht `RAM:` |
+| `MainWindow.c` | `Open`/`Write` `ENVARC:AmigaGPT/last-conversation` | Zuletzt gewählter Chat-Name (persistent, kein `RAM:`) |
+| `config.c` | `Open`/`Write` `ENVARC:AmigaGPT/config.json` | Einstellungen/API-Keys (Fallback-Lesen `AMIGAGPT:config.json`) |
 | `speech.c` | `Delete(output)` dann `Open(output, …)` | TTS: **eine** Ausgabedatei (oft `T:…`, nur wenn `output` gesetzt) |
 | Rexx `say.rexx` | `Delete T:AmigaGPTInput` | nur **`T:`**, nicht `RAM:` |
 

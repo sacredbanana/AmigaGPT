@@ -5,9 +5,12 @@
 
 #define STREAMLOG_SSE_SNIPPET_MAX 200
 
-/** MorphOS RAM disk (standard assign). */
+/** MorphOS RAM disk (debug stream only). */
 #define STREAMLOG_STREAM_PATH "T:amigagpt_stream.log"
 #define STREAMLOG_UTF8_PATH   "T:amigagpt_utf8.log"
+/** Always-on lifecycle: persistent (survives reboot); T: mirror for quick inspection. */
+#define STREAMLOG_LIFECYCLE_PATH "AMIGAGPT:amigagpt_lifecycle.log"
+#define STREAMLOG_LIFECYCLE_MIRROR_PATH "T:amigagpt_lifecycle.log"
 
 void streamLogSyncFromConfig(void);
 
@@ -24,5 +27,8 @@ void streamLogUtf8(CONST_STRPTR detail);
 
 /** Startup trace (only when debugStreamLog is on); helps diagnose silent WB start. */
 void streamLogBootPhase(CONST_STRPTR phase);
+
+/** Always-on lifecycle trace for startup/shutdown races. */
+void streamLogLifecycle(CONST_STRPTR phase);
 
 #endif

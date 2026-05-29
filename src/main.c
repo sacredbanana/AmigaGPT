@@ -15,6 +15,9 @@
 #include "config.h"
 #include "streamlog.h"
 #include "version.h"
+#if defined(__MORPHOS__) && !defined(DAEMON)
+#include "morphos_relaunch.h"
+#endif
 
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
 CONST_STRPTR stack = "$STACK: 32768";
@@ -41,8 +44,18 @@ static void cleanExit();
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG main(int argc, char **argv) {
-    atexit(cleanExit);
+    streamLogLifecycle("startup begin");
     SysBase = *((struct ExecBase **)4UL);
+
+#if defined(__MORPHOS__) && !defined(DAEMON)
+    if (!morphosRelaunchStartupGuard()) {
+        displayError(
+            (STRPTR) "AmigaGPT is already running, or the previous instance is "
+                     "still closing.\n\nWait a few seconds, then start once.");
+        streamLogLifecycle("startup aborted instance guard");
+        return RETURN_ERROR;
+    }
+#endif
 
 #if defined(__AMIGAOS3__) || defined(__MORPHOS__)
     struct Process *currentTask = (struct Process *)FindTask(NULL);
@@ -98,14 +111,16 @@ LONG main(int argc, char **argv) {
 
     if (readConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_READ);
-        exit(RETURN_ERROR);
+        cleanExit();
+        return RETURN_ERROR;
     }
 
     streamLogBootPhase("initVideo call");
     if (initVideo() == RETURN_ERROR) {
         streamLogBootPhase("initVideo fail");
-        displayError(STRING_ERROR_VIDEO_INIT);
-        exit(RETURN_ERROR);
+        /* initVideo() already reported a specific GUI/library error dialog. */
+        cleanExit();
+        return RETURN_ERROR;
     }
     streamLogBootPhase("initVideo done");
 
@@ -129,7 +144,8 @@ LONG main(int argc, char **argv) {
 
     if (initOpenAIConnector() == RETURN_ERROR) {
         displayError(STRING_ERROR_OPENAI_INIT);
-        exit(RETURN_ERROR);
+        cleanExit();
+        return RETURN_ERROR;
     }
 
 #ifdef DAEMON
@@ -137,9 +153,8 @@ LONG main(int argc, char **argv) {
 #endif
 
     startGUIRunLoop();
-
-    exit(RETURN_OK);
-    return 0;
+    cleanExit();
+    return RETURN_OK;
 }
 
 /**
@@ -150,16 +165,18 @@ static void cleanExit() {
     printf("AmigaGPTD shutting down...\n");
 #endif
 
+    streamLogLifecycle("shutdown begin");
     mainWindowSignalQuit();
 
+    shutdownGUI();
     if (writeConfig() == RETURN_ERROR) {
         displayError(STRING_ERROR_CONFIG_FILE_WRITE);
     }
     freeConfig();
-    shutdownGUI();
     closeSpeech();
     closeOpenAIConnector();
 #ifdef __AMIGAOS4__
     UnregisterApplication(appID, NULL);
 #endif
+    streamLogLifecycle("process exit");
 }
