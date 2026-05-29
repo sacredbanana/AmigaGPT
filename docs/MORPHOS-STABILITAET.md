@@ -76,7 +76,7 @@ Einmalige Migration: falls noch `AMIGAGPT:config.json` oder `AMIGAGPT:last-conve
 | Maßnahme | Datei | Was |
 | -------- | ----- | --- |
 | **Deferred UI-Refresh** | `MainWindow.c` | `displayConversation` / Listenklick → `PushMethod` (`morphosScheduleChatOutputRefreshFromList`) — kein synchrones Scintilla-Update im NList-Hook |
-| **Deferred Style-Apply** | `ChatOutputScintilla.c` | Nach `SCI_SETTEXT`: Styling immer per zweitem `PushMethod` (`apply styles defer scheduled`) |
+| **Deferred Style-Apply** | `ChatOutputScintilla.c` | Nach `SCI_SETTEXT`: Styling per zweitem `PushMethod`; Scroll-Zeile (`firstVisibleLine`/`oldLineCount`) für Markdown-Toggle mit durchreichen |
 | **Run-Length-Styling** | `chatOutputScintillaApplyRoleStyleBytes()` | `SCI_SETSTYLING` (Runs) statt `SCI_SETSTYLINGEX`; kein redundant `SCI_SETLEXER` vor Styling |
 | **Kein Scroll bei Listenwechsel** | `chatOutputScintillaMorphosSkipViewport` | Kein `GOTOPOS`/`SCROLLCARET` bei NList-Chat-Wechsel und während Stream |
 | **Schweres Scroll vermeiden** | `SetUtf8TextWithRoleStyles()` | Viewport nur wenn nicht Skip und (preserveViewport oder Text ≤ 24 KB) |

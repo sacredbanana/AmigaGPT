@@ -7,9 +7,9 @@ Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8T
 | Thema | Umsetzung |
 |-------|-----------|
 | Layout | **Scrollgroup** + Scintilla (wie Code-Viewer); NListview-Wrapper und Phase-7c-Wheel entfallen auf MorphOS |
-| Markdown | **Midi-Markdown** (Scintilla-Styles 2–8 auf Assistant); Menü `config.markdownFormatting` |
+| Markdown | **Midi-Markdown** (Scintilla-Styles 2–8, 11 auf Assistant); Menü `config.markdownFormatting` |
 | User/Assistant | **Scintilla-Styles:** User = fett, dunkelblau, hellgrauer Hintergrund; Assistant = normal schwarz; `\n\n` zwischen Nodes |
-| Font | **`config.chatFixedWidthFont`** + **`config.chatFontSize`** (Ansicht: *Monospace font (chat output)*, *Increase/Decrease chat font size*); unabhängig von globalem *Fixed width fonts* (Eingabe/Bilder) |
+| Font | **`config.fixedWidthFonts`** (Ansicht: *Feste Schriftbreite*) + **`config.chatFontSize`** (*Chat-Schrift vergrößern/verkleinern*) |
 
 ## Code
 
@@ -30,7 +30,8 @@ Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloatt
 - **Export chat (raw UTF-8)…** — siehe `ChatExport.c`, [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md).
 - **User / Assistant text alignment** — No-op (Hervorhebung über Role-Styles)
 - **Wrap long lines (chat)** — `SCI_SETWRAPMODE` (`SC_WRAP_WORD` / `SC_WRAP_NONE`); `config.chatLineWrap` in `config.json`; `chatOutputScintillaApplyLineWrap()` auch nach Font-Wechsel
-- **Monospace font (chat output)** — `config.chatFixedWidthFont` (unabhängig von *Fixed width fonts*)
+- **Feste Schriftbreite** — `config.fixedWidthFonts` → Chat-Scintilla Mono vs. Sans
+- **Chat-Schrift vergrößern/verkleinern** — `config.chatFontSize`
 - **Increase / Decrease chat font size** — `config.chatFontSize` (8–24 pt)
 
 ## Nicht in Phase 12
@@ -51,9 +52,9 @@ Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloatt
 4. **New Chat** / **Delete Chat**: leere Ausgabe, kein Crash
 5. Langer Stream: live + vollständig nach Ende (R1/R2)
 6. Code-Fence-Platzhalter im Chat; Code-Viewer unverändert
-7. **Fixed width fonts** an/aus → Mono vs. Sans
+7. **Feste Schriftbreite** an/aus → Chat Mono vs. Sans
 8. **Export chat (raw)** → Datei mit `raw_utf8`, Fences sichtbar
-9. **Markdown formatting** an: `**fett**`, `*kursiv*`, `__unterstrichen__`, `# Überschrift` nur bei Assistant; Emoji Assistant z. B. 🌍→`[Welt]`, 👍→`(+1)` (nur Anzeige)
+9. **Markdown formatting** an: `**fett**`, `*kursiv*`, `__unterstrichen__`, `` `inline code` `` (Mono, grauer Hintergrund), `# Überschrift` nur bei Assistant; Emoji Assistant z. B. 🌍→`[Welt]`, 👍→`(+1)` (nur Anzeige); innerhalb `` `...` `` keine `*`/`**`/Links/Emoji
 10. **Markdown formatting** aus: Emoji unverändert (oft □)
 11. Alignment umschalten → kein Absturz (No-op)
 12. **[Codeblock n]** (3a): blauer Link → Code-Viewer, Block `n` aktiv
@@ -64,8 +65,9 @@ Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloatt
 
 Siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) — kein `SCLEX_MARKDOWN` im Chat.
 - Scintilla-Styling für Alignment
-- ~~Dediziertes Chat-Font-Menü~~ **erledigt** (`chatFixedWidthFont`, `chatFontSize`)
-- Stream nur Append-Delta (Vorbereitung Phase 13)
+- ~~Chat-Font-Menü~~ **erledigt** — *Feste Schriftbreite* + Schriftgröße +/−
+- ~~Stream nur Append-Delta~~ **erledigt** — live Stream: `SCI_APPENDTEXT` + Styling nur für Delta; nach Ende weiterhin volles `displayConversation` (Markdown/Hotspots)
+- ~~Inline code `` `...` ``~~ **erledigt** — Style 11 (Mono + grauer Hintergrund); nur bei *Markdown formatting*
 - Bare `http(s)://`-Links: **3b** — Hotspot + `openurl.library` (ASCII-Span); [Roadmap](MIDI-MARKDOWN-ROADMAP.md), Abschnitt [3b](#3b-url-hotspots-openurl) unten
 
 ## 3a — Klick auf `[Codeblock n]`

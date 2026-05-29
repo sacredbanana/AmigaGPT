@@ -3,7 +3,7 @@
 ## Priorität
 
 1. **Export Chat (raw UTF-8)** — **umgesetzt:** Ansicht → *Export chat (raw UTF-8)…* → `conversationNodeGetRaw()` pro Nachricht, inkl. ` ``` `; siehe `ChatExport.c`.
-2. **Midi-Markdown (MorphOS)** — **umgesetzt:** `chatOutputScintillaBuildMidiMarkdownDisplay` — Marker werden **nicht** angezeigt (wie MUI), nur **Assistant**, `**` / `*` / `__`, `#`-Überschriften ohne `#`-Prefix; `[Codeblock …]` unverändert. **Emoji→Text** nur bei aktivem Menü *Markdown formatting* (Anzeige; `raw_utf8`/Export unverändert) — TTEngine/DejaVu ohne Farb-Emoji.
+2. **Midi-Markdown (MorphOS)** — **umgesetzt:** `chatOutputScintillaBuildMidiMarkdownDisplay` — Marker werden **nicht** angezeigt (wie MUI), nur **Assistant**, `` `inline` ``, `**` / `*` / `__`, `#`-Überschriften ohne `#`-Prefix; `[Codeblock …]` unverändert. **Emoji→Text** nur bei aktivem Menü *Markdown formatting* (Anzeige; `raw_utf8`/Export unverändert) — TTEngine/DejaVu ohne Farb-Emoji.
 3. **Platzhalter `[Codeblock n]` → Code-Viewer** — **umgesetzt:** Hotspot-Stil; Öffnen bei **`SCN_HOTSPOTRELEASECLICK`** (Maus-Up), `SCN_HOTSPOTCLICK` nur für Auswahl abbrechen; `codeBlocksViewerOpenAtIndexWithToken()` + Epoch beim Chat-Wechsel. Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md#3a--klick-auf-codeblock-n). Export/raw unverändert.
 4. **Bare `http://` / `https://` + Markdown `[label](http…)` / `([label](http…))`** — **umgesetzt:** **3b** in [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md#3b-url-hotspots-openurl): Hotspot-Stil `CHAT_OUTPUT_STYLE_URL_HOTSPOT`; Klick wie **3a** (Release) → **`openurl.library`** (`URL_OpenA`). Anzeige nur **Label** (oder URL bei leerem Label); Ziel-URL in Span-Cache. **Nur** `http`/`https`-Ziele; Markdown `[text](url)` bleibt in `raw_utf8`/Export. Ohne OpenURL/Browser passiert nichts. Link-Auflösung **immer** aktiv (auch wenn *Markdown formatting* aus ist); `**`/Emoji-Stripping nur bei *Markdown formatting* an.
 5. **Tabellen** — **umgesetzt (Anzeige):** einfache GFM-Pipe-Tabellen (Header + `|---|`-Zeile + Datenzeilen, keine `\|` in Zellen). Spalten per **Zeichenanzahl** mit Leerzeichen aufgefüllt — **immer** in der Chat-Ansicht (nicht nur bei *Fixed width fonts*); Mono = saubere Ausrichtung, Sans = Näherung. **Nur Assistant**, nicht in `[Codeblock …]`-Zeilen; **nicht** während Stream (R3). Läuft **nach** Link-Auflösung in `chatOutputScintillaFormatPipeTables()`; `raw_utf8`/Export unverändert.
@@ -13,13 +13,14 @@
 
 ### Delimiter-Policy (keine Markdown-Bibliothek)
 
-Parser-Reihenfolge in `chatOutputScintilla.c` / `MainWindow.c` (`parseMarker` / `chatMdParseMarker`): `__` → `**` → einzelnes `*`. Style-Stack für Ein/Aus; Escape `\`, `\*`, `\_`.
+Parser-Reihenfolge in `chatOutputScintilla.c` / `MainWindow.c` (`parseMarker` / `chatMdParseMarker`): `` ` `` → `__` → `**` → einzelnes `*`. Style-Stack für Ein/Aus; Escape `\`, `\*`, `\_`. Innerhalb `` `...` `` keine weiteren Marker, Links oder Emoji-Ersetzung.
 
 | Marker | Verhalten | Begründung |
 |--------|-----------|------------|
-| **Kursiv** `*` | CommonMark-ähnlich: `chatmd_markers.c` — *left/right-flanking*, Wort-intern (`Spieler*innen`) aus, Heuristik Multiplikation (`8 *9=444`), kein Marker bei `\*` / `'*'`. Open/Close über Stack (`chatMdItalicStarCanOpen` / `CanClose`). Escape im Chat: `\` + nächstes Zeichen literal (`ChatOutputScintilla.c` / `MainWindow.c`). | Ein `*` kommt oft „falsch“ vor (Mathe, Wörter, Doku mit Anführungs-Stern). |
+| **Kursiv** `*` | CommonMark-ähnlich: `chatmd_markers.c` — *left/right-flanking*, Wort-intern (`Spieler*innen`) aus, Heuristik Multiplikation (`8 *9=444`), kein Marker bei `\*` / `'*'`, Fußnote nur exakt `(*)`. Open/Close über Stack (`chatMdItalicStarCanOpen` / `CanClose`). Escape im Chat: `\` + nächstes Zeichen literal (`ChatOutputScintilla.c` / `MainWindow.c`). | Ein `*` kommt oft „falsch“ vor (Mathe, Wörter, Doku mit Anführungs-Stern). |
 | **Fett** `**` | `chatMdBoldDoubleStarCanOpen` / `CanClose`: Open mit left-flanking (nicht `**.`); Close wenn Bold im Stack (auch nach `.` wie `satzende.**`). `chatMdPopBoldRun` beendet verschachtelte Reste. | Schließen nach Satzzeichen im Fetttext; kein „alles danach fett“. |
 | **Unterstreichen** `__` | **Naiv:** jedes `__` = Toggle (wie Fett). | Gleiche pragmatische Linie wie Fett. |
+| **Inline-Code** `` ` `` | Einzelnes Backtick öffnet/schließt; Delimiter werden nicht angezeigt. Mono + hellgrauer Hintergrund (`CHAT_OUTPUT_STYLE_MD_CODE`). Nur bei *Markdown formatting* an; ` ``` ` (Fence) bleibt literal. | Häufig in GPT-Antworten; kein Lexer nötig. |
 
 Host-Tests nur für Kursiv: `tools/test-chatmd-markers.sh` → `out/chatmd_markers_host_test`. Erweiterung auf Fett (`x**2`, …) erst bei realem Bedarf — nicht geplant für v0.1.
 
