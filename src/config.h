@@ -38,10 +38,9 @@ struct Config {
     ULONG proxyRequiresAuth;
     STRPTR proxyUsername;
     STRPTR proxyPassword;
+    /** MorphOS: chat Scintilla Mono vs Sans (Ansicht → Feste Schriftbreite); Eingabe = MUI-Standard. */
     ULONG fixedWidthFonts;
     ULONG markdownFormatting;
-    /** MorphOS chat Scintilla: DejaVu Sans Mono vs Sans (Ansicht-Menü, unabhängig von fixedWidthFonts). */
-    ULONG chatFixedWidthFont;
     /** MorphOS chat Scintilla font size in points (8–24). */
     ULONG chatFontSize;
     /** MorphOS chat Scintilla: SCI_SETWRAPMODE SC_WRAP_WORD when TRUE (Ansicht-Menü). */

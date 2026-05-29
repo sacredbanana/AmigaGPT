@@ -115,7 +115,6 @@ struct Config config = {
     .proxyPassword = NULL,
     .fixedWidthFonts = FALSE,
     .markdownFormatting = TRUE,
-    .chatFixedWidthFont = FALSE,
     .chatFontSize = CHAT_OUTPUT_FONT_SIZE_DEFAULT,
     .chatLineWrap = TRUE,
     .userTextAlignment = ALIGN_RIGHT,
@@ -262,9 +261,6 @@ LONG writeConfig() {
         json_object_new_boolean((BOOL)config.markdownFormatting));
     json_object_object_add(configJsonObject, "chatLineWrap",
                             json_object_new_boolean((BOOL)config.chatLineWrap));
-    json_object_object_add(
-        configJsonObject, "chatFixedWidthFont",
-        json_object_new_boolean((BOOL)config.chatFixedWidthFont));
     json_object_object_add(configJsonObject, "chatFontSize",
                            json_object_new_int((int)config.chatFontSize));
 
@@ -725,15 +721,18 @@ LONG readConfig() {
         config.chatLineWrap = TRUE;
     }
 
-    struct json_object *chatFixedWidthFontObj;
+#ifdef __MORPHOS__
+    {
+        struct json_object *chatFixedWidthFontObj;
 
-    if (json_object_object_get_ex(configJsonObject, "chatFixedWidthFont",
-                                  &chatFixedWidthFontObj)) {
-        config.chatFixedWidthFont =
-            (ULONG)json_object_get_boolean(chatFixedWidthFontObj);
-    } else {
-        config.chatFixedWidthFont = config.fixedWidthFonts;
+        if (json_object_object_get_ex(configJsonObject, "chatFixedWidthFont",
+                                      &chatFixedWidthFontObj)) {
+            config.fixedWidthFonts =
+                (ULONG)json_object_get_boolean(chatFixedWidthFontObj);
+            streamLogLifecycle("config migrate chatFixedWidthFont to fixedWidthFonts");
+        }
     }
+#endif
 
     struct json_object *chatFontSizeObj;
 

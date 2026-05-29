@@ -28,8 +28,6 @@
 
 /* msgctxt "STRING_MENU_CHAT_LINE_WRAP" */
 /* msgid "Wrap long lines (chat)" */
-/* msgctxt "STRING_MENU_CHAT_FIXED_WIDTH_FONT" */
-/* msgid "Monospace font (chat output)" */
 /* msgctxt "STRING_MENU_CHAT_FONT_LARGER" */
 /* msgid "Increase chat font size" */
 /* msgctxt "STRING_MENU_CHAT_FONT_SMALLER" */
@@ -474,21 +472,6 @@ HOOKPROTONHNONP(ApplyChatFontSettingFunc, void) {
 }
 MakeHook(ApplyChatFontSettingHook, ApplyChatFontSettingFunc);
 
-HOOKPROTONHNONP(ChatFixedWidthFontMenuItemClickedFunc, void) {
-    if (!syncMenuCheckbox(MENU_ITEM_VIEW_CHAT_FIXED_WIDTH_FONT,
-                          &config.chatFixedWidthFont)) {
-        return;
-    }
-    if (writeConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
-        return;
-    }
-    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
-             &ApplyChatFontSettingHook);
-}
-MakeHook(ChatFixedWidthFontMenuItemClickedHook,
-         ChatFixedWidthFontMenuItemClickedFunc);
-
 HOOKPROTONHNONP(ChatFontLargerMenuItemClickedFunc, void) {
     if (config.chatFontSize >= CHAT_OUTPUT_FONT_SIZE_MAX) {
         return;
@@ -588,12 +571,9 @@ void createMenu() {
 #ifdef __MORPHOS__
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_CHAT_LINE_WRAP, MUIA_UserData, MENU_ITEM_VIEW_CHAT_LINE_WRAP,
-    MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Toggle, TRUE, End,
+    MUIA_Menuitem_Checkit, TRUE,     MUIA_Menuitem_Toggle, TRUE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
-    STRING_MENU_CHAT_FIXED_WIDTH_FONT, MUIA_UserData,
-    MENU_ITEM_VIEW_CHAT_FIXED_WIDTH_FONT, MUIA_Menuitem_Checkit, TRUE,
-    MUIA_Menuitem_Toggle, TRUE, End, MUIA_Family_Child, MenuitemObject,
-    MUIA_Menuitem_Title, STRING_MENU_CHAT_FONT_LARGER, MUIA_UserData,
+    STRING_MENU_CHAT_FONT_LARGER, MUIA_UserData,
     MENU_ITEM_VIEW_CHAT_FONT_LARGER, MUIA_Menuitem_CopyStrings, FALSE, End,
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_CHAT_FONT_SMALLER, MUIA_UserData,
@@ -866,14 +846,6 @@ void addMenuActions() {
     DoMethod(chatLineWrapMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &ChatLineWrapMenuItemClickedHook);
-
-    Object chatFixedWidthFontMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_CHAT_FIXED_WIDTH_FONT);
-    set(chatFixedWidthFontMenuItem, MUIA_Menuitem_Checked,
-        config.chatFixedWidthFont);
-    DoMethod(chatFixedWidthFontMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
-             &ChatFixedWidthFontMenuItemClickedHook);
 
     Object chatFontLargerMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_CHAT_FONT_LARGER);

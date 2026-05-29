@@ -141,8 +141,8 @@ typedef struct {
 #define CHAT_OUTPUT_ASSISTANT_FORE 0x000000
 
 static const char *chatOutputScintillaFontFace(void) {
-    return config.chatFixedWidthFont ? CHAT_OUTPUT_SCINTILLA_FONT_MONO
-                                    : CHAT_OUTPUT_SCINTILLA_FONT_SANS;
+    return config.fixedWidthFonts ? CHAT_OUTPUT_SCINTILLA_FONT_MONO
+                                 : CHAT_OUTPUT_SCINTILLA_FONT_SANS;
 }
 
 static void chatOutputScintillaApplyFont(Object *sci) {

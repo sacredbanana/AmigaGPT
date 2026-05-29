@@ -49,9 +49,9 @@ struct Conversation *getCurrentConversation(void);
 void displayConversation(struct Conversation *conversation);
 
 #ifdef __MORPHOS__
-/** Apply config.fixedWidthFonts to chat/image input editors (not chat Scintilla on MorphOS). */
+/** MorphOS: chat Scintilla Mono/Sans from config.fixedWidthFonts (Ansicht → Feste Schriftbreite). */
 void applyFixedWidthFontsSetting(void);
-/** MorphOS: chat output font from config.chatFixedWidthFont / config.chatFontSize. */
+/** MorphOS: chat output font size from config.chatFontSize. */
 void applyChatFontSetting(void);
 
 /** Rebuild chat Scintilla from chatOutputTextEditorContents; preserveViewport for Markdown toggle. */

@@ -1736,14 +1736,7 @@ void chatOutputWheelShutdown(void) {}
 void chatOutputWheelDisposeClass(void) {}
 
 void applyFixedWidthFontsSetting(void) {
-    if (chatInputTextEditor != NULL) {
-        set(chatInputTextEditor, MUIA_TextEditor_FixedFont,
-            config.fixedWidthFonts);
-    }
-    if (imageInputTextEditor != NULL) {
-        set(imageInputTextEditor, MUIA_TextEditor_FixedFont,
-            config.fixedWidthFonts);
-    }
+    applyChatFontSetting();
 }
 
 void applyChatFontSetting(void) {
@@ -1784,8 +1777,11 @@ LONG createMainWindow() {
             MUIC_AmigaGPTTextEditor, NULL, TextFrame, MUIA_Background,
             MUII_BACKGROUND, MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
             MUIA_AmigaGPTTextEditor_SubmitHook, &SendMessageButtonClickedHook,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL, MUIA_TextEditor_FixedFont,
-            config.fixedWidthFonts, MUIA_TextEditor_ReadOnly, FALSE,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL,
+#ifndef __MORPHOS__
+            MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+#endif
+            MUIA_TextEditor_ReadOnly, FALSE,
             MUIA_TextEditor_TabSize, 4, MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
@@ -1793,8 +1789,11 @@ LONG createMainWindow() {
         imageInputTextEditor = NewObject(
             MUIC_AmigaGPTTextEditor, NULL, MUIA_Weight, 80,
             MUIA_AmigaGPTTextEditor_SubmitHook, &CreateImageButtonClickedHook,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL, MUIA_TextEditor_FixedFont,
-            config.fixedWidthFonts, MUIA_TextEditor_ReadOnly, FALSE,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL,
+#ifndef __MORPHOS__
+            MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+#endif
+            MUIA_TextEditor_ReadOnly, FALSE,
             MUIA_TextEditor_TabSize, 4, MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
@@ -1803,7 +1802,10 @@ LONG createMainWindow() {
             isAROS ? MUIC_BetterString : MUIC_TextEditor, TextFrame,
             MUIA_Background, MUII_BACKGROUND, MUIA_ObjectID,
             OBJECT_ID_CHAT_INPUT_TEXT_EDITOR, isAROS ? TAG_DONE : TAG_SKIP,
-            NULL, MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+            NULL,
+#ifndef __MORPHOS__
+            MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+#endif
             MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
             MUIA_TextEditor_Rows, 3, MUIA_TextEditor_ExportHook,
             MUIV_TextEditor_ExportHook_EMail, TAG_DONE);
@@ -1811,7 +1813,10 @@ LONG createMainWindow() {
         imageInputTextEditor = MUI_NewObject(
             isAROS ? MUIC_BetterString : MUIC_TextEditor, TextFrame,
             MUIA_Background, MUIA_Weight, 80, isAROS ? TAG_DONE : TAG_SKIP,
-            NULL, MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+            NULL,
+#ifndef __MORPHOS__
+            MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+#endif
             MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
             MUIA_TextEditor_Rows, 3, MUIA_TextEditor_ExportHook,
             MUIV_TextEditor_ExportHook_EMail, TAG_DONE);
