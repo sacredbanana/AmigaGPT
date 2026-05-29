@@ -35,14 +35,23 @@ Start: `docs/README.md`
 | `docs/WSL-SETUP-STATUS.md` | WSL environment setup status / checklist (DE) |
 | `tools/test-utf8stream.sh` | Host unit tests for `utf8stream` (WSL `gcc`) |
 
-## Build & test loop (MorphOS)
+## Build & test loop (MorphOS) — mandatory
 
-Binding cycle: **build → package to Z: → user tests → commit only after OK.**
+**Every `make` for this repo must be followed by packaging in the same agent turn**, unless the user explicitly opted out (nur bauen / ohne Paket / `DEPLOY=0`).
 
-1. `make -f Makefile.MorphOS`
-2. `./package-morphos-cross.sh` (unless user opts out)
-3. If `Z:` deploy fails → report; do not claim “paketiert”; do not commit
-4. User tests on MorphOS and confirms
-5. Then commit (not on `master`)
+Preferred one-liner:
 
-See `docs/HANDLUNGSANWEISUNG-GIT.md` §8–9, `docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md`, `.cursor/rules/morphos-build-package.mdc`, `.cursor/rules/morphos-runtime-agent.mdc`.
+```bash
+./ship-morphos.sh
+# or: make -f Makefile.MorphOS ship
+```
+
+That runs **build + daemon + `package-morphos-cross.sh` (Z:)**. Do **not** stop after `make` alone.
+
+Report after package: **version** (`2.18.BUILD_NUMBER`), **MD5**, **`Z:/morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha`**. If Z: deploy fails → say so; do not claim “paketiert”; do not commit.
+
+Then: user tests on MorphOS → commit only after OK (not on `master`).
+
+**Automation:** `.cursor/hooks.json` nudges the agent after bare `make` and on `stop` if packaging was skipped. **Rules:** `.cursor/rules/morphos-build-package.mdc`, workspace `development/.cursor/rules/morphos-make-then-package.mdc`. **Optional global rule:** `docs/CURSOR-USER-RULE-SNIPPET.txt`.
+
+See `docs/HANDLUNGSANWEISUNG-GIT.md` §8–9, `docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md`.

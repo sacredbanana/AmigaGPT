@@ -5,7 +5,9 @@ alwaysApply: true
 
 # MorphOS: Build → package → test → commit
 
-**Default after any MorphOS code change:** `make -f Makefile.MorphOS` **and** `./package-morphos-cross.sh` — in the **same** turn, without waiting for the user to ask. Treat “build done” without packaging as **incomplete**.
+**Binding (user):** At **every** place you run `make` for this project, **immediately** run `./package-morphos-cross.sh` in the **same** turn — unless the user **explicitly** requested otherwise (nur bauen / ohne Paket / `DEPLOY=0`).
+
+**Default after any MorphOS code change:** `make -f Makefile.MorphOS` **and** `./package-morphos-cross.sh` — without waiting for the user to ask. Treat “build done” or `make` alone as **incomplete**.
 
 ## Agent handoff (avoid half-done)
 

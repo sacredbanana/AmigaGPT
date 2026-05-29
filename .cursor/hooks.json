@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterShellExecution": [
+      {
+        "command": ".cursor/hooks/morphos-after-make.sh",
+        "matcher": "Makefile\\.MorphOS|ship-morphos|package-morphos-cross"
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/morphos-stop-package.sh"
+      }
+    ]
+  }
+}

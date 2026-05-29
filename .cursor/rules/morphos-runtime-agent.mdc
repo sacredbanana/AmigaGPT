@@ -11,7 +11,7 @@ Read **`docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md`** when touching:
 
 ## Must not regress
 
-1. **Quit/restart:** `mainWindowPrepareShutdown()` — release **pens before** closing window; empty conversation list with destruct; single `Application_Load` before open; no Screen-hook that reloads ENVARC.
+1. **Quit/restart:** `mainWindowPrepareShutdown()` — release **pens before** closing window; empty conversation list with destruct; single `Application_Load` before open; no Screen-hook that reloads ENVARC. Prefs → **`ENVARC:AmigaGPT/`** (`config.json`, `last-conversation`); not `AMIGAGPT:` for UI/config state.
 2. **Menu → file dialog:** use `MUIM_Application_PushMethod` + deferred hook (not direct ASL from app notify).
 3. **Chat markdown:** no `SCLEX_MARKDOWN` in chat (MorphOS ineffective); use midi-markdown plan (Scintilla styles).
 
@@ -19,7 +19,7 @@ Read **`docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md`** when touching:
 
 Ask user to verify **3× quit → restart** after packaging. Do not commit until MorphOS OK (see `HANDLUNGSANWEISUNG-GIT.md` §9).
 
-Build/package: `.cursor/rules/morphos-build-package.mdc`
+Build/package: `.cursor/rules/morphos-build-package.mdc` — use `./ship-morphos.sh`; hooks in `.cursor/hooks.json`
 
 ## Agent search paths
 
