@@ -129,6 +129,11 @@ static BOOL chatMdItalicStarMultiplyHeuristic(const char *input, ULONG pos, ULON
     return FALSE;
 }
 
+/* Footnote marker "(*)" only — not emphasis; do not block `*word*)` or `(*word*`. */
+static BOOL chatMdItalicStarFootnoteParen(const char *input, ULONG pos, ULONG len) {
+    return pos > 0 && pos + 1 < len && input[pos - 1] == '(' && input[pos + 1] == ')';
+}
+
 BOOL chatMdItalicStarCanOpen(const char *input, ULONG pos, ULONG len) {
     if (input == NULL || pos >= len || input[pos] != '*') {
         return FALSE;
@@ -151,6 +156,9 @@ BOOL chatMdItalicStarCanOpen(const char *input, ULONG pos, ULONG len) {
     if (chatMdItalicStarMultiplyHeuristic(input, pos, len)) {
         return FALSE;
     }
+    if (chatMdItalicStarFootnoteParen(input, pos, len)) {
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -171,6 +179,9 @@ BOOL chatMdItalicStarCanClose(const char *input, ULONG pos, ULONG len) {
         return FALSE;
     }
     if (!chatMdRightFlanking(input, pos, len)) {
+        return FALSE;
+    }
+    if (chatMdItalicStarFootnoteParen(input, pos, len)) {
         return FALSE;
     }
     return TRUE;

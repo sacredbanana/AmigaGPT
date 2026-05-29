@@ -138,6 +138,37 @@ static void test_escaped_and_quoted_star(void) {
     }
 }
 
+static void test_footnote_star(void) {
+    const char *s = "2-1 (*)";
+    ULONG p = star_at(s);
+
+    ASSERT(!chatMdItalicStarCanOpen(s, p, (ULONG)strlen(s)), "(* not open");
+    ASSERT(!chatMdItalicStarCanClose(s, p, (ULONG)strlen(s)), "(* not close");
+
+    s = "(*) Hinweis";
+    p = star_at(s);
+    ASSERT(!chatMdItalicStarCanOpen(s, p, (ULONG)strlen(s)), "(*) line not open");
+}
+
+static void test_perlio_encoding_paren(void) {
+    const char *s = "*PerlIO::encoding*)";
+    ULONG openAt = 0;
+    ULONG closeAt = last_star_at(s);
+
+    ASSERT(chatMdItalicStarCanOpen(s, openAt, (ULONG)strlen(s)),
+           "*PerlIO::encoding*) open");
+    ASSERT(chatMdItalicStarCanClose(s, closeAt, (ULONG)strlen(s)),
+           "*PerlIO::encoding*) close");
+
+    s = "(*PerlIO::encoding*)";
+    openAt = star_at(s);
+    closeAt = last_star_at(s);
+    ASSERT(chatMdItalicStarCanOpen(s, openAt, (ULONG)strlen(s)),
+           "(*PerlIO::encoding*) open");
+    ASSERT(chatMdItalicStarCanClose(s, closeAt, (ULONG)strlen(s)),
+           "(*PerlIO::encoding*) close");
+}
+
 static void test_italic_still_works(void) {
     const char *s = "see *emphasis* here";
     ULONG openAt = strchr(s, '*') - s;
@@ -156,6 +187,8 @@ int main(void) {
     test_bold_close_after_period();
     test_bold_no_open_on_star_dot();
     test_escaped_and_quoted_star();
+    test_footnote_star();
+    test_perlio_encoding_paren();
     test_italic_still_works();
 
     printf("chatmd_markers_host_test: %d run, %d failed\n", tests_run, tests_failed);
