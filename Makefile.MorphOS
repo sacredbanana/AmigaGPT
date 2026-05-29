@@ -9,6 +9,13 @@ OS := $(shell uname)
 
 PROGRAM_NAME = AmigaGPT
 DAEMON_NAME = AmigaGPTD
+
+# Sibling repo: morphos/flexcat (override with FLEXCAT_BIN if needed)
+FLEXCAT_ROOT ?= $(abspath $(CURDIR)/../flexcat)
+FLEXCAT_BIN ?= $(FLEXCAT_ROOT)/src/bin_unix
+FLEXCAT ?= $(FLEXCAT_BIN)/flexcat
+export PATH := $(FLEXCAT_BIN):$(PATH)
+
 EXECUTABLE_DIR = out
 EXECUTABLE_OUT = $(EXECUTABLE_DIR)/$(PROGRAM_NAME)_MorphOS
 DAEMON_OUT = $(EXECUTABLE_DIR)/$(DAEMON_NAME)_MorphOS
@@ -41,7 +48,7 @@ cpp_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sou
 c_sources := $(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs)))
 c_sources := $(filter-out $(SOURCE_DIR)/test/% $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.c,$(c_sources))
 c_objects := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
-daemon_c_sources := $(filter-out $(SOURCE_DIR)/MainWindow.c $(SOURCE_DIR)/AboutAmigaGPTWindow.c $(SOURCE_DIR)/APIKeyRequesterWindow.c $(SOURCE_DIR)/ChatSystemRequesterWindow.c $(SOURCE_DIR)/ProxySettingsRequesterWindow.c $(SOURCE_DIR)/VoiceInstructionsRequesterWindow.c $(SOURCE_DIR)/AmigaGPTTextEditor.c $(SOURCE_DIR)/menu.c $(SOURCE_DIR)/CodeBlocksViewer.c $(SOURCE_DIR)/CodeBlocksScintilla.c $(SOURCE_DIR)/ChatOutputScintilla.c,$(c_sources))
+daemon_c_sources := $(filter-out $(SOURCE_DIR)/MainWindow.c $(SOURCE_DIR)/AboutAmigaGPTWindow.c $(SOURCE_DIR)/APIKeyRequesterWindow.c $(SOURCE_DIR)/ChatSystemRequesterWindow.c $(SOURCE_DIR)/ProxySettingsRequesterWindow.c $(SOURCE_DIR)/VoiceInstructionsRequesterWindow.c $(SOURCE_DIR)/AmigaGPTTextEditor.c $(SOURCE_DIR)/menu.c $(SOURCE_DIR)/CodeBlocksViewer.c $(SOURCE_DIR)/CodeBlocksScintilla.c $(SOURCE_DIR)/ChatOutputScintilla.c $(SOURCE_DIR)/morphos_relaunch.c,$(c_sources))
 daemon_c_objects := $(addprefix $(BUILD_DIR)/daemon_,$(patsubst %.c,%.o,$(notdir $(daemon_c_sources))))
 catalog_object := $(BUILD_DIR)/$(PROGRAM_NAME)_cat.o
 s_sources := $(wildcard *.s) $(wildcard $(addsuffix *.s,$(subdirs)))
@@ -83,11 +90,15 @@ ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NETINCDIR),-I$(INCDI
 LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-ljson-c,-lssl,-lcrypto,-ldebug,-L$(GCCLIBDIR),-latomic
 VASMFLAGS = -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__MORPHOS__ -I$(INCDIR) -I$(NETINCDIR) -I$(SDKDIR)
 
-.PHONY: all clean copy_bundle_files catalog catalog_definition daemon version-bump
+.PHONY: all clean copy_bundle_files catalog catalog_definition daemon version-bump ship
 
 all: version-bump $(EXECUTABLE_OUT) copy_bundle_files
 
 daemon: $(DAEMON_OUT)
+
+# Default MorphOS delivery: build + package + Z: (see ship-morphos.sh, AGENTS.md).
+ship: all daemon
+	@BUILD=0 "$(CURDIR)/package-morphos-cross.sh"
 
 clean:
 	$(info Cleaning...)
@@ -104,14 +115,18 @@ catalog_definition:
 	@xgettext -a -c -L C -j -o $(CATALOG_DEFINITION) $(SOURCE_DIR)/*.c
 
 catalog:
+	@if [ ! -x '$(FLEXCAT)' ]; then \
+		echo "flexcat not found: $(FLEXCAT) — build: cd $(FLEXCAT_ROOT) && make bootstrap && make"; \
+		exit 1; \
+	fi
 	$(info Removing old catalog sources)
 	@$(RM) $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.c $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.h
 
 	$(info Generating catalog header)
-	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.h=C_h.sd || true
+	@$(FLEXCAT) $(CATALOG_DEFINITION) $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.h=C_h.sd
 
 	$(info Generating catalog source)
-	@flexcat $(CATALOG_DEFINITION) $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.c=C_c.sd || true
+	@$(FLEXCAT) $(CATALOG_DEFINITION) $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.c=C_c.sd
 
 	$(info Updating catalog translations)
 	@for catalog_translation in $(catalog_translations); do \
@@ -120,7 +135,7 @@ catalog:
 
 	$(info Compiling catalogs $(catalog_translations))
 	@for catalog_translation in $(catalog_translations); do \
-		flexcat POFILE $$catalog_translation CATALOG $$(dirname $$catalog_translation)/$(PROGRAM_NAME).catalog || true; \
+		$(FLEXCAT) POFILE $$catalog_translation CATALOG $$(dirname $$catalog_translation)/$(PROGRAM_NAME).catalog || true; \
 	done
 
 $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.c $(SOURCE_DIR)/$(PROGRAM_NAME)_cat.h: catalog

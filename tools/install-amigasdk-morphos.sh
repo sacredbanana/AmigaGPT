@@ -26,7 +26,8 @@ echo "Checks:"
 test -f /opt/amiga/ppc-morphos/include/SDI_hook.h && echo "  SDI_hook.h: OK" || echo "  SDI_hook.h: MISSING"
 ls /opt/amiga/lib/libjson-c* 2>/dev/null | head -3 || echo "  libjson-c: (check lib/ manually)"
 
-export PATH="$HOME/development/morphos/flexcat/src/bin_unix:${PATH:-}"
+# shellcheck source=flexcat-env.sh
+source "$AMIGAGPT_DIR/tools/flexcat-env.sh"
 cd "$AMIGAGPT_DIR"
 echo "Building AmigaGPT (Makefile.MorphOS)..."
 make -f Makefile.MorphOS

@@ -15,9 +15,8 @@ STAGE="${PACKAGE_STAGE:-$ROOT/out/package-morphos}"
 ARCHIVE_BASE="${PACKAGE_ARCHIVE:-$ROOT/out/AmigaGPT-MorphOS-cross}"
 DEPLOY_WIN="${MORPHOS_DEPLOY:-Z:/morphos/out-crosscompile}"
 BUILD="${BUILD:-1}"
-FLEXCAT_BIN="${FLEXCAT_BIN:-$HOME/development/morphos/flexcat/src/bin_unix}"
-
-export PATH="${FLEXCAT_BIN}:${PATH:-}"
+# shellcheck source=tools/flexcat-env.sh
+source "$ROOT/tools/flexcat-env.sh"
 log() { printf '==> %s\n' "$*"; }
 
 file_md5() {

@@ -21,3 +21,6 @@ super-linter.log
 
 # GitHub Actions leftovers
 github_conf
+
+# Cursor hook state (morphos-after-make)
+.cursor/morphos-package-pending
