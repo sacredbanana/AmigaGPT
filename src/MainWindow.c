@@ -1480,14 +1480,24 @@ void chatOutputUpdateFromBuffer(BOOL preserveViewport) {
                     if (morphosChatStreamRawScintillaRefresh) {
                         streamLogLifecycle(
                             "chatOutput refresh stream raw path");
+                        chatOutputScintillaMorphosSkipViewport = TRUE;
+                        if (chatOutputScintillaAppendStreamDelta(
+                                chatOutputTextEditor, chatOutputTextEditorContents,
+                                textLen, roleStyles, textLen)) {
+                            streamLogLifecycle(
+                                "chatOutputUpdateFromBuffer scintilla append done");
+                            FreeVec(roleStyles);
+                            return;
+                        }
+                        streamLogLifecycle(
+                            "chat stream append fallback settext");
                     } else {
                         streamLogLifecycle("chatOutput refresh raw path");
+                        chatOutputScintillaMorphosSkipViewport =
+                            chatOutputMorphosListRefreshActive;
+                        chatOutputScintillaAugmentStyleBytesHotspots(
+                            chatOutputTextEditorContents, roleStyles, textLen);
                     }
-                    chatOutputScintillaMorphosSkipViewport =
-                        chatOutputMorphosListRefreshActive ||
-                        morphosChatStreamRawScintillaRefresh;
-                    chatOutputScintillaAugmentStyleBytesHotspots(
-                        chatOutputTextEditorContents, roleStyles, textLen);
                     streamLogLifecycle(
                         "chatOutputUpdateFromBuffer scintilla raw begin");
                     chatOutputScintillaForgetMarkdownLinkSpans();

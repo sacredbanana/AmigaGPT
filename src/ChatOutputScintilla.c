@@ -119,6 +119,10 @@ static int chatOutputScintillaFontSizePoints(void) {
 #define CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT 9
 /** Hotspot style for bare `http://` / `https://` URLs — OpenURL on release. */
 #define CHAT_OUTPUT_STYLE_URL_HOTSPOT 10
+/** Inline `` `...` `` — monospace + gray background (Assistant, Markdown formatting on). */
+#define CHAT_OUTPUT_STYLE_MD_CODE 11
+#define CHAT_OUTPUT_MD_CODE_FORE 0x00333333 /* BBGGRR dark gray */
+#define CHAT_OUTPUT_MD_CODE_BACK 0x00ECECEC /* BBGGRR light gray */
 
 #define CHAT_MD_MAX_STACK 32
 #define CHAT_OUTPUT_CODEBLOCK_LINK_FORE 0x00CC6600 /* BBGGRR link blue */
@@ -127,7 +131,8 @@ static int chatOutputScintillaFontSizePoints(void) {
 typedef enum {
     CHAT_MD_STYLE_BOLD,
     CHAT_MD_STYLE_ITALIC,
-    CHAT_MD_STYLE_UNDERLINE
+    CHAT_MD_STYLE_UNDERLINE,
+    CHAT_MD_STYLE_CODE
 } ChatMdStyleType;
 
 typedef struct {
@@ -256,6 +261,18 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETITALIC, CHAT_OUTPUT_STYLE_MD_ALL, 1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE, CHAT_OUTPUT_STYLE_MD_ALL, 1);
 
+    codeBlocksScintillaCommand(sci, SCI_STYLESETFORE, CHAT_OUTPUT_STYLE_MD_CODE,
+                               CHAT_OUTPUT_MD_CODE_FORE);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_MD_CODE,
+                               (sptr_t)CHAT_OUTPUT_SCINTILLA_FONT_MONO);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, CHAT_OUTPUT_STYLE_MD_CODE,
+                               chatOutputScintillaFontSizePoints());
+    codeBlocksScintillaCommand(sci, SCI_STYLESETBACK, CHAT_OUTPUT_STYLE_MD_CODE,
+                               CHAT_OUTPUT_MD_CODE_BACK);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETBOLD, CHAT_OUTPUT_STYLE_MD_CODE, 0);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETITALIC, CHAT_OUTPUT_STYLE_MD_CODE, 0);
+    codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE, CHAT_OUTPUT_STYLE_MD_CODE, 0);
+
     codeBlocksScintillaCommand(sci, SCI_STYLESETFORE, CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT,
                                CHAT_OUTPUT_CODEBLOCK_LINK_FORE);
     codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT,
@@ -304,6 +321,17 @@ static BOOL chatMdIsTop(const ChatMdStyleStack *s, ChatMdStyleType style) {
         return FALSE;
     }
     return (s->stack[s->top] == style);
+}
+
+static BOOL chatMdStackHasCode(const ChatMdStyleStack *s) {
+    int i;
+
+    for (i = 0; i <= s->top; i++) {
+        if (s->stack[i] == CHAT_MD_STYLE_CODE) {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 static BOOL chatMdStackHasBold(const ChatMdStyleStack *s) {
@@ -551,6 +579,38 @@ static UBYTE chatMdParseMarker(const char *input, ULONG pos, ULONG len,
     if (pos >= len) {
         return 0;
     }
+    if (chatMdStackHasCode(stack)) {
+        if (input[pos] == '`') {
+            ULONG run = 1;
+
+            while (pos + run < len && input[pos + run] == '`') {
+                run++;
+            }
+            if (run == 1) {
+                *foundStyle = CHAT_MD_STYLE_CODE;
+                return 1;
+            }
+        }
+        return 0;
+    }
+    if (input[pos] == '`') {
+        ULONG run = 1;
+
+        while (pos + run < len && input[pos + run] == '`') {
+            run++;
+        }
+        if (run >= 3) {
+            return 0;
+        }
+        if (pos > 0 && input[pos - 1] == '\\') {
+            return 0;
+        }
+        if (run != 1) {
+            return 0;
+        }
+        *foundStyle = CHAT_MD_STYLE_CODE;
+        return 1;
+    }
     if (pos + 1 < len && input[pos] == '_' && input[pos + 1] == '_') {
         *foundStyle = CHAT_MD_STYLE_UNDERLINE;
         return 2;
@@ -585,6 +645,9 @@ static UBYTE chatMdStyleFromStack(const ChatMdStyleStack *s) {
     BOOL underline = FALSE;
     int i;
 
+    if (chatMdStackHasCode(s)) {
+        return CHAT_OUTPUT_STYLE_MD_CODE;
+    }
     for (i = 0; i <= s->top; i++) {
         switch (s->stack[i]) {
         case CHAT_MD_STYLE_BOLD:
@@ -977,20 +1040,22 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
                     continue;
                 }
                 if (i < mdLineEnd) {
-                    linkEat = chatMdTryConsumeMarkdownHttpLinks(
-                        inUtf8, inLen, i, &outPos, outUtf8, outStyles,
-                        CHAT_OUTPUT_STYLE_MD_BOLD);
-                    if (linkEat > 0) {
-                        i += linkEat - 1;
-                        continue;
-                    }
-                    {
-                        ULONG emojiLen = chatMdEmitEmojiSubstitute(
-                            inUtf8, i, inLen, &outPos, outUtf8, outStyles,
+                    if (!chatMdStackHasCode(&styleStack)) {
+                        linkEat = chatMdTryConsumeMarkdownHttpLinks(
+                            inUtf8, inLen, i, &outPos, outUtf8, outStyles,
                             CHAT_OUTPUT_STYLE_MD_BOLD);
-                        if (emojiLen > 0) {
-                            i += emojiLen - 1;
+                        if (linkEat > 0) {
+                            i += linkEat - 1;
                             continue;
+                        }
+                        {
+                            ULONG emojiLen = chatMdEmitEmojiSubstitute(
+                                inUtf8, i, inLen, &outPos, outUtf8, outStyles,
+                                CHAT_OUTPUT_STYLE_MD_BOLD);
+                            if (emojiLen > 0) {
+                                i += emojiLen - 1;
+                                continue;
+                            }
                         }
                     }
                     if (inUtf8[i] == '\\' && i + 1 < inLen) {
@@ -1010,21 +1075,23 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
                 }
             }
 
-            linkEat = chatMdTryConsumeMarkdownHttpLinks(
-                inUtf8, inLen, i, &outPos, outUtf8, outStyles,
-                chatMdStyleFromStack(&styleStack));
-            if (linkEat > 0) {
-                i += linkEat - 1;
-                continue;
-            }
-
-            {
-                ULONG emojiLen = chatMdEmitEmojiSubstitute(
-                    inUtf8, i, inLen, &outPos, outUtf8, outStyles,
+            if (!chatMdStackHasCode(&styleStack)) {
+                linkEat = chatMdTryConsumeMarkdownHttpLinks(
+                    inUtf8, inLen, i, &outPos, outUtf8, outStyles,
                     chatMdStyleFromStack(&styleStack));
-                if (emojiLen > 0) {
-                    i += emojiLen - 1;
+                if (linkEat > 0) {
+                    i += linkEat - 1;
                     continue;
+                }
+
+                {
+                    ULONG emojiLen = chatMdEmitEmojiSubstitute(
+                        inUtf8, i, inLen, &outPos, outUtf8, outStyles,
+                        chatMdStyleFromStack(&styleStack));
+                    if (emojiLen > 0) {
+                        i += emojiLen - 1;
+                        continue;
+                    }
                 }
             }
 
@@ -1208,30 +1275,6 @@ static BOOL chatMdIsPipeTableRowLine(const char *text, ULONG len, ULONG lineStar
     return FALSE;
 }
 
-static BOOL chatMdIsPipeTableSeparatorLine(const char *text, ULONG len, ULONG lineStart,
-                                           ULONG lineEnd) {
-    ULONG p = chatMdSkipLinePrefixBounded(text, len, lineStart);
-    BOOL seenPipe = FALSE;
-
-    if (p >= lineEnd || text[p] != '|') {
-        return FALSE;
-    }
-    p++;
-    while (p < lineEnd) {
-        if (text[p] == '|') {
-            seenPipe = TRUE;
-            p++;
-            continue;
-        }
-        if (text[p] == '-' || text[p] == ':' || text[p] == ' ') {
-            p++;
-            continue;
-        }
-        return FALSE;
-    }
-    return seenPipe;
-}
-
 static ULONG chatMdTrimAsciiSpaces(const char *s, ULONG len, ULONG *outStart) {
     ULONG start = 0;
     ULONG end = len;
@@ -1254,12 +1297,25 @@ static ULONG chatMdParsePipeRowCells(const char *text, ULONG len, ULONG lineStar
                                      ULONG cellLens[CHAT_MD_TABLE_MAX_COLS]) {
     ULONG p = chatMdSkipLinePrefixBounded(text, len, lineStart);
     ULONG col = 0;
+    BOOL hasPipe = FALSE;
+    ULONG q;
 
-    if (p >= lineEnd || text[p] != '|') {
+    if (p >= lineEnd) {
         return 0;
     }
-    p++;
-    while (p <= lineEnd && col < CHAT_MD_TABLE_MAX_COLS) {
+    for (q = p; q < lineEnd; q++) {
+        if (text[q] == '|') {
+            hasPipe = TRUE;
+            break;
+        }
+    }
+    if (!hasPipe) {
+        return 0;
+    }
+    if (text[p] == '|') {
+        p++;
+    }
+    while (col < CHAT_MD_TABLE_MAX_COLS) {
         ULONG cellStart = p;
         ULONG cellEnd = p;
 
@@ -1324,6 +1380,18 @@ static BOOL chatMdSeparatorMatchesColumns(const char *text, ULONG len, ULONG lin
     return seenDashSegment;
 }
 
+static BOOL chatMdIsPipeTableSeparatorLine(const char *text, ULONG len, ULONG lineStart,
+                                           ULONG lineEnd) {
+    ULONG cellStarts[CHAT_MD_TABLE_MAX_COLS];
+    ULONG cellLens[CHAT_MD_TABLE_MAX_COLS];
+    ULONG got = chatMdParsePipeRowCells(text, len, lineStart, lineEnd, cellStarts, cellLens);
+
+    if (got == 0) {
+        return FALSE;
+    }
+    return chatMdSeparatorMatchesColumns(text, len, lineStart, lineEnd, got);
+}
+
 static void chatMdCopyEmit(ULONG *outPos, char *outUtf8, UBYTE *outStyles, const char *src,
                            const UBYTE *srcStyles, ULONG srcOff, ULONG count, UBYTE padStyle) {
     ULONG k;
@@ -1372,7 +1440,7 @@ static BOOL chatMdEmitPaddedPipeRow(const char *text, ULONG len, const UBYTE *st
     ULONG got = chatMdParsePipeRowCells(text, len, lineStart, lineEnd, cellStarts, cellLens);
     UBYTE lineStyle = CHAT_OUTPUT_STYLE_ASSISTANT;
 
-    if (got < ncol || pipeAt >= lineEnd || text[pipeAt] != '|') {
+    if (got < ncol || pipeAt >= lineEnd) {
         return FALSE;
     }
     if (styles != NULL && lineStart < lineEnd) {
@@ -1465,7 +1533,7 @@ static BOOL chatMdEmitSyntheticSeparatorRow(const char *text, ULONG len, const U
     ULONG scl[CHAT_MD_TABLE_MAX_COLS];
     ULONG gotSep;
 
-    if (pipeAt >= lineEnd || text[pipeAt] != '|') {
+    if (pipeAt >= lineEnd) {
         return FALSE;
     }
     if (styles != NULL && lineStart < lineEnd) {
@@ -1781,7 +1849,8 @@ static void chatOutputScintillaApplyUrlHotspotStyles(const char *utf8, UBYTE *st
         ULONG end = pos;
         ULONG schemeLen;
 
-        if (styleBytes[pos] == CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT) {
+        if (styleBytes[pos] == CHAT_OUTPUT_STYLE_CODEBLOCK_HOTSPOT ||
+            styleBytes[pos] == CHAT_OUTPUT_STYLE_MD_CODE) {
             pos++;
             continue;
         }
@@ -1802,7 +1871,11 @@ static void chatOutputScintillaApplyUrlHotspotStyles(const char *utf8, UBYTE *st
 static UBYTE *chatOutputDeferredRoleStyles;
 static ULONG chatOutputDeferredRoleStyleLen;
 static BOOL chatOutputDeferredPreserveViewport;
+static sptr_t chatOutputDeferredFirstVisibleLine;
+static sptr_t chatOutputDeferredOldLineCount;
 static Object *chatOutputDeferredSci;
+/** UTF-8 bytes already reflected in chat Scintilla (stream append-delta). */
+static ULONG chatOutputStreamSyncedUtf8Len;
 BOOL chatOutputScintillaMorphosSkipViewport;
 
 void chatOutputScintillaAugmentStyleBytesHotspots(const char *utf8, UBYTE *styleBytes,
@@ -1815,9 +1888,9 @@ void chatOutputScintillaAugmentStyleBytesHotspots(const char *utf8, UBYTE *style
     streamLogLifecycle("chat scintilla hotspots url done");
 }
 
-static void chatOutputScintillaApplyRoleStyleBytes(Object *sci,
-                                                   const UBYTE *styleBytes,
-                                                   ULONG byteLen) {
+static void chatOutputScintillaApplyRoleStyleBytesFromPos(Object *sci, ULONG startPos,
+                                                          const UBYTE *styleBytes,
+                                                          ULONG byteLen) {
     ULONG pos;
 
     if (sci == NULL || styleBytes == NULL || byteLen == 0 ||
@@ -1829,7 +1902,7 @@ static void chatOutputScintillaApplyRoleStyleBytes(Object *sci,
      * is cheaper. Lexer is already SCLEX_NULL from prime — skip SCI_SETLEXER here.
      */
     streamLogLifecycle("chat scintilla setstyling runs begin");
-    codeBlocksScintillaCommand(sci, SCI_STARTSTYLING, 0, 0xFF);
+    codeBlocksScintillaCommand(sci, SCI_STARTSTYLING, startPos, 0xFF);
     for (pos = 0; pos < byteLen;) {
         UBYTE style = styleBytes[pos];
         ULONG run = 1;
@@ -1843,6 +1916,76 @@ static void chatOutputScintillaApplyRoleStyleBytes(Object *sci,
     streamLogLifecycle("chat scintilla setstyling runs done");
 }
 
+static void chatOutputScintillaApplyRoleStyleBytes(Object *sci,
+                                                   const UBYTE *styleBytes,
+                                                   ULONG byteLen) {
+    chatOutputScintillaApplyRoleStyleBytesFromPos(sci, 0, styleBytes, byteLen);
+}
+
+void chatOutputScintillaResetStreamSync(void) {
+    chatOutputStreamSyncedUtf8Len = 0;
+}
+
+BOOL chatOutputScintillaAppendStreamDelta(Object *sci, const char *utf8, ULONG textLen,
+                                          const UBYTE *roleStyles, ULONG roleStyleLen) {
+    ULONG docLen;
+    ULONG deltaLen;
+    const char *delta;
+
+    if (sci == NULL || utf8 == NULL || mainWindowIsShuttingDown()) {
+        return FALSE;
+    }
+    chatOutputScintillaEnsureViewerReady(sci);
+    chatOutputScintillaCancelDeferredStyles();
+
+    if (textLen == 0) {
+        chatOutputStreamSyncedUtf8Len = 0;
+        return TRUE;
+    }
+
+    docLen = (ULONG)codeBlocksScintillaCommand(sci, SCI_GETLENGTH, 0, 0);
+    if (chatOutputStreamSyncedUtf8Len != docLen ||
+        textLen < chatOutputStreamSyncedUtf8Len) {
+        streamLogLifecycle("chat stream append fallback mismatch");
+        return FALSE;
+    }
+
+    deltaLen = textLen - chatOutputStreamSyncedUtf8Len;
+    if (deltaLen == 0) {
+        return TRUE;
+    }
+
+    delta = utf8 + chatOutputStreamSyncedUtf8Len;
+
+    codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 0, 0);
+    streamLogLifecycle("chat stream append delta begin");
+    codeBlocksScintillaCommand(sci, SCI_APPENDTEXT, deltaLen, (sptr_t)delta);
+    streamLogLifecycle("chat stream append delta done");
+
+    if (roleStyles != NULL && roleStyleLen > chatOutputStreamSyncedUtf8Len) {
+        ULONG styleLen = roleStyleLen;
+
+        if (styleLen > textLen) {
+            styleLen = textLen;
+        }
+        styleLen -= chatOutputStreamSyncedUtf8Len;
+        chatOutputScintillaApplyRoleStyleBytesFromPos(
+            sci, chatOutputStreamSyncedUtf8Len,
+            roleStyles + chatOutputStreamSyncedUtf8Len, styleLen);
+    } else {
+        codeBlocksScintillaCommand(sci, SCI_STARTSTYLING,
+                                   chatOutputStreamSyncedUtf8Len, 0xFF);
+        codeBlocksScintillaCommand(sci, SCI_SETSTYLING, deltaLen,
+                                   CHAT_OUTPUT_STYLE_ASSISTANT);
+    }
+
+    codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
+    codeBlocksScintillaCommand(sci, SCI_GOTOPOS, textLen, 0);
+    codeBlocksScintillaCommand(sci, SCI_SCROLLCARET, 0, 0);
+    chatOutputStreamSyncedUtf8Len = textLen;
+    return TRUE;
+}
+
 void chatOutputScintillaCancelDeferredStyles(void) {
     if (chatOutputDeferredRoleStyles != NULL) {
         FreeVec(chatOutputDeferredRoleStyles);
@@ -1851,6 +1994,8 @@ void chatOutputScintillaCancelDeferredStyles(void) {
     chatOutputDeferredRoleStyleLen = 0;
     chatOutputDeferredSci = NULL;
     chatOutputDeferredPreserveViewport = FALSE;
+    chatOutputDeferredFirstVisibleLine = 0;
+    chatOutputDeferredOldLineCount = 1;
     chatOutputScintillaMorphosSkipViewport = FALSE;
 }
 
@@ -1911,10 +2056,15 @@ HOOKPROTONHNONP(ChatOutputSciApplyStylesDeferredFunc, void) {
     UBYTE *styles = chatOutputDeferredRoleStyles;
     ULONG styleLen = chatOutputDeferredRoleStyleLen;
     BOOL preserve = chatOutputDeferredPreserveViewport;
+    sptr_t firstVisibleLine = chatOutputDeferredFirstVisibleLine;
+    sptr_t oldLineCount = chatOutputDeferredOldLineCount;
 
     chatOutputDeferredSci = NULL;
     chatOutputDeferredRoleStyles = NULL;
     chatOutputDeferredRoleStyleLen = 0;
+    chatOutputDeferredPreserveViewport = FALSE;
+    chatOutputDeferredFirstVisibleLine = 0;
+    chatOutputDeferredOldLineCount = 1;
 
     if (mainWindowIsShuttingDown() || sci == NULL || styles == NULL || styleLen == 0) {
         if (styles != NULL) {
@@ -1931,10 +2081,13 @@ HOOKPROTONHNONP(ChatOutputSciApplyStylesDeferredFunc, void) {
     if (!chatOutputScintillaMorphosSkipViewport &&
         (!preserve || styleLen <= (24 * 1024))) {
         streamLogLifecycle("chat scintilla viewport begin");
-        chatOutputScintillaFinishViewport(sci, 0, 1, preserve);
+        chatOutputScintillaFinishViewport(sci, firstVisibleLine, oldLineCount,
+                                          preserve);
         streamLogLifecycle("chat scintilla viewport done");
     }
     chatOutputScintillaMorphosSkipViewport = FALSE;
+    chatOutputStreamSyncedUtf8Len =
+        (ULONG)codeBlocksScintillaCommand(sci, SCI_GETLENGTH, 0, 0);
     streamLogLifecycle("chat scintilla apply styles deferred done");
 }
 MakeHook(ChatOutputSciApplyStylesDeferredHook, ChatOutputSciApplyStylesDeferredFunc);
@@ -2466,6 +2619,7 @@ void chatOutputScintillaClearDocument(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_CLEARDOCUMENTSTYLE, 0, 0);
     codeBlocksScintillaCommand(sci, SCI_CLEARALL, 0, 0);
     codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
+    chatOutputStreamSyncedUtf8Len = 0;
     streamLogLifecycle("chat scintilla clear done");
 }
 
@@ -2495,6 +2649,7 @@ void chatOutputScintillaSetUtf8TextWithRoleStyles(Object *sci, const char *utf8,
     streamLogLifecycle("chat scintilla settext begin");
     codeBlocksScintillaCommand(sci, SCI_SETTEXT, 0, (sptr_t)utf8);
     streamLogLifecycle("chat scintilla settext done");
+    chatOutputStreamSyncedUtf8Len = textLen;
     if (roleStyles != NULL && roleStyleLen > 0) {
         if (roleStyleLen > textLen) {
             roleStyleLen = textLen;
@@ -2507,6 +2662,8 @@ void chatOutputScintillaSetUtf8TextWithRoleStyles(Object *sci, const char *utf8,
                 memcpy(chatOutputDeferredRoleStyles, roleStyles, roleStyleLen);
                 chatOutputDeferredRoleStyleLen = roleStyleLen;
                 chatOutputDeferredPreserveViewport = preserveViewport;
+                chatOutputDeferredFirstVisibleLine = firstVisibleLine;
+                chatOutputDeferredOldLineCount = oldLineCount;
                 chatOutputDeferredSci = sci;
                 streamLogLifecycle("chat scintilla apply styles defer scheduled");
                 DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,

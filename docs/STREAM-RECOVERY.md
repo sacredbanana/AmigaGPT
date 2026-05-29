@@ -111,8 +111,9 @@ Im gesamten Repo (`src/*.c`, Rexx unter `bundle/`) gibt es **kein** `Delete("RAM
 
 ### S3 — UI-Freeze während Stream
 
-- **Trigger:** `appendAssistantStreamText` — pro Chunk `CodesetsUTF8ToStr`; alle 8 Chunks NFloattext-Update; Speech: Konvertierung **gesamtes** `receivedMessage`.
+- **Trigger:** `appendAssistantStreamText` — pro Chunk UI-Refresh; Speech: Konvertierung **gesamtes** `receivedMessage` (OS3/4 NFloattext; MorphOS Scintilla).
 - **Soll (R3):** Speech nur auf neuem `piece`; seltener Refresh; `MUIM_Application_NewInput` beibehalten; kein `displayConversation` während Stream (bereits so — beibehalten).
+- **MorphOS (2026-05):** Live-Stream nutzt `chatOutputScintillaAppendStreamDelta()` (`SCI_APPENDTEXT` + Styling nur für neues Tail) statt vollem `SCI_SETTEXT` pro Refresh; nach Stream-Ende `displayConversation` wie bisher.
 
 ### S4 — 64-KB-Stream-Puffer voll
 
