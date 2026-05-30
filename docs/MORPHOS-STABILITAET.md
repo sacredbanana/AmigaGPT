@@ -79,7 +79,7 @@ Einmalige Migration: falls noch `AMIGAGPT:config.json` oder `AMIGAGPT:last-conve
 | **Deferred Style-Apply** | `ChatOutputScintilla.c` | Nach `SCI_SETTEXT`: Styling per zweitem `PushMethod`; Scroll-Zeile (`firstVisibleLine`/`oldLineCount`) für Markdown-Toggle mit durchreichen |
 | **Run-Length-Styling** | `chatOutputScintillaApplyRoleStyleBytes()` | `SCI_SETSTYLING` (Runs) statt `SCI_SETSTYLINGEX`; kein redundant `SCI_SETLEXER` vor Styling |
 | **Kein Scroll bei Listenwechsel** | `chatOutputScintillaMorphosSkipViewport` | Kein `GOTOPOS`/`SCROLLCARET` bei NList-Chat-Wechsel und während Stream |
-| **Schweres Scroll vermeiden** | `SetUtf8TextWithRoleStyles()` | Viewport nur wenn nicht Skip und (preserveViewport oder Text ≤ 24 KB) |
+| **Schweres Scroll vermeiden** | `SetUtf8TextWithRoleStyles()` | Scroll ans Ende nur wenn nicht Skip und (≤ 24 KB oder kein Preserve); **Markdown-Toggle** (`preserveViewport`) stellt Scroll-Zeile auch bei großen Chats wieder her (`SETFIRSTVISIBLELINE`) |
 | **Raw während Stream** | `morphosChatStreamRawScintillaRefresh` | Live-Antwort ohne Markdown-Parse pro Chunk |
 | **Raw/Markdown per Menü** | `config.markdownFormatting` | Haken **aus** → dauerhaft Raw-Pfad; Haken **an** → Markdown außerhalb Stream (Nutzer steuert Stabilitätstest) |
 | **Refresh-Race** | `morphosScheduleChatOutputRefresh()` | Setzt `FromList` nicht zurück, wenn bereits ein Listen-Refresh pending ist |

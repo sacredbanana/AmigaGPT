@@ -2079,7 +2079,7 @@ HOOKPROTONHNONP(ChatOutputSciApplyStylesDeferredFunc, void) {
     FreeVec(styles);
     codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
     if (!chatOutputScintillaMorphosSkipViewport &&
-        (!preserve || styleLen <= (24 * 1024))) {
+        (preserve || styleLen <= (24 * 1024))) {
         streamLogLifecycle("chat scintilla viewport begin");
         chatOutputScintillaFinishViewport(sci, firstVisibleLine, oldLineCount,
                                           preserve);
