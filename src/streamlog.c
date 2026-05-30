@@ -39,9 +39,12 @@ void streamLogBootPhase(CONST_STRPTR phase) { (void)phase; }
 
 void streamLogLifecycle(CONST_STRPTR phase) { (void)phase; }
 
+void streamLogShutdownPhase(CONST_STRPTR phase) { (void)phase; }
+
 #else
 
 static BOOL streamLogEnabled = FALSE;
+static BOOL streamLogLifecycleEnabled = FALSE;
 
 static void streamLogSanitizeSnippet(STRPTR dest, ULONG destSize,
                                      CONST_STRPTR src) {
@@ -138,10 +141,15 @@ static void streamLogEmit(CONST_STRPTR path, CONST_STRPTR line) {
 
 void streamLogSyncFromConfig(void) {
     BOOL wasEnabled = streamLogEnabled;
+    BOOL wasLifecycleEnabled = streamLogLifecycleEnabled;
 
     streamLogEnabled = (BOOL)config.debugStreamLog;
+    streamLogLifecycleEnabled = (BOOL)config.debugLifecycleLog;
     if (streamLogEnabled && !wasEnabled) {
         streamLogEmit(STREAMLOG_STREAM_PATH, "debug logging enabled");
+    }
+    if (streamLogLifecycleEnabled && !wasLifecycleEnabled) {
+        streamLogLifecycle("lifecycle logging enabled");
     }
 }
 
@@ -218,16 +226,40 @@ void streamLogLifecycle(CONST_STRPTR phase) {
     APTR currentTask;
     UBYTE line[STREAMLOG_LINE_MAX];
 
+    if (!streamLogLifecycleEnabled || phase == NULL) {
+        return;
+    }
     DateStamp(&ds);
     currentTask = (APTR)FindTask(NULL);
     snprintf((STRPTR)line, sizeof(line),
              "lifecycle ds=%lu:%lu:%lu task=%p %s", (unsigned long)ds.ds_Days,
              (unsigned long)ds.ds_Minute, (unsigned long)ds.ds_Tick, currentTask,
-             phase != NULL ? phase : "?");
+             phase);
     streamLogAppendAlways(STREAMLOG_LIFECYCLE_PATH, (STRPTR)line);
     streamLogAppendAlways(STREAMLOG_LIFECYCLE_MIRROR_PATH, (STRPTR)line);
 #ifdef __MORPHOS__
     KPrintF("[AmigaGPT lifecycle] %s\n", line);
+#endif
+}
+
+void streamLogShutdownPhase(CONST_STRPTR phase) {
+#ifdef __MORPHOS__
+    BPTR fh;
+    ULONG len;
+
+    if (phase == NULL || phase[0] == '\0') {
+        return;
+    }
+    len = (ULONG)strlen(phase);
+    fh = Open((STRPTR)STREAMLOG_SHUTDOWN_LAST_PATH, MODE_NEWFILE);
+    if (fh == 0) {
+        return;
+    }
+    Write(fh, (APTR)phase, len);
+    Write(fh, (APTR)"\n", 1);
+    Close(fh);
+#else
+    (void)phase;
 #endif
 }
 

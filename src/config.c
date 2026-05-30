@@ -135,6 +135,7 @@ struct Config config = {
     .elevenLabsModel = NULL,
     .elevenLabsModelName = NULL,
     .debugStreamLog = FALSE,
+    .debugLifecycleLog = FALSE,
 };
 
 ULONG configClampChatFontSize(ULONG size) {
@@ -335,6 +336,8 @@ LONG writeConfig() {
             : NULL);
     json_object_object_add(configJsonObject, "debugStreamLog",
                            json_object_new_boolean((BOOL)config.debugStreamLog));
+    json_object_object_add(configJsonObject, "debugLifecycleLog",
+                           json_object_new_boolean((BOOL)config.debugLifecycleLog));
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
@@ -951,6 +954,18 @@ LONG readConfig() {
         } else if (json_object_is_type(debugStreamLogObj, json_type_int)) {
             config.debugStreamLog =
                 json_object_get_int(debugStreamLogObj) != 0 ? 1 : 0;
+        }
+    }
+
+    struct json_object *debugLifecycleLogObj;
+    if (json_object_object_get_ex(configJsonObject, "debugLifecycleLog",
+                                  &debugLifecycleLogObj)) {
+        if (json_object_is_type(debugLifecycleLogObj, json_type_boolean)) {
+            config.debugLifecycleLog =
+                (ULONG)json_object_get_boolean(debugLifecycleLogObj);
+        } else if (json_object_is_type(debugLifecycleLogObj, json_type_int)) {
+            config.debugLifecycleLog =
+                json_object_get_int(debugLifecycleLogObj) != 0 ? 1 : 0;
         }
     }
 

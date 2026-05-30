@@ -64,6 +64,8 @@ struct Config {
     STRPTR elevenLabsModelName;
     /** Phase 9: append T:amigagpt_stream.log (+ KPrintF for LogTool). */
     ULONG debugStreamLog;
+    /** MorphOS: AMIGAGPT:amigagpt_lifecycle.log (+ T: mirror, LogTool). Default off. */
+    ULONG debugLifecycleLog;
 };
 
 /**

@@ -17,10 +17,16 @@ LogTool ersetzt **keine** Datei: die App schreibt nicht „in LogTool“, sonder
 In `ENVARC:AmigaGPT/config.json` (Fallback beim ersten Start: `AMIGAGPT:config.json`):
 
 ```json
-"debugStreamLog": true
+"debugStreamLog": true,
+"debugLifecycleLog": true
 ```
 
-Default: **false**. Nach Änderung App neu starten (oder erneut `readConfig`).
+| Key | Default | Log |
+|-----|---------|-----|
+| `debugStreamLog` | **false** | `T:amigagpt_stream.log`, `T:amigagpt_utf8.log`, LogTool `[AmigaGPT]` |
+| `debugLifecycleLog` | **false** | `AMIGAGPT:amigagpt_lifecycle.log`, Spiegel `T:amigagpt_lifecycle.log`, LogTool `[AmigaGPT lifecycle]` |
+
+Nach Änderung App neu starten. Lifecycle-Zeilen beginnen **nach** `readConfig()` (nicht `startup begin` davor).
 
 ## Dateien
 
