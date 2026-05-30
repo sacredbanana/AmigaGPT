@@ -137,17 +137,18 @@ DoMethodA(sci, (Msg)&cmd);
 
 ### 5.5 Code-Viewer-Status (Definition of Done, Teil)
 
-| Kriterium | Status (2026-05-24) |
+| Kriterium | Status (2026-05-28) |
 |-----------|---------------------|
 | Menü „View code blocks…“ + Scintilla + NList (7a) | **Erledigt** (MorphOS) |
 | Copy/Save UTF-8 + System-Codeset (7b) | **Erledigt** (MorphOS, inkl. Quit mit offenem Viewer) |
 | Cross-Build `Makefile.MorphOS` + Daemon ohne Viewer | **Erledigt** |
-| Stream/Chat-Sync, WANT_READ (Recovery R1–R2) | **Offen** — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
-| String-Safety (Phase 8) | **In Arbeit** — [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md) (8.1); R2-Rest dokumentiert |
-| Logs (Phase 9) | **Offen** |
+| Stream/Chat-Sync, WANT_READ (Recovery R1–R3, R2) | **Erledigt** — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
+| String-Safety (Phase 8) | **Erledigt** (Minimal-DoD) — [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md) |
+| Logs (Phase 9) | **Erledigt** (minimal) — [PHASE-9-DEBUG-LOGS.md](PHASE-9-DEBUG-LOGS.md) |
 | DoD Phase 10 (formal) | **Erledigt** — [PHASE-10-DOD.md](PHASE-10-DOD.md) |
+| Chat-Hauptfenster Scintilla (Phase 12 + 12.1) | **Erledigt** — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md) |
 
-Chat-Hauptfenster bleibt **NFloattext** bis Phase 12.
+Optional offen: **R4** (Fence-Heuristik), **Phase 13** (Worker) — siehe [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md).
 
 ---
 

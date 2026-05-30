@@ -82,7 +82,7 @@ Nur **Monospace**-Familien für den Code-Viewer; Schreibweise aus Flow Studio ü
 
 **Nicht** die kurze MUI-Liste (Andale Mono, Arial, Times, Verdana) — das ist **graphics.library**, nicht TTEngine.
 
-**Zwei Font-Welten:** MUI/graphics vs. TTEngine — siehe [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md). Emoji: □ = fehlende Glyphe; `??` im Chat = noch NFloattext/codesets.
+**Zwei Font-Welten:** MUI/graphics vs. TTEngine — siehe [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md). Emoji: □ = fehlende Glyphe; `??` im Chat = historisch NFloattext/codesets — mit **Phase 12** Chat-Scintilla auf MorphOS behoben (Emoji je nach *Markdown formatting*).
 
 ---
 

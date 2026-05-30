@@ -4,7 +4,7 @@ Branch **scintilla**, MorphOS-Fork. Ergänzt [SCINTILLA-ARCHITECTURE.md](SCINTIL
 
 **Ziel:** Keine Pufferüberläufe und keine unsicheren String-APIs auf Pfaden mit Modell-/Netzwerkdaten.
 
-**Nicht Phase 8:** Stream-Recovery-Verhalten (R1–R3), neue Features, Chat-Scintilla (Phase 12).
+**Nicht Phase 8:** Stream-Recovery-Verhalten (R1–R3), neue Features. Chat-Scintilla war **Phase 12** (erledigt) — String-Audit dort bei Bedarf separat.
 
 ---
 

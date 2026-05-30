@@ -268,21 +268,23 @@ Details: [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md#recovery-r2--rest-b
 ## Implementierungsreihenfolge (gesamt)
 
 1. ~~7a / 7b~~ — Code-Viewer Copy/Save
-2. **R1** — `finishChatStream` + Chat-Sync
-3. **R2** — WANT_READ / partial
-4. **7c** — Mausrad (optional parallel)
-5. **R3** — Freeze
+2. ~~**R1**~~ — `finishChatStream` + Chat-Sync
+3. ~~**R2**~~ — WANT_READ / partial
+4. ~~**7c**~~ — Mausrad
+5. ~~**R3**~~ — Freeze (Scintilla-Stream-Pfad)
 6. ~~**8–10**~~ — Strings, Logs, DoD ✓ ([PHASE-10-DOD.md](PHASE-10-DOD.md))
-7. **R4** — optional
+7. ~~**11–12**~~ — Code-Viewer Lexer + Chat-Scintilla ✓ ([PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md))
+8. **R4** — optional
+9. **Phase 13** — Worker/UI-Batching, nur bei Bedarf
 
 ---
 
-## Offene Entscheidungen (vor R2/R1.1 klären)
+## Entscheidungen R2 (historisch, umgesetzt 2026-05)
 
-1. **User-Nachricht bei API-Fehler:** behalten (heute teils entfernt) oder in Eingabefeld zurück?
-2. **PARTIAL im Verlauf:** Assistant-Node immer speichern, auch ohne `response.completed`?
-3. **SSL-Fehlertext:** nur noch Katalog + Log, nie Roh-`displayError` für WANT_READ wenn partial?
+1. **User-Nachricht bei API-Fehler:** teils entfernt; partieller Assistant bleibt im Verlauf.
+2. **PARTIAL im Verlauf:** Assistant-Node wird gespeichert, auch ohne `response.completed`.
+3. **SSL-Fehlertext:** Katalog + Log; WANT_READ mit partial ohne rohen SSL-Dialog in der UI.
 
 ---
 
-*Stand: 2026-05-24 — R1/R3 erledigt; R2 teilweise (Rest dokumentiert); R4 optional zurückgestellt; Phase 8 gestartet ([PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md)).*
+*Stand: 2026-05-28 — R1–R3 + R2 erledigt; Phasen 8–12 erledigt; R4 optional; Phase 13 zurückgestellt.*

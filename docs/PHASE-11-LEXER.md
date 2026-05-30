@@ -43,9 +43,9 @@ Vollständige Liste: Tabelle `codeBlocksLexerMap[]` in `CodeBlocksScintilla.c`.
 ## Nicht in Phase 11
 
 - Tabs für mehrere Blöcke (optional später)
-- Inline-Code im Chat
-- Chat-Hauptfenster-Scintilla (**Phase 12**) — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md)
+- ~~Inline-Code im Chat~~ — **Phase 12.1** (`` `...` `` in Chat-Scintilla)
+- ~~Chat-Hauptfenster-Scintilla (**Phase 12**)~~ — **erledigt** — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md)
 
 ---
 
-*Stand: 2026-05-25 — Phase 11 minimal (Lexer im Code-Viewer).*
+*Stand: 2026-05-28 — Phase 11 minimal (Lexer im Code-Viewer); Chat-Features siehe Phase 12.*

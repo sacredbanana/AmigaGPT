@@ -28,10 +28,10 @@ Verwandt: [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) (Plan), [PHASE-
 | G1 | MorphOS-Cross-Build ohne Link-Fehler (`make -f Makefile.MorphOS`) | ✓ |
 | G2 | Paketierung = LHA auf `Z:\morphos\out-crosscompile\` (Exit 0) | ✓ |
 | G3 | Alle Pflicht-Checklisten **6–10** unten ✓ | ✓ |
-| G4 | Keine bekannten Showstopper für Code-Viewer + normalen Chat (offene R2-Punkte dokumentiert) | ✓ |
+| G4 | Keine bekannten Showstopper für Code-Viewer + normalen Chat (R4 optional dokumentiert) | ✓ |
 | G5 | Doku: dieses Dokument + Roadmap in SCINTILLA-ARCHITECTURE aktualisiert | ✓ |
 
-**Release-Label:** Code-Viewer **v0.1** (Phasen 6–10). Nächste Arbeit: **11** (Lexer/Komfort) oder **12** (Chat-Scintilla) — getrennt planen.
+**Release-Label:** Code-Viewer **v0.1** (Phasen 6–10). **Folgearbeit (2026-05):** Phase **11** (Lexer) und **12** (Chat-Scintilla) erledigt — [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md), [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md). Optional: **13** (Worker) / **R4** (Fence-Heuristik).
 
 ---
 
@@ -126,14 +126,15 @@ Aus [STREAM-RECOVERY.md](STREAM-RECOVERY.md#testplan-morphos) + Phase-7/9-Tests:
 
 ---
 
-## Offen (bewusst, nach v0.1)
+## Offen (bewusst, nach v0.1 / nach Phase 12)
 
-| ID | Thema | Phase |
-|----|--------|-------|
-| R4.1, R4.3 | Fence-Heuristik / Host-Tests (optional) | Recovery |
-| R4.1, R4.3 | Fence-Heuristik / Host-Tests | Recovery optional |
-| 11+ | Lexer, Chat-Scintilla, Worker | SCINTILLA-ARCHITECTURE |
+| ID | Thema | Phase / Hinweis |
+|----|--------|-----------------|
+| R4.1, R4.3 | Fence-Heuristik / Host-Tests (optional) | [STREAM-RECOVERY.md](STREAM-RECOVERY.md) R4 |
+| **13** | Worker / UI-Batching | Nur bei Stream-Freeze trotz R3 — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
+
+**Erledigt seit v0.1:** Phase **11** (Code-Viewer Lexer), Phase **12** + **12.1** (Chat-Scintilla, Midi-Markdown) — nicht mehr in dieser DoD-Checkliste.
 
 ---
 
-*Stand: 2026-05-25 — Phase 10 DoD abgehakt; Phasen 6–10 = Code-Viewer v0.1 abgeschlossen (MorphOS).*
+*Stand: 2026-05-28 — Phase 10 DoD unverändert gültig (Code-Viewer v0.1); Phasen 11–12 separat abgeschlossen.*

@@ -2,7 +2,7 @@
 
 Chronik und Checkliste dessen, was für **AmigaGPT / MorphOS** in **WSL2 (Debian)** eingerichtet wurde. Anleitung zum Nachbauen: [BUILD-MORPHOS-WSL.md](BUILD-MORPHOS-WSL.md).
 
-**Stand:** 2026-05-19 · WSL-User: `weimer`
+**Stand:** 2026-05-28 · WSL-User: `weimer`
 
 ---
 
@@ -145,7 +145,9 @@ make -f Makefile.MorphOS daemon
 
 | Datei | Zweck |
 | ----- | ----- |
-| `docs/SCINTILLA-ARCHITECTURE.md` | Architekturplan Scintilla / Streaming |
+| `docs/SCINTILLA-ARCHITECTURE.md` | Architekturplan Scintilla / Streaming (Phasen 6–13) |
+| `docs/PHASE-12-CHAT-SCINTILLA.md` | Chat-Scintilla + Midi-Markdown (MorphOS, erledigt) |
+| `docs/MIDI-MARKDOWN-ROADMAP.md` | Export, Hotspots, Tabellen, Zeilenumbruch |
 | `docs/GIT-FORK-WORKFLOW.md` | Fork, upstream, Branch-Hinweis |
 | `docs/HANDLUNGSANWEISUNG-GIT.md` | Git-Regeln Mensch + Agent |
 | `docs/BUILD-MORPHOS-WSL.md` | Schritt-für-Schritt Build-Anleitung |
@@ -159,16 +161,22 @@ make -f Makefile.MorphOS daemon
 
 ## Offene Punkte (Checkliste)
 
+### Erledigt (MorphOS / Fork)
+
 - [x] `AmigaSDK-gcc` geklont; Makefile nutzt `morphos/sdk` automatisch
 - [x] `make -f Makefile.MorphOS` + `daemon` → `out/AmigaGPT_MorphOS`, `out/AmigaGPTD_MorphOS`
-- [ ] `~/.bashrc`: FlexCat-PATH dauerhaft
 - [x] Dokumentation: kanonischer Pfad nur noch WSL (`~/development/morphos/AmigaGPT`)
+- [x] MorphOS: Code-Viewer 7a/7b (Copy/Save, Quit mit offenem Viewer) — [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)
+- [x] Stream-Recovery **R1–R3** + **R2** (WANT_READ, Chat-Sync, Stream-UI) — [STREAM-RECOVERY.md](STREAM-RECOVERY.md)
+- [x] Phase **12** + **12.1** Chat-Scintilla / Midi-Markdown (Hardware-Abnahme) — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md)
+- [x] `git push origin scintilla` (Stand synchron mit `origin/scintilla`, Build **8776**)
+
+### Optional (Umgebung / Dev-Workflow)
+
+- [ ] `~/.bashrc`: FlexCat-PATH dauerhaft (falls `which flexcat` leer ist)
 - [ ] Cursor-Workspace dauerhaft auf `\\wsl$\Debian\home\weimer\development\morphos\AmigaGPT` (nicht `C:\Users\xbox\cursorWorkspace\AmigaGPT`)
-- [ ] `git push origin scintilla` (lokale Doku-Commits)
-- [ ] Optional: `upstream` einmal `git fetch` + Merge in `scintilla`
-- [ ] Optional: nach `.pot`/`.po`-Änderung einmal **`make catalog`** bzw. vollständiger Build, damit `AmigaGPT_cat.*` aktuell sind
-- [x] MorphOS: Code-Viewer 7a/7b (Copy/Save, Quit mit offenem Viewer) — siehe [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)
-- [ ] Optional: Stream-Recovery R1/R2 auf MorphOS (WANT_READ, Chat vs. `display_text`) — [STREAM-RECOVERY.md](STREAM-RECOVERY.md)
+- [ ] `upstream` einmal `git fetch` + Merge in `scintilla`
+- [ ] Nach `.pot`/`.po`-Änderung einmal **`make catalog`** bzw. vollständiger Build, damit `AmigaGPT_cat.*` aktuell sind
 - [ ] **Optional (TODO):** Deploy in `package-morphos-cross.sh` zusätzlich/alternativ per **`smbclient`** (reines WSL, ohne `powershell.exe` / gemapptes `Z:`). Siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) §8.
 
 ---
