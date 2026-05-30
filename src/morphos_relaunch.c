@@ -4,9 +4,17 @@
 
 #include <proto/dos.h>
 #include <proto/exec.h>
+#include <proto/intuition.h>
 #include <exec/execbase.h>
+#include <intuition/intuition.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef __MORPHOS__
+#ifndef DAEMON
+#include <clib/debug_protos.h>
+#endif
+#endif
 
 #include "morphos_relaunch.h"
 #include "streamlog.h"
@@ -213,6 +221,26 @@ static void morphosPurgeStaleRelaunchLocks(void) {
     }
 }
 
+#define MORPHOS_STARTUP_ALERT_TITLE "AmigaGPT"
+
+void morphosStartupShowAlert(CONST_STRPTR body) {
+    struct EasyStruct es;
+
+    if (body == NULL || body[0] == '\0') {
+        return;
+    }
+    es.es_StructSize = sizeof(struct EasyStruct);
+    es.es_Flags = 0;
+    es.es_Title = (STRPTR)MORPHOS_STARTUP_ALERT_TITLE;
+    es.es_TextFormat = (STRPTR)body;
+    es.es_GadgetFormat = (STRPTR)"OK";
+    DisplayBeep(0);
+    EasyRequest(NULL, &es, NULL, NULL);
+#ifndef DAEMON
+    KPrintF("[AmigaGPT startup] %s\n", body);
+#endif
+}
+
 static void morphosWaitForTeardownMarker(void) {
     ULONG polls = 0;
 
@@ -220,31 +248,43 @@ static void morphosWaitForTeardownMarker(void) {
         if (!morphosLockFileExists(MORPHOS_RELAUNCH_TEARDOWN_PATH)) {
             if (polls > 0) {
                 streamLogLifecycle("startup teardown wait done");
+                streamLogStartupPhase("teardown wait done");
             }
             return;
         }
         if (polls == 0) {
             streamLogLifecycle("startup teardown wait begin");
+            streamLogStartupPhase("teardown wait begin");
+            morphosStartupShowAlert(
+                "The previous AmigaGPT is still closing.\n\n"
+                "Please wait — startup continues automatically in a few "
+                "seconds.\n\nDo not start AmigaGPT again until the main "
+                "window appears or this message stops appearing.");
         }
         Delay(MORPHOS_RELAUNCH_TEARDOWN_POLL_DELAY);
         polls++;
     }
     if (morphosAnotherInstanceRunning()) {
         streamLogLifecycle("startup teardown wait timeout peer alive");
+        streamLogStartupPhase("teardown wait timeout peer alive");
         return;
     }
     streamLogLifecycle("startup teardown wait timeout stale");
+    streamLogStartupPhase("teardown wait timeout stale");
     morphosDeleteLockFile(MORPHOS_RELAUNCH_TEARDOWN_PATH);
 }
 
 BOOL morphosRelaunchStartupGuard(void) {
+    streamLogStartupPhase("relaunch guard begin");
     morphosDeleteLegacyProgramDirLocks();
 
     if (!morphosTempAssignUsable()) {
         streamLogLifecycle(
             "relaunch guards skipped T assign unusable (no lock files)");
+        streamLogStartupPhase("relaunch guard skipped T unusable");
         Delay(MORPHOS_RELAUNCH_STARTUP_DELAY);
         streamLogLifecycle("startup post-relaunch cooldown done");
+        streamLogStartupPhase("relaunch guard ok no T locks");
         return TRUE;
     }
 
@@ -254,22 +294,32 @@ BOOL morphosRelaunchStartupGuard(void) {
         morphosWaitForTeardownMarker();
     } else {
         streamLogLifecycle("startup teardown wait skipped peer running");
+        streamLogStartupPhase("teardown wait skipped peer running");
     }
 
     if (morphosAnotherInstanceRunning()) {
         streamLogLifecycle("startup blocked another instance");
+        streamLogStartupPhase("blocked another instance");
+        morphosStartupShowAlert(
+            "AmigaGPT is already running, or the previous instance is still "
+            "closing.\n\nWait a few seconds, then start once.\n\nIf nothing "
+            "happens, check T:amigagpt_startup.last and "
+            "T:amigagpt_shutdown.last.");
         return FALSE;
     }
 
     if (!morphosWriteInstanceLock()) {
         streamLogLifecycle("startup instance lock unavailable on T");
+        streamLogStartupPhase("instance lock write failed");
         /* Non-fatal: continue without lock. */
     } else {
         streamLogLifecycle("startup instance lock ok");
+        streamLogStartupPhase("instance lock ok");
     }
 
     Delay(MORPHOS_RELAUNCH_STARTUP_DELAY);
     streamLogLifecycle("startup post-relaunch cooldown done");
+    streamLogStartupPhase("relaunch guard ok");
     return TRUE;
 }
 

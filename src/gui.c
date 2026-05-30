@@ -369,7 +369,16 @@ retryCreateApp:
             streamLogLifecycle("initVideo app create retry");
             goto retryCreateApp;
         }
+        streamLogStartupPhase("app create failed");
+#ifdef __MORPHOS__
+        morphosStartupShowAlert(
+            "AmigaGPT could not start (MUI application busy).\n\n"
+            "If you just quit, wait 5 seconds and try once.\n\n"
+            "Diagnostics: T:amigagpt_startup.last and "
+            "T:amigagpt_shutdown.last");
+#else
         displayError(STRING_ERROR_APP_CREATE);
+#endif
         return RETURN_ERROR;
       }
       {
@@ -429,6 +438,7 @@ retryCreateApp:
     if (createMainWindow() == RETURN_ERROR) {
         streamLogBootPhase("createMainWindow fail");
         streamLogLifecycle("mainWindow create fail");
+        streamLogStartupPhase("createMainWindow fail");
         if (app != NULL) {
             streamLogLifecycle("MUI_DisposeObject(app) begin after mainWindow fail");
             MUI_DisposeObject(app);

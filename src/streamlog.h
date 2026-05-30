@@ -12,6 +12,7 @@
 #define STREAMLOG_LIFECYCLE_PATH "AMIGAGPT:amigagpt_lifecycle.log"
 #define STREAMLOG_LIFECYCLE_MIRROR_PATH "T:amigagpt_lifecycle.log"
 #define STREAMLOG_SHUTDOWN_LAST_PATH "T:amigagpt_shutdown.last"
+#define STREAMLOG_STARTUP_LAST_PATH "T:amigagpt_startup.last"
 
 void streamLogSyncFromConfig(void);
 
@@ -34,5 +35,8 @@ void streamLogLifecycle(CONST_STRPTR phase);
 
 /** MorphOS: overwrite T:amigagpt_shutdown.last with last shutdown phase (always on). */
 void streamLogShutdownPhase(CONST_STRPTR phase);
+
+/** MorphOS: overwrite T:amigagpt_startup.last with last startup phase (always on). */
+void streamLogStartupPhase(CONST_STRPTR phase);
 
 #endif

@@ -24,8 +24,12 @@
 /**
  * Call at startup (after "startup begin" log). Waits out teardown, blocks if
  * another AmigaGPT task is still alive. Returns FALSE to exit main early.
+ * On failure shows an Intuition requester (before MUI app exists).
  */
 BOOL morphosRelaunchStartupGuard(void);
+
+/** Intuition alert before MUI ApplicationObject (MorphOS WB start failures). */
+void morphosStartupShowAlert(CONST_STRPTR body);
 
 /** Call at start of shutdownGUI before MUI_DisposeObject. */
 void morphosRelaunchShutdownBegin(void);
@@ -45,6 +49,7 @@ static inline BOOL morphosRelaunchStartupGuard(void) { return TRUE; }
 static inline void morphosRelaunchShutdownBegin(void) {}
 static inline void morphosRelaunchReleaseInstanceLock(void) {}
 static inline void morphosRelaunchShutdownEnd(void) {}
+static inline void morphosStartupShowAlert(CONST_STRPTR body) { (void)body; }
 
 #endif
 

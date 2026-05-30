@@ -41,6 +41,8 @@ void streamLogLifecycle(CONST_STRPTR phase) { (void)phase; }
 
 void streamLogShutdownPhase(CONST_STRPTR phase) { (void)phase; }
 
+void streamLogStartupPhase(CONST_STRPTR phase) { (void)phase; }
+
 #else
 
 static BOOL streamLogEnabled = FALSE;
@@ -252,6 +254,27 @@ void streamLogShutdownPhase(CONST_STRPTR phase) {
     }
     len = (ULONG)strlen(phase);
     fh = Open((STRPTR)STREAMLOG_SHUTDOWN_LAST_PATH, MODE_NEWFILE);
+    if (fh == 0) {
+        return;
+    }
+    Write(fh, (APTR)phase, len);
+    Write(fh, (APTR)"\n", 1);
+    Close(fh);
+#else
+    (void)phase;
+#endif
+}
+
+void streamLogStartupPhase(CONST_STRPTR phase) {
+#ifdef __MORPHOS__
+    BPTR fh;
+    ULONG len;
+
+    if (phase == NULL || phase[0] == '\0') {
+        return;
+    }
+    len = (ULONG)strlen(phase);
+    fh = Open((STRPTR)STREAMLOG_STARTUP_LAST_PATH, MODE_NEWFILE);
     if (fh == 0) {
         return;
     }

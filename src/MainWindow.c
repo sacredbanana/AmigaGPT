@@ -2121,6 +2121,7 @@ LONG createMainWindow() {
             End,
         End) == NULL) {
         streamLogLifecycle("createMainWindow WindowObject fail");
+        streamLogStartupPhase("createMainWindow fail");
         displayError(STRING_ERROR_MAIN_WINDOW);
         return RETURN_ERROR;
     }

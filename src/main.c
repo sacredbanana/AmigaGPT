@@ -45,14 +45,13 @@ static void cleanExit();
  **/
 LONG main(int argc, char **argv) {
     streamLogLifecycle("startup begin");
+    streamLogStartupPhase("startup begin");
     SysBase = *((struct ExecBase **)4UL);
 
 #if defined(__MORPHOS__) && !defined(DAEMON)
     if (!morphosRelaunchStartupGuard()) {
-        displayError(
-            (STRPTR) "AmigaGPT is already running, or the previous instance is "
-                     "still closing.\n\nWait a few seconds, then start once.");
         streamLogLifecycle("startup aborted instance guard");
+        streamLogStartupPhase("aborted instance guard");
         return RETURN_ERROR;
     }
 #endif
@@ -116,13 +115,16 @@ LONG main(int argc, char **argv) {
     }
 
     streamLogBootPhase("initVideo call");
+    streamLogStartupPhase("initVideo call");
     if (initVideo() == RETURN_ERROR) {
         streamLogBootPhase("initVideo fail");
+        streamLogStartupPhase("initVideo fail");
         /* initVideo() already reported a specific GUI/library error dialog. */
         cleanExit();
         return RETURN_ERROR;
     }
     streamLogBootPhase("initVideo done");
+    streamLogStartupPhase("initVideo ok");
 
     if (initSpeech(config.speechSystem) == RETURN_ERROR) {
         switch (config.speechSystem) {

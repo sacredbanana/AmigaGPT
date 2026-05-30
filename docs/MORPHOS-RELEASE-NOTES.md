@@ -48,12 +48,12 @@ Basis upstream: **2.17.0** (Dezember 2025). Nur **MorphOS** in diesem Block voll
 ### Diagnose (optional)
 
 - `"debugLifecycleLog": true` in `ENVARC:AmigaGPT/config.json` → ausführliches Lifecycle-Log auf `AMIGAGPT:`.
-- **`T:amigagpt_shutdown.last`** — letzte Shutdown-Phase (eine Zeile, RAM, immer an).
+- **`T:amigagpt_shutdown.last`** — letzte Shutdown-Phase (eine Zeile, RAM).
+- **`T:amigagpt_startup.last`** — letzte Startup-Phase bei blockiertem Start (eine Zeile, RAM).
 
 ### Bewusst zurückgestellt
 
 - **Phase 13** (Worker/UI-Batching) — nur bei erneuten Freezes unter Last.
-- Startup-Dialoge bei blockiertem Neustart (UX) — separates Follow-up.
 
 ### Bekannte Restrisiken
 

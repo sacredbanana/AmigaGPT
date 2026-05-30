@@ -18,7 +18,7 @@ Diagnose über persistentes Lifecycle-Log (`AMIGAGPT:amigagpt_lifecycle.log`).
 | --- | ----------- | ------ |
 | **ENVARC:** | Ja (über Neustart) | MUI: `ENVARC:mui/AmigaGPT.prefs` (`Application_Save`/`Load`); App-Zustand: `ENVARC:AmigaGPT/config.json` (Einstellungen/API-Keys), `ENVARC:AmigaGPT/last-conversation` (zuletzt gewählter Chat) |
 | **AMIGAGPT:** | Ja (Daten-Volume) | `chat-history.json`, `image-history.json`, Bilder unter `images/` — **kein** UI-Zustand/Prefs mehr (Legacy: `config.json`, `last-conversation.txt` werden einmalig migriert) |
-| **T:** | Nein (RAM) | Relaunch-Locks (`amigagpt_instance.lock`, `amigagpt_teardown.lock`); Spiegel `T:amigagpt_lifecycle.log` (nur mit `debugLifecycleLog`); **`T:amigagpt_shutdown.last`** = letzte Shutdown-Phase (immer, eine Zeile) |
+| **T:** | Nein (RAM) | Relaunch-Locks (`amigagpt_instance.lock`, `amigagpt_teardown.lock`); Spiegel `T:amigagpt_lifecycle.log` (nur mit `debugLifecycleLog`); **`T:amigagpt_shutdown.last`** = letzte Shutdown-Phase; **`T:amigagpt_startup.last`** = letzte Startup-Phase (beide immer, je eine Zeile) |
 
 **Warum nicht nur MUI-ENVARC für die aktive Konversation?**  
 `Application_Load` läuft in `createMainWindow()` **vor** `loadConversations()` — die NList ist noch leer; ein zweites Load **nach** `loadConversations()` hat die NList beim Restart kaputt gemacht (nicht wieder einführen). Beim Quit wird die Liste in `mainWindowPrepareShutdown()` **geleert**, **bevor** `Application_Save` — die aktive Zeile landet so oft nicht in `AmigaGPT.prefs`. Daher eigener Eintrag `ENVARC:AmigaGPT/last-conversation` (Chat-**Name**, nach `loadConversations()` per `restoreLastSelectedConversation()`).
@@ -60,7 +60,7 @@ Einmalige Migration: falls noch `AMIGAGPT:config.json` oder `AMIGAGPT:last-conve
 
 | Maßnahme | Datei | Was |
 | -------- | ----- | --- |
-| **Relaunch-Guard** | `main.c` + `morphos_relaunch.c` | Warten auf Teardown-Marker, Instance-Lock, `Delay(75)`, Log `startup instance lock ok` |
+| **Relaunch-Guard** | `main.c` + `morphos_relaunch.c` | Teardown-Wartezeit, Instance-Lock; **EasyRequest** bei Warten/Blockade; `T:amigagpt_startup.last` |
 | **App-Create-Cooldown** | `gui.c` → `initVideo()` | `Delay(30)` vor erstem `ApplicationObject` |
 | **App-Create-Retry** | `initVideo()` | Bis **12** Versuche; Delay 25, ab Versuch 5: **40** Ticks |
 | **Einmal Application_Load** | `createMainWindow()` | **Kein** zweites Load nach `loadConversations()` (NList-Restart-Bug) |
@@ -151,7 +151,6 @@ Ursache: keine aktive NList-Zeile und kein gespeicherter Chat-Name → mit `ENVA
 
 **Noch offen:**
 
-- **Startup ohne sichtbares Feedback** bei blockiertem/wartendem Neustart (UX-Follow-up).
 - **Markdown mit Haken an** nach Stream / bei sehr großen Chats → teurer Pfad (`markdown begin`); bei Freeze Markdown per Menü **aus** testen.
 - **Scintilla-Wheel** zwischen Chat- und Code-Fenster — plattformbedingt, nur zurückhaltend workarounden.
 - **Totaler System-Freeze** — Log schreibt ggf. nicht bis zum Absturz; nach Reboot `AMIGAGPT:`-Log lesen.
