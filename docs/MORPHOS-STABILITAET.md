@@ -49,8 +49,8 @@ Einmalige Migration: falls noch `AMIGAGPT:config.json` oder `AMIGAGPT:last-conve
 | **KillNotify Screen/Close** | `mainWindowPrepareShutdown()` | Kein ENVARC-Reload-Hook auf `MUIA_Window_Screen` |
 | **Notify-Klasse nach Dispose** | `shutdownGUI()` | `chatOutputScintillaDisposeNotifyClass()` **nach** `MUI_DisposeObject` |
 | **Post-Dispose-Cooldown** | `shutdownGUI()` | `Delay(150)` (~3 s) — MUI/Intuition soll fertig teardownen |
-| **Teardown-Marker + Lock frei** | `morphos_relaunch.c` | nur `T:amigagpt_teardown.lock`; create/delete im Lifecycle-Log (`relaunch lock …`) |
-| **Single-Instance-Lock** | `morphos_relaunch.c` | nur `T:amigagpt_instance.lock`; kein Fallback ins Programmverzeichnis; nach `mainWindowPrepareShutdown` löschen |
+| **Teardown-Marker + Lock frei** | `morphos_relaunch.c` | `T:amigagpt_teardown.lock` während Dispose; Instance-Lock **sofort** zu Shutdown-Beginn frei (8782) |
+| **Single-Instance-Lock** | `morphos_relaunch.c` | `T:amigagpt_instance.lock` mit Task-**Pointer** (nicht Name); Startup blockiert nur bei lebendem Peer |
 | **Chat-Shutdown** | `MainWindow.c` / `ChatOutputScintilla.c` | Konversationswahl erst nach `morphos conversation select enabled`; vor Dispose Notify abklemmen, **keine** SCI-Befehle am Chat-Scintilla beim Quit |
 | **Letzte Konversation** | `saveLastSelectedConversationName()` | Vor `currentConversation = NULL` in `mainWindowPrepareShutdown()` sowie bei Listenwahl → `ENVARC:AmigaGPT/last-conversation` |
 

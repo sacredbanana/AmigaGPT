@@ -4,6 +4,7 @@
 
 #include <proto/dos.h>
 #include <proto/exec.h>
+#include <exec/execbase.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -109,22 +110,38 @@ static BOOL morphosTempAssignUsable(void) {
     return TRUE;
 }
 
+#define MORPHOS_INSTANCE_LOCK_MAGIC 0x41475254UL /* 'AGRT' */
+
 struct MorphosInstanceLockData {
-    UBYTE taskName[32];
+    ULONG magic;
+    APTR taskPtr;
 };
 
-static void morphosCopyTaskName(UBYTE *dest, ULONG destSize) {
-    struct Task *self = FindTask(NULL);
+/** True if task is on Exec ready/wait lists (not self). */
+static BOOL morphosTaskInExecLists(struct List *list, struct Task *task) {
+    struct Node *n;
 
-    if (dest == NULL || destSize < 2) {
-        return;
+    for (n = list->lh_Head; n->ln_Succ != (struct Node *)&list->lh_Tail;
+         n = n->ln_Succ) {
+        if ((struct Task *)n == task) {
+            return TRUE;
+        }
     }
-    dest[0] = '\0';
-    if (self == NULL) {
-        return;
+    return FALSE;
+}
+
+static BOOL morphosTaskStillRunning(struct Task *task, struct Task *self) {
+    BOOL alive;
+
+    if (task == NULL || task == self) {
+        return FALSE;
     }
-    strncpy((STRPTR)dest, self->tc_Node.ln_Name, destSize - 1);
-    dest[destSize - 1] = '\0';
+    Forbid();
+    alive = (SysBase->ThisTask == task) ||
+            morphosTaskInExecLists(&SysBase->TaskReady, task) ||
+            morphosTaskInExecLists(&SysBase->TaskWait, task);
+    Permit();
+    return alive;
 }
 
 static BOOL morphosReadInstanceLock(struct MorphosInstanceLockData *out) {
@@ -141,16 +158,22 @@ static BOOL morphosReadInstanceLock(struct MorphosInstanceLockData *out) {
     }
     got = Read(fh, out, (LONG)sizeof(*out));
     Close(fh);
-    return got == (LONG)sizeof(*out);
+    if (got != (LONG)sizeof(*out) || out->magic != MORPHOS_INSTANCE_LOCK_MAGIC ||
+        out->taskPtr == NULL) {
+        return FALSE;
+    }
+    return TRUE;
 }
 
 static BOOL morphosWriteInstanceLock(void) {
     struct MorphosInstanceLockData data;
+    struct Task *self = FindTask(NULL);
     BPTR fh;
     LONG wrote;
 
     memset(&data, 0, sizeof(data));
-    morphosCopyTaskName(data.taskName, sizeof(data.taskName));
+    data.magic = MORPHOS_INSTANCE_LOCK_MAGIC;
+    data.taskPtr = (APTR)self;
 
     morphosDeleteLockFile(MORPHOS_RELAUNCH_LOCK_PATH);
     fh = Open((STRPTR)MORPHOS_RELAUNCH_LOCK_PATH, MODE_NEWFILE);
@@ -170,17 +193,12 @@ static BOOL morphosWriteInstanceLock(void) {
 
 static BOOL morphosAnotherInstanceRunning(void) {
     struct MorphosInstanceLockData data;
-    struct Task *other;
     struct Task *self = FindTask(NULL);
 
-    if (!morphosReadInstanceLock(&data) || data.taskName[0] == '\0') {
+    if (!morphosReadInstanceLock(&data)) {
         return FALSE;
     }
-    other = FindTask((STRPTR)data.taskName);
-    if (other == NULL || other == self) {
-        return FALSE;
-    }
-    return TRUE;
+    return morphosTaskStillRunning((struct Task *)data.taskPtr, self);
 }
 
 /** Remove T: lock files left after crash/freeze (no live peer task in lock). */
@@ -261,6 +279,12 @@ void morphosRelaunchShutdownBegin(void) {
         streamLogLifecycle("shutdown relaunch teardown skipped T unusable");
         return;
     }
+    /*
+     * Drop instance lock before long MUI dispose — FindTask(name) falsely blocks
+     * the next start while this task is still alive in Delay(post-dispose).
+     */
+    morphosRelaunchReleaseInstanceLock();
+    streamLogShutdownPhase("instance lock released early");
     if (morphosCreateLockFile(MORPHOS_RELAUNCH_TEARDOWN_PATH)) {
         streamLogLifecycle("shutdown relaunch teardown marker done");
     } else {
@@ -278,13 +302,30 @@ void morphosRelaunchReleaseInstanceLock(void) {
 }
 
 void morphosRelaunchShutdownEnd(void) {
-    streamLogLifecycle("shutdown instance lock released");
+    ULONG attempt;
+
     if (morphosTempAssignUsable()) {
-        morphosDeleteAllRelaunchLocks();
+        for (attempt = 0; attempt < 3; attempt++) {
+            morphosDeleteAllRelaunchLocks();
+            if (!morphosLockFileExists(MORPHOS_RELAUNCH_LOCK_PATH) &&
+                !morphosLockFileExists(MORPHOS_RELAUNCH_TEARDOWN_PATH)) {
+                break;
+            }
+            if (attempt < 2) {
+                Delay(2);
+            }
+        }
+        if (morphosLockFileExists(MORPHOS_RELAUNCH_LOCK_PATH) ||
+            morphosLockFileExists(MORPHOS_RELAUNCH_TEARDOWN_PATH)) {
+            streamLogLifecycle("shutdown relaunch locks delete incomplete");
+            streamLogShutdownPhase("relaunch locks remain");
+        }
     } else {
         streamLogLifecycle("shutdown relaunch locks release skipped T unusable");
+        streamLogShutdownPhase("relaunch locks skipped T unusable");
     }
     streamLogLifecycle("shutdown relaunch locks released");
+    streamLogShutdownPhase("relaunch locks released");
 }
 
 #endif /* __MORPHOS__ */

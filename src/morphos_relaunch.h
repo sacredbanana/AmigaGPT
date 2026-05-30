@@ -30,7 +30,7 @@ BOOL morphosRelaunchStartupGuard(void);
 /** Call at start of shutdownGUI before MUI_DisposeObject. */
 void morphosRelaunchShutdownBegin(void);
 
-/** Obsolete: instance lock is released in morphosRelaunchShutdownEnd after dispose. */
+/** Release T: instance lock (also called early from morphosRelaunchShutdownBegin). */
 void morphosRelaunchReleaseInstanceLock(void);
 
 /** Call after post-dispose Delay in shutdownGUI. */
