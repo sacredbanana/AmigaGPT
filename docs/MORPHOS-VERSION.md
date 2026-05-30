@@ -59,3 +59,8 @@ Nach **erfolgreichem** Deploy nach `Z:\morphos\out-crosscompile\` (Größe + MD5
 - Spalten: `version | git | build_utc | copy_utc | lha_md5`
 
 Nur bei verifiziertem Kopieren — kein Eintrag bei `DEPLOY=0` oder Deploy-Fehler.
+
+## Release-Notes (Fork)
+
+Nutzerlesbare Übersicht pro Release-Linie (z. B. **2.18**): [MORPHOS-RELEASE-NOTES.md](MORPHOS-RELEASE-NOTES.md).  
+Upstream-Änderungen: [CHANGELOG.md](../CHANGELOG.md) — bei `upstream`-Merge mitpflegen, nicht für jeden MorphOS-Build erweitern.

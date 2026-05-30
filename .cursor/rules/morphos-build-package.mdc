@@ -41,7 +41,7 @@ Do **not** stop at `out/AmigaGPT_MorphOS` or `make` alone.
 
 ## Git
 
-- Never commit on `master`. Default branch: `scintilla`.
+- Never commit on `master`. Branch from `master`: `feature/*`, `fix/*`, `chore/*`.
 - No push unless the user asks.
 
 Details: `docs/HANDLUNGSANWEISUNG-GIT.md` §8–9.

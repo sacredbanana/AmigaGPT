@@ -1,6 +1,6 @@
 # MorphOS-SDK: nativ (Referenz) vs. WSL (Cross-Build)
 
-**Stand:** 2026-05-20 · Branch `scintilla`  
+**Stand:** 2026-05-30 · **`master` 2.18**  
 **Zweck:** Alles Schriftliche aus der SDK-/Scintilla-Diskussion an einem Ort — Arbeitsaufteilung, Verzeichnisse, `pack`, Scintilla-API, Phase-6-Stand, nächste Schritte.
 
 Siehe auch: [MORPHOS-SDK-ERGAENZUNGEN.md](MORPHOS-SDK-ERGAENZUNGEN.md) (WSL-Ergänzungen), [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) (Phasen 6–13).
@@ -214,7 +214,7 @@ Details: [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md).
 
 ## 10. Git / Branch
 
-- Arbeit auf Branch **`scintilla`**, nicht `master` — [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md).
+- Arbeit auf **`master`** (Release 2.18) bzw. Feature-Branches davon — [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md).
 - Scintilla-Phase-6-Änderungen: Commit nur auf ausdrückliche Anfrage.
 
 ---

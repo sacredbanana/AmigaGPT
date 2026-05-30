@@ -197,8 +197,9 @@ mkdir -p ~/development/morphos
 cd ~/development/morphos
 git clone https://github.com/weiseb78/AmigaGPT.git
 cd AmigaGPT
-git checkout scintilla
-git pull origin scintilla
+git checkout master
+git pull origin master
+git checkout -b feature/kurzbeschreibung
 ```
 
 **Cursor / VS Code:** Ordner öffnen als
@@ -219,7 +220,7 @@ Einmalige Migration von einem alten Windows-Clone (nur wenn nötig, danach lösc
 ```bash
 # nur einmalig — danach nur noch git pull in ~/development/morphos/AmigaGPT
 git clone https://github.com/weiseb78/AmigaGPT.git ~/development/morphos/AmigaGPT
-cd ~/development/morphos/AmigaGPT && git checkout scintilla
+cd ~/development/morphos/AmigaGPT && git checkout master
 ```
 
 ---
@@ -285,7 +286,7 @@ CLEAN=1 ./build_morphos.sh
 | Linker sucht falsche GCC-Version | `GCCLIBDIR` in `Makefile.MorphOS` anpassen |
 | Katalog-Fehler bei AmigaGPT | `which flexcat`; PATH auf `bin_unix/flexcat` setzen |
 | Sehr langsamer Build auf `/mnt/c` | Nur `~/development/morphos/AmigaGPT` nutzen |
-| Pull blockiert durch hunderte `M`-Dateien | Kein `cp` von Windows — `git reset --hard origin/scintilla` in WSL |
+| Pull blockiert durch hunderte `M`-Dateien | Kein `cp` von Windows — `git reset --hard origin/master` in WSL (Arbeit vorher auf Feature-Branch sichern) |
 
 ---
 

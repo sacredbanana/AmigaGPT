@@ -10,7 +10,7 @@ Chronik und Checkliste dessen, was für **AmigaGPT / MorphOS** in **WSL2 (Debian
 
 1. MorphOS-Cross-Build von AmigaGPT in WSL (ohne zweiten Compiler).
 2. Ein kanonischer Projektordner unter **WSL-Home** (nicht dauerhaft `/mnt/c/…`).
-3. Git nur auf Topic-Branch **`scintilla`**, nicht auf `master` — siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md).
+3. Git: Topic-Branches von **`master`**, nicht direkt auf `master` committen — siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md).
 
 ---
 
@@ -32,7 +32,7 @@ Chronik und Checkliste dessen, was für **AmigaGPT / MorphOS** in **WSL2 (Debian
 ~/development/
   morphos/
     flexcat/              ← gebaut (FlexCat 2.18)
-    AmigaGPT/             ← Git-Clone, Branch scintilla, `make -f Makefile.MorphOS`
+    AmigaGPT/             ← Git-Clone, `master` = 2.18, Feature-Branches von master
 ```
 
 **Cursor / IDE** (Workspace hier öffnen, nicht unter Windows):
@@ -58,8 +58,9 @@ Sync nur noch per Git: `git pull` / `git push` in `~/development/morphos/AmigaGP
 | `origin` | `https://github.com/weiseb78/AmigaGPT.git` |
 | `upstream` | `https://github.com/sacredbanana/AmigaGPT.git` |
 
-- Entwicklung auf **`scintilla`**
-- **`master`** lokal = `origin/master` (keine direkten Feature-Commits)
+- **`master`** = stabiler Fork-Stand (**2.18**, Merge 2026-05-30, Build **8785**)
+- Neue Arbeit: **`feature/…`**, **`fix/…`**, **`chore/…`** von `master` — nicht direkt auf `master` committen
+- Branch **`scintilla`**: historische Entwicklungslinie (merged); optional remote/lokal löschen
 - Regeln: [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md), `.cursor/rules/git-branch-policy.mdc`
 
 ---
@@ -141,7 +142,7 @@ make -f Makefile.MorphOS daemon
 
 ---
 
-## Dokumentation im Repo (Commits auf `scintilla`)
+## Dokumentation im Repo
 
 | Datei | Zweck |
 | ----- | ----- |
@@ -169,13 +170,14 @@ make -f Makefile.MorphOS daemon
 - [x] MorphOS: Code-Viewer 7a/7b (Copy/Save, Quit mit offenem Viewer) — [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)
 - [x] Stream-Recovery **R1–R3** + **R2** (WANT_READ, Chat-Sync, Stream-UI) — [STREAM-RECOVERY.md](STREAM-RECOVERY.md)
 - [x] Phase **12** + **12.1** Chat-Scintilla / Midi-Markdown (Hardware-Abnahme) — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md)
-- [x] `git push origin scintilla` (Stand synchron mit `origin/scintilla`, Build **8776**)
+- [x] **`scintilla` → `master`** Merge (Release **2.18**, Build **8785**)
+- [x] Quit/Restart/Relaunch-Lock stabil (8785, Hardware)
 
 ### Optional (Umgebung / Dev-Workflow)
 
 - [ ] `~/.bashrc`: FlexCat-PATH dauerhaft (falls `which flexcat` leer ist)
 - [ ] Cursor-Workspace dauerhaft auf `\\wsl$\Debian\home\weimer\development\morphos\AmigaGPT` (nicht `C:\Users\xbox\cursorWorkspace\AmigaGPT`)
-- [ ] `upstream` einmal `git fetch` + Merge in `scintilla`
+- [ ] `upstream` einmal `git fetch` + Merge in Feature-Branch von `master`
 - [ ] Nach `.pot`/`.po`-Änderung einmal **`make catalog`** bzw. vollständiger Build, damit `AmigaGPT_cat.*` aktuell sind
 - [ ] **Optional (TODO):** Deploy in `package-morphos-cross.sh` zusätzlich/alternativ per **`smbclient`** (reines WSL, ohne `powershell.exe` / gemapptes `Z:`). Siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) §8.
 

@@ -1,7 +1,7 @@
 # MorphOS: umgesetzte Stabilitätsmaßnahmen
 
-Stand: Branch `scintilla`, Builds ~8720–**8757**.  
-Ergänzt [HANDLUNGSANWEISUNG-MORPHOS-AGENT.md](HANDLUNGSANWEISUNG-MORPHOS-AGENT.md) §3 und §5 mit dem **aktuellen Code**.
+Stand: **`master` 2.18**, Builds **8780–8785** (Quit/Geometrie/Relaunch-Lock).  
+Ergänzt [HANDLUNGSANWEISUNG-MORPHOS-AGENT.md](HANDLUNGSANWEISUNG-MORPHOS-AGENT.md) §3 und §5 mit dem **aktuellen Code**. Nutzer-Übersicht: [MORPHOS-RELEASE-NOTES.md](MORPHOS-RELEASE-NOTES.md).
 
 ---
 
@@ -120,13 +120,15 @@ chat scintilla setstyling runs done
 shutdown … process exit
 ```
 
-Typisches **Restart-Problem** (Relaunch-Race, noch offen):
+Typisches **Restart-Problem** (Relaunch-Race, vor **8785**):
 
 ```
 startup begin          ← neue Instanz
 app create fail        ← alte Instanz noch nicht fertig mit MUI
 … process exit         ← alte Instanz endet später
 ```
+
+Ab **8785**: Instance-Lock früh frei, Task-Pointer, Lock-Retry — Stress-Restart hardware-validiert. Bei erneutem Fehler: `T:amigagpt_shutdown.last`, optional `debugLifecycleLog`.
 
 Typisches **„kein Chat nach Restart“** (8753–8755, mit 8756+ behoben):
 
@@ -149,7 +151,7 @@ Ursache: keine aktive NList-Zeile und kein gespeicherter Chat-Name → mit `ENVA
 
 **Noch offen:**
 
-- **Zu schneller Neustart** trotz Guard → ggf. längere Delays oder strengeres Warten auf Teardown-Datei.
+- **Startup ohne sichtbares Feedback** bei blockiertem/wartendem Neustart (UX-Follow-up).
 - **Markdown mit Haken an** nach Stream / bei sehr großen Chats → teurer Pfad (`markdown begin`); bei Freeze Markdown per Menü **aus** testen.
 - **Scintilla-Wheel** zwischen Chat- und Code-Fenster — plattformbedingt, nur zurückhaltend workarounden.
 - **Totaler System-Freeze** — Log schreibt ggf. nicht bis zum Absturz; nach Reboot `AMIGAGPT:`-Log lesen.
@@ -164,7 +166,7 @@ Ursache: keine aktive NList-Zeile und kein gespeicherter Chat-Name → mit `ENVA
 2. Log rotieren: `AMIGAGPT:amigagpt_lifecycle.log` löschen oder umbenennen.
 3. Start → **bestehenden** Chat wählen (oder nach 8757: soll ohne Klick laden) → Quit → **3–5 s** Pause.
 4. **15–20×** wiederholen; im Log pro Zyklus erwarten: `restore last conversation ok` oder `auto-select …`, dann `conversation select deferred begin` → `… deferred done`, dann `process exit`.
-5. About-Version prüfen (z. B. **2.18.8757**).
+5. About-Version prüfen (z. B. **2.18.8785**).
 
 **Block C (optional):** Eine Session, **10–20×** nur Chat in der Liste wechseln, **ohne** Restart.
 
@@ -177,5 +179,5 @@ Ursache: keine aktive NList-Zeile und kein gespeicherter Chat-Name → mit `ENVA
 
 ## 9. Verwandte Commits / Bereiche
 
-- Shutdown-Basis: `360a0dd`, Branch `scintilla`
+- Shutdown-Basis: `360a0dd`; Relaunch-Lock: `1f3264c` (8785)
 - Scintilla-Lifecycle-Fixes: `MainWindow.c`, `ChatOutputScintilla.c`, `CodeBlocksViewer.c`, `gui.c`, `main.c`, `streamlog.c`

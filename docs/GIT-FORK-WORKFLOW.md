@@ -10,12 +10,15 @@ Für Cursor zusätzlich: `.cursor/rules/git-branch-policy.mdc` und [AGENTS.md](.
 Kurz:
 
 ```bash
-git checkout scintilla    # oder neuen Branch von master
+git checkout master
+git pull origin master
+git checkout -b feature/kurzbeschreibung
 # … arbeiten, committen …
-git push -u origin scintilla
+git push -u origin feature/kurzbeschreibung
+# Merge nach master (lokal oder PR), Branch löschen
 ```
 
-`master` soll `origin/master` bzw. nach Sync mit `upstream` dem stabilen Stand entsprechen.
+`master` = stabiler Fork-Stand (**2.18** seit 2026-05). Der Branch **`scintilla`** war die Entwicklungslinie bis zum Merge — nicht mehr Standard für neue Arbeit.
 
 ---
 

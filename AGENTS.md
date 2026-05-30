@@ -12,7 +12,7 @@ Read and follow **`docs/HANDLUNGSANWEISUNG-GIT.md`**.
 
 Summary:
 
-- **Do not commit on `master`.** Use topic branches; default: **`scintilla`**.
+- **Do not commit on `master`.** Use topic branches from `master` (`feature/*`, `fix/*`, `chore/*`).
 - Push only when the user asks. Never force-push `master`.
 - `origin` = fork; `upstream` = upstream original (fetch/merge into feature branches).
 
@@ -34,6 +34,7 @@ Start: `docs/README.md`
 | `docs/STREAM-RECOVERY.md` | Stream & chat recovery (R1–R4): WANT_READ, UI sync, freeze |
 | `docs/BUILD-MORPHOS-WSL.md` | MorphOS cross-build on WSL2 Debian (incl. FlexCat bootstrap) |
 | `docs/MORPHOS-SDK-ERGAENZUNGEN.md` | Exact SDK supplements (BIGFOOT vs AmigaSDK-gcc) |
+| `docs/MORPHOS-RELEASE-NOTES.md` | Fork release notes (e.g. 2.18); `CHANGELOG.md` = upstream |
 | `docs/WSL-SETUP-STATUS.md` | WSL environment setup status / checklist (DE) |
 | `tools/test-utf8stream.sh` | Host unit tests for `utf8stream` (WSL `gcc`) |
 
