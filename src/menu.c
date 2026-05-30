@@ -579,6 +579,7 @@ void createMenu() {
     STRING_MENU_CHAT_FONT_SMALLER, MUIA_UserData,
     MENU_ITEM_VIEW_CHAT_FONT_SMALLER, MUIA_Menuitem_CopyStrings, FALSE, End,
 #endif
+#ifndef __MORPHOS__
     MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_USER_TEXT_ALIGNMENT, MUIA_UserData,
     MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT, MUIA_Menuitem_CopyStrings, FALSE,
@@ -616,8 +617,9 @@ void createMenu() {
     MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_RIGHT, MUIA_Menuitem_CopyStrings,
     FALSE, MUIA_Menuitem_Checkit, TRUE, MUIA_Menuitem_Checked,
     config.assistantTextAlignment == ALIGN_RIGHT, MUIA_Menuitem_Exclude,
-    ~(1 << 2), MUIA_Menuitem_Toggle, TRUE, End, End, MUIA_Family_Child,
-    MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL, MUIA_UserData,
+    ~(1 << 2), MUIA_Menuitem_Toggle, TRUE, End, End,
+#endif
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL, MUIA_UserData,
     MENU_ITEM_NULL, End, MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title,
     STRING_MENU_MUI_SETTINGS, MUIA_UserData, MENU_ITEM_VIEW_MUI_SETTINGS,
     MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
@@ -861,6 +863,7 @@ void addMenuActions() {
     refreshChatFontMenuState();
 #endif
 
+#ifndef __MORPHOS__
     Object userTextAlignmentLeftMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_LEFT);
     set(userTextAlignmentLeftMenuItem, MUIA_Menuitem_Checked,
@@ -929,6 +932,8 @@ void addMenuActions() {
     DoMethod(assistantTextAlignmentRightMenuItem, MUIM_Notify,
              MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
              MUIM_CallHook, &TextAlignmentChangedHook);
+
+#endif /* !__MORPHOS__ */
 
     Object proxyEnabledMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_ENABLED);

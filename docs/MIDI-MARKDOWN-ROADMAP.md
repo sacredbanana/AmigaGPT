@@ -44,6 +44,7 @@ Bekannte Einschränkung (MorphOS/Scintilla.mcc): Beim Wechsel zwischen Chat-Scin
 ## Nicht geplant (v0.1)
 
 - `SCLEX_MARKDOWN` im Chat (MorphOS-Lexer fehlt)
+- **User/Assistant text alignment** im Chat-Scintilla (MorphOS) — Role-Styles statt NFloattext-Ausrichtung; Menü nur OS3/OS4
 - **Zeilenumbruch / Midi-Markdown / Hotspots** auf OS3/OS4 im Chat (dort kein Scintilla in der Ausgabe)
 - Pipe-Tabellen mit gleichen Spaltenbreiten in Sans (nur Näherung; Mono empfohlen)
 - Vollständiges GFM
