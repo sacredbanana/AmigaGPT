@@ -136,6 +136,10 @@ struct Config config = {
     .elevenLabsModelName = NULL,
     .debugStreamLog = FALSE,
     .debugLifecycleLog = FALSE,
+    .mainWindowLeft = 0,
+    .mainWindowTop = 0,
+    .mainWindowWidth = 0,
+    .mainWindowHeight = 0,
 };
 
 ULONG configClampChatFontSize(ULONG size) {
@@ -338,6 +342,14 @@ LONG writeConfig() {
                            json_object_new_boolean((BOOL)config.debugStreamLog));
     json_object_object_add(configJsonObject, "debugLifecycleLog",
                            json_object_new_boolean((BOOL)config.debugLifecycleLog));
+    json_object_object_add(configJsonObject, "mainWindowLeft",
+                           json_object_new_int(config.mainWindowLeft));
+    json_object_object_add(configJsonObject, "mainWindowTop",
+                           json_object_new_int(config.mainWindowTop));
+    json_object_object_add(configJsonObject, "mainWindowWidth",
+                           json_object_new_int((int)config.mainWindowWidth));
+    json_object_object_add(configJsonObject, "mainWindowHeight",
+                           json_object_new_int((int)config.mainWindowHeight));
 
     STRPTR configJsonString = (STRPTR)json_object_to_json_string_ext(
         configJsonObject, JSON_C_TO_STRING_PRETTY);
@@ -967,6 +979,33 @@ LONG readConfig() {
             config.debugLifecycleLog =
                 json_object_get_int(debugLifecycleLogObj) != 0 ? 1 : 0;
         }
+    }
+
+    struct json_object *mainWindowLeftObj;
+    if (json_object_object_get_ex(configJsonObject, "mainWindowLeft",
+                                  &mainWindowLeftObj) &&
+        json_object_is_type(mainWindowLeftObj, json_type_int)) {
+        config.mainWindowLeft = json_object_get_int(mainWindowLeftObj);
+    }
+    struct json_object *mainWindowTopObj;
+    if (json_object_object_get_ex(configJsonObject, "mainWindowTop",
+                                  &mainWindowTopObj) &&
+        json_object_is_type(mainWindowTopObj, json_type_int)) {
+        config.mainWindowTop = json_object_get_int(mainWindowTopObj);
+    }
+    struct json_object *mainWindowWidthObj;
+    if (json_object_object_get_ex(configJsonObject, "mainWindowWidth",
+                                  &mainWindowWidthObj) &&
+        json_object_is_type(mainWindowWidthObj, json_type_int)) {
+        config.mainWindowWidth =
+            (ULONG)json_object_get_int(mainWindowWidthObj);
+    }
+    struct json_object *mainWindowHeightObj;
+    if (json_object_object_get_ex(configJsonObject, "mainWindowHeight",
+                                  &mainWindowHeightObj) &&
+        json_object_is_type(mainWindowHeightObj, json_type_int)) {
+        config.mainWindowHeight =
+            (ULONG)json_object_get_int(mainWindowHeightObj);
     }
 
     FreeVec(configJsonString);

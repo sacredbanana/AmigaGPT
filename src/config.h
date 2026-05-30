@@ -66,6 +66,11 @@ struct Config {
     ULONG debugStreamLog;
     /** MorphOS: AMIGAGPT:amigagpt_lifecycle.log (+ T: mirror, LogTool). Default off. */
     ULONG debugLifecycleLog;
+    /** MorphOS main window geometry from config.json (0 = use MUI/Application_Load default). */
+    LONG mainWindowLeft;
+    LONG mainWindowTop;
+    ULONG mainWindowWidth;
+    ULONG mainWindowHeight;
 };
 
 /**

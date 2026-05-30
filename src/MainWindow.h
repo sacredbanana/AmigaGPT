@@ -65,6 +65,9 @@ void morphosScheduleChatOutputRefresh(BOOL preserveViewport);
 
 /** Like above but raw UTF-8 + role bytes only (NList chat switch; avoids Markdown freeze). */
 void morphosScheduleChatOutputRefreshFromList(void);
+
+/** Read main window edges/size into config (call before writeConfig on quit). */
+void mainWindowCaptureGeometryForConfig(void);
 #endif
 
 /** Before MUI_DisposeObject(app): close UI, clear lists, drop window notifies. */

@@ -32,14 +32,14 @@ Einmalige Migration: falls noch `AMIGAGPT:config.json` oder `AMIGAGPT:last-conve
 | Maßnahme | Datei / Funktion | Was |
 | -------- | ---------------- | --- |
 | **Prepare vor Dispose** | `gui.c` → `shutdownGUI()` | `mainWindowPrepareShutdown()` **vor** `MUIM_Application_Save` und `MUI_DisposeObject(app)` |
-| **ENVARC nach Prepare** | `shutdownGUI()` | **Kein** `MUIM_Application_Save` beim Quit (hard-freeze mit Chat-Scintilla); `config.json`/`last-conversation` separat |
+| **ENVARC nach Prepare** | `shutdownGUI()` | **Kein** `MUIM_Application_Save` beim Quit; Fenster-Geometrie in `config.json` (`mainWindowLeft/Top/Width/Height`) vor Teardown |
 | **Kein Chat-Scintilla-Clear beim Quit** | `mainWindowPrepareShutdown()` | **Kein** `SCI_CLEARALL` / `SETTEXT ""` am Chat — kann OS einfrieren; MUI dispose räumt auf |
 | **Kein Code-Scintilla-Clear beim Quit** | `codeBlocksViewerPrepareShutdown()` | Nur `KillNotify`, Zeiger nullen; Log: `scintilla skip clear` |
 | **Kein `NList_Clear` Code-Viewer Shutdown** | `codeBlocksViewerPrepareShutdown()` | Clear nur bei Chat-Wechsel (`codeBlocksViewerDismiss`), nicht beim App-Ende |
 | **Stream abbrechen** | `mainWindowPrepareShutdown()` | `openAIChatStreamRequestCancel()` — kein `finishChatStream` / `displayConversation` während Shutdown |
 | **Deferred Styles abbrechen** | `chatOutputScintillaCancelDeferredStyles()` | Pending `PushMethod`-Styling wird verworfen |
 | **Kein NewInput beim Quit** | `morphosFlushPendingPushMethods()` | Während Shutdown nur Pending-Flags löschen — **kein** `MUIM_Application_NewInput` (Reentry/Freeze) |
-| **Config vor Teardown** | `main.c` → `cleanExit()` | `writeConfig()` **vor** `shutdownGUI()` — ENVARC `config.json` ohne post-Dispose-MUI |
+| **Config vor Teardown** | `main.c` → `cleanExit()` | `mainWindowCaptureGeometryForConfig()` + `writeConfig()` **vor** `shutdownGUI()` |
 | **Refresh-Queue leeren** | `mainWindowPrepareShutdown()` | `chatOutputRefreshPending` / `FromList` zurücksetzen |
 | **Notify abklemmen** | `chatOutputScintillaDetachNotify()` | Vor Dispose, solange Hauptfenster noch offen |
 | **Code-Viewer schließen** | `codeBlocksViewerCloseWindow()` in Prepare | **Nicht** erneut in `PrepareShutdown` (CloseRequest-Reentry) |

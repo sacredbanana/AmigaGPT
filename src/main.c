@@ -170,6 +170,9 @@ static void cleanExit() {
     mainWindowSignalQuit();
 
 #ifndef DAEMON
+#ifdef __MORPHOS__
+    mainWindowCaptureGeometryForConfig();
+#endif
     if (writeConfig() == RETURN_ERROR) {
         streamLogShutdownPhase("config write failed");
         if (app) {

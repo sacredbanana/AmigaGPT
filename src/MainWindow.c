@@ -135,6 +135,8 @@ static LONG saveConversations();
 #define LAST_CONVERSATION_PATH "ENVARC:AmigaGPT/last-conversation"
 #define LAST_CONVERSATION_LEGACY "AMIGAGPT:last-conversation.txt"
 #define LAST_CONVERSATION_NAME_MAX 512
+#define MAIN_WINDOW_SAVED_MIN_WIDTH 320
+#define MAIN_WINDOW_SAVED_MIN_HEIGHT 200
 
 static void ensureLastConversationEnvarcDir(void) {
     CreateDir(LAST_CONVERSATION_DIR);
@@ -230,6 +232,44 @@ static BOOL restoreLastSelectedConversation(void) {
     FreeVec(nameBuf);
     return restored;
 }
+
+#ifdef __MORPHOS__
+void mainWindowCaptureGeometryForConfig(void) {
+    LONG left = 0;
+    LONG top = 0;
+    LONG width = 0;
+    LONG height = 0;
+
+    if (mainWindowObject == NULL) {
+        return;
+    }
+    get(mainWindowObject, MUIA_Window_LeftEdge, &left);
+    get(mainWindowObject, MUIA_Window_TopEdge, &top);
+    get(mainWindowObject, MUIA_Window_Width, &width);
+    get(mainWindowObject, MUIA_Window_Height, &height);
+    if (width < MAIN_WINDOW_SAVED_MIN_WIDTH ||
+        height < MAIN_WINDOW_SAVED_MIN_HEIGHT) {
+        return;
+    }
+    config.mainWindowLeft = left;
+    config.mainWindowTop = top;
+    config.mainWindowWidth = (ULONG)width;
+    config.mainWindowHeight = (ULONG)height;
+}
+
+static void mainWindowApplySavedGeometry(void) {
+    if (mainWindowObject == NULL ||
+        config.mainWindowWidth < MAIN_WINDOW_SAVED_MIN_WIDTH ||
+        config.mainWindowHeight < MAIN_WINDOW_SAVED_MIN_HEIGHT) {
+        return;
+    }
+    set(mainWindowObject, MUIA_Window_Width, (LONG)config.mainWindowWidth);
+    set(mainWindowObject, MUIA_Window_Height, (LONG)config.mainWindowHeight);
+    set(mainWindowObject, MUIA_Window_LeftEdge, config.mainWindowLeft);
+    set(mainWindowObject, MUIA_Window_TopEdge, config.mainWindowTop);
+}
+#endif /* __MORPHOS__ */
+
 static LONG loadImages();
 static LONG saveImages();
 static void openImage(struct GeneratedImage *image, WORD scaledWidth,
@@ -2037,6 +2077,7 @@ LONG createMainWindow() {
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
     streamLogLifecycle("createMainWindow Application_Load done");
 #ifdef __MORPHOS__
+    mainWindowApplySavedGeometry();
     /* ENVARC must not reopen code viewer before Scintilla is fully ready. */
     if (codeBlocksWindowObject != NULL) {
         streamLogLifecycle("createMainWindow codeBlocksWindow close begin");
