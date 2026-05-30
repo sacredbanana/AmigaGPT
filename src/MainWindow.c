@@ -381,12 +381,21 @@ static void morphosApplyPendingConversationSelection(void) {
 }
 
 static void morphosFlushPendingPushMethods(void) {
-    ULONG muiSig = 0;
-    ULONG pass;
-
     if (app == NULL) {
         return;
     }
+    if (mainWindowIsShuttingDown()) {
+        conversationRowPending = NULL;
+        chatOutputRefreshPending = FALSE;
+        chatOutputRefreshFromList = FALSE;
+        chatOutputScintillaCancelDeferredStyles();
+        chatOutputScintillaCancelPendingCodeblockOpen();
+        streamLogLifecycle("morphos flush pushmethods skipped shutdown");
+        return;
+    }
+    ULONG muiSig = 0;
+    ULONG pass;
+
     streamLogLifecycle("morphos flush pushmethods begin");
     for (pass = 0; pass < 12; pass++) {
         BOOL hadPending = chatOutputRefreshPending ||
@@ -397,12 +406,6 @@ static void morphosFlushPendingPushMethods(void) {
         (void)DoMethod(app, MUIM_Application_NewInput, &muiSig);
         if (!hadPending) {
             break;
-        }
-        if (mainWindowIsShuttingDown()) {
-            conversationRowPending = NULL;
-            chatOutputRefreshPending = FALSE;
-            chatOutputRefreshFromList = FALSE;
-            chatOutputScintillaCancelDeferredStyles();
         }
     }
     streamLogLifecycle("morphos flush pushmethods done");
@@ -2153,6 +2156,7 @@ static void mainWindowEmptyNList(Object *list) {
 
 void mainWindowPrepareShutdown(void) {
     streamLogLifecycle("mainWindowPrepareShutdown begin");
+    streamLogShutdownPhase("prepare shutdown begin");
     mainWindowShuttingDown = TRUE;
     mainWindowSignalQuit();
     openAIChatStreamRequestCancel();
@@ -2189,6 +2193,7 @@ void mainWindowPrepareShutdown(void) {
         DoMethod(mainWindowObject, MUIM_KillNotify, MUIA_Window_CloseRequest);
     }
     streamLogLifecycle("mainWindowPrepareShutdown done");
+    streamLogShutdownPhase("prepare shutdown done");
 }
 
 void mainWindowInvalidateAfterShutdown(void) {

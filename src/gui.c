@@ -1144,6 +1144,7 @@ void shutdownGUI() {
     if (app) {
 #ifndef DAEMON
 #if defined(__MORPHOS__)
+        streamLogShutdownPhase("shutdown gui begin");
         morphosRelaunchShutdownBegin();
 #endif
         /*
@@ -1151,6 +1152,7 @@ void shutdownGUI() {
          * save — saving while large styled chat docs are active can freeze MUI/OS.
          */
         mainWindowPrepareShutdown();
+        streamLogShutdownPhase("main window prepare done");
         streamLogLifecycle("chatOutputWheelShutdown begin");
         chatOutputWheelShutdown();
         streamLogLifecycle("chatOutputWheelShutdown done");
@@ -1158,21 +1160,14 @@ void shutdownGUI() {
         codeBlocksViewerPrepareShutdown();
 #endif
 
-#if defined(__MORPHOS__)
-        {
-            ULONG chatLen = 0;
-
-            if (chatOutputTextEditorContents != NULL) {
-                chatLen = (ULONG)strlen(chatOutputTextEditorContents);
-            }
-            if (chatLen > (32U * 1024U)) {
-                streamLogLifecycle("shutdown ENVARC save skipped heavy chat");
-            } else {
-                DoMethod(app, MUIM_Application_Save,
-                         MUIV_Application_Save_ENVARC);
-                streamLogLifecycle("shutdown ENVARC save done");
-            }
-        }
+#ifdef __MORPHOS__
+        /*
+         * Never MUIM_Application_Save on quit — can hard-freeze MorphOS when chat
+         * Scintilla holds a large/styled document (MUI prefs walk the object tree).
+         * Window prefs are restored from ENVARC on next start if saved earlier in-session.
+         */
+        streamLogLifecycle("shutdown ENVARC save skipped on quit");
+        streamLogShutdownPhase("envarc save skipped on quit");
 #else
         DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
         streamLogLifecycle("shutdown ENVARC save done");
@@ -1182,8 +1177,10 @@ void shutdownGUI() {
             streamLogLifecycle("shutdown dispose stream in progress");
         }
         streamLogLifecycle("MUI_DisposeObject(app) begin");
+        streamLogShutdownPhase("dispose app begin");
         MUI_DisposeObject(app);
         streamLogLifecycle("MUI_DisposeObject(app) done");
+        streamLogShutdownPhase("dispose app done");
         app = NULL;
 #if defined(__MORPHOS__) && !defined(DAEMON)
         /*
@@ -1192,7 +1189,9 @@ void shutdownGUI() {
          */
         Delay(MORPHOS_RELAUNCH_POST_DISPOSE_DELAY);
         streamLogLifecycle("shutdown post-dispose cooldown done");
+        streamLogShutdownPhase("post-dispose cooldown done");
         morphosRelaunchShutdownEnd();
+        streamLogShutdownPhase("shutdown gui end");
 #endif
         chatOutputWheelDisposeClass();
 #ifdef __MORPHOS__

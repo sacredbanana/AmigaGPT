@@ -2004,14 +2004,14 @@ BOOL chatOutputScintillaHasDeferredWorkPending(void) {
 }
 
 void chatOutputScintillaQuiesceForShutdown(Object *sci) {
+    (void)sci;
     streamLogLifecycle("chat scintilla quiesce for shutdown begin");
     chatOutputScintillaCancelPendingCodeblockOpen();
     chatOutputScintillaCancelDeferredStyles();
-    if (sci != NULL) {
-        codeBlocksScintillaCommand(sci, SCI_CANCEL, 0, 0);
-        codeBlocksScintillaCommand(sci, SCI_SETMODEVENTMASK, 0, 0);
-        codeBlocksScintillaCommand(sci, SCI_SETREADONLY, 1, 0);
-    }
+    /*
+     * No SCI_CANCEL / SETMODEVENTMASK on quit — can hard-freeze MorphOS on large
+     * styled chat docs; MUI_DisposeObject tears Scintilla down without clearing.
+     */
     streamLogLifecycle("chat scintilla quiesce for shutdown done");
 }
 

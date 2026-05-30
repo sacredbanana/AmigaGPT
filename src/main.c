@@ -166,12 +166,30 @@ static void cleanExit() {
 #endif
 
     streamLogLifecycle("shutdown begin");
+    streamLogShutdownPhase("shutdown begin");
     mainWindowSignalQuit();
 
-    shutdownGUI();
+#ifndef DAEMON
     if (writeConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+        streamLogShutdownPhase("config write failed");
+        if (app) {
+            displayError(STRING_ERROR_CONFIG_FILE_WRITE);
+        }
+#ifdef __MORPHOS__
+        else {
+            KPrintF("[AmigaGPT] config write failed on shutdown io=%ld\n",
+                    (long)IoErr());
+        }
+#endif
+    } else {
+        streamLogShutdownPhase("config saved");
     }
+#endif
+
+    shutdownGUI();
+#ifndef DAEMON
+    streamLogShutdownPhase("after shutdown gui");
+#endif
     freeConfig();
     closeSpeech();
     closeOpenAIConnector();
@@ -179,4 +197,5 @@ static void cleanExit() {
     UnregisterApplication(appID, NULL);
 #endif
     streamLogLifecycle("process exit");
+    streamLogShutdownPhase("process exit");
 }

@@ -18,7 +18,7 @@ Diagnose über persistentes Lifecycle-Log (`AMIGAGPT:amigagpt_lifecycle.log`).
 | --- | ----------- | ------ |
 | **ENVARC:** | Ja (über Neustart) | MUI: `ENVARC:mui/AmigaGPT.prefs` (`Application_Save`/`Load`); App-Zustand: `ENVARC:AmigaGPT/config.json` (Einstellungen/API-Keys), `ENVARC:AmigaGPT/last-conversation` (zuletzt gewählter Chat) |
 | **AMIGAGPT:** | Ja (Daten-Volume) | `chat-history.json`, `image-history.json`, Bilder unter `images/` — **kein** UI-Zustand/Prefs mehr (Legacy: `config.json`, `last-conversation.txt` werden einmalig migriert) |
-| **T:** | Nein (RAM) | Relaunch-Locks (`amigagpt_instance.lock`, `amigagpt_teardown.lock`), Spiegel `T:amigagpt_lifecycle.log` |
+| **T:** | Nein (RAM) | Relaunch-Locks (`amigagpt_instance.lock`, `amigagpt_teardown.lock`); Spiegel `T:amigagpt_lifecycle.log` (nur mit `debugLifecycleLog`); **`T:amigagpt_shutdown.last`** = letzte Shutdown-Phase (immer, eine Zeile) |
 
 **Warum nicht nur MUI-ENVARC für die aktive Konversation?**  
 `Application_Load` läuft in `createMainWindow()` **vor** `loadConversations()` — die NList ist noch leer; ein zweites Load **nach** `loadConversations()` hat die NList beim Restart kaputt gemacht (nicht wieder einführen). Beim Quit wird die Liste in `mainWindowPrepareShutdown()` **geleert**, **bevor** `Application_Save` — die aktive Zeile landet so oft nicht in `AmigaGPT.prefs`. Daher eigener Eintrag `ENVARC:AmigaGPT/last-conversation` (Chat-**Name**, nach `loadConversations()` per `restoreLastSelectedConversation()`).
@@ -32,12 +32,14 @@ Einmalige Migration: falls noch `AMIGAGPT:config.json` oder `AMIGAGPT:last-conve
 | Maßnahme | Datei / Funktion | Was |
 | -------- | ---------------- | --- |
 | **Prepare vor Dispose** | `gui.c` → `shutdownGUI()` | `mainWindowPrepareShutdown()` **vor** `MUIM_Application_Save` und `MUI_DisposeObject(app)` |
-| **ENVARC nach Prepare** | `shutdownGUI()` | Settings speichern, **nachdem** Fenster/Notifies abgebaut sind (nicht bei aktivem großem styled Chat-Dokument) |
+| **ENVARC nach Prepare** | `shutdownGUI()` | **Kein** `MUIM_Application_Save` beim Quit (hard-freeze mit Chat-Scintilla); `config.json`/`last-conversation` separat |
 | **Kein Chat-Scintilla-Clear beim Quit** | `mainWindowPrepareShutdown()` | **Kein** `SCI_CLEARALL` / `SETTEXT ""` am Chat — kann OS einfrieren; MUI dispose räumt auf |
 | **Kein Code-Scintilla-Clear beim Quit** | `codeBlocksViewerPrepareShutdown()` | Nur `KillNotify`, Zeiger nullen; Log: `scintilla skip clear` |
 | **Kein `NList_Clear` Code-Viewer Shutdown** | `codeBlocksViewerPrepareShutdown()` | Clear nur bei Chat-Wechsel (`codeBlocksViewerDismiss`), nicht beim App-Ende |
 | **Stream abbrechen** | `mainWindowPrepareShutdown()` | `openAIChatStreamRequestCancel()` — kein `finishChatStream` / `displayConversation` während Shutdown |
 | **Deferred Styles abbrechen** | `chatOutputScintillaCancelDeferredStyles()` | Pending `PushMethod`-Styling wird verworfen |
+| **Kein NewInput beim Quit** | `morphosFlushPendingPushMethods()` | Während Shutdown nur Pending-Flags löschen — **kein** `MUIM_Application_NewInput` (Reentry/Freeze) |
+| **Config vor Teardown** | `main.c` → `cleanExit()` | `writeConfig()` **vor** `shutdownGUI()` — ENVARC `config.json` ohne post-Dispose-MUI |
 | **Refresh-Queue leeren** | `mainWindowPrepareShutdown()` | `chatOutputRefreshPending` / `FromList` zurücksetzen |
 | **Notify abklemmen** | `chatOutputScintillaDetachNotify()` | Vor Dispose, solange Hauptfenster noch offen |
 | **Code-Viewer schließen** | `codeBlocksViewerCloseWindow()` in Prepare | **Nicht** erneut in `PrepareShutdown` (CloseRequest-Reentry) |
@@ -48,7 +50,7 @@ Einmalige Migration: falls noch `AMIGAGPT:config.json` oder `AMIGAGPT:last-conve
 | **Post-Dispose-Cooldown** | `shutdownGUI()` | `Delay(150)` (~3 s) — MUI/Intuition soll fertig teardownen |
 | **Teardown-Marker + Lock frei** | `morphos_relaunch.c` | nur `T:amigagpt_teardown.lock`; create/delete im Lifecycle-Log (`relaunch lock …`) |
 | **Single-Instance-Lock** | `morphos_relaunch.c` | nur `T:amigagpt_instance.lock`; kein Fallback ins Programmverzeichnis; nach `mainWindowPrepareShutdown` löschen |
-| **Chat-Shutdown** | `MainWindow.c` / `ChatOutputScintilla.c` | Konversationswahl erst nach `morphos conversation select enabled`; vor Dispose Scintilla quiescen + PushMethods flushen; ENVARC-Skip bei >32 KiB Chat-Puffer |
+| **Chat-Shutdown** | `MainWindow.c` / `ChatOutputScintilla.c` | Konversationswahl erst nach `morphos conversation select enabled`; vor Dispose Notify abklemmen, **keine** SCI-Befehle am Chat-Scintilla beim Quit |
 | **Letzte Konversation** | `saveLastSelectedConversationName()` | Vor `currentConversation = NULL` in `mainWindowPrepareShutdown()` sowie bei Listenwahl → `ENVARC:AmigaGPT/last-conversation` |
 
 ---
@@ -101,9 +103,11 @@ Einmalige Migration: falls noch `AMIGAGPT:config.json` oder `AMIGAGPT:last-conve
 
 | Maßnahme | Datei | Was |
 | -------- | ----- | --- |
-| **Persistentes Log** | `streamlog.c` | `AMIGAGPT:amigagpt_lifecycle.log` + Spiegel `T:amigagpt_lifecycle.log` |
+| **Persistentes Log** | `streamlog.c` | `AMIGAGPT:amigagpt_lifecycle.log` + Spiegel `T:amigagpt_lifecycle.log` — nur wenn `debugLifecycleLog: true` in `config.json` (Default **aus**) |
 | **Fein granulare Phasen** | überall `streamLogLifecycle()` | Startup, createMainWindow, chat settext/styling, shutdown, app-create retry |
-| **KPrintF-Spiegel** | `streamLogLifecycle()` | `[AmigaGPT lifecycle]` auch auf Debug-Kanal |
+| **KPrintF-Spiegel** | `streamLogLifecycle()` | `[AmigaGPT lifecycle]` auf Debug-Kanal (nur mit `debugLifecycleLog`) |
+
+Für Restart-Stress-Tests: `"debugLifecycleLog": true` setzen, App neu starten, danach Block R (§8). Für Alltag beide Debug-Flags **false** lassen.
 
 Typische **gute** Raw-Kette im Log:
 
@@ -155,7 +159,7 @@ Ursache: keine aktive NList-Zeile und kein gespeicherter Chat-Name → mit `ENVA
 
 **Block R (Restart mit Chat):**
 
-1. Menü **Markdown-Formatierung aus** (Raw, in Config gemerkt).
+1. Menü **Markdown-Formatierung aus** (Raw, in Config gemerkt); optional `"debugLifecycleLog": true` nur für diesen Test.
 2. Log rotieren: `AMIGAGPT:amigagpt_lifecycle.log` löschen oder umbenennen.
 3. Start → **bestehenden** Chat wählen (oder nach 8757: soll ohne Klick laden) → Quit → **3–5 s** Pause.
 4. **15–20×** wiederholen; im Log pro Zyklus erwarten: `restore last conversation ok` oder `auto-select …`, dann `conversation select deferred begin` → `… deferred done`, dann `process exit`.
