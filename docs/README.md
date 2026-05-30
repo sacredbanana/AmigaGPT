@@ -10,8 +10,10 @@
 | [MORPHOS-STABILITAET.md](MORPHOS-STABILITAET.md)             | **Umgesetzte Stabilitätsmaßnahmen** (Shutdown, Neustart, Scintilla, Lifecycle-Log) |
 | [MORPHOS-VERSION.md](MORPHOS-VERSION.md)                     | `$VER:` Version.Revision (MorphOS Style Guide), `version.h`                        |
 | [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md)                 | Remotes `origin` / `upstream`, Sync, PRs                                           |
-| [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)       | Plan Scintilla.mcc, Phasen 6–13; **6–10 v0.1 erledigt**                            |
+| [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)       | Plan Scintilla.mcc, Phasen 6–13; **6–12 erledigt** (MorphOS)                         |
 | [PHASE-10-DOD.md](PHASE-10-DOD.md)                           | **DoD Code-Viewer v0.1** (Phasen 6–10, MorphOS-Abnahme)                            |
+| [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md)     | **Phase 12 + 12.1** Chat-Scintilla, Midi-Markdown, Hotspots, Testplan (MorphOS)     |
+| [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md)         | Prioritäten Export / Midi-Markdown / Hotspots / Tabellen / Zeilenumbruch             |
 | [PHASE-11-LEXER.md](PHASE-11-LEXER.md)                       | Phase 11 Syntax-Highlighting im Code-Viewer                                          |
 | [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md)         | Phase 8 String-Safety (8.1–8.4)                                                    |
 | [PHASE-9-DEBUG-LOGS.md](PHASE-9-DEBUG-LOGS.md)               | Phase 9 Debug-Logs (Stream / UTF-8)                                                |
@@ -86,5 +88,21 @@ Ausführlich: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) (inkl. Prüfung: 
 - **Zeilenumbruch (Chat):** **Ansicht → Wrap long lines (chat)** — `SCI_SETWRAPMODE` / `config.chatLineWrap` (Standard: an); nur MorphOS.
 
 **Roadmap:** 6–12 ✓ (MorphOS) · **Export Chat (raw)** ✓ · **Midi-Markdown + 3a/3b Hotspots** (Codeblock + URL) ✓ · **Zeilenumbruch Chat** ✓ — [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) · **13 Worker** zurückgestellt — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [STREAM-RECOVERY.md](STREAM-RECOVERY.md).
+
+## Phase 12 — erledigt (MorphOS)
+
+**Status (2026-05):** Hauptfenster-Chat-Ausgabe auf **Scintilla + TTEngine** (UTF-8 direkt); **Phase 12.1 (Midi-Markdown)** abgeschlossen und auf Hardware getestet. Details und Testplan: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md).
+
+| Bereich | Umsetzung |
+| ------- | --------- |
+| Chat-Scintilla | NFloattext ersetzt; Role-Styles User/Assistant; Restart-Stabilität — [MORPHOS-STABILITAET.md](MORPHOS-STABILITAET.md) |
+| Midi-Markdown | `**` / `*` / `__`, `#`-Überschriften, `` `inline code` ``; Emoji→Text nur bei *Markdown formatting* |
+| Stream | Live-Roh-UTF-8 (R3); Append-Delta; volles Markdown nach Stream-Ende |
+| Hotspots **3a** | `[Codeblock n]` → Code-Viewer |
+| Hotspots **3b** | Bare `https://` + `[Label](url)` → `openurl.library` |
+| **3c** Pipe-Tabellen | Spalten-Padding nach Links (Assistant, nicht während Stream) |
+| Menüs | Markdown, Wrap, Export raw, Feste Schriftbreite, Chat-Schriftgröße |
+| **Bewusst entfallen** | User/Assistant-Ausrichtung im Chat (Role-Styles wie Cursor; Menü nur OS3/OS4) |
+| **Zurückgestellt** | Phase 13 Worker/UI-Batching — nur bei erneutem Stream-Freeze |
 
 Agenten: zusätzlich [AGENTS.md](../AGENTS.md) und `.cursor/rules/git-branch-policy.mdc`.

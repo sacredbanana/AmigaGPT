@@ -1,5 +1,7 @@
 # Phase 12 — Hauptfenster Chat-Ausgabe (Scintilla + TTEngine, MorphOS)
 
+**Status (2026-05):** Phase **12** und **12.1 (Midi-Markdown)** auf MorphOS **abgeschlossen** (Hardware-Abnahme). Phase **13** (Worker/UI-Batching) zurückgestellt — siehe [STREAM-RECOVERY.md](STREAM-RECOVERY.md) R3.
+
 Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8ToStr` → read-only **Scintilla.mcc** mit **TTEngine** (`SC_CP_UTF8`). Motivation: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) (Emoji → `??`).
 
 ## Entscheidungen (12.0)
@@ -43,7 +45,7 @@ Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloatt
 
 ## MorphOS-Testplan
 
-**Abnahme:** Kurztest MorphOS 2026-05 (Hotspot, Chat-Wechsel, Beenden) — vollständige Liste optional bei größeren Änderungen.
+**Abnahme:** MorphOS 2026-05 — Punkte 1–14 durchgetestet (Hotspots, Markdown-Toggle inkl. langer Chats, Stream, Restart). Bei größeren Änderungen Testplan erneut ab Punkt 1.
 
 1. Build + `package-morphos-cross.sh` → Z:
 2. Emoji Assistant: Markdown aus, „Antworte nur mit: 😀“ → kein `??`
@@ -60,14 +62,16 @@ Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloatt
 13. **Bare URL + Markdown-Link** (3b): `https://…` klickbar; `[Siehe hier](https://…)` zeigt nur Label, Klick öffnet URL; `([Label](https://…))` mit äußeren Klammern sichtbar
 14. **Pipe-Tabelle** (3c): Assistant-Tabelle nach Antwort-Ende ausgerichtet; Mono besser als Sans; Export/raw enthält ungepaddete Markdown-Tabelle
 
-## Phase 12.1 / Midi-Markdown
+## Phase 12.1 / Midi-Markdown — abgeschlossen
 
 Siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) — kein `SCLEX_MARKDOWN` im Chat.
-- ~~User/Assistant text alignment (Scintilla)~~ **bewusst entfallen** — Role-Styles statt NFloattext-Ausrichtung; Menü nur OS3/OS4
-- ~~Chat-Font-Menü~~ **erledigt** — *Feste Schriftbreite* + Schriftgröße +/−
+
+- ~~User/Assistant text alignment (Scintilla)~~ **bewusst entfallen** — Role-Styles statt NFloattext-Ausrichtung; Menü nur OS3/OS4 (`#ifndef __MORPHOS__` in `menu.c`)
+- ~~Chat-Font-Menü~~ **erledigt** — *Feste Schriftbreite* + Schriftgröße +/− (nur Chat-Scintilla)
 - ~~Stream nur Append-Delta~~ **erledigt** — live Stream: `SCI_APPENDTEXT` + Styling nur für Delta; nach Ende weiterhin volles `displayConversation` (Markdown/Hotspots)
 - ~~Inline code `` `...` ``~~ **erledigt** — Style 11 (Mono + grauer Hintergrund); nur bei *Markdown formatting*
-- Bare `http(s)://`-Links: **3b** — Hotspot + `openurl.library` (ASCII-Span); [Roadmap](MIDI-MARKDOWN-ROADMAP.md), Abschnitt [3b](#3b-url-hotspots-openurl) unten
+- ~~Bare `http(s)://`-Links (**3b**)~~ **erledigt** — Hotspot + `openurl.library`; Markdown `[Label](url)`; Abschnitt [3b](#3b-url-hotspots-openurl) unten
+- ~~Pipe-Tabellen (**3c**)~~ **erledigt** — `chatOutputScintillaFormatPipeTables()`; Abschnitt [3c](#3c-pipe-tables) unten
 
 ## 3a — Klick auf `[Codeblock n]`
 

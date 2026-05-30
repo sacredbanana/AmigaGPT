@@ -16,7 +16,7 @@ SDK nativ (MorphOS) vs. WSL, `MUIM_Scintilla_Command`, Inventar `devfiles.txt`: 
 | **6–10** | Scintilla **Code-Viewer** v0.1 — **erledigt** (MorphOS, 2026-05); DoD: [PHASE-10-DOD.md](PHASE-10-DOD.md) |
 | **R1–R4** | **Stream- & Chat-Recovery** — [STREAM-RECOVERY.md](STREAM-RECOVERY.md) (parallel zu 7c/8–10, vorrangig R1+R2) |
 | **11** | Code-Viewer Lexer/Highlighting — [PHASE-11-LEXER.md](PHASE-11-LEXER.md) (minimal umgesetzt) |
-| **12** | **Hauptfenster Chat-Ausgabe** → Scintilla.mcc + TTEngine (UTF-8, ohne NFloattext/codesets für diese Fläche) |
+| **12** | **Hauptfenster Chat-Ausgabe** → Scintilla.mcc + TTEngine — **erledigt** (MorphOS, 2026-05); [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md) |
 | **13** | MorphOS Worker / UI-Batching für Stream (bewusst **nach** Phase 12) |
 
 **Bereits umgesetzt, unverändert in Phase 12:** NList-Titel über `name_list_display` + codesets (Phase 5.1). **Nicht** in 6–12: Chat-**Eingabe** (`TextEditor`), Cairo.
@@ -334,7 +334,7 @@ Button-Beschriftung **ohne** „Code block“ (Kontext: Code-Blöcke-Fenster). A
 | Ort | Verhalten (MorphOS) |
 |-----|---------------------|
 | **Code-Viewer** | 7a/7b: aktiver Block, Raw oder System-Codeset (Buttons + Bearbeiten→Kopieren) |
-| **Chat (NFloattext)** | Anzeige/`display_text`, codesets — unverändert bis **Phase 12**; Stream-Sync: [STREAM-RECOVERY.md](STREAM-RECOVERY.md) |
+| **Chat (Scintilla)** | Phase **12** ✓ — UTF-8 direkt, Midi-Markdown, Hotspots; Stream: [STREAM-RECOVERY.md](STREAM-RECOVERY.md) R3 |
 
 ---
 
@@ -359,7 +359,7 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 
 **Umgesetzt:** `MainWindow.c` — Fenster-Event-Handler (`IDCMP_RAWKEY`, NewMouse `NM_WHEEL_*` / MUIKEY_UP|DOWN) scrollt `chatOutputListView` per `MUIA_NList_First` (`Up`/`Down`, mit Shift `PageUp`/`PageDown`), nur wenn der Mauszeiger über der Chat-Liste liegt.
 
-**Abgrenzung:** **Phase 12** ersetzt die Chat-**Ausgabe** durch Scintilla; 7c betrifft bis dahin das NFloattext-Setup.
+**Abgrenzung:** **Phase 12** hat die Chat-**Ausgabe** auf Scintilla umgestellt; 7c betraf das frühere NFloattext-Setup (historisch).
 
 **Priorität:** nach **7b** oder parallel, kleiner Scope (ein Notify-Hook, kein Datenmodell).
 
@@ -400,12 +400,12 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 - Menü **View code blocks…** mit **NList** + **Scintilla** (UTF-8, TTEngine, DejaVu Sans Mono)
 - **Copy/Save UTF-8** und **Copy/Save System-Codeset** (7b); Bearbeiten→Kopieren = Copy UTF-8
 - Mausrad-Scroll Chat (7c); String-Safety 8.1–8.4; Debug-Logs minimal (9)
-- Fence/Platzhalter unverändert; Chat-Ausgabe weiter NFloattext bis Phase 12
+- Fence/Platzhalter unverändert; Chat-Ausgabe war in 6–10 noch NFloattext (Phase 12 separat)
 
-**Ausgeschlossen in 6–10:**
+**Ausgeschlossen in 6–10 (später umgesetzt):**
 
 - Syntax-Highlighting (Phase 11)
-- Chat-Hauptfenster auf Scintilla (Phase 12)
+- Chat-Hauptfenster auf Scintilla (Phase 12 — **erledigt**)
 - Chat-Eingabe-Editor umstellen
 - Cairo
 - Themes / HTML / vollständiges Markdown
@@ -520,7 +520,7 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 
 **Phase 6 (MorphOS):** dasselbe Fenster mit **Scintilla** statt NFloattext — siehe oben „Umgesetzt (Phase 6)“.
 
-**Nächster Schritt (Empfehlung):** **Stream-Recovery R1+R2** ([STREAM-RECOVERY.md](STREAM-RECOVERY.md)), optional parallel **7c** (Mausrad). Danach R3, **Phase 8**, 9–10, Phase 11, **Phase 12**, **Phase 13**.
+**Stand (2026-05):** Phasen **6–12** und Recovery **R1–R3** (inkl. R2) auf MorphOS erledigt. **Nächster Schritt nur bei Bedarf:** **Phase 13** (Worker/UI-Batching), wenn R3 auf Hardware nicht mehr reicht — siehe [STREAM-RECOVERY.md](STREAM-RECOVERY.md). Kein Rückbau zu NFloattext im Chat.
 
 ---
 
