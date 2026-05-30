@@ -135,8 +135,6 @@ static LONG saveConversations();
 #define LAST_CONVERSATION_PATH "ENVARC:AmigaGPT/last-conversation"
 #define LAST_CONVERSATION_LEGACY "AMIGAGPT:last-conversation.txt"
 #define LAST_CONVERSATION_NAME_MAX 512
-#define MAIN_WINDOW_SAVED_MIN_WIDTH 320
-#define MAIN_WINDOW_SAVED_MIN_HEIGHT 200
 
 static void ensureLastConversationEnvarcDir(void) {
     CreateDir(LAST_CONVERSATION_DIR);
@@ -239,6 +237,7 @@ void mainWindowCaptureGeometryForConfig(void) {
     LONG top = 0;
     LONG width = 0;
     LONG height = 0;
+    struct Screen *scr = NULL;
 
     if (mainWindowObject == NULL) {
         return;
@@ -247,9 +246,37 @@ void mainWindowCaptureGeometryForConfig(void) {
     get(mainWindowObject, MUIA_Window_TopEdge, &top);
     get(mainWindowObject, MUIA_Window_Width, &width);
     get(mainWindowObject, MUIA_Window_Height, &height);
+    get(mainWindowObject, MUIA_Window_Screen, &scr);
     if (width < MAIN_WINDOW_SAVED_MIN_WIDTH ||
         height < MAIN_WINDOW_SAVED_MIN_HEIGHT) {
         return;
+    }
+    if (scr != NULL) {
+        LONG sw = scr->Width;
+        LONG sh = scr->Height;
+
+        if (width > sw) {
+            width = sw - 8;
+        }
+        if (height > sh) {
+            height = sh - 8;
+        }
+        if (left < 0 || top < 0 || left > sw || top > sh) {
+            left = 0;
+            top = 0;
+        }
+        if (left + width > sw) {
+            left = sw - width;
+        }
+        if (top + height > sh) {
+            top = sh - height;
+        }
+        if (left < 0) {
+            left = 0;
+        }
+        if (top < 0) {
+            top = 0;
+        }
     }
     config.mainWindowLeft = left;
     config.mainWindowTop = top;
@@ -257,16 +284,58 @@ void mainWindowCaptureGeometryForConfig(void) {
     config.mainWindowHeight = (ULONG)height;
 }
 
+static BOOL mainWindowSavedGeometryValid(void) {
+    return mainWindowObject != NULL &&
+           config.mainWindowWidth >= MAIN_WINDOW_SAVED_MIN_WIDTH &&
+           config.mainWindowHeight >= MAIN_WINDOW_SAVED_MIN_HEIGHT;
+}
+
 static void mainWindowApplySavedGeometry(void) {
-    if (mainWindowObject == NULL ||
-        config.mainWindowWidth < MAIN_WINDOW_SAVED_MIN_WIDTH ||
-        config.mainWindowHeight < MAIN_WINDOW_SAVED_MIN_HEIGHT) {
+    LONG left;
+    LONG top;
+    LONG width;
+    LONG height;
+    struct Screen *scr = NULL;
+
+    if (!mainWindowSavedGeometryValid()) {
         return;
     }
-    set(mainWindowObject, MUIA_Window_Width, (LONG)config.mainWindowWidth);
-    set(mainWindowObject, MUIA_Window_Height, (LONG)config.mainWindowHeight);
-    set(mainWindowObject, MUIA_Window_LeftEdge, config.mainWindowLeft);
-    set(mainWindowObject, MUIA_Window_TopEdge, config.mainWindowTop);
+    left = config.mainWindowLeft;
+    top = config.mainWindowTop;
+    width = (LONG)config.mainWindowWidth;
+    height = (LONG)config.mainWindowHeight;
+    get(mainWindowObject, MUIA_Window_Screen, &scr);
+    if (scr != NULL) {
+        LONG sw = scr->Width;
+        LONG sh = scr->Height;
+
+        if (width > sw) {
+            width = sw - 8;
+        }
+        if (height > sh) {
+            height = sh - 8;
+        }
+        if (left < 0 || top < 0 || left >= sw || top >= sh) {
+            left = (sw - width) / 2;
+            top = (sh - height) / 2;
+        }
+        if (left + width > sw) {
+            left = sw - width;
+        }
+        if (top + height > sh) {
+            top = sh - height;
+        }
+        if (left < 0) {
+            left = 0;
+        }
+        if (top < 0) {
+            top = 0;
+        }
+    }
+    set(mainWindowObject, MUIA_Window_Width, width);
+    set(mainWindowObject, MUIA_Window_Height, height);
+    set(mainWindowObject, MUIA_Window_LeftEdge, left);
+    set(mainWindowObject, MUIA_Window_TopEdge, top);
 }
 #endif /* __MORPHOS__ */
 
@@ -465,6 +534,7 @@ void morphosRunStartupDeferred(void) {
     streamLogLifecycle("morphos startup deferred finish done");
     chatOutputScintillaInstallMouseUpGuard();
     streamLogLifecycle("morphos startup deferred mouse guard done");
+    mainWindowApplySavedGeometry();
     morphosEnableConversationSelect();
 }
 
@@ -2077,7 +2147,6 @@ LONG createMainWindow() {
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
     streamLogLifecycle("createMainWindow Application_Load done");
 #ifdef __MORPHOS__
-    mainWindowApplySavedGeometry();
     /* ENVARC must not reopen code viewer before Scintilla is fully ready. */
     if (codeBlocksWindowObject != NULL) {
         streamLogLifecycle("createMainWindow codeBlocksWindow close begin");

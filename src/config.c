@@ -1007,6 +1007,14 @@ LONG readConfig() {
         config.mainWindowHeight =
             (ULONG)json_object_get_int(mainWindowHeightObj);
     }
+    if (config.mainWindowWidth < MAIN_WINDOW_SAVED_MIN_WIDTH ||
+        config.mainWindowHeight < MAIN_WINDOW_SAVED_MIN_HEIGHT ||
+        config.mainWindowWidth > 16384 || config.mainWindowHeight > 16384) {
+        config.mainWindowLeft = 0;
+        config.mainWindowTop = 0;
+        config.mainWindowWidth = 0;
+        config.mainWindowHeight = 0;
+    }
 
     FreeVec(configJsonString);
     json_object_put(configJsonObject);

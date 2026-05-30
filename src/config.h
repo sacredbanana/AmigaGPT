@@ -82,6 +82,9 @@ extern struct Config config;
 #define CHAT_OUTPUT_FONT_SIZE_MIN 8
 #define CHAT_OUTPUT_FONT_SIZE_MAX 24
 
+#define MAIN_WINDOW_SAVED_MIN_WIDTH 320
+#define MAIN_WINDOW_SAVED_MIN_HEIGHT 200
+
 ULONG configClampChatFontSize(ULONG size);
 
 /**

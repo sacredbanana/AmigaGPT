@@ -40,6 +40,7 @@ Einmalige Migration: falls noch `AMIGAGPT:config.json` oder `AMIGAGPT:last-conve
 | **Deferred Styles abbrechen** | `chatOutputScintillaCancelDeferredStyles()` | Pending `PushMethod`-Styling wird verworfen |
 | **Kein NewInput beim Quit** | `morphosFlushPendingPushMethods()` | Während Shutdown nur Pending-Flags löschen — **kein** `MUIM_Application_NewInput` (Reentry/Freeze) |
 | **Config vor Teardown** | `main.c` → `cleanExit()` | `mainWindowCaptureGeometryForConfig()` + `writeConfig()` **vor** `shutdownGUI()` |
+| **Geometrie wiederherstellen** | `morphosRunStartupDeferred()` | Nach Scintilla-Init + Fenster offen — **nicht** vor `Window_Open` (Restart-Bug 8780) |
 | **Refresh-Queue leeren** | `mainWindowPrepareShutdown()` | `chatOutputRefreshPending` / `FromList` zurücksetzen |
 | **Notify abklemmen** | `chatOutputScintillaDetachNotify()` | Vor Dispose, solange Hauptfenster noch offen |
 | **Code-Viewer schließen** | `codeBlocksViewerCloseWindow()` in Prepare | **Nicht** erneut in `PrepareShutdown` (CloseRequest-Reentry) |
