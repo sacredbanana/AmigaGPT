@@ -45,6 +45,16 @@ static BOOL is_fence_line(const UBYTE *raw_base, const UBYTE *fence) {
     return fence_line_indent_cols(line_start, fence) != (ULONG)-1;
 }
 
+static ULONG fence_tick_run_len(const UBYTE *p, const UBYTE *end) {
+    ULONG n = 0;
+
+    while (p < end && *p == '`') {
+        n++;
+        p++;
+    }
+    return n;
+}
+
 static void clear_codeblocks(struct ConversationNode *node) {
     struct AICodeBlock *block;
 
@@ -179,27 +189,30 @@ static void conversationNodeBuildDisplayOmittingCode(
 
     while (p < end) {
         const UBYTE *fence;
+        ULONG opening_ticks;
         const UBYTE *closing;
         const UBYTE *q;
         ULONG seg_len;
         UBYTE ph_buf[CODEBLOCK_PLACEHOLDER_MAX];
 
         fence = p;
-        for (; fence + 3 <= end; fence++) {
-            if (fence[0] == '`' && fence[1] == '`' && fence[2] == '`') {
+        opening_ticks = 0;
+        for (; fence < end; fence++) {
+            opening_ticks = fence_tick_run_len(fence, end);
+            if (opening_ticks >= 3) {
                 break;
             }
         }
-        if (fence + 3 > end) {
+        if (fence >= end) {
             break;
         }
 
         if (!is_fence_line(raw, fence)) {
-            p = fence + 3;
+            p = fence + opening_ticks;
             continue;
         }
 
-        p = fence + 3;
+        p = fence + opening_ticks;
         while (p < end && (*p == ' ' || *p == '\t')) {
             p++;
         }
@@ -217,10 +230,11 @@ static void conversationNodeBuildDisplayOmittingCode(
         }
 
         closing = NULL;
-        for (q = p; q + 3 <= end; q++) {
-            if (q[0] == '`' && q[1] == '`' && q[2] == '`' &&
-                is_fence_line(raw, q)) {
-                const UBYTE *r = q + 3;
+        for (q = p; q < end; q++) {
+            ULONG closing_ticks = fence_tick_run_len(q, end);
+
+            if (closing_ticks >= opening_ticks && is_fence_line(raw, q)) {
+                const UBYTE *r = q + closing_ticks;
 
                 while (r < end && (*r == ' ' || *r == '\t')) {
                     r++;
@@ -254,7 +268,7 @@ static void conversationNodeBuildDisplayOmittingCode(
         CopyMem(ph_buf, out + out_pos, placeholder_len);
         out_pos += placeholder_len;
 
-        p = closing + 3;
+        p = closing + opening_ticks;
         while (p < end && (*p == ' ' || *p == '\t')) {
             p++;
         }
@@ -320,6 +334,7 @@ void conversationNodeParseCodeFences(struct Conversation *conv,
 
     while (p < end) {
         const UBYTE *fence;
+        ULONG opening_ticks;
         const UBYTE *lang_start;
         const UBYTE *lang_end;
         ULONG lang_len;
@@ -330,21 +345,23 @@ void conversationNodeParseCodeFences(struct Conversation *conv,
         struct AICodeBlock *block;
 
         fence = p;
-        for (; fence + 3 <= end; fence++) {
-            if (fence[0] == '`' && fence[1] == '`' && fence[2] == '`') {
+        opening_ticks = 0;
+        for (; fence < end; fence++) {
+            opening_ticks = fence_tick_run_len(fence, end);
+            if (opening_ticks >= 3) {
                 break;
             }
         }
-        if (fence + 3 > end) {
+        if (fence >= end) {
             break;
         }
 
         if (!is_fence_line(raw, fence)) {
-            p = fence + 3;
+            p = fence + opening_ticks;
             continue;
         }
 
-        p = fence + 3;
+        p = fence + opening_ticks;
         while (p < end && (*p == ' ' || *p == '\t')) {
             p++;
         }
@@ -377,10 +394,11 @@ void conversationNodeParseCodeFences(struct Conversation *conv,
 
         code_start = p;
         closing = NULL;
-        for (q = code_start; q + 3 <= end; q++) {
-            if (q[0] == '`' && q[1] == '`' && q[2] == '`' &&
-                is_fence_line(raw, q)) {
-                const UBYTE *r = q + 3;
+        for (q = code_start; q < end; q++) {
+            ULONG closing_ticks = fence_tick_run_len(q, end);
+
+            if (closing_ticks >= opening_ticks && is_fence_line(raw, q)) {
+                const UBYTE *r = q + closing_ticks;
 
                 while (r < end && (*r == ' ' || *r == '\t')) {
                     r++;
@@ -434,7 +452,7 @@ void conversationNodeParseCodeFences(struct Conversation *conv,
 
         AddTail((struct List *)node->codeblocks, (struct Node *)block);
 
-        p = closing + 3;
+        p = closing + opening_ticks;
         while (p < end && (*p == ' ' || *p == '\t')) {
             p++;
         }
