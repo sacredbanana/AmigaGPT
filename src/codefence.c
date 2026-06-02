@@ -1,3 +1,6 @@
+#ifdef CODEFENCE_HOST
+#include "test/codefence_host_stubs.h"
+#else
 #include <exec/types.h>
 #include <exec/lists.h>
 #include <exec/memory.h>
@@ -5,9 +8,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "codefence.h"
 #include "AmigaGPT_cat.h"
 #include "openai.h"
+#endif
+
+#include "codefence.h"
 
 /** CommonMark: fenced code may be indented by up to 3 columns on the line. */
 #define FENCE_MAX_INDENT_COLS 3

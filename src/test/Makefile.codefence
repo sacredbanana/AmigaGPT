@@ -1,0 +1,16 @@
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c99 -DCODEFENCE_HOST -Isrc/test -Isrc
+OUT = out/codefence_host_test
+
+.PHONY: test clean
+
+$(OUT): src/test/codefence_host_test.c src/codefence.c src/codefence.h \
+        src/test/codefence_host_stubs.h
+	@mkdir -p out
+	$(CC) $(CFLAGS) -o $@ src/test/codefence_host_test.c
+
+test: $(OUT)
+	./$(OUT)
+
+clean:
+	rm -f $(OUT)
