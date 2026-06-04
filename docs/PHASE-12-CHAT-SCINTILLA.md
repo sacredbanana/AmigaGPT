@@ -55,7 +55,7 @@ Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloatt
 6. Code-Fence-Platzhalter im Chat; Code-Viewer unverändert
 7. **Feste Schriftbreite** an/aus → Chat Mono vs. Sans
 8. **Export chat (raw)** → Datei mit `raw_utf8`, Fences sichtbar
-9. **Markdown formatting** an: `**fett**`, `*kursiv*`, `__unterstrichen__`, `` `inline code` `` (Mono, grauer Hintergrund), `# Überschrift` nur bei Assistant; Emoji Assistant z. B. 🌍→`[Welt]`, 👍→`(+1)` (nur Anzeige); innerhalb `` `...` `` keine `*`/`**`/Links/Emoji
+9. **Markdown formatting** an: `**fett**`, `*kursiv*`, `__unterstrichen__`, `` `inline code` `` (Mono, grauer Hintergrund), `#`–`######` Überschriften (H1 größer … H6 leicht größer, nur Assistant); Emoji Assistant z. B. 🌍→`[Welt]`, 👍→`(+1)` (nur Anzeige); `x**2` bleibt literal (kein Fett); `Wenn`s` / `Wenn's` mit Grave-Accent **kein** grauer Rest der Zeile; `` `Januar` `` weiterhin Inline-Code; innerhalb `` `...` `` keine `*`/`**`/Links/Emoji
 10. **Markdown formatting** aus: Emoji unverändert (oft □)
 11. User vs. Assistant visuell unterscheidbar (Role-Styles: User fett/blau/grau, Assistant schwarz)
 12. **[Codeblock n]** (3a): blauer Link → Code-Viewer, Block `n` aktiv

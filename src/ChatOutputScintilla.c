@@ -121,11 +121,35 @@ static int chatOutputScintillaFontSizePoints(void) {
 #define CHAT_OUTPUT_STYLE_URL_HOTSPOT 10
 /** Inline `` `...` `` — monospace + gray background (Assistant, Markdown formatting on). */
 #define CHAT_OUTPUT_STYLE_MD_CODE 11
+/** ATX headings `#` … `######` — larger point size + bold (Markdown formatting on). */
+#define CHAT_OUTPUT_STYLE_MD_H1 12
+#define CHAT_OUTPUT_STYLE_MD_H2 13
+#define CHAT_OUTPUT_STYLE_MD_H3 14
+#define CHAT_OUTPUT_STYLE_MD_H4 15
+#define CHAT_OUTPUT_STYLE_MD_H5 16
+#define CHAT_OUTPUT_STYLE_MD_H6 17
 #define CHAT_OUTPUT_MD_CODE_FORE 0x00333333 /* BBGGRR dark gray */
 #define CHAT_OUTPUT_MD_CODE_BACK 0x00ECECEC /* BBGGRR light gray */
 
 #define CHAT_MD_MAX_STACK 32
 #define CHAT_OUTPUT_CODEBLOCK_LINK_FORE 0x00CC6600 /* BBGGRR link blue */
+
+static int chatOutputScintillaHeadingFontSizePoints(UBYTE level) {
+    static const int extra[] = { 8, 6, 4, 3, 2, 1 };
+    int base = chatOutputScintillaFontSizePoints();
+
+    if (level < 1 || level > 6) {
+        return base;
+    }
+    return base + extra[level - 1];
+}
+
+static UBYTE chatMdHeadingScintillaStyle(UBYTE level) {
+    if (level < 1 || level > 6) {
+        return CHAT_OUTPUT_STYLE_MD_BOLD;
+    }
+    return (UBYTE)(CHAT_OUTPUT_STYLE_MD_H1 + (level - 1));
+}
 #define CHAT_MD_CODEBLOCK_PREFIX "[Codeblock"
 
 typedef enum {
@@ -293,6 +317,24 @@ static void chatOutputScintillaInitRoleStyles(Object *sci) {
     codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE, CHAT_OUTPUT_STYLE_URL_HOTSPOT,
                                1);
     codeBlocksScintillaCommand(sci, SCI_STYLESETHOTSPOT, CHAT_OUTPUT_STYLE_URL_HOTSPOT, 1);
+
+    {
+        UBYTE lvl;
+
+        for (lvl = 1; lvl <= 6; lvl++) {
+            UBYTE styleNum = chatMdHeadingScintillaStyle(lvl);
+
+            codeBlocksScintillaCommand(sci, SCI_STYLESETFORE, styleNum,
+                                       CHAT_OUTPUT_ASSISTANT_FORE);
+            codeBlocksScintillaCommand(sci, SCI_STYLESETFONT, styleNum,
+                                       (sptr_t)fontFace);
+            codeBlocksScintillaCommand(sci, SCI_STYLESETSIZE, styleNum,
+                                       chatOutputScintillaHeadingFontSizePoints(lvl));
+            codeBlocksScintillaCommand(sci, SCI_STYLESETBOLD, styleNum, 1);
+            codeBlocksScintillaCommand(sci, SCI_STYLESETITALIC, styleNum, 0);
+            codeBlocksScintillaCommand(sci, SCI_STYLESETUNDERLINE, styleNum, 0);
+        }
+    }
 }
 
 static void chatMdInitStack(ChatMdStyleStack *s) { s->top = -1; }
@@ -608,6 +650,9 @@ static UBYTE chatMdParseMarker(const char *input, ULONG pos, ULONG len,
         if (run != 1) {
             return 0;
         }
+        if (!chatMdInlineBacktickCanOpen(input, pos, len)) {
+            return 0;
+        }
         *foundStyle = CHAT_MD_STYLE_CODE;
         return 1;
     }
@@ -817,7 +862,7 @@ static BOOL chatMdInSkippedRegion(const char *text, ULONG len, ULONG pos) {
     return chatMdFindCodeblockPlaceholderOnLine(text, len, lineStart, NULL);
 }
 
-static ULONG chatMdHeadingContentStart(const char *text, ULONG len, ULONG lineStart) {
+static UBYTE chatMdHeadingLevel(const char *text, ULONG len, ULONG lineStart) {
     ULONG h = lineStart;
     ULONG hashes = 0;
 
@@ -826,6 +871,20 @@ static ULONG chatMdHeadingContentStart(const char *text, ULONG len, ULONG lineSt
         h++;
     }
     if (hashes == 0 || hashes > 6 || h >= len || text[h] != ' ') {
+        return 0;
+    }
+    return (UBYTE)hashes;
+}
+
+static ULONG chatMdHeadingContentStart(const char *text, ULONG len, ULONG lineStart) {
+    ULONG h = lineStart;
+    ULONG hashes = (ULONG)chatMdHeadingLevel(text, len, lineStart);
+
+    if (hashes == 0) {
+        return 0;
+    }
+    h = lineStart + hashes;
+    if (h >= len || text[h] != ' ') {
         return 0;
     }
     h++;
@@ -870,21 +929,51 @@ static const ChatMdEmojiMapEntry chatMdEmojiMap[] = {
     { "👀", "(sehen)" },
     { "🙏", "(Danke)" },
     { "💪", "(stark)" },
+    { "🤝", "(Deal)" },
+    { "👏", "(Applaus)" },
+    { "🙌", "(Juhu)" },
+    { "🤷", "(?)" },
+    { "🤷‍♂️", "(?)" },
+    { "🤷‍♀️", "(?)" },
     { "🌍", "[Welt]" },
     { "🌎", "[Welt]" },
     { "🌏", "[Welt]" },
     { "🚀", "[Rakete]" },
     { "💻", "[PC]" },
+    { "🖥", "[PC]" },
+    { "🖥️", "[PC]" },
+    { "📱", "[Handy]" },
     { "📝", "[Notiz]" },
     { "📌", "[Pin]" },
     { "📎", "[Anhang]" },
+    { "📂", "[Ordner]" },
+    { "📁", "[Ordner]" },
+    { "📊", "[Chart]" },
+    { "📈", "[hoch]" },
+    { "📉", "[runter]" },
     { "🔧", "[Werkzeug]" },
     { "🛠", "[Werkzeug]" },
     { "🛠️", "[Werkzeug]" },
+    { "🐛", "[Bug]" },
+    { "⚡", "[Blitz]" },
+    { "☕", "[Kaffee]" },
+    { "🎵", "[Musik]" },
+    { "🏁", "[Ziel]" },
+    { "💯", "[100]" },
     { "✅", "[OK]" },
+    { "✔", "[OK]" },
+    { "✔️", "[OK]" },
     { "❌", "[X]" },
     { "⚠", "[!]" },
     { "⚠️", "[!]" },
+    { "🔴", "(rot)" },
+    { "🟢", "(gruen)" },
+    { "🟡", "(gelb)" },
+    { "🔵", "(blau)" },
+    { "➡", "->" },
+    { "➡️", "->" },
+    { "⬅", "<-" },
+    { "⬅️", "<-" },
     { "⭐", "(*)" },
     { "🎯", "[Ziel]" },
     { "🎉", "[Feier]" },
@@ -893,6 +982,16 @@ static const ChatMdEmojiMapEntry chatMdEmojiMap[] = {
     { "✨", "(*)" },
     { "❤️", "(Herz)" },
     { "❤", "(Herz)" },
+    { "💚", "(gruen)" },
+    { "💙", "(blau)" },
+    { "💛", "(gelb)" },
+    { "🧡", "(orange)" },
+    { "💜", "(lila)" },
+    { "😂", "XD" },
+    { "🤣", "XD" },
+    { "😅", "^^" },
+    { "🙄", "..." },
+    { "😬", "..." },
     { "😎", "(cool)" },
     { "🤔", "(?)" },
     { "🙂", ":)" },
@@ -904,6 +1003,8 @@ static const ChatMdEmojiMapEntry chatMdEmojiMap[] = {
     { "😁", ":D" },
     { "😢", ":'(" },
     { "😭", ":'(" },
+    { "😡", ">:(" },
+    { "😠", ">:(" },
 };
 
 static ULONG chatMdEmitEmojiSubstitute(const char *inUtf8, ULONG pos, ULONG len,
@@ -998,6 +1099,7 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
     ULONG mdLineStart = 0;
     ULONG mdLineEnd = 0;
     ULONG mdContentStart = 0;
+    UBYTE mdHeadingLevel = 0;
 
     for (i = 0; i < inLen; i++) {
         ULONG linkEat;
@@ -1032,10 +1134,15 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
                 while (mdLineEnd < inLen && inUtf8[mdLineEnd] != '\n') {
                     mdLineEnd++;
                 }
-                mdContentStart =
-                    chatMdHeadingContentStart(inUtf8, inLen, mdLineStart);
+                mdHeadingLevel = chatMdHeadingLevel(inUtf8, inLen, mdLineStart);
+                mdContentStart = (mdHeadingLevel > 0)
+                                     ? chatMdHeadingContentStart(inUtf8, inLen,
+                                                                 mdLineStart)
+                                     : 0;
             }
             if (mdContentStart > 0) {
+                UBYTE headingStyle = chatMdHeadingScintillaStyle(mdHeadingLevel);
+
                 if (i < mdContentStart) {
                     continue;
                 }
@@ -1043,7 +1150,7 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
                     if (!chatMdStackHasCode(&styleStack)) {
                         linkEat = chatMdTryConsumeMarkdownHttpLinks(
                             inUtf8, inLen, i, &outPos, outUtf8, outStyles,
-                            CHAT_OUTPUT_STYLE_MD_BOLD);
+                            headingStyle);
                         if (linkEat > 0) {
                             i += linkEat - 1;
                             continue;
@@ -1051,7 +1158,7 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
                         {
                             ULONG emojiLen = chatMdEmitEmojiSubstitute(
                                 inUtf8, i, inLen, &outPos, outUtf8, outStyles,
-                                CHAT_OUTPUT_STYLE_MD_BOLD);
+                                headingStyle);
                             if (emojiLen > 0) {
                                 i += emojiLen - 1;
                                 continue;
@@ -1061,16 +1168,17 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
                     if (inUtf8[i] == '\\' && i + 1 < inLen) {
                         i++;
                         chatMdEmit(&outPos, outUtf8, outStyles, inUtf8[i],
-                                   CHAT_OUTPUT_STYLE_MD_BOLD);
+                                   headingStyle);
                         continue;
                     }
                     if (chatMdHandleMarker(&styleStack, inUtf8, &i, inLen, &outPos,
-                                           outUtf8, outStyles,
-                                           CHAT_OUTPUT_STYLE_MD_BOLD)) {
+                                           outUtf8, outStyles, headingStyle)) {
                         continue;
                     }
                     chatMdEmit(&outPos, outUtf8, outStyles, inUtf8[i],
-                               CHAT_OUTPUT_STYLE_MD_BOLD);
+                               chatMdStackHasCode(&styleStack)
+                                   ? chatMdStyleFromStack(&styleStack)
+                                   : headingStyle);
                     continue;
                 }
             }

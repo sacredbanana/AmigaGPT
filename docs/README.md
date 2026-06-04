@@ -67,7 +67,7 @@ Logik-Tests mit normalem `gcc` — z. B. **UTF-8-Stream** (`utf8stream.c`), **
 | `src/test/Makefile.utf8stream`    | `make test`            |
 | `tools/test-utf8stream.sh`        | Wrapper                |
 | `out/utf8stream_host_test`        | Binary (nach dem Lauf) |
-| `tools/test-chatmd-markers.sh`    | Nur Kursiv-`*` (Delimiter); Fett `**` ohne Extra-Tests — siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md#delimiter-policy-keine-markdown-bibliothek) |
+| `tools/test-chatmd-markers.sh`    | Kursiv/Fett-`*` (inkl. `x**2`-Heuristik) — [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md#delimiter-policy-keine-markdown-bibliothek) |
 | `out/chatmd_markers_host_test`    | Binary (nach dem Lauf) |
 | `tools/test-codefence.sh`         | Fence-Parser (3+ Backticks, CommonMark-Schließen) |
 | `out/codefence_host_test`         | Binary (nach dem Lauf) |
@@ -102,7 +102,7 @@ Ausführlich: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) (inkl. Prüfung: 
 | Bereich | Umsetzung |
 | ------- | --------- |
 | Chat-Scintilla | NFloattext ersetzt; Role-Styles User/Assistant; Restart-Stabilität — [MORPHOS-STABILITAET.md](MORPHOS-STABILITAET.md) |
-| Midi-Markdown | `**` / `*` / `__`, `#`-Überschriften, `` `inline code` ``; Emoji→Text nur bei *Markdown formatting* |
+| Midi-Markdown | `**` / `*` / `__`, `#`–`######` (H1–H6 Größe), `` `inline code` ``; Emoji→Text nur bei *Markdown formatting* |
 | Stream | Live-Roh-UTF-8 (R3); Append-Delta; volles Markdown nach Stream-Ende |
 | Hotspots **3a** | `[Codeblock n]` → Code-Viewer |
 | Hotspots **3b** | Bare `https://` + `[Label](url)` → `openurl.library` |
