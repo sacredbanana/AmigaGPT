@@ -1,11 +1,28 @@
 # Dokumentation: GitHub-Repo vs. Workspace
 
-## Zwei Kanäle
+## Drei Kanäle
 
-| Kanal | Ort | Wer liest es? |
-| ----- | --- | ------------- |
-| **Repo (GitHub)** | `AmigaGPT/docs/`, `AGENTS.md` | Jeder Klon von `weiseb78/AmigaGPT` — muss **ohne** Nachbarordner funktionieren |
-| **Workspace** | `~/development/morphos/docs/` | Nur bei Entwicklung unter `~/development/morphos/` (Cursor-Regeln, du) |
+| Kanal | Ort | Remote | Wer liest es? |
+| ----- | --- | ------ | ------------- |
+| **Repo (GitHub)** | `AmigaGPT/docs/`, `AGENTS.md` | `github.com` (Fork) | Jeder Klon von `weiseb78/AmigaGPT` — muss **ohne** Nachbarordner funktionieren |
+| **Workspace-Docs (Gitea)** | `~/development/morphos/docs/` | Gitea `morphos-docs` | Versionierung über Rechner (WSL, MorphOS, …); **nicht** Ersatz für `AmigaGPT/docs/` |
+| **Nachbar (Gitea)** | `~/development/morphos/MarkdownEdit/` | Gitea (Produkt) | Eigenes Repo; AmigaGPT-Agent **nicht** patchen |
+
+**Gitea `morphos-docs` (Klartext, kein relativer Link im Repo):**
+
+```text
+ssh://xbox@192.168.50.96:2222/giteaadmin/morphos-docs.git
+```
+
+Clone neben AmigaGPT:
+
+```bash
+mkdir -p ~/development/morphos
+cd ~/development/morphos
+git clone ssh://xbox@192.168.50.96:2222/giteaadmin/morphos-docs.git docs
+```
+
+Updates: `cd ~/development/morphos/docs && git pull`
 
 ## Regeln (verbindlich für Commits in AmigaGPT)
 
@@ -17,8 +34,10 @@
 ## Workspace-Pfade (nur lokal, nicht als Link-Ziel im Repo)
 
 ```text
+~/development/morphos/docs/                                   # Git: morphos-docs (Gitea)
 ~/development/morphos/docs/HANDLUNGSANWEISUNG-MORPHOS.md      # Build, Z:, HW, TaskList
 ~/development/morphos/docs/HANDLUNGSANWEISUNG-MORPHOS-MUI.md  # MUI, Quit, ASL
+~/development/morphos/MarkdownEdit/                           # eigenes Gitea-Produktrepo
 ```
 
 ## Sync-Richtung
