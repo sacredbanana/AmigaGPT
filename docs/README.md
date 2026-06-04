@@ -2,11 +2,13 @@
 
 **Projektordner:** nur `~/development/morphos/AmigaGPT` in WSL — nicht `C:\Users\xbox\cursorWorkspace\AmigaGPT`. Details: [WSL-SETUP-STATUS.md](WSL-SETUP-STATUS.md).
 
+**Repo vs. Workspace:** Dieses Verzeichnis ist für **GitHub** vollständig. Gemeinsame MorphOS-Docs liegen nur lokal unter `~/development/morphos/docs/` — ohne relative Links dorthin in committed Dateien. Siehe [DOKUMENTATION-WORKSPACE.md](DOKUMENTATION-WORKSPACE.md).
 
 | Dokument                                                     | Inhalt                                                                             |
 | ------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| [DOKUMENTATION-WORKSPACE.md](DOKUMENTATION-WORKSPACE.md)     | **Repo vs. `morphos/docs`** — keine toten `../`-Links auf GitHub                    |
 | [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md)       | Git (kein Commit auf `master`) **und** Begriff **Paketieren** = Z:-Deploy          |
-| [HANDLUNGSANWEISUNG-MORPHOS-AGENT.md](HANDLUNGSANWEISUNG-MORPHOS-AGENT.md) | **Agent:** Restart, ASL/PushMethod, Scintilla-Chat, bekannte Regressionen |
+| [HANDLUNGSANWEISUNG-MORPHOS-AGENT.md](HANDLUNGSANWEISUNG-MORPHOS-AGENT.md) | **Agent:** Restart, ASL/PushMethod, Scintilla-Chat (vollständig im Repo) |
 | [MORPHOS-STABILITAET.md](MORPHOS-STABILITAET.md)             | **Umgesetzte Stabilitätsmaßnahmen** (Shutdown, Neustart, Scintilla, Lifecycle-Log) |
 | [MORPHOS-RELEASE-NOTES.md](MORPHOS-RELEASE-NOTES.md)       | **Was ist neu?** Fork-Releases (z. B. 2.18); `CHANGELOG.md` = upstream              |
 | [MORPHOS-VERSION.md](MORPHOS-VERSION.md)                     | `$VER:` Version.Revision (MorphOS Style Guide), `version.h`                        |

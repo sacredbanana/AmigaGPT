@@ -18,14 +18,14 @@ Summary:
 
 Cursor rule: `.cursor/rules/git-branch-policy.mdc` (always applied).
 
-## Docs map
+## Docs map (this repo — sufficient for GitHub clone)
 
-Start: `docs/README.md`
+Start: `docs/README.md` · Policy: `docs/DOKUMENTATION-WORKSPACE.md`
 
 | Document | Purpose |
 | -------- | ------- |
 | `docs/HANDLUNGSANWEISUNG-GIT.md` | Binding git workflow (DE) |
-| `docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md` | MorphOS runtime: restart, ASL, Scintilla (Agent, DE) |
+| `docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md` | MorphOS runtime for AmigaGPT only (complete in-repo) |
 | `docs/GIT-FORK-WORKFLOW.md` | Remotes, upstream sync, PRs |
 | `docs/SCINTILLA-ARCHITECTURE.md` | Scintilla / streaming / UTF-8 / Fence-Parser / Chat-Anzeige vs. `codeblocks` |
 | `docs/PHASE-10-DOD.md` | DoD Code-Viewer v0.1 (Phasen 6–10, MorphOS) |

@@ -1,6 +1,7 @@
 # Handlungsanweisung: MorphOS-Laufzeit (für Agenten)
 
-**Gemeinsam (alle MorphOS-Projekte):** [../../docs/HANDLUNGSANWEISUNG-MORPHOS.md](../../docs/HANDLUNGSANWEISUNG-MORPHOS.md) · [../../docs/HANDLUNGSANWEISUNG-MORPHOS-MUI.md](../../docs/HANDLUNGSANWEISUNG-MORPHOS-MUI.md)
+**Diese Datei ist für AmigaGPT vollständig** (auch bei GitHub-Klon ohne `morphos/docs`).  
+Übergreifende MorphOS-Learnings im Workspace: `~/development/morphos/docs/` — siehe [DOKUMENTATION-WORKSPACE.md](DOKUMENTATION-WORKSPACE.md) (keine relativen Links nach oben im Repo).
 
 Verbindliche Ergänzung zu [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) (Build, Paketieren, Commit).  
 Gilt für **alle** Änderungen an MorphOS-UI, MUI, Scintilla, Menüs, Shutdown und Chat-Anzeige — **nur AmigaGPT**.
