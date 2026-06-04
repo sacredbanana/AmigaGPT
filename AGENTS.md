@@ -36,7 +36,9 @@ Start: `docs/README.md`
 | `docs/MORPHOS-SDK-ERGAENZUNGEN.md` | Exact SDK supplements (BIGFOOT vs AmigaSDK-gcc) |
 | `docs/MORPHOS-RELEASE-NOTES.md` | Fork release notes (e.g. 2.18); `CHANGELOG.md` = upstream |
 | `docs/WSL-SETUP-STATUS.md` | WSL environment setup status / checklist (DE) |
-| `tools/test-utf8stream.sh` | Host unit tests for `utf8stream` (WSL `gcc`) |
+| `tools/test-utf8stream.sh` | Host tests: `utf8stream` (WSL `gcc`) |
+| `tools/test-chatmd-markers.sh` | Host tests: Kursiv/Fett-`*` Heuristik (`chatmd_markers.c`) |
+| `tools/test-codefence.sh` | Host tests: Fence-Parser 3+ Backticks (`codefence.c`) |
 
 ## Build & test loop (MorphOS) — mandatory
 

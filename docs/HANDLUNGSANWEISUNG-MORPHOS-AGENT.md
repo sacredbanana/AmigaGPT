@@ -1,7 +1,9 @@
 # Handlungsanweisung: MorphOS-Laufzeit (für Agenten)
 
+**Gemeinsam (alle MorphOS-Projekte):** [../../docs/HANDLUNGSANWEISUNG-MORPHOS.md](../../docs/HANDLUNGSANWEISUNG-MORPHOS.md) · [../../docs/HANDLUNGSANWEISUNG-MORPHOS-MUI.md](../../docs/HANDLUNGSANWEISUNG-MORPHOS-MUI.md)
+
 Verbindliche Ergänzung zu [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) (Build, Paketieren, Commit).  
-Gilt für **alle** Änderungen an MorphOS-UI, MUI, Scintilla, Menüs, Shutdown und Chat-Anzeige.
+Gilt für **alle** Änderungen an MorphOS-UI, MUI, Scintilla, Menüs, Shutdown und Chat-Anzeige — **nur AmigaGPT**.
 
 ---
 
@@ -94,7 +96,7 @@ Parent-Fenster: `get(mainWindowObject, MUIA_Window, &w)` oder `codeBlocksViewerS
 | **`SCLEX_MARKDOWN` im Chat** | **Nicht** — Lexer wirkungslos; Menü „Markdown formatting“ schaltet **Midi-Markdown** (`chatOutputScintillaBuildMidiMarkdownDisplay`) |
 | **Zeilenumbruch** | Menü *Wrap long lines (chat)*, `config.chatLineWrap` → `chatOutputScintillaApplyLineWrap()` — **nur MorphOS** (`#ifdef __MORPHOS__` in `menu.c`); kein Port auf NFloattext-Targets |
 | Stream | Roh-UTF-8 während Stream; kein Markdown-Parse pro Chunk (R3). **MorphOS:** `morphosChatStreamRawScintillaRefresh` — live nur `SetUtf8TextWithRoleStyles` (roh), Midi-Markdown/Links erst nach `finishChatStream` → `displayConversation`. |
-| Code-Fences | Parser in `codefence.c`; Chat zeigt `[Codeblock n]` oder Roh-`raw_utf8` — Diagnose über **Export raw** |
+| Code-Fences | Parser in `codefence.c` (3+ Backticks, CommonMark-Schließen); Chat `[Codeblock n]` oder Roh-`raw_utf8`; **Export raw**; Host-Test `tools/test-codefence.sh` |
 | Chat-Wechsel | `displayConversation` → volle Markdown-Pipeline; Heading-Zeilen **einmal pro Zeile** berechnen (kein Rückscan pro Byte) |
 | Scintilla-Wheel zwischen Fenstern | **Bekannte MorphOS/Scintilla.mcc-Einschränkung:** Rest-Scroll kann beim Wechsel Chat-Scintilla ↔ Code-Scintilla übernommen werden (auch in anderen Scintilla-Apps reproduzierbar). App-seitige Workarounds nur zurückhaltend einsetzen, da sie Stabilität/UX verschlechtern können. |
 

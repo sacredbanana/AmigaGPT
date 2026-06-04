@@ -33,6 +33,7 @@ Basis upstream: **2.17.0** (Dezember 2025). Nur **MorphOS** in diesem Block voll
 
 - Eigenes Fenster **Codeblöcke** mit Scintilla und Syntax-Highlighting.
 - Copy/Save UTF-8 und System-Codeset; sicheres Schließen beim Chat-Wechsel und Quit.
+- Fence-Parser: **3+ Backticks** (z. B. ` ```` `), Schließen mit gleicher/längerer Länge — zuverlässigere Codeblock-Erkennung in Raw/Viewer (Host-Test: `tools/test-codefence.sh`).
 
 ### Einstellungen & Daten
 

@@ -50,7 +50,7 @@ Ergebnis in WSL: `out/AmigaGPT-MorphOS-cross.lha` (+ lokales Staging `out/packag
 
 ## Host-Tests (WSL, ohne MorphOS)
 
-Logik-Tests mit normalem `gcc` — z. B. **UTF-8-Stream-Puffer** (`src/utf8stream.c`):
+Logik-Tests mit normalem `gcc` — z. B. **UTF-8-Stream** (`utf8stream.c`), **Midi-Markdown Delimiter** (`chatmd_markers.c`), **Code-Fences** (`codefence.c`):
 
 ```bash
 ~/development/morphos/AmigaGPT/tools/test-utf8stream.sh

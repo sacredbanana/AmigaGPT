@@ -506,7 +506,7 @@ Paste im read-only Code-Viewer: weiterhin **kein** Ziel.
 
 **Phase 4 (Minimal-Fence-Parser)**
 
-- `src/codefence.c` / `codefence.h` — erkennt Zeilen mit öffnendem ` ``` ` (optional Sprache in derselben Zeile) und schließendem ` ``` ` am Zeilenanfang; füllt `codeblocks` mit `struct AICodeBlock` (`language`, `raw_code`, `code_length`). Unvollständiges schließendes Fence am Textende wird ignoriert.
+- `src/codefence.c` / `codefence.h` — CommonMark-Fences: **3+ Backticks** auf eigener Zeile (bis 3 Spalten Einrückung); Schließen mit **gleicher oder längerer** Backtick-Folge; optional Sprache in der Öffnungszeile. Füllt `codeblocks` mit `struct AICodeBlock` (`language`, `raw_code`, `code_length`). Unvollständiges schließendes Fence am Textende wird ignoriert. Host-Tests: `tools/test-codefence.sh`.
 - Aufruf aus `addTextToConversation()` in `gui.c` — jede neue Nachricht (inkl. Import/Kopie) wird geparst.
 
 **Phase 5.1 (Chat vs. Code, ohne Scintilla)**

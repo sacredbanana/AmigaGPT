@@ -127,7 +127,7 @@ Im gesamten Repo (`src/*.c`, Rexx unter `bundle/`) gibt es **kein** `Delete("RAM
 
 ### S6 — Unvollständige Code-Fences
 
-- **Trigger:** `codefence.c` — schließendes ` ``` ` am Zeilenanfang fehlt (abgeschnittener Stream, Modell vergisst Fence).
+- **Trigger:** `codefence.c` — schließendes Fence (3+ Backticks, eigene Zeile) fehlt (abgeschnittener Stream, Modell vergisst Fence).
 - **Heute:** Kein Block / kein `display_text`; Roh-``` im Chat.
 - **Soll (R4, optional):** Unverändert dokumentieren **oder** Heuristik „offenes Fence bis EOF“ als ein Block (bewusst riskant).
 
@@ -238,7 +238,7 @@ Details: [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md#recovery-r2--rest-b
 |---|---------|
 | R4.1 | Dokumentierte Entscheidung: unvollständiges Fence am Ende → kein Block **oder** ein Block bis EOF |
 | R4.2 | Phase-9-Log: `T:amigagpt_stream.log` — letzte SSE-Zeile, Outcome, Länge `receivedMessage` |
-| R4.3 | Host-Test: Fence-Parser mit abgeschnittenem Closing (bereits `codefence` / ggf. erweitern) |
+| R4.3 | Host-Test Fence-Parser — **erledigt (2026-06):** `tools/test-codefence.sh` (`src/test/codefence_host_test.c`); inkl. unvollständiges Closing, 3/4+ Backticks, zu kurzes Schließen |
 
 ---
 

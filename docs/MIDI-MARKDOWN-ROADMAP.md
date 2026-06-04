@@ -22,7 +22,7 @@ Parser-Reihenfolge in `chatOutputScintilla.c` / `MainWindow.c` (`parseMarker` / 
 | **Unterstreichen** `__` | **Naiv:** jedes `__` = Toggle (wie Fett). | Gleiche pragmatische Linie wie Fett. |
 | **Inline-Code** `` ` `` | Einzelnes Backtick öffnet/schließt; Delimiter werden nicht angezeigt. Mono + hellgrauer Hintergrund (`CHAT_OUTPUT_STYLE_MD_CODE`). Nur bei *Markdown formatting* an; ` ``` ` (Fence) bleibt literal. | Häufig in GPT-Antworten; kein Lexer nötig. |
 
-Host-Tests nur für Kursiv: `tools/test-chatmd-markers.sh` → `out/chatmd_markers_host_test`. Erweiterung auf Fett (`x**2`, …) erst bei realem Bedarf — nicht geplant für v0.1.
+Host-Tests (WSL, ohne MorphOS): Kursiv/Fett-`*` — `tools/test-chatmd-markers.sh`; Code-Fences (3+ Backticks) — `tools/test-codefence.sh`. Erweiterung Marker-Tests (`x**2`, …) bei Bedarf.
 
 Bekannte Einschränkung (MorphOS/Scintilla.mcc): Beim Wechsel zwischen Chat-Scintilla und Code-Scintilla kann Rest-Scroll/Wheel-Zustand übernommen werden ("Scroll-Vererbung"). Gleiches Verhalten ist auch in anderen Scintilla-Apps auf MorphOS reproduzierbar; aggressive App-Workarounds wurden zurückgebaut.
 
