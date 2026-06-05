@@ -16,6 +16,7 @@
 | [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)       | Plan Scintilla.mcc, Phasen 6–13; **6–12 erledigt** (MorphOS)                         |
 | [PHASE-10-DOD.md](PHASE-10-DOD.md)                           | **DoD Code-Viewer v0.1** (Phasen 6–10, MorphOS-Abnahme)                            |
 | [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md)     | **Phase 12 + 12.1** Chat-Scintilla, Midi-Markdown, Hotspots, Testplan (MorphOS)     |
+| [CHAT-FIND-SCINTILLA.md](CHAT-FIND-SCINTILLA.md)               | Chat-Suche + User-Sprünge (MorphOS, Scintilla)                                      |
 | [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md)         | Prioritäten Export / Midi-Markdown / Hotspots / Tabellen / Zeilenumbruch             |
 | [PHASE-11-LEXER.md](PHASE-11-LEXER.md)                       | Phase 11 Syntax-Highlighting im Code-Viewer                                          |
 | [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md)         | Phase 8 String-Safety (8.1–8.4)                                                    |
@@ -37,9 +38,9 @@
 cd ~/development/morphos/AmigaGPT
 export PATH="$HOME/development/morphos/flexcat/src/bin_unix:$PATH"
 make -f Makefile.MorphOS              # je Lauf: BUILD_NUMBER + Datum; Anzeige = 2.18.<build>
-./ship-morphos.sh                       # = make -f Makefile.MorphOS ship (Standard nach Code-Änderung)
+bash ship-morphos.sh                     # = make -f Makefile.MorphOS ship (Standard nach Code-Änderung)
 make -f Makefile.MorphOS ship           # build + daemon + package + Z:
-./package-morphos-cross.sh            # BUILD=0 überspringt Make, wenn Binary schon da
+BUILD=0 bash package-morphos-cross.sh  # nur Paket, wenn Binary schon da (kein chmod nötig)
 ```
 
 **Paketieren** (verbindlich): siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) Abschnitt 8 — WSL legt `**AmigaGPT-MorphOS-cross.lha`** nach **`Z:\morphos\out-crosscompile\`** (nur die LHA, kein Ordner `package-morphos` auf Z:). Ob die LHA auf MorphOS aktuell ist, prüft das **MorphOS-Deploy-Skript** (liegt nicht in diesem Repo). Deploy-Fehler → Exit 1.
@@ -67,7 +68,7 @@ Logik-Tests mit normalem `gcc` — z. B. **UTF-8-Stream** (`utf8stream.c`), **
 | `src/test/Makefile.utf8stream`    | `make test`            |
 | `tools/test-utf8stream.sh`        | Wrapper                |
 | `out/utf8stream_host_test`        | Binary (nach dem Lauf) |
-| `tools/test-chatmd-markers.sh`    | Nur Kursiv-`*` (Delimiter); Fett `**` ohne Extra-Tests — siehe [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md#delimiter-policy-keine-markdown-bibliothek) |
+| `tools/test-chatmd-markers.sh`    | Kursiv/Fett-`*` (inkl. `x**2`-Heuristik) — [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md#delimiter-policy-keine-markdown-bibliothek) |
 | `out/chatmd_markers_host_test`    | Binary (nach dem Lauf) |
 | `tools/test-codefence.sh`         | Fence-Parser (3+ Backticks, CommonMark-Schließen) |
 | `out/codefence_host_test`         | Binary (nach dem Lauf) |
@@ -102,7 +103,7 @@ Ausführlich: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) (inkl. Prüfung: 
 | Bereich | Umsetzung |
 | ------- | --------- |
 | Chat-Scintilla | NFloattext ersetzt; Role-Styles User/Assistant; Restart-Stabilität — [MORPHOS-STABILITAET.md](MORPHOS-STABILITAET.md) |
-| Midi-Markdown | `**` / `*` / `__`, `#`-Überschriften, `` `inline code` ``; Emoji→Text nur bei *Markdown formatting* |
+| Midi-Markdown | `**` / `*` / `__`, `#`–`######` (H1–H6 Größe), `` `inline code` ``; Emoji→Text nur bei *Markdown formatting* |
 | Stream | Live-Roh-UTF-8 (R3); Append-Delta; volles Markdown nach Stream-Ende |
 | Hotspots **3a** | `[Codeblock n]` → Code-Viewer |
 | Hotspots **3b** | Bare `https://` + `[Label](url)` → `openurl.library` |

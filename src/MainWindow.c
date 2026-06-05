@@ -25,6 +25,7 @@
 #include "openai.h"
 #ifdef __MORPHOS__
 #include <mui/Scintilla_mcc.h>
+#include "ChatFindScintilla.h"
 #include "ChatOutputScintilla.h"
 #include "CodeBlocksViewer.h"
 #endif
@@ -1570,6 +1571,10 @@ void chatOutputUpdateFromBuffer(BOOL preserveViewport) {
         streamLogLifecycle("chatOutputUpdateFromBuffer empty");
         chatOutputScintillaSetUtf8TextWithRoleStyles(chatOutputTextEditor, "", NULL, 0,
                                                      preserveViewport);
+#ifdef __MORPHOS__
+        chatUserNavClear();
+        chatFindScintillaUpdateCounter(chatOutputTextEditor);
+#endif
         return;
     }
 
@@ -1599,6 +1604,10 @@ void chatOutputUpdateFromBuffer(BOOL preserveViewport) {
                                 textLen, roleStyles, textLen)) {
                             streamLogLifecycle(
                                 "chatOutputUpdateFromBuffer scintilla append done");
+#ifdef __MORPHOS__
+                            chatUserNavRebuild(roleStyles, textLen);
+                            chatFindScintillaUpdateCounter(chatOutputTextEditor);
+#endif
                             FreeVec(roleStyles);
                             return;
                         }
@@ -1619,6 +1628,10 @@ void chatOutputUpdateFromBuffer(BOOL preserveViewport) {
                         roleStyles, textLen, preserveViewport);
                     streamLogLifecycle(
                         "chatOutputUpdateFromBuffer scintilla raw done");
+#ifdef __MORPHOS__
+                    chatUserNavRebuild(roleStyles, textLen);
+                    chatFindScintillaUpdateCounter(chatOutputTextEditor);
+#endif
                     FreeVec(roleStyles);
                     return;
                 }
@@ -1650,6 +1663,10 @@ void chatOutputUpdateFromBuffer(BOOL preserveViewport) {
                     chatOutputTextEditor, displayText, displayStyles, textLen,
                     preserveViewport);
                 streamLogLifecycle("chatOutputUpdateFromBuffer scintilla set done");
+#ifdef __MORPHOS__
+                chatUserNavRebuild(displayStyles, textLen);
+                chatFindScintillaUpdateCounter(chatOutputTextEditor);
+#endif
                 FreeVec(displayText);
                 FreeVec(displayStyles);
             } else {
@@ -1667,6 +1684,10 @@ void chatOutputUpdateFromBuffer(BOOL preserveViewport) {
                     chatOutputTextEditor, chatOutputTextEditorContents,
                     roleStyles, textLen, preserveViewport);
                 streamLogLifecycle("chatOutputUpdateFromBuffer scintilla fallback done");
+#ifdef __MORPHOS__
+                chatUserNavRebuild(roleStyles, textLen);
+                chatFindScintillaUpdateCounter(chatOutputTextEditor);
+#endif
             }
 
             FreeVec(roleStyles);
@@ -1886,6 +1907,10 @@ LONG createMainWindow() {
     }
 #ifndef __MORPHOS__
     (void)createChatOutputFloattextClass();
+#else
+    if (!chatFindScintillaInit()) {
+        streamLogLifecycle("createMainWindow chat find init failed");
+    }
 #endif
 
     if (mainWindowObject != NULL) {
@@ -2011,12 +2036,15 @@ LONG createMainWindow() {
                             // Chat output text display
                             Child, HGroup, MUIA_VertWeight, 60,
 #ifdef __MORPHOS__
-                                Child, chatOutputScroller = ScrollgroupObject,
+                                Child, VGroup,
+                                    Child, chatFindScintillaGetBar(),
+                                    Child, chatOutputScroller = ScrollgroupObject,
                                     MUIA_Scrollgroup_AutoBars, TRUE,
                                     MUIA_Scrollgroup_Contents,
                                         chatOutputTextEditor = ScintillaObject,
                                         MUIA_Frame, MUIV_Frame_Text,
                                     End,
+                                End,
                                 End,
 #else
                                 Child, chatOutputListView = NListviewObject,
@@ -2142,6 +2170,11 @@ LONG createMainWindow() {
     streamLogLifecycle("createMainWindow OM_ADDMEMBER done");
 
     addMainWindowActions();
+
+#ifdef __MORPHOS__
+    chatFindScintillaSetContext(mainWindowObject, chatOutputTextEditor);
+    chatFindScintillaWireToApp(app);
+#endif
 
     /* Once before open; second Load after loadConversations broke NList on restart. */
     streamLogLifecycle("createMainWindow Application_Load begin");
@@ -2286,6 +2319,8 @@ void mainWindowPrepareShutdown(void) {
     morphosFlushPendingPushMethods();
     /* Close code viewer + drop chat notifies while main window is still open. */
     codeBlocksViewerCloseWindow();
+    chatFindScintillaHide();
+    chatUserNavClear();
     chatOutputScintillaQuiesceForShutdown(chatOutputTextEditor);
     chatOutputScintillaDetachNotify();
     /* No SCI_CLEARALL/SETTEXT on quit — can freeze MorphOS after styled large docs. */

@@ -1555,3 +1555,48 @@ msgstr "Chat-Schrift vergrößern"
 msgctxt "STRING_MENU_CHAT_FONT_SMALLER (284//)"
 msgid "Decrease chat font size"
 msgstr "Chat-Schrift verkleinern"
+
+#: src/menu.c
+msgctxt "STRING_MENU_FIND (285//)"
+msgid "Find..."
+msgstr "Suchen..."
+
+#: src/menu.c
+msgctxt "STRING_MENU_FIND_NEXT (286//)"
+msgid "Find next"
+msgstr "Weitersuchen"
+
+#: src/menu.c
+msgctxt "STRING_FIND_PROMPT (287//)"
+msgid "Find:"
+msgstr "Suchen:"
+
+#: src/menu.c
+msgctxt "STRING_FIND_PREVIOUS (288//)"
+msgid "Previous"
+msgstr "Zurück"
+
+#: src/menu.c
+msgctxt "STRING_FIND_NEXT (289//)"
+msgid "Next"
+msgstr "Weiter"
+
+#: src/menu.c
+msgctxt "STRING_FIND_CLOSE (290//)"
+msgid "Close"
+msgstr "Schließen"
+
+#: src/menu.c
+msgctxt "STRING_FIND_MATCHES (291//)"
+msgid "%ld of %ld"
+msgstr "%ld von %ld"
+
+#: src/menu.c
+msgctxt "STRING_CHAT_USER_PREV (292//)"
+msgid "Prev question"
+msgstr "Vorherige Frage"
+
+#: src/menu.c
+msgctxt "STRING_CHAT_USER_NEXT (293//)"
+msgid "Next question"
+msgstr "Nächste Frage"

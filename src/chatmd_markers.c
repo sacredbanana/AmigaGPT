@@ -214,14 +214,30 @@ static BOOL chatMdBoldDoubleStarLeftFlanking(const char *input, ULONG pos, ULONG
 }
 
 /*
+ * Exponent / math: `x**2`, `a**10` — not emphasis (GPT often uses ** for powers).
+ */
+static BOOL chatMdBoldExponentHeuristic(const char *input, ULONG pos, ULONG len) {
+    if (pos == 0 || pos + 2 >= len) {
+        return FALSE;
+    }
+    if (!chatMdIsAsciiAlnum(input[pos - 1])) {
+        return FALSE;
+    }
+    return chatMdIsAsciiDigit(input[pos + 2]);
+}
+
+/*
  * Bold `**`: open with left-flanking on content after the pair; close always allowed
- * (e.g. satzende.** hier). Reject open for `**.`.
+ * (e.g. satzende.** hier). Reject open for `**.` and `x**2`.
  */
 BOOL chatMdBoldDoubleStarCanOpen(const char *input, ULONG pos, ULONG len) {
     if (input == NULL || !chatMdBoldDoubleStarAt(input, pos, len)) {
         return FALSE;
     }
     if (chatMdItalicStarIsEscaped(input, pos, len)) {
+        return FALSE;
+    }
+    if (chatMdBoldExponentHeuristic(input, pos, len)) {
         return FALSE;
     }
     if (pos + 2 < len && input[pos + 2] == '.') {
@@ -238,4 +254,55 @@ BOOL chatMdBoldDoubleStarCanClose(const char *input, ULONG pos, ULONG len) {
         return FALSE;
     }
     return TRUE;
+}
+
+static BOOL chatMdInlineBacktickHasCloseOnLine(const char *input, ULONG pos, ULONG len) {
+    ULONG i;
+
+    for (i = pos + 1; i < len && input[i] != '\n'; i++) {
+        if (input[i] == '`' && input[i - 1] != '\\') {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/*
+ * GPT/German text often uses ` instead of apostrophe (Wenn`s). Treat as literal
+ * when sandwiched between word chars with no closing ` before whitespace.
+ */
+static BOOL chatMdInlineBacktickIsApostrophe(const char *input, ULONG pos, ULONG len) {
+    ULONG i;
+
+    if (pos == 0 || pos + 1 >= len || input[pos] != '`') {
+        return FALSE;
+    }
+    if (!chatMdIsAsciiAlnum(input[pos - 1]) || !chatMdIsAsciiAlnum(input[pos + 1])) {
+        return FALSE;
+    }
+    for (i = pos + 1; i < len && input[i] != '\n'; i++) {
+        if (input[i] == '`') {
+            return FALSE;
+        }
+        if (input[i] == ' ' || input[i] == '\t') {
+            break;
+        }
+    }
+    return TRUE;
+}
+
+BOOL chatMdInlineBacktickCanOpen(const char *input, ULONG pos, ULONG len) {
+    if (input == NULL || pos >= len || input[pos] != '`') {
+        return FALSE;
+    }
+    if (pos > 0 && input[pos - 1] == '\\') {
+        return FALSE;
+    }
+    if (pos + 1 < len && input[pos + 1] == '`') {
+        return FALSE;
+    }
+    if (chatMdInlineBacktickIsApostrophe(input, pos, len)) {
+        return FALSE;
+    }
+    return chatMdInlineBacktickHasCloseOnLine(input, pos, len);
 }

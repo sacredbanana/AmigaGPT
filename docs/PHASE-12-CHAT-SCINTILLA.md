@@ -18,6 +18,7 @@ Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8T
 | Datei | Rolle |
 |-------|--------|
 | [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) | Init, `SetUtf8Text`, Font; **3a:** Codeblock-Hotspot → deferred `codeBlocksViewerOpenAtIndexWithToken()`; **3b:** URL-Hotspot → `URL_OpenA`; gemeinsam: `SCIA_Notify`, `SCN_HOTSPOTRELEASECLICK`, `SCI_GETSTYLEAT`, `SCN_HOTSPOTCLICK` + `SCI_CANCEL` |
+| [ChatFindScintilla.c](../src/ChatFindScintilla.c) | Chat-Suchleiste (`SCI_FINDTEXT`), User-Frage-Sprünge; siehe [CHAT-FIND-SCINTILLA.md](CHAT-FIND-SCINTILLA.md) |
 | [CodeBlocksViewer.c](../src/CodeBlocksViewer.c) | `codeBlocksViewerOpenAtIndex` / `OpenAtIndexWithToken`, `Dismiss`, Menü `ScheduleOpenWindow` |
 | [MainWindow.c](../src/MainWindow.c) | Layout, `displayConversation`, Stream, `sendChatMessage`, Clear |
 | [CodeBlocksScintilla.c](../src/CodeBlocksScintilla.c) | `codeBlocksScintillaCommand` (SCI_*) |
@@ -34,6 +35,7 @@ Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloatt
 - **Feste Schriftbreite** — `config.fixedWidthFonts` → Chat-Scintilla Mono vs. Sans
 - **Chat-Schrift vergrößern/verkleinern** — `config.chatFontSize`
 - **Increase / Decrease chat font size** — `config.chatFontSize` (8–24 pt)
+- **Bearbeiten → Suchen… / Weitersuchen** — Chat-Suchleiste ([CHAT-FIND-SCINTILLA.md](CHAT-FIND-SCINTILLA.md)); Amiga-F / Amiga-G
 
 ## Nicht in Phase 12
 
@@ -55,12 +57,13 @@ Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloatt
 6. Code-Fence-Platzhalter im Chat; Code-Viewer unverändert
 7. **Feste Schriftbreite** an/aus → Chat Mono vs. Sans
 8. **Export chat (raw)** → Datei mit `raw_utf8`, Fences sichtbar
-9. **Markdown formatting** an: `**fett**`, `*kursiv*`, `__unterstrichen__`, `` `inline code` `` (Mono, grauer Hintergrund), `# Überschrift` nur bei Assistant; Emoji Assistant z. B. 🌍→`[Welt]`, 👍→`(+1)` (nur Anzeige); innerhalb `` `...` `` keine `*`/`**`/Links/Emoji
+9. **Markdown formatting** an: `**fett**`, `*kursiv*`, `__unterstrichen__`, `` `inline code` `` (Mono, grauer Hintergrund), `#`–`######` Überschriften (H1 größer … H6 leicht größer, nur Assistant); Emoji Assistant z. B. 🌍→`[Welt]`, 👍→`(+1)` (nur Anzeige); `x**2` bleibt literal (kein Fett); `Wenn`s` / `Wenn's` mit Grave-Accent **kein** grauer Rest der Zeile; `` `Januar` `` weiterhin Inline-Code; innerhalb `` `...` `` keine `*`/`**`/Links/Emoji
 10. **Markdown formatting** aus: Emoji unverändert (oft □)
 11. User vs. Assistant visuell unterscheidbar (Role-Styles: User fett/blau/grau, Assistant schwarz)
 12. **[Codeblock n]** (3a): blauer Link → Code-Viewer, Block `n` aktiv
 13. **Bare URL + Markdown-Link** (3b): `https://…` klickbar; `[Siehe hier](https://…)` zeigt nur Label, Klick öffnet URL; `([Label](https://…))` mit äußeren Klammern sichtbar
 14. **Pipe-Tabelle** (3c): Assistant-Tabelle nach Antwort-Ende ausgerichtet; Mono besser als Sans; Export/raw enthält ungepaddete Markdown-Tabelle
+15. **Chat-Suche** ([CHAT-FIND-SCINTILLA.md](CHAT-FIND-SCINTILLA.md)): *Suchen…* (Amiga-F), Treffer + x von y, Return = Weiter; User *Vorherige/Nächste Frage* + Zähler; Chat wechseln / Schließen ohne Crash
 
 ## Phase 12.1 / Midi-Markdown — abgeschlossen
 

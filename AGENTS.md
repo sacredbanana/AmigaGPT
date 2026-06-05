@@ -47,7 +47,7 @@ Start: `docs/README.md` · Policy: `docs/DOKUMENTATION-WORKSPACE.md`
 Preferred one-liner:
 
 ```bash
-./ship-morphos.sh
+bash ship-morphos.sh
 # or: make -f Makefile.MorphOS ship
 ```
 

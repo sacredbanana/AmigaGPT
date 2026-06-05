@@ -5,6 +5,9 @@
 
 #include <libraries/mui.h>
 
+/** Role style byte for user messages in chat Scintilla display buffer. */
+#define CHAT_OUTPUT_STYLE_USER 1
+
 /** Clear markdown `[label](http…)` URL span cache (e.g. when display bypasses buildMidiMarkdown). */
 void chatOutputScintillaForgetMarkdownLinkSpans(void);
 

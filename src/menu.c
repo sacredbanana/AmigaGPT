@@ -40,6 +40,24 @@
 /* msgid "No conversation is open to export." */
 /* msgctxt "STRING_ERROR_CHAT_EXPORT_SAVE" */
 /* msgid "Could not save the chat export." */
+/* msgctxt "STRING_MENU_FIND" */
+/* msgid "Find..." */
+/* msgctxt "STRING_MENU_FIND_NEXT" */
+/* msgid "Find next" */
+/* msgctxt "STRING_FIND_PROMPT" */
+/* msgid "Find:" */
+/* msgctxt "STRING_FIND_PREVIOUS" */
+/* msgid "Previous" */
+/* msgctxt "STRING_FIND_NEXT" */
+/* msgid "Next" */
+/* msgctxt "STRING_FIND_CLOSE" */
+/* msgid "Close" */
+/* msgctxt "STRING_FIND_MATCHES" */
+/* msgid "%ld of %ld" */
+/* msgctxt "STRING_CHAT_USER_PREV" */
+/* msgid "Prev question" */
+/* msgctxt "STRING_CHAT_USER_NEXT" */
+/* msgid "Next question" */
 #include "ProxySettingsRequesterWindow.h"
 #include "VoiceInstructionsRequesterWindow.h"
 #include "version.h"
@@ -558,7 +576,17 @@ void createMenu() {
     MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
     MUIA_Menuitem_Title, STRING_MENU_SELECT_ALL, MUIA_UserData,
     MENU_ITEM_EDIT_SELECT_ALL, MUIA_Menuitem_Shortcut, "A",
-    MUIA_Menuitem_CopyStrings, FALSE, End, End,
+    MUIA_Menuitem_CopyStrings, FALSE, End,
+#ifdef __MORPHOS__
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, NM_BARLABEL,
+    MUIA_Menuitem_CopyStrings, FALSE, End, MUIA_Family_Child, MenuitemObject,
+    MUIA_Menuitem_Title, STRING_MENU_FIND, MUIA_UserData, MENU_ITEM_EDIT_FIND,
+    MUIA_Menuitem_Shortcut, "F", MUIA_Menuitem_CopyStrings, FALSE, End,
+    MUIA_Family_Child, MenuitemObject, MUIA_Menuitem_Title, STRING_MENU_FIND_NEXT,
+    MUIA_UserData, MENU_ITEM_EDIT_FIND_NEXT, MUIA_Menuitem_Shortcut, "G",
+    MUIA_Menuitem_CopyStrings, FALSE, End,
+#endif
+    End,
 
     MUIA_Family_Child, MenuObject, MUIA_Menu_Title, STRING_MENU_VIEW,
     MUIA_Menu_CopyStrings, FALSE, MUIA_Family_Child, MenuitemObject,
@@ -1068,6 +1096,20 @@ void addMenuActions() {
     DoMethod(exportChatRawMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &ExportChatRawMenuItemClickedHook);
+
+#ifdef __MORPHOS__
+    Object findMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_FIND);
+    DoMethod(findMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
+             MUIV_Notify_Application, 2, MUIM_Application_ReturnID,
+             APP_ID_CHAT_FIND_SHOW);
+
+    Object findNextMenuItem =
+        (Object)DoMethod(menuStrip, MUIM_FindUData, MENU_ITEM_EDIT_FIND_NEXT);
+    DoMethod(findNextMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
+             MUIV_EveryTime, MUIV_Notify_Application, 2,
+             MUIM_Application_ReturnID, APP_ID_CHAT_FIND_NEXT);
+#endif
 
 #ifdef __MORPHOS__
     refreshViewCodeBlocksMenuState();

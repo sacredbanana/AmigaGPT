@@ -24,4 +24,10 @@ BOOL chatMdItalicStarCanClose(const char *input, ULONG pos, ULONG len);
 BOOL chatMdBoldDoubleStarCanOpen(const char *input, ULONG pos, ULONG len);
 BOOL chatMdBoldDoubleStarCanClose(const char *input, ULONG pos, ULONG len);
 
+/**
+ * Single `` ` `` at pos may open inline code (not already inside code).
+ * Rejects orphan backticks and letter`letter apostrophe (e.g. Wenn`s).
+ */
+BOOL chatMdInlineBacktickCanOpen(const char *input, ULONG pos, ULONG len);
+
 #endif

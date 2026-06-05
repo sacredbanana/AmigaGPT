@@ -27,5 +27,5 @@ if [[ ! -f "$marker" ]]; then
 fi
 
 rm -f "$marker"
-printf '%s\n' '{"followup_message":"MorphOS packaging is still required: run BUILD=0 ./package-morphos-cross.sh or ./ship-morphos.sh from morphos/AmigaGPT and report version, MD5, and Z: deploy path."}'
+printf '%s\n' '{"followup_message":"MorphOS packaging is still required: run BUILD=0 bash package-morphos-cross.sh or bash ship-morphos.sh from morphos/AmigaGPT and report version, MD5, and Z: deploy path."}'
 exit 0

@@ -1530,6 +1530,51 @@ msgctxt "STRING_MENU_CHAT_FONT_SMALLER (284//)"
 msgid "Decrease chat font size"
 msgstr "Decrease chat font size"
 
+#: src/menu.c
+msgctxt "STRING_MENU_FIND (285//)"
+msgid "Find..."
+msgstr "Find..."
+
+#: src/menu.c
+msgctxt "STRING_MENU_FIND_NEXT (286//)"
+msgid "Find next"
+msgstr "Find next"
+
+#: src/menu.c
+msgctxt "STRING_FIND_PROMPT (287//)"
+msgid "Find:"
+msgstr "Find:"
+
+#: src/menu.c
+msgctxt "STRING_FIND_PREVIOUS (288//)"
+msgid "Previous"
+msgstr "Previous"
+
+#: src/menu.c
+msgctxt "STRING_FIND_NEXT (289//)"
+msgid "Next"
+msgstr "Next"
+
+#: src/menu.c
+msgctxt "STRING_FIND_CLOSE (290//)"
+msgid "Close"
+msgstr "Close"
+
+#: src/menu.c
+msgctxt "STRING_FIND_MATCHES (291//)"
+msgid "%ld of %ld"
+msgstr "%ld of %ld"
+
+#: src/menu.c
+msgctxt "STRING_CHAT_USER_PREV (292//)"
+msgid "Prev question"
+msgstr "Prev question"
+
+#: src/menu.c
+msgctxt "STRING_CHAT_USER_NEXT (293//)"
+msgid "Next question"
+msgstr "Next question"
+
 #~ msgctxt "STRING_MENU_COPY_CODEBLOCK_SYSTEM (269//)"
 #~ msgid "Copy (system)"
 #~ msgstr "Copy (system)"

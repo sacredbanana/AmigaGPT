@@ -22,8 +22,9 @@ Danach:
 
 ```bash
 cd ~/development/morphos/AmigaGPT
-chmod +x package-morphos-cross.sh
-./package-morphos-cross.sh
+bash package-morphos-cross.sh
+# oder: bash ship-morphos.sh  (= make ship)
+# Nur bei Aufruf mit ./ vor dem Skript: chmod +x package-morphos-cross.sh
 
 # optional: Skript nach tools/ (wenn root-Rechte gefixt)
 # sudo chown -R "$USER:$USER" tools && mv package-morphos-cross.sh tools/

@@ -112,6 +112,21 @@ static void test_bold_no_open_on_star_dot(void) {
     ASSERT(!chatMdBoldDoubleStarCanOpen(s, p, (ULONG)strlen(s)), "**. not open");
 }
 
+static void test_bold_no_open_exponent(void) {
+    const char *s;
+    ULONG p;
+
+    s = "x**2";
+    p = strstr(s, "**") - s;
+    ASSERT(!chatMdBoldDoubleStarCanOpen(s, p, (ULONG)strlen(s)), "x**2 not open");
+
+    s = "a**10 and **bold**";
+    p = strstr(s, "**") - s;
+    ASSERT(!chatMdBoldDoubleStarCanOpen(s, p, (ULONG)strlen(s)), "a**10 not open");
+    p = (ULONG)(strstr(s, "and ") - s + 4);
+    ASSERT(chatMdBoldDoubleStarCanOpen(s, p, (ULONG)strlen(s)), "**bold** opens");
+}
+
 static void test_escaped_and_quoted_star(void) {
     const char *s;
     ULONG p;
@@ -169,6 +184,30 @@ static void test_perlio_encoding_paren(void) {
            "(*PerlIO::encoding*) close");
 }
 
+static void test_inline_backtick_open(void) {
+    const char *s;
+    ULONG p;
+
+    s = "Wenn`s an deutschen Monatsnamen liegt";
+    p = strchr(s, '`') - s;
+    ASSERT(!chatMdInlineBacktickCanOpen(s, p, (ULONG)strlen(s)),
+           "Wenn`s apostrophe not code");
+
+    s = "im `Januar` und `Februar`";
+    p = strchr(s, '`') - s;
+    ASSERT(chatMdInlineBacktickCanOpen(s, p, (ULONG)strlen(s)), "Januar open");
+    p = (ULONG)(strstr(s, "Februar") - s - 1);
+    ASSERT(chatMdInlineBacktickCanOpen(s, p, (ULONG)strlen(s)), "Februar open");
+
+    s = "use `foo()` here";
+    p = strchr(s, '`') - s;
+    ASSERT(chatMdInlineBacktickCanOpen(s, p, (ULONG)strlen(s)), "foo() open");
+
+    s = "orphan ` at end";
+    p = strchr(s, '`') - s;
+    ASSERT(!chatMdInlineBacktickCanOpen(s, p, (ULONG)strlen(s)), "orphan not open");
+}
+
 static void test_italic_still_works(void) {
     const char *s = "see *emphasis* here";
     ULONG openAt = strchr(s, '*') - s;
@@ -186,6 +225,8 @@ int main(void) {
     test_bold_open_close();
     test_bold_close_after_period();
     test_bold_no_open_on_star_dot();
+    test_bold_no_open_exponent();
+    test_inline_backtick_open();
     test_escaped_and_quoted_star();
     test_footnote_star();
     test_perlio_encoding_paren();
