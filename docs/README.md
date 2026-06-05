@@ -16,6 +16,7 @@
 | [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md)       | Plan Scintilla.mcc, Phasen 6–13; **6–12 erledigt** (MorphOS)                         |
 | [PHASE-10-DOD.md](PHASE-10-DOD.md)                           | **DoD Code-Viewer v0.1** (Phasen 6–10, MorphOS-Abnahme)                            |
 | [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md)     | **Phase 12 + 12.1** Chat-Scintilla, Midi-Markdown, Hotspots, Testplan (MorphOS)     |
+| [CHAT-FIND-SCINTILLA.md](CHAT-FIND-SCINTILLA.md)               | Chat-Suche + User-Sprünge (MorphOS, Scintilla)                                      |
 | [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md)         | Prioritäten Export / Midi-Markdown / Hotspots / Tabellen / Zeilenumbruch             |
 | [PHASE-11-LEXER.md](PHASE-11-LEXER.md)                       | Phase 11 Syntax-Highlighting im Code-Viewer                                          |
 | [PHASE-8-STRING-SAFETY.md](PHASE-8-STRING-SAFETY.md)         | Phase 8 String-Safety (8.1–8.4)                                                    |

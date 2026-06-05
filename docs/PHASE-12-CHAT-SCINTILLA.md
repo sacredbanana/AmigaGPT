@@ -18,6 +18,7 @@ Ersetzt die große Chat-**Ausgabe** im Hauptfenster: NFloattext + `CodesetsUTF8T
 | Datei | Rolle |
 |-------|--------|
 | [ChatOutputScintilla.c](../src/ChatOutputScintilla.c) | Init, `SetUtf8Text`, Font; **3a:** Codeblock-Hotspot → deferred `codeBlocksViewerOpenAtIndexWithToken()`; **3b:** URL-Hotspot → `URL_OpenA`; gemeinsam: `SCIA_Notify`, `SCN_HOTSPOTRELEASECLICK`, `SCI_GETSTYLEAT`, `SCN_HOTSPOTCLICK` + `SCI_CANCEL` |
+| [ChatFindScintilla.c](../src/ChatFindScintilla.c) | Chat-Suchleiste (`SCI_FINDTEXT`), User-Frage-Sprünge; siehe [CHAT-FIND-SCINTILLA.md](CHAT-FIND-SCINTILLA.md) |
 | [CodeBlocksViewer.c](../src/CodeBlocksViewer.c) | `codeBlocksViewerOpenAtIndex` / `OpenAtIndexWithToken`, `Dismiss`, Menü `ScheduleOpenWindow` |
 | [MainWindow.c](../src/MainWindow.c) | Layout, `displayConversation`, Stream, `sendChatMessage`, Clear |
 | [CodeBlocksScintilla.c](../src/CodeBlocksScintilla.c) | `codeBlocksScintillaCommand` (SCI_*) |
@@ -34,6 +35,7 @@ Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloatt
 - **Feste Schriftbreite** — `config.fixedWidthFonts` → Chat-Scintilla Mono vs. Sans
 - **Chat-Schrift vergrößern/verkleinern** — `config.chatFontSize`
 - **Increase / Decrease chat font size** — `config.chatFontSize` (8–24 pt)
+- **Bearbeiten → Suchen… / Weitersuchen** — Chat-Suchleiste ([CHAT-FIND-SCINTILLA.md](CHAT-FIND-SCINTILLA.md)); Amiga-F / Amiga-G
 
 ## Nicht in Phase 12
 
@@ -61,6 +63,7 @@ Nur unter `#ifdef __MORPHOS__` in `menu.c` — OS3/OS4/AROS haben weiter NFloatt
 12. **[Codeblock n]** (3a): blauer Link → Code-Viewer, Block `n` aktiv
 13. **Bare URL + Markdown-Link** (3b): `https://…` klickbar; `[Siehe hier](https://…)` zeigt nur Label, Klick öffnet URL; `([Label](https://…))` mit äußeren Klammern sichtbar
 14. **Pipe-Tabelle** (3c): Assistant-Tabelle nach Antwort-Ende ausgerichtet; Mono besser als Sans; Export/raw enthält ungepaddete Markdown-Tabelle
+15. **Chat-Suche** ([CHAT-FIND-SCINTILLA.md](CHAT-FIND-SCINTILLA.md)): *Suchen…* (Amiga-F), Treffer + x von y, Return = Weiter; User *Vorherige/Nächste Frage* + Zähler; Chat wechseln / Schließen ohne Crash
 
 ## Phase 12.1 / Midi-Markdown — abgeschlossen
 

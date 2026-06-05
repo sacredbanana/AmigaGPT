@@ -19,6 +19,7 @@
 #include <mui/TextEditor_mcc.h>
 #ifdef __MORPHOS__
 #include <mui/Scintilla_mcc.h>
+#include "ChatFindScintilla.h"
 #include "ChatOutputScintilla.h"
 #include "CodeBlocksScintilla.h"
 #include "CodeBlocksViewer.h"
@@ -502,6 +503,32 @@ void startGUIRunLoop() {
         case APP_ID_PRINT:
             printConversation();
             break;
+#ifdef __MORPHOS__
+        case APP_ID_CHAT_FIND_SHOW:
+            chatFindScintillaShow(chatOutputTextEditor);
+            break;
+        case APP_ID_CHAT_FIND_NEXT:
+            chatFindScintillaNext(chatOutputTextEditor);
+            break;
+        case APP_ID_CHAT_FIND_PREV:
+            chatFindScintillaPrev(chatOutputTextEditor);
+            break;
+        case APP_ID_CHAT_FIND_CLOSE:
+            chatFindScintillaHide();
+            break;
+        case APP_ID_CHAT_FIND_STRING_FOCUS:
+            chatFindScintillaOnStringFocus();
+            break;
+        case APP_ID_CHAT_FIND_UPDATE:
+            chatFindScintillaUpdateCounter(chatOutputTextEditor);
+            break;
+        case APP_ID_CHAT_USER_PREV:
+            chatUserNavPrev(chatOutputTextEditor);
+            break;
+        case APP_ID_CHAT_USER_NEXT:
+            chatUserNavNext(chatOutputTextEditor);
+            break;
+#endif
 #endif
         default:
             break;
