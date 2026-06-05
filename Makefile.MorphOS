@@ -98,7 +98,7 @@ daemon: $(DAEMON_OUT)
 
 # Default MorphOS delivery: build + package + Z: (see ship-morphos.sh, AGENTS.md).
 ship: all daemon
-	@BUILD=0 "$(CURDIR)/package-morphos-cross.sh"
+	@BUILD=0 bash "$(CURDIR)/package-morphos-cross.sh"
 
 clean:
 	$(info Cleaning...)

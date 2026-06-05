@@ -37,9 +37,9 @@
 cd ~/development/morphos/AmigaGPT
 export PATH="$HOME/development/morphos/flexcat/src/bin_unix:$PATH"
 make -f Makefile.MorphOS              # je Lauf: BUILD_NUMBER + Datum; Anzeige = 2.18.<build>
-./ship-morphos.sh                       # = make -f Makefile.MorphOS ship (Standard nach Code-Änderung)
+bash ship-morphos.sh                     # = make -f Makefile.MorphOS ship (Standard nach Code-Änderung)
 make -f Makefile.MorphOS ship           # build + daemon + package + Z:
-./package-morphos-cross.sh            # BUILD=0 überspringt Make, wenn Binary schon da
+BUILD=0 bash package-morphos-cross.sh  # nur Paket, wenn Binary schon da (kein chmod nötig)
 ```
 
 **Paketieren** (verbindlich): siehe [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) Abschnitt 8 — WSL legt `**AmigaGPT-MorphOS-cross.lha`** nach **`Z:\morphos\out-crosscompile\`** (nur die LHA, kein Ordner `package-morphos` auf Z:). Ob die LHA auf MorphOS aktuell ist, prüft das **MorphOS-Deploy-Skript** (liegt nicht in diesem Repo). Deploy-Fehler → Exit 1.

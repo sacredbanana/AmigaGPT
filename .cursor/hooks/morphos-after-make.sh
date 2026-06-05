@@ -67,7 +67,7 @@ fi
 if is_morphos_make_without_ship && [[ "$exit_code" -eq 0 ]]; then
   mkdir -p "$(dirname "$marker")"
   printf '%s\n' "$command" >"$marker"
-  printf '%s\n' '{"additional_context":"MORPHOS DELIVERY REQUIRED: make -f Makefile.MorphOS ran without packaging. In this same response run BUILD=0 ./package-morphos-cross.sh or ./ship-morphos.sh and report version + MD5 + Z:/morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha. Do not end the turn until packaging succeeded or deploy failed with exit code."}'
+  printf '%s\n' '{"additional_context":"MORPHOS DELIVERY REQUIRED: make -f Makefile.MorphOS ran without packaging. In this same response run BUILD=0 bash package-morphos-cross.sh or bash ship-morphos.sh and report version + MD5 + Z:/morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha. Do not end the turn until packaging succeeded or deploy failed with exit code."}'
   exit 0
 fi
 
