@@ -37,6 +37,7 @@ Updates: `cd ~/development/morphos/docs && git pull`
 ~/development/morphos/docs/                                   # Git: morphos-docs (Gitea)
 ~/development/morphos/docs/HANDLUNGSANWEISUNG-MORPHOS.md      # Build, Z:, HW, TaskList
 ~/development/morphos/docs/HANDLUNGSANWEISUNG-MORPHOS-MUI.md  # MUI, Quit, ASL
+~/development/morphos/docs/GIT-SSH-GITHUB.md                  # GitHub SSH Port 22 Timeout → 443
 ~/development/morphos/MarkdownEdit/                           # eigenes Gitea-Produktrepo
 ```
 
