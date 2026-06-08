@@ -142,6 +142,7 @@ Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [MIDI-MARKDOW
 - [SCINTILLA-ARCHITECTURE.md](SCINTILLA-ARCHITECTURE.md) — Phasen, Parser, Stream  
 - [STREAM-RECOVERY.md](STREAM-RECOVERY.md) — R1–R3  
 - [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md) — Chat-Scintilla  
+- [CHAT-FIND-SCINTILLA.md](CHAT-FIND-SCINTILLA.md) — Chat-Suche + User-Sprünge (MorphOS)  
 - [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) — Markdown/Export-Reihenfolge  
 
 Cursor: `.cursor/rules/morphos-build-package.mdc`, `.cursor/rules/morphos-runtime-agent.mdc`
