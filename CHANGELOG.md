@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.0.0 (2026-??-??)
+## 3.0.0 (2026-07-01)
 
 - Profile settings: New panels to manage chat, image and speech providers
 - Chat and Image menus replace the single OpenAI menu; model selection is now in "Chat Provider Settings" and "Image Provider Settings"
