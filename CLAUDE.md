@@ -46,11 +46,11 @@ Strings are referenced as `STRING_*` symbols generated from `catalogs/AmigaGPT.p
 - `make catalog_definition` regenerates `AmigaGPT.pot` from `src/*.c` via `xgettext`.
 - `make catalog` runs `flexcat` to regenerate `AmigaGPT_cat.{c,h}`, `msgmerge -U`s every `.po` against the template, and compiles each `<language>/AmigaGPT.catalog`.
 - The full build target (`all`) depends on `catalog`, so adding or changing a `STRING_*` will fail at link time until the `.pot` and `_cat.{c,h}` are regenerated.
-- To translate after adding new strings, run `/update-translations` (see `.cursor/commands/update-translations.md`); it delegates to the `po-translation-updater` agent which validates by running `./build_os3.sh`.
+- To translate after adding new strings, run `/update-translations` (see `.claude/commands/update-translations.md`); it delegates to the `po-translation-updater` agent which validates by running `./build_os3.sh`.
 
 ## Repo-specific guidance
 
 - Provider docs: prefer the project MCP servers `openaiDeveloperDocs` (OpenAI) and `xaiDocs` (xAI), and the `openai-docs` / `xai-docs` skills, over general web search.
-- AmigaOS / NDK / autodoc / SDK questions: use the `amiga-sdk-docs` skill. It maintains a local clone of `sacredbanana/AmigaSDK-gcc` at `.cursor/cache/amigasdk-gcc`; sync via `./.cursor/skills/amiga-sdk-docs/scripts/sync-repo.sh` and search the cache before falling back to the web. Wait for the sync to finish before falling back. Do not commit anything under `.cursor/cache/`.
+- AmigaOS / NDK / autodoc / SDK questions, library API lookups, and classic Amiga book recommendations: use the `amiga-sdk-docs` skill. It searches the local `sacredbanana/AmigaSDK-gcc` clone at `.claude/skills/amiga-sdk-docs/cache/amigasdk-gcc` (sync via `./.claude/skills/amiga-sdk-docs/scripts/sync-repo.sh`) and the retro-commodore.eu book catalog. Wait for the sync to finish before falling back to the web. Do not commit anything under `.claude/skills/amiga-sdk-docs/cache/`.
 - Building AmigaGPT itself: use the `build-amigagpt` skill — only the three `build_*.sh` scripts work in this environment.
 - Before calling an MCP tool, read the installed tool descriptor and follow its schema exactly.
