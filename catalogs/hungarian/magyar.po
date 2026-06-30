@@ -872,13 +872,11 @@ msgid "slt (slow)"
 msgstr "slt (lassú)"
 
 #: src/menu.c:181 src/menu.c:173
-#, fuzzy
 msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 msgid "Voice"
 msgstr "Hang"
 
 #: src/menu.c:194 src/menu.c:186
-#, fuzzy
 msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 msgid "Model"
 msgstr "Modell"
@@ -1938,26 +1936,24 @@ msgid "Sex"
 msgstr "Nem"
 
 #: src/SpeechProviderSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_FETCHING_OPENAI_MODELS (359//)"
 msgid "Fetching OpenAI models..."
 msgstr "Modellek lekérése..."
 
 #: src/SpeechProviderSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_FETCHING_OPENAI_MODELS (360//)"
 msgid "Failed to fetch OpenAI models"
-msgstr "Nem sikerült lekérni az ElevenLabs modelleket"
+msgstr "Nem sikerült lekérni az OpenAI modelleket"
 
 #: src/MainWindow.c
 msgctxt "STRING_STOP_SPEAKING (361//)"
 msgid "Stop speaking"
-msgstr "Stop speaking"
+msgstr "Beszéd leállítása"
 
 #: src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_XAI_AUTO_INSERT_SPEECH_TAGS (362//)"
 msgid "Auto-insert speech tags into LLM replies"
-msgstr "Auto-insert speech tags into LLM replies"
+msgstr "Beszéd-jelölők automatikus beillesztése az LLM-válaszokba"
 
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"

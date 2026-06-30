@@ -1,0 +1,13 @@
+root = true
+
+[*]
+charset = utf-8
+
+[bundle/AmigaGPT/AmigaGPT.guide]
+charset = latin1
+
+[bundle/AmigaGPT/AmigaGPT.readme]
+charset = latin1
+
+[bundle/AmigaGPT/Install-AmigaGPT]
+charset = latin1

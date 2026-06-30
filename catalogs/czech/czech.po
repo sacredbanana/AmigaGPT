@@ -863,13 +863,11 @@ msgid "slt (slow)"
 msgstr "slt (pomalý)"
 
 #: src/menu.c:181 src/menu.c:173
-#, fuzzy
 msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 msgid "Voice"
 msgstr "Hlas"
 
 #: src/menu.c:194 src/menu.c:186
-#, fuzzy
 msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 msgid "Model"
 msgstr "Model"
@@ -1926,26 +1924,24 @@ msgid "Sex"
 msgstr "Pohlaví"
 
 #: src/SpeechProviderSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_FETCHING_OPENAI_MODELS (359//)"
 msgid "Fetching OpenAI models..."
 msgstr "Načítání modelů..."
 
 #: src/SpeechProviderSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_FETCHING_OPENAI_MODELS (360//)"
 msgid "Failed to fetch OpenAI models"
-msgstr "Nepodařilo se stáhnout ElevenLabs modely"
+msgstr "Nepodařilo se stáhnout OpenAI modely"
 
 #: src/MainWindow.c
 msgctxt "STRING_STOP_SPEAKING (361//)"
 msgid "Stop speaking"
-msgstr "Stop speaking"
+msgstr "Zastavit mluvení"
 
 #: src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_XAI_AUTO_INSERT_SPEECH_TAGS (362//)"
 msgid "Auto-insert speech tags into LLM replies"
-msgstr "Auto-insert speech tags into LLM replies"
+msgstr "Automaticky vkládat řečové značky do odpovědí LLM"
 
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"

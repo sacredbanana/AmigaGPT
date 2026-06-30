@@ -859,13 +859,11 @@ msgid "slt (slow)"
 msgstr "slt (sakte)"
 
 #: src/menu.c:181 src/menu.c:173
-#, fuzzy
 msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 msgid "Voice"
 msgstr "Stemme"
 
 #: src/menu.c:194 src/menu.c:186
-#, fuzzy
 msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 msgid "Model"
 msgstr "Modell"
@@ -1919,26 +1917,24 @@ msgid "Sex"
 msgstr "Kjønn"
 
 #: src/SpeechProviderSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_FETCHING_OPENAI_MODELS (359//)"
 msgid "Fetching OpenAI models..."
 msgstr "Henter modeller..."
 
 #: src/SpeechProviderSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_FETCHING_OPENAI_MODELS (360//)"
 msgid "Failed to fetch OpenAI models"
-msgstr "Kunne ikke hente ElevenLabs modeller"
+msgstr "Kunne ikke hente OpenAI modeller"
 
 #: src/MainWindow.c
 msgctxt "STRING_STOP_SPEAKING (361//)"
 msgid "Stop speaking"
-msgstr "Stop speaking"
+msgstr "Stopp tale"
 
 #: src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_XAI_AUTO_INSERT_SPEECH_TAGS (362//)"
 msgid "Auto-insert speech tags into LLM replies"
-msgstr "Auto-insert speech tags into LLM replies"
+msgstr "Sett automatisk inn taletagger i LLM-svar"
 
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"

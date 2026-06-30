@@ -860,13 +860,11 @@ msgid "slt (slow)"
 msgstr "slt (slow)"
 
 #: src/menu.c:181 src/menu.c:173
-#, fuzzy
 msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 msgid "Voice"
 msgstr "Voice"
 
 #: src/menu.c:194 src/menu.c:186
-#, fuzzy
 msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 msgid "Model"
 msgstr "Model"
@@ -1921,16 +1919,14 @@ msgid "Sex"
 msgstr "Sex"
 
 #: src/SpeechProviderSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_FETCHING_OPENAI_MODELS (359//)"
 msgid "Fetching OpenAI models..."
 msgstr "Fetching models..."
 
 #: src/SpeechProviderSettingsRequesterWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_FETCHING_OPENAI_MODELS (360//)"
 msgid "Failed to fetch OpenAI models"
-msgstr "Failed to fetch ElevenLabs models"
+msgstr "Failed to fetch OpenAI models"
 
 #: src/MainWindow.c
 msgctxt "STRING_STOP_SPEAKING (361//)"
