@@ -66,7 +66,7 @@ For smooth operation of AmigaGPT, your system needs to meet the following requir
 - 8MB Fast RAM minimum, 16MB or higher recommended
 - Internet access using a TCP/IP stack such as Roadshow
 - MUI 3 minimum but MUI 5 recommended for all features. MUI 5:(https://github.com/amiga-mui/muidev/releases) or MUI 3.9: (https://github.com/amiga-mui/muidev/releases/download/MUI-3.9-2015R1/MUI-3.9-2015R1-os3.lha)
-- render.library 40.08 or higher (https://aminet.net/package/dev/misc/renderlib)
+- render.library 32 or higher (https://aminet.net/package/dev/misc/renderlib68k)
 - guigfx.library 20.0 or higher (https://aminet.net/dev/misc/guigfxlib.lha) (FPU) or (https://aminet.net/dev/misc/guigfxlib_nofpu.lha) 
 - codesets.library 6.22 or higher (http://aminet.net/package/util/libs/codesets-6.22)
 - MCC_Guigfx MUI custom class for displaying images (http://aminet.net/package/dev/mui/MCC_Guigfx)

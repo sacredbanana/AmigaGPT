@@ -43,8 +43,8 @@ Requirements:
   or MUI 3.9:
   (https://github.com/amiga-mui/muidev/releases/download/
   MUI-3.9-2015R1/MUI-3.9-2015R1-os3.lha)
-- **render.library 40.08** or higher
-  (https://aminet.net/package/dev/misc/renderlib)
+- **render.library 32** or higher
+  (https://aminet.net/package/dev/misc/renderlib68k)
 - **guigfx.library 20.0** or higher
   (https://aminet.net/dev/misc/guigfxlib.lha) (FPU) or
   (https://aminet.net/dev/misc/guigfxlib_nofpu.lha) 
