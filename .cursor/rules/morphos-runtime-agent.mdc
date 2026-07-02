@@ -17,9 +17,9 @@ Read **`docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md`** when touching:
 
 ## User test when UI/shutdown changes
 
-Ask user to verify **3× quit → restart** after packaging. Do not commit until MorphOS OK (see `HANDLUNGSANWEISUNG-GIT.md` §9).
+Ask user to verify **3× quit → restart** after packaging. Do not commit until MorphOS OK (see `HANDLUNGSANWEISUNG-GIT.md` §9). **„Fertig machen“ erlaubt keinen Commit ohne Test.**
 
-Build/package: `.cursor/rules/morphos-build-package.mdc` — use `./ship-morphos.sh`; hooks in `.cursor/hooks.json`
+Build/package: `.cursor/rules/morphos-build-package.mdc`, `.cursor/rules/morphos-hard-gates.mdc` — use `./ship-morphos.sh`; hooks in `.cursor/hooks.json`
 
 ## Agent search paths
 

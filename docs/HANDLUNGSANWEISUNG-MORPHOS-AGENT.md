@@ -30,7 +30,26 @@ Der Nutzer übernimmt erst am **Ende des definierten Agent-Teils**. Solange **Pa
 - **Falsch:** Antwort wirkt abgeschlossen, aber nur `out/AmigaGPT_MorphOS` existiert / kein `./package-morphos-cross.sh`.
 - **Richtig:** In derselben Bearbeitung **Bauen + Paketieren** (sofern der Nutzer nicht ausdrücklich „ohne Paket“ / `DEPLOY=0` gesagt hat), dann klare **Übergabezeile** („Dein Teil: MorphOS …“).
 
-`.cursor/rules/morphos-build-package.mdc` ist die Kurz-Checkliste für Cursor; dieser Abschnitt ist die verbindliche Einordnung für Mensch und Agent.
+`.cursor/rules/morphos-build-package.mdc` ist die Kurz-Checkliste für Cursor; **`.cursor/rules/morphos-hard-gates.mdc`** die harten Stopps (Z:-Fehler, kein Commit ohne Test). Dieser Abschnitt ist die verbindliche Einordnung für Mensch und Agent.
+
+---
+
+## 2b. Harte Stopps (nicht verhandelbar)
+
+Diese Punkte gelten **immer** — auch wenn der Nutzer „fertig machen“, „weiter“ oder einen Merge abschließen will.
+
+| Stop | Bedingung | Agent darf **nicht** |
+| ---- | --------- | -------------------- |
+| **Paket** | `package-morphos-cross.sh` / `ship-morphos.sh` mit **`DEPLOY=1`** endet mit Exit ≠ 0 (z. B. `Z:` nicht gemountet) | Als „paketiert“ oder „fertig“ melden; `DEPLOY=0` nachziehen; committen; pushen |
+| **Paket** | Nur `out/AmigaGPT-MorphOS-cross.lha` lokal, kein Z:-Deploy | MorphOS-Übergabe behaupten |
+| **Test** | Nutzer hat MorphOS-Laufzeit **nicht** als OK bestätigt | `git commit` / `git push` (auch nicht „Merge fertig machen“) |
+| **Git** | Branch ist `master` | Committen (Topic-Branch: `feature/*`, `fix/*`, `chore/*`) |
+
+**Nutzer-Meldung bei Z:-Fehler (Pflichtformulierung):**
+
+> **Fehler:** Paketieren fehlgeschlagen — bitte **`Z:` mounten** (Netzlaufwerk / gleiche Windows-Session wie WSL-Deploy). Bis zum erfolgreichen Deploy **blockiert** — kein Commit.
+
+`DEPLOY=0` ist **kein** Ersatz für einen fehlgeschlagenen Z:-Lauf — nur wenn der Nutzer **von vornherein** ohne Deploy arbeiten wollte.
 
 ---
 
@@ -124,14 +143,19 @@ Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [MIDI-MARKDOW
 
 | Fehler | Richtig |
 | ------ | ------- |
-| „Paketiert“ obwohl Z:-Deploy fehlgeschlagen | Exit-Code + klare Meldung; kein Commit |
-| Commit nach Build ohne MorphOS-OK | Warten auf Nutzer-Rückmeldung |
+| „Paketiert“ obwohl Z:-Deploy fehlgeschlagen | **STOP** — Exit-Code + „bitte Z: mounten“; **kein** Commit/Push |
+| `DEPLOY=0` nach Z:-Fehler, um weiterzumachen | Verboten; Nutzer behebt `Z:`, Agent wiederholt `ship-morphos.sh` |
+| Commit nach Build ohne MorphOS-OK | Warten auf Nutzer-Rückmeldung — auch bei „fertig machen“ / Merge |
+| Commit/Push auf `master` | Topic-Branch; Merge erst nach Test |
 | ASL direkt im Menü-Hook | `PushMethod` + Deferred-Hook |
 | Pens in `shutdownGUI()` nach Fenster zu | Pens in `mainWindowPrepareShutdown()` **vor** Close |
 | `codeBlocksViewerDismiss()` beim Shutdown (macht `NList_Clear`) | `codeBlocksViewerCloseWindow()` in `mainWindowPrepareShutdown()` |
 | Markdown-Lexer im Chat „schnell testen“ | Midi-Markdown-Plan lesen; Scintilla-Styles portieren |
 | Neues Feature + Restart nicht testen lassen | Restart-Checkliste §3 nennen |
 | Antwort klingt „fertig“ nach nur `make` | Zuerst `package-morphos-cross.sh`, dann Version+MD5+Z:; sonst kein MorphOS-Übergabe |
+| „Fertig machen“ als Freibrief für Commit | **Nein** — erst Z:-Deploy OK, dann Nutzer-Test OK, dann Commit auf Topic-Branch |
+
+Cursor: `.cursor/rules/morphos-build-package.mdc`, **`.cursor/rules/morphos-hard-gates.mdc`**, `.cursor/rules/morphos-runtime-agent.mdc`
 
 ---
 
@@ -144,5 +168,3 @@ Details: [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md), [MIDI-MARKDOW
 - [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md) — Chat-Scintilla  
 - [CHAT-FIND-SCINTILLA.md](CHAT-FIND-SCINTILLA.md) — Chat-Suche + User-Sprünge (MorphOS)  
 - [MIDI-MARKDOWN-ROADMAP.md](MIDI-MARKDOWN-ROADMAP.md) — Markdown/Export-Reihenfolge  
-
-Cursor: `.cursor/rules/morphos-build-package.mdc`, `.cursor/rules/morphos-runtime-agent.mdc`

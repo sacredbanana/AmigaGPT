@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# After MorphOS make: remind agent to package in the same turn.
+# After MorphOS make/package: remind agent to package, or HARD STOP on deploy failure.
 set -euo pipefail
 
 input=$(cat)
@@ -15,7 +15,8 @@ elif [[ "$input" =~ \"exitCode\"[[:space:]]*:[[:space:]]*([0-9]+) ]]; then
   exit_code="${BASH_REMATCH[1]}"
 fi
 
-MARKER_NAME=".cursor/morphos-package-pending"
+MARKER_PENDING=".cursor/morphos-package-pending"
+MARKER_FAILED=".cursor/morphos-package-failed"
 MAKEFILE="Makefile.MorphOS"
 
 find_repo() {
@@ -57,17 +58,26 @@ if [[ -z "$repo" ]]; then
   exit 0
 fi
 
-marker="$repo/$MARKER_NAME"
+marker_pending="$repo/$MARKER_PENDING"
+marker_failed="$repo/$MARKER_FAILED"
 
 if is_package_command && [[ "$exit_code" -eq 0 ]]; then
-  rm -f "$marker"
+  rm -f "$marker_pending" "$marker_failed"
+  exit 0
+fi
+
+if is_package_command && [[ "$exit_code" -ne 0 ]]; then
+  mkdir -p "$(dirname "$marker_failed")"
+  printf '%s\n' "$command (exit $exit_code)" >"$marker_failed"
+  rm -f "$marker_pending"
+  printf '%s\n' '{"additional_context":"MORPHOS HARD STOP: packaging/deploy failed (exit '"$exit_code"'). Report error to user: mount Z: drive. Do NOT commit, push, or use DEPLOY=0 as workaround. Retry ship-morphos.sh only after user fixes Z:."}'
   exit 0
 fi
 
 if is_morphos_make_without_ship && [[ "$exit_code" -eq 0 ]]; then
-  mkdir -p "$(dirname "$marker")"
-  printf '%s\n' "$command" >"$marker"
-  printf '%s\n' '{"additional_context":"MORPHOS DELIVERY REQUIRED: make -f Makefile.MorphOS ran without packaging. In this same response run BUILD=0 bash package-morphos-cross.sh or bash ship-morphos.sh and report version + MD5 + Z:/morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha. Do not end the turn until packaging succeeded or deploy failed with exit code."}'
+  mkdir -p "$(dirname "$marker_pending")"
+  printf '%s\n' "$command" >"$marker_pending"
+  printf '%s\n' '{"additional_context":"MORPHOS DELIVERY REQUIRED: make -f Makefile.MorphOS ran without packaging. In this same response run bash ship-morphos.sh and report version + MD5 + Z:/morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha. Do not end the turn until packaging succeeded or deploy failed with exit code."}'
   exit 0
 fi
 

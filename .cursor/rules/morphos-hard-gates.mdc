@@ -1,0 +1,40 @@
+---
+description: MorphOS — HARD STOP if Z deploy fails or before MorphOS test (no commit/push)
+alwaysApply: true
+---
+
+# MorphOS: Harte Stopps (nicht verhandelbar)
+
+Diese Regeln gelten **immer** — auch bei „fertig machen“, „weiter“, Merge abschließen, großen Refactors.
+
+## 1. Paketieren ist Pflicht — kein Workaround
+
+Nach MorphOS-Code-Änderung: `make -f Makefile.MorphOS` **und** `bash ship-morphos.sh` (bzw. `package-morphos-cross.sh` mit **`DEPLOY=1`**).
+
+**Paketieren = erfolgreicher Z:-Deploy** nach `Z:/morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha`.
+
+| Situation | Agent |
+| --------- | ----- |
+| Z:-Deploy fehlgeschlagen (Exit ≠ 0, z. B. `Z:` nicht gemountet) | **STOP.** Nutzer melden: **Fehler — `Z:` mounten/beheben.** Kein Commit, kein Push, nicht „fertig“. |
+| Nur `out/*.lha` lokal | **Nicht paketiert.** Nicht als Übergabe verkaufen. |
+| `DEPLOY=0` nach fehlgeschlagenem Z: | **Verboten** als Ersatz — nur wenn der Nutzer **von vornherein** `DEPLOY=0` / „ohne Deploy“ gesagt hat. |
+
+## 2. Commit/Push erst nach MorphOS-Test
+
+**Kein `git commit` und kein `git push`** für Laufzeit-Änderungen, bis der Nutzer **explizit** bestätigt hat, dass der MorphOS-Test **OK** war.
+
+Vor jedem Commit prüfen:
+
+1. `git branch --show-current` ≠ `master`
+2. Letzter Paketlauf: **Z:-Deploy erfolgreich** (Version + MD5 gemeldet)
+3. Nutzer hat **MorphOS OK** gesagt (oder reine Doku ohne Laufzeit — dann trotzdem kein `master`)
+
+**„Fertig machen“ / „weiter“ / Merge abschließen** erlauben **keinen** Commit ohne Test.
+
+## 3. Übergabe an den Nutzer
+
+Bei Z:-Fehler **eindeutig**:
+
+> **Fehler:** Paketieren fehlgeschlagen — bitte **`Z:` mounten** und Bescheid geben. Bis dahin blockiert.
+
+Details: `docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md` §2b, `docs/HANDLUNGSANWEISUNG-GIT.md` §8–9.
