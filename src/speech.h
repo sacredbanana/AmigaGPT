@@ -1,7 +1,15 @@
 #ifndef SPEECH_H
 #define SPEECH_H
 
+#include <devices/narrator.h>
 #include <proto/dos.h>
+
+#ifdef __AMIGAOS3__
+extern struct narrator_rb *NarratorIO;
+#elif defined(__AMIGAOS4__)
+extern struct FliteRequest *fliteRequest;
+#endif
+extern struct AHIRequest *ahiRequest;
 
 /**
  * A speech system
@@ -11,7 +19,8 @@ typedef enum {
     SPEECH_SYSTEM_37,
     SPEECH_SYSTEM_FLITE,
     SPEECH_SYSTEM_OPENAI,
-    SPEECH_SYSTEM_ELEVENLABS
+    SPEECH_SYSTEM_ELEVENLABS,
+    SPEECH_SYSTEM_XAI
 } SpeechSystem;
 
 /**
@@ -70,6 +79,13 @@ LONG initSpeech(SpeechSystem speechSystem);
  * @param audioFormat the audio format to save the audio to
  **/
 void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat);
+
+/* Speak using an explicitly provided settings struct (no config reads/writes).
+ */
+struct SpeechRequestSettings;
+void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
+                           AudioFormat *audioFormat,
+                           const struct SpeechRequestSettings *settings);
 
 /**
  * Close the speech system

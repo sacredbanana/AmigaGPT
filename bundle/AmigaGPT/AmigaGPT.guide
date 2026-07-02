@@ -36,6 +36,9 @@ AmigaGPT uses the o1, o3, o4, GPT-5, GPT-4o, GPT-4 and GPT-3.5 models developed 
 
 AI Image Generation with DALL-E 2, DALL-E 3 and GPT-Image-1
 
+- @{b}Shell Tool@{ub}
+Let ChatGPT execute AmigaDOS commands on your system. Ask it to list files, create directories, show file contents, and more. All commands require your approval before execution.
+
 - @{b}Seamless integration with AmigaOS and MorphOS@{ub}
 AmigaGPT takes full advantage of the MUI framework to provide a smooth, native user experience that is responsive and easy to use.
 
@@ -63,7 +66,7 @@ For smooth operation of AmigaGPT, your system needs to meet the following requir
 - 8MB Fast RAM minimum, 16MB or higher recommended
 - Internet access using a TCP/IP stack such as Roadshow
 - MUI 3 minimum but MUI 5 recommended for all features. MUI 5:(https://github.com/amiga-mui/muidev/releases) or MUI 3.9: (https://github.com/amiga-mui/muidev/releases/download/MUI-3.9-2015R1/MUI-3.9-2015R1-os3.lha)
-- render.library 40.08 or higher (https://aminet.net/package/dev/misc/renderlib)
+- render.library 32 or higher (https://aminet.net/package/dev/misc/renderlib68k)
 - guigfx.library 20.0 or higher (https://aminet.net/dev/misc/guigfxlib.lha) (FPU) or (https://aminet.net/dev/misc/guigfxlib_nofpu.lha) 
 - codesets.library 6.22 or higher (http://aminet.net/package/util/libs/codesets-6.22)
 - MCC_Guigfx MUI custom class for displaying images (http://aminet.net/package/dev/mui/MCC_Guigfx)
@@ -192,10 +195,12 @@ Click on a topic to learn about it:
 @{"Entering your OpenAI API key " link apikey}
 @{"Chatting with ChatGPT " link chatting}
 @{"Generating images " link images}
+@{"Shell Tool " link shelltool}
 @{"Conversation list " link conlist}
 @{"Edit menu " link editmenu}
 @{"Changing the appearance of the UI and chat " link appearance}
 @{"Using a proxy server " link proxy}
+@{"Chat and Image Provider Settings " link customservers}
 @{"ARexx integration " link arexx}
 
 @endnode
@@ -221,7 +226,7 @@ When launching for the first time you will need to enter your OpenAI API key bef
 
 When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "Send" or Shift + Enter to see ChatGPT's response. The generated text appears in the box above the input. Depending on if you have speech configured and enabled, you will also hear it spoken to you.
 
-You can choose to have this text read aloud using the "Speech" menu option. You can also select which model for OpenAI to use in the "OpenAI" menu option.
+You can choose to have this text read aloud using the "Speech" menu option. To choose the chat model and provider (OpenAI, Google Gemini, xAI Grok, Anthropic Claude or a custom provider), open "Chat Provider Settings" from the "Chat" menu.
 
 You can also chat to AmigaGPT within the Shell as long as either AmigaGPT or the AmigaGPTD daemon are running. Just type `askgpt` into the shell and it will ask you what you want to ask. Or just ask right away with the command "askgpt What is the capital of Australia?". To activate a mini GUI for AskGPT, just add `GUI` as the first argument to AskGPT.
 
@@ -237,7 +242,51 @@ To the left of the chat box is a conversation list which you can use to go to an
 @node images "Generating images"
 @{b}Generating Images@{ub}
 
-To generate images, simply select your desired image generation model from the "OpenAI" menu then type your prompt in the text box then hit the "Create Image" button. When it has been downloaded to your Amiga, you are then able to open the image to your desired scale, or save a copy of the file to a new location on your Amiga. Do note however that AmigaGPT will automatially save all your generated images until you delete them. This is just in case you would like to create a copy elsewhere.
+To generate images, open "Image Provider Settings" from the "Image" menu to choose your provider and image model, then type your prompt in the text box and hit the "Create Image" button. When it has been downloaded to your Amiga, you are then able to open the image to your desired scale, or save a copy of the file to a new location on your Amiga. Do note however that AmigaGPT will automatially save all your generated images until you delete them. This is just in case you would like to create a copy elsewhere.
+
+@endnode
+
+@node shelltool "Shell Tool"
+@{b}Shell Tool@{ub}
+
+The Shell Tool is a powerful feature that allows ChatGPT to execute AmigaDOS commands directly on your Amiga. This enables the AI to help you with tasks like listing files, creating directories, managing files, and more.
+
+@{b}Enabling the Shell Tool@{ub}
+
+To enable the Shell Tool, check "Shell Tool" in the "Chat" menu. Once enabled, you can ask ChatGPT to perform tasks that require shell access.
+
+@{b}Example prompts@{ub}
+
+- "List all files in RAM:"
+- "Create a new directory called Test in Work:"
+- "Show me the contents of S:Startup-Sequence"
+- "What version of Workbench am I running?"
+- "How much free memory do I have?"
+
+@{b}Security@{ub}
+
+For security, AmigaGPT will always show you the command the AI wants to execute and ask for your permission before running it. You can Allow or Deny each command. This ensures you always have control over what runs on your system.
+
+@{b}AmigaDOS Commands@{ub}
+
+The AI is automatically instructed about AmigaDOS command syntax, so it will use the correct commands for AmigaOS:
+
+- @{b}list@{ub} or @{b}dir@{ub} instead of ls
+- @{b}type@{ub} instead of cat
+- @{b}makedir@{ub} instead of mkdir
+- @{b}delete@{ub} instead of rm
+- @{b}copy@{ub} instead of cp
+- @{b}rename@{ub} instead of mv
+
+It also understands AmigaOS path conventions (e.g. Work:Projects/myfile).
+
+@{b}ARexx Support@{ub}
+
+The Shell Tool also works via ARexx when using the SENDMESSAGE command with either AmigaGPT or the AmigaGPTD daemon.
+
+@{b}Warning@{ub}
+
+Use this feature responsibly. While you have control over which commands are executed, be cautious about allowing commands that modify or delete files.
 
 @endnode
 
@@ -264,6 +313,17 @@ The "Connection" menu allows you to connect via a proxy server. It supports both
 
 @endnode
 
+@node customservers "Chat and Image Provider Settings"
+@{b}Chat and Image Provider Settings@{ub}
+
+AmigaGPT supports multiple AI providers. Open "Chat Provider Settings" from the "Chat" menu or "Image Provider Settings" from the "Image" menu.
+
+The provider list includes built-in entries for OpenAI, Google Gemini, xAI Grok and Anthropic Claude (chat only); these cannot be removed. For built-in providers you can set the API key and choose the model; host, port and other connection settings are fixed. Known models are shown for each built-in; for OpenAI you can also use "Fetch Models" to refresh the list. You can add custom provider profiles (e.g. LM Studio) with templates and full control over all settings. Custom profile names cannot match built-in provider names.
+
+When you switch to another profile without saving, AmigaGPT will ask whether to save your changes (Yes, No or Cancel).
+
+@endnode
+
 @node arexx "ARexx integration"
 @{b}ARexx integration@{ub}
 
@@ -273,16 +333,24 @@ Note: MorphOS does not yet have a complete ARexx implementation. You must instal
 
 AmigaGPT also comes with a companion daemon app called AmigaGPTD. You may run this in the shell. The daemon will respond to the same ARexx commands as the main app so you do not need to launch the main AmigaGPT app.
 
+@{b}Daemon Conversation History@{ub}
+
+The daemon maintains conversation history in T: so it remembers context across multiple ARexx calls until the next reboot. This allows for follow-up questions and multi-turn conversations. For example, you can ask "What is the capital of France?" and then follow up with "What is its population?" and the AI will understand you're asking about Paris.
+
+Use the NEWCHAT ARexx command to clear the conversation history and start fresh.
+
 Please note: AmigaGPT and AmigaGPTD listen on 2 differnt ARexx ports so adjust your scrips accordingly. AmigaGPT listens on @{b}AMIGAGPT@{ub} and AmigaGPTD listens on @{b}AMIGAGPTD@{ub}.
 
 The following ARexx commands are available:
 
 @{b}SENDMESSAGE@{ub}
-Sends a message to the OpenAI API and returns the response.
+Sends a message to the selected provider's API and returns the response.
 
-SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
+SENDMESSAGE PR=PROVIDER/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
+- PR=PROVIDER - Optional, the provider to use (OpenAI, Google Gemini, xAI Grok, Anthropic Claude, or Custom Provider). Use LISTPROVIDERS to see available providers. Default is the provider selected in AmigaGPT config
 - M=MODEL - Optional, the chat model to use (use LISTCHATMODELS to see available models). Default is gpt-5-mini
 - S=SYSTEM - Optional, system message to include
+- SF=SYSTEMFILE - Optional, file containing the system message to include. If both SF and S are provided, the effective system message is the file contents concatenated with S.
 - K=APIKEY - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
 - W=WEBSEARCH - Optional, enable ChatGPT to search the web
 - P=PROMPT - Required, the prompt or question to send
@@ -290,7 +358,8 @@ SENDMESSAGE M=MODEL/K,S=SYSTEM/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
 @{b}CREATEIMAGE@{ub}
 Generates an image using the specified model.
 
-CREATEIMAGE M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
+CREATEIMAGE PR=PROVIDER/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
+- PR=PROVIDER - Optional, the provider to use (OpenAI, Google Gemini, xAI Grok, or Custom Provider). Use LISTPROVIDERS to see available providers. Default is the provider selected in AmigaGPT config
 - M=MODEL - Optional, the image model to use (use LISTIMAGEMODELS to see available models). Default is gpt-image-1
 - S=SIZE - Optional, image size (use LISTIMAGESIZES to see available sizes). Default is 1024x1024
 - K=APIKEY - Optional, your OpenAI API key. Default is to use the key stored in AmigaGPT config
@@ -308,6 +377,13 @@ SPEAKTEXT M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/K,F=FORMAT/K,
 - O=OUTPUT - Optional, file to write audio data to instead of playing it
 - F=FORMAT - Optional, format of output file (use LISTAUDIOFORMATS to see available formats). Default is MP3 and ignored if OUTPUT is not provided
 - P=PROMPT - Required, the text to speak
+
+@{b}NEWCHAT@{ub}
+Clears the daemon's conversation history and starts a new chat. This is useful when you want to start a fresh conversation without context from previous messages.
+
+NEWCHAT
+
+This command takes no parameters and returns "Conversation history cleared" on success.
 
 @{b}List Commands@{ub}
 
@@ -331,6 +407,10 @@ LISTSERVERMODELS H=HOST/K,P=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/
 @{b}LISTAUDIOFORMATS@{ub}
  Lists all available audio formats for saving audio files
  LISTAUDIOFORMATS
+
+@{b}LISTPROVIDERS@{ub}
+Lists all available providers (OpenAI, Google Gemini, xAI Grok, Anthropic Claude, Custom Provider).
+LISTPROVIDERS
 
 @{b}LISTCHATMODELS@{ub}
 Lists all available chat models
@@ -438,7 +518,7 @@ We welcome contributions to AmigaGPT! If you have a bug to report, a feature to 
 - Bebbo for creating the Amiga GCC toolchain https://github.com/bebbo
 - OpenAI for making this all possible https://openai.com
 - EAB and everyone in it for answering my questions https://eab.abime.net/
-- J�n Zahuranc�k for all the thorough testing, bundling AmigaGPT into 
+- J?n Zahuran??k for all the thorough testing, bundling AmigaGPT into 
   AmiKit and for all the moral support https://www.amikit.amiga.sk
 - CoffinOS for bundling AmigaGPT into CoffinOS https://getcoffin.net
 - Amiga Future Magazine for reviewing AmigaGPT and publishing several of
@@ -793,6 +873,44 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 @node changelog "Changelog"
 @{b}Changelog@{ub}
 
+@{b}3.0.0 (2026-07-01)@{ub}
+
+- Profile settings: New panels to manage chat, image and speech providers
+- Chat and Image menus replace the single OpenAI menu; model selection is now in "Chat Provider Settings" and "Image Provider Settings"
+- Fetch latest models available from the server
+- System prompt setting is now a chat profile setting rather than a global one
+- New Speech Provider Settings window for setting your speech provider and options, creating speech profiles and testing your current speech settings
+- New config options for the Workbench speech systems: rate, pitch, mode (natural/robotic) and sex
+- ARexx SENDMESSAGE, CREATEIMAGE and SPEAKTEXT support PR=PROFILE to choose profile; new LISTPROFILES command
+- ARexx SENDMESSAGE supports SF=SYSTEMFILE to use the contents of a file as the system prompt
+- New powerful Shell Tool option to ask ChatGPT to run any command on your system in the shell
+- The daemon (AmigaGPTD) now maintains conversation history in T: for context across ARexx calls until reboot
+- The installer is now compatible with AmiKit
+- Speech now runs in the background so the app can remain responsive while it's speaking
+- Added a button to stop speaking
+- ARexx SPEAKTEXT and LISTVOICES support voices for all speech profiles
+- New NEWCHAT ARexx command to clear daemon conversation history
+- Support for Anthropic Claude for chat
+- Support for Anthropic Claude for image generation
+- Support for xAI Grok for chat
+- Support for xAI Grok for image generation
+- Support for xAI Grok for Text-To-Speech
+- Added streaming support in chat for Google Gemini
+- Support for Google Gemini for image generation
+- Automatically instructs the chat server to not use unicode characters the Amiga cannot display such as emoji since these characters display in AmigaGPT as question marks
+- All config options are now immediately saved to disk
+- Added NEWCHAT and PROFILE=PR options for AskGPT
+- ARexx say.rexx now supports different profiles and voices
+- The returned chat response string in ARexx will no longer contain unnecessary characters such as escape backslashes and escaped markdown characters
+- Removed the maximum size limit for conversations. Chat max length is now only determined by available memory and the model's context window
+- Greatly improved performance and memory usage when sending chat messages in the Responses API
+- Fix bug where conversation titles were getting displayed in the incorrect encoding
+- Fix bug where the app would get stuck after sending a few messages to Gemini
+- Fix bug where say.rexx did not ask you what you want to say
+- Fix bug where the first paragraph in every response is always black even if you have custom colours set
+- Fix bug where a missing or incorrect API key could cause the app to enter an infinite loop of displaying an error and retrying
+- Correctly handle reponses that contain JSON in the response header such as those received from Cloudfare 
+
 @{b}2.17.0 (2025-12-22)@{ub}
 
 - Add support for Elevenlabs TTS
@@ -807,8 +925,8 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 
 @{b}2.15.0 (2025-12-13)@{ub}
 
-- Add support for setting custom server endpoint and endpoint URL
-- Add chat/completions endpoint support for custom server for compatibility with servers such as Google Gemini
+- Add support for setting custom provider endpoint and endpoint URL
+- Add chat/completions endpoint support for custom providers for compatibility with providers such as Google Gemini
 
 @{b}2.14.0 (2025-12-13)@{ub}
 

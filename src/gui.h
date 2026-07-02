@@ -21,16 +21,19 @@
 #include "openai.h"
 
 #define APP_ID_PRINT 1000L
+#define APP_ID_CHAT_PROVIDER_SETTINGS 1001L
+#define APP_ID_IMAGE_PROVIDER_SETTINGS 1002L
+#define APP_ID_SPEECH_PROVIDER_SETTINGS 1003L
 
 #ifdef __MORPHOS__
-#define APP_ID_CHAT_FIND_SHOW 1001L
-#define APP_ID_CHAT_FIND_NEXT 1002L
-#define APP_ID_CHAT_FIND_PREV 1003L
-#define APP_ID_CHAT_FIND_CLOSE 1004L
-#define APP_ID_CHAT_FIND_STRING_FOCUS 1005L
-#define APP_ID_CHAT_FIND_UPDATE 1006L
-#define APP_ID_CHAT_USER_PREV 1007L
-#define APP_ID_CHAT_USER_NEXT 1008L
+#define APP_ID_CHAT_FIND_SHOW 1010L
+#define APP_ID_CHAT_FIND_NEXT 1011L
+#define APP_ID_CHAT_FIND_PREV 1012L
+#define APP_ID_CHAT_FIND_CLOSE 1013L
+#define APP_ID_CHAT_FIND_STRING_FOCUS 1014L
+#define APP_ID_CHAT_FIND_UPDATE 1015L
+#define APP_ID_CHAT_USER_PREV 1016L
+#define APP_ID_CHAT_USER_NEXT 1017L
 #endif
 
 /**
@@ -128,7 +131,8 @@ void setConversationSystem(struct Conversation *conversation,
  * If it found role in the JSON instead of content then return an empty string
  **/
 UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
-                                BOOL retainJSONFormat, APIEndpoint apiEndpoint);
+                                BOOL retainJSONFormat,
+                                APIChatEndpoint apiEndpoint);
 
 /** Safe read of API/proxy "error" (object or string). Returns NULL if none. */
 CONST_STRPTR jsonGetApiErrorMessage(struct json_object *error);
@@ -167,6 +171,12 @@ void openCodeBlocksViewerWindow(void);
  * @param conversation The conversation to free
  **/
 void freeConversation(struct Conversation *conversation);
+
+/**
+ * Convert a UTF-8 string to Latin-1 (ISO 8859-1).
+ * Returns an AllocVec'd buffer -- free with FreeVec().
+ **/
+STRPTR utf8ToLatin1(UTF8 *src);
 
 /**
  * Shutdown the GUI

@@ -16,13 +16,14 @@
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
+#include "AmigaGPTConfig.h"
 #include "AmigaGPTTextEditor.h"
-#include "config.h"
 #include "streamlog.h"
 #include "gui.h"
 #include "menu.h"
 #include "MainWindow.h"
 #include "openai.h"
+#include "speech.h"
 #ifdef __MORPHOS__
 #include <mui/Scintilla_mcc.h>
 #include "ChatFindScintilla.h"
@@ -31,12 +32,35 @@
 #endif
 #include "chatmd_markers.h"
 #include "utf8stream.h"
+
+#ifndef MAIN_WINDOW_SAVED_MIN_WIDTH
+#define MAIN_WINDOW_SAVED_MIN_WIDTH 320
+#define MAIN_WINDOW_SAVED_MIN_HEIGHT 200
+#endif
+
+static STRPTR dupStringAlloc(CONST_STRPTR src) {
+    STRPTR copy;
+    ULONG n;
+
+    if (src == NULL) {
+        return NULL;
+    }
+    n = (ULONG)strlen(src) + 1;
+    copy = AllocVec(n, MEMF_ANY | MEMF_CLEAR);
+    if (copy != NULL) {
+        strncpy(copy, src, n - 1);
+        copy[n - 1] = '\0';
+    }
+    return copy;
+}
 #include <dos/dos.h>
 
 /* Max nesting depth for B/I/U combined. Adjust as needed. */
 #define MAX_STYLE_STACK 32
 
-#define CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH 1024 * 100
+#define CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH (1024 * 512)
+#define CHAT_OUTPUT_WIDGET_SAFE_LIMIT (60 * 1024)
+#define CONVERSATION_TITLE_FALLBACK_MAX 96
 /** UI refresh during stream: at most ~5 updates per second (R3). */
 #define STREAM_UI_MIN_REFRESH_MS 200
 
@@ -88,6 +112,7 @@ Object *mainWindowObject = NULL;
 Object *newChatButton;
 Object *deleteChatButton;
 Object *sendMessageButton;
+Object *stopSpeakingButton;
 Object *chatInputTextEditor;
 #ifndef __MORPHOS__
 Object *chatOutputListView;
@@ -110,6 +135,8 @@ Object *openImageButton;
 Object *saveImageCopyButton;
 Object *modeRegisterGroup;
 STRPTR chatOutputTextEditorContents = NULL;
+static ULONG chatOutputTextEditorContentsCapacity =
+    CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH;
 WORD pens[NUMDRIPENS + 1];
 struct Conversation *currentConversation = NULL;
 struct GeneratedImage *currentImage = NULL;
@@ -279,16 +306,16 @@ void mainWindowCaptureGeometryForConfig(void) {
             top = 0;
         }
     }
-    config.mainWindowLeft = left;
-    config.mainWindowTop = top;
-    config.mainWindowWidth = (ULONG)width;
-    config.mainWindowHeight = (ULONG)height;
+    configSetMainWindowLeft(left);
+    configSetMainWindowTop(top);
+    configSetMainWindowWidth((ULONG)width);
+    configSetMainWindowHeight((ULONG)height);
 }
 
 static BOOL mainWindowSavedGeometryValid(void) {
     return mainWindowObject != NULL &&
-           config.mainWindowWidth >= MAIN_WINDOW_SAVED_MIN_WIDTH &&
-           config.mainWindowHeight >= MAIN_WINDOW_SAVED_MIN_HEIGHT;
+           configGetMainWindowWidth() >= MAIN_WINDOW_SAVED_MIN_WIDTH &&
+           configGetMainWindowHeight() >= MAIN_WINDOW_SAVED_MIN_HEIGHT;
 }
 
 static void mainWindowApplySavedGeometry(void) {
@@ -301,10 +328,10 @@ static void mainWindowApplySavedGeometry(void) {
     if (!mainWindowSavedGeometryValid()) {
         return;
     }
-    left = config.mainWindowLeft;
-    top = config.mainWindowTop;
-    width = (LONG)config.mainWindowWidth;
-    height = (LONG)config.mainWindowHeight;
+    left = configGetMainWindowLeft();
+    top = configGetMainWindowTop();
+    width = (LONG)configGetMainWindowWidth();
+    height = (LONG)configGetMainWindowHeight();
     get(mainWindowObject, MUIA_Window_Screen, &scr);
     if (scr != NULL) {
         LONG sw = scr->Width;
@@ -352,7 +379,7 @@ static void outputStyleOn(STRPTR out, size_t outSize, StyleType style);
 static void outputStyleOff(STRPTR out, size_t outSize);
 static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
                          StyleType *foundStyle, const StyleStack *stack);
-static PICTURE *generateThumbnail(struct GeneratedImage *image);
+static BOOL ensureChatOutputBufferCapacity(ULONG required);
 static void addMainWindowActions();
 #ifndef __MORPHOS__
 static Object *newChatOutputFloattextObject(void);
@@ -361,6 +388,65 @@ static void installChatOutputWheelHandler(void);
 #ifdef __MORPHOS__
 static void clearChatOutputDisplay(void);
 #endif
+
+/**
+ * Title for a new conversation: model text if non-empty, otherwise a truncated
+ * first user line, otherwise the localized "New chat" string.
+ **/
+static STRPTR allocNewConversationTitle(struct Conversation *conv,
+                                        const UTF8 *apiText) {
+    if (apiText != NULL && strlen((const char *)apiText) > 0) {
+        ULONG n = (ULONG)strlen((const char *)apiText) + 1;
+        STRPTR out = AllocVec(n, MEMF_ANY | MEMF_CLEAR);
+        if (out != NULL) {
+            strncpy(out, (const char *)apiText, n - 1);
+            out[n - 1] = '\0';
+        }
+        return out;
+    }
+    if (conv != NULL && conv->messages != NULL) {
+        struct MinNode *node = conv->messages->mlh_Head;
+        while (node->mln_Succ != NULL) {
+            struct ConversationNode *m = (struct ConversationNode *)node;
+            if (strcmp((const char *)m->role, "user") == 0) {
+                UTF8 *userRaw = conversationNodeGetRaw(m);
+                if (userRaw != NULL && strlen((const char *)userRaw) > 0) {
+                    STRPTR out = AllocVec(CONVERSATION_TITLE_FALLBACK_MAX + 1,
+                                          MEMF_ANY | MEMF_CLEAR);
+                    if (out == NULL)
+                        return NULL;
+                    ULONG pos = 0;
+                    const UTF8 *s = userRaw;
+                    for (; *s != '\0' && pos < CONVERSATION_TITLE_FALLBACK_MAX;
+                         s++) {
+                        UBYTE c = (UBYTE)*s;
+                        if (c == '\n' || c == '\r')
+                            out[pos++] = ' ';
+                        else
+                            out[pos++] = (char)c;
+                    }
+                    while (pos > 0 && out[pos - 1] == ' ')
+                        pos--;
+                    out[pos] = '\0';
+                    if (pos > 0)
+                        return out;
+                    FreeVec(out);
+                }
+            }
+            node = node->mln_Succ;
+        }
+    }
+    {
+        const char *d = STRING_NEW_CHAT;
+        ULONG n = (ULONG)strlen(d) + 1;
+        STRPTR out = AllocVec(n, MEMF_ANY | MEMF_CLEAR);
+        if (out != NULL) {
+            strncpy(out, d, n - 1);
+            out[n - 1] = '\0';
+        }
+        return out;
+    }
+}
 
 HOOKPROTONHNO(ConstructConversationLI_TextFunc, APTR,
               struct NList_ConstructMessage *ncm) {
@@ -378,11 +464,27 @@ MakeHook(DestructConversationLI_TextHook, DestructConversationLI_TextFunc);
 
 HOOKPROTONHNO(DisplayConversationLI_TextFunc, void,
               struct NList_DisplayMessage *ndm) {
+    static char nameBuf[512];
     struct Conversation *entry = (struct Conversation *)ndm->entry;
-    if (entry->name_list_display != NULL) {
+    if (entry == NULL) {
+        ndm->strings[0] = (STRPTR) "";
+    } else if (entry->name_list_display != NULL) {
         ndm->strings[0] = entry->name_list_display;
+    } else if (entry->name == NULL) {
+        ndm->strings[0] = (STRPTR) "";
     } else {
-        ndm->strings[0] = (STRPTR)entry->name;
+        STRPTR converted = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)entry->name,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
+        if (converted != NULL) {
+            strncpy(nameBuf, converted, sizeof(nameBuf) - 1);
+            nameBuf[sizeof(nameBuf) - 1] = '\0';
+            CodesetsFreeA(converted, NULL);
+        } else {
+            strncpy(nameBuf, entry->name, sizeof(nameBuf) - 1);
+            nameBuf[sizeof(nameBuf) - 1] = '\0';
+        }
+        ndm->strings[0] = nameBuf;
     }
 }
 MakeHook(DisplayConversationLI_TextHook, DisplayConversationLI_TextFunc);
@@ -398,13 +500,6 @@ HOOKPROTONHNO(DestructImageLI_TextFunc, void,
               struct NList_DestructMessage *ndm) {
     if (ndm->entry) {
         struct GeneratedImage *entry = (struct GeneratedImage *)ndm->entry;
-        if (entry->filePath != NULL) {
-#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-            DeleteFile(entry->filePath);
-#else
-            Delete(entry->filePath);
-#endif
-        }
         FreeVec(entry->name);
         FreeVec(entry->filePath);
         FreeVec(entry->prompt);
@@ -414,8 +509,24 @@ HOOKPROTONHNO(DestructImageLI_TextFunc, void,
 MakeHook(DestructImageLI_TextHook, DestructImageLI_TextFunc);
 
 HOOKPROTONHNO(DisplayImageLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
+    static char imgNameBuf[512];
     struct GeneratedImage *entry = (struct GeneratedImage *)ndm->entry;
-    ndm->strings[0] = (STRPTR)entry->name;
+    if (entry == NULL || entry->name == NULL) {
+        ndm->strings[0] = (STRPTR) "";
+    } else {
+        STRPTR converted = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)entry->name,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
+        if (converted != NULL) {
+            strncpy(imgNameBuf, converted, sizeof(imgNameBuf) - 1);
+            imgNameBuf[sizeof(imgNameBuf) - 1] = '\0';
+            CodesetsFreeA(converted, NULL);
+        } else {
+            strncpy(imgNameBuf, entry->name, sizeof(imgNameBuf) - 1);
+            imgNameBuf[sizeof(imgNameBuf) - 1] = '\0';
+        }
+        ndm->strings[0] = imgNameBuf;
+    }
 }
 MakeHook(DisplayImageLI_TextHook, DisplayImageLI_TextFunc);
 
@@ -600,6 +711,7 @@ HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
 
 #else /* !__MORPHOS__ */
 HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
+    set(chatInputTextEditor, MUIA_TextEditor_FixedFont, TRUE);
     struct Conversation *conversation;
     DoMethod(conversationListObject, MUIM_NList_GetEntry,
              MUIV_NList_GetEntry_Active, &conversation);
@@ -632,10 +744,14 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
         DoMethod(imageViewGroup, MUIM_Group_InitChange);
         DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
         MUI_DisposeObject(imageView);
-        imageView = GuigfxObject, MUIA_Guigfx_FileName, image->filePath,
-        MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Low, MUIA_Guigfx_ScaleMode,
-        NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE, MUIA_Guigfx_Transparency,
-        NITRF_MASK, End;
+        // clang-format off
+        imageView = GuigfxObject,
+            MUIA_Guigfx_FileName, image->filePath,
+            MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Low,
+            MUIA_Guigfx_ScaleMode, NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE,
+            MUIA_Guigfx_Transparency, NITRF_MASK,
+        End;
+        // clang-format on
         DoMethod(imageViewGroup, OM_ADDMEMBER, imageView);
         DoMethod(imageViewGroup, MUIM_Group_MoveMember, imageView, 0);
         DoMethod(imageViewGroup, MUIM_Group_ExitChange);
@@ -676,13 +792,40 @@ HOOKPROTONHNONP(DeleteChatButtonClickedFunc, void) {
 MakeHook(DeleteChatButtonClickedHook, DeleteChatButtonClickedFunc);
 
 HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
-    if (config.openAiApiKey != NULL && strlen(config.openAiApiKey) > 0) {
-        sendChatMessage();
-    } else {
+    struct ChatRequestSettings chatSettings;
+    configGetActiveChatRequestSettings(&chatSettings);
+    if (chatSettings.authorizationType != AUTHORIZATION_TYPE_NONE &&
+        (chatSettings.apiKey == NULL || strlen(chatSettings.apiKey) == 0)) {
         displayError(STRING_ERROR_NO_API_KEY);
+        return;
     }
+    sendChatMessage();
 }
 MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
+
+HOOKPROTONHNONP(StopSpeakingButtonClickedFunc, void) {
+#ifdef __AMIGAOS3__
+    if (NarratorIO != NULL &&
+        ((struct IORequest *)NarratorIO)->io_Device != NULL) {
+        if (!CheckIO((struct IORequest *)NarratorIO)) {
+            AbortIO((struct IORequest *)NarratorIO);
+            WaitIO((struct IORequest *)NarratorIO);
+        }
+    }
+#elif defined(__AMIGAOS4__)
+    if (fliteRequest != NULL &&
+        ((struct IORequest *)fliteRequest)->io_Device != NULL &&
+        !CheckIO((struct IORequest *)fliteRequest)) {
+        AbortIO((struct IORequest *)fliteRequest);
+        WaitIO((struct IORequest *)fliteRequest);
+    }
+#endif
+    if (ahiRequest != NULL && !CheckIO((struct IORequest *)ahiRequest)) {
+        AbortIO((struct IORequest *)ahiRequest);
+        WaitIO((struct IORequest *)ahiRequest);
+    }
+}
+MakeHook(StopSpeakingButtonClickedHook, StopSpeakingButtonClickedFunc);
 
 HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
     currentImage = NULL;
@@ -699,7 +842,9 @@ HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
     DoMethod(imageViewGroup, MUIM_Group_InitChange);
     DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
     MUI_DisposeObject(imageView);
+    // clang-format off
     imageView = RectangleObject, MUIA_Frame, MUIV_Frame_ImageButton, End;
+    // clang-format on
     DoMethod(imageViewGroup, OM_ADDMEMBER, imageView);
     DoMethod(imageViewGroup, MUIM_Group_MoveMember, imageView, 0);
     DoMethod(imageViewGroup, MUIM_Group_ExitChange);
@@ -707,6 +852,16 @@ HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
 MakeHook(NewImageButtonClickedHook, NewImageButtonClickedFunc);
 
 HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
+    struct GeneratedImage *entry;
+    DoMethod(imageListObject, MUIM_NList_GetEntry, MUIV_NList_GetEntry_Active,
+             &entry);
+    if (entry != NULL && entry->filePath != NULL) {
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+        DeleteFile(entry->filePath);
+#else
+        Delete(entry->filePath);
+#endif
+    }
     DoMethod(imageListObject, MUIM_NList_Remove, MUIV_NList_Remove_Active);
     DoMethod(imageListObject, MUIM_NList_Select, MUIV_NList_Select_All,
              MUIV_NList_Select_Off, NULL);
@@ -720,7 +875,9 @@ HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
     DoMethod(imageViewGroup, MUIM_Group_InitChange);
     DoMethod(imageViewGroup, OM_REMMEMBER, imageView);
     MUI_DisposeObject(imageView);
+    // clang-format off
     imageView = RectangleObject, MUIA_Frame, MUIV_Frame_ImageButton, End;
+    // clang-format on
     DoMethod(imageViewGroup, OM_ADDMEMBER, imageView);
     DoMethod(imageViewGroup, MUIM_Group_MoveMember, imageView, 0);
     DoMethod(imageViewGroup, MUIM_Group_ExitChange);
@@ -728,8 +885,22 @@ HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
 }
 MakeHook(DeleteImageButtonClickedHook, DeleteImageButtonClickedFunc);
 
+static BOOL isStringInList(CONST_STRPTR str, CONST_STRPTR *list) {
+    if (str == NULL || list == NULL)
+        return FALSE;
+    for (UBYTE i = 0; list[i] != NULL; i++) {
+        if (strcmp(str, list[i]) == 0)
+            return TRUE;
+    }
+    return FALSE;
+}
+
 HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
-    if (config.openAiApiKey == NULL || strlen(config.openAiApiKey) == 0) {
+    struct ImageRequestSettings imageSettings;
+    configGetActiveImageRequestSettings(&imageSettings);
+    CONST_STRPTR apiKey = imageSettings.apiKey;
+    if (imageSettings.authorizationType != AUTHORIZATION_TYPE_NONE &&
+        (apiKey == NULL || strlen(apiKey) == 0)) {
         displayError(STRING_ERROR_NO_API_KEY);
         return;
     }
@@ -750,32 +921,33 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         text[strlen(text) - 1] = '\0';
     }
 
-    UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
-                                        CSA_Source, (Tag)text, TAG_DONE);
-
+    /* Keep legacy image model enum for history + size selection. */
+    ImageModel imageModel = configGetImageModel();
     ImageSize imageSize;
-    switch (config.imageModel) {
+    switch (imageModel) {
     case DALL_E_2:
-        imageSize = config.imageSizeDallE2;
+        imageSize = configGetImageSizeDallE2();
         break;
     case DALL_E_3:
-        imageSize = config.imageSizeDallE3;
+        imageSize = configGetImageSizeDallE3();
         break;
     case GPT_IMAGE_1:
     case GPT_IMAGE_1_MINI:
     case GPT_IMAGE_1_5:
-        imageSize = config.imageSizeGptImage1;
+        imageSize = configGetImageSizeGptImage1();
         break;
     default:
-        imageSize = config.imageSizeDallE2;
+        imageSize = configGetImageSizeGptImage1();
         break;
     }
     struct json_object *response = postImageCreationRequestToOpenAI(
-        textUTF8, config.imageModel, imageSize, config.openAiApiKey,
-        config.proxyEnabled, config.proxyHost, config.proxyPort,
-        config.proxyUsesSSL, config.proxyRequiresAuth, config.proxyUsername,
-        config.proxyPassword, config.imageFormat);
-    CodesetsFreeA(textUTF8, NULL);
+        text, imageSettings.host, imageSettings.port, imageSettings.useSSL,
+        imageSettings.apiEndpointUrl, imageSettings.authorizationType,
+        imageSettings.customHeaders, imageSettings.model, imageSize, apiKey,
+        configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
+        configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+        configGetProxyUsername(), configGetProxyPassword(),
+        configGetImageFormat(), imageSettings.imageApiEndpoint);
 
     if (response == NULL) {
         displayError(STRING_ERROR_CONNECTION);
@@ -792,22 +964,22 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
 
     if (json_object_object_get_ex(response, "error", &error) &&
         !json_object_is_type(error, json_type_null)) {
-        STRPTR messageString = (STRPTR)jsonGetApiErrorMessage(error);
-
-        if (messageString != NULL) {
-            displayError(messageString);
-        } else if (json_object_is_type(error, json_type_object)) {
-            struct json_object *type;
-
-            if (json_object_object_get_ex(error, "type", &type)) {
-                STRPTR typeString = json_object_get_string(type);
-
-                if (typeString != NULL) {
-                    if (strcmp(typeString, "invalid_request_error") == 0) {
-                        displayError(STRING_ERROR_INVALID_REQUEST);
-                    } else {
-                        displayError(typeString);
-                    }
+        struct json_object *message = json_object_object_get(error, "message");
+        UTF8 *messageString = json_object_get_string(message);
+        STRPTR messageStringSystemEncoded = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)messageString,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
+        if (messageStringSystemEncoded != NULL) {
+            displayError(messageStringSystemEncoded);
+            CodesetsFreeA(messageStringSystemEncoded, NULL);
+        } else {
+            struct json_object *type = json_object_object_get(error, "type");
+            UTF8 *typeString = json_object_get_string(type);
+            if (typeString != NULL) {
+                if (strcmp(typeString, "invalid_request_error") == 0) {
+                    displayError(STRING_ERROR_INVALID_REQUEST);
+                } else {
+                    displayError(typeString);
                 }
             }
         }
@@ -851,18 +1023,42 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         return;
     }
 
-    LONG data_len;
-    UBYTE *imageData = decodeBase64(b64, &data_len);
+    STRPTR imageData;
+    ULONG b64Len = strlen(b64);
+    CodesetsDecodeB64(CSA_B64SourceString, (Tag)b64, CSA_B64SourceLen,
+                      (Tag)b64Len, CSA_B64DestPtr, (Tag)&imageData, TAG_DONE);
+    if (imageData == NULL) {
+        displayError(STRING_ERROR_INVALID_BASE64);
+        set(createImageButton, MUIA_Disabled, FALSE);
+        set(newImageButton, MUIA_Disabled, FALSE);
+        set(deleteImageButton, MUIA_Disabled, FALSE);
+        set(imageInputTextEditor, MUIA_Disabled, FALSE);
+        json_object_put(response);
+        return;
+    }
+
+    LONG data_len = (b64Len * 3) / 4;
+    while (b64Len > 0 && b64[--b64Len] == '=')
+        data_len--;
 
     CreateDir("AMIGAGPT:images");
+    /* Try to match file extension to actual bytes; fallback to user preference.
+     */
     STRPTR imageFormat;
-    switch (config.imageModel) {
-    case DALL_E_2:
-    case DALL_E_3:
+    if (data_len >= 8 && imageData[0] == 0x89 && imageData[1] == 0x50 &&
+        imageData[2] == 0x4E && imageData[3] == 0x47 && imageData[4] == 0x0D &&
+        imageData[5] == 0x0A && imageData[6] == 0x1A && imageData[7] == 0x0A) {
         imageFormat = "png";
-        break;
-    default:
-        imageFormat = IMAGE_FORMAT_NAMES[config.imageFormat];
+    } else if (data_len >= 3 && imageData[0] == 0xFF && imageData[1] == 0xD8 &&
+               imageData[2] == 0xFF) {
+        imageFormat = "jpg";
+    } else {
+        ImageFormat cfgFmt = configGetImageFormat();
+        if (cfgFmt != IMAGE_FORMAT_NULL && IMAGE_FORMAT_NAMES[cfgFmt] != NULL) {
+            imageFormat = IMAGE_FORMAT_NAMES[cfgFmt];
+        } else {
+            imageFormat = "png";
+        }
     }
 
     // Generate unique ID for the image
@@ -892,12 +1088,17 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         fwrite(imageData, 1, data_len, file);
         fclose(file);
     }
-    FreeVec(imageData);
+    CodesetsFreeA(imageData, NULL);
 
     json_object_put(response);
 
     WORD imageWidth, imageHeight;
     switch (imageSize) {
+    case IMAGE_SIZE_NULL:
+        /* "None" means don't send size; image may still be returned. */
+        imageWidth = 1024;
+        imageHeight = 1024;
+        break;
     case IMAGE_SIZE_256x256:
         imageWidth = 256;
         imageHeight = 256;
@@ -938,8 +1139,45 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     }
 
     updateStatusBar(STRING_GENERATING_IMAGE_NAME, 7);
+    struct ChatRequestSettings nameSettings;
+    configGetActiveChatRequestSettings(&nameSettings);
+    nameSettings.webSearchEnabled = FALSE;
+    /* Image title generation must use a chat-capable model. If the user has
+     * (accidentally) selected an image model as their chat model, fall back to
+     * a sane chat default for the active provider to avoid bad requests. */
+    CONST_STRPTR titleModel = nameSettings.model;
+    if (titleModel != NULL && strlen(titleModel) > 0) {
+        BOOL isImageModel = FALSE;
+        if (nameSettings.host != NULL &&
+            strcmp(nameSettings.host, "api.openai.com") == 0) {
+            isImageModel = isStringInList(titleModel, OPENAI_IMAGE_MODELS);
+        } else if (nameSettings.host != NULL &&
+                   strcmp(nameSettings.host,
+                          "generativelanguage.googleapis.com") == 0) {
+            isImageModel = isStringInList(titleModel, GEMINI_IMAGE_MODELS);
+        } else if (nameSettings.host != NULL &&
+                   strcmp(nameSettings.host, "api.x.ai") == 0) {
+            isImageModel = isStringInList(titleModel, GROK_IMAGE_MODELS);
+        }
+        if (isImageModel) {
+            if (nameSettings.host != NULL &&
+                strcmp(nameSettings.host, "api.openai.com") == 0) {
+                titleModel = "gpt-5-chat-latest";
+            } else if (nameSettings.host != NULL &&
+                       strcmp(nameSettings.host,
+                              "generativelanguage.googleapis.com") == 0) {
+                titleModel = "gemini-2.5-flash";
+            } else if (nameSettings.host != NULL &&
+                       strcmp(nameSettings.host, "api.x.ai") == 0) {
+                titleModel = "grok-4";
+            }
+        }
+    }
+    UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                                        CSA_Source, (Tag)text, TAG_DONE);
     struct Conversation *imageNameConversation = newConversation();
-    addTextToConversation(imageNameConversation, text, "user");
+    addTextToConversation(imageNameConversation, textUTF8, "user");
+    CodesetsFreeA(textUTF8, NULL);
     addTextToConversation(
         imageNameConversation,
         "generate a short title for this image and don't enclose the "
@@ -947,11 +1185,13 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         "in quotes or prefix the response with anything",
         "user");
     struct json_object **responses = postChatMessageToOpenAI(
-        imageNameConversation, NULL, 0, FALSE, CHAT_MODEL_NAMES[GPT_5_NANO],
-        config.openAiApiKey, FALSE, config.proxyEnabled, config.proxyHost,
-        config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth,
-        config.proxyUsername, config.proxyPassword, FALSE,
-        API_ENDPOINT_RESPONSES, NULL);
+        imageNameConversation, nameSettings.host, nameSettings.port,
+        nameSettings.useSSL, titleModel, nameSettings.apiKey, FALSE,
+        nameSettings.useProxy, nameSettings.proxyHost, nameSettings.proxyPort,
+        nameSettings.proxyUsesSSL, nameSettings.proxyRequiresAuth,
+        nameSettings.proxyUsername, nameSettings.proxyPassword, FALSE, FALSE,
+        nameSettings.apiEndpoint, nameSettings.apiEndpointUrl,
+        nameSettings.authorizationType, nameSettings.customHeaders);
 
     struct GeneratedImage *generatedImage =
         AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
@@ -972,14 +1212,47 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             freeConversation(imageNameConversation);
             return;
         }
-        STRPTR responseString = getMessageContentFromJson(
-            responses[0], FALSE, FALSE, API_ENDPOINT_RESPONSES);
-        generatedImage->name = configDupString(responseString);
+        /* Some providers (e.g. Claude with web search) may return text in
+         * multiple response objects. Concatenate all text parts. */
+        ULONG combinedLen = 1;
+        UWORD ri = 0;
+        struct json_object *r = NULL;
+        STRPTR combined = NULL;
+        while ((r = responses[ri++]) != NULL) {
+            UTF8 *part = getMessageContentFromJson(r, FALSE, FALSE,
+                                                   nameSettings.apiEndpoint);
+            if (part != NULL)
+                combinedLen += strlen(part) + 1;
+        }
+        combined = AllocVec(combinedLen, MEMF_ANY | MEMF_CLEAR);
+        if (combined == NULL) {
+            combined = (STRPTR) "";
+        } else {
+            ri = 0;
+            while ((r = responses[ri++]) != NULL) {
+                UTF8 *part = getMessageContentFromJson(
+                    r, FALSE, FALSE, nameSettings.apiEndpoint);
+                if (part != NULL && strlen(part) > 0) {
+                    strncat(combined, part, combinedLen - strlen(combined) - 1);
+                }
+            }
+        }
+        generatedImage->name =
+            AllocVec(strlen(combined) + 1, MEMF_ANY | MEMF_CLEAR);
+        if (generatedImage->name != NULL) {
+            strncpy(generatedImage->name, combined, strlen(combined));
+        }
         updateStatusBar(STRING_READY, 5);
-        json_object_put(responses[0]);
+        ri = 0;
+        while ((r = responses[ri++]) != NULL) {
+            json_object_put(r);
+        }
         FreeVec(responses);
+        if (combined != NULL && combined != (STRPTR) "") {
+            FreeVec(combined);
+        }
     } else {
-        generatedImage->name = configDupString(id);
+        generatedImage->name = dupStringAlloc(id);
         updateStatusBar(STRING_READY, 5);
         if (responses != NULL) {
             FreeVec(responses);
@@ -988,8 +1261,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     }
     freeConversation(imageNameConversation);
 
-    generatedImage->filePath = configDupString(fullPath);
-    generatedImage->prompt = configDupString(text);
+    generatedImage->filePath = dupStringAlloc(fullPath);
+    generatedImage->prompt = dupStringAlloc(text);
     if (generatedImage->name == NULL || generatedImage->filePath == NULL ||
         generatedImage->prompt == NULL) {
         if (generatedImage->name != NULL) {
@@ -1012,7 +1285,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         displayError(STRING_ERROR_GENERATING_IMAGE_NAME);
         return;
     }
-    generatedImage->imageModel = config.imageModel;
+    generatedImage->imageModel = configGetImageModel();
     generatedImage->width = imageWidth;
     generatedImage->height = imageHeight;
     DoMethod(imageListObject, MUIM_NList_InsertSingle, generatedImage,
@@ -1166,6 +1439,9 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]+ %s\0",
              greenPen, STRING_NEW_IMAGE);
     set(newImageButton, MUIA_Text_Contents, buttonLabelText);
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+             redPen, STRING_STOP_SPEAKING);
+    set(stopSpeakingButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s\0",
              redPen, STRING_DELETE_IMAGE);
     set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
@@ -1478,6 +1754,36 @@ static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
     return out;
 }
 
+static BOOL ensureChatOutputBufferCapacity(ULONG required) {
+    if (chatOutputTextEditorContents == NULL)
+        return FALSE;
+    if (required <= chatOutputTextEditorContentsCapacity)
+        return TRUE;
+
+    ULONG newCapacity = chatOutputTextEditorContentsCapacity;
+    while (newCapacity < required) {
+        if (newCapacity > 8 * 1024 * 1024) {
+            break;
+        }
+        newCapacity *= 2;
+    }
+    if (newCapacity < required) {
+        return FALSE;
+    }
+
+    STRPTR bigger = AllocVec(newCapacity, MEMF_ANY | MEMF_CLEAR);
+    if (bigger == NULL) {
+        return FALSE;
+    }
+    strncpy(bigger, chatOutputTextEditorContents,
+            chatOutputTextEditorContentsCapacity - 1);
+    set(chatOutputTextEditor, MUIA_NFloattext_Text, "");
+    FreeVec(chatOutputTextEditorContents);
+    chatOutputTextEditorContents = bigger;
+    chatOutputTextEditorContentsCapacity = newCapacity;
+    return TRUE;
+}
+
 /**
  * Prepare assistant text for NFloattext. Returns a newly AllocVec'd string,
  * or NULL if input is NULL or allocation fails. Caller must FreeVec() when
@@ -1490,7 +1796,7 @@ static STRPTR formatAssistantTextForDisplay(CONST_STRPTR input) {
     if (input == NULL) {
         return NULL;
     }
-    if (!config.markdownFormatting) {
+    if (!configGetMarkdownFormatting()) {
         len = strlen(input);
         out = AllocVec(len + 1, MEMF_CLEAR);
         if (out == NULL) {
@@ -1591,7 +1897,7 @@ void chatOutputUpdateFromBuffer(BOOL preserveViewport) {
 #ifdef __MORPHOS__
             {
                 BOOL morphosUseRawRefresh =
-                    !config.markdownFormatting ||
+                    !configGetMarkdownFormatting() ||
                     morphosChatStreamRawScintillaRefresh;
 
                 if (morphosUseRawRefresh) {
@@ -1862,13 +2168,13 @@ static Object *newChatOutputFloattextObject(void) {
     if (createChatOutputFloattextClass() == RETURN_OK) {
         return (Object *)NewObject(chatOutputFloattextClass->mcc_Class, NULL,
             MUIA_Font,
-            config.fixedWidthFonts ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
+            configGetFixedWidthFonts() ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
             MUIA_Frame, MUIV_Frame_Text, MUIA_ContextMenu, NULL,
             MUIA_NFloattext_Text, chatOutputTextEditorContents, TAG_DONE);
     }
     return (Object *)MUI_NewObject(
         MUIC_NFloattext, MUIA_Font,
-        config.fixedWidthFonts ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
+        configGetFixedWidthFonts() ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
         MUIA_Frame, MUIV_Frame_Text, MUIA_ContextMenu, NULL,
         MUIA_NFloattext_Text, chatOutputTextEditorContents, TAG_DONE);
 }
@@ -1920,61 +2226,77 @@ LONG createMainWindow() {
         MUI_DisposeObject(mainWindowObject);
     }
 
+    // clang-format off
     if (isMUI5 || isMUI39) {
         chatInputTextEditor = NewObject(
-            MUIC_AmigaGPTTextEditor, NULL, TextFrame, MUIA_Background,
-            MUII_BACKGROUND, MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
+            MUIC_AmigaGPTTextEditor, NULL,
+            TextFrame,
+            MUIA_Background, MUII_BACKGROUND,
+            MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
             MUIA_AmigaGPTTextEditor_SubmitHook, &SendMessageButtonClickedHook,
             isAROS ? TAG_DONE : TAG_SKIP, NULL,
 #ifndef __MORPHOS__
-            MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
 #endif
             MUIA_TextEditor_ReadOnly, FALSE,
-            MUIA_TextEditor_TabSize, 4, MUIA_TextEditor_Rows, 3,
+            MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
 
         imageInputTextEditor = NewObject(
-            MUIC_AmigaGPTTextEditor, NULL, MUIA_Weight, 80,
+            MUIC_AmigaGPTTextEditor, NULL,
+            MUIA_Weight, 80,
             MUIA_AmigaGPTTextEditor_SubmitHook, &CreateImageButtonClickedHook,
             isAROS ? TAG_DONE : TAG_SKIP, NULL,
 #ifndef __MORPHOS__
-            MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
 #endif
             MUIA_TextEditor_ReadOnly, FALSE,
-            MUIA_TextEditor_TabSize, 4, MUIA_TextEditor_Rows, 3,
+            MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
     } else {
         chatInputTextEditor = MUI_NewObject(
-            isAROS ? MUIC_BetterString : MUIC_TextEditor, TextFrame,
-            MUIA_Background, MUII_BACKGROUND, MUIA_ObjectID,
-            OBJECT_ID_CHAT_INPUT_TEXT_EDITOR, isAROS ? TAG_DONE : TAG_SKIP,
-            NULL,
+            isAROS ? MUIC_BetterString : MUIC_TextEditor,
+            TextFrame,
+            MUIA_Background, MUII_BACKGROUND,
+            MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL,
 #ifndef __MORPHOS__
-            MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
 #endif
-            MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
-            MUIA_TextEditor_Rows, 3, MUIA_TextEditor_ExportHook,
-            MUIV_TextEditor_ExportHook_EMail, TAG_DONE);
+            MUIA_TextEditor_ReadOnly, FALSE,
+            MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3,
+            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+            TAG_DONE);
 
         imageInputTextEditor = MUI_NewObject(
-            isAROS ? MUIC_BetterString : MUIC_TextEditor, TextFrame,
-            MUIA_Background, MUIA_Weight, 80, isAROS ? TAG_DONE : TAG_SKIP,
-            NULL,
+            isAROS ? MUIC_BetterString : MUIC_TextEditor,
+            TextFrame,
+            MUIA_Background, MUII_BACKGROUND,
+            MUIA_Weight, 80,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL,
 #ifndef __MORPHOS__
-            MUIA_TextEditor_FixedFont, config.fixedWidthFonts,
+            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
 #endif
-            MUIA_TextEditor_ReadOnly, FALSE, MUIA_TextEditor_TabSize, 4,
-            MUIA_TextEditor_Rows, 3, MUIA_TextEditor_ExportHook,
-            MUIV_TextEditor_ExportHook_EMail, TAG_DONE);
+            MUIA_TextEditor_ReadOnly, FALSE,
+            MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3,
+            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+            TAG_DONE);
     }
+    // clang-format on
 
     createMenu();
 
     if (chatOutputTextEditorContents == NULL) {
         chatOutputTextEditorContents = AllocVec(
             CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, MEMF_ANY | MEMF_CLEAR);
+        chatOutputTextEditorContentsCapacity =
+            CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH;
     }
 
     pages[0] = STRING_CHAT_MODE;
@@ -2060,9 +2382,13 @@ LONG createMainWindow() {
                                 // Chat input text editor
                                 Child, chatInputTextEditor,
                                 // Send message button
-                                Child, HGroup, MUIA_HorizWeight, 10,
+                                Child, VGroup, MUIA_HorizWeight, 10,
                                     Child, sendMessageButton = MUI_MakeObject(MUIO_Button, STRING_SEND,
                                         MUIA_ObjectID, OBJECT_ID_SEND_MESSAGE_BUTTON,
+                                        MUIA_CycleChain, TRUE,
+                                        MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                    End,
+                                    Child, stopSpeakingButton = MUI_MakeObject(MUIO_Button, STRING_STOP_SPEAKING,
                                         MUIA_CycleChain, TRUE,
                                         MUIA_InputMode, MUIV_InputMode_RelVerify,
                                     End,
@@ -2150,6 +2476,7 @@ LONG createMainWindow() {
         End) == NULL) {
         streamLogLifecycle("createMainWindow WindowObject fail");
         streamLogStartupPhase("createMainWindow fail");
+        // clang-format on
         displayError(STRING_ERROR_MAIN_WINDOW);
         return RETURN_ERROR;
     }
@@ -2225,6 +2552,9 @@ LONG createMainWindow() {
         snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
                  bluePen, STRING_SEND);
         set(sendMessageButton, MUIA_Text_Contents, buttonLabelText);
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+                 redPen, STRING_STOP_SPEAKING);
+        set(stopSpeakingButton, MUIA_Text_Contents, buttonLabelText);
         snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
                  "\33c\33P[%ld]+ %s\0", greenPen, STRING_NEW_IMAGE);
         set(newImageButton, MUIA_Text_Contents, buttonLabelText);
@@ -2392,6 +2722,9 @@ static void addMainWindowActions() {
     DoMethod(sendMessageButton, MUIM_Notify, MUIA_Pressed, FALSE,
              sendMessageButton, 2, MUIM_CallHook,
              &SendMessageButtonClickedHook);
+    DoMethod(stopSpeakingButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             stopSpeakingButton, 2, MUIM_CallHook,
+             &StopSpeakingButtonClickedHook);
     DoMethod(createImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
              createImageButton, 2, MUIM_CallHook,
              &CreateImageButtonClickedHook);
@@ -2523,8 +2856,9 @@ static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
      */
     if (streamUiShouldRefresh(*wordNumber)) {
         streamUiFlushChatDisplay();
-        if (config.speechEnabled &&
-            config.speechSystem != SPEECH_SYSTEM_OPENAI) {
+        if (configGetSpeechEnabled() &&
+            configGetSpeechSystem() != SPEECH_SYSTEM_OPENAI &&
+            configGetSpeechSystem() != SPEECH_SYSTEM_XAI) {
             speakStreamUtf8Tail(receivedMessage, speechUtf8Index);
         }
     }
@@ -2593,10 +2927,14 @@ static void flushUtf8StreamToMessage(struct UTF8StreamBuffer *stream,
 /* msgid "Response truncated (stream buffer limit reached)." */
 
 static ChatStreamOutcome chatStreamClassifyOutcome(UTF8 *receivedMessage) {
+    struct ChatRequestSettings chatSettings;
+
     if (receivedMessage == NULL || receivedMessage[0] == '\0') {
         return CHAT_STREAM_FAILED;
     }
-    if (config.useCustomServer) {
+    configGetActiveChatRequestSettings(&chatSettings);
+    if (!chatSettings.stream ||
+        chatSettings.apiEndpoint != API_CHAT_ENDPOINT_RESPONSES) {
         return CHAT_STREAM_OK;
     }
     switch (openAIChatStreamTransportOutcome()) {
@@ -2629,6 +2967,8 @@ static CONST_STRPTR chatStreamOutcomeName(ChatStreamOutcome outcome) {
 
 static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
                              ULONG speechUtf8Index, BOOL isNewConversation) {
+    struct ChatRequestSettings chatSettings;
+
 #ifdef __MORPHOS__
     morphosChatStreamRawScintillaRefresh = FALSE;
 #endif
@@ -2644,6 +2984,176 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
                          openAIChatStreamLastSseSnippet());
     }
 
+    configGetActiveChatRequestSettings(&chatSettings);
+
+
+    /* Handle shell tool calls - loop to handle multiple sequential commands */
+    while (chatSettings.stream && chatSettings.shellToolEnabled &&
+           hasPendingToolCall()) {
+        UTF8 *command = getPendingToolCommand();
+        STRPTR callId = getPendingToolCallId();
+        UTF8 *responseId = getPendingResponseId();
+
+        /* Ask user for confirmation before executing the command */
+        UBYTE confirmMsg[4096];
+        snprintf(confirmMsg, sizeof(confirmMsg),
+                 STRING_SHELL_TOOL_CONFIRMATION_BODY, command);
+        LONG result = MUI_Request(app, mainWindowObject,
+#ifdef __MORPHOS__
+                                  NULL,
+#else
+                                  MUIV_Requester_Image_Warning,
+#endif
+                                  STRING_SHELL_TOOL_CONFIRMATION_TITLE,
+                                  STRING_SHELL_TOOL_CONFIRMATION_BUTTONS,
+                                  confirmMsg, TAG_DONE);
+
+        if (result != 1) {
+            /* User denied - clear pending tool call and break out of loop */
+            clearPendingToolCall();
+            strncat(chatOutputTextEditorContents,
+                    STRING_SHELL_TOOL_DENIED_BANNER,
+                    chatOutputTextEditorContentsCapacity -
+                        strlen(chatOutputTextEditorContents) - 1);
+            strncat(receivedMessage, STRING_SHELL_TOOL_DENIED_BANNER,
+                    READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
+            streamUiFlushChatDisplay();
+            break; /* Stop processing more tool calls */
+        }
+
+        /* User allowed - proceed with execution */
+
+        /* Display that we're executing a command */
+        UBYTE statusMsg[256];
+        snprintf(statusMsg, sizeof(statusMsg), STRING_EXECUTING_COMMAND);
+        updateStatusBar(statusMsg, yellowPen);
+
+        /* Show the command in the chat output and save to history */
+        UBYTE cmdDisplay[512];
+        snprintf(cmdDisplay, sizeof(cmdDisplay),
+                 STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT, command);
+        strncat(chatOutputTextEditorContents, cmdDisplay,
+                chatOutputTextEditorContentsCapacity -
+                    strlen(chatOutputTextEditorContents) - 1);
+        strncat(receivedMessage, cmdDisplay,
+                READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
+        streamUiFlushChatDisplay();
+
+        /* Execute the shell command */
+        LONG exitCode = 0;
+        STRPTR output = executeShellCommand(command, &exitCode);
+
+        /* Display the output and save to history */
+        UBYTE outputDisplay[4096];
+        snprintf(outputDisplay, sizeof(outputDisplay),
+                 STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT, exitCode,
+                 output != NULL ? output : (STRPTR)STRING_SHELL_TOOL_NO_OUTPUT);
+        strncat(chatOutputTextEditorContents, outputDisplay,
+                chatOutputTextEditorContentsCapacity -
+                    strlen(chatOutputTextEditorContents) - 1);
+        strncat(receivedMessage, outputDisplay,
+                READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
+        streamUiFlushChatDisplay();
+
+        /* Build output string with exit code */
+        UBYTE toolOutput[8192];
+        snprintf(toolOutput, sizeof(toolOutput),
+                 STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT, exitCode,
+                 output != NULL ? output : (STRPTR)STRING_SHELL_TOOL_NO_OUTPUT);
+
+        /* Send the tool result back to the API - this may set a new pending
+         * tool call if OpenAI wants to run another command */
+        struct json_object *toolResponse = postToolResultToOpenAI(
+            responseId, callId, toolOutput, chatSettings.model,
+            chatSettings.host, chatSettings.port, chatSettings.useSSL,
+            chatSettings.apiKey, configGetProxyEnabled(),
+            chatSettings.proxyHost, chatSettings.proxyPort,
+            chatSettings.proxyUsesSSL, chatSettings.proxyRequiresAuth,
+            chatSettings.proxyUsername, chatSettings.proxyPassword,
+            chatSettings.shellToolEnabled, chatSettings.apiEndpointUrl,
+            chatSettings.authorizationType, chatSettings.customHeaders);
+
+        if (output != NULL) {
+            FreeVec(output);
+        }
+
+        /* Get the text content from the new response */
+        if (toolResponse != NULL) {
+            /* Check for errors */
+            struct json_object *error;
+            if (json_object_object_get_ex(toolResponse, "error", &error) &&
+                !json_object_is_type(error, json_type_null)) {
+                clearPendingToolCall();
+                struct json_object *message =
+                    json_object_object_get(error, "message");
+                if (message != NULL) {
+                    displayError(json_object_get_string(message));
+                }
+                json_object_put(toolResponse);
+                break; /* Stop on error */
+            }
+
+            /* Each tool result creates a new response id; keep it in sync so
+             * stateful requests (e.g. auto-generated conversation title) chain
+             * from the latest response, not the pre-tool id. */
+            conversationSyncLastResponseIdFromPayload(currentConversation,
+                                                      toolResponse);
+
+            /* Check if there's another tool call - if so, loop will continue.
+             * postToolResultToOpenAI will have set pendingToolCall if so */
+            if (hasPendingToolCall()) {
+                json_object_put(toolResponse);
+                continue;
+            }
+
+            /* No more tool calls - get the final response text */
+            UTF8 *toolContentString = getMessageContentFromJson(
+                toolResponse, FALSE, FALSE, chatSettings.apiEndpoint);
+            if (toolContentString != NULL && strlen(toolContentString) > 0) {
+                /* Append to the received message */
+                strncat(receivedMessage, toolContentString,
+                        READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
+
+                /* Display in chat output */
+                STRPTR formattedToolResponse =
+                    CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
+                                      CSA_Source, (Tag)toolContentString,
+                                      CSA_MapForeignChars, TRUE, TAG_DONE);
+                if (formattedToolResponse != NULL) {
+                    strncat(chatOutputTextEditorContents, formattedToolResponse,
+                            chatOutputTextEditorContentsCapacity -
+                                strlen(chatOutputTextEditorContents) - 1);
+                    CodesetsFreeA(formattedToolResponse, NULL);
+                } else {
+                    STRPTR latin1 = utf8ToLatin1(toolContentString);
+                    if (latin1 != NULL) {
+                        strncat(chatOutputTextEditorContents, latin1,
+                                chatOutputTextEditorContentsCapacity -
+                                    strlen(chatOutputTextEditorContents) - 1);
+                        FreeVec(latin1);
+                    }
+                }
+
+#ifndef __MORPHOS__
+                STRPTR formattedContent = convertMarkdownFormattingToMUI(
+                    chatOutputTextEditorContents);
+                if (formattedContent != NULL) {
+                    strncpy(chatOutputTextEditorContents, formattedContent,
+                            chatOutputTextEditorContentsCapacity - 1);
+                    FreeVec(formattedContent);
+                }
+                set(chatOutputTextEditor, MUIA_NFloattext_Text,
+                    chatOutputTextEditorContents);
+                set(chatOutputListView, MUIA_NList_First,
+                    MUIV_NList_First_Bottom);
+#else
+                streamUiFlushChatDisplay();
+#endif
+            }
+            json_object_put(toolResponse);
+        }
+    } /* end of while (tool calls) */
+
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 
     if (outcome == CHAT_STREAM_OK || outcome == CHAT_STREAM_PARTIAL) {
@@ -2658,8 +3168,10 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
         refreshViewCodeBlocksMenuState();
 #endif
 
-        if (config.speechEnabled) {
-            if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
+        if (configGetSpeechEnabled()) {
+            SpeechSystem speechSys = configGetSpeechSystem();
+            if (speechSys == SPEECH_SYSTEM_OPENAI ||
+                speechSys == SPEECH_SYSTEM_XAI) {
                 speakText(receivedMessage, NULL, AUDIO_FORMAT_PCM);
             } else {
                 speakStreamUtf8Tail(receivedMessage, &speechUtf8Index);
@@ -2677,22 +3189,19 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
                                   "quotes or prefix the response with anything",
                                   "user");
             setConversationSystem(currentConversation, NULL);
+            /* Do not send web search / server tools on the title request: xAI
+             * injects search tools when web search is on, and the model may
+             * return only tool calls with no assistant message text ? leaving
+             * the title empty and the row blank in the list. */
             responses = postChatMessageToOpenAI(
-                currentConversation,
-                config.useCustomServer ? config.customHost : NULL,
-                config.useCustomServer ? config.customPort : 0,
-                config.useCustomServer ? config.customUseSSL : FALSE,
-                config.useCustomServer ? config.customChatModel
-                                       : CHAT_MODEL_NAMES[GPT_5_NANO],
-                config.useCustomServer ? config.customApiKey
-                                       : config.openAiApiKey,
-                FALSE, config.proxyEnabled, config.proxyHost, config.proxyPort,
-                config.proxyUsesSSL, config.proxyRequiresAuth,
-                config.proxyUsername, config.proxyPassword,
-                config.webSearchEnabled,
-                config.useCustomServer ? config.customApiEndpoint
-                                       : API_ENDPOINT_RESPONSES,
-                config.useCustomServer ? config.customApiEndpointUrl : NULL);
+                currentConversation, chatSettings.host, chatSettings.port,
+                chatSettings.useSSL, chatSettings.model, chatSettings.apiKey,
+                FALSE, chatSettings.useProxy, chatSettings.proxyHost,
+                chatSettings.proxyPort, chatSettings.proxyUsesSSL,
+                chatSettings.proxyRequiresAuth, chatSettings.proxyUsername,
+                chatSettings.proxyPassword, FALSE, FALSE,
+                chatSettings.apiEndpoint, chatSettings.apiEndpointUrl,
+                chatSettings.authorizationType, chatSettings.customHeaders);
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);
@@ -2700,21 +3209,50 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
             if (responses == NULL) {
                 displayError(STRING_ERROR_CONNECTING_OPENAI);
             } else if (responses[0] != NULL) {
-                UTF8 *responseString = getMessageContentFromJson(
-                    responses[0], FALSE, FALSE,
-                    config.useCustomServer ? config.customApiEndpoint
-                                           : API_ENDPOINT_RESPONSES);
-                if (currentConversation->name == NULL &&
-                    responseString != NULL) {
-                    currentConversation->name =
-                        configDupString(responseString);
-                    conversationRefreshNameListDisplay(currentConversation);
+                ULONG combinedLen = 1;
+                UWORD ri = 0;
+                struct json_object *r = NULL;
+                STRPTR combined = NULL;
+
+                while ((r = responses[ri++]) != NULL) {
+                    UTF8 *part = getMessageContentFromJson(
+                        r, FALSE, FALSE, chatSettings.apiEndpoint);
+                    if (part != NULL)
+                        combinedLen += strlen(part) + 1;
+                }
+                combined = AllocVec(combinedLen, MEMF_ANY | MEMF_CLEAR);
+                if (combined == NULL) {
+                    combined = (STRPTR) "";
+                } else {
+                    ri = 0;
+                    while ((r = responses[ri++]) != NULL) {
+                        UTF8 *part = getMessageContentFromJson(
+                            r, FALSE, FALSE, chatSettings.apiEndpoint);
+                        if (part != NULL && strlen(part) > 0) {
+                            strncat(combined, part,
+                                    combinedLen - strlen(combined) - 1);
+                        }
+                    }
+                }
+                if (currentConversation->name == NULL) {
+                    currentConversation->name = allocNewConversationTitle(
+                        currentConversation, (const UTF8 *)combined);
+                    if (currentConversation->name != NULL) {
+                        conversationRefreshNameListDisplay(currentConversation);
+                    }
+                }
+                if (combined != NULL && combined != (STRPTR) "") {
+                    FreeVec(combined);
                 }
                 DoMethod(conversationListObject, MUIM_NList_InsertSingle,
                          currentConversation, MUIV_NList_Insert_Top);
                 DoMethod(conversationListObject, MUIM_NList_SetActive,
                          MUIV_NList_Active_Top, NULL);
-                json_object_put(responses[0]);
+                ri = 0;
+                r = NULL;
+                while ((r = responses[ri++]) != NULL) {
+                    json_object_put(r);
+                }
             }
             FreeVec(responses);
         }
@@ -2782,7 +3320,7 @@ static void sendChatMessage() {
     {
         UBYTE userStyleString[] = "\033r\033b\0333";
         UBYTE userAlignment;
-        switch (config.userTextAlignment) {
+        switch (configGetUserTextAlignment()) {
         case ALIGN_LEFT:
             userAlignment = 'l';
             break;
@@ -2827,7 +3365,10 @@ static void sendChatMessage() {
 #endif
     CodesetsFreeA(textUTF8, NULL);
 
-    setConversationSystem(currentConversation, config.chatSystem);
+    struct ChatRequestSettings chatSettings;
+
+    configGetActiveChatRequestSettings(&chatSettings);
+    setConversationSystem(currentConversation, chatSettings.chatSystem);
 
     if (isAROS) {
         set(chatInputTextEditor, MUIA_String_Contents, "");
@@ -2851,19 +3392,15 @@ static void sendChatMessage() {
     do {
         streamLogLifecycle("chat send postChat begin");
         responses = postChatMessageToOpenAI(
-            currentConversation,
-            config.useCustomServer ? config.customHost : NULL,
-            config.useCustomServer ? config.customPort : 0,
-            config.useCustomServer ? config.customUseSSL : FALSE,
-            config.useCustomServer ? config.customChatModel
-                                   : CHAT_MODEL_NAMES[config.chatModel],
-            config.useCustomServer ? config.customApiKey : config.openAiApiKey,
-            !config.useCustomServer, config.proxyEnabled, config.proxyHost,
-            config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth,
-            config.proxyUsername, config.proxyPassword, config.webSearchEnabled,
-            config.useCustomServer ? config.customApiEndpoint
-                                   : API_ENDPOINT_RESPONSES,
-            config.useCustomServer ? config.customApiEndpointUrl : NULL);
+            currentConversation, chatSettings.host, chatSettings.port,
+            chatSettings.useSSL, chatSettings.model, chatSettings.apiKey,
+            chatSettings.stream, chatSettings.useProxy, chatSettings.proxyHost,
+            chatSettings.proxyPort, chatSettings.proxyUsesSSL,
+            chatSettings.proxyRequiresAuth, chatSettings.proxyUsername,
+            chatSettings.proxyPassword, chatSettings.webSearchEnabled,
+            chatSettings.shellToolEnabled, chatSettings.apiEndpoint,
+            chatSettings.apiEndpointUrl, chatSettings.authorizationType,
+            chatSettings.customHeaders);
         if (responses == NULL) {
             streamLogLifecycle("chat send postChat returned null");
             streamLogApiError("connect", "postChatMessageToOpenAI returned NULL");
@@ -2957,11 +3494,8 @@ static void sendChatMessage() {
             }
 
             UTF8 *contentString = getMessageContentFromJson(
-                response, !config.useCustomServer, FALSE,
-                config.useCustomServer ? config.customApiEndpoint
-                                       : API_ENDPOINT_RESPONSES);
-            if (config.useCustomServer) {
-                receivedMessage[0] = '\0';
+                response, chatSettings.stream, FALSE, chatSettings.apiEndpoint);
+            if (!chatSettings.stream) {
                 appendValidatedUtf8Chunk(utf8Stream, contentString,
                                          receivedMessage, &wordNumber,
                                          &speechUtf8Index);
@@ -2981,10 +3515,61 @@ static void sendChatMessage() {
                     if (json_object_object_get_ex(response, "type", &typeObj)) {
                         type = json_object_get_string(typeObj);
                     }
-                    if (config.useCustomServer ||
-                        (type != NULL &&
-                         strcmp(type, "response.completed") == 0)) {
+                    if (type != NULL &&
+                        strcmp(type, "response.completed") == 0) {
                         dataStreamFinished = TRUE;
+                    } else if (json_object_object_get(response, "choices") !=
+                               NULL) {
+                        struct json_object *choices =
+                            json_object_object_get(response, "choices");
+                        if (choices != NULL &&
+                            json_object_is_type(choices, json_type_array) &&
+                            json_object_array_length(choices) > 0) {
+                            struct json_object *choice0 =
+                                json_object_array_get_idx(choices, 0);
+                            if (choice0 != NULL) {
+                                struct json_object *finishReason =
+                                    json_object_object_get(choice0,
+                                                           "finish_reason");
+                                if (finishReason != NULL &&
+                                    !json_object_is_type(finishReason,
+                                                         json_type_null)) {
+                                    UTF8 *fr =
+                                        json_object_get_string(finishReason);
+                                    if (fr != NULL && strlen(fr) > 0) {
+                                        dataStreamFinished = TRUE;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        struct json_object *candidates =
+                            json_object_object_get(response, "candidates");
+                        if (candidates != NULL &&
+                            json_object_is_type(candidates, json_type_array) &&
+                            json_object_array_length(candidates) > 0) {
+                            struct json_object *cand0 =
+                                json_object_array_get_idx(candidates, 0);
+                            if (cand0 != NULL &&
+                                json_object_is_type(cand0, json_type_object)) {
+                                struct json_object *finishReason =
+                                    json_object_object_get(cand0,
+                                                           "finishReason");
+                                if (finishReason == NULL) {
+                                    finishReason = json_object_object_get(
+                                        cand0, "finish_reason");
+                                }
+                                if (finishReason != NULL &&
+                                    !json_object_is_type(finishReason,
+                                                         json_type_null)) {
+                                    UTF8 *fr =
+                                        json_object_get_string(finishReason);
+                                    if (fr != NULL && strlen(fr) > 0) {
+                                        dataStreamFinished = TRUE;
+                                    }
+                                }
+                            }
+                        }
                     }
                     json_object_put(response);
                 } else {
@@ -3001,7 +3586,9 @@ static void sendChatMessage() {
             DoMethod(app, MUIM_Application_NewInput, &muiSig);
         }
 #endif
-        if (!config.useCustomServer && !openAIChatStreamInProgress()) {
+        if (chatSettings.stream &&
+            chatSettings.apiEndpoint == API_CHAT_ENDPOINT_RESPONSES &&
+            !openAIChatStreamInProgress()) {
             dataStreamFinished = TRUE;
         }
     } while (!dataStreamFinished && !mainWindowIsShuttingDown());
@@ -3045,6 +3632,25 @@ void displayConversation(struct Conversation *conversation) {
     }
 
     chatOutputTextEditorContents[0] = '\0';
+
+    ULONG estimatedRequired = 1024;
+    for (conversationNode =
+             (struct ConversationNode *)conversation->messages->mlh_Head;
+         conversationNode->node.mln_Succ != NULL;
+         conversationNode =
+             (struct ConversationNode *)conversationNode->node.mln_Succ) {
+        UTF8 *rawEstimate = conversationNodeGetRaw(conversationNode);
+        estimatedRequired +=
+            strlen((const char *)(rawEstimate != NULL ? rawEstimate : (UTF8 *)"")) *
+                3 +
+            512;
+    }
+    if (!ensureChatOutputBufferCapacity(estimatedRequired)) {
+        displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
+        set(sendMessageButton, MUIA_Disabled, TRUE);
+        return;
+    }
+
     for (conversationNode =
              (struct ConversationNode *)conversation->messages->mlh_Head;
          conversationNode->node.mln_Succ != NULL;
@@ -3053,6 +3659,21 @@ void displayConversation(struct Conversation *conversation) {
         content = conversationNodeGetDisplay(conversationNode);
         if (content == NULL) {
             content = (UTF8 *)"";
+        }
+        UTF8 *rawNode = conversationNodeGetRaw(conversationNode);
+        if ((strlen(chatOutputTextEditorContents) +
+             strlen((const char *)(rawNode != NULL ? rawNode : (UTF8 *)"")) +
+             256) >
+            chatOutputTextEditorContentsCapacity) {
+            ULONG need = strlen(chatOutputTextEditorContents) +
+                         strlen((const char *)(rawNode != NULL ? rawNode : (UTF8 *)"")) *
+                             3 +
+                         1024;
+            if (!ensureChatOutputBufferCapacity(need)) {
+                displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
+                set(sendMessageButton, MUIA_Disabled, TRUE);
+                return;
+            }
         }
         if ((strlen(chatOutputTextEditorContents) + strlen(content) + 256) >
             WRITE_BUFFER_LENGTH) {
@@ -3068,8 +3689,21 @@ void displayConversation(struct Conversation *conversation) {
                      CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, content);
 #else
         if (strcmp(conversationNode->role, "user") == 0) {
+            UTF8 *userRaw = conversationNodeGetRaw(conversationNode);
+            STRPTR userContent =
+                CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
+                                  CSA_Source, (Tag)userRaw,
+                                  CSA_MapForeignChars, TRUE, TAG_DONE);
+            STRPTR latin1Fallback = NULL;
+            BOOL freeWithCodesets = (userContent != NULL);
+            if (userContent == NULL) {
+                latin1Fallback = utf8ToLatin1(userRaw);
+                userContent = latin1Fallback ? latin1Fallback
+                                             : (STRPTR)userRaw;
+            }
+            content = (UTF8 *)userContent;
             UBYTE userAlignment;
-            switch (config.userTextAlignment) {
+            switch (configGetUserTextAlignment()) {
             case ALIGN_LEFT:
                 userAlignment = 'l';
                 break;
@@ -3098,9 +3732,13 @@ void displayConversation(struct Conversation *conversation) {
                                  userStyleString);
                 }
             }
+            if (freeWithCodesets)
+                CodesetsFreeA(userContent, NULL);
+            else if (latin1Fallback != NULL)
+                FreeVec(latin1Fallback);
         } else if (strcmp(conversationNode->role, "assistant") == 0) {
-            set(chatOutputTextEditor, MUIA_NFloattext_Align,
-                config.assistantTextAlignment);
+            set(chatOutputListView, MUIA_NFloattext_Align,
+                configGetAssistantTextAlignment());
             UBYTE assistantStyleString[] = "\n\n\0332";
             STRPTR formattedContent = formatAssistantTextForDisplay(content);
 
@@ -3124,16 +3762,13 @@ void displayConversation(struct Conversation *conversation) {
     morphosScheduleChatOutputRefreshFromList();
 #else
     {
-        STRPTR convertedConversationString = CodesetsUTF8ToStr(
-            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-            (Tag)chatOutputTextEditorContents, CSA_MapForeignChars, TRUE,
-            TAG_DONE);
-
-        snprintf(chatOutputTextEditorContents,
-                 CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, "%s",
-                 convertedConversationString);
-
-        CodesetsFreeA(convertedConversationString, NULL);
+        ULONG totalLen = (ULONG)strlen(chatOutputTextEditorContents);
+        if (totalLen > CHAT_OUTPUT_WIDGET_SAFE_LIMIT) {
+            STRPTR truncated = chatOutputTextEditorContents +
+                               (totalLen - CHAT_OUTPUT_WIDGET_SAFE_LIMIT);
+            memmove(chatOutputTextEditorContents, truncated,
+                    CHAT_OUTPUT_WIDGET_SAFE_LIMIT + 1);
+        }
 
         set(chatOutputTextEditor, MUIA_NFloattext_Text,
             chatOutputTextEditorContents);
@@ -3160,9 +3795,18 @@ copyConversation(struct Conversation *conversation) {
                               conversationNode->role);
     }
     if (conversation->name != NULL) {
-        copy->name = configDupString(conversation->name);
+        copy->name = dupStringAlloc(conversation->name);
         if (copy->name != NULL) {
             conversationRefreshNameListDisplay(copy);
+        }
+    }
+    if (conversation->lastResponseId != NULL &&
+        strlen(conversation->lastResponseId) > 0) {
+        copy->lastResponseId = AllocVec(
+            strlen(conversation->lastResponseId) + 1, MEMF_ANY | MEMF_CLEAR);
+        if (copy->lastResponseId != NULL) {
+            strncpy(copy->lastResponseId, conversation->lastResponseId,
+                    strlen(conversation->lastResponseId));
         }
     }
     return copy;
@@ -3177,9 +3821,9 @@ static struct GeneratedImage *
 copyGeneratedImage(struct GeneratedImage *generatedImage) {
     struct GeneratedImage *newEntry =
         AllocVec(sizeof(struct GeneratedImage), MEMF_CLEAR);
-    newEntry->name = configDupString(generatedImage->name);
-    newEntry->filePath = configDupString(generatedImage->filePath);
-    newEntry->prompt = configDupString(generatedImage->prompt);
+    newEntry->name = dupStringAlloc(generatedImage->name);
+    newEntry->filePath = dupStringAlloc(generatedImage->filePath);
+    newEntry->prompt = dupStringAlloc(generatedImage->prompt);
     newEntry->imageModel = generatedImage->imageModel;
     newEntry->width = generatedImage->width;
     newEntry->height = generatedImage->height;
@@ -3208,6 +3852,12 @@ static LONG saveConversations() {
         DoMethod(conversationListObject, MUIM_NList_GetEntry, i, &conversation);
         json_object_object_add(conversationJsonObject, "name",
                                json_object_new_string(conversation->name));
+        if (conversation->lastResponseId != NULL &&
+            strlen(conversation->lastResponseId) > 0) {
+            json_object_object_add(
+                conversationJsonObject, "lastResponseId",
+                json_object_new_string(conversation->lastResponseId));
+        }
         struct json_object *messagesJsonArray = json_object_new_array();
         struct ConversationNode *conversationNode;
         for (conversationNode =
@@ -3324,9 +3974,16 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth,
 
     updateStatusBar(STRING_LOADING_IMAGE, yellowPen);
 
-    Object *imageWindowLoadingTextObject = VGroup, Child, VSpace(0), Child,
-           TextObject, MUIA_Text_Contents, STRING_LOADING_IMAGE,
-           MUIA_Text_PreParse, "\033c", End, Child, VSpace(0), End;
+    // clang-format off
+    Object *imageWindowLoadingTextObject = VGroup,
+        Child, VSpace(0),
+        Child, TextObject,
+            MUIA_Text_Contents, STRING_LOADING_IMAGE,
+            MUIA_Text_PreParse, "\033c",
+        End,
+        Child, VSpace(0),
+    End;
+    // clang-format on
     DoMethod(imageWindowImageViewGroup, OM_ADDMEMBER,
              imageWindowLoadingTextObject);
     DoMethod(imageWindowImageViewGroup, OM_REMMEMBER, imageWindowImageView);
@@ -3339,10 +3996,14 @@ static void openImage(struct GeneratedImage *image, WORD scaledWidth,
     set(imageWindowObject, MUIA_Window_Open, TRUE);
 
     DoMethod(imageWindowImageViewGroup, MUIM_Group_InitChange);
-    imageWindowImageView = GuigfxObject, MUIA_Guigfx_FileName, image->filePath,
-    MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Best, MUIA_Guigfx_ScaleMode,
-    NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE | NISMF_KEEPASPECT_SCREEN,
-    MUIA_Guigfx_Transparency, NITRF_MASK, End;
+    // clang-format off
+    imageWindowImageView = GuigfxObject,
+        MUIA_Guigfx_FileName, image->filePath,
+        MUIA_Guigfx_Quality, MUIV_Guigfx_Quality_Best,
+        MUIA_Guigfx_ScaleMode, NISMF_SCALEFREE | NISMF_KEEPASPECT_PICTURE | NISMF_KEEPASPECT_SCREEN,
+        MUIA_Guigfx_Transparency, NITRF_MASK,
+    End;
+    // clang-format on
     DoMethod(imageWindowImageViewGroup, OM_ADDMEMBER, imageWindowImageView);
     DoMethod(imageWindowImageViewGroup, OM_REMMEMBER,
              imageWindowLoadingTextObject);
@@ -3411,6 +4072,7 @@ static LONG loadConversations() {
         return RETURN_ERROR;
     }
 
+    set(conversationListObject, MUIA_NList_Quiet, TRUE);
     for (UWORD i = 0; i < json_object_array_length(conversationsJsonArray);
          i++) {
         struct json_object *conversationJsonObject =
@@ -3426,6 +4088,7 @@ static LONG loadConversations() {
             displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
             FreeVec(conversationsJsonString);
             json_object_put(conversationsJsonArray);
+            set(conversationListObject, MUIA_NList_Quiet, FALSE);
             return RETURN_ERROR;
         }
 
@@ -3439,11 +4102,12 @@ static LONG loadConversations() {
             displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
             FreeVec(conversationsJsonString);
             json_object_put(conversationsJsonArray);
+            set(conversationListObject, MUIA_NList_Quiet, FALSE);
             return RETURN_ERROR;
         }
 
         struct Conversation *conversation = newConversation();
-        conversation->name = configDupString(conversationName);
+        conversation->name = dupStringAlloc(conversationName);
         if (conversation->name == NULL) {
             freeConversation(conversation);
             displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
@@ -3453,7 +4117,20 @@ static LONG loadConversations() {
         }
         conversationRefreshNameListDisplay(conversation);
 
-        set(conversationListObject, MUIA_NList_Quiet, TRUE);
+        struct json_object *lastResponseIdJsonObject;
+        if (json_object_object_get_ex(conversationJsonObject, "lastResponseId",
+                                      &lastResponseIdJsonObject)) {
+            STRPTR lastResponseId =
+                (STRPTR)json_object_get_string(lastResponseIdJsonObject);
+            if (lastResponseId != NULL && strlen(lastResponseId) > 0) {
+                conversation->lastResponseId =
+                    AllocVec(strlen(lastResponseId) + 1, MEMF_ANY | MEMF_CLEAR);
+                if (conversation->lastResponseId != NULL) {
+                    strncpy(conversation->lastResponseId, lastResponseId,
+                            strlen(lastResponseId));
+                }
+            }
+        }
 
         for (UWORD j = 0; j < json_object_array_length(messagesJsonArray);
              j++) {
@@ -3470,6 +4147,7 @@ static LONG loadConversations() {
                 displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
                 FreeVec(conversationsJsonString);
                 json_object_put(conversationsJsonArray);
+                set(conversationListObject, MUIA_NList_Quiet, FALSE);
                 return RETURN_ERROR;
             }
             STRPTR role = json_object_get_string(roleJsonObject);
@@ -3480,6 +4158,7 @@ static LONG loadConversations() {
                 displayError(STRING_ERROR_CHAT_HISTORY_PARSE_NO_BACKUP);
                 FreeVec(conversationsJsonString);
                 json_object_put(conversationsJsonArray);
+                set(conversationListObject, MUIA_NList_Quiet, FALSE);
                 return RETURN_ERROR;
             }
             UTF8 *content = json_object_get_string(contentJsonObject);
@@ -3617,9 +4296,9 @@ static LONG loadImages() {
 
         struct GeneratedImage *generatedImage =
             AllocVec(sizeof(struct GeneratedImage), MEMF_ANY);
-        generatedImage->name = configDupString(imageName);
-        generatedImage->filePath = configDupString(imageFilePath);
-        generatedImage->prompt = configDupString(imagePrompt);
+        generatedImage->name = dupStringAlloc(imageName);
+        generatedImage->filePath = dupStringAlloc(imageFilePath);
+        generatedImage->prompt = dupStringAlloc(imagePrompt);
         if (generatedImage->name == NULL || generatedImage->filePath == NULL ||
             generatedImage->prompt == NULL) {
             if (generatedImage->name != NULL) {
@@ -3675,10 +4354,12 @@ LONG printConversation() {
                 STRPTR convertedConversationString = CodesetsUTF8ToStr(
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                     (Tag)content, CSA_MapForeignChars, TRUE, TAG_DONE);
-
-                Write(printerFile, convertedConversationString, -1);
-
-                CodesetsFreeA(convertedConversationString, NULL);
+                if (convertedConversationString != NULL) {
+                    Write(printerFile, convertedConversationString, -1);
+                    CodesetsFreeA(convertedConversationString, NULL);
+                } else {
+                    Write(printerFile, content, -1);
+                }
             } else if (strcmp(conversationNode->role, "assistant") == 0) {
                 Write(printerFile, "\n\n", -1);
                 Write(printerFile, "*******************\n", -1);
@@ -3687,10 +4368,12 @@ LONG printConversation() {
                 STRPTR convertedConversationString = CodesetsUTF8ToStr(
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                     (Tag)content, CSA_MapForeignChars, TRUE, TAG_DONE);
-
-                Write(printerFile, convertedConversationString, -1);
-
-                CodesetsFreeA(convertedConversationString, NULL);
+                if (convertedConversationString != NULL) {
+                    Write(printerFile, convertedConversationString, -1);
+                    CodesetsFreeA(convertedConversationString, NULL);
+                } else {
+                    Write(printerFile, content, -1);
+                }
 
                 Write(printerFile, "\n\n", -1);
             }

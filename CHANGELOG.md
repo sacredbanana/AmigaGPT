@@ -1,5 +1,43 @@
 # Changelog
 
+## 3.0.0 (2026-07-01)
+
+- Profile settings: New panels to manage chat, image and speech providers
+- Chat and Image menus replace the single OpenAI menu; model selection is now in "Chat Provider Settings" and "Image Provider Settings"
+- Fetch latest models available from the server
+- System prompt setting is now a chat profile setting rather than a global one
+- New Speech Provider Settings window for setting your speech provider and options, creating speech profiles and testing your current speech settings
+- New config options for the Workbench speech systems: rate, pitch, mode (natural/robotic) and sex
+- ARexx SENDMESSAGE, CREATEIMAGE and SPEAKTEXT support PR=PROFILE to choose profile; new LISTPROFILES command
+- ARexx SENDMESSAGE supports SF=SYSTEMFILE to use the contents of a file as the system prompt
+- New powerful Shell Tool option to ask ChatGPT to run any command on your system in the shell
+- The daemon (AmigaGPTD) now maintains conversation history in T: for context across ARexx calls until reboot
+- The installer is now compatible with AmiKit
+- Speech now runs in the background so the app can remain responsive while it's speaking
+- Added a button to stop speaking
+- ARexx SPEAKTEXT and LISTVOICES support voices for all speech profiles
+- New NEWCHAT ARexx command to clear daemon conversation history
+- Support for Anthropic Claude for chat
+- Support for Anthropic Claude for image generation
+- Support for xAI Grok for chat
+- Support for xAI Grok for image generation
+- Support for xAI Grok for Text-To-Speech
+- Added streaming support in chat for Google Gemini
+- Support for Google Gemini for image generation
+- Automatically instructs the chat server to not use unicode characters the Amiga cannot display such as emoji since these characters display in AmigaGPT as question marks
+- All config options are now immediately saved to disk
+- Added NEWCHAT and PROFILE=PR options for AskGPT
+- ARexx say.rexx now supports different profiles and voices
+- The returned chat response string in ARexx will no longer contain unnecessary characters such as escape backslashes and escaped markdown characters
+- Removed the maximum size limit for conversations. Chat max length is now only determined by available memory and the model's context window
+- Greatly improved performance and memory usage when sending chat messages in the Responses API
+- Fix bug where conversation titles were getting displayed in the incorrect encoding
+- Fix bug where the app would get stuck after sending a few messages to Gemini
+- Fix bug where say.rexx did not ask you what you want to say
+- Fix bug where the first paragraph in every response is always black even if you have custom colours set
+- Fix bug where a missing or incorrect API key could cause the app to enter an infinite loop of displaying an error and retrying
+- Correctly handle reponses that contain JSON in the response header such as those received from Cloudfare 
+
 ## 2.17.0 (2025-12-22)
 
 - Add support for Elevenlabs TTS
@@ -8,14 +46,14 @@
 
 ## 2.16.0 (2025-12-18)
 
-- Add GPT Image 1.5  and GPT Image 1 Mini image models
+- Add GPT Image 1.5 and GPT Image 1 Mini image models
 - Add ability to select image output format (JPG/PNG)
 - Deleting images actually now properly deletes them from disk
 
 ## 2.15.0 (2025-12-13)
 
-- Add support for setting custom server endpoint and endpoint URL
-- Add chat/completions endpoint support for custom server for compatibility with servers such as Google Gemini
+- Add support for setting custom provider endpoint and endpoint URL
+- Add chat/completions endpoint support for custom providers for compatibility with providers such as Google Gemini
 
 ## 2.14.0 (2025-12-13)
 

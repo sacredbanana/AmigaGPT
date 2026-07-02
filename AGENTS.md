@@ -6,6 +6,19 @@ This repository is **weiseb78/AmigaGPT** — a fork of [sacredbanana/AmigaGPT](h
 
 **Rules vs. Handlung:** `.cursor/rules/*.mdc` sind die **kurzen, immer (bzw. projektweit) geladenen** Checklisten für das Modell. `docs/HANDLUNGSANWEISUNG-*.md` ist der **vollständige** verbindliche Text — gleicher Ablauf, nicht zwei verschiedene Flows. Wenn etwas kollidiert, gewinnt die Handlung; die Rules sollten dann angepasst werden.
 
+## Provider docs (upstream)
+
+- For OpenAI questions, prefer the project MCP server `openaiDeveloperDocs` and the project skill `openai-docs`.
+- For xAI questions, prefer the project MCP server `xaiDocs` and the project skill `xai-docs`.
+- For AmigaOS 3, AmigaOS 4.1, MorphOS, SDK, NDK, autodoc, include, or example-code questions, prefer the project skill `amiga-sdk-docs`.
+- For `amiga-sdk-docs`, sync and search the local cache at `.cursor/cache/amigasdk-gcc` before broader web search.
+- For `amiga-sdk-docs`, wait for the sync script to finish successfully or fail before any fallback to GitHub pages or broader web search.
+- Before calling an MCP tool, read the installed tool descriptor and follow its schema exactly.
+- For documentation answers, prefer MCP-backed official docs over general web search.
+- If MCP is unavailable, fall back only to official provider docs pages:
+  - OpenAI: `developers.openai.com`, `platform.openai.com`
+  - xAI: `docs.x.ai`
+
 ## Git (required)
 
 Read and follow **`docs/HANDLUNGSANWEISUNG-GIT.md`**.
@@ -30,6 +43,7 @@ Start: `docs/README.md` · Policy: `docs/DOKUMENTATION-WORKSPACE.md`
 | `docs/SCINTILLA-ARCHITECTURE.md` | Scintilla / streaming / UTF-8 / Fence-Parser / Chat-Anzeige vs. `codeblocks` |
 | `docs/PHASE-10-DOD.md` | DoD Code-Viewer v0.1 (Phasen 6–10, MorphOS) |
 | `docs/PHASE-12-CHAT-SCINTILLA.md` | Phase 12 + 12.1 Chat-Scintilla, Midi-Markdown, Testplan (MorphOS) |
+| `docs/CHAT-FIND-SCINTILLA.md` | Chat-Suche + User-Sprünge (MorphOS) |
 | `docs/MIDI-MARKDOWN-ROADMAP.md` | Export, Midi-Markdown, Hotspots, Tabellen, Zeilenumbruch |
 | `docs/STREAM-RECOVERY.md` | Stream & chat recovery (R1–R4): WANT_READ, UI sync, freeze |
 | `docs/BUILD-MORPHOS-WSL.md` | MorphOS cross-build on WSL2 Debian (incl. FlexCat bootstrap) |

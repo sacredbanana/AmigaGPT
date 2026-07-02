@@ -4,11 +4,11 @@
             "name": "GCC AmigaOS 3",
             "includePath": [
                 "./**",
-                "/opt/amiga/m68k-amigaos/include",
-                "/opt/amiga/m68k-amigaos/ndk-include",
-                "/opt/amiga/m68k-amigaos/libnix/include",
-                "/opt/amiga/m68k-amigaos/sys-include",
-                "/opt/amiga/m68k-amigaos/clib2/include"
+                "../AmigaSDK-gcc/amigaos3/sdk/m68k-amigaos/include",
+                "../AmigaSDK-gcc/amigaos3/sdk/m68k-amigaos/ndk-include",
+                "../AmigaSDK-gcc/amigaos3/sdk/m68k-amigaos/libnix/include",
+                "../AmigaSDK-gcc/amigaos3/sdk/m68k-amigaos/sys-include",
+                "../AmigaSDK-gcc/amigaos3/sdk/m68k-amigaos/clib2/include"
             ],
             "defines": [
                 "__AMIGAOS3__",
@@ -37,11 +37,11 @@
             "name": "GCC AmigaOS 3 Daemon",
             "includePath": [
                 "./**",
-                "/opt/amiga/m68k-amigaos/include",
-                "/opt/amiga/m68k-amigaos/ndk-include",
-                "/opt/amiga/m68k-amigaos/libnix/include",
-                "/opt/amiga/m68k-amigaos/sys-include",
-                "/opt/amiga/m68k-amigaos/clib2/include"
+                "../AmigaSDK-gcc/amigaos3/sdk/m68k-amigaos/include",
+                "../AmigaSDK-gcc/amigaos3/sdk/m68k-amigaos/ndk-include",
+                "../AmigaSDK-gcc/amigaos3/sdk/m68k-amigaos/libnix/include",
+                "../AmigaSDK-gcc/amigaos3/sdk/m68k-amigaos/sys-include",
+                "../AmigaSDK-gcc/amigaos3/sdk/m68k-amigaos/clib2/include"
             ],
             "defines": [
                 "__AMIGAOS3__",
@@ -71,11 +71,11 @@
             "name": "GCC AmigaOS 4",
             "includePath": [
                 "./**",
-                "/opt/amiga/ppc-amigaos/SDK/newlib/include",
-                "/opt/amiga/ppc-amigaos/SDK/include/include_h",
-                "/opt/amiga/ppc-amigaos/SDK/include/netinclude",
-                "/opt/amiga/ppc-amigaos/SDK/local/common/include",
-                "/opt/amiga/ppc-amigaos/SDK/local/newlib/include"
+                "../AmigaSDK-gcc/amigaos4/sdk/ppc-amigaos/SDK/newlib/include",
+                "../AmigaSDK-gcc/amigaos4/sdk/ppc-amigaos/SDK/include/include_h",
+                "../AmigaSDK-gcc/amigaos4/sdk/ppc-amigaos/SDK/include/netinclude",
+                "../AmigaSDK-gcc/amigaos4/sdk/ppc-amigaos/SDK/local/common/include",
+                "../AmigaSDK-gcc/amigaos4/sdk/ppc-amigaos/SDK/local/newlib/include"
             ],
             "defines": [
                 "__AMIGAOS4__",
@@ -92,7 +92,7 @@
             "cppStandard": "c++20",
             "intelliSenseMode": "macos-gcc-arm64",
             "mergeConfigurations": false,
-            "compilerPath": "/opt/amiga/bin/m68k-amigaos-gcc",
+            "compilerPath": "/opt/amiga/bin/ppc-amigaos-gcc",
             "browse": {
                 "path": [
                     "${workspaceFolder}"
@@ -104,9 +104,9 @@
             "name": "GCC MorphOS",
             "includePath": [
                 "./**",
-                "/opt/amiga/includestd",
-                "/opt/amiga/os-include",
-                "/opt/amiga/ppc-morphos/os-include"
+                "../AmigaSDK-gcc/morphos/sdk/includestd",
+                "../AmigaSDK-gcc/morphos/sdk/os-include",
+                "../AmigaSDK-gcc/morphos/sdk/ppc-morphos/os-include"
             ],
             "defines": [
                 "__MORPHOS__",
@@ -123,7 +123,7 @@
             "cppStandard": "c++20",
             "intelliSenseMode": "macos-gcc-arm64",
             "mergeConfigurations": false,
-            "compilerPath": "/opt/amiga/bin/m68k-amigaos-gcc",
+            "compilerPath": "/opt/amiga/bin/ppc-morphos-gcc",
             "browse": {
                 "path": [
                     "${workspaceFolder}"

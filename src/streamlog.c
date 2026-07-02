@@ -2,7 +2,7 @@
 #include <proto/exec.h>
 #include <stdio.h>
 #include <string.h>
-#include "config.h"
+#include "AmigaGPTConfig.h"
 #include "streamlog.h"
 
 #ifdef __MORPHOS__
@@ -145,8 +145,8 @@ void streamLogSyncFromConfig(void) {
     BOOL wasEnabled = streamLogEnabled;
     BOOL wasLifecycleEnabled = streamLogLifecycleEnabled;
 
-    streamLogEnabled = (BOOL)config.debugStreamLog;
-    streamLogLifecycleEnabled = (BOOL)config.debugLifecycleLog;
+    streamLogEnabled = (BOOL)configGetDebugStreamLog();
+    streamLogLifecycleEnabled = (BOOL)configGetDebugLifecycleLog();
     if (streamLogEnabled && !wasEnabled) {
         streamLogEmit(STREAMLOG_STREAM_PATH, "debug logging enabled");
     }

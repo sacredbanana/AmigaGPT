@@ -16,6 +16,8 @@
 #include <proto/socket.h>
 #include <sys/select.h>
 #include <sys/time.h>
+#include <dos/dostags.h>
+#include <dos/dosextens.h>
 #include <string.h>
 #include <stdio.h>
 #include "openai.h"
@@ -23,69 +25,78 @@
 #include "speech.h"
 #include "gui.h"
 #include "MainWindow.h"
+#include "AmigaGPTConfig.h"
 
 #define OPENAI_HOST "api.openai.com"
 #define OPENAI_PORT 443
+#define XAI_HOST "api.x.ai"
+#define XAI_PORT 443
 #define AUDIO_BUFFER_SIZE 4096
 #define MAX_CONNECTION_RETRIES 10
 /** Wait up to ~15 min for more TLS stream data (200 ms × 4500). */
 #define SSL_STREAM_WAIT_US 200000
 #define SSL_STREAM_WAIT_MAX 4500
 
-static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
-                                 BOOL useProxy, CONST_STRPTR proxyHost,
-                                 UWORD proxyPort, BOOL proxyUsesSSL,
-                                 BOOL proxyRequiresAuth,
-                                 CONST_STRPTR proxyUsername,
-                                 CONST_STRPTR proxyPassword);
-static ULONG rangeRand(ULONG maxValue);
-static BPTR ErrOutput();
-static BPTR GetStdErr();
-static LONG createSSLContext();
-static void generateRandomSeed(UBYTE *buffer, LONG size);
-static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
-static STRPTR getModelName(ChatModel model);
-static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
-static STRPTR base64Encode(CONST_STRPTR input);
-static void drainOpenSslErrorQueue(CONST_STRPTR where);
-static void reportSslError(SSL *s, int ret, CONST_STRPTR where);
-static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage);
-static BOOL sslWaitForReadReady(LONG sock, ULONG *stallCount);
-static BOOL streamBatchHasCompleted(struct json_object **responses, UWORD count);
+static CONST_STRPTR AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS =
+    "Output text using characters that can be represented or sensibly remapped "
+    "for the Amiga character set. Normal letters used in European languages "
+    "(for example French, German, Spanish, or Russian text) are fine, but do "
+    "not use emoji or special Unicode symbols that cannot be remapped "
+    "cleanly. Avoid typographic quotes, em/en dashes, ellipses, bullets, and "
+    "other decorative Unicode punctuation; use simple plain-text equivalents "
+    "instead.";
 
-static void appendToReadBuffer(UBYTE *buf, ULONG capacity, ULONG *used,
-                               const void *chunk, ULONG chunkLen) {
-    ULONG space;
-    ULONG n;
-
-    if (buf == NULL || used == NULL || chunk == NULL || chunkLen == 0) {
-        return;
-    }
-    if (*used >= capacity - 1) {
-        return;
-    }
-    space = capacity - 1 - *used;
-    n = chunkLen;
-    if (n > space) {
-        n = space;
-    }
-    if (n > 0) {
-        CopyMem(chunk, buf + *used, n);
-        *used += n;
-        buf[*used] = '\0';
-    }
-}
+/* System-prompt addendum injected when the active speech profile is xAI TTS
+ * and the user has enabled automatic speech tag insertion. Teaches the LLM
+ * the inline and wrapping tags supported by xAI's TTS engine so that its
+ * spoken replies can carry pauses, laughter, whispers, etc. */
+static CONST_STRPTR XAI_AUTO_SPEECH_TAG_INSTRUCTIONS =
+    "Your reply will be read aloud by xAI's text-to-speech engine. You may "
+    "embed xAI speech tags inline so the spoken delivery is more expressive. "
+    "Use them sparingly and only where they add natural emphasis or feeling "
+    "- never on every sentence, never to describe what you are doing, and "
+    "never invent tags that are not on this list.\n"
+    "\n"
+    "Inline tags (single point, no closing tag):\n"
+    "  Pauses: [pause], [long-pause]\n"
+    "  Laughter & crying: [laugh], [chuckle], [giggle], [cry]\n"
+    "  Mouth sounds: [tsk], [tongue-click], [lip-smack], [hum-tune]\n"
+    "  Breathing: [breath], [inhale], [exhale], [sigh]\n"
+    "\n"
+    "Wrapping tags (open tag + text + matching close tag):\n"
+    "  Volume & intensity: <soft>...</soft>, <loud>...</loud>, "
+    "<build-intensity>...</build-intensity>, "
+    "<decrease-intensity>...</decrease-intensity>\n"
+    "  Pitch & speed: <higher-pitch>...</higher-pitch>, "
+    "<lower-pitch>...</lower-pitch>, <slow>...</slow>, <fast>...</fast>\n"
+    "  Vocal style: <whisper>...</whisper>, <sing-song>...</sing-song>, "
+    "<singing>...</singing>, <laugh-speak>...</laugh-speak>, "
+    "<emphasis>...</emphasis>\n"
+    "\n"
+    "Guidelines:\n"
+    "- Place inline tags where the expression would naturally occur, e.g. "
+    "\"Really? [laugh] That's incredible!\".\n"
+    "- Wrap whole phrases, not single words, e.g. \"<whisper>It's a "
+    "secret.</whisper>\" reads more naturally than wrapping one word.\n"
+    "- Wrapping tags may be layered, e.g. \"<slow><soft>Goodnight, sleep "
+    "well.</soft></slow>\".\n"
+    "- Output tags inline as plain text exactly as shown above - do not "
+    "escape them, wrap them in code fences, or explain that you are using "
+    "them.\n"
+    "- Tags themselves are never spoken; they only shape the surrounding "
+    "delivery. Punctuation still drives natural rhythm, so keep writing "
+    "normal sentences and add tags where they enhance the read.";
 
 /** OpenAI chat SSE still active on the current TLS connection. */
 static BOOL chatStreamInProgress = FALSE;
 static BOOL chatStreamCancelRequested = FALSE;
-
 static BOOL chatStreamCompletedOk = FALSE;
 static BOOL chatStreamTruncated = FALSE;
 static ChatTransportOutcome chatStreamTransport = CHAT_TRANSPORT_UNKNOWN;
 static UBYTE openaiLastSseSnippet[STREAMLOG_SSE_SNIPPET_MAX + 1];
 
-static void chatStreamFinalizeTransport(UWORD responseIndex, ULONG readBufferLen) {
+static void chatStreamFinalizeTransport(UWORD responseIndex,
+                                        ULONG readBufferLen) {
     if (chatStreamCompletedOk) {
         chatStreamTransport = CHAT_TRANSPORT_OK;
     } else if (chatStreamTruncated || responseIndex > 0 || readBufferLen > 0) {
@@ -134,12 +145,12 @@ void openAIChatStreamCaptureLastSse(CONST_STRPTR fromBuffer) {
     openaiLastSseSnippet[out] = '\0';
 }
 
-static void chatStreamNoteReadTimeout(UWORD responseIndex, ULONG readBufferLen) {
+static void chatStreamNoteReadTimeout(UWORD responseIndex,
+                                      ULONG readBufferLen) {
     if (responseIndex > 0 || readBufferLen > 0) {
         chatStreamTruncated = TRUE;
     } else {
-        displayError(
-            "SSL: timeout waiting for stream data (WANT_READ)");
+        displayError("SSL: timeout waiting for stream data (WANT_READ)");
     }
 }
 
@@ -147,6 +158,47 @@ BOOL openAIChatStreamCompletedOk(void) { return chatStreamCompletedOk; }
 
 BOOL openAIChatStreamTruncated(void) { return chatStreamTruncated; }
 
+BOOL openAIChatStreamInProgress(void) { return chatStreamInProgress; }
+
+void openAIChatStreamRequestCancel(void) {
+    chatStreamCancelRequested = TRUE;
+    chatStreamInProgress = FALSE;
+}
+
+/* Static variables to store pending tool call info captured during streaming */
+static BOOL pendingToolCall = FALSE;
+static UBYTE pendingToolCallId[256] = {0};
+static UBYTE pendingToolCommand[4096] = {0};
+static UBYTE pendingResponseId[256] = {0};
+
+static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                                 BOOL useProxy, CONST_STRPTR proxyHost,
+                                 UWORD proxyPort, BOOL proxyUsesSSL,
+                                 BOOL proxyRequiresAuth,
+                                 CONST_STRPTR proxyUsername,
+                                 CONST_STRPTR proxyPassword);
+static ULONG rangeRand(ULONG maxValue);
+static BPTR ErrOutput();
+static BPTR GetStdErr();
+static LONG createSSLContext();
+static void generateRandomSeed(UBYTE *buffer, LONG size);
+static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
+static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
+static void drainOpenSslErrorQueue(CONST_STRPTR where);
+static void reportSslError(SSL *s, int ret, CONST_STRPTR where);
+static UTF8 *extractUserFriendlyErrorMessage(UTF8 *rawMessage);
+static STRPTR combineInstructionText(CONST_STRPTR first, CONST_STRPTR second);
+static void closeActiveResponseConnection(void);
+static BOOL responseMarksStreamFinished(struct json_object *response);
+static BOOL sslWaitForReadReady(LONG sock, ULONG *stallCount);
+static BOOL streamBatchHasCompleted(struct json_object **responses, UWORD count);
+static void setConversationLastResponseId(struct Conversation *conversation,
+                                          UTF8 *responseId);
+static UTF8 *extractResponseIdFromPayload(struct json_object *response);
+static BOOL responseIndicatesMissingPreviousId(struct json_object *response);
+static BOOL responseIndicatesBadRequest(struct json_object *response);
+static struct ConversationNode *
+getLastNonSystemConversationMessage(struct Conversation *conversation);
 
 struct Library *SocketBase;
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
@@ -161,8 +213,8 @@ struct SocketIFace *ISocket;
 static SSL_CTX *_ssl_context;
 LONG UsesOpenSSLStructs = FALSE;
 BOOL amiSSLInitialized = FALSE;
-UBYTE *writeBuffer = NULL;
-UBYTE *readBuffer = NULL;
+UTF8 *writeBuffer = NULL;
+UTF8 *readBuffer = NULL;
 X509 *server_cert;
 SSL_CTX *ctx = NULL;
 BIO *bio, *bio_err;
@@ -172,7 +224,8 @@ LONG ssl_err = 0;
 ULONG RangeSeed;
 
 /**
- * The names of the chat models
+ * The names of the chat models before the migration to string-based model
+ * names. Do not modify this array!
  * @see ChatModel
  **/
 CONST_STRPTR CHAT_MODEL_NAMES[] = {[CHATGPT_5_LATEST] = "gpt-5-chat-latest",
@@ -277,13 +330,43 @@ CONST_STRPTR OPENAI_TTS_VOICE_NAMES[] = {[OPENAI_TTS_VOICE_ALLOY] = "alloy",
                                          NULL};
 
 /**
+ * The names of the xAI TTS voices (sent as voice_id to the API)
+ * @see XAITTSVoice
+ **/
+CONST_STRPTR XAI_TTS_VOICE_NAMES[] = {[XAI_TTS_VOICE_ARA] = "ara",
+                                      [XAI_TTS_VOICE_EVE] = "eve",
+                                      [XAI_TTS_VOICE_LEO] = "leo",
+                                      [XAI_TTS_VOICE_REX] = "rex",
+                                      [XAI_TTS_VOICE_SAL] = "sal",
+                                      NULL};
+
+/**
  * The names of the API endpoints
  * @see APIEndpoint
  **/
-CONST_STRPTR API_ENDPOINT_NAMES[] = {[API_ENDPOINT_RESPONSES] = "responses",
-                                     [API_ENDPOINT_CHAT_COMPLETIONS] =
-                                         "chat/completions",
-                                     NULL};
+CONST_STRPTR API_CHAT_ENDPOINT_NAMES[] = {
+    [API_CHAT_ENDPOINT_RESPONSES] = "responses",
+    [API_CHAT_ENDPOINT_CHAT_COMPLETIONS] = "chat/completions",
+    [API_CHAT_ENDPOINT_MESSAGES] = "messages",
+    [API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT] = "models/:generateContent",
+    NULL};
+
+CONST_STRPTR API_IMAGE_ENDPOINT_NAMES[] = {
+    [API_IMAGE_ENDPOINT_IMAGES_GENERATIONS] = "images/generations",
+    [API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT] = "models/:generateContent",
+    NULL};
+
+/**
+ * The names of the authorization types
+ * @see AuthorizationType
+ **/
+CONST_STRPTR AUTHORIZATION_TYPE_NAMES[] = {
+    [AUTHORIZATION_TYPE_NONE] = "",
+    [AUTHORIZATION_TYPE_BEARER] = "Authorization: Bearer",
+    [AUTHORIZATION_TYPE_X_API_KEY] = "x-api-key:",
+    [AUTHORIZATION_TYPE_X_GOOGLE_API_KEY] = "x-goog-api-key:",
+    [AUTHORIZATION_TYPE_XI_API_KEY] = "xi-api-key:",
+    NULL};
 
 /**
  * The names of the image formats
@@ -291,6 +374,91 @@ CONST_STRPTR API_ENDPOINT_NAMES[] = {[API_ENDPOINT_RESPONSES] = "responses",
  **/
 CONST_STRPTR IMAGE_FORMAT_NAMES[] = {
     [IMAGE_FORMAT_JPG] = "jpeg", [IMAGE_FORMAT_PNG] = "png", NULL};
+
+/**
+ * Prepopulated chat models for OpenAI
+ **/
+CONST_STRPTR OPENAI_CHAT_MODELS[] = {"gpt-5-chat-latest",
+                                     "gpt-5.4",
+                                     "gpt-5.4-pro",
+                                     "gpt-5.3",
+                                     "gpt-5.3-codex",
+                                     "gpt-5.2",
+                                     "gpt-5.2-codex",
+                                     "gpt-5.2-pro",
+                                     "gpt-5.1",
+                                     "gpt-5.1-codex",
+                                     "gpt-5.1-codex-mini",
+                                     "gpt-5.1-codex-max",
+                                     "gpt-5",
+                                     "gpt-5-codex",
+                                     "gpt-5-mini",
+                                     "gpt-5-nano",
+                                     "gpt-4.5-preview",
+                                     "gpt-4.1",
+                                     "gpt-4.1-mini",
+                                     "gpt-4.1-nano",
+                                     "gpt-4o",
+                                     "gpt-4o-mini",
+                                     "gpt-4-turbo",
+                                     "gpt-4",
+                                     "gpt-3.5-turbo",
+                                     "o4-mini",
+                                     "o3",
+                                     "o3-mini",
+                                     "o1",
+                                     "o1-pro",
+                                     "o1-mini",
+                                     "o1-preview",
+                                     NULL};
+
+/**
+ * Prepopulated chat models for Google Gemini
+ **/
+CONST_STRPTR GEMINI_CHAT_MODELS[] = {
+    "gemini-2.5-flash",      "gemini-2.5-flash-lite",
+    "gemini-2.5-pro",        "gemini-2.0-flash",
+    "gemini-2.0-flash-lite", "gemini-3-flash-preview",
+    "gemini-3-pro-preview",  NULL};
+
+/**
+ * Prepopulated chat models for xAI Grok
+ **/
+CONST_STRPTR GROK_CHAT_MODELS[] = {
+    "grok-4",           "grok-4-fast", "grok-3", "grok-3-mini", "grok-3-fast",
+    "grok-3-fast-beta", "grok-3-beta", "grok-2", NULL};
+
+/**
+ * Prepopulated chat models for Anthropic Claude
+ **/
+CONST_STRPTR ANTHROPIC_CHAT_MODELS[] = {"claude-opus-4-5-20251101",
+                                        "claude-sonnet-4-5-20250929",
+                                        "claude-sonnet-4-20250514",
+                                        "claude-3-5-sonnet-20241022",
+                                        "claude-3-5-haiku-20241022",
+                                        "claude-3-opus-20240229",
+                                        "claude-3-sonnet-20240229",
+                                        "claude-3-haiku-20240307",
+                                        NULL};
+
+/**
+ * Prepopulated image models for OpenAI
+ **/
+CONST_STRPTR OPENAI_IMAGE_MODELS[] = {"gpt-image-1",      "gpt-image-1.5",
+                                      "gpt-image-1-mini", "dall-e-3",
+                                      "dall-e-2",         NULL};
+
+/**
+ * Prepopulated image models for Google Gemini
+ **/
+CONST_STRPTR GEMINI_IMAGE_MODELS[] = {"gemini-2.5-flash-image",
+                                      "gemini-3-pro-image-preview", NULL};
+
+/**
+ * Prepopulated image models for xAI Grok
+ **/
+CONST_STRPTR GROK_IMAGE_MODELS[] = {"grok-imagine-image",
+                                    "grok-imagine-image-pro", NULL};
 
 /**
  * Generate a random number
@@ -312,6 +480,247 @@ static ULONG rangeRand(ULONG maxValue) {
     return (UWORD)a;
 }
 
+static STRPTR combineInstructionText(CONST_STRPTR first, CONST_STRPTR second) {
+    BOOL hasFirst = (first != NULL && strlen(first) > 0);
+    BOOL hasSecond = (second != NULL && strlen(second) > 0);
+    if (!hasFirst && !hasSecond)
+        return NULL;
+
+    if (!hasFirst) {
+        STRPTR out = AllocVec(strlen(second) + 1, MEMF_CLEAR);
+        if (out != NULL)
+            strncpy(out, second, strlen(second));
+        return out;
+    }
+
+    if (!hasSecond) {
+        STRPTR out = AllocVec(strlen(first) + 1, MEMF_CLEAR);
+        if (out != NULL)
+            strncpy(out, first, strlen(first));
+        return out;
+    }
+
+    ULONG combinedLen = strlen(first) + strlen(second) + 3;
+    STRPTR out = AllocVec(combinedLen, MEMF_CLEAR);
+    if (out != NULL)
+        snprintf(out, combinedLen, "%s\n\n%s", first, second);
+    return out;
+}
+
+static void closeActiveResponseConnection(void) {
+    if (sock > -1) {
+        CloseSocket(sock);
+        sock = -1;
+    }
+    if (ssl != NULL) {
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
+        ssl = NULL;
+    }
+}
+
+static BOOL responseMarksStreamFinished(struct json_object *response) {
+    if (response == NULL)
+        return FALSE;
+
+    UTF8 *type =
+        json_object_get_string(json_object_object_get(response, "type"));
+    if (type != NULL && strcmp((char *)type, "response.completed") == 0)
+        return TRUE;
+
+    struct json_object *choices = json_object_object_get(response, "choices");
+    if (choices != NULL && json_object_is_type(choices, json_type_array) &&
+        json_object_array_length(choices) > 0) {
+        struct json_object *choice0 = json_object_array_get_idx(choices, 0);
+        if (choice0 != NULL) {
+            struct json_object *finishReason =
+                json_object_object_get(choice0, "finish_reason");
+            if (finishReason != NULL &&
+                !json_object_is_type(finishReason, json_type_null)) {
+                UTF8 *fr = json_object_get_string(finishReason);
+                if (fr != NULL && strlen(fr) > 0)
+                    return TRUE;
+            }
+        }
+    }
+
+    struct json_object *candidates =
+        json_object_object_get(response, "candidates");
+    if (candidates != NULL &&
+        json_object_is_type(candidates, json_type_array) &&
+        json_object_array_length(candidates) > 0) {
+        struct json_object *cand0 = json_object_array_get_idx(candidates, 0);
+        if (cand0 != NULL && json_object_is_type(cand0, json_type_object)) {
+            struct json_object *finishReason =
+                json_object_object_get(cand0, "finishReason");
+            if (finishReason == NULL) {
+                finishReason = json_object_object_get(cand0, "finish_reason");
+            }
+            if (finishReason != NULL &&
+                !json_object_is_type(finishReason, json_type_null)) {
+                UTF8 *fr = json_object_get_string(finishReason);
+                if (fr != NULL && strlen(fr) > 0)
+                    return TRUE;
+            }
+        }
+    }
+
+    return FALSE;
+}
+
+static BOOL streamBatchHasCompleted(struct json_object **responses, UWORD count) {
+    UWORD i;
+
+    for (i = 0; i < count && responses[i] != NULL; i++) {
+        struct json_object *typeObj;
+        CONST_STRPTR typeStr;
+
+        if (!json_object_is_type(responses[i], json_type_object) ||
+            !json_object_object_get_ex(responses[i], "type", &typeObj)) {
+            continue;
+        }
+        typeStr = json_object_get_string(typeObj);
+        if (typeStr != NULL && strcmp(typeStr, "response.completed") == 0) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static BOOL sslWaitForReadReady(LONG sock, ULONG *stallCount) {
+    struct timeval tv;
+    fd_set readfds;
+    LONG ready;
+
+    if (sock < 0) {
+        return FALSE;
+    }
+    if (stallCount != NULL) {
+        if (*stallCount >= SSL_STREAM_WAIT_MAX) {
+            return FALSE;
+        }
+        (*stallCount)++;
+    }
+    FD_ZERO(&readfds);
+    FD_SET(sock, &readfds);
+    tv.tv_sec = 0;
+    tv.tv_usec = SSL_STREAM_WAIT_US;
+    ready = WaitSelect(sock + 1, &readfds, NULL, NULL, &tv, NULL);
+    return ready > 0;
+}
+
+static void setConversationLastResponseId(struct Conversation *conversation,
+                                          UTF8 *responseId) {
+    if (conversation == NULL)
+        return;
+    if (conversation->lastResponseId != NULL) {
+        FreeVec(conversation->lastResponseId);
+        conversation->lastResponseId = NULL;
+    }
+    if (responseId == NULL || strlen(responseId) == 0)
+        return;
+    conversation->lastResponseId =
+        AllocVec(strlen(responseId) + 1, MEMF_ANY | MEMF_CLEAR);
+    if (conversation->lastResponseId != NULL) {
+        strncpy(conversation->lastResponseId, responseId, strlen(responseId));
+    }
+}
+
+static UTF8 *extractResponseIdFromPayload(struct json_object *response) {
+    if (response == NULL)
+        return NULL;
+    struct json_object *idObj = json_object_object_get(response, "id");
+    UTF8 *id = json_object_get_string(idObj);
+    if (id != NULL && strlen(id) > 0) {
+        return id;
+    }
+    struct json_object *nestedResp =
+        json_object_object_get(response, "response");
+    if (nestedResp != NULL &&
+        json_object_is_type(nestedResp, json_type_object)) {
+        struct json_object *nestedIdObj =
+            json_object_object_get(nestedResp, "id");
+        id = json_object_get_string(nestedIdObj);
+        if (id != NULL && strlen(id) > 0) {
+            return id;
+        }
+    }
+    return NULL;
+}
+
+void conversationSyncLastResponseIdFromPayload(
+    struct Conversation *conversation, struct json_object *payload) {
+    if (conversation == NULL || payload == NULL) {
+        return;
+    }
+    STRPTR id = extractResponseIdFromPayload(payload);
+    setConversationLastResponseId(conversation, (UTF8 *)id);
+}
+
+static BOOL responseIndicatesMissingPreviousId(struct json_object *response) {
+    if (response == NULL)
+        return FALSE;
+    struct json_object *error = json_object_object_get(response, "error");
+    if (error == NULL || json_object_is_type(error, json_type_null))
+        return FALSE;
+    struct json_object *messageObj = json_object_object_get(error, "message");
+    UTF8 *message = json_object_get_string(messageObj);
+    if (message == NULL || strlen(message) == 0)
+        return FALSE;
+
+    ULONG len = strlen(message);
+    STRPTR lower = AllocVec(len + 1, MEMF_ANY | MEMF_CLEAR);
+    if (lower == NULL)
+        return FALSE;
+    for (ULONG i = 0; i < len; i++) {
+        UBYTE c = (UBYTE)message[i];
+        if (c >= 'A' && c <= 'Z')
+            c = (UBYTE)(c - 'A' + 'a');
+        lower[i] = (char)c;
+    }
+
+    BOOL missing = (strstr(lower, "previous_response_id") != NULL &&
+                    (strstr(lower, "not found") != NULL ||
+                     strstr(lower, "does not exist") != NULL ||
+                     strstr(lower, "object not found") != NULL ||
+                     strstr(lower, "invalid") != NULL)) ||
+                   (strstr(lower, "response") != NULL &&
+                    strstr(lower, "not found") != NULL);
+    FreeVec(lower);
+    return missing;
+}
+
+static BOOL responseIndicatesBadRequest(struct json_object *response) {
+    if (response == NULL)
+        return FALSE;
+    struct json_object *error = json_object_object_get(response, "error");
+    if (error == NULL || json_object_is_type(error, json_type_null))
+        return FALSE;
+    struct json_object *messageObj = json_object_object_get(error, "message");
+    UTF8 *message = json_object_get_string(messageObj);
+    if (message == NULL || strlen(message) == 0)
+        return FALSE;
+
+    return (strstr(message, "400 Bad Request") != NULL ||
+            strstr(message, "HTTP/1.1 400") != NULL);
+}
+
+static struct ConversationNode *
+getLastNonSystemConversationMessage(struct Conversation *conversation) {
+    if (conversation == NULL || conversation->messages == NULL)
+        return NULL;
+    struct MinNode *node = conversation->messages->mlh_TailPred;
+    while (node != (struct MinNode *)&conversation->messages->mlh_Head &&
+           node != NULL) {
+        struct ConversationNode *msg = (struct ConversationNode *)node;
+        if (strcmp(msg->role, "system") != 0) {
+            return msg;
+        }
+        node = node->mln_Pred;
+    }
+    return NULL;
+}
+
 /**
  * Get the error output
  * @return the error output
@@ -325,6 +734,361 @@ static BPTR ErrOutput() { return (((struct Process *)FindTask(NULL))->pr_CES); }
 static BPTR GetStdErr() {
     BPTR err = ErrOutput();
     return (err ? err : Output());
+}
+
+/**
+ * Execute a shell command and capture its output
+ * @param command the command to execute
+ * @param exitCode pointer to store the exit code
+ * @return a pointer to a new string containing the command output -- Free
+ * it with FreeVec() when done
+ **/
+STRPTR executeShellCommand(UTF8 *command, LONG *exitCode) {
+    BPTR stdoutFile = 0;
+    BPTR stderrFile = 0;
+    STRPTR outputBuffer = NULL;
+    STRPTR errorBuffer = NULL;
+    STRPTR combinedOutput = NULL;
+    LONG stdoutLen = 0;
+    LONG stderrLen = 0;
+    LONG result = -1;
+
+    STRPTR commandStr =
+        CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                          (Tag)command, CSA_MapForeignChars, TRUE, TAG_DONE);
+    if (commandStr == NULL) {
+        *exitCode = -1;
+        return NULL;
+    }
+
+    /* Create temp files for stdout and stderr */
+    stdoutFile = Open("T:amigagpt_stdout.tmp", MODE_NEWFILE);
+    stderrFile = Open("T:amigagpt_stderr.tmp", MODE_NEWFILE);
+
+    if (stdoutFile == 0 || stderrFile == 0) {
+        if (stdoutFile)
+            Close(stdoutFile);
+        if (stderrFile)
+            Close(stderrFile);
+        *exitCode = -1;
+        combinedOutput = AllocVec(64, MEMF_CLEAR);
+        if (combinedOutput) {
+            strncpy(combinedOutput, "Error: Could not create temp files", 63);
+        }
+        return combinedOutput;
+    }
+
+    /* Execute the command with redirected output */
+#if defined(__MORPHOS__)
+    /* MorphOS may not support SYS_Error, so redirect both to stdout */
+    result = SystemTags(commandStr, SYS_Input, 0, SYS_Output, stdoutFile,
+                        NP_StackSize, 32768, TAG_DONE);
+#else
+    result = SystemTags(commandStr, SYS_Input, 0, SYS_Output, stdoutFile,
+                        SYS_Error, stderrFile, NP_StackSize, 32768, TAG_DONE);
+#endif
+
+    *exitCode = result;
+
+    Close(stdoutFile);
+    Close(stderrFile);
+
+    /* Read stdout */
+    stdoutFile = Open("T:amigagpt_stdout.tmp", MODE_OLDFILE);
+    if (stdoutFile) {
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+        Seek(stdoutFile, 0, OFFSET_END);
+        stdoutLen = Seek(stdoutFile, 0, OFFSET_BEGINNING);
+#elif defined(__AMIGAOS4__)
+        stdoutLen = GetFileSize(stdoutFile);
+#else
+        /* AROS */
+        struct FileInfoBlock fib;
+        ExamineFH64(stdoutFile, &fib, NULL);
+        stdoutLen = fib.fib_Size;
+#endif
+        if (stdoutLen > 0) {
+            outputBuffer = AllocVec(stdoutLen + 1, MEMF_CLEAR);
+            if (outputBuffer) {
+                Read(stdoutFile, outputBuffer, stdoutLen);
+                outputBuffer[stdoutLen] = '\0';
+            }
+        }
+        Close(stdoutFile);
+    }
+
+    /* Read stderr */
+    stderrFile = Open("T:amigagpt_stderr.tmp", MODE_OLDFILE);
+    if (stderrFile) {
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+        Seek(stderrFile, 0, OFFSET_END);
+        stderrLen = Seek(stderrFile, 0, OFFSET_BEGINNING);
+#elif defined(__AMIGAOS4__)
+        stderrLen = GetFileSize(stderrFile);
+#else
+        /* AROS */
+        struct FileInfoBlock fib2;
+        ExamineFH64(stderrFile, &fib2, NULL);
+        stderrLen = fib2.fib_Size;
+#endif
+        if (stderrLen > 0) {
+            errorBuffer = AllocVec(stderrLen + 1, MEMF_CLEAR);
+            if (errorBuffer) {
+                Read(stderrFile, errorBuffer, stderrLen);
+                errorBuffer[stderrLen] = '\0';
+            }
+        }
+        Close(stderrFile);
+    }
+
+    /* Delete temp files */
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+    DeleteFile("T:amigagpt_stdout.tmp");
+    DeleteFile("T:amigagpt_stderr.tmp");
+#else
+    Delete("T:amigagpt_stdout.tmp");
+    Delete("T:amigagpt_stderr.tmp");
+#endif
+
+    /* Combine stdout and stderr */
+    LONG totalLen = (stdoutLen > 0 ? stdoutLen : 0) +
+                    (stderrLen > 0 ? stderrLen + 16 : 0) + 64;
+    combinedOutput = AllocVec(totalLen, MEMF_CLEAR);
+    if (combinedOutput) {
+        if (outputBuffer && stdoutLen > 0) {
+            strncat(combinedOutput, outputBuffer, totalLen - 1);
+        }
+        if (errorBuffer && stderrLen > 0) {
+            if (stdoutLen > 0) {
+                strncat(combinedOutput, "\n\n--- STDERR ---\n", totalLen - 1);
+            }
+            strncat(combinedOutput, errorBuffer, totalLen - 1);
+        }
+        if (stdoutLen == 0 && stderrLen == 0) {
+            snprintf(combinedOutput, totalLen, "(No output)");
+        }
+    }
+
+    if (outputBuffer)
+        FreeVec(outputBuffer);
+    if (errorBuffer)
+        FreeVec(errorBuffer);
+    if (commandStr)
+        CodesetsFreeA(commandStr, NULL);
+
+    return combinedOutput;
+}
+
+/**
+ * Check if there is a pending tool call captured during streaming
+ * @return TRUE if there is a pending tool call
+ **/
+BOOL hasPendingToolCall(void) { return pendingToolCall; }
+
+/**
+ * Get the pending tool call command
+ * @return the command string (do not free)
+ **/
+STRPTR getPendingToolCommand(void) { return pendingToolCommand; }
+
+/**
+ * Get the pending tool call ID
+ * @return the call ID string (do not free)
+ **/
+STRPTR getPendingToolCallId(void) { return pendingToolCallId; }
+
+/**
+ * Get the pending response ID
+ * @return the response ID string (do not free)
+ **/
+STRPTR getPendingResponseId(void) { return pendingResponseId; }
+
+/**
+ * Clear the pending tool call after processing
+ **/
+void clearPendingToolCall(void) {
+    pendingToolCall = FALSE;
+    pendingToolCallId[0] = '\0';
+    pendingToolCommand[0] = '\0';
+    pendingResponseId[0] = '\0';
+}
+
+/**
+ * Check if a response contains a shell tool function call
+ * @param response the JSON response from the API
+ * @return TRUE if the response contains a shell function call
+ **/
+BOOL hasShellToolCall(struct json_object *response) {
+    if (response == NULL) {
+        return FALSE;
+    }
+
+    /* For streaming mode, response.completed has structure:
+     * {"type": "response.completed", "response": {"output": [...]}}
+     * For non-streaming, it's: {"output": [...]} */
+    struct json_object *outputArray =
+        json_object_object_get(response, "output");
+    struct json_object *nestedResponse = NULL;
+
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array)) {
+        /* Try nested structure for streaming mode */
+        nestedResponse = json_object_object_get(response, "response");
+        if (nestedResponse != NULL) {
+            outputArray = json_object_object_get(nestedResponse, "output");
+        }
+    }
+
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array)) {
+        return FALSE;
+    }
+
+    int arrayLength = json_object_array_length(outputArray);
+
+    for (int i = 0; i < arrayLength; i++) {
+        struct json_object *item = json_object_array_get_idx(outputArray, i);
+        struct json_object *itemTypeObj = json_object_object_get(item, "type");
+        if (itemTypeObj != NULL) {
+            UTF8 *typeStr = json_object_get_string(itemTypeObj);
+            if (strcmp(typeStr, "function_call") == 0) {
+                struct json_object *nameObj =
+                    json_object_object_get(item, "name");
+                if (nameObj != NULL) {
+                    UTF8 *nameStr = json_object_get_string(nameObj);
+                    if (strcmp(nameStr, "shell") == 0) {
+                        return TRUE;
+                    }
+                }
+            }
+        }
+    }
+    return FALSE;
+}
+
+/**
+ * Get the call ID from a shell tool function call response
+ * @param response the JSON response from the API
+ * @return the call ID string (do not free) or NULL
+ **/
+UTF8 *getShellToolCallId(struct json_object *response) {
+    if (response == NULL)
+        return NULL;
+
+    /* For streaming mode, response.completed has structure:
+     * {"type": "response.completed", "response": {"output": [...]}}
+     * For non-streaming, it's: {"output": [...]} */
+    struct json_object *outputArray =
+        json_object_object_get(response, "output");
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array)) {
+        /* Try nested structure for streaming mode */
+        struct json_object *nestedResponse =
+            json_object_object_get(response, "response");
+        if (nestedResponse != NULL) {
+            outputArray = json_object_object_get(nestedResponse, "output");
+        }
+    }
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array))
+        return NULL;
+
+    int arrayLength = json_object_array_length(outputArray);
+    for (int i = 0; i < arrayLength; i++) {
+        struct json_object *item = json_object_array_get_idx(outputArray, i);
+        struct json_object *typeObj = json_object_object_get(item, "type");
+        if (typeObj != NULL) {
+            UTF8 *typeStr = json_object_get_string(typeObj);
+            if (strcmp(typeStr, "function_call") == 0) {
+                struct json_object *nameObj =
+                    json_object_object_get(item, "name");
+                if (nameObj != NULL) {
+                    UTF8 *nameStr = json_object_get_string(nameObj);
+                    if (strcmp(nameStr, "shell") == 0) {
+                        struct json_object *callIdObj =
+                            json_object_object_get(item, "call_id");
+                        if (callIdObj != NULL) {
+                            return json_object_get_string(callIdObj);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return NULL;
+}
+
+/**
+ * Get the command from a shell tool function call response
+ * @param response the JSON response from the API
+ * @return the command string (must be freed with FreeVec) or NULL
+ **/
+UTF8 *getShellToolCommand(struct json_object *response) {
+    if (response == NULL)
+        return NULL;
+
+    /* For streaming mode, response.completed has structure:
+     * {"type": "response.completed", "response": {"output": [...]}}
+     * For non-streaming, it's: {"output": [...]} */
+    struct json_object *outputArray =
+        json_object_object_get(response, "output");
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array)) {
+        /* Try nested structure for streaming mode */
+        struct json_object *nestedResponse =
+            json_object_object_get(response, "response");
+        if (nestedResponse != NULL) {
+            outputArray = json_object_object_get(nestedResponse, "output");
+        }
+    }
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array))
+        return NULL;
+
+    int arrayLength = json_object_array_length(outputArray);
+    for (int i = 0; i < arrayLength; i++) {
+        struct json_object *item = json_object_array_get_idx(outputArray, i);
+        struct json_object *typeObj = json_object_object_get(item, "type");
+        if (typeObj != NULL) {
+            UTF8 *typeStr = json_object_get_string(typeObj);
+            if (strcmp(typeStr, "function_call") == 0) {
+                struct json_object *nameObj =
+                    json_object_object_get(item, "name");
+                if (nameObj != NULL) {
+                    UTF8 *nameStr = json_object_get_string(nameObj);
+                    if (strcmp(nameStr, "shell") == 0) {
+                        struct json_object *argsObj =
+                            json_object_object_get(item, "arguments");
+                        if (argsObj != NULL) {
+                            /* Arguments is a JSON string containing another
+                             * JSON object */
+                            UTF8 *argsStr = json_object_get_string(argsObj);
+                            struct json_object *parsedArgs =
+                                json_tokener_parse(argsStr);
+                            if (parsedArgs != NULL) {
+                                struct json_object *cmdObj =
+                                    json_object_object_get(parsedArgs,
+                                                           "command");
+                                if (cmdObj != NULL) {
+                                    UTF8 *cmdStr =
+                                        json_object_get_string(cmdObj);
+                                    STRPTR result = AllocVec(strlen(cmdStr) + 1,
+                                                             MEMF_CLEAR);
+                                    if (result) {
+                                        strncpy(result, cmdStr, strlen(cmdStr));
+                                    }
+                                    json_object_put(parsedArgs);
+                                    return result;
+                                }
+                                json_object_put(parsedArgs);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return NULL;
 }
 
 /**
@@ -501,10 +1265,13 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
             snprintf(credentials,
                      strlen(proxyUsername) + strlen(proxyPassword) + 2, "%s:%s",
                      proxyUsername, proxyPassword);
-            UBYTE *encodedCredentials = base64Encode(credentials);
+            UTF8 *encodedCredentials = CodesetsEncodeB64(
+                CSA_B64SourceString, (Tag)credentials, CSA_B64SourceLen,
+                (Tag)strlen(credentials), CSA_B64DestPtr,
+                (Tag)&encodedCredentials, TAG_DONE);
             snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                      encodedCredentials);
-            FreeVec(encodedCredentials);
+            CodesetsFreeA(encodedCredentials, NULL);
         }
 
         // Send CONNECT request with optional Proxy-Authorization header
@@ -573,7 +1340,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
  * @param host the host to use
  * @param port the port to use
  * @param useSSL whether to use SSL or not
- * @param openAiApiKey the OpenAI API key (can be NULL for local LLM)
+ * @param apiKey the OpenAI API key (can be NULL for local LLM)
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -581,15 +1348,17 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
+ * @param apiEndpointUrl the API endpoint URL to use
  * @return a pointer to a new json_object array containing the model names or
  * NULL -- Free it with json_object_put() when you are done using it
  **/
-struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
-                                  CONST_STRPTR openAiApiKey, BOOL useProxy,
-                                  CONST_STRPTR proxyHost, ULONG proxyPort,
-                                  BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                                  CONST_STRPTR proxyUsername,
-                                  CONST_STRPTR proxyPassword) {
+struct json_object *
+getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
+              BOOL useProxy, CONST_STRPTR proxyHost, ULONG proxyPort,
+              BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+              CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+              CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+              CONST_STRPTR customHeaders) {
     UBYTE connectionRetryCount = 0;
     if (host == NULL || strlen(host) == 0) {
         host = OPENAI_HOST;
@@ -603,44 +1372,75 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
         useSSL = TRUE;
     }
 
+    /* Build the models endpoint path */
+    UBYTE modelsPath[256];
+    if (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0) {
+        snprintf(modelsPath, sizeof(modelsPath), "/%s/models", apiEndpointUrl);
+    } else {
+        snprintf(modelsPath, sizeof(modelsPath), "/models");
+    }
+
+    /* Build the authorization header based on type */
+    UBYTE apiAuthHeader[512];
+    memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+    }
+
+    /* Build custom headers string with proper line ending */
+    UBYTE customHeadersFormatted[1024];
+    memset(customHeadersFormatted, 0, sizeof(customHeadersFormatted));
+    if (customHeaders != NULL && strlen(customHeaders) > 0) {
+        snprintf(customHeadersFormatted, sizeof(customHeadersFormatted),
+                 "%s\r\n", customHeaders);
+    }
+
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
     memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 
     // Build HTTP GET request
-    STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+    STRPTR proxyAuthHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
         STRPTR credentials =
             AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
-        snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
+        UTF8 *encodedCredentials = CodesetsEncodeB64(
+            CSA_B64SourceString, (Tag)credentials, CSA_B64SourceLen,
+            (Tag)strlen(credentials), CSA_B64DestPtr, (Tag)&encodedCredentials,
+            TAG_DONE);
+        snprintf(proxyAuthHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
         FreeVec(credentials);
     }
 
     if (useSSL || useProxy) {
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                 "GET %s://%s:%d/v1/models HTTP/1.1\r\n"
+                 "GET %s://%s:%d%s HTTP/1.1\r\n"
                  "Host: %s:%d\r\n"
-                 "Authorization: Bearer %s\r\n"
+                 "%s"
+                 "%s"
                  "User-Agent: AmigaGPT\r\n"
                  "%s\r\n",
-                 useSSL ? "https" : "http", host, port, host, port,
-                 openAiApiKey ? openAiApiKey : "", authHeader);
+                 useSSL ? "https" : "http", host, port, modelsPath, host, port,
+                 apiAuthHeader, customHeadersFormatted, proxyAuthHeader);
     } else {
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                 "GET /v1/models HTTP/1.1\r\n"
+                 "GET %s HTTP/1.1\r\n"
                  "Host: %s:%d\r\n"
-                 "Authorization: Bearer %s\r\n"
+                 "%s"
+                 "%s"
                  "User-Agent: AmigaGPT\r\n"
                  "%s\r\n",
-                 host, port, openAiApiKey ? openAiApiKey : "", authHeader);
+                 modelsPath, host, port, apiAuthHeader, customHeadersFormatted,
+                 proxyAuthHeader);
     }
 
-    FreeVec(authHeader);
+    FreeVec(proxyAuthHeader);
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
     while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
@@ -673,11 +1473,26 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
 #endif
 
     // Read response
+    struct json_object *response = NULL;
     ULONG totalBytesRead = 0;
     WORD bytesRead = 0;
     BOOL doneReading = FALSE;
     UBYTE *tempReadBuffer = AllocVec(useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH,
                                      MEMF_ANY | MEMF_CLEAR);
+
+    /* Keep a small rolling copy of the HTTP headers so we can detect
+     * Transfer-Encoding and split headers from body even when they arrive
+     * across multiple recv()/SSL_read() calls.
+     */
+    UBYTE headerBuf[8192];
+    ULONG headerLen = 0;
+    BOOL headersDone = FALSE;
+    BOOL isChunked = FALSE;
+    UBYTE chunkLenLine[32];
+    UBYTE chunkLenPos = 0;
+    ULONG chunkRemaining = 0;
+    UBYTE chunkCrlfToSkip = 0;
+    BOOL chunkDone = FALSE;
 
     while (!doneReading && totalBytesRead < READ_BUFFER_LENGTH - 1) {
         if (useSSL) {
@@ -692,10 +1507,205 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
         }
 
         if (bytesRead > 0) {
-            appendToReadBuffer(readBuffer, READ_BUFFER_LENGTH, &totalBytesRead,
-                               tempReadBuffer, (ULONG)bytesRead);
-        } else {
-            doneReading = TRUE;
+            const UBYTE *p = tempReadBuffer;
+            ULONG n = (ULONG)bytesRead;
+
+            while (n > 0 && !doneReading) {
+                if (!headersDone) {
+                    /* Accumulate header bytes until we find the header/body
+                     * delimiter (\r\n\r\n or \n\n).
+                     */
+                    ULONG space = (sizeof(headerBuf) - 1) - headerLen;
+                    ULONG toCopy = (n < space) ? n : space;
+                    if (toCopy > 0) {
+                        CopyMem((APTR)p, (APTR)(headerBuf + headerLen), toCopy);
+                        headerLen += toCopy;
+                        headerBuf[headerLen] = '\0';
+                        p += toCopy;
+                        n -= toCopy;
+                    } else {
+                        displayError(STRING_ERROR_HTTP_HEADERS_TOO_LARGE);
+                        doneReading = TRUE;
+                        break;
+                    }
+
+                    STRPTR hEnd = strstr((STRPTR)headerBuf, "\r\n\r\n");
+                    ULONG bodyOffset = 0;
+                    if (hEnd != NULL) {
+                        bodyOffset = (ULONG)(hEnd - (STRPTR)headerBuf) + 4;
+                    } else {
+                        hEnd = strstr((STRPTR)headerBuf, "\n\n");
+                        if (hEnd != NULL) {
+                            bodyOffset = (ULONG)(hEnd - (STRPTR)headerBuf) + 2;
+                        }
+                    }
+
+                    if (hEnd == NULL) {
+                        continue;
+                    }
+
+                    headersDone = TRUE;
+
+                    /* Some providers stream model lists with chunked transfer.
+                     * Detect it now so body handling can switch modes.
+                     */
+                    if (strstr((STRPTR)headerBuf,
+                               "Transfer-Encoding: chunked") != NULL ||
+                        strstr((STRPTR)headerBuf,
+                               "transfer-encoding: chunked") != NULL) {
+                        isChunked = TRUE;
+                    }
+
+                    ULONG rbLen = strlen((STRPTR)readBuffer);
+                    ULONG spaceLeft = (READ_BUFFER_LENGTH - 1) > rbLen
+                                          ? (READ_BUFFER_LENGTH - 1) - rbLen
+                                          : 0;
+                    ULONG toWrite =
+                        (bodyOffset < spaceLeft) ? bodyOffset : spaceLeft;
+                    if (toWrite > 0) {
+                        CopyMem((APTR)headerBuf, readBuffer + rbLen, toWrite);
+                        readBuffer[rbLen + toWrite] = '\0';
+                    }
+
+                    /* If this read contained both headers and body, continue
+                     * parsing immediately from the first body byte.
+                     */
+                    if (bodyOffset < headerLen) {
+                        p = headerBuf + bodyOffset;
+                        n = headerLen - bodyOffset;
+                        headerLen = bodyOffset;
+                    } else {
+                        continue;
+                    }
+                }
+
+                /* Non-chunked response: append remaining bytes as-is. */
+                if (!isChunked) {
+                    ULONG rbLen = strlen((STRPTR)readBuffer);
+                    ULONG spaceLeft = (READ_BUFFER_LENGTH - 1) > rbLen
+                                          ? (READ_BUFFER_LENGTH - 1) - rbLen
+                                          : 0;
+                    ULONG actualTake = (n < spaceLeft) ? n : spaceLeft;
+                    if (actualTake > 0) {
+                        CopyMem((APTR)p, readBuffer + rbLen, actualTake);
+                        readBuffer[rbLen + actualTake] = '\0';
+                    }
+                    n = 0;
+                    break;
+                }
+
+                /* Chunked response parser:
+                 * 1) read chunk length line (hex),
+                 * 2) copy exactly that many payload bytes,
+                 * 3) skip trailing CRLF,
+                 * 4) stop when chunk size is 0.
+                 */
+                while (n > 0 && !doneReading && !chunkDone) {
+                    if (chunkCrlfToSkip > 0) {
+                        chunkCrlfToSkip--;
+                        p++;
+                        n--;
+                        continue;
+                    }
+
+                    if (chunkRemaining == 0) {
+                        UBYTE c = *p;
+                        p++;
+                        n--;
+                        if (c == '\n') {
+                            chunkLenLine[chunkLenPos] = '\0';
+                            /* Ignore CR and optional chunk extensions
+                             * (";...") before parsing the hex size.
+                             */
+                            for (UBYTE i = 0; i < chunkLenPos; i++) {
+                                if (chunkLenLine[i] == '\r' ||
+                                    chunkLenLine[i] == ';') {
+                                    chunkLenLine[i] = '\0';
+                                    break;
+                                }
+                            }
+                            chunkRemaining =
+                                (ULONG)strtoul((char *)chunkLenLine, NULL, 16);
+                            chunkLenPos = 0;
+                            if (chunkRemaining == 0) {
+                                chunkDone = TRUE;
+                            }
+                        } else {
+                            if (chunkLenPos < sizeof(chunkLenLine) - 1) {
+                                chunkLenLine[chunkLenPos++] = c;
+                            }
+                        }
+                        continue;
+                    }
+
+                    ULONG take = (n < chunkRemaining) ? n : chunkRemaining;
+                    if (take > 0) {
+                        ULONG rbLen = strlen((STRPTR)readBuffer);
+                        ULONG spaceLeft = (READ_BUFFER_LENGTH - 1) > rbLen
+                                              ? (READ_BUFFER_LENGTH - 1) - rbLen
+                                              : 0;
+                        ULONG actualTake =
+                            (take < spaceLeft) ? take : spaceLeft;
+                        if (actualTake > 0) {
+                            CopyMem((APTR)p, readBuffer + rbLen, actualTake);
+                            readBuffer[rbLen + actualTake] = '\0';
+                        }
+                        p += take;
+                        n -= take;
+                        chunkRemaining -= take;
+                    }
+
+                    if (chunkRemaining == 0) {
+                        chunkCrlfToSkip = 2;
+                    }
+                }
+
+                if (chunkDone) {
+                    break;
+                }
+            }
+        }
+
+        /* Parse response.
+         *
+         * IMPORTANT: Some servers (e.g. Cloudflare) include JSON blobs in HTTP
+         * headers (e.g. Report-To / NEL). Do NOT parse from the first '{' in
+         * the whole buffer; strip HTTP headers first and parse JSON from body.
+         */
+        STRPTR body = NULL;
+        STRPTR headerEnd = strstr(readBuffer, "\r\n\r\n");
+        ULONG headerDelimLen = 4;
+        if (headerEnd == NULL) {
+            headerEnd = strstr(readBuffer, "\n\n");
+            headerDelimLen = 2;
+        }
+        if (headerEnd != NULL) {
+            body = headerEnd + headerDelimLen;
+        }
+
+        while (body != NULL && (*body == '\r' || *body == '\n' ||
+                                *body == ' ' || *body == '\t')) {
+            body++;
+        }
+
+        STRPTR jsonStart = NULL;
+        if (body != NULL) {
+            STRPTR objStart = strchr(body, '{');
+            STRPTR arrStart = strchr(body, '[');
+            if (objStart != NULL && arrStart != NULL) {
+                jsonStart = (objStart < arrStart) ? objStart : arrStart;
+            } else if (objStart != NULL) {
+                jsonStart = objStart;
+            } else if (arrStart != NULL) {
+                jsonStart = arrStart;
+            }
+        }
+
+        if (jsonStart != NULL) {
+            response = json_tokener_parse(jsonStart);
+            if (response != NULL) {
+                doneReading = TRUE;
+            }
         }
     }
     FreeVec(tempReadBuffer);
@@ -709,48 +1719,73 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
     }
     sock = -1;
 
-    // Parse response
-    STRPTR jsonStart = strstr(readBuffer, "\r\n\r\n");
-    if (jsonStart == NULL) {
-        displayError("Invalid response format");
-        return NULL;
-    }
-    jsonStart += 4;
-
-    struct json_object *response = json_tokener_parse(jsonStart);
-    struct json_object *dataArray;
-
-    if (response == NULL || !json_object_is_type(response, json_type_object)) {
-        if (response != NULL) {
-            json_object_put(response);
-        }
-        displayError("Failed to parse models response");
+    if (response == NULL) {
+        displayError(STRING_ERROR_MODELS_RESPONSE_PARSE);
         return NULL;
     }
 
-    // Extract model IDs from response
-    if (!json_object_object_get_ex(response, "data", &dataArray) ||
-        !json_object_is_type(dataArray, json_type_array)) {
+    // Display error if any
+    struct json_object *error = json_object_object_get(response, "error");
+    if (error != NULL) {
+        displayError(json_object_get_string(error));
         json_object_put(response);
-        displayError("No 'data' field in models response");
         return NULL;
     }
 
-    // Create array of model names
+    /* Extract model IDs from response.
+     *
+     * OpenAI format: { "data": [ { "id": "gpt-4.1" }, ... ] }
+     * Gemini format: { "models": [ { "name": "models/gemini-2.0-flash" }, ... ]
+     * }
+     */
     struct json_object *modelNames = json_object_new_array();
-    int arrayLength = json_object_array_length(dataArray);
 
-    for (int i = 0; i < arrayLength; i++) {
-        struct json_object *modelObj = json_object_array_get_idx(dataArray, i);
-        struct json_object *idObj;
-
-        if (modelObj == NULL || !json_object_is_type(modelObj, json_type_object) ||
-            !json_object_object_get_ex(modelObj, "id", &idObj)) {
-            continue;
+    struct json_object *dataArray = json_object_object_get(response, "data");
+    if (dataArray != NULL && json_object_is_type(dataArray, json_type_array)) {
+        int arrayLength = json_object_array_length(dataArray);
+        for (int i = 0; i < arrayLength; i++) {
+            struct json_object *modelObj =
+                json_object_array_get_idx(dataArray, i);
+            if (modelObj == NULL)
+                continue;
+            struct json_object *idObj = json_object_object_get(modelObj, "id");
+            if (idObj != NULL) {
+                UTF8 *modelId = json_object_get_string(idObj);
+                if (modelId != NULL && strlen(modelId) > 0)
+                    json_object_array_add(modelNames,
+                                          json_object_new_string(modelId));
+            }
         }
-        if (idObj != NULL) {
-            CONST_STRPTR modelId = json_object_get_string(idObj);
-            json_object_array_add(modelNames, json_object_new_string(modelId));
+    } else {
+        struct json_object *modelsArray =
+            json_object_object_get(response, "models");
+        if (modelsArray == NULL ||
+            !json_object_is_type(modelsArray, json_type_array)) {
+            json_object_put(response);
+            json_object_put(modelNames);
+            displayError("No 'data' or 'models' field in models response");
+            return NULL;
+        }
+
+        int arrayLength = json_object_array_length(modelsArray);
+        for (int i = 0; i < arrayLength; i++) {
+            struct json_object *modelObj =
+                json_object_array_get_idx(modelsArray, i);
+            if (modelObj == NULL)
+                continue;
+            struct json_object *nameObj =
+                json_object_object_get(modelObj, "name");
+            if (nameObj != NULL) {
+                UTF8 *fullName = json_object_get_string(nameObj);
+                if (fullName != NULL && strlen(fullName) > 0) {
+                    /* Gemini prefixes model names with "models/" */
+                    UTF8 *name = fullName;
+                    if (strncmp(fullName, "models/", 7) == 0)
+                        name = fullName + 7;
+                    json_object_array_add(modelNames,
+                                          json_object_new_string(name));
+                }
+            }
         }
     }
 
@@ -767,7 +1802,7 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
  * @param port the port to use set to 0 to use OpenAI default port
  * @param useSSL whether to use SSL or not
  * @param model the model to use
- * @param openAiApiKey the OpenAI API key
+ * @param apiKey the API key
  * @param stream whether to stream the response or not
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
@@ -778,18 +1813,21 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
  * @param proxyPassword the proxy password to use
  * @param webSearchEnabled whether to enable web search or not
  * @param apiEndpoint the API endpoint to use
- * @param apiEndpoinUrl the API endpoint URL to use
+ * @param apiEndpointUrl the API endpoint URL to use
+ * @param authorizationType the authorization type to use
+ * @param customHeaders custom HTTP headers to add to the request
  * @return a pointer to a new array of json_object containing the response(s) or
  *NULL -- Free it with json_object_put() for all responses then FreeVec() for
  *the array when you are done using it
  **/
 struct json_object **postChatMessageToOpenAI(
     struct Conversation *conversation, STRPTR host, UWORD port, BOOL useSSL,
-    CONST_STRPTR model, CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
+    CONST_STRPTR model, CONST_STRPTR apiKey, BOOL stream, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, BOOL webSearchEnabled, APIEndpoint apiEndpoint,
-    CONST_STRPTR apiEndpoinUrl) {
+    CONST_STRPTR proxyPassword, BOOL webSearchEnabled, BOOL shellToolEnabled,
+    APIChatEndpoint apiEndpoint, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders) {
     if (model == NULL || strlen(model) == 0) {
         displayError("Model not specified");
         return NULL;
@@ -797,42 +1835,194 @@ struct json_object **postChatMessageToOpenAI(
     struct json_object **responses =
         AllocVec(sizeof(struct json_object *) * RESPONSE_ARRAY_BUFFER_LENGTH,
                  MEMF_ANY | MEMF_CLEAR);
+    static UBYTE streamReconnectStreak = 0;
+    static BOOL streamSawAnyContent = FALSE;
     UWORD responseIndex = 0;
     UBYTE connectionRetryCount = 0;
+    BOOL reconnectCurrentStream = FALSE;
 
-    BOOL useCustomServer = host != NULL && strlen(host) > 0;
-    if (useCustomServer) {
-        if (port == 0) {
-            port = useSSL ? 443 : 80;
-        }
-    } else {
-        host = OPENAI_HOST;
-        port = OPENAI_PORT;
-        useSSL = TRUE;
+    /* Always use the connection settings passed in (from the active profile).
+     * We do not silently fall back to hardcoded OpenAI defaults here. */
+    if (host == NULL || strlen(host) == 0) {
+        displayError("Host not specified");
+        FreeVec(responses);
+        return NULL;
     }
+    if (port == 0) {
+        port = useSSL ? 443 : 80;
+    }
+
+    /* Host heuristics for provider-specific behavior (kept host-driven). */
+    BOOL isOpenAiHost = (strcmp(host, OPENAI_HOST) == 0);
+    BOOL isXaiHost = (strcmp(host, "api.x.ai") == 0);
+
+    /* The Responses API supports built-in tools like web_search and the
+     * "shell" function tool.  Enable tool injection for ANY host using the
+     * Responses endpoint so that custom / third-party profiles get tools too.
+     */
+    BOOL includeOpenAiTools = (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES);
+
+    /* Use Gemini native generateContent when requested by endpoint. */
+    BOOL useGeminiGenerateContent =
+        (apiEndpoint == API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT);
+    BOOL effectiveStream = stream;
+    BOOL canUseStatefulResponses =
+        (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES && conversation != NULL &&
+         conversation->lastResponseId != NULL &&
+         strlen(conversation->lastResponseId) > 0);
 
     if (useProxy && proxyUsesSSL) {
         useSSL = TRUE;
     }
 
-    if (!stream || !chatStreamInProgress) {
+    if (!effectiveStream || !chatStreamInProgress) {
         memset(readBuffer, 0, READ_BUFFER_LENGTH);
         chatStreamCancelRequested = FALSE;
-        chatStreamInProgress = stream;
+        chatStreamInProgress = effectiveStream;
+        streamSawAnyContent = FALSE;
+        if (effectiveStream) {
+            openAIChatStreamResetOutcome();
+        }
 
         struct json_object *obj = json_object_new_object();
-        json_object_object_add(obj, "model", json_object_new_string(model));
+        if (!useGeminiGenerateContent) {
+            json_object_object_add(obj, "model", json_object_new_string(model));
+        }
         struct json_object *conversationArray = json_object_new_array();
 
-        if (useCustomServer) {
-            struct MinNode *conversationNode = conversation->messages->mlh_Head;
-            if (apiEndpoint == API_ENDPOINT_CHAT_COMPLETIONS) {
+        struct MinNode *conversationNode = conversation->messages->mlh_Head;
+        STRPTR systemInstructions = combineInstructionText(
+            conversation->system, AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS);
+
+        /* If speech is on and the active speech profile is xAI TTS with
+         * automatic speech tag insertion enabled, append a tag cheat sheet to
+         * the system prompt so the LLM produces tagged output for playback. */
+        if (configGetSpeechEnabled()) {
+            struct SpeechRequestSettings speechSettings;
+            configGetSpeechRequestSettings(&speechSettings);
+            if (speechSettings.speechSystem == SPEECH_SYSTEM_XAI &&
+                speechSettings.xaiAutoSpeechTags) {
+                STRPTR withTags = combineInstructionText(
+                    systemInstructions, XAI_AUTO_SPEECH_TAG_INSTRUCTIONS);
+                if (withTags != NULL) {
+                    if (systemInstructions != NULL)
+                        FreeVec(systemInstructions);
+                    systemInstructions = withTags;
+                }
+            }
+            configFreeSpeechRequestSettings(&speechSettings);
+        }
+
+        if (useGeminiGenerateContent) {
+            /* Gemini native generateContent format:
+             * POST /v1beta/models/<model>:generateContent
+             * {
+             *   "contents": [{ "role": "...", "parts":[{"text":"..."}] }, ...],
+             *   "systemInstruction": { "parts":[{"text":"..."}] },
+             *   "tools": [{ "google_search": {} }]
+             * } */
+
+            if (systemInstructions != NULL && strlen(systemInstructions) > 0) {
+                struct json_object *sysObj = json_object_new_object();
+                struct json_object *sysParts = json_object_new_array();
+                struct json_object *sysPart0 = json_object_new_object();
+                json_object_object_add(
+                    sysPart0, "text",
+                    json_object_new_string(systemInstructions));
+                json_object_array_add(sysParts, sysPart0);
+                json_object_object_add(sysObj, "parts", sysParts);
+                json_object_object_add(obj, "systemInstruction", sysObj);
+            }
+
+            while (conversationNode->mln_Succ != NULL) {
+                struct ConversationNode *message =
+                    (struct ConversationNode *)conversationNode;
+                struct json_object *contentObj = json_object_new_object();
+
+                CONST_STRPTR role = "user";
+                if (strcmp(message->role, "assistant") == 0) {
+                    role = "model";
+                } else if (strcmp(message->role, "user") == 0) {
+                    role = "user";
+                }
+                json_object_object_add(contentObj, "role",
+                                       json_object_new_string(role));
+
+                struct json_object *partsArr = json_object_new_array();
+                struct json_object *partObj = json_object_new_object();
+                json_object_object_add(
+                    partObj, "text",
+                    json_object_new_string(
+                        (CONST_STRPTR)(conversationNodeGetRaw(message) != NULL
+                                           ? conversationNodeGetRaw(message)
+                                           : (UTF8 *)"")));
+                json_object_array_add(partsArr, partObj);
+                json_object_object_add(contentObj, "parts", partsArr);
+
+                json_object_array_add(conversationArray, contentObj);
+                conversationNode = conversationNode->mln_Succ;
+            }
+            json_object_object_add(obj, "contents", conversationArray);
+
+            /* Web search tool (optional) */
+            if (webSearchEnabled) {
+                struct json_object *toolsArray = json_object_new_array();
+                struct json_object *toolObj = json_object_new_object();
+                json_object_object_add(toolObj, "google_search",
+                                       json_object_new_object());
+                json_object_array_add(toolsArray, toolObj);
+                json_object_object_add(obj, "tools", toolsArray);
+            }
+
+        } else if (apiEndpoint == API_CHAT_ENDPOINT_MESSAGES) {
+            /* Anthropic/Claude Messages API format */
+            if (systemInstructions != NULL && strlen(systemInstructions) > 0)
+                json_object_object_add(
+                    obj, "system", json_object_new_string(systemInstructions));
+            /* max_tokens is required for Claude API */
+            json_object_object_add(obj, "max_tokens",
+                                   json_object_new_int(4096));
+
+            /* Build messages array (no system role in messages) */
+            while (conversationNode->mln_Succ != NULL) {
+                struct ConversationNode *message =
+                    (struct ConversationNode *)conversationNode;
+                struct json_object *messageObj = json_object_new_object();
+                json_object_object_add(messageObj, "role",
+                                       json_object_new_string(message->role));
+                json_object_object_add(
+                    messageObj, "content",
+                    json_object_new_string(
+                        (CONST_STRPTR)conversationNodeGetRaw(message)));
+                json_object_array_add(conversationArray, messageObj);
+                conversationNode = conversationNode->mln_Succ;
+            }
+            json_object_object_add(obj, "messages", conversationArray);
+            /* Claude streaming is handled differently, disable for now */
+            json_object_object_add(obj, "stream",
+                                   json_object_new_boolean(FALSE));
+
+            /* Anthropic web search tools (only for Messages API). */
+            if (webSearchEnabled) {
+                struct json_object *toolsArray = json_object_new_array();
+                struct json_object *toolObj = json_object_new_object();
+                json_object_object_add(
+                    toolObj, "type",
+                    json_object_new_string("web_search_20250305"));
+                json_object_object_add(toolObj, "name",
+                                       json_object_new_string("web_search"));
+                json_object_array_add(toolsArray, toolObj);
+                json_object_object_add(obj, "tools", toolsArray);
+            }
+        } else if (apiEndpoint == API_CHAT_ENDPOINT_CHAT_COMPLETIONS) {
+            /* OpenAI-compatible chat/completions */
+            if (systemInstructions != NULL && strlen(systemInstructions) > 0) {
                 struct json_object *messageObj = json_object_new_object();
                 json_object_object_add(messageObj, "role",
                                        json_object_new_string("system"));
                 json_object_object_add(
                     messageObj, "content",
-                    json_object_new_string(conversation->system));
+                    json_object_new_string(systemInstructions));
                 json_object_array_add(conversationArray, messageObj);
             }
             while (conversationNode->mln_Succ != NULL) {
@@ -844,64 +2034,191 @@ struct json_object **postChatMessageToOpenAI(
                 json_object_object_add(
                     messageObj, "content",
                     json_object_new_string(
-                        conversationNodeGetRaw(message)));
+                        (CONST_STRPTR)conversationNodeGetRaw(message)));
                 json_object_array_add(conversationArray, messageObj);
                 conversationNode = conversationNode->mln_Succ;
             }
-
+            json_object_object_add(obj, "messages", conversationArray);
             json_object_object_add(
-                obj,
-                apiEndpoint == API_ENDPOINT_RESPONSES ? "input" : "messages",
-                conversationArray);
-            json_object_object_add(obj, "stream",
-                                   json_object_new_boolean((json_bool)stream));
+                obj, "stream",
+                json_object_new_boolean((json_bool)effectiveStream));
 
-            if (apiEndpoint == API_ENDPOINT_RESPONSES) {
-                if (conversation->system != NULL &&
-                    strlen(conversation->system) > 0) {
-                    json_object_object_add(
-                        obj, "instructions",
-                        json_object_new_string(conversation->system));
+            /* Web search tools for chat/completions.  xAI gets its
+             * provider-specific x_search alongside web_search; other
+             * OpenAI-compatible providers get a plain web_search entry. */
+            if (webSearchEnabled) {
+                struct json_object *toolsArray = json_object_new_array();
+                struct json_object *webObj = json_object_new_object();
+                json_object_object_add(webObj, "type",
+                                       json_object_new_string("web_search"));
+                json_object_array_add(toolsArray, webObj);
+                if (isXaiHost) {
+                    struct json_object *xObj = json_object_new_object();
+                    json_object_object_add(xObj, "type",
+                                           json_object_new_string("x_search"));
+                    json_object_array_add(toolsArray, xObj);
                 }
+                json_object_object_add(obj, "tools", toolsArray);
             }
         } else {
-            struct json_object *toolsArray = json_object_new_array();
-            if (webSearchEnabled) {
-                struct json_object *webSearchToolObj = json_object_new_object();
-                json_object_object_add(webSearchToolObj, "type",
-                                       json_object_new_string("web_search"));
-                json_object_array_add(toolsArray, webSearchToolObj);
+            /* Responses-style requests (OpenAI + compatible providers).
+             * Only emit the tools array when at least one tool is active. */
+            BOOL wantTools = (includeOpenAiTools &&
+                              (webSearchEnabled || shellToolEnabled)) ||
+                             (webSearchEnabled && isXaiHost);
+            if (wantTools) {
+                struct json_object *toolsArray = json_object_new_array();
+                if (webSearchEnabled) {
+                    if (isXaiHost) {
+                        struct json_object *webSearchToolObj =
+                            json_object_new_object();
+                        json_object_object_add(
+                            webSearchToolObj, "type",
+                            json_object_new_string("web_search"));
+                        json_object_array_add(toolsArray, webSearchToolObj);
+                        struct json_object *xSearchToolObj =
+                            json_object_new_object();
+                        json_object_object_add(
+                            xSearchToolObj, "type",
+                            json_object_new_string("x_search"));
+                        json_object_array_add(toolsArray, xSearchToolObj);
+                    } else if (includeOpenAiTools) {
+                        struct json_object *webSearchToolObj =
+                            json_object_new_object();
+                        json_object_object_add(
+                            webSearchToolObj, "type",
+                            json_object_new_string("web_search"));
+                        json_object_array_add(toolsArray, webSearchToolObj);
+                    }
+                }
+                if (includeOpenAiTools && shellToolEnabled) {
+                    struct json_object *shellToolObj = json_object_new_object();
+                    json_object_object_add(shellToolObj, "type",
+                                           json_object_new_string("function"));
+                    json_object_object_add(shellToolObj, "name",
+                                           json_object_new_string("shell"));
+                    json_object_object_add(
+                        shellToolObj, "description",
+                        json_object_new_string(
+                            "Execute AmigaDOS shell commands on the user's "
+                            "Amiga. Use this to run commands, manage files, or "
+                            "interact with the system. Returns stdout, stderr, "
+                            "and exit code."));
+                    struct json_object *paramsObj = json_object_new_object();
+                    json_object_object_add(paramsObj, "type",
+                                           json_object_new_string("object"));
+                    struct json_object *propsObj = json_object_new_object();
+                    struct json_object *cmdPropObj = json_object_new_object();
+                    json_object_object_add(cmdPropObj, "type",
+                                           json_object_new_string("string"));
+                    json_object_object_add(
+                        cmdPropObj, "description",
+                        json_object_new_string(
+                            "The AmigaDOS command to execute (e.g. 'list "
+                            "RAM:', "
+                            "'type myfile.txt', 'cd Work:')"));
+                    json_object_object_add(propsObj, "command", cmdPropObj);
+                    json_object_object_add(paramsObj, "properties", propsObj);
+                    struct json_object *requiredArr = json_object_new_array();
+                    json_object_array_add(requiredArr,
+                                          json_object_new_string("command"));
+                    json_object_object_add(paramsObj, "required", requiredArr);
+                    json_object_object_add(shellToolObj, "parameters",
+                                           paramsObj);
+                    json_object_array_add(toolsArray, shellToolObj);
+                }
+                json_object_object_add(obj, "tools", toolsArray);
             }
-            json_object_object_add(obj, "tools", toolsArray);
 
-            struct MinNode *conversationNode = conversation->messages->mlh_Head;
-            while (conversationNode->mln_Succ != NULL) {
-                struct ConversationNode *message =
-                    (struct ConversationNode *)conversationNode;
-                struct json_object *messageObj = json_object_new_object();
-                json_object_object_add(messageObj, "role",
-                                       json_object_new_string(message->role));
+            if (canUseStatefulResponses) {
+                struct ConversationNode *latestMessage =
+                    getLastNonSystemConversationMessage(conversation);
+                if (latestMessage != NULL) {
+                    struct json_object *messageObj = json_object_new_object();
+                    json_object_object_add(
+                        messageObj, "role",
+                        json_object_new_string(latestMessage->role));
+                    json_object_object_add(
+                        messageObj, "content",
+                        json_object_new_string(
+                            (CONST_STRPTR)conversationNodeGetRaw(latestMessage)));
+                    json_object_array_add(conversationArray, messageObj);
+                }
                 json_object_object_add(
-                    messageObj, "content",
-                    json_object_new_string(
-                        conversationNodeGetRaw(message)));
-                json_object_array_add(conversationArray, messageObj);
-                conversationNode = conversationNode->mln_Succ;
+                    obj, "previous_response_id",
+                    json_object_new_string(conversation->lastResponseId));
+            } else {
+                while (conversationNode->mln_Succ != NULL) {
+                    struct ConversationNode *message =
+                        (struct ConversationNode *)conversationNode;
+                    struct json_object *messageObj = json_object_new_object();
+                    json_object_object_add(
+                        messageObj, "role",
+                        json_object_new_string(message->role));
+                    json_object_object_add(
+                        messageObj, "content",
+                        json_object_new_string(
+                        (CONST_STRPTR)conversationNodeGetRaw(message)));
+                    json_object_array_add(conversationArray, messageObj);
+                    conversationNode = conversationNode->mln_Succ;
+                }
             }
 
             json_object_object_add(obj, "input", conversationArray);
-            json_object_object_add(obj, "stream",
-                                   json_object_new_boolean((json_bool)stream));
+            json_object_object_add(
+                obj, "stream",
+                json_object_new_boolean((json_bool)effectiveStream));
 
-            if (conversation->system != NULL &&
-                strlen(conversation->system) > 0) {
+            if (includeOpenAiTools && shellToolEnabled) {
+                CONST_STRPTR amigaInstructions =
+#ifdef __AMIGAOS3__
+                    "This system is an Amiga computer running AmigaOS. When "
+                    "using the shell tool, "
+#elif defined(__AMIGAOS4__)
+                    "This system is a PowerPC Amiga computer running AmigaOS. "
+                    "When using the shell tool, "
+#else
+                    "This system is a PowerPC computer running MorphOS. When "
+                    "using the shell tool, "
+#endif
+                    "use AmigaDOS commands (not Unix/Linux). Key differences:\n"
+                    "- Directory listing: 'list' or 'dir' (not 'ls')\n"
+                    "- Show file contents: 'type' (not 'cat')\n"
+                    "- Path separator is ':' for devices and '/' for "
+                    "directories (e.g. 'Work:Projects/myfile')\n"
+                    "- Devices include RAM:, SYS:, Work:, DH0:, etc.\n"
+                    "- Create directory: 'makedir' (not 'mkdir')\n"
+                    "- Delete file: 'delete' (not 'rm')\n"
+                    "- Copy: 'copy' (not 'cp')\n"
+                    "- Rename/move: 'rename' (not 'mv')\n"
+                    "- Current directory: 'cd' with no args shows current, 'cd "
+                    "<path>' changes\n"
+                    "- Redirection: '>' for output, '<' for input, '>>' to "
+                    "append\n"
+                    "- Pipe character is '|' same as Unix";
+
+                STRPTR combinedInstr = combineInstructionText(
+                    systemInstructions, amigaInstructions);
+                if (combinedInstr != NULL) {
+                    json_object_object_add(
+                        obj, "instructions",
+                        json_object_new_string(combinedInstr));
+                    FreeVec(combinedInstr);
+                }
+            } else if (systemInstructions != NULL &&
+                       strlen(systemInstructions) > 0) {
                 json_object_object_add(
                     obj, "instructions",
-                    json_object_new_string(conversation->system));
+                    json_object_new_string(systemInstructions));
             }
         }
 
-        CONST_STRPTR jsonString = json_object_to_json_string(obj);
+        if (systemInstructions != NULL) {
+            FreeVec(systemInstructions);
+            systemInstructions = NULL;
+        }
+
+        UTF8 *jsonString = json_object_to_json_string(obj);
 
         STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
         if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
@@ -912,51 +2229,111 @@ struct json_object **postChatMessageToOpenAI(
             snprintf(credentials,
                      strlen(proxyUsername) + strlen(proxyPassword) + 2, "%s:%s",
                      proxyUsername, proxyPassword);
-            UBYTE *encodedCredentials = base64Encode(credentials);
+            STRPTR encodedCredentials;
+            CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                              CSA_B64SourceLen, (Tag)strlen(credentials),
+
+                              CSA_B64DestPtr, (Tag)&encodedCredentials,
+                              TAG_DONE);
             snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                      encodedCredentials);
-            FreeVec(encodedCredentials);
+            CodesetsFreeA(encodedCredentials, NULL);
+            FreeVec(credentials);
         }
 
-        if (apiEndpoinUrl == NULL) {
-            apiEndpoinUrl = "v1";
+        CONST_STRPTR effectiveApiEndpointUrl = apiEndpointUrl;
+        if (effectiveApiEndpointUrl == NULL) {
+            effectiveApiEndpointUrl = "";
         }
 
+        /* Build the API authorization header based on type */
+        UBYTE apiAuthHeader[512];
+        memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+        if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+            strlen(apiKey) > 0) {
+            snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                     AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+        }
+
+        /* Build custom headers string with proper line ending */
+        UBYTE customHeadersFormatted[1024];
+        memset(customHeadersFormatted, 0, sizeof(customHeadersFormatted));
+        if (customHeaders != NULL && strlen(customHeaders) > 0) {
+            snprintf(customHeadersFormatted, sizeof(customHeadersFormatted),
+                     "%s\r\n", customHeaders);
+        }
+
+        char endpointNameBuf[256];
+        memset(endpointNameBuf, 0, sizeof(endpointNameBuf));
+        CONST_STRPTR endpointName = API_CHAT_ENDPOINT_NAMES[apiEndpoint];
+        if (useGeminiGenerateContent) {
+            if (effectiveStream) {
+                snprintf(endpointNameBuf, sizeof(endpointNameBuf),
+                         "models/%s:streamGenerateContent?alt=sse", model);
+            } else {
+                snprintf(endpointNameBuf, sizeof(endpointNameBuf),
+                         "models/%s:generateContent", model);
+            }
+            endpointName = endpointNameBuf;
+        }
+
+        ULONG requestCapacity = strlen(jsonString) + 8192;
+        STRPTR requestBuffer = AllocVec(requestCapacity, MEMF_ANY | MEMF_CLEAR);
+        if (requestBuffer == NULL) {
+            json_object_put(obj);
+            FreeVec(authHeader);
+            FreeVec(responses);
+            displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+            return NULL;
+        }
+        LONG requestLength = 0;
         if (useSSL || useProxy) {
-            snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                     "POST %s://%s:%d%s%s/%s HTTP/1.1\r\n"
-                     "Host: %s:%d\r\n"
-                     "Content-Type: application/json\r\n"
-                     "Authorization: Bearer %s\r\n"
-                     "User-Agent: AmigaGPT\r\n"
-                     "Content-Length: %lu\r\n"
-                     "%s\r\n"
-                     "%s\0",
-                     useSSL ? "https" : "http", host, port,
-                     strlen(apiEndpoinUrl) > 0 ? "/" : "", apiEndpoinUrl,
-                     API_ENDPOINT_NAMES[apiEndpoint], host, port, openAiApiKey,
-                     strlen(jsonString), authHeader, jsonString);
+            requestLength =
+                snprintf(requestBuffer, requestCapacity,
+                         "POST %s://%s:%d%s%s/%s HTTP/1.1\r\n"
+                         "Host: %s:%d\r\n"
+                         "Content-Type: application/json\r\n"
+                         "%s"
+                         "%s"
+                         "User-Agent: AmigaGPT\r\n"
+                         "Content-Length: %lu\r\n"
+                         "%s\r\n"
+                         "%s\0",
+                         useSSL ? "https" : "http", host, port,
+                         strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
+                         effectiveApiEndpointUrl, endpointName, host, port,
+                         apiAuthHeader, customHeadersFormatted,
+                         strlen(jsonString), authHeader, jsonString);
         } else {
-            snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-                     "POST %s%s/%s HTTP/1.1\r\n"
-                     "Host: %s:%d\r\n"
-                     "Content-Type: application/json\r\n"
-                     "Authorization: Bearer %s\r\n"
-                     "User-Agent: AmigaGPT\r\n"
-                     "Content-Length: %lu\r\n"
-                     "%s\r\n"
-                     "%s\0",
-                     strlen(apiEndpoinUrl) > 0 ? "/" : "", apiEndpoinUrl,
-                     API_ENDPOINT_NAMES[apiEndpoint], host, port, openAiApiKey,
-                     strlen(jsonString), authHeader, jsonString);
+            requestLength =
+                snprintf(requestBuffer, requestCapacity,
+                         "POST %s%s/%s HTTP/1.1\r\n"
+                         "Host: %s:%d\r\n"
+                         "Content-Type: application/json\r\n"
+                         "%s"
+                         "%s"
+                         "User-Agent: AmigaGPT\r\n"
+                         "Content-Length: %lu\r\n"
+                         "%s\r\n"
+                         "%s\0",
+                         strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
+                         effectiveApiEndpointUrl, endpointName, host, port,
+                         apiAuthHeader, customHeadersFormatted,
+                         strlen(jsonString), authHeader, jsonString);
         }
 
         json_object_put(obj);
 
         FreeVec(authHeader);
 
+        if (requestLength < 0 || (ULONG)requestLength >= requestCapacity) {
+            FreeVec(requestBuffer);
+            FreeVec(responses);
+            displayError(STRING_ERROR_CHAT_REQUEST_TOO_LARGE);
+            return NULL;
+        }
+
         updateStatusBar(STRING_CONNECTING, yellowPen);
-        streamLogLifecycle("chat send ssl connect begin");
         while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
                                    proxyPort, proxyUsesSSL, proxyRequiresAuth,
                                    proxyUsername,
@@ -969,27 +2346,46 @@ struct json_object **postChatMessageToOpenAI(
             }
         }
         connectionRetryCount = 0;
-        streamLogLifecycle("chat send ssl connect done");
         updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
+        ULONG sentTotal = 0;
+        ULONG reqLen = (ULONG)requestLength;
         if (useSSL) {
-            ERR_clear_error();
-            ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
-            if (ssl_err <= 0) {
+            while (sentTotal < reqLen) {
+                ERR_clear_error();
+                LONG written = SSL_write(ssl, requestBuffer + sentTotal,
+                                         reqLen - sentTotal);
+                if (written > 0) {
+                    sentTotal += written;
+                    continue;
+                }
+                ssl_err = written;
                 reportSslError(ssl, ssl_err, "SSL_write (responses)");
+                break;
             }
+            ssl_err = (sentTotal == reqLen) ? (LONG)sentTotal : -1;
         } else {
-            ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+            while (sentTotal < reqLen) {
+                LONG written = send(sock, requestBuffer + sentTotal,
+                                    reqLen - sentTotal, 0);
+                if (written > 0) {
+                    sentTotal += written;
+                    continue;
+                }
+                ssl_err = written;
+                break;
+            }
+            if (sentTotal == reqLen) {
+                ssl_err = (LONG)sentTotal;
+            }
         }
+        FreeVec(requestBuffer);
     }
 
 #ifndef DAEMON
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 #endif
 
-        if (stream && !chatStreamInProgress) {
-            openAIChatStreamResetOutcome();
-        }
-        if (ssl_err > 0 || stream) {
+    if (ssl_err > 0 || effectiveStream) {
         ULONG totalBytesRead = 0;
         WORD bytesRead = 0;
         BOOL doneReading = FALSE;
@@ -997,12 +2393,6 @@ struct json_object **postChatMessageToOpenAI(
         UBYTE statusMessage[64];
         UBYTE *tempReadBuffer = AllocVec(
             useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
-        ULONG readBufferLen = 0;
-        ULONG sslWaitStalls = 0;
-
-        if (readBuffer != NULL) {
-            readBufferLen = (ULONG)strlen((char *)readBuffer);
-        }
         while (!doneReading) {
 #ifndef DAEMON
             DoMethod(loadingBar, MUIM_Busy_Move);
@@ -1025,189 +2415,323 @@ struct json_object **postChatMessageToOpenAI(
                 chatStreamInProgress = FALSE;
                 break;
             }
-            if (useSSL) {
-                ERR_clear_error();
-                bytesRead =
-                    SSL_read(ssl, tempReadBuffer,
-                             useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1);
+            /* IMPORTANT:
+             * In streaming mode, we may already have one-or-more complete SSE
+             * events buffered in readBuffer from a previous call. Do NOT block
+             * on SSL_read/recv if we can return an event immediately. */
+            BOOL shouldParseBuffered = FALSE;
+            if (effectiveStream && readBuffer != NULL &&
+                readBuffer[0] != '\0') {
+                STRPTR dataPos = strstr(readBuffer, "data:");
+                if (dataPos != NULL) {
+                    STRPTR end = strstr(dataPos, "\r\n\r\n");
+                    if (end == NULL)
+                        end = strstr(dataPos, "\n\n");
+                    if (end != NULL) {
+                        shouldParseBuffered = TRUE;
+                    }
+                }
+            }
+
+            BOOL didReadBytes = FALSE;
+            if (!shouldParseBuffered) {
+                if (useSSL) {
+                    ERR_clear_error();
+                    bytesRead = SSL_read(
+                        ssl, tempReadBuffer,
+                        useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1);
+                } else {
+                    bytesRead = recv(
+                        sock, tempReadBuffer,
+                        useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1, 0);
+                }
+                didReadBytes = TRUE;
             } else {
-                bytesRead =
-                    recv(sock, tempReadBuffer,
-                         useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1, 0);
+                bytesRead = 0;
             }
             snprintf(statusMessage, sizeof(statusMessage),
                      STRING_DOWNLOADING_RESPONSE);
             updateStatusBar(statusMessage, yellowPen);
+            // /* Only append when we actually read bytes. */
             if (bytesRead > 0) {
-                ULONG space = READ_BUFFER_LENGTH - 1 - readBufferLen;
-                ULONG copyLen = (ULONG)bytesRead;
-
-                if (space == 0) {
-                    chatStreamTruncated = TRUE;
-                    doneReading = TRUE;
-                    chatStreamInProgress = FALSE;
-                    break;
-                }
-                if (copyLen > space) {
-                    copyLen = space;
-                }
-                CopyMem(tempReadBuffer, readBuffer + readBufferLen, copyLen);
-                readBufferLen += copyLen;
-                readBuffer[readBufferLen] = '\0';
+                strncat(readBuffer, tempReadBuffer, bytesRead);
             }
             if (useSSL) {
-                err = SSL_get_error(ssl, bytesRead);
+                /* If we skipped reading because we had buffered events, force
+                 * the parsing path. */
+                err = didReadBytes ? SSL_get_error(ssl, bytesRead)
+                                   : SSL_ERROR_NONE;
             } else {
                 err = SSL_ERROR_NONE;
             }
             switch (err) {
             case SSL_ERROR_NONE:
                 totalBytesRead += bytesRead;
-                const STRPTR jsonStart = stream ? "data: {" : "{";
-                STRPTR jsonString = readBuffer;
-                if (readBuffer == NULL) {
-                    doneReading = TRUE;
-                    chatStreamInProgress = FALSE;
-                    break;
-                }
-                // Check for error in stream
-                if (stream) {
-                    if (jsonString != NULL &&
-                        strstr(jsonString, jsonStart) == NULL) {
-                        jsonString = strstr(jsonString, "{");
-                        if (jsonString == NULL) {
-                            if (readBuffer != NULL) {
-                                // Check if we can safely read the first
-                                // character
-                                if (readBuffer[0] != '\0') {
+                if (effectiveStream) {
+                    /* Streaming is Server-Sent Events (SSE):
+                     *   data: { ...json... }\r\n\r\n
+                     *   data: [DONE]\r\n\r\n     (chat.completions style)
+                     *
+                     * We must extract ONE complete SSE event per call. */
 
-                                    // Use strnlen or manual length calculation
-                                    // to avoid strlen issues with UTF-8
-                                    ULONG bufLen = 0;
-                                    ULONG maxLen = READ_BUFFER_LENGTH - 1;
-                                    while (bufLen < maxLen &&
-                                           readBuffer[bufLen] != '\0') {
-                                        bufLen++;
-                                    }
-
-                                    STRPTR httpResponse =
-                                        strstr(readBuffer, "HTTP/1.1");
-                                    if (httpResponse != NULL) {
-                                        STRPTR okCheck =
-                                            strstr(httpResponse, "200 OK");
-                                        if (okCheck == NULL) {
-                                            UBYTE error[256] = {0};
-                                            for (UWORD i = 0; i < 256; i++) {
-                                                if (httpResponse[i] == '\r' ||
-                                                    httpResponse[i] == '\n') {
-                                                    break;
-                                                }
-                                                error[i] = httpResponse[i];
-                                            }
-                                            displayError(error);
-                                            doneReading = TRUE;
-                                            chatStreamInProgress = FALSE;
-                                        }
-                                    }
+                    /* If we still have HTTP headers in the buffer, validate
+                     * status and strip them. */
+                    STRPTR httpResponse = strstr(readBuffer, "HTTP/1.1");
+                    if (httpResponse != NULL) {
+                        STRPTR okCheck = strstr(httpResponse, "200 OK");
+                        STRPTR okCheck2 = strstr(httpResponse, "HTTP/1.1 200");
+                        if (okCheck == NULL && okCheck2 == NULL) {
+                            UBYTE error[256] = {0};
+                            for (UWORD i = 0; i < 256; i++) {
+                                if (httpResponse[i] == '\r' ||
+                                    httpResponse[i] == '\n') {
+                                    break;
                                 }
-                            } else {
-                                doneReading = TRUE;
-                                chatStreamInProgress = FALSE;
+                                error[i] = httpResponse[i];
                             }
+                            /* IMPORTANT:
+                             * In streaming mode, the UI will keep calling us
+                             * until it sees either an "error" object or a
+                             * completion marker. If we only show an error
+                             * dialog here and return no JSON objects, the UI
+                             * will retry forever and spam the requester.
+                             *
+                             * Return a standard {"error":{"message":...}}
+                             * object in responses[0] so the caller can stop.
+                             */
+                            struct json_object *errObj =
+                                json_object_new_object();
+                            struct json_object *errInner =
+                                json_object_new_object();
+                            json_object_object_add(
+                                errInner, "message",
+                                json_object_new_string((CONST_STRPTR)error));
+                            json_object_object_add(errObj, "error", errInner);
+                            responses[responseIndex++] = errObj;
+                            doneReading = TRUE;
+                            chatStreamInProgress = FALSE;
+                            break;
+                        }
+
+                        STRPTR headerEnd = strstr(readBuffer, "\r\n\r\n");
+                        if (headerEnd == NULL)
+                            headerEnd = strstr(readBuffer, "\n\n");
+                        if (headerEnd != NULL) {
+                            STRPTR afterHeaders =
+                                headerEnd + ((headerEnd[0] == '\r') ? 4 : 2);
+                            memmove(readBuffer, afterHeaders,
+                                    strlen(afterHeaders) + 1);
                         }
                     }
-                }
-                STRPTR lastJsonString = jsonString;
-                if (jsonString != NULL) {
-                    while (jsonString = strstr(jsonString, jsonStart)) {
-                        lastJsonString = jsonString;
-                        if (stream) {
-                            jsonString += 6; // Get to the start of the JSON
+
+                    /* Try to extract a complete SSE event. If we can't, keep
+                     * reading from the socket. */
+                    while (readBuffer != NULL && readBuffer[0] != '\0') {
+                        /* Trim leading CR/LF noise */
+                        while (readBuffer[0] == '\r' || readBuffer[0] == '\n') {
+                            memmove(readBuffer, readBuffer + 1,
+                                    strlen(readBuffer));
                         }
+
+                        STRPTR dataPos = strstr(readBuffer, "data:");
+                        if (dataPos == NULL) {
+                            break; /* need more bytes */
+                        }
+
+                        /* Drop anything before the next 'data:' */
+                        if (dataPos != readBuffer) {
+                            memmove(readBuffer, dataPos, strlen(dataPos) + 1);
+                        }
+
+                        STRPTR eventEnd = strstr(readBuffer, "\r\n\r\n");
+                        ULONG delimLen = 4;
+                        if (eventEnd == NULL) {
+                            eventEnd = strstr(readBuffer, "\n\n");
+                            delimLen = 2;
+                        }
+                        if (eventEnd == NULL) {
+                            break; /* incomplete event */
+                        }
+
+                        STRPTR payloadStart = readBuffer + 5; /* after data: */
+                        while (*payloadStart == ' ' || *payloadStart == '\t') {
+                            payloadStart++;
+                        }
+                        ULONG payloadLen = (ULONG)(eventEnd - payloadStart);
+                        while (payloadLen > 0 &&
+                               (payloadStart[payloadLen - 1] == '\r' ||
+                                payloadStart[payloadLen - 1] == '\n')) {
+                            payloadLen--;
+                        }
+
+                        /* Consume this event from buffer now or later */
+                        STRPTR afterEvent = eventEnd + delimLen;
+
+                        if (payloadLen == 6 &&
+                            strncmp(payloadStart, "[DONE]", 6) == 0) {
+                            /* Synthesize a response.completed to signal the
+                             * UI loop that streaming is finished. */
+                            struct json_object *completed =
+                                json_object_new_object();
+                            json_object_object_add(
+                                completed, "type",
+                                json_object_new_string("response.completed"));
+                            responses[responseIndex++] = completed;
+
+                            memmove(readBuffer, afterEvent,
+                                    strlen(afterEvent) + 1);
+                            doneReading = TRUE;
+                            break;
+                        }
+
+                        if (payloadLen > 0 && payloadStart[0] == '{') {
+                            STRPTR oneJson =
+                                AllocVec(payloadLen + 1, MEMF_ANY | MEMF_CLEAR);
+                            if (oneJson != NULL) {
+                                CopyMem(payloadStart, oneJson, payloadLen);
+                                oneJson[payloadLen] = '\0';
+                                struct json_object *parsedResponse =
+                                    json_tokener_parse(oneJson);
+                                FreeVec(oneJson);
+                                if (parsedResponse != NULL) {
+                                    responses[responseIndex++] = parsedResponse;
+                                    streamSawAnyContent = TRUE;
+                                    openAIChatStreamCaptureLastSse(oneJson);
+                                    if (responseMarksStreamFinished(
+                                            parsedResponse)) {
+                                        chatStreamCompletedOk = TRUE;
+                                        chatStreamInProgress = FALSE;
+                                        closeActiveResponseConnection();
+                                        memset(readBuffer, 0,
+                                               READ_BUFFER_LENGTH);
+                                    }
+                                    memmove(readBuffer, afterEvent,
+                                            strlen(afterEvent) + 1);
+                                    doneReading = TRUE;
+                                    break;
+                                }
+                            }
+                        }
+
+                        /* If we couldn't parse it, consume and keep scanning to
+                         * avoid getting stuck on bad/unknown events. */
+                        memmove(readBuffer, afterEvent, strlen(afterEvent) + 1);
+                    }
+
+                    /* If we did not produce an event yet, keep reading. */
+                    break;
+                }
+
+                /* Non-streaming mode: parse the full JSON response.
+                 *
+                 * IMPORTANT: Some servers (e.g. Cloudflare) include JSON blobs
+                 * in HTTP headers (e.g. Report-To / NEL). If we scan from the
+                 * start of the buffer, we can accidentally parse a header JSON
+                 * object instead of the response body, resulting in an empty
+                 * assistant message being saved.
+                 *
+                 * Always strip HTTP headers first, then parse JSON from body.
+                 */
+                {
+                    if (readBuffer == NULL) {
+                        doneReading = TRUE;
+                        chatStreamInProgress = FALSE;
+                        break;
+                    }
+
+                    STRPTR body = NULL;
+                    STRPTR headerEnd = strstr(readBuffer, "\r\n\r\n");
+                    ULONG headerDelimLen = 4;
+                    if (headerEnd == NULL) {
+                        headerEnd = strstr(readBuffer, "\n\n");
+                        headerDelimLen = 2;
+                    }
+                    if (headerEnd != NULL) {
+                        body = headerEnd + headerDelimLen;
+                    }
+
+                    /* Skip leading whitespace/newlines */
+                    while (body != NULL && (*body == '\r' || *body == '\n' ||
+                                            *body == ' ' || *body == '\t')) {
+                        body++;
+                    }
+
+                    /* Find first JSON token in body */
+                    UTF8 *jsonString = NULL;
+                    if (body != NULL) {
+                        UTF8 *objStart = strchr(body, '{');
+                        UTF8 *arrStart = strchr(body, '[');
+                        if (objStart != NULL && arrStart != NULL) {
+                            jsonString =
+                                (objStart < arrStart) ? objStart : arrStart;
+                        } else if (objStart != NULL) {
+                            jsonString = objStart;
+                        } else if (arrStart != NULL) {
+                            jsonString = arrStart;
+                        }
+                    }
+
+                    if (jsonString != NULL) {
                         struct json_object *parsedResponse =
                             json_tokener_parse(jsonString);
                         if (parsedResponse != NULL) {
-                            if (responseIndex <
-                                RESPONSE_ARRAY_BUFFER_LENGTH - 1) {
-                                responses[responseIndex++] = parsedResponse;
-                            } else {
-                                json_object_put(parsedResponse);
-                            }
-                            if (!stream) {
-                                break;
-                            }
-                        } else if (!stream) {
-                            jsonString = NULL;
-                            break;
-                        }
-                    }
-                }
-
-                if (stream && lastJsonString != NULL) {
-                    openAIChatStreamCaptureLastSse(lastJsonString);
-                }
-
-                if (stream) {
-                    if (bytesRead > 0) {
-                        sslWaitStalls = 0;
-                        if (lastJsonString != NULL) {
-                            struct json_object *parsedResponse;
-                            if ((parsedResponse = json_tokener_parse(
-                                     lastJsonString + 6)) == NULL) {
-                                snprintf(readBuffer, READ_BUFFER_LENGTH,
-                                         "%s\0", lastJsonString);
-                                if ((parsedResponse = json_tokener_parse(
-                                         lastJsonString)) != NULL) {
-                                    if (responseIndex <
-                                        RESPONSE_ARRAY_BUFFER_LENGTH - 1) {
-                                        responses[responseIndex++] =
-                                            parsedResponse;
-                                    } else {
-                                        json_object_put(parsedResponse);
-                                    }
-                                }
-                            } else {
-                                memset(readBuffer, 0, READ_BUFFER_LENGTH);
-                            }
-                        }
-                        if (streamBatchHasCompleted(responses,
-                                                    responseIndex)) {
-                            chatStreamCompletedOk = TRUE;
-                            doneReading = TRUE;
-                            chatStreamInProgress = FALSE;
-                        } else if (useSSL && ssl != NULL &&
-                                   SSL_pending(ssl) > 0) {
-                            /* drain buffered TLS records in this call */
-                        } else {
-                            /* Yield batch to MainWindow; keep TLS stream open */
+                            responses[responseIndex++] = parsedResponse;
                             doneReading = TRUE;
                         }
-                    } else if (!sslWaitForReadReady(sock, &sslWaitStalls)) {
-                        chatStreamNoteReadTimeout(responseIndex, readBufferLen);
-                        doneReading = TRUE;
-                        chatStreamInProgress = FALSE;
                     }
-                } else if (jsonString != NULL) {
-                    doneReading = TRUE;
                 }
 
                 break;
             case SSL_ERROR_ZERO_RETURN:
+                /* Some providers end a stream by closing the connection rather
+                 * than sending an explicit final marker. If we reach EOF
+                 * without producing a chunk in this call, synthesize a
+                 * completion event so the caller does not spin forever waiting
+                 * for more data from a closed stream. */
+                if (effectiveStream && responseIndex == 0) {
+                    struct json_object *completed = json_object_new_object();
+                    json_object_object_add(
+                        completed, "type",
+                        json_object_new_string("response.completed"));
+                    responses[responseIndex++] = completed;
+                    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                    chatStreamInProgress = FALSE;
+                }
                 doneReading = TRUE;
-                chatStreamInProgress = FALSE;
                 break;
             case SSL_ERROR_WANT_READ:
-            case SSL_ERROR_WANT_WRITE:
-                if (!sslWaitForReadReady(sock, &sslWaitStalls)) {
-                    chatStreamNoteReadTimeout(responseIndex, readBufferLen);
+                printf("SSL_ERROR_WANT_READ\n");
+                /* If we've already received the SSE terminator, stop waiting.
+                 */
+                if (effectiveStream &&
+                    strstr(readBuffer, "data: [DONE]") != NULL) {
+                    /* Important: return a completion marker to the caller so
+                     * the UI loop can terminate instead of re-sending the
+                     * request. */
+                    struct json_object *completed = json_object_new_object();
+                    json_object_object_add(
+                        completed, "type",
+                        json_object_new_string("response.completed"));
+                    responses[responseIndex++] = completed;
+
+                    /* Clear buffer so we don't repeatedly trip this path. */
+                    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+
                     doneReading = TRUE;
                     chatStreamInProgress = FALSE;
                 }
                 break;
+            case SSL_ERROR_WANT_WRITE:
+                printf("SSL_ERROR_WANT_WRITE\n");
+                break;
             case SSL_ERROR_WANT_CONNECT:
+                printf("SSL_ERROR_WANT_CONNECT\n");
+                break;
             case SSL_ERROR_WANT_ACCEPT:
+                printf("SSL_ERROR_WANT_ACCEPT\n");
+                break;
             case SSL_ERROR_WANT_X509_LOOKUP:
-                reportSslError(ssl, bytesRead, "SSL_read (responses)");
+                printf("SSL_ERROR_WANT_X509_LOOKUP\n");
                 break;
             case SSL_ERROR_SYSCALL:
             case SSL_ERROR_SSL:
@@ -1216,9 +2740,26 @@ struct json_object **postChatMessageToOpenAI(
                 if (strlen(readBuffer) > 0) {
                     // Try to parse what we have - if it's valid JSON, the
                     // connection closure is normal
-                    const STRPTR jsonStart = stream ? "data: {" : "{";
-                    STRPTR jsonString = stream ? strstr(readBuffer, jsonStart)
-                                               : strstr(readBuffer, "{");
+                    if (strstr(readBuffer, "data: [DONE]") != NULL) {
+                        /* Same as WANT_READ case: make sure caller sees a
+                         * completion marker. */
+                        struct json_object *completed =
+                            json_object_new_object();
+                        json_object_object_add(
+                            completed, "type",
+                            json_object_new_string("response.completed"));
+                        responses[responseIndex++] = completed;
+
+                        memset(readBuffer, 0, READ_BUFFER_LENGTH);
+
+                        doneReading = TRUE;
+                        chatStreamInProgress = FALSE;
+                        break;
+                    }
+                    const UTF8 *jsonStart = effectiveStream ? "data: {" : "{";
+                    UTF8 *jsonString = effectiveStream
+                                           ? strstr(readBuffer, jsonStart)
+                                           : strstr(readBuffer, "{");
                     if (jsonString != NULL) {
                         // We have JSON data - this might be a normal connection
                         // closure
@@ -1226,8 +2767,78 @@ struct json_object **postChatMessageToOpenAI(
                         break;
                     }
                 }
-                // No valid data received - this is a real error
-                reportSslError(ssl, bytesRead, "SSL_read (responses)");
+                /* Recoverable stream disconnects (peer reset/pipe closed) can
+                 * happen mid-generation. Re-open the stream connection and let
+                 * the caller continue polling instead of surfacing an error
+                 * immediately.
+                 */
+                if (effectiveStream &&
+                    (errno == ECONNRESET || errno == EPIPE ||
+                     errno == ENOTCONN) &&
+                    streamSawAnyContent) {
+                    struct json_object *completed = json_object_new_object();
+                    json_object_object_add(
+                        completed, "type",
+                        json_object_new_string("response.completed"));
+                    responses[responseIndex++] = completed;
+                    chatStreamInProgress = FALSE;
+                    closeActiveResponseConnection();
+                    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                    doneReading = TRUE;
+                    break;
+                }
+
+                if (effectiveStream &&
+                    (errno == ECONNRESET || errno == EPIPE ||
+                     errno == ENOTCONN) &&
+                    streamReconnectStreak < 2) {
+                    streamReconnectStreak++;
+                    reconnectCurrentStream = TRUE;
+                    chatStreamInProgress = FALSE;
+                    closeActiveResponseConnection();
+                    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                    doneReading = TRUE;
+                    break;
+                }
+                /* No valid data received - return a structured error object so
+                 * the caller can stop streaming instead of retrying forever.
+                 * Avoid popping multiple low-level SSL dialogs here.
+                 */
+                {
+                    UBYTE errorLine[256] = {0};
+                    unsigned long sslQueueErr = ERR_peek_error();
+                    if (sslQueueErr != 0) {
+                        const char *reason =
+                            ERR_reason_error_string(sslQueueErr);
+                        const char *text = ERR_error_string(sslQueueErr, NULL);
+                        snprintf(
+                            errorLine, sizeof(errorLine),
+                            STRING_ERROR_SSL_READ_FAILED_FORMAT,
+                            reason != NULL
+                                ? reason
+                                : (text != NULL ? text : "unknown SSL error"));
+                        while (ERR_get_error() != 0) {
+                        }
+                    } else {
+                        snprintf(errorLine, sizeof(errorLine),
+                                 STRING_ERROR_SSL_READ_FAILED_FORMAT,
+                                 strerror(errno));
+                    }
+
+                    if (responseIndex == 0) {
+                        struct json_object *errObj = json_object_new_object();
+                        struct json_object *errInner = json_object_new_object();
+                        json_object_object_add(
+                            errInner, "message",
+                            json_object_new_string((CONST_STRPTR)errorLine));
+                        json_object_object_add(errObj, "error", errInner);
+                        responses[responseIndex++] = errObj;
+                    }
+
+                    chatStreamInProgress = FALSE;
+                    closeActiveResponseConnection();
+                    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                }
                 doneReading = TRUE;
                 break;
             default:
@@ -1236,48 +2847,104 @@ struct json_object **postChatMessageToOpenAI(
                 break;
             }
         }
-        if (stream) {
+        if (effectiveStream) {
+            ULONG readBufferLen =
+                readBuffer != NULL ? (ULONG)strlen((char *)readBuffer) : 0;
             chatStreamFinalizeTransport(responseIndex, readBufferLen);
         }
         FreeVec(tempReadBuffer);
+
+        if (reconnectCurrentStream) {
+            FreeVec(responses);
+            return postChatMessageToOpenAI(
+                conversation, host, port, useSSL, model, apiKey, stream,
+                useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                proxyUsername, proxyPassword, webSearchEnabled,
+                shellToolEnabled, apiEndpoint, apiEndpointUrl,
+                authorizationType, customHeaders);
+        }
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
         reportSslError(ssl, ssl_err, "SSL_write");
     }
-    if (stream) {
+
+    if (effectiveStream && responseIndex > 0) {
+        streamReconnectStreak = 0;
+    }
+    if (effectiveStream) {
         // Check if the last response is the end of the stream and set the
         // chatStreamInProgress flag to FALSE so that the next request will
         // establish a new connection because OpenAI will close the connection
         // after the stream is finished
-        if (responseIndex > 0 && responses[responseIndex - 1] != NULL &&
-            json_object_is_type(responses[responseIndex - 1], json_type_object)) {
-            struct json_object *typeObj = NULL;
-            CONST_STRPTR type = NULL;
-
-            if (json_object_object_get_ex(responses[responseIndex - 1], "type",
-                                         &typeObj)) {
-                type = json_object_get_string(typeObj);
-            }
+        if (responseIndex > 0 && responses[responseIndex - 1] != NULL) {
+            STRPTR type = json_object_get_string(
+                json_object_object_get(responses[responseIndex - 1], "type"));
             if (type != NULL && strcmp(type, "response.completed") == 0) {
                 chatStreamCompletedOk = TRUE;
                 chatStreamInProgress = FALSE;
+                closeActiveResponseConnection();
+
+                /* Check for tool call in response.completed and save it */
+                if (shellToolEnabled) {
+                    struct json_object *completedResponse =
+                        responses[responseIndex - 1];
+                    if (hasShellToolCall(completedResponse)) {
+                        STRPTR callId = getShellToolCallId(completedResponse);
+                        UTF8 *command = getShellToolCommand(completedResponse);
+                        /* Get response ID from nested response object */
+                        struct json_object *nestedResp = json_object_object_get(
+                            completedResponse, "response");
+                        UTF8 *respId = NULL;
+                        if (nestedResp) {
+                            respId = json_object_get_string(
+                                json_object_object_get(nestedResp, "id"));
+                        }
+
+                        if (callId && command && respId) {
+                            pendingToolCall = TRUE;
+                            strncpy(pendingToolCallId, callId,
+                                    sizeof(pendingToolCallId) - 1);
+                            strncpy(pendingToolCommand, command,
+                                    sizeof(pendingToolCommand) - 1);
+                            strncpy(pendingResponseId, respId,
+                                    sizeof(pendingResponseId) - 1);
+                        }
+                    }
+                }
             }
         }
-        struct json_object *error;
-        if (responseIndex > 0 &&
-            json_object_object_get_ex(responses[responseIndex - 1], "error",
-                                     &error) &&
-            !json_object_is_type(error, json_type_null)) {
-            CloseSocket(sock);
-            if (ssl != NULL) {
-                SSL_shutdown(ssl);
-                SSL_free(ssl);
-                ssl = NULL;
+        if (responseIndex > 0 && responses[responseIndex - 1] != NULL) {
+            struct json_object *error;
+            if (json_object_object_get_ex(responses[responseIndex - 1], "error",
+                                          &error) &&
+                !json_object_is_type(error, json_type_null)) {
+                closeActiveResponseConnection();
+                chatStreamInProgress = FALSE;
             }
-            sock = -1;
-            chatStreamInProgress = FALSE;
         }
     } else {
+        /* Non-streaming mode - check for tool calls in the response */
+        if (responseIndex > 0 && responses[responseIndex - 1] != NULL &&
+            shellToolEnabled) {
+            struct json_object *response = responses[responseIndex - 1];
+            if (hasShellToolCall(response)) {
+                STRPTR callId = getShellToolCallId(response);
+                UTF8 *command = getShellToolCommand(response);
+                /* For non-streaming, id is at top level */
+                UTF8 *respId = json_object_get_string(
+                    json_object_object_get(response, "id"));
+
+                if (callId && command && respId) {
+                    pendingToolCall = TRUE;
+                    strncpy(pendingToolCallId, callId,
+                            sizeof(pendingToolCallId) - 1);
+                    strncpy(pendingToolCommand, command,
+                            sizeof(pendingToolCommand) - 1);
+                    strncpy(pendingResponseId, respId,
+                            sizeof(pendingResponseId) - 1);
+                }
+            }
+        }
         CloseSocket(sock);
         if (ssl != NULL) {
             SSL_shutdown(ssl);
@@ -1286,23 +2953,43 @@ struct json_object **postChatMessageToOpenAI(
         }
         sock = -1;
     }
-    return responses;
-}
 
-/**
- * Decode a base64 encoded string
- * @param dataB64 the base64 encoded string
- * @param data_len the length of the decoded data
- * @return a pointer to the decoded data
- */
-UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len) {
-    LONG dataB64_len = strlen(dataB64);
-    *data_len = 3 * dataB64_len / 4;
-    UBYTE *data = AllocVec(*data_len, MEMF_ANY | MEMF_CLEAR);
-    EVP_DecodeBlock(data, dataB64, dataB64_len);
-    while (dataB64[--dataB64_len] == '=')
-        (*data_len)--;
-    return data;
+    if (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES && responseIndex > 0) {
+        struct json_object *lastResponse = responses[responseIndex - 1];
+        if (canUseStatefulResponses &&
+            (responseIndicatesMissingPreviousId(lastResponse) ||
+             responseIndicatesBadRequest(lastResponse))) {
+            setConversationLastResponseId(conversation, NULL);
+            if (effectiveStream) {
+                closeActiveResponseConnection();
+                chatStreamInProgress = FALSE;
+            }
+            for (UWORD i = 0; i < responseIndex; i++) {
+                if (responses[i] != NULL) {
+                    json_object_put(responses[i]);
+                }
+            }
+            FreeVec(responses);
+            return postChatMessageToOpenAI(
+                conversation, host, port, useSSL, model, apiKey, stream,
+                useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                proxyUsername, proxyPassword, webSearchEnabled,
+                shellToolEnabled, apiEndpoint, apiEndpointUrl,
+                authorizationType, customHeaders);
+        }
+
+        STRPTR newestResponseId = NULL;
+        for (UWORD i = 0; i < responseIndex; i++) {
+            STRPTR candidate = extractResponseIdFromPayload(responses[i]);
+            if (candidate != NULL && strlen(candidate) > 0) {
+                newestResponseId = candidate;
+            }
+        }
+        if (newestResponseId != NULL) {
+            setConversationLastResponseId(conversation, newestResponseId);
+        }
+    }
+    return responses;
 }
 
 /**
@@ -1310,7 +2997,7 @@ UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len) {
  * @param prompt the prompt to use
  * @param imageModel the image model to use
  * @param imageSize the size of the image to create
- * @param openAiApiKey the OpenAI API key
+ * @param apiKey the OpenAI API key
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -1319,18 +3006,27 @@ UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len) {
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
  * @param imageFormat the image format to use
+ * @param apiEndpoint the API endpoint to use
  * @return a pointer to a new json_object containing the response or NULL --
  *Free it with json_object_put when you are done using it
  **/
 struct json_object *postImageCreationRequestToOpenAI(
-    CONST_STRPTR prompt, ImageModel imageModel, ImageSize imageSize,
-    CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost,
-    UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
-    ImageFormat imageFormat) {
+    CONST_STRPTR prompt, CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders, CONST_STRPTR modelName, ImageSize imageSize,
+    CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, ImageFormat imageFormat,
+    APIImageEndpoint apiEndpoint) {
     struct json_object *response = NULL;
     UWORD responseIndex = 0;
-    BOOL useSSL = !useProxy || proxyUsesSSL;
+    BOOL requestUsesSSL = useSSL;
+    BOOL isGeminiGenerateContent =
+        (apiEndpoint == API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT);
+
+    if (useProxy && proxyUsesSSL) {
+        requestUsesSSL = TRUE;
+    }
     struct json_tokener *tokener = json_tokener_new();
     json_tokener_set_flags(tokener, JSON_TOKENER_STRICT);
 
@@ -1338,10 +3034,9 @@ struct json_object *postImageCreationRequestToOpenAI(
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
     UBYTE connectionRetryCount = 0;
-    while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useSSL, useProxy,
-                               proxyHost, proxyPort, proxyUsesSSL,
-                               proxyRequiresAuth, proxyUsername,
-                               proxyPassword) == RETURN_ERROR) {
+    while (createSSLConnection(host, port, requestUsesSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
             json_tokener_free(tokener);
@@ -1350,58 +3045,196 @@ struct json_object *postImageCreationRequestToOpenAI(
     }
     connectionRetryCount = 0;
 
-    struct json_object *obj = json_object_new_object();
-    json_object_object_add(
-        obj, "model", json_object_new_string(IMAGE_MODEL_NAMES[imageModel]));
-    json_object_object_add(obj, "prompt", json_object_new_string(prompt));
-    json_object_object_add(obj, "size",
-                           json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
-    if (imageModel == GPT_IMAGE_1 || imageModel == GPT_IMAGE_1_MINI ||
-        imageModel == GPT_IMAGE_1_5) {
-        json_object_object_add(obj, "moderation",
-                               json_object_new_string("low"));
-        json_object_object_add(
-            obj, "output_format",
-            json_object_new_string(IMAGE_FORMAT_NAMES[imageFormat]));
-        json_object_object_add(obj, "output_compression",
-                               json_object_new_int(100));
-    } else {
-        json_object_object_add(obj, "response_format",
-                               json_object_new_string("b64_json"));
-    }
-    CONST_STRPTR jsonString = json_object_to_json_string(obj);
+    UTF8 *promptUTF8 =
+        CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
+                           (Tag)prompt, CSA_MapForeignChars, TRUE, TAG_DONE);
 
-    STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+    struct json_object *obj = json_object_new_object();
+    if (apiEndpoint == API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT) {
+        /* Gemini native text-to-image endpoint:
+         * POST /v1beta/models/<model>:generateContent
+         * Header: x-goog-api-key
+         * Body: { "contents":[{"parts":[{"text":"..."}]}],
+         *         "generationConfig":{"responseModalities":["TEXT","IMAGE"]} }
+         * Docs: https://ai.google.dev/gemini-api/docs/image-generation#rest */
+        struct json_object *contentsArr = json_object_new_array();
+        struct json_object *contentObj = json_object_new_object();
+        struct json_object *partsArr = json_object_new_array();
+        struct json_object *partObj = json_object_new_object();
+        json_object_object_add(
+            partObj, "text",
+            json_object_new_string(promptUTF8 ? promptUTF8 : (UTF8 *)""));
+        json_object_array_add(partsArr, partObj);
+        json_object_object_add(contentObj, "parts", partsArr);
+        json_object_array_add(contentsArr, contentObj);
+        json_object_object_add(obj, "contents", contentsArr);
+
+        struct json_object *generationConfigObj = json_object_new_object();
+        struct json_object *modalitiesArr = json_object_new_array();
+        json_object_array_add(modalitiesArr, json_object_new_string("TEXT"));
+        json_object_array_add(modalitiesArr, json_object_new_string("IMAGE"));
+        json_object_object_add(generationConfigObj, "responseModalities",
+                               modalitiesArr);
+        json_object_object_add(obj, "generationConfig", generationConfigObj);
+    } else {
+        json_object_object_add(
+            obj, "model", json_object_new_string(modelName ? modelName : ""));
+        json_object_object_add(
+            obj, "prompt",
+            json_object_new_string(promptUTF8 ? promptUTF8 : (UTF8 *)""));
+        /* Provider differences:
+         * - xAI/Grok: no OpenAI "size" field; use aspect_ratio (see below).
+         * - Gemini OpenAI-compat examples omit size; keep request minimal.
+         * - OpenAI gpt-image-* supports size/output_format. */
+        BOOL isGptImage =
+            (modelName != NULL && strncmp(modelName, "gpt-image-", 10) == 0);
+        BOOL isGrok =
+            (modelName != NULL && strncmp(modelName, "grok-", 5) == 0);
+        if (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS) {
+            /* xAI rejects OpenAI-style "size" (docs: not supported). Use their
+             * aspect_ratio when the model is Grok Imagine. */
+            if (isGrok) {
+                if (imageSize != IMAGE_SIZE_NULL) {
+                    CONST_STRPTR aspectRatio = NULL;
+                    switch (imageSize) {
+                    case IMAGE_SIZE_1792x1024:
+                    case IMAGE_SIZE_1536x1024:
+                        aspectRatio = "16:9";
+                        break;
+                    case IMAGE_SIZE_1024x1792:
+                    case IMAGE_SIZE_1024x1536:
+                        aspectRatio = "9:16";
+                        break;
+                    case IMAGE_SIZE_AUTO:
+                        aspectRatio = "auto";
+                        break;
+                    default:
+                        aspectRatio = "1:1";
+                        break;
+                    }
+                    json_object_object_add(obj, "aspect_ratio",
+                                           json_object_new_string(aspectRatio));
+                }
+            } else if (imageSize != IMAGE_SIZE_NULL &&
+                       IMAGE_SIZE_NAMES[imageSize] != NULL) {
+                json_object_object_add(
+                    obj, "size",
+                    json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
+            }
+        }
+
+        if (isGptImage &&
+            (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS)) {
+            json_object_object_add(obj, "moderation",
+                                   json_object_new_string("low"));
+            if (imageFormat != IMAGE_FORMAT_NULL &&
+                IMAGE_FORMAT_NAMES[imageFormat] != NULL) {
+                json_object_object_add(
+                    obj, "output_format",
+                    json_object_new_string(IMAGE_FORMAT_NAMES[imageFormat]));
+                json_object_object_add(obj, "output_compression",
+                                       json_object_new_int(100));
+            }
+        } else {
+            json_object_object_add(obj, "response_format",
+                                   json_object_new_string("b64_json"));
+        }
+    }
+    CodesetsFreeA(promptUTF8, NULL);
+    UTF8 *jsonString = json_object_to_json_string(obj);
+
+    UTF8 *authHeader = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
         // Construct the Proxy-Authorization header
-        STRPTR credentials =
+        UTF8 *credentials =
             AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
+        STRPTR encodedCredentials;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
         snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
+        FreeVec(credentials);
     }
-    snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-             "POST %s/v1/images/generations HTTP/1.1\r\n"
-             "Host: api.openai.com\r\n"
-             "Content-Type: application/json\r\n"
-             "Authorization: Bearer %s\r\n"
-             "User-Agent: AmigaGPT\r\n"
-             "Content-Length: %lu\r\n"
-             "%s\r\n"
-             "%s\0",
-             useSSL ? "" : "https://api.openai.com", openAiApiKey,
-             strlen(jsonString), authHeader, jsonString);
+
+    /* Build auth header based on type */
+    UBYTE apiAuthHeader[512];
+    memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+    }
+
+    /* Custom headers string with line ending */
+    UBYTE customHeadersFormatted[1024];
+    memset(customHeadersFormatted, 0, sizeof(customHeadersFormatted));
+    if (customHeaders != NULL && strlen(customHeaders) > 0) {
+        snprintf(customHeadersFormatted, sizeof(customHeadersFormatted),
+                 "%s\r\n", customHeaders);
+    }
+
+    const char *endpointUrl = NULL;
+    endpointUrl = (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0)
+                      ? apiEndpointUrl
+                      : "";
+
+    UBYTE requestPath[256];
+    memset(requestPath, 0, sizeof(requestPath));
+    if (apiEndpoint == API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT) {
+        if (modelName == NULL || strlen(modelName) == 0) {
+            displayError("Gemini model not specified");
+            json_object_put(obj);
+            FreeVec(authHeader);
+            json_tokener_free(tokener);
+            return NULL;
+        }
+        snprintf(requestPath, sizeof(requestPath),
+                 "%s/models/%s:generateContent", endpointUrl, modelName);
+    } else {
+        snprintf(requestPath, sizeof(requestPath), "%s/images/generations",
+                 endpointUrl);
+    }
+
+    if (requestUsesSSL || useProxy) {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "POST %s://%s:%d/%s HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "Content-Type: application/json\r\n"
+                 "%s"
+                 "%s"
+                 "User-Agent: AmigaGPT\r\n"
+                 "Content-Length: %lu\r\n"
+                 "%s\r\n"
+                 "%s\0",
+                 requestUsesSSL ? "https" : "http", host, port, requestPath,
+                 host, port, apiAuthHeader, customHeadersFormatted,
+                 strlen(jsonString), authHeader, jsonString);
+    } else {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "POST /%s HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "Content-Type: application/json\r\n"
+                 "%s"
+                 "%s"
+                 "User-Agent: AmigaGPT\r\n"
+                 "Content-Length: %lu\r\n"
+                 "%s\r\n"
+                 "%s\0",
+                 requestPath, host, port, apiAuthHeader, customHeadersFormatted,
+                 strlen(jsonString), authHeader, jsonString);
+    }
 
     json_object_put(obj);
-
     FreeVec(authHeader);
 
     updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
-    if (useSSL) {
+    if (requestUsesSSL) {
         ERR_clear_error();
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
         if (ssl_err <= 0) {
@@ -1423,13 +3256,26 @@ struct json_object *postImageCreationRequestToOpenAI(
         UBYTE statusMessage[64];
         UBYTE *tempReadBuffer = AllocVec(
             useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
-        BOOL foundJson = FALSE;
+
+        /* Robust HTTP body handling (supports chunked transfer encoding). */
+        UBYTE headerBuf[8192];
+        ULONG headerLen = 0;
+        BOOL headersDone = FALSE;
+        BOOL isChunked = FALSE;
+        BOOL startedJson = FALSE;
+
+        /* Chunked decoding state */
+        UBYTE chunkLenLine[32];
+        UBYTE chunkLenPos = 0;
+        ULONG chunkRemaining = 0;
+        UBYTE chunkCrlfToSkip = 0;
+        BOOL chunkDone = FALSE;
 
         while (!doneReading) {
 #ifndef DAEMON
             DoMethod(loadingBar, MUIM_Busy_Move);
 #endif
-            if (useSSL) {
+            if (requestUsesSSL) {
                 ERR_clear_error();
                 bytesRead =
                     SSL_read(ssl, tempReadBuffer,
@@ -1439,87 +3285,278 @@ struct json_object *postImageCreationRequestToOpenAI(
                     recv(sock, tempReadBuffer,
                          useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1, 0);
             }
+            if (bytesRead > 0) {
+                /* Ensure string safety for any incidental debug/str ops. */
+                tempReadBuffer[bytesRead] = '\0';
+            }
             snprintf(statusMessage, sizeof(statusMessage), "%s (%lu %s)",
                      STRING_DOWNLOADING_IMAGE, totalBytesRead, STRING_BYTES);
             updateStatusBar(statusMessage, yellowPen);
-            if (!foundJson && bytesRead > 0) {
-                ULONG rbUsed = strlen((char *)readBuffer);
-
-                appendToReadBuffer(readBuffer, READ_BUFFER_LENGTH, &rbUsed,
-                                   tempReadBuffer, (ULONG)bytesRead);
-            }
-            if (useSSL) {
+            if (requestUsesSSL) {
                 err = SSL_get_error(ssl, bytesRead);
             } else {
                 err = SSL_ERROR_NONE;
             }
             switch (err) {
             case SSL_ERROR_NONE: {
-                STRPTR httpResponse = strstr(readBuffer, "HTTP/1.1");
-                if (httpResponse != NULL &&
-                    strstr(httpResponse, "200 OK") == NULL) {
-                    UBYTE error[256] = {0};
-                    for (UWORD i = 0; i < 256; i++) {
-                        if (httpResponse[i] == '\r' ||
-                            httpResponse[i] == '\n') {
+                totalBytesRead += bytesRead;
+                if (bytesRead <= 0) {
+                    /* Connection closed / no more data */
+                    doneReading = TRUE;
+                    break;
+                }
+
+                /* Feed bytes into either header accumulator or body decoder. */
+                const UBYTE *p = tempReadBuffer;
+                ULONG n = (ULONG)bytesRead;
+
+                while (n > 0 && !doneReading) {
+                    if (!headersDone) {
+                        /* Accumulate headers until \r\n\r\n (or \n\n). */
+                        ULONG space = (sizeof(headerBuf) - 1) - headerLen;
+                        ULONG toCopy = (n < space) ? n : space;
+                        if (toCopy > 0) {
+                            CopyMem((APTR)p, (APTR)(headerBuf + headerLen),
+                                    toCopy);
+                            headerLen += toCopy;
+                            headerBuf[headerLen] = '\0';
+                            p += toCopy;
+                            n -= toCopy;
+                        } else {
+                            displayError(STRING_ERROR_HTTP_HEADERS_TOO_LARGE);
+                            doneReading = TRUE;
                             break;
                         }
-                        error[i] = httpResponse[i];
+
+                        STRPTR hEnd = strstr((STRPTR)headerBuf, "\r\n\r\n");
+                        ULONG bodyOffset = 0;
+                        if (hEnd != NULL) {
+                            bodyOffset = (ULONG)(hEnd - (STRPTR)headerBuf) + 4;
+                        } else {
+                            hEnd = strstr((STRPTR)headerBuf, "\n\n");
+                            if (hEnd != NULL) {
+                                bodyOffset =
+                                    (ULONG)(hEnd - (STRPTR)headerBuf) + 2;
+                            }
+                        }
+                        if (hEnd == NULL) {
+                            /* Need more header bytes. */
+                            continue;
+                        }
+
+                        headersDone = TRUE;
+                        /* Parse status line quickly; fail early if not 200. */
+                        STRPTR http = strstr((STRPTR)headerBuf, "HTTP/");
+                        if (http != NULL) {
+                            STRPTR sp = strchr(http, ' ');
+                            if (sp != NULL) {
+                                LONG code = atol(sp + 1);
+                                if (code != 200) {
+                                    UBYTE errorLine[256] = {0};
+                                    for (UWORD i = 0; i < 255; i++) {
+                                        UBYTE c = (UBYTE)http[i];
+                                        if (c == '\r' || c == '\n' || c == 0)
+                                            break;
+                                        errorLine[i] = c;
+                                    }
+                                    displayError(errorLine);
+                                    doneReading = TRUE;
+                                    break;
+                                }
+                            }
+                        }
+
+                        /* Detect chunked transfer encoding. */
+                        if (strstr((STRPTR)headerBuf,
+                                   "Transfer-Encoding: chunked") != NULL ||
+                            strstr((STRPTR)headerBuf,
+                                   "transfer-encoding: chunked") != NULL) {
+                            isChunked = TRUE;
+                        }
+
+                        /* Any body bytes already in headerBuf should be
+                         * processed now. */
+                        if (bodyOffset < headerLen) {
+                            const UBYTE *body = headerBuf + bodyOffset;
+                            ULONG bodyLen = headerLen - bodyOffset;
+
+                            /* Process body bytes via the same loop by
+                             * re-pointing p/n to the remaining body segment,
+                             * then continuing with headersDone=TRUE. */
+                            p = body;
+                            n = bodyLen;
+                            /* Prevent re-processing these bytes via headerBuf
+                             * on the next iteration. */
+                            headerLen = bodyOffset;
+                            /* IMPORTANT: do NOT write a '\0' at bodyOffset.
+                             * We may have already received part of the body
+                             * (e.g. the first chunk size) in headerBuf, and
+                             * null-terminating here would overwrite it. */
+                        } else {
+                            /* No body bytes yet; continue with remaining input
+                             * (if any). */
+                            continue;
+                        }
+                    } /* end header accumulation */
+
+                    /* Body processing: handle chunked or plain bodies. */
+                    if (!isChunked) {
+                        /* Find the start of JSON once. */
+                        if (!startedJson) {
+                            const UBYTE *brace =
+                                (const UBYTE *)memchr(p, '{', n);
+                            if (brace == NULL) {
+                                /* No JSON start in this slice. */
+                                n = 0;
+                                break;
+                            }
+                            /* Skip everything up to '{'. */
+                            n -= (ULONG)(brace - p);
+                            p = brace;
+                            startedJson = TRUE;
+                        }
+                        response =
+                            json_tokener_parse_ex(tokener, (const char *)p, n);
+                        enum json_tokener_error jerr =
+                            json_tokener_get_error(tokener);
+                        if (jerr != json_tokener_success &&
+                            jerr != json_tokener_continue) {
+                            displayError(json_tokener_error_desc(jerr));
+                            doneReading = TRUE;
+                            break;
+                        }
+                        if (jerr == json_tokener_success && response != NULL) {
+                            doneReading = TRUE;
+                            break;
+                        }
+                        /* Need more bytes. */
+                        n = 0;
+                        break;
                     }
-                    displayError(error);
-                    doneReading = TRUE;
-                }
-                totalBytesRead += bytesRead;
-                if (!foundJson) {
-                    CONST_STRPTR jsonStart = "{";
-                    jsonString = readBuffer;
-                    jsonString = strstr(jsonString, jsonStart);
-                    if (jsonString == NULL) {
-                        continue;
+
+                    /* Chunked transfer decoding:
+                     * Read chunk size line -> read chunk bytes -> skip CRLF. */
+                    while (n > 0 && !doneReading && !chunkDone) {
+                        if (chunkCrlfToSkip > 0) {
+                            /* Skip CRLF after a chunk payload. */
+                            chunkCrlfToSkip--;
+                            p++;
+                            n--;
+                            continue;
+                        }
+                        if (chunkRemaining == 0) {
+                            /* Parse chunk length line until '\n'. */
+                            UBYTE c = *p;
+                            p++;
+                            n--;
+                            if (c == '\n') {
+                                chunkLenLine[chunkLenPos] = '\0';
+                                /* Strip optional '\r' and chunk extensions. */
+                                for (UBYTE i = 0; i < chunkLenPos; i++) {
+                                    if (chunkLenLine[i] == '\r' ||
+                                        chunkLenLine[i] == ';') {
+                                        chunkLenLine[i] = '\0';
+                                        break;
+                                    }
+                                }
+                                chunkRemaining = (ULONG)strtoul(
+                                    (char *)chunkLenLine, NULL, 16);
+                                chunkLenPos = 0;
+                                if (chunkRemaining == 0) {
+                                    chunkDone = TRUE;
+                                    /* There may be trailing headers; ignore. */
+                                    break;
+                                }
+                            } else {
+                                if (chunkLenPos < sizeof(chunkLenLine) - 1) {
+                                    chunkLenLine[chunkLenPos++] = c;
+                                } else {
+                                    displayError("Bad chunk length");
+                                    doneReading = TRUE;
+                                    break;
+                                }
+                            }
+                            continue;
+                        }
+
+                        /* We have chunk payload bytes to consume. */
+                        ULONG take = (n < chunkRemaining) ? n : chunkRemaining;
+                        if (!startedJson) {
+                            const UBYTE *brace =
+                                (const UBYTE *)memchr(p, '{', take);
+                            if (brace != NULL) {
+                                /* Skip up to JSON start within this chunk. */
+                                ULONG skip = (ULONG)(brace - p);
+                                p += skip;
+                                take -= skip;
+                                chunkRemaining -= skip;
+                                startedJson = TRUE;
+                            } else {
+                                /* No JSON start yet; skip these bytes. */
+                                p += take;
+                                n -= take;
+                                chunkRemaining -= take;
+                                if (chunkRemaining == 0)
+                                    chunkCrlfToSkip = 2;
+                                continue;
+                            }
+                        }
+
+                        if (take > 0) {
+                            response = json_tokener_parse_ex(
+                                tokener, (const char *)p, take);
+                            enum json_tokener_error jerr =
+                                json_tokener_get_error(tokener);
+                            if (jerr != json_tokener_success &&
+                                jerr != json_tokener_continue) {
+                                displayError(json_tokener_error_desc(jerr));
+                                doneReading = TRUE;
+                                break;
+                            }
+                            if (jerr == json_tokener_success &&
+                                response != NULL) {
+                                /* JSON is complete; no need to read more. */
+                                doneReading = TRUE;
+                                break;
+                            }
+                            p += take;
+                            n -= take;
+                            chunkRemaining -= take;
+                        }
+                        if (chunkRemaining == 0) {
+                            chunkCrlfToSkip = 2;
+                        }
+                    } /* end chunk decoder */
+
+                    if (chunkDone) {
+                        /* Finished chunk stream; if JSON wasn't complete,
+                         * surface an error. */
+                        enum json_tokener_error jerr =
+                            json_tokener_get_error(tokener);
+                        if (jerr != json_tokener_success) {
+                            displayError("Incomplete JSON (chunked)");
+                        }
+                        doneReading = TRUE;
+                        break;
                     }
-                    foundJson = TRUE;
-                }
-                enum json_tokener_error jerr;
-                jerr = json_tokener_get_error(tokener);
-                if (jsonString != NULL && jerr != json_tokener_continue) {
-                    response = json_tokener_parse_ex(tokener, jsonString,
-                                                     strlen(jsonString));
-                } else {
-                    response = json_tokener_parse_ex(tokener, tempReadBuffer,
-                                                     bytesRead);
-                }
-                jerr = json_tokener_get_error(tokener);
 
-                if (jerr != json_tokener_success &&
-                    jerr != json_tokener_continue) {
-                    displayError(json_tokener_error_desc(jerr));
+                    /* All available bytes consumed. */
+                    n = 0;
                 }
-
-                if (response == NULL) {
-                    continue;
-                }
-
-                doneReading = TRUE;
                 break;
             }
             case SSL_ERROR_ZERO_RETURN:
-                printf("SSL_ERROR_ZERO_RETURN\n");
                 doneReading = TRUE;
                 break;
             case SSL_ERROR_WANT_READ:
-                printf("SSL_ERROR_WANT_READ\n");
                 break;
             case SSL_ERROR_WANT_WRITE:
-                printf("SSL_ERROR_WANT_WRITE\n");
                 break;
             case SSL_ERROR_WANT_CONNECT:
-                printf("SSL_ERROR_WANT_CONNECT\n");
                 break;
             case SSL_ERROR_WANT_ACCEPT:
-                printf("SSL_ERROR_WANT_ACCEPT\n");
                 break;
             case SSL_ERROR_WANT_X509_LOOKUP:
-                printf("SSL_ERROR_WANT_X509_LOOKUP\n");
                 break;
             case SSL_ERROR_SYSCALL:
             case SSL_ERROR_SSL:
@@ -1527,8 +3564,7 @@ struct json_object *postImageCreationRequestToOpenAI(
                 doneReading = TRUE;
                 break;
             default:
-                printf(STRING_ERROR_UNKNOWN);
-                putchar('\n');
+                displayError(STRING_ERROR_UNKNOWN);
                 break;
             }
         }
@@ -1545,6 +3581,108 @@ struct json_object *postImageCreationRequestToOpenAI(
         ssl = NULL;
     }
     sock = -1;
+
+    if (isGeminiGenerateContent && response != NULL) {
+        /* Normalize Gemini response to match OpenAI image JSON shape:
+         * { "data": [ { "b64_json": "<base64>" } ] }
+         * so existing callers can keep reading response.data[0].b64_json */
+        struct json_object *geminiErr = NULL;
+        if (json_object_object_get_ex(response, "error", &geminiErr) &&
+            geminiErr != NULL &&
+            json_object_is_type(geminiErr, json_type_object)) {
+            struct json_object *msgObj =
+                json_object_object_get(geminiErr, "message");
+            CONST_STRPTR msg =
+                (msgObj != NULL) ? json_object_get_string(msgObj) : NULL;
+            struct json_object *wrapped = json_object_new_object();
+            struct json_object *errObj = json_object_new_object();
+            json_object_object_add(
+                errObj, "message",
+                json_object_new_string(msg ? msg
+                                           : "Gemini image request failed"));
+            json_object_object_add(
+                errObj, "type",
+                json_object_new_string("invalid_request_error"));
+            json_object_object_add(wrapped, "error", errObj);
+            json_object_put(response);
+            response = wrapped;
+        } else {
+            CONST_STRPTR b64 = NULL;
+            struct json_object *candidates = NULL;
+            if (json_object_object_get_ex(response, "candidates",
+                                          &candidates) &&
+                candidates != NULL &&
+                json_object_is_type(candidates, json_type_array) &&
+                json_object_array_length(candidates) > 0) {
+                struct json_object *cand0 =
+                    json_object_array_get_idx(candidates, 0);
+                struct json_object *content = NULL;
+                if (cand0 != NULL &&
+                    json_object_object_get_ex(cand0, "content", &content) &&
+                    content != NULL &&
+                    json_object_is_type(content, json_type_object)) {
+                    struct json_object *parts = NULL;
+                    if (json_object_object_get_ex(content, "parts", &parts) &&
+                        parts != NULL &&
+                        json_object_is_type(parts, json_type_array)) {
+                        for (size_t i = 0; i < json_object_array_length(parts);
+                             i++) {
+                            struct json_object *part =
+                                json_object_array_get_idx(parts, i);
+                            if (part == NULL ||
+                                !json_object_is_type(part, json_type_object))
+                                continue;
+                            struct json_object *inlineObj = NULL;
+                            if (!json_object_object_get_ex(part, "inlineData",
+                                                           &inlineObj)) {
+                                json_object_object_get_ex(part, "inline_data",
+                                                          &inlineObj);
+                            }
+                            if (inlineObj == NULL ||
+                                !json_object_is_type(inlineObj,
+                                                     json_type_object))
+                                continue;
+                            struct json_object *dataObj = NULL;
+                            if (json_object_object_get_ex(inlineObj, "data",
+                                                          &dataObj) &&
+                                dataObj != NULL) {
+                                b64 = json_object_get_string(dataObj);
+                                if (b64 != NULL && strlen(b64) > 0)
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (b64 != NULL && strlen(b64) > 0) {
+                struct json_object *normalized = json_object_new_object();
+                struct json_object *dataArr = json_object_new_array();
+                struct json_object *dataObj = json_object_new_object();
+                json_object_object_add(dataObj, "b64_json",
+                                       json_object_new_string(b64));
+                json_object_array_add(dataArr, dataObj);
+                json_object_object_add(normalized, "data", dataArr);
+                json_object_put(response);
+                response = normalized;
+            } else {
+                struct json_object *wrapped = json_object_new_object();
+                struct json_object *errObj = json_object_new_object();
+                json_object_object_add(
+                    errObj, "message",
+                    json_object_new_string(
+                        "Gemini image response did not include inline image "
+                        "data"));
+                json_object_object_add(
+                    errObj, "type",
+                    json_object_new_string("invalid_request_error"));
+                json_object_object_add(wrapped, "error", errObj);
+                json_object_put(response);
+                response = wrapped;
+            }
+        }
+    }
+
     json_tokener_free(tokener);
     return response;
 }
@@ -1592,17 +3730,15 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
     // Find the first slash after http:// or https:// to separate host and path
     CONST_STRPTR pathStart = strchr(urlStart, '/');
     if (pathStart == NULL) {
-        snprintf((char *)hostString, sizeof(hostString), "%s", urlStart);
-        snprintf((char *)pathString, sizeof(pathString), "/");
+        // URL doesn't have a path, use '/' as default
+        strcpy(hostString, urlStart);
+        strcpy(pathString, "/");
     } else {
-        ULONG hostLength = (ULONG)(pathStart - urlStart);
-
-        if (hostLength >= sizeof(hostString)) {
-            hostLength = sizeof(hostString) - 1;
-        }
-        CopyMem(urlStart, hostString, hostLength);
-        hostString[hostLength] = '\0';
-        snprintf((char *)pathString, sizeof(pathString), "%s", pathStart);
+        // Copy host and path into separate strings
+        ULONG hostLength = pathStart - urlStart;
+        strncpy(hostString, urlStart, hostLength);
+        hostString[hostLength] = '\0'; // Null-terminate the host string
+        strcpy(pathString, pathStart); // The rest is the path
     }
 
     STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
@@ -1613,10 +3749,13 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
+        UTF8 *encodedCredentials = CodesetsEncodeB64(
+            CSA_B64SourceString, (Tag)credentials, CSA_B64SourceLen,
+            (Tag)strlen(credentials), CSA_B64DestPtr, (Tag)&encodedCredentials,
+            TAG_DONE);
         snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
     }
 
     // Construct the HTTP GET request
@@ -1923,55 +4062,20 @@ static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength) {
 }
 
 /**
- * Wait until the TCP socket may have data (or timeout). Used for
- * SSL_ERROR_WANT_READ instead of spinning and freezing the UI.
+ * Parse the last Content-Length value from a NUL-terminated HTTP header block.
  */
-BOOL openAIChatStreamInProgress(void) { return chatStreamInProgress; }
-
-void openAIChatStreamRequestCancel(void) {
-    chatStreamCancelRequested = TRUE;
-    chatStreamInProgress = FALSE;
-}
-
-static BOOL streamBatchHasCompleted(struct json_object **responses, UWORD count) {
-    UWORD i;
-
-    for (i = 0; i < count && responses[i] != NULL; i++) {
-        struct json_object *typeObj;
-        CONST_STRPTR typeStr;
-
-        if (!json_object_is_type(responses[i], json_type_object) ||
-            !json_object_object_get_ex(responses[i], "type", &typeObj)) {
-            continue;
-        }
-        typeStr = json_object_get_string(typeObj);
-        if (typeStr != NULL && strcmp(typeStr, "response.completed") == 0) {
-            return TRUE;
+static LONG httpParseContentLengthNullTerminated(STRPTR hdr) {
+    LONG v = -1;
+    for (STRPTR p = hdr; *p; p++) {
+        if (strncmp(p, "Content-Length:", 15) == 0 ||
+            strncmp(p, "content-length:", 15) == 0) {
+            STRPTR q = p + 15;
+            while (*q == ' ' || *q == '\t')
+                q++;
+            v = (LONG)strtoul(q, NULL, 10);
         }
     }
-    return FALSE;
-}
-
-static BOOL sslWaitForReadReady(LONG sock, ULONG *stallCount) {
-    struct timeval tv;
-    fd_set readfds;
-    LONG ready;
-
-    if (sock < 0) {
-        return FALSE;
-    }
-    if (stallCount != NULL) {
-        if (*stallCount >= SSL_STREAM_WAIT_MAX) {
-            return FALSE;
-        }
-        (*stallCount)++;
-    }
-    FD_ZERO(&readfds);
-    FD_SET(sock, &readfds);
-    tv.tv_sec = 0;
-    tv.tv_usec = SSL_STREAM_WAIT_US;
-    ready = WaitSelect(sock + 1, &readfds, NULL, NULL, &tv, NULL);
-    return ready > 0;
+    return v;
 }
 
 /**
@@ -2047,7 +4151,7 @@ static void reportSslError(SSL *s, int ret, CONST_STRPTR where) {
  * @param openAITTSModel the TTS model to use
  * @param openAITTSVoice the voice to use
  * @param voiceInstructions the voice instructions to use
- * @param openAiApiKey the OpenAI API key
+ * @param apiKey the OpenAI API key
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -2060,23 +4164,38 @@ static void reportSslError(SSL *s, int ret, CONST_STRPTR where) {
  *with FreeVec() when you are done using it
  **/
 APTR postTextToSpeechRequestToOpenAI(
-    CONST_STRPTR text, OpenAITTSModel openAITTSModel,
+    CONST_STRPTR text, CONST_STRPTR openAITTSModelId,
     OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
-    CONST_STRPTR openAiApiKey, ULONG *audioLength, BOOL useProxy,
-    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
-    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR apiKey,
+    ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, AudioFormat *audioFormat) {
+    if (openAITTSModelId == NULL || strlen(openAITTSModelId) == 0)
+        openAITTSModelId =
+            OPENAI_TTS_MODEL_NAMES[OPENAI_TTS_MODEL_GPT_4o_MINI_TTS];
     struct json_object *response;
-    BOOL useSSL = !useProxy || proxyUsesSSL;
+    if (host == NULL || strlen(host) == 0)
+        host = OPENAI_HOST;
+    if (port == 0)
+        port = OPENAI_PORT;
+    if (apiEndpointUrl == NULL)
+        apiEndpointUrl = "v1";
 
     *audioLength = 0;
 
+    /* Prevent crashes on NULL apiKey (also avoids a guaranteed 401). */
+    if (authorizationType != AUTHORIZATION_TYPE_NONE &&
+        (apiKey == NULL || strlen(apiKey) == 0)) {
+        displayError(STRING_ERROR_NO_API_KEY);
+        return NULL;
+    }
+
     updateStatusBar(STRING_CONNECTING, yellowPen);
     UBYTE connectionRetryCount = 0;
-    while (createSSLConnection(OPENAI_HOST, OPENAI_PORT, useSSL, useProxy,
-                               proxyHost, proxyPort, proxyUsesSSL,
-                               proxyRequiresAuth, proxyUsername,
-                               proxyPassword) == RETURN_ERROR) {
+    while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
             return NULL;
@@ -2089,24 +4208,35 @@ APTR postTextToSpeechRequestToOpenAI(
     ULONG audioBufferSize = AUDIO_BUFFER_SIZE;
     UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
 
+    UTF8 *textUTF8 =
+        CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
+                           (Tag)text, CSA_MapForeignChars, TRUE, TAG_DONE);
+    UTF8 *voiceInstructionsUTF8 = CodesetsUTF8Create(
+        CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
+        (Tag)voiceInstructions, CSA_MapForeignChars, TRUE, TAG_DONE);
+
     struct json_object *obj = json_object_new_object();
-    json_object_object_add(
-        obj, "model",
-        json_object_new_string(OPENAI_TTS_MODEL_NAMES[openAITTSModel]));
+    json_object_object_add(obj, "model",
+                           json_object_new_string(openAITTSModelId));
     json_object_object_add(
         obj, "voice",
         json_object_new_string(OPENAI_TTS_VOICE_NAMES[openAITTSVoice]));
-    json_object_object_add(obj, "input", json_object_new_string(text));
+    json_object_object_add(
+        obj, "input", json_object_new_string(textUTF8 ? textUTF8 : (UTF8 *)""));
     if (voiceInstructions != NULL) {
-        json_object_object_add(obj, "instructions",
-                               json_object_new_string(voiceInstructions));
+        json_object_object_add(
+            obj, "instructions",
+            json_object_new_string(voiceInstructionsUTF8 ? voiceInstructionsUTF8
+                                                         : (UTF8 *)""));
     }
     json_object_object_add(
         obj, "response_format",
         json_object_new_string(
             AUDIO_FORMAT_NAMES[audioFormat != NULL ? *audioFormat
                                                    : AUDIO_FORMAT_PCM]));
-    CONST_STRPTR jsonString = json_object_to_json_string(obj);
+    UTF8 *jsonString = json_object_to_json_string(obj);
+    CodesetsFreeA(textUTF8, NULL);
+    CodesetsFreeA(voiceInstructionsUTF8, NULL);
 
     STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
@@ -2116,23 +4246,49 @@ APTR postTextToSpeechRequestToOpenAI(
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
+        STRPTR encodedCredentials;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
         snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
+        FreeVec(credentials);
+    }
+
+    UBYTE apiAuthHeader[512];
+    memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+    }
+
+    UBYTE endpoint[512];
+    snprintf(endpoint, sizeof(endpoint), "/%s/audio/speech",
+             (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0)
+                 ? apiEndpointUrl
+                 : "v1");
+
+    UBYTE absolutePrefix[768];
+    absolutePrefix[0] = '\0';
+    if (!useSSL) {
+        snprintf(absolutePrefix, sizeof(absolutePrefix), "http://%s:%u", host,
+                 (unsigned int)port);
     }
 
     snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
-             "POST %s/v1/audio/speech HTTP/1.1\r\n"
-             "Host: api.openai.com\r\n"
+             "POST %s%s HTTP/1.1\r\n"
+             "Host: %s\r\n"
              "Content-Type: application/json\r\n"
-             "Authorization: Bearer %s\r\n"
+             "%s"
              "User-Agent: AmigaGPT\r\n"
              "Content-Length: %lu\r\n"
              "%s\r\n"
              "%s\0",
-             useSSL ? "" : "https://api.openai.com", openAiApiKey,
-             strlen(jsonString), authHeader, jsonString);
+             absolutePrefix, endpoint, host, apiAuthHeader, strlen(jsonString),
+             authHeader, jsonString);
 
     json_object_put(obj);
 
@@ -2156,14 +4312,214 @@ APTR postTextToSpeechRequestToOpenAI(
     BOOL isErrorResponse = FALSE;
 
     if (ssl_err > 0) {
+        BOOL useSeed = FALSE;
+        ULONG seedLen = 0;
+
+        /* Accumulate response headers (may span multiple TLS records). */
+        UBYTE headerAccum[8192];
+        ULONG ha = 0;
+        headerAccum[0] = '\0';
+        while (ha < sizeof(headerAccum) - 1) {
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+            ERR_clear_error();
+            LONG hbr = useSSL ? SSL_read(ssl, headerAccum + ha,
+                                         (int)(sizeof(headerAccum) - 1 - ha))
+                              : recv(sock, headerAccum + ha,
+                                     (int)(sizeof(headerAccum) - 1 - ha), 0);
+            if (hbr > 0) {
+                ha += (ULONG)hbr;
+                headerAccum[ha] = '\0';
+                if (strstr((STRPTR)headerAccum, "\r\n\r\n") != NULL)
+                    break;
+                continue;
+            }
+            if (useSSL && hbr <= 0) {
+                int he = SSL_get_error(ssl, (int)hbr);
+                if (he == SSL_ERROR_WANT_READ || he == SSL_ERROR_WANT_WRITE)
+                    continue;
+            }
+            FreeVec(audioData);
+            return NULL;
+        }
+
+        STRPTR hstr = (STRPTR)headerAccum;
+        STRPTR hend = strstr(hstr, "\r\n\r\n");
+        if (hend == NULL) {
+            FreeVec(audioData);
+            return NULL;
+        }
+        ULONG bodyOff = (ULONG)(hend - hstr) + 4;
+
+        UBYTE hdrTerm[8192];
+        ULONG hcopy = bodyOff;
+        if (hcopy > sizeof(hdrTerm) - 1)
+            hcopy = sizeof(hdrTerm) - 1;
+        memcpy(hdrTerm, headerAccum, hcopy);
+        hdrTerm[hcopy] = '\0';
+
+        BOOL chunked =
+            strstr((STRPTR)hdrTerm, "Transfer-Encoding: chunked") != NULL ||
+            strstr((STRPTR)hdrTerm, "transfer-encoding: chunked") != NULL;
+        LONG ttsContentLen =
+            httpParseContentLengthNullTerminated((STRPTR)hdrTerm);
+
+        if (bodyOff < ha && headerAccum[bodyOff] == '{') {
+            response = json_tokener_parse((STRPTR)(headerAccum + bodyOff));
+            struct json_object *error;
+            if (response != NULL &&
+                json_object_object_get_ex(response, "error", &error)) {
+                struct json_object *message =
+                    json_object_object_get(error, "message");
+                STRPTR rawMessageString =
+                    message ? json_object_get_string(message) : NULL;
+                if (rawMessageString != NULL) {
+                    STRPTR cleanMessage =
+                        extractUserFriendlyErrorMessage(rawMessageString);
+                    displayError(cleanMessage);
+                    if (cleanMessage != rawMessageString) {
+                        FreeVec(cleanMessage);
+                    }
+                }
+                json_object_put(response);
+                FreeVec(audioData);
+                return NULL;
+            }
+            if (response != NULL)
+                json_object_put(response);
+        }
+
+        STRPTR httpLine = strstr((STRPTR)hdrTerm, "HTTP/");
+        if (httpLine != NULL && strstr(httpLine, "200 OK") == NULL) {
+            isErrorResponse = TRUE;
+        }
+
+        ULONG initialBody = (ha > bodyOff) ? (ha - bodyOff) : 0;
+        UBYTE statusMessage[64];
+
+        /* Non-chunked body: read exactly Content-Length bytes, or until close
+         * if no length (OpenAI speech often uses identity + Content-Length). */
+        if (!chunked && ttsContentLen > 0) {
+            if ((ULONG)ttsContentLen > audioBufferSize) {
+                audioBufferSize = (ULONG)ttsContentLen + 4096;
+                APTR oldad = audioData;
+                audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                if (audioData == NULL) {
+                    FreeVec(oldad);
+                    displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                    return NULL;
+                }
+                FreeVec(oldad);
+            }
+            ULONG need = (ULONG)ttsContentLen;
+            ULONG got = initialBody;
+            if (got > need)
+                got = need;
+            memcpy(audioData, headerAccum + bodyOff, got);
+            *audioLength = got;
+            while (*audioLength < need) {
+#ifndef DAEMON
+                DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+                ULONG space = need - *audioLength;
+                if (space > READ_BUFFER_LENGTH - 1)
+                    space = READ_BUFFER_LENGTH - 1;
+                ERR_clear_error();
+                LONG n =
+                    useSSL
+                        ? SSL_read(ssl, audioData + *audioLength, (int)space)
+                        : recv(sock, audioData + *audioLength, (int)space, 0);
+                if (n > 0) {
+                    *audioLength += (ULONG)n;
+                    snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                             STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+                    updateStatusBar(statusMessage, yellowPen);
+                    continue;
+                }
+                if (useSSL && n <= 0) {
+                    int e = SSL_get_error(ssl, (int)n);
+                    if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+                        continue;
+                }
+                break;
+            }
+            goto openai_tts_skip_trailing;
+        }
+
+        if (!chunked) {
+            ULONG got = initialBody;
+            if (got > 0) {
+                while (*audioLength + got > audioBufferSize) {
+                    audioBufferSize <<= 1;
+                    APTR oldAudioData = audioData;
+                    audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                    if (audioData == NULL) {
+                        FreeVec(oldAudioData);
+                        displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                        return NULL;
+                    }
+                    memcpy(audioData, oldAudioData, *audioLength);
+                    FreeVec(oldAudioData);
+                }
+                memcpy(audioData + *audioLength, headerAccum + bodyOff, got);
+                *audioLength += got;
+            }
+            while (1) {
+#ifndef DAEMON
+                DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+                memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                ERR_clear_error();
+                LONG n =
+                    useSSL ? SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH - 1)
+                           : recv(sock, readBuffer, READ_BUFFER_LENGTH - 1, 0);
+                if (n > 0) {
+                    if (*audioLength + (ULONG)n > audioBufferSize) {
+                        audioBufferSize <<= 1;
+                        APTR oldAudioData = audioData;
+                        audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                        if (audioData == NULL) {
+                            FreeVec(oldAudioData);
+                            displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                            return NULL;
+                        }
+                        memcpy(audioData, oldAudioData, *audioLength);
+                        FreeVec(oldAudioData);
+                    }
+                    memcpy(audioData + *audioLength, readBuffer, (ULONG)n);
+                    *audioLength += (ULONG)n;
+                    snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                             STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+                    updateStatusBar(statusMessage, yellowPen);
+                    continue;
+                }
+                if (useSSL && n <= 0) {
+                    int e = SSL_get_error(ssl, (int)n);
+                    if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+                        continue;
+                }
+                break;
+            }
+            goto openai_tts_skip_trailing;
+        }
+
+        seedLen = initialBody;
+        if (seedLen > READ_BUFFER_LENGTH - 1) {
+            displayError(STRING_ERROR_BAD_CHUNK);
+            FreeVec(audioData);
+            return NULL;
+        }
+        memcpy(readBuffer, headerAccum + bodyOff, seedLen);
+        useSeed = (seedLen > 0);
+
         LONG bytesRead = 0;
         ULONG bytesRemainingInBuffer = 0;
         BOOL doneReading = FALSE;
         LONG err = 0;
-        UBYTE statusMessage[64];
         UBYTE tempChunkHeaderBuffer[10] = {0};
         UBYTE tempChunkDataBufferLength = 0;
-        BOOL hasReadHeader = FALSE;
+        BOOL hasReadHeader = TRUE;
         BOOL newChunkNeeded = TRUE;
         ULONG chunkLength = 0;
         ULONG chunkBytesNeedingRead = 0;
@@ -2173,20 +4529,38 @@ APTR postTextToSpeechRequestToOpenAI(
 #ifndef DAEMON
             DoMethod(loadingBar, MUIM_Busy_Move);
 #endif
-            memset(readBuffer, 0, READ_BUFFER_LENGTH);
-            if (useSSL) {
-                ERR_clear_error();
-                bytesRead =
-                    SSL_read(ssl, readBuffer,
-                             useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1);
+            BOOL readFromSeed = FALSE;
+            if (useSeed) {
+                bytesRead = (LONG)seedLen;
+                readFromSeed = TRUE;
+                err = SSL_ERROR_NONE;
+                useSeed = FALSE;
             } else {
-                bytesRead =
-                    recv(sock, readBuffer,
-                         useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1, 0);
+                memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                if (useSSL) {
+                    ERR_clear_error();
+                    bytesRead =
+                        SSL_read(ssl, readBuffer,
+                                 useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1);
+                    err = SSL_get_error(ssl, bytesRead);
+                } else {
+                    bytesRead =
+                        recv(sock, readBuffer,
+                             useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1, 0);
+                    err = SSL_ERROR_NONE;
+                }
+                if (bytesRead <= 0 && useSSL &&
+                    (err == SSL_ERROR_WANT_READ ||
+                     err == SSL_ERROR_WANT_WRITE ||
+                     err == SSL_ERROR_WANT_CONNECT ||
+                     err == SSL_ERROR_WANT_ACCEPT ||
+                     err == SSL_ERROR_WANT_X509_LOOKUP)) {
+                    continue;
+                }
             }
-            if (newChunkNeeded && bytesRead == 1)
+            if (newChunkNeeded && bytesRead == 1 && !readFromSeed)
                 continue;
-            bytesRemainingInBuffer = bytesRead;
+            bytesRemainingInBuffer = (ULONG)bytesRead;
             dataStart = readBuffer;
 
             snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
@@ -2213,12 +4587,13 @@ APTR postTextToSpeechRequestToOpenAI(
                                 response = json_tokener_parse(jsonString);
                                 struct json_object *error;
                                 if (response != NULL &&
-                                    json_object_is_type(response,
-                                                        json_type_object) &&
                                     json_object_object_get_ex(response, "error",
                                                               &error)) {
-                                    CONST_STRPTR rawMessageString =
-                                        jsonGetApiErrorMessage(error);
+                                    struct json_object *message =
+                                        json_object_object_get(error,
+                                                               "message");
+                                    STRPTR rawMessageString =
+                                        json_object_get_string(message);
                                     STRPTR cleanMessage =
                                         extractUserFriendlyErrorMessage(
                                             rawMessageString);
@@ -2393,28 +4768,19 @@ APTR postTextToSpeechRequestToOpenAI(
                 doneReading = TRUE;
                 break;
             case SSL_ERROR_WANT_READ:
-                printf("SSL_ERROR_WANT_READ\n");
-                break;
             case SSL_ERROR_WANT_WRITE:
-                printf("SSL_ERROR_WANT_WRITE\n");
-                break;
             case SSL_ERROR_WANT_CONNECT:
-                printf("SSL_ERROR_WANT_CONNECT\n");
-                break;
             case SSL_ERROR_WANT_ACCEPT:
-                printf("SSL_ERROR_WANT_ACCEPT\n");
-                break;
             case SSL_ERROR_WANT_X509_LOOKUP:
-                printf("SSL_ERROR_WANT_X509_LOOKUP\n");
-                break;
+                continue;
             case SSL_ERROR_SYSCALL:
             case SSL_ERROR_SSL: {
                 reportSslError(ssl, bytesRead, "SSL_read (tts)");
                 updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
-                if (createSSLConnection(
-                        OPENAI_HOST, OPENAI_PORT, useSSL, useProxy, proxyHost,
-                        proxyPort, proxyUsesSSL, proxyRequiresAuth,
-                        proxyUsername, proxyPassword) == RETURN_ERROR) {
+                if (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                                        proxyPort, proxyUsesSSL,
+                                        proxyRequiresAuth, proxyUsername,
+                                        proxyPassword) == RETURN_ERROR) {
                     if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
                         displayError(STRING_ERROR_CONNECTION_MAX_RETRIES);
                         FreeVec(audioData);
@@ -2424,6 +4790,8 @@ APTR postTextToSpeechRequestToOpenAI(
                     // Successful reconnection - restart the download
                     *audioLength = 0; // Reset audio length
                     hasReadHeader = FALSE;
+                    useSeed = FALSE;
+                    seedLen = 0;
                     newChunkNeeded = TRUE;
                     chunkBytesNeedingRead = 0;
                     bytesRemainingInBuffer = 0;
@@ -2477,6 +4845,7 @@ APTR postTextToSpeechRequestToOpenAI(
             memcpy(audioData + *audioLength, dataStart, bytesToSave);
             *audioLength += bytesToSave;
         }
+    openai_tts_skip_trailing:;
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
         reportSslError(ssl, ssl_err, "SSL_write");
@@ -2501,9 +4870,11 @@ APTR postTextToSpeechRequestToOpenAI(
             if (errorResponse != NULL) {
                 struct json_object *error;
                 if (json_object_object_get_ex(errorResponse, "error", &error)) {
-                    CONST_STRPTR rawMessageString = jsonGetApiErrorMessage(error);
-
-                    if (rawMessageString != NULL) {
+                    struct json_object *message =
+                        json_object_object_get(error, "message");
+                    if (message != NULL) {
+                        STRPTR rawMessageString =
+                            json_object_get_string(message);
                         STRPTR cleanMessage =
                             extractUserFriendlyErrorMessage(rawMessageString);
                         displayError(cleanMessage);
@@ -2578,62 +4949,26 @@ void closeOpenAIConnector() {
 }
 
 /**
- * Encode a string to base64
- * @param input the string to encode
- * @return a pointer to a buffer containing the base64 encoded string -- Free it
- * with FreeVec() when you are done using it
- */
-static STRPTR base64Encode(CONST_STRPTR input) {
-    const UBYTE base64Table[] =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    ULONG len = strlen(input);
-    UBYTE *encoded = AllocVec((len + 2) / 3 * 4 + 1, MEMF_CLEAR | MEMF_ANY);
-    UBYTE *p = encoded;
-    ULONG i;
-    for (i = 0; i < len - 2; i += 3) {
-        *p++ = base64Table[(input[i] >> 2) & 0x3F];
-        *p++ = base64Table[((input[i] & 0x03) << 4) |
-                           ((input[i + 1] >> 4) & 0x0F)];
-        *p++ = base64Table[((input[i + 1] & 0x0F) << 2) |
-                           ((input[i + 2] >> 6) & 0x03)];
-        *p++ = base64Table[input[i + 2] & 0x3F];
-    }
-    if (i < len) {
-        *p++ = base64Table[(input[i] >> 2) & 0x3F];
-        if (i == (len - 1)) {
-            *p++ = base64Table[(input[i] & 0x03) << 4];
-            *p++ = '=';
-        } else {
-            *p++ = base64Table[((input[i] & 0x03) << 4) |
-                               ((input[i + 1] >> 4) & 0x0F)];
-            *p++ = base64Table[(input[i + 1] & 0x0F) << 2];
-        }
-        *p++ = '=';
-    }
-    return encoded;
-}
-
-/**
  * Extract user-friendly error message from OpenAI validation error
  * @param rawMessage The raw error message from OpenAI API
  * @return A user-friendly error message, or the original if parsing fails
  */
-static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage) {
+static UTF8 *extractUserFriendlyErrorMessage(UTF8 *rawMessage) {
     if (rawMessage == NULL) {
         return "Unknown error occurred";
     }
 
     // Look for the 'msg': pattern in validation errors
-    STRPTR msgStart = strstr(rawMessage, "'msg': \"");
+    UTF8 *msgStart = strstr(rawMessage, "'msg': \"");
     if (msgStart != NULL) {
         msgStart += 8; // Skip past "'msg': \""
-        STRPTR msgEnd = strstr(msgStart, "\"");
+        UTF8 *msgEnd = strstr(msgStart, "\"");
         if (msgEnd != NULL) {
             // Calculate length and create a copy
             ULONG msgLength = msgEnd - msgStart;
             STRPTR cleanMessage = AllocVec(msgLength + 1, MEMF_ANY);
             if (cleanMessage != NULL) {
-                CopyMem(msgStart, cleanMessage, msgLength);
+                strncpy(cleanMessage, msgStart, msgLength);
                 cleanMessage[msgLength] = '\0';
                 return cleanMessage;
             }
@@ -2642,9 +4977,9 @@ static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage) {
 
     // Fallback: return a copy of the original message
     ULONG originalLength = strlen(rawMessage);
-    STRPTR messageCopy = AllocVec(originalLength + 1, MEMF_ANY);
+    UTF8 *messageCopy = AllocVec(originalLength + 1, MEMF_ANY);
     if (messageCopy != NULL) {
-        CopyMem((APTR)rawMessage, messageCopy, originalLength);
+        strncpy(messageCopy, rawMessage, originalLength);
         messageCopy[originalLength] = '\0';
     }
     return messageCopy;
@@ -2670,23 +5005,28 @@ static STRPTR extractUserFriendlyErrorMessage(CONST_STRPTR rawMessage) {
  **/
 APTR postTextToSpeechRequestToElevenLabs(
     CONST_STRPTR text, CONST_STRPTR voiceId, CONST_STRPTR modelId,
-    CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
-    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
-    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR apiKey,
+    ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword) {
 
 #define ELEVENLABS_HOST "api.elevenlabs.io"
 #define ELEVENLABS_PORT 443
 
-    BOOL useSSL = !useProxy || proxyUsesSSL;
+    if (host == NULL || strlen(host) == 0)
+        host = ELEVENLABS_HOST;
+    if (port == 0)
+        port = ELEVENLABS_PORT;
+    if (apiEndpointUrl == NULL)
+        apiEndpointUrl = "v1";
     *audioLength = 0;
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
     UBYTE connectionRetryCount = 0;
-    while (createSSLConnection(ELEVENLABS_HOST, ELEVENLABS_PORT, useSSL,
-                               useProxy, proxyHost, proxyPort, proxyUsesSSL,
-                               proxyRequiresAuth, proxyUsername,
-                               proxyPassword) == RETURN_ERROR) {
+    while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
             return NULL;
@@ -2702,47 +5042,73 @@ APTR postTextToSpeechRequestToElevenLabs(
     }
 
     /* Build JSON request body */
+    UTF8 *textUTF8 =
+        CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
+                           (Tag)text, CSA_MapForeignChars, TRUE, TAG_DONE);
     struct json_object *obj = json_object_new_object();
-    json_object_object_add(obj, "text", json_object_new_string(text));
+    json_object_object_add(
+        obj, "text", json_object_new_string(textUTF8 ? textUTF8 : (UTF8 *)""));
     if (modelId != NULL && strlen(modelId) > 0) {
         json_object_object_add(obj, "model_id",
                                json_object_new_string(modelId));
     }
-    CONST_STRPTR jsonString = json_object_to_json_string(obj);
+    UTF8 *jsonString = json_object_to_json_string(obj);
+    CodesetsFreeA(textUTF8, NULL);
 
     /* Build proxy auth header if needed */
-    STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+    UTF8 *authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
         STRPTR credentials =
             AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
+        STRPTR encodedCredentials;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
         snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
         FreeVec(credentials);
     }
 
     /* Build the endpoint with voice ID and output format */
-    UBYTE endpoint[256];
+    UTF8 endpoint[256];
     snprintf(endpoint, sizeof(endpoint),
-             "/v1/text-to-speech/%s?output_format=pcm_24000",
+             "/%s/text-to-speech/%s?output_format=pcm_24000",
+             (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0)
+                 ? apiEndpointUrl
+                 : "v1",
              voiceId != NULL ? voiceId : "");
+
+    UBYTE apiAuthHeader[512];
+    memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+    }
+
+    UBYTE absolutePrefix[768];
+    absolutePrefix[0] = '\0';
+    if (!useSSL) {
+        snprintf(absolutePrefix, sizeof(absolutePrefix), "http://%s:%u", host,
+                 (unsigned int)port);
+    }
 
     snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
              "POST %s%s HTTP/1.1\r\n"
              "Host: %s\r\n"
              "Content-Type: application/json\r\n"
-             "xi-api-key: %s\r\n"
+             "%s"
              "User-Agent: AmigaGPT\r\n"
              "Content-Length: %lu\r\n"
              "Connection: close\r\n"
              "%s\r\n"
              "%s",
-             useSSL ? "" : "https://api.elevenlabs.io", endpoint,
-             ELEVENLABS_HOST, apiKey ? apiKey : "", strlen(jsonString),
+             absolutePrefix, endpoint, host, apiAuthHeader, strlen(jsonString),
              authHeader, jsonString);
 
     json_object_put(obj);
@@ -2770,74 +5136,130 @@ APTR postTextToSpeechRequestToElevenLabs(
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 #endif
 
-    /* Read response */
-    LONG bytesRead = 0;
-    BOOL hasReadHeader = FALSE;
-    UBYTE *dataStart = NULL;
-    UBYTE statusMessage[64];
+    /* Read response: accumulate headers across TLS records, then read the full
+     * body using Content-Length when present (avoids truncated audio). */
+    UBYTE headerAccum[8192];
+    ULONG ha = 0;
+    headerAccum[0] = '\0';
 
-    while (1) {
+    while (ha < sizeof(headerAccum) - 1) {
 #ifndef DAEMON
         DoMethod(loadingBar, MUIM_Busy_Move);
 #endif
-        memset(readBuffer, 0, READ_BUFFER_LENGTH);
-        if (useSSL) {
-            ERR_clear_error();
-            bytesRead = SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH - 1);
-        } else {
-            bytesRead = recv(sock, readBuffer, READ_BUFFER_LENGTH - 1, 0);
+        ERR_clear_error();
+        LONG br = useSSL ? SSL_read(ssl, headerAccum + ha,
+                                    (int)(sizeof(headerAccum) - 1 - ha))
+                         : recv(sock, headerAccum + ha,
+                                (int)(sizeof(headerAccum) - 1 - ha), 0);
+        if (br > 0) {
+            ha += (ULONG)br;
+            headerAccum[ha] = '\0';
+            if (strstr((STRPTR)headerAccum, "\r\n\r\n") != NULL)
+                break;
+            continue;
         }
-
-        if (bytesRead <= 0) {
-            break;
-        }
-
-        dataStart = readBuffer;
-        ULONG bytesToCopy = bytesRead;
-
-        if (!hasReadHeader) {
-            /* Look for end of HTTP headers */
-            dataStart = strstr(readBuffer, "\r\n\r\n");
-            if (dataStart != NULL) {
-                hasReadHeader = TRUE;
-                dataStart += 4;
-                bytesToCopy = bytesRead - (dataStart - readBuffer);
-
-                /* Check for error response */
-                if (strstr(readBuffer, "HTTP/1.1 200") == NULL) {
-                    /* Try to parse error JSON */
-                    if (dataStart[0] == '{') {
-                        struct json_object *response =
-                            json_tokener_parse(dataStart);
-                        if (response != NULL) {
-                            struct json_object *detail;
-                            if (json_object_object_get_ex(response, "detail",
-                                                          &detail)) {
-                                CONST_STRPTR errMsg = NULL;
-
-                                if (json_object_is_type(detail, json_type_object)) {
-                                    errMsg = jsonGetApiErrorMessage(detail);
-                                } else if (json_object_is_type(detail,
-                                                               json_type_string)) {
-                                    errMsg = json_object_get_string(detail);
-                                }
-                                if (errMsg != NULL) {
-                                    displayError(errMsg);
-                                }
-                            }
-                            json_object_put(response);
-                        }
-                    }
-                    FreeVec(audioData);
-                    return NULL;
-                }
-            } else {
+        if (useSSL && br <= 0) {
+            int e = SSL_get_error(ssl, (int)br);
+            if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
                 continue;
+        }
+        FreeVec(audioData);
+        return NULL;
+    }
+
+    STRPTR hstr = (STRPTR)headerAccum;
+    STRPTR hend = strstr(hstr, "\r\n\r\n");
+    if (hend == NULL) {
+        FreeVec(audioData);
+        return NULL;
+    }
+    ULONG bodyOff = (ULONG)(hend - hstr) + 4;
+
+    UBYTE hdrTerm[8192];
+    ULONG hcopy = bodyOff;
+    if (hcopy > sizeof(hdrTerm) - 1)
+        hcopy = sizeof(hdrTerm) - 1;
+    memcpy(hdrTerm, headerAccum, hcopy);
+    hdrTerm[hcopy] = '\0';
+
+    if (strstr((STRPTR)hdrTerm, "HTTP/1.1 200") == NULL &&
+        strstr((STRPTR)hdrTerm, "HTTP/1.0 200") == NULL) {
+        if (bodyOff < ha && headerAccum[bodyOff] == '{') {
+            struct json_object *response =
+                json_tokener_parse((STRPTR)(headerAccum + bodyOff));
+            if (response != NULL) {
+                struct json_object *detail;
+                if (json_object_object_get_ex(response, "detail", &detail)) {
+                    struct json_object *message =
+                        json_object_object_get(detail, "message");
+                    if (message != NULL) {
+                        displayError(json_object_get_string(message));
+                    } else {
+                        displayError(json_object_get_string(detail));
+                    }
+                }
+                json_object_put(response);
             }
         }
+        FreeVec(audioData);
+        return NULL;
+    }
 
-        /* Expand buffer if needed */
-        if (*audioLength + bytesToCopy > audioBufferSize) {
+    BOOL chunked =
+        strstr((STRPTR)hdrTerm, "Transfer-Encoding: chunked") != NULL ||
+        strstr((STRPTR)hdrTerm, "transfer-encoding: chunked") != NULL;
+    LONG contentLen = httpParseContentLengthNullTerminated((STRPTR)hdrTerm);
+    ULONG initialBody = (ha > bodyOff) ? (ha - bodyOff) : 0;
+    UBYTE statusMessage[64];
+
+    if (!chunked && contentLen > 0) {
+        if ((ULONG)contentLen > audioBufferSize) {
+            audioBufferSize = (ULONG)contentLen + 4096;
+            APTR old = audioData;
+            audioData = AllocVec(audioBufferSize, MEMF_ANY);
+            if (audioData == NULL) {
+                FreeVec(old);
+                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                return NULL;
+            }
+            if (old != NULL)
+                FreeVec(old);
+        }
+        ULONG need = (ULONG)contentLen;
+        ULONG got = initialBody;
+        if (got > need)
+            got = need;
+        memcpy(audioData, headerAccum + bodyOff, got);
+        *audioLength = got;
+        while (*audioLength < need) {
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+            ULONG space = need - *audioLength;
+            if (space > READ_BUFFER_LENGTH - 1)
+                space = READ_BUFFER_LENGTH - 1;
+            ERR_clear_error();
+            LONG n = useSSL
+                         ? SSL_read(ssl, audioData + *audioLength, (int)space)
+                         : recv(sock, audioData + *audioLength, (int)space, 0);
+            if (n > 0) {
+                *audioLength += (ULONG)n;
+                snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                         STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+                updateStatusBar(statusMessage, yellowPen);
+                continue;
+            }
+            if (useSSL && n <= 0) {
+                int e = SSL_get_error(ssl, (int)n);
+                if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+                    continue;
+            }
+            break;
+        }
+    } else if (!chunked) {
+        /* No Content-Length: read until the server closes the connection. */
+        ULONG got = initialBody;
+        while (*audioLength + got > audioBufferSize) {
             audioBufferSize <<= 1;
             APTR oldAudioData = audioData;
             audioData = AllocVec(audioBufferSize, MEMF_ANY);
@@ -2849,13 +5271,290 @@ APTR postTextToSpeechRequestToElevenLabs(
             memcpy(audioData, oldAudioData, *audioLength);
             FreeVec(oldAudioData);
         }
+        if (got > 0) {
+            memcpy(audioData + *audioLength, headerAccum + bodyOff, got);
+            *audioLength += got;
+        }
+        while (1) {
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+            memset(readBuffer, 0, READ_BUFFER_LENGTH);
+            ERR_clear_error();
+            LONG n = useSSL ? SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH - 1)
+                            : recv(sock, readBuffer, READ_BUFFER_LENGTH - 1, 0);
+            if (n > 0) {
+                if (*audioLength + (ULONG)n > audioBufferSize) {
+                    audioBufferSize <<= 1;
+                    APTR oldAudioData = audioData;
+                    audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                    if (audioData == NULL) {
+                        FreeVec(oldAudioData);
+                        displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                        return NULL;
+                    }
+                    memcpy(audioData, oldAudioData, *audioLength);
+                    FreeVec(oldAudioData);
+                }
+                memcpy(audioData + *audioLength, readBuffer, (ULONG)n);
+                *audioLength += (ULONG)n;
+                snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                         STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+                updateStatusBar(statusMessage, yellowPen);
+                continue;
+            }
+            if (useSSL && n <= 0) {
+                int e = SSL_get_error(ssl, (int)n);
+                if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+                    continue;
+            }
+            break;
+        }
+    } else {
+        /* Transfer-Encoding: chunked (e.g. Cloudflare Workers in front of
+         * ElevenLabs). Curl decodes chunks automatically; we must strip framing
+         * or raw PCM picks up hex chunk sizes + CRLFs and sounds corrupted. */
+        BOOL useSeed = FALSE;
+        ULONG seedLen = initialBody;
+        if (seedLen > READ_BUFFER_LENGTH - 1) {
+            displayError(STRING_ERROR_BAD_CHUNK);
+            FreeVec(audioData);
+            return NULL;
+        }
+        memcpy(readBuffer, headerAccum + bodyOff, seedLen);
+        useSeed = (seedLen > 0);
 
-        memcpy(audioData + *audioLength, dataStart, bytesToCopy);
-        *audioLength += bytesToCopy;
+        LONG bytesRead = 0;
+        ULONG bytesRemainingInBuffer = 0;
+        BOOL doneReading = FALSE;
+        LONG err = 0;
+        UBYTE tempChunkHeaderBuffer[10] = {0};
+        UBYTE tempChunkDataBufferLength = 0;
+        BOOL newChunkNeeded = TRUE;
+        ULONG chunkLength = 0;
+        ULONG chunkBytesNeedingRead = 0;
+        UBYTE *dataStart = NULL;
 
-        snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
-                 STRING_DOWNLOADED, *audioLength, STRING_BYTES);
-        updateStatusBar(statusMessage, yellowPen);
+        while (!doneReading) {
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+            BOOL readFromSeed = FALSE;
+            if (useSeed) {
+                bytesRead = (LONG)seedLen;
+                readFromSeed = TRUE;
+                err = SSL_ERROR_NONE;
+                useSeed = FALSE;
+            } else {
+                memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                if (useSSL) {
+                    ERR_clear_error();
+                    bytesRead =
+                        SSL_read(ssl, readBuffer,
+                                 useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1);
+                    err = SSL_get_error(ssl, bytesRead);
+                } else {
+                    bytesRead =
+                        recv(sock, readBuffer,
+                             useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1, 0);
+                    err = SSL_ERROR_NONE;
+                }
+                if (bytesRead <= 0 && useSSL &&
+                    (err == SSL_ERROR_WANT_READ ||
+                     err == SSL_ERROR_WANT_WRITE ||
+                     err == SSL_ERROR_WANT_CONNECT ||
+                     err == SSL_ERROR_WANT_ACCEPT ||
+                     err == SSL_ERROR_WANT_X509_LOOKUP)) {
+                    continue;
+                }
+            }
+            if (newChunkNeeded && bytesRead == 1 && !readFromSeed)
+                continue;
+            bytesRemainingInBuffer = (ULONG)bytesRead;
+            dataStart = readBuffer;
+
+            snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                     STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+            updateStatusBar(statusMessage, yellowPen);
+            if (useSSL) {
+                err = SSL_get_error(ssl, bytesRead);
+            } else {
+                err = SSL_ERROR_NONE;
+            }
+            switch (err) {
+            case SSL_ERROR_NONE:
+                while (bytesRemainingInBuffer > 0) {
+                    if (newChunkNeeded) {
+                        tempChunkDataBufferLength = 0;
+                        memset(tempChunkHeaderBuffer, 0, 10);
+                        while (!strstr((STRPTR)tempChunkHeaderBuffer, "\r\n") &&
+                               tempChunkDataBufferLength < 10) {
+                            if (bytesRemainingInBuffer > 0) {
+                                memcpy(tempChunkHeaderBuffer +
+                                           tempChunkDataBufferLength,
+                                       dataStart, 1);
+                                dataStart++;
+                                bytesRemainingInBuffer--;
+                                tempChunkDataBufferLength++;
+                            } else {
+                                UBYTE singleByte[1];
+                                if (useSSL) {
+                                    bytesRead = SSL_read(ssl, singleByte, 1);
+                                } else {
+                                    bytesRead = recv(sock, singleByte, 1, 0);
+                                }
+                                if (bytesRead <= 0) {
+                                    err = SSL_ERROR_SYSCALL;
+                                    doneReading = TRUE;
+                                    break;
+                                }
+                                memcpy(tempChunkHeaderBuffer +
+                                           tempChunkDataBufferLength,
+                                       singleByte, bytesRead);
+                                tempChunkDataBufferLength += bytesRead;
+                            }
+                        }
+                        if (doneReading)
+                            break;
+
+                        chunkLength = parseChunkLength(
+                            tempChunkHeaderBuffer, tempChunkDataBufferLength);
+                        if (chunkLength == 0) {
+                            doneReading = TRUE;
+                            break;
+                        }
+                        chunkBytesNeedingRead = chunkLength;
+                        if (bytesRemainingInBuffer == 0) {
+                            newChunkNeeded = FALSE;
+                            continue;
+                        }
+                    }
+
+                    if (*audioLength + chunkBytesNeedingRead >
+                        audioBufferSize) {
+                        audioBufferSize <<= 1;
+                        APTR oldAudioData = audioData;
+                        audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                        if (audioData == NULL) {
+                            FreeVec(oldAudioData);
+                            displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                            return NULL;
+                        }
+                        memcpy(audioData, oldAudioData, *audioLength);
+                        FreeVec(oldAudioData);
+                    }
+
+                    if (chunkBytesNeedingRead > bytesRemainingInBuffer) {
+                        memcpy(audioData + *audioLength, dataStart,
+                               bytesRemainingInBuffer);
+                        *audioLength += bytesRemainingInBuffer;
+                        chunkBytesNeedingRead -= bytesRemainingInBuffer;
+                        newChunkNeeded = FALSE;
+                        bytesRemainingInBuffer = 0;
+                    } else {
+                        memcpy(audioData + *audioLength, dataStart,
+                               chunkBytesNeedingRead);
+                        *audioLength += chunkBytesNeedingRead;
+                        bytesRemainingInBuffer -= chunkBytesNeedingRead;
+                        while (bytesRemainingInBuffer < 2) {
+                            if (useSSL) {
+                                bytesRead = SSL_read(ssl, readBuffer, 1);
+                            } else {
+                                bytesRead = recv(sock, readBuffer, 1, 0);
+                            }
+                            if (bytesRead <= 0) {
+                                if (chunkBytesNeedingRead == 0) {
+                                    newChunkNeeded = TRUE;
+                                    break;
+                                }
+                                err = SSL_ERROR_SYSCALL;
+                                doneReading = TRUE;
+                                break;
+                            }
+                            bytesRemainingInBuffer += bytesRead;
+                        }
+                        if (doneReading)
+                            break;
+                        dataStart += chunkBytesNeedingRead + 2;
+                        bytesRemainingInBuffer -= 2;
+                        chunkBytesNeedingRead = 0;
+                        newChunkNeeded = TRUE;
+                    }
+                }
+                break;
+            case SSL_ERROR_ZERO_RETURN:
+                if (bytesRemainingInBuffer > 0 && chunkBytesNeedingRead > 0) {
+                    while (bytesRemainingInBuffer > 0 &&
+                           chunkBytesNeedingRead > 0) {
+                        if (*audioLength + chunkBytesNeedingRead >
+                            audioBufferSize) {
+                            audioBufferSize <<= 1;
+                            APTR oldAudioData = audioData;
+                            audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                            if (audioData == NULL) {
+                                FreeVec(oldAudioData);
+                                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                                return NULL;
+                            }
+                            memcpy(audioData, oldAudioData, *audioLength);
+                            FreeVec(oldAudioData);
+                        }
+
+                        if (chunkBytesNeedingRead > bytesRemainingInBuffer) {
+                            memcpy(audioData + *audioLength, dataStart,
+                                   bytesRemainingInBuffer);
+                            *audioLength += bytesRemainingInBuffer;
+                            chunkBytesNeedingRead -= bytesRemainingInBuffer;
+                            bytesRemainingInBuffer = 0;
+                        } else {
+                            memcpy(audioData + *audioLength, dataStart,
+                                   chunkBytesNeedingRead);
+                            *audioLength += chunkBytesNeedingRead;
+                            bytesRemainingInBuffer -= chunkBytesNeedingRead;
+                            chunkBytesNeedingRead = 0;
+                            newChunkNeeded = TRUE;
+                        }
+                    }
+                }
+                doneReading = TRUE;
+                break;
+            case SSL_ERROR_WANT_READ:
+            case SSL_ERROR_WANT_WRITE:
+            case SSL_ERROR_WANT_CONNECT:
+            case SSL_ERROR_WANT_ACCEPT:
+            case SSL_ERROR_WANT_X509_LOOKUP:
+                continue;
+            case SSL_ERROR_SYSCALL:
+            case SSL_ERROR_SSL:
+                reportSslError(ssl, bytesRead, "SSL_read (elevenlabs tts)");
+                doneReading = TRUE;
+                break;
+            default:
+                printf(STRING_ERROR_UNKNOWN);
+                putchar('\n');
+                break;
+            }
+        }
+
+        if (bytesRemainingInBuffer > 0 && chunkBytesNeedingRead > 0) {
+            if (*audioLength + chunkBytesNeedingRead > audioBufferSize) {
+                audioBufferSize <<= 1;
+                APTR oldAudioData = audioData;
+                audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                if (audioData == NULL) {
+                    FreeVec(oldAudioData);
+                    displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                    return NULL;
+                }
+                memcpy(audioData, oldAudioData, *audioLength);
+                FreeVec(oldAudioData);
+            }
+            ULONG bytesToSave = (chunkBytesNeedingRead < bytesRemainingInBuffer)
+                                    ? chunkBytesNeedingRead
+                                    : bytesRemainingInBuffer;
+            memcpy(audioData + *audioLength, dataStart, bytesToSave);
+            *audioLength += bytesToSave;
+        }
     }
 
 #ifndef DAEMON
@@ -2870,6 +5569,656 @@ APTR postTextToSpeechRequestToElevenLabs(
     }
 
     return audioData;
+}
+
+APTR postTextToSpeechRequestToXAI(
+    CONST_STRPTR text, CONST_STRPTR voiceId, CONST_STRPTR language,
+    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR apiKey,
+    ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, AudioFormat *audioFormat) {
+
+    if (host == NULL || strlen(host) == 0)
+        host = XAI_HOST;
+    if (port == 0)
+        port = XAI_PORT;
+    if (apiEndpointUrl == NULL)
+        apiEndpointUrl = "v1";
+    *audioLength = 0;
+
+    if (authorizationType != AUTHORIZATION_TYPE_NONE &&
+        (apiKey == NULL || strlen(apiKey) == 0)) {
+        displayError(STRING_ERROR_NO_API_KEY);
+        return NULL;
+    }
+
+    /* xAI codecs: mp3, wav, pcm, mulaw, alaw. Anything else (opus/aac/flac)
+     * falls back to pcm so on-device playback still works. */
+    AudioFormat defaultAudioFormatForPlayback = AUDIO_FORMAT_PCM;
+    if (audioFormat == NULL)
+        audioFormat = &defaultAudioFormatForPlayback;
+    CONST_STRPTR xaiCodec = NULL;
+    switch (*audioFormat) {
+    case AUDIO_FORMAT_MP3:
+        xaiCodec = "mp3";
+        break;
+    case AUDIO_FORMAT_WAV:
+        xaiCodec = "wav";
+        break;
+    case AUDIO_FORMAT_PCM:
+    default:
+        xaiCodec = "pcm";
+        *audioFormat = AUDIO_FORMAT_PCM;
+        break;
+    }
+
+    updateStatusBar(STRING_CONNECTING, yellowPen);
+    UBYTE connectionRetryCount = 0;
+    while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
+        if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+            displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
+            return NULL;
+        }
+    }
+
+    ULONG audioBufferSize = AUDIO_BUFFER_SIZE;
+    UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
+    if (audioData == NULL) {
+        displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+        return NULL;
+    }
+
+    UTF8 *textUTF8 =
+        CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
+                           (Tag)text, CSA_MapForeignChars, TRUE, TAG_DONE);
+
+    CONST_STRPTR resolvedVoiceId =
+        (voiceId != NULL && strlen(voiceId) > 0)
+            ? voiceId
+            : XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE];
+    CONST_STRPTR languageStr =
+        (language != NULL && strlen(language) > 0) ? language : "en";
+
+    struct json_object *obj = json_object_new_object();
+    json_object_object_add(
+        obj, "text", json_object_new_string(textUTF8 ? textUTF8 : (UTF8 *)""));
+    json_object_object_add(obj, "voice_id",
+                           json_object_new_string(resolvedVoiceId));
+    json_object_object_add(obj, "language", json_object_new_string(languageStr));
+    struct json_object *outputFormat = json_object_new_object();
+    json_object_object_add(outputFormat, "codec",
+                           json_object_new_string(xaiCodec));
+    json_object_object_add(outputFormat, "sample_rate",
+                           json_object_new_int(24000));
+    if (strcmp(xaiCodec, "mp3") == 0)
+        json_object_object_add(outputFormat, "bit_rate",
+                               json_object_new_int(128000));
+    json_object_object_add(obj, "output_format", outputFormat);
+    UTF8 *jsonString = json_object_to_json_string(obj);
+    CodesetsFreeA(textUTF8, NULL);
+
+    UTF8 *authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+    if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
+        STRPTR credentials =
+            AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                     MEMF_ANY | MEMF_CLEAR);
+        snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                 "%s:%s", proxyUsername, proxyPassword);
+        STRPTR encodedCredentials;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
+        snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
+                 encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
+        FreeVec(credentials);
+    }
+
+    UBYTE apiAuthHeader[512];
+    memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+    }
+
+    UBYTE endpoint[256];
+    snprintf(endpoint, sizeof(endpoint), "/%s/tts",
+             (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0)
+                 ? apiEndpointUrl
+                 : "v1");
+
+    UBYTE absolutePrefix[768];
+    absolutePrefix[0] = '\0';
+    if (!useSSL) {
+        snprintf(absolutePrefix, sizeof(absolutePrefix), "http://%s:%u", host,
+                 (unsigned int)port);
+    }
+
+    snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+             "POST %s%s HTTP/1.1\r\n"
+             "Host: %s\r\n"
+             "Content-Type: application/json\r\n"
+             "%s"
+             "User-Agent: AmigaGPT\r\n"
+             "Content-Length: %lu\r\n"
+             "Connection: close\r\n"
+             "%s\r\n"
+             "%s",
+             absolutePrefix, endpoint, host, apiAuthHeader, strlen(jsonString),
+             authHeader, jsonString);
+
+    json_object_put(obj);
+    FreeVec(authHeader);
+
+    updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
+    if (useSSL) {
+        ERR_clear_error();
+        ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+        if (ssl_err <= 0) {
+            reportSslError(ssl, ssl_err, "SSL_write (xai tts)");
+            FreeVec(audioData);
+            return NULL;
+        }
+    } else {
+        ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+        if (ssl_err <= 0) {
+            displayError(STRING_ERROR_REQUEST_WRITE);
+            FreeVec(audioData);
+            return NULL;
+        }
+    }
+
+#ifndef DAEMON
+    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
+
+    UBYTE headerAccum[8192];
+    ULONG ha = 0;
+    headerAccum[0] = '\0';
+
+    while (ha < sizeof(headerAccum) - 1) {
+#ifndef DAEMON
+        DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+        ERR_clear_error();
+        LONG br = useSSL ? SSL_read(ssl, headerAccum + ha,
+                                    (int)(sizeof(headerAccum) - 1 - ha))
+                         : recv(sock, headerAccum + ha,
+                                (int)(sizeof(headerAccum) - 1 - ha), 0);
+        if (br > 0) {
+            ha += (ULONG)br;
+            headerAccum[ha] = '\0';
+            if (strstr((STRPTR)headerAccum, "\r\n\r\n") != NULL)
+                break;
+            continue;
+        }
+        if (useSSL && br <= 0) {
+            int e = SSL_get_error(ssl, (int)br);
+            if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+                continue;
+        }
+        FreeVec(audioData);
+        return NULL;
+    }
+
+    STRPTR hstr = (STRPTR)headerAccum;
+    STRPTR hend = strstr(hstr, "\r\n\r\n");
+    if (hend == NULL) {
+        FreeVec(audioData);
+        return NULL;
+    }
+    ULONG bodyOff = (ULONG)(hend - hstr) + 4;
+
+    UBYTE hdrTerm[8192];
+    ULONG hcopy = bodyOff;
+    if (hcopy > sizeof(hdrTerm) - 1)
+        hcopy = sizeof(hdrTerm) - 1;
+    memcpy(hdrTerm, headerAccum, hcopy);
+    hdrTerm[hcopy] = '\0';
+
+    if (strstr((STRPTR)hdrTerm, "HTTP/1.1 200") == NULL &&
+        strstr((STRPTR)hdrTerm, "HTTP/1.0 200") == NULL) {
+        if (bodyOff < ha && headerAccum[bodyOff] == '{') {
+            struct json_object *response =
+                json_tokener_parse((STRPTR)(headerAccum + bodyOff));
+            if (response != NULL) {
+                struct json_object *error;
+                struct json_object *message = NULL;
+                if (json_object_object_get_ex(response, "error", &error)) {
+                    message = json_object_object_get(error, "message");
+                    if (message == NULL && json_object_is_type(
+                                               error, json_type_string)) {
+                        message = error;
+                    }
+                }
+                if (message == NULL)
+                    message = json_object_object_get(response, "message");
+                if (message != NULL) {
+                    STRPTR rawMessageString = json_object_get_string(message);
+                    STRPTR cleanMessage =
+                        extractUserFriendlyErrorMessage(rawMessageString);
+                    displayError(cleanMessage);
+                    if (cleanMessage != rawMessageString)
+                        FreeVec(cleanMessage);
+                }
+                json_object_put(response);
+            }
+        }
+        FreeVec(audioData);
+        return NULL;
+    }
+
+    BOOL chunked =
+        strstr((STRPTR)hdrTerm, "Transfer-Encoding: chunked") != NULL ||
+        strstr((STRPTR)hdrTerm, "transfer-encoding: chunked") != NULL;
+    LONG contentLen = httpParseContentLengthNullTerminated((STRPTR)hdrTerm);
+    ULONG initialBody = (ha > bodyOff) ? (ha - bodyOff) : 0;
+    UBYTE statusMessage[64];
+
+    if (!chunked && contentLen > 0) {
+        if ((ULONG)contentLen > audioBufferSize) {
+            audioBufferSize = (ULONG)contentLen + 4096;
+            APTR old = audioData;
+            audioData = AllocVec(audioBufferSize, MEMF_ANY);
+            if (audioData == NULL) {
+                FreeVec(old);
+                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                return NULL;
+            }
+            if (old != NULL)
+                FreeVec(old);
+        }
+        ULONG need = (ULONG)contentLen;
+        ULONG got = initialBody;
+        if (got > need)
+            got = need;
+        memcpy(audioData, headerAccum + bodyOff, got);
+        *audioLength = got;
+        while (*audioLength < need) {
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+            ULONG space = need - *audioLength;
+            if (space > READ_BUFFER_LENGTH - 1)
+                space = READ_BUFFER_LENGTH - 1;
+            ERR_clear_error();
+            LONG n = useSSL
+                         ? SSL_read(ssl, audioData + *audioLength, (int)space)
+                         : recv(sock, audioData + *audioLength, (int)space, 0);
+            if (n > 0) {
+                *audioLength += (ULONG)n;
+                snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                         STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+                updateStatusBar(statusMessage, yellowPen);
+                continue;
+            }
+            if (useSSL && n <= 0) {
+                int e = SSL_get_error(ssl, (int)n);
+                if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+                    continue;
+            }
+            break;
+        }
+    } else if (!chunked) {
+        ULONG got = initialBody;
+        while (*audioLength + got > audioBufferSize) {
+            audioBufferSize <<= 1;
+            APTR oldAudioData = audioData;
+            audioData = AllocVec(audioBufferSize, MEMF_ANY);
+            if (audioData == NULL) {
+                FreeVec(oldAudioData);
+                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                return NULL;
+            }
+            memcpy(audioData, oldAudioData, *audioLength);
+            FreeVec(oldAudioData);
+        }
+        if (got > 0) {
+            memcpy(audioData + *audioLength, headerAccum + bodyOff, got);
+            *audioLength += got;
+        }
+        while (1) {
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+            memset(readBuffer, 0, READ_BUFFER_LENGTH);
+            ERR_clear_error();
+            LONG n = useSSL ? SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH - 1)
+                            : recv(sock, readBuffer, READ_BUFFER_LENGTH - 1, 0);
+            if (n > 0) {
+                if (*audioLength + (ULONG)n > audioBufferSize) {
+                    audioBufferSize <<= 1;
+                    APTR oldAudioData = audioData;
+                    audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                    if (audioData == NULL) {
+                        FreeVec(oldAudioData);
+                        displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                        return NULL;
+                    }
+                    memcpy(audioData, oldAudioData, *audioLength);
+                    FreeVec(oldAudioData);
+                }
+                memcpy(audioData + *audioLength, readBuffer, (ULONG)n);
+                *audioLength += (ULONG)n;
+                snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                         STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+                updateStatusBar(statusMessage, yellowPen);
+                continue;
+            }
+            if (useSSL && n <= 0) {
+                int e = SSL_get_error(ssl, (int)n);
+                if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+                    continue;
+            }
+            break;
+        }
+    } else {
+        /* Transfer-Encoding: chunked. Decode framing so raw PCM doesn't pick
+         * up hex chunk sizes + CRLFs. */
+        BOOL useSeed = FALSE;
+        ULONG seedLen = initialBody;
+        if (seedLen > READ_BUFFER_LENGTH - 1) {
+            displayError(STRING_ERROR_BAD_CHUNK);
+            FreeVec(audioData);
+            return NULL;
+        }
+        memcpy(readBuffer, headerAccum + bodyOff, seedLen);
+        useSeed = (seedLen > 0);
+
+        LONG bytesRead = 0;
+        ULONG bytesRemainingInBuffer = 0;
+        BOOL doneReading = FALSE;
+        LONG err = 0;
+        UBYTE tempChunkHeaderBuffer[10] = {0};
+        UBYTE tempChunkDataBufferLength = 0;
+        BOOL newChunkNeeded = TRUE;
+        ULONG chunkLength = 0;
+        ULONG chunkBytesNeedingRead = 0;
+        UBYTE *dataStart = NULL;
+
+        while (!doneReading) {
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+            BOOL readFromSeed = FALSE;
+            if (useSeed) {
+                bytesRead = (LONG)seedLen;
+                readFromSeed = TRUE;
+                err = SSL_ERROR_NONE;
+                useSeed = FALSE;
+            } else {
+                memset(readBuffer, 0, READ_BUFFER_LENGTH);
+                if (useSSL) {
+                    ERR_clear_error();
+                    bytesRead = SSL_read(
+                        ssl, readBuffer,
+                        useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1);
+                    err = SSL_get_error(ssl, bytesRead);
+                } else {
+                    bytesRead =
+                        recv(sock, readBuffer,
+                             useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1, 0);
+                    err = SSL_ERROR_NONE;
+                }
+                if (bytesRead <= 0 && useSSL &&
+                    (err == SSL_ERROR_WANT_READ ||
+                     err == SSL_ERROR_WANT_WRITE ||
+                     err == SSL_ERROR_WANT_CONNECT ||
+                     err == SSL_ERROR_WANT_ACCEPT ||
+                     err == SSL_ERROR_WANT_X509_LOOKUP)) {
+                    continue;
+                }
+            }
+            if (newChunkNeeded && bytesRead == 1 && !readFromSeed)
+                continue;
+            bytesRemainingInBuffer = (ULONG)bytesRead;
+            dataStart = readBuffer;
+
+            snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                     STRING_DOWNLOADED, *audioLength, STRING_BYTES);
+            updateStatusBar(statusMessage, yellowPen);
+            if (useSSL) {
+                err = SSL_get_error(ssl, bytesRead);
+            } else {
+                err = SSL_ERROR_NONE;
+            }
+            switch (err) {
+            case SSL_ERROR_NONE:
+                while (bytesRemainingInBuffer > 0) {
+                    if (newChunkNeeded) {
+                        tempChunkDataBufferLength = 0;
+                        memset(tempChunkHeaderBuffer, 0, 10);
+                        while (!strstr((STRPTR)tempChunkHeaderBuffer, "\r\n") &&
+                               tempChunkDataBufferLength < 10) {
+                            if (bytesRemainingInBuffer > 0) {
+                                memcpy(tempChunkHeaderBuffer +
+                                           tempChunkDataBufferLength,
+                                       dataStart, 1);
+                                dataStart++;
+                                bytesRemainingInBuffer--;
+                                tempChunkDataBufferLength++;
+                            } else {
+                                UBYTE singleByte[1];
+                                if (useSSL) {
+                                    bytesRead = SSL_read(ssl, singleByte, 1);
+                                } else {
+                                    bytesRead = recv(sock, singleByte, 1, 0);
+                                }
+                                if (bytesRead <= 0) {
+                                    err = SSL_ERROR_SYSCALL;
+                                    doneReading = TRUE;
+                                    break;
+                                }
+                                memcpy(tempChunkHeaderBuffer +
+                                           tempChunkDataBufferLength,
+                                       singleByte, bytesRead);
+                                tempChunkDataBufferLength += bytesRead;
+                            }
+                        }
+                        if (doneReading)
+                            break;
+
+                        chunkLength = parseChunkLength(
+                            tempChunkHeaderBuffer, tempChunkDataBufferLength);
+                        if (chunkLength == 0) {
+                            doneReading = TRUE;
+                            break;
+                        }
+                        chunkBytesNeedingRead = chunkLength;
+                        if (bytesRemainingInBuffer == 0) {
+                            newChunkNeeded = FALSE;
+                            continue;
+                        }
+                    }
+
+                    if (*audioLength + chunkBytesNeedingRead >
+                        audioBufferSize) {
+                        audioBufferSize <<= 1;
+                        APTR oldAudioData = audioData;
+                        audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                        if (audioData == NULL) {
+                            FreeVec(oldAudioData);
+                            displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                            return NULL;
+                        }
+                        memcpy(audioData, oldAudioData, *audioLength);
+                        FreeVec(oldAudioData);
+                    }
+
+                    if (chunkBytesNeedingRead > bytesRemainingInBuffer) {
+                        memcpy(audioData + *audioLength, dataStart,
+                               bytesRemainingInBuffer);
+                        *audioLength += bytesRemainingInBuffer;
+                        chunkBytesNeedingRead -= bytesRemainingInBuffer;
+                        newChunkNeeded = FALSE;
+                        bytesRemainingInBuffer = 0;
+                    } else {
+                        memcpy(audioData + *audioLength, dataStart,
+                               chunkBytesNeedingRead);
+                        *audioLength += chunkBytesNeedingRead;
+                        bytesRemainingInBuffer -= chunkBytesNeedingRead;
+                        while (bytesRemainingInBuffer < 2) {
+                            if (useSSL) {
+                                bytesRead = SSL_read(ssl, readBuffer, 1);
+                            } else {
+                                bytesRead = recv(sock, readBuffer, 1, 0);
+                            }
+                            if (bytesRead <= 0) {
+                                if (chunkBytesNeedingRead == 0) {
+                                    newChunkNeeded = TRUE;
+                                    break;
+                                }
+                                err = SSL_ERROR_SYSCALL;
+                                doneReading = TRUE;
+                                break;
+                            }
+                            bytesRemainingInBuffer += bytesRead;
+                        }
+                        if (doneReading)
+                            break;
+                        dataStart += chunkBytesNeedingRead + 2;
+                        bytesRemainingInBuffer -= 2;
+                        chunkBytesNeedingRead = 0;
+                        newChunkNeeded = TRUE;
+                    }
+                }
+                break;
+            case SSL_ERROR_ZERO_RETURN:
+                if (bytesRemainingInBuffer > 0 && chunkBytesNeedingRead > 0) {
+                    while (bytesRemainingInBuffer > 0 &&
+                           chunkBytesNeedingRead > 0) {
+                        if (*audioLength + chunkBytesNeedingRead >
+                            audioBufferSize) {
+                            audioBufferSize <<= 1;
+                            APTR oldAudioData = audioData;
+                            audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                            if (audioData == NULL) {
+                                FreeVec(oldAudioData);
+                                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                                return NULL;
+                            }
+                            memcpy(audioData, oldAudioData, *audioLength);
+                            FreeVec(oldAudioData);
+                        }
+
+                        if (chunkBytesNeedingRead > bytesRemainingInBuffer) {
+                            memcpy(audioData + *audioLength, dataStart,
+                                   bytesRemainingInBuffer);
+                            *audioLength += bytesRemainingInBuffer;
+                            chunkBytesNeedingRead -= bytesRemainingInBuffer;
+                            bytesRemainingInBuffer = 0;
+                        } else {
+                            memcpy(audioData + *audioLength, dataStart,
+                                   chunkBytesNeedingRead);
+                            *audioLength += chunkBytesNeedingRead;
+                            bytesRemainingInBuffer -= chunkBytesNeedingRead;
+                            chunkBytesNeedingRead = 0;
+                            newChunkNeeded = TRUE;
+                        }
+                    }
+                }
+                doneReading = TRUE;
+                break;
+            case SSL_ERROR_WANT_READ:
+            case SSL_ERROR_WANT_WRITE:
+            case SSL_ERROR_WANT_CONNECT:
+            case SSL_ERROR_WANT_ACCEPT:
+            case SSL_ERROR_WANT_X509_LOOKUP:
+                continue;
+            case SSL_ERROR_SYSCALL:
+            case SSL_ERROR_SSL:
+                reportSslError(ssl, bytesRead, "SSL_read (xai tts)");
+                doneReading = TRUE;
+                break;
+            default:
+                printf(STRING_ERROR_UNKNOWN);
+                putchar('\n');
+                break;
+            }
+        }
+
+        if (bytesRemainingInBuffer > 0 && chunkBytesNeedingRead > 0) {
+            if (*audioLength + chunkBytesNeedingRead > audioBufferSize) {
+                audioBufferSize <<= 1;
+                APTR oldAudioData = audioData;
+                audioData = AllocVec(audioBufferSize, MEMF_ANY);
+                if (audioData == NULL) {
+                    FreeVec(oldAudioData);
+                    displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                    return NULL;
+                }
+                memcpy(audioData, oldAudioData, *audioLength);
+                FreeVec(oldAudioData);
+            }
+            ULONG bytesToSave = (chunkBytesNeedingRead < bytesRemainingInBuffer)
+                                    ? chunkBytesNeedingRead
+                                    : bytesRemainingInBuffer;
+            memcpy(audioData + *audioLength, dataStart, bytesToSave);
+            *audioLength += bytesToSave;
+        }
+    }
+
+#ifndef DAEMON
+    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+#endif
+
+    updateStatusBar(STRING_READY, greenPen);
+
+    if (*audioLength == 0) {
+        FreeVec(audioData);
+        return NULL;
+    }
+
+    return audioData;
+}
+
+struct json_object *getXAICustomVoices(
+    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR apiKey, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword) {
+    if (host == NULL || strlen(host) == 0)
+        host = XAI_HOST;
+    if (port == 0)
+        port = XAI_PORT;
+    if (apiEndpointUrl == NULL || strlen(apiEndpointUrl) == 0)
+        apiEndpointUrl = "v1";
+
+    UBYTE endpoint[256];
+    snprintf(endpoint, sizeof(endpoint), "/%s/custom-voices?limit=1000",
+             apiEndpointUrl);
+
+    CONST_STRPTR headerName;
+    BOOL useBearer;
+    switch (authorizationType) {
+    case AUTHORIZATION_TYPE_X_API_KEY:
+        headerName = "x-api-key";
+        useBearer = FALSE;
+        break;
+    case AUTHORIZATION_TYPE_X_GOOGLE_API_KEY:
+        headerName = "x-goog-api-key";
+        useBearer = FALSE;
+        break;
+    case AUTHORIZATION_TYPE_XI_API_KEY:
+        headerName = "xi-api-key";
+        useBearer = FALSE;
+        break;
+    case AUTHORIZATION_TYPE_BEARER:
+    default:
+        headerName = "Authorization";
+        useBearer = TRUE;
+        break;
+    }
+
+    return makeHttpsGetRequest(host, port, useSSL, endpoint, apiKey,
+                               headerName, useBearer, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword);
 }
 
 /**
@@ -2892,14 +6241,14 @@ APTR postTextToSpeechRequestToElevenLabs(
  * json_object_put() when you are done using it
  **/
 struct json_object *
-makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
-                    CONST_STRPTR apiKey, CONST_STRPTR apiKeyHeader,
-                    BOOL useBearer, BOOL useProxy, CONST_STRPTR proxyHost,
-                    UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
+makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                    CONST_STRPTR endpoint, CONST_STRPTR apiKey,
+                    CONST_STRPTR apiKeyHeader, BOOL useBearer, BOOL useProxy,
+                    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+                    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+                    CONST_STRPTR proxyPassword) {
 
     UBYTE connectionRetryCount = 0;
-    BOOL useSSL = TRUE;
 
     if (port == 0) {
         port = 443;
@@ -2912,28 +6261,36 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
     memset(writeBuffer, 0, WRITE_BUFFER_LENGTH);
 
     /* Build HTTP GET request */
-    STRPTR authHeader = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
+    UTF8 *authHeader = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
-        STRPTR credentials =
+        UTF8 *credentials =
             AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
                      MEMF_ANY | MEMF_CLEAR);
         snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
                  "%s:%s", proxyUsername, proxyPassword);
-        UBYTE *encodedCredentials = base64Encode(credentials);
+        STRPTR encodedCredentials;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
         snprintf(authHeader, 512, "Proxy-Authorization: Basic %s\r\n",
                  encodedCredentials);
-        FreeVec(encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
         FreeVec(credentials);
     }
 
     /* Build the API key header */
-    UBYTE apiKeyHeaderStr[512];
-    if (useBearer) {
+    UTF8 apiKeyHeaderStr[512];
+    apiKeyHeaderStr[0] = '\0';
+    if (apiKeyHeader == NULL || strlen(apiKeyHeader) == 0 || apiKey == NULL ||
+        strlen(apiKey) == 0) {
+        apiKeyHeaderStr[0] = '\0';
+    } else if (useBearer) {
         snprintf(apiKeyHeaderStr, sizeof(apiKeyHeaderStr), "%s: Bearer %s\r\n",
-                 apiKeyHeader, apiKey ? apiKey : "");
+                 apiKeyHeader, apiKey);
     } else {
         snprintf(apiKeyHeaderStr, sizeof(apiKeyHeaderStr), "%s: %s\r\n",
-                 apiKeyHeader, apiKey ? apiKey : "");
+                 apiKeyHeader, apiKey);
     }
 
     if (useSSL || useProxy) {
@@ -3052,4 +6409,383 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 #endif
     return result;
+}
+
+/**
+ * Post a tool result (shell command output) back to the OpenAI API
+ * This continues the conversation after a tool call
+ * @param previousResponseId the ID from the previous response
+ * @param callId the call_id from the function call
+ * @param output the output from the shell command
+ * @param model the model to use
+ * @param host the host to use
+ * @param port the port to use
+ * @param useSSL whether to use SSL
+ * @param apiKey the API key
+ * @param useProxy whether to use a proxy
+ * @param proxyHost the proxy host
+ * @param proxyPort the proxy port
+ * @param proxyUsesSSL whether the proxy uses SSL
+ * @param proxyRequiresAuth whether the proxy requires auth
+ * @param proxyUsername the proxy username
+ * @param proxyPassword the proxy password
+ * @param shellToolEnabled whether the shell tool is enabled
+ * @param apiEndpointUrl the API endpoint base URL (e.g. "v1")
+ * @param authorizationType the authorization type to use
+ * @param customHeaders custom HTTP headers to add to the request
+ * @return a pointer to a new json_object containing the response or NULL --
+ * Free it with json_object_put() when done
+ **/
+struct json_object *postToolResultToOpenAI(
+    CONST_STRPTR previousResponseId, CONST_STRPTR callId, CONST_STRPTR output,
+    CONST_STRPTR model, STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, BOOL shellToolEnabled,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders) {
+
+    UBYTE connectionRetryCount = 0;
+    if (host == NULL || strlen(host) == 0) {
+        displayError("Host not specified");
+        return NULL;
+    }
+    if (port == 0) {
+        port = useSSL ? 443 : 80;
+    }
+    if (useProxy && proxyUsesSSL) {
+        useSSL = TRUE;
+    }
+
+    /* Build the tool result JSON - do this BEFORE clearing pending tool call
+     * since callId and previousResponseId may point to the static buffers */
+    struct json_object *obj = json_object_new_object();
+
+    /* Add the model - required by the API */
+    if (model == NULL || strlen(model) == 0) {
+        json_object_put(obj);
+        displayError("Model not specified");
+        return NULL;
+    }
+    json_object_object_add(obj, "model", json_object_new_string(model));
+
+    /* Use the previous response ID to continue the conversation */
+    json_object_object_add(obj, "previous_response_id",
+                           json_object_new_string(previousResponseId));
+
+    /* Build the input array with the function call output */
+    struct json_object *inputArray = json_object_new_array();
+    struct json_object *toolResultObj = json_object_new_object();
+    json_object_object_add(toolResultObj, "type",
+                           json_object_new_string("function_call_output"));
+    json_object_object_add(toolResultObj, "call_id",
+                           json_object_new_string(callId));
+    json_object_object_add(toolResultObj, "output",
+                           json_object_new_string(output));
+    json_object_array_add(inputArray, toolResultObj);
+    json_object_object_add(obj, "input", inputArray);
+
+    /* Add tools array so the model knows it can still use the shell tool */
+    struct json_object *toolsArray = json_object_new_array();
+    struct json_object *shellToolObj = json_object_new_object();
+    json_object_object_add(shellToolObj, "type",
+                           json_object_new_string("function"));
+    json_object_object_add(shellToolObj, "name",
+                           json_object_new_string("shell"));
+    json_object_object_add(
+        shellToolObj, "description",
+        json_object_new_string(
+            "Execute AmigaDOS shell commands on the user's Amiga. "
+            "Use this to run commands, manage files, or interact "
+            "with the system. Returns stdout, stderr, and exit code."));
+    struct json_object *paramsObj = json_object_new_object();
+    json_object_object_add(paramsObj, "type", json_object_new_string("object"));
+    struct json_object *propsObj = json_object_new_object();
+    struct json_object *cmdPropObj = json_object_new_object();
+    json_object_object_add(cmdPropObj, "type",
+                           json_object_new_string("string"));
+    json_object_object_add(
+        cmdPropObj, "description",
+        json_object_new_string(
+            "The AmigaDOS command to execute (e.g. 'list RAM:', "
+            "'type myfile.txt', 'cd Work:')"));
+    json_object_object_add(propsObj, "command", cmdPropObj);
+    json_object_object_add(paramsObj, "properties", propsObj);
+    struct json_object *requiredArr = json_object_new_array();
+    json_object_array_add(requiredArr, json_object_new_string("command"));
+    json_object_object_add(paramsObj, "required", requiredArr);
+    json_object_object_add(shellToolObj, "parameters", paramsObj);
+    json_object_array_add(toolsArray, shellToolObj);
+    json_object_object_add(obj, "tools", toolsArray);
+
+    CONST_STRPTR jsonString = json_object_to_json_string(obj);
+
+    /* Now safe to clear pending tool call - JSON has copies of the strings */
+    clearPendingToolCall();
+
+    /* Build the API authorization header based on type */
+    UBYTE apiAuthHeader[512];
+    memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+    }
+
+    /* Build custom headers string with proper line ending */
+    UBYTE customHeadersFormatted[1024];
+    memset(customHeadersFormatted, 0, sizeof(customHeadersFormatted));
+    if (customHeaders != NULL && strlen(customHeaders) > 0) {
+        snprintf(customHeadersFormatted, sizeof(customHeadersFormatted),
+                 "%s\r\n", customHeaders);
+    }
+
+    CONST_STRPTR effectiveApiEndpointUrl = apiEndpointUrl;
+    if (effectiveApiEndpointUrl == NULL) {
+        effectiveApiEndpointUrl = "";
+    }
+
+    /* Build proxy auth header if needed */
+    STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
+    if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
+        STRPTR credentials =
+            AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                     MEMF_ANY | MEMF_CLEAR);
+        snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                 "%s:%s", proxyUsername, proxyPassword);
+        STRPTR encodedCredentials;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
+        snprintf(authHeader, 256, "Proxy-Authorization: Basic %s\r\n",
+                 encodedCredentials);
+        CodesetsFreeA(encodedCredentials, NULL);
+        FreeVec(credentials);
+    }
+
+    /* Build the HTTP request using the profile's endpoint URL */
+    if (useSSL || useProxy) {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "POST %s://%s:%d%s%s/responses HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "Content-Type: application/json\r\n"
+                 "%s"
+                 "%s"
+                 "User-Agent: AmigaGPT\r\n"
+                 "Content-Length: %lu\r\n"
+                 "%s\r\n"
+                 "%s\0",
+                 useSSL ? "https" : "http", host, port,
+                 strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
+                 effectiveApiEndpointUrl, host, port, apiAuthHeader,
+                 customHeadersFormatted, strlen(jsonString), authHeader,
+                 jsonString);
+    } else {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "POST %s%s/responses HTTP/1.1\r\n"
+                 "Host: %s:%d\r\n"
+                 "Content-Type: application/json\r\n"
+                 "%s"
+                 "%s"
+                 "User-Agent: AmigaGPT\r\n"
+                 "Content-Length: %lu\r\n"
+                 "%s\r\n"
+                 "%s\0",
+                 strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
+                 effectiveApiEndpointUrl, host, port, apiAuthHeader,
+                 customHeadersFormatted, strlen(jsonString), authHeader,
+                 jsonString);
+    }
+
+    json_object_put(obj);
+    FreeVec(authHeader);
+
+    /* Connect and send */
+    updateStatusBar(STRING_CONNECTING, yellowPen);
+    while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
+        if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+            displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
+            return NULL;
+        }
+    }
+
+    updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
+    if (useSSL) {
+        ERR_clear_error();
+        ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
+        if (ssl_err <= 0) {
+            reportSslError(ssl, ssl_err, "SSL_write (tool result)");
+            return NULL;
+        }
+    } else {
+        ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
+        if (ssl_err <= 0) {
+            displayError(STRING_ERROR_REQUEST_WRITE);
+            return NULL;
+        }
+    }
+
+    /* Read response */
+    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+    LONG totalBytesRead = 0;
+    WORD bytesRead = 0;
+    LONG err = 0;
+    BOOL doneReading = FALSE;
+    UBYTE statusMessage[64];
+    UBYTE *tempReadBuffer =
+        AllocVec(TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+
+    while (!doneReading) {
+#ifndef DAEMON
+        DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+        if (useSSL) {
+            ERR_clear_error();
+            bytesRead =
+                SSL_read(ssl, tempReadBuffer, TEMP_READ_BUFFER_LENGTH - 1);
+        } else {
+            bytesRead =
+                recv(sock, tempReadBuffer, TEMP_READ_BUFFER_LENGTH - 1, 0);
+        }
+
+        snprintf(statusMessage, sizeof(statusMessage),
+                 STRING_DOWNLOADING_RESPONSE);
+        updateStatusBar(statusMessage, yellowPen);
+
+        if (bytesRead <= 0) {
+            doneReading = TRUE;
+            break;
+        }
+
+        strncat(readBuffer, tempReadBuffer, bytesRead);
+        totalBytesRead += bytesRead;
+
+        /* Check if we have a complete response.
+         *
+         * IMPORTANT: Some servers (e.g. Cloudflare) include JSON blobs in HTTP
+         * headers (e.g. Report-To / NEL). Only parse JSON from the HTTP body.
+         */
+        STRPTR jsonStart = NULL;
+        {
+            STRPTR body = NULL;
+            STRPTR headerEnd = strstr(readBuffer, "\r\n\r\n");
+            ULONG headerDelimLen = 4;
+            if (headerEnd == NULL) {
+                headerEnd = strstr(readBuffer, "\n\n");
+                headerDelimLen = 2;
+            }
+            if (headerEnd != NULL) {
+                body = headerEnd + headerDelimLen;
+            }
+            while (body != NULL && (*body == '\r' || *body == '\n' ||
+                                    *body == ' ' || *body == '\t')) {
+                body++;
+            }
+            if (body != NULL) {
+                STRPTR objStart = strchr(body, '{');
+                STRPTR arrStart = strchr(body, '[');
+                if (objStart != NULL && arrStart != NULL) {
+                    jsonStart = (objStart < arrStart) ? objStart : arrStart;
+                } else if (objStart != NULL) {
+                    jsonStart = objStart;
+                } else if (arrStart != NULL) {
+                    jsonStart = arrStart;
+                }
+            }
+        }
+
+        if (jsonStart != NULL) {
+            struct json_object *parsedResponse = json_tokener_parse(jsonStart);
+            if (parsedResponse != NULL) {
+                /* Check if the response contains another tool call */
+                if (shellToolEnabled && hasShellToolCall(parsedResponse)) {
+                    UTF8 *cId = getShellToolCallId(parsedResponse);
+                    UTF8 *cmd = getShellToolCommand(parsedResponse);
+                    /* For non-streaming, id is at top level */
+                    STRPTR rId = (STRPTR)json_object_get_string(
+                        json_object_object_get(parsedResponse, "id"));
+
+                    if (cId && cmd && rId) {
+                        pendingToolCall = TRUE;
+                        strncpy(pendingToolCallId, cId,
+                                sizeof(pendingToolCallId) - 1);
+                        strncpy(pendingToolCommand, cmd,
+                                sizeof(pendingToolCommand) - 1);
+                        strncpy(pendingResponseId, rId,
+                                sizeof(pendingResponseId) - 1);
+                    }
+                }
+                FreeVec(tempReadBuffer);
+                updateStatusBar(STRING_READY, greenPen);
+                return parsedResponse;
+            }
+        }
+
+        if (totalBytesRead >= READ_BUFFER_LENGTH - 1) {
+            doneReading = TRUE;
+        }
+    }
+
+    FreeVec(tempReadBuffer);
+
+    /* Try to parse whatever we got */
+    UTF8 *jsonStart = NULL;
+    {
+        STRPTR body = NULL;
+        UTF8 *headerEnd = strstr(readBuffer, "\r\n\r\n");
+        ULONG headerDelimLen = 4;
+        if (headerEnd == NULL) {
+            headerEnd = strstr((UTF8 *)readBuffer, "\n\n");
+            headerDelimLen = 2;
+        }
+        if (headerEnd != NULL) {
+            body = headerEnd + headerDelimLen;
+        }
+        while (body != NULL && (*body == '\r' || *body == '\n' ||
+                                *body == ' ' || *body == '\t')) {
+            body++;
+        }
+        if (body != NULL) {
+            UTF8 *objStart = strchr(body, '{');
+            UTF8 *arrStart = strchr(body, '[');
+            if (objStart != NULL && arrStart != NULL) {
+                jsonStart = (objStart < arrStart) ? objStart : arrStart;
+            } else if (objStart != NULL) {
+                jsonStart = objStart;
+            } else if (arrStart != NULL) {
+                jsonStart = arrStart;
+            }
+        }
+    }
+    if (jsonStart != NULL) {
+        struct json_object *parsedResponse = json_tokener_parse(jsonStart);
+        if (parsedResponse != NULL) {
+            /* Check if the response contains another tool call */
+            if (shellToolEnabled && hasShellToolCall(parsedResponse)) {
+                UTF8 *callId = getShellToolCallId(parsedResponse);
+                UTF8 *command = getShellToolCommand(parsedResponse);
+                /* For non-streaming, id is at top level */
+                UTF8 *respId = json_object_get_string(
+                    json_object_object_get(parsedResponse, "id"));
+
+                if (callId && command && respId) {
+                    pendingToolCall = TRUE;
+                    strncpy(pendingToolCallId, callId,
+                            sizeof(pendingToolCallId) - 1);
+                    strncpy(pendingToolCommand, command,
+                            sizeof(pendingToolCommand) - 1);
+                    strncpy(pendingResponseId, respId,
+                            sizeof(pendingResponseId) - 1);
+                }
+            }
+            updateStatusBar(STRING_READY, greenPen);
+            return parsedResponse;
+        }
+    }
+
+    updateStatusBar(STRING_ERROR, redPen);
+    return NULL;
 }

@@ -6,33 +6,41 @@
 #include <string.h>
 #ifdef __AMIGAOS3__
 #include <proto/translator.h>
-#include <devices/narrator.h>
 #elif defined(__AMIGAOS4__)
 #include <exec/exec.h>
 #include <dos/dos.h>
 #include <devices/flite.h>
 #include <proto/flite.h>
 #endif
-#include "config.h"
+#include "AmigaGPTConfig.h"
 #include "gui.h"
 #include "openai.h"
 #include "version.h"
+
+#ifndef DAEMON
+#include <libraries/mui.h>
+#include <proto/muimaster.h>
+#endif
 
 #ifdef __AMIGAOS3__
 #define TRANSLATION_BUFFER_SIZE 8192
 
 struct Library *TranslatorBase = NULL;
 static struct MsgPort *NarratorPort = NULL;
-static struct narrator_rb *NarratorIO = NULL;
+struct narrator_rb *NarratorIO = NULL;
 static BYTE audioChannels[4] = {3, 5, 10, 12};
 static STRPTR translationBuffer = NULL;
 #elif defined(__AMIGAOS4__)
 static struct MsgPort *fliteMessagePort = NULL;
-static struct FliteRequest *fliteRequest = NULL;
+struct FliteRequest *fliteRequest = NULL;
 struct Device *FliteBase = NULL;
 struct FliteIFace *IFlite = NULL;
 struct FliteVoice *voice = NULL;
 #endif
+
+static struct MsgPort *AHImp = NULL;
+struct AHIRequest *ahiRequest = NULL;
+UBYTE *audioBuffer = NULL;
 
 /**
  * The names of the speech voices
@@ -49,13 +57,13 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size);
  * The names of the speech systems
  * @see SpeechSystem
  **/
-const STRPTR SPEECH_SYSTEM_NAMES[] = {
-    [SPEECH_SYSTEM_34] = "Workbench 1.x v34",
-    [SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
-    [SPEECH_SYSTEM_FLITE] = "Flite",
-    [SPEECH_SYSTEM_OPENAI] = "OpenAI Text To Speech",
-    [SPEECH_SYSTEM_ELEVENLABS] = "Elevenlabs Text To Speech",
-    NULL};
+const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
+                                      [SPEECH_SYSTEM_37] = "Workbench 2.0 v37",
+                                      [SPEECH_SYSTEM_FLITE] = "Flite",
+                                      [SPEECH_SYSTEM_OPENAI] = "OpenAI",
+                                      [SPEECH_SYSTEM_ELEVENLABS] = "ElevenLabs",
+                                      [SPEECH_SYSTEM_XAI] = "xAI",
+                                      NULL};
 
 /**
  * The names of the audio formats
@@ -76,21 +84,49 @@ const STRPTR AUDIO_FORMAT_NAMES[] = {[AUDIO_FORMAT_PCM] = "pcm",
  **/
 LONG initSpeech(SpeechSystem speechSystem) {
     if (speechSystem == SPEECH_SYSTEM_OPENAI ||
-        speechSystem == SPEECH_SYSTEM_ELEVENLABS)
+        speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
+        speechSystem == SPEECH_SYSTEM_XAI) {
+        AHImp = CreateMsgPort();
+        ahiRequest = (struct AHIRequest *)CreateIORequest(
+            AHImp, sizeof(struct AHIRequest));
+        ahiRequest->ahir_Version = 4;
+        ahiRequest->ahir_Std.io_Message.mn_ReplyPort = AHImp;
+        ahiRequest->ahir_Std.io_Command = CMD_WRITE;
+        ahiRequest->ahir_Std.io_Data = NULL;
+        ahiRequest->ahir_Std.io_Length = 0;
+        ahiRequest->ahir_Frequency = 24000;
+        ahiRequest->ahir_Type = AHIST_M16S; // 16-bit signed mono sound
+        ahiRequest->ahir_Volume = 0x10000;  // Full volume
+        ahiRequest->ahir_Position = 0x8000; // Centered
+
+        // Open the AHI device
+        BYTE ahiError = OpenDevice(AHINAME, AHI_DEFAULT_UNIT,
+                                   (struct IORequest *)ahiRequest, 0L);
+        if (ahiError != 0) {
+            UBYTE errorBuffer[256];
+            snprintf(errorBuffer, 256, "%s: %s", STRING_ERROR_AHI_DEVICE_OPEN,
+                     ahiError);
+            displayError(errorBuffer);
+            configSetSpeechEnabled(FALSE);
+            return RETURN_ERROR;
+        }
+
         return RETURN_OK;
+    }
+
 #ifdef __AMIGAOS3__
     if (!translationBuffer)
         translationBuffer = AllocVec(TRANSLATION_BUFFER_SIZE, MEMF_ANY);
     if (!(NarratorPort = CreateMsgPort())) {
         displayError(STRING_ERROR_NARRATOR_PORT);
-        config.speechEnabled = FALSE;
+        configSetSpeechEnabled(FALSE);
         return RETURN_ERROR;
     }
 
     if (!(NarratorIO =
               CreateIORequest(NarratorPort, sizeof(struct narrator_rb)))) {
         displayError(STRING_ERROR_NARRATOR_IO_REQUEST);
-        config.speechEnabled = FALSE;
+        configSetSpeechEnabled(FALSE);
         return RETURN_ERROR;
     }
 
@@ -99,7 +135,7 @@ LONG initSpeech(SpeechSystem speechSystem) {
         if (OpenDevice("AMIGAGPT:devs/speech/34/narrator.device", 0,
                        (struct IORequest *)NarratorIO, 0L) != 0) {
             displayError(STRING_ERROR_NARRATOR_34_DEVICE_OPEN);
-            config.speechEnabled = FALSE;
+            configSetSpeechEnabled(FALSE);
             return RETURN_ERROR;
         }
         break;
@@ -107,7 +143,7 @@ LONG initSpeech(SpeechSystem speechSystem) {
         if (OpenDevice("AMIGAGPT:devs/speech/37/narrator.device", 0,
                        (struct IORequest *)NarratorIO, 0L) != 0) {
             displayError(STRING_ERROR_NARRATOR_37_DEVICE_OPEN);
-            config.speechEnabled = FALSE;
+            configSetSpeechEnabled(FALSE);
             return RETURN_ERROR;
         }
         NarratorIO->flags = NDF_NEWIORB;
@@ -117,7 +153,7 @@ LONG initSpeech(SpeechSystem speechSystem) {
     if ((TranslatorBase =
              (struct Library *)OpenLibrary("translator.library", 42)) == NULL) {
         displayError(STRING_ERROR_TRANSLATOR_LIB_OPEN);
-        config.speechEnabled = FALSE;
+        configSetSpeechEnabled(FALSE);
         return RETURN_ERROR;
     }
 #elif defined(__AMIGAOS4__)
@@ -144,17 +180,17 @@ LONG initSpeech(SpeechSystem speechSystem) {
                 (struct Library *)FliteBase, "main", 1, NULL);
             if (!IFlite) {
                 displayError(STRING_ERROR_FLITE_INTERFACE_OPEN);
-                config.speechEnabled = FALSE;
+                configSetSpeechEnabled(FALSE);
                 return RETURN_ERROR;
             }
         } else {
             displayError(STRING_ERROR_FLITE_DEVICE_OPEN);
-            config.speechEnabled = FALSE;
+            configSetSpeechEnabled(FALSE);
             return RETURN_ERROR;
         }
     } else {
         PrintFault(ERROR_NO_FREE_STORE, STRING_APP_NAME);
-        config.speechEnabled = FALSE;
+        configSetSpeechEnabled(FALSE);
         return RETURN_ERROR;
     }
 #endif
@@ -166,6 +202,21 @@ LONG initSpeech(SpeechSystem speechSystem) {
  * Close the speech system
  **/
 void closeSpeech() {
+    if (ahiRequest) {
+        if (CheckIO((struct IORequest *)ahiRequest) == 0) {
+            AbortIO((struct IORequest *)ahiRequest);
+            WaitIO((struct IORequest *)ahiRequest);
+        }
+        CloseDevice((struct IORequest *)ahiRequest);
+        DeleteIORequest((struct IORequest *)ahiRequest);
+        DeleteMsgPort(AHImp);
+    }
+    ahiRequest = NULL;
+    AHImp = NULL;
+    if (audioBuffer) {
+        FreeVec(audioBuffer);
+        audioBuffer = NULL;
+    }
 #ifdef __AMIGAOS3__
     if (TranslatorBase) {
         CloseLibrary(TranslatorBase);
@@ -177,6 +228,7 @@ void closeSpeech() {
     if (NarratorIO) {
         if (CheckIO((struct IORequest *)NarratorIO) == 0) {
             AbortIO((struct IORequest *)NarratorIO);
+            WaitIO((struct IORequest *)NarratorIO);
         }
         if (((struct IORequest *)NarratorIO)->io_Device != NULL) {
             CloseDevice((struct IORequest *)NarratorIO);
@@ -221,17 +273,50 @@ void closeSpeech() {
 /**
  * Speak the given text aloud
  * @param text the text to speak
- * @param output the output file to save the OpenAI audio to. If NULL, the audio
- * will be played through AHI.
+ * @param output the output file to save the OpenAI audio to. If NULL, the
+ * audio will be played through AHI.
  * @param audioFormat the audio format to save the audio to
  **/
 void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
-    if (config.speechSystem == SPEECH_SYSTEM_OPENAI ||
-        config.speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
-        struct MsgPort *AHImp;
-        struct AHIRequest *ahiRequest;
-        BYTE ahiError;
-        ULONG audioLength;
+    struct SpeechRequestSettings settings;
+    configGetSpeechRequestSettings(&settings);
+    speakTextWithSettings(text, output, audioFormat, &settings);
+    configFreeSpeechRequestSettings(&settings);
+}
+
+void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
+                           AudioFormat *audioFormat,
+                           const struct SpeechRequestSettings *settings) {
+    if (settings == NULL)
+        return;
+
+    SpeechSystem speechSystem = settings->speechSystem;
+
+    if (speechSystem == SPEECH_SYSTEM_OPENAI ||
+        speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
+        speechSystem == SPEECH_SYSTEM_XAI) {
+        if (speechSystem == SPEECH_SYSTEM_OPENAI) {
+            if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
+                (settings->openAiApiKey == NULL ||
+                 strlen(settings->openAiApiKey) == 0)) {
+                displayError(STRING_ERROR_NO_API_KEY);
+                return;
+            }
+        } else if (speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
+            if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
+                (settings->elevenLabsApiKey == NULL ||
+                 strlen(settings->elevenLabsApiKey) == 0)) {
+                displayError(STRING_ERROR_NO_API_KEY);
+                return;
+            }
+        } else if (speechSystem == SPEECH_SYSTEM_XAI) {
+            if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
+                (settings->xaiApiKey == NULL ||
+                 strlen(settings->xaiApiKey) == 0)) {
+                displayError(STRING_ERROR_NO_API_KEY);
+                return;
+            }
+        }
 
         AudioFormat defaultAudioFormatForPlayback = AUDIO_FORMAT_PCM;
 
@@ -239,22 +324,55 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
             audioFormat = &defaultAudioFormatForPlayback;
         }
 
-        UBYTE *audioBuffer = NULL;
+        if (CheckIO((struct IORequest *)ahiRequest) == 0) {
+            AbortIO((struct IORequest *)ahiRequest);
+            WaitIO((struct IORequest *)ahiRequest);
+        }
 
-        if (config.speechSystem == SPEECH_SYSTEM_OPENAI) {
+        if (audioBuffer) {
+            FreeVec(audioBuffer);
+            audioBuffer = NULL;
+        }
+
+        ULONG audioLength;
+
+        if (speechSystem == SPEECH_SYSTEM_OPENAI) {
             audioBuffer = postTextToSpeechRequestToOpenAI(
-                text, config.openAITTSModel, config.openAITTSVoice,
-                config.openAIVoiceInstructions, config.openAiApiKey,
-                &audioLength, config.proxyEnabled, config.proxyHost,
-                config.proxyPort, config.proxyUsesSSL, config.proxyRequiresAuth,
-                config.proxyUsername, config.proxyPassword, audioFormat);
-        } else if (config.speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
+                text, settings->openAiTtsModelId, settings->openAiTtsVoice,
+                settings->openAiVoiceInstructions, settings->host,
+                settings->port, settings->useSSL, settings->apiEndpointUrl,
+                settings->authorizationType, settings->openAiApiKey,
+                &audioLength, configGetProxyEnabled(), configGetProxyHost(),
+                configGetProxyPort(), configGetProxyUsesSSL(),
+                configGetProxyRequiresAuth(), configGetProxyUsername(),
+                configGetProxyPassword(), audioFormat);
+        } else if (speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
             audioBuffer = postTextToSpeechRequestToElevenLabs(
-                text, config.elevenLabsVoiceID, config.elevenLabsModel,
-                config.elevenLabsAPIKey, &audioLength, config.proxyEnabled,
-                config.proxyHost, config.proxyPort, config.proxyUsesSSL,
-                config.proxyRequiresAuth, config.proxyUsername,
-                config.proxyPassword);
+                text, settings->elevenLabsVoiceID, settings->elevenLabsModel,
+                settings->host, settings->port, settings->useSSL,
+                settings->apiEndpointUrl, settings->authorizationType,
+                settings->elevenLabsApiKey, &audioLength,
+                configGetProxyEnabled(), configGetProxyHost(),
+                configGetProxyPort(), configGetProxyUsesSSL(),
+                configGetProxyRequiresAuth(), configGetProxyUsername(),
+                configGetProxyPassword());
+        } else if (speechSystem == SPEECH_SYSTEM_XAI) {
+            CONST_STRPTR voiceId = settings->xaiVoiceId;
+            if (voiceId == NULL || strlen(voiceId) == 0) {
+                XAITTSVoice v = settings->xaiVoice;
+                if (v >= 0 && XAI_TTS_VOICE_NAMES[v] != NULL)
+                    voiceId = XAI_TTS_VOICE_NAMES[v];
+                else
+                    voiceId = XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE];
+            }
+            audioBuffer = postTextToSpeechRequestToXAI(
+                text, voiceId, settings->xaiLanguage, settings->host,
+                settings->port, settings->useSSL, settings->apiEndpointUrl,
+                settings->authorizationType, settings->xaiApiKey, &audioLength,
+                configGetProxyEnabled(), configGetProxyHost(),
+                configGetProxyPort(), configGetProxyUsesSSL(),
+                configGetProxyRequiresAuth(), configGetProxyUsername(),
+                configGetProxyPassword(), audioFormat);
         }
 
         if (!audioBuffer) {
@@ -271,8 +389,10 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
                                     // bytes at a time
 
                 "1:\n"
-                "move.w (%%a0), %%d0\n" // Load the word from the buffer into D0
-                "rol.w #8, %%d0\n" // Rotate left by 8 bits to swap the bytes
+                "move.w (%%a0), %%d0\n"  // Load the word from the buffer
+                                         // into D0
+                "rol.w #8, %%d0\n"       // Rotate left by 8 bits to swap the
+                                         // bytes
                 "move.w %%d0, (%%a0)+\n" // Store the swapped word back and
                                          // increment address
                 "subq.l #1, %%d1\n"      // Decrement counter
@@ -305,82 +425,75 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
                 Close(outputFile);
             }
             FreeVec(audioBuffer);
+            audioBuffer = NULL;
             return;
         }
 
-        // Create a message port for AHI communication
-        AHImp = CreateMsgPort();
+        // Add 2s of silence to the audio buffer to make sure AHI plays the
+        // entire audio buffer. Unsure if this is an AHI bug or an emulator
+        // bug.
+        {
+            ULONG padBytes = 24000 * 4; /* 2s @ 24kHz 16-bit mono */
+            UBYTE *padded =
+                AllocVec(audioLength + padBytes, MEMF_ANY | MEMF_CLEAR);
+            if (padded) {
+                memcpy(padded, audioBuffer, audioLength);
+                FreeVec(audioBuffer);
+                audioBuffer = padded;
+                audioLength += padBytes;
+            } else {
+                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                FreeVec(audioBuffer);
+                audioBuffer = NULL;
+                return;
+            }
+        }
 
-        // Allocate an AHIRequest
-        ahiRequest = (struct AHIRequest *)CreateIORequest(
-            AHImp, sizeof(struct AHIRequest));
-        ahiRequest->ahir_Version = 4; // Use AHI version 4
-
-        // Setup the AHIRequest for playback
-        ahiRequest->ahir_Std.io_Message.mn_ReplyPort = AHImp;
-        ahiRequest->ahir_Std.io_Command = CMD_WRITE;
         ahiRequest->ahir_Std.io_Data = audioBuffer;
         ahiRequest->ahir_Std.io_Length = audioLength;
-        ahiRequest->ahir_Frequency = 24000; // Set playback frequency
-        ahiRequest->ahir_Type = AHIST_M16S; // 16-bit signed mono sound
-        ahiRequest->ahir_Volume = 0x10000;  // Full volume
-        ahiRequest->ahir_Position = 0x8000; // Centered
 
-        // Open the AHI device
-        ahiError = OpenDevice(AHINAME, AHI_DEFAULT_UNIT,
-                              (struct IORequest *)ahiRequest, 0L);
-        if (ahiError != 0) {
-            UBYTE errorBuffer[256];
-            snprintf(errorBuffer, 256, "%s: %s", STRING_ERROR_AHI_DEVICE_OPEN,
-                     ahiError);
-            displayError(errorBuffer);
-            config.speechEnabled = FALSE;
-            FreeVec(audioBuffer);
-            return;
-        }
-
-        // Send the command to AHI
         SendIO((struct IORequest *)ahiRequest);
-
-        // Wait for playback to finish
-        WaitPort(AHImp);
-        GetMsg(AHImp);
-
-        // Cleanup
-        CloseDevice((struct IORequest *)ahiRequest);
-        DeleteIORequest((struct IORequest *)ahiRequest);
-        DeleteMsgPort(AHImp);
-
-        FreeVec(audioBuffer);
 
         return;
     }
 #ifdef __AMIGAOS3__
-    if (config.speechSystem == SPEECH_SYSTEM_34 ||
-        config.speechSystem == SPEECH_SYSTEM_37) {
-        memset(translationBuffer, 0, TRANSLATION_BUFFER_SIZE);
+    if (speechSystem == SPEECH_SYSTEM_34 || speechSystem == SPEECH_SYSTEM_37) {
         if (CheckIO((struct IORequest *)NarratorIO) == 0) {
+            AbortIO((struct IORequest *)NarratorIO);
             WaitIO((struct IORequest *)NarratorIO);
         }
-        LoadAccent(config.speechAccent);
-        SetAccent(config.speechAccent);
+
+        STRPTR accent = settings->accentPath;
+        if (accent == NULL || strlen(accent) == 0)
+            accent = "american.accent";
+        LoadAccent(accent);
+        SetAccent(accent);
         Translate(text, strlen(text), translationBuffer,
                   TRANSLATION_BUFFER_SIZE - 1);
         NarratorIO->ch_masks = audioChannels;
         NarratorIO->nm_masks = sizeof(audioChannels);
+        NarratorIO->rate = settings->narratorRate;
+        NarratorIO->pitch = settings->narratorPitch;
+        NarratorIO->mode =
+            settings->narratorMode ? 1 : 0; /* 0 natural, 1 robotic */
+        NarratorIO->sex = settings->narratorSex ? 1 : 0; /* 0 male, 1 female */
         NarratorIO->message.io_Command = CMD_WRITE;
         NarratorIO->message.io_Data = translationBuffer;
         NarratorIO->message.io_Length = strlen(translationBuffer);
-        DoIO((struct IORequest *)NarratorIO);
+        SendIO((struct IORequest *)NarratorIO);
     }
 #elif defined(__AMIGAOS4__)
-    if (config.speechSystem == SPEECH_SYSTEM_FLITE) {
+    if (speechSystem == SPEECH_SYSTEM_FLITE) {
+        if (CheckIO((struct IORequest *)fliteRequest) == 0) {
+            AbortIO((struct IORequest *)fliteRequest);
+            WaitIO((struct IORequest *)fliteRequest);
+        }
         if (IFlite && voice)
             CloseVoice(voice);
         voice = NULL;
         UBYTE voiceName[32];
         snprintf(voiceName, 32, "%s.voice\0",
-                 SPEECH_FLITE_VOICE_NAMES[config.speechFliteVoice]);
+                 SPEECH_FLITE_VOICE_NAMES[settings->fliteVoice]);
         voice = OpenVoice(voiceName);
         if (!voice) {
             displayError(STRING_ERROR_VOICE_OPEN);
@@ -392,33 +505,6 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
         fliteRequest->fr_Voice = voice;
 
         SendIO((struct IORequest *)fliteRequest);
-        Wait((1 << fliteMessagePort->mp_SigBit) | SIGBREAKF_CTRL_C);
-
-        /* Note: Never use CheckIO() or WaitIO() on an unused IORequest! */
-        if (!CheckIO((struct IORequest *)fliteRequest)) {
-            /* Aborting only works if the IORequest has not yet been
-                removed from the MsgPort by the flite.device process. */
-            AbortIO((struct IORequest *)fliteRequest);
-        }
-        /* Wait for request to finish, and perform cleanup afterwards */
-        WaitIO((struct IORequest *)fliteRequest);
-
-        switch (fliteRequest->fr_Std.io_Error) {
-        case IOERR_SUCCESS:
-            break;
-        case IOERR_ABORTED:
-            displayError(STRING_ERROR_SPEECH_IO_ABORTED);
-            break;
-        case FLERR_FLITE:
-            displayError(STRING_ERROR_FLITE);
-            break;
-        case FLERR_NOVOICE:
-            displayError(STRING_ERROR_NO_VOICE);
-            break;
-        default:
-            displayError(STRING_ERROR_SPEECH_UNKNOWN);
-            break;
-        }
     }
 #endif
 }
@@ -465,16 +551,16 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size) {
                 __asm__ __volatile__(
                     "lea    (%1), %%a0\n" // Load buffer address into A0
                     "move.l %0, %%d1\n"   // Load fileSize into D1
-                    "lsr.l  #1, %%d1\n" // fileSize / 2, since we're processing
-                                        // 2 bytes at a time
+                    "lsr.l  #1, %%d1\n"   // fileSize / 2, since we're
+                                          // processing 2 bytes at a time
 
                     "1:\n"
                     "move.w (%%a0), %%d0\n" // Load the word from the buffer
                                             // into D0
                     "rol.w  #8, %%d0\n"     // Rotate left by 8 bits to swap the
                                             // bytes
-                    "move.w %%d0, (%%a0)+\n" // Store the swapped word back and
-                                             // increment address
+                    "move.w %%d0, (%%a0)+\n" // Store the swapped word back
+                                             // and increment address
                     "subq.l #1, %%d1\n"      // Decrement counter
                     "bne.b  1b\n"            // Repeat if not done
 

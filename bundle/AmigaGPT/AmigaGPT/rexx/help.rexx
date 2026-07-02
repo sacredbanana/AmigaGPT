@@ -15,18 +15,15 @@ ADDRESS VALUE AMIGAGPT_PORT
 SAY "ARexx commands:"
 '?'
 SAY RESULT
-SAY "Chat models:"
-'LISTCHATMODELS'
+SAY "Profiles:"
+'LISTPROFILES'
 SAY RESULT
-SAY "Image models:"
-'LISTIMAGEMODELS'
+SAY "Models for active profiles:"
+'LISTMODELS'
+SAY RESULT
+SAY "Voices for active profile:"
+'LISTVOICES'
 SAY RESULT
 SAY "Image sizes:"
 'LISTIMAGESIZES'
-SAY RESULT
-SAY "Voice models:"
-'LISTVOICEMODELS'
-SAY RESULT
-SAY "Voices:"
-'LISTVOICES'
 SAY RESULT

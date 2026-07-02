@@ -18,7 +18,7 @@
 #include "chatmd_markers.h"
 #include "CodeBlocksScintilla.h"
 #include "CodeBlocksViewer.h"
-#include "config.h"
+#include "AmigaGPTConfig.h"
 #include "gui.h"
 #include "MainWindow.h"
 #include "streamlog.h"
@@ -101,7 +101,7 @@ MakeHook(ChatOutputSciOpenCodeblockDeferredHook, ChatOutputSciOpenCodeblockDefer
 #define CHAT_OUTPUT_SCINTILLA_FONT_SANS "DejaVu Sans"
 
 static int chatOutputScintillaFontSizePoints(void) {
-    return (int)configClampChatFontSize(config.chatFontSize);
+    return (int)configClampChatFontSize(configGetChatFontSize());
 }
 
 /** Style 0 = assistant (default); style 1 = user (bold, distinct colour). */
@@ -170,7 +170,7 @@ typedef struct {
 #define CHAT_OUTPUT_ASSISTANT_FORE 0x000000
 
 static const char *chatOutputScintillaFontFace(void) {
-    return config.fixedWidthFonts ? CHAT_OUTPUT_SCINTILLA_FONT_MONO
+    return configGetFixedWidthFonts() ? CHAT_OUTPUT_SCINTILLA_FONT_MONO
                                  : CHAT_OUTPUT_SCINTILLA_FONT_SANS;
 }
 
@@ -1078,7 +1078,7 @@ ULONG chatOutputScintillaBuildMidiMarkdownDisplay(const char *inUtf8,
     ChatMdStyleStack styleStack;
     ULONG i;
     ULONG outPos = 0;
-    const BOOL stripMidi = config.markdownFormatting;
+    const BOOL stripMidi = configGetMarkdownFormatting();
 
     if (inUtf8 == NULL || outUtf8 == NULL || outStyles == NULL || inLen == 0) {
         if (outUtf8 != NULL) {
@@ -2216,7 +2216,7 @@ void chatOutputScintillaApplyLineWrap(Object *sci) {
     }
     codeBlocksScintillaCommand(
         sci, SCI_SETWRAPMODE,
-        config.chatLineWrap ? (uptr_t)SC_WRAP_WORD : (uptr_t)SC_WRAP_NONE, 0);
+        configGetChatLineWrap() ? (uptr_t)SC_WRAP_WORD : (uptr_t)SC_WRAP_NONE, 0);
 }
 
 static ULONG chatOutputScintillaParseCodeblockIndexAt(const char *atBracket) {

@@ -29,24 +29,22 @@
 #include <string.h>
 #include <exec/memory.h>
 #include "AboutAmigaGPTWindow.h"
+#include "AmigaGPTConfig.h"
 #include "AmigaGPTTextEditor.h"
 #include "APIKeyRequesterWindow.h"
 #include "ARexx.h"
-#include "ChatSystemRequesterWindow.h"
 #include "CustomServerSettingsRequesterWindow.h"
 #include "codefence.h"
-#include "config.h"
 #include "streamlog.h"
 #if defined(__MORPHOS__) && !defined(DAEMON)
 #include "morphos_relaunch.h"
 #include "openai.h"
 #endif
-#include "ElevenLabsSettingsRequesterWindow.h"
+#include "SpeechProviderSettingsRequesterWindow.h"
 #include "gui.h"
 #include "menu.h"
 #include "MainWindow.h"
 #include "ProxySettingsRequesterWindow.h"
-#include "VoiceInstructionsRequesterWindow.h"
 #include "version.h"
 
 #ifdef __AMIGAOS4__
@@ -222,11 +220,16 @@ LONG initVideo() {
         return RETURN_ERROR;
     }
 
+    /* Initialize the MUI config class now that MUIMasterBase is open */
+    if (initConfigMUI() == RETURN_ERROR) {
+        displayError("Failed to initialize config MUI class");
+    }
+
 #ifdef DAEMON
     if (!(app = ApplicationObject, MUIA_Application_Base, "AMIGAGPTD",
           MUIA_Application_Title, "AmigaGPT Daemon", MUIA_Application_Version,
           APP_VERSION, MUIA_Application_Copyright,
-          "2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
+          "2023-2026 Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Description, "AmigaGPT Daemon",
           MUIA_Application_Version, APP_VER_STRING_AMIGAGPTD,
@@ -245,19 +248,13 @@ LONG initVideo() {
     if (createAPIKeyRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
-    if (createChatSystemRequesterWindow() == RETURN_ERROR)
-        return RETURN_ERROR;
-
     if (createCustomServerSettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
     if (createProxySettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
-    if (createVoiceInstructionsRequesterWindow() == RETURN_ERROR)
-        return RETURN_ERROR;
-
-    if (createElevenLabsSettingsRequesterWindow() == RETURN_ERROR)
+    if (createSpeechProviderSettingsRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
     {
@@ -270,7 +267,7 @@ retryCreateApp:
       if (!(app = ApplicationObject, MUIA_Application_Base, "AMIGAGPT",
           MUIA_Application_Title, STRING_APP_NAME, MUIA_Application_Version,
           APP_VERSION, MUIA_Application_Copyright,
-          "2023-2025 Cameron Armstrong (Nightfox/sacredbanana)",
+          "2023-2026 Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Author, "Cameron Armstrong (Nightfox/sacredbanana)",
           MUIA_Application_Description, STRING_APP_DESCRIPTION,
           MUIA_Application_Version, APP_VER_STRING_AMIGAGPT,
@@ -278,11 +275,9 @@ retryCreateApp:
           "AMIGAGPT:AmigaGPT.guide", MUIA_Application_SingleTask, TRUE,
           MUIA_Application_Commands, arexxList, MUIA_Application_UseRexx, TRUE,
           SubWindow, apiKeyRequesterWindowObject, SubWindow,
-          chatSystemRequesterWindowObject, SubWindow,
           customServerSettingsRequesterWindowObject, SubWindow,
           proxySettingsRequesterWindowObject, SubWindow,
-          voiceInstructionsRequesterWindowObject, SubWindow,
-          elevenLabsSettingsRequesterWindowObject, SubWindow,
+          speechProviderSettingsRequesterWindowObject, SubWindow,
 #ifndef __MORPHOS__
           codeBlocksWindowObject = WindowObject, MUIA_Window_Title,
           STRING_MENU_VIEW_CODEBLOCKS, MUIA_Window_ID, OBJECT_ID_CODEBLOCKS_WINDOW,
@@ -361,10 +356,6 @@ retryCreateApp:
         snprintf((STRPTR)phase, sizeof(phase),
                  "app create fail attempt=%lu", (unsigned long)(appCreateAttempts + 1));
         streamLogLifecycle((CONST_STRPTR)phase);
-        /*
-         * MorphOS restart race: previous task may still be tearing down MUI objects
-         * for a short time. Retry app creation a few times before failing hard.
-         */
         if (++appCreateAttempts < 12) {
             Delay(appCreateAttempts > 4 ? 40 : 25);
             streamLogLifecycle("initVideo app create retry");
@@ -529,6 +520,15 @@ void startGUIRunLoop() {
             chatUserNavNext(chatOutputTextEditor);
             break;
 #endif
+        case APP_ID_CHAT_PROVIDER_SETTINGS:
+            openChatProviderSettingsRequesterWindow();
+            break;
+        case APP_ID_IMAGE_PROVIDER_SETTINGS:
+            openImageProviderSettingsRequesterWindow();
+            break;
+        case APP_ID_SPEECH_PROVIDER_SETTINGS:
+            openSpeechProviderSettingsRequesterWindow();
+            break;
 #endif
         default:
             break;
@@ -736,6 +736,7 @@ struct Conversation *newConversation() {
     conversation->name = NULL;
     conversation->name_list_display = NULL;
     conversation->system = NULL;
+    conversation->lastResponseId = NULL;
 
     return conversation;
 }
@@ -804,75 +805,222 @@ CONST_STRPTR jsonGetApiErrorMessage(struct json_object *error) {
  * @return a pointer to a new UTF8 string containing the message content --
  * If it found role in the JSON instead of content then return an empty string
  **/
+static UTF8 *messageScratch = NULL;
+static ULONG messageScratchCap = 0;
+
+static void ensureMessageScratch(ULONG need) {
+    if (messageScratch != NULL && need <= messageScratchCap)
+        return;
+    ULONG newCap = messageScratchCap ? messageScratchCap : 1024;
+    while (newCap < need) {
+        newCap *= 2;
+        if (newCap < 1024)
+            newCap = 1024;
+    }
+    UTF8 *newBuf = AllocVec(newCap, MEMF_ANY | MEMF_CLEAR);
+    if (newBuf == NULL)
+        return;
+    if (messageScratch != NULL) {
+        strncpy((char *)newBuf, (char *)messageScratch, newCap - 1);
+        FreeVec(messageScratch);
+    }
+    messageScratch = newBuf;
+    messageScratchCap = newCap;
+}
+
+static void resetMessageScratch(void) {
+    ensureMessageScratch(8);
+    if (messageScratch != NULL)
+        messageScratch[0] = '\0';
+}
+
+static void appendNewlineToMessageScratch(void) {
+    if (messageScratch == NULL)
+        return;
+    ULONG curLen = (ULONG)strlen((char *)messageScratch);
+    ensureMessageScratch(curLen + 4);
+    if (messageScratch == NULL)
+        return;
+    if (curLen > 0 && messageScratch[curLen - 1] != '\n') {
+        strncat((char *)messageScratch, "\n",
+                messageScratchCap - strlen((char *)messageScratch) - 1);
+    }
+}
+
+static void appendJsonStringToMessageScratch(struct json_object *obj,
+                                             BOOL retainJSONFormat) {
+    if (obj == NULL)
+        return;
+    if (messageScratch == NULL)
+        resetMessageScratch();
+    if (messageScratch == NULL)
+        return;
+
+    UTF8 *piece = NULL;
+    size_t pieceLen = 0;
+
+    if (retainJSONFormat) {
+        /* When the source is a JSON string, preserve the textual content
+         * without wrapping quotes. Using json_object_get_string() here avoids
+         * leaving a stray trailing quote in ARexx responses while still
+         * keeping any JSON-style escaping already present in the string data.
+         */
+        if (json_object_is_type(obj, json_type_string)) {
+            piece = (UTF8 *)json_object_get_string(obj);
+            if (piece != NULL)
+                pieceLen = strlen((char *)piece);
+        } else {
+            UTF8 *raw = (UTF8 *)json_object_to_json_string_ext(
+                obj, JSON_C_TO_STRING_NOSLASHESCAPE);
+            if (raw != NULL) {
+                piece = raw;
+                pieceLen = strlen((char *)raw);
+            }
+        }
+    } else {
+        piece = (UTF8 *)json_object_get_string(obj);
+        if (piece != NULL)
+            pieceLen = strlen((char *)piece);
+    }
+
+    if (piece == NULL || pieceLen == 0)
+        return;
+
+    ULONG curLen = (ULONG)strlen((UTF8 *)messageScratch);
+    ensureMessageScratch(curLen + (ULONG)pieceLen + 4);
+    if (messageScratch == NULL)
+        return;
+
+    strncat((UTF8 *)messageScratch, piece,
+            messageScratchCap - strlen((char *)messageScratch) - 1);
+}
+
 UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                                 BOOL retainJSONFormat,
-                                APIEndpoint apiEndpoint) {
-    if (json == NULL || !json_object_is_type(json, json_type_object)) {
-        return stream ? (UTF8 *)"" : NULL;
-    }
+                                APIChatEndpoint apiEndpoint) {
+    if (json == NULL)
+        return NULL;
     if (stream) {
-        struct json_object *type;
-        CONST_STRPTR typeStr;
+        /* Streaming can be either:
+         * - OpenAI Responses streaming events (type=response.output_text.delta)
+         * - OpenAI-compatible chat.completions streaming chunks
+         *   (object=chat.completion.chunk, choices[].delta.content)
+         * - Gemini native streamGenerateContent SSE chunks
+         *   (candidates[].content.parts[].text)
+         */
 
-        if (!json_object_object_get_ex(json, "type", &type)) {
+        /* Responses API streaming */
+        struct json_object *type = json_object_object_get(json, "type");
+        if (type != NULL) {
+            UTF8 *typeStr = json_object_get_string(type);
+            if (typeStr != NULL &&
+                strcmp(typeStr, "response.output_text.delta") == 0) {
+                struct json_object *text =
+                    json_object_object_get(json, "delta");
+                return text != NULL ? (UTF8 *)json_object_get_string(text)
+                                    : (UTF8 *)"";
+            }
+            /* Any other typed event (e.g. response.completed) contributes no
+             * text */
             return (UTF8 *)"";
         }
-        typeStr = json_object_get_string(type);
-        if (typeStr == NULL) {
-            return (UTF8 *)"";
-        }
-        if (strcmp(typeStr, "response.output_text.delta") == 0) {
-            struct json_object *delta;
 
-            if (!json_object_object_get_ex(json, "delta", &delta)) {
-                return (UTF8 *)"";
+        /* chat.completions streaming chunk */
+        struct json_object *choices = json_object_object_get(json, "choices");
+        if (choices != NULL && json_object_is_type(choices, json_type_array) &&
+            json_object_array_length(choices) > 0) {
+            struct json_object *choice0 = json_object_array_get_idx(choices, 0);
+            if (choice0 != NULL) {
+                struct json_object *delta =
+                    json_object_object_get(choice0, "delta");
+                if (delta != NULL) {
+                    struct json_object *content =
+                        json_object_object_get(delta, "content");
+                    if (content != NULL) {
+                        UTF8 *s = json_object_get_string(content);
+                        return s != NULL ? s : (UTF8 *)"";
+                    }
+                }
+
+                /* Legacy /v1/completions streaming chunk:
+                 * { "choices": [{"text": "..."}], ... } */
+                struct json_object *textObj =
+                    json_object_object_get(choice0, "text");
+                if (textObj != NULL) {
+                    UTF8 *s = json_object_get_string(textObj);
+                    return s != NULL ? s : (UTF8 *)"";
+                }
             }
-            if (json_object_is_type(delta, json_type_string)) {
-                return (UTF8 *)json_object_get_string(delta);
+        }
+
+        /* Gemini native streamGenerateContent chunk */
+        struct json_object *candidates =
+            json_object_object_get(json, "candidates");
+        if (candidates != NULL &&
+            json_object_is_type(candidates, json_type_array) &&
+            json_object_array_length(candidates) > 0) {
+            resetMessageScratch();
+            int candLen = json_object_array_length(candidates);
+            for (int c = 0; c < candLen; c++) {
+                struct json_object *cand =
+                    json_object_array_get_idx(candidates, c);
+                if (cand == NULL)
+                    continue;
+                struct json_object *content =
+                    json_object_object_get(cand, "content");
+                if (content == NULL ||
+                    !json_object_is_type(content, json_type_object))
+                    continue;
+                struct json_object *parts =
+                    json_object_object_get(content, "parts");
+                if (parts == NULL ||
+                    !json_object_is_type(parts, json_type_array))
+                    continue;
+                int pLen = json_object_array_length(parts);
+                for (int p = 0; p < pLen; p++) {
+                    struct json_object *part =
+                        json_object_array_get_idx(parts, p);
+                    if (part == NULL ||
+                        !json_object_is_type(part, json_type_object))
+                        continue;
+                    struct json_object *t =
+                        json_object_object_get(part, "text");
+                    if (t != NULL) {
+                        appendJsonStringToMessageScratch(t, retainJSONFormat);
+                    }
+                }
+                if (c < candLen - 1)
+                    appendNewlineToMessageScratch();
             }
-            if (json_object_is_type(delta, json_type_object) &&
-                json_object_object_get_ex(delta, "text", &delta)) {
-                return (UTF8 *)json_object_get_string(delta);
+            if (messageScratch != NULL && strlen((char *)messageScratch) > 0) {
+                return messageScratch;
             }
             return (UTF8 *)"";
         }
+
         return (UTF8 *)"";
     } else {
-        struct json_object *text = NULL;
-
-        if (apiEndpoint == API_ENDPOINT_RESPONSES) {
-            struct json_object *outputArray;
+        resetMessageScratch();
+        if (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES) {
+            struct json_object *outputArray =
+                json_object_object_get(json, "output");
             struct json_object *output = NULL;
 
-            if (!json_object_object_get_ex(json, "output", &outputArray) ||
+            if (outputArray == NULL ||
                 !json_object_is_type(outputArray, json_type_array)) {
                 return (UTF8 *)"";
             }
-
-            {
-                int arrayLength = json_object_array_length(outputArray);
-                int i;
-
-                for (i = 0; i < arrayLength; i++) {
-                    struct json_object *currentOutput =
-                        json_object_array_get_idx(outputArray, i);
-                    struct json_object *typeObj;
-
-                    if (currentOutput == NULL ||
-                        !json_object_is_type(currentOutput, json_type_object)) {
-                        continue;
-                    }
-                    if (!json_object_object_get_ex(currentOutput, "type",
-                                                 &typeObj)) {
-                        continue;
-                    }
-                    {
-                        const char *typeStr = json_object_get_string(typeObj);
-
-                        if (typeStr != NULL && strcmp(typeStr, "message") == 0) {
-                            output = currentOutput;
-                            break;
-                        }
+            int arrayLength = json_object_array_length(outputArray);
+            for (int i = 0; i < arrayLength; i++) {
+                struct json_object *currentOutput =
+                    json_object_array_get_idx(outputArray, i);
+                struct json_object *typeObj =
+                    json_object_object_get(currentOutput, "type");
+                if (typeObj != NULL) {
+                    UTF8 *typeStr = json_object_get_string(typeObj);
+                    if (strcmp(typeStr, "message") == 0) {
+                        output = currentOutput;
+                        break;
                     }
                 }
             }
@@ -881,57 +1029,173 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                 return (UTF8 *)"";
             }
 
-            {
-                struct json_object *contentArray;
-                struct json_object *content;
-
-                if (!json_object_object_get_ex(output, "content",
-                                             &contentArray) ||
-                    !json_object_is_type(contentArray, json_type_array)) {
-                    return (UTF8 *)"";
+            struct json_object *contentArray =
+                json_object_object_get(output, "content");
+            if (contentArray != NULL &&
+                json_object_is_type(contentArray, json_type_array)) {
+                /* Concatenate all text blocks in the message content */
+                int cLen = json_object_array_length(contentArray);
+                for (int i = 0; i < cLen; i++) {
+                    struct json_object *content =
+                        json_object_array_get_idx(contentArray, i);
+                    if (content == NULL ||
+                        !json_object_is_type(content, json_type_object))
+                        continue;
+                    struct json_object *t =
+                        json_object_object_get(content, "text");
+                    if (t != NULL) {
+                        appendJsonStringToMessageScratch(t, retainJSONFormat);
+                    }
                 }
-                content = json_object_array_get_idx(contentArray, 0);
-                if (content == NULL ||
-                    !json_object_is_type(content, json_type_object) ||
-                    !json_object_object_get_ex(content, "text", &text)) {
-                    return (UTF8 *)"";
+                if (messageScratch != NULL &&
+                    strlen((char *)messageScratch) > 0) {
+                    return messageScratch;
                 }
             }
+            return (UTF8 *)"";
+        } else if (apiEndpoint == API_CHAT_ENDPOINT_MESSAGES) {
+            /* Anthropic/Claude Messages API response format:
+             * { "content": [{"type": "text", "text": "..."}], ... } */
+            struct json_object *contentArray =
+                json_object_object_get(json, "content");
+            if (contentArray == NULL ||
+                !json_object_is_type(contentArray, json_type_array)) {
+                return (UTF8 *)"";
+            }
+
+            /* Concatenate all text blocks in the content array */
+            int arrayLength = json_object_array_length(contentArray);
+            for (int i = 0; i < arrayLength; i++) {
+                struct json_object *block =
+                    json_object_array_get_idx(contentArray, i);
+                struct json_object *typeObj =
+                    json_object_object_get(block, "type");
+                if (typeObj != NULL) {
+                    UTF8 *typeStr = json_object_get_string(typeObj);
+                    if (strcmp(typeStr, "text") == 0) {
+                        struct json_object *t =
+                            json_object_object_get(block, "text");
+                        if (t != NULL) {
+                            appendJsonStringToMessageScratch(t,
+                                                             retainJSONFormat);
+                        }
+                    }
+                }
+            }
+
+            if (messageScratch != NULL && strlen((char *)messageScratch) > 0) {
+                return messageScratch;
+            }
+            return (UTF8 *)"";
         } else {
-            struct json_object *choices;
-            struct json_object *choice;
-            struct json_object *message;
-
-            if (!json_object_object_get_ex(json, "choices", &choices) ||
-                !json_object_is_type(choices, json_type_array)) {
-                return NULL;
+            /* Gemini native generateContent format:
+             * { "candidates": [{ "content": { "parts": [{"text":"..."}] } }] }
+             */
+            struct json_object *candidates =
+                json_object_object_get(json, "candidates");
+            if (candidates != NULL &&
+                json_object_is_type(candidates, json_type_array) &&
+                json_object_array_length(candidates) > 0) {
+                int candLen = json_object_array_length(candidates);
+                for (int c = 0; c < candLen; c++) {
+                    struct json_object *cand =
+                        json_object_array_get_idx(candidates, c);
+                    if (cand == NULL)
+                        continue;
+                    struct json_object *content =
+                        json_object_object_get(cand, "content");
+                    if (content == NULL ||
+                        !json_object_is_type(content, json_type_object))
+                        continue;
+                    struct json_object *parts =
+                        json_object_object_get(content, "parts");
+                    if (parts == NULL ||
+                        !json_object_is_type(parts, json_type_array))
+                        continue;
+                    int pLen = json_object_array_length(parts);
+                    for (int p = 0; p < pLen; p++) {
+                        struct json_object *part =
+                            json_object_array_get_idx(parts, p);
+                        if (part == NULL ||
+                            !json_object_is_type(part, json_type_object))
+                            continue;
+                        struct json_object *t =
+                            json_object_object_get(part, "text");
+                        if (t != NULL) {
+                            appendJsonStringToMessageScratch(t,
+                                                             retainJSONFormat);
+                        }
+                    }
+                    if (c < candLen - 1)
+                        appendNewlineToMessageScratch();
+                }
+                if (messageScratch != NULL &&
+                    strlen((char *)messageScratch) > 0) {
+                    return messageScratch;
+                }
             }
-            choice = json_object_array_get_idx(choices, 0);
-            if (choice == NULL || !json_object_is_type(choice, json_type_object) ||
-                !json_object_object_get_ex(choice, "message", &message) ||
-                !json_object_is_type(message, json_type_object) ||
-                !json_object_object_get_ex(message, "content", &text)) {
-                return NULL;
-            }
-        }
 
-        if (text == NULL) {
-            return NULL;
-        }
-        if (retainJSONFormat) {
-            UTF8 *textStr = json_object_to_json_string_ext(
-                text, JSON_C_TO_STRING_NOSLASHESCAPE);
-
-            if (textStr == NULL) {
-                return NULL;
+            /* OpenAI chat/completions format:
+             * { "choices": [{"message": {"content": "..."}}] } */
+            struct json_object *contentArray =
+                json_object_object_get(json, "choices");
+            if (contentArray == NULL ||
+                !json_object_is_type(contentArray, json_type_array)) {
+                return (UTF8 *)"";
             }
-            textStr++;
-            textStr[strlen(textStr) - 1] = '\0';
-            return textStr;
+            int cLen = json_object_array_length(contentArray);
+            for (int i = 0; i < cLen; i++) {
+                struct json_object *choice =
+                    json_object_array_get_idx(contentArray, i);
+                if (choice == NULL)
+                    continue;
+                struct json_object *message =
+                    json_object_object_get(choice, "message");
+                if (message == NULL)
+                    continue;
+                struct json_object *content =
+                    json_object_object_get(message, "content");
+                if (content == NULL)
+                    continue;
+                if (json_object_is_type(content, json_type_string)) {
+                    appendJsonStringToMessageScratch(content, retainJSONFormat);
+                    if (i < cLen - 1) {
+                        appendNewlineToMessageScratch();
+                    }
+                } else if (json_object_is_type(content, json_type_array)) {
+                    /* Some providers return content as an array of parts */
+                    int pLen = json_object_array_length(content);
+                    for (int p = 0; p < pLen; p++) {
+                        struct json_object *part =
+                            json_object_array_get_idx(content, p);
+                        if (part == NULL ||
+                            !json_object_is_type(part, json_type_object))
+                            continue;
+                        struct json_object *typeObj =
+                            json_object_object_get(part, "type");
+                        if (typeObj != NULL) {
+                            UTF8 *typeStr = json_object_get_string(typeObj);
+                            if (typeStr != NULL &&
+                                strcmp((char *)typeStr, "text") == 0) {
+                                struct json_object *t =
+                                    json_object_object_get(part, "text");
+                                appendJsonStringToMessageScratch(
+                                    t, retainJSONFormat);
+                            }
+                        }
+                    }
+                    if (i < cLen - 1)
+                        appendNewlineToMessageScratch();
+                }
+            }
+            if (messageScratch != NULL && strlen((char *)messageScratch) > 0) {
+                return messageScratch;
+            }
+            return (UTF8 *)"";
         }
-        return (UTF8 *)json_object_get_string(text);
     }
 }
+
 
 static struct MinList *newEmptyMinList(void) {
     struct MinList *list = AllocVec(sizeof(struct MinList), MEMF_CLEAR);
@@ -1045,12 +1309,15 @@ void freeConversation(struct Conversation *conversation) {
         freeConversationNode(conversationNode);
         FreeVec(conversationNode);
     }
+    FreeVec(conversation->messages);
     if (conversation->name != NULL)
         FreeVec(conversation->name);
     if (conversation->name_list_display != NULL)
         CodesetsFreeA(conversation->name_list_display, NULL);
     if (conversation->system != NULL)
         CodesetsFreeA(conversation->system, NULL);
+    if (conversation->lastResponseId != NULL)
+        FreeVec(conversation->lastResponseId);
     FreeVec(conversation);
 }
 
@@ -1174,6 +1441,38 @@ void openCodeBlocksViewerWindow(void) {
 }
 #endif
 
+STRPTR utf8ToLatin1(UTF8 *src) {
+    if (src == NULL)
+        return NULL;
+    ULONG srcLen = strlen(src);
+    STRPTR dest = AllocVec(srcLen + 1, MEMF_ANY | MEMF_CLEAR);
+    if (dest == NULL)
+        return NULL;
+    ULONG si = 0, di = 0;
+    while (si < srcLen) {
+        UBYTE c = (UBYTE)src[si];
+        if (c < 0x80) {
+            dest[di++] = c;
+            si++;
+        } else if ((c & 0xE0) == 0xC0 && si + 1 < srcLen &&
+                   ((UBYTE)src[si + 1] & 0xC0) == 0x80) {
+            UWORD codepoint = ((c & 0x1F) << 6) | (src[si + 1] & 0x3F);
+            dest[di++] = (codepoint <= 0xFF) ? (UBYTE)codepoint : '?';
+            si += 2;
+        } else if ((c & 0xF0) == 0xE0 && si + 2 < srcLen) {
+            dest[di++] = '?';
+            si += 3;
+        } else if ((c & 0xF8) == 0xF0 && si + 3 < srcLen) {
+            dest[di++] = '?';
+            si += 4;
+        } else {
+            dest[di++] = c;
+            si++;
+        }
+    }
+    dest[di] = '\0';
+    return dest;
+}
 /**
  * Shutdown the GUI
  **/

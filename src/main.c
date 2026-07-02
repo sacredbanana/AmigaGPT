@@ -10,9 +10,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <workbench/startup.h>
+#include "AmigaGPTConfig.h"
 #include "gui.h"
 #include "MainWindow.h"
-#include "config.h"
 #include "streamlog.h"
 #include "version.h"
 #if defined(__MORPHOS__) && !defined(DAEMON)
@@ -61,9 +61,6 @@ LONG main(int argc, char **argv) {
     struct CommandLineInterface *cli =
         (struct CommandLineInterface *)BADDR(currentTask->pr_CLI);
 
-    /* If we started from Workbench then we must retrieve the startup message
-     before doing anything else. The startup message also contains a lock on
-     the program directory. */
     if (cli == NULL) {
         wbStartupMessage = (struct WBStartup *)GetMsg(&currentTask->pr_MsgPort);
         if (wbStartupMessage != NULL) {
@@ -108,26 +105,19 @@ LONG main(int argc, char **argv) {
     printf("AmigaGPTD " APP_VERSION " starting...\n");
 #endif
 
-    if (readConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_READ);
-        cleanExit();
-        return RETURN_ERROR;
-    }
-
     streamLogBootPhase("initVideo call");
     streamLogStartupPhase("initVideo call");
     if (initVideo() == RETURN_ERROR) {
         streamLogBootPhase("initVideo fail");
         streamLogStartupPhase("initVideo fail");
-        /* initVideo() already reported a specific GUI/library error dialog. */
         cleanExit();
         return RETURN_ERROR;
     }
     streamLogBootPhase("initVideo done");
     streamLogStartupPhase("initVideo ok");
 
-    if (initSpeech(config.speechSystem) == RETURN_ERROR) {
-        switch (config.speechSystem) {
+    if (initSpeech(configGetSpeechSystem()) == RETURN_ERROR) {
+        switch (configGetSpeechSystem()) {
         case SPEECH_SYSTEM_34:
             displayError(STRING_ERROR_SPEECH_INIT_WORKBENCH_34);
             break;
@@ -140,7 +130,7 @@ LONG main(int argc, char **argv) {
             displayError(STRING_ERROR_SPEECH_UNKNOWN_SYSTEM);
             break;
         }
-        config.speechEnabled = FALSE;
+        configSetSpeechEnabled(FALSE);
         closeSpeech();
     }
 

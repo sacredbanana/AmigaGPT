@@ -2,8 +2,8 @@
 #include <libraries/mui.h>
 #include <SDI_hook.h>
 #include <string.h>
+#include "AmigaGPTConfig.h"
 #include "ProxySettingsRequesterWindow.h"
-#include "config.h"
 #include "gui.h"
 
 Object *proxyHostString;
@@ -17,8 +17,7 @@ Object *proxySettingsRequesterWindowObject;
 HOOKPROTONHNONP(ProxySettingsRequesterOkButtonClickedFunc, void) {
     STRPTR proxyHost;
     get(proxyHostString, MUIA_String_Contents, &proxyHost);
-    configAssignString(&config.proxyHost, proxyHost);
-    set(proxyHostString, MUIA_String_Contents, config.proxyHost);
+    configSetProxyHost(proxyHost);
 
     LONG port;
     get(proxyPortString, MUIA_String_Integer, &port);
@@ -26,29 +25,24 @@ HOOKPROTONHNONP(ProxySettingsRequesterOkButtonClickedFunc, void) {
         displayError(STRING_ERROR_INVALID_PORT);
         return;
     }
-    config.proxyPort = port;
+    configSetProxyPort(port);
 
     LONG usesSSL;
     get(proxyUsesSSLCycle, MUIA_Cycle_Active, &usesSSL);
-    config.proxyUsesSSL = usesSSL == 1;
+    configSetProxyUsesSSL(usesSSL == 1);
 
     LONG requiresAuth;
     get(proxyRequiresAuthCycle, MUIA_Cycle_Active, &requiresAuth);
-    config.proxyRequiresAuth = requiresAuth == 1;
+    configSetProxyRequiresAuth(requiresAuth == 1);
 
     STRPTR proxyUsername;
     get(proxyUsernameString, MUIA_String_Contents, &proxyUsername);
-    configAssignString(&config.proxyUsername, proxyUsername);
-    set(proxyUsernameString, MUIA_String_Contents, config.proxyUsername);
+    configSetProxyUsername(proxyUsername);
 
     STRPTR proxyPassword;
     get(proxyPasswordString, MUIA_String_Contents, &proxyPassword);
-    configAssignString(&config.proxyPassword, proxyPassword);
-    set(proxyPasswordString, MUIA_String_Contents, config.proxyPassword);
+    configSetProxyPassword(proxyPassword);
 
-    if (writeConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
-    }
     set(proxySettingsRequesterWindowObject, MUIA_Window_Open, FALSE);
 }
 MakeHook(ProxySettingsRequesterOkButtonClickedHook,
@@ -68,6 +62,7 @@ LONG createProxySettingsRequesterWindow() {
     authOptions[1] = STRING_AUTH_USER_PASS;
 
     Object *proxySettingsRequesterOkButton, *proxySettingsRequesterCancelButton;
+    // clang-format off
     if ((proxySettingsRequesterWindowObject = WindowObject,
 			MUIA_Window_Title, STRING_PROXY_SETTINGS,
 			MUIA_Window_Width, 400,
@@ -80,7 +75,7 @@ LONG createProxySettingsRequesterWindow() {
                     Child, proxyHostString = StringObject,
                         MUIA_Frame, MUIV_Frame_String,
                         MUIA_CycleChain, TRUE,
-                        MUIA_String_Contents, config.proxyHost,
+                        MUIA_String_Contents, configGetProxyHost() != NULL ? configGetProxyHost() : "",
                     End,
                 End,
                 Child, VGroup,
@@ -91,7 +86,7 @@ LONG createProxySettingsRequesterWindow() {
                         MUIA_CycleChain, TRUE,
                         MUIA_String_Accept, "0123456789",
                         MUIA_String_MaxLen, 5,
-                        MUIA_String_Integer, (LONG)config.proxyPort,
+                        MUIA_String_Integer, (LONG)configGetProxyPort(),
                     End,
                 End,
                 Child, VGroup,
@@ -100,7 +95,7 @@ LONG createProxySettingsRequesterWindow() {
                     Child, proxyUsesSSLCycle = CycleObject,
                         MUIA_CycleChain, TRUE,
                         MUIA_Cycle_Entries, sslOptions,
-                        MUIA_Cycle_Active, config.proxyUsesSSL ? 1 : 0,
+                        MUIA_Cycle_Active, configGetProxyUsesSSL() ? 1 : 0,
                     End,
                 End,
                 Child, VGroup,
@@ -109,7 +104,7 @@ LONG createProxySettingsRequesterWindow() {
                     Child, proxyRequiresAuthCycle = CycleObject,
                         MUIA_CycleChain, TRUE,
                         MUIA_Cycle_Entries, authOptions,
-                        MUIA_Cycle_Active, config.proxyRequiresAuth ? 1 : 0,
+                        MUIA_Cycle_Active, configGetProxyRequiresAuth() ? 1 : 0,
                     End,
                     Child, HGroup,
                         Child, VGroup,
@@ -118,8 +113,8 @@ LONG createProxySettingsRequesterWindow() {
                             Child, proxyUsernameString = StringObject,
                                 MUIA_Frame, MUIV_Frame_String,
                                 MUIA_CycleChain, TRUE,
-                                MUIA_String_Contents, config.proxyUsername,
-                                MUIA_Disabled, !config.proxyRequiresAuth,
+                                MUIA_String_Contents, configGetProxyUsername() != NULL ? configGetProxyUsername() : "",
+                                MUIA_Disabled, !configGetProxyRequiresAuth(),
                             End,
                         End,
                         Child, VGroup,
@@ -129,8 +124,8 @@ LONG createProxySettingsRequesterWindow() {
                                 MUIA_Frame, MUIV_Frame_String,
                                 MUIA_CycleChain, TRUE,
                                 MUIA_String_Secret, TRUE,
-                                MUIA_String_Contents, config.proxyPassword,
-                                MUIA_Disabled, !config.proxyRequiresAuth,
+                                MUIA_String_Contents, configGetProxyPassword() != NULL ? configGetProxyPassword() : "",
+                                MUIA_Disabled, !configGetProxyRequiresAuth(),
                             End,
                         End,
                     End,
@@ -149,6 +144,7 @@ LONG createProxySettingsRequesterWindow() {
 				End,
 			End,
 		End) == NULL) {
+    // clang-format on
         displayError(STRING_ERROR_PROXY_SETTINGS);
         return RETURN_ERROR;
     }

@@ -10,6 +10,7 @@ C_c.sd
 src/test/build
 src/test/openai-key.h
 src/test/codeblocks_memory_host_test
+src/test/gemini-key.h
 
 # Accidental compile in src/ (normal objects live under build/)
 src/*.o
@@ -24,3 +25,9 @@ github_conf
 
 # Cursor hook state (morphos-after-make)
 .cursor/morphos-package-pending
+
+# Cursor project-local caches
+.cursor/cache/
+
+# Claude skill caches
+.claude/skills/amiga-sdk-docs/cache/

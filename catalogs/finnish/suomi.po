@@ -268,8 +268,8 @@ msgstr "Kuvanluontitila"
 
 #: src/MainWindow.c:199 src/MainWindow.c:435
 msgctxt "STRING_ERROR_NO_API_KEY (27//)"
-msgid "Please enter your OpenAI API key in the Open AI settings in the menu."
-msgstr "Kirjoita OpenAI API -avain valikon Open AI -asetuksiin."
+msgid "Please enter your API key"
+msgstr "Anna API-avaimesi"
 
 #: src/MainWindow.c:283
 msgctxt "STRING_ERROR_CONNECTION (28//)"
@@ -526,7 +526,7 @@ msgstr "Virhe kopioitaessa tiedostoa"
 #: src/ProxySettingsRequesterWindow.c:30
 msgctxt "STRING_ERROR_INVALID_PORT (68//)"
 msgid "Invalid port number. Please enter a number between 0 and 65535."
-msgstr "Virheellinen portin numero. Anna numero väliltä 0–65535."
+msgstr "Virheellinen portin numero. Anna numero väliltä 0-65535."
 
 #: src/ProxySettingsRequesterWindow.c:72
 msgctxt "STRING_ENCRYPTION_NONE (69//)"
@@ -690,7 +690,7 @@ msgstr "Muokattua MUI-luokkaa ei löytynyt"
 #: src/menu.c:26
 msgctxt "STRING_ABOUT (99//)"
 msgid "About"
-msgstr "Noin"
+msgstr "Tietoja"
 
 #: src/menu.c:59
 msgctxt "STRING_ERROR_SPEECH_INIT_WORKBENCH_37 (100//)"
@@ -864,13 +864,13 @@ msgstr "slt (hidas)"
 
 #: src/menu.c:181 src/menu.c:173
 msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
-msgid "OpenAI Voice"
-msgstr "OpenAI Voice"
+msgid "Voice"
+msgstr "Ääni"
 
 #: src/menu.c:194 src/menu.c:186
 msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
-msgid "OpenAI Speech Model"
-msgstr "OpenAI-puhemalli"
+msgid "Model"
+msgstr "Mall"
 
 #: src/menu.c:199 src/menu.c:192
 msgctxt "STRING_MENU_OPENAI (141//)"
@@ -1293,19 +1293,19 @@ msgid "Web Search"
 msgstr "Web-haku"
 
 #: src/menu.c:146
-msgctxt "STRING_MENU_CUSTOM_SERVER (239//)"
-msgid "Custom Server"
-msgstr "Oma Palvelin"
+msgctxt "STRING_MENU_CUSTOM_PROVIDER (239//)"
+msgid "Custom Provider"
+msgstr "Mukautettu palveluntarjoaja"
 
 #: src/menu.c:148
-msgctxt "STRING_MENU_CUSTOM_SERVER_SETTINGS (241//)"
-msgid "Custom Server Settings"
-msgstr "Oma Palvelin Asetukset"
+msgctxt "STRING_MENU_CUSTOM_PROVIDER_SETTINGS (241//)"
+msgid "Custom Provider Settings"
+msgstr "Mukautetun palveluntarjoajan asetukset"
 
 #: src/CustomServerSettingsRequesterWindow.c:11
-msgctxt "STRING_ERROR_CUSTOM_SERVER_SETTINGS (242//)"
-msgid "Failed to create custom server settings window"
-msgstr "Oma Palvelin Asetukset-ikkunan luonti epäonnistui"
+msgctxt "STRING_ERROR_CUSTOM_PROVIDER_SETTINGS (242//)"
+msgid "Failed to create provider settings window"
+msgstr "Palveluntarjoajan asetusten ikkunan luonti epäonnistui"
 
 #: src/CustomServerSettingsRequesterWindow.c:111
 msgctxt "STRING_MENU_OPENAI_API_ENDPOINT (243//)"
@@ -1336,11 +1336,6 @@ msgstr "ElevenLabs Asetukset"
 msgctxt "STRING_NONE_SELECTED (248//)"
 msgid "None Selected"
 msgstr "Ei valittu"
-
-#: src/ElevenLabsSettingsRequesterWindow.c:111
-msgctxt "STRING_ERROR_ELEVENLABS_API_KEY_REQUIRED (249//)"
-msgid "Please enter your ElevenLabs API key first"
-msgstr "Syötä ensin ElevenLabs API-avain"
 
 #: src/ElevenLabsSettingsRequesterWindow.c:112
 msgctxt "STRING_FETCHING_ELEVENLABS_MODELS (250//)"
@@ -1392,181 +1387,711 @@ msgctxt "STRING_ERROR_ELEVENLABS_SETTINGS_WINDOW_CREATE (259//)"
 msgid "Failed to create ElevenLabs settings window"
 msgstr "ElevenLabs asetuksien ikkunan luonti epäonnistui"
 
-#: src/codefence.c:65
-msgctxt "STRING_CHAT_CODEBLOCK_PLACEHOLDER (260//)"
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE (260//)"
+msgid "Template"
+msgstr "Malli"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_NONE (261//)"
+msgid "Select a template..."
+msgstr "Valitse malli..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_GOOGLE_GEMINI (262//)"
+msgid "Google Gemini"
+msgstr "Google Gemini"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_LM_STUDIO (263//)"
+msgid "LM Studio"
+msgstr "LM Studio"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_FETCH_MODELS (264//)"
+msgid "Fetch Models"
+msgstr "Hae mallit"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_FETCHING_MODELS (265//)"
+msgid "Fetching models..."
+msgstr "Haetaan malleja..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_FETCHING_MODELS (266//)"
+msgid "Failed to fetch models from server"
+msgstr "Mallien haku palvelimelta epäonnistui"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_NO_HOST (267//)"
+msgid "Please enter a host address first"
+msgstr "Anna ensin isäntäosoite"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_AUTHORIZATION_TYPE (268//)"
+msgid "Authorization"
+msgstr "Valtuutus"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_AUTHORIZATION_NONE (269//)"
+msgid "None"
+msgstr "None"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_AUTHORIZATION_BEARER (270//)"
+msgid "Bearer Token"
+msgstr "Bearer Token"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_AUTHORIZATION_X_API_KEY (271//)"
+msgid "x-api-key"
+msgstr "x-api-key"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_ANTHROPIC_CLAUDE (272//)"
+msgid "Anthropic Claude"
+msgstr "Anthropic Claude"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_CUSTOM_HEADERS (273//)"
+msgid "Custom Headers"
+msgstr "Mukautetut otsakkeet"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_XAI_GROK (274//)"
+msgid "xAI Grok"
+msgstr "xAI Grok"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_PROFILES (275//)"
+msgid "Profiles"
+msgstr "Profiilit"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_SAVE_PROFILE (276//)"
+msgid "Save Profile"
+msgstr "Tallenna profiili"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_DELETE_PROFILE (277//)"
+msgid "Delete"
+msgstr "Poista"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_PROFILE_NAME (278//)"
+msgid "Profile Name"
+msgstr "Profiilin nimi"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_NEW_PROFILE (279//)"
+msgid "(New Profile)"
+msgstr "(Uusi profiili)"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
+msgid "Please enter a profile name"
+msgstr "Anna profiilin nimi"
+
+#: src/menu.c
+msgctxt "STRING_MENU_OPENAI_SHELL_TOOL (281//)"
+msgid "Shell Tool"
+msgstr "Shell-työkalu"
+
+#: src/openai.c
+msgctxt "STRING_EXECUTING_COMMAND (282//)"
+msgid "Executing command..."
+msgstr "Suoritetaan komentoa..."
+
+#: src/openai.c
+msgctxt "STRING_SHELL_TOOL_OUTPUT (283//)"
+msgid "Shell Output"
+msgstr "Shell-tuloste"
+
+#: src/openai.c
+msgctxt "STRING_SHELL_TOOL_ERROR (284//)"
+msgid "Shell Error"
+msgstr "Shell-virhe"
+
+#: src/menu.c
+msgctxt "STRING_MENU_CHAT (285//)"
+msgid "Chat"
+msgstr "Chat"
+
+#: src/menu.c
+msgctxt "STRING_MENU_IMAGE (286//)"
+msgid "Image"
+msgstr "Kuva"
+
+#: src/menu.c
+msgctxt "STRING_CHAT_PROVIDER_SETTINGS (287//)"
+msgid "Chat Provider Settings"
+msgstr "Chat-palveluntarjoajan asetukset"
+
+#: src/menu.c
+msgctxt "STRING_IMAGE_PROVIDER_SETTINGS (288//)"
+msgid "Image Provider Settings"
+msgstr "Kuvapalveluntarjoajan asetukset"
+
+#: src/openai.c
+msgctxt "STRING_PROVIDER_OPENAI (289//)"
+msgid "OpenAI"
+msgstr "OpenAI"
+
+#: src/openai.c
+msgctxt "STRING_PROVIDER_GEMINI (290//)"
+msgid "Google Gemini"
+msgstr "Google Gemini"
+
+#: src/openai.c
+msgctxt "STRING_PROVIDER_GROK (291//)"
+msgid "xAI Grok"
+msgstr "xAI Grok"
+
+#: src/openai.c
+msgctxt "STRING_PROVIDER_ANTHROPIC (292//)"
+msgid "Anthropic Claude"
+msgstr "Anthropic Claude"
+
+#: src/openai.c
+msgctxt "STRING_PROVIDER_CUSTOM (293//)"
+msgid "Custom Provider"
+msgstr "Mukautettu palveluntarjoaja"
+
+#: src/menu.c
+msgctxt "STRING_WEB_SEARCH (294//)"
+msgid "Web Search"
+msgstr "Web-haku"
+
+#: src/menu.c
+msgctxt "STRING_SHELL_TOOL (295//)"
+msgid "Shell Tool"
+msgstr "Shell-työkalu"
+
+#: src/menu.c
+msgctxt "STRING_CHAT_MODEL (296//)"
+msgid "Chat Model"
+msgstr "Chat-malli"
+
+#: src/menu.c
+msgctxt "STRING_IMAGE_MODEL (297//)"
+msgid "Image Model"
+msgstr "Kuvan malli"
+
+#: src/AmigaGPTConfig.c
+msgctxt "STRING_CONFIG_MIGRATED (298//)"
+msgid ""
+"Configuration has been migrated to the new format.\n"
+"Your old config has been backed up to config.bak"
+msgstr ""
+"Asetukset on siirretty uuteen muotoon.\n"
+"Vanha asetustiedostosi on varmuuskopioitu tiedostoon config.bak"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_PROFILE_NAME_RESERVED (299//)"
+msgid "A profile with this name already exists."
+msgstr "Tällä nimellä on jo profiili."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_SAVE_CHANGES_PROMPT (300//)"
+msgid "You have unsaved changes. Do you want to save them before switching?"
+msgstr ""
+"Sinulla on tallentamattomia muutoksia. Haluatko tallentaa ne ennen "
+"vaihtamista?"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_STREAMING (301//)"
+msgid "Streaming"
+msgstr "Suoratoisto"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_ON (302//)"
+msgid "On"
+msgstr "Päällä"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_OFF (303//)"
+msgid "Off"
+msgstr "Pois"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_BODY (304//)"
+msgid ""
+"The AI wants to execute the following shell command:\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this command to run?"
+msgstr ""
+"Tekoäly haluaa suorittaa seuraavan shell-komennon:\n"
+"\n"
+"%s\n"
+"\n"
+"Sallitaanko tämän komennon suorittaminen?"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_TITLE (305//)"
+msgid "Shell Command Confirmation"
+msgstr "Shell-komennon vahvistus"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_CONFIRMATION_BUTTONS (306//)"
+msgid "*_Allow|_Deny"
+msgstr "*_Salli|_Estä"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_DENIED_BANNER (307//)"
+msgid ""
+"\n"
+"\n"
+"--- Shell command denied by user ---\n"
+"\n"
+msgstr ""
+"\n"
+"\n"
+"--- Shell-komento estetty käyttäjän toimesta ---\n"
+"\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT (308//)"
+msgid ""
+"\n"
+"\n"
+"--- Executing: %s ---\n"
+msgstr ""
+"\n"
+"\n"
+"--- Suoritetaan: %s ---\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_OUTPUT_DISPLAY_FORMAT (309//)"
+msgid ""
+"Exit code: %ld\n"
+"%s\n"
+"--- End ---\n"
+"\n"
+msgstr ""
+"Poistumiskoodi: %ld\n"
+"%s\n"
+"--- Loppu ---\n"
+"\n"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_NO_OUTPUT (310//)"
+msgid "(No output)"
+msgstr "(Ei tulostetta)"
+
+#: src/MainWindow.c
+msgctxt "STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT (311//)"
+msgid ""
+"Exit code: %ld\n"
+"Output:\n"
+"%s"
+msgstr ""
+"Poistumiskoodi: %ld\n"
+"Tuloste:\n"
+"%s"
+
+#: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
+msgid "Speech Provider Settings"
+msgstr "Puhepalvelun asetukset"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_WARNING_MISSING_FORMAT (313//)"
+msgid "Warning: required component is missing: %s"
+msgstr "Varoitus: tarvittava komponentti puuttuu: %s"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_SPEECH_PROVIDER_SETTINGS_WINDOW_CREATE (314//)"
+msgid "Failed to create Speech Provider Settings window"
+msgstr "Puhepalvelun asetukset -ikkunan luonti epäonnistui"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_MENU_TEMPLATE_OPENAI (315//)"
+msgid "OpenAI"
+msgstr "OpenAI"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_NEW (316//)"
+msgid "New"
+msgstr "Uusi"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_DUPLICATE (317//)"
+msgid "Duplicate"
+msgstr "Kopioi"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST (318//)"
+msgid "Test"
+msgstr "Testi"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_IMAGE_TEST_TITLE (319//)"
+msgid "Image Test"
+msgstr "Kuvatesti"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_DEFAULT_NEW_PROFILE_NAME (320//)"
+msgid "New Profile"
+msgstr "Uusi profiili"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_PROFILE_COPY_SUFFIX (321//)"
+msgid " copy"
+msgstr " kopio"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_PASS (322//)"
+msgid "PASS"
+msgstr "ONNISTUI"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_FAIL (323//)"
+msgid "FAIL"
+msgstr "EPÄONNISTUI"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_RESULT_TITLE (324//)"
+msgid "Test Result"
+msgstr "Testin tulos"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_CHAT_TEST_RESULT_TITLE (325//)"
+msgid "Chat Test Result"
+msgstr "Keskustelutestin tulos"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_IMAGE_TEST_RESULT_TITLE (326//)"
+msgid "Image Test Result"
+msgstr "Kuvatestin tulos"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_NO_PROFILE_SELECTED (327//)"
+msgid "No profile selected."
+msgstr "Profiilia ei ole valittu."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_RECEIVED_JSON_RESPONSE (328//)"
+msgid "Received JSON response."
+msgstr "JSON-vastaus vastaanotettu."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_NO_JSON_RESPONSE_RECEIVED (329//)"
+msgid "No JSON response received."
+msgstr "JSON-vastausta ei vastaanotettu."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_NO_IMAGE_DATA_RECEIVED_SHOWING_JSON (330//)"
+msgid "No image data received (showing JSON)."
+msgstr "Kuvadataa ei vastaanotettu (näytetään JSON)."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_IMAGE_DATA_DECODE_FAILED_SHOWING_JSON (331//)"
+msgid "Image data decode failed (showing JSON)."
+msgstr "Kuvadatan dekoodaus epäonnistui (näytetään JSON)."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_IMAGE_RECEIVED_COULD_NOT_SAVE_SHOWING_JSON (332//)"
+msgid "Image received but could not be saved (showing JSON)."
+msgstr "Kuva vastaanotettiin, mutta sitä ei voitu tallentaa (näytetään JSON)."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_TEST_DETAIL_ERROR_RESPONSE_RECEIVED (333//)"
+msgid "Error response received."
+msgstr "Virhevastaus vastaanotettu."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_IMAGE_SIZE (334//)"
+msgid "Image Size"
+msgstr "Kuvan koko"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_PROFILE_NOT_FOUND (335//)"
+msgid "%s profile not found: %s"
+msgstr "%s-profiilia ei löytynyt: %s"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_REQUESTED (336//)"
+msgid "Requested"
+msgstr "Pyydetty"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SYSTEM_FILE_READ (337//)"
+msgid "Could not read system file: %s"
+msgstr "Järjestelmätiedostoa ei voitu lukea: %s"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SYSTEM_FILE_MEMORY (338//)"
+msgid "Out of memory reading system file"
+msgstr "Muisti loppui järjestelmätiedostoa luettaessa"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_CONVERSATION_CLEARED (339//)"
+msgid "Conversation history cleared"
+msgstr "Keskusteluhistoria tyhjennetty"
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_FETCHING_VOICES (340//)"
+msgid "Failed to fetch voices from server"
+msgstr "Ääniä ei voitu hakea palvelimelta"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_MODELS (341//)"
+msgid "No selectable models for this speech profile"
+msgstr "Tälle puheprofiilille ei ole valittavia malleja"
+
+#: src/ARexx.c
+msgctxt "STRING_REXX_NO_SELECTABLE_SPEECH_VOICES (342//)"
+msgid "No selectable voices for this speech profile"
+msgstr "Tälle puheprofiilille ei ole valittavia ääniä"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_HTTP_HEADERS_TOO_LARGE (343//)"
+msgid "HTTP headers too large"
+msgstr "HTTP-otsakkeet ovat liian suuret"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_MODELS_RESPONSE_PARSE (344//)"
+msgid "Failed to parse models response"
+msgstr "Mallivastausta ei voitu jäsentää"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_CHAT_REQUEST_TOO_LARGE (345//)"
+msgid "Chat request too large"
+msgstr "Chat-pyyntö on liian suuri"
+
+#: src/openai.c
+msgctxt "STRING_ERROR_SSL_READ_FAILED_FORMAT (346//)"
+msgid "SSL read failed: %s"
+msgstr "SSL-luku epäonnistui: %s"
+
+#: src/MainWindow.c:395
+msgctxt "STRING_ERROR_INVALID_BASE64 (347//)"
+msgid "Invalid base64 image data"
+msgstr "Virheellinen base64-kuvadata"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_GET_ALL_VOICES (348//)"
+msgid "Get All Voices"
+msgstr "Hae kaikki äänet"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_CONNECTION_SETTINGS (349//)"
+msgid "Connection settings"
+msgstr "Yhteysasetukset"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_WORKBENCH_NARRATOR_DEVICE (350//)"
+msgid "Workbench narrator.device"
+msgstr "Workbench narrator.device"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_MODE_NATURAL (351//)"
+msgid "Natural"
+msgstr "Luonnollinen"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_MODE_ROBOTIC (352//)"
+msgid "Robotic"
+msgstr "Robottimainen"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_SEX_MALE (353//)"
+msgid "Male"
+msgstr "Mies"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_SEX_FEMALE (354//)"
+msgid "Female"
+msgstr "Nainen"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_RATE_WPM (355//)"
+msgid "Rate (wpm)"
+msgstr "Nopeus (wpm)"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_PITCH_HZ (356//)"
+msgid "Pitch (Hz)"
+msgstr "Sävelkorkeus (Hz)"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_MODE (357//)"
+msgid "Mode"
+msgstr "Tila"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_NARRATOR_SEX (358//)"
+msgid "Sex"
+msgstr "Sukupuoli"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_FETCHING_OPENAI_MODELS (359//)"
+msgid "Fetching OpenAI models..."
+msgstr "Haetaan malleja..."
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_ERROR_FETCHING_OPENAI_MODELS (360//)"
+msgid "Failed to fetch OpenAI models"
+msgstr "OpenAI mallien hakeminen epäonnistui"
+
+#: src/MainWindow.c
+msgctxt "STRING_STOP_SPEAKING (361//)"
+msgid "Stop speaking"
+msgstr "Lopeta puhuminen"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_XAI_AUTO_INSERT_SPEECH_TAGS (362//)"
+msgid "Auto-insert speech tags into LLM replies"
+msgstr "Lisää puhetunnisteet automaattisesti LLM-vastauksiin"
+
+#~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
+#~ msgid "OpenAI Voice"
+#~ msgstr "OpenAI Voice"
+
+#~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
+#~ msgid "OpenAI Speech Model"
+#~ msgstr "OpenAI-puhemalli"
+msgctxt "STRING_MENU_FIND (363//)"
+msgid "Find..."
+msgstr "Find..."
+
+#: src/menu.c
+msgctxt "STRING_MENU_FIND_NEXT (364//)"
+msgid "Find next"
+msgstr "Find next"
+
+#: src/menu.c
+msgctxt "STRING_FIND_PROMPT (365//)"
+msgid "Find:"
+msgstr "Find:"
+
+#: src/menu.c
+msgctxt "STRING_FIND_PREVIOUS (366//)"
+msgid "Previous"
+msgstr "Previous"
+
+#: src/menu.c
+msgctxt "STRING_FIND_NEXT (367//)"
+msgid "Next"
+msgstr "Next"
+
+#: src/menu.c
+msgctxt "STRING_FIND_CLOSE (368//)"
+msgid "Close"
+msgstr "Close"
+
+#: src/menu.c
+msgctxt "STRING_FIND_MATCHES (369//)"
+msgid "%ld of %ld"
+msgstr "%ld of %ld"
+
+#: src/menu.c
+msgctxt "STRING_CHAT_USER_PREV (370//)"
+msgid "Prev question"
+msgstr "Prev question"
+
+#: src/menu.c
+msgctxt "STRING_CHAT_USER_NEXT (371//)"
+msgid "Next question"
+msgstr "Next question"
+
+msgctxt "STRING_MENU_MARKDOWN_FORMATTING (372//)"
+msgid "Markdown formatting"
+msgstr "Markdown formatting"
+
+#: src/menu.c
+msgctxt "STRING_MENU_EXPORT_CHAT_RAW (373//)"
+msgid "Export chat (raw UTF-8)..."
+msgstr "Export chat (raw UTF-8)..."
+
+#: src/ChatExport.c
+msgctxt "STRING_EXPORT_CHAT_RAW (374//)"
+msgid "Export chat (raw)"
+msgstr "Export chat (raw)"
+
+#: src/ChatExport.c
+msgctxt "STRING_ERROR_NO_CONVERSATION_EXPORT (375//)"
+msgid "No conversation is open to export."
+msgstr "No conversation is open to export."
+
+#: src/ChatExport.c
+msgctxt "STRING_ERROR_CHAT_EXPORT_SAVE (376//)"
+msgid "Could not save the chat export."
+msgstr "Could not save the chat export."
+
+#: src/menu.c
+msgctxt "STRING_MENU_CHAT_LINE_WRAP (377//)"
+msgid "Wrap long lines (chat)"
+msgstr "Wrap long lines (chat)"
+
+#: src/menu.c
+msgctxt "STRING_MENU_CHAT_FONT_LARGER (378//)"
+msgid "Increase chat font size"
+msgstr "Increase chat font size"
+
+#: src/menu.c
+msgctxt "STRING_MENU_CHAT_FONT_SMALLER (379//)"
+msgctxt "STRING_ERROR_CLIPBOARD_LIB_OPEN (380//)"
+msgid "Could not open clipboard.library."
+msgstr "Could not open clipboard.library."
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_ERROR_CLIPBOARD_COPY (381//)"
+msgid "Could not copy the active code block to the clipboard."
+msgstr "Could not copy the active code block to the clipboard."
+
+#: src/menu.c
+msgctxt "STRING_MENU_COPY_CODEBLOCK (382//)"
+msgid "Copy (UTF-8)"
+msgstr "Copy (UTF-8)"
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_MENU_COPY_CODEBLOCK_SYSTEM (383//)"
+msgid "Copy (system charset)"
+msgstr "Copy (system charset)"
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_MENU_SAVE_CODEBLOCK_UTF8 (384//)"
+msgid "Save (UTF-8)..."
+msgstr "Save (UTF-8)..."
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_MENU_SAVE_CODEBLOCK_SYSTEM (385//)"
+msgid "Save (system charset)..."
+msgstr "Save (system charset)..."
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_SAVE_CODEBLOCK (386//)"
+msgid "Save code block"
+msgstr "Save code block"
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_ERROR_CODEBLOCK_SAVE (387//)"
+msgid "Could not save the code block."
+msgstr "Could not save the code block."
+
+#: src/CodeBlocksViewer.c
+msgctxt "STRING_ERROR_NO_ACTIVE_CODEBLOCK (388//)"
+msgctxt "STRING_CHAT_RESPONSE_PARTIAL (389//)"
+msgid "Response incomplete (connection ended early)."
+msgstr "Response incomplete (connection ended early)."
+
+#: src/MainWindow.c
+msgctxt "STRING_CHAT_STREAM_TRUNCATED (390//)"
+
+#: src/codefence.c
+msgctxt "STRING_CHAT_CODEBLOCK_PLACEHOLDER (391//)"
 msgid "[Codeblock %ld]\n"
 msgstr "[Codeblock %ld]\n"
 
-#: src/gui.c
-msgctxt "STRING_MENU_VIEW_CODEBLOCKS (261//)"
-msgid "View code blocks..."
-msgstr "View code blocks..."
 
 #: src/gui.c
-msgctxt "STRING_ERROR_NO_ACTIVE_CONVERSATION (262//)"
-msgid "No active conversation. Open or start a chat first."
-msgstr "No active conversation. Open or start a chat first."
-
-#: src/gui.c
-msgctxt "STRING_ERROR_NO_CODEBLOCKS_IN_CHAT (263//)"
-msgid "No fenced code blocks in this conversation yet."
-msgstr "No fenced code blocks in this conversation yet."
-
-#: src/gui.c
-msgctxt "STRING_ERROR_TTENGINE_LIB_OPEN (265//)"
+msgctxt "STRING_ERROR_TTENGINE_LIB_OPEN (400//)"
 msgid ""
 "Could not open ttengine.library. Install TTEngine (FreeType fonts) for "
 "Scintilla UTF-8 display."
 msgstr ""
 "Could not open ttengine.library. Install TTEngine (FreeType fonts) for "
 "Scintilla UTF-8 display."
-
-#: src/menu.c:320
-msgctxt "STRING_MENU_MARKDOWN_FORMATTING (264//)"
-msgid "Markdown formatting"
-msgstr "Markdown formatting"
-
-#: src/gui.c
-msgctxt "STRING_ERROR_CLIPBOARD_LIB_OPEN (266//)"
-msgid "Could not open clipboard.library."
-msgstr "Translator.librarya ei voitu avata"
-
-#: src/CodeBlocksViewer.c
-msgctxt "STRING_ERROR_CLIPBOARD_COPY (267//)"
-msgid "Could not copy the active code block to the clipboard."
-msgstr "Could not copy the active code block to the clipboard."
-
-#: src/menu.c
-msgctxt "STRING_MENU_COPY_CODEBLOCK (268//)"
-msgid "Copy (UTF-8)"
-msgstr "Copy (UTF-8)"
-
-#: src/CodeBlocksViewer.c
-msgctxt "STRING_MENU_COPY_CODEBLOCK_SYSTEM (269//)"
-msgid "Copy (system charset)"
-msgstr "Copy (system charset)"
-
-#: src/CodeBlocksViewer.c
-msgctxt "STRING_MENU_SAVE_CODEBLOCK_UTF8 (270//)"
-msgid "Save (UTF-8)..."
-msgstr "Save (UTF-8)..."
-
-#: src/CodeBlocksViewer.c
-msgctxt "STRING_MENU_SAVE_CODEBLOCK_SYSTEM (271//)"
-msgid "Save (system charset)..."
-msgstr "Save (system charset)..."
-
-#: src/CodeBlocksViewer.c
-msgctxt "STRING_SAVE_CODEBLOCK (272//)"
-msgid "Save code block"
-msgstr "Save code block"
-
-#: src/CodeBlocksViewer.c
-msgctxt "STRING_ERROR_NO_ACTIVE_CODEBLOCK (274//)"
-msgid "No code block is selected."
-msgstr "No code block is selected."
-
-#: src/CodeBlocksViewer.c
-msgctxt "STRING_ERROR_CODEBLOCK_SAVE (273//)"
-msgid "Could not save the active code block."
-msgstr "Could not save the active code block."
-
-#: src/MainWindow.c
-msgctxt "STRING_CHAT_RESPONSE_PARTIAL (275//)"
-msgid "Response incomplete (connection ended early)."
-msgstr "Response incomplete (connection ended early)."
-
-#: src/MainWindow.c
-msgctxt "STRING_CHAT_STREAM_TRUNCATED (276//)"
-msgid "Response truncated (stream buffer limit reached)."
-msgstr "Response truncated (stream buffer limit reached)."
-
-#: src/menu.c
-msgctxt "STRING_MENU_EXPORT_CHAT_RAW (277//)"
-msgid "Export chat (raw UTF-8)..."
-msgstr "Export chat (raw UTF-8)..."
-
-#: src/ChatExport.c
-msgctxt "STRING_EXPORT_CHAT_RAW (278//)"
-msgid "Export chat (raw)"
-msgstr "Export chat (raw)"
-
-#: src/ChatExport.c
-msgctxt "STRING_ERROR_NO_CONVERSATION_EXPORT (279//)"
-msgid "No conversation is open to export."
-msgstr "No conversation is open to export."
-
-#: src/ChatExport.c
-#, fuzzy
-msgctxt "STRING_ERROR_CHAT_EXPORT_SAVE (280//)"
-msgid "Could not save the chat export."
-msgstr "Could not save the active code block."
-
-#: src/menu.c
-msgctxt "STRING_MENU_CHAT_LINE_WRAP (281//)"
-msgid "Wrap long lines (chat)"
-msgstr "Wrap long lines (chat)"
-
-#: src/menu.c
-msgctxt "STRING_MENU_CHAT_FIXED_WIDTH_FONT (282//)"
-msgid "Monospace font (chat output)"
-msgstr "Monospace font (chat output)"
-
-#: src/menu.c
-msgctxt "STRING_MENU_CHAT_FONT_LARGER (283//)"
-msgid "Increase chat font size"
-msgstr "Increase chat font size"
-
-#: src/menu.c
-msgctxt "STRING_MENU_CHAT_FONT_SMALLER (284//)"
-msgid "Decrease chat font size"
-msgstr "Decrease chat font size"
-
-#: src/menu.c
-msgctxt "STRING_MENU_FIND (285//)"
-msgid "Find..."
-msgstr "Find..."
-
-#: src/menu.c
-msgctxt "STRING_MENU_FIND_NEXT (286//)"
-msgid "Find next"
-msgstr "Find next"
-
-#: src/menu.c
-msgctxt "STRING_FIND_PROMPT (287//)"
-msgid "Find:"
-msgstr "Find:"
-
-#: src/menu.c
-msgctxt "STRING_FIND_PREVIOUS (288//)"
-msgid "Previous"
-msgstr "Previous"
-
-#: src/menu.c
-msgctxt "STRING_FIND_NEXT (289//)"
-msgid "Next"
-msgstr "Next"
-
-#: src/menu.c
-msgctxt "STRING_FIND_CLOSE (290//)"
-msgid "Close"
-msgstr "Close"
-
-#: src/menu.c
-msgctxt "STRING_FIND_MATCHES (291//)"
-msgid "%ld of %ld"
-msgstr "%ld of %ld"
-
-#: src/menu.c
-msgctxt "STRING_CHAT_USER_PREV (292//)"
-msgid "Prev question"
-msgstr "Prev question"
-
-#: src/menu.c
-msgctxt "STRING_CHAT_USER_NEXT (293//)"
-msgid "Next question"
-msgstr "Next question"
-
-#~ msgctxt "STRING_MENU_COPY_CODEBLOCK_SYSTEM (269//)"
-#~ msgid "Copy (system)"
-#~ msgstr "Copy (system)"

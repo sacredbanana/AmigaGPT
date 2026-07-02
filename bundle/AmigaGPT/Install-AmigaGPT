@@ -90,8 +90,8 @@
   if (= #index 3) (set @result "dansk") (
   if (= #index 4) (set @result "deutsch") (
   if (= #index 5) (set @result "english_british") (
-  if (= #index 6) (set @result "español") (
-  if (= #index 7) (set @result "français") (
+  if (= #index 6) (set @result "espaï¿½ol") (
+  if (= #index 7) (set @result "franï¿½ais") (
   if (= #index 8) (set @result "greek") (
   if (= #index 9) (set @result "hrvatski") (
   if (= #index 10) (set @result "italiano") (
@@ -99,14 +99,14 @@
   if (= #index 12) (set @result "nederlands") (
   if (= #index 13) (set @result "norsk") (
   if (= #index 14) (set @result "polski") (
-  if (= #index 15) (set @result "português") (
+  if (= #index 15) (set @result "portuguï¿½s") (
   if (= #index 16) (set @result "russian") (
   if (= #index 17) (set @result "slovak") (
   if (= #index 18) (set @result "slovensko") (
   if (= #index 19) (set @result "srpski") (
   if (= #index 20) (set @result "suomi") (
   if (= #index 21) (set @result "svenska") (
-  if (= #index 22) (set @result "türkçe") (
+  if (= #index 22) (set @result "tï¿½rkï¿½e") (
   (set @result "unknown")
   ))))))))))))))))))))))))
   )
@@ -288,6 +288,7 @@
 
 ; We have to create a drawer "AmigaGPT" there!
 (set #amigagptdir (tackon #amigagptdirbase @app-name))
+(set #amikitkitdir "SYS:Prefs/Presets/AmiKit/KIT")
 
 (if (not (exists #amigagptdir))
   (
@@ -346,18 +347,31 @@
       (optional "force" "askuser")
     )
     (copyfiles 
-      (source "AmigaGPT/AmigaGPTD_OS3")
-      (dest "C:")
-      (newname "AmigaGPTD")
-      (optional "force" "askuser")
-    )
-    (copyfiles 
       (source "icons/AmigaGPT_Drawer_OS3.info")
       (dest #amigagptdirbase)
       (newname (cat @app-name ".info"))
       (noposition)
       (optional "force" "askuser")
     )
+    (if (not (exists #amikitkitdir))
+      (
+        (copyfiles 
+          (source "AmigaGPT/AmigaGPTD_OS3")
+          (dest "C:")
+          (newname "AmigaGPTD")
+          (optional "force" "askuser")
+        )
+      )
+      (
+        (copyfiles
+          (source "AmigaGPT/AmigaGPTD_OS3")
+          (dest #amikitkitdir)
+          (newname "AmigaGPTD")
+          (optional "force" "askuser")
+        )
+      )
+    )
+    
     (complete 70)
     ;------------------------------------------------------------------------
     ; Copy devs directory if it doesn't exist
@@ -490,8 +504,9 @@
 	(command "Endif")
 )
 
-(
-  (startup "AMIGAGPT"
+(if (not (exists #amikitkitdir))
+  (
+    (startup "AMIGAGPT"
     (prompt #userstartuprunask)
     (help @startup-help)
     (confirm)
@@ -499,6 +514,7 @@
     (command "  Assign AMIGAGPT: \"" @default-dest "\"\n")
     (command "  Run <>NIL: C:AmigaGPTD <>NIL:\n")
     (command "Endif")
+    )
   )
 )
 

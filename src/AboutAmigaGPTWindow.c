@@ -109,10 +109,14 @@ LONG createAboutAmigaGPTWindow() {
              STRING_ABOUT_WINDOW_WHATIFF, STRING_ABOUT_WINDOW_YOUTUBE_REVIEW,
              STRING_ABOUT_WINDOW_YOUTUBE_REVIEW, STRING_ABOUT_WINDOW_AMIGABILL,
              STRING_ABOUT_WINDOW_LES_DOCS, STRING_ABOUT_WINDOW_DANIEL_REIMANN);
-    if ((aboutAmigaGPTWindowObject = AboutboxObject, MUIA_Aboutbox_Build,
-         buildString, MUIA_Aboutbox_Credits, bodyString, MUIA_Aboutbox_URL,
-         "https://github.com/sacredbanana/AmigaGPT", MUIA_Aboutbox_URLText,
-         STRING_ABOUT_WINDOW_URL_TEXT, End)) {
+    // clang-format off
+    if ((aboutAmigaGPTWindowObject = AboutboxObject,
+         MUIA_Aboutbox_Build, buildString,
+         MUIA_Aboutbox_Credits, bodyString,
+         MUIA_Aboutbox_URL, "https://github.com/sacredbanana/AmigaGPT",
+         MUIA_Aboutbox_URLText, STRING_ABOUT_WINDOW_URL_TEXT,
+    End)) {
+    // clang-format on
         DoMethod(aboutAmigaGPTWindowObject, MUIM_Notify,
                  MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 2,
                  MUIM_CallHook, &AboutWindowCloseHook);

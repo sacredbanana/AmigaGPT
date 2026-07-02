@@ -44,6 +44,7 @@ CONST_STRPTR openAIChatStreamLastSseSnippet(void);
 void openAIChatStreamCaptureLastSse(CONST_STRPTR fromBuffer);
 #define CHAT_SYSTEM_LENGTH 512
 #define OPENAI_API_KEY_LENGTH 256
+#define MAX_PROVIDER_MODELS 32
 
 /**
  * A fenced code block extracted from assistant output (Phase 2; parser in Phase 4).
@@ -99,12 +100,40 @@ struct Conversation {
      * The system of the conversation
      **/
     UTF8 *system;
+    /**
+     * Last response ID returned by the Responses API for stateful follow-ups
+     **/
+    UTF8 *lastResponseId;
 };
+
+/**
+ * Sets conversation->lastResponseId from a Responses API JSON payload (e.g.
+ * after submitting function_call_output). Keeps stateful follow-ups aligned
+ * with the latest response in the chain.
+ **/
+void conversationSyncLastResponseIdFromPayload(struct Conversation *conversation,
+                                               struct json_object *payload);
+
+/**
+ * Prepopulated chat models for each built-in provider
+ **/
+extern CONST_STRPTR OPENAI_CHAT_MODELS[];
+extern CONST_STRPTR GEMINI_CHAT_MODELS[];
+extern CONST_STRPTR GROK_CHAT_MODELS[];
+extern CONST_STRPTR ANTHROPIC_CHAT_MODELS[];
+
+/**
+ * Prepopulated image models for each built-in provider
+ **/
+extern CONST_STRPTR OPENAI_IMAGE_MODELS[];
+extern CONST_STRPTR GEMINI_IMAGE_MODELS[];
+extern CONST_STRPTR GROK_IMAGE_MODELS[];
 
 /**
  * The chat model OpenAI should use. Commented out models are not supported by
  * the responses endpoint. Do not exceed 32 models or the menu will not display
  * correctly.
+ * @deprecated Use string-based model names instead
  **/
 typedef enum {
     CHATGPT_5_LATEST = 0L,
@@ -134,13 +163,16 @@ typedef enum {
 } ChatModel;
 
 /**
- * The names of the models
+ * The names of the chat models before the migration to string-based model
+ * names. Do not modify this array!
  * @see ChatModel
+ * @deprecated Use provider-specific model arrays instead
  **/
 extern CONST_STRPTR CHAT_MODEL_NAMES[];
 
 /**
  * The image model OpenAI should use
+ * @deprecated Use string-based model names instead
  **/
 typedef enum {
     DALL_E_2 = 0L,
@@ -151,8 +183,9 @@ typedef enum {
 } ImageModel;
 
 /**
- * The names of the image models
+ * The names of the image models (legacy, for backward compatibility)
  * @see ImageModel
+ * @deprecated Use provider-specific model arrays instead
  **/
 extern CONST_STRPTR IMAGE_MODEL_NAMES[];
 
@@ -193,6 +226,23 @@ typedef enum {
  * @see OpenAITTSModel
  **/
 extern CONST_STRPTR OPENAI_TTS_VOICE_NAMES[];
+
+/**
+ * The voice xAI should use
+ **/
+typedef enum {
+    XAI_TTS_VOICE_ARA = 0L,
+    XAI_TTS_VOICE_EVE,
+    XAI_TTS_VOICE_LEO,
+    XAI_TTS_VOICE_REX,
+    XAI_TTS_VOICE_SAL
+} XAITTSVoice;
+
+/**
+ * The names of the xAI voices (id strings sent to the API)
+ * @see XAITTSVoice
+ **/
+extern CONST_STRPTR XAI_TTS_VOICE_NAMES[];
 
 /**
  * The size of the requested image
@@ -238,34 +288,66 @@ extern const ImageSize IMAGE_SIZES_GPT_IMAGE_1[];
  * @see ImageModel
  **/
 struct GeneratedImage {
-    STRPTR name;
+    UTF8 *name;
     STRPTR filePath;
-    STRPTR prompt;
+    UTF8 *prompt;
     ImageModel imageModel;
     ULONG width;
     ULONG height;
 };
 
 /**
- * The API endpoint to use
- * @see APIEndpoint
+ * Chat API endpoint to use
  **/
 typedef enum {
-    API_ENDPOINT_RESPONSES = 0L,
-    API_ENDPOINT_CHAT_COMPLETIONS
-} APIEndpoint;
+    API_CHAT_ENDPOINT_RESPONSES = 0L,
+    API_CHAT_ENDPOINT_CHAT_COMPLETIONS,
+    API_CHAT_ENDPOINT_MESSAGES,
+    /* Gemini native text endpoint (generateContent / streamGenerateContent) */
+    API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT
+} APIChatEndpoint;
+
+extern CONST_STRPTR API_CHAT_ENDPOINT_NAMES[];
 
 /**
- * The names of the API endpoints
- * @see APIEndpoint
+ * Image API endpoint to use
  **/
-extern CONST_STRPTR API_ENDPOINT_NAMES[];
+typedef enum {
+    /* OpenAI-compatible image generation endpoint */
+    API_IMAGE_ENDPOINT_IMAGES_GENERATIONS = 0L,
+    /* Gemini native image endpoint (generateContent with responseModalities) */
+    API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT
+} APIImageEndpoint;
+
+extern CONST_STRPTR API_IMAGE_ENDPOINT_NAMES[];
+
+/**
+ * The authorization type to use
+ * @see AuthorizationType
+ **/
+typedef enum {
+    AUTHORIZATION_TYPE_NONE = 0,
+    AUTHORIZATION_TYPE_BEARER,
+    AUTHORIZATION_TYPE_X_API_KEY,
+    AUTHORIZATION_TYPE_X_GOOGLE_API_KEY,
+    AUTHORIZATION_TYPE_XI_API_KEY
+} AuthorizationType;
+
+/**
+ * The names of the authorization types
+ * @see AuthorizationType
+ **/
+extern CONST_STRPTR AUTHORIZATION_TYPE_NAMES[];
 
 /**
  * The format of the image
  * @see ImageFormat
  **/
-typedef enum { IMAGE_FORMAT_JPG = 0L, IMAGE_FORMAT_PNG } ImageFormat;
+typedef enum {
+    IMAGE_FORMAT_NULL = -1L,
+    IMAGE_FORMAT_JPG = 0L,
+    IMAGE_FORMAT_PNG
+} ImageFormat;
 
 /**
  * The names of the image formats
@@ -284,7 +366,7 @@ LONG initOpenAIConnector();
  * @param host the host to use
  * @param port the port to use
  * @param useSSL whether to use SSL or not
- * @param openAiApiKey the OpenAI API key (can be NULL for local LLM)
+ * @param apiKey the API key (can be NULL for local LLM)
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -292,15 +374,19 @@ LONG initOpenAIConnector();
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
+ * @param apiEndpointUrl the API endpoint URL to use
+ * @param authorizationType the authorization type to use
+ * @param customHeaders custom HTTP headers to add to the request
  * @return a pointer to a new json_object array containing the model names or
  * NULL -- Free it with json_object_put() when you are done using it
  **/
-struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
-                                  CONST_STRPTR openAiApiKey, BOOL useProxy,
-                                  CONST_STRPTR proxyHost, ULONG proxyPort,
-                                  BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-                                  CONST_STRPTR proxyUsername,
-                                  CONST_STRPTR proxyPassword);
+struct json_object *
+getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
+              BOOL useProxy, CONST_STRPTR proxyHost, ULONG proxyPort,
+              BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+              CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+              CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+              CONST_STRPTR customHeaders);
 
 /**
  * Post a chat message to OpenAI
@@ -309,7 +395,7 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
  * @param port the port to use set to 0 to use OpenAI default port
  * @param useSSL whether to use SSL or not
  * @param model the model to use
- * @param openAiApiKey the OpenAI API key
+ * @param apiKey the API key
  * @param stream whether to stream the response or not
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
@@ -320,25 +406,28 @@ struct json_object *getChatModels(STRPTR host, ULONG port, BOOL useSSL,
  * @param proxyPassword the proxy password to use
  * @param webSearchEnabled whether to enable web search or not
  * @param apiEndpoint the API endpoint to use
- * @param apiEndpoinUrl the API endpoint URL to use
+ * @param apiEndpointUrl the API endpoint URL to use
+ * @param authorizationType the authorization type to use
+ * @param customHeaders custom HTTP headers to add to the request
  * @return a pointer to a new array of json_object containing the response(s) or
  *NULL -- Free it with json_object_put() for all responses then FreeVec() for
  *the array when you are done using it
  **/
 struct json_object **postChatMessageToOpenAI(
     struct Conversation *conversation, STRPTR host, UWORD port, BOOL useSSL,
-    CONST_STRPTR model, CONST_STRPTR openAiApiKey, BOOL stream, BOOL useProxy,
+    CONST_STRPTR model, CONST_STRPTR apiKey, BOOL stream, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, BOOL webSearchEnabled, APIEndpoint apiEndpoint,
-    CONST_STRPTR apiEndpoinUrl);
+    CONST_STRPTR proxyPassword, BOOL webSearchEnabled, BOOL shellToolEnabled,
+    APIChatEndpoint apiEndpoint, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders);
 
 /**
  * Post a image creation request to OpenAI
  * @param prompt the prompt to use
  * @param imageModel the image model to use
  * @param imageSize the size of the image to create
- * @param openAiApiKey the OpenAI API key
+ * @param apiKey the API key
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -347,15 +436,18 @@ struct json_object **postChatMessageToOpenAI(
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
  * @param imageFormat the image format to use
+ * @param apiEndpoint the API endpoint to use
  * @return a pointer to a new json_object containing the response or NULL --
  *Free it with json_object_put when you are done using it
  **/
 struct json_object *postImageCreationRequestToOpenAI(
-    CONST_STRPTR prompt, ImageModel imageModel, ImageSize imageSize,
-    CONST_STRPTR openAiApiKey, BOOL useProxy, CONST_STRPTR proxyHost,
-    UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
-    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
-    ImageFormat imageFormat);
+    CONST_STRPTR prompt, CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders, CONST_STRPTR modelName, ImageSize imageSize,
+    CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, ImageFormat imageFormat,
+    APIImageEndpoint apiEndpoint);
 
 /**
  * Download a file from the internet
@@ -378,10 +470,10 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
 /**
  * Post a text to speech request to OpenAI
  * @param text the text to speak
- * @param openAITTSModel the TTS model to use
+ * @param openAITTSModelId the TTS model id (e.g., "tts-1", "gpt-4o-mini-tts")
  * @param openAITTSVoice the voice to use
  * @param voiceInstructions the voice instructions to use
- * @param openAiApiKey the OpenAI API key
+ * @param apiKey the API key
  * @param useProxy whether to use a proxy or not
  * @param proxyHost the proxy host to use
  * @param proxyPort the proxy port to use
@@ -394,9 +486,11 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
  *with FreeVec() when you are done using it
  **/
 APTR postTextToSpeechRequestToOpenAI(
-    CONST_STRPTR text, OpenAITTSModel openAITTSModel,
+    CONST_STRPTR text, CONST_STRPTR openAITTSModelId,
     OpenAITTSVoice openAITTSVoice, CONST_STRPTR voiceInstructions,
-    CONST_STRPTR openAiApiKey, ULONG *audioLength, BOOL useProxy,
+    CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, AudioFormat *audioFormat);
@@ -405,14 +499,6 @@ APTR postTextToSpeechRequestToOpenAI(
  * Cleanup the OpenAI connector and free all resources
  **/
 void closeOpenAIConnector();
-
-/**
- * Decode a base64 encoded string
- * @param dataB64 the base64 encoded string
- * @param data_len the length of the decoded data
- * @return a pointer to the decoded data
- */
-UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len);
 
 /**
  * Make a generic HTTPS GET request and return the JSON response
@@ -434,11 +520,104 @@ UBYTE *decodeBase64(UBYTE *dataB64, LONG *data_len);
  * json_object_put() when you are done using it
  **/
 struct json_object *
-makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
-                    CONST_STRPTR apiKey, CONST_STRPTR apiKeyHeader,
+makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                    CONST_STRPTR endpoint, CONST_STRPTR apiKey,
+                    CONST_STRPTR apiKeyHeader,
                     BOOL useBearer, BOOL useProxy, CONST_STRPTR proxyHost,
                     UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
                     CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
+
+/**
+ * Check if there is a pending tool call captured during streaming
+ * @return TRUE if there is a pending tool call
+ **/
+BOOL hasPendingToolCall(void);
+
+/**
+ * Get the pending tool call command
+ * @return the command string (do not free)
+ **/
+STRPTR getPendingToolCommand(void);
+
+/**
+ * Get the pending tool call ID
+ * @return the call ID string (do not free)
+ **/
+STRPTR getPendingToolCallId(void);
+
+/**
+ * Get the pending response ID
+ * @return the response ID string (do not free)
+ **/
+STRPTR getPendingResponseId(void);
+
+/**
+ * Clear the pending tool call after processing
+ **/
+void clearPendingToolCall(void);
+
+/**
+ * Check if a response contains a shell tool function call
+ * @param response the JSON response from the API
+ * @return TRUE if the response contains a shell function call
+ **/
+BOOL hasShellToolCall(struct json_object *response);
+
+/**
+ * Get the call ID from a shell tool function call response
+ * @param response the JSON response from the API
+ * @return the call ID string (do not free) or NULL
+ **/
+UTF8 *getShellToolCallId(struct json_object *response);
+
+/**
+ * Get the command from a shell tool function call response
+ * @param response the JSON response from the API
+ * @return the command string (must be freed with FreeVec) or NULL
+ **/
+UTF8 *getShellToolCommand(struct json_object *response);
+
+/**
+ * Execute a shell command and capture its output
+ * @param command the command to execute
+ * @param exitCode pointer to store the exit code
+ * @return a pointer to a new string containing the command output -- Free
+ * it with FreeVec() when done
+ **/
+STRPTR executeShellCommand(UTF8 *command, LONG *exitCode);
+
+/**
+ * Post a tool result (shell command output) back to the API
+ * This continues the conversation after a tool call
+ * @param previousResponseId the ID from the previous response
+ * @param callId the call_id from the function call
+ * @param output the output from the shell command
+ * @param model the model to use
+ * @param host the host to use
+ * @param port the port to use
+ * @param useSSL whether to use SSL
+ * @param apiKey the API key
+ * @param useProxy whether to use a proxy
+ * @param proxyHost the proxy host
+ * @param proxyPort the proxy port
+ * @param proxyUsesSSL whether the proxy uses SSL
+ * @param proxyRequiresAuth whether the proxy requires auth
+ * @param proxyUsername the proxy username
+ * @param proxyPassword the proxy password
+ * @param shellToolEnabled whether the shell tool is enabled
+ * @param apiEndpointUrl the API endpoint base URL (e.g. "v1")
+ * @param authorizationType the authorization type to use
+ * @param customHeaders custom HTTP headers to add to the request
+ * @return a pointer to a new json_object containing the response or NULL
+ **/
+struct json_object *postToolResultToOpenAI(
+    CONST_STRPTR previousResponseId, CONST_STRPTR callId, CONST_STRPTR output,
+    CONST_STRPTR model, STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, BOOL shellToolEnabled,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders);
 
 /**
  * Post a text to speech request to the ElevenLabs API
@@ -460,7 +639,48 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, CONST_STRPTR endpoint,
  **/
 APTR postTextToSpeechRequestToElevenLabs(
     CONST_STRPTR text, CONST_STRPTR voiceId, CONST_STRPTR modelId,
+    CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
     CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword);
+
+/**
+ * Post a text to speech request to xAI
+ * @param text the text to speak
+ * @param voiceId the voice_id string (built-in like "eve" or 8-char custom id)
+ * @param language the BCP-47 language code (e.g. "en", "auto"); defaults to
+ * "en" if NULL/empty
+ * @param apiKey the xAI API key
+ * @param useProxy whether to use a proxy or not
+ * @param proxyHost the proxy host to use
+ * @param proxyPort the proxy port to use
+ * @param proxyUsesSSL whether the proxy uses SSL or not
+ * @param proxyRequiresAuth whether the proxy requires authentication or not
+ * @param proxyUsername the proxy username to use
+ * @param proxyPassword the proxy password to use
+ * @param audioFormat the audio format to use
+ * @return a pointer to a buffer containing the audio data or NULL -- Free it
+ * with FreeVec() when you are done using it
+ **/
+APTR postTextToSpeechRequestToXAI(
+    CONST_STRPTR text, CONST_STRPTR voiceId, CONST_STRPTR language,
+    CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, AudioFormat *audioFormat);
+
+/**
+ * Fetch the list of custom voices from xAI (GET /v1/custom-voices).
+ * Returns the parsed JSON object or NULL on error. The caller must
+ * json_object_put() the result.
+ **/
+struct json_object *getXAICustomVoices(
+    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR apiKey, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword);

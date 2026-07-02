@@ -3,8 +3,8 @@
 #include <SDI_hook.h>
 #include <mui/TextEditor_mcc.h>
 #include <string.h>
+#include "AmigaGPTConfig.h"
 #include "APIKeyRequesterWindow.h"
-#include "config.h"
 #include "gui.h"
 #include "MainWindow.h"
 
@@ -13,18 +13,16 @@ Object *apiKeyRequesterWindowObject;
 
 HOOKPROTONHNONP(APIKeyRequesterOkButtonClickedFunc, void) {
     STRPTR apiKey = DoMethod(apiKeyRequesterString, MUIM_TextEditor_ExportText);
-    // Remove trailing newline characters
     for (ULONG i = 0; i < strlen(apiKey); i++) {
         if (apiKey[i] == '\n') {
             apiKey[i] = '\0';
         }
     }
-    configAssignString(&config.openAiApiKey, apiKey);
-    set(apiKeyRequesterString, MUIA_TextEditor_Contents, config.openAiApiKey);
+    set(apiKeyRequesterString, MUIA_TextEditor_Contents, apiKey);
+    configSetOpenAiApiKey(apiKey);
+    configSetOpenAiImageApiKey(apiKey);
+    configSetOpenAiSpeechApiKey(apiKey);
     FreeVec(apiKey);
-    if (writeConfig() == RETURN_ERROR) {
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
-    }
 }
 MakeHook(APIKeyRequesterOkButtonClickedHook,
          APIKeyRequesterOkButtonClickedFunc);
@@ -35,6 +33,7 @@ MakeHook(APIKeyRequesterOkButtonClickedHook,
  **/
 LONG createAPIKeyRequesterWindow() {
     Object *apiKeyRequesterOkButton, *apiKeyRequesterCancelButton;
+    // clang-format off
     if ((apiKeyRequesterWindowObject = WindowObject,
             MUIA_Window_Title, STRING_API_KEY_REQUESTER_TITLE,
             MUIA_Window_Width, 800,
@@ -55,7 +54,7 @@ LONG createAPIKeyRequesterWindow() {
                 End,
                 Child, apiKeyRequesterString = TextEditorObject,
                     MUIA_CycleChain, TRUE,
-                    MUIA_TextEditor_Contents, config.openAiApiKey,
+                    MUIA_TextEditor_Contents, configGetOpenAiApiKey(),
                 End,
                 Child, HGroup,
                     Child, apiKeyRequesterOkButton = MUI_MakeObject(MUIO_Button, STRING_OK,
@@ -71,6 +70,7 @@ LONG createAPIKeyRequesterWindow() {
                 End,
             End,
         End) == NULL) {
+    // clang-format on
         displayError(STRING_ERROR_API_KEY_REQUESTER);
         return RETURN_ERROR;
     }
