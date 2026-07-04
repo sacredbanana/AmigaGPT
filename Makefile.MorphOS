@@ -19,7 +19,7 @@ LIBDIR = /opt/amiga/lib
 SDKDIR = /opt/amiga/os-include
 NETINCDIR = /opt/amiga/includestd
 INCDIR = /opt/amiga/ppc-morphos/include
-GCCLIBDIR = /opt/amiga/lib/gcc/ppc-morphos/11.2.0/
+GCCLIBDIR = /opt/ppc-morphos/lib/gcc-lib/ppc-morphos/15.2.0/
 
 ifeq ($(OS),Darwin)
 	SED = sed -i "" 
@@ -67,7 +67,7 @@ else
 endif
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NETINCDIR),-I$(INCDIR),-D
-LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-ljson-c,-lssl,-lcrypto,-L$(GCCLIBDIR),-latomic
+LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-ljson-c,-lssl,-lcrypto,-lpthread,-L$(GCCLIBDIR),-latomic
 VASMFLAGS = -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__MORPHOS__ -I$(INCDIR) -I$(NETINCDIR) -I$(SDKDIR)
 
 .PHONY: all clean copy_bundle_files catalog catalog_definition daemon
