@@ -722,13 +722,13 @@ msgstr "Projekt"
 
 #: src/menu.c:125 src/menu.c:117
 msgctxt "STRING_MENU_ABOUT_AMIGAGPT (105//)"
-msgid "About AmigaGPT"
-msgstr "O AmigaGPT"
+msgid "About AmigaGPT..."
+msgstr "O AmigaGPT..."
 
 #: src/menu.c:127 src/menu.c:119
 msgctxt "STRING_MENU_ABOUT_MUI (106//)"
-msgid "About MUI"
-msgstr "O MUI"
+msgid "About MUI..."
+msgstr "O MUI..."
 
 #: src/menu.c:129 src/menu.c:121
 msgctxt "STRING_MENU_QUIT (107//)"
@@ -772,8 +772,8 @@ msgstr "Zobraziť"
 
 #: src/menu.c:137 src/menu.c:129
 msgctxt "STRING_MENU_MUI_SETTINGS (115//)"
-msgid "MUI Settings"
-msgstr "Nastavenia MUI"
+msgid "MUI Settings..."
+msgstr "Nastavenia MUI..."
 
 #: src/menu.c:138 src/menu.c:130
 msgctxt "STRING_MENU_CONNECTION (116//)"
@@ -792,8 +792,8 @@ msgstr "Povolené"
 
 #: src/menu.c:142 src/menu.c:134
 msgctxt "STRING_MENU_SETTINGS (119//)"
-msgid "Settings"
-msgstr "Nastavenia"
+msgid "Settings..."
+msgstr "Nastavenia..."
 
 #: src/menu.c:143 src/menu.c:135
 msgctxt "STRING_MENU_SPEECH (120//)"
@@ -891,21 +891,6 @@ msgctxt "STRING_MENU_OPENAI_CHAT_MODEL (144//)"
 msgid "Chat Model"
 msgstr "Model chatu"
 
-#: src/menu.c:251 src/menu.c:244
-msgctxt "STRING_MENU_OPENAI_IMAGE_MODEL (145//)"
-msgid "Image Model"
-msgstr "Obrazový model"
-
-#: src/menu.c:256 src/menu.c:249
-msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2 (146//)"
-msgid "DALL-E 2 Image Size"
-msgstr "Veľkosť obrázka DALL-E 2"
-
-#: src/menu.c:263 src/menu.c:257
-msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3 (147//)"
-msgid "DALL-E 3 Image Size"
-msgstr "Veľkosť obrázka DALL-E 3"
-
 #: src/menu.c:270 src/menu.c:265
 msgctxt "STRING_MENU_HELP (148//)"
 msgid "Help"
@@ -913,8 +898,8 @@ msgstr "Pomoc"
 
 #: src/menu.c:271 src/menu.c:266
 msgctxt "STRING_MENU_OPEN_DOCUMENTATION (149//)"
-msgid "Open Documentation"
-msgstr "Otvorte dokumentáciu"
+msgid "Open Documentation..."
+msgstr "Otvorte dokumentáciu..."
 
 #: src/openai.c:175
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN (150//)"
@@ -1203,8 +1188,8 @@ msgstr "ARexx Shell"
 
 #: src/menu.c:307
 msgctxt "STRING_MENU_AREXX_IMPORT_SCRIPT (221//)"
-msgid "Import Script"
-msgstr "Importovať skript"
+msgid "Import Script..."
+msgstr "Importovať skript..."
 
 #: src/menu.c:308
 msgctxt "STRING_MENU_AREXX_RUN_SCRIPT (222//)"
@@ -1225,11 +1210,6 @@ msgstr "Nepodarilo sa otvoriť ARexx shell"
 msgctxt "STRING_ERROR_AREXX_LIB_OPEN (226//)"
 msgid "Could not open arexx.class."
 msgstr "Nepodarilo sa otvoriť arexx.class."
-
-#: src/menu.c:294
-msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1 (227//)"
-msgid "GPT Image 1 Image Size"
-msgstr "GPT Image 1 Veľkosť obrázku"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
@@ -1284,21 +1264,6 @@ msgstr "Tlačiť"
 msgctxt "STRING_MENU_CLEAR_MUI_SETTINGS (237//)"
 msgid "Clear MUI Settings"
 msgstr "Vyčistiť nastavenia MUI"
-
-#: src/menu.c:145
-msgctxt "STRING_MENU_OPENAI_WEB_SEARCH (238//)"
-msgid "Web Search"
-msgstr "Web vyhľadávanie"
-
-#: src/menu.c:146
-msgctxt "STRING_MENU_CUSTOM_PROVIDER (239//)"
-msgid "Custom Provider"
-msgstr "Vlastný poskytovateľ"
-
-#: src/menu.c:148
-msgctxt "STRING_MENU_CUSTOM_PROVIDER_SETTINGS (241//)"
-msgid "Custom Provider Settings"
-msgstr "Nastavenia vlastného poskytovateľa"
 
 #: src/CustomServerSettingsRequesterWindow.c:11
 msgctxt "STRING_ERROR_CUSTOM_PROVIDER_SETTINGS (242//)"
@@ -1490,11 +1455,6 @@ msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
 msgid "Please enter a profile name"
 msgstr "Zadajte názov profilu"
 
-#: src/menu.c
-msgctxt "STRING_MENU_OPENAI_SHELL_TOOL (281//)"
-msgid "Shell Tool"
-msgstr "Nástroj Shell"
-
 #: src/openai.c
 msgctxt "STRING_EXECUTING_COMMAND (282//)"
 msgid "Executing command..."
@@ -1522,13 +1482,13 @@ msgstr "Obrázok"
 
 #: src/menu.c
 msgctxt "STRING_CHAT_PROVIDER_SETTINGS (287//)"
-msgid "Chat Provider Settings"
-msgstr "Nastavenia poskytovateľa chatu"
+msgid "Chat Provider Settings..."
+msgstr "Nastavenia poskytovateľa chatu..."
 
 #: src/menu.c
 msgctxt "STRING_IMAGE_PROVIDER_SETTINGS (288//)"
-msgid "Image Provider Settings"
-msgstr "Nastavenia poskytovateľa obrázkov"
+msgid "Image Provider Settings..."
+msgstr "Nastavenia poskytovateľa obrázkov..."
 
 #: src/openai.c
 msgctxt "STRING_PROVIDER_OPENAI (289//)"
@@ -1689,8 +1649,8 @@ msgstr ""
 
 #: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
-msgid "Speech Provider Settings"
-msgstr "Nastavenia poskytovateľa reči"
+msgid "Speech Provider Settings..."
+msgstr "Nastavenia poskytovateľa reči..."
 
 #: src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_WARNING_MISSING_FORMAT (313//)"

@@ -726,13 +726,13 @@ msgstr "Projekt"
 
 #: src/menu.c:125 src/menu.c:117
 msgctxt "STRING_MENU_ABOUT_AMIGAGPT (105//)"
-msgid "About AmigaGPT"
-msgstr "O AmigaGPT"
+msgid "About AmigaGPT..."
+msgstr "O AmigaGPT..."
 
 #: src/menu.c:127 src/menu.c:119
 msgctxt "STRING_MENU_ABOUT_MUI (106//)"
-msgid "About MUI"
-msgstr "O MUI"
+msgid "About MUI..."
+msgstr "O MUI..."
 
 #: src/menu.c:129 src/menu.c:121
 msgctxt "STRING_MENU_QUIT (107//)"
@@ -776,8 +776,8 @@ msgstr "Pogled"
 
 #: src/menu.c:137 src/menu.c:129
 msgctxt "STRING_MENU_MUI_SETTINGS (115//)"
-msgid "MUI Settings"
-msgstr "MUI postavke"
+msgid "MUI Settings..."
+msgstr "MUI postavke..."
 
 #: src/menu.c:138 src/menu.c:130
 msgctxt "STRING_MENU_CONNECTION (116//)"
@@ -796,8 +796,8 @@ msgstr "Omogućeno"
 
 #: src/menu.c:142 src/menu.c:134
 msgctxt "STRING_MENU_SETTINGS (119//)"
-msgid "Settings"
-msgstr "Postavke"
+msgid "Settings..."
+msgstr "Postavke..."
 
 #: src/menu.c:143 src/menu.c:135
 msgctxt "STRING_MENU_SPEECH (120//)"
@@ -895,21 +895,6 @@ msgctxt "STRING_MENU_OPENAI_CHAT_MODEL (144//)"
 msgid "Chat Model"
 msgstr "Chat Model"
 
-#: src/menu.c:251 src/menu.c:244
-msgctxt "STRING_MENU_OPENAI_IMAGE_MODEL (145//)"
-msgid "Image Model"
-msgstr "Model slike"
-
-#: src/menu.c:256 src/menu.c:249
-msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2 (146//)"
-msgid "DALL-E 2 Image Size"
-msgstr "DALL-E 2 Veličina slike"
-
-#: src/menu.c:263 src/menu.c:257
-msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3 (147//)"
-msgid "DALL-E 3 Image Size"
-msgstr "DALL-E 3 Veličina slike"
-
 #: src/menu.c:270 src/menu.c:265
 msgctxt "STRING_MENU_HELP (148//)"
 msgid "Help"
@@ -917,8 +902,8 @@ msgstr "Upomoć"
 
 #: src/menu.c:271 src/menu.c:266
 msgctxt "STRING_MENU_OPEN_DOCUMENTATION (149//)"
-msgid "Open Documentation"
-msgstr "Otvorite dokumentaciju"
+msgid "Open Documentation..."
+msgstr "Otvorite dokumentaciju..."
 
 #: src/openai.c:175
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN (150//)"
@@ -1207,8 +1192,8 @@ msgstr "ARexx Shell"
 
 #: src/menu.c:307
 msgctxt "STRING_MENU_AREXX_IMPORT_SCRIPT (221//)"
-msgid "Import Script"
-msgstr "Uvezi skriptu"
+msgid "Import Script..."
+msgstr "Uvezi skriptu..."
 
 #: src/menu.c:308
 msgctxt "STRING_MENU_AREXX_RUN_SCRIPT (222//)"
@@ -1229,11 +1214,6 @@ msgstr "Otvaranje ARexx shella nije uspjelo"
 msgctxt "STRING_ERROR_AREXX_LIB_OPEN (226//)"
 msgid "Could not open arexx.class."
 msgstr "Nije moguće otvoriti arexx.class."
-
-#: src/menu.c:294
-msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1 (227//)"
-msgid "GPT Image 1 Image Size"
-msgstr "GPT Image 1 Slika Velicina"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
@@ -1288,21 +1268,6 @@ msgstr "Štampaj"
 msgctxt "STRING_MENU_CLEAR_MUI_SETTINGS (237//)"
 msgid "Clear MUI Settings"
 msgstr "Obriši MUI postavke"
-
-#: src/menu.c:145
-msgctxt "STRING_MENU_OPENAI_WEB_SEARCH (238//)"
-msgid "Web Search"
-msgstr "Pretraga web-a"
-
-#: src/menu.c:146
-msgctxt "STRING_MENU_CUSTOM_PROVIDER (239//)"
-msgid "Custom Provider"
-msgstr "Prilagođeni pružatelj"
-
-#: src/menu.c:148
-msgctxt "STRING_MENU_CUSTOM_PROVIDER_SETTINGS (241//)"
-msgid "Custom Provider Settings"
-msgstr "Postavke prilagođenog pružatelja"
 
 #: src/CustomServerSettingsRequesterWindow.c:11
 msgctxt "STRING_ERROR_CUSTOM_PROVIDER_SETTINGS (242//)"
@@ -1494,11 +1459,6 @@ msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
 msgid "Please enter a profile name"
 msgstr "Molimo unesite naziv profila"
 
-#: src/menu.c
-msgctxt "STRING_MENU_OPENAI_SHELL_TOOL (281//)"
-msgid "Shell Tool"
-msgstr "Shell alat"
-
 #: src/openai.c
 msgctxt "STRING_EXECUTING_COMMAND (282//)"
 msgid "Executing command..."
@@ -1526,13 +1486,13 @@ msgstr "Slika"
 
 #: src/menu.c
 msgctxt "STRING_CHAT_PROVIDER_SETTINGS (287//)"
-msgid "Chat Provider Settings"
-msgstr "Postavke pružaoca ćaskanja"
+msgid "Chat Provider Settings..."
+msgstr "Postavke pružaoca ćaskanja..."
 
 #: src/menu.c
 msgctxt "STRING_IMAGE_PROVIDER_SETTINGS (288//)"
-msgid "Image Provider Settings"
-msgstr "Postavke pružaoca slika"
+msgid "Image Provider Settings..."
+msgstr "Postavke pružaoca slika..."
 
 #: src/openai.c
 msgctxt "STRING_PROVIDER_OPENAI (289//)"
@@ -1693,8 +1653,8 @@ msgstr ""
 
 #: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
-msgid "Speech Provider Settings"
-msgstr "Postavke pružatelja govora"
+msgid "Speech Provider Settings..."
+msgstr "Postavke pružatelja govora..."
 
 #: src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_WARNING_MISSING_FORMAT (313//)"
