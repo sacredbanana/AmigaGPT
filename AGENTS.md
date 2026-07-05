@@ -1,5 +1,11 @@
 # Agent Notes
 
+## Amiga Latin-1 files — ISO 8859-1 only (HARD RULE)
+
+Read and follow **[AMIGA-LATIN1-FILES.md](AMIGA-LATIN1-FILES.md)** before and after editing any covered file. That document is the canonical rule for all agents. Claude Code also loads `.claude/rules/amiga-latin1-files.md` when touching those paths.
+
+Covered paths: `bundle/AmigaGPT/Install-AmigaGPT`, `AmigaGPT.readme`, `AmigaGPT.guide`, and all `*.rexx` under `bundle/` and `assets/`.
+
 ## Provider docs
 
 - For OpenAI questions, prefer the project MCP server `openaiDeveloperDocs` and the project skill `openai-docs`.
