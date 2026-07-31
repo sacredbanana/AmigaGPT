@@ -22,6 +22,7 @@ Verbindliche Arbeitsweise für Menschen und Assistenten (Cursor, CI, Reviews).
 | PR von Feature-Branch → `master` (wenn stabil) | Force-Push auf `master` |
 
 **`master`** = stabiler Referenzstand (Fork **2.18**-Linie seit 2026-05; ggf. nach Sync mit `upstream`).  
+Kein Branch **`main`**.  
 **Feature-Branches** = laufende Entwicklung — kurzlebig, nach Merge löschen (z. B. `feature/morphos-startup-feedback`).
 
 Der Branch **`scintilla`** war die Entwicklungslinie bis zum Merge nach `master` (8785); nicht mehr Standard für neue Arbeit.
@@ -54,7 +55,8 @@ git checkout -b feature/kurzbeschreibung   # oder fix/…, chore/…
 git push -u origin <branch-name>
 ```
 
-**Nicht:** `git push origin master` (außer bewusster Maintainer-Merge nach PR).
+**Nur wenn der Nutzer ausdrücklich pushen lässt.**  
+**Nicht:** `git push origin master` (außer bewusster Maintainer-Merge nach Freigabe).
 
 Auf GitHub: **Pull Request** `feature/…` → `master` (eigener Fork) oder später ggf. PR zum Upstream.
 

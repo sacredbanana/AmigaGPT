@@ -26,7 +26,7 @@ Read and follow **`docs/HANDLUNGSANWEISUNG-GIT.md`**.
 Summary:
 
 - **Do not commit on `master`.** Use topic branches from `master` (`feature/*`, `fix/*`, `chore/*`).
-- Push only when the user asks. Never force-push `master`.
+- Push only when the user asks. Never force-push `master`. Prefer **`master`**, not `main`.
 - `origin` = fork; `upstream` = upstream original (fetch/merge into feature branches).
 
 Cursor rule: `.cursor/rules/git-branch-policy.mdc` (always applied).

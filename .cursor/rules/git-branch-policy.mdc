@@ -11,6 +11,7 @@ alwaysApply: true
 - Before committing: run `git branch --show-current` and abort if the branch is `master`.
 - New work: branch from **`master`** (`git checkout master && git checkout -b feature/…`).
 - Do not push unless the user explicitly asks. Never force-push `master`.
+- Prefer branch name **`master`** (not `main`).
 - Do not change `git config`. Do not commit secrets.
 
 ## Workflow
