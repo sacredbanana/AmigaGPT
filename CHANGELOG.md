@@ -4,6 +4,7 @@
 
 - Prevent unnecessary console windows opening up
 - Wrap all requester message text to automatically fit
+- Status bar no longer displays an unwanted trailing character
 
 ## 3.0.0 (2026-07-01)
 

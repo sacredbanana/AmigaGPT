@@ -227,10 +227,6 @@ LONG initVideo() {
 #endif
 
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
-
-    printf("DBG: initVideo\n");
-    fflush(stdout);
-    return RETURN_ERROR;
     return RETURN_OK;
 }
 
@@ -304,7 +300,10 @@ void startGUIRunLoop() {
 void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
 #ifndef DAEMON
     STRPTR formattedMessage = AllocVec(strlen(message) + 32, MEMF_ANY);
-    snprintf(formattedMessage, strlen(message) + 32, "\33P[%lu]  %s\t\0", pen,
+    // No tabs or other control characters here - MUI passes anything that
+    // isn't an \33 escape code straight to the font, and fonts which define a
+    // glyph for it draw a stray box at the end of the status bar
+    snprintf(formattedMessage, strlen(message) + 32, "\33P[%lu]  %s", pen,
              message);
     set(statusBar, MUIA_Text_Contents, formattedMessage);
     FreeVec(formattedMessage);
@@ -484,7 +483,8 @@ void displayError(STRPTR message) {
     const LONG ERROR_CODE = IoErr();
     if (ERROR_CODE == 0) {
         STRPTR wrappedMessage = wrapRequesterText(message);
-        CONST_STRPTR requesterMessage = wrappedMessage ? wrappedMessage : message;
+        CONST_STRPTR requesterMessage =
+            wrappedMessage ? wrappedMessage : message;
 #ifndef DAEMON
         if (!app || MUI_Request(app, mainWindowObject,
 #ifdef __MORPHOS__
