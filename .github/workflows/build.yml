@@ -3,13 +3,13 @@ name: Build and package the app for all platforms
 on:
   push:
     branches:
-    - master
-    - develop
+      - master
+      - develop
 
 jobs:
   build:
     name: Build and package
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -21,8 +21,6 @@ jobs:
 
       - name: Build and package
         run: |
-          docker pull sacredbanana/amiga-compiler:ppc-morphos-old
-          docker tag sacredbanana/amiga-compiler:ppc-morphos-old sacredbanana/amiga-compiler:ppc-morphos
           sudo ./package.sh
 
       - name: Upload artifacts
