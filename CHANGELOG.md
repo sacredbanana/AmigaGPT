@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.1 (2026-08-15)
+
+- Prevent unnecessary console windows opening up
+- Wrap all requester message text to automatically fit
+
 ## 3.0.0 (2026-07-01)
 
 - Profile settings: New panels to manage chat, image and speech providers
