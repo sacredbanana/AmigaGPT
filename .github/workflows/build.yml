@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build and package
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -21,6 +21,8 @@ jobs:
 
       - name: Build and package
         run: |
+          docker pull sacredbanana/amiga-compiler:ppc-morphos-old
+          docker tag sacredbanana/amiga-compiler:ppc-morphos-old sacredbanana/amiga-compiler:ppc-morphos
           sudo ./package.sh
 
       - name: Upload artifacts
