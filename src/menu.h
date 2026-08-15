@@ -50,3 +50,9 @@ extern Object *menuStrip;
 void createMenu();
 
 void addMenuActions();
+
+/**
+ * @brief Enable or disable the Edit menu items depending on whether one of the
+ * input text editors currently holds the keyboard focus
+ */
+void updateEditMenuItemsEnabled();

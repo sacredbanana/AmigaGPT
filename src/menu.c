@@ -153,6 +153,11 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
 }
 MakeHook(ARexxRunScriptMenuItemClickedHook, ARexxRunScriptMenuItemClickedFunc);
 
+/* The input text editor which currently holds the keyboard focus, or NULL if
+ * the focus is somewhere else. The Edit menu items only make sense while one
+ * of the input text editors is focused so they are disabled otherwise. */
+static Object *focusedInputTextEditor = NULL;
+
 /**
  * Get the active text editor based on which page is selected in the mode
  * register group
@@ -160,9 +165,75 @@ MakeHook(ARexxRunScriptMenuItemClickedHook, ARexxRunScriptMenuItemClickedFunc);
  */
 static Object *getActiveTextEditor() {
     LONG activePage = 0;
+
+    if (focusedInputTextEditor != NULL) {
+        return focusedInputTextEditor;
+    }
+
     get(modeRegisterGroup, MUIA_Group_ActivePage, &activePage);
     return (activePage == 0) ? chatInputTextEditor : imageInputTextEditor;
 }
+
+/**
+ * Enable or disable all of the items in the Edit menu
+ * @param enabled TRUE to enable the items, FALSE to disable them
+ */
+static void setEditMenuItemsEnabled(BOOL enabled) {
+    static const ULONG editMenuItems[] = {
+        MENU_ITEM_EDIT_CUT, MENU_ITEM_EDIT_COPY, MENU_ITEM_EDIT_PASTE,
+        MENU_ITEM_EDIT_CLEAR, MENU_ITEM_EDIT_SELECT_ALL};
+    UWORD i;
+
+    if (menuStrip == NULL) {
+        return;
+    }
+
+    for (i = 0; i < (sizeof(editMenuItems) / sizeof(editMenuItems[0])); i++) {
+        Object menuItem =
+            (Object)DoMethod(menuStrip, MUIM_FindUData, editMenuItems[i]);
+        if (menuItem) {
+            set(menuItem, MUIA_Menuitem_Enabled, enabled);
+        }
+    }
+}
+
+/**
+ * Apply the enabled state of the Edit menu items to match the text editor
+ * which currently holds the keyboard focus. The Edit commands are not
+ * supported at all on AROS so they always stay disabled there.
+ */
+static void applyEditMenuItemsEnabled() {
+    static BOOL editMenuItemsEnabled = TRUE;
+    BOOL enabled = !isAROS && focusedInputTextEditor != NULL;
+
+    if (enabled != editMenuItemsEnabled) {
+        setEditMenuItemsEnabled(enabled);
+        editMenuItemsEnabled = enabled;
+    }
+}
+
+/**
+ * Read the object which currently has the keyboard focus from the main window
+ * and enable or disable the Edit menu items accordingly
+ */
+void updateEditMenuItemsEnabled() {
+    Object *activeObject = NULL;
+
+    if (mainWindowObject != NULL) {
+        get(mainWindowObject, MUIA_Window_ActiveObject, &activeObject);
+    }
+
+    focusedInputTextEditor = (activeObject == chatInputTextEditor ||
+                              activeObject == imageInputTextEditor)
+                                 ? activeObject
+                                 : NULL;
+    applyEditMenuItemsEnabled();
+}
+
+HOOKPROTONHNONP(ActiveObjectChangedFunc, void) {
+    updateEditMenuItemsEnabled();
+}
+MakeHook(ActiveObjectChangedHook, ActiveObjectChangedFunc);
 
 HOOKPROTONHNONP(EditCutFunc, void) {
     Object *activeEditor = getActiveTextEditor();
@@ -615,6 +686,13 @@ void addMenuActions() {
                  MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
                  &EditSelectAllHook);
     }
+
+    /* The Edit menu items act on the focused input text editor so keep them
+     * disabled while the focus is on any other object */
+    DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_ActiveObject,
+             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
+             &ActiveObjectChangedHook);
+    updateEditMenuItemsEnabled();
 
     Object muiSettingsMenuItem = (Object)DoMethod(menuStrip, MUIM_FindUData,
                                                   MENU_ITEM_VIEW_MUI_SETTINGS);

@@ -5,6 +5,7 @@
 - Prevent unnecessary console windows opening up
 - Wrap all requester message text to automatically fit
 - Status bar no longer displays an unwanted trailing character
+- Edit menu items are disabled unless the chat or image input text field has the keyboard focus
 
 ## 3.0.0 (2026-07-01)
 

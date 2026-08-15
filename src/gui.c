@@ -284,6 +284,11 @@ void startGUIRunLoop() {
         default:
             break;
         }
+#ifndef DAEMON
+        // The keyboard focus may have moved as a result of the input just
+        // processed so keep the Edit menu items in sync with it
+        updateEditMenuItemsEnabled();
+#endif
         if (running && signals)
             signals = Wait(signals | SIGBREAKF_CTRL_C);
         if (signals & SIGBREAKF_CTRL_C)
