@@ -112,7 +112,12 @@ LONG main(int argc, char **argv) {
         exit(RETURN_ERROR);
     }
 
-    if (initSpeech(configGetSpeechSystem()) == RETURN_ERROR) {
+    /* Only open the configured speech device (which may require AHI) if the
+     * user has actually enabled speech; otherwise leave it uninitialized so
+     * users without AHI installed don't see a spurious error on every
+     * launch. */
+    if (configGetSpeechEnabled() &&
+        initSpeech(configGetSpeechSystem()) == RETURN_ERROR) {
         switch (configGetSpeechSystem()) {
         case SPEECH_SYSTEM_34:
             displayError(STRING_ERROR_SPEECH_INIT_WORKBENCH_34);

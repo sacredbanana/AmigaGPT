@@ -199,6 +199,21 @@ LONG initSpeech(SpeechSystem speechSystem) {
 }
 
 /**
+ * Lazily initialize the speech system for a specific request, without
+ * disturbing the user's "speech enabled" preference: initSpeech() disables
+ * that preference on failure, which is correct when it's called at startup
+ * or from the settings requester, but not when it's opportunistically
+ * triggered by a single speak request (e.g. an ARexx SPEAKTEXT call for a
+ * profile that isn't the app's configured default).
+ **/
+static LONG lazyInitSpeech(SpeechSystem speechSystem) {
+    ULONG wasEnabled = configGetSpeechEnabled();
+    LONG result = initSpeech(speechSystem);
+    configSetSpeechEnabled(wasEnabled);
+    return result;
+}
+
+/**
  * Close the speech system
  **/
 void closeSpeech() {
@@ -296,8 +311,12 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
         speechSystem == SPEECH_SYSTEM_XAI) {
         if (ahiRequest == NULL) {
-            displayError(STRING_ERROR_SPEECH_NOT_INITIALIZED);
-            return FALSE;
+            if (lazyInitSpeech(speechSystem) == RETURN_ERROR)
+                return FALSE; /* initSpeech already displayed a specific error */
+            if (ahiRequest == NULL) {
+                displayError(STRING_ERROR_SPEECH_NOT_INITIALIZED);
+                return FALSE;
+            }
         }
 
         if (speechSystem == SPEECH_SYSTEM_OPENAI) {
@@ -464,8 +483,12 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
 #ifdef __AMIGAOS3__
     if (speechSystem == SPEECH_SYSTEM_34 || speechSystem == SPEECH_SYSTEM_37) {
         if (NarratorIO == NULL) {
-            displayError(STRING_ERROR_SPEECH_NOT_INITIALIZED);
-            return FALSE;
+            if (lazyInitSpeech(speechSystem) == RETURN_ERROR)
+                return FALSE; /* initSpeech already displayed a specific error */
+            if (NarratorIO == NULL) {
+                displayError(STRING_ERROR_SPEECH_NOT_INITIALIZED);
+                return FALSE;
+            }
         }
 
         if (CheckIO((struct IORequest *)NarratorIO) == 0) {
@@ -495,8 +518,12 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
 #elif defined(__AMIGAOS4__)
     if (speechSystem == SPEECH_SYSTEM_FLITE) {
         if (fliteRequest == NULL) {
-            displayError(STRING_ERROR_SPEECH_NOT_INITIALIZED);
-            return FALSE;
+            if (lazyInitSpeech(speechSystem) == RETURN_ERROR)
+                return FALSE; /* initSpeech already displayed a specific error */
+            if (fliteRequest == NULL) {
+                displayError(STRING_ERROR_SPEECH_NOT_INITIALIZED);
+                return FALSE;
+            }
         }
 
         if (CheckIO((struct IORequest *)fliteRequest) == 0) {
