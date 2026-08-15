@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.1.0 (2026-08-15)
+## 3.1.0 (2026-08-16)
 
 - Support speech from an OpenVox server
 - Prevent unnecessary console windows opening up
