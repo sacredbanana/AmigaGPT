@@ -63,6 +63,7 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
                                       [SPEECH_SYSTEM_OPENAI] = "OpenAI",
                                       [SPEECH_SYSTEM_ELEVENLABS] = "ElevenLabs",
                                       [SPEECH_SYSTEM_XAI] = "xAI",
+                                      [SPEECH_SYSTEM_OPENVOX] = "OpenVox",
                                       NULL};
 
 /**
@@ -85,7 +86,8 @@ const STRPTR AUDIO_FORMAT_NAMES[] = {[AUDIO_FORMAT_PCM] = "pcm",
 LONG initSpeech(SpeechSystem speechSystem) {
     if (speechSystem == SPEECH_SYSTEM_OPENAI ||
         speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
-        speechSystem == SPEECH_SYSTEM_XAI) {
+        speechSystem == SPEECH_SYSTEM_XAI ||
+        speechSystem == SPEECH_SYSTEM_OPENVOX) {
         AHImp = CreateMsgPort();
         ahiRequest = (struct AHIRequest *)CreateIORequest(
             AHImp, sizeof(struct AHIRequest));
@@ -309,7 +311,8 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
 
     if (speechSystem == SPEECH_SYSTEM_OPENAI ||
         speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
-        speechSystem == SPEECH_SYSTEM_XAI) {
+        speechSystem == SPEECH_SYSTEM_XAI ||
+        speechSystem == SPEECH_SYSTEM_OPENVOX) {
         if (ahiRequest == NULL) {
             if (lazyInitSpeech(speechSystem) == RETURN_ERROR)
                 return FALSE; /* initSpeech already displayed a specific error */
@@ -340,6 +343,13 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                 displayError(STRING_ERROR_NO_API_KEY);
                 return FALSE;
             }
+        } else if (speechSystem == SPEECH_SYSTEM_OPENVOX) {
+            if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
+                (settings->openVoxApiKey == NULL ||
+                 strlen(settings->openVoxApiKey) == 0)) {
+                displayError(STRING_ERROR_NO_API_KEY);
+                return FALSE;
+            }
         }
 
         AudioFormat defaultAudioFormatForPlayback = AUDIO_FORMAT_PCM;
@@ -359,6 +369,7 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         }
 
         ULONG audioLength;
+        ULONG playbackFrequency = 24000;
 
         if (speechSystem == SPEECH_SYSTEM_OPENAI) {
             audioBuffer = postTextToSpeechRequestToOpenAI(
@@ -397,6 +408,18 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                 configGetProxyPort(), configGetProxyUsesSSL(),
                 configGetProxyRequiresAuth(), configGetProxyUsername(),
                 configGetProxyPassword(), audioFormat);
+        } else if (speechSystem == SPEECH_SYSTEM_OPENVOX) {
+            audioBuffer = postTextToSpeechRequestToOpenVox(
+                text, settings->openVoxModel, settings->openVoxVoice,
+                settings->openVoxLanguage, settings->host, settings->port,
+                settings->useSSL, settings->apiEndpointUrl,
+                settings->authorizationType, settings->openVoxApiKey,
+                &audioLength, &playbackFrequency, configGetProxyEnabled(),
+                configGetProxyHost(), configGetProxyPort(),
+                configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+                configGetProxyUsername(), configGetProxyPassword());
+            if (audioFormat != NULL)
+                *audioFormat = AUDIO_FORMAT_PCM;
         }
 
         if (!audioBuffer) {
@@ -457,7 +480,8 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         // entire audio buffer. Unsure if this is an AHI bug or an emulator
         // bug.
         {
-            ULONG padBytes = 24000 * 4; /* 2s @ 24kHz 16-bit mono */
+            ULONG padBytes =
+                playbackFrequency * 4; /* 2s, 16-bit mono */
             UBYTE *padded =
                 AllocVec(audioLength + padBytes, MEMF_ANY | MEMF_CLEAR);
             if (padded) {
@@ -475,6 +499,7 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
 
         ahiRequest->ahir_Std.io_Data = audioBuffer;
         ahiRequest->ahir_Std.io_Length = audioLength;
+        ahiRequest->ahir_Frequency = playbackFrequency;
 
         SendIO((struct IORequest *)ahiRequest);
 

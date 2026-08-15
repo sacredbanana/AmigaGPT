@@ -24,7 +24,7 @@ You can customise the look and feel of the application, including the ability to
 
 - ### Speech capability
 
-**AmigaGPT** supports multiple speech providers, configurable from **Speech Provider Settings**. For cloud-based voices, it supports **OpenAI TTS** (high quality 16-bit voices), **xAI Grok TTS**, and **ElevenLabs** (requires AHI). For offline synthesis, AmigaOS 3 can use the Amiga's built-in `narrator.device` (**v34** and **v37**) with `translator.library`, and AmigaOS 4.1 supports `flite.device`. Speech runs in the background so the app stays responsive, with a dedicated **Stop** button to interrupt playback.
+**AmigaGPT** supports multiple speech providers, configurable from **Speech Provider Settings**. For cloud-based voices, it supports **OpenAI TTS** (high quality 16-bit voices), **xAI Grok TTS**, **ElevenLabs**, and **OpenVox** (requires AHI). For offline synthesis, AmigaOS 3 can use the Amiga's built-in `narrator.device` (**v34** and **v37**) with `translator.library`, and AmigaOS 4.1 supports `flite.device`. Speech runs in the background so the app stays responsive, with a dedicated **Stop** button to interrupt playback.
 
 - ### Shell Tool
 
@@ -59,7 +59,7 @@ Ensure you have the necessary system requirements:
 - An API key for your chosen AI provider (**OpenAI**, **Google Gemini**, **xAI**, or **Anthropic**), or a locally-hosted OpenAI-compatible LLM server
 - _Optional_: **AmigaOS 3 only**: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
 - _Optional_: **AmigaOS 4 only**: **Flite device** (<http://aminet.net/package/mus/misc/flite_device>)
-- _Optional_: For OpenAI, xAI Grok or ElevenLabs voices, **_AHI_** needs to be installed
+- _Optional_: For OpenAI, xAI Grok, ElevenLabs or OpenVox voices, **_AHI_** needs to be installed
   (<http://aminet.net/package/driver/audio/ahiusr_4.18>)
 - _Optional_: For **ElevenLabs** TTS, an ElevenLabs account and API key
 
@@ -74,7 +74,7 @@ Ensure you have the necessary system requirements:
 
 ## _Optional steps to enable speech functionality_
 
-AmigaGPT supports reading the output aloud. How AmigaGPT does this depends on your chosen speech provider. Cloud-based voices (OpenAI TTS, xAI Grok TTS, ElevenLabs) work on every supported OS and require AHI. Offline synthesis uses OS-native devices.
+AmigaGPT supports reading the output aloud. How AmigaGPT does this depends on your chosen speech provider. Cloud-based voices (OpenAI TTS, xAI Grok TTS, ElevenLabs, OpenVox) work on every supported OS and require AHI. Offline synthesis uses OS-native devices.
 
 ### Installing AHI for cloud-based voices
 

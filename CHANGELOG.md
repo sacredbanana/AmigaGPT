@@ -1,7 +1,8 @@
 # Changelog
 
-## 3.0.1 (2026-08-15)
+## 3.1.0 (2026-08-15)
 
+- Support speech from an OpenVox server
 - Prevent unnecessary console windows opening up
 - Wrap all requester message text to automatically fit
 - Status bar no longer displays an unwanted trailing character

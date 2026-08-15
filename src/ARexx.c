@@ -783,6 +783,45 @@ static void rexxApplySpeechSystemDefaults(struct SpeechRequestSettings *out) {
         out->narratorMode = REXX_DEFAULT_NARRATOR_MODE;
         out->narratorSex = REXX_DEFAULT_NARRATOR_SEX;
     }
+    if (out->speechSystem == SPEECH_SYSTEM_OPENAI ||
+        out->speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
+        out->speechSystem == SPEECH_SYSTEM_XAI ||
+        out->speechSystem == SPEECH_SYSTEM_OPENVOX) {
+        if (out->host != NULL)
+            FreeVec(out->host);
+        if (out->apiEndpointUrl != NULL)
+            FreeVec(out->apiEndpointUrl);
+        out->apiEndpointUrl = rexxDupStr("v1");
+        if (out->speechSystem == SPEECH_SYSTEM_OPENAI) {
+            out->host = rexxDupStr("api.openai.com");
+            out->port = 443;
+            out->useSSL = TRUE;
+            out->authorizationType = AUTHORIZATION_TYPE_BEARER;
+        } else if (out->speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
+            out->host = rexxDupStr("api.elevenlabs.io");
+            out->port = 443;
+            out->useSSL = TRUE;
+            out->authorizationType = AUTHORIZATION_TYPE_XI_API_KEY;
+        } else if (out->speechSystem == SPEECH_SYSTEM_XAI) {
+            out->host = rexxDupStr("api.x.ai");
+            out->port = 443;
+            out->useSSL = TRUE;
+            out->authorizationType = AUTHORIZATION_TYPE_BEARER;
+        } else {
+            out->host = rexxDupStr("127.0.0.1");
+            out->port = 8666;
+            out->useSSL = FALSE;
+            out->authorizationType = AUTHORIZATION_TYPE_NONE;
+        }
+    }
+    if (out->speechSystem == SPEECH_SYSTEM_OPENVOX) {
+        if (out->openVoxModel == NULL)
+            out->openVoxModel = rexxDupStr("chatterbox-turbo-small");
+        if (out->openVoxLanguage == NULL)
+            out->openVoxLanguage = rexxDupStr("en");
+        if (out->openVoxVoice == NULL)
+            out->openVoxVoice = rexxDupStr("Kaya");
+    }
 }
 
 static BOOL
@@ -809,6 +848,10 @@ rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
     out->elevenLabsVoiceName = rexxDupStr(configGetElevenLabsVoiceName());
     out->elevenLabsModel = rexxDupStr(configGetElevenLabsModel());
     out->elevenLabsModelName = rexxDupStr(configGetElevenLabsModelName());
+    out->openVoxApiKey = rexxDupStr("");
+    out->openVoxModel = rexxDupStr("chatterbox-turbo-small");
+    out->openVoxLanguage = rexxDupStr("en");
+    out->openVoxVoice = rexxDupStr("Kaya");
     rexxApplySpeechSystemDefaults(out);
 
     CONST_STRPTR resolvedProfileName = profileName;
@@ -854,6 +897,33 @@ rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
         json_object_object_get(profile, "speechSystem");
     if (sysObj != NULL)
         out->speechSystem = (SpeechSystem)json_object_get_int(sysObj);
+    rexxApplySpeechSystemDefaults(out);
+
+    struct json_object *hostObj = json_object_object_get(profile, "host");
+    if (hostObj != NULL) {
+        if (out->host != NULL)
+            FreeVec(out->host);
+        out->host = rexxDupStr(json_object_get_string(hostObj));
+    }
+    struct json_object *portObj = json_object_object_get(profile, "port");
+    if (portObj != NULL)
+        out->port = (UWORD)json_object_get_int(portObj);
+    struct json_object *sslObj = json_object_object_get(profile, "useSSL");
+    if (sslObj != NULL)
+        out->useSSL = json_object_get_boolean(sslObj) ? TRUE : FALSE;
+    struct json_object *endpointObj =
+        json_object_object_get(profile, "apiEndpointUrl");
+    if (endpointObj != NULL) {
+        if (out->apiEndpointUrl != NULL)
+            FreeVec(out->apiEndpointUrl);
+        out->apiEndpointUrl =
+            rexxDupStr(json_object_get_string(endpointObj));
+    }
+    struct json_object *authObj =
+        json_object_object_get(profile, "authorizationType");
+    if (authObj != NULL)
+        out->authorizationType =
+            (AuthorizationType)json_object_get_int(authObj);
 
     if (out->speechSystem == SPEECH_SYSTEM_34) {
         out->narratorRate = (UWORD)configGetNarratorRate34();
@@ -989,6 +1059,39 @@ rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
             rexxDupStr((modelName != NULL && strlen(modelName) > 0)
                            ? modelName
                            : ELEVENLABS_MODEL_FLASH_V2_5_NAME);
+    }
+
+    struct json_object *openVoxKeyObj =
+        json_object_object_get(profile, "openVoxApiKey");
+    if (openVoxKeyObj != NULL) {
+        if (out->openVoxApiKey != NULL)
+            FreeVec(out->openVoxApiKey);
+        out->openVoxApiKey =
+            rexxDupStr(json_object_get_string(openVoxKeyObj));
+    }
+    struct json_object *openVoxModelObj =
+        json_object_object_get(profile, "openVoxModel");
+    if (openVoxModelObj != NULL) {
+        if (out->openVoxModel != NULL)
+            FreeVec(out->openVoxModel);
+        out->openVoxModel =
+            rexxDupStr(json_object_get_string(openVoxModelObj));
+    }
+    struct json_object *openVoxLanguageObj =
+        json_object_object_get(profile, "openVoxLanguage");
+    if (openVoxLanguageObj != NULL) {
+        if (out->openVoxLanguage != NULL)
+            FreeVec(out->openVoxLanguage);
+        out->openVoxLanguage =
+            rexxDupStr(json_object_get_string(openVoxLanguageObj));
+    }
+    struct json_object *openVoxVoiceObj =
+        json_object_object_get(profile, "openVoxVoice");
+    if (openVoxVoiceObj != NULL) {
+        if (out->openVoxVoice != NULL)
+            FreeVec(out->openVoxVoice);
+        out->openVoxVoice =
+            rexxDupStr(json_object_get_string(openVoxVoiceObj));
     }
 
     if (arr != NULL)
@@ -1733,6 +1836,51 @@ static void rexxAppendElevenLabsVoiceNames(STRPTR buffer, ULONG bufferSize,
     json_object_put(response);
 }
 
+static struct json_object *
+rexxGetOpenVoxJson(const struct SpeechRequestSettings *settings,
+                   CONST_STRPTR endpoint) {
+    CONST_STRPTR header = "";
+    BOOL bearer = FALSE;
+    if (settings->authorizationType == AUTHORIZATION_TYPE_BEARER) {
+        header = "Authorization";
+        bearer = TRUE;
+    } else if (settings->authorizationType == AUTHORIZATION_TYPE_X_API_KEY) {
+        header = "x-api-key";
+    } else if (settings->authorizationType ==
+               AUTHORIZATION_TYPE_X_GOOGLE_API_KEY) {
+        header = "x-goog-api-key";
+    } else if (settings->authorizationType ==
+               AUTHORIZATION_TYPE_XI_API_KEY) {
+        header = "xi-api-key";
+    }
+    return makeHttpsGetRequest(
+        settings->host != NULL ? settings->host : (STRPTR) "127.0.0.1",
+        settings->port != 0 ? settings->port : 8666, settings->useSSL,
+        endpoint, settings->openVoxApiKey, header, bearer,
+        configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
+        configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+        configGetProxyUsername(), configGetProxyPassword());
+}
+
+static void rexxAppendOpenVoxDataValues(STRPTR buffer, ULONG bufferSize,
+                                        struct json_object *response,
+                                        CONST_STRPTR key) {
+    struct json_object *data = NULL;
+    if (response == NULL ||
+        !json_object_object_get_ex(response, "data", &data) ||
+        !json_object_is_type(data, json_type_array))
+        return;
+    LONG count = json_object_array_length(data);
+    for (LONG i = 0; i < count; i++) {
+        struct json_object *entry = json_object_array_get_idx(data, i);
+        struct json_object *value =
+            entry ? json_object_object_get(entry, key) : NULL;
+        CONST_STRPTR text = value ? json_object_get_string(value) : NULL;
+        if (text != NULL && strlen(text) > 0)
+            rexxAppendLine(buffer, bufferSize, text);
+    }
+}
+
 static void rexxAppendChatModelsForProfile(STRPTR buffer, ULONG bufferSize,
                                            CONST_STRPTR requestedProfile) {
     struct ChatRequestSettings settings;
@@ -1816,6 +1964,19 @@ static void rexxAppendSpeechModelsForProfile(STRPTR buffer, ULONG bufferSize,
     } else if (settings.speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
         rexxAppendElevenLabsModelNames(buffer, bufferSize,
                                        settings.elevenLabsApiKey);
+    } else if (settings.speechSystem == SPEECH_SYSTEM_OPENVOX) {
+        UBYTE endpoint[512];
+        snprintf(endpoint, sizeof(endpoint), "/%s/models",
+                 settings.apiEndpointUrl != NULL
+                     ? settings.apiEndpointUrl
+                     : (STRPTR) "v1");
+        struct json_object *models = rexxGetOpenVoxJson(&settings, endpoint);
+        if (models == NULL)
+            rexxAppendLine(buffer, bufferSize, STRING_ERROR_FETCHING_MODELS);
+        else {
+            rexxAppendOpenVoxDataValues(buffer, bufferSize, models, "id");
+            json_object_put(models);
+        }
     } else {
         rexxAppendLine(buffer, bufferSize,
                        STRING_REXX_NO_SELECTABLE_SPEECH_MODELS);
@@ -1837,6 +1998,62 @@ static void rexxAppendVoicesForSpeechProfile(STRPTR buffer, ULONG bufferSize,
     } else if (settings.speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
         rexxAppendElevenLabsVoiceNames(buffer, bufferSize,
                                        settings.elevenLabsApiKey);
+    } else if (settings.speechSystem == SPEECH_SYSTEM_OPENVOX) {
+        UBYTE endpoint[768];
+        CONST_STRPTR endpointBase = settings.apiEndpointUrl != NULL
+                                        ? settings.apiEndpointUrl
+                                        : (STRPTR) "v1";
+        CONST_STRPTR model = settings.openVoxModel != NULL
+                                 ? settings.openVoxModel
+                                 : (STRPTR) "chatterbox-turbo-small";
+        snprintf(endpoint, sizeof(endpoint), "/%s/models/%s/languages",
+                 endpointBase, model);
+        struct json_object *languages =
+            rexxGetOpenVoxJson(&settings, endpoint);
+        STRPTR language = NULL;
+        struct json_object *languageData = NULL;
+        if (languages != NULL &&
+            json_object_object_get_ex(languages, "data", &languageData) &&
+            json_object_is_type(languageData, json_type_array)) {
+            LONG count = json_object_array_length(languageData);
+            for (LONG i = 0; i < count; i++) {
+                struct json_object *entry =
+                    json_object_array_get_idx(languageData, i);
+                CONST_STRPTR code =
+                    rexxJsonGetStringDefault(entry, "code", NULL);
+                if (code == NULL)
+                    continue;
+                if (language == NULL)
+                    language = rexxDupStr(code);
+                if (settings.openVoxLanguage != NULL &&
+                    strcmp(settings.openVoxLanguage, code) == 0) {
+                    if (language != NULL)
+                        FreeVec(language);
+                    language = rexxDupStr(code);
+                    break;
+                }
+            }
+        }
+        if (languages != NULL)
+            json_object_put(languages);
+        if (language == NULL) {
+            rexxAppendLine(buffer, bufferSize,
+                           STRING_ERROR_REXX_FETCHING_VOICES);
+            configFreeSpeechRequestSettings(&settings);
+            return;
+        }
+        snprintf(endpoint, sizeof(endpoint),
+                 "/%s/models/%s/voices?language=%s",
+                 endpointBase, model, language);
+        struct json_object *voices = rexxGetOpenVoxJson(&settings, endpoint);
+        FreeVec(language);
+        if (voices == NULL)
+            rexxAppendLine(buffer, bufferSize,
+                           STRING_ERROR_REXX_FETCHING_VOICES);
+        else {
+            rexxAppendOpenVoxDataValues(buffer, bufferSize, voices, "name");
+            json_object_put(voices);
+        }
     } else if (settings.speechSystem == SPEECH_SYSTEM_34 ||
                settings.speechSystem == SPEECH_SYSTEM_37) {
         rexxAppendLine(buffer, bufferSize, "male");
@@ -2066,6 +2283,10 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
             if (speechSettings.xaiApiKey != NULL)
                 FreeVec(speechSettings.xaiApiKey);
             speechSettings.xaiApiKey = rexxDupStr(apiKey);
+        } else if (speechSettings.speechSystem == SPEECH_SYSTEM_OPENVOX) {
+            if (speechSettings.openVoxApiKey != NULL)
+                FreeVec(speechSettings.openVoxApiKey);
+            speechSettings.openVoxApiKey = rexxDupStr(apiKey);
         } else {
             if (speechSettings.openAiApiKey != NULL)
                 FreeVec(speechSettings.openAiApiKey);
@@ -2095,6 +2316,11 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
                 if (speechSettings.xaiVoiceId != NULL)
                     FreeVec(speechSettings.xaiVoiceId);
                 speechSettings.xaiVoiceId = rexxDupStr(voiceString);
+            } else if (speechSettings.speechSystem ==
+                       SPEECH_SYSTEM_OPENVOX) {
+                if (speechSettings.openVoxVoice != NULL)
+                    FreeVec(speechSettings.openVoxVoice);
+                speechSettings.openVoxVoice = rexxDupStr(voiceString);
             }
         }
     }
@@ -2110,9 +2336,15 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
     }
 
     if (modelString != NULL && strlen(modelString) > 0) {
-        if (speechSettings.openAiTtsModelId != NULL)
-            FreeVec(speechSettings.openAiTtsModelId);
-        speechSettings.openAiTtsModelId = rexxDupStr(modelString);
+        if (speechSettings.speechSystem == SPEECH_SYSTEM_OPENVOX) {
+            if (speechSettings.openVoxModel != NULL)
+                FreeVec(speechSettings.openVoxModel);
+            speechSettings.openVoxModel = rexxDupStr(modelString);
+        } else {
+            if (speechSettings.openAiTtsModelId != NULL)
+                FreeVec(speechSettings.openAiTtsModelId);
+            speechSettings.openAiTtsModelId = rexxDupStr(modelString);
+        }
     }
     speechSettings.openAiTtsVoice = voice;
     if (instructions != NULL && strlen(instructions) > 0) {

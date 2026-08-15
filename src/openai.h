@@ -619,6 +619,20 @@ APTR postTextToSpeechRequestToXAI(
     CONST_STRPTR proxyPassword, AudioFormat *audioFormat);
 
 /**
+ * Synthesize speech with an OpenVox server. OpenVox returns a WAV file (or a
+ * base64 WAV in an audio.chunk event); this function returns its raw
+ * little-endian 16-bit mono PCM payload for the shared AHI playback path.
+ */
+APTR postTextToSpeechRequestToOpenVox(
+    CONST_STRPTR text, CONST_STRPTR model, CONST_STRPTR voice,
+    CONST_STRPTR language, CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR apiKey, ULONG *audioLength, ULONG *sampleRate, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword);
+
+/**
  * Fetch the list of custom voices from xAI (GET /v1/custom-voices).
  * Returns the parsed JSON object or NULL on error. The caller must
  * json_object_put() the result.

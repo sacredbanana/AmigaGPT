@@ -79,7 +79,7 @@ For smooth operation of AmigaGPT, your system needs to meet the following requir
 - An OpenAI account with an active API key
 - Optional: For speech on AmigaOS 3, any version of narrator.device
 - Optional: For speech on AmigaOS 4, Flite Device
-- Optional: For OpenAI speech, AHI is required
+- Optional: For OpenAI, ElevenLabs or OpenVox speech, AHI is required
  (http://aminet.net/package/driver/audio/ahiusr_4.18)
 
 @endnode
