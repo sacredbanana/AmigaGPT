@@ -65,6 +65,7 @@ struct codeset *systemCodeset;
 
 static BOOL checkMUICustomClassInstalled();
 static void closeGUILibraries();
+static STRPTR wrapRequesterText(CONST_STRPTR message);
 
 static CONST_STRPTR USED_CLASSES[] = {
     MUIC_Aboutbox,   MUIC_Busy,       MUIC_NList,
@@ -310,6 +311,94 @@ void updateStatusBar(CONST_STRPTR message, const ULONG pen) {
 }
 
 /**
+ * Wrap requester text to fit the current screen.
+ *
+ * MUI_Request() and EasyRequest() size themselves from explicit lines and do
+ * not word-wrap long paragraphs. Keep lines short enough for low-resolution
+ * screens, while retaining line breaks already present in the message.
+ *
+ * @param message the message to wrap
+ * @return an AllocVec'd wrapped copy, or NULL if it could not be allocated
+ **/
+static STRPTR wrapRequesterText(CONST_STRPTR message) {
+    struct Screen *screen = NULL;
+    BOOL screenLocked = FALSE;
+    ULONG fontWidth = 8;
+    ULONG maxColumns = 72;
+    size_t messageLength;
+    size_t bufferLength;
+    size_t inputIndex;
+    size_t outputIndex = 0;
+    size_t lineStart = 0;
+    size_t lastSpace = (size_t)-1;
+    STRPTR wrappedMessage;
+
+    if (!message)
+        return NULL;
+
+#ifndef DAEMON
+    if (mainWindowObject)
+        get(mainWindowObject, MUIA_Window_Screen, &screen);
+#endif
+    if (!screen) {
+        screen = LockPubScreen(NULL);
+        screenLocked = screen != NULL;
+    }
+
+    if (screen) {
+        if (screen->RastPort.Font && screen->RastPort.Font->tf_XSize > 0)
+            fontWidth = screen->RastPort.Font->tf_XSize;
+
+        if (screen->Width > 96)
+            maxColumns = (screen->Width - 96) / fontWidth;
+
+        if (maxColumns < 24)
+            maxColumns = 24;
+        else if (maxColumns > 72)
+            maxColumns = 72;
+    }
+
+    if (screenLocked)
+        UnlockPubScreen(NULL, screen);
+
+    messageLength = strlen(message);
+    bufferLength = messageLength + (messageLength / maxColumns) + 2;
+    wrappedMessage = AllocVec(bufferLength, MEMF_ANY);
+    if (!wrappedMessage)
+        return NULL;
+
+    for (inputIndex = 0; inputIndex < messageLength; inputIndex++) {
+        UBYTE character = message[inputIndex];
+
+        wrappedMessage[outputIndex++] = character;
+
+        if (character == '\n') {
+            lineStart = outputIndex;
+            lastSpace = (size_t)-1;
+            continue;
+        }
+
+        if (character == ' ' || character == '\t')
+            lastSpace = outputIndex - 1;
+
+        if (outputIndex - lineStart >= maxColumns &&
+            inputIndex + 1 < messageLength && message[inputIndex + 1] != '\n') {
+            if (lastSpace != (size_t)-1 && lastSpace >= lineStart) {
+                wrappedMessage[lastSpace] = '\n';
+                lineStart = lastSpace + 1;
+            } else {
+                wrappedMessage[outputIndex++] = '\n';
+                lineStart = outputIndex;
+            }
+            lastSpace = (size_t)-1;
+        }
+    }
+
+    wrappedMessage[outputIndex] = '\0';
+    return wrappedMessage;
+}
+
+/**
  * Copies a file from one location to another
  * @param source The source file to copy
  * @param destination The destination to copy the file to
@@ -391,6 +480,8 @@ void displayError(STRPTR message) {
     snprintf(okString, strlen(STRING_OK) + 2, "*%s", STRING_OK);
     const LONG ERROR_CODE = IoErr();
     if (ERROR_CODE == 0) {
+        STRPTR wrappedMessage = wrapRequesterText(message);
+        CONST_STRPTR requesterMessage = wrappedMessage ? wrappedMessage : message;
 #ifndef DAEMON
         if (!app || MUI_Request(app, mainWindowObject,
 #ifdef __MORPHOS__
@@ -398,19 +489,25 @@ void displayError(STRPTR message) {
 #else
                                 MUIV_Requester_Image_Error,
 #endif
-                                errorTitle, okString, "\33c%s", message) != 0) {
+                                errorTitle, okString, "\33c%s",
+                                requesterMessage) != 0) {
 #endif
             struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,
-                                         errorTitle, message, STRING_OK};
-            EasyRequest(NULL, &errorES, NULL, NULL);
+                                         errorTitle, "%s", STRING_OK};
+            EasyRequest(NULL, &errorES, NULL, requesterMessage);
 #ifndef DAEMON
         }
 #endif
+        if (wrappedMessage)
+            FreeVec(wrappedMessage);
     } else {
         STRPTR errorDescription = AllocVec(ERROR_BUFFER_LENGTH, MEMF_ANY);
         Fault(ERROR_CODE, NULL, errorDescription, ERROR_BUFFER_LENGTH);
         snprintf(errorMessage, ERROR_BUFFER_LENGTH, "%s: %s\n\n%s\0",
                  errorTitle, errorDescription, message);
+        STRPTR wrappedMessage = wrapRequesterText(errorMessage);
+        CONST_STRPTR requesterMessage =
+            wrappedMessage ? wrappedMessage : errorMessage;
         if (app) {
 #ifndef DAEMON
             MUI_Request(app, mainWindowObject,
@@ -419,13 +516,15 @@ void displayError(STRPTR message) {
 #else
                         MUIV_Requester_Image_Error,
 #endif
-                        errorTitle, okString, "\33c%s", errorMessage);
+                        errorTitle, okString, "\33c%s", requesterMessage);
         } else {
 #endif
             struct EasyStruct errorES = {sizeof(struct EasyStruct), 0,
-                                         STRING_ERROR, errorMessage, STRING_OK};
-            EasyRequest(NULL, &errorES, NULL, NULL);
+                                         STRING_ERROR, "%s", STRING_OK};
+            EasyRequest(NULL, &errorES, NULL, requesterMessage);
         }
+        if (wrappedMessage)
+            FreeVec(wrappedMessage);
         FreeVec(errorDescription);
     }
     FreeVec(errorMessage);
