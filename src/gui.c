@@ -42,7 +42,7 @@ static ULONG muiDispatcherGate(void) {
     Object *obj = (Object *)REG_A2;
     Msg msg = (Msg)REG_A1;
 
-    dispatcher = (ULONG (*)(struct IClass *, Object *, Msg))cl->cl_UserData;
+    dispatcher = (ULONG(*)(struct IClass *, Object *, Msg))cl->cl_UserData;
 
     return dispatcher(cl, obj, msg);
 }
@@ -228,6 +228,9 @@ LONG initVideo() {
 
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
 
+    printf("DBG: initVideo\n");
+    fflush(stdout);
+    return RETURN_ERROR;
     return RETURN_OK;
 }
 

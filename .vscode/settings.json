@@ -112,7 +112,11 @@
         "prtbase.h": "c",
         "busy_mcc.h": "c",
         "time.h": "c",
-        "strings.h": "c"
+        "strings.h": "c",
+        "*.def": "c",
+        "cstdlib": "c",
+        "rope": "c",
+        "future": "c"
     },
     "m68k.vasm.provideDiagnostics": false,
     "amiga.program": "out/amigagpt",

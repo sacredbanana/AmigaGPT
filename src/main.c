@@ -28,6 +28,21 @@ CONST_STRPTR version = "$VER: AmigaGPT " APP_VERSION " (" BUILD_DATE
                        ") � 2023-2026 Cameron Armstrong";
 #endif
 
+/* When a libnix program is started from Workbench it has no stdio streams, so
+   the startup code opens the console described by __stdiowin and points
+   stdin/stdout/stderr at it. The default is an AUTO console window, which pops
+   up - untitled, so it appears to contain nothing but the ":" of its empty
+   path - as soon as anything is written to stdout, typically when the buffers
+   are flushed at exit. The GUI reports everything through requesters, so send
+   stray stdio output to NIL: instead. Shell-started runs are unaffected: they
+   inherit the Shell's streams and never look at __stdiowin. The daemon keeps
+   the default because its status output is the whole point of it.
+   AmigaOS 4 (newlib) already defaults to no console window. */
+#if (defined(__AMIGAOS3__) || defined(__MORPHOS__)) && !defined(DAEMON) &&     \
+    !defined(DEBUG)
+char __stdiowin[] = "NIL:";
+#endif
+
 #ifdef __AMIGAOS4__
 static uint32 appID;
 #endif
@@ -104,6 +119,7 @@ LONG main(int argc, char **argv) {
             break;
         case SPEECH_SYSTEM_37:
             displayError(STRING_ERROR_SPEECH_INIT_WORKBENCH_37);
+            break;
         case SPEECH_SYSTEM_FLITE:
             displayError(STRING_ERROR_SPEECH_INIT_FLITE);
             break;
