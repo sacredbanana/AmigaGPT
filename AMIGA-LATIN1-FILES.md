@@ -21,6 +21,8 @@ These files run on or are displayed by real Amiga hardware, which does **not** s
 - `bundle/AmigaGPT/AmigaGPT.readme`
 - `bundle/AmigaGPT/AmigaGPT.guide`
 
+**C sources** — all `*.c` under `src/` (Amiga-facing strings, `$VER:` cookies, copyright symbols, and any future non-ASCII Latin-1 text)
+
 **ARexx scripts** — all `*.rexx` under `bundle/` and `assets/` (ASCII-only today; must stay Latin-1-safe for future translated strings)
 
 ## Before and after every edit
@@ -35,7 +37,9 @@ FILES = [
     "bundle/AmigaGPT/Install-AmigaGPT",
     "bundle/AmigaGPT/AmigaGPT.readme",
     "bundle/AmigaGPT/AmigaGPT.guide",
-] + sorted(p for root in ("bundle", "assets") for p in Path(root).rglob("*.rexx"))
+] + sorted(Path("src").rglob("*.c")) + sorted(
+    p for root in ("bundle", "assets") for p in Path(root).rglob("*.rexx")
+)
 
 def utf8_sequence_len(data: bytes, i: int) -> int:
     """Return 2–4 if data[i:] starts a valid UTF-8 multibyte sequence; else 0."""
@@ -72,7 +76,7 @@ Also confirm charset: `file -I <path>` should report `iso-8859-1` or `us-ascii`.
 
 - **Do not** use normal text patch tools (`StrReplace`, `Write`, etc.) on files that contain or will contain non-ASCII Latin-1 characters — they write UTF-8 and corrupt accented text.
 - **Do** edit with `python3` using `read_bytes()` / `write_bytes()`, or restore bytes from a known-good git revision.
-- Pure ASCII edits to `.rexx` files are usually safe via normal tools, but **re-run verification** after any edit.
+- Pure ASCII edits to `.rexx` / `.c` files are usually safe via normal tools, but **re-run verification** after any edit.
 - If the user has the file open in an IDE, warn them to **reload or close the tab** after git operations so a stale buffer does not re-corrupt the file on save.
 
 ## Common corruption signs

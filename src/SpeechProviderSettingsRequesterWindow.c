@@ -559,7 +559,7 @@ static struct json_object *getOpenAITTSModels(CONST_STRPTR host, UWORD port,
 }
 
 /* Build a "models cache" json object from an OpenAI /v1/models response,
- * keeping only entries whose id contains "tts" — the API doesn't expose a
+ * keeping only entries whose id contains "tts" - the API doesn't expose a
  * modality flag, so this filter is the closest we can get. */
 static struct json_object *
 filterOpenAITTSModels(struct json_object *rawModels) {
@@ -1170,7 +1170,7 @@ HOOKPROTONHNONP(XAIFetchVoicesButtonClickedFunc, void) {
         configGetProxyPassword());
 
     if (fetched != NULL) {
-        /* Drop NList entries first — they reference strings owned by the
+        /* Drop NList entries first - they reference strings owned by the
          * old xaiVoicesJson, which we're about to free. */
         if (xaiVoiceList != NULL)
             DoMethod(xaiVoiceList, MUIM_NList_Clear);
@@ -1470,7 +1470,7 @@ static void updateSpeechApiKeyStringEnabledFromAuth(SpeechSystem sys) {
 }
 
 static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
-    /* Enable/disable the “custom common” controls. Provider groups
+    /* Enable/disable the "custom common" controls. Provider groups
      * are shown/hidden separately. */
     if (speechProfileNameString != NULL)
         set(speechProfileNameString, MUIA_Disabled, !isCustomOrNew);
@@ -1502,7 +1502,7 @@ static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
         set(fliteVoiceCycle, MUIA_Disabled, !(sys == SPEECH_SYSTEM_FLITE));
 
     /* Built-in OpenAI / ElevenLabs profiles ship with locked connection
-     * settings — users who want to point at a different host should clone
+     * settings - users who want to point at a different host should clone
      * to a custom profile first. */
     BOOL connectionEditable = speechSystemUsesNetwork(sys) && isCustomOrNew;
     if (speechHostString != NULL)
@@ -1948,7 +1948,7 @@ static void loadProfileIntoUI(LONG activeIndex) {
         updateRequirementWarningForSystem(sys, fliteWarningText);
     }
 
-    /* Built-ins can’t be deleted. */
+    /* Built-ins can't be deleted. */
     if (deleteProfileButton != NULL)
         set(deleteProfileButton, MUIA_Disabled,
             (activeIndex < getBuiltinSpeechProviderCount()));
@@ -2488,7 +2488,7 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
             uiVid = XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE];
         json_object_object_add(p, "xaiTTSVoiceId",
                                json_object_new_string(uiVid));
-        /* Keep the legacy enum field in sync for old readers — match the
+        /* Keep the legacy enum field in sync for old readers - match the
          * id to a builtin index when possible. */
         LONG enumIdx = (LONG)XAI_TTS_VOICE_EVE;
         for (LONG i = 0; XAI_TTS_VOICE_NAMES[i] != NULL; i++) {
@@ -3055,7 +3055,7 @@ HOOKPROTONHNONP(SpeechProviderTestFunc, void) {
 
     /* Prefer the model/voice currently selected in the UI lists; fall back to
      * the saved config when nothing is selected (these are just pointers, not
-     * ownership — they remain valid for the duration of this call). */
+     * ownership - they remain valid for the duration of this call). */
     CONST_STRPTR uiModelId = currentElevenLabsModelIdFromUI();
     CONST_STRPTR uiVoiceId = currentElevenLabsVoiceIdFromUI();
     s.elevenLabsModel =

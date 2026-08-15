@@ -3,6 +3,7 @@ paths:
   - "bundle/AmigaGPT/Install-AmigaGPT"
   - "bundle/AmigaGPT/AmigaGPT.readme"
   - "bundle/AmigaGPT/AmigaGPT.guide"
+  - "src/**/*.c"
   - "bundle/**/*.rexx"
   - "assets/**/*.rexx"
 ---
