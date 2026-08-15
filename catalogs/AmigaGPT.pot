@@ -1878,3 +1878,13 @@ msgstr "Stop speaking"
 msgctxt "STRING_XAI_AUTO_INSERT_SPEECH_TAGS (362//)"
 msgid "Auto-insert speech tags into LLM replies"
 msgstr "Auto-insert speech tags into LLM replies"
+
+#: src/speech.c
+msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (363//)"
+msgid "Speech is not available. The speech device failed to initialize."
+msgstr "Speech is not available. The speech device failed to initialize."
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (364//)"
+msgid "SPEAKTEXT failed. See the error requester for details."
+msgstr "SPEAKTEXT failed. See the error requester for details."

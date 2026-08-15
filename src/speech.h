@@ -83,7 +83,7 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat);
 /* Speak using an explicitly provided settings struct (no config reads/writes).
  */
 struct SpeechRequestSettings;
-void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
+BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                            AudioFormat *audioFormat,
                            const struct SpeechRequestSettings *settings);
 

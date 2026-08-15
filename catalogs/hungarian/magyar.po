@@ -1915,6 +1915,16 @@ msgctxt "STRING_XAI_AUTO_INSERT_SPEECH_TAGS (362//)"
 msgid "Auto-insert speech tags into LLM replies"
 msgstr "Beszéd-jelölők automatikus beillesztése az LLM-válaszokba"
 
+#: src/speech.c
+msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (363//)"
+msgid "Speech is not available. The speech device failed to initialize."
+msgstr "A beszéd nem érhető el. Nem sikerült inicializálni a beszédeszközt."
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (364//)"
+msgid "SPEAKTEXT failed. See the error requester for details."
+msgstr "A SPEAKTEXT sikertelen volt. Részletekért lásd a hibaablakot."
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Voice"

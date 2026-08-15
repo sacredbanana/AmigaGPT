@@ -2121,8 +2121,13 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
         speechSettings.openAiVoiceInstructions = rexxDupStr(instructions);
     }
 
-    speakTextWithSettings(prompt, output, &audioFormat, &speechSettings);
+    BOOL spoke = speakTextWithSettings(prompt, output, &audioFormat, &speechSettings);
     configFreeSpeechRequestSettings(&speechSettings);
+    if (!spoke) {
+        set(app, MUIA_Application_RexxString, STRING_ERROR_REXX_SPEAK_FAILED);
+        updateStatusBar(STRING_ERROR, redPen);
+        return RETURN_ERROR;
+    }
     set(app, MUIA_Application_RexxString, prompt);
     updateStatusBar(STRING_READY, greenPen);
     return RETURN_OK;
