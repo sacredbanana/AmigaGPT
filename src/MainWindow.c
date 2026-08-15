@@ -48,6 +48,7 @@ Object *chatOutputTextEditor;
 Object *statusBar;
 Object *conversationListObject;
 Object *loadingBar;
+Object *loadingBarGroup;
 Object *imageInputTextEditor;
 Object *createImageButton;
 Object *newImageButton;
@@ -87,6 +88,22 @@ static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
                          StyleType *foundStyle);
 static BOOL ensureChatOutputBufferCapacity(ULONG required);
 static void addMainWindowActions();
+
+/**
+ * Shows the loading bar and starts the busy meter animating
+ **/
+void showLoadingBar() {
+    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
+    set(loadingBarGroup, MUIA_Group_ActivePage, 1);
+}
+
+/**
+ * Stops the busy meter and hides the loading bar, leaving it blank
+ **/
+void hideLoadingBar() {
+    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    set(loadingBarGroup, MUIA_Group_ActivePage, 0);
+}
 
 /**
  * Title for a new conversation: model text if non-empty, otherwise a truncated
@@ -1407,10 +1424,16 @@ LONG createMainWindow() {
                     MUIA_Background, MUII_SHADOW,
                     MUIA_Text_Contents, STRING_READY,
                 End,
-                // Loading bar
-                Child, loadingBar = BusyObject, MUIA_VertWeight, 10,
+                // Loading bar: blank page while idle, busy meter page while a
+                // request is in flight, so it no longer stays frozen on its
+                // last position once a request finishes.
+                Child, loadingBarGroup = PageGroup, MUIA_VertWeight, 10,
                     MUIA_MaxHeight, 20,
-                    MUIA_Busy_Speed, MUIV_Busy_Speed_Off,
+                    MUIA_Group_ActivePage, 0,
+                    Child, HVSpace,
+                    Child, loadingBar = BusyObject,
+                        MUIA_Busy_Speed, MUIV_Busy_Speed_Off,
+                    End,
                 End,
             End,
         End) == NULL) {
@@ -1552,7 +1575,7 @@ static void sendChatMessage() {
     set(deleteChatButton, MUIA_Disabled, TRUE);
 
     updateStatusBar(STRING_SENDING_MESSAGE, yellowPen);
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
+    showLoadingBar();
     UTF8 *receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
     STRPTR text;
     if (isAROS) {
@@ -1643,7 +1666,7 @@ static void sendChatMessage() {
             chatSettings.customHeaders);
         if (responses == NULL) {
             displayError(STRING_ERROR_CONNECTING_OPENAI);
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+            hideLoadingBar();
             set(sendMessageButton, MUIA_Disabled, FALSE);
             set(newChatButton, MUIA_Disabled, FALSE);
             set(deleteChatButton, MUIA_Disabled, FALSE);
@@ -1673,7 +1696,7 @@ static void sendChatMessage() {
                 } else {
                     displayError(messageString);
                 }
-                set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+                hideLoadingBar();
                 if (isAROS) {
                     set(chatInputTextEditor, MUIA_String_Contents, text);
                 } else {
@@ -2014,7 +2037,7 @@ static void sendChatMessage() {
         }
     } /* end of while (tool calls) */
 
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 
     if (responses != NULL) {
         addTextToConversation(currentConversation, receivedMessage,
@@ -2043,7 +2066,7 @@ static void sendChatMessage() {
         }
         if (isNewConversation) {
             updateStatusBar(STRING_GENERATING_CONVERSATION_TITLE, 7);
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
+            showLoadingBar();
             addTextToConversation(currentConversation,
                                   "generate a short title for this "
                                   "conversation and don't enclose the title in "
@@ -2066,7 +2089,7 @@ static void sendChatMessage() {
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+            hideLoadingBar();
             if (responses == NULL) {
                 displayError(STRING_ERROR_CONNECTING_OPENAI);
                 set(sendMessageButton, MUIA_Disabled, FALSE);

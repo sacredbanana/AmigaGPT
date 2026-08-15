@@ -12,6 +12,7 @@ extern Object *chatOutputScroller;
 extern Object *statusBar;
 extern Object *conversationListObject;
 extern Object *loadingBar;
+extern Object *loadingBarGroup;
 extern Object *imageListObject;
 extern Object *imageInputTextEditor;
 extern Object *createImageButton;
@@ -42,3 +43,13 @@ void displayConversation(struct Conversation *conversation);
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG printConversation();
+
+/**
+ * Shows the loading bar and starts the busy meter animating
+ **/
+void showLoadingBar();
+
+/**
+ * Stops the busy meter and hides the loading bar, leaving it blank
+ **/
+void hideLoadingBar();

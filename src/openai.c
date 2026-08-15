@@ -1058,7 +1058,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
     struct hostent *hostent;
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
+    showLoadingBar();
 #endif
 
     if (ssl != NULL) {
@@ -3084,7 +3084,7 @@ struct json_object *postImageCreationRequestToOpenAI(
     }
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 #endif
 
     if (ssl_err > 0) {
@@ -3630,7 +3630,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
     }
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 #endif
 
     if (ssl_err > 0) {
@@ -4145,7 +4145,7 @@ APTR postTextToSpeechRequestToOpenAI(
     }
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 #endif
 
     BOOL isErrorResponse = FALSE;
@@ -5397,7 +5397,7 @@ APTR postTextToSpeechRequestToElevenLabs(
     }
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 #endif
 
     updateStatusBar(STRING_READY, greenPen);
@@ -6002,7 +6002,7 @@ APTR postTextToSpeechRequestToXAI(
     }
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 #endif
 
     updateStatusBar(STRING_READY, greenPen);
@@ -6157,7 +6157,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
     FreeVec(authHeader);
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
+    showLoadingBar();
 #endif
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
@@ -6167,7 +6167,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
 #ifndef DAEMON
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+            hideLoadingBar();
 #endif
             return NULL;
         }
@@ -6180,7 +6180,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
         if (ssl_err <= 0) {
             reportSslError(ssl, ssl_err, "SSL_write (generic GET)");
 #ifndef DAEMON
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+            hideLoadingBar();
 #endif
             return NULL;
         }
@@ -6189,7 +6189,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
         if (ssl_err <= 0) {
             displayError(STRING_ERROR_REQUEST_WRITE);
 #ifndef DAEMON
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+            hideLoadingBar();
 #endif
             return NULL;
         }
@@ -6228,7 +6228,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
 
     if (jsonStart == NULL) {
 #ifndef DAEMON
-        set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+        hideLoadingBar();
 #endif
         return NULL;
     }
@@ -6245,7 +6245,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
     /* Parse JSON */
     struct json_object *result = json_tokener_parse(jsonStart);
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 #endif
     return result;
 }
