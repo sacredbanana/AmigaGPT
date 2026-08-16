@@ -152,11 +152,6 @@ static STRPTR narratorSexOptions[3] = {NULL};
 #define OPENVOX_HOST "127.0.0.1"
 #define OPENVOX_PORT 8666
 
-static BOOL speechSystemUsesNetwork(SpeechSystem sys) {
-    return (sys == SPEECH_SYSTEM_OPENAI || sys == SPEECH_SYSTEM_ELEVENLABS ||
-            sys == SPEECH_SYSTEM_XAI || sys == SPEECH_SYSTEM_OPENVOX);
-}
-
 static CONST_STRPTR defaultHostForSpeechSystem(SpeechSystem sys) {
     if (sys == SPEECH_SYSTEM_ELEVENLABS)
         return ELEVENLABS_HOST;

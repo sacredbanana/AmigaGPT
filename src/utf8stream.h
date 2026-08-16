@@ -42,4 +42,10 @@ ULONG utf8stream_take_complete(struct UTF8StreamBuffer *stream, UBYTE *dest,
 ULONG utf8stream_flush(struct UTF8StreamBuffer *stream, UBYTE *dest,
                        ULONG dest_capacity);
 
+/**
+ * TRUE if s contains CJK Unified Ideographs / Hangul / kana (typical East-Asian
+ * scripts). Used to avoid MorphOS TTEngine live-redraw freezes and pointless TTS.
+ */
+BOOL utf8_contains_cjk(const UBYTE *s);
+
 #endif

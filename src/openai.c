@@ -37,6 +37,8 @@
 #define SSL_STREAM_WAIT_US 200000
 #define SSL_STREAM_WAIT_MAX 4500
 
+#ifndef __MORPHOS__
+/* OS3/OS4 UI is Latin-1 oriented; MorphOS chat is UTF-8 via Scintilla. */
 static CONST_STRPTR AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS =
     "Output text using characters that can be represented or sensibly remapped "
     "for the Amiga character set. Normal letters used in European languages "
@@ -45,6 +47,7 @@ static CONST_STRPTR AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS =
     "cleanly. Avoid typographic quotes, em/en dashes, ellipses, bullets, and "
     "other decorative Unicode punctuation; use simple plain-text equivalents "
     "instead.";
+#endif
 
 /* System-prompt addendum injected when the active speech profile is xAI TTS
  * and the user has enabled automatic speech tag insertion. Teaches the LLM
@@ -508,15 +511,23 @@ static STRPTR combineInstructionText(CONST_STRPTR first, CONST_STRPTR second) {
 }
 
 static void closeActiveResponseConnection(void) {
+    /* Hard-close: never block on SSL_shutdown (can hang the next chat connect
+     * after a failed or aborted network TTS request on the shared socket). */
     if (sock > -1) {
         CloseSocket(sock);
         sock = -1;
     }
     if (ssl != NULL) {
-        SSL_shutdown(ssl);
         SSL_free(ssl);
         ssl = NULL;
     }
+}
+
+static APTR ttsFail(APTR audioData) {
+    closeActiveResponseConnection();
+    if (audioData != NULL)
+        FreeVec(audioData);
+    return NULL;
 }
 
 static BOOL responseMarksStreamFinished(struct json_object *response) {
@@ -1188,16 +1199,8 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
     showLoadingBar();
 #endif
 
-    if (ssl != NULL) {
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-        ssl = NULL;
-    }
-
-    if (sock > -1) {
-        CloseSocket(sock);
-        sock = -1;
-    }
+    /* Drop any prior shared connection without blocking SSL_shutdown. */
+    closeActiveResponseConnection();
 
     if (useSSL || (useProxy && proxyUsesSSL)) {
         /* The following needs to be done once per socket */
@@ -1216,11 +1219,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
         memcpy(&addr.sin_addr, hostent->h_addr, hostent->h_length);
     } else {
         displayError(useProxy ? STRING_ERROR_PROXY_HOST : STRING_ERROR_HOST);
-        if (ssl != NULL) {
-            SSL_shutdown(ssl);
-            SSL_free(ssl);
-            ssl = NULL;
-        }
+        closeActiveResponseConnection();
         return RETURN_ERROR;
     }
 
@@ -1235,22 +1234,12 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
         if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
             displayError(useProxy ? STRING_ERROR_CONNECTION_PROXY
                                   : STRING_ERROR_CONNECTION);
-            CloseSocket(sock);
-            if (ssl != NULL) {
-                SSL_shutdown(ssl);
-                SSL_free(ssl);
-                ssl = NULL;
-            }
-            sock = -1;
+            closeActiveResponseConnection();
             return RETURN_ERROR;
         }
     } else {
         displayError(STRING_ERROR_SOCKET_CREATE);
-        if (ssl != NULL) {
-            SSL_shutdown(ssl);
-            SSL_free(ssl);
-            ssl = NULL;
-        }
+        closeActiveResponseConnection();
         return RETURN_ERROR;
     }
 
@@ -1282,7 +1271,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
 
         if (send(sock, connectRequest, strlen(connectRequest), 0) < 0) {
             displayError(STRING_ERROR_CONNECT_REQUEST);
-            CloseSocket(sock);
+            closeActiveResponseConnection();
             FreeVec(connectRequest);
             FreeVec(authHeader);
             return RETURN_ERROR;
@@ -1298,7 +1287,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
             } else {
                 displayError(STRING_ERROR_PROXY_NO_RESPONSE);
             }
-            CloseSocket(sock);
+            closeActiveResponseConnection();
             FreeVec(response);
             return RETURN_ERROR;
         }
@@ -1323,11 +1312,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
         } else {
             /* Handshake failed: report with full diagnostics. */
             reportSslError(ssl, ssl_err, "SSL_connect");
-            CloseSocket(sock);
-            SSL_shutdown(ssl);
-            SSL_free(ssl);
-            ssl = NULL;
-            sock = -1;
+            closeActiveResponseConnection();
             return RETURN_ERROR;
         }
     }
@@ -1891,8 +1876,16 @@ struct json_object **postChatMessageToOpenAI(
         struct json_object *conversationArray = json_object_new_array();
 
         struct MinNode *conversationNode = conversation->messages->mlh_Head;
+#ifdef __MORPHOS__
+        /* MorphOS chat is UTF-8 (Scintilla). Do not inject the upstream
+         * Latin-1/Amiga-charset instruction — it makes models drop umlauts
+         * and other Unicode that we intentionally support. */
+        STRPTR systemInstructions =
+            combineInstructionText(conversation->system, NULL);
+#else
         STRPTR systemInstructions = combineInstructionText(
             conversation->system, AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS);
+#endif
 
         /* If speech is on and the active speech profile is xAI TTS with
          * automatic speech tag insertion enabled, append a tag cheat sheet to
@@ -4340,15 +4333,13 @@ APTR postTextToSpeechRequestToOpenAI(
                 if (he == SSL_ERROR_WANT_READ || he == SSL_ERROR_WANT_WRITE)
                     continue;
             }
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
 
         STRPTR hstr = (STRPTR)headerAccum;
         STRPTR hend = strstr(hstr, "\r\n\r\n");
         if (hend == NULL) {
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
         ULONG bodyOff = (ULONG)(hend - hstr) + 4;
 
@@ -4383,8 +4374,7 @@ APTR postTextToSpeechRequestToOpenAI(
                     }
                 }
                 json_object_put(response);
-                FreeVec(audioData);
-                return NULL;
+                return ttsFail(audioData);
             }
             if (response != NULL)
                 json_object_put(response);
@@ -4408,7 +4398,7 @@ APTR postTextToSpeechRequestToOpenAI(
                 if (audioData == NULL) {
                     FreeVec(oldad);
                     displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                    return NULL;
+                    return ttsFail(NULL);
                 }
                 FreeVec(oldad);
             }
@@ -4455,9 +4445,8 @@ APTR postTextToSpeechRequestToOpenAI(
                     APTR oldAudioData = audioData;
                     audioData = AllocVec(audioBufferSize, MEMF_ANY);
                     if (audioData == NULL) {
-                        FreeVec(oldAudioData);
                         displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                        return NULL;
+                        return ttsFail(oldAudioData);
                     }
                     memcpy(audioData, oldAudioData, *audioLength);
                     FreeVec(oldAudioData);
@@ -4480,9 +4469,8 @@ APTR postTextToSpeechRequestToOpenAI(
                         APTR oldAudioData = audioData;
                         audioData = AllocVec(audioBufferSize, MEMF_ANY);
                         if (audioData == NULL) {
-                            FreeVec(oldAudioData);
                             displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                            return NULL;
+                            return ttsFail(oldAudioData);
                         }
                         memcpy(audioData, oldAudioData, *audioLength);
                         FreeVec(oldAudioData);
@@ -4507,8 +4495,7 @@ APTR postTextToSpeechRequestToOpenAI(
         seedLen = initialBody;
         if (seedLen > READ_BUFFER_LENGTH - 1) {
             displayError(STRING_ERROR_BAD_CHUNK);
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
         memcpy(readBuffer, headerAccum + bodyOff, seedLen);
         useSeed = (seedLen > 0);
@@ -4601,8 +4588,7 @@ APTR postTextToSpeechRequestToOpenAI(
                                     if (cleanMessage != rawMessageString) {
                                         FreeVec(cleanMessage);
                                     }
-                                    FreeVec(audioData);
-                                    return NULL;
+                                    return ttsFail(audioData);
                                 }
                             } else {
                                 STRPTR httpResponse =
@@ -4671,9 +4657,8 @@ APTR postTextToSpeechRequestToOpenAI(
                         APTR oldAudioData = audioData;
                         audioData = AllocVec(audioBufferSize, MEMF_ANY);
                         if (audioData == NULL) {
-                            FreeVec(oldAudioData);
                             displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                            return NULL;
+                            return ttsFail(oldAudioData);
                         }
                         memcpy(audioData, oldAudioData, *audioLength);
                         FreeVec(oldAudioData);
@@ -4739,9 +4724,8 @@ APTR postTextToSpeechRequestToOpenAI(
                             APTR oldAudioData = audioData;
                             audioData = AllocVec(audioBufferSize, MEMF_ANY);
                             if (audioData == NULL) {
-                                FreeVec(oldAudioData);
                                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                                return NULL;
+                                return ttsFail(oldAudioData);
                             }
                             memcpy(audioData, oldAudioData, *audioLength);
                             FreeVec(oldAudioData);
@@ -4783,8 +4767,7 @@ APTR postTextToSpeechRequestToOpenAI(
                                         proxyPassword) == RETURN_ERROR) {
                     if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
                         displayError(STRING_ERROR_CONNECTION_MAX_RETRIES);
-                        FreeVec(audioData);
-                        return NULL;
+                        return ttsFail(audioData);
                     }
                 } else {
                     // Successful reconnection - restart the download
@@ -4830,9 +4813,8 @@ APTR postTextToSpeechRequestToOpenAI(
                 APTR oldAudioData = audioData;
                 audioData = AllocVec(audioBufferSize, MEMF_ANY);
                 if (audioData == NULL) {
-                    FreeVec(oldAudioData);
                     displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                    return NULL;
+                    return ttsFail(oldAudioData);
                 }
                 memcpy(audioData, oldAudioData, *audioLength);
                 FreeVec(oldAudioData);
@@ -4849,17 +4831,10 @@ APTR postTextToSpeechRequestToOpenAI(
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
         reportSslError(ssl, ssl_err, "SSL_write");
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
-    CloseSocket(sock);
-    if (ssl != NULL) {
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-        ssl = NULL;
-    }
-    sock = -1;
+    closeActiveResponseConnection();
 
     // Check if this was an error response and parse JSON error message
     if (isErrorResponse && *audioLength > 0) {
@@ -4883,8 +4858,7 @@ APTR postTextToSpeechRequestToOpenAI(
                                                    // message
                         }
                         json_object_put(errorResponse);
-                        FreeVec(audioData);
-                        return NULL;
+                        return ttsFail(audioData);
                     }
                 }
                 json_object_put(errorResponse);
@@ -4892,12 +4866,12 @@ APTR postTextToSpeechRequestToOpenAI(
         }
         // If we couldn't parse the JSON error, show a generic error
         displayError("HTTP error occurred but could not parse error details");
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
     updateStatusBar(STRING_DOWNLOAD_COMPLETE, greenPen);
 
+    closeActiveResponseConnection();
     return audioData;
 }
 
@@ -5038,7 +5012,7 @@ APTR postTextToSpeechRequestToElevenLabs(
     UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
     if (audioData == NULL) {
         displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-        return NULL;
+        return ttsFail(NULL);
     }
 
     /* Build JSON request body */
@@ -5120,15 +5094,13 @@ APTR postTextToSpeechRequestToElevenLabs(
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
         if (ssl_err <= 0) {
             reportSslError(ssl, ssl_err, "SSL_write (elevenlabs tts)");
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
         if (ssl_err <= 0) {
             displayError(STRING_ERROR_REQUEST_WRITE);
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
     }
 
@@ -5163,15 +5135,13 @@ APTR postTextToSpeechRequestToElevenLabs(
             if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
                 continue;
         }
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
     STRPTR hstr = (STRPTR)headerAccum;
     STRPTR hend = strstr(hstr, "\r\n\r\n");
     if (hend == NULL) {
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
     ULONG bodyOff = (ULONG)(hend - hstr) + 4;
 
@@ -5201,8 +5171,7 @@ APTR postTextToSpeechRequestToElevenLabs(
                 json_object_put(response);
             }
         }
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
     BOOL chunked =
@@ -5220,7 +5189,7 @@ APTR postTextToSpeechRequestToElevenLabs(
             if (audioData == NULL) {
                 FreeVec(old);
                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                return NULL;
+                return ttsFail(NULL);
             }
             if (old != NULL)
                 FreeVec(old);
@@ -5264,9 +5233,8 @@ APTR postTextToSpeechRequestToElevenLabs(
             APTR oldAudioData = audioData;
             audioData = AllocVec(audioBufferSize, MEMF_ANY);
             if (audioData == NULL) {
-                FreeVec(oldAudioData);
                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                return NULL;
+                return ttsFail(oldAudioData);
             }
             memcpy(audioData, oldAudioData, *audioLength);
             FreeVec(oldAudioData);
@@ -5289,9 +5257,8 @@ APTR postTextToSpeechRequestToElevenLabs(
                     APTR oldAudioData = audioData;
                     audioData = AllocVec(audioBufferSize, MEMF_ANY);
                     if (audioData == NULL) {
-                        FreeVec(oldAudioData);
                         displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                        return NULL;
+                        return ttsFail(oldAudioData);
                     }
                     memcpy(audioData, oldAudioData, *audioLength);
                     FreeVec(oldAudioData);
@@ -5318,8 +5285,7 @@ APTR postTextToSpeechRequestToElevenLabs(
         ULONG seedLen = initialBody;
         if (seedLen > READ_BUFFER_LENGTH - 1) {
             displayError(STRING_ERROR_BAD_CHUNK);
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
         memcpy(readBuffer, headerAccum + bodyOff, seedLen);
         useSeed = (seedLen > 0);
@@ -5436,9 +5402,8 @@ APTR postTextToSpeechRequestToElevenLabs(
                         APTR oldAudioData = audioData;
                         audioData = AllocVec(audioBufferSize, MEMF_ANY);
                         if (audioData == NULL) {
-                            FreeVec(oldAudioData);
                             displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                            return NULL;
+                            return ttsFail(oldAudioData);
                         }
                         memcpy(audioData, oldAudioData, *audioLength);
                         FreeVec(oldAudioData);
@@ -5492,9 +5457,8 @@ APTR postTextToSpeechRequestToElevenLabs(
                             APTR oldAudioData = audioData;
                             audioData = AllocVec(audioBufferSize, MEMF_ANY);
                             if (audioData == NULL) {
-                                FreeVec(oldAudioData);
                                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                                return NULL;
+                                return ttsFail(oldAudioData);
                             }
                             memcpy(audioData, oldAudioData, *audioLength);
                             FreeVec(oldAudioData);
@@ -5542,9 +5506,8 @@ APTR postTextToSpeechRequestToElevenLabs(
                 APTR oldAudioData = audioData;
                 audioData = AllocVec(audioBufferSize, MEMF_ANY);
                 if (audioData == NULL) {
-                    FreeVec(oldAudioData);
                     displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                    return NULL;
+                    return ttsFail(oldAudioData);
                 }
                 memcpy(audioData, oldAudioData, *audioLength);
                 FreeVec(oldAudioData);
@@ -5564,10 +5527,10 @@ APTR postTextToSpeechRequestToElevenLabs(
     updateStatusBar(STRING_READY, greenPen);
 
     if (*audioLength == 0) {
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
+    closeActiveResponseConnection();
     return audioData;
 }
 
@@ -5628,7 +5591,7 @@ APTR postTextToSpeechRequestToXAI(
     UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
     if (audioData == NULL) {
         displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-        return NULL;
+        return ttsFail(NULL);
     }
 
     UTF8 *textUTF8 =
@@ -5720,15 +5683,13 @@ APTR postTextToSpeechRequestToXAI(
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
         if (ssl_err <= 0) {
             reportSslError(ssl, ssl_err, "SSL_write (xai tts)");
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
         if (ssl_err <= 0) {
             displayError(STRING_ERROR_REQUEST_WRITE);
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
     }
 
@@ -5761,15 +5722,13 @@ APTR postTextToSpeechRequestToXAI(
             if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
                 continue;
         }
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
     STRPTR hstr = (STRPTR)headerAccum;
     STRPTR hend = strstr(hstr, "\r\n\r\n");
     if (hend == NULL) {
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
     ULONG bodyOff = (ULONG)(hend - hstr) + 4;
 
@@ -5808,8 +5767,7 @@ APTR postTextToSpeechRequestToXAI(
                 json_object_put(response);
             }
         }
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
     BOOL chunked =
@@ -5827,7 +5785,7 @@ APTR postTextToSpeechRequestToXAI(
             if (audioData == NULL) {
                 FreeVec(old);
                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                return NULL;
+                return ttsFail(NULL);
             }
             if (old != NULL)
                 FreeVec(old);
@@ -5870,9 +5828,8 @@ APTR postTextToSpeechRequestToXAI(
             APTR oldAudioData = audioData;
             audioData = AllocVec(audioBufferSize, MEMF_ANY);
             if (audioData == NULL) {
-                FreeVec(oldAudioData);
                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                return NULL;
+                return ttsFail(oldAudioData);
             }
             memcpy(audioData, oldAudioData, *audioLength);
             FreeVec(oldAudioData);
@@ -5895,9 +5852,8 @@ APTR postTextToSpeechRequestToXAI(
                     APTR oldAudioData = audioData;
                     audioData = AllocVec(audioBufferSize, MEMF_ANY);
                     if (audioData == NULL) {
-                        FreeVec(oldAudioData);
                         displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                        return NULL;
+                        return ttsFail(oldAudioData);
                     }
                     memcpy(audioData, oldAudioData, *audioLength);
                     FreeVec(oldAudioData);
@@ -5923,8 +5879,7 @@ APTR postTextToSpeechRequestToXAI(
         ULONG seedLen = initialBody;
         if (seedLen > READ_BUFFER_LENGTH - 1) {
             displayError(STRING_ERROR_BAD_CHUNK);
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
         memcpy(readBuffer, headerAccum + bodyOff, seedLen);
         useSeed = (seedLen > 0);
@@ -6041,9 +5996,8 @@ APTR postTextToSpeechRequestToXAI(
                         APTR oldAudioData = audioData;
                         audioData = AllocVec(audioBufferSize, MEMF_ANY);
                         if (audioData == NULL) {
-                            FreeVec(oldAudioData);
                             displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                            return NULL;
+                            return ttsFail(oldAudioData);
                         }
                         memcpy(audioData, oldAudioData, *audioLength);
                         FreeVec(oldAudioData);
@@ -6097,9 +6051,8 @@ APTR postTextToSpeechRequestToXAI(
                             APTR oldAudioData = audioData;
                             audioData = AllocVec(audioBufferSize, MEMF_ANY);
                             if (audioData == NULL) {
-                                FreeVec(oldAudioData);
                                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                                return NULL;
+                                return ttsFail(oldAudioData);
                             }
                             memcpy(audioData, oldAudioData, *audioLength);
                             FreeVec(oldAudioData);
@@ -6147,9 +6100,8 @@ APTR postTextToSpeechRequestToXAI(
                 APTR oldAudioData = audioData;
                 audioData = AllocVec(audioBufferSize, MEMF_ANY);
                 if (audioData == NULL) {
-                    FreeVec(oldAudioData);
                     displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                    return NULL;
+                    return ttsFail(oldAudioData);
                 }
                 memcpy(audioData, oldAudioData, *audioLength);
                 FreeVec(oldAudioData);
@@ -6169,10 +6121,10 @@ APTR postTextToSpeechRequestToXAI(
     updateStatusBar(STRING_READY, greenPen);
 
     if (*audioLength == 0) {
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
+    closeActiveResponseConnection();
     return audioData;
 }
 
@@ -6337,7 +6289,7 @@ static APTR openVoxPostJson(
         }
         if (n <= 0) {
             FreeVec(request);
-            return NULL;
+            return ttsFail(NULL);
         }
         sent += (ULONG)n;
     }
@@ -6347,7 +6299,7 @@ static APTR openVoxPostJson(
     ULONG responseLength = 0;
     UBYTE *response = AllocVec(responseCapacity, MEMF_ANY);
     if (response == NULL)
-        return NULL;
+        return ttsFail(NULL);
 
     updateStatusBar(STRING_DOWNLOADING_RESPONSE, yellowPen);
     for (;;) {
@@ -6355,8 +6307,7 @@ static APTR openVoxPostJson(
             ULONG newCapacity = responseCapacity << 1;
             UBYTE *grown = AllocVec(newCapacity, MEMF_ANY);
             if (grown == NULL) {
-                FreeVec(response);
-                return NULL;
+                return ttsFail(response);
             }
             memcpy(grown, response, responseLength);
             FreeVec(response);
@@ -6390,8 +6341,7 @@ static APTR openVoxPostJson(
         delimiterLength = 2;
     }
     if (headerEnd == NULL) {
-        FreeVec(response);
-        return NULL;
+        return ttsFail(response);
     }
     UBYTE *body = headerEnd + delimiterLength;
     ULONG headerLength = (ULONG)(body - response);
@@ -6436,6 +6386,7 @@ static APTR openVoxPostJson(
     if (bodyLength != NULL)
         *bodyLength = resultLength;
     updateStatusBar(STRING_READY, greenPen);
+    closeActiveResponseConnection();
     return result;
 }
 

@@ -187,3 +187,60 @@ ULONG utf8stream_flush(struct UTF8StreamBuffer *stream, UBYTE *dest,
 
     return utf8stream_copy_prefix(stream, dest, dest_capacity, stream->used);
 }
+
+BOOL utf8_contains_cjk(const UBYTE *s) {
+    if (s == NULL) {
+        return FALSE;
+    }
+
+    while (*s != '\0') {
+        UBYTE b = *s;
+        ULONG need;
+        ULONG cp;
+
+        if (b < 0x80) {
+            s++;
+            continue;
+        }
+        if ((b & 0xE0) == 0xC0) {
+            need = 2;
+        } else if ((b & 0xF0) == 0xE0) {
+            need = 3;
+        } else if ((b & 0xF8) == 0xF0) {
+            need = 4;
+        } else {
+            s++;
+            continue;
+        }
+
+        {
+            ULONG i;
+            for (i = 1; i < need; i++) {
+                if (s[i] == '\0' || (s[i] & 0xC0) != 0x80) {
+                    s++;
+                    need = 0;
+                    break;
+                }
+            }
+            if (need == 0) {
+                continue;
+            }
+        }
+
+        if (need == 3) {
+            cp = ((ULONG)(b & 0x0F) << 12) | ((ULONG)(s[1] & 0x3F) << 6) |
+                 (ULONG)(s[2] & 0x3F);
+            /* Hiragana, Katakana, CJK Ext A / Unified, Hangul, CJK Compatibility */
+            if ((cp >= 0x3040UL && cp <= 0x30FFUL) ||
+                (cp >= 0x3400UL && cp <= 0x9FFFUL) ||
+                (cp >= 0xAC00UL && cp <= 0xD7AFUL) ||
+                (cp >= 0xF900UL && cp <= 0xFAFFUL)) {
+                return TRUE;
+            }
+        }
+
+        s += need;
+    }
+
+    return FALSE;
+}

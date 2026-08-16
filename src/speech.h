@@ -31,6 +31,12 @@ typedef enum {
 extern const STRPTR SPEECH_SYSTEM_NAMES[];
 
 /**
+ * TRUE for TTS engines that use the shared HTTP/SSL socket (OpenAI, ElevenLabs,
+ * xAI, OpenVox). Local narrator/Flite are FALSE.
+ **/
+BOOL speechSystemUsesNetwork(SpeechSystem speechSystem);
+
+/**
  * The Flite voice of the spoken text
  **/
 typedef enum {

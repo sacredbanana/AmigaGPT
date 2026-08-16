@@ -1915,7 +1915,9 @@ void chatOutputUpdateFromBuffer(BOOL preserveViewport) {
             {
                 BOOL morphosUseRawRefresh =
                     !configGetMarkdownFormatting() ||
-                    morphosChatStreamRawScintillaRefresh;
+                    morphosChatStreamRawScintillaRefresh ||
+                    utf8_contains_cjk(
+                        (const UBYTE *)chatOutputTextEditorContents);
 
                 if (morphosUseRawRefresh) {
                     if (morphosChatStreamRawScintillaRefresh) {
@@ -2805,6 +2807,16 @@ static BOOL streamUiShouldRefresh(UWORD chunkCount) {
 
 static void streamUiFlushChatDisplay(void) {
 #ifdef __MORPHOS__
+    /*
+     * Live Scintilla redraw of CJK via TTEngine/DejaVu freezes MorphOS and
+     * stalls the SSL read loop (status stuck on "Antwort wird heruntergeladen").
+     * Keep the UTF-8 buffer updated; paint once after the stream ends.
+     */
+    if (morphosChatStreamRawScintillaRefresh &&
+        chatOutputTextEditorContents != NULL &&
+        utf8_contains_cjk((const UBYTE *)chatOutputTextEditorContents)) {
+        return;
+    }
     chatOutputUpdateFromBuffer(FALSE);
 #else
     set(chatOutputTextEditor, MUIA_NFloattext_Text,
@@ -2879,9 +2891,11 @@ static void appendAssistantStreamText(STRPTR piece, STRPTR receivedMessage,
      */
     if (streamUiShouldRefresh(*wordNumber)) {
         streamUiFlushChatDisplay();
+        /* Network TTS shares the chat SSL socket — never speak mid-stream.
+         * CJK mid-stream local TTS also stalls the UI on MorphOS. */
         if (configGetSpeechEnabled() &&
-            configGetSpeechSystem() != SPEECH_SYSTEM_OPENAI &&
-            configGetSpeechSystem() != SPEECH_SYSTEM_XAI) {
+            !speechSystemUsesNetwork(configGetSpeechSystem()) &&
+            !utf8_contains_cjk((const UBYTE *)receivedMessage)) {
             speakStreamUtf8Tail(receivedMessage, speechUtf8Index);
         }
     }
@@ -3192,9 +3206,18 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
 
         if (configGetSpeechEnabled()) {
             SpeechSystem speechSys = configGetSpeechSystem();
-            if (speechSys == SPEECH_SYSTEM_OPENAI ||
-                speechSys == SPEECH_SYSTEM_XAI) {
-                speakText(receivedMessage, NULL, AUDIO_FORMAT_PCM);
+            /* CJK + network TTS blocks the UI on the shared SSL socket for a
+             * long time (looks like a hang after "chinesische Schriftzeichen"). */
+            if (utf8_contains_cjk((const UBYTE *)receivedMessage)) {
+                updateStatusBar(STRING_READY, greenPen);
+            } else if (speechSystemUsesNetwork(speechSys)) {
+                AudioFormat pcmFmt = AUDIO_FORMAT_PCM;
+                AudioFormat *fmt =
+                    (speechSys == SPEECH_SYSTEM_OPENAI ||
+                     speechSys == SPEECH_SYSTEM_XAI)
+                        ? &pcmFmt
+                        : NULL;
+                speakText(receivedMessage, NULL, fmt);
             } else {
                 speakStreamUtf8Tail(receivedMessage, &speechUtf8Index);
             }

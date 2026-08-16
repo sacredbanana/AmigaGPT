@@ -45,11 +45,13 @@ git remote add upstream https://github.com/sacredbanana/AmigaGPT.git
 
 ```bash
 git fetch upstream
-git checkout main   # oder der Default-Branch deines Forks
-git merge upstream/main
-# alternativ: git rebase upstream/main
-git push origin main
+git checkout master   # Fork-Default (nicht main)
+git checkout -b chore/upstream-sync
+git merge upstream/master
+# Konflikte lösen, testen, dann nach master mergen
 ```
+
+**Encoding-Check (MorphOS):** Upstream ab **3.0** injiziert `AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS` — unter MorphOS **nicht** übernehmen (UTF-8/Scintilla). Details: [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) §5, [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) §2b.
 
 ## Beitrag zurück ins Original
 

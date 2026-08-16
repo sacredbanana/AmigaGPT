@@ -39,9 +39,10 @@ Start: `docs/README.md` · Policy: `docs/DOKUMENTATION-WORKSPACE.md`
 
 | Document | Purpose |
 | -------- | ------- |
-| `docs/HANDLUNGSANWEISUNG-GIT.md` | Binding git workflow (DE) |
+| `docs/HANDLUNGSANWEISUNG-GIT.md` | Binding git workflow (DE); upstream sync + MorphOS charset-prompt check |
 | `docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md` | MorphOS runtime for AmigaGPT only (complete in-repo) |
 | `docs/GIT-FORK-WORKFLOW.md` | Remotes, upstream sync, PRs |
+| `docs/UNICODE-MORPHOS-MUI.md` | UTF-8 / codesets / Scintilla; §2b no upstream charset prompt on MorphOS |
 | `docs/SCINTILLA-ARCHITECTURE.md` | Scintilla / streaming / UTF-8 / Fence-Parser / Chat-Anzeige vs. `codeblocks` |
 | `docs/PHASE-10-DOD.md` | DoD Code-Viewer v0.1 (Phasen 6–10, MorphOS) |
 | `docs/PHASE-12-CHAT-SCINTILLA.md` | Phase 12 + 12.1 Chat-Scintilla, Midi-Markdown, Testplan (MorphOS) |

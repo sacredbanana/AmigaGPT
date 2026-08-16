@@ -78,6 +78,13 @@ const STRPTR AUDIO_FORMAT_NAMES[] = {[AUDIO_FORMAT_PCM] = "pcm",
                                      [AUDIO_FORMAT_FLAC] = "flac",
                                      NULL};
 
+BOOL speechSystemUsesNetwork(SpeechSystem speechSystem) {
+    return (speechSystem == SPEECH_SYSTEM_OPENAI ||
+            speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
+            speechSystem == SPEECH_SYSTEM_XAI ||
+            speechSystem == SPEECH_SYSTEM_OPENVOX);
+}
+
 /**
  * Initialise the speech system
  * @param speechSystem the speech system to use
