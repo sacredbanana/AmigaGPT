@@ -19,6 +19,8 @@ This repository is **weiseb78/AmigaGPT** — a fork of [sacredbanana/AmigaGPT](h
   - OpenAI: `developers.openai.com`, `platform.openai.com`
   - xAI: `docs.x.ai`
 
+- **ISO 8859-1 Amiga Latin-1 files (HARD RULE)** — Read and follow **[AMIGA-LATIN1-FILES.md](AMIGA-LATIN1-FILES.md)** before and after editing any covered file. Claude Code also loads `.claude/rules/amiga-latin1-files.md` when touching those paths. Applies to `bundle/AmigaGPT/Install-AmigaGPT`, `AmigaGPT.readme`, `AmigaGPT.guide`, all `*.c` under `src/`, and all `*.rexx` under `bundle/` and `assets/`.
+
 ## Git (required)
 
 Read and follow **`docs/HANDLUNGSANWEISUNG-GIT.md`**.

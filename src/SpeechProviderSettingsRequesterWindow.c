@@ -82,6 +82,16 @@ static Object *xaiFetchVoicesButton = NULL;
 static Object *xaiCurrentVoiceText = NULL;
 static Object *xaiAutoSpeechTagsCheckbox = NULL;
 
+/* OpenVox fields */
+static Object *openVoxApiKeyString = NULL;
+static Object *openVoxModelList = NULL;
+static Object *openVoxLanguageList = NULL;
+static Object *openVoxVoiceList = NULL;
+static Object *openVoxFetchModelsButton = NULL;
+static Object *openVoxCurrentModelText = NULL;
+static Object *openVoxCurrentLanguageText = NULL;
+static Object *openVoxCurrentVoiceText = NULL;
+
 /* Workbench fields */
 static Object *workbenchAccentString = NULL;
 static Object *workbenchAccentBrowseButton = NULL;
@@ -107,6 +117,7 @@ static Object *fliteGroup = NULL;
 static Object *openAiGroup = NULL;
 static Object *elevenLabsGroup = NULL;
 static Object *xaiGroup = NULL;
+static Object *openVoxGroup = NULL;
 static Object *okButton = NULL;
 static Object *cancelButton = NULL;
 static Object *testButton = NULL;
@@ -117,6 +128,9 @@ static struct json_object *elevenLabsModelsJson = NULL;
 static struct json_object *elevenLabsVoicesJson = NULL;
 static struct json_object *openAITTSModelsJson = NULL;
 static struct json_object *xaiVoicesJson = NULL;
+static struct json_object *openVoxModelsJson = NULL;
+static struct json_object *openVoxLanguagesJson = NULL;
+static struct json_object *openVoxVoicesJson = NULL;
 static BOOL suppressProfileSelected = FALSE;
 static BOOL speechSettingsDirty = FALSE;
 static LONG lastSelectedProfile = MUIV_NList_Active_Off;
@@ -135,10 +149,12 @@ static STRPTR narratorSexOptions[3] = {NULL};
 #define ELEVENLABS_PORT 443
 #define XAI_TTS_HOST "api.x.ai"
 #define XAI_TTS_PORT 443
+#define OPENVOX_HOST "127.0.0.1"
+#define OPENVOX_PORT 8666
 
 static BOOL speechSystemUsesNetwork(SpeechSystem sys) {
     return (sys == SPEECH_SYSTEM_OPENAI || sys == SPEECH_SYSTEM_ELEVENLABS ||
-            sys == SPEECH_SYSTEM_XAI);
+            sys == SPEECH_SYSTEM_XAI || sys == SPEECH_SYSTEM_OPENVOX);
 }
 
 static CONST_STRPTR defaultHostForSpeechSystem(SpeechSystem sys) {
@@ -146,10 +162,14 @@ static CONST_STRPTR defaultHostForSpeechSystem(SpeechSystem sys) {
         return ELEVENLABS_HOST;
     if (sys == SPEECH_SYSTEM_XAI)
         return XAI_TTS_HOST;
+    if (sys == SPEECH_SYSTEM_OPENVOX)
+        return OPENVOX_HOST;
     return "api.openai.com";
 }
 
 static AuthorizationType defaultAuthForSpeechSystem(SpeechSystem sys) {
+    if (sys == SPEECH_SYSTEM_OPENVOX)
+        return AUTHORIZATION_TYPE_NONE;
     return (sys == SPEECH_SYSTEM_ELEVENLABS) ? AUTHORIZATION_TYPE_XI_API_KEY
                                              : AUTHORIZATION_TYPE_BEARER;
 }
@@ -237,15 +257,15 @@ static void updateProfileManagementButtonLabels(void) {
 static LONG getBuiltinSpeechProviderCount(void) {
     LONG count = 0;
 #ifdef __AMIGAOS3__
-    /* Workbench v34/v37 + OpenAI + ElevenLabs + xAI */
-    count = 5;
+    /* Workbench v34/v37 + OpenAI + ElevenLabs + xAI + OpenVox */
+    count = 6;
 #else
 #ifdef __AMIGAOS4__
-    /* Flite + OpenAI + ElevenLabs + xAI */
-    count = 4;
+    /* Flite + OpenAI + ElevenLabs + xAI + OpenVox */
+    count = 5;
 #else
-    /* MorphOS: OpenAI + ElevenLabs + xAI */
-    count = 3;
+    /* MorphOS: OpenAI + ElevenLabs + xAI + OpenVox */
+    count = 4;
 #endif
 #endif
     return count;
@@ -257,7 +277,7 @@ static BOOL isBuiltinListIndex(LONG idx) {
 
 static SpeechSystem builtinSystemForListIndex(LONG idx) {
 #ifdef __AMIGAOS3__
-    /* 0=v34, 1=v37, 2=OpenAI, 3=ElevenLabs, 4=xAI */
+    /* 0=v34, 1=v37, 2=OpenAI, 3=ElevenLabs, 4=xAI, 5=OpenVox */
     if (idx == 0)
         return SPEECH_SYSTEM_34;
     if (idx == 1)
@@ -266,24 +286,30 @@ static SpeechSystem builtinSystemForListIndex(LONG idx) {
         return SPEECH_SYSTEM_OPENAI;
     if (idx == 3)
         return SPEECH_SYSTEM_ELEVENLABS;
-    return SPEECH_SYSTEM_XAI;
+    if (idx == 4)
+        return SPEECH_SYSTEM_XAI;
+    return SPEECH_SYSTEM_OPENVOX;
 #else
 #ifdef __AMIGAOS4__
-    /* 0=Flite, 1=OpenAI, 2=ElevenLabs, 3=xAI */
+    /* 0=Flite, 1=OpenAI, 2=ElevenLabs, 3=xAI, 4=OpenVox */
     if (idx == 0)
         return SPEECH_SYSTEM_FLITE;
     if (idx == 1)
         return SPEECH_SYSTEM_OPENAI;
     if (idx == 2)
         return SPEECH_SYSTEM_ELEVENLABS;
-    return SPEECH_SYSTEM_XAI;
+    if (idx == 3)
+        return SPEECH_SYSTEM_XAI;
+    return SPEECH_SYSTEM_OPENVOX;
 #else
-    /* 0=OpenAI, 1=ElevenLabs, 2=xAI */
+    /* 0=OpenAI, 1=ElevenLabs, 2=xAI, 3=OpenVox */
     if (idx == 0)
         return SPEECH_SYSTEM_OPENAI;
     if (idx == 1)
         return SPEECH_SYSTEM_ELEVENLABS;
-    return SPEECH_SYSTEM_XAI;
+    if (idx == 2)
+        return SPEECH_SYSTEM_XAI;
+    return SPEECH_SYSTEM_OPENVOX;
 #endif
 #endif
 }
@@ -559,7 +585,7 @@ static struct json_object *getOpenAITTSModels(CONST_STRPTR host, UWORD port,
 }
 
 /* Build a "models cache" json object from an OpenAI /v1/models response,
- * keeping only entries whose id contains "tts" — the API doesn't expose a
+ * keeping only entries whose id contains "tts" - the API doesn't expose a
  * modality flag, so this filter is the closest we can get. */
 static struct json_object *
 filterOpenAITTSModels(struct json_object *rawModels) {
@@ -1170,7 +1196,7 @@ HOOKPROTONHNONP(XAIFetchVoicesButtonClickedFunc, void) {
         configGetProxyPassword());
 
     if (fetched != NULL) {
-        /* Drop NList entries first — they reference strings owned by the
+        /* Drop NList entries first - they reference strings owned by the
          * old xaiVoicesJson, which we're about to free. */
         if (xaiVoiceList != NULL)
             DoMethod(xaiVoiceList, MUIM_NList_Clear);
@@ -1196,6 +1222,202 @@ HOOKPROTONHNONP(XAIFetchVoicesButtonClickedFunc, void) {
         set(xaiFetchVoicesButton, MUIA_Disabled, FALSE);
 }
 MakeHook(XAIFetchVoicesButtonClickedHook, XAIFetchVoicesButtonClickedFunc);
+
+static struct json_object *fetchOpenVoxJson(CONST_STRPTR endpoint,
+                                            CONST_STRPTR apiKey) {
+    STRPTR host = NULL;
+    LONG port = OPENVOX_PORT;
+    LONG useSSL = 0;
+    LONG authType = AUTHORIZATION_TYPE_NONE;
+    if (speechHostString != NULL)
+        get(speechHostString, MUIA_String_Contents, &host);
+    if (speechPortString != NULL)
+        get(speechPortString, MUIA_String_Integer, &port);
+    if (speechUsesSSLCycle != NULL)
+        get(speechUsesSSLCycle, MUIA_Cycle_Active, &useSSL);
+    if (speechAuthorizationTypeCycle != NULL)
+        get(speechAuthorizationTypeCycle, MUIA_Cycle_Active, &authType);
+
+    return makeHttpsGetRequest(
+        (host != NULL && strlen(host) > 0) ? host : OPENVOX_HOST,
+        (UWORD)(port > 0 ? port : OPENVOX_PORT), useSSL == 1, endpoint, apiKey,
+        headerNameForAuthorizationType((AuthorizationType)authType),
+        authType == AUTHORIZATION_TYPE_BEARER, configGetProxyEnabled(),
+        configGetProxyHost(), configGetProxyPort(), configGetProxyUsesSSL(),
+        configGetProxyRequiresAuth(), configGetProxyUsername(),
+        configGetProxyPassword());
+}
+
+static void populateOpenVoxList(Object *list, struct json_object *response,
+                                CONST_STRPTR key, CONST_STRPTR selectedValue) {
+    if (list == NULL)
+        return;
+    DoMethod(list, MUIM_NList_Clear);
+    struct json_object *data = NULL;
+    if (response == NULL ||
+        !json_object_object_get_ex(response, "data", &data) ||
+        !json_object_is_type(data, json_type_array))
+        return;
+    LONG selected = MUIV_NList_Active_Off;
+    LONG count = json_object_array_length(data);
+    for (LONG i = 0; i < count; i++) {
+        struct json_object *entry = json_object_array_get_idx(data, i);
+        struct json_object *valueObj =
+            entry ? json_object_object_get(entry, key) : NULL;
+        CONST_STRPTR value = valueObj ? json_object_get_string(valueObj) : NULL;
+        if (value == NULL || strlen(value) == 0)
+            continue;
+        DoMethod(list, MUIM_NList_InsertSingle, (ULONG)value,
+                 MUIV_NList_Insert_Bottom);
+        if (selectedValue != NULL && strcmp(selectedValue, value) == 0)
+            selected = i;
+    }
+    if (selected == MUIV_NList_Active_Off && count > 0)
+        selected = 0;
+    if (selected != MUIV_NList_Active_Off)
+        set(list, MUIA_NList_Active, selected);
+}
+
+static CONST_STRPTR openVoxActiveListValue(Object *list) {
+    if (list == NULL)
+        return NULL;
+    LONG active = MUIV_NList_Active_Off;
+    get(list, MUIA_NList_Active, &active);
+    if (active == MUIV_NList_Active_Off)
+        return NULL;
+    STRPTR value = NULL;
+    DoMethod(list, MUIM_NList_GetEntry, active, &value);
+    return value;
+}
+
+HOOKPROTONHNONP(OpenVoxFetchModelsButtonClickedFunc, void) {
+    STRPTR apiKey = NULL;
+    STRPTR endpointUrl = NULL;
+    LONG authType = AUTHORIZATION_TYPE_NONE;
+    if (openVoxApiKeyString != NULL)
+        get(openVoxApiKeyString, MUIA_String_Contents, &apiKey);
+    if (speechEndpointUrlString != NULL)
+        get(speechEndpointUrlString, MUIA_String_Contents, &endpointUrl);
+    if (speechAuthorizationTypeCycle != NULL)
+        get(speechAuthorizationTypeCycle, MUIA_Cycle_Active, &authType);
+    if (authType != AUTHORIZATION_TYPE_NONE &&
+        (apiKey == NULL || strlen(apiKey) == 0)) {
+        displayError(STRING_ERROR_NO_API_KEY);
+        return;
+    }
+
+    UBYTE endpoint[512];
+    snprintf(endpoint, sizeof(endpoint), "/%s/models",
+             (endpointUrl != NULL && strlen(endpointUrl) > 0) ? endpointUrl
+                                                              : "v1");
+    set(openVoxFetchModelsButton, MUIA_Disabled, TRUE);
+    updateStatusBar(STRING_FETCHING_MODELS, yellowPen);
+    struct json_object *fetched = fetchOpenVoxJson(endpoint, apiKey);
+    if (fetched == NULL) {
+        displayError("OpenVox server is unavailable.");
+    } else {
+        STRPTR current = NULL;
+        if (openVoxCurrentModelText != NULL)
+            get(openVoxCurrentModelText, MUIA_Text_Contents, &current);
+        if (openVoxModelList != NULL)
+            DoMethod(openVoxModelList, MUIM_NList_Clear);
+        if (openVoxModelsJson != NULL)
+            json_object_put(openVoxModelsJson);
+        openVoxModelsJson = fetched;
+        populateOpenVoxList(openVoxModelList, openVoxModelsJson, "id", current);
+    }
+    updateStatusBar(STRING_READY, greenPen);
+    set(openVoxFetchModelsButton, MUIA_Disabled, FALSE);
+}
+MakeHook(OpenVoxFetchModelsButtonClickedHook,
+         OpenVoxFetchModelsButtonClickedFunc);
+
+HOOKPROTONHNONP(OpenVoxModelSelectedFunc, void) {
+    if (getSpeechSystemFromCycle() != SPEECH_SYSTEM_OPENVOX)
+        return;
+
+    CONST_STRPTR model = openVoxActiveListValue(openVoxModelList);
+    if (model == NULL || strlen(model) == 0) {
+        displayError("No selectable models for this OpenVox profile.");
+        return;
+    }
+    STRPTR apiKey = NULL;
+    STRPTR endpointUrl = NULL;
+    LONG authType = AUTHORIZATION_TYPE_NONE;
+    if (openVoxApiKeyString != NULL)
+        get(openVoxApiKeyString, MUIA_String_Contents, &apiKey);
+    if (speechEndpointUrlString != NULL)
+        get(speechEndpointUrlString, MUIA_String_Contents, &endpointUrl);
+    if (speechAuthorizationTypeCycle != NULL)
+        get(speechAuthorizationTypeCycle, MUIA_Cycle_Active, &authType);
+    if (authType != AUTHORIZATION_TYPE_NONE &&
+        (apiKey == NULL || strlen(apiKey) == 0)) {
+        displayError(STRING_ERROR_NO_API_KEY);
+        return;
+    }
+    if (endpointUrl == NULL || strlen(endpointUrl) == 0)
+        endpointUrl = "v1";
+
+    STRPTR previousLanguage = NULL;
+    CONST_STRPTR activeLanguage = openVoxActiveListValue(openVoxLanguageList);
+    if (activeLanguage != NULL)
+        previousLanguage = dupStrLocal(activeLanguage);
+    if (previousLanguage == NULL && openVoxCurrentLanguageText != NULL) {
+        STRPTR current = NULL;
+        get(openVoxCurrentLanguageText, MUIA_Text_Contents, &current);
+        previousLanguage = dupStrLocal(current);
+    }
+
+    updateStatusBar(STRING_FETCHING_MODELS, yellowPen);
+    UBYTE endpoint[768];
+    snprintf(endpoint, sizeof(endpoint), "/%s/models/%s/languages",
+             endpointUrl, model);
+    struct json_object *languages = fetchOpenVoxJson(endpoint, apiKey);
+    if (languages == NULL) {
+        if (previousLanguage != NULL)
+            FreeVec(previousLanguage);
+        displayError("OpenVox server is unavailable.");
+        updateStatusBar(STRING_READY, greenPen);
+        return;
+    }
+    if (openVoxLanguageList != NULL)
+        DoMethod(openVoxLanguageList, MUIM_NList_Clear);
+    if (openVoxLanguagesJson != NULL)
+        json_object_put(openVoxLanguagesJson);
+    openVoxLanguagesJson = languages;
+    populateOpenVoxList(openVoxLanguageList, openVoxLanguagesJson, "code",
+                        previousLanguage);
+    if (previousLanguage != NULL)
+        FreeVec(previousLanguage);
+
+    CONST_STRPTR language = openVoxActiveListValue(openVoxLanguageList);
+    if (language == NULL || strlen(language) == 0) {
+        displayError("No languages are available for this OpenVox model.");
+        updateStatusBar(STRING_READY, greenPen);
+        return;
+    }
+
+    STRPTR currentVoice = NULL;
+    if (openVoxCurrentVoiceText != NULL)
+        get(openVoxCurrentVoiceText, MUIA_Text_Contents, &currentVoice);
+    snprintf(endpoint, sizeof(endpoint),
+             "/%s/models/%s/voices?language=%s", endpointUrl, model,
+             language);
+    struct json_object *voices = fetchOpenVoxJson(endpoint, apiKey);
+    if (voices == NULL) {
+        displayError("OpenVox server is unavailable.");
+    } else {
+        if (openVoxVoiceList != NULL)
+            DoMethod(openVoxVoiceList, MUIM_NList_Clear);
+        if (openVoxVoicesJson != NULL)
+            json_object_put(openVoxVoicesJson);
+        openVoxVoicesJson = voices;
+        populateOpenVoxList(openVoxVoiceList, openVoxVoicesJson, "name",
+                            currentVoice);
+    }
+    updateStatusBar(STRING_READY, greenPen);
+}
+MakeHook(OpenVoxModelSelectedHook, OpenVoxModelSelectedFunc);
 
 static void updateElevenLabsSearchButtonLabel(void) {
     if (elevenLabsSearchButton == NULL || elevenLabsVoiceSearchString == NULL)
@@ -1284,6 +1506,8 @@ static void populateSpeechSystemOptions(void) {
     speechSystemOptions[n++] =
         (STRPTR)SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_ELEVENLABS];
     speechSystemOptions[n++] = (STRPTR)SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_XAI];
+    speechSystemOptions[n++] =
+        (STRPTR)SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENVOX];
     speechSystemOptions[n] = NULL;
 }
 
@@ -1322,9 +1546,11 @@ HOOKPROTONHNONP(SpeechProviderSystemChangedFunc, void) {
             set(speechHostString, MUIA_String_Contents,
                 defaultHostForSpeechSystem(sys));
         if (speechPortString != NULL)
-            set(speechPortString, MUIA_String_Integer, 443);
+            set(speechPortString, MUIA_String_Integer,
+                sys == SPEECH_SYSTEM_OPENVOX ? OPENVOX_PORT : 443);
         if (speechUsesSSLCycle != NULL)
-            set(speechUsesSSLCycle, MUIA_Cycle_Active, 1);
+            set(speechUsesSSLCycle, MUIA_Cycle_Active,
+                sys == SPEECH_SYSTEM_OPENVOX ? 0 : 1);
         if (speechAuthorizationTypeCycle != NULL)
             set(speechAuthorizationTypeCycle, MUIA_Cycle_Active,
                 (LONG)defaultAuthForSpeechSystem(sys));
@@ -1383,6 +1609,9 @@ static void populateProfileList(void) {
              MUIV_NList_Insert_Bottom);
     DoMethod(speechProfileList, MUIM_NList_InsertSingle,
              (ULONG)SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_XAI],
+             MUIV_NList_Insert_Bottom);
+    DoMethod(speechProfileList, MUIM_NList_InsertSingle,
+             (ULONG)SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENVOX],
              MUIV_NList_Insert_Bottom);
 
     /* Custom profiles */
@@ -1467,10 +1696,13 @@ static void updateSpeechApiKeyStringEnabledFromAuth(SpeechSystem sys) {
     if (xaiApiKeyString != NULL)
         set(xaiApiKeyString, MUIA_Disabled,
             !(sys == SPEECH_SYSTEM_XAI) || authNone);
+    if (openVoxApiKeyString != NULL)
+        set(openVoxApiKeyString, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_OPENVOX) || authNone);
 }
 
 static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
-    /* Enable/disable the “custom common” controls. Provider groups
+    /* Enable/disable the "custom common" controls. Provider groups
      * are shown/hidden separately. */
     if (speechProfileNameString != NULL)
         set(speechProfileNameString, MUIA_Disabled, !isCustomOrNew);
@@ -1502,7 +1734,7 @@ static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
         set(fliteVoiceCycle, MUIA_Disabled, !(sys == SPEECH_SYSTEM_FLITE));
 
     /* Built-in OpenAI / ElevenLabs profiles ship with locked connection
-     * settings — users who want to point at a different host should clone
+     * settings - users who want to point at a different host should clone
      * to a custom profile first. */
     BOOL connectionEditable = speechSystemUsesNetwork(sys) && isCustomOrNew;
     if (speechHostString != NULL)
@@ -1553,6 +1785,19 @@ static void setFieldsEnabledForSystem(SpeechSystem sys, BOOL isCustomOrNew) {
         set(xaiFetchVoicesButton, MUIA_Disabled, !(sys == SPEECH_SYSTEM_XAI));
     if (xaiCurrentVoiceText != NULL)
         set(xaiCurrentVoiceText, MUIA_Disabled, !(sys == SPEECH_SYSTEM_XAI));
+
+    if (openVoxModelList != NULL)
+        set(openVoxModelList, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_OPENVOX));
+    if (openVoxLanguageList != NULL)
+        set(openVoxLanguageList, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_OPENVOX));
+    if (openVoxVoiceList != NULL)
+        set(openVoxVoiceList, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_OPENVOX));
+    if (openVoxFetchModelsButton != NULL)
+        set(openVoxFetchModelsButton, MUIA_Disabled,
+            !(sys == SPEECH_SYSTEM_OPENVOX));
 }
 
 static void updateGroupVisibilityForSystem(SpeechSystem sys,
@@ -1573,6 +1818,8 @@ static void updateGroupVisibilityForSystem(SpeechSystem sys,
         set(elevenLabsGroup, MUIA_ShowMe, (sys == SPEECH_SYSTEM_ELEVENLABS));
     if (xaiGroup != NULL)
         set(xaiGroup, MUIA_ShowMe, (sys == SPEECH_SYSTEM_XAI));
+    if (openVoxGroup != NULL)
+        set(openVoxGroup, MUIA_ShowMe, (sys == SPEECH_SYSTEM_OPENVOX));
 }
 
 static void loadProfileIntoUI(LONG activeIndex) {
@@ -1631,8 +1878,8 @@ static void loadProfileIntoUI(LONG activeIndex) {
 
     if (speechSystemUsesNetwork(sys)) {
         CONST_STRPTR host = defaultHostForSpeechSystem(sys);
-        LONG port = 443;
-        LONG useSSL = 1;
+        LONG port = sys == SPEECH_SYSTEM_OPENVOX ? OPENVOX_PORT : 443;
+        LONG useSSL = sys == SPEECH_SYSTEM_OPENVOX ? 0 : 1;
         LONG authType = (LONG)defaultAuthForSpeechSystem(sys);
         CONST_STRPTR endpointUrl = "v1";
         if (customProfile != NULL) {
@@ -1935,6 +2182,45 @@ static void loadProfileIntoUI(LONG activeIndex) {
         set(xaiAutoSpeechTagsCheckbox, MUIA_Selected, autoTags);
     }
 
+    /* OpenVox fields */
+    CONST_STRPTR openVoxModel = "chatterbox-turbo-small";
+    CONST_STRPTR openVoxLanguage = "en";
+    CONST_STRPTR openVoxVoice = "Kaya";
+    CONST_STRPTR openVoxKey = "";
+    if (customProfile != NULL) {
+        struct json_object *value =
+            json_object_object_get(customProfile, "openVoxModel");
+        if (value != NULL && strlen(json_object_get_string(value)) > 0)
+            openVoxModel = json_object_get_string(value);
+        value = json_object_object_get(customProfile, "openVoxLanguage");
+        if (value != NULL && strlen(json_object_get_string(value)) > 0)
+            openVoxLanguage = json_object_get_string(value);
+        value = json_object_object_get(customProfile, "openVoxVoice");
+        if (value != NULL && strlen(json_object_get_string(value)) > 0)
+            openVoxVoice = json_object_get_string(value);
+        value = json_object_object_get(customProfile, "openVoxApiKey");
+        if (value != NULL)
+            openVoxKey = json_object_get_string(value);
+    }
+    if (openVoxApiKeyString != NULL)
+        set(openVoxApiKeyString, MUIA_String_Contents,
+            openVoxKey != NULL ? openVoxKey : "");
+    if (openVoxCurrentModelText != NULL)
+        set(openVoxCurrentModelText, MUIA_Text_Contents, openVoxModel);
+    if (openVoxCurrentLanguageText != NULL)
+        set(openVoxCurrentLanguageText, MUIA_Text_Contents, openVoxLanguage);
+    if (openVoxCurrentVoiceText != NULL)
+        set(openVoxCurrentVoiceText, MUIA_Text_Contents, openVoxVoice);
+    if (openVoxModelsJson != NULL)
+        populateOpenVoxList(openVoxModelList, openVoxModelsJson, "id",
+                            openVoxModel);
+    if (openVoxLanguagesJson != NULL)
+        populateOpenVoxList(openVoxLanguageList, openVoxLanguagesJson, "code",
+                            openVoxLanguage);
+    if (openVoxVoicesJson != NULL)
+        populateOpenVoxList(openVoxVoiceList, openVoxVoicesJson, "name",
+                            openVoxVoice);
+
     setFieldsEnabledForSystem(sys, isCustomOrNew);
     /* Update per-provider dependency warnings (shown only in relevant groups)
      */
@@ -1948,7 +2234,7 @@ static void loadProfileIntoUI(LONG activeIndex) {
         updateRequirementWarningForSystem(sys, fliteWarningText);
     }
 
-    /* Built-ins can’t be deleted. */
+    /* Built-ins can't be deleted. */
     if (deleteProfileButton != NULL)
         set(deleteProfileButton, MUIA_Disabled,
             (activeIndex < getBuiltinSpeechProviderCount()));
@@ -2045,6 +2331,11 @@ static struct json_object *createDefaultProfile(CONST_STRPTR name) {
         json_object_new_string(XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE]));
     json_object_object_add(p, "xaiAutoSpeechTags",
                            json_object_new_boolean(TRUE));
+    json_object_object_add(p, "openVoxApiKey", json_object_new_string(""));
+    json_object_object_add(p, "openVoxModel",
+                           json_object_new_string("chatterbox-turbo-small"));
+    json_object_object_add(p, "openVoxLanguage", json_object_new_string("en"));
+    json_object_object_add(p, "openVoxVoice", json_object_new_string("Kaya"));
     return p;
 }
 
@@ -2186,6 +2477,25 @@ static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys) {
             p, "xaiAutoSpeechTags",
             json_object_new_boolean(
                 configGetXAIAutoSpeechTags() ? TRUE : FALSE));
+    }
+
+    if (sys == SPEECH_SYSTEM_OPENVOX) {
+        json_object_object_add(p, "host", json_object_new_string(OPENVOX_HOST));
+        json_object_object_add(p, "port", json_object_new_int(OPENVOX_PORT));
+        json_object_object_add(p, "useSSL", json_object_new_boolean(FALSE));
+        json_object_object_add(
+            p, "authorizationType",
+            json_object_new_int((int)AUTHORIZATION_TYPE_NONE));
+        json_object_object_add(p, "apiEndpointUrl",
+                               json_object_new_string("v1"));
+        json_object_object_add(p, "openVoxApiKey", json_object_new_string(""));
+        json_object_object_add(
+            p, "openVoxModel",
+            json_object_new_string("chatterbox-turbo-small"));
+        json_object_object_add(p, "openVoxLanguage",
+                               json_object_new_string("en"));
+        json_object_object_add(p, "openVoxVoice",
+                               json_object_new_string("Kaya"));
     }
 
     return p;
@@ -2488,7 +2798,7 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
             uiVid = XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE];
         json_object_object_add(p, "xaiTTSVoiceId",
                                json_object_new_string(uiVid));
-        /* Keep the legacy enum field in sync for old readers — match the
+        /* Keep the legacy enum field in sync for old readers - match the
          * id to a builtin index when possible. */
         LONG enumIdx = (LONG)XAI_TTS_VOICE_EVE;
         for (LONG i = 0; XAI_TTS_VOICE_NAMES[i] != NULL; i++) {
@@ -2507,6 +2817,50 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
         json_object_object_add(p, "xaiAutoSpeechTags",
                                json_object_new_boolean((BOOL)autoTags));
     }
+
+    /* OpenVox */
+    STRPTR openVoxKey = NULL;
+    if (openVoxApiKeyString != NULL)
+        get(openVoxApiKeyString, MUIA_String_Contents, &openVoxKey);
+    json_object_object_add(
+        p, "openVoxApiKey",
+        json_object_new_string(openVoxKey != NULL ? openVoxKey : ""));
+    CONST_STRPTR openVoxModel = openVoxActiveListValue(openVoxModelList);
+    CONST_STRPTR openVoxLanguage =
+        openVoxActiveListValue(openVoxLanguageList);
+    CONST_STRPTR openVoxVoice = openVoxActiveListValue(openVoxVoiceList);
+    STRPTR currentValue = NULL;
+    if (openVoxModel == NULL && openVoxCurrentModelText != NULL) {
+        get(openVoxCurrentModelText, MUIA_Text_Contents, &currentValue);
+        openVoxModel = currentValue;
+    }
+    currentValue = NULL;
+    if (openVoxLanguage == NULL && openVoxCurrentLanguageText != NULL) {
+        get(openVoxCurrentLanguageText, MUIA_Text_Contents, &currentValue);
+        openVoxLanguage = currentValue;
+    }
+    currentValue = NULL;
+    if (openVoxVoice == NULL && openVoxCurrentVoiceText != NULL) {
+        get(openVoxCurrentVoiceText, MUIA_Text_Contents, &currentValue);
+        openVoxVoice = currentValue;
+    }
+    json_object_object_add(
+        p, "openVoxModel",
+        json_object_new_string(
+            (openVoxModel != NULL && strlen(openVoxModel) > 0)
+                ? openVoxModel
+                : "chatterbox-turbo-small"));
+    json_object_object_add(
+        p, "openVoxLanguage",
+        json_object_new_string(
+            (openVoxLanguage != NULL && strlen(openVoxLanguage) > 0)
+                ? openVoxLanguage
+                : "en"));
+    json_object_object_add(
+        p, "openVoxVoice",
+        json_object_new_string(
+            (openVoxVoice != NULL && strlen(openVoxVoice) > 0) ? openVoxVoice
+                                                               : "Kaya"));
 
     return p;
 }
@@ -3055,7 +3409,7 @@ HOOKPROTONHNONP(SpeechProviderTestFunc, void) {
 
     /* Prefer the model/voice currently selected in the UI lists; fall back to
      * the saved config when nothing is selected (these are just pointers, not
-     * ownership — they remain valid for the duration of this call). */
+     * ownership - they remain valid for the duration of this call). */
     CONST_STRPTR uiModelId = currentElevenLabsModelIdFromUI();
     CONST_STRPTR uiVoiceId = currentElevenLabsVoiceIdFromUI();
     s.elevenLabsModel =
@@ -3075,6 +3429,21 @@ HOOKPROTONHNONP(SpeechProviderTestFunc, void) {
             uiXaiVoiceId ? (STRPTR)uiXaiVoiceId : configGetXAITTSVoiceId();
     }
     s.xaiLanguage = (STRPTR) "en";
+
+    /* OpenVox */
+    if (openVoxApiKeyString != NULL)
+        get(openVoxApiKeyString, MUIA_String_Contents, &s.openVoxApiKey);
+    s.openVoxModel = (STRPTR)openVoxActiveListValue(openVoxModelList);
+    s.openVoxLanguage =
+        (STRPTR)openVoxActiveListValue(openVoxLanguageList);
+    s.openVoxVoice = (STRPTR)openVoxActiveListValue(openVoxVoiceList);
+    if (s.openVoxModel == NULL && openVoxCurrentModelText != NULL)
+        get(openVoxCurrentModelText, MUIA_Text_Contents, &s.openVoxModel);
+    if (s.openVoxLanguage == NULL && openVoxCurrentLanguageText != NULL)
+        get(openVoxCurrentLanguageText, MUIA_Text_Contents,
+            &s.openVoxLanguage);
+    if (s.openVoxVoice == NULL && openVoxCurrentVoiceText != NULL)
+        get(openVoxCurrentVoiceText, MUIA_Text_Contents, &s.openVoxVoice);
 
     /* Test phrase */
     STRPTR test =
@@ -3583,6 +3952,91 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                                 End,
                             End,
                         End,
+
+                        Child, openVoxGroup = VGroup,
+                            MUIA_Frame, MUIV_Frame_Group,
+                            MUIA_FrameTitle, "OpenVox",
+                            Child, VGroup,
+                                MUIA_Frame, MUIV_Frame_Group,
+                                MUIA_FrameTitle, STRING_MENU_OPENAI_API_KEY,
+                                Child, openVoxApiKeyString = StringObject,
+                                    MUIA_Frame, MUIV_Frame_String,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_String_MaxLen, 256,
+                                End,
+                            End,
+                            Child, VGroup,
+                                MUIA_Frame, MUIV_Frame_Group,
+                                MUIA_FrameTitle, "Model",
+                                Child, HGroup,
+                                    Child, Label(STRING_CURRENT),
+                                    Child, openVoxCurrentModelText = TextObject,
+                                        MUIA_Text_Contents, "chatterbox-turbo-small",
+                                    End,
+                                End,
+                                Child, openVoxFetchModelsButton =
+                                    MUI_MakeObject(MUIO_Button, STRING_FETCH_MODELS, TAG_DONE),
+                                Child, NListviewObject,
+                                    MUIA_NListview_NList, openVoxModelList = NListObject,
+                                        MUIA_NList_ConstructHook2, &ConstructStringLI_TextHook,
+                                        MUIA_NList_DestructHook2, &DestructStringLI_TextHook,
+                                        MUIA_NList_DisplayHook2, &DisplayStringLI_TextHook,
+                                        MUIA_NList_Format, "",
+                                        MUIA_NList_Title, FALSE,
+                                        MUIA_NList_MinLineHeight, 16,
+                                    End,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
+                                    MUIA_FixHeight, 80,
+                                End,
+                            End,
+                            Child, VGroup,
+                                MUIA_Frame, MUIV_Frame_Group,
+                                MUIA_FrameTitle, "Language",
+                                Child, HGroup,
+                                    Child, Label(STRING_CURRENT),
+                                    Child, openVoxCurrentLanguageText = TextObject,
+                                        MUIA_Text_Contents, "en",
+                                    End,
+                                End,
+                                Child, NListviewObject,
+                                    MUIA_NListview_NList, openVoxLanguageList = NListObject,
+                                        MUIA_NList_ConstructHook2, &ConstructStringLI_TextHook,
+                                        MUIA_NList_DestructHook2, &DestructStringLI_TextHook,
+                                        MUIA_NList_DisplayHook2, &DisplayStringLI_TextHook,
+                                        MUIA_NList_Format, "",
+                                        MUIA_NList_Title, FALSE,
+                                        MUIA_NList_MinLineHeight, 16,
+                                    End,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
+                                    MUIA_FixHeight, 70,
+                                End,
+                            End,
+                            Child, VGroup,
+                                MUIA_Frame, MUIV_Frame_Group,
+                                MUIA_FrameTitle, "Voice",
+                                Child, HGroup,
+                                    Child, Label(STRING_CURRENT),
+                                    Child, openVoxCurrentVoiceText = TextObject,
+                                        MUIA_Text_Contents, "Kaya",
+                                    End,
+                                End,
+                                Child, NListviewObject,
+                                    MUIA_NListview_NList, openVoxVoiceList = NListObject,
+                                        MUIA_NList_ConstructHook2, &ConstructStringLI_TextHook,
+                                        MUIA_NList_DestructHook2, &DestructStringLI_TextHook,
+                                        MUIA_NList_DisplayHook2, &DisplayStringLI_TextHook,
+                                        MUIA_NList_Format, "",
+                                        MUIA_NList_Title, FALSE,
+                                        MUIA_NList_MinLineHeight, 16,
+                                    End,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
+                                    MUIA_FixHeight, 120,
+                                End,
+                            End,
+                        End,
                     End,
                 End,
                 Child, HGroup,
@@ -3641,6 +4095,13 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
     DoMethod(xaiFetchVoicesButton, MUIM_Notify, MUIA_Pressed, FALSE,
              MUIV_Notify_Application, 2, MUIM_CallHook,
              &XAIFetchVoicesButtonClickedHook);
+    DoMethod(openVoxFetchModelsButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             MUIV_Notify_Application, 2, MUIM_CallHook,
+             &OpenVoxFetchModelsButtonClickedHook);
+    DoMethod(openVoxModelList, MUIM_Notify, MUIA_NList_Active,
+             MUIV_EveryTime,
+             MUIV_Notify_Application, 2, MUIM_CallHook,
+             &OpenVoxModelSelectedHook);
     DoMethod(elevenLabsVoiceSearchString, MUIM_Notify, MUIA_String_Contents,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &ElevenLabsVoiceSearchChangedHook);

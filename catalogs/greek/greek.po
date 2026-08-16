@@ -741,13 +741,13 @@ msgstr "Σχέδιο"
 
 #: src/menu.c:125 src/menu.c:117
 msgctxt "STRING_MENU_ABOUT_AMIGAGPT (105//)"
-msgid "About AmigaGPT"
-msgstr "Σχετικά με το AmigaGPT"
+msgid "About AmigaGPT..."
+msgstr "Σχετικά με το AmigaGPT..."
 
 #: src/menu.c:127 src/menu.c:119
 msgctxt "STRING_MENU_ABOUT_MUI (106//)"
-msgid "About MUI"
-msgstr "Σχετικά με το MUI"
+msgid "About MUI..."
+msgstr "Σχετικά με το MUI..."
 
 #: src/menu.c:129 src/menu.c:121
 msgctxt "STRING_MENU_QUIT (107//)"
@@ -791,8 +791,8 @@ msgstr "Θέα"
 
 #: src/menu.c:137 src/menu.c:129
 msgctxt "STRING_MENU_MUI_SETTINGS (115//)"
-msgid "MUI Settings"
-msgstr "Ρυθμίσεις MUI"
+msgid "MUI Settings..."
+msgstr "Ρυθμίσεις MUI..."
 
 #: src/menu.c:138 src/menu.c:130
 msgctxt "STRING_MENU_CONNECTION (116//)"
@@ -811,8 +811,8 @@ msgstr "Ενεργοποιημένο"
 
 #: src/menu.c:142 src/menu.c:134
 msgctxt "STRING_MENU_SETTINGS (119//)"
-msgid "Settings"
-msgstr "Ρυθμίσεις"
+msgid "Settings..."
+msgstr "Ρυθμίσεις..."
 
 #: src/menu.c:143 src/menu.c:135
 msgctxt "STRING_MENU_SPEECH (120//)"
@@ -910,21 +910,6 @@ msgctxt "STRING_MENU_OPENAI_CHAT_MODEL (144//)"
 msgid "Chat Model"
 msgstr "Μοντέλο συνομιλίας"
 
-#: src/menu.c:251 src/menu.c:244
-msgctxt "STRING_MENU_OPENAI_IMAGE_MODEL (145//)"
-msgid "Image Model"
-msgstr "Μοντέλο εικόνας"
-
-#: src/menu.c:256 src/menu.c:249
-msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2 (146//)"
-msgid "DALL-E 2 Image Size"
-msgstr "DALL-E 2 Μέγεθος εικόνας"
-
-#: src/menu.c:263 src/menu.c:257
-msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3 (147//)"
-msgid "DALL-E 3 Image Size"
-msgstr "Μέγεθος εικόνας DALL-E 3"
-
 #: src/menu.c:270 src/menu.c:265
 msgctxt "STRING_MENU_HELP (148//)"
 msgid "Help"
@@ -932,8 +917,8 @@ msgstr "Βοήθεια"
 
 #: src/menu.c:271 src/menu.c:266
 msgctxt "STRING_MENU_OPEN_DOCUMENTATION (149//)"
-msgid "Open Documentation"
-msgstr "Ανοίξτε την Τεκμηρίωση"
+msgid "Open Documentation..."
+msgstr "Ανοίξτε την Τεκμηρίωση..."
 
 #: src/openai.c:175
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN (150//)"
@@ -1227,8 +1212,8 @@ msgstr "ARexx Shell"
 
 #: src/menu.c:307
 msgctxt "STRING_MENU_AREXX_IMPORT_SCRIPT (221//)"
-msgid "Import Script"
-msgstr "Εισαγωγή Script"
+msgid "Import Script..."
+msgstr "Εισαγωγή Script..."
 
 #: src/menu.c:308
 msgctxt "STRING_MENU_AREXX_RUN_SCRIPT (222//)"
@@ -1249,11 +1234,6 @@ msgstr "Απέτυχε το άνοιγμα του ARexx shell"
 msgctxt "STRING_ERROR_AREXX_LIB_OPEN (226//)"
 msgid "Could not open arexx.class."
 msgstr "Αδυνατή η ανοίξιση του arexx.class."
-
-#: src/menu.c:294
-msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1 (227//)"
-msgid "GPT Image 1 Image Size"
-msgstr "GPT Image 1 Εικόνα Μέγεθος"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
@@ -1306,21 +1286,6 @@ msgstr "Εκτύπωση"
 msgctxt "STRING_MENU_CLEAR_MUI_SETTINGS (237//)"
 msgid "Clear MUI Settings"
 msgstr "Καθαρισμός MUI Settings"
-
-#: src/menu.c:145
-msgctxt "STRING_MENU_OPENAI_WEB_SEARCH (238//)"
-msgid "Web Search"
-msgstr "Web αναζήτηση"
-
-#: src/menu.c:146
-msgctxt "STRING_MENU_CUSTOM_PROVIDER (239//)"
-msgid "Custom Provider"
-msgstr "Προσαρμοσμένος πάροχος"
-
-#: src/menu.c:148
-msgctxt "STRING_MENU_CUSTOM_PROVIDER_SETTINGS (241//)"
-msgid "Custom Provider Settings"
-msgstr "Ρυθμίσεις προσαρμοσμένου παρόχου"
 
 #: src/CustomServerSettingsRequesterWindow.c:11
 msgctxt "STRING_ERROR_CUSTOM_PROVIDER_SETTINGS (242//)"
@@ -1512,11 +1477,6 @@ msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
 msgid "Please enter a profile name"
 msgstr "Παρακαλώ εισαγάγετε ένα όνομα προφίλ"
 
-#: src/menu.c
-msgctxt "STRING_MENU_OPENAI_SHELL_TOOL (281//)"
-msgid "Shell Tool"
-msgstr "Εργαλείο Shell"
-
 #: src/openai.c
 msgctxt "STRING_EXECUTING_COMMAND (282//)"
 msgid "Executing command..."
@@ -1544,13 +1504,13 @@ msgstr "Εικών"
 
 #: src/menu.c
 msgctxt "STRING_CHAT_PROVIDER_SETTINGS (287//)"
-msgid "Chat Provider Settings"
-msgstr "Ρυθμίσεις παρόχου συνομιλίας"
+msgid "Chat Provider Settings..."
+msgstr "Ρυθμίσεις παρόχου συνομιλίας..."
 
 #: src/menu.c
 msgctxt "STRING_IMAGE_PROVIDER_SETTINGS (288//)"
-msgid "Image Provider Settings"
-msgstr "Ρυθμίσεις παρόχου εικόνας"
+msgid "Image Provider Settings..."
+msgstr "Ρυθμίσεις παρόχου εικόνας..."
 
 #: src/openai.c
 msgctxt "STRING_PROVIDER_OPENAI (289//)"
@@ -1712,8 +1672,8 @@ msgstr ""
 
 #: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
-msgid "Speech Provider Settings"
-msgstr "Ρυθμίσεις παρόχου ομιλίας"
+msgid "Speech Provider Settings..."
+msgstr "Ρυθμίσεις παρόχου ομιλίας..."
 
 #: src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_WARNING_MISSING_FORMAT (313//)"
@@ -1964,6 +1924,16 @@ msgstr "Διακοπή ομιλίας"
 msgctxt "STRING_XAI_AUTO_INSERT_SPEECH_TAGS (362//)"
 msgid "Auto-insert speech tags into LLM replies"
 msgstr "Αυτόματη εισαγωγή ετικετών ομιλίας στις απαντήσεις LLM"
+
+#: src/speech.c
+msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (363//)"
+msgid "Speech is not available. The speech device failed to initialize."
+msgstr "Η ομιλία δεν είναι διαθέσιμη. Δεν ήταν δυνατή η αρχικοποίηση της συσκευής ομιλίας."
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (364//)"
+msgid "SPEAKTEXT failed. See the error requester for details."
+msgstr "Το SPEAKTEXT απέτυχε. Δείτε το παράθυρο σφάλματος για λεπτομέρειες."
 
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"

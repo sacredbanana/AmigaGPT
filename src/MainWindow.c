@@ -124,6 +124,7 @@ Object *chatOutputTextEditor;
 Object *statusBar;
 Object *conversationListObject;
 Object *loadingBar;
+Object *loadingBarGroup;
 Object *imageInputTextEditor;
 Object *createImageButton;
 Object *newImageButton;
@@ -388,6 +389,22 @@ static void installChatOutputWheelHandler(void);
 #ifdef __MORPHOS__
 static void clearChatOutputDisplay(void);
 #endif
+
+/**
+ * Shows the loading bar and starts the busy meter animating
+ **/
+void showLoadingBar() {
+    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
+    set(loadingBarGroup, MUIA_Group_ActivePage, 1);
+}
+
+/**
+ * Stops the busy meter and hides the loading bar, leaving it blank
+ **/
+void hideLoadingBar() {
+    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    set(loadingBarGroup, MUIA_Group_ActivePage, 0);
+}
 
 /**
  * Title for a new conversation: model text if non-empty, otherwise a truncated
@@ -2467,10 +2484,16 @@ LONG createMainWindow() {
                     MUIA_Background, MUII_SHADOW,
                     MUIA_Text_Contents, STRING_READY,
                 End,
-                // Loading bar
-                Child, loadingBar = BusyObject, MUIA_VertWeight, 10,
+                // Loading bar: blank page while idle, busy meter page while a
+                // request is in flight, so it no longer stays frozen on its
+                // last position once a request finishes.
+                Child, loadingBarGroup = PageGroup, MUIA_VertWeight, 10,
                     MUIA_MaxHeight, 20,
-                    MUIA_Busy_Speed, MUIV_Busy_Speed_Off,
+                    MUIA_Group_ActivePage, 0,
+                    Child, HVSpace,
+                    Child, loadingBar = BusyObject,
+                        MUIA_Busy_Speed, MUIV_Busy_Speed_Off,
+                    End,
                 End,
             End,
         End) == NULL) {
@@ -2926,8 +2949,7 @@ static void flushUtf8StreamToMessage(struct UTF8StreamBuffer *stream,
 /* msgctxt "STRING_CHAT_STREAM_TRUNCATED (276//)" */
 /* msgid "Response truncated (stream buffer limit reached)." */
 
-static ChatStreamOutcome chatStreamClassifyOutcome(UTF8 *receivedMessage) {
-    struct ChatRequestSettings chatSettings;
+static ChatStreamOutcome chatStreamClassifyOutcome(UTF8 *receivedMessage) {    struct ChatRequestSettings chatSettings;
 
     if (receivedMessage == NULL || receivedMessage[0] == '\0') {
         return CHAT_STREAM_FAILED;
@@ -3154,7 +3176,7 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
         }
     } /* end of while (tool calls) */
 
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 
     if (outcome == CHAT_STREAM_OK || outcome == CHAT_STREAM_PARTIAL) {
 #ifndef __MORPHOS__
@@ -3182,7 +3204,7 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
             struct json_object **responses;
 
             updateStatusBar(STRING_GENERATING_CONVERSATION_TITLE, 7);
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
+            showLoadingBar();
             addTextToConversation(currentConversation,
                                   "generate a short title for this "
                                   "conversation and don't enclose the title in "
@@ -3205,7 +3227,7 @@ static void finishChatStream(ChatStreamOutcome outcome, UTF8 *receivedMessage,
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
             FreeVec(titleRequestNode);
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+            hideLoadingBar();
             if (responses == NULL) {
                 displayError(STRING_ERROR_CONNECTING_OPENAI);
             } else if (responses[0] != NULL) {

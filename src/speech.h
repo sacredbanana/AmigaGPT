@@ -20,7 +20,8 @@ typedef enum {
     SPEECH_SYSTEM_FLITE,
     SPEECH_SYSTEM_OPENAI,
     SPEECH_SYSTEM_ELEVENLABS,
-    SPEECH_SYSTEM_XAI
+    SPEECH_SYSTEM_XAI,
+    SPEECH_SYSTEM_OPENVOX
 } SpeechSystem;
 
 /**
@@ -83,7 +84,7 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat);
 /* Speak using an explicitly provided settings struct (no config reads/writes).
  */
 struct SpeechRequestSettings;
-void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
+BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                            AudioFormat *audioFormat,
                            const struct SpeechRequestSettings *settings);
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.1.0 (2026-08-16)
+
+- Support speech from an OpenVox server
+- Prevent unnecessary console windows opening up
+- Wrap all requester message text to automatically fit
+- Status bar no longer displays an unwanted trailing character
+- Edit menu items are disabled unless the chat or image input text field has the keyboard focus
+- Improve speech error handling to fix crashes
+- No longer try to use AHI if the speech system doesn't use it
+- Reset loading bar when loading is complete
+
 ## 3.0.0 (2026-07-01)
 
 - Profile settings: New panels to manage chat, image and speech providers

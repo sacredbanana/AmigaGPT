@@ -113,10 +113,12 @@ LONG createAboutAmigaGPTWindow() {
     if ((aboutAmigaGPTWindowObject = AboutboxObject,
          MUIA_Aboutbox_Build, buildString,
          MUIA_Aboutbox_Credits, bodyString,
+         #if !defined(__MORPHOS__)
          MUIA_Aboutbox_URL, "https://github.com/sacredbanana/AmigaGPT",
          MUIA_Aboutbox_URLText, STRING_ABOUT_WINDOW_URL_TEXT,
+         #endif
     End)) {
-    // clang-format on
+        // clang-format on
         DoMethod(aboutAmigaGPTWindowObject, MUIM_Notify,
                  MUIA_Window_CloseRequest, TRUE, MUIV_Notify_Self, 2,
                  MUIM_CallHook, &AboutWindowCloseHook);

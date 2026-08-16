@@ -3154,6 +3154,14 @@ void configFreeSpeechRequestSettings(struct SpeechRequestSettings *out) {
         FreeVec(out->xaiVoiceId);
     if (out->xaiLanguage != NULL)
         FreeVec(out->xaiLanguage);
+    if (out->openVoxModel != NULL)
+        FreeVec(out->openVoxModel);
+    if (out->openVoxApiKey != NULL)
+        FreeVec(out->openVoxApiKey);
+    if (out->openVoxVoice != NULL)
+        FreeVec(out->openVoxVoice);
+    if (out->openVoxLanguage != NULL)
+        FreeVec(out->openVoxLanguage);
     memset(out, 0, sizeof(*out));
 }
 
@@ -3186,6 +3194,10 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
     out->xaiVoiceId = dupStrCfg(configGetXAITTSVoiceId());
     out->xaiLanguage = dupStrCfg("en");
     out->xaiAutoSpeechTags = configGetXAIAutoSpeechTags() ? TRUE : FALSE;
+    out->openVoxModel = dupStrCfg("chatterbox-turbo-small");
+    out->openVoxApiKey = dupStrCfg("");
+    out->openVoxVoice = dupStrCfg("Kaya");
+    out->openVoxLanguage = dupStrCfg("en");
 
     /* Default accent + narrator params based on system */
     if (out->speechSystem == SPEECH_SYSTEM_34) {
@@ -3254,6 +3266,16 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
                     FreeVec(out->apiEndpointUrl);
                 out->apiEndpointUrl = dupStrCfg("v1");
                 out->authorizationType = AUTHORIZATION_TYPE_BEARER;
+            } else if (out->speechSystem == SPEECH_SYSTEM_OPENVOX) {
+                if (out->host != NULL)
+                    FreeVec(out->host);
+                out->host = dupStrCfg("127.0.0.1");
+                out->port = 8666;
+                out->useSSL = FALSE;
+                if (out->apiEndpointUrl != NULL)
+                    FreeVec(out->apiEndpointUrl);
+                out->apiEndpointUrl = dupStrCfg("v1");
+                out->authorizationType = AUTHORIZATION_TYPE_NONE;
             }
             break;
         }
@@ -3308,6 +3330,16 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
                 FreeVec(out->apiEndpointUrl);
             out->apiEndpointUrl = dupStrCfg("v1");
             out->authorizationType = AUTHORIZATION_TYPE_BEARER;
+        } else if (out->speechSystem == SPEECH_SYSTEM_OPENVOX) {
+            if (out->host != NULL)
+                FreeVec(out->host);
+            out->host = dupStrCfg("127.0.0.1");
+            out->port = 8666;
+            out->useSSL = FALSE;
+            if (out->apiEndpointUrl != NULL)
+                FreeVec(out->apiEndpointUrl);
+            out->apiEndpointUrl = dupStrCfg("v1");
+            out->authorizationType = AUTHORIZATION_TYPE_NONE;
         }
 
         struct json_object *hostObj = json_object_object_get(p, "host");
@@ -3523,6 +3555,38 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
         if (xAutoTags != NULL)
             out->xaiAutoSpeechTags =
                 json_object_get_boolean(xAutoTags) ? TRUE : FALSE;
+
+        struct json_object *ovModel =
+            json_object_object_get(p, "openVoxModel");
+        if (ovModel != NULL) {
+            if (out->openVoxModel != NULL)
+                FreeVec(out->openVoxModel);
+            out->openVoxModel =
+                dupStrCfg(json_object_get_string(ovModel));
+        }
+        struct json_object *ovKey =
+            json_object_object_get(p, "openVoxApiKey");
+        if (ovKey != NULL) {
+            if (out->openVoxApiKey != NULL)
+                FreeVec(out->openVoxApiKey);
+            out->openVoxApiKey = dupStrCfg(json_object_get_string(ovKey));
+        }
+        struct json_object *ovVoice =
+            json_object_object_get(p, "openVoxVoice");
+        if (ovVoice != NULL) {
+            if (out->openVoxVoice != NULL)
+                FreeVec(out->openVoxVoice);
+            out->openVoxVoice =
+                dupStrCfg(json_object_get_string(ovVoice));
+        }
+        struct json_object *ovLanguage =
+            json_object_object_get(p, "openVoxLanguage");
+        if (ovLanguage != NULL) {
+            if (out->openVoxLanguage != NULL)
+                FreeVec(out->openVoxLanguage);
+            out->openVoxLanguage =
+                dupStrCfg(json_object_get_string(ovLanguage));
+        }
 
         break;
     }

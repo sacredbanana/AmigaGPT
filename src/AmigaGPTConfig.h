@@ -270,6 +270,12 @@ struct SpeechRequestSettings {
      * instructions asking the LLM to insert xAI speech tags into its replies
      * for more expressive playback. */
     BOOL xaiAutoSpeechTags;
+
+    /* OpenVox TTS */
+    STRPTR openVoxApiKey;
+    STRPTR openVoxModel;
+    STRPTR openVoxVoice;
+    STRPTR openVoxLanguage;
 };
 
 void configGetSpeechRequestSettings(struct SpeechRequestSettings *out);
