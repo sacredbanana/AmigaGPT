@@ -22,6 +22,7 @@ Verbindliche Arbeitsweise für Menschen und Assistenten (Cursor, CI, Reviews).
 | PR von Feature-Branch → `master` (wenn stabil) | Force-Push auf `master` |
 
 **`master`** = stabiler Referenzstand (Fork **2.18**-Linie seit 2026-05; ggf. nach Sync mit `upstream`).  
+Kein Branch **`main`**.  
 **Feature-Branches** = laufende Entwicklung — kurzlebig, nach Merge löschen (z. B. `feature/morphos-startup-feedback`).
 
 Der Branch **`scintilla`** war die Entwicklungslinie bis zum Merge nach `master` (8785); nicht mehr Standard für neue Arbeit.
@@ -54,7 +55,8 @@ git checkout -b feature/kurzbeschreibung   # oder fix/…, chore/…
 git push -u origin <branch-name>
 ```
 
-**Nicht:** `git push origin master` (außer bewusster Maintainer-Merge nach PR).
+**Nur wenn der Nutzer ausdrücklich pushen lässt.**  
+**Nicht:** `git push origin master` (außer bewusster Maintainer-Merge nach Freigabe).
 
 Auf GitHub: **Pull Request** `feature/…` → `master` (eigener Fork) oder später ggf. PR zum Upstream.
 
@@ -84,8 +86,8 @@ Details: [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md).
 
 1. Aktiven Branch prüfen: **nicht `master`** für neue Commits.
 2. Neuen Topic-Branch von **`master`**: `feature/…`, `fix/…`, `chore/…` (vom User oder passend benannt).
-3. MorphOS-Änderungen: **bauen → paketieren (Z:)** → Nutzer testet → **dann** commit (§9).
-4. Z:-Deploy fehlgeschlagen → melden, nicht als paketiert verkaufen, nicht committen.
+3. MorphOS-Änderungen: **bauen → paketieren (Z:)** → bei Z:-Fehler **STOP** (Nutzer mountet `Z:`) → Nutzer testet → **dann** Commit auf Topic-Branch (§9).
+4. Z:-Deploy fehlgeschlagen → **blockiert** — melden, nicht committen, nicht pushen, kein `DEPLOY=0` als Workaround.
 5. Nach `git reset`/`merge` auf `master`: User informieren, nicht still auf `master` weitercommitten.
 6. Push nur auf Anfrage; nie `master` force-pushen.
 
@@ -133,11 +135,13 @@ Skript: `package-morphos-cross.sh` · Kurzbeschreibung: [README.md](README.md).
 | 1 | Agent | Änderung umsetzen |
 | 2 | Agent | `make -f Makefile.MorphOS` |
 | 3 | Agent | `./package-morphos-cross.sh` (Standard `DEPLOY=1`) |
-| 4 | Agent | Version, MD5, Z:-Pfad melden; bei **Deploy-Fehler** klar sagen, dass **nicht** paketiert wurde — **kein Commit** |
+| 4 | Agent | Version, MD5, Z:-Pfad melden; bei **Deploy-Fehler** **STOP** — Nutzer: **`Z:` mounten**; **kein Commit**, **kein Push**, nicht „fertig“ |
 | 5 | Nutzer | Auf MorphOS testen (LHA von Z:, eigenes Deploy-Skript), Rückmeldung |
-| 6 | Agent | **Commit** erst nach **erfolgreicher** Rückmeldung (oder auf ausdrückliche Anweisung) |
+| 6 | Agent | **Commit** erst nach **erfolgreicher** Rückmeldung — auf **Topic-Branch**, nicht `master` |
 
 **Paketieren** im Sinne von §8 ist nur bei **erfolgreichem** Z:-Deploy abgeschlossen. Lokal nur `out/…lha` ohne Z: reicht dem Nutzer für den Testloop nicht als „fertig paketiert“.
+
+**Nicht verhandelbar:** „Fertig machen“, Merge abschließen oder große Aufgaben erlauben **keinen** Schritt 6 ohne Schritt 4 (Z: OK) und Schritt 5 (Nutzer OK). **`DEPLOY=0` nach Z:-Fehler** ist verboten.
 
 Push weiterhin nur auf Anfrage. Neue Arbeit: Topic-Branch von `master`, nicht direkt auf `master` committen.
 

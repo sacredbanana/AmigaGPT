@@ -26,7 +26,7 @@ Read and follow **`docs/HANDLUNGSANWEISUNG-GIT.md`**.
 Summary:
 
 - **Do not commit on `master`.** Use topic branches from `master` (`feature/*`, `fix/*`, `chore/*`).
-- Push only when the user asks. Never force-push `master`.
+- Push only when the user asks. Never force-push `master`. Prefer **`master`**, not `main`.
 - `origin` = fork; `upstream` = upstream original (fetch/merge into feature branches).
 
 Cursor rule: `.cursor/rules/git-branch-policy.mdc` (always applied).
@@ -67,10 +67,10 @@ bash ship-morphos.sh
 
 That runs **build + daemon + `package-morphos-cross.sh` (Z:)**. Do **not** stop after `make` alone.
 
-Report after package: **version** (`2.18.BUILD_NUMBER`), **MD5**, **`Z:/morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha`**. If Z: deploy fails → say so; do not claim “paketiert”; do not commit.
+Report after package: **version** (`2.18.BUILD_NUMBER`), **MD5**, **`Z:/morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha`**. If Z: deploy fails → **STOP** — tell user to mount **`Z:`**; do not claim “paketiert”; do not commit or push; do not use `DEPLOY=0` to continue.
 
-Then: user tests on MorphOS → commit only after OK (not on `master`).
+Then: user tests on MorphOS → commit only after explicit **MorphOS OK** on a topic branch (not `master`).
 
-**Automation:** `.cursor/hooks.json` nudges the agent after bare `make` and on `stop` if packaging was skipped. **Rules:** `.cursor/rules/morphos-build-package.mdc`, workspace `development/.cursor/rules/morphos-make-then-package.mdc`. **Optional global rule:** `docs/CURSOR-USER-RULE-SNIPPET.txt`.
+**Automation:** `.cursor/hooks.json` nudges the agent after bare `make` and on `stop` if packaging was skipped or failed. **Rules:** `.cursor/rules/morphos-build-package.mdc`, **`.cursor/rules/morphos-hard-gates.mdc`**, workspace `development/.cursor/rules/morphos-make-then-package.mdc`.
 
 See `docs/HANDLUNGSANWEISUNG-GIT.md` §8–9, `docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md`.

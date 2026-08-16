@@ -1,47 +1,34 @@
 ---
-description: MorphOS — ALWAYS package after build (default); deploy to Z
+description: MorphOS — ALWAYS package after build (default); deploy to Z; HARD STOP on failure
 alwaysApply: true
 ---
 
 # MorphOS: Build → package → test → commit
 
-**Binding (user):** At **every** place you run `make` for this project, **immediately** run `bash package-morphos-cross.sh` in the **same** turn — unless the user **explicitly** requested otherwise (nur bauen / ohne Paket / `DEPLOY=0`).
+**Binding:** Jedes `make -f Makefile.MorphOS` → **sofort** `bash ship-morphos.sh` in **derselben** Antwort — außer der Nutzer sagt ausdrücklich „nur bauen“ / „ohne Paket“ / `DEPLOY=0`.
 
-**Default after any MorphOS code change:** `make -f Makefile.MorphOS` **and** `bash package-morphos-cross.sh` — without waiting for the user to ask. Treat “build done” or `make` alone as **incomplete**.
+**Paketieren ist nicht optional.** Siehe auch `.cursor/rules/morphos-hard-gates.mdc`.
 
-## Agent handoff (avoid half-done)
+## Ablauf
 
-The user should **never** have to guess whether packaging ran. Ending a turn with only `make` for MorphOS runtime code is **wrong** unless the user explicitly asked to skip packaging.
+1. Implementieren
+2. `make -f Makefile.MorphOS`
+3. `bash ship-morphos.sh` (Standard **`DEPLOY=1`**)
+4. Melden: Version (`2.18.BUILD_NUMBER`), **MD5**, `Z:/morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha`
+5. **Nutzer testet** auf MorphOS (bei UI/Shutdown: 3× Quit/Restart)
+6. **Erst dann** Commit auf Topic-Branch — **nie** auf `master`
 
-- **Agent NOT done until:** steps 2–3 below succeeded **or** you reported deploy failure with exit code (and did not imply “ready to test on MorphOS”).
-- **User’s turn (MorphOS test)** only **after** successful package **and** you reported version + MD5 + `Z:` path (or user said they will copy `out/*.lha` themselves after `DEPLOY=0`).
-- **Do not** write summaries that sound like the task is finished if packaging was skipped by mistake.
+## Bei Z:-Deploy-Fehler (HARD STOP)
 
-Binding cycle for this fork (unless the user says otherwise):
+- Exit-Code melden. **Nicht** „paketiert“ / „fertig“ / „bereit zum Test“.
+- **Kein** `git commit`, **kein** `git push`, **kein** Merge-Commit.
+- **Kein** `DEPLOY=0` nachziehen, um „trotzdem weiter“ zu machen.
+- Nutzer: **`Z:` mounten** — Agent wartet auf Retry.
 
-1. **Implement** (code/docs as needed).
-2. **Build:** `make -f Makefile.MorphOS` from repo root.
-3. **Package:** `bash package-morphos-cross.sh` (default `DEPLOY=1`; or `bash ship-morphos.sh`).
-4. **Report:** version (`2.18.BUILD_NUMBER`), **MD5**, path `Z:/morphos/out-crosscompile/AmigaGPT-MorphOS-cross.lha`.
-5. **User tests** on MorphOS and gives feedback.
-6. **Commit** only after the user confirms the test was **successful** (or they explicitly ask to commit anyway).
+## Ausnahmen (nur explizit vom Nutzer)
 
-Do **not** stop at `out/AmigaGPT_MorphOS` or `make` alone.
+- `DEPLOY=0` / „ohne Deploy“ **von Anfang an** — dann kein abgeschlossenes Paketieren; Nutzer kopiert LHA selbst.
+- Commit ohne MorphOS-Test: **nur** reine Doku **ohne** Laufzeit-Bezug — trotzdem Topic-Branch, nicht `master`.
+- Push: **nur** auf ausdrückliche Anfrage.
 
-## Exceptions (only when the user says so)
-
-- Skip build: e.g. “nur paketieren” → `BUILD=0` on the package script if the binary is already current.
-- Skip packaging: e.g. “nur bauen”, “ohne Paket”, `DEPLOY=0`, “nicht deployen”.
-- Skip MorphOS test before commit: e.g. docs-only with user OK, or explicit “jetzt committen”.
-
-## On failure
-
-- **`Z:` deploy failed (Exit 1):** say clearly that **paketieren** did not complete. Do **not** claim “paketiert”. Do **not** commit. User fixes `Z:` (or copies LHA manually); agent retries package when asked.
-- **MorphOS test failed:** fix, then repeat build → package → wait for user OK → then commit.
-
-## Git
-
-- Never commit on `master`. Branch from `master`: `feature/*`, `fix/*`, `chore/*`.
-- No push unless the user asks.
-
-Details: `docs/HANDLUNGSANWEISUNG-GIT.md` §8–9.
+Details: `docs/HANDLUNGSANWEISUNG-GIT.md` §8–9, `docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md` §2b.
