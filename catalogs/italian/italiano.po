@@ -1917,12 +1917,12 @@ msgid "Auto-insert speech tags into LLM replies"
 msgstr "Inserisci automaticamente i tag vocali nelle risposte LLM"
 
 #: src/speech.c
-msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (363//)"
+msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (402//)"
 msgid "Speech is not available. The speech device failed to initialize."
 msgstr "La voce non è disponibile. Impossibile inizializzare il dispositivo vocale."
 
 #: src/ARexx.c
-msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (364//)"
+msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (403//)"
 msgid "SPEAKTEXT failed. See the error requester for details."
 msgstr "SPEAKTEXT non riuscito. Vedere la finestra di errore per i dettagli."
 

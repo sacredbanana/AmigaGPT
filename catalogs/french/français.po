@@ -1931,12 +1931,12 @@ msgid "Auto-insert speech tags into LLM replies"
 msgstr "Insérer automatiquement les balises vocales dans les réponses LLM"
 
 #: src/speech.c
-msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (363//)"
+msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (402//)"
 msgid "Speech is not available. The speech device failed to initialize."
 msgstr "La synthèse vocale n'est pas disponible. Le périphérique vocal n'a pas pu être initialisé."
 
 #: src/ARexx.c
-msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (364//)"
+msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (403//)"
 msgid "SPEAKTEXT failed. See the error requester for details."
 msgstr "Échec de SPEAKTEXT. Voir la fenêtre d'erreur pour plus de détails."
 

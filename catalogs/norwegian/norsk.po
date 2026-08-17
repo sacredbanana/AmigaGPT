@@ -1897,12 +1897,12 @@ msgid "Auto-insert speech tags into LLM replies"
 msgstr "Sett automatisk inn taletagger i LLM-svar"
 
 #: src/speech.c
-msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (363//)"
+msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (402//)"
 msgid "Speech is not available. The speech device failed to initialize."
 msgstr "Tale er ikke tilgjengelig. Taleenheten kunne ikke initialiseres."
 
 #: src/ARexx.c
-msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (364//)"
+msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (403//)"
 msgid "SPEAKTEXT failed. See the error requester for details."
 msgstr "SPEAKTEXT mislyktes. Se feilvinduet for detaljer."
 

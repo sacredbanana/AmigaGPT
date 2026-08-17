@@ -1904,12 +1904,12 @@ msgid "Auto-insert speech tags into LLM replies"
 msgstr "Automaticky vkládat řečové značky do odpovědí LLM"
 
 #: src/speech.c
-msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (363//)"
+msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (402//)"
 msgid "Speech is not available. The speech device failed to initialize."
 msgstr "Řeč není k dispozici. Nepodařilo se inicializovat řečové zařízení."
 
 #: src/ARexx.c
-msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (364//)"
+msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (403//)"
 msgid "SPEAKTEXT failed. See the error requester for details."
 msgstr "SPEAKTEXT selhal. Podrobnosti naleznete v chybovém okně."
 

@@ -1899,12 +1899,12 @@ msgid "Auto-insert speech tags into LLM replies"
 msgstr "Auto-insert speech tags into LLM replies"
 
 #: src/speech.c
-msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (363//)"
+msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (402//)"
 msgid "Speech is not available. The speech device failed to initialize."
 msgstr "Speech is not available. The speech device failed to initialise."
 
 #: src/ARexx.c
-msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (364//)"
+msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (403//)"
 msgid "SPEAKTEXT failed. See the error requester for details."
 msgstr "SPEAKTEXT failed. See the error requester for details."
 

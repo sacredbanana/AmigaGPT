@@ -1926,12 +1926,12 @@ msgid "Auto-insert speech tags into LLM replies"
 msgstr "Αυτόματη εισαγωγή ετικετών ομιλίας στις απαντήσεις LLM"
 
 #: src/speech.c
-msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (363//)"
+msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (402//)"
 msgid "Speech is not available. The speech device failed to initialize."
 msgstr "Η ομιλία δεν είναι διαθέσιμη. Δεν ήταν δυνατή η αρχικοποίηση της συσκευής ομιλίας."
 
 #: src/ARexx.c
-msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (364//)"
+msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (403//)"
 msgid "SPEAKTEXT failed. See the error requester for details."
 msgstr "Το SPEAKTEXT απέτυχε. Δείτε το παράθυρο σφάλματος για λεπτομέρειες."
 

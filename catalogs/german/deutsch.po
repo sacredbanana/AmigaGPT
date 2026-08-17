@@ -1938,12 +1938,12 @@ msgid "Auto-insert speech tags into LLM replies"
 msgstr "Sprach-Tags automatisch in LLM-Antworten einfügen"
 
 #: src/speech.c
-msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (363//)"
+msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (402//)"
 msgid "Speech is not available. The speech device failed to initialize."
 msgstr "Sprachausgabe ist nicht verfügbar. Das Sprachgerät konnte nicht initialisiert werden."
 
 #: src/ARexx.c
-msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (364//)"
+msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (403//)"
 msgid "SPEAKTEXT failed. See the error requester for details."
 msgstr "SPEAKTEXT ist fehlgeschlagen. Weitere Details finden Sie im Fehlerfenster."
 
