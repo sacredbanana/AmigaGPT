@@ -93,7 +93,7 @@ Optional in der Shell: `GETENV Language`, `GETENV Country` (Locale-Preferences s
 
 **MorphOS Chat (Phase 12 + Midi-Markdown):** Farb-Emoji sind mit TTEngine/DejaVu nicht darstellbar (Flow Studio: andere Fonts helfen kaum; Stylos/Cairo nur teilweise, nicht farbig). Mit **Markdown formatting an** ersetzt AmigaGPT häufige Emoji in der **Assistant-Anzeige** durch kurze Texte (z. B. 🌍→`[Welt]`, 👍→`(+1)`); **Export raw UTF-8** und `raw_utf8` bleiben original. **Markdown aus** → keine Ersetzung (oft □ oder fehlende Glyphe).
 
-**CJK (Chinesisch/Japanisch/Koreanisch):** DejaVu Sans Mono hat kaum CJK-Glyphen → leere Kästchen (□). Live-Scintilla-Refresh während des Streams mit CJK kann MorphOS/TTEngine **einfrieren** (Status bleibt „Antwort wird heruntergeladen…“). Der Fork überspringt deshalb Live-Redraw und Netz-TTS bei erkanntem CJK; Anzeige einmal nach Stream-Ende (roh, ohne Midi-Markdown). Sinnvoller CJK-Font (z. B. Noto Sans CJK) wäre eine spätere Option.
+**CJK (Chinesisch/Japanisch/Koreanisch):** DejaVu Sans Mono hat kaum CJK-Glyphen → leere Kästchen (□). Live-Scintilla-Refresh während des Streams mit CJK kann MorphOS/TTEngine **einfrieren** (Status bleibt „Antwort wird heruntergeladen…“). Der Fork überspringt deshalb Live-Redraw und Netz-TTS bei erkanntem CJK (BMP + supplementary, z. B. Extension B `U+20000` als 4-Byte-UTF-8); Anzeige einmal nach Stream-Ende (roh, ohne Midi-Markdown). Sinnvoller CJK-Font (z. B. WenQuanYi / Noto Sans CJK) wäre eine spätere Option (Style-Segmentierung).
 
 ---
 

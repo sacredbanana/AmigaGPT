@@ -188,6 +188,31 @@ ULONG utf8stream_flush(struct UTF8StreamBuffer *stream, UBYTE *dest,
     return utf8stream_copy_prefix(stream, dest, dest_capacity, stream->used);
 }
 
+static BOOL utf8_is_cjk_codepoint(ULONG cp) {
+    /* Hiragana, Katakana */
+    if (cp >= 0x3040UL && cp <= 0x30FFUL)
+        return TRUE;
+    /* CJK Unified + Extension A (BMP) */
+    if (cp >= 0x3400UL && cp <= 0x9FFFUL)
+        return TRUE;
+    /* Hangul syllables */
+    if (cp >= 0xAC00UL && cp <= 0xD7AFUL)
+        return TRUE;
+    /* CJK Compatibility Ideographs (BMP) */
+    if (cp >= 0xF900UL && cp <= 0xFAFFUL)
+        return TRUE;
+    /* CJK Extensions B–F (supplementary) */
+    if (cp >= 0x20000UL && cp <= 0x2EBEFUL)
+        return TRUE;
+    /* CJK Compatibility Ideographs Supplement */
+    if (cp >= 0x2F800UL && cp <= 0x2FA1FUL)
+        return TRUE;
+    /* CJK Extensions G–H */
+    if (cp >= 0x30000UL && cp <= 0x323AFUL)
+        return TRUE;
+    return FALSE;
+}
+
 BOOL utf8_contains_cjk(const UBYTE *s) {
     if (s == NULL) {
         return FALSE;
@@ -230,13 +255,16 @@ BOOL utf8_contains_cjk(const UBYTE *s) {
         if (need == 3) {
             cp = ((ULONG)(b & 0x0F) << 12) | ((ULONG)(s[1] & 0x3F) << 6) |
                  (ULONG)(s[2] & 0x3F);
-            /* Hiragana, Katakana, CJK Ext A / Unified, Hangul, CJK Compatibility */
-            if ((cp >= 0x3040UL && cp <= 0x30FFUL) ||
-                (cp >= 0x3400UL && cp <= 0x9FFFUL) ||
-                (cp >= 0xAC00UL && cp <= 0xD7AFUL) ||
-                (cp >= 0xF900UL && cp <= 0xFAFFUL)) {
-                return TRUE;
-            }
+        } else if (need == 4) {
+            cp = ((ULONG)(b & 0x07) << 18) | ((ULONG)(s[1] & 0x3F) << 12) |
+                 ((ULONG)(s[2] & 0x3F) << 6) | (ULONG)(s[3] & 0x3F);
+        } else {
+            s += need;
+            continue;
+        }
+
+        if (utf8_is_cjk_codepoint(cp)) {
+            return TRUE;
         }
 
         s += need;

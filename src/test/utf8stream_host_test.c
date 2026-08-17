@@ -108,12 +108,24 @@ static void test_multiple_chunks_german(void) {
     utf8stream_free(s);
 }
 
+static void test_utf8_contains_cjk(void) {
+    const UBYTE zh[] = {0xE4, 0xB8, 0x96, 0xE7, 0x95, 0x8C, 0}; /* 世界 */
+    const UBYTE ext_b[] = {0xF0, 0xA0, 0x80, 0x80, 0};          /* U+20000 */
+    const UBYTE latin[] = "Hallo";
+
+    ASSERT(utf8_contains_cjk(zh), "bmp cjk");
+    ASSERT(utf8_contains_cjk(ext_b), "cjk extension b (4-byte utf-8)");
+    ASSERT(!utf8_contains_cjk(latin), "latin not cjk");
+    ASSERT(!utf8_contains_cjk((const UBYTE *)"hello"), "ascii not cjk");
+}
+
 int main(void) {
     test_ascii_single_chunk();
     test_utf8_split_two_byte();
     test_utf8_split_three_byte();
     test_flush_incomplete();
     test_multiple_chunks_german();
+    test_utf8_contains_cjk();
 
     printf("utf8stream host tests: %d run, %d failed\n", tests_run, tests_failed);
     return tests_failed ? 1 : 0;
