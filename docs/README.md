@@ -84,9 +84,10 @@ Neue oder geänderte Strings: `catalogs/AmigaGPT.pot` bzw. die `catalogs/*/*.po`
 
 ## Text / Zeichensatz (MorphOS)
 
-Ausführlich: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) (inkl. Prüfung: `GETENV Charset` nicht gesetzt, Emoji im Chat → `??`).
+Ausführlich: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) (inkl. Prüfung: `GETENV Charset` nicht gesetzt, Emoji im Chat → `??`; **§2b** Upstream-Charset-Prompt ab 3.0).
 
 - **Chat-Ausgabe (MorphOS, Phase 12):** Scintilla + TTEngine, UTF-8 direkt — [PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md). OS3/OS4/AROS weiter **NFloattext** + codesets (kein Scintilla im Chat).
+- **Kein Amiga-Charset-System-Prompt unter MorphOS** — Upstream-3.0-Text in `openai.c` nur für OS3/OS4; sonst droppen Modelle oft Umlaute. Merge-Check: [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) §5.
 - **Chat-Ansicht nur MorphOS:** Menü **Ansicht** — *Markdown formatting*, *Wrap long lines (chat)*, Export raw, Codeblöcke-Hotspots, Pipe-Tabellen-Anzeige gelten nur unter `#ifdef __MORPHOS__` (gleicher Grund: nur dort Chat-Scintilla). `config.chatLineWrap` / `config.markdownFormatting` in `config.json` werden auf MorphOS gelesen; auf anderen Targets ohne Chat-Scintilla ohne Wirkung.
 - **Chat-Eingabe:** `TextEditor` → `CodesetsUTF8Create` → UTF-8 zur API — **nicht** Phase 6–10 / 12 (Eingabe).
 - **Konversationsliste (NList):** `name` UTF-8; Anzeige `**name_list_display`** (Codesets) — **bereits umgesetzt** (Phase 5.1).

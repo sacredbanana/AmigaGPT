@@ -19,6 +19,8 @@ This repository is **weiseb78/AmigaGPT** — a fork of [sacredbanana/AmigaGPT](h
   - OpenAI: `developers.openai.com`, `platform.openai.com`
   - xAI: `docs.x.ai`
 
+- **ISO 8859-1 Amiga Latin-1 files (HARD RULE)** — Read and follow **[AMIGA-LATIN1-FILES.md](AMIGA-LATIN1-FILES.md)** before and after editing any covered file. Claude Code also loads `.claude/rules/amiga-latin1-files.md` when touching those paths. Applies to `bundle/AmigaGPT/Install-AmigaGPT`, `AmigaGPT.readme`, `AmigaGPT.guide`, all `*.c` under `src/`, and all `*.rexx` under `bundle/` and `assets/`.
+
 ## Git (required)
 
 Read and follow **`docs/HANDLUNGSANWEISUNG-GIT.md`**.
@@ -37,9 +39,10 @@ Start: `docs/README.md` · Policy: `docs/DOKUMENTATION-WORKSPACE.md`
 
 | Document | Purpose |
 | -------- | ------- |
-| `docs/HANDLUNGSANWEISUNG-GIT.md` | Binding git workflow (DE) |
+| `docs/HANDLUNGSANWEISUNG-GIT.md` | Binding git workflow (DE); upstream sync + MorphOS charset-prompt check |
 | `docs/HANDLUNGSANWEISUNG-MORPHOS-AGENT.md` | MorphOS runtime for AmigaGPT only (complete in-repo) |
 | `docs/GIT-FORK-WORKFLOW.md` | Remotes, upstream sync, PRs |
+| `docs/UNICODE-MORPHOS-MUI.md` | UTF-8 / codesets / Scintilla; §2b no upstream charset prompt on MorphOS |
 | `docs/SCINTILLA-ARCHITECTURE.md` | Scintilla / streaming / UTF-8 / Fence-Parser / Chat-Anzeige vs. `codeblocks` |
 | `docs/PHASE-10-DOD.md` | DoD Code-Viewer v0.1 (Phasen 6–10, MorphOS) |
 | `docs/PHASE-12-CHAT-SCINTILLA.md` | Phase 12 + 12.1 Chat-Scintilla, Midi-Markdown, Testplan (MorphOS) |

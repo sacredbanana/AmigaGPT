@@ -79,7 +79,7 @@ For smooth operation of AmigaGPT, your system needs to meet the following requir
 - An OpenAI account with an active API key
 - Optional: For speech on AmigaOS 3, any version of narrator.device
 - Optional: For speech on AmigaOS 4, Flite Device
-- Optional: For OpenAI speech, AHI is required
+- Optional: For OpenAI, ElevenLabs or OpenVox speech, AHI is required
  (http://aminet.net/package/driver/audio/ahiusr_4.18)
 
 @endnode
@@ -872,6 +872,17 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 
 @node changelog "Changelog"
 @{b}Changelog@{ub}
+
+@{b}3.1.0 (2026-08-16)@{ub}
+
+- Support speech from an OpenVox server
+- Prevent unnecessary console windows opening up
+- Wrap all requester message text to automatically fit
+- Status bar no longer displays an unwanted trailing character
+- Edit menu items are disabled unless the chat or image input text field has the keyboard focus
+- Improve speech error handling to fix crashes
+- No longer try to use AHI if the speech system doesn't use it
+- Reset loading bar when loading is complete
 
 @{b}3.0.0 (2026-07-01)@{ub}
 

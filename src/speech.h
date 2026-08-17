@@ -20,7 +20,8 @@ typedef enum {
     SPEECH_SYSTEM_FLITE,
     SPEECH_SYSTEM_OPENAI,
     SPEECH_SYSTEM_ELEVENLABS,
-    SPEECH_SYSTEM_XAI
+    SPEECH_SYSTEM_XAI,
+    SPEECH_SYSTEM_OPENVOX
 } SpeechSystem;
 
 /**
@@ -28,6 +29,12 @@ typedef enum {
  * @see SpeechSystem
  **/
 extern const STRPTR SPEECH_SYSTEM_NAMES[];
+
+/**
+ * TRUE for TTS engines that use the shared HTTP/SSL socket (OpenAI, ElevenLabs,
+ * xAI, OpenVox). Local narrator/Flite are FALSE.
+ **/
+BOOL speechSystemUsesNetwork(SpeechSystem speechSystem);
 
 /**
  * The Flite voice of the spoken text
@@ -83,7 +90,7 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat);
 /* Speak using an explicitly provided settings struct (no config reads/writes).
  */
 struct SpeechRequestSettings;
-void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
+BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                            AudioFormat *audioFormat,
                            const struct SpeechRequestSettings *settings);
 

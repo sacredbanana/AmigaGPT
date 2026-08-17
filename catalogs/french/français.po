@@ -743,13 +743,13 @@ msgstr "Projet"
 
 #: src/menu.c:125 src/menu.c:117
 msgctxt "STRING_MENU_ABOUT_AMIGAGPT (105//)"
-msgid "About AmigaGPT"
-msgstr "À propos d'AmigaGPT"
+msgid "About AmigaGPT..."
+msgstr "À propos d'AmigaGPT..."
 
 #: src/menu.c:127 src/menu.c:119
 msgctxt "STRING_MENU_ABOUT_MUI (106//)"
-msgid "About MUI"
-msgstr "À propos de MUI"
+msgid "About MUI..."
+msgstr "À propos de MUI..."
 
 #: src/menu.c:129 src/menu.c:121
 msgctxt "STRING_MENU_QUIT (107//)"
@@ -793,8 +793,8 @@ msgstr "Voir"
 
 #: src/menu.c:137 src/menu.c:129
 msgctxt "STRING_MENU_MUI_SETTINGS (115//)"
-msgid "MUI Settings"
-msgstr "Paramètres MUI"
+msgid "MUI Settings..."
+msgstr "Paramètres MUI..."
 
 #: src/menu.c:138 src/menu.c:130
 msgctxt "STRING_MENU_CONNECTION (116//)"
@@ -813,8 +813,8 @@ msgstr "Activé"
 
 #: src/menu.c:142 src/menu.c:134
 msgctxt "STRING_MENU_SETTINGS (119//)"
-msgid "Settings"
-msgstr "Paramètres"
+msgid "Settings..."
+msgstr "Paramètres..."
 
 #: src/menu.c:143 src/menu.c:135
 msgctxt "STRING_MENU_SPEECH (120//)"
@@ -912,21 +912,6 @@ msgctxt "STRING_MENU_OPENAI_CHAT_MODEL (144//)"
 msgid "Chat Model"
 msgstr "Modèle de discussion"
 
-#: src/menu.c:251 src/menu.c:244
-msgctxt "STRING_MENU_OPENAI_IMAGE_MODEL (145//)"
-msgid "Image Model"
-msgstr "Modèle d'image"
-
-#: src/menu.c:256 src/menu.c:249
-msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_2 (146//)"
-msgid "DALL-E 2 Image Size"
-msgstr "Taille de l'image DALL-E 2"
-
-#: src/menu.c:263 src/menu.c:257
-msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_DALL_E_3 (147//)"
-msgid "DALL-E 3 Image Size"
-msgstr "Taille de l'image DALL-E 3"
-
 #: src/menu.c:270 src/menu.c:265
 msgctxt "STRING_MENU_HELP (148//)"
 msgid "Help"
@@ -934,8 +919,8 @@ msgstr "Aide"
 
 #: src/menu.c:271 src/menu.c:266
 msgctxt "STRING_MENU_OPEN_DOCUMENTATION (149//)"
-msgid "Open Documentation"
-msgstr "Ouvrir la documentation"
+msgid "Open Documentation..."
+msgstr "Ouvrir la documentation..."
 
 #: src/openai.c:175
 msgctxt "STRING_ERROR_BSDSOCKET_LIB_OPEN (150//)"
@@ -1227,8 +1212,8 @@ msgstr "ARexx Shell"
 
 #: src/menu.c:307
 msgctxt "STRING_MENU_AREXX_IMPORT_SCRIPT (221//)"
-msgid "Import Script"
-msgstr "Importer le script"
+msgid "Import Script..."
+msgstr "Importer le script..."
 
 #: src/menu.c:308
 msgctxt "STRING_MENU_AREXX_RUN_SCRIPT (222//)"
@@ -1249,11 +1234,6 @@ msgstr "Impossible d'ouvrir le fichier ARexx"
 msgctxt "STRING_ERROR_AREXX_LIB_OPEN (226//)"
 msgid "Could not open arexx.class."
 msgstr "Impossible d'ouvrir arexx.class."
-
-#: src/menu.c:294
-msgctxt "STRING_MENU_OPENAI_IMAGE_SIZE_GPT_IMAGE_1 (227//)"
-msgid "GPT Image 1 Image Size"
-msgstr "Taille de l'image GPT Image 1"
 
 #: src/MainWindow.c:299
 msgctxt "STRING_ERROR_INVALID_REQUEST (228//)"
@@ -1308,21 +1288,6 @@ msgstr "Imprimer"
 msgctxt "STRING_MENU_CLEAR_MUI_SETTINGS (237//)"
 msgid "Clear MUI Settings"
 msgstr "Effacer les paramètres MUI"
-
-#: src/menu.c:145
-msgctxt "STRING_MENU_OPENAI_WEB_SEARCH (238//)"
-msgid "Web Search"
-msgstr "Recherche web"
-
-#: src/menu.c:146
-msgctxt "STRING_MENU_CUSTOM_PROVIDER (239//)"
-msgid "Custom Provider"
-msgstr "Fournisseur personnalisé"
-
-#: src/menu.c:148
-msgctxt "STRING_MENU_CUSTOM_PROVIDER_SETTINGS (241//)"
-msgid "Custom Provider Settings"
-msgstr "Paramètres du fournisseur personnalisé"
 
 #: src/CustomServerSettingsRequesterWindow.c:11
 msgctxt "STRING_ERROR_CUSTOM_PROVIDER_SETTINGS (242//)"
@@ -1514,11 +1479,6 @@ msgctxt "STRING_ERROR_PROFILE_NAME_REQUIRED (280//)"
 msgid "Please enter a profile name"
 msgstr "Veuillez entrer un nom de profil"
 
-#: src/menu.c
-msgctxt "STRING_MENU_OPENAI_SHELL_TOOL (281//)"
-msgid "Shell Tool"
-msgstr "Outil Shell"
-
 #: src/openai.c
 msgctxt "STRING_EXECUTING_COMMAND (282//)"
 msgid "Executing command..."
@@ -1546,13 +1506,13 @@ msgstr "Image"
 
 #: src/menu.c
 msgctxt "STRING_CHAT_PROVIDER_SETTINGS (287//)"
-msgid "Chat Provider Settings"
-msgstr "Paramètres du fournisseur de chat"
+msgid "Chat Provider Settings..."
+msgstr "Paramètres du fournisseur de chat..."
 
 #: src/menu.c
 msgctxt "STRING_IMAGE_PROVIDER_SETTINGS (288//)"
-msgid "Image Provider Settings"
-msgstr "Paramètres du fournisseur d'images"
+msgid "Image Provider Settings..."
+msgstr "Paramètres du fournisseur d'images..."
 
 #: src/openai.c
 msgctxt "STRING_PROVIDER_OPENAI (289//)"
@@ -1715,8 +1675,8 @@ msgstr ""
 
 #: src/menu.c src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_PROVIDER_SETTINGS (312//)"
-msgid "Speech Provider Settings"
-msgstr "Paramètres du fournisseur de synthèse vocale"
+msgid "Speech Provider Settings..."
+msgstr "Paramètres du fournisseur de synthèse vocale..."
 
 #: src/SpeechProviderSettingsRequesterWindow.c
 msgctxt "STRING_SPEECH_WARNING_MISSING_FORMAT (313//)"
@@ -1969,6 +1929,16 @@ msgstr "Arrêter de parler"
 msgctxt "STRING_XAI_AUTO_INSERT_SPEECH_TAGS (362//)"
 msgid "Auto-insert speech tags into LLM replies"
 msgstr "Insérer automatiquement les balises vocales dans les réponses LLM"
+
+#: src/speech.c
+msgctxt "STRING_ERROR_SPEECH_NOT_INITIALIZED (402//)"
+msgid "Speech is not available. The speech device failed to initialize."
+msgstr "La synthèse vocale n'est pas disponible. Le périphérique vocal n'a pas pu être initialisé."
+
+#: src/ARexx.c
+msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (403//)"
+msgid "SPEAKTEXT failed. See the error requester for details."
+msgstr "Échec de SPEAKTEXT. Voir la fenêtre d'erreur pour plus de détails."
 
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"

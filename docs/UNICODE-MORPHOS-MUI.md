@@ -39,6 +39,21 @@ systemCodeset = CodesetsFindA(NULL, NULL);
 
 `struct codeset` mit `table[256]` zeigt: die klassische Welt ist **8-Bit-orientiert**. UTF-8 ist als MIBenum vorhanden, ist aber nicht auf jedem System der Default.
 
+### 2b. Upstream-System-Prompt „Amiga character set“ (ab 3.0)
+
+Sacredbanana **3.0** hängt an jedes Chat-Request automatisch Text an (`AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS` in `src/openai.c`): das Modell soll nur Zeichen liefern, die sich für das Amiga-Codeset remappen lassen (kein Emoji / Schmuck-Unicode). Unter **NFloattext** (OS3/OS4) ist das sinnvoll.
+
+**MorphOS-Fork:** Chat-Ausgabe ist **UTF-8 über Scintilla** ([PHASE-12-CHAT-SCINTILLA.md](PHASE-12-CHAT-SCINTILLA.md)). Derselbe Prompt führt bei vielen Modellen dazu, dass sie **Umlaute und Unicode meiden** (ASCII/`ae` statt `ä`) — gegen die Fork-Absicht.
+
+| Plattform | Charset-Prompt |
+| --------- | -------------- |
+| MorphOS (`__MORPHOS__`) | **nicht** injizieren — nur Nutzer-Systemprompt (+ optional xAI-Speech-Tags) |
+| OS3 / OS4 | Upstream-Prompt **behalten** |
+
+**Merge-Check:** Bei jedem `upstream`-Merge `openai.c` auf neue System-`instructions` / Encoding-Annahmen prüfen. Dieses Delta gehört zum **3.0-Merge**, nicht erst zu 3.1 (3.1 hat den Prompt nur mitgeschleppt). Checkliste: [HANDLUNGSANWEISUNG-GIT.md](HANDLUNGSANWEISUNG-GIT.md) §5.
+
+**Nicht verwechseln:** Prompt ≠ Codec. MorphOS-Anzeige war schon ohne `CodesetsUTF8ToStr` im Chat; Eingabe bleibt System-Codeset → `CodesetsUTF8Create` → UTF-8 für API/Nodes (alle Plattformen).
+
 ### MorphOS ohne TTEngine (klassischer Pfad)
 
 - `graphics.library` / `Text()`: praktisch 8-Bit-Codeset.
@@ -78,6 +93,8 @@ Optional in der Shell: `GETENV Language`, `GETENV Country` (Locale-Preferences s
 
 **MorphOS Chat (Phase 12 + Midi-Markdown):** Farb-Emoji sind mit TTEngine/DejaVu nicht darstellbar (Flow Studio: andere Fonts helfen kaum; Stylos/Cairo nur teilweise, nicht farbig). Mit **Markdown formatting an** ersetzt AmigaGPT häufige Emoji in der **Assistant-Anzeige** durch kurze Texte (z. B. 🌍→`[Welt]`, 👍→`(+1)`); **Export raw UTF-8** und `raw_utf8` bleiben original. **Markdown aus** → keine Ersetzung (oft □ oder fehlende Glyphe).
 
+**CJK (Chinesisch/Japanisch/Koreanisch):** DejaVu Sans Mono hat kaum CJK-Glyphen → leere Kästchen (□). Live-Scintilla-Refresh während des Streams mit CJK kann MorphOS/TTEngine **einfrieren** (Status bleibt „Antwort wird heruntergeladen…“). Der Fork überspringt deshalb Live-Redraw und Netz-TTS bei erkanntem CJK (BMP + supplementary, z. B. Extension B `U+20000` als 4-Byte-UTF-8); Anzeige einmal nach Stream-Ende (roh, ohne Midi-Markdown). Sinnvoller CJK-Font (z. B. WenQuanYi / Noto Sans CJK) wäre eine spätere Option (Style-Segmentierung).
+
 ---
 
 ## 4. Scintilla + TTEngine vs. Cairo
@@ -113,4 +130,4 @@ Optional in der Shell: `GETENV Language`, `GETENV Country` (Locale-Preferences s
 
 ## 6. Kurzfassung
 
-AmigaGPT speichert in **UTF-8**. **NFloattext** (OS3/OS4 Chat) erwartet **System-Codeset-Strings** → Konvertierungsverluste (Prüfung: Emoji → `??`). Auf **MorphOS** nutzt die Chat-**Ausgabe** seit **Phase 12** **Scintilla + TTEngine** mit UTF-8 direkt; der **Code-Viewer** tat das bereits ab Phase 6. **Cairo** wäre ein separater, schwerer Gesamt-Renderer.
+AmigaGPT speichert in **UTF-8**. **NFloattext** (OS3/OS4 Chat) erwartet **System-Codeset-Strings** → Konvertierungsverluste (Prüfung: Emoji → `??`). Auf **MorphOS** nutzt die Chat-**Ausgabe** seit **Phase 12** **Scintilla + TTEngine** mit UTF-8 direkt; der **Code-Viewer** tat das bereits ab Phase 6. Deshalb injiziert der Fork unter MorphOS **nicht** den Upstream-3.0-Charset-System-Prompt (§2b). **Cairo** wäre ein separater, schwerer Gesamt-Renderer.

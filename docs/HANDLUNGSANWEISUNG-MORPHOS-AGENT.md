@@ -112,6 +112,7 @@ Parent-Fenster: `get(mainWindowObject, MUIA_Window, &w)` oder `codeBlocksViewerS
 | Thema | Regel |
 | ----- | ----- |
 | Anzeige | Read-only **Scintilla** + TTEngine (`SC_CP_UTF8`), nicht NFloattext/Codesets — **nur MorphOS**; OS3/OS4/AROS: NFloattext unverändert |
+| Charset-System-Prompt | Upstream ab 3.0 (`AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS`) unter MorphOS **nicht** injizieren — sonst oft keine Umlaute; siehe [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) §2b |
 | User/Assistant | `SCLEX_NULL` + Style-Bytes (User = fett/blau/grau); **kein** Ausrichtungs-Menü auf MorphOS (`#ifndef __MORPHOS__` in `menu.c` — nur OS3/OS4 NFloattext) |
 | **`SCLEX_MARKDOWN` im Chat** | **Nicht** — Lexer wirkungslos; Menü „Markdown formatting“ schaltet **Midi-Markdown** (`chatOutputScintillaBuildMidiMarkdownDisplay`) |
 | **Zeilenumbruch** | Menü *Wrap long lines (chat)*, `config.chatLineWrap` → `chatOutputScintillaApplyLineWrap()` — **nur MorphOS** (`#ifdef __MORPHOS__` in `menu.c`); kein Port auf NFloattext-Targets |

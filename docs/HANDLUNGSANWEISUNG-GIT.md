@@ -78,6 +78,19 @@ git merge upstream/master
 # Konflikte lösen, testen, dann merge nach master
 ```
 
+### Upstream-Merge: Encoding / System-Prompts (MorphOS)
+
+Upstream **3.0** führt in `src/openai.c` `AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS` ein und hängt sie an jedes Chat-Request (Changelog: Modell soll keine Amiga-untauglichen Unicode-Zeichen senden). Das passt zu **OS3/OS4** (NFloattext + codesets), **nicht** zum MorphOS-Chat (Scintilla, UTF-8).
+
+| Regel | Umsetzung |
+| ----- | --------- |
+| MorphOS | **Kein** Charset-System-Prompt — `#ifdef __MORPHOS__` nur `conversation->system` (ggf. + xAI-Speech-Tags) |
+| OS3/OS4 | Upstream-Prompt behalten |
+| Bei jedem `upstream`-Merge | Diff auf neue `instructions` / Charset-/ASCII-Prompts in `openai.c` prüfen; MorphOS-UTF-8 nicht wieder einschleifen |
+
+Hintergrund und Pipelines: [UNICODE-MORPHOS-MUI.md](UNICODE-MORPHOS-MUI.md) §2b.  
+Hätte schon beim **3.0-Merge** gesetzt werden sollen; nach **3.1-Sync** nachgezogen (Prompt war unverändert mitgeschleppt).
+
 Details: [GIT-FORK-WORKFLOW.md](GIT-FORK-WORKFLOW.md).
 
 ---
@@ -103,7 +116,7 @@ Technische Regel für Cursor: `.cursor/rules/git-branch-policy.mdc`
 | Doc- oder Code-Änderung fertig | Commit auf Topic-Branch, Merge nach `master` — nicht direkt auf `master` committen |
 | `master` lokal „voraus“ nach Versehen | `git checkout master && git reset --hard origin/master`, Arbeit auf Feature-Branch behalten |
 | Remote-Branch divergiert | `git pull --rebase` oder mit User klären; `--force-with-lease` nur bewusst |
-| Upstream-Update | Erst `fetch upstream`, Merge in Feature-Branch, testen |
+| Upstream-Update | Erst `fetch upstream`, Merge in Feature-Branch; Encoding-Check (§5); testen |
 
 ---
 

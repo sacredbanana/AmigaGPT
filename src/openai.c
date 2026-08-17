@@ -37,6 +37,8 @@
 #define SSL_STREAM_WAIT_US 200000
 #define SSL_STREAM_WAIT_MAX 4500
 
+#ifndef __MORPHOS__
+/* OS3/OS4 UI is Latin-1 oriented; MorphOS chat is UTF-8 via Scintilla. */
 static CONST_STRPTR AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS =
     "Output text using characters that can be represented or sensibly remapped "
     "for the Amiga character set. Normal letters used in European languages "
@@ -45,6 +47,7 @@ static CONST_STRPTR AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS =
     "cleanly. Avoid typographic quotes, em/en dashes, ellipses, bullets, and "
     "other decorative Unicode punctuation; use simple plain-text equivalents "
     "instead.";
+#endif
 
 /* System-prompt addendum injected when the active speech profile is xAI TTS
  * and the user has enabled automatic speech tag insertion. Teaches the LLM
@@ -508,15 +511,23 @@ static STRPTR combineInstructionText(CONST_STRPTR first, CONST_STRPTR second) {
 }
 
 static void closeActiveResponseConnection(void) {
+    /* Hard-close: never block on SSL_shutdown (can hang the next chat connect
+     * after a failed or aborted network TTS request on the shared socket). */
     if (sock > -1) {
         CloseSocket(sock);
         sock = -1;
     }
     if (ssl != NULL) {
-        SSL_shutdown(ssl);
         SSL_free(ssl);
         ssl = NULL;
     }
+}
+
+static APTR ttsFail(APTR audioData) {
+    closeActiveResponseConnection();
+    if (audioData != NULL)
+        FreeVec(audioData);
+    return NULL;
 }
 
 static BOOL responseMarksStreamFinished(struct json_object *response) {
@@ -1185,19 +1196,11 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
     struct hostent *hostent;
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
+    showLoadingBar();
 #endif
 
-    if (ssl != NULL) {
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-        ssl = NULL;
-    }
-
-    if (sock > -1) {
-        CloseSocket(sock);
-        sock = -1;
-    }
+    /* Drop any prior shared connection without blocking SSL_shutdown. */
+    closeActiveResponseConnection();
 
     if (useSSL || (useProxy && proxyUsesSSL)) {
         /* The following needs to be done once per socket */
@@ -1216,11 +1219,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
         memcpy(&addr.sin_addr, hostent->h_addr, hostent->h_length);
     } else {
         displayError(useProxy ? STRING_ERROR_PROXY_HOST : STRING_ERROR_HOST);
-        if (ssl != NULL) {
-            SSL_shutdown(ssl);
-            SSL_free(ssl);
-            ssl = NULL;
-        }
+        closeActiveResponseConnection();
         return RETURN_ERROR;
     }
 
@@ -1235,22 +1234,12 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
         if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
             displayError(useProxy ? STRING_ERROR_CONNECTION_PROXY
                                   : STRING_ERROR_CONNECTION);
-            CloseSocket(sock);
-            if (ssl != NULL) {
-                SSL_shutdown(ssl);
-                SSL_free(ssl);
-                ssl = NULL;
-            }
-            sock = -1;
+            closeActiveResponseConnection();
             return RETURN_ERROR;
         }
     } else {
         displayError(STRING_ERROR_SOCKET_CREATE);
-        if (ssl != NULL) {
-            SSL_shutdown(ssl);
-            SSL_free(ssl);
-            ssl = NULL;
-        }
+        closeActiveResponseConnection();
         return RETURN_ERROR;
     }
 
@@ -1282,7 +1271,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
 
         if (send(sock, connectRequest, strlen(connectRequest), 0) < 0) {
             displayError(STRING_ERROR_CONNECT_REQUEST);
-            CloseSocket(sock);
+            closeActiveResponseConnection();
             FreeVec(connectRequest);
             FreeVec(authHeader);
             return RETURN_ERROR;
@@ -1298,7 +1287,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
             } else {
                 displayError(STRING_ERROR_PROXY_NO_RESPONSE);
             }
-            CloseSocket(sock);
+            closeActiveResponseConnection();
             FreeVec(response);
             return RETURN_ERROR;
         }
@@ -1323,11 +1312,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
         } else {
             /* Handshake failed: report with full diagnostics. */
             reportSslError(ssl, ssl_err, "SSL_connect");
-            CloseSocket(sock);
-            SSL_shutdown(ssl);
-            SSL_free(ssl);
-            ssl = NULL;
-            sock = -1;
+            closeActiveResponseConnection();
             return RETURN_ERROR;
         }
     }
@@ -1891,8 +1876,16 @@ struct json_object **postChatMessageToOpenAI(
         struct json_object *conversationArray = json_object_new_array();
 
         struct MinNode *conversationNode = conversation->messages->mlh_Head;
+#ifdef __MORPHOS__
+        /* MorphOS chat is UTF-8 (Scintilla). Do not inject the upstream
+         * Latin-1/Amiga-charset instruction — it makes models drop umlauts
+         * and other Unicode that we intentionally support. */
+        STRPTR systemInstructions =
+            combineInstructionText(conversation->system, NULL);
+#else
         STRPTR systemInstructions = combineInstructionText(
             conversation->system, AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS);
+#endif
 
         /* If speech is on and the active speech profile is xAI TTS with
          * automatic speech tag insertion enabled, append a tag cheat sheet to
@@ -3245,7 +3238,7 @@ struct json_object *postImageCreationRequestToOpenAI(
     }
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 #endif
 
     if (ssl_err > 0) {
@@ -3791,7 +3784,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
     }
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 #endif
 
     if (ssl_err > 0) {
@@ -4306,7 +4299,7 @@ APTR postTextToSpeechRequestToOpenAI(
     }
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 #endif
 
     BOOL isErrorResponse = FALSE;
@@ -4340,15 +4333,13 @@ APTR postTextToSpeechRequestToOpenAI(
                 if (he == SSL_ERROR_WANT_READ || he == SSL_ERROR_WANT_WRITE)
                     continue;
             }
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
 
         STRPTR hstr = (STRPTR)headerAccum;
         STRPTR hend = strstr(hstr, "\r\n\r\n");
         if (hend == NULL) {
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
         ULONG bodyOff = (ULONG)(hend - hstr) + 4;
 
@@ -4383,8 +4374,7 @@ APTR postTextToSpeechRequestToOpenAI(
                     }
                 }
                 json_object_put(response);
-                FreeVec(audioData);
-                return NULL;
+                return ttsFail(audioData);
             }
             if (response != NULL)
                 json_object_put(response);
@@ -4408,7 +4398,7 @@ APTR postTextToSpeechRequestToOpenAI(
                 if (audioData == NULL) {
                     FreeVec(oldad);
                     displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                    return NULL;
+                    return ttsFail(NULL);
                 }
                 FreeVec(oldad);
             }
@@ -4455,9 +4445,8 @@ APTR postTextToSpeechRequestToOpenAI(
                     APTR oldAudioData = audioData;
                     audioData = AllocVec(audioBufferSize, MEMF_ANY);
                     if (audioData == NULL) {
-                        FreeVec(oldAudioData);
                         displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                        return NULL;
+                        return ttsFail(oldAudioData);
                     }
                     memcpy(audioData, oldAudioData, *audioLength);
                     FreeVec(oldAudioData);
@@ -4480,9 +4469,8 @@ APTR postTextToSpeechRequestToOpenAI(
                         APTR oldAudioData = audioData;
                         audioData = AllocVec(audioBufferSize, MEMF_ANY);
                         if (audioData == NULL) {
-                            FreeVec(oldAudioData);
                             displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                            return NULL;
+                            return ttsFail(oldAudioData);
                         }
                         memcpy(audioData, oldAudioData, *audioLength);
                         FreeVec(oldAudioData);
@@ -4507,8 +4495,7 @@ APTR postTextToSpeechRequestToOpenAI(
         seedLen = initialBody;
         if (seedLen > READ_BUFFER_LENGTH - 1) {
             displayError(STRING_ERROR_BAD_CHUNK);
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
         memcpy(readBuffer, headerAccum + bodyOff, seedLen);
         useSeed = (seedLen > 0);
@@ -4601,8 +4588,7 @@ APTR postTextToSpeechRequestToOpenAI(
                                     if (cleanMessage != rawMessageString) {
                                         FreeVec(cleanMessage);
                                     }
-                                    FreeVec(audioData);
-                                    return NULL;
+                                    return ttsFail(audioData);
                                 }
                             } else {
                                 STRPTR httpResponse =
@@ -4671,9 +4657,8 @@ APTR postTextToSpeechRequestToOpenAI(
                         APTR oldAudioData = audioData;
                         audioData = AllocVec(audioBufferSize, MEMF_ANY);
                         if (audioData == NULL) {
-                            FreeVec(oldAudioData);
                             displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                            return NULL;
+                            return ttsFail(oldAudioData);
                         }
                         memcpy(audioData, oldAudioData, *audioLength);
                         FreeVec(oldAudioData);
@@ -4739,9 +4724,8 @@ APTR postTextToSpeechRequestToOpenAI(
                             APTR oldAudioData = audioData;
                             audioData = AllocVec(audioBufferSize, MEMF_ANY);
                             if (audioData == NULL) {
-                                FreeVec(oldAudioData);
                                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                                return NULL;
+                                return ttsFail(oldAudioData);
                             }
                             memcpy(audioData, oldAudioData, *audioLength);
                             FreeVec(oldAudioData);
@@ -4783,8 +4767,7 @@ APTR postTextToSpeechRequestToOpenAI(
                                         proxyPassword) == RETURN_ERROR) {
                     if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
                         displayError(STRING_ERROR_CONNECTION_MAX_RETRIES);
-                        FreeVec(audioData);
-                        return NULL;
+                        return ttsFail(audioData);
                     }
                 } else {
                     // Successful reconnection - restart the download
@@ -4830,9 +4813,8 @@ APTR postTextToSpeechRequestToOpenAI(
                 APTR oldAudioData = audioData;
                 audioData = AllocVec(audioBufferSize, MEMF_ANY);
                 if (audioData == NULL) {
-                    FreeVec(oldAudioData);
                     displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                    return NULL;
+                    return ttsFail(oldAudioData);
                 }
                 memcpy(audioData, oldAudioData, *audioLength);
                 FreeVec(oldAudioData);
@@ -4849,17 +4831,10 @@ APTR postTextToSpeechRequestToOpenAI(
     } else {
         displayError(STRING_ERROR_REQUEST_WRITE);
         reportSslError(ssl, ssl_err, "SSL_write");
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
-    CloseSocket(sock);
-    if (ssl != NULL) {
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-        ssl = NULL;
-    }
-    sock = -1;
+    closeActiveResponseConnection();
 
     // Check if this was an error response and parse JSON error message
     if (isErrorResponse && *audioLength > 0) {
@@ -4883,8 +4858,7 @@ APTR postTextToSpeechRequestToOpenAI(
                                                    // message
                         }
                         json_object_put(errorResponse);
-                        FreeVec(audioData);
-                        return NULL;
+                        return ttsFail(audioData);
                     }
                 }
                 json_object_put(errorResponse);
@@ -4892,12 +4866,12 @@ APTR postTextToSpeechRequestToOpenAI(
         }
         // If we couldn't parse the JSON error, show a generic error
         displayError("HTTP error occurred but could not parse error details");
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
     updateStatusBar(STRING_DOWNLOAD_COMPLETE, greenPen);
 
+    closeActiveResponseConnection();
     return audioData;
 }
 
@@ -5038,7 +5012,7 @@ APTR postTextToSpeechRequestToElevenLabs(
     UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
     if (audioData == NULL) {
         displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-        return NULL;
+        return ttsFail(NULL);
     }
 
     /* Build JSON request body */
@@ -5120,15 +5094,13 @@ APTR postTextToSpeechRequestToElevenLabs(
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
         if (ssl_err <= 0) {
             reportSslError(ssl, ssl_err, "SSL_write (elevenlabs tts)");
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
         if (ssl_err <= 0) {
             displayError(STRING_ERROR_REQUEST_WRITE);
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
     }
 
@@ -5163,15 +5135,13 @@ APTR postTextToSpeechRequestToElevenLabs(
             if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
                 continue;
         }
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
     STRPTR hstr = (STRPTR)headerAccum;
     STRPTR hend = strstr(hstr, "\r\n\r\n");
     if (hend == NULL) {
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
     ULONG bodyOff = (ULONG)(hend - hstr) + 4;
 
@@ -5201,8 +5171,7 @@ APTR postTextToSpeechRequestToElevenLabs(
                 json_object_put(response);
             }
         }
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
     BOOL chunked =
@@ -5220,7 +5189,7 @@ APTR postTextToSpeechRequestToElevenLabs(
             if (audioData == NULL) {
                 FreeVec(old);
                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                return NULL;
+                return ttsFail(NULL);
             }
             if (old != NULL)
                 FreeVec(old);
@@ -5264,9 +5233,8 @@ APTR postTextToSpeechRequestToElevenLabs(
             APTR oldAudioData = audioData;
             audioData = AllocVec(audioBufferSize, MEMF_ANY);
             if (audioData == NULL) {
-                FreeVec(oldAudioData);
                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                return NULL;
+                return ttsFail(oldAudioData);
             }
             memcpy(audioData, oldAudioData, *audioLength);
             FreeVec(oldAudioData);
@@ -5289,9 +5257,8 @@ APTR postTextToSpeechRequestToElevenLabs(
                     APTR oldAudioData = audioData;
                     audioData = AllocVec(audioBufferSize, MEMF_ANY);
                     if (audioData == NULL) {
-                        FreeVec(oldAudioData);
                         displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                        return NULL;
+                        return ttsFail(oldAudioData);
                     }
                     memcpy(audioData, oldAudioData, *audioLength);
                     FreeVec(oldAudioData);
@@ -5318,8 +5285,7 @@ APTR postTextToSpeechRequestToElevenLabs(
         ULONG seedLen = initialBody;
         if (seedLen > READ_BUFFER_LENGTH - 1) {
             displayError(STRING_ERROR_BAD_CHUNK);
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
         memcpy(readBuffer, headerAccum + bodyOff, seedLen);
         useSeed = (seedLen > 0);
@@ -5436,9 +5402,8 @@ APTR postTextToSpeechRequestToElevenLabs(
                         APTR oldAudioData = audioData;
                         audioData = AllocVec(audioBufferSize, MEMF_ANY);
                         if (audioData == NULL) {
-                            FreeVec(oldAudioData);
                             displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                            return NULL;
+                            return ttsFail(oldAudioData);
                         }
                         memcpy(audioData, oldAudioData, *audioLength);
                         FreeVec(oldAudioData);
@@ -5492,9 +5457,8 @@ APTR postTextToSpeechRequestToElevenLabs(
                             APTR oldAudioData = audioData;
                             audioData = AllocVec(audioBufferSize, MEMF_ANY);
                             if (audioData == NULL) {
-                                FreeVec(oldAudioData);
                                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                                return NULL;
+                                return ttsFail(oldAudioData);
                             }
                             memcpy(audioData, oldAudioData, *audioLength);
                             FreeVec(oldAudioData);
@@ -5542,9 +5506,8 @@ APTR postTextToSpeechRequestToElevenLabs(
                 APTR oldAudioData = audioData;
                 audioData = AllocVec(audioBufferSize, MEMF_ANY);
                 if (audioData == NULL) {
-                    FreeVec(oldAudioData);
                     displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                    return NULL;
+                    return ttsFail(oldAudioData);
                 }
                 memcpy(audioData, oldAudioData, *audioLength);
                 FreeVec(oldAudioData);
@@ -5558,16 +5521,16 @@ APTR postTextToSpeechRequestToElevenLabs(
     }
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 #endif
 
     updateStatusBar(STRING_READY, greenPen);
 
     if (*audioLength == 0) {
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
+    closeActiveResponseConnection();
     return audioData;
 }
 
@@ -5628,7 +5591,7 @@ APTR postTextToSpeechRequestToXAI(
     UBYTE *audioData = AllocVec(audioBufferSize, MEMF_ANY);
     if (audioData == NULL) {
         displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-        return NULL;
+        return ttsFail(NULL);
     }
 
     UTF8 *textUTF8 =
@@ -5720,15 +5683,13 @@ APTR postTextToSpeechRequestToXAI(
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
         if (ssl_err <= 0) {
             reportSslError(ssl, ssl_err, "SSL_write (xai tts)");
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
         if (ssl_err <= 0) {
             displayError(STRING_ERROR_REQUEST_WRITE);
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
     }
 
@@ -5761,15 +5722,13 @@ APTR postTextToSpeechRequestToXAI(
             if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
                 continue;
         }
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
     STRPTR hstr = (STRPTR)headerAccum;
     STRPTR hend = strstr(hstr, "\r\n\r\n");
     if (hend == NULL) {
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
     ULONG bodyOff = (ULONG)(hend - hstr) + 4;
 
@@ -5808,8 +5767,7 @@ APTR postTextToSpeechRequestToXAI(
                 json_object_put(response);
             }
         }
-        FreeVec(audioData);
-        return NULL;
+        return ttsFail(audioData);
     }
 
     BOOL chunked =
@@ -5827,7 +5785,7 @@ APTR postTextToSpeechRequestToXAI(
             if (audioData == NULL) {
                 FreeVec(old);
                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                return NULL;
+                return ttsFail(NULL);
             }
             if (old != NULL)
                 FreeVec(old);
@@ -5870,9 +5828,8 @@ APTR postTextToSpeechRequestToXAI(
             APTR oldAudioData = audioData;
             audioData = AllocVec(audioBufferSize, MEMF_ANY);
             if (audioData == NULL) {
-                FreeVec(oldAudioData);
                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                return NULL;
+                return ttsFail(oldAudioData);
             }
             memcpy(audioData, oldAudioData, *audioLength);
             FreeVec(oldAudioData);
@@ -5895,9 +5852,8 @@ APTR postTextToSpeechRequestToXAI(
                     APTR oldAudioData = audioData;
                     audioData = AllocVec(audioBufferSize, MEMF_ANY);
                     if (audioData == NULL) {
-                        FreeVec(oldAudioData);
                         displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                        return NULL;
+                        return ttsFail(oldAudioData);
                     }
                     memcpy(audioData, oldAudioData, *audioLength);
                     FreeVec(oldAudioData);
@@ -5923,8 +5879,7 @@ APTR postTextToSpeechRequestToXAI(
         ULONG seedLen = initialBody;
         if (seedLen > READ_BUFFER_LENGTH - 1) {
             displayError(STRING_ERROR_BAD_CHUNK);
-            FreeVec(audioData);
-            return NULL;
+            return ttsFail(audioData);
         }
         memcpy(readBuffer, headerAccum + bodyOff, seedLen);
         useSeed = (seedLen > 0);
@@ -6041,9 +5996,8 @@ APTR postTextToSpeechRequestToXAI(
                         APTR oldAudioData = audioData;
                         audioData = AllocVec(audioBufferSize, MEMF_ANY);
                         if (audioData == NULL) {
-                            FreeVec(oldAudioData);
                             displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                            return NULL;
+                            return ttsFail(oldAudioData);
                         }
                         memcpy(audioData, oldAudioData, *audioLength);
                         FreeVec(oldAudioData);
@@ -6097,9 +6051,8 @@ APTR postTextToSpeechRequestToXAI(
                             APTR oldAudioData = audioData;
                             audioData = AllocVec(audioBufferSize, MEMF_ANY);
                             if (audioData == NULL) {
-                                FreeVec(oldAudioData);
                                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                                return NULL;
+                                return ttsFail(oldAudioData);
                             }
                             memcpy(audioData, oldAudioData, *audioLength);
                             FreeVec(oldAudioData);
@@ -6147,9 +6100,8 @@ APTR postTextToSpeechRequestToXAI(
                 APTR oldAudioData = audioData;
                 audioData = AllocVec(audioBufferSize, MEMF_ANY);
                 if (audioData == NULL) {
-                    FreeVec(oldAudioData);
                     displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-                    return NULL;
+                    return ttsFail(oldAudioData);
                 }
                 memcpy(audioData, oldAudioData, *audioLength);
                 FreeVec(oldAudioData);
@@ -6163,17 +6115,629 @@ APTR postTextToSpeechRequestToXAI(
     }
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 #endif
 
     updateStatusBar(STRING_READY, greenPen);
 
     if (*audioLength == 0) {
-        FreeVec(audioData);
+        return ttsFail(audioData);
+    }
+
+    closeActiveResponseConnection();
+    return audioData;
+}
+
+#define OPENVOX_DEFAULT_HOST "127.0.0.1"
+#define OPENVOX_DEFAULT_PORT 8666
+#define OPENVOX_MAX_BUSY_RETRIES 60
+#define OPENVOX_LOADED_MODEL_SLOTS 8
+
+static UBYTE openVoxLoadedModels[OPENVOX_LOADED_MODEL_SLOTS][128];
+
+static STRPTR openVoxDupStr(CONST_STRPTR value) {
+    if (value == NULL)
+        return NULL;
+    STRPTR copy = AllocVec(strlen(value) + 1, MEMF_ANY | MEMF_CLEAR);
+    if (copy != NULL)
+        strcpy(copy, value);
+    return copy;
+}
+
+static ULONG openVoxReadLE32(const UBYTE *p) {
+    return (ULONG)p[0] | ((ULONG)p[1] << 8) | ((ULONG)p[2] << 16) |
+           ((ULONG)p[3] << 24);
+}
+
+static UWORD openVoxReadLE16(const UBYTE *p) {
+    return (UWORD)((UWORD)p[0] | ((UWORD)p[1] << 8));
+}
+
+static BOOL openVoxModelIsLoaded(CONST_STRPTR model) {
+    if (model == NULL)
+        return FALSE;
+    for (LONG i = 0; i < OPENVOX_LOADED_MODEL_SLOTS; i++) {
+        if (openVoxLoadedModels[i][0] != '\0' &&
+            strcmp(openVoxLoadedModels[i], model) == 0)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+static void openVoxRememberLoadedModel(CONST_STRPTR model) {
+    if (model == NULL || strlen(model) == 0 || openVoxModelIsLoaded(model))
+        return;
+    for (LONG i = 0; i < OPENVOX_LOADED_MODEL_SLOTS; i++) {
+        if (openVoxLoadedModels[i][0] == '\0') {
+            strncpy(openVoxLoadedModels[i], model,
+                    sizeof(openVoxLoadedModels[i]) - 1);
+            openVoxLoadedModels[i][sizeof(openVoxLoadedModels[i]) - 1] = '\0';
+            return;
+        }
+    }
+    /* A small fixed cache is enough for normal use. Replace the oldest slot
+     * once a user has exercised more models than that in one app session. */
+    for (LONG i = 1; i < OPENVOX_LOADED_MODEL_SLOTS; i++)
+        strcpy(openVoxLoadedModels[i - 1], openVoxLoadedModels[i]);
+    strncpy(openVoxLoadedModels[OPENVOX_LOADED_MODEL_SLOTS - 1], model,
+            sizeof(openVoxLoadedModels[0]) - 1);
+    openVoxLoadedModels[OPENVOX_LOADED_MODEL_SLOTS - 1]
+                       [sizeof(openVoxLoadedModels[0]) - 1] = '\0';
+}
+
+/* Send a JSON POST and return a newly allocated copy of its HTTP response
+ * body. The caller owns the returned buffer. This deliberately keeps status
+ * handling separate so OpenVox's single-job 429 response can be retried. */
+static APTR openVoxPostJson(
+    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR endpoint,
+    AuthorizationType authorizationType, CONST_STRPTR apiKey,
+    CONST_STRPTR jsonBody, ULONG *bodyLength, LONG *statusCode, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword) {
+    if (bodyLength != NULL)
+        *bodyLength = 0;
+    if (statusCode != NULL)
+        *statusCode = 0;
+    if (host == NULL || strlen(host) == 0)
+        host = OPENVOX_DEFAULT_HOST;
+    if (port == 0)
+        port = OPENVOX_DEFAULT_PORT;
+    if (jsonBody == NULL)
+        jsonBody = "";
+
+    UBYTE apiAuthHeader[512];
+    apiAuthHeader[0] = '\0';
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+    }
+
+    UBYTE proxyAuthHeader[512];
+    proxyAuthHeader[0] = '\0';
+    if (useProxy && proxyRequiresAuth && !proxyUsesSSL &&
+        proxyUsername != NULL && proxyPassword != NULL) {
+        STRPTR credentials =
+            AllocVec(strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                     MEMF_ANY | MEMF_CLEAR);
+        if (credentials == NULL)
+            return NULL;
+        snprintf(credentials, strlen(proxyUsername) + strlen(proxyPassword) + 2,
+                 "%s:%s", proxyUsername, proxyPassword);
+        STRPTR encodedCredentials = NULL;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
+        if (encodedCredentials != NULL) {
+            snprintf(proxyAuthHeader, sizeof(proxyAuthHeader),
+                     "Proxy-Authorization: Basic %s\r\n", encodedCredentials);
+            CodesetsFreeA(encodedCredentials, NULL);
+        }
+        FreeVec(credentials);
+    }
+
+    UBYTE requestTarget[768];
+    if (useProxy) {
+        snprintf(requestTarget, sizeof(requestTarget), "%s://%s:%u%s",
+                 useSSL ? "https" : "http", host, (unsigned int)port,
+                 endpoint);
+    } else {
+        snprintf(requestTarget, sizeof(requestTarget), "%s", endpoint);
+    }
+
+    ULONG requestSize = strlen(jsonBody) + strlen(requestTarget) +
+                        strlen(apiAuthHeader) + strlen(proxyAuthHeader) + 512;
+    STRPTR request = AllocVec(requestSize, MEMF_ANY | MEMF_CLEAR);
+    if (request == NULL)
+        return NULL;
+    snprintf(request, requestSize,
+             "POST %s HTTP/1.1\r\n"
+             "Host: %s:%u\r\n"
+             "Content-Type: application/json\r\n"
+             "Accept: application/json, audio/wav\r\n"
+             "%s%s"
+             "User-Agent: AmigaGPT\r\n"
+             "Connection: close\r\n"
+             "Content-Length: %lu\r\n\r\n%s",
+             requestTarget, host, (unsigned int)port, apiAuthHeader,
+             proxyAuthHeader, (ULONG)strlen(jsonBody), jsonBody);
+
+    UBYTE connectionRetryCount = 0;
+    updateStatusBar(STRING_CONNECTING, yellowPen);
+    while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
+        if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+            FreeVec(request);
+            return NULL;
+        }
+    }
+
+    ULONG sent = 0;
+    ULONG requestLength = strlen(request);
+    updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
+    while (sent < requestLength) {
+        LONG n;
+        if (useSSL) {
+            ERR_clear_error();
+            n = SSL_write(ssl, request + sent, requestLength - sent);
+            if (n <= 0)
+                reportSslError(ssl, n, "SSL_write (OpenVox)");
+        } else {
+            n = send(sock, request + sent, requestLength - sent, 0);
+        }
+        if (n <= 0) {
+            FreeVec(request);
+            return ttsFail(NULL);
+        }
+        sent += (ULONG)n;
+    }
+    FreeVec(request);
+
+    ULONG responseCapacity = 8192;
+    ULONG responseLength = 0;
+    UBYTE *response = AllocVec(responseCapacity, MEMF_ANY);
+    if (response == NULL)
+        return ttsFail(NULL);
+
+    updateStatusBar(STRING_DOWNLOADING_RESPONSE, yellowPen);
+    for (;;) {
+        if (responseLength + 4096 + 1 > responseCapacity) {
+            ULONG newCapacity = responseCapacity << 1;
+            UBYTE *grown = AllocVec(newCapacity, MEMF_ANY);
+            if (grown == NULL) {
+                return ttsFail(response);
+            }
+            memcpy(grown, response, responseLength);
+            FreeVec(response);
+            response = grown;
+            responseCapacity = newCapacity;
+        }
+        LONG n;
+        if (useSSL) {
+            ERR_clear_error();
+            n = SSL_read(ssl, response + responseLength,
+                         responseCapacity - responseLength - 1);
+        } else {
+            n = recv(sock, response + responseLength,
+                     responseCapacity - responseLength - 1, 0);
+        }
+        if (n <= 0)
+            break;
+        responseLength += (ULONG)n;
+    }
+    response[responseLength] = '\0';
+
+    LONG parsedStatus = 0;
+    sscanf((STRPTR)response, "HTTP/%*s %ld", &parsedStatus);
+    if (statusCode != NULL)
+        *statusCode = parsedStatus;
+
+    UBYTE *headerEnd = (UBYTE *)strstr((STRPTR)response, "\r\n\r\n");
+    ULONG delimiterLength = 4;
+    if (headerEnd == NULL) {
+        headerEnd = (UBYTE *)strstr((STRPTR)response, "\n\n");
+        delimiterLength = 2;
+    }
+    if (headerEnd == NULL) {
+        return ttsFail(response);
+    }
+    UBYTE *body = headerEnd + delimiterLength;
+    ULONG headerLength = (ULONG)(body - response);
+    ULONG available = responseLength > headerLength
+                          ? responseLength - headerLength
+                          : 0;
+
+    /* OpenVox normally sends Content-Length. Decode chunked bodies as well so
+     * the same client remains valid behind a proxy. */
+    BOOL chunked = strstr((STRPTR)response, "Transfer-Encoding: chunked") != NULL ||
+                   strstr((STRPTR)response, "transfer-encoding: chunked") != NULL;
+    UBYTE *result = NULL;
+    ULONG resultLength = 0;
+    if (chunked) {
+        result = AllocVec(available + 1, MEMF_ANY | MEMF_CLEAR);
+        if (result != NULL) {
+            UBYTE *cursor = body;
+            UBYTE *end = body + available;
+            while (cursor < end) {
+                ULONG chunkSize = strtoul((STRPTR)cursor, NULL, 16);
+                UBYTE *lineEnd = (UBYTE *)strstr((STRPTR)cursor, "\r\n");
+                if (lineEnd == NULL || chunkSize == 0)
+                    break;
+                cursor = lineEnd + 2;
+                if ((ULONG)(end - cursor) < chunkSize)
+                    break;
+                memcpy(result + resultLength, cursor, chunkSize);
+                resultLength += chunkSize;
+                cursor += chunkSize;
+                if (cursor + 1 < end && cursor[0] == '\r' &&
+                    cursor[1] == '\n')
+                    cursor += 2;
+            }
+        }
+    } else {
+        result = AllocVec(available + 1, MEMF_ANY | MEMF_CLEAR);
+        if (result != NULL && available > 0)
+            memcpy(result, body, available);
+        resultLength = available;
+    }
+    FreeVec(response);
+    if (bodyLength != NULL)
+        *bodyLength = resultLength;
+    updateStatusBar(STRING_READY, greenPen);
+    closeActiveResponseConnection();
+    return result;
+}
+
+static struct json_object *openVoxGetJson(
+    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR endpoint,
+    AuthorizationType authorizationType, CONST_STRPTR apiKey, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword) {
+    CONST_STRPTR headerName = "";
+    BOOL useBearer = FALSE;
+    if (authorizationType == AUTHORIZATION_TYPE_BEARER) {
+        headerName = "Authorization";
+        useBearer = TRUE;
+    } else if (authorizationType == AUTHORIZATION_TYPE_X_API_KEY) {
+        headerName = "x-api-key";
+    } else if (authorizationType == AUTHORIZATION_TYPE_X_GOOGLE_API_KEY) {
+        headerName = "x-goog-api-key";
+    } else if (authorizationType == AUTHORIZATION_TYPE_XI_API_KEY) {
+        headerName = "xi-api-key";
+    }
+    return makeHttpsGetRequest(
+        host, port, useSSL, endpoint, apiKey, headerName, useBearer, useProxy,
+        proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+        proxyPassword);
+}
+
+static CONST_STRPTR openVoxFirstString(struct json_object *response,
+                                       CONST_STRPTR key) {
+    struct json_object *data = NULL;
+    if (response == NULL ||
+        !json_object_object_get_ex(response, "data", &data) ||
+        !json_object_is_type(data, json_type_array) ||
+        json_object_array_length(data) == 0)
+        return NULL;
+    struct json_object *first = json_object_array_get_idx(data, 0);
+    struct json_object *value =
+        first ? json_object_object_get(first, key) : NULL;
+    return value ? json_object_get_string(value) : NULL;
+}
+
+static CONST_STRPTR openVoxResolveListValue(struct json_object *response,
+                                            CONST_STRPTR requested,
+                                            CONST_STRPTR primaryKey,
+                                            CONST_STRPTR alternateKey) {
+    struct json_object *data = NULL;
+    if (response == NULL ||
+        !json_object_object_get_ex(response, "data", &data) ||
+        !json_object_is_type(data, json_type_array))
+        return NULL;
+    LONG count = json_object_array_length(data);
+    for (LONG i = 0; i < count; i++) {
+        struct json_object *entry = json_object_array_get_idx(data, i);
+        struct json_object *primary =
+            entry ? json_object_object_get(entry, primaryKey) : NULL;
+        struct json_object *alternate =
+            (entry && alternateKey != NULL)
+                ? json_object_object_get(entry, alternateKey)
+                : NULL;
+        CONST_STRPTR primaryValue =
+            primary ? json_object_get_string(primary) : NULL;
+        CONST_STRPTR alternateValue =
+            alternate ? json_object_get_string(alternate) : NULL;
+        if (requested != NULL &&
+            ((primaryValue != NULL && strcmp(requested, primaryValue) == 0) ||
+             (alternateValue != NULL &&
+              strcmp(requested, alternateValue) == 0)))
+            return primaryValue;
+    }
+    return openVoxFirstString(response, primaryKey);
+}
+
+static CONST_STRPTR openVoxAudioBase64(struct json_object *root) {
+    if (root == NULL)
+        return NULL;
+    struct json_object *chunk = json_object_object_get(root, "audio.chunk");
+    if (chunk == NULL)
+        chunk = json_object_object_get(root, "chunk");
+    if (chunk == NULL)
+        chunk = root;
+    struct json_object *data = json_object_object_get(chunk, "data");
+    if (data == NULL)
+        data = chunk;
+    struct json_object *audio = json_object_object_get(data, "audio");
+    if (audio == NULL) {
+        struct json_object *audioObj = json_object_object_get(root, "audio");
+        if (audioObj != NULL &&
+            json_object_is_type(audioObj, json_type_object)) {
+            chunk = json_object_object_get(audioObj, "chunk");
+            if (chunk != NULL) {
+                data = json_object_object_get(chunk, "data");
+                if (data != NULL)
+                    audio = json_object_object_get(data, "audio");
+            }
+        }
+    }
+    return (audio != NULL && json_object_is_type(audio, json_type_string))
+               ? json_object_get_string(audio)
+               : NULL;
+}
+
+static APTR openVoxExtractWavPcm(const UBYTE *wav, ULONG wavLength,
+                                 ULONG *pcmLength, ULONG *sampleRate) {
+    if (pcmLength != NULL)
+        *pcmLength = 0;
+    if (sampleRate != NULL)
+        *sampleRate = 24000;
+    if (wav == NULL || wavLength < 12 || memcmp(wav, "RIFF", 4) != 0 ||
+        memcmp(wav + 8, "WAVE", 4) != 0)
+        return NULL;
+
+    UWORD format = 0, channels = 0, bits = 0;
+    ULONG rate = 24000;
+    const UBYTE *pcm = NULL;
+    ULONG length = 0;
+    ULONG offset = 12;
+    while (offset + 8 <= wavLength) {
+        const UBYTE *chunk = wav + offset;
+        ULONG chunkLength = openVoxReadLE32(chunk + 4);
+        ULONG dataOffset = offset + 8;
+        if (dataOffset > wavLength || chunkLength > wavLength - dataOffset)
+            break;
+        if (memcmp(chunk, "fmt ", 4) == 0 && chunkLength >= 16) {
+            format = openVoxReadLE16(wav + dataOffset);
+            channels = openVoxReadLE16(wav + dataOffset + 2);
+            rate = openVoxReadLE32(wav + dataOffset + 4);
+            bits = openVoxReadLE16(wav + dataOffset + 14);
+        } else if (memcmp(chunk, "data", 4) == 0) {
+            pcm = wav + dataOffset;
+            length = chunkLength;
+        }
+        offset = dataOffset + chunkLength + (chunkLength & 1);
+    }
+    if (pcm == NULL || length == 0 || format != 1 || channels != 1 ||
+        bits != 16)
+        return NULL;
+    UBYTE *copy = AllocVec(length, MEMF_ANY);
+    if (copy == NULL)
+        return NULL;
+    memcpy(copy, pcm, length);
+    if (pcmLength != NULL)
+        *pcmLength = length;
+    if (sampleRate != NULL)
+        *sampleRate = rate;
+    return copy;
+}
+
+APTR postTextToSpeechRequestToOpenVox(
+    CONST_STRPTR text, CONST_STRPTR model, CONST_STRPTR voice,
+    CONST_STRPTR language, CONST_STRPTR host, UWORD port, BOOL useSSL,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR apiKey, ULONG *audioLength, ULONG *sampleRate, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword) {
+    if (audioLength != NULL)
+        *audioLength = 0;
+    if (sampleRate != NULL)
+        *sampleRate = 24000;
+    if (host == NULL || strlen(host) == 0)
+        host = OPENVOX_DEFAULT_HOST;
+    if (port == 0)
+        port = OPENVOX_DEFAULT_PORT;
+    if (apiEndpointUrl == NULL || strlen(apiEndpointUrl) == 0)
+        apiEndpointUrl = "v1";
+
+    UBYTE endpoint[512];
+    snprintf(endpoint, sizeof(endpoint), "/%s/models", apiEndpointUrl);
+    struct json_object *models = openVoxGetJson(
+        host, port, useSSL, endpoint, authorizationType, apiKey, useProxy,
+        proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+        proxyPassword);
+    if (models == NULL) {
+        displayError("OpenVox server is unavailable.");
+        return NULL;
+    }
+    CONST_STRPTR resolvedModel = openVoxResolveListValue(
+        models, model, "id", "model_key");
+    STRPTR selectedModel =
+        resolvedModel != NULL ? openVoxDupStr(resolvedModel) : NULL;
+    json_object_put(models);
+    if (selectedModel == NULL || strlen(selectedModel) == 0) {
+        if (selectedModel != NULL)
+            FreeVec(selectedModel);
+        displayError("OpenVox returned no usable speech models.");
         return NULL;
     }
 
-    return audioData;
+    if (!openVoxModelIsLoaded(selectedModel)) {
+        snprintf(endpoint, sizeof(endpoint), "/%s/models/%s/load",
+                 apiEndpointUrl, selectedModel);
+        BOOL loaded = FALSE;
+        BOOL serverUnavailable = FALSE;
+        for (LONG retry = 0; retry < OPENVOX_MAX_BUSY_RETRIES; retry++) {
+            ULONG responseLength = 0;
+            LONG status = 0;
+            APTR response = openVoxPostJson(
+                host, port, useSSL, endpoint, authorizationType, apiKey, "",
+                &responseLength, &status, useProxy, proxyHost, proxyPort,
+                proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword);
+            if (response != NULL)
+                FreeVec(response);
+            if (status == 429) {
+                Delay(50);
+                continue;
+            }
+            serverUnavailable = (status == 0);
+            loaded = (status >= 200 && status < 300);
+            break;
+        }
+        if (!loaded) {
+            FreeVec(selectedModel);
+            displayError(serverUnavailable
+                             ? "OpenVox server is unavailable."
+                             : "OpenVox could not load the selected model.");
+            return NULL;
+        }
+        openVoxRememberLoadedModel(selectedModel);
+    }
+
+    snprintf(endpoint, sizeof(endpoint), "/%s/models/%s/languages",
+             apiEndpointUrl, selectedModel);
+    struct json_object *languages = openVoxGetJson(
+        host, port, useSSL, endpoint, authorizationType, apiKey, useProxy,
+        proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+        proxyPassword);
+    if (languages == NULL) {
+        FreeVec(selectedModel);
+        displayError("OpenVox server is unavailable.");
+        return NULL;
+    }
+    CONST_STRPTR resolvedLanguage = openVoxResolveListValue(
+        languages, language, "code", "id");
+    STRPTR selectedLanguage =
+        resolvedLanguage != NULL ? openVoxDupStr(resolvedLanguage) : NULL;
+    if (languages != NULL)
+        json_object_put(languages);
+    if (selectedLanguage == NULL || strlen(selectedLanguage) == 0) {
+        FreeVec(selectedModel);
+        if (selectedLanguage != NULL)
+            FreeVec(selectedLanguage);
+        displayError("OpenVox returned no valid languages for this model.");
+        return NULL;
+    }
+
+    snprintf(endpoint, sizeof(endpoint), "/%s/models/%s/voices?language=%s",
+             apiEndpointUrl, selectedModel, selectedLanguage);
+    struct json_object *voices = openVoxGetJson(
+        host, port, useSSL, endpoint, authorizationType, apiKey, useProxy,
+        proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+        proxyPassword);
+    if (voices == NULL) {
+        FreeVec(selectedModel);
+        FreeVec(selectedLanguage);
+        displayError("OpenVox server is unavailable.");
+        return NULL;
+    }
+    CONST_STRPTR resolvedVoice =
+        openVoxResolveListValue(voices, voice, "name", "id");
+    STRPTR selectedVoice =
+        resolvedVoice != NULL ? openVoxDupStr(resolvedVoice) : NULL;
+    if (voices != NULL)
+        json_object_put(voices);
+    if (selectedVoice == NULL || strlen(selectedVoice) == 0) {
+        FreeVec(selectedModel);
+        FreeVec(selectedLanguage);
+        if (selectedVoice != NULL)
+            FreeVec(selectedVoice);
+        displayError("OpenVox returned no valid voices for this language.");
+        return NULL;
+    }
+
+    UTF8 *textUTF8 =
+        CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
+                           (Tag)text, CSA_MapForeignChars, TRUE, TAG_DONE);
+    struct json_object *request = json_object_new_object();
+    json_object_object_add(request, "model",
+                           json_object_new_string(selectedModel));
+    json_object_object_add(
+        request, "input",
+        json_object_new_string(textUTF8 != NULL ? textUTF8 : (UTF8 *)""));
+    json_object_object_add(request, "language",
+                           json_object_new_string(selectedLanguage));
+    json_object_object_add(request, "voice",
+                           json_object_new_string(selectedVoice));
+    json_object_object_add(request, "response_format",
+                           json_object_new_string("wav"));
+    CONST_STRPTR requestJson = json_object_to_json_string(request);
+
+    snprintf(endpoint, sizeof(endpoint), "/%s/audio/speech", apiEndpointUrl);
+    APTR response = NULL;
+    ULONG responseLength = 0;
+    LONG status = 0;
+    for (LONG retry = 0; retry < OPENVOX_MAX_BUSY_RETRIES; retry++) {
+        response = openVoxPostJson(
+            host, port, useSSL, endpoint, authorizationType, apiKey,
+            requestJson, &responseLength, &status, useProxy, proxyHost,
+            proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+            proxyPassword);
+        if (status != 429)
+            break;
+        if (response != NULL) {
+            FreeVec(response);
+            response = NULL;
+        }
+        Delay(50);
+    }
+    json_object_put(request);
+    if (textUTF8 != NULL)
+        CodesetsFreeA(textUTF8, NULL);
+    FreeVec(selectedModel);
+    FreeVec(selectedLanguage);
+    FreeVec(selectedVoice);
+
+    if (response == NULL || status < 200 || status >= 300) {
+        if (response != NULL)
+            FreeVec(response);
+        displayError(status == 0 ? "OpenVox server is unavailable."
+                                 : "OpenVox speech generation failed.");
+        return NULL;
+    }
+
+    APTR pcm = openVoxExtractWavPcm(response, responseLength, audioLength,
+                                    sampleRate);
+    if (pcm == NULL && responseLength > 0) {
+        struct json_object *event = json_tokener_parse((STRPTR)response);
+        CONST_STRPTR b64 = openVoxAudioBase64(event);
+        if (b64 != NULL && strlen(b64) > 0) {
+            STRPTR decoded = NULL;
+            ULONG b64Length = strlen(b64);
+            CodesetsDecodeB64(CSA_B64SourceString, (Tag)b64,
+                              CSA_B64SourceLen, (Tag)b64Length,
+                              CSA_B64DestPtr, (Tag)&decoded, TAG_DONE);
+            if (decoded != NULL) {
+                ULONG decodedLength = (b64Length * 3) / 4;
+                while (b64Length > 0 && b64[b64Length - 1] == '=') {
+                    decodedLength--;
+                    b64Length--;
+                }
+                pcm = openVoxExtractWavPcm((UBYTE *)decoded, decodedLength,
+                                           audioLength, sampleRate);
+                CodesetsFreeA(decoded, NULL);
+            }
+        }
+        if (event != NULL)
+            json_object_put(event);
+    }
+    FreeVec(response);
+    if (pcm == NULL)
+        displayError("OpenVox returned an unsupported audio response.");
+    return pcm;
 }
 
 struct json_object *getXAICustomVoices(
@@ -6318,7 +6882,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
     FreeVec(authHeader);
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
+    showLoadingBar();
 #endif
 
     updateStatusBar(STRING_CONNECTING, yellowPen);
@@ -6328,7 +6892,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
         if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
             displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
 #ifndef DAEMON
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+            hideLoadingBar();
 #endif
             return NULL;
         }
@@ -6341,7 +6905,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
         if (ssl_err <= 0) {
             reportSslError(ssl, ssl_err, "SSL_write (generic GET)");
 #ifndef DAEMON
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+            hideLoadingBar();
 #endif
             return NULL;
         }
@@ -6350,7 +6914,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
         if (ssl_err <= 0) {
             displayError(STRING_ERROR_REQUEST_WRITE);
 #ifndef DAEMON
-            set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+            hideLoadingBar();
 #endif
             return NULL;
         }
@@ -6389,7 +6953,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
 
     if (jsonStart == NULL) {
 #ifndef DAEMON
-        set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+        hideLoadingBar();
 #endif
         return NULL;
     }
@@ -6406,7 +6970,7 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
     /* Parse JSON */
     struct json_object *result = json_tokener_parse(jsonStart);
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    hideLoadingBar();
 #endif
     return result;
 }

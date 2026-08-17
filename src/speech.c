@@ -63,6 +63,7 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
                                       [SPEECH_SYSTEM_OPENAI] = "OpenAI",
                                       [SPEECH_SYSTEM_ELEVENLABS] = "ElevenLabs",
                                       [SPEECH_SYSTEM_XAI] = "xAI",
+                                      [SPEECH_SYSTEM_OPENVOX] = "OpenVox",
                                       NULL};
 
 /**
@@ -77,6 +78,13 @@ const STRPTR AUDIO_FORMAT_NAMES[] = {[AUDIO_FORMAT_PCM] = "pcm",
                                      [AUDIO_FORMAT_FLAC] = "flac",
                                      NULL};
 
+BOOL speechSystemUsesNetwork(SpeechSystem speechSystem) {
+    return (speechSystem == SPEECH_SYSTEM_OPENAI ||
+            speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
+            speechSystem == SPEECH_SYSTEM_XAI ||
+            speechSystem == SPEECH_SYSTEM_OPENVOX);
+}
+
 /**
  * Initialise the speech system
  * @param speechSystem the speech system to use
@@ -85,7 +93,8 @@ const STRPTR AUDIO_FORMAT_NAMES[] = {[AUDIO_FORMAT_PCM] = "pcm",
 LONG initSpeech(SpeechSystem speechSystem) {
     if (speechSystem == SPEECH_SYSTEM_OPENAI ||
         speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
-        speechSystem == SPEECH_SYSTEM_XAI) {
+        speechSystem == SPEECH_SYSTEM_XAI ||
+        speechSystem == SPEECH_SYSTEM_OPENVOX) {
         AHImp = CreateMsgPort();
         ahiRequest = (struct AHIRequest *)CreateIORequest(
             AHImp, sizeof(struct AHIRequest));
@@ -199,6 +208,21 @@ LONG initSpeech(SpeechSystem speechSystem) {
 }
 
 /**
+ * Lazily initialize the speech system for a specific request, without
+ * disturbing the user's "speech enabled" preference: initSpeech() disables
+ * that preference on failure, which is correct when it's called at startup
+ * or from the settings requester, but not when it's opportunistically
+ * triggered by a single speak request (e.g. an ARexx SPEAKTEXT call for a
+ * profile that isn't the app's configured default).
+ **/
+static LONG lazyInitSpeech(SpeechSystem speechSystem) {
+    ULONG wasEnabled = configGetSpeechEnabled();
+    LONG result = initSpeech(speechSystem);
+    configSetSpeechEnabled(wasEnabled);
+    return result;
+}
+
+/**
  * Close the speech system
  **/
 void closeSpeech() {
@@ -284,37 +308,54 @@ void speakText(STRPTR text, CONST_STRPTR output, AudioFormat *audioFormat) {
     configFreeSpeechRequestSettings(&settings);
 }
 
-void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
+BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                            AudioFormat *audioFormat,
                            const struct SpeechRequestSettings *settings) {
     if (settings == NULL)
-        return;
+        return FALSE;
 
     SpeechSystem speechSystem = settings->speechSystem;
 
     if (speechSystem == SPEECH_SYSTEM_OPENAI ||
         speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
-        speechSystem == SPEECH_SYSTEM_XAI) {
+        speechSystem == SPEECH_SYSTEM_XAI ||
+        speechSystem == SPEECH_SYSTEM_OPENVOX) {
+        if (ahiRequest == NULL) {
+            if (lazyInitSpeech(speechSystem) == RETURN_ERROR)
+                return FALSE; /* initSpeech already displayed a specific error */
+            if (ahiRequest == NULL) {
+                displayError(STRING_ERROR_SPEECH_NOT_INITIALIZED);
+                return FALSE;
+            }
+        }
+
         if (speechSystem == SPEECH_SYSTEM_OPENAI) {
             if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
                 (settings->openAiApiKey == NULL ||
                  strlen(settings->openAiApiKey) == 0)) {
                 displayError(STRING_ERROR_NO_API_KEY);
-                return;
+                return FALSE;
             }
         } else if (speechSystem == SPEECH_SYSTEM_ELEVENLABS) {
             if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
                 (settings->elevenLabsApiKey == NULL ||
                  strlen(settings->elevenLabsApiKey) == 0)) {
                 displayError(STRING_ERROR_NO_API_KEY);
-                return;
+                return FALSE;
             }
         } else if (speechSystem == SPEECH_SYSTEM_XAI) {
             if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
                 (settings->xaiApiKey == NULL ||
                  strlen(settings->xaiApiKey) == 0)) {
                 displayError(STRING_ERROR_NO_API_KEY);
-                return;
+                return FALSE;
+            }
+        } else if (speechSystem == SPEECH_SYSTEM_OPENVOX) {
+            if (settings->authorizationType != AUTHORIZATION_TYPE_NONE &&
+                (settings->openVoxApiKey == NULL ||
+                 strlen(settings->openVoxApiKey) == 0)) {
+                displayError(STRING_ERROR_NO_API_KEY);
+                return FALSE;
             }
         }
 
@@ -335,6 +376,7 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         }
 
         ULONG audioLength;
+        ULONG playbackFrequency = 24000;
 
         if (speechSystem == SPEECH_SYSTEM_OPENAI) {
             audioBuffer = postTextToSpeechRequestToOpenAI(
@@ -373,10 +415,22 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                 configGetProxyPort(), configGetProxyUsesSSL(),
                 configGetProxyRequiresAuth(), configGetProxyUsername(),
                 configGetProxyPassword(), audioFormat);
+        } else if (speechSystem == SPEECH_SYSTEM_OPENVOX) {
+            audioBuffer = postTextToSpeechRequestToOpenVox(
+                text, settings->openVoxModel, settings->openVoxVoice,
+                settings->openVoxLanguage, settings->host, settings->port,
+                settings->useSSL, settings->apiEndpointUrl,
+                settings->authorizationType, settings->openVoxApiKey,
+                &audioLength, &playbackFrequency, configGetProxyEnabled(),
+                configGetProxyHost(), configGetProxyPort(),
+                configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
+                configGetProxyUsername(), configGetProxyPassword());
+            if (audioFormat != NULL)
+                *audioFormat = AUDIO_FORMAT_PCM;
         }
 
         if (!audioBuffer) {
-            return;
+            return FALSE;
         }
 
         if (audioFormat == NULL || *audioFormat == AUDIO_FORMAT_PCM) {
@@ -426,14 +480,15 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             }
             FreeVec(audioBuffer);
             audioBuffer = NULL;
-            return;
+            return TRUE;
         }
 
         // Add 2s of silence to the audio buffer to make sure AHI plays the
         // entire audio buffer. Unsure if this is an AHI bug or an emulator
         // bug.
         {
-            ULONG padBytes = 24000 * 4; /* 2s @ 24kHz 16-bit mono */
+            ULONG padBytes =
+                playbackFrequency * 4; /* 2s, 16-bit mono */
             UBYTE *padded =
                 AllocVec(audioLength + padBytes, MEMF_ANY | MEMF_CLEAR);
             if (padded) {
@@ -445,19 +500,29 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
                 FreeVec(audioBuffer);
                 audioBuffer = NULL;
-                return;
+                return FALSE;
             }
         }
 
         ahiRequest->ahir_Std.io_Data = audioBuffer;
         ahiRequest->ahir_Std.io_Length = audioLength;
+        ahiRequest->ahir_Frequency = playbackFrequency;
 
         SendIO((struct IORequest *)ahiRequest);
 
-        return;
+        return TRUE;
     }
 #ifdef __AMIGAOS3__
     if (speechSystem == SPEECH_SYSTEM_34 || speechSystem == SPEECH_SYSTEM_37) {
+        if (NarratorIO == NULL) {
+            if (lazyInitSpeech(speechSystem) == RETURN_ERROR)
+                return FALSE; /* initSpeech already displayed a specific error */
+            if (NarratorIO == NULL) {
+                displayError(STRING_ERROR_SPEECH_NOT_INITIALIZED);
+                return FALSE;
+            }
+        }
+
         if (CheckIO((struct IORequest *)NarratorIO) == 0) {
             AbortIO((struct IORequest *)NarratorIO);
             WaitIO((struct IORequest *)NarratorIO);
@@ -484,6 +549,15 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
     }
 #elif defined(__AMIGAOS4__)
     if (speechSystem == SPEECH_SYSTEM_FLITE) {
+        if (fliteRequest == NULL) {
+            if (lazyInitSpeech(speechSystem) == RETURN_ERROR)
+                return FALSE; /* initSpeech already displayed a specific error */
+            if (fliteRequest == NULL) {
+                displayError(STRING_ERROR_SPEECH_NOT_INITIALIZED);
+                return FALSE;
+            }
+        }
+
         if (CheckIO((struct IORequest *)fliteRequest) == 0) {
             AbortIO((struct IORequest *)fliteRequest);
             WaitIO((struct IORequest *)fliteRequest);
@@ -497,7 +571,7 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         voice = OpenVoice(voiceName);
         if (!voice) {
             displayError(STRING_ERROR_VOICE_OPEN);
-            return;
+            return FALSE;
         }
         fliteRequest->fr_Std.io_Command = CMD_WRITE;
         fliteRequest->fr_Std.io_Data = (APTR)text;
@@ -507,6 +581,7 @@ void speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         SendIO((struct IORequest *)fliteRequest);
     }
 #endif
+    return TRUE;
 }
 
 /**

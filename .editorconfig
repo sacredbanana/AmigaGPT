@@ -11,3 +11,12 @@ charset = latin1
 
 [bundle/AmigaGPT/Install-AmigaGPT]
 charset = latin1
+
+[src/**/*.c]
+charset = latin1
+
+[bundle/**/*.rexx]
+charset = latin1
+
+[assets/**/*.rexx]
+charset = latin1

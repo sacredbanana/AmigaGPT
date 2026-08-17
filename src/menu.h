@@ -42,39 +42,10 @@ enum MenuItemID {
     MENU_ITEM_SPEECH,
     MENU_ITEM_SPEECH_ENABLED,
     MENU_ITEM_SPEECH_PROVIDER_SETTINGS,
-    /* Legacy speech menu items (kept for backward compatibility) */
-    MENU_ITEM_SPEECH_SYSTEM,
-    MENU_ITEM_SPEECH_ACCENT,
-    MENU_ITEM_SPEECH_FLITE_VOICE,
-    MENU_ITEM_SPEECH_OPENAI_VOICE,
-    MENU_ITEM_SPEECH_ELEVENLABS_SETTINGS,
-    MENU_ITEM_SPEECH_OPENAI_VOICE_INSTRUCTIONS,
-    MENU_ITEM_SPEECH_OPENAI_MODEL,
-    /* Chat menu (replaces OpenAI menu for chat features) */
     MENU_ITEM_CHAT,
     MENU_ITEM_CHAT_PROVIDER_SETTINGS,
-    /* Image menu (replaces OpenAI menu for image features) */
     MENU_ITEM_IMAGE,
     MENU_ITEM_IMAGE_PROVIDER_SETTINGS,
-    MENU_ITEM_IMAGE_SIZE_DALL_E_2,
-    MENU_ITEM_IMAGE_SIZE_DALL_E_3,
-    MENU_ITEM_IMAGE_SIZE_GPT_IMAGE_1,
-    MENU_ITEM_IMAGE_FORMAT,
-    /* Legacy OpenAI menu items (kept for backward compatibility) */
-    MENU_ITEM_AI,
-    MENU_ITEM_AI_OPENAI_API_KEY,
-    MENU_ITEM_AI_CHAT_SYSTEM,
-    MENU_ITEM_AI_OPENAI_CHAT_MODEL,
-    MENU_ITEM_AI_OPENAI_IMAGE_MODEL,
-    MENU_ITEM_AI_OPENAI_IMAGE_SIZE_DALL_E_2,
-    MENU_ITEM_AI_OPENAI_IMAGE_SIZE_DALL_E_3,
-    MENU_ITEM_AI_OPENAI_IMAGE_SIZE_GPT_IMAGE_1,
-    MENU_ITEM_AI_OPENAI_IMAGE_FORMAT,
-    MENU_ITEM_AI_OPENAI_WEB_SEARCH_ENABLED,
-    MENU_ITEM_AI_OPENAI_SHELL_TOOL_ENABLED,
-    MENU_ITEM_AI_CUSTOM_PROVIDER,
-    MENU_ITEM_AI_CUSTOM_PROVIDER_ENABLED,
-    MENU_ITEM_AI_CUSTOM_PROVIDER_SETTINGS,
     MENU_ITEM_AREXX,
     MENU_ITEM_AREXX_AREXX_SHELL,
     MENU_ITEM_AREXX_IMPORT_SCRIPT,
@@ -96,3 +67,9 @@ void refreshViewCodeBlocksMenuState(void);
 /** Gray out chat font +/- at min/max size (8–24 pt). */
 void refreshChatFontMenuState(void);
 #endif
+
+/**
+ * @brief Enable or disable the Edit menu items depending on whether one of the
+ * input text editors currently holds the keyboard focus
+ */
+void updateEditMenuItemsEnabled();
