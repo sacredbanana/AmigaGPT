@@ -1917,6 +1917,91 @@ msgctxt "STRING_ERROR_REXX_SPEAK_FAILED (364//)"
 msgid "SPEAKTEXT failed. See the error requester for details."
 msgstr "SPEAKTEXT ni uspel. Podrobnosti si oglejte v oknu z napako."
 
+#: src/MainWindow.c
+msgctxt "STRING_ATTACH_FILES (365//)"
+msgid "Attach files..."
+msgstr "Attach files..."
+
+#: src/MainWindow.c
+msgctxt "STRING_CLEAR_ATTACHMENTS (366//)"
+msgid "Clear"
+msgstr "Clear"
+
+#: src/MainWindow.c
+msgctxt "STRING_NO_FILES_ATTACHED (367//)"
+msgid "No files attached"
+msgstr "No files attached"
+
+#: src/MainWindow.c
+msgctxt "STRING_FILES_ATTACHED_FORMAT (368//)"
+msgid "%lu file(s) attached"
+msgstr "%lu file(s) attached"
+
+#: src/MainWindow.c
+msgctxt "STRING_SAVE_RESPONSE_FILES (369//)"
+msgid "Save received files..."
+msgstr "Save received files..."
+
+#: src/MainWindow.c
+msgctxt "STRING_RESPONSE_FILES_SAVED_FORMAT (370//)"
+msgid "%lu received file(s) saved"
+msgstr "%lu received file(s) saved"
+
+#: src/MainWindow.c
+msgctxt "STRING_ATTACHED_FILES_PREFIX (371//)"
+msgid "Attached files: "
+msgstr "Attached files: "
+
+#: src/MainWindow.c
+msgctxt "STRING_RECEIVED_FILES_PREFIX (372//)"
+msgid "Received files: "
+msgstr "Received files: "
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_MESSAGE_OR_ATTACHMENT_REQUIRED (373//)"
+msgid "Enter a message or attach at least one file."
+msgstr "Enter a message or attach at least one file."
+
+#: src/openai.c
+msgctxt "STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND (374//)"
+msgid "An attached file could not be found or opened."
+msgstr "An attached file could not be found or opened."
+
+#: src/openai.c
+msgctxt "STRING_ERROR_ATTACHMENT_TOO_LARGE (375//)"
+msgid "Attachments are limited to 8 MB per file and 16 MB per request."
+msgstr "Attachments are limited to 8 MB per file and 16 MB per request."
+
+#: src/openai.c
+msgctxt "STRING_ERROR_ATTACHMENT_ENCODE (376//)"
+msgid "Could not encode an attached file."
+msgstr "Could not encode an attached file."
+
+#: src/openai.c
+msgctxt "STRING_ERROR_RECEIVED_FILE_DOWNLOAD (377//)"
+msgid "Could not download a file returned by the LLM."
+msgstr "Could not download a file returned by the LLM."
+
+#: src/openai.c
+msgctxt "STRING_ENCODING_ATTACHMENT_FORMAT (378//)"
+msgid "Encoding attachment %lu of %lu..."
+msgstr "Encoding attachment %lu of %lu..."
+
+#: src/openai.c
+msgctxt "STRING_PREPARING_REQUEST (379//)"
+msgid "Preparing request..."
+msgstr "Preparing request..."
+
+#: src/openai.c
+msgctxt "STRING_UPLOADING_REQUEST_FORMAT (380//)"
+msgid "Uploading request: %lu%%"
+msgstr "Uploading request: %lu%%"
+
+#: src/openai.c
+msgctxt "STRING_WAITING_FOR_RESPONSE (381//)"
+msgid "Upload complete. Waiting for response..."
+msgstr "Upload complete. Waiting for response..."
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Voice"

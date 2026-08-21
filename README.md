@@ -129,6 +129,10 @@ There are 2 main modes of operation: Chat and Image Generation. You can switch b
 
 When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "**Send**" to see the AI's response. The generated text appears in the box above the input. You can choose to have this text read aloud using the "**Speech**" menu option; configure the speech provider and voice in "**Speech Provider Settings**" from the **Speech** menu. To enable or disable web search, use the **Web Search** option in the **Chat** menu. To choose the chat model and provider, open "**Chat Provider Settings**" from the "**Chat**" menu.
 
+Use **Attach files...** to select one or more files to send with the next message. The selected files are shown beside the chat controls and can be removed with **Clear** before sending. Images and documents are encoded in the active provider's native multimodal request format. Extensionless Amiga text files such as `User-Startup` are detected from their contents and sent as plain text. To keep memory use practical on classic Amigas, each file is limited to 8 MB and all files in one request are limited to 16 MB.
+
+When an LLM response includes downloadable files, they are listed beneath the assistant message and **Save received files...** becomes available. Choose a destination drawer and AmigaGPT will save every returned file there without overwriting an existing file; numeric suffixes are added when necessary. Provider and model support for particular input types and returned files varies.
+
 To the left of the chat box is a conversation list which you can use to go to another saved conversation. New conversations can be created with the "**New chat**" button and conversations can be removed with the "**Delete chat**" button.
 
 You can also chat to AmigaGPT within the Shell as long as either AmigaGPT or the AmigaGPTD daemon are running. Just type `askgpt` into the shell and it will ask you what you want to ask. Or just ask right away with the command `askgpt What is the capital of Australia?`. To activate a mini GUI for AskGPT, just add `GUI` as the first argument to AskGPT.

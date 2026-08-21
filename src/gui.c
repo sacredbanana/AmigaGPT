@@ -468,6 +468,10 @@ BOOL copyFile(STRPTR source, STRPTR destination) {
  * @param message the message to display
  **/
 void displayError(STRPTR message) {
+    /* Snapshot the caller's error before status/UI allocation work can change
+     * IoErr(). Callers that are reporting protocol/API errors clear IoErr()
+     * first so an unrelated AmigaDOS fault is not prepended. */
+    const LONG ERROR_CODE = IoErr();
 #ifndef DAEMON
     const UBYTE appName[] = "AmigaGPT";
     if (app) {
@@ -485,7 +489,6 @@ void displayError(STRPTR message) {
     CONST_STRPTR okString =
         AllocVec(strlen(STRING_OK) + 2, MEMF_ANY | MEMF_CLEAR);
     snprintf(okString, strlen(STRING_OK) + 2, "*%s", STRING_OK);
-    const LONG ERROR_CODE = IoErr();
     if (ERROR_CODE == 0) {
         STRPTR wrappedMessage = wrapRequesterText(message);
         CONST_STRPTR requesterMessage =
@@ -991,20 +994,127 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
  * @param text The text to add to the conversation
  * @param role The role of the text (user or assistant)
  **/
-void addTextToConversation(struct Conversation *conversation, UTF8 *text,
-                           STRPTR role) {
+struct ConversationNode *addTextToConversation(struct Conversation *conversation,
+                                               UTF8 *text, STRPTR role) {
     struct ConversationNode *conversationNode =
         AllocVec(sizeof(struct ConversationNode), MEMF_CLEAR);
     if (conversationNode == NULL) {
         displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
-        return;
+        return NULL;
     }
+    NewList((struct List *)&conversationNode->files);
     strncpy(conversationNode->role, role, sizeof(conversationNode->role) - 1);
     conversationNode->role[sizeof(conversationNode->role) - 1] = '\0';
     conversationNode->content = AllocVec(strlen(text) + 1, MEMF_CLEAR);
+    if (conversationNode->content == NULL) {
+        FreeVec(conversationNode);
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        return NULL;
+    }
     strncpy(conversationNode->content, text, strlen(text));
     AddTail((struct List *)conversation->messages,
             (struct Node *)conversationNode);
+    return conversationNode;
+}
+
+static STRPTR duplicateChatFileString(CONST_STRPTR value) {
+    if (value == NULL)
+        return NULL;
+    STRPTR copy = AllocVec(strlen(value) + 1, MEMF_ANY | MEMF_CLEAR);
+    if (copy != NULL)
+        strncpy(copy, value, strlen(value));
+    return copy;
+}
+
+BOOL addChatFile(struct MinList *files, CONST_STRPTR path, CONST_STRPTR name,
+                 CONST_STRPTR mimeType, CONST_STRPTR fileId,
+                 CONST_STRPTR containerId, CONST_STRPTR downloadUrl) {
+    if (files == NULL || name == NULL)
+        return FALSE;
+    struct ChatFile *file = AllocVec(sizeof(struct ChatFile), MEMF_CLEAR);
+    if (file == NULL)
+        return FALSE;
+    file->path = duplicateChatFileString(path);
+    file->name = duplicateChatFileString(name);
+    file->mimeType = duplicateChatFileString(mimeType);
+    file->fileId = duplicateChatFileString(fileId);
+    file->containerId = duplicateChatFileString(containerId);
+    file->downloadUrl = duplicateChatFileString(downloadUrl);
+    if (file->name == NULL || (path != NULL && file->path == NULL) ||
+        (mimeType != NULL && file->mimeType == NULL) ||
+        (fileId != NULL && file->fileId == NULL) ||
+        (containerId != NULL && file->containerId == NULL) ||
+        (downloadUrl != NULL && file->downloadUrl == NULL)) {
+        if (file->path != NULL)
+            FreeVec(file->path);
+        if (file->name != NULL)
+            FreeVec(file->name);
+        if (file->mimeType != NULL)
+            FreeVec(file->mimeType);
+        if (file->fileId != NULL)
+            FreeVec(file->fileId);
+        if (file->containerId != NULL)
+            FreeVec(file->containerId);
+        if (file->downloadUrl != NULL)
+            FreeVec(file->downloadUrl);
+        FreeVec(file);
+        return FALSE;
+    }
+    AddTail((struct List *)files, (struct Node *)file);
+    return TRUE;
+}
+
+BOOL copyChatFiles(struct MinList *destination, struct MinList *source) {
+    if (destination == NULL || source == NULL)
+        return FALSE;
+    struct ChatFile *file;
+    for (file = (struct ChatFile *)source->mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        if (!addChatFile(destination, file->path, file->name, file->mimeType,
+                         file->fileId, file->containerId,
+                         file->downloadUrl))
+            return FALSE;
+    }
+    return TRUE;
+}
+
+void moveChatFiles(struct MinList *destination, struct MinList *source) {
+    if (destination == NULL || source == NULL)
+        return;
+    struct ChatFile *file;
+    while ((file = (struct ChatFile *)RemHead((struct List *)source)) != NULL)
+        AddTail((struct List *)destination, (struct Node *)file);
+}
+
+void freeChatFiles(struct MinList *files) {
+    if (files == NULL)
+        return;
+    struct ChatFile *file;
+    while ((file = (struct ChatFile *)RemHead((struct List *)files)) != NULL) {
+        if (file->path != NULL)
+            FreeVec(file->path);
+        if (file->name != NULL)
+            FreeVec(file->name);
+        if (file->mimeType != NULL)
+            FreeVec(file->mimeType);
+        if (file->fileId != NULL)
+            FreeVec(file->fileId);
+        if (file->containerId != NULL)
+            FreeVec(file->containerId);
+        if (file->downloadUrl != NULL)
+            FreeVec(file->downloadUrl);
+        FreeVec(file);
+    }
+}
+
+void freeConversationNode(struct ConversationNode *conversationNode) {
+    if (conversationNode == NULL)
+        return;
+    freeChatFiles(&conversationNode->files);
+    if (conversationNode->content != NULL)
+        FreeVec(conversationNode->content);
+    FreeVec(conversationNode);
 }
 
 /**
@@ -1015,8 +1125,7 @@ void freeConversation(struct Conversation *conversation) {
     struct ConversationNode *conversationNode;
     while ((conversationNode = (struct ConversationNode *)RemHead(
                 (struct List *)conversation->messages)) != NULL) {
-        FreeVec(conversationNode->content);
-        FreeVec(conversationNode);
+        freeConversationNode(conversationNode);
     }
     FreeVec(conversation->messages);
     if (conversation->name != NULL)
@@ -1090,6 +1199,7 @@ void shutdownGUI() {
     }
 
 #ifndef DAEMON
+    freeMainWindowFileState();
     if (chatOutputTextEditorContents) {
         FreeVec(chatOutputTextEditorContents);
     }

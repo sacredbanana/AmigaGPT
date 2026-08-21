@@ -5,6 +5,8 @@
 #include <proto/dos.h>
 #include "speech.h"
 
+struct json_object;
+
 #define READ_BUFFER_LENGTH 65536
 #define TEMP_READ_BUFFER_LENGTH READ_BUFFER_LENGTH / 2
 #define WRITE_BUFFER_LENGTH 131072
@@ -12,6 +14,23 @@
 #define CHAT_SYSTEM_LENGTH 512
 #define OPENAI_API_KEY_LENGTH 256
 #define MAX_PROVIDER_MODELS 32
+#define MAX_ATTACHMENT_FILE_BYTES (8UL * 1024UL * 1024UL)
+#define MAX_ATTACHMENT_TOTAL_BYTES (16UL * 1024UL * 1024UL)
+
+/**
+ * A file associated with a chat message. Local files have a path and are
+ * encoded into the next API request. Files returned by a provider have a
+ * file ID, container ID, or download URL and can be saved by the user.
+ **/
+struct ChatFile {
+    struct MinNode node;
+    STRPTR path;
+    UTF8 *name;
+    UTF8 *mimeType;
+    UTF8 *fileId;
+    UTF8 *containerId;
+    UTF8 *downloadUrl;
+};
 
 /**
  * A node in the conversation
@@ -30,6 +49,10 @@ struct ConversationNode {
      * The text of the message
      **/
     UTF8 *content;
+    /**
+     * Local attachments sent with this message, or files returned with it.
+     **/
+    struct MinList files;
 };
 
 struct Conversation {
@@ -411,6 +434,24 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
                    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
                    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
                    CONST_STRPTR proxyPassword);
+
+/**
+ * Download an authenticated binary file from the active provider.
+ **/
+ULONG downloadProviderFile(
+    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR endpoint,
+    CONST_STRPTR destination, CONST_STRPTR apiKey, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders);
+
+/**
+ * Find downloadable files in a provider response and append them to files.
+ * Duplicate IDs and URLs are ignored.
+ **/
+ULONG collectResponseFiles(struct json_object *response,
+                           struct MinList *files);
 
 /**
  * Post a text to speech request to OpenAI

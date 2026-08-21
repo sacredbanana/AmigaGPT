@@ -41,6 +41,10 @@ Object *mainWindowObject = NULL;
 Object *newChatButton;
 Object *deleteChatButton;
 Object *sendMessageButton;
+Object *attachFilesButton;
+Object *clearAttachmentsButton;
+Object *saveResponseFilesButton;
+Object *attachmentSummaryText;
 Object *stopSpeakingButton;
 Object *chatInputTextEditor;
 Object *chatOutputListView;
@@ -62,6 +66,8 @@ Object *modeRegisterGroup;
 STRPTR chatOutputTextEditorContents = NULL;
 static ULONG chatOutputTextEditorContentsCapacity =
     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH;
+static struct MinList pendingChatFiles;
+static BOOL pendingChatFilesInitialized = FALSE;
 WORD pens[NUMDRIPENS + 1];
 struct Conversation *currentConversation = NULL;
 struct GeneratedImage *currentImage = NULL;
@@ -88,6 +94,91 @@ static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
                          StyleType *foundStyle);
 static BOOL ensureChatOutputBufferCapacity(ULONG required);
 static void addMainWindowActions();
+static void updateAttachmentControls();
+static void updateResponseFileControl();
+
+static CONST_STRPTR jsonStringValue(struct json_object *object,
+                                    CONST_STRPTR key) {
+    struct json_object *value = NULL;
+    if (object == NULL ||
+        !json_object_object_get_ex(object, key, &value) || value == NULL ||
+        json_object_is_type(value, json_type_null))
+        return NULL;
+    return json_object_get_string(value);
+}
+
+static ULONG chatFileCount(struct MinList *files) {
+    ULONG count = 0;
+    struct ChatFile *file;
+    for (file = (struct ChatFile *)files->mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ)
+        count++;
+    return count;
+}
+
+static BOOL chatFilePathAlreadyPresent(struct MinList *files,
+                                       CONST_STRPTR path) {
+    struct ChatFile *file;
+    for (file = (struct ChatFile *)files->mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        if (file->path != NULL && strcmp(file->path, path) == 0)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+static void updateAttachmentControls() {
+    if (!pendingChatFilesInitialized || attachmentSummaryText == NULL)
+        return;
+    ULONG count = chatFileCount(&pendingChatFiles);
+    UBYTE summary[128];
+    if (count == 0) {
+        snprintf(summary, sizeof(summary), "%s", STRING_NO_FILES_ATTACHED);
+    } else {
+        snprintf(summary, sizeof(summary), STRING_FILES_ATTACHED_FORMAT,
+                 count);
+    }
+    set(attachmentSummaryText, MUIA_Text_Contents, summary);
+    set(clearAttachmentsButton, MUIA_Disabled, count == 0);
+}
+
+static ULONG responseFileCount(struct Conversation *conversation) {
+    ULONG count = 0;
+    if (conversation == NULL)
+        return 0;
+    struct ConversationNode *message;
+    for (message =
+             (struct ConversationNode *)conversation->messages->mlh_Head;
+         message->node.mln_Succ != NULL;
+         message = (struct ConversationNode *)message->node.mln_Succ) {
+        if (strcmp(message->role, "assistant") != 0)
+            continue;
+        struct ChatFile *file;
+        for (file = (struct ChatFile *)message->files.mlh_Head;
+             file->node.mln_Succ != NULL;
+             file = (struct ChatFile *)file->node.mln_Succ) {
+            if (file->fileId != NULL || file->downloadUrl != NULL ||
+                file->path != NULL)
+                count++;
+        }
+    }
+    return count;
+}
+
+static void updateResponseFileControl() {
+    if (saveResponseFilesButton != NULL)
+        set(saveResponseFilesButton, MUIA_Disabled,
+            responseFileCount(currentConversation) == 0);
+}
+
+void freeMainWindowFileState() {
+    if (pendingChatFilesInitialized) {
+        freeChatFiles(&pendingChatFiles);
+        pendingChatFilesInitialized = FALSE;
+    }
+}
 
 /**
  * Shows the loading bar and starts the busy meter animating
@@ -248,6 +339,7 @@ HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
     if (conversation) {
         currentConversation = conversation;
         displayConversation(currentConversation);
+        updateResponseFileControl();
         DoMethod(chatInputTextEditor, MUIM_GoActive);
     }
 }
@@ -290,6 +382,7 @@ MakeHook(ImageRowClickedHook, ImageRowClickedFunc);
 HOOKPROTONHNONP(NewChatButtonClickedFunc, void) {
     currentConversation = NULL;
     DoMethod(chatOutputTextEditor, MUIM_NList_Clear);
+    updateResponseFileControl();
     DoMethod(chatInputTextEditor, MUIM_GoActive);
 }
 MakeHook(NewChatButtonClickedHook, NewChatButtonClickedFunc);
@@ -299,9 +392,225 @@ HOOKPROTONHNONP(DeleteChatButtonClickedFunc, void) {
              MUIV_NList_Remove_Active);
     currentConversation = NULL;
     DoMethod(chatOutputTextEditor, MUIM_NList_Clear);
+    updateResponseFileControl();
     saveConversations();
 }
 MakeHook(DeleteChatButtonClickedHook, DeleteChatButtonClickedFunc);
+
+static void addPendingChatFile(CONST_STRPTR path, CONST_STRPTR name) {
+    if (path == NULL || name == NULL ||
+        chatFilePathAlreadyPresent(&pendingChatFiles, path))
+        return;
+    UTF8 *nameUTF8 = CodesetsUTF8Create(
+        CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source, (Tag)name,
+        CSA_MapForeignChars, TRUE, TAG_DONE);
+    if (!addChatFile(&pendingChatFiles, path,
+                     nameUTF8 != NULL ? nameUTF8 : (UTF8 *)name, NULL, NULL,
+                     NULL, NULL))
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+    if (nameUTF8 != NULL)
+        CodesetsFreeA(nameUTF8, NULL);
+}
+
+HOOKPROTONHNONP(AttachFilesButtonClickedFunc, void) {
+    struct FileRequester *fileReq =
+        AllocAslRequestTags(ASL_FileRequest, TAG_END);
+    if (fileReq == NULL)
+        return;
+    if (AslRequestTags(fileReq, ASLFR_Window, mainWindow, ASLFR_TitleText,
+                       STRING_ATTACH_FILES, ASLFR_DoMultiSelect, TRUE,
+                       ASLFR_RejectIcons, TRUE, TAG_DONE)) {
+        if (fileReq->fr_NumArgs > 0 && fileReq->fr_ArgList != NULL) {
+            for (LONG i = 0; i < fileReq->fr_NumArgs; i++) {
+                UBYTE fullPath[1024] = {0};
+                struct WBArg *argument = &fileReq->fr_ArgList[i];
+                if (NameFromLock(argument->wa_Lock, fullPath,
+                                 sizeof(fullPath))) {
+                    AddPart(fullPath, argument->wa_Name, sizeof(fullPath));
+                    addPendingChatFile(fullPath, argument->wa_Name);
+                }
+            }
+        } else if (fileReq->fr_File != NULL &&
+                   strlen(fileReq->fr_File) > 0) {
+            ULONG fullPathLength = strlen(fileReq->fr_Drawer) +
+                                   strlen(fileReq->fr_File) + 2;
+            STRPTR fullPath =
+                AllocVec(fullPathLength, MEMF_ANY | MEMF_CLEAR);
+            if (fullPath != NULL) {
+                strncpy(fullPath, fileReq->fr_Drawer,
+                        strlen(fileReq->fr_Drawer));
+                AddPart(fullPath, fileReq->fr_File, fullPathLength);
+                addPendingChatFile(fullPath, fileReq->fr_File);
+                FreeVec(fullPath);
+            }
+        }
+    }
+    FreeAslRequest(fileReq);
+    updateAttachmentControls();
+}
+MakeHook(AttachFilesButtonClickedHook, AttachFilesButtonClickedFunc);
+
+HOOKPROTONHNONP(ClearAttachmentsButtonClickedFunc, void) {
+    freeChatFiles(&pendingChatFiles);
+    updateAttachmentControls();
+}
+MakeHook(ClearAttachmentsButtonClickedHook,
+         ClearAttachmentsButtonClickedFunc);
+
+static CONST_STRPTR safeResponseFileName(CONST_STRPTR name) {
+    if (name == NULL || strlen(name) == 0)
+        return "response-file";
+    CONST_STRPTR safe = name;
+    for (CONST_STRPTR cursor = name; *cursor != '\0'; cursor++) {
+        if (*cursor == '/' || *cursor == ':' || *cursor == '\\')
+            safe = cursor + 1;
+    }
+    return strlen(safe) > 0 ? safe : (CONST_STRPTR)"response-file";
+}
+
+static STRPTR uniqueResponseFilePath(CONST_STRPTR drawer,
+                                     CONST_STRPTR filename) {
+    ULONG capacity = strlen(drawer) + strlen(filename) + 32;
+    STRPTR candidate = AllocVec(capacity, MEMF_ANY | MEMF_CLEAR);
+    if (candidate == NULL)
+        return NULL;
+    strncpy(candidate, drawer, capacity - 1);
+    AddPart(candidate, filename, capacity);
+    BPTR lock = Lock(candidate, ACCESS_READ);
+    if (lock == 0)
+        return candidate;
+    UnLock(lock);
+
+    CONST_STRPTR extension = strrchr(filename, '.');
+    ULONG stemLength =
+        extension != NULL ? (ULONG)(extension - filename) : strlen(filename);
+    for (ULONG suffix = 2; suffix < 10000; suffix++) {
+        UBYTE numberedName[512];
+        snprintf(numberedName, sizeof(numberedName), "%.*s-%lu%s",
+                 (int)stemLength, filename, suffix,
+                 extension != NULL ? extension : (CONST_STRPTR)"");
+        candidate[0] = '\0';
+        strncpy(candidate, drawer, capacity - 1);
+        AddPart(candidate, numberedName, capacity);
+        lock = Lock(candidate, ACCESS_READ);
+        if (lock == 0)
+            return candidate;
+        UnLock(lock);
+    }
+    FreeVec(candidate);
+    return NULL;
+}
+
+HOOKPROTONHNONP(SaveResponseFilesButtonClickedFunc, void) {
+    if (currentConversation == NULL ||
+        responseFileCount(currentConversation) == 0)
+        return;
+    struct FileRequester *fileReq =
+        AllocAslRequestTags(ASL_FileRequest, TAG_END);
+    if (fileReq == NULL)
+        return;
+    if (!AslRequestTags(fileReq, ASLFR_Window, mainWindow, ASLFR_TitleText,
+                        STRING_SAVE_RESPONSE_FILES, ASLFR_DrawersOnly, TRUE,
+                        ASLFR_InitialDrawer, "SYS:", TAG_DONE)) {
+        FreeAslRequest(fileReq);
+        return;
+    }
+
+    struct ChatRequestSettings chatSettings;
+    configGetActiveChatRequestSettings(&chatSettings);
+    ULONG savedCount = 0;
+    struct ConversationNode *message;
+    for (message =
+             (struct ConversationNode *)currentConversation->messages->mlh_Head;
+         message->node.mln_Succ != NULL;
+         message = (struct ConversationNode *)message->node.mln_Succ) {
+        if (strcmp(message->role, "assistant") != 0)
+            continue;
+        struct ChatFile *file;
+        for (file = (struct ChatFile *)message->files.mlh_Head;
+             file->node.mln_Succ != NULL;
+             file = (struct ChatFile *)file->node.mln_Succ) {
+            STRPTR systemName = CodesetsUTF8ToStr(
+                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
+                (Tag)file->name, CSA_MapForeignChars, TRUE, TAG_DONE);
+            CONST_STRPTR usableName = safeResponseFileName(
+                systemName != NULL ? systemName : (STRPTR)file->name);
+            STRPTR destination =
+                uniqueResponseFilePath(fileReq->fr_Drawer, usableName);
+            if (destination == NULL) {
+                if (systemName != NULL)
+                    CodesetsFreeA(systemName, NULL);
+                continue;
+            }
+
+            ULONG result = RETURN_ERROR;
+            if (file->path != NULL) {
+                BPTR existing = Lock(file->path, ACCESS_READ);
+                if (existing != 0) {
+                    UnLock(existing);
+                    result = copyFile(file->path, destination) ? RETURN_OK
+                                                               : RETURN_ERROR;
+                }
+            }
+            if (result != RETURN_OK && file->downloadUrl != NULL) {
+                result = downloadFile(
+                    file->downloadUrl, destination, chatSettings.useProxy,
+                    chatSettings.proxyHost, chatSettings.proxyPort,
+                    chatSettings.proxyUsesSSL,
+                    chatSettings.proxyRequiresAuth,
+                    chatSettings.proxyUsername, chatSettings.proxyPassword);
+            }
+            if (result != RETURN_OK && file->fileId != NULL) {
+                UBYTE endpoint[1024];
+                CONST_STRPTR base =
+                    chatSettings.apiEndpointUrl != NULL &&
+                            strlen(chatSettings.apiEndpointUrl) > 0
+                        ? chatSettings.apiEndpointUrl
+                        : (CONST_STRPTR)"v1";
+                if (file->containerId != NULL) {
+                    snprintf(endpoint, sizeof(endpoint),
+                             "/%s/containers/%s/files/%s/content", base,
+                             file->containerId, file->fileId);
+                } else {
+                    snprintf(endpoint, sizeof(endpoint),
+                             "/%s/files/%s/content", base, file->fileId);
+                }
+                result = downloadProviderFile(
+                    chatSettings.host, chatSettings.port,
+                    chatSettings.useSSL, endpoint, destination,
+                    chatSettings.apiKey, chatSettings.useProxy,
+                    chatSettings.proxyHost, chatSettings.proxyPort,
+                    chatSettings.proxyUsesSSL,
+                    chatSettings.proxyRequiresAuth,
+                    chatSettings.proxyUsername, chatSettings.proxyPassword,
+                    chatSettings.authorizationType,
+                    chatSettings.customHeaders);
+            }
+            if (result == RETURN_OK) {
+                if (file->path != NULL)
+                    FreeVec(file->path);
+                file->path =
+                    AllocVec(strlen(destination) + 1, MEMF_ANY | MEMF_CLEAR);
+                if (file->path != NULL)
+                    strncpy(file->path, destination, strlen(destination));
+                savedCount++;
+            }
+            FreeVec(destination);
+            if (systemName != NULL)
+                CodesetsFreeA(systemName, NULL);
+        }
+    }
+    FreeAslRequest(fileReq);
+    if (savedCount > 0) {
+        UBYTE statusMessage[128];
+        snprintf(statusMessage, sizeof(statusMessage),
+                 STRING_RESPONSE_FILES_SAVED_FORMAT, savedCount);
+        updateStatusBar(statusMessage, greenPen);
+        saveConversations();
+    }
+}
+MakeHook(SaveResponseFilesButtonClickedHook,
+         SaveResponseFilesButtonClickedFunc);
 
 HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
     struct ChatRequestSettings chatSettings;
@@ -1193,6 +1502,10 @@ static BOOL ensureChatOutputBufferCapacity(ULONG required) {
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createMainWindow() {
+    if (!pendingChatFilesInitialized) {
+        NewList((struct List *)&pendingChatFiles);
+        pendingChatFilesInitialized = TRUE;
+    }
     if ((isMUI5 || isMUI39) && createAmigaGPTTextEditor() == RETURN_ERROR) {
         displayError("Could not create custom class.");
     }
@@ -1334,6 +1647,24 @@ LONG createMainWindow() {
                                     MUIA_NFloattext_Text, chatOutputTextEditorContents,
                                     End,
                                 End,
+                            End,
+                            Child, HGroup,
+                                Child, attachFilesButton = MUI_MakeObject(MUIO_Button, STRING_ATTACH_FILES,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
+                                Child, clearAttachmentsButton = MUI_MakeObject(MUIO_Button, STRING_CLEAR_ATTACHMENTS,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
+                                Child, attachmentSummaryText = TextObject,
+                                    MUIA_Text_Contents, STRING_NO_FILES_ATTACHED,
+                                    MUIA_Text_SetMin, FALSE,
+                                End,
+                                Child, saveResponseFilesButton = MUI_MakeObject(MUIO_Button, STRING_SAVE_RESPONSE_FILES,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
                             End,
                             Child, HGroup, MUIA_VertWeight, 20,
                                 // Chat input text editor
@@ -1504,6 +1835,8 @@ LONG createMainWindow() {
     
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);
+    updateAttachmentControls();
+    updateResponseFileControl();
     
     updateStatusBar(STRING_READY, greenPen);
 
@@ -1525,6 +1858,15 @@ static void addMainWindowActions() {
     DoMethod(sendMessageButton, MUIM_Notify, MUIA_Pressed, FALSE,
              sendMessageButton, 2, MUIM_CallHook,
              &SendMessageButtonClickedHook);
+    DoMethod(attachFilesButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             attachFilesButton, 2, MUIM_CallHook,
+             &AttachFilesButtonClickedHook);
+    DoMethod(clearAttachmentsButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             clearAttachmentsButton, 2, MUIM_CallHook,
+             &ClearAttachmentsButtonClickedHook);
+    DoMethod(saveResponseFilesButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             saveResponseFilesButton, 2, MUIM_CallHook,
+             &SaveResponseFilesButtonClickedHook);
     DoMethod(stopSpeakingButton, MUIM_Notify, MUIA_Pressed, FALSE,
              stopSpeakingButton, 2, MUIM_CallHook,
              &StopSpeakingButtonClickedHook);
@@ -1577,14 +1919,37 @@ static void sendChatMessage() {
     updateStatusBar(STRING_SENDING_MESSAGE, yellowPen);
     showLoadingBar();
     UTF8 *receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+    struct MinList receivedFiles;
+    NewList((struct List *)&receivedFiles);
     STRPTR text;
     if (isAROS) {
         get(chatInputTextEditor, MUIA_String_Contents, &text);
     } else {
         text = DoMethod(chatInputTextEditor, MUIM_TextEditor_ExportText);
     }
+    BOOL freeExportedText = !isAROS && text != NULL;
+    if (text == NULL)
+        text = (STRPTR)"";
+    while (strlen(text) > 0 && text[strlen(text) - 1] == '\n')
+        text[strlen(text) - 1] = '\0';
+    if (strlen(text) == 0 && chatFileCount(&pendingChatFiles) == 0) {
+        displayError(STRING_ERROR_MESSAGE_OR_ATTACHMENT_REQUIRED);
+        hideLoadingBar();
+        set(sendMessageButton, MUIA_Disabled, FALSE);
+        set(newChatButton, MUIA_Disabled, FALSE);
+        set(deleteChatButton, MUIA_Disabled, FALSE);
+        FreeVec(receivedMessage);
+        if (isNewConversation) {
+            freeConversation(currentConversation);
+            currentConversation = NULL;
+        }
+        if (freeExportedText)
+            FreeVec(text);
+        return;
+    }
+
     UBYTE userStyleString[] = "\033r\033b\0333";
-    UBYTE userAlignment;
+    UBYTE userAlignment = 'l';
     switch (configGetUserTextAlignment()) {
     case ALIGN_LEFT:
         userAlignment = 'l';
@@ -1619,18 +1984,39 @@ static void sendChatMessage() {
         chatOutputTextEditorContents);
     set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
 
-    // Remove trailing newline characters
-    while (text[strlen(text) - 1] == '\n') {
-        text[strlen(text) - 1] = '\0';
-    }
-
     UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
 
                                         CSA_Source, (Tag)text,
                                         CSA_MapForeignChars, TRUE, TAG_DONE);
 
-    addTextToConversation(currentConversation, textUTF8, "user");
-    CodesetsFreeA(textUTF8, NULL);
+    struct ConversationNode *userMessage = addTextToConversation(
+        currentConversation, textUTF8 != NULL ? textUTF8 : (UTF8 *)"",
+        "user");
+    if (textUTF8 != NULL)
+        CodesetsFreeA(textUTF8, NULL);
+    if (userMessage == NULL ||
+        !copyChatFiles(&userMessage->files, &pendingChatFiles)) {
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        hideLoadingBar();
+        set(sendMessageButton, MUIA_Disabled, FALSE);
+        set(newChatButton, MUIA_Disabled, FALSE);
+        set(deleteChatButton, MUIA_Disabled, FALSE);
+        if (userMessage != NULL) {
+            RemTail((struct List *)currentConversation->messages);
+            freeConversationNode(userMessage);
+        }
+        if (isNewConversation) {
+            freeConversation(currentConversation);
+            currentConversation = NULL;
+            chatOutputTextEditorContents[0] = '\0';
+            set(chatOutputTextEditor, MUIA_NFloattext_Text,
+                chatOutputTextEditorContents);
+        }
+        FreeVec(receivedMessage);
+        if (freeExportedText)
+            FreeVec(text);
+        return;
+    }
 
     if (isAROS) {
         set(chatInputTextEditor, MUIA_String_Contents, "");
@@ -1649,6 +2035,15 @@ static void sendChatMessage() {
     struct ChatRequestSettings chatSettings;
     configGetActiveChatRequestSettings(&chatSettings);
 
+    /* Responses API streaming repeats substantial response metadata in SSE
+     * events. Image inputs can therefore produce a response many times larger
+     * than the final JSON object, which is unreliable on classic Amiga TCP
+     * stacks even though the upload itself completed. Use the compact response
+     * form for messages with local files; normal text chat keeps its configured
+     * streaming behavior. */
+    BOOL requestStream =
+        chatSettings.stream && chatFileCount(&userMessage->files) == 0;
+
     setConversationSystem(currentConversation, chatSettings.chatSystem);
 
     strncat(chatOutputTextEditorContents, "\n", 1);
@@ -1657,7 +2052,7 @@ static void sendChatMessage() {
         responses = postChatMessageToOpenAI(
             currentConversation, chatSettings.host, chatSettings.port,
             chatSettings.useSSL, chatSettings.model, chatSettings.apiKey,
-            chatSettings.stream, chatSettings.useProxy, chatSettings.proxyHost,
+            requestStream, chatSettings.useProxy, chatSettings.proxyHost,
             chatSettings.proxyPort, chatSettings.proxyUsesSSL,
             chatSettings.proxyRequiresAuth, chatSettings.proxyUsername,
             chatSettings.proxyPassword, chatSettings.webSearchEnabled,
@@ -1670,8 +2065,25 @@ static void sendChatMessage() {
             set(sendMessageButton, MUIA_Disabled, FALSE);
             set(newChatButton, MUIA_Disabled, FALSE);
             set(deleteChatButton, MUIA_Disabled, FALSE);
+            struct ConversationNode *failedMessage =
+                (struct ConversationNode *)RemTail(
+                    (struct List *)currentConversation->messages);
+            freeConversationNode(failedMessage);
+            if (isNewConversation) {
+                freeConversation(currentConversation);
+                currentConversation = NULL;
+                chatOutputTextEditorContents[0] = '\0';
+                set(chatOutputTextEditor, MUIA_NFloattext_Text,
+                    chatOutputTextEditorContents);
+            }
+            if (isAROS) {
+                set(chatInputTextEditor, MUIA_String_Contents, text);
+            } else {
+                set(chatInputTextEditor, MUIA_TextEditor_Contents, text);
+            }
+            freeChatFiles(&receivedFiles);
             FreeVec(receivedMessage);
-            if (!isAROS) {
+            if (freeExportedText) {
                 FreeVec(text);
             }
             return;
@@ -1681,6 +2093,7 @@ static void sendChatMessage() {
 
         struct json_object *response;
         while (response = responses[responseIndex++]) {
+            collectResponseFiles(response, &receivedFiles);
             struct json_object *error;
             if (json_object_object_get_ex(response, "error", &error) &&
                 !json_object_is_type(error, json_type_null)) {
@@ -1691,9 +2104,11 @@ static void sendChatMessage() {
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                     (Tag)messageString, CSA_MapForeignChars, TRUE, TAG_DONE);
                 if (formattedMessageSystemEncoded != NULL) {
+                    SetIoErr(0);
                     displayError(formattedMessageSystemEncoded);
                     CodesetsFreeA(formattedMessageSystemEncoded, NULL);
                 } else {
+                    SetIoErr(0);
                     displayError(messageString);
                 }
                 hideLoadingBar();
@@ -1704,9 +2119,11 @@ static void sendChatMessage() {
                 }
                 struct Node *lastMessage =
                     RemTail((struct List *)currentConversation->messages);
-                FreeVec(lastMessage);
-                if (currentConversation ==
-                    currentConversation->messages->mlh_TailPred) {
+                freeConversationNode((struct ConversationNode *)lastMessage);
+                if (isNewConversation &&
+                    currentConversation->messages->mlh_Head->mln_Succ ==
+                        NULL) {
+                    freeConversation(currentConversation);
                     currentConversation = NULL;
                     chatOutputTextEditorContents[0] = '\0';
                     set(chatOutputTextEditor, MUIA_NFloattext_Text,
@@ -1720,16 +2137,17 @@ static void sendChatMessage() {
                 set(newChatButton, MUIA_Disabled, FALSE);
                 set(deleteChatButton, MUIA_Disabled, FALSE);
 
+                freeChatFiles(&receivedFiles);
                 FreeVec(receivedMessage);
-                if (!isAROS) {
+                if (freeExportedText) {
                     FreeVec(text);
                 }
                 return;
             }
 
             UTF8 *contentString = getMessageContentFromJson(
-                response, chatSettings.stream, FALSE, chatSettings.apiEndpoint);
-            if (!chatSettings.stream) {
+                response, requestStream, FALSE, chatSettings.apiEndpoint);
+            if (!requestStream) {
                 strncpy(receivedMessage, contentString,
                         READ_BUFFER_LENGTH - strlen(receivedMessage) -
                             strlen(contentString) - 1);
@@ -1862,14 +2280,14 @@ static void sendChatMessage() {
 
     /* Ensure the final streamed text is shown immediately even when the stream
      * ended before the next coalesced refresh threshold. */
-    if (chatSettings.stream && chunkCounter > 0) {
+    if (requestStream && chunkCounter > 0) {
         set(chatOutputTextEditor, MUIA_NFloattext_Text,
             chatOutputTextEditorContents);
         set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
     }
 
     /* Handle shell tool calls - loop to handle multiple sequential commands */
-    while (chatSettings.stream && chatSettings.shellToolEnabled &&
+    while (requestStream && chatSettings.shellToolEnabled &&
            hasPendingToolCall()) {
         UTF8 *command = getPendingToolCommand();
         STRPTR callId = getPendingToolCallId();
@@ -1966,6 +2384,7 @@ static void sendChatMessage() {
 
         /* Get the text content from the new response */
         if (toolResponse != NULL) {
+            collectResponseFiles(toolResponse, &receivedFiles);
             /* Check for errors */
             struct json_object *error;
             if (json_object_object_get_ex(toolResponse, "error", &error) &&
@@ -1974,6 +2393,7 @@ static void sendChatMessage() {
                 struct json_object *message =
                     json_object_object_get(error, "message");
                 if (message != NULL) {
+                    SetIoErr(0);
                     displayError(json_object_get_string(message));
                 }
                 json_object_put(toolResponse);
@@ -2040,8 +2460,15 @@ static void sendChatMessage() {
     hideLoadingBar();
 
     if (responses != NULL) {
-        addTextToConversation(currentConversation, receivedMessage,
-                              "assistant");
+        struct ConversationNode *assistantMessage = addTextToConversation(
+            currentConversation, receivedMessage, "assistant");
+        if (assistantMessage != NULL)
+            moveChatFiles(&assistantMessage->files, &receivedFiles);
+        else
+            freeChatFiles(&receivedFiles);
+        freeChatFiles(&pendingChatFiles);
+        updateAttachmentControls();
+        updateResponseFileControl();
         displayConversation(currentConversation);
 
         if (configGetSpeechEnabled()) {
@@ -2061,7 +2488,7 @@ static void sendChatMessage() {
         }
         FreeVec(responses);
         FreeVec(receivedMessage);
-        if (!isAROS) {
+        if (freeExportedText) {
             FreeVec(text);
         }
         if (isNewConversation) {
@@ -2088,7 +2515,8 @@ static void sendChatMessage() {
                 chatSettings.authorizationType, chatSettings.customHeaders);
             struct Node *titleRequestNode =
                 RemTail((struct List *)currentConversation->messages);
-            FreeVec(titleRequestNode);
+            freeConversationNode(
+                (struct ConversationNode *)titleRequestNode);
             hideLoadingBar();
             if (responses == NULL) {
                 displayError(STRING_ERROR_CONNECTING_OPENAI);
@@ -2152,6 +2580,42 @@ static void sendChatMessage() {
     set(deleteChatButton, MUIA_Disabled, FALSE);
 }
 
+static void appendMessageFileSummary(struct ConversationNode *message) {
+    if (message == NULL || message->files.mlh_Head->mln_Succ == NULL)
+        return;
+    CONST_STRPTR prefix = strcmp(message->role, "assistant") == 0
+                              ? STRING_RECEIVED_FILES_PREFIX
+                              : STRING_ATTACHED_FILES_PREFIX;
+    strncat(chatOutputTextEditorContents, "\n[",
+            chatOutputTextEditorContentsCapacity -
+                strlen(chatOutputTextEditorContents) - 1);
+    strncat(chatOutputTextEditorContents, prefix,
+            chatOutputTextEditorContentsCapacity -
+                strlen(chatOutputTextEditorContents) - 1);
+    struct ChatFile *file;
+    ULONG index = 0;
+    for (file = (struct ChatFile *)message->files.mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        if (index++ > 0)
+            strncat(chatOutputTextEditorContents, ", ",
+                    chatOutputTextEditorContentsCapacity -
+                        strlen(chatOutputTextEditorContents) - 1);
+        STRPTR name = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)file->name,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
+        strncat(chatOutputTextEditorContents,
+                name != NULL ? name : (STRPTR)file->name,
+                chatOutputTextEditorContentsCapacity -
+                    strlen(chatOutputTextEditorContents) - 1);
+        if (name != NULL)
+            CodesetsFreeA(name, NULL);
+    }
+    strncat(chatOutputTextEditorContents, "]",
+            chatOutputTextEditorContentsCapacity -
+                strlen(chatOutputTextEditorContents) - 1);
+}
+
 /**
  * Prints the conversation to the conversation window
  * @param conversation the conversation to display
@@ -2167,9 +2631,14 @@ void displayConversation(struct Conversation *conversation) {
     for (conversationNode =
              (struct ConversationNode *)conversation->messages->mlh_Head;
          conversationNode->node.mln_Succ != NULL;
-         conversationNode =
+        conversationNode =
              (struct ConversationNode *)conversationNode->node.mln_Succ) {
         estimatedRequired += strlen(conversationNode->content) * 3 + 512;
+        struct ChatFile *file;
+        for (file = (struct ChatFile *)conversationNode->files.mlh_Head;
+             file->node.mln_Succ != NULL;
+             file = (struct ChatFile *)file->node.mln_Succ)
+            estimatedRequired += strlen(file->name) * 3 + 8;
     }
     if (!ensureChatOutputBufferCapacity(estimatedRequired)) {
         displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
@@ -2205,7 +2674,7 @@ void displayConversation(struct Conversation *conversation) {
                 content = latin1Fallback ? latin1Fallback
                                          : (STRPTR)conversationNode->content;
             }
-            UBYTE userAlignment;
+            UBYTE userAlignment = 'l';
             switch (configGetUserTextAlignment()) {
             case ALIGN_LEFT:
                 userAlignment = 'l';
@@ -2232,6 +2701,7 @@ void displayConversation(struct Conversation *conversation) {
                 CodesetsFreeA(content, NULL);
             else if (latin1Fallback != NULL)
                 FreeVec(latin1Fallback);
+            appendMessageFileSummary(conversationNode);
         } else if (strcmp(conversationNode->role, "assistant") == 0) {
             set(chatOutputListView, MUIA_NFloattext_Align,
                 configGetAssistantTextAlignment());
@@ -2261,6 +2731,7 @@ void displayConversation(struct Conversation *conversation) {
                         strlen(formattedContent));
                 FreeVec(formattedContent);
             }
+            appendMessageFileSummary(conversationNode);
             const UBYTE messageSeparatorStyleString[] = "\n\n";
             strncat(chatOutputTextEditorContents, messageSeparatorStyleString,
                     strlen(messageSeparatorStyleString));
@@ -2294,8 +2765,10 @@ copyConversation(struct Conversation *conversation) {
          conversationNode->node.mln_Succ != NULL;
          conversationNode =
              (struct ConversationNode *)conversationNode->node.mln_Succ) {
-        addTextToConversation(copy, conversationNode->content,
-                              conversationNode->role);
+        struct ConversationNode *copiedMessage = addTextToConversation(
+            copy, conversationNode->content, conversationNode->role);
+        if (copiedMessage != NULL)
+            copyChatFiles(&copiedMessage->files, &conversationNode->files);
     }
     if (conversation->name != NULL) {
         copy->name = AllocVec(strlen(conversation->name) + 1, MEMF_CLEAR);
@@ -2381,6 +2854,44 @@ static LONG saveConversations() {
             json_object_object_add(
                 messageJsonObject, "content",
                 json_object_new_string(conversationNode->content));
+            struct json_object *filesJsonArray = json_object_new_array();
+            struct ChatFile *chatFile;
+            for (chatFile =
+                     (struct ChatFile *)conversationNode->files.mlh_Head;
+                 chatFile->node.mln_Succ != NULL;
+                 chatFile = (struct ChatFile *)chatFile->node.mln_Succ) {
+                struct json_object *fileJsonObject = json_object_new_object();
+                json_object_object_add(
+                    fileJsonObject, "name",
+                    json_object_new_string(chatFile->name));
+                if (chatFile->path != NULL)
+                    json_object_object_add(
+                        fileJsonObject, "path",
+                        json_object_new_string(chatFile->path));
+                if (chatFile->mimeType != NULL)
+                    json_object_object_add(
+                        fileJsonObject, "mimeType",
+                        json_object_new_string(chatFile->mimeType));
+                if (chatFile->fileId != NULL)
+                    json_object_object_add(
+                        fileJsonObject, "fileId",
+                        json_object_new_string(chatFile->fileId));
+                if (chatFile->containerId != NULL)
+                    json_object_object_add(
+                        fileJsonObject, "containerId",
+                        json_object_new_string(chatFile->containerId));
+                if (chatFile->downloadUrl != NULL)
+                    json_object_object_add(
+                        fileJsonObject, "downloadUrl",
+                        json_object_new_string(chatFile->downloadUrl));
+                json_object_array_add(filesJsonArray, fileJsonObject);
+            }
+            if (json_object_array_length(filesJsonArray) > 0) {
+                json_object_object_add(messageJsonObject, "files",
+                                       filesJsonArray);
+            } else {
+                json_object_put(filesJsonArray);
+            }
             json_object_array_add(messagesJsonArray, messageJsonObject);
         }
         json_object_object_add(conversationJsonObject, "messages",
@@ -2647,7 +3158,30 @@ static LONG loadConversations() {
                 return RETURN_ERROR;
             }
             UTF8 *content = json_object_get_string(contentJsonObject);
-            addTextToConversation(conversation, content, role);
+            struct ConversationNode *message =
+                addTextToConversation(conversation, content, role);
+            struct json_object *filesJsonArray = NULL;
+            if (message != NULL &&
+                json_object_object_get_ex(messageJsonObject, "files",
+                                          &filesJsonArray) &&
+                json_object_is_type(filesJsonArray, json_type_array)) {
+                for (ULONG k = 0;
+                     k < json_object_array_length(filesJsonArray); k++) {
+                    struct json_object *fileJsonObject =
+                        json_object_array_get_idx(filesJsonArray, k);
+                    CONST_STRPTR name =
+                        jsonStringValue(fileJsonObject, "name");
+                    if (name == NULL)
+                        continue;
+                    addChatFile(
+                        &message->files,
+                        jsonStringValue(fileJsonObject, "path"), name,
+                        jsonStringValue(fileJsonObject, "mimeType"),
+                        jsonStringValue(fileJsonObject, "fileId"),
+                        jsonStringValue(fileJsonObject, "containerId"),
+                        jsonStringValue(fileJsonObject, "downloadUrl"));
+                }
+            }
         }
         DoMethod(conversationListObject, MUIM_NList_InsertSingle, conversation,
                  MUIV_NList_Insert_Top);

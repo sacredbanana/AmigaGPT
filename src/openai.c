@@ -30,6 +30,16 @@
 #define XAI_PORT 443
 #define AUDIO_BUFFER_SIZE 4096
 #define MAX_CONNECTION_RETRIES 10
+#define MAX_ATTACHMENT_REQUEST_RETRIES 1
+#define UPLOAD_WRITE_CHUNK_SIZE 4096
+#define MAX_UPLOAD_WRITE_RETRIES 100
+#ifndef IPPROTO_TCP
+#define IPPROTO_TCP 6
+#endif
+#ifndef TCP_NODELAY
+#define TCP_NODELAY 1
+#endif
+#define OPENAI_FILE_BOUNDARY "----AmigaGPTFormBoundary"
 
 static CONST_STRPTR AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS =
     "Output text using characters that can be represented or sensibly remapped "
@@ -102,6 +112,23 @@ static LONG verify_cb(LONG preverify_ok, X509_STORE_CTX *ctx);
 static ULONG parseChunkLength(UBYTE *buffer, ULONG bufferLength);
 static void drainOpenSslErrorQueue(CONST_STRPTR where);
 static void reportSslError(SSL *s, int ret, CONST_STRPTR where);
+static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
+                                     ULONG requestLength, BOOL reportErrors);
+static LONG reconnectAndResendChatRequest(
+    CONST_STRPTR host, UWORD port, BOOL useSSL, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, CONST_STRPTR request, ULONG requestLength,
+    UBYTE *retryCount);
+static void flushSslWrites(BOOL useSSL);
+static void clearHttpReadBuffer(void);
+static BOOL uploadOpenAIFilesForMessage(
+    struct ConversationNode *message, CONST_STRPTR host, UWORD port,
+    BOOL useSSL, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, CONST_STRPTR apiKey,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders);
+static LONG httpParseContentLengthNullTerminated(STRPTR hdr);
 static UTF8 *extractUserFriendlyErrorMessage(UTF8 *rawMessage);
 static STRPTR combineInstructionText(CONST_STRPTR first, CONST_STRPTR second);
 static void closeActiveResponseConnection(void);
@@ -592,6 +619,909 @@ getLastNonSystemConversationMessage(struct Conversation *conversation) {
         node = node->mln_Pred;
     }
     return NULL;
+}
+
+static CONST_STRPTR attachmentMimeType(CONST_STRPTR name) {
+    CONST_STRPTR extension = name != NULL ? strrchr(name, '.') : NULL;
+    if (extension == NULL)
+        return "application/octet-stream";
+    if (strcasecmp(extension, ".pdf") == 0)
+        return "application/pdf";
+    if (strcasecmp(extension, ".txt") == 0 ||
+        strcasecmp(extension, ".text") == 0)
+        return "text/plain";
+    if (strcasecmp(extension, ".md") == 0)
+        return "text/markdown";
+    if (strcasecmp(extension, ".csv") == 0)
+        return "text/csv";
+    if (strcasecmp(extension, ".json") == 0)
+        return "application/json";
+    if (strcasecmp(extension, ".xml") == 0)
+        return "application/xml";
+    if (strcasecmp(extension, ".html") == 0 ||
+        strcasecmp(extension, ".htm") == 0)
+        return "text/html";
+    if (strcasecmp(extension, ".png") == 0)
+        return "image/png";
+    if (strcasecmp(extension, ".jpg") == 0 ||
+        strcasecmp(extension, ".jpeg") == 0)
+        return "image/jpeg";
+    if (strcasecmp(extension, ".gif") == 0)
+        return "image/gif";
+    if (strcasecmp(extension, ".webp") == 0)
+        return "image/webp";
+    if (strcasecmp(extension, ".doc") == 0)
+        return "application/msword";
+    if (strcasecmp(extension, ".docx") == 0)
+        return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    if (strcasecmp(extension, ".xls") == 0)
+        return "application/vnd.ms-excel";
+    if (strcasecmp(extension, ".xlsx") == 0)
+        return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    if (strcasecmp(extension, ".ppt") == 0)
+        return "application/vnd.ms-powerpoint";
+    if (strcasecmp(extension, ".pptx") == 0)
+        return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    if (strcasecmp(extension, ".rtf") == 0)
+        return "application/rtf";
+    if (strcasecmp(extension, ".wav") == 0)
+        return "audio/wav";
+    if (strcasecmp(extension, ".mp3") == 0)
+        return "audio/mpeg";
+    return "application/octet-stream";
+}
+
+static BOOL attachmentFileLooksLikeText(CONST_STRPTR path) {
+    if (path == NULL)
+        return FALSE;
+
+    BPTR file = Open(path, MODE_OLDFILE);
+    if (file == 0)
+        return FALSE;
+
+    UBYTE sample[1024];
+    LONG bytesRead = Read(file, sample, sizeof(sample));
+    Close(file);
+    if (bytesRead < 0)
+        return FALSE;
+
+    /* Plain Amiga text is commonly ASCII or ISO-8859-1 and often has no
+     * filename extension (for example, S:User-Startup). Reject NUL and binary
+     * control bytes, but allow normal whitespace and all printable Latin-1
+     * bytes. Empty files are harmless text files too. */
+    for (LONG i = 0; i < bytesRead; i++) {
+        UBYTE c = sample[i];
+        if (c == 0 || c == 0x7f ||
+            (c < 0x20 && c != '\t' && c != '\n' && c != '\r' &&
+             c != '\f'))
+            return FALSE;
+    }
+    return TRUE;
+}
+
+static CONST_STRPTR attachmentMimeTypeForFile(struct ChatFile *file) {
+    CONST_STRPTR mime = attachmentMimeType(file != NULL ? file->name : NULL);
+    if (strcmp(mime, "application/octet-stream") == 0 && file != NULL &&
+        attachmentFileLooksLikeText(file->path))
+        return "text/plain";
+    return mime;
+}
+
+static STRPTR encodeAttachmentBase64(struct ChatFile *file,
+                                     ULONG *totalAttachmentBytes) {
+    if (file == NULL || file->path == NULL)
+        return NULL;
+
+    BPTR attachmentFile = Open(file->path, MODE_OLDFILE);
+    if (attachmentFile == 0) {
+        displayError(STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND);
+        return NULL;
+    }
+
+#ifdef __AMIGAOS3__
+    Seek(attachmentFile, 0, OFFSET_END);
+    LONG fileSize = Seek(attachmentFile, 0, OFFSET_BEGINNING);
+#else
+#ifdef __AMIGAOS4__
+    int64_t fileSize = GetFileSize(attachmentFile);
+#else
+    struct FileInfoBlock fib;
+    BOOL examined = ExamineFH64(attachmentFile, &fib, NULL);
+    int64_t fileSize = examined ? fib.fib_Size : -1;
+#endif
+#endif
+    Close(attachmentFile);
+    if (fileSize < 0) {
+        displayError(STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND);
+        return NULL;
+    }
+    if ((uint64_t)fileSize > MAX_ATTACHMENT_FILE_BYTES) {
+        displayError(STRING_ERROR_ATTACHMENT_TOO_LARGE);
+        return NULL;
+    }
+    ULONG fileBytes = fileSize > 0 ? (ULONG)fileSize : 0;
+    if (*totalAttachmentBytes >
+        MAX_ATTACHMENT_TOTAL_BYTES - fileBytes) {
+        displayError(STRING_ERROR_ATTACHMENT_TOO_LARGE);
+        return NULL;
+    }
+
+    STRPTR encoded = NULL;
+    ULONG result = CodesetsEncodeB64(
+        CSA_B64SourceFile, (Tag)file->path, CSA_B64DestPtr, (Tag)&encoded,
+        CSA_B64MaxLineLen, (Tag)255, CSA_B64Unix, TRUE, TAG_DONE);
+    if (result != 0 || encoded == NULL) {
+        displayError(STRING_ERROR_ATTACHMENT_ENCODE);
+        if (encoded != NULL)
+            CodesetsFreeA(encoded, NULL);
+        return NULL;
+    }
+
+    /* codesets.library wraps Base64 lines. JSON file-data fields are more
+     * interoperable without embedded CR/LF whitespace, so compact in place. */
+    STRPTR readPos = encoded;
+    STRPTR writePos = encoded;
+    while (*readPos != '\0') {
+        if (*readPos != '\r' && *readPos != '\n')
+            *writePos++ = *readPos;
+        readPos++;
+    }
+    *writePos = '\0';
+    *totalAttachmentBytes += fileBytes;
+    return encoded;
+}
+
+static BOOL messageHasLocalFiles(struct ConversationNode *message) {
+    if (message == NULL || strcmp(message->role, "user") != 0)
+        return FALSE;
+    struct ChatFile *file;
+    for (file = (struct ChatFile *)message->files.mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        if (file->path != NULL)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+static ULONG localFileCount(struct ConversationNode *message) {
+    if (message == NULL)
+        return 0;
+    ULONG count = 0;
+    struct ChatFile *file;
+    for (file = (struct ChatFile *)message->files.mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        if (file->path != NULL)
+            count++;
+    }
+    return count;
+}
+
+static BOOL appendLocalFileParts(struct ConversationNode *message,
+                                 struct json_object *contentArray,
+                                 APIChatEndpoint apiEndpoint,
+                                 ULONG *totalAttachmentBytes) {
+    if (!messageHasLocalFiles(message))
+        return TRUE;
+
+    ULONG fileCount = localFileCount(message);
+    ULONG fileIndex = 0;
+    struct ChatFile *file;
+    for (file = (struct ChatFile *)message->files.mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        if (file->path == NULL)
+            continue;
+        fileIndex++;
+        CONST_STRPTR mime = file->mimeType != NULL
+                                ? (CONST_STRPTR)file->mimeType
+                                : attachmentMimeTypeForFile(file);
+        BOOL isImage = strncmp(mime, "image/", 6) == 0;
+        if (file->fileId != NULL && strlen(file->fileId) > 0 &&
+            apiEndpoint == API_CHAT_ENDPOINT_RESPONSES) {
+            struct json_object *part = json_object_new_object();
+            if (isImage) {
+                json_object_object_add(part, "type",
+                                       json_object_new_string("input_image"));
+                json_object_object_add(
+                    part, "file_id", json_object_new_string(file->fileId));
+            } else {
+                json_object_object_add(part, "type",
+                                       json_object_new_string("input_file"));
+                json_object_object_add(
+                    part, "file_id", json_object_new_string(file->fileId));
+                if (file->name != NULL)
+                    json_object_object_add(
+                        part, "filename",
+                        json_object_new_string(file->name));
+            }
+            json_object_array_add(contentArray, part);
+            continue;
+        }
+        UBYTE statusMessage[96];
+        snprintf(statusMessage, sizeof(statusMessage),
+                 STRING_ENCODING_ATTACHMENT_FORMAT, fileIndex, fileCount);
+        updateStatusBar(statusMessage, yellowPen);
+        STRPTR encoded =
+            encodeAttachmentBase64(file, totalAttachmentBytes);
+        if (encoded == NULL)
+            return FALSE;
+
+        struct json_object *part = json_object_new_object();
+
+        if (apiEndpoint == API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT) {
+            struct json_object *inlineData = json_object_new_object();
+            json_object_object_add(inlineData, "mimeType",
+                                   json_object_new_string(mime));
+            json_object_object_add(inlineData, "data",
+                                   json_object_new_string(encoded));
+            json_object_object_add(part, "inlineData", inlineData);
+        } else if (apiEndpoint == API_CHAT_ENDPOINT_MESSAGES) {
+            struct json_object *source = json_object_new_object();
+            json_object_object_add(part, "type",
+                                   json_object_new_string(isImage ? "image"
+                                                                  : "document"));
+            json_object_object_add(source, "type",
+                                   json_object_new_string("base64"));
+            json_object_object_add(source, "media_type",
+                                   json_object_new_string(mime));
+            json_object_object_add(source, "data",
+                                   json_object_new_string(encoded));
+            json_object_object_add(part, "source", source);
+        } else {
+            ULONG dataUrlLength = strlen("data:;base64,") + strlen(mime) +
+                                  strlen(encoded) + 1;
+            STRPTR dataUrl =
+                AllocVec(dataUrlLength, MEMF_ANY | MEMF_CLEAR);
+            if (dataUrl == NULL) {
+                CodesetsFreeA(encoded, NULL);
+                json_object_put(part);
+                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+                return FALSE;
+            }
+            snprintf(dataUrl, dataUrlLength, "data:%s;base64,%s", mime,
+                     encoded);
+            if (apiEndpoint == API_CHAT_ENDPOINT_CHAT_COMPLETIONS) {
+                if (isImage) {
+                    struct json_object *imageUrl = json_object_new_object();
+                    json_object_object_add(part, "type",
+                                           json_object_new_string("image_url"));
+                    json_object_object_add(imageUrl, "url",
+                                           json_object_new_string(dataUrl));
+                    json_object_object_add(part, "image_url", imageUrl);
+                } else {
+                    struct json_object *fileObj = json_object_new_object();
+                    json_object_object_add(part, "type",
+                                           json_object_new_string("file"));
+                    json_object_object_add(
+                        fileObj, "filename",
+                        json_object_new_string(file->name));
+                    json_object_object_add(fileObj, "file_data",
+                                           json_object_new_string(dataUrl));
+                    json_object_object_add(part, "file", fileObj);
+                }
+            } else if (isImage) {
+                json_object_object_add(part, "type",
+                                       json_object_new_string("input_image"));
+                json_object_object_add(part, "image_url",
+                                       json_object_new_string(dataUrl));
+            } else {
+                json_object_object_add(part, "type",
+                                       json_object_new_string("input_file"));
+                json_object_object_add(part, "filename",
+                                       json_object_new_string(file->name));
+                json_object_object_add(part, "file_data",
+                                       json_object_new_string(dataUrl));
+            }
+            FreeVec(dataUrl);
+        }
+
+        json_object_array_add(contentArray, part);
+        CodesetsFreeA(encoded, NULL);
+    }
+    return TRUE;
+}
+
+static CONST_STRPTR responseObjectString(struct json_object *object,
+                                         CONST_STRPTR key) {
+    struct json_object *value = NULL;
+    if (object == NULL ||
+        !json_object_object_get_ex(object, key, &value) || value == NULL ||
+        json_object_is_type(value, json_type_null))
+        return NULL;
+    return json_object_get_string(value);
+}
+
+static BOOL responseFileAlreadyCollected(struct MinList *files,
+                                         CONST_STRPTR fileId,
+                                         CONST_STRPTR downloadUrl) {
+    struct ChatFile *file;
+    for (file = (struct ChatFile *)files->mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        if (fileId != NULL && file->fileId != NULL &&
+            strcmp(fileId, file->fileId) == 0)
+            return TRUE;
+        if (downloadUrl != NULL && file->downloadUrl != NULL &&
+            strcmp(downloadUrl, file->downloadUrl) == 0)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+static ULONG collectResponseFilesRecursive(struct json_object *value,
+                                           struct MinList *files,
+                                           CONST_STRPTR inheritedContainerId) {
+    if (value == NULL)
+        return 0;
+
+    ULONG added = 0;
+    if (json_object_is_type(value, json_type_array)) {
+        ULONG length = json_object_array_length(value);
+        for (ULONG i = 0; i < length; i++) {
+            added += collectResponseFilesRecursive(
+                json_object_array_get_idx(value, i), files,
+                inheritedContainerId);
+        }
+        return added;
+    }
+    if (!json_object_is_type(value, json_type_object))
+        return 0;
+
+    CONST_STRPTR type = responseObjectString(value, "type");
+    CONST_STRPTR containerId = responseObjectString(value, "container_id");
+    if (containerId == NULL)
+        containerId = inheritedContainerId;
+    CONST_STRPTR fileId = responseObjectString(value, "file_id");
+    CONST_STRPTR filename = responseObjectString(value, "filename");
+    CONST_STRPTR path = responseObjectString(value, "path");
+    CONST_STRPTR downloadUrl = responseObjectString(value, "download_url");
+    if (downloadUrl == NULL && type != NULL &&
+        (strcmp(type, "file") == 0 || strcmp(type, "output_file") == 0))
+        downloadUrl = responseObjectString(value, "url");
+
+    BOOL isFileObject =
+        type != NULL &&
+        (strcmp(type, "container_file_citation") == 0 ||
+         strcmp(type, "output_file") == 0 ||
+         strcmp(type, "file_path") == 0 || strcmp(type, "file") == 0);
+    if (isFileObject && (fileId != NULL || downloadUrl != NULL)) {
+        if (filename == NULL && path != NULL)
+            filename = FilePart(path);
+        if (filename == NULL)
+            filename =
+                fileId != NULL ? fileId : (CONST_STRPTR)"response-file";
+        if (!responseFileAlreadyCollected(files, fileId, downloadUrl) &&
+            addChatFile(files, NULL, filename,
+                        responseObjectString(value, "mime_type"), fileId,
+                        containerId, downloadUrl))
+            added++;
+    }
+
+    json_object_object_foreach(value, key, child) {
+        (void)key;
+        added += collectResponseFilesRecursive(child, files, containerId);
+    }
+    return added;
+}
+
+ULONG collectResponseFiles(struct json_object *response,
+                           struct MinList *files) {
+    if (response == NULL || files == NULL)
+        return 0;
+    return collectResponseFilesRecursive(response, files, NULL);
+}
+
+static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
+                                     ULONG requestLength, BOOL reportErrors) {
+    ULONG sentTotal = 0;
+    ULONG lastPercent = 101;
+    UWORD retryCount = 0;
+
+    while (sentTotal < requestLength) {
+        ULONG remaining = requestLength - sentTotal;
+        ULONG chunkLength = remaining < UPLOAD_WRITE_CHUNK_SIZE
+                                ? remaining
+                                : UPLOAD_WRITE_CHUNK_SIZE;
+        LONG written;
+        if (useSSL) {
+            ERR_clear_error();
+            written = SSL_write(ssl, request + sentTotal, chunkLength);
+            if (written <= 0) {
+                LONG error = SSL_get_error(ssl, written);
+                if (error == SSL_ERROR_WANT_READ ||
+                    error == SSL_ERROR_WANT_WRITE) {
+                    if (retryCount++ < MAX_UPLOAD_WRITE_RETRIES) {
+                        Delay(1);
+                        continue;
+                    }
+                    SetIoErr(0);
+                    if (reportErrors)
+                        displayError(STRING_ERROR_REQUEST_WRITE);
+                    return -1;
+                }
+                if (reportErrors)
+                    reportSslError(ssl, written, "SSL_write (chat request)");
+                return -1;
+            }
+        } else {
+            written = send(sock, request + sentTotal, chunkLength, 0);
+            if (written <= 0) {
+                if ((errno == EINTR || errno == EAGAIN) &&
+                    retryCount++ < MAX_UPLOAD_WRITE_RETRIES) {
+                    Delay(1);
+                    continue;
+                }
+                if (reportErrors)
+                    displayError(STRING_ERROR_REQUEST_WRITE);
+                return -1;
+            }
+        }
+
+        retryCount = 0;
+        sentTotal += (ULONG)written;
+        ULONG percent = (sentTotal * 100UL) / requestLength;
+        if (percent != lastPercent) {
+            UBYTE statusMessage[64];
+            snprintf(statusMessage, sizeof(statusMessage),
+                     STRING_UPLOADING_REQUEST_FORMAT, percent);
+            updateStatusBar(statusMessage, yellowPen);
+            lastPercent = percent;
+        }
+    }
+
+    flushSslWrites(useSSL);
+    updateStatusBar(STRING_WAITING_FOR_RESPONSE, yellowPen);
+    return (LONG)sentTotal;
+}
+
+static LONG reconnectAndResendChatRequest(
+    CONST_STRPTR host, UWORD port, BOOL useSSL, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, CONST_STRPTR request, ULONG requestLength,
+    UBYTE *retryCount) {
+    while (*retryCount < MAX_ATTACHMENT_REQUEST_RETRIES) {
+        (*retryCount)++;
+        updateStatusBar(STRING_ERROR_LOST_CONNECTION, redPen);
+        closeActiveResponseConnection();
+        Delay(10);
+        if (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                                proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                                proxyUsername, proxyPassword) == RETURN_ERROR)
+            continue;
+
+        LONG sent = writeRequestWithProgress(useSSL, request, requestLength,
+                                             FALSE);
+        if (sent > 0)
+            return sent;
+    }
+    return -1;
+}
+
+static void flushSslWrites(BOOL useSSL) {
+    if (!useSSL || ssl == NULL)
+        return;
+    BIO *wbio = SSL_get_wbio(ssl);
+    if (wbio != NULL)
+        (void)BIO_flush(wbio);
+}
+
+static void clearHttpReadBuffer(void) {
+    if (readBuffer != NULL)
+        memset(readBuffer, 0, READ_BUFFER_LENGTH);
+}
+
+static LONG writeAllQuiet(BOOL useSSL, CONST_STRPTR data, ULONG length) {
+    ULONG sent = 0;
+    UWORD retryCount = 0;
+    while (sent < length) {
+        ULONG remaining = length - sent;
+        ULONG chunkLength = remaining < UPLOAD_WRITE_CHUNK_SIZE
+                                ? remaining
+                                : UPLOAD_WRITE_CHUNK_SIZE;
+        LONG written;
+        if (useSSL) {
+            ERR_clear_error();
+            written = SSL_write(ssl, data + sent, (int)chunkLength);
+            if (written <= 0) {
+                LONG error = SSL_get_error(ssl, written);
+                if ((error == SSL_ERROR_WANT_READ ||
+                     error == SSL_ERROR_WANT_WRITE) &&
+                    retryCount++ < MAX_UPLOAD_WRITE_RETRIES) {
+                    Delay(1);
+                    continue;
+                }
+                return -1;
+            }
+        } else {
+            written = send(sock, data + sent, chunkLength, 0);
+            if (written <= 0) {
+                if ((errno == EINTR || errno == EAGAIN) &&
+                    retryCount++ < MAX_UPLOAD_WRITE_RETRIES) {
+                    Delay(1);
+                    continue;
+                }
+                return -1;
+            }
+        }
+        retryCount = 0;
+        sent += (ULONG)written;
+    }
+    return (LONG)sent;
+}
+
+static STRPTR isolateJsonObject(STRPTR buffer) {
+    STRPTR start;
+    STRPTR p;
+    LONG depth = 0;
+    BOOL inString = FALSE;
+    BOOL escape = FALSE;
+    if (buffer == NULL)
+        return NULL;
+    start = strchr(buffer, '{');
+    if (start == NULL)
+        return NULL;
+    for (p = start; *p != '\0'; p++) {
+        if (inString) {
+            if (escape)
+                escape = FALSE;
+            else if (*p == '\\')
+                escape = TRUE;
+            else if (*p == '"')
+                inString = FALSE;
+            continue;
+        }
+        if (*p == '"')
+            inString = TRUE;
+        else if (*p == '{')
+            depth++;
+        else if (*p == '}') {
+            depth--;
+            if (depth == 0) {
+                p[1] = '\0';
+                return start;
+            }
+        }
+    }
+    return NULL;
+}
+
+static BOOL storeChatFileId(struct ChatFile *file, CONST_STRPTR fileId) {
+    STRPTR copy;
+    if (file == NULL || fileId == NULL || strlen(fileId) == 0)
+        return FALSE;
+    copy = AllocVec(strlen(fileId) + 1, MEMF_ANY | MEMF_CLEAR);
+    if (copy == NULL)
+        return FALSE;
+    strncpy(copy, fileId, strlen(fileId));
+    if (file->fileId != NULL)
+        FreeVec(file->fileId);
+    file->fileId = copy;
+    return TRUE;
+}
+
+static BOOL uploadOneOpenAIFile(
+    struct ChatFile *file, ULONG fileIndex, ULONG fileCount,
+    CONST_STRPTR host, UWORD port, BOOL useSSL, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, CONST_STRPTR apiKey,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders) {
+    BPTR attachmentFile;
+    LONG fileSize;
+    UBYTE statusMessage[96];
+    UBYTE safeName[256];
+    UBYTE prefix[768];
+    UBYTE suffix[96];
+    UBYTE apiAuthHeader[512];
+    UBYTE customHeadersFormatted[1024];
+    UBYTE proxyAuthHeader[512];
+    ULONG prefixLength;
+    ULONG suffixLength;
+    ULONG bodyLength;
+    ULONG headerLength;
+    ULONG sentBody = 0;
+    ULONG lastPercent = 101;
+    CONST_STRPTR mime;
+    CONST_STRPTR rawName;
+    BOOL useAbsoluteRequestTarget;
+    STRPTR jsonStart;
+    struct json_object *parsed;
+    struct json_object *errorObj;
+    struct json_object *idObj;
+    CONST_STRPTR fileId;
+
+    if (file == NULL || file->path == NULL)
+        return FALSE;
+    if (file->fileId != NULL && strlen(file->fileId) > 0)
+        return TRUE;
+
+    snprintf(statusMessage, sizeof(statusMessage),
+             STRING_ENCODING_ATTACHMENT_FORMAT, fileIndex, fileCount);
+    updateStatusBar(statusMessage, yellowPen);
+
+    attachmentFile = Open(file->path, MODE_OLDFILE);
+    if (attachmentFile == 0) {
+        displayError(STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND);
+        return FALSE;
+    }
+#ifdef __AMIGAOS3__
+    Seek(attachmentFile, 0, OFFSET_END);
+    fileSize = Seek(attachmentFile, 0, OFFSET_BEGINNING);
+#elif defined(__AMIGAOS4__)
+    {
+        int64_t size64 = GetFileSize(attachmentFile);
+        fileSize = (size64 < 0 || size64 > 0x7fffffff) ? -1 : (LONG)size64;
+    }
+#else
+    {
+        struct FileInfoBlock fib;
+        fileSize = ExamineFH64(attachmentFile, &fib, NULL) ? (LONG)fib.fib_Size
+                                                           : -1;
+    }
+#endif
+    if (fileSize < 0) {
+        Close(attachmentFile);
+        displayError(STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND);
+        return FALSE;
+    }
+    if ((ULONG)fileSize > MAX_ATTACHMENT_FILE_BYTES) {
+        Close(attachmentFile);
+        displayError(STRING_ERROR_ATTACHMENT_TOO_LARGE);
+        return FALSE;
+    }
+
+    mime = file->mimeType != NULL ? (CONST_STRPTR)file->mimeType
+                                  : attachmentMimeTypeForFile(file);
+    rawName = file->name != NULL ? (CONST_STRPTR)file->name : "attachment";
+    strncpy(safeName, rawName, sizeof(safeName) - 1);
+    safeName[sizeof(safeName) - 1] = '\0';
+    {
+        ULONG i;
+        for (i = 0; safeName[i] != '\0'; i++) {
+            if (safeName[i] == '"' || safeName[i] == '\\' ||
+                safeName[i] == '\r' || safeName[i] == '\n')
+                safeName[i] = '_';
+        }
+    }
+
+    prefixLength = snprintf(
+        prefix, sizeof(prefix),
+        "--%s\r\n"
+        "Content-Disposition: form-data; name=\"purpose\"\r\n"
+        "\r\n"
+        "user_data\r\n"
+        "--%s\r\n"
+        "Content-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n"
+        "Content-Type: %s\r\n"
+        "\r\n",
+        OPENAI_FILE_BOUNDARY, OPENAI_FILE_BOUNDARY, safeName, mime);
+    suffixLength =
+        snprintf(suffix, sizeof(suffix), "\r\n--%s--\r\n", OPENAI_FILE_BOUNDARY);
+    if (prefixLength >= sizeof(prefix) || suffixLength >= sizeof(suffix)) {
+        Close(attachmentFile);
+        displayError(STRING_ERROR_CHAT_REQUEST_TOO_LARGE);
+        return FALSE;
+    }
+    bodyLength = prefixLength + (ULONG)fileSize + suffixLength;
+
+    memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+    }
+    memset(customHeadersFormatted, 0, sizeof(customHeadersFormatted));
+    if (customHeaders != NULL && strlen(customHeaders) > 0)
+        snprintf(customHeadersFormatted, sizeof(customHeadersFormatted),
+                 "%s\r\n", customHeaders);
+    memset(proxyAuthHeader, 0, sizeof(proxyAuthHeader));
+    if (useProxy && proxyRequiresAuth && !proxyUsesSSL &&
+        proxyUsername != NULL && proxyPassword != NULL) {
+        ULONG credentialLength =
+            strlen(proxyUsername) + strlen(proxyPassword) + 2;
+        STRPTR credentials = AllocVec(credentialLength, MEMF_ANY | MEMF_CLEAR);
+        if (credentials != NULL) {
+            STRPTR encodedCredentials = NULL;
+            snprintf(credentials, credentialLength, "%s:%s", proxyUsername,
+                     proxyPassword);
+            CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                              CSA_B64SourceLen, (Tag)strlen(credentials),
+                              CSA_B64DestPtr, (Tag)&encodedCredentials,
+                              TAG_DONE);
+            if (encodedCredentials != NULL) {
+                snprintf(proxyAuthHeader, sizeof(proxyAuthHeader),
+                         "Proxy-Authorization: Basic %s\r\n",
+                         encodedCredentials);
+                CodesetsFreeA(encodedCredentials, NULL);
+            }
+            FreeVec(credentials);
+        }
+    }
+
+    if (createSSLConnection(host, port, useSSL, useProxy, proxyHost, proxyPort,
+                            proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+                            proxyPassword) == RETURN_ERROR) {
+        Close(attachmentFile);
+        return FALSE;
+    }
+
+    useAbsoluteRequestTarget = useProxy && !proxyUsesSSL;
+    if (useAbsoluteRequestTarget) {
+        headerLength = snprintf(
+            writeBuffer, WRITE_BUFFER_LENGTH,
+            "POST %s://%s:%u/v1/files HTTP/1.1\r\n"
+            "Host: %s:%u\r\n"
+            "Content-Type: multipart/form-data; boundary=%s\r\n"
+            "%s%s%s"
+            "User-Agent: AmigaGPT\r\n"
+            "Content-Length: %lu\r\n"
+            "Connection: close\r\n"
+            "\r\n",
+            useSSL ? "https" : "http", host, (unsigned int)port, host,
+            (unsigned int)port, OPENAI_FILE_BOUNDARY, apiAuthHeader,
+            customHeadersFormatted, proxyAuthHeader, bodyLength);
+    } else {
+        headerLength = snprintf(
+            writeBuffer, WRITE_BUFFER_LENGTH,
+            "POST /v1/files HTTP/1.1\r\n"
+            "Host: %s:%u\r\n"
+            "Content-Type: multipart/form-data; boundary=%s\r\n"
+            "%s%s%s"
+            "User-Agent: AmigaGPT\r\n"
+            "Content-Length: %lu\r\n"
+            "Connection: close\r\n"
+            "\r\n",
+            host, (unsigned int)port, OPENAI_FILE_BOUNDARY, apiAuthHeader,
+            customHeadersFormatted, proxyAuthHeader, bodyLength);
+    }
+    if (headerLength >= WRITE_BUFFER_LENGTH ||
+        writeAllQuiet(useSSL, writeBuffer, headerLength) <= 0 ||
+        writeAllQuiet(useSSL, prefix, prefixLength) <= 0) {
+        Close(attachmentFile);
+        closeActiveResponseConnection();
+        displayError(STRING_ERROR_REQUEST_WRITE);
+        return FALSE;
+    }
+    sentBody = prefixLength;
+
+    {
+        UBYTE *chunk = AllocVec(UPLOAD_WRITE_CHUNK_SIZE, MEMF_ANY);
+        if (chunk == NULL) {
+            Close(attachmentFile);
+            closeActiveResponseConnection();
+            displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+            return FALSE;
+        }
+        while (sentBody - prefixLength < (ULONG)fileSize) {
+            ULONG remainingFile = (ULONG)fileSize - (sentBody - prefixLength);
+            ULONG toRead = remainingFile < UPLOAD_WRITE_CHUNK_SIZE
+                               ? remainingFile
+                               : UPLOAD_WRITE_CHUNK_SIZE;
+            LONG bytesRead = Read(attachmentFile, chunk, toRead);
+            ULONG percent;
+            if (bytesRead <= 0) {
+                FreeVec(chunk);
+                Close(attachmentFile);
+                closeActiveResponseConnection();
+                displayError(STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND);
+                return FALSE;
+            }
+            if (writeAllQuiet(useSSL, chunk, (ULONG)bytesRead) <= 0) {
+                FreeVec(chunk);
+                Close(attachmentFile);
+                closeActiveResponseConnection();
+                displayError(STRING_ERROR_REQUEST_WRITE);
+                return FALSE;
+            }
+            sentBody += (ULONG)bytesRead;
+            percent = (sentBody * 100UL) / bodyLength;
+            if (percent != lastPercent) {
+                snprintf(statusMessage, sizeof(statusMessage),
+                         STRING_UPLOADING_REQUEST_FORMAT, percent);
+                updateStatusBar(statusMessage, yellowPen);
+                lastPercent = percent;
+            }
+        }
+        FreeVec(chunk);
+    }
+    Close(attachmentFile);
+
+    if (writeAllQuiet(useSSL, suffix, suffixLength) <= 0) {
+        closeActiveResponseConnection();
+        displayError(STRING_ERROR_REQUEST_WRITE);
+        return FALSE;
+    }
+    flushSslWrites(useSSL);
+    updateStatusBar(STRING_WAITING_FOR_RESPONSE, yellowPen);
+
+    memset(readBuffer, 0, READ_BUFFER_LENGTH);
+    {
+        ULONG total = 0;
+        while (total < READ_BUFFER_LENGTH - 1) {
+            LONG n =
+                useSSL ? SSL_read(ssl, readBuffer + total,
+                                  (int)(READ_BUFFER_LENGTH - 1 - total))
+                       : recv(sock, readBuffer + total,
+                              READ_BUFFER_LENGTH - 1 - total, 0);
+            if (n <= 0)
+                break;
+            total += (ULONG)n;
+            readBuffer[total] = '\0';
+        }
+    }
+    closeActiveResponseConnection();
+
+    jsonStart = isolateJsonObject(readBuffer);
+    if (jsonStart == NULL) {
+        clearHttpReadBuffer();
+        SetIoErr(0);
+        displayError(STRING_ERROR_CONNECTING_OPENAI);
+        return FALSE;
+    }
+    parsed = json_tokener_parse(jsonStart);
+    clearHttpReadBuffer();
+    if (parsed == NULL) {
+        displayError(STRING_ERROR_CONNECTING_OPENAI);
+        return FALSE;
+    }
+    if (json_object_object_get_ex(parsed, "error", &errorObj) &&
+        errorObj != NULL && !json_object_is_type(errorObj, json_type_null)) {
+        struct json_object *messageObj =
+            json_object_object_get(errorObj, "message");
+        CONST_STRPTR message = json_object_get_string(messageObj);
+        SetIoErr(0);
+        if (message != NULL)
+            displayError((STRPTR)message);
+        else
+            displayError(STRING_ERROR_CONNECTING_OPENAI);
+        json_object_put(parsed);
+        return FALSE;
+    }
+    idObj = json_object_object_get(parsed, "id");
+    fileId = json_object_get_string(idObj);
+    if (fileId == NULL || strlen(fileId) == 0) {
+        json_object_put(parsed);
+        displayError(STRING_ERROR_CONNECTING_OPENAI);
+        return FALSE;
+    }
+    if (!storeChatFileId(file, fileId)) {
+        json_object_put(parsed);
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        return FALSE;
+    }
+    json_object_put(parsed);
+    return TRUE;
+}
+
+static BOOL uploadOpenAIFilesForMessage(
+    struct ConversationNode *message, CONST_STRPTR host, UWORD port,
+    BOOL useSSL, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+    BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, CONST_STRPTR apiKey,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders) {
+    struct ChatFile *file;
+    ULONG fileCount;
+    ULONG fileIndex = 0;
+    if (!messageHasLocalFiles(message))
+        return TRUE;
+    fileCount = localFileCount(message);
+    for (file = (struct ChatFile *)message->files.mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        if (file->path == NULL)
+            continue;
+        fileIndex++;
+        if (!uploadOneOpenAIFile(file, fileIndex, fileCount, host, port, useSSL,
+                                 useProxy, proxyHost, proxyPort, proxyUsesSSL,
+                                 proxyRequiresAuth, proxyUsername,
+                                 proxyPassword, apiKey, authorizationType,
+                                 customHeaders))
+            return FALSE;
+    }
+    return TRUE;
 }
 
 /**
@@ -1104,6 +2034,11 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
         timeout.tv_usec = 0;
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
         setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+        {
+            int one = 1;
+            setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one));
+            setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+        }
 
         if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
             displayError(useProxy ? STRING_ERROR_CONNECTION_PROXY
@@ -1713,7 +2648,10 @@ struct json_object **postChatMessageToOpenAI(
     static BOOL streamSawAnyContent = FALSE;
     UWORD responseIndex = 0;
     UBYTE connectionRetryCount = 0;
+    UBYTE attachmentRetryCount = 0;
     BOOL reconnectCurrentStream = FALSE;
+    STRPTR requestBuffer = NULL;
+    LONG requestLength = 0;
 
     /* Always use the connection settings passed in (from the active profile).
      * We do not silently fall back to hardcoded OpenAI defaults here. */
@@ -1744,15 +2682,38 @@ struct json_object **postChatMessageToOpenAI(
         (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES && conversation != NULL &&
          conversation->lastResponseId != NULL &&
          strlen(conversation->lastResponseId) > 0);
+    struct ConversationNode *attachmentMessage =
+        getLastNonSystemConversationMessage(conversation);
 
     if (useProxy && proxyUsesSSL) {
         useSSL = TRUE;
     }
 
-    if (!effectiveStream || !streamingInProgress) {
+    BOOL startedNewRequest = !effectiveStream || !streamingInProgress;
+    if (startedNewRequest) {
         memset(readBuffer, 0, READ_BUFFER_LENGTH);
         streamingInProgress = effectiveStream;
         streamSawAnyContent = FALSE;
+
+        /* OpenAI vision/file inputs: upload binaries via /v1/files first so
+         * the chat JSON stays tiny. A huge Base64 POST on classic AmiSSL is
+         * what OpenAI then resets while we wait for the response. */
+        if (isOpenAiHost && apiEndpoint == API_CHAT_ENDPOINT_RESPONSES &&
+            messageHasLocalFiles(attachmentMessage)) {
+            if (!uploadOpenAIFilesForMessage(
+                    attachmentMessage, host, port, useSSL, useProxy, proxyHost,
+                    proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+                    proxyPassword, apiKey, authorizationType, customHeaders)) {
+                clearHttpReadBuffer();
+                FreeVec(responses);
+                streamingInProgress = FALSE;
+                return NULL;
+            }
+            /* The Files API response lives in readBuffer. Chat replies are
+             * strncat'd onto that buffer, so leave it empty or the parser
+             * treats the file object as the model response and shows nothing. */
+            clearHttpReadBuffer();
+        }
 
         struct json_object *obj = json_object_new_object();
         if (!useGeminiGenerateContent) {
@@ -1782,6 +2743,9 @@ struct json_object **postChatMessageToOpenAI(
             }
             configFreeSpeechRequestSettings(&speechSettings);
         }
+
+        ULONG totalAttachmentBytes = 0;
+        BOOL attachmentBuildFailed = FALSE;
 
         if (useGeminiGenerateContent) {
             /* Gemini native generateContent format:
@@ -1826,6 +2790,10 @@ struct json_object **postChatMessageToOpenAI(
                                                ? message->content
                                                : (UTF8 *)""));
                 json_object_array_add(partsArr, partObj);
+                if (message == attachmentMessage &&
+                    !appendLocalFileParts(message, partsArr, apiEndpoint,
+                                          &totalAttachmentBytes))
+                    attachmentBuildFailed = TRUE;
                 json_object_object_add(contentObj, "parts", partsArr);
 
                 json_object_array_add(conversationArray, contentObj);
@@ -1859,9 +2827,27 @@ struct json_object **postChatMessageToOpenAI(
                 struct json_object *messageObj = json_object_new_object();
                 json_object_object_add(messageObj, "role",
                                        json_object_new_string(message->role));
-                json_object_object_add(
-                    messageObj, "content",
-                    json_object_new_string(message->content));
+                if (message == attachmentMessage &&
+                    messageHasLocalFiles(message)) {
+                    struct json_object *contentArray = json_object_new_array();
+                    struct json_object *textPart = json_object_new_object();
+                    json_object_object_add(textPart, "type",
+                                           json_object_new_string("text"));
+                    json_object_object_add(
+                        textPart, "text",
+                        json_object_new_string(message->content));
+                    json_object_array_add(contentArray, textPart);
+                    if (!appendLocalFileParts(message, contentArray,
+                                              apiEndpoint,
+                                              &totalAttachmentBytes))
+                        attachmentBuildFailed = TRUE;
+                    json_object_object_add(messageObj, "content",
+                                           contentArray);
+                } else {
+                    json_object_object_add(
+                        messageObj, "content",
+                        json_object_new_string(message->content));
+                }
                 json_object_array_add(conversationArray, messageObj);
                 conversationNode = conversationNode->mln_Succ;
             }
@@ -1899,9 +2885,27 @@ struct json_object **postChatMessageToOpenAI(
                 struct json_object *messageObj = json_object_new_object();
                 json_object_object_add(messageObj, "role",
                                        json_object_new_string(message->role));
-                json_object_object_add(
-                    messageObj, "content",
-                    json_object_new_string(message->content));
+                if (message == attachmentMessage &&
+                    messageHasLocalFiles(message)) {
+                    struct json_object *contentArray = json_object_new_array();
+                    struct json_object *textPart = json_object_new_object();
+                    json_object_object_add(textPart, "type",
+                                           json_object_new_string("text"));
+                    json_object_object_add(
+                        textPart, "text",
+                        json_object_new_string(message->content));
+                    json_object_array_add(contentArray, textPart);
+                    if (!appendLocalFileParts(message, contentArray,
+                                              apiEndpoint,
+                                              &totalAttachmentBytes))
+                        attachmentBuildFailed = TRUE;
+                    json_object_object_add(messageObj, "content",
+                                           contentArray);
+                } else {
+                    json_object_object_add(
+                        messageObj, "content",
+                        json_object_new_string(message->content));
+                }
                 json_object_array_add(conversationArray, messageObj);
                 conversationNode = conversationNode->mln_Succ;
             }
@@ -1998,16 +3002,34 @@ struct json_object **postChatMessageToOpenAI(
             }
 
             if (canUseStatefulResponses) {
-                struct ConversationNode *latestMessage =
-                    getLastNonSystemConversationMessage(conversation);
+                struct ConversationNode *latestMessage = attachmentMessage;
                 if (latestMessage != NULL) {
                     struct json_object *messageObj = json_object_new_object();
                     json_object_object_add(
                         messageObj, "role",
                         json_object_new_string(latestMessage->role));
-                    json_object_object_add(
-                        messageObj, "content",
-                        json_object_new_string(latestMessage->content));
+                    if (messageHasLocalFiles(latestMessage)) {
+                        struct json_object *contentArray =
+                            json_object_new_array();
+                        struct json_object *textPart = json_object_new_object();
+                        json_object_object_add(
+                            textPart, "type",
+                            json_object_new_string("input_text"));
+                        json_object_object_add(
+                            textPart, "text",
+                            json_object_new_string(latestMessage->content));
+                        json_object_array_add(contentArray, textPart);
+                        if (!appendLocalFileParts(
+                                latestMessage, contentArray, apiEndpoint,
+                                &totalAttachmentBytes))
+                            attachmentBuildFailed = TRUE;
+                        json_object_object_add(messageObj, "content",
+                                               contentArray);
+                    } else {
+                        json_object_object_add(
+                            messageObj, "content",
+                            json_object_new_string(latestMessage->content));
+                    }
                     json_object_array_add(conversationArray, messageObj);
                 }
                 json_object_object_add(
@@ -2018,12 +3040,32 @@ struct json_object **postChatMessageToOpenAI(
                     struct ConversationNode *message =
                         (struct ConversationNode *)conversationNode;
                     struct json_object *messageObj = json_object_new_object();
-                    json_object_object_add(
-                        messageObj, "role",
-                        json_object_new_string(message->role));
-                    json_object_object_add(
-                        messageObj, "content",
-                        json_object_new_string(message->content));
+                        json_object_object_add(
+                            messageObj, "role",
+                            json_object_new_string(message->role));
+                    if (message == attachmentMessage &&
+                        messageHasLocalFiles(message)) {
+                        struct json_object *contentArray =
+                            json_object_new_array();
+                        struct json_object *textPart = json_object_new_object();
+                        json_object_object_add(
+                            textPart, "type",
+                            json_object_new_string("input_text"));
+                        json_object_object_add(
+                            textPart, "text",
+                            json_object_new_string(message->content));
+                        json_object_array_add(contentArray, textPart);
+                        if (!appendLocalFileParts(
+                                message, contentArray, apiEndpoint,
+                                &totalAttachmentBytes))
+                            attachmentBuildFailed = TRUE;
+                        json_object_object_add(messageObj, "content",
+                                               contentArray);
+                    } else {
+                        json_object_object_add(
+                            messageObj, "content",
+                            json_object_new_string(message->content));
+                    }
                     json_object_array_add(conversationArray, messageObj);
                     conversationNode = conversationNode->mln_Succ;
                 }
@@ -2083,6 +3125,14 @@ struct json_object **postChatMessageToOpenAI(
             systemInstructions = NULL;
         }
 
+        if (attachmentBuildFailed) {
+            json_object_put(obj);
+            FreeVec(responses);
+            streamingInProgress = FALSE;
+            return NULL;
+        }
+
+        updateStatusBar(STRING_PREPARING_REQUEST, yellowPen);
         UTF8 *jsonString = json_object_to_json_string(obj);
 
         STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
@@ -2143,7 +3193,7 @@ struct json_object **postChatMessageToOpenAI(
         }
 
         ULONG requestCapacity = strlen(jsonString) + 8192;
-        STRPTR requestBuffer = AllocVec(requestCapacity, MEMF_ANY | MEMF_CLEAR);
+        requestBuffer = AllocVec(requestCapacity, MEMF_ANY | MEMF_CLEAR);
         if (requestBuffer == NULL) {
             json_object_put(obj);
             FreeVec(authHeader);
@@ -2151,8 +3201,11 @@ struct json_object **postChatMessageToOpenAI(
             displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
             return NULL;
         }
-        LONG requestLength = 0;
-        if (useSSL || useProxy) {
+        /* Absolute-form request targets are for a plain HTTP proxy. Direct TLS
+         * connections, and TLS connections established through CONNECT, use
+         * the normal origin-form path. */
+        BOOL useAbsoluteRequestTarget = useProxy && !proxyUsesSSL;
+        if (useAbsoluteRequestTarget) {
             requestLength =
                 snprintf(requestBuffer, requestCapacity,
                          "POST %s://%s:%d%s%s/%s HTTP/1.1\r\n"
@@ -2206,58 +3259,37 @@ struct json_object **postChatMessageToOpenAI(
             if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
                 displayError(STRING_ERROR_CONNECTING_MAX_RETRIES);
                 streamingInProgress = FALSE;
+                FreeVec(requestBuffer);
                 FreeVec(responses);
                 return NULL;
             }
         }
         connectionRetryCount = 0;
-        updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
-        ULONG sentTotal = 0;
-        ULONG reqLen = (ULONG)requestLength;
-        if (useSSL) {
-            while (sentTotal < reqLen) {
-                ERR_clear_error();
-                LONG written = SSL_write(ssl, requestBuffer + sentTotal,
-                                         reqLen - sentTotal);
-                if (written > 0) {
-                    sentTotal += written;
-                    continue;
-                }
-                ssl_err = written;
-                reportSslError(ssl, ssl_err, "SSL_write (responses)");
-                break;
-            }
-            ssl_err = (sentTotal == reqLen) ? (LONG)sentTotal : -1;
-        } else {
-            while (sentTotal < reqLen) {
-                LONG written = send(sock, requestBuffer + sentTotal,
-                                    reqLen - sentTotal, 0);
-                if (written > 0) {
-                    sentTotal += written;
-                    continue;
-                }
-                ssl_err = written;
-                break;
-            }
-            if (sentTotal == reqLen) {
-                ssl_err = (LONG)sentTotal;
-            }
+        ssl_err = writeRequestWithProgress(
+            useSSL, requestBuffer, (ULONG)requestLength, FALSE);
+        if (ssl_err <= 0) {
+            ssl_err = reconnectAndResendChatRequest(
+                host, port, useSSL, useProxy, proxyHost, proxyPort,
+                proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword,
+                requestBuffer, (ULONG)requestLength, &attachmentRetryCount);
         }
-        FreeVec(requestBuffer);
     }
 
 #ifndef DAEMON
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
 #endif
 
-    if (ssl_err > 0 || effectiveStream) {
+    if (!startedNewRequest || ssl_err > 0) {
         ULONG totalBytesRead = 0;
         WORD bytesRead = 0;
         BOOL doneReading = FALSE;
         LONG err = 0;
+        LONG lastReadSocketError = 0;
         UBYTE statusMessage[64];
         UBYTE *tempReadBuffer = AllocVec(
             useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
+        if (startedNewRequest)
+            clearHttpReadBuffer();
         while (!doneReading) {
 #ifndef DAEMON
             DoMethod(loadingBar, MUIM_Busy_Move);
@@ -2308,6 +3340,8 @@ struct json_object **postChatMessageToOpenAI(
                  * the parsing path. */
                 err = didReadBytes ? SSL_get_error(ssl, bytesRead)
                                    : SSL_ERROR_NONE;
+                if (didReadBytes && bytesRead <= 0)
+                    lastReadSocketError = errno;
             } else {
                 err = SSL_ERROR_NONE;
             }
@@ -2328,6 +3362,43 @@ struct json_object **postChatMessageToOpenAI(
                         STRPTR okCheck = strstr(httpResponse, "200 OK");
                         STRPTR okCheck2 = strstr(httpResponse, "HTTP/1.1 200");
                         if (okCheck == NULL && okCheck2 == NULL) {
+                            STRPTR headerEnd = strstr(readBuffer, "\r\n\r\n");
+                            ULONG headerDelimLen = 4;
+                            if (headerEnd == NULL) {
+                                headerEnd = strstr(readBuffer, "\n\n");
+                                headerDelimLen = 2;
+                            }
+
+                            /* Keep reading until the complete error body is
+                             * available. OpenAI returns useful structured JSON
+                             * here (for example, the exact invalid parameter),
+                             * which is much more actionable than the HTTP
+                             * status line alone. */
+                            if (headerEnd == NULL)
+                                break;
+                            STRPTR errorBody = headerEnd + headerDelimLen;
+                            LONG errorContentLength =
+                                httpParseContentLengthNullTerminated(
+                                    readBuffer);
+                            ULONG errorBodyLength = strlen(errorBody);
+                            if (errorContentLength > 0 &&
+                                errorBodyLength < (ULONG)errorContentLength)
+                                break;
+
+                            while (*errorBody == '\r' || *errorBody == '\n' ||
+                                   *errorBody == ' ' || *errorBody == '\t')
+                                errorBody++;
+                            struct json_object *parsedError = NULL;
+                            if (*errorBody == '{' || *errorBody == '[')
+                                parsedError = json_tokener_parse(errorBody);
+                            if (parsedError != NULL) {
+                                responses[responseIndex++] = parsedError;
+                                SetIoErr(0);
+                                doneReading = TRUE;
+                                streamingInProgress = FALSE;
+                                break;
+                            }
+
                             UBYTE error[256] = {0};
                             for (UWORD i = 0; i < 256; i++) {
                                 if (httpResponse[i] == '\r' ||
@@ -2355,6 +3426,7 @@ struct json_object **postChatMessageToOpenAI(
                                 json_object_new_string((CONST_STRPTR)error));
                             json_object_object_add(errObj, "error", errInner);
                             responses[responseIndex++] = errObj;
+                            SetIoErr(0);
                             doneReading = TRUE;
                             streamingInProgress = FALSE;
                             break;
@@ -2601,15 +3673,19 @@ struct json_object **postChatMessageToOpenAI(
                         streamingInProgress = FALSE;
                         break;
                     }
-                    const UTF8 *jsonStart = effectiveStream ? "data: {" : "{";
-                    UTF8 *jsonString = effectiveStream
-                                           ? strstr(readBuffer, jsonStart)
-                                           : strstr(readBuffer, "{");
-                    if (jsonString != NULL) {
-                        // We have JSON data - this might be a normal connection
-                        // closure
-                        doneReading = TRUE;
-                        break;
+                    if (!effectiveStream) {
+                        UTF8 *jsonString = strstr(readBuffer, "{");
+                        if (jsonString == NULL)
+                            jsonString = strstr(readBuffer, "[");
+                        if (jsonString != NULL) {
+                            struct json_object *parsedResponse =
+                                json_tokener_parse(jsonString);
+                            if (parsedResponse != NULL) {
+                                responses[responseIndex++] = parsedResponse;
+                                doneReading = TRUE;
+                                break;
+                            }
+                        }
                     }
                 }
                 /* Recoverable stream disconnects (peer reset/pipe closed) can
@@ -2618,8 +3694,9 @@ struct json_object **postChatMessageToOpenAI(
                  * immediately.
                  */
                 if (effectiveStream &&
-                    (errno == ECONNRESET || errno == EPIPE ||
-                     errno == ENOTCONN) &&
+                    (lastReadSocketError == ECONNRESET ||
+                     lastReadSocketError == EPIPE ||
+                     lastReadSocketError == ENOTCONN) &&
                     streamSawAnyContent) {
                     struct json_object *completed = json_object_new_object();
                     json_object_object_add(
@@ -2634,8 +3711,9 @@ struct json_object **postChatMessageToOpenAI(
                 }
 
                 if (effectiveStream &&
-                    (errno == ECONNRESET || errno == EPIPE ||
-                     errno == ENOTCONN) &&
+                    (lastReadSocketError == ECONNRESET ||
+                     lastReadSocketError == EPIPE ||
+                     lastReadSocketError == ENOTCONN) &&
                     streamReconnectStreak < 2) {
                     streamReconnectStreak++;
                     reconnectCurrentStream = TRUE;
@@ -2667,10 +3745,11 @@ struct json_object **postChatMessageToOpenAI(
                     } else {
                         snprintf(errorLine, sizeof(errorLine),
                                  STRING_ERROR_SSL_READ_FAILED_FORMAT,
-                                 strerror(errno));
+                                 strerror(lastReadSocketError));
                     }
 
                     if (responseIndex == 0) {
+                        SetIoErr(0);
                         struct json_object *errObj = json_object_new_object();
                         struct json_object *errInner = json_object_new_object();
                         json_object_object_add(
@@ -2696,6 +3775,8 @@ struct json_object **postChatMessageToOpenAI(
 
         if (reconnectCurrentStream) {
             FreeVec(responses);
+            if (requestBuffer != NULL)
+                FreeVec(requestBuffer);
             return postChatMessageToOpenAI(
                 conversation, host, port, useSSL, model, apiKey, stream,
                 useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth,
@@ -2704,8 +3785,10 @@ struct json_object **postChatMessageToOpenAI(
                 authorizationType, customHeaders);
         }
     } else {
+        SetIoErr(0);
         displayError(STRING_ERROR_REQUEST_WRITE);
-        reportSslError(ssl, ssl_err, "SSL_write");
+        streamingInProgress = FALSE;
+        closeActiveResponseConnection();
     }
 
     if (effectiveStream && responseIndex > 0) {
@@ -2809,6 +3892,8 @@ struct json_object **postChatMessageToOpenAI(
                 }
             }
             FreeVec(responses);
+            if (requestBuffer != NULL)
+                FreeVec(requestBuffer);
             return postChatMessageToOpenAI(
                 conversation, host, port, useSSL, model, apiKey, stream,
                 useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth,
@@ -2828,6 +3913,8 @@ struct json_object **postChatMessageToOpenAI(
             setConversationLastResponseId(conversation, newestResponseId);
         }
     }
+    if (requestBuffer != NULL)
+        FreeVec(requestBuffer);
     return responses;
 }
 
@@ -3794,6 +4881,258 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
     return RETURN_OK;
 }
 
+struct ChunkedFileWriter {
+    UBYTE sizeLine[32];
+    UBYTE sizeLength;
+    UBYTE framingBytesToSkip;
+    ULONG chunkBytesRemaining;
+    BOOL readingSize;
+    BOOL complete;
+};
+
+static BOOL writeChunkedFileBytes(BPTR fileHandle,
+                                  struct ChunkedFileWriter *state,
+                                  UBYTE *data, ULONG length,
+                                  ULONG *writtenTotal) {
+    ULONG position = 0;
+    while (position < length && !state->complete) {
+        if (state->framingBytesToSkip > 0) {
+            position++;
+            state->framingBytesToSkip--;
+            if (state->framingBytesToSkip == 0)
+                state->readingSize = TRUE;
+            continue;
+        }
+        if (state->readingSize) {
+            UBYTE c = data[position++];
+            if (c == '\n') {
+                state->sizeLine[state->sizeLength] = '\0';
+                state->chunkBytesRemaining =
+                    strtoul((STRPTR)state->sizeLine, NULL, 16);
+                state->sizeLength = 0;
+                state->readingSize = FALSE;
+                if (state->chunkBytesRemaining == 0)
+                    state->complete = TRUE;
+            } else if (c != '\r' &&
+                       state->sizeLength < sizeof(state->sizeLine) - 1) {
+                state->sizeLine[state->sizeLength++] = c;
+            }
+            continue;
+        }
+
+        ULONG available = length - position;
+        ULONG toWrite = state->chunkBytesRemaining < available
+                            ? state->chunkBytesRemaining
+                            : available;
+        if (toWrite > 0) {
+            if (Write(fileHandle, data + position, toWrite) != (LONG)toWrite)
+                return FALSE;
+            position += toWrite;
+            state->chunkBytesRemaining -= toWrite;
+            *writtenTotal += toWrite;
+        }
+        if (state->chunkBytesRemaining == 0)
+            state->framingBytesToSkip = 2;
+    }
+    return TRUE;
+}
+
+ULONG downloadProviderFile(
+    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR endpoint,
+    CONST_STRPTR destination, CONST_STRPTR apiKey, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders) {
+    if (host == NULL || endpoint == NULL || destination == NULL)
+        return RETURN_ERROR;
+    if (port == 0)
+        port = useSSL ? 443 : 80;
+    if (useProxy && proxyUsesSSL)
+        useSSL = TRUE;
+
+    UBYTE apiAuthHeader[512] = {0};
+    if (authorizationType != AUTHORIZATION_TYPE_NONE && apiKey != NULL &&
+        strlen(apiKey) > 0) {
+        snprintf(apiAuthHeader, sizeof(apiAuthHeader), "%s %s\r\n",
+                 AUTHORIZATION_TYPE_NAMES[authorizationType], apiKey);
+    }
+    UBYTE customHeadersFormatted[1024] = {0};
+    if (customHeaders != NULL && strlen(customHeaders) > 0)
+        snprintf(customHeadersFormatted, sizeof(customHeadersFormatted),
+                 "%s\r\n", customHeaders);
+
+    UBYTE proxyAuthHeader[512] = {0};
+    if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
+        ULONG credentialLength = strlen(proxyUsername) + strlen(proxyPassword) +
+                                 2;
+        STRPTR credentials =
+            AllocVec(credentialLength, MEMF_ANY | MEMF_CLEAR);
+        if (credentials == NULL)
+            return RETURN_ERROR;
+        snprintf(credentials, credentialLength, "%s:%s", proxyUsername,
+                 proxyPassword);
+        STRPTR encodedCredentials = NULL;
+        CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                          CSA_B64SourceLen, (Tag)strlen(credentials),
+                          CSA_B64DestPtr, (Tag)&encodedCredentials, TAG_DONE);
+        if (encodedCredentials != NULL) {
+            snprintf(proxyAuthHeader, sizeof(proxyAuthHeader),
+                     "Proxy-Authorization: Basic %s\r\n", encodedCredentials);
+            CodesetsFreeA(encodedCredentials, NULL);
+        }
+        FreeVec(credentials);
+    }
+
+    if (useSSL || useProxy) {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "GET %s://%s:%u%s HTTP/1.1\r\n"
+                 "Host: %s:%u\r\n"
+                 "%s%s%s"
+                 "User-Agent: AmigaGPT\r\n"
+                 "Accept: */*\r\n"
+                 "Connection: close\r\n\r\n",
+                 useSSL ? "https" : "http", host, (unsigned int)port,
+                 endpoint, host, (unsigned int)port, apiAuthHeader,
+                 customHeadersFormatted, proxyAuthHeader);
+    } else {
+        snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                 "GET %s HTTP/1.1\r\n"
+                 "Host: %s:%u\r\n"
+                 "%s%s%s"
+                 "User-Agent: AmigaGPT\r\n"
+                 "Accept: */*\r\n"
+                 "Connection: close\r\n\r\n",
+                 endpoint, host, (unsigned int)port, apiAuthHeader,
+                 customHeadersFormatted, proxyAuthHeader);
+    }
+
+#ifndef DAEMON
+    showLoadingBar();
+#endif
+    updateStatusBar(STRING_CONNECTING, yellowPen);
+    UBYTE connectionRetryCount = 0;
+    while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
+        if (connectionRetryCount++ >= MAX_CONNECTION_RETRIES) {
+#ifndef DAEMON
+            hideLoadingBar();
+#endif
+            return RETURN_ERROR;
+        }
+    }
+
+    LONG sent = useSSL ? SSL_write(ssl, writeBuffer, strlen(writeBuffer))
+                       : send(sock, writeBuffer, strlen(writeBuffer), 0);
+    if (sent <= 0) {
+        closeActiveResponseConnection();
+#ifndef DAEMON
+        hideLoadingBar();
+#endif
+        return RETURN_ERROR;
+    }
+
+    UBYTE header[8192];
+    ULONG headerLength = 0;
+    STRPTR headerEnd = NULL;
+    while (headerLength < sizeof(header) - 1 && headerEnd == NULL) {
+        LONG received =
+            useSSL ? SSL_read(ssl, header + headerLength,
+                              sizeof(header) - headerLength - 1)
+                   : recv(sock, header + headerLength,
+                          sizeof(header) - headerLength - 1, 0);
+        if (received <= 0)
+            break;
+        headerLength += (ULONG)received;
+        header[headerLength] = '\0';
+        headerEnd = strstr((STRPTR)header, "\r\n\r\n");
+    }
+    if (headerEnd == NULL ||
+        (strstr((STRPTR)header, "HTTP/1.1 2") == NULL &&
+         strstr((STRPTR)header, "HTTP/1.0 2") == NULL)) {
+        closeActiveResponseConnection();
+#ifndef DAEMON
+        hideLoadingBar();
+#endif
+        displayError(STRING_ERROR_RECEIVED_FILE_DOWNLOAD);
+        return RETURN_ERROR;
+    }
+
+    ULONG bodyOffset = (ULONG)(headerEnd - (STRPTR)header) + 4;
+    ULONG initialBodyLength =
+        headerLength > bodyOffset ? headerLength - bodyOffset : 0;
+    BOOL chunked =
+        strstr((STRPTR)header, "Transfer-Encoding: chunked") != NULL ||
+        strstr((STRPTR)header, "transfer-encoding: chunked") != NULL;
+    BPTR fileHandle = Open(destination, MODE_NEWFILE);
+    if (fileHandle == 0) {
+        closeActiveResponseConnection();
+#ifndef DAEMON
+        hideLoadingBar();
+#endif
+        displayError(STRING_ERROR_FILE_WRITE_OPEN);
+        return RETURN_ERROR;
+    }
+
+    ULONG writtenTotal = 0;
+    BOOL writeSucceeded = TRUE;
+    struct ChunkedFileWriter chunkState;
+    memset(&chunkState, 0, sizeof(chunkState));
+    chunkState.readingSize = TRUE;
+    if (initialBodyLength > 0) {
+        if (chunked) {
+            writeSucceeded = writeChunkedFileBytes(
+                fileHandle, &chunkState, header + bodyOffset,
+                initialBodyLength, &writtenTotal);
+        } else {
+            writeSucceeded =
+                Write(fileHandle, header + bodyOffset, initialBodyLength) ==
+                (LONG)initialBodyLength;
+            writtenTotal += writeSucceeded ? initialBodyLength : 0;
+        }
+    }
+
+    while (writeSucceeded && (!chunked || !chunkState.complete)) {
+        LONG received = useSSL ? SSL_read(ssl, readBuffer,
+                                          READ_BUFFER_LENGTH - 1)
+                               : recv(sock, readBuffer,
+                                      READ_BUFFER_LENGTH - 1, 0);
+        if (received <= 0)
+            break;
+        if (chunked) {
+            writeSucceeded = writeChunkedFileBytes(
+                fileHandle, &chunkState, (UBYTE *)readBuffer,
+                (ULONG)received, &writtenTotal);
+        } else {
+            writeSucceeded = Write(fileHandle, readBuffer, received) == received;
+            if (writeSucceeded)
+                writtenTotal += (ULONG)received;
+        }
+        UBYTE statusMessage[96];
+        snprintf(statusMessage, sizeof(statusMessage), "%s %lu %s",
+                 STRING_DOWNLOADED, writtenTotal, STRING_BYTES);
+        updateStatusBar(statusMessage, yellowPen);
+    }
+
+    Close(fileHandle);
+    closeActiveResponseConnection();
+#ifndef DAEMON
+    hideLoadingBar();
+#endif
+    if (!writeSucceeded || (chunked && !chunkState.complete)) {
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+        DeleteFile(destination);
+#else
+        Delete(destination);
+#endif
+        displayError(STRING_ERROR_RECEIVED_FILE_DOWNLOAD);
+        return RETURN_ERROR;
+    }
+    updateStatusBar(STRING_READY, greenPen);
+    return RETURN_OK;
+}
+
 /**
  * Create a new SSL context
  * @return RETURN_OK on success, RETURN_ERROR on failure
@@ -3823,7 +5162,14 @@ static LONG createSSLContext() {
         /* Basic certificate handling */
         SSL_CTX_set_default_verify_paths(ctx);
 
-        SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
+#ifdef SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER
+        SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY |
+                                  SSL_MODE_ENABLE_PARTIAL_WRITE |
+                                  SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+#else
+        SSL_CTX_set_mode(ctx,
+                         SSL_MODE_AUTO_RETRY | SSL_MODE_ENABLE_PARTIAL_WRITE);
+#endif
 
         // Disable certificate verification. This is done because proxy servers
         // often use self-signed certificates
@@ -3951,6 +5297,7 @@ static void drainOpenSslErrorQueue(CONST_STRPTR where) {
  **/
 static void reportSslError(SSL *s, int ret, CONST_STRPTR where) {
     int why = SSL_get_error(s, ret);
+    SetIoErr(0);
     switch (why) {
     case SSL_ERROR_NONE:
         return;
