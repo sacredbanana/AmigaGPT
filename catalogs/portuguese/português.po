@@ -946,10 +946,10 @@ msgstr "Falha ao obter a interface de amisslmaster.library"
 #: src/openai.c:223
 msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
 msgid ""
-"Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
+"Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.27 or "
 "newer. Please refer to the documentation for more information."
 msgstr ""
-"Falha ao inicializar amisslmaster.library. O AmigaGPT requer AmiSSL 5.18 ou "
+"Falha ao inicializar amisslmaster.library. O AmigaGPT requer AmiSSL 5.27 ou "
 "mais recente. Consulte a documentação para obter mais informações."
 
 #: src/openai.c:233

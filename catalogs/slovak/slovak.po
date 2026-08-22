@@ -939,11 +939,11 @@ msgstr "Nepodarilo sa získať rozhranie knižnice amisslmaster.library"
 #: src/openai.c:223
 msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
 msgid ""
-"Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
+"Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.27 or "
 "newer. Please refer to the documentation for more information."
 msgstr ""
 "Nepodarilo sa inicializovať amisslmaster.library. AmigaGPT vyžaduje AmiSSL "
-"5.18 alebo novší. Ďalšie informácie nájdete v dokumentácii."
+"5.27 alebo novší. Ďalšie informácie nájdete v dokumentácii."
 
 #: src/openai.c:233
 msgctxt "STRING_ERROR_AMISSL_INTERFACE_INIT (156//)"

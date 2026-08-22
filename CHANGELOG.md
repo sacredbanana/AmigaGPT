@@ -4,6 +4,7 @@
 
 - Attach files to the prompt
 - Download files created in the response
+- Upgrade AmiSSL version to 5.27
 
 ## 3.1.0 (2026-08-16)
 

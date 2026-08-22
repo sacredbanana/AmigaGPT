@@ -947,10 +947,10 @@ msgstr "Nije uspjelo dobivanje sučelja amisslmaster.library"
 #: src/openai.c:223
 msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
 msgid ""
-"Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
+"Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.27 or "
 "newer. Please refer to the documentation for more information."
 msgstr ""
-"Neuspješno pokretanje amisslmaster.library. AmigaGPT zahtijeva AmiSSL 5.18 "
+"Neuspješno pokretanje amisslmaster.library. AmigaGPT zahtijeva AmiSSL 5.27 "
 "ili noviji. Više informacija potražite u dokumentaciji."
 
 #: src/openai.c:233

@@ -73,7 +73,7 @@ For smooth operation of AmigaGPT, your system needs to meet the following requir
 - MCC_NList MUI custom class for lists (http://aminet.net/package/dev/mui/MCC_NList-0.128)
 - MCC_TextEditor custom class for text input (https://aminet.net/dev/mui/MCC_TextEditor-15.56.lha)
 - A PNG datatype for viewing images. Any will do, but here is one (https://aminet.net/util/dtype/vPNGdt.lha)
-- For AmigaOS 3 & 4, AmiSSL 5.18 or higher
+- For AmigaOS 3 & 4, AmiSSL 5.27 or higher
   (https://aminet.net/package/util/libs/AmiSSL-v5-OS3) for OS3 and
   (https://aminet.net/package/util/libs/AmiSSL-v5-OS4) for OS4
 - An OpenAI account with an active API key

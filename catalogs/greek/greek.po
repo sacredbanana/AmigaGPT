@@ -959,11 +959,11 @@ msgstr "Αποτυχία λήψης της διεπαφής του amislmaster.l
 #: src/openai.c:223
 msgctxt "STRING_ERROR_AMISSLMASTER_LIB_INIT (155//)"
 msgid ""
-"Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.18 or "
+"Failed to initialize amisslmaster.library. AmigaGPT requires AmiSSL 5.27 or "
 "newer. Please refer to the documentation for more information."
 msgstr ""
 "Απέτυχε η προετοιμασία του amislmaster.library. Το AmigaGPT απαιτεί AmiSSL "
-"5.18 ή νεότερη έκδοση. Ανατρέξτε στην τεκμηρίωση για περισσότερες "
+"5.27 ή νεότερη έκδοση. Ανατρέξτε στην τεκμηρίωση για περισσότερες "
 "πληροφορίες."
 
 #: src/openai.c:233
