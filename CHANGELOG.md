@@ -2,7 +2,7 @@
 
 ## 3.2.0 (2026-08-22)
 
-- Attach files to the prompt (OpenAI, Grok, Claude and Gemini)
+- Attach files to the prompt
 - Download files created in the response
 
 ## 3.1.0 (2026-08-16)

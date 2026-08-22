@@ -14,6 +14,7 @@
 #include <mui/Busy_mcc.h>
 #include <proto/exec.h>
 #include <proto/socket.h>
+#include <sys/socket.h>
 #include <dos/dostags.h>
 #include <dos/dosextens.h>
 #include <string.h>
@@ -34,6 +35,7 @@
 #define MAX_CONNECTION_RETRIES 10
 #define MAX_ATTACHMENT_REQUEST_RETRIES 1
 #define UPLOAD_WRITE_CHUNK_SIZE 4096
+#define PLAIN_HTTP_WRITE_CHUNK_SIZE 1024
 #define MAX_UPLOAD_WRITE_RETRIES 100
 #ifndef IPPROTO_TCP
 #define IPPROTO_TCP 6
@@ -41,6 +43,8 @@
 #ifndef TCP_NODELAY
 #define TCP_NODELAY 1
 #endif
+#define SOCKET_READ_WAIT_SECONDS 1
+#define SOCKET_READ_MAX_IDLE_SECONDS 180
 #define OPENAI_FILE_BOUNDARY "----AmigaGPTFormBoundary"
 
 static CONST_STRPTR AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS =
@@ -123,7 +127,12 @@ static LONG reconnectAndResendChatRequest(
     CONST_STRPTR proxyPassword, CONST_STRPTR request, ULONG requestLength,
     UBYTE *retryCount);
 static void flushSslWrites(BOOL useSSL);
+static void flushTransportWrites(BOOL useSSL);
+static LONG waitForSocketReadable(BOOL useSSL);
+static LONG waitForSocketWritable(void);
 static void clearHttpReadBuffer(void);
+static BOOL hostUsesRemoteFileIds(CONST_STRPTR host,
+                                  APIChatEndpoint apiEndpoint);
 static BOOL uploadRemoteFilesForMessage(
     struct ConversationNode *message, CONST_STRPTR host, UWORD port,
     BOOL useSSL, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
@@ -702,6 +711,25 @@ static BOOL attachmentFileLooksLikeText(CONST_STRPTR path) {
     return TRUE;
 }
 
+static BOOL hostUsesRemoteFileIds(CONST_STRPTR host,
+                                  APIChatEndpoint apiEndpoint) {
+    if (host == NULL)
+        return FALSE;
+    if (strcmp(host, OPENAI_HOST) == 0 &&
+        apiEndpoint == API_CHAT_ENDPOINT_RESPONSES)
+        return TRUE;
+    if (strcmp(host, XAI_HOST) == 0 &&
+        apiEndpoint == API_CHAT_ENDPOINT_RESPONSES)
+        return TRUE;
+    if (strcmp(host, ANTHROPIC_HOST) == 0 &&
+        apiEndpoint == API_CHAT_ENDPOINT_MESSAGES)
+        return TRUE;
+    if (strcmp(host, GEMINI_HOST) == 0 &&
+        apiEndpoint == API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT)
+        return TRUE;
+    return FALSE;
+}
+
 static CONST_STRPTR attachmentMimeTypeForFile(struct ChatFile *file) {
     CONST_STRPTR mime = attachmentMimeType(file != NULL ? file->name : NULL);
     if (strcmp(mime, "application/octet-stream") == 0 && file != NULL &&
@@ -770,8 +798,46 @@ static STRPTR encodeAttachmentBase64(struct ChatFile *file,
         readPos++;
     }
     *writePos = '\0';
+    {
+        ULONG expected = ((fileBytes + 2UL) / 3UL) * 4UL;
+        if (strlen(encoded) != expected) {
+            displayError(STRING_ERROR_ATTACHMENT_ENCODE);
+            CodesetsFreeA(encoded, NULL);
+            return NULL;
+        }
+    }
     *totalAttachmentBytes += fileBytes;
     return encoded;
+}
+
+static STRPTR assembleDataUrl(CONST_STRPTR mime, CONST_STRPTR encoded) {
+    ULONG mimeLen;
+    ULONG encLen;
+    ULONG totalLen;
+    STRPTR out;
+    ULONG pos;
+
+    if (mime == NULL)
+        mime = "application/octet-stream";
+    if (encoded == NULL)
+        return NULL;
+    mimeLen = strlen(mime);
+    encLen = strlen(encoded);
+    totalLen = 5UL + mimeLen + 8UL + encLen + 1UL;
+    out = AllocVec(totalLen, MEMF_ANY);
+    if (out == NULL)
+        return NULL;
+    pos = 0;
+    memcpy(out + pos, "data:", 5);
+    pos += 5;
+    memcpy(out + pos, mime, mimeLen);
+    pos += mimeLen;
+    memcpy(out + pos, ";base64,", 8);
+    pos += 8;
+    memcpy(out + pos, encoded, encLen);
+    pos += encLen;
+    out[pos] = '\0';
+    return out;
 }
 
 static BOOL messageHasLocalFiles(struct ConversationNode *message) {
@@ -785,6 +851,17 @@ static BOOL messageHasLocalFiles(struct ConversationNode *message) {
             return TRUE;
     }
     return FALSE;
+}
+
+static BOOL conversationMessageIsEmptyAssistant(
+    struct ConversationNode *message) {
+    if (message == NULL || message->role == NULL)
+        return FALSE;
+    if (strcmp(message->role, "assistant") != 0)
+        return FALSE;
+    if (messageHasLocalFiles(message))
+        return FALSE;
+    return message->content == NULL || strlen(message->content) == 0;
 }
 
 static BOOL messageHasLocalImages(struct ConversationNode *message) {
@@ -840,7 +917,8 @@ static BOOL appendLocalFileParts(struct ConversationNode *message,
                                 ? (CONST_STRPTR)file->mimeType
                                 : attachmentMimeTypeForFile(file);
         BOOL isImage = strncmp(mime, "image/", 6) == 0;
-        if (file->fileId != NULL && strlen(file->fileId) > 0) {
+        if (hostUsesRemoteFileIds(host, apiEndpoint) &&
+            file->fileId != NULL && strlen(file->fileId) > 0) {
             struct json_object *part = json_object_new_object();
             if (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES) {
                 BOOL xaiHost =
@@ -927,18 +1005,13 @@ static BOOL appendLocalFileParts(struct ConversationNode *message,
                                    json_object_new_string(encoded));
             json_object_object_add(part, "source", source);
         } else {
-            ULONG dataUrlLength = strlen("data:;base64,") + strlen(mime) +
-                                  strlen(encoded) + 1;
-            STRPTR dataUrl =
-                AllocVec(dataUrlLength, MEMF_ANY | MEMF_CLEAR);
+            STRPTR dataUrl = assembleDataUrl(mime, encoded);
             if (dataUrl == NULL) {
                 CodesetsFreeA(encoded, NULL);
                 json_object_put(part);
                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
                 return FALSE;
             }
-            snprintf(dataUrl, dataUrlLength, "data:%s;base64,%s", mime,
-                     encoded);
             if (apiEndpoint == API_CHAT_ENDPOINT_CHAT_COMPLETIONS) {
                 if (isImage) {
                     struct json_object *imageUrl = json_object_new_object();
@@ -947,7 +1020,7 @@ static BOOL appendLocalFileParts(struct ConversationNode *message,
                     json_object_object_add(imageUrl, "url",
                                            json_object_new_string(dataUrl));
                     json_object_object_add(part, "image_url", imageUrl);
-                } else {
+                } else if (host != NULL && strcmp(host, OPENAI_HOST) == 0) {
                     struct json_object *fileObj = json_object_new_object();
                     json_object_object_add(part, "type",
                                            json_object_new_string("file"));
@@ -957,6 +1030,16 @@ static BOOL appendLocalFileParts(struct ConversationNode *message,
                     json_object_object_add(fileObj, "file_data",
                                            json_object_new_string(dataUrl));
                     json_object_object_add(part, "file", fileObj);
+                } else {
+                    /* LM Studio and other local servers have no Files API. */
+                    UBYTE note[320];
+                    snprintf(note, sizeof(note), "[Attached file: %s]",
+                             file->name != NULL ? (CONST_STRPTR)file->name
+                                                : "attachment");
+                    json_object_object_add(part, "type",
+                                           json_object_new_string("text"));
+                    json_object_object_add(part, "text",
+                                           json_object_new_string(note));
                 }
             } else if (isImage) {
                 json_object_object_add(part, "type",
@@ -1078,10 +1161,13 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
 
     while (sentTotal < requestLength) {
         ULONG remaining = requestLength - sentTotal;
-        ULONG chunkLength = remaining < UPLOAD_WRITE_CHUNK_SIZE
-                                ? remaining
-                                : UPLOAD_WRITE_CHUNK_SIZE;
+        ULONG chunkLimit =
+            useSSL ? UPLOAD_WRITE_CHUNK_SIZE : PLAIN_HTTP_WRITE_CHUNK_SIZE;
+        ULONG chunkLength =
+            remaining < chunkLimit ? remaining : chunkLimit;
         LONG written;
+        if (!useSSL)
+            waitForSocketWritable();
         if (useSSL) {
             ERR_clear_error();
             written = SSL_write(ssl, request + sentTotal, chunkLength);
@@ -1114,6 +1200,12 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
                     displayError(STRING_ERROR_REQUEST_WRITE);
                 return -1;
             }
+            /* bsdsocket needs a task switch or large POSTs stay in the send
+             * buffer and the server never sees a complete request. */
+            Delay(1);
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
         }
 
         retryCount = 0;
@@ -1128,7 +1220,20 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
         }
     }
 
-    flushSslWrites(useSSL);
+    flushTransportWrites(useSSL);
+    if (!useSSL) {
+        UWORD drainTicks = (UWORD)(sentTotal / 512UL) + 5;
+        UWORD i;
+        if (drainTicks > 50)
+            drainTicks = 50;
+        for (i = 0; i < drainTicks; i++) {
+            waitForSocketWritable();
+            Delay(1);
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+        }
+    }
     updateStatusBar(STRING_WAITING_FOR_RESPONSE, yellowPen);
     return (LONG)sentTotal;
 }
@@ -1163,6 +1268,49 @@ static void flushSslWrites(BOOL useSSL) {
     BIO *wbio = SSL_get_wbio(ssl);
     if (wbio != NULL)
         (void)BIO_flush(wbio);
+}
+
+static void flushTransportWrites(BOOL useSSL) {
+    int one;
+
+    flushSslWrites(useSSL);
+    if (useSSL || sock < 0)
+        return;
+    one = 1;
+    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+}
+
+static LONG waitForSocketReadable(BOOL useSSL) {
+    fd_set readfds;
+    struct timeval tv;
+    LONG n;
+
+    if (useSSL && ssl != NULL && SSL_pending(ssl) > 0)
+        return 1;
+    if (sock < 0)
+        return -1;
+
+    memset(&readfds, 0, sizeof(readfds));
+    FD_ZERO(&readfds);
+    FD_SET(sock, &readfds);
+    tv.tv_sec = SOCKET_READ_WAIT_SECONDS;
+    tv.tv_usec = 0;
+    n = WaitSelect(sock + 1, &readfds, NULL, NULL, &tv, NULL);
+    return n;
+}
+
+static LONG waitForSocketWritable(void) {
+    fd_set writefds;
+    struct timeval tv;
+
+    if (sock < 0)
+        return -1;
+    memset(&writefds, 0, sizeof(writefds));
+    FD_ZERO(&writefds);
+    FD_SET(sock, &writefds);
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    return WaitSelect(sock + 1, NULL, &writefds, NULL, &tv, NULL);
 }
 
 static void clearHttpReadBuffer(void) {
@@ -2517,6 +2665,11 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
             int one = 1;
             setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one));
             setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+            {
+                int sndbuf = 65535;
+                setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sndbuf,
+                           sizeof(sndbuf));
+            }
         }
 
         if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -3167,6 +3320,16 @@ struct json_object **postChatMessageToOpenAI(
         getLastNonSystemConversationMessage(conversation);
     if (isXaiHost && messageHasLocalImages(attachmentMessage))
         canUseStatefulResponses = FALSE;
+    /* LM Studio and other OpenAI-compatible servers decode vision on
+     * chat/completions (image_url.url). Their /v1/responses path tries to
+     * load the data URI as a raw media buffer and fails. */
+    if (!isOpenAiHost && !isXaiHost && !isAnthropicHost && !isGeminiHost &&
+        messageHasLocalFiles(attachmentMessage) &&
+        apiEndpoint == API_CHAT_ENDPOINT_RESPONSES) {
+        apiEndpoint = API_CHAT_ENDPOINT_CHAT_COMPLETIONS;
+        includeOpenAiTools = FALSE;
+        canUseStatefulResponses = FALSE;
+    }
 
     if (useProxy && proxyUsesSSL) {
         useSSL = TRUE;
@@ -3180,13 +3343,10 @@ struct json_object **postChatMessageToOpenAI(
 
         /* Upload binaries via each provider's Files API so the chat JSON stays
          * tiny. A huge Base64 POST on classic AmiSSL is what then resets while
-         * we wait for the response. */
+         * we wait for the response. Custom OpenAI-compatible hosts such as
+         * LM Studio have no Files API, so they keep inline data URIs. */
         if (messageHasLocalFiles(attachmentMessage) &&
-            ((isOpenAiHost && apiEndpoint == API_CHAT_ENDPOINT_RESPONSES) ||
-             (isXaiHost && apiEndpoint == API_CHAT_ENDPOINT_RESPONSES) ||
-             (isAnthropicHost &&
-              apiEndpoint == API_CHAT_ENDPOINT_MESSAGES) ||
-             (isGeminiHost && useGeminiGenerateContent))) {
+            hostUsesRemoteFileIds(host, apiEndpoint)) {
             if (!uploadRemoteFilesForMessage(
                     attachmentMessage, host, port, useSSL, useProxy, proxyHost,
                     proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
@@ -3259,6 +3419,10 @@ struct json_object **postChatMessageToOpenAI(
             while (conversationNode->mln_Succ != NULL) {
                 struct ConversationNode *message =
                     (struct ConversationNode *)conversationNode;
+                if (conversationMessageIsEmptyAssistant(message)) {
+                    conversationNode = conversationNode->mln_Succ;
+                    continue;
+                }
                 struct json_object *contentObj = json_object_new_object();
 
                 CONST_STRPTR role = "user";
@@ -3312,6 +3476,10 @@ struct json_object **postChatMessageToOpenAI(
             while (conversationNode->mln_Succ != NULL) {
                 struct ConversationNode *message =
                     (struct ConversationNode *)conversationNode;
+                if (conversationMessageIsEmptyAssistant(message)) {
+                    conversationNode = conversationNode->mln_Succ;
+                    continue;
+                }
                 struct json_object *messageObj = json_object_new_object();
                 json_object_object_add(messageObj, "role",
                                        json_object_new_string(message->role));
@@ -3370,6 +3538,10 @@ struct json_object **postChatMessageToOpenAI(
             while (conversationNode->mln_Succ != NULL) {
                 struct ConversationNode *message =
                     (struct ConversationNode *)conversationNode;
+                if (conversationMessageIsEmptyAssistant(message)) {
+                    conversationNode = conversationNode->mln_Succ;
+                    continue;
+                }
                 struct json_object *messageObj = json_object_new_object();
                 json_object_object_add(messageObj, "role",
                                        json_object_new_string(message->role));
@@ -3405,7 +3577,9 @@ struct json_object **postChatMessageToOpenAI(
             /* Web search tools for chat/completions.  xAI gets its
              * provider-specific x_search alongside web_search; other
              * OpenAI-compatible providers get a plain web_search entry. */
-            if (webSearchEnabled) {
+            if (webSearchEnabled &&
+                (isOpenAiHost || isXaiHost ||
+                 !messageHasLocalFiles(attachmentMessage))) {
                 struct json_object *toolsArray = json_object_new_array();
                 struct json_object *webObj = json_object_new_object();
                 json_object_object_add(webObj, "type",
@@ -3425,6 +3599,11 @@ struct json_object **postChatMessageToOpenAI(
             BOOL wantTools = (includeOpenAiTools &&
                               (webSearchEnabled || shellToolEnabled)) ||
                              (webSearchEnabled && isXaiHost);
+            /* Local OpenAI-compatible servers reject hosted OpenAI tools, and
+             * mixing them with attachments makes them look for a Files API. */
+            if (wantTools && !isOpenAiHost && !isXaiHost &&
+                messageHasLocalFiles(attachmentMessage))
+                wantTools = FALSE;
             if (wantTools) {
                 struct json_object *toolsArray = json_object_new_array();
                 if (webSearchEnabled) {
@@ -3527,6 +3706,10 @@ struct json_object **postChatMessageToOpenAI(
                 while (conversationNode->mln_Succ != NULL) {
                     struct ConversationNode *message =
                         (struct ConversationNode *)conversationNode;
+                    if (conversationMessageIsEmptyAssistant(message)) {
+                        conversationNode = conversationNode->mln_Succ;
+                        continue;
+                    }
                     struct json_object *messageObj = json_object_new_object();
                         json_object_object_add(
                             messageObj, "role",
@@ -3625,7 +3808,16 @@ struct json_object **postChatMessageToOpenAI(
         }
 
         updateStatusBar(STRING_PREPARING_REQUEST, yellowPen);
-        UTF8 *jsonString = json_object_to_json_string(obj);
+        UTF8 *jsonString =
+            (UTF8 *)json_object_to_json_string_ext(
+                obj, JSON_C_TO_STRING_PLAIN | JSON_C_TO_STRING_NOSLASHESCAPE);
+        if (jsonString == NULL) {
+            json_object_put(obj);
+            FreeVec(responses);
+            streamingInProgress = FALSE;
+            displayError(STRING_ERROR_CHAT_REQUEST_TOO_LARGE);
+            return NULL;
+        }
 
         STRPTR authHeader = AllocVec(256, MEMF_CLEAR | MEMF_ANY);
         if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
@@ -3684,8 +3876,64 @@ struct json_object **postChatMessageToOpenAI(
             endpointName = endpointNameBuf;
         }
 
-        ULONG requestCapacity = strlen(jsonString) + 8192;
-        requestBuffer = AllocVec(requestCapacity, MEMF_ANY | MEMF_CLEAR);
+        ULONG jsonLength = strlen(jsonString);
+        if (messageHasLocalFiles(attachmentMessage) &&
+            jsonLength < totalAttachmentBytes) {
+            json_object_put(obj);
+            FreeVec(authHeader);
+            FreeVec(responses);
+            streamingInProgress = FALSE;
+            displayError(STRING_ERROR_CHAT_REQUEST_TOO_LARGE);
+            return NULL;
+        }
+
+        UBYTE headerBuf[4096];
+        LONG headerLength;
+        BOOL useAbsoluteRequestTarget = useProxy && !proxyUsesSSL;
+        if (useAbsoluteRequestTarget) {
+            headerLength = snprintf(
+                headerBuf, sizeof(headerBuf),
+                "POST %s://%s:%d%s%s/%s HTTP/1.1\r\n"
+                "Host: %s:%d\r\n"
+                "Content-Type: application/json\r\n"
+                "%s"
+                "%s"
+                "User-Agent: AmigaGPT\r\n"
+                "Content-Length: %lu\r\n"
+                "Connection: close\r\n"
+                "%s\r\n",
+                useSSL ? "https" : "http", host, port,
+                strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
+                effectiveApiEndpointUrl, endpointName, host, port,
+                apiAuthHeader, customHeadersFormatted, jsonLength,
+                authHeader);
+        } else {
+            headerLength = snprintf(
+                headerBuf, sizeof(headerBuf),
+                "POST %s%s/%s HTTP/1.1\r\n"
+                "Host: %s:%d\r\n"
+                "Content-Type: application/json\r\n"
+                "%s"
+                "%s"
+                "User-Agent: AmigaGPT\r\n"
+                "Content-Length: %lu\r\n"
+                "Connection: close\r\n"
+                "%s\r\n",
+                strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
+                effectiveApiEndpointUrl, endpointName, host, port,
+                apiAuthHeader, customHeadersFormatted, jsonLength,
+                authHeader);
+        }
+        if (headerLength < 0 || (ULONG)headerLength >= sizeof(headerBuf)) {
+            json_object_put(obj);
+            FreeVec(authHeader);
+            FreeVec(responses);
+            displayError(STRING_ERROR_CHAT_REQUEST_TOO_LARGE);
+            return NULL;
+        }
+
+        ULONG requestCapacity = (ULONG)headerLength + jsonLength + 1;
+        requestBuffer = AllocVec(requestCapacity, MEMF_ANY);
         if (requestBuffer == NULL) {
             json_object_put(obj);
             FreeVec(authHeader);
@@ -3693,55 +3941,14 @@ struct json_object **postChatMessageToOpenAI(
             displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
             return NULL;
         }
-        /* Absolute-form request targets are for a plain HTTP proxy. Direct TLS
-         * connections, and TLS connections established through CONNECT, use
-         * the normal origin-form path. */
-        BOOL useAbsoluteRequestTarget = useProxy && !proxyUsesSSL;
-        if (useAbsoluteRequestTarget) {
-            requestLength =
-                snprintf(requestBuffer, requestCapacity,
-                         "POST %s://%s:%d%s%s/%s HTTP/1.1\r\n"
-                         "Host: %s:%d\r\n"
-                         "Content-Type: application/json\r\n"
-                         "%s"
-                         "%s"
-                         "User-Agent: AmigaGPT\r\n"
-                         "Content-Length: %lu\r\n"
-                         "%s\r\n"
-                         "%s\0",
-                         useSSL ? "https" : "http", host, port,
-                         strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
-                         effectiveApiEndpointUrl, endpointName, host, port,
-                         apiAuthHeader, customHeadersFormatted,
-                         strlen(jsonString), authHeader, jsonString);
-        } else {
-            requestLength =
-                snprintf(requestBuffer, requestCapacity,
-                         "POST %s%s/%s HTTP/1.1\r\n"
-                         "Host: %s:%d\r\n"
-                         "Content-Type: application/json\r\n"
-                         "%s"
-                         "%s"
-                         "User-Agent: AmigaGPT\r\n"
-                         "Content-Length: %lu\r\n"
-                         "%s\r\n"
-                         "%s\0",
-                         strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
-                         effectiveApiEndpointUrl, endpointName, host, port,
-                         apiAuthHeader, customHeadersFormatted,
-                         strlen(jsonString), authHeader, jsonString);
-        }
+        memcpy(requestBuffer, headerBuf, (ULONG)headerLength);
+        memcpy(requestBuffer + headerLength, jsonString, jsonLength);
+        requestBuffer[headerLength + jsonLength] = '\0';
+        requestLength = (LONG)((ULONG)headerLength + jsonLength);
 
         json_object_put(obj);
 
         FreeVec(authHeader);
-
-        if (requestLength < 0 || (ULONG)requestLength >= requestCapacity) {
-            FreeVec(requestBuffer);
-            FreeVec(responses);
-            displayError(STRING_ERROR_CHAT_REQUEST_TOO_LARGE);
-            return NULL;
-        }
 
         updateStatusBar(STRING_CONNECTING, yellowPen);
         while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
@@ -3757,6 +3964,12 @@ struct json_object **postChatMessageToOpenAI(
             }
         }
         connectionRetryCount = 0;
+        {
+            UBYTE sizeMessage[80];
+            snprintf(sizeMessage, sizeof(sizeMessage), "Sending %lu bytes...",
+                     (ULONG)requestLength);
+            updateStatusBar(sizeMessage, yellowPen);
+        }
         ssl_err = writeRequestWithProgress(
             useSSL, requestBuffer, (ULONG)requestLength, FALSE);
         if (ssl_err <= 0) {
@@ -3768,7 +3981,7 @@ struct json_object **postChatMessageToOpenAI(
     }
 
 #ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
+    showLoadingBar();
 #endif
 
     if (!startedNewRequest || ssl_err > 0) {
@@ -3777,7 +3990,7 @@ struct json_object **postChatMessageToOpenAI(
         BOOL doneReading = FALSE;
         LONG err = 0;
         LONG lastReadSocketError = 0;
-        UBYTE statusMessage[64];
+        ULONG idleWaitSeconds = 0;
         UBYTE *tempReadBuffer = AllocVec(
             useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
         if (startedNewRequest)
@@ -3805,35 +4018,75 @@ struct json_object **postChatMessageToOpenAI(
             }
 
             BOOL didReadBytes = FALSE;
+            BOOL socketWaitFailed = FALSE;
             if (!shouldParseBuffered) {
-                if (useSSL) {
+                LONG waitResult = waitForSocketReadable(useSSL);
+                if (waitResult == 0) {
+                    idleWaitSeconds += SOCKET_READ_WAIT_SECONDS;
+                    updateStatusBar(STRING_WAITING_FOR_RESPONSE, yellowPen);
+                    if (idleWaitSeconds >= SOCKET_READ_MAX_IDLE_SECONDS) {
+                        SetIoErr(0);
+                        if (responseIndex == 0) {
+                            struct json_object *errObj =
+                                json_object_new_object();
+                            struct json_object *errInner =
+                                json_object_new_object();
+                            json_object_object_add(
+                                errInner, "message",
+                                json_object_new_string(
+                                    STRING_ERROR_CONNECTION));
+                            json_object_object_add(errObj, "error", errInner);
+                            responses[responseIndex++] = errObj;
+                        }
+                        streamingInProgress = FALSE;
+                        closeActiveResponseConnection();
+                        doneReading = TRUE;
+                    }
+                    continue;
+                }
+                if (waitResult < 0) {
+                    bytesRead = -1;
+                    lastReadSocketError = errno;
+                    socketWaitFailed = TRUE;
+                    didReadBytes = TRUE;
+                } else if (useSSL) {
                     ERR_clear_error();
                     bytesRead = SSL_read(
                         ssl, tempReadBuffer,
                         useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1);
+                    didReadBytes = TRUE;
                 } else {
                     bytesRead = recv(
                         sock, tempReadBuffer,
                         useProxy ? 8192 - 1 : TEMP_READ_BUFFER_LENGTH - 1, 0);
+                    didReadBytes = TRUE;
                 }
-                didReadBytes = TRUE;
             } else {
                 bytesRead = 0;
             }
-            snprintf(statusMessage, sizeof(statusMessage),
-                     STRING_DOWNLOADING_RESPONSE);
-            updateStatusBar(statusMessage, yellowPen);
-            // /* Only append when we actually read bytes. */
             if (bytesRead > 0) {
+                idleWaitSeconds = 0;
+                tempReadBuffer[bytesRead] = '\0';
                 strncat(readBuffer, tempReadBuffer, bytesRead);
+                updateStatusBar(STRING_DOWNLOADING_RESPONSE, yellowPen);
             }
-            if (useSSL) {
+            if (socketWaitFailed) {
+                err = SSL_ERROR_SYSCALL;
+            } else if (useSSL) {
                 /* If we skipped reading because we had buffered events, force
                  * the parsing path. */
                 err = didReadBytes ? SSL_get_error(ssl, bytesRead)
                                    : SSL_ERROR_NONE;
                 if (didReadBytes && bytesRead <= 0)
                     lastReadSocketError = errno;
+            } else if (didReadBytes) {
+                lastReadSocketError = errno;
+                if (bytesRead > 0)
+                    err = SSL_ERROR_NONE;
+                else if (bytesRead == 0)
+                    err = SSL_ERROR_ZERO_RETURN;
+                else
+                    err = SSL_ERROR_SYSCALL;
             } else {
                 err = SSL_ERROR_NONE;
             }
@@ -4395,13 +4648,26 @@ struct json_object **postChatMessageToOpenAI(
         }
 
         STRPTR newestResponseId = NULL;
+        BOOL responseFailed = FALSE;
         for (UWORD i = 0; i < responseIndex; i++) {
-            STRPTR candidate = extractResponseIdFromPayload(responses[i]);
+            CONST_STRPTR typeStr;
+            STRPTR candidate;
+            if (responses[i] == NULL)
+                continue;
+            typeStr = responseObjectString(responses[i], "type");
+            if ((typeStr != NULL &&
+                 (strcmp(typeStr, "error") == 0 ||
+                  strcmp(typeStr, "response.failed") == 0)) ||
+                getApiErrorMessageFromJson(responses[i]) != NULL)
+                responseFailed = TRUE;
+            candidate = extractResponseIdFromPayload(responses[i]);
             if (candidate != NULL && strlen(candidate) > 0) {
                 newestResponseId = candidate;
             }
         }
-        if (newestResponseId != NULL) {
+        if (responseFailed)
+            setConversationLastResponseId(conversation, NULL);
+        else if (newestResponseId != NULL) {
             setConversationLastResponseId(conversation, newestResponseId);
         }
     }

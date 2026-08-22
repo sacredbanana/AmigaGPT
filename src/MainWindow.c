@@ -2039,14 +2039,24 @@ static void sendChatMessage() {
      * events. Image inputs can therefore produce a response many times larger
      * than the final JSON object, which is unreliable on classic Amiga TCP
      * stacks even though the upload itself completed. Use the compact response
-     * form for messages with local files, except on xAI: file attachments there
-     * become an agentic search and need stream events to keep the socket
-     * alive. */
+     * form for messages with local files on cloud SSL hosts. xAI attachments
+     * become an agentic search and need stream events. Custom/local servers
+     * such as LM Studio keep the profile's streaming setting. */
     BOOL xaiHost = chatSettings.host != NULL &&
                    strcmp(chatSettings.host, "api.x.ai") == 0;
+    BOOL cloudAttachmentHost =
+        (chatSettings.host != NULL &&
+         (strcmp(chatSettings.host, "api.openai.com") == 0 ||
+          strcmp(chatSettings.host, "generativelanguage.googleapis.com") ==
+              0 ||
+          strcmp(chatSettings.host, "api.anthropic.com") == 0));
     BOOL requestStream = chatSettings.stream;
-    if (chatFileCount(&userMessage->files) > 0)
-        requestStream = xaiHost;
+    if (chatFileCount(&userMessage->files) > 0) {
+        if (xaiHost)
+            requestStream = TRUE;
+        else if (cloudAttachmentHost)
+            requestStream = FALSE;
+    }
 
     setConversationSystem(currentConversation, chatSettings.chatSystem);
 
