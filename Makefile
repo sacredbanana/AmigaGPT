@@ -14,11 +14,6 @@ DAEMON_OUT = $(EXECUTABLE_DIR)/$(DAEMON_NAME)_OS3
 CC = m68k-amigaos-gcc
 VASM = vasmm68k_mot
 
-LIBDIR = /opt/amiga/m68k-amigaos/lib
-SDKDIR = /opt/amiga/m68k-amigaos/sys-include
-NDKDIR = /opt/amiga/m68k-amigaos/ndk-include
-INCDIR = /opt/amiga/m68k-amigaos/include
-
 ifeq ($(OS),Darwin)
 	SED = sed -i "" 
 else
@@ -64,9 +59,9 @@ else
 	CCFLAGS += -Ofast -fomit-frame-pointer
 endif
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
-ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NDKDIR),-I$(INCDIR),-D
-LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui
-VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS3__ -I$(INCDIR) -I$(SDKDIR) -I$(NDKDIR)
+ASFLAGS = -Wa,-g,--register-prefix-optional,-D
+LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui
+VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS3__
 
 .PHONY: all clean copy_bundle_files catalog catalog_definition daemon
 

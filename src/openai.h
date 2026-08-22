@@ -373,6 +373,8 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
  * @param webSearchEnabled whether to enable web search or not
+ * @param shellToolEnabled whether to enable the AmigaDOS shell tool
+ * @param codeInterpreterEnabled whether to enable the hosted code interpreter
  * @param apiEndpoint the API endpoint to use
  * @param apiEndpointUrl the API endpoint URL to use
  * @param authorizationType the authorization type to use
@@ -387,8 +389,9 @@ struct json_object **postChatMessageToOpenAI(
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, BOOL webSearchEnabled, BOOL shellToolEnabled,
-    APIChatEndpoint apiEndpoint, CONST_STRPTR apiEndpointUrl,
-    AuthorizationType authorizationType, CONST_STRPTR customHeaders);
+    BOOL codeInterpreterEnabled, APIChatEndpoint apiEndpoint,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders);
 
 /**
  * Post a image creation request to OpenAI
@@ -591,6 +594,7 @@ STRPTR executeShellCommand(UTF8 *command, LONG *exitCode);
  * @param proxyUsername the proxy username
  * @param proxyPassword the proxy password
  * @param shellToolEnabled whether the shell tool is enabled
+ * @param codeInterpreterEnabled whether the hosted code interpreter is enabled
  * @param apiEndpointUrl the API endpoint base URL (e.g. "v1")
  * @param authorizationType the authorization type to use
  * @param customHeaders custom HTTP headers to add to the request
@@ -602,8 +606,8 @@ struct json_object *postToolResultToOpenAI(
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, BOOL shellToolEnabled,
-    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
-    CONST_STRPTR customHeaders);
+    BOOL codeInterpreterEnabled, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders);
 
 /**
  * Post a text to speech request to the ElevenLabs API

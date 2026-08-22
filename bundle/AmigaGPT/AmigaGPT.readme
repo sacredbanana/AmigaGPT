@@ -21,6 +21,7 @@ Features:
 - Generates text based on input prompts
 - Generates images based on input prompts
 - Shell Tool - Let the AI execute AmigaDOS commands on your system
+- Code Interpreter - Let the AI run Python in a provider-hosted sandbox
 - UI customisation
 - Full conversation history
 - Text-to-speech (Amiga Native, Flite, OpenAI, xAI, ElevenLabs, OpenVox)
@@ -165,7 +166,8 @@ any prompt into this box and press "Send" to see the GPT model's response.
 The generated text appears in the box above the input. You can choose to have
 this text read aloud using the "Speech" menu option. To choose the chat model
 and provider (OpenAI, Google Gemini, xAI Grok, Anthropic Claude or a custom
-server), open "Chat Provider Settings" from the "Chat" menu.
+server), and to enable web search or the code interpreter, open "Chat Provider
+Settings" from the "Chat" menu.
 
 To the left of the chat box is a conversation list which you can use to go to
 another saved conversation. New conversations can be created with the "New
@@ -210,6 +212,26 @@ either AmigaGPT or the AmigaGPTD daemon.
 
 Note: Use this feature responsibly. While you have control over which commands
 are executed, be cautious about allowing commands that modify or delete files.
+
+*Code Interpreter*
+
+The Code Interpreter lets the AI write and run Python in a sandboxed
+environment hosted by the chat provider. Use it for calculations, data
+analysis, and files the model generates as part of its answer.
+
+To enable it, open "Chat Provider Settings" from the "Chat" menu and turn on
+"Code Interpreter" for the selected profile. The option is shown for OpenAI,
+Google Gemini, xAI Grok and Anthropic Claude. For a custom profile it is shown
+when the API endpoint is Responses, Messages or Gemini generateContent, and
+hidden for chat/completions servers that do not provide a hosted interpreter.
+
+Attach a .zip file with "Attach files...". On OpenAI the archive is uploaded
+and given to the Code Interpreter container. On Anthropic Claude it is uploaded
+to the code-execution container. Turn on Code Interpreter for that profile so
+the model can unpack the ZIP.
+
+When the model creates a file (for example a CSV or a plot), AmigaGPT can
+download it with the existing received-files controls.
 
 *General*
 
@@ -346,6 +368,15 @@ Special Thanks:
   http://amiga-news.de
 
 Changelog:
+
+------------------
+3.2.0 (2026-08-22)
+------------------
+
+- Attach files to the prompt
+- Download files created in the response
+- Chat profile option to enable the provider's hosted code interpreter
+- Upgrade AmiSSL version to 5.27
 
 ------------------
 3.1.0 (2026-08-16)

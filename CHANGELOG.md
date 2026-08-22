@@ -3,8 +3,12 @@
 ## 3.2.0 (2026-08-22)
 
 - Attach files to the prompt
+- Send ZIP archives as chat attachments (OpenAI and Anthropic Code Interpreter)
 - Download files created in the response
+- Chat profile option to enable the provider's hosted code interpreter
 - Upgrade AmiSSL version to 5.27
+- Recompiled with latest libnix
+- Recompiled with optimsised build of json-c
 
 ## 3.1.0 (2026-08-16)
 

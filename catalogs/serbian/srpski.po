@@ -1999,6 +1999,11 @@ msgctxt "STRING_WAITING_FOR_RESPONSE (381//)"
 msgid "Upload complete. Waiting for response..."
 msgstr "Upload complete. Waiting for response..."
 
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_CODE_INTERPRETER (382//)"
+msgid "Code Interpreter"
+msgstr "Interpreter koda"
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Voice"

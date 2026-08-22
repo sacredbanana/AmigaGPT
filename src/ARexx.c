@@ -437,18 +437,22 @@ static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
         STRPTR system = NULL;
         ULONG webSearch = TRUE;
         ULONG shellTool = FALSE;
+        ULONG codeInterpreter = FALSE;
         if (configObj) {
             get(configObj, MUIA_AmigaGPTConfig_OpenAiChatModelName, &model);
             get(configObj, MUIA_AmigaGPTConfig_OpenAiWebSearchEnabled,
                 &webSearch);
             get(configObj, MUIA_AmigaGPTConfig_OpenAiShellToolEnabled,
                 &shellTool);
+            get(configObj, MUIA_AmigaGPTConfig_OpenAiCodeInterpreterEnabled,
+                &codeInterpreter);
             get(configObj, MUIA_AmigaGPTConfig_OpenAiChatSystem, &system);
         }
         out->model =
             (model != NULL && strlen(model) > 0) ? model : "gpt-5-chat-latest";
         out->webSearchEnabled = (BOOL)webSearch;
         out->shellToolEnabled = (BOOL)shellTool;
+        out->codeInterpreterEnabled = (BOOL)codeInterpreter;
         rexxReplaceString(&rexxResolvedChatSystem, system);
         out->chatSystem = rexxResolvedChatSystem;
     } else if (strcmp(profileName, REXX_LOCKED_PROFILE_NAME_GEMINI) == 0) {
@@ -463,16 +467,20 @@ static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
         STRPTR model = NULL;
         STRPTR system = NULL;
         ULONG webSearch = TRUE;
+        ULONG codeInterpreter = FALSE;
         if (configObj) {
             get(configObj, MUIA_AmigaGPTConfig_GeminiChatModelName, &model);
             get(configObj, MUIA_AmigaGPTConfig_GeminiWebSearchEnabled,
                 &webSearch);
+            get(configObj, MUIA_AmigaGPTConfig_GeminiCodeInterpreterEnabled,
+                &codeInterpreter);
             get(configObj, MUIA_AmigaGPTConfig_GeminiChatSystem, &system);
         }
         out->model =
             (model != NULL && strlen(model) > 0) ? model : "gemini-2.5-flash";
         out->webSearchEnabled = (BOOL)webSearch;
         out->shellToolEnabled = FALSE;
+        out->codeInterpreterEnabled = (BOOL)codeInterpreter;
         rexxReplaceString(&rexxResolvedChatSystem, system);
         out->chatSystem = rexxResolvedChatSystem;
     } else if (strcmp(profileName, REXX_LOCKED_PROFILE_NAME_GROK) == 0) {
@@ -487,15 +495,19 @@ static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
         STRPTR model = NULL;
         STRPTR system = NULL;
         ULONG webSearch = TRUE;
+        ULONG codeInterpreter = FALSE;
         if (configObj) {
             get(configObj, MUIA_AmigaGPTConfig_GrokChatModelName, &model);
             get(configObj, MUIA_AmigaGPTConfig_GrokWebSearchEnabled,
                 &webSearch);
+            get(configObj, MUIA_AmigaGPTConfig_GrokCodeInterpreterEnabled,
+                &codeInterpreter);
             get(configObj, MUIA_AmigaGPTConfig_GrokChatSystem, &system);
         }
         out->model = (model != NULL && strlen(model) > 0) ? model : "grok-4";
         out->webSearchEnabled = (BOOL)webSearch;
         out->shellToolEnabled = FALSE;
+        out->codeInterpreterEnabled = (BOOL)codeInterpreter;
         rexxReplaceString(&rexxResolvedChatSystem, system);
         out->chatSystem = rexxResolvedChatSystem;
     } else {
@@ -510,10 +522,13 @@ static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
         STRPTR model = NULL;
         STRPTR system = NULL;
         ULONG webSearch = TRUE;
+        ULONG codeInterpreter = FALSE;
         if (configObj) {
             get(configObj, MUIA_AmigaGPTConfig_AnthropicChatModelName, &model);
             get(configObj, MUIA_AmigaGPTConfig_AnthropicWebSearchEnabled,
                 &webSearch);
+            get(configObj, MUIA_AmigaGPTConfig_AnthropicCodeInterpreterEnabled,
+                &codeInterpreter);
             get(configObj, MUIA_AmigaGPTConfig_AnthropicChatSystem, &system);
         }
         out->model = (model != NULL && strlen(model) > 0)
@@ -521,6 +536,7 @@ static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
                          : "claude-3-5-sonnet-latest";
         out->webSearchEnabled = (BOOL)webSearch;
         out->shellToolEnabled = FALSE;
+        out->codeInterpreterEnabled = (BOOL)codeInterpreter;
         rexxReplaceString(&rexxResolvedChatSystem, system);
         out->chatSystem = rexxResolvedChatSystem;
     }
@@ -605,6 +621,10 @@ static BOOL rexxResolveChatProfileSettings(CONST_STRPTR profileName,
         rexxJsonGetBoolDefault(profile, "webSearchEnabled", TRUE);
     out->shellToolEnabled =
         rexxJsonGetBoolDefault(profile, "shellToolEnabled", FALSE);
+    out->codeInterpreterEnabled =
+        rexxJsonGetBoolDefault(profile, "codeInterpreterEnabled", FALSE);
+    if (out->apiEndpoint == API_CHAT_ENDPOINT_CHAT_COMPLETIONS)
+        out->codeInterpreterEnabled = FALSE;
     rexxReplaceString(&rexxResolvedChatSystem,
                       rexxJsonGetStringDefault(profile, "chatSystem", ""));
     out->chatSystem = rexxResolvedChatSystem;
@@ -1267,8 +1287,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         conversation, host, portValue, useSSL, model, apiKey, FALSE, useProxy,
         proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
         proxyUsername, proxyPassword, webSearchEnabled,
-        rexxSettings.shellToolEnabled, apiEndpoint, apiEndpointUrl, authType,
-        customHeaders);
+        rexxSettings.shellToolEnabled, rexxSettings.codeInterpreterEnabled,
+        apiEndpoint, apiEndpointUrl, authType, customHeaders);
 
     /* Note: Don't free the conversation here - we keep it for context */
 
@@ -1331,8 +1351,9 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             responseId, callId, toolOutput, model, (STRPTR)host,
             (UWORD)portValue, useSSL, apiKey, useProxy, proxyHost,
             proxyPortValue, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-            proxyPassword, rexxSettings.shellToolEnabled, apiEndpointUrl,
-            authType, customHeaders);
+            proxyPassword, rexxSettings.shellToolEnabled,
+            rexxSettings.codeInterpreterEnabled, apiEndpointUrl, authType,
+            customHeaders);
 
         if (output != NULL) {
             FreeVec(output);

@@ -39,6 +39,9 @@ AI Image Generation with DALL-E 2, DALL-E 3 and GPT-Image-1
 - @{b}Shell Tool@{ub}
 Let ChatGPT execute AmigaDOS commands on your system. Ask it to list files, create directories, show file contents, and more. All commands require your approval before execution.
 
+- @{b}Code Interpreter@{ub}
+Let the AI write and run Python in a provider-hosted sandbox for calculations, data analysis and generated files. Enable it in Chat Provider Settings. Available for OpenAI, Google Gemini, xAI Grok, Anthropic Claude, and custom profiles that use the Responses, Messages or Gemini generateContent endpoints.
+
 - @{b}Seamless integration with AmigaOS and MorphOS@{ub}
 AmigaGPT takes full advantage of the MUI framework to provide a smooth, native user experience that is responsive and easy to use.
 
@@ -196,6 +199,7 @@ Click on a topic to learn about it:
 @{"Chatting with ChatGPT " link chatting}
 @{"Generating images " link images}
 @{"Shell Tool " link shelltool}
+@{"Code Interpreter " link codeinterpreter}
 @{"Conversation list " link conlist}
 @{"Edit menu " link editmenu}
 @{"Changing the appearance of the UI and chat " link appearance}
@@ -226,7 +230,7 @@ When launching for the first time you will need to enter your OpenAI API key bef
 
 When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "Send" or Shift + Enter to see ChatGPT's response. The generated text appears in the box above the input. Depending on if you have speech configured and enabled, you will also hear it spoken to you.
 
-You can choose to have this text read aloud using the "Speech" menu option. To choose the chat model and provider (OpenAI, Google Gemini, xAI Grok, Anthropic Claude or a custom provider), open "Chat Provider Settings" from the "Chat" menu.
+You can choose to have this text read aloud using the "Speech" menu option. To choose the chat model and provider (OpenAI, Google Gemini, xAI Grok, Anthropic Claude or a custom provider), and to enable web search or the code interpreter, open "Chat Provider Settings" from the "Chat" menu.
 
 You can also chat to AmigaGPT within the Shell as long as either AmigaGPT or the AmigaGPTD daemon are running. Just type `askgpt` into the shell and it will ask you what you want to ask. Or just ask right away with the command "askgpt What is the capital of Australia?". To activate a mini GUI for AskGPT, just add `GUI` as the first argument to AskGPT.
 
@@ -287,6 +291,25 @@ The Shell Tool also works via ARexx when using the SENDMESSAGE command with eith
 @{b}Warning@{ub}
 
 Use this feature responsibly. While you have control over which commands are executed, be cautious about allowing commands that modify or delete files.
+
+@endnode
+
+@node codeinterpreter "Code Interpreter"
+@{b}Code Interpreter@{ub}
+
+The Code Interpreter lets the AI write and run Python in a sandboxed environment hosted by the chat provider. Use it for calculations, data analysis, and files the model generates as part of its answer.
+
+@{b}Enabling the Code Interpreter@{ub}
+
+Open "Chat Provider Settings" from the "Chat" menu and turn on "Code Interpreter" for the selected profile. The option is shown for OpenAI, Google Gemini, xAI Grok and Anthropic Claude. For a custom profile it is shown when the API endpoint is Responses, Messages or Gemini generateContent, and hidden for chat/completions servers that do not provide a hosted interpreter.
+
+@{b}ZIP archives@{ub}
+
+Attach a .zip file with "Attach files...". On OpenAI the archive is uploaded and given to the Code Interpreter container. On Anthropic Claude it is uploaded to the code-execution container. Turn on Code Interpreter for that profile so the model can unpack the ZIP.
+
+@{b}Generated files@{ub}
+
+When the model creates a file (for example a CSV or a plot), AmigaGPT can download it with the existing received-files controls.
 
 @endnode
 
@@ -872,6 +895,13 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 
 @node changelog "Changelog"
 @{b}Changelog@{ub}
+
+@{b}3.2.0 (2026-08-22)@{ub}
+
+- Attach files to the prompt
+- Download files created in the response
+- Chat profile option to enable the provider's hosted code interpreter
+- Upgrade AmiSSL version to 5.27
 
 @{b}3.1.0 (2026-08-16)@{ub}
 

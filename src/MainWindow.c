@@ -976,7 +976,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         nameSettings.useProxy, nameSettings.proxyHost, nameSettings.proxyPort,
         nameSettings.proxyUsesSSL, nameSettings.proxyRequiresAuth,
         nameSettings.proxyUsername, nameSettings.proxyPassword, FALSE, FALSE,
-        nameSettings.apiEndpoint, nameSettings.apiEndpointUrl,
+        FALSE, nameSettings.apiEndpoint, nameSettings.apiEndpointUrl,
         nameSettings.authorizationType, nameSettings.customHeaders);
 
     struct GeneratedImage *generatedImage =
@@ -2070,9 +2070,9 @@ static void sendChatMessage() {
             chatSettings.proxyPort, chatSettings.proxyUsesSSL,
             chatSettings.proxyRequiresAuth, chatSettings.proxyUsername,
             chatSettings.proxyPassword, chatSettings.webSearchEnabled,
-            chatSettings.shellToolEnabled, chatSettings.apiEndpoint,
-            chatSettings.apiEndpointUrl, chatSettings.authorizationType,
-            chatSettings.customHeaders);
+            chatSettings.shellToolEnabled, chatSettings.codeInterpreterEnabled,
+            chatSettings.apiEndpoint, chatSettings.apiEndpointUrl,
+            chatSettings.authorizationType, chatSettings.customHeaders);
         if (responses == NULL) {
             displayError(STRING_ERROR_CONNECTING_OPENAI);
             hideLoadingBar();
@@ -2385,8 +2385,9 @@ static void sendChatMessage() {
             chatSettings.proxyHost, chatSettings.proxyPort,
             chatSettings.proxyUsesSSL, chatSettings.proxyRequiresAuth,
             chatSettings.proxyUsername, chatSettings.proxyPassword,
-            chatSettings.shellToolEnabled, chatSettings.apiEndpointUrl,
-            chatSettings.authorizationType, chatSettings.customHeaders);
+            chatSettings.shellToolEnabled, chatSettings.codeInterpreterEnabled,
+            chatSettings.apiEndpointUrl, chatSettings.authorizationType,
+            chatSettings.customHeaders);
 
         if (output != NULL) {
             FreeVec(output);
@@ -2520,7 +2521,7 @@ static void sendChatMessage() {
                 FALSE, chatSettings.useProxy, chatSettings.proxyHost,
                 chatSettings.proxyPort, chatSettings.proxyUsesSSL,
                 chatSettings.proxyRequiresAuth, chatSettings.proxyUsername,
-                chatSettings.proxyPassword, FALSE, FALSE,
+                chatSettings.proxyPassword, FALSE, FALSE, FALSE,
                 chatSettings.apiEndpoint, chatSettings.apiEndpointUrl,
                 chatSettings.authorizationType, chatSettings.customHeaders);
             struct Node *titleRequestNode =

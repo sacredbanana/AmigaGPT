@@ -26,13 +26,17 @@ You can customise the look and feel of the application, including the ability to
 
 **AmigaGPT** supports multiple speech providers, configurable from **Speech Provider Settings**. For cloud-based voices, it supports **OpenAI TTS** (high quality 16-bit voices), **xAI Grok TTS**, **ElevenLabs**, and **OpenVox** (requires AHI). For offline synthesis, AmigaOS 3 can use the Amiga's built-in `narrator.device` (**v34** and **v37**) with `translator.library`, and AmigaOS 4.1 supports `flite.device`. Speech runs in the background so the app stays responsive, with a dedicated **Stop** button to interrupt playback.
 
+- ### Code Interpreter
+
+**AmigaGPT** can let the AI write and run Python in a provider-hosted sandbox for calculations, data analysis, and generated files. Enable it in **Chat Provider Settings** for OpenAI, Google Gemini, xAI Grok, Anthropic Claude, and custom profiles that use the Responses, Messages, or Gemini generateContent endpoints. It is hidden for custom chat/completions servers that do not offer a hosted interpreter.
+
 - ### Shell Tool
 
-**AmigaGPT** can let the AI execute AmigaDOS commands directly on your Amiga. Enable it from the **Chat** menu and ask the AI to list files, create directories, show file contents, and more. All commands require your approval before execution for security.
+**AmigaGPT** can let the AI execute AmigaDOS commands directly on your Amiga. Enable it in **Chat Provider Settings** and ask the AI to list files, create directories, show file contents, and more. All commands require your approval before execution for security.
 
 - ### Web Search
 
-**AmigaGPT** can instruct the AI to search the web for up-to-date information. Enable or disable it via the **Chat** menu or the `W=WEBSEARCH` flag in the ARexx `SENDMESSAGE` command.
+**AmigaGPT** can instruct the AI to search the web for up-to-date information. Enable or disable it in **Chat Provider Settings**, or use the `W=WEBSEARCH` flag in the ARexx `SENDMESSAGE` command.
 
 - ### ARexx integration
 
@@ -127,9 +131,9 @@ There are 2 main modes of operation: Chat and Image Generation. You can switch b
 
 ### Chat
 
-When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "**Send**" to see the AI's response. The generated text appears in the box above the input. You can choose to have this text read aloud using the "**Speech**" menu option; configure the speech provider and voice in "**Speech Provider Settings**" from the **Speech** menu. To enable or disable web search, use the **Web Search** option in the **Chat** menu. To choose the chat model and provider, open "**Chat Provider Settings**" from the "**Chat**" menu.
+When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "**Send**" to see the AI's response. The generated text appears in the box above the input. You can choose to have this text read aloud using the "**Speech**" menu option; configure the speech provider and voice in "**Speech Provider Settings**" from the **Speech** menu. To enable or disable web search or the code interpreter, open **Chat Provider Settings** from the **Chat** menu. To choose the chat model and provider, use the same window.
 
-Use **Attach files...** to select one or more files to send with the next message. The selected files are shown beside the chat controls and can be removed with **Clear** before sending. OpenAI, xAI Grok, Anthropic Claude and Google Gemini upload the file first and then reference it, so the chat request stays small on classic Amiga TCP stacks. Other providers receive images and documents in their native multimodal request format. Extensionless Amiga text files such as `User-Startup` are detected from their contents and sent as plain text. To keep memory use practical on classic Amigas, each file is limited to 8 MB and all files in one request are limited to 16 MB.
+Use **Attach files...** to select one or more files to send with the next message. The selected files are shown beside the chat controls and can be removed with **Clear** before sending. OpenAI, xAI Grok, Anthropic Claude and Google Gemini upload the file first and then reference it, so the chat request stays small on classic Amiga TCP stacks. Other providers receive images and documents in their native multimodal request format. Extensionless Amiga text files such as `User-Startup` are detected from their contents and sent as plain text. ZIP archives are sent as `application/zip`. On OpenAI they are placed in the Code Interpreter container (enable **Code Interpreter** so the model can unpack them); on Anthropic Claude they are uploaded to the code-execution container the same way. To keep memory use practical on classic Amigas, each file is limited to 8 MB and all files in one request are limited to 16 MB.
 
 When an LLM response includes downloadable files, they are listed beneath the assistant message and **Save received files...** becomes available. Choose a destination drawer and AmigaGPT will save every returned file there without overwriting an existing file; numeric suffixes are added when necessary. Provider and model support for particular input types and returned files varies.
 

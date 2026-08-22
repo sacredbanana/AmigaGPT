@@ -75,6 +75,10 @@ struct AmigaGPTConfigData {
     ULONG geminiShellToolEnabled;
     ULONG grokShellToolEnabled;
     ULONG anthropicShellToolEnabled;
+    ULONG openAiCodeInterpreterEnabled;
+    ULONG geminiCodeInterpreterEnabled;
+    ULONG grokCodeInterpreterEnabled;
+    ULONG anthropicCodeInterpreterEnabled;
     ULONG customPort;
     ULONG customUseSSL;
     APIChatEndpoint customApiEndpoint;
@@ -242,6 +246,10 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->geminiShellToolEnabled = FALSE;
     data->grokShellToolEnabled = FALSE;
     data->anthropicShellToolEnabled = FALSE;
+    data->openAiCodeInterpreterEnabled = FALSE;
+    data->geminiCodeInterpreterEnabled = FALSE;
+    data->grokCodeInterpreterEnabled = FALSE;
+    data->anthropicCodeInterpreterEnabled = FALSE;
     data->customPort = 80;
     data->customUseSSL = FALSE;
     data->customApiEndpoint = API_CHAT_ENDPOINT_CHAT_COMPLETIONS;
@@ -575,6 +583,18 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_AnthropicShellToolEnabled:
         *store = data->anthropicShellToolEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_OpenAiCodeInterpreterEnabled:
+        *store = data->openAiCodeInterpreterEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GeminiCodeInterpreterEnabled:
+        *store = data->geminiCodeInterpreterEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_GrokCodeInterpreterEnabled:
+        *store = data->grokCodeInterpreterEnabled;
+        return TRUE;
+    case MUIA_AmigaGPTConfig_AnthropicCodeInterpreterEnabled:
+        *store = data->anthropicCodeInterpreterEnabled;
         return TRUE;
     case MUIA_AmigaGPTConfig_CustomPort:
         *store = data->customPort;
@@ -1019,6 +1039,30 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
         case MUIA_AmigaGPTConfig_AnthropicShellToolEnabled:
             if (data->anthropicShellToolEnabled != (ULONG)ti_Data) {
                 data->anthropicShellToolEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_OpenAiCodeInterpreterEnabled:
+            if (data->openAiCodeInterpreterEnabled != (ULONG)ti_Data) {
+                data->openAiCodeInterpreterEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_GeminiCodeInterpreterEnabled:
+            if (data->geminiCodeInterpreterEnabled != (ULONG)ti_Data) {
+                data->geminiCodeInterpreterEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_GrokCodeInterpreterEnabled:
+            if (data->grokCodeInterpreterEnabled != (ULONG)ti_Data) {
+                data->grokCodeInterpreterEnabled = (ULONG)ti_Data;
+                changed = TRUE;
+            }
+            break;
+        case MUIA_AmigaGPTConfig_AnthropicCodeInterpreterEnabled:
+            if (data->anthropicCodeInterpreterEnabled != (ULONG)ti_Data) {
+                data->anthropicCodeInterpreterEnabled = (ULONG)ti_Data;
                 changed = TRUE;
             }
             break;
@@ -1488,6 +1532,18 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
     json_object_object_add(
         configJsonObject, "anthropicShellToolEnabled",
         json_object_new_boolean((BOOL)data->anthropicShellToolEnabled));
+    json_object_object_add(
+        configJsonObject, "openAiCodeInterpreterEnabled",
+        json_object_new_boolean((BOOL)data->openAiCodeInterpreterEnabled));
+    json_object_object_add(
+        configJsonObject, "geminiCodeInterpreterEnabled",
+        json_object_new_boolean((BOOL)data->geminiCodeInterpreterEnabled));
+    json_object_object_add(
+        configJsonObject, "grokCodeInterpreterEnabled",
+        json_object_new_boolean((BOOL)data->grokCodeInterpreterEnabled));
+    json_object_object_add(
+        configJsonObject, "anthropicCodeInterpreterEnabled",
+        json_object_new_boolean((BOOL)data->anthropicCodeInterpreterEnabled));
     json_object_object_add(configJsonObject, "customPort",
                            json_object_new_int(data->customPort));
     json_object_object_add(configJsonObject, "customUseSSL",
@@ -2063,6 +2119,22 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     if (json_object_object_get_ex(configJsonObject, "anthropicShellToolEnabled",
                                   &valueObj))
         data->anthropicShellToolEnabled =
+            (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject,
+                                  "openAiCodeInterpreterEnabled", &valueObj))
+        data->openAiCodeInterpreterEnabled =
+            (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject,
+                                  "geminiCodeInterpreterEnabled", &valueObj))
+        data->geminiCodeInterpreterEnabled =
+            (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject,
+                                  "grokCodeInterpreterEnabled", &valueObj))
+        data->grokCodeInterpreterEnabled =
+            (ULONG)json_object_get_boolean(valueObj);
+    if (json_object_object_get_ex(configJsonObject,
+                                  "anthropicCodeInterpreterEnabled", &valueObj))
+        data->anthropicCodeInterpreterEnabled =
             (ULONG)json_object_get_boolean(valueObj);
 
     if (json_object_object_get_ex(configJsonObject, legacyCustomProviderFlagKey,
@@ -4139,6 +4211,13 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
             out->shellToolEnabled = (BOOL)v;
         }
         {
+            ULONG v = FALSE;
+            if (configObj)
+                get(configObj, MUIA_AmigaGPTConfig_OpenAiCodeInterpreterEnabled,
+                    &v);
+            out->codeInterpreterEnabled = (BOOL)v;
+        }
+        {
             STRPTR s = NULL;
             if (configObj)
                 get(configObj, MUIA_AmigaGPTConfig_OpenAiChatSystem, &s);
@@ -4174,6 +4253,13 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
         }
         out->shellToolEnabled = FALSE;
         {
+            ULONG v = FALSE;
+            if (configObj)
+                get(configObj, MUIA_AmigaGPTConfig_GeminiCodeInterpreterEnabled,
+                    &v);
+            out->codeInterpreterEnabled = (BOOL)v;
+        }
+        {
             STRPTR s = NULL;
             if (configObj)
                 get(configObj, MUIA_AmigaGPTConfig_GeminiChatSystem, &s);
@@ -4207,6 +4293,13 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
             out->webSearchEnabled = (BOOL)v;
         }
         out->shellToolEnabled = FALSE;
+        {
+            ULONG v = FALSE;
+            if (configObj)
+                get(configObj, MUIA_AmigaGPTConfig_GrokCodeInterpreterEnabled,
+                    &v);
+            out->codeInterpreterEnabled = (BOOL)v;
+        }
         {
             STRPTR s = NULL;
             if (configObj)
@@ -4245,6 +4338,13 @@ static void fillLockedChatProfileDefaults(struct ChatRequestSettings *out,
             out->webSearchEnabled = (BOOL)v;
         }
         out->shellToolEnabled = FALSE;
+        {
+            ULONG v = FALSE;
+            if (configObj)
+                get(configObj,
+                    MUIA_AmigaGPTConfig_AnthropicCodeInterpreterEnabled, &v);
+            out->codeInterpreterEnabled = (BOOL)v;
+        }
         {
             STRPTR s = NULL;
             if (configObj)
@@ -4335,6 +4435,10 @@ void configGetActiveChatRequestSettings(struct ChatRequestSettings *out) {
             jsonGetBoolDefault(profile, "webSearchEnabled", TRUE);
         out->shellToolEnabled =
             jsonGetBoolDefault(profile, "shellToolEnabled", FALSE);
+        out->codeInterpreterEnabled =
+            jsonGetBoolDefault(profile, "codeInterpreterEnabled", FALSE);
+        if (out->apiEndpoint == API_CHAT_ENDPOINT_CHAT_COMPLETIONS)
+            out->codeInterpreterEnabled = FALSE;
         freeString(&resolvedChatSystem);
         resolvedChatSystem =
             copyString(jsonGetStringDefault(profile, "chatSystem", ""));
@@ -4353,6 +4457,7 @@ void configGetActiveChatRequestSettings(struct ChatRequestSettings *out) {
         out->customHeaders = configGetCustomHeaders();
         out->webSearchEnabled = TRUE;
         out->shellToolEnabled = FALSE;
+        out->codeInterpreterEnabled = FALSE;
         out->chatSystem = "";
     }
     if (arr != NULL)

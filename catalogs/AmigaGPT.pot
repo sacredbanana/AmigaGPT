@@ -1973,3 +1973,8 @@ msgstr "Uploading request: %lu%%"
 msgctxt "STRING_WAITING_FOR_RESPONSE (381//)"
 msgid "Upload complete. Waiting for response..."
 msgstr "Upload complete. Waiting for response..."
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_CODE_INTERPRETER (382//)"
+msgid "Code Interpreter"
+msgstr "Code Interpreter"

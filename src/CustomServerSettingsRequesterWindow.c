@@ -38,6 +38,7 @@ Object *customServerFullUrlPreviewString;
 Object *customServerStreamingCycle;
 Object *customServerWebSearchCycle;
 Object *customServerShellToolCycle;
+Object *customServerCodeInterpreterCycle;
 Object *customServerChatSystemString;
 Object *customServerSettingsRequesterWindowObject;
 Object *customServerProfileList;
@@ -61,6 +62,9 @@ static Object *customServerStreamingGroup = NULL;
 static Object *customServerWebSearchGroup = NULL;
 /* Frame group containing Shell Tool option (chat-only) */
 static Object *customServerShellToolGroup = NULL;
+/* Frame group containing Code Interpreter option (chat-only; hidden when the
+ * selected provider/endpoint has no hosted code interpreter) */
+static Object *customServerCodeInterpreterGroup = NULL;
 /* Frame group containing Chat System prompt (chat-only) */
 static Object *customServerChatSystemGroup = NULL;
 /* Frame group containing Image Size (image-only) */
@@ -137,6 +141,7 @@ static STRPTR pendingLockedChatModels[LOCKED_CHAT_PROFILE_COUNT] = {0};
 static BOOL pendingLockedStreaming[LOCKED_CHAT_PROFILE_COUNT] = {0};
 static BOOL pendingLockedWebSearch[LOCKED_CHAT_PROFILE_COUNT] = {0};
 static BOOL pendingLockedShellTool[LOCKED_CHAT_PROFILE_COUNT] = {0};
+static BOOL pendingLockedCodeInterpreter[LOCKED_CHAT_PROFILE_COUNT] = {0};
 static STRPTR pendingLockedChatSystem[LOCKED_CHAT_PROFILE_COUNT] = {0};
 static STRPTR pendingLockedImageModels[LOCKED_IMAGE_PROFILE_COUNT] = {0};
 static ImageSize pendingImageSize = IMAGE_SIZE_1024x1024;
@@ -440,6 +445,7 @@ static void freePendingLockedProfiles(void) {
         pendingLockedStreaming[i] = FALSE;
         pendingLockedWebSearch[i] = FALSE;
         pendingLockedShellTool[i] = FALSE;
+        pendingLockedCodeInterpreter[i] = FALSE;
     }
     for (int i = 0; i < LOCKED_IMAGE_PROFILE_COUNT; i++) {
         if (pendingLockedImageModels[i] != NULL) {
@@ -536,6 +542,23 @@ static void loadPendingLockedProfilesFromConfig(void) {
         pendingLockedShellTool[LOCKED_PROFILE_GEMINI] = FALSE;
         pendingLockedShellTool[LOCKED_PROFILE_GROK] = FALSE;
         pendingLockedShellTool[LOCKED_PROFILE_ANTHROPIC] = FALSE;
+        v = FALSE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_OpenAiCodeInterpreterEnabled, &v);
+        pendingLockedCodeInterpreter[LOCKED_PROFILE_OPENAI] = (BOOL)v;
+        v = FALSE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_GeminiCodeInterpreterEnabled, &v);
+        pendingLockedCodeInterpreter[LOCKED_PROFILE_GEMINI] = (BOOL)v;
+        v = FALSE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_GrokCodeInterpreterEnabled, &v);
+        pendingLockedCodeInterpreter[LOCKED_PROFILE_GROK] = (BOOL)v;
+        v = FALSE;
+        if (configObj)
+            get(configObj, MUIA_AmigaGPTConfig_AnthropicCodeInterpreterEnabled,
+                &v);
+        pendingLockedCodeInterpreter[LOCKED_PROFILE_ANTHROPIC] = (BOOL)v;
     }
 
     /* Per-locked-profile chat system prompt */
@@ -610,6 +633,29 @@ static void setServerSettingsGadgetsEnabled(BOOL enabled) {
         set(customServerCustomHeadersString, MUIA_Disabled,
             enabled ? FALSE : TRUE);
     /* Fetch Models is left enabled for built-in providers (e.g. OpenAI) */
+}
+
+static BOOL currentFormSupportsCodeInterpreter(void) {
+    LONG active = MUIV_NList_Active_Off;
+    LONG endpoint = 0;
+    if (settingsIsImageMode)
+        return FALSE;
+    if (customServerProfileList != NULL)
+        get(customServerProfileList, MUIA_NList_Active, &active);
+    if (active != MUIV_NList_Active_Off && isLockedProfileListIndex(active))
+        return TRUE;
+    if (customServerApiEndpointCycle != NULL)
+        get(customServerApiEndpointCycle, MUIA_Cycle_Active, &endpoint);
+    return endpoint == (LONG)API_CHAT_ENDPOINT_RESPONSES ||
+           endpoint == (LONG)API_CHAT_ENDPOINT_MESSAGES ||
+           endpoint == (LONG)API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT;
+}
+
+static void updateCodeInterpreterVisibility(void) {
+    BOOL show = currentFormSupportsCodeInterpreter();
+    if (customServerCodeInterpreterGroup != NULL)
+        set(customServerCodeInterpreterGroup, MUIA_ShowMe,
+            show ? TRUE : FALSE);
 }
 
 /**
@@ -692,6 +738,11 @@ static void loadLockedProfileIntoUI(LONG lockedIndex) {
             pendingLockedShellTool[lockedIndex] ? 1 : 0);
         set(customServerShellToolCycle, MUIA_Disabled, !shellSupported);
     }
+    if (!settingsIsImageMode && customServerCodeInterpreterCycle != NULL) {
+        set(customServerCodeInterpreterCycle, MUIA_Cycle_Active,
+            pendingLockedCodeInterpreter[lockedIndex] ? 1 : 0);
+    }
+    updateCodeInterpreterVisibility();
     if (!settingsIsImageMode && customServerChatSystemString != NULL) {
         STRPTR sys = pendingLockedChatSystem[lockedIndex];
         set(customServerChatSystemString, MUIA_String_Contents, sys ? sys : "");
@@ -966,6 +1017,12 @@ static void loadProfileIntoUI(struct json_object *profile) {
                 obj != NULL ? (json_object_get_boolean(obj) ? 1 : 0) : 0);
             set(customServerShellToolCycle, MUIA_Disabled, FALSE);
         }
+        obj = json_object_object_get(profile, "codeInterpreterEnabled");
+        if (customServerCodeInterpreterCycle != NULL) {
+            set(customServerCodeInterpreterCycle, MUIA_Cycle_Active,
+                obj != NULL ? (json_object_get_boolean(obj) ? 1 : 0) : 0);
+        }
+        updateCodeInterpreterVisibility();
         obj = json_object_object_get(profile, "chatSystem");
         if (customServerChatSystemString != NULL) {
             set(customServerChatSystemString, MUIA_String_Contents,
@@ -1060,6 +1117,13 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
         json_object_object_add(profile, "shellToolEnabled",
                                json_object_new_boolean(shellTool == 1));
 
+        LONG codeInterpreter = 0;
+        if (customServerCodeInterpreterCycle != NULL)
+            get(customServerCodeInterpreterCycle, MUIA_Cycle_Active,
+                &codeInterpreter);
+        json_object_object_add(profile, "codeInterpreterEnabled",
+                               json_object_new_boolean(codeInterpreter == 1));
+
         STRPTR chatSys = NULL;
         if (customServerChatSystemString != NULL)
             get(customServerChatSystemString, MUIA_String_Contents, &chatSys);
@@ -1138,6 +1202,12 @@ static BOOL applyProfileFromFormToStorage(LONG profileListIndex,
             if (customServerShellToolCycle != NULL)
                 get(customServerShellToolCycle, MUIA_Cycle_Active, &shellTool);
             pendingLockedShellTool[lockedIndex] = (shellTool == 1);
+
+            LONG codeInterpreter = 0;
+            if (customServerCodeInterpreterCycle != NULL)
+                get(customServerCodeInterpreterCycle, MUIA_Cycle_Active,
+                    &codeInterpreter);
+            pendingLockedCodeInterpreter[lockedIndex] = (codeInterpreter == 1);
 
             STRPTR chatSys = NULL;
             if (customServerChatSystemString != NULL)
@@ -1847,6 +1917,11 @@ HOOKPROTONHNONP(SettingsChangedFunc, void) {
     if (!loadingProfile)
         profileSettingsDirty = TRUE;
     refreshUrlPreview();
+    if (customServerSettingsRootGroup != NULL)
+        DoMethod(customServerSettingsRootGroup, MUIM_Group_InitChange);
+    updateCodeInterpreterVisibility();
+    if (customServerSettingsRootGroup != NULL)
+        DoMethod(customServerSettingsRootGroup, MUIM_Group_ExitChange);
 }
 MakeHook(SettingsChangedHook, SettingsChangedFunc);
 
@@ -2066,6 +2141,11 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
                 MUIA_AmigaGPTConfig_GeminiShellToolEnabled,
                 MUIA_AmigaGPTConfig_GrokShellToolEnabled,
                 MUIA_AmigaGPTConfig_AnthropicShellToolEnabled};
+            static const ULONG codeInterpreterAttrs[] = {
+                MUIA_AmigaGPTConfig_OpenAiCodeInterpreterEnabled,
+                MUIA_AmigaGPTConfig_GeminiCodeInterpreterEnabled,
+                MUIA_AmigaGPTConfig_GrokCodeInterpreterEnabled,
+                MUIA_AmigaGPTConfig_AnthropicCodeInterpreterEnabled};
             static const ULONG chatSystemAttrs[] = {
                 MUIA_AmigaGPTConfig_OpenAiChatSystem,
                 MUIA_AmigaGPTConfig_GeminiChatSystem,
@@ -2084,6 +2164,8 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterOkButtonClickedFunc, void) {
                         pendingLockedWebSearch[i] ? TRUE : FALSE);
                     set(configObj, shellToolAttrs[i],
                         pendingLockedShellTool[i] ? TRUE : FALSE);
+                    set(configObj, codeInterpreterAttrs[i],
+                        pendingLockedCodeInterpreter[i] ? TRUE : FALSE);
 
                     CONST_STRPTR cs = pendingLockedChatSystem[i];
                     set(configObj, chatSystemAttrs[i],
@@ -2281,7 +2363,7 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterTestButtonClickedFunc, void) {
             conv, host, port, useSSL, (CONST_STRPTR)modelName, apiKeyToUse,
             FALSE, useProxy, proxyHost, proxyPort, proxyUsesSSL,
             proxyRequiresAuth, proxyUsername, proxyPassword, FALSE, FALSE,
-            apiEndpoint, (CONST_STRPTR)apiEndpointUrl, authType,
+            FALSE, apiEndpoint, (CONST_STRPTR)apiEndpointUrl, authType,
             (CONST_STRPTR)customHeaders);
 
         if (responses != NULL && responses[0] != NULL) {
@@ -2592,6 +2674,15 @@ LONG createCustomServerSettingsRequesterWindow() {
                                 MUIA_Cycle_Active, 0,
                             End,
                         End,
+                        Child, customServerCodeInterpreterGroup = VGroup,
+                            MUIA_Frame, MUIV_Frame_Group,
+                            MUIA_FrameTitle, STRING_CODE_INTERPRETER,
+                            Child, customServerCodeInterpreterCycle = CycleObject,
+                                MUIA_CycleChain, TRUE,
+                                MUIA_Cycle_Entries, streamingOptions,
+                                MUIA_Cycle_Active, 0,
+                            End,
+                        End,
                         Child, VGroup,
                             MUIA_Frame, MUIV_Frame_Group,
                             MUIA_FrameTitle, STRING_MENU_OPENAI_API_KEY,
@@ -2758,6 +2849,9 @@ LONG createCustomServerSettingsRequesterWindow() {
     DoMethod(customServerShellToolCycle, MUIM_Notify, MUIA_Cycle_Active,
              MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
              &SettingsChangedHook);
+    DoMethod(customServerCodeInterpreterCycle, MUIM_Notify, MUIA_Cycle_Active,
+             MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
+             &SettingsChangedHook);
     DoMethod(customServerChatSystemString, MUIM_Notify, MUIA_String_Contents,
              MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook,
              &SettingsChangedHook);
@@ -2849,6 +2943,11 @@ static void applyProviderSettingsWindowMode(BOOL isImageMode) {
         set(customServerShellToolGroup, MUIA_ShowMe,
             settingsIsImageMode ? FALSE : TRUE);
     }
+    if (customServerCodeInterpreterGroup != NULL) {
+        set(customServerCodeInterpreterGroup, MUIA_ShowMe,
+            settingsIsImageMode ? FALSE : TRUE);
+    }
+    updateCodeInterpreterVisibility();
     if (customServerChatSystemGroup != NULL) {
         set(customServerChatSystemGroup, MUIA_ShowMe,
             settingsIsImageMode ? FALSE : TRUE);

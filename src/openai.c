@@ -286,12 +286,10 @@ CONST_STRPTR OPENAI_TTS_VOICE_NAMES[] = {[OPENAI_TTS_VOICE_ALLOY] = "alloy",
  * The names of the xAI TTS voices (sent as voice_id to the API)
  * @see XAITTSVoice
  **/
-CONST_STRPTR XAI_TTS_VOICE_NAMES[] = {[XAI_TTS_VOICE_ARA] = "ara",
-                                      [XAI_TTS_VOICE_EVE] = "eve",
-                                      [XAI_TTS_VOICE_LEO] = "leo",
-                                      [XAI_TTS_VOICE_REX] = "rex",
-                                      [XAI_TTS_VOICE_SAL] = "sal",
-                                      NULL};
+CONST_STRPTR XAI_TTS_VOICE_NAMES[] = {
+    [XAI_TTS_VOICE_ARA] = "ara", [XAI_TTS_VOICE_EVE] = "eve",
+    [XAI_TTS_VOICE_LEO] = "leo", [XAI_TTS_VOICE_REX] = "rex",
+    [XAI_TTS_VOICE_SAL] = "sal", NULL};
 
 /**
  * The names of the API endpoints
@@ -665,22 +663,31 @@ static CONST_STRPTR attachmentMimeType(CONST_STRPTR name) {
     if (strcasecmp(extension, ".doc") == 0)
         return "application/msword";
     if (strcasecmp(extension, ".docx") == 0)
-        return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        return "application/"
+               "vnd.openxmlformats-officedocument.wordprocessingml.document";
     if (strcasecmp(extension, ".xls") == 0)
         return "application/vnd.ms-excel";
     if (strcasecmp(extension, ".xlsx") == 0)
-        return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        return "application/"
+               "vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     if (strcasecmp(extension, ".ppt") == 0)
         return "application/vnd.ms-powerpoint";
     if (strcasecmp(extension, ".pptx") == 0)
-        return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+        return "application/"
+               "vnd.openxmlformats-officedocument.presentationml.presentation";
     if (strcasecmp(extension, ".rtf") == 0)
         return "application/rtf";
     if (strcasecmp(extension, ".wav") == 0)
         return "audio/wav";
     if (strcasecmp(extension, ".mp3") == 0)
         return "audio/mpeg";
+    if (strcasecmp(extension, ".zip") == 0)
+        return "application/zip";
     return "application/octet-stream";
+}
+
+static BOOL attachmentMimeIsZip(CONST_STRPTR mime) {
+    return mime != NULL && strcmp(mime, "application/zip") == 0;
 }
 
 static BOOL attachmentFileLooksLikeText(CONST_STRPTR path) {
@@ -704,8 +711,7 @@ static BOOL attachmentFileLooksLikeText(CONST_STRPTR path) {
     for (LONG i = 0; i < bytesRead; i++) {
         UBYTE c = sample[i];
         if (c == 0 || c == 0x7f ||
-            (c < 0x20 && c != '\t' && c != '\n' && c != '\r' &&
-             c != '\f'))
+            (c < 0x20 && c != '\t' && c != '\n' && c != '\r' && c != '\f'))
             return FALSE;
     }
     return TRUE;
@@ -736,6 +742,31 @@ static CONST_STRPTR attachmentMimeTypeForFile(struct ChatFile *file) {
         attachmentFileLooksLikeText(file->path))
         return "text/plain";
     return mime;
+}
+
+static CONST_STRPTR chatFileMime(struct ChatFile *file) {
+    if (file != NULL && file->mimeType != NULL)
+        return (CONST_STRPTR)file->mimeType;
+    return attachmentMimeTypeForFile(file);
+}
+
+static struct json_object *
+collectUploadedZipFileIds(struct ConversationNode *message) {
+    struct json_object *ids = json_object_new_array();
+    struct ChatFile *file;
+
+    if (ids == NULL || message == NULL)
+        return ids;
+    for (file = (struct ChatFile *)message->files.mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        if (file->path == NULL || file->fileId == NULL ||
+            strlen(file->fileId) == 0)
+            continue;
+        if (attachmentMimeIsZip(chatFileMime(file)))
+            json_object_array_add(ids, json_object_new_string(file->fileId));
+    }
+    return ids;
 }
 
 static STRPTR encodeAttachmentBase64(struct ChatFile *file,
@@ -771,8 +802,7 @@ static STRPTR encodeAttachmentBase64(struct ChatFile *file,
         return NULL;
     }
     ULONG fileBytes = fileSize > 0 ? (ULONG)fileSize : 0;
-    if (*totalAttachmentBytes >
-        MAX_ATTACHMENT_TOTAL_BYTES - fileBytes) {
+    if (*totalAttachmentBytes > MAX_ATTACHMENT_TOTAL_BYTES - fileBytes) {
         displayError(STRING_ERROR_ATTACHMENT_TOO_LARGE);
         return NULL;
     }
@@ -853,8 +883,8 @@ static BOOL messageHasLocalFiles(struct ConversationNode *message) {
     return FALSE;
 }
 
-static BOOL conversationMessageIsEmptyAssistant(
-    struct ConversationNode *message) {
+static BOOL
+conversationMessageIsEmptyAssistant(struct ConversationNode *message) {
     if (message == NULL || message->role == NULL)
         return FALSE;
     if (strcmp(message->role, "assistant") != 0)
@@ -899,8 +929,8 @@ static ULONG localFileCount(struct ConversationNode *message) {
 static BOOL appendLocalFileParts(struct ConversationNode *message,
                                  struct json_object *contentArray,
                                  APIChatEndpoint apiEndpoint,
-                                 ULONG *totalAttachmentBytes,
-                                 CONST_STRPTR host) {
+                                 ULONG *totalAttachmentBytes, CONST_STRPTR host,
+                                 BOOL codeInterpreterEnabled) {
     if (!messageHasLocalFiles(message))
         return TRUE;
 
@@ -913,51 +943,61 @@ static BOOL appendLocalFileParts(struct ConversationNode *message,
         if (file->path == NULL)
             continue;
         fileIndex++;
-        CONST_STRPTR mime = file->mimeType != NULL
-                                ? (CONST_STRPTR)file->mimeType
-                                : attachmentMimeTypeForFile(file);
+        CONST_STRPTR mime = chatFileMime(file);
         BOOL isImage = strncmp(mime, "image/", 6) == 0;
-        if (hostUsesRemoteFileIds(host, apiEndpoint) &&
-            file->fileId != NULL && strlen(file->fileId) > 0) {
+        BOOL isZip = attachmentMimeIsZip(mime);
+        if (hostUsesRemoteFileIds(host, apiEndpoint) && file->fileId != NULL &&
+            strlen(file->fileId) > 0) {
             struct json_object *part = json_object_new_object();
             if (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES) {
-                BOOL xaiHost =
-                    host != NULL && strcmp(host, XAI_HOST) == 0;
+                BOOL xaiHost = host != NULL && strcmp(host, XAI_HOST) == 0;
                 /* xAI vision does not accept input_image.file_id. Uploaded
-                 * images must be attached as input_file like other documents. */
+                 * images must be attached as input_file like other documents.
+                 */
                 if (isImage && !xaiHost) {
                     json_object_object_add(
                         part, "type", json_object_new_string("input_image"));
                     json_object_object_add(
                         part, "file_id", json_object_new_string(file->fileId));
+                } else if (isZip && !xaiHost && codeInterpreterEnabled) {
+                    /* OpenAI input_file rejects ZIP archives. The file_id is
+                     * passed on the code interpreter container instead. */
+                    json_object_put(part);
+                    continue;
                 } else {
+                    /* OpenAI rejects file_id and filename on the same
+                     * input_file. The Files API already stored the name. */
                     json_object_object_add(
                         part, "type", json_object_new_string("input_file"));
                     json_object_object_add(
                         part, "file_id", json_object_new_string(file->fileId));
-                    if (file->name != NULL)
-                        json_object_object_add(
-                            part, "filename",
-                            json_object_new_string(file->name));
                 }
             } else if (apiEndpoint == API_CHAT_ENDPOINT_MESSAGES) {
-                struct json_object *source = json_object_new_object();
-                json_object_object_add(
-                    part, "type",
-                    json_object_new_string(isImage ? "image" : "document"));
-                json_object_object_add(source, "type",
-                                       json_object_new_string("file"));
-                json_object_object_add(
-                    source, "file_id", json_object_new_string(file->fileId));
-                json_object_object_add(part, "source", source);
+                if (isZip && codeInterpreterEnabled) {
+                    json_object_object_add(
+                        part, "type",
+                        json_object_new_string("container_upload"));
+                    json_object_object_add(
+                        part, "file_id", json_object_new_string(file->fileId));
+                } else {
+                    struct json_object *source = json_object_new_object();
+                    json_object_object_add(
+                        part, "type",
+                        json_object_new_string(isImage ? "image" : "document"));
+                    json_object_object_add(source, "type",
+                                           json_object_new_string("file"));
+                    json_object_object_add(
+                        source, "file_id",
+                        json_object_new_string(file->fileId));
+                    json_object_object_add(part, "source", source);
+                }
             } else if (apiEndpoint ==
                        API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT) {
                 struct json_object *fileData = json_object_new_object();
                 json_object_object_add(fileData, "mimeType",
                                        json_object_new_string(mime));
-                json_object_object_add(
-                    fileData, "fileUri",
-                    json_object_new_string(file->fileId));
+                json_object_object_add(fileData, "fileUri",
+                                       json_object_new_string(file->fileId));
                 json_object_object_add(part, "file_data", fileData);
             } else {
                 json_object_put(part);
@@ -978,8 +1018,7 @@ static BOOL appendLocalFileParts(struct ConversationNode *message,
         snprintf(statusMessage, sizeof(statusMessage),
                  STRING_ENCODING_ATTACHMENT_FORMAT, fileIndex, fileCount);
         updateStatusBar(statusMessage, yellowPen);
-        STRPTR encoded =
-            encodeAttachmentBase64(file, totalAttachmentBytes);
+        STRPTR encoded = encodeAttachmentBase64(file, totalAttachmentBytes);
         if (encoded == NULL)
             return FALSE;
 
@@ -994,9 +1033,9 @@ static BOOL appendLocalFileParts(struct ConversationNode *message,
             json_object_object_add(part, "inlineData", inlineData);
         } else if (apiEndpoint == API_CHAT_ENDPOINT_MESSAGES) {
             struct json_object *source = json_object_new_object();
-            json_object_object_add(part, "type",
-                                   json_object_new_string(isImage ? "image"
-                                                                  : "document"));
+            json_object_object_add(
+                part, "type",
+                json_object_new_string(isImage ? "image" : "document"));
             json_object_object_add(source, "type",
                                    json_object_new_string("base64"));
             json_object_object_add(source, "media_type",
@@ -1024,9 +1063,8 @@ static BOOL appendLocalFileParts(struct ConversationNode *message,
                     struct json_object *fileObj = json_object_new_object();
                     json_object_object_add(part, "type",
                                            json_object_new_string("file"));
-                    json_object_object_add(
-                        fileObj, "filename",
-                        json_object_new_string(file->name));
+                    json_object_object_add(fileObj, "filename",
+                                           json_object_new_string(file->name));
                     json_object_object_add(fileObj, "file_data",
                                            json_object_new_string(dataUrl));
                     json_object_object_add(part, "file", fileObj);
@@ -1066,9 +1104,8 @@ static BOOL appendLocalFileParts(struct ConversationNode *message,
 static CONST_STRPTR responseObjectString(struct json_object *object,
                                          CONST_STRPTR key) {
     struct json_object *value = NULL;
-    if (object == NULL ||
-        !json_object_object_get_ex(object, key, &value) || value == NULL ||
-        json_object_is_type(value, json_type_null))
+    if (object == NULL || !json_object_object_get_ex(object, key, &value) ||
+        value == NULL || json_object_is_type(value, json_type_null))
         return NULL;
     return json_object_get_string(value);
 }
@@ -1077,8 +1114,7 @@ static BOOL responseFileAlreadyCollected(struct MinList *files,
                                          CONST_STRPTR fileId,
                                          CONST_STRPTR downloadUrl) {
     struct ChatFile *file;
-    for (file = (struct ChatFile *)files->mlh_Head;
-         file->node.mln_Succ != NULL;
+    for (file = (struct ChatFile *)files->mlh_Head; file->node.mln_Succ != NULL;
          file = (struct ChatFile *)file->node.mln_Succ) {
         if (fileId != NULL && file->fileId != NULL &&
             strcmp(fileId, file->fileId) == 0)
@@ -1124,14 +1160,13 @@ static ULONG collectResponseFilesRecursive(struct json_object *value,
     BOOL isFileObject =
         type != NULL &&
         (strcmp(type, "container_file_citation") == 0 ||
-         strcmp(type, "output_file") == 0 ||
-         strcmp(type, "file_path") == 0 || strcmp(type, "file") == 0);
+         strcmp(type, "output_file") == 0 || strcmp(type, "file_path") == 0 ||
+         strcmp(type, "file") == 0);
     if (isFileObject && (fileId != NULL || downloadUrl != NULL)) {
         if (filename == NULL && path != NULL)
             filename = FilePart(path);
         if (filename == NULL)
-            filename =
-                fileId != NULL ? fileId : (CONST_STRPTR)"response-file";
+            filename = fileId != NULL ? fileId : (CONST_STRPTR) "response-file";
         if (!responseFileAlreadyCollected(files, fileId, downloadUrl) &&
             addChatFile(files, NULL, filename,
                         responseObjectString(value, "mime_type"), fileId,
@@ -1163,8 +1198,7 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
         ULONG remaining = requestLength - sentTotal;
         ULONG chunkLimit =
             useSSL ? UPLOAD_WRITE_CHUNK_SIZE : PLAIN_HTTP_WRITE_CHUNK_SIZE;
-        ULONG chunkLength =
-            remaining < chunkLimit ? remaining : chunkLimit;
+        ULONG chunkLength = remaining < chunkLimit ? remaining : chunkLimit;
         LONG written;
         if (!useSSL)
             waitForSocketWritable();
@@ -1254,8 +1288,8 @@ static LONG reconnectAndResendChatRequest(
                                 proxyUsername, proxyPassword) == RETURN_ERROR)
             continue;
 
-        LONG sent = writeRequestWithProgress(useSSL, request, requestLength,
-                                             FALSE);
+        LONG sent =
+            writeRequestWithProgress(useSSL, request, requestLength, FALSE);
         if (sent > 0)
             return sent;
     }
@@ -1407,14 +1441,14 @@ static BOOL storeChatFileId(struct ChatFile *file, CONST_STRPTR fileId) {
     return TRUE;
 }
 
-static BOOL uploadOneOpenAIFile(
-    struct ChatFile *file, ULONG fileIndex, ULONG fileCount,
-    CONST_STRPTR host, UWORD port, BOOL useSSL, BOOL useProxy,
-    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
-    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, CONST_STRPTR apiKey,
-    AuthorizationType authorizationType, CONST_STRPTR customHeaders,
-    CONST_STRPTR purpose) {
+static BOOL
+uploadOneOpenAIFile(struct ChatFile *file, ULONG fileIndex, ULONG fileCount,
+                    CONST_STRPTR host, UWORD port, BOOL useSSL, BOOL useProxy,
+                    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+                    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+                    CONST_STRPTR proxyPassword, CONST_STRPTR apiKey,
+                    AuthorizationType authorizationType,
+                    CONST_STRPTR customHeaders, CONST_STRPTR purpose) {
     BPTR attachmentFile;
     LONG fileSize;
     UBYTE statusMessage[96];
@@ -1463,8 +1497,8 @@ static BOOL uploadOneOpenAIFile(
 #else
     {
         struct FileInfoBlock fib;
-        fileSize = ExamineFH64(attachmentFile, &fib, NULL) ? (LONG)fib.fib_Size
-                                                           : -1;
+        fileSize =
+            ExamineFH64(attachmentFile, &fib, NULL) ? (LONG)fib.fib_Size : -1;
     }
 #endif
     if (fileSize < 0) {
@@ -1514,8 +1548,8 @@ static BOOL uploadOneOpenAIFile(
             "\r\n",
             OPENAI_FILE_BOUNDARY, safeName, mime);
     }
-    suffixLength =
-        snprintf(suffix, sizeof(suffix), "\r\n--%s--\r\n", OPENAI_FILE_BOUNDARY);
+    suffixLength = snprintf(suffix, sizeof(suffix), "\r\n--%s--\r\n",
+                            OPENAI_FILE_BOUNDARY);
     if (prefixLength >= sizeof(prefix) || suffixLength >= sizeof(suffix)) {
         Close(attachmentFile);
         displayError(STRING_ERROR_CHAT_REQUEST_TOO_LARGE);
@@ -1566,19 +1600,19 @@ static BOOL uploadOneOpenAIFile(
 
     useAbsoluteRequestTarget = useProxy && !proxyUsesSSL;
     if (useAbsoluteRequestTarget) {
-        headerLength = snprintf(
-            writeBuffer, WRITE_BUFFER_LENGTH,
-            "POST %s://%s:%u/v1/files HTTP/1.1\r\n"
-            "Host: %s:%u\r\n"
-            "Content-Type: multipart/form-data; boundary=%s\r\n"
-            "%s%s%s"
-            "User-Agent: AmigaGPT\r\n"
-            "Content-Length: %lu\r\n"
-            "Connection: close\r\n"
-            "\r\n",
-            useSSL ? "https" : "http", host, (unsigned int)port, host,
-            (unsigned int)port, OPENAI_FILE_BOUNDARY, apiAuthHeader,
-            customHeadersFormatted, proxyAuthHeader, bodyLength);
+        headerLength =
+            snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                     "POST %s://%s:%u/v1/files HTTP/1.1\r\n"
+                     "Host: %s:%u\r\n"
+                     "Content-Type: multipart/form-data; boundary=%s\r\n"
+                     "%s%s%s"
+                     "User-Agent: AmigaGPT\r\n"
+                     "Content-Length: %lu\r\n"
+                     "Connection: close\r\n"
+                     "\r\n",
+                     useSSL ? "https" : "http", host, (unsigned int)port, host,
+                     (unsigned int)port, OPENAI_FILE_BOUNDARY, apiAuthHeader,
+                     customHeadersFormatted, proxyAuthHeader, bodyLength);
     } else {
         headerLength = snprintf(
             writeBuffer, WRITE_BUFFER_LENGTH,
@@ -1657,11 +1691,10 @@ static BOOL uploadOneOpenAIFile(
     {
         ULONG total = 0;
         while (total < READ_BUFFER_LENGTH - 1) {
-            LONG n =
-                useSSL ? SSL_read(ssl, readBuffer + total,
-                                  (int)(READ_BUFFER_LENGTH - 1 - total))
-                       : recv(sock, readBuffer + total,
-                              READ_BUFFER_LENGTH - 1 - total, 0);
+            LONG n = useSSL ? SSL_read(ssl, readBuffer + total,
+                                       (int)(READ_BUFFER_LENGTH - 1 - total))
+                            : recv(sock, readBuffer + total,
+                                   READ_BUFFER_LENGTH - 1 - total, 0);
             if (n <= 0)
                 break;
             total += (ULONG)n;
@@ -1814,11 +1847,10 @@ static BOOL readFullHttpResponse(BOOL useSSL) {
 }
 
 static BOOL uploadOneGeminiFile(
-    struct ChatFile *file, ULONG fileIndex, ULONG fileCount,
-    CONST_STRPTR host, UWORD port, BOOL useSSL, BOOL useProxy,
-    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
-    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, CONST_STRPTR apiKey,
+    struct ChatFile *file, ULONG fileIndex, ULONG fileCount, CONST_STRPTR host,
+    UWORD port, BOOL useSSL, BOOL useProxy, CONST_STRPTR proxyHost,
+    UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword, CONST_STRPTR apiKey,
     AuthorizationType authorizationType, CONST_STRPTR customHeaders) {
     BPTR attachmentFile;
     LONG fileSize;
@@ -1868,8 +1900,8 @@ static BOOL uploadOneGeminiFile(
 #else
     {
         struct FileInfoBlock fib;
-        fileSize = ExamineFH64(attachmentFile, &fib, NULL) ? (LONG)fib.fib_Size
-                                                           : -1;
+        fileSize =
+            ExamineFH64(attachmentFile, &fib, NULL) ? (LONG)fib.fib_Size : -1;
     }
 #endif
     if (fileSize < 0) {
@@ -1923,23 +1955,23 @@ static BOOL uploadOneGeminiFile(
         return FALSE;
     }
 
-    headerLength = snprintf(
-        writeBuffer, WRITE_BUFFER_LENGTH,
-        "POST /upload/v1beta/files HTTP/1.1\r\n"
-        "Host: %s:%u\r\n"
-        "%s%s"
-        "X-Goog-Upload-Protocol: resumable\r\n"
-        "X-Goog-Upload-Command: start\r\n"
-        "X-Goog-Upload-Header-Content-Length: %ld\r\n"
-        "X-Goog-Upload-Header-Content-Type: %s\r\n"
-        "Content-Type: application/json\r\n"
-        "User-Agent: AmigaGPT\r\n"
-        "Content-Length: %lu\r\n"
-        "Connection: close\r\n"
-        "\r\n"
-        "%s",
-        host, (unsigned int)port, apiAuthHeader, customHeadersFormatted,
-        fileSize, mime, metadataLength, metadata);
+    headerLength = snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                            "POST /upload/v1beta/files HTTP/1.1\r\n"
+                            "Host: %s:%u\r\n"
+                            "%s%s"
+                            "X-Goog-Upload-Protocol: resumable\r\n"
+                            "X-Goog-Upload-Command: start\r\n"
+                            "X-Goog-Upload-Header-Content-Length: %ld\r\n"
+                            "X-Goog-Upload-Header-Content-Type: %s\r\n"
+                            "Content-Type: application/json\r\n"
+                            "User-Agent: AmigaGPT\r\n"
+                            "Content-Length: %lu\r\n"
+                            "Connection: close\r\n"
+                            "\r\n"
+                            "%s",
+                            host, (unsigned int)port, apiAuthHeader,
+                            customHeadersFormatted, fileSize, mime,
+                            metadataLength, metadata);
     if (headerLength >= WRITE_BUFFER_LENGTH ||
         writeAllQuiet(useSSL, writeBuffer, headerLength) <= 0) {
         Close(attachmentFile);
@@ -2005,19 +2037,18 @@ static BOOL uploadOneGeminiFile(
         return FALSE;
     }
 
-    headerLength = snprintf(
-        writeBuffer, WRITE_BUFFER_LENGTH,
-        "POST %s HTTP/1.1\r\n"
-        "Host: %s:%u\r\n"
-        "%s"
-        "X-Goog-Upload-Offset: 0\r\n"
-        "X-Goog-Upload-Command: upload, finalize\r\n"
-        "User-Agent: AmigaGPT\r\n"
-        "Content-Length: %ld\r\n"
-        "Connection: close\r\n"
-        "\r\n",
-        uploadPath, uploadHost, (unsigned int)uploadPort, apiAuthHeader,
-        fileSize);
+    headerLength = snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
+                            "POST %s HTTP/1.1\r\n"
+                            "Host: %s:%u\r\n"
+                            "%s"
+                            "X-Goog-Upload-Offset: 0\r\n"
+                            "X-Goog-Upload-Command: upload, finalize\r\n"
+                            "User-Agent: AmigaGPT\r\n"
+                            "Content-Length: %ld\r\n"
+                            "Connection: close\r\n"
+                            "\r\n",
+                            uploadPath, uploadHost, (unsigned int)uploadPort,
+                            apiAuthHeader, fileSize);
     FreeVec(uploadPath);
     if (headerLength >= WRITE_BUFFER_LENGTH ||
         writeAllQuiet(uploadUseSSL, writeBuffer, headerLength) <= 0) {
@@ -2087,7 +2118,8 @@ static BOOL uploadOneGeminiFile(
     fileObj = json_object_object_get(parsed, "file");
     fileUri = NULL;
     if (fileObj != NULL)
-        fileUri = json_object_get_string(json_object_object_get(fileObj, "uri"));
+        fileUri =
+            json_object_get_string(json_object_object_get(fileObj, "uri"));
     if (fileUri == NULL || strlen(fileUri) == 0)
         fileUri = json_object_get_string(json_object_object_get(parsed, "uri"));
     if (fileUri == NULL || strlen(fileUri) == 0) {
@@ -2341,6 +2373,29 @@ void clearPendingToolCall(void) {
     pendingToolCallId[0] = '\0';
     pendingToolCommand[0] = '\0';
     pendingResponseId[0] = '\0';
+}
+
+static void
+addResponsesCodeInterpreterTool(struct json_object *toolsArray, BOOL isXaiHost,
+                                struct json_object *containerFileIds) {
+    struct json_object *toolObj;
+    if (toolsArray == NULL)
+        return;
+    toolObj = json_object_new_object();
+    json_object_object_add(toolObj, "type",
+                           json_object_new_string("code_interpreter"));
+    /* OpenAI requires a container. xAI's Responses-compatible tool does not. */
+    if (!isXaiHost) {
+        struct json_object *containerObj = json_object_new_object();
+        json_object_object_add(containerObj, "type",
+                               json_object_new_string("auto"));
+        if (containerFileIds != NULL &&
+            json_object_array_length(containerFileIds) > 0)
+            json_object_object_add(containerObj, "file_ids",
+                                   json_object_get(containerFileIds));
+        json_object_object_add(toolObj, "container", containerObj);
+    }
+    json_object_array_add(toolsArray, toolObj);
 }
 
 /**
@@ -3266,8 +3321,9 @@ struct json_object **postChatMessageToOpenAI(
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, BOOL webSearchEnabled, BOOL shellToolEnabled,
-    APIChatEndpoint apiEndpoint, CONST_STRPTR apiEndpointUrl,
-    AuthorizationType authorizationType, CONST_STRPTR customHeaders) {
+    BOOL codeInterpreterEnabled, APIChatEndpoint apiEndpoint,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders) {
     if (model == NULL || strlen(model) == 0) {
         displayError("Model not specified");
         return NULL;
@@ -3359,7 +3415,8 @@ struct json_object **postChatMessageToOpenAI(
             }
             /* The Files API response lives in readBuffer. Chat replies are
              * strncat'd onto that buffer, so leave it empty or the parser
-             * treats the file object as the model response and shows nothing. */
+             * treats the file object as the model response and shows nothing.
+             */
             clearHttpReadBuffer();
         }
 
@@ -3444,7 +3501,8 @@ struct json_object **postChatMessageToOpenAI(
                 json_object_array_add(partsArr, partObj);
                 if (message == attachmentMessage &&
                     !appendLocalFileParts(message, partsArr, apiEndpoint,
-                                          &totalAttachmentBytes, host))
+                                          &totalAttachmentBytes, host,
+                                          codeInterpreterEnabled))
                     attachmentBuildFailed = TRUE;
                 json_object_object_add(contentObj, "parts", partsArr);
 
@@ -3453,13 +3511,21 @@ struct json_object **postChatMessageToOpenAI(
             }
             json_object_object_add(obj, "contents", conversationArray);
 
-            /* Web search tool (optional) */
-            if (webSearchEnabled) {
+            /* Web search / code execution tools (optional) */
+            if (webSearchEnabled || codeInterpreterEnabled) {
                 struct json_object *toolsArray = json_object_new_array();
-                struct json_object *toolObj = json_object_new_object();
-                json_object_object_add(toolObj, "google_search",
-                                       json_object_new_object());
-                json_object_array_add(toolsArray, toolObj);
+                if (webSearchEnabled) {
+                    struct json_object *toolObj = json_object_new_object();
+                    json_object_object_add(toolObj, "google_search",
+                                           json_object_new_object());
+                    json_object_array_add(toolsArray, toolObj);
+                }
+                if (codeInterpreterEnabled) {
+                    struct json_object *toolObj = json_object_new_object();
+                    json_object_object_add(toolObj, "code_execution",
+                                           json_object_new_object());
+                    json_object_array_add(toolsArray, toolObj);
+                }
                 json_object_object_add(obj, "tools", toolsArray);
             }
 
@@ -3495,10 +3561,10 @@ struct json_object **postChatMessageToOpenAI(
                     json_object_array_add(contentArray, textPart);
                     if (!appendLocalFileParts(message, contentArray,
                                               apiEndpoint,
-                                              &totalAttachmentBytes, host))
+                                              &totalAttachmentBytes, host,
+                                              codeInterpreterEnabled))
                         attachmentBuildFailed = TRUE;
-                    json_object_object_add(messageObj, "content",
-                                           contentArray);
+                    json_object_object_add(messageObj, "content", contentArray);
                 } else {
                     json_object_object_add(
                         messageObj, "content",
@@ -3512,16 +3578,28 @@ struct json_object **postChatMessageToOpenAI(
             json_object_object_add(obj, "stream",
                                    json_object_new_boolean(FALSE));
 
-            /* Anthropic web search tools (only for Messages API). */
-            if (webSearchEnabled) {
+            /* Anthropic server tools (only for Messages API). */
+            if (webSearchEnabled || codeInterpreterEnabled) {
                 struct json_object *toolsArray = json_object_new_array();
-                struct json_object *toolObj = json_object_new_object();
-                json_object_object_add(
-                    toolObj, "type",
-                    json_object_new_string("web_search_20250305"));
-                json_object_object_add(toolObj, "name",
-                                       json_object_new_string("web_search"));
-                json_object_array_add(toolsArray, toolObj);
+                if (webSearchEnabled) {
+                    struct json_object *toolObj = json_object_new_object();
+                    json_object_object_add(
+                        toolObj, "type",
+                        json_object_new_string("web_search_20250305"));
+                    json_object_object_add(
+                        toolObj, "name", json_object_new_string("web_search"));
+                    json_object_array_add(toolsArray, toolObj);
+                }
+                if (codeInterpreterEnabled) {
+                    struct json_object *toolObj = json_object_new_object();
+                    json_object_object_add(
+                        toolObj, "type",
+                        json_object_new_string("code_execution_20250825"));
+                    json_object_object_add(
+                        toolObj, "name",
+                        json_object_new_string("code_execution"));
+                    json_object_array_add(toolsArray, toolObj);
+                }
                 json_object_object_add(obj, "tools", toolsArray);
             }
         } else if (apiEndpoint == API_CHAT_ENDPOINT_CHAT_COMPLETIONS) {
@@ -3557,10 +3635,10 @@ struct json_object **postChatMessageToOpenAI(
                     json_object_array_add(contentArray, textPart);
                     if (!appendLocalFileParts(message, contentArray,
                                               apiEndpoint,
-                                              &totalAttachmentBytes, host))
+                                              &totalAttachmentBytes, host,
+                                              codeInterpreterEnabled))
                         attachmentBuildFailed = TRUE;
-                    json_object_object_add(messageObj, "content",
-                                           contentArray);
+                    json_object_object_add(messageObj, "content", contentArray);
                 } else {
                     json_object_object_add(
                         messageObj, "content",
@@ -3596,9 +3674,10 @@ struct json_object **postChatMessageToOpenAI(
         } else {
             /* Responses-style requests (OpenAI + compatible providers).
              * Only emit the tools array when at least one tool is active. */
-            BOOL wantTools = (includeOpenAiTools &&
-                              (webSearchEnabled || shellToolEnabled)) ||
-                             (webSearchEnabled && isXaiHost);
+            BOOL wantTools =
+                (includeOpenAiTools && (webSearchEnabled || shellToolEnabled ||
+                                        codeInterpreterEnabled)) ||
+                ((webSearchEnabled || codeInterpreterEnabled) && isXaiHost);
             /* Local OpenAI-compatible servers reject hosted OpenAI tools, and
              * mixing them with attachments makes them look for a Files API. */
             if (wantTools && !isOpenAiHost && !isXaiHost &&
@@ -3665,6 +3744,15 @@ struct json_object **postChatMessageToOpenAI(
                                            paramsObj);
                     json_object_array_add(toolsArray, shellToolObj);
                 }
+                if (codeInterpreterEnabled &&
+                    (includeOpenAiTools || isXaiHost)) {
+                    struct json_object *zipFileIds =
+                        collectUploadedZipFileIds(attachmentMessage);
+                    addResponsesCodeInterpreterTool(toolsArray, isXaiHost,
+                                                    zipFileIds);
+                    if (zipFileIds != NULL)
+                        json_object_put(zipFileIds);
+                }
                 json_object_object_add(obj, "tools", toolsArray);
             }
 
@@ -3686,9 +3774,10 @@ struct json_object **postChatMessageToOpenAI(
                             textPart, "text",
                             json_object_new_string(latestMessage->content));
                         json_object_array_add(contentArray, textPart);
-                        if (!appendLocalFileParts(
-                                latestMessage, contentArray, apiEndpoint,
-                                &totalAttachmentBytes, host))
+                        if (!appendLocalFileParts(latestMessage, contentArray,
+                                                  apiEndpoint,
+                                                  &totalAttachmentBytes, host,
+                                                  codeInterpreterEnabled))
                             attachmentBuildFailed = TRUE;
                         json_object_object_add(messageObj, "content",
                                                contentArray);
@@ -3711,9 +3800,9 @@ struct json_object **postChatMessageToOpenAI(
                         continue;
                     }
                     struct json_object *messageObj = json_object_new_object();
-                        json_object_object_add(
-                            messageObj, "role",
-                            json_object_new_string(message->role));
+                    json_object_object_add(
+                        messageObj, "role",
+                        json_object_new_string(message->role));
                     if (message == attachmentMessage &&
                         messageHasLocalFiles(message)) {
                         struct json_object *contentArray =
@@ -3726,9 +3815,10 @@ struct json_object **postChatMessageToOpenAI(
                             textPart, "text",
                             json_object_new_string(message->content));
                         json_object_array_add(contentArray, textPart);
-                        if (!appendLocalFileParts(
-                                message, contentArray, apiEndpoint,
-                                &totalAttachmentBytes, host))
+                        if (!appendLocalFileParts(message, contentArray,
+                                                  apiEndpoint,
+                                                  &totalAttachmentBytes, host,
+                                                  codeInterpreterEnabled))
                             attachmentBuildFailed = TRUE;
                         json_object_object_add(messageObj, "content",
                                                contentArray);
@@ -3746,7 +3836,8 @@ struct json_object **postChatMessageToOpenAI(
             json_object_object_add(
                 obj, "stream",
                 json_object_new_boolean((json_bool)effectiveStream));
-            /* xAI image understanding fails if the request is stored server-side. */
+            /* xAI image understanding fails if the request is stored
+             * server-side. */
             if (isXaiHost && messageHasLocalImages(attachmentMessage))
                 json_object_object_add(obj, "store",
                                        json_object_new_boolean(FALSE));
@@ -3808,9 +3899,8 @@ struct json_object **postChatMessageToOpenAI(
         }
 
         updateStatusBar(STRING_PREPARING_REQUEST, yellowPen);
-        UTF8 *jsonString =
-            (UTF8 *)json_object_to_json_string_ext(
-                obj, JSON_C_TO_STRING_PLAIN | JSON_C_TO_STRING_NOSLASHESCAPE);
+        UTF8 *jsonString = (UTF8 *)json_object_to_json_string_ext(
+            obj, JSON_C_TO_STRING_PLAIN | JSON_C_TO_STRING_NOSLASHESCAPE);
         if (jsonString == NULL) {
             json_object_put(obj);
             FreeVec(responses);
@@ -3905,8 +3995,7 @@ struct json_object **postChatMessageToOpenAI(
                 useSSL ? "https" : "http", host, port,
                 strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
                 effectiveApiEndpointUrl, endpointName, host, port,
-                apiAuthHeader, customHeadersFormatted, jsonLength,
-                authHeader);
+                apiAuthHeader, customHeadersFormatted, jsonLength, authHeader);
         } else {
             headerLength = snprintf(
                 headerBuf, sizeof(headerBuf),
@@ -3921,8 +4010,7 @@ struct json_object **postChatMessageToOpenAI(
                 "%s\r\n",
                 strlen(effectiveApiEndpointUrl) > 0 ? "/" : "",
                 effectiveApiEndpointUrl, endpointName, host, port,
-                apiAuthHeader, customHeadersFormatted, jsonLength,
-                authHeader);
+                apiAuthHeader, customHeadersFormatted, jsonLength, authHeader);
         }
         if (headerLength < 0 || (ULONG)headerLength >= sizeof(headerBuf)) {
             json_object_put(obj);
@@ -3970,8 +4058,8 @@ struct json_object **postChatMessageToOpenAI(
                      (ULONG)requestLength);
             updateStatusBar(sizeMessage, yellowPen);
         }
-        ssl_err = writeRequestWithProgress(
-            useSSL, requestBuffer, (ULONG)requestLength, FALSE);
+        ssl_err = writeRequestWithProgress(useSSL, requestBuffer,
+                                           (ULONG)requestLength, FALSE);
         if (ssl_err <= 0) {
             ssl_err = reconnectAndResendChatRequest(
                 host, port, useSSL, useProxy, proxyHost, proxyPort,
@@ -4526,8 +4614,8 @@ struct json_object **postChatMessageToOpenAI(
                 conversation, host, port, useSSL, model, apiKey, stream,
                 useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth,
                 proxyUsername, proxyPassword, webSearchEnabled,
-                shellToolEnabled, apiEndpoint, apiEndpointUrl,
-                authorizationType, customHeaders);
+                shellToolEnabled, codeInterpreterEnabled, apiEndpoint,
+                apiEndpointUrl, authorizationType, customHeaders);
         }
     } else {
         SetIoErr(0);
@@ -4643,8 +4731,8 @@ struct json_object **postChatMessageToOpenAI(
                 conversation, host, port, useSSL, model, apiKey, stream,
                 useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth,
                 proxyUsername, proxyPassword, webSearchEnabled,
-                shellToolEnabled, apiEndpoint, apiEndpointUrl,
-                authorizationType, customHeaders);
+                shellToolEnabled, codeInterpreterEnabled, apiEndpoint,
+                apiEndpointUrl, authorizationType, customHeaders);
         }
 
         STRPTR newestResponseId = NULL;
@@ -5649,9 +5737,8 @@ struct ChunkedFileWriter {
 };
 
 static BOOL writeChunkedFileBytes(BPTR fileHandle,
-                                  struct ChunkedFileWriter *state,
-                                  UBYTE *data, ULONG length,
-                                  ULONG *writtenTotal) {
+                                  struct ChunkedFileWriter *state, UBYTE *data,
+                                  ULONG length, ULONG *writtenTotal) {
     ULONG position = 0;
     while (position < length && !state->complete) {
         if (state->framingBytesToSkip > 0) {
@@ -5695,13 +5782,15 @@ static BOOL writeChunkedFileBytes(BPTR fileHandle,
     return TRUE;
 }
 
-ULONG downloadProviderFile(
-    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR endpoint,
-    CONST_STRPTR destination, CONST_STRPTR apiKey, BOOL useProxy,
-    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
-    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword, AuthorizationType authorizationType,
-    CONST_STRPTR customHeaders) {
+ULONG downloadProviderFile(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                           CONST_STRPTR endpoint, CONST_STRPTR destination,
+                           CONST_STRPTR apiKey, BOOL useProxy,
+                           CONST_STRPTR proxyHost, UWORD proxyPort,
+                           BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                           CONST_STRPTR proxyUsername,
+                           CONST_STRPTR proxyPassword,
+                           AuthorizationType authorizationType,
+                           CONST_STRPTR customHeaders) {
     if (host == NULL || endpoint == NULL || destination == NULL)
         return RETURN_ERROR;
     if (port == 0)
@@ -5722,10 +5811,9 @@ ULONG downloadProviderFile(
 
     UBYTE proxyAuthHeader[512] = {0};
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
-        ULONG credentialLength = strlen(proxyUsername) + strlen(proxyPassword) +
-                                 2;
-        STRPTR credentials =
-            AllocVec(credentialLength, MEMF_ANY | MEMF_CLEAR);
+        ULONG credentialLength =
+            strlen(proxyUsername) + strlen(proxyPassword) + 2;
+        STRPTR credentials = AllocVec(credentialLength, MEMF_ANY | MEMF_CLEAR);
         if (credentials == NULL)
             return RETURN_ERROR;
         snprintf(credentials, credentialLength, "%s:%s", proxyUsername,
@@ -5750,8 +5838,8 @@ ULONG downloadProviderFile(
                  "User-Agent: AmigaGPT\r\n"
                  "Accept: */*\r\n"
                  "Connection: close\r\n\r\n",
-                 useSSL ? "https" : "http", host, (unsigned int)port,
-                 endpoint, host, (unsigned int)port, apiAuthHeader,
+                 useSSL ? "https" : "http", host, (unsigned int)port, endpoint,
+                 host, (unsigned int)port, apiAuthHeader,
                  customHeadersFormatted, proxyAuthHeader);
     } else {
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
@@ -5795,20 +5883,18 @@ ULONG downloadProviderFile(
     ULONG headerLength = 0;
     STRPTR headerEnd = NULL;
     while (headerLength < sizeof(header) - 1 && headerEnd == NULL) {
-        LONG received =
-            useSSL ? SSL_read(ssl, header + headerLength,
-                              sizeof(header) - headerLength - 1)
-                   : recv(sock, header + headerLength,
-                          sizeof(header) - headerLength - 1, 0);
+        LONG received = useSSL ? SSL_read(ssl, header + headerLength,
+                                          sizeof(header) - headerLength - 1)
+                               : recv(sock, header + headerLength,
+                                      sizeof(header) - headerLength - 1, 0);
         if (received <= 0)
             break;
         headerLength += (ULONG)received;
         header[headerLength] = '\0';
         headerEnd = strstr((STRPTR)header, "\r\n\r\n");
     }
-    if (headerEnd == NULL ||
-        (strstr((STRPTR)header, "HTTP/1.1 2") == NULL &&
-         strstr((STRPTR)header, "HTTP/1.0 2") == NULL)) {
+    if (headerEnd == NULL || (strstr((STRPTR)header, "HTTP/1.1 2") == NULL &&
+                              strstr((STRPTR)header, "HTTP/1.0 2") == NULL)) {
         closeActiveResponseConnection();
 #ifndef DAEMON
         hideLoadingBar();
@@ -5841,8 +5927,8 @@ ULONG downloadProviderFile(
     if (initialBodyLength > 0) {
         if (chunked) {
             writeSucceeded = writeChunkedFileBytes(
-                fileHandle, &chunkState, header + bodyOffset,
-                initialBodyLength, &writtenTotal);
+                fileHandle, &chunkState, header + bodyOffset, initialBodyLength,
+                &writtenTotal);
         } else {
             writeSucceeded =
                 Write(fileHandle, header + bodyOffset, initialBodyLength) ==
@@ -5852,18 +5938,18 @@ ULONG downloadProviderFile(
     }
 
     while (writeSucceeded && (!chunked || !chunkState.complete)) {
-        LONG received = useSSL ? SSL_read(ssl, readBuffer,
-                                          READ_BUFFER_LENGTH - 1)
-                               : recv(sock, readBuffer,
-                                      READ_BUFFER_LENGTH - 1, 0);
+        LONG received = useSSL
+                            ? SSL_read(ssl, readBuffer, READ_BUFFER_LENGTH - 1)
+                            : recv(sock, readBuffer, READ_BUFFER_LENGTH - 1, 0);
         if (received <= 0)
             break;
         if (chunked) {
             writeSucceeded = writeChunkedFileBytes(
-                fileHandle, &chunkState, (UBYTE *)readBuffer,
-                (ULONG)received, &writtenTotal);
+                fileHandle, &chunkState, (UBYTE *)readBuffer, (ULONG)received,
+                &writtenTotal);
         } else {
-            writeSucceeded = Write(fileHandle, readBuffer, received) == received;
+            writeSucceeded =
+                Write(fileHandle, readBuffer, received) == received;
             if (writeSucceeded)
                 writtenTotal += (ULONG)received;
         }
@@ -7579,10 +7665,9 @@ APTR postTextToSpeechRequestToXAI(
         CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
                            (Tag)text, CSA_MapForeignChars, TRUE, TAG_DONE);
 
-    CONST_STRPTR resolvedVoiceId =
-        (voiceId != NULL && strlen(voiceId) > 0)
-            ? voiceId
-            : XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE];
+    CONST_STRPTR resolvedVoiceId = (voiceId != NULL && strlen(voiceId) > 0)
+                                       ? voiceId
+                                       : XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE];
     CONST_STRPTR languageStr =
         (language != NULL && strlen(language) > 0) ? language : "en";
 
@@ -7591,7 +7676,8 @@ APTR postTextToSpeechRequestToXAI(
         obj, "text", json_object_new_string(textUTF8 ? textUTF8 : (UTF8 *)""));
     json_object_object_add(obj, "voice_id",
                            json_object_new_string(resolvedVoiceId));
-    json_object_object_add(obj, "language", json_object_new_string(languageStr));
+    json_object_object_add(obj, "language",
+                           json_object_new_string(languageStr));
     struct json_object *outputFormat = json_object_new_object();
     json_object_object_add(outputFormat, "codec",
                            json_object_new_string(xaiCodec));
@@ -7734,8 +7820,8 @@ APTR postTextToSpeechRequestToXAI(
                 struct json_object *message = NULL;
                 if (json_object_object_get_ex(response, "error", &error)) {
                     message = json_object_object_get(error, "message");
-                    if (message == NULL && json_object_is_type(
-                                               error, json_type_string)) {
+                    if (message == NULL &&
+                        json_object_is_type(error, json_type_string)) {
                         message = error;
                     }
                 }
@@ -7898,9 +7984,9 @@ APTR postTextToSpeechRequestToXAI(
                 memset(readBuffer, 0, READ_BUFFER_LENGTH);
                 if (useSSL) {
                     ERR_clear_error();
-                    bytesRead = SSL_read(
-                        ssl, readBuffer,
-                        useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1);
+                    bytesRead =
+                        SSL_read(ssl, readBuffer,
+                                 useProxy ? 8192 - 1 : READ_BUFFER_LENGTH - 1);
                     err = SSL_get_error(ssl, bytesRead);
                 } else {
                     bytesRead =
@@ -8180,13 +8266,13 @@ static void openVoxRememberLoadedModel(CONST_STRPTR model) {
 /* Send a JSON POST and return a newly allocated copy of its HTTP response
  * body. The caller owns the returned buffer. This deliberately keeps status
  * handling separate so OpenVox's single-job 429 response can be retried. */
-static APTR openVoxPostJson(
-    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR endpoint,
-    AuthorizationType authorizationType, CONST_STRPTR apiKey,
-    CONST_STRPTR jsonBody, ULONG *bodyLength, LONG *statusCode, BOOL useProxy,
-    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
-    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword) {
+static APTR
+openVoxPostJson(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                CONST_STRPTR endpoint, AuthorizationType authorizationType,
+                CONST_STRPTR apiKey, CONST_STRPTR jsonBody, ULONG *bodyLength,
+                LONG *statusCode, BOOL useProxy, CONST_STRPTR proxyHost,
+                UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
     if (bodyLength != NULL)
         *bodyLength = 0;
     if (statusCode != NULL)
@@ -8232,8 +8318,7 @@ static APTR openVoxPostJson(
     UBYTE requestTarget[768];
     if (useProxy) {
         snprintf(requestTarget, sizeof(requestTarget), "%s://%s:%u%s",
-                 useSSL ? "https" : "http", host, (unsigned int)port,
-                 endpoint);
+                 useSSL ? "https" : "http", host, (unsigned int)port, endpoint);
     } else {
         snprintf(requestTarget, sizeof(requestTarget), "%s", endpoint);
     }
@@ -8339,14 +8424,14 @@ static APTR openVoxPostJson(
     }
     UBYTE *body = headerEnd + delimiterLength;
     ULONG headerLength = (ULONG)(body - response);
-    ULONG available = responseLength > headerLength
-                          ? responseLength - headerLength
-                          : 0;
+    ULONG available =
+        responseLength > headerLength ? responseLength - headerLength : 0;
 
     /* OpenVox normally sends Content-Length. Decode chunked bodies as well so
      * the same client remains valid behind a proxy. */
-    BOOL chunked = strstr((STRPTR)response, "Transfer-Encoding: chunked") != NULL ||
-                   strstr((STRPTR)response, "transfer-encoding: chunked") != NULL;
+    BOOL chunked =
+        strstr((STRPTR)response, "Transfer-Encoding: chunked") != NULL ||
+        strstr((STRPTR)response, "transfer-encoding: chunked") != NULL;
     UBYTE *result = NULL;
     ULONG resultLength = 0;
     if (chunked) {
@@ -8365,8 +8450,7 @@ static APTR openVoxPostJson(
                 memcpy(result + resultLength, cursor, chunkSize);
                 resultLength += chunkSize;
                 cursor += chunkSize;
-                if (cursor + 1 < end && cursor[0] == '\r' &&
-                    cursor[1] == '\n')
+                if (cursor + 1 < end && cursor[0] == '\r' && cursor[1] == '\n')
                     cursor += 2;
             }
         }
@@ -8383,12 +8467,12 @@ static APTR openVoxPostJson(
     return result;
 }
 
-static struct json_object *openVoxGetJson(
-    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR endpoint,
-    AuthorizationType authorizationType, CONST_STRPTR apiKey, BOOL useProxy,
-    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
-    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword) {
+static struct json_object *
+openVoxGetJson(CONST_STRPTR host, UWORD port, BOOL useSSL,
+               CONST_STRPTR endpoint, AuthorizationType authorizationType,
+               CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost,
+               UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+               CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
     CONST_STRPTR headerName = "";
     BOOL useBearer = FALSE;
     if (authorizationType == AUTHORIZATION_TYPE_BEARER) {
@@ -8401,10 +8485,10 @@ static struct json_object *openVoxGetJson(
     } else if (authorizationType == AUTHORIZATION_TYPE_XI_API_KEY) {
         headerName = "xi-api-key";
     }
-    return makeHttpsGetRequest(
-        host, port, useSSL, endpoint, apiKey, headerName, useBearer, useProxy,
-        proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-        proxyPassword);
+    return makeHttpsGetRequest(host, port, useSSL, endpoint, apiKey, headerName,
+                               useBearer, useProxy, proxyHost, proxyPort,
+                               proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+                               proxyPassword);
 }
 
 static CONST_STRPTR openVoxFirstString(struct json_object *response,
@@ -8548,16 +8632,16 @@ APTR postTextToSpeechRequestToOpenVox(
 
     UBYTE endpoint[512];
     snprintf(endpoint, sizeof(endpoint), "/%s/models", apiEndpointUrl);
-    struct json_object *models = openVoxGetJson(
-        host, port, useSSL, endpoint, authorizationType, apiKey, useProxy,
-        proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-        proxyPassword);
+    struct json_object *models =
+        openVoxGetJson(host, port, useSSL, endpoint, authorizationType, apiKey,
+                       useProxy, proxyHost, proxyPort, proxyUsesSSL,
+                       proxyRequiresAuth, proxyUsername, proxyPassword);
     if (models == NULL) {
         displayError("OpenVox server is unavailable.");
         return NULL;
     }
-    CONST_STRPTR resolvedModel = openVoxResolveListValue(
-        models, model, "id", "model_key");
+    CONST_STRPTR resolvedModel =
+        openVoxResolveListValue(models, model, "id", "model_key");
     STRPTR selectedModel =
         resolvedModel != NULL ? openVoxDupStr(resolvedModel) : NULL;
     json_object_put(models);
@@ -8602,17 +8686,17 @@ APTR postTextToSpeechRequestToOpenVox(
 
     snprintf(endpoint, sizeof(endpoint), "/%s/models/%s/languages",
              apiEndpointUrl, selectedModel);
-    struct json_object *languages = openVoxGetJson(
-        host, port, useSSL, endpoint, authorizationType, apiKey, useProxy,
-        proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-        proxyPassword);
+    struct json_object *languages =
+        openVoxGetJson(host, port, useSSL, endpoint, authorizationType, apiKey,
+                       useProxy, proxyHost, proxyPort, proxyUsesSSL,
+                       proxyRequiresAuth, proxyUsername, proxyPassword);
     if (languages == NULL) {
         FreeVec(selectedModel);
         displayError("OpenVox server is unavailable.");
         return NULL;
     }
-    CONST_STRPTR resolvedLanguage = openVoxResolveListValue(
-        languages, language, "code", "id");
+    CONST_STRPTR resolvedLanguage =
+        openVoxResolveListValue(languages, language, "code", "id");
     STRPTR selectedLanguage =
         resolvedLanguage != NULL ? openVoxDupStr(resolvedLanguage) : NULL;
     if (languages != NULL)
@@ -8627,10 +8711,10 @@ APTR postTextToSpeechRequestToOpenVox(
 
     snprintf(endpoint, sizeof(endpoint), "/%s/models/%s/voices?language=%s",
              apiEndpointUrl, selectedModel, selectedLanguage);
-    struct json_object *voices = openVoxGetJson(
-        host, port, useSSL, endpoint, authorizationType, apiKey, useProxy,
-        proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-        proxyPassword);
+    struct json_object *voices =
+        openVoxGetJson(host, port, useSSL, endpoint, authorizationType, apiKey,
+                       useProxy, proxyHost, proxyPort, proxyUsesSSL,
+                       proxyRequiresAuth, proxyUsername, proxyPassword);
     if (voices == NULL) {
         FreeVec(selectedModel);
         FreeVec(selectedLanguage);
@@ -8674,11 +8758,11 @@ APTR postTextToSpeechRequestToOpenVox(
     ULONG responseLength = 0;
     LONG status = 0;
     for (LONG retry = 0; retry < OPENVOX_MAX_BUSY_RETRIES; retry++) {
-        response = openVoxPostJson(
-            host, port, useSSL, endpoint, authorizationType, apiKey,
-            requestJson, &responseLength, &status, useProxy, proxyHost,
-            proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-            proxyPassword);
+        response =
+            openVoxPostJson(host, port, useSSL, endpoint, authorizationType,
+                            apiKey, requestJson, &responseLength, &status,
+                            useProxy, proxyHost, proxyPort, proxyUsesSSL,
+                            proxyRequiresAuth, proxyUsername, proxyPassword);
         if (status != 429)
             break;
         if (response != NULL) {
@@ -8702,17 +8786,17 @@ APTR postTextToSpeechRequestToOpenVox(
         return NULL;
     }
 
-    APTR pcm = openVoxExtractWavPcm(response, responseLength, audioLength,
-                                    sampleRate);
+    APTR pcm =
+        openVoxExtractWavPcm(response, responseLength, audioLength, sampleRate);
     if (pcm == NULL && responseLength > 0) {
         struct json_object *event = json_tokener_parse((STRPTR)response);
         CONST_STRPTR b64 = openVoxAudioBase64(event);
         if (b64 != NULL && strlen(b64) > 0) {
             STRPTR decoded = NULL;
             ULONG b64Length = strlen(b64);
-            CodesetsDecodeB64(CSA_B64SourceString, (Tag)b64,
-                              CSA_B64SourceLen, (Tag)b64Length,
-                              CSA_B64DestPtr, (Tag)&decoded, TAG_DONE);
+            CodesetsDecodeB64(CSA_B64SourceString, (Tag)b64, CSA_B64SourceLen,
+                              (Tag)b64Length, CSA_B64DestPtr, (Tag)&decoded,
+                              TAG_DONE);
             if (decoded != NULL) {
                 ULONG decodedLength = (b64Length * 3) / 4;
                 while (b64Length > 0 && b64[b64Length - 1] == '=') {
@@ -8733,12 +8817,13 @@ APTR postTextToSpeechRequestToOpenVox(
     return pcm;
 }
 
-struct json_object *getXAICustomVoices(
-    CONST_STRPTR host, UWORD port, BOOL useSSL, CONST_STRPTR apiEndpointUrl,
-    AuthorizationType authorizationType, CONST_STRPTR apiKey, BOOL useProxy,
-    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
-    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword) {
+struct json_object *
+getXAICustomVoices(CONST_STRPTR host, UWORD port, BOOL useSSL,
+                   CONST_STRPTR apiEndpointUrl,
+                   AuthorizationType authorizationType, CONST_STRPTR apiKey,
+                   BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+                   BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                   CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword) {
     if (host == NULL || strlen(host) == 0)
         host = XAI_HOST;
     if (port == 0)
@@ -8772,10 +8857,10 @@ struct json_object *getXAICustomVoices(
         break;
     }
 
-    return makeHttpsGetRequest(host, port, useSSL, endpoint, apiKey,
-                               headerName, useBearer, useProxy, proxyHost,
-                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
-                               proxyUsername, proxyPassword);
+    return makeHttpsGetRequest(host, port, useSSL, endpoint, apiKey, headerName,
+                               useBearer, useProxy, proxyHost, proxyPort,
+                               proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+                               proxyPassword);
 }
 
 /**
@@ -8999,8 +9084,8 @@ struct json_object *postToolResultToOpenAI(
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, BOOL shellToolEnabled,
-    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
-    CONST_STRPTR customHeaders) {
+    BOOL codeInterpreterEnabled, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders) {
 
     UBYTE connectionRetryCount = 0;
     if (host == NULL || strlen(host) == 0) {
@@ -9073,6 +9158,10 @@ struct json_object *postToolResultToOpenAI(
     json_object_object_add(paramsObj, "required", requiredArr);
     json_object_object_add(shellToolObj, "parameters", paramsObj);
     json_object_array_add(toolsArray, shellToolObj);
+    if (codeInterpreterEnabled) {
+        addResponsesCodeInterpreterTool(toolsArray, strcmp(host, XAI_HOST) == 0,
+                                        NULL);
+    }
     json_object_object_add(obj, "tools", toolsArray);
 
     CONST_STRPTR jsonString = json_object_to_json_string(obj);
