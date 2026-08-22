@@ -96,6 +96,10 @@ LONG createAboutAmigaGPTWindow() {
              "\t%s\n"
              "\thttp://amiga-news.de\n"
              "\n"
+             "\t\033iObligement\033n\n"
+             "\t%s\n"
+             "\thttp://obligement.free.fr/articles/itwcameronarmstrong.php\n"
+             "\n"
              "\033b%%\247\033n\n"
              "\tMIT\n"
              "\n"
@@ -108,7 +112,8 @@ LONG createAboutAmigaGPTWindow() {
              STRING_ABOUT_WINDOW_COFFINOS, STRING_ABOUT_WINDOW_AMIGA_FUTURE,
              STRING_ABOUT_WINDOW_WHATIFF, STRING_ABOUT_WINDOW_YOUTUBE_REVIEW,
              STRING_ABOUT_WINDOW_YOUTUBE_REVIEW, STRING_ABOUT_WINDOW_AMIGABILL,
-             STRING_ABOUT_WINDOW_LES_DOCS, STRING_ABOUT_WINDOW_DANIEL_REIMANN);
+             STRING_ABOUT_WINDOW_LES_DOCS, STRING_ABOUT_WINDOW_DANIEL_REIMANN,
+             STRING_ABOUT_WINDOW_OBLIGEMENT);
     // clang-format off
     if ((aboutAmigaGPTWindowObject = AboutboxObject,
          MUIA_Aboutbox_Build, buildString,

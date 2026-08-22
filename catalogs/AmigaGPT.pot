@@ -1978,3 +1978,8 @@ msgstr "Upload complete. Waiting for response..."
 msgctxt "STRING_CODE_INTERPRETER (382//)"
 msgid "Code Interpreter"
 msgstr "Code Interpreter"
+
+#: src/AboutAmigaGPTWindow.c:111
+msgctxt "STRING_ABOUT_WINDOW_OBLIGEMENT (383//)"
+msgid "for covering AmigaGPT for the french Amiga community and interviewing me"
+msgstr "for covering AmigaGPT for the french Amiga community and interviewing me"

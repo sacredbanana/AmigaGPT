@@ -2015,6 +2015,13 @@ msgctxt "STRING_CODE_INTERPRETER (382//)"
 msgid "Code Interpreter"
 msgstr "Kódértelmező"
 
+#: src/AboutAmigaGPTWindow.c:111
+#, fuzzy
+msgctxt "STRING_ABOUT_WINDOW_OBLIGEMENT (383//)"
+msgid ""
+"for covering AmigaGPT for the french Amiga community and interviewing me"
+msgstr "az AmigaGPT áttekintéséért és velem készített interjúért a 14. számban"
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Voice"
