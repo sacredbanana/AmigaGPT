@@ -472,6 +472,8 @@ void displayError(STRPTR message) {
      * IoErr(). Callers that are reporting protocol/API errors clear IoErr()
      * first so an unrelated AmigaDOS fault is not prepended. */
     const LONG ERROR_CODE = IoErr();
+    if (message == NULL || strlen(message) == 0)
+        message = STRING_ERROR_UNKNOWN;
 #ifndef DAEMON
     const UBYTE appName[] = "AmigaGPT";
     if (app) {
@@ -685,6 +687,44 @@ static void appendJsonStringToMessageScratch(struct json_object *obj,
 
     strncat((UTF8 *)messageScratch, piece,
             messageScratchCap - strlen((char *)messageScratch) - 1);
+}
+
+UTF8 *getApiErrorMessageFromJson(struct json_object *json) {
+    struct json_object *error = NULL;
+    UTF8 *text;
+    if (json == NULL)
+        return NULL;
+    if (!json_object_object_get_ex(json, "error", &error) || error == NULL ||
+        json_object_is_type(error, json_type_null)) {
+        text = json_object_get_string(json_object_object_get(json, "message"));
+        if (text != NULL && strlen(text) > 0)
+            return text;
+        return NULL;
+    }
+    if (json_object_is_type(error, json_type_string)) {
+        text = json_object_get_string(error);
+        if (text != NULL && strlen(text) > 0)
+            return text;
+        return NULL;
+    }
+    if (json_object_is_type(error, json_type_object)) {
+        text = json_object_get_string(json_object_object_get(error, "message"));
+        if (text != NULL && strlen(text) > 0)
+            return text;
+        text = json_object_get_string(json_object_object_get(error, "error"));
+        if (text != NULL && strlen(text) > 0)
+            return text;
+        text = json_object_get_string(json_object_object_get(error, "detail"));
+        if (text != NULL && strlen(text) > 0)
+            return text;
+        text = json_object_get_string(json_object_object_get(error, "code"));
+        if (text != NULL && strlen(text) > 0)
+            return text;
+        text = (UTF8 *)json_object_to_json_string(error);
+        if (text != NULL && strlen(text) > 0)
+            return text;
+    }
+    return NULL;
 }
 
 UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,

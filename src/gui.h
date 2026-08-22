@@ -119,6 +119,13 @@ UTF8 *getMessageContentFromJson(struct json_object *json, BOOL stream,
                                 APIChatEndpoint apiEndpoint);
 
 /**
+ * Extract a human-readable API error string from a JSON error payload.
+ * Handles both {"error":{"message":"..."}} and {"error":"..."}.
+ * The returned pointer is owned by the json object; do not FreeVec it.
+ **/
+UTF8 *getApiErrorMessageFromJson(struct json_object *json);
+
+/**
  * Add a block of text to the conversation list
  * @param conversation The conversation to add the text to
  * @param text The text to add to the conversation

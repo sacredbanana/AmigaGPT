@@ -2039,10 +2039,14 @@ static void sendChatMessage() {
      * events. Image inputs can therefore produce a response many times larger
      * than the final JSON object, which is unreliable on classic Amiga TCP
      * stacks even though the upload itself completed. Use the compact response
-     * form for messages with local files; normal text chat keeps its configured
-     * streaming behavior. */
-    BOOL requestStream =
-        chatSettings.stream && chatFileCount(&userMessage->files) == 0;
+     * form for messages with local files, except on xAI: file attachments there
+     * become an agentic search and need stream events to keep the socket
+     * alive. */
+    BOOL xaiHost = chatSettings.host != NULL &&
+                   strcmp(chatSettings.host, "api.x.ai") == 0;
+    BOOL requestStream = chatSettings.stream;
+    if (chatFileCount(&userMessage->files) > 0)
+        requestStream = xaiHost;
 
     setConversationSystem(currentConversation, chatSettings.chatSystem);
 
@@ -2094,12 +2098,8 @@ static void sendChatMessage() {
         struct json_object *response;
         while (response = responses[responseIndex++]) {
             collectResponseFiles(response, &receivedFiles);
-            struct json_object *error;
-            if (json_object_object_get_ex(response, "error", &error) &&
-                !json_object_is_type(error, json_type_null)) {
-                struct json_object *message =
-                    json_object_object_get(error, "message");
-                UTF8 *messageString = json_object_get_string(message);
+            UTF8 *messageString = getApiErrorMessageFromJson(response);
+            if (messageString != NULL) {
                 STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                     (Tag)messageString, CSA_MapForeignChars, TRUE, TAG_DONE);
