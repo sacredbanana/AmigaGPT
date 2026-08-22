@@ -541,7 +541,7 @@ We welcome contributions to AmigaGPT! If you have a bug to report, a feature to 
 - Bebbo for creating the Amiga GCC toolchain https://github.com/bebbo
 - OpenAI for making this all possible https://openai.com
 - EAB and everyone in it for answering my questions https://eab.abime.net/
-- J?n Zahuran??k for all the thorough testing, bundling AmigaGPT into 
+- Ján Zahurancík for all the thorough testing, bundling AmigaGPT into 
   AmiKit and for all the moral support https://www.amikit.amiga.sk
 - CoffinOS for bundling AmigaGPT into CoffinOS https://getcoffin.net
 - Amiga Future Magazine for reviewing AmigaGPT and publishing several of
@@ -559,6 +559,8 @@ We welcome contributions to AmigaGPT! If you have a bug to report, a feature to 
   support for the French accent https://www.youtube.com/watch?v=BV5Fq1PresE
 - amiga-news.de for covering AmigaGPT news
   http://amiga-news.de
+- Obligement for covering AmigaGPT for the french Amiga community and
+  interviewing me http://obligement.free.fr/articles/itwcameronarmstrong.php
 
 @endnode
 
@@ -950,7 +952,7 @@ For the latest information on the models you can use in @{b}AmigaGPT@{ub}, pleas
 - Fix bug where say.rexx did not ask you what you want to say
 - Fix bug where the first paragraph in every response is always black even if you have custom colours set
 - Fix bug where a missing or incorrect API key could cause the app to enter an infinite loop of displaying an error and retrying
-- Correctly handle reponses that contain JSON in the response header such as those received from CloudfareÂ 
+- Correctly handle reponses that contain JSON in the response header such as those received from Cloudfare
 
 @{b}2.17.0 (2025-12-22)@{ub}
 

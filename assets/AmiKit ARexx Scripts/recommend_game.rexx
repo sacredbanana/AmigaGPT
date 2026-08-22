@@ -107,7 +107,7 @@ CreateApp: PROCEDURE
   res = NewObj("application","app")
   IF res > 0 THEN EXIT 30
 
-  /* events → APPEVENTs (still "pressed") */
+  /* events -> APPEVENTs (still "pressed") */
   CALL Notify("win","closerequest",1,"app","ReturnID","quit")
   CALL Notify("btnOk","pressed",1,"app","ReturnID","quit")
   CALL Notify("btnMore","pressed",1,"app","ReturnID")

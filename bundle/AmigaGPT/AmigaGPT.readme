@@ -348,7 +348,7 @@ Special Thanks:
 - Bebbo for creating the Amiga GCC toolchain https://github.com/bebbo
 - OpenAI for making this all possible https://openai.com
 - EAB and everyone in it for answering my questions https://eab.abime.net/
-- Jï¿½n Zahuran?ï¿½ï¿½k for all the thorough testing, bundling AmigaGPT into 
+- Ján Zahurancík for all the thorough testing, bundling AmigaGPT into 
   AmiKit and for all the moral support https://www.amikit.amiga.sk
 - CoffinOS for bundling AmigaGPT into CoffinOS https://getcoffin.net
 - Amiga Future Magazine for reviewing AmigaGPT and publishing several of
@@ -366,6 +366,8 @@ Special Thanks:
   support for the French accent https://www.youtube.com/watch?v=BV5Fq1PresE
 - amiga-news.de for covering AmigaGPT news
   http://amiga-news.de
+- Obligement for covering AmigaGPT for the french Amiga community and
+  interviewing me http://obligement.free.fr/articles/itwcameronarmstrong.php
 
 Changelog:
 
@@ -448,7 +450,7 @@ Changelog:
 - Fix bug where a missing or incorrect API key could cause the app to enter an
   infinite loop of displaying an error and retrying
 - Correctly handle reponses that contain JSON in the response header such as
-  those received from CloudfareÂ 
+  those received from Cloudfare
 
 -------------------
 2.17.0 (2025-12-22)
