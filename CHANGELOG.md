@@ -12,6 +12,7 @@
 - No longer uses base relative code to prevent crahes from accidental trashing of the base register (A4)
 - Added an entry to the special thanks section
 - Installer has updated text and no longer asks where to install the locale files (forces an installation to LOCALE:)
+- Window titles no longer include a trailing ellipsis; that remains on the matching menu items only
 
 ## 3.1.0 (2026-08-16)
 

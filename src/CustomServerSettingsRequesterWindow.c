@@ -2562,7 +2562,7 @@ LONG createCustomServerSettingsRequesterWindow() {
         *customServerSettingsRequesterTestButton;
     // clang-format off
     if ((customServerSettingsRequesterWindowObject = WindowObject,
-        MUIA_Window_Title, STRING_CHAT_PROVIDER_SETTINGS,
+        MUIA_Window_Title, STRING_CHAT_PROVIDER_SETTINGS_TITLE,
         MUIA_Window_Width, 500,
         MUIA_Window_Height, MUIV_Window_Height_Default,
         MUIA_Window_CloseGadget, FALSE,
@@ -2924,8 +2924,8 @@ static void applyProviderSettingsWindowMode(BOOL isImageMode) {
 
     if (customServerSettingsRequesterWindowObject != NULL) {
         set(customServerSettingsRequesterWindowObject, MUIA_Window_Title,
-            settingsIsImageMode ? STRING_IMAGE_PROVIDER_SETTINGS
-                                : STRING_CHAT_PROVIDER_SETTINGS);
+            settingsIsImageMode ? STRING_IMAGE_PROVIDER_SETTINGS_TITLE
+                                : STRING_CHAT_PROVIDER_SETTINGS_TITLE);
     }
 
     /* Chat-only UI: Streaming + selectable API endpoint */

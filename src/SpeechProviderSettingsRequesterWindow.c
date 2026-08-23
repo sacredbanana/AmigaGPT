@@ -3613,7 +3613,7 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
 
     // clang-format off
     speechProviderSettingsRequesterWindowObject = WindowObject,
-        MUIA_Window_Title, STRING_SPEECH_PROVIDER_SETTINGS,
+        MUIA_Window_Title, STRING_SPEECH_PROVIDER_SETTINGS_TITLE,
         MUIA_Window_CloseGadget, TRUE,
         /* Keep window size stable when switching profiles (ShowMe toggles). */
         MUIA_Window_AutoAdjust, FALSE,

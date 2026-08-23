@@ -2015,6 +2015,21 @@ msgid ""
 "for covering AmigaGPT for the french Amiga community and interviewing me"
 msgstr "za recenzję AmigaGPT i wywiad ze mną w numerze 14"
 
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_CHAT_PROVIDER_SETTINGS_TITLE (384//)"
+msgid "Chat Provider Settings"
+msgstr "Ustawienia dostawcy czatu"
+
+#: src/CustomServerSettingsRequesterWindow.c
+msgctxt "STRING_IMAGE_PROVIDER_SETTINGS_TITLE (385//)"
+msgid "Image Provider Settings"
+msgstr "Ustawienia dostawcy obrazów"
+
+#: src/SpeechProviderSettingsRequesterWindow.c
+msgctxt "STRING_SPEECH_PROVIDER_SETTINGS_TITLE (386//)"
+msgid "Speech Provider Settings"
+msgstr "Ustawienia dostawcy mowy"
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "Głos OpenAI"
