@@ -1838,7 +1838,7 @@ palm/include/fdlibm.h
 @node changelog "Changelog"
 @{b}@{fg shine}Changelog@{fg text}@{ub}
 
-@{b}@{u}3.2.0 (2026-08-22)@{uu}@{ub}
+@{b}@{u}3.2.0 (2026-08-24)@{uu}@{ub}
 
 - Attach files to the prompt with automatic file type detection
 - Download files created in the response
