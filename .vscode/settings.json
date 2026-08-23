@@ -4,7 +4,6 @@
     "files.autoGuessEncoding": false,
     "files.associations": {
         "Install-AmigaGPT": "lisp",
-        "*.guide": "ini",
         "*.readme": "plaintext",
         "intuition.h": "c",
         "translator.h": "c",
@@ -146,14 +145,10 @@
             80
         ]
     },
-    "[ini]": {
-        "files.encoding": "iso88591",
-        "editor.formatOnSave": false,
-    },
     "[rexx]": {
         "files.encoding": "iso88591",
         "editor.rulers": [
             80
         ]
-    },
+    }
 }
