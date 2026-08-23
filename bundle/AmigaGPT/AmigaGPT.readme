@@ -282,6 +282,10 @@ the model can unpack the ZIP.
 When the model creates a file (for example a CSV or a plot), AmigaGPT can
 download it with the existing received-files controls.
 
+The CODEINTERPRETER switch on the ARexx SENDMESSAGE command turns the
+code interpreter on for a single request, even if the profile has it
+switched off. It cannot turn it off for a profile that has it on.
+
 AmigaGPT works out what kind of file each attachment is by looking inside it
 with libmagic, the same code the Unix "file" command uses, rather than trusting
 the file name. That matters on the Amiga, where files often have no extension:
@@ -381,7 +385,8 @@ installed, AmigaGPT tells you which one is missing.
   SENDMESSAGE PR=PROFILE/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,H=HOST/K,
               PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,
               PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,
-              PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,P=PROMPT/F
+              PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,
+              CI=CODEINTERPRETER/S,P=PROMPT/F
   CREATEIMAGE PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,
               P=PROMPT/F
   SPEAKTEXT   PR=PROFILE/K,M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,
@@ -515,6 +520,8 @@ Changelog:
 - Attach files to the prompt with automatic file type detection
 - Download files created in the response
 - Chat profile option to enable the provider's hosted code interpreter
+- ARexx SENDMESSAGE supports CI=CODEINTERPRETER to force the hosted code
+  interpreter on
 - Upgrade AmiSSL version to 5.27
 - Recompiled with latest libnix
 - Recompiled with optimsised build of json-c

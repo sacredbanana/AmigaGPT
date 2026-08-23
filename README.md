@@ -28,7 +28,7 @@ You can customise the look and feel of the application, including the ability to
 
 - ### Code Interpreter
 
-**AmigaGPT** can let the AI write and run Python in a provider-hosted sandbox for calculations, data analysis, and generated files. Enable it in **Chat Provider Settings** for OpenAI, Google Gemini, xAI Grok, Anthropic Claude, and custom profiles that use the Responses, Messages, or Gemini generateContent endpoints. It is hidden for custom chat/completions servers that do not offer a hosted interpreter.
+**AmigaGPT** can let the AI write and run Python in a provider-hosted sandbox for calculations, data analysis, and generated files. Enable it in **Chat Provider Settings** for OpenAI, Google Gemini, xAI Grok, Anthropic Claude, and custom profiles that use the Responses, Messages, or Gemini generateContent endpoints. It is hidden for custom chat/completions servers that do not offer a hosted interpreter. You can also use the `CI=CODEINTERPRETER` flag in the ARexx `SENDMESSAGE` command.
 
 - ### Shell Tool
 
@@ -241,7 +241,7 @@ The following ARexx commands are available:
 Sends a message using the selected chat profile and returns the response.
 
 ```
-SENDMESSAGE PR=PROFILE/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,H=HOST/K,PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,P=PROMPT/F
+SENDMESSAGE PR=PROFILE/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,H=HOST/K,PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,CI=CODEINTERPRETER/S,P=PROMPT/F
 ```
 
 Note: a few short aliases are shared by two arguments in the same template (`S` for both `SYSTEM` and `SSL`, `PP` for both `PROXYPORT` and `PROXYPASSWORD`), and the `?` help output prints `P=PORT` where the command expects `PO=PORT`. Spell `SYSTEM`, `SSL`, `PORT`, `PROXYPORT` and `PROXYPASSWORD` out in full and there is no ambiguity.
@@ -262,6 +262,7 @@ Note: a few short aliases are shared by two arguments in the same template (`S` 
 - `PU=PROXYUSERNAME` - Optional, the proxy username
 - `PROXYPASSWORD` - Optional, the proxy password
 - `W=WEBSEARCH` - Optional, enable web search. If omitted, the selected profile's setting is used. If provided, it forces web search on even when the selected profile has it disabled
+- `CI=CODEINTERPRETER` - Optional, enable the hosted code interpreter. If omitted, the selected profile's setting is used. If provided, it forces the code interpreter on even when the selected profile has it disabled
 - `P=PROMPT` - Required, the prompt or question to send
 
 #### CREATEIMAGE

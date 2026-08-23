@@ -1169,7 +1169,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     STRPTR proxyUsername = (STRPTR)arg[13];
     STRPTR proxyPassword = (STRPTR)arg[14];
     BOOL webSearchRequested = (BOOL)arg[15];
-    STRPTR prompt = (STRPTR)arg[16];
+    BOOL codeInterpreterRequested = (BOOL)arg[16];
+    STRPTR prompt = (STRPTR)arg[17];
 
     /* Reload config from disk to pick up any changes from the main app */
     DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
@@ -1225,6 +1226,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     }
 
     BOOL webSearchEnabled = rexxSettings.webSearchEnabled || webSearchRequested;
+    BOOL codeInterpreterEnabled =
+        rexxSettings.codeInterpreterEnabled || codeInterpreterRequested;
 
     /* Get the persistent daemon conversation (load from T: or create new) */
     struct Conversation *conversation = getDaemonConversation();
@@ -1287,8 +1290,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         conversation, host, portValue, useSSL, model, apiKey, FALSE, useProxy,
         proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
         proxyUsername, proxyPassword, webSearchEnabled,
-        rexxSettings.shellToolEnabled, rexxSettings.codeInterpreterEnabled,
-        apiEndpoint, apiEndpointUrl, authType, customHeaders);
+        rexxSettings.shellToolEnabled, codeInterpreterEnabled, apiEndpoint,
+        apiEndpointUrl, authType, customHeaders);
 
     /* Note: Don't free the conversation here - we keep it for context */
 
@@ -1352,8 +1355,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             (UWORD)portValue, useSSL, apiKey, useProxy, proxyHost,
             proxyPortValue, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
             proxyPassword, rexxSettings.shellToolEnabled,
-            rexxSettings.codeInterpreterEnabled, apiEndpointUrl, authType,
-            customHeaders);
+            codeInterpreterEnabled, apiEndpointUrl, authType, customHeaders);
 
         if (output != NULL) {
             FreeVec(output);
@@ -2402,7 +2404,8 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
         "K,U=USEPROXY/"
         "S,PH=PROXYHOST/"
         "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
-        "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,P=PROMPT/F\n"
+        "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,"
+        "CI=CODEINTERPRETER/S,P=PROMPT/F\n"
         "CREATEIMAGE "
         "PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/"
         "F\n"
@@ -2426,8 +2429,9 @@ struct MUI_Command arexxList[] = {
      "K,U=USEPROXY/"
      "S,PH=PROXYHOST/"
      "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
-     "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,P=PROMPT/F",
-     17,
+     "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,"
+     "CI=CODEINTERPRETER/S,P=PROMPT/F",
+     18,
      &SendMessageHook,
      {0, 0, 0, 0, 0}},
     {"CREATEIMAGE",

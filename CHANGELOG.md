@@ -5,6 +5,7 @@
 - Attach files to the prompt with automatic file type detection
 - Download files created in the response
 - Chat profile option to enable the provider's hosted code interpreter
+- ARexx SENDMESSAGE supports CI=CODEINTERPRETER to force the hosted code interpreter on
 - Upgrade AmiSSL version to 5.27
 - Recompiled with latest libnix
 - Recompiled with optimsised build of json-c

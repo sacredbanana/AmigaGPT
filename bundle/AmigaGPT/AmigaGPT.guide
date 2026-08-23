@@ -556,6 +556,10 @@ Attach a file with @{b}Attach files...@{ub}. A .zip archive is handed to the Cod
 @{b}@{u}Getting results out@{uu}@{ub}
 
 When the model creates a file - a CSV, a plot, a report - it is listed under the reply and can be written to disk with @{b}Save received files...@{ub}. See @{"Saving received files" link receivedfiles}.
+
+@{b}@{u}From ARexx@{uu}@{ub}
+
+The @{b}CODEINTERPRETER@{ub} switch on the ARexx SENDMESSAGE command turns the code interpreter on for a single request, even if the profile has it switched off. It cannot turn it off for a profile that has it on. See @{"SENDMESSAGE" link arexxsendmessage}.
 @endnode
 
 @node websearch "Web search"
@@ -997,7 +1001,8 @@ Sends a message using a chat profile and returns the reply.
   SENDMESSAGE PR=PROFILE/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,H=HOST/K,
               PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,
               PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,
-              PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,P=PROMPT/F
+              PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,
+              CI=CODEINTERPRETER/S,P=PROMPT/F
 
 @{b}@{u}Arguments@{uu}@{ub}
 
@@ -1017,6 +1022,7 @@ Sends a message using a chat profile and returns the reply.
 - @{b}PROXYUSERNAME@{ub} or @{b}PU@{ub} - the proxy username
 - @{b}PROXYPASSWORD@{ub} - the proxy password
 - @{b}WEBSEARCH@{ub} or @{b}W@{ub} - let the model search the web for this request. This can switch web search on for a profile that has it off; it cannot switch it off for a profile that has it on.
+- @{b}CODEINTERPRETER@{ub} or @{b}CI@{ub} - let the model use the hosted code interpreter for this request. This can switch the code interpreter on for a profile that has it off; it cannot switch it off for a profile that has it on.
 - @{b}PROMPT@{ub} or @{b}P@{ub} - required. The question to ask. Takes the rest of the line.
 
 @{b}@{u}Result@{uu}@{ub}
@@ -1041,6 +1047,9 @@ When the daemon answers, the message is added to its conversation history, so th
   SAY RESULT
 
   'SENDMESSAGE WEBSEARCH P=What is the latest AmigaOS release?'
+  SAY RESULT
+
+  'SENDMESSAGE CODEINTERPRETER P=Calculate the first 20 Fibonacci numbers'
   SAY RESULT
 @endnode
 
@@ -1810,6 +1819,7 @@ palm/include/fdlibm.h
 - Attach files to the prompt with automatic file type detection
 - Download files created in the response
 - Chat profile option to enable the provider's hosted code interpreter
+- ARexx SENDMESSAGE supports CI=CODEINTERPRETER to force the hosted code interpreter on
 - Upgrade AmiSSL version to 5.27
 - Recompiled with latest libnix
 - Recompiled with optimsised build of json-c
