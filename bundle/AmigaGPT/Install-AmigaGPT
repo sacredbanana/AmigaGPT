@@ -60,8 +60,6 @@
 (set #amigagptdestdir-prompt ("Please select the drawer where %s should be installed. A new drawer \"%s\" will be created if it doesn't exist.\n" @app-name @app-name))
 (set #amigagptdestdir-help "Typically, 'Work:' is selected as destination.")
 (set #upgrade-message "An existing installation of AmigaGPT%s was found in this directory.\n\nThis installation will be replaced.\n\nWarning: AmigaGPT now only allows a single platform for each directory it's installed into.\n\nIf you have installed AmigaGPT for other platforms in this directory, they will get deleted!\n\nDo you want to continue?")
-(set #localedir-prompt "Please select the drawer where locale catalogs should be installed.\n")
-(set #localedir-help "This should be set to the locale directory located at the root of your system.")
 (set #readme-prompt "Please select the drawer where readme should be installed.\n")
 (set #readme-help "This can be placed anywhere you like.")
 (set #guide-prompt "Please select the drawer where the AmigaGPT guide should be installed.\n\nInstall it in the same drawer as AmigaGPT if you want to open the guide from AmigaGPT's \"Help\" menu.\n")
@@ -317,18 +315,8 @@
 ; Ok, we found the correct destination now
 (set @default-dest #amigagptdir)
 
-(set #localedir 
-  (if (= @user-level 2)
-    (expandpath
-      (askdir
-        (prompt #localedir-prompt)
-        (help #localedir-help)
-        (default "LOCALE:")
-      )
-    )
-    "LOCALE:"
-  )
-)
+; Catalogs only work from LOCALE: so there is nothing to ask about
+(set #localedir "LOCALE:")
 
 (p_install-catalogs)
 
