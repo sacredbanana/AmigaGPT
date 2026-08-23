@@ -10,6 +10,7 @@
 | Claude Code | `.claude/rules/amiga-latin1-files.md` (path-scoped; loads when touching covered files) |
 | Cursor and other agents | `AGENTS.md` (repo root; Cursor reads this automatically) |
 | Claude Code (summary) | `CLAUDE.md` |
+| Cursor / VS Code editor | `.vscode/settings.json` (per-language `files.encoding`) |
 
 These files run on or are displayed by real Amiga hardware, which does **not** support UTF-8.
 
@@ -24,6 +25,31 @@ These files run on or are displayed by real Amiga hardware, which does **not** s
 **C sources** — all `*.c` under `src/` (Amiga-facing strings, `$VER:` cookies, copyright symbols, and any future non-ASCII Latin-1 text)
 
 **ARexx scripts** — all `*.rexx` under `bundle/` and `assets/` (ASCII-only today; must stay Latin-1-safe for future translated strings)
+
+## Editor setup (Cursor / VS Code)
+
+`.vscode/settings.json` pins the encoding so these files open and save as ISO 8859-1 without
+"Reopen with Encoding":
+
+- `"[c]"` — covers every `*.c` under `src/`, plus the headers that `files.associations` maps to
+  `c` (VS Code treats an unlisted `.h` as `cpp`).
+- `"[lisp]"` + `files.associations` mapping `Install-AmigaGPT` to `lisp` — the installer is
+  Lisp-shaped, so this gives it real highlighting as well as the encoding. It needs the
+  `slbtty.lisp-syntax` extension (recommended in `.vscode/extensions.json`); without it the
+  language id does not exist and the file falls back to plain text and UTF-8.
+- `"[ini]"` + `files.associations` mapping `*.guide` and `*.readme` to `ini` — those are prose
+  with no language of their own, and `files.encoding` can only be overridden per language, so
+  they borrow a built-in language id that nothing else in this repo uses.
+- `"[rexx]"` — applies only while a Rexx language extension is installed; nothing provides a
+  `rexx` language out of the box, so by default `*.rexx` opens as plain text in UTF-8. Those
+  files are ASCII-only today, and the verification script below is what actually guards them.
+- `"files.autoGuessEncoding": false` — the encoding is decided by the rules above, not guessed.
+
+The `charset = latin1` entries in `.editorconfig` are kept for other editors and tools, but VS
+Code and Cursor do not read `.editorconfig` themselves — that needs the EditorConfig extension,
+so those entries alone do not set the encoding.
+
+To confirm it is working, open one of the files and check the status bar reads **ISO 8859-1**.
 
 ## Before and after every edit
 
