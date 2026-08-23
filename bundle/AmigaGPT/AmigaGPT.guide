@@ -1,12 +1,12 @@
 @database AmigaGPT.guide
-@$VER: AmigaGPT.guide 3.2.0 (23.8.2026)
+@$VER: AmigaGPT.guide 3.2.0
 @author "Cameron Armstrong (Nightfox/sacredbanana)"
 @(c) "2023-2026 Cameron Armstrong"
 @toc Main
 @wordwrap
 
 @node Main "AmigaGPT"
-@{b}AmigaGPT 3.2.0@{ub}
+@{b}AmigaGPT@{ub}
 
 Welcome to the future of language modelling on the classic AmigaOS, AmigaGPT. Built to tap into the power of Artificial Intelligence, this program will take your Amiga experience to new horizons.
 

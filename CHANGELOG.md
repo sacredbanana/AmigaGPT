@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.2.0 (2026-08-23)
+## 3.2.0 (2026-08-24)
 
 - Attach files to the prompt with automatic file type detection
 - Download files created in the response
