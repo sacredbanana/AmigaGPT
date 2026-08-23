@@ -1488,7 +1488,7 @@ Contributions to AmigaGPT are welcome. If you have a bug to report, a feature to
 - Bebbo for creating the Amiga GCC toolchain @{u}https://github.com/bebbo@{uu}
 - OpenAI for making this all possible @{u}https://openai.com@{uu}
 - EAB and everyone in it for answering my questions @{u}https://eab.abime.net/@{uu}
-- Ján Zahurancík for all the thorough testing, bundling AmigaGPT into
+- Jï¿½n Zahurancï¿½k for all the thorough testing, bundling AmigaGPT into
   AmiKit, creating KIT, and for all the moral support
   @{u}https://www.amikit.amiga.sk@{uu}
 - CoffinOS for bundling AmigaGPT into CoffinOS @{u}https://getcoffin.net@{uu}
@@ -1854,6 +1854,9 @@ palm/include/fdlibm.h
 - Added an entry to the special thanks section
 - Installer has updated text and no longer asks where to install the locale files (forces an installation to LOCALE:)
 - Window titles no longer include a trailing ellipsis; that remains on the matching menu items only
+- Rename textedit_translate_norwegian.rexx to textedit_translate_no.rexx so the name fits FFS
+- Add show_received_file.rexx, which downloads a file from the model and opens it in MultiView (via SYS:Utilities/MultiView)
+- Installer sets the script protect bit on the bundled ARexx scripts so they can be run from the Shell without RX
 
 @{b}@{u}3.1.0 (2026-08-16)@{uu}@{ub}
 
