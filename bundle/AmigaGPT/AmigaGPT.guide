@@ -433,6 +433,10 @@ Some replies contain files rather than just text - a CSV produced by the @{"Code
 Press it and choose a destination drawer. AmigaGPT downloads every file in the reply and writes it there. Nothing is ever overwritten: if a file of that name already exists, a number is added to the new one.
 
 The status bar reports how many files were saved.
+
+@{b}@{u}From ARexx@{uu}@{ub}
+
+The @{b}DESTINATION@{ub} argument on the ARexx SENDMESSAGE command is a drawer. If the reply contains files, they are downloaded there the same way as @{b}Save received files...@{ub}. Existing names are not overwritten. If you omit DESTINATION, they are saved in the current directory. When files are saved, RESULT is the reply text followed by a FILES: line and one path per line. See @{"SENDMESSAGE" link arexxsendmessage}.
 @endnode
 
 @node filetypes "How the file type is worked out"
@@ -1006,7 +1010,7 @@ Sends a message using a chat profile and returns the reply.
               PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,
               PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,
               PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,
-              CI=CODEINTERPRETER/S,A=ATTACH/K,P=PROMPT/F
+              CI=CODEINTERPRETER/S,A=ATTACH/K,D=DESTINATION/K,P=PROMPT/F
 
 @{b}@{u}Arguments@{uu}@{ub}
 
@@ -1028,11 +1032,14 @@ Sends a message using a chat profile and returns the reply.
 - @{b}WEBSEARCH@{ub} or @{b}W@{ub} - let the model search the web for this request. This can switch web search on for a profile that has it off; it cannot switch it off for a profile that has it on.
 - @{b}CODEINTERPRETER@{ub} or @{b}CI@{ub} - let the model use the hosted code interpreter for this request. This can switch the code interpreter on for a profile that has it off; it cannot switch it off for a profile that has it on.
 - @{b}ATTACH@{ub} or @{b}A@{ub} - one file to send with this request, or several paths separated by commas. The files are typed the same way as @{b}Attach files...@{ub} in the GUI. Either ATTACH or PROMPT must be given.
+- @{b}DESTINATION@{ub} or @{b}D@{ub} - a drawer to save files the model returns. If you omit this, they are saved in the current directory. Existing names are not overwritten.
 - @{b}PROMPT@{ub} or @{b}P@{ub} - the question to ask. Takes the rest of the line. Optional if ATTACH is given.
 
 @{b}@{u}Result@{uu}@{ub}
 
 The reply text. It is cleaned up before it is returned - no escape backslashes and no escaped markdown characters - so it can be printed or fed straight into another program.
+
+If files were saved, RESULT continues with a @{b}FILES:@{ub} line and then one saved path per line.
 
 @{b}@{u}Notes@{uu}@{ub}
 
@@ -1061,6 +1068,9 @@ When the daemon answers, the message is added to its conversation history, so th
   SAY RESULT
 
   'SENDMESSAGE ATTACH RAM:data.csv,RAM:notes.txt CODEINTERPRETER P=Summarise this data'
+  SAY RESULT
+
+  'SENDMESSAGE DESTINATION=RAM: CODEINTERPRETER P=Make a CSV of the first 10 primes'
   SAY RESULT
 @endnode
 
@@ -1832,6 +1842,7 @@ palm/include/fdlibm.h
 - Chat profile option to enable the provider's hosted code interpreter
 - ARexx SENDMESSAGE supports CI=CODEINTERPRETER to force the hosted code interpreter on
 - ARexx SENDMESSAGE supports A=ATTACH to send one or more files with the prompt
+- ARexx SENDMESSAGE supports D=DESTINATION to download files the model returns (defaults to the current directory)
 - Upgrade AmiSSL version to 5.27
 - Recompiled with latest libnix
 - Recompiled with optimsised build of json-c

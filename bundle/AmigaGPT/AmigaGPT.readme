@@ -205,7 +205,9 @@ small on a classic Amiga TCP stack.
 When a reply contains files, they are listed underneath the assistant message
 and "Save received files..." becomes available. Choose a destination drawer
 and every returned file is written there; nothing is overwritten, numeric
-suffixes are added when necessary.
+suffixes are added when necessary. From ARexx, SENDMESSAGE downloads them
+to DESTINATION if you give a drawer, or to the current directory if you
+omit it.
 
 To the left of the chat box is a conversation list which you can use to go to
 another saved conversation. New conversations can be created with the "New
@@ -387,7 +389,7 @@ installed, AmigaGPT tells you which one is missing.
               PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,
               PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,
               PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,
-              CI=CODEINTERPRETER/S,A=ATTACH/K,P=PROMPT/F
+              CI=CODEINTERPRETER/S,A=ATTACH/K,D=DESTINATION/K,P=PROMPT/F
   CREATEIMAGE PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,
               P=PROMPT/F
   SPEAKTEXT   PR=PROFILE/K,M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,
@@ -525,6 +527,8 @@ Changelog:
   interpreter on
 - ARexx SENDMESSAGE supports A=ATTACH to send one or more files with the
   prompt
+- ARexx SENDMESSAGE supports D=DESTINATION to download files the model
+  returns (defaults to the current directory)
 - Upgrade AmiSSL version to 5.27
 - Recompiled with latest libnix
 - Recompiled with optimsised build of json-c

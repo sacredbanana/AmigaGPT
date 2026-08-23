@@ -1,3 +1,4 @@
+#include <dos/dosextens.h>
 #include <json-c/json.h>
 #include <libraries/mui.h>
 #include <proto/dos.h>
@@ -376,6 +377,177 @@ static BOOL rexxAttachPathsToMessage(struct ConversationNode *message,
 
     FreeVec(specCopy);
     return TRUE;
+}
+
+static BOOL rexxGetCurrentDrawer(STRPTR buffer, ULONG bufferSize) {
+    BPTR lock = 0;
+    BOOL ok;
+    if (buffer == NULL || bufferSize == 0)
+        return FALSE;
+#ifdef __AMIGAOS4__
+    lock = GetCurrentDir();
+#else
+    {
+        struct Process *process = (struct Process *)FindTask(NULL);
+        if (process != NULL && process->pr_CurrentDir != 0)
+            lock = DupLock(process->pr_CurrentDir);
+    }
+#endif
+    if (lock == 0)
+        return FALSE;
+    ok = NameFromLock(lock, buffer, bufferSize);
+    UnLock(lock);
+    return ok;
+}
+
+static BOOL rexxEnsureDrawer(CONST_STRPTR drawer) {
+    BPTR lock;
+    if (drawer == NULL || drawer[0] == '\0')
+        return FALSE;
+    lock = Lock(drawer, ACCESS_READ);
+    if (lock != 0) {
+        UnLock(lock);
+        return TRUE;
+    }
+    lock = CreateDir(drawer);
+    if (lock != 0) {
+        UnLock(lock);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static STRPTR rexxDownloadReceivedFiles(
+    struct MinList *files, CONST_STRPTR drawer, CONST_STRPTR host, UWORD port,
+    BOOL useSSL, CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost,
+    UWORD proxyPort, BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+    CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+    CONST_STRPTR apiEndpointUrl, AuthorizationType authorizationType,
+    CONST_STRPTR customHeaders) {
+    ULONG pathBytes = 1;
+    STRPTR paths;
+    struct ChatFile *file;
+    if (files == NULL || drawer == NULL)
+        return NULL;
+
+    for (file = (struct ChatFile *)files->mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        pathBytes += strlen(drawer) + 80;
+        if (file->name != NULL)
+            pathBytes += strlen((STRPTR)file->name);
+    }
+    paths = AllocVec(pathBytes, MEMF_ANY | MEMF_CLEAR);
+    if (paths == NULL)
+        return NULL;
+
+    for (file = (struct ChatFile *)files->mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        STRPTR systemName = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)file->name,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
+        CONST_STRPTR usableName = chatFileSafeName(
+            systemName != NULL ? systemName : (STRPTR)file->name);
+        STRPTR destination = uniqueChatFileDestination(drawer, usableName);
+        if (destination == NULL) {
+            if (systemName != NULL)
+                CodesetsFreeA(systemName, NULL);
+            continue;
+        }
+        if (saveChatFileToPath(file, destination, host, port, useSSL, apiKey,
+                               useProxy, proxyHost, proxyPort, proxyUsesSSL,
+                               proxyRequiresAuth, proxyUsername, proxyPassword,
+                               apiEndpointUrl, authorizationType,
+                               customHeaders) == RETURN_OK) {
+            if (paths[0] != '\0')
+                strncat(paths, "\n", pathBytes - strlen(paths) - 1);
+            strncat(paths, destination, pathBytes - strlen(paths) - 1);
+        }
+        FreeVec(destination);
+        if (systemName != NULL)
+            CodesetsFreeA(systemName, NULL);
+    }
+
+    if (paths[0] == '\0') {
+        FreeVec(paths);
+        return NULL;
+    }
+    return paths;
+}
+
+static ULONG rexxReceivedFileCount(struct MinList *files) {
+    ULONG count = 0;
+    struct ChatFile *file;
+    if (files == NULL)
+        return 0;
+    for (file = (struct ChatFile *)files->mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ)
+        count++;
+    return count;
+}
+
+static void rexxSetSendMessageReply(struct Conversation *conversation,
+                                    CONST_STRPTR replyUTF8,
+                                    struct MinList *receivedFiles,
+                                    CONST_STRPTR savedPaths) {
+    CONST_STRPTR text = (replyUTF8 != NULL) ? replyUTF8 : (CONST_STRPTR)"";
+    struct ConversationNode *assistantMessage =
+        addTextToConversation(conversation, (UTF8 *)text, "assistant");
+    if (assistantMessage != NULL)
+        moveChatFiles(&assistantMessage->files, receivedFiles);
+    else if (receivedFiles != NULL)
+        freeChatFiles(receivedFiles);
+    saveDaemonConversation();
+
+    STRPTR formatted = NULL;
+    if (text[0] != '\0') {
+        formatted = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)text,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
+    }
+    CONST_STRPTR reply = formatted != NULL ? formatted : text;
+    if (savedPaths != NULL && savedPaths[0] != '\0') {
+        ULONG need = strlen(reply) + strlen(savedPaths) + 16;
+        STRPTR combined = AllocVec(need, MEMF_ANY | MEMF_CLEAR);
+        if (combined != NULL) {
+            if (reply[0] != '\0') {
+                strncat(combined, reply, need - 1);
+                strncat(combined, "\n\n", need - strlen(combined) - 1);
+            }
+            strncat(combined, "FILES:\n", need - strlen(combined) - 1);
+            strncat(combined, savedPaths, need - strlen(combined) - 1);
+            set(app, MUIA_Application_RexxString, combined);
+            FreeVec(combined);
+        } else {
+            set(app, MUIA_Application_RexxString, (STRPTR)reply);
+        }
+    } else {
+        set(app, MUIA_Application_RexxString, (STRPTR)reply);
+    }
+    if (formatted != NULL)
+        CodesetsFreeA(formatted, NULL);
+    updateStatusBar(STRING_READY, greenPen);
+}
+
+static void rexxFinishSendMessage(
+    struct Conversation *conversation, CONST_STRPTR replyUTF8,
+    struct MinList *receivedFiles, CONST_STRPTR saveDrawer, CONST_STRPTR host,
+    UWORD port, BOOL useSSL, CONST_STRPTR apiKey, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders) {
+    STRPTR savedPaths = rexxDownloadReceivedFiles(
+        receivedFiles, saveDrawer != NULL ? saveDrawer : (CONST_STRPTR)"", host,
+        port, useSSL, apiKey, useProxy, proxyHost, proxyPort, proxyUsesSSL,
+        proxyRequiresAuth, proxyUsername, proxyPassword, apiEndpointUrl,
+        authorizationType, customHeaders);
+    rexxSetSendMessageReply(conversation, replyUTF8, receivedFiles,
+                            savedPaths);
+    if (savedPaths != NULL)
+        FreeVec(savedPaths);
 }
 
 #define REXX_LOCKED_PROFILE_NAME_OPENAI "OpenAI"
@@ -1305,7 +1477,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     BOOL webSearchRequested = (BOOL)arg[15];
     BOOL codeInterpreterRequested = (BOOL)arg[16];
     STRPTR attachSpec = (STRPTR)arg[17];
-    STRPTR prompt = (STRPTR)arg[18];
+    STRPTR destination = (STRPTR)arg[18];
+    STRPTR prompt = (STRPTR)arg[19];
 
     /* Reload config from disk to pick up any changes from the main app */
     DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
@@ -1363,6 +1536,23 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     BOOL webSearchEnabled = rexxSettings.webSearchEnabled || webSearchRequested;
     BOOL codeInterpreterEnabled =
         rexxSettings.codeInterpreterEnabled || codeInterpreterRequested;
+    UBYTE currentDrawer[512];
+    CONST_STRPTR saveDrawer;
+    if (destination != NULL && destination[0] != '\0') {
+        saveDrawer = destination;
+        if (!rexxEnsureDrawer(saveDrawer)) {
+            UBYTE errMsg[512];
+            snprintf(errMsg, sizeof(errMsg), "%s: %s",
+                     STRING_ERROR_FILE_WRITE_OPEN, saveDrawer);
+            set(app, MUIA_Application_RexxString, errMsg);
+            updateStatusBar(STRING_ERROR, redPen);
+            return RETURN_OK;
+        }
+    } else if (rexxGetCurrentDrawer(currentDrawer, sizeof(currentDrawer))) {
+        saveDrawer = currentDrawer;
+    } else {
+        saveDrawer = "";
+    }
 
     /* Get the persistent daemon conversation (load from T: or create new) */
     struct Conversation *conversation = getDaemonConversation();
@@ -1452,6 +1642,9 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     CONST_STRPTR customHeaders = rexxSettings.customHeaders;
     CONST_STRPTR apiEndpointUrl = rexxSettings.apiEndpointUrl;
 
+    struct MinList receivedFiles;
+    NewList((struct List *)&receivedFiles);
+
     struct json_object **responses = postChatMessageToOpenAI(
         conversation, host, portValue, useSSL, model, apiKey, FALSE, useProxy,
         proxyHost, proxyPortValue, proxyUsesSSL, proxyRequiresAuth,
@@ -1462,9 +1655,16 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     /* Note: Don't free the conversation here - we keep it for context */
 
     if (responses == NULL) {
+        freeChatFiles(&receivedFiles);
         set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
         updateStatusBar(STRING_ERROR, redPen);
         return RETURN_OK;
+    }
+
+    {
+        UWORD collectIndex = 0;
+        while (responses[collectIndex] != NULL)
+            collectResponseFiles(responses[collectIndex++], &receivedFiles);
     }
 
     /* Handle shell tool calls if enabled - loop to handle multiple sequential
@@ -1495,6 +1695,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
                 json_object_put(responses[i]);
             }
             FreeVec(responses);
+            freeChatFiles(&receivedFiles);
             set(app, MUIA_Application_RexxString,
                 STRING_SHELL_TOOL_DENIED_BANNER);
             updateStatusBar(STRING_READY, greenPen);
@@ -1536,11 +1737,14 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
         if (toolResponse == NULL) {
             clearPendingToolCall();
+            freeChatFiles(&receivedFiles);
             set(app, MUIA_Application_RexxString,
                 STRING_ERROR_CONNECTING_OPENAI);
             updateStatusBar(STRING_ERROR, redPen);
             return RETURN_OK;
         }
+
+        collectResponseFiles(toolResponse, &receivedFiles);
 
         /* Check for errors */
         struct json_object *error;
@@ -1557,6 +1761,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
                 formattedMessageSystemEncoded);
             CodesetsFreeA(formattedMessageSystemEncoded, NULL);
             json_object_put(toolResponse);
+            freeChatFiles(&receivedFiles);
             updateStatusBar(STRING_ERROR, redPen);
             return RETURN_OK;
         }
@@ -1572,6 +1777,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             responses = AllocVec(2 * sizeof(struct json_object *), MEMF_CLEAR);
             if (responses == NULL) {
                 clearPendingToolCall();
+                freeChatFiles(&receivedFiles);
                 set(app, MUIA_Application_RexxString,
                     STRING_ERROR_CONNECTING_OPENAI);
                 updateStatusBar(STRING_ERROR, redPen);
@@ -1585,42 +1791,41 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         /* No more tool calls - get the final response text */
         UTF8 *toolContentString =
             getMessageContentFromJson(toolResponse, FALSE, TRUE, apiEndpoint);
-        if (toolContentString != NULL && strlen(toolContentString) > 0) {
-            /* Create a copy and strip unnecessary escape backslashes. */
-            STRPTR cleanedContent = AllocVec(
-                strlen((STRPTR)toolContentString) + 1, MEMF_ANY | MEMF_CLEAR);
-            if (cleanedContent != NULL) {
-                STRPTR rPtr = (STRPTR)toolContentString;
-                STRPTR wPtr = cleanedContent;
-                while (*rPtr) {
-                    if (*rPtr == '\\' &&
-                        (*(rPtr + 1) == '"' || *(rPtr + 1) == '\'' ||
-                         *(rPtr + 1) == '*' || *(rPtr + 1) == '_' ||
-                         *(rPtr + 1) == '`')) {
-                        rPtr++; /* Skip the escape backslash. */
+        if ((toolContentString != NULL && strlen(toolContentString) > 0) ||
+            rexxReceivedFileCount(&receivedFiles) > 0) {
+            STRPTR cleanedContent = NULL;
+            if (toolContentString != NULL && strlen(toolContentString) > 0) {
+                cleanedContent = AllocVec(
+                    strlen((STRPTR)toolContentString) + 1, MEMF_ANY | MEMF_CLEAR);
+                if (cleanedContent != NULL) {
+                    STRPTR rPtr = (STRPTR)toolContentString;
+                    STRPTR wPtr = cleanedContent;
+                    while (*rPtr) {
+                        if (*rPtr == '\\' &&
+                            (*(rPtr + 1) == '"' || *(rPtr + 1) == '\'' ||
+                             *(rPtr + 1) == '*' || *(rPtr + 1) == '_' ||
+                             *(rPtr + 1) == '`')) {
+                            rPtr++; /* Skip the escape backslash. */
+                        }
+                        *wPtr++ = *rPtr++;
                     }
-                    *wPtr++ = *rPtr++;
+                    *wPtr = '\0';
                 }
-                *wPtr = '\0';
-
-                /* Add response to conversation history for context. */
-                addTextToConversation(conversation, cleanedContent,
-                                      "assistant");
-                saveDaemonConversation();
-
-                STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
-                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                    (Tag)cleanedContent, CSA_MapForeignChars, TRUE, TAG_DONE);
-                set(app, MUIA_Application_RexxString,
-                    formattedMessageSystemEncoded);
-                CodesetsFreeA(formattedMessageSystemEncoded, NULL);
-                FreeVec(cleanedContent);
             }
+            rexxFinishSendMessage(
+                conversation,
+                cleanedContent != NULL ? cleanedContent : (CONST_STRPTR)"",
+                &receivedFiles, saveDrawer, host, (UWORD)portValue, useSSL,
+                apiKey, useProxy, proxyHost, (UWORD)proxyPortValue,
+                proxyUsesSSL, proxyRequiresAuth, proxyUsername, proxyPassword,
+                apiEndpointUrl, authType, customHeaders);
+            if (cleanedContent != NULL)
+                FreeVec(cleanedContent);
             json_object_put(toolResponse);
-            updateStatusBar(STRING_READY, greenPen);
             return RETURN_OK;
         }
         json_object_put(toolResponse);
+        freeChatFiles(&receivedFiles);
 
         set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
         updateStatusBar(STRING_ERROR, redPen);
@@ -1628,6 +1833,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     }
 
     if (responses[0] == NULL) {
+        freeChatFiles(&receivedFiles);
         set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
         updateStatusBar(STRING_ERROR, redPen);
         FreeVec(responses);
@@ -1658,6 +1864,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
                 json_object_put(response);
             }
             FreeVec(responses);
+            freeChatFiles(&receivedFiles);
             updateStatusBar(STRING_ERROR, redPen);
             return RETURN_OK;
         }
@@ -1676,6 +1883,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             json_object_put(response);
         }
         FreeVec(responses);
+        freeChatFiles(&receivedFiles);
         return RETURN_OK;
     }
 
@@ -1688,7 +1896,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         }
     }
 
-    if (strlen(combined) == 0) {
+    if (strlen(combined) == 0 && rexxReceivedFileCount(&receivedFiles) == 0) {
         set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);
         updateStatusBar(STRING_ERROR, redPen);
         ri = 0;
@@ -1697,6 +1905,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         }
         FreeVec(responses);
         FreeVec(combined);
+        freeChatFiles(&receivedFiles);
         return RETURN_OK;
     }
 
@@ -1714,15 +1923,11 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     }
     *writePtr = '\0';
 
-    /* Add response to conversation history for context. */
-    addTextToConversation(conversation, combined, "assistant");
-    saveDaemonConversation();
-
-    STRPTR formattedMessageSystemEncoded =
-        CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                          (Tag)combined, CSA_MapForeignChars, TRUE, TAG_DONE);
-    set(app, MUIA_Application_RexxString, formattedMessageSystemEncoded);
-    CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+    rexxFinishSendMessage(
+        conversation, combined, &receivedFiles, saveDrawer, host,
+        (UWORD)portValue, useSSL, apiKey, useProxy, proxyHost,
+        (UWORD)proxyPortValue, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
+        proxyPassword, apiEndpointUrl, authType, customHeaders);
 
     ri = 0;
     while ((response = responses[ri++]) != NULL) {
@@ -2571,7 +2776,7 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
         "S,PH=PROXYHOST/"
         "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
         "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,"
-        "CI=CODEINTERPRETER/S,A=ATTACH/K,P=PROMPT/F\n"
+        "CI=CODEINTERPRETER/S,A=ATTACH/K,D=DESTINATION/K,P=PROMPT/F\n"
         "CREATEIMAGE "
         "PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/"
         "F\n"
@@ -2596,8 +2801,8 @@ struct MUI_Command arexxList[] = {
      "S,PH=PROXYHOST/"
      "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
      "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,"
-     "CI=CODEINTERPRETER/S,A=ATTACH/K,P=PROMPT/F",
-     19,
+     "CI=CODEINTERPRETER/S,A=ATTACH/K,D=DESTINATION/K,P=PROMPT/F",
+     20,
      &SendMessageHook,
      {0, 0, 0, 0, 0}},
     {"CREATEIMAGE",

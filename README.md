@@ -146,7 +146,7 @@ When the app has opened, you are presented with a text input box. You can type a
 
 Use **Attach files...** to select one or more files to send with the next message, or pass them with the `A=ATTACH` argument on the ARexx `SENDMESSAGE` command. The selected files are shown beside the chat controls and can be removed with **Clear** before sending. OpenAI, xAI Grok, Anthropic Claude and Google Gemini upload the file first and then reference it, so the chat request stays small on classic Amiga TCP stacks. Other providers receive images and documents in their native multimodal request format. The type of each file is determined by looking inside it with libmagic -- the same code the Unix `file` command uses -- rather than from its name, so extensionless Amiga files such as `User-Startup` are sent as plain text and a file with a misleading name is sent as what it actually is. This uses the `magic.mgc` database that the installer copies into the AmigaGPT drawer by default, with `C:` offered as an alternative so one copy can be shared with the `file` package from Aminet; AmigaGPT checks `PROGDIR:magic.mgc` first, then `AMIGAGPT:magic.mgc`, then `C:magic.mgc`, and falls back to guessing from the file extension if none of them is present. ZIP archives are sent as `application/zip`. On OpenAI they are placed in the Code Interpreter container (enable **Code Interpreter** so the model can unpack them); on Anthropic Claude they are uploaded to the code-execution container the same way. To keep memory use practical on classic Amigas, each file is limited to 8 MB and all files in one request are limited to 16 MB.
 
-When an LLM response includes downloadable files, they are listed beneath the assistant message and **Save received files...** becomes available. Choose a destination drawer and AmigaGPT will save every returned file there without overwriting an existing file; numeric suffixes are added when necessary. Provider and model support for particular input types and returned files varies.
+When an LLM response includes downloadable files, they are listed beneath the assistant message and **Save received files...** becomes available. Choose a destination drawer and AmigaGPT will save every returned file there without overwriting an existing file; numeric suffixes are added when necessary. From ARexx, `SENDMESSAGE` downloads them to `D=DESTINATION` if you give a drawer, or to the current directory if you omit it. Provider and model support for particular input types and returned files varies.
 
 To the left of the chat box is a conversation list which you can use to go to another saved conversation. New conversations can be created with the "**New chat**" button and conversations can be removed with the "**Delete chat**" button.
 
@@ -241,7 +241,7 @@ The following ARexx commands are available:
 Sends a message using the selected chat profile and returns the response.
 
 ```
-SENDMESSAGE PR=PROFILE/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,H=HOST/K,PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,CI=CODEINTERPRETER/S,A=ATTACH/K,P=PROMPT/F
+SENDMESSAGE PR=PROFILE/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,H=HOST/K,PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,CI=CODEINTERPRETER/S,A=ATTACH/K,D=DESTINATION/K,P=PROMPT/F
 ```
 
 Note: a few short aliases are shared by two arguments in the same template (`S` for both `SYSTEM` and `SSL`, `PP` for both `PROXYPORT` and `PROXYPASSWORD`), and the `?` help output prints `P=PORT` where the command expects `PO=PORT`. Spell `SYSTEM`, `SSL`, `PORT`, `PROXYPORT` and `PROXYPASSWORD` out in full and there is no ambiguity.
@@ -264,6 +264,7 @@ Note: a few short aliases are shared by two arguments in the same template (`S` 
 - `W=WEBSEARCH` - Optional, enable web search. If omitted, the selected profile's setting is used. If provided, it forces web search on even when the selected profile has it disabled
 - `CI=CODEINTERPRETER` - Optional, enable the hosted code interpreter. If omitted, the selected profile's setting is used. If provided, it forces the code interpreter on even when the selected profile has it disabled
 - `A=ATTACH` - Optional, one file to send with the prompt, or several paths separated by commas. The files are typed the same way as **Attach files...** in the GUI. Either `ATTACH` or `PROMPT` must be provided
+- `D=DESTINATION` - Optional, a drawer to save files the model returns. If omitted, they are saved in the current directory. Existing names are not overwritten; a number is added when necessary. When files are saved, `RESULT` is the reply text followed by a `FILES:` line and one path per line
 - `P=PROMPT` - Optional if `ATTACH` is provided, otherwise required. The prompt or question to send
 
 #### CREATEIMAGE

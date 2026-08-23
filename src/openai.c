@@ -1261,6 +1261,114 @@ ULONG collectResponseFiles(struct json_object *response,
     return collectResponseFilesRecursive(response, files, NULL);
 }
 
+CONST_STRPTR chatFileSafeName(CONST_STRPTR name) {
+    if (name == NULL || strlen(name) == 0)
+        return "response-file";
+    CONST_STRPTR safe = name;
+    for (CONST_STRPTR cursor = name; *cursor != '\0'; cursor++) {
+        if (*cursor == '/' || *cursor == ':' || *cursor == '\\')
+            safe = cursor + 1;
+    }
+    return strlen(safe) > 0 ? safe : (CONST_STRPTR)"response-file";
+}
+
+STRPTR uniqueChatFileDestination(CONST_STRPTR drawer, CONST_STRPTR filename) {
+    ULONG capacity;
+    STRPTR candidate;
+    BPTR lock;
+    CONST_STRPTR extension;
+    ULONG stemLength;
+    ULONG suffix;
+
+    if (drawer == NULL || filename == NULL)
+        return NULL;
+    capacity = strlen(drawer) + strlen(filename) + 32;
+    candidate = AllocVec(capacity, MEMF_ANY | MEMF_CLEAR);
+    if (candidate == NULL)
+        return NULL;
+    strncpy(candidate, drawer, capacity - 1);
+    AddPart(candidate, filename, capacity);
+    lock = Lock(candidate, ACCESS_READ);
+    if (lock == 0)
+        return candidate;
+    UnLock(lock);
+
+    extension = strrchr(filename, '.');
+    stemLength =
+        extension != NULL ? (ULONG)(extension - filename) : strlen(filename);
+    for (suffix = 2; suffix < 10000; suffix++) {
+        UBYTE numberedName[512];
+        snprintf(numberedName, sizeof(numberedName), "%.*s-%lu%s",
+                 (int)stemLength, filename, suffix,
+                 extension != NULL ? extension : (CONST_STRPTR)"");
+        candidate[0] = '\0';
+        strncpy(candidate, drawer, capacity - 1);
+        AddPart(candidate, numberedName, capacity);
+        lock = Lock(candidate, ACCESS_READ);
+        if (lock == 0)
+            return candidate;
+        UnLock(lock);
+    }
+    FreeVec(candidate);
+    return NULL;
+}
+
+ULONG saveChatFileToPath(struct ChatFile *file, CONST_STRPTR destination,
+                         CONST_STRPTR host, UWORD port, BOOL useSSL,
+                         CONST_STRPTR apiKey, BOOL useProxy,
+                         CONST_STRPTR proxyHost, UWORD proxyPort,
+                         BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                         CONST_STRPTR proxyUsername,
+                         CONST_STRPTR proxyPassword,
+                         CONST_STRPTR apiEndpointUrl,
+                         AuthorizationType authorizationType,
+                         CONST_STRPTR customHeaders) {
+    ULONG result = RETURN_ERROR;
+    if (file == NULL || destination == NULL)
+        return RETURN_ERROR;
+
+    if (file->path != NULL) {
+        BPTR existing = Lock(file->path, ACCESS_READ);
+        if (existing != 0) {
+            UnLock(existing);
+            result = copyFile(file->path, (STRPTR)destination) ? RETURN_OK
+                                                               : RETURN_ERROR;
+        }
+    }
+    if (result != RETURN_OK && file->downloadUrl != NULL) {
+        result = downloadFile(file->downloadUrl, destination, useProxy,
+                              proxyHost, proxyPort, proxyUsesSSL,
+                              proxyRequiresAuth, proxyUsername, proxyPassword);
+    }
+    if (result != RETURN_OK && file->fileId != NULL) {
+        UBYTE endpoint[1024];
+        CONST_STRPTR base =
+            apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0
+                ? apiEndpointUrl
+                : (CONST_STRPTR)"v1";
+        if (file->containerId != NULL) {
+            snprintf(endpoint, sizeof(endpoint),
+                     "/%s/containers/%s/files/%s/content", base,
+                     file->containerId, file->fileId);
+        } else {
+            snprintf(endpoint, sizeof(endpoint), "/%s/files/%s/content", base,
+                     file->fileId);
+        }
+        result = downloadProviderFile(
+            host, port, useSSL, endpoint, destination, apiKey, useProxy,
+            proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth,
+            proxyUsername, proxyPassword, authorizationType, customHeaders);
+    }
+    if (result == RETURN_OK) {
+        if (file->path != NULL)
+            FreeVec(file->path);
+        file->path = AllocVec(strlen(destination) + 1, MEMF_ANY | MEMF_CLEAR);
+        if (file->path != NULL)
+            strncpy(file->path, destination, strlen(destination));
+    }
+    return result;
+}
+
 static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
                                      ULONG requestLength, BOOL reportErrors) {
     ULONG sentTotal = 0;

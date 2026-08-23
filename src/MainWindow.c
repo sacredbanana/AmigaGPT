@@ -464,49 +464,6 @@ HOOKPROTONHNONP(ClearAttachmentsButtonClickedFunc, void) {
 MakeHook(ClearAttachmentsButtonClickedHook,
          ClearAttachmentsButtonClickedFunc);
 
-static CONST_STRPTR safeResponseFileName(CONST_STRPTR name) {
-    if (name == NULL || strlen(name) == 0)
-        return "response-file";
-    CONST_STRPTR safe = name;
-    for (CONST_STRPTR cursor = name; *cursor != '\0'; cursor++) {
-        if (*cursor == '/' || *cursor == ':' || *cursor == '\\')
-            safe = cursor + 1;
-    }
-    return strlen(safe) > 0 ? safe : (CONST_STRPTR)"response-file";
-}
-
-static STRPTR uniqueResponseFilePath(CONST_STRPTR drawer,
-                                     CONST_STRPTR filename) {
-    ULONG capacity = strlen(drawer) + strlen(filename) + 32;
-    STRPTR candidate = AllocVec(capacity, MEMF_ANY | MEMF_CLEAR);
-    if (candidate == NULL)
-        return NULL;
-    strncpy(candidate, drawer, capacity - 1);
-    AddPart(candidate, filename, capacity);
-    BPTR lock = Lock(candidate, ACCESS_READ);
-    if (lock == 0)
-        return candidate;
-    UnLock(lock);
-
-    CONST_STRPTR extension = strrchr(filename, '.');
-    ULONG stemLength =
-        extension != NULL ? (ULONG)(extension - filename) : strlen(filename);
-    for (ULONG suffix = 2; suffix < 10000; suffix++) {
-        UBYTE numberedName[512];
-        snprintf(numberedName, sizeof(numberedName), "%.*s-%lu%s",
-                 (int)stemLength, filename, suffix,
-                 extension != NULL ? extension : (CONST_STRPTR)"");
-        candidate[0] = '\0';
-        strncpy(candidate, drawer, capacity - 1);
-        AddPart(candidate, numberedName, capacity);
-        lock = Lock(candidate, ACCESS_READ);
-        if (lock == 0)
-            return candidate;
-        UnLock(lock);
-    }
-    FreeVec(candidate);
-    return NULL;
-}
 
 HOOKPROTONHNONP(SaveResponseFilesButtonClickedFunc, void) {
     if (currentConversation == NULL ||
@@ -540,68 +497,26 @@ HOOKPROTONHNONP(SaveResponseFilesButtonClickedFunc, void) {
             STRPTR systemName = CodesetsUTF8ToStr(
                 CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
                 (Tag)file->name, CSA_MapForeignChars, TRUE, TAG_DONE);
-            CONST_STRPTR usableName = safeResponseFileName(
+            CONST_STRPTR usableName = chatFileSafeName(
                 systemName != NULL ? systemName : (STRPTR)file->name);
             STRPTR destination =
-                uniqueResponseFilePath(fileReq->fr_Drawer, usableName);
+                uniqueChatFileDestination(fileReq->fr_Drawer, usableName);
             if (destination == NULL) {
                 if (systemName != NULL)
                     CodesetsFreeA(systemName, NULL);
                 continue;
             }
 
-            ULONG result = RETURN_ERROR;
-            if (file->path != NULL) {
-                BPTR existing = Lock(file->path, ACCESS_READ);
-                if (existing != 0) {
-                    UnLock(existing);
-                    result = copyFile(file->path, destination) ? RETURN_OK
-                                                               : RETURN_ERROR;
-                }
-            }
-            if (result != RETURN_OK && file->downloadUrl != NULL) {
-                result = downloadFile(
-                    file->downloadUrl, destination, chatSettings.useProxy,
-                    chatSettings.proxyHost, chatSettings.proxyPort,
-                    chatSettings.proxyUsesSSL,
-                    chatSettings.proxyRequiresAuth,
-                    chatSettings.proxyUsername, chatSettings.proxyPassword);
-            }
-            if (result != RETURN_OK && file->fileId != NULL) {
-                UBYTE endpoint[1024];
-                CONST_STRPTR base =
-                    chatSettings.apiEndpointUrl != NULL &&
-                            strlen(chatSettings.apiEndpointUrl) > 0
-                        ? chatSettings.apiEndpointUrl
-                        : (CONST_STRPTR)"v1";
-                if (file->containerId != NULL) {
-                    snprintf(endpoint, sizeof(endpoint),
-                             "/%s/containers/%s/files/%s/content", base,
-                             file->containerId, file->fileId);
-                } else {
-                    snprintf(endpoint, sizeof(endpoint),
-                             "/%s/files/%s/content", base, file->fileId);
-                }
-                result = downloadProviderFile(
-                    chatSettings.host, chatSettings.port,
-                    chatSettings.useSSL, endpoint, destination,
-                    chatSettings.apiKey, chatSettings.useProxy,
-                    chatSettings.proxyHost, chatSettings.proxyPort,
-                    chatSettings.proxyUsesSSL,
-                    chatSettings.proxyRequiresAuth,
-                    chatSettings.proxyUsername, chatSettings.proxyPassword,
+            if (saveChatFileToPath(
+                    file, destination, chatSettings.host, chatSettings.port,
+                    chatSettings.useSSL, chatSettings.apiKey,
+                    chatSettings.useProxy, chatSettings.proxyHost,
+                    chatSettings.proxyPort, chatSettings.proxyUsesSSL,
+                    chatSettings.proxyRequiresAuth, chatSettings.proxyUsername,
+                    chatSettings.proxyPassword, chatSettings.apiEndpointUrl,
                     chatSettings.authorizationType,
-                    chatSettings.customHeaders);
-            }
-            if (result == RETURN_OK) {
-                if (file->path != NULL)
-                    FreeVec(file->path);
-                file->path =
-                    AllocVec(strlen(destination) + 1, MEMF_ANY | MEMF_CLEAR);
-                if (file->path != NULL)
-                    strncpy(file->path, destination, strlen(destination));
+                    chatSettings.customHeaders) == RETURN_OK)
                 savedCount++;
-            }
             FreeVec(destination);
             if (systemName != NULL)
                 CodesetsFreeA(systemName, NULL);

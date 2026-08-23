@@ -457,6 +457,31 @@ ULONG collectResponseFiles(struct json_object *response,
                            struct MinList *files);
 
 /**
+ * Strip directory components from a response file name so it is safe to
+ * write into a destination drawer.
+ **/
+CONST_STRPTR chatFileSafeName(CONST_STRPTR name);
+
+/**
+ * Build a path in drawer that does not yet exist. Adds -2, -3, ... before
+ * the extension when the name is already taken. Caller must FreeVec().
+ **/
+STRPTR uniqueChatFileDestination(CONST_STRPTR drawer, CONST_STRPTR filename);
+
+/**
+ * Save one received chat file to destination. Tries a local copy first,
+ * then downloadUrl, then the provider Files API. On success, file->path
+ * is updated to destination.
+ **/
+ULONG saveChatFileToPath(
+    struct ChatFile *file, CONST_STRPTR destination, CONST_STRPTR host,
+    UWORD port, BOOL useSSL, CONST_STRPTR apiKey, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders);
+
+/**
  * Post a text to speech request to OpenAI
  * @param text the text to speak
  * @param openAITTSModelId the TTS model id (e.g., "tts-1", "gpt-4o-mini-tts")
