@@ -1072,6 +1072,8 @@ When the daemon answers, the message is added to its conversation history, so th
 
   'SENDMESSAGE DESTINATION=RAM: CODEINTERPRETER P=Make a CSV of the first 10 primes'
   SAY RESULT
+
+The bundled @{b}show_received_file.rexx@{ub} script does the same kind of request and opens the first saved path in MultiView.
 @endnode
 
 @node arexxcreateimage "CREATEIMAGE"
@@ -1237,7 +1239,8 @@ AmigaGPT installs a set of example scripts into @{i}AMIGAGPT:rexx@{ui}. They are
 - @{b}say.rexx@{ub} - asks you what to say and speaks it
 - @{b}say_os_version.rexx@{ub} - runs the Version command and speaks the result. Shows how to feed the output of an AmigaDOS command into AmigaGPT.
 - @{b}amiga_image.rexx@{ub} - generates a picture and opens it in MultiView
-- @{b}textedit_translate_norwegian.rexx@{ub} - takes the selected text in TextEdit, translates it and puts the translation back. Shows AmigaGPT working as a service to another application.
+- @{b}textedit_translate_no.rexx@{ub} - takes the selected text in TextEdit, translates it and puts the translation back. Shows AmigaGPT working as a service to another application.
+- @{b}show_received_file.rexx@{ub} - asks the hosted code interpreter for a file, saves it to RAM: with DESTINATION, and opens it in MultiView. Shows how to read the FILES: block from SENDMESSAGE.
 
 Use @{b}Import Script...@{ub} in the @{b}ARexx@{ub} menu to add your own scripts to the menu.
 @endnode

@@ -397,7 +397,8 @@ AmigaGPT installs a set of example scripts into `AMIGAGPT:rexx`:
 | `say.rexx` | Asks you what to say and speaks it |
 | `say_os_version.rexx` | Runs `Version` and speaks the result - shows how to feed an AmigaDOS command into AmigaGPT |
 | `amiga_image.rexx` | Generates a picture and opens it in MultiView |
-| `textedit_translate_norwegian.rexx` | Translates the selected text in TextEdit and puts the translation back |
+| `textedit_translate_no.rexx` | Translates the selected text in TextEdit and puts the translation back |
+| `show_received_file.rexx` | Asks the hosted code interpreter for a file, saves it with `D=DESTINATION`, and opens it in MultiView |
 
 The **ARexx** menu allows you to import and run ARexx scripts. Also, selecting **Arexx Shell** will open a shell and put all ARexx scripts in trace mode so you can run the scripts line by line for debugging purposes. Select **Arexx Shell** once again to turn off trace mode and close the shell.
 

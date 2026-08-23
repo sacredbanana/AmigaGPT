@@ -412,8 +412,8 @@ help output prints P=PORT where the command expects PO=PORT. Spell SYSTEM,
 SSL, PORT, PROXYPORT and PROXYPASSWORD out in full and there is no ambiguity.
 
 Example scripts are installed into AMIGAGPT:rexx - askgpt.rexx, help.rexx,
-joke.rexx, say.rexx, say_os_version.rexx, amiga_image.rexx and
-textedit_translate_norwegian.rexx.
+joke.rexx, say.rexx, say_os_version.rexx, amiga_image.rexx,
+textedit_translate_no.rexx and show_received_file.rexx.
 
 *Files and drawers*
 
