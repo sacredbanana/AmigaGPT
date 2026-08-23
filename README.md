@@ -62,6 +62,7 @@ Ensure you have the necessary system requirements:
 - **A PNG datatype** Any will do, but here is one (<https://aminet.net/util/dtype/vPNGdt.lha>)
 - An API key for your chosen AI provider (**OpenAI**, **Google Gemini**, **xAI**, or **Anthropic**), or a locally-hosted OpenAI-compatible LLM server
 - _Optional_: **AmigaOS 3 only**: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
+- _Optional_: **AmigaOS 3 only**: **`translator.library` v42** or higher, needed by both versions of `narrator.device` (<http://aminet.net/util/libs/translator42.lha>). Only v42 is required; the v43 patch is optional
 - _Optional_: **AmigaOS 4 only**: **Flite device** (<http://aminet.net/package/mus/misc/flite_device>)
 - _Optional_: For OpenAI, xAI Grok, ElevenLabs or OpenVox voices, **_AHI_** needs to be installed
   (<http://aminet.net/package/driver/audio/ahiusr_4.18>)
@@ -91,32 +92,42 @@ If your OS does not come with AHI installed, you can get it from
 
 **v34** is the original version that came with Workbench 1.x. **v37** was an updated version included with Workbench 2.0.x. It has more features and sounds more natural, however it does sound quite different which is why **AmigaGPT** supports you installing both versions and your choice of version to be used can be selected in the **Speech** menu in the app.
 
-Regardless of which version of `narrator.device` you choose to install (or both), **AmigaGPT** requires that you install the free third party `translator.library` **v43**. This works with both versions of `narrator.device`.
+Regardless of which version of `narrator.device` you choose to install (or both), **AmigaGPT** requires the free third party `translator.library` **v42** or higher. This works with both versions of `narrator.device`.
 
-### Installing `translator.library` **v43**
+### Installing `translator.library`
 
-Since `translator.library` **v43** is not available as a standalone install, you will need to install **v42** and then patch it to **v43**.
+**v42** is all AmigaGPT requires, and it is available as a standalone install:
 
 - Download <http://aminet.net/util/libs/translator42.lha> and extract the archive to any convenient location on your Amiga such as `RAM:`
 - Navigate to that directory and double click the `Install` program
 - Run the installer using all the default settings
-- Download <http://aminet.net/util/libs/Tran43pch.lha> and once again extract it to a location of your choice
+- Reboot your Amiga - It will not work until the system is restarted
+
+#### Optional: patching to **v43**
+
+**v43** is a later revision with improved pronunciation. AmigaGPT does not need it - earlier documentation said it was required, but that is no longer the case - and speech works fine on v42. If you want it anyway, install v42 as above and then apply the patch:
+
+- Download <http://aminet.net/util/libs/Tran43pch.lha> and extract it to a location of your choice
 - Navigate to that directory and double click the `Install` program
 - Run the installer using all the default settings
-- Reboot your Amiga - It will not work until the system is restarted
+- Reboot your Amiga
 
 ### Installing `narrator.device` **v34**
 
-- Insert your Workbench 1.x disk and copy `df0:devs/narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/34`
+- Insert your Workbench 1.x disk and copy `df0:devs/narrator.device` to `AMIGAGPT:devs/speech/34`
 
 ### Installing `narrator.device` **v37**
 
-- Insert your Workbench 2.0.x (you cannot use 2.1 because the speech libraries were removed after version 2.0.4) disk and copy `df0:devs/narrator.device` to `{AmigaGPTProgramDirectory}/devs/speech/37`
+- Insert your Workbench 2.0.x (you cannot use 2.1 because the speech libraries were removed after version 2.0.4) disk and copy `df0:devs/narrator.device` to `AMIGAGPT:devs/speech/37`
 
 ### AmigaOS 4
 
 - AmigaGPT for AmigaOS 4 uses the Flite device to provide speech synthesis. Download it from <http://aminet.net/package/mus/misc/flite_device>.
 - Extract the archive and run the installer
+
+### MorphOS
+
+MorphOS has no offline speech system. Use one of the cloud voices (OpenAI, xAI, ElevenLabs or OpenVox) with AHI installed.
 
 ## Launching **AmigaGPT**
 
@@ -139,7 +150,17 @@ When an LLM response includes downloadable files, they are listed beneath the as
 
 To the left of the chat box is a conversation list which you can use to go to another saved conversation. New conversations can be created with the "**New chat**" button and conversations can be removed with the "**Delete chat**" button.
 
-You can also chat to AmigaGPT within the Shell as long as either AmigaGPT or the AmigaGPTD daemon are running. Just type `askgpt` into the shell and it will ask you what you want to ask. Or just ask right away with the command `askgpt What is the capital of Australia?`. To activate a mini GUI for AskGPT, just add `GUI` as the first argument to AskGPT.
+You can also chat to AmigaGPT within the Shell as long as either AmigaGPT or the AmigaGPTD daemon are running. Just type `askgpt` into the shell and it will ask you what you want to ask. Or just ask right away with the command `askgpt What is the capital of Australia?`.
+
+```
+askgpt [GUI] [NEWCHAT] [PROFILE=name] question
+```
+
+- `GUI` opens a small window for the question and the answer instead of printing to the Shell. This needs RxMUI and `rmh.library`; without them AskGPT falls back to a simple requester
+- `NEWCHAT` clears the conversation history first, so the question is not answered in the context of whatever came before
+- `PROFILE=name` (or `PR=name`) uses a particular chat profile instead of the active one
+
+Because the daemon keeps its history between calls, successive `askgpt` commands continue the same conversation until you use `NEWCHAT` or reboot.
 
 ### Image Generation
 
@@ -149,25 +170,57 @@ To generate images, open "**Image Provider Settings**" from the "**Image**" menu
 
 AmigaGPT supports multiple AI providers. Open "**Chat Provider Settings**" from the "**Chat**" menu or "**Image Provider Settings**" from the "**Image**" menu.
 
-The provider list includes built-in entries for **OpenAI**, **Google Gemini**, **xAI Grok** and **Anthropic Claude** (chat only); these cannot be removed. For built-in providers you can set the API key and choose the model; host, port and other connection settings are fixed. Known models are shown for each built-in; for OpenAI you can also use "Fetch Models" to refresh the list. You can add custom provider profiles (e.g. LM Studio) with templates and full control over all settings. Custom profile names cannot match built-in provider names.
+The provider list includes built-in entries for **OpenAI**, **Google Gemini**, **xAI Grok** and **Anthropic Claude** (chat only); these cannot be removed. For built-in providers you can set the API key and choose the model; host, port and other connection settings are fixed. Known models are shown for each built-in; for OpenAI you can also use "Fetch Models" to refresh the list. You can add custom provider profiles (e.g. LM Studio or Ollama) with **New**, which creates a blank profile you have full control over, or copy an existing one with **Duplicate**. **Test** sends a small request using the settings currently on screen and reports PASS or FAIL together with the raw server response. Custom profile names cannot match built-in provider names.
 
 When you switch to another profile without saving, AmigaGPT will ask whether to save your changes (Yes, No or Cancel).
+
+### Speech Provider Settings
+
+Open "**Speech Provider Settings...**" from the "**Speech**" menu. This is where the speech system is chosen and configured; in earlier versions of AmigaGPT this was done from the **Speech** menu itself.
+
+Like the chat and image windows it has a **Profiles** list with **New**, **Duplicate** and **Delete**, a **Profile Name** field, and a **Test** button that speaks a sample using the settings currently on screen. The **Speech system** cycle chooses between:
+
+| Speech system | Platform | Needs |
+| --- | --- | --- |
+| Workbench 1.x v34 | AmigaOS 3 | `narrator.device` v34 + `translator.library` v42+ |
+| Workbench 2.0 v37 | AmigaOS 3 | `narrator.device` v37 + `translator.library` v42+ |
+| Flite | AmigaOS 4 | `flite.device` |
+| OpenAI | any | AHI + OpenAI API key |
+| xAI | any | AHI + xAI API key |
+| ElevenLabs | any | AHI + ElevenLabs API key |
+| OpenVox | any | AHI + an OpenVox server (defaults to `127.0.0.1:8666`) |
+
+MorphOS has no offline speech system, so use one of the cloud voices.
+
+Depending on the selected system the window shows:
+
+- **Connection settings** (cloud systems) - Host, Port, Encryption, Authorization and API Endpoint URL
+- **Workbench narrator.device** (v34/v37) - **Accent** (default `american.accent`), **Rate (wpm)** (default 150), **Pitch (Hz)** (default 110), **Mode** (Natural/Robotic) and **Sex** (Male/Female). v34 and v37 each keep their own copy of these.
+- **Flite Voice** - `kal`, `kal16`, `awb`, `rms` or `slt`
+- **OpenAI** - API key, **Model** (`tts-1`, `tts-1-hd`, `gpt-4o-mini-tts`) with **Fetch Models**, **Voice** (alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, verse) and **OpenAI Voice Instructions**
+- **xAI** - API key, **Voice** (ara, eve, leo, rex, sal) and **Auto-insert speech tags into LLM replies**
+- **ElevenLabs** - API key, **Model** (Eleven v3, Eleven Multilingual v2, Eleven Flash v2.5, Eleven Turbo v2.5) with **Fetch Models**, and **Voice** with **Search** and **Get All Voices**
+- **OpenVox** - models and voices are fetched from your own server
+
+If a profile needs something that is not installed, AmigaGPT warns you which component is missing.
 
 ### General
 
 The "**Project**" menu includes an "**About**" option, which displays information about the program.
 
-In the "**Edit**" menu, you'll find basic text editing commands like **Cut**, **Copy**, **Paste** and **Clear**.
+In the "**Edit**" menu, you'll find basic text editing commands: **Cut** (Right-Amiga + X), **Copy** (+ C), **Paste** (+ V), **Clear** (+ L) and **Select all** (+ A). They act on whichever text field has the keyboard focus and are greyed out when neither the chat input nor the image prompt is active.
 
-The "**Project**" menu also includes a **Print** option to print the current conversation.
+The "**Project**" menu also includes a **Print** option (Right-Amiga + P) to print the current conversation.
 
-The "**View**" menu allows you to change the appearance of the app, including toggling **Fixed Width Fonts** and setting the **User** and **Assistant text alignment**.
+The "**Help**" menu has **Open Documentation...**, which opens `AMIGAGPT:AmigaGPT.guide` - the full AmigaGuide manual, including a troubleshooting section and a complete menu reference.
 
-AmigaGPT can run on its own screen or in Workbench. To configure this, open the **MUI Settings** menu item from the **View** menu and configure it in the **Screen** or **System** menu in the **MUI Setings** panel.
+The "**View**" menu allows you to change the appearance of the app, including toggling **Fixed Width Fonts** and setting the **User** and **Assistant text alignment**. **MUI Settings...** opens the full MUI preferences for AmigaGPT, and **Clear MUI Settings** resets fonts, colours, screen and window positions back to their defaults.
+
+AmigaGPT can run on its own screen or in Workbench. To configure this, open the **MUI Settings** menu item from the **View** menu and configure it in the **Screen** or **System** menu in the **MUI Settings** panel.
 
 If you open in a new screen you have the ability to create a screen for the app to open in. **AmigaGPT** supports anything from 320x200 all the way up to 4k resolution if using a video card for RTG. Bear in mind text will appear very tiny in resolutions above 1080p so you may want to increase the font size settings from the MUI settings in the View menu when the app opens.
 
-The "**Connection**" menu allows you to connect via a proxy server. It supports both HTTP and HTTPS proxy servers but if you use an unecrypted HTTP proxy server you can improve the performance of AmigaGPT by removing the need for the encryption of the OpenAI traffic to be done on the system running AmigaGPT. For an easy proxy server you can run on your local network you can try out <https://mitmproxy.org>
+The "**Connection**" menu allows you to connect via a proxy server. It supports both HTTP and HTTPS proxy servers but if you use an unencrypted HTTP proxy server you can improve the performance of AmigaGPT by removing the need for the encryption of the OpenAI traffic to be done on the system running AmigaGPT. For an easy proxy server you can run on your local network you can try out <https://mitmproxy.org>
 
 ### ARexx Support
 
@@ -179,7 +232,7 @@ AmigaGPT also comes with a companion daemon app called AmigaGPTD. You may run th
 
 The daemon maintains conversation history in T: so it remembers context across multiple ARexx calls until the next reboot. This allows for follow-up questions and multi-turn conversations. Use the `NEWCHAT` ARexx command to clear the conversation history and start fresh.
 
-Please note: AmigaGPT and AmigaGPTD listen on 2 differnt ARexx ports so adjust your scrips accordingly. AmigaGPT listens on **AMIGAGPT** and AmigaGPTD listens on **AMIGAGPTD**.
+Please note: AmigaGPT and AmigaGPTD listen on 2 different ARexx ports so adjust your scripts accordingly. AmigaGPT listens on **AMIGAGPT** and AmigaGPTD listens on **AMIGAGPTD**.
 
 The following ARexx commands are available:
 
@@ -188,14 +241,26 @@ The following ARexx commands are available:
 Sends a message using the selected chat profile and returns the response.
 
 ```
-SENDMESSAGE PR=PROFILE/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,K=APIKEY/K,W=WEBSEARCH/S,P=PROMPT/F
+SENDMESSAGE PR=PROFILE/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,H=HOST/K,PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,P=PROMPT/F
 ```
+
+Note: a few short aliases are shared by two arguments in the same template (`S` for both `SYSTEM` and `SSL`, `PP` for both `PROXYPORT` and `PROXYPASSWORD`), and the `?` help output prints `P=PORT` where the command expects `PO=PORT`. Spell `SYSTEM`, `SSL`, `PORT`, `PROXYPORT` and `PROXYPASSWORD` out in full and there is no ambiguity.
 
 - `PR=PROFILE` - Optional, the chat profile to use. This can be a built-in profile such as OpenAI, Google Gemini, xAI Grok or Anthropic Claude, or a saved custom chat profile name. Use `LISTPROFILES` to see available profiles. If omitted, the active chat profile from AmigaGPT config is used
 - `M=MODEL` - Optional, the chat model to use. Use `LISTMODELS PR=<profile>` to inspect the models for a profile. If omitted, the selected profile's model is used
 - `S=SYSTEM` - Optional, system message to include
 - `SF=SYSTEMFILE` - Optional, file containing the system message to include. If both `SF` and `S` are provided, the effective system message is the file contents concatenated with `S`.
+- `H=HOST` - Optional, connect to this server instead of the profile's host
+- `PORT` - Optional, the port to connect to
+- `SSL` - Optional, use an encrypted connection
 - `K=APIKEY` - Optional, API key override. If omitted, the selected profile's API key is used
+- `U=USEPROXY` - Optional, route this request through a proxy server
+- `PH=PROXYHOST` - Optional, the proxy server address
+- `PROXYPORT` - Optional, the proxy server port
+- `PS=PROXYUSESSSL` - Optional, the proxy connection is encrypted
+- `PA=PROXYREQUIRESAUTH` - Optional, the proxy requires authentication
+- `PU=PROXYUSERNAME` - Optional, the proxy username
+- `PROXYPASSWORD` - Optional, the proxy password
 - `W=WEBSEARCH` - Optional, enable web search. If omitted, the selected profile's setting is used. If provided, it forces web search on even when the selected profile has it disabled
 - `P=PROMPT` - Required, the prompt or question to send
 
@@ -317,7 +382,53 @@ SAY 'Image saved to:' RESULT
 EXIT
 ```
 
+#### Bundled ARexx scripts
+
+AmigaGPT installs a set of example scripts into `AMIGAGPT:rexx`:
+
+| Script | What it does |
+| --- | --- |
+| `askgpt.rexx` | The Shell front end. Argument parsing, an optional RxMUI interface, profile selection and `NEWCHAT` |
+| `help.rexx` | Prints the command set, the profiles, the models for the active profiles and the voices for the active speech profile |
+| `joke.rexx` | Asks for a joke and shows it in an RxMUI window, falling back to a plain requester |
+| `say.rexx` | Asks you what to say and speaks it |
+| `say_os_version.rexx` | Runs `Version` and speaks the result - shows how to feed an AmigaDOS command into AmigaGPT |
+| `amiga_image.rexx` | Generates a picture and opens it in MultiView |
+| `textedit_translate_norwegian.rexx` | Translates the selected text in TextEdit and puts the translation back |
+
 The **ARexx** menu allows you to import and run ARexx scripts. Also, selecting **Arexx Shell** will open a shell and put all ARexx scripts in trace mode so you can run the scripts line by line for debugging purposes. Select **Arexx Shell** once again to turn off trace mode and close the shell.
+
+## Files and Drawers
+
+Everything AmigaGPT keeps lives under the `AMIGAGPT:` assign, which the installer adds to `S:User-Startup`.
+
+| Path | Contents |
+| --- | --- |
+| `AMIGAGPT:AmigaGPT` | The application |
+| `AMIGAGPT:AmigaGPTD` | The daemon |
+| `C:askgpt` | The Shell command, if you installed it |
+| `AMIGAGPT:config.json` | All settings, profiles and API keys (plain text) |
+| `AMIGAGPT:config.bak` | The previous configuration |
+| `AMIGAGPT:chat-history.json` | Every conversation |
+| `AMIGAGPT:image-history.json` | Every generated image |
+| `AMIGAGPT:images/` | The generated image files |
+| `AMIGAGPT:AmigaGPT.guide` | This documentation, opened by the **Help** menu |
+| `AMIGAGPT:magic.mgc` | The file type database (may also be in `PROGDIR:` or `C:`) |
+| `AMIGAGPT:rexx/` | The bundled ARexx scripts |
+| `AMIGAGPT:devs/speech/34/` | Where `narrator.device` v34 goes |
+| `AMIGAGPT:devs/speech/37/` | Where `narrator.device` v37 goes |
+| `LOCALE:Catalogs/<language>/AmigaGPT.catalog` | The translations |
+| `T:AmigaGPTD_history.json` | The daemon conversation, until the next reboot |
+
+If a history file is ever found to be corrupt, AmigaGPT renames it with a `.bak` extension - or copies it to `RAM:` if it cannot - tells you what happened, and carries on with an empty history rather than refusing to start.
+
+## Language
+
+AmigaGPT follows the language set in your system Locale preferences. English is built into the program; the other 22 languages are installed as catalogs into `LOCALE:Catalogs`:
+
+Bosnian, Croatian, Czech, Danish, Dutch, English (British), Finnish, French, German, Greek, Hungarian, Italian, Norwegian, Polish, Portuguese, Russian, Serbian, Slovak, Slovenian, Spanish, Swedish and Turkish.
+
+The installer preselects your system language. If no catalog is installed for the current language, AmigaGPT falls back to English. The interface language is separate from the language the AI answers in - to change the latter, put an instruction such as "Always answer in Italian" into the **Chat System** field of the chat profile.
 
 ## Models
 
@@ -387,7 +498,7 @@ We welcome contributions to **AmigaGPT**! If you have a bug to report, a feature
 - **Ján Zahurančík** for all the thorough testing, bundling AmigaGPT into AmiKit, creating KIT, and for all the moral support <https://www.amikit.amiga.sk>
 - **CoffinOS** for bundling AmigaGPT into CoffinOS <https://getcoffin.net>
 - **Amiga Future Magazine** for reviewing AmigaGPT and publishing several of its updates in the News from Aminet section <https://www.amigafuture.de/>
-- **WhatIFF? Magaine** for reviewing AmigaGPT and interviewing me in issue 14 <https://www.whatiff.info>
+- **WhatIFF? Magazine** for reviewing AmigaGPT and interviewing me in issue 14 <https://www.whatiff.info>
 - **Dan Wood** for reviewing AmigaGPT on his YouTube channel <https://www.youtube.com/watch?v=-OA28r8Up5U>
 - **Proteque-CBN** for reviewing AmigaGPT on his YouTube channel <https://www.youtube.com/watch?v=t3q8HQ6wrnw>
 - **AmigaBill** for covering AmigaGPT in the Amiga News section on his Twitch streams and allowing me to join his stream to promote it <https://www.twitch.tv/amigabill>
