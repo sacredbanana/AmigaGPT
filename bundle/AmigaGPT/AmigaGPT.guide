@@ -311,6 +311,14 @@ Attach a .zip file with "Attach files...". On OpenAI the archive is uploaded and
 
 When the model creates a file (for example a CSV or a plot), AmigaGPT can download it with the existing received-files controls.
 
+@{b}How the file type is worked out@{ub}
+
+AmigaGPT tells the provider what kind of file each attachment is, and it works this out by looking inside the file with libmagic, the same code the Unix "file" command uses. This matters on the Amiga, where files often have no extension at all: a text file called "S:User-Startup" is correctly sent as text, and a file with a misleading name is sent as what it really is rather than what it claims to be.
+
+This needs the file type database "magic.mgc", which the installer puts in the AmigaGPT drawer unless you choose somewhere else. AmigaGPT looks for it as PROGDIR:magic.mgc first, then AMIGAGPT:magic.mgc, then C:magic.mgc, so a copy in the AmigaGPT drawer takes precedence, and a copy in C: - which is where the "file" package on Aminet puts it - works just as well.
+
+If the database cannot be found, attachments still work: AmigaGPT falls back to guessing the type from the file name extension, as earlier versions always did.
+
 @endnode
 
 @node editmenu "Edit menu"

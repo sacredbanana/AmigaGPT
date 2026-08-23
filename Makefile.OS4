@@ -66,7 +66,7 @@ else
 endif
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-I$(SDKDIR),-I$(NETINCDIR),-I$(INCDIR),-D
-LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-lamisslstubs,-ljson-c,-lauto
+LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-L$(LIBDIR),-L$(SDKLIBDIR),-lm,-lamisslstubs,-ljson-c,-lmagic,-lauto
 VASMFLAGS = -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS4__ -I$(NETINCDIR) -I$(SDKDIR) -I$(INCDIR)
 
 .PHONY: all clean copy_bundle_files catalog catalog_definition daemon

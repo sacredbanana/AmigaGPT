@@ -1,14 +1,17 @@
 # Changelog
 
-## 3.2.0 (2026-08-22)
+## 3.2.0 (2026-08-23)
 
-- Attach files to the prompt
-- Send ZIP archives as chat attachments (OpenAI and Anthropic Code Interpreter)
+- Attach files to the prompt with automatic file type detection
 - Download files created in the response
 - Chat profile option to enable the provider's hosted code interpreter
 - Upgrade AmiSSL version to 5.27
 - Recompiled with latest libnix
 - Recompiled with optimsised build of json-c
+- Recompiled with latest MorphOS SDK 3.20
+- No longer uses base relative code to prevent crahes from accidental trashing of the base register (A4)
+- Added an entry to the special thanks section
+- Installer has updated text and no longer asks where to install the locale files (forces an installation to LOCALE:)
 
 ## 3.1.0 (2026-08-16)
 

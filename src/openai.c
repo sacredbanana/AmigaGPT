@@ -11,6 +11,7 @@
 #include <netdb.h>
 #endif
 #include <json-c/json.h>
+#include <magic.h>
 #include <mui/Busy_mcc.h>
 #include <proto/exec.h>
 #include <proto/socket.h>
@@ -631,6 +632,68 @@ getLastNonSystemConversationMessage(struct Conversation *conversation) {
     return NULL;
 }
 
+/* Where the compiled magic database is looked for, in order. The file(1)
+ * distribution installs it to C:, and AmigaGPT's installer puts a copy there
+ * too, so a machine with either package gets content-based detection. PROGDIR:
+ * is checked first so a copy dropped next to the executable wins, then the
+ * AMIGAGPT: assign, which finds the install drawer even when the executable
+ * itself lives somewhere else. */
+static CONST_STRPTR magicDatabasePaths[] = {
+    "PROGDIR:magic.mgc", "AMIGAGPT:magic.mgc", "C:magic.mgc", NULL};
+
+/* Identify a file by its contents with libmagic, returning an AllocVec'd MIME
+ * type string, or NULL if that is not possible on this machine.
+ *
+ * The cookie is opened and closed around each file rather than kept alive: the
+ * database is a couple of megabytes and libmagic reads all of it into memory,
+ * which is a lot to hold for the whole session on a 68k machine. The cost is
+ * paid once per attachment, normally when the file is attached rather than when
+ * the message is sent -- see addPendingChatFile() -- so the pause lands where
+ * the user has just used the file requester and expects some disk activity. */
+STRPTR detectMimeTypeFromContents(CONST_STRPTR path) {
+    magic_t cookie;
+    CONST_STRPTR detected;
+    STRPTR result = NULL;
+    ULONG i;
+
+    if (path == NULL)
+        return NULL;
+
+    cookie = magic_open(MAGIC_MIME_TYPE | MAGIC_ERROR);
+    if (cookie == NULL)
+        return NULL;
+
+    for (i = 0; magicDatabasePaths[i] != NULL; i++) {
+        /* Check the file is there before handing it to magic_load(). A normal
+         * installation only has the C: copy, so the earlier candidates usually
+         * do not exist, and calling magic_load() a second time on a cookie
+         * whose first call failed is not behaviour worth depending on. */
+        BPTR probe = Open(magicDatabasePaths[i], MODE_OLDFILE);
+        if (probe == 0)
+            continue;
+        Close(probe);
+        if (magic_load(cookie, magicDatabasePaths[i]) == 0)
+            break;
+    }
+    if (magicDatabasePaths[i] == NULL) {
+        /* No database anywhere: fall back to the extension table. */
+        magic_close(cookie);
+        return NULL;
+    }
+
+    detected = (CONST_STRPTR)magic_file(cookie, path);
+    if (detected != NULL && strlen(detected) > 0) {
+        /* libmagic owns the string it returned, and it dies with the cookie,
+         * so take a copy before closing. */
+        result = AllocVec(strlen(detected) + 1, MEMF_ANY | MEMF_CLEAR);
+        if (result != NULL)
+            CopyMem((APTR)detected, result, strlen(detected));
+    }
+    magic_close(cookie);
+    return result;
+}
+
+/* Fallback for when libmagic is unavailable: guess from the file extension. */
 static CONST_STRPTR attachmentMimeType(CONST_STRPTR name) {
     CONST_STRPTR extension = name != NULL ? strrchr(name, '.') : NULL;
     if (extension == NULL)
@@ -747,6 +810,17 @@ static CONST_STRPTR attachmentMimeTypeForFile(struct ChatFile *file) {
 static CONST_STRPTR chatFileMime(struct ChatFile *file) {
     if (file != NULL && file->mimeType != NULL)
         return (CONST_STRPTR)file->mimeType;
+    if (file != NULL && file->path != NULL) {
+        /* Cache the result on the ChatFile. That keeps the returned pointer
+         * valid for as long as the caller could hold it, frees it through the
+         * path that already frees mimeType, and means the database is only
+         * loaded once per attachment however many times this is called. */
+        STRPTR detected = detectMimeTypeFromContents(file->path);
+        if (detected != NULL) {
+            file->mimeType = detected;
+            return (CONST_STRPTR)file->mimeType;
+        }
+    }
     return attachmentMimeTypeForFile(file);
 }
 
@@ -904,8 +978,7 @@ static BOOL messageHasLocalImages(struct ConversationNode *message) {
         CONST_STRPTR mime;
         if (file->path == NULL)
             continue;
-        mime = file->mimeType != NULL ? (CONST_STRPTR)file->mimeType
-                                      : attachmentMimeTypeForFile(file);
+        mime = chatFileMime(file);
         if (strncmp(mime, "image/", 6) == 0)
             return TRUE;
     }

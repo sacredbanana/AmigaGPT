@@ -689,4 +689,14 @@ struct json_object *getXAICustomVoices(
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword);
 
+/**
+ * Determine an attachment's MIME type by inspecting its contents with
+ * libmagic.
+ * @param path the file to inspect
+ * @returns an AllocVec'd MIME type string the caller must FreeVec, or NULL if
+ * no magic database is available -- callers should fall back to guessing from
+ * the file name in that case
+ **/
+STRPTR detectMimeTypeFromContents(CONST_STRPTR path);
+
 #endif

@@ -69,7 +69,7 @@ else
 endif
 CPPFLAGS= $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS = -Wa,-g,--register-prefix-optional,-D
-LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-lamiga,-lm,-lamisslstubs,-ljson-c,-lmui
+LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-lamiga,-lm,-lamisslstubs,-ljson-c,-lmagic,-lmui
 VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS3__
 
 .PHONY: all clean copy_bundle_files catalog catalog_definition daemon

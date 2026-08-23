@@ -37,6 +37,8 @@ Requirements:
 - For AmigaOS 3 & 4, AmiSSL 5.27 or higher
   (https://aminet.net/package/util/libs/AmiSSL-v5-OS3) for OS3 and
   (https://aminet.net/package/util/libs/AmiSSL-v5-OS4) for OS4
+- About 2.5MB free on C: for the file type database used to identify
+  attachments (installed automatically; optional)
 - Internet access using a TCP/IP stack such as Roadshow 
 (http://roadshow.apc-tcp.de/index-en.php)
 - MUI 3 minimum but MUI 5 recommended for all features
@@ -232,6 +234,17 @@ the model can unpack the ZIP.
 
 When the model creates a file (for example a CSV or a plot), AmigaGPT can
 download it with the existing received-files controls.
+
+AmigaGPT works out what kind of file each attachment is by looking inside it
+with libmagic, the same code the Unix "file" command uses, rather than trusting
+the file name. That matters on the Amiga, where files often have no extension:
+a text file called "S:User-Startup" is correctly sent as text. This needs the
+file type database "magic.mgc", which the installer puts in the AmigaGPT drawer
+unless you choose somewhere else. AmigaGPT looks for PROGDIR:magic.mgc first,
+then AMIGAGPT:magic.mgc, then C:magic.mgc, so a copy in the AmigaGPT drawer
+takes precedence and a copy in C:, where the "file" package on Aminet puts it,
+serves too. Without it, attachments still work -- the type is guessed from the
+file name extension instead.
 
 *General*
 

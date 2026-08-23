@@ -404,10 +404,17 @@ static void addPendingChatFile(CONST_STRPTR path, CONST_STRPTR name) {
     UTF8 *nameUTF8 = CodesetsUTF8Create(
         CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source, (Tag)name,
         CSA_MapForeignChars, TRUE, TAG_DONE);
+    /* Work out the type now rather than when the message is sent: reading the
+     * magic database takes a moment, and here it is part of an action the user
+     * just asked for. NULL simply means no database is installed, in which case
+     * the type is guessed from the file name at send time instead. */
+    STRPTR detectedMime = detectMimeTypeFromContents(path);
     if (!addChatFile(&pendingChatFiles, path,
-                     nameUTF8 != NULL ? nameUTF8 : (UTF8 *)name, NULL, NULL,
-                     NULL, NULL))
+                     nameUTF8 != NULL ? nameUTF8 : (UTF8 *)name, detectedMime,
+                     NULL, NULL, NULL))
         displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+    if (detectedMime != NULL)
+        FreeVec(detectedMime); /* addChatFile took its own copy */
     if (nameUTF8 != NULL)
         CodesetsFreeA(nameUTF8, NULL);
 }

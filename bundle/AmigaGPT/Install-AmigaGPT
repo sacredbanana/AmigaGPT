@@ -46,7 +46,7 @@
 
 ; Text strings
 (set #welcome 
-    ("Welcome to the %s installer!\nThis will install %s %s on your system.\n\nAmigaGPT is a versatile ChatGPT client for Amiga systems that brings the capabilities of OpenAI's GPT to your Amiga." @app-name @app-name #app-version)
+    ("Welcome to the %s installer!\nThis will install %s %s on your system.\n\nAmigaGPT is a versatile AI assistant for Amiga systems that brings the capabilities of Artificial Intelligence to your Amiga." @app-name @app-name #app-version)
 )
 
 (set #wrongversion
@@ -64,8 +64,10 @@
 (set #localedir-help "This should be set to the locale directory located at the root of your system.")
 (set #readme-prompt "Please select the drawer where readme should be installed.\n")
 (set #readme-help "This can be placed anywhere you like.")
-(set #guide-prompt "Please select the drawer where the guide should be installed.")
-(set #guide-help "This should be located in the same directory as AmigaGPT if you want to be able to read it from the help menu.")
+(set #guide-prompt "Please select the drawer where the AmigaGPT guide should be installed.\n\nInstall it in the same drawer as AmigaGPT if you want to open the guide from AmigaGPT's \"Help\" menu.\n")
+(set #guide-help "AmigaGPT opens the guide as \"AMIGAGPT:AmigaGPT.guide\", and the AMIGAGPT: assign points at the drawer AmigaGPT was installed into, so keeping the guide there is what makes the \"Help\" menu work. You can install it anywhere else you like, but then it can only be opened by hand from Workbench or the Shell.")
+(set #magic-prompt "Please select the drawer where the file type database \"magic.mgc\" should be installed.\n\nAmigaGPT uses this database to work out what kind of file each attachment is by looking inside the file instead of trusting its name. Without it, attachments are still sent, but the type has to be guessed from the file name extension, so a file with no extension or a misleading one may be sent as the wrong type.\n")
+(set #magic-help "The database is plain data, not machine code, so one copy works on every system. AmigaGPT looks for it in three places, in this order: \"PROGDIR:magic.mgc\" (the drawer AmigaGPT is in), \"AMIGAGPT:magic.mgc\" (the same drawer, via the assign) and \"C:magic.mgc\". The AmigaGPT drawer is offered by default and is the recommended choice. Pick C: instead if you have, or plan to install, the \"file\" package from Aminet, so both programs share one copy. Any other drawer will not be found.")
 (set #installing "Installing %s...")
 (set #startup-prompt "Some lines need to be added to S:User-Startup for %s:\n\n%s")
 (set #startup-help "AmigaGPT won't work correctly without these lines!")
@@ -438,6 +440,31 @@
   )
 )
 
+;------------------------------------------------------------------------
+; Copy the file type database. AmigaGPT uses libmagic to identify an attached
+; file by its contents rather than its name, which needs this database at run
+; time. It is not machine code, so one copy serves every system. The AmigaGPT
+; drawer is the default because AmigaGPT finds it there both as PROGDIR: and
+; through the AMIGAGPT: assign; C: is where the file(1) distribution installs
+; it, so a machine with that package can share a single copy instead. The
+; question is asked at every user level because the prompt is what explains
+; the database and the consequence of leaving it out.
+(set #magicdir
+  (expandpath
+    (askdir
+      (prompt #magic-prompt)
+      (help #magic-help)
+      (default @default-dest)
+    )
+  )
+)
+(working (#installing "File type database"))
+(copyfiles
+  (source "AmigaGPT/magic.mgc")
+  (dest #magicdir)
+  (optional "force" "askuser")
+)
+
 (complete 50)
 
 ;------------------------------------------------------------------------
@@ -460,13 +487,23 @@
 (complete 80)
 
 ;------------------------------------------------------------------------
-; Copy documentation
+; Copy documentation. The guide is asked for with askdir rather than passing
+; (prompt) and (help) to copyfiles, where they would only ever be shown by a
+; (confirm): the Help menu opens AMIGAGPT:AmigaGPT.guide, so the user needs to
+; be told that moving the guide elsewhere breaks it.
+(set #guidedir
+  (expandpath
+    (askdir
+      (prompt #guide-prompt)
+      (help #guide-help)
+      (default @default-dest)
+    )
+  )
+)
 (working (#installing "Documentation"))
 (copyfiles 
-  (prompt #guide-prompt)
-  (help #guide-help)
   (source "AmigaGPT.guide")
-  (dest @default-dest)
+  (dest #guidedir)
   (infos)
 )
 
