@@ -1859,7 +1859,7 @@ palm/include/fdlibm.h
 - Fix bug where say.rexx did not ask you what you want to say
 - Fix bug where the first paragraph in every response is always black even if you have custom colours set
 - Fix bug where a missing or incorrect API key could cause the app to enter an infinite loop of displaying an error and retrying
-- Correctly handle reponses that contain JSON in the response header such as those received from Cloudfare
+- Correctly handle reponses that contain JSON in the response header such as those received from Cloudflare
 
 @{b}2.17.0 (2025-12-22)@{ub}
 
