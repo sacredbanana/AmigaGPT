@@ -419,6 +419,10 @@ A .zip file is sent as application/zip. On OpenAI it is placed in the Code Inter
 Which file types a provider and model will accept varies. If a file is rejected, the error from the server is shown in a requester.
 
 See also @{"How the file type is worked out" link filetypes}.
+
+@{b}@{u}From ARexx@{uu}@{ub}
+
+The @{b}ATTACH@{ub} argument on the ARexx SENDMESSAGE command sends one or more files with that request. Separate several paths with commas. The prompt may be omitted when at least one file is attached. See @{"SENDMESSAGE" link arexxsendmessage}.
 @endnode
 
 @node receivedfiles "Saving received files"
@@ -1002,7 +1006,7 @@ Sends a message using a chat profile and returns the reply.
               PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,
               PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,
               PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,
-              CI=CODEINTERPRETER/S,P=PROMPT/F
+              CI=CODEINTERPRETER/S,A=ATTACH/K,P=PROMPT/F
 
 @{b}@{u}Arguments@{uu}@{ub}
 
@@ -1023,7 +1027,8 @@ Sends a message using a chat profile and returns the reply.
 - @{b}PROXYPASSWORD@{ub} - the proxy password
 - @{b}WEBSEARCH@{ub} or @{b}W@{ub} - let the model search the web for this request. This can switch web search on for a profile that has it off; it cannot switch it off for a profile that has it on.
 - @{b}CODEINTERPRETER@{ub} or @{b}CI@{ub} - let the model use the hosted code interpreter for this request. This can switch the code interpreter on for a profile that has it off; it cannot switch it off for a profile that has it on.
-- @{b}PROMPT@{ub} or @{b}P@{ub} - required. The question to ask. Takes the rest of the line.
+- @{b}ATTACH@{ub} or @{b}A@{ub} - one file to send with this request, or several paths separated by commas. The files are typed the same way as @{b}Attach files...@{ub} in the GUI. Either ATTACH or PROMPT must be given.
+- @{b}PROMPT@{ub} or @{b}P@{ub} - the question to ask. Takes the rest of the line. Optional if ATTACH is given.
 
 @{b}@{u}Result@{uu}@{ub}
 
@@ -1050,6 +1055,12 @@ When the daemon answers, the message is added to its conversation history, so th
   SAY RESULT
 
   'SENDMESSAGE CODEINTERPRETER P=Calculate the first 20 Fibonacci numbers'
+  SAY RESULT
+
+  'SENDMESSAGE ATTACH RAM:photo.jpg P=What is in this picture?'
+  SAY RESULT
+
+  'SENDMESSAGE ATTACH RAM:data.csv,RAM:notes.txt CODEINTERPRETER P=Summarise this data'
   SAY RESULT
 @endnode
 
@@ -1820,6 +1831,7 @@ palm/include/fdlibm.h
 - Download files created in the response
 - Chat profile option to enable the provider's hosted code interpreter
 - ARexx SENDMESSAGE supports CI=CODEINTERPRETER to force the hosted code interpreter on
+- ARexx SENDMESSAGE supports A=ATTACH to send one or more files with the prompt
 - Upgrade AmiSSL version to 5.27
 - Recompiled with latest libnix
 - Recompiled with optimsised build of json-c

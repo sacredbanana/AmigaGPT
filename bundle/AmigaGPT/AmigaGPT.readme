@@ -195,7 +195,8 @@ server), and to enable web search or the code interpreter, open "Chat Provider
 Settings" from the "Chat" menu.
 
 Use "Attach files..." to select one or more files to send with the next
-message. The number waiting to be sent is shown beside the button and "Clear"
+message, or pass them with the ATTACH argument on the ARexx SENDMESSAGE
+command. The number waiting to be sent is shown beside the button and "Clear"
 removes them again. Each file may be up to 8MB and all the files in one
 request up to 16MB. OpenAI, xAI Grok, Anthropic Claude and Google Gemini
 upload the file first and then refer to it, so the chat request itself stays
@@ -386,7 +387,7 @@ installed, AmigaGPT tells you which one is missing.
               PO=PORT/N,S=SSL/S,K=APIKEY/K,U=USEPROXY/S,PH=PROXYHOST/K,
               PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/S,
               PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,
-              CI=CODEINTERPRETER/S,P=PROMPT/F
+              CI=CODEINTERPRETER/S,A=ATTACH/K,P=PROMPT/F
   CREATEIMAGE PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,
               P=PROMPT/F
   SPEAKTEXT   PR=PROFILE/K,M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,
@@ -522,6 +523,8 @@ Changelog:
 - Chat profile option to enable the provider's hosted code interpreter
 - ARexx SENDMESSAGE supports CI=CODEINTERPRETER to force the hosted code
   interpreter on
+- ARexx SENDMESSAGE supports A=ATTACH to send one or more files with the
+  prompt
 - Upgrade AmiSSL version to 5.27
 - Recompiled with latest libnix
 - Recompiled with optimsised build of json-c

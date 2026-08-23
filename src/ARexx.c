@@ -244,6 +244,140 @@ static STRPTR readTextFileToString(CONST_STRPTR path) {
     return buf;
 }
 
+static BOOL rexxPathIsReadableFile(CONST_STRPTR path) {
+    BPTR file;
+    if (path == NULL || path[0] == '\0')
+        return FALSE;
+    file = Open(path, MODE_OLDFILE);
+    if (file == 0)
+        return FALSE;
+    Close(file);
+    return TRUE;
+}
+
+static void rexxSetAttachmentError(CONST_STRPTR path) {
+    UBYTE errMsg[512];
+    if (path != NULL && path[0] != '\0') {
+        snprintf(errMsg, sizeof(errMsg), "%s: %s",
+                 STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND, path);
+    } else {
+        snprintf(errMsg, sizeof(errMsg), "%s",
+                 STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND);
+    }
+    set(app, MUIA_Application_RexxString, errMsg);
+    updateStatusBar(STRING_ERROR, redPen);
+}
+
+static ULONG rexxCountAttachPaths(CONST_STRPTR attachSpec) {
+    ULONG count = 0;
+    CONST_STRPTR cursor;
+    if (attachSpec == NULL)
+        return 0;
+    cursor = attachSpec;
+    while (*cursor != '\0') {
+        CONST_STRPTR path = cursor;
+        CONST_STRPTR comma = strchr(cursor, ',');
+        CONST_STRPTR end;
+        if (comma != NULL)
+            cursor = comma + 1;
+        else
+            cursor += strlen(cursor);
+        while (*path == ' ' || *path == '\t')
+            path++;
+        end = (comma != NULL) ? comma : (path + strlen(path));
+        while (end > path && (end[-1] == ' ' || end[-1] == '\t'))
+            end--;
+        if (end > path)
+            count++;
+    }
+    return count;
+}
+
+/**
+ * Attach comma-separated file paths to a conversation message.
+ * An empty specification is success. On failure the ARexx error string is set.
+ **/
+static BOOL rexxAttachPathsToMessage(struct ConversationNode *message,
+                                     CONST_STRPTR attachSpec) {
+    STRPTR specCopy;
+    STRPTR cursor;
+    if (attachSpec == NULL || attachSpec[0] == '\0')
+        return TRUE;
+    if (message == NULL)
+        return FALSE;
+
+    specCopy = AllocVec(strlen(attachSpec) + 1, MEMF_ANY | MEMF_CLEAR);
+    if (specCopy == NULL) {
+        set(app, MUIA_Application_RexxString,
+            STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        updateStatusBar(STRING_ERROR, redPen);
+        return FALSE;
+    }
+    strncpy(specCopy, attachSpec, strlen(attachSpec));
+
+    cursor = specCopy;
+    while (*cursor != '\0') {
+        STRPTR path = cursor;
+        STRPTR comma = strchr(cursor, ',');
+        STRPTR end;
+        CONST_STRPTR name;
+        UTF8 *nameUTF8;
+        STRPTR detectedMime;
+
+        if (comma != NULL) {
+            *comma = '\0';
+            cursor = comma + 1;
+        } else {
+            cursor += strlen(cursor);
+        }
+
+        while (*path == ' ' || *path == '\t')
+            path++;
+        end = path + strlen(path);
+        while (end > path && (end[-1] == ' ' || end[-1] == '\t')) {
+            end--;
+            *end = '\0';
+        }
+        if (*path == '\0')
+            continue;
+
+        if (!rexxPathIsReadableFile(path)) {
+            rexxSetAttachmentError(path);
+            FreeVec(specCopy);
+            return FALSE;
+        }
+
+        name = FilePart(path);
+        if (name == NULL || *name == '\0')
+            name = path;
+
+        nameUTF8 = CodesetsUTF8Create(
+            CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source, (Tag)name,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
+        detectedMime = detectMimeTypeFromContents(path);
+        if (!addChatFile(&message->files, path,
+                         nameUTF8 != NULL ? nameUTF8 : (UTF8 *)name,
+                         detectedMime, NULL, NULL, NULL)) {
+            if (detectedMime != NULL)
+                FreeVec(detectedMime);
+            if (nameUTF8 != NULL)
+                CodesetsFreeA(nameUTF8, NULL);
+            FreeVec(specCopy);
+            set(app, MUIA_Application_RexxString,
+                STRING_ERROR_MEMORY_CONVERSATION_NODE);
+            updateStatusBar(STRING_ERROR, redPen);
+            return FALSE;
+        }
+        if (detectedMime != NULL)
+            FreeVec(detectedMime);
+        if (nameUTF8 != NULL)
+            CodesetsFreeA(nameUTF8, NULL);
+    }
+
+    FreeVec(specCopy);
+    return TRUE;
+}
+
 #define REXX_LOCKED_PROFILE_NAME_OPENAI "OpenAI"
 #define REXX_LOCKED_PROFILE_NAME_GEMINI "Google Gemini"
 #define REXX_LOCKED_PROFILE_NAME_GROK "xAI Grok"
@@ -1170,7 +1304,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
     STRPTR proxyPassword = (STRPTR)arg[14];
     BOOL webSearchRequested = (BOOL)arg[15];
     BOOL codeInterpreterRequested = (BOOL)arg[16];
-    STRPTR prompt = (STRPTR)arg[17];
+    STRPTR attachSpec = (STRPTR)arg[17];
+    STRPTR prompt = (STRPTR)arg[18];
 
     /* Reload config from disk to pick up any changes from the main app */
     DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
@@ -1231,10 +1366,37 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
     /* Get the persistent daemon conversation (load from T: or create new) */
     struct Conversation *conversation = getDaemonConversation();
-    UTF8 *promptUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
-                                          CSA_Source, (Tag)prompt, TAG_DONE);
-    addTextToConversation(conversation, promptUTF8, "user");
-    CodesetsFreeA(promptUTF8, NULL);
+    CONST_STRPTR promptText = (prompt != NULL) ? prompt : (CONST_STRPTR)"";
+    ULONG attachCount = rexxCountAttachPaths(attachSpec);
+    if (promptText[0] == '\0' && attachCount == 0) {
+        set(app, MUIA_Application_RexxString,
+            STRING_ERROR_MESSAGE_OR_ATTACHMENT_REQUIRED);
+        updateStatusBar(STRING_ERROR, redPen);
+        return RETURN_OK;
+    }
+
+    UTF8 *promptUTF8 = NULL;
+    if (promptText[0] != '\0') {
+        promptUTF8 =
+            CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                               CSA_Source, (Tag)promptText, TAG_DONE);
+    }
+    struct ConversationNode *userMessage = addTextToConversation(
+        conversation, promptUTF8 != NULL ? promptUTF8 : (UTF8 *)promptText,
+        "user");
+    if (promptUTF8 != NULL)
+        CodesetsFreeA(promptUTF8, NULL);
+    if (userMessage == NULL) {
+        set(app, MUIA_Application_RexxString,
+            STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        updateStatusBar(STRING_ERROR, redPen);
+        return RETURN_OK;
+    }
+    if (!rexxAttachPathsToMessage(userMessage, attachSpec)) {
+        RemTail((struct List *)conversation->messages);
+        freeConversationNode(userMessage);
+        return RETURN_OK;
+    }
 
     /* Resolve effective system message from SYSTEMFILE and SYSTEM. */
     STRPTR systemFromFile = NULL;
@@ -1247,6 +1409,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         systemFromFile = readTextFileToString(systemFile);
         if (systemFromFile == NULL) {
             UBYTE errMsg[512];
+            RemTail((struct List *)conversation->messages);
+            freeConversationNode(userMessage);
             snprintf(errMsg, sizeof(errMsg), STRING_ERROR_REXX_SYSTEM_FILE_READ,
                      systemFile);
             set(app, MUIA_Application_RexxString, errMsg);
@@ -1261,6 +1425,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             combinedSystem = AllocVec(need, MEMF_ANY | MEMF_CLEAR);
             if (combinedSystem == NULL) {
                 FreeVec(systemFromFile);
+                RemTail((struct List *)conversation->messages);
+                freeConversationNode(userMessage);
                 set(app, MUIA_Application_RexxString,
                     STRING_ERROR_REXX_SYSTEM_FILE_MEMORY);
                 updateStatusBar(STRING_ERROR, redPen);
@@ -2405,7 +2571,7 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
         "S,PH=PROXYHOST/"
         "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
         "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,"
-        "CI=CODEINTERPRETER/S,P=PROMPT/F\n"
+        "CI=CODEINTERPRETER/S,A=ATTACH/K,P=PROMPT/F\n"
         "CREATEIMAGE "
         "PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/"
         "F\n"
@@ -2430,8 +2596,8 @@ struct MUI_Command arexxList[] = {
      "S,PH=PROXYHOST/"
      "K,PP=PROXYPORT/N,PS=PROXYUSESSSL/S,PA=PROXYREQUIRESAUTH/"
      "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,"
-     "CI=CODEINTERPRETER/S,P=PROMPT/F",
-     18,
+     "CI=CODEINTERPRETER/S,A=ATTACH/K,P=PROMPT/F",
+     19,
      &SendMessageHook,
      {0, 0, 0, 0, 0}},
     {"CREATEIMAGE",
