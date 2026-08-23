@@ -402,14 +402,17 @@ static void updateRequirementWarningForSystem(SpeechSystem sys,
 
 #ifdef __AMIGAOS3__
     if (sys == SPEECH_SYSTEM_34 || sys == SPEECH_SYSTEM_37) {
-        struct Library *TranslatorBase = OpenLibrary("translator.library", 43);
+        /* speech.c opens translator.library with version 42, so probe for the
+           same version here. Warning about v43 made a working v42-only system
+           look broken. */
+        struct Library *TranslatorBase = OpenLibrary("translator.library", 42);
         if (TranslatorBase != NULL) {
             CloseLibrary(TranslatorBase);
             TranslatorBase = NULL;
         } else {
             UBYTE line[256];
             snprintf(line, sizeof(line), STRING_SPEECH_WARNING_MISSING_FORMAT,
-                     "translator.library v43");
+                     "translator.library v42");
             strncat(warningBuf, line,
                     sizeof(warningBuf) - strlen(warningBuf) - 1);
         }
