@@ -471,6 +471,9 @@
   (all)
   (infos)
 )
+(foreach (tackon @default-dest "rexx") "#?.rexx"
+  (protect (tackon (tackon @default-dest "rexx") @each-name) "+s")
+)
 
 (complete 80)
 

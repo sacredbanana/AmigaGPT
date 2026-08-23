@@ -23,10 +23,25 @@ IF FILE = "" THEN DO
   EXIT 1
 END
 
+cmd = FindMultiView() || ' "' || FILE || '"'
 ADDRESS COMMAND
-MultiView FILE
+(cmd)
 
 EXIT 0
+
+/* MultiView lives in SYS:Utilities, which is not always on the Shell path */
+FindMultiView: PROCEDURE
+  candidates = 'SYS:Utilities/MultiView C:MultiView'
+  i = 1
+  DO WHILE i <= WORDS(candidates)
+    path = WORD(candidates, i)
+    IF OPEN('mvtest', path, 'r') THEN DO
+      CALL CLOSE('mvtest')
+      RETURN path
+    END
+    i = i + 1
+  END
+  RETURN 'SYS:Utilities/MultiView'
 
 /* SENDMESSAGE appends FILES: and one saved path per line when files arrive */
 FirstReceivedFile: PROCEDURE

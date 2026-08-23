@@ -15,7 +15,23 @@ END
 ADDRESS VALUE AMIGAGPT_PORT
 'CREATEIMAGE P=A beautiful Amiga computer on a desk'
 
+IMAGE = RESULT
+cmd = FindMultiView() || ' "' || IMAGE || '"'
 ADDRESS COMMAND
-MultiView RESULT
+(cmd)
 
 EXIT 0
+
+/* MultiView lives in SYS:Utilities, which is not always on the Shell path */
+FindMultiView: PROCEDURE
+  candidates = 'SYS:Utilities/MultiView C:MultiView'
+  i = 1
+  DO WHILE i <= WORDS(candidates)
+    path = WORD(candidates, i)
+    IF OPEN('mvtest', path, 'r') THEN DO
+      CALL CLOSE('mvtest')
+      RETURN path
+    END
+    i = i + 1
+  END
+  RETURN 'SYS:Utilities/MultiView'

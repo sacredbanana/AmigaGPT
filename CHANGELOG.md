@@ -17,7 +17,8 @@
 - Installer has updated text and no longer asks where to install the locale files (forces an installation to LOCALE:)
 - Window titles no longer include a trailing ellipsis; that remains on the matching menu items only
 - Rename textedit_translate_norwegian.rexx to textedit_translate_no.rexx so the name fits FFS
-- Add show_received_file.rexx, which downloads a file from the model and opens it in MultiView
+- Add show_received_file.rexx, which downloads a file from the model and opens it in MultiView (via SYS:Utilities/MultiView)
+- Installer sets the script protect bit on the bundled ARexx scripts so they can be run from the Shell without RX
 
 ## 3.1.0 (2026-08-16)
 
