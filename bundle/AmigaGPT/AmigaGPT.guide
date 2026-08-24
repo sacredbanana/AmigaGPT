@@ -1,5 +1,5 @@
 @database AmigaGPT.guide
-@$VER: AmigaGPT.guide 3.2.0
+@$VER: AmigaGPT.guide 3.2.1
 @author "Cameron Armstrong (Nightfox/sacredbanana)"
 @(c) "2023-2026 Cameron Armstrong"
 @toc Main
@@ -1837,6 +1837,10 @@ palm/include/fdlibm.h
 
 @node changelog "Changelog"
 @{b}@{fg shine}Changelog@{fg text}@{ub}
+
+@{b}@{u}3.2.1 (2026-08-24)@{uu}@{ub}
+
+- Fix follow-up chat failing with "No tool output found for function call" after the model used the shell tool (ARexx/KIT and the GUI)
 
 @{b}@{u}3.2.0 (2026-08-24)@{uu}@{ub}
 

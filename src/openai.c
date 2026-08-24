@@ -98,10 +98,20 @@ static CONST_STRPTR XAI_AUTO_SPEECH_TAG_INSTRUCTIONS =
     "delivery. Punctuation still drives natural rhythm, so keep writing "
     "normal sentences and add tags where they enhance the read.";
 
-/* Static variables to store pending tool call info captured during streaming */
+/* Unanswered function_call items from the last Responses API payload */
+#define PENDING_FUNCTION_CALL_MAX 16
+#define PENDING_FUNCTION_CALL_ID_LEN 256
+#define PENDING_FUNCTION_CALL_NAME_LEN 64
+
+struct PendingFunctionCall {
+    UBYTE callId[PENDING_FUNCTION_CALL_ID_LEN];
+    UBYTE name[PENDING_FUNCTION_CALL_NAME_LEN];
+    STRPTR command;
+};
+
+static struct PendingFunctionCall pendingFunctionCalls[PENDING_FUNCTION_CALL_MAX];
+static UWORD pendingFunctionCallCount = 0;
 static BOOL pendingToolCall = FALSE;
-static UBYTE pendingToolCallId[256] = {0};
-static UBYTE pendingToolCommand[4096] = {0};
 static UBYTE pendingResponseId[256] = {0};
 
 static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
@@ -150,7 +160,11 @@ static void setConversationLastResponseId(struct Conversation *conversation,
                                           UTF8 *responseId);
 static UTF8 *extractResponseIdFromPayload(struct json_object *response);
 static BOOL responseIndicatesMissingPreviousId(struct json_object *response);
+static BOOL responseIndicatesUnansweredFunctionCall(struct json_object *response);
 static BOOL responseIndicatesBadRequest(struct json_object *response);
+static struct json_object *getResponseOutputArray(struct json_object *response);
+static BOOL responseHasFunctionCall(struct json_object *response);
+static void capturePendingFunctionCalls(struct json_object *response);
 static struct ConversationNode *
 getLastNonSystemConversationMessage(struct Conversation *conversation);
 
@@ -599,6 +613,42 @@ static BOOL responseIndicatesMissingPreviousId(struct json_object *response) {
                     strstr(lower, "not found") != NULL);
     FreeVec(lower);
     return missing;
+}
+
+static BOOL
+responseIndicatesUnansweredFunctionCall(struct json_object *response) {
+    struct json_object *error;
+    struct json_object *messageObj;
+    UTF8 *message;
+    ULONG len;
+    STRPTR lower;
+    BOOL unanswered;
+
+    if (response == NULL)
+        return FALSE;
+    error = json_object_object_get(response, "error");
+    if (error == NULL || json_object_is_type(error, json_type_null))
+        return FALSE;
+    messageObj = json_object_object_get(error, "message");
+    message = json_object_get_string(messageObj);
+    if (message == NULL || strlen(message) == 0)
+        return FALSE;
+
+    len = strlen(message);
+    lower = AllocVec(len + 1, MEMF_ANY | MEMF_CLEAR);
+    if (lower == NULL)
+        return FALSE;
+    for (ULONG i = 0; i < len; i++) {
+        UBYTE c = (UBYTE)message[i];
+        if (c >= 'A' && c <= 'Z')
+            c = (UBYTE)(c - 'A' + 'a');
+        lower[i] = (char)c;
+    }
+
+    unanswered = (strstr(lower, "no tool output found") != NULL &&
+                  strstr(lower, "function call") != NULL);
+    FreeVec(lower);
+    return unanswered;
 }
 
 static BOOL responseIndicatesBadRequest(struct json_object *response) {
@@ -2528,17 +2578,41 @@ STRPTR executeShellCommand(UTF8 *command, LONG *exitCode) {
  **/
 BOOL hasPendingToolCall(void) { return pendingToolCall; }
 
+UWORD getPendingToolCallCount(void) { return pendingFunctionCallCount; }
+
+BOOL getPendingToolCallAt(UWORD index, STRPTR *callIdOut, STRPTR *nameOut,
+                          STRPTR *commandOut) {
+    if (index >= pendingFunctionCallCount)
+        return FALSE;
+    if (callIdOut != NULL)
+        *callIdOut = pendingFunctionCalls[index].callId;
+    if (nameOut != NULL)
+        *nameOut = pendingFunctionCalls[index].name;
+    if (commandOut != NULL)
+        *commandOut = pendingFunctionCalls[index].command;
+    return TRUE;
+}
+
 /**
  * Get the pending tool call command
  * @return the command string (do not free)
  **/
-STRPTR getPendingToolCommand(void) { return pendingToolCommand; }
+STRPTR getPendingToolCommand(void) {
+    if (pendingFunctionCallCount == 0 ||
+        pendingFunctionCalls[0].command == NULL)
+        return (STRPTR)"";
+    return pendingFunctionCalls[0].command;
+}
 
 /**
  * Get the pending tool call ID
  * @return the call ID string (do not free)
  **/
-STRPTR getPendingToolCallId(void) { return pendingToolCallId; }
+STRPTR getPendingToolCallId(void) {
+    if (pendingFunctionCallCount == 0)
+        return (STRPTR)"";
+    return pendingFunctionCalls[0].callId;
+}
 
 /**
  * Get the pending response ID
@@ -2550,9 +2624,17 @@ STRPTR getPendingResponseId(void) { return pendingResponseId; }
  * Clear the pending tool call after processing
  **/
 void clearPendingToolCall(void) {
+    UWORD i;
+    for (i = 0; i < pendingFunctionCallCount; i++) {
+        if (pendingFunctionCalls[i].command != NULL) {
+            FreeVec(pendingFunctionCalls[i].command);
+            pendingFunctionCalls[i].command = NULL;
+        }
+        pendingFunctionCalls[i].callId[0] = '\0';
+        pendingFunctionCalls[i].name[0] = '\0';
+    }
+    pendingFunctionCallCount = 0;
     pendingToolCall = FALSE;
-    pendingToolCallId[0] = '\0';
-    pendingToolCommand[0] = '\0';
     pendingResponseId[0] = '\0';
 }
 
@@ -2577,6 +2659,127 @@ addResponsesCodeInterpreterTool(struct json_object *toolsArray, BOOL isXaiHost,
         json_object_object_add(toolObj, "container", containerObj);
     }
     json_object_array_add(toolsArray, toolObj);
+}
+
+static struct json_object *getResponseOutputArray(struct json_object *response) {
+    struct json_object *outputArray;
+
+    if (response == NULL)
+        return NULL;
+
+    outputArray = json_object_object_get(response, "output");
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array)) {
+        struct json_object *nestedResponse =
+            json_object_object_get(response, "response");
+        if (nestedResponse != NULL)
+            outputArray = json_object_object_get(nestedResponse, "output");
+    }
+    if (outputArray == NULL ||
+        !json_object_is_type(outputArray, json_type_array))
+        return NULL;
+    return outputArray;
+}
+
+static BOOL responseHasFunctionCall(struct json_object *response) {
+    struct json_object *outputArray = getResponseOutputArray(response);
+    int arrayLength;
+    int i;
+
+    if (outputArray == NULL)
+        return FALSE;
+
+    arrayLength = json_object_array_length(outputArray);
+    for (i = 0; i < arrayLength; i++) {
+        struct json_object *item = json_object_array_get_idx(outputArray, i);
+        struct json_object *itemTypeObj;
+        UTF8 *typeStr;
+
+        if (item == NULL)
+            continue;
+        itemTypeObj = json_object_object_get(item, "type");
+        typeStr = json_object_get_string(itemTypeObj);
+        if (typeStr != NULL && strcmp(typeStr, "function_call") == 0)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+static STRPTR dupPendingCommand(CONST_STRPTR command) {
+    ULONG len;
+    STRPTR copy;
+
+    if (command == NULL || strlen(command) == 0)
+        return NULL;
+    len = strlen(command);
+    copy = AllocVec(len + 1, MEMF_ANY | MEMF_CLEAR);
+    if (copy != NULL)
+        strncpy(copy, command, len);
+    return copy;
+}
+
+static void capturePendingFunctionCalls(struct json_object *response) {
+    struct json_object *outputArray;
+    STRPTR responseId;
+    int arrayLength;
+    int i;
+
+    clearPendingToolCall();
+    outputArray = getResponseOutputArray(response);
+    if (outputArray == NULL)
+        return;
+
+    responseId = extractResponseIdFromPayload(response);
+    if (responseId != NULL && strlen(responseId) > 0)
+        strncpy(pendingResponseId, responseId, sizeof(pendingResponseId) - 1);
+
+    arrayLength = json_object_array_length(outputArray);
+    for (i = 0; i < arrayLength; i++) {
+        struct json_object *item = json_object_array_get_idx(outputArray, i);
+        struct json_object *itemTypeObj;
+        struct json_object *callIdObj;
+        struct json_object *nameObj;
+        UTF8 *typeStr;
+        UTF8 *callId;
+        UTF8 *nameStr;
+        struct PendingFunctionCall *slot;
+
+        if (item == NULL || pendingFunctionCallCount >= PENDING_FUNCTION_CALL_MAX)
+            continue;
+        itemTypeObj = json_object_object_get(item, "type");
+        typeStr = json_object_get_string(itemTypeObj);
+        if (typeStr == NULL || strcmp(typeStr, "function_call") != 0)
+            continue;
+        callIdObj = json_object_object_get(item, "call_id");
+        callId = json_object_get_string(callIdObj);
+        if (callId == NULL || strlen(callId) == 0)
+            continue;
+
+        slot = &pendingFunctionCalls[pendingFunctionCallCount];
+        memset(slot, 0, sizeof(*slot));
+        strncpy(slot->callId, callId, sizeof(slot->callId) - 1);
+        nameObj = json_object_object_get(item, "name");
+        nameStr = json_object_get_string(nameObj);
+        if (nameStr != NULL)
+            strncpy(slot->name, nameStr, sizeof(slot->name) - 1);
+        if (nameStr != NULL && strcmp(nameStr, "shell") == 0) {
+            struct json_object *argsObj =
+                json_object_object_get(item, "arguments");
+            UTF8 *argsStr = json_object_get_string(argsObj);
+            if (argsStr != NULL) {
+                struct json_object *parsedArgs = json_tokener_parse(argsStr);
+                if (parsedArgs != NULL) {
+                    struct json_object *cmdObj =
+                        json_object_object_get(parsedArgs, "command");
+                    slot->command =
+                        dupPendingCommand(json_object_get_string(cmdObj));
+                    json_object_put(parsedArgs);
+                }
+            }
+        }
+        pendingFunctionCallCount++;
+        pendingToolCall = TRUE;
+    }
 }
 
 /**
@@ -4820,33 +5023,7 @@ struct json_object **postChatMessageToOpenAI(
                 streamingInProgress = FALSE;
                 closeActiveResponseConnection();
 
-                /* Check for tool call in response.completed and save it */
-                if (shellToolEnabled) {
-                    struct json_object *completedResponse =
-                        responses[responseIndex - 1];
-                    if (hasShellToolCall(completedResponse)) {
-                        STRPTR callId = getShellToolCallId(completedResponse);
-                        UTF8 *command = getShellToolCommand(completedResponse);
-                        /* Get response ID from nested response object */
-                        struct json_object *nestedResp = json_object_object_get(
-                            completedResponse, "response");
-                        UTF8 *respId = NULL;
-                        if (nestedResp) {
-                            respId = json_object_get_string(
-                                json_object_object_get(nestedResp, "id"));
-                        }
-
-                        if (callId && command && respId) {
-                            pendingToolCall = TRUE;
-                            strncpy(pendingToolCallId, callId,
-                                    sizeof(pendingToolCallId) - 1);
-                            strncpy(pendingToolCommand, command,
-                                    sizeof(pendingToolCommand) - 1);
-                            strncpy(pendingResponseId, respId,
-                                    sizeof(pendingResponseId) - 1);
-                        }
-                    }
-                }
+                capturePendingFunctionCalls(responses[responseIndex - 1]);
             }
         }
         if (responseIndex > 0 && responses[responseIndex - 1] != NULL) {
@@ -4859,28 +5036,9 @@ struct json_object **postChatMessageToOpenAI(
             }
         }
     } else {
-        /* Non-streaming mode - check for tool calls in the response */
-        if (responseIndex > 0 && responses[responseIndex - 1] != NULL &&
-            shellToolEnabled) {
-            struct json_object *response = responses[responseIndex - 1];
-            if (hasShellToolCall(response)) {
-                STRPTR callId = getShellToolCallId(response);
-                UTF8 *command = getShellToolCommand(response);
-                /* For non-streaming, id is at top level */
-                UTF8 *respId = json_object_get_string(
-                    json_object_object_get(response, "id"));
-
-                if (callId && command && respId) {
-                    pendingToolCall = TRUE;
-                    strncpy(pendingToolCallId, callId,
-                            sizeof(pendingToolCallId) - 1);
-                    strncpy(pendingToolCommand, command,
-                            sizeof(pendingToolCommand) - 1);
-                    strncpy(pendingResponseId, respId,
-                            sizeof(pendingResponseId) - 1);
-                }
-            }
-        }
+        /* Non-streaming mode - capture every function_call in the response */
+        if (responseIndex > 0 && responses[responseIndex - 1] != NULL)
+            capturePendingFunctionCalls(responses[responseIndex - 1]);
         CloseSocket(sock);
         if (ssl != NULL) {
             SSL_shutdown(ssl);
@@ -4894,6 +5052,7 @@ struct json_object **postChatMessageToOpenAI(
         struct json_object *lastResponse = responses[responseIndex - 1];
         if (canUseStatefulResponses &&
             (responseIndicatesMissingPreviousId(lastResponse) ||
+             responseIndicatesUnansweredFunctionCall(lastResponse) ||
              responseIndicatesBadRequest(lastResponse))) {
             setConversationLastResponseId(conversation, NULL);
             if (effectiveStream) {
@@ -4936,7 +5095,13 @@ struct json_object **postChatMessageToOpenAI(
         }
         if (responseFailed)
             setConversationLastResponseId(conversation, NULL);
-        else if (newestResponseId != NULL) {
+        else if (hasPendingToolCall() ||
+                 responseHasFunctionCall(lastResponse)) {
+            /* Do not chain a later user message off a response that still
+             * has unanswered function_call items. The tool loop will store
+             * the post-output id; otherwise the next request resends history. */
+            setConversationLastResponseId(conversation, NULL);
+        } else if (newestResponseId != NULL) {
             setConversationLastResponseId(conversation, newestResponseId);
         }
     }
@@ -9234,36 +9399,36 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
     return result;
 }
 
-/**
- * Post a tool result (shell command output) back to the OpenAI API
- * This continues the conversation after a tool call
- * @param previousResponseId the ID from the previous response
- * @param callId the call_id from the function call
- * @param output the output from the shell command
- * @param model the model to use
- * @param host the host to use
- * @param port the port to use
- * @param useSSL whether to use SSL
- * @param apiKey the API key
- * @param useProxy whether to use a proxy
- * @param proxyHost the proxy host
- * @param proxyPort the proxy port
- * @param proxyUsesSSL whether the proxy uses SSL
- * @param proxyRequiresAuth whether the proxy requires auth
- * @param proxyUsername the proxy username
- * @param proxyPassword the proxy password
- * @param shellToolEnabled whether the shell tool is enabled
- * @param apiEndpointUrl the API endpoint base URL (e.g. "v1")
- * @param authorizationType the authorization type to use
- * @param customHeaders custom HTTP headers to add to the request
- * @return a pointer to a new json_object containing the response or NULL --
- * Free it with json_object_put() when done
- **/
 struct json_object *postToolResultToOpenAI(
     CONST_STRPTR previousResponseId, CONST_STRPTR callId, CONST_STRPTR output,
     CONST_STRPTR model, STRPTR host, UWORD port, BOOL useSSL,
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, BOOL shellToolEnabled,
+    BOOL codeInterpreterEnabled, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders) {
+    CONST_STRPTR callIds[1];
+    CONST_STRPTR outputs[1];
+
+    callIds[0] = callId;
+    outputs[0] = output;
+    return postToolResultsToOpenAI(
+        previousResponseId, callIds, outputs, 1, model, host, port, useSSL,
+        apiKey, useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth,
+        proxyUsername, proxyPassword, shellToolEnabled, codeInterpreterEnabled,
+        apiEndpointUrl, authorizationType, customHeaders);
+}
+
+/**
+ * Post every function_call_output for one previous response in a single
+ * request. The Responses API requires all call_ids from that response.
+ **/
+struct json_object *postToolResultsToOpenAI(
+    CONST_STRPTR previousResponseId, CONST_STRPTR *callIds,
+    CONST_STRPTR *outputs, UWORD outputCount, CONST_STRPTR model, STRPTR host,
+    UWORD port, BOOL useSSL, CONST_STRPTR apiKey, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, BOOL shellToolEnabled,
     BOOL codeInterpreterEnabled, CONST_STRPTR apiEndpointUrl,
     AuthorizationType authorizationType, CONST_STRPTR customHeaders) {
@@ -9292,21 +9457,40 @@ struct json_object *postToolResultToOpenAI(
     }
     json_object_object_add(obj, "model", json_object_new_string(model));
 
+    if (previousResponseId == NULL || strlen(previousResponseId) == 0 ||
+        callIds == NULL || outputs == NULL || outputCount == 0) {
+        json_object_put(obj);
+        return NULL;
+    }
+
     /* Use the previous response ID to continue the conversation */
     json_object_object_add(obj, "previous_response_id",
                            json_object_new_string(previousResponseId));
 
-    /* Build the input array with the function call output */
-    struct json_object *inputArray = json_object_new_array();
-    struct json_object *toolResultObj = json_object_new_object();
-    json_object_object_add(toolResultObj, "type",
-                           json_object_new_string("function_call_output"));
-    json_object_object_add(toolResultObj, "call_id",
-                           json_object_new_string(callId));
-    json_object_object_add(toolResultObj, "output",
-                           json_object_new_string(output));
-    json_object_array_add(inputArray, toolResultObj);
-    json_object_object_add(obj, "input", inputArray);
+    /* Build the input array with every function_call_output */
+    {
+        struct json_object *inputArray = json_object_new_array();
+        UWORD outputIndex;
+        for (outputIndex = 0; outputIndex < outputCount; outputIndex++) {
+            struct json_object *toolResultObj;
+            if (callIds[outputIndex] == NULL || outputs[outputIndex] == NULL)
+                continue;
+            toolResultObj = json_object_new_object();
+            json_object_object_add(toolResultObj, "type",
+                                   json_object_new_string("function_call_output"));
+            json_object_object_add(toolResultObj, "call_id",
+                                   json_object_new_string(callIds[outputIndex]));
+            json_object_object_add(toolResultObj, "output",
+                                   json_object_new_string(outputs[outputIndex]));
+            json_object_array_add(inputArray, toolResultObj);
+        }
+        if (json_object_array_length(inputArray) == 0) {
+            json_object_put(inputArray);
+            json_object_put(obj);
+            return NULL;
+        }
+        json_object_object_add(obj, "input", inputArray);
+    }
 
     /* Add tools array so the model knows it can still use the shell tool */
     struct json_object *toolsArray = json_object_new_array();
@@ -9527,24 +9711,7 @@ struct json_object *postToolResultToOpenAI(
         if (jsonStart != NULL) {
             struct json_object *parsedResponse = json_tokener_parse(jsonStart);
             if (parsedResponse != NULL) {
-                /* Check if the response contains another tool call */
-                if (shellToolEnabled && hasShellToolCall(parsedResponse)) {
-                    UTF8 *cId = getShellToolCallId(parsedResponse);
-                    UTF8 *cmd = getShellToolCommand(parsedResponse);
-                    /* For non-streaming, id is at top level */
-                    STRPTR rId = (STRPTR)json_object_get_string(
-                        json_object_object_get(parsedResponse, "id"));
-
-                    if (cId && cmd && rId) {
-                        pendingToolCall = TRUE;
-                        strncpy(pendingToolCallId, cId,
-                                sizeof(pendingToolCallId) - 1);
-                        strncpy(pendingToolCommand, cmd,
-                                sizeof(pendingToolCommand) - 1);
-                        strncpy(pendingResponseId, rId,
-                                sizeof(pendingResponseId) - 1);
-                    }
-                }
+                capturePendingFunctionCalls(parsedResponse);
                 FreeVec(tempReadBuffer);
                 updateStatusBar(STRING_READY, greenPen);
                 return parsedResponse;
@@ -9590,24 +9757,7 @@ struct json_object *postToolResultToOpenAI(
     if (jsonStart != NULL) {
         struct json_object *parsedResponse = json_tokener_parse(jsonStart);
         if (parsedResponse != NULL) {
-            /* Check if the response contains another tool call */
-            if (shellToolEnabled && hasShellToolCall(parsedResponse)) {
-                UTF8 *callId = getShellToolCallId(parsedResponse);
-                UTF8 *command = getShellToolCommand(parsedResponse);
-                /* For non-streaming, id is at top level */
-                UTF8 *respId = json_object_get_string(
-                    json_object_object_get(parsedResponse, "id"));
-
-                if (callId && command && respId) {
-                    pendingToolCall = TRUE;
-                    strncpy(pendingToolCallId, callId,
-                            sizeof(pendingToolCallId) - 1);
-                    strncpy(pendingToolCommand, command,
-                            sizeof(pendingToolCommand) - 1);
-                    strncpy(pendingResponseId, respId,
-                            sizeof(pendingResponseId) - 1);
-                }
-            }
+            capturePendingFunctionCalls(parsedResponse);
             updateStatusBar(STRING_READY, greenPen);
             return parsedResponse;
         }

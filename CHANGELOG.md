@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.2.1 (2026-08-24)
+
+- Fix follow-up chat failing with "No tool output found for function call" after the model used the shell tool (ARexx/KIT and the GUI)
+
 ## 3.2.0 (2026-08-24)
 
 - Attach files to the prompt with automatic file type detection

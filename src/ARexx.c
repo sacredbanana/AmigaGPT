@@ -1667,73 +1667,138 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             collectResponseFiles(responses[collectIndex++], &receivedFiles);
     }
 
-    /* Handle shell tool calls if enabled - loop to handle multiple sequential
-     * commands */
-    while (rexxSettings.shellToolEnabled && hasPendingToolCall()) {
-        STRPTR command = getPendingToolCommand();
-        STRPTR callId = getPendingToolCallId();
+    /* Resolve every unanswered function_call before the next user message. */
+    while (hasPendingToolCall()) {
         STRPTR responseId = getPendingResponseId();
+        UWORD pendingCount = getPendingToolCallCount();
+        STRPTR *callIds = NULL;
+        STRPTR *outputs = NULL;
+        UWORD i;
+        BOOL userDenied = FALSE;
+        BOOL denyRest = FALSE;
+        BOOL executedAny = FALSE;
+        BOOL allocFailed = FALSE;
+        struct json_object *toolResponse;
+        struct json_object *error;
+        UTF8 *toolContentString;
 
-        /* Ask user for confirmation before executing the command */
-        UBYTE confirmMsg[4096];
-        snprintf(confirmMsg, sizeof(confirmMsg),
-                 STRING_SHELL_TOOL_CONFIRMATION_BODY, command);
-        LONG confirmResult = MUI_Request(app, NULL,
-#ifdef __MORPHOS__
-                                         NULL,
-#else
-                                         MUIV_Requester_Image_Warning,
-#endif
-                                         STRING_SHELL_TOOL_CONFIRMATION_TITLE,
-                                         STRING_SHELL_TOOL_CONFIRMATION_BUTTONS,
-                                         confirmMsg, TAG_DONE);
-
-        if (confirmResult != 1) {
-            /* User denied - clear pending tool call and return error */
+        if (responseId == NULL || strlen(responseId) == 0 || pendingCount == 0) {
             clearPendingToolCall();
-            for (UWORD i = 0; responses[i] != NULL; i++) {
+            break;
+        }
+
+        callIds = AllocVec(pendingCount * sizeof(STRPTR), MEMF_ANY | MEMF_CLEAR);
+        outputs = AllocVec(pendingCount * sizeof(STRPTR), MEMF_ANY | MEMF_CLEAR);
+        if (callIds == NULL || outputs == NULL) {
+            if (callIds != NULL)
+                FreeVec(callIds);
+            if (outputs != NULL)
+                FreeVec(outputs);
+            clearPendingToolCall();
+            for (i = 0; responses != NULL && responses[i] != NULL; i++) {
                 json_object_put(responses[i]);
             }
-            FreeVec(responses);
+            if (responses != NULL)
+                FreeVec(responses);
             freeChatFiles(&receivedFiles);
             set(app, MUIA_Application_RexxString,
-                STRING_SHELL_TOOL_DENIED_BANNER);
-            updateStatusBar(STRING_READY, greenPen);
+                STRING_ERROR_CONNECTING_OPENAI);
+            updateStatusBar(STRING_ERROR, redPen);
             return RETURN_OK;
         }
 
-        /* User allowed - proceed with execution */
-        updateStatusBar(STRING_EXECUTING_COMMAND, yellowPen);
+        for (i = 0; i < pendingCount; i++) {
+            STRPTR callId = NULL;
+            STRPTR command = NULL;
+            getPendingToolCallAt(i, &callId, NULL, &command);
+            callIds[i] = callId;
 
-        /* Execute the shell command */
-        LONG exitCode = 0;
-        STRPTR output = executeShellCommand(command, &exitCode);
-
-        /* Build output string with exit code */
-        UBYTE toolOutput[8192];
-        snprintf(toolOutput, sizeof(toolOutput),
-                 STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT, exitCode,
-                 output != NULL ? output : (STRPTR)STRING_SHELL_TOOL_NO_OUTPUT);
-
-        /* Send the tool result back to the API - this may set a new pending
-         * tool call if OpenAI wants to run another command */
-        struct json_object *toolResponse = postToolResultToOpenAI(
-            responseId, callId, toolOutput, model, (STRPTR)host,
-            (UWORD)portValue, useSSL, apiKey, useProxy, proxyHost,
-            proxyPortValue, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-            proxyPassword, rexxSettings.shellToolEnabled,
-            codeInterpreterEnabled, apiEndpointUrl, authType, customHeaders);
-
-        if (output != NULL) {
-            FreeVec(output);
+            if (denyRest) {
+                outputs[i] = rexxDupStr(TOOL_CALL_OUTPUT_DENIED);
+            } else if (rexxSettings.shellToolEnabled && command != NULL &&
+                       strlen(command) > 0) {
+                UBYTE confirmMsg[4096];
+                LONG confirmResult;
+                snprintf(confirmMsg, sizeof(confirmMsg),
+                         STRING_SHELL_TOOL_CONFIRMATION_BODY, command);
+                confirmResult = MUI_Request(app, NULL,
+#ifdef __MORPHOS__
+                                            NULL,
+#else
+                                            MUIV_Requester_Image_Warning,
+#endif
+                                            STRING_SHELL_TOOL_CONFIRMATION_TITLE,
+                                            STRING_SHELL_TOOL_CONFIRMATION_BUTTONS,
+                                            confirmMsg, TAG_DONE);
+                if (confirmResult != 1) {
+                    outputs[i] = rexxDupStr(TOOL_CALL_OUTPUT_DENIED);
+                    userDenied = TRUE;
+                    denyRest = TRUE;
+                } else {
+                    LONG exitCode = 0;
+                    STRPTR output;
+                    UBYTE toolOutput[8192];
+                    updateStatusBar(STRING_EXECUTING_COMMAND, yellowPen);
+                    output = executeShellCommand(command, &exitCode);
+                    snprintf(toolOutput, sizeof(toolOutput),
+                             STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT, exitCode,
+                             output != NULL ? output
+                                            : (STRPTR)STRING_SHELL_TOOL_NO_OUTPUT);
+                    outputs[i] = rexxDupStr(toolOutput);
+                    if (output != NULL)
+                        FreeVec(output);
+                    executedAny = TRUE;
+                }
+            } else {
+                outputs[i] = rexxDupStr(TOOL_CALL_OUTPUT_UNAVAILABLE);
+            }
+            if (outputs[i] == NULL)
+                allocFailed = TRUE;
         }
+
+        if (allocFailed) {
+            for (i = 0; i < pendingCount; i++) {
+                if (outputs[i] != NULL)
+                    FreeVec(outputs[i]);
+            }
+            FreeVec(callIds);
+            FreeVec(outputs);
+            clearPendingToolCall();
+            for (i = 0; responses != NULL && responses[i] != NULL; i++) {
+                json_object_put(responses[i]);
+            }
+            if (responses != NULL)
+                FreeVec(responses);
+            freeChatFiles(&receivedFiles);
+            set(app, MUIA_Application_RexxString,
+                STRING_ERROR_CONNECTING_OPENAI);
+            updateStatusBar(STRING_ERROR, redPen);
+            return RETURN_OK;
+        }
+
+        toolResponse = postToolResultsToOpenAI(
+            responseId, (CONST_STRPTR *)callIds, (CONST_STRPTR *)outputs,
+            pendingCount, model, (STRPTR)host, (UWORD)portValue, useSSL, apiKey,
+            useProxy, proxyHost, proxyPortValue, proxyUsesSSL,
+            proxyRequiresAuth, proxyUsername, proxyPassword,
+            rexxSettings.shellToolEnabled, codeInterpreterEnabled,
+            apiEndpointUrl, authType, customHeaders);
+
+        for (i = 0; i < pendingCount; i++) {
+            if (outputs[i] != NULL)
+                FreeVec(outputs[i]);
+        }
+        FreeVec(callIds);
+        FreeVec(outputs);
 
         /* Free the original responses */
-        for (UWORD i = 0; responses[i] != NULL; i++) {
-            json_object_put(responses[i]);
+        if (responses != NULL) {
+            for (i = 0; responses[i] != NULL; i++) {
+                json_object_put(responses[i]);
+            }
+            FreeVec(responses);
+            responses = NULL;
         }
-        FreeVec(responses);
-        responses = NULL;
 
         if (toolResponse == NULL) {
             clearPendingToolCall();
@@ -1747,7 +1812,6 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         collectResponseFiles(toolResponse, &receivedFiles);
 
         /* Check for errors */
-        struct json_object *error;
         if (json_object_object_get_ex(toolResponse, "error", &error) &&
             !json_object_is_type(error, json_type_null)) {
             clearPendingToolCall();
@@ -1768,12 +1832,8 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
 
         conversationSyncLastResponseIdFromPayload(conversation, toolResponse);
 
-        /* Check if there's another tool call in this response -
-         * postToolResultToOpenAI will have set pendingToolCall if so */
         if (hasPendingToolCall()) {
-            /* There's another tool call - loop will continue */
             json_object_put(toolResponse);
-            /* Allocate a dummy responses array for the loop */
             responses = AllocVec(2 * sizeof(struct json_object *), MEMF_CLEAR);
             if (responses == NULL) {
                 clearPendingToolCall();
@@ -1788,8 +1848,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             continue;
         }
 
-        /* No more tool calls - get the final response text */
-        UTF8 *toolContentString =
+        toolContentString =
             getMessageContentFromJson(toolResponse, FALSE, TRUE, apiEndpoint);
         if ((toolContentString != NULL && strlen(toolContentString) > 0) ||
             rexxReceivedFileCount(&receivedFiles) > 0) {
@@ -1825,6 +1884,13 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             return RETURN_OK;
         }
         json_object_put(toolResponse);
+        if (userDenied && !executedAny) {
+            freeChatFiles(&receivedFiles);
+            set(app, MUIA_Application_RexxString,
+                STRING_SHELL_TOOL_DENIED_BANNER);
+            updateStatusBar(STRING_READY, greenPen);
+            return RETURN_OK;
+        }
         freeChatFiles(&receivedFiles);
 
         set(app, MUIA_Application_RexxString, STRING_ERROR_CONNECTING_OPENAI);

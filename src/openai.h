@@ -542,10 +542,29 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
                     CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 
 /**
+ * function_call_output strings sent back to the API (not shown to the user)
+ **/
+#define TOOL_CALL_OUTPUT_DENIED "The user denied this command."
+#define TOOL_CALL_OUTPUT_UNAVAILABLE "This tool call could not be executed."
+
+/**
  * Check if there is a pending tool call captured during streaming
  * @return TRUE if there is a pending tool call
  **/
 BOOL hasPendingToolCall(void);
+
+/**
+ * Number of unanswered function_call items captured from the last response
+ **/
+UWORD getPendingToolCallCount(void);
+
+/**
+ * Get one captured function_call. Pointers stay valid until
+ * clearPendingToolCall() or the next capture.
+ * @return TRUE if index is valid
+ **/
+BOOL getPendingToolCallAt(UWORD index, STRPTR *callIdOut, STRPTR *nameOut,
+                          STRPTR *commandOut);
 
 /**
  * Get the pending tool call command
@@ -630,6 +649,20 @@ struct json_object *postToolResultToOpenAI(
     CONST_STRPTR model, STRPTR host, UWORD port, BOOL useSSL,
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
+    CONST_STRPTR proxyPassword, BOOL shellToolEnabled,
+    BOOL codeInterpreterEnabled, CONST_STRPTR apiEndpointUrl,
+    AuthorizationType authorizationType, CONST_STRPTR customHeaders);
+
+/**
+ * Post every function_call_output for one previous response in a single
+ * request. The Responses API requires all call_ids from that response.
+ **/
+struct json_object *postToolResultsToOpenAI(
+    CONST_STRPTR previousResponseId, CONST_STRPTR *callIds,
+    CONST_STRPTR *outputs, UWORD outputCount, CONST_STRPTR model, STRPTR host,
+    UWORD port, BOOL useSSL, CONST_STRPTR apiKey, BOOL useProxy,
+    CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
+    BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, BOOL shellToolEnabled,
     BOOL codeInterpreterEnabled, CONST_STRPTR apiEndpointUrl,
     AuthorizationType authorizationType, CONST_STRPTR customHeaders);

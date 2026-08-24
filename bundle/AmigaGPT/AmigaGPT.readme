@@ -3,7 +3,7 @@ Kurz: KI-Chat, Bilder und Sprache
 Author: Cameron Armstrong (Nightfox) <cameronscottarmstrong@gmail.com>
 Uploader: Cameron Armstrong (Nightfox)  <cameronscottarmstrong@gmail.com>
 Type: util/misc
-Version: 3.2.0
+Version: 3.2.1
 Architecture: m68k-amigaos >= 3.1; ppc-amigaos; ppc-morphos
 Requires: AmigaOS 3.1+/68020+ util/libs/AmiSSL-v5-OS3.lha MUI
 
@@ -515,6 +515,13 @@ Special Thanks:
   interviewing me http://obligement.free.fr/articles/itwcameronarmstrong.php
 
 Changelog:
+
+------------------
+3.2.1 (2026-08-24)
+------------------
+
+- Fix follow-up chat failing with "No tool output found for function call"
+  after the model used the shell tool (ARexx/KIT and the GUI)
 
 ------------------
 3.2.0 (2026-08-24)
