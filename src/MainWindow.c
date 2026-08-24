@@ -856,8 +856,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     CONST_STRPTR titleModel = nameSettings.model;
     if (titleModel != NULL && strlen(titleModel) > 0) {
         BOOL isImageModel = FALSE;
-        if (nameSettings.host != NULL &&
-            strcmp(nameSettings.host, "api.openai.com") == 0) {
+        if (hostIsOpenAICompatible(nameSettings.host,
+                                   nameSettings.apiEndpointUrl)) {
             isImageModel = isStringInList(titleModel, OPENAI_IMAGE_MODELS);
         } else if (nameSettings.host != NULL &&
                    strcmp(nameSettings.host,
@@ -868,8 +868,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
             isImageModel = isStringInList(titleModel, GROK_IMAGE_MODELS);
         }
         if (isImageModel) {
-            if (nameSettings.host != NULL &&
-                strcmp(nameSettings.host, "api.openai.com") == 0) {
+            if (hostIsOpenAICompatible(nameSettings.host,
+                                       nameSettings.apiEndpointUrl)) {
                 titleModel = "gpt-5-chat-latest";
             } else if (nameSettings.host != NULL &&
                        strcmp(nameSettings.host,
@@ -1968,7 +1968,8 @@ static void sendChatMessage() {
                    strcmp(chatSettings.host, "api.x.ai") == 0;
     BOOL cloudAttachmentHost =
         (chatSettings.host != NULL &&
-         (strcmp(chatSettings.host, "api.openai.com") == 0 ||
+         (hostIsOpenAICompatible(chatSettings.host,
+                                 chatSettings.apiEndpointUrl) ||
           strcmp(chatSettings.host, "generativelanguage.googleapis.com") ==
               0 ||
           strcmp(chatSettings.host, "api.anthropic.com") == 0));

@@ -3,6 +3,7 @@
 ## 3.2.1 (2026-08-24)
 
 - Fix follow-up chat failing with "No tool output found for function call" after the model used the shell tool (ARexx/KIT and the GUI)
+- Treat AmiKit (KIT) OpenAI proxy hosts (any URL containing "amikit") as OpenAI so file attachments, downloads and the hosted code interpreter work through the proxy
 
 ## 3.2.0 (2026-08-24)
 

@@ -404,7 +404,7 @@ Press @{b}Attach files...@{ub} to pick one or more files to send with your next 
 
 @{b}@{u}How the files are sent@{uu}@{ub}
 
-OpenAI, xAI Grok, Anthropic Claude and Google Gemini upload the file first and then refer to it by its identifier, so the chat request itself stays small - which matters a great deal on a classic Amiga TCP stack. Other providers receive images and documents in their own multimodal request format.
+OpenAI, xAI Grok, Anthropic Claude, Google Gemini and the AmiKit (KIT) OpenAI proxy upload the file first and then refer to it by its identifier, so the chat request itself stays small - which matters a great deal on a classic Amiga TCP stack. Other providers receive images and documents in their own multimodal request format.
 
 @{b}@{u}Size limits@{uu}@{ub}
 
@@ -412,7 +412,7 @@ To keep memory use practical on classic Amigas, each file may be up to 8MB, and 
 
 @{b}@{u}ZIP archives@{uu}@{ub}
 
-A .zip file is sent as application/zip. On OpenAI it is placed in the Code Interpreter container, and on Anthropic Claude it is uploaded to the code-execution container. Turn on @{b}Code Interpreter@{ub} for that profile so the model can unpack it. See @{"Code Interpreter" link codeinterpreter}.
+A .zip file is sent as application/zip. On OpenAI and the AmiKit (KIT) OpenAI proxy it is placed in the Code Interpreter container, and on Anthropic Claude it is uploaded to the code-execution container. Turn on @{b}Code Interpreter@{ub} for that profile so the model can unpack it. See @{"Code Interpreter" link codeinterpreter}.
 
 @{b}@{u}What a provider accepts@{uu}@{ub}
 
@@ -555,7 +555,7 @@ The Code Interpreter lets the AI write and run Python in a sandbox hosted by the
 
 Open @{b}Chat Provider Settings...@{ub} from the @{b}Chat@{ub} menu and turn on @{b}Code Interpreter@{ub} for the selected profile.
 
-The option is offered for OpenAI, Google Gemini, xAI Grok and Anthropic Claude. For a custom profile it appears when the API endpoint is responses, messages or Gemini generateContent, and is hidden for chat/completions servers, which have no hosted interpreter.
+The option is offered for OpenAI, Google Gemini, xAI Grok and Anthropic Claude. For a custom profile it appears when the API endpoint is responses, messages or Gemini generateContent, and is hidden for chat/completions servers, which have no hosted interpreter. A custom profile whose host or endpoint URL contains "amikit" is treated as the AmiKit OpenAI proxy, so attachments, zip archives and the hosted interpreter work the same way as on OpenAI.
 
 @{b}@{u}Sending data in@{uu}@{ub}
 
@@ -747,6 +747,8 @@ Then press @{b}Fetch Models@{ub} to pull the model list from the server, choose 
 @{b}@{u}Limitations@{uu}@{ub}
 
 Local servers generally have no Files API, so attachments are sent inline in the request rather than uploaded first, and there is usually no hosted code interpreter, so the @{b}Code Interpreter@{ub} option is hidden for chat/completions profiles.
+
+An exception is the AmiKit (KIT) OpenAI proxy. If the host or API endpoint URL contains "amikit" (the hostname can change), AmigaGPT treats that profile like OpenAI: files are uploaded to /v1/files first, the hosted code interpreter is available on the responses endpoint, and files the model creates can be downloaded.
 @endnode
 
 @node models "Models"
@@ -1841,6 +1843,7 @@ palm/include/fdlibm.h
 @{b}@{u}3.2.1 (2026-08-24)@{uu}@{ub}
 
 - Fix follow-up chat failing with "No tool output found for function call" after the model used the shell tool (ARexx/KIT and the GUI)
+- Treat AmiKit (KIT) OpenAI proxy hosts (any URL containing "amikit") as OpenAI so file attachments, downloads and the hosted code interpreter work through the proxy
 
 @{b}@{u}3.2.0 (2026-08-24)@{uu}@{ub}
 

@@ -757,4 +757,12 @@ struct json_object *getXAICustomVoices(
  **/
 STRPTR detectMimeTypeFromContents(CONST_STRPTR path);
 
+/**
+ * True for api.openai.com and for AmiKit's OpenAI-compatible proxy. The proxy
+ * hostname can change; any host or endpoint URL that contains "amikit"
+ * (case-insensitive) is treated as OpenAI for Files API uploads, hosted tools
+ * and attachment handling.
+ **/
+BOOL hostIsOpenAICompatible(CONST_STRPTR host, CONST_STRPTR apiEndpointUrl);
+
 #endif

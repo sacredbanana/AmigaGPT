@@ -143,6 +143,7 @@ static LONG waitForSocketReadable(BOOL useSSL);
 static LONG waitForSocketWritable(void);
 static void clearHttpReadBuffer(void);
 static BOOL hostUsesRemoteFileIds(CONST_STRPTR host,
+                                  CONST_STRPTR apiEndpointUrl,
                                   APIChatEndpoint apiEndpoint);
 static BOOL uploadRemoteFilesForMessage(
     struct ConversationNode *message, CONST_STRPTR host, UWORD port,
@@ -830,13 +831,53 @@ static BOOL attachmentFileLooksLikeText(CONST_STRPTR path) {
     return TRUE;
 }
 
-static BOOL hostUsesRemoteFileIds(CONST_STRPTR host,
-                                  APIChatEndpoint apiEndpoint) {
-    if (host == NULL)
+static int asciiLower(int c) {
+    if (c >= 'A' && c <= 'Z')
+        return c + ('a' - 'A');
+    return c;
+}
+
+static BOOL stringContainsIgnoreCase(CONST_STRPTR haystack,
+                                     CONST_STRPTR needle) {
+    ULONG i, j, nlen, hlen;
+    if (haystack == NULL || needle == NULL)
         return FALSE;
-    if (strcmp(host, OPENAI_HOST) == 0 &&
+    nlen = strlen(needle);
+    hlen = strlen(haystack);
+    if (nlen == 0 || hlen < nlen)
+        return FALSE;
+    for (i = 0; i + nlen <= hlen; i++) {
+        for (j = 0; j < nlen; j++) {
+            if (asciiLower((unsigned char)haystack[i + j]) !=
+                asciiLower((unsigned char)needle[j]))
+                break;
+        }
+        if (j == nlen)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+BOOL hostIsOpenAICompatible(CONST_STRPTR host, CONST_STRPTR apiEndpointUrl) {
+    if (host != NULL && strcmp(host, OPENAI_HOST) == 0)
+        return TRUE;
+    /* AmiKit's OpenAI proxy hostname can change, but it keeps "amikit" in
+     * the URL. Treat that host like api.openai.com so Files API uploads,
+     * code interpreter and zip-on-container work through the worker. */
+    if (stringContainsIgnoreCase(host, "amikit") ||
+        stringContainsIgnoreCase(apiEndpointUrl, "amikit"))
+        return TRUE;
+    return FALSE;
+}
+
+static BOOL hostUsesRemoteFileIds(CONST_STRPTR host,
+                                  CONST_STRPTR apiEndpointUrl,
+                                  APIChatEndpoint apiEndpoint) {
+    if (hostIsOpenAICompatible(host, apiEndpointUrl) &&
         apiEndpoint == API_CHAT_ENDPOINT_RESPONSES)
         return TRUE;
+    if (host == NULL)
+        return FALSE;
     if (strcmp(host, XAI_HOST) == 0 &&
         apiEndpoint == API_CHAT_ENDPOINT_RESPONSES)
         return TRUE;
@@ -1053,6 +1094,7 @@ static BOOL appendLocalFileParts(struct ConversationNode *message,
                                  struct json_object *contentArray,
                                  APIChatEndpoint apiEndpoint,
                                  ULONG *totalAttachmentBytes, CONST_STRPTR host,
+                                 CONST_STRPTR apiEndpointUrl,
                                  BOOL codeInterpreterEnabled) {
     if (!messageHasLocalFiles(message))
         return TRUE;
@@ -1069,7 +1111,8 @@ static BOOL appendLocalFileParts(struct ConversationNode *message,
         CONST_STRPTR mime = chatFileMime(file);
         BOOL isImage = strncmp(mime, "image/", 6) == 0;
         BOOL isZip = attachmentMimeIsZip(mime);
-        if (hostUsesRemoteFileIds(host, apiEndpoint) && file->fileId != NULL &&
+        if (hostUsesRemoteFileIds(host, apiEndpointUrl, apiEndpoint) &&
+            file->fileId != NULL &&
             strlen(file->fileId) > 0) {
             struct json_object *part = json_object_new_object();
             if (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES) {
@@ -1182,7 +1225,7 @@ static BOOL appendLocalFileParts(struct ConversationNode *message,
                     json_object_object_add(imageUrl, "url",
                                            json_object_new_string(dataUrl));
                     json_object_object_add(part, "image_url", imageUrl);
-                } else if (host != NULL && strcmp(host, OPENAI_HOST) == 0) {
+                } else if (hostIsOpenAICompatible(host, apiEndpointUrl)) {
                     struct json_object *fileObj = json_object_new_object();
                     json_object_object_add(part, "type",
                                            json_object_new_string("file"));
@@ -3736,8 +3779,10 @@ struct json_object **postChatMessageToOpenAI(
         port = useSSL ? 443 : 80;
     }
 
-    /* Host heuristics for provider-specific behavior (kept host-driven). */
-    BOOL isOpenAiHost = (strcmp(host, OPENAI_HOST) == 0);
+    /* Host heuristics for provider-specific behavior (kept host-driven).
+     * AmiKit's OpenAI proxy is treated as OpenAI so Files API, hosted tools
+     * and zip-on-container work through the worker. */
+    BOOL isOpenAiHost = hostIsOpenAICompatible(host, apiEndpointUrl);
     BOOL isXaiHost = (strcmp(host, XAI_HOST) == 0);
     BOOL isAnthropicHost = (strcmp(host, ANTHROPIC_HOST) == 0);
     BOOL isGeminiHost = (strcmp(host, GEMINI_HOST) == 0);
@@ -3786,7 +3831,7 @@ struct json_object **postChatMessageToOpenAI(
          * we wait for the response. Custom OpenAI-compatible hosts such as
          * LM Studio have no Files API, so they keep inline data URIs. */
         if (messageHasLocalFiles(attachmentMessage) &&
-            hostUsesRemoteFileIds(host, apiEndpoint)) {
+            hostUsesRemoteFileIds(host, apiEndpointUrl, apiEndpoint)) {
             if (!uploadRemoteFilesForMessage(
                     attachmentMessage, host, port, useSSL, useProxy, proxyHost,
                     proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
@@ -3886,6 +3931,7 @@ struct json_object **postChatMessageToOpenAI(
                 if (message == attachmentMessage &&
                     !appendLocalFileParts(message, partsArr, apiEndpoint,
                                           &totalAttachmentBytes, host,
+                                          apiEndpointUrl,
                                           codeInterpreterEnabled))
                     attachmentBuildFailed = TRUE;
                 json_object_object_add(contentObj, "parts", partsArr);
@@ -3946,6 +3992,7 @@ struct json_object **postChatMessageToOpenAI(
                     if (!appendLocalFileParts(message, contentArray,
                                               apiEndpoint,
                                               &totalAttachmentBytes, host,
+                                              apiEndpointUrl,
                                               codeInterpreterEnabled))
                         attachmentBuildFailed = TRUE;
                     json_object_object_add(messageObj, "content", contentArray);
@@ -4020,6 +4067,7 @@ struct json_object **postChatMessageToOpenAI(
                     if (!appendLocalFileParts(message, contentArray,
                                               apiEndpoint,
                                               &totalAttachmentBytes, host,
+                                              apiEndpointUrl,
                                               codeInterpreterEnabled))
                         attachmentBuildFailed = TRUE;
                     json_object_object_add(messageObj, "content", contentArray);
@@ -4161,6 +4209,7 @@ struct json_object **postChatMessageToOpenAI(
                         if (!appendLocalFileParts(latestMessage, contentArray,
                                                   apiEndpoint,
                                                   &totalAttachmentBytes, host,
+                                                  apiEndpointUrl,
                                                   codeInterpreterEnabled))
                             attachmentBuildFailed = TRUE;
                         json_object_object_add(messageObj, "content",
@@ -4202,6 +4251,7 @@ struct json_object **postChatMessageToOpenAI(
                         if (!appendLocalFileParts(message, contentArray,
                                                   apiEndpoint,
                                                   &totalAttachmentBytes, host,
+                                                  apiEndpointUrl,
                                                   codeInterpreterEnabled))
                             attachmentBuildFailed = TRUE;
                         json_object_object_add(messageObj, "content",
