@@ -30,17 +30,20 @@ CONST_STRPTR version = "$VER: AmigaGPT " APP_VERSION " (" BUILD_DATE
 
 /* When a libnix program is started from Workbench it has no stdio streams, so
    the startup code opens the console described by __stdiowin and points
-   stdin/stdout/stderr at it. The default is an AUTO console window, which pops
-   up - untitled, so it appears to contain nothing but the ":" of its empty
-   path - as soon as anything is written to stdout, typically when the buffers
-   are flushed at exit. The GUI reports everything through requesters, so send
-   stray stdio output to NIL: instead. Shell-started runs are unaffected: they
-   inherit the Shell's streams and never look at __stdiowin. The daemon keeps
-   the default because its status output is the whole point of it.
-   AmigaOS 4 (newlib) already defaults to no console window. */
+   stdin/stdout/stderr at it. The default is "CON://///AUTO/CLOSE/WAIT" - an
+   untitled AUTO window that looks empty apart from its ":". The GUI reports
+   everything through requesters, so send stray stdio to NIL: instead.
+   Shell-started runs inherit the Shell's streams and never look at __stdiowin.
+   The daemon keeps the default because its status output is the whole point of
+   it. AmigaOS 4 (newlib) already defaults to no console window.
+
+   libnix loads this as a char * (Open(__stdiowin)). It MUST be a pointer. An
+   array "NIL:" is read as the address 0x4E494C3A; Open() fails and libnix
+   calls exit(20) before main(), so the program appears not to launch from
+   Workbench while still working from the Shell. */
 #if (defined(__AMIGAOS3__) || defined(__MORPHOS__)) && !defined(DAEMON) &&     \
     !defined(DEBUG)
-char __stdiowin[] = "NIL:";
+char *__stdiowin = "NIL:";
 #endif
 
 #ifdef __AMIGAOS4__
@@ -59,19 +62,8 @@ LONG main(int argc, char **argv) {
     atexit(cleanExit);
     SysBase = *((struct ExecBase **)4UL);
 
-#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
-    struct Process *currentTask = (struct Process *)FindTask(NULL);
-    struct CommandLineInterface *cli =
-        (struct CommandLineInterface *)BADDR(currentTask->pr_CLI);
-
-    /* If we started from Workbench then we must retrieve the startup message
-     before doing anything else. The startup message also contains a lock on
-     the program directory. */
-    if (cli == NULL) {
-        wbStartupMessage = (struct WBStartup *)GetMsg(&currentTask->pr_MsgPort);
-    }
-
 #ifdef __AMIGAOS3__
+    struct Process *currentTask = (struct Process *)FindTask(NULL);
     UBYTE *upper = (UBYTE *)currentTask->pr_Task.tc_SPUpper;
     UBYTE *lower = (UBYTE *)currentTask->pr_Task.tc_SPLower;
     ULONG total = upper - lower;
@@ -84,7 +76,7 @@ LONG main(int argc, char **argv) {
         FreeVec(warningMessage);
     }
 #endif
-#else
+#ifdef __AMIGAOS4__
     if (argc == 0) {
         wbStartupMessage = (struct WBStartup *)argv;
     }
@@ -140,11 +132,6 @@ LONG main(int argc, char **argv) {
         displayError(STRING_ERROR_OPENAI_INIT);
         exit(RETURN_ERROR);
     }
-
-#ifdef __AMIGAOS3__
-    if (wbStartupMessage != NULL)
-        ReplyMsg((struct Message *)wbStartupMessage);
-#endif
 
 #ifdef DAEMON
     printf("AmigaGPTD ready - listening for ARexx commands...\n");
