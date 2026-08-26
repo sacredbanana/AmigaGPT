@@ -1840,10 +1840,11 @@ palm/include/fdlibm.h
 @node changelog "Changelog"
 @{b}@{fg shine}Changelog@{fg text}@{ub}
 
-@{b}@{u}3.2.1 (2026-08-24)@{uu}@{ub}
+@{b}@{u}3.2.1 (2026-08-26)@{uu}@{ub}
 
 - Fix follow-up chat failing with "No tool output found for function call" after the model used the shell tool (ARexx/KIT and the GUI)
 - Treat AmiKit (KIT) OpenAI proxy hosts (any URL containing "amikit") as OpenAI so file attachments, downloads and the hosted code interpreter work through the proxy
+- Fix an issue causing the app to not launch from Workbench
 
 @{b}@{u}3.2.0 (2026-08-24)@{uu}@{ub}
 
