@@ -9,7 +9,7 @@ Provides current, citation-backed guidance from official OpenAI documentation.
 
 ## Quick start
 
-- Prefer an installed OpenAI docs MCP server if one exists in the current Claude Code session.
+- Prefer an installed OpenAI docs MCP server if one exists in the current session.
 - Before calling any MCP tool, read its descriptor and follow its schema exactly.
 - If no suitable OpenAI docs MCP server is available, use `WebSearch` and `WebFetch`.
 - Restrict web fallback to official OpenAI domains: `developers.openai.com` and `platform.openai.com`.

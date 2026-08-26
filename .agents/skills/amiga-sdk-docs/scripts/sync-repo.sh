@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_url="https://github.com/sacredbanana/AmigaSDK-gcc.git"
-cache_root=".cursor/cache"
+cache_root=".agents/skills/amiga-sdk-docs/cache"
 cache_dir="$cache_root/amigasdk-gcc"
 lock_dir="$cache_root/amigasdk-gcc.sync.lock"
 wait_secs="${SYNC_WAIT_SECS:-300}"

@@ -1,15 +1,15 @@
 ---
 name: xai-docs
-description: Provides current, citation-backed guidance from official xAI documentation. Use when the user asks about xAI APIs, Grok models, xAI SDKs, rate limits, pricing, tools, files, streaming, structured outputs, reasoning, image or audio capabilities, or xAI documentation in general. Prefer an installed xAI Docs MCP server when available; otherwise search and fetch only official xAI docs pages.
+description: This skill should be used when the user asks about xAI APIs, Grok models, xAI SDKs, rate limits, pricing, tools, files, streaming, structured outputs, reasoning, image or audio capabilities, or xAI documentation in general. Prefer an installed xAI Docs MCP server when available; otherwise search and fetch only official xAI docs pages.
 ---
 
 # xAI Docs
 
-This is a Cursor-native skill for working with official xAI documentation.
+Provides current, citation-backed guidance from official xAI documentation.
 
 ## Quick start
 
-- Prefer an installed xAI Docs MCP server if one exists in the current Cursor environment.
+- Prefer an installed xAI Docs MCP server if one exists in the current session.
 - Before calling any MCP tool, read its descriptor and follow its schema exactly.
 - If no suitable xAI docs MCP server is available, use `WebSearch` and `WebFetch`.
 - Restrict web fallback to official xAI docs domains: `docs.x.ai` and `x.ai`.
@@ -67,5 +67,4 @@ Use this path when no xAI docs MCP server is installed, or when the MCP server c
 
 ## Notes
 
-- xAI hosts an official docs MCP server at `https://docs.x.ai/api/mcp`.
-- This skill is designed for Cursor and does not assume a specific workspace MCP server identifier.
+- xAI hosts an official docs MCP server at `https://docs.x.ai/api/mcp` (configured in `.claude/mcp.json` and `.cursor/mcp.json`).
