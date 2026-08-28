@@ -133,13 +133,17 @@ ARexx — erste Zeile MUSS /* Kommentar */ sein
 Laut AmigaOS-Handbuch (Elements of ARexx): Jedes Programm beginnt mit /* ... */.
 Ohne diesen Kopf: rx meldet oft Fehler 5. fix-protection.rexx beginnt mit /* ... */.
 
-Installation
+Installation (MorphOS — LHA vom Share entpacken, nicht WSL)
 ------------
-1. LHA entpacken (z.B. nach Work:AmigaGPT/), Ordner package-morphos/AmigaGPT/...
-2. Optional in AmigaGPT/AmigaGPT/: rx fix-protection.rexx (vor allem fuer rexx/#?)
-3. assign AMIGAGPT: Work:AmigaGPT/AmigaGPT/AmigaGPT  (Pfad nach eurem Entpacken)
+1. LHA entpacken, z. B. nach Work:Tmp/AmigaGPT-test/
+   → package-morphos/AmigaGPT/AmigaGPT/...  (HW-Test-Sandbox; kein Work:Programme/)
+2. Optional in package-morphos/AmigaGPT/AmigaGPT/: rx fix-protection.rexx (vor allem rexx/#?)
+3. assign AMIGAGPT: <Entpackpfad>/package-morphos/AmigaGPT/AmigaGPT
+   (Beispiel: Work:Tmp/AmigaGPT-test/package-morphos/AmigaGPT/AmigaGPT)
 4. Optional: run >nil: AMIGAGPT:AmigaGPTD_MorphOS
 5. Start: run AMIGAGPT:AmigaGPT_MorphOS  (oder Doppelklick)
+
+Dauerhafte User-Installation: eigener Pfad nach Wahl — nicht vom Agent/MCP überschreiben.
 
 Share-Deploy (WSL): nur AmigaGPT-MorphOS-cross.lha nach morphos/out-crosscompile/
 (z.B. HDSFGO4-share:morphos/out-crosscompile/). Entpacken: MorphOS-Deploy-Skript.
