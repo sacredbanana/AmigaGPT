@@ -3333,10 +3333,6 @@ getChatModels(STRPTR host, ULONG port, BOOL useSSL, CONST_STRPTR apiKey,
         }
     }
 
-#ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
-#endif
-
     // Read response
     struct json_object *response = NULL;
     ULONG totalBytesRead = 0;
@@ -5938,10 +5934,6 @@ struct json_object *postImageCreationRequestToOpenAI(
         FreeVec(referenceParts);
     FreeVec(authHeader);
 
-#ifndef DAEMON
-    hideLoadingBar();
-#endif
-
     if (ssl_err > 0) {
         ULONG totalBytesRead = 0;
         WORD bytesRead = 0;
@@ -6483,10 +6475,6 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
     }
-
-#ifndef DAEMON
-    hideLoadingBar();
-#endif
 
     if (ssl_err > 0) {
         ULONG totalBytesRead = 0;
@@ -7256,10 +7244,6 @@ APTR postTextToSpeechRequestToOpenAI(
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
     }
-
-#ifndef DAEMON
-    hideLoadingBar();
-#endif
 
     BOOL isErrorResponse = FALSE;
 
@@ -8084,10 +8068,6 @@ APTR postTextToSpeechRequestToElevenLabs(
         }
     }
 
-#ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
-#endif
-
     /* Read response: accumulate headers across TLS records, then read the full
      * body using Content-Length when present (avoids truncated audio). */
     UBYTE headerAccum[8192];
@@ -8683,10 +8663,6 @@ APTR postTextToSpeechRequestToXAI(
             return NULL;
         }
     }
-
-#ifndef DAEMON
-    set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
-#endif
 
     UBYTE headerAccum[8192];
     ULONG ha = 0;

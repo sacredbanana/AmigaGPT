@@ -300,6 +300,13 @@ void startGUIRunLoop() {
         // processed so keep the Edit menu items in sync with it
         updateEditMenuItemsEnabled();
 #endif
+#ifndef DAEMON
+        /* Every network request runs synchronously inside an input hook, so
+         * reaching the idle wait means nothing is in flight any more - stop
+         * the busy meter here rather than relying on each request path to
+         * clear it on every one of its exits. */
+        hideLoadingBar();
+#endif
         if (running && signals)
             signals = Wait(signals | SIGBREAKF_CTRL_C);
         if (signals & SIGBREAKF_CTRL_C)

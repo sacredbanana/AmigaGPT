@@ -2,6 +2,7 @@
 
 ## 3.3.0 (2026-08-29)
 
+- Fix the busy bar at the bottom of the main window animating forever after generating an image, and keep it running for the whole request instead of blanking out as soon as the request was sent
 - Attach reference images to an image generation prompt so the model can edit, restyle or combine pictures you already have
 - Edit button on a generated image starts a fresh prompt with that picture already attached as a reference
 - ARexx CREATEIMAGE supports A=ATTACH to send one or more reference images with the prompt

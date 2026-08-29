@@ -219,10 +219,16 @@ void freeMainWindowFileState() {
     }
 }
 
+/** Whether the busy meter page is currently the visible one */
+static BOOL loadingBarVisible = FALSE;
+
 /**
  * Shows the loading bar and starts the busy meter animating
  **/
 void showLoadingBar() {
+    if (loadingBarVisible)
+        return;
+    loadingBarVisible = TRUE;
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_User);
     set(loadingBarGroup, MUIA_Group_ActivePage, 1);
 }
@@ -231,6 +237,9 @@ void showLoadingBar() {
  * Stops the busy meter and hides the loading bar, leaving it blank
  **/
 void hideLoadingBar() {
+    if (!loadingBarVisible)
+        return;
+    loadingBarVisible = FALSE;
     set(loadingBar, MUIA_Busy_Speed, MUIV_Busy_Speed_Off);
     set(loadingBarGroup, MUIA_Group_ActivePage, 0);
 }
