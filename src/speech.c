@@ -5,7 +5,6 @@
 #include <proto/dos.h>
 #include <proto/exec.h>
 #include <string.h>
-#include <time.h>
 #ifdef __AMIGAOS3__
 #include <clib/compiler-specific.h>
 #include <devices/audio.h>
@@ -139,10 +138,10 @@ static void startAHIWrite(APTR data, ULONG length, ULONG frequency,
 }
 
 static ULONG nowMs(void) {
-    clock_t ticks = clock();
-    if (CLOCKS_PER_SEC == 0)
-        return 0;
-    return (ULONG)((ticks * 1000UL) / CLOCKS_PER_SEC);
+    struct DateStamp stamp;
+
+    DateStamp(&stamp);
+    return ((ULONG)stamp.ds_Minute * 60000UL) + ((ULONG)stamp.ds_Tick * 20UL);
 }
 
 static void resetPlaybackMeta(void) {
