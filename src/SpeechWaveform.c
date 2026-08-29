@@ -1,5 +1,7 @@
 #include <clib/alib_protos.h>
 #include <dos/dos.h>
+#include <graphics/gfx.h>
+#include <graphics/rastport.h>
 #include <intuition/intuition.h>
 #include <libraries/mui.h>
 #include <proto/dos.h>
@@ -30,6 +32,11 @@ struct SpeechWaveformData {
     UBYTE bands[WAVE_COLS][WAVE_BANDS];
     ULONG durationMs;
     ULONG positionMs;
+    struct BitMap *cacheBm;
+    struct RastPort cacheRp;
+    LONG cacheWidth;
+    LONG cacheHeight;
+    BOOL cacheValid;
 };
 
 static const WORD COS_TAB[FFT_N] = {
@@ -165,6 +172,17 @@ static void analyzeColumn(const WORD *window, UBYTE *peak, UBYTE *bands) {
     }
 }
 
+static void freeWaveformCache(struct SpeechWaveformData *data) {
+    if (data->cacheBm != NULL) {
+        WaitBlit();
+        FreeBitMap(data->cacheBm);
+        data->cacheBm = NULL;
+    }
+    data->cacheValid = FALSE;
+    data->cacheWidth = 0;
+    data->cacheHeight = 0;
+}
+
 static void clearWaveform(struct SpeechWaveformData *data) {
     memset(data->peaks, 0, sizeof(data->peaks));
     memset(data->bands, 0, sizeof(data->bands));
@@ -172,6 +190,7 @@ static void clearWaveform(struct SpeechWaveformData *data) {
     data->durationMs = 0;
     data->positionMs = 0;
     data->fileName[0] = '\0';
+    data->cacheValid = FALSE;
 }
 
 static BOOL loadWaveformFile(struct SpeechWaveformData *data,
@@ -288,6 +307,7 @@ static BOOL loadWaveformFromSamples(struct SpeechWaveformData *data,
 
     memset(data->peaks, 0, sizeof(data->peaks));
     memset(data->bands, 0, sizeof(data->bands));
+    data->cacheValid = FALSE;
     data->durationMs = (ULONG)(((unsigned long long)frames * 1000ULL) /
                                sampleRate);
     for (col = 0; col < WAVE_COLS; col++) {
@@ -382,34 +402,31 @@ static ULONG seekFromX(struct SpeechWaveformData *data, Object *obj, LONG x) {
     return ms;
 }
 
-static void drawWaveform(struct IClass *cl, Object *obj) {
-    struct SpeechWaveformData *data = INST_DATA(cl, obj);
-    struct RastPort *rp = _rp(obj);
-    struct DrawInfo *dri = _dri(obj);
-    LONG left = _mleft(obj);
-    LONG top = _mtop(obj);
-    LONG width = _mwidth(obj);
-    LONG height = _mheight(obj);
+static void waveformPens(struct DrawInfo *dri, ULONG *shadow, ULONG *shine,
+                         ULONG *wavePen, ULONG *headPen, ULONG *specPen) {
+    ULONG fill;
+
+    *shadow = dri != NULL ? dri->dri_Pens[SHADOWPEN] : 1;
+    *shine = dri != NULL ? dri->dri_Pens[SHINEPEN] : 2;
+    fill = dri != NULL ? dri->dri_Pens[FILLPEN] : 3;
+    *wavePen = greenPen ? greenPen : *shine;
+    *headPen = yellowPen ? yellowPen : *shine;
+    *specPen = bluePen ? bluePen : fill;
+}
+
+static void renderStaticWaveform(struct RastPort *rp, LONG left, LONG top,
+                                 LONG width, LONG height,
+                                 struct SpeechWaveformData *data,
+                                 struct DrawInfo *dri) {
     LONG x;
     LONG mid;
-    LONG playX;
     ULONG shadow;
     ULONG shine;
-    ULONG fill;
     ULONG wavePen;
     ULONG headPen;
     ULONG specPen;
 
-    if (rp == NULL || width <= 0 || height <= 0)
-        return;
-
-    shadow = dri != NULL ? dri->dri_Pens[SHADOWPEN] : 1;
-    shine = dri != NULL ? dri->dri_Pens[SHINEPEN] : 2;
-    fill = dri != NULL ? dri->dri_Pens[FILLPEN] : 3;
-    wavePen = greenPen ? greenPen : shine;
-    headPen = yellowPen ? yellowPen : shine;
-    specPen = bluePen ? bluePen : fill;
-
+    waveformPens(dri, &shadow, &shine, &wavePen, &headPen, &specPen);
     SetAPen(rp, shadow);
     RectFill(rp, left, top, left + width - 1, top + height - 1);
 
@@ -423,19 +440,15 @@ static void drawWaveform(struct IClass *cl, Object *obj) {
     mid = top + height / 2;
     for (x = 0; x < width; x++) {
         ULONG col = ((ULONG)x * WAVE_COLS) / (ULONG)width;
-        ULONG played;
         LONG peak;
-        if (col >= WAVE_COLS)
-            col = WAVE_COLS - 1;
-        played = data->durationMs > 0 &&
-                 ((ULONG)x * data->durationMs) / (ULONG)width <
-                     data->positionMs;
-        peak = (LONG)data->peaks[col] * (height / 2 - 2) / 255;
         LONG y0;
         LONG y1;
         LONG band;
         LONG bandH;
 
+        if (col >= WAVE_COLS)
+            col = WAVE_COLS - 1;
+        peak = (LONG)data->peaks[col] * (height / 2 - 2) / 255;
         if (peak < 1)
             peak = 1;
         y0 = mid - peak;
@@ -459,36 +472,102 @@ static void drawWaveform(struct IClass *cl, Object *obj) {
                 pen = wavePen;
             else if (energy > 24)
                 pen = specPen;
-            if (played && pen == shadow)
-                pen = fill;
             if (by0 < y0)
                 by0 = y0;
             if (by1 > y1)
                 by1 = y1;
             if (by1 >= by0) {
                 SetAPen(rp, pen);
-                WritePixel(rp, left + x, (by0 + by1) / 2);
                 if (by1 > by0)
                     RectFill(rp, left + x, by0, left + x, by1);
+                else
+                    WritePixel(rp, left + x, by0);
             }
         }
 
-        SetAPen(rp, played ? headPen : wavePen);
+        SetAPen(rp, wavePen);
         WritePixel(rp, left + x, y0);
         WritePixel(rp, left + x, y1);
     }
+}
 
-    if (data->durationMs > 0) {
-        playX = left + (LONG)((data->positionMs * (ULONG)width) /
-                              data->durationMs);
-        if (playX < left)
-            playX = left;
-        if (playX > left + width - 1)
-            playX = left + width - 1;
-        SetAPen(rp, headPen);
-        Move(rp, playX, top);
-        Draw(rp, playX, top + height - 1);
+static void drawPlayhead(struct RastPort *rp, LONG left, LONG top, LONG width,
+                         LONG height, struct SpeechWaveformData *data,
+                         struct DrawInfo *dri) {
+    LONG playX;
+    ULONG shadow;
+    ULONG shine;
+    ULONG wavePen;
+    ULONG headPen;
+    ULONG specPen;
+
+    if (!data->hasAudio || data->durationMs == 0 || width <= 0)
+        return;
+    waveformPens(dri, &shadow, &shine, &wavePen, &headPen, &specPen);
+    playX = left + (LONG)((data->positionMs * (ULONG)width) / data->durationMs);
+    if (playX < left)
+        playX = left;
+    if (playX > left + width - 1)
+        playX = left + width - 1;
+    SetAPen(rp, headPen);
+    Move(rp, playX, top);
+    Draw(rp, playX, top + height - 1);
+}
+
+static BOOL ensureWaveformCache(struct IClass *cl, Object *obj) {
+    struct SpeechWaveformData *data = INST_DATA(cl, obj);
+    struct RastPort *rp = _rp(obj);
+    LONG width = _mwidth(obj);
+    LONG height = _mheight(obj);
+    struct BitMap *friendBm;
+    ULONG depth;
+
+    if (rp == NULL || rp->BitMap == NULL || width <= 0 || height <= 0)
+        return FALSE;
+    if (data->cacheValid && data->cacheBm != NULL &&
+        data->cacheWidth == width && data->cacheHeight == height)
+        return TRUE;
+
+    freeWaveformCache(data);
+    friendBm = rp->BitMap;
+    depth = (ULONG)friendBm->Depth;
+    if (depth < 1)
+        depth = 1;
+    data->cacheBm =
+        AllocBitMap((ULONG)width, (ULONG)height, depth,
+                    BMF_MINPLANES | BMF_CLEAR, friendBm);
+    if (data->cacheBm == NULL)
+        return FALSE;
+    InitRastPort(&data->cacheRp);
+    data->cacheRp.BitMap = data->cacheBm;
+    data->cacheWidth = width;
+    data->cacheHeight = height;
+    renderStaticWaveform(&data->cacheRp, 0, 0, width, height, data, _dri(obj));
+    WaitBlit();
+    data->cacheValid = TRUE;
+    return TRUE;
+}
+
+static void drawWaveform(struct IClass *cl, Object *obj) {
+    struct SpeechWaveformData *data = INST_DATA(cl, obj);
+    struct RastPort *rp = _rp(obj);
+    struct DrawInfo *dri = _dri(obj);
+    LONG left = _mleft(obj);
+    LONG top = _mtop(obj);
+    LONG width = _mwidth(obj);
+    LONG height = _mheight(obj);
+
+    if (rp == NULL || width <= 0 || height <= 0)
+        return;
+
+    if (ensureWaveformCache(cl, obj)) {
+        BltBitMapRastPort(data->cacheBm, 0, 0, rp, left, top, width, height,
+                          0xC0);
+        WaitBlit();
+    } else {
+        renderStaticWaveform(rp, left, top, width, height, data, dri);
     }
+    drawPlayhead(rp, left, top, width, height, data, dri);
 }
 
 static SAVEDS ULONG mNew(struct IClass *cl, Object *obj, Msg msg) {
@@ -531,6 +610,7 @@ static SAVEDS ULONG mSet(struct IClass *cl, Object *obj, struct opSet *msg) {
         switch (tag->ti_Tag) {
         case MUIA_SpeechWaveform_FileName:
             loadWaveformFile(data, (CONST_STRPTR)tag->ti_Data);
+            data->cacheValid = FALSE;
             redraw = TRUE;
             break;
         case MUIA_SpeechWaveform_Position:
@@ -538,7 +618,8 @@ static SAVEDS ULONG mSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                 data->positionMs = tag->ti_Data;
                 if (data->positionMs > data->durationMs)
                     data->positionMs = data->durationMs;
-                redraw = TRUE;
+                if (_win(obj) != NULL)
+                    MUI_Redraw(obj, MADF_DRAWUPDATE);
             }
             break;
         }
@@ -566,7 +647,9 @@ static SAVEDS ULONG mSetup(struct IClass *cl, Object *obj, Msg msg) {
 }
 
 static SAVEDS ULONG mCleanup(struct IClass *cl, Object *obj, Msg msg) {
+    struct SpeechWaveformData *data = INST_DATA(cl, obj);
     remEventHandler(cl, obj);
+    freeWaveformCache(data);
     return DoSuperMethodA(cl, obj, msg);
 }
 
@@ -609,7 +692,7 @@ static SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
             ULONG ms = seekFromX(data, obj, mx);
             data->dragging = TRUE;
             data->positionMs = ms;
-            MUI_Redraw(obj, MADF_DRAWOBJECT);
+            MUI_Redraw(obj, MADF_DRAWUPDATE);
             set(obj, MUIA_SpeechWaveform_Seek, ms);
             return MUI_EventHandlerRC_Eat;
         }
@@ -620,7 +703,7 @@ static SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
         ULONG ms = seekFromX(data, obj, mx);
         if (ms != data->positionMs) {
             data->positionMs = ms;
-            MUI_Redraw(obj, MADF_DRAWOBJECT);
+            MUI_Redraw(obj, MADF_DRAWUPDATE);
             set(obj, MUIA_SpeechWaveform_Seek, ms);
         }
         return MUI_EventHandlerRC_Eat;

@@ -2660,6 +2660,7 @@ LONG createMainWindow() {
             MUIC_SpeechWaveform, NULL,
             MUIA_Frame, MUIV_Frame_Group,
             MUIA_Background, MUII_SHADOW,
+            MUIA_FillArea, FALSE,
             MUIA_Weight, 200,
             TAG_DONE);
     } else {
