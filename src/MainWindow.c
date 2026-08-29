@@ -75,11 +75,6 @@ Object *newSpeechButton;
 Object *deleteSpeechButton;
 Object *generateSpeechButton;
 Object *regenerateSpeechButton;
-Object *playSpeechButton;
-Object *pauseSpeechButton;
-Object *stopSpeechButton;
-Object *rewindSpeechButton;
-Object *speechTimeText;
 Object *speechProfileInfo;
 Object *speechWaveform;
 Object *saveSpeechCopyButton;
@@ -282,15 +277,6 @@ static BOOL abortIfRequestBusy(void) {
     return TRUE;
 }
 
-static void formatSpeechTime(STRPTR buffer, ULONG size, ULONG positionMs,
-                             ULONG durationMs) {
-    snprintf(buffer, size, "%lu:%02lu / %lu:%02lu",
-             (ULONG)(positionMs / 60000UL),
-             (ULONG)((positionMs / 1000UL) % 60UL),
-             (ULONG)(durationMs / 60000UL),
-             (ULONG)((durationMs / 1000UL) % 60UL));
-}
-
 static CONST_STRPTR xaiBuiltinVoiceName(CONST_STRPTR voiceId) {
     static const CONST_STRPTR pretty[] = {"Ara", "Eve", "Leo", "Rex", "Sal"};
     UBYTE i;
@@ -445,49 +431,30 @@ void updatePlayButton() {
     BOOL paused;
     BOOL hasSpeech;
     ULONG position;
-    ULONG duration;
-    BOOL playDisabled;
-    BOOL pauseDisabled;
-    BOOL stopDisabled;
-    BOOL rewindDisabled;
-    UBYTE timeText[32];
-    static BOOL lastPlayDisabled = (BOOL)-1;
-    static BOOL lastPauseDisabled = (BOOL)-1;
-    static BOOL lastStopDisabled = (BOOL)-1;
-    static BOOL lastRewindDisabled = (BOOL)-1;
+    static BOOL lastPlaying = (BOOL)-1;
+    static BOOL lastPaused = (BOOL)-1;
+    static BOOL lastHasSpeech = (BOOL)-1;
     static ULONG lastPosition = (ULONG)-1;
-    static UBYTE lastTimeText[32];
+
+    if (speechWaveform == NULL || speechWaveformClass == NULL)
+        return;
 
     playing = isSpeechPlaying();
     paused = isSpeechPaused();
     hasSpeech = currentSpeech != NULL && !requestInterfaceBusy;
     position = speechPlaybackPositionMs();
-    duration = speechPlaybackDurationMs();
-    playDisabled = !hasSpeech || playing;
-    pauseDisabled = !hasSpeech || !playing;
-    stopDisabled = !hasSpeech || (!playing && !paused && position == 0);
-    rewindDisabled = !hasSpeech || (position == 0 && !playing);
+    if (playing == lastPlaying && paused == lastPaused &&
+        hasSpeech == lastHasSpeech && position == lastPosition)
+        return;
 
-    if (playSpeechButton != NULL && playDisabled != lastPlayDisabled)
-        set(playSpeechButton, MUIA_Disabled, playDisabled);
-    if (pauseSpeechButton != NULL && pauseDisabled != lastPauseDisabled)
-        set(pauseSpeechButton, MUIA_Disabled, pauseDisabled);
-    if (stopSpeechButton != NULL && stopDisabled != lastStopDisabled)
-        set(stopSpeechButton, MUIA_Disabled, stopDisabled);
-    if (rewindSpeechButton != NULL && rewindDisabled != lastRewindDisabled)
-        set(rewindSpeechButton, MUIA_Disabled, rewindDisabled);
-    if (speechWaveform != NULL && position != lastPosition)
-        set(speechWaveform, MUIA_SpeechWaveform_Position, position);
-    formatSpeechTime(timeText, sizeof(timeText), position, duration);
-    if (speechTimeText != NULL && strcmp(lastTimeText, timeText) != 0) {
-        strncpy(lastTimeText, timeText, sizeof(lastTimeText) - 1);
-        lastTimeText[sizeof(lastTimeText) - 1] = '\0';
-        set(speechTimeText, MUIA_Text_Contents, timeText);
-    }
-    lastPlayDisabled = playDisabled;
-    lastPauseDisabled = pauseDisabled;
-    lastStopDisabled = stopDisabled;
-    lastRewindDisabled = rewindDisabled;
+    SetAttrs(speechWaveform, MUIA_SpeechWaveform_Position, position,
+             MUIA_SpeechWaveform_Playing, playing ? TRUE : FALSE,
+             MUIA_SpeechWaveform_Paused, paused ? TRUE : FALSE,
+             MUIA_SpeechWaveform_HasSpeech, hasSpeech ? TRUE : FALSE,
+             TAG_DONE);
+    lastPlaying = playing;
+    lastPaused = paused;
+    lastHasSpeech = hasSpeech;
     lastPosition = position;
 }
 
@@ -553,14 +520,6 @@ static void setSpeechGenerationControlsDisabled(BOOL disabled) {
         set(generateSpeechTextButton, MUIA_Disabled, disabled);
     if (saveSpeechCopyButton != NULL)
         set(saveSpeechCopyButton, MUIA_Disabled, disabled);
-    if (playSpeechButton != NULL)
-        set(playSpeechButton, MUIA_Disabled, disabled);
-    if (pauseSpeechButton != NULL)
-        set(pauseSpeechButton, MUIA_Disabled, disabled);
-    if (stopSpeechButton != NULL)
-        set(stopSpeechButton, MUIA_Disabled, disabled);
-    if (rewindSpeechButton != NULL)
-        set(rewindSpeechButton, MUIA_Disabled, disabled);
     if (speechListObject != NULL)
         set(speechListObject, MUIA_Disabled, disabled);
 }
@@ -1409,25 +1368,43 @@ HOOKPROTONHNONP(PlaySpeechButtonClickedFunc, void) {
         playSpeechFile(currentSpeech->filePath);
     updatePlayButton();
 }
-MakeHook(PlaySpeechButtonClickedHook, PlaySpeechButtonClickedFunc);
 
 HOOKPROTONHNONP(PauseSpeechButtonClickedFunc, void) {
     pauseSpeech();
     updatePlayButton();
 }
-MakeHook(PauseSpeechButtonClickedHook, PauseSpeechButtonClickedFunc);
 
 HOOKPROTONHNONP(StopSpeechButtonClickedFunc, void) {
     stopSpeech();
     updatePlayButton();
 }
-MakeHook(StopSpeechButtonClickedHook, StopSpeechButtonClickedFunc);
 
 HOOKPROTONHNONP(RewindSpeechButtonClickedFunc, void) {
     rewindSpeech();
     updatePlayButton();
 }
-MakeHook(RewindSpeechButtonClickedHook, RewindSpeechButtonClickedFunc);
+
+HOOKPROTONHNONP(SpeechWaveformCommandFunc, void) {
+    ULONG command = 0;
+
+    if (speechWaveform != NULL)
+        get(speechWaveform, MUIA_SpeechWaveform_Command, &command);
+    switch (command) {
+    case MUIV_SpeechWaveform_Command_Play:
+        PlaySpeechButtonClickedFunc();
+        break;
+    case MUIV_SpeechWaveform_Command_Pause:
+        PauseSpeechButtonClickedFunc();
+        break;
+    case MUIV_SpeechWaveform_Command_Stop:
+        StopSpeechButtonClickedFunc();
+        break;
+    case MUIV_SpeechWaveform_Command_Rewind:
+        RewindSpeechButtonClickedFunc();
+        break;
+    }
+}
+MakeHook(SpeechWaveformCommandHook, SpeechWaveformCommandFunc);
 
 HOOKPROTONHNONP(SpeechWaveformSeekFunc, void) {
     ULONG positionMs = 0;
@@ -2895,28 +2872,6 @@ LONG createMainWindow() {
                             End,
                             Child, speechWaveform,
                             Child, HGroup,
-                                Child, rewindSpeechButton = MUI_MakeObject(MUIO_Button, STRING_REWIND,
-                                    MUIA_CycleChain, TRUE,
-                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
-                                TAG_DONE),
-                                Child, playSpeechButton = MUI_MakeObject(MUIO_Button, STRING_PLAY,
-                                    MUIA_CycleChain, TRUE,
-                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
-                                TAG_DONE),
-                                Child, pauseSpeechButton = MUI_MakeObject(MUIO_Button, STRING_PAUSE,
-                                    MUIA_CycleChain, TRUE,
-                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
-                                TAG_DONE),
-                                Child, stopSpeechButton = MUI_MakeObject(MUIO_Button, STRING_STOP,
-                                    MUIA_CycleChain, TRUE,
-                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
-                                TAG_DONE),
-                                Child, speechTimeText = TextObject,
-                                    MUIA_Text_Contents, "0:00 / 0:00",
-                                    MUIA_Text_SetMin, TRUE,
-                                End,
-                            End,
-                            Child, HGroup,
                                 Child, regenerateSpeechButton = MUI_MakeObject(MUIO_Button, STRING_REGENERATE,
                                     MUIA_CycleChain, TRUE,
                                     MUIA_InputMode, MUIV_InputMode_RelVerify,
@@ -3119,20 +3074,14 @@ static void addMainWindowActions() {
     DoMethod(regenerateSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
              regenerateSpeechButton, 2, MUIM_CallHook,
              &RegenerateSpeechButtonClickedHook);
-    DoMethod(playSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
-             playSpeechButton, 2, MUIM_CallHook, &PlaySpeechButtonClickedHook);
-    DoMethod(pauseSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
-             pauseSpeechButton, 2, MUIM_CallHook,
-             &PauseSpeechButtonClickedHook);
-    DoMethod(stopSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
-             stopSpeechButton, 2, MUIM_CallHook, &StopSpeechButtonClickedHook);
-    DoMethod(rewindSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
-             rewindSpeechButton, 2, MUIM_CallHook,
-             &RewindSpeechButtonClickedHook);
-    if (speechWaveformClass != NULL && speechWaveform != NULL)
+    if (speechWaveformClass != NULL && speechWaveform != NULL) {
         DoMethod(speechWaveform, MUIM_Notify, MUIA_SpeechWaveform_Seek,
                  MUIV_EveryTime, speechWaveform, 2, MUIM_CallHook,
                  &SpeechWaveformSeekHook);
+        DoMethod(speechWaveform, MUIM_Notify, MUIA_SpeechWaveform_Command,
+                 MUIV_EveryTime, speechWaveform, 2, MUIM_CallHook,
+                 &SpeechWaveformCommandHook);
+    }
     DoMethod(saveSpeechCopyButton, MUIM_Notify, MUIA_Pressed, FALSE,
              saveSpeechCopyButton, 2, MUIM_CallHook,
              &SaveSpeechCopyButtonClickedHook);

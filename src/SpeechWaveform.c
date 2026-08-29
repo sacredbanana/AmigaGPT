@@ -1,8 +1,10 @@
 #include <clib/alib_protos.h>
 #include <dos/dos.h>
 #include <graphics/gfx.h>
+#include <graphics/gfxmacros.h>
 #include <graphics/rastport.h>
 #include <intuition/intuition.h>
+#include <intuition/screens.h>
 #include <libraries/mui.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
@@ -19,6 +21,15 @@
 #define WAVE_COLS 256
 #define WAVE_BANDS 8
 #define FFT_N 32
+#define CTRL_BAR 20
+#define BTN_W 22
+#define BTN_H 16
+#define BTN_GAP 3
+#define BTN_PAD 4
+#define BTN_NONE 0
+#define BTN_PLAYPAUSE 1
+#define BTN_STOP 2
+#define BTN_REWIND 3
 
 struct MUI_CustomClass *speechWaveformClass;
 
@@ -37,6 +48,11 @@ struct SpeechWaveformData {
     LONG cacheWidth;
     LONG cacheHeight;
     BOOL cacheValid;
+    BOOL playing;
+    BOOL paused;
+    BOOL hasSpeech;
+    UBYTE pressedBtn;
+    ULONG command;
 };
 
 static const WORD COS_TAB[FFT_N] = {
@@ -403,6 +419,228 @@ static ULONG seekFromX(struct SpeechWaveformData *data, Object *obj, LONG x) {
 }
 
 static void waveformPens(struct DrawInfo *dri, ULONG *shadow, ULONG *shine,
+                         ULONG *wavePen, ULONG *headPen, ULONG *specPen);
+
+static LONG waveformHeight(Object *obj) {
+    LONG height = _mheight(obj);
+
+    if (height > CTRL_BAR + 8)
+        return height - CTRL_BAR;
+    if (height > 8)
+        return height - 8;
+    return height;
+}
+
+static void buttonBox(Object *obj, UBYTE btn, LONG *x, LONG *y) {
+    LONG index = (LONG)btn - 1;
+
+    *x = _mleft(obj) + BTN_PAD + index * (BTN_W + BTN_GAP);
+    *y = _mtop(obj) + waveformHeight(obj) + (CTRL_BAR - BTN_H) / 2;
+}
+
+static BOOL buttonEnabled(struct SpeechWaveformData *data, UBYTE btn) {
+    if (!data->hasSpeech)
+        return FALSE;
+    if (btn == BTN_PLAYPAUSE)
+        return TRUE;
+    if (btn == BTN_STOP)
+        return data->playing || data->paused || data->positionMs > 0;
+    if (btn == BTN_REWIND)
+        return data->playing || data->positionMs > 0;
+    return FALSE;
+}
+
+static UBYTE buttonAt(Object *obj, LONG mx, LONG my) {
+    UBYTE btn;
+    LONG x;
+    LONG y;
+
+    for (btn = BTN_PLAYPAUSE; btn <= BTN_REWIND; btn++) {
+        buttonBox(obj, btn, &x, &y);
+        if (mx >= x && mx < x + BTN_W && my >= y && my < y + BTN_H)
+            return btn;
+    }
+    return BTN_NONE;
+}
+
+static BOOL inWaveform(Object *obj, LONG mx, LONG my) {
+    LONG left = _mleft(obj);
+    LONG top = _mtop(obj);
+    LONG width = _mwidth(obj);
+    LONG height = waveformHeight(obj);
+
+    return mx >= left && mx < left + width && my >= top && my < top + height;
+}
+
+static void formatPlayTime(UBYTE *buf, ULONG posMs, ULONG durMs) {
+    ULONG pm = posMs / 60000UL;
+    ULONG ps = (posMs / 1000UL) % 60UL;
+    ULONG dm = durMs / 60000UL;
+    ULONG ds = (durMs / 1000UL) % 60UL;
+    UBYTE *p = buf;
+
+    if (pm > 99)
+        pm = 99;
+    if (dm > 99)
+        dm = 99;
+    if (pm >= 10)
+        *p++ = (UBYTE)('0' + (pm / 10));
+    *p++ = (UBYTE)('0' + (pm % 10));
+    *p++ = ':';
+    *p++ = (UBYTE)('0' + (ps / 10));
+    *p++ = (UBYTE)('0' + (ps % 10));
+    *p++ = ' ';
+    *p++ = '/';
+    *p++ = ' ';
+    if (dm >= 10)
+        *p++ = (UBYTE)('0' + (dm / 10));
+    *p++ = (UBYTE)('0' + (dm % 10));
+    *p++ = ':';
+    *p++ = (UBYTE)('0' + (ds / 10));
+    *p++ = (UBYTE)('0' + (ds % 10));
+    *p = '\0';
+}
+
+static void startIcon(struct RastPort *rp, ULONG pen) {
+    SetDrMd(rp, JAM1);
+    SetAPen(rp, pen);
+}
+
+static void drawIconPlay(struct RastPort *rp, LONG x, LONG y, ULONG pen) {
+    static const UBYTE widths[10] = {2, 3, 5, 6, 8, 8, 6, 5, 3, 2};
+    LONG row;
+    LONG col;
+
+    startIcon(rp, pen);
+    for (row = 0; row < 10; row++) {
+        for (col = 0; col < (LONG)widths[row]; col++)
+            WritePixel(rp, x + 6 + col, y + 3 + row);
+    }
+}
+
+static void drawIconPause(struct RastPort *rp, LONG x, LONG y, ULONG pen) {
+    startIcon(rp, pen);
+    RectFill(rp, x + 5, y + 3, x + 8, y + 12);
+    RectFill(rp, x + 13, y + 3, x + 16, y + 12);
+}
+
+static void drawIconStop(struct RastPort *rp, LONG x, LONG y, ULONG pen) {
+    startIcon(rp, pen);
+    RectFill(rp, x + 6, y + 4, x + 15, y + 12);
+}
+
+static void drawIconRewind(struct RastPort *rp, LONG x, LONG y, ULONG pen) {
+    static const UBYTE widths[10] = {2, 3, 5, 6, 8, 8, 6, 5, 3, 2};
+    LONG row;
+    LONG col;
+
+    startIcon(rp, pen);
+    RectFill(rp, x + 3, y + 3, x + 5, y + 12);
+    for (row = 0; row < 10; row++) {
+        LONG start = x + 7 + (8 - (LONG)widths[row]);
+        for (col = 0; col < (LONG)widths[row]; col++)
+            WritePixel(rp, start + col, y + 3 + row);
+    }
+}
+
+static void drawControlButton(struct RastPort *rp, Object *obj,
+                              struct SpeechWaveformData *data, UBYTE btn,
+                              ULONG shine, ULONG shadow, ULONG fill) {
+    LONG x;
+    LONG y;
+    BOOL enabled = buttonEnabled(data, btn);
+    BOOL pressed = (data->pressedBtn == btn);
+    ULONG iconPen;
+
+    buttonBox(obj, btn, &x, &y);
+    SetDrMd(rp, JAM1);
+    SetAPen(rp, fill);
+    RectFill(rp, x, y, x + BTN_W - 1, y + BTN_H - 1);
+    SetAPen(rp, pressed ? shadow : shine);
+    Move(rp, x, y + BTN_H - 1);
+    Draw(rp, x, y);
+    Draw(rp, x + BTN_W - 1, y);
+    SetAPen(rp, pressed ? shine : shadow);
+    Draw(rp, x + BTN_W - 1, y + BTN_H - 1);
+    Draw(rp, x, y + BTN_H - 1);
+
+    iconPen = enabled ? shine : shadow;
+    if (btn == BTN_PLAYPAUSE) {
+        if (data->playing)
+            drawIconPause(rp, x, y, iconPen);
+        else
+            drawIconPlay(rp, x, y, iconPen);
+    } else if (btn == BTN_STOP)
+        drawIconStop(rp, x, y, iconPen);
+    else
+        drawIconRewind(rp, x, y, iconPen);
+}
+
+static void drawControlBar(struct RastPort *rp, Object *obj,
+                           struct SpeechWaveformData *data,
+                           struct DrawInfo *dri) {
+    LONG left = _mleft(obj);
+    LONG width = _mwidth(obj);
+    LONG barTop = _mtop(obj) + waveformHeight(obj);
+    LONG barBottom = _mtop(obj) + _mheight(obj) - 1;
+    ULONG shadow;
+    ULONG shine;
+    ULONG wavePen;
+    ULONG headPen;
+    ULONG specPen;
+    ULONG fill;
+    ULONG face;
+    UBYTE timeText[24];
+    LONG textW;
+    LONG textX;
+    LONG textY;
+
+    if (width <= 0 || barBottom < barTop)
+        return;
+
+    waveformPens(dri, &shadow, &shine, &wavePen, &headPen, &specPen);
+    (void)wavePen;
+    (void)headPen;
+    (void)specPen;
+    fill = dri != NULL ? dri->dri_Pens[FILLPEN] : 3;
+    face = dri != NULL ? dri->dri_Pens[BACKGROUNDPEN] : 0;
+    SetAPen(rp, fill);
+    RectFill(rp, left, barTop, left + width - 1, barBottom);
+    SetAPen(rp, shine);
+    Move(rp, left, barTop);
+    Draw(rp, left + width - 1, barTop);
+
+    drawControlButton(rp, obj, data, BTN_PLAYPAUSE, shine, shadow, face);
+    drawControlButton(rp, obj, data, BTN_STOP, shine, shadow, face);
+    drawControlButton(rp, obj, data, BTN_REWIND, shine, shadow, face);
+
+    formatPlayTime(timeText, data->positionMs, data->durationMs);
+    SetAPen(rp, shine);
+    SetDrMd(rp, JAM1);
+    textW = TextLength(rp, (STRPTR)timeText, strlen((char *)timeText));
+    textX = left + width - 4 - textW;
+    if (rp->TxHeight > 0)
+        textY = barTop + ((CTRL_BAR - rp->TxHeight) / 2) + rp->TxBaseline;
+    else
+        textY = barTop + 13;
+    if (textX > left + BTN_PAD + 3 * (BTN_W + BTN_GAP)) {
+        Move(rp, textX, textY);
+        Text(rp, (STRPTR)timeText, strlen((char *)timeText));
+    }
+}
+
+static ULONG commandForButton(struct SpeechWaveformData *data, UBYTE btn) {
+    if (btn == BTN_PLAYPAUSE)
+        return data->playing ? MUIV_SpeechWaveform_Command_Pause
+                             : MUIV_SpeechWaveform_Command_Play;
+    if (btn == BTN_STOP)
+        return MUIV_SpeechWaveform_Command_Stop;
+    if (btn == BTN_REWIND)
+        return MUIV_SpeechWaveform_Command_Rewind;
+    return 0;
+}
+
+static void waveformPens(struct DrawInfo *dri, ULONG *shadow, ULONG *shine,
                          ULONG *wavePen, ULONG *headPen, ULONG *specPen) {
     ULONG fill;
 
@@ -518,7 +756,7 @@ static BOOL ensureWaveformCache(struct IClass *cl, Object *obj) {
     struct SpeechWaveformData *data = INST_DATA(cl, obj);
     struct RastPort *rp = _rp(obj);
     LONG width = _mwidth(obj);
-    LONG height = _mheight(obj);
+    LONG height = waveformHeight(obj);
     struct BitMap *friendBm;
     ULONG depth;
 
@@ -555,19 +793,22 @@ static void drawWaveform(struct IClass *cl, Object *obj) {
     LONG left = _mleft(obj);
     LONG top = _mtop(obj);
     LONG width = _mwidth(obj);
-    LONG height = _mheight(obj);
+    LONG height = waveformHeight(obj);
 
-    if (rp == NULL || width <= 0 || height <= 0)
+    if (rp == NULL || width <= 0 || _mheight(obj) <= 0)
         return;
 
-    if (ensureWaveformCache(cl, obj)) {
-        BltBitMapRastPort(data->cacheBm, 0, 0, rp, left, top, width, height,
-                          0xC0);
-        WaitBlit();
-    } else {
-        renderStaticWaveform(rp, left, top, width, height, data, dri);
+    if (height > 0) {
+        if (ensureWaveformCache(cl, obj)) {
+            BltBitMapRastPort(data->cacheBm, 0, 0, rp, left, top, width,
+                              height, 0xC0);
+            WaitBlit();
+        } else {
+            renderStaticWaveform(rp, left, top, width, height, data, dri);
+        }
+        drawPlayhead(rp, left, top, width, height, data, dri);
     }
-    drawPlayhead(rp, left, top, width, height, data, dri);
+    drawControlBar(rp, obj, data, dri);
 }
 
 static SAVEDS ULONG mNew(struct IClass *cl, Object *obj, Msg msg) {
@@ -596,6 +837,18 @@ static SAVEDS ULONG mGet(struct IClass *cl, Object *obj, struct opGet *msg) {
     case MUIA_SpeechWaveform_Seek:
         *msg->opg_Storage = data->positionMs;
         return TRUE;
+    case MUIA_SpeechWaveform_Playing:
+        *msg->opg_Storage = (ULONG)data->playing;
+        return TRUE;
+    case MUIA_SpeechWaveform_Paused:
+        *msg->opg_Storage = (ULONG)data->paused;
+        return TRUE;
+    case MUIA_SpeechWaveform_HasSpeech:
+        *msg->opg_Storage = (ULONG)data->hasSpeech;
+        return TRUE;
+    case MUIA_SpeechWaveform_Command:
+        *msg->opg_Storage = data->command;
+        return TRUE;
     }
     return DoSuperMethodA(cl, obj, (Msg)msg);
 }
@@ -605,6 +858,7 @@ static SAVEDS ULONG mSet(struct IClass *cl, Object *obj, struct opSet *msg) {
     struct TagItem *tags;
     struct TagItem *tag;
     BOOL redraw = FALSE;
+    BOOL update = FALSE;
 
     for (tags = msg->ops_AttrList; (tag = NextTagItem(&tags));) {
         switch (tag->ti_Tag) {
@@ -618,15 +872,39 @@ static SAVEDS ULONG mSet(struct IClass *cl, Object *obj, struct opSet *msg) {
                 data->positionMs = tag->ti_Data;
                 if (data->positionMs > data->durationMs)
                     data->positionMs = data->durationMs;
-                if (_win(obj) != NULL)
-                    MUI_Redraw(obj, MADF_DRAWUPDATE);
+                update = TRUE;
             }
+            break;
+        case MUIA_SpeechWaveform_Playing:
+            if (data->playing != (BOOL)tag->ti_Data) {
+                data->playing = (BOOL)tag->ti_Data;
+                update = TRUE;
+            }
+            break;
+        case MUIA_SpeechWaveform_Paused:
+            if (data->paused != (BOOL)tag->ti_Data) {
+                data->paused = (BOOL)tag->ti_Data;
+                update = TRUE;
+            }
+            break;
+        case MUIA_SpeechWaveform_HasSpeech:
+            if (data->hasSpeech != (BOOL)tag->ti_Data) {
+                data->hasSpeech = (BOOL)tag->ti_Data;
+                update = TRUE;
+            }
+            break;
+        case MUIA_SpeechWaveform_Command:
+            data->command = tag->ti_Data;
             break;
         }
     }
 
-    if (redraw && _win(obj) != NULL)
-        MUI_Redraw(obj, MADF_DRAWOBJECT);
+    if (_win(obj) != NULL) {
+        if (redraw)
+            MUI_Redraw(obj, MADF_DRAWOBJECT);
+        else if (update)
+            MUI_Redraw(obj, MADF_DRAWUPDATE);
+    }
 
     return DoSuperMethodA(cl, obj, (Msg)msg);
 }
@@ -656,11 +934,11 @@ static SAVEDS ULONG mCleanup(struct IClass *cl, Object *obj, Msg msg) {
 static SAVEDS ULONG mAskMinMax(struct IClass *cl, Object *obj,
                                struct MUIP_AskMinMax *msg) {
     DoSuperMethodA(cl, obj, (Msg)msg);
-    msg->MinMaxInfo->MinWidth += 80;
-    msg->MinMaxInfo->DefWidth += 200;
+    msg->MinMaxInfo->MinWidth += 160;
+    msg->MinMaxInfo->DefWidth += 240;
     msg->MinMaxInfo->MaxWidth = MUI_MAXMAX;
-    msg->MinMaxInfo->MinHeight += 48;
-    msg->MinMaxInfo->DefHeight += 96;
+    msg->MinMaxInfo->MinHeight += 68;
+    msg->MinMaxInfo->DefHeight += 116;
     msg->MinMaxInfo->MaxHeight = MUI_MAXMAX;
     return 0;
 }
@@ -686,18 +964,40 @@ static SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
     my = imsg->MouseY;
 
     if (imsg->Class == IDCMP_MOUSEBUTTONS) {
-        if (imsg->Code == SELECTDOWN && data->hasAudio &&
-            mx >= _mleft(obj) && mx < _mleft(obj) + _mwidth(obj) &&
-            my >= _mtop(obj) && my < _mtop(obj) + _mheight(obj)) {
-            ULONG ms = seekFromX(data, obj, mx);
-            data->dragging = TRUE;
-            data->positionMs = ms;
-            MUI_Redraw(obj, MADF_DRAWUPDATE);
-            set(obj, MUIA_SpeechWaveform_Seek, ms);
-            return MUI_EventHandlerRC_Eat;
-        }
-        if (imsg->Code == SELECTUP)
+        if (imsg->Code == SELECTDOWN) {
+            UBYTE btn = buttonAt(obj, mx, my);
+            if (btn != BTN_NONE) {
+                if (!buttonEnabled(data, btn))
+                    return MUI_EventHandlerRC_Eat;
+                data->pressedBtn = btn;
+                data->dragging = FALSE;
+                MUI_Redraw(obj, MADF_DRAWUPDATE);
+                return MUI_EventHandlerRC_Eat;
+            }
+            if (data->hasAudio && inWaveform(obj, mx, my)) {
+                ULONG ms = seekFromX(data, obj, mx);
+                data->dragging = TRUE;
+                data->pressedBtn = BTN_NONE;
+                data->positionMs = ms;
+                MUI_Redraw(obj, MADF_DRAWUPDATE);
+                set(obj, MUIA_SpeechWaveform_Seek, ms);
+                return MUI_EventHandlerRC_Eat;
+            }
+        } else if (imsg->Code == SELECTUP) {
+            UBYTE pressed = data->pressedBtn;
             data->dragging = FALSE;
+            data->pressedBtn = BTN_NONE;
+            if (pressed != BTN_NONE) {
+                MUI_Redraw(obj, MADF_DRAWUPDATE);
+                if (buttonAt(obj, mx, my) == pressed &&
+                    buttonEnabled(data, pressed)) {
+                    ULONG command = commandForButton(data, pressed);
+                    if (command != 0)
+                        set(obj, MUIA_SpeechWaveform_Command, command);
+                }
+                return MUI_EventHandlerRC_Eat;
+            }
+        }
     } else if (imsg->Class == IDCMP_MOUSEMOVE && data->dragging &&
                data->hasAudio) {
         ULONG ms = seekFromX(data, obj, mx);

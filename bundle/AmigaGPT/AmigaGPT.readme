@@ -258,10 +258,10 @@ saves it under AMIGAGPT:speech/ instead of playing it automatically. Type a
 phrase, optionally attach files, and press Generate. Each phrase is listed on
 the left, titled with the first 32 characters of the text. Selecting a phrase
 shows the speech profile that produced it and an interactive waveform.
-Play, Pause, Stop and Rewind control local playback of the already-saved WAV
-file. Click any point on the waveform to jump there. Regenerate replaces the
-selected phrase's file. Save Speech Copy writes a copy somewhere else on
-your Amiga.
+Play/pause (left), stop and rewind on the waveform control local playback of
+the already-saved WAV file. Click any point on the waveform to jump there.
+Regenerate replaces the selected phrase's file. Save Speech Copy writes a
+copy somewhere else on your Amiga.
 
 Generate text with AI sends the current text and any attached files through
 the active chat profile and replaces the editor contents with the returned
