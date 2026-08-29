@@ -106,6 +106,15 @@ LONG openGUILibraries() {
         return RETURN_ERROR;
     }
 
+    struct Library *AROSBase;
+
+    if ((AROSBase = OpenLibrary("aros.library", 0))) {
+        isAROS = TRUE;
+        CloseLibrary(AROSBase);
+    } else {
+        isAROS = FALSE;
+    }
+
     isMUI5 = MUIMasterBase->lib_Version >= 21;
     isMUI39 = MUIMasterBase->lib_Version == 20;
     return RETURN_OK;
@@ -240,6 +249,8 @@ static BOOL checkMUICustomClassInstalled() {
         if (!isMUI5 && !strcmp(USED_CLASSES[i], MUIC_Aboutbox) != 0)
             continue;
         if (!isAROS && !strcmp(USED_CLASSES[i], MUIC_BetterString) != 0)
+            continue;
+        if (isAROS && !strcmp(USED_CLASSES[i], MUIC_TextEditor) != 0)
             continue;
         if (!MUI_GetClass(USED_CLASSES[i])) {
             displayError(STRING_ERROR_MUI_CUSTOM_CLASS_NOT_FOUND);
@@ -1243,9 +1254,7 @@ void shutdownGUI() {
     if (chatOutputTextEditorContents) {
         FreeVec(chatOutputTextEditorContents);
     }
-    if (isMUI5 || isMUI39) {
-        deleteAmigaGPTTextEditor();
-    }
+    deleteAmigaGPTTextEditor();
 #endif
 
     closeGUILibraries();

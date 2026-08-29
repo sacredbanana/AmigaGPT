@@ -1428,7 +1428,8 @@ LONG createMainWindow() {
         NewList((struct List *)&pendingChatFiles);
         pendingChatFilesInitialized = TRUE;
     }
-    if ((isMUI5 || isMUI39) && createAmigaGPTTextEditor() == RETURN_ERROR) {
+    BOOL useCustomTextEditor = createAmigaGPTTextEditor() == RETURN_OK;
+    if (!useCustomTextEditor) {
         displayError("Could not create custom class.");
     }
 
@@ -1437,7 +1438,7 @@ LONG createMainWindow() {
     }
 
     // clang-format off
-    if (isMUI5 || isMUI39) {
+    if (useCustomTextEditor) {
         chatInputTextEditor = NewObject(
             MUIC_AmigaGPTTextEditor, NULL,
             MUIA_Background, MUII_BACKGROUND,
@@ -1465,7 +1466,6 @@ LONG createMainWindow() {
     } else {
         chatInputTextEditor = MUI_NewObject(
             isAROS ? MUIC_BetterString : MUIC_TextEditor,
-            TextFrame,
             MUIA_Background, MUII_BACKGROUND,
             MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
             isAROS ? TAG_DONE : TAG_SKIP, NULL,
@@ -1478,7 +1478,6 @@ LONG createMainWindow() {
 
         imageInputTextEditor = MUI_NewObject(
             isAROS ? MUIC_BetterString : MUIC_TextEditor,
-            TextFrame,
             MUIA_Background, MUII_BACKGROUND,
             MUIA_Weight, 80,
             isAROS ? TAG_DONE : TAG_SKIP, NULL,

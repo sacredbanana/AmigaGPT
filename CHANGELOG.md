@@ -4,6 +4,9 @@
 
 - Fix every second chat message failing with providers that do not retain responses (xAI Grok), which made ARexx SENDMESSAGE and the AskGPT script only work every second time
 - Fix ARexx SENDMESSAGE returning an empty RESULT instead of the error text when the provider reports errors as a plain string rather than an object
+- Improved memory management for AmigaGPTTextEditor
+- AmigaGPTTextEditor no longer crashes in MUI 3.8 on app exit
+- AmigaGPTTextEditor now enabled for MUI 3.8
 
 ## 3.2.1 (2026-08-26)
 

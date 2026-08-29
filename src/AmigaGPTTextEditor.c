@@ -9,10 +9,42 @@
 struct MUI_CustomClass *amigaGPTTextEditorClass;
 
 struct AmigaGPTTextEditorData {
-    struct MUI_EventHandlerNode *eh;
+    struct MUI_EventHandlerNode eh;
     struct Hook *submitHook;
-    BOOL isActive;
+    BOOL eventHandlerAdded;
 };
+
+/**
+ * @brief Add the event handler to the object's window if it is not already
+ * added
+ */
+static void addEventHandler(struct IClass *cl, Object *obj) {
+    struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
+    Object *window = _win(obj);
+
+    if (data->eventHandlerAdded || window == NULL)
+        return;
+
+    DoMethod(window, MUIM_Window_AddEventHandler, &data->eh);
+    data->eventHandlerAdded = TRUE;
+}
+
+/**
+ * @brief Remove the event handler from the object's window if it is currently
+ * added. The handler must never outlive the object, otherwise the window walks
+ * a dangling node when it iterates its event handler queue.
+ */
+static void remEventHandler(struct IClass *cl, Object *obj) {
+    struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
+    Object *window = _win(obj);
+
+    if (!data->eventHandlerAdded)
+        return;
+
+    if (window != NULL)
+        DoMethod(window, MUIM_Window_RemEventHandler, &data->eh);
+    data->eventHandlerAdded = FALSE;
+}
 
 SAVEDS ULONG mGet(struct IClass *cl, Object *obj, struct opGet *msg) {
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
@@ -20,7 +52,7 @@ SAVEDS ULONG mGet(struct IClass *cl, Object *obj, struct opGet *msg) {
 
     switch (((struct opGet *)msg)->opg_AttrID) {
     case MUIA_AmigaGPTTextEditor_SubmitHook:
-        *store = (ULONG)&data->submitHook;
+        *store = (ULONG)data->submitHook;
         return TRUE;
     }
 
@@ -46,26 +78,22 @@ SAVEDS ULONG mSet(struct IClass *cl, Object *obj, struct opSet *msg) {
 
 SAVEDS ULONG mSetup(struct IClass *cl, Object *obj, Msg msg) {
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
-    struct MUI_EventHandlerNode *eh = (struct MUI_EventHandlerNode *)AllocVec(
-        sizeof(struct MUI_EventHandlerNode), MEMF_PUBLIC);
-    eh->ehn_Class = cl;
-    eh->ehn_Object = obj;
-    eh->ehn_Events = IDCMP_RAWKEY;
-    eh->ehn_Flags = MUI_EHF_GUIMODE;
-    eh->ehn_Priority = 100;
-    data->eh = eh;
-    data->isActive = FALSE;
 
     if (!(DoSuperMethodA(cl, obj, msg)))
         return FALSE;
+
+    data->eh.ehn_Class = cl;
+    data->eh.ehn_Object = obj;
+    data->eh.ehn_Events = IDCMP_RAWKEY;
+    data->eh.ehn_Flags = MUI_EHF_GUIMODE;
+    data->eh.ehn_Priority = 100;
+    data->eventHandlerAdded = FALSE;
 
     return TRUE;
 }
 
 SAVEDS ULONG mCleanup(struct IClass *cl, Object *obj, Msg msg) {
-    struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
-
-    FreeVec(data->eh);
+    remEventHandler(cl, obj);
 
     return DoSuperMethodA(cl, obj, msg);
 }
@@ -80,13 +108,19 @@ SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
         case IDCMP_RAWKEY: {
             if (msg->imsg->Code == 0x44) {
                 if (msg->imsg->Qualifier == 32768) {
-                    STRPTR text;
+                    STRPTR text = NULL;
+                    BOOL freeText = FALSE;
                     if (isAROS) {
                         get(obj, MUIA_String_Contents, &text);
                     } else {
-                        text = DoMethod(obj, MUIM_TextEditor_ExportText);
+                        text =
+                            (STRPTR)DoMethod(obj, MUIM_TextEditor_ExportText);
+                        freeText = text != NULL;
                     }
-                    if (strlen(text) > 0) {
+                    BOOL hasText = text != NULL && strlen(text) > 0;
+                    if (freeText)
+                        FreeVec(text);
+                    if (hasText) {
                         rc = MUI_EventHandlerRC_Eat;
                         if (data->submitHook != NULL) {
                             DoMethod(obj, MUIM_CallHook, data->submitHook, NULL,
@@ -114,7 +148,7 @@ SAVEDS ULONG mNew(struct IClass *cl, Object *obj, Msg *msg) {
     struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
 
     data->submitHook = NULL;
-    data->eh = NULL;
+    data->eventHandlerAdded = FALSE;
 
     struct TagItem *tags, *tag;
     for (tags = ((struct opSet *)msg)->ops_AttrList;
@@ -132,24 +166,15 @@ SAVEDS ULONG mNew(struct IClass *cl, Object *obj, Msg *msg) {
 
 SAVEDS ULONG mGoActive(struct IClass *cl, Object *obj,
                        struct MUIP_GoActive *msg) {
-    struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
-
-    if (!data->isActive) {
-        DoMethod(_win(obj), MUIM_Window_AddEventHandler, data->eh);
-        data->isActive = TRUE;
-    }
+    addEventHandler(cl, obj);
 
     return DoSuperMethodA(cl, obj, msg);
 }
 
 SAVEDS ULONG mGoInactive(struct IClass *cl, Object *obj,
                          struct MUIP_GoInactive *msg) {
-    struct AmigaGPTTextEditorData *data = INST_DATA(cl, obj);
+    remEventHandler(cl, obj);
 
-    if (data->isActive && _win(obj) != NULL) {
-        DoMethod(_win(obj), MUIM_Window_RemEventHandler, data->eh);
-    }
-    data->isActive = FALSE;
     return DoSuperMethodA(cl, obj, msg);
 }
 
@@ -181,12 +206,17 @@ DISPATCHER(MyDispatcher) {
  * @return RETURN_OK if successful, RETURN_ERROR otherwise
  */
 LONG createAmigaGPTTextEditor() {
+    if (amigaGPTTextEditorClass != NULL)
+        return RETURN_OK;
+
     if (!(amigaGPTTextEditorClass = MUI_CreateCustomClass(
               NULL, isAROS ? MUIC_BetterString : MUIC_TextEditor, NULL,
               sizeof(struct AmigaGPTTextEditorData), ENTRY(MyDispatcher))))
         return RETURN_ERROR;
 
-    amigaGPTTextEditorClass->mcc_Class->cl_ID = (ClassID) "AmigaGPTTextEditor";
+    /* Do not set mcc_Class->cl_ID here. This is a private class, and MUI 3.8
+     * treats a class with an ID as a public one while disposing its objects,
+     * which crashes when the app shuts down. */
     return RETURN_OK;
 }
 
@@ -194,5 +224,9 @@ LONG createAmigaGPTTextEditor() {
  * @brief Delete the AmigaGPTTextEditor class
  */
 void deleteAmigaGPTTextEditor() {
+    if (amigaGPTTextEditorClass == NULL)
+        return;
+
     MUI_DeleteCustomClass(amigaGPTTextEditorClass);
+    amigaGPTTextEditorClass = NULL;
 }
