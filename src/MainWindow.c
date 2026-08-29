@@ -1440,7 +1440,6 @@ LONG createMainWindow() {
     if (isMUI5 || isMUI39) {
         chatInputTextEditor = NewObject(
             MUIC_AmigaGPTTextEditor, NULL,
-            TextFrame,
             MUIA_Background, MUII_BACKGROUND,
             MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
             MUIA_AmigaGPTTextEditor_SubmitHook, &SendMessageButtonClickedHook,
