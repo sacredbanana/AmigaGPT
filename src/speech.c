@@ -59,6 +59,11 @@ static BYTE narratorCaptureDoneSignal = -1;
 #elif defined(__AMIGAOS4__)
 static struct MsgPort *fliteMessagePort = NULL;
 struct FliteRequest *fliteRequest = NULL;
+static struct MsgPort *fliteFileMessagePort = NULL;
+static struct FliteRequest *fliteFileRequest = NULL;
+static STRPTR fliteTextBuffer = NULL;
+static BOOL fliteRequestPending = FALSE;
+static BOOL fliteFileRequestPending = FALSE;
 struct Device *FliteBase = NULL;
 struct FliteIFace *IFlite = NULL;
 struct FliteVoice *voice = NULL;
@@ -353,6 +358,28 @@ static void startNarratorCaptureProcess(void) {
         narratorCapturePending = FALSE;
     }
 }
+#elif defined(__AMIGAOS4__)
+static void finishFliteRequest(struct FliteRequest *request, BOOL *pending,
+                               BOOL abortRequest) {
+    if (request == NULL || !*pending)
+        return;
+
+    if (abortRequest && CheckIO((struct IORequest *)request) == 0)
+        AbortIO((struct IORequest *)request);
+    WaitIO((struct IORequest *)request);
+    *pending = FALSE;
+}
+
+static void finishFliteRequests(BOOL abortRequests) {
+    finishFliteRequest(fliteFileRequest, &fliteFileRequestPending,
+                       abortRequests);
+    finishFliteRequest(fliteRequest, &fliteRequestPending, abortRequests);
+
+    if (fliteTextBuffer != NULL) {
+        FreeVec(fliteTextBuffer);
+        fliteTextBuffer = NULL;
+    }
+}
 #endif
 
 /**
@@ -487,6 +514,30 @@ LONG initSpeech(SpeechSystem speechSystem) {
                 configSetSpeechEnabled(FALSE);
                 return RETURN_ERROR;
             }
+
+            /* flite.device supports only one output per request. Keep a
+               second request ready so speech can be written as RIFF-WAVE and
+               then played normally through AHI. */
+            fliteFileMessagePort = AllocSysObject(ASOT_PORT, NULL);
+            if (fliteFileMessagePort != NULL) {
+                fliteFileRequest = AllocSysObjectTags(
+                    ASOT_IOREQUEST, ASOIOR_Size, sizeof(struct FliteRequest),
+                    ASOIOR_ReplyPort, fliteFileMessagePort, TAG_END);
+            }
+            if (fliteFileRequest != NULL) {
+                fliteFileRequest->fr_Version = 53;
+                fliteFileRequest->fr_Revision = 1;
+                if (OpenDevice("flite.device", 0,
+                               (struct IORequest *)fliteFileRequest,
+                               0) != IOERR_SUCCESS) {
+                    FreeSysObject(ASOT_IOREQUEST, fliteFileRequest);
+                    fliteFileRequest = NULL;
+                }
+            }
+            if (fliteFileRequest == NULL && fliteFileMessagePort != NULL) {
+                FreeSysObject(ASOT_PORT, fliteFileMessagePort);
+                fliteFileMessagePort = NULL;
+            }
         } else {
             displayError(STRING_ERROR_FLITE_DEVICE_OPEN);
             configSetSpeechEnabled(FALSE);
@@ -572,11 +623,23 @@ void closeSpeech() {
         translationBuffer = NULL;
     }
 #elif defined(__AMIGAOS4__)
+    finishFliteRequests(TRUE);
     if (IFlite && voice) {
         CloseVoice(voice);
         voice = NULL;
+    }
+    if (IFlite) {
         DropInterface((struct Interface *)IFlite);
         IFlite = NULL;
+    }
+    if (fliteFileRequest) {
+        CloseDevice((struct IORequest *)fliteFileRequest);
+        FreeSysObject(ASOT_IOREQUEST, fliteFileRequest);
+        fliteFileRequest = NULL;
+    }
+    if (fliteFileMessagePort) {
+        FreeSysObject(ASOT_PORT, fliteFileMessagePort);
+        fliteFileMessagePort = NULL;
     }
     if (fliteRequest) {
         CloseDevice((struct IORequest *)fliteRequest);
@@ -867,10 +930,7 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             }
         }
 
-        if (CheckIO((struct IORequest *)fliteRequest) == 0) {
-            AbortIO((struct IORequest *)fliteRequest);
-            WaitIO((struct IORequest *)fliteRequest);
-        }
+        finishFliteRequests(TRUE);
         if (IFlite && voice)
             CloseVoice(voice);
         voice = NULL;
@@ -882,12 +942,42 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             displayError(STRING_ERROR_VOICE_OPEN);
             return FALSE;
         }
+
+        if (fliteFileRequest != NULL) {
+            ULONG textLength = strlen(text) + 1;
+            fliteTextBuffer = AllocVec(textLength, MEMF_SHARED);
+            if (fliteTextBuffer != NULL)
+                memcpy(fliteTextBuffer, text, textLength);
+            else
+                displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+        }
+
         fliteRequest->fr_Std.io_Command = CMD_WRITE;
-        fliteRequest->fr_Std.io_Data = (APTR)text;
+        fliteRequest->fr_Std.io_Data =
+            (APTR)(fliteTextBuffer != NULL ? fliteTextBuffer : text);
         fliteRequest->fr_Std.io_Length = ~0; /* io_Data is NULL-terminated */
+        fliteRequest->fr_Input = FLITE_INPUT_TEXT;
+        fliteRequest->fr_Output = FLITE_OUTPUT_AHI;
         fliteRequest->fr_Voice = voice;
 
+        if (fliteFileRequest != NULL && fliteTextBuffer != NULL) {
+            fliteFileRequest->fr_Std.io_Command = CMD_WRITE;
+            fliteFileRequest->fr_Std.io_Data = (APTR)fliteTextBuffer;
+            fliteFileRequest->fr_Std.io_Length = ~0;
+            fliteFileRequest->fr_Input = FLITE_INPUT_TEXT;
+            fliteFileRequest->fr_Output = FLITE_OUTPUT_FILE;
+            fliteFileRequest->fr_Lock = GetCurrentDir();
+            fliteFileRequest->fr_Filename = "OUT:output.wav";
+            fliteFileRequest->fr_Voice = voice;
+
+            /* The device has one worker for both requests. File output is
+               faster than real-time, so queue it first to avoid delaying the
+               WAV until after audible playback has finished. */
+            SendIO((struct IORequest *)fliteFileRequest);
+            fliteFileRequestPending = TRUE;
+        }
         SendIO((struct IORequest *)fliteRequest);
+        fliteRequestPending = TRUE;
     }
 #endif
     return TRUE;
