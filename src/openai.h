@@ -751,7 +751,9 @@ struct json_object *postToolResultsToOpenAI(
  * @param proxyRequiresAuth whether the proxy requires authentication or not
  * @param proxyUsername the proxy username to use
  * @param proxyPassword the proxy password to use
- * @return a pointer to a buffer containing the PCM audio data or NULL -- Free
+ * @param audioFormat AUDIO_FORMAT_WAV requests a WAV container (wav_24000);
+ * otherwise raw PCM (pcm_24000) is requested for AHI playback
+ * @return a pointer to a buffer containing the audio data or NULL -- Free
  * it with FreeVec() when you are done using it
  **/
 APTR postTextToSpeechRequestToElevenLabs(
@@ -761,7 +763,7 @@ APTR postTextToSpeechRequestToElevenLabs(
     CONST_STRPTR apiKey, ULONG *audioLength, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword);
+    CONST_STRPTR proxyPassword, AudioFormat *audioFormat);
 
 /**
  * Post a text to speech request to xAI
@@ -791,9 +793,9 @@ APTR postTextToSpeechRequestToXAI(
     CONST_STRPTR proxyPassword, AudioFormat *audioFormat);
 
 /**
- * Synthesize speech with an OpenVox server. OpenVox returns a WAV file (or a
- * base64 WAV in an audio.chunk event); this function returns its raw
- * little-endian 16-bit mono PCM payload for the shared AHI playback path.
+ * Synthesize speech with an OpenVox server. OpenVox always produces WAV.
+ * Pass AUDIO_FORMAT_WAV to keep that container; otherwise the little-endian
+ * 16-bit mono PCM payload is returned for AHI playback.
  */
 APTR postTextToSpeechRequestToOpenVox(
     CONST_STRPTR text, CONST_STRPTR model, CONST_STRPTR voice,
@@ -802,7 +804,7 @@ APTR postTextToSpeechRequestToOpenVox(
     CONST_STRPTR apiKey, ULONG *audioLength, ULONG *sampleRate, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword);
+    CONST_STRPTR proxyPassword, AudioFormat *audioFormat);
 
 /**
  * Fetch the list of custom voices from xAI (GET /v1/custom-voices).

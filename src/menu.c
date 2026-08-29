@@ -171,7 +171,11 @@ static Object *getActiveTextEditor() {
     }
 
     get(modeRegisterGroup, MUIA_Group_ActivePage, &activePage);
-    return (activePage == 0) ? chatInputTextEditor : imageInputTextEditor;
+    if (activePage == 0)
+        return chatInputTextEditor;
+    if (activePage == 1)
+        return imageInputTextEditor;
+    return speechInputTextEditor;
 }
 
 /**
@@ -224,7 +228,8 @@ void updateEditMenuItemsEnabled() {
     }
 
     focusedInputTextEditor = (activeObject == chatInputTextEditor ||
-                              activeObject == imageInputTextEditor)
+                              activeObject == imageInputTextEditor ||
+                              activeObject == speechInputTextEditor)
                                  ? activeObject
                                  : NULL;
     applyEditMenuItemsEnabled();

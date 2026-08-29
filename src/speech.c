@@ -75,7 +75,34 @@ struct FliteVoice *voice = NULL;
 
 static struct MsgPort *AHImp = NULL;
 struct AHIRequest *ahiRequest = NULL;
+static BOOL ahiIOInFlight = FALSE;
 UBYTE *audioBuffer = NULL;
+
+static void finishAHIPlayback(BOOL abort) {
+    if (ahiRequest == NULL || !ahiIOInFlight)
+        return;
+    if (CheckIO((struct IORequest *)ahiRequest) == 0 && abort)
+        AbortIO((struct IORequest *)ahiRequest);
+    WaitIO((struct IORequest *)ahiRequest);
+    ahiIOInFlight = FALSE;
+}
+
+static void startAHIWrite(APTR data, ULONG length, ULONG frequency,
+                          ULONG type) {
+    ahiRequest->ahir_Std.io_Command = CMD_WRITE;
+    ahiRequest->ahir_Std.io_Flags = 0;
+    ahiRequest->ahir_Std.io_Error = 0;
+    ahiRequest->ahir_Std.io_Offset = 0;
+    ahiRequest->ahir_Std.io_Data = data;
+    ahiRequest->ahir_Std.io_Length = length;
+    ahiRequest->ahir_Frequency = frequency;
+    ahiRequest->ahir_Type = type;
+    ahiRequest->ahir_Volume = 0x10000;
+    ahiRequest->ahir_Position = 0x8000;
+    ahiRequest->ahir_Link = NULL;
+    SendIO((struct IORequest *)ahiRequest);
+    ahiIOInFlight = TRUE;
+}
 
 /**
  * The names of the speech voices
@@ -140,6 +167,21 @@ static BOOL savePcmAsWav(CONST_STRPTR filename, const UBYTE *pcmData,
                   (LONG)dataLength;
     Close(outputFile);
     return success;
+}
+
+static BOOL bufferLooksLikeWav(const UBYTE *data, ULONG dataLength) {
+    ULONG offset;
+    ULONG limit;
+
+    if (data == NULL || dataLength < 12)
+        return FALSE;
+    limit = dataLength > 16 ? 16 : dataLength;
+    for (offset = 0; offset + 12 <= limit; offset++) {
+        if (memcmp(data + offset, "RIFF", 4) == 0 &&
+            memcmp(data + offset + 8, "WAVE", 4) == 0)
+            return TRUE;
+    }
+    return FALSE;
 }
 
 static BOOL saveRawAudio(CONST_STRPTR filename, const UBYTE *data,
@@ -674,16 +716,14 @@ static LONG lazyInitSpeech(SpeechSystem speechSystem) {
  **/
 void closeSpeech() {
     if (ahiRequest) {
-        if (CheckIO((struct IORequest *)ahiRequest) == 0) {
-            AbortIO((struct IORequest *)ahiRequest);
-            WaitIO((struct IORequest *)ahiRequest);
-        }
+        finishAHIPlayback(TRUE);
         CloseDevice((struct IORequest *)ahiRequest);
         DeleteIORequest((struct IORequest *)ahiRequest);
         DeleteMsgPort(AHImp);
     }
     ahiRequest = NULL;
     AHImp = NULL;
+    ahiIOInFlight = FALSE;
     if (audioBuffer) {
         FreeVec(audioBuffer);
         audioBuffer = NULL;
@@ -830,18 +870,14 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             saveToFile ? requestedFormat : AUDIO_FORMAT_PCM;
         audioFormat = &requestFormat;
 
-        if (ahiRequest != NULL &&
-            CheckIO((struct IORequest *)ahiRequest) == 0) {
-            AbortIO((struct IORequest *)ahiRequest);
-            WaitIO((struct IORequest *)ahiRequest);
-        }
+        finishAHIPlayback(TRUE);
 
         if (audioBuffer) {
             FreeVec(audioBuffer);
             audioBuffer = NULL;
         }
 
-        ULONG audioLength;
+        ULONG audioLength = 0;
         ULONG playbackFrequency = 24000;
 
         if (speechSystem == SPEECH_SYSTEM_OPENAI) {
@@ -863,7 +899,7 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                 configGetProxyEnabled(), configGetProxyHost(),
                 configGetProxyPort(), configGetProxyUsesSSL(),
                 configGetProxyRequiresAuth(), configGetProxyUsername(),
-                configGetProxyPassword());
+                configGetProxyPassword(), audioFormat);
         } else if (speechSystem == SPEECH_SYSTEM_XAI) {
             CONST_STRPTR voiceId = settings->xaiVoiceId;
             if (voiceId == NULL || strlen(voiceId) == 0) {
@@ -890,9 +926,8 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                 &audioLength, &playbackFrequency, configGetProxyEnabled(),
                 configGetProxyHost(), configGetProxyPort(),
                 configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
-                configGetProxyUsername(), configGetProxyPassword());
-            if (audioFormat != NULL)
-                *audioFormat = AUDIO_FORMAT_PCM;
+                configGetProxyUsername(), configGetProxyPassword(),
+                audioFormat);
         }
 
         if (!audioBuffer) {
@@ -900,18 +935,15 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         }
 
         if (saveToFile) {
-            BOOL providerReturnedWav =
-                requestFormat == AUDIO_FORMAT_WAV &&
-                (speechSystem == SPEECH_SYSTEM_OPENAI ||
-                 speechSystem == SPEECH_SYSTEM_XAI);
-            BOOL saved = providerReturnedWav
-                             ? saveRawAudio(output, audioBuffer, audioLength)
-                             : (requestedFormat == AUDIO_FORMAT_WAV
-                                    ? savePcmAsWav(output, audioBuffer,
-                                                   audioLength,
-                                                   playbackFrequency, 16)
-                                    : saveRawAudio(output, audioBuffer,
-                                                   audioLength));
+            BOOL saved;
+            if (requestedFormat == AUDIO_FORMAT_WAV) {
+                saved = bufferLooksLikeWav(audioBuffer, audioLength)
+                            ? saveRawAudio(output, audioBuffer, audioLength)
+                            : savePcmAsWav(output, audioBuffer, audioLength,
+                                           playbackFrequency, 16);
+            } else {
+                saved = saveRawAudio(output, audioBuffer, audioLength);
+            }
             FreeVec(audioBuffer);
             audioBuffer = NULL;
             if (!saved)
@@ -919,7 +951,7 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             return saved;
         }
 
-        if (requestFormat == AUDIO_FORMAT_PCM) {
+        if (requestFormat == AUDIO_FORMAT_PCM && audioLength >= 2) {
 // Convert to big endian
 #ifdef __AMIGAOS3__
             __asm__ __volatile__(
@@ -943,7 +975,7 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                 : "d0", "d1", "a0", "memory"         // Clobber list
             );
 #else
-            for (ULONG i = 0; i < audioLength - 1; i += 2) {
+            for (ULONG i = 0; i + 1 < audioLength; i += 2) {
                 UBYTE temp = audioBuffer[i];
                 audioBuffer[i] = audioBuffer[i + 1];
                 audioBuffer[i + 1] = temp;
@@ -972,11 +1004,8 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             }
         }
 
-        ahiRequest->ahir_Std.io_Data = audioBuffer;
-        ahiRequest->ahir_Std.io_Length = audioLength;
-        ahiRequest->ahir_Frequency = playbackFrequency;
-
-        SendIO((struct IORequest *)ahiRequest);
+        startAHIWrite(audioBuffer, audioLength, playbackFrequency,
+                      AHIST_M16S);
 
         return TRUE;
     }
@@ -1151,12 +1180,13 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size) {
             displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
         } else {
             // Read file content into buffer
-            if (Read(fileHandle, buffer, fileSize) != fileSize) {
+            LONG bytesRead = Read(fileHandle, buffer, fileSize);
+            if (bytesRead <= 0) {
                 displayError(STRING_ERROR_FILE_READ);
                 FreeVec(buffer);
                 buffer = NULL;
             } else {
-                *size = fileSize;
+                *size = (ULONG)bytesRead;
             }
         }
     }
@@ -1179,11 +1209,7 @@ void stopSpeech() {
 #elif defined(__AMIGAOS4__)
     finishFliteRequests(TRUE);
 #endif
-    if (ahiRequest != NULL &&
-        CheckIO((struct IORequest *)ahiRequest) == 0) {
-        AbortIO((struct IORequest *)ahiRequest);
-        WaitIO((struct IORequest *)ahiRequest);
-    }
+    finishAHIPlayback(TRUE);
     if (audioBuffer != NULL) {
         FreeVec(audioBuffer);
         audioBuffer = NULL;
@@ -1193,47 +1219,81 @@ void stopSpeech() {
 BOOL playSpeechFile(CONST_STRPTR filename) {
     ULONG wavLength = 0;
     UBYTE *wav = loadAudioFile(filename, &wavLength);
-    ULONG offset = 12;
+    ULONG riff = 0;
+    ULONG offset;
     ULONG sampleRate = 0;
     ULONG dataLength = 0;
     UBYTE *data = NULL;
     UWORD encoding = 0;
-    UWORD channels = 0;
-    UWORD bitsPerSample = 0;
+    UWORD channels = 1;
+    UWORD bitsPerSample = 16;
+    ULONG frameSize;
+    ULONG playLength;
+    ULONG padBytes;
+    ULONG type;
+    BOOL parsedWav = FALSE;
     BOOL success = FALSE;
 
     if (wav == NULL)
         return FALSE;
-    if (wavLength < 12 || memcmp(wav, "RIFF", 4) != 0 ||
-        memcmp(wav + 8, "WAVE", 4) != 0)
-        goto done;
 
-    while (offset + 8 <= wavLength) {
-        ULONG chunkLength = readLittleEndian32(wav + offset + 4);
-        ULONG chunkData = offset + 8;
-        if (chunkData > wavLength || chunkLength > wavLength - chunkData)
-            break;
-        if (memcmp(wav + offset, "fmt ", 4) == 0 && chunkLength >= 16) {
-            encoding = readLittleEndian16(wav + chunkData);
-            channels = readLittleEndian16(wav + chunkData + 2);
-            sampleRate = readLittleEndian32(wav + chunkData + 4);
-            bitsPerSample = readLittleEndian16(wav + chunkData + 14);
-        } else if (memcmp(wav + offset, "data", 4) == 0) {
-            data = wav + chunkData;
-            dataLength = chunkLength;
+    while (riff + 12 <= wavLength &&
+           (memcmp(wav + riff, "RIFF", 4) != 0 ||
+            memcmp(wav + riff + 8, "WAVE", 4) != 0))
+        riff++;
+    if (riff + 12 <= wavLength) {
+        offset = riff + 12;
+        while (offset + 8 <= wavLength) {
+            ULONG chunkLength = readLittleEndian32(wav + offset + 4);
+            ULONG chunkData = offset + 8;
+            if (chunkData > wavLength)
+                break;
+            if (chunkLength > wavLength - chunkData)
+                chunkLength = wavLength - chunkData;
+            if (memcmp(wav + offset, "fmt ", 4) == 0 && chunkLength >= 16) {
+                encoding = readLittleEndian16(wav + chunkData);
+                channels = readLittleEndian16(wav + chunkData + 2);
+                sampleRate = readLittleEndian32(wav + chunkData + 4);
+                bitsPerSample = readLittleEndian16(wav + chunkData + 14);
+            } else if (memcmp(wav + offset, "data", 4) == 0) {
+                data = wav + chunkData;
+                dataLength = chunkLength;
+            }
+            offset = chunkData + chunkLength + (chunkLength & 1);
         }
-        offset = chunkData + chunkLength + (chunkLength & 1);
+        if (encoding == 0xFFFE)
+            encoding = 1;
+        parsedWav = (encoding == 1 && (channels == 1 || channels == 2) &&
+                     sampleRate != 0 && data != NULL && dataLength != 0 &&
+                     (bitsPerSample == 8 || bitsPerSample == 16 ||
+                      bitsPerSample == 24));
     }
 
-    if (encoding != 1 || channels != 1 || sampleRate == 0 || data == NULL ||
-        dataLength == 0 || (bitsPerSample != 8 && bitsPerSample != 16))
-        goto done;
+    if (!parsedWav) {
+        data = wav;
+        dataLength = wavLength;
+        sampleRate = 24000;
+        channels = 1;
+        bitsPerSample = 16;
+    }
     if (initAHIPlayback() == RETURN_ERROR)
         goto done;
 
-    stopSpeech();
-    ULONG padBytes = sampleRate * (bitsPerSample / 8) * 2;
-    audioBuffer = AllocVec(dataLength + padBytes, MEMF_ANY | MEMF_CLEAR);
+    finishAHIPlayback(TRUE);
+    if (audioBuffer != NULL) {
+        FreeVec(audioBuffer);
+        audioBuffer = NULL;
+    }
+    frameSize = (ULONG)((bitsPerSample + 7) / 8) * channels;
+    if (frameSize == 0)
+        goto done;
+    dataLength -= dataLength % frameSize;
+    if (dataLength == 0)
+        goto done;
+    padBytes = sampleRate * (bitsPerSample == 8 ? 1 : 2) * channels * 2;
+    playLength = (bitsPerSample == 24 ? (dataLength / 3) * 2 : dataLength) +
+                 padBytes;
+    audioBuffer = AllocVec(playLength, MEMF_ANY | MEMF_CLEAR);
     if (audioBuffer == NULL) {
         displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
         goto done;
@@ -1242,22 +1302,26 @@ BOOL playSpeechFile(CONST_STRPTR filename) {
         ULONG i;
         for (i = 0; i < dataLength; i++)
             audioBuffer[i] = data[i] ^ 0x80;
-        ahiRequest->ahir_Type = AHIST_M8S;
+        type = channels == 1 ? AHIST_M8S : AHIST_S8S;
+    } else if (bitsPerSample == 24) {
+        ULONG in = 0;
+        ULONG out = 0;
+        while (in + 2 < dataLength) {
+            audioBuffer[out++] = data[in + 2];
+            audioBuffer[out++] = data[in + 1];
+            in += 3;
+        }
+        type = channels == 1 ? AHIST_M16S : AHIST_S16S;
     } else {
         ULONG i;
         for (i = 0; i + 1 < dataLength; i += 2) {
             audioBuffer[i] = data[i + 1];
             audioBuffer[i + 1] = data[i];
         }
-        ahiRequest->ahir_Type = AHIST_M16S;
+        type = channels == 1 ? AHIST_M16S : AHIST_S16S;
     }
 
-    ahiRequest->ahir_Std.io_Data = audioBuffer;
-    ahiRequest->ahir_Std.io_Length = dataLength + padBytes;
-    ahiRequest->ahir_Frequency = sampleRate;
-    ahiRequest->ahir_Volume = 0x10000;
-    ahiRequest->ahir_Position = 0x8000;
-    SendIO((struct IORequest *)ahiRequest);
+    startAHIWrite(audioBuffer, playLength, sampleRate, type);
     success = TRUE;
 
 done:

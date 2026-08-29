@@ -19,6 +19,7 @@ extern Object *loadingBar;
 extern Object *loadingBarGroup;
 extern Object *imageListObject;
 extern Object *imageInputTextEditor;
+extern Object *speechInputTextEditor;
 extern Object *createImageButton;
 extern Object *newImageButton;
 extern Object *deleteImageButton;

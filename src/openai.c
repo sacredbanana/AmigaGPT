@@ -172,7 +172,7 @@ static BOOL responseHasFunctionCall(struct json_object *response);
 static void capturePendingFunctionCalls(struct json_object *response);
 static struct ConversationNode *
 getLastNonSystemConversationMessage(struct Conversation *conversation);
-static void pumpRequestInterface(void);
+static BOOL pumpRequestInterface(void);
 
 static volatile BOOL requestCancelled = FALSE;
 
@@ -618,21 +618,25 @@ void endCancellableRequest(void) {}
 
 void cancelActiveRequest(void) {
     requestCancelled = TRUE;
-    closeActiveResponseConnection();
+    /* Unblock a waiting read/write, but do not SSL_free here. NewInput can
+     * run this from inside the request loop while ssl is still in use. */
+    if (sock > -1) {
+        CloseSocket(sock);
+        sock = -1;
+    }
 }
 
 BOOL isRequestCancelled(void) { return requestCancelled; }
 
-static void pumpRequestInterface(void) {
+static BOOL pumpRequestInterface(void) {
 #ifndef DAEMON
     ULONG signals = 0;
     if (loadingBar != NULL)
-        pumpRequestInterface();
+        DoMethod(loadingBar, MUIM_Busy_Move);
     if (app != NULL)
         DoMethod(app, MUIM_Application_NewInput, &signals);
 #endif
-    if (requestCancelled)
-        closeActiveResponseConnection();
+    return !requestCancelled;
 }
 
 static BOOL responseMarksStreamFinished(struct json_object *response) {
@@ -1601,7 +1605,8 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
              * buffer and the server never sees a complete request. */
             Delay(1);
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface())
+                return -1;
 #endif
         }
 
@@ -1627,7 +1632,8 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
             waitForSocketWritable();
             Delay(1);
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface())
+                return -1;
 #endif
         }
     }
@@ -4607,7 +4613,10 @@ struct json_object **postChatMessageToOpenAI(
             clearHttpReadBuffer();
         while (!doneReading) {
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface()) {
+                doneReading = TRUE;
+                continue;
+            }
 #endif
             /* IMPORTANT:
              * In streaming mode, we may already have one-or-more complete SSE
@@ -5377,7 +5386,8 @@ static BOOL writeStreamedRequestPiece(BOOL useSSL, const UBYTE *data,
             }
         }
 #ifndef DAEMON
-        pumpRequestInterface();
+        if (!pumpRequestInterface())
+            return FALSE;
 #endif
     }
     return TRUE;
@@ -5438,7 +5448,8 @@ static void finishStreamedRequest(BOOL useSSL, ULONG sentTotal) {
             waitForSocketWritable();
             Delay(1);
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface())
+                return;
 #endif
         }
     }
@@ -6105,7 +6116,10 @@ struct json_object *postImageCreationRequestToOpenAI(
 
         while (!doneReading) {
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface()) {
+                doneReading = TRUE;
+                continue;
+            }
 #endif
             if (requestUsesSSL) {
                 ERR_clear_error();
@@ -6636,7 +6650,10 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
 
         while (!doneReading) {
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface()) {
+                doneReading = TRUE;
+                continue;
+            }
 #endif
             if (useSSL) {
                 ERR_clear_error();
@@ -7403,7 +7420,10 @@ APTR postTextToSpeechRequestToOpenAI(
         headerAccum[0] = '\0';
         while (ha < sizeof(headerAccum) - 1) {
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface()) {
+                FreeVec(audioData);
+                return NULL;
+            }
 #endif
             ERR_clear_error();
             LONG hbr = useSSL ? SSL_read(ssl, headerAccum + ha,
@@ -7502,7 +7522,10 @@ APTR postTextToSpeechRequestToOpenAI(
             *audioLength = got;
             while (*audioLength < need) {
 #ifndef DAEMON
-                pumpRequestInterface();
+                if (!pumpRequestInterface()) {
+                    FreeVec(audioData);
+                    return NULL;
+                }
 #endif
                 ULONG space = need - *audioLength;
                 if (space > READ_BUFFER_LENGTH - 1)
@@ -7549,7 +7572,10 @@ APTR postTextToSpeechRequestToOpenAI(
             }
             while (1) {
 #ifndef DAEMON
-                pumpRequestInterface();
+                if (!pumpRequestInterface()) {
+                    FreeVec(audioData);
+                    return NULL;
+                }
 #endif
                 memset(readBuffer, 0, READ_BUFFER_LENGTH);
                 ERR_clear_error();
@@ -7609,7 +7635,10 @@ APTR postTextToSpeechRequestToOpenAI(
 
         while (!doneReading) {
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface()) {
+                doneReading = TRUE;
+                continue;
+            }
 #endif
             BOOL readFromSeed = FALSE;
             if (useSeed) {
@@ -8091,7 +8120,7 @@ APTR postTextToSpeechRequestToElevenLabs(
     AuthorizationType authorizationType, CONST_STRPTR apiKey,
     ULONG *audioLength, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword) {
+    CONST_STRPTR proxyPassword, AudioFormat *audioFormat) {
 
 #define ELEVENLABS_HOST "api.elevenlabs.io"
 #define ELEVENLABS_PORT 443
@@ -8159,11 +8188,14 @@ APTR postTextToSpeechRequestToElevenLabs(
     /* Build the endpoint with voice ID and output format */
     UTF8 endpoint[256];
     snprintf(endpoint, sizeof(endpoint),
-             "/%s/text-to-speech/%s?output_format=pcm_24000",
+             "/%s/text-to-speech/%s?output_format=%s",
              (apiEndpointUrl != NULL && strlen(apiEndpointUrl) > 0)
                  ? apiEndpointUrl
                  : "v1",
-             voiceId != NULL ? voiceId : "");
+             voiceId != NULL ? voiceId : "",
+             (audioFormat != NULL && *audioFormat == AUDIO_FORMAT_WAV)
+                 ? "wav_24000"
+                 : "pcm_24000");
 
     UBYTE apiAuthHeader[512];
     memset(apiAuthHeader, 0, sizeof(apiAuthHeader));
@@ -8222,7 +8254,10 @@ APTR postTextToSpeechRequestToElevenLabs(
 
     while (ha < sizeof(headerAccum) - 1) {
 #ifndef DAEMON
-        pumpRequestInterface();
+        if (!pumpRequestInterface()) {
+            FreeVec(audioData);
+            return NULL;
+        }
 #endif
         ERR_clear_error();
         LONG br = useSSL ? SSL_read(ssl, headerAccum + ha,
@@ -8311,7 +8346,10 @@ APTR postTextToSpeechRequestToElevenLabs(
         *audioLength = got;
         while (*audioLength < need) {
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface()) {
+                FreeVec(audioData);
+                return NULL;
+            }
 #endif
             ULONG space = need - *audioLength;
             if (space > READ_BUFFER_LENGTH - 1)
@@ -8355,7 +8393,10 @@ APTR postTextToSpeechRequestToElevenLabs(
         }
         while (1) {
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface()) {
+                FreeVec(audioData);
+                return NULL;
+            }
 #endif
             memset(readBuffer, 0, READ_BUFFER_LENGTH);
             ERR_clear_error();
@@ -8415,7 +8456,10 @@ APTR postTextToSpeechRequestToElevenLabs(
 
         while (!doneReading) {
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface()) {
+                doneReading = TRUE;
+                continue;
+            }
 #endif
             BOOL readFromSeed = FALSE;
             if (useSeed) {
@@ -8816,7 +8860,10 @@ APTR postTextToSpeechRequestToXAI(
 
     while (ha < sizeof(headerAccum) - 1) {
 #ifndef DAEMON
-        pumpRequestInterface();
+        if (!pumpRequestInterface()) {
+            FreeVec(audioData);
+            return NULL;
+        }
 #endif
         ERR_clear_error();
         LONG br = useSSL ? SSL_read(ssl, headerAccum + ha,
@@ -8914,7 +8961,10 @@ APTR postTextToSpeechRequestToXAI(
         *audioLength = got;
         while (*audioLength < need) {
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface()) {
+                FreeVec(audioData);
+                return NULL;
+            }
 #endif
             ULONG space = need - *audioLength;
             if (space > READ_BUFFER_LENGTH - 1)
@@ -8957,7 +9007,10 @@ APTR postTextToSpeechRequestToXAI(
         }
         while (1) {
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface()) {
+                FreeVec(audioData);
+                return NULL;
+            }
 #endif
             memset(readBuffer, 0, READ_BUFFER_LENGTH);
             ERR_clear_error();
@@ -9016,7 +9069,10 @@ APTR postTextToSpeechRequestToXAI(
 
         while (!doneReading) {
 #ifndef DAEMON
-            pumpRequestInterface();
+            if (!pumpRequestInterface()) {
+                doneReading = TRUE;
+                continue;
+            }
 #endif
             BOOL readFromSeed = FALSE;
             if (useSeed) {
@@ -9662,7 +9718,7 @@ APTR postTextToSpeechRequestToOpenVox(
     CONST_STRPTR apiKey, ULONG *audioLength, ULONG *sampleRate, BOOL useProxy,
     CONST_STRPTR proxyHost, UWORD proxyPort, BOOL proxyUsesSSL,
     BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
-    CONST_STRPTR proxyPassword) {
+    CONST_STRPTR proxyPassword, AudioFormat *audioFormat) {
     if (audioLength != NULL)
         *audioLength = 0;
     if (sampleRate != NULL)
@@ -9830,7 +9886,52 @@ APTR postTextToSpeechRequestToOpenVox(
         return NULL;
     }
 
-    APTR pcm =
+    BOOL keepWav = audioFormat != NULL && *audioFormat == AUDIO_FORMAT_WAV;
+    if (keepWav && responseLength >= 12 &&
+        memcmp(response, "RIFF", 4) == 0 &&
+        memcmp((UBYTE *)response + 8, "WAVE", 4) == 0) {
+        if (audioLength != NULL)
+            *audioLength = responseLength;
+        return response;
+    }
+
+    APTR pcm = NULL;
+    if (keepWav) {
+        struct json_object *event = json_tokener_parse((STRPTR)response);
+        CONST_STRPTR b64 = openVoxAudioBase64(event);
+        if (b64 != NULL && strlen(b64) > 0) {
+            STRPTR decoded = NULL;
+            ULONG b64Length = strlen(b64);
+            CodesetsDecodeB64(CSA_B64SourceString, (Tag)b64, CSA_B64SourceLen,
+                              (Tag)b64Length, CSA_B64DestPtr, (Tag)&decoded,
+                              TAG_DONE);
+            if (decoded != NULL) {
+                ULONG decodedLength = (b64Length * 3) / 4;
+                while (b64Length > 0 && b64[b64Length - 1] == '=') {
+                    decodedLength--;
+                    b64Length--;
+                }
+                if (decodedLength >= 12 && memcmp(decoded, "RIFF", 4) == 0 &&
+                    memcmp(decoded + 8, "WAVE", 4) == 0) {
+                    pcm = AllocVec(decodedLength, MEMF_ANY);
+                    if (pcm != NULL) {
+                        memcpy(pcm, decoded, decodedLength);
+                        if (audioLength != NULL)
+                            *audioLength = decodedLength;
+                    }
+                }
+                CodesetsFreeA(decoded, NULL);
+            }
+        }
+        if (event != NULL)
+            json_object_put(event);
+        FreeVec(response);
+        if (pcm == NULL)
+            displayError("OpenVox returned an unsupported audio response.");
+        return pcm;
+    }
+
+    pcm =
         openVoxExtractWavPcm(response, responseLength, audioLength, sampleRate);
     if (pcm == NULL && responseLength > 0) {
         struct json_object *event = json_tokener_parse((STRPTR)response);
@@ -10349,7 +10450,10 @@ struct json_object *postToolResultsToOpenAI(
 
     while (!doneReading) {
 #ifndef DAEMON
-        pumpRequestInterface();
+        if (!pumpRequestInterface()) {
+            doneReading = TRUE;
+            continue;
+        }
 #endif
         if (useSSL) {
             ERR_clear_error();

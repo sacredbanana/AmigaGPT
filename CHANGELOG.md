@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.4.0 (2026-xx-xx)
 
 - Speech tab for generating reusable spoken phrases as WAV files, with phrase history, Play, Regenerate, Save Speech Copy, file attachments and Generate text with AI
 - ARexx SPEAKTEXT now saves WAV (default) or raw PCM for every speech backend, including narrator.device and flite.device, when OUTPUT is given

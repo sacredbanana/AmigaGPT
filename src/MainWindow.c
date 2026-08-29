@@ -2111,6 +2111,63 @@ static BOOL ensureChatOutputBufferCapacity(ULONG required) {
     return TRUE;
 }
 
+static Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
+                                       ULONG weight) {
+    // clang-format off
+    if (amigaGPTTextEditorClass != NULL) {
+        return NewObject(
+            MUIC_AmigaGPTTextEditor, NULL,
+            MUIA_Background, MUII_BACKGROUND,
+            MUIA_CycleChain, TRUE,
+            objectId != 0 ? MUIA_ObjectID : TAG_IGNORE, objectId,
+            weight != 0 ? MUIA_Weight : TAG_IGNORE, weight,
+            MUIA_AmigaGPTTextEditor_SubmitHook, submitHook,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL,
+            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
+            MUIA_TextEditor_ReadOnly, FALSE,
+            MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3,
+            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+            TAG_DONE);
+    }
+    return MUI_NewObject(
+        isAROS ? MUIC_BetterString : MUIC_TextEditor,
+        MUIA_Background, MUII_BACKGROUND,
+        MUIA_CycleChain, TRUE,
+        objectId != 0 ? MUIA_ObjectID : TAG_IGNORE, objectId,
+        weight != 0 ? MUIA_Weight : TAG_IGNORE, weight,
+        isAROS ? TAG_DONE : TAG_SKIP, NULL,
+        MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
+        MUIA_TextEditor_ReadOnly, FALSE,
+        MUIA_TextEditor_TabSize, 4,
+        MUIA_TextEditor_Rows, 3,
+        MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+        TAG_DONE);
+    // clang-format on
+}
+
+static Object *promptEditorForPage(LONG page) {
+    if (page == 0)
+        return chatInputTextEditor;
+    if (page == 1)
+        return imageInputTextEditor;
+    return speechInputTextEditor;
+}
+
+HOOKPROTONHNONP(ModePageChangedFunc, void) {
+    LONG page = 0;
+    Object *editor;
+
+    get(modeRegisterGroup, MUIA_Group_ActivePage, &page);
+    editor = promptEditorForPage(page);
+    if (editor != NULL && mainWindowObject != NULL) {
+        set(mainWindowObject, MUIA_Window_ActiveObject, editor);
+        DoMethod(editor, MUIM_GoActive);
+    }
+    updateEditMenuItemsEnabled();
+}
+MakeHook(ModePageChangedHook, ModePageChangedFunc);
+
 /**
  * Create the main window
  * @return RETURN_OK on success, RETURN_ERROR on failure
@@ -2137,82 +2194,13 @@ LONG createMainWindow() {
         MUI_DisposeObject(mainWindowObject);
     }
 
-    // clang-format off
-    if (useCustomTextEditor) {
-        chatInputTextEditor = NewObject(
-            MUIC_AmigaGPTTextEditor, NULL,
-            MUIA_Background, MUII_BACKGROUND,
-            MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
-            MUIA_AmigaGPTTextEditor_SubmitHook, &SendMessageButtonClickedHook,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL,
-            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
-            MUIA_TextEditor_ReadOnly, FALSE,
-            MUIA_TextEditor_TabSize, 4,
-            MUIA_TextEditor_Rows, 3,
-            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
-            TAG_DONE);
-
-        imageInputTextEditor = NewObject(
-            MUIC_AmigaGPTTextEditor, NULL,
-            MUIA_Weight, 80,
-            MUIA_AmigaGPTTextEditor_SubmitHook, &CreateImageButtonClickedHook,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL,
-            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
-            MUIA_TextEditor_ReadOnly, FALSE,
-            MUIA_TextEditor_TabSize, 4,
-            MUIA_TextEditor_Rows, 3,
-            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
-            TAG_DONE);
-
-        speechInputTextEditor = NewObject(
-            MUIC_AmigaGPTTextEditor, NULL,
-            MUIA_Weight, 80,
-            MUIA_AmigaGPTTextEditor_SubmitHook, &GenerateSpeechButtonClickedHook,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL,
-            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
-            MUIA_TextEditor_ReadOnly, FALSE,
-            MUIA_TextEditor_TabSize, 4,
-            MUIA_TextEditor_Rows, 3,
-            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
-            TAG_DONE);
-    } else {
-        chatInputTextEditor = MUI_NewObject(
-            isAROS ? MUIC_BetterString : MUIC_TextEditor,
-            MUIA_Background, MUII_BACKGROUND,
-            MUIA_ObjectID, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL,
-            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
-            MUIA_TextEditor_ReadOnly, FALSE,
-            MUIA_TextEditor_TabSize, 4,
-            MUIA_TextEditor_Rows, 3,
-            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
-            TAG_DONE);
-
-        imageInputTextEditor = MUI_NewObject(
-            isAROS ? MUIC_BetterString : MUIC_TextEditor,
-            MUIA_Background, MUII_BACKGROUND,
-            MUIA_Weight, 80,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL,
-            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
-            MUIA_TextEditor_ReadOnly, FALSE,
-            MUIA_TextEditor_TabSize, 4,
-            MUIA_TextEditor_Rows, 3,
-            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
-            TAG_DONE);
-
-        speechInputTextEditor = MUI_NewObject(
-            isAROS ? MUIC_BetterString : MUIC_TextEditor,
-            MUIA_Background, MUII_BACKGROUND,
-            MUIA_Weight, 80,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL,
-            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
-            MUIA_TextEditor_ReadOnly, FALSE,
-            MUIA_TextEditor_TabSize, 4,
-            MUIA_TextEditor_Rows, 3,
-            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
-            TAG_DONE);
-    }
-    // clang-format on
+    chatInputTextEditor = createPromptInputEditor(
+        &SendMessageButtonClickedHook, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR, 0);
+    imageInputTextEditor = createPromptInputEditor(
+        &CreateImageButtonClickedHook, OBJECT_ID_IMAGE_INPUT_TEXT_EDITOR, 80);
+    speechInputTextEditor = createPromptInputEditor(
+        &GenerateSpeechButtonClickedHook, OBJECT_ID_SPEECH_INPUT_TEXT_EDITOR,
+        80);
 
     createMenu();
 
@@ -2691,6 +2679,9 @@ static void addMainWindowActions() {
     DoMethod(speakFileContentsCheckbox, MUIM_Notify, MUIA_Selected,
              MUIV_EveryTime, speakFileContentsCheckbox, 2, MUIM_CallHook,
              &SpeechTextChangedHook);
+    DoMethod(modeRegisterGroup, MUIM_Notify, MUIA_Group_ActivePage,
+             MUIV_EveryTime, modeRegisterGroup, 2, MUIM_CallHook,
+             &ModePageChangedHook);
     if (isAROS) {
         DoMethod(speechInputTextEditor, MUIM_Notify, MUIA_String_Contents,
                  MUIV_EveryTime, speechInputTextEditor, 2, MUIM_CallHook,
@@ -3347,7 +3338,7 @@ static void sendChatMessage() {
             SpeechSystem speechSys = configGetSpeechSystem();
             if (speechSys == SPEECH_SYSTEM_OPENAI ||
                 speechSys == SPEECH_SYSTEM_XAI) {
-                speakText(receivedMessage, NULL, AUDIO_FORMAT_PCM);
+                speakText(receivedMessage, NULL, NULL);
             } else {
                 STRPTR receivedMessageSystemEncoded = CodesetsUTF8ToStr(
                     CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
