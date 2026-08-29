@@ -6,6 +6,8 @@
 #include <libraries/codesets.h>
 #include <libraries/mui.h>
 #include <mui/Aboutbox_mcc.h>
+#include <mui/ActionTextEditor_mcc.h>
+#include <mui/AudioPlayer_mcc.h>
 #include <mui/BetterString_mcc.h>
 #include <mui/Busy_mcc.h>
 #include <mui/Guigfx_mcc.h>
@@ -18,7 +20,6 @@
 #include <string.h>
 #include "AboutAmigaGPTWindow.h"
 #include "AmigaGPTConfig.h"
-#include "AmigaGPTTextEditor.h"
 #include "APIKeyRequesterWindow.h"
 #include "ARexx.h"
 #include "CustomServerSettingsRequesterWindow.h"
@@ -28,9 +29,6 @@
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
 #include "speech.h"
-#ifndef DAEMON
-#include "SpeechWaveform.h"
-#endif
 #include "version.h"
 
 #ifdef __AMIGAOS4__
@@ -72,9 +70,10 @@ static void closeGUILibraries();
 static STRPTR wrapRequesterText(CONST_STRPTR message);
 
 static CONST_STRPTR USED_CLASSES[] = {
-    MUIC_Aboutbox,   MUIC_Busy,       MUIC_NList,
-    MUIC_NListview,  MUIC_TextEditor, MUIC_BetterString,
-    MUIC_NFloattext, MUIC_Guigfx,     NULL};
+    MUIC_Aboutbox,          MUIC_Busy,           MUIC_NList,
+    MUIC_NListview,         MUIC_TextEditor,     MUIC_BetterString,
+    MUIC_NFloattext,        MUIC_Guigfx,         MUIC_ActionTextEditor,
+    MUIC_AudioPlayer,       NULL};
 
 /**
  * Open the libraries needed for the GUI
@@ -255,6 +254,8 @@ static BOOL checkMUICustomClassInstalled() {
         if (!isAROS && !strcmp(USED_CLASSES[i], MUIC_BetterString) != 0)
             continue;
         if (isAROS && !strcmp(USED_CLASSES[i], MUIC_TextEditor) != 0)
+            continue;
+        if (isAROS && !strcmp(USED_CLASSES[i], MUIC_ActionTextEditor) != 0)
             continue;
         if (!MUI_GetClass(USED_CLASSES[i])) {
             displayError(STRING_ERROR_MUI_CUSTOM_CLASS_NOT_FOUND);
@@ -1273,8 +1274,6 @@ void shutdownGUI() {
     if (chatOutputTextEditorContents) {
         FreeVec(chatOutputTextEditorContents);
     }
-    deleteAmigaGPTTextEditor();
-    deleteSpeechWaveformClass();
 #endif
 
     closeGUILibraries();

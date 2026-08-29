@@ -8,6 +8,8 @@
 #include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
+#include <mui/ActionTextEditor_mcc.h>
+#include <mui/AudioPlayer_mcc.h>
 #include <mui/TextEditor_mcc.h>
 #include <SDI_hook.h>
 #include <stdio.h>
@@ -15,14 +17,12 @@
 #include <strings.h>
 #include <time.h>
 #include "AmigaGPTConfig.h"
-#include "AmigaGPTTextEditor.h"
 #include "gui.h"
 #include "menu.h"
 #include "MainWindow.h"
 #include "openai.h"
 #include "speech.h"
 #include "SpeechProviderSettingsRequesterWindow.h"
-#include "SpeechWaveform.h"
 #include <dos/dos.h>
 
 /* Max nesting depth for B/I/U combined. Adjust as needed. */
@@ -105,6 +105,7 @@ struct GeneratedSpeech {
 static struct GeneratedSpeech *currentSpeech = NULL;
 static STRPTR pages[4] = {NULL};
 static BOOL requestInterfaceBusy = FALSE;
+static BOOL haveAudioPlayer = FALSE;
 
 struct Conversation *newConversation();
 static struct Conversation *copyConversation(struct Conversation *conversation);
@@ -448,17 +449,18 @@ static void setSpeechPlayerDisplay(CONST_STRPTR filePath,
         contents = (CONST_STRPTR)STRING_SPEECH_NO_PROFILE;
     if (speechProfileInfo != NULL)
         set(speechProfileInfo, MUIA_Text_Contents, contents);
-    if (speechWaveform != NULL && speechWaveformClass != NULL)
-        speechWaveformSetFile(speechWaveform, filePath);
+    if (haveAudioPlayer && speechWaveform != NULL)
+        set(speechWaveform, MUIA_AudioPlayer_FileName,
+            filePath != NULL ? filePath : (CONST_STRPTR) "");
 }
 
 static void applySpeechWaveformPens(void) {
-    if (speechWaveform == NULL || speechWaveformClass == NULL)
+    if (!haveAudioPlayer || speechWaveform == NULL)
         return;
-    SetAttrs(speechWaveform, MUIA_SpeechWaveform_WavePen, greenPen,
-             MUIA_SpeechWaveform_PeakPen, yellowPen,
-             MUIA_SpeechWaveform_SpectrumPen, bluePen,
-             MUIA_SpeechWaveform_TextPen, greenPen, TAG_DONE);
+    SetAttrs(speechWaveform, MUIA_AudioPlayer_WavePen, greenPen,
+             MUIA_AudioPlayer_PeakPen, yellowPen,
+             MUIA_AudioPlayer_SpectrumPen, bluePen, MUIA_AudioPlayer_TextPen,
+             greenPen, TAG_DONE);
 }
 
 void updatePlayButton() {
@@ -467,13 +469,13 @@ void updatePlayButton() {
 
     updateActionButtonLabels(FALSE);
 
-    if (speechWaveform == NULL || speechWaveformClass == NULL)
+    if (!haveAudioPlayer || speechWaveform == NULL)
         return;
 
-    speechWaveformService(speechWaveform);
+    DoMethod(speechWaveform, MUIM_AudioPlayer_Service);
     hasSpeech = currentSpeech != NULL && !requestInterfaceBusy;
     if (hasSpeech != lastHasSpeech) {
-        set(speechWaveform, MUIA_SpeechWaveform_HasSpeech,
+        set(speechWaveform, MUIA_AudioPlayer_HasSpeech,
             hasSpeech ? TRUE : FALSE);
         lastHasSpeech = hasSpeech;
     }
@@ -2490,21 +2492,22 @@ static BOOL ensureChatOutputBufferCapacity(ULONG required) {
 static Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
                                        ULONG weight) {
     // clang-format off
-    if (amigaGPTTextEditorClass != NULL) {
-        return NewObject(
-            MUIC_AmigaGPTTextEditor, NULL,
+    if (!isAROS) {
+        Object *editor = MUI_NewObject(
+            MUIC_ActionTextEditor,
             MUIA_Background, MUII_BACKGROUND,
             MUIA_CycleChain, TRUE,
             objectId != 0 ? MUIA_ObjectID : TAG_IGNORE, objectId,
             weight != 0 ? MUIA_Weight : TAG_IGNORE, weight,
-            MUIA_AmigaGPTTextEditor_SubmitHook, submitHook,
-            isAROS ? TAG_DONE : TAG_SKIP, NULL,
+            MUIA_ActionTextEditor_SubmitHook, submitHook,
             MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
             MUIA_TextEditor_ReadOnly, FALSE,
             MUIA_TextEditor_TabSize, 4,
             MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
+        if (editor != NULL)
+            return editor;
     }
     return MUI_NewObject(
         isAROS ? MUIC_BetterString : MUIC_TextEditor,
@@ -2561,13 +2564,6 @@ LONG createMainWindow() {
         NewList((struct List *)&pendingSpeechFiles);
         pendingSpeechFilesInitialized = TRUE;
     }
-    BOOL useCustomTextEditor = createAmigaGPTTextEditor() == RETURN_OK;
-    if (!useCustomTextEditor) {
-        displayError("Could not create custom class.");
-    }
-    if (createSpeechWaveformClass() != RETURN_OK)
-        displayError("Could not create custom class.");
-
     if (mainWindowObject != NULL) {
         MUI_DisposeObject(mainWindowObject);
     }
@@ -2593,14 +2589,16 @@ LONG createMainWindow() {
     pages[1] = STRING_MENU_IMAGE;
     pages[2] = STRING_MENU_SPEECH;
 
-    if (speechWaveformClass != NULL) {
-        speechWaveform = NewObject(
-            MUIC_SpeechWaveform, NULL,
-            MUIA_Frame, MUIV_Frame_Group,
-            MUIA_Background, MUII_SHADOW,
-            MUIA_FillArea, FALSE,
-            MUIA_Weight, 200,
-            TAG_DONE);
+    haveAudioPlayer = FALSE;
+    speechWaveform = MUI_NewObject(
+        MUIC_AudioPlayer,
+        MUIA_Frame, MUIV_Frame_Group,
+        MUIA_Background, MUII_SHADOW,
+        MUIA_FillArea, FALSE,
+        MUIA_Weight, 200,
+        TAG_DONE);
+    if (speechWaveform != NULL) {
+        haveAudioPlayer = TRUE;
     } else {
         speechWaveform = RectangleObject,
             MUIA_Frame, MUIV_Frame_Group,
@@ -3036,8 +3034,8 @@ static void addMainWindowActions() {
     DoMethod(regenerateSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
              regenerateSpeechButton, 2, MUIM_CallHook,
              &RegenerateSpeechButtonClickedHook);
-    if (speechWaveformClass != NULL && speechWaveform != NULL)
-        set(speechWaveform, MUIA_SpeechWaveform_HasSpeech, FALSE);
+    if (haveAudioPlayer && speechWaveform != NULL)
+        set(speechWaveform, MUIA_AudioPlayer_HasSpeech, FALSE);
     DoMethod(saveSpeechCopyButton, MUIM_Notify, MUIA_Pressed, FALSE,
              saveSpeechCopyButton, 2, MUIM_CallHook,
              &SaveSpeechCopyButtonClickedHook);

@@ -26,7 +26,8 @@ The host-side test binary (`src/test/`) is a separate harness that builds with t
 The repo is one C source tree (`src/`) compiled into two binaries from the same objects:
 
 - **AmigaGPT** — full MUI-based GUI client.
-- **AmigaGPTD** — headless daemon. Built with `-DDAEMON`; the Makefiles drop the window/menu source files (`MainWindow.c`, `AboutAmigaGPTWindow.c`, `APIKeyRequesterWindow.c`, `ProxySettingsRequesterWindow.c`, `VoiceInstructionsRequesterWindow.c`, `AmigaGPTTextEditor.c`, `menu.c`) for this variant. Both binaries share the rest of the source and the same compiled catalog object.
+- **AmigaGPTD** — headless daemon. Built with `-DDAEMON`; the Makefiles drop the window/menu source files (`MainWindow.c`, `AboutAmigaGPTWindow.c`, `APIKeyRequesterWindow.c`, `ProxySettingsRequesterWindow.c`, `VoiceInstructionsRequesterWindow.c`, `menu.c`) for this variant. Both binaries share the rest of the source and the same compiled catalog object.
+- **Public MUI classes** — the prompt editor and speech waveform are no longer private classes compiled into AmigaGPT. They live in sibling repos `/Volumes/repos/MCC_ActionTextEditor` and `/Volumes/repos/MCC_AudioPlayer`. Built `.mcc` files are copied into `bundle/AmigaGPT/MCC/` and the installer places them in `MUI:Libs/MUI` (OS3/OS4) or `SYS:Classes/MUI` (MorphOS). The GUI loads `ActionTextEditor.mcc` and `AudioPlayer.mcc` by name. Public headers ship in the `sacredbanana/amiga-compiler` Docker SDK as `<mui/ActionTextEditor_mcc.h>` and `<mui/AudioPlayer_mcc.h>`.
 
 ALWAYS check https://github.com/murinsel/AmigaAI to make sure its features are inferior to the features in this project.
 

@@ -59,6 +59,7 @@ Ensure you have the necessary system requirements:
 - **MCC_Guigfx** MUI custom class for displaying images (<http://aminet.net/package/dev/mui/MCC_Guigfx>)
 - **MCC_NList** MUI custom class for lists (<http://aminet.net/package/dev/mui/MCC_NList-0.128>)
 - **MCC_TextEditor 15.56** or higher (<https://aminet.net/dev/mui/MCC_TextEditor-15.56.lha>)
+- **MCC_ActionTextEditor** and **MCC_AudioPlayer**, shipped with AmigaGPT and installed into the system MUI class drawer. They can also be built from their own repos if you want them for other programs.
 - **A PNG datatype** Any will do, but here is one (<https://aminet.net/util/dtype/vPNGdt.lha>)
 - An API key for your chosen AI provider (**OpenAI**, **Google Gemini**, **SpaceXAI**, or **Anthropic**), or a locally-hosted OpenAI-compatible LLM server
 - _Optional_: **AmigaOS 3 only**: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
@@ -72,7 +73,7 @@ Ensure you have the necessary system requirements:
 
 - For AmigaOS 3 & 4, Install AmiSSL and a TCP/IP stack if not already done so
 - Download and install MUI. Version 5 recommended, version 3 minimum. Reboot.
-- Download and install codesets.library, render.library, MCC_Guigfx, MCC_NList and MCC_TextEditor
+- Download and install codesets.library, render.library, MCC_Guigfx, MCC_NList and MCC_TextEditor. The AmigaGPT installer also copies ActionTextEditor.mcc and AudioPlayer.mcc into the MUI class drawer.
 - Download the latest release of **AmigaGPT**
 - Extract the `amigagpt.lha` archive to a temporary location
 - Run the provided installer

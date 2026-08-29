@@ -62,6 +62,9 @@ Requirements:
   (http://aminet.net/package/dev/mui/MCC_NList-0.128)
 - MCC_TextEditor 15.56 or higher
   (https://aminet.net/dev/mui/MCC_TextEditor-15.56.lha)
+- MCC_ActionTextEditor and MCC_AudioPlayer, shipped with this
+  archive. The installer copies them into MUI:Libs/MUI (AmigaOS)
+  or SYS:Classes/MUI (MorphOS)
 - A PNG datatype - Any will do, but here is one
   (https://aminet.net/util/dtype/vPNGdt.lha)
 - An active API key for at least one supported provider (OpenAI, Google

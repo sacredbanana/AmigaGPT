@@ -11,6 +11,7 @@
 - Waveform colours are settable (wave, peak, spectrum, background, bar and text pens); AmigaGPT uses its green, yellow and blue pens so the display matches the rest of the UI
 - Expert mode in the installer  now asks whether to install AmigaGPTD, including on AmiKit, instead of always copying the daemon
 - On AmiKit the installer writes the AMIGAGPT: assign and optional daemon start to KIT-Startup instead of S:User-Startup
+- Extracted the Return-to-submit editor and speech waveform into public MUI classes ActionTextEditor.mcc and AudioPlayer.mcc. The installer copies them into MUI:Libs/MUI (or SYS:Classes/MUI on MorphOS)
 
 ## 3.3.0 (2026-08-29)
 

@@ -80,6 +80,8 @@
 (set #amigagptdinstallask	"Do you want to install the AmigaGPT daemon (AmigaGPTD)? This is a background program that answers ARexx commands without opening the main AmigaGPT window.")
 (set #amigagptdinstallhelp	"On AmiKit, AmigaGPTD is copied into SYS:Prefs/Presets/AmiKit/KIT so AmiKit can start it. On other systems it is copied to C:. Skip it if you only want the main AmigaGPT application.")
 (set #kitstartup-fail	"Could not update SYS:Prefs/Presets/AmiKit/KIT/KIT-Startup. Please add the AMIGAGPT: assign to that file by hand.")
+(set #muidir-missing "The MUI custom class drawer\n\n%s\n\ncould not be found.\n\nInstall MUI first. ActionTextEditor.mcc and AudioPlayer.mcc will not be installed.")
+(set #mcc-installed "Installed ActionTextEditor.mcc and AudioPlayer.mcc to %s.")
 
 
 ;------------------------------------------------------------------------
@@ -289,6 +291,65 @@
 ; Set OS flags based on user choice
 (set #os4 (if (= #os-choice 1) 1 0))
 (set #mos (if (= #os-choice 2) 1 0))
+
+;------------------------------------------------------------------------
+; Install the MUI custom classes AmigaGPT loads at run time
+(if (not (exists #muidir))
+  (
+    (message (#muidir-missing #muidir))
+  )
+  (
+    (working (#installing "MUI custom classes"))
+    (if (= #os-choice 0)
+      (
+        (copyfiles
+          (source "MCC/ActionTextEditor_OS3.mcc")
+          (dest #muidir)
+          (newname "ActionTextEditor.mcc")
+          (optional "force" "askuser")
+        )
+        (copyfiles
+          (source "MCC/AudioPlayer_OS3.mcc")
+          (dest #muidir)
+          (newname "AudioPlayer.mcc")
+          (optional "force" "askuser")
+        )
+      )
+    )
+    (if (= #os-choice 1)
+      (
+        (copyfiles
+          (source "MCC/ActionTextEditor_OS4.mcc")
+          (dest #muidir)
+          (newname "ActionTextEditor.mcc")
+          (optional "force" "askuser")
+        )
+        (copyfiles
+          (source "MCC/AudioPlayer_OS4.mcc")
+          (dest #muidir)
+          (newname "AudioPlayer.mcc")
+          (optional "force" "askuser")
+        )
+      )
+    )
+    (if (= #os-choice 2)
+      (
+        (copyfiles
+          (source "MCC/ActionTextEditor_MorphOS.mcc")
+          (dest #muidir)
+          (newname "ActionTextEditor.mcc")
+          (optional "force" "askuser")
+        )
+        (copyfiles
+          (source "MCC/AudioPlayer_MorphOS.mcc")
+          (dest #muidir)
+          (newname "AudioPlayer.mcc")
+          (optional "force" "askuser")
+        )
+      )
+    )
+  )
+)
 
 (complete 20)
 

@@ -99,6 +99,7 @@ AmigaGPT is translated into 22 languages in addition to English. See @{"Language
 - MCC_Guigfx, the MUI custom class used to display images (@{u}http://aminet.net/package/dev/mui/MCC_Guigfx@{uu})
 - MCC_NList, the MUI custom class used for lists (@{u}http://aminet.net/package/dev/mui/MCC_NList-0.128@{uu})
 - MCC_TextEditor 15.56 or higher, the MUI custom class used for text input (@{u}https://aminet.net/dev/mui/MCC_TextEditor-15.56.lha@{uu})
+- MCC_ActionTextEditor and MCC_AudioPlayer, shipped with AmigaGPT. The installer copies ActionTextEditor.mcc and AudioPlayer.mcc into the system MUI class drawer
 - A PNG datatype for viewing generated images. Any will do, but here is one (@{u}https://aminet.net/util/dtype/vPNGdt.lha@{uu})
 - For AmigaOS 3 and AmigaOS 4, AmiSSL 5.27 or higher
   OS3: @{u}https://aminet.net/package/util/libs/AmiSSL-v5-OS3@{uu}
@@ -128,7 +129,7 @@ AmigaGPT is translated into 22 languages in addition to English. See @{"Language
 
 - On AmigaOS 3 and AmigaOS 4, install AmiSSL and a TCP/IP stack if you have not already done so
 - Download and install MUI. Version 5 is recommended, version 3 is the minimum. Reboot afterwards.
-- Download and install codesets.library, render.library, guigfx.library, MCC_Guigfx, MCC_NList and MCC_TextEditor
+- Download and install codesets.library, render.library, guigfx.library, MCC_Guigfx, MCC_NList and MCC_TextEditor. The AmigaGPT installer also copies ActionTextEditor.mcc and AudioPlayer.mcc into the MUI class drawer
 
 @{b}@{u}Installing AmigaGPT@{uu}@{ub}
 
@@ -1428,7 +1429,7 @@ The interface language and the language the AI answers in are separate things. T
 MUI is not installed, or is older than version 3. Install MUI and reboot. See @{"System Requirements" link requirements}.
 
 @{b}@{u}"Could not find all the MUI custom classes"@{uu}@{ub}
-One of MCC_NList, MCC_TextEditor or MCC_Guigfx is missing. Install all three and reboot.
+One of MCC_NList, MCC_TextEditor, MCC_Guigfx, ActionTextEditor.mcc or AudioPlayer.mcc is missing. Install MUI and the listed classes, then run the AmigaGPT installer so it can copy ActionTextEditor.mcc and AudioPlayer.mcc into the MUI class drawer, and reboot.
 
 @{b}@{u}"Could not open codesets.library"@{uu}@{ub}
 Install codesets.library 6.22 or higher.
