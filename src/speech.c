@@ -5,6 +5,9 @@
 #include <proto/exec.h>
 #include <string.h>
 #ifdef __AMIGAOS3__
+#include <clib/compiler-specific.h>
+#include <devices/audio.h>
+#include <dos/dostags.h>
 #include <proto/translator.h>
 #elif defined(__AMIGAOS4__)
 #include <exec/exec.h>
@@ -30,6 +33,29 @@ static struct MsgPort *NarratorPort = NULL;
 struct narrator_rb *NarratorIO = NULL;
 static BYTE audioChannels[4] = {3, 5, 10, 12};
 static STRPTR translationBuffer = NULL;
+
+#define DEVICE_BEGINIO_OFFSET (-30)
+#define NARRATOR_CAPTURE_MIN_BYTES (128UL * 1024UL)
+#define NARRATOR_CAPTURE_MAX_BYTES (8UL * 1024UL * 1024UL)
+
+typedef void __ASM__ (*AudioBeginIOFunction)(
+    __REG__(a1, struct IORequest *request),
+    __REG__(a6, struct Device *device));
+
+static struct MsgPort *NarratorCapturePort = NULL;
+static struct IOAudio *NarratorCaptureIO = NULL;
+static UBYTE *narratorCaptureBuffer = NULL;
+static volatile ULONG narratorCaptureLength = 0;
+static ULONG narratorCaptureCapacity = 0;
+static ULONG narratorCaptureUnit = 0;
+static ULONG narratorCaptureSampleRate = DEFFREQ;
+static volatile BOOL narratorCaptureActive = FALSE;
+static volatile BOOL narratorCapturePending = FALSE;
+static volatile BOOL narratorCaptureOverflow = FALSE;
+static BOOL narratorCaptureDeviceOpen = FALSE;
+static AudioBeginIOFunction narratorOriginalBeginIO = NULL;
+static struct Task *narratorCaptureOwner = NULL;
+static BYTE narratorCaptureDoneSignal = -1;
 #elif defined(__AMIGAOS4__)
 static struct MsgPort *fliteMessagePort = NULL;
 struct FliteRequest *fliteRequest = NULL;
@@ -66,10 +92,12 @@ static void writeLittleEndian32(UBYTE *destination, ULONG value) {
 }
 
 static BOOL savePcmAsWav(CONST_STRPTR filename, const UBYTE *pcmData,
-                         ULONG dataLength, ULONG sampleRate) {
+                         ULONG dataLength, ULONG sampleRate,
+                         UWORD bitsPerSample) {
     UBYTE header[44];
     BPTR outputFile;
     BOOL success;
+    UWORD blockAlign = bitsPerSample / 8;
 
     memcpy(header, "RIFF", 4);
     writeLittleEndian32(header + 4, dataLength + 36);
@@ -78,9 +106,9 @@ static BOOL savePcmAsWav(CONST_STRPTR filename, const UBYTE *pcmData,
     writeLittleEndian16(header + 20, 1); /* PCM */
     writeLittleEndian16(header + 22, 1); /* Mono */
     writeLittleEndian32(header + 24, sampleRate);
-    writeLittleEndian32(header + 28, sampleRate * 2);
-    writeLittleEndian16(header + 32, 2);
-    writeLittleEndian16(header + 34, 16);
+    writeLittleEndian32(header + 28, sampleRate * blockAlign);
+    writeLittleEndian16(header + 32, blockAlign);
+    writeLittleEndian16(header + 34, bitsPerSample);
     memcpy(header + 36, "data", 4);
     writeLittleEndian32(header + 40, dataLength);
 
@@ -95,6 +123,237 @@ static BOOL savePcmAsWav(CONST_STRPTR filename, const UBYTE *pcmData,
     Close(outputFile);
     return success;
 }
+
+#ifdef __AMIGAOS3__
+static ULONG estimateNarratorCaptureSize(CONST_STRPTR text, UWORD rate,
+                                          UWORD sampleRate) {
+    ULONG wordCount = 0;
+    ULONG seconds;
+    ULONG size;
+    BOOL inWord = FALSE;
+    CONST_STRPTR cursor;
+
+    for (cursor = text; cursor != NULL && *cursor != '\0'; cursor++) {
+        BOOL separator = *cursor == ' ' || *cursor == '\t' ||
+                         *cursor == '\n' || *cursor == '\r';
+        if (separator) {
+            inWord = FALSE;
+        } else if (!inWord) {
+            wordCount++;
+            inWord = TRUE;
+        }
+    }
+
+    if (wordCount == 0)
+        wordCount = 1;
+    if (rate < MINRATE || rate > MAXRATE)
+        rate = DEFRATE;
+    if (sampleRate < MINFREQ || sampleRate > MAXFREQ)
+        sampleRate = DEFFREQ;
+
+    /* Add 25 percent plus three seconds for pauses and synthesis tails. */
+    seconds = ((wordCount * 75UL) + rate - 1) / rate + 3;
+    if (seconds > NARRATOR_CAPTURE_MAX_BYTES / sampleRate)
+        return NARRATOR_CAPTURE_MAX_BYTES;
+
+    size = seconds * sampleRate;
+    if (size < NARRATOR_CAPTURE_MIN_BYTES)
+        size = NARRATOR_CAPTURE_MIN_BYTES;
+    return size;
+}
+
+static void captureNarratorAudioRequest(struct IOAudio *request) {
+    ULONG unit;
+    ULONG available;
+    ULONG copyLength;
+    UBYTE narratorChannels;
+
+    if (!narratorCaptureActive || request == NULL ||
+        request->ioa_Request.io_Command != CMD_WRITE ||
+        request->ioa_Data == NULL || request->ioa_Length == 0)
+        return;
+
+    unit = (ULONG)request->ioa_Request.io_Unit;
+    narratorChannels = NarratorIO != NULL ? NarratorIO->chanmask : 0;
+    if (narratorChannels != 0 && (unit & narratorChannels) == 0)
+        return;
+
+    /* narrator.device sends identical mono data to a left/right pair. */
+    if (narratorCaptureUnit == 0)
+        narratorCaptureUnit = unit;
+    if (unit != narratorCaptureUnit)
+        return;
+
+    if (narratorCaptureLength >= narratorCaptureCapacity) {
+        narratorCaptureOverflow = TRUE;
+        return;
+    }
+
+    available = narratorCaptureCapacity - narratorCaptureLength;
+    copyLength = request->ioa_Length;
+    if (copyLength > available) {
+        copyLength = available;
+        narratorCaptureOverflow = TRUE;
+    }
+
+    memcpy(narratorCaptureBuffer + narratorCaptureLength, request->ioa_Data,
+           copyLength);
+    narratorCaptureLength += copyLength;
+}
+
+static void __ASM__ narratorAudioBeginIOHook(
+    __REG__(a1, struct IORequest *request),
+    __REG__(a6, struct Device *device)) {
+    captureNarratorAudioRequest((struct IOAudio *)request);
+    if (narratorOriginalBeginIO != NULL)
+        narratorOriginalBeginIO(request, device);
+}
+
+static void releaseNarratorCaptureResources(void) {
+    if (narratorCaptureDeviceOpen && NarratorCaptureIO != NULL) {
+        CloseDevice((struct IORequest *)NarratorCaptureIO);
+        narratorCaptureDeviceOpen = FALSE;
+    }
+    if (NarratorCaptureIO != NULL) {
+        DeleteIORequest((struct IORequest *)NarratorCaptureIO);
+        NarratorCaptureIO = NULL;
+    }
+    if (NarratorCapturePort != NULL) {
+        DeleteMsgPort(NarratorCapturePort);
+        NarratorCapturePort = NULL;
+    }
+    if (narratorCaptureBuffer != NULL) {
+        FreeVec(narratorCaptureBuffer);
+        narratorCaptureBuffer = NULL;
+    }
+}
+
+static void finishNarratorCapture(void) {
+    ULONG i;
+
+    Forbid();
+    Disable();
+    narratorCaptureActive = FALSE;
+    if (narratorOriginalBeginIO != NULL && NarratorCaptureIO != NULL) {
+        SetFunction(
+            (struct Library *)NarratorCaptureIO->ioa_Request.io_Device,
+            DEVICE_BEGINIO_OFFSET, (ULONG (*)())narratorOriginalBeginIO);
+    }
+    Enable();
+    Permit();
+    narratorOriginalBeginIO = NULL;
+
+    /* Paula/audio.device samples are signed; 8-bit WAV PCM is unsigned. */
+    if (narratorCaptureBuffer != NULL) {
+        for (i = 0; i < narratorCaptureLength; i++)
+            narratorCaptureBuffer[i] ^= 0x80;
+    }
+
+    if (narratorCaptureLength > 0)
+        savePcmAsWav("OUT:output.wav", narratorCaptureBuffer,
+                     narratorCaptureLength, narratorCaptureSampleRate, 8);
+    releaseNarratorCaptureResources();
+}
+
+static void narratorCaptureProcess(void) {
+    struct Task *owner = narratorCaptureOwner;
+    ULONG doneMask = 1UL << narratorCaptureDoneSignal;
+
+    while (CheckIO((struct IORequest *)NarratorIO) == 0)
+        Delay(1);
+    WaitIO((struct IORequest *)NarratorIO);
+    finishNarratorCapture();
+    if (owner != NULL)
+        Signal(owner, doneMask);
+}
+
+static void waitForNarratorCapture(BOOL abortPlayback) {
+    ULONG doneMask;
+
+    if (!narratorCapturePending)
+        return;
+
+    doneMask = 1UL << narratorCaptureDoneSignal;
+    if (abortPlayback && NarratorIO != NULL &&
+        CheckIO((struct IORequest *)NarratorIO) == 0) {
+        AbortIO((struct IORequest *)NarratorIO);
+    }
+    Wait(doneMask);
+    FreeSignal(narratorCaptureDoneSignal);
+    narratorCaptureDoneSignal = -1;
+    narratorCaptureOwner = NULL;
+    narratorCapturePending = FALSE;
+}
+
+static BOOL prepareNarratorCapture(CONST_STRPTR text, UWORD rate,
+                                   UWORD sampleRate) {
+    if (sampleRate < MINFREQ || sampleRate > MAXFREQ)
+        sampleRate = DEFFREQ;
+
+    narratorCaptureCapacity =
+        estimateNarratorCaptureSize(text, rate, sampleRate);
+    narratorCaptureBuffer = AllocVec(narratorCaptureCapacity, MEMF_PUBLIC);
+    if (narratorCaptureBuffer == NULL)
+        goto failure;
+
+    NarratorCapturePort = CreateMsgPort();
+    if (NarratorCapturePort == NULL)
+        goto failure;
+    NarratorCaptureIO = (struct IOAudio *)CreateIORequest(
+        NarratorCapturePort, sizeof(struct IOAudio));
+    if (NarratorCaptureIO == NULL)
+        goto failure;
+    NarratorCaptureIO->ioa_Data = NULL;
+    NarratorCaptureIO->ioa_Length = 0;
+    NarratorCaptureIO->ioa_AllocKey = 0;
+    if (OpenDevice(AUDIONAME, 0, (struct IORequest *)NarratorCaptureIO, 0) !=
+        0)
+        goto failure;
+    narratorCaptureDeviceOpen = TRUE;
+
+    narratorCaptureDoneSignal = AllocSignal(-1);
+    if (narratorCaptureDoneSignal < 0)
+        goto failure;
+
+    narratorCaptureLength = 0;
+    narratorCaptureUnit = 0;
+    narratorCaptureSampleRate = sampleRate;
+    narratorCaptureOverflow = FALSE;
+    narratorCaptureOwner = FindTask(NULL);
+
+    Forbid();
+    Disable();
+    narratorOriginalBeginIO = (AudioBeginIOFunction)SetFunction(
+        (struct Library *)NarratorCaptureIO->ioa_Request.io_Device,
+        DEVICE_BEGINIO_OFFSET, (ULONG (*)())narratorAudioBeginIOHook);
+    narratorCaptureActive = TRUE;
+    Enable();
+    Permit();
+    narratorCapturePending = TRUE;
+    return TRUE;
+
+failure:
+    if (narratorCaptureDoneSignal >= 0) {
+        FreeSignal(narratorCaptureDoneSignal);
+        narratorCaptureDoneSignal = -1;
+    }
+    releaseNarratorCaptureResources();
+    return FALSE;
+}
+
+static void startNarratorCaptureProcess(void) {
+    if (CreateNewProcTags(NP_Entry, narratorCaptureProcess, NP_Name,
+                          "AmigaGPT narrator capture", NP_StackSize, 8192,
+                          TAG_DONE) == NULL) {
+        WaitIO((struct IORequest *)NarratorIO);
+        finishNarratorCapture();
+        FreeSignal(narratorCaptureDoneSignal);
+        narratorCaptureDoneSignal = -1;
+        narratorCaptureOwner = NULL;
+        narratorCapturePending = FALSE;
+    }
+}
+#endif
 
 /**
  * The names of the speech systems
@@ -278,6 +537,7 @@ void closeSpeech() {
         audioBuffer = NULL;
     }
 #ifdef __AMIGAOS3__
+    waitForNarratorCapture(TRUE);
     if (TranslatorBase) {
         CloseLibrary(TranslatorBase);
         Forbid();
@@ -471,7 +731,7 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
 
         if ((output == NULL || strlen(output) == 0) &&
             !savePcmAsWav("OUT:output.wav", audioBuffer, audioLength,
-                          playbackFrequency)) {
+                          playbackFrequency, 16)) {
             displayError(STRING_ERROR_FILE_OPEN);
         }
 
@@ -556,6 +816,8 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
     }
 #ifdef __AMIGAOS3__
     if (speechSystem == SPEECH_SYSTEM_34 || speechSystem == SPEECH_SYSTEM_37) {
+        BOOL capturePrepared;
+
         if (NarratorIO == NULL) {
             if (lazyInitSpeech(speechSystem) == RETURN_ERROR)
                 return FALSE; /* initSpeech already displayed a specific error */
@@ -565,6 +827,7 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             }
         }
 
+        waitForNarratorCapture(TRUE);
         if (CheckIO((struct IORequest *)NarratorIO) == 0) {
             AbortIO((struct IORequest *)NarratorIO);
             WaitIO((struct IORequest *)NarratorIO);
@@ -587,7 +850,11 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         NarratorIO->message.io_Command = CMD_WRITE;
         NarratorIO->message.io_Data = translationBuffer;
         NarratorIO->message.io_Length = strlen(translationBuffer);
+        capturePrepared = prepareNarratorCapture(
+            text, NarratorIO->rate, NarratorIO->sampfreq);
         SendIO((struct IORequest *)NarratorIO);
+        if (capturePrepared)
+            startNarratorCaptureProcess();
     }
 #elif defined(__AMIGAOS4__)
     if (speechSystem == SPEECH_SYSTEM_FLITE) {
