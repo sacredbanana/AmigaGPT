@@ -261,8 +261,8 @@ saves it under AMIGAGPT:speech/ instead of playing it automatically. Type a
 phrase, optionally attach files, and press Generate. Each phrase is listed on
 the left, titled with the first 32 characters of the text. Selecting a phrase
 shows the speech profile that produced it and an interactive waveform.
-Play/pause (left), stop and rewind on the waveform control local playback of
-the already-saved WAV file. Click any point on the waveform to jump there.
+Play/pause (left), stop and rewind on the waveform play the already-saved
+WAV or raw PCM. Click any point on the waveform to jump there.
 Regenerate replaces the selected phrase's file. Save Speech Copy writes a
 copy somewhere else on your Amiga.
 

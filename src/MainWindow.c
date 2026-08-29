@@ -452,38 +452,31 @@ static void setSpeechPlayerDisplay(CONST_STRPTR filePath,
         speechWaveformSetFile(speechWaveform, filePath);
 }
 
+static void applySpeechWaveformPens(void) {
+    if (speechWaveform == NULL || speechWaveformClass == NULL)
+        return;
+    SetAttrs(speechWaveform, MUIA_SpeechWaveform_WavePen, greenPen,
+             MUIA_SpeechWaveform_PeakPen, yellowPen,
+             MUIA_SpeechWaveform_SpectrumPen, bluePen,
+             MUIA_SpeechWaveform_TextPen, greenPen, TAG_DONE);
+}
+
 void updatePlayButton() {
-    BOOL playing;
-    BOOL paused;
     BOOL hasSpeech;
-    ULONG position;
-    static BOOL lastPlaying = (BOOL)-1;
-    static BOOL lastPaused = (BOOL)-1;
     static BOOL lastHasSpeech = (BOOL)-1;
-    static ULONG lastPosition = (ULONG)-1;
 
     updateActionButtonLabels(FALSE);
 
     if (speechWaveform == NULL || speechWaveformClass == NULL)
         return;
 
-    playing = isSpeechPlaying();
-    paused = isSpeechPaused();
+    speechWaveformService(speechWaveform);
     hasSpeech = currentSpeech != NULL && !requestInterfaceBusy;
-    position = speechPlaybackPositionMs();
-    if (playing == lastPlaying && paused == lastPaused &&
-        hasSpeech == lastHasSpeech && position == lastPosition)
-        return;
-
-    SetAttrs(speechWaveform, MUIA_SpeechWaveform_Position, position,
-             MUIA_SpeechWaveform_Playing, playing ? TRUE : FALSE,
-             MUIA_SpeechWaveform_Paused, paused ? TRUE : FALSE,
-             MUIA_SpeechWaveform_HasSpeech, hasSpeech ? TRUE : FALSE,
-             TAG_DONE);
-    lastPlaying = playing;
-    lastPaused = paused;
-    lastHasSpeech = hasSpeech;
-    lastPosition = position;
+    if (hasSpeech != lastHasSpeech) {
+        set(speechWaveform, MUIA_SpeechWaveform_HasSpeech,
+            hasSpeech ? TRUE : FALSE);
+        lastHasSpeech = hasSpeech;
+    }
 }
 
 static void updateSpeechControls() {
@@ -852,8 +845,6 @@ HOOKPROTONHNONP(SpeechRowClickedFunc, void) {
         currentSpeech = entry;
         setEditorText(speechInputTextEditor, entry->text);
         stopSpeech();
-        if (entry->filePath != NULL)
-            loadSpeechPlayback(entry->filePath);
         setSpeechPlayerDisplay(entry->filePath, entry->profileInfo);
     }
     updateSpeechControls();
@@ -1336,7 +1327,6 @@ static void generateSpeech(BOOL regenerate) {
     DoMethod(speechListObject, MUIM_NList_Redraw, MUIV_NList_Redraw_Active);
     if (saveSpeechHistory() != RETURN_OK && createdNewEntry)
         deleteDiskFile(path);
-    loadSpeechPlayback(path);
     setSpeechPlayerDisplay(path, entry->profileInfo);
     finishActiveRequest(TRUE);
 }
@@ -1345,7 +1335,6 @@ HOOKPROTONHNONP(NewSpeechButtonClickedFunc, void) {
     currentSpeech = NULL;
     setEditorText(speechInputTextEditor, "");
     freeChatFiles(&pendingSpeechFiles);
-    unloadSpeechPlayback();
     setSpeechPlayerDisplay(NULL, NULL);
     updateSpeechControls();
     DoMethod(speechInputTextEditor, MUIM_GoActive);
@@ -1380,68 +1369,6 @@ HOOKPROTONHNONP(RegenerateSpeechButtonClickedFunc, void) {
 }
 MakeHook(RegenerateSpeechButtonClickedHook,
          RegenerateSpeechButtonClickedFunc);
-
-HOOKPROTONHNONP(PlaySpeechButtonClickedFunc, void) {
-    if (isSpeechPlaying() || currentSpeech == NULL ||
-        currentSpeech->filePath == NULL) {
-        updatePlayButton();
-        return;
-    }
-    if (speechPlaybackDurationMs() == 0)
-        loadSpeechPlayback(currentSpeech->filePath);
-    if (speechPlaybackPositionMs() >= speechPlaybackDurationMs() &&
-        speechPlaybackDurationMs() > 0)
-        seekSpeech(0);
-    if (!startSpeechPlayback())
-        playSpeechFile(currentSpeech->filePath);
-    updatePlayButton();
-}
-
-HOOKPROTONHNONP(PauseSpeechButtonClickedFunc, void) {
-    pauseSpeech();
-    updatePlayButton();
-}
-
-HOOKPROTONHNONP(StopSpeechButtonClickedFunc, void) {
-    stopSpeech();
-    updatePlayButton();
-}
-
-HOOKPROTONHNONP(RewindSpeechButtonClickedFunc, void) {
-    rewindSpeech();
-    updatePlayButton();
-}
-
-HOOKPROTONHNONP(SpeechWaveformCommandFunc, void) {
-    ULONG command = 0;
-
-    if (speechWaveform != NULL)
-        get(speechWaveform, MUIA_SpeechWaveform_Command, &command);
-    switch (command) {
-    case MUIV_SpeechWaveform_Command_Play:
-        PlaySpeechButtonClickedFunc();
-        break;
-    case MUIV_SpeechWaveform_Command_Pause:
-        PauseSpeechButtonClickedFunc();
-        break;
-    case MUIV_SpeechWaveform_Command_Stop:
-        StopSpeechButtonClickedFunc();
-        break;
-    case MUIV_SpeechWaveform_Command_Rewind:
-        RewindSpeechButtonClickedFunc();
-        break;
-    }
-}
-MakeHook(SpeechWaveformCommandHook, SpeechWaveformCommandFunc);
-
-HOOKPROTONHNONP(SpeechWaveformSeekFunc, void) {
-    ULONG positionMs = 0;
-    if (speechWaveform != NULL)
-        get(speechWaveform, MUIA_SpeechWaveform_Seek, &positionMs);
-    seekSpeech(positionMs);
-    updatePlayButton();
-}
-MakeHook(SpeechWaveformSeekHook, SpeechWaveformSeekFunc);
 
 HOOKPROTONHNONP(AttachSpeechFilesButtonClickedFunc, void) {
     ULONG oldCount = chatFileCount(&pendingSpeechFiles);
@@ -2273,6 +2200,7 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
              redPen, STRING_DELETE_IMAGE);
     set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
     setActionButtonsStopMode(requestInterfaceBusy);
+    applySpeechWaveformPens();
     FreeVec(buttonLabelText);
     SetAttrs(mainWindowObject, MUIA_Window_ActiveObject, chatInputTextEditor,
              TAG_DONE);
@@ -3024,6 +2952,7 @@ LONG createMainWindow() {
                  "\33c\33P[%ld]- %s\0", redPen, STRING_DELETE_IMAGE);
         set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
         setActionButtonsStopMode(FALSE);
+        applySpeechWaveformPens();
         FreeVec(buttonLabelText);
 
         // Force a layout refresh to ensure buttons display correctly
@@ -3107,14 +3036,8 @@ static void addMainWindowActions() {
     DoMethod(regenerateSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
              regenerateSpeechButton, 2, MUIM_CallHook,
              &RegenerateSpeechButtonClickedHook);
-    if (speechWaveformClass != NULL && speechWaveform != NULL) {
-        DoMethod(speechWaveform, MUIM_Notify, MUIA_SpeechWaveform_Seek,
-                 MUIV_EveryTime, speechWaveform, 2, MUIM_CallHook,
-                 &SpeechWaveformSeekHook);
-        DoMethod(speechWaveform, MUIM_Notify, MUIA_SpeechWaveform_Command,
-                 MUIV_EveryTime, speechWaveform, 2, MUIM_CallHook,
-                 &SpeechWaveformCommandHook);
-    }
+    if (speechWaveformClass != NULL && speechWaveform != NULL)
+        set(speechWaveform, MUIA_SpeechWaveform_HasSpeech, FALSE);
     DoMethod(saveSpeechCopyButton, MUIM_Notify, MUIA_Pressed, FALSE,
              saveSpeechCopyButton, 2, MUIM_CallHook,
              &SaveSpeechCopyButtonClickedHook);

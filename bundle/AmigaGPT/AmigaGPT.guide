@@ -347,7 +347,7 @@ AmigaGPT has three modes of operation, selected by the tabs at the top left of t
   - The @{b}input field@{ub} holds the text that will be spoken
   - @{b}Generate@{ub} writes a WAV file under AMIGAGPT:speech/ using the active speech profile. It does not play the result
   - The blank area shows the @{b}speech profile@{ub} used to generate the selected phrase (name, system, voice, model and related settings) and an interactive @{b}waveform@{ub} with a frequency timeline. The bar under the waveform has play/pause (left), stop, rewind, and the elapsed time. Click any point on the waveform to jump there
-  - Those symbols control local AHI playback of the already-saved WAV file. They do not contact a speech provider again
+  - Those symbols play the already-saved WAV or raw PCM through AHI. They do not contact a speech provider again
   - @{b}Regenerate@{ub} replaces the selected phrase's WAV file
   - @{b}Save Speech Copy@{ub} writes a copy somewhere else on your Amiga
   - @{b}Generate text with AI@{ub} rewrites the input with the active chat profile, using any attached files, then unchecks @{b}Speak contents of files@{ub}

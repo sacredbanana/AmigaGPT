@@ -10,11 +10,29 @@
 #define MUIA_SpeechWaveform_Paused (SpeechWaveform_Dummy + 0x06)
 #define MUIA_SpeechWaveform_HasSpeech (SpeechWaveform_Dummy + 0x07)
 #define MUIA_SpeechWaveform_Command (SpeechWaveform_Dummy + 0x08)
+#define MUIA_SpeechWaveform_SampleRate (SpeechWaveform_Dummy + 0x09)
+#define MUIA_SpeechWaveform_Channels (SpeechWaveform_Dummy + 0x0A)
+#define MUIA_SpeechWaveform_Bits (SpeechWaveform_Dummy + 0x0B)
+#define MUIA_SpeechWaveform_LittleEndian (SpeechWaveform_Dummy + 0x0C)
+#define MUIA_SpeechWaveform_WavePen (SpeechWaveform_Dummy + 0x0D)
+#define MUIA_SpeechWaveform_PeakPen (SpeechWaveform_Dummy + 0x0E)
+#define MUIA_SpeechWaveform_SpectrumPen (SpeechWaveform_Dummy + 0x0F)
+#define MUIA_SpeechWaveform_BackPen (SpeechWaveform_Dummy + 0x10)
+#define MUIA_SpeechWaveform_BarPen (SpeechWaveform_Dummy + 0x11)
+#define MUIA_SpeechWaveform_TextPen (SpeechWaveform_Dummy + 0x12)
+
+#define MUIV_SpeechWaveform_Pen_Default ((ULONG)~0)
 
 #define MUIV_SpeechWaveform_Command_Play 1
 #define MUIV_SpeechWaveform_Command_Pause 2
 #define MUIV_SpeechWaveform_Command_Stop 3
 #define MUIV_SpeechWaveform_Command_Rewind 4
+
+#define MUIM_SpeechWaveform_Play (SpeechWaveform_Dummy + 0x20)
+#define MUIM_SpeechWaveform_Pause (SpeechWaveform_Dummy + 0x21)
+#define MUIM_SpeechWaveform_Stop (SpeechWaveform_Dummy + 0x22)
+#define MUIM_SpeechWaveform_Rewind (SpeechWaveform_Dummy + 0x23)
+#define MUIM_SpeechWaveform_Service (SpeechWaveform_Dummy + 0x24)
 
 #define MUIC_SpeechWaveform speechWaveformClass->mcc_Class
 
@@ -29,6 +47,6 @@ extern struct MUI_CustomClass *speechWaveformClass;
 LONG createSpeechWaveformClass(void);
 void deleteSpeechWaveformClass(void);
 void speechWaveformSetFile(Object *obj, CONST_STRPTR filename);
-void speechWaveformLoadPlayback(Object *obj);
+void speechWaveformService(Object *obj);
 
 #endif

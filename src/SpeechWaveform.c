@@ -1,5 +1,7 @@
 #include <clib/alib_protos.h>
+#include <devices/ahi.h>
 #include <dos/dos.h>
+#include <exec/memory.h>
 #include <graphics/gfx.h>
 #include <graphics/gfxmacros.h>
 #include <graphics/rastport.h>
@@ -14,8 +16,6 @@
 #include <proto/utility.h>
 #include <SDI_hook.h>
 #include <string.h>
-#include "gui.h"
-#include "speech.h"
 #include "SpeechWaveform.h"
 
 #define WAVE_COLS 256
@@ -53,6 +53,30 @@ struct SpeechWaveformData {
     BOOL hasSpeech;
     UBYTE pressedBtn;
     ULONG command;
+    UBYTE *pcm;
+    ULONG pcmBytes;
+    ULONG pcmAlloc;
+    ULONG sampleRate;
+    ULONG ahiType;
+    ULONG frameSize;
+    ULONG playOffset;
+    ULONG playStartOffset;
+    ULONG playStartMs;
+    ULONG rawSampleRate;
+    UWORD rawChannels;
+    UWORD rawBits;
+    BOOL rawLittleEndian;
+    struct MsgPort *ahiPort;
+    struct AHIRequest *ahiReq;
+    BOOL ahiBusy;
+    struct MUI_InputHandlerNode ihn;
+    BOOL ihnAdded;
+    ULONG penWave;
+    ULONG penPeak;
+    ULONG penSpec;
+    ULONG penBack;
+    ULONG penBar;
+    ULONG penText;
 };
 
 static const WORD COS_TAB[FFT_N] = {
@@ -188,6 +212,12 @@ static void analyzeColumn(const WORD *window, UBYTE *peak, UBYTE *bands) {
     }
 }
 
+static BOOL loadWaveformFromSamples(struct SpeechWaveformData *data,
+                                    const UBYTE *pcm, ULONG dataLength,
+                                    ULONG sampleRate, UWORD bits,
+                                    UWORD channels, BOOL signedPcm,
+                                    BOOL bigEndian);
+
 static void freeWaveformCache(struct SpeechWaveformData *data) {
     if (data->cacheBm != NULL) {
         WaitBlit();
@@ -199,20 +229,318 @@ static void freeWaveformCache(struct SpeechWaveformData *data) {
     data->cacheHeight = 0;
 }
 
+static ULONG nowMs(void) {
+    struct DateStamp stamp;
+
+    DateStamp(&stamp);
+    return ((ULONG)stamp.ds_Minute * 60000UL) + ((ULONG)stamp.ds_Tick * 20UL);
+}
+
+static void finishAHI(struct SpeechWaveformData *data, BOOL abort) {
+    if (data->ahiReq == NULL || !data->ahiBusy)
+        return;
+    if (CheckIO((struct IORequest *)data->ahiReq) == 0 && abort)
+        AbortIO((struct IORequest *)data->ahiReq);
+    WaitIO((struct IORequest *)data->ahiReq);
+    data->ahiBusy = FALSE;
+}
+
+static void closeAHI(struct SpeechWaveformData *data) {
+    finishAHI(data, TRUE);
+    if (data->ahiReq != NULL) {
+        if (data->ahiReq->ahir_Std.io_Device != NULL)
+            CloseDevice((struct IORequest *)data->ahiReq);
+        DeleteIORequest((struct IORequest *)data->ahiReq);
+        data->ahiReq = NULL;
+    }
+    if (data->ahiPort != NULL) {
+        DeleteMsgPort(data->ahiPort);
+        data->ahiPort = NULL;
+    }
+}
+
+static BOOL initAHI(struct SpeechWaveformData *data) {
+    if (data->ahiReq != NULL)
+        return TRUE;
+    data->ahiPort = CreateMsgPort();
+    if (data->ahiPort == NULL)
+        return FALSE;
+    data->ahiReq = (struct AHIRequest *)CreateIORequest(
+        data->ahiPort, sizeof(struct AHIRequest));
+    if (data->ahiReq == NULL) {
+        DeleteMsgPort(data->ahiPort);
+        data->ahiPort = NULL;
+        return FALSE;
+    }
+    data->ahiReq->ahir_Version = 4;
+    data->ahiReq->ahir_Std.io_Message.mn_ReplyPort = data->ahiPort;
+    data->ahiReq->ahir_Std.io_Command = CMD_WRITE;
+    data->ahiReq->ahir_Std.io_Data = NULL;
+    data->ahiReq->ahir_Std.io_Length = 0;
+    data->ahiReq->ahir_Frequency = 24000;
+    data->ahiReq->ahir_Type = AHIST_M16S;
+    data->ahiReq->ahir_Volume = 0x10000;
+    data->ahiReq->ahir_Position = 0x8000;
+    if (OpenDevice(AHINAME, AHI_DEFAULT_UNIT, (struct IORequest *)data->ahiReq,
+                   0L) != 0) {
+        DeleteIORequest((struct IORequest *)data->ahiReq);
+        DeleteMsgPort(data->ahiPort);
+        data->ahiReq = NULL;
+        data->ahiPort = NULL;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static ULONG bytesFromMs(struct SpeechWaveformData *data, ULONG ms) {
+    unsigned long long bytes;
+
+    if (data->sampleRate == 0 || data->frameSize == 0)
+        return 0;
+    bytes = (unsigned long long)ms * data->sampleRate * data->frameSize;
+    bytes /= 1000ULL;
+    if (bytes > data->pcmBytes)
+        bytes = data->pcmBytes;
+    bytes -= bytes % data->frameSize;
+    return (ULONG)bytes;
+}
+
+static ULONG msFromBytes(struct SpeechWaveformData *data, ULONG bytes) {
+    unsigned long long ms;
+
+    if (data->sampleRate == 0 || data->frameSize == 0)
+        return 0;
+    if (bytes > data->pcmBytes)
+        bytes = data->pcmBytes;
+    ms = (unsigned long long)bytes * 1000ULL;
+    ms /= ((unsigned long long)data->sampleRate * data->frameSize);
+    return (ULONG)ms;
+}
+
+static ULONG currentPlayBytes(struct SpeechWaveformData *data) {
+    ULONG elapsed;
+    ULONG bytes;
+
+    if (data->pcmBytes == 0)
+        return 0;
+    if (!data->ahiBusy)
+        return data->playOffset;
+    elapsed = nowMs() - data->playStartMs;
+    bytes = data->playStartOffset + bytesFromMs(data, elapsed);
+    if (bytes > data->pcmBytes)
+        bytes = data->pcmBytes;
+    return bytes;
+}
+
+static void startAHIWrite(struct SpeechWaveformData *data, ULONG offset) {
+    data->ahiReq->ahir_Std.io_Command = CMD_WRITE;
+    data->ahiReq->ahir_Std.io_Flags = 0;
+    data->ahiReq->ahir_Std.io_Error = 0;
+    data->ahiReq->ahir_Std.io_Offset = 0;
+    data->ahiReq->ahir_Std.io_Data = data->pcm + offset;
+    data->ahiReq->ahir_Std.io_Length = data->pcmAlloc - offset;
+    data->ahiReq->ahir_Frequency = data->sampleRate;
+    data->ahiReq->ahir_Type = data->ahiType;
+    data->ahiReq->ahir_Volume = 0x10000;
+    data->ahiReq->ahir_Position = 0x8000;
+    data->ahiReq->ahir_Link = NULL;
+    SendIO((struct IORequest *)data->ahiReq);
+    data->ahiBusy = TRUE;
+}
+
+static void stopPlayback(struct SpeechWaveformData *data, BOOL resetPos) {
+    finishAHI(data, TRUE);
+    data->playing = FALSE;
+    if (resetPos) {
+        data->paused = FALSE;
+        data->playOffset = 0;
+        data->playStartOffset = 0;
+        data->positionMs = 0;
+    }
+}
+
+static void freePCM(struct SpeechWaveformData *data) {
+    if (data->pcm != NULL) {
+        FreeVec(data->pcm);
+        data->pcm = NULL;
+    }
+    data->pcmBytes = 0;
+    data->pcmAlloc = 0;
+    data->sampleRate = 0;
+    data->ahiType = 0;
+    data->frameSize = 0;
+    data->playOffset = 0;
+    data->playStartOffset = 0;
+}
+
 static void clearWaveform(struct SpeechWaveformData *data) {
+    stopPlayback(data, TRUE);
+    freePCM(data);
     memset(data->peaks, 0, sizeof(data->peaks));
     memset(data->bands, 0, sizeof(data->bands));
     data->hasAudio = FALSE;
     data->durationMs = 0;
     data->positionMs = 0;
+    data->paused = FALSE;
     data->fileName[0] = '\0';
     data->cacheValid = FALSE;
 }
 
-static BOOL loadWaveformFile(struct SpeechWaveformData *data,
-                             CONST_STRPTR filename) {
-    ULONG wavLength = 0;
-    UBYTE *wav;
+static BOOL startPlayback(struct SpeechWaveformData *data, ULONG offset) {
+    if (data->pcm == NULL || data->pcmAlloc == 0 || data->frameSize == 0)
+        return FALSE;
+    if (!initAHI(data))
+        return FALSE;
+    if (offset >= data->pcmBytes)
+        offset = 0;
+    offset -= offset % data->frameSize;
+    finishAHI(data, TRUE);
+    startAHIWrite(data, offset);
+    data->playOffset = offset;
+    data->playStartOffset = offset;
+    data->playStartMs = nowMs();
+    data->positionMs = msFromBytes(data, offset);
+    data->playing = TRUE;
+    data->paused = FALSE;
+    return TRUE;
+}
+
+static BOOL pausePlayback(struct SpeechWaveformData *data) {
+    if (!data->playing && !data->ahiBusy)
+        return FALSE;
+    data->playOffset = currentPlayBytes(data);
+    data->positionMs = msFromBytes(data, data->playOffset);
+    finishAHI(data, TRUE);
+    data->playing = FALSE;
+    data->paused = TRUE;
+    return TRUE;
+}
+
+static BOOL seekPlayback(struct SpeechWaveformData *data, ULONG ms) {
+    ULONG offset;
+    BOOL wasPlaying;
+
+    if (data->pcm == NULL)
+        return FALSE;
+    wasPlaying = data->playing || data->ahiBusy;
+    offset = bytesFromMs(data, ms);
+    finishAHI(data, TRUE);
+    data->playOffset = offset;
+    data->positionMs = msFromBytes(data, offset);
+    data->paused = !wasPlaying;
+    data->playing = FALSE;
+    if (wasPlaying)
+        return startPlayback(data, offset);
+    return TRUE;
+}
+
+static void rewindPlayback(struct SpeechWaveformData *data) {
+    BOOL wasPlaying = data->playing || data->ahiBusy;
+
+    if (data->pcm == NULL) {
+        stopPlayback(data, TRUE);
+        return;
+    }
+    finishAHI(data, TRUE);
+    data->playOffset = 0;
+    data->positionMs = 0;
+    data->paused = !wasPlaying;
+    data->playing = FALSE;
+    if (wasPlaying)
+        startPlayback(data, 0);
+}
+
+static void servicePlayback(struct SpeechWaveformData *data) {
+    ULONG bytes;
+
+    if (data->ahiBusy) {
+        if (CheckIO((struct IORequest *)data->ahiReq) != 0) {
+            finishAHI(data, FALSE);
+            data->playing = FALSE;
+            data->paused = FALSE;
+            data->playOffset = data->pcmBytes;
+            data->positionMs = data->durationMs;
+            return;
+        }
+    }
+    if (!data->playing)
+        return;
+    bytes = currentPlayBytes(data);
+    data->positionMs = msFromBytes(data, bytes);
+    if (data->positionMs > data->durationMs)
+        data->positionMs = data->durationMs;
+}
+
+static BOOL decodeToAHI(struct SpeechWaveformData *data, const UBYTE *src,
+                        ULONG srcLength, ULONG sampleRate, UWORD channels,
+                        UWORD bits, BOOL littleEndian) {
+    ULONG srcFrame;
+    ULONG dstFrame;
+    ULONG playLength;
+    ULONG padBytes;
+    ULONG converted = 0;
+    ULONG type;
+
+    srcFrame = (ULONG)((bits + 7) / 8) * channels;
+    if (srcFrame == 0 || src == NULL || srcLength == 0 || sampleRate == 0)
+        return FALSE;
+    srcLength -= srcLength % srcFrame;
+    if (srcLength == 0)
+        return FALSE;
+    dstFrame = (ULONG)(bits == 8 ? 1 : 2) * channels;
+    padBytes = sampleRate * dstFrame * 2;
+    playLength =
+        (bits == 24 ? (srcLength / 3) * 2 : srcLength) + padBytes;
+    data->pcm = AllocVec(playLength, MEMF_ANY | MEMF_CLEAR);
+    if (data->pcm == NULL)
+        return FALSE;
+    if (bits == 8) {
+        ULONG i;
+        for (i = 0; i < srcLength; i++)
+            data->pcm[i] = src[i] ^ 0x80;
+        converted = srcLength;
+        type = channels == 1 ? AHIST_M8S : AHIST_S8S;
+    } else if (bits == 24) {
+        ULONG in = 0;
+        ULONG out = 0;
+        while (in + 2 < srcLength) {
+            if (littleEndian) {
+                data->pcm[out++] = src[in + 2];
+                data->pcm[out++] = src[in + 1];
+            } else {
+                data->pcm[out++] = src[in];
+                data->pcm[out++] = src[in + 1];
+            }
+            in += 3;
+        }
+        converted = out;
+        type = channels == 1 ? AHIST_M16S : AHIST_S16S;
+    } else if (littleEndian) {
+        ULONG i;
+        for (i = 0; i + 1 < srcLength; i += 2) {
+            data->pcm[i] = src[i + 1];
+            data->pcm[i + 1] = src[i];
+        }
+        converted = srcLength;
+        type = channels == 1 ? AHIST_M16S : AHIST_S16S;
+    } else {
+        memcpy(data->pcm, src, srcLength);
+        converted = srcLength;
+        type = channels == 1 ? AHIST_M16S : AHIST_S16S;
+    }
+    data->pcmBytes = converted;
+    data->pcmAlloc = playLength;
+    data->sampleRate = sampleRate;
+    data->ahiType = type;
+    data->frameSize = dstFrame;
+    data->playOffset = 0;
+    data->playStartOffset = 0;
+    return TRUE;
+}
+
+static BOOL loadAudio(struct SpeechWaveformData *data, CONST_STRPTR filename) {
+    ULONG fileLength = 0;
+    UBYTE *file;
     ULONG riff = 0;
     ULONG offset;
     ULONG sampleRate = 0;
@@ -221,85 +549,79 @@ static BOOL loadWaveformFile(struct SpeechWaveformData *data,
     UWORD encoding = 0;
     UWORD channels = 1;
     UWORD bits = 16;
-    ULONG frames;
-    ULONG col;
-    BOOL parsed = FALSE;
+    BOOL parsedWav = FALSE;
+    BOOL littleEndian = TRUE;
+    UWORD analyzeBits;
 
     clearWaveform(data);
     if (filename == NULL || filename[0] == '\0')
         return FALSE;
 
-    wav = readWholeFile(filename, &wavLength);
-    if (wav == NULL)
+    file = readWholeFile(filename, &fileLength);
+    if (file == NULL)
         return FALSE;
 
-    while (riff + 12 <= wavLength &&
-           (memcmp(wav + riff, "RIFF", 4) != 0 ||
-            memcmp(wav + riff + 8, "WAVE", 4) != 0))
+    while (riff + 12 <= fileLength &&
+           (memcmp(file + riff, "RIFF", 4) != 0 ||
+            memcmp(file + riff + 8, "WAVE", 4) != 0))
         riff++;
-    if (riff + 12 <= wavLength) {
+    if (riff + 12 <= fileLength) {
         offset = riff + 12;
-        while (offset + 8 <= wavLength) {
-            ULONG chunkLength = readLE32(wav + offset + 4);
+        while (offset + 8 <= fileLength) {
+            ULONG chunkLength = readLE32(file + offset + 4);
             ULONG chunkData = offset + 8;
-            if (chunkData > wavLength)
+            if (chunkData > fileLength)
                 break;
-            if (chunkLength > wavLength - chunkData)
-                chunkLength = wavLength - chunkData;
-            if (memcmp(wav + offset, "fmt ", 4) == 0 && chunkLength >= 16) {
-                encoding = readLE16(wav + chunkData);
-                channels = readLE16(wav + chunkData + 2);
-                sampleRate = readLE32(wav + chunkData + 4);
-                bits = readLE16(wav + chunkData + 14);
-            } else if (memcmp(wav + offset, "data", 4) == 0) {
-                pcm = wav + chunkData;
+            if (chunkLength > fileLength - chunkData)
+                chunkLength = fileLength - chunkData;
+            if (memcmp(file + offset, "fmt ", 4) == 0 && chunkLength >= 16) {
+                encoding = readLE16(file + chunkData);
+                channels = readLE16(file + chunkData + 2);
+                sampleRate = readLE32(file + chunkData + 4);
+                bits = readLE16(file + chunkData + 14);
+            } else if (memcmp(file + offset, "data", 4) == 0) {
+                pcm = file + chunkData;
                 dataLength = chunkLength;
             }
             offset = chunkData + chunkLength + (chunkLength & 1);
         }
         if (encoding == 0xFFFE)
             encoding = 1;
-        parsed = (encoding == 1 && (channels == 1 || channels == 2) &&
-                  sampleRate != 0 && pcm != NULL && dataLength != 0 &&
-                  (bits == 8 || bits == 16 || bits == 24));
+        parsedWav = (encoding == 1 && (channels == 1 || channels == 2) &&
+                     sampleRate != 0 && pcm != NULL && dataLength != 0 &&
+                     (bits == 8 || bits == 16 || bits == 24));
     }
-    if (!parsed) {
-        pcm = wav;
-        dataLength = wavLength;
-        sampleRate = 24000;
-        channels = 1;
-        bits = 16;
+    if (!parsedWav) {
+        pcm = file;
+        dataLength = fileLength;
+        sampleRate = data->rawSampleRate ? data->rawSampleRate : 24000;
+        channels = data->rawChannels ? data->rawChannels : 1;
+        bits = data->rawBits ? data->rawBits : 16;
+        littleEndian = data->rawLittleEndian;
+        if (channels != 1 && channels != 2)
+            channels = 1;
+        if (bits != 8 && bits != 16 && bits != 24)
+            bits = 16;
     }
 
-    frames = dataLength / (((bits + 7) / 8) * channels);
-    if (frames == 0) {
-        FreeVec(wav);
+    if (!decodeToAHI(data, pcm, dataLength, sampleRate, channels, bits,
+                     littleEndian)) {
+        FreeVec(file);
         return FALSE;
     }
-    data->durationMs = (ULONG)(((unsigned long long)frames * 1000ULL) /
-                               (sampleRate ? sampleRate : 24000));
+    FreeVec(file);
 
-    for (col = 0; col < WAVE_COLS; col++) {
-        WORD window[FFT_N];
-        ULONG start = (col * frames) / WAVE_COLS;
-        ULONG end = ((col + 1) * frames) / WAVE_COLS;
-        ULONG n;
-        if (end <= start)
-            end = start + 1;
-        for (n = 0; n < FFT_N; n++) {
-            ULONG idx = start + ((end - start) * n) / FFT_N;
-            if (idx >= frames)
-                idx = frames - 1;
-            window[n] = sampleAt(pcm, idx, bits, channels, FALSE, FALSE);
-        }
-        analyzeColumn(window, &data->peaks[col], data->bands[col]);
+    analyzeBits = (UWORD)(data->frameSize / channels * 8);
+    if (analyzeBits == 0)
+        analyzeBits = 16;
+    if (!loadWaveformFromSamples(data, data->pcm, data->pcmBytes,
+                                 data->sampleRate, analyzeBits, channels, TRUE,
+                                 TRUE)) {
+        freePCM(data);
+        return FALSE;
     }
-
     strncpy(data->fileName, filename, sizeof(data->fileName) - 1);
     data->fileName[sizeof(data->fileName) - 1] = '\0';
-    data->hasAudio = TRUE;
-    data->positionMs = 0;
-    FreeVec(wav);
     return TRUE;
 }
 
@@ -353,31 +675,28 @@ static void redrawWaveform(Object *obj) {
 }
 
 void speechWaveformSetFile(Object *obj, CONST_STRPTR filename) {
-    struct SpeechWaveformData *data;
+    static const char empty[] = "";
 
     if (obj == NULL || speechWaveformClass == NULL)
         return;
-    data = INST_DATA(speechWaveformClass->mcc_Class, obj);
-    loadWaveformFile(data, filename);
-    if (!data->hasAudio && filename != NULL && filename[0] != '\0')
-        speechWaveformLoadPlayback(obj);
-    else
-        redrawWaveform(obj);
+    set(obj, MUIA_SpeechWaveform_FileName,
+        filename != NULL ? filename : (CONST_STRPTR)empty);
 }
 
-void speechWaveformLoadPlayback(Object *obj) {
+void speechWaveformService(Object *obj) {
     struct SpeechWaveformData *data;
+    ULONG oldPos;
+    BOOL oldPlaying;
 
     if (obj == NULL || speechWaveformClass == NULL)
         return;
-    if (!speechPlaybackHasAudio())
-        return;
     data = INST_DATA(speechWaveformClass->mcc_Class, obj);
-    if (loadWaveformFromSamples(
-            data, speechPlaybackSamples(), speechPlaybackSampleBytes(),
-            speechPlaybackSampleRate(), speechPlaybackBitsPerSample(),
-            speechPlaybackChannelCount(), TRUE, TRUE))
-        redrawWaveform(obj);
+    oldPos = data->positionMs;
+    oldPlaying = data->playing;
+    servicePlayback(data);
+    if ((oldPos != data->positionMs || oldPlaying != data->playing) &&
+        _win(obj) != NULL)
+        MUI_Redraw(obj, MADF_DRAWUPDATE);
 }
 
 static void addEventHandler(struct IClass *cl, Object *obj) {
@@ -418,8 +737,17 @@ static ULONG seekFromX(struct SpeechWaveformData *data, Object *obj, LONG x) {
     return ms;
 }
 
-static void waveformPens(struct DrawInfo *dri, ULONG *shadow, ULONG *shine,
-                         ULONG *wavePen, ULONG *headPen, ULONG *specPen);
+static ULONG resolvedPen(ULONG custom, ULONG fallback) {
+    return custom != MUIV_SpeechWaveform_Pen_Default ? custom : fallback;
+}
+
+static void themePens(struct DrawInfo *dri, ULONG *shadow, ULONG *shine,
+                      ULONG *fill, ULONG *face) {
+    *shadow = dri != NULL ? dri->dri_Pens[SHADOWPEN] : 1;
+    *shine = dri != NULL ? dri->dri_Pens[SHINEPEN] : 2;
+    *fill = dri != NULL ? dri->dri_Pens[FILLPEN] : 3;
+    *face = dri != NULL ? dri->dri_Pens[BACKGROUNDPEN] : 0;
+}
 
 static LONG waveformHeight(Object *obj) {
     LONG height = _mheight(obj);
@@ -439,7 +767,7 @@ static void buttonBox(Object *obj, UBYTE btn, LONG *x, LONG *y) {
 }
 
 static BOOL buttonEnabled(struct SpeechWaveformData *data, UBYTE btn) {
-    if (!data->hasSpeech)
+    if (!data->hasSpeech || !data->hasAudio)
         return FALSE;
     if (btn == BTN_PLAYPAUSE)
         return TRUE;
@@ -585,11 +913,10 @@ static void drawControlBar(struct RastPort *rp, Object *obj,
     LONG barBottom = _mtop(obj) + _mheight(obj) - 1;
     ULONG shadow;
     ULONG shine;
-    ULONG wavePen;
-    ULONG headPen;
-    ULONG specPen;
     ULONG fill;
     ULONG face;
+    ULONG usedBar;
+    ULONG usedText;
     UBYTE timeText[24];
     LONG textW;
     LONG textX;
@@ -598,13 +925,11 @@ static void drawControlBar(struct RastPort *rp, Object *obj,
     if (width <= 0 || barBottom < barTop)
         return;
 
-    waveformPens(dri, &shadow, &shine, &wavePen, &headPen, &specPen);
-    (void)wavePen;
-    (void)headPen;
-    (void)specPen;
-    fill = dri != NULL ? dri->dri_Pens[FILLPEN] : 3;
-    face = dri != NULL ? dri->dri_Pens[BACKGROUNDPEN] : 0;
-    SetAPen(rp, fill);
+    themePens(dri, &shadow, &shine, &fill, &face);
+    (void)fill;
+    usedBar = resolvedPen(data->penBar, face);
+    usedText = resolvedPen(data->penText, shine);
+    SetAPen(rp, usedBar);
     RectFill(rp, left, barTop, left + width - 1, barBottom);
     SetAPen(rp, shine);
     Move(rp, left, barTop);
@@ -615,7 +940,7 @@ static void drawControlBar(struct RastPort *rp, Object *obj,
     drawControlButton(rp, obj, data, BTN_REWIND, shine, shadow, face);
 
     formatPlayTime(timeText, data->positionMs, data->durationMs);
-    SetAPen(rp, shine);
+    SetAPen(rp, usedText);
     SetDrMd(rp, JAM1);
     textW = TextLength(rp, (STRPTR)timeText, strlen((char *)timeText));
     textX = left + width - 4 - textW;
@@ -629,6 +954,25 @@ static void drawControlBar(struct RastPort *rp, Object *obj,
     }
 }
 
+static BOOL doCommand(struct SpeechWaveformData *data, ULONG command) {
+    if (command == MUIV_SpeechWaveform_Command_Play) {
+        if (data->positionMs >= data->durationMs && data->durationMs > 0)
+            return startPlayback(data, 0);
+        return startPlayback(data, data->playOffset);
+    }
+    if (command == MUIV_SpeechWaveform_Command_Pause)
+        return pausePlayback(data);
+    if (command == MUIV_SpeechWaveform_Command_Stop) {
+        stopPlayback(data, TRUE);
+        return TRUE;
+    }
+    if (command == MUIV_SpeechWaveform_Command_Rewind) {
+        rewindPlayback(data);
+        return TRUE;
+    }
+    return FALSE;
+}
+
 static ULONG commandForButton(struct SpeechWaveformData *data, UBYTE btn) {
     if (btn == BTN_PLAYPAUSE)
         return data->playing ? MUIV_SpeechWaveform_Command_Pause
@@ -640,18 +984,6 @@ static ULONG commandForButton(struct SpeechWaveformData *data, UBYTE btn) {
     return 0;
 }
 
-static void waveformPens(struct DrawInfo *dri, ULONG *shadow, ULONG *shine,
-                         ULONG *wavePen, ULONG *headPen, ULONG *specPen) {
-    ULONG fill;
-
-    *shadow = dri != NULL ? dri->dri_Pens[SHADOWPEN] : 1;
-    *shine = dri != NULL ? dri->dri_Pens[SHINEPEN] : 2;
-    fill = dri != NULL ? dri->dri_Pens[FILLPEN] : 3;
-    *wavePen = greenPen ? greenPen : *shine;
-    *headPen = yellowPen ? yellowPen : *shine;
-    *specPen = bluePen ? bluePen : fill;
-}
-
 static void renderStaticWaveform(struct RastPort *rp, LONG left, LONG top,
                                  LONG width, LONG height,
                                  struct SpeechWaveformData *data,
@@ -660,12 +992,20 @@ static void renderStaticWaveform(struct RastPort *rp, LONG left, LONG top,
     LONG mid;
     ULONG shadow;
     ULONG shine;
+    ULONG fill;
+    ULONG face;
     ULONG wavePen;
     ULONG headPen;
     ULONG specPen;
+    ULONG backPen;
 
-    waveformPens(dri, &shadow, &shine, &wavePen, &headPen, &specPen);
-    SetAPen(rp, shadow);
+    themePens(dri, &shadow, &shine, &fill, &face);
+    (void)face;
+    wavePen = resolvedPen(data->penWave, shine);
+    headPen = resolvedPen(data->penPeak, shine);
+    specPen = resolvedPen(data->penSpec, fill);
+    backPen = resolvedPen(data->penBack, shadow);
+    SetAPen(rp, backPen);
     RectFill(rp, left, top, left + width - 1, top + height - 1);
 
     if (!data->hasAudio) {
@@ -735,13 +1075,17 @@ static void drawPlayhead(struct RastPort *rp, LONG left, LONG top, LONG width,
     LONG playX;
     ULONG shadow;
     ULONG shine;
-    ULONG wavePen;
+    ULONG fill;
+    ULONG face;
     ULONG headPen;
-    ULONG specPen;
 
     if (!data->hasAudio || data->durationMs == 0 || width <= 0)
         return;
-    waveformPens(dri, &shadow, &shine, &wavePen, &headPen, &specPen);
+    themePens(dri, &shadow, &shine, &fill, &face);
+    (void)shadow;
+    (void)fill;
+    (void)face;
+    headPen = resolvedPen(data->penPeak, shine);
     playX = left + (LONG)((data->positionMs * (ULONG)width) / data->durationMs);
     if (playX < left)
         playX = left;
@@ -811,12 +1155,73 @@ static void drawWaveform(struct IClass *cl, Object *obj) {
     drawControlBar(rp, obj, data, dri);
 }
 
-static SAVEDS ULONG mNew(struct IClass *cl, Object *obj, Msg msg) {
-    if (!(obj = (Object *)DoSuperMethodA(cl, obj, msg)))
+static SAVEDS ULONG mNew(struct IClass *cl, Object *obj, struct opSet *msg) {
+    if (!(obj = (Object *)DoSuperMethodA(cl, obj, (Msg)msg)))
         return 0;
     {
         struct SpeechWaveformData *data = INST_DATA(cl, obj);
+        struct TagItem *tags;
+        struct TagItem *tag;
+        CONST_STRPTR fileName = NULL;
+
         memset(data, 0, sizeof(*data));
+        data->rawSampleRate = 24000;
+        data->rawChannels = 1;
+        data->rawBits = 16;
+        data->rawLittleEndian = TRUE;
+        data->hasSpeech = TRUE;
+        data->penWave = MUIV_SpeechWaveform_Pen_Default;
+        data->penPeak = MUIV_SpeechWaveform_Pen_Default;
+        data->penSpec = MUIV_SpeechWaveform_Pen_Default;
+        data->penBack = MUIV_SpeechWaveform_Pen_Default;
+        data->penBar = MUIV_SpeechWaveform_Pen_Default;
+        data->penText = MUIV_SpeechWaveform_Pen_Default;
+        for (tags = msg->ops_AttrList; (tag = NextTagItem(&tags));) {
+            switch (tag->ti_Tag) {
+            case MUIA_SpeechWaveform_SampleRate:
+                if (tag->ti_Data != 0)
+                    data->rawSampleRate = tag->ti_Data;
+                break;
+            case MUIA_SpeechWaveform_Channels:
+                if (tag->ti_Data == 1 || tag->ti_Data == 2)
+                    data->rawChannels = (UWORD)tag->ti_Data;
+                break;
+            case MUIA_SpeechWaveform_Bits:
+                if (tag->ti_Data == 8 || tag->ti_Data == 16 ||
+                    tag->ti_Data == 24)
+                    data->rawBits = (UWORD)tag->ti_Data;
+                break;
+            case MUIA_SpeechWaveform_LittleEndian:
+                data->rawLittleEndian = tag->ti_Data ? TRUE : FALSE;
+                break;
+            case MUIA_SpeechWaveform_HasSpeech:
+                data->hasSpeech = tag->ti_Data ? TRUE : FALSE;
+                break;
+            case MUIA_SpeechWaveform_FileName:
+                fileName = (CONST_STRPTR)tag->ti_Data;
+                break;
+            case MUIA_SpeechWaveform_WavePen:
+                data->penWave = tag->ti_Data;
+                break;
+            case MUIA_SpeechWaveform_PeakPen:
+                data->penPeak = tag->ti_Data;
+                break;
+            case MUIA_SpeechWaveform_SpectrumPen:
+                data->penSpec = tag->ti_Data;
+                break;
+            case MUIA_SpeechWaveform_BackPen:
+                data->penBack = tag->ti_Data;
+                break;
+            case MUIA_SpeechWaveform_BarPen:
+                data->penBar = tag->ti_Data;
+                break;
+            case MUIA_SpeechWaveform_TextPen:
+                data->penText = tag->ti_Data;
+                break;
+            }
+        }
+        if (fileName != NULL && fileName[0] != '\0')
+            loadAudio(data, fileName);
     }
     return (ULONG)obj;
 }
@@ -849,6 +1254,49 @@ static SAVEDS ULONG mGet(struct IClass *cl, Object *obj, struct opGet *msg) {
     case MUIA_SpeechWaveform_Command:
         *msg->opg_Storage = data->command;
         return TRUE;
+    case MUIA_SpeechWaveform_SampleRate:
+        *msg->opg_Storage = data->hasAudio ? data->sampleRate
+                                           : data->rawSampleRate;
+        return TRUE;
+    case MUIA_SpeechWaveform_Channels:
+        *msg->opg_Storage =
+            data->hasAudio
+                ? (ULONG)((data->ahiType == AHIST_S8S ||
+                           data->ahiType == AHIST_S16S)
+                              ? 2
+                              : 1)
+                : (ULONG)data->rawChannels;
+        return TRUE;
+    case MUIA_SpeechWaveform_Bits:
+        *msg->opg_Storage =
+            data->hasAudio
+                ? (ULONG)((data->ahiType == AHIST_M8S ||
+                           data->ahiType == AHIST_S8S)
+                              ? 8
+                              : 16)
+                : (ULONG)data->rawBits;
+        return TRUE;
+    case MUIA_SpeechWaveform_LittleEndian:
+        *msg->opg_Storage = (ULONG)data->rawLittleEndian;
+        return TRUE;
+    case MUIA_SpeechWaveform_WavePen:
+        *msg->opg_Storage = data->penWave;
+        return TRUE;
+    case MUIA_SpeechWaveform_PeakPen:
+        *msg->opg_Storage = data->penPeak;
+        return TRUE;
+    case MUIA_SpeechWaveform_SpectrumPen:
+        *msg->opg_Storage = data->penSpec;
+        return TRUE;
+    case MUIA_SpeechWaveform_BackPen:
+        *msg->opg_Storage = data->penBack;
+        return TRUE;
+    case MUIA_SpeechWaveform_BarPen:
+        *msg->opg_Storage = data->penBar;
+        return TRUE;
+    case MUIA_SpeechWaveform_TextPen:
+        *msg->opg_Storage = data->penText;
+        return TRUE;
     }
     return DoSuperMethodA(cl, obj, (Msg)msg);
 }
@@ -863,29 +1311,40 @@ static SAVEDS ULONG mSet(struct IClass *cl, Object *obj, struct opSet *msg) {
     for (tags = msg->ops_AttrList; (tag = NextTagItem(&tags));) {
         switch (tag->ti_Tag) {
         case MUIA_SpeechWaveform_FileName:
-            loadWaveformFile(data, (CONST_STRPTR)tag->ti_Data);
+            loadAudio(data, (CONST_STRPTR)tag->ti_Data);
             data->cacheValid = FALSE;
             redraw = TRUE;
             break;
+        case MUIA_SpeechWaveform_SampleRate:
+            if (tag->ti_Data != 0)
+                data->rawSampleRate = tag->ti_Data;
+            break;
+        case MUIA_SpeechWaveform_Channels:
+            if (tag->ti_Data == 1 || tag->ti_Data == 2)
+                data->rawChannels = (UWORD)tag->ti_Data;
+            break;
+        case MUIA_SpeechWaveform_Bits:
+            if (tag->ti_Data == 8 || tag->ti_Data == 16 || tag->ti_Data == 24)
+                data->rawBits = (UWORD)tag->ti_Data;
+            break;
+        case MUIA_SpeechWaveform_LittleEndian:
+            data->rawLittleEndian = tag->ti_Data ? TRUE : FALSE;
+            break;
         case MUIA_SpeechWaveform_Position:
-            if (data->positionMs != tag->ti_Data) {
-                data->positionMs = tag->ti_Data;
-                if (data->positionMs > data->durationMs)
-                    data->positionMs = data->durationMs;
-                update = TRUE;
-            }
+            if (data->hasAudio)
+                seekPlayback(data, tag->ti_Data);
+            update = TRUE;
             break;
         case MUIA_SpeechWaveform_Playing:
-            if (data->playing != (BOOL)tag->ti_Data) {
-                data->playing = (BOOL)tag->ti_Data;
-                update = TRUE;
-            }
+            if (tag->ti_Data)
+                startPlayback(data, data->playOffset);
+            else
+                pausePlayback(data);
+            update = TRUE;
             break;
         case MUIA_SpeechWaveform_Paused:
-            if (data->paused != (BOOL)tag->ti_Data) {
-                data->paused = (BOOL)tag->ti_Data;
-                update = TRUE;
-            }
+            data->paused = tag->ti_Data ? TRUE : FALSE;
+            update = TRUE;
             break;
         case MUIA_SpeechWaveform_HasSpeech:
             if (data->hasSpeech != (BOOL)tag->ti_Data) {
@@ -895,6 +1354,46 @@ static SAVEDS ULONG mSet(struct IClass *cl, Object *obj, struct opSet *msg) {
             break;
         case MUIA_SpeechWaveform_Command:
             data->command = tag->ti_Data;
+            break;
+        case MUIA_SpeechWaveform_WavePen:
+            if (data->penWave != tag->ti_Data) {
+                data->penWave = tag->ti_Data;
+                data->cacheValid = FALSE;
+                redraw = TRUE;
+            }
+            break;
+        case MUIA_SpeechWaveform_PeakPen:
+            if (data->penPeak != tag->ti_Data) {
+                data->penPeak = tag->ti_Data;
+                data->cacheValid = FALSE;
+                redraw = TRUE;
+            }
+            break;
+        case MUIA_SpeechWaveform_SpectrumPen:
+            if (data->penSpec != tag->ti_Data) {
+                data->penSpec = tag->ti_Data;
+                data->cacheValid = FALSE;
+                redraw = TRUE;
+            }
+            break;
+        case MUIA_SpeechWaveform_BackPen:
+            if (data->penBack != tag->ti_Data) {
+                data->penBack = tag->ti_Data;
+                data->cacheValid = FALSE;
+                redraw = TRUE;
+            }
+            break;
+        case MUIA_SpeechWaveform_BarPen:
+            if (data->penBar != tag->ti_Data) {
+                data->penBar = tag->ti_Data;
+                update = TRUE;
+            }
+            break;
+        case MUIA_SpeechWaveform_TextPen:
+            if (data->penText != tag->ti_Data) {
+                data->penText = tag->ti_Data;
+                update = TRUE;
+            }
             break;
         }
     }
@@ -909,6 +1408,37 @@ static SAVEDS ULONG mSet(struct IClass *cl, Object *obj, struct opSet *msg) {
     return DoSuperMethodA(cl, obj, (Msg)msg);
 }
 
+static void addInputHandler(struct IClass *cl, Object *obj) {
+    struct SpeechWaveformData *data = INST_DATA(cl, obj);
+    Object *app = _app(obj);
+
+    (void)cl;
+    if (data->ihnAdded || app == NULL)
+        return;
+#ifdef MUIIHNF_TIMER
+    memset(&data->ihn, 0, sizeof(data->ihn));
+    data->ihn.ihn_Object = obj;
+    data->ihn.ihn_Flags = MUIIHNF_TIMER;
+    data->ihn.ihn_Millis = 80;
+    DoMethod(app, MUIM_Application_AddInputHandler, &data->ihn);
+    data->ihnAdded = TRUE;
+#endif
+}
+
+static void remInputHandler(struct IClass *cl, Object *obj) {
+    struct SpeechWaveformData *data = INST_DATA(cl, obj);
+    Object *app = _app(obj);
+
+    (void)cl;
+    if (!data->ihnAdded)
+        return;
+#ifdef MUIIHNF_TIMER
+    if (app != NULL)
+        DoMethod(app, MUIM_Application_RemInputHandler, &data->ihn);
+#endif
+    data->ihnAdded = FALSE;
+}
+
 static SAVEDS ULONG mSetup(struct IClass *cl, Object *obj, Msg msg) {
     struct SpeechWaveformData *data = INST_DATA(cl, obj);
 
@@ -921,14 +1451,74 @@ static SAVEDS ULONG mSetup(struct IClass *cl, Object *obj, Msg msg) {
     data->eh.ehn_Flags = MUI_EHF_GUIMODE;
     data->eh.ehn_Priority = 0;
     addEventHandler(cl, obj);
+    addInputHandler(cl, obj);
     return TRUE;
 }
 
 static SAVEDS ULONG mCleanup(struct IClass *cl, Object *obj, Msg msg) {
     struct SpeechWaveformData *data = INST_DATA(cl, obj);
+    remInputHandler(cl, obj);
     remEventHandler(cl, obj);
+    stopPlayback(data, FALSE);
+    closeAHI(data);
     freeWaveformCache(data);
     return DoSuperMethodA(cl, obj, msg);
+}
+
+static SAVEDS ULONG mDispose(struct IClass *cl, Object *obj, Msg msg) {
+    struct SpeechWaveformData *data = INST_DATA(cl, obj);
+    stopPlayback(data, TRUE);
+    closeAHI(data);
+    freePCM(data);
+    freeWaveformCache(data);
+    return DoSuperMethodA(cl, obj, msg);
+}
+
+static SAVEDS ULONG mPlay(struct IClass *cl, Object *obj, Msg msg) {
+    struct SpeechWaveformData *data = INST_DATA(cl, obj);
+
+    (void)msg;
+    doCommand(data, MUIV_SpeechWaveform_Command_Play);
+    if (_win(obj) != NULL)
+        MUI_Redraw(obj, MADF_DRAWUPDATE);
+    return TRUE;
+}
+
+static SAVEDS ULONG mPause(struct IClass *cl, Object *obj, Msg msg) {
+    struct SpeechWaveformData *data = INST_DATA(cl, obj);
+
+    (void)msg;
+    doCommand(data, MUIV_SpeechWaveform_Command_Pause);
+    if (_win(obj) != NULL)
+        MUI_Redraw(obj, MADF_DRAWUPDATE);
+    return TRUE;
+}
+
+static SAVEDS ULONG mStop(struct IClass *cl, Object *obj, Msg msg) {
+    struct SpeechWaveformData *data = INST_DATA(cl, obj);
+
+    (void)msg;
+    doCommand(data, MUIV_SpeechWaveform_Command_Stop);
+    if (_win(obj) != NULL)
+        MUI_Redraw(obj, MADF_DRAWUPDATE);
+    return TRUE;
+}
+
+static SAVEDS ULONG mRewind(struct IClass *cl, Object *obj, Msg msg) {
+    struct SpeechWaveformData *data = INST_DATA(cl, obj);
+
+    (void)msg;
+    doCommand(data, MUIV_SpeechWaveform_Command_Rewind);
+    if (_win(obj) != NULL)
+        MUI_Redraw(obj, MADF_DRAWUPDATE);
+    return TRUE;
+}
+
+static SAVEDS ULONG mService(struct IClass *cl, Object *obj, Msg msg) {
+    (void)cl;
+    (void)msg;
+    speechWaveformService(obj);
+    return TRUE;
 }
 
 static SAVEDS ULONG mAskMinMax(struct IClass *cl, Object *obj,
@@ -957,8 +1547,10 @@ static SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
     LONG mx;
     LONG my;
 
-    if (imsg == NULL)
-        return DoSuperMethodA(cl, obj, (Msg)msg);
+    if (imsg == NULL) {
+        speechWaveformService(obj);
+        return 0;
+    }
 
     mx = imsg->MouseX;
     my = imsg->MouseY;
@@ -978,7 +1570,7 @@ static SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
                 ULONG ms = seekFromX(data, obj, mx);
                 data->dragging = TRUE;
                 data->pressedBtn = BTN_NONE;
-                data->positionMs = ms;
+                seekPlayback(data, ms);
                 MUI_Redraw(obj, MADF_DRAWUPDATE);
                 set(obj, MUIA_SpeechWaveform_Seek, ms);
                 return MUI_EventHandlerRC_Eat;
@@ -992,8 +1584,11 @@ static SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
                 if (buttonAt(obj, mx, my) == pressed &&
                     buttonEnabled(data, pressed)) {
                     ULONG command = commandForButton(data, pressed);
-                    if (command != 0)
+                    if (command != 0) {
+                        doCommand(data, command);
+                        MUI_Redraw(obj, MADF_DRAWUPDATE);
                         set(obj, MUIA_SpeechWaveform_Command, command);
+                    }
                 }
                 return MUI_EventHandlerRC_Eat;
             }
@@ -1002,7 +1597,7 @@ static SAVEDS ULONG mHandleEvent(struct IClass *cl, Object *obj,
                data->hasAudio) {
         ULONG ms = seekFromX(data, obj, mx);
         if (ms != data->positionMs) {
-            data->positionMs = ms;
+            seekPlayback(data, ms);
             MUI_Redraw(obj, MADF_DRAWUPDATE);
             set(obj, MUIA_SpeechWaveform_Seek, ms);
         }
@@ -1016,6 +1611,8 @@ DISPATCHER(SpeechWaveformDispatcher) {
     switch (msg->MethodID) {
     case OM_NEW:
         return (mNew(cl, obj, (APTR)msg));
+    case OM_DISPOSE:
+        return (mDispose(cl, obj, (APTR)msg));
     case OM_GET:
         return (mGet(cl, obj, (APTR)msg));
     case OM_SET:
@@ -1024,6 +1621,16 @@ DISPATCHER(SpeechWaveformDispatcher) {
         return (mSetup(cl, obj, (APTR)msg));
     case MUIM_Cleanup:
         return (mCleanup(cl, obj, (APTR)msg));
+    case MUIM_SpeechWaveform_Play:
+        return (mPlay(cl, obj, (APTR)msg));
+    case MUIM_SpeechWaveform_Pause:
+        return (mPause(cl, obj, (APTR)msg));
+    case MUIM_SpeechWaveform_Stop:
+        return (mStop(cl, obj, (APTR)msg));
+    case MUIM_SpeechWaveform_Rewind:
+        return (mRewind(cl, obj, (APTR)msg));
+    case MUIM_SpeechWaveform_Service:
+        return (mService(cl, obj, (APTR)msg));
     case MUIM_AskMinMax:
         return (mAskMinMax(cl, obj, (APTR)msg));
     case MUIM_Draw:

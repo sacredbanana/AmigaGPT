@@ -90,7 +90,8 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
 
 /**
  * Play a saved mono PCM WAV file through AHI without contacting a speech
- * provider. Starts from the beginning of the file.
+ * provider. Starts from the beginning of the file. The Speech tab waveform
+ * gadget has its own player; these helpers are for speak-to-file and ARexx.
  **/
 BOOL playSpeechFile(CONST_STRPTR filename);
 
