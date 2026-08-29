@@ -55,6 +55,8 @@ Strings are referenced as `STRING_*` symbols generated from `catalogs/AmigaGPT.p
 ## Repo-specific guidance
 
 - Project skills live in `.agents/skills/` (Agent Skills standard). Cursor, Codex, and other compatible agents load that path directly. Claude Code loads the same files through links under `.claude/skills/`.
+- When testing the AmigaGPT GUI through AmiKit/Amiberry automation, submit text from the prompt field by pressing Return. There is no need to locate and click the Send button.
+- AmiKit normally finishes booting in about 10-15 seconds, so do not use a long fixed wait before checking whether it is ready. Open an Amiga Shell with Left Alt+S.
 - Provider docs: prefer the project MCP servers `openaiDeveloperDocs` (OpenAI) and `xaiDocs` (xAI), and the `openai-docs` / `xai-docs` skills, over general web search.
 - AmigaOS / NDK / autodoc / SDK questions, library API lookups, and classic Amiga book recommendations: use the `amiga-sdk-docs` skill. It searches the local `sacredbanana/AmigaSDK-gcc` clone at `.agents/skills/amiga-sdk-docs/cache/amigasdk-gcc` (sync via `./.agents/skills/amiga-sdk-docs/scripts/sync-repo.sh`) and the retro-commodore.eu book catalog. Wait for the sync to finish before falling back to the web. Do not commit anything under `.agents/skills/amiga-sdk-docs/cache/`.
 - Building AmigaGPT itself: use the `build-amigagpt` skill — only the three `build_*.sh` scripts work in this environment.
