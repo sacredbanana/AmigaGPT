@@ -408,6 +408,9 @@ struct json_object **postChatMessageToOpenAI(
  * @param proxyPassword the proxy password to use
  * @param imageFormat the image format to use
  * @param apiEndpoint the API endpoint to use
+ * @param referenceImages a list of struct ChatFile to send as reference images,
+ *or NULL for a plain text-to-image request. Only entries with a local path are
+ *used, and their presence turns the request into an image edit
  * @return a pointer to a new json_object containing the response or NULL --
  *Free it with json_object_put when you are done using it
  **/
@@ -418,7 +421,7 @@ struct json_object *postImageCreationRequestToOpenAI(
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, ImageFormat imageFormat,
-    APIImageEndpoint apiEndpoint);
+    APIImageEndpoint apiEndpoint, struct MinList *referenceImages);
 
 /**
  * Download a file from the internet
@@ -756,6 +759,16 @@ struct json_object *getXAICustomVoices(
  * the file name in that case
  **/
 STRPTR detectMimeTypeFromContents(CONST_STRPTR path);
+
+/**
+ * True when an attachment is a picture, so it can be used as a reference image
+ * for image generation.
+ * @param path the file's path, used to guess from the name when no magic
+ * database is installed
+ * @param detectedMime the MIME type libmagic reported, or NULL if it could not
+ * be determined
+ **/
+BOOL attachmentLooksLikeImage(CONST_STRPTR path, CONST_STRPTR detectedMime);
 
 /**
  * True for api.openai.com and for AmiKit's OpenAI-compatible proxy. The proxy

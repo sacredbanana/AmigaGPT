@@ -62,12 +62,18 @@ Object *imageView;
 Object *imageViewGroup;
 Object *openImageButton;
 Object *saveImageCopyButton;
+Object *editImageButton;
+Object *attachReferenceImagesButton;
+Object *clearReferenceImagesButton;
+Object *referenceImageSummaryText;
 Object *modeRegisterGroup;
 STRPTR chatOutputTextEditorContents = NULL;
 static ULONG chatOutputTextEditorContentsCapacity =
     CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH;
 static struct MinList pendingChatFiles;
 static BOOL pendingChatFilesInitialized = FALSE;
+static struct MinList pendingImageFiles;
+static BOOL pendingImageFilesInitialized = FALSE;
 WORD pens[NUMDRIPENS + 1];
 struct Conversation *currentConversation = NULL;
 struct GeneratedImage *currentImage = NULL;
@@ -95,6 +101,7 @@ static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
 static BOOL ensureChatOutputBufferCapacity(ULONG required);
 static void addMainWindowActions();
 static void updateAttachmentControls();
+static void updateReferenceImageControls();
 static void updateResponseFileControl();
 
 static CONST_STRPTR jsonStringValue(struct json_object *object,
@@ -144,6 +151,34 @@ static void updateAttachmentControls() {
     set(clearAttachmentsButton, MUIA_Disabled, count == 0);
 }
 
+static void updateReferenceImageControls() {
+    if (!pendingImageFilesInitialized || referenceImageSummaryText == NULL)
+        return;
+    ULONG count = chatFileCount(&pendingImageFiles);
+    UBYTE summary[128];
+    if (count == 0) {
+        snprintf(summary, sizeof(summary), "%s", STRING_NO_REFERENCE_IMAGES);
+    } else {
+        snprintf(summary, sizeof(summary),
+                 STRING_REFERENCE_IMAGES_ATTACHED_FORMAT, count);
+    }
+    set(referenceImageSummaryText, MUIA_Text_Contents, summary);
+    set(clearReferenceImagesButton, MUIA_Disabled, count == 0);
+}
+
+/* Everything the user can touch while an image request is in flight. Clear is
+ * a special case: it stays disabled afterwards when there is nothing to clear.
+ */
+static void setImageGenerationControlsDisabled(BOOL disabled) {
+    set(createImageButton, MUIA_Disabled, disabled);
+    set(newImageButton, MUIA_Disabled, disabled);
+    set(deleteImageButton, MUIA_Disabled, disabled);
+    set(imageInputTextEditor, MUIA_Disabled, disabled);
+    set(attachReferenceImagesButton, MUIA_Disabled, disabled);
+    set(clearReferenceImagesButton, MUIA_Disabled,
+        disabled || chatFileCount(&pendingImageFiles) == 0);
+}
+
 static ULONG responseFileCount(struct Conversation *conversation) {
     ULONG count = 0;
     if (conversation == NULL)
@@ -177,6 +212,10 @@ void freeMainWindowFileState() {
     if (pendingChatFilesInitialized) {
         freeChatFiles(&pendingChatFiles);
         pendingChatFilesInitialized = FALSE;
+    }
+    if (pendingImageFilesInitialized) {
+        freeChatFiles(&pendingImageFiles);
+        pendingImageFilesInitialized = FALSE;
     }
 }
 
@@ -355,6 +394,7 @@ HOOKPROTONHNONP(ImageRowClickedFunc, void) {
         set(createImageButton, MUIA_Disabled, TRUE);
         set(openImageButton, MUIA_Disabled, FALSE);
         set(saveImageCopyButton, MUIA_Disabled, FALSE);
+        set(editImageButton, MUIA_Disabled, FALSE);
         if (isAROS) {
             set(imageInputTextEditor, MUIA_String_Contents, image->prompt);
         } else {
@@ -397,9 +437,9 @@ HOOKPROTONHNONP(DeleteChatButtonClickedFunc, void) {
 }
 MakeHook(DeleteChatButtonClickedHook, DeleteChatButtonClickedFunc);
 
-static void addPendingChatFile(CONST_STRPTR path, CONST_STRPTR name) {
-    if (path == NULL || name == NULL ||
-        chatFilePathAlreadyPresent(&pendingChatFiles, path))
+static void addPendingFile(struct MinList *files, CONST_STRPTR path,
+                           CONST_STRPTR name, BOOL imagesOnly) {
+    if (path == NULL || name == NULL || chatFilePathAlreadyPresent(files, path))
         return;
     UTF8 *nameUTF8 = CodesetsUTF8Create(
         CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source, (Tag)name,
@@ -409,24 +449,31 @@ static void addPendingChatFile(CONST_STRPTR path, CONST_STRPTR name) {
      * just asked for. NULL simply means no database is installed, in which case
      * the type is guessed from the file name at send time instead. */
     STRPTR detectedMime = detectMimeTypeFromContents(path);
-    if (!addChatFile(&pendingChatFiles, path,
-                     nameUTF8 != NULL ? nameUTF8 : (UTF8 *)name, detectedMime,
-                     NULL, NULL, NULL))
+    /* An image request can only carry pictures, and what the provider says
+     * about anything else is not something a user could act on, so the file is
+     * turned away here instead. */
+    if (imagesOnly && !attachmentLooksLikeImage(path, detectedMime)) {
+        displayError(STRING_ERROR_NOT_AN_IMAGE);
+    } else if (!addChatFile(files, path,
+                            nameUTF8 != NULL ? nameUTF8 : (UTF8 *)name,
+                            detectedMime, NULL, NULL, NULL)) {
         displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+    }
     if (detectedMime != NULL)
         FreeVec(detectedMime); /* addChatFile took its own copy */
     if (nameUTF8 != NULL)
         CodesetsFreeA(nameUTF8, NULL);
 }
 
-HOOKPROTONHNONP(AttachFilesButtonClickedFunc, void) {
+static void requestFilesIntoList(struct MinList *files, CONST_STRPTR title,
+                                 BOOL imagesOnly) {
     struct FileRequester *fileReq =
         AllocAslRequestTags(ASL_FileRequest, TAG_END);
     if (fileReq == NULL)
         return;
     if (AslRequestTags(fileReq, ASLFR_Window, mainWindow, ASLFR_TitleText,
-                       STRING_ATTACH_FILES, ASLFR_DoMultiSelect, TRUE,
-                       ASLFR_RejectIcons, TRUE, TAG_DONE)) {
+                       title, ASLFR_DoMultiSelect, TRUE, ASLFR_RejectIcons,
+                       TRUE, TAG_DONE)) {
         if (fileReq->fr_NumArgs > 0 && fileReq->fr_ArgList != NULL) {
             for (LONG i = 0; i < fileReq->fr_NumArgs; i++) {
                 UBYTE fullPath[1024] = {0};
@@ -434,7 +481,8 @@ HOOKPROTONHNONP(AttachFilesButtonClickedFunc, void) {
                 if (NameFromLock(argument->wa_Lock, fullPath,
                                  sizeof(fullPath))) {
                     AddPart(fullPath, argument->wa_Name, sizeof(fullPath));
-                    addPendingChatFile(fullPath, argument->wa_Name);
+                    addPendingFile(files, fullPath, argument->wa_Name,
+                                   imagesOnly);
                 }
             }
         } else if (fileReq->fr_File != NULL &&
@@ -447,12 +495,16 @@ HOOKPROTONHNONP(AttachFilesButtonClickedFunc, void) {
                 strncpy(fullPath, fileReq->fr_Drawer,
                         strlen(fileReq->fr_Drawer));
                 AddPart(fullPath, fileReq->fr_File, fullPathLength);
-                addPendingChatFile(fullPath, fileReq->fr_File);
+                addPendingFile(files, fullPath, fileReq->fr_File, imagesOnly);
                 FreeVec(fullPath);
             }
         }
     }
     FreeAslRequest(fileReq);
+}
+
+HOOKPROTONHNONP(AttachFilesButtonClickedFunc, void) {
+    requestFilesIntoList(&pendingChatFiles, STRING_ATTACH_FILES, FALSE);
     updateAttachmentControls();
 }
 MakeHook(AttachFilesButtonClickedHook, AttachFilesButtonClickedFunc);
@@ -463,6 +515,21 @@ HOOKPROTONHNONP(ClearAttachmentsButtonClickedFunc, void) {
 }
 MakeHook(ClearAttachmentsButtonClickedHook,
          ClearAttachmentsButtonClickedFunc);
+
+HOOKPROTONHNONP(AttachReferenceImagesButtonClickedFunc, void) {
+    requestFilesIntoList(&pendingImageFiles, STRING_ATTACH_REFERENCE_IMAGES,
+                         TRUE);
+    updateReferenceImageControls();
+}
+MakeHook(AttachReferenceImagesButtonClickedHook,
+         AttachReferenceImagesButtonClickedFunc);
+
+HOOKPROTONHNONP(ClearReferenceImagesButtonClickedFunc, void) {
+    freeChatFiles(&pendingImageFiles);
+    updateReferenceImageControls();
+}
+MakeHook(ClearReferenceImagesButtonClickedHook,
+         ClearReferenceImagesButtonClickedFunc);
 
 
 HOOKPROTONHNONP(SaveResponseFilesButtonClickedFunc, void) {
@@ -572,10 +639,13 @@ MakeHook(StopSpeakingButtonClickedHook, StopSpeakingButtonClickedFunc);
 
 HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
     currentImage = NULL;
+    freeChatFiles(&pendingImageFiles);
+    updateReferenceImageControls();
     set(imageInputTextEditor, MUIA_Disabled, FALSE);
     set(createImageButton, MUIA_Disabled, FALSE);
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);
+    set(editImageButton, MUIA_Disabled, TRUE);
     if (isAROS) {
         set(imageInputTextEditor, MUIA_String_Contents, "");
     } else {
@@ -610,6 +680,8 @@ HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
              MUIV_NList_Select_Off, NULL);
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);
+    set(editImageButton, MUIA_Disabled, TRUE);
+    currentImage = NULL;
     if (isAROS) {
         set(imageInputTextEditor, MUIA_String_Contents, "");
     } else {
@@ -627,6 +699,37 @@ HOOKPROTONHNONP(DeleteImageButtonClickedFunc, void) {
     saveImages();
 }
 MakeHook(DeleteImageButtonClickedHook, DeleteImageButtonClickedFunc);
+
+/* Start a fresh prompt with the image on screen attached as its reference, so
+ * that "make the sky darker" is one click away from a picture that just came
+ * back. The list selection is dropped -- the next Create adds a new entry
+ * rather than replacing this one -- but the preview stays put so the user can
+ * still see what they are working from. */
+HOOKPROTONHNONP(EditImageButtonClickedFunc, void) {
+    struct GeneratedImage *source = currentImage;
+    if (source == NULL || source->filePath == NULL)
+        return;
+    CONST_STRPTR name = FilePart(source->filePath);
+    if (name == NULL || *name == '\0')
+        name = source->filePath;
+    freeChatFiles(&pendingImageFiles);
+    addPendingFile(&pendingImageFiles, source->filePath, name, TRUE);
+    updateReferenceImageControls();
+
+    currentImage = NULL;
+    if (isAROS) {
+        set(imageInputTextEditor, MUIA_String_Contents, "");
+    } else {
+        DoMethod(imageInputTextEditor, MUIM_TextEditor_ClearText);
+    }
+    set(imageInputTextEditor, MUIA_Disabled, FALSE);
+    set(createImageButton, MUIA_Disabled, FALSE);
+    set(openImageButton, MUIA_Disabled, TRUE);
+    set(saveImageCopyButton, MUIA_Disabled, TRUE);
+    set(editImageButton, MUIA_Disabled, TRUE);
+    DoMethod(imageInputTextEditor, MUIM_GoActive);
+}
+MakeHook(EditImageButtonClickedHook, EditImageButtonClickedFunc);
 
 static BOOL isStringInList(CONST_STRPTR str, CONST_STRPTR *list) {
     if (str == NULL || list == NULL)
@@ -649,10 +752,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     }
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);
-    set(createImageButton, MUIA_Disabled, TRUE);
-    set(newImageButton, MUIA_Disabled, TRUE);
-    set(deleteImageButton, MUIA_Disabled, TRUE);
-    set(imageInputTextEditor, MUIA_Disabled, TRUE);
+    set(editImageButton, MUIA_Disabled, TRUE);
+    setImageGenerationControlsDisabled(TRUE);
     STRPTR text;
     if (isAROS) {
         get(imageInputTextEditor, MUIA_String_Contents, &text);
@@ -690,14 +791,12 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         configGetProxyEnabled(), configGetProxyHost(), configGetProxyPort(),
         configGetProxyUsesSSL(), configGetProxyRequiresAuth(),
         configGetProxyUsername(), configGetProxyPassword(),
-        configGetImageFormat(), imageSettings.imageApiEndpoint);
+        configGetImageFormat(), imageSettings.imageApiEndpoint,
+        &pendingImageFiles);
 
     if (response == NULL) {
         displayError(STRING_ERROR_CONNECTION);
-        set(createImageButton, MUIA_Disabled, FALSE);
-        set(newImageButton, MUIA_Disabled, FALSE);
-        set(deleteImageButton, MUIA_Disabled, FALSE);
-        set(imageInputTextEditor, MUIA_Disabled, FALSE);
+        setImageGenerationControlsDisabled(FALSE);
         if (!isAROS) {
             FreeVec(text);
         }
@@ -726,10 +825,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
                 }
             }
         }
-        set(createImageButton, MUIA_Disabled, FALSE);
-        set(newImageButton, MUIA_Disabled, FALSE);
-        set(deleteImageButton, MUIA_Disabled, FALSE);
-        set(imageInputTextEditor, MUIA_Disabled, FALSE);
+        setImageGenerationControlsDisabled(FALSE);
         json_object_put(response);
         if (!isAROS) {
             FreeVec(text);
@@ -750,10 +846,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
                       (Tag)b64Len, CSA_B64DestPtr, (Tag)&imageData, TAG_DONE);
     if (imageData == NULL) {
         displayError(STRING_ERROR_INVALID_BASE64);
-        set(createImageButton, MUIA_Disabled, FALSE);
-        set(newImageButton, MUIA_Disabled, FALSE);
-        set(deleteImageButton, MUIA_Disabled, FALSE);
-        set(imageInputTextEditor, MUIA_Disabled, FALSE);
+        setImageGenerationControlsDisabled(FALSE);
         json_object_put(response);
         return;
     }
@@ -908,10 +1001,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     } else if (responses[0] != NULL) {
         if (json_object_object_get_ex(responses[0], "error", &error) &&
             !json_object_is_type(error, json_type_null)) {
-            set(createImageButton, MUIA_Disabled, FALSE);
-            set(newImageButton, MUIA_Disabled, FALSE);
-            set(deleteImageButton, MUIA_Disabled, FALSE);
-            set(imageInputTextEditor, MUIA_Disabled, FALSE);
+            setImageGenerationControlsDisabled(FALSE);
             json_object_put(responses[0]);
             FreeVec(responses);
             if (!isAROS) {
@@ -986,9 +1076,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     currentImage = generatedImage;
     ImageRowClickedFunc();
 
-    set(createImageButton, MUIA_Disabled, FALSE);
-    set(newImageButton, MUIA_Disabled, FALSE);
-    set(deleteImageButton, MUIA_Disabled, FALSE);
+    setImageGenerationControlsDisabled(FALSE);
 
     saveImages();
 
@@ -1144,6 +1232,7 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
 
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);
+    set(editImageButton, MUIA_Disabled, TRUE);
 
     updateStatusBar(STRING_READY, greenPen);
 }
@@ -1428,6 +1517,10 @@ LONG createMainWindow() {
         NewList((struct List *)&pendingChatFiles);
         pendingChatFilesInitialized = TRUE;
     }
+    if (!pendingImageFilesInitialized) {
+        NewList((struct List *)&pendingImageFiles);
+        pendingImageFilesInitialized = TRUE;
+    }
     BOOL useCustomTextEditor = createAmigaGPTTextEditor() == RETURN_OK;
     if (!useCustomTextEditor) {
         displayError("Could not create custom class.");
@@ -1653,6 +1746,26 @@ LONG createMainWindow() {
                                     MUIA_CycleChain, TRUE,
                                     MUIA_InputMode, MUIV_InputMode_RelVerify,
                                 TAG_DONE),
+                                // Edit image button: reuse this image as a reference for a new prompt
+                                Child, editImageButton = MUI_MakeObject(MUIO_Button, STRING_EDIT_IMAGE,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
+                            End,
+                            // Reference images sent along with the prompt
+                            Child, HGroup,
+                                Child, attachReferenceImagesButton = MUI_MakeObject(MUIO_Button, STRING_ATTACH_REFERENCE_IMAGES,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
+                                Child, clearReferenceImagesButton = MUI_MakeObject(MUIO_Button, STRING_CLEAR_REFERENCE_IMAGES,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
+                                Child, referenceImageSummaryText = TextObject,
+                                    MUIA_Text_Contents, STRING_NO_REFERENCE_IMAGES,
+                                    MUIA_Text_SetMin, FALSE,
+                                End,
                             End,
                             Child, HGroup,
                                 // Image input text editor
@@ -1755,7 +1868,9 @@ LONG createMainWindow() {
     
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);
+    set(editImageButton, MUIA_Disabled, TRUE);
     updateAttachmentControls();
+    updateReferenceImageControls();
     updateResponseFileControl();
     
     updateStatusBar(STRING_READY, greenPen);
@@ -1798,6 +1913,14 @@ static void addMainWindowActions() {
     DoMethod(saveImageCopyButton, MUIM_Notify, MUIA_Pressed, FALSE,
              saveImageCopyButton, 2, MUIM_CallHook,
              &SaveImageCopyButtonClickedHook);
+    DoMethod(editImageButton, MUIM_Notify, MUIA_Pressed, FALSE, editImageButton,
+             2, MUIM_CallHook, &EditImageButtonClickedHook);
+    DoMethod(attachReferenceImagesButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             attachReferenceImagesButton, 2, MUIM_CallHook,
+             &AttachReferenceImagesButtonClickedHook);
+    DoMethod(clearReferenceImagesButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             clearReferenceImagesButton, 2, MUIM_CallHook,
+             &ClearReferenceImagesButtonClickedHook);
     DoMethod(conversationListObject, MUIM_Notify, MUIA_NList_EntryClick,
              MUIV_EveryTime, MUIV_Notify_Window, 3, MUIM_CallHook,
              &ConversationRowClickedHook, MUIV_TriggerValue);

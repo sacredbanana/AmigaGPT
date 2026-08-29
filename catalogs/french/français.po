@@ -2054,6 +2054,36 @@ msgctxt "STRING_SPEECH_PROVIDER_SETTINGS_TITLE (386//)"
 msgid "Speech Provider Settings"
 msgstr "Paramètres du fournisseur de synthèse vocale"
 
+#: src/MainWindow.c
+msgctxt "STRING_EDIT_IMAGE (387//)"
+msgid "Edit..."
+msgstr "Modifier..."
+
+#: src/MainWindow.c
+msgctxt "STRING_ATTACH_REFERENCE_IMAGES (388//)"
+msgid "Attach images..."
+msgstr "Joindre des images..."
+
+#: src/MainWindow.c
+msgctxt "STRING_CLEAR_REFERENCE_IMAGES (389//)"
+msgid "Clear"
+msgstr "Effacer"
+
+#: src/MainWindow.c
+msgctxt "STRING_NO_REFERENCE_IMAGES (390//)"
+msgid "No reference images"
+msgstr "Aucune image de référence"
+
+#: src/MainWindow.c
+msgctxt "STRING_REFERENCE_IMAGES_ATTACHED_FORMAT (391//)"
+msgid "%lu reference image(s)"
+msgstr "%lu image(s) de référence"
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_NOT_AN_IMAGE (392//)"
+msgid "Only image files can be used as reference images."
+msgstr "Seuls les fichiers image peuvent servir d'images de référence."
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "Voix OpenAI"

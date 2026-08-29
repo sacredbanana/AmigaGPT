@@ -256,17 +256,20 @@ static BOOL rexxPathIsReadableFile(CONST_STRPTR path) {
     return TRUE;
 }
 
-static void rexxSetAttachmentError(CONST_STRPTR path) {
+static void rexxSetAttachmentErrorFor(CONST_STRPTR message,
+                                      CONST_STRPTR path) {
     UBYTE errMsg[512];
     if (path != NULL && path[0] != '\0') {
-        snprintf(errMsg, sizeof(errMsg), "%s: %s",
-                 STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND, path);
+        snprintf(errMsg, sizeof(errMsg), "%s: %s", message, path);
     } else {
-        snprintf(errMsg, sizeof(errMsg), "%s",
-                 STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND);
+        snprintf(errMsg, sizeof(errMsg), "%s", message);
     }
     set(app, MUIA_Application_RexxString, errMsg);
     updateStatusBar(STRING_ERROR, redPen);
+}
+
+static void rexxSetAttachmentError(CONST_STRPTR path) {
+    rexxSetAttachmentErrorFor(STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND, path);
 }
 
 static ULONG rexxCountAttachPaths(CONST_STRPTR attachSpec) {
@@ -295,16 +298,18 @@ static ULONG rexxCountAttachPaths(CONST_STRPTR attachSpec) {
 }
 
 /**
- * Attach comma-separated file paths to a conversation message.
- * An empty specification is success. On failure the ARexx error string is set.
+ * Attach comma-separated file paths to a chat-file list. An empty
+ * specification is success. Set imagesOnly for the reference images of an image
+ * request, which can only carry pictures. On failure the ARexx error string is
+ * set.
  **/
-static BOOL rexxAttachPathsToMessage(struct ConversationNode *message,
-                                     CONST_STRPTR attachSpec) {
+static BOOL rexxAttachPathsToList(struct MinList *files,
+                                  CONST_STRPTR attachSpec, BOOL imagesOnly) {
     STRPTR specCopy;
     STRPTR cursor;
     if (attachSpec == NULL || attachSpec[0] == '\0')
         return TRUE;
-    if (message == NULL)
+    if (files == NULL)
         return FALSE;
 
     specCopy = AllocVec(strlen(attachSpec) + 1, MEMF_ANY | MEMF_CLEAR);
@@ -356,7 +361,16 @@ static BOOL rexxAttachPathsToMessage(struct ConversationNode *message,
             CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source, (Tag)name,
             CSA_MapForeignChars, TRUE, TAG_DONE);
         detectedMime = detectMimeTypeFromContents(path);
-        if (!addChatFile(&message->files, path,
+        if (imagesOnly && !attachmentLooksLikeImage(path, detectedMime)) {
+            if (detectedMime != NULL)
+                FreeVec(detectedMime);
+            if (nameUTF8 != NULL)
+                CodesetsFreeA(nameUTF8, NULL);
+            FreeVec(specCopy);
+            rexxSetAttachmentErrorFor(STRING_ERROR_NOT_AN_IMAGE, path);
+            return FALSE;
+        }
+        if (!addChatFile(files, path,
                          nameUTF8 != NULL ? nameUTF8 : (UTF8 *)name,
                          detectedMime, NULL, NULL, NULL)) {
             if (detectedMime != NULL)
@@ -1607,7 +1621,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         updateStatusBar(STRING_ERROR, redPen);
         return RETURN_OK;
     }
-    if (!rexxAttachPathsToMessage(userMessage, attachSpec)) {
+    if (!rexxAttachPathsToList(&userMessage->files, attachSpec, FALSE)) {
         RemTail((struct List *)conversation->messages);
         freeConversationNode(userMessage);
         return RETURN_OK;
@@ -2018,8 +2032,13 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     STRPTR modelString = (STRPTR)arg[1];
     STRPTR sizeString = (STRPTR)arg[2];
     STRPTR apiKey = (STRPTR)arg[3];
-    STRPTR destination = (STRPTR)arg[4];
-    STRPTR prompt = (STRPTR)arg[5];
+    STRPTR attachSpec = (STRPTR)arg[4];
+    STRPTR destination = (STRPTR)arg[5];
+    STRPTR prompt = (STRPTR)arg[6];
+    /* Reference images the provider edits from, rather than generating the
+     * picture from the prompt alone. */
+    struct MinList referenceImages;
+    NewList((struct List *)&referenceImages);
 
     /* Reload config from disk to pick up any changes from the main app */
     DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
@@ -2054,6 +2073,11 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
         }
     }
 
+    if (!rexxAttachPathsToList(&referenceImages, attachSpec, TRUE)) {
+        freeChatFiles(&referenceImages);
+        return RETURN_ERROR;
+    }
+
     UTF8 *promptUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
                                           CSA_Source, (Tag)prompt, TAG_DONE);
 
@@ -2072,8 +2096,10 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
         apiKey, imgSettings.useProxy, imgSettings.proxyHost,
         imgSettings.proxyPort, imgSettings.proxyUsesSSL,
         imgSettings.proxyRequiresAuth, imgSettings.proxyUsername,
-        imgSettings.proxyPassword, IMAGE_FORMAT_JPG, imageEndpoint);
+        imgSettings.proxyPassword, IMAGE_FORMAT_JPG, imageEndpoint,
+        &referenceImages);
     CodesetsFreeA(promptUTF8, NULL);
+    freeChatFiles(&referenceImages);
 
     if (response == NULL) {
         printf(STRING_ERROR_CONNECTION);
@@ -2851,8 +2877,8 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
         "S,PU=PROXYUSERNAME/K,PP=PROXYPASSWORD/K,W=WEBSEARCH/S,"
         "CI=CODEINTERPRETER/S,A=ATTACH/K,D=DESTINATION/K,P=PROMPT/F\n"
         "CREATEIMAGE "
-        "PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/"
-        "F\n"
+        "PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,A=ATTACH/K,D=DESTINATION/"
+        "K,P=PROMPT/F\n"
         "SPEAKTEXT "
         "PR=PROFILE/K,M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,"
         "O=OUTPUT/K,F=FORMAT/K,P=PROMPT/F\n"
@@ -2879,8 +2905,9 @@ struct MUI_Command arexxList[] = {
      &SendMessageHook,
      {0, 0, 0, 0, 0}},
     {"CREATEIMAGE",
-     "PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F",
-     6,
+     "PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,A=ATTACH/K,D=DESTINATION/K,"
+     "P=PROMPT/F",
+     7,
      &CreateImageHook,
      {0, 0, 0, 0, 0}},
     {"SPEAKTEXT",

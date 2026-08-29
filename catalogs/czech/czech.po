@@ -2025,6 +2025,36 @@ msgctxt "STRING_SPEECH_PROVIDER_SETTINGS_TITLE (386//)"
 msgid "Speech Provider Settings"
 msgstr "Nastavení poskytovatele řeči"
 
+#: src/MainWindow.c
+msgctxt "STRING_EDIT_IMAGE (387//)"
+msgid "Edit..."
+msgstr "Upravit..."
+
+#: src/MainWindow.c
+msgctxt "STRING_ATTACH_REFERENCE_IMAGES (388//)"
+msgid "Attach images..."
+msgstr "Přidat obrázky..."
+
+#: src/MainWindow.c
+msgctxt "STRING_CLEAR_REFERENCE_IMAGES (389//)"
+msgid "Clear"
+msgstr "Vymazat"
+
+#: src/MainWindow.c
+msgctxt "STRING_NO_REFERENCE_IMAGES (390//)"
+msgid "No reference images"
+msgstr "Žádné referenční obrázky"
+
+#: src/MainWindow.c
+msgctxt "STRING_REFERENCE_IMAGES_ATTACHED_FORMAT (391//)"
+msgid "%lu reference image(s)"
+msgstr "%lu referenčních obrázků"
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_NOT_AN_IMAGE (392//)"
+msgid "Only image files can be used as reference images."
+msgstr "Jako referenční obrázky lze použít pouze obrazové soubory."
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Voice"

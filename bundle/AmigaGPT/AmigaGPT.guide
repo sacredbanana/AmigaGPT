@@ -333,8 +333,10 @@ AmigaGPT has two modes of operation, selected by the tabs at the top left of the
   - The generated picture is displayed in the centre of the window
   - The @{b}prompt field@{ub} sits below the picture
   - @{b}Create Image@{ub} generates the picture
+  - @{b}Attach images...@{ub} and @{b}Clear@{ub} manage the reference images sent with the prompt
   - @{b}Open Image@{ub} opens the picture at whatever scale you want
   - @{b}Save Image Copy@{ub} writes a copy somewhere else on your Amiga
+  - @{b}Edit...@{ub} starts a new prompt with the displayed picture attached as a reference
 
 @{b}@{u}The status bar@{uu}@{ub}
 
@@ -489,10 +491,19 @@ When the picture has been downloaded it is displayed in the window and added to 
 
 - @{b}Open Image@{ub} opens it at whatever scale you like
 - @{b}Save Image Copy@{ub} writes a copy anywhere on your Amiga
+- @{b}Edit...@{ub} starts a fresh prompt with the picture attached as a reference
 - @{b}New Image@{ub} clears the prompt ready for the next one
 - @{b}Delete Image@{ub} removes the selected picture
 
 AmigaGPT gives each picture a short name generated from the prompt, and keeps every picture it generates in @{i}AMIGAGPT:images@{ui} until you delete it, so saving a copy elsewhere is only needed if you want one.
+
+@{b}@{u}Reference images@{uu}@{ub}
+
+@{b}Attach images...@{ub} sends one or more pictures along with the prompt, so the model can edit, restyle or combine pictures you already have instead of working from the description alone. The attached pictures are listed beside the prompt and are removed with @{b}Clear@{ub}, or by pressing @{b}New Image@{ub}. Only image files can be attached, and the same limits as chat attachments apply - 8 MB per file and 16 MB per request.
+
+@{b}Edit...@{ub} is the quick way in: it starts a fresh prompt with the picture on screen already attached, so refining a result you have just generated takes one click. The preview stays on screen while you type, and pressing @{b}Create Image@{ub} adds a new picture to the list rather than replacing the one you started from.
+
+Reference images turn the request into an image edit. OpenAI and OpenAI-compatible servers receive them as a multipart form on their images/edits endpoint - the gpt-image models accept several pictures at once, DALL-E 2 one - xAI receives them as data URIs on the same endpoint, and Google Gemini receives them inline in the same generateContent request it uses for text-to-image. Where the provider allows it the pictures are streamed to the server straight from disk, so a large reference image never has to fit in memory alongside the rest of the request.
 
 @{b}@{u}Providers, sizes and formats@{uu}@{ub}
 
@@ -1083,7 +1094,7 @@ The bundled @{b}show_received_file.rexx@{ub} script does the same kind of reques
 
 Generates an image and returns the path of the file it was saved to.
 
-  CREATEIMAGE PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
+  CREATEIMAGE PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,A=ATTACH/K,D=DESTINATION/K,P=PROMPT/F
 
 @{b}@{u}Arguments@{uu}@{ub}
 
@@ -1091,6 +1102,7 @@ Generates an image and returns the path of the file it was saved to.
 - @{b}MODEL@{ub} or @{b}M@{ub} - the image model. Use @{b}LISTMODELS@{ub}. Defaults to the profile's model.
 - @{b}SIZE@{ub} or @{b}S@{ub} - the image size. Use @{b}LISTIMAGESIZES@{ub}. Defaults to 1024x1024. Some providers ignore this.
 - @{b}APIKEY@{ub} or @{b}K@{ub} - use this key instead of the profile's
+- @{b}ATTACH@{ub} or @{b}A@{ub} - one or more comma-separated paths to reference images the provider edits from, instead of generating the picture from the prompt alone. Only image files are accepted, and the same limits as chat attachments apply - 8 MB per file and 16 MB per request. How many pictures a provider accepts varies: the OpenAI gpt-image models take several, DALL-E 2 one, and xAI up to three.
 - @{b}DESTINATION@{ub} or @{b}D@{ub} - where to write the picture. If you leave this out, a temporary file is created.
 - @{b}PROMPT@{ub} or @{b}P@{ub} - required. A description of the picture. Takes the rest of the line.
 
@@ -1104,6 +1116,11 @@ The full path of the file that was written, which is exactly what you need to ha
   SAY 'Image saved to:' RESULT
   ADDRESS COMMAND
   'MultiView @{i}Work:Pictures/amiga.png@{ui}'
+
+Editing a picture you already have:
+
+  'CREATEIMAGE A=@{i}Work:Pictures/amiga.png@{ui} D=@{i}Work:Pictures/stormy.png@{ui} P=Make the sky a stormy purple'
+  SAY 'Edited image saved to:' RESULT
 @endnode
 
 @node arexxspeaktext "SPEAKTEXT"

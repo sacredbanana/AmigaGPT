@@ -735,6 +735,14 @@ static CONST_STRPTR attachmentMimeType(CONST_STRPTR name) {
     return "application/octet-stream";
 }
 
+BOOL attachmentLooksLikeImage(CONST_STRPTR path, CONST_STRPTR detectedMime) {
+    /* detectedMime is what libmagic made of the contents. Without a magic
+     * database there is nothing to go on but the file name. */
+    CONST_STRPTR mime =
+        detectedMime != NULL ? detectedMime : attachmentMimeType(path);
+    return mime != NULL && strncmp(mime, "image/", 6) == 0;
+}
+
 static BOOL attachmentMimeIsZip(CONST_STRPTR mime) {
     return mime != NULL && strcmp(mime, "application/zip") == 0;
 }
@@ -5119,6 +5127,434 @@ struct json_object **postChatMessageToOpenAI(
     return responses;
 }
 
+/* Reference images make an image request far too big for writeBuffer: a single
+ * 1024x1024 PNG is already past WRITE_BUFFER_LENGTH once Base64-encoded. The
+ * helpers below write such a request in pieces -- header first, then the body
+ * -- so the image bytes never have to sit in one buffer alongside the headers.
+ */
+static ULONG countReferenceImages(struct MinList *referenceImages) {
+    ULONG count = 0;
+    struct ChatFile *file;
+    if (referenceImages == NULL)
+        return 0;
+    for (file = (struct ChatFile *)referenceImages->mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        if (file->path != NULL)
+            count++;
+    }
+    return count;
+}
+
+static LONG localFileSizeOnDisk(CONST_STRPTR path) {
+    BPTR handle;
+    LONG size;
+
+    if (path == NULL)
+        return -1;
+    handle = Open(path, MODE_OLDFILE);
+    if (handle == 0)
+        return -1;
+#ifdef __AMIGAOS3__
+    Seek(handle, 0, OFFSET_END);
+    size = Seek(handle, 0, OFFSET_BEGINNING);
+#elif defined(__AMIGAOS4__)
+    {
+        int64_t size64 = GetFileSize(handle);
+        size = (size64 < 0 || size64 > 0x7fffffff) ? -1 : (LONG)size64;
+    }
+#else
+    {
+        struct FileInfoBlock fib;
+        size = ExamineFH64(handle, &fib, NULL) ? (LONG)fib.fib_Size : -1;
+    }
+#endif
+    Close(handle);
+    return size;
+}
+
+/* Send one piece of a body that is being written across several calls. Unlike
+ * writeRequestWithProgress() this leaves the transport unflushed so the next
+ * piece can follow; call finishStreamedRequest() once the last piece is out.
+ * Transport failures are reported by the caller, which already has one error
+ * path for a request that could not be written. */
+static BOOL writeStreamedRequestPiece(BOOL useSSL, const UBYTE *data,
+                                      ULONG length, ULONG *sentBody,
+                                      ULONG bodyLength, ULONG *lastPercent) {
+    ULONG sent = 0;
+    UWORD retryCount = 0;
+
+    while (sent < length) {
+        ULONG remaining = length - sent;
+        ULONG chunkLimit =
+            useSSL ? UPLOAD_WRITE_CHUNK_SIZE : PLAIN_HTTP_WRITE_CHUNK_SIZE;
+        ULONG chunkLength = remaining < chunkLimit ? remaining : chunkLimit;
+        LONG written;
+        if (!useSSL)
+            waitForSocketWritable();
+        if (useSSL) {
+            ERR_clear_error();
+            written = SSL_write(ssl, data + sent, (int)chunkLength);
+            if (written <= 0) {
+                LONG error = SSL_get_error(ssl, written);
+                if ((error == SSL_ERROR_WANT_READ ||
+                     error == SSL_ERROR_WANT_WRITE) &&
+                    retryCount++ < MAX_UPLOAD_WRITE_RETRIES) {
+                    Delay(1);
+                    continue;
+                }
+                return FALSE;
+            }
+        } else {
+            written = send(sock, data + sent, chunkLength, 0);
+            if (written <= 0) {
+                if ((errno == EINTR || errno == EAGAIN) &&
+                    retryCount++ < MAX_UPLOAD_WRITE_RETRIES) {
+                    Delay(1);
+                    continue;
+                }
+                return FALSE;
+            }
+            /* bsdsocket needs a task switch or large POSTs stay in the send
+             * buffer and the server never sees a complete request. */
+            Delay(1);
+        }
+        retryCount = 0;
+        sent += (ULONG)written;
+        if (sentBody != NULL && bodyLength > 0) {
+            ULONG percent;
+            *sentBody += (ULONG)written;
+            percent = (*sentBody * 100UL) / bodyLength;
+            if (lastPercent == NULL || percent != *lastPercent) {
+                UBYTE statusMessage[64];
+                snprintf(statusMessage, sizeof(statusMessage),
+                         STRING_UPLOADING_REQUEST_FORMAT, percent);
+                updateStatusBar(statusMessage, yellowPen);
+                if (lastPercent != NULL)
+                    *lastPercent = percent;
+            }
+        }
+#ifndef DAEMON
+        DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+    }
+    return TRUE;
+}
+
+/* Copy a file straight from disk into the request body, so an attachment never
+ * needs a buffer of its own. */
+static BOOL streamFileIntoRequest(BOOL useSSL, CONST_STRPTR path,
+                                  ULONG fileSize, ULONG *sentBody,
+                                  ULONG bodyLength, ULONG *lastPercent) {
+    BPTR handle;
+    UBYTE *chunk;
+    ULONG remaining = fileSize;
+
+    handle = Open(path, MODE_OLDFILE);
+    if (handle == 0) {
+        displayError(STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND);
+        return FALSE;
+    }
+    chunk = AllocVec(UPLOAD_WRITE_CHUNK_SIZE, MEMF_ANY);
+    if (chunk == NULL) {
+        Close(handle);
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        return FALSE;
+    }
+    while (remaining > 0) {
+        ULONG toRead = remaining < UPLOAD_WRITE_CHUNK_SIZE
+                           ? remaining
+                           : UPLOAD_WRITE_CHUNK_SIZE;
+        LONG bytesRead = Read(handle, chunk, toRead);
+        if (bytesRead <= 0) {
+            FreeVec(chunk);
+            Close(handle);
+            displayError(STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND);
+            return FALSE;
+        }
+        if (!writeStreamedRequestPiece(useSSL, chunk, (ULONG)bytesRead,
+                                       sentBody, bodyLength, lastPercent)) {
+            FreeVec(chunk);
+            Close(handle);
+            return FALSE;
+        }
+        remaining -= (ULONG)bytesRead;
+    }
+    FreeVec(chunk);
+    Close(handle);
+    return TRUE;
+}
+
+static void finishStreamedRequest(BOOL useSSL, ULONG sentTotal) {
+    flushTransportWrites(useSSL);
+    if (!useSSL) {
+        UWORD drainTicks = (UWORD)(sentTotal / 512UL) + 5;
+        UWORD i;
+        if (drainTicks > 50)
+            drainTicks = 50;
+        for (i = 0; i < drainTicks; i++) {
+            waitForSocketWritable();
+            Delay(1);
+#ifndef DAEMON
+            DoMethod(loadingBar, MUIM_Busy_Move);
+#endif
+        }
+    }
+    updateStatusBar(STRING_WAITING_FOR_RESPONSE, yellowPen);
+}
+
+/* Gemini takes reference images as extra inlineData parts alongside the prompt
+ * text in the request it already uses for text-to-image. */
+static BOOL appendGeminiReferenceImageParts(struct MinList *referenceImages,
+                                            struct json_object *partsArr,
+                                            ULONG *totalAttachmentBytes) {
+    ULONG count = countReferenceImages(referenceImages);
+    ULONG index = 0;
+    struct ChatFile *file;
+
+    for (file = (struct ChatFile *)referenceImages->mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        UBYTE statusMessage[96];
+        STRPTR encoded;
+        struct json_object *inlineData;
+        struct json_object *part;
+        if (file->path == NULL)
+            continue;
+        snprintf(statusMessage, sizeof(statusMessage),
+                 STRING_ENCODING_ATTACHMENT_FORMAT, ++index, count);
+        updateStatusBar(statusMessage, yellowPen);
+        encoded = encodeAttachmentBase64(file, totalAttachmentBytes);
+        if (encoded == NULL)
+            return FALSE;
+        inlineData = json_object_new_object();
+        json_object_object_add(inlineData, "mimeType",
+                               json_object_new_string(chatFileMime(file)));
+        json_object_object_add(inlineData, "data",
+                               json_object_new_string(encoded));
+        part = json_object_new_object();
+        json_object_object_add(part, "inlineData", inlineData);
+        json_object_array_add(partsArr, part);
+        CodesetsFreeA(encoded, NULL);
+    }
+    return TRUE;
+}
+
+/* xAI's /images/edits takes data URIs in JSON: "image" for a single source and
+ * "images" for several. Docs: https://docs.x.ai/developers/model-capabilities/
+ * images/editing */
+static BOOL addXAIReferenceImages(struct MinList *referenceImages,
+                                  struct json_object *obj,
+                                  ULONG *totalAttachmentBytes) {
+    ULONG count = countReferenceImages(referenceImages);
+    ULONG index = 0;
+    struct json_object *imagesArr = count > 1 ? json_object_new_array() : NULL;
+    struct ChatFile *file;
+
+    for (file = (struct ChatFile *)referenceImages->mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        UBYTE statusMessage[96];
+        STRPTR encoded;
+        STRPTR dataUrl;
+        struct json_object *imageObj;
+        if (file->path == NULL)
+            continue;
+        snprintf(statusMessage, sizeof(statusMessage),
+                 STRING_ENCODING_ATTACHMENT_FORMAT, ++index, count);
+        updateStatusBar(statusMessage, yellowPen);
+        encoded = encodeAttachmentBase64(file, totalAttachmentBytes);
+        if (encoded == NULL) {
+            if (imagesArr != NULL)
+                json_object_put(imagesArr);
+            return FALSE;
+        }
+        dataUrl = assembleDataUrl(chatFileMime(file), encoded);
+        CodesetsFreeA(encoded, NULL);
+        if (dataUrl == NULL) {
+            if (imagesArr != NULL)
+                json_object_put(imagesArr);
+            displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+            return FALSE;
+        }
+        imageObj = json_object_new_object();
+        json_object_object_add(imageObj, "type",
+                               json_object_new_string("image_url"));
+        json_object_object_add(imageObj, "url",
+                               json_object_new_string(dataUrl));
+        FreeVec(dataUrl);
+        if (imagesArr != NULL)
+            json_object_array_add(imagesArr, imageObj);
+        else
+            json_object_object_add(obj, "image", imageObj);
+    }
+    if (imagesArr != NULL)
+        json_object_object_add(obj, "images", imagesArr);
+    return TRUE;
+}
+
+/* One multipart part header per reference image, plus the size of the file it
+ * introduces, so Content-Length can be worked out before anything is sent. */
+struct ReferenceImagePart {
+    struct ChatFile *file;
+    ULONG fileSize;
+    ULONG headerLength;
+    UBYTE header[512];
+};
+
+/* Append one text field to a multipart form, returning the new offset. An
+ * offset that has reached the capacity means the form did not fit; the caller
+ * checks for that once at the end rather than after every field. */
+static ULONG appendMultipartField(STRPTR buffer, ULONG capacity, ULONG offset,
+                                  CONST_STRPTR name, CONST_STRPTR value) {
+    if (offset >= capacity)
+        return capacity;
+    offset += snprintf(buffer + offset, capacity - offset,
+                       "--%s\r\n"
+                       "Content-Disposition: form-data; name=\"%s\"\r\n"
+                       "\r\n"
+                       "%s\r\n",
+                       OPENAI_FILE_BOUNDARY, name, value);
+    return offset > capacity ? capacity : offset;
+}
+
+/* Lay out the multipart form OpenAI-compatible /images/edits expects. Nothing
+ * is sent here: the part headers and file sizes are collected first so that
+ * Content-Length is known before the first byte goes out. */
+static BOOL buildReferenceImageMultipart(
+    struct MinList *referenceImages, CONST_STRPTR modelName,
+    CONST_STRPTR promptUTF8, ImageSize imageSize, ImageFormat imageFormat,
+    BOOL isGptImage, BOOL isGrok, STRPTR *fieldsOut, ULONG *fieldsLengthOut,
+    struct ReferenceImagePart **partsOut, ULONG *partCountOut,
+    ULONG *bodyLengthOut) {
+    ULONG imageCount = countReferenceImages(referenceImages);
+    /* gpt-image-* accepts several sources under image[]; dall-e-2 edits take a
+     * single image. */
+    CONST_STRPTR imageFieldName = isGptImage ? "image[]" : "image";
+    ULONG fieldsCapacity =
+        1024 + (promptUTF8 != NULL ? strlen(promptUTF8) : 0) +
+        (modelName != NULL ? strlen(modelName) : 0);
+    STRPTR fields = AllocVec(fieldsCapacity, MEMF_ANY | MEMF_CLEAR);
+    struct ReferenceImagePart *parts =
+        AllocVec(sizeof(struct ReferenceImagePart) * imageCount,
+                 MEMF_ANY | MEMF_CLEAR);
+    ULONG totalAttachmentBytes = 0;
+    ULONG offset = 0;
+    ULONG index = 0;
+    ULONG bodyLength;
+    ULONG i;
+    struct ChatFile *file;
+
+    if (fields == NULL || parts == NULL) {
+        if (fields != NULL)
+            FreeVec(fields);
+        if (parts != NULL)
+            FreeVec(parts);
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        return FALSE;
+    }
+
+    offset = appendMultipartField(fields, fieldsCapacity, offset, "model",
+                                  modelName != NULL ? modelName : "");
+    offset = appendMultipartField(fields, fieldsCapacity, offset, "prompt",
+                                  promptUTF8 != NULL ? promptUTF8 : "");
+    /* xAI sizes its images with aspect_ratio rather than OpenAI's size. */
+    if (!isGrok && imageSize != IMAGE_SIZE_NULL &&
+        IMAGE_SIZE_NAMES[imageSize] != NULL) {
+        offset = appendMultipartField(fields, fieldsCapacity, offset, "size",
+                                      IMAGE_SIZE_NAMES[imageSize]);
+    }
+    if (isGptImage) {
+        if (imageFormat != IMAGE_FORMAT_NULL &&
+            IMAGE_FORMAT_NAMES[imageFormat] != NULL) {
+            offset =
+                appendMultipartField(fields, fieldsCapacity, offset,
+                                     "output_format",
+                                     IMAGE_FORMAT_NAMES[imageFormat]);
+        }
+    } else {
+        /* gpt-image-* always answers with Base64; everything else has to be
+         * asked, and the caller only knows how to decode b64_json. */
+        offset = appendMultipartField(fields, fieldsCapacity, offset,
+                                      "response_format", "b64_json");
+    }
+    if (offset >= fieldsCapacity) {
+        FreeVec(fields);
+        FreeVec(parts);
+        displayError(STRING_ERROR_CHAT_REQUEST_TOO_LARGE);
+        return FALSE;
+    }
+
+    for (file = (struct ChatFile *)referenceImages->mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        LONG fileSize;
+        CONST_STRPTR mime;
+        CONST_STRPTR rawName;
+        UBYTE safeName[256];
+        ULONG headerLength;
+
+        if (file->path == NULL)
+            continue;
+        fileSize = localFileSizeOnDisk(file->path);
+        if (fileSize < 0) {
+            FreeVec(fields);
+            FreeVec(parts);
+            displayError(STRING_ERROR_ATTACHMENT_FILE_NOT_FOUND);
+            return FALSE;
+        }
+        if ((ULONG)fileSize > MAX_ATTACHMENT_FILE_BYTES ||
+            totalAttachmentBytes >
+                MAX_ATTACHMENT_TOTAL_BYTES - (ULONG)fileSize) {
+            FreeVec(fields);
+            FreeVec(parts);
+            displayError(STRING_ERROR_ATTACHMENT_TOO_LARGE);
+            return FALSE;
+        }
+        totalAttachmentBytes += (ULONG)fileSize;
+
+        mime = chatFileMime(file);
+        rawName = file->name != NULL ? (CONST_STRPTR)file->name : "image.png";
+        strncpy(safeName, rawName, sizeof(safeName) - 1);
+        safeName[sizeof(safeName) - 1] = '\0';
+        for (i = 0; safeName[i] != '\0'; i++) {
+            if (safeName[i] == '"' || safeName[i] == '\\' ||
+                safeName[i] == '\r' || safeName[i] == '\n')
+                safeName[i] = '_';
+        }
+
+        headerLength = snprintf(parts[index].header, sizeof(parts[index].header),
+                                "--%s\r\n"
+                                "Content-Disposition: form-data; name=\"%s\"; "
+                                "filename=\"%s\"\r\n"
+                                "Content-Type: %s\r\n"
+                                "\r\n",
+                                OPENAI_FILE_BOUNDARY, imageFieldName, safeName,
+                                mime);
+        if (headerLength >= sizeof(parts[index].header)) {
+            FreeVec(fields);
+            FreeVec(parts);
+            displayError(STRING_ERROR_CHAT_REQUEST_TOO_LARGE);
+            return FALSE;
+        }
+        parts[index].file = file;
+        parts[index].fileSize = (ULONG)fileSize;
+        parts[index].headerLength = headerLength;
+        index++;
+    }
+
+    bodyLength = offset + strlen(OPENAI_FILE_BOUNDARY) + 6; /* --boundary--\r\n */
+    for (i = 0; i < index; i++)
+        bodyLength += parts[i].headerLength + parts[i].fileSize + 2;
+
+    *fieldsOut = fields;
+    *fieldsLengthOut = offset;
+    *partsOut = parts;
+    *partCountOut = index;
+    *bodyLengthOut = bodyLength;
+    return TRUE;
+}
+
 /**
  * Post a image creation request to OpenAI
  * @param prompt the prompt to use
@@ -5134,6 +5570,9 @@ struct json_object **postChatMessageToOpenAI(
  * @param proxyPassword the proxy password to use
  * @param imageFormat the image format to use
  * @param apiEndpoint the API endpoint to use
+ * @param referenceImages a list of struct ChatFile to send as reference images,
+ *or NULL for a plain text-to-image request. Only entries with a local path are
+ *used, and their presence turns the request into an image edit
  * @return a pointer to a new json_object containing the response or NULL --
  *Free it with json_object_put when you are done using it
  **/
@@ -5144,7 +5583,7 @@ struct json_object *postImageCreationRequestToOpenAI(
     CONST_STRPTR apiKey, BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
     BOOL proxyUsesSSL, BOOL proxyRequiresAuth, CONST_STRPTR proxyUsername,
     CONST_STRPTR proxyPassword, ImageFormat imageFormat,
-    APIImageEndpoint apiEndpoint) {
+    APIImageEndpoint apiEndpoint, struct MinList *referenceImages) {
     struct json_object *response = NULL;
     UWORD responseIndex = 0;
     BOOL requestUsesSSL = useSSL;
@@ -5176,99 +5615,169 @@ struct json_object *postImageCreationRequestToOpenAI(
         CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
                            (Tag)prompt, CSA_MapForeignChars, TRUE, TAG_DONE);
 
-    struct json_object *obj = json_object_new_object();
-    if (apiEndpoint == API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT) {
-        /* Gemini native text-to-image endpoint:
-         * POST /v1beta/models/<model>:generateContent
-         * Header: x-goog-api-key
-         * Body: { "contents":[{"parts":[{"text":"..."}]}],
-         *         "generationConfig":{"responseModalities":["TEXT","IMAGE"]} }
-         * Docs: https://ai.google.dev/gemini-api/docs/image-generation#rest */
-        struct json_object *contentsArr = json_object_new_array();
-        struct json_object *contentObj = json_object_new_object();
-        struct json_object *partsArr = json_object_new_array();
-        struct json_object *partObj = json_object_new_object();
-        json_object_object_add(
-            partObj, "text",
-            json_object_new_string(promptUTF8 ? promptUTF8 : (UTF8 *)""));
-        json_object_array_add(partsArr, partObj);
-        json_object_object_add(contentObj, "parts", partsArr);
-        json_object_array_add(contentsArr, contentObj);
-        json_object_object_add(obj, "contents", contentsArr);
+    /* Reference images turn a plain generation into an edit request, and the
+     * three provider families disagree about how the images get there:
+     * OpenAI-compatible servers want a multipart form on /images/edits, xAI
+     * wants data URIs in JSON on the same path, and Gemini wants inlineData
+     * parts in the generateContent request it already uses for text-to-image.
+     */
+    ULONG referenceImageCount = countReferenceImages(referenceImages);
+    BOOL isXaiHost = (host != NULL && strcmp(host, XAI_HOST) == 0);
+    BOOL editRequest = referenceImageCount > 0 && !isGeminiGenerateContent;
+    BOOL multipartRequest = editRequest && !isXaiHost;
+    /* Anything with a body this large cannot be assembled inside writeBuffer,
+     * so it is written header-first and then streamed. */
+    BOOL streamedRequest = referenceImageCount > 0;
+    BOOL isGptImage =
+        (modelName != NULL && strncmp(modelName, "gpt-image-", 10) == 0);
+    BOOL isGrok = (modelName != NULL && strncmp(modelName, "grok-", 5) == 0);
+    ULONG totalAttachmentBytes = 0;
+    struct json_object *obj = NULL;
+    UTF8 *jsonString = NULL;
+    STRPTR multipartFields = NULL;
+    ULONG multipartFieldsLength = 0;
+    struct ReferenceImagePart *referenceParts = NULL;
+    ULONG referencePartCount = 0;
+    UBYTE multipartSuffix[64];
+    ULONG multipartSuffixLength = 0;
+    ULONG bodyLength = 0;
 
-        struct json_object *generationConfigObj = json_object_new_object();
-        struct json_object *modalitiesArr = json_object_new_array();
-        json_object_array_add(modalitiesArr, json_object_new_string("TEXT"));
-        json_object_array_add(modalitiesArr, json_object_new_string("IMAGE"));
-        json_object_object_add(generationConfigObj, "responseModalities",
-                               modalitiesArr);
-        json_object_object_add(obj, "generationConfig", generationConfigObj);
-    } else {
-        json_object_object_add(
-            obj, "model", json_object_new_string(modelName ? modelName : ""));
-        json_object_object_add(
-            obj, "prompt",
-            json_object_new_string(promptUTF8 ? promptUTF8 : (UTF8 *)""));
-        /* Provider differences:
-         * - xAI/Grok: no OpenAI "size" field; use aspect_ratio (see below).
-         * - Gemini OpenAI-compat examples omit size; keep request minimal.
-         * - OpenAI gpt-image-* supports size/output_format. */
-        BOOL isGptImage =
-            (modelName != NULL && strncmp(modelName, "gpt-image-", 10) == 0);
-        BOOL isGrok =
-            (modelName != NULL && strncmp(modelName, "grok-", 5) == 0);
-        if (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS) {
-            /* xAI rejects OpenAI-style "size" (docs: not supported). Use their
-             * aspect_ratio when the model is Grok Imagine. */
-            if (isGrok) {
-                if (imageSize != IMAGE_SIZE_NULL) {
-                    CONST_STRPTR aspectRatio = NULL;
-                    switch (imageSize) {
-                    case IMAGE_SIZE_1792x1024:
-                    case IMAGE_SIZE_1536x1024:
-                        aspectRatio = "16:9";
-                        break;
-                    case IMAGE_SIZE_1024x1792:
-                    case IMAGE_SIZE_1024x1536:
-                        aspectRatio = "9:16";
-                        break;
-                    case IMAGE_SIZE_AUTO:
-                        aspectRatio = "auto";
-                        break;
-                    default:
-                        aspectRatio = "1:1";
-                        break;
-                    }
-                    json_object_object_add(obj, "aspect_ratio",
-                                           json_object_new_string(aspectRatio));
-                }
-            } else if (imageSize != IMAGE_SIZE_NULL &&
-                       IMAGE_SIZE_NAMES[imageSize] != NULL) {
-                json_object_object_add(
-                    obj, "size",
-                    json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
-            }
+    if (multipartRequest) {
+        if (!buildReferenceImageMultipart(
+                referenceImages, modelName, promptUTF8, imageSize, imageFormat,
+                isGptImage, isGrok, &multipartFields, &multipartFieldsLength,
+                &referenceParts, &referencePartCount, &bodyLength)) {
+            CodesetsFreeA(promptUTF8, NULL);
+            closeActiveResponseConnection();
+            json_tokener_free(tokener);
+            return NULL;
         }
+        multipartSuffixLength =
+            snprintf(multipartSuffix, sizeof(multipartSuffix), "--%s--\r\n",
+                     OPENAI_FILE_BOUNDARY);
+    } else {
+        obj = json_object_new_object();
+        if (apiEndpoint == API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT) {
+            /* Gemini native text-to-image endpoint:
+             * POST /v1beta/models/<model>:generateContent
+             * Header: x-goog-api-key
+             * Body: { "contents":[{"parts":[{"text":"..."}]}],
+             *         "generationConfig":{"responseModalities":["TEXT","IMAGE"]} }
+             * Docs: https://ai.google.dev/gemini-api/docs/image-generation#rest */
+            struct json_object *contentsArr = json_object_new_array();
+            struct json_object *contentObj = json_object_new_object();
+            struct json_object *partsArr = json_object_new_array();
+            struct json_object *partObj = json_object_new_object();
+            json_object_object_add(
+                partObj, "text",
+                json_object_new_string(promptUTF8 ? promptUTF8 : (UTF8 *)""));
+            json_object_array_add(partsArr, partObj);
+            json_object_object_add(contentObj, "parts", partsArr);
+            json_object_array_add(contentsArr, contentObj);
+            json_object_object_add(obj, "contents", contentsArr);
 
-        if (isGptImage &&
-            (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS)) {
-            json_object_object_add(obj, "moderation",
-                                   json_object_new_string("low"));
-            if (imageFormat != IMAGE_FORMAT_NULL &&
-                IMAGE_FORMAT_NAMES[imageFormat] != NULL) {
-                json_object_object_add(
-                    obj, "output_format",
-                    json_object_new_string(IMAGE_FORMAT_NAMES[imageFormat]));
-                json_object_object_add(obj, "output_compression",
-                                       json_object_new_int(100));
+            struct json_object *generationConfigObj = json_object_new_object();
+            struct json_object *modalitiesArr = json_object_new_array();
+            json_object_array_add(modalitiesArr, json_object_new_string("TEXT"));
+            json_object_array_add(modalitiesArr,
+                                  json_object_new_string("IMAGE"));
+            json_object_object_add(generationConfigObj, "responseModalities",
+                                   modalitiesArr);
+            json_object_object_add(obj, "generationConfig",
+                                   generationConfigObj);
+
+            /* partsArr belongs to obj by now, so a failure here is cleaned up
+             * by the single json_object_put() below. */
+            if (referenceImageCount > 0 &&
+                !appendGeminiReferenceImageParts(referenceImages, partsArr,
+                                                 &totalAttachmentBytes)) {
+                json_object_put(obj);
+                CodesetsFreeA(promptUTF8, NULL);
+                closeActiveResponseConnection();
+                json_tokener_free(tokener);
+                return NULL;
             }
         } else {
-            json_object_object_add(obj, "response_format",
-                                   json_object_new_string("b64_json"));
+            json_object_object_add(
+                obj, "model",
+                json_object_new_string(modelName ? modelName : ""));
+            json_object_object_add(
+                obj, "prompt",
+                json_object_new_string(promptUTF8 ? promptUTF8 : (UTF8 *)""));
+            /* Provider differences:
+             * - xAI/Grok: no OpenAI "size" field; use aspect_ratio (see below).
+             * - Gemini OpenAI-compat examples omit size; keep request minimal.
+             * - OpenAI gpt-image-* supports size/output_format. */
+            if (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS) {
+                /* xAI rejects OpenAI-style "size" (docs: not supported). Use
+                 * their aspect_ratio when the model is Grok Imagine. */
+                if (isGrok) {
+                    if (imageSize != IMAGE_SIZE_NULL) {
+                        CONST_STRPTR aspectRatio = NULL;
+                        switch (imageSize) {
+                        case IMAGE_SIZE_1792x1024:
+                        case IMAGE_SIZE_1536x1024:
+                            aspectRatio = "16:9";
+                            break;
+                        case IMAGE_SIZE_1024x1792:
+                        case IMAGE_SIZE_1024x1536:
+                            aspectRatio = "9:16";
+                            break;
+                        case IMAGE_SIZE_AUTO:
+                            aspectRatio = "auto";
+                            break;
+                        default:
+                            aspectRatio = "1:1";
+                            break;
+                        }
+                        json_object_object_add(
+                            obj, "aspect_ratio",
+                            json_object_new_string(aspectRatio));
+                    }
+                } else if (imageSize != IMAGE_SIZE_NULL &&
+                           IMAGE_SIZE_NAMES[imageSize] != NULL) {
+                    json_object_object_add(
+                        obj, "size",
+                        json_object_new_string(IMAGE_SIZE_NAMES[imageSize]));
+                }
+            }
+
+            if (isGptImage &&
+                (apiEndpoint == API_IMAGE_ENDPOINT_IMAGES_GENERATIONS)) {
+                /* moderation applies to generations only, so leave it off an
+                 * edit request. */
+                if (!editRequest)
+                    json_object_object_add(obj, "moderation",
+                                           json_object_new_string("low"));
+                if (imageFormat != IMAGE_FORMAT_NULL &&
+                    IMAGE_FORMAT_NAMES[imageFormat] != NULL) {
+                    json_object_object_add(
+                        obj, "output_format",
+                        json_object_new_string(
+                            IMAGE_FORMAT_NAMES[imageFormat]));
+                    if (!editRequest)
+                        json_object_object_add(obj, "output_compression",
+                                               json_object_new_int(100));
+                }
+            } else {
+                json_object_object_add(obj, "response_format",
+                                       json_object_new_string("b64_json"));
+            }
+
+            if (editRequest &&
+                !addXAIReferenceImages(referenceImages, obj,
+                                       &totalAttachmentBytes)) {
+                json_object_put(obj);
+                CodesetsFreeA(promptUTF8, NULL);
+                closeActiveResponseConnection();
+                json_tokener_free(tokener);
+                return NULL;
+            }
         }
+        jsonString = json_object_to_json_string(obj);
+        bodyLength = strlen(jsonString);
     }
     CodesetsFreeA(promptUTF8, NULL);
-    UTF8 *jsonString = json_object_to_json_string(obj);
 
     UTF8 *authHeader = AllocVec(512, MEMF_CLEAR | MEMF_ANY);
     if (useProxy && proxyRequiresAuth && !proxyUsesSSL) {
@@ -5311,6 +5820,15 @@ struct json_object *postImageCreationRequestToOpenAI(
                       ? apiEndpointUrl
                       : "";
 
+    UBYTE contentTypeHeader[128];
+    if (multipartRequest) {
+        snprintf(contentTypeHeader, sizeof(contentTypeHeader),
+                 "multipart/form-data; boundary=%s", OPENAI_FILE_BOUNDARY);
+    } else {
+        snprintf(contentTypeHeader, sizeof(contentTypeHeader),
+                 "application/json");
+    }
+
     UBYTE requestPath[256];
     memset(requestPath, 0, sizeof(requestPath));
     if (apiEndpoint == API_IMAGE_ENDPOINT_GEMINI_GENERATE_CONTENT) {
@@ -5324,15 +5842,15 @@ struct json_object *postImageCreationRequestToOpenAI(
         snprintf(requestPath, sizeof(requestPath),
                  "%s/models/%s:generateContent", endpointUrl, modelName);
     } else {
-        snprintf(requestPath, sizeof(requestPath), "%s/images/generations",
-                 endpointUrl);
+        snprintf(requestPath, sizeof(requestPath), "%s/images/%s", endpointUrl,
+                 editRequest ? "edits" : "generations");
     }
 
     if (requestUsesSSL || useProxy) {
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
                  "POST %s://%s:%d/%s HTTP/1.1\r\n"
                  "Host: %s:%d\r\n"
-                 "Content-Type: application/json\r\n"
+                 "Content-Type: %s\r\n"
                  "%s"
                  "%s"
                  "User-Agent: AmigaGPT\r\n"
@@ -5340,28 +5858,69 @@ struct json_object *postImageCreationRequestToOpenAI(
                  "%s\r\n"
                  "%s\0",
                  requestUsesSSL ? "https" : "http", host, port, requestPath,
-                 host, port, apiAuthHeader, customHeadersFormatted,
-                 strlen(jsonString), authHeader, jsonString);
+                 host, port, contentTypeHeader, apiAuthHeader,
+                 customHeadersFormatted, bodyLength, authHeader,
+                 streamedRequest ? "" : (CONST_STRPTR)jsonString);
     } else {
         snprintf(writeBuffer, WRITE_BUFFER_LENGTH,
                  "POST /%s HTTP/1.1\r\n"
                  "Host: %s:%d\r\n"
-                 "Content-Type: application/json\r\n"
+                 "Content-Type: %s\r\n"
                  "%s"
                  "%s"
                  "User-Agent: AmigaGPT\r\n"
                  "Content-Length: %lu\r\n"
                  "%s\r\n"
                  "%s\0",
-                 requestPath, host, port, apiAuthHeader, customHeadersFormatted,
-                 strlen(jsonString), authHeader, jsonString);
+                 requestPath, host, port, contentTypeHeader, apiAuthHeader,
+                 customHeadersFormatted, bodyLength, authHeader,
+                 streamedRequest ? "" : (CONST_STRPTR)jsonString);
     }
 
-    json_object_put(obj);
-    FreeVec(authHeader);
-
     updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
-    if (requestUsesSSL) {
+    if (streamedRequest) {
+        /* Headers first, then the body a piece at a time; the reference images
+         * themselves go straight from disk to the socket. */
+        ULONG sentBody = 0;
+        ULONG lastPercent = 101;
+        BOOL written = writeStreamedRequestPiece(
+            requestUsesSSL, (const UBYTE *)writeBuffer, strlen(writeBuffer),
+            NULL, 0, NULL);
+        if (written && multipartRequest) {
+            ULONG i;
+            written = writeStreamedRequestPiece(
+                requestUsesSSL, (const UBYTE *)multipartFields,
+                multipartFieldsLength, &sentBody, bodyLength, &lastPercent);
+            for (i = 0; written && i < referencePartCount; i++) {
+                written =
+                    writeStreamedRequestPiece(
+                        requestUsesSSL,
+                        (const UBYTE *)referenceParts[i].header,
+                        referenceParts[i].headerLength, &sentBody, bodyLength,
+                        &lastPercent) &&
+                    streamFileIntoRequest(requestUsesSSL,
+                                          referenceParts[i].file->path,
+                                          referenceParts[i].fileSize, &sentBody,
+                                          bodyLength, &lastPercent) &&
+                    writeStreamedRequestPiece(requestUsesSSL,
+                                              (const UBYTE *)"\r\n", 2,
+                                              &sentBody, bodyLength,
+                                              &lastPercent);
+            }
+            if (written)
+                written = writeStreamedRequestPiece(
+                    requestUsesSSL, (const UBYTE *)multipartSuffix,
+                    multipartSuffixLength, &sentBody, bodyLength, &lastPercent);
+        } else if (written) {
+            written = writeStreamedRequestPiece(
+                requestUsesSSL, (const UBYTE *)jsonString, bodyLength,
+                &sentBody, bodyLength, &lastPercent);
+        }
+        if (written)
+            finishStreamedRequest(requestUsesSSL, strlen(writeBuffer) +
+                                                      bodyLength);
+        ssl_err = written ? 1 : -1;
+    } else if (requestUsesSSL) {
         ERR_clear_error();
         ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
         if (ssl_err <= 0) {
@@ -5370,6 +5929,14 @@ struct json_object *postImageCreationRequestToOpenAI(
     } else {
         ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
     }
+
+    if (obj != NULL)
+        json_object_put(obj);
+    if (multipartFields != NULL)
+        FreeVec(multipartFields);
+    if (referenceParts != NULL)
+        FreeVec(referenceParts);
+    FreeVec(authHeader);
 
 #ifndef DAEMON
     hideLoadingBar();

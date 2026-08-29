@@ -12,7 +12,7 @@ AmigaGPT is a versatile multi-provider AI client for AmigaOS 3.x, 4.1 and MorphO
 
 - ### AI Image Generation
 
-**AmigaGPT** can generate images from a prompt using **OpenAI** (DALL-E 2, DALL-E 3, GPT-Image-1), **Google Gemini**, and **xAI Grok**. You can view and save the images right inside the app, with a choice of output format (PNG or JPEG).
+**AmigaGPT** can generate images from a prompt using **OpenAI** (DALL-E 2, DALL-E 3, GPT-Image-1), **Google Gemini**, and **xAI Grok**. You can view and save the images right inside the app, with a choice of output format (PNG or JPEG). Reference images can be attached to the prompt so the model edits, restyles or combines pictures you already have, and any generated picture can be fed straight back in with a single **Edit...** click.
 
 - ### Seamless integration with AmigaOS and MorphOS
 
@@ -166,6 +166,10 @@ Because the daemon keeps its history between calls, successive `askgpt` commands
 
 To generate images, open "**Image Provider Settings**" from the "**Image**" menu to choose your provider (**OpenAI**, **Google Gemini**, or **xAI Grok**) and model, then type your prompt in the text box and hit the "**Create Image**" button. You can also select the output format (PNG or JPEG) from the Image Provider Settings. When the image has been downloaded to your Amiga, you are then able to open it to your desired scale, or save a copy to a new location. Note that AmigaGPT will automatically save all generated images until you delete them.
 
+Use **Attach images...** to send one or more reference images with the prompt, so the model can edit, restyle or combine pictures you already have instead of working from the description alone. The attached pictures are listed beside the prompt and can be removed with **Clear**; **New Image** clears them too. Only image files can be attached, and the same limits as chat attachments apply -- 8 MB per file and 16 MB per request. Reference images turn the request into an image edit: OpenAI-compatible providers receive them as a multipart form on `/images/edits` (the `gpt-image-*` models accept several, DALL-E 2 one), xAI receives them as data URIs on the same endpoint, and Google Gemini receives them inline in the same `generateContent` request it uses for text-to-image. The pictures are streamed to the server straight from disk where the provider allows it, so a large reference image does not have to fit in memory alongside the request.
+
+When a picture comes back, **Edit...** starts a fresh prompt with that picture already attached as a reference, so "make the sky darker" is one click away from a result you just generated. The preview stays on screen while you type the new prompt, and creating the image adds a new entry to the list rather than replacing the one you started from.
+
 ### Chat and Image Provider Settings
 
 AmigaGPT supports multiple AI providers. Open "**Chat Provider Settings**" from the "**Chat**" menu or "**Image Provider Settings**" from the "**Image**" menu.
@@ -272,13 +276,14 @@ Note: a few short aliases are shared by two arguments in the same template (`S` 
 Generates an image using the specified model.
 
 ```
-CREATEIMAGE PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,D=DESTINATION/K,P=PROMPT/F
+CREATEIMAGE PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,A=ATTACH/K,D=DESTINATION/K,P=PROMPT/F
 ```
 
 - `PR=PROFILE` - Optional, the image profile to use. This can be a built-in profile such as OpenAI, Google Gemini or xAI Grok, or a saved custom image profile name. Use `LISTPROFILES` to see available profiles. If omitted, the active image profile from AmigaGPT config is used
 - `M=MODEL` - Optional, the image model to use. Use `LISTMODELS PR=<profile>` to inspect the models for a profile. If omitted, the selected profile's model is used
 - `S=SIZE` - Optional, image size (use LISTIMAGESIZES to see available sizes). Default is 1024x1024. Note: some providers may ignore unsupported parameters (e.g. xAI currently does not support `size`) - see [xAI Image Generations](https://docs.x.ai/docs/guides/image-generations) and [Gemini OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai)
 - `K=APIKEY` - Optional, API key override. If omitted, the selected profile's API key is used
+- `A=ATTACH` - Optional, one or more comma-separated paths to reference images the provider should edit from instead of generating the picture from the prompt alone. Only image files are accepted, and the same 8 MB per file and 16 MB per request limits as chat attachments apply. How many the provider accepts varies: OpenAI's `gpt-image-*` models take several, DALL-E 2 one, and xAI up to three
 - `D=DESTINATION` - Optional, the path where the image will be saved. Default is the creation of a temporary file. The destination will be the returned string from this function
 - `P=PROMPT` - Required, description of the image to generate
 
@@ -378,6 +383,10 @@ SAY RESULT
 /* Generate an image */
 'CREATEIMAGE P=A beautiful Amiga computer on a desk'
 SAY 'Image saved to:' RESULT
+
+/* Edit a picture you already have */
+'CREATEIMAGE A=Work:Pictures/amiga.png P=Make the sky a stormy purple'
+SAY 'Edited image saved to:' RESULT
 
 /* Speak some text */
 'SPEAKTEXT P=Hello from ARexx!'

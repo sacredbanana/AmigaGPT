@@ -2418,7 +2418,7 @@ HOOKPROTONHNONP(CustomServerSettingsRequesterTestButtonClickedFunc, void) {
         (CONST_STRPTR)apiEndpointUrl, authType, (CONST_STRPTR)customHeaders,
         (CONST_STRPTR)modelName, imageSize, apiKeyToUse, useProxy, proxyHost,
         proxyPort, proxyUsesSSL, proxyRequiresAuth, proxyUsername,
-        proxyPassword, imageFormat, imageEndpoint);
+        proxyPassword, imageFormat, imageEndpoint, NULL);
 
     if (resp == NULL) {
         updateStatusBar(STRING_ERROR, redPen);

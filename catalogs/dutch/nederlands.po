@@ -2043,6 +2043,36 @@ msgctxt "STRING_SPEECH_PROVIDER_SETTINGS_TITLE (386//)"
 msgid "Speech Provider Settings"
 msgstr "Instellingen voor spraakprovider"
 
+#: src/MainWindow.c
+msgctxt "STRING_EDIT_IMAGE (387//)"
+msgid "Edit..."
+msgstr "Bewerken..."
+
+#: src/MainWindow.c
+msgctxt "STRING_ATTACH_REFERENCE_IMAGES (388//)"
+msgid "Attach images..."
+msgstr "Afbeeldingen toevoegen..."
+
+#: src/MainWindow.c
+msgctxt "STRING_CLEAR_REFERENCE_IMAGES (389//)"
+msgid "Clear"
+msgstr "Wissen"
+
+#: src/MainWindow.c
+msgctxt "STRING_NO_REFERENCE_IMAGES (390//)"
+msgid "No reference images"
+msgstr "Geen referentieafbeeldingen"
+
+#: src/MainWindow.c
+msgctxt "STRING_REFERENCE_IMAGES_ATTACHED_FORMAT (391//)"
+msgid "%lu reference image(s)"
+msgstr "%lu referentieafbeelding(en)"
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_NOT_AN_IMAGE (392//)"
+msgid "Only image files can be used as reference images."
+msgstr "Alleen afbeeldingsbestanden kunnen als referentieafbeelding worden gebruikt."
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI-stem"
