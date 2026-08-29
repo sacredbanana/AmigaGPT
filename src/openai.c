@@ -111,6 +111,11 @@ struct PendingFunctionCall {
 
 static struct PendingFunctionCall pendingFunctionCalls[PENDING_FUNCTION_CALL_MAX];
 static UWORD pendingFunctionCallCount = 0;
+/* Host whose /responses endpoint rejected previous_response_id chaining. xAI
+ * does not retain responses, so every follow-up message off a stored id fails
+ * there; one wasted round trip per session is enough to learn that and fall
+ * back to sending the whole conversation. */
+static UBYTE statefulResponsesUnsupportedHost[256] = {0};
 static BOOL pendingToolCall = FALSE;
 static UBYTE pendingResponseId[256] = {0};
 
@@ -160,9 +165,7 @@ static BOOL responseMarksStreamFinished(struct json_object *response);
 static void setConversationLastResponseId(struct Conversation *conversation,
                                           UTF8 *responseId);
 static UTF8 *extractResponseIdFromPayload(struct json_object *response);
-static BOOL responseIndicatesMissingPreviousId(struct json_object *response);
-static BOOL responseIndicatesUnansweredFunctionCall(struct json_object *response);
-static BOOL responseIndicatesBadRequest(struct json_object *response);
+static UTF8 *responseErrorText(struct json_object *response);
 static struct json_object *getResponseOutputArray(struct json_object *response);
 static BOOL responseHasFunctionCall(struct json_object *response);
 static void capturePendingFunctionCalls(struct json_object *response);
@@ -583,88 +586,20 @@ void conversationSyncLastResponseIdFromPayload(
     setConversationLastResponseId(conversation, (UTF8 *)id);
 }
 
-static BOOL responseIndicatesMissingPreviousId(struct json_object *response) {
+/**
+ * Return the error text carried by a response payload, or NULL when the
+ * payload is not an error.  Providers disagree on the shape: OpenAI nests the
+ * text in error.message while xAI answers with a plain "error" string, so the
+ * shared extractor is used rather than reading error.message directly.
+ **/
+static UTF8 *responseErrorText(struct json_object *response) {
+    struct json_object *error = NULL;
     if (response == NULL)
-        return FALSE;
-    struct json_object *error = json_object_object_get(response, "error");
-    if (error == NULL || json_object_is_type(error, json_type_null))
-        return FALSE;
-    struct json_object *messageObj = json_object_object_get(error, "message");
-    UTF8 *message = json_object_get_string(messageObj);
-    if (message == NULL || strlen(message) == 0)
-        return FALSE;
-
-    ULONG len = strlen(message);
-    STRPTR lower = AllocVec(len + 1, MEMF_ANY | MEMF_CLEAR);
-    if (lower == NULL)
-        return FALSE;
-    for (ULONG i = 0; i < len; i++) {
-        UBYTE c = (UBYTE)message[i];
-        if (c >= 'A' && c <= 'Z')
-            c = (UBYTE)(c - 'A' + 'a');
-        lower[i] = (char)c;
-    }
-
-    BOOL missing = (strstr(lower, "previous_response_id") != NULL &&
-                    (strstr(lower, "not found") != NULL ||
-                     strstr(lower, "does not exist") != NULL ||
-                     strstr(lower, "object not found") != NULL ||
-                     strstr(lower, "invalid") != NULL)) ||
-                   (strstr(lower, "response") != NULL &&
-                    strstr(lower, "not found") != NULL);
-    FreeVec(lower);
-    return missing;
-}
-
-static BOOL
-responseIndicatesUnansweredFunctionCall(struct json_object *response) {
-    struct json_object *error;
-    struct json_object *messageObj;
-    UTF8 *message;
-    ULONG len;
-    STRPTR lower;
-    BOOL unanswered;
-
-    if (response == NULL)
-        return FALSE;
-    error = json_object_object_get(response, "error");
-    if (error == NULL || json_object_is_type(error, json_type_null))
-        return FALSE;
-    messageObj = json_object_object_get(error, "message");
-    message = json_object_get_string(messageObj);
-    if (message == NULL || strlen(message) == 0)
-        return FALSE;
-
-    len = strlen(message);
-    lower = AllocVec(len + 1, MEMF_ANY | MEMF_CLEAR);
-    if (lower == NULL)
-        return FALSE;
-    for (ULONG i = 0; i < len; i++) {
-        UBYTE c = (UBYTE)message[i];
-        if (c >= 'A' && c <= 'Z')
-            c = (UBYTE)(c - 'A' + 'a');
-        lower[i] = (char)c;
-    }
-
-    unanswered = (strstr(lower, "no tool output found") != NULL &&
-                  strstr(lower, "function call") != NULL);
-    FreeVec(lower);
-    return unanswered;
-}
-
-static BOOL responseIndicatesBadRequest(struct json_object *response) {
-    if (response == NULL)
-        return FALSE;
-    struct json_object *error = json_object_object_get(response, "error");
-    if (error == NULL || json_object_is_type(error, json_type_null))
-        return FALSE;
-    struct json_object *messageObj = json_object_object_get(error, "message");
-    UTF8 *message = json_object_get_string(messageObj);
-    if (message == NULL || strlen(message) == 0)
-        return FALSE;
-
-    return (strstr(message, "400 Bad Request") != NULL ||
-            strstr(message, "HTTP/1.1 400") != NULL);
+        return NULL;
+    if (!json_object_object_get_ex(response, "error", &error) ||
+        error == NULL || json_object_is_type(error, json_type_null))
+        return NULL;
+    return getApiErrorMessageFromJson(response);
 }
 
 static struct ConversationNode *
@@ -3801,6 +3736,9 @@ struct json_object **postChatMessageToOpenAI(
         (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES && conversation != NULL &&
          conversation->lastResponseId != NULL &&
          strlen(conversation->lastResponseId) > 0);
+    if (canUseStatefulResponses &&
+        strcmp((CONST_STRPTR)statefulResponsesUnsupportedHost, host) == 0)
+        canUseStatefulResponses = FALSE;
     struct ConversationNode *attachmentMessage =
         getLastNonSystemConversationMessage(conversation);
     if (isXaiHost && messageHasLocalImages(attachmentMessage))
@@ -5100,10 +5038,13 @@ struct json_object **postChatMessageToOpenAI(
 
     if (apiEndpoint == API_CHAT_ENDPOINT_RESPONSES && responseIndex > 0) {
         struct json_object *lastResponse = responses[responseIndex - 1];
-        if (canUseStatefulResponses &&
-            (responseIndicatesMissingPreviousId(lastResponse) ||
-             responseIndicatesUnansweredFunctionCall(lastResponse) ||
-             responseIndicatesBadRequest(lastResponse))) {
+        /* A request that chained off previous_response_id is retried once
+         * with the full history whenever it comes back as an error. Matching
+         * on the error text is not reliable enough: providers word the
+         * failure differently, and some (xAI) do not retain responses at all,
+         * so every follow-up message off a stored id fails. The retry runs
+         * with lastResponseId cleared, so it cannot recurse again. */
+        if (canUseStatefulResponses && responseErrorText(lastResponse) != NULL) {
             setConversationLastResponseId(conversation, NULL);
             if (effectiveStream) {
                 closeActiveResponseConnection();
@@ -5117,12 +5058,30 @@ struct json_object **postChatMessageToOpenAI(
             FreeVec(responses);
             if (requestBuffer != NULL)
                 FreeVec(requestBuffer);
-            return postChatMessageToOpenAI(
+            struct json_object **retryResponses = postChatMessageToOpenAI(
                 conversation, host, port, useSSL, model, apiKey, stream,
                 useProxy, proxyHost, proxyPort, proxyUsesSSL, proxyRequiresAuth,
                 proxyUsername, proxyPassword, webSearchEnabled,
                 shellToolEnabled, codeInterpreterEnabled, apiEndpoint,
                 apiEndpointUrl, authorizationType, customHeaders);
+            /* The same request minus previous_response_id going through is
+             * what tells us the chaining itself is not supported here, so
+             * remember the host and stop paying for the failed round trip on
+             * every following message. */
+            if (retryResponses != NULL) {
+                BOOL retrySucceeded = TRUE;
+                for (UWORD i = 0; retryResponses[i] != NULL; i++) {
+                    if (responseErrorText(retryResponses[i]) != NULL) {
+                        retrySucceeded = FALSE;
+                        break;
+                    }
+                }
+                if (retrySucceeded) {
+                    strncpy(statefulResponsesUnsupportedHost, host,
+                            sizeof(statefulResponsesUnsupportedHost) - 1);
+                }
+            }
+            return retryResponses;
         }
 
         STRPTR newestResponseId = NULL;

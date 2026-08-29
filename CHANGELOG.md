@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.2.2 (2026-08-29)
+
+- Fix every second chat message failing with providers that do not retain responses (xAI Grok), which made ARexx SENDMESSAGE and the AskGPT script only work every second time
+- Fix ARexx SENDMESSAGE returning an empty RESULT instead of the error text when the provider reports errors as a plain string rather than an object
+
 ## 3.2.1 (2026-08-26)
 
 - Fix follow-up chat failing with "No tool output found for function call" after the model used the shell tool (ARexx/KIT and the GUI)

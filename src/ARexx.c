@@ -1425,6 +1425,31 @@ rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
     return TRUE;
 }
 
+/**
+ * Reply to the ARexx caller with the API error carried by a response payload.
+ * Providers disagree on the shape - OpenAI nests the text in error.message
+ * while xAI answers with a plain "error" string - so the shared extractor is
+ * used, with the generic connection error as a fallback. Replying with an
+ * empty string would leave RESULT unset in the calling script, which looks
+ * like the command silently did nothing.
+ **/
+static void rexxSetApiErrorReply(struct json_object *response) {
+    UTF8 *messageString = getApiErrorMessageFromJson(response);
+    STRPTR formatted = NULL;
+    if (messageString != NULL && strlen(messageString) > 0) {
+        formatted = CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
+                                      CSA_Source, (Tag)messageString,
+                                      CSA_MapForeignChars, TRUE, TAG_DONE);
+    }
+    set(app, MUIA_Application_RexxString,
+        (formatted != NULL && formatted[0] != '\0')
+            ? formatted
+            : (STRPTR)STRING_ERROR_CONNECTING_OPENAI);
+    if (formatted != NULL)
+        CodesetsFreeA(formatted, NULL);
+    updateStatusBar(STRING_ERROR, redPen);
+}
+
 static void rexxSetProfileNotFoundError(CONST_STRPTR kind,
                                         CONST_STRPTR profileName) {
     UBYTE errMsg[512];
@@ -1815,18 +1840,9 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         if (json_object_object_get_ex(toolResponse, "error", &error) &&
             !json_object_is_type(error, json_type_null)) {
             clearPendingToolCall();
-            struct json_object *message =
-                json_object_object_get(error, "message");
-            UTF8 *messageString = json_object_get_string(message);
-            STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
-                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                (Tag)messageString, CSA_MapForeignChars, TRUE, TAG_DONE);
-            set(app, MUIA_Application_RexxString,
-                formattedMessageSystemEncoded);
-            CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+            rexxSetApiErrorReply(toolResponse);
             json_object_put(toolResponse);
             freeChatFiles(&receivedFiles);
-            updateStatusBar(STRING_ERROR, redPen);
             return RETURN_OK;
         }
 
@@ -1915,15 +1931,7 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
         struct json_object *error;
         if (json_object_object_get_ex(response, "error", &error) &&
             !json_object_is_type(error, json_type_null)) {
-            struct json_object *message =
-                json_object_object_get(error, "message");
-            UTF8 *messageString = json_object_get_string(message);
-            STRPTR formattedMessageSystemEncoded = CodesetsUTF8ToStr(
-                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                (Tag)messageString, CSA_MapForeignChars, TRUE, TAG_DONE);
-            set(app, MUIA_Application_RexxString,
-                formattedMessageSystemEncoded);
-            CodesetsFreeA(formattedMessageSystemEncoded, NULL);
+            rexxSetApiErrorReply(response);
             /* Cleanup */
             ri = 0;
             while ((response = responses[ri++]) != NULL) {
@@ -1931,7 +1939,6 @@ HOOKPROTONHNO(SendMessageFunc, APTR, ULONG *arg) {
             }
             FreeVec(responses);
             freeChatFiles(&receivedFiles);
-            updateStatusBar(STRING_ERROR, redPen);
             return RETURN_OK;
         }
         UTF8 *part =

@@ -1490,7 +1490,7 @@ Contributions to AmigaGPT are welcome. If you have a bug to report, a feature to
 - Bebbo for creating the Amiga GCC toolchain @{u}https://github.com/bebbo@{uu}
 - OpenAI for making this all possible @{u}https://openai.com@{uu}
 - EAB and everyone in it for answering my questions @{u}https://eab.abime.net/@{uu}
-- Jï¿½n Zahurancï¿½k for all the thorough testing, bundling AmigaGPT into
+- Ján Zahurancík for all the thorough testing, bundling AmigaGPT into
   AmiKit, creating KIT, and for all the moral support
   @{u}https://www.amikit.amiga.sk@{uu}
 - CoffinOS for bundling AmigaGPT into CoffinOS @{u}https://getcoffin.net@{uu}
