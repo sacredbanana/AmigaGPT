@@ -419,7 +419,7 @@ The **ARexx** menu allows you to import and run ARexx scripts. Also, selecting *
 
 ## Files and Drawers
 
-Everything AmigaGPT keeps lives under the `AMIGAGPT:` assign, which the installer adds to `S:User-Startup`.
+Everything AmigaGPT keeps lives under the `AMIGAGPT:` assign, which the installer adds to `S:User-Startup`, or to `SYS:Prefs/Presets/AmiKit/KIT/KIT-Startup` when you are running AmiKit.
 
 | Path | Contents |
 | --- | --- |

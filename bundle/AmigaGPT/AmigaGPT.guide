@@ -162,6 +162,9 @@ AmigaOS 3, AmigaOS 4 or MorphOS. The correct one is preselected for the machine 
 - @{b}Where to install AmigaGPT@{ub}
 A drawer named AmigaGPT is created inside the drawer you choose. @{i}Work:@{ui} is a typical choice.
 
+- @{b}Whether to install AmigaGPTD@{ub}
+Asked in Expert mode. The daemon answers ARexx commands without the main window. On AmiKit it is installed into the KIT drawer; otherwise it is installed to @{i}C:@{ui}. Novice and Average always install it. See @{"The AmigaGPTD daemon" link daemon}.
+
 - @{b}Which languages to install@{ub}
 English is built into the program and is always available. Any of the 22 translations can be installed as catalogs. Your system language is preselected. See @{"Language and Catalogs" link language}.
 
@@ -178,15 +181,15 @@ Keep AmigaGPT.guide in the AmigaGPT drawer if you want the Help menu to be able 
 Anywhere you like.
 
 - @{b}The AMIGAGPT: assign@{ub}
-An assign is added to @{i}S:User-Startup@{ui}. AmigaGPT stores its configuration, conversation history and generated images through this assign, so it is required.
+An assign is added to @{i}S:User-Startup@{ui}, or to @{i}SYS:Prefs/Presets/AmiKit/KIT/KIT-Startup@{ui} when you are running AmiKit. AmigaGPT stores its configuration, conversation history and generated images through this assign, so it is required.
 
 - @{b}Whether to start the daemon at boot@{ub}
-Adds a line to @{i}S:User-Startup@{ui} that runs AmigaGPTD when the machine boots, so ARexx scripts and the AskGPT command work without the GUI being open. See @{"The AmigaGPTD daemon" link daemon}.
+Adds a line that runs AmigaGPTD when the machine boots, so ARexx scripts and the AskGPT command work without the GUI being open. On a normal Amiga that line goes in @{i}S:User-Startup@{ui}. On AmiKit it goes in @{i}KIT-Startup@{ui} and starts the copy in the KIT drawer. Skipped if you chose not to install AmigaGPTD. See @{"The AmigaGPTD daemon" link daemon}.
 
 - @{b}Whether to install the AskGPT script@{ub}
 Installs the AskGPT ARexx script into @{i}C:@{ui} so you can ask questions from the Shell. See @{"The AskGPT shell command" link askgpt}.
 
-You must reboot, or execute the new @{i}S:User-Startup@{ui} lines by hand, before AmigaGPT will run.
+You must reboot, or execute the new @{i}S:User-Startup@{ui} or @{i}KIT-Startup@{ui} lines by hand, before AmigaGPT will run.
 @endnode
 
 @node ahi "Installing AHI"
@@ -276,7 +279,7 @@ On AmigaOS 3, AmigaGPT checks its own stack on startup and warns you if it is be
 
 @{b}@{u}The daemon@{uu}@{ub}
 
-AmigaGPTD is a companion program with no user interface that answers the same ARexx commands as the full application. Run it from the Shell, or let the installer add it to @{i}S:User-Startup@{ui} so that it is always available. See @{"The AmigaGPTD daemon" link daemon}.
+AmigaGPTD is a companion program with no user interface that answers the same ARexx commands as the full application. Run it from the Shell, or let the installer add it to @{i}S:User-Startup@{ui} (or @{i}KIT-Startup@{ui} on AmiKit) so that it is always available. See @{"The AmigaGPTD daemon" link daemon}.
 
 @{b}@{u}First run@{uu}@{ub}
 
@@ -901,7 +904,7 @@ AmigaGPTD is a companion program with no user interface. It answers exactly the 
 
 @{b}@{u}Running it@{uu}@{ub}
 
-Run AmigaGPTD from the Shell, or let the installer add it to @{i}S:User-Startup@{ui} so that it starts with the machine. It prints a short line when it starts, when it is ready and when it shuts down. Stop it with @{bg fill}@{fg filltext}Ctrl-C@{fg text}@{bg background} or by closing its Shell.
+Run AmigaGPTD from the Shell, or let the installer add it to @{i}S:User-Startup@{ui} (or @{i}KIT-Startup@{ui} on AmiKit) so that it starts with the machine. It prints a short line when it starts, when it is ready and when it shuts down. Stop it with @{bg fill}@{fg filltext}Ctrl-C@{fg text}@{bg background} or by closing its Shell.
 
 @{b}@{u}Two different ARexx ports@{uu}@{ub}
 
@@ -1354,7 +1357,7 @@ See @{"ARexx Integration" link arexx}.
 @node files "Files and Drawers"
 @{b}@{fg shine}Files and Drawers@{fg text}@{ub}
 
-Everything AmigaGPT keeps lives under the @{b}AMIGAGPT:@{ub} assign, which the installer adds to @{i}S:User-Startup@{ui} and which points at the drawer you installed into.
+Everything AmigaGPT keeps lives under the @{b}AMIGAGPT:@{ub} assign, which the installer adds to @{i}S:User-Startup@{ui} (or @{i}KIT-Startup@{ui} on AmiKit) and which points at the drawer you installed into.
 
 @{b}@{u}Programs@{uu}@{ub}
 

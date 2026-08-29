@@ -7,6 +7,8 @@
 - LISTAUDIOFORMATS now reports wav and pcm
 - Main window tabs renamed to Chat, Image and Speech
 - Stop button is shared by every mode and can abort in-flight chat, image and speech requests, then restore the previous state
+- Expert mode in the installer  now asks whether to install AmigaGPTD, including on AmiKit, instead of always copying the daemon
+- On AmiKit the installer writes the AMIGAGPT: assign and optional daemon start to KIT-Startup instead of S:User-Startup
 
 ## 3.3.0 (2026-08-29)
 

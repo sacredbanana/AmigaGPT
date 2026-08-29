@@ -1,4 +1,4 @@
-; $VER: Install-AmigaGPT 2.3.1 (29.03.2025)
+; $VER: Install-AmigaGPT 2.3.3 (30.08.2026)
 ;------------------------------------------------------------------------
 (set @app-name "AmigaGPT")
 (set @default-dest "SYS:")
@@ -77,6 +77,9 @@
 (set #userstartuprunask	"Do you want the AmigaGPT daemon to automatically start when you boot? This will be added to your \"S:User-Startup\" file.")
 (set #askgptinstallask	"Do you want the AskGPT ARexx script to be installed? This will allow you to ask AmigaGPT questions from the command line by running 'askgpt <question>' from the command line.")
 (set #askgptinstallhelp	"The AskGPT script will be installed to your C: directory and will be available as a command line tool.")
+(set #amigagptdinstallask	"Do you want to install the AmigaGPT daemon (AmigaGPTD)? This is a background program that answers ARexx commands without opening the main AmigaGPT window.")
+(set #amigagptdinstallhelp	"On AmiKit, AmigaGPTD is copied into SYS:Prefs/Presets/AmiKit/KIT so AmiKit can start it. On other systems it is copied to C:. Skip it if you only want the main AmigaGPT application.")
+(set #kitstartup-fail	"Could not update SYS:Prefs/Presets/AmiKit/KIT/KIT-Startup. Please add the AMIGAGPT: assign to that file by hand.")
 
 
 ;------------------------------------------------------------------------
@@ -244,6 +247,19 @@
   ) )
 
 ;------------------------------------------------------------------------
+; AmiKit: write assign / optional daemon start into KIT-Startup
+;------------------------------------------------------------------------
+
+(procedure p_update-kit-startup #start-daemon
+  (run (cat "setenv AMIGAGPT_DEST \"" @default-dest "\""))
+  (run (cat "setenv AMIGAGPT_STARTDAEMON \"" #start-daemon "\""))
+  (set #kit-status (run "rx update_kit_startup.rexx"))
+  (if (<> #kit-status 0)
+    (message #kitstartup-fail)
+  )
+)
+
+;------------------------------------------------------------------------
 ; We can't handle this script without Installer 42.9 or better!
 (if (< @installer-version 2752521)
   (
@@ -315,6 +331,24 @@
 ; Ok, we found the correct destination now
 (set @default-dest #amigagptdir)
 
+;------------------------------------------------------------------------
+; Expert mode: ask whether to install AmigaGPTD before the locale options
+(if (= @user-level 2)
+  (
+    (set #install-amigagptd
+      (askchoice
+        (prompt #amigagptdinstallask)
+        (help #amigagptdinstallhelp)
+        (choices "Yes" "No")
+        (default 0)
+      )
+    )
+  )
+  (
+    (set #install-amigagptd 0)
+  )
+)
+
 ; Catalogs only work from LOCALE: so there is nothing to ask about
 (set #localedir "LOCALE:")
 
@@ -343,21 +377,25 @@
       (noposition)
       (optional "force" "askuser")
     )
-    (if (not (exists #amikitkitdir))
+    (if (= #install-amigagptd 0)
       (
-        (copyfiles 
-          (source "AmigaGPT/AmigaGPTD_OS3")
-          (dest "C:")
-          (newname "AmigaGPTD")
-          (optional "force" "askuser")
-        )
-      )
-      (
-        (copyfiles
-          (source "AmigaGPT/AmigaGPTD_OS3")
-          (dest #amikitkitdir)
-          (newname "AmigaGPTD")
-          (optional "force" "askuser")
+        (if (not (exists #amikitkitdir))
+          (
+            (copyfiles 
+              (source "AmigaGPT/AmigaGPTD_OS3")
+              (dest "C:")
+              (newname "AmigaGPTD")
+              (optional "force" "askuser")
+            )
+          )
+          (
+            (copyfiles
+              (source "AmigaGPT/AmigaGPTD_OS3")
+              (dest #amikitkitdir)
+              (newname "AmigaGPTD")
+              (optional "force" "askuser")
+            )
+          )
         )
       )
     )
@@ -388,11 +426,15 @@
       (infos)
       (optional "force" "askuser")
     )
-    (copyfiles 
-      (source "AmigaGPT/AmigaGPTD_OS4")
-      (dest "C:")
-      (newname "AmigaGPTD")
-      (optional "force" "askuser")
+    (if (= #install-amigagptd 0)
+      (
+        (copyfiles 
+          (source "AmigaGPT/AmigaGPTD_OS4")
+          (dest "C:")
+          (newname "AmigaGPTD")
+          (optional "force" "askuser")
+        )
+      )
     )
     (copyfiles 
       (source "icons/AmigaGPT_Drawer_OS4.info")
@@ -412,11 +454,15 @@
       (infos)
       (optional "force" "askuser")
     )
-    (copyfiles 
-      (source "AmigaGPT/AmigaGPTD_MorphOS")
-      (dest "C:")
-      (newname "AmigaGPTD")
-      (optional "force" "askuser")
+    (if (= #install-amigagptd 0)
+      (
+        (copyfiles 
+          (source "AmigaGPT/AmigaGPTD_MorphOS")
+          (dest "C:")
+          (newname "AmigaGPTD")
+          (optional "force" "askuser")
+        )
+      )
     )
     (copyfiles 
       (source "icons/AmigaGPT_Drawer_OS4.info") ; Use OS4 drawer icon for MorphOS
@@ -524,24 +570,66 @@
 
 (complete 93)
 
-(startup "AMIGAGPT"
-	(prompt #userstartupassignask)
-  (help @startup-help)
-	(command "If Exists \"" @default-dest "\"\n")
-	(command "   Assign AMIGAGPT: \"" @default-dest "\"\n")
-	(command "Endif")
-)
-
-(if (not (exists #amikitkitdir))
+(if (exists #amikitkitdir)
+  (
+    (set #userstartupassignask "An AMIGAGPT: assign will be added to your \"SYS:Prefs/Presets/AmiKit/KIT/KIT-Startup\" file.")
+    (set #userstartuprunask "Do you want the AmigaGPT daemon to automatically start when you boot? This will be added to your \"SYS:Prefs/Presets/AmiKit/KIT/KIT-Startup\" file.")
+    (set #startup-help "On AmiKit these lines go in KIT-Startup rather than S:User-Startup. AmigaGPT needs the AMIGAGPT: assign.")
+    (set #write-kit 0)
+    (set #kit-daemon 0)
+    (set #assign-choice
+      (askchoice
+        (prompt #userstartupassignask)
+        (help #startup-help)
+        (choices "Yes" "No")
+        (default 0)
+      )
+    )
+    (if (= #assign-choice 0)
+      (set #write-kit 1)
+    )
+    (if (= #install-amigagptd 0)
+      (
+        (set #daemon-choice
+          (askchoice
+            (prompt #userstartuprunask)
+            (help #startup-help)
+            (choices "Yes" "No")
+            (default 0)
+          )
+        )
+        (if (= #daemon-choice 0)
+          (
+            (set #write-kit 1)
+            (set #kit-daemon 1)
+          )
+        )
+      )
+    )
+    (if #write-kit
+      (p_update-kit-startup #kit-daemon)
+    )
+  )
   (
     (startup "AMIGAGPT"
-    (prompt #userstartuprunask)
-    (help @startup-help)
-    (confirm)
-    (command "If Exists \"" @default-dest "\"\n")
-    (command "  Assign AMIGAGPT: \"" @default-dest "\"\n")
-    (command "  Run <>NIL: C:AmigaGPTD <>NIL:\n")
-    (command "Endif")
+      (prompt #userstartupassignask)
+      (help #startup-help)
+      (command "If Exists \"" @default-dest "\"\n")
+      (command "   Assign AMIGAGPT: \"" @default-dest "\"\n")
+      (command "Endif")
+    )
+    (if (= #install-amigagptd 0)
+      (
+        (startup "AMIGAGPT"
+          (prompt #userstartuprunask)
+          (help #startup-help)
+          (confirm)
+          (command "If Exists \"" @default-dest "\"\n")
+          (command "  Assign AMIGAGPT: \"" @default-dest "\"\n")
+          (command "  Run <>NIL: C:AmigaGPTD <>NIL:\n")
+          (command "Endif")
+        )
+      )
     )
   )
 )
