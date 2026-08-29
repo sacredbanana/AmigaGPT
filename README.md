@@ -24,7 +24,7 @@ You can customise the look and feel of the application, including the ability to
 
 - ### Speech capability
 
-**AmigaGPT** supports multiple speech providers, configurable from **Speech Provider Settings**. For cloud-based voices, it supports **OpenAI TTS** (high quality 16-bit voices), **SpaceXAI Grok TTS**, **ElevenLabs**, and **OpenVox** (requires AHI). For offline synthesis, AmigaOS 3 can use the Amiga's built-in `narrator.device` (**v34** and **v37**) with `translator.library`, and AmigaOS 4.1 supports `flite.device`. The **Speech** tab generates reusable WAV files from the active speech profile without playing them automatically; **Play** reads the saved file locally. Speech also runs in the background from Chat replies or ARexx. While a request is running, **Send**, **Create** and **Generate** change to **Stop** and abort that request.
+**AmigaGPT** supports multiple speech providers, configurable from **Speech Provider Settings**. For cloud-based voices, it supports **OpenAI TTS** (high quality 16-bit voices), **SpaceXAI Grok TTS**, **ElevenLabs**, and **OpenVox** (requires AHI). For offline synthesis, AmigaOS 3 can use the Amiga's built-in `narrator.device` (**v34** and **v37**) with `translator.library`, and AmigaOS 4.1 supports `flite.device`. The **Speech** tab generates reusable WAV files from the active speech profile without playing them automatically; **Play** reads the saved file locally and changes to **Stop** while it is playing. Speech also runs in the background from Chat replies or ARexx. While a request is running, **Send**, **Create** and **Generate** change to **Stop** and abort that request.
 
 - ### Code Interpreter
 
@@ -172,7 +172,7 @@ When a picture comes back, **Edit...** starts a fresh prompt with that picture a
 
 ### Speech
 
-The **Speech** tab generates spoken audio with the active speech profile and saves it under `AMIGAGPT:speech/` instead of playing it automatically. Type a phrase, optionally attach files, and press **Generate**. Each phrase is listed on the left, titled with the first 32 characters of the text. **Play** only plays the already-saved WAV file; it does not contact a speech provider again. **Regenerate** replaces the selected phrase's file. **Save Speech Copy** writes a copy somewhere else on your Amiga.
+The **Speech** tab generates spoken audio with the active speech profile and saves it under `AMIGAGPT:speech/` instead of playing it automatically. Type a phrase, optionally attach files, and press **Generate**. Each phrase is listed on the left, titled with the first 32 characters of the text. **Play** only plays the already-saved WAV file; it does not contact a speech provider again. While audio is playing, **Play** changes to **Stop** and interrupts playback. **Regenerate** replaces the selected phrase's file. **Save Speech Copy** writes a copy somewhere else on your Amiga.
 
 **Generate text with AI** sends the current text and any attached files through the active chat profile and replaces the editor contents with the returned text. It then unchecks **Speak contents of files**; you can tick that box again if you still want attached files spoken together with the rewritten text. The checkbox is greyed out until files are attached, and is checked automatically when the first file is added.
 

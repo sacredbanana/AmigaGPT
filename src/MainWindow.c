@@ -100,6 +100,7 @@ struct GeneratedSpeech {
 static struct GeneratedSpeech *currentSpeech = NULL;
 static STRPTR pages[4] = {NULL};
 static BOOL requestInterfaceBusy = FALSE;
+static BOOL playButtonShowingStop = FALSE;
 
 struct Conversation *newConversation();
 static struct Conversation *copyConversation(struct Conversation *conversation);
@@ -272,6 +273,27 @@ static BOOL abortIfRequestBusy(void) {
     return TRUE;
 }
 
+void updatePlayButton() {
+    BOOL playing;
+    if (playSpeechButton == NULL)
+        return;
+    playing = isSpeechPlaying();
+    if (playing) {
+        if (!playButtonShowingStop) {
+            setActionButtonLabel(playSpeechButton, redPen, STRING_STOP);
+            playButtonShowingStop = TRUE;
+        }
+        set(playSpeechButton, MUIA_Disabled, FALSE);
+        return;
+    }
+    if (playButtonShowingStop) {
+        set(playSpeechButton, MUIA_Text_Contents, STRING_PLAY);
+        playButtonShowingStop = FALSE;
+    }
+    set(playSpeechButton, MUIA_Disabled,
+        requestInterfaceBusy || currentSpeech == NULL);
+}
+
 static void updateSpeechControls() {
     ULONG count = pendingSpeechFilesInitialized
                       ? chatFileCount(&pendingSpeechFiles)
@@ -307,10 +329,9 @@ static void updateSpeechControls() {
             set(regenerateSpeechButton, MUIA_Disabled,
                 !canGenerate || currentSpeech == NULL);
     }
-    if (playSpeechButton != NULL)
-        set(playSpeechButton, MUIA_Disabled, currentSpeech == NULL);
     if (saveSpeechCopyButton != NULL)
         set(saveSpeechCopyButton, MUIA_Disabled, currentSpeech == NULL);
+    updatePlayButton();
     if (text != NULL)
         FreeVec(text);
 }
@@ -333,8 +354,6 @@ static void setSpeechGenerationControlsDisabled(BOOL disabled) {
         set(regenerateSpeechButton, MUIA_Disabled, disabled);
     if (generateSpeechTextButton != NULL)
         set(generateSpeechTextButton, MUIA_Disabled, disabled);
-    if (playSpeechButton != NULL)
-        set(playSpeechButton, MUIA_Disabled, disabled);
     if (saveSpeechCopyButton != NULL)
         set(saveSpeechCopyButton, MUIA_Disabled, disabled);
     if (speechListObject != NULL)
@@ -365,6 +384,7 @@ static void setRequestInterfaceBusy(BOOL busy) {
     setSpeechGenerationControlsDisabled(busy);
     setPrimaryActionButtonsEnabled();
     setActionButtonsStopMode(busy);
+    updatePlayButton();
 }
 
 static void finishActiveRequest(BOOL restoreReadyStatus) {
@@ -1019,8 +1039,14 @@ MakeHook(RegenerateSpeechButtonClickedHook,
          RegenerateSpeechButtonClickedFunc);
 
 HOOKPROTONHNONP(PlaySpeechButtonClickedFunc, void) {
+    if (isSpeechPlaying()) {
+        stopSpeech();
+        updatePlayButton();
+        return;
+    }
     if (currentSpeech != NULL && currentSpeech->filePath != NULL)
         playSpeechFile(currentSpeech->filePath);
+    updatePlayButton();
 }
 MakeHook(PlaySpeechButtonClickedHook, PlaySpeechButtonClickedFunc);
 
@@ -2197,6 +2223,7 @@ MakeHook(ModePageChangedHook, ModePageChangedFunc);
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createMainWindow() {
+    playButtonShowingStop = FALSE;
     if (!pendingChatFilesInitialized) {
         NewList((struct List *)&pendingChatFiles);
         pendingChatFilesInitialized = TRUE;

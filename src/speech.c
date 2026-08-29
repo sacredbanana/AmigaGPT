@@ -76,6 +76,9 @@ struct FliteVoice *voice = NULL;
 static struct MsgPort *AHImp = NULL;
 struct AHIRequest *ahiRequest = NULL;
 static BOOL ahiIOInFlight = FALSE;
+#ifdef __AMIGAOS3__
+static BOOL narratorIOInFlight = FALSE;
+#endif
 UBYTE *audioBuffer = NULL;
 
 static void finishAHIPlayback(BOOL abort) {
@@ -742,6 +745,7 @@ void closeSpeech() {
             AbortIO((struct IORequest *)NarratorIO);
             WaitIO((struct IORequest *)NarratorIO);
         }
+        narratorIOInFlight = FALSE;
         if (((struct IORequest *)NarratorIO)->io_Device != NULL) {
             CloseDevice((struct IORequest *)NarratorIO);
             Forbid();
@@ -1058,6 +1062,7 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             waitForNarratorCapture(FALSE);
             return narratorCaptureSucceeded;
         }
+        narratorIOInFlight = TRUE;
         return TRUE;
     }
 #elif defined(__AMIGAOS4__)
@@ -1206,6 +1211,7 @@ void stopSpeech() {
         AbortIO((struct IORequest *)NarratorIO);
         WaitIO((struct IORequest *)NarratorIO);
     }
+    narratorIOInFlight = FALSE;
 #elif defined(__AMIGAOS4__)
     finishFliteRequests(TRUE);
 #endif
@@ -1214,6 +1220,52 @@ void stopSpeech() {
         FreeVec(audioBuffer);
         audioBuffer = NULL;
     }
+}
+
+BOOL isSpeechPlaying(void) {
+    if (ahiIOInFlight) {
+        if (CheckIO((struct IORequest *)ahiRequest) == 0)
+            return TRUE;
+        finishAHIPlayback(FALSE);
+        if (audioBuffer != NULL) {
+            FreeVec(audioBuffer);
+            audioBuffer = NULL;
+        }
+    }
+#ifdef __AMIGAOS3__
+    if (narratorIOInFlight && NarratorIO != NULL &&
+        ((struct IORequest *)NarratorIO)->io_Device != NULL) {
+        if (CheckIO((struct IORequest *)NarratorIO) == 0)
+            return TRUE;
+        WaitIO((struct IORequest *)NarratorIO);
+        narratorIOInFlight = FALSE;
+    }
+#elif defined(__AMIGAOS4__)
+    if (fliteRequestPending && fliteRequest != NULL) {
+        if (CheckIO((struct IORequest *)fliteRequest) == 0)
+            return TRUE;
+        finishFliteRequest(fliteRequest, &fliteRequestPending, FALSE);
+        if (fliteTextBuffer != NULL && !fliteFileRequestPending) {
+            FreeVec(fliteTextBuffer);
+            fliteTextBuffer = NULL;
+        }
+    }
+#endif
+    return FALSE;
+}
+
+ULONG speechPlaybackSignalMask(void) {
+    ULONG mask = 0;
+    if (ahiIOInFlight && AHImp != NULL)
+        mask |= (1UL << AHImp->mp_SigBit);
+#ifdef __AMIGAOS3__
+    if (narratorIOInFlight && NarratorPort != NULL)
+        mask |= (1UL << NarratorPort->mp_SigBit);
+#elif defined(__AMIGAOS4__)
+    if (fliteRequestPending && fliteMessagePort != NULL)
+        mask |= (1UL << fliteMessagePort->mp_SigBit);
+#endif
+    return mask;
 }
 
 BOOL playSpeechFile(CONST_STRPTR filename) {

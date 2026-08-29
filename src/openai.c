@@ -635,6 +635,7 @@ static BOOL pumpRequestInterface(void) {
         DoMethod(loadingBar, MUIM_Busy_Move);
     if (app != NULL)
         DoMethod(app, MUIM_Application_NewInput, &signals);
+    updatePlayButton();
 #endif
     return !requestCancelled;
 }

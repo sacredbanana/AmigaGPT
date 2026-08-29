@@ -27,6 +27,7 @@
 #include "MainWindow.h"
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
+#include "speech.h"
 #include "version.h"
 
 #ifdef __AMIGAOS4__
@@ -306,9 +307,16 @@ void startGUIRunLoop() {
          * the busy meter here rather than relying on each request path to
          * clear it on every one of its exits. */
         hideLoadingBar();
+        updatePlayButton();
 #endif
-        if (running && signals)
-            signals = Wait(signals | SIGBREAKF_CTRL_C);
+        {
+            ULONG waitMask = signals;
+#ifndef DAEMON
+            waitMask |= speechPlaybackSignalMask();
+#endif
+            if (running && waitMask)
+                signals = Wait(waitMask | SIGBREAKF_CTRL_C);
+        }
         if (signals & SIGBREAKF_CTRL_C)
             running = FALSE;
     }

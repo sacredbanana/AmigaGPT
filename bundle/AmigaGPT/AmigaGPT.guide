@@ -346,7 +346,7 @@ AmigaGPT has three modes of operation, selected by the tabs at the top left of t
   - The @{b}phrase list@{ub} runs down the left hand side, with @{b}New Phrase@{ub} and @{b}Delete Phrase@{ub} beneath it. Each phrase is titled with the first 32 characters of its text
   - The @{b}input field@{ub} holds the text that will be spoken
   - @{b}Generate@{ub} writes a WAV file under AMIGAGPT:speech/ using the active speech profile. It does not play the result
-  - @{b}Play@{ub} plays the already-saved WAV file through AHI. It does not contact a speech provider again
+  - @{b}Play@{ub} plays the already-saved WAV file through AHI. It does not contact a speech provider again. While audio is playing, it changes to @{b}Stop@{ub} and interrupts playback
   - @{b}Regenerate@{ub} replaces the selected phrase's WAV file
   - @{b}Save Speech Copy@{ub} writes a copy somewhere else on your Amiga
   - @{b}Generate text with AI@{ub} rewrites the input with the active chat profile, using any attached files, then unchecks @{b}Speak contents of files@{ub}
@@ -354,7 +354,7 @@ AmigaGPT has three modes of operation, selected by the tabs at the top left of t
 
 @{b}@{u}Stop@{uu}@{ub}
 
-While a request is running, the @{b}Send@{ub}, @{b}Create@{ub} or @{b}Generate@{ub} button in that mode changes to @{b}Stop@{ub}. Pressing it aborts the in-flight chat, image or speech request and restores that mode to the state it had before the request.
+While a request is running, the @{b}Send@{ub}, @{b}Create@{ub} or @{b}Generate@{ub} button in that mode changes to @{b}Stop@{ub}. Pressing it aborts the in-flight chat, image or speech request and restores that mode to the state it had before the request. @{b}Play@{ub} also changes to @{b}Stop@{ub} while speech is playing and interrupts that playback.
 
 @{b}@{u}The status bar@{uu}@{ub}
 
@@ -808,7 +808,7 @@ AmigaGPT can read the assistant's replies aloud, and can speak arbitrary text on
 
 @{b}@{u}Turning it on@{uu}@{ub}
 
-Tick @{b}Enabled@{ub} in the @{b}Speech@{ub} menu. Speech runs in the background, so the application stays responsive while it is talking. While a request is running, @{b}Send@{ub}, @{b}Create@{ub} or @{b}Generate@{ub} changes to @{b}Stop@{ub} and aborts that request.
+Tick @{b}Enabled@{ub} in the @{b}Speech@{ub} menu. Speech runs in the background, so the application stays responsive while it is talking. While a request is running, @{b}Send@{ub}, @{b}Create@{ub} or @{b}Generate@{ub} changes to @{b}Stop@{ub} and aborts that request. @{b}Play@{ub} changes to @{b}Stop@{ub} while speech is playing and interrupts playback.
 
 The @{b}Speech@{ub} tab generates reusable WAV files without playing them. See @{"The main window" link mainwindow}.
 

@@ -7,6 +7,7 @@
 - LISTAUDIOFORMATS now reports wav and pcm
 - Main window tabs renamed to Chat, Image and Speech
 - Send, Create and Generate change to Stop while a request is in progress, and abort that request, replacing the old Stop Speaking button
+- Play changes to Stop while speech is playing and interrupts playback
 - Expert mode in the installer  now asks whether to install AmigaGPTD, including on AmiKit, instead of always copying the daemon
 - On AmiKit the installer writes the AMIGAGPT: assign and optional daemon start to KIT-Startup instead of S:User-Startup
 

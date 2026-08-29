@@ -257,7 +257,8 @@ The Speech tab generates spoken audio with the active speech profile and
 saves it under AMIGAGPT:speech/ instead of playing it automatically. Type a
 phrase, optionally attach files, and press Generate. Each phrase is listed on
 the left, titled with the first 32 characters of the text. Play only plays
-the already-saved WAV file. Regenerate replaces the selected phrase's file.
+the already-saved WAV file. While audio is playing, Play changes to Stop
+and interrupts playback. Regenerate replaces the selected phrase's file.
 Save Speech Copy writes a copy somewhere else on your Amiga.
 
 Generate text with AI sends the current text and any attached files through

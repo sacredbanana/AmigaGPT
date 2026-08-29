@@ -98,6 +98,18 @@ BOOL playSpeechFile(CONST_STRPTR filename);
 void stopSpeech();
 
 /**
+ * TRUE if narrator, flite or AHI playback is still in flight. Reaps a
+ * completed request so a later call reports idle.
+ **/
+BOOL isSpeechPlaying(void);
+
+/**
+ * Exec signal bits for in-flight playback message ports. OR these into
+ * Wait() so the UI wakes when playback ends.
+ **/
+ULONG speechPlaybackSignalMask(void);
+
+/**
  * Close the speech system
  **/
 void closeSpeech();

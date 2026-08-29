@@ -61,3 +61,9 @@ void showLoadingBar();
  * Stops the busy meter and hides the loading bar, leaving it blank
  **/
 void hideLoadingBar();
+
+/**
+ * Refresh the Speech tab Play button: Stop while audio is playing, Play
+ * when idle.
+ **/
+void updatePlayButton();
