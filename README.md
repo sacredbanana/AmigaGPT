@@ -24,7 +24,7 @@ You can customise the look and feel of the application, including the ability to
 
 - ### Speech capability
 
-**AmigaGPT** supports multiple speech providers, configurable from **Speech Provider Settings**. For cloud-based voices, it supports **OpenAI TTS** (high quality 16-bit voices), **SpaceXAI Grok TTS**, **ElevenLabs**, and **OpenVox** (requires AHI). For offline synthesis, AmigaOS 3 can use the Amiga's built-in `narrator.device` (**v34** and **v37**) with `translator.library`, and AmigaOS 4.1 supports `flite.device`. The **Speech** tab generates reusable WAV files from the active speech profile without playing them automatically; **Play** reads the saved file locally. Speech also runs in the background from Chat replies or ARexx, and a dedicated **Stop** button aborts playback and in-flight requests.
+**AmigaGPT** supports multiple speech providers, configurable from **Speech Provider Settings**. For cloud-based voices, it supports **OpenAI TTS** (high quality 16-bit voices), **SpaceXAI Grok TTS**, **ElevenLabs**, and **OpenVox** (requires AHI). For offline synthesis, AmigaOS 3 can use the Amiga's built-in `narrator.device` (**v34** and **v37**) with `translator.library`, and AmigaOS 4.1 supports `flite.device`. The **Speech** tab generates reusable WAV files from the active speech profile without playing them automatically; **Play** reads the saved file locally. Speech also runs in the background from Chat replies or ARexx. While a request is running, **Send**, **Create** and **Generate** change to **Stop** and abort that request.
 
 - ### Code Interpreter
 
@@ -138,7 +138,7 @@ MorphOS has no offline speech system. Use one of the cloud voices (OpenAI, Space
 
 When launching for the first time you will need to enter your AI provider's API key before you can start chatting. Open **Chat Provider Settings** from the **Chat** menu to select your provider and enter your key. For OpenAI, navigate to <https://platform.openai.com/account/api-keys> to generate an API key.
 
-There are 3 main modes of operation: Chat, Image and Speech. You can switch between them via the tabs in the top left corner. The **Stop** button is shared by every mode and aborts the request that is currently in progress, then restores that mode to the state it had before the request.
+There are 3 main modes of operation: Chat, Image and Speech. You can switch between them via the tabs in the top left corner. While a chat, image or speech request is running, the **Send**, **Create** or **Generate** button in that mode changes to **Stop**; pressing it aborts the request and restores that mode to the state it had before the request.
 
 ### Chat
 

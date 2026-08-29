@@ -46,7 +46,6 @@ Object *attachFilesButton;
 Object *clearAttachmentsButton;
 Object *saveResponseFilesButton;
 Object *attachmentSummaryText;
-Object *stopSpeakingButton;
 Object *chatInputTextEditor;
 Object *chatOutputListView;
 Object *chatOutputTextEditor;
@@ -100,6 +99,7 @@ struct GeneratedSpeech {
 };
 static struct GeneratedSpeech *currentSpeech = NULL;
 static STRPTR pages[4] = {NULL};
+static BOOL requestInterfaceBusy = FALSE;
 
 struct Conversation *newConversation();
 static struct Conversation *copyConversation(struct Conversation *conversation);
@@ -235,6 +235,43 @@ static void deleteDiskFile(CONST_STRPTR path) {
 #endif
 }
 
+static void setActionButtonLabel(Object *button, LONG pen, CONST_STRPTR label) {
+    UBYTE buffer[64];
+    if (button == NULL)
+        return;
+    snprintf(buffer, sizeof(buffer), "\33c\33P[%ld]%s", pen, label);
+    set(button, MUIA_Text_Contents, buffer);
+}
+
+static void setActionButtonsStopMode(BOOL stopMode) {
+    if (stopMode) {
+        setActionButtonLabel(sendMessageButton, redPen, STRING_STOP);
+        setActionButtonLabel(createImageButton, redPen, STRING_STOP);
+        setActionButtonLabel(generateSpeechButton, redPen, STRING_STOP);
+        return;
+    }
+    setActionButtonLabel(sendMessageButton, bluePen, STRING_SEND);
+    setActionButtonLabel(createImageButton, bluePen, STRING_CREATE_IMAGE);
+    setActionButtonLabel(generateSpeechButton, bluePen, STRING_GENERATE_SPEECH);
+}
+
+static void setPrimaryActionButtonsEnabled(void) {
+    if (sendMessageButton != NULL)
+        set(sendMessageButton, MUIA_Disabled, FALSE);
+    if (createImageButton != NULL)
+        set(createImageButton, MUIA_Disabled, FALSE);
+    if (generateSpeechButton != NULL)
+        set(generateSpeechButton, MUIA_Disabled, FALSE);
+}
+
+static BOOL abortIfRequestBusy(void) {
+    if (!requestInterfaceBusy)
+        return FALSE;
+    cancelActiveRequest();
+    stopSpeech();
+    return TRUE;
+}
+
 static void updateSpeechControls() {
     ULONG count = pendingSpeechFilesInitialized
                       ? chatFileCount(&pendingSpeechFiles)
@@ -261,13 +298,15 @@ static void updateSpeechControls() {
         get(speakFileContentsCheckbox, MUIA_Selected, &speakFiles);
     }
     canGenerate = hasText || (count > 0 && speakFiles);
-    if (generateSpeechTextButton != NULL)
-        set(generateSpeechTextButton, MUIA_Disabled, !hasText);
-    if (generateSpeechButton != NULL)
-        set(generateSpeechButton, MUIA_Disabled, !canGenerate);
-    if (regenerateSpeechButton != NULL)
-        set(regenerateSpeechButton, MUIA_Disabled,
-            !canGenerate || currentSpeech == NULL);
+    if (!requestInterfaceBusy) {
+        if (generateSpeechTextButton != NULL)
+            set(generateSpeechTextButton, MUIA_Disabled, !hasText);
+        if (generateSpeechButton != NULL)
+            set(generateSpeechButton, MUIA_Disabled, !canGenerate);
+        if (regenerateSpeechButton != NULL)
+            set(regenerateSpeechButton, MUIA_Disabled,
+                !canGenerate || currentSpeech == NULL);
+    }
     if (playSpeechButton != NULL)
         set(playSpeechButton, MUIA_Disabled, currentSpeech == NULL);
     if (saveSpeechCopyButton != NULL)
@@ -290,23 +329,19 @@ static void setSpeechGenerationControlsDisabled(BOOL disabled) {
         set(attachSpeechFilesButton, MUIA_Disabled, disabled);
     if (clearSpeechFilesButton != NULL)
         set(clearSpeechFilesButton, MUIA_Disabled, disabled || count == 0);
-    if (generateSpeechButton != NULL)
-        set(generateSpeechButton, MUIA_Disabled, disabled);
     if (regenerateSpeechButton != NULL)
         set(regenerateSpeechButton, MUIA_Disabled, disabled);
+    if (generateSpeechTextButton != NULL)
+        set(generateSpeechTextButton, MUIA_Disabled, disabled);
     if (playSpeechButton != NULL)
         set(playSpeechButton, MUIA_Disabled, disabled);
     if (saveSpeechCopyButton != NULL)
         set(saveSpeechCopyButton, MUIA_Disabled, disabled);
-    if (generateSpeechTextButton != NULL)
-        set(generateSpeechTextButton, MUIA_Disabled, disabled);
     if (speechListObject != NULL)
         set(speechListObject, MUIA_Disabled, disabled);
 }
 
 static void setChatControlsDisabled(BOOL disabled) {
-    if (sendMessageButton != NULL)
-        set(sendMessageButton, MUIA_Disabled, disabled);
     if (newChatButton != NULL)
         set(newChatButton, MUIA_Disabled, disabled);
     if (deleteChatButton != NULL)
@@ -324,11 +359,12 @@ static void setChatControlsDisabled(BOOL disabled) {
 }
 
 static void setRequestInterfaceBusy(BOOL busy) {
-    if (modeRegisterGroup != NULL)
-        set(modeRegisterGroup, MUIA_Disabled, busy);
+    requestInterfaceBusy = busy;
     setChatControlsDisabled(busy);
     setImageGenerationControlsDisabled(busy);
     setSpeechGenerationControlsDisabled(busy);
+    setPrimaryActionButtonsEnabled();
+    setActionButtonsStopMode(busy);
 }
 
 static void finishActiveRequest(BOOL restoreReadyStatus) {
@@ -350,7 +386,6 @@ static void finishActiveRequest(BOOL restoreReadyStatus) {
  * a special case: it stays disabled afterwards when there is nothing to clear.
  */
 static void setImageGenerationControlsDisabled(BOOL disabled) {
-    set(createImageButton, MUIA_Disabled, disabled);
     set(newImageButton, MUIA_Disabled, disabled);
     set(deleteImageButton, MUIA_Disabled, disabled);
     set(imageInputTextEditor, MUIA_Disabled, disabled);
@@ -971,6 +1006,8 @@ HOOKPROTONHNONP(DeleteSpeechButtonClickedFunc, void) {
 MakeHook(DeleteSpeechButtonClickedHook, DeleteSpeechButtonClickedFunc);
 
 HOOKPROTONHNONP(GenerateSpeechButtonClickedFunc, void) {
+    if (abortIfRequestBusy())
+        return;
     generateSpeech(FALSE);
 }
 MakeHook(GenerateSpeechButtonClickedHook, GenerateSpeechButtonClickedFunc);
@@ -1211,6 +1248,8 @@ MakeHook(SaveResponseFilesButtonClickedHook,
          SaveResponseFilesButtonClickedFunc);
 
 HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
+    if (abortIfRequestBusy())
+        return;
     struct ChatRequestSettings chatSettings;
     configGetActiveChatRequestSettings(&chatSettings);
     if (chatSettings.authorizationType != AUTHORIZATION_TYPE_NONE &&
@@ -1221,12 +1260,6 @@ HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
     sendChatMessage();
 }
 MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
-
-HOOKPROTONHNONP(StopSpeakingButtonClickedFunc, void) {
-    cancelActiveRequest();
-    stopSpeech();
-}
-MakeHook(StopSpeakingButtonClickedHook, StopSpeakingButtonClickedFunc);
 
 HOOKPROTONHNONP(NewImageButtonClickedFunc, void) {
     currentImage = NULL;
@@ -1333,6 +1366,8 @@ static BOOL isStringInList(CONST_STRPTR str, CONST_STRPTR *list) {
 }
 
 HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
+    if (abortIfRequestBusy())
+        return;
     struct ImageRequestSettings imageSettings;
     configGetActiveImageRequestSettings(&imageSettings);
     CONST_STRPTR apiKey = imageSettings.apiKey;
@@ -1801,30 +1836,19 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s\0",
              redPen, STRING_DELETE_CHAT);
     set(deleteChatButton, MUIA_Text_Contents, buttonLabelText);
-    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-             bluePen, STRING_SEND);
-    set(sendMessageButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]+ %s\0",
              greenPen, STRING_NEW_IMAGE);
     set(newImageButton, MUIA_Text_Contents, buttonLabelText);
-    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-             redPen, STRING_STOP);
-    set(stopSpeakingButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]+ %s\0",
              greenPen, STRING_NEW_PHRASE);
     set(newSpeechButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s\0",
              redPen, STRING_DELETE_PHRASE);
     set(deleteSpeechButton, MUIA_Text_Contents, buttonLabelText);
-    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-             bluePen, STRING_GENERATE_SPEECH);
-    set(generateSpeechButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s\0",
              redPen, STRING_DELETE_IMAGE);
     set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
-    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-             bluePen, STRING_CREATE_IMAGE);
-    set(createImageButton, MUIA_Text_Contents, buttonLabelText);
+    setActionButtonsStopMode(requestInterfaceBusy);
     FreeVec(buttonLabelText);
     SetAttrs(mainWindowObject, MUIA_Window_ActiveObject, chatInputTextEditor,
              TAG_DONE);
@@ -2481,13 +2505,6 @@ LONG createMainWindow() {
                         End,
                     End,
                 End,
-                Child, HGroup,
-                    Child, HVSpace,
-                    Child, stopSpeakingButton = MUI_MakeObject(MUIO_Button, STRING_STOP,
-                        MUIA_CycleChain, TRUE,
-                        MUIA_InputMode, MUIV_InputMode_RelVerify,
-                    TAG_DONE),
-                End,
                 // Status bar
                 Child, statusBar = TextObject,
                     MUIA_Background, MUII_SHADOW,
@@ -2549,30 +2566,19 @@ LONG createMainWindow() {
         snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
                  "\33c\33P[%ld]- %s\0", redPen, STRING_DELETE_CHAT);
         set(deleteChatButton, MUIA_Text_Contents, buttonLabelText);
-        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-                 bluePen, STRING_SEND);
-        set(sendMessageButton, MUIA_Text_Contents, buttonLabelText);
-        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-                 redPen, STRING_STOP);
-        set(stopSpeakingButton, MUIA_Text_Contents, buttonLabelText);
         snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
                  "\33c\33P[%ld]+ %s\0", greenPen, STRING_NEW_PHRASE);
         set(newSpeechButton, MUIA_Text_Contents, buttonLabelText);
         snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
                  "\33c\33P[%ld]- %s\0", redPen, STRING_DELETE_PHRASE);
         set(deleteSpeechButton, MUIA_Text_Contents, buttonLabelText);
-        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-                 bluePen, STRING_GENERATE_SPEECH);
-        set(generateSpeechButton, MUIA_Text_Contents, buttonLabelText);
         snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
                  "\33c\33P[%ld]+ %s\0", greenPen, STRING_NEW_IMAGE);
         set(newImageButton, MUIA_Text_Contents, buttonLabelText);
         snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
                  "\33c\33P[%ld]- %s\0", redPen, STRING_DELETE_IMAGE);
         set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
-        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-                 bluePen, STRING_CREATE_IMAGE);
-        set(createImageButton, MUIA_Text_Contents, buttonLabelText);
+        setActionButtonsStopMode(FALSE);
         FreeVec(buttonLabelText);
 
         // Force a layout refresh to ensure buttons display correctly
@@ -2618,9 +2624,6 @@ static void addMainWindowActions() {
     DoMethod(saveResponseFilesButton, MUIM_Notify, MUIA_Pressed, FALSE,
              saveResponseFilesButton, 2, MUIM_CallHook,
              &SaveResponseFilesButtonClickedHook);
-    DoMethod(stopSpeakingButton, MUIM_Notify, MUIA_Pressed, FALSE,
-             stopSpeakingButton, 2, MUIM_CallHook,
-             &StopSpeakingButtonClickedHook);
     DoMethod(createImageButton, MUIM_Notify, MUIA_Pressed, FALSE,
              createImageButton, 2, MUIM_CallHook,
              &CreateImageButtonClickedHook);

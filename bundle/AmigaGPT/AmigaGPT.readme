@@ -213,8 +213,8 @@ omit it.
 To the left of the chat box is a conversation list which you can use to go to
 another saved conversation. New conversations can be created with the "New
 chat" button and conversations can be removed with the "Delete chat" button.
-Speech runs in the background so the app stays responsive, and the "Stop
-speaking" button interrupts it.
+Speech runs in the background so the app stays responsive. While a request
+is running, Send, Create or Generate changes to Stop and aborts it.
 
 You can also chat from the Shell with the AskGPT command as long as either
 AmigaGPT or the AmigaGPTD daemon is running:
@@ -226,8 +226,8 @@ clears the conversation history first, and PROFILE (or PR) picks a particular
 chat profile. With no question at all, AskGPT asks you what you want to know.
 
 There are 3 main modes of operation: Chat, Image and Speech. You can switch
-between them via the tabs in the top left corner. The Stop button is shared
-by every mode and aborts the request that is currently in progress.
+between them via the tabs in the top left corner. While a request is running,
+Send, Create or Generate changes to Stop and aborts that request.
 
 *Image Generation*
 

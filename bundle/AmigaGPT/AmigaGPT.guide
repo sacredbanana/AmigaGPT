@@ -354,7 +354,7 @@ AmigaGPT has three modes of operation, selected by the tabs at the top left of t
 
 @{b}@{u}Stop@{uu}@{ub}
 
-The @{b}Stop@{ub} button sits below the tabs so it is available in every mode. It aborts speech playback and any in-flight chat, image or speech request, then restores that mode to the state it had before the request.
+While a request is running, the @{b}Send@{ub}, @{b}Create@{ub} or @{b}Generate@{ub} button in that mode changes to @{b}Stop@{ub}. Pressing it aborts the in-flight chat, image or speech request and restores that mode to the state it had before the request.
 
 @{b}@{u}The status bar@{uu}@{ub}
 
@@ -808,7 +808,7 @@ AmigaGPT can read the assistant's replies aloud, and can speak arbitrary text on
 
 @{b}@{u}Turning it on@{uu}@{ub}
 
-Tick @{b}Enabled@{ub} in the @{b}Speech@{ub} menu. Speech runs in the background, so the application stays responsive while it is talking, and the @{b}Stop@{ub} button interrupts playback or an in-flight request at any point.
+Tick @{b}Enabled@{ub} in the @{b}Speech@{ub} menu. Speech runs in the background, so the application stays responsive while it is talking. While a request is running, @{b}Send@{ub}, @{b}Create@{ub} or @{b}Generate@{ub} changes to @{b}Stop@{ub} and aborts that request.
 
 The @{b}Speech@{ub} tab generates reusable WAV files without playing them. See @{"The main window" link mainwindow}.
 
