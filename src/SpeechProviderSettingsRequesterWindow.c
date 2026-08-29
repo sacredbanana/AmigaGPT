@@ -7,6 +7,11 @@ LONG createSpeechProviderSettingsRequesterWindow(void) { return RETURN_OK; }
 
 void openSpeechProviderSettingsRequesterWindow(void) {}
 
+CONST_STRPTR speechLookupXAIVoiceName(CONST_STRPTR voiceId) {
+    (void)voiceId;
+    return NULL;
+}
+
 #else
 
 #include <dos/dos.h>
@@ -811,6 +816,57 @@ static void setXAIVoiceListActiveById(CONST_STRPTR voiceId) {
             return;
         }
     }
+}
+
+static CONST_STRPTR currentXAIVoiceIdFromUI(void);
+
+static CONST_STRPTR xaiBuiltinPrettyName(CONST_STRPTR voiceId) {
+    static const CONST_STRPTR pretty[] = {"Ara", "Eve", "Leo", "Rex", "Sal"};
+    UBYTE i;
+
+    if (voiceId == NULL || voiceId[0] == '\0')
+        return NULL;
+    for (i = 0; XAI_TTS_VOICE_NAMES[i] != NULL; i++) {
+        if (strcasecmp(voiceId, XAI_TTS_VOICE_NAMES[i]) == 0)
+            return pretty[i];
+    }
+    return NULL;
+}
+
+CONST_STRPTR speechLookupXAIVoiceName(CONST_STRPTR voiceId) {
+    struct json_object *voices = NULL;
+    LONG i;
+    LONG count;
+
+    if (voiceId == NULL || voiceId[0] == '\0')
+        return xaiBuiltinPrettyName(voiceId);
+    if (xaiVoicesJson == NULL ||
+        !json_object_object_get_ex(xaiVoicesJson, "voices", &voices))
+        return xaiBuiltinPrettyName(voiceId);
+    count = json_object_array_length(voices);
+    for (i = 0; i < count; i++) {
+        struct json_object *voice = json_object_array_get_idx(voices, i);
+        struct json_object *idObj =
+            voice != NULL ? json_object_object_get(voice, "voice_id") : NULL;
+        CONST_STRPTR id = idObj != NULL ? json_object_get_string(idObj) : NULL;
+        struct json_object *nameObj;
+        CONST_STRPTR name;
+
+        if (id == NULL || strcmp(id, voiceId) != 0)
+            continue;
+        nameObj = json_object_object_get(voice, "name");
+        name = nameObj != NULL ? json_object_get_string(nameObj) : NULL;
+        if (name != NULL && name[0] != '\0')
+            return name;
+        return xaiBuiltinPrettyName(voiceId);
+    }
+    return xaiBuiltinPrettyName(voiceId);
+}
+
+static CONST_STRPTR currentXAIVoiceNameFromUI(void) {
+    CONST_STRPTR id = currentXAIVoiceIdFromUI();
+    CONST_STRPTR name = speechLookupXAIVoiceName(id);
+    return name != NULL ? name : id;
 }
 
 static CONST_STRPTR currentXAIVoiceIdFromUI(void) {
@@ -2357,6 +2413,8 @@ static struct json_object *createDefaultProfile(CONST_STRPTR name) {
     json_object_object_add(
         p, "xaiTTSVoiceId",
         json_object_new_string(XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE]));
+    json_object_object_add(p, "xaiTTSVoiceName",
+                           json_object_new_string("Eve"));
     json_object_object_add(p, "xaiAutoSpeechTags",
                            json_object_new_boolean(TRUE));
     json_object_object_add(p, "openVoxApiKey", json_object_new_string(""));
@@ -2500,6 +2558,14 @@ static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys) {
                 vid = (STRPTR)XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE];
             json_object_object_add(p, "xaiTTSVoiceId",
                                    json_object_new_string(vid));
+            {
+                CONST_STRPTR vname = configGetXAITTSVoiceName();
+                if (vname == NULL || vname[0] == '\0')
+                    vname = speechLookupXAIVoiceName(vid);
+                json_object_object_add(
+                    p, "xaiTTSVoiceName",
+                    json_object_new_string(vname != NULL ? vname : ""));
+            }
         }
         json_object_object_add(
             p, "xaiAutoSpeechTags",
@@ -2826,6 +2892,14 @@ static struct json_object *createProfileFromUI(CONST_STRPTR name) {
             uiVid = XAI_TTS_VOICE_NAMES[XAI_TTS_VOICE_EVE];
         json_object_object_add(p, "xaiTTSVoiceId",
                                json_object_new_string(uiVid));
+        {
+            CONST_STRPTR uiName = currentXAIVoiceNameFromUI();
+            if (uiName == NULL || uiName[0] == '\0')
+                uiName = speechLookupXAIVoiceName(uiVid);
+            json_object_object_add(
+                p, "xaiTTSVoiceName",
+                json_object_new_string(uiName != NULL ? uiName : ""));
+        }
         /* Keep the legacy enum field in sync for old readers - match the
          * id to a builtin index when possible. */
         LONG enumIdx = (LONG)XAI_TTS_VOICE_EVE;
@@ -3003,6 +3077,13 @@ static void commitBuiltinProfileToConfig(struct json_object *profile) {
         CONST_STRPTR vid = jsonStringOrEmpty(profile, "xaiTTSVoiceId");
         if (vid != NULL && strlen(vid) > 0)
             configSetXAITTSVoiceId(vid);
+        {
+            CONST_STRPTR vname =
+                jsonStringOrEmpty(profile, "xaiTTSVoiceName");
+            if (vname == NULL || vname[0] == '\0')
+                vname = speechLookupXAIVoiceName(vid);
+            configSetXAITTSVoiceName(vname != NULL ? vname : "");
+        }
         struct json_object *atObj =
             json_object_object_get(profile, "xaiAutoSpeechTags");
         if (atObj != NULL)

@@ -2184,6 +2184,41 @@ msgctxt "STRING_REQUEST_CANCELLED (409//)"
 msgid "Request cancelled"
 msgstr "Solicitado"
 
+#: src/MainWindow.c
+msgctxt "STRING_PAUSE (410//)"
+msgid "Pause"
+msgstr "Pausa"
+
+#: src/MainWindow.c
+msgctxt "STRING_REWIND (411//)"
+msgid "Rewind"
+msgstr "Rebobinar"
+
+#: src/MainWindow.c
+msgctxt "STRING_NO_SPEECH_SELECTED (412//)"
+msgid "Select a phrase to see its speech profile and waveform."
+msgstr "Selecione uma frase para ver o seu perfil de fala e a forma de onda."
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEECH_PROFILE (413//)"
+msgid "Profile"
+msgstr "Perfil"
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEECH_SYSTEM_LABEL (414//)"
+msgid "System"
+msgstr "Sistema"
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEECH_NO_PROFILE (415//)"
+msgid "No profile was recorded for this phrase."
+msgstr "Não foi gravado nenhum perfil para esta frase."
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEECH_LANGUAGE (416//)"
+msgid "Language"
+msgstr "Idioma"
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "Voz OpenAI"

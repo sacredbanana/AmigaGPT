@@ -28,6 +28,9 @@
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
 #include "speech.h"
+#ifndef DAEMON
+#include "SpeechWaveform.h"
+#endif
 #include "version.h"
 
 #ifdef __AMIGAOS4__
@@ -307,6 +310,7 @@ void startGUIRunLoop() {
          * the busy meter here rather than relying on each request path to
          * clear it on every one of its exits. */
         hideLoadingBar();
+        speechServicePlayback();
         updatePlayButton();
 #endif
         {
@@ -1270,6 +1274,7 @@ void shutdownGUI() {
         FreeVec(chatOutputTextEditorContents);
     }
     deleteAmigaGPTTextEditor();
+    deleteSpeechWaveformClass();
 #endif
 
     closeGUILibraries();

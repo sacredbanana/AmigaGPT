@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <devices/ahi.h>
+#include <devices/timer.h>
 #include <proto/ahi.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
 #include <string.h>
+#include <time.h>
 #ifdef __AMIGAOS3__
 #include <clib/compiler-specific.h>
 #include <devices/audio.h>
@@ -80,6 +82,35 @@ static BOOL ahiIOInFlight = FALSE;
 static BOOL narratorIOInFlight = FALSE;
 #endif
 UBYTE *audioBuffer = NULL;
+static ULONG playbackDataLength = 0;
+static ULONG playbackAllocLength = 0;
+static ULONG playbackFrequency = 0;
+static ULONG playbackType = 0;
+static ULONG playbackFrameSize = 0;
+static ULONG playbackOffset = 0;
+static ULONG playbackStartOffset = 0;
+static ULONG playbackStartMs = 0;
+static BOOL playbackPaused = FALSE;
+static BOOL playbackIsFile = FALSE;
+static UBYTE playbackPath[256];
+#ifdef __AMIGAOS4__
+typedef struct TimeRequest SpeechTimeRequest;
+#define SPEECH_TIMER_IO(req) ((req)->Request)
+#define SPEECH_TIMER_SECS(req) ((req)->Time.Seconds)
+#define SPEECH_TIMER_MICRO(req) ((req)->Time.Microseconds)
+#else
+typedef struct timerequest SpeechTimeRequest;
+#define SPEECH_TIMER_IO(req) ((req)->tr_node)
+#define SPEECH_TIMER_SECS(req) ((req)->tr_time.tv_secs)
+#define SPEECH_TIMER_MICRO(req) ((req)->tr_time.tv_micro)
+#endif
+
+static struct MsgPort *playTimerPort = NULL;
+static SpeechTimeRequest *playTimerReq = NULL;
+static BOOL playTimerPending = FALSE;
+
+static LONG initAHIPlayback(void);
+static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size);
 
 static void finishAHIPlayback(BOOL abort) {
     if (ahiRequest == NULL || !ahiIOInFlight)
@@ -107,6 +138,168 @@ static void startAHIWrite(APTR data, ULONG length, ULONG frequency,
     ahiIOInFlight = TRUE;
 }
 
+static ULONG nowMs(void) {
+    clock_t ticks = clock();
+    if (CLOCKS_PER_SEC == 0)
+        return 0;
+    return (ULONG)((ticks * 1000UL) / CLOCKS_PER_SEC);
+}
+
+static void resetPlaybackMeta(void) {
+    playbackDataLength = 0;
+    playbackAllocLength = 0;
+    playbackFrequency = 0;
+    playbackType = 0;
+    playbackFrameSize = 0;
+    playbackOffset = 0;
+    playbackStartOffset = 0;
+    playbackStartMs = 0;
+    playbackPaused = FALSE;
+    playbackIsFile = FALSE;
+    playbackPath[0] = '\0';
+}
+
+static void freePlaybackBuffer(void) {
+    if (audioBuffer != NULL) {
+        FreeVec(audioBuffer);
+        audioBuffer = NULL;
+    }
+    resetPlaybackMeta();
+}
+
+static ULONG bytesFromMs(ULONG ms) {
+    unsigned long long bytes;
+
+    if (playbackFrequency == 0 || playbackFrameSize == 0)
+        return 0;
+    bytes = (unsigned long long)ms * playbackFrequency * playbackFrameSize;
+    bytes /= 1000ULL;
+    if (bytes > playbackDataLength)
+        bytes = playbackDataLength;
+    bytes -= bytes % playbackFrameSize;
+    return (ULONG)bytes;
+}
+
+static ULONG msFromBytes(ULONG bytes) {
+    unsigned long long ms;
+
+    if (playbackFrequency == 0 || playbackFrameSize == 0)
+        return 0;
+    if (bytes > playbackDataLength)
+        bytes = playbackDataLength;
+    ms = (unsigned long long)bytes * 1000ULL;
+    ms /= ((unsigned long long)playbackFrequency * playbackFrameSize);
+    return (ULONG)ms;
+}
+
+static ULONG currentPlaybackBytes(void) {
+    ULONG elapsed;
+    ULONG bytes;
+
+    if (!playbackIsFile || playbackDataLength == 0)
+        return 0;
+    if (!ahiIOInFlight)
+        return playbackOffset;
+    elapsed = nowMs() - playbackStartMs;
+    bytes = playbackStartOffset + bytesFromMs(elapsed);
+    if (bytes > playbackDataLength)
+        bytes = playbackDataLength;
+    return bytes;
+}
+
+static void stopPlayTimer(void) {
+    if (!playTimerPending || playTimerReq == NULL)
+        return;
+    if (CheckIO((struct IORequest *)playTimerReq) == 0) {
+        AbortIO((struct IORequest *)playTimerReq);
+        WaitIO((struct IORequest *)playTimerReq);
+    } else {
+        WaitIO((struct IORequest *)playTimerReq);
+    }
+    playTimerPending = FALSE;
+}
+
+static void closePlayTimer(void) {
+    stopPlayTimer();
+    if (playTimerReq != NULL) {
+        if (SPEECH_TIMER_IO(playTimerReq).io_Device != NULL)
+            CloseDevice((struct IORequest *)playTimerReq);
+        DeleteIORequest((struct IORequest *)playTimerReq);
+        playTimerReq = NULL;
+    }
+    if (playTimerPort != NULL) {
+        DeleteMsgPort(playTimerPort);
+        playTimerPort = NULL;
+    }
+}
+
+static BOOL initPlayTimer(void) {
+    if (playTimerReq != NULL)
+        return TRUE;
+    playTimerPort = CreateMsgPort();
+    if (playTimerPort == NULL)
+        return FALSE;
+    playTimerReq = (SpeechTimeRequest *)CreateIORequest(
+        playTimerPort, sizeof(SpeechTimeRequest));
+    if (playTimerReq == NULL) {
+        DeleteMsgPort(playTimerPort);
+        playTimerPort = NULL;
+        return FALSE;
+    }
+    if (OpenDevice(TIMERNAME, UNIT_VBLANK, (struct IORequest *)playTimerReq,
+                   0) != 0) {
+        DeleteIORequest((struct IORequest *)playTimerReq);
+        DeleteMsgPort(playTimerPort);
+        playTimerReq = NULL;
+        playTimerPort = NULL;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static void armPlayTimer(void) {
+    if (!initPlayTimer() || playTimerPending)
+        return;
+    SPEECH_TIMER_IO(playTimerReq).io_Command = TR_ADDREQUEST;
+    SPEECH_TIMER_IO(playTimerReq).io_Flags = 0;
+    SPEECH_TIMER_SECS(playTimerReq) = 0;
+    SPEECH_TIMER_MICRO(playTimerReq) = 80000;
+    SendIO((struct IORequest *)playTimerReq);
+    playTimerPending = TRUE;
+}
+
+static void servicePlayTimer(void) {
+    if (!playTimerPending || playTimerReq == NULL)
+        return;
+    if (CheckIO((struct IORequest *)playTimerReq) == 0)
+        return;
+    WaitIO((struct IORequest *)playTimerReq);
+    playTimerPending = FALSE;
+    if (ahiIOInFlight)
+        armPlayTimer();
+}
+
+static BOOL startPlaybackFromOffset(ULONG offset) {
+    if (audioBuffer == NULL || playbackAllocLength == 0 ||
+        playbackFrameSize == 0)
+        return FALSE;
+    if (initAHIPlayback() == RETURN_ERROR)
+        return FALSE;
+    if (offset >= playbackDataLength)
+        offset = 0;
+    offset -= offset % playbackFrameSize;
+    finishAHIPlayback(TRUE);
+    startAHIWrite(audioBuffer + offset, playbackAllocLength - offset,
+                  playbackFrequency, playbackType);
+    playbackOffset = offset;
+    playbackStartOffset = offset;
+    playbackStartMs = nowMs();
+    playbackPaused = FALSE;
+    playbackIsFile = TRUE;
+    armPlayTimer();
+    return TRUE;
+}
+
 /**
  * The names of the speech voices
  * @see SpeechFliteVoice
@@ -115,8 +308,6 @@ const STRPTR SPEECH_FLITE_VOICE_NAMES[] = {
     [SPEECH_FLITE_VOICE_KAL] = "kal", [SPEECH_FLITE_VOICE_KAL16] = "kal16",
     [SPEECH_FLITE_VOICE_AWB] = "awb", [SPEECH_FLITE_VOICE_RMS] = "rms",
     [SPEECH_FLITE_VOICE_SLT] = "slt", NULL};
-
-static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size);
 
 static UWORD readLittleEndian16(const UBYTE *source) {
     return (UWORD)((UWORD)source[0] | ((UWORD)source[1] << 8));
@@ -718,6 +909,7 @@ static LONG lazyInitSpeech(SpeechSystem speechSystem) {
  * Close the speech system
  **/
 void closeSpeech() {
+    closePlayTimer();
     if (ahiRequest) {
         finishAHIPlayback(TRUE);
         CloseDevice((struct IORequest *)ahiRequest);
@@ -727,10 +919,7 @@ void closeSpeech() {
     ahiRequest = NULL;
     AHImp = NULL;
     ahiIOInFlight = FALSE;
-    if (audioBuffer) {
-        FreeVec(audioBuffer);
-        audioBuffer = NULL;
-    }
+    freePlaybackBuffer();
 #ifdef __AMIGAOS3__
     waitForNarratorCapture(TRUE);
     if (TranslatorBase) {
@@ -875,11 +1064,8 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         audioFormat = &requestFormat;
 
         finishAHIPlayback(TRUE);
-
-        if (audioBuffer) {
-            FreeVec(audioBuffer);
-            audioBuffer = NULL;
-        }
+        stopPlayTimer();
+        freePlaybackBuffer();
 
         ULONG audioLength = 0;
         ULONG playbackFrequency = 24000;
@@ -950,6 +1136,7 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             }
             FreeVec(audioBuffer);
             audioBuffer = NULL;
+            resetPlaybackMeta();
             if (!saved)
                 displayError(STRING_ERROR_FILE_OPEN);
             return saved;
@@ -1004,12 +1191,15 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
                 FreeVec(audioBuffer);
                 audioBuffer = NULL;
+                resetPlaybackMeta();
                 return FALSE;
             }
         }
 
         startAHIWrite(audioBuffer, audioLength, playbackFrequency,
                       AHIST_M16S);
+        playbackIsFile = FALSE;
+        playbackPaused = FALSE;
 
         return TRUE;
     }
@@ -1215,10 +1405,14 @@ void stopSpeech() {
 #elif defined(__AMIGAOS4__)
     finishFliteRequests(TRUE);
 #endif
+    stopPlayTimer();
     finishAHIPlayback(TRUE);
-    if (audioBuffer != NULL) {
-        FreeVec(audioBuffer);
-        audioBuffer = NULL;
+    if (playbackIsFile) {
+        playbackOffset = 0;
+        playbackStartOffset = 0;
+        playbackPaused = FALSE;
+    } else {
+        freePlaybackBuffer();
     }
 }
 
@@ -1227,9 +1421,14 @@ BOOL isSpeechPlaying(void) {
         if (CheckIO((struct IORequest *)ahiRequest) == 0)
             return TRUE;
         finishAHIPlayback(FALSE);
-        if (audioBuffer != NULL) {
+        stopPlayTimer();
+        if (playbackIsFile) {
+            playbackOffset = playbackDataLength;
+            playbackPaused = FALSE;
+        } else if (audioBuffer != NULL) {
             FreeVec(audioBuffer);
             audioBuffer = NULL;
+            resetPlaybackMeta();
         }
     }
 #ifdef __AMIGAOS3__
@@ -1254,10 +1453,104 @@ BOOL isSpeechPlaying(void) {
     return FALSE;
 }
 
+void speechServicePlayback(void) {
+    servicePlayTimer();
+    isSpeechPlaying();
+}
+
+BOOL isSpeechPaused(void) {
+    return playbackIsFile && playbackPaused && audioBuffer != NULL;
+}
+
+ULONG speechPlaybackPositionMs(void) {
+    return msFromBytes(currentPlaybackBytes());
+}
+
+ULONG speechPlaybackDurationMs(void) {
+    return msFromBytes(playbackDataLength);
+}
+
+BOOL speechPlaybackHasAudio(void) {
+    return playbackIsFile && audioBuffer != NULL && playbackDataLength > 0;
+}
+
+const UBYTE *speechPlaybackSamples(void) {
+    return audioBuffer;
+}
+
+ULONG speechPlaybackSampleBytes(void) {
+    return playbackDataLength;
+}
+
+ULONG speechPlaybackSampleRate(void) {
+    return playbackFrequency;
+}
+
+UWORD speechPlaybackChannelCount(void) {
+    return (playbackType == AHIST_S8S || playbackType == AHIST_S16S) ? 2 : 1;
+}
+
+UWORD speechPlaybackBitsPerSample(void) {
+    return (playbackType == AHIST_M8S || playbackType == AHIST_S8S) ? 8 : 16;
+}
+
+void pauseSpeech(void) {
+    if (!playbackIsFile || !ahiIOInFlight)
+        return;
+    playbackOffset = currentPlaybackBytes();
+    stopPlayTimer();
+    finishAHIPlayback(TRUE);
+    playbackPaused = TRUE;
+}
+
+BOOL seekSpeech(ULONG positionMs) {
+    BOOL wasPlaying;
+    ULONG offset;
+
+    if (!playbackIsFile || audioBuffer == NULL)
+        return FALSE;
+    wasPlaying = ahiIOInFlight;
+    offset = bytesFromMs(positionMs);
+    stopPlayTimer();
+    finishAHIPlayback(TRUE);
+    playbackOffset = offset;
+    playbackPaused = !wasPlaying;
+    if (wasPlaying)
+        return startPlaybackFromOffset(offset);
+    return TRUE;
+}
+
+void rewindSpeech(void) {
+    BOOL wasPlaying = ahiIOInFlight;
+
+    if (!playbackIsFile || audioBuffer == NULL) {
+        stopSpeech();
+        return;
+    }
+    stopPlayTimer();
+    finishAHIPlayback(TRUE);
+    playbackOffset = 0;
+    playbackPaused = !wasPlaying;
+    if (wasPlaying)
+        startPlaybackFromOffset(0);
+}
+
+BOOL startSpeechPlayback(void) {
+    if (!playbackIsFile || audioBuffer == NULL)
+        return FALSE;
+    if (ahiIOInFlight)
+        return TRUE;
+    if (playbackOffset >= playbackDataLength)
+        playbackOffset = 0;
+    return startPlaybackFromOffset(playbackOffset);
+}
+
 ULONG speechPlaybackSignalMask(void) {
     ULONG mask = 0;
     if (ahiIOInFlight && AHImp != NULL)
         mask |= (1UL << AHImp->mp_SigBit);
+    if (playTimerPending && playTimerPort != NULL)
+        mask |= (1UL << playTimerPort->mp_SigBit);
 #ifdef __AMIGAOS3__
     if (narratorIOInFlight && NarratorPort != NULL)
         mask |= (1UL << NarratorPort->mp_SigBit);
@@ -1268,9 +1561,15 @@ ULONG speechPlaybackSignalMask(void) {
     return mask;
 }
 
-BOOL playSpeechFile(CONST_STRPTR filename) {
+void unloadSpeechPlayback(void) {
+    stopPlayTimer();
+    finishAHIPlayback(TRUE);
+    freePlaybackBuffer();
+}
+
+BOOL loadSpeechPlayback(CONST_STRPTR filename) {
     ULONG wavLength = 0;
-    UBYTE *wav = loadAudioFile(filename, &wavLength);
+    UBYTE *wav;
     ULONG riff = 0;
     ULONG offset;
     ULONG sampleRate = 0;
@@ -1279,13 +1578,22 @@ BOOL playSpeechFile(CONST_STRPTR filename) {
     UWORD encoding = 0;
     UWORD channels = 1;
     UWORD bitsPerSample = 16;
-    ULONG frameSize;
+    ULONG srcFrameSize;
+    ULONG dstFrameSize;
     ULONG playLength;
     ULONG padBytes;
     ULONG type;
+    ULONG convertedLength = 0;
     BOOL parsedWav = FALSE;
-    BOOL success = FALSE;
 
+    if (filename == NULL || filename[0] == '\0')
+        return FALSE;
+
+    stopPlayTimer();
+    finishAHIPlayback(TRUE);
+    freePlaybackBuffer();
+
+    wav = loadAudioFile(filename, &wavLength);
     if (wav == NULL)
         return FALSE;
 
@@ -1328,32 +1636,31 @@ BOOL playSpeechFile(CONST_STRPTR filename) {
         channels = 1;
         bitsPerSample = 16;
     }
-    if (initAHIPlayback() == RETURN_ERROR)
-        goto done;
-
-    finishAHIPlayback(TRUE);
-    if (audioBuffer != NULL) {
-        FreeVec(audioBuffer);
-        audioBuffer = NULL;
+    srcFrameSize = (ULONG)((bitsPerSample + 7) / 8) * channels;
+    if (srcFrameSize == 0) {
+        FreeVec(wav);
+        return FALSE;
     }
-    frameSize = (ULONG)((bitsPerSample + 7) / 8) * channels;
-    if (frameSize == 0)
-        goto done;
-    dataLength -= dataLength % frameSize;
-    if (dataLength == 0)
-        goto done;
-    padBytes = sampleRate * (bitsPerSample == 8 ? 1 : 2) * channels * 2;
+    dataLength -= dataLength % srcFrameSize;
+    if (dataLength == 0) {
+        FreeVec(wav);
+        return FALSE;
+    }
+    dstFrameSize = (ULONG)(bitsPerSample == 8 ? 1 : 2) * channels;
+    padBytes = sampleRate * dstFrameSize * 2;
     playLength = (bitsPerSample == 24 ? (dataLength / 3) * 2 : dataLength) +
                  padBytes;
     audioBuffer = AllocVec(playLength, MEMF_ANY | MEMF_CLEAR);
     if (audioBuffer == NULL) {
         displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
-        goto done;
+        FreeVec(wav);
+        return FALSE;
     }
     if (bitsPerSample == 8) {
         ULONG i;
         for (i = 0; i < dataLength; i++)
             audioBuffer[i] = data[i] ^ 0x80;
+        convertedLength = dataLength;
         type = channels == 1 ? AHIST_M8S : AHIST_S8S;
     } else if (bitsPerSample == 24) {
         ULONG in = 0;
@@ -1363,6 +1670,7 @@ BOOL playSpeechFile(CONST_STRPTR filename) {
             audioBuffer[out++] = data[in + 1];
             in += 3;
         }
+        convertedLength = out;
         type = channels == 1 ? AHIST_M16S : AHIST_S16S;
     } else {
         ULONG i;
@@ -1370,13 +1678,27 @@ BOOL playSpeechFile(CONST_STRPTR filename) {
             audioBuffer[i] = data[i + 1];
             audioBuffer[i + 1] = data[i];
         }
+        convertedLength = dataLength;
         type = channels == 1 ? AHIST_M16S : AHIST_S16S;
     }
 
-    startAHIWrite(audioBuffer, playLength, sampleRate, type);
-    success = TRUE;
-
-done:
+    playbackDataLength = convertedLength;
+    playbackAllocLength = playLength;
+    playbackFrequency = sampleRate;
+    playbackType = type;
+    playbackFrameSize = dstFrameSize;
+    playbackOffset = 0;
+    playbackStartOffset = 0;
+    playbackPaused = FALSE;
+    playbackIsFile = TRUE;
+    strncpy(playbackPath, filename, sizeof(playbackPath) - 1);
+    playbackPath[sizeof(playbackPath) - 1] = '\0';
     FreeVec(wav);
-    return success;
+    return TRUE;
+}
+
+BOOL playSpeechFile(CONST_STRPTR filename) {
+    if (!loadSpeechPlayback(filename))
+        return FALSE;
+    return startPlaybackFromOffset(0);
 }

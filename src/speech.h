@@ -90,9 +90,30 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
 
 /**
  * Play a saved mono PCM WAV file through AHI without contacting a speech
- * provider.
+ * provider. Starts from the beginning of the file.
  **/
 BOOL playSpeechFile(CONST_STRPTR filename);
+
+/**
+ * Decode a saved WAV into the playback buffer without starting AHI. The
+ * same file can then be played, paused, seeked and rewound.
+ **/
+BOOL loadSpeechPlayback(CONST_STRPTR filename);
+
+/** Abort playback and discard the loaded file buffer. */
+void unloadSpeechPlayback(void);
+
+/** Play or resume the loaded WAV from the current position. */
+BOOL startSpeechPlayback(void);
+
+/** Abort the current AHI write and keep the playhead where it is. */
+void pauseSpeech(void);
+
+/** Seek the loaded WAV to an offset in milliseconds. */
+BOOL seekSpeech(ULONG positionMs);
+
+/** Seek the loaded WAV to the start. Continues playing if it was playing. */
+void rewindSpeech(void);
 
 /** Stop any narrator, flite or AHI playback currently in progress. */
 void stopSpeech();
@@ -102,6 +123,39 @@ void stopSpeech();
  * completed request so a later call reports idle.
  **/
 BOOL isSpeechPlaying(void);
+
+/** TRUE if a WAV is loaded and the playhead is held mid-file. */
+BOOL isSpeechPaused(void);
+
+/** Playhead position of the loaded WAV, in milliseconds. */
+ULONG speechPlaybackPositionMs(void);
+
+/** Duration of the loaded WAV, in milliseconds. Zero if nothing is loaded. */
+ULONG speechPlaybackDurationMs(void);
+
+/** TRUE if a decoded file is sitting in the playback buffer. */
+BOOL speechPlaybackHasAudio(void);
+
+/** Pointer to the decoded PCM currently loaded for file playback. */
+const UBYTE *speechPlaybackSamples(void);
+
+/** Number of PCM bytes in the loaded file, not including the AHI pad. */
+ULONG speechPlaybackSampleBytes(void);
+
+/** Sample rate of the loaded file. */
+ULONG speechPlaybackSampleRate(void);
+
+/** 1 for mono, 2 for stereo. */
+UWORD speechPlaybackChannelCount(void);
+
+/** 8 or 16. Loaded PCM is signed; 16-bit samples are big-endian. */
+UWORD speechPlaybackBitsPerSample(void);
+
+/**
+ * Reap a finished playhead timer and AHI write. Call this from the GUI
+ * idle loop so the waveform can advance while audio is playing.
+ **/
+void speechServicePlayback(void);
 
 /**
  * Exec signal bits for in-flight playback message ports. OR these into

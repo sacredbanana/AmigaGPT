@@ -7,6 +7,7 @@ extern Object *speechProviderSettingsRequesterWindowObject;
 
 LONG createSpeechProviderSettingsRequesterWindow(void);
 void openSpeechProviderSettingsRequesterWindow(void);
+CONST_STRPTR speechLookupXAIVoiceName(CONST_STRPTR voiceId);
 
 #endif
 

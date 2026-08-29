@@ -2113,3 +2113,38 @@ msgstr "Failed to parse speech history. The speech-history.json file is probably
 msgctxt "STRING_REQUEST_CANCELLED (409//)"
 msgid "Request cancelled"
 msgstr "Request cancelled"
+
+#: src/MainWindow.c
+msgctxt "STRING_PAUSE (410//)"
+msgid "Pause"
+msgstr "Pause"
+
+#: src/MainWindow.c
+msgctxt "STRING_REWIND (411//)"
+msgid "Rewind"
+msgstr "Rewind"
+
+#: src/MainWindow.c
+msgctxt "STRING_NO_SPEECH_SELECTED (412//)"
+msgid "Select a phrase to see its speech profile and waveform."
+msgstr "Select a phrase to see its speech profile and waveform."
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEECH_PROFILE (413//)"
+msgid "Profile"
+msgstr "Profile"
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEECH_SYSTEM_LABEL (414//)"
+msgid "System"
+msgstr "System"
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEECH_NO_PROFILE (415//)"
+msgid "No profile was recorded for this phrase."
+msgstr "No profile was recorded for this phrase."
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEECH_LANGUAGE (416//)"
+msgid "Language"
+msgstr "Language"

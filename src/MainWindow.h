@@ -63,7 +63,6 @@ void showLoadingBar();
 void hideLoadingBar();
 
 /**
- * Refresh the Speech tab Play button: Stop while audio is playing, Play
- * when idle.
+ * Refresh the Speech tab transport, playhead and time display.
  **/
 void updatePlayButton();

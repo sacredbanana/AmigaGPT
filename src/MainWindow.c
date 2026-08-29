@@ -12,6 +12,7 @@
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
 #include "AmigaGPTConfig.h"
 #include "AmigaGPTTextEditor.h"
@@ -20,6 +21,8 @@
 #include "MainWindow.h"
 #include "openai.h"
 #include "speech.h"
+#include "SpeechProviderSettingsRequesterWindow.h"
+#include "SpeechWaveform.h"
 #include <dos/dos.h>
 
 /* Max nesting depth for B/I/U combined. Adjust as needed. */
@@ -73,6 +76,12 @@ Object *deleteSpeechButton;
 Object *generateSpeechButton;
 Object *regenerateSpeechButton;
 Object *playSpeechButton;
+Object *pauseSpeechButton;
+Object *stopSpeechButton;
+Object *rewindSpeechButton;
+Object *speechTimeText;
+Object *speechProfileInfo;
+Object *speechWaveform;
 Object *saveSpeechCopyButton;
 Object *generateSpeechTextButton;
 Object *attachSpeechFilesButton;
@@ -96,11 +105,11 @@ struct GeneratedSpeech {
     STRPTR title;
     STRPTR filePath;
     STRPTR text;
+    STRPTR profileInfo;
 };
 static struct GeneratedSpeech *currentSpeech = NULL;
 static STRPTR pages[4] = {NULL};
 static BOOL requestInterfaceBusy = FALSE;
-static BOOL playButtonShowingStop = FALSE;
 
 struct Conversation *newConversation();
 static struct Conversation *copyConversation(struct Conversation *conversation);
@@ -273,25 +282,213 @@ static BOOL abortIfRequestBusy(void) {
     return TRUE;
 }
 
+static void formatSpeechTime(STRPTR buffer, ULONG size, ULONG positionMs,
+                             ULONG durationMs) {
+    snprintf(buffer, size, "%lu:%02lu / %lu:%02lu",
+             (ULONG)(positionMs / 60000UL),
+             (ULONG)((positionMs / 1000UL) % 60UL),
+             (ULONG)(durationMs / 60000UL),
+             (ULONG)((durationMs / 1000UL) % 60UL));
+}
+
+static CONST_STRPTR xaiBuiltinVoiceName(CONST_STRPTR voiceId) {
+    static const CONST_STRPTR pretty[] = {"Ara", "Eve", "Leo", "Rex", "Sal"};
+    UBYTE i;
+
+    if (voiceId == NULL || voiceId[0] == '\0')
+        return NULL;
+    for (i = 0; XAI_TTS_VOICE_NAMES[i] != NULL; i++) {
+        if (strcasecmp(voiceId, XAI_TTS_VOICE_NAMES[i]) == 0)
+            return pretty[i];
+    }
+    return NULL;
+}
+
+static BOOL copyXAIVoiceNameForId(CONST_STRPTR voiceId, STRPTR dest,
+                                  ULONG destSize) {
+    CONST_STRPTR pretty;
+    CONST_STRPTR storedId;
+    CONST_STRPTR storedName;
+    STRPTR profilesStr;
+    struct json_object *arr;
+    int i;
+    int len;
+
+    if (dest == NULL || destSize == 0 || voiceId == NULL || voiceId[0] == '\0')
+        return FALSE;
+    dest[0] = '\0';
+    pretty = xaiBuiltinVoiceName(voiceId);
+    if (pretty == NULL)
+        pretty = speechLookupXAIVoiceName(voiceId);
+    if (pretty != NULL && pretty[0] != '\0' && strcmp(pretty, voiceId) != 0) {
+        strncpy(dest, pretty, destSize - 1);
+        dest[destSize - 1] = '\0';
+        return TRUE;
+    }
+    pretty = xaiBuiltinVoiceName(voiceId);
+    if (pretty != NULL) {
+        strncpy(dest, pretty, destSize - 1);
+        dest[destSize - 1] = '\0';
+        return TRUE;
+    }
+    storedId = configGetXAITTSVoiceId();
+    storedName = configGetXAITTSVoiceName();
+    if (storedId != NULL && storedName != NULL && storedName[0] != '\0' &&
+        strcmp(storedId, voiceId) == 0) {
+        strncpy(dest, storedName, destSize - 1);
+        dest[destSize - 1] = '\0';
+        return TRUE;
+    }
+    profilesStr = configGetSpeechProfiles();
+    if (profilesStr == NULL || profilesStr[0] == '\0')
+        return FALSE;
+    arr = json_tokener_parse(profilesStr);
+    if (arr == NULL || !json_object_is_type(arr, json_type_array)) {
+        if (arr != NULL)
+            json_object_put(arr);
+        return FALSE;
+    }
+    len = json_object_array_length(arr);
+    for (i = 0; i < len; i++) {
+        struct json_object *profile = json_object_array_get_idx(arr, i);
+        struct json_object *idObj;
+        struct json_object *nameObj;
+        CONST_STRPTR id;
+        CONST_STRPTR name;
+
+        if (profile == NULL)
+            continue;
+        idObj = json_object_object_get(profile, "xaiTTSVoiceId");
+        nameObj = json_object_object_get(profile, "xaiTTSVoiceName");
+        id = idObj != NULL ? json_object_get_string(idObj) : NULL;
+        name = nameObj != NULL ? json_object_get_string(nameObj) : NULL;
+        if (id != NULL && name != NULL && name[0] != '\0' &&
+            strcmp(id, voiceId) == 0) {
+            strncpy(dest, name, destSize - 1);
+            dest[destSize - 1] = '\0';
+            json_object_put(arr);
+            return TRUE;
+        }
+    }
+    json_object_put(arr);
+    return FALSE;
+}
+
+static void resolveSpeechProfileVoiceName(STRPTR dest, ULONG destSize,
+                                          CONST_STRPTR profileInfo) {
+    CONST_STRPTR label = STRING_MENU_OPENAI_VOICE;
+    CONST_STRPTR cursor;
+    UBYTE prefix[64];
+    UBYTE voiceId[64];
+    UBYTE voiceName[128];
+    ULONG prefixLen;
+
+    if (dest == NULL || destSize == 0)
+        return;
+    dest[0] = '\0';
+    if (profileInfo == NULL || profileInfo[0] == '\0')
+        return;
+    strncpy(dest, profileInfo, destSize - 1);
+    dest[destSize - 1] = '\0';
+    snprintf(prefix, sizeof(prefix), "%s: ", label != NULL ? label : "Voice");
+    prefixLen = strlen(prefix);
+    cursor = dest;
+    while (cursor[0] != '\0') {
+        if (strncmp(cursor, prefix, prefixLen) == 0) {
+            CONST_STRPTR start = cursor + prefixLen;
+            CONST_STRPTR end = start;
+            while (*end != '\0' && *end != '\n')
+                end++;
+            if ((ULONG)(end - start) >= sizeof(voiceId))
+                break;
+            memcpy(voiceId, start, (ULONG)(end - start));
+            voiceId[end - start] = '\0';
+            if (copyXAIVoiceNameForId(voiceId, voiceName, sizeof(voiceName)) &&
+                strcmp(voiceName, voiceId) != 0) {
+                UBYTE rebuilt[768];
+                ULONG head = (ULONG)(cursor - dest);
+                snprintf(rebuilt, sizeof(rebuilt), "%.*s%s%s%s", (int)head,
+                         dest, prefix, voiceName, end);
+                strncpy(dest, rebuilt, destSize - 1);
+                dest[destSize - 1] = '\0';
+            }
+            break;
+        }
+        while (*cursor != '\0' && *cursor != '\n')
+            cursor++;
+        if (*cursor == '\n')
+            cursor++;
+    }
+}
+
+static void setSpeechPlayerDisplay(CONST_STRPTR filePath,
+                                   CONST_STRPTR profileInfo) {
+    CONST_STRPTR contents;
+    UBYTE resolved[768];
+
+    resolved[0] = '\0';
+    if (profileInfo != NULL && profileInfo[0] != '\0') {
+        resolveSpeechProfileVoiceName(resolved, sizeof(resolved), profileInfo);
+        contents = resolved;
+    } else if (currentSpeech == NULL)
+        contents = (CONST_STRPTR)STRING_NO_SPEECH_SELECTED;
+    else
+        contents = (CONST_STRPTR)STRING_SPEECH_NO_PROFILE;
+    if (speechProfileInfo != NULL)
+        set(speechProfileInfo, MUIA_Text_Contents, contents);
+    if (speechWaveform != NULL && speechWaveformClass != NULL)
+        speechWaveformSetFile(speechWaveform, filePath);
+}
+
 void updatePlayButton() {
     BOOL playing;
-    if (playSpeechButton == NULL)
-        return;
+    BOOL paused;
+    BOOL hasSpeech;
+    ULONG position;
+    ULONG duration;
+    BOOL playDisabled;
+    BOOL pauseDisabled;
+    BOOL stopDisabled;
+    BOOL rewindDisabled;
+    UBYTE timeText[32];
+    static BOOL lastPlayDisabled = (BOOL)-1;
+    static BOOL lastPauseDisabled = (BOOL)-1;
+    static BOOL lastStopDisabled = (BOOL)-1;
+    static BOOL lastRewindDisabled = (BOOL)-1;
+    static ULONG lastPosition = (ULONG)-1;
+    static UBYTE lastTimeText[32];
+
     playing = isSpeechPlaying();
-    if (playing) {
-        if (!playButtonShowingStop) {
-            setActionButtonLabel(playSpeechButton, redPen, STRING_STOP);
-            playButtonShowingStop = TRUE;
-        }
-        set(playSpeechButton, MUIA_Disabled, FALSE);
-        return;
+    paused = isSpeechPaused();
+    hasSpeech = currentSpeech != NULL && !requestInterfaceBusy;
+    position = speechPlaybackPositionMs();
+    duration = speechPlaybackDurationMs();
+    playDisabled = !hasSpeech || playing;
+    pauseDisabled = !hasSpeech || !playing;
+    stopDisabled = !hasSpeech || (!playing && !paused && position == 0);
+    rewindDisabled = !hasSpeech || (position == 0 && !playing);
+
+    if (playSpeechButton != NULL && playDisabled != lastPlayDisabled)
+        set(playSpeechButton, MUIA_Disabled, playDisabled);
+    if (pauseSpeechButton != NULL && pauseDisabled != lastPauseDisabled)
+        set(pauseSpeechButton, MUIA_Disabled, pauseDisabled);
+    if (stopSpeechButton != NULL && stopDisabled != lastStopDisabled)
+        set(stopSpeechButton, MUIA_Disabled, stopDisabled);
+    if (rewindSpeechButton != NULL && rewindDisabled != lastRewindDisabled)
+        set(rewindSpeechButton, MUIA_Disabled, rewindDisabled);
+    if (speechWaveform != NULL && position != lastPosition)
+        set(speechWaveform, MUIA_SpeechWaveform_Position, position);
+    formatSpeechTime(timeText, sizeof(timeText), position, duration);
+    if (speechTimeText != NULL && strcmp(lastTimeText, timeText) != 0) {
+        strncpy(lastTimeText, timeText, sizeof(lastTimeText) - 1);
+        lastTimeText[sizeof(lastTimeText) - 1] = '\0';
+        set(speechTimeText, MUIA_Text_Contents, timeText);
     }
-    if (playButtonShowingStop) {
-        set(playSpeechButton, MUIA_Text_Contents, STRING_PLAY);
-        playButtonShowingStop = FALSE;
-    }
-    set(playSpeechButton, MUIA_Disabled,
-        requestInterfaceBusy || currentSpeech == NULL);
+    lastPlayDisabled = playDisabled;
+    lastPauseDisabled = pauseDisabled;
+    lastStopDisabled = stopDisabled;
+    lastRewindDisabled = rewindDisabled;
+    lastPosition = position;
 }
 
 static void updateSpeechControls() {
@@ -356,6 +553,14 @@ static void setSpeechGenerationControlsDisabled(BOOL disabled) {
         set(generateSpeechTextButton, MUIA_Disabled, disabled);
     if (saveSpeechCopyButton != NULL)
         set(saveSpeechCopyButton, MUIA_Disabled, disabled);
+    if (playSpeechButton != NULL)
+        set(playSpeechButton, MUIA_Disabled, disabled);
+    if (pauseSpeechButton != NULL)
+        set(pauseSpeechButton, MUIA_Disabled, disabled);
+    if (stopSpeechButton != NULL)
+        set(stopSpeechButton, MUIA_Disabled, disabled);
+    if (rewindSpeechButton != NULL)
+        set(rewindSpeechButton, MUIA_Disabled, disabled);
     if (speechListObject != NULL)
         set(speechListObject, MUIA_Disabled, disabled);
 }
@@ -635,6 +840,8 @@ HOOKPROTONHNO(DestructSpeechLI_TextFunc, void,
             FreeVec(entry->filePath);
         if (entry->text != NULL)
             FreeVec(entry->text);
+        if (entry->profileInfo != NULL)
+            FreeVec(entry->profileInfo);
         FreeVec(entry);
     }
 }
@@ -657,6 +864,10 @@ HOOKPROTONHNONP(SpeechRowClickedFunc, void) {
     if (entry != NULL) {
         currentSpeech = entry;
         setEditorText(speechInputTextEditor, entry->text);
+        stopSpeech();
+        if (entry->filePath != NULL)
+            loadSpeechPlayback(entry->filePath);
+        setSpeechPlayerDisplay(entry->filePath, entry->profileInfo);
     }
     updateSpeechControls();
 }
@@ -902,6 +1113,135 @@ static STRPTR buildSpeechText(void) {
     return result;
 }
 
+static STRPTR copySpeechString(CONST_STRPTR text) {
+    STRPTR copy;
+    ULONG length;
+
+    if (text == NULL)
+        return NULL;
+    length = strlen(text);
+    copy = AllocVec(length + 1, MEMF_ANY | MEMF_CLEAR);
+    if (copy != NULL)
+        memcpy(copy, text, length);
+    return copy;
+}
+
+static void appendProfileLine(STRPTR buffer, ULONG size, CONST_STRPTR label,
+                              CONST_STRPTR value) {
+    ULONG used;
+
+    if (buffer == NULL || label == NULL || value == NULL || value[0] == '\0')
+        return;
+    used = strlen(buffer);
+    if (used + 4 >= size)
+        return;
+    if (used > 0)
+        buffer[used++] = '\n';
+    snprintf(buffer + used, size - used, "%s: %s", label, value);
+}
+
+static STRPTR formatSpeechProfileInfo(
+    const struct SpeechRequestSettings *settings) {
+    UBYTE buffer[768];
+    CONST_STRPTR voice = NULL;
+    CONST_STRPTR model = NULL;
+    UBYTE extra[64];
+
+    if (settings == NULL)
+        return NULL;
+    memset(buffer, 0, sizeof(buffer));
+    appendProfileLine(buffer, sizeof(buffer), STRING_SPEECH_PROFILE,
+                      settings->activeProfileName);
+    if (settings->speechSystem <= SPEECH_SYSTEM_OPENVOX)
+        appendProfileLine(buffer, sizeof(buffer), STRING_SPEECH_SYSTEM_LABEL,
+                          SPEECH_SYSTEM_NAMES[settings->speechSystem]);
+
+    extra[0] = '\0';
+    switch (settings->speechSystem) {
+    case SPEECH_SYSTEM_34:
+    case SPEECH_SYSTEM_37:
+        snprintf(extra, sizeof(extra), "%s, %s",
+                 settings->narratorSex ? STRING_NARRATOR_SEX_FEMALE
+                                       : STRING_NARRATOR_SEX_MALE,
+                 settings->narratorMode ? STRING_NARRATOR_MODE_ROBOTIC
+                                        : STRING_NARRATOR_MODE_NATURAL);
+        appendProfileLine(buffer, sizeof(buffer), STRING_MENU_OPENAI_VOICE,
+                          extra);
+        snprintf(extra, sizeof(extra), "%u", settings->narratorRate);
+        appendProfileLine(buffer, sizeof(buffer), STRING_NARRATOR_RATE_WPM,
+                          extra);
+        snprintf(extra, sizeof(extra), "%u", settings->narratorPitch);
+        appendProfileLine(buffer, sizeof(buffer), STRING_NARRATOR_PITCH_HZ,
+                          extra);
+        appendProfileLine(buffer, sizeof(buffer), STRING_MENU_SPEECH_ACCENT,
+                          settings->accentPath);
+        break;
+    case SPEECH_SYSTEM_FLITE:
+        if (settings->fliteVoice <= SPEECH_FLITE_VOICE_SLT)
+            voice = SPEECH_FLITE_VOICE_NAMES[settings->fliteVoice];
+        appendProfileLine(buffer, sizeof(buffer), STRING_MENU_OPENAI_VOICE,
+                          voice);
+        break;
+    case SPEECH_SYSTEM_OPENAI:
+        if (settings->openAiTtsVoice <= OPENAI_TTS_VOICE_VERSE)
+            voice = OPENAI_TTS_VOICE_NAMES[settings->openAiTtsVoice];
+        model = settings->openAiTtsModelId;
+        appendProfileLine(buffer, sizeof(buffer), STRING_MENU_OPENAI_VOICE,
+                          voice);
+        appendProfileLine(buffer, sizeof(buffer),
+                          STRING_MENU_SPEECH_OPENAI_MODEL, model);
+        break;
+    case SPEECH_SYSTEM_ELEVENLABS:
+        voice = settings->elevenLabsVoiceName;
+        if (voice == NULL || voice[0] == '\0')
+            voice = settings->elevenLabsVoiceID;
+        model = settings->elevenLabsModelName;
+        if (model == NULL || model[0] == '\0')
+            model = settings->elevenLabsModel;
+        appendProfileLine(buffer, sizeof(buffer), STRING_MENU_OPENAI_VOICE,
+                          voice);
+        appendProfileLine(buffer, sizeof(buffer),
+                          STRING_MENU_SPEECH_OPENAI_MODEL, model);
+        break;
+    case SPEECH_SYSTEM_XAI: {
+        UBYTE xaiName[128];
+        CONST_STRPTR voiceId = settings->xaiVoiceId;
+        if (voiceId == NULL || voiceId[0] == '\0') {
+            if (settings->xaiVoice >= 0 &&
+                XAI_TTS_VOICE_NAMES[settings->xaiVoice] != NULL)
+                voiceId = XAI_TTS_VOICE_NAMES[settings->xaiVoice];
+        }
+        voice = settings->xaiVoiceName;
+        if (voice == NULL || voice[0] == '\0') {
+            if (copyXAIVoiceNameForId(voiceId, xaiName, sizeof(xaiName)))
+                voice = xaiName;
+            else
+                voice = voiceId;
+        }
+        appendProfileLine(buffer, sizeof(buffer), STRING_MENU_OPENAI_VOICE,
+                          voice);
+        if (voice != NULL && voiceId != NULL && voice[0] != '\0' &&
+            strcmp(voice, voiceId) != 0)
+            configSetXAITTSVoiceName(voice);
+    }
+        appendProfileLine(buffer, sizeof(buffer), STRING_SPEECH_LANGUAGE,
+                          settings->xaiLanguage);
+        break;
+    case SPEECH_SYSTEM_OPENVOX:
+        appendProfileLine(buffer, sizeof(buffer), STRING_MENU_OPENAI_VOICE,
+                          settings->openVoxVoice);
+        appendProfileLine(buffer, sizeof(buffer),
+                          STRING_MENU_SPEECH_OPENAI_MODEL,
+                          settings->openVoxModel);
+        appendProfileLine(buffer, sizeof(buffer), STRING_SPEECH_LANGUAGE,
+                          settings->openVoxLanguage);
+        break;
+    }
+    if (buffer[0] == '\0')
+        return NULL;
+    return copySpeechString(buffer);
+}
+
 static STRPTR speechTitle(CONST_STRPTR text) {
     ULONG length = text != NULL ? strlen(text) : 0;
     STRPTR title;
@@ -925,6 +1265,7 @@ static void generateSpeech(BOOL regenerate) {
     struct SpeechRequestSettings settings;
     BOOL generated;
     BOOL createdNewEntry = FALSE;
+    STRPTR profileInfo = NULL;
 
     memset(id, 0, sizeof(id));
     memset(path, 0, sizeof(path));
@@ -954,6 +1295,8 @@ static void generateSpeech(BOOL regenerate) {
     showLoadingBar();
     configGetSpeechRequestSettings(&settings);
     generated = speakTextWithSettings(text, path, &format, &settings);
+    if (generated && !isRequestCancelled())
+        profileInfo = formatSpeechProfileInfo(&settings);
     configFreeSpeechRequestSettings(&settings);
     if (!generated || isRequestCancelled()) {
         if (entry == NULL)
@@ -968,6 +1311,8 @@ static void generateSpeech(BOOL regenerate) {
         if (entry == NULL) {
             deleteDiskFile(path);
             FreeVec(text);
+            if (profileInfo != NULL)
+                FreeVec(profileInfo);
             finishActiveRequest(FALSE);
             displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
             return;
@@ -979,6 +1324,8 @@ static void generateSpeech(BOOL regenerate) {
             deleteDiskFile(path);
             FreeVec(entry);
             FreeVec(text);
+            if (profileInfo != NULL)
+                FreeVec(profileInfo);
             finishActiveRequest(FALSE);
             displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
             return;
@@ -992,13 +1339,18 @@ static void generateSpeech(BOOL regenerate) {
             FreeVec(entry->text);
         if (entry->title != NULL)
             FreeVec(entry->title);
+        if (entry->profileInfo != NULL)
+            FreeVec(entry->profileInfo);
     }
     entry->text = text;
     entry->title = speechTitle(text);
+    entry->profileInfo = profileInfo;
     currentSpeech = entry;
     DoMethod(speechListObject, MUIM_NList_Redraw, MUIV_NList_Redraw_Active);
     if (saveSpeechHistory() != RETURN_OK && createdNewEntry)
         deleteDiskFile(path);
+    loadSpeechPlayback(path);
+    setSpeechPlayerDisplay(path, entry->profileInfo);
     finishActiveRequest(TRUE);
 }
 
@@ -1006,6 +1358,8 @@ HOOKPROTONHNONP(NewSpeechButtonClickedFunc, void) {
     currentSpeech = NULL;
     setEditorText(speechInputTextEditor, "");
     freeChatFiles(&pendingSpeechFiles);
+    unloadSpeechPlayback();
+    setSpeechPlayerDisplay(NULL, NULL);
     updateSpeechControls();
     DoMethod(speechInputTextEditor, MUIM_GoActive);
 }
@@ -1020,6 +1374,8 @@ HOOKPROTONHNONP(DeleteSpeechButtonClickedFunc, void) {
     DoMethod(speechListObject, MUIM_NList_Remove, MUIV_NList_Remove_Active);
     currentSpeech = NULL;
     setEditorText(speechInputTextEditor, "");
+    stopSpeech();
+    setSpeechPlayerDisplay(NULL, NULL);
     saveSpeechHistory();
     updateSpeechControls();
 }
@@ -1039,16 +1395,48 @@ MakeHook(RegenerateSpeechButtonClickedHook,
          RegenerateSpeechButtonClickedFunc);
 
 HOOKPROTONHNONP(PlaySpeechButtonClickedFunc, void) {
-    if (isSpeechPlaying()) {
-        stopSpeech();
+    if (isSpeechPlaying() || currentSpeech == NULL ||
+        currentSpeech->filePath == NULL) {
         updatePlayButton();
         return;
     }
-    if (currentSpeech != NULL && currentSpeech->filePath != NULL)
+    if (speechPlaybackDurationMs() == 0)
+        loadSpeechPlayback(currentSpeech->filePath);
+    if (speechPlaybackPositionMs() >= speechPlaybackDurationMs() &&
+        speechPlaybackDurationMs() > 0)
+        seekSpeech(0);
+    if (!startSpeechPlayback())
         playSpeechFile(currentSpeech->filePath);
     updatePlayButton();
 }
 MakeHook(PlaySpeechButtonClickedHook, PlaySpeechButtonClickedFunc);
+
+HOOKPROTONHNONP(PauseSpeechButtonClickedFunc, void) {
+    pauseSpeech();
+    updatePlayButton();
+}
+MakeHook(PauseSpeechButtonClickedHook, PauseSpeechButtonClickedFunc);
+
+HOOKPROTONHNONP(StopSpeechButtonClickedFunc, void) {
+    stopSpeech();
+    updatePlayButton();
+}
+MakeHook(StopSpeechButtonClickedHook, StopSpeechButtonClickedFunc);
+
+HOOKPROTONHNONP(RewindSpeechButtonClickedFunc, void) {
+    rewindSpeech();
+    updatePlayButton();
+}
+MakeHook(RewindSpeechButtonClickedHook, RewindSpeechButtonClickedFunc);
+
+HOOKPROTONHNONP(SpeechWaveformSeekFunc, void) {
+    ULONG positionMs = 0;
+    if (speechWaveform != NULL)
+        get(speechWaveform, MUIA_SpeechWaveform_Seek, &positionMs);
+    seekSpeech(positionMs);
+    updatePlayButton();
+}
+MakeHook(SpeechWaveformSeekHook, SpeechWaveformSeekFunc);
 
 HOOKPROTONHNONP(AttachSpeechFilesButtonClickedFunc, void) {
     ULONG oldCount = chatFileCount(&pendingSpeechFiles);
@@ -2223,7 +2611,6 @@ MakeHook(ModePageChangedHook, ModePageChangedFunc);
  * @return RETURN_OK on success, RETURN_ERROR on failure
  **/
 LONG createMainWindow() {
-    playButtonShowingStop = FALSE;
     if (!pendingChatFilesInitialized) {
         NewList((struct List *)&pendingChatFiles);
         pendingChatFilesInitialized = TRUE;
@@ -2240,6 +2627,8 @@ LONG createMainWindow() {
     if (!useCustomTextEditor) {
         displayError("Could not create custom class.");
     }
+    if (createSpeechWaveformClass() != RETURN_OK)
+        displayError("Could not create custom class.");
 
     if (mainWindowObject != NULL) {
         MUI_DisposeObject(mainWindowObject);
@@ -2265,6 +2654,22 @@ LONG createMainWindow() {
     pages[0] = STRING_MENU_CHAT;
     pages[1] = STRING_MENU_IMAGE;
     pages[2] = STRING_MENU_SPEECH;
+
+    if (speechWaveformClass != NULL) {
+        speechWaveform = NewObject(
+            MUIC_SpeechWaveform, NULL,
+            MUIA_Frame, MUIV_Frame_Group,
+            MUIA_Background, MUII_SHADOW,
+            MUIA_Weight, 200,
+            TAG_DONE);
+    } else {
+        speechWaveform = RectangleObject,
+            MUIA_Frame, MUIV_Frame_Group,
+            MUIA_Weight, 200,
+        End;
+    }
+    if (speechWaveform == NULL)
+        speechWaveform = HVSpace;
 
     // clang-format off
     if ((mainWindowObject = WindowObject,
@@ -2481,12 +2886,36 @@ LONG createMainWindow() {
                             End,
                         End,
                         Child, VGroup,
-                            Child, HVSpace,
+                            Child, speechProfileInfo = TextObject,
+                                MUIA_Frame, MUIV_Frame_Group,
+                                MUIA_Text_Contents, STRING_NO_SPEECH_SELECTED,
+                                MUIA_Text_SetMin, FALSE,
+                                MUIA_Weight, 20,
+                            End,
+                            Child, speechWaveform,
                             Child, HGroup,
+                                Child, rewindSpeechButton = MUI_MakeObject(MUIO_Button, STRING_REWIND,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
                                 Child, playSpeechButton = MUI_MakeObject(MUIO_Button, STRING_PLAY,
                                     MUIA_CycleChain, TRUE,
                                     MUIA_InputMode, MUIV_InputMode_RelVerify,
                                 TAG_DONE),
+                                Child, pauseSpeechButton = MUI_MakeObject(MUIO_Button, STRING_PAUSE,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
+                                Child, stopSpeechButton = MUI_MakeObject(MUIO_Button, STRING_STOP,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
+                                Child, speechTimeText = TextObject,
+                                    MUIA_Text_Contents, "0:00 / 0:00",
+                                    MUIA_Text_SetMin, TRUE,
+                                End,
+                            End,
+                            Child, HGroup,
                                 Child, regenerateSpeechButton = MUI_MakeObject(MUIO_Button, STRING_REGENERATE,
                                     MUIA_CycleChain, TRUE,
                                     MUIA_InputMode, MUIV_InputMode_RelVerify,
@@ -2691,6 +3120,18 @@ static void addMainWindowActions() {
              &RegenerateSpeechButtonClickedHook);
     DoMethod(playSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
              playSpeechButton, 2, MUIM_CallHook, &PlaySpeechButtonClickedHook);
+    DoMethod(pauseSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             pauseSpeechButton, 2, MUIM_CallHook,
+             &PauseSpeechButtonClickedHook);
+    DoMethod(stopSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             stopSpeechButton, 2, MUIM_CallHook, &StopSpeechButtonClickedHook);
+    DoMethod(rewindSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             rewindSpeechButton, 2, MUIM_CallHook,
+             &RewindSpeechButtonClickedHook);
+    if (speechWaveformClass != NULL && speechWaveform != NULL)
+        DoMethod(speechWaveform, MUIM_Notify, MUIA_SpeechWaveform_Seek,
+                 MUIV_EveryTime, speechWaveform, 2, MUIM_CallHook,
+                 &SpeechWaveformSeekHook);
     DoMethod(saveSpeechCopyButton, MUIM_Notify, MUIA_Pressed, FALSE,
              saveSpeechCopyButton, 2, MUIM_CallHook,
              &SaveSpeechCopyButtonClickedHook);
@@ -3890,6 +4331,11 @@ static LONG saveSpeechHistory() {
         json_object_object_add(
             speechJsonObject, "text",
             json_object_new_string(entry->text != NULL ? entry->text : ""));
+        json_object_object_add(speechJsonObject, "profileInfo",
+                               json_object_new_string(
+                                   entry->profileInfo != NULL
+                                       ? entry->profileInfo
+                                       : ""));
         json_object_array_add(speechJsonArray, speechJsonObject);
     }
 
@@ -4340,6 +4786,8 @@ static LONG loadSpeechHistory() {
         CONST_STRPTR title = jsonStringValue(speechJsonObject, "title");
         CONST_STRPTR filePath = jsonStringValue(speechJsonObject, "filePath");
         CONST_STRPTR text = jsonStringValue(speechJsonObject, "text");
+        CONST_STRPTR profileInfo =
+            jsonStringValue(speechJsonObject, "profileInfo");
         struct GeneratedSpeech *entry;
 
         if (filePath == NULL || text == NULL) {
@@ -4365,6 +4813,8 @@ static LONG loadSpeechHistory() {
             strcpy(entry->filePath, filePath);
         if (entry->text != NULL)
             strcpy(entry->text, text);
+        if (profileInfo != NULL && profileInfo[0] != '\0')
+            entry->profileInfo = copySpeechString(profileInfo);
         DoMethod(speechListObject, MUIM_NList_InsertSingle, entry,
                  MUIV_NList_Insert_Top);
     }

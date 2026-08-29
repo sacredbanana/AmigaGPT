@@ -2,12 +2,12 @@
 
 ## 3.4.0 (2026-xx-xx)
 
-- Speech tab for generating reusable spoken phrases as WAV files, with phrase history, Play, Regenerate, Save Speech Copy, file attachments and Generate text with AI
+- Speech tab for generating reusable spoken phrases as WAV files, with phrase history, Play, Pause, Stop, Rewind, an interactive waveform timeline, speech profile details, Regenerate, Save Speech Copy, file attachments and Generate text with AI
 - ARexx SPEAKTEXT now saves WAV (default) or raw PCM for every speech backend, including narrator.device and flite.device, when OUTPUT is given
 - LISTAUDIOFORMATS now reports wav and pcm
 - Main window tabs renamed to Chat, Image and Speech
 - Send, Create and Generate change to Stop while a request is in progress, and abort that request, replacing the old Stop Speaking button
-- Play changes to Stop while speech is playing and interrupts playback
+- Speech tab playback uses a dedicated Play, Pause, Stop and Rewind transport; click the waveform to jump to any point in the phrase
 - Expert mode in the installer  now asks whether to install AmigaGPTD, including on AmiKit, instead of always copying the daemon
 - On AmiKit the installer writes the AMIGAGPT: assign and optional daemon start to KIT-Startup instead of S:User-Startup
 

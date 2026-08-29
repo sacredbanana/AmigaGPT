@@ -2165,6 +2165,41 @@ msgctxt "STRING_REQUEST_CANCELLED (409//)"
 msgid "Request cancelled"
 msgstr "İstenen"
 
+#: src/MainWindow.c
+msgctxt "STRING_PAUSE (410//)"
+msgid "Pause"
+msgstr "Duraklat"
+
+#: src/MainWindow.c
+msgctxt "STRING_REWIND (411//)"
+msgid "Rewind"
+msgstr "Geri sar"
+
+#: src/MainWindow.c
+msgctxt "STRING_NO_SPEECH_SELECTED (412//)"
+msgid "Select a phrase to see its speech profile and waveform."
+msgstr "Konuşma profilini ve dalga biçimini görmek için bir ifade seçin."
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEECH_PROFILE (413//)"
+msgid "Profile"
+msgstr "Profil"
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEECH_SYSTEM_LABEL (414//)"
+msgid "System"
+msgstr "Sistem"
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEECH_NO_PROFILE (415//)"
+msgid "No profile was recorded for this phrase."
+msgstr "Bu ifade için herhangi bir profil kaydedilmedi."
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEECH_LANGUAGE (416//)"
+msgid "Language"
+msgstr "Dil"
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Ses"
