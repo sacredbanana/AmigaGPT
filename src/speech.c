@@ -62,7 +62,7 @@ const STRPTR SPEECH_SYSTEM_NAMES[] = {[SPEECH_SYSTEM_34] = "Workbench 1.x v34",
                                       [SPEECH_SYSTEM_FLITE] = "Flite",
                                       [SPEECH_SYSTEM_OPENAI] = "OpenAI",
                                       [SPEECH_SYSTEM_ELEVENLABS] = "ElevenLabs",
-                                      [SPEECH_SYSTEM_XAI] = "xAI",
+                                      [SPEECH_SYSTEM_XAI] = "SpaceXAI",
                                       [SPEECH_SYSTEM_OPENVOX] = "OpenVox",
                                       NULL};
 

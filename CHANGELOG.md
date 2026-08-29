@@ -2,11 +2,16 @@
 
 ## 3.3.0 (2026-08-29)
 
+- Rename the xAI provider to SpaceXAI throughout the chat, image and speech provider settings; existing configs and ARexx scripts using the old name keep working
+- New default chat models: gpt-5.6-terra (OpenAI), gemini-flash-latest (Google Gemini), claude-sonnet-5 (Anthropic Claude) and grok-4.5 (SpaceXAI Grok)
+- New default image models: gpt-image-2 (OpenAI), gemini-3-pro-image (Google Gemini) and grok-imagine-image-2.0 (SpaceXAI Grok)
+- Code Interpreter is now enabled by default for all built-in chat providers
+- Model and voice lists are now sorted alphabetically, both for the prepopulated lists shown on first launch and for lists refreshed with the Fetch button
 - Fix the busy bar at the bottom of the main window animating forever after generating an image, and keep it running for the whole request instead of blanking out as soon as the request was sent
 - Attach reference images to an image generation prompt so the model can edit, restyle or combine pictures you already have
 - Edit button on a generated image starts a fresh prompt with that picture already attached as a reference
 - ARexx CREATEIMAGE supports A=ATTACH to send one or more reference images with the prompt
-- Fix every second chat message failing with providers that do not retain responses (xAI Grok), which made ARexx SENDMESSAGE and the AskGPT script only work every second time
+- Fix every second chat message failing with providers that do not retain responses (SpaceXAI Grok), which made ARexx SENDMESSAGE and the AskGPT script only work every second time
 - Fix ARexx SENDMESSAGE returning an empty RESULT instead of the error text when the provider reports errors as a plain string rather than an object
 - Improved memory management for AmigaGPTTextEditor
 - AmigaGPTTextEditor no longer crashes in MUI 3.8 on app exit

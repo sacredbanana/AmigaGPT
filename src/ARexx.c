@@ -566,7 +566,7 @@ static void rexxFinishSendMessage(
 
 #define REXX_LOCKED_PROFILE_NAME_OPENAI "OpenAI"
 #define REXX_LOCKED_PROFILE_NAME_GEMINI "Google Gemini"
-#define REXX_LOCKED_PROFILE_NAME_GROK "xAI Grok"
+#define REXX_LOCKED_PROFILE_NAME_GROK "SpaceXAI Grok"
 #define REXX_LOCKED_PROFILE_NAME_ANTHROPIC "Anthropic Claude"
 #define REXX_DEFAULT_NARRATOR_RATE 150
 #define REXX_DEFAULT_NARRATOR_PITCH 110
@@ -686,7 +686,8 @@ static CONST_STRPTR rexxResolveChatProfileAlias(CONST_STRPTR name) {
         return REXX_LOCKED_PROFILE_NAME_GEMINI;
     }
     if (strcasecmp(name, REXX_LOCKED_PROFILE_NAME_GROK) == 0 ||
-        strcasecmp(name, "xAI") == 0 || strcasecmp(name, "Grok") == 0) {
+        strcasecmp(name, "SpaceXAI") == 0 || strcasecmp(name, "xAI") == 0 ||
+        strcasecmp(name, "xAI Grok") == 0 || strcasecmp(name, "Grok") == 0) {
         return REXX_LOCKED_PROFILE_NAME_GROK;
     }
     if (strcasecmp(name, REXX_LOCKED_PROFILE_NAME_ANTHROPIC) == 0 ||
@@ -709,7 +710,8 @@ static CONST_STRPTR rexxResolveImageProfileAlias(CONST_STRPTR name) {
         return REXX_LOCKED_PROFILE_NAME_GEMINI;
     }
     if (strcasecmp(name, REXX_LOCKED_PROFILE_NAME_GROK) == 0 ||
-        strcasecmp(name, "xAI") == 0 || strcasecmp(name, "Grok") == 0) {
+        strcasecmp(name, "SpaceXAI") == 0 || strcasecmp(name, "xAI") == 0 ||
+        strcasecmp(name, "xAI Grok") == 0 || strcasecmp(name, "Grok") == 0) {
         return REXX_LOCKED_PROFILE_NAME_GROK;
     }
     return NULL;
@@ -2059,7 +2061,7 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
     if (modelName == NULL || strlen(modelName) == 0) {
         modelName = imgSettings.model;
         if (modelName == NULL || strlen(modelName) == 0) {
-            modelName = OPENAI_IMAGE_MODELS[0];
+            modelName = DEFAULT_OPENAI_IMAGE_MODEL;
         }
     }
 

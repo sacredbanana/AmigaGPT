@@ -98,6 +98,32 @@ extern CONST_STRPTR GEMINI_IMAGE_MODELS[];
 extern CONST_STRPTR GROK_IMAGE_MODELS[];
 
 /**
+ * The chat model each built-in provider starts on. The prepopulated lists are
+ * shown sorted alphabetically, so the default is named here rather than taken
+ * from the first entry of the list.
+ **/
+#define DEFAULT_OPENAI_CHAT_MODEL "gpt-5.6-terra"
+#define DEFAULT_GEMINI_CHAT_MODEL "gemini-flash-latest"
+#define DEFAULT_GROK_CHAT_MODEL "grok-4.5"
+#define DEFAULT_ANTHROPIC_CHAT_MODEL "claude-sonnet-5"
+
+/**
+ * The image model each built-in provider starts on
+ **/
+#define DEFAULT_OPENAI_IMAGE_MODEL "gpt-image-2"
+#define DEFAULT_GEMINI_IMAGE_MODEL "gemini-3-pro-image"
+#define DEFAULT_GROK_IMAGE_MODEL "grok-imagine-image-2.0"
+
+/**
+ * Sort a json array of model or voice entries alphabetically in place, so the
+ * prepopulated lists and anything fetched from a provider are shown in the
+ * same order.
+ * @param array the json array to sort. Entries may be plain strings or objects
+ * @param key the object field to sort on, or NULL when the entries are strings
+ **/
+void sortJsonArrayAlphabetically(struct json_object *array, CONST_STRPTR key);
+
+/**
  * The chat model OpenAI should use. Commented out models are not supported by
  * the responses endpoint. Do not exceed 32 models or the menu will not display
  * correctly.

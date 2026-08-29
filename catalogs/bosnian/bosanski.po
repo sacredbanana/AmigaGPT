@@ -1426,8 +1426,8 @@ msgstr "Prilagođena zaglavlja"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_MENU_TEMPLATE_XAI_GROK (274//)"
-msgid "xAI Grok"
-msgstr "xAI Grok"
+msgid "SpaceXAI Grok"
+msgstr "SpaceXAI Grok"
 
 #: src/CustomServerSettingsRequesterWindow.c
 msgctxt "STRING_PROFILES (275//)"
@@ -1506,8 +1506,8 @@ msgstr "Google Gemini"
 
 #: src/openai.c
 msgctxt "STRING_PROVIDER_GROK (291//)"
-msgid "xAI Grok"
-msgstr "xAI Grok"
+msgid "SpaceXAI Grok"
+msgstr "SpaceXAI Grok"
 
 #: src/openai.c
 msgctxt "STRING_PROVIDER_ANTHROPIC (292//)"

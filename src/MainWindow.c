@@ -972,14 +972,14 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         if (isImageModel) {
             if (hostIsOpenAICompatible(nameSettings.host,
                                        nameSettings.apiEndpointUrl)) {
-                titleModel = "gpt-5-chat-latest";
+                titleModel = DEFAULT_OPENAI_CHAT_MODEL;
             } else if (nameSettings.host != NULL &&
                        strcmp(nameSettings.host,
                               "generativelanguage.googleapis.com") == 0) {
-                titleModel = "gemini-2.5-flash";
+                titleModel = DEFAULT_GEMINI_CHAT_MODEL;
             } else if (nameSettings.host != NULL &&
                        strcmp(nameSettings.host, "api.x.ai") == 0) {
-                titleModel = "grok-4";
+                titleModel = DEFAULT_GROK_CHAT_MODEL;
             }
         }
     }

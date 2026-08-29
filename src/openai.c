@@ -349,6 +349,7 @@ CONST_STRPTR IMAGE_FORMAT_NAMES[] = {
  * Prepopulated chat models for OpenAI
  **/
 CONST_STRPTR OPENAI_CHAT_MODELS[] = {"gpt-5-chat-latest",
+                                     "gpt-5.6-terra",
                                      "gpt-5.4",
                                      "gpt-5.4-pro",
                                      "gpt-5.3",
@@ -386,22 +387,25 @@ CONST_STRPTR OPENAI_CHAT_MODELS[] = {"gpt-5-chat-latest",
  * Prepopulated chat models for Google Gemini
  **/
 CONST_STRPTR GEMINI_CHAT_MODELS[] = {
-    "gemini-2.5-flash",      "gemini-2.5-flash-lite",
-    "gemini-2.5-pro",        "gemini-2.0-flash",
-    "gemini-2.0-flash-lite", "gemini-3-flash-preview",
-    "gemini-3-pro-preview",  NULL};
+    "gemini-flash-latest",    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",  "gemini-2.5-pro",
+    "gemini-2.0-flash",       "gemini-2.0-flash-lite",
+    "gemini-3-flash-preview", "gemini-3-pro-preview",
+    NULL};
 
 /**
- * Prepopulated chat models for xAI Grok
+ * Prepopulated chat models for SpaceXAI Grok
  **/
 CONST_STRPTR GROK_CHAT_MODELS[] = {
-    "grok-4",           "grok-4-fast", "grok-3", "grok-3-mini", "grok-3-fast",
-    "grok-3-fast-beta", "grok-3-beta", "grok-2", NULL};
+    "grok-4.5",    "grok-4",      "grok-4-fast",       "grok-3",
+    "grok-3-mini", "grok-3-fast", "grok-3-fast-beta",  "grok-3-beta",
+    "grok-2",      NULL};
 
 /**
  * Prepopulated chat models for Anthropic Claude
  **/
-CONST_STRPTR ANTHROPIC_CHAT_MODELS[] = {"claude-opus-4-5-20251101",
+CONST_STRPTR ANTHROPIC_CHAT_MODELS[] = {"claude-sonnet-5",
+                                        "claude-opus-4-5-20251101",
                                         "claude-sonnet-4-5-20250929",
                                         "claude-sonnet-4-20250514",
                                         "claude-3-5-sonnet-20241022",
@@ -414,21 +418,68 @@ CONST_STRPTR ANTHROPIC_CHAT_MODELS[] = {"claude-opus-4-5-20251101",
 /**
  * Prepopulated image models for OpenAI
  **/
-CONST_STRPTR OPENAI_IMAGE_MODELS[] = {"gpt-image-1",      "gpt-image-1.5",
-                                      "gpt-image-1-mini", "dall-e-3",
-                                      "dall-e-2",         NULL};
+CONST_STRPTR OPENAI_IMAGE_MODELS[] = {"gpt-image-2",   "gpt-image-1",
+                                      "gpt-image-1.5", "gpt-image-1-mini",
+                                      "dall-e-3",      "dall-e-2",
+                                      NULL};
 
 /**
  * Prepopulated image models for Google Gemini
  **/
-CONST_STRPTR GEMINI_IMAGE_MODELS[] = {"gemini-2.5-flash-image",
+CONST_STRPTR GEMINI_IMAGE_MODELS[] = {"gemini-3-pro-image",
+                                      "gemini-2.5-flash-image",
                                       "gemini-3-pro-image-preview", NULL};
 
 /**
- * Prepopulated image models for xAI Grok
+ * Prepopulated image models for SpaceXAI Grok
  **/
-CONST_STRPTR GROK_IMAGE_MODELS[] = {"grok-imagine-image",
+CONST_STRPTR GROK_IMAGE_MODELS[] = {"grok-imagine-image-2.0",
+                                    "grok-imagine-image",
                                     "grok-imagine-image-pro", NULL};
+
+/**
+ * The object field the running json_object_array_sort() is comparing on, or
+ * NULL when the array holds plain strings. json-c gives the compare function
+ * no context of its own, and every caller runs on the app task, so a file
+ * scope value is enough.
+ **/
+static CONST_STRPTR jsonSortKey = NULL;
+
+/**
+ * Get the text a json array entry should be sorted on
+ * @param entry the array entry
+ * @return the text to compare, never NULL
+ **/
+static CONST_STRPTR jsonSortText(struct json_object *entry) {
+    CONST_STRPTR text = NULL;
+    if (entry == NULL)
+        return "";
+    if (jsonSortKey != NULL) {
+        struct json_object *value = json_object_object_get(entry, jsonSortKey);
+        text = value != NULL ? json_object_get_string(value) : NULL;
+    } else if (json_object_is_type(entry, json_type_string)) {
+        text = json_object_get_string(entry);
+    }
+    return text != NULL ? text : (CONST_STRPTR) "";
+}
+
+/**
+ * json_object_array_sort() compare function ordering entries alphabetically,
+ * ignoring case
+ **/
+static int jsonSortCompare(const void *a, const void *b) {
+    struct json_object *entryA = *(struct json_object *const *)a;
+    struct json_object *entryB = *(struct json_object *const *)b;
+    return strcasecmp(jsonSortText(entryA), jsonSortText(entryB));
+}
+
+void sortJsonArrayAlphabetically(struct json_object *array, CONST_STRPTR key) {
+    if (array == NULL || !json_object_is_type(array, json_type_array))
+        return;
+    jsonSortKey = key;
+    json_object_array_sort(array, jsonSortCompare);
+    jsonSortKey = NULL;
+}
 
 /**
  * Generate a random number

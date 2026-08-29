@@ -536,19 +536,25 @@ static void setElevenLabsModelListActiveById(CONST_STRPTR modelId) {
             return;
     }
 
+    /* Count only the entries populateElevenLabsModelList() inserts, so the
+     * list index matches even when an entry is skipped. */
     LONG modelCount = json_object_array_length(modelsArray);
+    LONG listIndex = 0;
     for (LONG i = 0; i < modelCount; i++) {
         struct json_object *modelObj =
             json_object_array_get_idx(modelsArray, i);
         struct json_object *modelIdObj = NULL;
-        if (modelObj != NULL &&
-            json_object_object_get_ex(modelObj, "model_id", &modelIdObj)) {
+        if (modelObj == NULL ||
+            json_object_object_get(modelObj, "name") == NULL)
+            continue;
+        if (json_object_object_get_ex(modelObj, "model_id", &modelIdObj)) {
             CONST_STRPTR mid = json_object_get_string(modelIdObj);
             if (mid != NULL && strcmp(mid, modelId) == 0) {
-                set(elevenLabsModelList, MUIA_NList_Active, i);
+                set(elevenLabsModelList, MUIA_NList_Active, listIndex);
                 return;
             }
         }
+        listIndex++;
     }
 }
 
@@ -661,19 +667,25 @@ static void setOpenAITtsModelListActiveById(CONST_STRPTR modelId) {
             return;
     }
 
+    /* Count only the entries populateOpenAITtsModelList() inserts, so the
+     * list index matches even when an entry is skipped. */
     LONG modelCount = json_object_array_length(modelsArray);
+    LONG listIndex = 0;
     for (LONG i = 0; i < modelCount; i++) {
         struct json_object *modelObj =
             json_object_array_get_idx(modelsArray, i);
         struct json_object *idObj = NULL;
-        if (modelObj != NULL &&
-            json_object_object_get_ex(modelObj, "id", &idObj)) {
-            CONST_STRPTR mid = json_object_get_string(idObj);
-            if (mid != NULL && strcmp(mid, modelId) == 0) {
-                set(openAiTtsModelList, MUIA_NList_Active, i);
-                return;
-            }
+        if (modelObj == NULL ||
+            !json_object_object_get_ex(modelObj, "id", &idObj))
+            continue;
+        CONST_STRPTR mid = json_object_get_string(idObj);
+        if (mid == NULL)
+            continue;
+        if (strcmp(mid, modelId) == 0) {
+            set(openAiTtsModelList, MUIA_NList_Active, listIndex);
+            return;
         }
+        listIndex++;
     }
 }
 
@@ -771,14 +783,22 @@ static void populateXAIVoiceList(void) {
         /* Reuse the stored "display" field if already built; otherwise
          * compute and stash it so the NList display hook has stable
          * memory to point at. */
-        struct json_object *disp = json_object_object_get(v, "display");
-        if (disp == NULL) {
+        if (json_object_object_get(v, "display") == NULL) {
             UBYTE buf[128];
             CONST_STRPTR d = xaiVoiceDisplayString(v, buf, sizeof(buf));
             json_object_object_add(v, "display",
                                    json_object_new_string(d ? d : ""));
-            disp = json_object_object_get(v, "display");
         }
+    }
+
+    /* Sort on the display text so built-in and fetched voices interleave
+     * alphabetically. The array order is what the active list index maps
+     * back to, so sorting it keeps the two in step. */
+    sortJsonArrayAlphabetically(voices, "display");
+
+    for (LONG i = 0; i < count; i++) {
+        struct json_object *v = json_object_array_get_idx(voices, i);
+        struct json_object *disp = json_object_object_get(v, "display");
         STRPTR entry = (STRPTR)json_object_get_string(disp);
         DoMethod(xaiVoiceList, MUIM_NList_InsertSingle, entry,
                  MUIV_NList_Insert_Bottom);
@@ -900,8 +920,11 @@ static void populateOpenAITtsModelList(void) {
             return;
     }
 
+    sortJsonArrayAlphabetically(modelsArray, "id");
+
     LONG modelCount = json_object_array_length(modelsArray);
     LONG selectedIndex = MUIV_NList_Active_Off;
+    LONG insertedCount = 0;
     STRPTR currentModelId = configGetOpenAITTSModelId();
 
     for (LONG i = 0; i < modelCount; i++) {
@@ -918,7 +941,8 @@ static void populateOpenAITtsModelList(void) {
         DoMethod(openAiTtsModelList, MUIM_NList_InsertSingle, id,
                  MUIV_NList_Insert_Bottom);
         if (currentModelId != NULL && strcmp(currentModelId, id) == 0)
-            selectedIndex = i;
+            selectedIndex = insertedCount;
+        insertedCount++;
     }
 
     if (selectedIndex != MUIV_NList_Active_Off)
@@ -943,8 +967,11 @@ static void populateElevenLabsModelList(void) {
         }
     }
 
+    sortJsonArrayAlphabetically(modelsArray, "name");
+
     LONG modelCount = json_object_array_length(modelsArray);
     LONG selectedIndex = MUIV_NList_Active_Off;
+    LONG insertedCount = 0;
     STRPTR currentModelId = configGetElevenLabsModel();
     STRPTR currentModelName = NULL;
     if (elevenLabsCurrentModelText != NULL)
@@ -965,15 +992,16 @@ static void populateElevenLabsModelList(void) {
                 json_object_object_get_ex(modelObj, "model_id", &modelIdObj)) {
                 CONST_STRPTR mid = json_object_get_string(modelIdObj);
                 if (mid != NULL && strcmp(currentModelId, mid) == 0) {
-                    selectedIndex = i;
+                    selectedIndex = insertedCount;
                 }
             }
             if (selectedIndex == MUIV_NList_Active_Off &&
                 currentModelName != NULL &&
                 strcmp(currentModelName, STRING_NONE_SELECTED) != 0 &&
                 strcmp(currentModelName, name) == 0) {
-                selectedIndex = i;
+                selectedIndex = insertedCount;
             }
+            insertedCount++;
         }
     }
 
@@ -999,8 +1027,11 @@ static void populateElevenLabsVoiceList(void) {
         }
     }
 
+    sortJsonArrayAlphabetically(voicesArray, "name");
+
     LONG voiceCount = json_object_array_length(voicesArray);
     LONG selectedIndex = MUIV_NList_Active_Off;
+    LONG insertedCount = 0;
     STRPTR currentVoiceID = configGetElevenLabsVoiceID();
 
     for (LONG i = 0; i < voiceCount; i++) {
@@ -1018,9 +1049,10 @@ static void populateElevenLabsVoiceList(void) {
                 json_object_object_get_ex(voiceObj, "voice_id", &voiceIdObj)) {
                 CONST_STRPTR vid = json_object_get_string(voiceIdObj);
                 if (vid != NULL && strcmp(currentVoiceID, vid) == 0) {
-                    selectedIndex = i;
+                    selectedIndex = insertedCount;
                 }
             }
+            insertedCount++;
         }
     }
 
@@ -1261,8 +1293,11 @@ static void populateOpenVoxList(Object *list, struct json_object *response,
         !json_object_object_get_ex(response, "data", &data) ||
         !json_object_is_type(data, json_type_array))
         return;
+    sortJsonArrayAlphabetically(data, key);
+
     LONG selected = MUIV_NList_Active_Off;
     LONG count = json_object_array_length(data);
+    LONG insertedCount = 0;
     for (LONG i = 0; i < count; i++) {
         struct json_object *entry = json_object_array_get_idx(data, i);
         struct json_object *valueObj =
@@ -1273,9 +1308,10 @@ static void populateOpenVoxList(Object *list, struct json_object *response,
         DoMethod(list, MUIM_NList_InsertSingle, (ULONG)value,
                  MUIV_NList_Insert_Bottom);
         if (selectedValue != NULL && strcmp(selectedValue, value) == 0)
-            selected = i;
+            selected = insertedCount;
+        insertedCount++;
     }
-    if (selected == MUIV_NList_Active_Off && count > 0)
+    if (selected == MUIV_NList_Active_Off && insertedCount > 0)
         selected = 0;
     if (selected != MUIV_NList_Active_Off)
         set(list, MUIA_NList_Active, selected);
@@ -3911,7 +3947,7 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
 
                         Child, xaiGroup = VGroup,
                             MUIA_Frame, MUIV_Frame_Group,
-                            MUIA_FrameTitle, "xAI",
+                            MUIA_FrameTitle, SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_XAI],
                             Child, VGroup,
                                 MUIA_Frame, MUIV_Frame_Group,
                                 MUIA_FrameTitle, STRING_MENU_OPENAI_API_KEY,

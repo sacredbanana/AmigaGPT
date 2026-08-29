@@ -1,6 +1,6 @@
 # AmigaGPT
 
-AmigaGPT is a versatile multi-provider AI client for AmigaOS 3.x, 4.1 and MorphOS. This powerful tool brings the capabilities of leading AI providers — OpenAI, Google Gemini, xAI Grok, Anthropic Claude, and custom LLM servers — to your Amiga system, enabling text generation, question answering, and creative exploration. AmigaGPT can also generate stunning images and includes support for speech output, making it easier than ever to interact with AI on your Amiga. Designed to integrate seamlessly with your system, AmigaGPT delivers modern AI technology while embracing the timeless Amiga experience.
+AmigaGPT is a versatile multi-provider AI client for AmigaOS 3.x, 4.1 and MorphOS. This powerful tool brings the capabilities of leading AI providers — OpenAI, Google Gemini, SpaceXAI Grok, Anthropic Claude, and custom LLM servers — to your Amiga system, enabling text generation, question answering, and creative exploration. AmigaGPT can also generate stunning images and includes support for speech output, making it easier than ever to interact with AI on your Amiga. Designed to integrate seamlessly with your system, AmigaGPT delivers modern AI technology while embracing the timeless Amiga experience.
 
 <img width="953" alt="Screenshot 2023-06-15 at 10 26 38 pm" src="https://github.com/sacredbanana/AmigaGPT/assets/6903516/ca5e0db3-4e37-4ea9-a6ac-9fff2d5c195a">
 
@@ -8,11 +8,11 @@ AmigaGPT is a versatile multi-provider AI client for AmigaOS 3.x, 4.1 and MorphO
 
 - ### State-of-the-art language and image models
 
-**AmigaGPT** supports multiple AI providers for chat: **OpenAI** (o1, o3, o4, GPT-5, GPT-4o, GPT-4 and GPT-3.5), **Google Gemini**, **xAI Grok**, **Anthropic Claude**, and custom LLM servers compatible with the OpenAI API. Switch between providers and models from the Chat Provider Settings.
+**AmigaGPT** supports multiple AI providers for chat: **OpenAI** (o1, o3, o4, GPT-5, GPT-4o, GPT-4 and GPT-3.5), **Google Gemini**, **SpaceXAI Grok**, **Anthropic Claude**, and custom LLM servers compatible with the OpenAI API. Switch between providers and models from the Chat Provider Settings.
 
 - ### AI Image Generation
 
-**AmigaGPT** can generate images from a prompt using **OpenAI** (DALL-E 2, DALL-E 3, GPT-Image-1), **Google Gemini**, and **xAI Grok**. You can view and save the images right inside the app, with a choice of output format (PNG or JPEG). Reference images can be attached to the prompt so the model edits, restyles or combines pictures you already have, and any generated picture can be fed straight back in with a single **Edit...** click.
+**AmigaGPT** can generate images from a prompt using **OpenAI** (DALL-E 2, DALL-E 3, GPT-Image-1), **Google Gemini**, and **SpaceXAI Grok**. You can view and save the images right inside the app, with a choice of output format (PNG or JPEG). Reference images can be attached to the prompt so the model edits, restyles or combines pictures you already have, and any generated picture can be fed straight back in with a single **Edit...** click.
 
 - ### Seamless integration with AmigaOS and MorphOS
 
@@ -24,11 +24,11 @@ You can customise the look and feel of the application, including the ability to
 
 - ### Speech capability
 
-**AmigaGPT** supports multiple speech providers, configurable from **Speech Provider Settings**. For cloud-based voices, it supports **OpenAI TTS** (high quality 16-bit voices), **xAI Grok TTS**, **ElevenLabs**, and **OpenVox** (requires AHI). For offline synthesis, AmigaOS 3 can use the Amiga's built-in `narrator.device` (**v34** and **v37**) with `translator.library`, and AmigaOS 4.1 supports `flite.device`. Speech runs in the background so the app stays responsive, with a dedicated **Stop** button to interrupt playback.
+**AmigaGPT** supports multiple speech providers, configurable from **Speech Provider Settings**. For cloud-based voices, it supports **OpenAI TTS** (high quality 16-bit voices), **SpaceXAI Grok TTS**, **ElevenLabs**, and **OpenVox** (requires AHI). For offline synthesis, AmigaOS 3 can use the Amiga's built-in `narrator.device` (**v34** and **v37**) with `translator.library`, and AmigaOS 4.1 supports `flite.device`. Speech runs in the background so the app stays responsive, with a dedicated **Stop** button to interrupt playback.
 
 - ### Code Interpreter
 
-**AmigaGPT** can let the AI write and run Python in a provider-hosted sandbox for calculations, data analysis, and generated files. Enable it in **Chat Provider Settings** for OpenAI, Google Gemini, xAI Grok, Anthropic Claude, and custom profiles that use the Responses, Messages, or Gemini generateContent endpoints. It is hidden for custom chat/completions servers that do not offer a hosted interpreter. You can also use the `CI=CODEINTERPRETER` flag in the ARexx `SENDMESSAGE` command.
+**AmigaGPT** can let the AI write and run Python in a provider-hosted sandbox for calculations, data analysis, and generated files. Enable it in **Chat Provider Settings** for OpenAI, Google Gemini, SpaceXAI Grok, Anthropic Claude, and custom profiles that use the Responses, Messages, or Gemini generateContent endpoints. It is hidden for custom chat/completions servers that do not offer a hosted interpreter. You can also use the `CI=CODEINTERPRETER` flag in the ARexx `SENDMESSAGE` command.
 
 - ### Shell Tool
 
@@ -60,11 +60,11 @@ Ensure you have the necessary system requirements:
 - **MCC_NList** MUI custom class for lists (<http://aminet.net/package/dev/mui/MCC_NList-0.128>)
 - **MCC_TextEditor 15.56** or higher (<https://aminet.net/dev/mui/MCC_TextEditor-15.56.lha>)
 - **A PNG datatype** Any will do, but here is one (<https://aminet.net/util/dtype/vPNGdt.lha>)
-- An API key for your chosen AI provider (**OpenAI**, **Google Gemini**, **xAI**, or **Anthropic**), or a locally-hosted OpenAI-compatible LLM server
+- An API key for your chosen AI provider (**OpenAI**, **Google Gemini**, **SpaceXAI**, or **Anthropic**), or a locally-hosted OpenAI-compatible LLM server
 - _Optional_: **AmigaOS 3 only**: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
 - _Optional_: **AmigaOS 3 only**: **`translator.library` v42** or higher, needed by both versions of `narrator.device` (<http://aminet.net/util/libs/translator42.lha>). Only v42 is required; the v43 patch is optional
 - _Optional_: **AmigaOS 4 only**: **Flite device** (<http://aminet.net/package/mus/misc/flite_device>)
-- _Optional_: For OpenAI, xAI Grok, ElevenLabs or OpenVox voices, **_AHI_** needs to be installed
+- _Optional_: For OpenAI, SpaceXAI Grok, ElevenLabs or OpenVox voices, **_AHI_** needs to be installed
   (<http://aminet.net/package/driver/audio/ahiusr_4.18>)
 - _Optional_: For **ElevenLabs** TTS, an ElevenLabs account and API key
 
@@ -79,7 +79,7 @@ Ensure you have the necessary system requirements:
 
 ## _Optional steps to enable speech functionality_
 
-AmigaGPT supports reading the output aloud. How AmigaGPT does this depends on your chosen speech provider. Cloud-based voices (OpenAI TTS, xAI Grok TTS, ElevenLabs, OpenVox) work on every supported OS and require AHI. Offline synthesis uses OS-native devices.
+AmigaGPT supports reading the output aloud. How AmigaGPT does this depends on your chosen speech provider. Cloud-based voices (OpenAI TTS, SpaceXAI Grok TTS, ElevenLabs, OpenVox) work on every supported OS and require AHI. Offline synthesis uses OS-native devices.
 
 ### Installing AHI for cloud-based voices
 
@@ -127,7 +127,7 @@ Regardless of which version of `narrator.device` you choose to install (or both)
 
 ### MorphOS
 
-MorphOS has no offline speech system. Use one of the cloud voices (OpenAI, xAI, ElevenLabs or OpenVox) with AHI installed.
+MorphOS has no offline speech system. Use one of the cloud voices (OpenAI, SpaceXAI, ElevenLabs or OpenVox) with AHI installed.
 
 ## Launching **AmigaGPT**
 
@@ -144,7 +144,7 @@ There are 2 main modes of operation: Chat and Image Generation. You can switch b
 
 When the app has opened, you are presented with a text input box. You can type any prompt into this box and press "**Send**" to see the AI's response. The generated text appears in the box above the input. You can choose to have this text read aloud using the "**Speech**" menu option; configure the speech provider and voice in "**Speech Provider Settings**" from the **Speech** menu. To enable or disable web search or the code interpreter, open **Chat Provider Settings** from the **Chat** menu. To choose the chat model and provider, use the same window.
 
-Use **Attach files...** to select one or more files to send with the next message, or pass them with the `A=ATTACH` argument on the ARexx `SENDMESSAGE` command. The selected files are shown beside the chat controls and can be removed with **Clear** before sending. OpenAI, xAI Grok, Anthropic Claude and Google Gemini upload the file first and then reference it, so the chat request stays small on classic Amiga TCP stacks. Other providers receive images and documents in their native multimodal request format. The type of each file is determined by looking inside it with libmagic -- the same code the Unix `file` command uses -- rather than from its name, so extensionless Amiga files such as `User-Startup` are sent as plain text and a file with a misleading name is sent as what it actually is. This uses the `magic.mgc` database that the installer copies into the AmigaGPT drawer by default, with `C:` offered as an alternative so one copy can be shared with the `file` package from Aminet; AmigaGPT checks `PROGDIR:magic.mgc` first, then `AMIGAGPT:magic.mgc`, then `C:magic.mgc`, and falls back to guessing from the file extension if none of them is present. ZIP archives are sent as `application/zip`. On OpenAI they are placed in the Code Interpreter container (enable **Code Interpreter** so the model can unpack them); on Anthropic Claude they are uploaded to the code-execution container the same way. To keep memory use practical on classic Amigas, each file is limited to 8 MB and all files in one request are limited to 16 MB.
+Use **Attach files...** to select one or more files to send with the next message, or pass them with the `A=ATTACH` argument on the ARexx `SENDMESSAGE` command. The selected files are shown beside the chat controls and can be removed with **Clear** before sending. OpenAI, SpaceXAI Grok, Anthropic Claude and Google Gemini upload the file first and then reference it, so the chat request stays small on classic Amiga TCP stacks. Other providers receive images and documents in their native multimodal request format. The type of each file is determined by looking inside it with libmagic -- the same code the Unix `file` command uses -- rather than from its name, so extensionless Amiga files such as `User-Startup` are sent as plain text and a file with a misleading name is sent as what it actually is. This uses the `magic.mgc` database that the installer copies into the AmigaGPT drawer by default, with `C:` offered as an alternative so one copy can be shared with the `file` package from Aminet; AmigaGPT checks `PROGDIR:magic.mgc` first, then `AMIGAGPT:magic.mgc`, then `C:magic.mgc`, and falls back to guessing from the file extension if none of them is present. ZIP archives are sent as `application/zip`. On OpenAI they are placed in the Code Interpreter container (enable **Code Interpreter** so the model can unpack them); on Anthropic Claude they are uploaded to the code-execution container the same way. To keep memory use practical on classic Amigas, each file is limited to 8 MB and all files in one request are limited to 16 MB.
 
 When an LLM response includes downloadable files, they are listed beneath the assistant message and **Save received files...** becomes available. Choose a destination drawer and AmigaGPT will save every returned file there without overwriting an existing file; numeric suffixes are added when necessary. From ARexx, `SENDMESSAGE` downloads them to `D=DESTINATION` if you give a drawer, or to the current directory if you omit it. Provider and model support for particular input types and returned files varies.
 
@@ -164,9 +164,9 @@ Because the daemon keeps its history between calls, successive `askgpt` commands
 
 ### Image Generation
 
-To generate images, open "**Image Provider Settings**" from the "**Image**" menu to choose your provider (**OpenAI**, **Google Gemini**, or **xAI Grok**) and model, then type your prompt in the text box and hit the "**Create Image**" button. You can also select the output format (PNG or JPEG) from the Image Provider Settings. When the image has been downloaded to your Amiga, you are then able to open it to your desired scale, or save a copy to a new location. Note that AmigaGPT will automatically save all generated images until you delete them.
+To generate images, open "**Image Provider Settings**" from the "**Image**" menu to choose your provider (**OpenAI**, **Google Gemini**, or **SpaceXAI Grok**) and model, then type your prompt in the text box and hit the "**Create Image**" button. You can also select the output format (PNG or JPEG) from the Image Provider Settings. When the image has been downloaded to your Amiga, you are then able to open it to your desired scale, or save a copy to a new location. Note that AmigaGPT will automatically save all generated images until you delete them.
 
-Use **Attach images...** to send one or more reference images with the prompt, so the model can edit, restyle or combine pictures you already have instead of working from the description alone. The attached pictures are listed beside the prompt and can be removed with **Clear**; **New Image** clears them too. Only image files can be attached, and the same limits as chat attachments apply -- 8 MB per file and 16 MB per request. Reference images turn the request into an image edit: OpenAI-compatible providers receive them as a multipart form on `/images/edits` (the `gpt-image-*` models accept several, DALL-E 2 one), xAI receives them as data URIs on the same endpoint, and Google Gemini receives them inline in the same `generateContent` request it uses for text-to-image. The pictures are streamed to the server straight from disk where the provider allows it, so a large reference image does not have to fit in memory alongside the request.
+Use **Attach images...** to send one or more reference images with the prompt, so the model can edit, restyle or combine pictures you already have instead of working from the description alone. The attached pictures are listed beside the prompt and can be removed with **Clear**; **New Image** clears them too. Only image files can be attached, and the same limits as chat attachments apply -- 8 MB per file and 16 MB per request. Reference images turn the request into an image edit: OpenAI-compatible providers receive them as a multipart form on `/images/edits` (the `gpt-image-*` models accept several, DALL-E 2 one), SpaceXAI receives them as data URIs on the same endpoint, and Google Gemini receives them inline in the same `generateContent` request it uses for text-to-image. The pictures are streamed to the server straight from disk where the provider allows it, so a large reference image does not have to fit in memory alongside the request.
 
 When a picture comes back, **Edit...** starts a fresh prompt with that picture already attached as a reference, so "make the sky darker" is one click away from a result you just generated. The preview stays on screen while you type the new prompt, and creating the image adds a new entry to the list rather than replacing the one you started from.
 
@@ -174,7 +174,7 @@ When a picture comes back, **Edit...** starts a fresh prompt with that picture a
 
 AmigaGPT supports multiple AI providers. Open "**Chat Provider Settings**" from the "**Chat**" menu or "**Image Provider Settings**" from the "**Image**" menu.
 
-The provider list includes built-in entries for **OpenAI**, **Google Gemini**, **xAI Grok** and **Anthropic Claude** (chat only); these cannot be removed. For built-in providers you can set the API key and choose the model; host, port and other connection settings are fixed. Known models are shown for each built-in; for OpenAI you can also use "Fetch Models" to refresh the list. You can add custom provider profiles (e.g. LM Studio or Ollama) with **New**, which creates a blank profile you have full control over, or copy an existing one with **Duplicate**. **Test** sends a small request using the settings currently on screen and reports PASS or FAIL together with the raw server response. Custom profile names cannot match built-in provider names.
+The provider list includes built-in entries for **OpenAI**, **Google Gemini**, **SpaceXAI Grok** and **Anthropic Claude** (chat only); these cannot be removed. For built-in providers you can set the API key and choose the model; host, port and other connection settings are fixed. Known models are shown for each built-in; for OpenAI you can also use "Fetch Models" to refresh the list. You can add custom provider profiles (e.g. LM Studio or Ollama) with **New**, which creates a blank profile you have full control over, or copy an existing one with **Duplicate**. **Test** sends a small request using the settings currently on screen and reports PASS or FAIL together with the raw server response. Custom profile names cannot match built-in provider names.
 
 When you switch to another profile without saving, AmigaGPT will ask whether to save your changes (Yes, No or Cancel).
 
@@ -190,7 +190,7 @@ Like the chat and image windows it has a **Profiles** list with **New**, **Dupli
 | Workbench 2.0 v37 | AmigaOS 3 | `narrator.device` v37 + `translator.library` v42+ |
 | Flite | AmigaOS 4 | `flite.device` |
 | OpenAI | any | AHI + OpenAI API key |
-| xAI | any | AHI + xAI API key |
+| SpaceXAI | any | AHI + SpaceXAI API key |
 | ElevenLabs | any | AHI + ElevenLabs API key |
 | OpenVox | any | AHI + an OpenVox server (defaults to `127.0.0.1:8666`) |
 
@@ -202,7 +202,7 @@ Depending on the selected system the window shows:
 - **Workbench narrator.device** (v34/v37) - **Accent** (default `american.accent`), **Rate (wpm)** (default 150), **Pitch (Hz)** (default 110), **Mode** (Natural/Robotic) and **Sex** (Male/Female). v34 and v37 each keep their own copy of these.
 - **Flite Voice** - `kal`, `kal16`, `awb`, `rms` or `slt`
 - **OpenAI** - API key, **Model** (`tts-1`, `tts-1-hd`, `gpt-4o-mini-tts`) with **Fetch Models**, **Voice** (alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, verse) and **OpenAI Voice Instructions**
-- **xAI** - API key, **Voice** (ara, eve, leo, rex, sal) and **Auto-insert speech tags into LLM replies**
+- **SpaceXAI** - API key, **Voice** (ara, eve, leo, rex, sal) and **Auto-insert speech tags into LLM replies**
 - **ElevenLabs** - API key, **Model** (Eleven v3, Eleven Multilingual v2, Eleven Flash v2.5, Eleven Turbo v2.5) with **Fetch Models**, and **Voice** with **Search** and **Get All Voices**
 - **OpenVox** - models and voices are fetched from your own server
 
@@ -250,7 +250,7 @@ SENDMESSAGE PR=PROFILE/K,M=MODEL/K,S=SYSTEM/K,SF=SYSTEMFILE/K,H=HOST/K,PO=PORT/N
 
 Note: a few short aliases are shared by two arguments in the same template (`S` for both `SYSTEM` and `SSL`, `PP` for both `PROXYPORT` and `PROXYPASSWORD`), and the `?` help output prints `P=PORT` where the command expects `PO=PORT`. Spell `SYSTEM`, `SSL`, `PORT`, `PROXYPORT` and `PROXYPASSWORD` out in full and there is no ambiguity.
 
-- `PR=PROFILE` - Optional, the chat profile to use. This can be a built-in profile such as OpenAI, Google Gemini, xAI Grok or Anthropic Claude, or a saved custom chat profile name. Use `LISTPROFILES` to see available profiles. If omitted, the active chat profile from AmigaGPT config is used
+- `PR=PROFILE` - Optional, the chat profile to use. This can be a built-in profile such as OpenAI, Google Gemini, SpaceXAI Grok or Anthropic Claude, or a saved custom chat profile name. Use `LISTPROFILES` to see available profiles. If omitted, the active chat profile from AmigaGPT config is used
 - `M=MODEL` - Optional, the chat model to use. Use `LISTMODELS PR=<profile>` to inspect the models for a profile. If omitted, the selected profile's model is used
 - `S=SYSTEM` - Optional, system message to include
 - `SF=SYSTEMFILE` - Optional, file containing the system message to include. If both `SF` and `S` are provided, the effective system message is the file contents concatenated with `S`.
@@ -279,11 +279,11 @@ Generates an image using the specified model.
 CREATEIMAGE PR=PROFILE/K,M=MODEL/K,S=SIZE/K,K=APIKEY/K,A=ATTACH/K,D=DESTINATION/K,P=PROMPT/F
 ```
 
-- `PR=PROFILE` - Optional, the image profile to use. This can be a built-in profile such as OpenAI, Google Gemini or xAI Grok, or a saved custom image profile name. Use `LISTPROFILES` to see available profiles. If omitted, the active image profile from AmigaGPT config is used
+- `PR=PROFILE` - Optional, the image profile to use. This can be a built-in profile such as OpenAI, Google Gemini or SpaceXAI Grok, or a saved custom image profile name. Use `LISTPROFILES` to see available profiles. If omitted, the active image profile from AmigaGPT config is used
 - `M=MODEL` - Optional, the image model to use. Use `LISTMODELS PR=<profile>` to inspect the models for a profile. If omitted, the selected profile's model is used
-- `S=SIZE` - Optional, image size (use LISTIMAGESIZES to see available sizes). Default is 1024x1024. Note: some providers may ignore unsupported parameters (e.g. xAI currently does not support `size`) - see [xAI Image Generations](https://docs.x.ai/docs/guides/image-generations) and [Gemini OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai)
+- `S=SIZE` - Optional, image size (use LISTIMAGESIZES to see available sizes). Default is 1024x1024. Note: some providers may ignore unsupported parameters (e.g. SpaceXAI currently does not support `size`) - see [SpaceXAI Image Generations](https://docs.x.ai/docs/guides/image-generations) and [Gemini OpenAI compatibility](https://ai.google.dev/gemini-api/docs/openai)
 - `K=APIKEY` - Optional, API key override. If omitted, the selected profile's API key is used
-- `A=ATTACH` - Optional, one or more comma-separated paths to reference images the provider should edit from instead of generating the picture from the prompt alone. Only image files are accepted, and the same 8 MB per file and 16 MB per request limits as chat attachments apply. How many the provider accepts varies: OpenAI's `gpt-image-*` models take several, DALL-E 2 one, and xAI up to three
+- `A=ATTACH` - Optional, one or more comma-separated paths to reference images the provider should edit from instead of generating the picture from the prompt alone. Only image files are accepted, and the same 8 MB per file and 16 MB per request limits as chat attachments apply. How many the provider accepts varies: OpenAI's `gpt-image-*` models take several, DALL-E 2 one, and SpaceXAI up to three
 - `D=DESTINATION` - Optional, the path where the image will be saved. Default is the creation of a temporary file. The destination will be the returned string from this function
 - `P=PROMPT` - Required, description of the image to generate
 
@@ -449,7 +449,7 @@ The installer preselects your system language. If no catalog is installed for th
 
 - **OpenAI**: <https://platform.openai.com/docs/models>
 - **Google Gemini**: <https://ai.google.dev/gemini-api/docs/models>
-- **xAI Grok**: <https://docs.x.ai/docs/models>
+- **SpaceXAI Grok**: <https://docs.x.ai/docs/models>
 - **Anthropic Claude**: <https://docs.anthropic.com/en/docs/about-claude/models>
 
 You can also use the **Fetch Models** button in Chat Provider Settings to retrieve the current model list directly from the server.

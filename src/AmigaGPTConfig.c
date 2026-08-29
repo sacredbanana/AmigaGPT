@@ -199,6 +199,72 @@ static STRPTR copyString(CONST_STRPTR src) {
     return dst;
 }
 
+#define LOCKED_PROFILE_NAME_OPENAI "OpenAI"
+#define LOCKED_PROFILE_NAME_GEMINI "Google Gemini"
+#define LOCKED_PROFILE_NAME_GROK "SpaceXAI Grok"
+#define LOCKED_PROFILE_NAME_ANTHROPIC "Anthropic Claude"
+
+/* Names the built-in xAI provider was stored under before it was renamed to
+ * SpaceXAI. Configs written by older versions still carry them. */
+#define LEGACY_PROFILE_NAME_GROK "xAI Grok"
+#define LEGACY_SPEECH_PROFILE_NAME_XAI "xAI"
+
+/**
+ * Rewrite a stored profile name that still uses a pre-rename provider name
+ * @param name the stored name, replaced in place when it matches
+ * @param legacyName the name written by older versions
+ * @param currentName the name to store instead
+ */
+static void migrateLegacyProfileName(STRPTR *name, CONST_STRPTR legacyName,
+                                     CONST_STRPTR currentName) {
+    if (name == NULL || *name == NULL || strcmp(*name, legacyName) != 0)
+        return;
+    freeString(name);
+    *name = copyString(currentName);
+}
+
+/**
+ * Rewrite pre-rename provider names inside a stored profiles JSON array
+ * @param profilesJsonString the serialised array, replaced in place when any
+ * entry is renamed
+ * @param legacyName the profile name written by older versions
+ * @param currentName the name to store instead
+ */
+static void migrateLegacyProfileNamesInJson(STRPTR *profilesJsonString,
+                                            CONST_STRPTR legacyName,
+                                            CONST_STRPTR currentName) {
+    if (profilesJsonString == NULL || *profilesJsonString == NULL)
+        return;
+    struct json_object *profiles = json_tokener_parse(*profilesJsonString);
+    if (profiles == NULL)
+        return;
+    if (!json_object_is_type(profiles, json_type_array)) {
+        json_object_put(profiles);
+        return;
+    }
+
+    BOOL renamed = FALSE;
+    int count = json_object_array_length(profiles);
+    for (int i = 0; i < count; i++) {
+        struct json_object *profile = json_object_array_get_idx(profiles, i);
+        struct json_object *nameObj =
+            profile ? json_object_object_get(profile, "name") : NULL;
+        CONST_STRPTR name = nameObj ? json_object_get_string(nameObj) : NULL;
+        if (name != NULL && strcmp(name, legacyName) == 0) {
+            json_object_object_add(profile, "name",
+                                   json_object_new_string(currentName));
+            renamed = TRUE;
+        }
+    }
+
+    if (renamed) {
+        CONST_STRPTR updated = json_object_to_json_string(profiles);
+        freeString(profilesJsonString);
+        *profilesJsonString = copyString(updated);
+    }
+    json_object_put(profiles);
+}
+
 /**
  * Set default values for config data
  */
@@ -246,10 +312,10 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->geminiShellToolEnabled = FALSE;
     data->grokShellToolEnabled = FALSE;
     data->anthropicShellToolEnabled = FALSE;
-    data->openAiCodeInterpreterEnabled = FALSE;
-    data->geminiCodeInterpreterEnabled = FALSE;
-    data->grokCodeInterpreterEnabled = FALSE;
-    data->anthropicCodeInterpreterEnabled = FALSE;
+    data->openAiCodeInterpreterEnabled = TRUE;
+    data->geminiCodeInterpreterEnabled = TRUE;
+    data->grokCodeInterpreterEnabled = TRUE;
+    data->anthropicCodeInterpreterEnabled = TRUE;
     data->customPort = 80;
     data->customUseSSL = FALSE;
     data->customApiEndpoint = API_CHAT_ENDPOINT_CHAT_COMPLETIONS;
@@ -311,8 +377,8 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->elevenLabsModelName = copyString(ELEVENLABS_MODEL_FLASH_V2_5_NAME);
 
     /* New string-based model names (new in schema v2) */
-    data->chatModelName = copyString("gpt-5-chat-latest");
-    data->imageModelName = copyString("gpt-image-1.5");
+    data->chatModelName = copyString(DEFAULT_OPENAI_CHAT_MODEL);
+    data->imageModelName = copyString(DEFAULT_OPENAI_IMAGE_MODEL);
 
     /* Provider-specific API keys */
     data->geminiApiKey = NULL;
@@ -320,23 +386,15 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->anthropicApiKey = NULL;
 
     /* Provider-specific chat model names */
-    data->openAiChatModelName = copyString(
-        OPENAI_CHAT_MODELS[0] ? OPENAI_CHAT_MODELS[0] : "gpt-5-chat-latest");
-    data->geminiChatModelName = copyString(
-        GEMINI_CHAT_MODELS[0] ? GEMINI_CHAT_MODELS[0] : "gemini-2.5-flash");
-    data->grokChatModelName =
-        copyString(GROK_CHAT_MODELS[0] ? GROK_CHAT_MODELS[0] : "grok-4");
-    data->anthropicChatModelName =
-        copyString(ANTHROPIC_CHAT_MODELS[0] ? ANTHROPIC_CHAT_MODELS[0]
-                                            : "claude-opus-4-5-20251101");
+    data->openAiChatModelName = copyString(DEFAULT_OPENAI_CHAT_MODEL);
+    data->geminiChatModelName = copyString(DEFAULT_GEMINI_CHAT_MODEL);
+    data->grokChatModelName = copyString(DEFAULT_GROK_CHAT_MODEL);
+    data->anthropicChatModelName = copyString(DEFAULT_ANTHROPIC_CHAT_MODEL);
 
     /* Provider-specific image model names */
-    data->openAiImageModelName = copyString(
-        OPENAI_IMAGE_MODELS[0] ? OPENAI_IMAGE_MODELS[0] : "gpt-image-1.5");
-    data->geminiImageModelName = copyString(
-        GEMINI_IMAGE_MODELS[0] ? GEMINI_IMAGE_MODELS[0] : "imagen-4-ultra");
-    data->grokImageModelName = copyString(
-        GROK_IMAGE_MODELS[0] ? GROK_IMAGE_MODELS[0] : "grok-2-image");
+    data->openAiImageModelName = copyString(DEFAULT_OPENAI_IMAGE_MODEL);
+    data->geminiImageModelName = copyString(DEFAULT_GEMINI_IMAGE_MODEL);
+    data->grokImageModelName = copyString(DEFAULT_GROK_IMAGE_MODEL);
 
     /* Per-mode API keys */
     data->openAiImageApiKey = NULL;
@@ -2256,6 +2314,13 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     readJsonString(configJsonObject, "speechProfiles", &data->speechProfiles);
     readJsonString(configJsonObject, "activeSpeechProfileName",
                    &data->activeSpeechProfileName);
+    /* The xAI speech provider is now called SpaceXAI */
+    migrateLegacyProfileName(&data->activeSpeechProfileName,
+                             LEGACY_SPEECH_PROFILE_NAME_XAI,
+                             SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_XAI]);
+    migrateLegacyProfileNamesInJson(&data->speechProfiles,
+                                    LEGACY_SPEECH_PROFILE_NAME_XAI,
+                                    SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_XAI]);
     if (data->activeSpeechProfileName == NULL) {
         data->activeSpeechProfileName =
             copyString(SPEECH_SYSTEM_NAMES[data->speechSystem]
@@ -2445,7 +2510,7 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
             }
         }
         if (data->chatModelName == NULL) {
-            data->chatModelName = copyString("gpt-5-chat-latest");
+            data->chatModelName = copyString(DEFAULT_OPENAI_CHAT_MODEL);
         }
 
         /* Migrate imageModel enum to imageModelName string */
@@ -2464,7 +2529,7 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
             }
         }
         if (data->imageModelName == NULL) {
-            data->imageModelName = copyString("gpt-image-1.5");
+            data->imageModelName = copyString(DEFAULT_OPENAI_IMAGE_MODEL);
         }
 
         /* Update schema version */
@@ -2482,28 +2547,23 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
 
     /* Set defaults for any NULL string model names */
     if (data->chatModelName == NULL)
-        data->chatModelName = copyString("gpt-5-chat-latest");
+        data->chatModelName = copyString(DEFAULT_OPENAI_CHAT_MODEL);
     if (data->imageModelName == NULL)
-        data->imageModelName = copyString("gpt-image-1.5");
+        data->imageModelName = copyString(DEFAULT_OPENAI_IMAGE_MODEL);
     if (data->openAiChatModelName == NULL) {
         data->openAiChatModelName =
             copyString(data->chatModelName
-                           ? data->chatModelName
-                           : (OPENAI_CHAT_MODELS[0] ? OPENAI_CHAT_MODELS[0]
-                                                    : "gpt-5-chat-latest"));
+                           ? (CONST_STRPTR)data->chatModelName
+                           : (CONST_STRPTR)DEFAULT_OPENAI_CHAT_MODEL);
     }
     if (data->geminiChatModelName == NULL) {
-        data->geminiChatModelName = copyString(
-            GEMINI_CHAT_MODELS[0] ? GEMINI_CHAT_MODELS[0] : "gemini-2.5-flash");
+        data->geminiChatModelName = copyString(DEFAULT_GEMINI_CHAT_MODEL);
     }
     if (data->grokChatModelName == NULL) {
-        data->grokChatModelName =
-            copyString(GROK_CHAT_MODELS[0] ? GROK_CHAT_MODELS[0] : "grok-4");
+        data->grokChatModelName = copyString(DEFAULT_GROK_CHAT_MODEL);
     }
     if (data->anthropicChatModelName == NULL) {
-        data->anthropicChatModelName =
-            copyString(ANTHROPIC_CHAT_MODELS[0] ? ANTHROPIC_CHAT_MODELS[0]
-                                                : "claude-opus-4-5-20251101");
+        data->anthropicChatModelName = copyString(DEFAULT_ANTHROPIC_CHAT_MODEL);
     }
 
     /* If provider-specific image model keys are missing (older configs), map
@@ -2524,7 +2584,9 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
                     freeString(&data->geminiImageModelName);
                     data->geminiImageModelName =
                         copyString(data->imageModelName);
-                } else if (strcmp(activeImg, "xAI Grok") == 0) {
+                } else if (strcmp(activeImg, LEGACY_PROFILE_NAME_GROK) ==
+                               0 ||
+                           strcmp(activeImg, LOCKED_PROFILE_NAME_GROK) == 0) {
                     freeString(&data->grokImageModelName);
                     data->grokImageModelName = copyString(data->imageModelName);
                 } else {
@@ -2540,15 +2602,11 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     }
 
     if (data->openAiImageModelName == NULL)
-        data->openAiImageModelName = copyString(
-            OPENAI_IMAGE_MODELS[0] ? OPENAI_IMAGE_MODELS[0] : "gpt-image-1.5");
+        data->openAiImageModelName = copyString(DEFAULT_OPENAI_IMAGE_MODEL);
     if (data->geminiImageModelName == NULL)
-        data->geminiImageModelName =
-            copyString(GEMINI_IMAGE_MODELS[0] ? GEMINI_IMAGE_MODELS[0]
-                                              : "gemini-2.5-flash-image");
+        data->geminiImageModelName = copyString(DEFAULT_GEMINI_IMAGE_MODEL);
     if (data->grokImageModelName == NULL)
-        data->grokImageModelName = copyString(
-            GROK_IMAGE_MODELS[0] ? GROK_IMAGE_MODELS[0] : "grok-imagine-image");
+        data->grokImageModelName = copyString(DEFAULT_GROK_IMAGE_MODEL);
 
     /* Migrate global webSearchEnabled / shellToolEnabled / chatSystem into
      * per-profile fields if this is the first run after the upgrade. */
@@ -2561,7 +2619,10 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
             BOOL isOpenAi = (active != NULL && strcmp(active, "OpenAI") == 0);
             BOOL isGemini =
                 (active != NULL && strcmp(active, "Google Gemini") == 0);
-            BOOL isGrok = (active != NULL && strcmp(active, "xAI Grok") == 0);
+            BOOL isGrok =
+                (active != NULL &&
+                 (strcmp(active, LEGACY_PROFILE_NAME_GROK) == 0 ||
+                  strcmp(active, LOCKED_PROFILE_NAME_GROK) == 0));
             BOOL isAnthropic =
                 (active != NULL && strcmp(active, "Anthropic Claude") == 0);
             BOOL isLocked = isOpenAi || isGemini || isGrok || isAnthropic;
@@ -2631,6 +2692,14 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
             saveConfig(data);
         }
     }
+
+    /* The xAI Grok chat and image provider is now called SpaceXAI Grok. This
+     * runs last so the legacy migrations above still see the old name. */
+    migrateLegacyProfileName(&data->activeProfileName, LEGACY_PROFILE_NAME_GROK,
+                             LOCKED_PROFILE_NAME_GROK);
+    migrateLegacyProfileName(&data->activeImageProfileName,
+                             LEGACY_PROFILE_NAME_GROK,
+                             LOCKED_PROFILE_NAME_GROK);
 
     FreeVec(configJsonString);
     json_object_put(configJsonObject);
@@ -4063,11 +4132,6 @@ void configSetElevenLabsModelName(CONST_STRPTR value) {
 }
 
 /* Active server profile request settings (no provider selection) */
-
-#define LOCKED_PROFILE_NAME_OPENAI "OpenAI"
-#define LOCKED_PROFILE_NAME_GEMINI "Google Gemini"
-#define LOCKED_PROFILE_NAME_GROK "xAI Grok"
-#define LOCKED_PROFILE_NAME_ANTHROPIC "Anthropic Claude"
 
 static BOOL isLockedChatProfileName(CONST_STRPTR name) {
     if (name == NULL)
