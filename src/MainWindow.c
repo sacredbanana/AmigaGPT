@@ -248,16 +248,42 @@ static void setActionButtonLabel(Object *button, LONG pen, CONST_STRPTR label) {
     set(button, MUIA_Text_Contents, buffer);
 }
 
-static void setActionButtonsStopMode(BOOL stopMode) {
-    if (stopMode) {
+#define ACTION_BTN_IDLE 0
+#define ACTION_BTN_REQUEST_STOP 1
+#define ACTION_BTN_SPEAK_STOP 2
+
+static void updateActionButtonLabels(BOOL force) {
+    static UBYTE lastMode = 255;
+    UBYTE mode;
+
+    if (requestInterfaceBusy)
+        mode = ACTION_BTN_REQUEST_STOP;
+    else if (isSpeechPlaying())
+        mode = ACTION_BTN_SPEAK_STOP;
+    else
+        mode = ACTION_BTN_IDLE;
+
+    if (!force && mode == lastMode)
+        return;
+    lastMode = mode;
+
+    if (mode == ACTION_BTN_REQUEST_STOP) {
         setActionButtonLabel(sendMessageButton, redPen, STRING_STOP);
         setActionButtonLabel(createImageButton, redPen, STRING_STOP);
         setActionButtonLabel(generateSpeechButton, redPen, STRING_STOP);
         return;
     }
-    setActionButtonLabel(sendMessageButton, bluePen, STRING_SEND);
+    if (mode == ACTION_BTN_SPEAK_STOP)
+        setActionButtonLabel(sendMessageButton, redPen, STRING_STOP);
+    else
+        setActionButtonLabel(sendMessageButton, bluePen, STRING_SEND);
     setActionButtonLabel(createImageButton, bluePen, STRING_CREATE_IMAGE);
     setActionButtonLabel(generateSpeechButton, bluePen, STRING_GENERATE_SPEECH);
+}
+
+static void setActionButtonsStopMode(BOOL stopMode) {
+    (void)stopMode;
+    updateActionButtonLabels(TRUE);
 }
 
 static void setPrimaryActionButtonsEnabled(void) {
@@ -435,6 +461,8 @@ void updatePlayButton() {
     static BOOL lastPaused = (BOOL)-1;
     static BOOL lastHasSpeech = (BOOL)-1;
     static ULONG lastPosition = (ULONG)-1;
+
+    updateActionButtonLabels(FALSE);
 
     if (speechWaveform == NULL || speechWaveformClass == NULL)
         return;
@@ -1641,6 +1669,11 @@ MakeHook(SaveResponseFilesButtonClickedHook,
 HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
     if (abortIfRequestBusy())
         return;
+    if (isSpeechPlaying()) {
+        stopSpeech();
+        updatePlayButton();
+        return;
+    }
     struct ChatRequestSettings chatSettings;
     configGetActiveChatRequestSettings(&chatSettings);
     if (chatSettings.authorizationType != AUTHORIZATION_TYPE_NONE &&
