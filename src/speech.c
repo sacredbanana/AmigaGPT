@@ -53,6 +53,49 @@ const STRPTR SPEECH_FLITE_VOICE_NAMES[] = {
 
 static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size);
 
+static void writeLittleEndian16(UBYTE *destination, UWORD value) {
+    destination[0] = (UBYTE)(value & 0xff);
+    destination[1] = (UBYTE)((value >> 8) & 0xff);
+}
+
+static void writeLittleEndian32(UBYTE *destination, ULONG value) {
+    destination[0] = (UBYTE)(value & 0xff);
+    destination[1] = (UBYTE)((value >> 8) & 0xff);
+    destination[2] = (UBYTE)((value >> 16) & 0xff);
+    destination[3] = (UBYTE)((value >> 24) & 0xff);
+}
+
+static BOOL savePcmAsWav(CONST_STRPTR filename, const UBYTE *pcmData,
+                         ULONG dataLength, ULONG sampleRate) {
+    UBYTE header[44];
+    BPTR outputFile;
+    BOOL success;
+
+    memcpy(header, "RIFF", 4);
+    writeLittleEndian32(header + 4, dataLength + 36);
+    memcpy(header + 8, "WAVEfmt ", 8);
+    writeLittleEndian32(header + 16, 16);
+    writeLittleEndian16(header + 20, 1); /* PCM */
+    writeLittleEndian16(header + 22, 1); /* Mono */
+    writeLittleEndian32(header + 24, sampleRate);
+    writeLittleEndian32(header + 28, sampleRate * 2);
+    writeLittleEndian16(header + 32, 2);
+    writeLittleEndian16(header + 34, 16);
+    memcpy(header + 36, "data", 4);
+    writeLittleEndian32(header + 40, dataLength);
+
+    outputFile = Open(filename, MODE_NEWFILE);
+    if (!outputFile)
+        return FALSE;
+
+    success = Write(outputFile, header, sizeof(header)) ==
+                  (LONG)sizeof(header) &&
+              Write(outputFile, (APTR)pcmData, dataLength) ==
+                  (LONG)dataLength;
+    Close(outputFile);
+    return success;
+}
+
 /**
  * The names of the speech systems
  * @see SpeechSystem
@@ -424,6 +467,12 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
 
         if (!audioBuffer) {
             return FALSE;
+        }
+
+        if ((output == NULL || strlen(output) == 0) &&
+            !savePcmAsWav("OUT:output.wav", audioBuffer, audioLength,
+                          playbackFrequency)) {
+            displayError(STRING_ERROR_FILE_OPEN);
         }
 
         if (audioFormat == NULL || *audioFormat == AUDIO_FORMAT_PCM) {
