@@ -177,17 +177,27 @@ NoGUI_RequestChoice: PROCEDURE EXPOSE AMIGAGPT_PORT PROMPT PROFILE NEWCHAT
 
 GetAnswer: PROCEDURE EXPOSE AMIGAGPT_PORT PROFILE NEWCHAT
   CALL GetAttr("asktext","Contents", PROMPT)
-  PROMPT = TRANSLATE(PROMPT, ", ", '0A'X)
+  /* Keep the real line breaks in PROMPT so they still show in the window,
+     and hand the port an escaped copy instead. P=PROMPT/F is a ReadArgs
+     "rest of line" argument, so a raw line feed would cut the prompt at the
+     first Enter - that is why this used to become commas. The two-character
+     \n is the same convention AmigaGPT already uses for line breaks in
+     RESULT, and the model reads it as a line break. */
+  SENDLINE = ReplaceAll(PROMPT, '0A'X, "\n")
   CALL SetAttr("asktext","Contents", "Retrieving answer using AmigaGPT. Please wait...")
   CALL SetAttr("asktext", "ReadOnly", 1)
   ADDRESS VALUE AMIGAGPT_PORT
   IF NEWCHAT THEN 'NEWCHAT'
   CMD = 'SENDMESSAGE'
   IF PROFILE ~= "" THEN CMD = CMD ' PR="' || PROFILE || '"'
-  CMD = CMD ' P='PROMPT
+  CMD = CMD ' P='SENDLINE
   CMD
   ADDRESS COMMAND
-  ANSWER = ParseText(RESULT)
+  /* ParseText() is not defined anywhere in this script and ARexx has no
+     built-in of that name, so this line aborted the GUI path before the
+     answer could be shown. The console path above already does the right
+     thing, so it is used here as well. */
+  ANSWER = ReplaceAll(RESULT, "\n", '0A'X)
   CALL SetAttr("asktext","Contents", '1B'X"b"PROMPT '0A'X'0A'X ANSWER)
   CALL KillNotify("btnOk","app")
   CALL Notify("btnOk","pressed",1,"app","ReturnID", "quit")
