@@ -6,7 +6,7 @@
 - Fix ARexx SENDMESSAGE returning an empty RESULT instead of the error text when the provider reports errors as a plain string rather than an object
 - Improved memory management for AmigaGPTTextEditor
 - AmigaGPTTextEditor no longer crashes in MUI 3.8 on app exit
-- AmigaGPTTextEditor now enabled for MUI 3.8
+- AmigaGPTTextEditor now enabled for MUI 3.8. (Can now push enter to send message / shift + enter to create new line)
 
 ## 3.2.1 (2026-08-26)
 
