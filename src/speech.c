@@ -49,6 +49,10 @@ static volatile ULONG narratorCaptureLength = 0;
 static ULONG narratorCaptureCapacity = 0;
 static ULONG narratorCaptureUnit = 0;
 static ULONG narratorCaptureSampleRate = DEFFREQ;
+static UBYTE narratorCaptureOutput[1024] = {0};
+static AudioFormat narratorCaptureFormat = AUDIO_FORMAT_WAV;
+static volatile BOOL narratorCaptureSucceeded = FALSE;
+static volatile BOOL narratorCaptureMuted = FALSE;
 static volatile BOOL narratorCaptureActive = FALSE;
 static volatile BOOL narratorCapturePending = FALSE;
 static volatile BOOL narratorCaptureOverflow = FALSE;
@@ -83,6 +87,15 @@ const STRPTR SPEECH_FLITE_VOICE_NAMES[] = {
     [SPEECH_FLITE_VOICE_SLT] = "slt", NULL};
 
 static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size);
+
+static UWORD readLittleEndian16(const UBYTE *source) {
+    return (UWORD)((UWORD)source[0] | ((UWORD)source[1] << 8));
+}
+
+static ULONG readLittleEndian32(const UBYTE *source) {
+    return (ULONG)source[0] | ((ULONG)source[1] << 8) |
+           ((ULONG)source[2] << 16) | ((ULONG)source[3] << 24);
+}
 
 static void writeLittleEndian16(UBYTE *destination, UWORD value) {
     destination[0] = (UBYTE)(value & 0xff);
@@ -126,6 +139,51 @@ static BOOL savePcmAsWav(CONST_STRPTR filename, const UBYTE *pcmData,
               Write(outputFile, (APTR)pcmData, dataLength) ==
                   (LONG)dataLength;
     Close(outputFile);
+    return success;
+}
+
+static BOOL saveRawAudio(CONST_STRPTR filename, const UBYTE *data,
+                         ULONG dataLength) {
+    BPTR outputFile;
+    BOOL success;
+
+    if (filename == NULL || data == NULL || dataLength == 0)
+        return FALSE;
+    outputFile = Open(filename, MODE_NEWFILE);
+    if (outputFile == 0)
+        return FALSE;
+    success = Write(outputFile, (APTR)data, dataLength) == (LONG)dataLength;
+    Close(outputFile);
+    return success;
+}
+
+static BOOL saveWavPayloadAsRaw(CONST_STRPTR wavFilename,
+                                CONST_STRPTR rawFilename) {
+    ULONG wavLength = 0;
+    UBYTE *wav = loadAudioFile(wavFilename, &wavLength);
+    ULONG offset = 12;
+    BOOL success = FALSE;
+
+    if (wav == NULL)
+        return FALSE;
+    if (wavLength < 12 || memcmp(wav, "RIFF", 4) != 0 ||
+        memcmp(wav + 8, "WAVE", 4) != 0)
+        goto done;
+
+    while (offset + 8 <= wavLength) {
+        ULONG chunkLength = readLittleEndian32(wav + offset + 4);
+        ULONG dataOffset = offset + 8;
+        if (dataOffset > wavLength || chunkLength > wavLength - dataOffset)
+            break;
+        if (memcmp(wav + offset, "data", 4) == 0) {
+            success = saveRawAudio(rawFilename, wav + dataOffset, chunkLength);
+            break;
+        }
+        offset = dataOffset + chunkLength + (chunkLength & 1);
+    }
+
+done:
+    FreeVec(wav);
     return success;
 }
 
@@ -204,6 +262,12 @@ static void captureNarratorAudioRequest(struct IOAudio *request) {
     memcpy(narratorCaptureBuffer + narratorCaptureLength, request->ioa_Data,
            copyLength);
     narratorCaptureLength += copyLength;
+
+    /* narrator.device has no file-only output mode. Let audio.device complete
+       each request normally, but silence the hardware while generating a
+       file. The unmodified sample bytes above are still captured. */
+    if (narratorCaptureMuted)
+        request->ioa_Volume = 0;
 }
 
 static void __ASM__ narratorAudioBeginIOHook(
@@ -248,15 +312,26 @@ static void finishNarratorCapture(void) {
     Permit();
     narratorOriginalBeginIO = NULL;
 
+    narratorCaptureSucceeded = FALSE;
     /* Paula/audio.device samples are signed; 8-bit WAV PCM is unsigned. */
-    if (narratorCaptureBuffer != NULL) {
+    if (narratorCaptureFormat == AUDIO_FORMAT_WAV &&
+        narratorCaptureBuffer != NULL) {
         for (i = 0; i < narratorCaptureLength; i++)
             narratorCaptureBuffer[i] ^= 0x80;
     }
 
-    if (narratorCaptureLength > 0)
-        savePcmAsWav("OUT:output.wav", narratorCaptureBuffer,
-                     narratorCaptureLength, narratorCaptureSampleRate, 8);
+    if (narratorCaptureLength > 0 && narratorCaptureOutput[0] != '\0') {
+        if (narratorCaptureFormat == AUDIO_FORMAT_PCM) {
+            narratorCaptureSucceeded = saveRawAudio(
+                narratorCaptureOutput, narratorCaptureBuffer,
+                narratorCaptureLength);
+        } else {
+            narratorCaptureSucceeded = savePcmAsWav(
+                narratorCaptureOutput, narratorCaptureBuffer,
+                narratorCaptureLength, narratorCaptureSampleRate, 8);
+        }
+    }
+    narratorCaptureMuted = FALSE;
     releaseNarratorCaptureResources();
 }
 
@@ -291,7 +366,10 @@ static void waitForNarratorCapture(BOOL abortPlayback) {
 }
 
 static BOOL prepareNarratorCapture(CONST_STRPTR text, UWORD rate,
-                                   UWORD sampleRate) {
+                                   UWORD sampleRate, CONST_STRPTR output,
+                                   AudioFormat format) {
+    if (output == NULL || strlen(output) == 0)
+        return FALSE;
     if (sampleRate < MINFREQ || sampleRate > MAXFREQ)
         sampleRate = DEFFREQ;
 
@@ -323,6 +401,12 @@ static BOOL prepareNarratorCapture(CONST_STRPTR text, UWORD rate,
     narratorCaptureLength = 0;
     narratorCaptureUnit = 0;
     narratorCaptureSampleRate = sampleRate;
+    strncpy(narratorCaptureOutput, output,
+            sizeof(narratorCaptureOutput) - 1);
+    narratorCaptureOutput[sizeof(narratorCaptureOutput) - 1] = '\0';
+    narratorCaptureFormat = format;
+    narratorCaptureSucceeded = FALSE;
+    narratorCaptureMuted = TRUE;
     narratorCaptureOverflow = FALSE;
     narratorCaptureOwner = FindTask(NULL);
 
@@ -338,6 +422,7 @@ static BOOL prepareNarratorCapture(CONST_STRPTR text, UWORD rate,
     return TRUE;
 
 failure:
+    narratorCaptureMuted = FALSE;
     if (narratorCaptureDoneSignal >= 0) {
         FreeSignal(narratorCaptureDoneSignal);
         narratorCaptureDoneSignal = -1;
@@ -407,6 +492,42 @@ const STRPTR AUDIO_FORMAT_NAMES[] = {[AUDIO_FORMAT_PCM] = "pcm",
                                      [AUDIO_FORMAT_FLAC] = "flac",
                                      NULL};
 
+static LONG initAHIPlayback(void) {
+    if (ahiRequest != NULL)
+        return RETURN_OK;
+
+    AHImp = CreateMsgPort();
+    if (AHImp == NULL)
+        return RETURN_ERROR;
+    ahiRequest = (struct AHIRequest *)CreateIORequest(
+        AHImp, sizeof(struct AHIRequest));
+    if (ahiRequest == NULL) {
+        DeleteMsgPort(AHImp);
+        AHImp = NULL;
+        return RETURN_ERROR;
+    }
+    ahiRequest->ahir_Version = 4;
+    ahiRequest->ahir_Std.io_Message.mn_ReplyPort = AHImp;
+    ahiRequest->ahir_Std.io_Command = CMD_WRITE;
+    ahiRequest->ahir_Std.io_Data = NULL;
+    ahiRequest->ahir_Std.io_Length = 0;
+    ahiRequest->ahir_Frequency = 24000;
+    ahiRequest->ahir_Type = AHIST_M16S;
+    ahiRequest->ahir_Volume = 0x10000;
+    ahiRequest->ahir_Position = 0x8000;
+
+    if (OpenDevice(AHINAME, AHI_DEFAULT_UNIT,
+                   (struct IORequest *)ahiRequest, 0L) != 0) {
+        DeleteIORequest((struct IORequest *)ahiRequest);
+        DeleteMsgPort(AHImp);
+        ahiRequest = NULL;
+        AHImp = NULL;
+        displayError(STRING_ERROR_AHI_DEVICE_OPEN);
+        return RETURN_ERROR;
+    }
+    return RETURN_OK;
+}
+
 /**
  * Initialise the speech system
  * @param speechSystem the speech system to use
@@ -417,27 +538,7 @@ LONG initSpeech(SpeechSystem speechSystem) {
         speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
         speechSystem == SPEECH_SYSTEM_XAI ||
         speechSystem == SPEECH_SYSTEM_OPENVOX) {
-        AHImp = CreateMsgPort();
-        ahiRequest = (struct AHIRequest *)CreateIORequest(
-            AHImp, sizeof(struct AHIRequest));
-        ahiRequest->ahir_Version = 4;
-        ahiRequest->ahir_Std.io_Message.mn_ReplyPort = AHImp;
-        ahiRequest->ahir_Std.io_Command = CMD_WRITE;
-        ahiRequest->ahir_Std.io_Data = NULL;
-        ahiRequest->ahir_Std.io_Length = 0;
-        ahiRequest->ahir_Frequency = 24000;
-        ahiRequest->ahir_Type = AHIST_M16S; // 16-bit signed mono sound
-        ahiRequest->ahir_Volume = 0x10000;  // Full volume
-        ahiRequest->ahir_Position = 0x8000; // Centered
-
-        // Open the AHI device
-        BYTE ahiError = OpenDevice(AHINAME, AHI_DEFAULT_UNIT,
-                                   (struct IORequest *)ahiRequest, 0L);
-        if (ahiError != 0) {
-            UBYTE errorBuffer[256];
-            snprintf(errorBuffer, 256, "%s: %s", STRING_ERROR_AHI_DEVICE_OPEN,
-                     ahiError);
-            displayError(errorBuffer);
+        if (initAHIPlayback() == RETURN_ERROR) {
             configSetSpeechEnabled(FALSE);
             return RETURN_ERROR;
         }
@@ -674,12 +775,19 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         return FALSE;
 
     SpeechSystem speechSystem = settings->speechSystem;
+    BOOL saveToFile = output != NULL && strlen(output) > 0;
+    AudioFormat requestedFormat =
+        audioFormat != NULL ? *audioFormat : AUDIO_FORMAT_WAV;
+
+    if (saveToFile && requestedFormat != AUDIO_FORMAT_WAV &&
+        requestedFormat != AUDIO_FORMAT_PCM)
+        return FALSE;
 
     if (speechSystem == SPEECH_SYSTEM_OPENAI ||
         speechSystem == SPEECH_SYSTEM_ELEVENLABS ||
         speechSystem == SPEECH_SYSTEM_XAI ||
         speechSystem == SPEECH_SYSTEM_OPENVOX) {
-        if (ahiRequest == NULL) {
+        if (!saveToFile && ahiRequest == NULL) {
             if (lazyInitSpeech(speechSystem) == RETURN_ERROR)
                 return FALSE; /* initSpeech already displayed a specific error */
             if (ahiRequest == NULL) {
@@ -718,13 +826,12 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             }
         }
 
-        AudioFormat defaultAudioFormatForPlayback = AUDIO_FORMAT_PCM;
+        AudioFormat requestFormat =
+            saveToFile ? requestedFormat : AUDIO_FORMAT_PCM;
+        audioFormat = &requestFormat;
 
-        if (output == NULL || strlen(output) == 0) {
-            audioFormat = &defaultAudioFormatForPlayback;
-        }
-
-        if (CheckIO((struct IORequest *)ahiRequest) == 0) {
+        if (ahiRequest != NULL &&
+            CheckIO((struct IORequest *)ahiRequest) == 0) {
             AbortIO((struct IORequest *)ahiRequest);
             WaitIO((struct IORequest *)ahiRequest);
         }
@@ -792,13 +899,27 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             return FALSE;
         }
 
-        if ((output == NULL || strlen(output) == 0) &&
-            !savePcmAsWav("OUT:output.wav", audioBuffer, audioLength,
-                          playbackFrequency, 16)) {
-            displayError(STRING_ERROR_FILE_OPEN);
+        if (saveToFile) {
+            BOOL providerReturnedWav =
+                requestFormat == AUDIO_FORMAT_WAV &&
+                (speechSystem == SPEECH_SYSTEM_OPENAI ||
+                 speechSystem == SPEECH_SYSTEM_XAI);
+            BOOL saved = providerReturnedWav
+                             ? saveRawAudio(output, audioBuffer, audioLength)
+                             : (requestedFormat == AUDIO_FORMAT_WAV
+                                    ? savePcmAsWav(output, audioBuffer,
+                                                   audioLength,
+                                                   playbackFrequency, 16)
+                                    : saveRawAudio(output, audioBuffer,
+                                                   audioLength));
+            FreeVec(audioBuffer);
+            audioBuffer = NULL;
+            if (!saved)
+                displayError(STRING_ERROR_FILE_OPEN);
+            return saved;
         }
 
-        if (audioFormat == NULL || *audioFormat == AUDIO_FORMAT_PCM) {
+        if (requestFormat == AUDIO_FORMAT_PCM) {
 // Convert to big endian
 #ifdef __AMIGAOS3__
             __asm__ __volatile__(
@@ -828,24 +949,6 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                 audioBuffer[i + 1] = temp;
             }
 #endif
-        }
-
-        if (output != NULL && strlen(output) > 0) {
-#ifdef __AMIGAOS4__
-            Delete(output);
-#else
-            DeleteFile(output);
-#endif
-            BPTR outputFile = Open(output, MODE_NEWFILE);
-            if (!outputFile) {
-                displayError(STRING_ERROR_FILE_OPEN);
-            } else {
-                Write(outputFile, audioBuffer, audioLength);
-                Close(outputFile);
-            }
-            FreeVec(audioBuffer);
-            audioBuffer = NULL;
-            return TRUE;
         }
 
         // Add 2s of silence to the audio buffer to make sure AHI plays the
@@ -879,7 +982,7 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
     }
 #ifdef __AMIGAOS3__
     if (speechSystem == SPEECH_SYSTEM_34 || speechSystem == SPEECH_SYSTEM_37) {
-        BOOL capturePrepared;
+        BOOL capturePrepared = FALSE;
 
         if (NarratorIO == NULL) {
             if (lazyInitSpeech(speechSystem) == RETURN_ERROR)
@@ -913,11 +1016,20 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         NarratorIO->message.io_Command = CMD_WRITE;
         NarratorIO->message.io_Data = translationBuffer;
         NarratorIO->message.io_Length = strlen(translationBuffer);
-        capturePrepared = prepareNarratorCapture(
-            text, NarratorIO->rate, NarratorIO->sampfreq);
+        if (saveToFile) {
+            capturePrepared = prepareNarratorCapture(
+                text, NarratorIO->rate, NarratorIO->sampfreq, output,
+                requestedFormat);
+            if (!capturePrepared)
+                return FALSE;
+        }
         SendIO((struct IORequest *)NarratorIO);
-        if (capturePrepared)
+        if (capturePrepared) {
             startNarratorCaptureProcess();
+            waitForNarratorCapture(FALSE);
+            return narratorCaptureSucceeded;
+        }
+        return TRUE;
     }
 #elif defined(__AMIGAOS4__)
     if (speechSystem == SPEECH_SYSTEM_FLITE) {
@@ -943,6 +1055,11 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
             return FALSE;
         }
 
+        if (saveToFile && fliteFileRequest == NULL) {
+            displayError(STRING_ERROR_FLITE_DEVICE_OPEN);
+            return FALSE;
+        }
+
         if (fliteFileRequest != NULL) {
             ULONG textLength = strlen(text) + 1;
             fliteTextBuffer = AllocVec(textLength, MEMF_SHARED);
@@ -952,6 +1069,34 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                 displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
         }
 
+        if (saveToFile && fliteFileRequest != NULL &&
+            fliteTextBuffer != NULL) {
+            CONST_STRPTR fliteOutput = output;
+            CONST_STRPTR temporaryWav = "T:AmigaGPT-flite-output.wav";
+            if (requestedFormat == AUDIO_FORMAT_PCM)
+                fliteOutput = temporaryWav;
+            fliteFileRequest->fr_Std.io_Command = CMD_WRITE;
+            fliteFileRequest->fr_Std.io_Data = (APTR)fliteTextBuffer;
+            fliteFileRequest->fr_Std.io_Length = ~0;
+            fliteFileRequest->fr_Input = FLITE_INPUT_TEXT;
+            fliteFileRequest->fr_Output = FLITE_OUTPUT_FILE;
+            fliteFileRequest->fr_Lock = GetCurrentDir();
+            fliteFileRequest->fr_Filename = fliteOutput;
+            fliteFileRequest->fr_Voice = voice;
+            SendIO((struct IORequest *)fliteFileRequest);
+            fliteFileRequestPending = TRUE;
+            finishFliteRequest(fliteFileRequest, &fliteFileRequestPending,
+                               FALSE);
+            BOOL saved = fliteFileRequest->fr_Std.io_Error == 0;
+            if (saved && requestedFormat == AUDIO_FORMAT_PCM)
+                saved = saveWavPayloadAsRaw(temporaryWav, output);
+            if (requestedFormat == AUDIO_FORMAT_PCM)
+                Delete(temporaryWav);
+            FreeVec(fliteTextBuffer);
+            fliteTextBuffer = NULL;
+            return saved;
+        }
+
         fliteRequest->fr_Std.io_Command = CMD_WRITE;
         fliteRequest->fr_Std.io_Data =
             (APTR)(fliteTextBuffer != NULL ? fliteTextBuffer : text);
@@ -959,28 +1104,12 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
         fliteRequest->fr_Input = FLITE_INPUT_TEXT;
         fliteRequest->fr_Output = FLITE_OUTPUT_AHI;
         fliteRequest->fr_Voice = voice;
-
-        if (fliteFileRequest != NULL && fliteTextBuffer != NULL) {
-            fliteFileRequest->fr_Std.io_Command = CMD_WRITE;
-            fliteFileRequest->fr_Std.io_Data = (APTR)fliteTextBuffer;
-            fliteFileRequest->fr_Std.io_Length = ~0;
-            fliteFileRequest->fr_Input = FLITE_INPUT_TEXT;
-            fliteFileRequest->fr_Output = FLITE_OUTPUT_FILE;
-            fliteFileRequest->fr_Lock = GetCurrentDir();
-            fliteFileRequest->fr_Filename = "OUT:output.wav";
-            fliteFileRequest->fr_Voice = voice;
-
-            /* The device has one worker for both requests. File output is
-               faster than real-time, so queue it first to avoid delaying the
-               WAV until after audible playback has finished. */
-            SendIO((struct IORequest *)fliteFileRequest);
-            fliteFileRequestPending = TRUE;
-        }
         SendIO((struct IORequest *)fliteRequest);
         fliteRequestPending = TRUE;
+        return TRUE;
     }
 #endif
-    return TRUE;
+    return FALSE;
 }
 
 /**
@@ -1002,9 +1131,18 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size) {
         return NULL;
     }
 
-    // Obtain the size of the file
+#ifdef __AMIGAOS3__
     Seek(fileHandle, 0, OFFSET_END);
     fileSize = Seek(fileHandle, 0, OFFSET_BEGINNING);
+#elif defined(__AMIGAOS4__)
+    fileSize = (LONG)GetFileSize(fileHandle);
+#else
+    {
+        struct FileInfoBlock fib;
+        ExamineFH64(fileHandle, &fib, NULL);
+        fileSize = (LONG)fib.fib_Size;
+    }
+#endif
 
     if (fileSize > 0) {
         // Allocate buffer for audio data
@@ -1018,30 +1156,7 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size) {
                 FreeVec(buffer);
                 buffer = NULL;
             } else {
-                // Successfully read the file
                 *size = fileSize;
-
-                // Convert to big endian
-                __asm__ __volatile__(
-                    "lea    (%1), %%a0\n" // Load buffer address into A0
-                    "move.l %0, %%d1\n"   // Load fileSize into D1
-                    "lsr.l  #1, %%d1\n"   // fileSize / 2, since we're
-                                          // processing 2 bytes at a time
-
-                    "1:\n"
-                    "move.w (%%a0), %%d0\n" // Load the word from the buffer
-                                            // into D0
-                    "rol.w  #8, %%d0\n"     // Rotate left by 8 bits to swap the
-                                            // bytes
-                    "move.w %%d0, (%%a0)+\n" // Store the swapped word back
-                                             // and increment address
-                    "subq.l #1, %%d1\n"      // Decrement counter
-                    "bne.b  1b\n"            // Repeat if not done
-
-                    :                            // No output operands
-                    : "g"(fileSize), "g"(buffer) // Input operands
-                    : "d0", "d1", "a0", "memory" // Clobber list
-                );
             }
         }
     }
@@ -1050,4 +1165,102 @@ static APTR loadAudioFile(CONST_STRPTR filename, ULONG *size) {
     Close(fileHandle);
 
     return buffer;
+}
+
+void stopSpeech() {
+#ifdef __AMIGAOS3__
+    waitForNarratorCapture(TRUE);
+    if (NarratorIO != NULL &&
+        ((struct IORequest *)NarratorIO)->io_Device != NULL &&
+        CheckIO((struct IORequest *)NarratorIO) == 0) {
+        AbortIO((struct IORequest *)NarratorIO);
+        WaitIO((struct IORequest *)NarratorIO);
+    }
+#elif defined(__AMIGAOS4__)
+    finishFliteRequests(TRUE);
+#endif
+    if (ahiRequest != NULL &&
+        CheckIO((struct IORequest *)ahiRequest) == 0) {
+        AbortIO((struct IORequest *)ahiRequest);
+        WaitIO((struct IORequest *)ahiRequest);
+    }
+    if (audioBuffer != NULL) {
+        FreeVec(audioBuffer);
+        audioBuffer = NULL;
+    }
+}
+
+BOOL playSpeechFile(CONST_STRPTR filename) {
+    ULONG wavLength = 0;
+    UBYTE *wav = loadAudioFile(filename, &wavLength);
+    ULONG offset = 12;
+    ULONG sampleRate = 0;
+    ULONG dataLength = 0;
+    UBYTE *data = NULL;
+    UWORD encoding = 0;
+    UWORD channels = 0;
+    UWORD bitsPerSample = 0;
+    BOOL success = FALSE;
+
+    if (wav == NULL)
+        return FALSE;
+    if (wavLength < 12 || memcmp(wav, "RIFF", 4) != 0 ||
+        memcmp(wav + 8, "WAVE", 4) != 0)
+        goto done;
+
+    while (offset + 8 <= wavLength) {
+        ULONG chunkLength = readLittleEndian32(wav + offset + 4);
+        ULONG chunkData = offset + 8;
+        if (chunkData > wavLength || chunkLength > wavLength - chunkData)
+            break;
+        if (memcmp(wav + offset, "fmt ", 4) == 0 && chunkLength >= 16) {
+            encoding = readLittleEndian16(wav + chunkData);
+            channels = readLittleEndian16(wav + chunkData + 2);
+            sampleRate = readLittleEndian32(wav + chunkData + 4);
+            bitsPerSample = readLittleEndian16(wav + chunkData + 14);
+        } else if (memcmp(wav + offset, "data", 4) == 0) {
+            data = wav + chunkData;
+            dataLength = chunkLength;
+        }
+        offset = chunkData + chunkLength + (chunkLength & 1);
+    }
+
+    if (encoding != 1 || channels != 1 || sampleRate == 0 || data == NULL ||
+        dataLength == 0 || (bitsPerSample != 8 && bitsPerSample != 16))
+        goto done;
+    if (initAHIPlayback() == RETURN_ERROR)
+        goto done;
+
+    stopSpeech();
+    ULONG padBytes = sampleRate * (bitsPerSample / 8) * 2;
+    audioBuffer = AllocVec(dataLength + padBytes, MEMF_ANY | MEMF_CLEAR);
+    if (audioBuffer == NULL) {
+        displayError(STRING_ERROR_AUDIO_BUFFER_MEMORY);
+        goto done;
+    }
+    if (bitsPerSample == 8) {
+        ULONG i;
+        for (i = 0; i < dataLength; i++)
+            audioBuffer[i] = data[i] ^ 0x80;
+        ahiRequest->ahir_Type = AHIST_M8S;
+    } else {
+        ULONG i;
+        for (i = 0; i + 1 < dataLength; i += 2) {
+            audioBuffer[i] = data[i + 1];
+            audioBuffer[i + 1] = data[i];
+        }
+        ahiRequest->ahir_Type = AHIST_M16S;
+    }
+
+    ahiRequest->ahir_Std.io_Data = audioBuffer;
+    ahiRequest->ahir_Std.io_Length = dataLength + padBytes;
+    ahiRequest->ahir_Frequency = sampleRate;
+    ahiRequest->ahir_Volume = 0x10000;
+    ahiRequest->ahir_Position = 0x8000;
+    SendIO((struct IORequest *)ahiRequest);
+    success = TRUE;
+
+done:
+    FreeVec(wav);
+    return success;
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Speech tab for generating reusable spoken phrases as WAV files, with phrase history, Play, Regenerate, Save Speech Copy, file attachments and Generate text with AI
+- ARexx SPEAKTEXT now saves WAV (default) or raw PCM for every speech backend, including narrator.device and flite.device, when OUTPUT is given
+- LISTAUDIOFORMATS now reports wav and pcm
+- Main window tabs renamed to Chat, Image and Speech
+- Stop button is shared by every mode and can abort in-flight chat, image and speech requests, then restore the previous state
+
 ## 3.3.0 (2026-08-29)
 
 - Rename the xAI provider to SpaceXAI throughout the chat, image and speech provider settings; existing configs and ARexx scripts using the old name keep working

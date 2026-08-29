@@ -24,7 +24,7 @@ You can customise the look and feel of the application, including the ability to
 
 - ### Speech capability
 
-**AmigaGPT** supports multiple speech providers, configurable from **Speech Provider Settings**. For cloud-based voices, it supports **OpenAI TTS** (high quality 16-bit voices), **SpaceXAI Grok TTS**, **ElevenLabs**, and **OpenVox** (requires AHI). For offline synthesis, AmigaOS 3 can use the Amiga's built-in `narrator.device` (**v34** and **v37**) with `translator.library`, and AmigaOS 4.1 supports `flite.device`. Speech runs in the background so the app stays responsive, with a dedicated **Stop** button to interrupt playback.
+**AmigaGPT** supports multiple speech providers, configurable from **Speech Provider Settings**. For cloud-based voices, it supports **OpenAI TTS** (high quality 16-bit voices), **SpaceXAI Grok TTS**, **ElevenLabs**, and **OpenVox** (requires AHI). For offline synthesis, AmigaOS 3 can use the Amiga's built-in `narrator.device` (**v34** and **v37**) with `translator.library`, and AmigaOS 4.1 supports `flite.device`. The **Speech** tab generates reusable WAV files from the active speech profile without playing them automatically; **Play** reads the saved file locally. Speech also runs in the background from Chat replies or ARexx, and a dedicated **Stop** button aborts playback and in-flight requests.
 
 - ### Code Interpreter
 
@@ -138,7 +138,7 @@ MorphOS has no offline speech system. Use one of the cloud voices (OpenAI, Space
 
 When launching for the first time you will need to enter your AI provider's API key before you can start chatting. Open **Chat Provider Settings** from the **Chat** menu to select your provider and enter your key. For OpenAI, navigate to <https://platform.openai.com/account/api-keys> to generate an API key.
 
-There are 2 main modes of operation: Chat and Image Generation. You can switch between them via the tabs in the top left corner.
+There are 3 main modes of operation: Chat, Image and Speech. You can switch between them via the tabs in the top left corner. The **Stop** button is shared by every mode and aborts the request that is currently in progress, then restores that mode to the state it had before the request.
 
 ### Chat
 
@@ -169,6 +169,12 @@ To generate images, open "**Image Provider Settings**" from the "**Image**" menu
 Use **Attach images...** to send one or more reference images with the prompt, so the model can edit, restyle or combine pictures you already have instead of working from the description alone. The attached pictures are listed beside the prompt and can be removed with **Clear**; **New Image** clears them too. Only image files can be attached, and the same limits as chat attachments apply -- 8 MB per file and 16 MB per request. Reference images turn the request into an image edit: OpenAI-compatible providers receive them as a multipart form on `/images/edits` (the `gpt-image-*` models accept several, DALL-E 2 one), SpaceXAI receives them as data URIs on the same endpoint, and Google Gemini receives them inline in the same `generateContent` request it uses for text-to-image. The pictures are streamed to the server straight from disk where the provider allows it, so a large reference image does not have to fit in memory alongside the request.
 
 When a picture comes back, **Edit...** starts a fresh prompt with that picture already attached as a reference, so "make the sky darker" is one click away from a result you just generated. The preview stays on screen while you type the new prompt, and creating the image adds a new entry to the list rather than replacing the one you started from.
+
+### Speech
+
+The **Speech** tab generates spoken audio with the active speech profile and saves it under `AMIGAGPT:speech/` instead of playing it automatically. Type a phrase, optionally attach files, and press **Generate**. Each phrase is listed on the left, titled with the first 32 characters of the text. **Play** only plays the already-saved WAV file; it does not contact a speech provider again. **Regenerate** replaces the selected phrase's file. **Save Speech Copy** writes a copy somewhere else on your Amiga.
+
+**Generate text with AI** sends the current text and any attached files through the active chat profile and replaces the editor contents with the returned text. It then unchecks **Speak contents of files**; you can tick that box again if you still want attached files spoken together with the rewritten text. The checkbox is greyed out until files are attached, and is checked automatically when the first file is added.
 
 ### Chat and Image Provider Settings
 
@@ -300,8 +306,8 @@ SPEAKTEXT PR=PROFILE/K,M=MODEL/K,V=VOICE/K,I=INSTRUCTIONS/K,K=APIKEY/K,O=OUTPUT/
 - `V=VOICE` - Optional voice override (use `LISTVOICES` to see available voices). For OpenAI speech profiles, this selects the OpenAI voice. For Workbench speech profiles, `male`, `female`, `male robot`, and `female robot` override the profile's narrator sex/mode. If omitted, the selected speech profile's voice settings are used
 - `I=INSTRUCTIONS` - Optional, OpenAI voice instructions override
 - `K=APIKEY` - Optional, API key override. If omitted, the selected speech profile's API key is used
-- `O=OUTPUT` - Optional, file to write audio data to instead of playing it
-- `F=FORMAT` - Optional, format of output file (use LISTAUDIOFORMATS to see available formats). Default is MP3 and ignored if OUTPUT is not provided
+- `O=OUTPUT` - Optional, file to write audio data to instead of playing it. When this is given, the text is synthesised silently and the audio is not played
+- `F=FORMAT` - Optional, format of the output file. Use `LISTAUDIOFORMATS` to see the supported values (`wav` and `pcm`). Default is WAV. Ignored if OUTPUT is not provided
 - `P=PROMPT` - Required, the text to speak
 
 #### NEWCHAT

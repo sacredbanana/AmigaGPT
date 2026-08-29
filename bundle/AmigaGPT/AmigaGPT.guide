@@ -312,22 +312,22 @@ Before you can chat you need to give AmigaGPT an API key for the provider you wa
 @node mainwindow "The main window"
 @{b}@{fg shine}The main window@{fg text}@{ub}
 
-AmigaGPT has two modes of operation, selected by the tabs at the top left of the window:
+AmigaGPT has three modes of operation, selected by the tabs at the top left of the window:
 
-- @{b}Chat Mode@{ub} - talk to a language model
-- @{b}Image Generation Mode@{ub} - create pictures from a description
+- @{b}Chat@{ub} - talk to a language model
+- @{b}Image@{ub} - create pictures from a description
+- @{b}Speech@{ub} - generate spoken audio and save it as a WAV file
 
-@{b}@{u}Chat Mode@{uu}@{ub}
+@{b}@{u}Chat@{uu}@{ub}
 
   - The @{b}conversation list@{ub} runs down the left hand side, with @{b}New Chat@{ub} and @{b}Delete Chat@{ub} beneath it
   - The @{b}transcript@{ub} fills the centre of the window and shows the whole conversation, your messages and the assistant replies
   - The @{b}input field@{ub} sits below the transcript
   - @{b}Send@{ub} submits the message. @{bg fill}@{fg filltext}Shift + Enter@{fg text}@{bg background} in the input field does the same.
-  - @{b}Stop speaking@{ub} interrupts speech that is currently playing
   - @{b}Attach files...@{ub} and @{b}Clear@{ub} manage the files sent with the next message
   - @{b}Save received files...@{ub} becomes available when a reply contains files
 
-@{b}@{u}Image Generation Mode@{uu}@{ub}
+@{b}@{u}Image@{uu}@{ub}
 
   - The @{b}image list@{ub} runs down the left hand side, with @{b}New Image@{ub} and @{b}Delete Image@{ub} beneath it
   - The generated picture is displayed in the centre of the window
@@ -337,6 +337,21 @@ AmigaGPT has two modes of operation, selected by the tabs at the top left of the
   - @{b}Open Image@{ub} opens the picture at whatever scale you want
   - @{b}Save Image Copy@{ub} writes a copy somewhere else on your Amiga
   - @{b}Edit...@{ub} starts a new prompt with the displayed picture attached as a reference
+
+@{b}@{u}Speech@{uu}@{ub}
+
+  - The @{b}phrase list@{ub} runs down the left hand side, with @{b}New Phrase@{ub} and @{b}Delete Phrase@{ub} beneath it. Each phrase is titled with the first 32 characters of its text
+  - The @{b}input field@{ub} holds the text that will be spoken
+  - @{b}Generate@{ub} writes a WAV file under AMIGAGPT:speech/ using the active speech profile. It does not play the result
+  - @{b}Play@{ub} plays the already-saved WAV file through AHI. It does not contact a speech provider again
+  - @{b}Regenerate@{ub} replaces the selected phrase's WAV file
+  - @{b}Save Speech Copy@{ub} writes a copy somewhere else on your Amiga
+  - @{b}Generate text with AI@{ub} rewrites the input with the active chat profile, using any attached files, then unchecks @{b}Speak contents of files@{ub}
+  - @{b}Speak contents of files@{ub} is greyed out until files are attached, and is checked automatically when the first file is added
+
+@{b}@{u}Stop@{uu}@{ub}
+
+The @{b}Stop@{ub} button sits below the tabs so it is available in every mode. It aborts speech playback and any in-flight chat, image or speech request, then restores that mode to the state it had before the request.
 
 @{b}@{u}The status bar@{uu}@{ub}
 
@@ -468,7 +483,7 @@ Attachments still work. AmigaGPT falls back to guessing the type from the file n
 @node conlist "The conversation list"
 @{b}@{fg shine}The conversation list@{fg text}@{ub}
 
-The list down the left hand side of the window in Chat Mode holds every conversation you have had. Click an entry to go back to it; the whole transcript is restored, and anything you say next continues that conversation.
+The list down the left hand side of the window in Chat holds every conversation you have had. Click an entry to go back to it; the whole transcript is restored, and anything you say next continues that conversation.
 
 - @{b}New Chat@{ub} starts a fresh conversation
 - @{b}Delete Chat@{ub} removes the selected one
@@ -481,7 +496,7 @@ The daemon keeps its own separate history. See @{"The AmigaGPTD daemon" link dae
 @node images "Generating images"
 @{b}@{fg shine}Generating images@{fg text}@{ub}
 
-Switch to @{b}Image Generation Mode@{ub} with the tab at the top left of the window.
+Switch to @{b}Image@{ub} with the tab at the top left of the window.
 
 - Open @{b}Image Provider Settings...@{ub} from the @{b}Image@{ub} menu to choose the provider, the model, the image size and the file format
 - Type a description of the picture you want into the prompt field
@@ -790,7 +805,9 @@ AmigaGPT can read the assistant's replies aloud, and can speak arbitrary text on
 
 @{b}@{u}Turning it on@{uu}@{ub}
 
-Tick @{b}Enabled@{ub} in the @{b}Speech@{ub} menu. Speech runs in the background, so the application stays responsive while it is talking, and the @{b}Stop speaking@{ub} button interrupts it at any point.
+Tick @{b}Enabled@{ub} in the @{b}Speech@{ub} menu. Speech runs in the background, so the application stays responsive while it is talking, and the @{b}Stop@{ub} button interrupts playback or an in-flight request at any point.
+
+The @{b}Speech@{ub} tab generates reusable WAV files without playing them. See @{"The main window" link mainwindow}.
 
 If speech is switched off, AmigaGPT does not open the speech device at all, so a machine without AHI installed sees no error at startup.
 
@@ -1139,7 +1156,7 @@ Speaks the given text aloud, or writes it to an audio file.
 - @{b}INSTRUCTIONS@{ub} or @{b}I@{ub} - delivery instructions for the OpenAI voices
 - @{b}APIKEY@{ub} or @{b}K@{ub} - use this key instead of the profile's
 - @{b}OUTPUT@{ub} or @{b}O@{ub} - write the audio to this file instead of playing it
-- @{b}FORMAT@{ub} or @{b}F@{ub} - the audio format for OUTPUT. Use @{b}LISTAUDIOFORMATS@{ub}. The default is mp3. Ignored when OUTPUT is not given.
+- @{b}FORMAT@{ub} or @{b}F@{ub} - the audio format for OUTPUT. Use @{b}LISTAUDIOFORMATS@{ub}. The accepted values are @{b}wav@{ub} and @{b}pcm@{ub}. The default is wav. Ignored when OUTPUT is not given. When OUTPUT is given the text is synthesised silently and is not played.
 - @{b}PROMPT@{ub} or @{b}P@{ub} - required. The text to speak. Takes the rest of the line.
 
 @{b}@{u}Examples@{uu}@{ub}
@@ -1198,7 +1215,7 @@ Lists every image size AmigaGPT knows about.
 
 @{b}@{u}LISTAUDIOFORMATS@{uu}@{ub}
 
-Lists the audio formats SPEAKTEXT can write: pcm, mp3, opus, wav, aac and flac.
+Lists the audio formats SPEAKTEXT can write: wav and pcm.
 
   LISTAUDIOFORMATS
 

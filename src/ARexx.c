@@ -2703,10 +2703,7 @@ MakeHook(ListVoicesHook, ListVoicesFunc);
 
 HOOKPROTONHNO(ListAudioFormatsFunc, APTR, ULONG *arg) {
     STRPTR formats = AllocVec(1024, MEMF_ANY | MEMF_CLEAR);
-    for (UBYTE i = 0; AUDIO_FORMAT_NAMES[i] != NULL; i++) {
-        strncat(formats, AUDIO_FORMAT_NAMES[i], 1024);
-        strncat(formats, "\n", 1024);
-    }
+    strncpy(formats, "wav\npcm\n", 1023);
     set(app, MUIA_Application_RexxString, formats);
     FreeVec(formats);
     return RETURN_OK;
@@ -2832,14 +2829,19 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
             }
         }
     }
-    AudioFormat audioFormat = AUDIO_FORMAT_MP3;
+    AudioFormat audioFormat = AUDIO_FORMAT_WAV;
     if (audioFormatString != NULL && strlen(audioFormatString) > 0) {
-        for (UBYTE i = 0; AUDIO_FORMAT_NAMES[i] != NULL; i++) {
-            printf("AUDIO_FORMAT_NAMES[%d]: %s\n", i, AUDIO_FORMAT_NAMES[i]);
-            if (strcasecmp(audioFormatString, AUDIO_FORMAT_NAMES[i]) == 0) {
-                audioFormat = i;
-                break;
-            }
+        if (strcasecmp(audioFormatString, "wav") == 0) {
+            audioFormat = AUDIO_FORMAT_WAV;
+        } else if (strcasecmp(audioFormatString, "pcm") == 0 ||
+                   strcasecmp(audioFormatString, "raw") == 0) {
+            audioFormat = AUDIO_FORMAT_PCM;
+        } else {
+            configFreeSpeechRequestSettings(&speechSettings);
+            set(app, MUIA_Application_RexxString,
+                "FORMAT must be WAV or PCM.");
+            updateStatusBar(STRING_ERROR, redPen);
+            return RETURN_ERROR;
         }
     }
 
@@ -2868,7 +2870,8 @@ HOOKPROTONHNO(SpeakTextFunc, APTR, ULONG *arg) {
         updateStatusBar(STRING_ERROR, redPen);
         return RETURN_ERROR;
     }
-    set(app, MUIA_Application_RexxString, prompt);
+    set(app, MUIA_Application_RexxString,
+        output != NULL && strlen(output) > 0 ? output : prompt);
     updateStatusBar(STRING_READY, greenPen);
     return RETURN_OK;
 }

@@ -2092,6 +2092,130 @@ msgctxt "STRING_ERROR_NOT_AN_IMAGE (392//)"
 msgid "Only image files can be used as reference images."
 msgstr "Nur Bilddateien können als Referenzbilder verwendet werden."
 
+#: src/MainWindow.c
+msgctxt "STRING_STOP (393//)"
+msgid "Stop"
+msgstr "Stop"
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_NEW_PHRASE (394//)"
+msgid "New Phrase"
+msgstr "Neues Profil"
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_DELETE_PHRASE (395//)"
+msgid "Delete Phrase"
+msgstr "Chat löschen"
+
+#: src/MainWindow.c
+msgctxt "STRING_GENERATE_SPEECH (396//)"
+msgid "Generate"
+msgstr "Generate"
+
+#: src/MainWindow.c
+msgctxt "STRING_REGENERATE (397//)"
+msgid "Regenerate"
+msgstr "Regenerate"
+
+#: src/MainWindow.c
+msgctxt "STRING_PLAY (398//)"
+msgid "Play"
+msgstr "Play"
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_SAVE_SPEECH_COPY (399//)"
+msgid "Save Speech Copy"
+msgstr "Bildkopie speichern"
+
+#: src/MainWindow.c
+msgctxt "STRING_GENERATE_TEXT_WITH_AI (400//)"
+msgid "Generate text with AI"
+msgstr "Generate text with AI"
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEAK_CONTENTS_OF_FILES (401//)"
+msgid "Speak contents of files"
+msgstr "Speak contents of files"
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_GENERATING_SPEECH (402//)"
+msgid "Generating speech..."
+msgstr "Bildname wird generiert ..."
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_SPEECH_HISTORY_CREATE (403//)"
+msgid "Failed to create speech history file. Phrase history will not be saved."
+msgstr ""
+"Erstellen der Bildverlaufsdatei fehlgeschlagen. Der Bildverlauf wird nicht "
+"gespeichert."
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_SPEECH_HISTORY_WRITE (404//)"
+msgid ""
+"Failed to write to speech history file. Phrase history will not be saved."
+msgstr ""
+"Schreiben in Bildverlaufsdatei fehlgeschlagen. Bildverlauf wird nicht "
+"gespeichert."
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_SPEECH_HISTORY_READ (405//)"
+msgid ""
+"Failed to read from speech history file. Phrase history will not be loaded"
+msgstr ""
+"Fehler beim Lesen aus der Nachrichtenverlaufsdatei. Der Konversationsverlauf "
+"wird nicht geladen."
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP (406//)"
+msgid ""
+"Failed to parse speech history. Malformed JSON. The speech-history.json file "
+"is probably corrupted. Phrase history will not be loaded. A backup of the "
+"speech-history.json file has been created as speech-history.json.bak"
+msgstr ""
+"Chatverlauf konnte nicht analysiert werden. Fehlerhaftes JSON. Die Datei "
+"chat-history.json ist wahrscheinlich beschädigt. Der Konversationsverlauf "
+"wird nicht geladen. Eine Sicherungskopie der Datei chat-history.json wurde "
+"als chat-history.json.bak erstellt."
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM (407//)"
+msgid ""
+"Failed to parse speech history. Malformed JSON. The speech-history.json file "
+"is probably corrupted. Phrase history will not be loaded. There was an error "
+"writing a backup of the speech history to disk but a copy has been saved to "
+"RAM:speech-history.json"
+msgstr ""
+"Chatverlauf konnte nicht analysiert werden. Fehlerhaftes JSON. Die Datei "
+"chat-history.json ist wahrscheinlich beschädigt. Der Gesprächsverlauf wird "
+"nicht geladen. Beim Schreiben einer Sicherungskopie des Chatverlaufs auf die "
+"Festplatte ist ein Fehler aufgetreten, aber eine Kopie wurde im RAM "
+"gespeichert: chat-history.json.bak"
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
+msgid ""
+"Failed to parse speech history. The speech-history.json file is probably "
+"corrupted. Phrase history will not be loaded."
+msgstr ""
+"Chatverlauf konnte nicht analysiert werden. Die Datei chat-history.json ist "
+"wahrscheinlich beschädigt. Der Konversationsverlauf wird nicht geladen."
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_REQUEST_CANCELLED (409//)"
+msgid "Request cancelled"
+msgstr "Angefordert"
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Stimme"

@@ -172,6 +172,9 @@ static BOOL responseHasFunctionCall(struct json_object *response);
 static void capturePendingFunctionCalls(struct json_object *response);
 static struct ConversationNode *
 getLastNonSystemConversationMessage(struct Conversation *conversation);
+static void pumpRequestInterface(void);
+
+static volatile BOOL requestCancelled = FALSE;
 
 struct Library *SocketBase;
 #if defined(__AMIGAOS3__) || defined(__AMIGAOS4__)
@@ -605,6 +608,31 @@ static void closeActiveResponseConnection(void) {
         SSL_free(ssl);
         ssl = NULL;
     }
+}
+
+void beginCancellableRequest(void) {
+    requestCancelled = FALSE;
+}
+
+void endCancellableRequest(void) {}
+
+void cancelActiveRequest(void) {
+    requestCancelled = TRUE;
+    closeActiveResponseConnection();
+}
+
+BOOL isRequestCancelled(void) { return requestCancelled; }
+
+static void pumpRequestInterface(void) {
+#ifndef DAEMON
+    ULONG signals = 0;
+    if (loadingBar != NULL)
+        pumpRequestInterface();
+    if (app != NULL)
+        DoMethod(app, MUIM_Application_NewInput, &signals);
+#endif
+    if (requestCancelled)
+        closeActiveResponseConnection();
 }
 
 static BOOL responseMarksStreamFinished(struct json_object *response) {
@@ -1573,7 +1601,7 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
              * buffer and the server never sees a complete request. */
             Delay(1);
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
         }
 
@@ -1599,7 +1627,7 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
             waitForSocketWritable();
             Delay(1);
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
         }
     }
@@ -4579,7 +4607,7 @@ struct json_object **postChatMessageToOpenAI(
             clearHttpReadBuffer();
         while (!doneReading) {
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
             /* IMPORTANT:
              * In streaming mode, we may already have one-or-more complete SSE
@@ -5349,7 +5377,7 @@ static BOOL writeStreamedRequestPiece(BOOL useSSL, const UBYTE *data,
             }
         }
 #ifndef DAEMON
-        DoMethod(loadingBar, MUIM_Busy_Move);
+        pumpRequestInterface();
 #endif
     }
     return TRUE;
@@ -5410,7 +5438,7 @@ static void finishStreamedRequest(BOOL useSSL, ULONG sentTotal) {
             waitForSocketWritable();
             Delay(1);
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
         }
     }
@@ -6077,7 +6105,7 @@ struct json_object *postImageCreationRequestToOpenAI(
 
         while (!doneReading) {
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
             if (requestUsesSSL) {
                 ERR_clear_error();
@@ -6608,7 +6636,7 @@ ULONG downloadFile(CONST_STRPTR url, CONST_STRPTR destination, BOOL useProxy,
 
         while (!doneReading) {
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
             if (useSSL) {
                 ERR_clear_error();
@@ -7375,7 +7403,7 @@ APTR postTextToSpeechRequestToOpenAI(
         headerAccum[0] = '\0';
         while (ha < sizeof(headerAccum) - 1) {
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
             ERR_clear_error();
             LONG hbr = useSSL ? SSL_read(ssl, headerAccum + ha,
@@ -7474,7 +7502,7 @@ APTR postTextToSpeechRequestToOpenAI(
             *audioLength = got;
             while (*audioLength < need) {
 #ifndef DAEMON
-                DoMethod(loadingBar, MUIM_Busy_Move);
+                pumpRequestInterface();
 #endif
                 ULONG space = need - *audioLength;
                 if (space > READ_BUFFER_LENGTH - 1)
@@ -7521,7 +7549,7 @@ APTR postTextToSpeechRequestToOpenAI(
             }
             while (1) {
 #ifndef DAEMON
-                DoMethod(loadingBar, MUIM_Busy_Move);
+                pumpRequestInterface();
 #endif
                 memset(readBuffer, 0, READ_BUFFER_LENGTH);
                 ERR_clear_error();
@@ -7581,7 +7609,7 @@ APTR postTextToSpeechRequestToOpenAI(
 
         while (!doneReading) {
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
             BOOL readFromSeed = FALSE;
             if (useSeed) {
@@ -8194,7 +8222,7 @@ APTR postTextToSpeechRequestToElevenLabs(
 
     while (ha < sizeof(headerAccum) - 1) {
 #ifndef DAEMON
-        DoMethod(loadingBar, MUIM_Busy_Move);
+        pumpRequestInterface();
 #endif
         ERR_clear_error();
         LONG br = useSSL ? SSL_read(ssl, headerAccum + ha,
@@ -8283,7 +8311,7 @@ APTR postTextToSpeechRequestToElevenLabs(
         *audioLength = got;
         while (*audioLength < need) {
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
             ULONG space = need - *audioLength;
             if (space > READ_BUFFER_LENGTH - 1)
@@ -8327,7 +8355,7 @@ APTR postTextToSpeechRequestToElevenLabs(
         }
         while (1) {
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
             memset(readBuffer, 0, READ_BUFFER_LENGTH);
             ERR_clear_error();
@@ -8387,7 +8415,7 @@ APTR postTextToSpeechRequestToElevenLabs(
 
         while (!doneReading) {
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
             BOOL readFromSeed = FALSE;
             if (useSeed) {
@@ -8788,7 +8816,7 @@ APTR postTextToSpeechRequestToXAI(
 
     while (ha < sizeof(headerAccum) - 1) {
 #ifndef DAEMON
-        DoMethod(loadingBar, MUIM_Busy_Move);
+        pumpRequestInterface();
 #endif
         ERR_clear_error();
         LONG br = useSSL ? SSL_read(ssl, headerAccum + ha,
@@ -8886,7 +8914,7 @@ APTR postTextToSpeechRequestToXAI(
         *audioLength = got;
         while (*audioLength < need) {
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
             ULONG space = need - *audioLength;
             if (space > READ_BUFFER_LENGTH - 1)
@@ -8929,7 +8957,7 @@ APTR postTextToSpeechRequestToXAI(
         }
         while (1) {
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
             memset(readBuffer, 0, READ_BUFFER_LENGTH);
             ERR_clear_error();
@@ -8988,7 +9016,7 @@ APTR postTextToSpeechRequestToXAI(
 
         while (!doneReading) {
 #ifndef DAEMON
-            DoMethod(loadingBar, MUIM_Busy_Move);
+            pumpRequestInterface();
 #endif
             BOOL readFromSeed = FALSE;
             if (useSeed) {
@@ -10321,7 +10349,7 @@ struct json_object *postToolResultsToOpenAI(
 
     while (!doneReading) {
 #ifndef DAEMON
-        DoMethod(loadingBar, MUIM_Busy_Move);
+        pumpRequestInterface();
 #endif
         if (useSSL) {
             ERR_clear_error();

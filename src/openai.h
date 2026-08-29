@@ -374,6 +374,28 @@ extern CONST_STRPTR IMAGE_FORMAT_NAMES[];
 LONG initOpenAIConnector();
 
 /**
+ * Mark the start of a cancellable network request. Clears any previous
+ * cancellation flag so a later Stop click applies only to this request.
+ **/
+void beginCancellableRequest(void);
+
+/**
+ * Mark the end of a cancellable network request.
+ **/
+void endCancellableRequest(void);
+
+/**
+ * Abort the in-flight network request by closing its socket/TLS session.
+ * Safe to call when no request is active.
+ **/
+void cancelActiveRequest(void);
+
+/**
+ * TRUE if the current request was cancelled with cancelActiveRequest().
+ **/
+BOOL isRequestCancelled(void);
+
+/**
  * Get the chat models from the OpenAI API
  * @param host the host to use
  * @param port the port to use

@@ -89,6 +89,15 @@ BOOL speakTextWithSettings(STRPTR text, CONST_STRPTR output,
                            const struct SpeechRequestSettings *settings);
 
 /**
+ * Play a saved mono PCM WAV file through AHI without contacting a speech
+ * provider.
+ **/
+BOOL playSpeechFile(CONST_STRPTR filename);
+
+/** Stop any narrator, flite or AHI playback currently in progress. */
+void stopSpeech();
+
+/**
  * Close the speech system
  **/
 void closeSpeech();

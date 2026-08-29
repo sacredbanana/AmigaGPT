@@ -225,8 +225,9 @@ GUI opens a small RxMUI window instead of printing to the Shell, NEWCHAT
 clears the conversation history first, and PROFILE (or PR) picks a particular
 chat profile. With no question at all, AskGPT asks you what you want to know.
 
-There are 2 main modes of operation: Chat and Image Generation. You can switch
-between them via the tabs in the top left corner.
+There are 3 main modes of operation: Chat, Image and Speech. You can switch
+between them via the tabs in the top left corner. The Stop button is shared
+by every mode and aborts the request that is currently in progress.
 
 *Image Generation*
 
@@ -249,6 +250,20 @@ When a picture comes back, "Edit..." starts a fresh prompt with that picture
 already attached as a reference, so refining a result you have just generated
 takes one click. Creating the image then adds a new entry to the list rather
 than replacing the one you started from.
+
+*Speech*
+
+The Speech tab generates spoken audio with the active speech profile and
+saves it under AMIGAGPT:speech/ instead of playing it automatically. Type a
+phrase, optionally attach files, and press Generate. Each phrase is listed on
+the left, titled with the first 32 characters of the text. Play only plays
+the already-saved WAV file. Regenerate replaces the selected phrase's file.
+Save Speech Copy writes a copy somewhere else on your Amiga.
+
+Generate text with AI sends the current text and any attached files through
+the active chat profile and replaces the editor contents with the returned
+text. It then unchecks Speak contents of files; you can tick that box again
+if you still want attached files spoken together with the rewritten text.
 
 *Shell Tool*
 

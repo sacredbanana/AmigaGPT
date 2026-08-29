@@ -18,6 +18,7 @@
 #include "gui.h"
 #include "menu.h"
 #include "MainWindow.h"
+#include "openai.h"
 #include "speech.h"
 #include <dos/dos.h>
 
@@ -66,6 +67,19 @@ Object *editImageButton;
 Object *attachReferenceImagesButton;
 Object *clearReferenceImagesButton;
 Object *referenceImageSummaryText;
+Object *speechInputTextEditor;
+Object *speechListObject;
+Object *newSpeechButton;
+Object *deleteSpeechButton;
+Object *generateSpeechButton;
+Object *regenerateSpeechButton;
+Object *playSpeechButton;
+Object *saveSpeechCopyButton;
+Object *generateSpeechTextButton;
+Object *attachSpeechFilesButton;
+Object *clearSpeechFilesButton;
+Object *speechAttachmentSummaryText;
+Object *speakFileContentsCheckbox;
 Object *modeRegisterGroup;
 STRPTR chatOutputTextEditorContents = NULL;
 static ULONG chatOutputTextEditorContentsCapacity =
@@ -74,10 +88,18 @@ static struct MinList pendingChatFiles;
 static BOOL pendingChatFilesInitialized = FALSE;
 static struct MinList pendingImageFiles;
 static BOOL pendingImageFilesInitialized = FALSE;
+static struct MinList pendingSpeechFiles;
+static BOOL pendingSpeechFilesInitialized = FALSE;
 WORD pens[NUMDRIPENS + 1];
 struct Conversation *currentConversation = NULL;
 struct GeneratedImage *currentImage = NULL;
-static STRPTR pages[3] = {NULL};
+struct GeneratedSpeech {
+    STRPTR title;
+    STRPTR filePath;
+    STRPTR text;
+};
+static struct GeneratedSpeech *currentSpeech = NULL;
+static STRPTR pages[4] = {NULL};
 
 struct Conversation *newConversation();
 static struct Conversation *copyConversation(struct Conversation *conversation);
@@ -88,6 +110,11 @@ static LONG loadConversations();
 static LONG saveConversations();
 static LONG loadImages();
 static LONG saveImages();
+static LONG loadSpeechHistory();
+static LONG saveSpeechHistory();
+static void updateSpeechControls();
+static void setImageGenerationControlsDisabled(BOOL disabled);
+static void generateSpeech(BOOL regenerate);
 static void openImage(struct GeneratedImage *image, WORD scaledWidth,
                       WORD scaledHeight);
 static void initStyleStack(StyleStack *s);
@@ -166,6 +193,159 @@ static void updateReferenceImageControls() {
     set(clearReferenceImagesButton, MUIA_Disabled, count == 0);
 }
 
+static STRPTR duplicateEditorText(Object *editor) {
+    STRPTR source = NULL;
+    STRPTR copy;
+    BOOL freeSource = FALSE;
+
+    if (editor == NULL)
+        return NULL;
+    if (isAROS) {
+        get(editor, MUIA_String_Contents, &source);
+    } else {
+        source = (STRPTR)DoMethod(editor, MUIM_TextEditor_ExportText);
+        freeSource = source != NULL;
+    }
+    if (source == NULL)
+        source = (STRPTR)"";
+    copy = AllocVec(strlen(source) + 1, MEMF_ANY | MEMF_CLEAR);
+    if (copy != NULL)
+        strcpy(copy, source);
+    if (freeSource)
+        FreeVec(source);
+    return copy;
+}
+
+static void setEditorText(Object *editor, CONST_STRPTR text) {
+    if (editor == NULL)
+        return;
+    if (isAROS)
+        set(editor, MUIA_String_Contents, text != NULL ? text : "");
+    else
+        set(editor, MUIA_TextEditor_Contents, text != NULL ? text : "");
+}
+
+static void deleteDiskFile(CONST_STRPTR path) {
+    if (path == NULL || strlen(path) == 0)
+        return;
+#if defined(__AMIGAOS3__) || defined(__MORPHOS__)
+    DeleteFile(path);
+#else
+    Delete(path);
+#endif
+}
+
+static void updateSpeechControls() {
+    ULONG count = pendingSpeechFilesInitialized
+                      ? chatFileCount(&pendingSpeechFiles)
+                      : 0;
+    UBYTE summary[128];
+    STRPTR text = duplicateEditorText(speechInputTextEditor);
+    BOOL hasText = text != NULL && strlen(text) > 0;
+    ULONG speakFiles = FALSE;
+    BOOL canGenerate;
+
+    if (count == 0)
+        strcpy(summary, STRING_NO_FILES_ATTACHED);
+    else
+        snprintf(summary, sizeof(summary), STRING_FILES_ATTACHED_FORMAT,
+                 count);
+    if (speechAttachmentSummaryText != NULL)
+        set(speechAttachmentSummaryText, MUIA_Text_Contents, summary);
+    if (clearSpeechFilesButton != NULL)
+        set(clearSpeechFilesButton, MUIA_Disabled, count == 0);
+    if (speakFileContentsCheckbox != NULL) {
+        set(speakFileContentsCheckbox, MUIA_Disabled, count == 0);
+        if (count == 0)
+            set(speakFileContentsCheckbox, MUIA_Selected, FALSE);
+        get(speakFileContentsCheckbox, MUIA_Selected, &speakFiles);
+    }
+    canGenerate = hasText || (count > 0 && speakFiles);
+    if (generateSpeechTextButton != NULL)
+        set(generateSpeechTextButton, MUIA_Disabled, !hasText);
+    if (generateSpeechButton != NULL)
+        set(generateSpeechButton, MUIA_Disabled, !canGenerate);
+    if (regenerateSpeechButton != NULL)
+        set(regenerateSpeechButton, MUIA_Disabled,
+            !canGenerate || currentSpeech == NULL);
+    if (playSpeechButton != NULL)
+        set(playSpeechButton, MUIA_Disabled, currentSpeech == NULL);
+    if (saveSpeechCopyButton != NULL)
+        set(saveSpeechCopyButton, MUIA_Disabled, currentSpeech == NULL);
+    if (text != NULL)
+        FreeVec(text);
+}
+
+static void setSpeechGenerationControlsDisabled(BOOL disabled) {
+    ULONG count = pendingSpeechFilesInitialized
+                      ? chatFileCount(&pendingSpeechFiles)
+                      : 0;
+    if (newSpeechButton != NULL)
+        set(newSpeechButton, MUIA_Disabled, disabled);
+    if (deleteSpeechButton != NULL)
+        set(deleteSpeechButton, MUIA_Disabled, disabled);
+    if (speechInputTextEditor != NULL)
+        set(speechInputTextEditor, MUIA_Disabled, disabled);
+    if (attachSpeechFilesButton != NULL)
+        set(attachSpeechFilesButton, MUIA_Disabled, disabled);
+    if (clearSpeechFilesButton != NULL)
+        set(clearSpeechFilesButton, MUIA_Disabled, disabled || count == 0);
+    if (generateSpeechButton != NULL)
+        set(generateSpeechButton, MUIA_Disabled, disabled);
+    if (regenerateSpeechButton != NULL)
+        set(regenerateSpeechButton, MUIA_Disabled, disabled);
+    if (playSpeechButton != NULL)
+        set(playSpeechButton, MUIA_Disabled, disabled);
+    if (saveSpeechCopyButton != NULL)
+        set(saveSpeechCopyButton, MUIA_Disabled, disabled);
+    if (generateSpeechTextButton != NULL)
+        set(generateSpeechTextButton, MUIA_Disabled, disabled);
+    if (speechListObject != NULL)
+        set(speechListObject, MUIA_Disabled, disabled);
+}
+
+static void setChatControlsDisabled(BOOL disabled) {
+    if (sendMessageButton != NULL)
+        set(sendMessageButton, MUIA_Disabled, disabled);
+    if (newChatButton != NULL)
+        set(newChatButton, MUIA_Disabled, disabled);
+    if (deleteChatButton != NULL)
+        set(deleteChatButton, MUIA_Disabled, disabled);
+    if (chatInputTextEditor != NULL)
+        set(chatInputTextEditor, MUIA_Disabled, disabled);
+    if (attachFilesButton != NULL)
+        set(attachFilesButton, MUIA_Disabled, disabled);
+    if (clearAttachmentsButton != NULL)
+        set(clearAttachmentsButton, MUIA_Disabled,
+            disabled || !pendingChatFilesInitialized ||
+                chatFileCount(&pendingChatFiles) == 0);
+    if (conversationListObject != NULL)
+        set(conversationListObject, MUIA_Disabled, disabled);
+}
+
+static void setRequestInterfaceBusy(BOOL busy) {
+    if (modeRegisterGroup != NULL)
+        set(modeRegisterGroup, MUIA_Disabled, busy);
+    setChatControlsDisabled(busy);
+    setImageGenerationControlsDisabled(busy);
+    setSpeechGenerationControlsDisabled(busy);
+}
+
+static void finishActiveRequest(BOOL restoreReadyStatus) {
+    BOOL cancelled = isRequestCancelled();
+    endCancellableRequest();
+    setRequestInterfaceBusy(FALSE);
+    hideLoadingBar();
+    if (cancelled)
+        updateStatusBar(STRING_REQUEST_CANCELLED, yellowPen);
+    else if (restoreReadyStatus)
+        updateStatusBar(STRING_READY, greenPen);
+    updateAttachmentControls();
+    updateReferenceImageControls();
+    updateSpeechControls();
+    updateResponseFileControl();
+}
+
 /* Everything the user can touch while an image request is in flight. Clear is
  * a special case: it stays disabled afterwards when there is nothing to clear.
  */
@@ -216,6 +396,10 @@ void freeMainWindowFileState() {
     if (pendingImageFilesInitialized) {
         freeChatFiles(&pendingImageFiles);
         pendingImageFilesInitialized = FALSE;
+    }
+    if (pendingSpeechFilesInitialized) {
+        freeChatFiles(&pendingSpeechFiles);
+        pendingSpeechFilesInitialized = FALSE;
     }
 }
 
@@ -379,6 +563,50 @@ HOOKPROTONHNO(DisplayImageLI_TextFunc, void, struct NList_DisplayMessage *ndm) {
 }
 MakeHook(DisplayImageLI_TextHook, DisplayImageLI_TextFunc);
 
+HOOKPROTONHNO(ConstructSpeechLI_TextFunc, APTR,
+              struct NList_ConstructMessage *ncm) {
+    return ncm->entry;
+}
+MakeHook(ConstructSpeechLI_TextHook, ConstructSpeechLI_TextFunc);
+
+HOOKPROTONHNO(DestructSpeechLI_TextFunc, void,
+              struct NList_DestructMessage *ndm) {
+    struct GeneratedSpeech *entry =
+        (struct GeneratedSpeech *)ndm->entry;
+    if (entry != NULL) {
+        if (entry->title != NULL)
+            FreeVec(entry->title);
+        if (entry->filePath != NULL)
+            FreeVec(entry->filePath);
+        if (entry->text != NULL)
+            FreeVec(entry->text);
+        FreeVec(entry);
+    }
+}
+MakeHook(DestructSpeechLI_TextHook, DestructSpeechLI_TextFunc);
+
+HOOKPROTONHNO(DisplaySpeechLI_TextFunc, void,
+              struct NList_DisplayMessage *ndm) {
+    struct GeneratedSpeech *entry =
+        (struct GeneratedSpeech *)ndm->entry;
+    ndm->strings[0] = entry != NULL && entry->title != NULL
+                          ? entry->title
+                          : (STRPTR)"";
+}
+MakeHook(DisplaySpeechLI_TextHook, DisplaySpeechLI_TextFunc);
+
+HOOKPROTONHNONP(SpeechRowClickedFunc, void) {
+    struct GeneratedSpeech *entry = NULL;
+    DoMethod(speechListObject, MUIM_NList_GetEntry,
+             MUIV_NList_GetEntry_Active, &entry);
+    if (entry != NULL) {
+        currentSpeech = entry;
+        setEditorText(speechInputTextEditor, entry->text);
+    }
+    updateSpeechControls();
+}
+MakeHook(SpeechRowClickedHook, SpeechRowClickedFunc);
+
 HOOKPROTONHNONP(ConversationRowClickedFunc, void) {
     set(chatInputTextEditor, MUIA_TextEditor_FixedFont, TRUE);
     struct Conversation *conversation;
@@ -540,6 +768,378 @@ HOOKPROTONHNONP(ClearReferenceImagesButtonClickedFunc, void) {
 MakeHook(ClearReferenceImagesButtonClickedHook,
          ClearReferenceImagesButtonClickedFunc);
 
+static STRPTR readSpeechFile(CONST_STRPTR path) {
+    BPTR file;
+    LONG length;
+    STRPTR contents;
+    LONG i;
+
+    if (path == NULL)
+        return NULL;
+    file = Open(path, MODE_OLDFILE);
+    if (file == 0)
+        return NULL;
+#ifdef __AMIGAOS3__
+    Seek(file, 0, OFFSET_END);
+    length = Seek(file, 0, OFFSET_BEGINNING);
+#elif defined(__AMIGAOS4__)
+    length = (LONG)GetFileSize(file);
+#else
+    {
+        struct FileInfoBlock fib;
+        ExamineFH64(file, &fib, NULL);
+        length = (LONG)fib.fib_Size;
+    }
+#endif
+    if (length <= 0 || length > 8 * 1024 * 1024) {
+        Close(file);
+        return NULL;
+    }
+    contents = AllocVec(length + 1, MEMF_ANY | MEMF_CLEAR);
+    if (contents == NULL || Read(file, contents, length) != length) {
+        if (contents != NULL)
+            FreeVec(contents);
+        Close(file);
+        return NULL;
+    }
+    Close(file);
+    for (i = 0; i < length; i++) {
+        if (contents[i] == '\0')
+            contents[i] = ' ';
+    }
+    return contents;
+}
+
+static STRPTR buildSpeechText(void) {
+    STRPTR result = duplicateEditorText(speechInputTextEditor);
+    ULONG selected = FALSE;
+    struct ChatFile *file;
+
+    if (result == NULL)
+        return NULL;
+    get(speakFileContentsCheckbox, MUIA_Selected, &selected);
+    if (!selected)
+        return result;
+
+    for (file = (struct ChatFile *)pendingSpeechFiles.mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        STRPTR contents = readSpeechFile(file->path);
+        STRPTR expanded;
+        ULONG oldLength;
+        ULONG addLength;
+        if (contents == NULL)
+            continue;
+        oldLength = strlen(result);
+        addLength = strlen(contents);
+        expanded = AllocVec(oldLength + addLength + 3,
+                            MEMF_ANY | MEMF_CLEAR);
+        if (expanded != NULL) {
+            strcpy(expanded, result);
+            if (oldLength > 0)
+                strcat(expanded, "\n\n");
+            strcat(expanded, contents);
+            FreeVec(result);
+            result = expanded;
+        }
+        FreeVec(contents);
+    }
+    return result;
+}
+
+static STRPTR speechTitle(CONST_STRPTR text) {
+    ULONG length = text != NULL ? strlen(text) : 0;
+    STRPTR title;
+    if (length > 32)
+        length = 32;
+    title = AllocVec(length + 1, MEMF_ANY | MEMF_CLEAR);
+    if (title != NULL && length > 0)
+        memcpy(title, text, length);
+    return title;
+}
+
+static void generateSpeech(BOOL regenerate) {
+    STRPTR text;
+    UBYTE path[64];
+    UBYTE id[12];
+    CONST_STRPTR idChars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    struct GeneratedSpeech *entry;
+    AudioFormat format = AUDIO_FORMAT_WAV;
+    BPTR speechDir;
+    UBYTE i;
+    struct SpeechRequestSettings settings;
+    BOOL generated;
+    BOOL createdNewEntry = FALSE;
+
+    memset(id, 0, sizeof(id));
+    memset(path, 0, sizeof(path));
+    entry = regenerate ? currentSpeech : NULL;
+    text = buildSpeechText();
+    if (text == NULL || strlen(text) == 0) {
+        if (text != NULL)
+            FreeVec(text);
+        return;
+    }
+    speechDir = CreateDir("AMIGAGPT:speech");
+    if (speechDir != 0)
+        UnLock(speechDir);
+    if (entry != NULL && entry->filePath != NULL) {
+        strncpy(path, entry->filePath, sizeof(path) - 1);
+        path[sizeof(path) - 1] = '\0';
+    } else {
+        srand(time(NULL));
+        for (i = 0; i < 10; i++)
+            id[i] = idChars[rand() % strlen(idChars)];
+        snprintf(path, sizeof(path), "AMIGAGPT:speech/%s.wav", id);
+    }
+
+    beginCancellableRequest();
+    setRequestInterfaceBusy(TRUE);
+    updateStatusBar(STRING_GENERATING_SPEECH, yellowPen);
+    showLoadingBar();
+    configGetSpeechRequestSettings(&settings);
+    generated = speakTextWithSettings(text, path, &format, &settings);
+    configFreeSpeechRequestSettings(&settings);
+    if (!generated || isRequestCancelled()) {
+        if (entry == NULL)
+            deleteDiskFile(path);
+        FreeVec(text);
+        finishActiveRequest(generated && !isRequestCancelled());
+        return;
+    }
+
+    if (entry == NULL) {
+        entry = AllocVec(sizeof(*entry), MEMF_ANY | MEMF_CLEAR);
+        if (entry == NULL) {
+            deleteDiskFile(path);
+            FreeVec(text);
+            finishActiveRequest(FALSE);
+            displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+            return;
+        }
+        entry->filePath = AllocVec(strlen(path) + 1, MEMF_ANY | MEMF_CLEAR);
+        if (entry->filePath != NULL)
+            strcpy(entry->filePath, path);
+        else {
+            deleteDiskFile(path);
+            FreeVec(entry);
+            FreeVec(text);
+            finishActiveRequest(FALSE);
+            displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+            return;
+        }
+        DoMethod(speechListObject, MUIM_NList_InsertSingle, entry,
+                 MUIV_NList_Insert_Top);
+        DoMethod(speechListObject, MUIM_NList_SetActive, 0, NULL);
+        createdNewEntry = TRUE;
+    } else {
+        if (entry->text != NULL)
+            FreeVec(entry->text);
+        if (entry->title != NULL)
+            FreeVec(entry->title);
+    }
+    entry->text = text;
+    entry->title = speechTitle(text);
+    currentSpeech = entry;
+    DoMethod(speechListObject, MUIM_NList_Redraw, MUIV_NList_Redraw_Active);
+    if (saveSpeechHistory() != RETURN_OK && createdNewEntry)
+        deleteDiskFile(path);
+    finishActiveRequest(TRUE);
+}
+
+HOOKPROTONHNONP(NewSpeechButtonClickedFunc, void) {
+    currentSpeech = NULL;
+    setEditorText(speechInputTextEditor, "");
+    freeChatFiles(&pendingSpeechFiles);
+    updateSpeechControls();
+    DoMethod(speechInputTextEditor, MUIM_GoActive);
+}
+MakeHook(NewSpeechButtonClickedHook, NewSpeechButtonClickedFunc);
+
+HOOKPROTONHNONP(DeleteSpeechButtonClickedFunc, void) {
+    struct GeneratedSpeech *entry = NULL;
+    DoMethod(speechListObject, MUIM_NList_GetEntry,
+             MUIV_NList_GetEntry_Active, &entry);
+    if (entry != NULL && entry->filePath != NULL)
+        deleteDiskFile(entry->filePath);
+    DoMethod(speechListObject, MUIM_NList_Remove, MUIV_NList_Remove_Active);
+    currentSpeech = NULL;
+    setEditorText(speechInputTextEditor, "");
+    saveSpeechHistory();
+    updateSpeechControls();
+}
+MakeHook(DeleteSpeechButtonClickedHook, DeleteSpeechButtonClickedFunc);
+
+HOOKPROTONHNONP(GenerateSpeechButtonClickedFunc, void) {
+    generateSpeech(FALSE);
+}
+MakeHook(GenerateSpeechButtonClickedHook, GenerateSpeechButtonClickedFunc);
+
+HOOKPROTONHNONP(RegenerateSpeechButtonClickedFunc, void) {
+    generateSpeech(TRUE);
+}
+MakeHook(RegenerateSpeechButtonClickedHook,
+         RegenerateSpeechButtonClickedFunc);
+
+HOOKPROTONHNONP(PlaySpeechButtonClickedFunc, void) {
+    if (currentSpeech != NULL && currentSpeech->filePath != NULL)
+        playSpeechFile(currentSpeech->filePath);
+}
+MakeHook(PlaySpeechButtonClickedHook, PlaySpeechButtonClickedFunc);
+
+HOOKPROTONHNONP(AttachSpeechFilesButtonClickedFunc, void) {
+    ULONG oldCount = chatFileCount(&pendingSpeechFiles);
+    requestFilesIntoList(&pendingSpeechFiles, STRING_ATTACH_FILES, FALSE);
+    if (oldCount == 0 && chatFileCount(&pendingSpeechFiles) > 0)
+        set(speakFileContentsCheckbox, MUIA_Selected, TRUE);
+    updateSpeechControls();
+}
+MakeHook(AttachSpeechFilesButtonClickedHook,
+         AttachSpeechFilesButtonClickedFunc);
+
+HOOKPROTONHNONP(ClearSpeechFilesButtonClickedFunc, void) {
+    freeChatFiles(&pendingSpeechFiles);
+    updateSpeechControls();
+}
+MakeHook(ClearSpeechFilesButtonClickedHook,
+         ClearSpeechFilesButtonClickedFunc);
+
+HOOKPROTONHNONP(SpeechTextChangedFunc, void) {
+    if (!isAROS && speechInputTextEditor != NULL)
+        set(speechInputTextEditor, MUIA_TextEditor_HasChanged, FALSE);
+    updateSpeechControls();
+}
+MakeHook(SpeechTextChangedHook, SpeechTextChangedFunc);
+
+HOOKPROTONHNONP(SaveSpeechCopyButtonClickedFunc, void) {
+    STRPTR filePath;
+    STRPTR fileExtension;
+    UBYTE fileName[16];
+    struct FileRequester *fileReq;
+
+    if (currentSpeech == NULL || currentSpeech->filePath == NULL)
+        return;
+    filePath = currentSpeech->filePath;
+    fileExtension = strrchr(filePath, '.');
+    if (fileExtension == NULL)
+        fileExtension = ".wav";
+    snprintf(fileName, sizeof(fileName), "speech%s", fileExtension);
+    fileReq = AllocAslRequestTags(ASL_FileRequest, TAG_END);
+    if (fileReq != NULL) {
+        if (AslRequestTags(fileReq, ASLFR_Window, mainWindow, ASLFR_TitleText,
+                           STRING_SAVE_SPEECH_COPY, ASLFR_InitialFile, fileName,
+                           ASLFR_InitialDrawer, "SYS:", ASLFR_DoSaveMode, TRUE,
+                           TAG_DONE)) {
+            STRPTR savePath = fileReq->fr_Drawer;
+            STRPTR saveName = fileReq->fr_File;
+            UWORD fullPathLength = strlen(savePath) + strlen(saveName) + 2;
+            STRPTR fullPath = AllocVec(fullPathLength, MEMF_CLEAR);
+            if (fullPath != NULL) {
+                strncpy(fullPath, savePath, strlen(savePath));
+                AddPart(fullPath, saveName, fullPathLength);
+                copyFile(filePath, fullPath);
+                FreeVec(fullPath);
+            }
+        }
+        FreeAslRequest(fileReq);
+    }
+}
+MakeHook(SaveSpeechCopyButtonClickedHook, SaveSpeechCopyButtonClickedFunc);
+
+HOOKPROTONHNONP(GenerateSpeechTextButtonClickedFunc, void) {
+    STRPTR text = duplicateEditorText(speechInputTextEditor);
+    struct Conversation *conversation;
+    struct ConversationNode *userMessage;
+    struct ChatRequestSettings chatSettings;
+    struct json_object **responses;
+    UTF8 *textUTF8;
+    UTF8 *content;
+    STRPTR displayText;
+
+    if (text == NULL || strlen(text) == 0) {
+        if (text != NULL)
+            FreeVec(text);
+        return;
+    }
+
+    conversation = newConversation();
+    if (conversation == NULL) {
+        FreeVec(text);
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        return;
+    }
+    textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                                  CSA_Source, (Tag)text, CSA_MapForeignChars,
+                                  TRUE, TAG_DONE);
+    userMessage = addTextToConversation(
+        conversation, textUTF8 != NULL ? textUTF8 : (UTF8 *)text, "user");
+    if (textUTF8 != NULL)
+        CodesetsFreeA(textUTF8, NULL);
+    if (userMessage == NULL ||
+        !copyChatFiles(&userMessage->files, &pendingSpeechFiles)) {
+        displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
+        freeConversation(conversation);
+        FreeVec(text);
+        return;
+    }
+
+    beginCancellableRequest();
+    setRequestInterfaceBusy(TRUE);
+    updateStatusBar(STRING_SENDING_MESSAGE, yellowPen);
+    showLoadingBar();
+    configGetActiveChatRequestSettings(&chatSettings);
+    setConversationSystem(conversation, chatSettings.chatSystem);
+    responses = postChatMessageToOpenAI(
+        conversation, chatSettings.host, chatSettings.port, chatSettings.useSSL,
+        chatSettings.model, chatSettings.apiKey, FALSE, chatSettings.useProxy,
+        chatSettings.proxyHost, chatSettings.proxyPort,
+        chatSettings.proxyUsesSSL, chatSettings.proxyRequiresAuth,
+        chatSettings.proxyUsername, chatSettings.proxyPassword,
+        chatSettings.webSearchEnabled, FALSE, FALSE, chatSettings.apiEndpoint,
+        chatSettings.apiEndpointUrl, chatSettings.authorizationType,
+        chatSettings.customHeaders);
+    if (isRequestCancelled()) {
+        if (responses != NULL) {
+            if (responses[0] != NULL)
+                json_object_put(responses[0]);
+            FreeVec(responses);
+        }
+        freeConversation(conversation);
+        FreeVec(text);
+        finishActiveRequest(FALSE);
+        return;
+    }
+    if (responses == NULL || responses[0] == NULL) {
+        if (responses != NULL)
+            FreeVec(responses);
+        freeConversation(conversation);
+        FreeVec(text);
+        finishActiveRequest(FALSE);
+        displayError(STRING_ERROR_CONNECTING_OPENAI);
+        return;
+    }
+    content = getMessageContentFromJson(responses[0], FALSE, FALSE,
+                                        chatSettings.apiEndpoint);
+    if (content != NULL && strlen((char *)content) > 0) {
+        displayText = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)content,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
+        setEditorText(speechInputTextEditor,
+                      displayText != NULL ? displayText : (STRPTR)content);
+        if (displayText != NULL)
+            CodesetsFreeA(displayText, NULL);
+        if (speakFileContentsCheckbox != NULL)
+            set(speakFileContentsCheckbox, MUIA_Selected, FALSE);
+    }
+    json_object_put(responses[0]);
+    FreeVec(responses);
+    freeConversation(conversation);
+    FreeVec(text);
+    finishActiveRequest(TRUE);
+}
+MakeHook(GenerateSpeechTextButtonClickedHook,
+         GenerateSpeechTextButtonClickedFunc);
+
 
 HOOKPROTONHNONP(SaveResponseFilesButtonClickedFunc, void) {
     if (currentConversation == NULL ||
@@ -623,26 +1223,8 @@ HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
 MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
 
 HOOKPROTONHNONP(StopSpeakingButtonClickedFunc, void) {
-#ifdef __AMIGAOS3__
-    if (NarratorIO != NULL &&
-        ((struct IORequest *)NarratorIO)->io_Device != NULL) {
-        if (!CheckIO((struct IORequest *)NarratorIO)) {
-            AbortIO((struct IORequest *)NarratorIO);
-            WaitIO((struct IORequest *)NarratorIO);
-        }
-    }
-#elif defined(__AMIGAOS4__)
-    if (fliteRequest != NULL &&
-        ((struct IORequest *)fliteRequest)->io_Device != NULL &&
-        !CheckIO((struct IORequest *)fliteRequest)) {
-        AbortIO((struct IORequest *)fliteRequest);
-        WaitIO((struct IORequest *)fliteRequest);
-    }
-#endif
-    if (ahiRequest != NULL && !CheckIO((struct IORequest *)ahiRequest)) {
-        AbortIO((struct IORequest *)ahiRequest);
-        WaitIO((struct IORequest *)ahiRequest);
-    }
+    cancelActiveRequest();
+    stopSpeech();
 }
 MakeHook(StopSpeakingButtonClickedHook, StopSpeakingButtonClickedFunc);
 
@@ -762,7 +1344,10 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     set(openImageButton, MUIA_Disabled, TRUE);
     set(saveImageCopyButton, MUIA_Disabled, TRUE);
     set(editImageButton, MUIA_Disabled, TRUE);
-    setImageGenerationControlsDisabled(TRUE);
+    beginCancellableRequest();
+    setRequestInterfaceBusy(TRUE);
+    showLoadingBar();
+    updateStatusBar(STRING_PREPARING_REQUEST, yellowPen);
     STRPTR text;
     if (isAROS) {
         get(imageInputTextEditor, MUIA_String_Contents, &text);
@@ -804,8 +1389,9 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
         &pendingImageFiles);
 
     if (response == NULL) {
-        displayError(STRING_ERROR_CONNECTION);
-        setImageGenerationControlsDisabled(FALSE);
+        if (!isRequestCancelled())
+            displayError(STRING_ERROR_CONNECTION);
+        finishActiveRequest(FALSE);
         if (!isAROS) {
             FreeVec(text);
         }
@@ -834,7 +1420,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
                 }
             }
         }
-        setImageGenerationControlsDisabled(FALSE);
+        finishActiveRequest(FALSE);
         json_object_put(response);
         if (!isAROS) {
             FreeVec(text);
@@ -855,7 +1441,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
                       (Tag)b64Len, CSA_B64DestPtr, (Tag)&imageData, TAG_DONE);
     if (imageData == NULL) {
         displayError(STRING_ERROR_INVALID_BASE64);
-        setImageGenerationControlsDisabled(FALSE);
+        finishActiveRequest(FALSE);
         json_object_put(response);
         return;
     }
@@ -1010,7 +1596,7 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     } else if (responses[0] != NULL) {
         if (json_object_object_get_ex(responses[0], "error", &error) &&
             !json_object_is_type(error, json_type_null)) {
-            setImageGenerationControlsDisabled(FALSE);
+            finishActiveRequest(FALSE);
             json_object_put(responses[0]);
             FreeVec(responses);
             if (!isAROS) {
@@ -1085,9 +1671,8 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     currentImage = generatedImage;
     ImageRowClickedFunc();
 
-    setImageGenerationControlsDisabled(FALSE);
-
     saveImages();
+    finishActiveRequest(TRUE);
 
     if (!isAROS) {
         FreeVec(text);
@@ -1223,8 +1808,17 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
              greenPen, STRING_NEW_IMAGE);
     set(newImageButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-             redPen, STRING_STOP_SPEAKING);
+             redPen, STRING_STOP);
     set(stopSpeakingButton, MUIA_Text_Contents, buttonLabelText);
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]+ %s\0",
+             greenPen, STRING_NEW_PHRASE);
+    set(newSpeechButton, MUIA_Text_Contents, buttonLabelText);
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s\0",
+             redPen, STRING_DELETE_PHRASE);
+    set(deleteSpeechButton, MUIA_Text_Contents, buttonLabelText);
+    snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+             bluePen, STRING_GENERATE_SPEECH);
+    set(generateSpeechButton, MUIA_Text_Contents, buttonLabelText);
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s\0",
              redPen, STRING_DELETE_IMAGE);
     set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
@@ -1530,6 +2124,10 @@ LONG createMainWindow() {
         NewList((struct List *)&pendingImageFiles);
         pendingImageFilesInitialized = TRUE;
     }
+    if (!pendingSpeechFilesInitialized) {
+        NewList((struct List *)&pendingSpeechFiles);
+        pendingSpeechFilesInitialized = TRUE;
+    }
     BOOL useCustomTextEditor = createAmigaGPTTextEditor() == RETURN_OK;
     if (!useCustomTextEditor) {
         displayError("Could not create custom class.");
@@ -1565,6 +2163,18 @@ LONG createMainWindow() {
             MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
+
+        speechInputTextEditor = NewObject(
+            MUIC_AmigaGPTTextEditor, NULL,
+            MUIA_Weight, 80,
+            MUIA_AmigaGPTTextEditor_SubmitHook, &GenerateSpeechButtonClickedHook,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL,
+            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
+            MUIA_TextEditor_ReadOnly, FALSE,
+            MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3,
+            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+            TAG_DONE);
     } else {
         chatInputTextEditor = MUI_NewObject(
             isAROS ? MUIC_BetterString : MUIC_TextEditor,
@@ -1589,6 +2199,18 @@ LONG createMainWindow() {
             MUIA_TextEditor_Rows, 3,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
+
+        speechInputTextEditor = MUI_NewObject(
+            isAROS ? MUIC_BetterString : MUIC_TextEditor,
+            MUIA_Background, MUII_BACKGROUND,
+            MUIA_Weight, 80,
+            isAROS ? TAG_DONE : TAG_SKIP, NULL,
+            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
+            MUIA_TextEditor_ReadOnly, FALSE,
+            MUIA_TextEditor_TabSize, 4,
+            MUIA_TextEditor_Rows, 3,
+            MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
+            TAG_DONE);
     }
     // clang-format on
 
@@ -1601,8 +2223,9 @@ LONG createMainWindow() {
             CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH;
     }
 
-    pages[0] = STRING_CHAT_MODE;
-    pages[1] = STRING_IMAGE_GENERATION_MODE;
+    pages[0] = STRING_MENU_CHAT;
+    pages[1] = STRING_MENU_IMAGE;
+    pages[2] = STRING_MENU_SPEECH;
 
     // clang-format off
     if ((mainWindowObject = WindowObject,
@@ -1698,10 +2321,6 @@ LONG createMainWindow() {
                                         MUIA_CycleChain, TRUE,
                                         MUIA_InputMode, MUIV_InputMode_RelVerify,
                                     End,
-                                    Child, stopSpeakingButton = MUI_MakeObject(MUIO_Button, STRING_STOP_SPEAKING,
-                                        MUIA_CycleChain, TRUE,
-                                        MUIA_InputMode, MUIV_InputMode_RelVerify,
-                                    End,
                                 End,
                             End,
                         End,
@@ -1791,6 +2410,95 @@ LONG createMainWindow() {
                             End,
                         End,
                     End,
+                    Child, HGroup,
+                        GroupFrame,
+                        Child, VGroup, MUIA_Weight, 30,
+                            Child, newSpeechButton = MUI_MakeObject(MUIO_Button, STRING_NEW_PHRASE,
+                                MUIA_CycleChain, TRUE,
+                                MUIA_InputMode, MUIV_InputMode_RelVerify,
+                            TAG_DONE),
+                            Child, deleteSpeechButton = MUI_MakeObject(MUIO_Button, STRING_DELETE_PHRASE,
+                                MUIA_Background, MUII_FILL,
+                                MUIA_CycleChain, TRUE,
+                                MUIA_InputMode, MUIV_InputMode_RelVerify,
+                            TAG_DONE),
+                            Child, NListviewObject,
+                                MUIA_CycleChain, 1,
+                                MUIA_NListview_NList, speechListObject = NListObject,
+                                    MUIA_ContextMenu, NULL,
+                                    MUIA_NList_DefaultObjectOnClick, TRUE,
+                                    MUIA_NList_MultiSelect, MUIV_NList_MultiSelect_None,
+                                    MUIA_NList_ConstructHook2, &ConstructSpeechLI_TextHook,
+                                    MUIA_NList_DestructHook2, &DestructSpeechLI_TextHook,
+                                    MUIA_NList_DisplayHook2, &DisplaySpeechLI_TextHook,
+                                    MUIA_NList_Format, "BAR MINW=100 MAXW=200",
+                                    MUIA_NList_AutoVisible, TRUE,
+                                    MUIA_NList_TitleSeparator, FALSE,
+                                    MUIA_NList_Title, FALSE,
+                                    MUIA_NList_MinColSortable, 0,
+                                    MUIA_NList_Imports, MUIV_NList_Imports_All,
+                                    MUIA_NList_Exports, MUIV_NList_Exports_All,
+                                End,
+                            End,
+                        End,
+                        Child, VGroup,
+                            Child, HVSpace,
+                            Child, HGroup,
+                                Child, playSpeechButton = MUI_MakeObject(MUIO_Button, STRING_PLAY,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
+                                Child, regenerateSpeechButton = MUI_MakeObject(MUIO_Button, STRING_REGENERATE,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
+                                Child, saveSpeechCopyButton = MUI_MakeObject(MUIO_Button, STRING_SAVE_SPEECH_COPY,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
+                            End,
+                            Child, HGroup,
+                                Child, attachSpeechFilesButton = MUI_MakeObject(MUIO_Button, STRING_ATTACH_FILES,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
+                                Child, clearSpeechFilesButton = MUI_MakeObject(MUIO_Button, STRING_CLEAR_ATTACHMENTS,
+                                    MUIA_CycleChain, TRUE,
+                                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                TAG_DONE),
+                                Child, speechAttachmentSummaryText = TextObject,
+                                    MUIA_Text_Contents, STRING_NO_FILES_ATTACHED,
+                                    MUIA_Text_SetMin, FALSE,
+                                End,
+                            End,
+                            Child, HGroup,
+                                Child, speakFileContentsCheckbox = MUI_MakeObject(MUIO_Checkmark, NULL),
+                                Child, LLabel(STRING_SPEAK_CONTENTS_OF_FILES),
+                                Child, HSpace(0),
+                            End,
+                            Child, HGroup,
+                                Child, speechInputTextEditor,
+                                Child, VGroup,
+                                    MUIA_Weight, 20,
+                                    Child, generateSpeechButton = MUI_MakeObject(MUIO_Button, STRING_GENERATE_SPEECH,
+                                        MUIA_CycleChain, TRUE,
+                                        MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                    TAG_DONE),
+                                    Child, generateSpeechTextButton = MUI_MakeObject(MUIO_Button, STRING_GENERATE_TEXT_WITH_AI,
+                                        MUIA_CycleChain, TRUE,
+                                        MUIA_InputMode, MUIV_InputMode_RelVerify,
+                                    TAG_DONE),
+                                End,
+                            End,
+                        End,
+                    End,
+                End,
+                Child, HGroup,
+                    Child, HVSpace,
+                    Child, stopSpeakingButton = MUI_MakeObject(MUIO_Button, STRING_STOP,
+                        MUIA_CycleChain, TRUE,
+                        MUIA_InputMode, MUIV_InputMode_RelVerify,
+                    TAG_DONE),
                 End,
                 // Status bar
                 Child, statusBar = TextObject,
@@ -1857,8 +2565,17 @@ LONG createMainWindow() {
                  bluePen, STRING_SEND);
         set(sendMessageButton, MUIA_Text_Contents, buttonLabelText);
         snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
-                 redPen, STRING_STOP_SPEAKING);
+                 redPen, STRING_STOP);
         set(stopSpeakingButton, MUIA_Text_Contents, buttonLabelText);
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
+                 "\33c\33P[%ld]+ %s\0", greenPen, STRING_NEW_PHRASE);
+        set(newSpeechButton, MUIA_Text_Contents, buttonLabelText);
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
+                 "\33c\33P[%ld]- %s\0", redPen, STRING_DELETE_PHRASE);
+        set(deleteSpeechButton, MUIA_Text_Contents, buttonLabelText);
+        snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]%s\0",
+                 bluePen, STRING_GENERATE_SPEECH);
+        set(generateSpeechButton, MUIA_Text_Contents, buttonLabelText);
         snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE,
                  "\33c\33P[%ld]+ %s\0", greenPen, STRING_NEW_IMAGE);
         set(newImageButton, MUIA_Text_Contents, buttonLabelText);
@@ -1881,11 +2598,13 @@ LONG createMainWindow() {
     updateAttachmentControls();
     updateReferenceImageControls();
     updateResponseFileControl();
+    updateSpeechControls();
     
     updateStatusBar(STRING_READY, greenPen);
 
     loadConversations();
     loadImages();
+    loadSpeechHistory();
 
     return RETURN_OK;
 }
@@ -1941,6 +2660,46 @@ static void addMainWindowActions() {
     DoMethod(imageListObject, MUIM_Notify, MUIA_NList_EntryClick,
              MUIV_EveryTime, MUIV_Notify_Window, 3, MUIM_CallHook,
              &ImageRowClickedHook, MUIV_TriggerValue);
+    DoMethod(newSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE, newSpeechButton,
+             2, MUIM_CallHook, &NewSpeechButtonClickedHook);
+    DoMethod(deleteSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             MUIV_Notify_Application, 3, MUIM_CallHook,
+             &DeleteSpeechButtonClickedHook, MUIV_TriggerValue);
+    DoMethod(generateSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             generateSpeechButton, 2, MUIM_CallHook,
+             &GenerateSpeechButtonClickedHook);
+    DoMethod(regenerateSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             regenerateSpeechButton, 2, MUIM_CallHook,
+             &RegenerateSpeechButtonClickedHook);
+    DoMethod(playSpeechButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             playSpeechButton, 2, MUIM_CallHook, &PlaySpeechButtonClickedHook);
+    DoMethod(saveSpeechCopyButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             saveSpeechCopyButton, 2, MUIM_CallHook,
+             &SaveSpeechCopyButtonClickedHook);
+    DoMethod(generateSpeechTextButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             generateSpeechTextButton, 2, MUIM_CallHook,
+             &GenerateSpeechTextButtonClickedHook);
+    DoMethod(attachSpeechFilesButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             attachSpeechFilesButton, 2, MUIM_CallHook,
+             &AttachSpeechFilesButtonClickedHook);
+    DoMethod(clearSpeechFilesButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             clearSpeechFilesButton, 2, MUIM_CallHook,
+             &ClearSpeechFilesButtonClickedHook);
+    DoMethod(speechListObject, MUIM_Notify, MUIA_NList_EntryClick,
+             MUIV_EveryTime, MUIV_Notify_Window, 3, MUIM_CallHook,
+             &SpeechRowClickedHook, MUIV_TriggerValue);
+    DoMethod(speakFileContentsCheckbox, MUIM_Notify, MUIA_Selected,
+             MUIV_EveryTime, speakFileContentsCheckbox, 2, MUIM_CallHook,
+             &SpeechTextChangedHook);
+    if (isAROS) {
+        DoMethod(speechInputTextEditor, MUIM_Notify, MUIA_String_Contents,
+                 MUIV_EveryTime, speechInputTextEditor, 2, MUIM_CallHook,
+                 &SpeechTextChangedHook);
+    } else {
+        DoMethod(speechInputTextEditor, MUIM_Notify, MUIA_TextEditor_HasChanged,
+                 TRUE, speechInputTextEditor, 2, MUIM_CallHook,
+                 &SpeechTextChangedHook);
+    }
     DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
              MUIV_Notify_Application, 2, MUIM_Application_ReturnID,
              MUIV_Application_ReturnID_Quit);
@@ -1964,10 +2723,6 @@ static void sendChatMessage() {
             chatOutputTextEditorContents);
         set(conversationListObject, MUIA_NList_Active, MUIV_NList_Active_Off);
     }
-    set(sendMessageButton, MUIA_Disabled, TRUE);
-    set(newChatButton, MUIA_Disabled, TRUE);
-    set(deleteChatButton, MUIA_Disabled, TRUE);
-
     updateStatusBar(STRING_SENDING_MESSAGE, yellowPen);
     showLoadingBar();
     UTF8 *receivedMessage = AllocVec(READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
@@ -1987,9 +2742,6 @@ static void sendChatMessage() {
     if (strlen(text) == 0 && chatFileCount(&pendingChatFiles) == 0) {
         displayError(STRING_ERROR_MESSAGE_OR_ATTACHMENT_REQUIRED);
         hideLoadingBar();
-        set(sendMessageButton, MUIA_Disabled, FALSE);
-        set(newChatButton, MUIA_Disabled, FALSE);
-        set(deleteChatButton, MUIA_Disabled, FALSE);
         FreeVec(receivedMessage);
         if (isNewConversation) {
             freeConversation(currentConversation);
@@ -1999,6 +2751,9 @@ static void sendChatMessage() {
             FreeVec(text);
         return;
     }
+
+    beginCancellableRequest();
+    setRequestInterfaceBusy(TRUE);
 
     UBYTE userStyleString[] = "\033r\033b\0333";
     UBYTE userAlignment = 'l';
@@ -2049,10 +2804,7 @@ static void sendChatMessage() {
     if (userMessage == NULL ||
         !copyChatFiles(&userMessage->files, &pendingChatFiles)) {
         displayError(STRING_ERROR_MEMORY_CONVERSATION_NODE);
-        hideLoadingBar();
-        set(sendMessageButton, MUIA_Disabled, FALSE);
-        set(newChatButton, MUIA_Disabled, FALSE);
-        set(deleteChatButton, MUIA_Disabled, FALSE);
+        finishActiveRequest(FALSE);
         if (userMessage != NULL) {
             RemTail((struct List *)currentConversation->messages);
             freeConversationNode(userMessage);
@@ -2127,11 +2879,9 @@ static void sendChatMessage() {
             chatSettings.apiEndpoint, chatSettings.apiEndpointUrl,
             chatSettings.authorizationType, chatSettings.customHeaders);
         if (responses == NULL) {
-            displayError(STRING_ERROR_CONNECTING_OPENAI);
-            hideLoadingBar();
-            set(sendMessageButton, MUIA_Disabled, FALSE);
-            set(newChatButton, MUIA_Disabled, FALSE);
-            set(deleteChatButton, MUIA_Disabled, FALSE);
+            if (!isRequestCancelled())
+                displayError(STRING_ERROR_CONNECTING_OPENAI);
+            finishActiveRequest(FALSE);
             struct ConversationNode *failedMessage =
                 (struct ConversationNode *)RemTail(
                     (struct List *)currentConversation->messages);
@@ -2174,7 +2924,6 @@ static void sendChatMessage() {
                     SetIoErr(0);
                     displayError(messageString);
                 }
-                hideLoadingBar();
                 if (isAROS) {
                     set(chatInputTextEditor, MUIA_String_Contents, text);
                 } else {
@@ -2196,9 +2945,7 @@ static void sendChatMessage() {
                 }
                 json_object_put(response);
 
-                set(sendMessageButton, MUIA_Disabled, FALSE);
-                set(newChatButton, MUIA_Disabled, FALSE);
-                set(deleteChatButton, MUIA_Disabled, FALSE);
+                finishActiveRequest(FALSE);
 
                 freeChatFiles(&receivedFiles);
                 FreeVec(receivedMessage);
@@ -2644,10 +3391,9 @@ static void sendChatMessage() {
                 (struct ConversationNode *)titleRequestNode);
             hideLoadingBar();
             if (responses == NULL) {
-                displayError(STRING_ERROR_CONNECTING_OPENAI);
-                set(sendMessageButton, MUIA_Disabled, FALSE);
-                set(newChatButton, MUIA_Disabled, FALSE);
-                set(deleteChatButton, MUIA_Disabled, FALSE);
+                if (!isRequestCancelled())
+                    displayError(STRING_ERROR_CONNECTING_OPENAI);
+                finishActiveRequest(FALSE);
                 return;
             }
             if (responses[0] != NULL) {
@@ -2697,12 +3443,8 @@ static void sendChatMessage() {
         }
     }
 
-    updateStatusBar(STRING_READY, greenPen);
     saveConversations();
-
-    set(sendMessageButton, MUIA_Disabled, FALSE);
-    set(newChatButton, MUIA_Disabled, FALSE);
-    set(deleteChatButton, MUIA_Disabled, FALSE);
+    finishActiveRequest(TRUE);
 }
 
 static void appendMessageFileSummary(struct ConversationNode *message) {
@@ -3093,6 +3835,60 @@ static LONG saveImages() {
 }
 
 /**
+ * Saves the generated speech phrases to disk
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+ **/
+static LONG saveSpeechHistory() {
+    BPTR file = Open("AMIGAGPT:speech-history.json", MODE_NEWFILE);
+    LONG totalSpeechCount;
+    struct json_object *speechJsonArray;
+    LONG i;
+    STRPTR speechJsonString;
+
+    if (file == 0) {
+        displayError(STRING_ERROR_SPEECH_HISTORY_CREATE);
+        return RETURN_ERROR;
+    }
+
+    get(speechListObject, MUIA_NList_Entries, &totalSpeechCount);
+    speechJsonArray = json_object_new_array();
+    for (i = 0; i < totalSpeechCount; i++) {
+        struct json_object *speechJsonObject = json_object_new_object();
+        struct GeneratedSpeech *entry = NULL;
+
+        DoMethod(speechListObject, MUIM_NList_GetEntry, i, &entry);
+        if (entry == NULL)
+            continue;
+        json_object_object_add(
+            speechJsonObject, "title",
+            json_object_new_string(entry->title != NULL ? entry->title : ""));
+        json_object_object_add(speechJsonObject, "filePath",
+                               json_object_new_string(entry->filePath != NULL
+                                                          ? entry->filePath
+                                                          : ""));
+        json_object_object_add(
+            speechJsonObject, "text",
+            json_object_new_string(entry->text != NULL ? entry->text : ""));
+        json_object_array_add(speechJsonArray, speechJsonObject);
+    }
+
+    speechJsonString = (STRPTR)json_object_to_json_string_ext(
+        speechJsonArray, JSON_C_TO_STRING_PRETTY);
+
+    if (Write(file, speechJsonString, strlen(speechJsonString)) !=
+        (LONG)strlen(speechJsonString)) {
+        displayError(STRING_ERROR_SPEECH_HISTORY_WRITE);
+        Close(file);
+        json_object_put(speechJsonArray);
+        return RETURN_ERROR;
+    }
+
+    Close(file);
+    json_object_put(speechJsonArray);
+    return RETURN_OK;
+}
+
+/**
  * Opens and displays the image with scaling
  * @param image the image to open
  * @param width the width of the image
@@ -3455,6 +4251,105 @@ static LONG loadImages() {
     }
 
     json_object_put(imagesJsonArray);
+    return RETURN_OK;
+}
+
+/**
+ * Load the generated speech phrases from disk
+ * @return RETURN_OK on success, RETURN_ERROR on failure
+ **/
+static LONG loadSpeechHistory() {
+    BPTR file = Open("AMIGAGPT:speech-history.json", MODE_OLDFILE);
+    STRPTR speechJsonString;
+    struct json_object *speechJsonArray;
+    UWORD i;
+#ifdef __AMIGAOS3__
+    LONG fileSize;
+#else
+#ifdef __AMIGAOS4__
+    int64_t fileSize;
+#else
+    struct FileInfoBlock fib;
+    int64_t fileSize;
+#endif
+#endif
+
+    if (file == 0)
+        return RETURN_OK;
+
+#ifdef __AMIGAOS3__
+    Seek(file, 0, OFFSET_END);
+    fileSize = Seek(file, 0, OFFSET_BEGINNING);
+#else
+#ifdef __AMIGAOS4__
+    fileSize = GetFileSize(file);
+#else
+    ExamineFH64(file, &fib, NULL);
+    fileSize = fib.fib_Size;
+#endif
+#endif
+    speechJsonString = AllocVec(fileSize + 1, MEMF_CLEAR);
+    if (Read(file, speechJsonString, fileSize) != fileSize) {
+        displayError(STRING_ERROR_SPEECH_HISTORY_READ);
+        Close(file);
+        FreeVec(speechJsonString);
+        return RETURN_ERROR;
+    }
+
+    Close(file);
+
+    speechJsonArray = json_tokener_parse(speechJsonString);
+    if (speechJsonArray == NULL) {
+        if (Rename("AMIGAGPT:speech-history.json",
+                   "AMIGAGPT:speech-history.json.bak")) {
+            displayError(STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP);
+        } else if (copyFile("AMIGAGPT:speech-history.json",
+                            "RAM:speech-history.json")) {
+            displayError(STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM);
+            deleteDiskFile("AMIGAGPT:speech-history.json");
+        }
+
+        FreeVec(speechJsonString);
+        return RETURN_ERROR;
+    }
+
+    for (i = 0; i < json_object_array_length(speechJsonArray); i++) {
+        struct json_object *speechJsonObject =
+            json_object_array_get_idx(speechJsonArray, i);
+        CONST_STRPTR title = jsonStringValue(speechJsonObject, "title");
+        CONST_STRPTR filePath = jsonStringValue(speechJsonObject, "filePath");
+        CONST_STRPTR text = jsonStringValue(speechJsonObject, "text");
+        struct GeneratedSpeech *entry;
+
+        if (filePath == NULL || text == NULL) {
+            displayError(STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP);
+            FreeVec(speechJsonString);
+            json_object_put(speechJsonArray);
+            return RETURN_ERROR;
+        }
+
+        entry = AllocVec(sizeof(*entry), MEMF_ANY | MEMF_CLEAR);
+        if (entry == NULL)
+            continue;
+        entry->filePath = AllocVec(strlen(filePath) + 1, MEMF_ANY | MEMF_CLEAR);
+        entry->text = AllocVec(strlen(text) + 1, MEMF_ANY | MEMF_CLEAR);
+        if (title != NULL) {
+            entry->title = AllocVec(strlen(title) + 1, MEMF_ANY | MEMF_CLEAR);
+            if (entry->title != NULL)
+                strcpy(entry->title, title);
+        } else {
+            entry->title = speechTitle(text);
+        }
+        if (entry->filePath != NULL)
+            strcpy(entry->filePath, filePath);
+        if (entry->text != NULL)
+            strcpy(entry->text, text);
+        DoMethod(speechListObject, MUIM_NList_InsertSingle, entry,
+                 MUIV_NList_Insert_Top);
+    }
+
+    FreeVec(speechJsonString);
+    json_object_put(speechJsonArray);
     return RETURN_OK;
 }
 

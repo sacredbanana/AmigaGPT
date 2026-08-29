@@ -2071,7 +2071,132 @@ msgstr "%lu referentieafbeelding(en)"
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_NOT_AN_IMAGE (392//)"
 msgid "Only image files can be used as reference images."
-msgstr "Alleen afbeeldingsbestanden kunnen als referentieafbeelding worden gebruikt."
+msgstr ""
+"Alleen afbeeldingsbestanden kunnen als referentieafbeelding worden gebruikt."
+
+#: src/MainWindow.c
+msgctxt "STRING_STOP (393//)"
+msgid "Stop"
+msgstr "Stop"
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_NEW_PHRASE (394//)"
+msgid "New Phrase"
+msgstr "Nieuw profiel"
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_DELETE_PHRASE (395//)"
+msgid "Delete Phrase"
+msgstr "Chat verwijderen"
+
+#: src/MainWindow.c
+msgctxt "STRING_GENERATE_SPEECH (396//)"
+msgid "Generate"
+msgstr "Generate"
+
+#: src/MainWindow.c
+msgctxt "STRING_REGENERATE (397//)"
+msgid "Regenerate"
+msgstr "Regenerate"
+
+#: src/MainWindow.c
+msgctxt "STRING_PLAY (398//)"
+msgid "Play"
+msgstr "Play"
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_SAVE_SPEECH_COPY (399//)"
+msgid "Save Speech Copy"
+msgstr "Afbeelding opslaan Kopiëren"
+
+#: src/MainWindow.c
+msgctxt "STRING_GENERATE_TEXT_WITH_AI (400//)"
+msgid "Generate text with AI"
+msgstr "Generate text with AI"
+
+#: src/MainWindow.c
+msgctxt "STRING_SPEAK_CONTENTS_OF_FILES (401//)"
+msgid "Speak contents of files"
+msgstr "Speak contents of files"
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_GENERATING_SPEECH (402//)"
+msgid "Generating speech..."
+msgstr "Afbeeldingnaam genereren..."
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_SPEECH_HISTORY_CREATE (403//)"
+msgid "Failed to create speech history file. Phrase history will not be saved."
+msgstr ""
+"Het is niet gelukt om een afbeeldingsgeschiedenisbestand te maken. De "
+"afbeeldingsgeschiedenis wordt niet opgeslagen."
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_SPEECH_HISTORY_WRITE (404//)"
+msgid ""
+"Failed to write to speech history file. Phrase history will not be saved."
+msgstr ""
+"Kan niet schrijven naar afbeeldingsgeschiedenisbestand. "
+"Afbeeldingsgeschiedenis wordt niet opgeslagen."
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_SPEECH_HISTORY_READ (405//)"
+msgid ""
+"Failed to read from speech history file. Phrase history will not be loaded"
+msgstr ""
+"Lezen van berichtengeschiedenisbestand mislukt. Gespreksgeschiedenis wordt "
+"niet geladen."
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP (406//)"
+msgid ""
+"Failed to parse speech history. Malformed JSON. The speech-history.json file "
+"is probably corrupted. Phrase history will not be loaded. A backup of the "
+"speech-history.json file has been created as speech-history.json.bak"
+msgstr ""
+"Chatgeschiedenis kon niet worden geparseerd. Misvormde JSON. Het bestand "
+"chat-history.json is waarschijnlijk beschadigd. De gespreksgeschiedenis "
+"wordt niet geladen. Er is een back-up van het bestand chat-history.json "
+"gemaakt als chat-history.json.bak"
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM (407//)"
+msgid ""
+"Failed to parse speech history. Malformed JSON. The speech-history.json file "
+"is probably corrupted. Phrase history will not be loaded. There was an error "
+"writing a backup of the speech history to disk but a copy has been saved to "
+"RAM:speech-history.json"
+msgstr ""
+"Chatgeschiedenis kon niet worden geparseerd. Misvormde JSON. Het bestand "
+"chat-history.json is waarschijnlijk beschadigd. De gespreksgeschiedenis "
+"wordt niet geladen. Er is een fout opgetreden bij het schrijven van een back-"
+"up van de chatgeschiedenis naar schijf, maar er is een kopie opgeslagen in "
+"RAM:chat-history.json.bak"
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
+msgid ""
+"Failed to parse speech history. The speech-history.json file is probably "
+"corrupted. Phrase history will not be loaded."
+msgstr ""
+"Chatgeschiedenis kon niet worden geparseerd. Het bestand chat-history.json "
+"is waarschijnlijk beschadigd. De gespreksgeschiedenis wordt niet geladen."
+
+#: src/MainWindow.c
+#, fuzzy
+msgctxt "STRING_REQUEST_CANCELLED (409//)"
+msgid "Request cancelled"
+msgstr "Aangevraagd"
 
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
