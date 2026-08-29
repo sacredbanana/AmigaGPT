@@ -2399,6 +2399,15 @@ static void rexxAppendChatModelsForProfile(STRPTR buffer, ULONG bufferSize,
         rexxAppendLine(buffer, bufferSize, STRING_ERROR_FETCHING_MODELS);
         return;
     }
+    ModelListFilter filter = MODEL_LIST_FILTER_CHAT;
+    if (settings.profileName != NULL &&
+        strcmp(settings.profileName, REXX_LOCKED_PROFILE_NAME_OPENAI) == 0)
+        filter = MODEL_LIST_FILTER_OPENAI_CHAT;
+    else if (settings.profileName != NULL &&
+             strcmp(settings.profileName,
+                    REXX_LOCKED_PROFILE_NAME_GEMINI) == 0)
+        filter = MODEL_LIST_FILTER_GEMINI_CHAT;
+    filterModelNames(models, filter);
     rexxAppendModelNamesFromJsonArray(buffer, bufferSize, models);
     json_object_put(models);
 }
@@ -2426,6 +2435,9 @@ static void rexxAppendImageModelsForProfile(STRPTR buffer, ULONG bufferSize,
         rexxAppendLine(buffer, bufferSize, STRING_ERROR_FETCHING_MODELS);
         return;
     }
+    if (settings.profileName != NULL &&
+        rexxIsLockedImageProfileName(settings.profileName))
+        filterModelNames(models, MODEL_LIST_FILTER_IMAGE);
     rexxAppendModelNamesFromJsonArray(buffer, bufferSize, models);
     json_object_put(models);
 }
@@ -2453,6 +2465,7 @@ static void rexxAppendSpeechModelsForProfile(STRPTR buffer, ULONG bufferSize,
         if (models == NULL) {
             rexxAppendLine(buffer, bufferSize, STRING_ERROR_FETCHING_MODELS);
         } else {
+            filterModelNames(models, MODEL_LIST_FILTER_TTS);
             rexxAppendModelNamesFromJsonArray(buffer, bufferSize, models);
             json_object_put(models);
         }

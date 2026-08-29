@@ -1807,6 +1807,28 @@ HOOKPROTONHNONP(FetchCustomModelsFunc, void) {
                       endpointUrl, authorizationType, customHeaders);
 
     if (customServerModelsJson != NULL) {
+        LONG activeProfile = MUIV_NList_Active_Off;
+        get(customServerProfileList, MUIA_NList_Active, &activeProfile);
+
+        if (settingsIsImageMode) {
+            /* Built-in image providers expose mixed-purpose model lists.
+             * Custom OpenAI-compatible image profiles stay unfiltered because
+             * local multimodal model IDs do not necessarily contain "image".
+             */
+            if (isLockedProfileListIndex(activeProfile))
+                filterModelNames(customServerModelsJson,
+                                 MODEL_LIST_FILTER_IMAGE);
+        } else {
+            ModelListFilter filter = MODEL_LIST_FILTER_CHAT;
+            if (isLockedProfileListIndex(activeProfile)) {
+                if (activeProfile == LOCKED_PROFILE_OPENAI)
+                    filter = MODEL_LIST_FILTER_OPENAI_CHAT;
+                else if (activeProfile == LOCKED_PROFILE_GEMINI)
+                    filter = MODEL_LIST_FILTER_GEMINI_CHAT;
+            }
+            filterModelNames(customServerModelsJson, filter);
+        }
+
         populateModelList();
         updateStatusBar(STRING_READY, greenPen);
     } else {

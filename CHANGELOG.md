@@ -5,6 +5,7 @@
 - Rename the xAI provider to SpaceXAI throughout the chat, image and speech provider settings; existing configs and ARexx scripts using the old name keep working
 - New default chat models: gpt-5.6-terra (OpenAI), gemini-flash-latest (Google Gemini), claude-sonnet-5 (Anthropic Claude) and grok-4.5 (SpaceXAI Grok)
 - New default image models: gpt-image-2 (OpenAI), gemini-3-pro-image (Google Gemini) and grok-imagine-image-2.0 (SpaceXAI Grok)
+- Fetched models now filter out non-relevant models
 - Code Interpreter is now enabled by default for all built-in chat providers
 - Model and voice lists are now sorted alphabetically, both for the prepopulated lists shown on first launch and for lists refreshed with the Fetch button
 - Fix the busy bar at the bottom of the main window animating forever after generating an image, and keep it running for the whole request instead of blanking out as soon as the request was sent

@@ -124,6 +124,24 @@ extern CONST_STRPTR GROK_IMAGE_MODELS[];
 void sortJsonArrayAlphabetically(struct json_object *array, CONST_STRPTR key);
 
 /**
+ * Filters applied to model ID arrays returned by getChatModels().
+ */
+typedef enum {
+    MODEL_LIST_FILTER_CHAT = 0,
+    MODEL_LIST_FILTER_OPENAI_CHAT,
+    MODEL_LIST_FILTER_GEMINI_CHAT,
+    MODEL_LIST_FILTER_IMAGE,
+    MODEL_LIST_FILTER_TTS
+} ModelListFilter;
+
+/**
+ * Remove model IDs that do not belong in the requested model list.
+ * @param models a json array of model ID strings, modified in place
+ * @param filter the kind of model list being populated
+ */
+void filterModelNames(struct json_object *models, ModelListFilter filter);
+
+/**
  * The chat model OpenAI should use. Commented out models are not supported by
  * the responses endpoint. Do not exceed 32 models or the menu will not display
  * correctly.

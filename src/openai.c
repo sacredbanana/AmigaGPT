@@ -19,6 +19,7 @@
 #include <dos/dostags.h>
 #include <dos/dosextens.h>
 #include <string.h>
+#include <strings.h>
 #include <stdio.h>
 #include "openai.h"
 #include "speech.h"
@@ -479,6 +480,72 @@ void sortJsonArrayAlphabetically(struct json_object *array, CONST_STRPTR key) {
     jsonSortKey = key;
     json_object_array_sort(array, jsonSortCompare);
     jsonSortKey = NULL;
+}
+
+/**
+ * Return TRUE when haystack contains needle, ignoring ASCII case.
+ */
+static BOOL modelNameContains(CONST_STRPTR haystack, CONST_STRPTR needle) {
+    if (haystack == NULL || needle == NULL || strlen(needle) == 0)
+        return FALSE;
+
+    ULONG needleLength = strlen(needle);
+    for (CONST_STRPTR cursor = haystack; *cursor != '\0'; cursor++) {
+        if (strncasecmp(cursor, needle, needleLength) == 0)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+/**
+ * Return TRUE when a normalized model ID belongs in the requested list.
+ */
+static BOOL modelNameMatchesFilter(CONST_STRPTR modelId,
+                                   ModelListFilter filter) {
+    if (modelId == NULL || strlen(modelId) == 0)
+        return FALSE;
+
+    switch (filter) {
+    case MODEL_LIST_FILTER_OPENAI_CHAT:
+        if (strncasecmp(modelId, "chat-", 5) != 0 &&
+            strncasecmp(modelId, "gpt-", 4) != 0)
+            return FALSE;
+        break;
+    case MODEL_LIST_FILTER_GEMINI_CHAT:
+        if (strncasecmp(modelId, "gemini-", 7) != 0)
+            return FALSE;
+        break;
+    case MODEL_LIST_FILTER_IMAGE:
+        return modelNameContains(modelId, "image");
+    case MODEL_LIST_FILTER_TTS:
+        return modelNameContains(modelId, "tts");
+    case MODEL_LIST_FILTER_CHAT:
+    default:
+        break;
+    }
+
+    return !modelNameContains(modelId, "audio") &&
+           !modelNameContains(modelId, "video") &&
+           !modelNameContains(modelId, "transcribe") &&
+           !modelNameContains(modelId, "image") &&
+           !modelNameContains(modelId, "tts") &&
+           !modelNameContains(modelId, "embedding") &&
+           !modelNameContains(modelId, "robotics") &&
+           !modelNameContains(modelId, "realtime") &&
+           !modelNameContains(modelId, "computer-use");
+}
+
+void filterModelNames(struct json_object *models, ModelListFilter filter) {
+    if (models == NULL || !json_object_is_type(models, json_type_array))
+        return;
+
+    for (LONG i = (LONG)json_object_array_length(models) - 1; i >= 0; i--) {
+        struct json_object *entry = json_object_array_get_idx(models, i);
+        CONST_STRPTR modelId = entry != NULL ? json_object_get_string(entry)
+                                             : NULL;
+        if (!modelNameMatchesFilter(modelId, filter))
+            json_object_array_del_idx(models, i, 1);
+    }
 }
 
 /**

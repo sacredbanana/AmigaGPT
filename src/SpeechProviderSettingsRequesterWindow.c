@@ -585,7 +585,7 @@ static struct json_object *getOpenAITTSModels(CONST_STRPTR host, UWORD port,
                                               AuthorizationType authType,
                                               CONST_STRPTR apiKey) {
     /* getChatModels already targets /<endpointUrl>/models and handles auth /
-     * proxy, so reuse it. The response is the raw OpenAI models payload. */
+     * proxy, so reuse it. It returns a normalized model ID array. */
     return getChatModels((STRPTR)host, (ULONG)port, useSSL, apiKey,
                          configGetProxyEnabled(), configGetProxyHost(),
                          configGetProxyPort(), configGetProxyUsesSSL(),
@@ -593,23 +593,15 @@ static struct json_object *getOpenAITTSModels(CONST_STRPTR host, UWORD port,
                          configGetProxyPassword(), endpointUrl, authType, NULL);
 }
 
-/* Build a "models cache" json object from an OpenAI /v1/models response,
- * keeping only entries whose id contains "tts" - the API doesn't expose a
- * modality flag, so this filter is the closest we can get. */
+/* Build a "models cache" json object from the normalized model ID array,
+ * keeping only IDs containing "tts". */
 static struct json_object *
 filterOpenAITTSModels(struct json_object *rawModels) {
-    if (rawModels == NULL)
+    if (rawModels == NULL ||
+        !json_object_is_type(rawModels, json_type_array))
         return NULL;
 
-    struct json_object *dataArray = NULL;
-    if (!json_object_object_get_ex(rawModels, "data", &dataArray)) {
-        if (json_object_is_type(rawModels, json_type_array))
-            dataArray = rawModels;
-        else
-            return NULL;
-    }
-    if (!json_object_is_type(dataArray, json_type_array))
-        return NULL;
+    filterModelNames(rawModels, MODEL_LIST_FILTER_TTS);
 
     struct json_object *out = json_object_new_object();
     struct json_object *filtered = json_object_new_array();
@@ -619,14 +611,11 @@ filterOpenAITTSModels(struct json_object *rawModels) {
     for (UBYTE i = 0; OPENAI_TTS_MODEL_NAMES[i] != NULL; i++)
         addDefaultOpenAITTSModel(filtered, OPENAI_TTS_MODEL_NAMES[i]);
 
-    LONG count = json_object_array_length(dataArray);
+    LONG count = json_object_array_length(rawModels);
     for (LONG i = 0; i < count; i++) {
-        struct json_object *entry = json_object_array_get_idx(dataArray, i);
-        struct json_object *idObj = NULL;
-        if (entry == NULL || !json_object_object_get_ex(entry, "id", &idObj))
-            continue;
-        CONST_STRPTR id = json_object_get_string(idObj);
-        if (id == NULL || strstr(id, "tts") == NULL)
+        struct json_object *entry = json_object_array_get_idx(rawModels, i);
+        CONST_STRPTR id = entry != NULL ? json_object_get_string(entry) : NULL;
+        if (id == NULL)
             continue;
 
         /* Skip duplicates already added from the defaults. */
