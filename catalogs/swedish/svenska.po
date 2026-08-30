@@ -2066,16 +2066,14 @@ msgid "Stop"
 msgstr "Stop"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_NEW_PHRASE (394//)"
 msgid "New Phrase"
-msgstr "Ny profil"
+msgstr "Ny fras"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_DELETE_PHRASE (395//)"
 msgid "Delete Phrase"
-msgstr "Ta bort chatt"
+msgstr "Ta bort fras"
 
 #: src/MainWindow.c
 msgctxt "STRING_GENERATE_SPEECH (396//)"
@@ -2093,10 +2091,9 @@ msgid "Play"
 msgstr "Play"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_SAVE_SPEECH_COPY (399//)"
 msgid "Save Speech Copy"
-msgstr "Spara bildkopia"
+msgstr "Spara ljudkopia"
 
 #: src/MainWindow.c
 msgctxt "STRING_GENERATE_TEXT_WITH_AI (400//)"
@@ -2109,52 +2106,46 @@ msgid "Speak contents of files"
 msgstr "Speak contents of files"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_GENERATING_SPEECH (402//)"
 msgid "Generating speech..."
-msgstr "Skapar bildnamn..."
+msgstr "Genererar tal..."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_CREATE (403//)"
 msgid "Failed to create speech history file. Phrase history will not be saved."
 msgstr ""
-"Det gick inte att skapa bildhistorikfilen. Bildhistorik kommer inte att "
+"Det gick inte att skapa talhistorikfilen. Frashistoriken kommer inte att "
 "sparas."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_WRITE (404//)"
 msgid ""
 "Failed to write to speech history file. Phrase history will not be saved."
 msgstr ""
-"Det gick inte att skriva till bildhistorikfilen. Bildhistorik kommer inte "
+"Det gick inte att skriva till talhistorikfilen. Frashistoriken kommer inte "
 "att sparas."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_READ (405//)"
 msgid ""
 "Failed to read from speech history file. Phrase history will not be loaded"
 msgstr ""
-"Det gick inte att läsa från meddelandehistorikfilen. Konversationshistorik "
-"kommer inte att laddas"
+"Det gick inte att läsa från talhistorikfilen. Frashistoriken kommer inte "
+"att läsas in"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP (406//)"
 msgid ""
 "Failed to parse speech history. Malformed JSON. The speech-history.json file "
 "is probably corrupted. Phrase history will not be loaded. A backup of the "
 "speech-history.json file has been created as speech-history.json.bak"
 msgstr ""
-"Det gick inte att analysera chatthistoriken. Felaktig JSON. Chat-"
-"history.json-filen är förmodligen skadad. Konversationshistorik kommer inte "
-"att laddas. En säkerhetskopia av filen chat-history.json har skapats som "
-"chat-history.json.bak"
+"Det gick inte att tolka talhistoriken. Felaktig JSON. Filen "
+"speech-history.json är troligen skadad. Frashistoriken kommer inte att "
+"läsas in. En säkerhetskopia av filen speech-history.json har skapats som "
+"speech-history.json.bak"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM (407//)"
 msgid ""
 "Failed to parse speech history. Malformed JSON. The speech-history.json file "
@@ -2162,26 +2153,24 @@ msgid ""
 "writing a backup of the speech history to disk but a copy has been saved to "
 "RAM:speech-history.json"
 msgstr ""
-"Det gick inte att analysera chatthistoriken. Felaktig JSON. Chat-"
-"history.json-filen är förmodligen skadad. Konversationshistorik kommer inte "
-"att laddas. Det gick inte att skriva en säkerhetskopia av chatthistoriken "
-"till disken men en kopia har sparats i RAM:chat-history.json.bak"
+"Det gick inte att tolka talhistoriken. Felaktig JSON. Filen "
+"speech-history.json är troligen skadad. Frashistoriken kommer inte att "
+"läsas in. Det uppstod ett fel när en säkerhetskopia av talhistoriken skulle "
+"skrivas till disk, men en kopia har sparats i RAM:speech-history.json"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
 msgid ""
 "Failed to parse speech history. The speech-history.json file is probably "
 "corrupted. Phrase history will not be loaded."
 msgstr ""
-"Det gick inte att analysera chatthistoriken. Chat-history.json-filen är "
-"förmodligen skadad. Konversationshistorik kommer inte att laddas."
+"Det gick inte att tolka talhistoriken. Filen speech-history.json är "
+"troligen skadad. Frashistoriken kommer inte att läsas in."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_REQUEST_CANCELLED (409//)"
 msgid "Request cancelled"
-msgstr "Begärd"
+msgstr "Begäran avbröts"
 
 #: src/MainWindow.c
 msgctxt "STRING_PAUSE (410//)"
@@ -2225,3 +2214,4 @@ msgstr "Språk"
 #~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 #~ msgid "OpenAI Speech Model"
 #~ msgstr "OpenAI Speech Model"
+

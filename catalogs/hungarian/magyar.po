@@ -2073,16 +2073,14 @@ msgid "Stop"
 msgstr "Stop"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_NEW_PHRASE (394//)"
 msgid "New Phrase"
-msgstr "Új profil"
+msgstr "Új frázis"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_DELETE_PHRASE (395//)"
 msgid "Delete Phrase"
-msgstr "Csevegés törlése"
+msgstr "Frázis törlése"
 
 #: src/MainWindow.c
 msgctxt "STRING_GENERATE_SPEECH (396//)"
@@ -2100,10 +2098,9 @@ msgid "Play"
 msgstr "Play"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_SAVE_SPEECH_COPY (399//)"
 msgid "Save Speech Copy"
-msgstr "Képmásolat mentése"
+msgstr "Hangmásolat mentése"
 
 #: src/MainWindow.c
 msgctxt "STRING_GENERATE_TEXT_WITH_AI (400//)"
@@ -2116,52 +2113,46 @@ msgid "Speak contents of files"
 msgstr "Speak contents of files"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_GENERATING_SPEECH (402//)"
 msgid "Generating speech..."
-msgstr "Képnév generálása..."
+msgstr "Beszéd generálása..."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_CREATE (403//)"
 msgid "Failed to create speech history file. Phrase history will not be saved."
 msgstr ""
-"Nem sikerült létrehozni a képelőzményfájlt. A képelőzmények nem kerülnek "
-"mentésre."
+"Nem sikerült létrehozni a beszédelőzmények fájlt. A fráziselőzmények nem "
+"lesznek mentve."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_WRITE (404//)"
 msgid ""
 "Failed to write to speech history file. Phrase history will not be saved."
 msgstr ""
-"Nem sikerült írni a képelőzmények fájlba. A képelőzmények nem kerülnek "
-"mentésre."
+"Nem sikerült írni a beszédelőzmények fájlba. A fráziselőzmények nem lesznek "
+"mentve."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_READ (405//)"
 msgid ""
 "Failed to read from speech history file. Phrase history will not be loaded"
 msgstr ""
-"Nem sikerült beolvasni az üzenetelőzmény-fájlt. A beszélgetési előzmények "
-"nem töltődnek be"
+"Nem sikerült beolvasni a beszédelőzmények fájlt. A fráziselőzmények nem "
+"töltődnek be"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP (406//)"
 msgid ""
 "Failed to parse speech history. Malformed JSON. The speech-history.json file "
 "is probably corrupted. Phrase history will not be loaded. A backup of the "
 "speech-history.json file has been created as speech-history.json.bak"
 msgstr ""
-"Nem sikerült elemezni a csevegési előzményeket. Rosszul formázott JSON. A "
-"chat-history.json fájl valószínűleg sérült. A beszélgetési előzmények nem "
-"töltődnek be. A chat-history.json fájl biztonsági másolata chat-"
-"history.json.bak néven készült"
+"Nem sikerült feldolgozni a beszédelőzményeket. Hibás JSON. A "
+"speech-history.json fájl valószínűleg sérült. A fráziselőzmények nem "
+"töltődnek be. A speech-history.json fájlról biztonsági másolat készült "
+"speech-history.json.bak néven"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM (407//)"
 msgid ""
 "Failed to parse speech history. Malformed JSON. The speech-history.json file "
@@ -2169,27 +2160,24 @@ msgid ""
 "writing a backup of the speech history to disk but a copy has been saved to "
 "RAM:speech-history.json"
 msgstr ""
-"Nem sikerült elemezni a csevegési előzményeket. Rosszul formázott JSON. A "
-"chat-history.json fájl valószínűleg sérült. A beszélgetési előzmények nem "
-"töltődnek be. Hiba történt a csevegési előzmények biztonsági másolatának "
-"lemezre írásakor, de a rendszer elmentette a másolatot a RAM-ba: chat-"
-"history.json.bak"
+"Nem sikerült feldolgozni a beszédelőzményeket. Hibás JSON. A "
+"speech-history.json fájl valószínűleg sérült. A fráziselőzmények nem "
+"töltődnek be. Hiba történt a beszédelőzmények biztonsági másolatának "
+"lemezre írásakor, de egy másolat el lett mentve ide: RAM:speech-history.json"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
 msgid ""
 "Failed to parse speech history. The speech-history.json file is probably "
 "corrupted. Phrase history will not be loaded."
 msgstr ""
-"A csevegési előzmények elemzése nem sikerült. A chat-history.json fájl "
-"valószínűleg sérült. A beszélgetési előzmények nem töltődnek be."
+"Nem sikerült feldolgozni a beszédelőzményeket. A speech-history.json fájl "
+"valószínűleg sérült. A fráziselőzmények nem töltődnek be."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_REQUEST_CANCELLED (409//)"
 msgid "Request cancelled"
-msgstr "Kért"
+msgstr "A kérés megszakítva"
 
 #: src/MainWindow.c
 msgctxt "STRING_PAUSE (410//)"
@@ -2233,3 +2221,4 @@ msgstr "Nyelv"
 #~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 #~ msgid "OpenAI Speech Model"
 #~ msgstr "OpenAI beszédmodell"
+

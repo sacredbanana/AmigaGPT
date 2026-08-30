@@ -2071,16 +2071,14 @@ msgid "Stop"
 msgstr "Stop"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_NEW_PHRASE (394//)"
 msgid "New Phrase"
-msgstr "Novi profil"
+msgstr "Nova fraza"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_DELETE_PHRASE (395//)"
 msgid "Delete Phrase"
-msgstr "Izbriši chat"
+msgstr "Izbriši frazu"
 
 #: src/MainWindow.c
 msgctxt "STRING_GENERATE_SPEECH (396//)"
@@ -2098,10 +2096,9 @@ msgid "Play"
 msgstr "Play"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_SAVE_SPEECH_COPY (399//)"
 msgid "Save Speech Copy"
-msgstr "Spremi kopiju slike"
+msgstr "Spremi kopiju zvuka"
 
 #: src/MainWindow.c
 msgctxt "STRING_GENERATE_TEXT_WITH_AI (400//)"
@@ -2114,52 +2111,46 @@ msgid "Speak contents of files"
 msgstr "Speak contents of files"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_GENERATING_SPEECH (402//)"
 msgid "Generating speech..."
-msgstr "Generiranje naziva slike..."
+msgstr "Generiranje govora..."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_CREATE (403//)"
 msgid "Failed to create speech history file. Phrase history will not be saved."
 msgstr ""
-"Stvaranje datoteke povijesti slike nije uspjelo. Povijest slika neće biti "
+"Nije uspjelo stvaranje datoteke povijesti govora. Povijest fraza neće biti "
 "spremljena."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_WRITE (404//)"
 msgid ""
 "Failed to write to speech history file. Phrase history will not be saved."
 msgstr ""
-"Pisanje u datoteku povijesti slike nije uspjelo. Povijest slika neće biti "
+"Nije uspjelo pisanje u datoteku povijesti govora. Povijest fraza neće biti "
 "spremljena."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_READ (405//)"
 msgid ""
 "Failed to read from speech history file. Phrase history will not be loaded"
 msgstr ""
-"Neuspješno čitanje iz datoteke povijesti poruka. Povijest razgovora neće se "
-"učitati"
+"Nije uspjelo čitanje datoteke povijesti govora. Povijest fraza neće biti "
+"učitana"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP (406//)"
 msgid ""
 "Failed to parse speech history. Malformed JSON. The speech-history.json file "
 "is probably corrupted. Phrase history will not be loaded. A backup of the "
 "speech-history.json file has been created as speech-history.json.bak"
 msgstr ""
-"Raščlanjivanje povijesti razgovora nije uspjelo. Neispravan JSON. Datoteka "
-"chat-history.json vjerojatno je oštećena. Povijest razgovora neće se "
-"učitati. Sigurnosna kopija datoteke chat-history.json stvorena je kao chat-"
-"history.json.bak"
+"Nije uspjela obrada povijesti govora. Neispravan JSON. Datoteka "
+"speech-history.json vjerojatno je oštećena. Povijest fraza neće biti "
+"učitana. Sigurnosna kopija datoteke speech-history.json stvorena je kao "
+"speech-history.json.bak"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM (407//)"
 msgid ""
 "Failed to parse speech history. Malformed JSON. The speech-history.json file "
@@ -2167,26 +2158,24 @@ msgid ""
 "writing a backup of the speech history to disk but a copy has been saved to "
 "RAM:speech-history.json"
 msgstr ""
-"Raščlanjivanje povijesti razgovora nije uspjelo. Neispravan JSON. Datoteka "
-"chat-history.json vjerojatno je oštećena. Povijest razgovora neće se "
-"učitati. Došlo je do pogreške pri pisanju sigurnosne kopije povijesti "
-"razgovora na disk, ali kopija je spremljena u RAM:chat-history.json.bak"
+"Nije uspjela obrada povijesti govora. Neispravan JSON. Datoteka "
+"speech-history.json vjerojatno je oštećena. Povijest fraza neće biti "
+"učitana. Došlo je do pogreške pri pisanju sigurnosne kopije povijesti "
+"govora na disk, ali je kopija spremljena u RAM:speech-history.json"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
 msgid ""
 "Failed to parse speech history. The speech-history.json file is probably "
 "corrupted. Phrase history will not be loaded."
 msgstr ""
-"Raščlanjivanje povijesti razgovora nije uspjelo. Datoteka chat-history.json "
-"vjerojatno je oštećena. Povijest razgovora neće se učitati."
+"Nije uspjela obrada povijesti govora. Datoteka speech-history.json "
+"vjerojatno je oštećena. Povijest fraza neće biti učitana."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_REQUEST_CANCELLED (409//)"
 msgid "Request cancelled"
-msgstr "Zatraženo"
+msgstr "Zahtjev je otkazan"
 
 #: src/MainWindow.c
 msgctxt "STRING_PAUSE (410//)"
@@ -2230,3 +2219,4 @@ msgstr "Jezik"
 #~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 #~ msgid "OpenAI Speech Model"
 #~ msgstr "Govorni model OpenAI"
+

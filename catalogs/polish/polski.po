@@ -2066,16 +2066,14 @@ msgid "Stop"
 msgstr "Stop"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_NEW_PHRASE (394//)"
 msgid "New Phrase"
-msgstr "Nowy profil"
+msgstr "Nowa fraza"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_DELETE_PHRASE (395//)"
 msgid "Delete Phrase"
-msgstr "Usuń czat"
+msgstr "Usuń frazę"
 
 #: src/MainWindow.c
 msgctxt "STRING_GENERATE_SPEECH (396//)"
@@ -2093,10 +2091,9 @@ msgid "Play"
 msgstr "Play"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_SAVE_SPEECH_COPY (399//)"
 msgid "Save Speech Copy"
-msgstr "Zapisz kopię obrazu"
+msgstr "Zapisz kopię audio"
 
 #: src/MainWindow.c
 msgctxt "STRING_GENERATE_TEXT_WITH_AI (400//)"
@@ -2109,52 +2106,46 @@ msgid "Speak contents of files"
 msgstr "Speak contents of files"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_GENERATING_SPEECH (402//)"
 msgid "Generating speech..."
-msgstr "Generowanie nazwy obrazu..."
+msgstr "Generowanie mowy..."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_CREATE (403//)"
 msgid "Failed to create speech history file. Phrase history will not be saved."
 msgstr ""
-"Nie udało się utworzyć pliku historii obrazu. Historia obrazu nie zostanie "
+"Nie udało się utworzyć pliku historii mowy. Historia fraz nie zostanie "
 "zapisana."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_WRITE (404//)"
 msgid ""
 "Failed to write to speech history file. Phrase history will not be saved."
 msgstr ""
-"Nie udało się zapisać do pliku historii obrazu. Historia obrazu nie zostanie "
+"Nie udało się zapisać do pliku historii mowy. Historia fraz nie zostanie "
 "zapisana."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_READ (405//)"
 msgid ""
 "Failed to read from speech history file. Phrase history will not be loaded"
 msgstr ""
-"Nie udało się odczytać pliku historii wiadomości. Historia konwersacji nie "
-"zostanie załadowana"
+"Nie udało się odczytać pliku historii mowy. Historia fraz nie zostanie "
+"wczytana"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP (406//)"
 msgid ""
 "Failed to parse speech history. Malformed JSON. The speech-history.json file "
 "is probably corrupted. Phrase history will not be loaded. A backup of the "
 "speech-history.json file has been created as speech-history.json.bak"
 msgstr ""
-"Nie udało się przeanalizować historii czatu. Nieprawidłowo sformatowany "
-"JSON. Plik chat-history.json jest prawdopodobnie uszkodzony. Historia "
-"konwersacji nie zostanie załadowana. Utworzono kopię zapasową pliku chat-"
-"history.json jako chat-history.json.bak"
+"Nie udało się przetworzyć historii mowy. Nieprawidłowy JSON. Plik "
+"speech-history.json jest prawdopodobnie uszkodzony. Historia fraz nie "
+"zostanie wczytana. Utworzono kopię zapasową pliku speech-history.json jako "
+"speech-history.json.bak"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM (407//)"
 msgid ""
 "Failed to parse speech history. Malformed JSON. The speech-history.json file "
@@ -2162,27 +2153,24 @@ msgid ""
 "writing a backup of the speech history to disk but a copy has been saved to "
 "RAM:speech-history.json"
 msgstr ""
-"Nie udało się przeanalizować historii czatu. Nieprawidłowo sformatowany "
-"JSON. Plik chat-history.json jest prawdopodobnie uszkodzony. Historia "
-"konwersacji nie zostanie załadowana. Wystąpił błąd podczas zapisywania kopii "
-"zapasowej historii czatu na dysku, ale kopia została zapisana w pamięci "
-"RAM:chat-history.json.bak"
+"Nie udało się przetworzyć historii mowy. Nieprawidłowy JSON. Plik "
+"speech-history.json jest prawdopodobnie uszkodzony. Historia fraz nie "
+"zostanie wczytana. Wystąpił błąd podczas zapisywania kopii zapasowej "
+"historii mowy na dysku, ale kopia została zapisana w RAM:speech-history.json"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
 msgid ""
 "Failed to parse speech history. The speech-history.json file is probably "
 "corrupted. Phrase history will not be loaded."
 msgstr ""
-"Nie udało się przeanalizować historii czatu.Plik chat-history.json jest "
-"prawdopodobnie uszkodzony. Historia konwersacji nie zostanie załadowana."
+"Nie udało się przetworzyć historii mowy. Plik speech-history.json jest "
+"prawdopodobnie uszkodzony. Historia fraz nie zostanie wczytana."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_REQUEST_CANCELLED (409//)"
 msgid "Request cancelled"
-msgstr "Żądany"
+msgstr "Żądanie anulowane"
 
 #: src/MainWindow.c
 msgctxt "STRING_PAUSE (410//)"
@@ -2226,3 +2214,4 @@ msgstr "Język"
 #~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 #~ msgid "OpenAI Speech Model"
 #~ msgstr "Model mowy OpenAI"
+

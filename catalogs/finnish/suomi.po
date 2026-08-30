@@ -2064,16 +2064,14 @@ msgid "Stop"
 msgstr "Stop"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_NEW_PHRASE (394//)"
 msgid "New Phrase"
-msgstr "Uusi profiili"
+msgstr "Uusi lause"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_DELETE_PHRASE (395//)"
 msgid "Delete Phrase"
-msgstr "Poista Chat"
+msgstr "Poista lause"
 
 #: src/MainWindow.c
 msgctxt "STRING_GENERATE_SPEECH (396//)"
@@ -2091,10 +2089,9 @@ msgid "Play"
 msgstr "Play"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_SAVE_SPEECH_COPY (399//)"
 msgid "Save Speech Copy"
-msgstr "Tallenna kuvakopio"
+msgstr "Tallenna äänikopio"
 
 #: src/MainWindow.c
 msgctxt "STRING_GENERATE_TEXT_WITH_AI (400//)"
@@ -2107,50 +2104,42 @@ msgid "Speak contents of files"
 msgstr "Speak contents of files"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_GENERATING_SPEECH (402//)"
 msgid "Generating speech..."
-msgstr "Luodaan kuvan nimeä..."
+msgstr "Luodaan puhetta..."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_CREATE (403//)"
 msgid "Failed to create speech history file. Phrase history will not be saved."
-msgstr ""
-"Kuvahistoriatiedoston luominen epäonnistui. Kuvahistoriaa ei tallenneta."
+msgstr "Puhehistorian tiedoston luominen epäonnistui. Lausehistoriaa ei tallenneta."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_WRITE (404//)"
 msgid ""
 "Failed to write to speech history file. Phrase history will not be saved."
 msgstr ""
-"Kuvahistoriatiedostoon kirjoittaminen epäonnistui. Kuvahistoriaa ei "
+"Puhehistorian tiedostoon kirjoittaminen epäonnistui. Lausehistoriaa ei "
 "tallenneta."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_READ (405//)"
 msgid ""
 "Failed to read from speech history file. Phrase history will not be loaded"
-msgstr ""
-"Viestihistoriatiedoston lukeminen epäonnistui. Keskusteluhistoriaa ei ladata"
+msgstr "Puhehistorian tiedoston lukeminen epäonnistui. Lausehistoriaa ei ladata"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP (406//)"
 msgid ""
 "Failed to parse speech history. Malformed JSON. The speech-history.json file "
 "is probably corrupted. Phrase history will not be loaded. A backup of the "
 "speech-history.json file has been created as speech-history.json.bak"
 msgstr ""
-"Keskusteluhistorian jäsentäminen epäonnistui. Väärin muotoiltu JSON. Chat-"
-"history.json-tiedosto on todennäköisesti vioittunut. Keskusteluhistoriaa ei "
-"ladata. Varmuuskopio chat-history.json-tiedostosta on luotu nimellä chat-"
-"history.json.bak"
+"Puhehistorian jäsentäminen epäonnistui. JSON on virheellinen. Tiedosto "
+"speech-history.json on todennäköisesti vioittunut. Lausehistoriaa ei "
+"ladata. Tiedostosta speech-history.json on luotu varmuuskopio nimellä "
+"speech-history.json.bak"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM (407//)"
 msgid ""
 "Failed to parse speech history. Malformed JSON. The speech-history.json file "
@@ -2158,26 +2147,24 @@ msgid ""
 "writing a backup of the speech history to disk but a copy has been saved to "
 "RAM:speech-history.json"
 msgstr ""
-"Keskusteluhistorian jäsentäminen epäonnistui. Väärin muotoiltu JSON. Chat-"
-"history.json-tiedosto on todennäköisesti vioittunut. Keskusteluhistoriaa ei "
-"ladata. Keskusteluhistorian varmuuskopion kirjoittamisessa levylle tapahtui "
-"virhe, mutta kopio on tallennettu RAM-muistiin:chat-history.json.bak"
+"Puhehistorian jäsentäminen epäonnistui. JSON on virheellinen. Tiedosto "
+"speech-history.json on todennäköisesti vioittunut. Lausehistoriaa ei "
+"ladata. Puhehistorian varmuuskopion kirjoittaminen levylle epäonnistui, "
+"mutta kopio tallennettiin kohteeseen RAM:speech-history.json"
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
 msgid ""
 "Failed to parse speech history. The speech-history.json file is probably "
 "corrupted. Phrase history will not be loaded."
 msgstr ""
-"Keskusteluhistorian jäsentäminen epäonnistui. Chat-history.json-tiedosto on "
-"todennäköisesti vioittunut. Keskusteluhistoriaa ei ladata."
+"Puhehistorian jäsentäminen epäonnistui. Tiedosto speech-history.json on "
+"todennäköisesti vioittunut. Lausehistoriaa ei ladata."
 
 #: src/MainWindow.c
-#, fuzzy
 msgctxt "STRING_REQUEST_CANCELLED (409//)"
 msgid "Request cancelled"
-msgstr "Pyydetty"
+msgstr "Pyyntö peruttu"
 
 #: src/MainWindow.c
 msgctxt "STRING_PAUSE (410//)"
@@ -2221,3 +2208,4 @@ msgstr "Kieli"
 #~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 #~ msgid "OpenAI Speech Model"
 #~ msgstr "OpenAI-puhemalli"
+
