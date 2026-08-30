@@ -13,6 +13,7 @@
 - On AmiKit the installer writes the AMIGAGPT: assign and optional daemon start to KIT-Startup instead of S:User-Startup
 - Extracted the Return-to-submit editor and speech waveform into public MUI classes ActionTextEditor.mcc and AudioPlayer.mcc. The installer copies them into MUI:Libs/MUI (or SYS:Classes/MUI on MorphOS)
 - Fix MorphOS asking to insert volume "." at launch when Ambient left the current directory unset and MUI searched there for an icon or .mcc
+- Fix file uploads through Cloudflare (AmiKit) failing with a connect error because Report-To header JSON was parsed instead of the Files API body
 
 ## 3.3.0 (2026-08-29)
 

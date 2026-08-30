@@ -1764,12 +1764,27 @@ static LONG writeAllQuiet(BOOL useSSL, CONST_STRPTR data, ULONG length) {
 static STRPTR isolateJsonObject(STRPTR buffer) {
     STRPTR start;
     STRPTR p;
+    STRPTR searchFrom;
     LONG depth = 0;
     BOOL inString = FALSE;
     BOOL escape = FALSE;
     if (buffer == NULL)
         return NULL;
-    start = strchr(buffer, '{');
+    /* Cloudflare Workers put JSON in headers (Report-To / NEL). Chat already
+     * strips headers first; file uploads used to scan the whole buffer and
+     * treat Report-To as the Files API response (no id -> connect error). */
+    searchFrom = buffer;
+    {
+        STRPTR headerEnd = strstr(buffer, "\r\n\r\n");
+        ULONG delimLen = 4;
+        if (headerEnd == NULL) {
+            headerEnd = strstr(buffer, "\n\n");
+            delimLen = 2;
+        }
+        if (headerEnd != NULL)
+            searchFrom = headerEnd + delimLen;
+    }
+    start = strchr(searchFrom, '{');
     if (start == NULL)
         return NULL;
     for (p = start; *p != '\0'; p++) {
