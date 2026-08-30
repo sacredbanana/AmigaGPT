@@ -121,10 +121,6 @@ LONG main(int argc, char **argv) {
         wbStartupMessage = (struct WBStartup *)argv;
     }
 
-    char fileName[256];
-    NameFromLock(GetProgramDir(), fileName, sizeof(fileName));
-    AddPart(fileName, argv[0], sizeof(fileName));
-
     appID = RegisterApplication(
         NULL, REGAPP_UniqueApplication, TRUE, REGAPP_URLIdentifier,
         "minotaurcreative.net", REGAPP_WBStartup, (ULONG)wbStartupMessage,
