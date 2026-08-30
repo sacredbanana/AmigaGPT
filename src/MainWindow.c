@@ -2495,7 +2495,6 @@ static Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
     if (!isAROS) {
         Object *editor = MUI_NewObject(
             MUIC_ActionTextEditor,
-            // MUIA_Background, MUII_BACKGROUND,
             MUIA_CycleChain, TRUE,
             objectId != 0 ? MUIA_ObjectID : TAG_IGNORE, objectId,
             weight != 0 ? MUIA_Weight : TAG_IGNORE, weight,
@@ -2511,7 +2510,7 @@ static Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
     }
     return MUI_NewObject(
         isAROS ? MUIC_BetterString : MUIC_TextEditor,
-        MUIA_Background, MUII_BACKGROUND,
+        isAROS ? MUIA_Background : TAG_IGNORE, MUII_BACKGROUND,
         MUIA_CycleChain, TRUE,
         objectId != 0 ? MUIA_ObjectID : TAG_IGNORE, objectId,
         weight != 0 ? MUIA_Weight : TAG_IGNORE, weight,
