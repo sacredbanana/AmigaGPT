@@ -418,7 +418,7 @@ static BOOL rexxEnsureDrawer(CONST_STRPTR drawer) {
     BPTR lock;
     if (drawer == NULL || drawer[0] == '\0')
         return FALSE;
-    lock = Lock(drawer, ACCESS_READ);
+    lock = Lock(drawer, SHARED_LOCK);
     if (lock != 0) {
         UnLock(lock);
         return TRUE;

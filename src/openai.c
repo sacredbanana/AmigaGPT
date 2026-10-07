@@ -1475,7 +1475,7 @@ STRPTR uniqueChatFileDestination(CONST_STRPTR drawer, CONST_STRPTR filename) {
         return NULL;
     strncpy(candidate, drawer, capacity - 1);
     AddPart(candidate, filename, capacity);
-    lock = Lock(candidate, ACCESS_READ);
+    lock = Lock(candidate, SHARED_LOCK);
     if (lock == 0)
         return candidate;
     UnLock(lock);
@@ -1491,7 +1491,7 @@ STRPTR uniqueChatFileDestination(CONST_STRPTR drawer, CONST_STRPTR filename) {
         candidate[0] = '\0';
         strncpy(candidate, drawer, capacity - 1);
         AddPart(candidate, numberedName, capacity);
-        lock = Lock(candidate, ACCESS_READ);
+        lock = Lock(candidate, SHARED_LOCK);
         if (lock == 0)
             return candidate;
         UnLock(lock);
@@ -1515,7 +1515,7 @@ ULONG saveChatFileToPath(struct ChatFile *file, CONST_STRPTR destination,
         return RETURN_ERROR;
 
     if (file->path != NULL) {
-        BPTR existing = Lock(file->path, ACCESS_READ);
+        BPTR existing = Lock(file->path, SHARED_LOCK);
         if (existing != 0) {
             UnLock(existing);
             result = copyFile(file->path, (STRPTR)destination) ? RETURN_OK
