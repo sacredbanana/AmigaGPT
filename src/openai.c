@@ -18,9 +18,11 @@
 #include <sys/socket.h>
 #include <dos/dostags.h>
 #include <dos/dosextens.h>
+#include <errno.h>
 #include <string.h>
 #include <strings.h>
 #include <stdio.h>
+#include <time.h>
 #include "openai.h"
 #include "speech.h"
 #include "gui.h"
@@ -44,6 +46,12 @@
 #endif
 #ifndef TCP_NODELAY
 #define TCP_NODELAY 1
+#endif
+#ifndef FIONBIO
+#define FIONBIO 0x8004667e
+#endif
+#ifndef EWOULDBLOCK
+#define EWOULDBLOCK EAGAIN
 #endif
 #define SOCKET_READ_WAIT_SECONDS 1
 #define SOCKET_READ_MAX_IDLE_SECONDS 180
@@ -147,6 +155,9 @@ static void flushSslWrites(BOOL useSSL);
 static void flushTransportWrites(BOOL useSSL);
 static LONG waitForSocketReadable(BOOL useSSL);
 static LONG waitForSocketWritable(void);
+static BOOL socketOperationWouldBlock(void);
+static void setSocketNonBlocking(LONG s);
+static BOOL handshakeSSLConnection(void);
 static void clearHttpReadBuffer(void);
 static BOOL hostUsesRemoteFileIds(CONST_STRPTR host,
                                   CONST_STRPTR apiEndpointUrl,
@@ -1560,7 +1571,7 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
                                      ULONG requestLength, BOOL reportErrors) {
     ULONG sentTotal = 0;
     ULONG lastPercent = 101;
-    UWORD retryCount = 0;
+    clock_t writeStart = clock();
 
     while (sentTotal < requestLength) {
         ULONG remaining = requestLength - sentTotal;
@@ -1568,6 +1579,13 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
             useSSL ? UPLOAD_WRITE_CHUNK_SIZE : PLAIN_HTTP_WRITE_CHUNK_SIZE;
         ULONG chunkLength = remaining < chunkLimit ? remaining : chunkLimit;
         LONG written;
+        if ((clock() - writeStart) / CLOCKS_PER_SEC >=
+            SOCKET_READ_MAX_IDLE_SECONDS) {
+            SetIoErr(0);
+            if (reportErrors)
+                displayError(STRING_ERROR_REQUEST_WRITE);
+            return -1;
+        }
         if (!useSSL)
             waitForSocketWritable();
         if (useSSL) {
@@ -1577,14 +1595,15 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
                 LONG error = SSL_get_error(ssl, written);
                 if (error == SSL_ERROR_WANT_READ ||
                     error == SSL_ERROR_WANT_WRITE) {
-                    if (retryCount++ < MAX_UPLOAD_WRITE_RETRIES) {
-                        Delay(1);
-                        continue;
-                    }
-                    SetIoErr(0);
-                    if (reportErrors)
-                        displayError(STRING_ERROR_REQUEST_WRITE);
-                    return -1;
+                    if (error == SSL_ERROR_WANT_READ)
+                        waitForSocketReadable(TRUE);
+                    else
+                        waitForSocketWritable();
+#ifndef DAEMON
+                    if (!pumpRequestInterface())
+                        return -1;
+#endif
+                    continue;
                 }
                 if (reportErrors)
                     reportSslError(ssl, written, "SSL_write (chat request)");
@@ -1593,9 +1612,12 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
         } else {
             written = send(sock, request + sentTotal, chunkLength, 0);
             if (written <= 0) {
-                if ((errno == EINTR || errno == EAGAIN) &&
-                    retryCount++ < MAX_UPLOAD_WRITE_RETRIES) {
-                    Delay(1);
+                if (socketOperationWouldBlock()) {
+                    waitForSocketWritable();
+#ifndef DAEMON
+                    if (!pumpRequestInterface())
+                        return -1;
+#endif
                     continue;
                 }
                 if (reportErrors)
@@ -1605,13 +1627,12 @@ static LONG writeRequestWithProgress(BOOL useSSL, CONST_STRPTR request,
             /* bsdsocket needs a task switch or large POSTs stay in the send
              * buffer and the server never sees a complete request. */
             Delay(1);
-#ifndef DAEMON
-            if (!pumpRequestInterface())
-                return -1;
-#endif
         }
+#ifndef DAEMON
+        if (!pumpRequestInterface())
+            return -1;
+#endif
 
-        retryCount = 0;
         sentTotal += (ULONG)written;
         ULONG percent = (sentTotal * 100UL) / requestLength;
         if (percent != lastPercent) {
@@ -1684,37 +1705,105 @@ static void flushTransportWrites(BOOL useSSL) {
     setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 }
 
-static LONG waitForSocketReadable(BOOL useSSL) {
-    fd_set readfds;
-    struct timeval tv;
-    LONG n;
+static BOOL socketOperationWouldBlock(void) {
+    return errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR;
+}
 
+static void setSocketNonBlocking(LONG s) {
+    long nonblock = 1;
+    if (s < 0)
+        return;
+    IoctlSocket(s, FIONBIO, (char *)&nonblock);
+}
+
+static LONG waitForSocketReadable(BOOL useSSL) {
     if (useSSL && ssl != NULL && SSL_pending(ssl) > 0)
         return 1;
     if (sock < 0)
         return -1;
 
-    memset(&readfds, 0, sizeof(readfds));
-    FD_ZERO(&readfds);
-    FD_SET(sock, &readfds);
-    tv.tv_sec = SOCKET_READ_WAIT_SECONDS;
-    tv.tv_usec = 0;
-    n = WaitSelect(sock + 1, &readfds, NULL, NULL, &tv, NULL);
-    return n;
+#ifdef __MORPHOS__
+    /* MorphOS netstack has been seen to ignore WaitSelect timeouts on TLS
+     * sockets, which freezes the GUI on "Connecting..." until the peer
+     * closes. Poll instead and let non-blocking SSL_read return WANT_READ. */
+    Delay(2);
+    return 1;
+#else
+    {
+        fd_set readfds;
+        struct timeval tv;
+        LONG n;
+        ULONG extraSignals = 0;
+
+        memset(&readfds, 0, sizeof(readfds));
+        FD_ZERO(&readfds);
+        FD_SET(sock, &readfds);
+        tv.tv_sec = SOCKET_READ_WAIT_SECONDS;
+        tv.tv_usec = 0;
+        n = WaitSelect(sock + 1, &readfds, NULL, NULL, &tv, &extraSignals);
+        return n;
+    }
+#endif
 }
 
 static LONG waitForSocketWritable(void) {
-    fd_set writefds;
-    struct timeval tv;
-
     if (sock < 0)
         return -1;
-    memset(&writefds, 0, sizeof(writefds));
-    FD_ZERO(&writefds);
-    FD_SET(sock, &writefds);
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
-    return WaitSelect(sock + 1, NULL, &writefds, NULL, &tv, NULL);
+#ifdef __MORPHOS__
+    Delay(2);
+    return 1;
+#else
+    {
+        fd_set writefds;
+        struct timeval tv;
+        ULONG extraSignals = 0;
+
+        memset(&writefds, 0, sizeof(writefds));
+        FD_ZERO(&writefds);
+        FD_SET(sock, &writefds);
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
+        return WaitSelect(sock + 1, NULL, &writefds, NULL, &tv, &extraSignals);
+    }
+#endif
+}
+
+static BOOL handshakeSSLConnection(void) {
+    clock_t lastTick = clock();
+    ULONG waitedSeconds = 0;
+
+    while (TRUE) {
+#ifndef DAEMON
+        if (!pumpRequestInterface())
+            return FALSE;
+#endif
+        ERR_clear_error();
+        ssl_err = SSL_connect(ssl);
+        if (ssl_err == 1)
+            return TRUE;
+        {
+            LONG error = SSL_get_error(ssl, ssl_err);
+            if (error == SSL_ERROR_WANT_READ) {
+                if (waitForSocketReadable(TRUE) < 0)
+                    return FALSE;
+            } else if (error == SSL_ERROR_WANT_WRITE ||
+                       error == SSL_ERROR_WANT_CONNECT) {
+                if (waitForSocketWritable() < 0)
+                    return FALSE;
+            } else {
+                reportSslError(ssl, ssl_err, "SSL_connect");
+                return FALSE;
+            }
+        }
+        if ((clock() - lastTick) >= CLOCKS_PER_SEC) {
+            waitedSeconds++;
+            lastTick = clock();
+            if (waitedSeconds >= SOCKET_READ_MAX_IDLE_SECONDS) {
+                displayError(STRING_ERROR_CONNECTION);
+                return FALSE;
+            }
+        }
+    }
 }
 
 static void clearHttpReadBuffer(void) {
@@ -1724,22 +1813,27 @@ static void clearHttpReadBuffer(void) {
 
 static LONG writeAllQuiet(BOOL useSSL, CONST_STRPTR data, ULONG length) {
     ULONG sent = 0;
-    UWORD retryCount = 0;
+    clock_t writeStart = clock();
     while (sent < length) {
         ULONG remaining = length - sent;
         ULONG chunkLength = remaining < UPLOAD_WRITE_CHUNK_SIZE
                                 ? remaining
                                 : UPLOAD_WRITE_CHUNK_SIZE;
         LONG written;
+        if ((clock() - writeStart) / CLOCKS_PER_SEC >=
+            SOCKET_READ_MAX_IDLE_SECONDS)
+            return -1;
         if (useSSL) {
             ERR_clear_error();
             written = SSL_write(ssl, data + sent, (int)chunkLength);
             if (written <= 0) {
                 LONG error = SSL_get_error(ssl, written);
-                if ((error == SSL_ERROR_WANT_READ ||
-                     error == SSL_ERROR_WANT_WRITE) &&
-                    retryCount++ < MAX_UPLOAD_WRITE_RETRIES) {
-                    Delay(1);
+                if (error == SSL_ERROR_WANT_READ ||
+                    error == SSL_ERROR_WANT_WRITE) {
+                    if (error == SSL_ERROR_WANT_READ)
+                        waitForSocketReadable(TRUE);
+                    else
+                        waitForSocketWritable();
                     continue;
                 }
                 return -1;
@@ -1747,15 +1841,13 @@ static LONG writeAllQuiet(BOOL useSSL, CONST_STRPTR data, ULONG length) {
         } else {
             written = send(sock, data + sent, chunkLength, 0);
             if (written <= 0) {
-                if ((errno == EINTR || errno == EAGAIN) &&
-                    retryCount++ < MAX_UPLOAD_WRITE_RETRIES) {
-                    Delay(1);
+                if (socketOperationWouldBlock()) {
+                    waitForSocketWritable();
                     continue;
                 }
                 return -1;
             }
         }
-        retryCount = 0;
         sent += (ULONG)written;
     }
     return (LONG)sent;
@@ -2210,16 +2302,51 @@ static BOOL parseHttpUrl(CONST_STRPTR url, STRPTR host, ULONG hostSize,
     return TRUE;
 }
 
+/* Read whatever is available into buffer, waiting while a non-blocking
+ * socket (MorphOS) reports it would block. Returns the byte count, 0 when the
+ * peer has closed the connection, or -1 on error or idle timeout. */
+static LONG readSomeWaiting(BOOL useSSL, UBYTE *buffer, ULONG length) {
+    clock_t idleStart = clock();
+    while (TRUE) {
+        LONG n;
+        if (useSSL) {
+            LONG error;
+            ERR_clear_error();
+            n = SSL_read(ssl, buffer, (int)length);
+            if (n > 0)
+                return n;
+            error = SSL_get_error(ssl, n);
+            if (error == SSL_ERROR_ZERO_RETURN)
+                return 0;
+            if (error == SSL_ERROR_SYSCALL && n == 0)
+                return 0;
+            if (error != SSL_ERROR_WANT_READ &&
+                error != SSL_ERROR_WANT_WRITE &&
+                !(error == SSL_ERROR_SYSCALL && socketOperationWouldBlock()))
+                return -1;
+        } else {
+            n = recv(sock, buffer, length, 0);
+            if (n >= 0)
+                return n;
+            if (!socketOperationWouldBlock())
+                return -1;
+        }
+        if ((clock() - idleStart) / CLOCKS_PER_SEC >=
+            SOCKET_READ_MAX_IDLE_SECONDS)
+            return -1;
+        if (waitForSocketReadable(useSSL) < 0)
+            return -1;
+    }
+}
+
 static BOOL readFullHttpResponse(BOOL useSSL) {
     ULONG total = 0;
     if (readBuffer == NULL)
         return FALSE;
     memset(readBuffer, 0, READ_BUFFER_LENGTH);
     while (total < READ_BUFFER_LENGTH - 1) {
-        LONG n = useSSL ? SSL_read(ssl, readBuffer + total,
-                                   (int)(READ_BUFFER_LENGTH - 1 - total))
-                        : recv(sock, readBuffer + total,
-                               READ_BUFFER_LENGTH - 1 - total, 0);
+        LONG n = readSomeWaiting(useSSL, readBuffer + total,
+                                 READ_BUFFER_LENGTH - 1 - total);
         if (n <= 0)
             break;
         total += (ULONG)n;
@@ -3127,6 +3254,12 @@ LONG initOpenAIConnector() {
         displayError(STRING_ERROR_BSDSOCKET_LIB_OPEN);
         return RETURN_ERROR;
     }
+#elif defined(__MORPHOS__)
+    if ((SocketBase = OpenLibrary("bsdsocket.library", 4)) == NULL &&
+        (SocketBase = OpenLibrary("bsdsocket.library", 0)) == NULL) {
+        displayError(STRING_ERROR_BSDSOCKET_LIB_OPEN);
+        return RETURN_ERROR;
+    }
 #elif defined(__AMIGAOS4__)
     if ((SocketBase = OpenLibrary("bsdsocket.library", 4)) == NULL) {
         displayError(STRING_ERROR_BSDSOCKET_LIB_OPEN_OS4);
@@ -3338,6 +3471,10 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
         FreeVec(response);
     }
 
+#ifdef __MORPHOS__
+    setSocketNonBlocking(sock);
+#endif
+
     if (useSSL) {
         /* Associate the socket with the ssl structure */
         SSL_set_fd(ssl, sock);
@@ -3346,16 +3483,7 @@ static ULONG createSSLConnection(CONST_STRPTR host, UWORD port, BOOL useSSL,
         SSL_set_tlsext_host_name(ssl, host);
 
         /* Perform SSL handshake */
-        ERR_clear_error();
-        ssl_err = SSL_connect(ssl);
-
-        if (ssl_err == 1) {
-            /* Handshake successful. */
-            // printf("SSL connection to %s using %s\n", host,
-            // SSL_get_cipher(ssl));
-        } else {
-            /* Handshake failed: report with full diagnostics. */
-            reportSslError(ssl, ssl_err, "SSL_connect");
+        if (!handshakeSSLConnection()) {
             CloseSocket(sock);
             SSL_shutdown(ssl);
             SSL_free(ssl);
@@ -4623,6 +4751,7 @@ struct json_object **postChatMessageToOpenAI(
         LONG err = 0;
         LONG lastReadSocketError = 0;
         ULONG idleWaitSeconds = 0;
+        clock_t lastReadProgress = clock();
         UBYTE *tempReadBuffer = AllocVec(
             useProxy ? 8192 : TEMP_READ_BUFFER_LENGTH, MEMF_ANY | MEMF_CLEAR);
         if (startedNewRequest)
@@ -4701,6 +4830,7 @@ struct json_object **postChatMessageToOpenAI(
             }
             if (bytesRead > 0) {
                 idleWaitSeconds = 0;
+                lastReadProgress = clock();
                 tempReadBuffer[bytesRead] = '\0';
                 strncat(readBuffer, tempReadBuffer, bytesRead);
                 updateStatusBar(STRING_DOWNLOADING_RESPONSE, yellowPen);
@@ -4714,12 +4844,16 @@ struct json_object **postChatMessageToOpenAI(
                                    : SSL_ERROR_NONE;
                 if (didReadBytes && bytesRead <= 0)
                     lastReadSocketError = errno;
+                if (err == SSL_ERROR_SYSCALL && socketOperationWouldBlock())
+                    err = SSL_ERROR_WANT_READ;
             } else if (didReadBytes) {
                 lastReadSocketError = errno;
                 if (bytesRead > 0)
                     err = SSL_ERROR_NONE;
                 else if (bytesRead == 0)
                     err = SSL_ERROR_ZERO_RETURN;
+                else if (socketOperationWouldBlock())
+                    err = SSL_ERROR_WANT_READ;
                 else
                     err = SSL_ERROR_SYSCALL;
             } else {
@@ -4997,7 +5131,25 @@ struct json_object **postChatMessageToOpenAI(
                 doneReading = TRUE;
                 break;
             case SSL_ERROR_WANT_READ:
-                printf("SSL_ERROR_WANT_READ\n");
+            case SSL_ERROR_WANT_WRITE:
+                updateStatusBar(STRING_WAITING_FOR_RESPONSE, yellowPen);
+                if ((clock() - lastReadProgress) / CLOCKS_PER_SEC >=
+                    SOCKET_READ_MAX_IDLE_SECONDS) {
+                    SetIoErr(0);
+                    if (responseIndex == 0) {
+                        struct json_object *errObj = json_object_new_object();
+                        struct json_object *errInner = json_object_new_object();
+                        json_object_object_add(
+                            errInner, "message",
+                            json_object_new_string(STRING_ERROR_CONNECTION));
+                        json_object_object_add(errObj, "error", errInner);
+                        responses[responseIndex++] = errObj;
+                    }
+                    streamingInProgress = FALSE;
+                    closeActiveResponseConnection();
+                    doneReading = TRUE;
+                    break;
+                }
                 /* If we've already received the SSE terminator, stop waiting.
                  */
                 if (effectiveStream &&
@@ -5018,17 +5170,9 @@ struct json_object **postChatMessageToOpenAI(
                     streamingInProgress = FALSE;
                 }
                 break;
-            case SSL_ERROR_WANT_WRITE:
-                printf("SSL_ERROR_WANT_WRITE\n");
-                break;
             case SSL_ERROR_WANT_CONNECT:
-                printf("SSL_ERROR_WANT_CONNECT\n");
-                break;
             case SSL_ERROR_WANT_ACCEPT:
-                printf("SSL_ERROR_WANT_ACCEPT\n");
-                break;
             case SSL_ERROR_WANT_X509_LOOKUP:
-                printf("SSL_ERROR_WANT_X509_LOOKUP\n");
                 break;
             case SSL_ERROR_SYSCALL:
             case SSL_ERROR_SSL:
@@ -5349,7 +5493,7 @@ static BOOL writeStreamedRequestPiece(BOOL useSSL, const UBYTE *data,
                                       ULONG length, ULONG *sentBody,
                                       ULONG bodyLength, ULONG *lastPercent) {
     ULONG sent = 0;
-    UWORD retryCount = 0;
+    clock_t writeStart = clock();
 
     while (sent < length) {
         ULONG remaining = length - sent;
@@ -5357,6 +5501,9 @@ static BOOL writeStreamedRequestPiece(BOOL useSSL, const UBYTE *data,
             useSSL ? UPLOAD_WRITE_CHUNK_SIZE : PLAIN_HTTP_WRITE_CHUNK_SIZE;
         ULONG chunkLength = remaining < chunkLimit ? remaining : chunkLimit;
         LONG written;
+        if ((clock() - writeStart) / CLOCKS_PER_SEC >=
+            SOCKET_READ_MAX_IDLE_SECONDS)
+            return FALSE;
         if (!useSSL)
             waitForSocketWritable();
         if (useSSL) {
@@ -5364,10 +5511,16 @@ static BOOL writeStreamedRequestPiece(BOOL useSSL, const UBYTE *data,
             written = SSL_write(ssl, data + sent, (int)chunkLength);
             if (written <= 0) {
                 LONG error = SSL_get_error(ssl, written);
-                if ((error == SSL_ERROR_WANT_READ ||
-                     error == SSL_ERROR_WANT_WRITE) &&
-                    retryCount++ < MAX_UPLOAD_WRITE_RETRIES) {
-                    Delay(1);
+                if (error == SSL_ERROR_WANT_READ ||
+                    error == SSL_ERROR_WANT_WRITE) {
+                    if (error == SSL_ERROR_WANT_READ)
+                        waitForSocketReadable(TRUE);
+                    else
+                        waitForSocketWritable();
+#ifndef DAEMON
+                    if (!pumpRequestInterface())
+                        return FALSE;
+#endif
                     continue;
                 }
                 return FALSE;
@@ -5375,9 +5528,12 @@ static BOOL writeStreamedRequestPiece(BOOL useSSL, const UBYTE *data,
         } else {
             written = send(sock, data + sent, chunkLength, 0);
             if (written <= 0) {
-                if ((errno == EINTR || errno == EAGAIN) &&
-                    retryCount++ < MAX_UPLOAD_WRITE_RETRIES) {
-                    Delay(1);
+                if (socketOperationWouldBlock()) {
+                    waitForSocketWritable();
+#ifndef DAEMON
+                    if (!pumpRequestInterface())
+                        return FALSE;
+#endif
                     continue;
                 }
                 return FALSE;
@@ -5386,7 +5542,6 @@ static BOOL writeStreamedRequestPiece(BOOL useSSL, const UBYTE *data,
              * buffer and the server never sees a complete request. */
             Delay(1);
         }
-        retryCount = 0;
         sent += (ULONG)written;
         if (sentBody != NULL && bodyLength > 0) {
             ULONG percent;
@@ -7096,12 +7251,10 @@ static LONG createSSLContext() {
         SSL_CTX_set_default_verify_paths(ctx);
 
 #ifdef SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER
-        SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY |
-                                  SSL_MODE_ENABLE_PARTIAL_WRITE |
+        SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE |
                                   SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 #else
-        SSL_CTX_set_mode(ctx,
-                         SSL_MODE_AUTO_RETRY | SSL_MODE_ENABLE_PARTIAL_WRITE);
+        SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
 #endif
 
         // Disable certificate verification. This is done because proxy servers
@@ -8059,6 +8212,7 @@ void closeOpenAIConnector() {
         CloseLibrary(AmiSSLMasterBase);
         AmiSSLMasterBase = NULL;
     }
+#endif
 
     if (SocketBase) {
 #ifdef __AMIGAOS4__
@@ -8067,7 +8221,6 @@ void closeOpenAIConnector() {
         CloseLibrary(SocketBase);
         SocketBase = NULL;
     }
-#endif
 
     sock = -1;
 
@@ -10138,39 +10291,20 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
     }
 
     updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
-    if (useSSL) {
-        ERR_clear_error();
-        ssl_err = SSL_write(ssl, writeBuffer, strlen(writeBuffer));
-        if (ssl_err <= 0) {
-            reportSslError(ssl, ssl_err, "SSL_write (generic GET)");
+    if (writeAllQuiet(useSSL, writeBuffer, strlen(writeBuffer)) <= 0) {
+        displayError(STRING_ERROR_REQUEST_WRITE);
 #ifndef DAEMON
-            hideLoadingBar();
+        hideLoadingBar();
 #endif
-            return NULL;
-        }
-    } else {
-        ssl_err = send(sock, writeBuffer, strlen(writeBuffer), 0);
-        if (ssl_err <= 0) {
-            displayError(STRING_ERROR_REQUEST_WRITE);
-#ifndef DAEMON
-            hideLoadingBar();
-#endif
-            return NULL;
-        }
+        return NULL;
     }
 
     LONG totalRead = 0;
     LONG bytesRead;
 
     do {
-        if (useSSL) {
-            ERR_clear_error();
-            bytesRead = SSL_read(ssl, readBuffer + totalRead,
-                                 READ_BUFFER_LENGTH - totalRead - 1);
-        } else {
-            bytesRead = recv(sock, readBuffer + totalRead,
-                             READ_BUFFER_LENGTH - totalRead - 1, 0);
-        }
+        bytesRead = readSomeWaiting(useSSL, readBuffer + totalRead,
+                                    READ_BUFFER_LENGTH - totalRead - 1);
         if (bytesRead > 0) {
             totalRead += bytesRead;
         }

@@ -1,18 +1,17 @@
 # Changelog
 
-## 3.4.0 (2026-xx-xx)
+## 3.4.0 (2026-10-08)
 
 - Speech tab for generating reusable spoken phrases as WAV files, with phrase history, an interactive waveform with play/pause, stop and rewind symbols, speech profile details, Regenerate, Save Speech Copy, file attachments and Generate text with AI
 - ARexx SPEAKTEXT now saves WAV (default) or raw PCM for every speech backend, including narrator.device and flite.device, when OUTPUT is given
 - LISTAUDIOFORMATS now reports wav and pcm
 - Main window tabs renamed to Chat, Image and Speech
 - Send, Create and Generate change to Stop while a request is in progress, and abort that request. After a Chat reply is being read aloud, Send stays on Stop and interrupts playback
-- Speech tab playback lives on the waveform: play/pause (left), stop, rewind, and elapsed time; the gadget plays WAV or raw PCM itself (byte-swapping to big endian when needed) and does not use the chat speech engine
-- Waveform colours are settable (wave, peak, spectrum, background, bar and text pens); AmigaGPT uses its green, yellow and blue pens so the display matches the rest of the UI
 - Expert mode in the installer  now asks whether to install AmigaGPTD, including on AmiKit, instead of always copying the daemon
 - On AmiKit the installer writes the AMIGAGPT: assign and optional daemon start to KIT-Startup instead of S:User-Startup
 - Extracted the Return-to-submit editor and speech waveform into public MUI classes ActionTextEditor.mcc and AudioPlayer.mcc. The installer copies them into MUI:Libs/MUI (or SYS:Classes/MUI on MorphOS)
 - Fix MorphOS asking to insert volume "." at launch when Ambient left the current directory unset and MUI searched there for an icon or .mcc
+- Fix MorphOS chat hanging on "Connecting..." after a successful profile test
 - Fix file uploads through Cloudflare (AmiKit) failing with a connect error because Report-To header JSON was parsed instead of the Files API body
 
 ## 3.3.0 (2026-08-29)

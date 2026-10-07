@@ -304,6 +304,10 @@ static BOOL abortIfRequestBusy(void) {
     return TRUE;
 }
 
+static void queueRequestHook(struct Hook *hook) {
+    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook, hook);
+}
+
 static CONST_STRPTR xaiBuiltinVoiceName(CONST_STRPTR voiceId) {
     static const CONST_STRPTR pretty[] = {"Ara", "Eve", "Leo", "Rex", "Sal"};
     UBYTE i;
@@ -1359,10 +1363,17 @@ HOOKPROTONHNONP(DeleteSpeechButtonClickedFunc, void) {
 }
 MakeHook(DeleteSpeechButtonClickedHook, DeleteSpeechButtonClickedFunc);
 
+HOOKPROTONHNONP(GenerateSpeechDeferredFunc, void) {
+    if (requestInterfaceBusy)
+        return;
+    generateSpeech(FALSE);
+}
+MakeHook(GenerateSpeechDeferredHook, GenerateSpeechDeferredFunc);
+
 HOOKPROTONHNONP(GenerateSpeechButtonClickedFunc, void) {
     if (abortIfRequestBusy())
         return;
-    generateSpeech(FALSE);
+    queueRequestHook(&GenerateSpeechDeferredHook);
 }
 MakeHook(GenerateSpeechButtonClickedHook, GenerateSpeechButtonClickedFunc);
 
@@ -1595,15 +1606,15 @@ HOOKPROTONHNONP(SaveResponseFilesButtonClickedFunc, void) {
 MakeHook(SaveResponseFilesButtonClickedHook,
          SaveResponseFilesButtonClickedFunc);
 
-HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
-    if (abortIfRequestBusy())
+HOOKPROTONHNONP(SendChatDeferredFunc, void) {
+    struct ChatRequestSettings chatSettings;
+    if (requestInterfaceBusy)
         return;
     if (isSpeechPlaying()) {
         stopSpeech();
         updatePlayButton();
         return;
     }
-    struct ChatRequestSettings chatSettings;
     configGetActiveChatRequestSettings(&chatSettings);
     if (chatSettings.authorizationType != AUTHORIZATION_TYPE_NONE &&
         (chatSettings.apiKey == NULL || strlen(chatSettings.apiKey) == 0)) {
@@ -1611,6 +1622,13 @@ HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
         return;
     }
     sendChatMessage();
+}
+MakeHook(SendChatDeferredHook, SendChatDeferredFunc);
+
+HOOKPROTONHNONP(SendMessageButtonClickedFunc, void) {
+    if (abortIfRequestBusy())
+        return;
+    queueRequestHook(&SendChatDeferredHook);
 }
 MakeHook(SendMessageButtonClickedHook, SendMessageButtonClickedFunc);
 
@@ -1718,8 +1736,8 @@ static BOOL isStringInList(CONST_STRPTR str, CONST_STRPTR *list) {
     return FALSE;
 }
 
-HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
-    if (abortIfRequestBusy())
+HOOKPROTONHNONP(CreateImageDeferredFunc, void) {
+    if (requestInterfaceBusy)
         return;
     struct ImageRequestSettings imageSettings;
     configGetActiveImageRequestSettings(&imageSettings);
@@ -2065,6 +2083,13 @@ HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
     if (!isAROS) {
         FreeVec(text);
     }
+}
+MakeHook(CreateImageDeferredHook, CreateImageDeferredFunc);
+
+HOOKPROTONHNONP(CreateImageButtonClickedFunc, void) {
+    if (abortIfRequestBusy())
+        return;
+    queueRequestHook(&CreateImageDeferredHook);
 }
 MakeHook(CreateImageButtonClickedHook, CreateImageButtonClickedFunc);
 
