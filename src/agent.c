@@ -1,5 +1,6 @@
 #include <dos/dos.h>
 #include <dos/dosextens.h>
+#include <devices/inputevent.h>
 #include <dos/dostags.h>
 #include <json-c/json.h>
 #include <libraries/mui.h>
@@ -116,6 +117,48 @@ static const struct AgentToolDefinition BUILT_IN_TOOLS[] = {
      "\"description\":\"What the picture should show\"},\"path\":{"
      "\"type\":\"string\",\"description\":\"Where to save it, ending in "
      ".png\"}},\"required\":[\"prompt\",\"path\"]}"},
+    {"screenshot", AGENT_TOOL_EXECUTE,
+     "Take a picture of the screen and look at it. Use this, with mouse and "
+     "keyboard, only for what the shell, ARexx and file tools cannot do, "
+     "such as operating a program that has no ARexx port. AmigaGPT hides its "
+     "own window first so it is not in the way.",
+     "{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\","
+     "\"description\":\"Optional file to save the picture to as a PNG\"}},"
+     "\"required\":[]}"},
+    {"mouse", AGENT_TOOL_EXECUTE,
+     "Move the pointer and use a mouse button. Positions are in the pixels "
+     "of the latest screenshot. Take a screenshot first to see where things "
+     "are, and another afterwards to check what happened. Menus open with "
+     "the right button: drag with button right from the screen's title bar "
+     "to the menu item.",
+     "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\","
+     "\"enum\":[\"move\",\"click\",\"double_click\",\"drag\"]},\"x\":{"
+     "\"type\":\"integer\"},\"y\":{\"type\":\"integer\"},\"button\":{"
+     "\"type\":\"string\",\"enum\":[\"left\",\"right\",\"middle\"],"
+     "\"description\":\"Default left\"},\"to_x\":{\"type\":\"integer\","
+     "\"description\":\"Where a drag ends\"},\"to_y\":{\"type\":"
+     "\"integer\"}},\"required\":[\"action\",\"x\",\"y\"]}"},
+    {"keyboard", AGENT_TOOL_EXECUTE,
+     "Type text or press a key in whichever window is active. Click a "
+     "window or text field first to make it the one that receives keys.",
+     "{\"type\":\"object\",\"properties\":{\"text\":{\"type\":\"string\","
+     "\"description\":\"Text to type. A line break presses Return\"},"
+     "\"key\":{\"type\":\"string\",\"description\":\"A key to press: a "
+     "single character, or return, enter, escape, backspace, tab, delete, "
+     "space, up, down, left, right, help, f1 to f10\"},\"qualifiers\":{"
+     "\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":["
+     "\"shift\",\"ctrl\",\"alt\",\"lamiga\",\"ramiga\"]},"
+     "\"description\":\"Keys held with key, e.g. ramiga with q\"},"
+     "\"repeat\":{\"type\":\"integer\",\"description\":\"Times to press "
+     "key\"}},\"required\":[]}"},
+    {"host_command", AGENT_TOOL_EXECUTE,
+     "Run a command in the shell of the host computer this Amiga is "
+     "emulated on, and return its output. Use it only for what cannot be "
+     "done, or is impractical, on the Amiga itself. The command uses the "
+     "host's own syntax and paths, not AmigaDOS ones.",
+     "{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\","
+     "\"description\":\"The host shell command line\"}},"
+     "\"required\":[\"command\"]}"},
     {"list_arexx_ports", AGENT_TOOL_SAFE,
      "List the public message ports on this machine. Programs that can be "
      "scripted with ARexx appear here by their port name.",
@@ -152,6 +195,16 @@ static APTR requesterWindow = NULL;
 static UBYTE effectiveModelBuffer[256];
 static ULONG commandCounter = 0;
 static BOOL agentRunning = FALSE;
+static void (*desktopHideHook)(void) = NULL;
+static void (*desktopShowHook)(void) = NULL;
+static BOOL desktopHidden = FALSE;
+/* -1 until checked, then whether the host tools are installed and work */
+static LONG hostToolsState = -1;
+static UBYTE hostInfoText[512];
+/* The picture made by the tool call that is running, for its result */
+static STRPTR pendingImage = NULL;
+
+static BOOL hostToolsAvailable(void);
 
 /* ------------------------------------------------------------------------
  * Strings and files
@@ -528,6 +581,29 @@ static CONST_STRPTR activeProjectPath(void) {
 
 void agentSetRequesterWindow(APTR windowObject) {
     requesterWindow = windowObject;
+}
+
+void agentSetDesktopHooks(void (*hide)(void), void (*show)(void)) {
+    desktopHideHook = hide;
+    desktopShowHook = show;
+}
+
+/* Get this program's windows out of the way before the desktop is looked
+ * at or operated */
+static void hideForDesktop(void) {
+    if (desktopHidden || desktopHideHook == NULL)
+        return;
+    desktopHideHook();
+    desktopHidden = TRUE;
+    /* Let the screen redraw what was underneath */
+    Delay(40);
+}
+
+static void showAfterDesktop(void) {
+    if (!desktopHidden || desktopShowHook == NULL)
+        return;
+    desktopShowHook();
+    desktopHidden = FALSE;
 }
 
 AgentApprovalMode agentGetApprovalMode(void) {
@@ -937,11 +1013,12 @@ static void appendInstructionFile(struct AgentBuffer *buffer,
 static STRPTR buildSystemPrompt(struct json_object *subagent) {
     static CONST_STRPTR approvalNotes[] = {
         "Reading local files is always allowed. The user is asked before a "
-        "shell command, an ARexx command, an MCP tool, web access, image "
-        "generation or a file change runs, and may refuse it.",
-        "Read-only mode is on: shell commands, ARexx commands, MCP tools, web "
-        "access, image generation and file changes are refused. Investigate "
-        "and report instead.",
+        "shell or host command, an ARexx command, an MCP tool, web access, "
+        "image generation, desktop control or a file change runs, and may "
+        "refuse it.",
+        "Read-only mode is on: shell and host commands, ARexx commands, MCP "
+        "tools, web access, image generation, desktop control and file "
+        "changes are refused. Investigate and report instead.",
         "File writes and edits run without asking. The user is asked before "
         "a shell command, an ARexx command, an MCP tool, web access or image "
         "generation runs.",
@@ -1000,6 +1077,33 @@ static STRPTR buildSystemPrompt(struct json_object *subagent) {
         "that fits it: no emoji, typographic quotes, long dashes or other "
         "symbols outside it, in files and in replies.\n");
 
+    agentBufferAppend(
+        &buffer,
+        "The screenshot, mouse and keyboard tools operate the desktop the "
+        "way a person would. They are slow and imprecise, so use them only "
+        "when the shell, ARexx and file tools cannot do the job.\n");
+    if (hostToolsAvailable()) {
+        STRPTR hostInfo = agentToUtf8(hostInfoText);
+        agentBufferAppend(
+            &buffer,
+            "This Amiga is emulated by Amiberry and the Host-Tools commands "
+            "are installed, so the host computer can be reached:\n");
+        agentBufferAppend(&buffer, hostInfo != NULL ? hostInfo : "");
+        agentBufferAppend(
+            &buffer,
+            "\nThe host_command tool runs a command in the host's shell. "
+            "These AmigaDOS commands also work in the shell tool: host-path "
+            "<amiga path> prints the host path of a file on a volume the "
+            "host can see, host-multiview <file or URL> opens it in the "
+            "host's default program, host-clip copy <text> and host-clip "
+            "paste use the host clipboard, host-notify <message> shows a "
+            "host notification. Stay on the Amiga for anything it can do "
+            "itself, and use the host only for what is impossible or "
+            "impractical there, such as work that needs a modern program, "
+            "a lot of memory or computing power.\n");
+        if (hostInfo != NULL)
+            FreeVec(hostInfo);
+    }
     if (project[0] != '\0') {
         STRPTR projectUtf8 = agentToUtf8(project);
         agentBufferAppend(&buffer, "The active project is the drawer ");
@@ -1091,6 +1195,9 @@ static struct json_object *buildTools(BOOL allowSubagents,
             continue;
         if (strcmp(definition->name, "load_skill") == 0 &&
             (skills == NULL || json_object_array_length(skills) == 0))
+            continue;
+        if (strcmp(definition->name, "host_command") == 0 &&
+            !hostToolsAvailable())
             continue;
         if (filter && !listContains(allowed, definition->name))
             continue;
@@ -1908,6 +2015,169 @@ static STRPTR toolGenerateImage(struct json_object *arguments, BOOL *isError) {
     return agentDuplicate(message);
 }
 
+/**
+ * Whether this Amiga is emulated and has the Host-Tools commands, which
+ * reach the host computer through the emulator
+ * (https://github.com/BlitterStudio/host-tools). Checked once.
+ **/
+static BOOL hostToolsAvailable(void) {
+    if (hostToolsState < 0) {
+        hostToolsState = 0;
+        hostInfoText[0] = '\0';
+        if (pathExists("C:host-shell") && pathExists("C:host-info")) {
+            LONG exitCode = -1;
+            BOOL finished = FALSE;
+            /* host-info fails when there is no emulator underneath */
+            STRPTR output = runCommand("C:host-info", "", &exitCode, &finished);
+            if (finished && exitCode == 0 && output != NULL &&
+                strstr(output, "OS:") != NULL) {
+                strncpy(hostInfoText, output, sizeof(hostInfoText) - 1);
+                hostInfoText[sizeof(hostInfoText) - 1] = '\0';
+                hostToolsState = 1;
+            }
+            if (output != NULL)
+                FreeVec(output);
+        }
+    }
+    return hostToolsState == 1;
+}
+
+static STRPTR toolHostCommand(struct json_object *arguments, BOOL *isError) {
+    STRPTR command = agentToLocal(jsonString(arguments, "command"));
+    struct AgentBuffer line = {NULL, 0, 0};
+    STRPTR result;
+    CONST_STRPTR p;
+
+    *isError = TRUE;
+    if (command == NULL || command[0] == '\0') {
+        if (command != NULL)
+            FreeVec(command);
+        return agentDuplicate("Error: command is empty.");
+    }
+    if (!hostToolsAvailable()) {
+        FreeVec(command);
+        return agentDuplicate("Error: the host tools are not available.");
+    }
+    /* host-shell passes a single argument to the host shell untouched, so
+     * the whole command goes in one AmigaDOS string. Inside it an asterisk
+     * escapes the characters the Amiga Shell would otherwise act on. */
+    agentBufferAppend(&line, "C:host-shell \"");
+    for (p = command; *p != '\0'; p++) {
+        if (*p == '\n')
+            agentBufferAppend(&line, "*N");
+        else if (*p == '\r')
+            continue;
+        else {
+            if (*p == '*' || *p == '"' || *p == '$' || *p == '`')
+                agentBufferAppend(&line, "*");
+            agentBufferAppendLength(&line, p, 1);
+        }
+    }
+    agentBufferAppend(&line, "\"");
+    FreeVec(command);
+    *isError = FALSE;
+    result = runCommandForModel(line.data, "", isError);
+    agentBufferFree(&line);
+    return result;
+}
+
+static STRPTR toolScreenshot(struct json_object *arguments, BOOL *isError) {
+    UBYTE path[AGENT_PATH_LENGTH];
+    UBYTE description[320];
+    CONST_STRPTR pathArgument = jsonString(arguments, "path");
+    STRPTR image = NULL;
+
+    path[0] = '\0';
+    if (pathArgument[0] != '\0') {
+        resolvePath(pathArgument, path, sizeof(path));
+        ensureParentDirectories(path);
+    }
+    hideForDesktop();
+    if (!agentDesktopScreenshot(&image, description, sizeof(description),
+                                path[0] != '\0' ? (CONST_STRPTR)path : NULL)) {
+        *isError = TRUE;
+        return agentDuplicate("Error: the screen could not be captured.");
+    }
+    if (pendingImage != NULL)
+        FreeVec(pendingImage);
+    pendingImage = image;
+    return agentDuplicate(description);
+}
+
+static LONG jsonInteger(struct json_object *object, CONST_STRPTR key,
+                        LONG defaultValue) {
+    struct json_object *value;
+    if (object == NULL || !json_object_object_get_ex(object, key, &value) ||
+        value == NULL)
+        return defaultValue;
+    return (LONG)json_object_get_int(value);
+}
+
+static STRPTR toolMouse(struct json_object *arguments, BOOL *isError) {
+    UBYTE error[256];
+    LONG x = jsonInteger(arguments, "x", -1);
+    LONG y = jsonInteger(arguments, "y", -1);
+    hideForDesktop();
+    if (!agentDesktopMouse(jsonString(arguments, "action"),
+                           jsonString(arguments, "button"), x, y,
+                           jsonInteger(arguments, "to_x", x),
+                           jsonInteger(arguments, "to_y", y), error,
+                           sizeof(error))) {
+        *isError = TRUE;
+        return agentDuplicate(error);
+    }
+    return agentDuplicate("Done. Take a screenshot to see the result.");
+}
+
+static STRPTR toolKeyboard(struct json_object *arguments, BOOL *isError) {
+    static const struct {
+        CONST_STRPTR name;
+        UWORD flag;
+    } qualifierNames[] = {{"shift", IEQUALIFIER_LSHIFT},
+                          {"ctrl", IEQUALIFIER_CONTROL},
+                          {"alt", IEQUALIFIER_LALT},
+                          {"lamiga", IEQUALIFIER_LCOMMAND},
+                          {"ramiga", IEQUALIFIER_RCOMMAND},
+                          {NULL, 0}};
+    UBYTE error[256];
+    struct json_object *list;
+    CONST_STRPTR textUtf8 = jsonString(arguments, "text");
+    CONST_STRPTR key = jsonString(arguments, "key");
+    STRPTR text = textUtf8[0] != '\0' ? agentToLocal(textUtf8) : NULL;
+    UWORD qualifiers = 0;
+    ULONG i, j;
+    BOOL ok;
+
+    if (text == NULL && key[0] == '\0') {
+        *isError = TRUE;
+        return agentDuplicate("Error: give text to type or a key to press.");
+    }
+    if (json_object_object_get_ex(arguments, "qualifiers", &list) &&
+        json_object_is_type(list, json_type_array)) {
+        for (i = 0; i < json_object_array_length(list); i++) {
+            CONST_STRPTR name =
+                json_object_get_string(json_object_array_get_idx(list, i));
+            for (j = 0; name != NULL && qualifierNames[j].name != NULL; j++) {
+                if (strcasecmp(name, qualifierNames[j].name) == 0)
+                    qualifiers |= qualifierNames[j].flag;
+            }
+        }
+    }
+    hideForDesktop();
+    ok = agentDesktopKeyboard(text, key, qualifiers,
+                              jsonInteger(arguments, "repeat", 1), error,
+                              sizeof(error));
+    if (text != NULL)
+        FreeVec(text);
+    if (!ok) {
+        *isError = TRUE;
+        return agentDuplicate(error);
+    }
+    if (error[0] != '\0')
+        return agentDuplicate(error);
+    return agentDuplicate("Done. Take a screenshot to see the result.");
+}
+
 static STRPTR toolLoadSkill(struct json_object *arguments, BOOL *isError) {
     struct json_object *skill = findByName(skills, jsonString(arguments, "name"));
     struct AgentBuffer buffer = {NULL, 0, 0};
@@ -1963,6 +2233,39 @@ static void allowRuleFor(CONST_STRPTR name, struct json_object *arguments,
                length + i + 1 < size) {
             UBYTE c = (UBYTE)command[i];
             out[length + i] = (c >= 'A' && c <= 'Z') ? (UBYTE)(c + 32) : c;
+            i++;
+        }
+        out[length + i] = '\0';
+        /* Allowing host-shell or host-run once must not allow every host
+         * command, so the host command's own name is part of the rule */
+        if (strcmp(out, "shell:host-shell") == 0 ||
+            strcmp(out, "shell:host-run") == 0 ||
+            strcmp(out, "shell:c:host-shell") == 0 ||
+            strcmp(out, "shell:c:host-run") == 0) {
+            command += i;
+            while (*command == ' ' || *command == '"')
+                command++;
+            length = strlen(out);
+            if (length + 2 < size) {
+                out[length++] = ' ';
+                for (i = 0; command[i] != '\0' && command[i] != ' ' &&
+                            command[i] != '"' && length + i + 1 < size;
+                     i++)
+                    out[length + i] = command[i];
+                out[length + i] = '\0';
+            }
+        }
+    } else if (strcmp(name, "host_command") == 0) {
+        CONST_STRPTR command = jsonString(arguments, "command");
+        ULONG i = 0;
+        ULONG length;
+        snprintf(out, size, "host:");
+        length = strlen(out);
+        while (*command == ' ')
+            command++;
+        while (command[i] != '\0' && command[i] != ' ' && command[i] != '\n' &&
+               length + i + 1 < size) {
+            out[length + i] = command[i];
             i++;
         }
         out[length + i] = '\0';
@@ -2025,6 +2328,14 @@ static STRPTR describeCall(CONST_STRPTR name, struct json_object *arguments) {
         detail = jsonString(arguments, "url");
     else if (strcmp(name, "generate_image") == 0)
         detail = jsonString(arguments, "prompt");
+    else if (strcmp(name, "host_command") == 0)
+        detail = jsonString(arguments, "command");
+    else if (strcmp(name, "mouse") == 0 || strcmp(name, "keyboard") == 0)
+        detail = arguments != NULL
+                     ? json_object_to_json_string_ext(
+                           arguments, JSON_C_TO_STRING_PLAIN |
+                                          JSON_C_TO_STRING_NOSLASHESCAPE)
+                     : "";
     else if (findBuiltInTool(name) != NULL)
         detail = jsonString(arguments, "path");
     else if (arguments != NULL)
@@ -2069,6 +2380,8 @@ static BOOL approveCall(CONST_STRPTR name, struct json_object *arguments) {
     if (ruleAllows(rule))
         return TRUE;
 
+    /* The question has to be seen, so the windows come back for it */
+    showAfterDesktop();
     description = describeCall(name, arguments);
     descriptionLocal = agentToLocal(description);
     messageSize = strlen(STRING_AGENT_CONFIRM_BODY) + strlen(name) +
@@ -2215,6 +2528,14 @@ static STRPTR executeCall(CONST_STRPTR name, struct json_object *arguments,
         return toolDownloadFile(arguments, isError);
     if (strcmp(name, "generate_image") == 0)
         return toolGenerateImage(arguments, isError);
+    if (strcmp(name, "screenshot") == 0)
+        return toolScreenshot(arguments, isError);
+    if (strcmp(name, "mouse") == 0)
+        return toolMouse(arguments, isError);
+    if (strcmp(name, "keyboard") == 0)
+        return toolKeyboard(arguments, isError);
+    if (strcmp(name, "host_command") == 0)
+        return toolHostCommand(arguments, isError);
     if (strcmp(name, "list_arexx_ports") == 0)
         return toolListArexxPorts(isError);
     if (strcmp(name, "arexx") == 0)
@@ -2227,6 +2548,43 @@ static STRPTR executeCall(CONST_STRPTR name, struct json_object *arguments,
     return agentDuplicate("Error: there is no tool with that name.");
 }
 
+/* Take the pictures out of a history, or out of a list of tool results */
+static void removeImages(struct json_object *array) {
+    ULONG i, j;
+    for (i = 0; array != NULL && i < json_object_array_length(array); i++) {
+        struct json_object *entry = json_object_array_get_idx(array, i);
+        struct json_object *results;
+        json_object_object_del(entry, "image");
+        if (!json_object_object_get_ex(entry, "results", &results) ||
+            !json_object_is_type(results, json_type_array))
+            continue;
+        for (j = 0; j < json_object_array_length(results); j++)
+            json_object_object_del(json_object_array_get_idx(results, j),
+                                   "image");
+    }
+}
+
+/* The size of the pictures in a history, which is not counted against the
+ * limit on its text */
+static ULONG imageBytes(struct json_object *items) {
+    ULONG total = 0;
+    ULONG i, j;
+    for (i = 0; i < json_object_array_length(items); i++) {
+        struct json_object *results;
+        if (!json_object_object_get_ex(json_object_array_get_idx(items, i),
+                                       "results", &results) ||
+            !json_object_is_type(results, json_type_array))
+            continue;
+        for (j = 0; j < json_object_array_length(results); j++) {
+            struct json_object *image;
+            if (json_object_object_get_ex(
+                    json_object_array_get_idx(results, j), "image", &image))
+                total += strlen(jsonString(image, "data"));
+        }
+    }
+    return total;
+}
+
 /* Drop the oldest turns once the history is too big to keep sending */
 static void trimHistory(struct json_object *items) {
     while (json_object_array_length(items) > 2) {
@@ -2234,7 +2592,8 @@ static void trimHistory(struct json_object *items) {
             json_object_to_json_string_ext(items, JSON_C_TO_STRING_PLAIN);
         ULONG count = (ULONG)json_object_array_length(items);
         ULONG next = 1;
-        if (text == NULL || strlen(text) <= AGENT_MAX_HISTORY_BYTES)
+        if (text == NULL ||
+            strlen(text) <= AGENT_MAX_HISTORY_BYTES + imageBytes(items))
             return;
         /* Remove a whole turn so no tool result is left without its call */
         while (next < count &&
@@ -2374,6 +2733,19 @@ static STRPTR runLoop(struct json_object *items, CONST_STRPTR system,
                 json_object_new_string(toolOutput != NULL ? toolOutput : ""));
             json_object_object_add(result, "isError",
                                    json_object_new_boolean(isError));
+            if (pendingImage != NULL) {
+                struct json_object *image = json_object_new_object();
+                /* Pictures are large, so only the newest one is kept */
+                removeImages(items);
+                removeImages(results);
+                json_object_object_add(image, "mime",
+                                       json_object_new_string("image/png"));
+                json_object_object_add(image, "data",
+                                       json_object_new_string(pendingImage));
+                json_object_object_add(result, "image", image);
+                FreeVec(pendingImage);
+                pendingImage = NULL;
+            }
             json_object_array_add(results, result);
             if (toolOutput != NULL)
                 FreeVec(toolOutput);
@@ -2846,6 +3218,9 @@ BOOL agentRun(CONST_STRPTR prompt, AgentOutputFunc output) {
     finalText = runLoop(history, system, tools, agentEffectiveModel(), FALSE,
                         output, &ok);
     setErrorRequestersSuppressed(FALSE);
+    showAfterDesktop();
+    /* A picture of the screen is stale by the next turn and too big to keep */
+    removeImages(history);
     json_object_put(tools);
     if (system != NULL)
         FreeVec(system);

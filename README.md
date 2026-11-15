@@ -187,17 +187,21 @@ The **Agent** tab hands a task to the model and lets it work on your Amiga with 
 
 The agent talks to the active chat provider, so it works with OpenAI, Google Gemini, SpaceXAI Grok, Anthropic Claude and custom OpenAI-compatible servers whose model supports tool calling.
 
-**Tools.** The agent can run AmigaDOS commands in a Shell (`shell`), read, write and edit files (`read_file`, `write_file`, `edit_file`), list and search drawers (`list_directory`, `search_files`), identify a file's type (`identify_file`), read a web page or web API (`fetch_url`), download a file (`download_file`), generate a picture with the active image provider (`generate_image`), list ARexx ports and send a command to one (`list_arexx_ports`, `arexx`), load a skill (`load_skill`), hand a side task to a subagent (`run_subagent`), and call the tools of any MCP server you have added.
+**Tools.** The agent can run AmigaDOS commands in a Shell (`shell`), read, write and edit files (`read_file`, `write_file`, `edit_file`), list and search drawers (`list_directory`, `search_files`), identify a file's type (`identify_file`), read a web page or web API (`fetch_url`), download a file (`download_file`), generate a picture with the active image provider (`generate_image`), list ARexx ports and send a command to one (`list_arexx_ports`, `arexx`), load a skill (`load_skill`), hand a side task to a subagent (`run_subagent`), and call the tools of any MCP server you have added. When a job cannot be done that way, it can also look at the screen and operate it with the mouse and keyboard, and under emulation it can run commands on the host computer (both described below).
 
 Commands run in the background without a keyboard, so the window stays responsive and **Stop** always works. A command that has not finished after two minutes is left running and the agent is told so (change `commandTimeout`, in seconds, in `AMIGAGPT:agent/settings.json`). The agent cannot send ARexx commands to AmigaGPT's own port. Errors that would normally open a requester are passed to the agent instead while it works, so a failed download or connection does not stop it.
+
+**Desktop control.** `screenshot` takes a picture of the front screen for the model to look at, `mouse` moves the pointer, clicks, double-clicks and drags (with the right button for menus), and `keyboard` types text or presses a key with qualifiers such as Right Amiga. They are a fallback for programs that have no ARexx port or shell command: slower and less exact than the other tools, and the agent is told to use them only when nothing else will do. They need a model that accepts images. AmigaGPT iconifies itself while the agent works on the desktop, so its own window is not in the way, and comes back when the turn ends or when it needs to ask you something. The picture is scaled down to at most 1024 x 768 before it is sent.
+
+**Host computer.** When the Amiga is emulated by Amiberry and the [Host-Tools](https://github.com/BlitterStudio/host-tools) commands are installed in `C:`, the agent gets a `host_command` tool that runs a command in the host's shell and returns its output, and is told about `host-path`, `host-multiview`, `host-clip` and `host-notify`. It is instructed to stay on the Amiga for anything the Amiga can do and to use the host only for what is impossible or impractical there. AmigaGPT checks for this once, by running `host-info`; on a real Amiga, or without Host-Tools, the tool is simply not offered. Host commands always ask for approval unless you are in Full auto, and **Always allow** remembers them by the host command's name.
 
 **Approval.** The **Approval** gadget decides what runs without asking:
 
 | Setting | What happens |
 | --- | --- |
-| Ask before changes | Reading local files is free. Shell commands, ARexx commands, MCP tools, web access, image generation and file changes show a requester first |
+| Ask before changes | Reading local files is free. Shell and host commands, ARexx commands, MCP tools, web access, image generation, desktop control and file changes show a requester first |
 | Read only | Nothing that changes the system runs. The agent can only look and report |
-| Accept file edits | File writes and edits run. Shell commands, ARexx commands, MCP tools, web access and image generation still ask |
+| Accept file edits | File writes and edits run. Everything else that needs approval still asks |
 | Full auto | Everything runs without asking |
 
 The requester offers **Allow once**, **Always allow** and **Deny**. **Always allow** remembers the answer for the project: a Shell command is remembered by its command name (allowing `list` does not allow `delete`), an ARexx command by its port, and other tools by name.

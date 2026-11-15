@@ -371,6 +371,18 @@ HOOKPROTONHNONP(AgentSendButtonClickedFunc, void) {
 }
 MakeHook(AgentSendButtonClickedHook, AgentSendButtonClickedFunc);
 
+/* Iconifying closes every window of the program, so the agent sees and
+ * clicks what is underneath, and the user can still bring it back */
+static void hideApplication(void) {
+    if (app != NULL)
+        set(app, MUIA_Application_Iconified, TRUE);
+}
+
+static void showApplication(void) {
+    if (app != NULL)
+        set(app, MUIA_Application_Iconified, FALSE);
+}
+
 Object *agentPagePromptEditor(void) { return agentInputEditor; }
 
 void agentPageSetBusy(BOOL busy) {
@@ -562,6 +574,7 @@ void addAgentPageActions(void) {
         return;
     createAgentEditorWindow();
     agentSetRequesterWindow(mainWindowObject);
+    agentSetDesktopHooks(hideApplication, showApplication);
 
     DoMethod(agentAddProjectButton, MUIM_Notify, MUIA_Pressed, FALSE,
              agentAddProjectButton, 2, MUIM_CallHook, &AgentAddProjectHook);

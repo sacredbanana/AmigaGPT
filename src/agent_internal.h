@@ -12,7 +12,11 @@
  *   {"type":"user","text":"..."}
  *   {"type":"assistant","text":"...","calls":[{"id","name","args":{}}],
  *    "raw":<the provider's own blocks>,"rawFormat":<APIChatEndpoint>}
- *   {"type":"tool","results":[{"id","name","output","isError"}]}
+ *   {"type":"tool","results":[{"id","name","output","isError",
+ *    "image":{"mime","data"}}]}
+ *
+ * "image" is a picture the tool produced, base64 encoded, which is shown to
+ * the model. Only the newest one is kept, because each is large.
  *
  * A tool list is a json array of {"name","description","parameters"} where
  * parameters is a JSON Schema object.
@@ -85,5 +89,41 @@ STRPTR agentMcpCall(CONST_STRPTR name, struct json_object *arguments,
 void agentMcpDescribe(struct AgentBuffer *buffer);
 
 void agentMcpFree(void);
+
+/**
+ * Take a picture of the front screen, scaled down to a size a model can use
+ * @param base64Out receives the PNG file, base64 encoded. Free it with
+ * FreeVec()
+ * @param description receives a sentence about the picture for the model
+ * @param savePath a file to write the PNG to as well, or NULL
+ * @return TRUE if the picture was taken
+ **/
+BOOL agentDesktopScreenshot(STRPTR *base64Out, STRPTR description,
+                            ULONG descriptionSize, CONST_STRPTR savePath);
+
+/**
+ * Move the pointer on the front screen and use a mouse button
+ * @param action move, click, double_click or drag
+ * @param button left, right or middle
+ * @param x,y the position in pixels of the screenshot picture
+ * @param toX,toY where a drag ends
+ * @param error receives the reason on failure
+ **/
+BOOL agentDesktopMouse(CONST_STRPTR action, CONST_STRPTR button, LONG x,
+                       LONG y, LONG toX, LONG toY, STRPTR error,
+                       ULONG errorSize);
+
+/**
+ * Press keys as if they were typed
+ * @param text text to type in the local character set, or NULL
+ * @param key a named key or a single character, or NULL
+ * @param qualifiers IEQUALIFIER_ flags held with the key
+ * @param repeat how often to press the key
+ * @param error receives the reason on failure, or a note about characters
+ * that could not be typed
+ **/
+BOOL agentDesktopKeyboard(CONST_STRPTR text, CONST_STRPTR key,
+                          UWORD qualifiers, LONG repeat, STRPTR error,
+                          ULONG errorSize);
 
 #endif /* AGENT_INTERNAL_H */

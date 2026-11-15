@@ -649,16 +649,32 @@ The agent talks to the active chat provider, so it works with OpenAI, Google Gem
   arexx              send an ARexx command to a program
   load_skill         load the instructions of a skill
   run_subagent       hand a side task to a subagent
+  screenshot         look at the screen
+  mouse              move the pointer, click and drag
+  keyboard           type text and press keys
+  host_command       run a command on the host computer (emulation only)
 
 The tools of any MCP server you have added are available as well.
 
 Commands run in the background without a keyboard, so the window stays responsive and @{b}Stop@{ub} always works. A command that has not finished after two minutes is left running and the agent is told so. The agent cannot send ARexx commands to AmigaGPT itself.
 
+@{b}@{u}Operating the desktop@{uu}@{ub}
+
+The @{i}screenshot@{ui}, @{i}mouse@{ui} and @{i}keyboard@{ui} tools let the agent look at the screen and operate it the way you would. They are a fallback for programs that have no ARexx port or Shell command. They are slower and less exact than the other tools, and the agent is told to use them only when nothing else will do. They need a model that accepts pictures.
+
+AmigaGPT iconifies itself while the agent works on the desktop, so its own window is not in the way. It comes back when the turn ends, or when it needs to ask you something.
+
+@{b}@{u}The host computer@{uu}@{ub}
+
+When your Amiga is emulated by Amiberry and the Host-Tools commands are installed in @{i}C:@{ui}, the agent gets a @{i}host_command@{ui} tool that runs a command in the shell of the host computer and returns its output. The agent is told to stay on the Amiga for anything the Amiga can do, and to use the host only for what is impossible or impractical there.
+
+On a real Amiga, or without Host-Tools, the tool is not offered. Host-Tools is available from https://github.com/BlitterStudio/host-tools
+
 @{b}@{u}Approval@{uu}@{ub}
 
 The @{b}Approval@{ub} gadget decides what runs without asking you:
 
-  @{b}Ask before changes@{ub}  Reading local files is free. Shell commands, ARexx commands, MCP tools, web access, image generation and file changes show a requester first.
+  @{b}Ask before changes@{ub}  Reading local files is free. Shell and host commands, ARexx commands, MCP tools, web access, image generation, desktop control and file changes show a requester first.
   @{b}Read only@{ub}           Nothing that changes the system runs. The agent can only look and report.
   @{b}Accept file edits@{ub}   File writes and edits run. Everything else that needs approval still asks.
   @{b}Full auto@{ub}           Everything runs without asking.

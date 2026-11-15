@@ -146,6 +146,26 @@ static struct json_object *rawBlocks(struct json_object *item,
     return raw;
 }
 
+/* The picture a tool result carries, or NULL. Its "mime" and "data" hold
+ * the type and the base64 encoded file. */
+static struct json_object *resultImage(struct json_object *result) {
+    struct json_object *image = objectOf(result, "image");
+    if (image == NULL || stringOf(image, "data")[0] == '\0')
+        return NULL;
+    return image;
+}
+
+/* A picture as a data: address, which the OpenAI formats take. Free it with
+ * FreeVec() */
+static STRPTR imageDataUrl(struct json_object *image) {
+    struct AgentBuffer buffer = {NULL, 0, 0};
+    agentBufferAppend(&buffer, "data:");
+    agentBufferAppend(&buffer, stringOf(image, "mime"));
+    agentBufferAppend(&buffer, ";base64,");
+    agentBufferAppend(&buffer, stringOf(image, "data"));
+    return buffer.data;
+}
+
 /* ------------------------------------------------------------------------
  * OpenAI Responses
  * ---------------------------------------------------------------------- */
@@ -201,6 +221,29 @@ static struct json_object *buildResponsesRequest(
                 addString(entry, "call_id", stringOf(result, "id"));
                 addString(entry, "output", stringOf(result, "output"));
                 json_object_array_add(input, entry);
+            }
+            /* A function output is text, so a picture follows as a user
+             * message once every output of the turn has been given */
+            for (j = 0;
+                 results != NULL && j < json_object_array_length(results); j++) {
+                struct json_object *image =
+                    resultImage(json_object_array_get_idx(results, j));
+                if (image != NULL) {
+                    struct json_object *message = textObject("role", "user");
+                    struct json_object *content = json_object_new_array();
+                    struct json_object *part = textObject("type", "input_text");
+                    STRPTR url = imageDataUrl(image);
+                    addString(part, "text",
+                              "The picture returned by the tool call above:");
+                    json_object_array_add(content, part);
+                    part = textObject("type", "input_image");
+                    addString(part, "image_url", url);
+                    json_object_array_add(content, part);
+                    json_object_object_add(message, "content", content);
+                    json_object_array_add(input, message);
+                    if (url != NULL)
+                        FreeVec(url);
+                }
             }
         }
     }
@@ -326,6 +369,29 @@ static struct json_object *buildChatCompletionsRequest(
                 addString(message, "content", stringOf(result, "output"));
                 json_object_array_add(messages, message);
             }
+            for (j = 0;
+                 results != NULL && j < json_object_array_length(results); j++) {
+                struct json_object *image =
+                    resultImage(json_object_array_get_idx(results, j));
+                if (image != NULL) {
+                    struct json_object *content = json_object_new_array();
+                    struct json_object *part = textObject("type", "text");
+                    struct json_object *imageUrl = json_object_new_object();
+                    STRPTR url = imageDataUrl(image);
+                    addString(part, "text",
+                              "The picture returned by the tool call above:");
+                    json_object_array_add(content, part);
+                    addString(imageUrl, "url", url);
+                    part = textObject("type", "image_url");
+                    json_object_object_add(part, "image_url", imageUrl);
+                    json_object_array_add(content, part);
+                    message = textObject("role", "user");
+                    json_object_object_add(message, "content", content);
+                    json_object_array_add(messages, message);
+                    if (url != NULL)
+                        FreeVec(url);
+                }
+            }
         }
     }
     json_object_object_add(request, "messages", messages);
@@ -447,9 +513,26 @@ static struct json_object *buildMessagesRequest(
                 struct json_object *block = textObject("type", "tool_result");
                 struct json_object *isError;
                 CONST_STRPTR output = stringOf(result, "output");
+                struct json_object *image = resultImage(result);
                 addString(block, "tool_use_id", stringOf(result, "id"));
-                addString(block, "content",
-                          output[0] != '\0' ? output : "(No output)");
+                if (image != NULL) {
+                    /* A tool result can hold a picture next to its text */
+                    struct json_object *parts = json_object_new_array();
+                    struct json_object *part = textObject("type", "text");
+                    struct json_object *source = textObject("type", "base64");
+                    addString(part, "text",
+                              output[0] != '\0' ? output : "(No output)");
+                    json_object_array_add(parts, part);
+                    addString(source, "media_type", stringOf(image, "mime"));
+                    addString(source, "data", stringOf(image, "data"));
+                    part = textObject("type", "image");
+                    json_object_object_add(part, "source", source);
+                    json_object_array_add(parts, part);
+                    json_object_object_add(block, "content", parts);
+                } else {
+                    addString(block, "content",
+                              output[0] != '\0' ? output : "(No output)");
+                }
                 if (json_object_object_get_ex(result, "isError", &isError) &&
                     json_object_get_boolean(isError))
                     json_object_object_add(block, "is_error",
@@ -626,6 +709,19 @@ static struct json_object *buildGeminiRequest(CONST_STRPTR system,
                 json_object_object_add(part, "functionResponse",
                                        functionResponse);
                 json_object_array_add(parts, part);
+            }
+            for (j = 0;
+                 results != NULL && j < json_object_array_length(results); j++) {
+                struct json_object *image =
+                    resultImage(json_object_array_get_idx(results, j));
+                if (image != NULL) {
+                    struct json_object *part = json_object_new_object();
+                    struct json_object *inlineData =
+                        textObject("mimeType", stringOf(image, "mime"));
+                    addString(inlineData, "data", stringOf(image, "data"));
+                    json_object_object_add(part, "inlineData", inlineData);
+                    json_object_array_add(parts, part);
+                }
             }
         }
         if (parts != NULL) {

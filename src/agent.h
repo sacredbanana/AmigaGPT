@@ -93,6 +93,12 @@ void agentShutdown(void);
  **/
 void agentSetRequesterWindow(APTR windowObject);
 
+/**
+ * How the program gets its own windows out of the way while the agent looks
+ * at and operates the desktop, and brings them back. Either may be NULL.
+ **/
+void agentSetDesktopHooks(void (*hide)(void), void (*show)(void));
+
 AgentApprovalMode agentGetApprovalMode(void);
 void agentSetApprovalMode(AgentApprovalMode mode);
 AgentEffort agentGetEffort(void);
