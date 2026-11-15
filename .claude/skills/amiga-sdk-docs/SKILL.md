@@ -1,1 +1,0 @@
-../../../.agents/skills/amiga-sdk-docs/SKILL.md

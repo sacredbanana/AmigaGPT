@@ -20,5 +20,3 @@ github_conf
 .cursor/cache/
 
 # Skill SDK caches (canonical path plus Claude compatibility path)
-.agents/skills/amiga-sdk-docs/cache/
-.claude/skills/amiga-sdk-docs/cache/

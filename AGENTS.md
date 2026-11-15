@@ -51,15 +51,19 @@ Strings are referenced as `STRING_*` symbols generated from `catalogs/AmigaGPT.p
 - `make catalog_definition` regenerates `AmigaGPT.pot` from `src/*.c` via `xgettext`.
 - `make catalog` runs `flexcat` to regenerate `AmigaGPT_cat.{c,h}`, `msgmerge -U`s every `.po` against the template, and compiles each `<language>/AmigaGPT.catalog`.
 - The full build target (`all`) depends on `catalog`, so adding or changing a `STRING_*` will fail at link time until the `.pot` and `_cat.{c,h}` are regenerated.
-- To translate after adding new strings, run `/update-translations` (see `.claude/commands/update-translations.md`); it delegates to the `po-translation-updater` agent which validates by running `./build_os3.sh`.
+- **Localisation is part of every UI change (HARD RULE).** Whenever you add, change or remove a user-facing string, use the `update-translations` skill (`.agents/skills/update-translations/SKILL.md`) in the same task, without waiting to be asked: update `catalogs/AmigaGPT.pot`, translate the entry into every `catalogs/*/*.po`, and confirm `./build_os3.sh` passes. The work is not finished while any language is missing a translation for a string you touched. The skill delegates to the `po-translation-updater` subagent (defined in `.claude/agents/`, `.codex/agents/` and `.cursor/agents/`) and, on hosts without subagents, has you follow that agent's workflow directly. Users can also run it by hand as `/update-translations` (Claude Code, Cursor) or `$update-translations` (Codex).
 
 ## Repo-specific guidance
 
-- Project skills live in `.agents/skills/` (Agent Skills standard). Cursor, Codex, and other compatible agents load that path directly. Claude Code loads the same files through links under `.claude/skills/`.
+- Project skills live in `.agents/skills/` (Agent Skills standard). Cursor, Codex, and other compatible agents load that path directly. Claude Code loads the same files through links under `.claude/skills/`. The project skills are `build-amigagpt` and `update-translations`; general-purpose skills are installed per user, not committed here.
 - When testing the AmigaGPT GUI through AmiKit/Amiberry automation, submit text from the prompt field by pressing Return. There is no need to locate and click the Send button.
 - AmiKit normally finishes booting in about 10-15 seconds, so do not use a long fixed wait before checking whether it is ready. Open an Amiga Shell with Left Alt+S.
-- Provider docs: prefer the project MCP servers `openaiDeveloperDocs` (OpenAI) and `xaiDocs` (xAI), and the `openai-docs` / `xai-docs` skills, over general web search.
-- AmigaOS / NDK / autodoc / SDK questions, library API lookups, and classic Amiga book recommendations: use the `amiga-sdk-docs` skill. It searches the local `sacredbanana/AmigaSDK-gcc` clone at `.agents/skills/amiga-sdk-docs/cache/amigasdk-gcc` (sync via `./.agents/skills/amiga-sdk-docs/scripts/sync-repo.sh`) and the retro-commodore.eu book catalog. Wait for the sync to finish before falling back to the web. Do not commit anything under `.agents/skills/amiga-sdk-docs/cache/`.
+- Provider docs: prefer the project MCP servers `openaiDeveloperDocs` (OpenAI) and `xaiDocs` (xAI) over general web search. If the user has the public OpenAI or xAI docs skills installed globally, those are fine to use too.
+- AmigaOS / NDK / autodoc / SDK questions, library API lookups, classic Amiga book recommendations and Amiga toolchain questions: use the **Amiga Guru** skill (`amiga-guru`, https://github.com/sacredbanana/amiga-guru). It searches a local sparse clone of `sacredbanana/AmigaSDK-gcc` and the retro-commodore.eu book catalog. Wait for its cache sync to finish before falling back to the web.
+  - **If it is not installed**, stop and tell the user before doing Amiga API work, and offer to install it globally (ask first; it writes outside this repo):
+    - Claude Code: `git clone https://github.com/sacredbanana/amiga-guru.git ~/.claude/skills/amiga-guru`
+    - Codex / ChatGPT desktop / other Agent Skills hosts: `git clone https://github.com/sacredbanana/amiga-guru.git ~/.agents/skills/amiga-guru`
+    - A restart of the agent may be needed before the skill appears. Do not install it inside this repo, and never commit its `cache/` directory.
 - Building AmigaGPT itself: use the `build-amigagpt` skill — only the three `build_*.sh` scripts work in this environment.
 - Before calling an MCP tool, read the installed tool descriptor and follow its schema exactly.
 - For documentation answers, prefer MCP-backed official docs over general web search. If MCP is unavailable, fall back only to official provider docs pages:
