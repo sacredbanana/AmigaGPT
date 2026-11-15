@@ -50,7 +50,7 @@ static const struct AgentToolDefinition BUILT_IN_TOOLS[] = {
      "Run an AmigaDOS command in a Shell and return its exit code and output. "
      "The command runs in the project drawer when a project is active. Use "
      "AmigaDOS commands (list, type, copy, delete, makedir, rename), not "
-     "Unix ones.",
+     "Unix ones. Note that \"Assign NAME:\" alone removes that assign.",
      "{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\","
      "\"description\":\"The AmigaDOS command line to run\"}},"
      "\"required\":[\"command\"]}"},
@@ -1071,6 +1071,17 @@ static STRPTR buildSystemPrompt(struct json_object *subagent) {
         "- Commands run without a keyboard and are given up on after a time "
         "limit. Do not start anything that waits for input or opens a window "
         "the user must close; start such programs with run >NIL: instead.\n"
+        "- Assign NAME: with nothing after it removes that assign; it does "
+        "not show it. List assigns with Assign alone or check one with "
+        "Assign NAME: EXISTS. Never remove an assign unless the user asks.\n"
+        "- To install software that comes with an Installer script (an "
+        "Install icon), such as AmiSSL or MUI, download and unpack it, then "
+        "open the installer for the user with WBRun <path of the installer "
+        "icon, without .info> and tell them to finish it there. Do not copy "
+        "its files, change assigns or edit startup scripts yourself unless "
+        "the user tells you not to open the installer and to do the whole "
+        "install. If WBRun is not installed, tell the user where the "
+        "installer is instead.\n"
         "- You are running inside AmigaGPT. Do not send ARexx commands to "
         "AmigaGPT's own port and do not run askgpt.\n"
         "Files are stored in the ISO 8859-1 character set. Write plain text "
@@ -2216,6 +2227,80 @@ static AgentToolClass toolClassFor(CONST_STRPTR name) {
     return AGENT_TOOL_EXECUTE;
 }
 
+/* What an Assign line in a shell command would do to the assign list */
+typedef enum {
+    ASSIGN_EFFECT_NONE,
+    /* "Assign NAME:" with nothing after it. AmigaDOS removes the assign,
+     * though it reads like asking where it points. */
+    ASSIGN_EFFECT_BARE_REMOVE,
+    /* "Assign NAME: REMOVE" or DISMOUNT */
+    ASSIGN_EFFECT_REMOVE
+} AssignEffect;
+
+/* Copy the next shell argument into out without its quotes
+ * @return the text after the argument, or NULL at the end of the line */
+static CONST_STRPTR nextShellArgument(CONST_STRPTR p, STRPTR out, ULONG size) {
+    ULONG length = 0;
+    while (*p == ' ' || *p == '\t')
+        p++;
+    if (*p == '\0' || *p == '\n' || *p == ';')
+        return NULL;
+    if (*p == '"') {
+        p++;
+        while (*p != '\0' && *p != '"' && *p != '\n') {
+            if (length + 1 < size)
+                out[length++] = *p;
+            p++;
+        }
+        if (*p == '"')
+            p++;
+    } else {
+        while (*p != '\0' && *p != ' ' && *p != '\t' && *p != '\n' &&
+               *p != ';') {
+            if (length + 1 < size)
+                out[length++] = *p;
+            p++;
+        }
+    }
+    out[length] = '\0';
+    return p;
+}
+
+/* Look through every line of a shell command for an Assign that removes
+ * one. The strongest effect found is returned. */
+static AssignEffect shellAssignEffect(CONST_STRPTR command) {
+    AssignEffect effect = ASSIGN_EFFECT_NONE;
+    CONST_STRPTR line = command;
+
+    while (line != NULL && *line != '\0') {
+        UBYTE word[AGENT_PATH_LENGTH];
+        CONST_STRPTR p = nextShellArgument(line, word, sizeof(word));
+        ULONG length = strlen(word);
+        CONST_STRPTR newline = strchr(line, '\n');
+
+        /* Assign, C:Assign or SYS:C/Assign */
+        if (p != NULL && length >= 6 &&
+            strcasecmp(word + length - 6, "assign") == 0 &&
+            (length == 6 || word[length - 7] == ':' ||
+             word[length - 7] == '/')) {
+            ULONG arguments = 0;
+            BOOL lastIsDevice = FALSE;
+            while ((p = nextShellArgument(p, word, sizeof(word))) != NULL) {
+                length = strlen(word);
+                arguments++;
+                lastIsDevice = length > 1 && word[length - 1] == ':';
+                if (strcasecmp(word, "REMOVE") == 0 ||
+                    strcasecmp(word, "DISMOUNT") == 0)
+                    effect = ASSIGN_EFFECT_REMOVE;
+            }
+            if (arguments == 1 && lastIsDevice)
+                return ASSIGN_EFFECT_BARE_REMOVE;
+        }
+        line = newline != NULL ? newline + 1 : NULL;
+    }
+    return effect;
+}
+
 /* The rule that "Always allow" stores for a call. Shell commands are allowed
  * by command name and ARexx by port, so one answer does not unlock both
  * "list" and "delete". */
@@ -2369,15 +2454,24 @@ static BOOL approveCall(CONST_STRPTR name, struct json_object *arguments) {
     ULONG messageSize;
     CONST_STRPTR p;
     LONG answer;
+    /* Removing an assign can cut off a library or AmigaGPT's own
+     * certificates, so it is always asked about, even in full auto and
+     * when "assign" was allowed before, and the answer is not remembered */
+    BOOL alwaysAsk = strcmp(name, "shell") == 0 &&
+                     shellAssignEffect(jsonString(arguments, "command")) !=
+                         ASSIGN_EFFECT_NONE;
 
-    if (toolClass == AGENT_TOOL_SAFE || mode == AGENT_APPROVAL_FULL_AUTO)
-        return TRUE;
-    if (mode == AGENT_APPROVAL_READ_ONLY)
+    if (mode == AGENT_APPROVAL_READ_ONLY && toolClass != AGENT_TOOL_SAFE)
         return FALSE;
-    if (mode == AGENT_APPROVAL_ACCEPT_EDITS && toolClass == AGENT_TOOL_EDIT)
-        return TRUE;
+    if (!alwaysAsk) {
+        if (toolClass == AGENT_TOOL_SAFE || mode == AGENT_APPROVAL_FULL_AUTO)
+            return TRUE;
+        if (mode == AGENT_APPROVAL_ACCEPT_EDITS &&
+            toolClass == AGENT_TOOL_EDIT)
+            return TRUE;
+    }
     allowRuleFor(name, arguments, rule, sizeof(rule));
-    if (ruleAllows(rule))
+    if (!alwaysAsk && ruleAllows(rule))
         return TRUE;
 
     /* The question has to be seen, so the windows come back for it */
@@ -2413,6 +2507,8 @@ static BOOL approveCall(CONST_STRPTR name, struct json_object *arguments) {
     if (description != NULL)
         FreeVec(description);
 
+    if (answer == 2 && alwaysAsk)
+        return TRUE;
     if (answer == 2) {
         struct json_object *rules = allowRules(TRUE);
         if (rules != NULL) {
@@ -2493,6 +2589,17 @@ static STRPTR executeCall(CONST_STRPTR name, struct json_object *arguments,
                           BOOL isSubagent, AgentOutputFunc output,
                           BOOL *isError) {
     *isError = FALSE;
+    if (strcmp(name, "shell") == 0 &&
+        shellAssignEffect(jsonString(arguments, "command")) ==
+            ASSIGN_EFFECT_BARE_REMOVE) {
+        *isError = TRUE;
+        return agentDuplicate(
+            "Refused: \"Assign NAME:\" with nothing after the name REMOVES "
+            "the assign in AmigaDOS, it does not show it. To see where an "
+            "assign points use \"Assign\" alone (it lists every assign) or "
+            "\"Assign NAME: EXISTS\". If you really mean to remove it, say so "
+            "to the user and use \"Assign NAME: REMOVE\".");
+    }
     if (!approveCall(name, arguments)) {
         *isError = TRUE;
         return agentDuplicate(agentGetApprovalMode() == AGENT_APPROVAL_READ_ONLY
