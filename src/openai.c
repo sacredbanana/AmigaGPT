@@ -28,6 +28,7 @@
 #include "gui.h"
 #include "MainWindow.h"
 #include "AmigaGPTConfig.h"
+#include "shellpath.h"
 
 #define OPENAI_HOST "api.openai.com"
 #define OPENAI_PORT 443
@@ -2752,15 +2753,24 @@ STRPTR executeShellCommand(UTF8 *command, LONG *exitCode) {
         return combinedOutput;
     }
 
-    /* Execute the command with redirected output */
+    /* Execute the command with redirected output and the same search path a
+     * Shell opened from Workbench would have */
+    {
 #if defined(__MORPHOS__)
-    /* MorphOS may not support SYS_Error, so redirect both to stdout */
-    result = SystemTags(commandStr, SYS_Input, 0, SYS_Output, stdoutFile,
-                        NP_StackSize, 32768, TAG_DONE);
+        /* MorphOS may not support SYS_Error, so redirect both to stdout */
+        struct TagItem tags[] = {{SYS_Input, 0},
+                                 {SYS_Output, (ULONG)stdoutFile},
+                                 {NP_StackSize, 32768},
+                                 {TAG_DONE, 0}};
 #else
-    result = SystemTags(commandStr, SYS_Input, 0, SYS_Output, stdoutFile,
-                        SYS_Error, stderrFile, NP_StackSize, 32768, TAG_DONE);
+        struct TagItem tags[] = {{SYS_Input, 0},
+                                 {SYS_Output, (ULONG)stdoutFile},
+                                 {SYS_Error, (ULONG)stderrFile},
+                                 {NP_StackSize, 32768},
+                                 {TAG_DONE, 0}};
 #endif
+        result = runShellCommand(commandStr, tags);
+    }
 
     *exitCode = result;
 

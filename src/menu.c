@@ -17,23 +17,12 @@
 #include "MainWindow.h"
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
+#include "shellpath.h"
 #include "version.h"
 
 Object *menuStrip = NULL;
 
 static void populateArexxMenu();
-static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent);
-static void FreeNPPath(BPTR listHead);
-
-/* The Shell's path nodes are trivial: next + lock (both BPTRs).   */
-/* RKRM names it PathComponent / Guru Book calls it PathList entry. */
-struct PathNodeCompat {
-    BPTR pc_Next; /* BPTR to next node (or ZERO) */
-    BPTR pc_Lock; /* BPTR lock on a directory    */
-};
-
-/* Iterate a BPTR path list */
-#define PN_NEXT(n) ((struct PathNodeCompat *)BADDR((n)->pc_Next))
 
 HOOKPROTONHNONP(AboutAmigaGPTMenuItemClickedFunc, void) {
     if (aboutAmigaGPTWindowObject) {
@@ -60,21 +49,17 @@ HOOKPROTONHNONP(AboutAmigaGPTMenuItemClickedFunc, void) {
 }
 MakeHook(AboutAmigaGPTMenuItemClickedHook, AboutAmigaGPTMenuItemClickedFunc);
 
+/* Not every Amiga Shell understands "&&", so each command gets its own call.
+ * runShellCommand() puts SYS:Rexxc on the path, so no PATH ADD is needed. */
 HOOKPROTONHNONP(OpenARexxShellFunc, void) {
-#ifdef __MORPHOS__
-    SystemTags("TS && TCO", TAG_DONE);
-#else
-    SystemTags("PATH ADD SYS:Rexxc && TS && TCO", TAG_DONE);
-#endif
+    runShellCommand("TS", NULL);
+    runShellCommand("TCO", NULL);
 }
 MakeHook(OpenARexxShellFuncHook, OpenARexxShellFunc);
 
 HOOKPROTONHNONP(CloseARexxShellFunc, void) {
-#ifdef __MORPHOS__
-    SystemTags("TE && TCC", TAG_DONE);
-#else
-    SystemTags("PATH ADD SYS:Rexxc >NIL: && TE && TCC", TAG_DONE);
-#endif
+    runShellCommand("TE", NULL);
+    runShellCommand("TCC", NULL);
 }
 MakeHook(CloseARexxShellFuncHook, CloseARexxShellFunc);
 
@@ -117,38 +102,14 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
     NameFromLock(GetProgramDir(), scriptPath, 1024);
     AddPart(scriptPath, "rexx/", 1024);
     AddPart(scriptPath, script, 1024);
-#ifdef __MORPHOS__
-    const char *extra[] = {"SYS:Utilities", "MOSSYS:C", "SYS:S", "MOSSYS:S",
-                           NULL};
-#else
-    const char *extra[] = {"SYS:Utilities",
-                           "SYS:S",
-                           "SYS:Rexxc",
-                           "SYS:System",
-                           "SYS:Prefs",
-                           "SYS:Tools",
-                           "SYS:Tools/Commodities",
-                           "SYS:WBStartup",
-                           NULL};
-#endif
-
-    BPTR npPath = BuildNPPath(extra, TRUE); // BuildNPPath should stop at NULL
-                                            // and DUPLICATE any parent nodes.
 
     UBYTE command[1024];
-#ifdef __AMIGAOS3__
-    snprintf(command, sizeof(command), "Run SYS:Rexxc/RX %s", scriptPath);
-#else
     snprintf(command, sizeof(command), "Run RX %s", scriptPath);
-#endif
 
-    LONG rc = SystemTags((CONST_STRPTR)command, NP_Path, (ULONG)npPath,
-                         NP_StackSize, 32768, TAG_DONE);
-
-    // Only free on failure. On success DOS owns the list.
-    if (rc == -1 && npPath) {
-        FreeNPPath(npPath);
-    }
+    /* The script inherits this Shell's path, so it finds the same programs
+     * (MultiView, the user's own tools...) as a Shell opened from Workbench */
+    struct TagItem tags[] = {{NP_StackSize, 32768}, {TAG_DONE, 0}};
+    runShellCommand((CONST_STRPTR)command, tags);
     FreeVec(scriptPath);
 }
 MakeHook(ARexxRunScriptMenuItemClickedHook, ARexxRunScriptMenuItemClickedFunc);
@@ -939,103 +900,3 @@ static void populateArexxMenu() {
     DoMethod(menuStrip, MUIM_Menustrip_ExitChange);
 }
 
-/**
- * @brief Build a NP_Path list.
- * @param extraDirs[]: array of assigns/paths like "SYS:Utilities",
- *MOSSYS:Utilities"
- * @param addParent: if TRUE, duplicate the caller's existing CLI path first
- * @returns BPTR to first node, or ZERO on failure (nothing allocated).
- **/
-static BPTR BuildNPPath(const char *const *extraDirs, BOOL addParent) {
-    struct PathNodeCompat *head = NULL, *tail = NULL;
-
-// Optionally copy the caller's current shell path (duplicates the locks).
-#ifndef __AMIGAOS4__
-    if (addParent) {
-        struct CommandLineInterface *cli =
-            Cli(); // NULL if we're not in a shell
-        if (cli && cli->cli_CommandDir) {
-            for (struct PathNodeCompat *src =
-                     (struct PathNodeCompat *)BADDR(cli->cli_CommandDir);
-                 src; src = PN_NEXT(src)) {
-                BPTR dup = DupLock(src->pc_Lock);
-                if (!dup)
-                    goto fail;
-
-                struct PathNodeCompat *node = (struct PathNodeCompat *)AllocVec(
-                    sizeof(*node), MEMF_PUBLIC | MEMF_CLEAR);
-                if (!node) {
-                    UnLock(dup);
-                    goto fail;
-                }
-
-                node->pc_Lock = dup;
-                if (tail)
-                    tail->pc_Next = MKBADDR(node);
-                else
-                    head = node;
-                tail = node;
-            }
-        }
-    }
-#endif
-
-    // Append our extra directories
-    const size_t extraCount = sizeof(extraDirs) / sizeof(extraDirs[0]);
-    for (size_t i = 0; i < extraCount; ++i) {
-        if (!extraDirs[i] || !extraDirs[i][0])
-            continue;
-        BPTR lock = Lock((STRPTR)extraDirs[i], SHARED_LOCK);
-        if (!lock)
-            continue;
-
-        struct PathNodeCompat *node = (struct PathNodeCompat *)AllocVec(
-            sizeof(*node), MEMF_PUBLIC | MEMF_CLEAR);
-        if (!node) {
-            UnLock(lock);
-            goto fail;
-        }
-
-        node->pc_Lock = lock;
-        if (tail)
-            tail->pc_Next = MKBADDR(node);
-        else
-            head = node;
-        tail = node;
-    }
-
-    /* Note: current directory and C: are implicit; don't add them yourself. C:
-     * is always searched last, current dir always first */
-
-    return MKBADDR(head);
-
-fail:
-    if (head) {
-        struct PathNodeCompat *n = head;
-        while (n) {
-            struct PathNodeCompat *next = PN_NEXT(n);
-            if (n->pc_Lock)
-                UnLock(n->pc_Lock);
-            FreeVec(n);
-            n = next;
-        }
-    }
-    return NULL;
-}
-
-/**
- * @brief Free a NP_Path list we built if SystemTagList() fails (rc == -1).
- * @param listHead The head of the NP_Path list to free.
- **/
-static void FreeNPPath(BPTR listHead) {
-    if (!listHead)
-        return;
-    struct PathNodeCompat *n = (struct PathNodeCompat *)BADDR(listHead);
-    while (n) {
-        struct PathNodeCompat *next = PN_NEXT(n);
-        if (n->pc_Lock)
-            UnLock(n->pc_Lock);
-        FreeVec(n);
-        n = next;
-    }
-}

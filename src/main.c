@@ -98,6 +98,12 @@ LONG main(int argc, char **argv) {
     atexit(cleanExit);
     SysBase = *((struct ExecBase **)4UL);
 
+    /* Kept for RegisterApplication() on OS4 and for finding the Workbench
+     * search path when spawning Shells (see shellpath.c) */
+    if (argc == 0) {
+        wbStartupMessage = (struct WBStartup *)argv;
+    }
+
 #if defined(__AMIGAOS3__) || defined(__MORPHOS__)
     ensureCurrentDir(argc, argv);
 #endif
@@ -117,10 +123,6 @@ LONG main(int argc, char **argv) {
     }
 #endif
 #ifdef __AMIGAOS4__
-    if (argc == 0) {
-        wbStartupMessage = (struct WBStartup *)argv;
-    }
-
     appID = RegisterApplication(
         NULL, REGAPP_UniqueApplication, TRUE, REGAPP_URLIdentifier,
         "minotaurcreative.net", REGAPP_WBStartup, (ULONG)wbStartupMessage,
