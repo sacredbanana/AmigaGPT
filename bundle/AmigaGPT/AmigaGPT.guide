@@ -303,6 +303,7 @@ Before you can chat you need to give AmigaGPT an API key for the provider you wa
   @{"Shell Tool                               " link shelltool}
   @{"Code Interpreter                         " link codeinterpreter}
   @{"Web search                               " link websearch}
+  @{"Agent mode                               " link agent}
   @{"Speech                                   " link speech}
   @{"Printing a conversation                  " link printing}
   @{"Editing text                             " link editmenu}
@@ -617,6 +618,116 @@ The @{b}WEBSEARCH@{ub} switch on the ARexx SENDMESSAGE command turns web search 
 @{b}@{u}Availability@{uu}@{ub}
 
 Web search is a server-side feature. It works where the provider supports it; a custom server that does not offer it will simply ignore the request.
+@endnode
+
+@node agent "Agent mode"
+@{b}@{fg shine}Agent mode@{fg text}@{ub}
+
+The @{b}Agent@{ub} tab hands a task to the AI and lets it work on your Amiga with tools until the task is done. Type what you want and press Return. Each tool the agent uses is shown in the transcript as a line starting with ">". @{b}Send@{ub} changes to @{b}Stop@{ub} while it works.
+
+The agent talks to the active chat provider, so it works with OpenAI, Google Gemini, SpaceXAI Grok, Anthropic Claude and custom servers whose model supports tool calling.
+
+@{b}@{u}Example tasks@{uu}@{ub}
+
+- "Find every .info file in @{i}Work:Projects@{ui} that has no matching file"
+- "Add a version string to main.c and rebuild"
+- "Ask MultiView which file it is showing"
+
+@{b}@{u}Tools@{uu}@{ub}
+
+  shell              run an AmigaDOS command
+  read_file          read a text file
+  write_file         create or replace a file
+  edit_file          change part of a file
+  list_directory     list a drawer
+  search_files       search the text files below a drawer
+  identify_file      work out a file's type
+  fetch_url          read a web page or a web API
+  download_file      download a file from the web
+  generate_image     generate a picture with the active image provider
+  list_arexx_ports   list the ARexx ports of running programs
+  arexx              send an ARexx command to a program
+  load_skill         load the instructions of a skill
+  run_subagent       hand a side task to a subagent
+
+The tools of any MCP server you have added are available as well.
+
+Commands run in the background without a keyboard, so the window stays responsive and @{b}Stop@{ub} always works. A command that has not finished after two minutes is left running and the agent is told so. The agent cannot send ARexx commands to AmigaGPT itself.
+
+@{b}@{u}Approval@{uu}@{ub}
+
+The @{b}Approval@{ub} gadget decides what runs without asking you:
+
+  @{b}Ask before changes@{ub}  Reading local files is free. Shell commands, ARexx commands, MCP tools, web access, image generation and file changes show a requester first.
+  @{b}Read only@{ub}           Nothing that changes the system runs. The agent can only look and report.
+  @{b}Accept file edits@{ub}   File writes and edits run. Everything else that needs approval still asks.
+  @{b}Full auto@{ub}           Everything runs without asking.
+
+The requester offers @{b}Allow once@{ub}, @{b}Always allow@{ub} and @{b}Deny@{ub}. @{b}Always allow@{ub} remembers the answer for the project: a Shell command is remembered by its command name, so allowing @{i}list@{ui} does not allow @{i}delete@{ui}. An ARexx command is remembered by its port and other tools by name.
+
+@{b}@{u}Projects@{uu}@{ub}
+
+A project is a drawer. @{b}Add project...@{ub} adds one and the list on the left switches between them. While a project is active, Shell commands start in its drawer and paths without a device name are relative to it. "(No project)" works anywhere, with full paths. @{b}Remove project@{ub} only takes the project off the list; the drawer is not touched.
+
+@{b}@{u}Model and effort@{uu}@{ub}
+
+The agent uses the chat model of the active chat provider unless you type another model name into @{b}Model@{ub}. @{b}Effort@{ub} asks the model for low, medium or high reasoning effort. Default leaves the choice to the provider. Not every model accepts an effort setting.
+
+@{b}@{u}Instructions@{uu}@{ub}
+
+@{b}Instructions...@{ub} opens the @{i}AGENTS.md@{ui} file of the active project, or the global one when no project is active. Whatever you write there is given to the agent at the start of every task: what the project is, how to build it, rules to follow. The global file applies to every project. The @{i}/init@{ui} command has the agent write one for you.
+
+@{b}@{u}Skills@{uu}@{ub}
+
+A skill is a drawer holding a @{i}SKILL.md@{ui} file: a short header with a name and a description, followed by instructions for one kind of task. The agent sees the names and descriptions and loads a skill when a task calls for it. Skills written for other agents in the Agent Skills layout can be used as they are.
+
+@{b}Import skill...@{ub} copies a skill drawer into @{i}AMIGAGPT:agent/skills/@{ui}. The @{i}/import-skill@{ui} command does the same from a path or a web address, and @{i}/create-skill@{ui} has the agent write a new one.
+
+@{b}@{u}Commands@{uu}@{ub}
+
+Messages starting with "/" are commands:
+
+  /help                         list the commands
+  /new                          start a new session
+  /projects                     list the projects
+  /project <name>               switch project (none for no project)
+  /approval ask|readonly|edits|auto
+  /effort default|low|medium|high
+  /model <name>                 choose the model (default for the chat model)
+  /skills  /commands  /agents   list skills, your commands, subagents
+  /mcp                          list the MCP servers and their tools
+  /init                         have the agent write AGENTS.md
+  /create-skill <description>   have the agent write a new skill
+  /import-skill <source>        add a skill from a drawer, file or web address
+
+Your own commands are text files in a @{i}commands@{ui} drawer: @{i}commands/review.md@{ui} becomes @{i}/review@{ui}, and its text is sent as the prompt with $ARGUMENTS replaced by whatever follows the command. A skill can also be run by its name.
+
+@{b}@{u}Subagents@{uu}@{ub}
+
+The agent can hand a self-contained side task to a subagent, which works with a fresh memory and returns only its report. There is always a @{i}general@{ui} subagent. Your own are text files in an @{i}agents@{ui} drawer. The header can set @{i}description@{ui}, @{i}model@{ui} and @{i}tools@{ui} (a comma separated list limiting what it may use), and the text below the header is its instructions.
+
+@{b}@{u}MCP servers@{uu}@{ub}
+
+@{b}MCP servers...@{ub} opens @{i}mcp.json@{ui}, where remote Model Context Protocol servers are listed:
+
+  {
+    "mcpServers": {
+      "docs": {
+        "url": "https://example.com/mcp",
+        "headers": { "Authorization": "Bearer YOUR-TOKEN" }
+      }
+    }
+  }
+
+Only servers reached over the network are supported. Servers that are started as a local program are not, because those programs do not run on the Amiga.
+
+@{b}@{u}Where things are kept@{uu}@{ub}
+
+Global files are in @{i}AMIGAGPT:agent/@{ui}: @{i}AGENTS.md@{ui}, @{i}mcp.json@{ui}, @{i}skills/@{ui}, @{i}commands/@{ui} and @{i}agents/@{ui}. A project can have its own @{i}AGENTS.md@{ui} in its drawer, and @{i}skills/@{ui}, @{i}commands/@{ui}, @{i}agents/@{ui} and @{i}mcp.json@{ui} in a @{i}.agents@{ui} drawer inside it. A project entry replaces a global one of the same name.
+
+The session is kept between runs until you start a new one.
+
+See also @{"AGENT" link arexxagent} to run the agent from ARexx.
 @endnode
 
 @node printing "Printing a conversation"
@@ -984,6 +1095,7 @@ Both understand the same commands, so a script written for one works with the ot
   @{"CREATEIMAGE       " link arexxcreateimage} generate an image
   @{"SPEAKTEXT         " link arexxspeaktext} speak text, or write it to an audio file
   @{"NEWCHAT           " link arexxnewchat} clear the daemon conversation history
+  @{"AGENT             " link arexxagent} run a task with the agent
   @{"The LIST commands " link arexxlists} discover profiles, models, voices, sizes, formats
   @{"Notes on arguments" link arexxargs} how the templates work
 
@@ -1183,6 +1295,23 @@ Clears the daemon's conversation history and starts a fresh conversation. Use it
 The command takes no arguments and returns "Conversation history cleared" when it succeeds.
 
 See @{"The AmigaGPTD daemon" link daemon}.
+@endnode
+
+@node arexxagent "AGENT"
+@{b}@{fg shine}AGENT@{fg text}@{ub}
+
+Runs one turn of the agent and returns everything it printed: its replies and a line for each tool it used. See @{"Agent mode" link agent}. The agent's session is kept between calls, so a later call continues the same task.
+
+  AGENT PJ=PROJECT/K,A=APPROVAL/K,N=NEW/S,P=PROMPT/F
+
+  @{b}PROJECT@{ub}    the project to work in: the name of an existing project, the path of a drawer (which is added as a project), or NONE
+  @{b}APPROVAL@{ub}   ASK, READONLY, EDITS or AUTO
+  @{b}NEW@{ub}        start a new session first
+  @{b}PROMPT@{ub}     the task, or a command such as /skills
+
+With ASK and EDITS a requester still appears on screen for anything that needs approval, so scripts that run unattended should use READONLY or AUTO.
+
+The project and approval mode you give stay set afterwards. RC is 0 whenever the turn ran. If the provider reported an error, the error text is in RESULT.
 @endnode
 
 @node arexxlists "The LIST commands"

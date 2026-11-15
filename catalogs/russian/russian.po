@@ -2127,13 +2127,15 @@ msgstr "Не удалось создать файл истории речи. И�
 msgctxt "STRING_ERROR_SPEECH_HISTORY_WRITE (404//)"
 msgid ""
 "Failed to write to speech history file. Phrase history will not be saved."
-msgstr "Не удалось записать в файл истории речи. История фраз не будет сохранена."
+msgstr ""
+"Не удалось записать в файл истории речи. История фраз не будет сохранена."
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_READ (405//)"
 msgid ""
 "Failed to read from speech history file. Phrase history will not be loaded"
-msgstr "Не удалось прочитать файл истории речи. История фраз не будет загружена"
+msgstr ""
+"Не удалось прочитать файл истории речи. История фраз не будет загружена"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP (406//)"
@@ -2142,10 +2144,9 @@ msgid ""
 "is probably corrupted. Phrase history will not be loaded. A backup of the "
 "speech-history.json file has been created as speech-history.json.bak"
 msgstr ""
-"Не удалось разобрать историю речи. Некорректный JSON. Файл "
-"speech-history.json, вероятно, поврежден. История фраз не будет загружена. "
-"Резервная копия файла speech-history.json создана как "
-"speech-history.json.bak"
+"Не удалось разобрать историю речи. Некорректный JSON. Файл speech-"
+"history.json, вероятно, поврежден. История фраз не будет загружена. "
+"Резервная копия файла speech-history.json создана как speech-history.json.bak"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM (407//)"
@@ -2155,10 +2156,10 @@ msgid ""
 "writing a backup of the speech history to disk but a copy has been saved to "
 "RAM:speech-history.json"
 msgstr ""
-"Не удалось разобрать историю речи. Некорректный JSON. Файл "
-"speech-history.json, вероятно, поврежден. История фраз не будет загружена. "
-"Не удалось записать резервную копию истории речи на диск, но копия "
-"сохранена в RAM:speech-history.json"
+"Не удалось разобрать историю речи. Некорректный JSON. Файл speech-"
+"history.json, вероятно, поврежден. История фраз не будет загружена. Не "
+"удалось записать резервную копию истории речи на диск, но копия сохранена в "
+"RAM:speech-history.json"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
@@ -2209,6 +2210,261 @@ msgctxt "STRING_SPEECH_LANGUAGE (416//)"
 msgid "Language"
 msgstr "Язык"
 
+#: src/MainWindow.c
+msgctxt "STRING_MENU_AGENT (417//)"
+msgid "Agent"
+msgstr "Агент"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NO_PROJECT (418//)"
+msgid "(No project)"
+msgstr "(Нет проекта)"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+msgid "Add project..."
+msgstr "Добавить проект..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
+msgid "Remove project"
+msgstr "Удалить проект"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_PROJECT_DRAWER (421//)"
+msgid "Select the project drawer"
+msgstr "Выберите ящик проекта"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL (422//)"
+msgid "Approval"
+msgstr "Подтверждение"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ASK (423//)"
+msgid "Ask before changes"
+msgstr "Спрашивать перед изменениями"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_READ_ONLY (424//)"
+msgid "Read only"
+msgstr "Только чтение"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ACCEPT_EDITS (425//)"
+msgid "Accept file edits"
+msgstr "Принимать правки файлов"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_FULL_AUTO (426//)"
+msgid "Full auto"
+msgstr "Полный автомат"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT (427//)"
+msgid "Effort"
+msgstr "Усилие"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_DEFAULT (428//)"
+msgid "Default"
+msgstr "По умолчанию"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_LOW (429//)"
+msgid "Low"
+msgstr "Низкое"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_MEDIUM (430//)"
+msgid "Medium"
+msgstr "Среднее"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_HIGH (431//)"
+msgid "High"
+msgstr "Высокое"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL (432//)"
+msgid "Model"
+msgstr "Модель"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL_HELP (433//)"
+msgid ""
+"The model the agent uses. Leave this empty to use the chat model of the "
+"active chat provider."
+msgstr ""
+"Модель, которую использует агент. Оставьте поле пустым, чтобы использовать "
+"модель чата активного провайдера чата."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_INSTRUCTIONS (434//)"
+msgid "Instructions..."
+msgstr "Инструкции..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MCP_SERVERS (435//)"
+msgid "MCP servers..."
+msgstr "Серверы MCP..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_IMPORT_SKILL (436//)"
+msgid "Import skill..."
+msgstr "Импорт навыка..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_SKILL (437//)"
+msgid "Select a skill drawer or its SKILL.md file"
+msgstr "Выберите ящик навыка или его файл SKILL.md"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NEW_SESSION (438//)"
+msgid "New session"
+msgstr "Новая сессия"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SAVE (439//)"
+msgid "Save"
+msgstr "Сохранить"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ERROR_SAVING_FILE (440//)"
+msgid "The file could not be saved."
+msgstr "Не удалось сохранить файл."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_WELCOME (441//)"
+msgid ""
+"Describe a task and the agent will work on it using the Shell, files, ARexx, "
+"skills and MCP servers. Type /help for the list of commands."
+msgstr ""
+"Опишите задачу, и агент будет работать над ней, используя Shell, файлы, "
+"ARexx, навыки и серверы MCP. Введите /help, чтобы увидеть список команд."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_TITLE (442//)"
+msgid "Agent Action Confirmation"
+msgstr "Подтверждение действия агента"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BODY (443//)"
+msgid ""
+"The agent wants to use the tool \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this action?"
+msgstr ""
+"Агент хочет использовать инструмент \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Разрешить это действие?"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BUTTONS (444//)"
+msgid "*_Allow once|Always a_llow|_Deny"
+msgstr "*_Разрешить один раз|Разрешать _всегда|_Запретить"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_WORKING (445//)"
+msgid "The agent is working..."
+msgstr "Агент работает..."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_RUNNING_TOOL (446//)"
+msgid "Running tool: %s"
+msgstr "Выполняется инструмент: %s"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
+msgid ""
+"The agent stopped because it reached the step limit. Send another message to "
+"let it continue."
+msgstr ""
+"Агент остановился, так как достиг лимита шагов. Отправьте ещё одно "
+"сообщение, чтобы он продолжил."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STOPPED (448//)"
+msgid "The agent was stopped."
+msgstr "Агент был остановлен."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SESSION_CLEARED (449//)"
+msgid "A new session has started."
+msgstr "Начата новая сессия."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_NO_SUCH_PROJECT (450//)"
+msgid "There is no project with that name."
+msgstr "Проекта с таким именем нет."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORTED (451//)"
+msgid "The skill \"%s\" was imported."
+msgstr "Навык \"%s\" импортирован."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORT_FAILED (452//)"
+msgid ""
+"The skill could not be imported. Choose a drawer that holds a SKILL.md file, "
+"or a SKILL.md file with a name in its header."
+msgstr ""
+"Не удалось импортировать навык. Выберите ящик, содержащий файл SKILL.md, или "
+"файл SKILL.md с именем в заголовке."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_UNKNOWN_COMMAND (453//)"
+msgid "There is no command /%s. Type /help for the list of commands."
+msgstr "Команды /%s не существует. Введите /help, чтобы увидеть список команд."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_HELP (454//)"
+msgid ""
+"Commands:\n"
+"/help - show this list\n"
+"/new - start a new session\n"
+"/projects - list the projects\n"
+"/project <name> - switch project (none for no project)\n"
+"/approval ask|readonly|edits|auto - choose what runs without asking\n"
+"/effort default|low|medium|high - choose the reasoning effort\n"
+"/model <name> - choose the model (default for the chat model)\n"
+"/skills - list the skills\n"
+"/commands - list your own commands\n"
+"/agents - list the subagents\n"
+"/mcp - list the MCP servers and their tools\n"
+"/init - write an AGENTS.md for the project\n"
+"/create-skill <description> - have the agent write a new skill\n"
+"/import-skill <drawer, file or web address> - add a skill\n"
+"A skill or one of your own commands can also be run by its name, for "
+"example /review."
+msgstr ""
+"Команды:\n"
+"/help - показать этот список\n"
+"/new - начать новую сессию\n"
+"/projects - показать список проектов\n"
+"/project <имя> - сменить проект (none - без проекта)\n"
+"/approval ask|readonly|edits|auto - выбрать, что выполняется без запроса\n"
+"/effort default|low|medium|high - выбрать усилие рассуждения\n"
+"/model <имя> - выбрать модель (default - модель чата)\n"
+"/skills - показать список навыков\n"
+"/commands - показать список ваших команд\n"
+"/agents - показать список субагентов\n"
+"/mcp - показать серверы MCP и их инструменты\n"
+"/init - написать AGENTS.md для проекта\n"
+"/create-skill <описание> - поручить агенту написать новый навык\n"
+"/import-skill <ящик, файл или веб-адрес> - добавить навык\n"
+"Навык или одну из ваших команд можно также запустить по имени, например "
+"/review."
+
+#: src/ARexx.c
+msgctxt "STRING_AGENT_PROMPT_REQUIRED (455//)"
+msgid "A prompt is required."
+msgstr "Требуется запрос."
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Голос"
@@ -2216,4 +2472,3 @@ msgstr "Язык"
 #~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 #~ msgid "OpenAI Speech Model"
 #~ msgstr "Речевая модель OpenAI"
-

@@ -14,6 +14,10 @@ AmigaGPT is a versatile multi-provider AI client for AmigaOS 3.x, 4.1 and MorphO
 
 **AmigaGPT** can generate images from a prompt using **OpenAI** (DALL-E 2, DALL-E 3, GPT-Image-1), **Google Gemini**, and **SpaceXAI Grok**. You can view and save the images right inside the app, with a choice of output format (PNG or JPEG). Reference images can be attached to the prompt so the model edits, restyles or combines pictures you already have, and any generated picture can be fed straight back in with a single **Edit...** click.
 
+- ### Agent mode
+
+The **Agent** tab turns the model into an agent that works on your Amiga: it runs AmigaDOS commands, reads, writes and edits files, sends ARexx commands to other programs and calls remote MCP servers, step by step, until the task is done. It has projects, instruction files, skills, your own slash commands, subagents, a choice of model and reasoning effort, and approval controls that decide what may run without asking you first.
+
 - ### Seamless integration with AmigaOS and MorphOS
 
 **AmigaGPT** takes full advantage of the MUI framework to provide a smooth, native user experience that is responsive and easy to use.
@@ -139,7 +143,7 @@ MorphOS has no offline speech system. Use one of the cloud voices (OpenAI, Space
 
 When launching for the first time you will need to enter your AI provider's API key before you can start chatting. Open **Chat Provider Settings** from the **Chat** menu to select your provider and enter your key. For OpenAI, navigate to <https://platform.openai.com/account/api-keys> to generate an API key.
 
-There are 3 main modes of operation: Chat, Image and Speech. You can switch between them via the tabs in the top left corner. While a chat, image or speech request is running, the **Send**, **Create** or **Generate** button in that mode changes to **Stop**; pressing it aborts the request and restores that mode to the state it had before the request.
+There are 4 main modes of operation: Chat, Image, Speech and Agent. You can switch between them via the tabs in the top left corner. While a chat, image or speech request is running, the **Send**, **Create** or **Generate** button in that mode changes to **Stop**; pressing it aborts the request and restores that mode to the state it had before the request.
 
 ### Chat
 
@@ -176,6 +180,73 @@ When a picture comes back, **Edit...** starts a fresh prompt with that picture a
 The **Speech** tab generates spoken audio with the active speech profile and saves it under `AMIGAGPT:speech/` instead of playing it automatically. Type a phrase, optionally attach files, and press **Generate**. Each phrase is listed on the left, titled with the first 32 characters of the text. Selecting a phrase shows the speech profile that produced it (name, system, voice, model and related settings) and an interactive waveform with a frequency timeline. Play/pause (left), stop and rewind on the waveform play the already-saved WAV or raw PCM through AHI; they do not contact a speech provider again. Click any point on the waveform to jump there. **Regenerate** replaces the selected phrase's file. **Save Speech Copy** writes a copy somewhere else on your Amiga.
 
 **Generate text with AI** sends the current text and any attached files through the active chat profile and replaces the editor contents with the returned text. It then unchecks **Speak contents of files**; you can tick that box again if you still want attached files spoken together with the rewritten text. The checkbox is greyed out until files are attached, and is checked automatically when the first file is added.
+
+### Agent
+
+The **Agent** tab hands a task to the model and lets it work on your Amiga with tools until the task is done. Type what you want ("find every .info file in Work:Projects that has no matching file", "add a version string to main.c and rebuild") and press Return. Each tool the agent uses is shown in the transcript as a line starting with `>`. **Send** changes to **Stop** while it works.
+
+The agent talks to the active chat provider, so it works with OpenAI, Google Gemini, SpaceXAI Grok, Anthropic Claude and custom OpenAI-compatible servers whose model supports tool calling.
+
+**Tools.** The agent can run AmigaDOS commands in a Shell (`shell`), read, write and edit files (`read_file`, `write_file`, `edit_file`), list and search drawers (`list_directory`, `search_files`), identify a file's type (`identify_file`), read a web page or web API (`fetch_url`), download a file (`download_file`), generate a picture with the active image provider (`generate_image`), list ARexx ports and send a command to one (`list_arexx_ports`, `arexx`), load a skill (`load_skill`), hand a side task to a subagent (`run_subagent`), and call the tools of any MCP server you have added.
+
+Commands run in the background without a keyboard, so the window stays responsive and **Stop** always works. A command that has not finished after two minutes is left running and the agent is told so (change `commandTimeout`, in seconds, in `AMIGAGPT:agent/settings.json`). The agent cannot send ARexx commands to AmigaGPT's own port. Errors that would normally open a requester are passed to the agent instead while it works, so a failed download or connection does not stop it.
+
+**Approval.** The **Approval** gadget decides what runs without asking:
+
+| Setting | What happens |
+| --- | --- |
+| Ask before changes | Reading local files is free. Shell commands, ARexx commands, MCP tools, web access, image generation and file changes show a requester first |
+| Read only | Nothing that changes the system runs. The agent can only look and report |
+| Accept file edits | File writes and edits run. Shell commands, ARexx commands, MCP tools, web access and image generation still ask |
+| Full auto | Everything runs without asking |
+
+The requester offers **Allow once**, **Always allow** and **Deny**. **Always allow** remembers the answer for the project: a Shell command is remembered by its command name (allowing `list` does not allow `delete`), an ARexx command by its port, and other tools by name.
+
+**Projects.** A project is a drawer. **Add project...** adds one and the list on the left switches between them. While a project is active, Shell commands start in its drawer and paths without a device name are relative to it. "(No project)" works anywhere, with full paths.
+
+**Model and effort.** The agent uses the chat model of the active chat provider unless you type another model name into **Model**. **Effort** asks the model for low, medium or high reasoning effort; Default leaves the choice to the provider. Not every model accepts an effort setting.
+
+**Instructions.** **Instructions...** opens the `AGENTS.md` file of the active project (or the global one when no project is active). Whatever you write there is given to the agent at the start of every task: what the project is, how to build it, rules to follow. The global file applies to every project. `/init` has the agent write one for you by exploring the project.
+
+**Skills.** A skill is a drawer holding a `SKILL.md` file: a short header with a `name` and `description`, followed by instructions for one kind of task. The agent sees the names and descriptions and loads a skill when a task calls for it. Skills use the open Agent Skills layout, so skills written for other agents can be used as they are. **Import skill...** copies a skill drawer into `AMIGAGPT:agent/skills/`, `/import-skill` does the same from a path or a web address, and `/create-skill <description>` has the agent write a new one.
+
+**Commands.** Messages starting with `/` are commands:
+
+| Command | Does |
+| --- | --- |
+| `/help` | Lists the commands |
+| `/new` | Starts a new session |
+| `/projects`, `/project <name>` | Lists the projects, switches project (`none` for no project) |
+| `/approval ask\|readonly\|edits\|auto` | Sets the approval mode |
+| `/effort default\|low\|medium\|high` | Sets the reasoning effort |
+| `/model <name>` | Sets the model (`default` for the chat model) |
+| `/skills`, `/commands`, `/agents`, `/mcp` | Lists skills, your own commands, subagents, and MCP servers with their tools |
+| `/init` | Has the agent write `AGENTS.md` for the project |
+| `/create-skill <description>` | Has the agent write a new skill |
+| `/import-skill <drawer, file or web address>` | Adds a skill |
+
+Your own commands are Markdown files in a `commands` drawer: `commands/review.md` becomes `/review`, and its text is sent as the prompt with `$ARGUMENTS` replaced by whatever follows the command. A skill can also be run by name, for example `/my-skill`.
+
+**Subagents.** The agent can hand a self-contained side task to a subagent, which works with a fresh context and returns only its report. There is always a `general` subagent. Your own are Markdown files in an `agents` drawer; the header can set `description`, `model` (a different model for that subagent) and `tools` (a comma separated list limiting what it may use), and the text below the header is its instructions.
+
+**MCP servers.** **MCP servers...** opens `mcp.json`, where remote Model Context Protocol servers are listed in the layout other agents use:
+
+```json
+{
+  "mcpServers": {
+    "docs": {
+      "url": "https://example.com/mcp",
+      "headers": { "Authorization": "Bearer YOUR-TOKEN" }
+    }
+  }
+}
+```
+
+Their tools appear to the agent as `mcp__<server>__<tool>`. Only servers reached over HTTP are supported; servers that are started as a local program are not, because those are Node or Python programs that do not run on the Amiga.
+
+**Where things live.** Global files are in `AMIGAGPT:agent/` (`AGENTS.md`, `mcp.json`, `skills/`, `commands/`, `agents/`). A project can add its own `AGENTS.md` in its drawer, and `skills/`, `commands/`, `agents/` and `mcp.json` in a `.agents` drawer inside it (`.claude` is read too). A project entry replaces a global one of the same name.
+
+The session is kept between runs until you start a new one. When a session grows very long its oldest turns are dropped.
 
 ### Chat and Image Provider Settings
 
@@ -321,6 +392,21 @@ NEWCHAT
 
 This command takes no parameters and returns "Conversation history cleared" on success.
 
+#### AGENT
+
+Runs one turn of the agent (see [Agent](#agent)) and returns everything it printed: its replies and a line for each tool it used. The agent's session is kept between calls, so a later call continues the same task.
+
+```
+AGENT PJ=PROJECT/K,A=APPROVAL/K,N=NEW/S,P=PROMPT/F
+```
+
+- `PJ=PROJECT` - Optional, the project to work in: the name of an existing project, the path of a drawer (which is added as a project), or `NONE`
+- `A=APPROVAL` - Optional, `ASK`, `READONLY`, `EDITS` or `AUTO`. With `ASK` and `EDITS` a requester still appears on screen for anything that needs approval, so unattended scripts should use `READONLY` or `AUTO`
+- `N=NEW` - Optional, start a new session first
+- `P=PROMPT` - Required, the task, or a slash command such as `/skills`
+
+The project and approval mode you give stay set afterwards. `RC` is 0 whenever the turn ran; if the provider reported an error, the error text is in `RESULT`.
+
 #### List Commands
 
 #### LISTMODELS
@@ -432,6 +518,11 @@ Everything AmigaGPT keeps lives under the `AMIGAGPT:` assign, which the installe
 | `AMIGAGPT:chat-history.json` | Every conversation |
 | `AMIGAGPT:image-history.json` | Every generated image |
 | `AMIGAGPT:images/` | The generated image files |
+| `AMIGAGPT:agent/settings.json` | The agent's approval mode, effort, model, projects and remembered approvals |
+| `AMIGAGPT:agent/session.json` | The agent's current session |
+| `AMIGAGPT:agent/AGENTS.md` | Instructions given to the agent in every project |
+| `AMIGAGPT:agent/mcp.json` | The MCP servers available in every project |
+| `AMIGAGPT:agent/skills/`, `commands/`, `agents/` | Your skills, slash commands and subagents |
 | `AMIGAGPT:AmigaGPT.guide` | This documentation, opened by the **Help** menu |
 | `AMIGAGPT:magic.mgc` | The file type database (may also be in `PROGDIR:` or `C:`) |
 | `AMIGAGPT:rexx/` | The bundled ARexx scripts |

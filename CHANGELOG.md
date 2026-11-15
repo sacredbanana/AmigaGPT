@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Agent tab: the model works on a task with tools until it is done. Tools for AmigaDOS Shell commands, reading, writing, editing, listing and searching files, file type identification, reading web pages, downloading files, generating pictures, ARexx ports and commands, skills, subagents and remote MCP servers
+- Agent approval modes (Ask before changes, Read only, Accept file edits, Full auto) with Allow once / Always allow / Deny requesters and per-project remembered approvals
+- Agent projects, AGENTS.md instruction files, skills in the Agent Skills layout (use, import and creation), your own slash commands, subagents, model override and reasoning effort
+- Agent works with OpenAI, Google Gemini, SpaceXAI Grok, Anthropic Claude and custom OpenAI-compatible servers
+- ARexx AGENT command runs an agent turn from a script, in the app and the daemon
+
 ## 3.4.0 (2026-10-08)
 
 - Speech tab for generating reusable spoken phrases as WAV files, with phrase history, an interactive waveform with play/pause, stop and rewind symbols, speech profile details, Regenerate, Save Speech Copy, file attachments and Generate text with AI

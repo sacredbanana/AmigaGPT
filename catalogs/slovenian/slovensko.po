@@ -2139,10 +2139,10 @@ msgid ""
 "is probably corrupted. Phrase history will not be loaded. A backup of the "
 "speech-history.json file has been created as speech-history.json.bak"
 msgstr ""
-"Zgodovine govora ni bilo mogoče razčleniti. Neveljaven JSON. Datoteka "
-"speech-history.json je verjetno poškodovana. Zgodovina fraz ne bo naložena. "
-"Varnostna kopija datoteke speech-history.json je bila ustvarjena kot "
-"speech-history.json.bak"
+"Zgodovine govora ni bilo mogoče razčleniti. Neveljaven JSON. Datoteka speech-"
+"history.json je verjetno poškodovana. Zgodovina fraz ne bo naložena. "
+"Varnostna kopija datoteke speech-history.json je bila ustvarjena kot speech-"
+"history.json.bak"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM (407//)"
@@ -2152,10 +2152,10 @@ msgid ""
 "writing a backup of the speech history to disk but a copy has been saved to "
 "RAM:speech-history.json"
 msgstr ""
-"Zgodovine govora ni bilo mogoče razčleniti. Neveljaven JSON. Datoteka "
-"speech-history.json je verjetno poškodovana. Zgodovina fraz ne bo naložena. "
-"Pri zapisovanju varnostne kopije zgodovine govora na disk je prišlo do "
-"napake, vendar je bila kopija shranjena v RAM:speech-history.json"
+"Zgodovine govora ni bilo mogoče razčleniti. Neveljaven JSON. Datoteka speech-"
+"history.json je verjetno poškodovana. Zgodovina fraz ne bo naložena. Pri "
+"zapisovanju varnostne kopije zgodovine govora na disk je prišlo do napake, "
+"vendar je bila kopija shranjena v RAM:speech-history.json"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
@@ -2206,6 +2206,261 @@ msgctxt "STRING_SPEECH_LANGUAGE (416//)"
 msgid "Language"
 msgstr "Jezik"
 
+#: src/MainWindow.c
+msgctxt "STRING_MENU_AGENT (417//)"
+msgid "Agent"
+msgstr "Agent"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NO_PROJECT (418//)"
+msgid "(No project)"
+msgstr "(Brez projekta)"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+msgid "Add project..."
+msgstr "Dodaj projekt..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
+msgid "Remove project"
+msgstr "Odstrani projekt"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_PROJECT_DRAWER (421//)"
+msgid "Select the project drawer"
+msgstr "Izberite predal projekta"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL (422//)"
+msgid "Approval"
+msgstr "Odobritev"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ASK (423//)"
+msgid "Ask before changes"
+msgstr "Vprašaj pred spremembami"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_READ_ONLY (424//)"
+msgid "Read only"
+msgstr "Samo za branje"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ACCEPT_EDITS (425//)"
+msgid "Accept file edits"
+msgstr "Sprejmi urejanja datotek"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_FULL_AUTO (426//)"
+msgid "Full auto"
+msgstr "Popolnoma samodejno"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT (427//)"
+msgid "Effort"
+msgstr "Napor"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_DEFAULT (428//)"
+msgid "Default"
+msgstr "Privzeto"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_LOW (429//)"
+msgid "Low"
+msgstr "Nizek"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_MEDIUM (430//)"
+msgid "Medium"
+msgstr "Srednji"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_HIGH (431//)"
+msgid "High"
+msgstr "Visok"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL (432//)"
+msgid "Model"
+msgstr "Model"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL_HELP (433//)"
+msgid ""
+"The model the agent uses. Leave this empty to use the chat model of the "
+"active chat provider."
+msgstr ""
+"Model, ki ga uporablja agent. Pustite prazno, če želite uporabiti model "
+"klepeta aktivnega ponudnika klepeta."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_INSTRUCTIONS (434//)"
+msgid "Instructions..."
+msgstr "Navodila..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MCP_SERVERS (435//)"
+msgid "MCP servers..."
+msgstr "Strežniki MCP..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_IMPORT_SKILL (436//)"
+msgid "Import skill..."
+msgstr "Uvozi veščino..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_SKILL (437//)"
+msgid "Select a skill drawer or its SKILL.md file"
+msgstr "Izberite predal veščine ali njeno datoteko SKILL.md"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NEW_SESSION (438//)"
+msgid "New session"
+msgstr "Nova seja"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SAVE (439//)"
+msgid "Save"
+msgstr "Shrani"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ERROR_SAVING_FILE (440//)"
+msgid "The file could not be saved."
+msgstr "Datoteke ni bilo mogoče shraniti."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_WELCOME (441//)"
+msgid ""
+"Describe a task and the agent will work on it using the Shell, files, ARexx, "
+"skills and MCP servers. Type /help for the list of commands."
+msgstr ""
+"Opišite nalogo in agent bo delal na njej z uporabo Shell, datotek, ARexx, "
+"veščin in strežnikov MCP. Vnesite /help za seznam ukazov."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_TITLE (442//)"
+msgid "Agent Action Confirmation"
+msgstr "Potrditev dejanja agenta"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BODY (443//)"
+msgid ""
+"The agent wants to use the tool \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this action?"
+msgstr ""
+"Agent želi uporabiti orodje \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Dovolite to dejanje?"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BUTTONS (444//)"
+msgid "*_Allow once|Always a_llow|_Deny"
+msgstr "*_Dovoli enkrat|_Vedno dovoli|_Zavrni"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_WORKING (445//)"
+msgid "The agent is working..."
+msgstr "Agent dela..."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_RUNNING_TOOL (446//)"
+msgid "Running tool: %s"
+msgstr "Izvajanje orodja: %s"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
+msgid ""
+"The agent stopped because it reached the step limit. Send another message to "
+"let it continue."
+msgstr ""
+"Agent se je ustavil, ker je dosegel omejitev korakov. Pošljite novo "
+"sporočilo, da bo nadaljeval."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STOPPED (448//)"
+msgid "The agent was stopped."
+msgstr "Agent je bil ustavljen."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SESSION_CLEARED (449//)"
+msgid "A new session has started."
+msgstr "Začela se je nova seja."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_NO_SUCH_PROJECT (450//)"
+msgid "There is no project with that name."
+msgstr "Projekt s tem imenom ne obstaja."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORTED (451//)"
+msgid "The skill \"%s\" was imported."
+msgstr "Veščina \"%s\" je bila uvožena."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORT_FAILED (452//)"
+msgid ""
+"The skill could not be imported. Choose a drawer that holds a SKILL.md file, "
+"or a SKILL.md file with a name in its header."
+msgstr ""
+"Veščine ni bilo mogoče uvoziti. Izberite predal, ki vsebuje datoteko "
+"SKILL.md, ali datoteko SKILL.md z imenom v glavi."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_UNKNOWN_COMMAND (453//)"
+msgid "There is no command /%s. Type /help for the list of commands."
+msgstr "Ukaz /%s ne obstaja. Vnesite /help za seznam ukazov."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_HELP (454//)"
+msgid ""
+"Commands:\n"
+"/help - show this list\n"
+"/new - start a new session\n"
+"/projects - list the projects\n"
+"/project <name> - switch project (none for no project)\n"
+"/approval ask|readonly|edits|auto - choose what runs without asking\n"
+"/effort default|low|medium|high - choose the reasoning effort\n"
+"/model <name> - choose the model (default for the chat model)\n"
+"/skills - list the skills\n"
+"/commands - list your own commands\n"
+"/agents - list the subagents\n"
+"/mcp - list the MCP servers and their tools\n"
+"/init - write an AGENTS.md for the project\n"
+"/create-skill <description> - have the agent write a new skill\n"
+"/import-skill <drawer, file or web address> - add a skill\n"
+"A skill or one of your own commands can also be run by its name, for "
+"example /review."
+msgstr ""
+"Ukazi:\n"
+"/help - prikaži ta seznam\n"
+"/new - začni novo sejo\n"
+"/projects - izpiši projekte\n"
+"/project <ime> - zamenjaj projekt (none za delo brez projekta)\n"
+"/approval ask|readonly|edits|auto - izberi, kaj se izvaja brez vprašanja\n"
+"/effort default|low|medium|high - izberi napor razmišljanja\n"
+"/model <ime> - izberi model (default za model klepeta)\n"
+"/skills - izpiši veščine\n"
+"/commands - izpiši lastne ukaze\n"
+"/agents - izpiši podagente\n"
+"/mcp - izpiši strežnike MCP in njihova orodja\n"
+"/init - napiši AGENTS.md za projekt\n"
+"/create-skill <opis> - naj agent napiše novo veščino\n"
+"/import-skill <predal, datoteka ali spletni naslov> - dodaj veščino\n"
+"Veščino ali enega od lastnih ukazov lahko zaženete tudi z imenom, na primer "
+"/review."
+
+#: src/ARexx.c
+msgctxt "STRING_AGENT_PROMPT_REQUIRED (455//)"
+msgid "A prompt is required."
+msgstr "Zahtevan je poziv."
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Voice"
@@ -2213,4 +2468,3 @@ msgstr "Jezik"
 #~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 #~ msgid "OpenAI Speech Model"
 #~ msgstr "Govorni model OpenAI"
-

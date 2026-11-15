@@ -652,6 +652,8 @@ static BOOL pumpRequestInterface(void) {
     return !requestCancelled;
 }
 
+BOOL pumpRequestEvents(void) { return pumpRequestInterface(); }
+
 static BOOL responseMarksStreamFinished(struct json_object *response) {
     if (response == NULL)
         return FALSE;
@@ -2262,9 +2264,8 @@ static BOOL copyHttpHeaderValue(CONST_STRPTR headers, CONST_STRPTR headerName,
     return FALSE;
 }
 
-static BOOL parseHttpUrl(CONST_STRPTR url, STRPTR host, ULONG hostSize,
-                         UWORD *port, STRPTR path, ULONG pathSize,
-                         BOOL *useSSL) {
+BOOL parseHttpUrl(CONST_STRPTR url, STRPTR host, ULONG hostSize, UWORD *port,
+                  STRPTR path, ULONG pathSize, BOOL *useSSL) {
     CONST_STRPTR p = url;
     CONST_STRPTR slash;
     CONST_STRPTR colon;
@@ -10727,4 +10728,345 @@ struct json_object *postToolResultsToOpenAI(
 
     updateStatusBar(STRING_ERROR, redPen);
     return NULL;
+}
+
+/* ------------------------------------------------------------------------
+ * Generic HTTP request used by the agent loop and the MCP client
+ * ---------------------------------------------------------------------- */
+
+static BOOL httpHeaderHasToken(CONST_STRPTR headers, CONST_STRPTR name,
+                               CONST_STRPTR token) {
+    UBYTE value[256];
+    ULONG i;
+    if (!copyHttpHeaderValue(headers, name, value, sizeof(value)))
+        return FALSE;
+    for (i = 0; value[i] != '\0'; i++)
+        value[i] = (UBYTE)asciiLower(value[i]);
+    return strstr(value, token) != NULL;
+}
+
+/* Decode a chunked body. Returns an AllocVec'd string, and sets *complete
+ * when the terminating zero-length chunk has arrived. */
+static STRPTR httpDecodeChunkedBody(CONST_STRPTR raw, ULONG rawLength,
+                                    BOOL *complete, ULONG *lengthOut) {
+    STRPTR out = AllocVec(rawLength + 1, MEMF_ANY | MEMF_CLEAR);
+    ULONG in = 0;
+    ULONG outLength = 0;
+    *complete = FALSE;
+    if (out == NULL)
+        return NULL;
+    while (in < rawLength) {
+        ULONG lineEnd = in;
+        ULONG chunkLength;
+        while (lineEnd < rawLength && raw[lineEnd] != '\n')
+            lineEnd++;
+        if (lineEnd >= rawLength)
+            break;
+        chunkLength = strtoul(raw + in, NULL, 16);
+        in = lineEnd + 1;
+        if (chunkLength == 0) {
+            *complete = TRUE;
+            break;
+        }
+        if (in + chunkLength > rawLength)
+            chunkLength = rawLength - in;
+        CopyMem((APTR)(raw + in), out + outLength, chunkLength);
+        outLength += chunkLength;
+        in += chunkLength;
+        /* Skip the CRLF that follows the chunk data */
+        while (in < rawLength && (raw[in] == '\r' || raw[in] == '\n'))
+            in++;
+    }
+    out[outLength] = '\0';
+    if (lengthOut != NULL)
+        *lengthOut = outLength;
+    return out;
+}
+
+/* A server-sent event stream carrying one JSON-RPC answer is finished as
+ * soon as an event holding a result or an error has been fully received. */
+static BOOL httpEventStreamHasAnswer(CONST_STRPTR body) {
+    CONST_STRPTR data = body;
+    while (data != NULL && (data = strstr(data, "data:")) != NULL) {
+        CONST_STRPTR end = strstr(data, "\n\n");
+        CONST_STRPTR endCr = strstr(data, "\r\n\r\n");
+        if (endCr != NULL && (end == NULL || endCr < end))
+            end = endCr;
+        if (end == NULL)
+            return FALSE;
+        {
+            CONST_STRPTR result = strstr(data, "\"result\"");
+            CONST_STRPTR error = strstr(data, "\"error\"");
+            if ((result != NULL && result < end) ||
+                (error != NULL && error < end))
+                return TRUE;
+        }
+        data = end;
+    }
+    return FALSE;
+}
+
+STRPTR httpSendRequest(CONST_STRPTR method, CONST_STRPTR host, UWORD port,
+                       BOOL useSSL, CONST_STRPTR path,
+                       CONST_STRPTR extraHeaders, CONST_STRPTR body,
+                       BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+                       BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                       CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+                       LONG *statusOut, STRPTR responseHeadersOut,
+                       ULONG responseHeadersSize) {
+    return httpSendRequestBinary(method, host, port, useSSL, path,
+                                 extraHeaders, body, useProxy, proxyHost,
+                                 proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                                 proxyUsername, proxyPassword, statusOut,
+                                 responseHeadersOut, responseHeadersSize,
+                                 NULL);
+}
+
+STRPTR httpSendRequestBinary(CONST_STRPTR method, CONST_STRPTR host,
+                             UWORD port, BOOL useSSL, CONST_STRPTR path,
+                             CONST_STRPTR extraHeaders, CONST_STRPTR body,
+                             BOOL useProxy, CONST_STRPTR proxyHost,
+                             UWORD proxyPort, BOOL proxyUsesSSL,
+                             BOOL proxyRequiresAuth,
+                             CONST_STRPTR proxyUsername,
+                             CONST_STRPTR proxyPassword, LONG *statusOut,
+                             STRPTR responseHeadersOut,
+                             ULONG responseHeadersSize,
+                             ULONG *bodyLengthOut) {
+    STRPTR request = NULL;
+    STRPTR raw = NULL;
+    STRPTR result = NULL;
+    ULONG rawCapacity = 16384;
+    ULONG rawLength = 0;
+    ULONG bodyLength = body != NULL ? strlen(body) : 0;
+    ULONG requestSize;
+    ULONG headerLength;
+    UBYTE proxyAuthHeader[512];
+    UBYTE connectionRetryCount = 0;
+    STRPTR headerEnd = NULL;
+    BOOL chunked = FALSE;
+    BOOL eventStream = FALSE;
+    LONG contentLength = -1;
+    clock_t idleStart;
+
+    if (statusOut != NULL)
+        *statusOut = 0;
+    if (bodyLengthOut != NULL)
+        *bodyLengthOut = 0;
+    if (responseHeadersOut != NULL && responseHeadersSize > 0)
+        responseHeadersOut[0] = '\0';
+    if (host == NULL || strlen(host) == 0 || path == NULL)
+        return NULL;
+    if (port == 0)
+        port = useSSL ? 443 : 80;
+    if (useProxy && proxyUsesSSL)
+        useSSL = TRUE;
+    if (extraHeaders == NULL)
+        extraHeaders = "";
+
+    proxyAuthHeader[0] = '\0';
+    if (useProxy && proxyRequiresAuth && !proxyUsesSSL &&
+        proxyUsername != NULL && proxyPassword != NULL) {
+        ULONG credentialsSize = strlen(proxyUsername) + strlen(proxyPassword) + 2;
+        STRPTR credentials = AllocVec(credentialsSize, MEMF_ANY | MEMF_CLEAR);
+        if (credentials != NULL) {
+            STRPTR encodedCredentials = NULL;
+            snprintf(credentials, credentialsSize, "%s:%s", proxyUsername,
+                     proxyPassword);
+            CodesetsEncodeB64(CSA_B64SourceString, (Tag)credentials,
+                              CSA_B64SourceLen, (Tag)strlen(credentials),
+                              CSA_B64DestPtr, (Tag)&encodedCredentials,
+                              TAG_DONE);
+            if (encodedCredentials != NULL) {
+                snprintf(proxyAuthHeader, sizeof(proxyAuthHeader),
+                         "Proxy-Authorization: Basic %s\r\n",
+                         encodedCredentials);
+                CodesetsFreeA(encodedCredentials, NULL);
+            }
+            FreeVec(credentials);
+        }
+    }
+
+    requestSize = bodyLength + strlen(extraHeaders) + strlen(path) +
+                  strlen(host) * 2 + 1024;
+    request = AllocVec(requestSize, MEMF_ANY | MEMF_CLEAR);
+    if (request == NULL)
+        return NULL;
+    if (useProxy && !proxyUsesSSL)
+        snprintf(request, requestSize, "%s %s://%s:%d%s HTTP/1.1\r\n", method,
+                 useSSL ? "https" : "http", host, port, path);
+    else
+        snprintf(request, requestSize, "%s %s HTTP/1.1\r\n", method, path);
+    headerLength = strlen(request);
+    /* The port is only named when it is not the usual one. Servers copy
+     * the Host header into redirects, so "host:80" on a plain request would
+     * come back as an https address on port 80. */
+    if (port == (useSSL ? 443 : 80))
+        snprintf(request + headerLength, requestSize - headerLength,
+                 "Host: %s\r\n", host);
+    else
+        snprintf(request + headerLength, requestSize - headerLength,
+                 "Host: %s:%d\r\n", host, port);
+    headerLength = strlen(request);
+    snprintf(request + headerLength, requestSize - headerLength,
+             "User-Agent: AmigaGPT\r\n"
+             "Connection: close\r\n"
+             "%s%s"
+             "Content-Length: %lu\r\n"
+             "\r\n",
+             extraHeaders, proxyAuthHeader, bodyLength);
+    headerLength = strlen(request);
+    if (bodyLength > 0)
+        CopyMem((APTR)body, request + headerLength, bodyLength);
+
+    updateStatusBar(STRING_CONNECTING, yellowPen);
+    while (createSSLConnection(host, port, useSSL, useProxy, proxyHost,
+                               proxyPort, proxyUsesSSL, proxyRequiresAuth,
+                               proxyUsername, proxyPassword) == RETURN_ERROR) {
+        if (requestCancelled || connectionRetryCount++ >= 2) {
+            FreeVec(request);
+            return NULL;
+        }
+    }
+
+    updateStatusBar(STRING_SENDING_REQUEST, yellowPen);
+    if (writeAllQuiet(useSSL, request, headerLength + bodyLength) < 0) {
+        FreeVec(request);
+        closeActiveResponseConnection();
+        return NULL;
+    }
+    flushTransportWrites(useSSL);
+    FreeVec(request);
+
+    raw = AllocVec(rawCapacity, MEMF_ANY | MEMF_CLEAR);
+    if (raw == NULL) {
+        closeActiveResponseConnection();
+        return NULL;
+    }
+
+    updateStatusBar(STRING_DOWNLOADING_RESPONSE, yellowPen);
+    idleStart = clock();
+    while (TRUE) {
+        LONG bytesRead;
+        LONG readable;
+
+        if (!pumpRequestInterface())
+            break;
+        if ((clock() - idleStart) / CLOCKS_PER_SEC >=
+            SOCKET_READ_MAX_IDLE_SECONDS)
+            break;
+        readable = waitForSocketReadable(useSSL);
+        if (readable < 0)
+            break;
+        if (readable == 0)
+            continue;
+
+        if (rawLength + 4096 + 1 > rawCapacity) {
+            ULONG biggerCapacity = rawCapacity * 2;
+            STRPTR bigger = AllocVec(biggerCapacity, MEMF_ANY | MEMF_CLEAR);
+            if (bigger == NULL)
+                break;
+            CopyMem(raw, bigger, rawLength);
+            FreeVec(raw);
+            raw = bigger;
+            rawCapacity = biggerCapacity;
+            headerEnd = NULL;
+        }
+
+        if (useSSL) {
+            if (ssl == NULL)
+                break;
+            ERR_clear_error();
+            bytesRead = SSL_read(ssl, raw + rawLength, 4096);
+            if (bytesRead <= 0) {
+                LONG error = SSL_get_error(ssl, bytesRead);
+                if (error == SSL_ERROR_WANT_READ ||
+                    error == SSL_ERROR_WANT_WRITE ||
+                    (error == SSL_ERROR_SYSCALL && bytesRead < 0 &&
+                     socketOperationWouldBlock()))
+                    continue;
+                break;
+            }
+        } else {
+            if (sock < 0)
+                break;
+            bytesRead = recv(sock, raw + rawLength, 4096, 0);
+            if (bytesRead < 0 && socketOperationWouldBlock())
+                continue;
+            if (bytesRead <= 0)
+                break;
+        }
+        rawLength += (ULONG)bytesRead;
+        raw[rawLength] = '\0';
+        idleStart = clock();
+
+        if (headerEnd == NULL) {
+            headerEnd = strstr(raw, "\r\n\r\n");
+            if (headerEnd != NULL) {
+                UBYTE saved = headerEnd[2];
+                headerEnd[2] = '\0';
+                chunked = httpHeaderHasToken(raw, "Transfer-Encoding",
+                                             "chunked");
+                eventStream = httpHeaderHasToken(raw, "Content-Type",
+                                                 "text/event-stream");
+                contentLength = httpParseContentLengthNullTerminated(raw);
+                if (chunked)
+                    contentLength = -1;
+                headerEnd[2] = saved;
+            }
+        }
+        if (headerEnd != NULL) {
+            CONST_STRPTR bodyStart = headerEnd + 4;
+            ULONG received = rawLength - (ULONG)(bodyStart - raw);
+            if (chunked) {
+                BOOL complete = FALSE;
+                STRPTR decoded = httpDecodeChunkedBody(bodyStart, received,
+                                                       &complete, NULL);
+                BOOL answered = decoded != NULL && eventStream &&
+                                httpEventStreamHasAnswer(decoded);
+                if (decoded != NULL)
+                    FreeVec(decoded);
+                if (complete || answered)
+                    break;
+            } else if (contentLength >= 0) {
+                if (received >= (ULONG)contentLength)
+                    break;
+            } else if (eventStream && httpEventStreamHasAnswer(bodyStart)) {
+                break;
+            }
+        }
+    }
+    closeActiveResponseConnection();
+
+    headerEnd = strstr(raw, "\r\n\r\n");
+    if (headerEnd != NULL && !requestCancelled) {
+        CONST_STRPTR bodyStart = headerEnd + 4;
+        ULONG received = rawLength - (ULONG)(bodyStart - raw);
+        if (statusOut != NULL && strncmp(raw, "HTTP/", 5) == 0) {
+            CONST_STRPTR space = strchr(raw, ' ');
+            if (space != NULL)
+                *statusOut = strtol(space + 1, NULL, 10);
+        }
+        if (responseHeadersOut != NULL && responseHeadersSize > 0) {
+            ULONG copyLength = (ULONG)(headerEnd - raw) + 2;
+            if (copyLength >= responseHeadersSize)
+                copyLength = responseHeadersSize - 1;
+            CopyMem(raw, responseHeadersOut, copyLength);
+            responseHeadersOut[copyLength] = '\0';
+        }
+        if (chunked) {
+            BOOL complete = FALSE;
+            result = httpDecodeChunkedBody(bodyStart, received, &complete,
+                                           bodyLengthOut);
+        } else {
+            result = AllocVec(received + 1, MEMF_ANY | MEMF_CLEAR);
+            if (result != NULL) {
+                CopyMem((APTR)bodyStart, result, received);
+                if (bodyLengthOut != NULL)
+                    *bodyLengthOut = received;
+            }
+        }
+    }
+    FreeVec(raw);
+    return result;
 }

@@ -26,6 +26,7 @@
 #include "SpeechProviderSettingsRequesterWindow.h"
 #include "gui.h"
 #include "MainWindow.h"
+#include "agent.h"
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
 #include "speech.h"
@@ -164,6 +165,7 @@ LONG initVideo() {
                         "another instance of AmigaGPTD running.");
         return RETURN_ERROR;
     }
+    agentInit();
 #else
     if (!checkMUICustomClassInstalled()) {
         displayError(STRING_ERROR_MUI_CUSTOM_CLASSES_INSTALLED);
@@ -232,6 +234,9 @@ LONG initVideo() {
 
     if (createAboutAmigaGPTWindow() == RETURN_OK)
         DoMethod(app, OM_ADDMEMBER, aboutAmigaGPTWindowObject);
+
+    /* The Agent tab shows the agent's settings, so they are loaded first */
+    agentInit();
 
     if (createMainWindow() == RETURN_ERROR)
         return RETURN_ERROR;
@@ -498,6 +503,22 @@ BOOL copyFile(STRPTR source, STRPTR destination) {
  * Display an error message
  * @param message the message to display
  **/
+static BOOL errorRequestersSuppressed = FALSE;
+static UBYTE suppressedErrorText[512];
+
+void setErrorRequestersSuppressed(BOOL suppressed) {
+    errorRequestersSuppressed = suppressed;
+    suppressedErrorText[0] = '\0';
+}
+
+CONST_STRPTR takeSuppressedError(void) {
+    static UBYTE taken[512];
+    strncpy(taken, suppressedErrorText, sizeof(taken) - 1);
+    taken[sizeof(taken) - 1] = '\0';
+    suppressedErrorText[0] = '\0';
+    return taken;
+}
+
 void displayError(STRPTR message) {
     /* Snapshot the caller's error before status/UI allocation work can change
      * IoErr(). Callers that are reporting protocol/API errors clear IoErr()
@@ -505,6 +526,13 @@ void displayError(STRPTR message) {
     const LONG ERROR_CODE = IoErr();
     if (message == NULL || strlen(message) == 0)
         message = STRING_ERROR_UNKNOWN;
+    /* While the agent works nobody may be there to press OK, so the error
+     * is kept for the agent to report instead of stopping everything */
+    if (errorRequestersSuppressed) {
+        strncpy(suppressedErrorText, message, sizeof(suppressedErrorText) - 1);
+        suppressedErrorText[sizeof(suppressedErrorText) - 1] = '\0';
+        return;
+    }
 #ifndef DAEMON
     const UBYTE appName[] = "AmigaGPT";
     if (app) {
@@ -1245,6 +1273,7 @@ STRPTR utf8ToLatin1(UTF8 *src) {
  * Shutdown the GUI
  **/
 void shutdownGUI() {
+    agentShutdown();
     if (app) {
         DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 

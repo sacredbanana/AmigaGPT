@@ -2160,8 +2160,8 @@ msgid ""
 "is probably corrupted. Phrase history will not be loaded. A backup of the "
 "speech-history.json file has been created as speech-history.json.bak"
 msgstr ""
-"Αποτυχία ανάλυσης του ιστορικού ομιλίας. Μη έγκυρο JSON. Το αρχείο "
-"speech-history.json είναι πιθανόν κατεστραμμένο. Το ιστορικό φράσεων δεν θα "
+"Αποτυχία ανάλυσης του ιστορικού ομιλίας. Μη έγκυρο JSON. Το αρχείο speech-"
+"history.json είναι πιθανόν κατεστραμμένο. Το ιστορικό φράσεων δεν θα "
 "φορτωθεί. Δημιουργήθηκε αντίγραφο ασφαλείας του αρχείου speech-history.json "
 "ως speech-history.json.bak"
 
@@ -2173,11 +2173,11 @@ msgid ""
 "writing a backup of the speech history to disk but a copy has been saved to "
 "RAM:speech-history.json"
 msgstr ""
-"Αποτυχία ανάλυσης του ιστορικού ομιλίας. Μη έγκυρο JSON. Το αρχείο "
-"speech-history.json είναι πιθανόν κατεστραμμένο. Το ιστορικό φράσεων δεν θα "
+"Αποτυχία ανάλυσης του ιστορικού ομιλίας. Μη έγκυρο JSON. Το αρχείο speech-"
+"history.json είναι πιθανόν κατεστραμμένο. Το ιστορικό φράσεων δεν θα "
 "φορτωθεί. Παρουσιάστηκε σφάλμα κατά την εγγραφή αντιγράφου ασφαλείας του "
-"ιστορικού ομιλίας στον δίσκο, αλλά αποθηκεύτηκε ένα αντίγραφο στο "
-"RAM:speech-history.json"
+"ιστορικού ομιλίας στον δίσκο, αλλά αποθηκεύτηκε ένα αντίγραφο στο RAM:speech-"
+"history.json"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
@@ -2185,8 +2185,8 @@ msgid ""
 "Failed to parse speech history. The speech-history.json file is probably "
 "corrupted. Phrase history will not be loaded."
 msgstr ""
-"Αποτυχία ανάλυσης του ιστορικού ομιλίας. Το αρχείο speech-history.json "
-"είναι πιθανόν κατεστραμμένο. Το ιστορικό φράσεων δεν θα φορτωθεί."
+"Αποτυχία ανάλυσης του ιστορικού ομιλίας. Το αρχείο speech-history.json είναι "
+"πιθανόν κατεστραμμένο. Το ιστορικό φράσεων δεν θα φορτωθεί."
 
 #: src/MainWindow.c
 msgctxt "STRING_REQUEST_CANCELLED (409//)"
@@ -2206,7 +2206,8 @@ msgstr "Επαναφορά"
 #: src/MainWindow.c
 msgctxt "STRING_NO_SPEECH_SELECTED (412//)"
 msgid "Select a phrase to see its speech profile and waveform."
-msgstr "Επιλέξτε μια φράση για να δείτε το προφίλ ομιλίας και την κυματομορφή της."
+msgstr ""
+"Επιλέξτε μια φράση για να δείτε το προφίλ ομιλίας και την κυματομορφή της."
 
 #: src/MainWindow.c
 msgctxt "STRING_SPEECH_PROFILE (413//)"
@@ -2228,6 +2229,263 @@ msgctxt "STRING_SPEECH_LANGUAGE (416//)"
 msgid "Language"
 msgstr "Γλώσσα"
 
+#: src/MainWindow.c
+msgctxt "STRING_MENU_AGENT (417//)"
+msgid "Agent"
+msgstr "Πράκτορας"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NO_PROJECT (418//)"
+msgid "(No project)"
+msgstr "(Κανένα έργο)"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+msgid "Add project..."
+msgstr "Προσθήκη έργου..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
+msgid "Remove project"
+msgstr "Αφαίρεση έργου"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_PROJECT_DRAWER (421//)"
+msgid "Select the project drawer"
+msgstr "Επιλέξτε το συρτάρι του έργου"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL (422//)"
+msgid "Approval"
+msgstr "Έγκριση"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ASK (423//)"
+msgid "Ask before changes"
+msgstr "Ερώτηση πριν από αλλαγές"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_READ_ONLY (424//)"
+msgid "Read only"
+msgstr "Μόνο ανάγνωση"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ACCEPT_EDITS (425//)"
+msgid "Accept file edits"
+msgstr "Αποδοχή αλλαγών αρχείων"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_FULL_AUTO (426//)"
+msgid "Full auto"
+msgstr "Πλήρως αυτόματα"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT (427//)"
+msgid "Effort"
+msgstr "Προσπάθεια"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_DEFAULT (428//)"
+msgid "Default"
+msgstr "Προεπιλογή"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_LOW (429//)"
+msgid "Low"
+msgstr "Χαμηλή"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_MEDIUM (430//)"
+msgid "Medium"
+msgstr "Μεσαία"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_HIGH (431//)"
+msgid "High"
+msgstr "Υψηλή"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL (432//)"
+msgid "Model"
+msgstr "Μοντέλο"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL_HELP (433//)"
+msgid ""
+"The model the agent uses. Leave this empty to use the chat model of the "
+"active chat provider."
+msgstr ""
+"Το μοντέλο που χρησιμοποιεί ο πράκτορας. Αφήστε το κενό για να "
+"χρησιμοποιηθεί το μοντέλο συνομιλίας του ενεργού παρόχου συνομιλίας."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_INSTRUCTIONS (434//)"
+msgid "Instructions..."
+msgstr "Οδηγίες..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MCP_SERVERS (435//)"
+msgid "MCP servers..."
+msgstr "Διακομιστές MCP..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_IMPORT_SKILL (436//)"
+msgid "Import skill..."
+msgstr "Εισαγωγή δεξιότητας..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_SKILL (437//)"
+msgid "Select a skill drawer or its SKILL.md file"
+msgstr "Επιλέξτε το συρτάρι μιας δεξιότητας ή το αρχείο SKILL.md της"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NEW_SESSION (438//)"
+msgid "New session"
+msgstr "Νέα συνεδρία"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SAVE (439//)"
+msgid "Save"
+msgstr "Αποθήκευση"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ERROR_SAVING_FILE (440//)"
+msgid "The file could not be saved."
+msgstr "Δεν ήταν δυνατή η αποθήκευση του αρχείου."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_WELCOME (441//)"
+msgid ""
+"Describe a task and the agent will work on it using the Shell, files, ARexx, "
+"skills and MCP servers. Type /help for the list of commands."
+msgstr ""
+"Περιγράψτε μια εργασία και ο πράκτορας θα την εκτελέσει χρησιμοποιώντας το "
+"Shell, αρχεία, ARexx, δεξιότητες και διακομιστές MCP. Πληκτρολογήστε /help "
+"για τη λίστα εντολών."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_TITLE (442//)"
+msgid "Agent Action Confirmation"
+msgstr "Επιβεβαίωση ενέργειας πράκτορα"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BODY (443//)"
+msgid ""
+"The agent wants to use the tool \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this action?"
+msgstr ""
+"Ο πράκτορας θέλει να χρησιμοποιήσει το εργαλείο \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Να επιτραπεί αυτή η ενέργεια;"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BUTTONS (444//)"
+msgid "*_Allow once|Always a_llow|_Deny"
+msgstr "*_Επιτρέψτε μία φορά|_Πάντα να επιτρέπεται|_Αρνηθείτε"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_WORKING (445//)"
+msgid "The agent is working..."
+msgstr "Ο πράκτορας εργάζεται..."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_RUNNING_TOOL (446//)"
+msgid "Running tool: %s"
+msgstr "Εκτέλεση εργαλείου: %s"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
+msgid ""
+"The agent stopped because it reached the step limit. Send another message to "
+"let it continue."
+msgstr ""
+"Ο πράκτορας σταμάτησε επειδή έφτασε το όριο βημάτων. Στείλτε άλλο ένα μήνυμα "
+"για να συνεχίσει."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STOPPED (448//)"
+msgid "The agent was stopped."
+msgstr "Ο πράκτορας διακόπηκε."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SESSION_CLEARED (449//)"
+msgid "A new session has started."
+msgstr "Ξεκίνησε μια νέα συνεδρία."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_NO_SUCH_PROJECT (450//)"
+msgid "There is no project with that name."
+msgstr "Δεν υπάρχει έργο με αυτό το όνομα."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORTED (451//)"
+msgid "The skill \"%s\" was imported."
+msgstr "Η δεξιότητα \"%s\" εισήχθη."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORT_FAILED (452//)"
+msgid ""
+"The skill could not be imported. Choose a drawer that holds a SKILL.md file, "
+"or a SKILL.md file with a name in its header."
+msgstr ""
+"Δεν ήταν δυνατή η εισαγωγή της δεξιότητας. Επιλέξτε ένα συρτάρι που περιέχει "
+"αρχείο SKILL.md ή ένα αρχείο SKILL.md με όνομα στην κεφαλίδα του."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_UNKNOWN_COMMAND (453//)"
+msgid "There is no command /%s. Type /help for the list of commands."
+msgstr "Δεν υπάρχει εντολή /%s. Πληκτρολογήστε /help για τη λίστα εντολών."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_HELP (454//)"
+msgid ""
+"Commands:\n"
+"/help - show this list\n"
+"/new - start a new session\n"
+"/projects - list the projects\n"
+"/project <name> - switch project (none for no project)\n"
+"/approval ask|readonly|edits|auto - choose what runs without asking\n"
+"/effort default|low|medium|high - choose the reasoning effort\n"
+"/model <name> - choose the model (default for the chat model)\n"
+"/skills - list the skills\n"
+"/commands - list your own commands\n"
+"/agents - list the subagents\n"
+"/mcp - list the MCP servers and their tools\n"
+"/init - write an AGENTS.md for the project\n"
+"/create-skill <description> - have the agent write a new skill\n"
+"/import-skill <drawer, file or web address> - add a skill\n"
+"A skill or one of your own commands can also be run by its name, for "
+"example /review."
+msgstr ""
+"Εντολές:\n"
+"/help - εμφάνιση αυτής της λίστας\n"
+"/new - έναρξη νέας συνεδρίας\n"
+"/projects - λίστα των έργων\n"
+"/project <όνομα> - αλλαγή έργου (none για κανένα έργο)\n"
+"/approval ask|readonly|edits|auto - επιλογή του τι εκτελείται χωρίς ερώτηση\n"
+"/effort default|low|medium|high - επιλογή της προσπάθειας συλλογισμού\n"
+"/model <όνομα> - επιλογή μοντέλου (default για το μοντέλο συνομιλίας)\n"
+"/skills - λίστα των δεξιοτήτων\n"
+"/commands - λίστα των δικών σας εντολών\n"
+"/agents - λίστα των υποπρακτόρων\n"
+"/mcp - λίστα των διακομιστών MCP και των εργαλείων τους\n"
+"/init - σύνταξη ενός AGENTS.md για το έργο\n"
+"/create-skill <περιγραφή> - ανάθεση στον πράκτορα να γράψει μια νέα "
+"δεξιότητα\n"
+"/import-skill <συρτάρι, αρχείο ή διεύθυνση web> - προσθήκη δεξιότητας\n"
+"Μια δεξιότητα ή μια δική σας εντολή μπορεί επίσης να εκτελεστεί με το όνομά "
+"της, για παράδειγμα /review."
+
+#: src/ARexx.c
+msgctxt "STRING_AGENT_PROMPT_REQUIRED (455//)"
+msgid "A prompt is required."
+msgstr "Απαιτείται προτροπή."
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Voice"
@@ -2235,4 +2493,3 @@ msgstr "Γλώσσα"
 #~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 #~ msgid "OpenAI Speech Model"
 #~ msgstr "Μοντέλο ομιλίας OpenAI"
-

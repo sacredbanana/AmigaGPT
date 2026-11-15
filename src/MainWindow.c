@@ -20,6 +20,8 @@
 #include "gui.h"
 #include "menu.h"
 #include "MainWindow.h"
+#include "agent.h"
+#include "AgentPage.h"
 #include "openai.h"
 #include "speech.h"
 #include "SpeechProviderSettingsRequesterWindow.h"
@@ -103,7 +105,7 @@ struct GeneratedSpeech {
     STRPTR profileInfo;
 };
 static struct GeneratedSpeech *currentSpeech = NULL;
-static STRPTR pages[4] = {NULL};
+static STRPTR pages[5] = {NULL};
 static BOOL requestInterfaceBusy = FALSE;
 static BOOL haveAudioPlayer = FALSE;
 
@@ -573,6 +575,7 @@ static void setRequestInterfaceBusy(BOOL busy) {
     setChatControlsDisabled(busy);
     setImageGenerationControlsDisabled(busy);
     setSpeechGenerationControlsDisabled(busy);
+    agentPageSetBusy(busy);
     setPrimaryActionButtonsEnabled();
     setActionButtonsStopMode(busy);
     updatePlayButton();
@@ -591,6 +594,20 @@ static void finishActiveRequest(BOOL restoreReadyStatus) {
     updateReferenceImageControls();
     updateSpeechControls();
     updateResponseFileControl();
+}
+
+BOOL mainWindowRequestBusy(void) { return requestInterfaceBusy; }
+
+BOOL mainWindowAbortIfRequestBusy(void) { return abortIfRequestBusy(); }
+
+void mainWindowBeginRequest(void) {
+    beginCancellableRequest();
+    setRequestInterfaceBusy(TRUE);
+    showLoadingBar();
+}
+
+void mainWindowFinishRequest(BOOL restoreReadyStatus) {
+    finishActiveRequest(restoreReadyStatus);
 }
 
 /* Everything the user can touch while an image request is in flight. Clear is
@@ -647,6 +664,7 @@ void freeMainWindowFileState() {
         freeChatFiles(&pendingSpeechFiles);
         pendingSpeechFilesInitialized = FALSE;
     }
+    freeAgentPage();
 }
 
 /** Whether the busy meter page is currently the visible one */
@@ -2514,8 +2532,8 @@ static BOOL ensureChatOutputBufferCapacity(ULONG required) {
     return TRUE;
 }
 
-static Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
-                                       ULONG weight) {
+Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
+                                ULONG weight) {
     // clang-format off
     if (!isAROS) {
         Object *editor = MUI_NewObject(
@@ -2554,6 +2572,8 @@ static Object *promptEditorForPage(LONG page) {
         return chatInputTextEditor;
     if (page == 1)
         return imageInputTextEditor;
+    if (page == 3)
+        return agentPagePromptEditor();
     return speechInputTextEditor;
 }
 
@@ -2612,6 +2632,12 @@ LONG createMainWindow() {
     pages[0] = STRING_MENU_CHAT;
     pages[1] = STRING_MENU_IMAGE;
     pages[2] = STRING_MENU_SPEECH;
+    pages[3] = STRING_MENU_AGENT;
+    pages[4] = NULL;
+
+    Object *agentPage = createAgentPage();
+    if (agentPage == NULL)
+        agentPage = HVSpace;
 
     haveAudioPlayer = FALSE;
     speechWaveform = MUI_NewObject(
@@ -2899,6 +2925,7 @@ LONG createMainWindow() {
                             End,
                         End,
                     End,
+                    Child, agentPage,
                 End,
                 // Status bar
                 Child, statusBar = TextObject,
@@ -2930,6 +2957,7 @@ LONG createMainWindow() {
     DoMethod(mainWindowObject, MUIM_Notify, MUIA_Window_Screen, MUIV_EveryTime, MUIV_Notify_Self, 2, MUIM_CallHook, &ConfigureForScreenHook);
 
     addMainWindowActions();
+    addAgentPageActions();
     
     // Open the main window immediately after creation
     DoMethod(app, MUIM_Application_Load, MUIV_Application_Load_ENVARC);
@@ -2974,6 +3002,7 @@ LONG createMainWindow() {
                  "\33c\33P[%ld]- %s\0", redPen, STRING_DELETE_IMAGE);
         set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
         setActionButtonsStopMode(FALSE);
+        agentPageWindowOpened();
         applySpeechWaveformPens();
         FreeVec(buttonLabelText);
 

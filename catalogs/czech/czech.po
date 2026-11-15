@@ -2108,21 +2108,22 @@ msgstr "Generování řeči..."
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_CREATE (403//)"
 msgid "Failed to create speech history file. Phrase history will not be saved."
-msgstr "Nepodařilo se vytvořit soubor historie řeči. Historie frází nebude uložena."
+msgstr ""
+"Nepodařilo se vytvořit soubor historie řeči. Historie frází nebude uložena."
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_WRITE (404//)"
 msgid ""
 "Failed to write to speech history file. Phrase history will not be saved."
 msgstr ""
-"Nepodařilo se zapsat do souboru historie řeči. Historie frází nebude "
-"uložena."
+"Nepodařilo se zapsat do souboru historie řeči. Historie frází nebude uložena."
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_READ (405//)"
 msgid ""
 "Failed to read from speech history file. Phrase history will not be loaded"
-msgstr "Nepodařilo se načíst soubor historie řeči. Historie frází nebude načtena"
+msgstr ""
+"Nepodařilo se načíst soubor historie řeči. Historie frází nebude načtena"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP (406//)"
@@ -2131,10 +2132,9 @@ msgid ""
 "is probably corrupted. Phrase history will not be loaded. A backup of the "
 "speech-history.json file has been created as speech-history.json.bak"
 msgstr ""
-"Nepodařilo se zpracovat historii řeči. Chybný JSON. Soubor "
-"speech-history.json je pravděpodobně poškozen. Historie frází nebude "
-"načtena. Byla vytvořena záloha souboru speech-history.json jako "
-"speech-history.json.bak"
+"Nepodařilo se zpracovat historii řeči. Chybný JSON. Soubor speech-"
+"history.json je pravděpodobně poškozen. Historie frází nebude načtena. Byla "
+"vytvořena záloha souboru speech-history.json jako speech-history.json.bak"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM (407//)"
@@ -2144,10 +2144,10 @@ msgid ""
 "writing a backup of the speech history to disk but a copy has been saved to "
 "RAM:speech-history.json"
 msgstr ""
-"Nepodařilo se zpracovat historii řeči. Chybný JSON. Soubor "
-"speech-history.json je pravděpodobně poškozen. Historie frází nebude "
-"načtena. Při zapisování zálohy historie řeči na disk došlo k chybě, ale "
-"kopie byla uložena do RAM:speech-history.json"
+"Nepodařilo se zpracovat historii řeči. Chybný JSON. Soubor speech-"
+"history.json je pravděpodobně poškozen. Historie frází nebude načtena. Při "
+"zapisování zálohy historie řeči na disk došlo k chybě, ale kopie byla "
+"uložena do RAM:speech-history.json"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
@@ -2198,6 +2198,261 @@ msgctxt "STRING_SPEECH_LANGUAGE (416//)"
 msgid "Language"
 msgstr "Jazyk"
 
+#: src/MainWindow.c
+msgctxt "STRING_MENU_AGENT (417//)"
+msgid "Agent"
+msgstr "Agent"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NO_PROJECT (418//)"
+msgid "(No project)"
+msgstr "(Žádný projekt)"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+msgid "Add project..."
+msgstr "Přidat projekt..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
+msgid "Remove project"
+msgstr "Odebrat projekt"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_PROJECT_DRAWER (421//)"
+msgid "Select the project drawer"
+msgstr "Vyberte zásuvku projektu"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL (422//)"
+msgid "Approval"
+msgstr "Schvalování"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ASK (423//)"
+msgid "Ask before changes"
+msgstr "Ptát se před změnami"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_READ_ONLY (424//)"
+msgid "Read only"
+msgstr "Pouze pro čtení"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ACCEPT_EDITS (425//)"
+msgid "Accept file edits"
+msgstr "Přijímat úpravy souborů"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_FULL_AUTO (426//)"
+msgid "Full auto"
+msgstr "Plně automaticky"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT (427//)"
+msgid "Effort"
+msgstr "Úsilí"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_DEFAULT (428//)"
+msgid "Default"
+msgstr "Výchozí"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_LOW (429//)"
+msgid "Low"
+msgstr "Nízké"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_MEDIUM (430//)"
+msgid "Medium"
+msgstr "Střední"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_HIGH (431//)"
+msgid "High"
+msgstr "Vysoké"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL (432//)"
+msgid "Model"
+msgstr "Model"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL_HELP (433//)"
+msgid ""
+"The model the agent uses. Leave this empty to use the chat model of the "
+"active chat provider."
+msgstr ""
+"Model, který agent používá. Ponechte prázdné, chcete-li použít model chatu "
+"aktivního poskytovatele chatu."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_INSTRUCTIONS (434//)"
+msgid "Instructions..."
+msgstr "Instrukce..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MCP_SERVERS (435//)"
+msgid "MCP servers..."
+msgstr "Servery MCP..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_IMPORT_SKILL (436//)"
+msgid "Import skill..."
+msgstr "Importovat dovednost..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_SKILL (437//)"
+msgid "Select a skill drawer or its SKILL.md file"
+msgstr "Vyberte zásuvku dovednosti nebo její soubor SKILL.md"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NEW_SESSION (438//)"
+msgid "New session"
+msgstr "Nová relace"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SAVE (439//)"
+msgid "Save"
+msgstr "Uložit"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ERROR_SAVING_FILE (440//)"
+msgid "The file could not be saved."
+msgstr "Soubor se nepodařilo uložit."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_WELCOME (441//)"
+msgid ""
+"Describe a task and the agent will work on it using the Shell, files, ARexx, "
+"skills and MCP servers. Type /help for the list of commands."
+msgstr ""
+"Popište úkol a agent na něm bude pracovat s využitím Shell, souborů, ARexx, "
+"dovedností a serverů MCP. Napište /help pro seznam příkazů."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_TITLE (442//)"
+msgid "Agent Action Confirmation"
+msgstr "Potvrzení akce agenta"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BODY (443//)"
+msgid ""
+"The agent wants to use the tool \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this action?"
+msgstr ""
+"Agent chce použít nástroj \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Povolit tuto akci?"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BUTTONS (444//)"
+msgid "*_Allow once|Always a_llow|_Deny"
+msgstr "*_Povolit jednou|Povolit _vždy|_Zakázat"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_WORKING (445//)"
+msgid "The agent is working..."
+msgstr "Agent pracuje..."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_RUNNING_TOOL (446//)"
+msgid "Running tool: %s"
+msgstr "Spouští se nástroj: %s"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
+msgid ""
+"The agent stopped because it reached the step limit. Send another message to "
+"let it continue."
+msgstr ""
+"Agent se zastavil, protože dosáhl limitu kroků. Pošlete další zprávu, aby "
+"mohl pokračovat."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STOPPED (448//)"
+msgid "The agent was stopped."
+msgstr "Agent byl zastaven."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SESSION_CLEARED (449//)"
+msgid "A new session has started."
+msgstr "Byla zahájena nová relace."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_NO_SUCH_PROJECT (450//)"
+msgid "There is no project with that name."
+msgstr "Projekt s tímto názvem neexistuje."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORTED (451//)"
+msgid "The skill \"%s\" was imported."
+msgstr "Dovednost \"%s\" byla importována."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORT_FAILED (452//)"
+msgid ""
+"The skill could not be imported. Choose a drawer that holds a SKILL.md file, "
+"or a SKILL.md file with a name in its header."
+msgstr ""
+"Dovednost se nepodařilo importovat. Zvolte zásuvku, která obsahuje soubor "
+"SKILL.md, nebo soubor SKILL.md s názvem v hlavičce."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_UNKNOWN_COMMAND (453//)"
+msgid "There is no command /%s. Type /help for the list of commands."
+msgstr "Příkaz /%s neexistuje. Napište /help pro seznam příkazů."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_HELP (454//)"
+msgid ""
+"Commands:\n"
+"/help - show this list\n"
+"/new - start a new session\n"
+"/projects - list the projects\n"
+"/project <name> - switch project (none for no project)\n"
+"/approval ask|readonly|edits|auto - choose what runs without asking\n"
+"/effort default|low|medium|high - choose the reasoning effort\n"
+"/model <name> - choose the model (default for the chat model)\n"
+"/skills - list the skills\n"
+"/commands - list your own commands\n"
+"/agents - list the subagents\n"
+"/mcp - list the MCP servers and their tools\n"
+"/init - write an AGENTS.md for the project\n"
+"/create-skill <description> - have the agent write a new skill\n"
+"/import-skill <drawer, file or web address> - add a skill\n"
+"A skill or one of your own commands can also be run by its name, for "
+"example /review."
+msgstr ""
+"Příkazy:\n"
+"/help - zobrazit tento seznam\n"
+"/new - zahájit novou relaci\n"
+"/projects - vypsat projekty\n"
+"/project <název> - přepnout projekt (none pro žádný projekt)\n"
+"/approval ask|readonly|edits|auto - zvolit, co se spouští bez dotazu\n"
+"/effort default|low|medium|high - zvolit úsilí při uvažování\n"
+"/model <název> - zvolit model (default pro model chatu)\n"
+"/skills - vypsat dovednosti\n"
+"/commands - vypsat vlastní příkazy\n"
+"/agents - vypsat podagenty\n"
+"/mcp - vypsat servery MCP a jejich nástroje\n"
+"/init - napsat AGENTS.md pro projekt\n"
+"/create-skill <popis> - nechat agenta napsat novou dovednost\n"
+"/import-skill <zásuvka, soubor nebo webová adresa> - přidat dovednost\n"
+"Dovednost nebo některý z vlastních příkazů lze spustit také jeho názvem, "
+"například /review."
+
+#: src/ARexx.c
+msgctxt "STRING_AGENT_PROMPT_REQUIRED (455//)"
+msgid "A prompt is required."
+msgstr "Je vyžadován prompt."
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Voice"
@@ -2205,4 +2460,3 @@ msgstr "Jazyk"
 #~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 #~ msgid "OpenAI Speech Model"
 #~ msgstr "Model řeči OpenAI"
-

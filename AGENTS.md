@@ -41,7 +41,11 @@ Major modules:
 - `openai.c` / `openai.h` — provider abstraction. Attachment MIME types come from libmagic (`-lmagic`, linked on all three platforms), which needs `magic.mgc` at run time — `PROGDIR:`, then `AMIGAGPT:`, then `C:`; an extension table remains as the fallback. The bundled `bundle/AmigaGPT/AmigaGPT/magic.mgc` is a reduced database built by `make-curated-magic.sh` in the `file` port, since the full 10.8 MB one is too large for a 68k machine to load. Built-in providers are OpenAI, Google Gemini, xAI Grok and Anthropic Claude (chat only); custom HTTP profiles (e.g. LM Studio) are also supported. Conversations are linked lists of `ConversationNode`; `lastResponseId` tracks OpenAI Responses API state. Communicates via AmiSSL.
 - `speech.c` — speech subsystem dispatcher. Supports `narrator.device` v34/v37 + `translator.library` (OS3), `flite.device` (OS4), OpenAI TTS (any OS, requires AHI), and ElevenLabs TTS.
 - `AmigaGPTConfig.c` — persisted settings, profile storage, API key handling.
-- `ARexx.c` — ARexx port handler. The GUI listens on port `AMIGAGPT`, the daemon on `AMIGAGPTD`. Command set is documented in `README.md` (SENDMESSAGE, CREATEIMAGE, SPEAKTEXT, NEWCHAT, LIST\*).
+- `agent.c` / `agent.h` — agent mode core, shared by the GUI and the daemon: settings and projects (`AMIGAGPT:agent/settings.json`), the system prompt (`AGENTS.md` files), skills, slash commands and subagents discovered from `AMIGAGPT:agent/` and the project's `.agents/` drawer, the built-in tools, the approval rules and the tool loop. The session history is a provider-neutral json array, described in `agent_internal.h`.
+- `agentapi.c` — turns the neutral history and tool list into each chat wire format (Responses, chat/completions, Anthropic Messages, Gemini generateContent) and the answer back. A new provider format only needs a builder and a parser here. Assistant turns keep the provider's raw blocks so Claude thinking blocks and Gemini thought signatures are replayed unchanged.
+- `agentmcp.c` — MCP client for remote servers (Streamable HTTP, JSON-RPC), configured by `mcp.json`.
+- `AgentPage.c` — the Agent tab of the main window (GUI build only; the whole file is inside `#ifndef DAEMON`).
+- `ARexx.c` — ARexx port handler. The GUI listens on port `AMIGAGPT`, the daemon on `AMIGAGPTD`. Command set is documented in `README.md` (SENDMESSAGE, CREATEIMAGE, SPEAKTEXT, NEWCHAT, AGENT, LIST\*).
 - `version.h` — `BUILD_NUMBER` is auto-incremented by `sed` in the Makefile on every C compile; do not hand-edit.
 
 ## Localization (gettext catalogs)

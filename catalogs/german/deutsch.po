@@ -2154,8 +2154,8 @@ msgctxt "STRING_ERROR_SPEECH_HISTORY_WRITE (404//)"
 msgid ""
 "Failed to write to speech history file. Phrase history will not be saved."
 msgstr ""
-"Schreiben in die Sprachverlaufsdatei fehlgeschlagen. Der Phrasenverlauf "
-"wird nicht gespeichert."
+"Schreiben in die Sprachverlaufsdatei fehlgeschlagen. Der Phrasenverlauf wird "
+"nicht gespeichert."
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_READ (405//)"
@@ -2218,7 +2218,9 @@ msgstr "Zurückspulen"
 #: src/MainWindow.c
 msgctxt "STRING_NO_SPEECH_SELECTED (412//)"
 msgid "Select a phrase to see its speech profile and waveform."
-msgstr "Wählen Sie eine Phrase aus, um ihr Sprachprofil und ihre Wellenform anzuzeigen."
+msgstr ""
+"Wählen Sie eine Phrase aus, um ihr Sprachprofil und ihre Wellenform "
+"anzuzeigen."
 
 #: src/MainWindow.c
 msgctxt "STRING_SPEECH_PROFILE (413//)"
@@ -2240,6 +2242,266 @@ msgctxt "STRING_SPEECH_LANGUAGE (416//)"
 msgid "Language"
 msgstr "Sprache"
 
+#: src/MainWindow.c
+msgctxt "STRING_MENU_AGENT (417//)"
+msgid "Agent"
+msgstr "Agent"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NO_PROJECT (418//)"
+msgid "(No project)"
+msgstr "(Kein Projekt)"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+msgid "Add project..."
+msgstr "Projekt hinzufügen..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
+msgid "Remove project"
+msgstr "Projekt entfernen"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_PROJECT_DRAWER (421//)"
+msgid "Select the project drawer"
+msgstr "Projektschublade auswählen"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL (422//)"
+msgid "Approval"
+msgstr "Genehmigung"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ASK (423//)"
+msgid "Ask before changes"
+msgstr "Vor Änderungen fragen"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_READ_ONLY (424//)"
+msgid "Read only"
+msgstr "Nur lesen"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ACCEPT_EDITS (425//)"
+msgid "Accept file edits"
+msgstr "Dateiänderungen akzeptieren"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_FULL_AUTO (426//)"
+msgid "Full auto"
+msgstr "Vollautomatisch"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT (427//)"
+msgid "Effort"
+msgstr "Aufwand"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_DEFAULT (428//)"
+msgid "Default"
+msgstr "Standard"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_LOW (429//)"
+msgid "Low"
+msgstr "Niedrig"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_MEDIUM (430//)"
+msgid "Medium"
+msgstr "Mittel"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_HIGH (431//)"
+msgid "High"
+msgstr "Hoch"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL (432//)"
+msgid "Model"
+msgstr "Modell"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL_HELP (433//)"
+msgid ""
+"The model the agent uses. Leave this empty to use the chat model of the "
+"active chat provider."
+msgstr ""
+"Das Modell, das der Agent verwendet. Leer lassen, um das Chat-Modell des "
+"aktiven Chat-Anbieters zu verwenden."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_INSTRUCTIONS (434//)"
+msgid "Instructions..."
+msgstr "Anweisungen..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MCP_SERVERS (435//)"
+msgid "MCP servers..."
+msgstr "MCP-Server..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_IMPORT_SKILL (436//)"
+msgid "Import skill..."
+msgstr "Skill importieren..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_SKILL (437//)"
+msgid "Select a skill drawer or its SKILL.md file"
+msgstr "Skill-Schublade oder deren SKILL.md-Datei auswählen"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NEW_SESSION (438//)"
+msgid "New session"
+msgstr "Neue Sitzung"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SAVE (439//)"
+msgid "Save"
+msgstr "Speichern"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ERROR_SAVING_FILE (440//)"
+msgid "The file could not be saved."
+msgstr "Die Datei konnte nicht gespeichert werden."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_WELCOME (441//)"
+msgid ""
+"Describe a task and the agent will work on it using the Shell, files, ARexx, "
+"skills and MCP servers. Type /help for the list of commands."
+msgstr ""
+"Beschreiben Sie eine Aufgabe, und der Agent bearbeitet sie mit Shell, "
+"Dateien, ARexx, Skills und MCP-Servern. Geben Sie /help ein, um die "
+"Befehlsliste anzuzeigen."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_TITLE (442//)"
+msgid "Agent Action Confirmation"
+msgstr "Bestätigung der Agentenaktion"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BODY (443//)"
+msgid ""
+"The agent wants to use the tool \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this action?"
+msgstr ""
+"Der Agent möchte das Werkzeug \"%s\" verwenden:\n"
+"\n"
+"%s\n"
+"\n"
+"Diese Aktion zulassen?"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BUTTONS (444//)"
+msgid "*_Allow once|Always a_llow|_Deny"
+msgstr "*_Einmal zulassen|_Immer zulassen|_Ablehnen"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_WORKING (445//)"
+msgid "The agent is working..."
+msgstr "Der Agent arbeitet..."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_RUNNING_TOOL (446//)"
+msgid "Running tool: %s"
+msgstr "Werkzeug wird ausgeführt: %s"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
+msgid ""
+"The agent stopped because it reached the step limit. Send another message to "
+"let it continue."
+msgstr ""
+"Der Agent hat angehalten, weil das Schrittlimit erreicht wurde. Senden Sie "
+"eine weitere Nachricht, damit er fortfährt."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STOPPED (448//)"
+msgid "The agent was stopped."
+msgstr "Der Agent wurde gestoppt."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SESSION_CLEARED (449//)"
+msgid "A new session has started."
+msgstr "Eine neue Sitzung wurde gestartet."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_NO_SUCH_PROJECT (450//)"
+msgid "There is no project with that name."
+msgstr "Es gibt kein Projekt mit diesem Namen."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORTED (451//)"
+msgid "The skill \"%s\" was imported."
+msgstr "Der Skill \"%s\" wurde importiert."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORT_FAILED (452//)"
+msgid ""
+"The skill could not be imported. Choose a drawer that holds a SKILL.md file, "
+"or a SKILL.md file with a name in its header."
+msgstr ""
+"Der Skill konnte nicht importiert werden. Wählen Sie eine Schublade mit "
+"einer SKILL.md-Datei oder eine SKILL.md-Datei mit einem Namen im Kopfbereich."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_UNKNOWN_COMMAND (453//)"
+msgid "There is no command /%s. Type /help for the list of commands."
+msgstr ""
+"Es gibt keinen Befehl /%s. Geben Sie /help ein, um die Befehlsliste "
+"anzuzeigen."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_HELP (454//)"
+msgid ""
+"Commands:\n"
+"/help - show this list\n"
+"/new - start a new session\n"
+"/projects - list the projects\n"
+"/project <name> - switch project (none for no project)\n"
+"/approval ask|readonly|edits|auto - choose what runs without asking\n"
+"/effort default|low|medium|high - choose the reasoning effort\n"
+"/model <name> - choose the model (default for the chat model)\n"
+"/skills - list the skills\n"
+"/commands - list your own commands\n"
+"/agents - list the subagents\n"
+"/mcp - list the MCP servers and their tools\n"
+"/init - write an AGENTS.md for the project\n"
+"/create-skill <description> - have the agent write a new skill\n"
+"/import-skill <drawer, file or web address> - add a skill\n"
+"A skill or one of your own commands can also be run by its name, for "
+"example /review."
+msgstr ""
+"Befehle:\n"
+"/help - diese Liste anzeigen\n"
+"/new - eine neue Sitzung starten\n"
+"/projects - die Projekte auflisten\n"
+"/project <Name> - Projekt wechseln (none für kein Projekt)\n"
+"/approval ask|readonly|edits|auto - festlegen, was ohne Nachfrage ausgeführt "
+"wird\n"
+"/effort default|low|medium|high - den Denkaufwand festlegen\n"
+"/model <Name> - das Modell wählen (default für das Chat-Modell)\n"
+"/skills - die Skills auflisten\n"
+"/commands - Ihre eigenen Befehle auflisten\n"
+"/agents - die Subagenten auflisten\n"
+"/mcp - die MCP-Server und ihre Werkzeuge auflisten\n"
+"/init - eine AGENTS.md für das Projekt schreiben\n"
+"/create-skill <Beschreibung> - den Agenten einen neuen Skill schreiben "
+"lassen\n"
+"/import-skill <Schublade, Datei oder Webadresse> - einen Skill hinzufügen\n"
+"Ein Skill oder einer Ihrer eigenen Befehle kann auch über seinen Namen "
+"ausgeführt werden, zum Beispiel /review."
+
+#: src/ARexx.c
+msgctxt "STRING_AGENT_PROMPT_REQUIRED (455//)"
+msgid "A prompt is required."
+msgstr "Ein Prompt ist erforderlich."
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Stimme"
@@ -2247,4 +2509,3 @@ msgstr "Sprache"
 #~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 #~ msgid "OpenAI Speech Model"
 #~ msgstr "OpenAI-Sprachmodell"
-

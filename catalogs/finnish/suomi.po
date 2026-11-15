@@ -2111,7 +2111,8 @@ msgstr "Luodaan puhetta..."
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_CREATE (403//)"
 msgid "Failed to create speech history file. Phrase history will not be saved."
-msgstr "Puhehistorian tiedoston luominen epäonnistui. Lausehistoriaa ei tallenneta."
+msgstr ""
+"Puhehistorian tiedoston luominen epäonnistui. Lausehistoriaa ei tallenneta."
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_WRITE (404//)"
@@ -2125,7 +2126,8 @@ msgstr ""
 msgctxt "STRING_ERROR_SPEECH_HISTORY_READ (405//)"
 msgid ""
 "Failed to read from speech history file. Phrase history will not be loaded"
-msgstr "Puhehistorian tiedoston lukeminen epäonnistui. Lausehistoriaa ei ladata"
+msgstr ""
+"Puhehistorian tiedoston lukeminen epäonnistui. Lausehistoriaa ei ladata"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP (406//)"
@@ -2135,9 +2137,9 @@ msgid ""
 "speech-history.json file has been created as speech-history.json.bak"
 msgstr ""
 "Puhehistorian jäsentäminen epäonnistui. JSON on virheellinen. Tiedosto "
-"speech-history.json on todennäköisesti vioittunut. Lausehistoriaa ei "
-"ladata. Tiedostosta speech-history.json on luotu varmuuskopio nimellä "
-"speech-history.json.bak"
+"speech-history.json on todennäköisesti vioittunut. Lausehistoriaa ei ladata. "
+"Tiedostosta speech-history.json on luotu varmuuskopio nimellä speech-"
+"history.json.bak"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM (407//)"
@@ -2148,9 +2150,9 @@ msgid ""
 "RAM:speech-history.json"
 msgstr ""
 "Puhehistorian jäsentäminen epäonnistui. JSON on virheellinen. Tiedosto "
-"speech-history.json on todennäköisesti vioittunut. Lausehistoriaa ei "
-"ladata. Puhehistorian varmuuskopion kirjoittaminen levylle epäonnistui, "
-"mutta kopio tallennettiin kohteeseen RAM:speech-history.json"
+"speech-history.json on todennäköisesti vioittunut. Lausehistoriaa ei ladata. "
+"Puhehistorian varmuuskopion kirjoittaminen levylle epäonnistui, mutta kopio "
+"tallennettiin kohteeseen RAM:speech-history.json"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
@@ -2201,6 +2203,262 @@ msgctxt "STRING_SPEECH_LANGUAGE (416//)"
 msgid "Language"
 msgstr "Kieli"
 
+#: src/MainWindow.c
+msgctxt "STRING_MENU_AGENT (417//)"
+msgid "Agent"
+msgstr "Agentti"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NO_PROJECT (418//)"
+msgid "(No project)"
+msgstr "(Ei projektia)"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+msgid "Add project..."
+msgstr "Lisää projekti..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
+msgid "Remove project"
+msgstr "Poista projekti"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_PROJECT_DRAWER (421//)"
+msgid "Select the project drawer"
+msgstr "Valitse projektin laatikko"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL (422//)"
+msgid "Approval"
+msgstr "Hyväksyntä"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ASK (423//)"
+msgid "Ask before changes"
+msgstr "Kysy ennen muutoksia"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_READ_ONLY (424//)"
+msgid "Read only"
+msgstr "Vain luku"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ACCEPT_EDITS (425//)"
+msgid "Accept file edits"
+msgstr "Hyväksy tiedostomuutokset"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_FULL_AUTO (426//)"
+msgid "Full auto"
+msgstr "Täysin automaattinen"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT (427//)"
+msgid "Effort"
+msgstr "Panostus"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_DEFAULT (428//)"
+msgid "Default"
+msgstr "Oletus"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_LOW (429//)"
+msgid "Low"
+msgstr "Matala"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_MEDIUM (430//)"
+msgid "Medium"
+msgstr "Keskitaso"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_HIGH (431//)"
+msgid "High"
+msgstr "Korkea"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL (432//)"
+msgid "Model"
+msgstr "Malli"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL_HELP (433//)"
+msgid ""
+"The model the agent uses. Leave this empty to use the chat model of the "
+"active chat provider."
+msgstr ""
+"Agentin käyttämä malli. Jätä tyhjäksi, jos haluat käyttää aktiivisen "
+"chat-palveluntarjoajan chat-mallia."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_INSTRUCTIONS (434//)"
+msgid "Instructions..."
+msgstr "Ohjeet..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MCP_SERVERS (435//)"
+msgid "MCP servers..."
+msgstr "MCP-palvelimet..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_IMPORT_SKILL (436//)"
+msgid "Import skill..."
+msgstr "Tuo taito..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_SKILL (437//)"
+msgid "Select a skill drawer or its SKILL.md file"
+msgstr "Valitse taidon laatikko tai sen SKILL.md-tiedosto"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NEW_SESSION (438//)"
+msgid "New session"
+msgstr "Uusi istunto"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SAVE (439//)"
+msgid "Save"
+msgstr "Tallenna"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ERROR_SAVING_FILE (440//)"
+msgid "The file could not be saved."
+msgstr "Tiedostoa ei voitu tallentaa."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_WELCOME (441//)"
+msgid ""
+"Describe a task and the agent will work on it using the Shell, files, ARexx, "
+"skills and MCP servers. Type /help for the list of commands."
+msgstr ""
+"Kuvaile tehtävä, niin agentti työstää sitä käyttäen apunaan seuraavia: "
+"Shell, tiedostot, ARexx, taidot ja MCP-palvelimet. Kirjoita /help nähdäksesi "
+"komentoluettelon."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_TITLE (442//)"
+msgid "Agent Action Confirmation"
+msgstr "Agentin toiminnon vahvistus"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BODY (443//)"
+msgid ""
+"The agent wants to use the tool \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this action?"
+msgstr ""
+"Agentti haluaa käyttää työkalua \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Sallitaanko tämä toiminto?"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BUTTONS (444//)"
+msgid "*_Allow once|Always a_llow|_Deny"
+msgstr "*_Salli kerran|Salli _aina|_Estä"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_WORKING (445//)"
+msgid "The agent is working..."
+msgstr "Agentti työskentelee..."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_RUNNING_TOOL (446//)"
+msgid "Running tool: %s"
+msgstr "Suoritetaan työkalua: %s"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
+msgid ""
+"The agent stopped because it reached the step limit. Send another message to "
+"let it continue."
+msgstr ""
+"Agentti pysähtyi, koska se saavutti vaiherajan. Lähetä uusi viesti, jotta se "
+"voi jatkaa."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STOPPED (448//)"
+msgid "The agent was stopped."
+msgstr "Agentti pysäytettiin."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SESSION_CLEARED (449//)"
+msgid "A new session has started."
+msgstr "Uusi istunto on alkanut."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_NO_SUCH_PROJECT (450//)"
+msgid "There is no project with that name."
+msgstr "Sen nimistä projektia ei ole."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORTED (451//)"
+msgid "The skill \"%s\" was imported."
+msgstr "Taito \"%s\" tuotiin."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORT_FAILED (452//)"
+msgid ""
+"The skill could not be imported. Choose a drawer that holds a SKILL.md file, "
+"or a SKILL.md file with a name in its header."
+msgstr ""
+"Taitoa ei voitu tuoda. Valitse laatikko, jossa on SKILL.md-tiedosto, tai "
+"SKILL.md-tiedosto, jonka otsakkeessa on nimi."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_UNKNOWN_COMMAND (453//)"
+msgid "There is no command /%s. Type /help for the list of commands."
+msgstr "Komentoa /%s ei ole. Kirjoita /help nähdäksesi komentoluettelon."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_HELP (454//)"
+msgid ""
+"Commands:\n"
+"/help - show this list\n"
+"/new - start a new session\n"
+"/projects - list the projects\n"
+"/project <name> - switch project (none for no project)\n"
+"/approval ask|readonly|edits|auto - choose what runs without asking\n"
+"/effort default|low|medium|high - choose the reasoning effort\n"
+"/model <name> - choose the model (default for the chat model)\n"
+"/skills - list the skills\n"
+"/commands - list your own commands\n"
+"/agents - list the subagents\n"
+"/mcp - list the MCP servers and their tools\n"
+"/init - write an AGENTS.md for the project\n"
+"/create-skill <description> - have the agent write a new skill\n"
+"/import-skill <drawer, file or web address> - add a skill\n"
+"A skill or one of your own commands can also be run by its name, for "
+"example /review."
+msgstr ""
+"Komennot:\n"
+"/help - näytä tämä luettelo\n"
+"/new - aloita uusi istunto\n"
+"/projects - luettele projektit\n"
+"/project <nimi> - vaihda projektia (none = ei projektia)\n"
+"/approval ask|readonly|edits|auto - valitse, mitä suoritetaan kysymättä\n"
+"/effort default|low|medium|high - valitse päättelyn panostus\n"
+"/model <nimi> - valitse malli (default = chat-malli)\n"
+"/skills - luettele taidot\n"
+"/commands - luettele omat komentosi\n"
+"/agents - luettele aliagentit\n"
+"/mcp - luettele MCP-palvelimet ja niiden työkalut\n"
+"/init - kirjoita projektille AGENTS.md\n"
+"/create-skill <kuvaus> - anna agentin kirjoittaa uusi taito\n"
+"/import-skill <laatikko, tiedosto tai verkko-osoite> - lisää taito\n"
+"Taidon tai oman komentosi voi suorittaa myös sen nimellä, esimerkiksi "
+"/review."
+
+#: src/ARexx.c
+msgctxt "STRING_AGENT_PROMPT_REQUIRED (455//)"
+msgid "A prompt is required."
+msgstr "Kehote vaaditaan."
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Voice"
@@ -2208,4 +2466,3 @@ msgstr "Kieli"
 #~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 #~ msgid "OpenAI Speech Model"
 #~ msgstr "OpenAI-puhemalli"
-

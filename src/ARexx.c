@@ -9,6 +9,7 @@
 #include <time.h>
 #include "AmigaGPTConfig.h"
 #include "ARexx.h"
+#include "agent.h"
 #include "gui.h"
 #include "MainWindow.h"
 #include "openai.h"
@@ -2163,6 +2164,15 @@ HOOKPROTONHNO(CreateImageFunc, APTR, ULONG *arg) {
 }
 MakeHook(CreateImageHook, CreateImageFunc);
 
+BOOL createImageFile(CONST_STRPTR prompt, CONST_STRPTR destination) {
+    /* The same path as the CREATEIMAGE command, with the active image
+     * profile, its model and the default size */
+    ULONG arguments[7] = {0, 0, 0, 0, 0, 0, 0};
+    arguments[5] = (ULONG)destination;
+    arguments[6] = (ULONG)prompt;
+    return CallHookPkt(&CreateImageHook, NULL, arguments) == RETURN_OK;
+}
+
 static void rexxAppendText(STRPTR buffer, ULONG bufferSize, CONST_STRPTR text) {
     if (buffer == NULL || text == NULL || bufferSize == 0)
         return;
@@ -2884,6 +2894,97 @@ HOOKPROTONHNO(NewChatFunc, APTR, ULONG *arg) {
 }
 MakeHook(NewChatHook, NewChatFunc);
 
+/* Collects what the agent prints during an AGENT command */
+static STRPTR rexxAgentOutput = NULL;
+static ULONG rexxAgentOutputLength = 0;
+static ULONG rexxAgentOutputCapacity = 0;
+
+static void rexxAgentOutputReceived(CONST_STRPTR text) {
+    STRPTR local = agentToLocal(text);
+    ULONG length;
+    if (local == NULL)
+        return;
+    length = strlen(local);
+    if (rexxAgentOutputLength + length + 1 > rexxAgentOutputCapacity) {
+        ULONG capacity =
+            rexxAgentOutputCapacity > 0 ? rexxAgentOutputCapacity : 4096;
+        STRPTR bigger;
+        while (rexxAgentOutputLength + length + 1 > capacity)
+            capacity *= 2;
+        bigger = AllocVec(capacity, MEMF_ANY | MEMF_CLEAR);
+        if (bigger == NULL) {
+            FreeVec(local);
+            return;
+        }
+        if (rexxAgentOutput != NULL) {
+            CopyMem(rexxAgentOutput, bigger, rexxAgentOutputLength);
+            FreeVec(rexxAgentOutput);
+        }
+        rexxAgentOutput = bigger;
+        rexxAgentOutputCapacity = capacity;
+    }
+    CopyMem(local, rexxAgentOutput + rexxAgentOutputLength, length);
+    rexxAgentOutputLength += length;
+    rexxAgentOutput[rexxAgentOutputLength] = '\0';
+    FreeVec(local);
+}
+
+/* AGENT PJ=PROJECT/K,A=APPROVAL/K,N=NEW/S,P=PROMPT/F
+ * Runs one agent turn and returns everything it printed. */
+HOOKPROTONHNO(AgentFunc, APTR, ULONG *arg) {
+    static CONST_STRPTR approvalNames[] = {"ASK", "READONLY", "EDITS", "AUTO"};
+    STRPTR project = (STRPTR)arg[0];
+    STRPTR approval = (STRPTR)arg[1];
+    BOOL newSession = (BOOL)arg[2];
+    STRPTR prompt = (STRPTR)arg[3];
+    STRPTR promptUtf8;
+    ULONG i;
+
+    if (prompt == NULL || strlen(prompt) == 0) {
+        set(app, MUIA_Application_RexxString, STRING_AGENT_PROMPT_REQUIRED);
+        return RETURN_ERROR;
+    }
+    DoMethod(configObj, MUIM_AmigaGPTConfig_Load);
+
+    if (project != NULL && strlen(project) > 0) {
+        LONG found = -1;
+        for (i = 0; i < agentProjectCount(); i++) {
+            if (strcasecmp(agentProjectName(i), project) == 0)
+                found = (LONG)i;
+        }
+        /* A drawer that is not a project yet becomes one */
+        if (found < 0 && strcasecmp(project, "NONE") != 0)
+            found = agentAddProject(project);
+        agentSetActiveProject(found);
+    }
+    if (approval != NULL) {
+        for (i = 0; i < AGENT_APPROVAL_COUNT; i++) {
+            if (strcasecmp(approval, approvalNames[i]) == 0)
+                agentSetApprovalMode((AgentApprovalMode)i);
+        }
+    }
+    if (newSession)
+        agentNewSession();
+
+    rexxAgentOutputLength = 0;
+    if (rexxAgentOutput != NULL)
+        rexxAgentOutput[0] = '\0';
+    promptUtf8 = agentToUtf8(prompt);
+    beginCancellableRequest();
+    if (promptUtf8 != NULL)
+        agentRun(promptUtf8, rexxAgentOutputReceived);
+    endCancellableRequest();
+    if (promptUtf8 != NULL)
+        FreeVec(promptUtf8);
+
+    set(app, MUIA_Application_RexxString,
+        rexxAgentOutput != NULL ? rexxAgentOutput : (STRPTR) "");
+    /* ARexx only hands RESULT to the script when RC is 0, and a failed turn
+     * explains itself in the text, so the text is always returned */
+    return RETURN_OK;
+}
+MakeHook(AgentHook, AgentFunc);
+
 HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
     set(app, MUIA_Application_RexxString,
         "SENDMESSAGE "
@@ -2902,6 +3003,7 @@ HOOKPROTONHNO(HelpFunc, APTR, ULONG *arg) {
         "O=OUTPUT/K,F=FORMAT/K,P=PROMPT/F\n"
         "LISTMODELS PR=PROFILE/K\n"
         "NEWCHAT\n"
+        "AGENT PJ=PROJECT/K,A=APPROVAL/K,N=NEW/S,P=PROMPT/F\n"
         "LISTPROFILES\n"
         "LISTAUDIOFORMATS\n"
         "LISTIMAGESIZES\n"
@@ -2935,6 +3037,11 @@ struct MUI_Command arexxList[] = {
      &SpeakTextHook,
      {0, 0, 0, 0, 0}},
     {"NEWCHAT", NULL, NULL, &NewChatHook, {0, 0, 0, 0, 0}},
+    {"AGENT",
+     "PJ=PROJECT/K,A=APPROVAL/K,N=NEW/S,P=PROMPT/F",
+     4,
+     &AgentHook,
+     {0, 0, 0, 0, 0}},
     {"LISTAUDIOFORMATS", NULL, NULL, &ListAudioFormatsHook, {0, 0, 0, 0, 0}},
     {"LISTMODELS", "PR=PROFILE/K", 1, &ListModelsHook, {0, 0, 0, 0, 0}},
     {"LISTPROFILES", NULL, NULL, &ListProfilesHook, {0, 0, 0, 0, 0}},

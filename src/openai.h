@@ -611,6 +611,58 @@ makeHttpsGetRequest(CONST_STRPTR host, UWORD port, BOOL useSSL,
                     CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword);
 
 /**
+ * Let the GUI handle its events during a long wait, so the window redraws
+ * and the Stop button works. Does nothing in the daemon.
+ * @return FALSE once the active request has been cancelled
+ **/
+BOOL pumpRequestEvents(void);
+
+/**
+ * Send one HTTP request and return the whole response body. Chunked bodies
+ * are decoded. A text/event-stream response is read until an event carrying
+ * a JSON-RPC result or error has arrived. The request can be cancelled with
+ * cancelActiveRequest().
+ * @param method "POST", "GET" or "DELETE"
+ * @param path the request path including the leading slash
+ * @param extraHeaders complete header lines, each ending in CRLF, or NULL
+ * @param body the request body or NULL
+ * @param statusOut receives the HTTP status code, or 0 if none was read
+ * @param responseHeadersOut receives the response header block, or NULL
+ * @return the body -- Free it with FreeVec() -- or NULL on failure
+ **/
+STRPTR httpSendRequest(CONST_STRPTR method, CONST_STRPTR host, UWORD port,
+                       BOOL useSSL, CONST_STRPTR path,
+                       CONST_STRPTR extraHeaders, CONST_STRPTR body,
+                       BOOL useProxy, CONST_STRPTR proxyHost, UWORD proxyPort,
+                       BOOL proxyUsesSSL, BOOL proxyRequiresAuth,
+                       CONST_STRPTR proxyUsername, CONST_STRPTR proxyPassword,
+                       LONG *statusOut, STRPTR responseHeadersOut,
+                       ULONG responseHeadersSize);
+
+/**
+ * Like httpSendRequest() for bodies that are not text
+ * @param bodyLengthOut receives the number of bytes in the body
+ **/
+STRPTR httpSendRequestBinary(CONST_STRPTR method, CONST_STRPTR host,
+                             UWORD port, BOOL useSSL, CONST_STRPTR path,
+                             CONST_STRPTR extraHeaders, CONST_STRPTR body,
+                             BOOL useProxy, CONST_STRPTR proxyHost,
+                             UWORD proxyPort, BOOL proxyUsesSSL,
+                             BOOL proxyRequiresAuth,
+                             CONST_STRPTR proxyUsername,
+                             CONST_STRPTR proxyPassword, LONG *statusOut,
+                             STRPTR responseHeadersOut,
+                             ULONG responseHeadersSize,
+                             ULONG *bodyLengthOut);
+
+/**
+ * Split an http:// or https:// URL into its parts.
+ * @return TRUE if the URL was understood
+ **/
+BOOL parseHttpUrl(CONST_STRPTR url, STRPTR host, ULONG hostSize, UWORD *port,
+                  STRPTR path, ULONG pathSize, BOOL *useSSL);
+
+/**
  * function_call_output strings sent back to the API (not shown to the user)
  **/
 #define TOOL_CALL_OUTPUT_DENIED "The user denied this command."

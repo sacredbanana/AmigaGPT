@@ -2101,21 +2101,22 @@ msgstr "Genererer tale..."
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_CREATE (403//)"
 msgid "Failed to create speech history file. Phrase history will not be saved."
-msgstr "Kunne ikke opprette talehistorikkfilen. Frasehistorikken blir ikke lagret."
+msgstr ""
+"Kunne ikke opprette talehistorikkfilen. Frasehistorikken blir ikke lagret."
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_WRITE (404//)"
 msgid ""
 "Failed to write to speech history file. Phrase history will not be saved."
-msgstr "Kunne ikke skrive til talehistorikkfilen. Frasehistorikken blir ikke lagret."
+msgstr ""
+"Kunne ikke skrive til talehistorikkfilen. Frasehistorikken blir ikke lagret."
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_READ (405//)"
 msgid ""
 "Failed to read from speech history file. Phrase history will not be loaded"
 msgstr ""
-"Kunne ikke lese fra talehistorikkfilen. Frasehistorikken blir ikke lastet "
-"inn"
+"Kunne ikke lese fra talehistorikkfilen. Frasehistorikken blir ikke lastet inn"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP (406//)"
@@ -2124,10 +2125,10 @@ msgid ""
 "is probably corrupted. Phrase history will not be loaded. A backup of the "
 "speech-history.json file has been created as speech-history.json.bak"
 msgstr ""
-"Kunne ikke tolke talehistorikken. Ugyldig JSON. Filen speech-history.json "
-"er sannsynligvis skadet. Frasehistorikken blir ikke lastet inn. Det er "
-"opprettet en sikkerhetskopi av filen speech-history.json som "
-"speech-history.json.bak"
+"Kunne ikke tolke talehistorikken. Ugyldig JSON. Filen speech-history.json er "
+"sannsynligvis skadet. Frasehistorikken blir ikke lastet inn. Det er "
+"opprettet en sikkerhetskopi av filen speech-history.json som speech-"
+"history.json.bak"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_BACKUP_RAM (407//)"
@@ -2137,10 +2138,10 @@ msgid ""
 "writing a backup of the speech history to disk but a copy has been saved to "
 "RAM:speech-history.json"
 msgstr ""
-"Kunne ikke tolke talehistorikken. Ugyldig JSON. Filen speech-history.json "
-"er sannsynligvis skadet. Frasehistorikken blir ikke lastet inn. Det oppstod "
-"en feil ved skriving av en sikkerhetskopi av talehistorikken til disk, men "
-"en kopi er lagret i RAM:speech-history.json"
+"Kunne ikke tolke talehistorikken. Ugyldig JSON. Filen speech-history.json er "
+"sannsynligvis skadet. Frasehistorikken blir ikke lastet inn. Det oppstod en "
+"feil ved skriving av en sikkerhetskopi av talehistorikken til disk, men en "
+"kopi er lagret i RAM:speech-history.json"
 
 #: src/MainWindow.c
 msgctxt "STRING_ERROR_SPEECH_HISTORY_PARSE_NO_BACKUP (408//)"
@@ -2148,8 +2149,8 @@ msgid ""
 "Failed to parse speech history. The speech-history.json file is probably "
 "corrupted. Phrase history will not be loaded."
 msgstr ""
-"Kunne ikke tolke talehistorikken. Filen speech-history.json er "
-"sannsynligvis skadet. Frasehistorikken blir ikke lastet inn."
+"Kunne ikke tolke talehistorikken. Filen speech-history.json er sannsynligvis "
+"skadet. Frasehistorikken blir ikke lastet inn."
 
 #: src/MainWindow.c
 msgctxt "STRING_REQUEST_CANCELLED (409//)"
@@ -2191,6 +2192,262 @@ msgctxt "STRING_SPEECH_LANGUAGE (416//)"
 msgid "Language"
 msgstr "Språk"
 
+#: src/MainWindow.c
+msgctxt "STRING_MENU_AGENT (417//)"
+msgid "Agent"
+msgstr "Agent"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NO_PROJECT (418//)"
+msgid "(No project)"
+msgstr "(Intet prosjekt)"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+msgid "Add project..."
+msgstr "Legg til prosjekt..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
+msgid "Remove project"
+msgstr "Fjern prosjekt"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_PROJECT_DRAWER (421//)"
+msgid "Select the project drawer"
+msgstr "Velg prosjektskuffen"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL (422//)"
+msgid "Approval"
+msgstr "Godkjenning"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ASK (423//)"
+msgid "Ask before changes"
+msgstr "Spør før endringer"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_READ_ONLY (424//)"
+msgid "Read only"
+msgstr "Skrivebeskyttet"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_ACCEPT_EDITS (425//)"
+msgid "Accept file edits"
+msgstr "Godta filendringer"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_APPROVAL_FULL_AUTO (426//)"
+msgid "Full auto"
+msgstr "Helautomatisk"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT (427//)"
+msgid "Effort"
+msgstr "Innsats"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_DEFAULT (428//)"
+msgid "Default"
+msgstr "Standard"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_LOW (429//)"
+msgid "Low"
+msgstr "Lav"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_MEDIUM (430//)"
+msgid "Medium"
+msgstr "Middels"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_EFFORT_HIGH (431//)"
+msgid "High"
+msgstr "Høy"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL (432//)"
+msgid "Model"
+msgstr "Modell"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MODEL_HELP (433//)"
+msgid ""
+"The model the agent uses. Leave this empty to use the chat model of the "
+"active chat provider."
+msgstr ""
+"Modellen agenten bruker. La feltet stå tomt for å bruke chatmodellen til den "
+"aktive chatleverandøren."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_INSTRUCTIONS (434//)"
+msgid "Instructions..."
+msgstr "Instruksjoner..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_MCP_SERVERS (435//)"
+msgid "MCP servers..."
+msgstr "MCP-servere..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_IMPORT_SKILL (436//)"
+msgid "Import skill..."
+msgstr "Importér skill..."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SELECT_SKILL (437//)"
+msgid "Select a skill drawer or its SKILL.md file"
+msgstr "Velg en skill-skuff eller SKILL.md-filen i den"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_NEW_SESSION (438//)"
+msgid "New session"
+msgstr "Ny økt"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_SAVE (439//)"
+msgid "Save"
+msgstr "Lagre"
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_ERROR_SAVING_FILE (440//)"
+msgid "The file could not be saved."
+msgstr "Filen kunne ikke lagres."
+
+#: src/AgentPage.c
+msgctxt "STRING_AGENT_WELCOME (441//)"
+msgid ""
+"Describe a task and the agent will work on it using the Shell, files, ARexx, "
+"skills and MCP servers. Type /help for the list of commands."
+msgstr ""
+"Beskriv en oppgave, så jobber agenten med den ved hjelp av Shell, filer, "
+"ARexx, skills og MCP-servere. Skriv /help for å se listen over kommandoer."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_TITLE (442//)"
+msgid "Agent Action Confirmation"
+msgstr "Bekreftelse av agenthandling"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BODY (443//)"
+msgid ""
+"The agent wants to use the tool \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Allow this action?"
+msgstr ""
+"Agenten vil bruke verktøyet \"%s\":\n"
+"\n"
+"%s\n"
+"\n"
+"Tillate denne handlingen?"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_CONFIRM_BUTTONS (444//)"
+msgid "*_Allow once|Always a_llow|_Deny"
+msgstr "*_Tillat en gang|Tillat a_lltid|_Avslå"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_WORKING (445//)"
+msgid "The agent is working..."
+msgstr "Agenten arbeider..."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_RUNNING_TOOL (446//)"
+msgid "Running tool: %s"
+msgstr "Kjører verktøy: %s"
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
+msgid ""
+"The agent stopped because it reached the step limit. Send another message to "
+"let it continue."
+msgstr ""
+"Agenten stoppet fordi den nådde grensen for antall trinn. Send en ny melding "
+"for å la den fortsette."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_STOPPED (448//)"
+msgid "The agent was stopped."
+msgstr "Agenten ble stoppet."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SESSION_CLEARED (449//)"
+msgid "A new session has started."
+msgstr "En ny økt har startet."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_NO_SUCH_PROJECT (450//)"
+msgid "There is no project with that name."
+msgstr "Det finnes ikke noe prosjekt med det navnet."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORTED (451//)"
+msgid "The skill \"%s\" was imported."
+msgstr "Skillen \"%s\" ble importert."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_SKILL_IMPORT_FAILED (452//)"
+msgid ""
+"The skill could not be imported. Choose a drawer that holds a SKILL.md file, "
+"or a SKILL.md file with a name in its header."
+msgstr ""
+"Skillen kunne ikke importeres. Velg en skuff som inneholder en SKILL.md-fil, "
+"eller en SKILL.md-fil med et navn i hodet."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_UNKNOWN_COMMAND (453//)"
+msgid "There is no command /%s. Type /help for the list of commands."
+msgstr ""
+"Kommandoen /%s finnes ikke. Skriv /help for å se listen over kommandoer."
+
+#: src/agent.c
+msgctxt "STRING_AGENT_HELP (454//)"
+msgid ""
+"Commands:\n"
+"/help - show this list\n"
+"/new - start a new session\n"
+"/projects - list the projects\n"
+"/project <name> - switch project (none for no project)\n"
+"/approval ask|readonly|edits|auto - choose what runs without asking\n"
+"/effort default|low|medium|high - choose the reasoning effort\n"
+"/model <name> - choose the model (default for the chat model)\n"
+"/skills - list the skills\n"
+"/commands - list your own commands\n"
+"/agents - list the subagents\n"
+"/mcp - list the MCP servers and their tools\n"
+"/init - write an AGENTS.md for the project\n"
+"/create-skill <description> - have the agent write a new skill\n"
+"/import-skill <drawer, file or web address> - add a skill\n"
+"A skill or one of your own commands can also be run by its name, for "
+"example /review."
+msgstr ""
+"Kommandoer:\n"
+"/help - vis denne listen\n"
+"/new - start en ny økt\n"
+"/projects - vis prosjektene\n"
+"/project <navn> - bytt prosjekt (none for intet prosjekt)\n"
+"/approval ask|readonly|edits|auto - velg hva som kjøres uten å spørre\n"
+"/effort default|low|medium|high - velg resonneringsinnsatsen\n"
+"/model <navn> - velg modellen (default for chatmodellen)\n"
+"/skills - vis skills\n"
+"/commands - vis dine egne kommandoer\n"
+"/agents - vis underagentene\n"
+"/mcp - vis MCP-serverne og verktøyene deres\n"
+"/init - skriv en AGENTS.md for prosjektet\n"
+"/create-skill <beskrivelse> - la agenten skrive en ny skill\n"
+"/import-skill <skuff, fil eller nettadresse> - legg til en skill\n"
+"En skill eller en av dine egne kommandoer kan også kjøres med navnet sitt, "
+"for eksempel /review."
+
+#: src/ARexx.c
+msgctxt "STRING_AGENT_PROMPT_REQUIRED (455//)"
+msgid "A prompt is required."
+msgstr "En prompt er påkrevd."
+
 #~ msgctxt "STRING_MENU_OPENAI_VOICE (133//)"
 #~ msgid "OpenAI Voice"
 #~ msgstr "OpenAI Voice"
@@ -2198,4 +2455,3 @@ msgstr "Språk"
 #~ msgctxt "STRING_MENU_SPEECH_OPENAI_MODEL (140//)"
 #~ msgid "OpenAI Speech Model"
 #~ msgstr "OpenAI talemodell"
-

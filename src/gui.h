@@ -92,6 +92,19 @@ BOOL copyFile(STRPTR source, STRPTR destination);
 void displayError(STRPTR message);
 
 /**
+ * Stop displayError() from opening requesters. The last message is kept
+ * instead and can be read with takeSuppressedError(). Used while the agent
+ * works, when nobody may be there to press OK.
+ **/
+void setErrorRequestersSuppressed(BOOL suppressed);
+
+/**
+ * The last error kept while requesters were suppressed, in the local
+ * character set, or "" if there was none. Reading it clears it.
+ **/
+CONST_STRPTR takeSuppressedError(void);
+
+/**
  * Creates a new conversation
  * @return A pointer to the new conversation
  **/

@@ -37,6 +37,30 @@ extern LONG deleteButtonPen;
  **/
 LONG createMainWindow();
 
+/**
+ * Create a prompt editor like the one on the Chat tab
+ * @param submitHook the hook called when Return is pressed
+ * @param objectId the MUI object ID, or 0 for none
+ * @param weight the layout weight, or 0 for the default
+ **/
+Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
+                                ULONG weight);
+
+/** Whether a request is running */
+BOOL mainWindowRequestBusy(void);
+
+/**
+ * Cancel the running request, if there is one
+ * @return TRUE if a request was running
+ **/
+BOOL mainWindowAbortIfRequestBusy(void);
+
+/** Lock the window and show the busy meter for a new request */
+void mainWindowBeginRequest(void);
+
+/** Unlock the window after a request */
+void mainWindowFinishRequest(BOOL restoreReadyStatus);
+
 /** Free pending attachment state owned by the main window. */
 void freeMainWindowFileState();
 
