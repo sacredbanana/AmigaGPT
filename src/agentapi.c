@@ -634,7 +634,18 @@ static void stripUnsupportedSchemaKeys(struct json_object *schema) {
     }
 }
 
-static struct json_object *buildGeminiRequest(CONST_STRPTR system,
+/* Gemini 1.x and 2.x take a token budget for thinking and reject the
+ * thinkingLevel that Gemini 3 and later take */
+static BOOL geminiUsesThinkingBudget(CONST_STRPTR model) {
+    CONST_STRPTR name = model;
+    if (strncmp(name, "models/", 7) == 0)
+        name += 7;
+    return strncmp(name, "gemini-1", 8) == 0 ||
+           strncmp(name, "gemini-2", 8) == 0;
+}
+
+static struct json_object *buildGeminiRequest(CONST_STRPTR model,
+                                              CONST_STRPTR system,
                                               struct json_object *history,
                                               struct json_object *tools,
                                               AgentEffort effort) {
@@ -764,9 +775,18 @@ static struct json_object *buildGeminiRequest(CONST_STRPTR system,
 
     if (EFFORT_NAMES[effort] != NULL) {
         struct json_object *generationConfig = json_object_new_object();
+        struct json_object *thinkingConfig;
+        if (geminiUsesThinkingBudget(model)) {
+            /* Budgets that fit the ranges of both Flash and Pro */
+            static const LONG budgets[] = {0, 1024, 8192, 24576};
+            thinkingConfig = json_object_new_object();
+            json_object_object_add(thinkingConfig, "thinkingBudget",
+                                   json_object_new_int(budgets[effort]));
+        } else {
+            thinkingConfig = textObject("thinkingLevel", EFFORT_NAMES[effort]);
+        }
         json_object_object_add(generationConfig, "thinkingConfig",
-                               textObject("thinkingLevel",
-                                          EFFORT_NAMES[effort]));
+                               thinkingConfig);
         json_object_object_add(request, "generationConfig", generationConfig);
     }
     return request;
@@ -794,11 +814,28 @@ static struct json_object *parseGeminiAnswer(struct json_object *response) {
                     arguments != NULL ? json_object_get(arguments) : NULL);
         } else if (!(json_object_object_get_ex(part, "thought", &thought) &&
                      json_object_get_boolean(thought))) {
-            agentBufferAppend(&text, stringOf(part, "text"));
+            CONST_STRPTR partText = stringOf(part, "text");
+            /* Gemini 2.5 sometimes writes its reasoning as plain text that
+             * starts with a line saying "thought", instead of marking the
+             * part as a thought. It is left out of the reply like a real
+             * thought part, and kept in the history unchanged. */
+            if (strncmp(partText, "thought\n", 8) != 0)
+                agentBufferAppend(&text, partText);
         }
     }
-    return newAssistant(&text, calls, parts,
-                        API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT);
+    {
+        struct json_object *assistant = newAssistant(
+            &text, calls, parts, API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT);
+        CONST_STRPTR finish =
+            candidates != NULL && json_object_array_length(candidates) > 0
+                ? stringOf(json_object_array_get_idx(candidates, 0),
+                           "finishReason")
+                : stringOf(objectOf(response, "promptFeedback"),
+                           "blockReason");
+        if (finish[0] != '\0')
+            addString(assistant, "finish", finish);
+        return assistant;
+    }
 }
 
 /* ------------------------------------------------------------------------
@@ -807,11 +844,11 @@ static struct json_object *parseGeminiAnswer(struct json_object *response) {
 
 static STRPTR errorText(CONST_STRPTR text) { return agentDuplicate(text); }
 
-struct json_object *agentApiSend(const struct ChatRequestSettings *settings,
-                                 CONST_STRPTR model, CONST_STRPTR system,
-                                 struct json_object *history,
-                                 struct json_object *tools, AgentEffort effort,
-                                 BOOL *pauseOut, STRPTR *errorOut) {
+static struct json_object *
+agentApiSendOnce(const struct ChatRequestSettings *settings, CONST_STRPTR model,
+                 CONST_STRPTR system, struct json_object *history,
+                 struct json_object *tools, AgentEffort effort, BOOL *pauseOut,
+                 STRPTR *errorOut) {
     struct json_object *request;
     struct json_object *response;
     struct json_object *assistant = NULL;
@@ -841,7 +878,7 @@ struct json_object *agentApiSend(const struct ChatRequestSettings *settings,
 
     switch (settings->apiEndpoint) {
     case API_CHAT_ENDPOINT_GEMINI_GENERATE_CONTENT:
-        request = buildGeminiRequest(system, history, tools, effort);
+        request = buildGeminiRequest(model, system, history, tools, effort);
         snprintf(path, sizeof(path), "%s%s/models/%s:generateContent",
                  endpointUrl[0] != '\0' ? "/" : "", endpointUrl, model);
         break;
@@ -940,5 +977,80 @@ struct json_object *agentApiSend(const struct ChatRequestSettings *settings,
         break;
     }
     json_object_put(response);
+    return assistant;
+}
+
+/* The model that last refused an effort setting. Models and providers
+ * differ in which levels they take, if any, so a refusal is remembered
+ * rather than predicted. */
+static UBYTE effortRefusedModel[128] = {0};
+
+/* Whether an answer has neither text nor a tool call */
+static BOOL assistantIsEmpty(struct json_object *assistant, BOOL paused) {
+    struct json_object *calls = arrayOf(assistant, "calls");
+    if (assistant == NULL || paused)
+        return FALSE;
+    return stringOf(assistant, "text")[0] == '\0' &&
+           (calls == NULL || json_object_array_length(calls) == 0);
+}
+
+/* Whether an error message is a provider refusing the effort setting */
+static BOOL errorIsAboutEffort(CONST_STRPTR message) {
+    static CONST_STRPTR words[] = {"hinking", "effort", "easoning", NULL};
+    ULONG i;
+    if (message == NULL)
+        return FALSE;
+    for (i = 0; words[i] != NULL; i++) {
+        if (strstr(message, words[i]) != NULL)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+struct json_object *agentApiSend(const struct ChatRequestSettings *settings,
+                                 CONST_STRPTR model, CONST_STRPTR system,
+                                 struct json_object *history,
+                                 struct json_object *tools, AgentEffort effort,
+                                 BOOL *pauseOut, STRPTR *errorOut) {
+    struct json_object *assistant;
+
+    if (effort != AGENT_EFFORT_DEFAULT && model != NULL &&
+        strcmp(effortRefusedModel, model) == 0)
+        effort = AGENT_EFFORT_DEFAULT;
+    assistant = agentApiSendOnce(settings, model, system, history, tools,
+                                 effort, pauseOut, errorOut);
+    if (assistantIsEmpty(assistant, *pauseOut) && !isRequestCancelled()) {
+        /* Models now and then answer with nothing at all. Asking again
+         * usually gets a real answer. */
+        json_object_put(assistant);
+        assistant = agentApiSendOnce(settings, model, system, history, tools,
+                                     effort, pauseOut, errorOut);
+        if (assistantIsEmpty(assistant, *pauseOut)) {
+            struct AgentBuffer message = {NULL, 0, 0};
+            CONST_STRPTR finish = stringOf(assistant, "finish");
+            agentBufferAppend(&message,
+                              "The model returned an empty answer twice.");
+            if (finish[0] != '\0') {
+                agentBufferAppend(&message, " Reason given: ");
+                agentBufferAppend(&message, finish);
+                agentBufferAppend(&message, ".");
+            }
+            json_object_put(assistant);
+            assistant = NULL;
+            *errorOut = message.data;
+        }
+    }
+    if (assistant == NULL && effort != AGENT_EFFORT_DEFAULT &&
+        !isRequestCancelled() && errorIsAboutEffort(*errorOut)) {
+        /* Ask again without it rather than fail the whole task */
+        strncpy(effortRefusedModel, model, sizeof(effortRefusedModel) - 1);
+        effortRefusedModel[sizeof(effortRefusedModel) - 1] = '\0';
+        if (*errorOut != NULL) {
+            FreeVec(*errorOut);
+            *errorOut = NULL;
+        }
+        assistant = agentApiSendOnce(settings, model, system, history, tools,
+                                     AGENT_EFFORT_DEFAULT, pauseOut, errorOut);
+    }
     return assistant;
 }

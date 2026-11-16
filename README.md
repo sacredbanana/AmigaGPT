@@ -212,7 +212,7 @@ The requester offers **Allow once**, **Always allow** and **Deny**. **Always all
 
 There is no limit on the number of steps the agent takes for one task: it works until it has an answer, a request fails, or you press **Stop**.
 
-**Model and effort.** The agent uses the chat model of the active chat provider unless you type another model name into **Model**. **Effort** asks the model for low, medium or high reasoning effort; Default leaves the choice to the provider. Not every model accepts an effort setting.
+**Model and effort.** The agent uses the chat model of the active chat provider unless you type another model name into **Model**. **Effort** asks the model for low, medium or high reasoning effort; Default leaves the choice to the provider. Not every model accepts an effort setting; when the provider refuses it, the agent asks again without it and remembers that for the model.
 
 **Instructions.** **Instructions...** opens the `AGENTS.md` file of the active project (or the global one when no project is active). Whatever you write there is given to the agent at the start of every task: what the project is, how to build it, rules to follow. The global file applies to every project. `/init` has the agent write one for you by exploring the project.
 

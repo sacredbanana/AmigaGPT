@@ -687,7 +687,7 @@ A project is a drawer. @{b}Add project...@{ub} adds one and the list on the left
 
 @{b}@{u}Model and effort@{uu}@{ub}
 
-The agent uses the chat model of the active chat provider unless you type another model name into @{b}Model@{ub}. @{b}Effort@{ub} asks the model for low, medium or high reasoning effort. Default leaves the choice to the provider. Not every model accepts an effort setting.
+The agent uses the chat model of the active chat provider unless you type another model name into @{b}Model@{ub}. @{b}Effort@{ub} asks the model for low, medium or high reasoning effort. Default leaves the choice to the provider. Not every model accepts an effort setting. When the provider refuses it, the agent asks again without it.
 
 @{b}@{u}Instructions@{uu}@{ub}
 
