@@ -275,32 +275,6 @@ HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
 MakeHook(OpenDocumentationMenuItemClickedHook,
          OpenDocumentationMenuItemClickedFunc);
 
-HOOKPROTONHNONP(RecreateMainWindowFunc, void) {
-    set(mainWindowObject, MUIA_Window_Open, FALSE);
-    DoMethod(mainWindowObject, MUIM_KillNotify, MUIA_Window_Screen);
-    DoMethod(mainWindowObject, MUIM_KillNotify, MUIA_Window_CloseRequest);
-    DoMethod(app, OM_REMMEMBER, mainWindowObject);
-    if (createMainWindow() == RETURN_ERROR) {
-        displayError(STRING_ERROR_MAIN_WINDOW);
-        return;
-    }
-}
-MakeHook(RecreateMainWindowHook, RecreateMainWindowFunc);
-
-HOOKPROTONHNONP(FixedWidthFontsMenuItemClickedFunc, void) {
-    configSetFixedWidthFonts(!configGetFixedWidthFonts());
-    if (FALSE) { /* Auto-save handles this now */
-        displayError(STRING_ERROR_CONFIG_FILE_WRITE);
-    }
-    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
-             &RecreateMainWindowHook);
-}
-MakeHook(FixedWidthFontsMenuItemClickedHook,
-         FixedWidthFontsMenuItemClickedFunc);
-
-HOOKPROTONHNONP(TextAlignmentChangedFunc, void) { displayConversation(NULL); }
-MakeHook(TextAlignmentChangedHook, TextAlignmentChangedFunc);
-
 HOOKPROTONHNONP(ClearMuiSettingsFunc, void) {
 #ifdef __AMIGAOS4__
     Delete("ENVARC:mui/AmigaGPT.prefs");
@@ -393,80 +367,6 @@ void createMenu() {
         MUIA_Family_Child, MenuObject,
             MUIA_Menu_Title, STRING_MENU_VIEW,
             MUIA_Menu_CopyStrings, FALSE,
-            MUIA_Family_Child, MenuitemObject,
-                MUIA_Menuitem_Title, STRING_MENU_FIXED_WIDTH_FONTS,
-                MUIA_UserData, MENU_ITEM_VIEW_FIXED_WIDTH_FONTS,
-                MUIA_Menuitem_Checkit, TRUE,
-                MUIA_Menuitem_Toggle, TRUE,
-            End,
-            MUIA_Family_Child, MenuitemObject,
-                MUIA_Menuitem_Title, STRING_MENU_USER_TEXT_ALIGNMENT,
-                MUIA_UserData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT,
-                MUIA_Menuitem_CopyStrings, FALSE,
-                MUIA_Family_Child, MenuitemObject,
-                    MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_LEFT,
-                    MUIA_UserData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_LEFT,
-                    MUIA_Menuitem_CopyStrings, FALSE,
-                    MUIA_Menuitem_Checkit, TRUE,
-                    MUIA_Menuitem_Checked, configGetUserTextAlignment() == ALIGN_LEFT,
-                    MUIA_Menuitem_Exclude, ~(1 << 0),
-                    MUIA_Menuitem_Toggle, TRUE,
-                End,
-                MUIA_Family_Child, MenuitemObject,
-                    MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_CENTER,
-                    MUIA_UserData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_CENTER,
-                    MUIA_Menuitem_CopyStrings, FALSE,
-                    MUIA_Menuitem_Checkit, TRUE,
-                    MUIA_Menuitem_Checked, configGetUserTextAlignment() == ALIGN_CENTER,
-                    MUIA_Menuitem_Exclude, ~(1 << 1),
-                    MUIA_Menuitem_Toggle, TRUE,
-                End,
-                MUIA_Family_Child, MenuitemObject,
-                    MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_RIGHT,
-                    MUIA_UserData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_RIGHT,
-                    MUIA_Menuitem_CopyStrings, FALSE,
-                    MUIA_Menuitem_Checkit, TRUE,
-                    MUIA_Menuitem_Checked, configGetUserTextAlignment() == ALIGN_RIGHT,
-                    MUIA_Menuitem_Exclude, ~(1 << 2),
-                    MUIA_Menuitem_Toggle, TRUE,
-                End,
-            End,
-            MUIA_Family_Child, MenuitemObject,
-                MUIA_Menuitem_Title, STRING_MENU_ASSISTANT_TEXT_ALIGNMENT,
-                MUIA_UserData, MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT,
-                MUIA_Menuitem_CopyStrings, FALSE,
-                MUIA_Family_Child, MenuitemObject,
-                    MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_LEFT,
-                    MUIA_UserData, MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_LEFT,
-                    MUIA_Menuitem_CopyStrings, FALSE,
-                    MUIA_Menuitem_Checkit, TRUE,
-                    MUIA_Menuitem_Checked, configGetAssistantTextAlignment() == ALIGN_LEFT,
-                    MUIA_Menuitem_Exclude, ~(1 << 0),
-                    MUIA_Menuitem_Toggle, TRUE,
-                End,
-                MUIA_Family_Child, MenuitemObject,
-                    MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_CENTER,
-                    MUIA_UserData, MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_CENTER,
-                    MUIA_Menuitem_CopyStrings, FALSE,
-                    MUIA_Menuitem_Checkit, TRUE,
-                    MUIA_Menuitem_Checked, configGetAssistantTextAlignment() == ALIGN_CENTER,
-                    MUIA_Menuitem_Exclude, ~(1 << 1),
-                    MUIA_Menuitem_Toggle, TRUE,
-                End,
-                MUIA_Family_Child, MenuitemObject,
-                    MUIA_Menuitem_Title, STRING_MENU_TEXT_ALIGNMENT_RIGHT,
-                    MUIA_UserData, MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_RIGHT,
-                    MUIA_Menuitem_CopyStrings, FALSE,
-                    MUIA_Menuitem_Checkit, TRUE,
-                    MUIA_Menuitem_Checked, configGetAssistantTextAlignment() == ALIGN_RIGHT,
-                    MUIA_Menuitem_Exclude, ~(1 << 2),
-                    MUIA_Menuitem_Toggle, TRUE,
-                End,
-            End,
-            MUIA_Family_Child, MenuitemObject,
-                MUIA_Menuitem_Title, NM_BARLABEL,
-                MUIA_UserData, MENU_ITEM_NULL,
-            End,
             MUIA_Family_Child, MenuitemObject,
                 MUIA_Menuitem_Title, STRING_MENU_MUI_SETTINGS,
                 MUIA_UserData, MENU_ITEM_VIEW_MUI_SETTINGS,
@@ -682,83 +582,6 @@ void addMenuActions() {
     DoMethod(clearMuiSettingsMenuItem, MUIM_Notify, MUIA_Menuitem_Trigger,
              MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
              &ClearMuiSettingsHook);
-
-    Object fixedWidthFontsMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_FIXED_WIDTH_FONTS);
-    set(fixedWidthFontsMenuItem, MUIA_Menuitem_Checked,
-        configGetFixedWidthFonts());
-    DoMethod(fixedWidthFontsMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
-             &FixedWidthFontsMenuItemClickedHook);
-
-    Object userTextAlignmentLeftMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_LEFT);
-    set(userTextAlignmentLeftMenuItem, MUIA_Menuitem_Checked,
-        configGetUserTextAlignment() == ALIGN_LEFT);
-    DoMethod(userTextAlignmentLeftMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, configObj, 3, MUIM_Set,
-             MUIA_AmigaGPTConfig_UserTextAlignment, ALIGN_LEFT);
-    DoMethod(userTextAlignmentLeftMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
-             &TextAlignmentChangedHook, MUIV_TriggerValue);
-
-    Object userTextAlignmentCenterMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_CENTER);
-    set(userTextAlignmentCenterMenuItem, MUIA_Menuitem_Checked,
-        configGetUserTextAlignment() == ALIGN_CENTER);
-    DoMethod(userTextAlignmentCenterMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, MUIV_EveryTime, configObj, 3, MUIM_Set,
-             MUIA_AmigaGPTConfig_UserTextAlignment, ALIGN_CENTER);
-    DoMethod(userTextAlignmentCenterMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
-             MUIM_CallHook, &TextAlignmentChangedHook, MUIV_TriggerValue);
-
-    Object userTextAlignmentRightMenuItem = (Object)DoMethod(
-        menuStrip, MUIM_FindUData, MENU_ITEM_VIEW_USER_TEXT_ALIGNMENT_RIGHT);
-    set(userTextAlignmentRightMenuItem, MUIA_Menuitem_Checked,
-        configGetUserTextAlignment() == ALIGN_RIGHT);
-    DoMethod(userTextAlignmentRightMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, configObj, 3, MUIM_Set,
-             MUIA_AmigaGPTConfig_UserTextAlignment, ALIGN_RIGHT);
-    DoMethod(userTextAlignmentRightMenuItem, MUIM_Notify, MUIA_Menuitem_Checked,
-             MUIV_EveryTime, MUIV_Notify_Application, 2, MUIM_CallHook,
-             &TextAlignmentChangedHook);
-
-    Object assistantTextAlignmentLeftMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData,
-                         MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_LEFT);
-    set(assistantTextAlignmentLeftMenuItem, MUIA_Menuitem_Checked,
-        configGetAssistantTextAlignment() == ALIGN_LEFT);
-    DoMethod(assistantTextAlignmentLeftMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, MUIV_EveryTime, configObj, 3, MUIM_Set,
-             MUIA_AmigaGPTConfig_AssistantTextAlignment, ALIGN_LEFT);
-    DoMethod(assistantTextAlignmentLeftMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
-             MUIM_CallHook, &TextAlignmentChangedHook);
-
-    Object assistantTextAlignmentCenterMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData,
-                         MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_CENTER);
-    set(assistantTextAlignmentCenterMenuItem, MUIA_Menuitem_Checked,
-        configGetAssistantTextAlignment() == ALIGN_CENTER);
-    DoMethod(assistantTextAlignmentCenterMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, MUIV_EveryTime, configObj, 3, MUIM_Set,
-             MUIA_AmigaGPTConfig_AssistantTextAlignment, ALIGN_CENTER);
-    DoMethod(assistantTextAlignmentCenterMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
-             MUIM_CallHook, &TextAlignmentChangedHook);
-
-    Object assistantTextAlignmentRightMenuItem =
-        (Object)DoMethod(menuStrip, MUIM_FindUData,
-                         MENU_ITEM_VIEW_ASSISTANT_TEXT_ALIGNMENT_RIGHT);
-    set(assistantTextAlignmentRightMenuItem, MUIA_Menuitem_Checked,
-        configGetAssistantTextAlignment() == ALIGN_RIGHT);
-    DoMethod(assistantTextAlignmentRightMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, MUIV_EveryTime, configObj, 3, MUIM_Set,
-             MUIA_AmigaGPTConfig_AssistantTextAlignment, ALIGN_RIGHT);
-    DoMethod(assistantTextAlignmentRightMenuItem, MUIM_Notify,
-             MUIA_Menuitem_Checked, MUIV_EveryTime, MUIV_Notify_Application, 2,
-             MUIM_CallHook, &TextAlignmentChangedHook);
 
     Object proxyEnabledMenuItem = (Object)DoMethod(
         menuStrip, MUIM_FindUData, MENU_ITEM_CONNECTION_PROXY_ENABLED);

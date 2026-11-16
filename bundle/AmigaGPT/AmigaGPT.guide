@@ -65,7 +65,7 @@ Seven speech systems are supported: narrator.device v34 and v37 on AmigaOS 3, fl
 AmigaGPT takes full advantage of the MUI framework to provide a smooth, native user experience that is responsive and easy to use.
 
 - @{b}UI customisation@{ub}
-Choose the fonts, the colours, the text alignment and whether the app opens on the Workbench screen or on a screen of its own.
+Choose the fonts, the colours, the chat bubbles and whether the app opens on the Workbench screen or on a screen of its own.
 
 - @{b}ARexx integration@{ub}
 Control AmigaGPT from scripts and from other applications. Send prompts, generate images and speak text with simple ARexx commands, with or without the GUI running. See @{"ARexx Integration" link arexx}.
@@ -791,9 +791,6 @@ Bear in mind that text becomes very small above 1080p, so you may want to raise 
 
 @{b}@{u}The View menu@{uu}@{ub}
 
-- @{b}Fixed width fonts@{ub} switches the conversations and the input fields to a monospaced font. Code blocks and tables always use one, so they line up either way
-- @{b}User text alignment@{ub} puts the bubbles of your own messages on the Left, in the Center or on the Right
-- @{b}Assistant text alignment@{ub} does the same for the replies
 - @{b}MUI Settings...@{ub} opens the full MUI preferences for this application - fonts, colours, frames, screen and window behaviour
 - @{b}Clear MUI Settings@{ub} resets all of that back to the defaults
 
@@ -801,8 +798,8 @@ Bear in mind that text becomes very small above 1080p, so you may want to raise 
 
 The conversations and text fields are drawn by BestTextEditor.mcc. With MUI 4 or later, @{b}MUI Settings...@{ub} has a @{b}BestTextEditor@{ub} page for them:
 
-- @{b}Text@{ub} sets the text font and the font for code. Leave a font empty to use the one from the MUI settings. With @{b}Automatic colors@{ub} switched off you can also pick the colors for links, code, block quotes, rules, the cursor and the selection. Switched on, they are worked out from the text and background colors so they suit light and dark themes
-- @{b}Chat bubbles@{ub} has eight bubble styles, each with its alignment, maximum width, background and text color. AmigaGPT uses style 1 for your messages and style 2 for the replies
+- @{b}Text@{ub} sets the text font and the font for code. Leave a font empty to use the one from the MUI settings. With @{b}Automatic colors@{ub} switched off you can also pick the colors for links, code, block quotes, rules, the cursor and the selection. Switched on, they are worked out from the text and background colors so they suit light and dark themes. For a fixed width look, pick a monospaced text font. Code blocks and tables always use the code font, so they line up either way
+- @{b}Chat bubbles@{ub} has eight bubble styles, each with its alignment, maximum width, background and text color. AmigaGPT uses style 1 for your messages and style 2 for the replies, so this is where you put each on the left, in the center or on the right
 
 Changes show straight away. The page is also in the MUI preferences program, so you can give BestTextEditor the same look in every program that uses it.
 
@@ -1472,9 +1469,6 @@ These act on the text field that has the keyboard focus and are greyed out when 
 
 @{b}@{u}View@{uu}@{ub}
 
-  @{b}Fixed width fonts@{ub}                      toggle
-  @{b}User text alignment@{ub}                    Left, Center, Right
-  @{b}Assistant text alignment@{ub}               Left, Center, Right
   @{b}MUI Settings...@{ub}                        full MUI preferences
   @{b}Clear MUI Settings@{ub}                     back to the defaults
 

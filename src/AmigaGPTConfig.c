@@ -57,9 +57,6 @@ struct AmigaGPTConfigData {
     ULONG proxyPort;
     ULONG proxyUsesSSL;
     ULONG proxyRequiresAuth;
-    ULONG fixedWidthFonts;
-    LONG userTextAlignment;
-    LONG assistantTextAlignment;
     LONG webSearchEnabled;
     LONG shellToolEnabled;
     ULONG customChatStreamEnabled;
@@ -358,9 +355,6 @@ static void setDefaults(struct AmigaGPTConfigData *data) {
     data->proxyPort = 8080;
     data->proxyUsesSSL = FALSE;
     data->proxyRequiresAuth = FALSE;
-    data->fixedWidthFonts = FALSE;
-    data->userTextAlignment = ALIGN_RIGHT;
-    data->assistantTextAlignment = ALIGN_LEFT;
     data->webSearchEnabled = TRUE;
     data->shellToolEnabled = FALSE;
     data->customChatStreamEnabled = FALSE;
@@ -653,15 +647,6 @@ SAVEDS ULONG mConfigGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     case MUIA_AmigaGPTConfig_ProxyRequiresAuth:
         *store = data->proxyRequiresAuth;
-        return TRUE;
-    case MUIA_AmigaGPTConfig_FixedWidthFonts:
-        *store = data->fixedWidthFonts;
-        return TRUE;
-    case MUIA_AmigaGPTConfig_UserTextAlignment:
-        *store = data->userTextAlignment;
-        return TRUE;
-    case MUIA_AmigaGPTConfig_AssistantTextAlignment:
-        *store = data->assistantTextAlignment;
         return TRUE;
     case MUIA_AmigaGPTConfig_WebSearchEnabled:
         *store = data->webSearchEnabled;
@@ -1058,24 +1043,6 @@ SAVEDS ULONG mConfigSet(struct IClass *cl, Object *obj, struct opSet *msg) {
         case MUIA_AmigaGPTConfig_ProxyRequiresAuth:
             if (data->proxyRequiresAuth != (ULONG)ti_Data) {
                 data->proxyRequiresAuth = (ULONG)ti_Data;
-                changed = TRUE;
-            }
-            break;
-        case MUIA_AmigaGPTConfig_FixedWidthFonts:
-            if (data->fixedWidthFonts != (ULONG)ti_Data) {
-                data->fixedWidthFonts = (ULONG)ti_Data;
-                changed = TRUE;
-            }
-            break;
-        case MUIA_AmigaGPTConfig_UserTextAlignment:
-            if (data->userTextAlignment != (LONG)ti_Data) {
-                data->userTextAlignment = (LONG)ti_Data;
-                changed = TRUE;
-            }
-            break;
-        case MUIA_AmigaGPTConfig_AssistantTextAlignment:
-            if (data->assistantTextAlignment != (LONG)ti_Data) {
-                data->assistantTextAlignment = (LONG)ti_Data;
                 changed = TRUE;
             }
             break;
@@ -1615,13 +1582,6 @@ static LONG saveConfig(struct AmigaGPTConfigData *data) {
     json_object_object_add(
         configJsonObject, "proxyRequiresAuth",
         json_object_new_boolean((BOOL)data->proxyRequiresAuth));
-    json_object_object_add(
-        configJsonObject, "fixedWidthFonts",
-        json_object_new_boolean((BOOL)data->fixedWidthFonts));
-    json_object_object_add(configJsonObject, "userTextAlignment",
-                           json_object_new_int(data->userTextAlignment));
-    json_object_object_add(configJsonObject, "assistantTextAlignment",
-                           json_object_new_int(data->assistantTextAlignment));
     json_object_object_add(
         configJsonObject, "webSearchEnabled",
         json_object_new_boolean((BOOL)data->webSearchEnabled));
@@ -2188,28 +2148,6 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
     if (json_object_object_get_ex(configJsonObject, "proxyRequiresAuth",
                                   &valueObj))
         data->proxyRequiresAuth = (ULONG)json_object_get_boolean(valueObj);
-
-    if (json_object_object_get_ex(configJsonObject, "fixedWidthFonts",
-                                  &valueObj))
-        data->fixedWidthFonts = (ULONG)json_object_get_boolean(valueObj);
-
-    if (json_object_object_get_ex(configJsonObject, "userTextAlignment",
-                                  &valueObj))
-        data->userTextAlignment = json_object_get_int(valueObj);
-
-    if (data->userTextAlignment != ALIGN_LEFT &&
-        data->userTextAlignment != ALIGN_RIGHT &&
-        data->userTextAlignment != ALIGN_CENTER)
-        data->userTextAlignment = ALIGN_RIGHT;
-
-    if (json_object_object_get_ex(configJsonObject, "assistantTextAlignment",
-                                  &valueObj))
-        data->assistantTextAlignment = json_object_get_int(valueObj);
-
-    if (data->assistantTextAlignment != ALIGN_LEFT &&
-        data->assistantTextAlignment != ALIGN_RIGHT &&
-        data->assistantTextAlignment != ALIGN_CENTER)
-        data->assistantTextAlignment = ALIGN_LEFT;
 
     if (json_object_object_get_ex(configJsonObject, "webSearchEnabled",
                                   &valueObj))
@@ -3693,27 +3631,6 @@ STRPTR configGetProxyPassword(void) {
     return val;
 }
 
-ULONG configGetFixedWidthFonts(void) {
-    ULONG val = FALSE;
-    if (configObj)
-        get(configObj, MUIA_AmigaGPTConfig_FixedWidthFonts, &val);
-    return val;
-}
-
-LONG configGetUserTextAlignment(void) {
-    LONG val = ALIGN_RIGHT;
-    if (configObj)
-        get(configObj, MUIA_AmigaGPTConfig_UserTextAlignment, &val);
-    return val;
-}
-
-LONG configGetAssistantTextAlignment(void) {
-    LONG val = ALIGN_LEFT;
-    if (configObj)
-        get(configObj, MUIA_AmigaGPTConfig_AssistantTextAlignment, &val);
-    return val;
-}
-
 LONG configGetWebSearchEnabled(void) {
     LONG val = TRUE;
     if (configObj)
@@ -4098,21 +4015,6 @@ void configSetProxyUsername(CONST_STRPTR value) {
 void configSetProxyPassword(CONST_STRPTR value) {
     if (configObj)
         set(configObj, MUIA_AmigaGPTConfig_ProxyPassword, (ULONG)value);
-}
-
-void configSetFixedWidthFonts(ULONG value) {
-    if (configObj)
-        set(configObj, MUIA_AmigaGPTConfig_FixedWidthFonts, value);
-}
-
-void configSetUserTextAlignment(LONG value) {
-    if (configObj)
-        set(configObj, MUIA_AmigaGPTConfig_UserTextAlignment, value);
-}
-
-void configSetAssistantTextAlignment(LONG value) {
-    if (configObj)
-        set(configObj, MUIA_AmigaGPTConfig_AssistantTextAlignment, value);
 }
 
 void configSetWebSearchEnabled(LONG value) {

@@ -1251,36 +1251,6 @@ msgstr ""
 "Ungültige Anfrage. Ihr OpenAI API-Konto hat wahrscheinlich keine Kredite "
 "mehr für das Ausführen dieses Modells. Bitte überprüfen Sie Ihr Kontostand."
 
-#: src/menu.c:137
-msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
-msgid "Fixed width fonts"
-msgstr "Feste Schriftbreite"
-
-#: src/menu.c:138
-msgctxt "STRING_MENU_USER_TEXT_ALIGNMENT (230//)"
-msgid "User text alignment"
-msgstr "Benutzerschriftausrichtung"
-
-#: src/menu.c:139
-msgctxt "STRING_MENU_ASSISTANT_TEXT_ALIGNMENT (231//)"
-msgid "Assistant text alignment"
-msgstr "Assistenten-Textausrichtung"
-
-#: src/menu.c:140
-msgctxt "STRING_MENU_TEXT_ALIGNMENT_LEFT (232//)"
-msgid "Left"
-msgstr "Links"
-
-#: src/menu.c:141
-msgctxt "STRING_MENU_TEXT_ALIGNMENT_CENTER (233//)"
-msgid "Center"
-msgstr "Zentriert"
-
-#: src/menu.c:142
-msgctxt "STRING_MENU_TEXT_ALIGNMENT_RIGHT (234//)"
-msgid "Right"
-msgstr "Rechts"
-
 #: src/AboutAmigaGPTWindow.c:105
 msgctxt "STRING_ABOUT_WINDOW_DANIEL_REIMANN (235//)"
 msgid "for covering AmigaGPT news"

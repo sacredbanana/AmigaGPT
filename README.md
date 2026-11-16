@@ -308,7 +308,7 @@ The "**Project**" menu also includes a **Print** option (Right-Amiga + P) to pri
 
 The "**Help**" menu has **Open Documentation...**, which opens `AMIGAGPT:AmigaGPT.guide` - the full AmigaGuide manual, including a troubleshooting section and a complete menu reference.
 
-The "**View**" menu allows you to change the appearance of the app, including toggling **Fixed Width Fonts** and setting the **User** and **Assistant text alignment**. **MUI Settings...** opens the full MUI preferences for AmigaGPT, and **Clear MUI Settings** resets fonts, colours, screen and window positions back to their defaults. With MUI 4 or later the MUI settings include a **BestTextEditor** page that sets the fonts, the accent colours and the eight chat bubble styles of the conversations (AmigaGPT uses style 1 for your messages and style 2 for the replies).
+The "**View**" menu changes the appearance of the app. **MUI Settings...** opens the full MUI preferences for AmigaGPT, and **Clear MUI Settings** resets fonts, colours, screen and window positions back to their defaults. With MUI 4 or later the MUI settings include a **BestTextEditor** page that sets the fonts, the accent colours and the eight chat bubble styles of the conversations (AmigaGPT uses style 1 for your messages and style 2 for the replies, so the side each one sits on is set there too).
 
 AmigaGPT can run on its own screen or in Workbench. To configure this, open the **MUI Settings** menu item from the **View** menu and configure it in the **Screen** or **System** menu in the **MUI Settings** panel.
 

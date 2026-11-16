@@ -217,20 +217,6 @@ static void setEditorText(Object *editor, CONST_STRPTR text) {
 /* Chat transcript                                                           */
 /* ------------------------------------------------------------------------ */
 
-/**
- * The bubble side letter for an ALIGN_* value from the configuration
- **/
-static UBYTE chatBubbleSide(LONG alignment) {
-    switch (alignment) {
-    case ALIGN_CENTER:
-        return 'c';
-    case ALIGN_RIGHT:
-        return 'r';
-    default:
-        return 'l';
-    }
-}
-
 static void chatOutputClear(void) {
     if (chatOutputTextEditor != NULL)
         DoMethod(chatOutputTextEditor, MUIM_TextEditor_ClearText);
@@ -258,11 +244,9 @@ static void chatOutputBeginMessage(BOOL user) {
     if (chatOutputTextEditor == NULL)
         return;
     get(chatOutputTextEditor, MUIA_BestTextEditor_Length, &length);
-    snprintf(codes, sizeof(codes), "%s\033[B:%ld%c]\033[M:%ld]",
+    snprintf(codes, sizeof(codes), "%s\033[B:%ld]\033[M:%ld]",
              length > 0 ? "\n" : "",
              (LONG)(user ? CHAT_BUBBLE_USER : CHAT_BUBBLE_ASSISTANT),
-             chatBubbleSide(user ? configGetUserTextAlignment()
-                                 : configGetAssistantTextAlignment()),
              (LONG)(user ? 0 : 1));
     chatOutputAppend(codes, FALSE);
 }
@@ -2484,7 +2468,6 @@ Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
             weight != 0 ? MUIA_Weight : TAG_IGNORE, weight,
             MUIA_BestTextEditor_SubmitHook, submitHook,
             MUIA_BestTextEditor_Markdown, TRUE,
-            MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
             MUIA_TextEditor_ReadOnly, FALSE,
             MUIA_TextEditor_TabSize, 4,
             MUIA_TextEditor_Rows, 3,
@@ -2515,7 +2498,6 @@ Object *createTranscriptView(Object **viewOut) {
     // clang-format off
     view = BestTextEditorObject,
         MUIA_TextEditor_ReadOnly, TRUE,
-        MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
         MUIA_TextEditor_WrapMode, MUIV_TextEditor_WrapMode_SoftWrap,
         MUIA_TextEditor_Slider, slider,
         MUIA_TextEditor_ActiveObjectOnClick, TRUE,

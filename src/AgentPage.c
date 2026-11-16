@@ -111,17 +111,6 @@ static LONG lastBlockKind = -1;
 #define AGENT_BUBBLE_ASSISTANT 2
 #define AGENT_BUBBLE_ERROR 4
 
-static UBYTE agentBubbleSide(LONG alignment) {
-    switch (alignment) {
-    case ALIGN_CENTER:
-        return 'c';
-    case ALIGN_RIGHT:
-        return 'r';
-    default:
-        return 'l';
-    }
-}
-
 /* Add text, putting a style code at the start of each of its lines, since
  * a style lasts only until the end of its line */
 static void appendStyledLines(CONST_STRPTR style, CONST_STRPTR text) {
@@ -188,9 +177,8 @@ static void appendBlock(AgentOutputKind kind, CONST_STRPTR text) {
     switch (kind) {
     case AGENT_OUTPUT_USER:
         /* The same as a user message on the Chat tab */
-        snprintf(codes, sizeof(codes), "\033[B:%d%c]\033[M:0]",
-                 AGENT_BUBBLE_USER,
-                 agentBubbleSide(configGetUserTextAlignment()));
+        snprintf(codes, sizeof(codes), "\033[B:%d]\033[M:0]",
+                 AGENT_BUBBLE_USER);
         appendTranscript(codes);
         appendTrimmed(text);
         break;
@@ -215,9 +203,8 @@ static void appendBlock(AgentOutputKind kind, CONST_STRPTR text) {
         appendTrimmed(text);
         break;
     default:
-        snprintf(codes, sizeof(codes), "\033[B:%d%c]\033[M:1]",
-                 AGENT_BUBBLE_ASSISTANT,
-                 agentBubbleSide(configGetAssistantTextAlignment()));
+        snprintf(codes, sizeof(codes), "\033[B:%d]\033[M:1]",
+                 AGENT_BUBBLE_ASSISTANT);
         appendTranscript(codes);
         appendTrimmed(text);
         break;

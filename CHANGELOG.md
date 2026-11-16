@@ -12,12 +12,13 @@
 - ARexx AGENT command runs an agent turn from a script, in the app and the daemon
 - Blank speech profile API keys auto import from matching chat provider profiles
 - New text editor and conversation view written from scratch for AmigaGPT. Replies are shown with Markdown formatting: headings, bold, italic, strike-through, inline code, code blocks, quotes, bullet, numbered and task lists, rules, tables, links and pictures
-- Chat and Agent conversations are shown as message bubbles: your messages on one side and the AI's on the other, following the alignment settings
+- Chat and Agent conversations are shown as message bubbles: your messages on one side and the AI's on the other
 - Replies appear as they stream in, already formatted, without redrawing the whole conversation for every new piece of text, and conversations of any length can be shown
 - Prompt fields show Markdown as you type, with its markup dimmed. Return sends, Shift+Return starts a new line
 - Click a link in a conversation to open it in your web browser through OpenURL, or a picture to open it in MultiView. Pictures attached to a message are shown in the conversation
 - Edit menu Copy and Select All also work in the Chat and Agent conversation views
 - MCC_TextEditor, ActionTextEditor.mcc and MCC_NFloattext are no longer needed
+- The fonts, colours and chat bubbles (side, width and colours) are set on the BestTextEditor page of MUI Settings, which replaces the Fixed width fonts, User text alignment and Assistant text alignment items of the View menu
 
 ## 3.4.0 (2026-10-08)
 

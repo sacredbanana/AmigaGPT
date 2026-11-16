@@ -1221,36 +1221,6 @@ msgstr ""
 "Neplatný požadavek. Vaš OpenAI API účet pravděpodobně nemá žádné kredity na "
 "spuštění tohoto modelu. Zkontrolujte svůj účet."
 
-#: src/menu.c:137
-msgctxt "STRING_MENU_FIXED_WIDTH_FONTS (229//)"
-msgid "Fixed width fonts"
-msgstr "Fiksní šířka písma"
-
-#: src/menu.c:138
-msgctxt "STRING_MENU_USER_TEXT_ALIGNMENT (230//)"
-msgid "User text alignment"
-msgstr "Poravnání korisnického textu"
-
-#: src/menu.c:139
-msgctxt "STRING_MENU_ASSISTANT_TEXT_ALIGNMENT (231//)"
-msgid "Assistant text alignment"
-msgstr "Poravnání asistentova textu"
-
-#: src/menu.c:140
-msgctxt "STRING_MENU_TEXT_ALIGNMENT_LEFT (232//)"
-msgid "Left"
-msgstr "Vlevo"
-
-#: src/menu.c:141
-msgctxt "STRING_MENU_TEXT_ALIGNMENT_CENTER (233//)"
-msgid "Center"
-msgstr "Vstředit"
-
-#: src/menu.c:142
-msgctxt "STRING_MENU_TEXT_ALIGNMENT_RIGHT (234//)"
-msgid "Right"
-msgstr "Vpravo"
-
 #: src/AboutAmigaGPTWindow.c:105
 msgctxt "STRING_ABOUT_WINDOW_DANIEL_REIMANN (235//)"
 msgid "for covering AmigaGPT news"

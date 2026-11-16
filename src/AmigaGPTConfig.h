@@ -43,9 +43,6 @@
 #define MUIA_AmigaGPTConfig_ProxyPort (AmigaGPTConfig_Dummy + 0x0C)
 #define MUIA_AmigaGPTConfig_ProxyUsesSSL (AmigaGPTConfig_Dummy + 0x0D)
 #define MUIA_AmigaGPTConfig_ProxyRequiresAuth (AmigaGPTConfig_Dummy + 0x0E)
-#define MUIA_AmigaGPTConfig_FixedWidthFonts (AmigaGPTConfig_Dummy + 0x0F)
-#define MUIA_AmigaGPTConfig_UserTextAlignment (AmigaGPTConfig_Dummy + 0x10)
-#define MUIA_AmigaGPTConfig_AssistantTextAlignment (AmigaGPTConfig_Dummy + 0x11)
 #define MUIA_AmigaGPTConfig_WebSearchEnabled (AmigaGPTConfig_Dummy + 0x12)
 #define MUIA_AmigaGPTConfig_ShellToolEnabled (AmigaGPTConfig_Dummy + 0x18)
 #define MUIA_AmigaGPTConfig_CustomChatStreamEnabled                            \
@@ -417,14 +414,6 @@ STRPTR configGetProxyUsername(void);
 void configSetProxyUsername(CONST_STRPTR value);
 STRPTR configGetProxyPassword(void);
 void configSetProxyPassword(CONST_STRPTR value);
-
-/* View settings */
-ULONG configGetFixedWidthFonts(void);
-void configSetFixedWidthFonts(ULONG value);
-LONG configGetUserTextAlignment(void);
-void configSetUserTextAlignment(LONG value);
-LONG configGetAssistantTextAlignment(void);
-void configSetAssistantTextAlignment(LONG value);
 
 /* Web search */
 LONG configGetWebSearchEnabled(void);
