@@ -63,7 +63,7 @@ Ensure you have the necessary system requirements:
 - **MCC_Guigfx** MUI custom class for displaying images (<http://aminet.net/package/dev/mui/MCC_Guigfx>)
 - **MCC_NList** MUI custom class for lists (<http://aminet.net/package/dev/mui/MCC_NList-0.128>)
 - **MCC_AudioPlayer**, shipped with AmigaGPT and installed into the system MUI class drawer. It can also be built from its own repo if you want it for other programs.
-- **MCC_BestTextEditor**, shipped with AmigaGPT and installed into the system MUI class drawer. It draws every conversation and text field (Markdown, chat bubbles, inline images, links) and has its own page in the MUI settings (`BestTextEditor.mcp`) for fonts, colors and bubble styles. Its source is in `mcc/BestTextEditor`.
+- **MCC_BestTextEditor**, shipped with AmigaGPT and installed into the system MUI class drawer. It draws every conversation and text field (Markdown, chat bubbles, inline images, links, UTF-8 text and colour emoji) and has its own page in the MUI settings (`BestTextEditor.mcp`) for fonts, colors and bubble styles. The installer puts its emoji set, `BestTextEditor.emoji`, next to it. Its source is in `mcc/BestTextEditor`.
 - **A PNG datatype** Any will do, but here is one (<https://aminet.net/util/dtype/vPNGdt.lha>)
 - An API key for your chosen AI provider (**OpenAI**, **Google Gemini**, **SpaceXAI**, or **Anthropic**), or a locally-hosted OpenAI-compatible LLM server
 - _Optional_: **AmigaOS 3 only**: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
@@ -309,6 +309,8 @@ The "**Project**" menu also includes a **Print** option (Right-Amiga + P) to pri
 The "**Help**" menu has **Open Documentation...**, which opens `AMIGAGPT:AmigaGPT.guide` - the full AmigaGuide manual, including a troubleshooting section and a complete menu reference.
 
 The "**View**" menu changes the appearance of the app. **MUI Settings...** opens the full MUI preferences for AmigaGPT, and **Clear MUI Settings** resets fonts, colours, screen and window positions back to their defaults. With MUI 4 or later the MUI settings include a **BestTextEditor** page that sets the fonts, the accent colours and the eight chat bubble styles of the conversations (AmigaGPT uses style 1 for your messages and style 2 for the replies, so the side each one sits on is set there too).
+
+Conversations keep every character a reply contains. Letters in your system's character set are drawn in your font, common punctuation it lacks (curly quotes, dashes, the ellipsis, arrows, box drawing) with the nearest look-alike, and emoji in colour at the height of the text, including skin tones, flags and ZWJ sequences. A character nothing can draw shows as a small box. Emoji and other characters pasted into the Chat and Agent prompts are sent as they are, and copying from a conversation puts both a system character set and a UTF-8 version on the clipboard.
 
 AmigaGPT can run on its own screen or in Workbench. To configure this, open the **MUI Settings** menu item from the **View** menu and configure it in the **Screen** or **System** menu in the **MUI Settings** panel.
 
@@ -594,6 +596,8 @@ The build app will be saved to the `/out` directory.
 ## License
 
 **AmigaGPT** is licensed under the MIT License.
+
+The colour emoji in `BestTextEditor.emoji` are the [Twemoji](https://github.com/jdecked/twemoji) graphics, copyright Twitter, Inc and other contributors, licensed under [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/). They have been scaled to 20 pixels and reduced to 255 colours by `mcc/BestTextEditor/tools/make-emoji-data.py`, which rebuilds the file from a Twemoji release.
 
 ## Contributing
 

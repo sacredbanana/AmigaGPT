@@ -41,9 +41,11 @@ LONG createMainWindow();
  * @param submitHook the hook called when Return is pressed
  * @param objectId the MUI object ID, or 0 for none
  * @param weight the layout weight, or 0 for the default
+ * @param utf8 TRUE if its text is UTF-8 (MUIA_BestTextEditor_UTF8), FALSE
+ *        for the system codeset
  **/
 Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
-                                ULONG weight);
+                                ULONG weight, BOOL utf8);
 
 /**
  * A read only view for a conversation, with Markdown, chat bubbles, clickable

@@ -224,7 +224,8 @@ static void chatOutputClear(void) {
 
 /**
  * Add text to the end of the transcript
- * @param text the text in the local character set
+ * @param text the text in UTF-8: the view keeps emoji and every other
+ *        character, whatever the system codeset
  * @param raw TRUE if ESC in the text is not a formatting code
  **/
 static void chatOutputAppend(CONST_STRPTR text, BOOL raw) {
@@ -232,6 +233,21 @@ static void chatOutputAppend(CONST_STRPTR text, BOOL raw) {
         return;
     DoMethod(chatOutputTextEditor, MUIM_BestTextEditor_Append, (IPTR)text, -1,
              raw ? MUIF_BestTextEditor_Append_Raw : 0);
+}
+
+/**
+ * Add text in the local character set (catalog strings, file paths) to the
+ * end of the transcript
+ **/
+static void chatOutputAppendLocal(CONST_STRPTR text, BOOL raw) {
+    UTF8 *utf8;
+    if (text == NULL)
+        return;
+    utf8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                              CSA_Source, (Tag)text, TAG_DONE);
+    chatOutputAppend(utf8 != NULL ? (CONST_STRPTR)utf8 : text, raw);
+    if (utf8 != NULL)
+        CodesetsFreeA(utf8, NULL);
 }
 
 /**
@@ -311,20 +327,23 @@ static void appendMessageFileSummary(struct ConversationNode *message) {
     for (file = (struct ChatFile *)message->files.mlh_Head;
          file->node.mln_Succ != NULL;
          file = (struct ChatFile *)file->node.mln_Succ) {
-        STRPTR name = CodesetsUTF8ToStr(
-            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)file->name,
-            CSA_MapForeignChars, TRUE, TAG_DONE);
-        CONST_STRPTR shown = name != NULL ? name : (STRPTR)file->name;
+        /* The view is UTF-8: names are already, the path is local */
+        CONST_STRPTR shown = (CONST_STRPTR)file->name;
         if (chatFileIsLocalImage(file)) {
-            ULONG size = strlen(shown) + strlen(file->path) + 32;
+            UTF8 *pathUTF8 = CodesetsUTF8Create(
+                CSA_SourceCodeset, (Tag)systemCodeset, CSA_Source,
+                (Tag)file->path, TAG_DONE);
+            CONST_STRPTR filePath =
+                pathUTF8 != NULL ? (CONST_STRPTR)pathUTF8 : file->path;
+            ULONG size = strlen(shown) + strlen(filePath) + 32;
             STRPTR line = AllocVec(size, MEMF_ANY);
             STRPTR alt = AllocVec(strlen(shown) + 1, MEMF_ANY);
             if (line != NULL && alt != NULL) {
-                STRPTR path = AllocVec(strlen(file->path) + 1, MEMF_ANY);
+                STRPTR path = AllocVec(strlen(filePath) + 1, MEMF_ANY);
                 strcpy(alt, shown);
                 chatMarkdownSafe(alt);
                 if (path != NULL) {
-                    strcpy(path, file->path);
+                    strcpy(path, filePath);
                     chatMarkdownSafe(path);
                     /* Markdown only for this line, so the image is drawn */
                     snprintf(line, size, "\n\033[M:1]![%s](<%s>)", alt, path);
@@ -336,20 +355,20 @@ static void appendMessageFileSummary(struct ConversationNode *message) {
                 FreeVec(line);
             if (alt != NULL)
                 FreeVec(alt);
+            if (pathUTF8 != NULL)
+                CodesetsFreeA(pathUTF8, NULL);
         } else {
             CONST_STRPTR prefix = strcmp(message->role, "assistant") == 0
                                       ? STRING_RECEIVED_FILES_PREFIX
                                       : STRING_ATTACHED_FILES_PREFIX;
             if (others++ == 0) {
                 chatOutputAppend("\n\033[M:0][", FALSE);
-                chatOutputAppend(prefix, TRUE);
+                chatOutputAppendLocal(prefix, TRUE);
             } else {
                 chatOutputAppend(", ", TRUE);
             }
             chatOutputAppend(shown, TRUE);
         }
-        if (name != NULL)
-            CodesetsFreeA(name, NULL);
     }
     if (others > 0)
         chatOutputAppend("]", TRUE);
@@ -2457,7 +2476,7 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
 MakeHook(ConfigureForScreenHook, ConfigureForScreenFunc);
 
 Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
-                                ULONG weight) {
+                                ULONG weight, BOOL utf8) {
     // clang-format off
     if (!isAROS) {
         /* Return sends, Shift+Return starts a new line. Markdown is shown
@@ -2468,6 +2487,7 @@ Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
             weight != 0 ? MUIA_Weight : TAG_IGNORE, weight,
             MUIA_BestTextEditor_SubmitHook, submitHook,
             MUIA_BestTextEditor_Markdown, TRUE,
+            MUIA_BestTextEditor_UTF8, utf8,
             MUIA_TextEditor_ReadOnly, FALSE,
             MUIA_TextEditor_TabSize, 4,
             MUIA_TextEditor_Rows, 3,
@@ -2503,6 +2523,7 @@ Object *createTranscriptView(Object **viewOut) {
         MUIA_TextEditor_ActiveObjectOnClick, TRUE,
         MUIA_BestTextEditor_Markdown, TRUE,
         MUIA_BestTextEditor_StickToBottom, TRUE,
+        MUIA_BestTextEditor_UTF8, TRUE,
         MUIA_BestTextEditor_LinkHook, mainWindowLinkHook(),
         MUIA_CycleChain, TRUE,
         MUIA_ContextMenu, NULL,
@@ -2565,13 +2586,18 @@ LONG createMainWindow() {
         MUI_DisposeObject(mainWindowObject);
     }
 
+    /* The chat prompt is UTF-8 like the conversation, so pasted emoji and
+     * other characters outside the system codeset reach the model. The
+     * image and speech prompts stay in the system codeset. */
     chatInputTextEditor = createPromptInputEditor(
-        &SendMessageButtonClickedHook, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR, 0);
+        &SendMessageButtonClickedHook, OBJECT_ID_CHAT_INPUT_TEXT_EDITOR, 0,
+        TRUE);
     imageInputTextEditor = createPromptInputEditor(
-        &CreateImageButtonClickedHook, OBJECT_ID_IMAGE_INPUT_TEXT_EDITOR, 80);
+        &CreateImageButtonClickedHook, OBJECT_ID_IMAGE_INPUT_TEXT_EDITOR, 80,
+        FALSE);
     speechInputTextEditor = createPromptInputEditor(
         &GenerateSpeechButtonClickedHook, OBJECT_ID_SPEECH_INPUT_TEXT_EDITOR,
-        80);
+        80, FALSE);
 
     createMenu();
 
@@ -3116,13 +3142,15 @@ static void sendChatMessage() {
     DoMethod(chatOutputTextEditor, MUIM_BestTextEditor_ScrollTo,
              MUIV_BestTextEditor_ScrollTo_Bottom);
 
-    UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
-
-                                        CSA_Source, (Tag)text,
-                                        CSA_MapForeignChars, TRUE, TAG_DONE);
+    /* The prompt editor gives UTF-8; the AROS string gadget gives local */
+    UTF8 *textUTF8 =
+        isAROS ? CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
+                                    CSA_Source, (Tag)text,
+                                    CSA_MapForeignChars, TRUE, TAG_DONE)
+               : NULL;
 
     struct ConversationNode *userMessage = addTextToConversation(
-        currentConversation, textUTF8 != NULL ? textUTF8 : (UTF8 *)"",
+        currentConversation, textUTF8 != NULL ? textUTF8 : (UTF8 *)text,
         "user");
     if (textUTF8 != NULL)
         CodesetsFreeA(textUTF8, NULL);
@@ -3282,27 +3310,11 @@ static void sendChatMessage() {
                 if (contentString != NULL) {
                     // Text for printing
                     if (strlen(contentString) > 0) {
-                        STRPTR formattedMessageSystemEncoded =
-                            CodesetsUTF8ToStr(
-                                CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                                (Tag)contentString, CSA_MapForeignChars, TRUE,
-                                TAG_DONE);
                         strncat(receivedMessage, contentString,
                                 READ_BUFFER_LENGTH - strlen(receivedMessage) -
                                     strlen(contentString) - 1);
-                        CONST_STRPTR displayStr = formattedMessageSystemEncoded;
-                        STRPTR latin1StreamFb = NULL;
-                        if (displayStr == NULL) {
-                            latin1StreamFb = utf8ToLatin1(contentString);
-                            displayStr = latin1StreamFb
-                                             ? latin1StreamFb
-                                             : (CONST_STRPTR)contentString;
-                        }
-                        chatOutputAppend(displayStr, TRUE);
-                        if (formattedMessageSystemEncoded != NULL)
-                            CodesetsFreeA(formattedMessageSystemEncoded, NULL);
-                        if (latin1StreamFb != NULL)
-                            FreeVec(latin1StreamFb);
+                        /* the transcript view takes the UTF-8 as it is */
+                        chatOutputAppend(contentString, TRUE);
 
                         /* The view only lays out and draws the paragraph
                          * that grew, so every chunk is shown at once */
@@ -3450,7 +3462,8 @@ static void sendChatMessage() {
                         strncpy(outputs[i], TOOL_CALL_OUTPUT_DENIED, len);
                     userDenied = TRUE;
                     denyRest = TRUE;
-                    chatOutputAppend(STRING_SHELL_TOOL_DENIED_BANNER, TRUE);
+                    chatOutputAppendLocal(STRING_SHELL_TOOL_DENIED_BANNER,
+                                          TRUE);
                     strncat(receivedMessage, STRING_SHELL_TOOL_DENIED_BANNER,
                             READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
                 } else {
@@ -3467,7 +3480,7 @@ static void sendChatMessage() {
                     updateStatusBar(statusMsg, yellowPen);
                     snprintf(cmdDisplay, sizeof(cmdDisplay),
                              STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT, command);
-                    chatOutputAppend(cmdDisplay, TRUE);
+                    chatOutputAppendLocal(cmdDisplay, TRUE);
                     strncat(receivedMessage, cmdDisplay,
                             READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
 
@@ -3477,7 +3490,7 @@ static void sendChatMessage() {
                              output != NULL
                                  ? output
                                  : (STRPTR)STRING_SHELL_TOOL_NO_OUTPUT);
-                    chatOutputAppend(outputDisplay, TRUE);
+                    chatOutputAppendLocal(outputDisplay, TRUE);
                     strncat(receivedMessage, outputDisplay,
                             READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
 
@@ -3562,20 +3575,7 @@ static void sendChatMessage() {
                     strncat(receivedMessage, toolContentString,
                             READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
 
-                    STRPTR formattedToolResponse = CodesetsUTF8ToStr(
-                        CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                        (Tag)toolContentString, CSA_MapForeignChars, TRUE,
-                        TAG_DONE);
-                    if (formattedToolResponse != NULL) {
-                        chatOutputAppend(formattedToolResponse, TRUE);
-                        CodesetsFreeA(formattedToolResponse, NULL);
-                    } else {
-                        STRPTR latin1 = utf8ToLatin1(toolContentString);
-                        if (latin1 != NULL) {
-                            chatOutputAppend(latin1, TRUE);
-                            FreeVec(latin1);
-                        }
-                    }
+                    chatOutputAppend(toolContentString, TRUE);
                 }
             }
             json_object_put(toolResponse);
@@ -3727,25 +3727,11 @@ void displayConversation(struct Conversation *conversation) {
          conversationNode =
              (struct ConversationNode *)conversationNode->node.mln_Succ) {
         BOOL user = strcmp(conversationNode->role, "user") == 0;
-        STRPTR content;
-        STRPTR latin1Fallback = NULL;
         if (!user && strcmp(conversationNode->role, "assistant") != 0)
             continue;
-        content = CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
-                                    CSA_Source, (Tag)conversationNode->content,
-                                    CSA_MapForeignChars, TRUE, TAG_DONE);
+        /* the view is UTF-8, like the conversation */
         chatOutputBeginMessage(user);
-        if (content != NULL) {
-            chatOutputAppendMessageText(content);
-            CodesetsFreeA(content, NULL);
-        } else {
-            latin1Fallback = utf8ToLatin1(conversationNode->content);
-            chatOutputAppendMessageText(latin1Fallback != NULL
-                                            ? latin1Fallback
-                                            : (STRPTR)conversationNode->content);
-            if (latin1Fallback != NULL)
-                FreeVec(latin1Fallback);
-        }
+        chatOutputAppendMessageText(conversationNode->content);
         appendMessageFileSummary(conversationNode);
     }
     set(chatOutputTextEditor, MUIA_TextEditor_Quiet, FALSE);

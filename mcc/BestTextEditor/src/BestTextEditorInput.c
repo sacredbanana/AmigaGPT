@@ -23,6 +23,9 @@
 #ifndef ID_CHRS
 #define ID_CHRS MAKE_ID('C', 'H', 'R', 'S')
 #endif
+#ifndef ID_UTF8
+#define ID_UTF8 MAKE_ID('U', 'T', 'F', '8')
+#endif
 
 #define RK_UP 0x4c
 #define RK_DOWN 0x4d
@@ -70,7 +73,7 @@ static struct RTEPos rtePosLeft(struct RTEData *data, struct RTEPos pos,
         return pos;
     }
     if (!word) {
-        pos.offset--;
+        pos.offset = rteClusterStart(&data->paras[pos.para], pos.offset - 1);
         return pos;
     }
     {
@@ -94,7 +97,7 @@ static struct RTEPos rtePosRight(struct RTEData *data, struct RTEPos pos,
         return pos;
     }
     if (!word) {
-        pos.offset++;
+        pos.offset = rteClusterEnd(p, pos.offset);
         return pos;
     }
     while (pos.offset < p->len && rteIsWordChar(p->text[pos.offset]))
@@ -273,11 +276,13 @@ static void rteInsertAtCursor(struct RTEData *data, Object *obj,
                               CONST_STRPTR text, LONG len, BOOL raw) {
     struct RTEPos end;
     rteDeleteSelection(data);
-    if (data->overwrite && raw && len == 1 && text[0] != '\n') {
+    /* overwrite replaces a character when one character is typed */
+    if (data->overwrite && raw && len > 0 && text[0] != '\n' &&
+        rteSegment(text, len, 0, NULL) == (ULONG)len) {
         struct RTEPara *p = &data->paras[data->cursor.para];
         if (data->cursor.offset < p->len) {
             struct RTEPos next = data->cursor;
-            next.offset++;
+            next.offset = rteClusterEnd(p, next.offset);
             rteDeleteRange(data, data->cursor, next, TRUE);
         }
     }
@@ -323,6 +328,7 @@ static void rteCheckKeyword(struct RTEData *data, Object *obj) {
     ULONG start;
     CONST_STRPTR k;
     ULONG wlen;
+    STRPTR word;
 
     if (data->keywords == NULL)
         return;
@@ -334,36 +340,53 @@ static void rteCheckKeyword(struct RTEData *data, Object *obj) {
     wlen = end - start;
     if (wlen == 0 || wlen >= sizeof(data->matchedKeyword))
         return;
-    for (k = data->keywords; *k != '\0';) {
+    word = rteUTF8ToApi(data, (STRPTR)p->text + start, wlen, &wlen);
+    if (word == NULL)
+        return;
+    for (k = data->keywords; *k != '\0' && wlen > 0;) {
         CONST_STRPTR e = k;
         while (*e != '\0' && *e != ',')
             e++;
-        if ((ULONG)(e - k) == wlen &&
-            strncmp(k, (STRPTR)p->text + start, wlen) == 0) {
+        if ((ULONG)(e - k) == wlen && strncmp(k, word, wlen) == 0) {
             CopyMem((APTR)k, data->matchedKeyword, wlen);
             data->matchedKeyword[wlen] = '\0';
             SetAttrs(obj, MUIA_TextEditor_MatchedKeyword,
                      (IPTR)data->matchedKeyword, TAG_DONE);
-            return;
+            break;
         }
         k = *e == ',' ? e + 1 : e;
     }
+    FreeVec(word);
 }
 
 /* ------------------------------------------------------------------------ */
 /* Clipboard                                                                 */
 /* ------------------------------------------------------------------------ */
 
-static BOOL rteWriteClip(CONST_STRPTR text, ULONG len) {
-    struct Library *IFFParseBase = OpenLibrary("iffparse.library", 39);
+/**
+ * Put UTF-8 text on the clipboard as FTXT: a CHRS chunk in the system
+ * codeset for every program, and a UTF8 chunk with the full text for
+ * programs that understand it (as MorphOS's clipboard.library writes it)
+ */
+static BOOL rteWriteClip(CONST_STRPTR utf8, ULONG utf8Len) {
+    struct Library *IFFParseBase;
 #if defined(__AMIGAOS4__)
     struct IFFParseIFace *IIFFParse = NULL;
 #endif
     struct IFFHandle *iff;
     BOOL ok = FALSE;
+    ULONG len;
+    STRPTR text = rteFromUTF8(utf8, utf8Len, &len);
+    BOOL plain = text != NULL && len == utf8Len &&
+                 memcmp(text, utf8, utf8Len) == 0;
 
-    if (IFFParseBase == NULL)
+    if (text == NULL)
         return FALSE;
+    IFFParseBase = OpenLibrary("iffparse.library", 39);
+    if (IFFParseBase == NULL) {
+        FreeVec(text);
+        return FALSE;
+    }
 #if defined(__AMIGAOS4__)
     IIFFParse = (struct IFFParseIFace *)GetInterface(IFFParseBase, "main", 1,
                                                      NULL);
@@ -382,6 +405,12 @@ static BOOL rteWriteClip(CONST_STRPTR text, ULONG len) {
                         ok = WriteChunkBytes(iff, (APTR)text, len) == (LONG)len;
                         PopChunk(iff);
                     }
+                    /* ASCII only text needs no second copy */
+                    if (ok && !plain &&
+                        PushChunk(iff, 0, ID_UTF8, IFFSIZE_UNKNOWN) == 0) {
+                        WriteChunkBytes(iff, (APTR)utf8, utf8Len);
+                        PopChunk(iff);
+                    }
                     PopChunk(iff);
                 }
                 CloseIFF(iff);
@@ -394,10 +423,31 @@ static BOOL rteWriteClip(CONST_STRPTR text, ULONG len) {
     DropInterface((struct Interface *)IIFFParse);
 #endif
     CloseLibrary(IFFParseBase);
+    FreeVec(text);
     return ok;
 }
 
-/** Read FTXT CHRS from the clipboard. Returns an AllocVec'd string. */
+/**
+ * Make room for size more bytes in a growing AllocVec'd buffer
+ * @return where the new bytes go, or NULL
+ */
+static STRPTR rteClipGrow(LONG size, STRPTR *buf, ULONG len) {
+    STRPTR bigger = AllocVec(len + size + 1, MEMF_ANY);
+    if (bigger == NULL)
+        return NULL;
+    if (*buf != NULL) {
+        CopyMem(*buf, bigger, len);
+        FreeVec(*buf);
+    }
+    *buf = bigger;
+    return bigger + len;
+}
+
+/**
+ * Read FTXT from the clipboard: the UTF8 chunks when there are any, else
+ * the CHRS chunks converted from the system codeset
+ * @return an AllocVec'd UTF-8 string
+ */
 static STRPTR rteReadClip(LONG *error) {
     struct Library *IFFParseBase = OpenLibrary("iffparse.library", 39);
 #if defined(__AMIGAOS4__)
@@ -405,8 +455,10 @@ static STRPTR rteReadClip(LONG *error) {
 #endif
     struct IFFHandle *iff;
     STRPTR text = NULL;
-    ULONG len = 0;
+    STRPTR utf8 = NULL;
+    ULONG len = 0, utf8Len = 0;
     BOOL foundForm = FALSE;
+    static const LONG stops[] = {ID_FTXT, ID_CHRS, ID_FTXT, ID_UTF8};
 
     *error = Error_ClipboardIsEmpty;
     if (IFFParseBase == NULL)
@@ -424,26 +476,27 @@ static STRPTR rteReadClip(LONG *error) {
         if (iff->iff_Stream != 0) {
             InitIFFasClip(iff);
             if (OpenIFF(iff, IFFF_READ) == 0) {
-                if (StopChunk(iff, ID_FTXT, ID_CHRS) == 0) {
+                if (StopChunks(iff, (LONG *)stops, 2) == 0) {
                     while (ParseIFF(iff, IFFPARSE_SCAN) == 0) {
                         struct ContextNode *cn = CurrentChunk(iff);
-                        STRPTR bigger;
+                        BOOL isUTF8;
+                        STRPTR *buf;
+                        ULONG *bufLen;
+                        STRPTR at;
                         LONG got;
                         foundForm = TRUE;
                         if (cn == NULL || cn->cn_Size <= 0)
                             continue;
-                        bigger = AllocVec(len + cn->cn_Size + 1, MEMF_ANY);
-                        if (bigger == NULL)
+                        isUTF8 = cn->cn_ID == ID_UTF8;
+                        buf = isUTF8 ? &utf8 : &text;
+                        bufLen = isUTF8 ? &utf8Len : &len;
+                        at = rteClipGrow(cn->cn_Size, buf, *bufLen);
+                        if (at == NULL)
                             break;
-                        if (text != NULL) {
-                            CopyMem(text, bigger, len);
-                            FreeVec(text);
-                        }
-                        text = bigger;
-                        got = ReadChunkBytes(iff, text + len, cn->cn_Size);
+                        got = ReadChunkBytes(iff, at, cn->cn_Size);
                         if (got > 0)
-                            len += got;
-                        text[len] = '\0';
+                            *bufLen += got;
+                        (*buf)[*bufLen] = '\0';
                     }
                 }
                 CloseIFF(iff);
@@ -456,6 +509,15 @@ static STRPTR rteReadClip(LONG *error) {
     DropInterface((struct Interface *)IIFFParse);
 #endif
     CloseLibrary(IFFParseBase);
+    if (utf8 != NULL) {
+        if (text != NULL)
+            FreeVec(text);
+        text = utf8;
+    } else if (text != NULL) {
+        STRPTR converted = rteToUTF8(text, len, NULL);
+        FreeVec(text);
+        text = converted;
+    }
     if (text == NULL && foundForm)
         *error = Error_ClipboardIsNotFTXT;
     if (text != NULL)
@@ -754,7 +816,14 @@ static BOOL rteKey(struct RTEData *data, Object *obj, struct IntuiMessage *imsg)
         if (data->convertTabs) {
             UWORD tab = data->tabSize > 0 ? data->tabSize : RTE_TAB_DEFAULT;
             UBYTE spaces[16];
-            UWORD count = tab - (data->cursor.offset % tab);
+            struct RTEPara *cp = &data->paras[data->cursor.para];
+            ULONG column = 0, i;
+            UWORD count;
+            for (i = 0; i < data->cursor.offset && i < cp->len; i++) {
+                if ((cp->text[i] & 0xc0) != 0x80)
+                    column++;
+            }
+            count = tab - (column % tab);
             memset(spaces, ' ', sizeof(spaces));
             rteInsertAtCursor(data, obj, spaces, RTE_MIN(count, 16), TRUE);
         } else {
@@ -777,10 +846,15 @@ static BOOL rteKey(struct RTEData *data, Object *obj, struct IntuiMessage *imsg)
         }
         if (out > 0) {
             BOOL space = buf[0] == ' ';
+            ULONG ulen;
+            STRPTR utf8 = rteToUTF8(buf, out, &ulen);
+            if (utf8 == NULL)
+                return TRUE;
             if (space)
                 rteCheckKeyword(data, obj);
             rteUndoBeginGroup(data);
-            rteInsertAtCursor(data, obj, buf, out, TRUE);
+            rteInsertAtCursor(data, obj, utf8, ulen, TRUE);
+            FreeVec(utf8);
             data->wantX = -1;
             rteHardWrap(data, obj);
             return TRUE;
@@ -816,7 +890,7 @@ static void rteSelectUnit(struct RTEData *data, struct RTEPos pos,
             while (to->offset < p->len && rteIsWordChar(p->text[to->offset]))
                 to->offset++;
         } else if (pos.offset < p->len) {
-            to->offset++;
+            to->offset = rteClusterEnd(p, to->offset);
         }
     } else if (data->selectUnit == 2) {
         from->offset = 0;
@@ -872,11 +946,9 @@ static BOOL rteActivateLink(struct RTEData *data, Object *obj,
     image = (style & RTE_S_IMAGE) != 0;
     if (!rteFindSpan(p, pos.offset, image, &s, &e, &us, &ue))
         return FALSE;
-    url = AllocVec(ue - us + 1, MEMF_ANY);
+    url = rteUTF8ToApi(data, (STRPTR)p->text + us, ue - us, NULL);
     if (url == NULL)
         return FALSE;
-    CopyMem(p->text + us, url, ue - us);
-    url[ue - us] = '\0';
     if (data->clickedLink != NULL)
         FreeVec(data->clickedLink);
     data->clickedLink = url;
@@ -935,10 +1007,15 @@ static void rteMouseDown(struct RTEData *data, Object *obj,
         if (data->clickCount == 2 && data->doubleClickHook != NULL) {
             struct ClickMessage cm;
             struct RTEPara *p = &data->paras[pos.para];
-            cm.LineContents = (STRPTR)p->text;
-            cm.ClickPosition = pos.offset;
+            STRPTR line = rteUTF8ToApi(data, (STRPTR)p->text, p->len, NULL);
+            BOOL eaten;
+            cm.LineContents = line != NULL ? line : (STRPTR)p->text;
+            cm.ClickPosition = rteOffsetToColumn(data, p, pos.offset);
             cm.Qualifier = imsg->Qualifier;
-            if (CallHookPkt(data->doubleClickHook, obj, &cm)) {
+            eaten = CallHookPkt(data->doubleClickHook, obj, &cm) != 0;
+            if (line != NULL)
+                FreeVec(line);
+            if (eaten) {
                 data->selecting = FALSE;
                 return;
             }
@@ -1201,13 +1278,21 @@ static void rteChangeCase(struct RTEData *data, Object *obj, BOOL upper) {
         ULONG k;
         for (k = s; k < e; k++) {
             UBYTE c = p->text[k];
-            if (upper && ((c >= 'a' && c <= 'z') ||
-                          (c >= 0xe0 && c <= 0xfe && c != 0xf7)))
+            if (c == 0xc3 && k + 1 < e) {
+                /* Latin-1 letters: U+00C0-00DE and U+00E0-00FE */
+                UBYTE d = p->text[k + 1];
+                if (upper && d >= 0xa0 && d <= 0xbe && d != 0xb7)
+                    p->text[k + 1] = d - 32;
+                else if (!upper && d >= 0x80 && d <= 0x9e && d != 0x97)
+                    p->text[k + 1] = d + 32;
+                k++;
+            } else if (upper && c >= 'a' && c <= 'z') {
                 p->text[k] = c - 32;
-            else if (!upper && ((c >= 'A' && c <= 'Z') ||
-                                (c >= 0xc0 && c <= 0xde && c != 0xd7)))
+            } else if (!upper && c >= 'A' && c <= 'Z') {
                 p->text[k] = c + 32;
+            }
         }
+        p->glyphLen = 0;
         rteMarkDirty(data, para);
     }
     if (!rteHasSelection(data))
@@ -1244,14 +1329,19 @@ IPTR rteARexx(struct RTEData *data, Object *obj, CONST_STRPTR command) {
     }
     if (rteWordIs(command, "GETLINE")) {
         struct RTEPara *p = &data->paras[data->cursor.para];
-        return (IPTR)rteResultString(p->text, p->len);
+        return (IPTR)rteUTF8ToApi(data, (STRPTR)p->text, p->len, NULL);
     }
     if (rteWordIs(command, "GETCURSOR")) {
         UBYTE buf[16];
         if (rteArgHas(args, "LINE"))
             rteFormat(buf, "", data->cursor.para + 1, 10, 1, "");
         else
-            rteFormat(buf, "", data->cursor.offset + 1, 10, 1, "");
+            rteFormat(buf, "",
+                      rteOffsetToColumn(data,
+                                        &data->paras[data->cursor.para],
+                                        data->cursor.offset) +
+                          1,
+                      10, 1, "");
         return (IPTR)rteResultString(buf, strlen(buf));
     }
 
@@ -1266,7 +1356,8 @@ IPTR rteARexx(struct RTEData *data, Object *obj, CONST_STRPTR command) {
     if (rteWordIs(command, "GOTOCOLUMN")) {
         LONG n = rteArgNumber(args) - 1;
         pos = data->cursor;
-        pos.offset = n < 0 ? 0 : (ULONG)n;
+        pos.offset = rteColumnToOffset(data, &data->paras[pos.para],
+                                       n < 0 ? 0 : (ULONG)n);
         rteMoveTo(data, obj, pos, FALSE);
         return TRUE;
     }
@@ -1278,9 +1369,11 @@ IPTR rteARexx(struct RTEData *data, Object *obj, CONST_STRPTR command) {
         return TRUE;
     }
     if (rteWordIs(command, "COLUMN")) {
-        LONG n = (LONG)data->cursor.offset + rteArgNumber(args);
+        struct RTEPara *p = &data->paras[data->cursor.para];
+        LONG n = (LONG)rteOffsetToColumn(data, p, data->cursor.offset) +
+                 rteArgNumber(args);
         pos = data->cursor;
-        pos.offset = n < 0 ? 0 : (ULONG)n;
+        pos.offset = rteColumnToOffset(data, p, n < 0 ? 0 : (ULONG)n);
         rteMoveTo(data, obj, pos, data->marking);
         return TRUE;
     }
@@ -1424,8 +1517,13 @@ IPTR rteARexx(struct RTEData *data, Object *obj, CONST_STRPTR command) {
         return TRUE;
     }
     if (rteWordIs(command, "TEXT")) {
-        rteUndoBeginGroup(data);
-        rteInsertAtCursor(data, obj, args, strlen(args), TRUE);
+        ULONG len;
+        STRPTR text = rteApiToUTF8(data, args, -1, &len);
+        if (text != NULL) {
+            rteUndoBeginGroup(data);
+            rteInsertAtCursor(data, obj, text, len, TRUE);
+            FreeVec(text);
+        }
         return TRUE;
     }
     if (rteWordIs(command, "UNDO")) {

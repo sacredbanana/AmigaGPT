@@ -19,6 +19,10 @@
 - Edit menu Copy and Select All also work in the Chat and Agent conversation views
 - MCC_TextEditor, ActionTextEditor.mcc and MCC_NFloattext are no longer needed
 - The fonts, colours and chat bubbles (side, width and colours) are set on the BestTextEditor page of MUI Settings, which replaces the Fixed width fonts, User text alignment and Assistant text alignment items of the View menu
+- Full UTF-8 text with colour emoji: conversations keep every character of a reply instead of turning those outside the system character set into "?". Emoji are drawn in colour at the height of the text, including skin tones, flags and ZWJ sequences (Twemoji graphics, installed as BestTextEditor.emoji next to BestTextEditor.mcc), common punctuation the system character set lacks is drawn with a look-alike, and anything else shows as a box
+- Emoji and other characters pasted into the Chat and Agent prompts are sent as they are. Copying from a text field puts the text on the clipboard both in the system character set and as UTF-8, and pasting prefers the UTF-8 version
+- Chat and Agent no longer tell the model to avoid emoji and characters outside the Amiga character set in its replies, since the conversation now shows them. The agent is still told to write files in ISO 8859-1 so other Amiga programs can read them, and AmigaGPTD keeps the old instruction because its replies go to ARexx in the system character set
+- BestTextEditor.mcc keeps its text as UTF-8 and talks the system character set to programs by default, like TextEditor.mcc, or UTF-8 with the new MUIA_BestTextEditor_UTF8 attribute
 
 ## 3.4.0 (2026-10-08)
 

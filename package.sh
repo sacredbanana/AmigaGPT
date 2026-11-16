@@ -34,6 +34,8 @@ cp -R out/AmigaGPTD_MorphOS bundle/AmigaGPT/AmigaGPT/AmigaGPTD_MorphOS
 for platform in OS3 OS4 MorphOS; do
     cp out/BestTextEditor_${platform}.mcc out/BestTextEditor_${platform}.mcp bundle/AmigaGPT/MCC/
 done
+# Its colour emoji, one file for every platform
+cp mcc/BestTextEditor/data/BestTextEditor.emoji bundle/AmigaGPT/MCC/
 
 # Copy catalog files to bundle directory, BestTextEditor.mcp's included
 mkdir -p bundle/AmigaGPT/catalogs
@@ -58,4 +60,4 @@ lha $LHA_OPTS ../out/AmigaGPT.lha AmigaGPT AmigaGPT.info
 
 rm -f AmigaGPT/AmigaGPT/AmigaGPT_OS3 AmigaGPT/AmigaGPT/AmigaGPT_OS4 AmigaGPT/AmigaGPT/AmigaGPT_MorphOS AmigaGPT/AmigaGPT/AmigaGPTD_OS3 AmigaGPT/AmigaGPT/AmigaGPTD_OS4 AmigaGPT/AmigaGPT/AmigaGPTD_MorphOS
 rm -dr AmigaGPT/catalogs
-rm -f AmigaGPT/MCC/BestTextEditor_*.mcc AmigaGPT/MCC/BestTextEditor_*.mcp
+rm -f AmigaGPT/MCC/BestTextEditor_*.mcc AmigaGPT/MCC/BestTextEditor_*.mcp AmigaGPT/MCC/BestTextEditor.emoji

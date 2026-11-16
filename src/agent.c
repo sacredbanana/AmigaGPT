@@ -1101,9 +1101,16 @@ static STRPTR buildSystemPrompt(struct json_object *subagent) {
         "installer is instead.\n"
         "- You are running inside AmigaGPT. Do not send ARexx commands to "
         "AmigaGPT's own port and do not run askgpt.\n"
-        "Files are stored in the ISO 8859-1 character set. Write plain text "
-        "that fits it: no emoji, typographic quotes, long dashes or other "
-        "symbols outside it, in files and in replies.\n");
+        "Files are stored in the ISO 8859-1 character set, and other Amiga "
+        "programs read them that way. Write file contents that fit it: no "
+        "emoji, typographic quotes, long dashes or other symbols outside it. "
+#ifdef DAEMON
+        /* The daemon hands replies to ARexx in the system codeset */
+        "Keep your replies to it as well.\n");
+#else
+        /* The Agent tab shows replies in a UTF-8 view that draws emoji */
+        "This applies only to files; your replies may use any character.\n");
+#endif
 
     agentBufferAppend(
         &buffer,

@@ -99,7 +99,7 @@ AmigaGPT is translated into 22 languages in addition to English. See @{"Language
 - MCC_Guigfx, the MUI custom class used to display images (@{u}http://aminet.net/package/dev/mui/MCC_Guigfx@{uu})
 - MCC_NList, the MUI custom class used for lists (@{u}http://aminet.net/package/dev/mui/MCC_NList-0.128@{uu})
 - MCC_AudioPlayer, shipped with AmigaGPT. The installer copies AudioPlayer.mcc into the system MUI class drawer
-- MCC_BestTextEditor, shipped with AmigaGPT. It shows every conversation and text field. The installer copies BestTextEditor.mcc and its preferences page BestTextEditor.mcp into the system MUI class drawer
+- MCC_BestTextEditor, shipped with AmigaGPT. It shows every conversation and text field. The installer copies BestTextEditor.mcc, its preferences page BestTextEditor.mcp and its colour emoji BestTextEditor.emoji into the system MUI class drawer
 - A PNG datatype for viewing generated images. Any will do, but here is one (@{u}https://aminet.net/util/dtype/vPNGdt.lha@{uu})
 - For AmigaOS 3 and AmigaOS 4, AmiSSL 5.27 or higher
   OS3: @{u}https://aminet.net/package/util/libs/AmiSSL-v5-OS3@{uu}
@@ -806,6 +806,17 @@ Changes show straight away. The page is also in the MUI preferences program, so 
 @{b}@{u}Formatting in replies@{uu}@{ub}
 
 Replies are shown with their Markdown formatting - headings, emphasis, code, lists, quotes, tables, links and pictures - so they read naturally instead of being littered with asterisks and hashes. See @{"Chatting" link chatting}.
+
+@{b}@{u}Emoji and other characters@{uu}@{ub}
+
+Conversations keep every character a reply contains, whatever the character set of your system:
+
+- Letters your system's character set has are drawn in your font, as before
+- Common punctuation it lacks, such as curly quotes, dashes, the ellipsis, arrows and box drawing lines, is drawn with the nearest character it does have
+- Emoji are drawn in colour at the height of the text, including skin tones, flags and combined emoji such as families. They come from BestTextEditor.emoji, which the installer puts next to BestTextEditor.mcc
+- A character that nothing can draw shows as a small box
+
+You can also paste emoji and other characters into the Chat and Agent prompts, and they are sent to the AI as they are. Copying from a conversation puts the text on the clipboard both in your system's character set, for every program, and in full as UTF-8, for programs that understand it.
 
 All of these settings are saved and restored automatically.
 @endnode
@@ -1788,6 +1799,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+@{b}@{u}Twemoji@{uu}@{ub}
+
+The colour emoji in BestTextEditor.emoji are the Twemoji graphics (https://github.com/jdecked/twemoji), copyright Twitter, Inc and other contributors, licensed under CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/). They have been scaled to 20 pixels and reduced to 255 colours.
 
 @{b}@{u}Flite@{uu}@{ub}
 

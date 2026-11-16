@@ -3,6 +3,7 @@ out/
 build/
 bundle/AmigaGPT/catalogs
 bundle/AmigaGPT/MCC/BestTextEditor_*
+bundle/AmigaGPT/MCC/BestTextEditor.emoji
 catalogs/*/*.catalog
 catalogs/*/*.po~
 src/AmigaGPT_cat.*

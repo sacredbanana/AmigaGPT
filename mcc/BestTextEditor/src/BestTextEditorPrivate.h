@@ -18,6 +18,12 @@
 /*
  * Internal data model
  *
+ * The text is stored as UTF-8, whatever encoding the application uses (see
+ * MUIA_BestTextEditor_UTF8). Offsets are byte offsets. Characters that need
+ * more than one byte, and emoji sequences made of several characters, form
+ * a cluster: the cursor never stops inside one, and only its first byte has
+ * a width. Text in the system codeset is converted on the way in and out.
+ *
  * The text is an array of paragraphs (logical lines without their '\n').
  * Every paragraph owns its own byte buffer, so typing touches one small
  * allocation and never shifts the rest of the document. Buffers come from an
@@ -107,14 +113,29 @@ struct RTELine {
     UBYTE pad;
 };
 
+/*
+ * What is drawn for each byte of a paragraph that holds non-ASCII text
+ * (RTEPara.glyphs). Bytes of pure ASCII paragraphs are drawn as they are.
+ */
+#define RTE_G_KIND(g)  ((g) & 0xe000)
+#define RTE_G_VALUE(g) ((g) & 0x1fff)
+#define RTE_G_GLYPH    0x0000 /* the value is the system codeset byte */
+#define RTE_G_TRANS    0x2000 /* the value indexes the transliterations */
+#define RTE_G_EMOJI    0x4000 /* the value is the emoji number */
+#define RTE_G_MISSING  0x6000 /* no glyph for it: a box is drawn */
+#define RTE_G_CONT     0x8000 /* inside a cluster that started earlier */
+
 struct RTEPara {
-    UBYTE *text;  /* NUL terminated, cap includes the NUL */
+    UBYTE *text;  /* NUL terminated UTF-8, cap includes the NUL */
     UWORD *attrs; /* NULL when the paragraph has no explicit attributes */
     UWORD *md;    /* rendered styles, NULL when uniform (see mdUniform) */
+    UWORD *glyphs; /* RTE_G_* per byte, valid for the first glyphLen bytes */
     ULONG len;
     ULONG cap;
     ULONG attrCap;
     ULONG mdCap;
+    ULONG glyphCap;
+    ULONG glyphLen; /* 0 when the glyphs are stale or not needed */
 
     /* metadata */
     UBYTE flow;       /* MUIV_TextEditor_Flow_* */
@@ -202,6 +223,15 @@ struct RTEImage {
     BOOL failed;
 };
 
+/* An emoji drawn for one screen at one size (per object, freed on cleanup) */
+struct RTEEmojiBitMap {
+    struct MinNode node;
+    UWORD index;
+    UWORD size;
+    struct BitMap *bitmap;
+    PLANEPTR mask;
+};
+
 /* Pens resolved while the object is set up */
 enum {
     RTE_PEN_TEXT = 0,
@@ -261,6 +291,7 @@ struct RTEData {
     BOOL typeAndSpell;
     BOOL rgbMode;
     BOOL submitEmpty;
+    BOOL utf8;       /* the application talks UTF-8, not the system codeset */
     BOOL notifying;  /* set while it notifies its own attributes */
     BOOL activating; /* set while it makes itself the active object */
     UBYTE globalFlowValue;
@@ -432,6 +463,12 @@ struct RTEData {
     /* images */
     struct MinList images;
 
+    /* emoji bitmaps for this screen, and pens for their colours on
+     * palette screens (-1 = not obtained yet) */
+    struct MinList emoji;
+    LONG emojiPens[256];
+    BOOL emojiPenAlloc[256];
+
     /* bookmarks (global character indexes) */
     ULONG bookmarks[10];
     BOOL bookmarkSet[10];
@@ -495,6 +532,9 @@ void rteLineGeometry(struct RTEData *data, struct RTEPara *p,
                      LONG *extraRemainder);
 LONG rteCharWidth(struct RTEData *data, struct RTEPara *p, ULONG offset,
                   LONG x);
+LONG rteGlyphWidth(struct RTEData *data, UWORD style, UWORD glyph);
+LONG rteEmojiSize(struct RTEData *data, UWORD style);
+LONG rteBoxWidth(struct RTEData *data, UWORD style);
 UWORD rteStyleAt(struct RTEPara *p, ULONG offset);
 ULONG rteParaAtY(struct RTEData *data, LONG y);
 ULONG rteLineAtY(struct RTEPara *p, LONG y);
@@ -519,6 +559,33 @@ void rteSetDefaultBubbleStyles(struct RTEData *data);
 void rteReadConfig(struct RTEData *data, Object *obj);
 void rteReleasePens(struct RTEData *data, Object *obj);
 LONG rteResolveColor(struct RTEData *data, Object *obj, UWORD index);
+
+/* BestTextEditorText.c */
+void rteInitUnicode(void);
+void rteFreeUnicode(void);
+BOOL rteEmojiReady(void);
+ULONG rteDecodeUTF8(CONST_STRPTR s, ULONG len, ULONG *cp);
+ULONG rteEncodeUTF8(ULONG cp, UBYTE *out);
+ULONG rteSegment(CONST_STRPTR text, ULONG len, ULONG off, UWORD *glyph);
+ULONG rteClusterEnd(struct RTEPara *p, ULONG off);
+ULONG rteClusterStart(struct RTEPara *p, ULONG off);
+UWORD rteGlyphAt(struct RTEPara *p, ULONG off);
+void rteAnnotate(struct RTEData *data, struct RTEPara *p);
+ULONG rteGlyphBytes(UWORD glyph, UBYTE *out);
+STRPTR rteToUTF8(CONST_STRPTR s, LONG len, ULONG *outLen);
+STRPTR rteFromUTF8(CONST_STRPTR s, LONG len, ULONG *outLen);
+STRPTR rteApiToUTF8(struct RTEData *data, CONST_STRPTR s, LONG len,
+                    ULONG *outLen);
+STRPTR rteUTF8ToApi(struct RTEData *data, CONST_STRPTR s, LONG len,
+                    ULONG *outLen);
+ULONG rteOffsetToColumn(struct RTEData *data, struct RTEPara *p, ULONG off);
+ULONG rteColumnToOffset(struct RTEData *data, struct RTEPara *p, ULONG col);
+ULONG rtePosToApiIndex(struct RTEData *data, struct RTEPos pos);
+struct RTEPos rteApiIndexToPos(struct RTEData *data, ULONG index);
+BOOL rteDrawEmoji(struct RTEData *data, Object *obj, struct RastPort *rp,
+                  UWORD index, LONG size, LONG x, LONG y, LONG clipL,
+                  LONG clipT, LONG clipR, LONG clipB);
+void rteFreeEmojiBitMaps(struct RTEData *data, Object *obj);
 
 /* BestTextEditorInput.c */
 ULONG rteHandleEvent(struct IClass *cl, Object *obj,

@@ -283,6 +283,7 @@ struct RTEImage *rteGetImage(struct RTEData *data, CONST_STRPTR source,
     struct DataTypesIFace *IDataTypes;
 #endif
     STRPTR path;
+    STRPTR sysSource;
     struct BitMap *bm = NULL;
     struct BitMapHeader *bmh = NULL;
     struct TagItem tags[6];
@@ -331,17 +332,27 @@ struct RTEImage *rteGetImage(struct RTEData *data, CONST_STRPTR source,
     AddTail((struct List *)&data->images, (struct Node *)img);
     img->failed = TRUE;
 
-    path = img->source;
+    /* The source is UTF-8 in the document; file names and the hook use the
+     * application's encoding */
+    sysSource = rteUTF8ToApi(data, img->source, -1, NULL);
+    path = sysSource != NULL ? sysSource : img->source;
     if (data->imageHook != NULL) {
         struct BestTextImageMessage msg;
-        msg.source = img->source;
+        msg.source = path;
         path = (STRPTR)CallHookPkt(data->imageHook, data->obj, &msg);
     } else if (strncmp(path, "http://", 7) == 0 ||
                strncmp(path, "https://", 8) == 0) {
         path = NULL;
+    } else if (data->utf8 && sysSource != NULL) {
+        FreeVec(sysSource);
+        sysSource = rteFromUTF8(img->source, -1, NULL);
+        path = sysSource != NULL ? sysSource : img->source;
     }
-    if (path == NULL || path[0] == '\0' || !rteOpenDataTypes())
+    if (path == NULL || path[0] == '\0' || !rteOpenDataTypes()) {
+        if (sysSource != NULL)
+            FreeVec(sysSource);
         return NULL;
+    }
     DataTypesBase = rteDataTypesBase;
 #if defined(__AMIGAOS4__)
     IDataTypes = rteIDataTypes;
@@ -359,6 +370,8 @@ struct RTEImage *rteGetImage(struct RTEData *data, CONST_STRPTR source,
     tags[4].ti_Data = TRUE;
     tags[5].ti_Tag = TAG_DONE;
     img->dto = NewDTObjectA(path, tags);
+    if (sysSource != NULL)
+        FreeVec(sysSource);
     if (img->dto == NULL) {
         rteCloseDataTypes();
         return NULL;
@@ -992,6 +1005,42 @@ static LONG rteImageWidthAt(struct RTEData *data, struct RTEPara *p,
     return img->width;
 }
 
+/** Height of the emoji drawn in text of a style */
+LONG rteEmojiSize(struct RTEData *data, UWORD style) {
+    LONG h = (style & (RTE_S_CODE | RTE_S_CODEFONT)) ? data->codeHeight
+                                                     : data->fontHeight;
+    return h < 6 ? 6 : h;
+}
+
+/** Width of the box drawn for a character no font or emoji has */
+LONG rteBoxWidth(struct RTEData *data, UWORD style) {
+    LONG w = (rteEmojiSize(data, style) * 2) / 3 + 2;
+    return w < 5 ? 5 : w;
+}
+
+/** Width of what a glyph (RTE_G_*) draws in a style */
+LONG rteGlyphWidth(struct RTEData *data, UWORD style, UWORD glyph) {
+    UWORD *tab;
+    switch (RTE_G_KIND(glyph)) {
+    case RTE_G_GLYPH:
+        return rteWidthTable(data, style)[RTE_G_VALUE(glyph) & 0xff];
+    case RTE_G_TRANS: {
+        UBYTE b[8];
+        ULONG n = rteGlyphBytes(glyph, b), i;
+        LONG w = 0;
+        tab = rteWidthTable(data, style);
+        for (i = 0; i < n; i++)
+            w += tab[b[i]];
+        return w;
+    }
+    case RTE_G_EMOJI:
+        return rteEmojiSize(data, style) + 1;
+    case RTE_G_MISSING:
+        return rteBoxWidth(data, style);
+    }
+    return 0; /* RTE_G_CONT: the cluster's first byte has the width */
+}
+
 LONG rteCharWidth(struct RTEData *data, struct RTEPara *p, ULONG offset,
                   LONG x) {
     UWORD style = rteStyleAt(p, offset);
@@ -1007,7 +1056,10 @@ LONG rteCharWidth(struct RTEData *data, struct RTEPara *p, ULONG offset,
             stop = 8;
         return stop - (x % stop);
     }
-    return rteWidthTable(data, style)[c];
+    if (p->glyphLen == 0 && c < 0x80 &&
+        (offset + 1 >= p->len || p->text[offset + 1] < 0x80))
+        return rteWidthTable(data, style)[c];
+    return rteGlyphWidth(data, style, rteGlyphAt(p, offset));
 }
 
 LONG rteBubbleSide(struct RTEData *data, struct RTEPara *p) {
@@ -1130,6 +1182,7 @@ void rteLayoutParagraph(struct RTEData *data, ULONG index) {
     p->stateIn = index > 0 ? data->paras[index - 1].stateOut : RTE_ST_NONE;
     if (index > 0 && !(data->paras[index - 1].flags & RTEP_MARKDOWN))
         p->stateIn = RTE_ST_NONE;
+    rteAnnotate(data, p);
     rteParseBlock(data, p);
 
     area = rteAreaWidth(data, p);
@@ -1183,7 +1236,11 @@ void rteLayoutParagraph(struct RTEData *data, ULONG index) {
             LONG w = rteCharWidth(data, p, i, x);
             UBYTE c = p->text[i];
             BOOL counts = w > 0;
-            if (i > lineStart && ((x + w > limit && c != ' ') ||
+            /* a line never breaks inside a character or emoji */
+            BOOL inside = (c & 0xc0) == 0x80 ||
+                          RTE_G_KIND(rteGlyphAt(p, i)) == RTE_G_CONT;
+            if (i > lineStart && !inside &&
+                ((x + w > limit && c != ' ') ||
                                   (data->wrapBorder > 0 &&
                                    data->wrapMode !=
                                        MUIV_TextEditor_WrapMode_NoWrap &&

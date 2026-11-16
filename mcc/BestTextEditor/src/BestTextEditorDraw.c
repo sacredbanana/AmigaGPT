@@ -640,6 +640,43 @@ static BOOL rteSelectionInPara(struct RTEData *data, ULONG para, ULONG *s,
     return TRUE;
 }
 
+/* What is drawn for byte j of an annotated paragraph (pure ASCII
+ * paragraphs have no glyph array: their bytes are drawn as they are) */
+#define RTE_GLYPH_FAST(p, j)                                                   \
+    ((p)->glyphs != NULL && (p)->glyphLen == (p)->len ? (p)->glyphs[j]         \
+                                                      : (UWORD)(p)->text[j])
+
+#define RTE_DRAW_BUF 128
+
+/** Width of a text glyph in a run, from the run's width table */
+static LONG rteRunGlyphWidth(UWORD *tab, UWORD g) {
+    switch (RTE_G_KIND(g)) {
+    case RTE_G_GLYPH:
+        return tab[RTE_G_VALUE(g) & 0xff];
+    case RTE_G_TRANS: {
+        UBYTE b[8];
+        ULONG n = rteGlyphBytes(g, b), i;
+        LONG w = 0;
+        for (i = 0; i < n; i++)
+            w += tab[b[i]];
+        return w;
+    }
+    }
+    return 0;
+}
+
+/** The box drawn for a character that no font or emoji covers */
+static void rteDrawBox(struct RTETarget *t, LONG pen, LONG x, LONG baseY,
+                       LONG w, LONG h) {
+    LONG x0 = x + 1, x1 = x + w - 2, y0 = baseY - h, y1 = baseY - 1;
+    if (x1 <= x0 || y1 <= y0)
+        return;
+    rteFill(t, pen, x0, y0, x1, y0);
+    rteFill(t, pen, x0, y1, x1, y1);
+    rteFill(t, pen, x0, y0, x0, y1);
+    rteFill(t, pen, x1, y0, x1, y1);
+}
+
 static void rteDrawLineText(struct RTEData *data, Object *obj,
                             struct RTETarget *t, ULONG paraIndex,
                             struct RTEPara *p, struct RTELine *l) {
@@ -713,6 +750,8 @@ static void rteDrawLineText(struct RTEData *data, Object *obj,
     while (k < end) {
         UWORD style = rteStyleAt(p, k);
         UWORD attr = rteAttrAt(p, k);
+        UWORD glyph = RTE_GLYPH_FAST(p, k);
+        UWORD kind = RTE_G_KIND(glyph);
         BOOL selected = hasSel && k >= selS && k < selE;
         ULONG runEnd = k + 1;
         LONG runW;
@@ -721,6 +760,8 @@ static void rteDrawLineText(struct RTEData *data, Object *obj,
         ULONG soft = 0;
         LONG runX = x;
         LONG fontBase;
+        UWORD *tab;
+        ULONG j;
 
         if (style & RTE_S_HIDDEN) {
             k++;
@@ -733,20 +774,40 @@ static void rteDrawLineText(struct RTEData *data, Object *obj,
             k++;
             continue;
         }
+        if (kind == RTE_G_CONT) {
+            /* the rest of a cluster whose first byte was hidden */
+            k++;
+            continue;
+        }
         if (p->text[k] == '\t') {
             x += rteCharWidth(data, p, k, x - (t->ox + left));
             k++;
             continue;
         }
-        /* extend the run over bytes that render the same way */
-        while (runEnd < end) {
-            UWORD s2 = rteStyleAt(p, runEnd);
-            if (s2 != style || rteAttrAt(p, runEnd) != attr ||
-                (hasSel && (runEnd >= selS && runEnd < selE) != selected) ||
-                p->text[runEnd] == '\t' ||
-                (extra > 0 && p->text[runEnd - 1] == ' '))
-                break;
-            runEnd++;
+        /* extend the run over characters that render the same way; the
+         * later bytes of a character always go with its first */
+        if (kind != RTE_G_EMOJI && kind != RTE_G_MISSING) {
+            while (runEnd < end) {
+                UWORD g2 = RTE_GLYPH_FAST(p, runEnd);
+                UWORD s2;
+                if (RTE_G_KIND(g2) == RTE_G_CONT) {
+                    runEnd++;
+                    continue;
+                }
+                s2 = rteStyleAt(p, runEnd);
+                if (s2 != style || rteAttrAt(p, runEnd) != attr ||
+                    (hasSel && (runEnd >= selS && runEnd < selE) != selected) ||
+                    p->text[runEnd] == '\t' ||
+                    RTE_G_KIND(g2) == RTE_G_EMOJI ||
+                    RTE_G_KIND(g2) == RTE_G_MISSING ||
+                    (extra > 0 && p->text[runEnd - 1] == ' '))
+                    break;
+                runEnd++;
+            }
+        } else {
+            runEnd = rteClusterEnd(p, k);
+            if (runEnd > end)
+                runEnd = end;
         }
 
         font = (style & (RTE_S_CODE | RTE_S_CODEFONT)) ? data->codeFont
@@ -779,14 +840,34 @@ static void rteDrawLineText(struct RTEData *data, Object *obj,
         else
             pen = normalPen;
 
-        runW = 0;
-        {
-            UWORD *tab = data->widths[(font == data->codeFont ? 2 : 0) +
-                                      ((style & RTE_S_BOLD) ? 1 : 0)];
-            ULONG j;
-            for (j = k; j < runEnd; j++)
-                runW += tab[p->text[j]];
+        if (kind == RTE_G_EMOJI || kind == RTE_G_MISSING) {
+            /* a colour emoji, or a box for a character nothing can draw */
+            LONG w = rteGlyphWidth(data, style, glyph);
+            LONG size = rteEmojiSize(data, style);
+            LONG top = baseY - fontBase;
+            BOOL drawn = FALSE;
+            if ((style & RTE_S_CODE) && !selected)
+                rteFill(t, rteCodeBgPen(data, p), x - 1, top - 1, x + w,
+                        top + font->tf_YSize);
+            if (kind == RTE_G_EMOJI)
+                drawn = rteDrawEmoji(data, obj, rp, RTE_G_VALUE(glyph), size,
+                                     x, top, t->clipL, t->clipT, t->clipR,
+                                     t->clipB);
+            if (!drawn)
+                rteDrawBox(t, pen, x, baseY, w,
+                           RTE_MAX(fontBase - 1, 4));
+            if (soft & FSF_UNDERLINED)
+                rteFill(t, pen, x, baseY + 1, x + w - 1, baseY + 1);
+            x += w;
+            k = runEnd;
+            continue;
         }
+
+        tab = data->widths[(font == data->codeFont ? 2 : 0) +
+                           ((style & RTE_S_BOLD) ? 1 : 0)];
+        runW = 0;
+        for (j = k; j < runEnd; j++)
+            runW += rteRunGlyphWidth(tab, RTE_GLYPH_FAST(p, j));
 
         if ((style & RTE_S_CODE) && !selected) {
             rteFill(t, rteCodeBgPen(data, p), runX - 1,
@@ -805,31 +886,51 @@ static void rteDrawLineText(struct RTEData *data, Object *obj,
         }
         SetAPen(rp, pen);
 
-        /* Clip the run to what the target can hold */
+        /* The run's characters in the system codeset, clipped to what the
+         * target can hold and drawn in pieces of a small buffer */
         {
-            ULONG a = k, b = runEnd;
-            LONG ax = runX;
-            UWORD *tab = data->widths[(font == data->codeFont ? 2 : 0) +
-                                      ((style & RTE_S_BOLD) ? 1 : 0)];
+            UBYTE buf[RTE_DRAW_BUF];
+            ULONG nb = 0;
+            LONG cx = runX, bx = runX;
             LONG limitL = t->buffered ? t->clipL - RTE_DB_MARGIN + 2 : t->clipL;
             LONG limitR = t->buffered ? t->clipR + RTE_DB_MARGIN - 8 : t->clipR;
-            LONG bx;
-            while (a < b && ax < limitL) {
-                ax += tab[p->text[a]];
-                a++;
-            }
-            bx = ax;
-            {
-                ULONG c2 = a;
-                while (c2 < b && bx + tab[p->text[c2]] <= limitR) {
-                    bx += tab[p->text[c2]];
-                    c2++;
+            BOOL started = FALSE, done = FALSE;
+            for (j = k; j < runEnd && !done; j++) {
+                UBYTE b[8];
+                ULONG n, q;
+                UWORD g = RTE_GLYPH_FAST(p, j);
+                if (RTE_G_KIND(g) == RTE_G_CONT)
+                    continue;
+                n = rteGlyphBytes(g, b);
+                for (q = 0; q < n; q++) {
+                    LONG w = tab[b[q]];
+                    if (!started) {
+                        if (cx < limitL) {
+                            cx += w;
+                            continue;
+                        }
+                        started = TRUE;
+                        bx = cx;
+                    }
+                    if (cx + w > limitR) {
+                        done = TRUE;
+                        break;
+                    }
+                    if (nb == sizeof(buf)) {
+                        if (bx <= t->clipR) {
+                            Move(rp, bx, baseY);
+                            Text(rp, (STRPTR)buf, nb);
+                        }
+                        bx = cx;
+                        nb = 0;
+                    }
+                    buf[nb++] = b[q];
+                    cx += w;
                 }
-                b = c2;
             }
-            if (b > a && ax <= t->clipR) {
-                Move(rp, ax, baseY);
-                Text(rp, (STRPTR)p->text + a, b - a);
+            if (nb > 0 && bx <= t->clipR) {
+                Move(rp, bx, baseY);
+                Text(rp, (STRPTR)buf, nb);
             }
         }
         if (style & RTE_S_STRIKE) {
@@ -1039,23 +1140,31 @@ static void rteDrawPlaceholder(struct RTEData *data, Object *obj) {
     struct RastPort *rp = _rp(obj);
     LONG x = data->viewLeft + RTE_PAD_X;
     LONG y = data->viewTop + RTE_PAD_Y + data->fontBaseline - data->scrollY;
-    ULONG len = strlen(data->inactiveContents);
+    STRPTR text = data->inactiveContents;
+    STRPTR converted = NULL;
+    ULONG len;
     struct TextExtent te;
     ULONG fit;
-    APTR clip = MUI_AddClipping(muiRenderInfo(obj), data->viewLeft,
+    APTR clip;
+    if (data->utf8 && (converted = rteFromUTF8(text, -1, NULL)) != NULL)
+        text = converted;
+    len = strlen(text);
+    clip = MUI_AddClipping(muiRenderInfo(obj), data->viewLeft,
                                 data->viewTop, data->viewWidth,
                                 data->viewHeight);
     SetFont(rp, data->font);
     SetSoftStyle(rp, FSF_ITALIC, FSF_BOLD | FSF_ITALIC | FSF_UNDERLINED);
     SetAPen(rp, data->pens[RTE_PEN_DIM]);
     SetDrMd(rp, JAM1);
-    fit = TextFit(rp, data->inactiveContents, len, &te, NULL, 1,
+    fit = TextFit(rp, text, len, &te, NULL, 1,
                   RTE_MAX(data->viewWidth - 2 * RTE_PAD_X, 1),
                   data->fontHeight + 1);
     Move(rp, x, y);
-    Text(rp, data->inactiveContents, fit);
+    Text(rp, text, fit);
     SetSoftStyle(rp, 0, FSF_BOLD | FSF_ITALIC | FSF_UNDERLINED);
     MUI_RemoveClipping(muiRenderInfo(obj), clip);
+    if (converted != NULL)
+        FreeVec(converted);
 }
 
 /**

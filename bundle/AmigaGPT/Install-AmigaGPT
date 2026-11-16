@@ -324,6 +324,13 @@
     (set #class-type "mcp")
     (set #class-file "BestTextEditor.mcp")
     (p_install-class)
+    ; the colour emoji BestTextEditor.mcc draws, the same file on every OS
+    (working (#installing "BestTextEditor.emoji"))
+    (copyfiles
+      (source "MCC/BestTextEditor.emoji")
+      (dest #muidir)
+      (optional "force" "askuser")
+    )
   )
 )
 

@@ -70,7 +70,7 @@ static void showTranscript(void) {
                  MUIV_BestTextEditor_ScrollTo_Bottom);
 }
 
-/* Add local character set text to the transcript. The text may hold the
+/* Add UTF-8 text to the transcript. The text may hold the
  * view's formatting codes; the copy kept here survives the window being
  * rebuilt, the view only ever gets the new part appended */
 static void appendTranscript(CONST_STRPTR text) {
@@ -154,7 +154,7 @@ static void appendTrimmed(CONST_STRPTR text) {
  * Add one block of the conversation in the style of its kind: the user's
  * and the agent's messages in chat bubbles, reasoning and tool calls as
  * coloured text between them
- * @param text the text in the local character set, without format codes
+ * @param text the text in UTF-8, without format codes
  **/
 static void appendBlock(AgentOutputKind kind, CONST_STRPTR text) {
     UBYTE codes[40];
@@ -212,6 +212,14 @@ static void appendBlock(AgentOutputKind kind, CONST_STRPTR text) {
     lastBlockKind = kind;
 }
 
+/* A block of text in the local character set, such as a catalog string */
+static void appendLocalBlock(AgentOutputKind kind, CONST_STRPTR text) {
+    STRPTR utf8 = agentToUtf8(text);
+    appendBlock(kind, utf8 != NULL ? utf8 : text);
+    if (utf8 != NULL)
+        FreeVec(utf8);
+}
+
 static void clearTranscript(void) {
     lastBlockKind = -1;
     agentTranscriptLength = 0;
@@ -221,9 +229,10 @@ static void clearTranscript(void) {
         DoMethod(agentOutput, MUIM_TextEditor_ClearText);
 }
 
-/* Transcript text arrives from the agent in UTF-8 */
+/* Transcript text arrives from the agent in UTF-8, which the view shows as
+ * it is, emoji included */
 static void agentOutputReceived(AgentOutputKind kind, CONST_STRPTR text) {
-    STRPTR local = agentToLocal(text);
+    STRPTR local = agentDuplicate(text);
     STRPTR p;
     if (local == NULL)
         return;
@@ -391,7 +400,7 @@ static void showSessionTranscript(void) {
     clearTranscript();
     agentRenderSession(agentOutputReceived);
     if (agentTranscriptLength == 0)
-        appendBlock(AGENT_OUTPUT_INFO, STRING_AGENT_WELCOME);
+        appendLocalBlock(AGENT_OUTPUT_INFO, STRING_AGENT_WELCOME);
     showTranscript();
 }
 
@@ -638,7 +647,8 @@ HOOKPROTONHNONP(AgentSendDeferredFunc, void) {
             FreeVec(shown);
     }
     showTranscript();
-    prompt = agentToUtf8(text);
+    /* the prompt editor gives UTF-8, the AROS string gadget local text */
+    prompt = isAROS ? agentToUtf8(text) : agentDuplicate(text);
     if (freeText)
         FreeVec(text);
     if (isAROS)
@@ -787,7 +797,7 @@ Object *createAgentPage(void) {
     }
 
     agentInputEditor =
-        createPromptInputEditor(&AgentSendButtonClickedHook, 0, 0);
+        createPromptInputEditor(&AgentSendButtonClickedHook, 0, 0, TRUE);
     agentOutputScroller = createTranscriptView(&agentOutput);
     /* The transcript outlives the window, which is rebuilt when the fonts
      * change */
@@ -940,7 +950,11 @@ void agentPageWindowOpened(void) {
     if (agentTranscriptLength == 0) {
         agentRenderSession(agentOutputReceived);
         if (agentTranscriptLength == 0) {
-            appendTranscript(STRING_AGENT_WELCOME);
+            STRPTR welcome = agentToUtf8(STRING_AGENT_WELCOME);
+            appendTranscript(welcome != NULL ? welcome
+                                             : (STRPTR)STRING_AGENT_WELCOME);
+            if (welcome != NULL)
+                FreeVec(welcome);
             appendTranscript("\n");
             showTranscript();
         }

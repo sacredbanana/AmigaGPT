@@ -64,8 +64,9 @@ Requirements:
   into MUI:Libs/MUI (AmigaOS) or SYS:Classes/MUI (MorphOS)
 - MCC_BestTextEditor, shipped with this archive. It shows every
   conversation and text field, and its look can be changed on its page in
-  the MUI settings. The installer copies BestTextEditor.mcc and
-  BestTextEditor.mcp next to AudioPlayer.mcc
+  the MUI settings. The installer copies BestTextEditor.mcc,
+  BestTextEditor.mcp and BestTextEditor.emoji (its colour emoji) next to
+  AudioPlayer.mcc
 - A PNG datatype - Any will do, but here is one
   (https://aminet.net/util/dtype/vPNGdt.lha)
 - An active API key for at least one supported provider (OpenAI, Google
@@ -1278,6 +1279,16 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+-------
+Twemoji
+-------
+
+The colour emoji in BestTextEditor.emoji are the Twemoji graphics
+(https://github.com/jdecked/twemoji), copyright Twitter, Inc and other
+contributors, licensed under CC-BY 4.0
+(https://creativecommons.org/licenses/by/4.0/). They have been scaled to
+20 pixels and reduced to 255 colours.
 
 -----
 Flite

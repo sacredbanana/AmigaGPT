@@ -42,12 +42,14 @@ static void rteFreeParaBuffers(struct RTEData *data, struct RTEPara *p) {
     rteFree(data, p->text, p->cap);
     rteFree(data, p->attrs, p->attrCap * sizeof(UWORD));
     rteFree(data, p->md, p->mdCap * sizeof(UWORD));
+    rteFree(data, p->glyphs, p->glyphCap * sizeof(UWORD));
     rteFree(data, p->lines, p->maxLines * sizeof(struct RTELine));
     p->text = NULL;
     p->attrs = NULL;
     p->md = NULL;
+    p->glyphs = NULL;
     p->lines = NULL;
-    p->cap = p->attrCap = p->mdCap = 0;
+    p->cap = p->attrCap = p->mdCap = p->glyphCap = p->glyphLen = 0;
     p->maxLines = p->numLines = 0;
 }
 
@@ -194,6 +196,7 @@ BOOL rteInitDocument(struct RTEData *data) {
     NewList((struct List *)&data->undoList);
     NewList((struct List *)&data->redoList);
     NewList((struct List *)&data->images);
+    NewList((struct List *)&data->emoji);
     return TRUE;
 }
 
@@ -294,8 +297,9 @@ BOOL rteIsWordChar(UBYTE c) {
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
         (c >= '0' && c <= '9') || c == '_')
         return TRUE;
-    /* Latin-1 letters */
-    return c >= 0xc0 && c != 0xd7 && c != 0xf7;
+    /* Every byte of a UTF-8 sequence: letters of other scripts are words,
+     * and a word boundary never falls inside a character */
+    return c >= 0x80;
 }
 
 static void rteShiftBookmarks(struct RTEData *data, ULONG index, LONG delta,
@@ -527,6 +531,7 @@ static BOOL rteParaInsert(struct RTEData *data, struct RTEPara *p, ULONG off,
     }
     memmove(p->text + off + len, p->text + off, p->len - off + 1);
     CopyMem((APTR)text, p->text + off, len);
+    p->glyphLen = 0;
     if (p->attrs != NULL) {
         memmove(p->attrs + off + len, p->attrs + off,
                 (p->len - off) * sizeof(UWORD));
@@ -545,6 +550,7 @@ static void rteParaRemove(struct RTEData *data, struct RTEPara *p, ULONG from,
     if (to <= from)
         return;
     memmove(p->text + from, p->text + to, p->len - to + 1);
+    p->glyphLen = 0;
     if (p->attrs != NULL)
         memmove(p->attrs + from, p->attrs + to, (p->len - to) * sizeof(UWORD));
     p->len -= to - from;
@@ -651,6 +657,7 @@ BOOL rteInsertText(struct RTEData *data, struct RTEPos pos, CONST_STRPTR text,
         p = &data->paras[pos.para];
         p->len = pos.offset;
         p->text[p->len] = '\0';
+        p->glyphLen = 0;
 
         for (i = 0; i <= len; i++) {
             if (i == len || text[i] == '\n') {
@@ -729,6 +736,7 @@ BOOL rteDeleteRange(struct RTEData *data, struct RTEPos from, struct RTEPos to,
         ULONG tailLen = last->len - to.offset;
         first->len = from.offset;
         first->text[first->len] = '\0';
+        first->glyphLen = 0;
         if (tailLen > 0) {
             if (last->attrs != NULL && first->attrs == NULL)
                 rteParaEnsureAttrs(data, first);
@@ -1280,7 +1288,8 @@ static void rteImpParse(struct RTEData *data, struct RTEImporter *imp,
         rteImpPut(imp, c);
         if (c == ' ')
             lastSpace = l->len - 1;
-        column++;
+        if ((c & 0xc0) != 0x80)
+            column++;
         i++;
 
         if (wrap > 0 && column > wrap && lastSpace != (ULONG)-1) {
@@ -1445,6 +1454,7 @@ BOOL rteImport(struct RTEData *data, struct RTEPos pos, CONST_STRPTR text,
             if (imp.numLines > 1) {
                 p->len = pos.offset;
                 p->text[p->len] = '\0';
+                p->glyphLen = 0;
             }
             rteParaInsert(data, p, pos.offset, l->text,
                           l->anyAttr ? l->attrs : NULL, l->len);
@@ -1615,7 +1625,8 @@ static void rteExportSlice(struct RTEData *data, struct RTEOut *o,
             }
         }
         rteOutChar(o, c);
-        column++;
+        if ((c & 0xc0) != 0x80)
+            column++;
         if (c == ' ')
             lastSpaceOut = o->len - 1;
         if (wrap > 0 && column > wrap && lastSpaceOut != (ULONG)-1 &&
@@ -1790,8 +1801,16 @@ void rteSetBlockAttrs(struct RTEData *data, struct RTEPos from,
 /* Search                                                                    */
 /* ------------------------------------------------------------------------ */
 
-static UBYTE rteFold(UBYTE c) {
-    if ((c >= 'A' && c <= 'Z') || (c >= 0xc0 && c <= 0xde && c != 0xd7))
+/**
+ * Lower case of the byte at s[k] for matching: ASCII, and the Latin-1
+ * letters, whose UTF-8 form is 0xc3 and a second byte 0x80-0x9e
+ */
+static UBYTE rteFold(CONST_STRPTR s, ULONG k) {
+    UBYTE c = s[k];
+    if (c >= 'A' && c <= 'Z')
+        return c + 32;
+    if (k > 0 && (UBYTE)s[k - 1] == 0xc3 && c >= 0x80 && c <= 0x9e &&
+        c != 0x97)
         return c + 32;
     return c;
 }
@@ -1801,9 +1820,13 @@ static BOOL rteMatchAt(CONST_STRPTR text, ULONG len, ULONG at,
     ULONG k;
     if (at + plen > len)
         return FALSE;
+    /* never match from the middle of a character */
+    if (((UBYTE)text[at] & 0xc0) == 0x80)
+        return FALSE;
     for (k = 0; k < plen; k++) {
         UBYTE a = text[at + k], b = pattern[k];
-        if (caseSensitive ? a != b : rteFold(a) != rteFold(b))
+        if (caseSensitive ? a != b
+                          : rteFold(text + at, k) != rteFold(pattern, k))
             return FALSE;
     }
     return TRUE;

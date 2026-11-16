@@ -8,9 +8,9 @@
  * lower without running any of its code, so a .mcp below that never shows
  * up in MUI preferences. */
 #define LIB_VERSION 20
-#define LIB_REVISION 0
+#define LIB_REVISION 1
 #define LIB_DATE "16.11.2026"
-#define LIB_REV_STRING "20.0"
+#define LIB_REV_STRING "20.1"
 #define LIB_COPYRIGHT "Copyright (C) 2026 Cameron Armstrong"
 
 #endif

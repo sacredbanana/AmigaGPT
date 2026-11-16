@@ -58,6 +58,11 @@
 #define SOCKET_READ_MAX_IDLE_SECONDS 180
 #define OPENAI_FILE_BOUNDARY "----AmigaGPTFormBoundary"
 
+/* Only the daemon needs this. Its replies go to ARexx scripts and shells in
+ * the system codeset, where emoji and other characters outside it turn into
+ * "?". The GUI shows replies in BestTextEditor's UTF-8 views, which draw them,
+ * so the model may answer in any character there. */
+#ifdef DAEMON
 static CONST_STRPTR AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS =
     "Output text using characters that can be represented or sensibly remapped "
     "for the Amiga character set. Normal letters used in European languages "
@@ -66,6 +71,9 @@ static CONST_STRPTR AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS =
     "cleanly. Avoid typographic quotes, em/en dashes, ellipses, bullets, and "
     "other decorative Unicode punctuation; use simple plain-text equivalents "
     "instead.";
+#else
+static CONST_STRPTR AMIGA_CHARACTER_SET_OUTPUT_INSTRUCTIONS = NULL;
+#endif
 
 /* System-prompt addendum injected when the active speech profile is xAI TTS
  * and the user has enabled automatic speech tag insertion. Teaches the LLM

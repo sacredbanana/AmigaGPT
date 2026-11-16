@@ -5,6 +5,8 @@
  * AmigaOS 4 and MorphOS. The class needs datatypes.library (inline images)
  * and diskfont.library (fonts from the preferences); both are optional and
  * opened once here, since one copy of the library serves every program.
+ * The system codeset is read from codesets.library (also optional) here too,
+ * and the emoji set is unloaded when the library is expunged.
  */
 #include <libraries/mui.h>
 #include <proto/exec.h>
@@ -44,6 +46,7 @@ struct DiskfontIFace *IDiskfont = NULL;
 #endif
 
 BOOL ClassInit(UNUSED struct Library *base) {
+    rteInitUnicode();
     rteDataTypesBase = OpenLibrary("datatypes.library", 39);
     DiskfontBase = OpenLibrary("diskfont.library", 36);
 #if defined(__AMIGAOS4__)
@@ -64,6 +67,7 @@ BOOL ClassInit(UNUSED struct Library *base) {
 }
 
 VOID ClassExpunge(UNUSED struct Library *base) {
+    rteFreeUnicode();
 #if defined(__AMIGAOS4__)
     if (IDiskfont != NULL)
         DropInterface((struct Interface *)IDiskfont);

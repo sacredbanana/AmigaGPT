@@ -279,9 +279,12 @@ void rteNotifyState(struct RTEData *data, Object *obj) {
         data->nRedo = redo;
         rteNotifyAttr(data, obj, MUIA_TextEditor_RedoAvailable, redo);
     }
-    if ((LONG)data->cursor.offset != data->nCursorX) {
-        data->nCursorX = data->cursor.offset;
-        rteNotifyAttr(data, obj, MUIA_TextEditor_CursorX, data->cursor.offset);
+    {
+        LONG column = (LONG)rteOffsetToColumn(data, p, data->cursor.offset);
+        if (column != data->nCursorX) {
+            data->nCursorX = column;
+            rteNotifyAttr(data, obj, MUIA_TextEditor_CursorX, column);
+        }
     }
     if ((LONG)data->cursor.para != data->nCursorY) {
         data->nCursorY = data->cursor.para;
@@ -382,6 +385,40 @@ static STRPTR rteDupString(CONST_STRPTR s) {
     return copy;
 }
 
+/**
+ * Import text in the application's encoding (see MUIA_BestTextEditor_UTF8)
+ */
+static BOOL rteImportApi(struct RTEData *data, struct RTEPos pos,
+                         CONST_STRPTR text, LONG length, BOOL raw, ULONG hook,
+                         struct RTEPos *endPos, BOOL recordUndo) {
+    STRPTR utf8;
+    ULONG len;
+    BOOL ok;
+    if (data->utf8)
+        return rteImport(data, pos, text, length, raw, hook, endPos,
+                         recordUndo);
+    utf8 = rteToUTF8(text, length, &len);
+    if (utf8 == NULL) {
+        rteHandleError(data, data->obj, Error_MemoryAllocationFailed);
+        return FALSE;
+    }
+    ok = rteImport(data, pos, utf8, (LONG)len, raw, hook, endPos, recordUndo);
+    FreeVec(utf8);
+    return ok;
+}
+
+/** Export a range in the application's encoding */
+static STRPTR rteExportApi(struct RTEData *data, struct RTEPos from,
+                           struct RTEPos to, ULONG hook, ULONG wrap) {
+    STRPTR text = rteExport(data, from, to, hook, wrap);
+    STRPTR converted;
+    if (text == NULL || data->utf8)
+        return text;
+    converted = rteFromUTF8(text, -1, NULL);
+    FreeVec(text);
+    return converted;
+}
+
 static void rteSetContents(struct RTEData *data, Object *obj,
                            CONST_STRPTR text) {
     struct RTEPos start = {0, 0};
@@ -389,7 +426,8 @@ static void rteSetContents(struct RTEData *data, Object *obj,
     rteFreeUndo(data, FALSE);
     data->nextBubbleId = 1;
     if (text != NULL && text[0] != '\0')
-        rteImport(data, start, text, -1, FALSE, data->importHook, NULL, FALSE);
+        rteImportApi(data, start, text, -1, FALSE, data->importHook, NULL,
+                     FALSE);
     data->cursor.para = data->cursor.offset = 0;
     data->anchor = data->cursor;
     data->marking = FALSE;
@@ -482,6 +520,14 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
     CONST_STRPTR contents = NULL;
     BOOL setContents = FALSE;
 
+    /* The encoding applies to every other attribute in the same call */
+    if ((tag = FindTagItem(MUIA_BestTextEditor_UTF8, taglist)) != NULL &&
+        (tag->ti_Data != 0) != data->utf8) {
+        data->utf8 = tag->ti_Data != 0;
+        data->nCursorX = -1;
+        data->drawAll = TRUE;
+    }
+
     while ((tag = NextTagItem(&tags)) != NULL) {
         IPTR v = tag->ti_Data;
         switch (tag->ti_Tag) {
@@ -520,7 +566,7 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             break;
         case MUIA_TextEditor_CursorIndex:
             if (!data->notifying) {
-                data->cursor = rteIndexToPos(data, v);
+                data->cursor = rteApiIndexToPos(data, v);
                 data->anchor = data->cursor;
                 data->marking = FALSE;
                 if (!init) {
@@ -532,10 +578,21 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
         case MUIA_TextEditor_CursorX:
         case MUIA_TextEditor_CursorY:
             if (!data->notifying) {
-                if (tag->ti_Tag == MUIA_TextEditor_CursorX)
-                    data->cursor.offset = v;
-                else
+                if (tag->ti_Tag == MUIA_TextEditor_CursorX) {
+                    rteClampPos(data, &data->cursor);
+                    data->cursor.offset = rteColumnToOffset(
+                        data, &data->paras[data->cursor.para], v);
+                } else {
+                    ULONG column;
+                    rteClampPos(data, &data->cursor);
+                    column = rteOffsetToColumn(
+                        data, &data->paras[data->cursor.para],
+                        data->cursor.offset);
                     data->cursor.para = v;
+                    rteClampPos(data, &data->cursor);
+                    data->cursor.offset = rteColumnToOffset(
+                        data, &data->paras[data->cursor.para], column);
+                }
                 rteClampPos(data, &data->cursor);
                 data->anchor = data->cursor;
                 data->marking = FALSE;
@@ -784,6 +841,8 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
         case MUIA_BestTextEditor_CodeFont:
             data->userCodeFont = (struct TextFont *)v;
             break;
+        case MUIA_BestTextEditor_UTF8:
+            break; /* applied before the loop */
         case MUIA_Disabled:
             data->disabled = v != 0;
             data->drawAll = TRUE;
@@ -859,6 +918,11 @@ static IPTR mNew(struct IClass *cl, Object *obj, struct opSet *msg) {
     data->nCursorX = data->nCursorY = -1;
     data->nPropEntries = data->nPropVisible = data->nPropFirst = -1;
     data->nHPropEntries = data->nHPropVisible = data->nHPropFirst = -1;
+    {
+        UWORD i;
+        for (i = 0; i < 256; i++)
+            data->emojiPens[i] = -1;
+    }
     rteSetDefaultBubbleStyles(data);
     if (!rteInitDocument(data)) {
         CoerceMethod(cl, obj, OM_DISPOSE);
@@ -907,7 +971,7 @@ static IPTR mGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         *store = data->convertTabs;
         return TRUE;
     case MUIA_TextEditor_CursorIndex:
-        *store = rtePosToIndex(data, data->cursor);
+        *store = rtePosToApiIndex(data, data->cursor);
         return TRUE;
     case MUIA_TextEditor_CursorPosition: {
         static struct Rectangle rect;
@@ -928,7 +992,8 @@ static IPTR mGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         return TRUE;
     }
     case MUIA_TextEditor_CursorX:
-        *store = data->cursor.offset;
+        *store = rteOffsetToColumn(data, &data->paras[data->cursor.para],
+                                   data->cursor.offset);
         return TRUE;
     case MUIA_TextEditor_CursorY:
         *store = data->cursor.para;
@@ -1083,6 +1148,9 @@ static IPTR mGet(struct IClass *cl, Object *obj, struct opGet *msg) {
         rteEnsureLayout(data, obj);
         *store = rteViewAtBottom(data);
         return TRUE;
+    case MUIA_BestTextEditor_UTF8:
+        *store = data->utf8;
+        return TRUE;
     }
     return DoSuperMethodA(cl, obj, (Msg)msg);
 }
@@ -1094,6 +1162,8 @@ static IPTR mSetup(struct IClass *cl, Object *obj, Msg msg) {
     rteReadConfig(data, obj);
     rteSetupFonts(data, obj);
     rteObtainPens(data, obj);
+    /* the emoji index is loaded once, by the first object set up */
+    rteEmojiReady();
     data->setup = TRUE;
     data->dbFailed = FALSE;
     data->layoutWidth = 0;
@@ -1124,6 +1194,7 @@ static IPTR mCleanup(struct IClass *cl, Object *obj, Msg msg) {
     data->selecting = FALSE;
     rteFreeDoubleBuffer(data);
     rteFreeImages(data);
+    rteFreeEmojiBitMaps(data, obj);
     rteReleasePens(data, obj);
     if (data->ownCodeFont && data->codeFont != NULL)
         CloseFont(data->codeFont);
@@ -1321,7 +1392,8 @@ static IPTR mExportText(struct IClass *cl, Object *obj, Msg msg) {
     (void)obj;
     to.para = data->numParas - 1;
     to.offset = data->paras[to.para].len;
-    return (IPTR)rteExport(data, from, to, data->exportHook, data->exportWrap);
+    return (IPTR)rteExportApi(data, from, to, data->exportHook,
+                              data->exportWrap);
 }
 
 static void rteResolveBlockCoords(struct RTEData *data, LONG sx, LONG sy,
@@ -1336,10 +1408,12 @@ static void rteResolveBlockCoords(struct RTEData *data, LONG sx, LONG sy,
         sy = data->numParas - 1;
     from->para = sy;
     to->para = ey;
-    from->offset = (sx == MUIV_TextEditor_SetBlock_Min || sx < 0) ? 0 : sx;
+    from->offset = (sx == MUIV_TextEditor_SetBlock_Min || sx < 0)
+                       ? 0
+                       : rteColumnToOffset(data, &data->paras[sy], sx);
     to->offset = ex == MUIV_TextEditor_SetBlock_Max || ex < 0
                      ? data->paras[ey].len
-                     : (ULONG)ex;
+                     : rteColumnToOffset(data, &data->paras[ey], ex);
     rteClampPos(data, from);
     rteClampPos(data, to);
 }
@@ -1364,7 +1438,8 @@ static IPTR mExportBlock(struct IClass *cl, Object *obj,
         from.offset = 0;
         to.offset = data->paras[to.para].len;
     }
-    return (IPTR)rteExport(data, from, to, data->exportHook, data->exportWrap);
+    return (IPTR)rteExportApi(data, from, to, data->exportHook,
+                              data->exportWrap);
 }
 
 static IPTR mInsertText(struct IClass *cl, Object *obj,
@@ -1395,8 +1470,8 @@ static IPTR mInsertText(struct IClass *cl, Object *obj,
         break;
     }
     rteUndoBeginGroup(data);
-    if (rteImport(data, pos, msg->text, -1, FALSE, data->importHook, &end,
-                  TRUE) &&
+    if (rteImportApi(data, pos, msg->text, -1, FALSE, data->importHook, &end,
+                     TRUE) &&
         msg->pos == MUIV_TextEditor_InsertText_Cursor) {
         data->cursor = end;
         data->anchor = end;
@@ -1423,9 +1498,9 @@ static IPTR mAppend(struct IClass *cl, Object *obj,
     pos.offset = data->paras[pos.para].len;
     cursorAtEnd = rteComparePos(data->cursor, pos) == 0;
     data->importCarry = TRUE;
-    ok = rteImport(data, pos, msg->text, msg->length,
-                   (msg->flags & MUIF_BestTextEditor_Append_Raw) != 0,
-                   MUIV_TextEditor_ImportHook_Plain, NULL, FALSE);
+    ok = rteImportApi(data, pos, msg->text, msg->length,
+                      (msg->flags & MUIF_BestTextEditor_Append_Raw) != 0,
+                      MUIV_TextEditor_ImportHook_Plain, NULL, FALSE);
     data->importCarry = FALSE;
     if (!ok)
         return FALSE;
@@ -1483,11 +1558,12 @@ static IPTR mBlockInfo(struct IClass *cl, Object *obj,
         return FALSE;
     rteOrderedSelection(data, &from, &to);
     if (msg->startx != NULL)
-        *msg->startx = from.offset;
+        *msg->startx =
+            rteOffsetToColumn(data, &data->paras[from.para], from.offset);
     if (msg->starty != NULL)
         *msg->starty = from.para;
     if (msg->stopx != NULL)
-        *msg->stopx = to.offset;
+        *msg->stopx = rteOffsetToColumn(data, &data->paras[to.para], to.offset);
     if (msg->stopy != NULL)
         *msg->stopy = to.para;
     return TRUE;
@@ -1500,25 +1576,34 @@ static IPTR mCursorXYToIndex(struct IClass *cl, Object *obj,
     BOOL valid = msg->y >= 0 && (ULONG)msg->y < data->numParas && msg->x >= 0;
     (void)obj;
     pos.para = msg->y < 0 ? 0 : msg->y;
-    pos.offset = msg->x < 0 ? 0 : msg->x;
-    if (valid && (ULONG)msg->x > data->paras[msg->y].len)
+    pos.offset = 0;
+    rteClampPos(data, &pos);
+    if (valid && (ULONG)msg->x > rteOffsetToColumn(data, &data->paras[msg->y],
+                                                    data->paras[msg->y].len))
         valid = FALSE;
+    pos.offset = rteColumnToOffset(data, &data->paras[pos.para],
+                                   msg->x < 0 ? 0 : msg->x);
     rteClampPos(data, &pos);
     if (msg->index != NULL)
-        *msg->index = rtePosToIndex(data, pos);
+        *msg->index = rtePosToApiIndex(data, pos);
     return valid;
 }
 
 static IPTR mIndexToCursorXY(struct IClass *cl, Object *obj,
                              struct MUIP_TextEditor_IndexToCursorXY *msg) {
     struct RTEData *data = INST_DATA(cl, obj);
-    struct RTEPos pos = rteIndexToPos(data, msg->index < 0 ? 0 : msg->index);
+    struct RTEPos pos =
+        rteApiIndexToPos(data, msg->index < 0 ? 0 : msg->index);
+    struct RTEPos last;
     (void)obj;
     if (msg->x != NULL)
-        *msg->x = pos.offset;
+        *msg->x = rteOffsetToColumn(data, &data->paras[pos.para], pos.offset);
     if (msg->y != NULL)
         *msg->y = pos.para;
-    return msg->index >= 0 && (ULONG)msg->index <= data->totalLength;
+    last.para = data->numParas - 1;
+    last.offset = data->paras[last.para].len;
+    return msg->index >= 0 &&
+           (ULONG)msg->index <= rtePosToApiIndex(data, last);
 }
 
 static IPTR mSearch(struct IClass *cl, Object *obj,
@@ -1526,7 +1611,14 @@ static IPTR mSearch(struct IClass *cl, Object *obj,
     struct RTEData *data = INST_DATA(cl, obj);
     BOOL found;
     rteInvalidateRange(data, 0, 0x3fffffff);
-    found = rteSearch(data, msg->SearchString, msg->Flags);
+    if (data->utf8 || msg->SearchString == NULL) {
+        found = rteSearch(data, msg->SearchString, msg->Flags);
+    } else {
+        STRPTR utf8 = rteToUTF8(msg->SearchString, -1, NULL);
+        found = utf8 != NULL && rteSearch(data, utf8, msg->Flags);
+        if (utf8 != NULL)
+            FreeVec(utf8);
+    }
     if (found) {
         rteMakeCursorVisible(data, obj);
         if (data->readOnly && data->shown) {
@@ -1555,8 +1647,8 @@ static IPTR mReplace(struct IClass *cl, Object *obj,
     rteDeleteRange(data, from, to, TRUE);
     data->cursor = from;
     if (msg->NewString != NULL &&
-        rteImport(data, from, msg->NewString, -1, TRUE,
-                  MUIV_TextEditor_ImportHook_Plain, &end, TRUE))
+        rteImportApi(data, from, msg->NewString, -1, TRUE,
+                     MUIV_TextEditor_ImportHook_Plain, &end, TRUE))
         data->cursor = end;
     data->anchor = data->cursor;
     data->marking = FALSE;
@@ -1605,9 +1697,9 @@ static IPTR mTestPos(struct IClass *cl, Object *obj,
                 data, p, &p->lines[rteLineAtY(p, docY)],
                 mx - data->viewLeft - RTE_PAD_X + data->scrollX);
         if (msg->index != NULL)
-            *msg->index = rtePosToIndex(data, pos);
+            *msg->index = rtePosToApiIndex(data, pos);
         if (msg->cursorx != NULL)
-            *msg->cursorx = pos.offset;
+            *msg->cursorx = rteOffsetToColumn(data, p, pos.offset);
         if (msg->cursory != NULL)
             *msg->cursory = pos.para;
     }

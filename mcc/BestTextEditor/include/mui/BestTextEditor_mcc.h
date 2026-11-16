@@ -27,6 +27,24 @@
  *     for streaming text.
  *   - Justified text, overwrite mode and keyboard macros (the parts of the
  *     TextEditor.mcc API it documents as "not yet implemented").
+ *   - Unicode: the text is kept as UTF-8. Characters of the system codeset
+ *     are drawn with the Amiga font, common characters it lacks (curly
+ *     quotes, dashes, ellipsis, arrows, box drawing...) with look-alikes,
+ *     and emoji in colour, including skin tones, flags and ZWJ sequences,
+ *     from BestTextEditor.emoji (Twemoji graphics, CC-BY 4.0), which sits
+ *     next to the class. Anything else shows as a box.
+ *
+ * Text encoding
+ *   By default every string given to or returned by the class (contents,
+ *   inserted and exported text, ARexx commands, search strings, keywords,
+ *   links) is in the system codeset, exactly as with TextEditor.mcc, and
+ *   cursor columns count the characters of that text. Characters the
+ *   system codeset cannot hold come out as '?' (or their look-alike).
+ *   With MUIA_BestTextEditor_UTF8 set, those strings are UTF-8 and cursor
+ *   columns and indexes are byte offsets into the UTF-8 text. Typed text
+ *   and the clipboard are converted either way: copying writes an FTXT
+ *   CHRS chunk in the system codeset and a UTF8 chunk, and pasting prefers
+ *   the UTF8 chunk.
  *
  * Extra escape sequences understood by the import (at the start of a line):
  *   ESC [B:n]    start a new bubble using bubble style n (1..8); the bubble
@@ -69,6 +87,7 @@
 #define MUIA_BestTextEditor_AtBottom        (BestTextEditor_Dummy + 0x0d) /* ..G BOOL           */
 #define MUIA_BestTextEditor_SubmitEmpty     (BestTextEditor_Dummy + 0x0e) /* ISG BOOL           */
 #define MUIA_BestTextEditor_CodeFont        (BestTextEditor_Dummy + 0x0f) /* I.. struct TextFont * */
+#define MUIA_BestTextEditor_UTF8            (BestTextEditor_Dummy + 0x10) /* ISG BOOL           */
 
 /* Methods */
 #define MUIM_BestTextEditor_Append          (BestTextEditor_Dummy + 0x40)
@@ -80,6 +99,9 @@ struct MUIP_BestTextEditor_ScrollTo { ULONG MethodID; LONG where; };
 
 /* Flags for MUIM_BestTextEditor_Append */
 #define MUIF_BestTextEditor_Append_Raw      (1 << 0) /* no escape sequences */
+/* The text of MUIM_BestTextEditor_Append is in the same encoding as all
+ * other text (MUIA_BestTextEditor_UTF8). In UTF-8 a character may be split
+ * between two calls: it shows correctly once its last byte arrives. */
 #define MUIF_BestTextEditor_Append_NoScroll (1 << 1) /* never follow the end */
 
 /* Values for MUIM_BestTextEditor_ScrollTo */

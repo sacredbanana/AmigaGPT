@@ -13,7 +13,7 @@ MCP = $(OUT_DIR)/BestTextEditor_$(PLATFORM).mcp
 
 MCC_SOURCES = src/library.c src/BestTextEditor.c src/BestTextEditorBuffer.c \
 	src/BestTextEditorDraw.c src/BestTextEditorInput.c \
-	src/BestTextEditorLayout.c
+	src/BestTextEditorLayout.c src/BestTextEditorText.c
 MCP_SOURCES = mcp/library.c mcp/BestTextEditorPrefs.c mcp/catalog.c
 
 MCC_OBJECTS = $(patsubst src/%.c,$(BUILD_DIR)/mcc/%.o,$(MCC_SOURCES))
