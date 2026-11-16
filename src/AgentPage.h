@@ -26,6 +26,11 @@ void addAgentPageActions(void);
 Object *agentPagePromptEditor(void);
 
 /**
+ * The view showing the agent's conversation, for the Edit menu
+ **/
+Object *agentPageTranscriptView(void);
+
+/**
  * Show the saved session and colour the buttons. Call once the main window
  * is open and the pens are allocated.
  **/
@@ -41,17 +46,6 @@ void agentPageColorButtons(void);
  * Lock or unlock the Agent tab while a request is running
  **/
 void agentPageSetBusy(BOOL busy);
-
-/**
- * Get the pens the transcript draws reasoning and tool calls with, for the
- * screen the window is on. Pens held from before are released first.
- **/
-void agentPageObtainPens(struct Screen *screen);
-
-/**
- * Give back the transcript's pens. Call while the screen is still open.
- **/
-void agentPageReleasePens(void);
 
 /**
  * Free what the Agent tab holds

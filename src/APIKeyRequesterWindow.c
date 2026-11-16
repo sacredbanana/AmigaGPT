@@ -7,6 +7,7 @@
 #include "APIKeyRequesterWindow.h"
 #include "gui.h"
 #include "MainWindow.h"
+#include "RichTextEditor.h"
 
 Object *apiKeyRequesterString;
 Object *apiKeyRequesterWindowObject;
@@ -52,8 +53,11 @@ LONG createAPIKeyRequesterWindow() {
                     MUIA_Text_PreParse, "\033c",
                     MUIA_Text_Contents,  STRING_API_KEY_REQUESTER_BODY_HELP,
                 End,
-                Child, apiKeyRequesterString = TextEditorObject,
+                Child, apiKeyRequesterString = RichTextEditorObject,
                     MUIA_CycleChain, TRUE,
+                    MUIA_TextEditor_Rows, 2,
+                    MUIA_TextEditor_WrapWords, FALSE,
+                    MUIA_TextEditor_WrapMode, MUIV_TextEditor_WrapMode_SoftWrap,
                     MUIA_TextEditor_Contents, configGetOpenAiApiKey(),
                 End,
                 Child, HGroup,

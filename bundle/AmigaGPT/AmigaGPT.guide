@@ -98,8 +98,7 @@ AmigaGPT is translated into 22 languages in addition to English. See @{"Language
 - codesets.library 6.22 or higher (@{u}http://aminet.net/package/util/libs/codesets-6.22@{uu})
 - MCC_Guigfx, the MUI custom class used to display images (@{u}http://aminet.net/package/dev/mui/MCC_Guigfx@{uu})
 - MCC_NList, the MUI custom class used for lists (@{u}http://aminet.net/package/dev/mui/MCC_NList-0.128@{uu})
-- MCC_TextEditor 15.56 or higher, the MUI custom class used for text input (@{u}https://aminet.net/dev/mui/MCC_TextEditor-15.56.lha@{uu})
-- MCC_ActionTextEditor and MCC_AudioPlayer, shipped with AmigaGPT. The installer copies ActionTextEditor.mcc and AudioPlayer.mcc into the system MUI class drawer
+- MCC_AudioPlayer, shipped with AmigaGPT. The installer copies AudioPlayer.mcc into the system MUI class drawer
 - A PNG datatype for viewing generated images. Any will do, but here is one (@{u}https://aminet.net/util/dtype/vPNGdt.lha@{uu})
 - For AmigaOS 3 and AmigaOS 4, AmiSSL 5.27 or higher
   OS3: @{u}https://aminet.net/package/util/libs/AmiSSL-v5-OS3@{uu}
@@ -129,7 +128,7 @@ AmigaGPT is translated into 22 languages in addition to English. See @{"Language
 
 - On AmigaOS 3 and AmigaOS 4, install AmiSSL and a TCP/IP stack if you have not already done so
 - Download and install MUI. Version 5 is recommended, version 3 is the minimum. Reboot afterwards.
-- Download and install codesets.library, render.library, guigfx.library, MCC_Guigfx, MCC_NList and MCC_TextEditor. The AmigaGPT installer also copies ActionTextEditor.mcc and AudioPlayer.mcc into the MUI class drawer
+- Download and install codesets.library, render.library, guigfx.library, MCC_Guigfx and MCC_NList. The AmigaGPT installer also copies AudioPlayer.mcc into the MUI class drawer
 
 @{b}@{u}Installing AmigaGPT@{uu}@{ub}
 
@@ -391,9 +390,17 @@ Your keys are written to @{i}AMIGAGPT:config.json@{ui} in plain text. @{fg shine
 @node chatting "Chatting"
 @{b}@{fg shine}Chatting@{fg text}@{ub}
 
-Type a prompt into the input field at the bottom of the window and press @{b}Send@{ub}, or @{bg fill}@{fg filltext}Shift + Enter@{fg text}@{bg background}. The reply appears in the transcript above, streamed a piece at a time where the provider supports it. If speech is enabled the reply is also read aloud.
+Type a prompt into the input field at the bottom of the window and press @{b}Send@{ub}, or @{bg fill}@{fg filltext}Return@{fg text}@{bg background}. @{bg fill}@{fg filltext}Shift + Return@{fg text}@{bg background} starts a new line instead. The reply appears in the transcript above, streamed a piece at a time where the provider supports it. If speech is enabled the reply is also read aloud.
 
-Your messages and the replies are formatted differently so they are easy to tell apart, and you can change the alignment of each in the @{b}View@{ub} menu. See @{"Changing the appearance" link appearance}.
+Your messages and the replies are shown as message bubbles so they are easy to tell apart, and you can choose which side each kind of bubble sits on in the @{b}View@{ub} menu. See @{"Changing the appearance" link appearance}.
+
+@{b}@{u}Formatting, links and pictures@{uu}@{ub}
+
+Replies are shown with their Markdown formatting: headings, bold, italic, strike-through, inline code, code blocks, quotes, bullet, numbered and task lists, rules, tables and links. The formatting appears while the reply is still arriving. In the input field the Markdown you type is shown as you type it, with its markup dimmed, and it is sent exactly as typed.
+
+Click a link to open it in your web browser through the OpenURL command. Pictures you attach to a message are shown in its bubble; click one to open it in MultiView.
+
+Select text in a conversation with the mouse to copy it to the clipboard. With the conversation active you can also use @{b}Copy@{ub} and @{b}Select All@{ub} from the @{b}Edit@{ub} menu, and scroll it with the cursor keys.
 
 @{b}@{u}Choosing the model@{uu}@{ub}
 
@@ -625,7 +632,7 @@ Web search is a server-side feature. It works where the provider supports it; a 
 
 The @{b}Agent@{ub} tab hands a task to the AI and lets it work on your Amiga with tools until the task is done. Type what you want and press Return. @{b}Send@{ub} changes to @{b}Stop@{ub} while it works.
 
-The transcript shows each part of the conversation in its own style: your messages in bold, aligned like user messages on the Chat tab; the reasoning of the AI in grey italics; each tool it uses as an amber line starting with ">"; its replies as normal text; and errors in red. Reasoning appears when the AI reveals it, which depends on the provider and the model. Everything shown is saved with the session, so a session you reopen looks the same.
+The transcript shows each part of the conversation in its own style: your messages in bubbles on the same side as on the Chat tab; the reasoning of the AI in grey italics; each tool it uses as an amber line starting with ">"; its replies in bubbles on the other side, with their Markdown formatting; and errors in a red bubble. Reasoning appears when the AI reveals it, which depends on the provider and the model. Everything shown is saved with the session, so a session you reopen looks the same.
 
 The agent talks to the active chat provider, so it works with OpenAI, Google Gemini, SpaceXAI Grok, Anthropic Claude and custom servers whose model supports tool calling.
 
@@ -783,15 +790,15 @@ Bear in mind that text becomes very small above 1080p, so you may want to raise 
 
 @{b}@{u}The View menu@{uu}@{ub}
 
-- @{b}Fixed width fonts@{ub} switches the transcript and the input field to a monospaced font, which makes code and tables in the replies line up properly
-- @{b}User text alignment@{ub} sets your own messages to Left, Center or Right in the transcript
+- @{b}Fixed width fonts@{ub} switches the conversations and the input fields to a monospaced font. Code blocks and tables always use one, so they line up either way
+- @{b}User text alignment@{ub} puts the bubbles of your own messages on the Left, in the Center or on the Right
 - @{b}Assistant text alignment@{ub} does the same for the replies
 - @{b}MUI Settings...@{ub} opens the full MUI preferences for this application - fonts, colours, frames, screen and window behaviour
 - @{b}Clear MUI Settings@{ub} resets all of that back to the defaults
 
 @{b}@{u}Formatting in replies@{uu}@{ub}
 
-AmigaGPT renders bold, italic and underline from the model's markdown into the transcript's own soft styles, so replies read naturally instead of being littered with asterisks.
+Replies are shown with their Markdown formatting - headings, emphasis, code, lists, quotes, tables, links and pictures - so they read naturally instead of being littered with asterisks and hashes. See @{"Chatting" link chatting}.
 
 All of these settings are saved and restored automatically.
 @endnode
@@ -1576,7 +1583,7 @@ The interface language and the language the AI answers in are separate things. T
 MUI is not installed, or is older than version 3. Install MUI and reboot. See @{"System Requirements" link requirements}.
 
 @{b}@{u}"Could not find all the MUI custom classes"@{uu}@{ub}
-One of MCC_NList, MCC_TextEditor, MCC_Guigfx, ActionTextEditor.mcc or AudioPlayer.mcc is missing. Install MUI and the listed classes, then run the AmigaGPT installer so it can copy ActionTextEditor.mcc and AudioPlayer.mcc into the MUI class drawer, and reboot.
+One of MCC_NList, MCC_Guigfx or AudioPlayer.mcc is missing. Install MUI and the listed classes, then run the AmigaGPT installer so it can copy AudioPlayer.mcc into the MUI class drawer, and reboot. MCC_TextEditor, ActionTextEditor.mcc and MCC_NFloattext are no longer needed.
 
 @{b}@{u}"Could not open codesets.library"@{uu}@{ub}
 Install codesets.library 6.22 or higher.

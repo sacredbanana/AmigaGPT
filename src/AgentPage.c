@@ -1,7 +1,6 @@
 #ifndef DAEMON
 #include <libraries/asl.h>
 #include <libraries/mui.h>
-#include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListtree_mcc.h>
 #include <mui/NListview_mcc.h>
@@ -19,6 +18,7 @@
 #include "AmigaGPTConfig.h"
 #include "gui.h"
 #include "MainWindow.h"
+#include "RichTextEditor.h"
 
 #define AGENT_TRANSCRIPT_INITIAL_CAPACITY 16384
 
@@ -47,7 +47,7 @@ static Object *agentImportSkillButton = NULL;
 static Object *agentNewSessionButton = NULL;
 static Object *agentControlsGroup = NULL;
 static Object *agentOutput = NULL;
-static Object *agentOutputListView = NULL;
+static Object *agentOutputScroller = NULL;
 static Object *agentInputEditor = NULL;
 static Object *agentSendButton = NULL;
 static Object *agentEditorWindow = NULL;
@@ -63,14 +63,16 @@ static BOOL agentUpdatingSessionTree = FALSE;
 static STRPTR agentApprovalLabels[AGENT_APPROVAL_COUNT + 1] = {NULL};
 static STRPTR agentEffortLabels[AGENT_EFFORT_COUNT + 1] = {NULL};
 
+/* The transcript follows new output, so show its end */
 static void showTranscript(void) {
-    if (agentOutput == NULL || agentTranscript == NULL)
-        return;
-    set(agentOutput, MUIA_NFloattext_Text, agentTranscript);
-    set(agentOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
+    if (agentOutput != NULL)
+        DoMethod(agentOutput, MUIM_RichTextEditor_ScrollTo,
+                 MUIV_RichTextEditor_ScrollTo_Bottom);
 }
 
-/* Add local character set text to the transcript */
+/* Add local character set text to the transcript. The text may hold the
+ * view's formatting codes; the copy kept here survives the window being
+ * rebuilt, the view only ever gets the new part appended */
 static void appendTranscript(CONST_STRPTR text) {
     ULONG length;
     if (text == NULL)
@@ -88,9 +90,6 @@ static void appendTranscript(CONST_STRPTR text) {
             return;
         if (agentTranscript != NULL) {
             CopyMem(agentTranscript, bigger, agentTranscriptLength);
-            /* The list still points at the old text, so empty it first */
-            if (agentOutput != NULL)
-                set(agentOutput, MUIA_NFloattext_Text, "");
             FreeVec(agentTranscript);
         }
         agentTranscript = bigger;
@@ -99,38 +98,28 @@ static void appendTranscript(CONST_STRPTR text) {
     CopyMem((APTR)text, agentTranscript + agentTranscriptLength, length);
     agentTranscriptLength += length;
     agentTranscript[agentTranscriptLength] = '\0';
+    if (agentOutput != NULL)
+        DoMethod(agentOutput, MUIM_RichTextEditor_Append, (IPTR)text, -1,
+                 MUIF_RichTextEditor_Append_NoScroll);
 }
 
 /* What the last block in the transcript was, to space blocks apart */
 static LONG lastBlockKind = -1;
-/* Pens for reasoning and tool calls, and the colour map they belong to */
-static LONG reasoningPen = -1;
-static LONG toolPen = -1;
-static struct ColorMap *penColorMap = NULL;
 
-void agentPageReleasePens(void) {
-    if (penColorMap != NULL) {
-        if (reasoningPen >= 0)
-            ReleasePen(penColorMap, reasoningPen);
-        if (toolPen >= 0)
-            ReleasePen(penColorMap, toolPen);
+/* Bubble styles of the view (see RichTextEditor.h) */
+#define AGENT_BUBBLE_USER 1
+#define AGENT_BUBBLE_ASSISTANT 2
+#define AGENT_BUBBLE_ERROR 4
+
+static UBYTE agentBubbleSide(LONG alignment) {
+    switch (alignment) {
+    case ALIGN_CENTER:
+        return 'c';
+    case ALIGN_RIGHT:
+        return 'r';
+    default:
+        return 'l';
     }
-    reasoningPen = -1;
-    toolPen = -1;
-    penColorMap = NULL;
-}
-
-void agentPageObtainPens(struct Screen *screen) {
-    agentPageReleasePens();
-    if (screen == NULL)
-        return;
-    penColorMap = screen->ViewPort.ColorMap;
-    /* A mid grey and an amber read well on both dark and light themes */
-    reasoningPen = ObtainBestPen(penColorMap, 0x99999999, 0x99999999,
-                                 0x99999999, OBP_Precision, PRECISION_GUI,
-                                 TAG_DONE);
-    toolPen = ObtainBestPen(penColorMap, 0xEEEEEEEE, 0x99999999, 0x22222222,
-                            OBP_Precision, PRECISION_GUI, TAG_DONE);
 }
 
 /* Add text, putting a style code at the start of each of its lines, since
@@ -157,95 +146,82 @@ static void appendStyledLines(CONST_STRPTR style, CONST_STRPTR text) {
     }
 }
 
-/* Reasoning keeps its italic after Markdown ends a bold or underline,
- * because the code that ends a style ends all of them */
-static STRPTR keepItalic(CONST_STRPTR formatted) {
-    ULONG count = 0;
-    CONST_STRPTR p;
-    STRPTR out;
-    STRPTR o;
-    for (p = formatted; (p = strstr(p, "\033n")) != NULL; p += 2)
-        count++;
-    out = AllocVec(strlen(formatted) + count * 2 + 1, MEMF_ANY | MEMF_CLEAR);
-    if (out == NULL)
-        return NULL;
-    for (p = formatted, o = out; *p != '\0'; p++) {
-        *o++ = *p;
-        if (p[0] == '\033' && p[1] == 'n') {
-            *o++ = *++p;
-            *o++ = '\033';
-            *o++ = 'i';
-        }
-    }
-    *o = '\0';
-    return out;
+/* Text without the line breaks at its end, which would leave empty lines at
+ * the bottom of a bubble */
+static void appendTrimmed(CONST_STRPTR text) {
+    ULONG length = strlen(text);
+    STRPTR copy;
+    while (length > 0 && (text[length - 1] == '\n' || text[length - 1] == ' '))
+        length--;
+    copy = AllocVec(length + 1, MEMF_ANY | MEMF_CLEAR);
+    if (copy == NULL)
+        return;
+    CopyMem((APTR)text, copy, length);
+    appendTranscript(copy);
+    FreeVec(copy);
 }
 
 /**
- * Add one block of the conversation in the style of its kind
+ * Add one block of the conversation in the style of its kind: the user's
+ * and the agent's messages in chat bubbles, reasoning and tool calls as
+ * coloured text between them
  * @param text the text in the local character set, without format codes
  **/
 static void appendBlock(AgentOutputKind kind, CONST_STRPTR text) {
-    UBYTE style[32];
-    STRPTR formatted = NULL;
+    UBYTE codes[40];
 
-    if (agentTranscriptLength > 0 &&
-        agentTranscript[agentTranscriptLength - 1] != '\n')
+    /* Every block starts on a line of its own, since the codes that choose
+     * its bubble and Markdown only work at the start of a line */
+    if (agentTranscriptLength > 0)
         appendTranscript("\n");
-    /* Blocks are kept apart by a blank line, except tool calls in a row */
-    if (agentTranscriptLength > 0 &&
+    /* Blocks outside bubbles are kept apart by a blank line, except tool
+     * calls in a row */
+    if (agentTranscriptLength > 1 && lastBlockKind >= 0 &&
+        (kind == AGENT_OUTPUT_REASONING || kind == AGENT_OUTPUT_TOOL ||
+         kind == AGENT_OUTPUT_INFO) &&
+        lastBlockKind != AGENT_OUTPUT_USER &&
+        lastBlockKind != AGENT_OUTPUT_ERROR &&
+        lastBlockKind != (LONG)kind &&
         !(kind == AGENT_OUTPUT_TOOL && lastBlockKind == AGENT_OUTPUT_TOOL))
-        appendTranscript("\n");
+        appendTranscript("\033[B:0]\n");
 
     switch (kind) {
-    case AGENT_OUTPUT_USER: {
+    case AGENT_OUTPUT_USER:
         /* The same as a user message on the Chat tab */
-        UBYTE alignment = 'r';
-        switch (configGetUserTextAlignment()) {
-        case ALIGN_LEFT:
-            alignment = 'l';
-            break;
-        case ALIGN_CENTER:
-            alignment = 'c';
-            break;
-        }
-        snprintf(style, sizeof(style), "\033%c\033b\0333", alignment);
-        appendStyledLines(style, text);
+        snprintf(codes, sizeof(codes), "\033[B:%d%c]\033[M:0]",
+                 AGENT_BUBBLE_USER,
+                 agentBubbleSide(configGetUserTextAlignment()));
+        appendTranscript(codes);
+        appendTrimmed(text);
         break;
-    }
-    case AGENT_OUTPUT_REASONING: {
-        STRPTR markdown = convertMarkdownFormattingToMUI(text);
-        if (markdown != NULL) {
-            formatted = keepItalic(markdown);
-            FreeVec(markdown);
-        }
-        if (reasoningPen >= 0)
-            snprintf(style, sizeof(style), "\033l\033i\033P[%ld]",
-                     reasoningPen);
-        else
-            snprintf(style, sizeof(style), "\033l\033i");
-        appendStyledLines(style, formatted != NULL ? formatted : text);
+    case AGENT_OUTPUT_REASONING:
+        /* Grey italics, still with Markdown */
+        appendTranscript("\033[B:0]\033[M:1]");
+        appendStyledLines("\033i\033P[8C8C8C]", text);
         break;
-    }
     case AGENT_OUTPUT_TOOL:
-        if (toolPen >= 0)
-            snprintf(style, sizeof(style), "\033l\033P[%ld]", toolPen);
-        else
-            snprintf(style, sizeof(style), "\033l");
-        appendStyledLines(style, text);
+        /* Amber, exactly as the tool reported it */
+        appendTranscript("\033[B:0]\033[M:0]");
+        appendStyledLines("\033P[D08A1E]", text);
         break;
     case AGENT_OUTPUT_ERROR:
-        snprintf(style, sizeof(style), "\033l\033P[%ld]", (LONG)redPen);
-        appendStyledLines(style, text);
+        snprintf(codes, sizeof(codes), "\033[B:%d]\033[M:0]",
+                 AGENT_BUBBLE_ERROR);
+        appendTranscript(codes);
+        appendTrimmed(text);
+        break;
+    case AGENT_OUTPUT_INFO:
+        appendTranscript("\033[B:0]\033[M:1]");
+        appendTrimmed(text);
         break;
     default:
-        formatted = convertMarkdownFormattingToMUI(text);
-        appendTranscript(formatted != NULL ? formatted : text);
+        snprintf(codes, sizeof(codes), "\033[B:%d%c]\033[M:1]",
+                 AGENT_BUBBLE_ASSISTANT,
+                 agentBubbleSide(configGetAssistantTextAlignment()));
+        appendTranscript(codes);
+        appendTrimmed(text);
         break;
     }
-    if (formatted != NULL)
-        FreeVec(formatted);
-    appendTranscript("\n");
     lastBlockKind = kind;
 }
 
@@ -255,7 +231,7 @@ static void clearTranscript(void) {
     if (agentTranscript != NULL)
         agentTranscript[0] = '\0';
     if (agentOutput != NULL)
-        set(agentOutput, MUIA_NFloattext_Text, "");
+        DoMethod(agentOutput, MUIM_TextEditor_ClearText);
 }
 
 /* Transcript text arrives from the agent in UTF-8 */
@@ -269,12 +245,7 @@ static void agentOutputReceived(AgentOutputKind kind, CONST_STRPTR text) {
         if (*p == '\33')
             *p = ' ';
     }
-    if (kind == AGENT_OUTPUT_INFO) {
-        appendTranscript(local);
-        lastBlockKind = AGENT_OUTPUT_INFO;
-    } else {
-        appendBlock(kind, local);
-    }
+    appendBlock(kind, local);
     FreeVec(local);
     showTranscript();
 }
@@ -432,10 +403,8 @@ static void refreshSessionTree(void) {
 static void showSessionTranscript(void) {
     clearTranscript();
     agentRenderSession(agentOutputReceived);
-    if (agentTranscriptLength == 0) {
-        appendTranscript(STRING_AGENT_WELCOME);
-        appendTranscript("\n");
-    }
+    if (agentTranscriptLength == 0)
+        appendBlock(AGENT_OUTPUT_INFO, STRING_AGENT_WELCOME);
     showTranscript();
 }
 
@@ -617,8 +586,7 @@ HOOKPROTONHNONP(AgentImportSkillFunc, void) {
         if (agentImportSkill(source, name, sizeof(name))) {
             snprintf(message, sizeof(message), STRING_AGENT_SKILL_IMPORTED,
                      name);
-            appendTranscript(message);
-            appendTranscript("\n");
+            appendBlock(AGENT_OUTPUT_INFO, message);
             showTranscript();
         } else {
             displayError(STRING_AGENT_SKILL_IMPORT_FAILED);
@@ -743,6 +711,8 @@ static void showApplication(void) {
 
 Object *agentPagePromptEditor(void) { return agentInputEditor; }
 
+Object *agentPageTranscriptView(void) { return agentOutput; }
+
 void agentPageSetBusy(BOOL busy) {
     if (agentControlsGroup != NULL)
         set(agentControlsGroup, MUIA_Disabled, busy);
@@ -771,9 +741,11 @@ static void createAgentEditorWindow(void) {
         WindowContents, VGroup,
             Child, HGroup,
                 MUIA_Group_Spacing, 0,
-                Child, agentEditorText = TextEditorObject,
+                Child, agentEditorText = RichTextEditorObject,
                     MUIA_TextEditor_FixedFont, TRUE,
                     MUIA_TextEditor_Slider, slider,
+                    MUIA_TextEditor_WrapMode, MUIV_TextEditor_WrapMode_SoftWrap,
+                    MUIA_RichTextEditor_Markdown, TRUE,
                     MUIA_CycleChain, TRUE,
                 End,
                 Child, slider,
@@ -829,6 +801,11 @@ Object *createAgentPage(void) {
 
     agentInputEditor =
         createPromptInputEditor(&AgentSendButtonClickedHook, 0, 0);
+    agentOutputScroller = createTranscriptView(&agentOutput);
+    /* The transcript outlives the window, which is rebuilt when the fonts
+     * change */
+    if (agentOutput != NULL && agentTranscript != NULL)
+        set(agentOutput, MUIA_TextEditor_Contents, agentTranscript);
 
     // clang-format off
     page = HGroup,
@@ -907,16 +884,7 @@ Object *createAgentPage(void) {
         End,
         Child, VGroup,
             Child, HGroup, MUIA_VertWeight, 60,
-                Child, agentOutputListView = NListviewObject,
-                    MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_None,
-                    MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
-                    MUIA_NListview_NList, agentOutput = NFloattextObject,
-                        MUIA_Font, configGetFixedWidthFonts() ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
-                        MUIA_Frame, MUIV_Frame_Text,
-                        MUIA_ContextMenu, NULL,
-                        MUIA_NFloattext_Text, agentTranscript != NULL ? agentTranscript : (STRPTR)"",
-                    End,
-                End,
+                Child, agentOutputScroller,
             End,
             Child, HGroup, MUIA_VertWeight, 20,
                 Child, agentInputEditor,
@@ -977,17 +945,8 @@ void addAgentPageActions(void) {
 }
 
 void agentPageWindowOpened(void) {
-    struct Screen *screen = NULL;
     if (agentSessionTree == NULL)
         return;
-    if (mainWindowObject != NULL)
-        get(mainWindowObject, MUIA_Window_Screen, &screen);
-    if (screen != NULL)
-        agentPageObtainPens(screen);
-    /* Replies follow the Chat tab's alignment for assistant messages */
-    if (agentOutput != NULL)
-        set(agentOutput, MUIA_NFloattext_Align,
-            configGetAssistantTextAlignment());
     refreshSessionTree();
     agentPageColorButtons();
     setAgentSendButtonLabel(FALSE);

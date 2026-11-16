@@ -21,7 +21,6 @@ CONST_STRPTR speechLookupXAIVoiceName(CONST_STRPTR voiceId) {
 #include <libraries/mui.h>
 #include <utility/tagitem.h>
 #include <mui/BetterString_mcc.h>
-#include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
@@ -37,6 +36,7 @@ CONST_STRPTR speechLookupXAIVoiceName(CONST_STRPTR voiceId) {
 #include "MainWindow.h"
 #include "gui.h"
 #include "openai.h"
+#include "RichTextEditor.h"
 #include "speech.h"
 
 #ifndef MAKE_ID
@@ -3963,8 +3963,9 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                             Child, VGroup,
                                 MUIA_Frame, MUIV_Frame_Group,
                                 MUIA_FrameTitle, STRING_MENU_OPENAI_VOICE_INSTRUCTIONS,
-                                Child, openAiVoiceInstructionsEditor = TextEditorObject,
+                                Child, openAiVoiceInstructionsEditor = RichTextEditorObject,
                                     MUIA_TextEditor_FixedFont, TRUE,
+                                    MUIA_TextEditor_WrapMode, MUIV_TextEditor_WrapMode_SoftWrap,
                                     MUIA_CycleChain, TRUE,
                                 End,
                             End,

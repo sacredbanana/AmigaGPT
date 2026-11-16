@@ -6,15 +6,12 @@
 #include <libraries/codesets.h>
 #include <libraries/mui.h>
 #include <mui/Aboutbox_mcc.h>
-#include <mui/ActionTextEditor_mcc.h>
 #include <mui/AudioPlayer_mcc.h>
 #include <mui/BetterString_mcc.h>
 #include <mui/Busy_mcc.h>
 #include <mui/Guigfx_mcc.h>
-#include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
-#include <mui/TextEditor_mcc.h>
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
@@ -28,6 +25,9 @@
 #include "MainWindow.h"
 #include "AgentPage.h"
 #include "agent.h"
+#ifndef DAEMON
+#include "RichTextEditor.h"
+#endif
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
 #include "speech.h"
@@ -71,11 +71,12 @@ static BOOL checkMUICustomClassInstalled();
 static void closeGUILibraries();
 static STRPTR wrapRequesterText(CONST_STRPTR message);
 
+/* The text editors and the conversation views are AmigaGPT's own private
+ * RichTextEditor class, so TextEditor.mcc, ActionTextEditor.mcc and
+ * NFloattext.mcc are no longer needed */
 static CONST_STRPTR USED_CLASSES[] = {
-    MUIC_Aboutbox,          MUIC_Busy,           MUIC_NList,
-    MUIC_NListview,         MUIC_TextEditor,     MUIC_BetterString,
-    MUIC_NFloattext,        MUIC_Guigfx,         MUIC_ActionTextEditor,
-    MUIC_AudioPlayer,       NULL};
+    MUIC_Aboutbox,  MUIC_Busy,   MUIC_NList,       MUIC_NListview,
+    MUIC_BetterString, MUIC_Guigfx, MUIC_AudioPlayer, NULL};
 
 /**
  * Open the libraries needed for the GUI
@@ -173,6 +174,11 @@ LONG initVideo() {
         return RETURN_ERROR;
     }
 
+    if (createRichTextEditorClass() == RETURN_ERROR) {
+        displayError(STRING_ERROR_APP_CREATE);
+        return RETURN_ERROR;
+    }
+
     if (createAPIKeyRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
@@ -258,10 +264,6 @@ static BOOL checkMUICustomClassInstalled() {
         if (!isMUI5 && !strcmp(USED_CLASSES[i], MUIC_Aboutbox) != 0)
             continue;
         if (!isAROS && !strcmp(USED_CLASSES[i], MUIC_BetterString) != 0)
-            continue;
-        if (isAROS && !strcmp(USED_CLASSES[i], MUIC_TextEditor) != 0)
-            continue;
-        if (isAROS && !strcmp(USED_CLASSES[i], MUIC_ActionTextEditor) != 0)
             continue;
         if (!MUI_GetClass(USED_CLASSES[i])) {
             displayError(STRING_ERROR_MUI_CUSTOM_CLASS_NOT_FOUND);
@@ -1279,7 +1281,6 @@ void shutdownGUI() {
         DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 
 #ifndef DAEMON
-        agentPageReleasePens();
         // Release pens if they were allocated
         if (mainWindowObject && (redPen || greenPen || bluePen || yellowPen)) {
             struct Screen *currentScreen;
@@ -1302,9 +1303,8 @@ void shutdownGUI() {
 
 #ifndef DAEMON
     freeMainWindowFileState();
-    if (chatOutputTextEditorContents) {
-        FreeVec(chatOutputTextEditorContents);
-    }
+    /* Only after every object of the class has been disposed */
+    deleteRichTextEditorClass();
 #endif
 
     closeGUILibraries();

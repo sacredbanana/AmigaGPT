@@ -12,6 +12,7 @@
 #include <string.h>
 #include "AmigaGPTConfig.h"
 #include "AboutAmigaGPTWindow.h"
+#include "AgentPage.h"
 #include "ARexx.h"
 #include "gui.h"
 #include "MainWindow.h"
@@ -114,9 +115,10 @@ HOOKPROTONHNP(ARexxRunScriptMenuItemClickedFunc, void, APTR obj) {
 }
 MakeHook(ARexxRunScriptMenuItemClickedHook, ARexxRunScriptMenuItemClickedFunc);
 
-/* The input text editor which currently holds the keyboard focus, or NULL if
- * the focus is somewhere else. The Edit menu items only make sense while one
- * of the input text editors is focused so they are disabled otherwise. */
+/* The text editor or conversation view which currently holds the keyboard
+ * focus, or NULL if the focus is somewhere else. The Edit menu items only
+ * make sense while one of them is focused so they are disabled otherwise.
+ * In a conversation view only Copy and Select All do anything. */
 static Object *focusedInputTextEditor = NULL;
 
 /**
@@ -188,11 +190,16 @@ void updateEditMenuItemsEnabled() {
         get(mainWindowObject, MUIA_Window_ActiveObject, &activeObject);
     }
 
-    focusedInputTextEditor = (activeObject == chatInputTextEditor ||
-                              activeObject == imageInputTextEditor ||
-                              activeObject == speechInputTextEditor)
-                                 ? activeObject
-                                 : NULL;
+    focusedInputTextEditor =
+        (activeObject != NULL &&
+         (activeObject == chatInputTextEditor ||
+          activeObject == imageInputTextEditor ||
+          activeObject == speechInputTextEditor ||
+          activeObject == chatOutputTextEditor ||
+          activeObject == agentPagePromptEditor() ||
+          activeObject == agentPageTranscriptView()))
+            ? activeObject
+            : NULL;
     applyEditMenuItemsEnabled();
 }
 
@@ -221,11 +228,15 @@ MakeHook(EditPasteHook, EditPasteFunc);
 
 HOOKPROTONHNONP(EditClearFunc, void) {
     Object *activeEditor = getActiveTextEditor();
+    LONG readOnly = FALSE;
     if (isAROS) {
         set(activeEditor, MUIA_String_Contents, "");
-    } else {
-        DoMethod(activeEditor, MUIM_TextEditor_ClearText);
+        return;
     }
+    /* A conversation view shows the conversation; it is not cleared */
+    get(activeEditor, MUIA_TextEditor_ReadOnly, &readOnly);
+    if (!readOnly)
+        DoMethod(activeEditor, MUIM_TextEditor_ClearText);
 }
 MakeHook(EditClearHook, EditClearFunc);
 

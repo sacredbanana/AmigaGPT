@@ -60,11 +60,8 @@ Requirements:
   (http://aminet.net/package/dev/mui/MCC_Guigfx)
 - MCC_NList MUI custom class for lists
   (http://aminet.net/package/dev/mui/MCC_NList-0.128)
-- MCC_TextEditor 15.56 or higher
-  (https://aminet.net/dev/mui/MCC_TextEditor-15.56.lha)
-- MCC_ActionTextEditor and MCC_AudioPlayer, shipped with this
-  archive. The installer copies them into MUI:Libs/MUI (AmigaOS)
-  or SYS:Classes/MUI (MorphOS)
+- MCC_AudioPlayer, shipped with this archive. The installer copies it
+  into MUI:Libs/MUI (AmigaOS) or SYS:Classes/MUI (MorphOS)
 - A PNG datatype - Any will do, but here is one
   (https://aminet.net/util/dtype/vPNGdt.lha)
 - An active API key for at least one supported provider (OpenAI, Google
@@ -83,8 +80,8 @@ Requirements:
 Installation:
 1. Install AmiSSL and a TCP/IP stack if not already done so
 2. Download and install MUI. Version 5 recommended, version 3 minimum. Reboot.
-3. Download and install codesets.library, render.library, MCC_Guigfx,
-   MCC_NList and MCC_TextEditor
+3. Download and install codesets.library, render.library, MCC_Guigfx
+   and MCC_NList
 4. Download the latest release of AmigaGPT.
 5. Extract the `amigagpt.lha` archive to a temporary location.
 6. Run the provided installer.

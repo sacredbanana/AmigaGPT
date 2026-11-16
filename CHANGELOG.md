@@ -8,9 +8,16 @@
 - Agent works with OpenAI, Google Gemini, SpaceXAI Grok, Anthropic Claude and custom OpenAI-compatible servers
 - Agent desktop control: screenshot, mouse and keyboard tools for programs that cannot be driven from the shell or ARexx. AmigaGPT iconifies itself while the agent works on the desktop
 - Agent host_command tool: under Amiberry with the Host-Tools commands installed, the agent can run commands on the host computer for work that is impossible or impractical on the Amiga
-- Agent transcript shows the model's reasoning, tool calls, replies and errors each in their own style, with user messages bold and aligned as on the Chat tab. Reasoning, tool calls and errors are saved with the session and shown again when it is reopened
+- Agent transcript shows the model's reasoning, tool calls, replies and errors each in their own style, with user messages and replies in bubbles as on the Chat tab. Reasoning, tool calls and errors are saved with the session and shown again when it is reopened
 - ARexx AGENT command runs an agent turn from a script, in the app and the daemon
 - Blank speech profile API keys auto import from matching chat provider profiles
+- New text editor and conversation view written from scratch for AmigaGPT. Replies are shown with Markdown formatting: headings, bold, italic, strike-through, inline code, code blocks, quotes, bullet, numbered and task lists, rules, tables, links and pictures
+- Chat and Agent conversations are shown as message bubbles: your messages on one side and the AI's on the other, following the alignment settings
+- Replies appear as they stream in, already formatted, without redrawing the whole conversation for every new piece of text, and conversations of any length can be shown
+- Prompt fields show Markdown as you type, with its markup dimmed. Return sends, Shift+Return starts a new line
+- Click a link in a conversation to open it in your web browser through OpenURL, or a picture to open it in MultiView. Pictures attached to a message are shown in the conversation
+- Edit menu Copy and Select All also work in the Chat and Agent conversation views
+- MCC_TextEditor, ActionTextEditor.mcc and MCC_NFloattext are no longer needed
 
 ## 3.4.0 (2026-10-08)
 

@@ -25,7 +25,6 @@ extern Object *newImageButton;
 extern Object *deleteImageButton;
 extern Object *imageView;
 extern Object *modeRegisterGroup;
-extern STRPTR chatOutputTextEditorContents;
 extern WORD pens[NUMDRIPENS + 1];
 extern LONG sendMessageButtonPen;
 extern LONG newChatButtonPen;
@@ -47,10 +46,17 @@ Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
                                 ULONG weight);
 
 /**
- * Convert **bold**, *italic* and __underline__ Markdown to MUI text codes
- * @return a new string. Free it with FreeVec()
+ * A read only view for a conversation, with Markdown, chat bubbles, clickable
+ * links and its own scroll bar
+ * @param viewOut receives the text object
+ * @return the group holding the view and its scroll bar
  **/
-STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input);
+Object *createTranscriptView(Object **viewOut);
+
+/**
+ * The hook that opens links clicked in a conversation view
+ **/
+struct Hook *mainWindowLinkHook(void);
 
 /** Whether a request is running */
 BOOL mainWindowRequestBusy(void);

@@ -5,10 +5,8 @@
 #include <mui/BetterString_mcc.h>
 #include <mui/Busy_mcc.h>
 #include <mui/Guigfx_mcc.h>
-#include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
-#include <mui/ActionTextEditor_mcc.h>
 #include <mui/AudioPlayer_mcc.h>
 #include <mui/TextEditor_mcc.h>
 #include <SDI_hook.h>
@@ -23,24 +21,18 @@
 #include "agent.h"
 #include "AgentPage.h"
 #include "openai.h"
+#include "RichTextEditor.h"
+#include "shellpath.h"
 #include "speech.h"
 #include "SpeechProviderSettingsRequesterWindow.h"
 #include <dos/dos.h>
+#include <dos/dostags.h>
 
-/* Max nesting depth for B/I/U combined. Adjust as needed. */
-#define MAX_STYLE_STACK 32
-
-#define CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH (1024 * 512)
-#define CHAT_OUTPUT_WIDGET_SAFE_LIMIT (60 * 1024)
 #define CONVERSATION_TITLE_FALLBACK_MAX 96
 
-typedef enum { STYLE_BOLD, STYLE_ITALIC, STYLE_UNDERLINE } StyleType;
-
-/* A small stack to track active styles in the order they were opened. */
-typedef struct {
-    StyleType stack[MAX_STYLE_STACK];
-    int top;
-} StyleStack;
+/* Bubble styles of the chat transcript (see RichTextEditor.h) */
+#define CHAT_BUBBLE_USER 1
+#define CHAT_BUBBLE_ASSISTANT 2
 
 struct Window *mainWindow;
 Object *mainWindowObject = NULL;
@@ -52,7 +44,7 @@ Object *clearAttachmentsButton;
 Object *saveResponseFilesButton;
 Object *attachmentSummaryText;
 Object *chatInputTextEditor;
-Object *chatOutputListView;
+Object *chatOutputScroller;
 Object *chatOutputTextEditor;
 Object *statusBar;
 Object *conversationListObject;
@@ -86,9 +78,6 @@ Object *clearSpeechFilesButton;
 Object *speechAttachmentSummaryText;
 Object *speakFileContentsCheckbox;
 Object *modeRegisterGroup;
-STRPTR chatOutputTextEditorContents = NULL;
-static ULONG chatOutputTextEditorContentsCapacity =
-    CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH;
 static struct MinList pendingChatFiles;
 static BOOL pendingChatFilesInitialized = FALSE;
 static struct MinList pendingImageFiles;
@@ -125,15 +114,6 @@ static void setImageGenerationControlsDisabled(BOOL disabled);
 static void generateSpeech(BOOL regenerate);
 static void openImage(struct GeneratedImage *image, WORD scaledWidth,
                       WORD scaledHeight);
-static void initStyleStack(StyleStack *s);
-static BOOL pushStyle(StyleStack *s, StyleType style);
-static BOOL popStyle(StyleStack *s, StyleType style);
-static BOOL isTopStyle(const StyleStack *s, StyleType style);
-static void outputStyleOn(STRPTR out, size_t outSize, StyleType style);
-static void outputStyleOff(STRPTR out, size_t outSize);
-static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
-                         StyleType *foundStyle);
-static BOOL ensureChatOutputBufferCapacity(ULONG required);
 static void addMainWindowActions();
 static void updateAttachmentControls();
 static void updateReferenceImageControls();
@@ -232,6 +212,235 @@ static void setEditorText(Object *editor, CONST_STRPTR text) {
     else
         set(editor, MUIA_TextEditor_Contents, text != NULL ? text : "");
 }
+
+/* ------------------------------------------------------------------------ */
+/* Chat transcript                                                           */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * The bubble side letter for an ALIGN_* value from the configuration
+ **/
+static UBYTE chatBubbleSide(LONG alignment) {
+    switch (alignment) {
+    case ALIGN_CENTER:
+        return 'c';
+    case ALIGN_RIGHT:
+        return 'r';
+    default:
+        return 'l';
+    }
+}
+
+static void chatOutputClear(void) {
+    if (chatOutputTextEditor != NULL)
+        DoMethod(chatOutputTextEditor, MUIM_TextEditor_ClearText);
+}
+
+/**
+ * Add text to the end of the transcript
+ * @param text the text in the local character set
+ * @param raw TRUE if ESC in the text is not a formatting code
+ **/
+static void chatOutputAppend(CONST_STRPTR text, BOOL raw) {
+    if (chatOutputTextEditor == NULL || text == NULL)
+        return;
+    DoMethod(chatOutputTextEditor, MUIM_RichTextEditor_Append, (IPTR)text, -1,
+             raw ? MUIF_RichTextEditor_Append_Raw : 0);
+}
+
+/**
+ * Start a new message bubble at the end of the transcript. User messages are
+ * shown as typed, assistant messages are rendered as Markdown.
+ **/
+static void chatOutputBeginMessage(BOOL user) {
+    UBYTE codes[32];
+    ULONG length = 0;
+    if (chatOutputTextEditor == NULL)
+        return;
+    get(chatOutputTextEditor, MUIA_RichTextEditor_Length, &length);
+    snprintf(codes, sizeof(codes), "%s\033[B:%ld%c]\033[M:%ld]",
+             length > 0 ? "\n" : "",
+             (LONG)(user ? CHAT_BUBBLE_USER : CHAT_BUBBLE_ASSISTANT),
+             chatBubbleSide(user ? configGetUserTextAlignment()
+                                 : configGetAssistantTextAlignment()),
+             (LONG)(user ? 0 : 1));
+    chatOutputAppend(codes, FALSE);
+}
+
+/**
+ * Add message text without the line breaks at its end, which would leave
+ * empty lines at the bottom of its bubble
+ **/
+static void chatOutputAppendMessageText(CONST_STRPTR text) {
+    ULONG length;
+    STRPTR trimmed;
+    if (text == NULL)
+        return;
+    length = strlen(text);
+    while (length > 0 && (text[length - 1] == '\n' || text[length - 1] == ' ' ||
+                          text[length - 1] == '\r'))
+        length--;
+    trimmed = AllocVec(length + 1, MEMF_ANY);
+    if (trimmed == NULL)
+        return;
+    CopyMem((APTR)text, trimmed, length);
+    trimmed[length] = '\0';
+    chatOutputAppend(trimmed, TRUE);
+    FreeVec(trimmed);
+}
+
+/**
+ * Is a chat file an image that can be shown in the transcript?
+ **/
+static BOOL chatFileIsLocalImage(struct ChatFile *file) {
+    BPTR lock;
+    if (file->path == NULL || file->path[0] == '\0' || file->mimeType == NULL ||
+        strncmp(file->mimeType, "image/", 6) != 0)
+        return FALSE;
+    lock = Lock(file->path, SHARED_LOCK);
+    if (lock == 0)
+        return FALSE;
+    UnLock(lock);
+    return TRUE;
+}
+
+/**
+ * Text that is safe to put inside the [] or <> of a Markdown image
+ **/
+static void chatMarkdownSafe(STRPTR text) {
+    for (; *text != '\0'; text++) {
+        if (*text == '[' || *text == ']' || *text == '<' || *text == '>' ||
+            *text == '\n' || *text == '\033')
+            *text = ' ';
+    }
+}
+
+/**
+ * Show the files of a message: images inline, other files as a list of
+ * names
+ **/
+static void appendMessageFileSummary(struct ConversationNode *message) {
+    struct ChatFile *file;
+    ULONG others = 0;
+    if (message == NULL || message->files.mlh_Head->mln_Succ == NULL)
+        return;
+    for (file = (struct ChatFile *)message->files.mlh_Head;
+         file->node.mln_Succ != NULL;
+         file = (struct ChatFile *)file->node.mln_Succ) {
+        STRPTR name = CodesetsUTF8ToStr(
+            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)file->name,
+            CSA_MapForeignChars, TRUE, TAG_DONE);
+        CONST_STRPTR shown = name != NULL ? name : (STRPTR)file->name;
+        if (chatFileIsLocalImage(file)) {
+            ULONG size = strlen(shown) + strlen(file->path) + 32;
+            STRPTR line = AllocVec(size, MEMF_ANY);
+            STRPTR alt = AllocVec(strlen(shown) + 1, MEMF_ANY);
+            if (line != NULL && alt != NULL) {
+                STRPTR path = AllocVec(strlen(file->path) + 1, MEMF_ANY);
+                strcpy(alt, shown);
+                chatMarkdownSafe(alt);
+                if (path != NULL) {
+                    strcpy(path, file->path);
+                    chatMarkdownSafe(path);
+                    /* Markdown only for this line, so the image is drawn */
+                    snprintf(line, size, "\n\033[M:1]![%s](<%s>)", alt, path);
+                    chatOutputAppend(line, FALSE);
+                    FreeVec(path);
+                }
+            }
+            if (line != NULL)
+                FreeVec(line);
+            if (alt != NULL)
+                FreeVec(alt);
+        } else {
+            CONST_STRPTR prefix = strcmp(message->role, "assistant") == 0
+                                      ? STRING_RECEIVED_FILES_PREFIX
+                                      : STRING_ATTACHED_FILES_PREFIX;
+            if (others++ == 0) {
+                chatOutputAppend("\n\033[M:0][", FALSE);
+                chatOutputAppend(prefix, TRUE);
+            } else {
+                chatOutputAppend(", ", TRUE);
+            }
+            chatOutputAppend(shown, TRUE);
+        }
+        if (name != NULL)
+            CodesetsFreeA(name, NULL);
+    }
+    if (others > 0)
+        chatOutputAppend("]", TRUE);
+}
+
+/**
+ * A link target or file that can be handed to a Shell command between
+ * double quotes: no quotes, no escape character and nothing unprintable
+ **/
+static BOOL linkIsSafe(CONST_STRPTR target) {
+    CONST_STRPTR c;
+    if (target == NULL || target[0] == '\0' || strlen(target) > 1000)
+        return FALSE;
+    for (c = target; *c != '\0'; c++) {
+        if (*c == '"' || *c == '*' || (UBYTE)*c < 0x20 || *c == 0x7f)
+            return FALSE;
+    }
+    return TRUE;
+}
+
+/**
+ * Open a clicked link in the web browser (through OpenURL) or a clicked
+ * image in MultiView, without waiting for either
+ **/
+static void openLink(CONST_STRPTR target, BOOL image) {
+    UBYTE command[1100];
+    struct TagItem tags[4];
+    BPTR input, output;
+    BOOL web;
+
+    if (!linkIsSafe(target))
+        return;
+    web = strncmp(target, "http://", 7) == 0 ||
+          strncmp(target, "https://", 8) == 0 ||
+          strncmp(target, "ftp://", 6) == 0 ||
+          strncmp(target, "mailto:", 7) == 0 ||
+          strncmp(target, "www.", 4) == 0;
+    if (web)
+        snprintf(command, sizeof(command), "OpenURL \"%s\"", target);
+    else if (image)
+        snprintf(command, sizeof(command), "MultiView \"%s\"", target);
+    else
+        return;
+    input = Open("NIL:", MODE_OLDFILE);
+    output = Open("NIL:", MODE_NEWFILE);
+    if (input == 0 || output == 0) {
+        if (input != 0)
+            Close(input);
+        if (output != 0)
+            Close(output);
+        return;
+    }
+    tags[0].ti_Tag = SYS_Input;
+    tags[0].ti_Data = (ULONG)input;
+    tags[1].ti_Tag = SYS_Output;
+    tags[1].ti_Data = (ULONG)output;
+    tags[2].ti_Tag = SYS_Asynch;
+    tags[2].ti_Data = TRUE;
+    tags[3].ti_Tag = TAG_DONE;
+    if (runShellCommand(command, tags) == -1) {
+        Close(input);
+        Close(output);
+    }
+}
+
+HOOKPROTONH(TranscriptLinkClickedFunc, ULONG, Object *obj,
+            struct RichTextLinkMessage *msg) {
+    (void)obj;
+    if (msg != NULL)
+        openLink(msg->url, msg->image);
+    return 0;
+}
+MakeHook(TranscriptLinkClickedHook, TranscriptLinkClickedFunc);
+
+struct Hook *mainWindowLinkHook(void) { return &TranscriptLinkClickedHook; }
 
 static void deleteDiskFile(CONST_STRPTR path) {
     if (path == NULL || strlen(path) == 0)
@@ -926,7 +1135,7 @@ MakeHook(ImageRowClickedHook, ImageRowClickedFunc);
 
 HOOKPROTONHNONP(NewChatButtonClickedFunc, void) {
     currentConversation = NULL;
-    DoMethod(chatOutputTextEditor, MUIM_NList_Clear);
+    chatOutputClear();
     updateResponseFileControl();
     DoMethod(chatInputTextEditor, MUIM_GoActive);
 }
@@ -936,7 +1145,7 @@ HOOKPROTONHNONP(DeleteChatButtonClickedFunc, void) {
     DoMethod(conversationListObject, MUIM_NList_Remove,
              MUIV_NList_Remove_Active);
     currentConversation = NULL;
-    DoMethod(chatOutputTextEditor, MUIM_NList_Clear);
+    chatOutputClear();
     updateResponseFileControl();
     saveConversations();
 }
@@ -2198,7 +2407,6 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
     // Get the current screen to allocate pens
     struct Screen *currentScreen;
     get(mainWindowObject, MUIA_Window_Screen, &currentScreen);
-    agentPageObtainPens(currentScreen);
 
     if (currentScreen) {
         // Release old pens if they exist
@@ -2264,308 +2472,69 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
 }
 MakeHook(ConfigureForScreenHook, ConfigureForScreenFunc);
 
-/**
- * Initialize the style stack.
- * @param s : the style stack
- */
-static void initStyleStack(StyleStack *s) { s->top = -1; }
-
-/**
- * Push a style onto the stack.
- * @param s : the style stack
- * @param style : the style to push
- * @return true if the style was pushed, false if the stack is full
- */
-static BOOL pushStyle(StyleStack *s, StyleType style) {
-    if (s->top >= (MAX_STYLE_STACK - 1)) {
-        return FALSE;
-    }
-    s->stack[++s->top] = style;
-    return TRUE;
-}
-
-/**
- * Pop the top style from the stack.
- * @param s : the style stack
- * @param style : the style to pop
- * @return true if the top style was 'style' and was popped, false otherwise
- */
-static BOOL popStyle(StyleStack *s, StyleType style) {
-    if (s->top < 0) {
-        return FALSE;
-    }
-    if (s->stack[s->top] == style) {
-        s->top--;
-        return TRUE;
-    }
-    return FALSE;
-}
-
-/**
- * Check if the stack is currently 'style' on top.
- * @return true if stack is currently 'style' on top
- */
-static BOOL isTopStyle(const StyleStack *s, StyleType style) {
-    if (s->top < 0)
-        return FALSE;
-    return (s->stack[s->top] == style);
-}
-
-/**
- * Output MUI escape codes for turning on/off styles:
- *   \033b = bold on
- *   \033i = italic on
- *   \033u = underline on
- *   \033n = normal (off)
- *
- * @param out : output buffer
- * @param outSize : size of the output buffer
- * @param style : style to turn on
- */
-static void outputStyleOn(STRPTR out, size_t outSize, StyleType style) {
-    switch (style) {
-    case STYLE_BOLD:
-        strncat(out, "\033b", outSize - strlen(out) - 1);
-        break;
-    case STYLE_ITALIC:
-        strncat(out, "\033i", outSize - strlen(out) - 1);
-        break;
-    case STYLE_UNDERLINE:
-        strncat(out, "\033u", outSize - strlen(out) - 1);
-        break;
-    }
-}
-
-/*
- * Output MUI escape code to turn off all styles.
- * @param out : output buffer
- * @param outSize : size of the output buffer
- */
-static void outputStyleOff(STRPTR out, size_t outSize) {
-    /*
-       MCC_NList's docs say \033n sets the soft style back to normal,
-       thus turning off bold/italic/underline.
-    */
-    strncat(out, "\033n", outSize - strlen(out) - 1);
-}
-
-/*
- * Attempt to parse the next formatting marker:
- *  - "**" => toggles bold
- *  - "*"  => toggles italic
- *  - "__" => toggles underline
- *  - "_"  => toggles italic (some Markdown variants do this),
- *            but we'll skip that unless you truly want single underscore
- *            for italic. We'll assume only * for italic, __ for underline.
- *
- * @param input : the input string
- * @param pos : current position in the input string
- * @param len : length of the input string
- * @param foundStyle : output parameter for the style found
- * @return :
- *   0 if no recognised marker
- *   2 if recognized a 2-char marker (e.g., "**", "__")
- *   1 if recognized a single-char marker (e.g., "*")
- *
- * Also outputs which style it corresponds to in 'foundStyle'.
- */
-static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
-                         StyleType *foundStyle) {
-    if (pos >= len)
-        return 0;
-
-    // Check for "__" (underline)
-    if (pos + 1 < len && input[pos] == '_' && input[pos + 1] == '_') {
-        *foundStyle = STYLE_UNDERLINE;
-        return 2;
-    }
-    // Check for "**" (bold)
-    if (pos + 1 < len && input[pos] == '*' && input[pos + 1] == '*') {
-        *foundStyle = STYLE_BOLD;
-        return 2;
-    }
-    // Check for single "*"
-    if (input[pos] == '*') {
-        *foundStyle = STYLE_ITALIC;
-        return 1;
-    }
-    return 0;
-}
-
-/**
- * Convert a (mini-)Markdown string with possible nesting of
- *   **bold**, *italic*, __underline__
- * to MUI/NList escape codes with a proper stack approach.
- *
- * - Supports nesting, e.g. **bold *italic** inside**
- * - Supports escaping:
- *      \*, \_, \\, so they're inserted literally.
- *
- * @param input the input string
- * @return a newly allocated string. Caller must FreeVec() it.
- */
-STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
-    if (!input)
-        return NULL;
-
-    // Heuristic for output expansion: each marker can expand
-    // to ~4 chars ("\033b" or "\033n"), so let's be generous.
-    size_t inLen = strlen(input);
-    size_t outCap = inLen * 6 + 128;
-    STRPTR out = AllocVec(outCap, MEMF_ANY | MEMF_CLEAR);
-    if (!out)
-        return NULL;
-
-    StyleStack styleStack;
-    initStyleStack(&styleStack);
-
-    size_t i = 0;
-    while (i < inLen) {
-        // 1) Check for escapes: "\"
-        if (input[i] == '\\') {
-            // If we have a next char, output it literally and skip
-            if (i + 1 < inLen) {
-                // Next char is literal
-                size_t outLen = strlen(out);
-                if (outLen < outCap - 2) {
-                    out[outLen] = input[i + 1];
-                    out[outLen + 1] = '\0';
-                }
-                i += 2;
-            } else {
-                // Just a trailing backslash alone:
-                // output it or ignore, your choice. We'll just ignore it.
-                i++;
-            }
-            continue;
-        }
-
-        // 2) Try to parse a formatting marker
-        StyleType styleFound;
-        UBYTE markerLen = parseMarker(input, i, inLen, &styleFound);
-        if (markerLen > 0) {
-            // It's either a 1-char or 2-char marker
-            if (isTopStyle(&styleStack, styleFound)) {
-                // It's a closing marker for the top style
-                popStyle(&styleStack, styleFound);
-                // Output style off
-                outputStyleOff(out, outCap);
-
-                // Now re-enable any style(s) that remain on the stack
-                // because \033n turns off everything.
-                for (UWORD s = 0; s <= styleStack.top; s++) {
-                    outputStyleOn(out, outCap, styleStack.stack[s]);
-                }
-            } else {
-                // It's an opening marker for a new style
-                if (pushStyle(&styleStack, styleFound)) {
-                    outputStyleOn(out, outCap, styleFound);
-                } else {
-                    // We've run out of stack space; treat as literal
-                    // We'll just insert the raw marker:
-                    size_t availableSpace = outCap - strlen(out) - 1;
-                    size_t copyLen = (markerLen < availableSpace)
-                                         ? markerLen
-                                         : availableSpace;
-
-                    UBYTE tempBuf[256];
-                    if (copyLen > sizeof(tempBuf) - 1) {
-                        copyLen = sizeof(tempBuf) - 1;
-                    }
-
-                    memcpy(tempBuf, &input[i], copyLen);
-                    tempBuf[copyLen] = '\0';
-
-                    strncat(out, tempBuf, availableSpace);
-                }
-            }
-            i += markerLen;
-        } else {
-            // 3) Not a marker, just a normal character
-            size_t outLen = strlen(out);
-            if (outLen < outCap - 2) {
-                out[outLen] = input[i];
-                out[outLen + 1] = '\0';
-            }
-            i++;
-        }
-    }
-
-    // If any styles remain open, we can close them
-    while (styleStack.top >= 0) {
-        popStyle(&styleStack, styleStack.stack[styleStack.top]);
-        outputStyleOff(out, outCap);
-        // Re-enable anything that might remain on the stack
-        for (int s = 0; s <= styleStack.top; s++) {
-            outputStyleOn(out, outCap, styleStack.stack[s]);
-        }
-    }
-
-    return out;
-}
-
-static BOOL ensureChatOutputBufferCapacity(ULONG required) {
-    if (chatOutputTextEditorContents == NULL)
-        return FALSE;
-    if (required <= chatOutputTextEditorContentsCapacity)
-        return TRUE;
-
-    ULONG newCapacity = chatOutputTextEditorContentsCapacity;
-    while (newCapacity < required) {
-        if (newCapacity > 8 * 1024 * 1024) {
-            break;
-        }
-        newCapacity *= 2;
-    }
-    if (newCapacity < required) {
-        return FALSE;
-    }
-
-    STRPTR bigger = AllocVec(newCapacity, MEMF_ANY | MEMF_CLEAR);
-    if (bigger == NULL) {
-        return FALSE;
-    }
-    strncpy(bigger, chatOutputTextEditorContents,
-            chatOutputTextEditorContentsCapacity - 1);
-    set(chatOutputTextEditor, MUIA_NFloattext_Text, "");
-    FreeVec(chatOutputTextEditorContents);
-    chatOutputTextEditorContents = bigger;
-    chatOutputTextEditorContentsCapacity = newCapacity;
-    return TRUE;
-}
-
 Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
                                 ULONG weight) {
     // clang-format off
     if (!isAROS) {
-        Object *editor = MUI_NewObject(
-            MUIC_ActionTextEditor,
+        /* Return sends, Shift+Return starts a new line. Markdown is shown
+         * as it is typed, with its markup dimmed. */
+        Object *editor = RichTextEditorObject,
             MUIA_CycleChain, TRUE,
             objectId != 0 ? MUIA_ObjectID : TAG_IGNORE, objectId,
             weight != 0 ? MUIA_Weight : TAG_IGNORE, weight,
-            MUIA_ActionTextEditor_SubmitHook, submitHook,
+            MUIA_RichTextEditor_SubmitHook, submitHook,
+            MUIA_RichTextEditor_Markdown, TRUE,
             MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
             MUIA_TextEditor_ReadOnly, FALSE,
             MUIA_TextEditor_TabSize, 4,
             MUIA_TextEditor_Rows, 3,
+            MUIA_TextEditor_WrapMode, MUIV_TextEditor_WrapMode_SoftWrap,
             MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
             TAG_DONE);
         if (editor != NULL)
             return editor;
     }
-    return MUI_NewObject(
-        isAROS ? MUIC_BetterString : MUIC_TextEditor,
-        isAROS ? MUIA_Background : TAG_IGNORE, MUII_BACKGROUND,
+    return MUI_NewObject(MUIC_BetterString,
+        MUIA_Background, MUII_BACKGROUND,
         MUIA_CycleChain, TRUE,
         objectId != 0 ? MUIA_ObjectID : TAG_IGNORE, objectId,
         weight != 0 ? MUIA_Weight : TAG_IGNORE, weight,
-        isAROS ? TAG_DONE : TAG_SKIP, NULL,
-        MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
-        MUIA_TextEditor_ReadOnly, FALSE,
-        MUIA_TextEditor_TabSize, 4,
-        MUIA_TextEditor_Rows, 3,
-        MUIA_TextEditor_ExportHook, MUIV_TextEditor_ExportHook_EMail,
         TAG_DONE);
+    // clang-format on
+}
+
+/**
+ * A read only view for a conversation: Markdown, chat bubbles and clickable
+ * links, with its own scroll bar
+ * @param viewOut receives the text object
+ * @return the group holding the view and its scroll bar
+ **/
+Object *createTranscriptView(Object **viewOut) {
+    Object *slider = ScrollbarObject, End;
+    Object *view;
+    // clang-format off
+    view = RichTextEditorObject,
+        MUIA_TextEditor_ReadOnly, TRUE,
+        MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
+        MUIA_TextEditor_WrapMode, MUIV_TextEditor_WrapMode_SoftWrap,
+        MUIA_TextEditor_Slider, slider,
+        MUIA_TextEditor_ActiveObjectOnClick, TRUE,
+        MUIA_RichTextEditor_Markdown, TRUE,
+        MUIA_RichTextEditor_StickToBottom, TRUE,
+        MUIA_RichTextEditor_LinkHook, mainWindowLinkHook(),
+        MUIA_CycleChain, TRUE,
+        MUIA_ContextMenu, NULL,
+    End;
+    *viewOut = view;
+    if (view == NULL) {
+        MUI_DisposeObject(slider);
+        return NULL;
+    }
+    return HGroup,
+        MUIA_Group_Spacing, 0,
+        Child, view,
+        Child, slider,
+    End;
     // clang-format on
 }
 
@@ -2624,12 +2593,7 @@ LONG createMainWindow() {
 
     createMenu();
 
-    if (chatOutputTextEditorContents == NULL) {
-        chatOutputTextEditorContents = AllocVec(
-            CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH, MEMF_ANY | MEMF_CLEAR);
-        chatOutputTextEditorContentsCapacity =
-            CHAT_OUTPUT_TEXT_EDITOR_CONTENTS_LENGTH;
-    }
+    chatOutputScroller = createTranscriptView(&chatOutputTextEditor);
 
     pages[0] = STRING_MENU_CHAT;
     pages[1] = STRING_MENU_IMAGE;
@@ -2715,16 +2679,7 @@ LONG createMainWindow() {
                         Child, VGroup,
                             // Chat output text display
                             Child, HGroup, MUIA_VertWeight, 60,
-                                Child, chatOutputListView = NListviewObject,
-                                MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_None,
-                                MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
-                                MUIA_NListview_NList, chatOutputTextEditor = NFloattextObject,
-                                    MUIA_Font, configGetFixedWidthFonts() ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
-                                    MUIA_Frame, MUIV_Frame_Text,
-                                    MUIA_ContextMenu, NULL,
-                                    MUIA_NFloattext_Text, chatOutputTextEditorContents,
-                                    End,
-                                End,
+                                Child, chatOutputScroller,
                             End,
                             Child, HGroup,
                                 Child, attachFilesButton = MUI_MakeObject(MUIO_Button, STRING_ATTACH_FILES,
@@ -3139,9 +3094,7 @@ static void sendChatMessage() {
     if (currentConversation == NULL) {
         isNewConversation = TRUE;
         currentConversation = newConversation();
-        chatOutputTextEditorContents[0] = '\0';
-        set(chatOutputTextEditor, MUIA_NFloattext_Text,
-            chatOutputTextEditorContents);
+        chatOutputClear();
         set(conversationListObject, MUIA_NList_Active, MUIV_NList_Active_Off);
     }
     updateStatusBar(STRING_SENDING_MESSAGE, yellowPen);
@@ -3176,41 +3129,10 @@ static void sendChatMessage() {
     beginCancellableRequest();
     setRequestInterfaceBusy(TRUE);
 
-    UBYTE userStyleString[] = "\033r\033b\0333";
-    UBYTE userAlignment = 'l';
-    switch (configGetUserTextAlignment()) {
-    case ALIGN_LEFT:
-        userAlignment = 'l';
-        break;
-    case ALIGN_CENTER:
-        userAlignment = 'c';
-        break;
-    case ALIGN_RIGHT:
-        userAlignment = 'r';
-        break;
-    }
-    userStyleString[1] = userAlignment;
-    strncat(chatOutputTextEditorContents, userStyleString,
-            strlen(userStyleString));
-    size_t currentLength = strlen(chatOutputTextEditorContents);
-    for (ULONG i = 0; i < strlen(text); i++) {
-        if (currentLength >= chatOutputTextEditorContentsCapacity - 10)
-            break;
-
-        chatOutputTextEditorContents[currentLength++] = text[i];
-        chatOutputTextEditorContents[currentLength] = '\0';
-
-        // If it's a newline, add the styling codes after it
-        if (text[i] == '\n') {
-            strncat(chatOutputTextEditorContents, userStyleString,
-                    strlen(userStyleString));
-            currentLength = strlen(chatOutputTextEditorContents);
-        }
-    }
-
-    set(chatOutputTextEditor, MUIA_NFloattext_Text,
-        chatOutputTextEditorContents);
-    set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
+    chatOutputBeginMessage(TRUE);
+    chatOutputAppendMessageText(text);
+    DoMethod(chatOutputTextEditor, MUIM_RichTextEditor_ScrollTo,
+             MUIV_RichTextEditor_ScrollTo_Bottom);
 
     UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
 
@@ -3233,9 +3155,7 @@ static void sendChatMessage() {
         if (isNewConversation) {
             freeConversation(currentConversation);
             currentConversation = NULL;
-            chatOutputTextEditorContents[0] = '\0';
-            set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                chatOutputTextEditorContents);
+            chatOutputClear();
         }
         FreeVec(receivedMessage);
         if (freeExportedText)
@@ -3252,11 +3172,6 @@ static void sendChatMessage() {
 
     BOOL dataStreamFinished = FALSE;
     ULONG speechIndex = 0;
-    UWORD chunkCounter = 0;
-    ULONG streamedCharsSinceFlush = 0;
-    ULONG flushesSinceScroll = 0;
-    const clock_t uiFlushIntervalTicks = CLOCKS_PER_SEC / 2;
-    clock_t nextUiFlushTick = clock() + uiFlushIntervalTicks;
     struct ChatRequestSettings chatSettings;
     configGetActiveChatRequestSettings(&chatSettings);
 
@@ -3286,7 +3201,7 @@ static void sendChatMessage() {
 
     setConversationSystem(currentConversation, chatSettings.chatSystem);
 
-    strncat(chatOutputTextEditorContents, "\n", 1);
+    chatOutputBeginMessage(FALSE);
 
     do {
         responses = postChatMessageToOpenAI(
@@ -3310,9 +3225,7 @@ static void sendChatMessage() {
             if (isNewConversation) {
                 freeConversation(currentConversation);
                 currentConversation = NULL;
-                chatOutputTextEditorContents[0] = '\0';
-                set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                    chatOutputTextEditorContents);
+                chatOutputClear();
             }
             if (isAROS) {
                 set(chatInputTextEditor, MUIA_String_Contents, text);
@@ -3358,9 +3271,7 @@ static void sendChatMessage() {
                         NULL) {
                     freeConversation(currentConversation);
                     currentConversation = NULL;
-                    chatOutputTextEditorContents[0] = '\0';
-                    set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                        chatOutputTextEditorContents);
+                    chatOutputClear();
                 } else {
                     displayConversation(currentConversation);
                 }
@@ -3405,32 +3316,14 @@ static void sendChatMessage() {
                                              ? latin1StreamFb
                                              : (CONST_STRPTR)contentString;
                         }
-                        ULONG displayLen = strlen(displayStr);
-                        strncat(chatOutputTextEditorContents, displayStr,
-                                chatOutputTextEditorContentsCapacity -
-                                    strlen(chatOutputTextEditorContents) - 1);
+                        chatOutputAppend(displayStr, TRUE);
                         if (formattedMessageSystemEncoded != NULL)
                             CodesetsFreeA(formattedMessageSystemEncoded, NULL);
                         if (latin1StreamFb != NULL)
                             FreeVec(latin1StreamFb);
-                        chunkCounter++;
-                        streamedCharsSinceFlush += displayLen;
 
-                        /* Reduce flicker/jitter by coalescing frequent tiny
-                         * updates into timed UI flushes.
-                         */
-                        clock_t nowTick = clock();
-                        if (streamedCharsSinceFlush >= 256 ||
-                            nowTick >= nextUiFlushTick) {
-                            set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                                chatOutputTextEditorContents);
-                            if (++flushesSinceScroll % 3 == 0) {
-                                set(chatOutputListView, MUIA_NList_First,
-                                    MUIV_NList_First_Bottom);
-                            }
-                            streamedCharsSinceFlush = 0;
-                            nextUiFlushTick = nowTick + uiFlushIntervalTicks;
-                        }
+                        /* The view only lays out and draws the paragraph
+                         * that grew, so every chunk is shown at once */
                     }
 
                     /* End-of-stream detection:
@@ -3511,11 +3404,7 @@ static void sendChatMessage() {
 
     /* Ensure the final streamed text is shown immediately even when the stream
      * ended before the next coalesced refresh threshold. */
-    if (requestStream && chunkCounter > 0) {
-        set(chatOutputTextEditor, MUIA_NFloattext_Text,
-            chatOutputTextEditorContents);
-        set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
-    }
+
 
     /* Resolve every unanswered function_call before the next user message. */
     while (requestStream && hasPendingToolCall()) {
@@ -3579,16 +3468,9 @@ static void sendChatMessage() {
                         strncpy(outputs[i], TOOL_CALL_OUTPUT_DENIED, len);
                     userDenied = TRUE;
                     denyRest = TRUE;
-                    strncat(chatOutputTextEditorContents,
-                            STRING_SHELL_TOOL_DENIED_BANNER,
-                            chatOutputTextEditorContentsCapacity -
-                                strlen(chatOutputTextEditorContents) - 1);
+                    chatOutputAppend(STRING_SHELL_TOOL_DENIED_BANNER, TRUE);
                     strncat(receivedMessage, STRING_SHELL_TOOL_DENIED_BANNER,
                             READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
-                    set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                        chatOutputTextEditorContents);
-                    set(chatOutputListView, MUIA_NList_First,
-                        MUIV_NList_First_Bottom);
                 } else {
                     LONG exitCode = 0;
                     STRPTR output;
@@ -3603,15 +3485,9 @@ static void sendChatMessage() {
                     updateStatusBar(statusMsg, yellowPen);
                     snprintf(cmdDisplay, sizeof(cmdDisplay),
                              STRING_SHELL_TOOL_EXECUTING_BANNER_FORMAT, command);
-                    strncat(chatOutputTextEditorContents, cmdDisplay,
-                            chatOutputTextEditorContentsCapacity -
-                                strlen(chatOutputTextEditorContents) - 1);
+                    chatOutputAppend(cmdDisplay, TRUE);
                     strncat(receivedMessage, cmdDisplay,
                             READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
-                    set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                        chatOutputTextEditorContents);
-                    set(chatOutputListView, MUIA_NList_First,
-                        MUIV_NList_First_Bottom);
 
                     output = executeShellCommand(command, &exitCode);
                     snprintf(outputDisplay, sizeof(outputDisplay),
@@ -3619,15 +3495,9 @@ static void sendChatMessage() {
                              output != NULL
                                  ? output
                                  : (STRPTR)STRING_SHELL_TOOL_NO_OUTPUT);
-                    strncat(chatOutputTextEditorContents, outputDisplay,
-                            chatOutputTextEditorContentsCapacity -
-                                strlen(chatOutputTextEditorContents) - 1);
+                    chatOutputAppend(outputDisplay, TRUE);
                     strncat(receivedMessage, outputDisplay,
                             READ_BUFFER_LENGTH - strlen(receivedMessage) - 1);
-                    set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                        chatOutputTextEditorContents);
-                    set(chatOutputListView, MUIA_NList_First,
-                        MUIV_NList_First_Bottom);
 
                     snprintf(toolOutput, sizeof(toolOutput),
                              STRING_SHELL_TOOL_TOOL_OUTPUT_FORMAT, exitCode,
@@ -3715,32 +3585,15 @@ static void sendChatMessage() {
                         (Tag)toolContentString, CSA_MapForeignChars, TRUE,
                         TAG_DONE);
                     if (formattedToolResponse != NULL) {
-                        strncat(chatOutputTextEditorContents,
-                                formattedToolResponse,
-                                chatOutputTextEditorContentsCapacity -
-                                    strlen(chatOutputTextEditorContents) - 1);
+                        chatOutputAppend(formattedToolResponse, TRUE);
                         CodesetsFreeA(formattedToolResponse, NULL);
                     } else {
                         STRPTR latin1 = utf8ToLatin1(toolContentString);
                         if (latin1 != NULL) {
-                            strncat(chatOutputTextEditorContents, latin1,
-                                    chatOutputTextEditorContentsCapacity -
-                                        strlen(chatOutputTextEditorContents) - 1);
+                            chatOutputAppend(latin1, TRUE);
                             FreeVec(latin1);
                         }
                     }
-
-                    STRPTR formattedContent = convertMarkdownFormattingToMUI(
-                        chatOutputTextEditorContents);
-                    if (formattedContent != NULL) {
-                        strncpy(chatOutputTextEditorContents, formattedContent,
-                                chatOutputTextEditorContentsCapacity - 1);
-                        FreeVec(formattedContent);
-                    }
-                    set(chatOutputTextEditor, MUIA_NFloattext_Text,
-                        chatOutputTextEditorContents);
-                    set(chatOutputListView, MUIA_NList_First,
-                        MUIV_NList_First_Bottom);
                 }
             }
             json_object_put(toolResponse);
@@ -3868,175 +3721,54 @@ static void sendChatMessage() {
     finishActiveRequest(TRUE);
 }
 
-static void appendMessageFileSummary(struct ConversationNode *message) {
-    if (message == NULL || message->files.mlh_Head->mln_Succ == NULL)
-        return;
-    CONST_STRPTR prefix = strcmp(message->role, "assistant") == 0
-                              ? STRING_RECEIVED_FILES_PREFIX
-                              : STRING_ATTACHED_FILES_PREFIX;
-    strncat(chatOutputTextEditorContents, "\n[",
-            chatOutputTextEditorContentsCapacity -
-                strlen(chatOutputTextEditorContents) - 1);
-    strncat(chatOutputTextEditorContents, prefix,
-            chatOutputTextEditorContentsCapacity -
-                strlen(chatOutputTextEditorContents) - 1);
-    struct ChatFile *file;
-    ULONG index = 0;
-    for (file = (struct ChatFile *)message->files.mlh_Head;
-         file->node.mln_Succ != NULL;
-         file = (struct ChatFile *)file->node.mln_Succ) {
-        if (index++ > 0)
-            strncat(chatOutputTextEditorContents, ", ",
-                    chatOutputTextEditorContentsCapacity -
-                        strlen(chatOutputTextEditorContents) - 1);
-        STRPTR name = CodesetsUTF8ToStr(
-            CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)file->name,
-            CSA_MapForeignChars, TRUE, TAG_DONE);
-        strncat(chatOutputTextEditorContents,
-                name != NULL ? name : (STRPTR)file->name,
-                chatOutputTextEditorContentsCapacity -
-                    strlen(chatOutputTextEditorContents) - 1);
-        if (name != NULL)
-            CodesetsFreeA(name, NULL);
-    }
-    strncat(chatOutputTextEditorContents, "]",
-            chatOutputTextEditorContentsCapacity -
-                strlen(chatOutputTextEditorContents) - 1);
-}
-
 /**
  * Prints the conversation to the conversation window
  * @param conversation the conversation to display
  **/
 void displayConversation(struct Conversation *conversation) {
-    if (conversation == NULL) {
-        conversation = currentConversation;
-    }
     struct ConversationNode *conversationNode;
-    chatOutputTextEditorContents[0] = '\0';
+    if (conversation == NULL)
+        conversation = currentConversation;
+    if (chatOutputTextEditor == NULL)
+        return;
 
-    ULONG estimatedRequired = 1024;
-    for (conversationNode =
-             (struct ConversationNode *)conversation->messages->mlh_Head;
-         conversationNode->node.mln_Succ != NULL;
-        conversationNode =
-             (struct ConversationNode *)conversationNode->node.mln_Succ) {
-        estimatedRequired += strlen(conversationNode->content) * 3 + 512;
-        struct ChatFile *file;
-        for (file = (struct ChatFile *)conversationNode->files.mlh_Head;
-             file->node.mln_Succ != NULL;
-             file = (struct ChatFile *)file->node.mln_Succ)
-            estimatedRequired += strlen(file->name) * 3 + 8;
-    }
-    if (!ensureChatOutputBufferCapacity(estimatedRequired)) {
-        displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
-        set(sendMessageButton, MUIA_Disabled, TRUE);
+    /* Build the whole transcript without drawing, then lay it out once */
+    set(chatOutputTextEditor, MUIA_TextEditor_Quiet, TRUE);
+    chatOutputClear();
+    if (conversation == NULL) {
+        set(chatOutputTextEditor, MUIA_TextEditor_Quiet, FALSE);
         return;
     }
-
     for (conversationNode =
              (struct ConversationNode *)conversation->messages->mlh_Head;
          conversationNode->node.mln_Succ != NULL;
          conversationNode =
              (struct ConversationNode *)conversationNode->node.mln_Succ) {
-        if ((strlen(chatOutputTextEditorContents) +
-             strlen(conversationNode->content) + 256) >
-            chatOutputTextEditorContentsCapacity) {
-            ULONG need = strlen(chatOutputTextEditorContents) +
-                         strlen(conversationNode->content) * 3 + 1024;
-            if (!ensureChatOutputBufferCapacity(need)) {
-                displayError(STRING_ERROR_CONVERSATION_MAX_LENGTH_EXCEEDED);
-                set(sendMessageButton, MUIA_Disabled, TRUE);
-                return;
-            }
-        }
-        if (strcmp(conversationNode->role, "user") == 0) {
-            STRPTR content =
-                CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
-                                  CSA_Source, (Tag)conversationNode->content,
-                                  CSA_MapForeignChars, TRUE, TAG_DONE);
-            STRPTR latin1Fallback = NULL;
-            BOOL freeWithCodesets = (content != NULL);
-            if (content == NULL) {
-                latin1Fallback = utf8ToLatin1(conversationNode->content);
-                content = latin1Fallback ? latin1Fallback
-                                         : (STRPTR)conversationNode->content;
-            }
-            UBYTE userAlignment = 'l';
-            switch (configGetUserTextAlignment()) {
-            case ALIGN_LEFT:
-                userAlignment = 'l';
-                break;
-            case ALIGN_CENTER:
-                userAlignment = 'c';
-                break;
-            case ALIGN_RIGHT:
-                userAlignment = 'r';
-                break;
-            }
-            UBYTE userStyleString[] = "\033r\033b\0333";
-            userStyleString[1] = userAlignment;
-            strncat(chatOutputTextEditorContents, userStyleString,
-                    strlen(userStyleString));
-            for (ULONG i = 0; i < strlen(content); i++) {
-                strncat(chatOutputTextEditorContents, content + i, 1);
-                if (content[i] == '\n') {
-                    strncat(chatOutputTextEditorContents, userStyleString,
-                            strlen(userStyleString));
-                }
-            }
-            if (freeWithCodesets)
-                CodesetsFreeA(content, NULL);
-            else if (latin1Fallback != NULL)
-                FreeVec(latin1Fallback);
-            appendMessageFileSummary(conversationNode);
-        } else if (strcmp(conversationNode->role, "assistant") == 0) {
-            set(chatOutputListView, MUIA_NFloattext_Align,
-                configGetAssistantTextAlignment());
-            UBYTE assistantStyleString[] = "\n\n";
-            strncat(chatOutputTextEditorContents, assistantStyleString,
-                    strlen(assistantStyleString));
-            UTF8 *formattedContentSystemEncoded =
-                CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
-                                  CSA_Source, (Tag)conversationNode->content,
-                                  CSA_MapForeignChars, TRUE, TAG_DONE);
-            CONST_STRPTR contentForFormatting = formattedContentSystemEncoded;
-            STRPTR latin1Fallback = NULL;
-            if (contentForFormatting == NULL) {
-                latin1Fallback = utf8ToLatin1(conversationNode->content);
-                contentForFormatting = latin1Fallback
-                                           ? latin1Fallback
-                                           : (STRPTR)conversationNode->content;
-            }
-            STRPTR formattedContent =
-                convertMarkdownFormattingToMUI(contentForFormatting);
-            if (formattedContentSystemEncoded != NULL)
-                CodesetsFreeA(formattedContentSystemEncoded, NULL);
+        BOOL user = strcmp(conversationNode->role, "user") == 0;
+        STRPTR content;
+        STRPTR latin1Fallback = NULL;
+        if (!user && strcmp(conversationNode->role, "assistant") != 0)
+            continue;
+        content = CodesetsUTF8ToStr(CSA_DestCodeset, (Tag)systemCodeset,
+                                    CSA_Source, (Tag)conversationNode->content,
+                                    CSA_MapForeignChars, TRUE, TAG_DONE);
+        chatOutputBeginMessage(user);
+        if (content != NULL) {
+            chatOutputAppendMessageText(content);
+            CodesetsFreeA(content, NULL);
+        } else {
+            latin1Fallback = utf8ToLatin1(conversationNode->content);
+            chatOutputAppendMessageText(latin1Fallback != NULL
+                                            ? latin1Fallback
+                                            : (STRPTR)conversationNode->content);
             if (latin1Fallback != NULL)
                 FreeVec(latin1Fallback);
-            if (formattedContent != NULL) {
-                strncat(chatOutputTextEditorContents, formattedContent,
-                        strlen(formattedContent));
-                FreeVec(formattedContent);
-            }
-            appendMessageFileSummary(conversationNode);
-            const UBYTE messageSeparatorStyleString[] = "\n\n";
-            strncat(chatOutputTextEditorContents, messageSeparatorStyleString,
-                    strlen(messageSeparatorStyleString));
         }
+        appendMessageFileSummary(conversationNode);
     }
-
-    ULONG totalLen = (ULONG)strlen(chatOutputTextEditorContents);
-    if (totalLen > CHAT_OUTPUT_WIDGET_SAFE_LIMIT) {
-        STRPTR truncated = chatOutputTextEditorContents +
-                           (totalLen - CHAT_OUTPUT_WIDGET_SAFE_LIMIT);
-        memmove(chatOutputTextEditorContents, truncated,
-                CHAT_OUTPUT_WIDGET_SAFE_LIMIT + 1);
-    }
-
-    set(chatOutputTextEditor, MUIA_NFloattext_Text,
-        chatOutputTextEditorContents);
-    set(chatOutputListView, MUIA_NList_First, MUIV_NList_First_Bottom);
+    set(chatOutputTextEditor, MUIA_TextEditor_Quiet, FALSE);
+    DoMethod(chatOutputTextEditor, MUIM_RichTextEditor_ScrollTo,
+             MUIV_RichTextEditor_ScrollTo_Bottom);
 }
 
 /**

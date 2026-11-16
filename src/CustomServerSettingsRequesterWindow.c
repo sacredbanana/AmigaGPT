@@ -1,7 +1,6 @@
 #include <exec/exec.h>
 #include <json-c/json.h>
 #include <libraries/mui.h>
-#include <mui/NFloattext_mcc.h>
 #include <mui/Guigfx_mcc.h>
 #include <mui/NList_mcc.h>
 #include <mui/NListview_mcc.h>
@@ -15,6 +14,7 @@
 #include "CustomServerSettingsRequesterWindow.h"
 #include "gui.h"
 #include "openai.h"
+#include "RichTextEditor.h"
 
 /* (Debug logging removed) */
 #define PSDPRINTF(...)                                                         \
@@ -220,6 +220,7 @@ static void showTestResultTextWithStatus(CONST_STRPTR title, BOOL success,
 
     if (customServerTestResultWindowObject == NULL) {
         Object *closeButton = NULL;
+        Object *testResultSlider = ScrollbarObject, End;
         // clang-format off
         if ((customServerTestResultWindowObject = WindowObject,
              MUIA_Window_Title, title != NULL ? title : (CONST_STRPTR)STRING_TEST,
@@ -230,15 +231,17 @@ static void showTestResultTextWithStatus(CONST_STRPTR title, BOOL success,
              MUIA_Window_LeftEdge, MUIV_Window_LeftEdge_Centered,
              MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered,
              WindowContents, VGroup,
-                 Child, NListviewObject,
-                     MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_None,
-                     MUIA_NListview_Vert_ScrollBar, MUIV_NListview_VSB_Auto,
-                     MUIA_NListview_NList, customServerTestResultFloattextObject = NFloattextObject,
-                         MUIA_Font, configGetFixedWidthFonts() ? MUIV_NList_Font_Fixed : MUIV_NList_Font,
-                         MUIA_Frame, MUIV_Frame_Text,
+                 Child, HGroup,
+                     MUIA_Group_Spacing, 0,
+                     Child, customServerTestResultFloattextObject = RichTextEditorObject,
+                         MUIA_TextEditor_ReadOnly, TRUE,
+                         MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
+                         MUIA_TextEditor_WrapMode, MUIV_TextEditor_WrapMode_SoftWrap,
+                         MUIA_TextEditor_Slider, testResultSlider,
+                         MUIA_TextEditor_Rows, 12,
                          MUIA_ContextMenu, NULL,
-                         MUIA_NFloattext_Text, "",
                      End,
+                     Child, testResultSlider,
                  End,
                  Child, HGroup,
                      Child, closeButton = MUI_MakeObject(MUIO_Button, STRING_OK, TAG_DONE),
@@ -296,8 +299,14 @@ static void showTestResultTextWithStatus(CONST_STRPTR title, BOOL success,
         strcpy(customServerTestResultTextBuffer, statusLine);
         strcat(customServerTestResultTextBuffer, body);
         if (customServerTestResultFloattextObject != NULL) {
-            set(customServerTestResultFloattextObject, MUIA_NFloattext_Text,
-                customServerTestResultTextBuffer);
+            /* Raw: a server's reply is shown exactly as it came */
+            DoMethod(customServerTestResultFloattextObject,
+                     MUIM_TextEditor_ClearText);
+            DoMethod(customServerTestResultFloattextObject,
+                     MUIM_RichTextEditor_Append,
+                     (IPTR)customServerTestResultTextBuffer, -1,
+                     MUIF_RichTextEditor_Append_Raw |
+                         MUIF_RichTextEditor_Append_NoScroll);
         }
     }
     if (bodyNoCR != NULL)
