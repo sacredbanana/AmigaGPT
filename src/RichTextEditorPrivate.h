@@ -346,6 +346,9 @@ struct RTEData {
     BOOL shown;
     BOOL active;
     BOOL justActivated; /* the key that activated it is not typed */
+    ULONG activatedSecs; /* when it became active */
+    BOOL keysDisabled; /* MUI's Tab cycling is off while it is active */
+    ULONG activatedMicros;
     BOOL disabled;
     struct TextFont *font;
     struct TextFont *codeFont;

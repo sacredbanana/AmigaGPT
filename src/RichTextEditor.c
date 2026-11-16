@@ -32,6 +32,8 @@ struct MUI_CustomClass *richTextEditorClass = NULL;
 #define RTE_PRIVATE_HFIRST (RichTextEditor_Dummy + 0x70)
 
 void rteMacroExecute(struct RTEData *data, Object *obj);
+static void rteRestoreCycleKeys(struct IClass *cl, struct RTEData *data,
+                                Object *obj);
 
 static BOOL rteNotifying = FALSE;
 
@@ -1115,6 +1117,7 @@ static IPTR mSetup(struct IClass *cl, Object *obj, Msg msg) {
 
 static IPTR mCleanup(struct IClass *cl, Object *obj, Msg msg) {
     struct RTEData *data = INST_DATA(cl, obj);
+    rteRestoreCycleKeys(cl, data, obj);
     if (data->ehAdded) {
         DoMethod(_win(obj), MUIM_Window_RemEventHandler, &data->eh);
         data->ehAdded = FALSE;
@@ -1198,10 +1201,68 @@ static IPTR mDraw(struct IClass *cl, Object *obj, struct MUIP_Draw *msg) {
     return 0;
 }
 
+/* Set while this class makes an object the window's active object */
+static BOOL rteActivating = FALSE;
+
+#define RTE_CYCLE_KEYS (MUIKEYF_GADGET_NEXT | MUIKEYF_GADGET_PREV)
+
+/**
+ * Tab is typed into an editable object, so MUI must not use it to move to
+ * the next gadget while one is active (Amiga+Tab and Ctrl+Tab still do)
+ */
+static void rteDisableCycleKeys(struct RTEData *data, Object *obj) {
+    Object *win = _win(obj);
+    ULONG keys = 0;
+    if (data->readOnly || win == NULL || data->keysDisabled)
+        return;
+    get(win, MUIA_Window_DisableKeys, &keys);
+    set(win, MUIA_Window_DisableKeys, keys | RTE_CYCLE_KEYS);
+    data->keysDisabled = TRUE;
+}
+
+static void rteRestoreCycleKeys(struct IClass *cl, struct RTEData *data,
+                                Object *obj) {
+    Object *win = _win(obj);
+    Object *current = NULL;
+    ULONG keys = 0;
+    if (!data->keysDisabled || win == NULL)
+        return;
+    data->keysDisabled = FALSE;
+    /* If focus moved straight to another editable editor, it wants them off
+     * too: MUI may activate it before this one is told it is inactive */
+    get(win, MUIA_Window_ActiveObject, &current);
+    if (current != NULL && current != obj && OCLASS(current) == cl) {
+        struct RTEData *other = INST_DATA(cl, current);
+        if (other->keysDisabled)
+            return;
+    }
+    get(win, MUIA_Window_DisableKeys, &keys);
+    set(win, MUIA_Window_DisableKeys, keys & ~RTE_CYCLE_KEYS);
+}
+
 static IPTR mGoActive(struct IClass *cl, Object *obj, Msg msg) {
     struct RTEData *data = INST_DATA(cl, obj);
+    Object *win = data->shown ? _win(obj) : NULL;
+
+    /* Programs often call MUIM_GoActive directly to put the cursor in an
+     * editor. Unless the window agrees that this is its active object, MUI
+     * keeps navigation keys such as Return for whatever it thinks is active,
+     * so make it so. MUI then sends MUIM_GoActive again. */
+    if (win != NULL && !rteActivating) {
+        Object *current = NULL;
+        get(win, MUIA_Window_ActiveObject, &current);
+        if (current != obj) {
+            rteActivating = TRUE;
+            set(win, MUIA_Window_ActiveObject, obj);
+            rteActivating = FALSE;
+            if (data->active)
+                return 0;
+        }
+    }
     data->active = TRUE;
     data->justActivated = TRUE;
+    rteDisableCycleKeys(data, obj);
+    CurrentTime(&data->activatedSecs, &data->activatedMicros);
     rteInvalidateSelection(data);
     rteInvalidateCursorLine(data);
     if (data->inactiveContents != NULL && data->totalLength == 0)
@@ -1214,6 +1275,7 @@ static IPTR mGoInactive(struct IClass *cl, Object *obj, Msg msg) {
     struct RTEData *data = INST_DATA(cl, obj);
     data->active = FALSE;
     rteEndDrag(data, obj);
+    rteRestoreCycleKeys(cl, data, obj);
     rteInvalidateSelection(data);
     rteInvalidateCursorLine(data);
     if (data->inactiveContents != NULL && data->totalLength == 0)

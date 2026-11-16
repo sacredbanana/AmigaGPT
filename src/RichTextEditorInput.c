@@ -576,6 +576,15 @@ static BOOL rteKey(struct RTEData *data, Object *obj, struct IntuiMessage *imsg)
         data->macroLen++;
     }
 
+    /* Tab is typed in an editable object; Amiga+Tab or Ctrl+Tab move to the
+     * next gadget instead (with Shift, the previous one) */
+    if (code == RK_TAB && (amigaKey || ctrl) && _win(obj) != NULL) {
+        set(_win(obj), MUIA_Window_ActiveObject,
+            shift ? MUIV_Window_ActiveObject_Prev
+                  : MUIV_Window_ActiveObject_Next);
+        return TRUE;
+    }
+
     /* Amiga shortcuts */
     if (amigaKey && !alt && !ctrl) {
         n = rteMapKey(imsg, buf, sizeof(buf));
@@ -742,8 +751,6 @@ static BOOL rteKey(struct RTEData *data, Object *obj, struct IntuiMessage *imsg)
         return TRUE;
     }
     case RK_TAB:
-        if (amigaKey || ctrl)
-            return FALSE;
         rteUndoBeginGroup(data);
         rteCheckKeyword(data, obj);
         if (data->convertTabs) {
@@ -1090,10 +1097,28 @@ ULONG rteHandleEvent(struct IClass *cl, Object *obj,
         }
         if (!data->active || (imsg->Code & IECODE_UP_PREFIX))
             break;
+        {
+            /* Keys belong to the window's active object. If that is not
+             * this object any more, it has lost the focus without being
+             * told, so stop showing a cursor and leave the key alone. */
+            Object *current = NULL;
+            if (_win(obj) != NULL)
+                get(_win(obj), MUIA_Window_ActiveObject, &current);
+            if (current != obj) {
+                data->active = FALSE;
+                rteInvalidateCursorLine(data);
+                rteRequestRedraw(data, obj);
+                break;
+            }
+        }
         if (data->justActivated) {
-            /* MUI hands over the Tab that cycled to this object as well */
+            /* MUI hands over the Tab that cycled to this object as well. That
+             * Tab comes within moments of the activation; a Tab pressed later,
+             * after a program put the cursor here, is typed as usual. */
+            LONG ms = ((LONG)imsg->Seconds - (LONG)data->activatedSecs) * 1000 +
+                      ((LONG)imsg->Micros - (LONG)data->activatedMicros) / 1000;
             data->justActivated = FALSE;
-            if (imsg->Code == RK_TAB)
+            if (imsg->Code == RK_TAB && ms > -250 && ms < 250)
                 break;
         }
         if (data->disabled)
