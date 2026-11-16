@@ -1213,6 +1213,7 @@ static IPTR mGoActive(struct IClass *cl, Object *obj, Msg msg) {
 static IPTR mGoInactive(struct IClass *cl, Object *obj, Msg msg) {
     struct RTEData *data = INST_DATA(cl, obj);
     data->active = FALSE;
+    rteEndDrag(data, obj);
     rteInvalidateSelection(data);
     rteInvalidateCursorLine(data);
     if (data->inactiveContents != NULL && data->totalLength == 0)

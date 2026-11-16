@@ -505,6 +505,7 @@ BOOL rteCopy(struct RTEData *data, Object *obj, BOOL cut);
 BOOL rtePaste(struct RTEData *data, Object *obj);
 IPTR rteARexx(struct RTEData *data, Object *obj, CONST_STRPTR command);
 void rteUpdateEventHandler(struct RTEData *data, Object *obj, ULONG events);
+void rteEndDrag(struct RTEData *data, Object *obj);
 
 /* RichTextEditor.c */
 void rteChanged(struct RTEData *data, Object *obj, BOOL contents);

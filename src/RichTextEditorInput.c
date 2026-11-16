@@ -903,6 +903,10 @@ static void rteMouseDown(struct RTEData *data, Object *obj,
     data->lastClickMicros = imsg->Micros;
     data->pressX = imsg->MouseX;
     data->pressY = imsg->MouseY;
+    /* The auto scroll timer reads the mouse position, so it must never see
+     * where an earlier drag ended */
+    data->mouseX = imsg->MouseX;
+    data->mouseY = imsg->MouseY;
     data->pressQualifier = imsg->Qualifier;
     data->dragMoved = FALSE;
     data->wantX = -1;
@@ -951,19 +955,26 @@ static void rteMouseDown(struct RTEData *data, Object *obj,
 
 static void rteMouseDrag(struct RTEData *data, Object *obj, LONG mx, LONG my) {
     LONG dx = mx - data->pressX, dy = my - data->pressY;
+    data->mouseX = mx;
+    data->mouseY = my;
     if (!data->dragMoved && dx * dx + dy * dy < 9)
         return;
     data->dragMoved = TRUE;
-    data->mouseX = mx;
-    data->mouseY = my;
     rteDragTo(data, obj, rtePosAtMouse(data, obj, mx, my));
+}
+
+/** Stop following the mouse */
+void rteEndDrag(struct RTEData *data, Object *obj) {
+    if (!data->selecting)
+        return;
+    data->selecting = FALSE;
+    rteUpdateEventHandler(data, obj,
+                          data->ehEvents & ~(IDCMP_MOUSEMOVE | IDCMP_INTUITICKS));
 }
 
 static void rteMouseUp(struct RTEData *data, Object *obj,
                        struct IntuiMessage *imsg) {
-    data->selecting = FALSE;
-    rteUpdateEventHandler(data, obj,
-                          data->ehEvents & ~(IDCMP_MOUSEMOVE | IDCMP_INTUITICKS));
+    rteEndDrag(data, obj);
     if (!data->dragMoved && data->clickCount == 1) {
         BOOL follow = data->readOnly ||
                       (data->pressQualifier & (QUAL_CTRL | QUAL_AMIGA)) != 0;
@@ -1028,6 +1039,11 @@ ULONG rteHandleEvent(struct IClass *cl, Object *obj,
         break;
     case IDCMP_MOUSEMOVE:
         if (data->selecting) {
+            /* The button went up where this window could not see it */
+            if (!(imsg->Qualifier & IEQUALIFIER_LEFTBUTTON)) {
+                rteEndDrag(data, obj);
+                break;
+            }
             rteMouseDrag(data, obj, imsg->MouseX, imsg->MouseY);
             return MUI_EventHandlerRC_Eat;
         }
@@ -1035,6 +1051,13 @@ ULONG rteHandleEvent(struct IClass *cl, Object *obj,
     case IDCMP_INTUITICKS:
         if (data->selecting) {
             LONG my = data->mouseY;
+            if (!(imsg->Qualifier & IEQUALIFIER_LEFTBUTTON)) {
+                rteEndDrag(data, obj);
+                break;
+            }
+            /* Only a real drag scrolls, never a click held still */
+            if (!data->dragMoved)
+                break;
             if (my < data->viewTop) {
                 rteScrollBy(data, obj, -data->lineHeight);
                 rteDragTo(data, obj, rtePosAtMouse(data, obj, data->mouseX, my));
