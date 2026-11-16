@@ -183,7 +183,9 @@ The **Speech** tab generates spoken audio with the active speech profile and sav
 
 ### Agent
 
-The **Agent** tab hands a task to the model and lets it work on your Amiga with tools until the task is done. Type what you want ("find every .info file in Work:Projects that has no matching file", "add a version string to main.c and rebuild") and press Return. Each tool the agent uses is shown in the transcript as a line starting with `>`. **Send** changes to **Stop** while it works.
+The **Agent** tab hands a task to the model and lets it work on your Amiga with tools until the task is done. Type what you want ("find every .info file in Work:Projects that has no matching file", "add a version string to main.c and rebuild") and press Return. **Send** changes to **Stop** while it works.
+
+The transcript shows each part of the conversation in its own style: your messages bold and aligned like user messages on the Chat tab, the model's reasoning in grey italics, each tool it uses as an amber line starting with `>`, its replies as normal text, and errors in red. Reasoning is shown when the model reveals it: Gemini, Claude and Grok send a summary of it, OpenAI reasoning models do so only when they reasoned at length, and OpenAI-compatible servers such as LM Studio send the text itself. Everything shown is saved with the session, so a session you reopen looks the same, including what subagents did. The answers to slash commands such as `/skills` are not saved.
 
 The agent talks to the active chat provider, so it works with OpenAI, Google Gemini, SpaceXAI Grok, Anthropic Claude and custom OpenAI-compatible servers whose model supports tool calling.
 
@@ -404,7 +406,7 @@ This command takes no parameters and returns "Conversation history cleared" on s
 
 #### AGENT
 
-Runs one turn of the agent (see [Agent](#agent)) and returns everything it printed: its replies and a line for each tool it used. The agent's session is kept between calls, so a later call continues the same task.
+Runs one turn of the agent (see [Agent](#agent)) and returns everything it printed: its replies, a line for each tool it used and any error. The model's reasoning is left out. The agent's session is kept between calls, so a later call continues the same task.
 
 ```
 AGENT PJ=PROJECT/K,A=APPROVAL/K,N=NEW/S,P=PROMPT/F

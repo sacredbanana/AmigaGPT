@@ -21,6 +21,10 @@ static ULONG syntheticIdCounter = 0;
 
 static CONST_STRPTR EFFORT_NAMES[] = {NULL, "low", "medium", "high"};
 
+/* Whether the request being built asks the model to show its reasoning.
+ * Set for each request by agentApiSendOnce(). */
+static BOOL askForReasoning = TRUE;
+
 static CONST_STRPTR stringOf(struct json_object *object, CONST_STRPTR key) {
     struct json_object *value;
     CONST_STRPTR text;
@@ -126,6 +130,27 @@ static struct json_object *newAssistant(struct AgentBuffer *text,
     }
     agentBufferFree(text);
     return assistant;
+}
+
+/* Store the reasoning a model showed with its turn, if it showed any */
+static void setReasoning(struct json_object *assistant,
+                         struct AgentBuffer *reasoning) {
+    ULONG length = reasoning->length;
+    while (length > 0 && (reasoning->data[length - 1] == '\n' ||
+                          reasoning->data[length - 1] == ' '))
+        reasoning->data[--length] = '\0';
+    if (length > 0)
+        addString(assistant, "reasoning", reasoning->data);
+    agentBufferFree(reasoning);
+}
+
+/* Separate the pieces of reasoning a model returns with a blank line */
+static void appendReasoning(struct AgentBuffer *reasoning, CONST_STRPTR text) {
+    if (text == NULL || text[0] == '\0')
+        return;
+    if (reasoning->length > 0)
+        agentBufferAppend(reasoning, "\n\n");
+    agentBufferAppend(reasoning, text);
 }
 
 /* The provider's own blocks of an assistant item, if it came from the same
@@ -270,22 +295,47 @@ static struct json_object *buildResponsesRequest(
     else
         json_object_put(toolArray);
 
-    if (EFFORT_NAMES[effort] != NULL)
-        json_object_object_add(request, "reasoning",
-                               textObject("effort", EFFORT_NAMES[effort]));
+    if (EFFORT_NAMES[effort] != NULL || askForReasoning) {
+        struct json_object *reasoning = json_object_new_object();
+        if (EFFORT_NAMES[effort] != NULL)
+            addString(reasoning, "effort", EFFORT_NAMES[effort]);
+        /* Reasoning models only return a summary of their reasoning when
+         * asked for one */
+        if (askForReasoning)
+            addString(reasoning, "summary", "auto");
+        json_object_object_add(request, "reasoning", reasoning);
+    }
     return request;
 }
 
 static struct json_object *parseResponsesAnswer(struct json_object *response) {
     struct json_object *output = arrayOf(response, "output");
     struct json_object *calls = json_object_new_array();
+    struct json_object *assistant;
     struct AgentBuffer text = {NULL, 0, 0};
+    struct AgentBuffer reasoning = {NULL, 0, 0};
     ULONG i, j;
 
     for (i = 0; output != NULL && i < json_object_array_length(output); i++) {
         struct json_object *item = json_object_array_get_idx(output, i);
         CONST_STRPTR type = stringOf(item, "type");
-        if (strcmp(type, "message") == 0) {
+        if (strcmp(type, "reasoning") == 0) {
+            /* OpenAI gives a summary; other servers give the text itself */
+            struct json_object *summary = arrayOf(item, "summary");
+            struct json_object *content = arrayOf(item, "content");
+            for (j = 0;
+                 summary != NULL && j < json_object_array_length(summary); j++)
+                appendReasoning(&reasoning,
+                                stringOf(json_object_array_get_idx(summary, j),
+                                         "text"));
+            for (j = 0;
+                 summary == NULL && content != NULL &&
+                 j < json_object_array_length(content);
+                 j++)
+                appendReasoning(&reasoning,
+                                stringOf(json_object_array_get_idx(content, j),
+                                         "text"));
+        } else if (strcmp(type, "message") == 0) {
             struct json_object *content = arrayOf(item, "content");
             for (j = 0;
                  content != NULL && j < json_object_array_length(content); j++) {
@@ -302,7 +352,9 @@ static struct json_object *parseResponsesAnswer(struct json_object *response) {
                     parseArguments(stringOf(item, "arguments")));
         }
     }
-    return newAssistant(&text, calls, NULL, API_CHAT_ENDPOINT_RESPONSES);
+    assistant = newAssistant(&text, calls, NULL, API_CHAT_ENDPOINT_RESPONSES);
+    setReasoning(assistant, &reasoning);
+    return assistant;
 }
 
 /* ------------------------------------------------------------------------
@@ -429,10 +481,17 @@ parseChatCompletionsAnswer(struct json_object *response) {
             : NULL;
     struct json_object *toolCalls = arrayOf(message, "tool_calls");
     struct json_object *calls = json_object_new_array();
+    struct json_object *assistant;
     struct AgentBuffer text = {NULL, 0, 0};
+    struct AgentBuffer reasoning = {NULL, 0, 0};
     ULONG i;
 
     agentBufferAppend(&text, stringOf(message, "content"));
+    /* Reasoning models on OpenAI compatible servers (LM Studio, DeepSeek,
+     * Grok) return their reasoning in one of these */
+    appendReasoning(&reasoning, stringOf(message, "reasoning_content"));
+    if (reasoning.length == 0)
+        appendReasoning(&reasoning, stringOf(message, "reasoning"));
     for (i = 0; toolCalls != NULL && i < json_object_array_length(toolCalls);
          i++) {
         struct json_object *toolCall = json_object_array_get_idx(toolCalls, i);
@@ -440,7 +499,10 @@ parseChatCompletionsAnswer(struct json_object *response) {
         addCall(calls, stringOf(toolCall, "id"), stringOf(function, "name"),
                 parseArguments(stringOf(function, "arguments")));
     }
-    return newAssistant(&text, calls, NULL, API_CHAT_ENDPOINT_CHAT_COMPLETIONS);
+    assistant =
+        newAssistant(&text, calls, NULL, API_CHAT_ENDPOINT_CHAT_COMPLETIONS);
+    setReasoning(assistant, &reasoning);
+    return assistant;
 }
 
 /* ------------------------------------------------------------------------
@@ -574,6 +636,14 @@ static struct json_object *buildMessagesRequest(
     if (EFFORT_NAMES[effort] != NULL)
         json_object_object_add(request, "output_config",
                                textObject("effort", EFFORT_NAMES[effort]));
+    /* Current Claude models leave the text of their thinking out unless a
+     * summary is asked for. Older ones reject this and are asked again
+     * without it. */
+    if (askForReasoning) {
+        struct json_object *thinking = textObject("type", "adaptive");
+        addString(thinking, "display", "summarized");
+        json_object_object_add(request, "thinking", thinking);
+    }
     return request;
 }
 
@@ -581,14 +651,18 @@ static struct json_object *parseMessagesAnswer(struct json_object *response,
                                                BOOL *pauseOut) {
     struct json_object *content = arrayOf(response, "content");
     struct json_object *calls = json_object_new_array();
+    struct json_object *assistant;
     struct AgentBuffer text = {NULL, 0, 0};
+    struct AgentBuffer reasoning = {NULL, 0, 0};
     CONST_STRPTR stopReason = stringOf(response, "stop_reason");
     ULONG i;
 
     for (i = 0; content != NULL && i < json_object_array_length(content); i++) {
         struct json_object *block = json_object_array_get_idx(content, i);
         CONST_STRPTR type = stringOf(block, "type");
-        if (strcmp(type, "text") == 0) {
+        if (strcmp(type, "thinking") == 0) {
+            appendReasoning(&reasoning, stringOf(block, "thinking"));
+        } else if (strcmp(type, "text") == 0) {
             agentBufferAppend(&text, stringOf(block, "text"));
         } else if (strcmp(type, "tool_use") == 0) {
             struct json_object *input = objectOf(block, "input");
@@ -602,7 +676,9 @@ static struct json_object *parseMessagesAnswer(struct json_object *response,
         *pauseOut = TRUE;
     if (strcmp(stopReason, "refusal") == 0 && text.data == NULL)
         agentBufferAppend(&text, "The model declined this request.");
-    return newAssistant(&text, calls, content, API_CHAT_ENDPOINT_MESSAGES);
+    assistant = newAssistant(&text, calls, content, API_CHAT_ENDPOINT_MESSAGES);
+    setReasoning(assistant, &reasoning);
+    return assistant;
 }
 
 /* ------------------------------------------------------------------------
@@ -773,18 +849,21 @@ static struct json_object *buildGeminiRequest(CONST_STRPTR model,
         json_object_put(declarations);
     }
 
-    if (EFFORT_NAMES[effort] != NULL) {
+    if (EFFORT_NAMES[effort] != NULL || askForReasoning) {
         struct json_object *generationConfig = json_object_new_object();
-        struct json_object *thinkingConfig;
-        if (geminiUsesThinkingBudget(model)) {
+        struct json_object *thinkingConfig = json_object_new_object();
+        if (EFFORT_NAMES[effort] != NULL && geminiUsesThinkingBudget(model)) {
             /* Budgets that fit the ranges of both Flash and Pro */
             static const LONG budgets[] = {0, 1024, 8192, 24576};
-            thinkingConfig = json_object_new_object();
             json_object_object_add(thinkingConfig, "thinkingBudget",
                                    json_object_new_int(budgets[effort]));
-        } else {
-            thinkingConfig = textObject("thinkingLevel", EFFORT_NAMES[effort]);
+        } else if (EFFORT_NAMES[effort] != NULL) {
+            addString(thinkingConfig, "thinkingLevel", EFFORT_NAMES[effort]);
         }
+        /* Summaries of the thoughts come back as parts marked thought */
+        if (askForReasoning)
+            json_object_object_add(thinkingConfig, "includeThoughts",
+                                   json_object_new_boolean(TRUE));
         json_object_object_add(generationConfig, "thinkingConfig",
                                thinkingConfig);
         json_object_object_add(request, "generationConfig", generationConfig);
@@ -801,6 +880,7 @@ static struct json_object *parseGeminiAnswer(struct json_object *response) {
     struct json_object *parts = arrayOf(content, "parts");
     struct json_object *calls = json_object_new_array();
     struct AgentBuffer text = {NULL, 0, 0};
+    struct AgentBuffer reasoning = {NULL, 0, 0};
     ULONG i;
 
     for (i = 0; parts != NULL && i < json_object_array_length(parts); i++) {
@@ -812,14 +892,18 @@ static struct json_object *parseGeminiAnswer(struct json_object *response) {
             addCall(calls, stringOf(functionCall, "id"),
                     stringOf(functionCall, "name"),
                     arguments != NULL ? json_object_get(arguments) : NULL);
-        } else if (!(json_object_object_get_ex(part, "thought", &thought) &&
-                     json_object_get_boolean(thought))) {
+        } else if (json_object_object_get_ex(part, "thought", &thought) &&
+                   json_object_get_boolean(thought)) {
+            appendReasoning(&reasoning, stringOf(part, "text"));
+        } else {
             CONST_STRPTR partText = stringOf(part, "text");
             /* Gemini 2.5 sometimes writes its reasoning as plain text that
              * starts with a line saying "thought", instead of marking the
-             * part as a thought. It is left out of the reply like a real
-             * thought part, and kept in the history unchanged. */
-            if (strncmp(partText, "thought\n", 8) != 0)
+             * part as a thought. It is shown as reasoning, and kept in the
+             * history unchanged. */
+            if (strncmp(partText, "thought\n", 8) == 0)
+                appendReasoning(&reasoning, partText + 8);
+            else
                 agentBufferAppend(&text, partText);
         }
     }
@@ -834,6 +918,7 @@ static struct json_object *parseGeminiAnswer(struct json_object *response) {
                            "blockReason");
         if (finish[0] != '\0')
             addString(assistant, "finish", finish);
+        setReasoning(assistant, &reasoning);
         return assistant;
     }
 }
@@ -847,8 +932,8 @@ static STRPTR errorText(CONST_STRPTR text) { return agentDuplicate(text); }
 static struct json_object *
 agentApiSendOnce(const struct ChatRequestSettings *settings, CONST_STRPTR model,
                  CONST_STRPTR system, struct json_object *history,
-                 struct json_object *tools, AgentEffort effort, BOOL *pauseOut,
-                 STRPTR *errorOut) {
+                 struct json_object *tools, AgentEffort effort,
+                 BOOL wantReasoning, BOOL *pauseOut, STRPTR *errorOut) {
     struct json_object *request;
     struct json_object *response;
     struct json_object *assistant = NULL;
@@ -862,6 +947,7 @@ agentApiSendOnce(const struct ChatRequestSettings *settings, CONST_STRPTR model,
 
     *pauseOut = FALSE;
     *errorOut = NULL;
+    askForReasoning = wantReasoning;
     if (effort < 0 || effort >= AGENT_EFFORT_COUNT)
         effort = AGENT_EFFORT_DEFAULT;
     if (settings == NULL || settings->host == NULL ||
@@ -980,10 +1066,11 @@ agentApiSendOnce(const struct ChatRequestSettings *settings, CONST_STRPTR model,
     return assistant;
 }
 
-/* The model that last refused an effort setting. Models and providers
- * differ in which levels they take, if any, so a refusal is remembered
- * rather than predicted. */
+/* The models that last refused an effort setting, and a request to show
+ * their reasoning. Models and providers differ in which they take, so a
+ * refusal is remembered rather than predicted. */
 static UBYTE effortRefusedModel[128] = {0};
+static UBYTE reasoningRefusedModel[128] = {0};
 
 /* Whether an answer has neither text nor a tool call */
 static BOOL assistantIsEmpty(struct json_object *assistant, BOOL paused) {
@@ -994,9 +1081,11 @@ static BOOL assistantIsEmpty(struct json_object *assistant, BOOL paused) {
            (calls == NULL || json_object_array_length(calls) == 0);
 }
 
-/* Whether an error message is a provider refusing the effort setting */
-static BOOL errorIsAboutEffort(CONST_STRPTR message) {
-    static CONST_STRPTR words[] = {"hinking", "effort", "easoning", NULL};
+/* Whether an error message is a provider refusing the effort setting or
+ * the request to show reasoning */
+static BOOL errorIsAboutReasoning(CONST_STRPTR message) {
+    static CONST_STRPTR words[] = {"hinking", "effort", "easoning", "ummary",
+                                   "display", NULL};
     ULONG i;
     if (message == NULL)
         return FALSE;
@@ -1007,6 +1096,47 @@ static BOOL errorIsAboutEffort(CONST_STRPTR message) {
     return FALSE;
 }
 
+static void rememberRefusal(STRPTR slot, ULONG size, CONST_STRPTR model) {
+    strncpy(slot, model, size - 1);
+    slot[size - 1] = '\0';
+}
+
+/* Send, and when the model refuses the reasoning request or the effort
+ * setting, ask again without them, one at a time */
+static struct json_object *
+sendAllowingRefusals(const struct ChatRequestSettings *settings,
+                     CONST_STRPTR model, CONST_STRPTR system,
+                     struct json_object *history, struct json_object *tools,
+                     AgentEffort effort, BOOL *pauseOut, STRPTR *errorOut) {
+    BOOL wantReasoning = strcmp(reasoningRefusedModel, model) != 0;
+    struct json_object *assistant;
+
+    if (strcmp(effortRefusedModel, model) == 0)
+        effort = AGENT_EFFORT_DEFAULT;
+    for (;;) {
+        assistant = agentApiSendOnce(settings, model, system, history, tools,
+                                     effort, wantReasoning, pauseOut, errorOut);
+        if (assistant != NULL || isRequestCancelled() ||
+            !errorIsAboutReasoning(*errorOut))
+            return assistant;
+        if (wantReasoning) {
+            wantReasoning = FALSE;
+            rememberRefusal(reasoningRefusedModel,
+                            sizeof(reasoningRefusedModel), model);
+        } else if (effort != AGENT_EFFORT_DEFAULT) {
+            effort = AGENT_EFFORT_DEFAULT;
+            rememberRefusal(effortRefusedModel, sizeof(effortRefusedModel),
+                            model);
+        } else {
+            return NULL;
+        }
+        if (*errorOut != NULL) {
+            FreeVec(*errorOut);
+            *errorOut = NULL;
+        }
+    }
+}
+
 struct json_object *agentApiSend(const struct ChatRequestSettings *settings,
                                  CONST_STRPTR model, CONST_STRPTR system,
                                  struct json_object *history,
@@ -1014,17 +1144,16 @@ struct json_object *agentApiSend(const struct ChatRequestSettings *settings,
                                  BOOL *pauseOut, STRPTR *errorOut) {
     struct json_object *assistant;
 
-    if (effort != AGENT_EFFORT_DEFAULT && model != NULL &&
-        strcmp(effortRefusedModel, model) == 0)
-        effort = AGENT_EFFORT_DEFAULT;
-    assistant = agentApiSendOnce(settings, model, system, history, tools,
-                                 effort, pauseOut, errorOut);
+    if (model == NULL)
+        model = "";
+    assistant = sendAllowingRefusals(settings, model, system, history, tools,
+                                     effort, pauseOut, errorOut);
     if (assistantIsEmpty(assistant, *pauseOut) && !isRequestCancelled()) {
         /* Models now and then answer with nothing at all. Asking again
          * usually gets a real answer. */
         json_object_put(assistant);
-        assistant = agentApiSendOnce(settings, model, system, history, tools,
-                                     effort, pauseOut, errorOut);
+        assistant = sendAllowingRefusals(settings, model, system, history,
+                                         tools, effort, pauseOut, errorOut);
         if (assistantIsEmpty(assistant, *pauseOut)) {
             struct AgentBuffer message = {NULL, 0, 0};
             CONST_STRPTR finish = stringOf(assistant, "finish");
@@ -1039,18 +1168,6 @@ struct json_object *agentApiSend(const struct ChatRequestSettings *settings,
             assistant = NULL;
             *errorOut = message.data;
         }
-    }
-    if (assistant == NULL && effort != AGENT_EFFORT_DEFAULT &&
-        !isRequestCancelled() && errorIsAboutEffort(*errorOut)) {
-        /* Ask again without it rather than fail the whole task */
-        strncpy(effortRefusedModel, model, sizeof(effortRefusedModel) - 1);
-        effortRefusedModel[sizeof(effortRefusedModel) - 1] = '\0';
-        if (*errorOut != NULL) {
-            FreeVec(*errorOut);
-            *errorOut = NULL;
-        }
-        assistant = agentApiSendOnce(settings, model, system, history, tools,
-                                     AGENT_EFFORT_DEFAULT, pauseOut, errorOut);
     }
     return assistant;
 }

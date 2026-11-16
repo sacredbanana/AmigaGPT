@@ -69,10 +69,26 @@ typedef enum {
 } AgentEffort;
 
 /**
- * Receives text for the transcript as the agent produces it
- * @param text UTF-8 text to append
+ * What a piece of transcript text is, so it can be shown in its own style
  **/
-typedef void (*AgentOutputFunc)(CONST_STRPTR text);
+typedef enum {
+    /* Plain text, such as the answer to a slash command. It may arrive in
+     * pieces and carries its own line breaks. */
+    AGENT_OUTPUT_INFO = 0,
+    /* Each of the others is one whole block without a final line break */
+    AGENT_OUTPUT_USER,      /* what the user asked */
+    AGENT_OUTPUT_REASONING, /* the model's reasoning, as far as it shows it */
+    AGENT_OUTPUT_REPLY,     /* the model's answer, which may use Markdown */
+    AGENT_OUTPUT_TOOL,      /* a tool call, as "> name detail" */
+    AGENT_OUTPUT_ERROR      /* a failed request or a stop */
+} AgentOutputKind;
+
+/**
+ * Receives text for the transcript as the agent produces it
+ * @param kind what the text is
+ * @param text UTF-8 text
+ **/
+typedef void (*AgentOutputFunc)(AgentOutputKind kind, CONST_STRPTR text);
 
 /** Convert UTF-8 to the local character set. Free it with FreeVec() */
 STRPTR agentToLocal(CONST_STRPTR utf8);

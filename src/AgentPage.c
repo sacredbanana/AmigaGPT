@@ -9,6 +9,7 @@
 #include <proto/asl.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
+#include <proto/graphics.h>
 #include <SDI_hook.h>
 #include <stdio.h>
 #include <string.h>
@@ -100,7 +101,156 @@ static void appendTranscript(CONST_STRPTR text) {
     agentTranscript[agentTranscriptLength] = '\0';
 }
 
+/* What the last block in the transcript was, to space blocks apart */
+static LONG lastBlockKind = -1;
+/* Pens for reasoning and tool calls, and the colour map they belong to */
+static LONG reasoningPen = -1;
+static LONG toolPen = -1;
+static struct ColorMap *penColorMap = NULL;
+
+void agentPageReleasePens(void) {
+    if (penColorMap != NULL) {
+        if (reasoningPen >= 0)
+            ReleasePen(penColorMap, reasoningPen);
+        if (toolPen >= 0)
+            ReleasePen(penColorMap, toolPen);
+    }
+    reasoningPen = -1;
+    toolPen = -1;
+    penColorMap = NULL;
+}
+
+void agentPageObtainPens(struct Screen *screen) {
+    agentPageReleasePens();
+    if (screen == NULL)
+        return;
+    penColorMap = screen->ViewPort.ColorMap;
+    /* A mid grey and an amber read well on both dark and light themes */
+    reasoningPen = ObtainBestPen(penColorMap, 0x99999999, 0x99999999,
+                                 0x99999999, OBP_Precision, PRECISION_GUI,
+                                 TAG_DONE);
+    toolPen = ObtainBestPen(penColorMap, 0xEEEEEEEE, 0x99999999, 0x22222222,
+                            OBP_Precision, PRECISION_GUI, TAG_DONE);
+}
+
+/* Add text, putting a style code at the start of each of its lines, since
+ * a style lasts only until the end of its line */
+static void appendStyledLines(CONST_STRPTR style, CONST_STRPTR text) {
+    CONST_STRPTR line = text;
+    while (line != NULL) {
+        CONST_STRPTR end = strchr(line, '\n');
+        appendTranscript(style);
+        if (end == NULL) {
+            appendTranscript(line);
+            break;
+        }
+        {
+            ULONG length = (ULONG)(end - line) + 1;
+            STRPTR piece = AllocVec(length + 1, MEMF_ANY | MEMF_CLEAR);
+            if (piece != NULL) {
+                CopyMem((APTR)line, piece, length);
+                appendTranscript(piece);
+                FreeVec(piece);
+            }
+        }
+        line = end + 1;
+    }
+}
+
+/* Reasoning keeps its italic after Markdown ends a bold or underline,
+ * because the code that ends a style ends all of them */
+static STRPTR keepItalic(CONST_STRPTR formatted) {
+    ULONG count = 0;
+    CONST_STRPTR p;
+    STRPTR out;
+    STRPTR o;
+    for (p = formatted; (p = strstr(p, "\033n")) != NULL; p += 2)
+        count++;
+    out = AllocVec(strlen(formatted) + count * 2 + 1, MEMF_ANY | MEMF_CLEAR);
+    if (out == NULL)
+        return NULL;
+    for (p = formatted, o = out; *p != '\0'; p++) {
+        *o++ = *p;
+        if (p[0] == '\033' && p[1] == 'n') {
+            *o++ = *++p;
+            *o++ = '\033';
+            *o++ = 'i';
+        }
+    }
+    *o = '\0';
+    return out;
+}
+
+/**
+ * Add one block of the conversation in the style of its kind
+ * @param text the text in the local character set, without format codes
+ **/
+static void appendBlock(AgentOutputKind kind, CONST_STRPTR text) {
+    UBYTE style[32];
+    STRPTR formatted = NULL;
+
+    if (agentTranscriptLength > 0 &&
+        agentTranscript[agentTranscriptLength - 1] != '\n')
+        appendTranscript("\n");
+    /* Blocks are kept apart by a blank line, except tool calls in a row */
+    if (agentTranscriptLength > 0 &&
+        !(kind == AGENT_OUTPUT_TOOL && lastBlockKind == AGENT_OUTPUT_TOOL))
+        appendTranscript("\n");
+
+    switch (kind) {
+    case AGENT_OUTPUT_USER: {
+        /* The same as a user message on the Chat tab */
+        UBYTE alignment = 'r';
+        switch (configGetUserTextAlignment()) {
+        case ALIGN_LEFT:
+            alignment = 'l';
+            break;
+        case ALIGN_CENTER:
+            alignment = 'c';
+            break;
+        }
+        snprintf(style, sizeof(style), "\033%c\033b\0333", alignment);
+        appendStyledLines(style, text);
+        break;
+    }
+    case AGENT_OUTPUT_REASONING: {
+        STRPTR markdown = convertMarkdownFormattingToMUI(text);
+        if (markdown != NULL) {
+            formatted = keepItalic(markdown);
+            FreeVec(markdown);
+        }
+        if (reasoningPen >= 0)
+            snprintf(style, sizeof(style), "\033l\033i\033P[%ld]",
+                     reasoningPen);
+        else
+            snprintf(style, sizeof(style), "\033l\033i");
+        appendStyledLines(style, formatted != NULL ? formatted : text);
+        break;
+    }
+    case AGENT_OUTPUT_TOOL:
+        if (toolPen >= 0)
+            snprintf(style, sizeof(style), "\033l\033P[%ld]", toolPen);
+        else
+            snprintf(style, sizeof(style), "\033l");
+        appendStyledLines(style, text);
+        break;
+    case AGENT_OUTPUT_ERROR:
+        snprintf(style, sizeof(style), "\033l\033P[%ld]", (LONG)redPen);
+        appendStyledLines(style, text);
+        break;
+    default:
+        formatted = convertMarkdownFormattingToMUI(text);
+        appendTranscript(formatted != NULL ? formatted : text);
+        break;
+    }
+    if (formatted != NULL)
+        FreeVec(formatted);
+    appendTranscript("\n");
+    lastBlockKind = kind;
+}
+
 static void clearTranscript(void) {
+    lastBlockKind = -1;
     agentTranscriptLength = 0;
     if (agentTranscript != NULL)
         agentTranscript[0] = '\0';
@@ -109,7 +259,7 @@ static void clearTranscript(void) {
 }
 
 /* Transcript text arrives from the agent in UTF-8 */
-static void agentOutputReceived(CONST_STRPTR text) {
+static void agentOutputReceived(AgentOutputKind kind, CONST_STRPTR text) {
     STRPTR local = agentToLocal(text);
     STRPTR p;
     if (local == NULL)
@@ -119,7 +269,12 @@ static void agentOutputReceived(CONST_STRPTR text) {
         if (*p == '\33')
             *p = ' ';
     }
-    appendTranscript(local);
+    if (kind == AGENT_OUTPUT_INFO) {
+        appendTranscript(local);
+        lastBlockKind = AGENT_OUTPUT_INFO;
+    } else {
+        appendBlock(kind, local);
+    }
     FreeVec(local);
     showTranscript();
 }
@@ -486,9 +641,19 @@ HOOKPROTONHNONP(AgentSendDeferredFunc, void) {
     saveModelString();
     serial = agentSessionSerial();
     turnStart = agentTranscriptLength;
-    appendTranscript("\n>>> ");
-    appendTranscript(text);
-    appendTranscript("\n\n");
+    {
+        /* What the user typed, without anything the text object would read
+         * as a format code */
+        STRPTR shown = agentDuplicate(text);
+        STRPTR p;
+        for (p = shown; p != NULL && *p != '\0'; p++) {
+            if (*p == '\33')
+                *p = ' ';
+        }
+        appendBlock(AGENT_OUTPUT_USER, shown != NULL ? shown : text);
+        if (shown != NULL)
+            FreeVec(shown);
+    }
     showTranscript();
     prompt = agentToUtf8(text);
     if (freeText)
@@ -784,8 +949,17 @@ void addAgentPageActions(void) {
 }
 
 void agentPageWindowOpened(void) {
+    struct Screen *screen = NULL;
     if (agentSessionTree == NULL)
         return;
+    if (mainWindowObject != NULL)
+        get(mainWindowObject, MUIA_Window_Screen, &screen);
+    if (screen != NULL)
+        agentPageObtainPens(screen);
+    /* Replies follow the Chat tab's alignment for assistant messages */
+    if (agentOutput != NULL)
+        set(agentOutput, MUIA_NFloattext_Align,
+            configGetAssistantTextAlignment());
     refreshSessionTree();
     setAgentSendButtonLabel(FALSE);
     if (agentTranscriptLength == 0) {

@@ -46,6 +46,12 @@ LONG createMainWindow();
 Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
                                 ULONG weight);
 
+/**
+ * Convert **bold**, *italic* and __underline__ Markdown to MUI text codes
+ * @return a new string. Free it with FreeVec()
+ **/
+STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input);
+
 /** Whether a request is running */
 BOOL mainWindowRequestBusy(void);
 

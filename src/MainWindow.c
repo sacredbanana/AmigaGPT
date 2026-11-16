@@ -2198,6 +2198,7 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
     // Get the current screen to allocate pens
     struct Screen *currentScreen;
     get(mainWindowObject, MUIA_Window_Screen, &currentScreen);
+    agentPageObtainPens(currentScreen);
 
     if (currentScreen) {
         // Release old pens if they exist
@@ -2402,7 +2403,7 @@ static UBYTE parseMarker(CONST_STRPTR input, size_t pos, size_t len,
  * @param input the input string
  * @return a newly allocated string. Caller must FreeVec() it.
  */
-static STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
+STRPTR convertMarkdownFormattingToMUI(CONST_STRPTR input) {
     if (!input)
         return NULL;
 

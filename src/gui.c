@@ -26,6 +26,7 @@
 #include "SpeechProviderSettingsRequesterWindow.h"
 #include "gui.h"
 #include "MainWindow.h"
+#include "AgentPage.h"
 #include "agent.h"
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
@@ -1278,6 +1279,7 @@ void shutdownGUI() {
         DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 
 #ifndef DAEMON
+        agentPageReleasePens();
         // Release pens if they were allocated
         if (mainWindowObject && (redPen || greenPen || bluePen || yellowPen)) {
             struct Screen *currentScreen;

@@ -2902,7 +2902,20 @@ static STRPTR rexxAgentOutput = NULL;
 static ULONG rexxAgentOutputLength = 0;
 static ULONG rexxAgentOutputCapacity = 0;
 
-static void rexxAgentOutputReceived(CONST_STRPTR text) {
+static void rexxAppendAgentOutput(CONST_STRPTR text);
+
+/* A script gets the agent's replies, tool calls and errors as plain lines.
+ * Reasoning is left out so the result holds only what the agent did and
+ * said. */
+static void rexxAgentOutputReceived(AgentOutputKind kind, CONST_STRPTR text) {
+    if (kind == AGENT_OUTPUT_REASONING)
+        return;
+    rexxAppendAgentOutput(text);
+    if (kind != AGENT_OUTPUT_INFO)
+        rexxAppendAgentOutput("\n");
+}
+
+static void rexxAppendAgentOutput(CONST_STRPTR text) {
     STRPTR local = agentToLocal(text);
     ULONG length;
     if (local == NULL)

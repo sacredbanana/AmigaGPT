@@ -502,15 +502,20 @@ static CONST_STRPTR jsonString(struct json_object *object, CONST_STRPTR key) {
     return text != NULL ? text : "";
 }
 
-static void outputLocal(AgentOutputFunc output, CONST_STRPTR localText) {
+static void outputLocalKind(AgentOutputFunc output, AgentOutputKind kind,
+                            CONST_STRPTR localText) {
     STRPTR utf8;
-    if (output == NULL || localText == NULL)
+    if (output == NULL || localText == NULL || localText[0] == '\0')
         return;
     utf8 = agentToUtf8(localText);
     if (utf8 != NULL) {
-        output(utf8);
+        output(kind, utf8);
         FreeVec(utf8);
     }
+}
+
+static void outputLocal(AgentOutputFunc output, CONST_STRPTR localText) {
+    outputLocalKind(output, AGENT_OUTPUT_INFO, localText);
 }
 
 /* Cut a tool result that would fill the model's context */
@@ -2540,6 +2545,43 @@ static STRPTR runLoop(struct json_object *items, CONST_STRPTR system,
                       struct json_object *tools, CONST_STRPTR model,
                       BOOL isSubagent, AgentOutputFunc output, BOOL *okOut);
 
+/* The tool calls a subagent made, collected so they can be saved with the
+ * run_subagent result and shown again when the session is reopened */
+static struct json_object *subagentSteps = NULL;
+
+/**
+ * Keep something that happened outside the conversation with the model,
+ * such as a failed request, in the session so it can be read back. The
+ * providers' request builders skip items of this type.
+ **/
+static void addNote(struct json_object *items, CONST_STRPTR kind,
+                    CONST_STRPTR text) {
+    struct json_object *note;
+    if (items == NULL || text == NULL || text[0] == '\0')
+        return;
+    note = json_object_new_object();
+    json_object_object_add(note, "type", json_object_new_string("note"));
+    json_object_object_add(note, "kind", json_object_new_string(kind));
+    json_object_object_add(note, "text", json_object_new_string(text));
+    json_object_array_add(items, note);
+}
+
+/* One line for a tool call: "> name detail" */
+static STRPTR toolCallLine(CONST_STRPTR name, struct json_object *arguments,
+                           BOOL nested) {
+    struct AgentBuffer line = {NULL, 0, 0};
+    STRPTR description = describeCall(name, arguments);
+    agentBufferAppend(&line, nested ? "    > " : "> ");
+    agentBufferAppend(&line, name);
+    if (description != NULL && description[0] != '\0') {
+        agentBufferAppend(&line, " ");
+        agentBufferAppend(&line, description);
+    }
+    if (description != NULL)
+        FreeVec(description);
+    return bufferTake(&line);
+}
+
 static STRPTR toolRunSubagent(struct json_object *arguments,
                               AgentOutputFunc output, BOOL *isError) {
     CONST_STRPTR agentName = jsonString(arguments, "agent");
@@ -2582,6 +2624,9 @@ static STRPTR toolRunSubagent(struct json_object *arguments,
     if (model[0] == '\0')
         model = agentEffectiveModel();
 
+    if (subagentSteps != NULL)
+        json_object_put(subagentSteps);
+    subagentSteps = json_object_new_array();
     report = runLoop(items, system, tools, model, TRUE, output, &ok);
     json_object_put(tools);
     json_object_put(items);
@@ -2755,12 +2800,22 @@ static STRPTR runLoop(struct json_object *items, CONST_STRPTR system,
         assistant = agentApiSend(&chatSettings, model, system, items, tools,
                                  agentGetEffort(), &paused, &error);
         if (assistant == NULL) {
-            if (!isRequestCancelled() && output != NULL) {
-                output("\n");
-                output(error != NULL ? error : "The request failed.");
-                output("\n");
-                outputLocal(output, takeSuppressedError());
-                output("\n");
+            if (!isRequestCancelled()) {
+                struct AgentBuffer message = {NULL, 0, 0};
+                STRPTR reason = agentToUtf8(takeSuppressedError());
+                agentBufferAppend(&message,
+                                  error != NULL ? error : "The request failed.");
+                if (reason != NULL && reason[0] != '\0') {
+                    agentBufferAppend(&message, "\n");
+                    agentBufferAppend(&message, reason);
+                }
+                if (reason != NULL)
+                    FreeVec(reason);
+                if (output != NULL)
+                    output(AGENT_OUTPUT_ERROR, message.data);
+                if (!isSubagent)
+                    addNote(items, "error", message.data);
+                agentBufferFree(&message);
             }
             if (error != NULL)
                 FreeVec(error);
@@ -2768,15 +2823,16 @@ static STRPTR runLoop(struct json_object *items, CONST_STRPTR system,
         }
         json_object_array_add(items, assistant);
 
+        if (output != NULL && !isSubagent &&
+            jsonString(assistant, "reasoning")[0] != '\0')
+            output(AGENT_OUTPUT_REASONING, jsonString(assistant, "reasoning"));
         text = jsonString(assistant, "text");
         if (text[0] != '\0') {
             if (finalText != NULL)
                 FreeVec(finalText);
             finalText = agentDuplicate(text);
-            if (output != NULL && !isSubagent) {
-                output(text);
-                output("\n");
-            }
+            if (output != NULL && !isSubagent)
+                output(AGENT_OUTPUT_REPLY, text);
         }
 
         if (!json_object_object_get_ex(assistant, "calls", &calls))
@@ -2799,17 +2855,15 @@ static STRPTR runLoop(struct json_object *items, CONST_STRPTR system,
             STRPTR toolOutput;
 
             json_object_object_get_ex(call, "args", &arguments);
-            if (output != NULL) {
-                STRPTR description = describeCall(name, arguments);
-                output(isSubagent ? "    > " : "> ");
-                output(name);
-                if (description != NULL && description[0] != '\0') {
-                    output(" ");
-                    output(description);
-                }
-                output("\n");
-                if (description != NULL)
-                    FreeVec(description);
+            {
+                STRPTR line = toolCallLine(name, arguments, isSubagent);
+                if (output != NULL && line != NULL)
+                    output(AGENT_OUTPUT_TOOL, line);
+                if (isSubagent && subagentSteps != NULL && line != NULL)
+                    json_object_array_add(subagentSteps,
+                                          json_object_new_string(line));
+                if (line != NULL)
+                    FreeVec(line);
             }
             {
                 UBYTE status[160];
@@ -2850,6 +2904,10 @@ static STRPTR runLoop(struct json_object *items, CONST_STRPTR system,
                 json_object_new_string(toolOutput != NULL ? toolOutput : ""));
             json_object_object_add(result, "isError",
                                    json_object_new_boolean(isError));
+            if (strcmp(name, "run_subagent") == 0 && subagentSteps != NULL) {
+                json_object_object_add(result, "steps", subagentSteps);
+                subagentSteps = NULL;
+            }
             if (pendingImage != NULL) {
                 struct json_object *image = json_object_new_object();
                 /* Pictures are large, so only the newest one is kept */
@@ -3150,23 +3208,64 @@ void agentDeleteSession(ULONG index) {
 
 void agentRenderSession(AgentOutputFunc output) {
     ULONG count;
-    ULONG i;
+    ULONG i, j, k;
     if (history == NULL || output == NULL)
         return;
     count = (ULONG)json_object_array_length(history);
     for (i = 0; i < count; i++) {
         struct json_object *item = json_object_array_get_idx(history, i);
         CONST_STRPTR type = jsonString(item, "type");
-        CONST_STRPTR text = jsonString(item, "text");
-        if (text[0] == '\0')
-            continue;
         if (strcmp(type, "user") == 0) {
-            output("\n>>> ");
-            output(text);
-            output("\n\n");
+            CONST_STRPTR typed = jsonString(item, "typed");
+            output(AGENT_OUTPUT_USER,
+                   typed[0] != '\0' ? typed : jsonString(item, "text"));
         } else if (strcmp(type, "assistant") == 0) {
-            output(text);
-            output("\n");
+            struct json_object *calls;
+            CONST_STRPTR reasoning = jsonString(item, "reasoning");
+            CONST_STRPTR text = jsonString(item, "text");
+            if (reasoning[0] != '\0')
+                output(AGENT_OUTPUT_REASONING, reasoning);
+            if (text[0] != '\0')
+                output(AGENT_OUTPUT_REPLY, text);
+            if (!json_object_object_get_ex(item, "calls", &calls) ||
+                !json_object_is_type(calls, json_type_array))
+                continue;
+            for (j = 0; j < json_object_array_length(calls); j++) {
+                struct json_object *call = json_object_array_get_idx(calls, j);
+                struct json_object *arguments = NULL;
+                STRPTR line;
+                json_object_object_get_ex(call, "args", &arguments);
+                line = toolCallLine(jsonString(call, "name"), arguments, FALSE);
+                if (line != NULL) {
+                    output(AGENT_OUTPUT_TOOL, line);
+                    FreeVec(line);
+                }
+            }
+        } else if (strcmp(type, "tool") == 0) {
+            /* What a subagent did is shown under the call that started it */
+            struct json_object *results;
+            if (!json_object_object_get_ex(item, "results", &results) ||
+                !json_object_is_type(results, json_type_array))
+                continue;
+            for (j = 0; j < json_object_array_length(results); j++) {
+                struct json_object *steps;
+                if (!json_object_object_get_ex(
+                        json_object_array_get_idx(results, j), "steps",
+                        &steps) ||
+                    !json_object_is_type(steps, json_type_array))
+                    continue;
+                for (k = 0; k < json_object_array_length(steps); k++) {
+                    CONST_STRPTR step = json_object_get_string(
+                        json_object_array_get_idx(steps, k));
+                    if (step != NULL)
+                        output(AGENT_OUTPUT_TOOL, step);
+                }
+            }
+        } else if (strcmp(type, "note") == 0) {
+            output(strcmp(jsonString(item, "kind"), "error") == 0
+                       ? AGENT_OUTPUT_ERROR
+                       : AGENT_OUTPUT_INFO,
+                   jsonString(item, "text"));
         }
     }
 }
@@ -3323,9 +3422,9 @@ static void listCatalog(AgentOutputFunc output, struct json_object *array,
     struct AgentBuffer buffer = {NULL, 0, 0};
     describeCatalog(&buffer, array, prefix);
     if (buffer.data != NULL)
-        output(buffer.data);
+        output(AGENT_OUTPUT_INFO, buffer.data);
     else
-        output("-\n");
+        output(AGENT_OUTPUT_INFO, "-\n");
     agentBufferFree(&buffer);
 }
 
@@ -3373,11 +3472,11 @@ static void handleSlashCommand(CONST_STRPTR line, AgentOutputFunc output,
 
     if (strcasecmp(name, "help") == 0) {
         outputLocal(output, STRING_AGENT_HELP);
-        output("\n");
+        output(AGENT_OUTPUT_INFO, "\n");
     } else if (strcasecmp(name, "new") == 0 || strcasecmp(name, "clear") == 0) {
         agentNewSession();
         outputLocal(output, STRING_AGENT_SESSION_CLEARED);
-        output("\n");
+        output(AGENT_OUTPUT_INFO, "\n");
     } else if (strcasecmp(name, "sessions") == 0) {
         ULONG count = agentSessionCount();
         LONG current = agentCurrentSession();
@@ -3385,37 +3484,37 @@ static void handleSlashCommand(CONST_STRPTR line, AgentOutputFunc output,
         for (i = 0; i < count; i++) {
             CONST_STRPTR project = agentSessionProjectPath(i);
             snprintf(number, sizeof(number), "%lu. ", (unsigned long)(i + 1));
-            output((LONG)i == current ? "* " : "  ");
-            output(number);
-            output(agentSessionTitle(i));
+            output(AGENT_OUTPUT_INFO, (LONG)i == current ? "* " : "  ");
+            output(AGENT_OUTPUT_INFO, number);
+            output(AGENT_OUTPUT_INFO, agentSessionTitle(i));
             if (project[0] != '\0') {
                 STRPTR projectUtf8 = agentToUtf8(project);
-                output(" (");
-                output(projectUtf8 != NULL ? projectUtf8 : "");
-                output(")");
+                output(AGENT_OUTPUT_INFO, " (");
+                output(AGENT_OUTPUT_INFO, projectUtf8 != NULL ? projectUtf8 : "");
+                output(AGENT_OUTPUT_INFO, ")");
                 if (projectUtf8 != NULL)
                     FreeVec(projectUtf8);
             }
-            output("\n");
+            output(AGENT_OUTPUT_INFO, "\n");
         }
         if (count == 0)
-            output("-\n");
+            output(AGENT_OUTPUT_INFO, "-\n");
     } else if (strcasecmp(name, "resume") == 0) {
         LONG number = atol(arguments);
         if (number >= 1 && (ULONG)number <= agentSessionCount() &&
             loadSession((ULONG)(number - 1))) {
-            output(agentSessionTitle((ULONG)agentCurrentSession()));
-            output("\n");
+            output(AGENT_OUTPUT_INFO, agentSessionTitle((ULONG)agentCurrentSession()));
+            output(AGENT_OUTPUT_INFO, "\n");
         } else {
             outputLocal(output, STRING_AGENT_NO_SUCH_SESSION);
-            output("\n");
+            output(AGENT_OUTPUT_INFO, "\n");
         }
     } else if (strcasecmp(name, "skills") == 0) {
         listCatalog(output, skills, "/");
     } else if (strcasecmp(name, "commands") == 0) {
         listCatalog(output, commands, "/");
     } else if (strcasecmp(name, "agents") == 0) {
-        output("- general\n");
+        output(AGENT_OUTPUT_INFO, "- general\n");
         listCatalog(output, subagents, "");
     } else if (strcasecmp(name, "mcp") == 0) {
         struct AgentBuffer buffer = {NULL, 0, 0};
@@ -3423,23 +3522,23 @@ static void handleSlashCommand(CONST_STRPTR line, AgentOutputFunc output,
         agentMcpAppendTools(tools);
         json_object_put(tools);
         agentMcpDescribe(&buffer);
-        output(buffer.data != NULL ? buffer.data : "-\n");
+        output(AGENT_OUTPUT_INFO, buffer.data != NULL ? buffer.data : "-\n");
         agentBufferFree(&buffer);
     } else if (strcasecmp(name, "projects") == 0) {
         ULONG count = agentProjectCount();
         LONG active = agentGetActiveProject();
         for (i = 0; i < count; i++) {
             STRPTR pathUtf8 = agentToUtf8(agentProjectPath(i));
-            output((LONG)i == active ? "* " : "- ");
-            output(agentProjectName(i));
-            output(" (");
-            output(pathUtf8 != NULL ? pathUtf8 : "");
-            output(")\n");
+            output(AGENT_OUTPUT_INFO, (LONG)i == active ? "* " : "- ");
+            output(AGENT_OUTPUT_INFO, agentProjectName(i));
+            output(AGENT_OUTPUT_INFO, " (");
+            output(AGENT_OUTPUT_INFO, pathUtf8 != NULL ? pathUtf8 : "");
+            output(AGENT_OUTPUT_INFO, ")\n");
             if (pathUtf8 != NULL)
                 FreeVec(pathUtf8);
         }
         if (count == 0)
-            output("-\n");
+            output(AGENT_OUTPUT_INFO, "-\n");
     } else if (strcasecmp(name, "project") == 0) {
         ULONG count = agentProjectCount();
         LONG found = -1;
@@ -3450,32 +3549,32 @@ static void handleSlashCommand(CONST_STRPTR line, AgentOutputFunc output,
         if (found >= 0 || arguments[0] == '\0' ||
             strcasecmp(arguments, "none") == 0) {
             agentSetActiveProject(found);
-            output(found >= 0 ? agentProjectName((ULONG)found) : "-");
-            output("\n");
+            output(AGENT_OUTPUT_INFO, found >= 0 ? agentProjectName((ULONG)found) : "-");
+            output(AGENT_OUTPUT_INFO, "\n");
         } else {
             outputLocal(output, STRING_AGENT_NO_SUCH_PROJECT);
-            output("\n");
+            output(AGENT_OUTPUT_INFO, "\n");
         }
     } else if (strcasecmp(name, "approval") == 0) {
         for (i = 0; i < AGENT_APPROVAL_COUNT; i++) {
             if (strcasecmp(arguments, approvalNames[i]) == 0)
                 agentSetApprovalMode((AgentApprovalMode)i);
         }
-        output(approvalNames[agentGetApprovalMode()]);
-        output("\n");
+        output(AGENT_OUTPUT_INFO, approvalNames[agentGetApprovalMode()]);
+        output(AGENT_OUTPUT_INFO, "\n");
     } else if (strcasecmp(name, "effort") == 0) {
         for (i = 0; i < AGENT_EFFORT_COUNT; i++) {
             if (strcasecmp(arguments, effortNames[i]) == 0)
                 agentSetEffort((AgentEffort)i);
         }
-        output(effortNames[agentGetEffort()]);
-        output("\n");
+        output(AGENT_OUTPUT_INFO, effortNames[agentGetEffort()]);
+        output(AGENT_OUTPUT_INFO, "\n");
     } else if (strcasecmp(name, "model") == 0) {
         if (arguments[0] != '\0')
             agentSetModel(strcasecmp(arguments, "default") == 0 ? ""
                                                                  : arguments);
-        output(agentEffectiveModel());
-        output("\n");
+        output(AGENT_OUTPUT_INFO, agentEffectiveModel());
+        output(AGENT_OUTPUT_INFO, "\n");
     } else if (strcasecmp(name, "import-skill") == 0) {
         UBYTE skillName[108];
         UBYTE message[256];
@@ -3490,7 +3589,7 @@ static void handleSlashCommand(CONST_STRPTR line, AgentOutputFunc output,
         if (sourceLocal != NULL)
             FreeVec(sourceLocal);
         outputLocal(output, message);
-        output("\n");
+        output(AGENT_OUTPUT_INFO, "\n");
     } else if (strcasecmp(name, "init") == 0) {
         UBYTE path[AGENT_PATH_LENGTH];
         struct AgentBuffer buffer = {NULL, 0, 0};
@@ -3547,7 +3646,7 @@ static void handleSlashCommand(CONST_STRPTR line, AgentOutputFunc output,
         UBYTE message[256];
         snprintf(message, sizeof(message), STRING_AGENT_UNKNOWN_COMMAND, name);
         outputLocal(output, message);
-        output("\n");
+        output(AGENT_OUTPUT_INFO, "\n");
     }
 }
 
@@ -3573,7 +3672,8 @@ BOOL agentRun(CONST_STRPTR prompt, AgentOutputFunc output) {
      * command could arrive in the middle of a turn */
     if (agentRunning) {
         if (output != NULL)
-            output("The agent is already working on a task.\n");
+            output(AGENT_OUTPUT_ERROR,
+                   "The agent is already working on a task.");
         return FALSE;
     }
     agentRunning = TRUE;
@@ -3612,6 +3712,9 @@ BOOL agentRun(CONST_STRPTR prompt, AgentOutputFunc output) {
     item = json_object_new_object();
     json_object_object_add(item, "type", json_object_new_string("user"));
     json_object_object_add(item, "text", json_object_new_string(prompt));
+    /* A command is shown as typed, not as the prompt it expanded to */
+    if (typed != prompt)
+        json_object_object_add(item, "typed", json_object_new_string(typed));
     json_object_array_add(history, item);
     saveSession();
 
@@ -3632,10 +3735,13 @@ BOOL agentRun(CONST_STRPTR prompt, AgentOutputFunc output) {
     if (expanded != NULL)
         FreeVec(expanded);
 
-    if (isRequestCancelled() && output != NULL) {
-        output("\n");
-        outputLocal(output, STRING_AGENT_STOPPED);
-        output("\n");
+    if (isRequestCancelled()) {
+        STRPTR stopped = agentToUtf8(STRING_AGENT_STOPPED);
+        if (output != NULL && stopped != NULL)
+            output(AGENT_OUTPUT_ERROR, stopped);
+        addNote(history, "error", stopped);
+        if (stopped != NULL)
+            FreeVec(stopped);
     }
     saveSession();
     updateStatusBar(ok ? STRING_READY : STRING_ERROR, ok ? greenPen : redPen);
