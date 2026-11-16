@@ -1,6 +1,6 @@
 #ifndef DAEMON
 /*
- * RichTextEditor - document storage
+ * BestTextEditor - document storage
  *
  * Paragraph buffers, smart resizing, insertion and deletion, the import and
  * export hooks, undo and redo, searching and the colour table.
@@ -9,7 +9,7 @@
 #include <proto/exec.h>
 #include <stdio.h>
 #include <string.h>
-#include "RichTextEditorPrivate.h"
+#include "BestTextEditorPrivate.h"
 
 #define RTE_POOL_PUDDLE 8192
 #define RTE_POOL_THRESH 2048
@@ -1063,16 +1063,16 @@ static ULONG rteImpEscape(struct RTEData *data, struct RTEImporter *imp,
         if (j < len && text[j] != ']') {
             switch (text[j]) {
             case 'l':
-                side = MUIV_RichTextEditor_Bubble_Left;
+                side = MUIV_BestTextEditor_Bubble_Left;
                 break;
             case 'r':
-                side = MUIV_RichTextEditor_Bubble_Right;
+                side = MUIV_BestTextEditor_Bubble_Right;
                 break;
             case 'c':
-                side = MUIV_RichTextEditor_Bubble_Center;
+                side = MUIV_BestTextEditor_Bubble_Center;
                 break;
             case 'f':
-                side = MUIV_RichTextEditor_Bubble_Full;
+                side = MUIV_BestTextEditor_Bubble_Full;
                 break;
             }
             while (j < len && text[j] != ']')
@@ -1091,8 +1091,8 @@ static ULONG rteImpEscape(struct RTEData *data, struct RTEImporter *imp,
                 imp->bubbleSide = 0;
                 imp->bubbleId = 0;
             } else {
-                if (value > RICHTEXTEDITOR_MAX_BUBBLE_STYLES)
-                    value = RICHTEXTEDITOR_MAX_BUBBLE_STYLES;
+                if (value > BESTTEXTEDITOR_MAX_BUBBLE_STYLES)
+                    value = BESTTEXTEDITOR_MAX_BUBBLE_STYLES;
                 imp->bubble = (UBYTE)value;
                 imp->bubbleSide = side;
                 imp->bubbleId = data->nextBubbleId++;

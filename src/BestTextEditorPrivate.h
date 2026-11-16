@@ -12,7 +12,7 @@
 #include <utility/hooks.h>
 #include <SDI_compiler.h>
 #include <SDI_hook.h>
-#include "RichTextEditor.h"
+#include "BestTextEditor.h"
 
 /*
  * Internal data model
@@ -293,7 +293,7 @@ struct RTEData {
     UBYTE typePen;
 
     /* soft style and colour at the end of the text, carried from one
-     * MUIM_RichTextEditor_Append to the next like a terminal stream */
+     * MUIM_BestTextEditor_Append to the next like a terminal stream */
     UBYTE appendStyle;
     UBYTE appendColor;
     BOOL importCarry;
@@ -332,14 +332,14 @@ struct RTEData {
     UWORD numColors;
 
     /* bubbles */
-    struct RichTextBubbleStyle bubbleStyles[RICHTEXTEDITOR_MAX_BUBBLE_STYLES];
+    struct BestTextBubbleStyle bubbleStyles[BESTTEXTEDITOR_MAX_BUBBLE_STYLES];
     UWORD numBubbleStyles;
-    LONG bubbleBgPen[RICHTEXTEDITOR_MAX_BUBBLE_STYLES];
-    LONG bubbleTextPen[RICHTEXTEDITOR_MAX_BUBBLE_STYLES];
-    BOOL bubbleBgAlloc[RICHTEXTEDITOR_MAX_BUBBLE_STYLES];
-    BOOL bubbleTextAlloc[RICHTEXTEDITOR_MAX_BUBBLE_STYLES];
-    LONG bubbleCodePen[RICHTEXTEDITOR_MAX_BUBBLE_STYLES];
-    BOOL bubbleCodeAlloc[RICHTEXTEDITOR_MAX_BUBBLE_STYLES];
+    LONG bubbleBgPen[BESTTEXTEDITOR_MAX_BUBBLE_STYLES];
+    LONG bubbleTextPen[BESTTEXTEDITOR_MAX_BUBBLE_STYLES];
+    BOOL bubbleBgAlloc[BESTTEXTEDITOR_MAX_BUBBLE_STYLES];
+    BOOL bubbleTextAlloc[BESTTEXTEDITOR_MAX_BUBBLE_STYLES];
+    LONG bubbleCodePen[BESTTEXTEDITOR_MAX_BUBBLE_STYLES];
+    BOOL bubbleCodeAlloc[BESTTEXTEDITOR_MAX_BUBBLE_STYLES];
 
     /* render state, valid between MUIM_Setup and MUIM_Cleanup */
     BOOL setup;
@@ -429,7 +429,7 @@ struct RTEData {
     BOOL macroPlaying;
 };
 
-/* RichTextEditorBuffer.c */
+/* BestTextEditorBuffer.c */
 BOOL rteInitDocument(struct RTEData *data);
 void rteFreeDocument(struct RTEData *data);
 BOOL rteParaReserve(struct RTEData *data, struct RTEPara *p, ULONG len);
@@ -468,7 +468,7 @@ void rteSetBlockAttrs(struct RTEData *data, struct RTEPos from,
                       struct RTEPos to, ULONG operation, ULONG value);
 BOOL rteIsWordChar(UBYTE c);
 
-/* RichTextEditorLayout.c */
+/* BestTextEditorLayout.c */
 void rteSetupFonts(struct RTEData *data, Object *obj);
 void rteLayout(struct RTEData *data);
 void rteLayoutParagraph(struct RTEData *data, ULONG index);
@@ -493,7 +493,7 @@ BOOL rteFindSpan(struct RTEPara *p, ULONG offset, BOOL image, ULONG *spanStart,
 LONG rteBubbleSide(struct RTEData *data, struct RTEPara *p);
 LONG rteParaFlow(struct RTEData *data, struct RTEPara *p);
 
-/* RichTextEditorDraw.c */
+/* BestTextEditorDraw.c */
 void rteDrawUpdate(struct RTEData *data, Object *obj, BOOL all);
 void rteFreeDoubleBuffer(struct RTEData *data);
 void rteObtainPens(struct RTEData *data, Object *obj);
@@ -501,7 +501,7 @@ void rteSetDefaultBubbleStyles(struct RTEData *data);
 void rteReleasePens(struct RTEData *data, Object *obj);
 LONG rteResolveColor(struct RTEData *data, Object *obj, UWORD index);
 
-/* RichTextEditorInput.c */
+/* BestTextEditorInput.c */
 ULONG rteHandleEvent(struct IClass *cl, Object *obj,
                      struct MUIP_HandleEvent *msg);
 BOOL rteCopy(struct RTEData *data, Object *obj, BOOL cut);
@@ -510,7 +510,7 @@ IPTR rteARexx(struct RTEData *data, Object *obj, CONST_STRPTR command);
 void rteUpdateEventHandler(struct RTEData *data, Object *obj, ULONG events);
 void rteEndDrag(struct RTEData *data, Object *obj);
 
-/* RichTextEditor.c */
+/* BestTextEditor.c */
 void rteChanged(struct RTEData *data, Object *obj, BOOL contents);
 void rteRequestRedraw(struct RTEData *data, Object *obj);
 void rteInvalidateRange(struct RTEData *data, LONG top, LONG bottom);

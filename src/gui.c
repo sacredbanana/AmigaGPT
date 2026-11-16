@@ -26,7 +26,7 @@
 #include "AgentPage.h"
 #include "agent.h"
 #ifndef DAEMON
-#include "RichTextEditor.h"
+#include "BestTextEditor.h"
 #endif
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
@@ -72,7 +72,7 @@ static void closeGUILibraries();
 static STRPTR wrapRequesterText(CONST_STRPTR message);
 
 /* The text editors and the conversation views are AmigaGPT's own private
- * RichTextEditor class, so TextEditor.mcc, ActionTextEditor.mcc and
+ * BestTextEditor class, so TextEditor.mcc, ActionTextEditor.mcc and
  * NFloattext.mcc are no longer needed */
 static CONST_STRPTR USED_CLASSES[] = {
     MUIC_Aboutbox,  MUIC_Busy,   MUIC_NList,       MUIC_NListview,
@@ -174,7 +174,7 @@ LONG initVideo() {
         return RETURN_ERROR;
     }
 
-    if (createRichTextEditorClass() == RETURN_ERROR) {
+    if (createBestTextEditorClass() == RETURN_ERROR) {
         displayError(STRING_ERROR_APP_CREATE);
         return RETURN_ERROR;
     }
@@ -1304,7 +1304,7 @@ void shutdownGUI() {
 #ifndef DAEMON
     freeMainWindowFileState();
     /* Only after every object of the class has been disposed */
-    deleteRichTextEditorClass();
+    deleteBestTextEditorClass();
 #endif
 
     closeGUILibraries();

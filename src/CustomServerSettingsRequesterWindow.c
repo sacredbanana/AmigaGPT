@@ -14,7 +14,7 @@
 #include "CustomServerSettingsRequesterWindow.h"
 #include "gui.h"
 #include "openai.h"
-#include "RichTextEditor.h"
+#include "BestTextEditor.h"
 
 /* (Debug logging removed) */
 #define PSDPRINTF(...)                                                         \
@@ -233,7 +233,7 @@ static void showTestResultTextWithStatus(CONST_STRPTR title, BOOL success,
              WindowContents, VGroup,
                  Child, HGroup,
                      MUIA_Group_Spacing, 0,
-                     Child, customServerTestResultFloattextObject = RichTextEditorObject,
+                     Child, customServerTestResultFloattextObject = BestTextEditorObject,
                          MUIA_TextEditor_ReadOnly, TRUE,
                          MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
                          MUIA_TextEditor_WrapMode, MUIV_TextEditor_WrapMode_SoftWrap,
@@ -303,10 +303,10 @@ static void showTestResultTextWithStatus(CONST_STRPTR title, BOOL success,
             DoMethod(customServerTestResultFloattextObject,
                      MUIM_TextEditor_ClearText);
             DoMethod(customServerTestResultFloattextObject,
-                     MUIM_RichTextEditor_Append,
+                     MUIM_BestTextEditor_Append,
                      (IPTR)customServerTestResultTextBuffer, -1,
-                     MUIF_RichTextEditor_Append_Raw |
-                         MUIF_RichTextEditor_Append_NoScroll);
+                     MUIF_BestTextEditor_Append_Raw |
+                         MUIF_BestTextEditor_Append_NoScroll);
         }
     }
     if (bodyNoCR != NULL)

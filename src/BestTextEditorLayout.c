@@ -1,6 +1,6 @@
 #ifndef DAEMON
 /*
- * RichTextEditor - layout
+ * BestTextEditor - layout
  *
  * Font metrics, Markdown parsing, line breaking, vertical placement of the
  * paragraphs, bubble geometry, inline images and the coordinate conversions
@@ -21,7 +21,7 @@
 #include <proto/muimaster.h>
 #include <proto/utility.h>
 #include <string.h>
-#include "RichTextEditorPrivate.h"
+#include "BestTextEditorPrivate.h"
 
 #ifndef PMODE_V43
 #define PMODE_V43 1
@@ -310,7 +310,7 @@ struct RTEImage *rteGetImage(struct RTEData *data, CONST_STRPTR source,
 
     path = img->source;
     if (data->imageHook != NULL) {
-        struct RichTextImageMessage msg;
+        struct BestTextImageMessage msg;
         msg.source = img->source;
         path = (STRPTR)CallHookPkt(data->imageHook, data->obj, &msg);
     } else if (strncmp(path, "http://", 7) == 0 ||
@@ -994,7 +994,7 @@ LONG rteBubbleSide(struct RTEData *data, struct RTEPara *p) {
         return p->bubbleSide;
     if (p->bubble <= data->numBubbleStyles)
         return data->bubbleStyles[p->bubble - 1].side;
-    return MUIV_RichTextEditor_Bubble_Left;
+    return MUIV_BestTextEditor_Bubble_Left;
 }
 
 LONG rteParaFlow(struct RTEData *data, struct RTEPara *p) {
@@ -1015,7 +1015,7 @@ static LONG rteAreaWidth(struct RTEData *data, struct RTEPara *p) {
         if (p->bubble <= data->numBubbleStyles)
             pct = data->bubbleStyles[p->bubble - 1].maxWidth;
         if (pct == 0 || pct > 100)
-            pct = side == MUIV_RichTextEditor_Bubble_Full ? 100 : 80;
+            pct = side == MUIV_BestTextEditor_Bubble_Full ? 100 : 80;
         max = (area - 2 * RTE_BUBBLE_TAIL) * (LONG)pct / 100;
         area = max - 2 * RTE_BUBBLE_PAD_X;
         if (area < 16)
@@ -1393,17 +1393,17 @@ void rteLayout(struct RTEData *data) {
                 j++;
             }
             bw = maxW + 2 * RTE_BUBBLE_PAD_X;
-            if (side == MUIV_RichTextEditor_Bubble_Full)
+            if (side == MUIV_BestTextEditor_Bubble_Full)
                 bw = area - 2 * RTE_BUBBLE_TAIL;
             if (bw < 2 * RTE_BUBBLE_RADIUS + 4)
                 bw = 2 * RTE_BUBBLE_RADIUS + 4;
             if (bw > area - 2 * RTE_BUBBLE_TAIL)
                 bw = area - 2 * RTE_BUBBLE_TAIL;
             switch (side) {
-            case MUIV_RichTextEditor_Bubble_Right:
+            case MUIV_BestTextEditor_Bubble_Right:
                 bx = area - RTE_BUBBLE_TAIL - bw;
                 break;
-            case MUIV_RichTextEditor_Bubble_Center:
+            case MUIV_BestTextEditor_Bubble_Center:
                 bx = (area - bw) / 2;
                 break;
             default:

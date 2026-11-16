@@ -3,11 +3,11 @@
 /* Defined in the daemon too: it links the settings windows that create
  * these objects, but never builds those windows, so the class itself is only
  * compiled into the GUI */
-struct MUI_CustomClass *richTextEditorClass = NULL;
+struct MUI_CustomClass *bestTextEditorClass = NULL;
 
 #ifndef DAEMON
 /*
- * RichTextEditor - the MUI class
+ * BestTextEditor - the MUI class
  *
  * Dispatcher, attributes, the TextEditor.mcc compatible methods and the
  * scroll and redraw bookkeeping that ties the other modules together.
@@ -26,10 +26,10 @@ struct MUI_CustomClass *richTextEditorClass = NULL;
 #include <proto/utility.h>
 #include <SDI_hook.h>
 #include <string.h>
-#include "RichTextEditorPrivate.h"
+#include "BestTextEditorPrivate.h"
 
 /* Private: horizontal slider position, set by the slider notification */
-#define RTE_PRIVATE_HFIRST (RichTextEditor_Dummy + 0x70)
+#define RTE_PRIVATE_HFIRST (BestTextEditor_Dummy + 0x70)
 
 void rteMacroExecute(struct RTEData *data, Object *obj);
 static void rteRestoreCycleKeys(struct IClass *cl, struct RTEData *data,
@@ -718,14 +718,14 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             relayout = TRUE;
             break;
 
-        case MUIA_RichTextEditor_SubmitHook:
+        case MUIA_BestTextEditor_SubmitHook:
         case MUIA_ActionTextEditor_SubmitHook:
             data->submitHook = (struct Hook *)v;
             break;
-        case MUIA_RichTextEditor_SubmitEmpty:
+        case MUIA_BestTextEditor_SubmitEmpty:
             data->submitEmpty = v != 0;
             break;
-        case MUIA_RichTextEditor_Markdown: {
+        case MUIA_BestTextEditor_Markdown: {
             ULONG i;
             data->markdown = v != 0;
             for (i = 0; i < data->numParas; i++) {
@@ -737,27 +737,27 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             relayout = TRUE;
             break;
         }
-        case MUIA_RichTextEditor_HideMarkup:
+        case MUIA_BestTextEditor_HideMarkup:
             data->hideMarkup = v != 0;
             data->hideMarkupSet = TRUE;
             relayout = TRUE;
             break;
-        case MUIA_RichTextEditor_LinkHook:
+        case MUIA_BestTextEditor_LinkHook:
             data->linkHook = (struct Hook *)v;
             break;
-        case MUIA_RichTextEditor_StickToBottom:
+        case MUIA_BestTextEditor_StickToBottom:
             data->stickToBottom = v != 0;
             break;
-        case MUIA_RichTextEditor_MaxLength:
+        case MUIA_BestTextEditor_MaxLength:
             data->maxLength = v;
             if (!init) {
                 rteTrimToMaxLength(data);
                 relayout = TRUE;
             }
             break;
-        case MUIA_RichTextEditor_BubbleStyles: {
-            const struct RichTextBubbleStyle *bs =
-                (const struct RichTextBubbleStyle *)v;
+        case MUIA_BestTextEditor_BubbleStyles: {
+            const struct BestTextBubbleStyle *bs =
+                (const struct BestTextBubbleStyle *)v;
             UWORD n = 0;
             BOOL wasSetup = data->setup;
             if (wasSetup)
@@ -765,8 +765,8 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             if (bs == NULL) {
                 rteSetDefaultBubbleStyles(data);
             } else {
-                while (n < RICHTEXTEDITOR_MAX_BUBBLE_STYLES &&
-                       bs[n].side != MUIV_RichTextEditor_Bubble_End) {
+                while (n < BESTTEXTEDITOR_MAX_BUBBLE_STYLES &&
+                       bs[n].side != MUIV_BestTextEditor_Bubble_End) {
                     data->bubbleStyles[n] = bs[n];
                     n++;
                 }
@@ -778,14 +778,14 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             relayout = TRUE;
             break;
         }
-        case MUIA_RichTextEditor_ImageHook:
+        case MUIA_BestTextEditor_ImageHook:
             data->imageHook = (struct Hook *)v;
             break;
-        case MUIA_RichTextEditor_MaxImageHeight:
+        case MUIA_BestTextEditor_MaxImageHeight:
             data->maxImageHeight = v;
             relayout = TRUE;
             break;
-        case MUIA_RichTextEditor_CodeFont:
+        case MUIA_BestTextEditor_CodeFont:
             data->userCodeFont = (struct TextFont *)v;
             break;
         case MUIA_Disabled:
@@ -1050,38 +1050,38 @@ static IPTR mGet(struct IClass *cl, Object *obj, struct opGet *msg) {
     case MUIA_TextEditor_WrapWords:
         *store = data->wrapWords;
         return TRUE;
-    case MUIA_RichTextEditor_SubmitHook:
+    case MUIA_BestTextEditor_SubmitHook:
     case MUIA_ActionTextEditor_SubmitHook:
         *store = (IPTR)data->submitHook;
         return TRUE;
-    case MUIA_RichTextEditor_SubmitEmpty:
+    case MUIA_BestTextEditor_SubmitEmpty:
         *store = data->submitEmpty;
         return TRUE;
-    case MUIA_RichTextEditor_Markdown:
+    case MUIA_BestTextEditor_Markdown:
         *store = data->markdown;
         return TRUE;
-    case MUIA_RichTextEditor_HideMarkup:
+    case MUIA_BestTextEditor_HideMarkup:
         *store = data->hideMarkup;
         return TRUE;
-    case MUIA_RichTextEditor_ClickedLink:
+    case MUIA_BestTextEditor_ClickedLink:
         *store = (IPTR)data->clickedLink;
         return TRUE;
-    case MUIA_RichTextEditor_StickToBottom:
+    case MUIA_BestTextEditor_StickToBottom:
         *store = data->stickToBottom;
         return TRUE;
-    case MUIA_RichTextEditor_MaxLength:
+    case MUIA_BestTextEditor_MaxLength:
         *store = data->maxLength;
         return TRUE;
-    case MUIA_RichTextEditor_MaxImageHeight:
+    case MUIA_BestTextEditor_MaxImageHeight:
         *store = data->maxImageHeight;
         return TRUE;
-    case MUIA_RichTextEditor_Length:
+    case MUIA_BestTextEditor_Length:
         *store = data->totalLength;
         return TRUE;
-    case MUIA_RichTextEditor_Paragraphs:
+    case MUIA_BestTextEditor_Paragraphs:
         *store = data->numParas;
         return TRUE;
-    case MUIA_RichTextEditor_AtBottom:
+    case MUIA_BestTextEditor_AtBottom:
         rteEnsureLayout(data, obj);
         *store = rteViewAtBottom(data);
         return TRUE;
@@ -1387,7 +1387,7 @@ static IPTR mInsertText(struct IClass *cl, Object *obj,
 }
 
 static IPTR mAppend(struct IClass *cl, Object *obj,
-                    struct MUIP_RichTextEditor_Append *msg) {
+                    struct MUIP_BestTextEditor_Append *msg) {
     struct RTEData *data = INST_DATA(cl, obj);
     struct RTEPos pos;
     BOOL follow;
@@ -1399,13 +1399,13 @@ static IPTR mAppend(struct IClass *cl, Object *obj,
     if (data->shown && !data->quiet)
         rteEnsureLayout(data, obj);
     follow = data->stickToBottom && rteViewAtBottom(data) &&
-             !(msg->flags & MUIF_RichTextEditor_Append_NoScroll);
+             !(msg->flags & MUIF_BestTextEditor_Append_NoScroll);
     pos.para = data->numParas - 1;
     pos.offset = data->paras[pos.para].len;
     cursorAtEnd = rteComparePos(data->cursor, pos) == 0;
     data->importCarry = TRUE;
     ok = rteImport(data, pos, msg->text, msg->length,
-                   (msg->flags & MUIF_RichTextEditor_Append_Raw) != 0,
+                   (msg->flags & MUIF_BestTextEditor_Append_Raw) != 0,
                    MUIV_TextEditor_ImportHook_Plain, NULL, FALSE);
     data->importCarry = FALSE;
     if (!ok)
@@ -1641,16 +1641,16 @@ static IPTR mQueryKeyAction(struct IClass *cl, Object *obj,
 }
 
 static IPTR mScrollTo(struct IClass *cl, Object *obj,
-                      struct MUIP_RichTextEditor_ScrollTo *msg) {
+                      struct MUIP_BestTextEditor_ScrollTo *msg) {
     struct RTEData *data = INST_DATA(cl, obj);
     switch (msg->where) {
-    case MUIV_RichTextEditor_ScrollTo_Top:
+    case MUIV_BestTextEditor_ScrollTo_Top:
         rteScrollTo(data, obj, 0);
         break;
-    case MUIV_RichTextEditor_ScrollTo_Bottom:
+    case MUIV_BestTextEditor_ScrollTo_Bottom:
         rteScrollTo(data, obj, 0x3fffffff);
         break;
-    case MUIV_RichTextEditor_ScrollTo_Cursor: {
+    case MUIV_BestTextEditor_ScrollTo_Cursor: {
         BOOL ro = data->readOnly;
         data->readOnly = FALSE;
         rteMakeCursorVisible(data, obj);
@@ -1751,30 +1751,30 @@ DISPATCHER(rteDispatcher) {
         return TRUE;
     }
 
-    case MUIM_RichTextEditor_Append:
-        return mAppend(cl, obj, (struct MUIP_RichTextEditor_Append *)msg);
-    case MUIM_RichTextEditor_ScrollTo:
-        return mScrollTo(cl, obj, (struct MUIP_RichTextEditor_ScrollTo *)msg);
+    case MUIM_BestTextEditor_Append:
+        return mAppend(cl, obj, (struct MUIP_BestTextEditor_Append *)msg);
+    case MUIM_BestTextEditor_ScrollTo:
+        return mScrollTo(cl, obj, (struct MUIP_BestTextEditor_ScrollTo *)msg);
     }
     return DoSuperMethodA(cl, obj, msg);
 }
 
-LONG createRichTextEditorClass(void) {
-    if (richTextEditorClass != NULL)
+LONG createBestTextEditorClass(void) {
+    if (bestTextEditorClass != NULL)
         return RETURN_OK;
-    richTextEditorClass =
+    bestTextEditorClass =
         MUI_CreateCustomClass(NULL, MUIC_Area, NULL, sizeof(struct RTEData),
                               ENTRY(rteDispatcher));
     /* No cl_ID: MUI 3.8 treats a class with an ID as public when disposing
      * its objects, which crashes a private class at shutdown */
-    return richTextEditorClass != NULL ? RETURN_OK : RETURN_ERROR;
+    return bestTextEditorClass != NULL ? RETURN_OK : RETURN_ERROR;
 }
 
-void deleteRichTextEditorClass(void) {
-    if (richTextEditorClass == NULL)
+void deleteBestTextEditorClass(void) {
+    if (bestTextEditorClass == NULL)
         return;
-    MUI_DeleteCustomClass(richTextEditorClass);
-    richTextEditorClass = NULL;
+    MUI_DeleteCustomClass(bestTextEditorClass);
+    bestTextEditorClass = NULL;
 }
 
 #endif /* DAEMON */

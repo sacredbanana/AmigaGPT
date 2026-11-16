@@ -1,6 +1,6 @@
 #ifndef DAEMON
 /*
- * RichTextEditor - input
+ * BestTextEditor - input
  *
  * Keyboard and mouse handling, the clipboard (IFF FTXT through iffparse),
  * keyboard macros and the TextEditor.mcc compatible ARexx command set.
@@ -17,7 +17,7 @@
 #include <proto/utility.h>
 #include <stdio.h>
 #include <string.h>
-#include "RichTextEditorPrivate.h"
+#include "BestTextEditorPrivate.h"
 
 #ifndef ID_FTXT
 #define ID_FTXT MAKE_ID('F', 'T', 'X', 'T')
@@ -862,7 +862,7 @@ static BOOL rteActivateLink(struct RTEData *data, Object *obj,
     struct RTEPara *p = &data->paras[pos.para];
     UWORD style;
     ULONG s, e, us, ue;
-    struct RichTextLinkMessage msg;
+    struct BestTextLinkMessage msg;
     STRPTR url;
     BOOL image;
 
@@ -888,7 +888,7 @@ static BOOL rteActivateLink(struct RTEData *data, Object *obj,
     msg.image = image;
     if (data->linkHook != NULL)
         CallHookPkt(data->linkHook, obj, &msg);
-    SetAttrs(obj, MUIA_RichTextEditor_ClickedLink, (IPTR)url, TAG_DONE);
+    SetAttrs(obj, MUIA_BestTextEditor_ClickedLink, (IPTR)url, TAG_DONE);
     return TRUE;
 }
 

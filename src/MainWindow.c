@@ -21,7 +21,7 @@
 #include "agent.h"
 #include "AgentPage.h"
 #include "openai.h"
-#include "RichTextEditor.h"
+#include "BestTextEditor.h"
 #include "shellpath.h"
 #include "speech.h"
 #include "SpeechProviderSettingsRequesterWindow.h"
@@ -30,7 +30,7 @@
 
 #define CONVERSATION_TITLE_FALLBACK_MAX 96
 
-/* Bubble styles of the chat transcript (see RichTextEditor.h) */
+/* Bubble styles of the chat transcript (see BestTextEditor.h) */
 #define CHAT_BUBBLE_USER 1
 #define CHAT_BUBBLE_ASSISTANT 2
 
@@ -244,8 +244,8 @@ static void chatOutputClear(void) {
 static void chatOutputAppend(CONST_STRPTR text, BOOL raw) {
     if (chatOutputTextEditor == NULL || text == NULL)
         return;
-    DoMethod(chatOutputTextEditor, MUIM_RichTextEditor_Append, (IPTR)text, -1,
-             raw ? MUIF_RichTextEditor_Append_Raw : 0);
+    DoMethod(chatOutputTextEditor, MUIM_BestTextEditor_Append, (IPTR)text, -1,
+             raw ? MUIF_BestTextEditor_Append_Raw : 0);
 }
 
 /**
@@ -257,7 +257,7 @@ static void chatOutputBeginMessage(BOOL user) {
     ULONG length = 0;
     if (chatOutputTextEditor == NULL)
         return;
-    get(chatOutputTextEditor, MUIA_RichTextEditor_Length, &length);
+    get(chatOutputTextEditor, MUIA_BestTextEditor_Length, &length);
     snprintf(codes, sizeof(codes), "%s\033[B:%ld%c]\033[M:%ld]",
              length > 0 ? "\n" : "",
              (LONG)(user ? CHAT_BUBBLE_USER : CHAT_BUBBLE_ASSISTANT),
@@ -432,7 +432,7 @@ static void openLink(CONST_STRPTR target, BOOL image) {
 }
 
 HOOKPROTONH(TranscriptLinkClickedFunc, ULONG, Object *obj,
-            struct RichTextLinkMessage *msg) {
+            struct BestTextLinkMessage *msg) {
     (void)obj;
     if (msg != NULL)
         openLink(msg->url, msg->image);
@@ -2478,12 +2478,12 @@ Object *createPromptInputEditor(struct Hook *submitHook, ULONG objectId,
     if (!isAROS) {
         /* Return sends, Shift+Return starts a new line. Markdown is shown
          * as it is typed, with its markup dimmed. */
-        Object *editor = RichTextEditorObject,
+        Object *editor = BestTextEditorObject,
             MUIA_CycleChain, TRUE,
             objectId != 0 ? MUIA_ObjectID : TAG_IGNORE, objectId,
             weight != 0 ? MUIA_Weight : TAG_IGNORE, weight,
-            MUIA_RichTextEditor_SubmitHook, submitHook,
-            MUIA_RichTextEditor_Markdown, TRUE,
+            MUIA_BestTextEditor_SubmitHook, submitHook,
+            MUIA_BestTextEditor_Markdown, TRUE,
             MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
             MUIA_TextEditor_ReadOnly, FALSE,
             MUIA_TextEditor_TabSize, 4,
@@ -2513,15 +2513,15 @@ Object *createTranscriptView(Object **viewOut) {
     Object *slider = ScrollbarObject, End;
     Object *view;
     // clang-format off
-    view = RichTextEditorObject,
+    view = BestTextEditorObject,
         MUIA_TextEditor_ReadOnly, TRUE,
         MUIA_TextEditor_FixedFont, configGetFixedWidthFonts(),
         MUIA_TextEditor_WrapMode, MUIV_TextEditor_WrapMode_SoftWrap,
         MUIA_TextEditor_Slider, slider,
         MUIA_TextEditor_ActiveObjectOnClick, TRUE,
-        MUIA_RichTextEditor_Markdown, TRUE,
-        MUIA_RichTextEditor_StickToBottom, TRUE,
-        MUIA_RichTextEditor_LinkHook, mainWindowLinkHook(),
+        MUIA_BestTextEditor_Markdown, TRUE,
+        MUIA_BestTextEditor_StickToBottom, TRUE,
+        MUIA_BestTextEditor_LinkHook, mainWindowLinkHook(),
         MUIA_CycleChain, TRUE,
         MUIA_ContextMenu, NULL,
     End;
@@ -3131,8 +3131,8 @@ static void sendChatMessage() {
 
     chatOutputBeginMessage(TRUE);
     chatOutputAppendMessageText(text);
-    DoMethod(chatOutputTextEditor, MUIM_RichTextEditor_ScrollTo,
-             MUIV_RichTextEditor_ScrollTo_Bottom);
+    DoMethod(chatOutputTextEditor, MUIM_BestTextEditor_ScrollTo,
+             MUIV_BestTextEditor_ScrollTo_Bottom);
 
     UTF8 *textUTF8 = CodesetsUTF8Create(CSA_SourceCodeset, (Tag)systemCodeset,
 
@@ -3767,8 +3767,8 @@ void displayConversation(struct Conversation *conversation) {
         appendMessageFileSummary(conversationNode);
     }
     set(chatOutputTextEditor, MUIA_TextEditor_Quiet, FALSE);
-    DoMethod(chatOutputTextEditor, MUIM_RichTextEditor_ScrollTo,
-             MUIV_RichTextEditor_ScrollTo_Bottom);
+    DoMethod(chatOutputTextEditor, MUIM_BestTextEditor_ScrollTo,
+             MUIV_BestTextEditor_ScrollTo_Bottom);
 }
 
 /**

@@ -36,7 +36,7 @@ CONST_STRPTR speechLookupXAIVoiceName(CONST_STRPTR voiceId) {
 #include "MainWindow.h"
 #include "gui.h"
 #include "openai.h"
-#include "RichTextEditor.h"
+#include "BestTextEditor.h"
 #include "speech.h"
 
 #ifndef MAKE_ID
@@ -3963,7 +3963,7 @@ LONG createSpeechProviderSettingsRequesterWindow(void) {
                             Child, VGroup,
                                 MUIA_Frame, MUIV_Frame_Group,
                                 MUIA_FrameTitle, STRING_MENU_OPENAI_VOICE_INSTRUCTIONS,
-                                Child, openAiVoiceInstructionsEditor = RichTextEditorObject,
+                                Child, openAiVoiceInstructionsEditor = BestTextEditorObject,
                                     MUIA_TextEditor_FixedFont, TRUE,
                                     MUIA_TextEditor_WrapMode, MUIV_TextEditor_WrapMode_SoftWrap,
                                     MUIA_CycleChain, TRUE,

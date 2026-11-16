@@ -18,7 +18,7 @@
 #include "AmigaGPTConfig.h"
 #include "gui.h"
 #include "MainWindow.h"
-#include "RichTextEditor.h"
+#include "BestTextEditor.h"
 
 #define AGENT_TRANSCRIPT_INITIAL_CAPACITY 16384
 
@@ -66,8 +66,8 @@ static STRPTR agentEffortLabels[AGENT_EFFORT_COUNT + 1] = {NULL};
 /* The transcript follows new output, so show its end */
 static void showTranscript(void) {
     if (agentOutput != NULL)
-        DoMethod(agentOutput, MUIM_RichTextEditor_ScrollTo,
-                 MUIV_RichTextEditor_ScrollTo_Bottom);
+        DoMethod(agentOutput, MUIM_BestTextEditor_ScrollTo,
+                 MUIV_BestTextEditor_ScrollTo_Bottom);
 }
 
 /* Add local character set text to the transcript. The text may hold the
@@ -99,14 +99,14 @@ static void appendTranscript(CONST_STRPTR text) {
     agentTranscriptLength += length;
     agentTranscript[agentTranscriptLength] = '\0';
     if (agentOutput != NULL)
-        DoMethod(agentOutput, MUIM_RichTextEditor_Append, (IPTR)text, -1,
-                 MUIF_RichTextEditor_Append_NoScroll);
+        DoMethod(agentOutput, MUIM_BestTextEditor_Append, (IPTR)text, -1,
+                 MUIF_BestTextEditor_Append_NoScroll);
 }
 
 /* What the last block in the transcript was, to space blocks apart */
 static LONG lastBlockKind = -1;
 
-/* Bubble styles of the view (see RichTextEditor.h) */
+/* Bubble styles of the view (see BestTextEditor.h) */
 #define AGENT_BUBBLE_USER 1
 #define AGENT_BUBBLE_ASSISTANT 2
 #define AGENT_BUBBLE_ERROR 4
@@ -741,11 +741,11 @@ static void createAgentEditorWindow(void) {
         WindowContents, VGroup,
             Child, HGroup,
                 MUIA_Group_Spacing, 0,
-                Child, agentEditorText = RichTextEditorObject,
+                Child, agentEditorText = BestTextEditorObject,
                     MUIA_TextEditor_FixedFont, TRUE,
                     MUIA_TextEditor_Slider, slider,
                     MUIA_TextEditor_WrapMode, MUIV_TextEditor_WrapMode_SoftWrap,
-                    MUIA_RichTextEditor_Markdown, TRUE,
+                    MUIA_BestTextEditor_Markdown, TRUE,
                     MUIA_CycleChain, TRUE,
                 End,
                 Child, slider,

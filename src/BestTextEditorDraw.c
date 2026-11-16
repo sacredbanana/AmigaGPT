@@ -1,6 +1,6 @@
 #ifndef DAEMON
 /*
- * RichTextEditor - rendering
+ * BestTextEditor - rendering
  *
  * The document is drawn as horizontal bands: the padding above a paragraph,
  * each visual line, and the padding below it. Every band is rendered into an
@@ -25,7 +25,7 @@
 #include <proto/intuition.h>
 #include <proto/muimaster.h>
 #include <string.h>
-#include "RichTextEditorPrivate.h"
+#include "BestTextEditorPrivate.h"
 
 #define RTE_DB_MARGIN 32
 
@@ -71,21 +71,21 @@ static ULONG rteLuminance(ULONG rgb) {
            1000;
 }
 
-static const struct RichTextBubbleStyle rteDefaultBubbles[] = {
-    {MUIV_RichTextEditor_Bubble_Right, 0x2f7ff0, MUIV_RichTextEditor_Color_Auto, 80},
-    {MUIV_RichTextEditor_Bubble_Left, 0xe6e6ea, MUIV_RichTextEditor_Color_Auto, 92},
-    {MUIV_RichTextEditor_Bubble_Center, 0xfff2bf, MUIV_RichTextEditor_Color_Auto, 90},
-    {MUIV_RichTextEditor_Bubble_Left, 0xffd9d6, 0x8a1010, 92},
-    {MUIV_RichTextEditor_Bubble_Left, 0xdcf5dc, MUIV_RichTextEditor_Color_Auto, 92},
-    {MUIV_RichTextEditor_Bubble_Left, 0xece3fa, MUIV_RichTextEditor_Color_Auto, 92},
-    {MUIV_RichTextEditor_Bubble_Full, 0xeeeeee, MUIV_RichTextEditor_Color_Auto, 100},
-    {MUIV_RichTextEditor_Bubble_Right, 0x34c759, MUIV_RichTextEditor_Color_Auto, 80}};
+static const struct BestTextBubbleStyle rteDefaultBubbles[] = {
+    {MUIV_BestTextEditor_Bubble_Right, 0x2f7ff0, MUIV_BestTextEditor_Color_Auto, 80},
+    {MUIV_BestTextEditor_Bubble_Left, 0xe6e6ea, MUIV_BestTextEditor_Color_Auto, 92},
+    {MUIV_BestTextEditor_Bubble_Center, 0xfff2bf, MUIV_BestTextEditor_Color_Auto, 90},
+    {MUIV_BestTextEditor_Bubble_Left, 0xffd9d6, 0x8a1010, 92},
+    {MUIV_BestTextEditor_Bubble_Left, 0xdcf5dc, MUIV_BestTextEditor_Color_Auto, 92},
+    {MUIV_BestTextEditor_Bubble_Left, 0xece3fa, MUIV_BestTextEditor_Color_Auto, 92},
+    {MUIV_BestTextEditor_Bubble_Full, 0xeeeeee, MUIV_BestTextEditor_Color_Auto, 100},
+    {MUIV_BestTextEditor_Bubble_Right, 0x34c759, MUIV_BestTextEditor_Color_Auto, 80}};
 
 void rteSetDefaultBubbleStyles(struct RTEData *data) {
     UWORD i;
-    for (i = 0; i < RICHTEXTEDITOR_MAX_BUBBLE_STYLES; i++)
+    for (i = 0; i < BESTTEXTEDITOR_MAX_BUBBLE_STYLES; i++)
         data->bubbleStyles[i] = rteDefaultBubbles[i];
-    data->numBubbleStyles = RICHTEXTEDITOR_MAX_BUBBLE_STYLES;
+    data->numBubbleStyles = BESTTEXTEDITOR_MAX_BUBBLE_STYLES;
 }
 
 void rteObtainPens(struct RTEData *data, Object *obj) {
@@ -127,7 +127,7 @@ void rteObtainPens(struct RTEData *data, Object *obj) {
     }
 
     for (i = 0; i < data->numBubbleStyles; i++) {
-        const struct RichTextBubbleStyle *bs = &data->bubbleStyles[i];
+        const struct BestTextBubbleStyle *bs = &data->bubbleStyles[i];
         ULONG textRGB = bs->text;
         ULONG actualBg = bs->background;
         data->bubbleBgPen[i] =
@@ -136,7 +136,7 @@ void rteObtainPens(struct RTEData *data, Object *obj) {
             data->bubbleBgPen[i] = mp[MPEN_HALFSHINE];
         else
             rtePenRGB(cm, data->bubbleBgPen[i], &actualBg);
-        if (textRGB == MUIV_RichTextEditor_Color_Auto)
+        if (textRGB == MUIV_BestTextEditor_Color_Auto)
             textRGB = rteLuminance(actualBg) > 140 ? 0x000000 : 0xffffff;
         data->bubbleTextPen[i] = rteBestPen(cm, textRGB, &data->bubbleTextAlloc[i]);
         if (data->bubbleTextPen[i] < 0)
@@ -356,8 +356,8 @@ static void rteDrawBubble(struct RTEData *data, struct RTETarget *t,
                 limit = RTE_MIN(limit, bottom - RTE_BUBBLE_RADIUS);
             rowsSame = RTE_MAX(limit - y, 1);
         }
-        if (tail && side != MUIV_RichTextEditor_Bubble_Center &&
-            side != MUIV_RichTextEditor_Bubble_Full) {
+        if (tail && side != MUIV_BestTextEditor_Bubble_Center &&
+            side != MUIV_BestTextEditor_Bubble_Full) {
             /* The corner on the tail side stays square and a small wedge
              * points out of the bubble, like a speech bubble */
             LONG wedge = RTE_BUBBLE_TAIL - fromBot;
@@ -365,7 +365,7 @@ static void rteDrawBubble(struct RTEData *data, struct RTETarget *t,
                 wedge = 0;
             if (fromBot <= 1)
                 wedge = RTE_BUBBLE_TAIL - 1 + (1 - fromBot);
-            if (side == MUIV_RichTextEditor_Bubble_Right) {
+            if (side == MUIV_BestTextEditor_Bubble_Right) {
                 rteFill(t, pen, bx0 + inset, ty, bx1 + wedge, ty);
             } else {
                 rteFill(t, pen, bx0 - wedge, ty, bx1 - inset, ty);
