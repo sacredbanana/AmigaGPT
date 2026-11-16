@@ -2234,12 +2234,12 @@ msgstr "(Geen project)"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
-msgid "Add project..."
-msgstr "Project toevoegen..."
+msgid "New project"
+msgstr "Nieuw project"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
-msgid "Remove project"
+msgid "Delete project"
 msgstr "Project verwijderen"
 
 #: src/AgentPage.c
@@ -2483,6 +2483,10 @@ msgctxt "STRING_AGENT_NO_SUCH_SESSION (457//)"
 msgid "There is no saved session with that number. Use /sessions to list them."
 msgstr ""
 "Er is geen opgeslagen sessie met dat nummer. Typ /sessions om ze te tonen."
+
+#~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+#~ msgid "Add project..."
+#~ msgstr "Project toevoegen..."
 
 #~ msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
 #~ msgid ""

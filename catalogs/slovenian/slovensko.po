@@ -2218,13 +2218,13 @@ msgstr "(Brez projekta)"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
-msgid "Add project..."
-msgstr "Dodaj projekt..."
+msgid "New project"
+msgstr "Nov projekt"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
-msgid "Remove project"
-msgstr "Odstrani projekt"
+msgid "Delete project"
+msgstr "Izbriši projekt"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_SELECT_PROJECT_DRAWER (421//)"
@@ -2466,6 +2466,10 @@ msgctxt "STRING_AGENT_NO_SUCH_SESSION (457//)"
 msgid "There is no saved session with that number. Use /sessions to list them."
 msgstr ""
 "Shranjena seja s to številko ne obstaja. Vnesite /sessions za seznam sej."
+
+#~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+#~ msgid "Add project..."
+#~ msgstr "Dodaj projekt..."
 
 #~ msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
 #~ msgid ""

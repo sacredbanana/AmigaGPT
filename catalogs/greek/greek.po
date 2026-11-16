@@ -2241,13 +2241,13 @@ msgstr "(Κανένα έργο)"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
-msgid "Add project..."
-msgstr "Προσθήκη έργου..."
+msgid "New project"
+msgstr "Νέο έργο"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
-msgid "Remove project"
-msgstr "Αφαίρεση έργου"
+msgid "Delete project"
+msgstr "Διαγραφή έργου"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_SELECT_PROJECT_DRAWER (421//)"
@@ -2492,6 +2492,10 @@ msgid "There is no saved session with that number. Use /sessions to list them."
 msgstr ""
 "Δεν υπάρχει αποθηκευμένη συνεδρία με αυτόν τον αριθμό. Πληκτρολογήστε "
 "/sessions για να τις δείτε."
+
+#~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+#~ msgid "Add project..."
+#~ msgstr "Προσθήκη έργου..."
 
 #~ msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
 #~ msgid ""

@@ -2219,12 +2219,12 @@ msgstr "(Inget projekt)"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
-msgid "Add project..."
-msgstr "Lägg till projekt..."
+msgid "New project"
+msgstr "Nytt projekt"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
-msgid "Remove project"
+msgid "Delete project"
 msgstr "Ta bort projekt"
 
 #: src/AgentPage.c
@@ -2469,6 +2469,10 @@ msgid "There is no saved session with that number. Use /sessions to list them."
 msgstr ""
 "Det finns ingen sparad session med det numret. Skriv /sessions för att se "
 "dem."
+
+#~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+#~ msgid "Add project..."
+#~ msgstr "Lägg till projekt..."
 
 #~ msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
 #~ msgid ""

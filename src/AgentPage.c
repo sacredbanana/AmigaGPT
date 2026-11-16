@@ -288,6 +288,34 @@ static void setAgentSendButtonLabel(BOOL busy) {
     set(agentSendButton, MUIA_Text_Contents, label);
 }
 
+/* New is green with a +, Delete is red with a -, as on the other tabs.
+ * MUI copies MUIA_Text_Contents, so the buffer can live on the stack.
+ * ESC P[p] is the text pen (MUI_Text.doc); the pen comes from ObtainBestPen. */
+void agentPageColorButtons(void) {
+    UBYTE label[64];
+
+    if (agentAddProjectButton != NULL) {
+        snprintf(label, sizeof(label), "\33c\33P[%ld]+ %s", greenPen,
+                 STRING_AGENT_ADD_PROJECT);
+        set(agentAddProjectButton, MUIA_Text_Contents, label);
+    }
+    if (agentRemoveProjectButton != NULL) {
+        snprintf(label, sizeof(label), "\33c\33P[%ld]- %s", redPen,
+                 STRING_AGENT_REMOVE_PROJECT);
+        set(agentRemoveProjectButton, MUIA_Text_Contents, label);
+    }
+    if (agentNewSessionButton != NULL) {
+        snprintf(label, sizeof(label), "\33c\33P[%ld]+ %s", greenPen,
+                 STRING_AGENT_NEW_SESSION);
+        set(agentNewSessionButton, MUIA_Text_Contents, label);
+    }
+    if (agentDeleteSessionButton != NULL) {
+        snprintf(label, sizeof(label), "\33c\33P[%ld]- %s", redPen,
+                 STRING_AGENT_DELETE_SESSION);
+        set(agentDeleteSessionButton, MUIA_Text_Contents, label);
+    }
+}
+
 /* The tree row that is selected, decoded, or 0 when there is none */
 static ULONG selectedTreeNode(void) {
     struct MUI_NListtree_TreeNode *node = NULL;
@@ -961,6 +989,7 @@ void agentPageWindowOpened(void) {
         set(agentOutput, MUIA_NFloattext_Align,
             configGetAssistantTextAlignment());
     refreshSessionTree();
+    agentPageColorButtons();
     setAgentSendButtonLabel(FALSE);
     if (agentTranscriptLength == 0) {
         agentRenderSession(agentOutputReceived);

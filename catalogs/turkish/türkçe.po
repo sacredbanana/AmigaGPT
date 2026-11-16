@@ -2199,13 +2199,13 @@ msgstr "(Proje yok)"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
-msgid "Add project..."
-msgstr "Proje ekle..."
+msgid "New project"
+msgstr "Yeni proje"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
-msgid "Remove project"
-msgstr "Projeyi kaldır"
+msgid "Delete project"
+msgstr "Projeyi sil"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_SELECT_PROJECT_DRAWER (421//)"
@@ -2447,6 +2447,10 @@ msgstr "Oturumu sil"
 msgctxt "STRING_AGENT_NO_SUCH_SESSION (457//)"
 msgid "There is no saved session with that number. Use /sessions to list them."
 msgstr "Bu numarada kayıtlı bir oturum yok. Listelemek için /sessions yazın."
+
+#~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+#~ msgid "Add project..."
+#~ msgstr "Proje ekle..."
 
 #~ msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
 #~ msgid ""

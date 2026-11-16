@@ -2222,12 +2222,12 @@ msgstr "(Нет проекта)"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
-msgid "Add project..."
-msgstr "Добавить проект..."
+msgid "New project"
+msgstr "Новый проект"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
-msgid "Remove project"
+msgid "Delete project"
 msgstr "Удалить проект"
 
 #: src/AgentPage.c
@@ -2471,6 +2471,10 @@ msgid "There is no saved session with that number. Use /sessions to list them."
 msgstr ""
 "Сохранённой сессии с таким номером нет. Введите /sessions, чтобы увидеть их "
 "список."
+
+#~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+#~ msgid "Add project..."
+#~ msgstr "Добавить проект..."
 
 #~ msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
 #~ msgid ""

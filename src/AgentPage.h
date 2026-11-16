@@ -32,6 +32,12 @@ Object *agentPagePromptEditor(void);
 void agentPageWindowOpened(void);
 
 /**
+ * Colour New and Delete the same way as the other tabs. Call after the
+ * screen pens are allocated, and again when the screen changes.
+ **/
+void agentPageColorButtons(void);
+
+/**
  * Lock or unlock the Agent tab while a request is running
  **/
 void agentPageSetBusy(BOOL busy);

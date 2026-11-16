@@ -685,7 +685,7 @@ The requester offers @{b}Allow once@{ub}, @{b}Always allow@{ub} and @{b}Deny@{ub
 
 @{b}@{u}Projects@{uu}@{ub}
 
-A project is a drawer. @{b}Add project...@{ub} adds one and the list on the left switches between them. While a project is active, Shell commands start in its drawer and paths without a device name are relative to it. "(No project)" works anywhere, with full paths. @{b}Remove project@{ub} only takes the project off the list; the drawer is not touched.
+A project is a drawer. @{b}New project@{ub} adds one and the list on the left switches between them. While a project is active, Shell commands start in its drawer and paths without a device name are relative to it. "(No project)" works anywhere, with full paths. @{b}Delete project@{ub} only takes the project off the list; the drawer is not touched.
 
 @{b}@{u}Model and effort@{uu}@{ub}
 

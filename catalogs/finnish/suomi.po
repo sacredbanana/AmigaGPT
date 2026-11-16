@@ -2215,12 +2215,12 @@ msgstr "(Ei projektia)"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
-msgid "Add project..."
-msgstr "Lisää projekti..."
+msgid "New project"
+msgstr "Uusi projekti"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
-msgid "Remove project"
+msgid "Delete project"
 msgstr "Poista projekti"
 
 #: src/AgentPage.c
@@ -2465,6 +2465,10 @@ msgid "There is no saved session with that number. Use /sessions to list them."
 msgstr ""
 "Tällä numerolla ei ole tallennettua istuntoa. Kirjoita /sessions nähdäksesi "
 "luettelon."
+
+#~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+#~ msgid "Add project..."
+#~ msgstr "Lisää projekti..."
 
 #~ msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
 #~ msgid ""

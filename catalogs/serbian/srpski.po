@@ -2215,13 +2215,13 @@ msgstr "(Nema projekta)"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
-msgid "Add project..."
-msgstr "Dodaj projekat..."
+msgid "New project"
+msgstr "Novi projekat"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_REMOVE_PROJECT (420//)"
-msgid "Remove project"
-msgstr "Ukloni projekat"
+msgid "Delete project"
+msgstr "Obriši projekat"
 
 #: src/AgentPage.c
 msgctxt "STRING_AGENT_SELECT_PROJECT_DRAWER (421//)"
@@ -2464,6 +2464,10 @@ msgid "There is no saved session with that number. Use /sessions to list them."
 msgstr ""
 "Ne postoji sačuvana sesija sa tim brojem. Ukucajte /sessions za njihovu "
 "listu."
+
+#~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
+#~ msgid "Add project..."
+#~ msgstr "Dodaj projekat..."
 
 #~ msgctxt "STRING_AGENT_STEP_LIMIT (447//)"
 #~ msgid ""

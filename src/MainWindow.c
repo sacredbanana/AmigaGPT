@@ -2245,6 +2245,7 @@ HOOKPROTONHNONP(ConfigureForScreenFunc, void) {
     snprintf(buttonLabelText, BUTTON_LABEL_BUFFER_SIZE, "\33c\33P[%ld]- %s\0",
              redPen, STRING_DELETE_IMAGE);
     set(deleteImageButton, MUIA_Text_Contents, buttonLabelText);
+    agentPageColorButtons();
     setActionButtonsStopMode(requestInterfaceBusy);
     applySpeechWaveformPens();
     FreeVec(buttonLabelText);
