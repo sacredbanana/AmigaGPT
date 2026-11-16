@@ -7,7 +7,7 @@
 #include "APIKeyRequesterWindow.h"
 #include "gui.h"
 #include "MainWindow.h"
-#include "BestTextEditor.h"
+#include <mui/BestTextEditor_mcc.h>
 
 Object *apiKeyRequesterString;
 Object *apiKeyRequesterWindowObject;

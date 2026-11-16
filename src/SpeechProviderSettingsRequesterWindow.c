@@ -36,7 +36,7 @@ CONST_STRPTR speechLookupXAIVoiceName(CONST_STRPTR voiceId) {
 #include "MainWindow.h"
 #include "gui.h"
 #include "openai.h"
-#include "BestTextEditor.h"
+#include <mui/BestTextEditor_mcc.h>
 #include "speech.h"
 
 #ifndef MAKE_ID

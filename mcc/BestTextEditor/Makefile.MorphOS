@@ -1,0 +1,13 @@
+# BestTextEditor.mcc and BestTextEditor.mcp - MorphOS
+CC = ppc-morphos-gcc
+STRIP = ppc-morphos-strip
+PLATFORM = MorphOS
+BUILD_DIR = build/morphos
+
+include common.mk
+
+CCFLAGS = $(COMMON_CCFLAGS) -noixemul -fomit-frame-pointer -DNO_INLINE_STDARG \
+	-D__MORPHOS__
+LDFLAGS = -nostartfiles -noixemul
+LDLIBS =
+STRIPFLAGS = --preserve-dates -R.comment -S

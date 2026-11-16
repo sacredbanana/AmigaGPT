@@ -18,7 +18,7 @@
 #include "AmigaGPTConfig.h"
 #include "gui.h"
 #include "MainWindow.h"
-#include "BestTextEditor.h"
+#include <mui/BestTextEditor_mcc.h>
 
 #define AGENT_TRANSCRIPT_INITIAL_CAPACITY 16384
 
@@ -106,7 +106,7 @@ static void appendTranscript(CONST_STRPTR text) {
 /* What the last block in the transcript was, to space blocks apart */
 static LONG lastBlockKind = -1;
 
-/* Bubble styles of the view (see BestTextEditor.h) */
+/* Bubble styles of the view (see <mui/BestTextEditor_mcc.h>) */
 #define AGENT_BUBBLE_USER 1
 #define AGENT_BUBBLE_ASSISTANT 2
 #define AGENT_BUBBLE_ERROR 4

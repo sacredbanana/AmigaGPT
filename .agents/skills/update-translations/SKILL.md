@@ -24,6 +24,10 @@ User-facing text in `src/*.c` must be a `STRING_*` symbol, never a literal. For 
 
 Encoding: the `.pot` and `.po` files are UTF-8 (`flexcat` converts them at build time). The `src/*.c` files are ISO 8859-1, so follow `AMIGA-LATIN1-FILES.md` when editing them.
 
+### BestTextEditor.mcp has its own template
+
+The MUI preferences page of the text editor class (`mcc/BestTextEditor/mcp/`) is a separate library with its own catalog, `BestTextEditor_mcp.catalog`. Its strings are `MCP_*` symbols in `mcc/BestTextEditor/catalogs/BestTextEditor_mcp.pot`, translated in `mcc/BestTextEditor/catalogs/<language>/BestTextEditor_mcp.po` (same language directory names as `catalogs/`). Add, change and remove its entries exactly as above, but in that template, and translate them into every one of those `.po` files. `make mcc` (run by the build scripts) regenerates `mcp/BestTextEditor_mcp_cat.{c,h}` and compiles the catalogs.
+
 ## 2. Sync and translate every `.po` file
 
 Delegate to the `po-translation-updater` subagent when your host has it. It is defined for each tool:

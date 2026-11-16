@@ -1,0 +1,17 @@
+# BestTextEditor.mcc and BestTextEditor.mcp - AmigaOS 4
+CC = ppc-amigaos-gcc
+STRIP = ppc-amigaos-strip
+PLATFORM = OS4
+BUILD_DIR = build/os4
+
+SDKDIR = /opt/amiga/ppc-amigaos/SDK/include/include_h
+INCDIR = /opt/amiga/ppc-amigaos/include
+
+include common.mk
+
+CCFLAGS = $(COMMON_CCFLAGS) -mcrt=newlib -I$(INCDIR) -I$(SDKDIR) \
+	-fomit-frame-pointer -DUSE_INLINE_STDARG -D__AMIGAOS4__ -D__amigaos4__ \
+	-D__USE_INLINE__ -D__NEW_TIMEVAL_DEFINITION_USED__
+LDFLAGS = -mcrt=newlib -nostartfiles
+LDLIBS =
+STRIPFLAGS = --preserve-dates -R.comment -R.sdata2 -S

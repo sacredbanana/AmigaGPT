@@ -72,14 +72,23 @@ ASFLAGS = -Wa,-g,--register-prefix-optional,-D
 LDFLAGS =  -Wl,-Map=$(EXECUTABLE_OUT).map,-lamiga,-lm,-lamisslstubs,-ljson-c,-lmagic,-lz,-lmui
 VASMFLAGS = -m68020 -Fhunk -opt-fconst -nowarn=62 -dwarf=3 -quiet -x -I. -D__AMIGAOS3__
 
-.PHONY: all clean copy_bundle_files catalog catalog_definition daemon
+# BestTextEditor.mcc/.mcp live in mcc/BestTextEditor and build with their own
+# Makefiles; AmigaGPT only needs the public header
+CCFLAGS += -Imcc/BestTextEditor/include
+MCC_DIR = mcc/BestTextEditor
+
+.PHONY: all clean copy_bundle_files catalog catalog_definition daemon mcc
 
 all: $(EXECUTABLE_OUT) copy_bundle_files
 
 daemon: $(DAEMON_OUT)
 
+mcc:
+	$(MAKE) -C $(MCC_DIR) OUT_DIR=$(CURDIR)/$(EXECUTABLE_DIR)
+
 clean:
 	$(info Cleaning...)
+	$(MAKE) -C $(MCC_DIR) OUT_DIR=$(CURDIR)/$(EXECUTABLE_DIR) clean
 	$(RM) -dr $(BUNDLE_DIR)/$(PROGRAM_NAME)/catalogs
 	$(RM) -dr $(BUILD_DIR)
 

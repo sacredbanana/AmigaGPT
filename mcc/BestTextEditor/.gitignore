@@ -1,0 +1,4 @@
+build/
+*.catalog
+*.po~
+mcp/BestTextEditor_mcp_cat.*

@@ -99,6 +99,7 @@ AmigaGPT is translated into 22 languages in addition to English. See @{"Language
 - MCC_Guigfx, the MUI custom class used to display images (@{u}http://aminet.net/package/dev/mui/MCC_Guigfx@{uu})
 - MCC_NList, the MUI custom class used for lists (@{u}http://aminet.net/package/dev/mui/MCC_NList-0.128@{uu})
 - MCC_AudioPlayer, shipped with AmigaGPT. The installer copies AudioPlayer.mcc into the system MUI class drawer
+- MCC_BestTextEditor, shipped with AmigaGPT. It shows every conversation and text field. The installer copies BestTextEditor.mcc and its preferences page BestTextEditor.mcp into the system MUI class drawer
 - A PNG datatype for viewing generated images. Any will do, but here is one (@{u}https://aminet.net/util/dtype/vPNGdt.lha@{uu})
 - For AmigaOS 3 and AmigaOS 4, AmiSSL 5.27 or higher
   OS3: @{u}https://aminet.net/package/util/libs/AmiSSL-v5-OS3@{uu}
@@ -128,7 +129,7 @@ AmigaGPT is translated into 22 languages in addition to English. See @{"Language
 
 - On AmigaOS 3 and AmigaOS 4, install AmiSSL and a TCP/IP stack if you have not already done so
 - Download and install MUI. Version 5 is recommended, version 3 is the minimum. Reboot afterwards.
-- Download and install codesets.library, render.library, guigfx.library, MCC_Guigfx and MCC_NList. The AmigaGPT installer also copies AudioPlayer.mcc into the MUI class drawer
+- Download and install codesets.library, render.library, guigfx.library, MCC_Guigfx and MCC_NList. The AmigaGPT installer also copies AudioPlayer.mcc, BestTextEditor.mcc and BestTextEditor.mcp into the MUI class drawer
 
 @{b}@{u}Installing AmigaGPT@{uu}@{ub}
 
@@ -795,6 +796,15 @@ Bear in mind that text becomes very small above 1080p, so you may want to raise 
 - @{b}Assistant text alignment@{ub} does the same for the replies
 - @{b}MUI Settings...@{ub} opens the full MUI preferences for this application - fonts, colours, frames, screen and window behaviour
 - @{b}Clear MUI Settings@{ub} resets all of that back to the defaults
+
+@{b}@{u}The look of the conversations@{uu}@{ub}
+
+The conversations and text fields are drawn by BestTextEditor.mcc. With MUI 4 or later, @{b}MUI Settings...@{ub} has a @{b}BestTextEditor@{ub} page for them:
+
+- @{b}Text@{ub} sets the text font and the font for code. Leave a font empty to use the one from the MUI settings. With @{b}Automatic colors@{ub} switched off you can also pick the colors for links, code, block quotes, rules, the cursor and the selection. Switched on, they are worked out from the text and background colors so they suit light and dark themes
+- @{b}Chat bubbles@{ub} has eight bubble styles, each with its alignment, maximum width, background and text color. AmigaGPT uses style 1 for your messages and style 2 for the replies
+
+Changes show straight away. The page is also in the MUI preferences program, so you can give BestTextEditor the same look in every program that uses it.
 
 @{b}@{u}Formatting in replies@{uu}@{ub}
 
@@ -1583,7 +1593,7 @@ The interface language and the language the AI answers in are separate things. T
 MUI is not installed, or is older than version 3. Install MUI and reboot. See @{"System Requirements" link requirements}.
 
 @{b}@{u}"Could not find all the MUI custom classes"@{uu}@{ub}
-One of MCC_NList, MCC_Guigfx or AudioPlayer.mcc is missing. Install MUI and the listed classes, then run the AmigaGPT installer so it can copy AudioPlayer.mcc into the MUI class drawer, and reboot. MCC_TextEditor, ActionTextEditor.mcc and MCC_NFloattext are no longer needed.
+One of MCC_NList, MCC_Guigfx, AudioPlayer.mcc or BestTextEditor.mcc is missing. Install MUI and the listed classes, then run the AmigaGPT installer so it can copy AudioPlayer.mcc and BestTextEditor.mcc into the MUI class drawer, and reboot. MCC_TextEditor, ActionTextEditor.mcc and MCC_NFloattext are no longer needed.
 
 @{b}@{u}"Could not open codesets.library"@{uu}@{ub}
 Install codesets.library 6.22 or higher.

@@ -80,7 +80,7 @@
 (set #amigagptdinstallask	"Do you want to install the AmigaGPT daemon (AmigaGPTD)? This is a background program that answers ARexx commands without opening the main AmigaGPT window.")
 (set #amigagptdinstallhelp	"On AmiKit, AmigaGPTD is copied into SYS:Prefs/Presets/AmiKit/KIT so AmiKit can start it. On other systems it is copied to C:. Skip it if you only want the main AmigaGPT application.")
 (set #kitstartup-fail	"Could not update SYS:Prefs/Presets/AmiKit/KIT/KIT-Startup. Please add the AMIGAGPT: assign to that file by hand.")
-(set #muidir-missing "The MUI custom class drawer\n\n%s\n\ncould not be found.\n\nInstall MUI first. AudioPlayer.mcc will not be installed.")
+(set #muidir-missing "The MUI custom class drawer\n\n%s\n\ncould not be found.\n\nInstall MUI first. AudioPlayer.mcc and BestTextEditor.mcc will not be installed.")
 (set #mcc-installed "Installed AudioPlayer.mcc to %s.")
 
 
@@ -293,44 +293,37 @@
 (set #mos (if (= #os-choice 2) 1 0))
 
 ;------------------------------------------------------------------------
-; Install the MUI custom class AmigaGPT loads at run time. Its text editors
-; are its own private class, so only AudioPlayer.mcc is needed
+; Install the MUI custom classes AmigaGPT loads at run time:
+; AudioPlayer.mcc, and BestTextEditor.mcc for every text editor and
+; conversation view with BestTextEditor.mcp, its page in MUI preferences.
+; The archive holds one build per OS, named <class>_<OS>.<mcc|mcp>.
+(procedure p_install-class
+  (working (#installing #class-file))
+  (copyfiles
+    (source (cat "MCC/" #class-name "_" (select #os-choice "OS3" "OS4" "MorphOS") "." #class-type))
+    (dest #muidir)
+    (newname #class-file)
+    (optional "force" "askuser")
+  )
+  ; the archive may not carry the executable bit over
+  (protect (tackon #muidir #class-file) "+e")
+)
+
 (if (not (exists #muidir))
   (
     (message (#muidir-missing #muidir))
   )
   (
-    (working (#installing "AudioPlayer.mcc"))
-    (if (= #os-choice 0)
-      (
-        (copyfiles
-          (source "MCC/AudioPlayer_OS3.mcc")
-          (dest #muidir)
-          (newname "AudioPlayer.mcc")
-          (optional "force" "askuser")
-        )
-      )
-    )
-    (if (= #os-choice 1)
-      (
-        (copyfiles
-          (source "MCC/AudioPlayer_OS4.mcc")
-          (dest #muidir)
-          (newname "AudioPlayer.mcc")
-          (optional "force" "askuser")
-        )
-      )
-    )
-    (if (= #os-choice 2)
-      (
-        (copyfiles
-          (source "MCC/AudioPlayer_MorphOS.mcc")
-          (dest #muidir)
-          (newname "AudioPlayer.mcc")
-          (optional "force" "askuser")
-        )
-      )
-    )
+    (set #class-name "AudioPlayer")
+    (set #class-type "mcc")
+    (set #class-file "AudioPlayer.mcc")
+    (p_install-class)
+    (set #class-name "BestTextEditor")
+    (set #class-file "BestTextEditor.mcc")
+    (p_install-class)
+    (set #class-type "mcp")
+    (set #class-file "BestTextEditor.mcp")
+    (p_install-class)
   )
 )
 

@@ -1,0 +1,146 @@
+# BestTextEditor.mcp
+msgid ""
+msgstr ""
+"Project-Id-Version: BestTextEditor.mcp\n"
+"Report-Msgid-Bugs-To: https://github.com/sacredbanana/AmigaGPT\n"
+"POT-Creation-Date: 2026-11-16 12:00+0000\n"
+"PO-Revision-Date: 2026-11-16 12:00+0000\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: hr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Catalog-Name: BestTextEditor_mcp\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PAGE_TEXT (0//)"
+msgid "Text"
+msgstr "Tekst"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PAGE_BUBBLES (1//)"
+msgid "Chat bubbles"
+msgstr "Oblačići chata"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_GROUP_FONTS (2//)"
+msgid "Fonts"
+msgstr "Fontovi"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_FONT (3//)"
+msgid "Text font"
+msgstr "Font teksta"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_CODE_FONT (4//)"
+msgid "Code font"
+msgstr "Font koda"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_FONT_HELP (5//)"
+msgid "Leave empty to use the font from the MUI settings."
+msgstr "Ostavite prazno da biste koristili font iz MUI postavki."
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_GROUP_COLORS (6//)"
+msgid "Colors"
+msgstr "Boje"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_AUTO_COLORS (7//)"
+msgid "Automatic colors"
+msgstr "Automatske boje"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_LINKS (8//)"
+msgid "Links"
+msgstr "Poveznice"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_CODE_BACKGROUND (9//)"
+msgid "Code background"
+msgstr "Pozadina koda"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_CODE_TEXT (10//)"
+msgid "Code text"
+msgstr "Tekst koda"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_QUOTES (11//)"
+msgid "Block quotes"
+msgstr "Citati"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_RULES (12//)"
+msgid "Rules"
+msgstr "Razdjelne crte"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_CURSOR (13//)"
+msgid "Cursor"
+msgstr "Kursor"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_SELECTION (14//)"
+msgid "Selection"
+msgstr "Odabir"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_SELECTED_TEXT (15//)"
+msgid "Selected text"
+msgstr "Odabrani tekst"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_BUBBLES_INFO (16//)"
+msgid "Each program decides which of these eight styles its messages use."
+msgstr "Svaki program odlučuje koji od ovih osam stilova koriste njegove poruke."
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGNMENT (17//)"
+msgid "Alignment"
+msgstr "Poravnanje"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_LEFT (18//)"
+msgid "Left"
+msgstr "Lijevo"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_RIGHT (19//)"
+msgid "Right"
+msgstr "Desno"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_CENTER (20//)"
+msgid "Center"
+msgstr "Centrirano"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_FULL (21//)"
+msgid "Full width"
+msgstr "Puna širina"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_MAX_WIDTH (22//)"
+msgid "Maximum width"
+msgstr "Najveća širina"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_BACKGROUND (23//)"
+msgid "Background"
+msgstr "Pozadina"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_AUTO_TEXT (24//)"
+msgid "Automatic text color"
+msgstr "Automatska boja teksta"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_COLOR (25//)"
+msgid "Text color"
+msgstr "Boja teksta"

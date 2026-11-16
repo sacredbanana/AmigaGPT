@@ -21,7 +21,7 @@
 #include "agent.h"
 #include "AgentPage.h"
 #include "openai.h"
-#include "BestTextEditor.h"
+#include <mui/BestTextEditor_mcc.h>
 #include "shellpath.h"
 #include "speech.h"
 #include "SpeechProviderSettingsRequesterWindow.h"
@@ -30,7 +30,7 @@
 
 #define CONVERSATION_TITLE_FALLBACK_MAX 96
 
-/* Bubble styles of the chat transcript (see BestTextEditor.h) */
+/* Bubble styles of the chat transcript (see <mui/BestTextEditor_mcc.h>) */
 #define CHAT_BUBBLE_USER 1
 #define CHAT_BUBBLE_ASSISTANT 2
 

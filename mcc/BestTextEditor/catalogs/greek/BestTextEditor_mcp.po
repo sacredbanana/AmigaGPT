@@ -1,0 +1,145 @@
+# BestTextEditor.mcp
+msgid ""
+msgstr ""
+"Project-Id-Version: BestTextEditor.mcp\n"
+"Report-Msgid-Bugs-To: https://github.com/sacredbanana/AmigaGPT\n"
+"POT-Creation-Date: 2026-11-16 12:00+0000\n"
+"PO-Revision-Date: 2026-11-16 12:00+0000\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: el\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Catalog-Name: BestTextEditor_mcp\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PAGE_TEXT (0//)"
+msgid "Text"
+msgstr "Κείμενο"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PAGE_BUBBLES (1//)"
+msgid "Chat bubbles"
+msgstr "Συννεφάκια συνομιλίας"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_GROUP_FONTS (2//)"
+msgid "Fonts"
+msgstr "Γραμματοσειρές"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_FONT (3//)"
+msgid "Text font"
+msgstr "Γραμματοσειρά κειμένου"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_CODE_FONT (4//)"
+msgid "Code font"
+msgstr "Γραμματοσειρά κώδικα"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_FONT_HELP (5//)"
+msgid "Leave empty to use the font from the MUI settings."
+msgstr "Αφήστε το κενό για να χρησιμοποιηθεί η γραμματοσειρά από τις ρυθμίσεις MUI."
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_GROUP_COLORS (6//)"
+msgid "Colors"
+msgstr "Χρώματα"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_AUTO_COLORS (7//)"
+msgid "Automatic colors"
+msgstr "Αυτόματα χρώματα"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_LINKS (8//)"
+msgid "Links"
+msgstr "Σύνδεσμοι"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_CODE_BACKGROUND (9//)"
+msgid "Code background"
+msgstr "Φόντο κώδικα"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_CODE_TEXT (10//)"
+msgid "Code text"
+msgstr "Κείμενο κώδικα"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_QUOTES (11//)"
+msgid "Block quotes"
+msgstr "Παραθέματα"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_RULES (12//)"
+msgid "Rules"
+msgstr "Διαχωριστικές γραμμές"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_CURSOR (13//)"
+msgid "Cursor"
+msgstr "Δρομέας"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_SELECTION (14//)"
+msgid "Selection"
+msgstr "Επιλογή"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_SELECTED_TEXT (15//)"
+msgid "Selected text"
+msgstr "Επιλεγμένο κείμενο"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_BUBBLES_INFO (16//)"
+msgid "Each program decides which of these eight styles its messages use."
+msgstr "Κάθε πρόγραμμα αποφασίζει ποιο από αυτά τα οκτώ στυλ χρησιμοποιούν τα μηνύματά του."
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGNMENT (17//)"
+msgid "Alignment"
+msgstr "Στοίχιση"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_LEFT (18//)"
+msgid "Left"
+msgstr "Αριστερά"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_RIGHT (19//)"
+msgid "Right"
+msgstr "Δεξιά"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_CENTER (20//)"
+msgid "Center"
+msgstr "Κέντρο"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_FULL (21//)"
+msgid "Full width"
+msgstr "Πλήρες πλάτος"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_MAX_WIDTH (22//)"
+msgid "Maximum width"
+msgstr "Μέγιστο πλάτος"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_BACKGROUND (23//)"
+msgid "Background"
+msgstr "Φόντο"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_AUTO_TEXT (24//)"
+msgid "Automatic text color"
+msgstr "Αυτόματο χρώμα κειμένου"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_COLOR (25//)"
+msgid "Text color"
+msgstr "Χρώμα κειμένου"

@@ -1,0 +1,146 @@
+# BestTextEditor.mcp
+msgid ""
+msgstr ""
+"Project-Id-Version: BestTextEditor.mcp\n"
+"Report-Msgid-Bugs-To: https://github.com/sacredbanana/AmigaGPT\n"
+"POT-Creation-Date: 2026-11-16 12:00+0000\n"
+"PO-Revision-Date: 2026-11-16 12:00+0000\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Catalog-Name: BestTextEditor_mcp\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PAGE_TEXT (0//)"
+msgid "Text"
+msgstr "Текст"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PAGE_BUBBLES (1//)"
+msgid "Chat bubbles"
+msgstr "Облачка чата"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_GROUP_FONTS (2//)"
+msgid "Fonts"
+msgstr "Шрифты"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_FONT (3//)"
+msgid "Text font"
+msgstr "Шрифт текста"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_CODE_FONT (4//)"
+msgid "Code font"
+msgstr "Шрифт кода"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_FONT_HELP (5//)"
+msgid "Leave empty to use the font from the MUI settings."
+msgstr "Оставьте поле пустым, чтобы использовать шрифт из настроек MUI."
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_GROUP_COLORS (6//)"
+msgid "Colors"
+msgstr "Цвета"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_AUTO_COLORS (7//)"
+msgid "Automatic colors"
+msgstr "Автоматические цвета"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_LINKS (8//)"
+msgid "Links"
+msgstr "Ссылки"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_CODE_BACKGROUND (9//)"
+msgid "Code background"
+msgstr "Фон кода"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_CODE_TEXT (10//)"
+msgid "Code text"
+msgstr "Текст кода"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_QUOTES (11//)"
+msgid "Block quotes"
+msgstr "Цитаты"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_RULES (12//)"
+msgid "Rules"
+msgstr "Разделители"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_CURSOR (13//)"
+msgid "Cursor"
+msgstr "Курсор"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_SELECTION (14//)"
+msgid "Selection"
+msgstr "Выделение"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_SELECTED_TEXT (15//)"
+msgid "Selected text"
+msgstr "Выделенный текст"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_BUBBLES_INFO (16//)"
+msgid "Each program decides which of these eight styles its messages use."
+msgstr "Каждая программа сама решает, какие из этих восьми стилей используют её сообщения."
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGNMENT (17//)"
+msgid "Alignment"
+msgstr "Выравнивание"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_LEFT (18//)"
+msgid "Left"
+msgstr "Слева"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_RIGHT (19//)"
+msgid "Right"
+msgstr "Справа"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_CENTER (20//)"
+msgid "Center"
+msgstr "По центру"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_FULL (21//)"
+msgid "Full width"
+msgstr "Во всю ширину"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_MAX_WIDTH (22//)"
+msgid "Maximum width"
+msgstr "Максимальная ширина"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_BACKGROUND (23//)"
+msgid "Background"
+msgstr "Фон"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_AUTO_TEXT (24//)"
+msgid "Automatic text color"
+msgstr "Автоматический цвет текста"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_COLOR (25//)"
+msgid "Text color"
+msgstr "Цвет текста"

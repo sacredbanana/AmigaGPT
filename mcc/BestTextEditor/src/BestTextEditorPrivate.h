@@ -12,7 +12,8 @@
 #include <utility/hooks.h>
 #include <SDI_compiler.h>
 #include <SDI_hook.h>
-#include "BestTextEditor.h"
+#include <mui/BestTextEditor_mcc.h>
+#include "BestTextEditorConfig.h"
 
 /*
  * Internal data model
@@ -260,6 +261,8 @@ struct RTEData {
     BOOL typeAndSpell;
     BOOL rgbMode;
     BOOL submitEmpty;
+    BOOL notifying;  /* set while it notifies its own attributes */
+    BOOL activating; /* set while it makes itself the active object */
     UBYTE globalFlowValue;
     UWORD tabSize;
     BOOL tabSizeSet;
@@ -287,6 +290,18 @@ struct RTEData {
     UBYTE matchedKeyword[64];
     STRPTR clickedLink;
     struct TextFont *userCodeFont;
+
+    /* settings from BestTextEditor.mcp, read on MUIM_Setup and
+     * MUIM_UpdateConfig. What the application sets itself wins. */
+    BOOL appFont;    /* MUIA_Font was given */
+    BOOL appBubbles; /* MUIA_BestTextEditor_BubbleStyles was given */
+    BOOL cfgAutoColors;
+    BOOL cfgPenValid[BTE_CFG_PEN_COUNT];
+    ULONG cfgPenRGB[BTE_CFG_PEN_COUNT];
+    char cfgTextFont[64];
+    char cfgCodeFont[64];
+    struct TextFont *cfgFont; /* opened from cfgTextFont */
+    struct TextFont *cfgCode; /* opened from cfgCodeFont */
 
     /* style used for typed text */
     UBYTE typeStyle;
@@ -436,6 +451,8 @@ BOOL rteParaReserve(struct RTEData *data, struct RTEPara *p, ULONG len);
 BOOL rteParaEnsureAttrs(struct RTEData *data, struct RTEPara *p);
 void rteMarkDirty(struct RTEData *data, ULONG para);
 void rteMarkAllDirty(struct RTEData *data);
+UBYTE *rteFormat(UBYTE *out, CONST_STRPTR prefix, ULONG value, UWORD base,
+                 UWORD digits, CONST_STRPTR suffix);
 ULONG rtePosToIndex(struct RTEData *data, struct RTEPos pos);
 struct RTEPos rteIndexToPos(struct RTEData *data, ULONG index);
 LONG rteComparePos(struct RTEPos a, struct RTEPos b);
@@ -470,6 +487,7 @@ BOOL rteIsWordChar(UBYTE c);
 
 /* BestTextEditorLayout.c */
 void rteSetupFonts(struct RTEData *data, Object *obj);
+void rteCloseConfigFonts(struct RTEData *data);
 void rteLayout(struct RTEData *data);
 void rteLayoutParagraph(struct RTEData *data, ULONG index);
 void rteLineGeometry(struct RTEData *data, struct RTEPara *p,
@@ -498,6 +516,7 @@ void rteDrawUpdate(struct RTEData *data, Object *obj, BOOL all);
 void rteFreeDoubleBuffer(struct RTEData *data);
 void rteObtainPens(struct RTEData *data, Object *obj);
 void rteSetDefaultBubbleStyles(struct RTEData *data);
+void rteReadConfig(struct RTEData *data, Object *obj);
 void rteReleasePens(struct RTEData *data, Object *obj);
 LONG rteResolveColor(struct RTEData *data, Object *obj, UWORD index);
 
@@ -543,5 +562,13 @@ BOOL rteViewAtBottom(struct RTEData *data);
 #define RTE_CODE_PAD 4
 #define RTE_LIST_INDENT_CHARS 2
 #define RTE_QUOTE_INDENT 10
+
+/* Libraries opened once by the library init code (library.c) */
+extern struct Library *rteDataTypesBase;
+extern struct Library *DiskfontBase;
+#if defined(__AMIGAOS4__)
+extern struct DataTypesIFace *rteIDataTypes;
+extern struct DiskfontIFace *IDiskfont;
+#endif
 
 #endif /* RTE_PRIVATE_H */

@@ -30,9 +30,15 @@ cp -R out/AmigaGPT_MorphOS bundle/AmigaGPT/AmigaGPT/AmigaGPT_MorphOS
 # Copy AmigaGPTD_MorphOS executable to bundle directory
 cp -R out/AmigaGPTD_MorphOS bundle/AmigaGPT/AmigaGPT/AmigaGPTD_MorphOS
 
-# Copy catalog files to bundle directory
+# Copy the BestTextEditor MUI classes (built by the build scripts above)
+for platform in OS3 OS4 MorphOS; do
+    cp out/BestTextEditor_${platform}.mcc out/BestTextEditor_${platform}.mcp bundle/AmigaGPT/MCC/
+done
+
+# Copy catalog files to bundle directory, BestTextEditor.mcp's included
 mkdir -p bundle/AmigaGPT/catalogs
 rsync -av --include='*/' --include='*.catalog' --exclude='*' catalogs/ bundle/AmigaGPT/catalogs/
+rsync -av --include='*/' --include='*.catalog' --exclude='*' mcc/BestTextEditor/catalogs/ bundle/AmigaGPT/catalogs/
 
 # Change directory to bundle directory
 cd bundle
@@ -52,3 +58,4 @@ lha $LHA_OPTS ../out/AmigaGPT.lha AmigaGPT AmigaGPT.info
 
 rm -f AmigaGPT/AmigaGPT/AmigaGPT_OS3 AmigaGPT/AmigaGPT/AmigaGPT_OS4 AmigaGPT/AmigaGPT/AmigaGPT_MorphOS AmigaGPT/AmigaGPT/AmigaGPTD_OS3 AmigaGPT/AmigaGPT/AmigaGPTD_OS4 AmigaGPT/AmigaGPT/AmigaGPTD_MorphOS
 rm -dr AmigaGPT/catalogs
+rm -f AmigaGPT/MCC/BestTextEditor_*.mcc AmigaGPT/MCC/BestTextEditor_*.mcp

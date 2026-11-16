@@ -1,0 +1,145 @@
+# BestTextEditor.mcp
+msgid ""
+msgstr ""
+"Project-Id-Version: BestTextEditor.mcp\n"
+"Report-Msgid-Bugs-To: https://github.com/sacredbanana/AmigaGPT\n"
+"POT-Creation-Date: 2026-11-16 12:00+0000\n"
+"PO-Revision-Date: 2026-11-16 12:00+0000\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Catalog-Name: BestTextEditor_mcp\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PAGE_TEXT (0//)"
+msgid "Text"
+msgstr "Texte"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PAGE_BUBBLES (1//)"
+msgid "Chat bubbles"
+msgstr "Bulles de discussion"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_GROUP_FONTS (2//)"
+msgid "Fonts"
+msgstr "Polices"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_FONT (3//)"
+msgid "Text font"
+msgstr "Police du texte"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_CODE_FONT (4//)"
+msgid "Code font"
+msgstr "Police du code"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_FONT_HELP (5//)"
+msgid "Leave empty to use the font from the MUI settings."
+msgstr "Laissez ce champ vide pour utiliser la police des paramètres MUI."
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_GROUP_COLORS (6//)"
+msgid "Colors"
+msgstr "Couleurs"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_AUTO_COLORS (7//)"
+msgid "Automatic colors"
+msgstr "Couleurs automatiques"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_LINKS (8//)"
+msgid "Links"
+msgstr "Liens"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_CODE_BACKGROUND (9//)"
+msgid "Code background"
+msgstr "Fond du code"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_CODE_TEXT (10//)"
+msgid "Code text"
+msgstr "Texte du code"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_QUOTES (11//)"
+msgid "Block quotes"
+msgstr "Citations"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_RULES (12//)"
+msgid "Rules"
+msgstr "Séparateurs"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_CURSOR (13//)"
+msgid "Cursor"
+msgstr "Curseur"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_SELECTION (14//)"
+msgid "Selection"
+msgstr "Sélection"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_PEN_SELECTED_TEXT (15//)"
+msgid "Selected text"
+msgstr "Texte sélectionné"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_BUBBLES_INFO (16//)"
+msgid "Each program decides which of these eight styles its messages use."
+msgstr "Chaque programme choisit lequel de ces huit styles ses messages utilisent."
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGNMENT (17//)"
+msgid "Alignment"
+msgstr "Alignement"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_LEFT (18//)"
+msgid "Left"
+msgstr "Gauche"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_RIGHT (19//)"
+msgid "Right"
+msgstr "Droite"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_CENTER (20//)"
+msgid "Center"
+msgstr "Centré"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_ALIGN_FULL (21//)"
+msgid "Full width"
+msgstr "Pleine largeur"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_MAX_WIDTH (22//)"
+msgid "Maximum width"
+msgstr "Largeur maximale"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_BACKGROUND (23//)"
+msgid "Background"
+msgstr "Arrière-plan"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_AUTO_TEXT (24//)"
+msgid "Automatic text color"
+msgstr "Couleur de texte automatique"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_COLOR (25//)"
+msgid "Text color"
+msgstr "Couleur du texte"

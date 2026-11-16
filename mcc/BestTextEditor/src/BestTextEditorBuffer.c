@@ -1,4 +1,3 @@
-#ifndef DAEMON
 /*
  * BestTextEditor - document storage
  *
@@ -7,7 +6,6 @@
  */
 #include <exec/memory.h>
 #include <proto/exec.h>
-#include <stdio.h>
 #include <string.h>
 #include "BestTextEditorPrivate.h"
 
@@ -1569,11 +1567,9 @@ static void rteExportStyle(struct RTEData *data, struct RTEOut *o,
     if (fc != tc) {
         struct RTEColor *col = &data->colors[tc];
         if (tc == 0 || col->kind == RTE_COLOR_CMAP)
-            snprintf(buf, sizeof(buf), "\033p[%lu]",
-                     tc == 0 ? 0UL : (unsigned long)col->value);
+            rteFormat(buf, "\033p[", tc == 0 ? 0UL : col->value, 10, 1, "]");
         else
-            snprintf(buf, sizeof(buf), "\033P[%06lX]",
-                     (unsigned long)col->value);
+            rteFormat(buf, "\033P[", col->value, 16, 6, "]");
         rteOutStr(o, buf);
     }
 }
@@ -1661,13 +1657,12 @@ STRPTR rteExport(struct RTEData *data, struct RTEPos from, struct RTEPos to,
                 if (p->bubble == 0)
                     rteOutStr(&o, "\033[B:0]");
                 else {
-                    static const char sides[] = "\0lrcf";
-                    if (p->bubbleSide != 0 && p->bubbleSide < 5)
-                        snprintf(buf, sizeof(buf), "\033[B:%u%c]",
-                                 (unsigned)p->bubble, sides[p->bubbleSide]);
-                    else
-                        snprintf(buf, sizeof(buf), "\033[B:%u]",
-                                 (unsigned)p->bubble);
+                    static const char *const sides[] = {"]", "l]", "r]",
+                                                        "c]", "f]"};
+                    rteFormat(buf, "\033[B:", p->bubble, 10, 1,
+                              (CONST_STRPTR)sides[p->bubbleSide < 5
+                                                      ? p->bubbleSide
+                                                      : 0]);
                     rteOutStr(&o, buf);
                 }
                 prevBubble = p->bubble;
@@ -1687,8 +1682,7 @@ STRPTR rteExport(struct RTEData *data, struct RTEPos from, struct RTEPos to,
             if (p->flags & RTEP_HIGHLIGHT)
                 rteOutStr(&o, "\033h");
             if (p->separator != 0) {
-                snprintf(buf, sizeof(buf), "\033[s:%u]",
-                         (unsigned)p->separator);
+                rteFormat(buf, "\033[s:", p->separator, 10, 1, "]");
                 rteOutStr(&o, buf);
             }
         } else if (p->separator != 0 && p->len == 0) {
@@ -1877,4 +1871,32 @@ BOOL rteSearch(struct RTEData *data, CONST_STRPTR string, ULONG flags) {
     return FALSE;
 }
 
-#endif /* DAEMON */
+/**
+ * Write prefix, value and suffix into out. This stands in for snprintf(),
+ * which a shared library cannot use without the C library's startup code.
+ * @param base 10 or 16 (upper case hex digits)
+ * @param digits minimum number of digits, padded with zeroes
+ * @return out
+ */
+UBYTE *rteFormat(UBYTE *out, CONST_STRPTR prefix, ULONG value, UWORD base,
+                 UWORD digits, CONST_STRPTR suffix) {
+    static const char hex[] = "0123456789ABCDEF";
+    UBYTE tmp[12];
+    UWORD n = 0;
+    UBYTE *o = out;
+
+    while (*prefix != '\0')
+        *o++ = *prefix++;
+    do {
+        tmp[n++] = hex[value % base];
+        value /= base;
+    } while (value != 0 && n < sizeof(tmp));
+    while (n < digits && n < sizeof(tmp))
+        tmp[n++] = '0';
+    while (n > 0)
+        *o++ = tmp[--n];
+    while (*suffix != '\0')
+        *o++ = *suffix++;
+    *o = '\0';
+    return out;
+}

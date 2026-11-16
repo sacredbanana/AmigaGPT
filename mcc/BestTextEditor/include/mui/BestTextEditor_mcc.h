@@ -1,8 +1,8 @@
-#ifndef BESTTEXTEDITOR_H
-#define BESTTEXTEDITOR_H
+#ifndef BESTTEXTEDITOR_MCC_H
+#define BESTTEXTEDITOR_MCC_H
 
 /*
- * BestTextEditor -- a multi-line text editing and display MUI class
+ * BestTextEditor.mcc -- a multi-line text editing and display MUI class
  *
  * A from-scratch replacement for TextEditor.mcc and ActionTextEditor.mcc. It
  * does not subclass either of them: it is a direct subclass of Area.
@@ -37,8 +37,14 @@
  *   ESC [M:1]    render the following lines as Markdown
  *   ESC [M:0]    stop rendering the following lines as Markdown
  *
- * The class is private to AmigaGPT for now. The tag base is reserved so it
- * can become BestTextEditor.mcc later without changing any IDs.
+ * Appearance
+ *   Fonts, accent colours and the eight bubble styles can be set by the user
+ *   on the BestTextEditor page of MUI preferences (BestTextEditor.mcp).
+ *   Attributes given by the application (MUIA_Font,
+ *   MUIA_BestTextEditor_CodeFont, MUIA_BestTextEditor_BubbleStyles) take
+ *   precedence over the preferences.
+ *
+ * The tag base 0xbd002000 belongs to this class.
  */
 
 #include <exec/types.h>
@@ -113,28 +119,9 @@ struct BestTextImageMessage {
     CONST_STRPTR source;  /* the image source as written in the text */
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define MUIC_BestTextEditor "BestTextEditor.mcc"
+#define MUIC_BestTextEditorP "BestTextEditor.mcp"
 
-extern struct MUI_CustomClass *bestTextEditorClass;
+#define BestTextEditorObject MUI_NewObject(MUIC_BestTextEditor
 
-#define MUIC_BestTextEditor (bestTextEditorClass->mcc_Class)
-#define BestTextEditorObject NewObject(MUIC_BestTextEditor, NULL
-
-/**
- * Create the private BestTextEditor class
- * @return RETURN_OK on success, RETURN_ERROR otherwise
- */
-LONG createBestTextEditorClass(void);
-
-/**
- * Delete the private BestTextEditor class
- */
-void deleteBestTextEditorClass(void);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* BESTTEXTEDITOR_H */
+#endif /* BESTTEXTEDITOR_MCC_H */

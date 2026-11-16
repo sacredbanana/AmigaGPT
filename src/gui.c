@@ -25,9 +25,7 @@
 #include "MainWindow.h"
 #include "AgentPage.h"
 #include "agent.h"
-#ifndef DAEMON
-#include "BestTextEditor.h"
-#endif
+#include <mui/BestTextEditor_mcc.h>
 #include "menu.h"
 #include "ProxySettingsRequesterWindow.h"
 #include "speech.h"
@@ -71,12 +69,14 @@ static BOOL checkMUICustomClassInstalled();
 static void closeGUILibraries();
 static STRPTR wrapRequesterText(CONST_STRPTR message);
 
-/* The text editors and the conversation views are AmigaGPT's own private
- * BestTextEditor class, so TextEditor.mcc, ActionTextEditor.mcc and
- * NFloattext.mcc are no longer needed */
+/* The text editors and the conversation views are BestTextEditor.mcc, so
+ * TextEditor.mcc, ActionTextEditor.mcc and NFloattext.mcc are no longer
+ * needed. Listing it here also puts its page (BestTextEditor.mcp) in
+ * AmigaGPT's MUI settings on MUI 4 and later. */
 static CONST_STRPTR USED_CLASSES[] = {
-    MUIC_Aboutbox,  MUIC_Busy,   MUIC_NList,       MUIC_NListview,
-    MUIC_BetterString, MUIC_Guigfx, MUIC_AudioPlayer, NULL};
+    MUIC_Aboutbox,     MUIC_Busy,   MUIC_NList,       MUIC_NListview,
+    MUIC_BetterString, MUIC_Guigfx, MUIC_AudioPlayer, MUIC_BestTextEditor,
+    NULL};
 
 /**
  * Open the libraries needed for the GUI
@@ -174,11 +174,6 @@ LONG initVideo() {
         return RETURN_ERROR;
     }
 
-    if (createBestTextEditorClass() == RETURN_ERROR) {
-        displayError(STRING_ERROR_APP_CREATE);
-        return RETURN_ERROR;
-    }
-
     if (createAPIKeyRequesterWindow() == RETURN_ERROR)
         return RETURN_ERROR;
 
@@ -265,11 +260,16 @@ static BOOL checkMUICustomClassInstalled() {
             continue;
         if (!isAROS && !strcmp(USED_CLASSES[i], MUIC_BetterString) != 0)
             continue;
-        if (!MUI_GetClass(USED_CLASSES[i])) {
+        /* MUI_GetClass() opens an external class library, so free it again
+         * or the library stays open and a newer one can never be loaded */
+        struct IClass *cl = MUI_GetClass(USED_CLASSES[i]);
+        if (cl == NULL) {
             displayError(STRING_ERROR_MUI_CUSTOM_CLASS_NOT_FOUND);
             putchar(':');
             displayError(USED_CLASSES[i]);
             hasAllClasses = FALSE;
+        } else {
+            MUI_FreeClass(cl);
         }
     }
     return hasAllClasses;
@@ -1303,8 +1303,6 @@ void shutdownGUI() {
 
 #ifndef DAEMON
     freeMainWindowFileState();
-    /* Only after every object of the class has been disposed */
-    deleteBestTextEditorClass();
 #endif
 
     closeGUILibraries();

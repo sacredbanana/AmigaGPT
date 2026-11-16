@@ -14,7 +14,7 @@
 #include "CustomServerSettingsRequesterWindow.h"
 #include "gui.h"
 #include "openai.h"
-#include "BestTextEditor.h"
+#include <mui/BestTextEditor_mcc.h>
 
 /* (Debug logging removed) */
 #define PSDPRINTF(...)                                                         \

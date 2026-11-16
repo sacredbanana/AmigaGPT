@@ -1,4 +1,3 @@
-#ifndef DAEMON
 /*
  * BestTextEditor - layout
  *
@@ -15,6 +14,7 @@
 #include <intuition/gadgetclass.h>
 #include <intuition/screens.h>
 #include <proto/datatypes.h>
+#include <proto/diskfont.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>
@@ -51,6 +51,49 @@ static void rteFillWidths(struct TextFont *font, UWORD *normal, UWORD *bold) {
     }
 }
 
+/**
+ * Open a font from a "name/size" spec as a font Popasl writes it
+ * @return the font, or NULL when the spec is empty or the font is missing
+ */
+static struct TextFont *rteOpenFontSpec(CONST_STRPTR spec) {
+    UBYTE name[72];
+    struct TextAttr ta;
+    ULONG len = 0, size = 0;
+    CONST_STRPTR s = spec;
+
+    if (s == NULL)
+        return NULL;
+    while (*s != '\0' && *s != '/' && len < sizeof(name) - 6)
+        name[len++] = *s++;
+    if (*s != '/' || len == 0)
+        return NULL;
+    for (s++; *s >= '0' && *s <= '9'; s++)
+        size = size * 10 + (*s - '0');
+    if (size == 0 || size > 255)
+        return NULL;
+    if (len < 5 || strncmp((const char *)name + len - 5, ".font", 5) != 0) {
+        memcpy(name + len, ".font", 5);
+        len += 5;
+    }
+    name[len] = '\0';
+    ta.ta_Name = (STRPTR)name;
+    ta.ta_YSize = (UWORD)size;
+    ta.ta_Style = 0;
+    ta.ta_Flags = 0;
+    if (DiskfontBase != NULL)
+        return OpenDiskFont(&ta);
+    return OpenFont(&ta);
+}
+
+void rteCloseConfigFonts(struct RTEData *data) {
+    if (data->cfgFont != NULL)
+        CloseFont(data->cfgFont);
+    if (data->cfgCode != NULL)
+        CloseFont(data->cfgCode);
+    data->cfgFont = NULL;
+    data->cfgCode = NULL;
+}
+
 void rteSetupFonts(struct RTEData *data, Object *obj) {
     struct TextFont *font = _font(obj);
 
@@ -58,9 +101,21 @@ void rteSetupFonts(struct RTEData *data, Object *obj) {
         CloseFont(data->codeFont);
     data->ownCodeFont = FALSE;
     data->codeFont = NULL;
+    rteCloseConfigFonts(data);
+
+    /* The preferences font, unless the application chose one */
+    if (!data->appFont && !data->fixedFont && data->cfgTextFont[0] != '\0') {
+        data->cfgFont = rteOpenFontSpec((CONST_STRPTR)data->cfgTextFont);
+        if (data->cfgFont != NULL)
+            font = data->cfgFont;
+    }
+    if (data->userCodeFont == NULL && data->cfgCodeFont[0] != '\0')
+        data->cfgCode = rteOpenFontSpec((CONST_STRPTR)data->cfgCodeFont);
 
     if (data->userCodeFont != NULL) {
         data->codeFont = data->userCodeFont;
+    } else if (data->cfgCode != NULL) {
+        data->codeFont = data->cfgCode;
     } else if (font != NULL && (font->tf_Flags & FPF_PROPORTIONAL) == 0) {
         data->codeFont = font;
     } else {
@@ -124,43 +179,11 @@ static LONG rteIndentUnit(struct RTEData *data) {
 /* Images                                                                    */
 /* ------------------------------------------------------------------------ */
 
-static struct Library *rteDataTypesBase = NULL;
-#if defined(__AMIGAOS4__)
-static struct DataTypesIFace *rteIDataTypes = NULL;
-#endif
-static ULONG rteDataTypesUsers = 0;
+/* Opened once for the whole library in ClassInit() (library.c); NULL when
+ * datatypes.library is missing, which only turns images off */
+static BOOL rteOpenDataTypes(void) { return rteDataTypesBase != NULL; }
 
-static BOOL rteOpenDataTypes(void) {
-    if (rteDataTypesBase != NULL) {
-        rteDataTypesUsers++;
-        return TRUE;
-    }
-    rteDataTypesBase = OpenLibrary("datatypes.library", 39);
-    if (rteDataTypesBase == NULL)
-        return FALSE;
-#if defined(__AMIGAOS4__)
-    rteIDataTypes =
-        (struct DataTypesIFace *)GetInterface(rteDataTypesBase, "main", 1, NULL);
-    if (rteIDataTypes == NULL) {
-        CloseLibrary(rteDataTypesBase);
-        rteDataTypesBase = NULL;
-        return FALSE;
-    }
-#endif
-    rteDataTypesUsers = 1;
-    return TRUE;
-}
-
-static void rteCloseDataTypes(void) {
-    if (rteDataTypesBase == NULL || --rteDataTypesUsers > 0)
-        return;
-#if defined(__AMIGAOS4__)
-    DropInterface((struct Interface *)rteIDataTypes);
-    rteIDataTypes = NULL;
-#endif
-    CloseLibrary(rteDataTypesBase);
-    rteDataTypesBase = NULL;
-}
+static void rteCloseDataTypes(void) {}
 
 static void rteDisposeImage(struct RTEImage *img) {
     struct Library *DataTypesBase = rteDataTypesBase;
@@ -1569,5 +1592,3 @@ BOOL rteFindSpan(struct RTEPara *p, ULONG offset, BOOL image, ULONG *spanStart,
     }
     return FALSE;
 }
-
-#endif /* DAEMON */

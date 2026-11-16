@@ -2,6 +2,7 @@
 out/
 build/
 bundle/AmigaGPT/catalogs
+bundle/AmigaGPT/MCC/BestTextEditor_*
 catalogs/*/*.catalog
 catalogs/*/*.po~
 src/AmigaGPT_cat.*

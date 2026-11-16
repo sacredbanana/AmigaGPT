@@ -1,13 +1,5 @@
-#include <libraries/mui.h>
-
-/* Defined in the daemon too: it links the settings windows that create
- * these objects, but never builds those windows, so the class itself is only
- * compiled into the GUI */
-struct MUI_CustomClass *bestTextEditorClass = NULL;
-
-#ifndef DAEMON
 /*
- * BestTextEditor - the MUI class
+ * BestTextEditor.mcc - the MUI class
  *
  * Dispatcher, attributes, the TextEditor.mcc compatible methods and the
  * scroll and redraw bookkeeping that ties the other modules together.
@@ -34,8 +26,6 @@ struct MUI_CustomClass *bestTextEditorClass = NULL;
 void rteMacroExecute(struct RTEData *data, Object *obj);
 static void rteRestoreCycleKeys(struct IClass *cl, struct RTEData *data,
                                 Object *obj);
-
-static BOOL rteNotifying = FALSE;
 
 /* ------------------------------------------------------------------------ */
 /* Redraw and scrolling                                                      */
@@ -110,10 +100,11 @@ static void rteClampScroll(struct RTEData *data) {
         data->scrollX = 0;
 }
 
-static void rteNotifyAttr(Object *obj, ULONG attr, IPTR value) {
-    rteNotifying = TRUE;
+static void rteNotifyAttr(struct RTEData *data, Object *obj, ULONG attr,
+                          IPTR value) {
+    data->notifying = TRUE;
     SetAttrs(obj, attr, value, TAG_DONE);
-    rteNotifying = FALSE;
+    data->notifying = FALSE;
 }
 
 static void rteUpdateSliders(struct RTEData *data, Object *obj) {
@@ -130,11 +121,11 @@ static void rteUpdateSliders(struct RTEData *data, Object *obj) {
                      data->lineHeight > 0 ? data->lineHeight : 1, TAG_DONE);
         }
         if (entries != data->nPropEntries)
-            rteNotifyAttr(obj, MUIA_TextEditor_Prop_Entries, entries);
+            rteNotifyAttr(data, obj, MUIA_TextEditor_Prop_Entries, entries);
         if (visible != data->nPropVisible)
-            rteNotifyAttr(obj, MUIA_TextEditor_Prop_Visible, visible);
+            rteNotifyAttr(data, obj, MUIA_TextEditor_Prop_Visible, visible);
         if (first != data->nPropFirst)
-            rteNotifyAttr(obj, MUIA_TextEditor_Prop_First, first);
+            rteNotifyAttr(data, obj, MUIA_TextEditor_Prop_First, first);
         data->nPropEntries = entries;
         data->nPropVisible = visible;
         data->nPropFirst = first;
@@ -278,62 +269,62 @@ void rteNotifyState(struct RTEData *data, Object *obj) {
     }
     if (marked != data->nAreaMarked) {
         data->nAreaMarked = marked;
-        rteNotifyAttr(obj, MUIA_TextEditor_AreaMarked, marked);
+        rteNotifyAttr(data, obj, MUIA_TextEditor_AreaMarked, marked);
     }
     if (undo != data->nUndo) {
         data->nUndo = undo;
-        rteNotifyAttr(obj, MUIA_TextEditor_UndoAvailable, undo);
+        rteNotifyAttr(data, obj, MUIA_TextEditor_UndoAvailable, undo);
     }
     if (redo != data->nRedo) {
         data->nRedo = redo;
-        rteNotifyAttr(obj, MUIA_TextEditor_RedoAvailable, redo);
+        rteNotifyAttr(data, obj, MUIA_TextEditor_RedoAvailable, redo);
     }
     if ((LONG)data->cursor.offset != data->nCursorX) {
         data->nCursorX = data->cursor.offset;
-        rteNotifyAttr(obj, MUIA_TextEditor_CursorX, data->cursor.offset);
+        rteNotifyAttr(data, obj, MUIA_TextEditor_CursorX, data->cursor.offset);
     }
     if ((LONG)data->cursor.para != data->nCursorY) {
         data->nCursorY = data->cursor.para;
-        rteNotifyAttr(obj, MUIA_TextEditor_CursorY, data->cursor.para);
+        rteNotifyAttr(data, obj, MUIA_TextEditor_CursorY, data->cursor.para);
     }
     if (style != data->nStyle) {
         UBYTE changed = style ^ data->nStyle;
         data->nStyle = style;
         if (changed & RTE_A_BOLD)
-            rteNotifyAttr(obj, MUIA_TextEditor_StyleBold,
+            rteNotifyAttr(data, obj, MUIA_TextEditor_StyleBold,
                           (style & RTE_A_BOLD) != 0);
         if (changed & RTE_A_ITALIC)
-            rteNotifyAttr(obj, MUIA_TextEditor_StyleItalic,
+            rteNotifyAttr(data, obj, MUIA_TextEditor_StyleItalic,
                           (style & RTE_A_ITALIC) != 0);
         if (changed & RTE_A_UNDERLINE)
-            rteNotifyAttr(obj, MUIA_TextEditor_StyleUnderline,
+            rteNotifyAttr(data, obj, MUIA_TextEditor_StyleUnderline,
                           (style & RTE_A_UNDERLINE) != 0);
     }
     if (pen != data->nPen) {
         data->nPen = pen;
-        rteNotifyAttr(obj, MUIA_TextEditor_Pen,
+        rteNotifyAttr(data, obj, MUIA_TextEditor_Pen,
                       data->colors[pen].kind == RTE_COLOR_CMAP
                           ? data->colors[pen].value
                           : 0);
     }
     if (p->flow != data->nFlow) {
         data->nFlow = p->flow;
-        rteNotifyAttr(obj, MUIA_TextEditor_Flow, p->flow);
+        rteNotifyAttr(data, obj, MUIA_TextEditor_Flow, p->flow);
     }
 }
 
 void rteChanged(struct RTEData *data, Object *obj, BOOL contents) {
     if (!data->hasChanged) {
         data->hasChanged = TRUE;
-        rteNotifyAttr(obj, MUIA_TextEditor_HasChanged, TRUE);
+        rteNotifyAttr(data, obj, MUIA_TextEditor_HasChanged, TRUE);
     }
     if (contents && !data->contentsChanged) {
         data->contentsChanged = TRUE;
-        rteNotifyAttr(obj, MUIA_TextEditor_ContentsChanged, TRUE);
+        rteNotifyAttr(data, obj, MUIA_TextEditor_ContentsChanged, TRUE);
     }
     if (!contents && !data->metaChanged) {
         data->metaChanged = TRUE;
-        rteNotifyAttr(obj, MUIA_TextEditor_MetaDataChanged, TRUE);
+        rteNotifyAttr(data, obj, MUIA_TextEditor_MetaDataChanged, TRUE);
     }
 }
 
@@ -521,14 +512,14 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             setContents = TRUE;
             break;
         case MUIA_TextEditor_ContentsChanged:
-            if (!rteNotifying)
+            if (!data->notifying)
                 data->contentsChanged = v != 0;
             break;
         case MUIA_TextEditor_ConvertTabs:
             data->convertTabs = v != 0;
             break;
         case MUIA_TextEditor_CursorIndex:
-            if (!rteNotifying) {
+            if (!data->notifying) {
                 data->cursor = rteIndexToPos(data, v);
                 data->anchor = data->cursor;
                 data->marking = FALSE;
@@ -540,7 +531,7 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             break;
         case MUIA_TextEditor_CursorX:
         case MUIA_TextEditor_CursorY:
-            if (!rteNotifying) {
+            if (!data->notifying) {
                 if (tag->ti_Tag == MUIA_TextEditor_CursorX)
                     data->cursor.offset = v;
                 else
@@ -573,7 +564,7 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             }
             break;
         case MUIA_TextEditor_Flow:
-            if (!rteNotifying && !init)
+            if (!data->notifying && !init)
                 rteSetFlow(data, obj, (UBYTE)v);
             break;
         case MUIA_TextEditor_GlobalFlow:
@@ -581,7 +572,7 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             relayout = TRUE;
             break;
         case MUIA_TextEditor_HasChanged:
-            if (!rteNotifying) {
+            if (!data->notifying) {
                 data->hasChanged = v != 0;
                 data->contentsChanged = v != 0;
                 data->metaChanged = v != 0;
@@ -614,7 +605,7 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             data->keywords = rteDupString((CONST_STRPTR)v);
             break;
         case MUIA_TextEditor_MetaDataChanged:
-            if (!rteNotifying)
+            if (!data->notifying)
                 data->metaChanged = v != 0;
             break;
         case MUIA_TextEditor_PasteColors:
@@ -624,11 +615,11 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             data->pasteStyles = v != 0;
             break;
         case MUIA_TextEditor_Pen:
-            if (!rteNotifying && !init)
+            if (!data->notifying && !init)
                 rteApplyStyle(data, obj, MUIF_TextEditor_SetBlock_Color, v);
             break;
         case MUIA_TextEditor_Prop_First:
-            if (!rteNotifying && !init)
+            if (!data->notifying && !init)
                 rteScrollTo(data, obj, (LONG)v);
             break;
         case RTE_PRIVATE_HFIRST:
@@ -677,16 +668,16 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             rteSetSlider(data, obj, (Object *)v, FALSE);
             break;
         case MUIA_TextEditor_StyleBold:
-            if (!rteNotifying && !init)
+            if (!data->notifying && !init)
                 rteApplyStyle(data, obj, MUIF_TextEditor_SetBlock_StyleBold, v);
             break;
         case MUIA_TextEditor_StyleItalic:
-            if (!rteNotifying && !init)
+            if (!data->notifying && !init)
                 rteApplyStyle(data, obj, MUIF_TextEditor_SetBlock_StyleItalic,
                               v);
             break;
         case MUIA_TextEditor_StyleUnderline:
-            if (!rteNotifying && !init)
+            if (!data->notifying && !init)
                 rteApplyStyle(data, obj,
                               MUIF_TextEditor_SetBlock_StyleUnderline, v);
             break;
@@ -762,8 +753,13 @@ static void rteSetAttrs(struct IClass *cl, Object *obj,
             BOOL wasSetup = data->setup;
             if (wasSetup)
                 rteReleasePens(data, obj);
+            data->appBubbles = bs != NULL;
             if (bs == NULL) {
-                rteSetDefaultBubbleStyles(data);
+                /* back to the bubbles of the preferences */
+                if (wasSetup)
+                    rteReadConfig(data, obj);
+                else
+                    rteSetDefaultBubbleStyles(data);
             } else {
                 while (n < BESTTEXTEDITOR_MAX_BUBBLE_STYLES &&
                        bs[n].side != MUIV_BestTextEditor_Bubble_End) {
@@ -844,6 +840,8 @@ static IPTR mNew(struct IClass *cl, Object *obj, struct opSet *msg) {
     data = INST_DATA(cl, obj);
     memset(data, 0, sizeof(*data));
     data->obj = obj;
+    data->appFont = FindTagItem(MUIA_Font, msg->ops_AttrList) != NULL;
+    data->cfgAutoColors = BTE_DEFAULT_AUTOCOLORS;
     data->autoClip = TRUE;
     data->convertTabs = TRUE;
     data->wrapWords = TRUE;
@@ -1093,6 +1091,7 @@ static IPTR mSetup(struct IClass *cl, Object *obj, Msg msg) {
     struct RTEData *data = INST_DATA(cl, obj);
     if (!DoSuperMethodA(cl, obj, msg))
         return FALSE;
+    rteReadConfig(data, obj);
     rteSetupFonts(data, obj);
     rteObtainPens(data, obj);
     data->setup = TRUE;
@@ -1130,9 +1129,32 @@ static IPTR mCleanup(struct IClass *cl, Object *obj, Msg msg) {
         CloseFont(data->codeFont);
     data->ownCodeFont = FALSE;
     data->codeFont = NULL;
+    rteCloseConfigFonts(data);
     data->font = NULL;
     data->setup = FALSE;
     return DoSuperMethodA(cl, obj, msg);
+}
+
+/**
+ * MUI 4 and later send this while the user edits the BestTextEditor page of
+ * MUI preferences, so the change shows at once
+ */
+static IPTR mUpdateConfig(struct IClass *cl, Object *obj,
+                          struct MUIP_UpdateConfig *msg) {
+    struct RTEData *data = INST_DATA(cl, obj);
+    if (data->setup && BTE_IS_CFG_ID(msg->cfgid)) {
+        /* Images keep their own colours, so they stay loaded */
+        rteReleasePens(data, obj);
+        rteReadConfig(data, obj);
+        rteSetupFonts(data, obj);
+        rteObtainPens(data, obj);
+        rteFreeDoubleBuffer(data);
+        data->layoutWidth = 0;
+        rteMarkAllDirty(data);
+        data->drawAll = TRUE;
+        rteRequestRedraw(data, obj);
+    }
+    return DoSuperMethodA(cl, obj, (Msg)msg);
 }
 
 static IPTR mAskMinMax(struct IClass *cl, Object *obj,
@@ -1201,9 +1223,6 @@ static IPTR mDraw(struct IClass *cl, Object *obj, struct MUIP_Draw *msg) {
     return 0;
 }
 
-/* Set while this class makes an object the window's active object */
-static BOOL rteActivating = FALSE;
-
 #define RTE_CYCLE_KEYS (MUIKEYF_GADGET_NEXT | MUIKEYF_GADGET_PREV)
 
 /**
@@ -1248,13 +1267,13 @@ static IPTR mGoActive(struct IClass *cl, Object *obj, Msg msg) {
      * editor. Unless the window agrees that this is its active object, MUI
      * keeps navigation keys such as Return for whatever it thinks is active,
      * so make it so. MUI then sends MUIM_GoActive again. */
-    if (win != NULL && !rteActivating) {
+    if (win != NULL && !data->activating) {
         Object *current = NULL;
         get(win, MUIA_Window_ActiveObject, &current);
         if (current != obj) {
-            rteActivating = TRUE;
+            data->activating = TRUE;
             set(win, MUIA_Window_ActiveObject, obj);
-            rteActivating = FALSE;
+            data->activating = FALSE;
             if (data->active)
                 return 0;
         }
@@ -1664,7 +1683,7 @@ static IPTR mScrollTo(struct IClass *cl, Object *obj,
     return TRUE;
 }
 
-DISPATCHER(rteDispatcher) {
+DISPATCHER(_Dispatcher) {
     switch (msg->MethodID) {
     case OM_NEW:
         return mNew(cl, obj, (struct opSet *)msg);
@@ -1692,6 +1711,8 @@ DISPATCHER(rteDispatcher) {
         return mGoActive(cl, obj, msg);
     case MUIM_GoInactive:
         return mGoInactive(cl, obj, msg);
+    case MUIM_UpdateConfig:
+        return mUpdateConfig(cl, obj, (struct MUIP_UpdateConfig *)msg);
 
     case MUIM_TextEditor_ARexxCmd: {
         struct RTEData *data = INST_DATA(cl, obj);
@@ -1758,23 +1779,3 @@ DISPATCHER(rteDispatcher) {
     }
     return DoSuperMethodA(cl, obj, msg);
 }
-
-LONG createBestTextEditorClass(void) {
-    if (bestTextEditorClass != NULL)
-        return RETURN_OK;
-    bestTextEditorClass =
-        MUI_CreateCustomClass(NULL, MUIC_Area, NULL, sizeof(struct RTEData),
-                              ENTRY(rteDispatcher));
-    /* No cl_ID: MUI 3.8 treats a class with an ID as public when disposing
-     * its objects, which crashes a private class at shutdown */
-    return bestTextEditorClass != NULL ? RETURN_OK : RETURN_ERROR;
-}
-
-void deleteBestTextEditorClass(void) {
-    if (bestTextEditorClass == NULL)
-        return;
-    MUI_DeleteCustomClass(bestTextEditorClass);
-    bestTextEditorClass = NULL;
-}
-
-#endif /* DAEMON */

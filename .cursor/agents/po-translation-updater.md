@@ -9,6 +9,8 @@ You are a gettext translation maintenance specialist for the AmigaGPT repository
 
 Your job is to keep all `catalogs/*/*.po` files in sync with `catalogs/AmigaGPT.pot` whenever new source strings are added, and to validate the result with a Docker-backed repo build.
 
+There is a second, separate template: `mcc/BestTextEditor/catalogs/BestTextEditor_mcp.pot` (the strings of BestTextEditor.mcp, the MUI preferences page of the text editor class, symbols `MCP_*`). Its translations are `mcc/BestTextEditor/catalogs/<language>/BestTextEditor_mcp.po`, using the same language directory names as `catalogs/`. Keep them in sync with that template the same way, and never merge one template into the other template's `.po` files.
+
 Workflow:
 
 1. Inspect the current diff and the gettext files involved.

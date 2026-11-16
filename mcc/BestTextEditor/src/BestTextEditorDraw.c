@@ -1,4 +1,3 @@
-#ifndef DAEMON
 /*
  * BestTextEditor - rendering
  *
@@ -71,21 +70,114 @@ static ULONG rteLuminance(ULONG rgb) {
            1000;
 }
 
-static const struct BestTextBubbleStyle rteDefaultBubbles[] = {
-    {MUIV_BestTextEditor_Bubble_Right, 0x2f7ff0, MUIV_BestTextEditor_Color_Auto, 80},
-    {MUIV_BestTextEditor_Bubble_Left, 0xe6e6ea, MUIV_BestTextEditor_Color_Auto, 92},
-    {MUIV_BestTextEditor_Bubble_Center, 0xfff2bf, MUIV_BestTextEditor_Color_Auto, 90},
-    {MUIV_BestTextEditor_Bubble_Left, 0xffd9d6, 0x8a1010, 92},
-    {MUIV_BestTextEditor_Bubble_Left, 0xdcf5dc, MUIV_BestTextEditor_Color_Auto, 92},
-    {MUIV_BestTextEditor_Bubble_Left, 0xece3fa, MUIV_BestTextEditor_Color_Auto, 92},
-    {MUIV_BestTextEditor_Bubble_Full, 0xeeeeee, MUIV_BestTextEditor_Color_Auto, 100},
-    {MUIV_BestTextEditor_Bubble_Right, 0x34c759, MUIV_BestTextEditor_Color_Auto, 80}};
-
 void rteSetDefaultBubbleStyles(struct RTEData *data) {
     UWORD i;
-    for (i = 0; i < BESTTEXTEDITOR_MAX_BUBBLE_STYLES; i++)
-        data->bubbleStyles[i] = rteDefaultBubbles[i];
+    for (i = 0; i < BESTTEXTEDITOR_MAX_BUBBLE_STYLES; i++) {
+        data->bubbleStyles[i].side = bteDefaultBubbles[i].side;
+        data->bubbleStyles[i].background = bteDefaultBubbles[i].background;
+        data->bubbleStyles[i].text = bteDefaultBubbles[i].text;
+        data->bubbleStyles[i].maxWidth = bteDefaultBubbles[i].maxWidth;
+    }
     data->numBubbleStyles = BESTTEXTEDITOR_MAX_BUBBLE_STYLES;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Preferences (BestTextEditor.mcp)                                          */
+/* ------------------------------------------------------------------------ */
+
+/* The stored data of a configuration item, or NULL when it is not set */
+static APTR rteConfigItem(Object *obj, ULONG id) {
+    APTR item = NULL;
+    if (!DoMethod(obj, MUIM_GetConfigItem, id, (IPTR)&item))
+        return NULL;
+    return item;
+}
+
+static BOOL rteConfigBool(Object *obj, ULONG id, BOOL def) {
+    ULONG *v = (ULONG *)rteConfigItem(obj, id);
+    return v != NULL ? *v != 0 : def;
+}
+
+/**
+ * The colour a pen spec stands for on this screen. MUI resolves the spec
+ * (MUI pen, system pen, palette entry or RGB), and the pen is given back
+ * straight away: the caller allocates its own pen for the colour.
+ * @param def spec to use when the item is not set, or NULL for none
+ */
+static BOOL rteConfigRGB(Object *obj, ULONG id, CONST_STRPTR def, ULONG *rgb) {
+    struct MUI_PenSpec spec;
+    const struct MUI_PenSpec *cfg = (const struct MUI_PenSpec *)rteConfigItem(obj, id);
+    LONG pen;
+
+    if (cfg == NULL) {
+        if (def == NULL)
+            return FALSE;
+        memset(&spec, 0, sizeof(spec));
+        strncpy(spec.buf, (const char *)def, sizeof(spec.buf) - 1);
+        cfg = &spec;
+    }
+    pen = MUI_ObtainPen(muiRenderInfo(obj), (struct MUI_PenSpec *)cfg, 0);
+    if (pen == -1)
+        return FALSE;
+    rtePenRGB(_screen(obj)->ViewPort.ColorMap, MUIPEN(pen), rgb);
+    MUI_ReleasePen(muiRenderInfo(obj), pen);
+    return TRUE;
+}
+
+static void rteConfigFont(Object *obj, ULONG id, char *buf, ULONG size) {
+    CONST_STRPTR s = (CONST_STRPTR)rteConfigItem(obj, id);
+    buf[0] = '\0';
+    if (s != NULL) {
+        strncpy(buf, (const char *)s, size - 1);
+        buf[size - 1] = '\0';
+    }
+}
+
+void rteReadConfig(struct RTEData *data, Object *obj) {
+    UWORD i;
+
+    rteConfigFont(obj, MUICFG_BestTextEditor_TextFont, data->cfgTextFont,
+                  sizeof(data->cfgTextFont));
+    rteConfigFont(obj, MUICFG_BestTextEditor_CodeFont, data->cfgCodeFont,
+                  sizeof(data->cfgCodeFont));
+
+    data->cfgAutoColors = rteConfigBool(obj, MUICFG_BestTextEditor_AutoColors,
+                                        BTE_DEFAULT_AUTOCOLORS);
+    for (i = 0; i < BTE_CFG_PEN_COUNT; i++) {
+        data->cfgPenValid[i] =
+            !data->cfgAutoColors &&
+            rteConfigRGB(obj, MUICFG_BestTextEditor_LinkPen + i,
+                         (CONST_STRPTR)bteDefaultPens[i], &data->cfgPenRGB[i]);
+    }
+
+    if (data->appBubbles)
+        return;
+    rteSetDefaultBubbleStyles(data);
+    for (i = 0; i < BESTTEXTEDITOR_MAX_BUBBLE_STYLES; i++) {
+        struct BestTextBubbleStyle *bs = &data->bubbleStyles[i];
+        ULONG base = BTE_CFG_BUBBLE(i);
+        ULONG *v, rgb;
+        BOOL autoText = bteDefaultBubbles[i].text == MUIV_BestTextEditor_Color_Auto;
+
+        v = (ULONG *)rteConfigItem(obj, base + BTE_CFG_BUBBLE_SIDE);
+        if (v != NULL && *v >= MUIV_BestTextEditor_Bubble_Left &&
+            *v <= MUIV_BestTextEditor_Bubble_Full)
+            bs->side = *v;
+        v = (ULONG *)rteConfigItem(obj, base + BTE_CFG_BUBBLE_WIDTH);
+        if (v != NULL && *v >= BTE_MIN_BUBBLE_WIDTH && *v <= 100)
+            bs->maxWidth = *v;
+        if (rteConfigRGB(obj, base + BTE_CFG_BUBBLE_BACKGROUND, NULL, &rgb))
+            bs->background = rgb;
+        autoText = rteConfigBool(obj, base + BTE_CFG_BUBBLE_AUTOTEXT, autoText);
+        if (autoText) {
+            bs->text = MUIV_BestTextEditor_Color_Auto;
+        } else if (rteConfigRGB(obj, base + BTE_CFG_BUBBLE_TEXT, NULL, &rgb)) {
+            bs->text = rgb;
+        } else if (bs->text == MUIV_BestTextEditor_Color_Auto) {
+            /* the .mcp shows black for a bubble that had automatic text */
+            bs->text = 0x000000;
+        }
+    }
 }
 
 void rteObtainPens(struct RTEData *data, Object *obj) {
@@ -119,6 +211,20 @@ void rteObtainPens(struct RTEData *data, Object *obj) {
         rteBestPen(cm, rteMix(bg, fg, 35), &data->penAlloc[RTE_PEN_QUOTE]);
     data->pens[RTE_PEN_RULE] =
         rteBestPen(cm, rteMix(bg, fg, 25), &data->penAlloc[RTE_PEN_RULE]);
+    /* Colours chosen in the preferences replace the automatic ones */
+    if (!data->cfgAutoColors) {
+        static const UBYTE cfgPen[BTE_CFG_PEN_COUNT] = {
+            RTE_PEN_LINK,   RTE_PEN_CODEBG, RTE_PEN_CODETEXT, RTE_PEN_QUOTE,
+            RTE_PEN_RULE,   RTE_PEN_CURSOR, RTE_PEN_MARK,     RTE_PEN_MARKTEXT};
+        for (i = 0; i < BTE_CFG_PEN_COUNT; i++) {
+            UBYTE p = cfgPen[i];
+            if (!data->cfgPenValid[i])
+                continue;
+            if (data->penAlloc[p])
+                ReleasePen(cm, data->pens[p]);
+            data->pens[p] = rteBestPen(cm, data->cfgPenRGB[i], &data->penAlloc[p]);
+        }
+    }
     for (i = 0; i < RTE_PEN_COUNT; i++) {
         if (data->pens[i] < 0) {
             data->pens[i] = mp[MPEN_TEXT];
@@ -1056,5 +1162,3 @@ void rteDrawUpdate(struct RTEData *data, Object *obj, BOOL all) {
     }
     data->inDraw = FALSE;
 }
-
-#endif /* DAEMON */

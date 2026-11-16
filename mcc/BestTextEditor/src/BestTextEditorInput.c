@@ -1,4 +1,3 @@
-#ifndef DAEMON
 /*
  * BestTextEditor - input
  *
@@ -15,7 +14,6 @@
 #include <proto/keymap.h>
 #include <proto/muimaster.h>
 #include <proto/utility.h>
-#include <stdio.h>
 #include <string.h>
 #include "BestTextEditorPrivate.h"
 
@@ -1251,11 +1249,9 @@ IPTR rteARexx(struct RTEData *data, Object *obj, CONST_STRPTR command) {
     if (rteWordIs(command, "GETCURSOR")) {
         UBYTE buf[16];
         if (rteArgHas(args, "LINE"))
-            snprintf(buf, sizeof(buf), "%lu",
-                     (unsigned long)data->cursor.para + 1);
+            rteFormat(buf, "", data->cursor.para + 1, 10, 1, "");
         else
-            snprintf(buf, sizeof(buf), "%lu",
-                     (unsigned long)data->cursor.offset + 1);
+            rteFormat(buf, "", data->cursor.offset + 1, 10, 1, "");
         return (IPTR)rteResultString(buf, strlen(buf));
     }
 
@@ -1511,5 +1507,3 @@ void rteMacroExecute(struct RTEData *data, Object *obj) {
     }
     data->macroPlaying = FALSE;
 }
-
-#endif /* DAEMON */

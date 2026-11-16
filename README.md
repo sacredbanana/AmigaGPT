@@ -63,6 +63,7 @@ Ensure you have the necessary system requirements:
 - **MCC_Guigfx** MUI custom class for displaying images (<http://aminet.net/package/dev/mui/MCC_Guigfx>)
 - **MCC_NList** MUI custom class for lists (<http://aminet.net/package/dev/mui/MCC_NList-0.128>)
 - **MCC_AudioPlayer**, shipped with AmigaGPT and installed into the system MUI class drawer. It can also be built from its own repo if you want it for other programs.
+- **MCC_BestTextEditor**, shipped with AmigaGPT and installed into the system MUI class drawer. It draws every conversation and text field (Markdown, chat bubbles, inline images, links) and has its own page in the MUI settings (`BestTextEditor.mcp`) for fonts, colors and bubble styles. Its source is in `mcc/BestTextEditor`.
 - **A PNG datatype** Any will do, but here is one (<https://aminet.net/util/dtype/vPNGdt.lha>)
 - An API key for your chosen AI provider (**OpenAI**, **Google Gemini**, **SpaceXAI**, or **Anthropic**), or a locally-hosted OpenAI-compatible LLM server
 - _Optional_: **AmigaOS 3 only**: A copy of the **Workbench 1.x** disk to install `narrator.device` **v34** and a copy of the **Workbench 2.0** disk to install `narrator.device` **v37**
@@ -76,7 +77,7 @@ Ensure you have the necessary system requirements:
 
 - For AmigaOS 3 & 4, Install AmiSSL and a TCP/IP stack if not already done so
 - Download and install MUI. Version 5 recommended, version 3 minimum. Reboot.
-- Download and install codesets.library, render.library, MCC_Guigfx and MCC_NList. The AmigaGPT installer also copies AudioPlayer.mcc into the MUI class drawer.
+- Download and install codesets.library, render.library, MCC_Guigfx and MCC_NList. The AmigaGPT installer also copies AudioPlayer.mcc, BestTextEditor.mcc and BestTextEditor.mcp into the MUI class drawer.
 - Download the latest release of **AmigaGPT**
 - Extract the `amigagpt.lha` archive to a temporary location
 - Run the provided installer
@@ -307,7 +308,7 @@ The "**Project**" menu also includes a **Print** option (Right-Amiga + P) to pri
 
 The "**Help**" menu has **Open Documentation...**, which opens `AMIGAGPT:AmigaGPT.guide` - the full AmigaGuide manual, including a troubleshooting section and a complete menu reference.
 
-The "**View**" menu allows you to change the appearance of the app, including toggling **Fixed Width Fonts** and setting the **User** and **Assistant text alignment**. **MUI Settings...** opens the full MUI preferences for AmigaGPT, and **Clear MUI Settings** resets fonts, colours, screen and window positions back to their defaults.
+The "**View**" menu allows you to change the appearance of the app, including toggling **Fixed Width Fonts** and setting the **User** and **Assistant text alignment**. **MUI Settings...** opens the full MUI preferences for AmigaGPT, and **Clear MUI Settings** resets fonts, colours, screen and window positions back to their defaults. With MUI 4 or later the MUI settings include a **BestTextEditor** page that sets the fonts, the accent colours and the eight chat bubble styles of the conversations (AmigaGPT uses style 1 for your messages and style 2 for the replies).
 
 AmigaGPT can run on its own screen or in Workbench. To configure this, open the **MUI Settings** menu item from the **View** menu and configure it in the **Screen** or **System** menu in the **MUI Settings** panel.
 

@@ -62,6 +62,10 @@ Requirements:
   (http://aminet.net/package/dev/mui/MCC_NList-0.128)
 - MCC_AudioPlayer, shipped with this archive. The installer copies it
   into MUI:Libs/MUI (AmigaOS) or SYS:Classes/MUI (MorphOS)
+- MCC_BestTextEditor, shipped with this archive. It shows every
+  conversation and text field, and its look can be changed on its page in
+  the MUI settings. The installer copies BestTextEditor.mcc and
+  BestTextEditor.mcp next to AudioPlayer.mcc
 - A PNG datatype - Any will do, but here is one
   (https://aminet.net/util/dtype/vPNGdt.lha)
 - An active API key for at least one supported provider (OpenAI, Google
