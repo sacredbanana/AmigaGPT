@@ -188,6 +188,12 @@ static const struct AgentToolDefinition BUILT_IN_TOOLS[] = {
 
 static struct json_object *settings = NULL;
 static struct json_object *history = NULL;
+/* The saved sessions, newest first: {"id","title","project","created",
+ * "updated"} */
+static struct json_object *sessionIndex = NULL;
+/* The id of the current session, or "" while it has not been saved */
+static UBYTE currentSessionId[32];
+static ULONG sessionSerial = 0;
 static struct json_object *skills = NULL;
 static struct json_object *commands = NULL;
 static struct json_object *subagents = NULL;
@@ -532,6 +538,8 @@ static STRPTR limitToolOutput(STRPTR text) {
  * Settings and projects
  * ---------------------------------------------------------------------- */
 
+static void saveSession(void);
+
 static void saveSettings(void) {
     CONST_STRPTR text;
     if (settings == NULL)
@@ -681,11 +689,16 @@ LONG agentGetActiveProject(void) {
 void agentSetActiveProject(LONG index) {
     if (settings == NULL)
         return;
+    if (index < 0 || (ULONG)index >= agentProjectCount())
+        index = -1;
+    /* A session belongs to one project */
+    if (index != agentGetActiveProject() && history != NULL &&
+        json_object_array_length(history) > 0)
+        agentNewSession();
     json_object_object_add(
         settings, "activeProject",
-        json_object_new_string(index >= 0 && (ULONG)index < agentProjectCount()
-                                   ? agentProjectName((ULONG)index)
-                                   : ""));
+        json_object_new_string(index >= 0 ? agentProjectName((ULONG)index)
+                                          : ""));
     saveSettings();
 }
 
@@ -745,8 +758,7 @@ void agentRemoveProject(ULONG index) {
     if (projects == NULL || index >= agentProjectCount())
         return;
     if (active == (LONG)index)
-        json_object_object_add(settings, "activeProject",
-                               json_object_new_string(""));
+        agentSetActiveProject(-1);
     json_object_array_del_idx(projects, index, 1);
     saveSettings();
 }
@@ -2718,15 +2730,13 @@ static STRPTR runLoop(struct json_object *items, CONST_STRPTR system,
                       struct json_object *tools, CONST_STRPTR model,
                       BOOL isSubagent, AgentOutputFunc output, BOOL *okOut) {
     struct ChatRequestSettings chatSettings;
-    LONG maxSteps = settingsGetInt("maxSteps", AGENT_DEFAULT_MAX_STEPS);
     STRPTR finalText = NULL;
-    LONG step;
 
     *okOut = FALSE;
-    if (maxSteps < 1)
-        maxSteps = AGENT_DEFAULT_MAX_STEPS;
 
-    for (step = 0; step < maxSteps; step++) {
+    /* There is no step limit: the agent works until it has an answer, a
+     * request fails or the user stops it */
+    for (;;) {
         struct json_object *assistant;
         struct json_object *calls = NULL;
         struct json_object *results;
@@ -2861,34 +2871,281 @@ static STRPTR runLoop(struct json_object *items, CONST_STRPTR system,
         json_object_object_add(toolItem, "type", json_object_new_string("tool"));
         json_object_object_add(toolItem, "results", results);
         json_object_array_add(items, toolItem);
+        /* A long task is kept on disk as it goes, not only at the end */
+        if (!isSubagent)
+            saveSession();
     }
-
-    if (output != NULL && !isSubagent) {
-        output("\n");
-        outputLocal(output, STRING_AGENT_STEP_LIMIT);
-        output("\n");
-    }
-    return finalText;
 }
 
 /* ------------------------------------------------------------------------
  * Session
  * ---------------------------------------------------------------------- */
 
-static void saveSession(void) {
-    CONST_STRPTR text;
-    if (history == NULL)
+#define AGENT_SESSION_TITLE_MAX 60
+
+static struct json_object *sessionIndexArray(void) {
+    if (sessionIndex == NULL ||
+        !json_object_is_type(sessionIndex, json_type_array)) {
+        if (sessionIndex != NULL)
+            json_object_put(sessionIndex);
+        sessionIndex = json_object_new_array();
+    }
+    return sessionIndex;
+}
+
+static void saveSessionIndex(void) {
+    CONST_STRPTR text = json_object_to_json_string_ext(
+        sessionIndexArray(), JSON_C_TO_STRING_PRETTY);
+    if (text != NULL)
+        agentWriteFile(AGENT_SESSION_INDEX_PATH, text, strlen(text));
+}
+
+static void sessionFilePath(STRPTR buffer, ULONG size, CONST_STRPTR id) {
+    UBYTE name[48];
+    snprintf(name, sizeof(name), "%s.json", id);
+    joinPath(buffer, size, AGENT_SESSIONS_DIR, name);
+}
+
+/* @return the index of the session with this id, or -1 */
+static LONG findSession(CONST_STRPTR id) {
+    struct json_object *index = sessionIndexArray();
+    ULONG count = (ULONG)json_object_array_length(index);
+    ULONG i;
+    if (id == NULL || id[0] == '\0')
+        return -1;
+    for (i = 0; i < count; i++) {
+        if (strcmp(jsonString(json_object_array_get_idx(index, i), "id"),
+                   id) == 0)
+            return (LONG)i;
+    }
+    return -1;
+}
+
+static void setCurrentSessionId(CONST_STRPTR id) {
+    strncpy(currentSessionId, id != NULL ? id : "",
+            sizeof(currentSessionId) - 1);
+    currentSessionId[sizeof(currentSessionId) - 1] = '\0';
+    if (settings != NULL) {
+        json_object_object_add(settings, "currentSession",
+                               json_object_new_string(currentSessionId));
+        saveSettings();
+    }
+}
+
+/* Seconds since 1 January 1978 */
+static ULONG secondsNow(void) {
+    struct DateStamp now;
+    DateStamp(&now);
+    return (ULONG)now.ds_Days * 86400 + (ULONG)now.ds_Minute * 60 +
+           (ULONG)now.ds_Tick / TICKS_PER_SECOND;
+}
+
+/* Name a session after the first line of its first prompt */
+static void makeSessionTitle(CONST_STRPTR prompt, STRPTR title, ULONG size) {
+    ULONG length = 0;
+    BOOL shortened = FALSE;
+    while (*prompt == ' ' || *prompt == '\t' || *prompt == '\r' ||
+           *prompt == '\n')
+        prompt++;
+    while (prompt[length] != '\0' && prompt[length] != '\n' &&
+           prompt[length] != '\r')
+        length++;
+    if (length > AGENT_SESSION_TITLE_MAX) {
+        length = AGENT_SESSION_TITLE_MAX;
+        /* Do not cut a UTF-8 character in half */
+        while (length > 0 && ((UBYTE)prompt[length] & 0xC0) == 0x80)
+            length--;
+        shortened = TRUE;
+    }
+    while (length > 0 && (prompt[length - 1] == ' ' ||
+                          prompt[length - 1] == '\t'))
+        length--;
+    if (length + 4 > size)
+        length = size > 4 ? size - 4 : 0;
+    memcpy(title, prompt, length);
+    title[length] = '\0';
+    if (shortened)
+        strcat(title, "...");
+}
+
+/* Read the history of a saved session. Never NULL */
+static struct json_object *readSessionHistory(CONST_STRPTR id) {
+    UBYTE path[AGENT_PATH_LENGTH];
+    struct json_object *items = NULL;
+    STRPTR text;
+    sessionFilePath(path, sizeof(path), id);
+    text = agentReadFile(path, NULL);
+    if (text != NULL) {
+        items = json_tokener_parse(text);
+        FreeVec(text);
+    }
+    if (items == NULL || !json_object_is_type(items, json_type_array)) {
+        if (items != NULL)
+            json_object_put(items);
+        items = json_object_new_array();
+    }
+    return items;
+}
+
+/* Give the current session an id and a place in the list. Called with its
+ * first prompt, in UTF-8 */
+static void beginSession(CONST_STRPTR prompt) {
+    struct json_object *entry;
+    UBYTE id[sizeof(currentSessionId)];
+    UBYTE title[AGENT_SESSION_TITLE_MAX + 8];
+    UBYTE path[AGENT_PATH_LENGTH];
+    ULONG now = secondsNow();
+    ULONG suffix = 0;
+
+    if (findSession(currentSessionId) >= 0)
         return;
+    do {
+        if (suffix == 0)
+            snprintf(id, sizeof(id), "%lu", (unsigned long)now);
+        else
+            snprintf(id, sizeof(id), "%lu-%lu", (unsigned long)now,
+                     (unsigned long)suffix);
+        suffix++;
+        sessionFilePath(path, sizeof(path), id);
+    } while (findSession(id) >= 0 || pathExists(path));
+
+    makeSessionTitle(prompt, title, sizeof(title));
+    entry = json_object_new_object();
+    json_object_object_add(entry, "id", json_object_new_string(id));
+    json_object_object_add(entry, "title", json_object_new_string(title));
+    json_object_object_add(entry, "project",
+                           json_object_new_string(activeProjectPath()));
+    json_object_object_add(entry, "created", json_object_new_int64(now));
+    json_object_object_add(entry, "updated", json_object_new_int64(now));
+    json_object_array_insert_idx(sessionIndexArray(), 0, entry);
+    saveSessionIndex();
+    setCurrentSessionId(id);
+}
+
+/* Write the current session and move it to the top of the list */
+static void saveSession(void) {
+    struct json_object *index = sessionIndexArray();
+    struct json_object *entry;
+    UBYTE path[AGENT_PATH_LENGTH];
+    CONST_STRPTR text;
+    LONG position;
+
+    if (history == NULL || json_object_array_length(history) == 0)
+        return;
+    position = findSession(currentSessionId);
+    if (position < 0)
+        return;
+    sessionFilePath(path, sizeof(path), currentSessionId);
     text = json_object_to_json_string_ext(history, JSON_C_TO_STRING_PLAIN);
     if (text != NULL)
-        agentWriteFile(AGENT_SESSION_PATH, text, strlen(text));
+        agentWriteFile(path, text, strlen(text));
+
+    entry = json_object_array_get_idx(index, position);
+    json_object_object_add(entry, "updated",
+                           json_object_new_int64(secondsNow()));
+    json_object_object_add(entry, "project",
+                           json_object_new_string(activeProjectPath()));
+    if (position > 0) {
+        /* Hold on to the entry while it moves */
+        json_object_get(entry);
+        json_object_array_del_idx(index, position, 1);
+        json_object_array_insert_idx(index, 0, entry);
+    }
+    saveSessionIndex();
 }
 
 void agentNewSession(void) {
+    saveSession();
     if (history != NULL)
         json_object_put(history);
     history = json_object_new_array();
-    saveSession();
+    setCurrentSessionId("");
+    sessionSerial++;
+}
+
+ULONG agentSessionCount(void) {
+    return (ULONG)json_object_array_length(sessionIndexArray());
+}
+
+CONST_STRPTR agentSessionTitle(ULONG index) {
+    return jsonString(json_object_array_get_idx(sessionIndexArray(), index),
+                      "title");
+}
+
+CONST_STRPTR agentSessionProjectPath(ULONG index) {
+    return jsonString(json_object_array_get_idx(sessionIndexArray(), index),
+                      "project");
+}
+
+LONG agentCurrentSession(void) { return findSession(currentSessionId); }
+
+ULONG agentSessionSerial(void) { return sessionSerial; }
+
+static BOOL loadSession(ULONG index) {
+    struct json_object *entry =
+        json_object_array_get_idx(sessionIndexArray(), index);
+    struct json_object *loaded;
+    UBYTE id[sizeof(currentSessionId)];
+    UBYTE project[AGENT_PATH_LENGTH];
+    LONG projectIndex = -1;
+    ULONG count = agentProjectCount();
+    ULONG i;
+
+    if (entry == NULL)
+        return FALSE;
+    strncpy(id, jsonString(entry, "id"), sizeof(id) - 1);
+    id[sizeof(id) - 1] = '\0';
+    strncpy(project, jsonString(entry, "project"), sizeof(project) - 1);
+    project[sizeof(project) - 1] = '\0';
+    if (id[0] == '\0')
+        return FALSE;
+    if (strcmp(id, currentSessionId) == 0)
+        return TRUE;
+
+    loaded = readSessionHistory(id);
+    for (i = 0; i < count && project[0] != '\0'; i++) {
+        if (strcasecmp(agentProjectPath(i), project) == 0)
+            projectIndex = (LONG)i;
+    }
+    /* Put the current session away, then switch to the session's project
+     * while the history is empty so no further session is started */
+    agentNewSession();
+    agentSetActiveProject(projectIndex);
+    json_object_put(history);
+    history = loaded;
+    setCurrentSessionId(id);
+    sessionSerial++;
+    return TRUE;
+}
+
+/* A session cannot be swapped out from under a running task */
+BOOL agentLoadSession(ULONG index) {
+    return agentRunning ? FALSE : loadSession(index);
+}
+
+void agentDeleteSession(ULONG index) {
+    struct json_object *entry =
+        json_object_array_get_idx(sessionIndexArray(), index);
+    UBYTE path[AGENT_PATH_LENGTH];
+    CONST_STRPTR id;
+
+    if (entry == NULL || agentRunning)
+        return;
+    id = jsonString(entry, "id");
+    if (id[0] != '\0') {
+        sessionFilePath(path, sizeof(path), id);
+        deleteDiskObject(path);
+    }
+    if (strcmp(id, currentSessionId) == 0) {
+        /* Forget it without saving it again */
+        if (history != NULL)
+            json_object_put(history);
+        history = json_object_new_array();
+        setCurrentSessionId("");
+        sessionSerial++;
+    }
+    json_object_array_del_idx(sessionIndexArray(), index, 1);
+    saveSessionIndex();
 }
 
 void agentRenderSession(AgentOutputFunc output) {
@@ -3121,6 +3378,38 @@ static void handleSlashCommand(CONST_STRPTR line, AgentOutputFunc output,
         agentNewSession();
         outputLocal(output, STRING_AGENT_SESSION_CLEARED);
         output("\n");
+    } else if (strcasecmp(name, "sessions") == 0) {
+        ULONG count = agentSessionCount();
+        LONG current = agentCurrentSession();
+        UBYTE number[16];
+        for (i = 0; i < count; i++) {
+            CONST_STRPTR project = agentSessionProjectPath(i);
+            snprintf(number, sizeof(number), "%lu. ", (unsigned long)(i + 1));
+            output((LONG)i == current ? "* " : "  ");
+            output(number);
+            output(agentSessionTitle(i));
+            if (project[0] != '\0') {
+                STRPTR projectUtf8 = agentToUtf8(project);
+                output(" (");
+                output(projectUtf8 != NULL ? projectUtf8 : "");
+                output(")");
+                if (projectUtf8 != NULL)
+                    FreeVec(projectUtf8);
+            }
+            output("\n");
+        }
+        if (count == 0)
+            output("-\n");
+    } else if (strcasecmp(name, "resume") == 0) {
+        LONG number = atol(arguments);
+        if (number >= 1 && (ULONG)number <= agentSessionCount() &&
+            loadSession((ULONG)(number - 1))) {
+            output(agentSessionTitle((ULONG)agentCurrentSession()));
+            output("\n");
+        } else {
+            outputLocal(output, STRING_AGENT_NO_SUCH_SESSION);
+            output("\n");
+        }
     } else if (strcasecmp(name, "skills") == 0) {
         listCatalog(output, skills, "/");
     } else if (strcasecmp(name, "commands") == 0) {
@@ -3271,6 +3560,7 @@ BOOL agentRun(CONST_STRPTR prompt, AgentOutputFunc output) {
     STRPTR finalText;
     struct json_object *tools;
     struct json_object *item;
+    CONST_STRPTR typed;
     BOOL ok = FALSE;
 
     if (prompt == NULL || settings == NULL)
@@ -3304,6 +3594,9 @@ BOOL agentRun(CONST_STRPTR prompt, AgentOutputFunc output) {
                                            : NULL,
                  &chatSettings);
 
+    /* The session is named after what the user typed, not what a command
+     * expanded to */
+    typed = prompt;
     if (prompt[0] == '/') {
         handleSlashCommand(prompt, output, &expanded);
         if (expanded == NULL) {
@@ -3314,10 +3607,13 @@ BOOL agentRun(CONST_STRPTR prompt, AgentOutputFunc output) {
         prompt = expanded;
     }
 
+    if (json_object_array_length(history) == 0)
+        beginSession(typed);
     item = json_object_new_object();
     json_object_object_add(item, "type", json_object_new_string("user"));
     json_object_object_add(item, "text", json_object_new_string(prompt));
     json_object_array_add(history, item);
+    saveSession();
 
     setErrorRequestersSuppressed(TRUE);
     system = buildSystemPrompt(NULL);
@@ -3373,23 +3669,67 @@ LONG agentInit(void) {
         json_object_object_add(settings, "effort",
                                json_object_new_int(AGENT_EFFORT_DEFAULT));
         json_object_object_add(settings, "model", json_object_new_string(""));
-        json_object_object_add(settings, "maxSteps",
-                               json_object_new_int(AGENT_DEFAULT_MAX_STEPS));
         json_object_object_add(settings, "activeProject",
                                json_object_new_string(""));
         json_object_object_add(settings, "projects", json_object_new_array());
         json_object_object_add(settings, "allow", json_object_new_array());
     }
 
-    text = agentReadFile(AGENT_SESSION_PATH, NULL);
+    /* Older versions stopped a task after a fixed number of steps */
+    if (json_object_object_get_ex(settings, "maxSteps", NULL)) {
+        json_object_object_del(settings, "maxSteps");
+        saveSettings();
+    }
+
+    ensureDirectory(AGENT_SESSIONS_DIR);
+    text = agentReadFile(AGENT_SESSION_INDEX_PATH, NULL);
     if (text != NULL) {
-        history = json_tokener_parse(text);
+        sessionIndex = json_tokener_parse(text);
         FreeVec(text);
     }
-    if (history == NULL || !json_object_is_type(history, json_type_array)) {
-        if (history != NULL)
-            json_object_put(history);
+    sessionIndexArray();
+
+    /* Carry on with the session that was open last time */
+    currentSessionId[0] = '\0';
+    if (findSession(jsonString(settings, "currentSession")) >= 0) {
+        strncpy(currentSessionId, jsonString(settings, "currentSession"),
+                sizeof(currentSessionId) - 1);
+        currentSessionId[sizeof(currentSessionId) - 1] = '\0';
+        history = readSessionHistory(currentSessionId);
+    } else {
         history = json_object_new_array();
+    }
+
+    /* Older versions kept a single session in session.json. It becomes the
+     * first entry of the session list */
+    text = agentReadFile(AGENT_OLD_SESSION_PATH, NULL);
+    if (text != NULL) {
+        struct json_object *old = json_tokener_parse(text);
+        FreeVec(text);
+        if (old != NULL && json_object_is_type(old, json_type_array) &&
+            json_object_array_length(old) > 0 &&
+            json_object_array_length(history) == 0) {
+            ULONG count = (ULONG)json_object_array_length(old);
+            CONST_STRPTR firstPrompt = "";
+            ULONG i;
+            for (i = 0; i < count && firstPrompt[0] == '\0'; i++) {
+                struct json_object *item = json_object_array_get_idx(old, i);
+                if (strcmp(jsonString(item, "type"), "user") == 0)
+                    firstPrompt = jsonString(item, "text");
+            }
+            json_object_put(history);
+            history = old;
+            beginSession(firstPrompt);
+            saveSession();
+            deleteDiskObject(AGENT_OLD_SESSION_PATH);
+        } else if (old != NULL) {
+            /* An empty session has nothing worth keeping. A file that does
+             * not parse is left alone */
+            if (json_object_is_type(old, json_type_array) &&
+                json_object_array_length(old) == 0)
+                deleteDiskObject(AGENT_OLD_SESSION_PATH);
+            json_object_put(old);
+        }
     }
     return settings != NULL && history != NULL ? RETURN_OK : RETURN_ERROR;
 }
@@ -3399,6 +3739,9 @@ void agentShutdown(void) {
     agentMcpFree();
     if (history != NULL)
         json_object_put(history);
+    if (sessionIndex != NULL)
+        json_object_put(sessionIndex);
+    sessionIndex = NULL;
     if (skills != NULL)
         json_object_put(skills);
     if (commands != NULL)

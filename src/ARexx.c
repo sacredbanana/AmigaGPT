@@ -771,8 +771,9 @@ static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
                 &codeInterpreter);
             get(configObj, MUIA_AmigaGPTConfig_OpenAiChatSystem, &system);
         }
-        out->model =
-            (model != NULL && strlen(model) > 0) ? model : "gpt-5-chat-latest";
+        out->model = (model != NULL && strlen(model) > 0)
+                         ? model
+                         : (STRPTR) "gpt-5-chat-latest";
         out->webSearchEnabled = (BOOL)webSearch;
         out->shellToolEnabled = (BOOL)shellTool;
         out->codeInterpreterEnabled = (BOOL)codeInterpreter;
@@ -799,8 +800,9 @@ static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
                 &codeInterpreter);
             get(configObj, MUIA_AmigaGPTConfig_GeminiChatSystem, &system);
         }
-        out->model =
-            (model != NULL && strlen(model) > 0) ? model : "gemini-2.5-flash";
+        out->model = (model != NULL && strlen(model) > 0)
+                         ? model
+                         : (STRPTR) "gemini-2.5-flash";
         out->webSearchEnabled = (BOOL)webSearch;
         out->shellToolEnabled = FALSE;
         out->codeInterpreterEnabled = (BOOL)codeInterpreter;
@@ -827,7 +829,8 @@ static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
                 &codeInterpreter);
             get(configObj, MUIA_AmigaGPTConfig_GrokChatSystem, &system);
         }
-        out->model = (model != NULL && strlen(model) > 0) ? model : "grok-4";
+        out->model = (model != NULL && strlen(model) > 0) ? model
+                                                          : (STRPTR) "grok-4";
         out->webSearchEnabled = (BOOL)webSearch;
         out->shellToolEnabled = FALSE;
         out->codeInterpreterEnabled = (BOOL)codeInterpreter;
@@ -856,7 +859,7 @@ static void rexxFillLockedChatProfileDefaults(struct ChatRequestSettings *out,
         }
         out->model = (model != NULL && strlen(model) > 0)
                          ? model
-                         : "claude-3-5-sonnet-latest";
+                         : (STRPTR) "claude-3-5-sonnet-latest";
         out->webSearchEnabled = (BOOL)webSearch;
         out->shellToolEnabled = FALSE;
         out->codeInterpreterEnabled = (BOOL)codeInterpreter;
@@ -1390,7 +1393,7 @@ rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
         out->elevenLabsModel =
             rexxDupStr((model != NULL && strlen(model) > 0)
                            ? model
-                           : ELEVENLABS_MODEL_FLASH_V2_5_ID);
+                           : (CONST_STRPTR)ELEVENLABS_MODEL_FLASH_V2_5_ID);
     }
     struct json_object *elevenLabsModelNameObj =
         json_object_object_get(profile, "elevenLabsModelName");
@@ -1401,7 +1404,7 @@ rexxResolveSpeechProfileSettings(CONST_STRPTR profileName,
         out->elevenLabsModelName =
             rexxDupStr((modelName != NULL && strlen(modelName) > 0)
                            ? modelName
-                           : ELEVENLABS_MODEL_FLASH_V2_5_NAME);
+                           : (CONST_STRPTR)ELEVENLABS_MODEL_FLASH_V2_5_NAME);
     }
 
     struct json_object *openVoxKeyObj =
@@ -1473,7 +1476,7 @@ static void rexxSetProfileNotFoundError(CONST_STRPTR kind,
     CONST_STRPTR displayKind =
         kind != NULL ? kind : (CONST_STRPTR)STRING_REXX_REQUESTED;
     snprintf(errMsg, sizeof(errMsg), STRING_ERROR_REXX_PROFILE_NOT_FOUND,
-             displayKind, profileName != NULL ? profileName : "");
+             displayKind, profileName != NULL ? profileName : (CONST_STRPTR) "");
     set(app, MUIA_Application_RexxString, errMsg);
     updateStatusBar(STRING_ERROR, redPen);
 }

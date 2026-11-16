@@ -14,7 +14,8 @@ struct json_object;
  * be read and edited with any text editor:
  *
  *   AMIGAGPT:agent/settings.json    approval mode, effort, model, projects
- *   AMIGAGPT:agent/session.json     the current session history
+ *   AMIGAGPT:agent/sessions.json    the saved sessions: id, title, project
+ *   AMIGAGPT:agent/sessions/<id>.json  the history of one session
  *   AMIGAGPT:agent/AGENTS.md        instructions for every project
  *   AMIGAGPT:agent/mcp.json         MCP servers for every project
  *   AMIGAGPT:agent/skills/<name>/SKILL.md
@@ -27,7 +28,10 @@ struct json_object;
  **/
 #define AGENT_DIR "AMIGAGPT:agent"
 #define AGENT_SETTINGS_PATH AGENT_DIR "/settings.json"
-#define AGENT_SESSION_PATH AGENT_DIR "/session.json"
+/* The single session file of older versions, moved into the session list */
+#define AGENT_OLD_SESSION_PATH AGENT_DIR "/session.json"
+#define AGENT_SESSION_INDEX_PATH AGENT_DIR "/sessions.json"
+#define AGENT_SESSIONS_DIR AGENT_DIR "/sessions"
 #define AGENT_GLOBAL_INSTRUCTIONS_PATH AGENT_DIR "/AGENTS.md"
 #define AGENT_GLOBAL_MCP_PATH AGENT_DIR "/mcp.json"
 #define AGENT_GLOBAL_SKILLS_DIR AGENT_DIR "/skills"
@@ -36,7 +40,6 @@ struct json_object;
 
 #define AGENT_PATH_LENGTH 512
 #define AGENT_TOOL_OUTPUT_MAX 16000
-#define AGENT_DEFAULT_MAX_STEPS 30
 
 /**
  * How much the agent may do without asking
@@ -124,6 +127,11 @@ CONST_STRPTR agentProjectPath(ULONG index);
  * @return the index of the active project or -1 when there is none
  **/
 LONG agentGetActiveProject(void);
+
+/**
+ * A session belongs to one project, so switching to another project while
+ * the current session has a history starts a new session
+ **/
 void agentSetActiveProject(LONG index);
 
 /**
@@ -159,18 +167,54 @@ void agentMcpConfigPath(STRPTR buffer, ULONG size);
 BOOL agentImportSkill(CONST_STRPTR source, STRPTR nameOut, ULONG nameSize);
 
 /**
- * Forget the current session
+ * Start a new, empty session. The current one stays in the session list.
+ * The new session is saved once it has its first prompt.
  **/
 void agentNewSession(void);
 
 /**
- * Write the user and assistant text of the saved session to output
+ * Sessions are kept newest first. Each belongs to the project that was
+ * active when it last ran, or to no project.
+ **/
+ULONG agentSessionCount(void);
+
+/** The title of a session in UTF-8 */
+CONST_STRPTR agentSessionTitle(ULONG index);
+
+/** The drawer of the project a session belongs to, or "" for none */
+CONST_STRPTR agentSessionProjectPath(ULONG index);
+
+/**
+ * @return the index of the current session, or -1 while it is new and has
+ * not been saved yet
+ **/
+LONG agentCurrentSession(void);
+
+/**
+ * Make a saved session the current one and activate its project
+ * @return TRUE if it was loaded
+ **/
+BOOL agentLoadSession(ULONG index);
+
+/**
+ * Delete a saved session. Deleting the current one starts a new session.
+ **/
+void agentDeleteSession(ULONG index);
+
+/**
+ * A number that changes whenever another session becomes the current one,
+ * so a front end knows to show its transcript again
+ **/
+ULONG agentSessionSerial(void);
+
+/**
+ * Write the user and assistant text of the current session to output
  **/
 void agentRenderSession(AgentOutputFunc output);
 
 /**
  * Run one user turn: a slash command, or a prompt the agent works on until
- * it has an answer, is cancelled, or reaches the step limit.
+ * it has an answer or is cancelled.
  * @param prompt the prompt in UTF-8
  * @param output receives transcript text
  * @return TRUE if the turn finished normally

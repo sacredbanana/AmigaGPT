@@ -3,6 +3,7 @@
 #include <libraries/mui.h>
 #include <mui/NFloattext_mcc.h>
 #include <mui/NList_mcc.h>
+#include <mui/NListtree_mcc.h>
 #include <mui/NListview_mcc.h>
 #include <mui/TextEditor_mcc.h>
 #include <proto/asl.h>
@@ -20,14 +21,22 @@
 
 #define AGENT_TRANSCRIPT_INITIAL_CAPACITY 16384
 
+/* What a row of the session tree stands for, kept in tn_User. A project row
+ * holds the project index plus one, so 0 is "no project"; a session row
+ * holds the session index */
+#define AGENT_NODE_PROJECT 0x10000000UL
+#define AGENT_NODE_SESSION 0x20000000UL
+#define AGENT_NODE_INDEX_MASK 0x0FFFFFFFUL
+
 #ifndef MAKE_ID
 #define MAKE_ID(a, b, c, d)                                                    \
     ((ULONG)(a) << 24 | (ULONG)(b) << 16 | (ULONG)(c) << 8 | (ULONG)(d))
 #endif
 
-static Object *agentProjectList = NULL;
+static Object *agentSessionTree = NULL;
 static Object *agentAddProjectButton = NULL;
 static Object *agentRemoveProjectButton = NULL;
+static Object *agentDeleteSessionButton = NULL;
 static Object *agentApprovalCycle = NULL;
 static Object *agentEffortCycle = NULL;
 static Object *agentModelString = NULL;
@@ -49,7 +58,7 @@ static STRPTR agentTranscript = NULL;
 static ULONG agentTranscriptCapacity = 0;
 static ULONG agentTranscriptLength = 0;
 static UBYTE agentEditorPath[AGENT_PATH_LENGTH];
-static BOOL agentUpdatingProjectList = FALSE;
+static BOOL agentUpdatingSessionTree = FALSE;
 static STRPTR agentApprovalLabels[AGENT_APPROVAL_COUNT + 1] = {NULL};
 static STRPTR agentEffortLabels[AGENT_EFFORT_COUNT + 1] = {NULL};
 
@@ -124,40 +133,172 @@ static void setAgentSendButtonLabel(BOOL busy) {
     set(agentSendButton, MUIA_Text_Contents, label);
 }
 
-static void refreshProjectList(void) {
-    ULONG count = agentProjectCount();
-    ULONG i;
-    if (agentProjectList == NULL)
-        return;
-    agentUpdatingProjectList = TRUE;
-    set(agentProjectList, MUIA_NList_Quiet, TRUE);
-    DoMethod(agentProjectList, MUIM_NList_Clear);
-    DoMethod(agentProjectList, MUIM_NList_InsertSingle,
-             (ULONG)STRING_AGENT_NO_PROJECT, MUIV_NList_Insert_Bottom);
-    for (i = 0; i < count; i++)
-        DoMethod(agentProjectList, MUIM_NList_InsertSingle,
-                 (ULONG)agentProjectName(i), MUIV_NList_Insert_Bottom);
-    set(agentProjectList, MUIA_NList_Quiet, FALSE);
-    /* Row 0 is "no project", so a project sits one row below its index */
-    set(agentProjectList, MUIA_NList_Active, agentGetActiveProject() + 1);
-    agentUpdatingProjectList = FALSE;
-    if (agentRemoveProjectButton != NULL)
-        set(agentRemoveProjectButton, MUIA_Disabled,
-            agentGetActiveProject() < 0);
+/* The tree row that is selected, decoded, or 0 when there is none */
+static ULONG selectedTreeNode(void) {
+    struct MUI_NListtree_TreeNode *node = NULL;
+    if (agentSessionTree == NULL)
+        return 0;
+    get(agentSessionTree, MUIA_NListtree_Active, &node);
+    /* MUIV_NListtree_Active_Off is 0 */
+    if (node == NULL)
+        return 0;
+    return (ULONG)(IPTR)node->tn_User;
 }
 
-HOOKPROTONHNONP(AgentProjectSelectedFunc, void) {
-    LONG active = 0;
-    if (agentUpdatingProjectList || agentProjectList == NULL)
-        return;
-    get(agentProjectList, MUIA_NList_Active, &active);
-    if (active < 0)
-        return;
-    agentSetActiveProject(active - 1);
+static void updateTreeButtons(void) {
+    ULONG node = selectedTreeNode();
     if (agentRemoveProjectButton != NULL)
-        set(agentRemoveProjectButton, MUIA_Disabled, active < 1);
+        set(agentRemoveProjectButton, MUIA_Disabled,
+            !((node & AGENT_NODE_PROJECT) &&
+              (node & AGENT_NODE_INDEX_MASK) > 0));
+    if (agentDeleteSessionButton != NULL)
+        set(agentDeleteSessionButton, MUIA_Disabled,
+            !(node & AGENT_NODE_SESSION));
 }
-MakeHook(AgentProjectSelectedHook, AgentProjectSelectedFunc);
+
+static struct MUI_NListtree_TreeNode *
+insertTreeNode(CONST_STRPTR name, ULONG user,
+               struct MUI_NListtree_TreeNode *list, ULONG flags) {
+    return (struct MUI_NListtree_TreeNode *)DoMethod(
+        agentSessionTree, MUIM_NListtree_Insert, (IPTR)name, (IPTR)user,
+        (IPTR)list, MUIV_NListtree_Insert_PrevNode_Tail, flags);
+}
+
+/* Add the saved sessions of one project under its row, newest first */
+static struct MUI_NListtree_TreeNode *
+insertSessions(struct MUI_NListtree_TreeNode *list, LONG project,
+               LONG currentSession) {
+    struct MUI_NListtree_TreeNode *current = NULL;
+    ULONG count = agentSessionCount();
+    ULONG projectCount = agentProjectCount();
+    ULONG i;
+    for (i = 0; i < count; i++) {
+        CONST_STRPTR path = agentSessionProjectPath(i);
+        LONG owner = -1;
+        ULONG j;
+        STRPTR title;
+        struct MUI_NListtree_TreeNode *node;
+        for (j = 0; j < projectCount && path[0] != '\0'; j++) {
+            if (strcasecmp(agentProjectPath(j), path) == 0)
+                owner = (LONG)j;
+        }
+        /* Sessions of a project that was removed are shown with no project */
+        if (owner != project)
+            continue;
+        title = agentToLocal(agentSessionTitle(i));
+        node = insertTreeNode(title != NULL && title[0] != '\0'
+                                  ? title
+                                  : (STRPTR) "-",
+                              AGENT_NODE_SESSION | i, list, 0);
+        if (title != NULL)
+            FreeVec(title);
+        if ((LONG)i == currentSession)
+            current = node;
+    }
+    return current;
+}
+
+/* Projects, each with its sessions under it, like folders */
+static void refreshSessionTree(void) {
+    struct MUI_NListtree_TreeNode *activeNode = NULL;
+    struct MUI_NListtree_TreeNode *row;
+    struct MUI_NListtree_TreeNode *found;
+    ULONG count = agentProjectCount();
+    LONG activeProject = agentGetActiveProject();
+    LONG currentSession = agentCurrentSession();
+    ULONG i;
+
+    if (agentSessionTree == NULL)
+        return;
+    agentUpdatingSessionTree = TRUE;
+    set(agentSessionTree, MUIA_NListtree_Quiet, TRUE);
+    DoMethod(agentSessionTree, MUIM_NListtree_Clear, NULL, 0);
+
+    row = insertTreeNode(STRING_AGENT_NO_PROJECT, AGENT_NODE_PROJECT,
+                         NULL,
+                         TNF_LIST | TNF_OPEN);
+    if (row != NULL) {
+        found = insertSessions(row, -1, currentSession);
+        if (found != NULL)
+            activeNode = found;
+        if (activeProject < 0 && activeNode == NULL)
+            activeNode = row;
+    }
+    for (i = 0; i < count; i++) {
+        row = insertTreeNode(agentProjectName(i), AGENT_NODE_PROJECT | (i + 1),
+                             NULL,
+                             TNF_LIST | TNF_OPEN);
+        if (row == NULL)
+            continue;
+        found = insertSessions(row, (LONG)i, currentSession);
+        if (found != NULL)
+            activeNode = found;
+        /* A new session that is not saved yet shows as its project */
+        if ((LONG)i == activeProject && currentSession < 0)
+            activeNode = row;
+    }
+
+    set(agentSessionTree, MUIA_NListtree_Quiet, FALSE);
+    set(agentSessionTree, MUIA_NListtree_Active,
+        activeNode != NULL ? (IPTR)activeNode : MUIV_NListtree_Active_Off);
+    agentUpdatingSessionTree = FALSE;
+    updateTreeButtons();
+}
+
+/* Show the transcript of the current session from the start */
+static void showSessionTranscript(void) {
+    clearTranscript();
+    agentRenderSession(agentOutputReceived);
+    if (agentTranscriptLength == 0) {
+        appendTranscript(STRING_AGENT_WELCOME);
+        appendTranscript("\n");
+    }
+    showTranscript();
+}
+
+/* A row was chosen. This runs after the notification has returned, because
+ * it rebuilds the tree */
+HOOKPROTONHNONP(AgentTreeSelectedDeferredFunc, void) {
+    ULONG node = selectedTreeNode();
+    ULONG serial = agentSessionSerial();
+    if (node == 0 || mainWindowRequestBusy())
+        return;
+    if (node & AGENT_NODE_SESSION) {
+        agentLoadSession(node & AGENT_NODE_INDEX_MASK);
+    } else if (node & AGENT_NODE_PROJECT) {
+        LONG project = (LONG)(node & AGENT_NODE_INDEX_MASK) - 1;
+        /* Choosing a project starts a new session in it */
+        if (project != agentGetActiveProject())
+            agentSetActiveProject(project);
+        else if (agentCurrentSession() >= 0)
+            agentNewSession();
+    }
+    if (agentSessionSerial() != serial)
+        showSessionTranscript();
+    refreshSessionTree();
+}
+MakeHook(AgentTreeSelectedDeferredHook, AgentTreeSelectedDeferredFunc);
+
+HOOKPROTONHNONP(AgentTreeSelectedFunc, void) {
+    if (agentUpdatingSessionTree || agentSessionTree == NULL)
+        return;
+    updateTreeButtons();
+    DoMethod(app, MUIM_Application_PushMethod, app, 2, MUIM_CallHook,
+             &AgentTreeSelectedDeferredHook);
+}
+MakeHook(AgentTreeSelectedHook, AgentTreeSelectedFunc);
+
+HOOKPROTONHNONP(AgentDeleteSessionFunc, void) {
+    ULONG node = selectedTreeNode();
+    ULONG serial = agentSessionSerial();
+    if (!(node & AGENT_NODE_SESSION) || mainWindowRequestBusy())
+        return;
+    agentDeleteSession(node & AGENT_NODE_INDEX_MASK);
+    if (agentSessionSerial() != serial)
+        showSessionTranscript();
+    refreshSessionTree();
+}
+MakeHook(AgentDeleteSessionHook, AgentDeleteSessionFunc);
 
 HOOKPROTONHNONP(AgentAddProjectFunc, void) {
     struct FileRequester *fileReq =
@@ -168,20 +309,28 @@ HOOKPROTONHNONP(AgentAddProjectFunc, void) {
                        STRING_AGENT_SELECT_PROJECT_DRAWER, ASLFR_DrawersOnly,
                        TRUE, TAG_DONE) &&
         fileReq->fr_Drawer != NULL && strlen(fileReq->fr_Drawer) > 0) {
+        ULONG serial = agentSessionSerial();
         agentAddProject(fileReq->fr_Drawer);
-        refreshProjectList();
+        if (agentSessionSerial() != serial)
+            showSessionTranscript();
+        refreshSessionTree();
     }
     FreeAslRequest(fileReq);
 }
 MakeHook(AgentAddProjectHook, AgentAddProjectFunc);
 
 HOOKPROTONHNONP(AgentRemoveProjectFunc, void) {
-    LONG active = agentGetActiveProject();
-    if (active < 0)
+    ULONG node = selectedTreeNode();
+    ULONG serial = agentSessionSerial();
+    if (!(node & AGENT_NODE_PROJECT) || (node & AGENT_NODE_INDEX_MASK) == 0 ||
+        mainWindowRequestBusy())
         return;
-    /* Only the entry in the project list goes; the drawer is left alone */
-    agentRemoveProject((ULONG)active);
-    refreshProjectList();
+    /* Only the entry in the project list goes; the drawer is left alone,
+     * and the project's sessions are listed with no project */
+    agentRemoveProject((node & AGENT_NODE_INDEX_MASK) - 1);
+    if (agentSessionSerial() != serial)
+        showSessionTranscript();
+    refreshSessionTree();
 }
 MakeHook(AgentRemoveProjectHook, AgentRemoveProjectFunc);
 
@@ -215,7 +364,8 @@ MakeHook(AgentModelChangedHook, AgentModelChangedFunc);
 
 HOOKPROTONHNONP(AgentNewSessionFunc, void) {
     agentNewSession();
-    clearTranscript();
+    showSessionTranscript();
+    refreshSessionTree();
 }
 MakeHook(AgentNewSessionHook, AgentNewSessionFunc);
 
@@ -300,6 +450,8 @@ HOOKPROTONHNONP(AgentSendDeferredFunc, void) {
     STRPTR text;
     STRPTR prompt;
     BOOL freeText;
+    ULONG serial;
+    ULONG turnStart;
 
     if (mainWindowRequestBusy() || agentInputEditor == NULL)
         return;
@@ -332,9 +484,8 @@ HOOKPROTONHNONP(AgentSendDeferredFunc, void) {
     }
 
     saveModelString();
-    /* A new session starts with an empty transcript */
-    if (strcasecmp(text, "/new") == 0 || strcasecmp(text, "/clear") == 0)
-        clearTranscript();
+    serial = agentSessionSerial();
+    turnStart = agentTranscriptLength;
     appendTranscript("\n>>> ");
     appendTranscript(text);
     appendTranscript("\n\n");
@@ -353,8 +504,22 @@ HOOKPROTONHNONP(AgentSendDeferredFunc, void) {
         FreeVec(prompt);
     }
     mainWindowFinishRequest(FALSE);
+    /* A command such as /new, /resume or /project switched to another
+     * session: show that session, followed by this turn */
+    if (agentSessionSerial() != serial) {
+        STRPTR turn = agentDuplicate(agentTranscript != NULL &&
+                                             turnStart <= agentTranscriptLength
+                                         ? agentTranscript + turnStart
+                                         : (STRPTR) "");
+        clearTranscript();
+        agentRenderSession(agentOutputReceived);
+        appendTranscript(turn);
+        showTranscript();
+        if (turn != NULL)
+            FreeVec(turn);
+    }
     /* A command may have changed what the controls show */
-    refreshProjectList();
+    refreshSessionTree();
     set(agentApprovalCycle, MUIA_Cycle_Active, (LONG)agentGetApprovalMode());
     set(agentEffortCycle, MUIA_Cycle_Active, (LONG)agentGetEffort());
     set(agentModelString, MUIA_String_Contents, agentGetModel());
@@ -485,15 +650,25 @@ Object *createAgentPage(void) {
             TAG_DONE),
             Child, NListviewObject,
                 MUIA_CycleChain, 1,
-                MUIA_NListview_NList, agentProjectList = NListObject,
+                MUIA_NListview_Horiz_ScrollBar, MUIV_NListview_HSB_Auto,
+                MUIA_NListview_NList, agentSessionTree = NListtreeObject,
                     MUIA_ContextMenu, NULL,
-                    MUIA_NList_MultiSelect, MUIV_NList_MultiSelect_None,
-                    MUIA_NList_ConstructHook, MUIV_NList_ConstructHook_String,
-                    MUIA_NList_DestructHook, MUIV_NList_DestructHook_String,
-                    MUIA_NList_Format, "BAR MINW=100 MAXW=200",
-                    MUIA_NList_AutoVisible, TRUE,
-                    MUIA_NList_Title, FALSE,
+                    MUIA_NListtree_MultiSelect, MUIV_NListtree_MultiSelect_None,
+                    MUIA_NListtree_DoubleClick, MUIV_NListtree_DoubleClick_Tree,
+                    MUIA_NListtree_EmptyNodes, FALSE,
+                    MUIA_NListtree_AutoVisible, MUIV_NListtree_AutoVisible_Expand,
+                    MUIA_NListtree_Title, FALSE,
                 End,
+            End,
+            Child, HGroup,
+                Child, agentNewSessionButton = MUI_MakeObject(MUIO_Button, STRING_AGENT_NEW_SESSION,
+                    MUIA_CycleChain, TRUE,
+                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                TAG_DONE),
+                Child, agentDeleteSessionButton = MUI_MakeObject(MUIO_Button, STRING_AGENT_DELETE_SESSION,
+                    MUIA_CycleChain, TRUE,
+                    MUIA_InputMode, MUIV_InputMode_RelVerify,
+                TAG_DONE),
             End,
             Child, VGroup,
                 MUIA_Frame, MUIV_Frame_Group,
@@ -536,10 +711,6 @@ Object *createAgentPage(void) {
                 MUIA_CycleChain, TRUE,
                 MUIA_InputMode, MUIV_InputMode_RelVerify,
             TAG_DONE),
-            Child, agentNewSessionButton = MUI_MakeObject(MUIO_Button, STRING_AGENT_NEW_SESSION,
-                MUIA_CycleChain, TRUE,
-                MUIA_InputMode, MUIV_InputMode_RelVerify,
-            TAG_DONE),
         End,
         Child, VGroup,
             Child, HGroup, MUIA_VertWeight, 60,
@@ -570,7 +741,7 @@ Object *createAgentPage(void) {
 }
 
 void addAgentPageActions(void) {
-    if (agentProjectList == NULL)
+    if (agentSessionTree == NULL)
         return;
     createAgentEditorWindow();
     agentSetRequesterWindow(mainWindowObject);
@@ -581,8 +752,12 @@ void addAgentPageActions(void) {
     DoMethod(agentRemoveProjectButton, MUIM_Notify, MUIA_Pressed, FALSE,
              agentRemoveProjectButton, 2, MUIM_CallHook,
              &AgentRemoveProjectHook);
-    DoMethod(agentProjectList, MUIM_Notify, MUIA_NList_Active, MUIV_EveryTime,
-             agentProjectList, 2, MUIM_CallHook, &AgentProjectSelectedHook);
+    DoMethod(agentSessionTree, MUIM_Notify, MUIA_NListtree_Active,
+             MUIV_EveryTime, agentSessionTree, 2, MUIM_CallHook,
+             &AgentTreeSelectedHook);
+    DoMethod(agentDeleteSessionButton, MUIM_Notify, MUIA_Pressed, FALSE,
+             agentDeleteSessionButton, 2, MUIM_CallHook,
+             &AgentDeleteSessionHook);
     DoMethod(agentApprovalCycle, MUIM_Notify, MUIA_Cycle_Active,
              MUIV_EveryTime, agentApprovalCycle, 2, MUIM_CallHook,
              &AgentApprovalChangedHook);
@@ -609,9 +784,9 @@ void addAgentPageActions(void) {
 }
 
 void agentPageWindowOpened(void) {
-    if (agentProjectList == NULL)
+    if (agentSessionTree == NULL)
         return;
-    refreshProjectList();
+    refreshSessionTree();
     setAgentSendButtonLabel(FALSE);
     if (agentTranscriptLength == 0) {
         agentRenderSession(agentOutputReceived);

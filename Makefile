@@ -61,7 +61,7 @@ BUILD_DATE := $(shell date +%d.%m.%Y)
 # call made from a hook is not: libnix's malloc alone has 35 a4-relative
 # accesses, so free()/malloc() from a dispatcher reads heap state from a wrong
 # address. That is what caused the intermittent crashes on exit.
-CCFLAGS = -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-volatile-register-var -noixemul -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\" -DBUILD_DATE=\"$(BUILD_DATE)\"
+CCFLAGS = -MP -MMD -m68020 -Wextra -Wno-unused-function -Wno-discarded-qualifiers -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-volatile-register-var -noixemul -lamiga -lm -lamisslstubs -lmui -D__AMIGAOS3__ -DGIT_BRANCH=\"$(GIT_BRANCH)\" -DGIT_COMMIT=\"$(GIT_COMMIT)\" -DGIT_TIMESTAMP=\"$(GIT_TIMESTAMP)\" -DBUILD_DATE=\"$(BUILD_DATE)\"
 ifeq ($(DEBUG),1)
 	CCFLAGS += -DDEBUG -g -Og
 else

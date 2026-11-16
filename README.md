@@ -206,7 +206,11 @@ Commands run in the background without a keyboard, so the window stays responsiv
 
 The requester offers **Allow once**, **Always allow** and **Deny**. **Always allow** remembers the answer for the project: a Shell command is remembered by its command name (allowing `list` does not allow `delete`), an ARexx command by its port, and other tools by name.
 
-**Projects.** A project is a drawer. **Add project...** adds one and the list on the left switches between them. While a project is active, Shell commands start in its drawer and paths without a device name are relative to it. "(No project)" works anywhere, with full paths.
+**Projects.** A project is a drawer. **Add project...** adds one. While a project is active, Shell commands start in its drawer and paths without a device name are relative to it. "(No project)" works anywhere, with full paths.
+
+**Sessions.** Every session is saved, and the list on the left shows them grouped under the project they belong to, newest first, each named after its first prompt. Click a session to go back to it: its transcript comes back and its project becomes active, so you can carry on where you left off. Click a project to start a new session in it. A session belongs to one project, so switching project always starts a new session; the old one stays in the list. **New session** starts a fresh session in the current project and **Delete session** removes the selected one. Removing a project leaves its sessions in the list under "(No project)". A session is saved after every step, so a long task is not lost if the Amiga is reset part way through.
+
+There is no limit on the number of steps the agent takes for one task: it works until it has an answer, a request fails, or you press **Stop**.
 
 **Model and effort.** The agent uses the chat model of the active chat provider unless you type another model name into **Model**. **Effort** asks the model for low, medium or high reasoning effort; Default leaves the choice to the provider. Not every model accepts an effort setting.
 
@@ -220,6 +224,8 @@ The requester offers **Allow once**, **Always allow** and **Deny**. **Always all
 | --- | --- |
 | `/help` | Lists the commands |
 | `/new` | Starts a new session |
+| `/sessions` | Lists the saved sessions, newest first, with their numbers |
+| `/resume <number>` | Goes back to a saved session from `/sessions` |
 | `/projects`, `/project <name>` | Lists the projects, switches project (`none` for no project) |
 | `/approval ask\|readonly\|edits\|auto` | Sets the approval mode |
 | `/effort default\|low\|medium\|high` | Sets the reasoning effort |
@@ -250,7 +256,7 @@ Their tools appear to the agent as `mcp__<server>__<tool>`. Only servers reached
 
 **Where things live.** Global files are in `AMIGAGPT:agent/` (`AGENTS.md`, `mcp.json`, `skills/`, `commands/`, `agents/`). A project can add its own `AGENTS.md` in its drawer, and `skills/`, `commands/`, `agents/` and `mcp.json` in a `.agents` drawer inside it (`.claude` is read too). A project entry replaces a global one of the same name.
 
-The session is kept between runs until you start a new one. When a session grows very long its oldest turns are dropped.
+The current session is picked up again the next time AmigaGPT starts. When a session grows very long its oldest turns are dropped.
 
 ### Chat and Image Provider Settings
 
@@ -409,7 +415,7 @@ AGENT PJ=PROJECT/K,A=APPROVAL/K,N=NEW/S,P=PROMPT/F
 - `N=NEW` - Optional, start a new session first
 - `P=PROMPT` - Required, the task, or a slash command such as `/skills`
 
-The project and approval mode you give stay set afterwards. `RC` is 0 whenever the turn ran; if the provider reported an error, the error text is in `RESULT`.
+The project and approval mode you give stay set afterwards. Giving a different project than the active one starts a new session in it, as in the window. `RC` is 0 whenever the turn ran; if the provider reported an error, the error text is in `RESULT`.
 
 #### List Commands
 
@@ -523,7 +529,8 @@ Everything AmigaGPT keeps lives under the `AMIGAGPT:` assign, which the installe
 | `AMIGAGPT:image-history.json` | Every generated image |
 | `AMIGAGPT:images/` | The generated image files |
 | `AMIGAGPT:agent/settings.json` | The agent's approval mode, effort, model, projects and remembered approvals |
-| `AMIGAGPT:agent/session.json` | The agent's current session |
+| `AMIGAGPT:agent/sessions.json` | The list of saved agent sessions: title, project and dates |
+| `AMIGAGPT:agent/sessions/` | One file holding the history of each agent session |
 | `AMIGAGPT:agent/AGENTS.md` | Instructions given to the agent in every project |
 | `AMIGAGPT:agent/mcp.json` | The MCP servers available in every project |
 | `AMIGAGPT:agent/skills/`, `commands/`, `agents/` | Your skills, slash commands and subagents |
