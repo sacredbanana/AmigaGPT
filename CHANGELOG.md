@@ -10,6 +10,7 @@
 - Agent host_command tool: under Amiberry with the Host-Tools commands installed, the agent can run commands on the host computer for work that is impossible or impractical on the Amiga
 - Agent transcript shows the model's reasoning, tool calls, replies and errors each in their own style, with user messages bold and aligned as on the Chat tab. Reasoning, tool calls and errors are saved with the session and shown again when it is reopened
 - ARexx AGENT command runs an agent turn from a script, in the app and the daemon
+- Blank speech profile API keys auto import from matching chat provider profiles
 
 ## 3.4.0 (2026-10-08)
 

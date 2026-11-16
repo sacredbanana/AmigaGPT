@@ -200,6 +200,21 @@ static STRPTR copyString(CONST_STRPTR src) {
     return dst;
 }
 
+static BOOL cfgStringBlank(CONST_STRPTR s) {
+    return s == NULL || s[0] == '\0';
+}
+
+static CONST_STRPTR firstNonBlank(CONST_STRPTR a, CONST_STRPTR b,
+                                  CONST_STRPTR c) {
+    if (!cfgStringBlank(a))
+        return a;
+    if (!cfgStringBlank(b))
+        return b;
+    if (!cfgStringBlank(c))
+        return c;
+    return "";
+}
+
 #define LOCKED_PROFILE_NAME_OPENAI "OpenAI"
 #define LOCKED_PROFILE_NAME_GEMINI "Google Gemini"
 #define LOCKED_PROFILE_NAME_GROK "SpaceXAI Grok"
@@ -259,6 +274,54 @@ static void migrateLegacyProfileNamesInJson(STRPTR *profilesJsonString,
     }
 
     if (renamed) {
+        CONST_STRPTR updated = json_object_to_json_string(profiles);
+        freeString(profilesJsonString);
+        *profilesJsonString = copyString(updated);
+    }
+    json_object_put(profiles);
+}
+
+/**
+ * Fill a blank API key on the built-in OpenAI speech profile.
+ * Opening speech settings used to store "" for that profile, which then hid
+ * the chat key the image provider was still able to import.
+ * @param profilesJsonString the serialised speech profiles array
+ * @param key the key to store when the built-in profile's key is blank
+ */
+static void fillBlankOpenAiSpeechKeyInProfiles(STRPTR *profilesJsonString,
+                                               CONST_STRPTR key) {
+    if (profilesJsonString == NULL || *profilesJsonString == NULL ||
+        cfgStringBlank(key))
+        return;
+    struct json_object *profiles = json_tokener_parse(*profilesJsonString);
+    if (profiles == NULL)
+        return;
+    if (!json_object_is_type(profiles, json_type_array)) {
+        json_object_put(profiles);
+        return;
+    }
+
+    BOOL filled = FALSE;
+    int count = json_object_array_length(profiles);
+    for (int i = 0; i < count; i++) {
+        struct json_object *profile = json_object_array_get_idx(profiles, i);
+        struct json_object *nameObj =
+            profile ? json_object_object_get(profile, "name") : NULL;
+        CONST_STRPTR name = nameObj ? json_object_get_string(nameObj) : NULL;
+        if (name == NULL ||
+            strcmp(name, SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENAI]) != 0)
+            continue;
+        struct json_object *keyObj =
+            json_object_object_get(profile, "openAiApiKey");
+        CONST_STRPTR existing = keyObj ? json_object_get_string(keyObj) : NULL;
+        if (!cfgStringBlank(existing))
+            continue;
+        json_object_object_add(profile, "openAiApiKey",
+                               json_object_new_string(key));
+        filled = TRUE;
+    }
+
+    if (filled) {
         CONST_STRPTR updated = json_object_to_json_string(profiles);
         freeString(profilesJsonString);
         *profilesJsonString = copyString(updated);
@@ -2506,6 +2569,20 @@ static LONG loadConfig(struct AmigaGPTConfigData *data) {
                     data->grokImageApiKey = copyString(data->grokApiKey);
             }
         }
+
+        /* A stored "" is not an independent speech key. Image import only
+         * ran when openAiImageApiKey was missing, so an earlier speech
+         * settings save of "" left this blank after the chat key existed. */
+        if (cfgStringBlank(data->openAiSpeechApiKey)) {
+            CONST_STRPTR source =
+                firstNonBlank(data->openAiApiKey, data->openAiImageApiKey, NULL);
+            if (!cfgStringBlank(source)) {
+                freeString(&data->openAiSpeechApiKey);
+                data->openAiSpeechApiKey = copyString(source);
+            }
+        }
+        fillBlankOpenAiSpeechKeyInProfiles(&data->speechProfiles,
+                                           data->openAiSpeechApiKey);
     }
 
     /* Migration from old config format (schema v1 to v2) */
@@ -3005,7 +3082,9 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
     out->useSSL = TRUE;
     out->apiEndpointUrl = dupStrCfg("v1");
     out->authorizationType = AUTHORIZATION_TYPE_BEARER;
-    out->openAiApiKey = dupStrCfg(configGetOpenAiSpeechApiKey());
+    out->openAiApiKey = dupStrCfg(firstNonBlank(
+        configGetOpenAiSpeechApiKey(), configGetOpenAiApiKey(),
+        configGetOpenAiImageApiKey()));
     out->openAiTtsModelId = dupStrCfg(configGetOpenAITTSModelId());
     out->openAiTtsVoice = configGetOpenAITTSVoice();
     out->openAiVoiceInstructions =
@@ -3242,11 +3321,19 @@ void configGetSpeechRequestSettings(struct SpeechRequestSettings *out) {
 
         struct json_object *k = json_object_object_get(p, "openAiApiKey");
         if (k != NULL) {
-            if (out->openAiApiKey != NULL) {
-                FreeVec(out->openAiApiKey);
-                out->openAiApiKey = NULL;
+            CONST_STRPTR profileKey = json_object_get_string(k);
+            BOOL builtinOpenAi =
+                name != NULL &&
+                strcmp(name, SPEECH_SYSTEM_NAMES[SPEECH_SYSTEM_OPENAI]) == 0;
+            /* A blank key on the built-in OpenAI profile means it was never
+             * set. Keep the chat or image key already resolved above. */
+            if (!(builtinOpenAi && cfgStringBlank(profileKey))) {
+                if (out->openAiApiKey != NULL) {
+                    FreeVec(out->openAiApiKey);
+                    out->openAiApiKey = NULL;
+                }
+                out->openAiApiKey = dupStrCfg(profileKey);
             }
-            out->openAiApiKey = dupStrCfg(json_object_get_string(k));
         }
         struct json_object *mid =
             json_object_object_get(p, "openAITTSModelId");

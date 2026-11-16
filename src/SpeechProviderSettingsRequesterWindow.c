@@ -195,6 +195,7 @@ static CONST_STRPTR headerNameForAuthorizationType(AuthorizationType authType) {
     }
 }
 
+static CONST_STRPTR openAiSpeechKeyOrInherited(void);
 static void loadProfilesFromConfig(void);
 static void saveProfilesToConfig(void);
 static void populateProfileList(void);
@@ -1518,6 +1519,21 @@ HOOKPROTONHNONP(ElevenLabsVoiceSearchChangedFunc, void) {
 }
 MakeHook(ElevenLabsVoiceSearchChangedHook, ElevenLabsVoiceSearchChangedFunc);
 
+/* The built-in OpenAI speech profile has its own key. A blank one was never
+ * set on its own, so use the chat key, then the image key. */
+static CONST_STRPTR openAiSpeechKeyOrInherited(void) {
+    STRPTR key = configGetOpenAiSpeechApiKey();
+    if (key != NULL && key[0] != '\0')
+        return key;
+    key = configGetOpenAiApiKey();
+    if (key != NULL && key[0] != '\0')
+        return key;
+    key = configGetOpenAiImageApiKey();
+    if (key != NULL && key[0] != '\0')
+        return key;
+    return "";
+}
+
 static void loadProfilesFromConfig(void) {
     if (speechProfilesJson != NULL) {
         json_object_put(speechProfilesJson);
@@ -1565,6 +1581,16 @@ static void loadProfilesFromConfig(void) {
         }
         if (builtinSpeechProfilesJson[i] == NULL) {
             builtinSpeechProfilesJson[i] = createBuiltinProfileFromConfig(sys);
+        } else if (sys == SPEECH_SYSTEM_OPENAI) {
+            struct json_object *kObj = json_object_object_get(
+                builtinSpeechProfilesJson[i], "openAiApiKey");
+            CONST_STRPTR existing =
+                kObj ? json_object_get_string(kObj) : NULL;
+            if (existing == NULL || existing[0] == '\0') {
+                json_object_object_add(
+                    builtinSpeechProfilesJson[i], "openAiApiKey",
+                    json_object_new_string(openAiSpeechKeyOrInherited()));
+            }
         }
     }
 }
@@ -2082,6 +2108,9 @@ static void loadProfileIntoUI(LONG activeIndex) {
             if (kObj != NULL)
                 key = (STRPTR)json_object_get_string(kObj);
         }
+        if ((key == NULL || key[0] == '\0') &&
+            isBuiltinListIndex(activeIndex) && sys == SPEECH_SYSTEM_OPENAI)
+            key = (STRPTR)openAiSpeechKeyOrInherited();
         set(openAiApiKeyString, MUIA_String_Contents, key ? key : "");
     }
     if (openAiTtsModelList != NULL) {
@@ -2479,9 +2508,7 @@ static struct json_object *createBuiltinProfileFromConfig(SpeechSystem sys) {
                                json_object_new_string("v1"));
         json_object_object_add(
             p, "openAiApiKey",
-            json_object_new_string(configGetOpenAiSpeechApiKey()
-                                       ? configGetOpenAiSpeechApiKey()
-                                       : ""));
+            json_object_new_string(openAiSpeechKeyOrInherited()));
         {
             STRPTR mid = configGetOpenAITTSModelId();
             json_object_object_add(
