@@ -2437,6 +2437,25 @@ msgid "There is no saved session with that number. Use /sessions to list them."
 msgstr ""
 "Shranjena seja s to številko ne obstaja. Vnesite /sessions za seznam sej."
 
+#: src/MainWindow.c
+msgctxt "STRING_PRINTING (458//)"
+msgid "Printing the conversation..."
+msgstr "Tiskanje pogovora..."
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_PRINTER_OPEN (459//)"
+msgid ""
+"Could not print the conversation. Check that the printer is connected and "
+"turned on."
+msgstr ""
+"Pogovora ni bilo mogoče natisniti. Preverite, ali je tiskalnik priključen in "
+"vklopljen."
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_PRINT_MEMORY (460//)"
+msgid "Not enough memory to print the conversation"
+msgstr "Ni dovolj pomnilnika za tiskanje pogovora"
+
 #~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
 #~ msgid "Add project..."
 #~ msgstr "Dodaj projekt..."

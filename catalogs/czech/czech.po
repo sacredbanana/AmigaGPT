@@ -2430,6 +2430,25 @@ msgstr ""
 "Uložená relace s tímto číslem neexistuje. Napište /sessions pro jejich "
 "seznam."
 
+#: src/MainWindow.c
+msgctxt "STRING_PRINTING (458//)"
+msgid "Printing the conversation..."
+msgstr "Tisk konverzace..."
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_PRINTER_OPEN (459//)"
+msgid ""
+"Could not print the conversation. Check that the printer is connected and "
+"turned on."
+msgstr ""
+"Konverzaci nelze vytisknout. Zkontrolujte, zda je tiskárna připojena a "
+"zapnuta."
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_PRINT_MEMORY (460//)"
+msgid "Not enough memory to print the conversation"
+msgstr "Nedostatek paměti pro tisk konverzace"
+
 #~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
 #~ msgid "Add project..."
 #~ msgstr "Přidat projekt..."

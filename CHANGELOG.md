@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 4.0.0
 
 - Agent tab: the model works on a task with tools until it is done. Tools for AmigaDOS Shell commands, reading, writing, editing, listing and searching files, file type identification, reading web pages, downloading files, generating pictures, ARexx ports and commands, skills, subagents and remote MCP servers
 - Agent approval modes (Ask before changes, Read only, Accept file edits, Full auto) with Allow once / Always allow / Deny requesters and per-project remembered approvals
@@ -23,6 +23,9 @@
 - Emoji and other characters pasted into the Chat and Agent prompts are sent as they are. Copying from a text field puts the text on the clipboard both in the system character set and as UTF-8, and pasting prefers the UTF-8 version
 - Chat and Agent no longer tell the model to avoid emoji and characters outside the Amiga character set in its replies, since the conversation now shows them. The agent is still told to write files in ISO 8859-1 so other Amiga programs can read them, and AmigaGPTD keeps the old instruction because its replies go to ARexx in the system character set
 - BestTextEditor.mcc keeps its text as UTF-8 and talks the system character set to programs by default, like TextEditor.mcc, or UTF-8 with the new MUIA_BestTextEditor_UTF8 attribute
+- Running ARexx scripts from within AmigaGPT now properly inherits your shell PATH
+- The Print and "Open Documentation" menu items are now asynchronous so no longer halt AmigaGPT when you use them
+
 
 ## 3.4.0 (2026-10-08)
 

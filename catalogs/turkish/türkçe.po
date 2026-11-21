@@ -2418,6 +2418,23 @@ msgctxt "STRING_AGENT_NO_SUCH_SESSION (457//)"
 msgid "There is no saved session with that number. Use /sessions to list them."
 msgstr "Bu numarada kayıtlı bir oturum yok. Listelemek için /sessions yazın."
 
+#: src/MainWindow.c
+msgctxt "STRING_PRINTING (458//)"
+msgid "Printing the conversation..."
+msgstr "Konuşma yazdırılıyor..."
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_PRINTER_OPEN (459//)"
+msgid ""
+"Could not print the conversation. Check that the printer is connected and "
+"turned on."
+msgstr "Konuşma yazdırılamadı. Yazıcının bağlı ve açık olduğundan emin olun."
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_PRINT_MEMORY (460//)"
+msgid "Not enough memory to print the conversation"
+msgstr "Konuşmayı yazdırmak için yeterli bellek yok"
+
 #~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
 #~ msgid "Add project..."
 #~ msgstr "Proje ekle..."

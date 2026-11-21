@@ -2442,6 +2442,24 @@ msgstr ""
 "Сохранённой сессии с таким номером нет. Введите /sessions, чтобы увидеть их "
 "список."
 
+#: src/MainWindow.c
+msgctxt "STRING_PRINTING (458//)"
+msgid "Printing the conversation..."
+msgstr "Печать беседы..."
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_PRINTER_OPEN (459//)"
+msgid ""
+"Could not print the conversation. Check that the printer is connected and "
+"turned on."
+msgstr ""
+"Не удалось напечатать беседу. Убедитесь, что принтер подключён и включён."
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_PRINT_MEMORY (460//)"
+msgid "Not enough memory to print the conversation"
+msgstr "Недостаточно памяти для печати беседы"
+
 #~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
 #~ msgid "Add project..."
 #~ msgstr "Добавить проект..."

@@ -85,10 +85,27 @@ void freeMainWindowFileState();
 void displayConversation(struct Conversation *conversation);
 
 /**
- * Print the conversation text to the printer
- * @return RETURN_OK on success, RETURN_ERROR on failure
+ * Print the conversation text to the printer. The printing itself runs in a
+ * separate process; this returns as soon as it has been started.
+ * @return RETURN_OK when printing has started, RETURN_ERROR otherwise
  **/
 LONG printConversation();
+
+/**
+ * The signal mask the main loop waits on for the print job to finish
+ * @return the signal mask, or 0 when nothing is printing
+ **/
+ULONG printJobSignalMask(void);
+
+/**
+ * Report and clean up the print job once its process has finished
+ **/
+void servicePrintJob(void);
+
+/**
+ * Wait for a running print job to finish, before the program exits
+ **/
+void waitForPrintJob(void);
 
 /**
  * Shows the loading bar and starts the busy meter animating

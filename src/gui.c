@@ -321,14 +321,23 @@ void startGUIRunLoop() {
         hideLoadingBar();
         speechServicePlayback();
         updatePlayButton();
+        /* Printing runs in its own process so it does not hold up the
+         * window; clean up once it has finished */
+        servicePrintJob();
 #endif
-        {
+        /* MUIM_Application_NewInput leaves signals at 0 when it has more
+         * input to process (for example straight after returning a ReturnID)
+         * and must be called again at once. Only sleep when MUI asks for it:
+         * adding the speech or print signals to a zero mask would make the
+         * loop sleep until audio or the print job next signals, leaving the
+         * window dead until then. */
+        if (running && signals) {
             ULONG waitMask = signals;
 #ifndef DAEMON
             waitMask |= speechPlaybackSignalMask();
+            waitMask |= printJobSignalMask();
 #endif
-            if (running && waitMask)
-                signals = Wait(waitMask | SIGBREAKF_CTRL_C);
+            signals = Wait(waitMask | SIGBREAKF_CTRL_C);
         }
         if (signals & SIGBREAKF_CTRL_C)
             running = FALSE;
@@ -1277,6 +1286,11 @@ STRPTR utf8ToLatin1(UTF8 *src) {
  **/
 void shutdownGUI() {
     agentShutdown();
+#ifndef DAEMON
+    /* The print process runs code from this program, so it has to finish
+     * before the program exits */
+    waitForPrintJob();
+#endif
     if (app) {
         DoMethod(app, MUIM_Application_Save, MUIV_Application_Save_ENVARC);
 

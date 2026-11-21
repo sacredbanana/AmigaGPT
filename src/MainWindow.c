@@ -4483,62 +4483,225 @@ static LONG loadSpeechHistory() {
     return RETURN_OK;
 }
 
+/* Printing runs in its own process so a slow (or switched off) printer does
+ * not freeze the main window. The main process builds the whole text up
+ * front, so the print process never touches the conversation, which may be
+ * changed or freed while it prints. Only one print job runs at a time. */
+static STRPTR printJobText = NULL;
+static ULONG printJobLength = 0;
+static struct Task *printJobOwner = NULL;
+static BYTE printJobDoneSignal = -1;
+static BOOL printJobPending = FALSE;
+static volatile BOOL printJobFinished = FALSE;
+static volatile BOOL printJobSucceeded = FALSE;
+
 /**
- * Print the conversation text to the printer
- * @return RETURN_OK on success, RETURN_ERROR on failure
+ * Append text to the print buffer, growing it as needed
+ * @param buffer the buffer, reallocated when it is too small
+ * @param length the number of bytes used in the buffer
+ * @param capacity the size of the buffer
+ * @param text the text to append
+ * @return TRUE on success, FALSE when out of memory
  **/
-LONG printConversation() {
+static BOOL appendPrintText(STRPTR *buffer, ULONG *length, ULONG *capacity,
+                            CONST_STRPTR text) {
+    ULONG textLength = strlen(text);
+
+    if (*length + textLength + 1 > *capacity) {
+        ULONG newCapacity = *capacity ? *capacity : 4096;
+        STRPTR newBuffer;
+
+        while (*length + textLength + 1 > newCapacity)
+            newCapacity *= 2;
+        newBuffer = AllocVec(newCapacity, MEMF_ANY);
+        if (newBuffer == NULL)
+            return FALSE;
+        if (*buffer != NULL) {
+            memcpy(newBuffer, *buffer, *length);
+            FreeVec(*buffer);
+        }
+        *buffer = newBuffer;
+        *capacity = newCapacity;
+    }
+
+    memcpy(*buffer + *length, text, textLength);
+    *length += textLength;
+    (*buffer)[*length] = '\0';
+    return TRUE;
+}
+
+/**
+ * Append a conversation message converted to the system codeset
+ * @return TRUE on success, FALSE when out of memory
+ **/
+static BOOL appendPrintMessage(STRPTR *buffer, ULONG *length, ULONG *capacity,
+                               UTF8 *content) {
+    BOOL appended;
+    STRPTR converted = CodesetsUTF8ToStr(
+        CSA_DestCodeset, (Tag)systemCodeset, CSA_Source, (Tag)content,
+        CSA_MapForeignChars, TRUE, TAG_DONE);
+
+    if (converted == NULL)
+        return appendPrintText(buffer, length, capacity, content);
+    appended = appendPrintText(buffer, length, capacity, converted);
+    CodesetsFreeA(converted, NULL);
+    return appended;
+}
+
+/**
+ * Entry point of the print process: writes the prepared text to PRT:
+ **/
+static void printConversationProcess(void) {
     BPTR printerFile;
-    LONG result = RETURN_ERROR;
+    BOOL succeeded = FALSE;
 
     printerFile = Open("PRT:", MODE_NEWFILE);
     if (printerFile) {
-        STRPTR printerText =
-            AllocVec(strlen(READ_BUFFER_LENGTH) + 1, MEMF_ANY | MEMF_CLEAR);
-        struct ConversationNode *conversationNode;
-
-        for (conversationNode = (struct ConversationNode *)
-                                    currentConversation->messages->mlh_Head;
-             conversationNode->node.mln_Succ != NULL;
-             conversationNode =
-                 (struct ConversationNode *)conversationNode->node.mln_Succ) {
-            UTF8 *content = conversationNode->content;
-            if (strcmp(conversationNode->role, "user") == 0) {
-                Write(printerFile, "*******************\n", -1);
-                Write(printerFile, "User:\n\n", -1);
-
-                STRPTR convertedConversationString = CodesetsUTF8ToStr(
-                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                    (Tag)content, CSA_MapForeignChars, TRUE, TAG_DONE);
-                if (convertedConversationString != NULL) {
-                    Write(printerFile, convertedConversationString, -1);
-                    CodesetsFreeA(convertedConversationString, NULL);
-                } else {
-                    Write(printerFile, content, -1);
-                }
-            } else if (strcmp(conversationNode->role, "assistant") == 0) {
-                Write(printerFile, "\n\n", -1);
-                Write(printerFile, "*******************\n", -1);
-                Write(printerFile, "AmigaGPT:\n\n", -1);
-
-                STRPTR convertedConversationString = CodesetsUTF8ToStr(
-                    CSA_DestCodeset, (Tag)systemCodeset, CSA_Source,
-                    (Tag)content, CSA_MapForeignChars, TRUE, TAG_DONE);
-                if (convertedConversationString != NULL) {
-                    Write(printerFile, convertedConversationString, -1);
-                    CodesetsFreeA(convertedConversationString, NULL);
-                } else {
-                    Write(printerFile, content, -1);
-                }
-
-                Write(printerFile, "\n\n", -1);
-            }
-        }
-
-        FreeVec(printerText);
+        /* A short write is not reported: printer.device shows its own
+         * requester for printer trouble, and a print-to-file driver ends the
+         * write early when its file requester is cancelled */
+        succeeded = TRUE;
+        Write(printerFile, printJobText, printJobLength);
         Close(printerFile);
-        result = RETURN_OK;
     }
 
+    printJobSucceeded = succeeded;
+    printJobFinished = TRUE;
+    /* Stay in Forbid() until the process has ended, so the main process
+     * cannot unload this code while the last instructions still run. The
+     * Forbid() is dropped when the process exits. */
+    Forbid();
+    Signal(printJobOwner, 1UL << printJobDoneSignal);
+}
+
+/**
+ * Release everything the print job used once its process has finished
+ **/
+static void releasePrintJob(void) {
+    if (printJobText != NULL) {
+        FreeVec(printJobText);
+        printJobText = NULL;
+    }
+    printJobLength = 0;
+    if (printJobDoneSignal >= 0) {
+        FreeSignal(printJobDoneSignal);
+        printJobDoneSignal = -1;
+    }
+    printJobOwner = NULL;
+    printJobPending = FALSE;
+    printJobFinished = FALSE;
+}
+
+/**
+ * The signal mask the main loop waits on for the print job to finish
+ * @return the signal mask, or 0 when nothing is printing
+ **/
+ULONG printJobSignalMask(void) {
+    return printJobPending ? 1UL << printJobDoneSignal : 0;
+}
+
+/**
+ * Report and clean up the print job once its process has finished. Call this
+ * from the main loop; it does nothing while the job is still printing.
+ **/
+void servicePrintJob(void) {
+    BOOL succeeded;
+
+    if (!printJobPending || !printJobFinished)
+        return;
+
+    succeeded = printJobSucceeded;
+    releasePrintJob();
+    if (succeeded)
+        updateStatusBar(STRING_READY, greenPen);
+    else
+        displayError(STRING_ERROR_PRINTER_OPEN);
+}
+
+/**
+ * Wait for a running print job to finish. Called on exit, because the print
+ * process runs code from this program.
+ **/
+void waitForPrintJob(void) {
+    if (!printJobPending)
+        return;
+
+    while (!printJobFinished)
+        Wait(1UL << printJobDoneSignal);
+    releasePrintJob();
+}
+
+/**
+ * Print the conversation text to the printer. The printing itself runs in a
+ * separate process; this returns as soon as it has been started.
+ * @return RETURN_OK when printing has started, RETURN_ERROR otherwise
+ **/
+LONG printConversation() {
+    struct ConversationNode *conversationNode;
+    STRPTR text = NULL;
+    ULONG length = 0;
+    ULONG capacity = 0;
+    BOOL ok = TRUE;
+
+    if (printJobPending) {
+        updateStatusBar(STRING_PRINTING, yellowPen);
+        return RETURN_ERROR;
+    }
+
+    if (currentConversation == NULL || currentConversation->messages == NULL)
+        return RETURN_ERROR;
+
+    for (conversationNode =
+             (struct ConversationNode *)currentConversation->messages->mlh_Head;
+         ok && conversationNode->node.mln_Succ != NULL;
+         conversationNode =
+             (struct ConversationNode *)conversationNode->node.mln_Succ) {
+        UTF8 *content = conversationNode->content;
+        if (content == NULL)
+            continue;
+        if (strcmp(conversationNode->role, "user") == 0) {
+            ok = appendPrintText(&text, &length, &capacity,
+                                 "*******************\nUser:\n\n") &&
+                 appendPrintMessage(&text, &length, &capacity, content);
+        } else if (strcmp(conversationNode->role, "assistant") == 0) {
+            ok = appendPrintText(&text, &length, &capacity,
+                                 "\n\n*******************\nAmigaGPT:\n\n") &&
+                 appendPrintMessage(&text, &length, &capacity, content) &&
+                 appendPrintText(&text, &length, &capacity, "\n\n");
+        }
+    }
+
+    if (!ok) {
+        if (text != NULL)
+            FreeVec(text);
+        displayError(STRING_ERROR_PRINT_MEMORY);
+        return RETURN_ERROR;
+    }
+    if (text == NULL)
+        return RETURN_OK;
+
+    printJobDoneSignal = AllocSignal(-1);
+    if (printJobDoneSignal < 0) {
+        FreeVec(text);
+        displayError(STRING_ERROR_PRINTER_OPEN);
+        return RETURN_ERROR;
+    }
+
+    printJobText = text;
+    printJobLength = length;
+    printJobOwner = FindTask(NULL);
+    printJobFinished = FALSE;
+    printJobSucceeded = FALSE;
+    printJobPending = TRUE;
+
+    if (CreateNewProcTags(NP_Entry, printConversationProcess, NP_Name,
+                          "AmigaGPT print", NP_StackSize, 8192,
+                          TAG_DONE) == NULL) {
+        releasePrintJob();
+        displayError(STRING_ERROR_PRINTER_OPEN);
+        return RETURN_ERROR;
+    }
+
+    updateStatusBar(STRING_PRINTING, yellowPen);
     return RETURN_OK;
 }

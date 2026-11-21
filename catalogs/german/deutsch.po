@@ -2479,6 +2479,25 @@ msgstr ""
 "Es gibt keine gespeicherte Sitzung mit dieser Nummer. Geben Sie /sessions "
 "ein, um sie aufzulisten."
 
+#: src/MainWindow.c
+msgctxt "STRING_PRINTING (458//)"
+msgid "Printing the conversation..."
+msgstr "Konversation wird gedruckt..."
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_PRINTER_OPEN (459//)"
+msgid ""
+"Could not print the conversation. Check that the printer is connected and "
+"turned on."
+msgstr ""
+"Die Konversation konnte nicht gedruckt werden. Prüfen Sie, ob der Drucker "
+"angeschlossen und eingeschaltet ist."
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_PRINT_MEMORY (460//)"
+msgid "Not enough memory to print the conversation"
+msgstr "Nicht genügend Speicher zum Drucken der Konversation"
+
 #~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
 #~ msgid "Add project..."
 #~ msgstr "Projekt hinzufügen..."

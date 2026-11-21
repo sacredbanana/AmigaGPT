@@ -247,30 +247,19 @@ HOOKPROTONHNONP(EditSelectAllFunc, void) {
 MakeHook(EditSelectAllHook, EditSelectAllFunc);
 
 HOOKPROTONHNONP(OpenDocumentationMenuItemClickedFunc, void) {
-    CONST_STRPTR guidePath = "AMIGAGPT:AmigaGPT.guide";
+    static CONST_STRPTR guidePath = "AMIGAGPT:AmigaGPT.guide";
     BPTR file = Open(guidePath, MODE_OLDFILE);
-    if (file == NULL) {
+    if (!file) {
         displayError(STRING_ERROR_DOCUMENTATION_OPEN);
         return;
     }
     Close(file);
 
-    struct Screen *screen;
-    get(mainWindowObject, MUIA_Window_Screen, &screen);
-
-    struct NewAmigaGuide guide = {
-        .nag_Name = guidePath,
-        .nag_Screen = screen,
-        .nag_PubScreen = NULL,
-        .nag_BaseName = STRING_APP_NAME,
-        .nag_Extens = NULL,
-    };
-    AMIGAGUIDECONTEXT handle;
-    if (handle = OpenAmigaGuide(&guide, NULL)) {
-        CloseAmigaGuide(handle);
-    } else {
-        displayError(STRING_ERROR_DOCUMENTATION_OPEN);
-    }
+    /* MUI shows the guide asynchronously: the application only sleeps until
+     * the guide is on screen, then keeps working while it stays open. MUI
+     * also closes the guide when the application is disposed. */
+    DoMethod(app, MUIM_Application_ShowHelp, mainWindowObject, guidePath,
+             "Main", 0);
 }
 MakeHook(OpenDocumentationMenuItemClickedHook,
          OpenDocumentationMenuItemClickedFunc);

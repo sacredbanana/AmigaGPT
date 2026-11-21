@@ -2440,6 +2440,25 @@ msgstr ""
 "Det finns ingen sparad session med det numret. Skriv /sessions för att se "
 "dem."
 
+#: src/MainWindow.c
+msgctxt "STRING_PRINTING (458//)"
+msgid "Printing the conversation..."
+msgstr "Skriver ut konversationen..."
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_PRINTER_OPEN (459//)"
+msgid ""
+"Could not print the conversation. Check that the printer is connected and "
+"turned on."
+msgstr ""
+"Det gick inte att skriva ut konversationen. Kontrollera att skrivaren är "
+"ansluten och påslagen."
+
+#: src/MainWindow.c
+msgctxt "STRING_ERROR_PRINT_MEMORY (460//)"
+msgid "Not enough memory to print the conversation"
+msgstr "Inte tillräckligt med minne för att skriva ut konversationen"
+
 #~ msgctxt "STRING_AGENT_ADD_PROJECT (419//)"
 #~ msgid "Add project..."
 #~ msgstr "Lägg till projekt..."
