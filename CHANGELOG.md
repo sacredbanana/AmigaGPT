@@ -25,6 +25,7 @@
 - BestTextEditor.mcc keeps its text as UTF-8 and talks the system character set to programs by default, like TextEditor.mcc, or UTF-8 with the new MUIA_BestTextEditor_UTF8 attribute
 - Running ARexx scripts from within AmigaGPT now properly inherits your shell PATH
 - The Print and "Open Documentation" menu items are now asynchronous so no longer halt AmigaGPT when you use them
+- The Help key opens the documentation at the topic for the part of the window under the mouse pointer
 
 
 ## 3.4.0 (2026-10-08)

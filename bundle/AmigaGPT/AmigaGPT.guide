@@ -290,6 +290,8 @@ Before you can chat you need to give AmigaGPT an API key for the provider you wa
 @node usage "Using AmigaGPT"
 @{b}@{fg shine}Using AmigaGPT@{fg text}@{ub}
 
+Press the @{b}Help@{ub} key in any AmigaGPT window to open this guide at the topic for the part of the window under the mouse pointer.
+
 @{i}Click on a topic to learn about it:@{ui}
 
   @{"The main window                          " link mainwindow}

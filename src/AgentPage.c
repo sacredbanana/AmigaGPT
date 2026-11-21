@@ -729,6 +729,7 @@ static void createAgentEditorWindow(void) {
     agentEditorWindow = WindowObject,
         MUIA_Window_Title, STRING_AGENT_INSTRUCTIONS,
         MUIA_Window_ID, MAKE_ID('A', 'G', 'E', 'D'),
+        MUIA_HelpNode, "agent",
         MUIA_Window_CloseGadget, TRUE,
         MUIA_Window_SizeGadget, TRUE,
         MUIA_Window_DepthGadget, TRUE,

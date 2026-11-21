@@ -37,6 +37,7 @@ LONG createAPIKeyRequesterWindow() {
     // clang-format off
     if ((apiKeyRequesterWindowObject = WindowObject,
             MUIA_Window_Title, STRING_API_KEY_REQUESTER_TITLE,
+            MUIA_HelpNode, "apikey",
             MUIA_Window_Width, 800,
             MUIA_Window_Height, 200,
             MUIA_Window_CloseGadget, FALSE,

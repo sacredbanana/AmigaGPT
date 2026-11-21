@@ -197,6 +197,9 @@ LONG initVideo() {
           MUIA_Application_Version, "$VER: AmigaGPT " APP_VERSION " (" BUILD_DATE ")",
           MUIA_Application_UsedClasses, USED_CLASSES,
           MUIA_Application_HelpFile, "AMIGAGPT:AmigaGPT.guide",
+          /* The Help key opens the node of the object under the pointer,
+           * falling back through its groups and window to this one */
+          MUIA_HelpNode, "Main",
           MUIA_Application_SingleTask, TRUE,
           MUIA_Application_Commands, arexxList,
           MUIA_Application_UseRexx, TRUE,
@@ -207,6 +210,7 @@ LONG initVideo() {
           SubWindow, imageWindowObject = WindowObject,
               MUIA_Window_Title, STRING_IMAGE,
               MUIA_Window_ID, OBJECT_ID_IMAGE_WINDOW,
+              MUIA_HelpNode, "images",
               MUIA_Window_Width, 320,
               MUIA_Window_Height, 240,
               MUIA_Window_CloseGadget, TRUE,

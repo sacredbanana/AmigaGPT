@@ -65,6 +65,7 @@ LONG createProxySettingsRequesterWindow() {
     // clang-format off
     if ((proxySettingsRequesterWindowObject = WindowObject,
 			MUIA_Window_Title, STRING_PROXY_SETTINGS,
+			MUIA_HelpNode, "proxy",
 			MUIA_Window_Width, 400,
 			MUIA_Window_Height, 200,
             MUIA_Window_CloseGadget, FALSE,

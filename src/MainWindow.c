@@ -2612,6 +2612,7 @@ LONG createMainWindow() {
     Object *agentPage = createAgentPage();
     if (agentPage == NULL)
         agentPage = HVSpace;
+    set(agentPage, MUIA_HelpNode, "agent");
 
     haveAudioPlayer = FALSE;
     speechWaveform = MUI_NewObject(
@@ -2636,6 +2637,7 @@ LONG createMainWindow() {
     if ((mainWindowObject = WindowObject,
             MUIA_Window_Title, STRING_APP_NAME,
             MUIA_Window_ID, OBJECT_ID_MAIN_WINDOW,
+            MUIA_HelpNode, "mainwindow",
             MUIA_Window_CloseGadget, TRUE,
             MUIA_Window_SizeGadget, TRUE,
             MUIA_Window_DepthGadget, TRUE,
@@ -2651,7 +2653,7 @@ LONG createMainWindow() {
             MUIA_Window_UseLeftBorderScroller, FALSE,
             WindowContents, VGroup,
                 Child, modeRegisterGroup = RegisterGroup(pages),
-                    Child, HGroup,
+                    Child, HGroup, MUIA_HelpNode, "chatting",
                         Child, VGroup, MUIA_Weight, 30,
                             // New chat button
                             Child, newChatButton = MUI_MakeObject(MUIO_Button, STRING_NEW_CHAT,
@@ -2668,6 +2670,7 @@ LONG createMainWindow() {
                             Child, NListviewObject,
                                 MUIA_CycleChain, 1,
                                 MUIA_NListview_NList, conversationListObject = NListObject,
+                                    MUIA_HelpNode, "conlist",
                                     MUIA_ContextMenu, NULL,
                                     MUIA_NList_DefaultObjectOnClick, TRUE,
                                     MUIA_NList_MultiSelect, MUIV_NList_MultiSelect_None,
@@ -2721,7 +2724,7 @@ LONG createMainWindow() {
                             End,
                         End,
                     End,
-                    Child, HGroup,
+                    Child, HGroup, MUIA_HelpNode, "images",
                         GroupFrame,
                         Child, VGroup,
                             // New image button
@@ -2806,7 +2809,7 @@ LONG createMainWindow() {
                             End,
                         End,
                     End,
-                    Child, HGroup,
+                    Child, HGroup, MUIA_HelpNode, "speech",
                         GroupFrame,
                         Child, VGroup, MUIA_Weight, 30,
                             Child, newSpeechButton = MUI_MakeObject(MUIO_Button, STRING_NEW_PHRASE,
