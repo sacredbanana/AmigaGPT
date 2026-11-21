@@ -143,3 +143,28 @@ msgstr "Automatische Textfarbe"
 msgctxt "MCP_TEXT_COLOR (25//)"
 msgid "Text color"
 msgstr "Textfarbe"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_GROUP_EDITOR (26//)"
+msgid "Editor"
+msgstr "Editor"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_EDITABLE (27//)"
+msgid "Editable"
+msgstr "Bearbeitbar"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_READ_ONLY (28//)"
+msgid "Read only"
+msgstr "Schreibgeschützt"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_PEN (29//)"
+msgid "Text"
+msgstr "Text"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_PEN_HELP (30//)"
+msgid "MUI's text pen is changed to black or white where it would be hard to read on the background. Any other color is used as chosen."
+msgstr "Die MUI-Textfarbe wird zu Schwarz oder Weiß geändert, wo sie auf dem Hintergrund schwer lesbar wäre. Jede andere Farbe wird wie gewählt verwendet."

@@ -144,3 +144,28 @@ msgstr "Автоматический цвет текста"
 msgctxt "MCP_TEXT_COLOR (25//)"
 msgid "Text color"
 msgstr "Цвет текста"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_GROUP_EDITOR (26//)"
+msgid "Editor"
+msgstr "Редактор"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_EDITABLE (27//)"
+msgid "Editable"
+msgstr "Редактируемые"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_READ_ONLY (28//)"
+msgid "Read only"
+msgstr "Только для чтения"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_PEN (29//)"
+msgid "Text"
+msgstr "Текст"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_PEN_HELP (30//)"
+msgid "MUI's text pen is changed to black or white where it would be hard to read on the background. Any other color is used as chosen."
+msgstr "Цвет текста MUI заменяется на чёрный или белый там, где его было бы трудно читать на фоне. Любой другой цвет используется так, как выбран."

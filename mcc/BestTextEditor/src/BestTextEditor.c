@@ -900,6 +900,12 @@ static IPTR mNew(struct IClass *cl, Object *obj, struct opSet *msg) {
     memset(data, 0, sizeof(*data));
     data->obj = obj;
     data->appFont = FindTagItem(MUIA_Font, msg->ops_AttrList) != NULL;
+    data->appBackground =
+        FindTagItem(MUIA_Background, msg->ops_AttrList) != NULL;
+    data->readOnlyLook = readOnly;
+    /* MUI was given the same background as a MUII_ number above */
+    strcpy(data->bgSpec[0], readOnly ? BTE_DEFAULT_READ_BACK
+                                     : BTE_DEFAULT_EDIT_BACK);
     data->cfgAutoColors = BTE_DEFAULT_AUTOCOLORS;
     data->autoClip = TRUE;
     data->convertTabs = TRUE;
@@ -946,6 +952,10 @@ static IPTR mDispose(struct IClass *cl, Object *obj, Msg msg) {
 }
 
 static IPTR mSet(struct IClass *cl, Object *obj, struct opSet *msg) {
+    if (FindTagItem(MUIA_Background, msg->ops_AttrList) != NULL) {
+        struct RTEData *data = INST_DATA(cl, obj);
+        data->appBackground = TRUE;
+    }
     rteSetAttrs(cl, obj, msg->ops_AttrList, FALSE);
     return DoSuperMethodA(cl, obj, (Msg)msg);
 }
@@ -1155,11 +1165,46 @@ static IPTR mGet(struct IClass *cl, Object *obj, struct opGet *msg) {
     return DoSuperMethodA(cl, obj, (Msg)msg);
 }
 
+/**
+ * Gives the object the background chosen in the preferences for editable or
+ * read only editors, unless the application set one itself. Area class
+ * swaps the image at once when the object is already set up.
+ */
+static void rteApplyBackground(struct IClass *cl, Object *obj,
+                               struct RTEData *data) {
+    CONST_STRPTR spec;
+    char *next;
+    struct TagItem tags[2];
+    struct opSet setMsg;
+
+    if (data->appBackground)
+        return;
+    spec = rteConfigBackground(data, obj);
+    if (strcmp((const char *)spec, data->bgSpec[data->bgSpecIdx]) == 0)
+        return;
+    /* MUI stores the spec pointer instead of copying the string, so the
+     * buffer it holds now is left alone */
+    next = data->bgSpec[data->bgSpecIdx ^ 1];
+    strncpy(next, (const char *)spec, BTE_IMAGE_SPEC_LENGTH - 1);
+    next[BTE_IMAGE_SPEC_LENGTH - 1] = '\0';
+    data->bgSpecIdx ^= 1;
+
+    tags[0].ti_Tag = MUIA_Background;
+    tags[0].ti_Data = (IPTR)next;
+    tags[1].ti_Tag = TAG_DONE;
+    tags[1].ti_Data = 0;
+    setMsg.MethodID = OM_SET;
+    setMsg.ops_AttrList = tags;
+    setMsg.ops_GInfo = NULL;
+    DoSuperMethodA(cl, obj, (Msg)&setMsg);
+}
+
 static IPTR mSetup(struct IClass *cl, Object *obj, Msg msg) {
     struct RTEData *data = INST_DATA(cl, obj);
     if (!DoSuperMethodA(cl, obj, msg))
         return FALSE;
     rteReadConfig(data, obj);
+    rteApplyBackground(cl, obj, data);
     rteSetupFonts(data, obj);
     rteObtainPens(data, obj);
     /* the emoji index is loaded once, by the first object set up */
@@ -1217,6 +1262,7 @@ static IPTR mUpdateConfig(struct IClass *cl, Object *obj,
         /* Images keep their own colours, so they stay loaded */
         rteReleasePens(data, obj);
         rteReadConfig(data, obj);
+        rteApplyBackground(cl, obj, data);
         rteSetupFonts(data, obj);
         rteObtainPens(data, obj);
         rteFreeDoubleBuffer(data);

@@ -56,9 +56,12 @@
  *   ESC [M:0]    stop rendering the following lines as Markdown
  *
  * Appearance
- *   Fonts, accent colours and the eight bubble styles can be set by the user
- *   on the BestTextEditor page of MUI preferences (BestTextEditor.mcp).
- *   Attributes given by the application (MUIA_Font,
+ *   Fonts, the background and text colour of editable and of read only
+ *   editors, accent colours and the eight bubble styles can be set by the
+ *   user on the BestTextEditor page of MUI preferences (BestTextEditor.mcp).
+ *   Whether an object counts as read only is decided by
+ *   MUIA_TextEditor_ReadOnly at creation, like its frame. Attributes given by
+ *   the application (MUIA_Font, MUIA_Background,
  *   MUIA_BestTextEditor_CodeFont, MUIA_BestTextEditor_BubbleStyles) take
  *   precedence over the preferences.
  *

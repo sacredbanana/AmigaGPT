@@ -144,3 +144,28 @@ msgstr "Samodejna barva besedila"
 msgctxt "MCP_TEXT_COLOR (25//)"
 msgid "Text color"
 msgstr "Barva besedila"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_GROUP_EDITOR (26//)"
+msgid "Editor"
+msgstr "Urejevalnik"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_EDITABLE (27//)"
+msgid "Editable"
+msgstr "Urejljivo"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_READ_ONLY (28//)"
+msgid "Read only"
+msgstr "Samo za branje"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_PEN (29//)"
+msgid "Text"
+msgstr "Besedilo"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_PEN_HELP (30//)"
+msgid "MUI's text pen is changed to black or white where it would be hard to read on the background. Any other color is used as chosen."
+msgstr "Barva besedila MUI se spremeni v črno ali belo, kjer bi bila na ozadju težko berljiva. Vsaka druga barva se uporabi tako, kot je izbrana."

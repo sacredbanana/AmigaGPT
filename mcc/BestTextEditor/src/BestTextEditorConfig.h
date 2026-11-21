@@ -15,6 +15,7 @@
  *   font   NUL terminated "name/size" string as written by a font Popasl,
  *          empty for the default font
  *   pen    struct MUI_PenSpec
+ *   image  NUL terminated MUI image spec ("6:4", "2:r...", "5:file" ...)
  *   bool   ULONG, 0 or 1
  *   number ULONG
  */
@@ -35,6 +36,11 @@
 #define MUICFG_BestTextEditor_CursorPen     (BTE_CFG_BASE + 0x08) /* pen  */
 #define MUICFG_BestTextEditor_MarkPen       (BTE_CFG_BASE + 0x09) /* pen  */
 #define MUICFG_BestTextEditor_MarkTextPen   (BTE_CFG_BASE + 0x0a) /* pen  */
+/* Background and text colour of editable and of read only editors */
+#define MUICFG_BestTextEditor_EditBack      (BTE_CFG_BASE + 0x0b) /* image */
+#define MUICFG_BestTextEditor_EditTextPen   (BTE_CFG_BASE + 0x0c) /* pen  */
+#define MUICFG_BestTextEditor_ReadBack      (BTE_CFG_BASE + 0x0d) /* image */
+#define MUICFG_BestTextEditor_ReadTextPen   (BTE_CFG_BASE + 0x0e) /* pen  */
 
 /* Bubble style n (0..7) uses BTE_CFG_BUBBLE(n) + one of the offsets below */
 #define BTE_CFG_BUBBLE(n)          (BTE_CFG_BASE + 0x20 + (n) * 0x08)
@@ -65,6 +71,16 @@ static const char *const bteDefaultPens[BTE_CFG_PEN_COUNT] = {
     "m6",                          /* selection: fill */
     "m0"                           /* selected text: shine */
 };
+
+/* Editor backgrounds: MUII_TextBack for editable editors and
+ * MUII_ReadListBack for read only ones, as image specs. The text pens
+ * default to MUI's text pen, which the class swaps for black or white when
+ * it would not read on the background; a chosen colour is used as it is. */
+#define BTE_DEFAULT_EDIT_BACK  "6:4"
+#define BTE_DEFAULT_READ_BACK  "6:41"
+#define BTE_DEFAULT_TEXT_PEN   "m5"
+/* Longest image spec kept (a picture file path) */
+#define BTE_IMAGE_SPEC_LENGTH  256
 
 struct BteBubbleDefault {
     ULONG side;

@@ -124,6 +124,21 @@ static BOOL rteConfigRGB(Object *obj, ULONG id, CONST_STRPTR def, ULONG *rgb) {
     return TRUE;
 }
 
+/**
+ * The background image spec for this editor: the one chosen in the
+ * preferences for editable or read only editors, or MUI's own default
+ */
+CONST_STRPTR rteConfigBackground(struct RTEData *data, Object *obj) {
+    CONST_STRPTR s = (CONST_STRPTR)rteConfigItem(
+        obj, data->readOnlyLook ? MUICFG_BestTextEditor_ReadBack
+                                : MUICFG_BestTextEditor_EditBack);
+    if (s == NULL || s[0] == '\0' ||
+        strlen((const char *)s) >= BTE_IMAGE_SPEC_LENGTH)
+        s = (CONST_STRPTR)(data->readOnlyLook ? BTE_DEFAULT_READ_BACK
+                                              : BTE_DEFAULT_EDIT_BACK);
+    return s;
+}
+
 static void rteConfigFont(Object *obj, ULONG id, char *buf, ULONG size) {
     CONST_STRPTR s = (CONST_STRPTR)rteConfigItem(obj, id);
     buf[0] = '\0';
@@ -140,6 +155,13 @@ void rteReadConfig(struct RTEData *data, Object *obj) {
                   sizeof(data->cfgTextFont));
     rteConfigFont(obj, MUICFG_BestTextEditor_CodeFont, data->cfgCodeFont,
                   sizeof(data->cfgCodeFont));
+
+    /* MUI's text pen, the default, is left to the contrast check */
+    data->cfgTextValid = rteConfigRGB(
+        obj,
+        data->readOnlyLook ? MUICFG_BestTextEditor_ReadTextPen
+                           : MUICFG_BestTextEditor_EditTextPen,
+        NULL, &data->cfgTextRGB);
 
     data->cfgAutoColors = rteConfigBool(obj, MUICFG_BestTextEditor_AutoColors,
                                         BTE_DEFAULT_AUTOCOLORS);
@@ -180,6 +202,22 @@ void rteReadConfig(struct RTEData *data, Object *obj) {
     }
 }
 
+/* The pen slot each hand picked accent colour sets, in config ID order */
+static const UBYTE rteCfgPenSlot[BTE_CFG_PEN_COUNT] = {
+    RTE_PEN_LINK,   RTE_PEN_CODEBG, RTE_PEN_CODETEXT, RTE_PEN_QUOTE,
+    RTE_PEN_RULE,   RTE_PEN_CURSOR, RTE_PEN_MARK,     RTE_PEN_MARKTEXT};
+
+/* TRUE when the preferences give this pen slot a colour of its own */
+static BOOL rteCfgPenSet(struct RTEData *data, UWORD slot) {
+    UWORD i;
+    if (data->cfgAutoColors)
+        return FALSE;
+    for (i = 0; i < BTE_CFG_PEN_COUNT; i++)
+        if (rteCfgPenSlot[i] == slot)
+            return data->cfgPenValid[i];
+    return FALSE;
+}
+
 void rteObtainPens(struct RTEData *data, Object *obj) {
     struct ColorMap *cm = _screen(obj)->ViewPort.ColorMap;
     UWORD *mp = _pens(obj);
@@ -199,10 +237,19 @@ void rteObtainPens(struct RTEData *data, Object *obj) {
     data->pens[RTE_PEN_SHADOW] = mp[MPEN_SHADOW];
     data->pens[RTE_PEN_CODETEXT] = mp[MPEN_TEXT];
 
+    /* A text colour chosen in the preferences replaces MUI's text pen */
+    if (data->cfgTextValid) {
+        LONG pen = rteBestPen(cm, data->cfgTextRGB, &data->penAlloc[RTE_PEN_TEXT]);
+        if (pen >= 0) {
+            data->pens[RTE_PEN_TEXT] = pen;
+            data->pens[RTE_PEN_CODETEXT] = pen;
+        }
+    }
+
     /* Tints derived from the actual text and background colours, so dark
      * and light MUI themes both get readable accents */
     rtePenRGB(cm, mp[MPEN_BACKGROUND], &bg);
-    rtePenRGB(cm, mp[MPEN_TEXT], &fg);
+    rtePenRGB(cm, data->pens[RTE_PEN_TEXT], &fg);
     link = rteLuminance(bg) > 110 ? 0x1a56c8 : 0x7fb2ff;
     data->pens[RTE_PEN_LINK] = rteBestPen(cm, link, &data->penAlloc[RTE_PEN_LINK]);
     data->pens[RTE_PEN_CODEBG] =
@@ -213,11 +260,8 @@ void rteObtainPens(struct RTEData *data, Object *obj) {
         rteBestPen(cm, rteMix(bg, fg, 25), &data->penAlloc[RTE_PEN_RULE]);
     /* Colours chosen in the preferences replace the automatic ones */
     if (!data->cfgAutoColors) {
-        static const UBYTE cfgPen[BTE_CFG_PEN_COUNT] = {
-            RTE_PEN_LINK,   RTE_PEN_CODEBG, RTE_PEN_CODETEXT, RTE_PEN_QUOTE,
-            RTE_PEN_RULE,   RTE_PEN_CURSOR, RTE_PEN_MARK,     RTE_PEN_MARKTEXT};
         for (i = 0; i < BTE_CFG_PEN_COUNT; i++) {
-            UBYTE p = cfgPen[i];
+            UBYTE p = rteCfgPenSlot[i];
             if (!data->cfgPenValid[i])
                 continue;
             if (data->penAlloc[p])
@@ -1002,7 +1046,11 @@ static BOOL rteReadPixelRGB(Object *obj, struct RastPort *rp, LONG x, LONG y,
 static void rteSetDerivedPen(struct RTEData *data, struct ColorMap *cm,
                              UWORD slot, ULONG rgb) {
     BOOL alloc;
-    LONG pen = rteBestPen(cm, rgb, &alloc);
+    LONG pen;
+    /* colours picked in the preferences stay as they are */
+    if (rteCfgPenSet(data, slot))
+        return;
+    pen = rteBestPen(cm, rgb, &alloc);
     if (pen < 0)
         return;
     if (data->penAlloc[slot])
@@ -1039,10 +1087,11 @@ static BOOL rteAdaptToBackground(struct RTEData *data, Object *obj) {
     diff = (LONG)rteLuminance(fg) - (LONG)rteLuminance(bg);
     if (diff < 0)
         diff = -diff;
-    if (diff < 100) {
+    if (diff < 100 && !data->cfgTextValid) {
         fg = rteLuminance(bg) > 128 ? 0x000000 : 0xffffff;
         rteSetDerivedPen(data, cm, RTE_PEN_TEXT, fg);
-        data->pens[RTE_PEN_CODETEXT] = data->pens[RTE_PEN_TEXT];
+        if (!rteCfgPenSet(data, RTE_PEN_CODETEXT))
+            data->pens[RTE_PEN_CODETEXT] = data->pens[RTE_PEN_TEXT];
     }
     rteSetDerivedPen(data, cm, RTE_PEN_DIM, rteMix(bg, fg, 50));
     rteSetDerivedPen(data, cm, RTE_PEN_CODEBG, rteMix(bg, fg, 12));

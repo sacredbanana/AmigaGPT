@@ -1,10 +1,11 @@
 /*
  * BestTextEditor.mcp - the BestTextEditor page of MUI preferences
  *
- * Fonts, accent colours and the eight chat bubble styles. Values are kept in
- * the application's MUI configuration under the MUICFG_BestTextEditor_* IDs
- * from BestTextEditorConfig.h, and only when they differ from the defaults,
- * so a missing item always means "default" on the .mcc side.
+ * Fonts, editor backgrounds and text colours, accent colours and the eight
+ * chat bubble styles. Values are kept in the application's MUI configuration
+ * under the MUICFG_BestTextEditor_* IDs from BestTextEditorConfig.h, and only
+ * when they differ from the defaults, so a missing item always means
+ * "default" on the .mcc side.
  */
 #include <clib/alib_protos.h>
 #include <exec/memory.h>
@@ -90,6 +91,36 @@ static Object *makePen(CONST_STRPTR title) {
     // clang-format on
 }
 
+static Object *makeTextPen(void) {
+    // clang-format off
+    return PoppenObject,
+        MUIA_Window_Title, MCP_TEXT_PEN,
+        MUIA_CycleChain, TRUE,
+        MUIA_ShortHelp, MCP_TEXT_PEN_HELP,
+    End;
+    // clang-format on
+}
+
+static Object *makeBackground(void) {
+    // clang-format off
+    return MUI_NewObject(MUIC_Popimage,
+        MUIA_Imageadjust_Type, MUIV_Imageadjust_Type_Background,
+        MUIA_Window_Title, MCP_BACKGROUND,
+        MUIA_CycleChain, TRUE,
+        MUIA_ShortHelp, MCP_BACKGROUND,
+        TAG_DONE);
+    // clang-format on
+}
+
+static Object *makeColumnTitle(CONST_STRPTR title) {
+    // clang-format off
+    return TextObject,
+        MUIA_Text_Contents, title,
+        MUIA_Text_PreParse, "\33c",
+    End;
+    // clang-format on
+}
+
 static Object *makeBubblePage(struct BubbleGadgets *g) {
     // clang-format off
     return ColGroup(2),
@@ -157,6 +188,18 @@ static IPTR mConfigToGadgets(struct IClass *cl, Object *obj,
         findString(config, MUICFG_BestTextEditor_TextFont, ""));
     set(data->codeFont, MUIA_String_Contents,
         findString(config, MUICFG_BestTextEditor_CodeFont, ""));
+    set(data->editBack, MUIA_Imagedisplay_Spec,
+        findString(config, MUICFG_BestTextEditor_EditBack,
+                   (CONST_STRPTR)BTE_DEFAULT_EDIT_BACK));
+    set(data->readBack, MUIA_Imagedisplay_Spec,
+        findString(config, MUICFG_BestTextEditor_ReadBack,
+                   (CONST_STRPTR)BTE_DEFAULT_READ_BACK));
+    setPen(data->editText,
+           findString(config, MUICFG_BestTextEditor_EditTextPen,
+                      (CONST_STRPTR)BTE_DEFAULT_TEXT_PEN));
+    setPen(data->readText,
+           findString(config, MUICFG_BestTextEditor_ReadTextPen,
+                      (CONST_STRPTR)BTE_DEFAULT_TEXT_PEN));
     set(data->autoColors, MUIA_Selected,
         findULong(config, MUICFG_BestTextEditor_AutoColors,
                   BTE_DEFAULT_AUTOCOLORS) != 0);
@@ -217,6 +260,18 @@ static void storePen(Object *config, ULONG id, Object *pen,
         DoMethod(config, MUIM_Dataspace_Add, (IPTR)spec, sizeof(*spec), id);
 }
 
+static void storeImage(Object *config, ULONG id, Object *image,
+                       CONST_STRPTR def) {
+    STRPTR spec = NULL;
+    get(image, MUIA_Imagedisplay_Spec, &spec);
+    if (spec == NULL || spec[0] == '\0' ||
+        strcmp((const char *)spec, (const char *)def) == 0 ||
+        strlen((const char *)spec) >= BTE_IMAGE_SPEC_LENGTH)
+        DoMethod(config, MUIM_Dataspace_Remove, id);
+    else
+        storeString(config, id, spec);
+}
+
 static ULONG getULong(Object *o, ULONG attr) {
     IPTR v = 0;
     get(o, attr, &v);
@@ -236,6 +291,14 @@ static IPTR mGadgetsToConfig(struct IClass *cl, Object *obj,
     s = NULL;
     get(data->codeFont, MUIA_String_Contents, &s);
     storeString(config, MUICFG_BestTextEditor_CodeFont, s);
+    storeImage(config, MUICFG_BestTextEditor_EditBack, data->editBack,
+               (CONST_STRPTR)BTE_DEFAULT_EDIT_BACK);
+    storeImage(config, MUICFG_BestTextEditor_ReadBack, data->readBack,
+               (CONST_STRPTR)BTE_DEFAULT_READ_BACK);
+    storePen(config, MUICFG_BestTextEditor_EditTextPen, data->editText,
+             (CONST_STRPTR)BTE_DEFAULT_TEXT_PEN);
+    storePen(config, MUICFG_BestTextEditor_ReadTextPen, data->readText,
+             (CONST_STRPTR)BTE_DEFAULT_TEXT_PEN);
     storeULong(config, MUICFG_BestTextEditor_AutoColors,
                getULong(data->autoColors, MUIA_Selected) != 0,
                BTE_DEFAULT_AUTOCOLORS);
@@ -304,6 +367,17 @@ static IPTR mNew(struct IClass *cl, Object *obj, struct opSet *msg) {
                 Child, makeFontPopup(&tmp.textFont, MCP_TEXT_FONT, FALSE),
                 Child, Label2(MCP_CODE_FONT),
                 Child, makeFontPopup(&tmp.codeFont, MCP_CODE_FONT, TRUE),
+            End,
+            Child, ColGroup(3), GroupFrameT(MCP_GROUP_EDITOR),
+                Child, HSpace(0),
+                Child, makeColumnTitle(MCP_BACKGROUND),
+                Child, makeColumnTitle(MCP_TEXT_PEN),
+                Child, Label1(MCP_EDITABLE),
+                Child, tmp.editBack = makeBackground(),
+                Child, tmp.editText = makeTextPen(),
+                Child, Label1(MCP_READ_ONLY),
+                Child, tmp.readBack = makeBackground(),
+                Child, tmp.readText = makeTextPen(),
             End,
             Child, VGroup, GroupFrameT(MCP_GROUP_COLORS),
                 Child, HGroup,
@@ -374,6 +448,14 @@ static IPTR mNew(struct IClass *cl, Object *obj, struct opSet *msg) {
                    MCP_TEXT_FONT, MUIA_String_Contents);
     registerGadget(obj, data->codeFont, MUICFG_BestTextEditor_CodeFont,
                    MCP_CODE_FONT, MUIA_String_Contents);
+    registerGadget(obj, data->editBack, MUICFG_BestTextEditor_EditBack,
+                   MCP_EDITABLE, MUIA_Imagedisplay_Spec);
+    registerGadget(obj, data->editText, MUICFG_BestTextEditor_EditTextPen,
+                   MCP_EDITABLE, MUIA_Pendisplay_Spec);
+    registerGadget(obj, data->readBack, MUICFG_BestTextEditor_ReadBack,
+                   MCP_READ_ONLY, MUIA_Imagedisplay_Spec);
+    registerGadget(obj, data->readText, MUICFG_BestTextEditor_ReadTextPen,
+                   MCP_READ_ONLY, MUIA_Pendisplay_Spec);
     registerGadget(obj, data->autoColors, MUICFG_BestTextEditor_AutoColors,
                    MCP_AUTO_COLORS, MUIA_Selected);
     for (i = 0; i < BTE_CFG_PEN_COUNT; i++)

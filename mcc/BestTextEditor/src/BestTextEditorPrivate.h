@@ -326,6 +326,14 @@ struct RTEData {
      * MUIM_UpdateConfig. What the application sets itself wins. */
     BOOL appFont;    /* MUIA_Font was given */
     BOOL appBubbles; /* MUIA_BestTextEditor_BubbleStyles was given */
+    BOOL appBackground; /* MUIA_Background was given */
+    BOOL readOnlyLook;  /* created read only: read list frame and background */
+    BOOL cfgTextValid;  /* a text colour was chosen for this kind of editor */
+    ULONG cfgTextRGB;
+    /* the background spec handed to MUI, which keeps the pointer: a new one
+     * goes into the buffer MUI is not using */
+    char bgSpec[2][BTE_IMAGE_SPEC_LENGTH];
+    UBYTE bgSpecIdx;
     BOOL cfgAutoColors;
     BOOL cfgPenValid[BTE_CFG_PEN_COUNT];
     ULONG cfgPenRGB[BTE_CFG_PEN_COUNT];
@@ -557,6 +565,7 @@ void rteFreeDoubleBuffer(struct RTEData *data);
 void rteObtainPens(struct RTEData *data, Object *obj);
 void rteSetDefaultBubbleStyles(struct RTEData *data);
 void rteReadConfig(struct RTEData *data, Object *obj);
+CONST_STRPTR rteConfigBackground(struct RTEData *data, Object *obj);
 void rteReleasePens(struct RTEData *data, Object *obj);
 LONG rteResolveColor(struct RTEData *data, Object *obj, UWORD index);
 

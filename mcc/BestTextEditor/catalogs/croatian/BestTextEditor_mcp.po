@@ -144,3 +144,28 @@ msgstr "Automatska boja teksta"
 msgctxt "MCP_TEXT_COLOR (25//)"
 msgid "Text color"
 msgstr "Boja teksta"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_GROUP_EDITOR (26//)"
+msgid "Editor"
+msgstr "Uređivač"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_EDITABLE (27//)"
+msgid "Editable"
+msgstr "Uređivo"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_READ_ONLY (28//)"
+msgid "Read only"
+msgstr "Samo za čitanje"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_PEN (29//)"
+msgid "Text"
+msgstr "Tekst"
+
+#: mcp/BestTextEditorPrefs.c
+msgctxt "MCP_TEXT_PEN_HELP (30//)"
+msgid "MUI's text pen is changed to black or white where it would be hard to read on the background. Any other color is used as chosen."
+msgstr "MUI boja za tekst mijenja se u crnu ili bijelu ondje gdje bi na pozadini bila teško čitljiva. Svaka druga boja koristi se onako kako je odabrana."
